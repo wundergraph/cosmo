@@ -1,5 +1,52 @@
 # Changelog
 
+## [0.10.1](https://github.com/wundergraph/cosmo/compare/helm-cosmo-router@0.10.0...helm-cosmo-router@0.10.1) (2025-04-14)
+
+
+### Bug Fixes
+
+* bump router chart version ([#1784](https://github.com/wundergraph/cosmo/issues/1784)) ([724aac3](https://github.com/wundergraph/cosmo/commit/724aac385956b0964f5132e0792a26923efbad99))
+
+## [0.10.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo-router@0.9.0...helm-cosmo-router@0.10.0) (2025-03-11)
+
+
+### Features
+
+* update package versions in helm charts ([#1676](https://github.com/wundergraph/cosmo/issues/1676)) ([95956dd](https://github.com/wundergraph/cosmo/commit/95956dd57ff67d49c26412202b70a4d48d0713e7))
+
+## [0.9.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo-router@0.8.1...helm-cosmo-router@0.9.0) (2024-10-11)
+
+
+### Features
+
+* make router config an explicit property update AppVersion ([#1263](https://github.com/wundergraph/cosmo/issues/1263)) ([0f89a1a](https://github.com/wundergraph/cosmo/commit/0f89a1ae6d74acf72400acc6bd5ead7a7895d0ce))
+
+
+### Bug Fixes
+
+* not respecting image.version in labels ([#1265](https://github.com/wundergraph/cosmo/issues/1265)) ([7c92c55](https://github.com/wundergraph/cosmo/commit/7c92c5576c3d713cc9c1349cf6f725f79ed75310))
+
+## [0.8.1](https://github.com/wundergraph/cosmo/compare/helm-cosmo-router@0.8.0...helm-cosmo-router@0.8.1) (2024-09-16)
+
+
+### Bug Fixes
+
+* use appVersion by default, optimize keycloak startup time ([#1170](https://github.com/wundergraph/cosmo/issues/1170)) ([82c2bb9](https://github.com/wundergraph/cosmo/commit/82c2bb98d568fd7973fa700a84bec7ce4c0c51cf))
+
+## [0.8.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo-router@0.7.0...helm-cosmo-router@0.8.0) (2024-09-05)
+
+
+### Features
+
+* enable using HTTP(S)_PROXY in router  ([#1136](https://github.com/wundergraph/cosmo/issues/1136)) ([4600fdf](https://github.com/wundergraph/cosmo/commit/4600fdff6ab57541a6119e4e51180ed4403363a6))
+
+## [0.7.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo-router@0.6.0...helm-cosmo-router@0.7.0) (2024-08-29)
+
+
+### Features
+
+* **cosmo:** add setting commonLabels on subchart resources ([#1120](https://github.com/wundergraph/cosmo/issues/1120)) ([030dc6d](https://github.com/wundergraph/cosmo/commit/030dc6da6652508d041bb34715d867d3a54db004))
+
 ## [0.6.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo-router-v0.5.0...helm-cosmo-router@0.6.0) (2024-08-14)
 
 

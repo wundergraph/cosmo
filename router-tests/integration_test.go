@@ -1,12 +1,16 @@
-package integration_test
+package integration
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"math/rand"
 	"net/http"
+	"net/http/httptest"
+	"net/http/httputil"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -25,42 +29,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
-const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
 const employeesIDData = `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
-
-func randString(n int) string {
-	b := make([]byte, n)
-	for i := range b {
-		b[i] = letterBytes[rand.Intn(len(letterBytes))]
-	}
-	return string(b)
-}
-
-type testQuery struct {
-	Name      string
-	Body      string
-	Variables map[string]interface{}
-}
-
-func (t *testQuery) Data() []byte {
-	name := t.Name
-	if name == "" {
-		name = randString(10)
-	}
-	values := map[string]interface{}{
-		"query":         fmt.Sprintf("query %s %s", name, t.Body),
-		"operationName": name,
-	}
-	if len(t.Variables) > 0 {
-		values["variables"] = t.Variables
-	}
-	data, err := json.Marshal(values)
-	if err != nil {
-		panic(err)
-	}
-	return data
-}
 
 func normalizeJSON(tb testing.TB, data []byte) []byte {
 	buf := new(bytes.Buffer)
@@ -76,7 +45,19 @@ func TestSimpleQuery(t *testing.T) {
 		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 			Query: `query { employees { id } }`,
 		})
+		require.Equal(t, res.Response.Header.Get("Content-Type"), "application/json; charset=utf-8")
 		require.JSONEq(t, employeesIDData, res.Body)
+	})
+}
+
+func TestNoSubgraphConfig(t *testing.T) {
+	t.Parallel()
+
+	testenv.RunRouterBinary(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			Query: `query { hello }`,
+		})
+		require.JSONEq(t, `{"data":{"hello":"Cosmo Router is ready! Follow this guide to deploy your first Supergraph: https://cosmo-docs.wundergraph.com/tutorial/from-zero-to-federation-in-5-steps-using-cosmo"}}`, res.Body)
 	})
 }
 
@@ -103,6 +84,7 @@ func TestContentTypes(t *testing.T) {
 			}, bytes.NewReader([]byte(`{"query":"{ employees { id } }"}`)))
 			require.NoError(t, err)
 			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.Equal(t, res.Header.Get("Content-Type"), "application/json; charset=utf-8")
 
 			body, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
@@ -131,39 +113,178 @@ func TestPlayground(t *testing.T) {
 func TestExecutionPlanCache(t *testing.T) {
 	t.Parallel()
 
-	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+	t.Run("enabled variables remapping", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			// MISS - First query
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:     `query Find($criteria: SearchInput) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
+				Variables: json.RawMessage(`{"criteria":{"nationality":"GERMAN"}}`),
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, "MISS", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
+			require.Equal(t, `{"data":{"findEmployees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}}]}}`, res.Body)
+
+			// MISS - Same query as above with different variables nullability
+			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:     `query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
+				Variables: json.RawMessage(`{"criteria":{"nationality":"GERMAN"}}`),
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, "MISS", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
+			require.Equal(t, `{"data":{"findEmployees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}}]}}`, res.Body)
+
+			// HIT - Same query as above with different variables values
+			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:     `query Find($criteria: SearchInput) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
+				Variables: json.RawMessage(`{"criteria":{"nationality":"AMERICAN"}}`),
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, "HIT", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
+			require.Equal(t, `{"data":{"findEmployees":[{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}]}}`, res.Body)
+
+			// HIT - Same query as above with different variable name
+			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:     `query Find($criteriaDifferent: SearchInput) {findEmployees(criteria: $criteriaDifferent){id details {forename surname}}}`,
+				Variables: json.RawMessage(`{"criteriaDifferent":{"nationality":"AMERICAN"}}`),
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, "HIT", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
+			require.Equal(t, `{"data":{"findEmployees":[{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}]}}`, res.Body)
+
+			// HIT - Same query as above with variables default value
+			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: `query Find($criteria: SearchInput! = { nationality: ENGLISH }) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, "HIT", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
+			require.Equal(t, `{"data":{"findEmployees":[{"id":12,"details":{"forename":"David","surname":"Stutt"}}]}}`, res.Body)
+
+			// HIT - Same query as above with inline value
+			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: `query Find {findEmployees(criteria: { nationality: ENGLISH }){id details {forename surname}}}`,
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, "HIT", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
+			require.Equal(t, `{"data":{"findEmployees":[{"id":12,"details":{"forename":"David","surname":"Stutt"}}]}}`, res.Body)
+
+			// HIT - Same query as above but with different whitespace and operation name
+			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: `query Foo      ($criteria: SearchInput! = { nationality: ENGLISH }) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, "HIT", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
+			require.Equal(t, `{"data":{"findEmployees":[{"id":12,"details":{"forename":"David","surname":"Stutt"}}]}}`, res.Body)
+		})
+	})
+
+	t.Run("disabled variables remapping", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.DisableVariablesRemapping = true
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// MISS - First query
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:     `query Find($criteria: SearchInput) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
+				Variables: json.RawMessage(`{"criteria":{"nationality":"GERMAN"}}`),
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, "MISS", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
+			require.Equal(t, `{"data":{"findEmployees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}}]}}`, res.Body)
+
+			// MISS - Same query as above with different variables nullability
+			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:     `query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
+				Variables: json.RawMessage(`{"criteria":{"nationality":"GERMAN"}}`),
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, "MISS", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
+			require.Equal(t, `{"data":{"findEmployees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}}]}}`, res.Body)
+
+			// HIT - Same query as above with different variables values
+			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:     `query Find($criteria: SearchInput) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
+				Variables: json.RawMessage(`{"criteria":{"nationality":"AMERICAN"}}`),
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, "HIT", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
+			require.Equal(t, `{"data":{"findEmployees":[{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}]}}`, res.Body)
+
+			// MISS - Same query as above with different variable name
+			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:     `query Find($criteriaDifferent: SearchInput) {findEmployees(criteria: $criteriaDifferent){id details {forename surname}}}`,
+				Variables: json.RawMessage(`{"criteriaDifferent":{"nationality":"AMERICAN"}}`),
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, "MISS", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
+			require.Equal(t, `{"data":{"findEmployees":[{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}]}}`, res.Body)
+
+			// HIT - Same query as above with variables default value
+			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: `query Find($criteria: SearchInput! = { nationality: ENGLISH }) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, "HIT", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
+			require.Equal(t, `{"data":{"findEmployees":[{"id":12,"details":{"forename":"David","surname":"Stutt"}}]}}`, res.Body)
+
+			// MISS - Same query as above with inline value
+			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: `query Find {findEmployees(criteria: { nationality: ENGLISH }){id details {forename surname}}}`,
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, "MISS", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
+			require.Equal(t, `{"data":{"findEmployees":[{"id":12,"details":{"forename":"David","surname":"Stutt"}}]}}`, res.Body)
+
+			// HIT - Same query as above but with different whitespace and operation name
+			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: `query Foo      ($criteria: SearchInput! = { nationality: ENGLISH }) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, "HIT", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
+			require.Equal(t, `{"data":{"findEmployees":[{"id":12,"details":{"forename":"David","surname":"Stutt"}}]}}`, res.Body)
+		})
+	})
+}
+
+func TestTypenameValidation(t *testing.T) {
+	t.Parallel()
+
+	testenv.Run(t, &testenv.Config{
+		Subgraphs: testenv.SubgraphsConfig{
+			GlobalMiddleware: func(handler http.Handler) http.Handler {
+				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.Header().Set("Content-Type", "application/json")
+					w.WriteHeader(http.StatusOK)
+					_, _ = w.Write([]byte(`{"data":{"findEmployees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"__typename":"wrongTypeName"},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"__typename":"wrongTypeName"},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"__typename":"wrongTypeName"},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"__typename":"wrongTypeName"}]}}`))
+				})
+			},
+		},
+	}, func(t *testing.T, xEnv *testenv.Environment) {
 		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-			Query:     `query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
+			Query:     `query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname} __typename}}`,
 			Variables: json.RawMessage(`{"criteria":{"nationality":"GERMAN"}}`),
 		})
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, res.Response.StatusCode)
-		require.Equal(t, "MISS", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
-		require.Equal(t, `{"data":{"findEmployees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}}]}}`, res.Body)
-
-		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-			Query:     `query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
-			Variables: json.RawMessage(`{"criteria":{"nationality":"GERMAN"}}`),
-		})
-		require.NoError(t, err)
-		require.Equal(t, http.StatusOK, res.Response.StatusCode)
-		require.Equal(t, "HIT", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
-		require.Equal(t, `{"data":{"findEmployees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}}]}}`, res.Body)
-
-		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-			Query: `query Find($criteria: SearchInput! = { nationality: ENGLISH }) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
-		})
-		require.NoError(t, err)
-		require.Equal(t, http.StatusOK, res.Response.StatusCode)
-		require.Equal(t, "MISS", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
-		require.Equal(t, `{"data":{"findEmployees":[{"id":12,"details":{"forename":"David","surname":"Stutt"}}]}}`, res.Body)
-		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-			Query: `query Find($criteria: SearchInput! = { nationality: ENGLISH }) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
-		})
-		require.NoError(t, err)
-		require.Equal(t, http.StatusOK, res.Response.StatusCode)
-		require.Equal(t, "HIT", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
-		require.Equal(t, `{"data":{"findEmployees":[{"id":12,"details":{"forename":"David","surname":"Stutt"}}]}}`, res.Body)
+		require.Equal(t, `{"errors":[{"message":"Subgraph 'family' returned invalid value 'wrongTypeName' for __typename field.","path":["findEmployees",0],"extensions":{"code":"INVALID_GRAPHQL"}}],"data":null}`, res.Body)
 	})
 }
 
@@ -237,7 +358,7 @@ func TestVariables(t *testing.T) {
 			})
 			require.NoError(t, err)
 			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
-			require.Equal(t, `{"errors":[{"message":"variables must be an object"}],"data":null}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"error parsing request body"}]}`, res.Body)
 		})
 
 		t.Run("invalid string", func(t *testing.T) {
@@ -247,7 +368,7 @@ func TestVariables(t *testing.T) {
 			})
 			require.NoError(t, err)
 			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
-			require.Equal(t, `{"errors":[{"message":"variables must be an object"}],"data":null}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"error parsing request body"}]}`, res.Body)
 		})
 
 		t.Run("invalid boolean", func(t *testing.T) {
@@ -257,7 +378,7 @@ func TestVariables(t *testing.T) {
 			})
 			require.NoError(t, err)
 			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
-			require.Equal(t, `{"errors":[{"message":"variables must be an object"}],"data":null}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"error parsing request body"}]}`, res.Body)
 		})
 
 		t.Run("invalid array", func(t *testing.T) {
@@ -267,7 +388,7 @@ func TestVariables(t *testing.T) {
 			})
 			require.NoError(t, err)
 			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
-			require.Equal(t, `{"errors":[{"message":"variables must be an object"}],"data":null}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"error parsing request body"}]}`, res.Body)
 		})
 
 		t.Run("missing", func(t *testing.T) {
@@ -277,7 +398,7 @@ func TestVariables(t *testing.T) {
 			})
 			require.NoError(t, err)
 			require.Equal(t, http.StatusOK, res.Response.StatusCode)
-			require.Equal(t, `{"errors":[{"message":"Variable \"$criteria\" of required type \"SearchInput!\" was not provided."}],"data":null}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"Variable \"$criteria\" of required type \"SearchInput!\" was not provided."}]}`, res.Body)
 		})
 
 		t.Run("wrong value variable", func(t *testing.T) {
@@ -287,7 +408,127 @@ func TestVariables(t *testing.T) {
 			})
 			require.NoError(t, err)
 			require.Equal(t, http.StatusOK, res.Response.StatusCode)
-			require.Equal(t, `{"errors":[{"message":"Variable \"$criteria\" got invalid value 1; Expected type \"SearchInput\" to be an object."}],"data":null}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"Variable \"$criteria\" got invalid value 1; Expected type \"SearchInput\" to be an object."}]}`, res.Body)
+		})
+	})
+}
+
+func TestVariablesRemapping(t *testing.T) {
+	t.Parallel()
+
+	t.Run("enabled", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							body, _ := io.ReadAll(r.Body)
+							var req core.GraphQLRequest
+							require.NoError(t, json.Unmarshal(body, &req))
+
+							require.Equal(t, `query($a: Int!){employee(id: $a){id}}`, req.Query)
+							require.Equal(t, json.RawMessage(`{"a":1}`), req.Variables)
+
+							w.WriteHeader(http.StatusOK)
+							_, _ = w.Write([]byte(`{"data":{"employee":{"id":1}}}`))
+						})
+					},
+				},
+				Test1: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							body, _ := io.ReadAll(r.Body)
+							var req core.GraphQLRequest
+							require.NoError(t, json.Unmarshal(body, &req))
+
+							require.Equal(t, `query($a: InputArg!){rootFieldWithInput(arg: $a)}`, req.Query)
+							require.Equal(t, json.RawMessage(`{"a":{"string":"foo"}}`), req.Variables)
+
+							w.WriteHeader(http.StatusOK)
+							_, _ = w.Write([]byte(`{"data":{"rootFieldWithInput":"bar"}}`))
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			t.Run("scalar argument type", func(t *testing.T) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:     `query ($count:Int!) { employee(id:$count) { id } }`,
+					Variables: json.RawMessage(`{"count":1}`),
+				})
+				require.JSONEq(t, `{"data":{"employee":{"id":1}}}`, res.Body)
+			})
+
+			t.Run("input object argument type - variable argument", func(t *testing.T) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:     `query ($arg:InputArg!) { rootFieldWithInput(arg: $arg) }`,
+					Variables: json.RawMessage(`{"arg":{"string": "foo"}}`),
+				})
+				require.JSONEq(t, `{"data":{"rootFieldWithInput":"bar"}}`, res.Body)
+			})
+
+			t.Run("input object argument type - inline value", func(t *testing.T) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { rootFieldWithInput(arg: {string: "foo"}) }`,
+				})
+				require.JSONEq(t, `{"data":{"rootFieldWithInput":"bar"}}`, res.Body)
+			})
+		})
+	})
+
+	t.Run("disabled", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.DisableVariablesRemapping = true
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							body, _ := io.ReadAll(r.Body)
+							var req core.GraphQLRequest
+							require.NoError(t, json.Unmarshal(body, &req))
+
+							require.Equal(t, `query($count: Int!){employee(id: $count){id}}`, req.Query)
+							require.Equal(t, json.RawMessage(`{"count":1}`), req.Variables)
+
+							w.WriteHeader(http.StatusOK)
+							_, _ = w.Write([]byte(`{"data":{"employee":{"id":1}}}`))
+						})
+					},
+				},
+				Test1: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							body, _ := io.ReadAll(r.Body)
+							var req core.GraphQLRequest
+							require.NoError(t, json.Unmarshal(body, &req))
+
+							require.Equal(t, `query($arg: InputArg!){rootFieldWithInput(arg: $arg)}`, req.Query)
+							require.Equal(t, json.RawMessage(`{"arg":{"string":"foo"}}`), req.Variables)
+
+							w.WriteHeader(http.StatusOK)
+							_, _ = w.Write([]byte(`{"data":{"rootFieldWithInput":"bar"}}`))
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			t.Run("scalar argument type", func(t *testing.T) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:     `query ($count:Int!) { employee(id:$count) { id } }`,
+					Variables: json.RawMessage(`{"count":1}`),
+				})
+				require.JSONEq(t, `{"data":{"employee":{"id":1}}}`, res.Body)
+			})
+
+			t.Run("input object argument type", func(t *testing.T) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:     `query ($arg:InputArg!) { rootFieldWithInput(arg: $arg) }`,
+					Variables: json.RawMessage(`{"arg":{"string": "foo"}}`),
+				})
+				require.JSONEq(t, `{"data":{"rootFieldWithInput":"bar"}}`, res.Body)
+			})
 		})
 	})
 }
@@ -296,10 +537,89 @@ func TestAnonymousQuery(t *testing.T) {
 	t.Parallel()
 
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		t.Run("anonymous query", func(t *testing.T) {
+			t.Parallel()
+
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employees { id } }`,
+			})
+			require.JSONEq(t, employeesIDData, res.Body)
+		})
+
+		t.Run("sequence of queries with different count of variables", func(t *testing.T) {
+			t.Parallel()
+
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query ($a: Float! = 1) { floatField(arg: $a) }`,
+			})
+			require.JSONEq(t, `{"data":{"floatField":1}}`, res.Body)
+
+			// we need to obtain more parse kits to reuse them
+			for i := 0; i < 10; i++ {
+				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query ($a: String = "A", $b: Int = 1) { delay(response: $a, ms: $b ) }`,
+				})
+				require.JSONEq(t, `{"data":{"delay":"A"}}`, res.Body)
+			}
+
+			// this query should not fail with panic because of the reuse of variables normalizer
+			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query ($a: Float! = 1) { floatField(arg: $a) }`,
+			})
+			require.JSONEq(t, `{"data":{"floatField":1}}`, res.Body)
+		})
+	})
+}
+
+func TestProxy(t *testing.T) {
+	t.Parallel()
+
+	fakeSubgraph := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"data":{"employees":[{"id":1234}]}}`))
+	}))
+
+	u, err := url.Parse(fakeSubgraph.URL)
+	require.NoError(t, err)
+
+	proxy := httptest.NewServer(httputil.NewSingleHostReverseProxy(u))
+	require.NoError(t, err)
+
+	testenv.Run(t, &testenv.Config{
+		RouterOptions: []core.Option{
+			core.WithProxy(func(req *http.Request) (*url.URL, error) {
+				return url.Parse(proxy.URL)
+			}),
+		},
+	}, func(t *testing.T, xEnv *testenv.Environment) {
 		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 			Query: `{ employees { id } }`,
 		})
-		require.JSONEq(t, employeesIDData, res.Body)
+		require.Equal(t, `{"data":{"employees":[{"id":1234}]}}`, res.Body)
+	})
+}
+
+func TestConcurrentBodyRead(t *testing.T) {
+	t.Parallel()
+	expectedData := `{"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse","hasChildren":true},"role":{"title":["Founder","CEO"],"departments":["ENGINEERING","MARKETING"]},"hobbies":[{"category":"SPORT"},{"name":"Counter Strike","genres":["FPS"],"yearsOfExperience":20},{"name":"WunderGraph"},{"languages":["GO","TYPESCRIPT"]},{"countriesLived":[{"language":"English"},{"language":"German"}]}]},{"id":2,"details":{"forename":"Dustin","surname":"Deus","hasChildren":false},"role":{"title":["Co-founder","Tech Lead"],"departments":["ENGINEERING"]},"hobbies":[{"category":"STRENGTH_TRAINING"},{"name":"Counter Strike","genres":["FPS"],"yearsOfExperience":0.5},{"languages":["GO","RUST"]}]},{"id":3,"details":{"forename":"Stefan","surname":"Avram","hasChildren":false},"role":{"title":["Co-founder","Head of Growth"],"departments":["MARKETING"]},"hobbies":[{"category":"HIKING"},{"category":"SPORT"},{"name":"Reading"},{"countriesLived":[{"language":"English"},{"language":"Serbian"}]}]},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer","hasChildren":true},"role":{"title":["Co-founder","COO"],"departments":["OPERATIONS","MARKETING"]},"hobbies":[{"category":"HIKING"},{"planeModels":["Aquila AT01","Cessna C172","Cessna C206","Cirrus SR20","Cirrus SR22","Diamond DA40","Diamond HK36","Diamond DA20","Piper Cub","Pitts Special","Robin DR400"],"yearsOfExperience":20},{"countriesLived":[{"language":"English"},{"language":"German"}]}]},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin","hasChildren":false},"role":{"title":["Senior GO Engineer"],"departments":["ENGINEERING"]},"hobbies":[{"name":"Building a house"},{"name":"Forumla 1"},{"name":"Raising cats"}]},{"id":7,"details":{"forename":"Suvij","surname":"Surya","hasChildren":false},"role":{"title":["Software Engineer"],"departments":["ENGINEERING"]},"hobbies":[{"name":"Chess","genres":["BOARD"],"yearsOfExperience":9.5},{"name":"Watching anime"}]},{"id":8,"details":{"forename":"Nithin","surname":"Kumar","hasChildren":false},"role":{"title":["Software Engineer"],"departments":["ENGINEERING"]},"hobbies":[{"category":"STRENGTH_TRAINING"},{"name":"Miscellaneous","genres":["ADVENTURE","RPG","SIMULATION","STRATEGY"],"yearsOfExperience":17},{"name":"Watching anime"}]},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma","hasChildren":false},"role":{"title":["Senior Frontend Engineer"],"departments":["ENGINEERING"]},"hobbies":[{"languages":["TYPESCRIPT"]},{"category":"CALISTHENICS"},{"category":"HIKING"},{"category":"STRENGTH_TRAINING"},{"name":"saas-ui"},{"countriesLived":[{"language":"German"},{"language":"Indonesian"},{"language":"Dutch"},{"language":"Portuguese"},{"language":"Spanish"},{"language":"Thai"}]}]},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse","hasChildren":true},"role":{"title":["Accounting & Finance"],"departments":["OPERATIONS"]},"hobbies":[{"name":"Spending time with the family"}]},{"id":12,"details":{"forename":"David","surname":"Stutt","hasChildren":false},"role":{"title":["Software Engineer"],"departments":["ENGINEERING"]},"hobbies":[{"languages":["CSHARP","GO","RUST","TYPESCRIPT"]},{"category":"STRENGTH_TRAINING"},{"name":"Miscellaneous","genres":["ADVENTURE","BOARD","CARD","ROGUELITE","RPG","SIMULATION","STRATEGY"],"yearsOfExperience":25.5},{"countriesLived":[{"language":"English"},{"language":"Korean"},{"language":"Taiwanese"}]}]}]}}`
+
+	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		goRoutines := 10
+		wg := &sync.WaitGroup{}
+		wg.Add(goRoutines)
+		for i := 0; i < goRoutines; i++ {
+			go func() {
+				defer wg.Done()
+				res, err := xEnv.MakeGraphQLRequestWithContext(context.Background(), testenv.GraphQLRequest{
+					Query: bigEmployeesQuery,
+				})
+				require.NoError(t, err)
+				require.Equal(t, http.StatusOK, res.Response.StatusCode)
+				require.Equal(t, expectedData, res.Body)
+			}()
+		}
+		wg.Wait()
 	})
 }
 
@@ -386,7 +706,7 @@ func TestOperationSelection(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employees { id } } { employees { id } }`,
 			})
-			require.Equal(t, `{"errors":[{"message":"operation name is required when multiple operations are defined"}],"data":null}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"operation name is required when multiple operations are defined"}]}`, res.Body)
 		})
 	})
 
@@ -410,7 +730,7 @@ func TestOperationSelection(t *testing.T) {
 				Query:         `{ employees { id } }`,
 				OperationName: []byte(`"Missing"`),
 			})
-			require.Equal(t, `{"errors":[{"message":"operation with name 'Missing' not found"}],"data":null}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"operation with name 'Missing' not found"}]}`, res.Body)
 		})
 	})
 
@@ -422,7 +742,7 @@ func TestOperationSelection(t *testing.T) {
 				Query:         `query Exists { employees { id } }`,
 				OperationName: []byte(`"Missing"`),
 			})
-			require.Equal(t, `{"errors":[{"message":"operation with name 'Missing' not found"}],"data":null}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"operation with name 'Missing' not found"}]}`, res.Body)
 		})
 
 		t.Run("multiple named operations", func(t *testing.T) {
@@ -449,7 +769,7 @@ func TestOperationSelection(t *testing.T) {
 			})
 		})
 
-		t.Run("multiple named operations B", func(t *testing.T) {
+		t.Run("multiple named operations C", func(t *testing.T) {
 			t.Parallel()
 
 			testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -457,7 +777,7 @@ func TestOperationSelection(t *testing.T) {
 					Query:         `query A { employees { id } } query B { employees { id details { forename surname } } }`,
 					OperationName: []byte(`"C"`),
 				})
-				require.Equal(t, `{"errors":[{"message":"operation with name 'C' not found"}],"data":null}`, res.Body)
+				require.Equal(t, `{"errors":[{"message":"operation with name 'C' not found"}]}`, res.Body)
 			})
 		})
 	})
@@ -479,6 +799,7 @@ func TestTestdataQueries(t *testing.T) {
 		}
 
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
 			g := goldie.New(
 				t,
@@ -522,7 +843,7 @@ func TestIntegrationWithUndefinedField(t *testing.T) {
 		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 			Query: `{ employees { id notDefined } }`,
 		})
-		require.JSONEq(t, `{"errors":[{"message":"field: notDefined not defined on type: Employee","path":["query","employees","notDefined"]}],"data":null}`, res.Body)
+		require.JSONEq(t, `{"errors":[{"message":"field: notDefined not defined on type: Employee","path":["query","employees"]}]}`, res.Body)
 	})
 }
 
@@ -536,12 +857,12 @@ func TestParallel(t *testing.T) {
 		wg.Add(10)
 		for i := 0; i < 10; i++ {
 			go func() {
+				defer wg.Done()
 				<-trigger
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `{ employee(id:1) { id details { forename surname } } }`,
 				})
 				require.JSONEq(t, expect, res.Body)
-				wg.Done()
 			}()
 		}
 		time.Sleep(10 * time.Millisecond)
@@ -676,53 +997,11 @@ func BenchmarkPb(b *testing.B) {
 	})
 }
 
-func FuzzQuery(f *testing.F) {
-	corpus := []struct {
-		Query     string
-		Variables []byte // As JSON
-	}{
-		{
-			Query: "{ employees { id } }",
-		},
-		{
-			Query: `($team:Department!= MARKETING) {
-				team_mates(team:$team) {
-				  id
-				}
-			  }`,
-			Variables: []byte(`{"team":"MARKETING"}`),
-		},
-		{
-			Query:     `($n:Int!) { employee(id:$n) { id } }`,
-			Variables: []byte(`{"n":4}`),
-		},
-	}
-	for _, tc := range corpus {
-		f.Add(tc.Query, tc.Variables)
-	}
-	f.Fuzz(func(t *testing.T, query string, variables []byte) {
-		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
-			var q testQuery
-			if err := json.Unmarshal(variables, &q.Variables); err != nil {
-				// Invalid JSON, mark as uninteresting input
-				t.Skip()
-			}
-			q.Body = query
-
-			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-				Query:     query,
-				Variables: variables,
-			})
-			require.NoError(t, err)
-			if res.Response.StatusCode != http.StatusOK && res.Response.StatusCode != http.StatusBadRequest {
-				t.Error("unexpected status code", res.Response.StatusCode)
-			}
-		})
-	})
-}
-
 func TestSubgraphOperationMinifier(t *testing.T) {
+	t.Parallel()
 	t.Run("prefer minified version", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 				cfg.MinifySubgraphOperations = true
@@ -749,6 +1028,8 @@ func TestSubgraphOperationMinifier(t *testing.T) {
 		})
 	})
 	t.Run("prefer non-minified when disabled", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			Subgraphs: testenv.SubgraphsConfig{
 				Employees: testenv.SubgraphConfig{
@@ -772,6 +1053,8 @@ func TestSubgraphOperationMinifier(t *testing.T) {
 		})
 	})
 	t.Run("minify concurrently without plan cache", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 				cfg.MinifySubgraphOperations = true
@@ -796,13 +1079,13 @@ func TestSubgraphOperationMinifier(t *testing.T) {
 			start := make(chan struct{})
 			for i := 0; i < 100; i++ {
 				go func() {
+					defer wg.Done()
 					<-start
 					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 						Query:         `query MyQuery {a: employees { ...EmployeeDetails } b: employees { ...EmployeeDetails } c: employees { ...EmployeeDetails } d: employees { ...EmployeeDetails } e: employees { ...EmployeeDetails } } fragment EmployeeDetails on Employee { id details { forename surname hasChildren } }`,
 						OperationName: json.RawMessage(`"MyQuery"`),
 					})
 					require.Equal(t, `{"data":{"a":[{"id":1,"details":{"forename":"Jens","surname":"Neuse","hasChildren":true}},{"id":2,"details":{"forename":"Dustin","surname":"Deus","hasChildren":false}},{"id":3,"details":{"forename":"Stefan","surname":"Avram","hasChildren":false}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer","hasChildren":true}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin","hasChildren":false}},{"id":7,"details":{"forename":"Suvij","surname":"Surya","hasChildren":false}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar","hasChildren":false}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma","hasChildren":false}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse","hasChildren":true}},{"id":12,"details":{"forename":"David","surname":"Stutt","hasChildren":false}}],"b":[{"id":1,"details":{"forename":"Jens","surname":"Neuse","hasChildren":true}},{"id":2,"details":{"forename":"Dustin","surname":"Deus","hasChildren":false}},{"id":3,"details":{"forename":"Stefan","surname":"Avram","hasChildren":false}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer","hasChildren":true}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin","hasChildren":false}},{"id":7,"details":{"forename":"Suvij","surname":"Surya","hasChildren":false}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar","hasChildren":false}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma","hasChildren":false}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse","hasChildren":true}},{"id":12,"details":{"forename":"David","surname":"Stutt","hasChildren":false}}],"c":[{"id":1,"details":{"forename":"Jens","surname":"Neuse","hasChildren":true}},{"id":2,"details":{"forename":"Dustin","surname":"Deus","hasChildren":false}},{"id":3,"details":{"forename":"Stefan","surname":"Avram","hasChildren":false}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer","hasChildren":true}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin","hasChildren":false}},{"id":7,"details":{"forename":"Suvij","surname":"Surya","hasChildren":false}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar","hasChildren":false}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma","hasChildren":false}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse","hasChildren":true}},{"id":12,"details":{"forename":"David","surname":"Stutt","hasChildren":false}}],"d":[{"id":1,"details":{"forename":"Jens","surname":"Neuse","hasChildren":true}},{"id":2,"details":{"forename":"Dustin","surname":"Deus","hasChildren":false}},{"id":3,"details":{"forename":"Stefan","surname":"Avram","hasChildren":false}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer","hasChildren":true}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin","hasChildren":false}},{"id":7,"details":{"forename":"Suvij","surname":"Surya","hasChildren":false}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar","hasChildren":false}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma","hasChildren":false}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse","hasChildren":true}},{"id":12,"details":{"forename":"David","surname":"Stutt","hasChildren":false}}],"e":[{"id":1,"details":{"forename":"Jens","surname":"Neuse","hasChildren":true}},{"id":2,"details":{"forename":"Dustin","surname":"Deus","hasChildren":false}},{"id":3,"details":{"forename":"Stefan","surname":"Avram","hasChildren":false}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer","hasChildren":true}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin","hasChildren":false}},{"id":7,"details":{"forename":"Suvij","surname":"Surya","hasChildren":false}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar","hasChildren":false}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma","hasChildren":false}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse","hasChildren":true}},{"id":12,"details":{"forename":"David","surname":"Stutt","hasChildren":false}}]}}`, res.Body)
-					wg.Done()
 				}()
 			}
 			close(start)
@@ -810,6 +1093,8 @@ func TestSubgraphOperationMinifier(t *testing.T) {
 		})
 	})
 	t.Run("prefer non-minified version", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 				cfg.MinifySubgraphOperations = true
@@ -888,479 +1173,6 @@ func TestConcurrentQueriesWithDelay(t *testing.T) {
 	})
 }
 
-func TestBlockMutations(t *testing.T) {
-	t.Parallel()
-	t.Run("allow", func(t *testing.T) {
-		t.Parallel()
-		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
-			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `mutation { updateEmployeeTag(id: 1, tag: "test") { id tag } }`,
-			})
-			require.Equal(t, http.StatusOK, res.Response.StatusCode)
-			require.Equal(t, `{"data":{"updateEmployeeTag":{"id":1,"tag":"test"}}}`, res.Body)
-		})
-	})
-	t.Run("block", func(t *testing.T) {
-		t.Parallel()
-		testenv.Run(t, &testenv.Config{
-			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-				securityConfiguration.BlockMutations = true
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `mutation { updateEmployeeTag(id: 1, tag: "test") { id tag } }`,
-			})
-			require.Equal(t, http.StatusOK, res.Response.StatusCode)
-			require.Equal(t, `{"errors":[{"message":"operation type 'mutation' is blocked"}],"data":null}`, res.Body)
-		})
-	})
-}
-
-func TestBlockNonPersistedOperations(t *testing.T) {
-	t.Parallel()
-	t.Run("block", func(t *testing.T) {
-		t.Parallel()
-		testenv.Run(t, &testenv.Config{
-			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-				securityConfiguration.BlockNonPersistedOperations = true
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `mutation { updateEmployeeTag(id: 1, tag: "test") { id tag } }`,
-			})
-			require.Equal(t, http.StatusOK, res.Response.StatusCode)
-			require.Equal(t, `{"errors":[{"message":"non-persisted operation is blocked"}],"data":null}`, res.Body)
-		})
-	})
-}
-
-func TestPartialOriginErrors(t *testing.T) {
-	t.Parallel()
-	testenv.Run(t, &testenv.Config{
-		Subgraphs: testenv.SubgraphsConfig{
-			Products: testenv.SubgraphConfig{
-				CloseOnStart: true,
-			},
-		},
-	}, func(t *testing.T, xEnv *testenv.Environment) {
-		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-			Query: `{ employees { id details { forename surname } notes } }`,
-		})
-		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '3' at Path 'employees'."}],"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"notes":null},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"notes":null},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"notes":null},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"notes":null},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"notes":null},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"notes":null},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"notes":null},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"notes":null},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"notes":null},{"id":12,"details":{"forename":"David","surname":"Stutt"},"notes":null}]}}`, res.Body)
-	})
-}
-
-func TestPartialOriginErrors500(t *testing.T) {
-	t.Parallel()
-	testenv.Run(t, &testenv.Config{
-		Subgraphs: testenv.SubgraphsConfig{
-			Products: testenv.SubgraphConfig{
-				Middleware: func(handler http.Handler) http.Handler {
-					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-						w.WriteHeader(http.StatusInternalServerError)
-					})
-				},
-			},
-		},
-	}, func(t *testing.T, xEnv *testenv.Environment) {
-		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-			Query: `{ employees { id details { forename surname } notes } }`,
-		})
-		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '3' at Path 'employees', Reason: empty response.","extensions":{"statusCode":500}}],"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"notes":null},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"notes":null},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"notes":null},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"notes":null},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"notes":null},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"notes":null},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"notes":null},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"notes":null},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"notes":null},{"id":12,"details":{"forename":"David","surname":"Stutt"},"notes":null}]}}`, res.Body)
-	})
-}
-
-func TestPartialOriginErrorsWithNoStatusCodePropagation(t *testing.T) {
-	t.Parallel()
-	testenv.Run(t, &testenv.Config{
-		ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
-			cfg.PropagateStatusCodes = false
-		},
-		Subgraphs: testenv.SubgraphsConfig{
-			Products: testenv.SubgraphConfig{
-				Middleware: func(handler http.Handler) http.Handler {
-					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-						w.WriteHeader(http.StatusInternalServerError)
-					})
-				},
-			},
-		},
-	}, func(t *testing.T, xEnv *testenv.Environment) {
-		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-			Query: `{ employees { id details { forename surname } notes } }`,
-		})
-		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '3' at Path 'employees', Reason: empty response."}],"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"notes":null},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"notes":null},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"notes":null},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"notes":null},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"notes":null},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"notes":null},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"notes":null},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"notes":null},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"notes":null},{"id":12,"details":{"forename":"David","surname":"Stutt"},"notes":null}]}}`, res.Body)
-	})
-}
-
-func TestPartialOriginNestedGraphQLErrors(t *testing.T) {
-	t.Parallel()
-	testenv.Run(t, &testenv.Config{
-		Subgraphs: testenv.SubgraphsConfig{
-			Products: testenv.SubgraphConfig{
-				Middleware: func(handler http.Handler) http.Handler {
-					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-						w.Header().Set("Content-Type", "application/json")
-						w.WriteHeader(http.StatusForbidden)
-						_, _ = w.Write([]byte(`{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}]}`))
-					})
-				},
-			},
-		},
-	}, func(t *testing.T, xEnv *testenv.Environment) {
-		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-			Query: `{ employees { id details { forename surname } notes } }`,
-		})
-		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '3' at Path 'employees'.","extensions":{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}],"statusCode":403}}],"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"notes":null},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"notes":null},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"notes":null},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"notes":null},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"notes":null},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"notes":null},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"notes":null},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"notes":null},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"notes":null},{"id":12,"details":{"forename":"David","surname":"Stutt"},"notes":null}]}}`, res.Body)
-	})
-}
-
-func TestPartialOriginNestedGraphQLErrorsWithNoErrorPropagation(t *testing.T) {
-	t.Parallel()
-	testenv.Run(t, &testenv.Config{
-		ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
-			cfg.Enabled = false
-		},
-		Subgraphs: testenv.SubgraphsConfig{
-			Products: testenv.SubgraphConfig{
-				Middleware: func(handler http.Handler) http.Handler {
-					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-						w.Header().Set("Content-Type", "application/json")
-						w.WriteHeader(http.StatusForbidden)
-						_, _ = w.Write([]byte(`{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}]}`))
-					})
-				},
-			},
-		},
-	}, func(t *testing.T, xEnv *testenv.Environment) {
-		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-			Query: `{ employees { id details { forename surname } notes } }`,
-		})
-		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '3' at Path 'employees'.","extensions":{"statusCode":403}}],"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"notes":null},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"notes":null},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"notes":null},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"notes":null},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"notes":null},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"notes":null},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"notes":null},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"notes":null},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"notes":null},{"id":12,"details":{"forename":"David","surname":"Stutt"},"notes":null}]}}`, res.Body)
-	})
-}
-
-func TestPartialOriginNestedGraphQLErrorsWithNoErrorPropagationAndFailedFetch(t *testing.T) {
-	t.Parallel()
-	testenv.Run(t, &testenv.Config{
-		ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
-			cfg.Enabled = false
-		},
-		Subgraphs: testenv.SubgraphsConfig{
-			Products: testenv.SubgraphConfig{
-				CloseOnStart: true,
-			},
-		},
-	}, func(t *testing.T, xEnv *testenv.Environment) {
-		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-			Query: `{ employees { id details { forename surname } notes } }`,
-		})
-		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '3' at Path 'employees'."}],"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"notes":null},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"notes":null},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"notes":null},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"notes":null},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"notes":null},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"notes":null},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"notes":null},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"notes":null},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"notes":null},{"id":12,"details":{"forename":"David","surname":"Stutt"},"notes":null}]}}`, res.Body)
-	})
-}
-
-func TestPartialOriginNestedGraphQLErrorsNoContentType(t *testing.T) {
-	t.Parallel()
-	testenv.Run(t, &testenv.Config{
-		Subgraphs: testenv.SubgraphsConfig{
-			Products: testenv.SubgraphConfig{
-				Middleware: func(handler http.Handler) http.Handler {
-					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-						w.WriteHeader(http.StatusForbidden)
-						_, _ = w.Write([]byte(`{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}]}`))
-					})
-				},
-			},
-		},
-	}, func(t *testing.T, xEnv *testenv.Environment) {
-		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-			Query: `{ employees { id details { forename surname } notes } }`,
-		})
-		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '3' at Path 'employees'.","extensions":{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}],"statusCode":403}}],"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"notes":null},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"notes":null},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"notes":null},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"notes":null},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"notes":null},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"notes":null},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"notes":null},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"notes":null},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"notes":null},{"id":12,"details":{"forename":"David","surname":"Stutt"},"notes":null}]}}`, res.Body)
-	})
-}
-
-func TestPartialOriginNestedGraphQLErrorsWith200OK(t *testing.T) {
-	t.Parallel()
-	testenv.Run(t, &testenv.Config{
-		Subgraphs: testenv.SubgraphsConfig{
-			Products: testenv.SubgraphConfig{
-				Middleware: func(handler http.Handler) http.Handler {
-					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-						w.WriteHeader(http.StatusOK)
-						_, _ = w.Write([]byte(`{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}]}`))
-					})
-				},
-			},
-		},
-	}, func(t *testing.T, xEnv *testenv.Environment) {
-		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-			Query: `{ employees { id details { forename surname } notes } }`,
-		})
-		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '3' at Path 'employees'.","extensions":{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}],"statusCode":200}}],"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"notes":null},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"notes":null},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"notes":null},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"notes":null},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"notes":null},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"notes":null},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"notes":null},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"notes":null},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"notes":null},{"id":12,"details":{"forename":"David","surname":"Stutt"},"notes":null}]}}`, res.Body)
-	})
-}
-
-func TestPartialOriginNestedGraphQLErrorsWithInvalidJSON(t *testing.T) {
-	t.Parallel()
-	testenv.Run(t, &testenv.Config{
-		Subgraphs: testenv.SubgraphsConfig{
-			Products: testenv.SubgraphConfig{
-				Middleware: func(handler http.Handler) http.Handler {
-					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-						w.WriteHeader(http.StatusUnauthorized)
-						_, _ = w.Write([]byte(`unauthorized`))
-					})
-				},
-			},
-		},
-	}, func(t *testing.T, xEnv *testenv.Environment) {
-		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-			Query: `{ employees { id details { forename surname } notes } }`,
-		})
-		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '3' at Path 'employees', Reason: invalid JSON.","extensions":{"statusCode":401}}],"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"notes":null},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"notes":null},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"notes":null},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"notes":null},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"notes":null},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"notes":null},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"notes":null},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"notes":null},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"notes":null},{"id":12,"details":{"forename":"David","surname":"Stutt"},"notes":null}]}}`, res.Body)
-	})
-}
-
-func TestWithOriginErrors(t *testing.T) {
-	t.Parallel()
-	testenv.Run(t, &testenv.Config{
-		Subgraphs: testenv.SubgraphsConfig{
-			Employees: testenv.SubgraphConfig{
-				CloseOnStart: true,
-			},
-		},
-	}, func(t *testing.T, xEnv *testenv.Environment) {
-		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-			Query: `{ employees { id details { forename surname } notes } }`,
-		})
-		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0'."}],"data":{"employees":null}}`, res.Body)
-	})
-}
-
-func TestWithOriginErrors500(t *testing.T) {
-	t.Parallel()
-	testenv.Run(t, &testenv.Config{
-		Subgraphs: testenv.SubgraphsConfig{
-			Employees: testenv.SubgraphConfig{
-				Middleware: func(handler http.Handler) http.Handler {
-					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-						w.WriteHeader(http.StatusInternalServerError)
-					})
-				},
-			},
-		},
-	}, func(t *testing.T, xEnv *testenv.Environment) {
-		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-			Query: `{ employees { id details { forename surname } notes } }`,
-		})
-		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0', Reason: empty response.","extensions":{"statusCode":500}}],"data":{"employees":null}}`, res.Body)
-	})
-}
-
-func TestWithOriginGraphQLErrorPropagated(t *testing.T) {
-	t.Parallel()
-	testenv.Run(t, &testenv.Config{
-		Subgraphs: testenv.SubgraphsConfig{
-			Employees: testenv.SubgraphConfig{
-				Middleware: func(handler http.Handler) http.Handler {
-					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-						w.WriteHeader(http.StatusOK)
-						_, _ = w.Write([]byte(`{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}]}`))
-					})
-				},
-			},
-		},
-	}, func(t *testing.T, xEnv *testenv.Environment) {
-		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-			Query: `{ employees { id details { forename surname } notes } }`,
-		})
-		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0'.","extensions":{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}],"statusCode":200}}],"data":{"employees":null}}`, res.Body)
-	})
-}
-
-func TestWithOriginGraphQLErrorPropagatedRemovingLocations(t *testing.T) {
-	t.Parallel()
-	testenv.Run(t, &testenv.Config{
-		Subgraphs: testenv.SubgraphsConfig{
-			Employees: testenv.SubgraphConfig{
-				Middleware: func(handler http.Handler) http.Handler {
-					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-						w.WriteHeader(http.StatusOK)
-						_, _ = w.Write([]byte(`{"errors":[{"message":"Unauthorized","locations":[{"line":1,"column":1}],"extensions":{"code":"UNAUTHORIZED"}}]}`))
-					})
-				},
-			},
-		},
-	}, func(t *testing.T, xEnv *testenv.Environment) {
-		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-			Query: `{ employees { id details { forename surname } notes } }`,
-		})
-		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0'.","extensions":{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}],"statusCode":200}}],"data":{"employees":null}}`, res.Body)
-	})
-}
-
-func TestWithOriginGraphQLErrorPropagatedKeepLocations(t *testing.T) {
-	t.Parallel()
-	testenv.Run(t, &testenv.Config{
-		ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
-			cfg.OmitLocations = false
-		},
-		Subgraphs: testenv.SubgraphsConfig{
-			Employees: testenv.SubgraphConfig{
-				Middleware: func(handler http.Handler) http.Handler {
-					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-						w.WriteHeader(http.StatusOK)
-						_, _ = w.Write([]byte(`{"errors":[{"message":"Unauthorized","locations":[{"line":1,"column":1}],"extensions":{"code":"UNAUTHORIZED"}}]}`))
-					})
-				},
-			},
-		},
-	}, func(t *testing.T, xEnv *testenv.Environment) {
-		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-			Query: `{ employees { id details { forename surname } notes } }`,
-		})
-		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0'.","extensions":{"errors":[{"message":"Unauthorized","locations":[{"line":1,"column":1}],"extensions":{"code":"UNAUTHORIZED"}}],"statusCode":200}}],"data":{"employees":null}}`, res.Body)
-	})
-}
-
-func TestWithOriginGraphQLErrorPropagatedOmitExtensions(t *testing.T) {
-	t.Parallel()
-	testenv.Run(t, &testenv.Config{
-		ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
-			cfg.OmitExtensions = true
-			cfg.Mode = config.SubgraphErrorPropagationModePassthrough
-		},
-		Subgraphs: testenv.SubgraphsConfig{
-			Employees: testenv.SubgraphConfig{
-				Middleware: func(handler http.Handler) http.Handler {
-					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-						w.WriteHeader(http.StatusOK)
-						_, _ = w.Write([]byte(`{"errors":[{"message":"Unauthorized","locations":[{"line":1,"column":1}],"extensions":{"code":"UNAUTHORIZED"}}]}`))
-					})
-				},
-			},
-		},
-	}, func(t *testing.T, xEnv *testenv.Environment) {
-		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-			Query: `{ employees { id details { forename surname } notes } }`,
-		})
-		require.Equal(t, `{"errors":[{"message":"Unauthorized"}],"data":{"employees":null}}`, res.Body)
-	})
-}
-
-func TestWithOriginGraphQLErrorPassThroughKeepLocations(t *testing.T) {
-	t.Parallel()
-	testenv.Run(t, &testenv.Config{
-		ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
-			cfg.OmitLocations = false
-			cfg.OmitExtensions = true
-			cfg.Mode = config.SubgraphErrorPropagationModePassthrough
-		},
-		Subgraphs: testenv.SubgraphsConfig{
-			Employees: testenv.SubgraphConfig{
-				Middleware: func(handler http.Handler) http.Handler {
-					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-						w.WriteHeader(http.StatusOK)
-						_, _ = w.Write([]byte(`{"errors":[{"message":"Unauthorized","locations":[{"line":1,"column":1}],"extensions":{"code":"UNAUTHORIZED"}}]}`))
-					})
-				},
-			},
-		},
-	}, func(t *testing.T, xEnv *testenv.Environment) {
-		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-			Query: `{ employees { id details { forename surname } notes } }`,
-		})
-		require.Equal(t, `{"errors":[{"message":"Unauthorized","locations":[{"line":1,"column":1}]}],"data":{"employees":null}}`, res.Body)
-	})
-}
-
-func TestWithOriginGraphQLErrorUnpropagated(t *testing.T) {
-	t.Parallel()
-	testenv.Run(t, &testenv.Config{
-		ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
-			cfg.Enabled = false
-		},
-		Subgraphs: testenv.SubgraphsConfig{
-			Employees: testenv.SubgraphConfig{
-				Middleware: func(handler http.Handler) http.Handler {
-					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-						w.WriteHeader(http.StatusOK)
-						_, _ = w.Write([]byte(`{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}]}`))
-					})
-				},
-			},
-		},
-	}, func(t *testing.T, xEnv *testenv.Environment) {
-		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-			Query: `{ employees { id details { forename surname } notes } }`,
-		})
-		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0'.","extensions":{"statusCode":200}}],"data":{"employees":null}}`, res.Body)
-	})
-}
-
-func TestWithOriginGraphQLErrorPropagatedPassThrough(t *testing.T) {
-	t.Parallel()
-	testenv.Run(t, &testenv.Config{
-		ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
-			cfg.Mode = config.SubgraphErrorPropagationModePassthrough
-		},
-		Subgraphs: testenv.SubgraphsConfig{
-			Employees: testenv.SubgraphConfig{
-				Middleware: func(handler http.Handler) http.Handler {
-					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-						w.WriteHeader(http.StatusOK)
-						_, _ = w.Write([]byte(`{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}]}`))
-					})
-				},
-			},
-		},
-	}, func(t *testing.T, xEnv *testenv.Environment) {
-		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-			Query: `{ employees { id details { forename surname } notes } }`,
-		})
-		require.Equal(t, `{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}],"data":{"employees":null}}`, res.Body)
-	})
-}
-
-func TestWithNestedSubgraphError(t *testing.T) {
-	t.Parallel()
-	testenv.Run(t, &testenv.Config{
-		ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
-			cfg.Mode = config.SubgraphErrorPropagationModePassthrough
-		},
-	}, func(t *testing.T, xEnv *testenv.Environment) {
-		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-			Query: `{ employee(id: 1) { id details { forename surname } rootFieldThrowsError fieldThrowsError rootFieldErrorWrapper { okField errorField } } }`,
-		})
-		require.Equal(t, `{"errors":[{"message":"error resolving RootFieldThrowsError for Employee 1","path":["employee","rootFieldThrowsError"]},{"message":"error resolving ErrorField","path":["employee","rootFieldErrorWrapper","errorField"]},{"message":"resolving Entity \"Employee\": error resolving FindEmployeeByID for id 1","path":["employee"]}],"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"rootFieldThrowsError":null,"fieldThrowsError":null,"rootFieldErrorWrapper":{"okField":"ok","errorField":null}}}}`, res.Body)
-	})
-}
-
-func TestWithNestedSubgraphErrorInWrappedMode(t *testing.T) {
-	t.Parallel()
-	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
-		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-			Query: `{ employee(id: 1) { id details { forename surname } rootFieldThrowsError fieldThrowsError rootFieldErrorWrapper { okField errorField } } }`,
-		})
-		require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0'.","extensions":{"errors":[{"message":"error resolving RootFieldThrowsError for Employee 1","path":["employee","rootFieldThrowsError"]},{"message":"error resolving ErrorField","path":["employee","rootFieldErrorWrapper","errorField"]}],"statusCode":200}},{"message":"Failed to fetch from Subgraph '4' at Path 'employee'.","extensions":{"errors":[{"message":"resolving Entity \"Employee\": error resolving FindEmployeeByID for id 1","path":["employee"]}],"statusCode":200}}],"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"rootFieldThrowsError":null,"fieldThrowsError":null,"rootFieldErrorWrapper":{"okField":"ok","errorField":null}}}}`, res.Body)
-	})
-}
-
-func TestWithNestedSubgraphErrorInList(t *testing.T) {
-	t.Parallel()
-	testenv.Run(t, &testenv.Config{
-		ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
-			cfg.Mode = config.SubgraphErrorPropagationModePassthrough
-		},
-	}, func(t *testing.T, xEnv *testenv.Environment) {
-		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-			Query: `{ employeeAsList(id: 1) { id details { forename surname } rootFieldThrowsError fieldThrowsError rootFieldErrorWrapper { okField errorField } } }`,
-		})
-		require.Equal(t, `{"errors":[{"message":"error resolving RootFieldThrowsError for Employee 1","path":["employeeAsList",0,"rootFieldThrowsError"]},{"message":"error resolving ErrorField","path":["employeeAsList",0,"rootFieldErrorWrapper","errorField"]},{"message":"resolving Entity \"Employee\": error resolving FindEmployeeByID for id 1","path":["employeeAsList"]}],"data":{"employeeAsList":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"rootFieldThrowsError":null,"fieldThrowsError":null,"rootFieldErrorWrapper":{"okField":"ok","errorField":null}}]}}`, res.Body)
-	})
-}
-
 func TestRequestBodySizeLimit(t *testing.T) {
 	t.Parallel()
 	testenv.Run(t, &testenv.Config{
@@ -1373,6 +1185,25 @@ func TestRequestBodySizeLimit(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Equal(t, http.StatusRequestEntityTooLarge, res.Response.StatusCode)
-		require.Equal(t, `{"errors":[{"message":"request body too large, max size is 10 bytes"}],"data":null}`, res.Body)
+		require.Equal(t, res.Response.Header.Get("Content-Type"), "application/json; charset=utf-8")
+		require.Equal(t, `{"errors":[{"message":"request body too large, max size is 10 bytes"}]}`, res.Body)
+	})
+}
+
+func TestDataNotSetOnPreExecutionErrors(t *testing.T) {
+	t.Parallel()
+	testenv.Run(t, &testenv.Config{
+		ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
+			cfg.Enabled = true
+			cfg.Mode = config.SubgraphErrorPropagationModePassthrough
+			cfg.DefaultExtensionCode = "DEFAULT_CODE"
+		},
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			Query: `{ employees { rootFieldThrowWithErrorCode(ex }}`,
+		})
+		require.NoError(t, err)
+		require.Equal(t, res.Response.Header.Get("Content-Type"), "application/json; charset=utf-8")
+		require.Equal(t, `{"errors":[{"message":"unexpected token - got: RBRACE want one of: [COLON]","locations":[{"line":1,"column":46}]}]}`, res.Body)
 	})
 }

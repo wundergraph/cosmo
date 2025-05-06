@@ -1,0 +1,16 @@
+version: v2
+managed:
+  enabled: true
+  disable:
+    - file_option: go_package
+      module: buf.build/googleapis/googleapis
+  override:
+    - file_option: go_package_prefix
+      value: github.com/wundergraph/cosmo/connect-go/gen/proto
+plugins:
+  - local: protoc-gen-connect-go
+    out: connect-go/gen/proto
+    opt: paths=source_relative
+  - local: protoc-gen-go
+    out: connect-go/gen/proto
+    opt: paths=source_relative

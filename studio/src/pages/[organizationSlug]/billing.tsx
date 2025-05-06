@@ -33,6 +33,8 @@ import { GetBillingPlansResponse_BillingPlan } from "@wundergraph/cosmo-connect/
 import { useRouter } from "next/router";
 import React, { useEffect } from "react";
 import { PiCheck } from "react-icons/pi";
+import { checkUserAccess } from "@/lib/utils";
+import Link from "next/link";
 
 const billingContactLink = process.env.NEXT_PUBLIC_BILLING_CONTACT_LINK;
 
@@ -136,7 +138,7 @@ const BillingPage: NextPageWithLayout = () => {
                   key={feature.id}
                   className="flex items-center gap-2 text-sm"
                 >
-                  <PiCheck className="h-4 w-4 text-green-400" />
+                  <PiCheck className="h-4 w-4 text-success" />
                   <span className="text-muted-foreground">
                     {feature.description}
                   </span>
@@ -273,6 +275,7 @@ const UpgradeButton = ({
   isCurrent: boolean;
   isDowngrade?: boolean;
 }) => {
+  const user = useUser();
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const { mutateAsync, isPending } = useMutation(createCheckoutSession);
@@ -335,7 +338,17 @@ const UpgradeButton = ({
   }
 
   if (plan.price === -1) {
-    return <Button variant="secondary">Contact us</Button>;
+    return (
+      <Button variant="secondary" asChild>
+        <Link
+          href="https://wundergraph.com/contact/sales"
+          target="_blank"
+          rel="noreferrer"
+        >
+          Contact us
+        </Link>
+      </Button>
+    );
   }
 
   if (isDowngrade) {
@@ -350,7 +363,13 @@ const UpgradeButton = ({
     <>
       <Button
         variant="secondary"
-        disabled={isPending}
+        disabled={
+          isPending ||
+          !checkUserAccess({
+            rolesToBe: ["admin", "developer"],
+            userRoles: user?.currentOrganization.roles || [],
+          })
+        }
         onClick={() => upgrade()}
       >
         Upgrade

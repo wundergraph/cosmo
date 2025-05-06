@@ -31,22 +31,17 @@ export default (opts: BaseCommandOptions) => {
 
     if (resp.tokens.length === 0) {
       console.log('No router tokens for the given graph found');
-      process.exit(0);
+      return;
     }
 
     const tokensTable = new Table({
-      head: [
-        pc.bold(pc.white('NAME')),
-        pc.bold(pc.white('AUTHOR')),
-        pc.bold(pc.white('LAST_USED_AT')),
-        pc.bold(pc.white('CREATED_AT')),
-      ],
+      head: [pc.bold(pc.white('NAME')), pc.bold(pc.white('AUTHOR')), pc.bold(pc.white('CREATED_AT'))],
       wordWrap: true,
       wrapOnWordBoundary: false,
     });
 
     for (const token of resp.tokens) {
-      tokensTable.push([token.name, token.creatorEmail || 'Unset', token.lastUsedAt || 'Never', token.createdAt]);
+      tokensTable.push([token.name, token.creatorEmail || 'Unset', token.createdAt]);
     }
     console.log(tokensTable.toString());
   });

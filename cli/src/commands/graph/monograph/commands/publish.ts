@@ -27,9 +27,10 @@ export default (opts: BaseCommandOptions) => {
     'If set, the command will fail if the admission webhook fails.',
     false,
   );
+  command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
 
   command.action(async (name, options) => {
-    const schemaFile = resolve(process.cwd(), options.schema);
+    const schemaFile = resolve(options.schema);
     if (!existsSync(schemaFile)) {
       program.error(
         pc.red(
@@ -128,8 +129,23 @@ export default (opts: BaseCommandOptions) => {
         if (resp.response?.details) {
           console.log(pc.red(pc.bold(resp.response?.details)));
         }
-        process.exit(1);
+        process.exitCode = 1;
+        return;
       }
+    }
+
+    if (!options.suppressWarnings && resp.compositionWarnings.length > 0) {
+      const compositionWarningsTable = new Table({
+        head: [pc.bold(pc.white('MESSAGE'))],
+        colWidths: [120],
+        wordWrap: true,
+      });
+
+      console.log(pc.yellow(`The following warnings were produced while composing the federated graph:`));
+      for (const compositionWarning of resp.compositionWarnings) {
+        compositionWarningsTable.push([compositionWarning.message]);
+      }
+      console.log(compositionWarningsTable.toString());
     }
   });
 

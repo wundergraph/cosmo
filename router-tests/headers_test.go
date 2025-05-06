@@ -1,4 +1,4 @@
-package integration_test
+package integration
 
 import (
 	"log"
@@ -17,35 +17,157 @@ func TestForwardHeaders(t *testing.T) {
 
 	const (
 		// Make sure you copy these to the struct tag in the subscription test
-		headerNameInGlobalRule   = "foo"
-		headerNameInSubgraphRule = "barista" // This matches the regex in test1 subgraph forwarding rules
-		headerValue              = "bar"
-		headerValue2             = "baz"
+		headerNameInGlobalRule        = "foo"
+		headerNameInSubgraphRule      = "barista"              // This matches the regex in test1 subgraph forwarding rules
+		headerNameCaseInsensitiveRule = "bAz-CAse-Insensitive" // This matches the regex in test1 subgraph forwarding rules
+		headerValue                   = "bar"
+		headerValue2                  = "baz"
 
-		subscriptionForGlobalRulePayload   = `{"query": "subscription { headerValue(name:\"foo\", repeat:3) { value }}"}`
-		subscriptionForSubgraphRulePayload = `{"query": "subscription { headerValue(name:\"barista\", repeat:3) { value }}"}`
+		subscriptionForGlobalRulePayload       = `{"query": "subscription { headerValue(name:\"foo\", repeat:3) { value }}"}`
+		subscriptionForSubgraphRulePayload     = `{"query": "subscription { headerValue(name:\"barista\", repeat:3) { value }}"}`
+		subscriptionForSubgraphCaseRulePayload = `{"query": "subscription { headerValue(name:\"baz-case-insensitive\", repeat:3) { value }}"}`
 	)
 
 	headerRules := config.HeaderRules{
-		All: config.GlobalHeaderRule{
-			Request: []config.RequestHeaderRule{
+		All: &config.GlobalHeaderRule{
+			Request: []*config.RequestHeaderRule{
 				{
 					Operation: config.HeaderRuleOperationPropagate,
 					Named:     headerNameInGlobalRule,
 				},
 			},
 		},
-		Subgraphs: map[string]config.GlobalHeaderRule{
+		Subgraphs: map[string]*config.GlobalHeaderRule{
 			"test1": {
-				Request: []config.RequestHeaderRule{
+				Request: []*config.RequestHeaderRule{
 					{
 						Operation: config.HeaderRuleOperationPropagate,
 						Matching:  "(?i)^bar.*",
+					},
+					{
+						Operation: config.HeaderRuleOperationPropagate,
+						Matching:  "^baz-case-.*",
 					},
 				},
 			},
 		},
 	}
+
+	t.Run("cookie filtering should remove no cookies when not specified", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.WebSocketClientReadTimeout = time.Millisecond * 10
+			},
+			RouterOptions: []core.Option{
+				core.WithHeaderRules(config.HeaderRules{
+					All: &config.GlobalHeaderRule{
+						Request: []*config.RequestHeaderRule{
+							{
+								Operation: config.HeaderRuleOperationPropagate,
+								Named:     "Cookie",
+							},
+						},
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Cookies: []*http.Cookie{
+					{
+						Name:  "allowed",
+						Value: "allowed",
+					},
+					{
+						Name:  "allowed_as_well",
+						Value: "allowed",
+					},
+				},
+				Query: `query { headerValue(name:"Cookie") }`,
+			})
+			require.Equal(t, `{"data":{"headerValue":"allowed=allowed; allowed_as_well=allowed"}}`, res.Body)
+
+		})
+	})
+
+	t.Run("cookie filtering should remove no cookies when whitelist is empty", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.WebSocketClientReadTimeout = time.Millisecond * 10
+			},
+			RouterOptions: []core.Option{
+				core.WithHeaderRules(config.HeaderRules{
+					CookieWhitelist: []string{},
+					All: &config.GlobalHeaderRule{
+						Request: []*config.RequestHeaderRule{
+							{
+								Operation: config.HeaderRuleOperationPropagate,
+								Named:     "Cookie",
+							},
+						},
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Cookies: []*http.Cookie{
+					{
+						Name:  "allowed",
+						Value: "allowed",
+					},
+					{
+						Name:  "allowed_as_well",
+						Value: "allowed",
+					},
+				},
+				Query: `query { headerValue(name:"Cookie") }`,
+			})
+			require.Equal(t, `{"data":{"headerValue":"allowed=allowed; allowed_as_well=allowed"}}`, res.Body)
+
+		})
+	})
+
+	t.Run("cookie filtering should remove cookies not on the whitelist", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.WebSocketClientReadTimeout = time.Millisecond * 10
+			},
+			RouterOptions: []core.Option{
+				core.WithHeaderRules(config.HeaderRules{
+					CookieWhitelist: []string{"allowed"},
+					All: &config.GlobalHeaderRule{
+						Request: []*config.RequestHeaderRule{
+							{
+								Operation: config.HeaderRuleOperationPropagate,
+								Named:     "Cookie",
+							},
+						},
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Cookies: []*http.Cookie{
+					{
+						Name:  "allowed",
+						Value: "allowed",
+					},
+					{
+						Name:  "disallowed",
+						Value: "disallowed",
+					},
+				},
+				Query: `query { headerValue(name:"Cookie") }`,
+			})
+			require.Equal(t, `{"data":{"headerValue":"allowed=allowed"}}`, res.Body)
+
+		})
+	})
 
 	t.Run("HTTP", func(t *testing.T) {
 		t.Parallel()
@@ -56,10 +178,11 @@ func TestForwardHeaders(t *testing.T) {
 		}{
 			{headerNameInGlobalRule, "global rule"},
 			{headerNameInSubgraphRule, "subgraph rule"},
+			{headerNameCaseInsensitiveRule, "subgraph rule"},
 		}
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.WebSocketReadTimeout = time.Millisecond * 10
+				cfg.WebSocketClientReadTimeout = time.Millisecond * 10
 			},
 			RouterOptions: []core.Option{
 				core.WithHeaderRules(headerRules),
@@ -81,12 +204,63 @@ func TestForwardHeaders(t *testing.T) {
 		})
 	})
 
+	t.Run("SetHeadersFromContext", func(t *testing.T) {
+		t.Parallel()
+
+		setRequestDynamicAttribute := func(headerName, contextField string) []core.Option {
+			return []core.Option{
+				core.WithHeaderRules(config.HeaderRules{
+					All: &config.GlobalHeaderRule{
+						Request: []*config.RequestHeaderRule{
+							{
+								Operation: config.HeaderRuleOperationSet,
+								Name:      headerName,
+								ValueFrom: &config.CustomDynamicAttribute{
+									ContextField: contextField,
+								}}}}})}
+		}
+		opNameHeader := "x-operation-info"
+
+		t.Run("successfully sets operation name header", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: setRequestDynamicAttribute(opNameHeader, core.ContextFieldOperationName),
+			},
+				func(t *testing.T, xEnv *testenv.Environment) {
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query myQuery { headerValue(name:"` + opNameHeader + `") }`,
+					})
+					headerVal := "myQuery"
+					require.Equal(t, `{"data":{"headerValue":"`+headerVal+`"}}`, res.Body)
+				})
+		})
+
+		t.Run("set dynamic header overwrites explicit header", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: setRequestDynamicAttribute(opNameHeader, core.ContextFieldOperationName),
+			},
+				func(t *testing.T, xEnv *testenv.Environment) {
+					res, err := xEnv.MakeGraphQLRequestWithHeaders(testenv.GraphQLRequest{
+						Query: `query myQuery { headerValue(name:"` + opNameHeader + `") }`,
+					}, map[string]string{
+						opNameHeader: "not-myQuery",
+					})
+					require.NoError(t, err)
+					headerVal := "myQuery"
+					require.Equal(t, `{"data":{"headerValue":"`+headerVal+`"}}`, res.Body)
+				})
+		})
+	})
+
 	t.Run("HTTP with client extension", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.WebSocketReadTimeout = time.Millisecond * 10
+				cfg.WebSocketClientReadTimeout = time.Millisecond * 10
 			},
 			RouterOptions: []core.Option{
 				core.WithHeaderRules(headerRules),
@@ -109,10 +283,11 @@ func TestForwardHeaders(t *testing.T) {
 			testName   string
 		}{
 			{headerNameInSubgraphRule, subscriptionForSubgraphRulePayload, "subgraph rule"},
+			{headerNameCaseInsensitiveRule, subscriptionForSubgraphCaseRulePayload, "subgraph case insensitive rule"},
 		}
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.WebSocketReadTimeout = time.Millisecond * 10
+				cfg.WebSocketClientReadTimeout = time.Millisecond * 10
 			},
 			RouterOptions: []core.Option{
 				core.WithHeaderRules(headerRules),
@@ -146,7 +321,7 @@ func TestForwardHeaders(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.WebSocketReadTimeout = time.Millisecond * 10
+				cfg.WebSocketClientReadTimeout = time.Millisecond * 10
 			},
 			RouterOptions: []core.Option{
 				core.WithHeaderRules(headerRules),
@@ -176,10 +351,11 @@ func TestForwardHeaders(t *testing.T) {
 		}{
 			{headerNameInGlobalRule, subscriptionForGlobalRulePayload, "global rule"},
 			{headerNameInSubgraphRule, subscriptionForSubgraphRulePayload, "subgraph rule"},
+			{headerNameCaseInsensitiveRule, subscriptionForSubgraphCaseRulePayload, "subgraph case insensitive rule"},
 		}
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.WebSocketReadTimeout = time.Millisecond * 10
+				cfg.WebSocketClientReadTimeout = time.Millisecond * 10
 			},
 			RouterOptions: []core.Option{
 				core.WithHeaderRules(headerRules),
@@ -246,8 +422,8 @@ func TestForwardRenamedHeaders(t *testing.T) {
 	)
 
 	headerRules := config.HeaderRules{
-		All: config.GlobalHeaderRule{
-			Request: []config.RequestHeaderRule{
+		All: &config.GlobalHeaderRule{
+			Request: []*config.RequestHeaderRule{
 				{
 					Operation: config.HeaderRuleOperationPropagate,
 					Named:     headerNameInGlobalRule,
@@ -255,9 +431,9 @@ func TestForwardRenamedHeaders(t *testing.T) {
 				},
 			},
 		},
-		Subgraphs: map[string]config.GlobalHeaderRule{
+		Subgraphs: map[string]*config.GlobalHeaderRule{
 			"test1": {
-				Request: []config.RequestHeaderRule{
+				Request: []*config.RequestHeaderRule{
 					{
 						Operation: config.HeaderRuleOperationPropagate,
 						Matching:  "(?i)^bar.*",
@@ -281,7 +457,7 @@ func TestForwardRenamedHeaders(t *testing.T) {
 		}
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.WebSocketReadTimeout = time.Millisecond * 10
+				cfg.WebSocketClientReadTimeout = time.Millisecond * 10
 			},
 			RouterOptions: []core.Option{
 				core.WithHeaderRules(headerRules),
@@ -311,7 +487,7 @@ func TestForwardRenamedHeaders(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.WebSocketReadTimeout = time.Millisecond * 10
+				cfg.WebSocketClientReadTimeout = time.Millisecond * 10
 			},
 			RouterOptions: []core.Option{
 				core.WithHeaderRules(headerRules),
@@ -338,7 +514,7 @@ func TestForwardRenamedHeaders(t *testing.T) {
 		}
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.WebSocketReadTimeout = time.Millisecond * 10
+				cfg.WebSocketClientReadTimeout = time.Millisecond * 10
 			},
 			RouterOptions: []core.Option{
 				core.WithHeaderRules(headerRules),
@@ -372,7 +548,7 @@ func TestForwardRenamedHeaders(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.WebSocketReadTimeout = time.Millisecond * 10
+				cfg.WebSocketClientReadTimeout = time.Millisecond * 10
 			},
 			RouterOptions: []core.Option{
 				core.WithHeaderRules(headerRules),
@@ -406,7 +582,7 @@ func TestForwardRenamedHeaders(t *testing.T) {
 		}
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.WebSocketReadTimeout = time.Millisecond * 10
+				cfg.WebSocketClientReadTimeout = time.Millisecond * 10
 			},
 			RouterOptions: []core.Option{
 				core.WithHeaderRules(headerRules),

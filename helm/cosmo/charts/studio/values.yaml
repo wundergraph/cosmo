@@ -9,7 +9,10 @@ image:
   registry: ghcr.io
   pullPolicy: IfNotPresent
   # -- Overrides the image tag whose default is the chart appVersion.
-  version: "latest"
+  #version: "latest"
+
+# -- Add labels to all deployed resources
+commonLabels: {}
 
 deploymentStrategy: {}
 

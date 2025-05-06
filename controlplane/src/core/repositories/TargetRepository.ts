@@ -40,7 +40,8 @@ export class TargetRepository {
   public async updateReadmeOfTarget(input: { id: string; readme: string }) {
     await this.db
       .update(targets)
-      .set({ readme: input.readme })
+      // if its a empty string, we want to set it to null
+      .set({ readme: input.readme || null })
       .where(and(eq(targets.id, input.id), eq(targets.organizationId, this.organizationId)))
       .execute();
   }
@@ -57,5 +58,9 @@ export class TargetRepository {
     }
 
     await this.db.update(targets).set({ namespaceId: newNamespaceId }).where(inArray(targets.id, targetIds));
+  }
+
+  public deleteAll() {
+    return this.db.delete(targets).where(eq(targets.organizationId, this.organizationId)).execute();
   }
 }

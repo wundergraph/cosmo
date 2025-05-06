@@ -1,0 +1,71 @@
+name: "Image Vulnerability Scan"
+description: "This action performs a Trivy scan on the image and adds a PR comment with the results."
+inputs:
+  name:
+    description: "The name of service"
+    required: true
+
+  github_token:
+    description: 'GitHub Token'
+    required: true
+
+  skip_dirs:
+    description: 'A comma separated list of folders to ignore'
+    required: false
+
+  image_ref:
+    description: "The name of the container"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Run Trivy and Report SARIF to GitHub Security tab
+      uses: aquasecurity/trivy-action@0.29.0
+      id: scan
+      with:
+        version: v0.58.0
+        image-ref: ${{ inputs.image_ref }}
+        ignore-unfixed: true
+        exit-code: 1
+        severity: 'CRITICAL,HIGH'
+        format: 'sarif'
+        trivyignores: '.trivyignore'
+        limit-severities-for-sarif: true
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+    - uses: mshick/add-pr-comment@v2
+      if: success() && steps.scan.outcome == 'success'
+      with:
+        message: |
+          # ${{ inputs.name }} image scan passed
+          :white_check_mark: No security [vulnerabilities](https://github.com/wundergraph/cosmo/security/code-scanning?query=pr%3A${{ github.event.number }}+is%3Aopen+tool%3ATrivy) found in image:
+          
+          ```
+          ${{ inputs.image_ref }}
+          ```
+
+
+    - uses: mshick/add-pr-comment@v2
+      if: failure() && steps.scan.outcome == 'failure'
+      with:
+        message: |
+          # ${{ inputs.name }} image scan failed
+          :x: Security vulnerabilities found in image:
+          
+          ```
+          ${{ inputs.image_ref }}
+          ```
+          
+          Please check the security [vulnerabilities](https://github.com/wundergraph/cosmo/security/code-scanning?query=pr%3A${{ github.event.number }}+is%3Aopen+tool%3ATrivy) found in the PR.
+          
+          If you believe this is a false positive, please add the vulnerability to the `.trivyignore` file and re-run the scan.

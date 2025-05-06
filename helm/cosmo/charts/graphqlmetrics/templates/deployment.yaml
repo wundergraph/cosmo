@@ -101,14 +101,14 @@ spec:
           livenessProbe:
             httpGet:
               path: /health
-              port: 4005
+              port: {{ .Values.service.port }}
             {{ if ((.Values.probes).liveness).initialDelaySeconds }}
             initialDelaySeconds: {{ ((.Values.probes).liveness).initialDelaySeconds | default 0 }}
             {{ end }}
           readinessProbe:
             httpGet:
               path: /health
-              port: 4005
+              port: {{ .Values.service.port }}
             {{ if ((.Values.probes).readiness).initialDelaySeconds }}
             initialDelaySeconds: {{ ((.Values.probes).readiness).initialDelaySeconds | default 0 }}
             {{ end }}

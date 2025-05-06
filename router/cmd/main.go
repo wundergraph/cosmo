@@ -4,34 +4,70 @@ import (
 	"context"
 	"errors"
 	"flag"
-	"github.com/wundergraph/cosmo/router/core"
-	"github.com/wundergraph/cosmo/router/pkg/config"
-	"github.com/wundergraph/cosmo/router/pkg/logging"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"go.uber.org/zap"
+	"github.com/wundergraph/cosmo/router/core"
+	"github.com/wundergraph/cosmo/router/internal/versioninfo"
+	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/logging"
+	"github.com/wundergraph/cosmo/router/pkg/profile"
 
-	"github.com/wundergraph/cosmo/router/internal/profile"
+	"go.uber.org/zap"
 )
 
 var (
-	overrideEnvFlag = flag.String("override-env", os.Getenv("OVERRIDE_ENV"), "env file name to override env variables")
-	configPathFlag  = flag.String("config", os.Getenv("CONFIG_PATH"), "path to config file")
+	overrideEnvFlag = flag.String("override-env", os.Getenv("OVERRIDE_ENV"), "Path to .env file to override environment variables")
+	configPathFlag  = flag.String("config", os.Getenv("CONFIG_PATH"), "Path to the router config file e.g. config.yaml")
+	routerVersion   = flag.Bool("version", false, "Prints the version and dependency information")
+	pprofListenAddr = flag.String("pprof-addr", os.Getenv("PPROF_ADDR"), "Address to listen for pprof requests. e.g. :6060 for localhost:6060")
+	memProfilePath  = flag.String("memprofile", "", "Path to write memory profile. Memory is a snapshot taken at the time the program exits")
+	cpuProfilePath  = flag.String("cpuprofile", "", "Path to write cpu profile. CPU is measured from when the program starts until the program exits")
+	help            = flag.Bool("help", false, "Prints the help message")
 )
 
 func Main() {
 	// Parse flags before calling profile.Start(), since it may add flags
 	flag.Parse()
 
-	profiler := profile.Start()
+	if *help {
+		flag.PrintDefaults()
+		os.Exit(0)
+	} else if *routerVersion {
+		bi := versioninfo.New(core.Version, core.Commit, core.Date)
+		fmt.Println(bi.String())
+		os.Exit(0)
+	}
 
 	result, err := config.LoadConfig(*configPathFlag, *overrideEnvFlag)
 	if err != nil {
-		log.Fatal("Could not load config", zap.Error(err))
+		log.Fatalf("Could not load config: %s", err)
 	}
+
+	logLevel, err := logging.ZapLogLevelFromString(result.Config.LogLevel)
+	if err != nil {
+		log.Fatalf("Could not parse log level: %s", err)
+	}
+
+	logger := logging.New(!result.Config.JSONLog, result.Config.DevelopmentMode, logLevel).
+		With(
+			zap.String("service", "@wundergraph/router"),
+			zap.String("service_version", core.Version),
+		)
+
+	// Start pprof server if address is provided
+	if *pprofListenAddr != "" {
+		pprofSvr := profile.NewServer(*pprofListenAddr, logger)
+		defer pprofSvr.Close()
+		go pprofSvr.Listen()
+	}
+
+	// Start profiling if flags are set
+	profiler := profile.Start(logger, *cpuProfilePath, *memProfilePath)
+	defer profiler.Finish()
 
 	// Handling shutdown
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt,
@@ -42,17 +78,6 @@ func Main() {
 		syscall.SIGINT,  // ctrl+c
 	)
 	defer stop()
-
-	logLevel, err := logging.ZapLogLevelFromString(result.Config.LogLevel)
-	if err != nil {
-		log.Fatal("Could not parse log level", zap.Error(err))
-	}
-
-	logger := logging.New(!result.Config.JSONLog, result.Config.LogLevel == "debug", logLevel).
-		With(
-			zap.String("component", "@wundergraph/router"),
-			zap.String("service_version", core.Version),
-		)
 
 	if *configPathFlag != "" {
 		logger.Info(
@@ -65,25 +90,22 @@ func Main() {
 		)
 	}
 
-	router, err := NewRouter(Params{
-		Config: &result.Config,
-		Logger: logger,
-	})
-
-	if err != nil {
-		logger.Fatal("Could not create router", zap.Error(err))
-	}
-
 	// Provide a way to cancel all running components of the router after graceful shutdown
 	// Don't use the parent context that is canceled by the signal handler
 	routerCtx, routerCancel := context.WithCancel(context.Background())
 	defer routerCancel()
 
-	go func() {
-		if err = router.Start(routerCtx); err != nil {
-			logger.Fatal("Could not start router", zap.Error(err))
-		}
-	}()
+	router, err := NewRouter(routerCtx, Params{
+		Config: &result.Config,
+		Logger: logger,
+	})
+	if err != nil {
+		logger.Fatal("Could not create router", zap.Error(err))
+	}
+
+	if err = router.Start(routerCtx); err != nil {
+		logger.Fatal("Could not start router", zap.Error(err))
+	}
 
 	<-ctx.Done()
 
@@ -103,8 +125,5 @@ func Main() {
 		logger.Info("Router shutdown successfully")
 	}
 
-	profiler.Finish()
-
 	logger.Debug("Router exiting")
-	os.Exit(0)
 }

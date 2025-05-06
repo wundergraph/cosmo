@@ -30,7 +30,7 @@ Demo: [https://zqadzbqwsi.execute-api.us-west-1.amazonaws.com/Prod/](https://zqa
 
 ## Cosmo Cloud
 
-First signup For Cosmo Cloud and follow the [onboarding](https://cosmo-docs.wundergraph.com/tutorial/cosmo-cloud-onboarding) process.
+First signup For Cosmo Cloud and follow the [onboarding](https://cosmo-docs.wundergraph.com/getting-started/cosmo-cloud-onboarding) process.
 
 Run `make fetch-router-config` to fetch the latest router configuration from Cosmo Cloud. We assume that you have named your graph `production`.
 The file is stored in `router.json` and copied to the Lambda build directory on each build.

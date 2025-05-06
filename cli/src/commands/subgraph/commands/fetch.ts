@@ -1,7 +1,7 @@
 import { writeFile } from 'node:fs/promises';
 import { Response } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { Command } from 'commander';
-import { join } from 'pathe';
+import { resolve } from 'pathe';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { getBaseHeaders } from '../../../core/config.js';
@@ -62,11 +62,12 @@ export default (opts: BaseCommandOptions) => {
       if (response?.details) {
         console.log(pc.red(pc.bold(response?.details)));
       }
-      process.exit(1);
+      process.exitCode = 1;
+      return;
     }
 
     if (options.out) {
-      await writeFile(join(process.cwd(), options.out), subgraphSDL ?? '');
+      await writeFile(resolve(options.out), subgraphSDL ?? '');
     } else {
       console.log(subgraphSDL);
     }

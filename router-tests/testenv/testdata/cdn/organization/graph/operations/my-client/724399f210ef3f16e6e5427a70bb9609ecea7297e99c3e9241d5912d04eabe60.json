@@ -1,0 +1,1 @@
+{"version":1,"body":"query A {\n  a: employee(id: 1) {\n    id\n    details {\n      pets {\n        name\n      }\n    }\n  }\n}\n\nquery B ($id: Int!) {\n  b: employee(id: $id) {\n    id\n    details {\n      pets {\n        name\n      }\n    }\n  }\n}"}

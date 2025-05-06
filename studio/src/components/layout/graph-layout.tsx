@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { useQuery } from "@connectrpc/connect-query";
 import {
   ChartBarIcon,
+  ClipboardIcon,
   ExclamationTriangleIcon,
   ServerStackIcon,
 } from "@heroicons/react/24/outline";
@@ -41,6 +42,7 @@ import { useRouter } from "next/router";
 import { Fragment, createContext, useContext, useMemo, useState } from "react";
 import { MdOutlineFeaturedPlayList } from "react-icons/md";
 import {
+  PiBracketsCurlyBold,
   PiChat,
   PiCubeFocus,
   PiDevices,
@@ -172,10 +174,16 @@ export const GraphLayout = ({ children }: LayoutProps) => {
         icon: <PiToggleRight className="h-4 w-4" />,
       },
       {
-        title: "Discussions",
-        href: basePath + "/discussions",
+        title: "Cache Operations",
+        href: basePath + "/cache-operations",
         matchExact: false,
-        icon: <PiChat className="h-4 w-4" />,
+        icon: <PiBracketsCurlyBold className="h-4 w-4" />,
+      },
+      {
+        title: "Proposals",
+        href: basePath + "/proposals",
+        matchExact: false,
+        icon: <ClipboardIcon className="h-4 w-4" />,
       },
     ];
   }, [organizationSlug, namespace, slug]);
@@ -264,15 +272,15 @@ export const GraphSelect = () => {
 
   const groupedGraphs = sortedGraphs.reduce<Record<string, FederatedGraph[]>>(
     (result, graph) => {
-      const { namespace, name } = graph;
+    const { namespace, name } = graph;
 
-      if (!result[namespace]) {
-        result[namespace] = [];
-      }
+    if (!result[namespace]) {
+      result[namespace] = [];
+    }
 
-      result[namespace].push(graph);
+    result[namespace].push(graph);
 
-      return result;
+    return result;
     },
     {},
   );

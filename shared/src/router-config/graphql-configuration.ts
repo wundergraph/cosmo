@@ -175,6 +175,7 @@ export function configurationDatasToDataSourceConfiguration(
               ...(event.streamConfiguration
                 ? {
                     streamConfiguration: new NatsStreamConfiguration({
+                      consumerInactiveThreshold: event.streamConfiguration.consumerInactiveThreshold,
                       consumerName: event.streamConfiguration.consumerName,
                       streamName: event.streamConfiguration.streamName,
                     }),
@@ -196,9 +197,9 @@ export function configurationDatasToDataSourceConfiguration(
 }
 
 export function generateFieldConfigurations(
-  fieldConfigurations: CompositionFieldConfiguration[],
-): FieldConfiguration[] {
-  const output: FieldConfiguration[] = [];
+  fieldConfigurations: Array<CompositionFieldConfiguration>,
+): Array<FieldConfiguration> {
+  const output: Array<FieldConfiguration> = [];
   for (const compositionFieldConfiguration of fieldConfigurations) {
     const argumentConfigurations: ArgumentConfiguration[] = compositionFieldConfiguration.argumentNames.map(
       (argumentName: string) =>
@@ -216,11 +217,16 @@ export function generateFieldConfigurations(
       compositionFieldConfiguration.requiredScopes?.map(
         (andScopes: string[]) => new Scopes({ requiredAndScopes: andScopes }),
       ) || [];
+    const requiredOrScopesByOr =
+      compositionFieldConfiguration.requiredScopesByOR?.map(
+        (andScopes: string[]) => new Scopes({ requiredAndScopes: andScopes }),
+      ) || [];
     const hasRequiredOrScopes = requiredOrScopes.length > 0;
     if (compositionFieldConfiguration.requiresAuthentication || hasRequiredOrScopes) {
       fieldConfiguration.authorizationConfiguration = new AuthorizationConfiguration({
         requiresAuthentication: compositionFieldConfiguration.requiresAuthentication || hasRequiredOrScopes,
         requiredOrScopes,
+        requiredOrScopesByOr,
       });
     }
     if (compositionFieldConfiguration.subscriptionFilterCondition) {

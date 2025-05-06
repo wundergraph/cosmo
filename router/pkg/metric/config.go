@@ -1,28 +1,40 @@
 package metric
 
 import (
+	"net/url"
+	"regexp"
+
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
 	"go.opentelemetry.io/otel/attribute"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
-	"net/http"
-	"net/url"
-	"regexp"
 )
 
 // DefaultServerName Default resource name.
 const DefaultServerName = "cosmo-router"
 
 type PrometheusConfig struct {
-	Enabled    bool
-	ListenAddr string
-	Path       string
+	Enabled      bool
+	ListenAddr   string
+	Path         string
+	GraphqlCache bool
+	EngineStats  EngineStatsConfig
 	// Metrics to exclude from Prometheus exporter
 	ExcludeMetrics []*regexp.Regexp
 	// Metric labels to exclude from Prometheus exporter
 	ExcludeMetricLabels []*regexp.Regexp
 	// TestRegistry is used for testing purposes. If set, the registry will be used instead of the default one.
 	TestRegistry *prometheus.Registry
+	// Whether or not to exclude scope info
+	ExcludeScopeInfo bool
+	// Prometheus schema field usage configuration
+	PromSchemaFieldUsage PrometheusSchemaFieldUsage
+}
+
+type PrometheusSchemaFieldUsage struct {
+	Enabled             bool
+	IncludeOperationSha bool
 }
 
 type OpenTelemetryExporter struct {
@@ -36,13 +48,28 @@ type OpenTelemetryExporter struct {
 	// HTTPPath represents the path for OTLP HTTP transport.
 	// For example
 	// /v1/metrics
-	HTTPPath string
+	HTTPPath    string
+	Temporality otelconfig.ExporterTemporality
+}
+
+type EngineStatsConfig struct {
+	Subscription bool
+}
+
+func (e *EngineStatsConfig) Enabled() bool {
+	return e.Subscription
 }
 
 type OpenTelemetry struct {
 	Enabled       bool
 	RouterRuntime bool
+	GraphqlCache  bool
+	EngineStats   EngineStatsConfig
 	Exporters     []*OpenTelemetryExporter
+	// Metrics to exclude from the OTLP exporter.
+	ExcludeMetrics []*regexp.Regexp
+	// Metric labels to exclude from the OTLP exporter.
+	ExcludeMetricLabels []*regexp.Regexp
 	// TestReader is used for testing purposes. If set, the reader will be used instead of the configured exporters.
 	TestReader sdkmetric.Reader
 }
@@ -81,11 +108,14 @@ type Config struct {
 	// Prometheus includes the Prometheus configuration
 	Prometheus PrometheusConfig
 
-	// AttributesMapper added to the global attributes for all metrics.
-	AttributesMapper func(req *http.Request) []attribute.KeyValue
-
 	// ResourceAttributes added to the global resource attributes for all metrics.
 	ResourceAttributes []attribute.KeyValue
+
+	Attributes []config.CustomAttribute
+
+	// IsUsingCloudExporter indicates whether the cloud exporter is used.
+	// This value is used for tests to enable/disable the simulated cloud exporter.
+	IsUsingCloudExporter bool
 }
 
 func (c *Config) IsEnabled() bool {
@@ -98,8 +128,8 @@ func DefaultConfig(serviceVersion string) *Config {
 	return &Config{
 		Name:               DefaultServerName,
 		Version:            serviceVersion,
-		AttributesMapper:   nil,
 		ResourceAttributes: make([]attribute.KeyValue, 0),
+		Attributes:         make([]config.CustomAttribute, 0),
 		OpenTelemetry: OpenTelemetry{
 			Enabled:       false,
 			RouterRuntime: true,

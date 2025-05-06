@@ -19,17 +19,18 @@ import {
   ScalarTypeExtensionNode,
   SchemaDefinitionNode,
   SchemaExtensionNode,
+  SelectionNode,
   SelectionSetNode,
   StringValueNode,
   UnionTypeDefinitionNode,
   UnionTypeExtensionNode,
 } from 'graphql';
+import { CompositeOutputNode } from '../schema-building/ast';
 import {
   ARGUMENT_DEFINITION_UPPER,
   ENUM_UPPER,
   ENUM_VALUE_UPPER,
   EXECUTABLE_DIRECTIVE_LOCATIONS,
-  EXTENDS,
   FIELD_DEFINITION_UPPER,
   FRAGMENT_DEFINITION_UPPER,
   FRAGMENT_SPREAD_UPPER,
@@ -40,6 +41,7 @@ import {
   INTERFACE_UPPER,
   KEY,
   MUTATION,
+  NAME,
   OBJECT_UPPER,
   QUERY,
   SCALAR_UPPER,
@@ -47,10 +49,8 @@ import {
   SUBSCRIPTION,
   UNION_UPPER,
 } from '../utils/string-constants';
-import { duplicateInterfaceError } from '../errors/errors';
-import { ObjectLikeTypeNode } from '../schema-building/ast';
 
-export function isObjectLikeNodeEntity(node: ObjectLikeTypeNode): boolean {
+export function isObjectLikeNodeEntity(node: CompositeOutputNode): boolean {
   if (!node.directives?.length) {
     return false;
   }
@@ -61,6 +61,7 @@ export function isObjectLikeNodeEntity(node: ObjectLikeTypeNode): boolean {
   }
   return false;
 }
+
 export function isNodeInterfaceObject(node: ObjectTypeDefinitionNode): boolean {
   if (!node.directives?.length) {
     return false;
@@ -71,57 +72,6 @@ export function isNodeInterfaceObject(node: ObjectTypeDefinitionNode): boolean {
     }
   }
   return false;
-}
-
-export function isNodeExtension(node: ObjectTypeDefinitionNode | InterfaceTypeDefinitionNode): boolean {
-  if (!node.directives?.length) {
-    return false;
-  }
-  for (const directive of node.directives) {
-    if (directive.name.value === EXTENDS) {
-      return true;
-    }
-  }
-  return false;
-}
-
-export function extractInterfaces(
-  node: InterfaceTypeDefinitionNode | InterfaceTypeExtensionNode | ObjectTypeDefinitionNode | ObjectTypeExtensionNode,
-  interfaces: Set<string>,
-  errors?: Error[],
-): Set<string> {
-  if (!node.interfaces) {
-    return interfaces;
-  }
-  const parentTypeName = node.name.value;
-  for (const face of node.interfaces) {
-    const name = face.name.value;
-    if (errors && interfaces.has(name)) {
-      errors.push(duplicateInterfaceError(name, parentTypeName));
-      continue;
-    }
-    interfaces.add(name);
-  }
-  return interfaces;
-}
-
-export function areBaseAndExtensionKindsCompatible(baseKind: Kind, extensionKind: Kind, typeName: string): boolean {
-  switch (baseKind) {
-    case Kind.ENUM_TYPE_DEFINITION:
-      return extensionKind === Kind.ENUM_TYPE_EXTENSION;
-    case Kind.INPUT_OBJECT_TYPE_DEFINITION:
-      return extensionKind === Kind.INPUT_OBJECT_TYPE_EXTENSION;
-    case Kind.INTERFACE_TYPE_DEFINITION:
-      return extensionKind === Kind.INTERFACE_TYPE_EXTENSION;
-    case Kind.OBJECT_TYPE_DEFINITION:
-      return extensionKind === Kind.OBJECT_TYPE_EXTENSION;
-    case Kind.SCALAR_TYPE_DEFINITION:
-      return extensionKind === Kind.SCALAR_TYPE_EXTENSION;
-    case Kind.UNION_TYPE_DEFINITION:
-      return extensionKind === Kind.UNION_TYPE_EXTENSION;
-    default:
-      return false;
-  }
 }
 
 export function stringToNameNode(value: string): NameNode {
@@ -248,27 +198,54 @@ export function formatDescription(description?: StringValueNode): StringValueNod
   return { ...description, value: value, block: true };
 }
 
-export function lexicographicallySortArgumentNodes(fieldNode: FieldNode): ArgumentNode[] | undefined {
+export function lexicographicallySortArgumentNodes(fieldNode: FieldNode): Array<ArgumentNode> | undefined {
   if (!fieldNode.arguments) {
     return fieldNode.arguments;
   }
-  const argumentNodes = fieldNode.arguments as ArgumentNode[];
+  const argumentNodes = fieldNode.arguments as Array<ArgumentNode>;
   return argumentNodes.sort((a, b) => a.name.value.localeCompare(b.name.value));
 }
 
 export function lexicographicallySortSelectionSetNode(selectionSetNode: SelectionSetNode): SelectionSetNode {
-  const selections = selectionSetNode.selections as FieldNode[];
+  const selections = selectionSetNode.selections as Array<SelectionNode>;
   return {
     ...selectionSetNode,
     selections: selections
-      .sort((a, b) => a.name.value.localeCompare(b.name.value))
-      .map((selection) => ({
-        ...selection,
-        arguments: lexicographicallySortArgumentNodes(selection),
-        selectionSet: selection.selectionSet
-          ? lexicographicallySortSelectionSetNode(selection.selectionSet)
-          : selection.selectionSet,
-      })),
+      .sort((a, b) => {
+        if (NAME in a) {
+          if (!(NAME in b)) {
+            return -1;
+          }
+          return a.name.value.localeCompare(b.name.value);
+        }
+        if (NAME in b) {
+          return 1;
+        }
+        const aName = a.typeCondition?.name.value ?? '';
+        return aName.localeCompare(b.typeCondition?.name.value ?? '');
+      })
+      .map((selection) => {
+        switch (selection.kind) {
+          case Kind.FIELD: {
+            return {
+              ...selection,
+              arguments: lexicographicallySortArgumentNodes(selection),
+              selectionSet: selection.selectionSet
+                ? lexicographicallySortSelectionSetNode(selection.selectionSet)
+                : selection.selectionSet,
+            };
+          }
+          case Kind.FRAGMENT_SPREAD: {
+            return selection;
+          }
+          case Kind.INLINE_FRAGMENT: {
+            return {
+              ...selection,
+              selectionSet: lexicographicallySortSelectionSetNode(selection.selectionSet),
+            };
+          }
+        }
+      }),
   };
 }
 
@@ -292,14 +269,14 @@ type ParseResult = {
   error?: Error;
 };
 
-export function parse(source: string): DocumentNode {
-  return graphqlParse(source, { noLocation: true });
+export function parse(source: string, noLocation = true): DocumentNode {
+  return graphqlParse(source, { noLocation });
 }
 
-export function safeParse(value: string): ParseResult {
+export function safeParse(value: string, noLocation = true): ParseResult {
   try {
-    const parsedValue = parse(value);
-    return { documentNode: parsedValue };
+    const documentNode = parse(value, noLocation);
+    return { documentNode };
   } catch (e) {
     return { error: e as Error };
   }

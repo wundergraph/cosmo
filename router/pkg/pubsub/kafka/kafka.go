@@ -4,15 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/twmb/franz-go/pkg/kerr"
 	"github.com/twmb/franz-go/pkg/kgo"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
-	"strings"
-	"sync"
-	"time"
 )
 
 var (
@@ -78,13 +79,10 @@ type kafkaPubSub struct {
 
 // topicPoller polls the Kafka topic for new records and calls the updateTriggers function.
 func (p *kafkaPubSub) topicPoller(ctx context.Context, client *kgo.Client, updater resolve.SubscriptionUpdater) error {
-
 	for {
 		select {
-
 		case <-p.ctx.Done(): // Close the poller if the application context was canceled
 			return p.ctx.Err()
-
 		case <-ctx.Done(): // Close the poller if the subscription context was canceled
 			return ctx.Err()
 
@@ -137,7 +135,7 @@ func (p *kafkaPubSub) topicPoller(ctx context.Context, client *kgo.Client, updat
 func (p *kafkaPubSub) Subscribe(ctx context.Context, event pubsub_datasource.KafkaSubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error {
 
 	log := p.logger.With(
-		zap.String("providerID", event.ProviderID),
+		zap.String("provider_id", event.ProviderID),
 		zap.String("method", "subscribe"),
 		zap.Strings("topics", event.Topics),
 	)
@@ -185,7 +183,7 @@ func (p *kafkaPubSub) Subscribe(ctx context.Context, event pubsub_datasource.Kaf
 // The event is written with a dedicated write client.
 func (p *kafkaPubSub) Publish(ctx context.Context, event pubsub_datasource.KafkaPublishEventConfiguration) error {
 	log := p.logger.With(
-		zap.String("providerID", event.ProviderID),
+		zap.String("provider_id", event.ProviderID),
 		zap.String("method", "publish"),
 		zap.String("topic", event.Topic),
 	)
@@ -221,7 +219,7 @@ func (p *kafkaPubSub) Shutdown(ctx context.Context) error {
 
 	err := p.writeClient.Flush(ctx)
 	if err != nil {
-		p.logger.Error("error flushing write client", zap.Error(err))
+		p.logger.Error("flushing write client", zap.Error(err))
 	}
 
 	p.writeClient.Close()
@@ -232,5 +230,9 @@ func (p *kafkaPubSub) Shutdown(ctx context.Context) error {
 	// Wait until all pollers are closed
 	p.closeWg.Wait()
 
-	return err
+	if err != nil {
+		return fmt.Errorf("kafka pubsub shutdown: %w", err)
+	}
+
+	return nil
 }

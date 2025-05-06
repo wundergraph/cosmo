@@ -3,7 +3,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { Command, program } from 'commander';
 import { endOfDay, formatISO, startOfDay, subDays } from 'date-fns';
 import pc from 'picocolors';
-import { join } from 'pathe';
+import { resolve } from 'pathe';
 import { getBaseHeaders } from '../../../core/config.js';
 import { CommonGraphCommandOptions } from '../../../core/types/types.js';
 
@@ -75,7 +75,7 @@ export default (opts: CommonGraphCommandOptions) => {
             })),
           }) as OutputFile[number],
       );
-      await writeFile(join(process.cwd(), options.out), JSON.stringify(output));
+      await writeFile(resolve(options.out), JSON.stringify(output));
     } else {
       let message = `Failed to fetch changelog for ${pc.bold(name)}.`;
       if (resp.response?.details) {

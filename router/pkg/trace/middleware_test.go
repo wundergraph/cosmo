@@ -20,8 +20,10 @@ func TestWrapHttpHandler(t *testing.T) {
 
 	t.Run("create a span for every request", func(t *testing.T) {
 		exporter := tracetest.NewInMemoryExporter(t)
-		h := NewMiddleware(nil,
-			otelhttp.WithTracerProvider(sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))),
+		h := NewMiddleware(
+			WithOtelHttp(
+				otelhttp.WithTracerProvider(sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))),
+			),
 		)
 
 		router := chi.NewRouter()
@@ -70,8 +72,10 @@ func TestWrapHttpHandler(t *testing.T) {
 
 		for _, test := range statusCodeTests {
 			router := chi.NewRouter()
-			h := NewMiddleware(nil,
-				otelhttp.WithTracerProvider(sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))),
+			h := NewMiddleware(
+				WithOtelHttp(
+					otelhttp.WithTracerProvider(sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))),
+				),
 			)
 
 			statusCode := test.statusCode

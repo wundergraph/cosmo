@@ -346,6 +346,70 @@ describe('CDN handlers', () => {
     });
   });
 
+  describe('Test versioned router config handler', async () => {
+    const federatedGraphId = 'federatedGraphId';
+    const organizationId = 'organizationId';
+    const token = await generateToken(organizationId, federatedGraphId, secretKey);
+    const blobStorage = new InMemoryBlobStorage();
+    const routerConfig = JSON.stringify({
+      engineConfig: {},
+    });
+
+    blobStorage.objects.set(`${organizationId}/${federatedGraphId}/routerconfigs/v2/latest.json`, {
+      buffer: Buffer.from(routerConfig),
+      metadata: {
+        version: '1',
+        'signature-sha256': 'signature',
+      },
+    });
+
+    const app = new Hono();
+
+    cdn(app, {
+      authJwtSecret: secretKey,
+      authAdmissionJwtSecret: secretAdmissionKey,
+      blobStorage,
+    });
+
+    test('that an error is thrown if an invalid router config path is requested', async () => {
+      const res = await app.request(`/${organizationId}/${federatedGraphId}/routerconfigs/v2/latest.json`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ version: '' }),
+      });
+      expect(res.status).toBe(400);
+      expect(await res.text()).toBe('Invalid router compatibility version "v2".');
+      expect(res.headers.get(signatureSha256Header)).toBeFalsy();
+    });
+
+    test('it returns a 404 if the router config does not exist', async () => {
+      const res = await app.request(`/${organizationId}/${federatedGraphId}/routerconfigs/v3/does_not_exist.json`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ version: '' }),
+      });
+      expect(res.status).toBe(404);
+      expect(res.headers.get(signatureSha256Header)).toBeFalsy();
+    });
+
+    test('than an error is thrown if the version is unchanged but an invalid router config path is requested', async () => {
+      const res = await app.request(`/${organizationId}/${federatedGraphId}/routerconfigs/v2/latest.json`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ version: '1' }),
+      });
+      expect(res.status).toBe(400);
+      expect(await res.text()).toBe('Invalid router compatibility version "v2".');
+      expect(res.headers.get(signatureSha256Header)).toBeFalsy();
+    });
+  });
+
   describe('Test draft router config handler', async () => {
     const federatedGraphId = 'federatedGraphId';
     const organizationId = 'organizationId';
@@ -388,6 +452,103 @@ describe('CDN handlers', () => {
           method: 'GET',
         },
       );
+      expect(res.status).toBe(404);
+    });
+  });
+
+  describe('Test cache warmer operations handler', async () => {
+    const federatedGraphId = 'federatedGraphId';
+    const organizationId = 'organizationId';
+    const token = await generateToken(organizationId, federatedGraphId, secretKey);
+    const blobStorage = new InMemoryBlobStorage();
+    const requestPath = `${organizationId}/${federatedGraphId}/cache_warmup/operations.json`;
+
+    const app = new Hono();
+
+    cdn(app, {
+      authJwtSecret: secretKey,
+      authAdmissionJwtSecret: secretAdmissionKey,
+      blobStorage,
+    });
+
+    test('it returns a 401 if no Authorization header is provided', async () => {
+      const res = await app.request(requestPath, {
+        method: 'GET',
+      });
+      expect(res.status).toBe(401);
+    });
+
+    test('it returns a 401 if an invalid Authorization header is provided', async () => {
+      const res = await app.request(requestPath, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token.slice(0, -1)}}`,
+        },
+      });
+      expect(res.status).toBe(401);
+    });
+
+    test('it returns a 401 if the graph or organization ids does not match with the JWT payload', async () => {
+      const res = await app.request(`/foo/bar/operations/cache_warmup/operations.json`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      expect(res.status).toBe(400);
+    });
+
+    test('it returns a 401 if the token has expired', async () => {
+      const token = await new SignJWT({
+        organization_id: organizationId,
+        federated_graph_id: federatedGraphId,
+        exp: Math.floor(Date.now() / 1000) - 60,
+      })
+        .setProtectedHeader({ alg: 'HS256' })
+        .sign(new TextEncoder().encode(secretKey));
+      const res = await app.request(`/foo/bar/cache_warmup/operations.json`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      expect(res.status).toBe(401);
+    });
+
+    test('it returns the cache warmer operations', async () => {
+      const operationContents = JSON.stringify({
+        operations: [
+          {
+            request: {
+              operationName: 'AB',
+              query: 'query AB($a: Int!){employeeAsList(id: $a){tag id derivedMood products}}',
+            },
+            client: { name: 'unknown', version: 'missing' },
+          },
+        ],
+      });
+
+      blobStorage.objects.set(requestPath, {
+        buffer: Buffer.from(operationContents),
+      });
+
+      const res = await app.request(requestPath, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      expect(res.status).toBe(200);
+      expect(await res.text()).toBe(operationContents);
+    });
+
+    test('it returns a 404 if the persisted operation does not exist', async () => {
+      const res = await app.request(`${organizationId}/${federatedGraphId}/cache_warmup/does_not_exist.json`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       expect(res.status).toBe(404);
     });
   });

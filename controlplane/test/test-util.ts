@@ -1,6 +1,6 @@
-import { randomUUID } from 'node:crypto';
+import { randomUUID, UUID } from 'node:crypto';
+import { join, resolve } from 'node:path';
 import fs from 'node:fs';
-import { join } from 'node:path';
 import { createPromiseClient, PromiseClient } from '@connectrpc/connect';
 import { fastifyConnectPlugin } from '@connectrpc/connect-fastify';
 import { createConnectTransport } from '@connectrpc/connect-node';
@@ -8,6 +8,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { NodeService } from '@wundergraph/cosmo-connect/dist/node/v1/node_connect';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
 import { formatISO, startOfTomorrow, startOfYear } from 'date-fns';
+import { drizzle } from 'drizzle-orm/postgres-js';
 import Fastify from 'fastify';
 import { pino } from 'pino';
 import postgres from 'postgres';
@@ -18,6 +19,7 @@ import ScimController from '../src/core/controllers/scim.js';
 import database from '../src/core/plugins/database.js';
 import fastifyRedis from '../src/core/plugins/redis.js';
 import { ApiKeyRepository } from '../src/core/repositories/ApiKeyRepository.js';
+import { BillingRepository, billingSchema } from '../src/core/repositories/BillingRepository.js';
 import { OrganizationRepository } from '../src/core/repositories/OrganizationRepository.js';
 import { UserRepository } from '../src/core/repositories/UserRepository.js';
 import routes from '../src/core/routes.js';
@@ -34,8 +36,14 @@ import {
 } from '../src/core/test-util.js';
 import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhookService.js';
 import { AIGraphReadmeQueue } from '../src/core/workers/AIGraphReadmeWorker.js';
-import { FeatureIds, Label } from '../src/types/index.js';
 import { DeleteOrganizationQueue } from '../src/core/workers/DeleteOrganizationWorker.js';
+import * as schema from '../src/db/schema.js';
+import { FeatureIds, Label } from '../src/types/index.js';
+import { NewBillingPlan } from '../src/db/models.js';
+import { DeactivateOrganizationQueue } from '../src/core/workers/DeactivateOrganizationWorker.js';
+import { DeleteUserQueue } from '../src/core/workers/DeleteUserQueue.js';
+import { ReactivateOrganizationQueue } from '../src/core/workers/ReactivateOrganizationWorker.js';
+import { DeleteOrganizationAuditLogsQueue } from '../src/core/workers/DeleteOrganizationAuditLogsWorker.js';
 
 export const DEFAULT_ROUTER_URL = 'http://localhost:3002';
 export const DEFAULT_SUBGRAPH_URL_ONE = 'http://localhost:4001';
@@ -49,12 +57,18 @@ export const SetupTest = async function ({
   enabledFeatures,
   enableMultiUsers,
   createScimKey,
+  setupBilling,
+  organizationId,
 }: {
   dbname: string;
   chClient?: ClickHouseClient;
   enableMultiUsers?: boolean;
   createScimKey?: boolean;
   enabledFeatures?: FeatureIds[];
+  setupBilling?: {
+    plan: 'developer@1' | 'launch@1' | 'scale@1' | 'enterprise';
+  };
+  organizationId?: UUID;
 }) {
   const log = pino();
   const databaseConnectionUrl = `postgresql://postgres:changeme@localhost:5432/${dbname}`;
@@ -68,7 +82,7 @@ export const SetupTest = async function ({
     runMigration: true,
   });
 
-  const companyAOrganizationId = randomUUID();
+  const companyAOrganizationId = organizationId || randomUUID();
   const aliceContext = createTestContext('company-a', companyAOrganizationId);
 
   const users: TestAuthenticatorOptions = {
@@ -78,6 +92,7 @@ export const SetupTest = async function ({
   if (enableMultiUsers) {
     users.adminBobCompanyA = createTestContext('company-a', companyAOrganizationId);
     users.devJoeCompanyA = createTestContext('company-a', companyAOrganizationId, false, true, ['developer']);
+    users.viewerTimCompanyA = createTestContext('company-a', companyAOrganizationId, false, false, ['viewer']);
     users.adminJimCompanyB = createTestContext('company-b', randomUUID());
   }
 
@@ -107,7 +122,7 @@ export const SetupTest = async function ({
     smtpRequireTls: false,
     smtpSecure: false,
     smtpUsername: '',
-    });
+  });
 
   await server.register(fastifyRedis, {
     host: 'localhost',
@@ -116,6 +131,10 @@ export const SetupTest = async function ({
 
   const readmeQueue = new AIGraphReadmeQueue(log, server.redisForQueue);
   const deleteOrganizationQueue = new DeleteOrganizationQueue(log, server.redisForQueue);
+  const deleteOrganizationAuditLogsQueue = new DeleteOrganizationAuditLogsQueue(log, server.redisForQueue);
+  const deactivateOrganizationQueue = new DeactivateOrganizationQueue(log, server.redisForQueue);
+  const deleteUserQueue = new DeleteUserQueue(log, server.redisForQueue);
+  const reactivateOrganizationQueue = new ReactivateOrganizationQueue(log, server.redisForQueue);
 
   const blobStorage = new InMemoryBlobStorage();
   await server.register(fastifyConnectPlugin, {
@@ -142,6 +161,10 @@ export const SetupTest = async function ({
       queues: {
         readmeQueue,
         deleteOrganizationQueue,
+        deleteOrganizationAuditLogsQueue,
+        deactivateOrganizationQueue,
+        reactivateOrganizationQueue,
+        deleteUserQueue,
       },
     }),
   });
@@ -149,6 +172,7 @@ export const SetupTest = async function ({
   const organizationRepository = new OrganizationRepository(log, server.db, '');
   const userRepository = new UserRepository(log, server.db);
   const apiKeyRepository = new ApiKeyRepository(server.db);
+  const billingRepository = new BillingRepository(server.db);
   const apiKeyAuth = new ApiKeyAuthenticator(server.db, organizationRepository);
   await server.register(ScimController, {
     organizationRepository,
@@ -201,6 +225,40 @@ export const SetupTest = async function ({
       users.adminBobCompanyA.userId = id;
       await seedTest(queryConnection, users.adminBobCompanyA, createScimKey);
     }
+    if (users.devJoeCompanyA) {
+      const id = await addKeycloakUser({
+        keycloakClient,
+        realmName: realm,
+        userTestData: {
+          userId: users.devJoeCompanyA.userId,
+          organizationId: users.devJoeCompanyA.organizationId,
+          organizationName: users.devJoeCompanyA.organizationName,
+          organizationSlug: users.devJoeCompanyA.organizationSlug,
+          email: users.devJoeCompanyA.email,
+          apiKey: users.devJoeCompanyA.apiKey,
+          roles: ['developer'],
+        },
+      });
+      users.devJoeCompanyA.userId = id;
+      await seedTest(queryConnection, users.devJoeCompanyA);
+    }
+    if (users.viewerTimCompanyA) {
+      const id = await addKeycloakUser({
+        keycloakClient,
+        realmName: realm,
+        userTestData: {
+          userId: users.viewerTimCompanyA.userId,
+          organizationId: users.viewerTimCompanyA.organizationId,
+          organizationName: users.viewerTimCompanyA.organizationName,
+          organizationSlug: users.viewerTimCompanyA.organizationSlug,
+          email: users.viewerTimCompanyA.email,
+          apiKey: users.viewerTimCompanyA.apiKey,
+          roles: ['developer'],
+        },
+      });
+      users.viewerTimCompanyA.userId = id;
+      await seedTest(queryConnection, users.viewerTimCompanyA);
+    }
     if (users.adminJimCompanyB) {
       const id = await addKeycloakUser({
         keycloakClient,
@@ -218,6 +276,11 @@ export const SetupTest = async function ({
       users.adminJimCompanyB.userId = id;
       await seedTest(queryConnection, users.adminJimCompanyB, createScimKey);
     }
+  }
+
+  if (setupBilling) {
+    await seedBilling(queryConnection);
+    await billingRepository.insertPlan(setupBilling.plan, users.adminAliceCompanyA.organizationId);
   }
 
   await queryConnection.end({
@@ -269,8 +332,12 @@ export const SetupTest = async function ({
     authenticator,
     realm,
     queues: {
-      deleteOrganizationQueue,
       readmeQueue,
+      deleteOrganizationQueue,
+      deleteOrganizationAuditLogsQueue,
+      deactivateOrganizationQueue,
+      deleteUserQueue,
+      reactivateOrganizationQueue,
     },
   };
 };
@@ -745,3 +812,38 @@ export type GraphNameAndKey = {
   key: string;
   name: string;
 };
+
+export async function seedBilling(queryConnection: postgres.Sql) {
+  const db = drizzle(queryConnection, { schema: { ...schema } });
+
+  const configPath = resolve(process.cwd(), './src/bin/billing.json');
+
+  const data = fs.readFileSync(configPath, 'utf8');
+  const json = billingSchema.parse(JSON.parse(data));
+
+  const entries = Object.entries(json.plans);
+
+  for (const [id, plan] of entries) {
+    const values: NewBillingPlan = {
+      id,
+      name: plan.name,
+      price: plan.price,
+      active: plan.active,
+      weight: plan.weight,
+      stripePriceId: 'stripePriceId' in plan ? plan.stripePriceId : undefined,
+      features: plan.features.map((feature) => ({
+        ...feature,
+        id: feature.id as FeatureIds,
+      })),
+    };
+
+    await db
+      .insert(schema.billingPlans)
+      .values(values)
+      .onConflictDoUpdate({
+        target: schema.billingPlans.id,
+        set: values,
+      })
+      .execute();
+  }
+}

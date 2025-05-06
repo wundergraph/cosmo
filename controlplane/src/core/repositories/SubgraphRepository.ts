@@ -1,13 +1,19 @@
 import { PlainMessage } from '@bufbuild/protobuf';
-import { CompositionError, DeploymentError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import {
+  CompositionError,
+  CompositionWarning,
+  DeploymentError,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel, normalizeURL, splitLabel } from '@wundergraph/cosmo-shared';
-import { SQL, and, asc, count, desc, eq, gt, inArray, like, lt, notInArray, or, sql } from 'drizzle-orm';
+import { addDays } from 'date-fns';
+import { SQL, and, asc, count, desc, eq, getTableName, gt, inArray, like, lt, notInArray, or, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { WebsocketSubprotocol } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import {
   featureSubgraphsToBaseSubgraphs,
+  fieldGracePeriod,
   graphCompositionSubgraphs,
   graphCompositions,
   schemaChecks,
@@ -19,20 +25,25 @@ import {
   users,
 } from '../../db/schema.js';
 import {
+  FeatureSubgraphDTO,
   FederatedGraphDTO,
   GetChecksResponse,
   Label,
   SchemaCheckDetailsDTO,
   SchemaCheckSummaryDTO,
+  SchemaGraphPruningDTO,
   SubgraphDTO,
   SubgraphListFilterOptions,
   SubgraphMemberDTO,
 } from '../../types/index.js';
 import { BlobStorage } from '../blobstorage/index.js';
-import { hasLabelsChanged, normalizeLabels } from '../util.js';
+import { getDiffBetweenGraphs } from '../composition/schemaCheck.js';
+import { getFederatedGraphRouterCompatibilityVersion, hasLabelsChanged, normalizeLabels } from '../util.js';
+import { ClickHouseClient } from '../clickhouse/index.js';
+import { FeatureFlagRepository } from './FeatureFlagRepository.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { TargetRepository } from './TargetRepository.js';
-import { FeatureFlagRepository } from './FeatureFlagRepository.js';
+import { SchemaCheckRepository } from './SchemaCheckRepository.js';
 
 type SubscriptionProtocol = 'ws' | 'sse' | 'sse_post';
 
@@ -203,14 +214,17 @@ export class SubgraphRepository {
       webhookJWTSecret: string;
       cdnBaseUrl: string;
     },
+    chClient: ClickHouseClient,
   ): Promise<{
     compositionErrors: PlainMessage<CompositionError>[];
+    compositionWarnings: PlainMessage<CompositionWarning>[];
     deploymentErrors: PlainMessage<DeploymentError>[];
     updatedFederatedGraphs: FederatedGraphDTO[];
     subgraphChanged: boolean;
   }> {
     const deploymentErrors: PlainMessage<DeploymentError>[] = [];
     const compositionErrors: PlainMessage<CompositionError>[] = [];
+    const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
     // The collection of federated graphs that will be potentially re-composed
     const updatedFederatedGraphs: FederatedGraphDTO[] = [];
     let subgraphChanged = false;
@@ -224,7 +238,7 @@ export class SubgraphRepository {
 
       const subgraph = await subgraphRepo.byTargetId(data.targetId);
       if (!subgraph) {
-        return { compositionErrors, updatedFederatedGraphs };
+        return { compositionErrors, updatedFederatedGraphs, compositionWarnings };
       }
 
       // TODO: avoid downloading the schema use hash instead
@@ -383,16 +397,28 @@ export class SubgraphRepository {
             });
             // If an enabled feature flag includes the feature graph that has just been published, push it to the array
             if (enabledFeatureFlags.length > 0) {
-              updatedFederatedGraphs.push(federatedGraphDTO);
+              const exists = updatedFederatedGraphs.find((g) => g.name === federatedGraphDTO.name);
+              if (!exists) {
+                updatedFederatedGraphs.push(federatedGraphDTO);
+              }
             }
           }
         }
         // Generate a new router config for non-feature graphs upon routing/subscription urls and labels changes
       } else if (subgraphChanged || labelChanged) {
-        // find all federated graphs that use this subgraph. We need evaluate them again.
-        updatedFederatedGraphs.push(
-          ...(await fedGraphRepo.bySubgraphLabels({ labels: subgraph.labels, namespaceId: data.namespaceId })),
-        );
+        // find all federated graphs that use this subgraph (with old labels). We need evaluate them again.
+        // When labels change,  graphs which matched with old labels may no longer match with new ones
+        const affectedGraphs = await fedGraphRepo.bySubgraphLabels({
+          labels: subgraph.labels,
+          namespaceId: data.namespaceId,
+        });
+
+        for (const graph of affectedGraphs) {
+          const exists = updatedFederatedGraphs.find((g) => g.name === graph.name);
+          if (!exists) {
+            updatedFederatedGraphs.push(graph);
+          }
+        }
       }
 
       // update the readme of the subgraph
@@ -404,19 +430,26 @@ export class SubgraphRepository {
         return;
       }
 
-      const { compositionErrors: cErrors, deploymentErrors: dErrors } = await fedGraphRepo.composeAndDeployGraphs({
+      const {
+        compositionErrors: cErrors,
+        deploymentErrors: dErrors,
+        compositionWarnings: cWarnings,
+      } = await fedGraphRepo.composeAndDeployGraphs({
         federatedGraphs: updatedFederatedGraphs.filter((g) => !g.contract),
         blobStorage,
         admissionConfig,
         actorId: data.updatedBy,
+        chClient,
       });
 
       compositionErrors.push(...cErrors);
       deploymentErrors.push(...dErrors);
+      compositionWarnings.push(...cWarnings);
     });
 
     return {
       compositionErrors,
+      compositionWarnings,
       updatedFederatedGraphs,
       deploymentErrors,
       subgraphChanged: subgraphChanged || labelChanged || data.unsetLabels,
@@ -437,10 +470,12 @@ export class SubgraphRepository {
       jwtSecret: string;
       cdnBaseUrl: string;
     },
+    chClient: ClickHouseClient,
   ): Promise<{
     compositionErrors: PlainMessage<CompositionError>[];
     updatedFederatedGraphs: FederatedGraphDTO[];
     deploymentErrors: PlainMessage<DeploymentError>[];
+    compositionWarnings: PlainMessage<CompositionWarning>[];
   }> {
     return this.db.transaction(async (tx) => {
       const updatedFederatedGraphs: FederatedGraphDTO[] = [];
@@ -478,7 +513,7 @@ export class SubgraphRepository {
           .execute();
       }
 
-      const { compositionErrors, deploymentErrors } = await fedGraphRepo.composeAndDeployGraphs({
+      const { compositionErrors, deploymentErrors, compositionWarnings } = await fedGraphRepo.composeAndDeployGraphs({
         federatedGraphs: updatedFederatedGraphs.filter((g) => !g.contract),
         blobStorage,
         admissionConfig: {
@@ -486,9 +521,10 @@ export class SubgraphRepository {
           cdnBaseUrl: admissionConfig.cdnBaseUrl,
         },
         actorId: data.updatedBy,
+        chClient,
       });
 
-      return { compositionErrors, updatedFederatedGraphs, deploymentErrors };
+      return { compositionErrors, updatedFederatedGraphs, deploymentErrors, compositionWarnings };
     });
   }
 
@@ -507,6 +543,7 @@ export class SubgraphRepository {
         .insert(schemaVersion)
         .values({
           targetId: subgraph.targetId,
+          organizationId: this.organizationId,
           schemaSDL: data.subgraphSchema,
           isV2Graph: data.isV2Graph,
         })
@@ -545,7 +582,7 @@ export class SubgraphRepository {
   }
 
   public async list(opts: SubgraphListFilterOptions): Promise<SubgraphDTO[]> {
-    const conditions: SQL<unknown>[] = [
+    const conditions: (SQL<unknown> | undefined)[] = [
       eq(schema.targets.organizationId, this.organizationId),
       eq(schema.targets.type, 'subgraph'),
     ];
@@ -555,14 +592,19 @@ export class SubgraphRepository {
     }
 
     if (opts.query) {
-      conditions.push(like(schema.targets.name, `%${opts.query}%`));
+      conditions.push(
+        or(
+          like(schema.targets.name, `%${opts.query}%`),
+          sql.raw(`${getTableName(schema.subgraphs)}.${schema.subgraphs.id.name}::text like '%${opts.query}%'`),
+        ),
+      );
     }
 
     if (opts.excludeFeatureSubgraphs) {
       conditions.push(eq(schema.subgraphs.isFeatureSubgraph, false));
     }
 
-    const targets = await this.db
+    const targetsQuery = this.db
       .select({
         id: schema.targets.id,
         name: schema.targets.name,
@@ -573,9 +615,16 @@ export class SubgraphRepository {
       // Left join because version is optional
       .leftJoin(schema.schemaVersion, eq(schema.subgraphs.schemaVersionId, schema.schemaVersion.id))
       .orderBy(asc(schema.targets.createdAt), asc(schemaVersion.createdAt))
-      .where(and(...conditions))
-      .limit(opts.limit)
-      .offset(opts.offset);
+      .where(and(...conditions));
+
+    if (opts.limit) {
+      targetsQuery.limit(opts.limit);
+    }
+    if (opts.offset) {
+      targetsQuery.offset(opts.offset);
+    }
+
+    const targets = await targetsQuery;
 
     const subgraphs: SubgraphDTO[] = [];
 
@@ -625,13 +674,17 @@ export class SubgraphRepository {
   }
 
   /**
-   * Returns all subgraphs that are part of the federated graph.
+   * When the parameter `subgraphs` is provided as an array of ids, those the subgraphs corresponding to the
+   * provided identifiers and belonging to the federated graph will be returned; otherwise, all subgraphs
+   * that are part of the federated graph are returned.
+   *
    * Even if they have not been published yet. Optionally, you can set the `published` flag to true
    * to only return subgraphs that have been published with a version.
    */
   public async listByFederatedGraph(data: {
     federatedGraphTargetId: string;
     published?: boolean;
+    includeSubgraphs?: string[];
   }): Promise<SubgraphDTO[]> {
     const target = await this.db.query.targets.findFirst({
       where: and(
@@ -659,7 +712,12 @@ export class SubgraphRepository {
         lastUpdatedAt: schema.schemaVersion.createdAt,
       })
       .from(schema.targets)
-      .innerJoin(schema.subgraphs, eq(schema.subgraphs.targetId, schema.targets.id))
+      .innerJoin(
+        schema.subgraphs,
+        Array.isArray(data.includeSubgraphs) && data.includeSubgraphs.length > 0
+          ? and(eq(schema.subgraphs.targetId, schema.targets.id), inArray(schema.subgraphs.id, data.includeSubgraphs))
+          : eq(schema.subgraphs.targetId, schema.targets.id),
+      )
       [data.published ? 'innerJoin' : 'leftJoin'](
         schema.schemaVersion,
         eq(schema.subgraphs.schemaVersionId, schema.schemaVersion.id),
@@ -773,77 +831,139 @@ export class SubgraphRepository {
 
   public async checks({
     federatedGraphTargetId,
+    federatedGraphId,
     limit,
     offset,
     startDate,
     endDate,
+    includeSubgraphs,
   }: {
     federatedGraphTargetId: string;
+    federatedGraphId: string;
     limit: number;
     offset: number;
     startDate: string;
     endDate: string;
+    includeSubgraphs: string[];
   }): Promise<GetChecksResponse> {
-    const subgraphs = await this.listByFederatedGraph({
+    const selectedSubgraphs = await this.listByFederatedGraph({
       federatedGraphTargetId,
+      includeSubgraphs,
     });
 
-    if (subgraphs.length === 0) {
+    if (selectedSubgraphs.length === 0) {
       return {
         checks: [],
         checksCount: 0,
       };
     }
 
-    const checkList = await this.db.query.schemaChecks.findMany({
-      columns: {
-        id: true,
-        targetId: true,
-        createdAt: true,
-        isComposable: true,
-        isDeleted: true,
-        hasBreakingChanges: true,
-        hasClientTraffic: true,
-        forcedSuccess: true,
-        ghDetails: true,
-        hasLintErrors: true,
-      },
-      limit,
-      offset,
-      orderBy: desc(schemaChecks.createdAt),
-      where: and(
-        inArray(
-          schemaChecks.targetId,
-          subgraphs.map(({ targetId }) => targetId),
+    const checkIds = await this.db
+      .selectDistinct({
+        id: schemaChecks.id,
+      })
+      .from(schemaChecks)
+      .leftJoin(schema.schemaCheckSubgraphs, eq(schema.schemaCheckSubgraphs.schemaCheckId, schemaChecks.id))
+      .where(
+        and(
+          // We have this or conditions because we want to fetch the checks based on the new schema or the old schema
+          // as we are not doing a data migration for the checks table
+          or(
+            // This is to fetch the checks based on the new schema
+            inArray(
+              schema.schemaCheckSubgraphs.subgraphId,
+              selectedSubgraphs.map(({ id }) => id),
+            ),
+            // This is to fetch the checks based on the old schema
+            inArray(
+              schemaChecks.targetId,
+              selectedSubgraphs.map(({ targetId }) => targetId),
+            ),
+          ),
+          gt(schemaChecks.createdAt, new Date(startDate)),
+          lt(schemaChecks.createdAt, new Date(endDate)),
         ),
-        gt(schemaChecks.createdAt, new Date(startDate)),
-        lt(schemaChecks.createdAt, new Date(endDate)),
-      ),
-    });
+      );
 
-    const checksCount = await this.getChecksCount({ federatedGraphTargetId, startDate, endDate });
+    // Get the full check details for the selected IDs, ordered by creation date
+    const checkList = await this.db
+      .select({
+        id: schemaChecks.id,
+        targetId: schemaChecks.targetId,
+        createdAt: schemaChecks.createdAt,
+        hasBreakingChanges: schemaChecks.hasBreakingChanges,
+        isComposable: schemaChecks.isComposable,
+        isDeleted: schemaChecks.isDeleted,
+        hasClientTraffic: schemaChecks.hasClientTraffic,
+        forcedSuccess: schemaChecks.forcedSuccess,
+        ghDetails: schemaChecks.ghDetails,
+        hasLintErrors: schemaChecks.hasLintErrors,
+        hasGraphPruningErrors: schemaChecks.hasGraphPruningErrors,
+        clientTrafficCheckSkipped: schemaChecks.clientTrafficCheckSkipped,
+        lintSkipped: schemaChecks.lintSkipped,
+        graphPruningSkipped: schemaChecks.graphPruningSkipped,
+        vcsContext: schemaChecks.vcsContext,
+        proposalMatch: schemaChecks.proposalMatch,
+        compositionSkipped: schemaChecks.compositionSkipped,
+        breakingChangesSkipped: schemaChecks.breakingChangesSkipped,
+        errorMessage: schemaChecks.errorMessage,
+      })
+      .from(schemaChecks)
+      .where(
+        inArray(
+          schemaChecks.id,
+          checkIds.map((c) => c.id),
+        ),
+      )
+      .orderBy(desc(schemaChecks.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    const checksCount = await this.getChecksCount({ federatedGraphTargetId, startDate, endDate, includeSubgraphs });
+
+    const schemaCheckRepo = new SchemaCheckRepository(this.db);
+    // Get all checkedSubgraphs for all checks in one go
+    const checksWithSubgraphs = await Promise.all(
+      checkList.map(async (c) => {
+        const checkedSubgraphs = await schemaCheckRepo.getCheckedSubgraphsForCheckIdAndFederatedGraphId({
+          checkId: c.id,
+          federatedGraphId,
+        });
+
+        return {
+          id: c.id,
+          targetID: c.targetId || undefined,
+          subgraphName: selectedSubgraphs.find((s) => s.targetId === c.targetId)?.name || undefined,
+          timestamp: c.createdAt.toISOString(),
+          isBreaking: c.hasBreakingChanges ?? false,
+          isComposable: c.isComposable ?? false,
+          isDeleted: c.isDeleted ?? false,
+          hasClientTraffic: c.hasClientTraffic ?? false,
+          isForcedSuccess: c.forcedSuccess ?? false,
+          ghDetails: c.ghDetails
+            ? {
+                commitSha: c.ghDetails.commitSha,
+                ownerSlug: c.ghDetails.ownerSlug,
+                repositorySlug: c.ghDetails.repositorySlug,
+                checkRunId: c.ghDetails.checkRunId,
+              }
+            : undefined,
+          hasLintErrors: c.hasLintErrors ?? false,
+          hasGraphPruningErrors: c.hasGraphPruningErrors ?? false,
+          clientTrafficCheckSkipped: c.clientTrafficCheckSkipped ?? false,
+          lintSkipped: c.lintSkipped ?? false,
+          graphPruningSkipped: c.graphPruningSkipped ?? false,
+          checkedSubgraphs,
+          proposalMatch: c.proposalMatch || undefined,
+          compositionSkipped: c.compositionSkipped ?? false,
+          breakingChangesSkipped: c.breakingChangesSkipped ?? false,
+          errorMessage: c.errorMessage || undefined,
+        };
+      }),
+    );
 
     return {
-      checks: checkList.map((c) => ({
-        id: c.id,
-        targetID: c.targetId,
-        subgraphName: subgraphs.find((s) => s.targetId === c.targetId)?.name ?? '',
-        timestamp: c.createdAt.toISOString(),
-        isBreaking: c.hasBreakingChanges ?? false,
-        isComposable: c.isComposable ?? false,
-        isDeleted: c.isDeleted ?? false,
-        hasClientTraffic: c.hasClientTraffic ?? false,
-        isForcedSuccess: c.forcedSuccess ?? false,
-        ghDetails: c.ghDetails
-          ? {
-              commitSha: c.ghDetails.commitSha,
-              ownerSlug: c.ghDetails.ownerSlug,
-              repositorySlug: c.ghDetails.repositorySlug,
-              checkRunId: c.ghDetails.checkRunId,
-            }
-          : undefined,
-        hasLintErrors: c.hasLintErrors ?? false,
-      })),
+      checks: checksWithSubgraphs,
       checksCount,
     };
   }
@@ -852,50 +972,55 @@ export class SubgraphRepository {
     federatedGraphTargetId,
     startDate,
     endDate,
+    includeSubgraphs,
   }: {
     federatedGraphTargetId: string;
-    startDate?: string;
-    endDate?: string;
+    startDate: string;
+    endDate: string;
+    includeSubgraphs?: string[];
   }): Promise<number> {
     const subgraphs = await this.listByFederatedGraph({
       federatedGraphTargetId,
+      includeSubgraphs,
     });
 
     if (subgraphs.length === 0) {
       return 0;
     }
 
-    let conditions: SQL<unknown> | undefined;
-
-    if (startDate && endDate) {
-      conditions = and(
+    const conditions: SQL<unknown> | undefined = and(
+      // We have this or conditions because we want to fetch the checks based on the new schema or the old schema
+      // as we are not doing a data migration for the checks table
+      or(
+        // This is to fetch the checks based on the new schema
+        inArray(
+          schema.schemaCheckSubgraphs.subgraphId,
+          subgraphs.map(({ id }) => id),
+        ),
+        // This is to fetch the checks based on the old schema
         inArray(
           schemaChecks.targetId,
           subgraphs.map(({ targetId }) => targetId),
         ),
-        gt(schemaChecks.createdAt, new Date(startDate)),
-        lt(schemaChecks.createdAt, new Date(endDate)),
-      );
-    } else {
-      conditions = and(
-        inArray(
-          schemaChecks.targetId,
-          subgraphs.map(({ targetId }) => targetId),
-        ),
-      );
-    }
+      ),
+      gt(schemaChecks.createdAt, new Date(startDate)),
+      lt(schemaChecks.createdAt, new Date(endDate)),
+    );
 
-    const checksCount = await this.db.select({ count: count() }).from(schemaChecks).where(conditions);
+    // Use a subquery with distinct check IDs to get the count
+    const checks = await this.db
+      .selectDistinct({ id: schemaChecks.id })
+      .from(schemaChecks)
+      .leftJoin(schema.schemaCheckSubgraphs, eq(schema.schemaCheckSubgraphs.schemaCheckId, schemaChecks.id))
+      .where(conditions);
 
-    if (checksCount.length === 0) {
-      return 0;
-    }
-    return checksCount[0].count;
+    return checks.length;
   }
 
   public async checkById(data: {
     id: string;
     federatedGraphTargetId: string;
+    federatedGraphId: string;
   }): Promise<SchemaCheckSummaryDTO | undefined> {
     const check = await this.db.query.schemaChecks.findFirst({
       where: eq(schema.schemaChecks.id, data.id),
@@ -911,16 +1036,18 @@ export class SubgraphRepository {
     const subgraphs = await this.listByFederatedGraph({
       federatedGraphTargetId: data.federatedGraphTargetId,
     });
-
     const subgraph = subgraphs.find((s) => s.targetId === check.targetId);
-    if (!subgraph) {
-      return;
-    }
+
+    const schemaCheckRepo = new SchemaCheckRepository(this.db);
+    const checkedSubgraphs = await schemaCheckRepo.getCheckedSubgraphsForCheckIdAndFederatedGraphId({
+      checkId: check.id,
+      federatedGraphId: data.federatedGraphId,
+    });
 
     return {
       id: check.id,
-      targetID: check.targetId,
-      subgraphName: subgraph.name ?? '',
+      targetID: check.targetId || undefined,
+      subgraphName: subgraph?.name || undefined,
       timestamp: check.createdAt.toISOString(),
       isBreaking: check.hasBreakingChanges ?? false,
       isComposable: check.isComposable ?? false,
@@ -941,6 +1068,22 @@ export class SubgraphRepository {
           }
         : undefined,
       hasLintErrors: check.hasLintErrors ?? false,
+      hasGraphPruningErrors: check.hasGraphPruningErrors ?? false,
+      clientTrafficCheckSkipped: check.clientTrafficCheckSkipped ?? false,
+      lintSkipped: check.lintSkipped ?? false,
+      graphPruningSkipped: check.graphPruningSkipped ?? false,
+      vcsContext: check.vcsContext
+        ? {
+            author: check.vcsContext.author,
+            branch: check.vcsContext.branch,
+            commitSha: check.vcsContext.commitSha,
+          }
+        : undefined,
+      checkedSubgraphs,
+      proposalMatch: check.proposalMatch || undefined,
+      compositionSkipped: check.compositionSkipped ?? false,
+      breakingChangesSkipped: check.breakingChangesSkipped ?? false,
+      errorMessage: check.errorMessage || undefined,
     };
   }
 
@@ -954,11 +1097,19 @@ export class SubgraphRepository {
         isBreaking: true,
       },
       where: eq(schema.schemaCheckChangeAction.schemaCheckId, id),
+      with: {
+        checkSubgraph: {
+          columns: {
+            subgraphName: true,
+          },
+        },
+      },
     });
 
     const errorList = await this.db.query.schemaCheckComposition.findMany({
       columns: {
         compositionErrors: true,
+        compositionWarnings: true,
       },
       where: and(
         eq(schema.schemaCheckComposition.schemaCheckId, id),
@@ -973,6 +1124,13 @@ export class SubgraphRepository {
       .split('\n')
       .filter((m) => !!m);
 
+    const compositionWarnings = errorList
+      .filter((ce) => ce.compositionWarnings != null)
+      .map((ce) => ce.compositionWarnings)
+      .join('\n')
+      .split('\n')
+      .filter((m) => !!m);
+
     return {
       changes: changes.map((c) => ({
         id: c.id,
@@ -980,8 +1138,10 @@ export class SubgraphRepository {
         message: c.changeMessage ?? '',
         path: c.path ?? undefined,
         isBreaking: c.isBreaking ?? false,
+        subgraphName: c.checkSubgraph?.subgraphName ?? undefined,
       })),
       compositionErrors,
+      compositionWarnings,
     };
   }
 
@@ -1104,6 +1264,23 @@ export class SubgraphRepository {
     };
   }
 
+  public async getSDLBySchemaVersionId(data: { schemaVersionId: string }) {
+    const latestValidVersion = await this.db
+      .select({
+        schemaSDL: schemaVersion.schemaSDL,
+      })
+      .from(schemaVersion)
+      .innerJoin(targets, eq(schemaVersion.targetId, targets.id))
+      .where(and(eq(targets.organizationId, this.organizationId), eq(schemaVersion.id, data.schemaVersionId)))
+      .execute();
+
+    if (latestValidVersion.length === 0) {
+      return undefined;
+    }
+
+    return latestValidVersion[0].schemaSDL;
+  }
+
   public async getAccessibleSubgraphs(userId: string): Promise<SubgraphDTO[]> {
     const graphs = await this.db
       .selectDistinctOn([targets.id], { targetId: targets.id, name: targets.name })
@@ -1185,5 +1362,219 @@ export class SubgraphRepository {
       .delete(subgraphMembers)
       .where(and(eq(subgraphMembers.subgraphId, subgraphId), eq(subgraphMembers.id, subgraphMemberId)))
       .execute();
+  }
+
+  public async addFieldGracePeriod({
+    subgraphId,
+    namespaceId,
+    path,
+    expiresAt,
+    isDeprecated,
+  }: {
+    subgraphId: string;
+    namespaceId: string;
+    path: string;
+    expiresAt: Date;
+    isDeprecated: boolean;
+  }) {
+    await this.db
+      .insert(fieldGracePeriod)
+      .values({
+        subgraphId,
+        namespaceId,
+        organizationId: this.organizationId,
+        path,
+        expiresAt,
+        isDeprecated,
+      })
+      .onConflictDoUpdate({
+        target: [
+          fieldGracePeriod.subgraphId,
+          fieldGracePeriod.namespaceId,
+          fieldGracePeriod.organizationId,
+          fieldGracePeriod.path,
+          fieldGracePeriod.isDeprecated,
+        ],
+        set: {
+          isDeprecated,
+          expiresAt,
+        },
+      });
+  }
+
+  public getSubgraphFieldsInGracePeriod({
+    subgraphId,
+    namespaceId,
+    onlyDeprecated,
+  }: {
+    subgraphId: string;
+    namespaceId: string;
+    onlyDeprecated?: boolean;
+  }) {
+    const conditions: SQL<unknown>[] = [
+      eq(fieldGracePeriod.subgraphId, subgraphId),
+      eq(fieldGracePeriod.namespaceId, namespaceId),
+      eq(fieldGracePeriod.organizationId, this.organizationId),
+      gt(fieldGracePeriod.expiresAt, new Date()),
+    ];
+
+    if (onlyDeprecated) {
+      conditions.push(eq(fieldGracePeriod.isDeprecated, onlyDeprecated));
+    }
+
+    return this.db
+      .select({
+        subgraphId: fieldGracePeriod.subgraphId,
+        namespaceId: fieldGracePeriod.namespaceId,
+        path: fieldGracePeriod.path,
+        expiresAt: fieldGracePeriod.expiresAt,
+        isDeprecated: fieldGracePeriod.isDeprecated,
+      })
+      .from(fieldGracePeriod)
+      .where(and(...conditions));
+  }
+
+  public async deleteFieldGracePeriod({
+    subgraphId,
+    namespaceId,
+    path,
+    isDeprecated,
+  }: {
+    subgraphId: string;
+    namespaceId: string;
+    path: string;
+    isDeprecated: boolean;
+  }) {
+    const conditions: SQL<unknown>[] = [
+      eq(fieldGracePeriod.subgraphId, subgraphId),
+      eq(fieldGracePeriod.namespaceId, namespaceId),
+      eq(fieldGracePeriod.organizationId, this.organizationId),
+      eq(fieldGracePeriod.path, path),
+    ];
+
+    if (isDeprecated) {
+      conditions.push(eq(fieldGracePeriod.isDeprecated, isDeprecated));
+    }
+    await this.db
+      .delete(fieldGracePeriod)
+      .where(and(...conditions))
+      .execute();
+  }
+
+  public async deleteExpiredGracePeriodFields({
+    subgraphId,
+    namespaceId,
+  }: {
+    subgraphId: string;
+    namespaceId: string;
+  }) {
+    const conditions: SQL<unknown>[] = [
+      eq(fieldGracePeriod.subgraphId, subgraphId),
+      eq(fieldGracePeriod.namespaceId, namespaceId),
+      eq(fieldGracePeriod.organizationId, this.organizationId),
+      lt(fieldGracePeriod.expiresAt, new Date()),
+    ];
+
+    await this.db
+      .delete(fieldGracePeriod)
+      .where(and(...conditions))
+      .execute();
+  }
+
+  public async handleSubgraphFieldGracePeriods({
+    schemaSDL,
+    newSchemaSDL,
+    subgraphId,
+    namespaceId,
+    graphPruningConfigs,
+  }: {
+    schemaSDL: string;
+    newSchemaSDL: string;
+    subgraphId: string;
+    namespaceId: string;
+    graphPruningConfigs: SchemaGraphPruningDTO[];
+  }) {
+    const subgraph = await this.byId(subgraphId);
+    if (!subgraph) {
+      throw new Error(`Subgraph not found.`);
+    }
+    const fedGraphRepo = new FederatedGraphRepository(this.logger, this.db, this.organizationId);
+    const federatedGraphs = await fedGraphRepo.bySubgraphLabels({ labels: subgraph.labels, namespaceId });
+    const schemaChanges = await getDiffBetweenGraphs(
+      schemaSDL,
+      newSchemaSDL,
+      getFederatedGraphRouterCompatibilityVersion(federatedGraphs),
+    );
+    if (schemaChanges.kind === 'failure') {
+      this.logger.error(`Failed to get diff between schemas for subgraph ${subgraphId} while handling grace periods`);
+    } else {
+      const fieldsAdded = schemaChanges.changes.filter(
+        (change) =>
+          change.changeType === 'FIELD_ADDED' ||
+          change.changeType === 'FIELD_TYPE_CHANGED' ||
+          change.changeType === 'INPUT_FIELD_ADDED' ||
+          change.changeType === 'INPUT_FIELD_TYPE_CHANGED' ||
+          change.changeType === 'FIELD_ARGUMENT_ADDED' ||
+          change.changeType === 'FIELD_ARGUMENT_REMOVED',
+      );
+      const fieldsRemoved = schemaChanges.changes.filter(
+        (change) => change.changeType === 'FIELD_REMOVED' || change.changeType === 'INPUT_FIELD_REMOVED',
+      );
+      const deprecatedFieldsAdded = schemaChanges.changes.filter(
+        (change) => change.changeType === 'FIELD_DEPRECATION_ADDED',
+      );
+      const deprecatedFieldsRemoved = schemaChanges.changes.filter(
+        (change) => change.changeType === 'FIELD_DEPRECATION_REMOVED',
+      );
+
+      const now = new Date();
+      const gracePeriodForUnusedFields = addDays(
+        now,
+        graphPruningConfigs.find((c) => c.ruleName === 'UNUSED_FIELDS')?.gracePeriodInDays || 7,
+      );
+      const gracePeriodForDeprecatedFields = addDays(
+        now,
+        graphPruningConfigs.find((c) => c.ruleName === 'DEPRECATED_FIELDS')?.gracePeriodInDays || 7,
+      );
+      for (const field of fieldsAdded) {
+        await this.addFieldGracePeriod({
+          subgraphId,
+          path: field.path,
+          namespaceId,
+          expiresAt: gracePeriodForUnusedFields,
+          isDeprecated: false,
+        });
+      }
+
+      for (const field of deprecatedFieldsAdded) {
+        await this.addFieldGracePeriod({
+          subgraphId,
+          path: field.path,
+          namespaceId,
+          expiresAt: gracePeriodForDeprecatedFields,
+          isDeprecated: true,
+        });
+      }
+
+      for (const field of deprecatedFieldsRemoved) {
+        await this.deleteFieldGracePeriod({
+          subgraphId,
+          path: field.path,
+          namespaceId,
+          isDeprecated: true,
+        });
+      }
+
+      for (const field of fieldsRemoved) {
+        await this.deleteFieldGracePeriod({
+          subgraphId,
+          path: field.path,
+          namespaceId,
+          isDeprecated: false,
+        });
+      }
+    }
+
+    await this.deleteExpiredGracePeriodFields({ subgraphId, namespaceId });
   }
 }

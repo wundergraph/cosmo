@@ -62,3 +62,11 @@ service:
     metrics:
       level: ${PROMETHEUS_LEVEL}
       address: ${PROMETHEUS_LISTEN_ADDR}
+    logs:
+      level: INFO
+      encoding: json
+      # https://opentelemetry.io/docs/collector/internal-telemetry/#configure-internal-logs
+      # https://github.com/open-telemetry/opentelemetry-collector/issues/3460#issuecomment-1981097777
+      # output logging to stdout
+      output_paths: ['stdout']
+      error_output_paths: ['stderr']

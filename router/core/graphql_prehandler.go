@@ -4,31 +4,39 @@ import (
 	"bytes"
 	"context"
 	"crypto/ecdsa"
+	"encoding/json"
+	"errors"
 	"fmt"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
-	"io"
+	"maps"
 	"net/http"
-	"strconv"
+	"slices"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
-	"go.opentelemetry.io/otel/attribute"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	"go.opentelemetry.io/otel/trace"
-
-	"github.com/wundergraph/cosmo/router/pkg/art"
-	"github.com/wundergraph/cosmo/router/pkg/logging"
-	"github.com/wundergraph/cosmo/router/pkg/otel"
-	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+	"go.opentelemetry.io/otel/codes"
 
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/pkg/errors"
+	"github.com/golang-jwt/jwt/v5"
+	"go.opentelemetry.io/otel/attribute"
+	otelmetric "go.opentelemetry.io/otel/metric"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 
+	"github.com/wundergraph/astjson"
+
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
+
+	"github.com/wundergraph/cosmo/router/internal/expr"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
+	"github.com/wundergraph/cosmo/router/pkg/art"
+	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/otel"
+	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 )
 
 type PreHandlerOptions struct {
@@ -41,6 +49,7 @@ type PreHandlerOptions struct {
 	OperationBlocker   *OperationBlocker
 	RouterPublicKey    *ecdsa.PublicKey
 	TracerProvider     *sdktrace.TracerProvider
+	ComplexityLimits   *config.ComplexityLimits
 	MaxUploadFiles     int
 	MaxUploadFileSize  int
 
@@ -52,6 +61,14 @@ type PreHandlerOptions struct {
 	AlwaysIncludeQueryPlan      bool
 	AlwaysSkipLoader            bool
 	QueryPlansEnabled           bool
+	QueryPlansLoggingEnabled    bool
+	TrackSchemaUsageInfo        bool
+	ClientHeader                config.ClientHeader
+	ComputeOperationSha256      bool
+	ApolloCompatibilityFlags    *config.ApolloCompatibilityFlags
+	DisableVariablesRemapping   bool
+	ExprManager                 *expr.Manager
+	OmitBatchExtensions         bool
 }
 
 type PreHandler struct {
@@ -65,7 +82,8 @@ type PreHandler struct {
 	developmentMode             bool
 	alwaysIncludeQueryPlan      bool
 	alwaysSkipLoader            bool
-	queryPlansEnabled           bool
+	queryPlansEnabled           bool // queryPlansEnabled is a flag to enable query plans output in the extensions
+	queryPlansLoggingEnabled    bool // queryPlansLoggingEnabled is a flag to enable logging of query plans
 	routerPublicKey             *ecdsa.PublicKey
 	enableRequestTracing        bool
 	tracerProvider              *sdktrace.TracerProvider
@@ -75,20 +93,25 @@ type PreHandler struct {
 	fileUploadEnabled           bool
 	maxUploadFiles              int
 	maxUploadFileSize           int
-	bodyReadBuffers             *sync.Pool
+	complexityLimits            *config.ComplexityLimits
+	trackSchemaUsageInfo        bool
+	clientHeader                config.ClientHeader
+	computeOperationSha256      bool
+	apolloCompatibilityFlags    *config.ApolloCompatibilityFlags
+	variableParsePool           astjson.ParserPool
+	disableVariablesRemapping   bool
+	exprManager                 *expr.Manager
+	omitBatchExtensions         bool
 }
 
 type httpOperation struct {
+	requestContext   *requestContext
 	body             []byte
-	files            []httpclient.File
+	files            []*httpclient.FileUpload
 	requestLogger    *zap.Logger
-	attributes       []attribute.KeyValue
-	clientInfo       *ClientInfo
 	routerSpan       trace.Span
 	operationMetrics *OperationMetrics
-	traceOptions     resolve.TraceOptions
 	traceTimings     *art.TraceTimings
-	executionOptions resolve.ExecutionOptions
 }
 
 func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
@@ -110,32 +133,31 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 			"wundergraph/cosmo/router/pre_handler",
 			trace.WithInstrumentationVersion("0.0.1"),
 		),
-		fileUploadEnabled:      opts.FileUploadEnabled,
-		maxUploadFiles:         opts.MaxUploadFiles,
-		maxUploadFileSize:      opts.MaxUploadFileSize,
-		bodyReadBuffers:        &sync.Pool{},
-		alwaysIncludeQueryPlan: opts.AlwaysIncludeQueryPlan,
-		alwaysSkipLoader:       opts.AlwaysSkipLoader,
-		queryPlansEnabled:      opts.QueryPlansEnabled,
+		fileUploadEnabled:         opts.FileUploadEnabled,
+		maxUploadFiles:            opts.MaxUploadFiles,
+		maxUploadFileSize:         opts.MaxUploadFileSize,
+		complexityLimits:          opts.ComplexityLimits,
+		alwaysIncludeQueryPlan:    opts.AlwaysIncludeQueryPlan,
+		alwaysSkipLoader:          opts.AlwaysSkipLoader,
+		queryPlansEnabled:         opts.QueryPlansEnabled,
+		queryPlansLoggingEnabled:  opts.QueryPlansLoggingEnabled,
+		trackSchemaUsageInfo:      opts.TrackSchemaUsageInfo,
+		clientHeader:              opts.ClientHeader,
+		computeOperationSha256:    opts.ComputeOperationSha256,
+		apolloCompatibilityFlags:  opts.ApolloCompatibilityFlags,
+		disableVariablesRemapping: opts.DisableVariablesRemapping,
+		exprManager:               opts.ExprManager,
+		omitBatchExtensions:       opts.OmitBatchExtensions,
 	}
 }
 
 func (h *PreHandler) getBodyReadBuffer(preferredSize int64) *bytes.Buffer {
 	if preferredSize <= 0 {
-		preferredSize = 1024
+		preferredSize = 1024 * 4 // 4KB
 	} else if preferredSize > h.operationProcessor.maxOperationSizeInBytes {
 		preferredSize = h.operationProcessor.maxOperationSizeInBytes
 	}
-	buf := h.bodyReadBuffers.Get()
-	if buf == nil {
-		return bytes.NewBuffer(make([]byte, 0, preferredSize))
-	}
-	return buf.(*bytes.Buffer)
-}
-
-func (h *PreHandler) releaseBodyReadBuffer(buf *bytes.Buffer) {
-	buf.Reset()
-	h.bodyReadBuffers.Put(buf)
+	return bytes.NewBuffer(make([]byte, 0, preferredSize))
 }
 
 // Error and Status Code handling
@@ -150,84 +172,129 @@ func (h *PreHandler) releaseBodyReadBuffer(buf *bytes.Buffer) {
 
 func (h *PreHandler) Handler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		requestLogger := h.log.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
 
 		var (
 			// In GraphQL the statusCode does not always express the error state of the request
 			// we use this flag to determine if we have an error for the request metrics
-			finalErr     error
 			writtenBytes int
 			statusCode   = http.StatusOK
 			traceTimings *art.TraceTimings
 		)
 
+		requestContext := getRequestContext(r.Context())
+		requestLogger := requestContext.logger
+
 		routerSpan := trace.SpanFromContext(r.Context())
 
-		clientInfo := NewClientInfoFromRequest(r)
-		commonAttributes := []attribute.KeyValue{
+		clientInfo := NewClientInfoFromRequest(r, h.clientHeader)
+
+		requestContext.telemetry.addCommonAttribute(
 			otel.WgClientName.String(clientInfo.Name),
 			otel.WgClientVersion.String(clientInfo.Version),
 			otel.WgOperationProtocol.String(OperationProtocolHTTP.String()),
+		)
+
+		startAttrs := *requestContext.telemetry.AcquireAttributes()
+		startAttrs = append(startAttrs, requestContext.telemetry.metricAttrs...)
+
+		metrics := h.metrics.StartOperation(
+			requestLogger,
+			r.ContentLength,
+			requestContext.telemetry.metricSliceAttrs,
+			otelmetric.WithAttributeSet(attribute.NewSet(startAttrs...)),
+		)
+
+		requestContext.telemetry.ReleaseAttributes(&startAttrs)
+
+		routerSpan.SetAttributes(requestContext.telemetry.traceAttrs...)
+
+		if requestContext.telemetry.traceAttributeExpressions != nil {
+			traceMetrics, err := requestContext.telemetry.traceAttributeExpressions.expressionsAttributes(requestContext)
+			if err != nil {
+				requestLogger.Error("failed to resolve trace attribute", zap.Error(err))
+			}
+			requestContext.telemetry.addCommonAttribute(
+				traceMetrics...,
+			)
+			routerSpan.SetAttributes(traceMetrics...)
 		}
+
+		if requestContext.telemetry.metricAttributeExpressions != nil {
+			metricAttrs, err := requestContext.telemetry.metricAttributeExpressions.expressionsAttributes(requestContext)
+			if err != nil {
+				requestLogger.Error("failed to resolve metric attribute", zap.Error(err))
+			}
+			requestContext.telemetry.addMetricAttribute(
+				metricAttrs...,
+			)
+		}
+
+		requestContext.operation = &operationContext{
+			clientInfo: clientInfo,
+		}
+
+		defer func() {
+			requestContext.telemetry.AddCustomMetricStringSliceAttr(ContextFieldGraphQLErrorServices, requestContext.graphQLErrorServices)
+			requestContext.telemetry.AddCustomMetricStringSliceAttr(ContextFieldOperationServices, requestContext.dataSourceNames)
+			requestContext.telemetry.AddCustomMetricStringSliceAttr(ContextFieldGraphQLErrorCodes, requestContext.graphQLErrorCodes)
+
+			metrics.Finish(
+				requestContext,
+				statusCode,
+				writtenBytes,
+				h.flushTelemetryAfterResponse,
+			)
+
+			if h.flushTelemetryAfterResponse {
+				h.flushMetrics(r.Context(), requestLogger)
+			}
+		}()
 
 		executionOptions, traceOptions, err := h.parseRequestOptions(r, clientInfo, requestLogger)
 		if err != nil {
-			finalErr = err
+			requestContext.SetError(err)
 			writeRequestErrors(r, w, http.StatusBadRequest, graphqlerrors.RequestErrorsFromError(err), requestLogger)
 			return
 		}
+
+		requestContext.operation.protocol = OperationProtocolHTTP
+		requestContext.operation.executionOptions = executionOptions
+		requestContext.operation.traceOptions = traceOptions
 
 		if traceOptions.Enable {
 			r = r.WithContext(resolve.SetTraceStart(r.Context(), traceOptions.EnablePredictableDebugTimings))
 			traceTimings = art.NewTraceTimings(r.Context())
 		}
 
-		if baseAttributes := baseAttributesFromContext(r.Context()); baseAttributes != nil {
-			commonAttributes = append(commonAttributes, baseAttributes...)
-		}
-
-		metrics := h.metrics.StartOperation(clientInfo, requestLogger, r.ContentLength, commonAttributes)
-
-		routerSpan.SetAttributes(commonAttributes...)
-
-		if h.flushTelemetryAfterResponse {
-			defer h.flushMetrics(r.Context(), requestLogger)
-		}
-
-		defer func() {
-			metrics.Finish(finalErr, statusCode, writtenBytes)
-		}()
-
 		var body []byte
-		var files []httpclient.File
-		// XXX: This buffer needs to be returned to the pool only
-		// AFTER we're done with body (retrieved from parser.ReadBody())
-		buf := h.getBodyReadBuffer(r.ContentLength)
+		var files []*httpclient.FileUpload
 
 		if strings.Contains(r.Header.Get("Content-Type"), "multipart/form-data") {
 			if !h.fileUploadEnabled {
-				finalErr = &httpGraphqlError{
+				requestContext.SetError(&httpGraphqlError{
 					message:    "file upload disabled",
 					statusCode: http.StatusOK,
-				}
-				writeOperationError(r, w, requestLogger, finalErr)
-				h.releaseBodyReadBuffer(buf)
+				})
+				writeOperationError(r, w, requestLogger, requestContext.error)
 				return
 			}
 
 			_, readMultiPartSpan := h.tracer.Start(r.Context(), "HTTP - Read Multipart",
 				trace.WithSpanKind(trace.SpanKindInternal),
-				trace.WithAttributes(commonAttributes...),
+				trace.WithAttributes(requestContext.telemetry.traceAttrs...),
 			)
 
 			multipartParser := NewMultipartParser(h.operationProcessor, h.maxUploadFiles, h.maxUploadFileSize)
 
 			var err error
-			body, files, err = multipartParser.Parse(r, buf)
+			body, files, err = multipartParser.Parse(r, h.getBodyReadBuffer(r.ContentLength))
+			// We set it before the error so that users could log the body if it exists in case of an error
+			if h.exprManager.VisitorManager.IsBodyUsedInExpressions() {
+				requestContext.expressionContext.Request.Body.Raw = string(body)
+			}
 			if err != nil {
-				finalErr = err
-				writeOperationError(r, w, requestLogger, finalErr)
-				h.releaseBodyReadBuffer(buf)
+				requestContext.SetError(err)
+				writeOperationError(r, w, requestLogger, requestContext.error)
 				readMultiPartSpan.End()
 				return
 			}
@@ -238,34 +305,33 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 			readMultiPartSpan.End()
 
-			// Cleanup all files. Needs to be called in the pre_handler function to ensure that the
+			// Cleanup all files. Needs to be called in the pre_handler function to ensure that
 			// defer is called after the response is written
 			defer func() {
 				if err := multipartParser.RemoveAll(); err != nil {
-					requestLogger.Error("failed to remove files after multipart request", zap.Error(err))
+					requestLogger.Error("Failed to remove files after multipart request", zap.Error(err))
 				}
 			}()
-		} else {
+		} else if r.Method == http.MethodPost {
 			_, readOperationBodySpan := h.tracer.Start(r.Context(), "HTTP - Read Body",
 				trace.WithSpanKind(trace.SpanKindInternal),
-				trace.WithAttributes(commonAttributes...),
+				trace.WithAttributes(requestContext.telemetry.traceAttrs...),
 			)
 
 			var err error
-			body, err = h.operationProcessor.ReadBody(buf, r.Body)
+			body, err = h.operationProcessor.ReadBody(r.Body, h.getBodyReadBuffer(r.ContentLength))
+			// We set it before the error so that users could log the body if it exists in case of an error
+			if h.exprManager.VisitorManager.IsBodyUsedInExpressions() {
+				requestContext.expressionContext.Request.Body.Raw = string(body)
+			}
 			if err != nil {
-				finalErr = err
+				requestContext.SetError(err)
 
-				// This error is expected e.g. when the client defines (Content-Length) and aborts the request before
-				// It means that EOF was encountered in the middle of reading the body. This is not a server error.
-				if errors.Is(err, io.ErrUnexpectedEOF) {
-					requestLogger.Debug("unexpected EOF while reading request body", zap.Error(err))
-				} else {
-					requestLogger.Error("failed to read request body", zap.Error(err))
-				}
+				// Don't produce errors logs here because it can only be client side errors
+				// e.g. too large body, slow client, aborted connection etc.
+				// The error is logged as debug log in the writeOperationError function
 
 				writeOperationError(r, w, requestLogger, err)
-				h.releaseBodyReadBuffer(buf)
 				readOperationBodySpan.End()
 				return
 			}
@@ -273,39 +339,20 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			readOperationBodySpan.End()
 		}
 
-		opContext, err := h.handleOperation(r, buf, &httpOperation{
-			requestLogger:    requestLogger,
-			attributes:       commonAttributes,
-			clientInfo:       clientInfo,
-			routerSpan:       routerSpan,
-			operationMetrics: metrics,
-			traceOptions:     traceOptions,
-			traceTimings:     traceTimings,
-			executionOptions: executionOptions,
-			files:            files,
-			body:             body,
-		})
-		if err != nil {
-			finalErr = err
-			// Mark the root span of the router as failed, so we can easily identify failed requests
-			rtrace.AttachErrToSpan(routerSpan, err)
-
-			writeOperationError(r, w, requestLogger, err)
-			h.releaseBodyReadBuffer(buf)
-			return
-		}
+		variablesParser := h.variableParsePool.Get()
+		defer h.variableParsePool.Put(variablesParser)
 
 		// If we have authenticators, we try to authenticate the request
 		if h.accessController != nil {
 			_, authenticateSpan := h.tracer.Start(r.Context(), "Authenticate",
 				trace.WithSpanKind(trace.SpanKindServer),
-				trace.WithAttributes(commonAttributes...),
+				trace.WithAttributes(requestContext.telemetry.traceAttrs...),
 			)
 
 			validatedReq, err := h.accessController.Access(w, r)
 			if err != nil {
-				finalErr = err
-				requestLogger.Error("failed to authenticate request", zap.Error(err))
+				requestContext.SetError(err)
+				requestLogger.Debug("Failed to authenticate request", zap.Error(err))
 
 				// Mark the root span of the router as failed, so we can easily identify failed requests
 				rtrace.AttachErrToSpan(routerSpan, err)
@@ -323,41 +370,107 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			authenticateSpan.End()
 
 			r = validatedReq
+
+			requestContext.expressionContext.Request.Auth = expr.LoadAuth(r.Context())
+		}
+
+		if requestContext.telemetry.traceAttributeExpressions != nil {
+			traceMetrics, err := requestContext.telemetry.traceAttributeExpressions.expressionsAttributesWithAuth(requestContext)
+			if err != nil {
+				requestLogger.Error("failed to resolve trace attribute", zap.Error(err))
+			}
+			requestContext.telemetry.addCommonAttribute(
+				traceMetrics...,
+			)
+			routerSpan.SetAttributes(traceMetrics...)
+		}
+
+		if requestContext.telemetry.metricAttributeExpressions != nil {
+			metricAttrs, err := requestContext.telemetry.metricAttributeExpressions.expressionsAttributesWithAuth(requestContext)
+			if err != nil {
+				requestLogger.Error("failed to resolve metric attribute", zap.Error(err))
+			}
+			requestContext.telemetry.addMetricAttribute(
+				metricAttrs...,
+			)
+		}
+
+		err = h.handleOperation(r, variablesParser, &httpOperation{
+			requestContext:   requestContext,
+			requestLogger:    requestLogger,
+			routerSpan:       routerSpan,
+			operationMetrics: metrics,
+			traceTimings:     traceTimings,
+			files:            files,
+			body:             body,
+		})
+		if err != nil {
+			requestContext.SetError(err)
+			// Mark the root span of the router as failed, so we can easily identify failed requests
+			rtrace.AttachErrToSpan(routerSpan, err)
+
+			writeOperationError(r, w, requestLogger, err)
+			return
 		}
 
 		art.SetRequestTracingStats(r.Context(), traceOptions, traceTimings)
 
-		requestContext := buildRequestContext(w, r, opContext, requestLogger)
-		metrics.AddOperationContext(opContext)
+		if traceOptions.Enable {
+			reqData := &resolve.RequestData{
+				Method:  r.Method,
+				URL:     r.URL.String(),
+				Headers: r.Header,
+				Body: resolve.BodyData{
+					Query:         requestContext.operation.rawContent,
+					OperationName: requestContext.operation.name,
+					Variables:     json.RawMessage(requestContext.operation.variables.String()),
+				},
+			}
+			r = r.WithContext(resolve.SetRequest(r.Context(), reqData))
+		}
 
-		ctxWithRequest := withRequestContext(r.Context(), requestContext)
-		ctxWithOperation := withOperationContext(ctxWithRequest, opContext)
 		ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
 
-		newReq := r.WithContext(ctxWithOperation)
+		// The request context needs to be updated with the latest request to ensure that the context is up to date
+		requestContext.request = r
+		requestContext.responseWriter = ww
 
 		// Call the final handler that resolves the operation
 		// and enrich the context to make it available in the request context as well for metrics etc.
-		next.ServeHTTP(ww, newReq)
+		next.ServeHTTP(ww, r)
 
 		statusCode = ww.Status()
 		writtenBytes = ww.BytesWritten()
 
-		// Evaluate the request after the request has been handled by the engine handler
-		finalErr = requestContext.error
-
 		// Mark the root span of the router as failed, so we can easily identify failed requests
-		if finalErr != nil {
-			rtrace.AttachErrToSpan(trace.SpanFromContext(r.Context()), finalErr)
+		if requestContext.error != nil {
+			rtrace.AttachErrToSpan(trace.SpanFromContext(r.Context()), requestContext.error)
 		}
 	})
 }
 
-func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpOperation *httpOperation) (*operationContext, error) {
+func (h *PreHandler) shouldComputeOperationSha256(operationKit *OperationKit) bool {
+	if h.computeOperationSha256 {
+		return true
+	}
 
-	operationKit, err := h.operationProcessor.NewKit(httpOperation.body, httpOperation.files)
+	hasPersistedHash := operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery != nil && operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash != ""
+	// If it already has a persisted hash attached to the request, then there is no need for us to compute it anew
+	// Otherwise, we only want to compute the hash (an expensive operation) if we're safelisting or logging unknown persisted operations
+	return !hasPersistedHash && (h.operationBlocker.SafelistEnabled || h.operationBlocker.LogUnknownOperationsEnabled)
+}
+
+// shouldFetchPersistedOperation determines if we should fetch a persisted operation. The most intuitive case is if the
+// operation is a persisted operation. However, we also want to fetch persisted operations if we're enabling safelisting
+// and if we're logging unknown operations. This is because we want to check if the operation is already persisted in the cache
+func (h *PreHandler) shouldFetchPersistedOperation(operationKit *OperationKit) bool {
+	return operationKit.parsedOperation.IsPersistedOperation || h.operationBlocker.SafelistEnabled || h.operationBlocker.LogUnknownOperationsEnabled
+}
+
+func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson.Parser, httpOperation *httpOperation) error {
+	operationKit, err := h.operationProcessor.NewKit()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	defer func() {
@@ -371,17 +484,89 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 
 	}()
 
-	if err := operationKit.UnmarshalOperation(); err != nil {
-		return nil, err
+	requestContext := httpOperation.requestContext
+
+	// Handle the case when operation information are provided as GET parameters
+	if req.Method == http.MethodGet {
+		if err := operationKit.UnmarshalOperationFromURL(req.URL); err != nil {
+			return &httpGraphqlError{
+				message:    fmt.Sprintf("error parsing request query params: %s", err),
+				statusCode: http.StatusBadRequest,
+			}
+		}
+	} else if req.Method == http.MethodPost {
+		if err := operationKit.UnmarshalOperationFromBody(httpOperation.body); err != nil {
+			return &httpGraphqlError{
+				message:    "error parsing request body",
+				statusCode: http.StatusBadRequest,
+			}
+		}
+		// If we have files, we need to set them on the parsed operation
+		if len(httpOperation.files) > 0 {
+			requestContext.operation.files = httpOperation.files
+		}
 	}
 
-	var skipParse bool
-
-	if operationKit.parsedOperation.IsPersistedOperation {
-		skipParse, err = operationKit.FetchPersistedOperation(req.Context(), httpOperation.clientInfo, httpOperation.attributes)
-		if err != nil {
-			return nil, err
+	// Compute the operation sha256 hash as soon as possible for observability reasons
+	if h.shouldComputeOperationSha256(operationKit) {
+		if err := operationKit.ComputeOperationSha256(); err != nil {
+			return &httpGraphqlError{
+				message:    fmt.Sprintf("error hashing operation: %s", err),
+				statusCode: http.StatusInternalServerError,
+			}
 		}
+		requestContext.operation.sha256Hash = operationKit.parsedOperation.Sha256Hash
+		requestContext.telemetry.addCustomMetricStringAttr(ContextFieldOperationSha256, requestContext.operation.sha256Hash)
+		if h.operationBlocker.SafelistEnabled || h.operationBlocker.LogUnknownOperationsEnabled {
+			// Set the request hash to the parsed hash, to see if it matches a persisted operation
+			operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery = &GraphQLRequestExtensionsPersistedQuery{
+				Sha256Hash: operationKit.parsedOperation.Sha256Hash,
+			}
+		}
+	}
+
+	requestContext.operation.extensions = operationKit.parsedOperation.Request.Extensions
+	requestContext.operation.variables, err = variablesParser.ParseBytes(operationKit.parsedOperation.Request.Variables)
+	if err != nil {
+		return &httpGraphqlError{
+			message:    fmt.Sprintf("error parsing variables: %s", err),
+			statusCode: http.StatusBadRequest,
+		}
+	}
+
+	var (
+		skipParse bool
+		isApq     bool
+	)
+
+	if h.shouldFetchPersistedOperation(operationKit) {
+		ctx, span := h.tracer.Start(req.Context(), "Load Persisted Operation",
+			trace.WithSpanKind(trace.SpanKindClient),
+			trace.WithAttributes(requestContext.telemetry.traceAttrs...),
+		)
+
+		skipParse, isApq, err = operationKit.FetchPersistedOperation(ctx, requestContext.operation.clientInfo)
+		span.SetAttributes(otel.WgEnginePersistedOperationCacheHit.Bool(operationKit.parsedOperation.PersistedOperationCacheHit))
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+
+			var poNotFoundErr *persistedoperation.PersistentOperationNotFoundError
+			if h.operationBlocker.LogUnknownOperationsEnabled && errors.As(err, &poNotFoundErr) {
+				requestContext.logger.Warn("Unknown persisted operation found", zap.String("query", operationKit.parsedOperation.Request.Query), zap.String("sha256Hash", poNotFoundErr.Sha256Hash))
+				if h.operationBlocker.SafelistEnabled {
+					span.End()
+					return err
+				}
+			} else {
+				span.End()
+				return err
+			}
+		}
+
+		span.End()
+
+		requestContext.operation.persistedOperationCacheHit = operationKit.parsedOperation.PersistedOperationCacheHit
 	}
 
 	// If the persistent operation is already in the cache, we skip the parse step
@@ -390,42 +575,82 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 	if !skipParse {
 		_, engineParseSpan := h.tracer.Start(req.Context(), "Operation - Parse",
 			trace.WithSpanKind(trace.SpanKindInternal),
-			trace.WithAttributes(httpOperation.attributes...),
+			trace.WithAttributes(requestContext.telemetry.traceAttrs...),
 		)
 
 		httpOperation.traceTimings.StartParse()
+		startParsing := time.Now()
 
 		err = operationKit.Parse()
 		if err != nil {
 			rtrace.AttachErrToSpan(engineParseSpan, err)
 
+			requestContext.operation.parsingTime = time.Since(startParsing)
+			if !requestContext.operation.traceOptions.ExcludeParseStats {
+				httpOperation.traceTimings.EndParse()
+			}
+
 			engineParseSpan.End()
 
-			return nil, err
+			return err
 		}
 
-		httpOperation.traceTimings.EndParse()
+		requestContext.operation.parsingTime = time.Since(startParsing)
+		if !requestContext.operation.traceOptions.ExcludeParseStats {
+			httpOperation.traceTimings.EndParse()
+		}
+
 		engineParseSpan.End()
 	}
 
-	// Give the buffer back to the pool as soon as we're done with it
-	h.releaseBodyReadBuffer(buf)
+	requestContext.operation.name = operationKit.parsedOperation.Request.OperationName
+	requestContext.operation.opType = operationKit.parsedOperation.Type
 
-	attributes := []attribute.KeyValue{
+	setExpressionContextOperation(requestContext)
+	setExpressionContextClient(requestContext)
+
+	attributesAfterParse := []attribute.KeyValue{
 		otel.WgOperationName.String(operationKit.parsedOperation.Request.OperationName),
 		otel.WgOperationType.String(operationKit.parsedOperation.Type),
 	}
-	attributes = append(attributes, httpOperation.attributes...)
+
+	// Add the batched operation index even if we error out later
+	var batchedOperationIndex string
+	if opIndex, ok := req.Context().Value(BatchedOperationId{}).(string); ok {
+		batchedOperationIndex = opIndex
+		attributesAfterParse = append(
+			attributesAfterParse, otel.WgBatchingOperationIndex.String(batchedOperationIndex),
+		)
+	}
+
+	requestContext.telemetry.addCommonAttribute(attributesAfterParse...)
+
+	if batchedOperationIndex != "" && operationKit.parsedOperation.Type == "subscription" {
+		unsupportedErr := &httpGraphqlError{
+			message:    "Subscriptions aren't supported in batch operations",
+			statusCode: http.StatusBadRequest,
+		}
+		if !h.omitBatchExtensions {
+			unsupportedErr.extensionCode = ExtensionCodeBatchSubscriptionsUnsupported
+		}
+		return unsupportedErr
+	}
 
 	// Set the router span name after we have the operation name
 	httpOperation.routerSpan.SetName(GetSpanName(operationKit.parsedOperation.Request.OperationName, operationKit.parsedOperation.Type))
 
-	// Set the operation name and type to the operation metrics and the router span as early as possible
-	httpOperation.routerSpan.SetAttributes(attributes...)
-	httpOperation.operationMetrics.AddAttributes(attributes...)
+	if req.Method == http.MethodGet && operationKit.parsedOperation.Type == "mutation" {
+		return &httpGraphqlError{
+			message:    "Mutations can only be sent over HTTP POST",
+			statusCode: http.StatusMethodNotAllowed,
+		}
+	}
 
-	if err := h.operationBlocker.OperationIsBlocked(operationKit.parsedOperation); err != nil {
-		return nil, &httpGraphqlError{
+	// Set the operation name and type to the operation metrics and the router span as early as possible
+	httpOperation.routerSpan.SetAttributes(attributesAfterParse...)
+
+	if err := h.operationBlocker.OperationIsBlocked(requestContext.logger, requestContext.expressionContext, operationKit.parsedOperation); err != nil {
+		return &httpGraphqlError{
 			message:    err.Error(),
 			statusCode: http.StatusOK,
 		}
@@ -433,61 +658,191 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 
 	if operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery != nil &&
 		operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash != "" {
+
+		requestContext.operation.persistedID = operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash
 		persistedIDAttribute := otel.WgOperationPersistedID.String(operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)
-		attributes = append(attributes, persistedIDAttribute)
+
+		requestContext.telemetry.addCommonAttribute(persistedIDAttribute)
+
 		httpOperation.routerSpan.SetAttributes(persistedIDAttribute)
-		httpOperation.operationMetrics.AddAttributes(persistedIDAttribute)
 	}
 
 	/**
 	* Normalize the operation
 	 */
 
-	httpOperation.traceTimings.StartNormalize()
+	if !requestContext.operation.traceOptions.ExcludeNormalizeStats {
+		httpOperation.traceTimings.StartNormalize()
+	}
+
+	startNormalization := time.Now()
 
 	_, engineNormalizeSpan := h.tracer.Start(req.Context(), "Operation - Normalize",
 		trace.WithSpanKind(trace.SpanKindInternal),
-		trace.WithAttributes(attributes...),
+		trace.WithAttributes(requestContext.telemetry.traceAttrs...),
 	)
 
-	cached, err := operationKit.NormalizeOperation()
+	cached, err := operationKit.NormalizeOperation(requestContext.operation.clientInfo.Name, isApq)
 	if err != nil {
 		rtrace.AttachErrToSpan(engineNormalizeSpan, err)
 
+		requestContext.operation.normalizationTime = time.Since(startNormalization)
+		if !requestContext.operation.traceOptions.ExcludeNormalizeStats {
+			httpOperation.traceTimings.EndNormalize()
+		}
+
 		engineNormalizeSpan.End()
 
-		return nil, err
+		return err
 	}
 
-	operationHashAttribute := otel.WgOperationHash.String(strconv.FormatUint(operationKit.parsedOperation.ID, 10))
-	attributes = append(attributes, operationHashAttribute)
+	// Set the cache hit attribute on the span
+	engineNormalizeSpan.SetAttributes(otel.WgNormalizationCacheHit.Bool(cached))
 
-	httpOperation.routerSpan.SetAttributes(operationHashAttribute)
-	httpOperation.operationMetrics.AddAttributes(operationHashAttribute)
+	requestContext.operation.normalizationCacheHit = operationKit.parsedOperation.NormalizationCacheHit
 
 	/**
 	* Normalize the variables
 	 */
 
-	err = operationKit.NormalizeVariables()
+	// Normalize the variables returns list of uploads mapping if there are any of them present in a query
+	// type UploadPathMapping struct {
+	// 	VariableName       string - is a variable name holding the direct or nested value of type Upload, example "f"
+	// 	OriginalUploadPath string - is a path relative to variables which have an Upload type, example "variables.f"
+	// 	NewUploadPath      string - if variable was used in the inline object like this `arg: {f: $f}` this field will hold the new extracted path, example "variables.a.f", if it is an empty, there was no change in the path
+	// }
+	uploadsMapping, err := operationKit.NormalizeVariables()
 	if err != nil {
 		rtrace.AttachErrToSpan(engineNormalizeSpan, err)
 
+		requestContext.operation.normalizationTime = time.Since(startNormalization)
+
+		if !requestContext.operation.traceOptions.ExcludeNormalizeStats {
+			httpOperation.traceTimings.EndNormalize()
+		}
+
 		engineNormalizeSpan.End()
 
-		return nil, err
+		return err
 	}
 
-	engineNormalizeSpan.SetAttributes(otel.WgNormalizationCacheHit.Bool(cached))
+	// update file uploads path if they were used in nested field in the extracted variables
+	for mapping := range slices.Values(uploadsMapping) {
+		// if the NewUploadPath is empty it means that there was no change in the path - e.g. upload was directly passed to the argument
+		// e.g. field(fileArgument: $file) will result in []UploadPathMapping{ {VariableName: "file", OriginalUploadPath: "variables.file", NewUploadPath: ""} }
+		if mapping.NewUploadPath == "" {
+			continue
+		}
 
-	if operationKit.parsedOperation.IsPersistedOperation {
-		engineNormalizeSpan.SetAttributes(otel.WgEnginePersistedOperationCacheHit.Bool(operationKit.parsedOperation.PersistedOperationCacheHit))
+		// look for the corresponding file which was used in the nested argument
+		// we are matching original upload path passed via uploads map with the mapping items
+		idx := slices.IndexFunc(requestContext.operation.files, func(file *httpclient.FileUpload) bool {
+			return file.VariablePath() == mapping.OriginalUploadPath
+		})
+
+		if idx == -1 {
+			continue
+		}
+
+		// if NewUploadPath is not empty the file argument was used in the nested object, and we need to update the path
+		// e.g. field(arg: {file: $file}) normalized to field(arg: $a) will result in []UploadPathMapping{ {VariableName: "file", OriginalUploadPath: "variables.file", NewUploadPath: "variables.a.file"} }
+		// so "variables.file" should be updated to "variables.a.file"
+		requestContext.operation.files[idx].SetVariablePath(uploadsMapping[idx].NewUploadPath)
+	}
+
+	// RemapVariables is updating and sort variables name to be able to have them in a predictable order
+	// after remapping requestContext.operation.remapVariables map will contain new names as a keys and old names as a values - to be able to extract the old values
+	// because it does not rename variables in a variables json
+	err = operationKit.RemapVariables(h.disableVariablesRemapping)
+	if err != nil {
+		rtrace.AttachErrToSpan(engineNormalizeSpan, err)
+
+		requestContext.operation.normalizationTime = time.Since(startNormalization)
+
+		if !requestContext.operation.traceOptions.ExcludeNormalizeStats {
+			httpOperation.traceTimings.EndNormalize()
+		}
+
+		engineNormalizeSpan.End()
+
+		return err
+	}
+
+	requestContext.operation.hash = operationKit.parsedOperation.ID
+	requestContext.operation.internalHash = operationKit.parsedOperation.InternalID
+	requestContext.operation.remapVariables = operationKit.parsedOperation.RemapVariables
+
+	operationHash := ""
+	if requestContext.operation.hash != 0 {
+		operationHash = requestContext.operation.HashString()
+	}
+	requestContext.expressionContext.Request.Operation.Hash = operationHash
+
+	if !h.disableVariablesRemapping && len(uploadsMapping) > 0 {
+		// after variables remapping we need to update the file uploads path because variables relative path has changed
+		// but files still references the old uploads locations
+		// key `to` is a new variable name
+		// value `from` is an old variable name
+		// we are looping through remapped variables to find a match between old variable name and variable which was holding an upload
+		for to, from := range maps.All(requestContext.operation.remapVariables) {
+
+			// loop over upload mappings to find a match between variable name and upload variable name
+			for uploadMapping := range slices.Values(uploadsMapping) {
+				if uploadMapping.VariableName != from {
+					continue
+				}
+
+				uploadPath := uploadMapping.NewUploadPath
+				// if NewUploadPath is empty it means that there was no change in the path - e.g. upload was directly passed to the argument
+				if uploadPath == "" {
+					uploadPath = uploadMapping.OriginalUploadPath
+				}
+
+				// next step is to compare file upload path with the original upload path from the upload mappings
+				for file := range slices.Values(requestContext.operation.files) {
+					if file.VariablePath() != uploadPath {
+						continue
+					}
+
+					// trim old variable name prefix
+					oldUploadPathPrefix := fmt.Sprintf("variables.%s.", from)
+					relativeUploadPath := strings.TrimPrefix(uploadPath, oldUploadPathPrefix)
+
+					// set new variable name prefix
+					updatedPath := fmt.Sprintf("variables.%s.%s", to, relativeUploadPath)
+					file.SetVariablePath(updatedPath)
+				}
+			}
+		}
+	}
+
+	operationHashString := operationKit.parsedOperation.IDString()
+
+	operationHashAttribute := otel.WgOperationHash.String(operationHashString)
+	requestContext.telemetry.addCommonAttribute(operationHashAttribute)
+	httpOperation.routerSpan.SetAttributes(operationHashAttribute)
+
+	requestContext.operation.rawContent = operationKit.parsedOperation.Request.Query
+	requestContext.operation.content = operationKit.parsedOperation.NormalizedRepresentation
+	requestContext.operation.variables, err = variablesParser.ParseBytes(operationKit.parsedOperation.Request.Variables)
+	if err != nil {
+		rtrace.AttachErrToSpan(engineNormalizeSpan, err)
+		if !requestContext.operation.traceOptions.ExcludeNormalizeStats {
+			httpOperation.traceTimings.EndNormalize()
+		}
+		engineNormalizeSpan.End()
+		return err
+	}
+	requestContext.operation.normalizationTime = time.Since(startNormalization)
+
+	if !requestContext.operation.traceOptions.ExcludeNormalizeStats {
+		httpOperation.traceTimings.EndNormalize()
 	}
 
 	engineNormalizeSpan.End()
 
-	if !httpOperation.traceOptions.ExcludeNormalizeStats {
-		httpOperation.traceTimings.EndNormalize()
+	if operationKit.parsedOperation.IsPersistedOperation {
+		engineNormalizeSpan.SetAttributes(otel.WgEnginePersistedOperationCacheHit.Bool(operationKit.parsedOperation.PersistedOperationCacheHit))
 	}
 
 	if h.traceExportVariables {
@@ -503,33 +858,65 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 	* Validate the operation
 	 */
 
-	if !httpOperation.traceOptions.ExcludeValidateStats {
+	if !requestContext.operation.traceOptions.ExcludeValidateStats {
 		httpOperation.traceTimings.StartValidate()
 	}
 
+	startValidation := time.Now()
+
 	_, engineValidateSpan := h.tracer.Start(req.Context(), "Operation - Validate",
 		trace.WithSpanKind(trace.SpanKindInternal),
-		trace.WithAttributes(attributes...),
+		trace.WithAttributes(requestContext.telemetry.traceAttrs...),
 	)
-	validationCached, err := operationKit.Validate(httpOperation.executionOptions.SkipLoader)
+	validationCached, err := operationKit.Validate(requestContext.operation.executionOptions.SkipLoader, requestContext.operation.remapVariables, h.apolloCompatibilityFlags)
 	if err != nil {
 		rtrace.AttachErrToSpan(engineValidateSpan, err)
 
+		requestContext.graphQLErrorCodes = append(requestContext.graphQLErrorCodes, h.getErrorCodes(err)...)
+		requestContext.operation.validationTime = time.Since(startValidation)
+
+		if !requestContext.operation.traceOptions.ExcludeValidateStats {
+			httpOperation.traceTimings.EndValidate()
+		}
+
 		engineValidateSpan.End()
 
-		return nil, err
+		return err
 	}
 
 	engineValidateSpan.SetAttributes(otel.WgValidationCacheHit.Bool(validationCached))
-	if httpOperation.executionOptions.SkipLoader {
+	if requestContext.operation.executionOptions.SkipLoader {
 		// In case we're skipping the loader, which means that we won't execute the operation
 		// we skip the validation of variables as we're not using them
 		// this allows us to generate query plans without having to provide variables
 		engineValidateSpan.SetAttributes(otel.WgVariablesValidationSkipped.Bool(true))
 	}
-	engineValidateSpan.End()
 
+	// Validate that the planned query doesn't exceed the maximum query depth configured
+	// This check runs if they've configured a max query depth, and it can optionally be turned off for persisted operations
+	if h.complexityLimits != nil {
+		cacheHit, complexityCalcs, queryDepthErr := operationKit.ValidateQueryComplexity(h.complexityLimits, operationKit.kit.doc, h.executor.RouterSchema, operationKit.parsedOperation.IsPersistedOperation)
+		engineValidateSpan.SetAttributes(otel.WgQueryDepth.Int(complexityCalcs.Depth))
+		engineValidateSpan.SetAttributes(otel.WgQueryTotalFields.Int(complexityCalcs.TotalFields))
+		engineValidateSpan.SetAttributes(otel.WgQueryRootFields.Int(complexityCalcs.RootFields))
+		engineValidateSpan.SetAttributes(otel.WgQueryRootFieldAliases.Int(complexityCalcs.RootFieldAliases))
+		engineValidateSpan.SetAttributes(otel.WgQueryDepthCacheHit.Bool(cacheHit))
+		if queryDepthErr != nil {
+			rtrace.AttachErrToSpan(engineValidateSpan, err)
+
+			requestContext.operation.validationTime = time.Since(startValidation)
+			httpOperation.traceTimings.EndValidate()
+
+			engineValidateSpan.End()
+
+			return queryDepthErr
+		}
+	}
+
+	requestContext.operation.validationTime = time.Since(startValidation)
 	httpOperation.traceTimings.EndValidate()
+
+	engineValidateSpan.End()
 
 	/**
 	* Plan the operation
@@ -538,40 +925,107 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, httpO
 	// If the request has a query parameter wg_trace=true we skip the cache
 	// and always plan the operation
 	// this allows us to "write" to the plan
-	httpOperation.traceTimings.StartPlanning()
+	if !requestContext.operation.traceOptions.ExcludePlannerStats {
+		httpOperation.traceTimings.StartPlanning()
+	}
+	startPlanning := time.Now()
 
 	_, enginePlanSpan := h.tracer.Start(req.Context(), "Operation - Plan",
 		trace.WithSpanKind(trace.SpanKindInternal),
-		trace.WithAttributes(otel.WgEngineRequestTracingEnabled.Bool(httpOperation.traceOptions.Enable)),
-		trace.WithAttributes(attributes...),
+		trace.WithAttributes(otel.WgEngineRequestTracingEnabled.Bool(requestContext.operation.traceOptions.Enable)),
+		trace.WithAttributes(requestContext.telemetry.traceAttrs...),
 	)
 
 	planOptions := PlanOptions{
-		Protocol:         OperationProtocolHTTP,
-		ClientInfo:       httpOperation.clientInfo,
-		TraceOptions:     httpOperation.traceOptions,
-		ExecutionOptions: httpOperation.executionOptions,
+		ClientInfo:           requestContext.operation.clientInfo,
+		TraceOptions:         requestContext.operation.traceOptions,
+		ExecutionOptions:     requestContext.operation.executionOptions,
+		TrackSchemaUsageInfo: h.trackSchemaUsageInfo,
 	}
 
-	opContext, err := h.planner.plan(operationKit.parsedOperation, planOptions)
+	err = h.planner.plan(requestContext.operation, planOptions)
 	if err != nil {
-
+		httpOperation.requestLogger.Debug("failed to plan operation", zap.Error(err))
 		rtrace.AttachErrToSpan(enginePlanSpan, err)
+
+		if !requestContext.operation.traceOptions.ExcludePlannerStats {
+			httpOperation.traceTimings.EndPlanning()
+		}
 
 		enginePlanSpan.End()
 
-		httpOperation.requestLogger.Error("failed to plan operation", zap.Error(err))
-
-		return nil, err
+		return err
 	}
 
-	enginePlanSpan.SetAttributes(otel.WgEnginePlanCacheHit.Bool(opContext.planCacheHit))
+	enginePlanSpan.SetAttributes(otel.WgEnginePlanCacheHit.Bool(requestContext.operation.planCacheHit))
+
+	requestContext.operation.planningTime = time.Since(startPlanning)
+	httpOperation.traceTimings.EndPlanning()
 
 	enginePlanSpan.End()
 
-	httpOperation.traceTimings.EndPlanning()
+	planningAttrs := *requestContext.telemetry.AcquireAttributes()
+	planningAttrs = append(planningAttrs, otel.WgEnginePlanCacheHit.Bool(requestContext.operation.planCacheHit))
+	planningAttrs = append(planningAttrs, requestContext.telemetry.metricAttrs...)
 
-	return opContext, nil
+	httpOperation.operationMetrics.routerMetrics.MetricStore().MeasureOperationPlanningTime(
+		req.Context(),
+		requestContext.operation.planningTime,
+		requestContext.telemetry.metricSliceAttrs,
+		otelmetric.WithAttributeSet(attribute.NewSet(planningAttrs...)),
+	)
+
+	requestContext.telemetry.ReleaseAttributes(&planningAttrs)
+
+	// we could log the query plan only if query plans are calculated
+	if (h.queryPlansEnabled && requestContext.operation.executionOptions.IncludeQueryPlanInResponse) ||
+		h.alwaysIncludeQueryPlan {
+
+		switch p := requestContext.operation.preparedPlan.preparedPlan.(type) {
+		case *plan.SynchronousResponsePlan:
+			p.Response.Fetches.NormalizedQuery = operationKit.parsedOperation.NormalizedRepresentation
+		}
+
+		if h.queryPlansLoggingEnabled {
+			switch p := requestContext.operation.preparedPlan.preparedPlan.(type) {
+			case *plan.SynchronousResponsePlan:
+				printedPlan := p.Response.Fetches.QueryPlan().PrettyPrint()
+
+				if h.developmentMode {
+					h.log.Sugar().Debugf("Query Plan:\n%s", printedPlan)
+				} else {
+					h.log.Debug("Query Plan", zap.String("query_plan", printedPlan))
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+func (h *PreHandler) getErrorCodes(err error) []string {
+	errorCodes := make([]string, 0)
+
+	var reportErr *reportError
+	if errors.As(err, &reportErr) {
+		for _, extError := range reportErr.Report().ExternalErrors {
+			if extError.ExtensionCode != "" {
+				errorCodes = append(errorCodes, extError.ExtensionCode)
+			}
+		}
+	}
+
+	// If "skipLoader" was passed as false to the Validate function, an httpGraphqlError with
+	// an extension code could be returned
+	var httpGqlError *httpGraphqlError
+	if errors.As(err, &httpGqlError) {
+		extensionCode := httpGqlError.ExtensionCode()
+		if extensionCode != "" {
+			errorCodes = append(errorCodes, extensionCode)
+		}
+	}
+
+	return errorCodes
 }
 
 // flushMetrics flushes all metrics to the respective exporters
@@ -581,15 +1035,7 @@ func (h *PreHandler) flushMetrics(ctx context.Context, requestLogger *zap.Logger
 
 	now := time.Now()
 
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		if err := h.metrics.GqlMetricsExporter().ForceFlush(ctx); err != nil {
-			requestLogger.Error("Failed to flush schema usage metrics", zap.Error(err))
-		}
-	}()
-
+	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -641,7 +1087,7 @@ func (h *PreHandler) internalParseRequestOptions(r *http.Request, clientInfo *Cl
 				return h.routerPublicKey, nil
 			}, jwt.WithValidMethods([]string{jwt.SigningMethodES256.Name}))
 			if err != nil {
-				requestLogger.Error(fmt.Sprintf("failed to parse request token: %s", err.Error()))
+				requestLogger.Debug(fmt.Sprintf("failed to parse request token: %s", err.Error()))
 				return resolve.ExecutionOptions{}, resolve.TraceOptions{}, err
 			}
 			return h.parseRequestExecutionOptions(r), h.parseRequestTraceOptions(r), nil
@@ -675,4 +1121,30 @@ func (h *PreHandler) parseRequestExecutionOptions(r *http.Request) resolve.Execu
 		options.IncludeQueryPlanInResponse = true
 	}
 	return options
+}
+
+func setExpressionContextOperation(requestContext *requestContext) {
+	requestContext.expressionContext.Request.Operation = expr.Operation{
+		Name: requestContext.operation.name,
+		Type: requestContext.operation.opType,
+	}
+}
+
+func setExpressionContextClient(requestContext *requestContext) {
+	clientName := requestContext.operation.clientInfo.Name
+	if clientName == "unknown" {
+		clientName = ""
+	}
+
+	clientVersion := requestContext.operation.clientInfo.Version
+	if clientVersion == "missing" {
+		clientVersion = ""
+	}
+
+	if clientName != "" || clientVersion != "" {
+		requestContext.expressionContext.Request.Client = expr.Client{
+			Name:    clientName,
+			Version: clientVersion,
+		}
+	}
 }

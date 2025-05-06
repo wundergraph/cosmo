@@ -31,6 +31,9 @@ type Authentication interface {
 	// Claims returns the claims of the authenticated request, as returned by
 	// the Authenticator.
 	Claims() Claims
+	// SetScopes sets the scopes of the authenticated request. It will replace the scopes already parsed from the claims.
+	// If users desire to append the scopes, they can first run `Scopes` to get the current scopes, and then append the new scopes
+	SetScopes(scopes []string)
 	// Scopes returns the scopes of the authenticated request, as returned by
 	// the Authenticator.
 	Scopes() []string
@@ -50,6 +53,17 @@ func (a *authentication) Claims() Claims {
 		return nil
 	}
 	return a.claims
+}
+
+func (a *authentication) SetScopes(scopes []string) {
+	if a == nil {
+		return
+	}
+	if a.claims == nil {
+		a.claims = make(Claims)
+	}
+	// per https://datatracker.ietf.org/doc/html/rfc8693#section-2.1-4.8, scopes should be space separated
+	a.claims["scope"] = strings.Join(scopes, " ")
 }
 
 func (a *authentication) Scopes() []string {
@@ -78,14 +92,24 @@ func Authenticate(ctx context.Context, authenticators []Authenticator, p Provide
 			joinedErrors = errors.Join(joinedErrors, err)
 			continue
 		}
-		if claims != nil {
-			return &authentication{
-				authenticator: auth.Name(),
-				claims:        claims,
-			}, nil
+
+		// Claims is nil when no authentication information matched the authenticator.
+		// In that case, we continue to the next authenticator.
+		if claims == nil {
+			continue
 		}
+
+		// If authentication succeeds, we return the authentication for the first provider.
+		return &authentication{
+			authenticator: auth.Name(),
+			claims:        claims,
+		}, nil
 	}
 	// If no authentication failed error will be nil here,
 	// even if to claims were found.
 	return nil, joinedErrors
+}
+
+func NewEmptyAuthentication() Authentication {
+	return &authentication{}
 }

@@ -5,7 +5,9 @@ on:
       - "controlplane/**/*"
       - "connect/**/*"
       - "composition/**/*"
+      - "shared/**/*"
       - ".github/workflows/cp-ci.yaml"
+      - ".github/scripts/setup-keycloak.sh"
 
 concurrency:
   group: ${{github.workflow}}-${{github.head_ref}}
@@ -13,6 +15,7 @@ concurrency:
 
 env:
   CI: true
+  DO_NOT_TRACK: '1'
 
 jobs:
   build_test:
@@ -47,8 +50,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - uses: ./.github/actions/node
 
@@ -57,6 +58,12 @@ jobs:
 
       - name: Generate code
         run: pnpm buf generate --template buf.ts.gen.yaml
+
+      - name: Install react-email
+        run: pnpm add -g react-email
+
+      - name: Generate email templates
+        run: pnpm run --filter ./controlplane/emails build
 
       - name: Check if git is not dirty after generating files
         run: git diff --no-ext-diff --exit-code
@@ -78,12 +85,13 @@ jobs:
           DB_URL: "postgresql://postgres:changeme@localhost:5432/controlplane"
 
   build_push_image:
+    # This is a limitation of GitHub. Only organization members can push to GitHub Container Registry
+    # For now, we will disable the push to the GitHub Container Registry for external contributors
+    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - uses: ./.github/actions/build-push-image
         with:

@@ -19,22 +19,10 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          # The go install / version instructions are inside the Makefile, so we need to cache the Makefile.
-          key: ${{ runner.os }}-go-${{ hashFiles('aws-lambda-router/go.sum') }}-makefile-${{ hashFiles('Makefile') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
 
       - uses: ./.github/actions/go
         with:
-          cache-dependency-path: router/go.sum
+          cache-dependency-path: aws-lambda-router/go.sum
 
       - uses: ./.github/actions/go-mod-tidy
         with:

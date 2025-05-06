@@ -1,7 +1,7 @@
 import { writeFile } from 'node:fs/promises';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { Command } from 'commander';
-import { join } from 'pathe';
+import { resolve } from 'pathe';
 import pc from 'picocolors';
 import { getBaseHeaders } from '../../../core/config.js';
 import { CommonGraphCommandOptions } from '../../../core/types/types.js';
@@ -14,6 +14,7 @@ export default (opts: CommonGraphCommandOptions) => {
   command.argument('<name>', `The name of the ${graphType} to fetch.`);
   command.option('-n, --namespace [string]', `The namespace of the ${graphType}.`);
   command.option('-o, --out [string]', 'Destination file for the SDL.');
+  command.option('-c, --client-schema', 'Output the client schema SDL.');
   command.action(async (name, options) => {
     const resp = await opts.client.platform.getFederatedGraphSDLByName(
       {
@@ -31,13 +32,15 @@ export default (opts: CommonGraphCommandOptions) => {
       if (resp.response?.details) {
         console.log(pc.red(pc.bold(resp.response?.details)));
       }
-      process.exit(1);
+      process.exitCode = 1;
+      return;
     }
 
+    const schema = (options.clientSchema ? resp.clientSchema : resp.sdl) ?? '';
     if (options.out) {
-      await writeFile(join(process.cwd(), options.out), resp.sdl ?? '');
+      await writeFile(resolve(options.out), schema);
     } else {
-      console.log(resp.sdl);
+      console.log(schema);
     }
   });
 

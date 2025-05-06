@@ -16,7 +16,9 @@ import {
 } from "@/components/ui/select";
 import { Toolbar } from "@/components/ui/toolbar";
 import { useCurrentOrganization } from "@/hooks/use-current-organization";
+import { useUser } from "@/hooks/use-user";
 import { NextPageWithLayout } from "@/lib/page";
+import { checkUserAccess } from "@/lib/utils";
 import { useQuery } from "@connectrpc/connect-query";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
@@ -27,6 +29,7 @@ import { useRouter } from "next/router";
 import { useContext } from "react";
 
 const GraphToolbar = () => {
+  const user = useUser();
   const org = useCurrentOrganization();
   const router = useRouter();
   const applyParams = useApplyParams();
@@ -53,7 +56,18 @@ const GraphToolbar = () => {
           </SelectGroup>
         </SelectContent>
       </Select>
-      <Button asChild>
+      <Button
+        asChild={checkUserAccess({
+          rolesToBe: ["admin", "developer"],
+          userRoles: user?.currentOrganization.roles || [],
+        })}
+        disabled={
+          !checkUserAccess({
+            rolesToBe: ["admin", "developer"],
+            userRoles: user?.currentOrganization.roles || [],
+          })
+        }
+      >
         <Link href={`/${org?.slug}/new?namespace=${namespace}`}>Create</Link>
       </Button>
     </Toolbar>
@@ -69,7 +83,7 @@ const GraphsDashboardPage: NextPageWithLayout = () => {
 
   const { data, isLoading, error, refetch } = useQuery(getFederatedGraphs, {
     includeMetrics: true,
-    namespace,
+    namespace: namespace || "default",
   });
 
   // refetch the query when the organization changes

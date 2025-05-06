@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
-	"github.com/buger/jsonparser"
 	"io"
 	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/buger/jsonparser"
 
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
@@ -34,7 +35,7 @@ func decompressNone(t *testing.T, body io.Reader) []byte {
 func TestResponseCompression(t *testing.T) {
 	t.Parallel()
 
-	employeesIdDataMinSizeGzip := `{"data":{"employees":[{"id":1}` + strings.Repeat(`,{"id":1}`, 200) + `]}}`
+	employeesIdDataMinSizeGzip := `{"data":{"employees":[{"id":1}` + strings.Repeat(`,{"id":1}`, 460) + `]}}` // > 4kb
 
 	testCases := []struct {
 		name           string

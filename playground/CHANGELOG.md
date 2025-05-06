@@ -4,6 +4,129 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.8.7](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.8.6...@wundergraph/playground@0.8.7) (2025-05-02)
+
+### Bug Fixes
+
+* vite vulnerability ([#1823](https://github.com/wundergraph/cosmo/issues/1823)) ([05d5300](https://github.com/wundergraph/cosmo/commit/05d53004612958fe1dab2c292ec89ac4ac686b61)) (@JivusAyrus)
+
+## [0.8.6](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.8.5...@wundergraph/playground@0.8.6) (2025-04-02)
+
+**Note:** Version bump only for package @wundergraph/playground
+
+## [0.8.5](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.8.4...@wundergraph/playground@0.8.5) (2025-03-25)
+
+### Bug Fixes
+
+* upgrade `vite` to solve vulnerability ([#1700](https://github.com/wundergraph/cosmo/issues/1700)) ([a8bb8e5](https://github.com/wundergraph/cosmo/commit/a8bb8e591d1a0523ad77a593240aef7974e7c8b3)) (@wilsonrivera)
+
+## [0.8.4](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.8.3...@wundergraph/playground@0.8.4) (2025-02-11)
+
+### Bug Fixes
+
+* websocket url in router playground ([#1583](https://github.com/wundergraph/cosmo/issues/1583)) ([8523ace](https://github.com/wundergraph/cosmo/commit/8523aceca6ecbed7e0318c5cf1115f9c00a3f933)) (@thisisnithin)
+
+## [0.8.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.8.2...@wundergraph/playground@0.8.3) (2025-02-03)
+
+### Bug Fixes
+
+* incorrect graphql endpoint in playground ([#1562](https://github.com/wundergraph/cosmo/issues/1562)) ([2e680ce](https://github.com/wundergraph/cosmo/commit/2e680ce7e6e0a584b13d3ee3aa314ab6e9a051c2)) (@thisisnithin)
+
+## [0.8.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.8.1...@wundergraph/playground@0.8.2) (2024-12-17)
+
+### Bug Fixes
+
+* router playground cursor visibility ([#1451](https://github.com/wundergraph/cosmo/issues/1451)) ([73b82da](https://github.com/wundergraph/cosmo/commit/73b82dafff85e9ba4ead8bccaa180e70fdf7f6ce)) (@thisisnithin)
+
+## [0.8.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.8.0...@wundergraph/playground@0.8.1) (2024-12-11)
+
+### Bug Fixes
+
+* tailwind entry point for newer Node.js versions ([#1432](https://github.com/wundergraph/cosmo/issues/1432)) ([ddcf279](https://github.com/wundergraph/cosmo/commit/ddcf279c612dff7edea84ec75be59a6bf23f0204)) (@StarpTech)
+
+# [0.8.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.7.4...@wundergraph/playground@0.8.0) (2024-12-10)
+
+### Features
+
+* query plan for subscriptions ([#1425](https://github.com/wundergraph/cosmo/issues/1425)) ([fc88e1b](https://github.com/wundergraph/cosmo/commit/fc88e1b3620a019acb5976b19787a91a79916b7a)) (@thisisnithin)
+
+## [0.7.4](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.7.3...@wundergraph/playground@0.7.4) (2024-12-06)
+
+### Bug Fixes
+
+* update packages to address vulnerabilities ([#1411](https://github.com/wundergraph/cosmo/issues/1411)) ([7e84900](https://github.com/wundergraph/cosmo/commit/7e84900ed705164d69c99afcf5a698b3298fb6ad)) (@JivusAyrus)
+
+## [0.7.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.7.2...@wundergraph/playground@0.7.3) (2024-12-03)
+
+### Bug Fixes
+
+* disable query plan for subscriptions ([#1417](https://github.com/wundergraph/cosmo/issues/1417)) ([7cdad41](https://github.com/wundergraph/cosmo/commit/7cdad413861535c78f8b664d2dbe4750e16770fb)) (@thisisnithin)
+
+## [0.7.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.7.1...@wundergraph/playground@0.7.2) (2024-11-05)
+
+### Bug Fixes
+
+* playground scripts inconsistent states ([#1337](https://github.com/wundergraph/cosmo/issues/1337)) ([73309eb](https://github.com/wundergraph/cosmo/commit/73309eb1f492246f9488b192f5956da24d4ebe5f)) (@thisisnithin)
+
+## [0.7.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.7.0...@wundergraph/playground@0.7.1) (2024-11-04)
+
+### Bug Fixes
+
+* playground undefined and callee error ([#1333](https://github.com/wundergraph/cosmo/issues/1333)) ([4b07060](https://github.com/wundergraph/cosmo/commit/4b0706080da881aadda1c8cd8577cbdccbf86494)) (@thisisnithin)
+
+# [0.7.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.6.0...@wundergraph/playground@0.7.0) (2024-10-31)
+
+### Features
+
+* custom scripts ([#1302](https://github.com/wundergraph/cosmo/issues/1302)) ([9f4457c](https://github.com/wundergraph/cosmo/commit/9f4457c7f7acdf2f56cc3ad7f0474653063f290c)) (@thisisnithin)
+
+# [0.6.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.5.2...@wundergraph/playground@0.6.0) (2024-10-21)
+
+### Features
+
+* include subgraph name in ART ([#1290](https://github.com/wundergraph/cosmo/issues/1290)) ([2acfc30](https://github.com/wundergraph/cosmo/commit/2acfc300a618b4fe8392df0633c6dd6c5bbe393a)) (@StarpTech)
+
+## [0.5.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.5.1...@wundergraph/playground@0.5.2) (2024-10-17)
+
+**Note:** Version bump only for package @wundergraph/playground
+
+## [0.5.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.5.0...@wundergraph/playground@0.5.1) (2024-09-25)
+
+### Bug Fixes
+
+* handle empty query in plan ([#1219](https://github.com/wundergraph/cosmo/issues/1219)) ([37af012](https://github.com/wundergraph/cosmo/commit/37af0123d8185897a5842616377be320b696037c)) (@thisisnithin)
+
+# [0.5.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.4.0...@wundergraph/playground@0.5.0) (2024-09-19)
+
+### Features
+
+* disable tracing through headers ([#1189](https://github.com/wundergraph/cosmo/issues/1189)) ([c23fd77](https://github.com/wundergraph/cosmo/commit/c23fd77871db68f7dc33b04ee1ac742476475817)) (@thisisnithin)
+
+# [0.4.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.3.1...@wundergraph/playground@0.4.0) (2024-09-18)
+
+### Features
+
+* allow playground consumers to customize headers ([#1183](https://github.com/wundergraph/cosmo/issues/1183)) ([80a7755](https://github.com/wundergraph/cosmo/commit/80a77550b0e8188602bf508e54224725c04e1ef8)) (@clayne11)
+
+## [0.3.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.3.0...@wundergraph/playground@0.3.1) (2024-09-17)
+
+### Bug Fixes
+
+* persisting headers in playground and styling ([#1177](https://github.com/wundergraph/cosmo/issues/1177)) ([223a4d7](https://github.com/wundergraph/cosmo/commit/223a4d7f5a14406e0010df2e953c868466a9ace4)) (@thisisnithin)
+
+# [0.3.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.2.2...@wundergraph/playground@0.3.0) (2024-09-05)
+
+### Features
+
+* query plan ui ([#1140](https://github.com/wundergraph/cosmo/issues/1140)) ([c255867](https://github.com/wundergraph/cosmo/commit/c25586728b34b177789a1d6a0fd9333e9e647959)) (@thisisnithin)
+
+## [0.2.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.2.1...@wundergraph/playground@0.2.2) (2024-08-28)
+
+### Bug Fixes
+
+* art render ([#1119](https://github.com/wundergraph/cosmo/issues/1119)) ([344d3db](https://github.com/wundergraph/cosmo/commit/344d3dbdff1758404903b9195708188a28be1898)) (@thisisnithin)
+* show actual error from network in playground ([#1126](https://github.com/wundergraph/cosmo/issues/1126)) ([a83c6e3](https://github.com/wundergraph/cosmo/commit/a83c6e3404e1d69e3de3a6e0db20332933bcb1ab)) (@thisisnithin)
+
 ## [0.2.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.2.0...@wundergraph/playground@0.2.1) (2024-08-15)
 
 ### Bug Fixes

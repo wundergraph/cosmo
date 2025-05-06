@@ -37,7 +37,7 @@ const SubgraphsDashboardPage: NextPageWithLayout = () => {
   const applyParams = useApplyParams();
 
   const { data, isLoading, error, refetch } = useQuery(getSubgraphs, {
-    namespace,
+    namespace: namespace || "default",
     query,
     limit,
     offset,
@@ -50,7 +50,7 @@ const SubgraphsDashboardPage: NextPageWithLayout = () => {
     error: fsError,
     refetch: refetchFeatureSubgraphs,
   } = useQuery(getFeatureSubgraphs, {
-    namespace,
+    namespace: namespace || "default",
     query,
     limit,
     offset,
@@ -64,7 +64,7 @@ const SubgraphsDashboardPage: NextPageWithLayout = () => {
     } else if (error || data?.response?.code !== EnumStatusCode.OK) {
       content = (
         <EmptyState
-          icon={<ExclamationTriangleIcon />}
+          icon={<ExclamationTriangleIcon className="h-12 w-12" />}
           title="Could not retrieve subgraphs"
           description={
             data?.response?.details || error?.message || "Please try again"
@@ -92,7 +92,7 @@ const SubgraphsDashboardPage: NextPageWithLayout = () => {
     ) {
       content = (
         <EmptyState
-          icon={<ExclamationTriangleIcon />}
+          icon={<ExclamationTriangleIcon className="h-12 w-12" />}
           title="Could not retrieve feature subgraphs"
           description={
             featureSubgraphsData?.response?.details ||
@@ -125,7 +125,7 @@ const SubgraphsDashboardPage: NextPageWithLayout = () => {
       <div className="relative mb-4 mt-8">
         <MagnifyingGlassIcon className="absolute bottom-0 left-3 top-0 my-auto" />
         <Input
-          placeholder="Search by name"
+          placeholder="Search by ID or Name"
           className="pl-8 pr-10"
           value={search}
           onChange={(e) => {

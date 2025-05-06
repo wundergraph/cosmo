@@ -11,3 +11,5 @@ pnpm wgc subgraph delete family --namespace default -f
 pnpm wgc subgraph delete hobbies --namespace default -f
 pnpm wgc subgraph delete products --namespace default -f
 pnpm wgc subgraph delete employeeupdated --namespace default -f
+pnpm wgc subgraph delete mood --namespace default -f
+pnpm wgc subgraph delete availability --namespace default -f

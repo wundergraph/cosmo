@@ -1,4 +1,16 @@
-FROM golang:1.21 as builder
+FROM golang:1.23 as builder
+
+ARG TARGETOS
+ARG TARGETARCH
+ARG COMMIT
+ARG DATE
+
+ARG VERSION=dev
+ENV VERSION=$VERSION
+
+ENV COMMIT=$COMMIT
+
+ENV DATE=$DATE
 
 WORKDIR /app/
 
@@ -15,7 +27,12 @@ COPY . .
 RUN go test -v ./...
 
 # Build router
-RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -a -o router cmd/custom/main.go
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
+    go build -trimpath -ldflags "-extldflags=-static \
+    -X 'github.com/wundergraph/cosmo/router/core.Version=${VERSION}' \
+    -X 'github.com/wundergraph/cosmo/router/core.Commit=${COMMIT}' \
+    -X 'github.com/wundergraph/cosmo/router/core.Date=${DATE}'" \
+    -a -o router cmd/custom/main.go
 
 FROM gcr.io/distroless/static:latest
 

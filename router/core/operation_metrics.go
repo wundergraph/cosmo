@@ -2,10 +2,11 @@ package core
 
 import (
 	"context"
-	"strconv"
+	"slices"
 	"time"
 
-	"github.com/wundergraph/cosmo/router/pkg/otel"
+	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
+	otelmetric "go.opentelemetry.io/otel/metric"
 
 	"go.uber.org/zap"
 
@@ -31,69 +32,91 @@ type OperationMetrics struct {
 	requestContentLength int64
 	routerMetrics        RouterMetrics
 	operationStartTime   time.Time
-	metricBaseFields     []attribute.KeyValue
 	inflightMetric       func()
 	routerConfigVersion  string
-	opContext            *operationContext
 	logger               *zap.Logger
+	trackUsageInfo       bool
+
+	promSchemaUsageEnabled             bool
+	promSchemaUsageIncludeOperationSha bool
 }
 
-func (m *OperationMetrics) exportSchemaUsageInfo(operationContext *operationContext, statusCode int, hasError bool) {
-	m.routerMetrics.ExportSchemaUsageInfo(operationContext, statusCode, hasError)
-}
+func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, responseSize int, exportSynchronous bool) {
+	ctx := context.Background()
 
-func (m *OperationMetrics) AddOperationContext(opContext *operationContext) {
-	m.opContext = opContext
-}
-
-func (m *OperationMetrics) Finish(err error, statusCode int, responseSize int) {
 	m.inflightMetric()
 
-	ctx := context.Background()
+	sliceAttrs := reqContext.telemetry.metricSliceAttrs
+
+	attrs := *reqContext.telemetry.AcquireAttributes()
+	defer reqContext.telemetry.ReleaseAttributes(&attrs)
+
+	attrs = append(attrs, semconv.HTTPStatusCode(statusCode))
+	attrs = append(attrs, reqContext.telemetry.metricAttrs...)
 
 	rm := m.routerMetrics.MetricStore()
 
-	if err != nil {
-		// We don't store false values in the metrics, so only add the error attribute if it's true
-		m.metricBaseFields = append(m.metricBaseFields, otel.WgRequestError.Bool(true))
-		rm.MeasureRequestError(ctx, m.metricBaseFields...)
+	latency := time.Since(m.operationStartTime)
+
+	o := otelmetric.WithAttributeSet(attribute.NewSet(attrs...))
+
+	if reqContext.error != nil {
+		rm.MeasureRequestError(ctx, sliceAttrs, o)
+
+		attrs = append(attrs, rotel.WgRequestError.Bool(true))
+		attrOpt := otelmetric.WithAttributeSet(attribute.NewSet(attrs...))
+
+		rm.MeasureRequestCount(ctx, sliceAttrs, attrOpt)
+		rm.MeasureLatency(ctx, latency, sliceAttrs, attrOpt)
+	} else {
+		rm.MeasureRequestCount(ctx, sliceAttrs, o)
+		rm.MeasureLatency(ctx, latency, sliceAttrs, o)
 	}
 
-	m.metricBaseFields = append(m.metricBaseFields, semconv.HTTPStatusCode(statusCode))
-	rm.MeasureRequestCount(ctx, m.metricBaseFields...)
-	rm.MeasureRequestSize(ctx, m.requestContentLength, m.metricBaseFields...)
-	rm.MeasureLatency(ctx,
-		m.operationStartTime,
-		m.metricBaseFields...,
-	)
-	rm.MeasureResponseSize(ctx, int64(responseSize), m.metricBaseFields...)
+	rm.MeasureRequestSize(ctx, m.requestContentLength, sliceAttrs, o)
+	rm.MeasureResponseSize(ctx, int64(responseSize), sliceAttrs, o)
 
-	if m.opContext != nil {
-		m.exportSchemaUsageInfo(m.opContext, statusCode, err != nil)
+	if m.trackUsageInfo && reqContext.operation != nil && !reqContext.operation.executionOptions.SkipLoader {
+		m.routerMetrics.ExportSchemaUsageInfo(reqContext.operation, statusCode, reqContext.error != nil, exportSynchronous)
 	}
-}
 
-func (m *OperationMetrics) AddAttributes(kv ...attribute.KeyValue) {
-	m.metricBaseFields = append(m.metricBaseFields, kv...)
-}
+	// Prometheus usage metrics, disabled by default
+	if m.promSchemaUsageEnabled && reqContext.operation != nil && !reqContext.operation.executionOptions.SkipLoader {
+		opAttrs := []attribute.KeyValue{
+			rotel.WgOperationName.String(reqContext.operation.name),
+			rotel.WgOperationType.String(reqContext.operation.opType),
+		}
 
-// AddClientInfo adds the client info to the operation metrics. If OperationMetrics
-// is nil, it's a no-op.
-func (m *OperationMetrics) AddClientInfo(info *ClientInfo) {
-	if info == nil {
-		return
+		if m.promSchemaUsageIncludeOperationSha && reqContext.operation.sha256Hash != "" {
+			opAttrs = append(opAttrs, rotel.WgOperationSha256.String(reqContext.operation.sha256Hash))
+		}
+
+		for _, field := range reqContext.operation.typeFieldUsageInfo {
+			if field.ExactParentTypeName == "" {
+				continue
+			}
+
+			fieldAttrs := []attribute.KeyValue{
+				rotel.WgGraphQLFieldName.String(field.Path[len(field.Path)-1]),
+				rotel.WgGraphQLParentType.String(field.ExactParentTypeName),
+			}
+
+			rm.MeasureSchemaFieldUsage(ctx, 1, []attribute.KeyValue{}, otelmetric.WithAttributeSet(attribute.NewSet(slices.Concat(opAttrs, fieldAttrs)...)))
+		}
 	}
-	// Add client info to metrics base fields
-	m.metricBaseFields = append(m.metricBaseFields, otel.WgClientName.String(info.Name))
-	m.metricBaseFields = append(m.metricBaseFields, otel.WgClientVersion.String(info.Version))
 }
 
 type OperationMetricsOptions struct {
-	Attributes           []attribute.KeyValue
+	InFlightAddOption    otelmetric.AddOption
+	SliceAttributes      []attribute.KeyValue
 	RouterConfigVersion  string
 	RequestContentLength int64
 	RouterMetrics        RouterMetrics
 	Logger               *zap.Logger
+	TrackUsageInfo       bool
+
+	PrometheusSchemaUsageEnabled    bool
+	PrometheusSchemaUsageIncludeSha bool
 }
 
 // newOperationMetrics creates a new OperationMetrics struct and starts the operation metrics.
@@ -101,38 +124,17 @@ type OperationMetricsOptions struct {
 func newOperationMetrics(opts OperationMetricsOptions) *OperationMetrics {
 	operationStartTime := time.Now()
 
-	inflightMetric := opts.RouterMetrics.MetricStore().MeasureInFlight(context.Background(), opts.Attributes...)
+	inflightMetric := opts.RouterMetrics.MetricStore().MeasureInFlight(context.Background(), opts.SliceAttributes, opts.InFlightAddOption)
 	return &OperationMetrics{
-		metricBaseFields:     opts.Attributes,
 		requestContentLength: opts.RequestContentLength,
 		operationStartTime:   operationStartTime,
 		inflightMetric:       inflightMetric,
 		routerConfigVersion:  opts.RouterConfigVersion,
 		routerMetrics:        opts.RouterMetrics,
 		logger:               opts.Logger,
+		trackUsageInfo:       opts.TrackUsageInfo,
+
+		promSchemaUsageEnabled:             opts.PrometheusSchemaUsageEnabled,
+		promSchemaUsageIncludeOperationSha: opts.PrometheusSchemaUsageIncludeSha,
 	}
-}
-
-// getAttributesFromOperationContext returns the attributes that are common to both metrics and traces.
-func getAttributesFromOperationContext(operationContext *operationContext) []attribute.KeyValue {
-	if operationContext == nil {
-		return nil
-	}
-
-	var baseMetricAttributeValues []attribute.KeyValue
-
-	// Fields that are always present in the metrics and traces
-	baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgClientName.String(operationContext.clientInfo.Name))
-	baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgClientVersion.String(operationContext.clientInfo.Version))
-	baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgOperationName.String(operationContext.Name()))
-	baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgOperationType.String(operationContext.Type()))
-	baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgOperationProtocol.String(operationContext.Protocol().String()))
-	baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgOperationHash.String(strconv.FormatUint(operationContext.Hash(), 10)))
-
-	// Common Field that will be present in both metrics and traces if not empty
-	if operationContext.PersistedID() != "" {
-		baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgOperationPersistedID.String(operationContext.PersistedID()))
-	}
-
-	return baseMetricAttributeValues
 }

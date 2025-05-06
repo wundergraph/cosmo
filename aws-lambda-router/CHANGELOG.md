@@ -4,6 +4,246 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.38.2](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.38.1...aws-lambda-router@0.38.2) (2025-04-15)
+
+**Note:** Version bump only for package aws-lambda-router
+
+## [0.38.1](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.38.0...aws-lambda-router@0.38.1) (2025-04-02)
+
+**Note:** Version bump only for package aws-lambda-router
+
+# [0.38.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.37.7...aws-lambda-router@0.38.0) (2024-12-21)
+
+### Features
+
+* upgrade go to 1.23 ([#1473](https://github.com/wundergraph/cosmo/issues/1473)) ([4c29d2d](https://github.com/wundergraph/cosmo/commit/4c29d2d358c2b716a33e35505b080b9be2e1fce3)) (@StarpTech)
+
+## [0.37.7](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.37.6...aws-lambda-router@0.37.7) (2024-12-18)
+
+**Note:** Version bump only for package aws-lambda-router
+
+## [0.37.6](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.37.5...aws-lambda-router@0.37.6) (2024-11-16)
+
+### Bug Fixes
+
+* **tests:** deadlock on unsubscribe when epoll disabled ([#1380](https://github.com/wundergraph/cosmo/issues/1380)) ([337a60f](https://github.com/wundergraph/cosmo/commit/337a60f15577b373ca67a83497304d53fe19f55d)) (@StarpTech)
+
+## [0.37.5](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.37.4...aws-lambda-router@0.37.5) (2024-11-14)
+
+### Bug Fixes
+
+* fix merging of response nodes of enum type ([#1373](https://github.com/wundergraph/cosmo/issues/1373)) ([f3927e3](https://github.com/wundergraph/cosmo/commit/f3927e3cfc382bff9beff0a7868b444db213b9d6)) (@devsergiy)
+
+## [0.37.4](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.37.3...aws-lambda-router@0.37.4) (2024-11-12)
+
+### Bug Fixes
+
+* variables normalization for the anonymous operations ([#1365](https://github.com/wundergraph/cosmo/issues/1365)) ([0b8ff06](https://github.com/wundergraph/cosmo/commit/0b8ff06592954bef2329fa69a660c60e55e4eb3d)) (@devsergiy)
+
+## [0.37.3](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.37.2...aws-lambda-router@0.37.3) (2024-11-12)
+
+**Note:** Version bump only for package aws-lambda-router
+
+## [0.37.2](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.37.1...aws-lambda-router@0.37.2) (2024-11-08)
+
+### Bug Fixes
+
+* json parsing and input templates rendering ([#1350](https://github.com/wundergraph/cosmo/issues/1350)) ([578a408](https://github.com/wundergraph/cosmo/commit/578a4085862b3149dbbfb10362aff118c62dfff2)) (@jensneuse)
+
+## [0.37.1](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.37.0...aws-lambda-router@0.37.1) (2024-11-07)
+
+**Note:** Version bump only for package aws-lambda-router
+
+# [0.37.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.36.1...aws-lambda-router@0.37.0) (2024-11-05)
+
+### Features
+
+* context handling performance & memory improvements ([#1336](https://github.com/wundergraph/cosmo/issues/1336)) ([1aed39a](https://github.com/wundergraph/cosmo/commit/1aed39a99d604595ca4fef711a45ef0b059f77a5)) (@jensneuse)
+
+## [0.36.1](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.36.0...aws-lambda-router@0.36.1) (2024-11-04)
+
+**Note:** Version bump only for package aws-lambda-router
+
+# [0.36.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.35.0...aws-lambda-router@0.36.0) (2024-10-29)
+
+### Features
+
+* extend apollo compatible error support ([#1311](https://github.com/wundergraph/cosmo/issues/1311)) ([d4d727e](https://github.com/wundergraph/cosmo/commit/d4d727e1c98f92eaa2103ca2356537e3a63eeff2)) (@Aenimus)
+
+# [0.35.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.34.2...aws-lambda-router@0.35.0) (2024-10-28)
+
+### Features
+
+* upgrade go tools to support lock free epoll conn handling for ws origin requests ([#1316](https://github.com/wundergraph/cosmo/issues/1316)) ([f3f23d6](https://github.com/wundergraph/cosmo/commit/f3f23d6686a241a38700ff9b0ce8c5fe6a41582f)) (@jensneuse)
+
+## [0.34.2](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.34.1...aws-lambda-router@0.34.2) (2024-10-27)
+
+**Note:** Version bump only for package aws-lambda-router
+
+## [0.34.1](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.34.0...aws-lambda-router@0.34.1) (2024-10-25)
+
+**Note:** Version bump only for package aws-lambda-router
+
+# [0.34.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.33.1...aws-lambda-router@0.34.0) (2024-10-25)
+
+### Features
+
+* add origin subgraph request epoll support ([#1284](https://github.com/wundergraph/cosmo/issues/1284)) ([4fe8146](https://github.com/wundergraph/cosmo/commit/4fe81461a43e45dbd3bae482976fec8127d3d982)) (@jensneuse)
+
+## [0.33.1](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.33.0...aws-lambda-router@0.33.1) (2024-10-24)
+
+### Bug Fixes
+
+* value completion typename, planner shared nodes selections ([#1306](https://github.com/wundergraph/cosmo/issues/1306)) ([b5929bf](https://github.com/wundergraph/cosmo/commit/b5929bfcd263e835efae617d3ca64691c44c7ff9)) (@devsergiy)
+
+# [0.33.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.32.0...aws-lambda-router@0.33.0) (2024-10-21)
+
+### Features
+
+* include subgraph name in ART ([#1290](https://github.com/wundergraph/cosmo/issues/1290)) ([2acfc30](https://github.com/wundergraph/cosmo/commit/2acfc300a618b4fe8392df0633c6dd6c5bbe393a)) (@StarpTech)
+
+# [0.32.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.31.0...aws-lambda-router@0.32.0) (2024-10-18)
+
+### Features
+
+* improve planning time ([#1287](https://github.com/wundergraph/cosmo/issues/1287)) ([c4ff4dd](https://github.com/wundergraph/cosmo/commit/c4ff4dda5bce0cf12429554d458304b92525e800)) (@devsergiy)
+
+# [0.31.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.30.2...aws-lambda-router@0.31.0) (2024-10-17)
+
+### Features
+
+* **tests:** add service and code when extensions is null or empty ([#1283](https://github.com/wundergraph/cosmo/issues/1283)) ([b220e81](https://github.com/wundergraph/cosmo/commit/b220e81148829c50dd7f710a2098dffe0260dc61)) (@StarpTech)
+
+## [0.30.2](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.30.1...aws-lambda-router@0.30.2) (2024-10-16)
+
+### Bug Fixes
+
+* provides edge cases ([#1275](https://github.com/wundergraph/cosmo/issues/1275)) ([a5020b3](https://github.com/wundergraph/cosmo/commit/a5020b3f547306fc2a7e94855caeb9daf3732e78)) (@devsergiy)
+
+## [0.30.1](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.30.0...aws-lambda-router@0.30.1) (2024-10-11)
+
+### Bug Fixes
+
+* handling external fields ([#1266](https://github.com/wundergraph/cosmo/issues/1266)) ([fff7225](https://github.com/wundergraph/cosmo/commit/fff72258dbb453bcc94558b3440fe72d797e6d0a)) (@devsergiy)
+
+# [0.30.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.29.0...aws-lambda-router@0.30.0) (2024-10-11)
+
+### Features
+
+* add suppress fetch errors option to apollo compatibility flags ([#1258](https://github.com/wundergraph/cosmo/issues/1258)) ([a4d1adb](https://github.com/wundergraph/cosmo/commit/a4d1adba01e587b72cb5180eb3241f8943d34014)) (@JivusAyrus)
+
+# [0.29.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.28.0...aws-lambda-router@0.29.0) (2024-10-10)
+
+### Features
+
+* create subsciption over multipart ([#1227](https://github.com/wundergraph/cosmo/issues/1227)) ([3bbc8d9](https://github.com/wundergraph/cosmo/commit/3bbc8d9c9e48cd3f37214214ca55954a1e97b00a)) (@df-wg)
+
+# [0.28.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.27.1...aws-lambda-router@0.28.0) (2024-10-09)
+
+### Features
+
+* add indirect interface fields to schema usage reporting ([#1235](https://github.com/wundergraph/cosmo/issues/1235)) ([1c62c14](https://github.com/wundergraph/cosmo/commit/1c62c14f9a9f11a6fbbebf5a3fbc4d85f304285e)) (@jensneuse)
+
+## [0.27.1](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.27.0...aws-lambda-router@0.27.1) (2024-10-07)
+
+**Note:** Version bump only for package aws-lambda-router
+
+# [0.27.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.26.1...aws-lambda-router@0.27.0) (2024-10-07)
+
+### Features
+
+* allow specified fields in subgraph errors ([#1248](https://github.com/wundergraph/cosmo/issues/1248)) ([72c770d](https://github.com/wundergraph/cosmo/commit/72c770d1d4d795f70586dfaa1a0ffab2943638a4)) (@thisisnithin)
+
+## [0.26.1](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.26.0...aws-lambda-router@0.26.1) (2024-10-03)
+
+### Bug Fixes
+
+* apollo compatibility for truncating floats, invalid __typenames ([#1242](https://github.com/wundergraph/cosmo/issues/1242)) ([a773ea5](https://github.com/wundergraph/cosmo/commit/a773ea53d7f9abe48033dad822f4424a31e28af2)) (@devsergiy)
+
+# [0.26.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.25.0...aws-lambda-router@0.26.0) (2024-10-03)
+
+### Features
+
+* router version command ([#1240](https://github.com/wundergraph/cosmo/issues/1240)) ([39970e5](https://github.com/wundergraph/cosmo/commit/39970e5b1c6d8e2a2958f5ea55bb0d8aa7206d92)) (@StarpTech)
+
+# [0.25.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.24.4...aws-lambda-router@0.25.0) (2024-10-02)
+
+### Features
+
+* add apollo compatibility flag to truncate floats ([#1236](https://github.com/wundergraph/cosmo/issues/1236)) ([17c80c9](https://github.com/wundergraph/cosmo/commit/17c80c91f4e594cf48dae887840517b588bbe0f8)) (@jensneuse)
+
+## [0.24.4](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.24.3...aws-lambda-router@0.24.4) (2024-09-30)
+
+### Bug Fixes
+
+* upgrade engine for ws deadlock, remove pont pool ([#1230](https://github.com/wundergraph/cosmo/issues/1230)) ([3ac50f8](https://github.com/wundergraph/cosmo/commit/3ac50f8b878fb6a5e2460c22aa94412a28c49600)) (@StarpTech)
+
+## [0.24.3](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.24.2...aws-lambda-router@0.24.3) (2024-09-30)
+
+### Bug Fixes
+
+* value completion reset, preserve __typename field location ([#1228](https://github.com/wundergraph/cosmo/issues/1228)) ([9d671f0](https://github.com/wundergraph/cosmo/commit/9d671f071af6d6b5789968682b98a9c5b7f9a7ec)) (@devsergiy)
+
+## [0.24.2](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.24.1...aws-lambda-router@0.24.2) (2024-09-30)
+
+### Bug Fixes
+
+* planning of consecutive fragments and fragments on union ([#1223](https://github.com/wundergraph/cosmo/issues/1223)) ([3e390cd](https://github.com/wundergraph/cosmo/commit/3e390cd5cf6ca87694c6a25794aecd84d4f0c31e)) (@devsergiy)
+
+## [0.24.1](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.24.0...aws-lambda-router@0.24.1) (2024-09-23)
+
+**Note:** Version bump only for package aws-lambda-router
+
+# [0.24.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.23.0...aws-lambda-router@0.24.0) (2024-09-23)
+
+### Features
+
+* add apollo compatibility mode with support for valueCompletion ([#1205](https://github.com/wundergraph/cosmo/issues/1205)) ([18b1ef0](https://github.com/wundergraph/cosmo/commit/18b1ef01b12945d2f3acc80ea9548a17f9effa21)) (@jensneuse)
+
+# [0.23.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.22.2...aws-lambda-router@0.23.0) (2024-09-19)
+
+### Features
+
+* return error from Router when Subgraph returns invalid value for __typename field ([#1194](https://github.com/wundergraph/cosmo/issues/1194)) ([b99d2fd](https://github.com/wundergraph/cosmo/commit/b99d2fdcd8b311028d11b501addb9d69e61c7df8)) (@jensneuse)
+
+## [0.22.2](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.22.1...aws-lambda-router@0.22.2) (2024-09-17)
+
+### Bug Fixes
+
+* ignore empty errors array ([#1181](https://github.com/wundergraph/cosmo/issues/1181)) ([bc5dda3](https://github.com/wundergraph/cosmo/commit/bc5dda393f727d8ee3483ea7e53c89377a0d2722)) (@devsergiy)
+
+## [0.22.1](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.22.0...aws-lambda-router@0.22.1) (2024-09-13)
+
+**Note:** Version bump only for package aws-lambda-router
+
+# [0.22.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.21.5...aws-lambda-router@0.22.0) (2024-09-12)
+
+### Features
+
+* subgraph error propagation improvements ([#1164](https://github.com/wundergraph/cosmo/issues/1164)) ([2700061](https://github.com/wundergraph/cosmo/commit/27000616aa96de67a33e90fbddfcd851d815f2ab)) (@StarpTech)
+
+## [0.21.5](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.21.4...aws-lambda-router@0.21.5) (2024-09-09)
+
+**Note:** Version bump only for package aws-lambda-router
+
+## [0.21.4](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.21.3...aws-lambda-router@0.21.4) (2024-08-30)
+
+### Bug Fixes
+
+* planning of provides, parent entity jump, conditional implicit keys, external fields ([#1092](https://github.com/wundergraph/cosmo/issues/1092)) ([0fe2cba](https://github.com/wundergraph/cosmo/commit/0fe2cbaa72fa7ba5dbbf97c1e95615f29f13af1f)) (@devsergiy)
+
+## [0.21.3](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.21.2...aws-lambda-router@0.21.3) (2024-08-30)
+
+### Bug Fixes
+
+* support __typename for introspection query ([#1131](https://github.com/wundergraph/cosmo/issues/1131)) ([704170e](https://github.com/wundergraph/cosmo/commit/704170e7417ce6352b5eaea63b65f3dc5b772dd8)) (@devsergiy)
+
+## [0.21.2](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.21.1...aws-lambda-router@0.21.2) (2024-08-22)
+
+### Bug Fixes
+
+* unicode escaping by replacing fastjson version ([#1109](https://github.com/wundergraph/cosmo/issues/1109)) ([9d7812a](https://github.com/wundergraph/cosmo/commit/9d7812a03983eb6422e5e636e367814b1cc9b1fa)) (@devsergiy)
+
 ## [0.21.1](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.21.0...aws-lambda-router@0.21.1) (2024-08-14)
 
 **Note:** Version bump only for package aws-lambda-router

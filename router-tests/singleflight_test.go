@@ -1,4 +1,4 @@
-package integration_test
+package integration
 
 import (
 	"fmt"
@@ -35,6 +35,40 @@ func TestSingleFlight(t *testing.T) {
 					Query: `{ employees { id } }`,
 				})
 				require.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
+			}()
+		}
+		close(trigger)
+		wg.Wait()
+		// We expect that the number of requests is less than the number of operations
+		require.NotEqual(t, int64(numOfOperations), xEnv.SubgraphRequestCount.Global.Load())
+	})
+}
+
+func TestSingleFlightOnNetworkErrors(t *testing.T) {
+	t.Parallel()
+
+	testenv.Run(t, &testenv.Config{
+		Subgraphs: testenv.SubgraphsConfig{
+			GlobalDelay: time.Millisecond * 100,
+			Employees: testenv.SubgraphConfig{
+				CloseOnStart: true,
+			},
+		},
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		var (
+			numOfOperations = 10
+			wg              sync.WaitGroup
+		)
+		wg.Add(numOfOperations)
+		trigger := make(chan struct{})
+		for i := 0; i < numOfOperations; i++ {
+			go func() {
+				defer wg.Done()
+				<-trigger
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ employees { id } }`,
+				})
+				require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'employees'."}],"data":{"employees":null}}`, res.Body)
 			}()
 		}
 		close(trigger)
@@ -198,8 +232,8 @@ func TestSingleFlightDifferentHeaders(t *testing.T) {
 		},
 		RouterOptions: []core.Option{
 			core.WithHeaderRules(config.HeaderRules{
-				All: config.GlobalHeaderRule{
-					Request: []config.RequestHeaderRule{
+				All: &config.GlobalHeaderRule{
+					Request: []*config.RequestHeaderRule{
 						{
 							Named:     "Authorization",
 							Operation: config.HeaderRuleOperationPropagate,
@@ -245,8 +279,8 @@ func TestSingleFlightSameHeaders(t *testing.T) {
 		},
 		RouterOptions: []core.Option{
 			core.WithHeaderRules(config.HeaderRules{
-				All: config.GlobalHeaderRule{
-					Request: []config.RequestHeaderRule{
+				All: &config.GlobalHeaderRule{
+					Request: []*config.RequestHeaderRule{
 						{
 							Named:     "Authorization",
 							Operation: config.HeaderRuleOperationPropagate,

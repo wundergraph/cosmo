@@ -3,7 +3,7 @@ kind: Job
 metadata:
   name: "{{ include "controlplane.fullname" . }}-database-migration-{{ now | unixEpoch }}"
   labels:
-    {{- include "controlplane.labels" . | nindent 4 }}
+    {{- include "controlplane.job.labels" (dict "additionalLabels" .Values.jobs.databaseMigration.additionalLabels "context" .) | nindent 4 }}
   annotations:
     # Run migration job before helm install/upgrade
     "helm.sh/hook": post-install,post-upgrade
@@ -23,7 +23,7 @@ spec:
     metadata:
       name: "{{ include "controlplane.fullname" . }}-database-migration"
       labels:
-        {{- include "controlplane.labels" . | nindent 8 }}
+        {{- include "controlplane.job.labels" (dict "additionalLabels" .Values.jobs.databaseMigration.additionalLabels "context" .) | nindent 8 }}
     spec:
       restartPolicy: OnFailure
       {{- with .Values.imagePullSecrets }}

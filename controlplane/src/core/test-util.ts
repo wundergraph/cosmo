@@ -143,6 +143,7 @@ export enum TestUser {
   adminAliceCompanyA = 'adminAliceCompanyA',
   adminBobCompanyA = 'adminBobCompanyA',
   devJoeCompanyA = 'devJoeCompanyA',
+  viewerTimCompanyA = 'viewerTimCompanyA',
   adminJimCompanyB = 'adminJimCompanyB',
 }
 

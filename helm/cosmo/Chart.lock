@@ -22,15 +22,15 @@ dependencies:
   version: 12.12.10
 - name: keycloak
   repository: https://charts.bitnami.com/bitnami
-  version: 21.7.1
+  version: 22.0.0
 - name: clickhouse
   repository: https://charts.bitnami.com/bitnami
-  version: 5.3.1
+  version: 6.2.14
 - name: minio
   repository: https://charts.bitnami.com/bitnami
   version: 14.6.25
 - name: redis
   repository: https://charts.bitnami.com/bitnami
   version: 19.3.3
-digest: sha256:5cad46df3af623eb9b400f50862861e28af36a2ff669ce3808b2614515497740
-generated: "2024-07-23T13:46:28.360453+02:00"
+digest: sha256:ca5d96eb18eb17314f0ca5048a25b9050942c17c9bdae669134e7ebf11fb3ecf
+generated: "2024-09-23T15:19:35.81985+05:30"

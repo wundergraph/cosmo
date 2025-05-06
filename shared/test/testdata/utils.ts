@@ -1,13 +1,14 @@
 import * as fs from 'node:fs';
 import {
   federateSubgraphs,
-  FederationResultContainer,
+  FederationResult,
+  LATEST_ROUTER_COMPATIBILITY_VERSION,
   Subgraph,
   SubscriptionCondition,
 } from '@wundergraph/composition';
 import { parse } from 'graphql';
 
-export function federateTestSubgraphs(): FederationResultContainer {
+export function federateTestSubgraphs(): FederationResult {
   const accounts: Subgraph = {
     definitions: parse(fs.readFileSync('test/testdata/accounts.graphql').toString()),
     name: 'accounts',
@@ -32,7 +33,7 @@ export function federateTestSubgraphs(): FederationResultContainer {
     url: 'https://wg-federation-demo-reviews.fly.dev/graphql',
   };
 
-  return federateSubgraphs([accounts, inventory, products, reviews]);
+  return federateSubgraphs([accounts, inventory, products, reviews], LATEST_ROUTER_COMPATIBILITY_VERSION);
 }
 
 export const simpleAccounts: Subgraph = {

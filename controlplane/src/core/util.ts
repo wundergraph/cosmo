@@ -1,23 +1,36 @@
 import { randomFill } from 'node:crypto';
+import { S3ClientConfig } from '@aws-sdk/client-s3';
 import { HandlerContext } from '@connectrpc/connect';
 import {
   GraphQLSubscriptionProtocol,
   GraphQLWebsocketSubprotocol,
 } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
+import { AxiosError } from 'axios';
+import { isNetworkError, isRetryableError } from 'axios-retry';
 import { formatISO, subHours } from 'date-fns';
 import { FastifyBaseLogger } from 'fastify';
 import { parse, visit } from 'graphql';
 import { uid } from 'uid/secure';
+import {
+  ContractTagOptions,
+  FederationResult,
+  FederationResultWithContracts,
+  LATEST_ROUTER_COMPATIBILITY_VERSION,
+  newContractTagOptionsFromArrays,
+} from '@wundergraph/composition';
 import { MemberRole, WebsocketSubprotocol } from '../db/models.js';
-import { AuthContext, DateRange, Label, ResponseMessage } from '../types/index.js';
+import { AuthContext, DateRange, FederatedGraphDTO, Label, ResponseMessage, S3StorageOptions } from '../types/index.js';
 import { isAuthenticationError, isAuthorizationError, isPublicError } from './errors/errors.js';
 import { GraphKeyAuthContext } from './services/GraphApiTokenAuthenticator.js';
+import { composeFederatedContract, composeFederatedGraphWithPotentialContracts } from './composition/composition.js';
+import { SubgraphsToCompose } from './repositories/FeatureFlagRepository.js';
 
 const labelRegex = /^[\dA-Za-z](?:[\w.-]{0,61}[\dA-Za-z])?$/;
 const organizationSlugRegex = /^[\da-z]+(?:-[\da-z]+)*$/;
 const namespaceRegex = /^[\da-z]+(?:[_-][\da-z]+)*$/;
 const schemaTagRegex = /^(?![/-])[\d/A-Za-z-]+(?<![/-])$/;
+const graphNameRegex = /^[\dA-Za-z]+(?:[./@_-][\dA-Za-z]+)*$/;
 
 /**
  * Wraps a function with a try/catch block and logs any errors that occur.
@@ -281,6 +294,13 @@ export const isValidNamespaceName = (name: string): boolean => {
   return namespaceRegex.test(name);
 };
 
+export const isValidGraphName = (name: string): boolean => {
+  if (name.length === 0 || name.length > 100) {
+    return false;
+  }
+  return graphNameRegex.test(name);
+};
+
 export const isValidOrganizationSlug = (slug: string): boolean => {
   // these reserved slugs are the root paths of the studio,
   // so the org slug should not be the same as one of our root paths
@@ -363,3 +383,182 @@ export function getValueOrDefault<K, V>(map: Map<K, V>, key: K, constructor: () 
   map.set(key, value);
   return value;
 }
+
+// webhookAxiosRetryCond retry condition function to retry on network errors and 429, 5xx errors for all
+// HTTP methods including POST, PUT, DELETE, etc.
+export function webhookAxiosRetryCond(err: AxiosError) {
+  return isNetworkError(err) || isRetryableError(err);
+}
+
+export function createS3ClientConfig(bucketName: string, opts: S3StorageOptions): S3ClientConfig {
+  const url = new URL(opts.url);
+  const { region, username, password } = opts;
+  const forcePathStyle = opts.forcePathStyle ?? !isVirtualHostStyleUrl(url);
+  const endpoint = opts.endpoint || (forcePathStyle ? url.origin : url.origin.replace(`${bucketName}.`, ''));
+
+  const accessKeyId = url.username || username || '';
+  const secretAccessKey = url.password || password || '';
+
+  if (!accessKeyId || !secretAccessKey) {
+    throw new Error('Missing S3 credentials. Please provide access key ID and secret access key.');
+  }
+
+  if (!region) {
+    throw new Error('Missing region in S3 configuration.');
+  }
+
+  return {
+    region,
+    endpoint,
+    credentials: {
+      accessKeyId,
+      secretAccessKey,
+    },
+    forcePathStyle,
+  };
+}
+
+export function extractS3BucketName(opts: S3StorageOptions) {
+  const url = new URL(opts.url);
+
+  if (opts.forcePathStyle || !isVirtualHostStyleUrl(url)) {
+    return url.pathname.slice(1);
+  }
+
+  return url.hostname.split('.')[0];
+}
+
+export function isVirtualHostStyleUrl(url: URL) {
+  return url.hostname.split('.').length > 2;
+}
+
+export function mergeUrls(baseUrl: string, relativeUrl: string) {
+  // Remove the leading slash beacuse if the relative URL starts with a slash,
+  // the relative part will merge with only the hostname ignoring the rest of the base url if any.
+  relativeUrl = relativeUrl.startsWith('/') ? relativeUrl.slice(1) : relativeUrl;
+
+  // Same as the above case, if the base URL doesnt end with a slash,
+  // the computed url will only have the host and the relative URL and will ignore the rest of the base URL if any.
+  baseUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
+
+  return new URL(relativeUrl, baseUrl).toString();
+}
+
+export function createBatches<T>(array: T[], batchSize: number): T[][] {
+  const batches: T[][] = [];
+
+  for (let i = 0; i < array.length; i += batchSize) {
+    const batch = array.slice(i, i + batchSize);
+    batches.push(batch);
+  }
+
+  return batches;
+}
+
+export const checkIfLabelMatchersChanged = (data: {
+  isContract: boolean;
+  currentLabelMatchers: string[];
+  newLabelMatchers: string[];
+  unsetLabelMatchers?: boolean;
+}) => {
+  if (data.isContract && data.newLabelMatchers.length === 0) {
+    return false;
+  }
+
+  // User tries to unset but no matchers exist, then nothing has changed
+  if (data.unsetLabelMatchers && data.currentLabelMatchers.length === 0) {
+    return false;
+  }
+
+  // If user tries to unset but matchers exist, then it has changed
+  if (data.unsetLabelMatchers) {
+    return true;
+  }
+
+  // Not a contract, not unsetting, no new matchers, then nothing has changed
+  if (data.newLabelMatchers.length === 0) {
+    return false;
+  }
+
+  // Not a contract, not unsetting but new matchers are passed, we need to check if they are different
+  if (data.newLabelMatchers.length !== data.currentLabelMatchers.length) {
+    return true;
+  }
+
+  for (const labelMatcher of data.newLabelMatchers) {
+    if (!data.currentLabelMatchers.includes(labelMatcher)) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
+export function getFederationResultWithPotentialContracts(
+  federatedGraph: FederatedGraphDTO,
+  subgraphsToCompose: SubgraphsToCompose,
+  tagOptionsByContractName: Map<string, ContractTagOptions>,
+): FederationResult | FederationResultWithContracts {
+  // This condition is only true when entering the method to specifically create/update a contract
+  if (federatedGraph.contract) {
+    return composeFederatedContract(
+      subgraphsToCompose.compositionSubgraphs,
+      newContractTagOptionsFromArrays(federatedGraph.contract.excludeTags, federatedGraph.contract.includeTags),
+      federatedGraph.routerCompatibilityVersion,
+    );
+  }
+  return composeFederatedGraphWithPotentialContracts(
+    subgraphsToCompose.compositionSubgraphs,
+    tagOptionsByContractName,
+    federatedGraph.routerCompatibilityVersion,
+  );
+}
+
+export function getFederatedGraphRouterCompatibilityVersion(federatedGraphDTOs: Array<FederatedGraphDTO>): string {
+  if (federatedGraphDTOs.length === 0) {
+    return LATEST_ROUTER_COMPATIBILITY_VERSION;
+  }
+  return federatedGraphDTOs[0].routerCompatibilityVersion;
+}
+
+export function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
+
+export const isCheckSuccessful = ({
+  isComposable,
+  isBreaking,
+  hasClientTraffic,
+  hasLintErrors,
+  hasGraphPruningErrors,
+  clientTrafficCheckSkipped,
+  hasProposalMatchError,
+}: {
+  isComposable: boolean;
+  isBreaking: boolean;
+  hasClientTraffic: boolean;
+  hasLintErrors: boolean;
+  hasGraphPruningErrors: boolean;
+  clientTrafficCheckSkipped: boolean;
+  hasProposalMatchError: boolean;
+}) => {
+  return (
+    isComposable &&
+    // If no breaking changes found
+    // OR Breaking changes are found, but no client traffic is found and traffic check is not skipped
+    (!isBreaking || (isBreaking && !hasClientTraffic && !clientTrafficCheckSkipped)) &&
+    !hasLintErrors &&
+    !hasGraphPruningErrors &&
+    !hasProposalMatchError
+  );
+};
+
+export const flipDateRangeValuesIfNeeded = (dateRange?: { start: number; end: number }) => {
+  if (!dateRange || dateRange.start <= dateRange.end) {
+    return;
+  }
+
+  const tmp = dateRange.start;
+  dateRange.start = dateRange.end;
+  dateRange.end = tmp;
+};

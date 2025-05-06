@@ -59,6 +59,42 @@ spec:
                   name: {{ include "cdn.fullname" . }}-configmap
                   key: port
 
+            - name: S3_REGION
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "cdn.fullname" . }}-configmap
+                  key: s3Region
+            {{- if .Values.configuration.s3ForcePathStyle }}
+            - name: S3_FORCE_PATH_STYLE
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "cdn.fullname" . }}-configmap
+                  key: s3ForcePathStyle
+            {{- end }}
+            {{- if .Values.configuration.s3Endpoint }}
+            - name: S3_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "cdn.fullname" . }}-configmap
+                  key: s3Endpoint
+            {{- end }}
+
+            {{- if .Values.configuration.s3AccessKeyId }}
+            - name: S3_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "cdn.secretName" . }}
+                  key: s3AccessKeyId
+            {{- end }}
+
+            {{- if .Values.configuration.s3SecretAccessKey }}
+            - name: S3_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "cdn.secretName" . }}
+                  key: s3SecretAccessKey
+            {{- end }}
+
             - name: S3_STORAGE_URL
               valueFrom:
                 secretKeyRef:

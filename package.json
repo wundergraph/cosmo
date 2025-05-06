@@ -32,8 +32,8 @@
     "dist"
   ],
   "engines": {
-    "node": ">=20.0.0",
-    "pnpm": "8"
+    "node": ">=22.11.0",
+    "pnpm": "9"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,md,mdx,yml,yaml,css,json,graphql,gql}": [
@@ -58,15 +58,21 @@
     "@lerna-lite/version": "3.7.1",
     "del-cli": "^5.1.0",
     "husky": "^8.0.3",
-    "lint-staged": "^12.5.0",
+    "lint-staged": "^15.2.10",
     "prettier": "^3.0.3",
-    "vitest": "^2.0.3"
+    "vitest": "^3.1.2"
   },
   "pnpm": {
     "overrides": {
       "react": "18.3.1",
-      "graphql": "16.9.0"
+      "graphql": "16.9.0",
+      "cross-spawn": "7.0.6",
+      "next": "15.2.4",
+      "zod": "3.24.2"
+    },
+    "patchedDependencies": {
+      "graphql@16.9.0": "patches/graphql@16.9.0.patch"
     }
   },
-  "packageManager": "pnpm@8.7.0"
+  "packageManager": "pnpm@9.12.3"
 }

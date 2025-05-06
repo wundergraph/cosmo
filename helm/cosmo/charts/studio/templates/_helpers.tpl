@@ -9,10 +9,12 @@ Expand the name of the chart.
 Create the image path for the passed in image field
 */}}
 {{- define "studio.image" -}}
-{{- if eq (substr 0 7 .Values.image.version) "sha256:" -}}
+{{- if and (.Values.image.version) (eq (substr 0 7 .Values.image.version) "sha256:") -}}
 {{- printf "%s/%s@%s" .Values.image.registry .Values.image.repository .Values.image.version -}}
+{{- else if .Values.image.version -}}
+{{- printf "%s/%s:%s" .Values.image.registry .Values.image.repository .Values.image.version -}}
 {{- else -}}
-{{- printf "%s/%s:%s" .Values.image.registry .Values.image.repository (.Values.image.version | default .Chart.AppVersion) -}}
+{{- printf "%s/%s:%s" .Values.image.registry .Values.image.repository .Chart.AppVersion -}}
 {{- end -}}
 {{- end -}}
 
@@ -45,11 +47,10 @@ Create chart name and version as used by the chart label.
 Common labels
 */}}
 {{- define "studio.labels" -}}
+{{ $version := .Values.image.version | default .Chart.AppVersion -}}
 helm.sh/chart: {{ include "studio.chart" . }}
 {{ include "studio.selectorLabels" . }}
-{{- if .Chart.AppVersion }}
-app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
-{{- end }}
+app.kubernetes.io/version: {{ $version | quote }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
 
@@ -59,6 +60,9 @@ Selector labels
 {{- define "studio.selectorLabels" -}}
 app.kubernetes.io/name: {{ include "studio.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
+{{- range $key, $value := .Values.commonLabels }}
+{{ $key }}: {{ quote $value }}
+{{- end }}
 {{- end }}
 
 {{/*

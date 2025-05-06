@@ -2,9 +2,11 @@ name: Studio CI
 on:
   pull_request:
     paths:
-      - "studio/**/*"
-      - "connect/**/*"
-      - ".github/workflows/studio-ci.yaml"
+      - 'studio/**/*'
+      - 'connect/**/*'
+      - 'shared/**/*'
+      - 'composition/**/*'
+      - '.github/workflows/studio-ci.yaml'
 
 concurrency:
   group: ${{github.workflow}}-${{github.head_ref}}
@@ -12,6 +14,7 @@ concurrency:
 
 env:
   CI: true
+  DO_NOT_TRACK: '1'
 
 jobs:
   build_test:
@@ -19,8 +22,6 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - uses: ./.github/actions/node
 
@@ -54,12 +55,13 @@ jobs:
         run: pnpm run --filter studio test
 
   build_push_image:
+    # This is a limitation of GitHub. Only organization members can push to GitHub Container Registry
+    # For now, we will disable the push to the GitHub Container Registry for external contributors
+    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - uses: ./.github/actions/build-push-image
         with:
@@ -69,4 +71,4 @@ jobs:
           dockerfile: studio/Dockerfile
           token: ${{secrets.GITHUB_TOKEN}}
           image_name: studio
-          image_description: "Cosmo Studio"
+          image_description: 'Cosmo Studio'

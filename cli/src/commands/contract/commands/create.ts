@@ -20,6 +20,7 @@ export default (opts: BaseCommandOptions) => {
     'The routing url of your router. This is the url that the router will be accessible at.',
   );
   command.option('--exclude [tags...]', 'Schema elements with these tags will be excluded from the contract schema.');
+  command.option('--include [tags...]', 'Schema elements with these tags will be included from the contract schema.');
   command.option(
     '--admission-webhook-url <url>',
     'The admission webhook url. This is the url that the controlplane will use to implement admission control for the contract graph.',
@@ -28,11 +29,12 @@ export default (opts: BaseCommandOptions) => {
     '--admission-webhook-secret [string]',
     'The admission webhook secret is used to sign requests to the webhook url.',
   );
+  command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
   command.option('--readme <path-to-readme>', 'The markdown file which describes the contract.');
   command.action(async (name, options) => {
     let readmeFile;
     if (options.readme) {
-      readmeFile = resolve(process.cwd(), options.readme);
+      readmeFile = resolve(options.readme);
       if (!existsSync(readmeFile)) {
         program.error(
           pc.red(
@@ -44,12 +46,24 @@ export default (opts: BaseCommandOptions) => {
 
     const spinner = ora('Contract is being created...').start();
 
+    if (options.exclude?.length > 0 && options.include?.length > 0) {
+      program.error(
+        pc.red(
+          pc.bold(
+            `The "exclude" and "include" options for tags are currently mutually exclusive.` +
+              ` Both options have been provided, but one of the options must be empty or unset.`,
+          ),
+        ),
+      );
+    }
+
     const resp = await opts.client.platform.createContract(
       {
         name,
         namespace: options.namespace,
         sourceGraphName: options.source,
         excludeTags: options.exclude,
+        includeTags: options.include,
         routingUrl: options.routingUrl,
         admissionWebhookUrl: options.admissionWebhookUrl,
         admissionWebhookSecret: options.admissionWebhookSecret,
@@ -72,9 +86,10 @@ export default (opts: BaseCommandOptions) => {
           head: [
             pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
             pc.bold(pc.white('NAMESPACE')),
+            pc.bold(pc.white('FEATURE_FLAG')),
             pc.bold(pc.white('ERROR_MESSAGE')),
           ],
-          colWidths: [30, 30, 120],
+          colWidths: [30, 30, 30, 120],
           wordWrap: true,
         });
 
@@ -82,6 +97,7 @@ export default (opts: BaseCommandOptions) => {
           compositionErrorsTable.push([
             compositionError.federatedGraphName,
             compositionError.namespace,
+            compositionError.featureFlag || '-',
             compositionError.message,
           ]);
         }
@@ -118,8 +134,33 @@ export default (opts: BaseCommandOptions) => {
         if (resp.response?.details) {
           console.error(pc.red(pc.bold(resp.response?.details)));
         }
-        process.exit(1);
+        process.exitCode = 1;
+        return;
       }
+    }
+
+    if (!options.suppressWarnings && resp.compositionWarnings.length > 0) {
+      const compositionWarningsTable = new Table({
+        head: [
+          pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
+          pc.bold(pc.white('NAMESPACE')),
+          pc.bold(pc.white('FEATURE_FLAG')),
+          pc.bold(pc.white('WARNING_MESSAGE')),
+        ],
+        colWidths: [30, 30, 30, 120],
+        wordWrap: true,
+      });
+
+      console.log(pc.yellow(`The following warnings were produced while composing the federated graph:`));
+      for (const compositionWarning of resp.compositionWarnings) {
+        compositionWarningsTable.push([
+          compositionWarning.federatedGraphName,
+          compositionWarning.namespace,
+          compositionWarning.featureFlag || '-',
+          compositionWarning.message,
+        ]);
+      }
+      console.log(compositionWarningsTable.toString());
     }
   });
 

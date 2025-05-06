@@ -3,7 +3,8 @@ import { readFile } from 'node:fs/promises';
 import { Command, program } from 'commander';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
-import { getBaseHeaders } from '../../../core/config.js';
+import { VCSContext } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { config, getBaseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { verifyGitHubIntegration } from '../../../github.js';
 import { handleCheckResult } from '../../../handle-check-result.js';
@@ -15,6 +16,10 @@ export default (opts: BaseCommandOptions) => {
   command.option('-n, --namespace [string]', 'The namespace of the subgraph.');
   command.option('--schema <path-to-schema>', 'The path of the new schema file.');
   command.option('--delete', 'Run checks in case the subgraph is deleted.');
+  command.option(
+    '--skip-traffic-check',
+    'This will skip checking for client traffic and any breaking change will fail the run.',
+  );
 
   command.action(async (name, options) => {
     let schemaFile;
@@ -24,17 +29,26 @@ export default (opts: BaseCommandOptions) => {
     }
 
     if (options.schema) {
-      schemaFile = resolve(process.cwd(), options.schema);
+      schemaFile = resolve(options.schema);
       if (!existsSync(schemaFile)) {
         program.error(
           pc.red(
-            pc.bold(`The readme file '${pc.bold(schemaFile)}' does not exist. Please check the path and try again.`),
+            pc.bold(`The schema file '${pc.bold(schemaFile)}' does not exist. Please check the path and try again.`),
           ),
         );
       }
     }
 
     const { gitInfo, ignoreErrorsDueToGitHubIntegration } = await verifyGitHubIntegration(opts.client);
+    let vcsContext: VCSContext | undefined;
+
+    if (config.checkAuthor || config.checkCommitSha || config.checkBranch) {
+      vcsContext = new VCSContext({
+        author: config.checkAuthor,
+        commitSha: config.checkCommitSha,
+        branch: config.checkBranch,
+      });
+    }
 
     // submit an empty schema in case of a delete check
     const schema = schemaFile ? await readFile(schemaFile) : Buffer.from('');
@@ -43,9 +57,11 @@ export default (opts: BaseCommandOptions) => {
       {
         subgraphName: name,
         namespace: options.namespace,
-        schema,
+        schema: new Uint8Array(schema),
         gitInfo,
         delete: options.delete,
+        skipTrafficCheck: options.skipTrafficCheck,
+        vcsContext,
       },
       {
         headers: getBaseHeaders(),
@@ -55,7 +71,9 @@ export default (opts: BaseCommandOptions) => {
     const success = handleCheckResult(resp);
 
     if (!success && !ignoreErrorsDueToGitHubIntegration) {
-      process.exit(1);
+      process.exitCode = 1;
+      // eslint-disable-next-line no-useless-return
+      return;
     }
   });
 

@@ -1,3 +1,7 @@
+import typography from '@tailwindcss/typography';
+import scrollbar from 'tailwind-scrollbar';
+import animate from 'tailwindcss-animate';
+
 /** @type {import('tailwindcss').Config} */
 export default {
   darkMode: 'class',
@@ -72,9 +76,9 @@ export default {
     },
   },
   plugins: [
-    require('@tailwindcss/typography'),
-    require('tailwindcss-animate'),
-    require('tailwind-scrollbar')({
+    typography,
+    animate,
+    scrollbar({
       nocompatible: true,
       preferredStrategy: 'pseudoelements',
     }),

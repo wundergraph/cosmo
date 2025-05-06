@@ -10,6 +10,8 @@ import (
 )
 
 func TestNormalizationCache(t *testing.T) {
+	t.Parallel()
+
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"Employee"`),
@@ -62,7 +64,77 @@ func TestNormalizationCache(t *testing.T) {
 	})
 }
 
+func TestNormalizationCacheWithMultiOperationDocument(t *testing.T) {
+	t.Parallel()
+
+	t.Run("Should identify correct document after removing unused operations during normalization", func(t *testing.T) {
+		t.Parallel()
+
+		document := `query A {
+  a: employee(id: 1) {
+    id
+    details {
+      pets {
+        name
+      }
+    }
+  }
+}
+
+query B ($id: Int!) {
+  b: employee(id: $id) {
+    id
+    details {
+      pets {
+        name
+      }
+    }
+  }
+}`
+
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				OperationName: []byte(`"A"`),
+				Query:         document,
+				Variables:     []byte(`{"id": 1234}`),
+			})
+			require.NoError(t, err)
+			require.Equal(t, "MISS", res.Response.Header.Get(core.NormalizationCacheHeader))
+			require.Equal(t, `{"data":{"a":{"id":1,"details":{"pets":null}}}}`, res.Body)
+
+			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				OperationName: []byte(`"A"`),
+				Query:         document,
+				Variables:     []byte(`{"id": 12345}`),
+			})
+			require.NoError(t, err)
+			require.Equal(t, "HIT", res.Response.Header.Get(core.NormalizationCacheHeader))
+			require.Equal(t, `{"data":{"a":{"id":1,"details":{"pets":null}}}}`, res.Body)
+
+			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				OperationName: []byte(`"B"`),
+				Query:         document,
+				Variables:     []byte(`{"id": 1}`),
+			})
+			require.NoError(t, err)
+			require.Equal(t, "MISS", res.Response.Header.Get(core.NormalizationCacheHeader))
+			require.Equal(t, `{"data":{"b":{"id":1,"details":{"pets":null}}}}`, res.Body)
+
+			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				OperationName: []byte(`"B"`),
+				Query:         document,
+				Variables:     []byte(`{"id": 3}`),
+			})
+			require.NoError(t, err)
+			require.Equal(t, "HIT", res.Response.Header.Get(core.NormalizationCacheHeader))
+			require.Equal(t, `{"data":{"b":{"id":3,"details":{"pets":[{"name":"Snappy"}]}}}}`, res.Body)
+		})
+	})
+}
+
 func TestDefaultValuesForSkipInclude(t *testing.T) {
+	t.Parallel()
+
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"MyQuery"`),
@@ -116,6 +188,8 @@ func TestDefaultValuesForSkipInclude(t *testing.T) {
 }
 
 func TestNormalizationCacheWithNestedVariables(t *testing.T) {
+	t.Parallel()
+
 	testenv.Run(t, &testenv.Config{
 		ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 			cfg.EnableNormalizationCache = true
@@ -175,6 +249,8 @@ func TestNormalizationCacheWithNestedVariables(t *testing.T) {
 }
 
 func TestWithoutNormalizationCache(t *testing.T) {
+	t.Parallel()
+
 	testenv.Run(t, &testenv.Config{
 		ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 			cfg.EnableNormalizationCache = false
@@ -208,6 +284,8 @@ func TestWithoutNormalizationCache(t *testing.T) {
 }
 
 func TestWithInputListCoercion(t *testing.T) {
+	t.Parallel()
+
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"MyQuery"`),

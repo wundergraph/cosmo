@@ -22,6 +22,7 @@ import {
   coerceFilterValues,
   fillColumnMetaData,
   CoercedFilterValues,
+  escapeStringsFromParams,
 } from './util.js';
 
 /**
@@ -98,6 +99,10 @@ export class AnalyticsRequestViewRepository {
       unit: Unit.TraceID,
       title: 'Trace ID',
     },
+    spanId: {
+      title: 'Span ID',
+      unit: Unit.SpanID,
+    },
     totalRequests: {
       type: 'number',
       title: 'Total Requests',
@@ -107,8 +112,12 @@ export class AnalyticsRequestViewRepository {
       unit: Unit.Nanoseconds,
       title: 'P95 Latency',
     },
-    errorsWithRate: {
-      title: 'Errors (Rate%)',
+    errors: {
+      title: 'Errors',
+    },
+    errorRate: {
+      title: 'Error Rate',
+      unit: Unit.Percentage,
     },
     rate: {
       title: 'Rate',
@@ -249,6 +258,7 @@ export class AnalyticsRequestViewRepository {
         query = `
           SELECT
             TraceId as traceId,
+            SpanId as spanId,
             -- DateTime64 is returned as a string
             toString(toUnixTimestamp(Timestamp)) as unixTimestamp,
             OperationName as operationName,
@@ -283,12 +293,8 @@ export class AnalyticsRequestViewRepository {
             OperationType as operationType,
             sum(TotalRequests) as totalRequests,
             quantilesMerge(0.95)(DurationQuantiles)[1] as p95,
-            CONCAT(
-              toString(sum(TotalRequestsError)),
-              ' (',
-              toString(round(sum(TotalRequestsError) / sum(TotalRequests) * 100, 2)),
-              '%)'
-            ) as errorsWithRate,
+            sum(TotalRequestsError) as errors,
+            round(sum(TotalRequestsError) / sum(TotalRequests) * 100, 2) as errorRate,
             toString(toUnixTimestamp(max(LastCalled))) as lastCalled
           FROM
             ${this.client.database}.traces_by_operation_quarter_hourly
@@ -301,6 +307,7 @@ export class AnalyticsRequestViewRepository {
           ${baseOrderSql || 'ORDER BY totalRequests DESC'}
           ${basePaginationSql}
         `;
+
         break;
       }
       case AnalyticsViewGroupName.Client: {
@@ -310,12 +317,8 @@ export class AnalyticsRequestViewRepository {
             ClientVersion as clientVersion,
             sum(TotalRequests) as totalRequests,
             quantilesMerge(0.95)(DurationQuantiles)[1] as p95,
-            CONCAT(
-              toString(sum(TotalRequestsError)),
-              ' (',
-              toString(round(sum(TotalRequestsError) / sum(TotalRequests) * 100, 2)),
-              '%)'
-            ) as errorsWithRate,
+            sum(TotalRequestsError) as errors,
+            round(sum(TotalRequestsError) / sum(TotalRequests) * 100, 2) as errorRate,
             toString(toUnixTimestamp(max(LastCalled))) as lastCalled
           FROM
             ${this.client.database}.traces_by_client_quarter_hourly
@@ -688,7 +691,7 @@ export class AnalyticsRequestViewRepository {
   ): Promise<PlainMessage<AnalyticsViewResult>> {
     const inputFilters = this.omitGroupedFilters(name, opts?.filters ?? []);
     const columnMetaData = fillColumnMetaData(this.columnMetadata);
-    const paginationSql = `LIMIT {limit:Int16} OFFSET {offset:Int16}`;
+    const paginationSql = `LIMIT {limit:Int16} OFFSET {offset:Int64}`;
     const orderSql = this.getSortOrder(opts?.sort?.id, opts?.sort?.desc);
 
     const { result: coercedQueryParams, filterMapper } = coerceFilterValues(
@@ -715,6 +718,8 @@ export class AnalyticsRequestViewRepository {
     const scopedSql = ` AND FederatedGraphID = '${federatedGraphId}' AND OrganizationID = '${organizationId}'`;
 
     whereSql += scopedSql;
+
+    escapeStringsFromParams(coercedQueryParams);
 
     const [result, totalCount] = await Promise.all([
       this.getViewData(name, whereSql, havingSql, paginationSql, coercedQueryParams, orderSql),

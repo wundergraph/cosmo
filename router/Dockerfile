@@ -1,10 +1,16 @@
-FROM --platform=${BUILDPLATFORM} golang:1.21 AS builder
+FROM --platform=${BUILDPLATFORM} golang:1.23 AS builder
 
 ARG TARGETOS
 ARG TARGETARCH
+ARG COMMIT
+ARG DATE
 
 ARG VERSION=dev
 ENV VERSION=$VERSION
+
+ENV COMMIT=$COMMIT
+
+ENV DATE=$DATE
 
 WORKDIR /app/
 
@@ -17,11 +23,13 @@ RUN go mod download
 # Copy the rest of the files
 COPY . .
 
-# Run tests
-RUN make test
-
-# Build router
-RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -trimpath -ldflags "-extldflags -static -X github.com/wundergraph/cosmo/router/core.Version=${VERSION}" -a -o router cmd/router/main.go
+# Build the binary with manual build info injection
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
+    go build -trimpath -ldflags "-extldflags=-static \
+    -X 'github.com/wundergraph/cosmo/router/core.Version=${VERSION}' \
+    -X 'github.com/wundergraph/cosmo/router/core.Commit=${COMMIT}' \
+    -X 'github.com/wundergraph/cosmo/router/core.Date=${DATE}'" \
+    -a -o router cmd/router/main.go
 
 FROM --platform=${BUILDPLATFORM} gcr.io/distroless/base-debian12
 

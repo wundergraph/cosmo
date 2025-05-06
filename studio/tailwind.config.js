@@ -1,8 +1,10 @@
+import defaultTheme from "tailwindcss/defaultTheme";
+import typography from "@tailwindcss/typography";
+import scrollbar from "tailwind-scrollbar";
+import animate from "tailwindcss-animate";
+
 /** @type {import('tailwindcss').Config} */
-
-const defaultTheme = require("tailwindcss/defaultTheme");
-
-module.exports = {
+export default {
   darkMode: ["class"],
   content: [
     "./pages/**/*.{ts,tsx}",
@@ -56,6 +58,9 @@ module.exports = {
         success: {
           DEFAULT: "hsl(var(--success))",
           foreground: "hsl(var(--success-foreground))",
+        },
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
         },
         muted: {
           DEFAULT: "hsl(var(--muted))",
@@ -114,9 +119,9 @@ module.exports = {
     },
   },
   plugins: [
-    require("@tailwindcss/typography"),
-    require("tailwindcss-animate"),
-    require("tailwind-scrollbar")({
+    typography,
+    animate,
+    scrollbar({
       nocompatible: true,
       preferredStrategy: "pseudoelements",
     }),

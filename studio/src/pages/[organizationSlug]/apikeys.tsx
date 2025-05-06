@@ -77,9 +77,11 @@ import { FiCheck, FiCopy } from "react-icons/fi";
 import { z } from "zod";
 
 const CreateAPIKeyDialog = ({
+  existingApiKeys,
   setApiKey,
   refresh,
 }: {
+  existingApiKeys: string[];
   setApiKey: Dispatch<SetStateAction<string | undefined>>;
   refresh: () => void;
 }) => {
@@ -120,7 +122,17 @@ const CreateAPIKeyDialog = ({
       .string()
       .trim()
       .min(3, { message: "API key name must be a minimum of 3 characters" })
-      .max(50, { message: "API key name must be maximum 50 characters" }),
+      .max(50, { message: "API key name must be maximum 50 characters" })
+      .superRefine((arg, ctx) => {
+        if (!existingApiKeys.includes(arg)) {
+          return;
+        }
+
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `An API key with the name ${arg} already exists`
+        });
+      }),
   });
 
   type CreateAPIKeyInput = z.infer<typeof createAPIKeyInputSchema>;
@@ -130,6 +142,7 @@ const CreateAPIKeyDialog = ({
     formState: { isValid, errors },
     handleSubmit,
     reset,
+    setError,
   } = useZodForm<CreateAPIKeyInput>({
     mode: "onBlur",
     schema: createAPIKeyInputSchema,
@@ -159,27 +172,27 @@ const CreateAPIKeyDialog = ({
       {
         onSuccess: (d) => {
           if (d.response?.code === EnumStatusCode.OK) {
+            setOpen(false);
+            setSelectedAllResources(false);
+            setSelectedFedGraphs([]);
+            setSelectedSubgraphs([]);
+            setSelectedPermissions([]);
+
             setApiKey(d.apiKey);
+            refresh();
+            reset();
           } else if (d.response?.details) {
-            toast({ description: d.response.details, duration: 3000 });
+            setError('name', { message: d.response.details });
           }
-          refresh();
-          reset();
         },
         onError: (error) => {
           toast({
             description: "Could not create an API key. Please try again.",
             duration: 3000,
           });
-          reset();
         },
       },
     );
-    setOpen(false);
-    setSelectedAllResources(false);
-    setSelectedFedGraphs([]);
-    setSelectedSubgraphs([]);
-    setSelectedPermissions([]);
   };
 
   const groupedSubgraphs = subgraphs.reduce<
@@ -227,7 +240,12 @@ const CreateAPIKeyDialog = ({
   }, {});
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(v) => {
+      setOpen(v);
+      if (!v) {
+        reset();
+      }
+    }}>
       <DialogTrigger>
         <Button>
           <div className="flex items-center gap-x-2">
@@ -699,11 +717,13 @@ export const Empty = ({
   setApiKey,
   open,
   setOpen,
+  refetch,
 }: {
   apiKey: string | undefined;
   setApiKey: Dispatch<SetStateAction<string | undefined>>;
   open: boolean;
   setOpen: Dispatch<SetStateAction<boolean>>;
+  refetch: () => void;
 }) => {
   const user = useContext(UserContext);
 
@@ -732,9 +752,11 @@ export const Empty = ({
           }) && (
             <CreateAPIKey
               apiKey={apiKey}
+              existingApiKeys={[]}
               setApiKey={setApiKey}
               open={open}
               setOpen={setOpen}
+              refetch={refetch}
             />
           )}
         </div>
@@ -745,17 +767,19 @@ export const Empty = ({
 
 export const CreateAPIKey = ({
   apiKey,
+  existingApiKeys,
   setApiKey,
   open,
   setOpen,
+  refetch,
 }: {
   apiKey: string | undefined;
+  existingApiKeys: string[];
   setApiKey: Dispatch<SetStateAction<string | undefined>>;
   open: boolean;
   setOpen: Dispatch<SetStateAction<boolean>>;
+  refetch: () => void;
 }) => {
-  const { refetch } = useQuery(getAPIKeys);
-
   useEffect(() => {
     if (!apiKey) return;
     setOpen(true);
@@ -763,7 +787,7 @@ export const CreateAPIKey = ({
 
   return (
     <>
-      <CreateAPIKeyDialog refresh={refetch} setApiKey={setApiKey} />
+      <CreateAPIKeyDialog refresh={refetch} setApiKey={setApiKey} existingApiKeys={existingApiKeys} />
       {apiKey && (
         <APIKeyCreatedDialog open={open} setOpen={setOpen} apiKey={apiKey} />
       )}
@@ -810,6 +834,7 @@ const APIKeysPage: NextPageWithLayout = () => {
           setApiKey={setApiKey}
           open={openApiKeyCreatedDialog}
           setOpen={setOpenApiKeyCreatedDialog}
+          refetch={refetch}
         />
       ) : (
         <>
@@ -847,9 +872,11 @@ const APIKeysPage: NextPageWithLayout = () => {
               }) && (
                 <CreateAPIKey
                   apiKey={apiKey}
+                  existingApiKeys={apiKeys.map((k) => k.name)}
                   setApiKey={setApiKey}
                   open={openApiKeyCreatedDialog}
                   setOpen={setOpenApiKeyCreatedDialog}
+                  refetch={refetch}
                 />
               )}
             </div>

@@ -19,10 +19,12 @@ export const Pagination = ({
   limit,
   noOfPages,
   pageNumber,
+  options,
 }: {
   limit: number;
   noOfPages: number;
   pageNumber: number;
+  options?: number[];
 }) => {
   const router = useRouter();
   const applyNewParams = useCallback(
@@ -37,8 +39,10 @@ export const Pagination = ({
     [router],
   );
 
+  const pageSizeOptions = options ?? [10, 20, 30, 40, 50];
+
   return (
-    <div className="flex justify-end">
+    <div className="flex justify-end space-x-3">
       <div className="flex items-center space-x-2">
         <p className="text-sm font-medium">Rows per page</p>
         <Select
@@ -52,7 +56,7 @@ export const Pagination = ({
             <SelectValue placeholder={`${limit}`} />
           </SelectTrigger>
           <SelectContent side="top">
-            {[10, 20, 30, 40, 50].map((pageSize) => (
+            {pageSizeOptions.map((pageSize) => (
               <SelectItem key={pageSize} value={`${pageSize}`}>
                 {pageSize}
               </SelectItem>
@@ -60,7 +64,7 @@ export const Pagination = ({
           </SelectContent>
         </Select>
       </div>
-      <div className="flex w-[100px] items-center justify-center text-sm font-medium">
+      <div className="flex items-center justify-center text-sm font-medium">
         Page {noOfPages === 0 ? "0" : pageNumber} of {noOfPages}
       </div>
       <div className="flex items-center space-x-2">

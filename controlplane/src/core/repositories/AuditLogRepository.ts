@@ -5,12 +5,14 @@ import { AuditableType, AuditActorType, AuditLogAction, AuditLogFullAction, Audi
 
 export type AddAuditLogInput = {
   organizationId: string;
+  organizationSlug: string;
   // Empty string means the actor is the system.
   actorId?: string;
   auditAction: AuditLogFullAction;
   action: AuditLogAction;
   actorDisplayName: 'cosmo-bot' | string;
   actorType: AuditActorType;
+  apiKeyName?: string;
   targetId?: string;
   targetType?: AuditTargetType;
   targetDisplayName?: string;
@@ -36,6 +38,7 @@ export class AuditLogRepository {
       .values(
         inputs.map((input) => ({
           organizationId: input.organizationId,
+          organizationSlug: input.organizationSlug,
           actorId: input.actorId,
           targetId: input.targetId,
           targetType: input.targetType,
@@ -46,6 +49,7 @@ export class AuditLogRepository {
           auditAction: input.auditAction,
           actorDisplayName: input.actorDisplayName,
           actorType: input.actorType,
+          apiKeyName: input.apiKeyName,
           targetNamespaceId: input.targetNamespaceId,
           targetNamespaceDisplayName: input.targetNamespaceDisplayName,
         })),
@@ -60,7 +64,7 @@ export class AuditLogRepository {
     startDate: string;
     endDate: string;
   }) {
-    return this.db
+    const query = this.db
       .select({
         id: schema.auditLogs.id,
         organizationId: schema.auditLogs.organizationId,
@@ -78,6 +82,8 @@ export class AuditLogRepository {
         actorType: schema.auditLogs.actorType,
         createdAt: schema.auditLogs.createdAt,
 
+        apiKeyName: schema.auditLogs.apiKeyName,
+
         targetNamespaceDisplayName: schema.auditLogs.targetNamespaceDisplayName,
         targetNamespaceId: schema.auditLogs.targetNamespaceId,
       })
@@ -89,10 +95,17 @@ export class AuditLogRepository {
           lt(schema.auditLogs.createdAt, new Date(input.endDate)),
         ),
       )
-      .orderBy(desc(schema.auditLogs.createdAt))
-      .limit(input.limit)
-      .offset(input.offset)
-      .execute();
+      .orderBy(desc(schema.auditLogs.createdAt));
+
+    if (input.limit) {
+      query.limit(input.limit);
+    }
+
+    if (input.offset) {
+      query.offset(input.offset);
+    }
+
+    return query.execute();
   }
 
   public async getAuditLogsCount(input: {
@@ -116,5 +129,9 @@ export class AuditLogRepository {
       return 0;
     }
     return auditLogsCount[0].count;
+  }
+
+  public deleteOrganizationLogs(input: { organizationId: string }) {
+    return this.db.delete(schema.auditLogs).where(eq(schema.auditLogs.organizationId, input.organizationId)).execute();
   }
 }

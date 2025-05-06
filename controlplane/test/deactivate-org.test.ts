@@ -5,6 +5,7 @@ import { OidcRepository } from '../src/core/repositories/OidcRepository.js';
 import { OrganizationRepository } from '../src/core/repositories/OrganizationRepository.js';
 import { afterAllSetup, beforeAllSetup, genID, TestUser } from '../src/core/test-util.js';
 import { createDeleteOrganizationWorker } from '../src/core/workers/DeleteOrganizationWorker.js';
+import { createReactivateOrganizationWorker } from '../src/core/workers/ReactivateOrganizationWorker.js';
 import { SetupTest } from './test-util.js';
 
 let dbname = '';
@@ -19,7 +20,9 @@ describe('Deactivate Organization', (ctx) => {
   });
 
   test('Should deactivate org and delete after scheduled', async (testContext) => {
-    const { client, server, keycloakClient, realm, queues, users, authenticator } = await SetupTest({ dbname });
+    const { client, server, keycloakClient, realm, queues, users, authenticator, blobStorage } = await SetupTest({
+      dbname,
+    });
     const mainUserContext = users[TestUser.adminAliceCompanyA];
 
     const orgName = genID();
@@ -63,6 +66,8 @@ describe('Deactivate Organization', (ctx) => {
       logger: server.log,
       keycloakClient,
       keycloakRealm: realm,
+      blobStorage,
+      deleteOrganizationAuditLogsQueue: queues.deleteOrganizationAuditLogsQueue,
     });
 
     const job = await orgRepo.deactivateOrganization({
@@ -92,7 +97,9 @@ describe('Deactivate Organization', (ctx) => {
   });
 
   test('Should reactivate org and remove the scheduled deletion', async (testContext) => {
-    const { client, server, keycloakClient, realm, queues, users, authenticator } = await SetupTest({ dbname });
+    const { client, server, keycloakClient, realm, queues, users, authenticator, blobStorage } = await SetupTest({
+      dbname,
+    });
     const mainUserContext = users[TestUser.adminAliceCompanyA];
 
     const orgName = genID();
@@ -112,12 +119,14 @@ describe('Deactivate Organization', (ctx) => {
       organizationSlug: org!.slug,
     });
 
-    const worker = createDeleteOrganizationWorker({
+    const deleteOrgWorker = createDeleteOrganizationWorker({
       redisConnection: server.redisForWorker,
       db: server.db,
       logger: server.log,
       keycloakClient,
       keycloakRealm: realm,
+      blobStorage,
+      deleteOrganizationAuditLogsQueue: queues.deleteOrganizationAuditLogsQueue,
     });
 
     await orgRepo.deactivateOrganization({
@@ -135,10 +144,19 @@ describe('Deactivate Organization', (ctx) => {
     const deactivatedOrg = await orgRepo.bySlug(orgName);
     expect(deactivatedOrg?.deactivation).toBeDefined();
 
-    await orgRepo.reactivateOrganization({
-      organizationId: org!.id,
+    const reactivateWorker = createReactivateOrganizationWorker({
+      redisConnection: server.redisForWorker,
+      db: server.db,
+      logger: server.log,
       deleteOrganizationQueue: queues.deleteOrganizationQueue,
     });
+
+    const reactivateJob = await queues.reactivateOrganizationQueue.addJob({
+      organizationId: org!.id,
+      organizationSlug: org!.slug,
+    });
+
+    await reactivateJob.waitUntilFinished(new QueueEvents(reactivateJob.queueName));
 
     const removedJob = await queues.deleteOrganizationQueue.getJob({
       organizationId: org!.id,
@@ -148,7 +166,8 @@ describe('Deactivate Organization', (ctx) => {
     const reactivatedOrg = await orgRepo.bySlug(orgName);
     expect(reactivatedOrg?.deactivation).toBeUndefined();
 
-    await worker.close();
+    await deleteOrgWorker.close();
+    await reactivateWorker.close();
 
     await server.close();
   });

@@ -3,7 +3,6 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import * as schema from '../../db/schema.js';
 import { FederatedGraphDTO } from '../../types/index.js';
-import { contracts, federatedGraphs, targets } from '../../db/schema.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 
 export class ContractRepository {
@@ -17,6 +16,7 @@ export class ContractRepository {
     sourceFederatedGraphId: string;
     downstreamFederatedGraphId: string;
     excludeTags: string[];
+    includeTags: string[];
     actorId: string;
   }) {
     const res = await this.db
@@ -30,11 +30,12 @@ export class ContractRepository {
     return res[0];
   }
 
-  public async update(data: { id: string; excludeTags: string[]; actorId: string }) {
+  public async update(data: { id: string; excludeTags: string[]; includeTags: string[]; actorId: string }) {
     const res = await this.db
       .update(schema.contracts)
       .set({
         excludeTags: data.excludeTags,
+        includeTags: data.includeTags,
         updatedById: data.actorId,
         updatedAt: new Date(),
       })
@@ -61,6 +62,7 @@ export class ContractRepository {
             sourceFederatedGraphId: true,
             downstreamFederatedGraphId: true,
             excludeTags: true,
+            includeTags: true,
           },
           with: {
             downstreamFederatedGraph: {

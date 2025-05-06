@@ -1,6 +1,7 @@
 import KeycloakAdminClient from '@keycloak/keycloak-admin-client';
 import { RequiredActionAlias } from '@keycloak/keycloak-admin-client/lib/defs/requiredActionProviderRepresentation.js';
 import { uid } from 'uid';
+import { GroupMapper } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { MemberRole } from '../../db/models.js';
 
 export default class Keycloak {
@@ -277,13 +278,13 @@ export default class Keycloak {
     });
 
     if (orgGroups.length === 0) {
-      throw new Error(`Organization group '${organizationSlug}' not found`);
+      return;
     }
 
     const orgGroup = orgGroups.find((group) => group.name === organizationSlug);
 
     if (!orgGroup) {
-      throw new Error(`Organization group '${organizationSlug}' not found`);
+      return;
     }
 
     await this.client.groups.del({
@@ -346,6 +347,13 @@ export default class Keycloak {
     });
   }
 
+  public fetchAllSubGroups({ realm, kcGroupId }: { realm?: string; kcGroupId: string }) {
+    return this.client.groups.listSubGroups({
+      parentId: kcGroupId,
+      realm: realm || this.realm,
+    });
+  }
+
   public async fetchChildGroup({
     realm,
     orgSlug,
@@ -357,18 +365,13 @@ export default class Keycloak {
     kcGroupId: string;
     childGroupType: MemberRole;
   }) {
-    const orgGroups = await this.client.groups.find({
+    const orgGroups = await this.client.groups.listSubGroups({
       search: childGroupType,
+      parentId: kcGroupId,
       realm: realm || this.realm,
     });
 
-    if (orgGroups.length === 0) {
-      throw new Error(`Organization group '${orgSlug}' does not have any child groups`);
-    }
-
-    const orgGroup = orgGroups.find((group) => group.id === kcGroupId);
-    const childGroup = orgGroup?.subGroups?.find((group) => group.path === `/${orgSlug}/${childGroupType}`);
-
+    const childGroup = orgGroups?.find((group) => group.path === `/${orgSlug}/${childGroupType}`);
     if (!childGroup) {
       throw new Error(`Organization child group '/${orgSlug}/${childGroupType}' not found`);
     }

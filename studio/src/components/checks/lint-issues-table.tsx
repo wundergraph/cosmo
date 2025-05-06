@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { CheckCircleIcon } from "@heroicons/react/24/outline";
+import { CheckCircleIcon, NoSymbolIcon } from "@heroicons/react/24/outline";
 import { Cross1Icon, EyeOpenIcon } from "@radix-ui/react-icons";
 import {
   LintIssue,
@@ -21,15 +21,43 @@ import {
   TableWrapper,
 } from "../ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
+import { useUser } from "@/hooks/use-user";
+import { useContext } from "react";
+import { GraphContext } from "@/components/layout/graph-layout";
 
 export const LintIssuesTable = ({
   lintIssues,
   caption,
+  isLintingEnabled,
 }: {
   lintIssues: LintIssue[];
   caption?: React.ReactNode;
+  isLintingEnabled: boolean;
 }) => {
   const router = useRouter();
+  const user = useUser();
+  const graphContext = useContext(GraphContext);
+
+  if (lintIssues.length === 0 && !isLintingEnabled) {
+    return (
+      <EmptyState
+        icon={<NoSymbolIcon className="text-gray-400" />}
+        title="Schema Linting Skipped"
+        description="Linting was skipped for this run. Configure it to catch linting issues in your schema."
+        actions={
+          <Button
+            onClick={() => {
+              router.push(
+                `/${user!.currentOrganization.slug}/policies?namespace=${graphContext?.graph?.namespace ?? "default"}`,
+              );
+            }}
+          >
+            Configure Lint Policy
+          </Button>
+        }
+      />
+    );
+  }
 
   if (lintIssues.length === 0) {
     return (
@@ -47,6 +75,7 @@ export const LintIssuesTable = ({
           <TableRow>
             <TableHead className="w-[380px]">Severity</TableHead>
             <TableHead>Message</TableHead>
+            {lintIssues[0].subgraphName && <TableHead>Subgraph</TableHead>}
             <TableHead className="w-[5px]"></TableHead>
           </TableRow>
         </TableHeader>
@@ -57,7 +86,7 @@ export const LintIssuesTable = ({
                 className={cn(
                   l.severity === LintSeverity.error
                     ? "text-destructive"
-                    : "text-yellow-600",
+                    : "text-warning",
                 )}
               >
                 <div className="flex items-center gap-x-2">
@@ -76,6 +105,7 @@ export const LintIssuesTable = ({
                 </div>
               </TableCell>
               <TableCell>{l.message}</TableCell>
+              {l.subgraphName && <TableCell>{l.subgraphName}</TableCell>}
               <TableCell>
                 <div className="flex items-center gap-x-2">
                   <Tooltip delayDuration={100}>
@@ -91,7 +121,11 @@ export const LintIssuesTable = ({
                             router.query.namespace
                           }/graph/${router.query.slug}/checks/${
                             router.query.checkId
-                          }?tab=schema${
+                          }?tab=schema&${
+                            l.subgraphName
+                              ? `subgraph=${l.subgraphName}`
+                              : ""
+                          }${
                             l.issueLocation?.line
                               ? `#L${l.issueLocation?.line}`
                               : ""

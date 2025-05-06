@@ -12,13 +12,15 @@ import (
 )
 
 const (
-	requestIDField = "reqId"
+	requestIDField               = "request_id"
+	traceIDField                 = "trace_id"
+	batchRequestOperationIDField = "batched_request_operation_id"
 )
 
 type RequestIDKey struct{}
 
-func New(prettyLogging bool, debug bool, level zapcore.Level) *zap.Logger {
-	return newZapLogger(zapcore.AddSync(os.Stdout), prettyLogging, debug, level)
+func New(pretty bool, development bool, level zapcore.Level) *zap.Logger {
+	return NewZapLogger(zapcore.AddSync(os.Stdout), pretty, development, level)
 }
 
 func zapBaseEncoderConfig() zapcore.EncoderConfig {
@@ -60,35 +62,103 @@ func attachBaseFields(logger *zap.Logger) *zap.Logger {
 	return logger
 }
 
-func newZapLogger(syncer zapcore.WriteSyncer, prettyLogging bool, debug bool, level zapcore.Level) *zap.Logger {
-	var encoder zapcore.Encoder
+func defaultZapCoreOptions(development bool) []zap.Option {
 	var zapOpts []zap.Option
 
-	if prettyLogging {
+	if development {
+		zapOpts = append(zapOpts, zap.AddCaller(), zap.Development())
+	}
+
+	// Stacktrace is included on logs of ErrorLevel and above.
+	zapOpts = append(zapOpts,
+		zap.AddStacktrace(zap.ErrorLevel),
+	)
+
+	return zapOpts
+}
+
+func NewZapLoggerWithCore(core zapcore.Core, development bool) *zap.Logger {
+	zapLogger := zap.New(core, defaultZapCoreOptions(development)...)
+
+	zapLogger = attachBaseFields(zapLogger)
+
+	return zapLogger
+}
+
+func NewZapLogger(syncer zapcore.WriteSyncer, pretty, development bool, level zapcore.Level) *zap.Logger {
+	var encoder zapcore.Encoder
+
+	if pretty {
 		encoder = zapConsoleEncoder()
 	} else {
 		encoder = ZapJsonEncoder()
 	}
 
-	if debug {
-		zapOpts = append(zapOpts, zap.AddCaller())
-	}
-
-	zapOpts = append(zapOpts, zap.AddStacktrace(zap.ErrorLevel))
-
-	zapLogger := zap.New(zapcore.NewCore(
+	c := zapcore.NewCore(
 		encoder,
 		syncer,
 		level,
-	), zapOpts...)
-
-	if prettyLogging {
-		return zapLogger
-	}
-
+	)
+	zapLogger := zap.New(c, defaultZapCoreOptions(development)...)
 	zapLogger = attachBaseFields(zapLogger)
 
 	return zapLogger
+}
+
+func NewZapAccessLogger(syncer zapcore.WriteSyncer, development, pretty bool) *zap.Logger {
+	var encoder zapcore.Encoder
+
+	if pretty {
+		encoder = zapConsoleEncoder()
+	} else {
+		encoder = ZapJsonEncoder()
+	}
+
+	c := zapcore.NewCore(
+		encoder,
+		syncer,
+		zapcore.InfoLevel,
+	)
+	zapLogger := zap.New(c, defaultZapCoreOptions(development)...)
+	zapLogger = attachBaseFields(zapLogger)
+
+	return zapLogger
+}
+
+type BufferedLogger struct {
+	Logger              *zap.Logger
+	bufferedWriteSyncer *zapcore.BufferedWriteSyncer
+}
+
+type BufferedLoggerOptions struct {
+	WS            *os.File
+	BufferSize    int
+	FlushInterval time.Duration
+	Development   bool
+	Level         zapcore.Level
+	Pretty        bool
+}
+
+func NewJSONZapBufferedLogger(options BufferedLoggerOptions) (*BufferedLogger, error) {
+	fl := &BufferedLogger{}
+
+	fl.bufferedWriteSyncer = &zapcore.BufferedWriteSyncer{
+		WS:            options.WS,
+		Size:          options.BufferSize,
+		FlushInterval: options.FlushInterval,
+	}
+
+	fl.Logger = NewZapAccessLogger(fl.bufferedWriteSyncer, options.Development, options.Pretty)
+
+	return fl, nil
+}
+
+func (f *BufferedLogger) Close() error {
+	return f.bufferedWriteSyncer.Stop()
+}
+
+func NewLogFile(path string) (*os.File, error) {
+	return os.OpenFile(path, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
 }
 
 func ZapLogLevelFromString(logLevel string) (zapcore.Level, error) {
@@ -112,4 +182,12 @@ func ZapLogLevelFromString(logLevel string) (zapcore.Level, error) {
 
 func WithRequestID(reqID string) zap.Field {
 	return zap.String(requestIDField, reqID)
+}
+
+func WithBatchedRequestOperationID(id string) zap.Field {
+	return zap.String(batchRequestOperationIDField, id)
+}
+
+func WithTraceID(traceId string) zap.Field {
+	return zap.String(traceIDField, traceId)
 }

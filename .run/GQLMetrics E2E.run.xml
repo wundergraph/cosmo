@@ -1,0 +1,17 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="GQLMetrics E2E" type="GoTestRunConfiguration" factoryName="Go Test">
+    <module name="cosmo" />
+    <working_directory value="$PROJECT_DIR$/graphqlmetrics/core" />
+    <go_parameters value="-race" />
+    <envs>
+      <env name="INT_TESTS" value="true" />
+    </envs>
+    <root_directory value="$PROJECT_DIR$/graphqlmetrics" />
+    <kind value="PACKAGE" />
+    <package value="github.com/wundergraph/cosmo/graphqlmetrics/core" />
+    <directory value="$PROJECT_DIR$" />
+    <filePath value="$PROJECT_DIR$" />
+    <framework value="gotest" />
+    <method v="2" />
+  </configuration>
+</component>

@@ -26,6 +26,7 @@ import { useMutation, useQuery } from "@connectrpc/connect-query";
 import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
+  NoSymbolIcon,
 } from "@heroicons/react/24/outline";
 import {
   ChevronDownIcon,
@@ -52,11 +53,16 @@ import { useApplyParams } from "../analytics/use-apply-params";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { OperationContentDialog } from "./operation-content";
+import { Pagination } from "../ui/pagination";
 
 export const CheckOperations = () => {
   const graphContext = useContext(GraphContext);
   const router = useRouter();
   const { toast } = useToast();
+  const pageNumber = router.query.page
+    ? parseInt(router.query.page as string)
+    : 1;
+  const limit = Number.parseInt((router.query.pageSize as string) || "10");
 
   const id = router.query.checkId as string;
 
@@ -66,6 +72,8 @@ export const CheckOperations = () => {
       checkId: id,
       graphName: graphContext?.graph?.name,
       namespace: graphContext?.graph?.namespace,
+      limit: limit > 200 ? 200 : limit,
+      offset: (pageNumber - 1) * limit,
     },
     {
       enabled: !!graphContext?.graph?.name,
@@ -271,6 +279,16 @@ export const CheckOperations = () => {
       />
     );
 
+  if (data && data.clientTrafficCheckSkipped) {
+    return (
+      <EmptyState
+        icon={<NoSymbolIcon className="text-gray-400" />}
+        title="Operations Check Skipped"
+        description="You skipped checking against client traffic for this run"
+      />
+    );
+  }
+
   if (data && data.operations.length === 0) {
     return (
       <EmptyState
@@ -281,8 +299,10 @@ export const CheckOperations = () => {
     );
   }
 
+  const noOfPages = Math.ceil(data.totalOperationsCount / limit);
+
   return (
-    <div className="px-4 lg:px-6">
+    <div className=" flex h-full flex-col px-4 lg:px-6">
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
           <MagnifyingGlassIcon className="absolute bottom-0 left-3 top-0 my-auto" />
@@ -367,192 +387,204 @@ export const CheckOperations = () => {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      <Accordion type="single" collapsible className="mt-4 w-full">
-        {filteredOperations.map(
-          ({
-            hash,
-            name,
-            type,
-            firstSeenAt,
-            lastSeenAt,
-            impactingChanges,
-            hasIgnoreAllOverride,
-            isSafe,
-          }) => {
-            const doAllChangesHaveOverrides = !impactingChanges.some(
-              (c) => !c.hasOverride,
-            );
+      <div className="flex h-[calc(100%_-_36px)] flex-col gap-y-6">
+        <Accordion
+          type="single"
+          collapsible
+          className="scrollbar-custom mt-4 max-h-[calc(100%_-_96px)] w-full overflow-auto"
+        >
+          {filteredOperations.map(
+            ({
+              hash,
+              name,
+              type,
+              firstSeenAt,
+              lastSeenAt,
+              impactingChanges,
+              hasIgnoreAllOverride,
+              isSafe,
+            }) => {
+              const doAllChangesHaveOverrides = !impactingChanges.some(
+                (c) => !c.hasOverride,
+              );
 
-            const firstSeenFormatted = formatDateTime(new Date(firstSeenAt));
-            const lastSeenAtFormatted = formatDateTime(new Date(lastSeenAt));
+              const firstSeenFormatted = formatDateTime(new Date(firstSeenAt));
+              const lastSeenAtFormatted = formatDateTime(new Date(lastSeenAt));
 
-            return (
-              <AccordionItem id={hash} key={hash} value={hash}>
-                <AccordionTrigger className="px-2 hover:bg-secondary/30 hover:no-underline">
-                  <div className="flex flex-1 items-center gap-2">
-                    <p className="w-16 text-start text-muted-foreground">
-                      {hash.slice(0, 6)}
-                    </p>
-                    <p
-                      className={cn({
-                        "italic text-muted-foreground": name.length === 0,
-                      })}
-                    >
-                      {name || "unnamed operation"}
-                    </p>
-                    <Badge
-                      className="!inline-block !decoration-[none]"
-                      variant="outline"
-                    >
-                      {type}
-                    </Badge>
-                    {isSafe && (
+              return (
+                <AccordionItem id={hash} key={hash} value={hash}>
+                  <AccordionTrigger className="px-2 hover:bg-secondary/30 hover:no-underline">
+                    <div className="flex flex-1 items-center gap-2">
+                      <p className="w-16 text-start text-muted-foreground">
+                        {hash.slice(0, 6)}
+                      </p>
+                      <p
+                        className={cn({
+                          "italic text-muted-foreground": name.length === 0,
+                        })}
+                      >
+                        {name || "unnamed operation"}
+                      </p>
                       <Badge
                         className="!inline-block !decoration-[none]"
-                        variant="success"
+                        variant="outline"
                       >
-                        ignored for this check
+                        {type}
                       </Badge>
-                    )}
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent>
-                  <div className="mt-2 flex flex-col gap-y-6 px-2">
-                    <div className="items-center justify-between space-y-6 md:flex-row xl:flex xl:space-y-0">
-                      <p className="text-muted-foreground">
-                        {firstSeenFormatted === lastSeenAtFormatted
-                          ? `Last seen at ${lastSeenAtFormatted}`
-                          : `First seen at ${firstSeenFormatted} and last seen at ${lastSeenAtFormatted}`}
-                      </p>
-                      <div className="flex items-center gap-x-2">
-                        <OperationContentDialog hash={hash} />
-                        <Tooltip delayDuration={100}>
-                          <TooltipTrigger asChild>
-                            <Button
-                              size="icon-sm"
-                              variant="secondary"
-                              onClick={() => copyLink(hash)}
-                            >
-                              <Share1Icon />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Copy link</TooltipContent>
-                        </Tooltip>
-                        {!hasIgnoreAllOverride && (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button size="sm" variant="secondary">
-                                Configure Override
-                                <ChevronDownIcon className="ml-2" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                disabled={
-                                  removingOverrides || creatingOverrides
-                                }
-                                onClick={() => {
-                                  doAllChangesHaveOverrides
-                                    ? removeOverrides({
-                                        graphName: graphContext?.graph?.name,
-                                        namespace:
-                                          graphContext?.graph?.namespace,
-                                        operationHash: hash,
-                                        changes: impactingChanges,
-                                      })
-                                    : createOverrides({
-                                        graphName: graphContext?.graph?.name,
-                                        namespace:
-                                          graphContext?.graph?.namespace,
-                                        operationHash: hash,
-                                        operationName: name,
-                                        changes: impactingChanges,
-                                      });
-                                }}
-                                className="cursor-pointer flex-col items-start gap-1"
-                              >
-                                {doAllChangesHaveOverrides
-                                  ? "Toggle changes as unsafe"
-                                  : "Toggle changes as safe"}
-                                <p className="max-w-xs text-xs text-muted-foreground">
-                                  {doAllChangesHaveOverrides
-                                    ? "Future checks will break if the listed changes appear again for this operation"
-                                    : "Future checks will ignore the listed breaking changes for this operation"}
-                                </p>
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                disabled={ignoring}
-                                onClick={() => {
-                                  createIgnoreAll({
-                                    operationHash: hash,
-                                    operationName: name,
-                                    graphName: graphContext?.graph?.name,
-                                    namespace: graphContext?.graph?.namespace,
-                                  });
-                                }}
-                                className="cursor-pointer flex-col items-start gap-1"
-                              >
-                                Ignore Operation
-                                <p className="max-w-xs text-xs text-muted-foreground">
-                                  Future checks will ignore all current and new
-                                  breaking changes for this operation
-                                </p>
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        )}
-                      </div>
-                    </div>
-                    {hasIgnoreAllOverride && (
-                      <Alert>
-                        <AlertTitle>
-                          Ignore Operation override is active
-                        </AlertTitle>
-                        <AlertDescription>
-                          Future checks will ignore this operation even if
-                          breaking changes affect it. To configure overrides for
-                          individual changes, please remove this override.
-                        </AlertDescription>
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          className="mt-4"
-                          isLoading={removing}
-                          onClick={() =>
-                            removeIgnoreAll({
-                              graphName: graphContext?.graph?.name,
-                              namespace: graphContext?.graph?.namespace,
-                              operationHash: hash,
-                            })
-                          }
+                      {isSafe && (
+                        <Badge
+                          className="!inline-block !decoration-[none]"
+                          variant="success"
                         >
-                          Remove Override
-                        </Button>
-                      </Alert>
-                    )}
-                    <ChangesTable
-                      operationHash={hash}
-                      operationName={name}
-                      changes={impactingChanges}
-                      hasIgnoreAll={hasIgnoreAllOverride}
-                      caption={
-                        <>
-                          {impactingChanges.length} Impacting Change
-                          {impactingChanges.length === 1 ? "" : "s"}
-                        </>
-                      }
-                      trafficCheckDays={data.trafficCheckDays}
-                      createdAt={data.createdAt}
-                    />
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-            );
-          },
-        )}
-      </Accordion>
-      <FieldUsageSheet />
+                          ignored for this check
+                        </Badge>
+                      )}
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="mt-2 flex flex-col gap-y-6 px-2">
+                      <div className="items-center justify-between space-y-6 md:flex-row xl:flex xl:space-y-0">
+                        <p className="text-muted-foreground">
+                          {firstSeenFormatted === lastSeenAtFormatted
+                            ? `Last seen at ${lastSeenAtFormatted}`
+                            : `First seen at ${firstSeenFormatted} and last seen at ${lastSeenAtFormatted}`}
+                        </p>
+                        <div className="flex items-center gap-x-2">
+                          <OperationContentDialog hash={hash} />
+                          <Tooltip delayDuration={100}>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="icon-sm"
+                                variant="secondary"
+                                onClick={() => copyLink(hash)}
+                              >
+                                <Share1Icon />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Copy link</TooltipContent>
+                          </Tooltip>
+                          {!hasIgnoreAllOverride && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button size="sm" variant="secondary">
+                                  Configure Override
+                                  <ChevronDownIcon className="ml-2" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  disabled={
+                                    removingOverrides || creatingOverrides
+                                  }
+                                  onClick={() => {
+                                    doAllChangesHaveOverrides
+                                      ? removeOverrides({
+                                          graphName: graphContext?.graph?.name,
+                                          namespace:
+                                            graphContext?.graph?.namespace,
+                                          operationHash: hash,
+                                          changes: impactingChanges,
+                                        })
+                                      : createOverrides({
+                                          graphName: graphContext?.graph?.name,
+                                          namespace:
+                                            graphContext?.graph?.namespace,
+                                          operationHash: hash,
+                                          operationName: name,
+                                          changes: impactingChanges,
+                                        });
+                                  }}
+                                  className="cursor-pointer flex-col items-start gap-1"
+                                >
+                                  {doAllChangesHaveOverrides
+                                    ? "Toggle changes as unsafe"
+                                    : "Toggle changes as safe"}
+                                  <p className="max-w-xs text-xs text-muted-foreground">
+                                    {doAllChangesHaveOverrides
+                                      ? "Future checks will break if the listed changes appear again for this operation"
+                                      : "Future checks will ignore the listed breaking changes for this operation"}
+                                  </p>
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  disabled={ignoring}
+                                  onClick={() => {
+                                    createIgnoreAll({
+                                      operationHash: hash,
+                                      operationName: name,
+                                      graphName: graphContext?.graph?.name,
+                                      namespace: graphContext?.graph?.namespace,
+                                    });
+                                  }}
+                                  className="cursor-pointer flex-col items-start gap-1"
+                                >
+                                  Ignore Operation
+                                  <p className="max-w-xs text-xs text-muted-foreground">
+                                    Future checks will ignore all current and
+                                    new breaking changes for this operation
+                                  </p>
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
+                        </div>
+                      </div>
+                      {hasIgnoreAllOverride && (
+                        <Alert>
+                          <AlertTitle>
+                            Ignore Operation override is active
+                          </AlertTitle>
+                          <AlertDescription>
+                            Future checks will ignore this operation even if
+                            breaking changes affect it. To configure overrides
+                            for individual changes, please remove this override.
+                          </AlertDescription>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            className="mt-4"
+                            isLoading={removing}
+                            onClick={() =>
+                              removeIgnoreAll({
+                                graphName: graphContext?.graph?.name,
+                                namespace: graphContext?.graph?.namespace,
+                                operationHash: hash,
+                              })
+                            }
+                          >
+                            Remove Override
+                          </Button>
+                        </Alert>
+                      )}
+                      <ChangesTable
+                        operationHash={hash}
+                        operationName={name}
+                        changes={impactingChanges}
+                        hasIgnoreAll={hasIgnoreAllOverride}
+                        caption={
+                          <>
+                            {impactingChanges.length} Impacting Change
+                            {impactingChanges.length === 1 ? "" : "s"}
+                          </>
+                        }
+                        trafficCheckDays={data.trafficCheckDays}
+                        createdAt={data.createdAt}
+                      />
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              );
+            },
+          )}
+        </Accordion>
+        <FieldUsageSheet />
+        <Pagination
+          limit={limit}
+          noOfPages={noOfPages}
+          pageNumber={pageNumber}
+          options={[10, 20, 30, 40, 50, 100, 200]}
+        />
+      </div>
     </div>
   );
 };

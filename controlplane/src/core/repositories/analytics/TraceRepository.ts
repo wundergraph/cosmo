@@ -6,20 +6,13 @@ import { timestampToNanoseconds } from './util.js';
 export class TraceRepository {
   constructor(private client: ClickHouseClient) {}
 
-  public async getTrace(traceID: string, organizationID: string): Promise<PlainMessage<Span>[]> {
-    const query = `
-    WITH '${traceID}' AS trace_id,
-    (
-        SELECT min(Start)
-        FROM ${this.client.database}.otel_traces_trace_id_ts
-        WHERE TraceId = trace_id
-    ) AS start,
-    (
-        SELECT max(End) + 1
-        FROM ${this.client.database}.otel_traces_trace_id_ts
-        WHERE TraceId = trace_id
-    ) AS end
-    SELECT  
+  public async getTrace(
+    traceID: string,
+    spanID: string,
+    organizationID: string,
+    federatedGraphId: string,
+  ): Promise<PlainMessage<Span>[]> {
+    const columns = `
         Timestamp as timestamp,
         TraceId as traceId,
         SpanId as spanId,
@@ -53,11 +46,51 @@ export class TraceRepository {
         SpanAttributes['wg.organization.id'] as organizationId,
         SpanAttributes['wg.router.version'] as attrRouterVersion,
         SpanAttributes['wg.operation.persisted_id'] as attrOperationPersistedId,
-        SpanAttributes['wg.federated_graph.id'] as attrFederatedGraphId
-    FROM ${this.client.database}.otel_traces
-    WHERE (TraceId = trace_id) AND (Timestamp >= start) AND (Timestamp <= end) AND SpanAttributes['wg.organization.id'] = '${organizationID}'
-    ORDER BY Timestamp ASC
-    LIMIT 1000
+        SpanAttributes['wg.federated_graph.id'] as attrFederatedGraphId,
+        SpanAttributes['wg.operation.batching.is_batched'] as attrIsBatched,
+        SpanAttributes['wg.operation.batching.operations_count'] as attrBatchedOperationsCount,
+        SpanAttributes['wg.operation.batching.operation_index'] as attrWgBatchedOperationIndex
+    `;
+
+    const query = `
+    WITH RECURSIVE spans AS (
+      SELECT ${columns}
+      FROM ${this.client.database}.otel_traces
+      WHERE 
+        TraceId = trace_id
+        AND Timestamp >= start 
+        AND Timestamp <= end
+        AND SpanAttributes['wg.organization.id'] = '${organizationID}'
+        AND SpanAttributes['wg.federated_graph.id'] = '${federatedGraphId}'
+        AND spanId = '${spanID}'
+      
+      UNION ALL
+      
+      SELECT ${columns}
+      FROM spans s, ${this.client.database}.otel_traces as t
+      WHERE t.ParentSpanId = s.spanId 
+        AND t.TraceId = trace_id
+        AND t.Timestamp >= start
+        AND t.Timestamp <= end
+        AND t.SpanAttributes['wg.organization.id'] = '${organizationID}'
+        AND t.SpanAttributes['wg.federated_graph.id'] = '${federatedGraphId}'
+    ),
+    '${traceID}' AS trace_id,
+    (
+        SELECT min(Start)
+        FROM ${this.client.database}.otel_traces_trace_id_ts
+        WHERE TraceId = trace_id
+    ) AS start,
+    (
+        SELECT max(End) + 1
+        FROM ${this.client.database}.otel_traces_trace_id_ts
+        WHERE TraceId = trace_id
+    ) AS end
+    SELECT *
+    FROM spans
+    ORDER BY timestamp ASC
+    LIMIT 100
+    SETTINGS allow_experimental_analyzer = 1
     `;
 
     const results = await this.client.queryPromise(query);
@@ -102,6 +135,9 @@ export class TraceRepository {
         routerVersion: result.attrRouterVersion,
         operationPersistedID: result.attrOperationPersistedId,
         federatedGraphID: result.attrFederatedGraphId,
+        isBatched: result.attrIsBatched,
+        batchedOperationsCount: result.attrBatchedOperationsCount,
+        batchedOperationIndex: result.attrWgBatchedOperationIndex,
       },
     }));
   }

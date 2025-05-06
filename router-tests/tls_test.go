@@ -3,9 +3,6 @@ package integration
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"github.com/stretchr/testify/require"
-	"github.com/wundergraph/cosmo/router-tests/testenv"
-	"github.com/wundergraph/cosmo/router/core"
 	"io"
 	"net"
 	"net/http"
@@ -13,12 +10,15 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router/core"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
-const employeesIDData = `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
-
 func TestTLS(t *testing.T) {
-
 	t.Parallel()
 
 	t.Run("Ensure router URL is https when passing TLSConfig", func(t *testing.T) {
@@ -195,7 +195,6 @@ func TestTLS(t *testing.T) {
 }
 
 func TestMTLS(t *testing.T) {
-
 	t.Parallel()
 
 	t.Run("TestPlayground", func(t *testing.T) {
@@ -345,6 +344,10 @@ func TestMTLS(t *testing.T) {
 					CertFile: "testdata/tls/cert.pem",
 				},
 			},
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.DebugLevel,
+			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			req, err := http.NewRequestWithContext(xEnv.Context, http.MethodPost, xEnv.RouterURL, strings.NewReader(`query { employees { id } }`))
 			require.NoError(t, err)
@@ -365,6 +368,11 @@ func TestMTLS(t *testing.T) {
 			require.ErrorAs(t, err, &netOpErr)
 
 			require.Error(t, netOpErr, "remote error: tls: certificate required")
+
+			clientAuthLogs := xEnv.Observer().FilterMessageSnippet("Client auth enabled").All()
+			require.Len(t, clientAuthLogs, 1)
+			providerIDFields := xEnv.Observer().FilterField(zap.String("mode", "RequireAndVerifyClientCert")).All()
+			require.Len(t, providerIDFields, 1)
 		})
 	})
 

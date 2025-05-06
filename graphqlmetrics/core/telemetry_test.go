@@ -82,7 +82,7 @@ func TestExposingPrometheusMetrics(t *testing.T) {
 	}
 
 	db := test.GetTestDatabase(t)
-	msvc := NewMetricsService(zap.NewNop(), db)
+	msvc := NewMetricsService(zap.NewNop(), db, defaultConfig())
 	ctx, stop := newServerCtx()
 	defer stop()
 
@@ -107,7 +107,7 @@ func TestExposingPrometheusMetrics(t *testing.T) {
 					t.Fatalf("Failed to shut down server: %v", err)
 				}
 			}()
-			time.Sleep(2 * time.Second)
+			time.Sleep(1 * time.Second)
 
 			endpoint := fmt.Sprintf("http://%s%s", tt.prom.ListenAddr, tt.prom.Path)
 			resp, err := http.Get(endpoint)
@@ -154,7 +154,7 @@ func TestValidateExposedMetrics(t *testing.T) {
 	defer stop()
 
 	db := test.GetTestDatabase(t)
-	msvc := NewMetricsService(zap.NewNop(), db)
+	msvc := NewMetricsService(zap.NewNop(), db, defaultConfig())
 
 	svr := NewServer(ctx, msvc,
 		WithListenAddr(mainListenAddr),
@@ -227,19 +227,20 @@ func TestValidateExposedMetrics(t *testing.T) {
 			"go_memstats_stack_sys_bytes",
 			"go_memstats_sys_bytes",
 			"go_threads",
-			"process_cpu_seconds_total",
-			"process_max_fds",
-			"process_open_fds",
-			"process_resident_memory_bytes",
-			"process_start_time_seconds",
-			"process_virtual_memory_bytes",
-			"process_virtual_memory_max_bytes",
+			// Only on linux
+			//"process_cpu_seconds_total",
+			//"process_max_fds",
+			//"process_open_fds",
+			//"process_resident_memory_bytes",
+			//"process_start_time_seconds",
+			//"process_virtual_memory_bytes",
+			//"process_virtual_memory_max_bytes",
 			"promhttp_metric_handler_errors_total",
 			"promhttp_metric_handler_errors_total",
 		}
 
 		for _, m := range expectedMetrics {
-			require.True(t, strings.Contains(metrics, m))
+			require.True(t, strings.Contains(metrics, m), fmt.Sprintf("expected metric %s not found", m))
 		}
 	})
 
@@ -319,7 +320,7 @@ func TestValidateExposedMetrics(t *testing.T) {
 	})
 }
 
-func TestValidateExposedAttirbutesWithoutClaims(t *testing.T) {
+func TestValidateExposedAttributesWithoutClaims(t *testing.T) {
 	if os.Getenv("INT_TESTS") != "true" {
 		t.Skip("Skipping integration tests")
 	}
@@ -344,7 +345,7 @@ func TestValidateExposedAttirbutesWithoutClaims(t *testing.T) {
 	defer stop()
 
 	db := test.GetTestDatabase(t)
-	msvc := NewMetricsService(zap.NewNop(), db)
+	msvc := NewMetricsService(zap.NewNop(), db, defaultConfig())
 
 	svr := NewServer(ctx, msvc,
 		WithListenAddr(mainListenAddr),
@@ -366,7 +367,7 @@ func TestValidateExposedAttirbutesWithoutClaims(t *testing.T) {
 		}
 	}()
 
-	time.Sleep(2 * time.Second)
+	time.Sleep(1 * time.Second)
 
 	t.Run("publishing metrics without having proper claims should indicate this in the rpc_grpc_status_code", func(t *testing.T) {
 		client := graphqlmetricsv1connect.NewGraphQLMetricsServiceClient(

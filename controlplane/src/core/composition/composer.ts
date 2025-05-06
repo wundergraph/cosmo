@@ -1,14 +1,19 @@
 import type { UUID } from 'node:crypto';
 import { printSchemaWithDirectives } from '@graphql-tools/utils';
 import {
+  ContractTagOptions,
   FederationResult,
-  FederationResultContainerWithContracts,
   FieldConfiguration,
+  newContractTagOptionsFromArrays,
+  ROUTER_COMPATIBILITY_VERSION_ONE,
+  ROUTER_COMPATIBILITY_VERSIONS,
   Subgraph,
+  SupportedRouterCompatibilityVersion,
+  Warning,
 } from '@wundergraph/composition';
-import { buildRouterConfig, ComposedSubgraph } from '@wundergraph/cosmo-shared';
+import { buildRouterConfig, ComposedSubgraph as IComposedSubgraph } from '@wundergraph/cosmo-shared';
 import { FastifyBaseLogger } from 'fastify';
-import { DocumentNode, parse, printSchema } from 'graphql';
+import { DocumentNode, GraphQLSchema, parse, printSchema } from 'graphql';
 import {
   FeatureFlagRouterExecutionConfig,
   FeatureFlagRouterExecutionConfigs,
@@ -28,9 +33,24 @@ import {
 } from '../services/AdmissionWebhookController.js';
 import { GraphCompositionRepository } from '../repositories/GraphCompositionRepository.js';
 import * as schema from '../../db/schema.js';
-import { composeSubgraphs, composeSubgraphsWithContracts } from './composition.js';
-import { getDiffBetweenGraphs, GetDiffBetweenGraphsResult } from './schemaCheck.js';
+import { ClickHouseClient } from '../clickhouse/index.js';
+import { CacheWarmerRepository } from '../repositories/CacheWarmerRepository.js';
+import { NamespaceRepository } from '../repositories/NamespaceRepository.js';
+import { InspectorSchemaChange } from '../services/SchemaUsageTrafficInspector.js';
+import { SchemaCheckChangeAction } from '../../db/models.js';
+import { composeSubgraphs, composeFederatedGraphWithPotentialContracts } from './composition.js';
+import { getDiffBetweenGraphs, GetDiffBetweenGraphsResult, GetDiffBetweenGraphsSuccess } from './schemaCheck.js';
 
+export function getRouterCompatibilityVersionPath(routerCompatibilityVersion: string): string {
+  switch (routerCompatibilityVersion) {
+    case ROUTER_COMPATIBILITY_VERSION_ONE: {
+      return '';
+    }
+    default: {
+      return `${routerCompatibilityVersion}/`;
+    }
+  }
+}
 export type CompositionResult = {
   compositions: ComposedFederatedGraph[];
 };
@@ -66,6 +86,7 @@ export function routerConfigToFeatureFlagExecutionConfig(routerConfig: RouterCon
 export function buildRouterExecutionConfig(
   composedGraph: ComposedFederatedGraph,
   federatedSchemaVersionId: UUID,
+  routerCompatibilityVersion: string,
 ): RouterConfig | undefined {
   if (composedGraph.errors.length > 0 || !composedGraph.composedSchema) {
     return;
@@ -75,14 +96,20 @@ export function buildRouterExecutionConfig(
     federatedClientSDL,
     federatedSDL: composedGraph.composedSchema,
     fieldConfigurations: composedGraph.fieldConfigurations,
+    routerCompatibilityVersion,
     subgraphs: composedGraph.subgraphs,
     schemaVersionId: federatedSchemaVersionId,
   });
 }
 
+export type ComposedSubgraph = IComposedSubgraph & {
+  targetId: string;
+  isFeatureSubgraph: boolean;
+};
+
 export function subgraphDTOsToComposedSubgraphs(
   subgraphs: SubgraphDTO[],
-  result?: FederationResult,
+  result: FederationResult,
 ): ComposedSubgraph[] {
   return subgraphs.map((subgraph) => {
     /* batchNormalize returns an intermediate representation of the engine configuration
@@ -93,12 +120,14 @@ export function subgraphDTOsToComposedSubgraphs(
      *  This is passed to the FederationFactory and is returned by federateSubgraphs if federation is successful.
      *  The normalized schema and engine configuration is used by buildRouterConfig.
      * */
-    const subgraphConfig = result?.subgraphConfigBySubgraphName.get(subgraph.name);
+    const subgraphConfig = result.success ? result.subgraphConfigBySubgraphName.get(subgraph.name) : undefined;
     const schema = subgraphConfig?.schema;
     const configurationDataByTypeName = subgraphConfig?.configurationDataByTypeName;
     return {
       id: subgraph.id,
       name: subgraph.name,
+      targetId: subgraph.targetId,
+      isFeatureSubgraph: subgraph.isFeatureSubgraph,
       url: subgraph.routingUrl,
       sdl: subgraph.schemaSDL,
       schemaVersionId: subgraph.schemaVersionId,
@@ -115,8 +144,7 @@ export function subgraphDTOsToComposedSubgraphs(
 export function mapResultToComposedGraph(
   federatedGraph: FederatedGraphDTO,
   subgraphs: SubgraphDTO[],
-  errors?: Error[],
-  result?: FederationResult,
+  result: FederationResult,
 ): ComposedFederatedGraph {
   return {
     id: federatedGraph.id,
@@ -124,14 +152,13 @@ export function mapResultToComposedGraph(
     name: federatedGraph.name,
     namespace: federatedGraph.namespace,
     namespaceId: federatedGraph.namespaceId,
-    composedSchema: result?.federatedGraphSchema ? printSchemaWithDirectives(result.federatedGraphSchema) : undefined,
-    federatedClientSchema: result?.federatedGraphClientSchema
-      ? printSchema(result.federatedGraphClientSchema)
-      : undefined,
-    shouldIncludeClientSchema: result?.shouldIncludeClientSchema || false,
-    errors: errors || [],
+    composedSchema: result.success ? printSchemaWithDirectives(result.federatedGraphSchema) : undefined,
+    federatedClientSchema: result.success ? printSchema(result.federatedGraphClientSchema) : undefined,
+    shouldIncludeClientSchema: result.success ? result.shouldIncludeClientSchema : false,
+    errors: result.success ? [] : result.errors,
     subgraphs: subgraphDTOsToComposedSubgraphs(subgraphs, result),
-    fieldConfigurations: result?.fieldConfigurations || [],
+    fieldConfigurations: result.success ? result.fieldConfigurations : [],
+    warnings: result.warnings,
   };
 }
 
@@ -147,6 +174,7 @@ export interface ComposedFederatedGraph {
   fieldConfigurations: FieldConfiguration[];
   federatedClientSchema?: string;
   shouldIncludeClientSchema?: boolean;
+  warnings: Warning[];
 }
 
 export interface CompositionDeployResult {
@@ -162,6 +190,18 @@ export class RouterConfigUploadError extends Error {
 
 export type ComposeDeploymentError = RouterConfigUploadError | AdmissionError | Error;
 
+export type CheckSubgraph = {
+  subgraph?: SubgraphDTO;
+  checkSubgraphId: string;
+  newSchemaSDL: string;
+  newGraphQLSchema?: GraphQLSchema;
+  inspectorChanges: InspectorSchemaChange[];
+  schemaChanges: GetDiffBetweenGraphsSuccess;
+  storedBreakingChanges: SchemaCheckChangeAction[];
+  routerCompatibilityVersion: string;
+  // will be used only for new subgraphs
+  labels?: Label[];
+};
 export class Composer {
   constructor(
     private logger: FastifyBaseLogger,
@@ -170,6 +210,7 @@ export class Composer {
     private subgraphRepo: SubgraphRepository,
     private contractRepo: ContractRepository,
     private graphCompositionRepository: GraphCompositionRepository,
+    private chClient?: ClickHouseClient,
   ) {}
 
   composeRouterConfigWithFeatureFlags({
@@ -216,6 +257,7 @@ export class Composer {
     admissionWebhookURL,
     admissionWebhookSecret,
     actorId,
+    routerCompatibilityVersion,
   }: {
     routerConfig: RouterConfig;
     blobStorage: BlobStorage;
@@ -229,14 +271,29 @@ export class Composer {
     admissionWebhookURL?: string;
     admissionWebhookSecret?: string;
     actorId: string;
+    routerCompatibilityVersion: string;
   }): Promise<{
     errors: ComposeDeploymentError[];
   }> {
     const routerConfigJsonStringBytes = Buffer.from(routerConfig.toJsonString(), 'utf8');
+    const errors: ComposeDeploymentError[] = [];
 
+    let versionPath = '';
+    if (routerCompatibilityVersion !== ROUTER_COMPATIBILITY_VERSION_ONE) {
+      if (ROUTER_COMPATIBILITY_VERSIONS.has(routerCompatibilityVersion as SupportedRouterCompatibilityVersion)) {
+        versionPath = `${routerCompatibilityVersion}/`;
+      } else {
+        errors.push(
+          new RouterConfigUploadError(`Invalid router compatibility version "${routerCompatibilityVersion}".`),
+        );
+        return {
+          errors,
+        };
+      }
+    }
     // CDN path and bucket path are the same in this case
     const s3PathDraft = `${organizationId}/${federatedGraphId}/routerconfigs/draft.json`;
-    const s3PathReady = `${organizationId}/${federatedGraphId}/routerconfigs/latest.json`;
+    const s3PathReady = `${organizationId}/${federatedGraphId}/routerconfigs/${versionPath}latest.json`;
 
     // The signature will be added by the admission webhook
     let signatureSha256: undefined | string;
@@ -320,13 +377,7 @@ export class Composer {
           },
         });
       } catch (err: any) {
-        this.logger.debug(
-          {
-            error: err,
-            federatedGraphId,
-          },
-          'Failed to upload the final router config to the blob storage',
-        );
+        this.logger.error(err, `Failed to upload the final router config for ${federatedGraphId} to the blob storage`);
         deploymentError = new RouterConfigUploadError('Failed to upload the final router config to the CDN', err);
       }
     }
@@ -343,8 +394,6 @@ export class Composer {
         routerConfigSignature: signatureSha256,
       });
     }
-
-    const errors: ComposeDeploymentError[] = [];
 
     if (deploymentError) {
       errors.push(deploymentError);
@@ -390,6 +439,24 @@ export class Composer {
       baseCompositionRouterExecutionConfig,
     });
 
+    const federatedGraph = await this.federatedGraphRepo.byId(federatedGraphId);
+    if (!federatedGraph) {
+      throw new Error(`Federated graph not found.`);
+    }
+    const namespaceRepository = new NamespaceRepository(this.db, organizationId);
+    const namespace = await namespaceRepository.byId(federatedGraph!.namespaceId);
+
+    if (namespace?.enableCacheWarmer && this.chClient) {
+      const cacheWarmerRepo = new CacheWarmerRepository(this.chClient, this.db);
+      await cacheWarmerRepo.fetchAndUploadCacheWarmerOperations({
+        blobStorage,
+        federatedGraphId,
+        organizationId,
+        namespaceId: namespace.id,
+        logger: this.logger,
+      });
+    }
+
     const { errors } = await this.uploadRouterConfig({
       blobStorage,
       federatedGraphId,
@@ -403,6 +470,7 @@ export class Composer {
         jwtSecret: admissionConfig.jwtSecret,
       },
       actorId,
+      routerCompatibilityVersion: federatedGraph.routerCompatibilityVersion,
     });
 
     return {
@@ -437,8 +505,9 @@ export class Composer {
       targetId: composedGraph.targetID,
       composedSDL: composedGraph.composedSchema,
       clientSchema: composedGraph.federatedClientSchema,
-      subgraphSchemaVersionIds: composedGraph.subgraphs.map((s) => s.schemaVersionId!),
+      composedSubgraphs: composedGraph.subgraphs,
       compositionErrors: composedGraph.errors,
+      compositionWarnings: composedGraph.warnings,
       composedById,
       schemaVersionId: federatedSchemaVersionId,
       isFeatureFlagComposition,
@@ -462,10 +531,15 @@ export class Composer {
       schemaChanges = await getDiffBetweenGraphs(
         prevValidFederatedSDL?.clientSchema || '',
         composedGraph.federatedClientSchema,
+        updatedFederatedGraph.routerCompatibilityVersion,
       );
     } else {
       // Fallback to full schema for backwards compatibility
-      schemaChanges = await getDiffBetweenGraphs(prevValidFederatedSDL?.schema || '', composedGraph.composedSchema);
+      schemaChanges = await getDiffBetweenGraphs(
+        prevValidFederatedSDL?.schema || '',
+        composedGraph.composedSchema || '',
+        updatedFederatedGraph.routerCompatibilityVersion,
+      );
     }
 
     if (schemaChanges.kind !== 'failure' && schemaChanges.changes.length > 0) {
@@ -488,7 +562,6 @@ export class Composer {
     ) => [SubgraphDTO[], { name: string; url: string; definitions: DocumentNode }[]],
   ): Promise<CompositionResult> {
     const composedGraphs: ComposedFederatedGraph[] = [];
-    let federationResultContainer: FederationResultContainerWithContracts;
 
     const graphs = await this.federatedGraphRepo.bySubgraphLabels({
       labels: subgraphLabels,
@@ -504,40 +577,38 @@ export class Composer {
 
         const contracts = await this.contractRepo.bySourceFederatedGraphId(graph.id);
 
-        if (contracts.length > 0) {
-          const tagExclusionsByContractName: Map<string, Set<string>> = new Map();
-
-          for (const contract of contracts) {
-            tagExclusionsByContractName.set(
-              contract.downstreamFederatedGraph.target.name,
-              new Set(contract.excludeTags),
-            );
-          }
-
-          federationResultContainer = composeSubgraphsWithContracts(subgraphsToBeComposed, tagExclusionsByContractName);
-        } else {
-          federationResultContainer = composeSubgraphs(subgraphsToBeComposed);
+        if (contracts.length === 0) {
+          const federationResult = composeSubgraphs(subgraphsToBeComposed, graph.routerCompatibilityVersion);
+          composedGraphs.push(mapResultToComposedGraph(graph, subgraphs, federationResult));
+          continue;
         }
 
-        if (!federationResultContainer) {
-          throw new Error('Could not federate subgraphs');
+        const tagOptionsByContractName = new Map<string, ContractTagOptions>();
+
+        for (const contract of contracts) {
+          tagOptionsByContractName.set(
+            contract.downstreamFederatedGraph.target.name,
+            newContractTagOptionsFromArrays(contract.excludeTags, contract.includeTags),
+          );
         }
 
-        const { federationResult: result, errors, federationResultContainerByContractName } = federationResultContainer;
+        const federationResult = composeFederatedGraphWithPotentialContracts(
+          subgraphsToBeComposed,
+          tagOptionsByContractName,
+          graph.routerCompatibilityVersion,
+        );
+        composedGraphs.push(mapResultToComposedGraph(graph, subgraphs, federationResult));
 
-        composedGraphs.push(mapResultToComposedGraph(graph, subgraphs, errors, result));
+        if (!federationResult.success) {
+          continue;
+        }
 
-        if (federationResultContainerByContractName) {
-          for (const [contractName, contractResultContainer] of federationResultContainerByContractName.entries()) {
-            const { errors: contractErrors, federationResult: contractResult } = contractResultContainer;
-
-            const contractGraph = await this.federatedGraphRepo.byName(contractName, graph.namespace);
-            if (!contractGraph) {
-              throw new Error(`Contract graph ${contractName} not found`);
-            }
-
-            composedGraphs.push(mapResultToComposedGraph(contractGraph, subgraphs, contractErrors, contractResult));
+        for (const [contractName, contractResult] of federationResult.federationResultByContractName) {
+          const contractGraph = await this.federatedGraphRepo.byName(contractName, graph.namespace);
+          if (!contractGraph) {
+            throw new Error(`Contract graph ${contractName} not found`);
           }
+          composedGraphs.push(mapResultToComposedGraph(contractGraph, subgraphs, contractResult));
         }
       } catch (e: any) {
         composedGraphs.push({
@@ -549,6 +620,7 @@ export class Composer {
           fieldConfigurations: [],
           errors: [e],
           subgraphs: [],
+          warnings: [],
         });
       }
     }
@@ -590,23 +662,128 @@ export class Composer {
     });
   }
 
-  composeWithDeletedSubgraph(subgraphLabels: Label[], subgraphName: string, namespaceId: string) {
-    return this.composeWithLabels(subgraphLabels, namespaceId, (subgraphs) => {
-      const subgraphsToBeComposed: Array<Subgraph> = [];
+  async composeWithProposedSchemas({
+    inputSubgraphs,
+    graphs,
+  }: {
+    inputSubgraphs: Map<string, CheckSubgraph>;
+    graphs: FederatedGraphDTO[];
+  }) {
+    const composedGraphs: ComposedFederatedGraph[] = [];
+    // the key is the federated graph id and the value is the list of check subgraph ids which are part of the composition for that federated graph
+    const checkSubgraphsByFedGraph = new Map<string, string[]>();
+    for (const graph of graphs) {
+      try {
+        const subgraphsOfFedGraph = await this.subgraphRepo.listByFederatedGraph({
+          federatedGraphTargetId: graph.targetId,
+        });
 
-      const filteredSubgraphs = subgraphs.filter((s) => s.name !== subgraphName);
+        const subgraphsToBeComposed: Subgraph[] = [];
+        for (const subgraph of subgraphsOfFedGraph) {
+          const inputSubgraph = inputSubgraphs.get(subgraph.name);
+          if (inputSubgraph) {
+            checkSubgraphsByFedGraph.set(graph.id, [
+              ...(checkSubgraphsByFedGraph.get(graph.id) || []),
+              inputSubgraph.checkSubgraphId,
+            ]);
+            if (inputSubgraph.newSchemaSDL === '') {
+              continue;
+            }
+            subgraphsToBeComposed.push({
+              name: subgraph.name,
+              url: subgraph.routingUrl,
+              definitions: parse(inputSubgraph.newSchemaSDL),
+            });
+          } else if (subgraph.schemaSDL !== '') {
+            subgraphsToBeComposed.push({
+              name: subgraph.name,
+              url: subgraph.routingUrl,
+              definitions: parse(subgraph.schemaSDL),
+            });
+          }
+        }
 
-      for (const subgraph of subgraphs) {
-        if (subgraph.name !== subgraphName && subgraph.schemaSDL !== '') {
+        // Handles new subgraphs
+        for (const [subgraphName, subgraph] of inputSubgraphs.entries()) {
+          if (subgraph.subgraph || subgraph.newSchemaSDL === '') {
+            continue;
+          }
+          // get the fed graphs which match the labels of the new subgraph
+          const fedGraphsOfNewSubgraphs = await this.federatedGraphRepo.bySubgraphLabels({
+            labels: subgraph.labels || [],
+            namespaceId: graph.namespaceId,
+            excludeContracts: true,
+          });
+
+          // if the current fed graph(the main loop) is present in the list of fed graphs which match the labels of the new subgraph, then we can compose the new subgraph
+          if (!fedGraphsOfNewSubgraphs.some((fg) => fg.id === graph.id)) {
+            continue;
+          }
+
+          checkSubgraphsByFedGraph.set(graph.id, [
+            ...(checkSubgraphsByFedGraph.get(graph.id) || []),
+            subgraph.checkSubgraphId,
+          ]);
+
           subgraphsToBeComposed.push({
-            name: subgraph.name,
-            url: subgraph.routingUrl,
-            definitions: parse(subgraph.schemaSDL),
+            name: subgraphName,
+            url: '',
+            definitions: parse(subgraph.newSchemaSDL),
           });
         }
-      }
 
-      return [filteredSubgraphs, subgraphsToBeComposed];
-    });
+        const contracts = await this.contractRepo.bySourceFederatedGraphId(graph.id);
+
+        if (contracts.length === 0) {
+          const federationResult = composeSubgraphs(subgraphsToBeComposed, graph.routerCompatibilityVersion);
+          composedGraphs.push(mapResultToComposedGraph(graph, subgraphsOfFedGraph, federationResult));
+          continue;
+        }
+
+        const tagOptionsByContractName = new Map<string, ContractTagOptions>();
+
+        for (const contract of contracts) {
+          tagOptionsByContractName.set(
+            contract.downstreamFederatedGraph.target.name,
+            newContractTagOptionsFromArrays(contract.excludeTags, contract.includeTags),
+          );
+        }
+
+        const federationResult = composeFederatedGraphWithPotentialContracts(
+          subgraphsToBeComposed,
+          tagOptionsByContractName,
+          graph.routerCompatibilityVersion,
+        );
+        composedGraphs.push(mapResultToComposedGraph(graph, subgraphsOfFedGraph, federationResult));
+
+        if (!federationResult.success) {
+          continue;
+        }
+
+        for (const [contractName, contractResult] of federationResult.federationResultByContractName) {
+          const contractGraph = await this.federatedGraphRepo.byName(contractName, graph.namespace);
+          if (!contractGraph) {
+            throw new Error(`Contract graph ${contractName} not found`);
+          }
+          composedGraphs.push(mapResultToComposedGraph(contractGraph, subgraphsOfFedGraph, contractResult));
+        }
+      } catch (e: any) {
+        composedGraphs.push({
+          id: graph.id,
+          name: graph.name,
+          namespace: graph.namespace,
+          namespaceId: graph.namespaceId,
+          targetID: graph.targetId,
+          fieldConfigurations: [],
+          errors: [e],
+          subgraphs: [],
+          warnings: [],
+        });
+      }
+    }
+    return {
+      composedGraphs,
+      checkSubgraphsByFedGraph,
+    };
   }
 }

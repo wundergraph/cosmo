@@ -50,36 +50,34 @@ func checkIfClaimsAreSet(claims *utils.GraphAPITokenClaims) bool {
 }
 
 func (c *Config) ObservabilityInterceptor() connect.UnaryInterceptorFunc {
-	return connect.UnaryInterceptorFunc(
-		func(next connect.UnaryFunc) connect.UnaryFunc {
-			return connect.UnaryFunc(func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
-				attributes := defaultAttributes(req)
-				// connect.CodeOK does not exist
-				var statusCode int = 0
+	return func(next connect.UnaryFunc) connect.UnaryFunc {
+		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
+			attributes := defaultAttributes(req)
+			// connect.CodeOK does not exist
+			var statusCode int = 0
 
-				claims, err := utils.GetClaims(ctx)
-				if err != nil || checkIfClaimsAreSet(claims) {
-					// handling this error will happen in the service itself
-					statusCode = int(connect.CodeInvalidArgument)
+			claims, err := utils.GetClaims(ctx)
+			if err != nil || checkIfClaimsAreSet(claims) {
+				// handling this error will happen in the service itself
+				statusCode = int(connect.CodeInvalidArgument)
 
-					attributes = append(attributes, WgFederatedGraphId.String(claims.FederatedGraphID))
-					attributes = append(attributes, WgOrganizationId.String(claims.OrganizationID))
-				} else {
-					attributes = append(attributes, WgFederatedGraphId.String(claims.FederatedGraphID))
-					attributes = append(attributes, WgOrganizationId.String(claims.OrganizationID))
-				}
+				attributes = append(attributes, WgFederatedGraphId.String(claims.FederatedGraphID))
+				attributes = append(attributes, WgOrganizationId.String(claims.OrganizationID))
+			} else {
+				attributes = append(attributes, WgFederatedGraphId.String(claims.FederatedGraphID))
+				attributes = append(attributes, WgOrganizationId.String(claims.OrganizationID))
+			}
 
-				res, err := next(ctx, req)
+			res, err := next(ctx, req)
 
-				if err != nil {
-					statusCode = int(connect.CodeOf(err))
-				}
+			if err != nil {
+				statusCode = int(connect.CodeOf(err))
+			}
 
-				attributes = append(attributes, semconv.RPCGRPCStatusCodeKey.Int(statusCode))
-				c.MetricStore.MeasureRequestCount(ctx, attributes...)
+			attributes = append(attributes, semconv.RPCGRPCStatusCodeKey.Int(statusCode))
+			c.MetricStore.MeasureRequestCount(ctx, attributes...)
 
-				return res, err
-			})
-		},
-	)
+			return res, err
+		}
+	}
 }

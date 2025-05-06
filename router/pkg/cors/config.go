@@ -17,7 +17,8 @@ type cors struct {
 }
 
 var (
-	DefaultSchemas = []string{
+	maxRecursionDepth = 10 // Safeguard against deep recursion
+	DefaultSchemas    = []string{
 		"http://",
 		"https://",
 	}
@@ -97,22 +98,6 @@ func (cors *cors) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (cors *cors) validateWildcardOrigin(origin string) bool {
-	for _, w := range cors.wildcardOrigins {
-		if w[0] == "*" && strings.HasSuffix(origin, w[1]) {
-			return true
-		}
-		if w[1] == "*" && strings.HasPrefix(origin, w[0]) {
-			return true
-		}
-		if strings.HasPrefix(origin, w[0]) && strings.HasSuffix(origin, w[1]) {
-			return true
-		}
-	}
-
-	return false
-}
-
 func (cors *cors) validateOrigin(origin string) bool {
 	if cors.allowAllOrigins {
 		return true
@@ -128,6 +113,58 @@ func (cors *cors) validateOrigin(origin string) bool {
 	if cors.allowOriginFunc != nil {
 		return cors.allowOriginFunc(origin)
 	}
+	return false
+}
+
+func (cors *cors) validateWildcardOrigin(origin string) bool {
+	for _, w := range cors.wildcardOrigins {
+		if matchOriginWithRule(origin, w, 0, map[string]bool{}) {
+			return true
+		}
+	}
+	return false
+}
+
+// Recursive helper function with depth limit and memoization
+func matchOriginWithRule(origin string, rule []string, depth int, memo map[string]bool) bool {
+	if depth > maxRecursionDepth {
+		return false // Exceeded recursion depth
+	}
+
+	// Memoization key
+	key := origin + "|" + strings.Join(rule, "|")
+	if val, exists := memo[key]; exists {
+		return val
+	}
+
+	if len(rule) == 0 {
+		// Successfully matched if origin is also fully consumed
+		return origin == ""
+	}
+
+	part := rule[0]
+
+	if part == "*" {
+		// Try to match the remaining rule by advancing in origin
+		for i := 0; i <= len(origin); i++ {
+			if matchOriginWithRule(origin[i:], rule[1:], depth+1, memo) {
+				memo[key] = true
+				return true
+			}
+		}
+		memo[key] = false
+		return false
+	}
+
+	// Check if the origin starts with the current part
+	if strings.HasPrefix(origin, part) {
+		// Recursively check the rest of the origin and rule
+		result := matchOriginWithRule(origin[len(part):], rule[1:], depth+1, memo)
+		memo[key] = result
+		return result
+	}
+
+	memo[key] = false
 	return false
 }
 

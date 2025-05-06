@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import GetFederatedGraphChangelog from '../common/changelog.js';
+import GetFederatedGraphVersion from '../common/version/index.js';
 import { checkAuth } from '../../auth/utils.js';
 import FetchFederatedGraphSchemaCommand from '../common/fetch-schema.js';
 import ListFederatedGraphs from './commands/list.js';
@@ -23,6 +24,7 @@ export default (opts: BaseCommandOptions) => {
   command.addCommand(MoveFederatedGraphCommand(opts));
   command.addCommand(FetchFederatedGraphCommand(opts));
   command.addCommand(FetchFederatedGraphSchemaCommand(opts));
+  command.addCommand(GetFederatedGraphVersion(opts));
 
   command.hook('preAction', async () => {
     await checkAuth();

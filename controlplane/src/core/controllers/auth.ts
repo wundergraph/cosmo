@@ -63,7 +63,7 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
       return {
         id: userSession.userId,
         email: userInfoData.email,
-        organizations: orgs,
+        organizations: orgs.filter((o) => !o.deletion || o.roles.includes('admin')),
         invitations,
         expiresAt: userSession.expiresAt,
       };
@@ -126,6 +126,8 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
 
         const userId = accessTokenPayload.sub!;
         const userEmail = accessTokenPayload.email!;
+        const firstName = accessTokenPayload.given_name || '';
+        const lastName = accessTokenPayload.family_name || '';
 
         const insertedSession = await opts.db.transaction(async (tx) => {
           // Upsert the user
@@ -278,6 +280,8 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
           opts.platformWebhooks.send(PlatformEventName.USER_REGISTER_SUCCESS, {
             user_id: userId,
             user_email: userEmail,
+            user_first_name: firstName,
+            user_last_name: lastName,
           });
         }
 
@@ -298,7 +302,11 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
           opts.authUtils.createSsoCookie(res, ssoSlug);
         }
         if (redirectURL) {
-          res.redirect(redirectURL);
+          if (redirectURL.startsWith(opts.webBaseUrl)) {
+            res.redirect(redirectURL);
+          } else {
+            res.redirect(opts.webBaseUrl);
+          }
         } else if (orgs.length === 0) {
           res.redirect(opts.webBaseUrl + '?migrate=true');
         } else {

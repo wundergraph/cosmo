@@ -2,10 +2,15 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { addSeconds, formatISO, subDays } from 'date-fns';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, Mock, test, vi } from 'vitest';
+import {
+  invalidOverrideTargetSubgraphNameWarning,
+  noBaseDefinitionForExtensionError,
+  OBJECT,
+} from '@wundergraph/composition';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import { SchemaChangeType } from '../src/types/index.js';
-import { SetupTest } from './test-util.js';
+import { DEFAULT_NAMESPACE, SetupTest } from './test-util.js';
 
 let dbname = '';
 
@@ -36,7 +41,7 @@ describe('CheckSubgraphSchema', (ctx) => {
   });
 
   test('Should be able to create a subgraph, publish the schema and then check with new schema', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const subgraphName = genID('subgraph1');
     const label = genUniqueLabel();
@@ -84,7 +89,7 @@ describe('CheckSubgraphSchema', (ctx) => {
   });
 
   test('Should be able to create a federated graph,subgraph, publish the schema and then check the new schema for composition errors', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const federatedGraphName = genID('fedGraph');
     const subgraphName = genID('subgraph1');
@@ -92,7 +97,7 @@ describe('CheckSubgraphSchema', (ctx) => {
 
     const createFederatedGraphResp = await client.createFederatedGraph({
       name: federatedGraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
       labelMatchers: [joinLabel(label)],
       routingUrl: 'http://localhost:8081',
     });
@@ -100,7 +105,7 @@ describe('CheckSubgraphSchema', (ctx) => {
 
     let resp = await client.createFederatedSubgraph({
       name: subgraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
       labels: [label],
       routingUrl: 'http://localhost:8080',
     });
@@ -109,7 +114,7 @@ describe('CheckSubgraphSchema', (ctx) => {
 
     resp = await client.publishFederatedSubgraph({
       name: subgraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
       schema: 'type Query { hello: String! }',
     });
 
@@ -117,14 +122,77 @@ describe('CheckSubgraphSchema', (ctx) => {
 
     const checkResp = await client.checkSubgraphSchema({
       subgraphName,
-      namespace: 'default',
+      namespace: DEFAULT_NAMESPACE,
       schema: Uint8Array.from(Buffer.from('type Query { hello: String! } extend type Product { hello: String! }')),
     });
     expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
-    expect(checkResp.compositionErrors.length).not.toBe(0);
-    expect(checkResp.compositionErrors[0].message).toBe(
-      `Extension error:\n Could not extend the type "Product" because no base definition exists.`,
+    expect(checkResp.compositionErrors).toHaveLength(1);
+    expect(checkResp.compositionErrors[0].message).toBe(noBaseDefinitionForExtensionError(OBJECT, 'Product').message);
+
+    const checkSummary = await client.getCheckSummary({
+      namespace: DEFAULT_NAMESPACE,
+      graphName: federatedGraphName,
+      checkId: checkResp.checkId,
+    });
+
+    expect(checkSummary.response?.code).toBe(EnumStatusCode.OK);
+    expect(checkSummary.affectedGraphs).toHaveLength(1);
+    expect(checkSummary.check?.checkedSubgraphs.length).toEqual(1);
+    await server.close();
+  });
+
+  test('Should be able to create a federated graph,subgraph, publish the schema and then check the new schema for composition warning', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname, chClient });
+
+    const federatedGraphName = genID('fedGraph');
+    const subgraphName = genID('subgraph1');
+    const label = genUniqueLabel();
+
+    const createFederatedGraphResp = await client.createFederatedGraph({
+      name: federatedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      labelMatchers: [joinLabel(label)],
+      routingUrl: 'http://localhost:8081',
+    });
+    expect(createFederatedGraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+    let resp = await client.createFederatedSubgraph({
+      name: subgraphName,
+      namespace: DEFAULT_NAMESPACE,
+      labels: [label],
+      routingUrl: 'http://localhost:8080',
+    });
+
+    expect(resp.response?.code).toBe(EnumStatusCode.OK);
+
+    resp = await client.publishFederatedSubgraph({
+      name: subgraphName,
+      namespace: DEFAULT_NAMESPACE,
+      schema: 'type Query { hello: String! }',
+    });
+
+    expect(resp.response?.code).toBe(EnumStatusCode.OK);
+
+    const checkResp = await client.checkSubgraphSchema({
+      subgraphName,
+      namespace: DEFAULT_NAMESPACE,
+      schema: Uint8Array.from(Buffer.from('type Query { hello: String! @override(from: "employees") }')),
+    });
+    expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+    expect(checkResp.compositionWarnings).toHaveLength(1);
+    expect(checkResp.compositionWarnings[0].message).toBe(
+      invalidOverrideTargetSubgraphNameWarning('employees', 'Query', ['hello'], subgraphName).message,
     );
+
+    const checkSummary = await client.getCheckSummary({
+      namespace: DEFAULT_NAMESPACE,
+      graphName: federatedGraphName,
+      checkId: checkResp.checkId,
+    });
+
+    expect(checkSummary.response?.code).toBe(EnumStatusCode.OK);
+    expect(checkSummary.affectedGraphs).toHaveLength(1);
+    expect(checkSummary.check?.checkedSubgraphs.length).toEqual(1);
 
     await server.close();
   });
@@ -159,8 +227,18 @@ describe('CheckSubgraphSchema', (ctx) => {
       schema: Uint8Array.from(Buffer.from('type Query { hello: String! }')),
     });
     expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
-    expect(checkResp.compositionErrors.length).toBe(0);
-    expect(checkResp.breakingChanges.length).toBe(0);
+    expect(checkResp.compositionErrors).toHaveLength(0);
+    expect(checkResp.breakingChanges).toHaveLength(0);
+
+    const checkSummary = await client.getCheckSummary({
+      namespace: DEFAULT_NAMESPACE,
+      graphName: federatedGraphName,
+      checkId: checkResp.checkId,
+    });
+
+    expect(checkSummary.response?.code).toBe(EnumStatusCode.OK);
+    expect(checkSummary.affectedGraphs).toHaveLength(1);
+    expect(checkSummary.check?.checkedSubgraphs.length).toEqual(1);
 
     await server.close();
   });
@@ -294,6 +372,160 @@ type Employee {
     });
     expect(checkOperationsResp.response?.code).toBe(EnumStatusCode.OK);
     expect(checkOperationsResp.operations.length).toBe(2);
+
+    await server.close();
+  });
+
+  test('Should have zero checked operations if traffic is skipped', async () => {
+    const { client, server } = await SetupTest({ dbname, chClient });
+
+    const fedGraphName = genID('fedGraph');
+    const subgraphName = genID('subgraph');
+    const label = genUniqueLabel();
+
+    const initSchema = `
+type Query {
+  employees: [Employee!]!
+}
+
+type Employee {
+  id: Int!
+}
+`;
+
+    const modifiedSchema = `
+type Query {
+  employees: [Employee]
+}
+
+type Employee {
+  id: Int!
+}
+`;
+
+    const createFedGraphRes = await client.createFederatedGraph({
+      name: fedGraphName,
+      namespace: 'default',
+      routingUrl: 'http://localhost:8081',
+      labelMatchers: [joinLabel(label)],
+    });
+    expect(createFedGraphRes.response?.code).toBe(EnumStatusCode.OK);
+
+    const createSubgraphRes = await client.createFederatedSubgraph({
+      name: subgraphName,
+      namespace: 'default',
+      labels: [label],
+      routingUrl: 'http://localhost:8081',
+    });
+    expect(createSubgraphRes.response?.code).toBe(EnumStatusCode.OK);
+
+    const publishResp = await client.publishFederatedSubgraph({
+      name: subgraphName,
+      namespace: 'default',
+      schema: initSchema,
+    });
+    expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
+
+    (chClient.queryPromise as Mock).mockResolvedValue([
+      {
+        operationHash: 'hash1',
+        operationName: 'op1',
+        operationType: 'query',
+        firstSeen: Date.now() / 1000,
+        lastSeen: Date.now() / 1000,
+      },
+      {
+        operationHash: 'hash2',
+        operationName: 'op2',
+        operationType: 'query',
+        firstSeen: Date.now() / 1000,
+        lastSeen: Date.now() / 1000,
+      },
+    ]);
+
+    const checkResp = await client.checkSubgraphSchema({
+      subgraphName,
+      namespace: 'default',
+      schema: Buffer.from(modifiedSchema),
+      skipTrafficCheck: true,
+    });
+    expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+    expect(checkResp.breakingChanges.length).toBe(1);
+    expect(checkResp.operationUsageStats?.totalOperations).toBe(0);
+    expect(checkResp.operationUsageStats?.safeOperations).toBe(0);
+    expect(checkResp.clientTrafficCheckSkipped).toBe(true);
+
+    const checkOperationsResp = await client.getCheckOperations({
+      checkId: checkResp.checkId,
+      graphName: fedGraphName,
+      namespace: 'default',
+    });
+    expect(checkOperationsResp.response?.code).toBe(EnumStatusCode.OK);
+    expect(checkOperationsResp.operations.length).toBe(0);
+
+    await server.close();
+  });
+
+  test('Should handle composition when one of the subgraphs has an empty schema', async () => {
+    const { client, server } = await SetupTest({ dbname, chClient });
+
+    const emptySubgraphName = genID('empty-subgraph');
+    const validSubgraphName = genID('valid-subgraph');
+    const label = genUniqueLabel();
+
+    // Create federated graph
+    const fedGraphName = genID('federated-graph');
+    await client.createFederatedGraph({
+      name: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      labelMatchers: [joinLabel(label)],
+      routingUrl: 'http://localhost:8081',
+    });
+
+    // Create first subgraph with empty schema
+    await client.createFederatedSubgraph({
+      name: emptySubgraphName,
+      namespace: DEFAULT_NAMESPACE,
+      labels: [label],
+      routingUrl: 'http://localhost:8081',
+    });
+
+    // Create second subgraph with valid schema
+    await client.createFederatedSubgraph({
+      name: validSubgraphName,
+      namespace: DEFAULT_NAMESPACE,
+      labels: [label],
+      routingUrl: 'http://localhost:8081',
+    });
+
+    // Publish valid schema
+    let validSchema = `
+    type Query {
+      hello: String
+    }
+  `;
+    const publishValidResp = await client.publishFederatedSubgraph({
+      name: validSubgraphName,
+      namespace: DEFAULT_NAMESPACE,
+      schema: validSchema,
+    });
+    expect(publishValidResp.response?.code).toBe(EnumStatusCode.OK);
+
+    validSchema = `
+    type Query {
+      hello2: String
+    }
+  `;
+
+    // Check valid subgraph with empty schema
+    const checkValidResp = await client.checkSubgraphSchema({
+      subgraphName: validSubgraphName,
+      namespace: DEFAULT_NAMESPACE,
+      schema: Buffer.from(validSchema),
+    });
+    expect(checkValidResp.response?.code).toBe(EnumStatusCode.OK);
+    expect(checkValidResp.compositionErrors.length).toBe(0);
+    expect(checkValidResp.breakingChanges.length).toBe(1);
 
     await server.close();
   });

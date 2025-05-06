@@ -3,13 +3,15 @@ package metric
 import (
 	"context"
 	"fmt"
+	"net/url"
+	"strings"
+	"time"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
 	"go.opentelemetry.io/otel/attribute"
 	otelprom "go.opentelemetry.io/otel/exporters/prometheus"
-	"net/url"
-	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
@@ -26,7 +28,7 @@ var (
 	// Please version the used meters if you change the buckets.
 
 	// 0kb-20MB
-	bytesBucketBounds = []float64{
+	cloudOtelBytesBucketBounds = []float64{
 		0, 50, 100, 300, 500, 1000, 3000, 5000, 10000, 15000,
 		30000, 50000, 70000, 90000, 150000, 300000, 600000,
 		800000, 1000000, 5000000, 10000000, 20000000,
@@ -35,10 +37,38 @@ var (
 	// Please version the used meters if you change the buckets.
 
 	// 0ms-10s
-	msBucketsBounds = []float64{
+	cloudOtelMsBucketsBounds = []float64{
 		0, 5, 7, 10, 15, 25, 50, 75, 100, 125, 150, 175, 200, 225,
 		250, 275, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000, 1250,
 		1500, 1750, 2000, 2250, 2500, 2750, 3000, 3500, 4000, 5000, 10000,
+	}
+
+	// Prometheus buckets with fewer buckets to reduce cardinality
+
+	promBytesBuckets = []float64{
+		512,     // 512 B
+		1024,    // 1 KB
+		4096,    // 4 KB
+		8192,    // 8 KB
+		16384,   // 16 KB
+		65536,   // 64 KB
+		262144,  // 256 KB
+		524288,  // 512 KB
+		1048576, // 1 MB
+		3145728, // 3 MB
+	}
+
+	prometheusMsBuckets = []float64{
+		10,    // 10 ms
+		25,    // 25 ms
+		50,    // 50 ms
+		100,   // 100 ms
+		250,   // 250 ms
+		500,   // 500 ms
+		1000,  // 1000 ms
+		2500,  // 2500ms
+		5000,  // 5 s
+		10000, // 10 s
 	}
 )
 
@@ -48,7 +78,7 @@ const (
 )
 
 var (
-	// temporalitySelector is a function that selects the temporality for a given instrument kind.
+	// defaultCloudTemporalitySelector is a function that selects the temporality for a given instrument kind.
 	// Short story about when we choose delta and when we choose cumulative temporality:
 	//
 	// Delta temporalities are reported as completed intervals. They don't build upon each other.
@@ -63,8 +93,9 @@ var (
 	// We choose delta temporality for synchronous instruments because we can easily sum the values over a time range.
 	// We choose cumulative temporality for asynchronous instruments because we can query the last cumulative value without extra work.
 	// See https://opentelemetry.io/docs/specs/otel/metrics/supplementary-guidelines/#aggregation-temporality for more information.
+	// and https://grafana.com/blog/2023/09/26/opentelemetry-metrics-a-guide-to-delta-vs.-cumulative-temporality-trade-offs/
 	//
-	temporalitySelector = func(kind sdkmetric.InstrumentKind) metricdata.Temporality {
+	defaultCloudTemporalitySelector = func(kind sdkmetric.InstrumentKind) metricdata.Temporality {
 		switch kind {
 		case sdkmetric.InstrumentKindCounter,
 			sdkmetric.InstrumentKindUpDownCounter,
@@ -77,6 +108,9 @@ var (
 			return metricdata.CumulativeTemporality
 		}
 		panic("unknown instrument kind")
+	}
+	cumulativeTemporalitySelector = func(kind sdkmetric.InstrumentKind) metricdata.Temporality {
+		return metricdata.CumulativeTemporality
 	}
 )
 
@@ -94,11 +128,16 @@ func NewPrometheusMeterProvider(ctx context.Context, c *Config, serviceInstanceI
 	// Only available on Linux and Windows systems
 	registry.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 
-	promExporter, err := otelprom.New(
+	otelPromOpts := []otelprom.Option{
 		otelprom.WithoutUnits(),
 		otelprom.WithRegisterer(registry),
-	)
+	}
 
+	if c.Prometheus.ExcludeScopeInfo {
+		otelPromOpts = append(otelPromOpts, otelprom.WithoutScopeInfo())
+	}
+
+	promExporter, err := otelprom.New(otelPromOpts...)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -116,10 +155,47 @@ func NewPrometheusMeterProvider(ctx context.Context, c *Config, serviceInstanceI
 	return sdkmetric.NewMeterProvider(opts...), registry, nil
 }
 
+func getTemporalitySelector(temporality otelconfig.ExporterTemporality, log *zap.Logger) func(kind sdkmetric.InstrumentKind) metricdata.Temporality {
+	// https://github.com/open-telemetry/opentelemetry-go/blob/main/internal/shared/otlp/otlpmetric/oconf/envconfig.go.tmpl#L166-L177
+	// See the above link for selectors for different temporalities
+	if temporality == otelconfig.DeltaTemporality {
+		deltaTemporalitySelector := func(kind sdkmetric.InstrumentKind) metricdata.Temporality {
+			switch kind {
+			case sdkmetric.InstrumentKindCounter,
+				sdkmetric.InstrumentKindObservableCounter,
+				sdkmetric.InstrumentKindHistogram:
+				return metricdata.DeltaTemporality
+			default:
+				return metricdata.CumulativeTemporality
+			}
+		}
+		return deltaTemporalitySelector
+	} else if temporality == otelconfig.CumulativeTemporality {
+		return cumulativeTemporalitySelector
+	} else if temporality == otelconfig.CustomCloudTemporality {
+		return defaultCloudTemporalitySelector
+	} else {
+		// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/sdk.md#metricreader
+		// if the temporality is not configured, we fallback the to the default as per OTEL-SDK
+		log.Debug("The temporality selector falls back to the default.")
+		return cumulativeTemporalitySelector
+	}
+}
+
 func createOTELExporter(log *zap.Logger, exp *OpenTelemetryExporter) (sdkmetric.Exporter, error) {
-	u, err := url.Parse(exp.Endpoint)
+	// Parse the URL to get the host and port
+	// The stdlib url.Parse does not parse localhost alone, so we need to add the scheme
+	u, err := parseURL(exp.Endpoint)
 	if err != nil {
 		return nil, fmt.Errorf("invalid OpenTelemetry endpoint %q: %w", exp.Endpoint, err)
+	}
+	defaultEndpoint, err := url.Parse(otelconfig.DefaultEndpoint())
+	if err != nil {
+		return nil, fmt.Errorf("invalid default OpenTelemetry endpoint %q: %w", otelconfig.DefaultEndpoint(), err)
+	}
+	// if the exporter is configured to our cloud otel, then the temporality is set to the custom cloud temporality selector.
+	if u.Host == defaultEndpoint.Host {
+		exp.Temporality = otelconfig.CustomCloudTemporality
 	}
 
 	var exporter sdkmetric.Exporter
@@ -129,7 +205,7 @@ func createOTELExporter(log *zap.Logger, exp *OpenTelemetryExporter) (sdkmetric.
 			// Includes host and port
 			otlpmetrichttp.WithEndpoint(u.Host),
 			otlpmetrichttp.WithCompression(otlpmetrichttp.GzipCompression),
-			otlpmetrichttp.WithTemporalitySelector(temporalitySelector),
+			otlpmetrichttp.WithTemporalitySelector(getTemporalitySelector(exp.Temporality, log)),
 		}
 
 		if u.Scheme != "https" {
@@ -152,7 +228,7 @@ func createOTELExporter(log *zap.Logger, exp *OpenTelemetryExporter) (sdkmetric.
 			// Includes host and port
 			otlpmetricgrpc.WithEndpoint(u.Host),
 			otlpmetricgrpc.WithCompressor("gzip"),
-			otlpmetricgrpc.WithTemporalitySelector(temporalitySelector),
+			otlpmetricgrpc.WithTemporalitySelector(getTemporalitySelector(exp.Temporality, log)),
 		}
 
 		if u.Scheme != "https" {
@@ -170,6 +246,7 @@ func createOTELExporter(log *zap.Logger, exp *OpenTelemetryExporter) (sdkmetric.
 	default:
 		return nil, fmt.Errorf("unknown metrics exporter %s", exp.Exporter)
 	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -217,6 +294,29 @@ func NewOtlpMeterProvider(ctx context.Context, log *zap.Logger, c *Config, servi
 	return mp, nil
 }
 
+// IsDefaultCloudExporterConfigured checks if the default cloud exporter is configured in the provided exporters.
+func IsDefaultCloudExporterConfigured(c []*OpenTelemetryExporter) bool {
+	for _, exp := range c {
+		if isCloudExporter(exp) {
+			return true
+		}
+	}
+	return false
+}
+
+// isCloudExporter checks if the provided is the default cloud exporter.
+func isCloudExporter(exp *OpenTelemetryExporter) bool {
+	u, err := parseURL(exp.Endpoint)
+	if err != nil {
+		return false
+	}
+	defaultEndpoint, err := url.Parse(otelconfig.DefaultEndpoint())
+	if err != nil {
+		return false
+	}
+	return u.Host == defaultEndpoint.Host
+}
+
 func getResource(ctx context.Context, serviceInstanceID string, c *Config) (*resource.Resource, error) {
 	r, err := resource.New(ctx,
 		resource.WithAttributes(semconv.ServiceNameKey.String(c.Name)),
@@ -259,10 +359,10 @@ func defaultPrometheusMetricOptions(ctx context.Context, serviceInstanceID strin
 	}
 
 	msBucketHistogram := sdkmetric.AggregationExplicitBucketHistogram{
-		Boundaries: msBucketsBounds,
+		Boundaries: prometheusMsBuckets,
 	}
 	bytesBucketHistogram := sdkmetric.AggregationExplicitBucketHistogram{
-		Boundaries: bytesBucketBounds,
+		Boundaries: promBytesBuckets,
 	}
 
 	var view sdkmetric.View = func(i sdkmetric.Instrument) (sdkmetric.Stream, bool) {
@@ -308,10 +408,43 @@ func defaultOtlpMetricOptions(ctx context.Context, serviceInstanceID string, c *
 	}
 
 	msBucketHistogram := sdkmetric.AggregationExplicitBucketHistogram{
-		Boundaries: msBucketsBounds,
+		Boundaries: cloudOtelMsBucketsBounds,
 	}
 	bytesBucketHistogram := sdkmetric.AggregationExplicitBucketHistogram{
-		Boundaries: bytesBucketBounds,
+		Boundaries: cloudOtelBytesBucketBounds,
+	}
+
+	attributeFilter := func(value attribute.KeyValue) bool {
+		for _, re := range c.OpenTelemetry.ExcludeMetricLabels {
+			if re.MatchString(string(value.Key)) {
+				return false
+			}
+		}
+		return true
+	}
+
+	var view sdkmetric.View = func(i sdkmetric.Instrument) (sdkmetric.Stream, bool) {
+		// In a custom View function, we need to explicitly copy the name, description, and unit.
+		s := sdkmetric.Stream{Name: i.Name, Description: i.Description, Unit: i.Unit}
+		// Filter out metrics that match the excludeMetrics regexes
+		for _, re := range c.OpenTelemetry.ExcludeMetrics {
+			if re.MatchString(i.Name) {
+				// Drop the metric
+				s.Aggregation = sdkmetric.AggregationDrop{}
+				return s, true
+			}
+		}
+
+		// Filter out attributes that match the excludeMetricAttributes regexes
+		s.AttributeFilter = attributeFilter
+
+		if i.Unit == unitBytes && i.Kind == sdkmetric.InstrumentKindHistogram {
+			s.Aggregation = bytesBucketHistogram
+		} else if i.Unit == unitMilliseconds && i.Kind == sdkmetric.InstrumentKindHistogram {
+			s.Aggregation = msBucketHistogram
+		}
+
+		return s, true
 	}
 
 	// Info: There can be only a single view per instrument. A view with less restriction might override a view.
@@ -319,25 +452,7 @@ func defaultOtlpMetricOptions(ctx context.Context, serviceInstanceID string, c *
 	return []sdkmetric.Option{
 		// Record information about this application in a Resource.
 		sdkmetric.WithResource(r),
-		// Use different histogram buckets for PrometheusConfig and OTLP
-		sdkmetric.WithView(sdkmetric.NewView(
-			sdkmetric.Instrument{
-				Kind: sdkmetric.InstrumentKindHistogram,
-				Unit: unitMilliseconds,
-			},
-			sdkmetric.Stream{
-				Aggregation: msBucketHistogram,
-			},
-		)),
-		sdkmetric.WithView(sdkmetric.NewView(
-			sdkmetric.Instrument{
-				Kind: sdkmetric.InstrumentKindHistogram,
-				Unit: unitBytes,
-			},
-			sdkmetric.Stream{
-				Aggregation: bytesBucketHistogram,
-			},
-		)),
+		sdkmetric.WithView(view),
 	}, nil
 }
 
@@ -348,4 +463,11 @@ func isKeyInSlice(key attribute.Key, keys []attribute.Key) bool {
 		}
 	}
 	return false
+}
+
+func parseURL(input string) (*url.URL, error) {
+	if !strings.Contains(input, "://") {
+		input = "http://" + input
+	}
+	return url.Parse(input)
 }

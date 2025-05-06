@@ -4,7 +4,7 @@ kind: Job
 metadata:
   name: "{{ include "controlplane.fullname" . }}-seed-organization-{{ now | unixEpoch }}"
   labels:
-    {{- include "controlplane.labels" . | nindent 4 }}
+    {{- include "controlplane.job.labels" (dict "additionalLabels" .Values.jobs.seedOrganization.additionalLabels "context" .) | nindent 4 }}
   annotations:
     # Run the job before installing the helm chart
     "helm.sh/hook": post-install,post-upgrade
@@ -22,7 +22,7 @@ spec:
     metadata:
       name: "{{ include "controlplane.fullname" . }}-seed-organization"
       labels:
-        {{- include "controlplane.labels" . | nindent 8 }}
+        {{- include "controlplane.job.labels" (dict "additionalLabels" .Values.jobs.seedOrganization.additionalLabels "context" .) | nindent 8 }}
     spec:
       restartPolicy: OnFailure
       {{- with .Values.imagePullSecrets }}

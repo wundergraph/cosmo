@@ -1,0 +1,3 @@
+paths-ignore:
+  - 'composition-go/index.global.js'
+  - 'router/internal/graphiql/graphiql.html'

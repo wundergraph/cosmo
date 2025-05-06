@@ -5,11 +5,6 @@ directive @openfed__subscriptionFilter(condition: openfed__SubscriptionFilterCon
 directive @edfs__kafkaPublish(topic: String!, providerId: String! = "default") on FIELD_DEFINITION
 directive @edfs__kafkaSubscribe(topics: [String!]!, providerId: String! = "default") on FIELD_DEFINITION
 
-input edfs__NatsStreamConfiguration {
-    consumerName: String!
-    streamName: String!
-}
-
 scalar openfed__SubscriptionFilterValue
 
 input openfed__SubscriptionFieldCondition {
@@ -36,7 +31,7 @@ input UpdateEmployeeInput {
 
 type Mutation {
     updateEmployeeMyKafka(employeeID: Int!, update: UpdateEmployeeInput!): edfs__PublishResult! @edfs__kafkaPublish(topic: "employeeUpdated", providerId: "my-kafka")
-    updateEmployeeMyNats(employeeID: Int!, update: UpdateEmployeeInput!): edfs__PublishResult! @edfs__natsPublish(subject: "employeeUpdatedMyNats.{{ args.employeeID }}", providerId: "my-nats")
+    updateEmployeeMyNats(id: Int!, update: UpdateEmployeeInput!): edfs__PublishResult! @edfs__natsPublish(subject: "employeeUpdatedMyNats.{{ args.id }}", providerId: "my-nats")
 }
 
 type Subscription {
@@ -75,7 +70,8 @@ type edfs__PublishResult {
     success: Boolean!
 }
 
-input edfs__StreamConfiguration {
+input edfs__NatsStreamConfiguration {
+    consumerInactiveThreshold: Int! = 30
     consumerName: String!
     streamName: String!
 }

@@ -6,7 +6,7 @@ var topSecretFactTypeDirective = model.TopSecretFactTypeDirective
 var topSecretFactTypeEntity = model.TopSecretFactTypeEntity
 var topSecretFactTypeMiscellaneous = model.TopSecretFactTypeMiscellaneous
 
-var topSecretFederationFacts = []model.TopSecretFact{
+var TopSecretFederationFacts = []model.TopSecretFact{
 	model.DirectiveFact{
 		Title:       "Shareability and Federation Version",
 		Description: "All fields in Federation Version 1 graphs are intrinsically considered @shareable.",

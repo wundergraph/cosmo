@@ -4,11 +4,13 @@ import { FastifyBaseLogger } from 'fastify';
 import * as schema from '../../db/schema.js';
 import { users } from '../../db/schema.js';
 import { UserDTO } from '../../types/index.js';
+import { BlobStorage } from '../blobstorage/index.js';
 import Keycloak from '../services/Keycloak.js';
 import OidcProvider from '../services/OidcProvider.js';
-import { OrganizationRepository } from './OrganizationRepository.js';
+import { DeleteOrganizationAuditLogsQueue } from '../workers/DeleteOrganizationAuditLogsWorker.js';
 import { BillingRepository } from './BillingRepository.js';
 import { OidcRepository } from './OidcRepository.js';
+import { OrganizationRepository } from './OrganizationRepository.js';
 
 /**
  * Repository for user related operations.
@@ -65,75 +67,109 @@ export class UserRepository {
       .execute();
   }
 
-  public async deleteUser(input: { id: string; keycloakClient: Keycloak; keycloakRealm: string }) {
+  public async deleteUser(
+    input: { id: string; keycloakClient: Keycloak; keycloakRealm: string },
+    blobStorage: BlobStorage,
+    deleteOrganizationAuditLogsQueue: DeleteOrganizationAuditLogsQueue,
+  ) {
     const orgRepo = new OrganizationRepository(this.logger, this.db);
-    const billingRepo = new BillingRepository(this.db);
+    const oidcRepo = new OidcRepository(this.db);
 
-    const { soloAdminSoloMemberOrgs, memberships } = await orgRepo.adminMemberships({ userId: input.id });
+    // get all memberships
+    const orgMemberships = await orgRepo.adminMemberships({ userId: input.id });
 
-    // Cancel subscriptions and remove oidc providers
-    for (const org of soloAdminSoloMemberOrgs) {
-      await billingRepo.cancelSubscription(org.id);
-
-      const oidcRepo = new OidcRepository(this.db);
-      const oidcProvider = new OidcProvider();
-
+    // get all providers
+    const oidcProviders = [];
+    for (const org of orgMemberships.soloAdminSoloMemberOrgs) {
       const provider = await oidcRepo.getOidcProvider({ organizationId: org.id });
       if (provider) {
-        await oidcProvider.deleteOidcProvider({
-          kcClient: input.keycloakClient,
-          kcRealm: input.keycloakRealm,
-          organizationSlug: org.slug,
-          alias: provider.alias,
-        });
+        oidcProviders.push({ ...provider, orgSlug: org.slug });
       }
     }
 
-    // Remove keycloak user from all org groups
-    for (const org of memberships) {
-      const orgMember = await orgRepo.getOrganizationMember({
-        organizationID: org.id,
-        userID: input.id,
-      });
+    // Perform Keycloak deletions.
+    await this.deleteUserFromKeycloak({ ...input, oidcProviders, orgMemberships });
 
-      if (!orgMember) {
-        throw new Error('Organization member not found');
-      }
-
-      await input.keycloakClient.removeUserFromOrganization({
-        realm: input.keycloakRealm,
-        userID: input.id,
-        groupName: org.slug,
-        roles: orgMember.roles,
-      });
-    }
-
+    // Perform DB deletions
     await this.db.transaction(async (tx) => {
       const orgRepo = new OrganizationRepository(this.logger, tx);
+      const billingRepo = new BillingRepository(tx);
+
+      // Cancel subscriptions and remove oidc providers
+      for (const org of orgMemberships.soloAdminSoloMemberOrgs) {
+        await billingRepo.cancelSubscription(org.id);
+      }
 
       // Delete all solo organizations of the user
       const deleteOrgs: Promise<void>[] = [];
-      for (const org of soloAdminSoloMemberOrgs) {
-        deleteOrgs.push(orgRepo.deleteOrganization(org.id));
+      for (const org of orgMemberships.soloAdminSoloMemberOrgs) {
+        deleteOrgs.push(orgRepo.deleteOrganization(org.id, blobStorage, deleteOrganizationAuditLogsQueue));
       }
       await Promise.all(deleteOrgs);
 
       // Delete from db
       await tx.delete(users).where(eq(users.id, input.id)).execute();
     });
+  }
 
-    for (const org of soloAdminSoloMemberOrgs) {
-      await input.keycloakClient.deleteOrganizationGroup({
+  private async deleteUserFromKeycloak(input: {
+    id: string;
+    oidcProviders: { alias: string; orgSlug: string }[];
+    orgMemberships: {
+      memberships: { slug: string; roles: string[] }[];
+      soloAdminSoloMemberOrgs: { slug: string }[];
+    };
+    keycloakClient: Keycloak;
+    keycloakRealm: string;
+  }) {
+    try {
+      const oidcProvider = new OidcProvider();
+
+      // Remove OIDC providers
+      for (const provider of input.oidcProviders) {
+        await oidcProvider.deleteOidcProvider({
+          kcClient: input.keycloakClient,
+          kcRealm: input.keycloakRealm,
+          organizationSlug: provider.orgSlug,
+          alias: provider.alias,
+        });
+      }
+
+      // Remove keycloak user from all org groups
+      for (const org of input.orgMemberships.memberships) {
+        await input.keycloakClient.removeUserFromOrganization({
+          realm: input.keycloakRealm,
+          userID: input.id,
+          groupName: org.slug,
+          roles: org.roles,
+        });
+      }
+
+      // Delete keycloak organization groups
+      for (const org of input.orgMemberships.soloAdminSoloMemberOrgs) {
+        await input.keycloakClient.deleteOrganizationGroup({
+          realm: input.keycloakRealm,
+          organizationSlug: org.slug,
+        });
+      }
+
+      // Delete user from keycloak
+      await input.keycloakClient.client.users.del({
+        id: input.id,
         realm: input.keycloakRealm,
-        organizationSlug: org.slug,
       });
+    } catch (e: any) {
+      this.logger.error(
+        {
+          userId: input.id,
+          error: e.message,
+          oidcProviders: input.oidcProviders,
+          ...input.orgMemberships,
+        },
+        'Error deleting user details from keycloak.',
+      );
+      throw e;
     }
-
-    // Delete user from keycloak
-    await input.keycloakClient.client.users.del({
-      id: input.id,
-      realm: input.keycloakRealm,
-    });
   }
 
   // only to update the active attribute

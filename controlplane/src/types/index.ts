@@ -1,6 +1,6 @@
 import { LintSeverity } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { JWTPayload } from 'jose';
-import { LintRuleEnum } from '../db/models.js';
+import { GraphPruningRuleEnum, LintRuleEnum, ProposalMatch } from '../db/models.js';
 
 export type FeatureIds =
   | 'users'
@@ -19,7 +19,10 @@ export type FeatureIds =
   | 'support'
   | 'ai'
   | 'oidc'
-  | 'scim';
+  | 'scim'
+  | 'field-pruning-grace-period'
+  | 'cache-warmer'
+  | 'proposals';
 
 export type Features = {
   [key in FeatureIds]: Feature;
@@ -56,6 +59,7 @@ export interface ContractDTO {
   sourceFederatedGraphId: string;
   downstreamFederatedGraphId: string;
   excludeTags: string[];
+  includeTags: string[];
 }
 
 export interface FederatedGraphDTO {
@@ -79,6 +83,7 @@ export interface FederatedGraphDTO {
   namespaceId: string;
   supportsFederation: boolean;
   contract?: ContractDTO;
+  routerCompatibilityVersion: string;
 }
 
 export interface FederatedGraphChangelogDTO {
@@ -141,10 +146,18 @@ export interface MigrationSubgraph {
   schema: string;
 }
 
+export interface CheckedSubgraphDTO {
+  id: string;
+  subgraphId?: string;
+  subgraphName: string;
+  isDeleted: boolean;
+  isNew: boolean;
+}
+
 export interface SchemaCheckDTO {
   id: string;
-  targetID: string;
-  subgraphName: string;
+  targetID?: string;
+  subgraphName?: string;
   timestamp: string;
   isComposable: boolean;
   isBreaking: boolean;
@@ -158,6 +171,20 @@ export interface SchemaCheckDTO {
     checkRunId: number;
   };
   hasLintErrors: boolean;
+  hasGraphPruningErrors: boolean;
+  clientTrafficCheckSkipped: boolean;
+  lintSkipped: boolean;
+  graphPruningSkipped: boolean;
+  vcsContext?: {
+    author: string;
+    commitSha: string;
+    branch: string;
+  };
+  checkedSubgraphs: CheckedSubgraphDTO[];
+  proposalMatch?: ProposalMatch;
+  compositionSkipped: boolean;
+  breakingChangesSkipped: boolean;
+  errorMessage?: string;
 }
 
 export interface SchemaCheckSummaryDTO extends SchemaCheckDTO {
@@ -180,8 +207,10 @@ export interface SchemaCheckDetailsDTO {
     message: string;
     path?: string;
     isBreaking: boolean;
+    subgraphName?: string;
   }[];
   compositionErrors: string[];
+  compositionWarnings: string[];
 }
 
 export interface OrganizationDTO {
@@ -204,6 +233,10 @@ export interface OrganizationDTO {
   deactivation?: {
     reason?: string;
     initiatedAt: string;
+  };
+  deletion?: {
+    queuedAt: string;
+    queuedBy?: string;
   };
 }
 
@@ -314,6 +347,30 @@ export enum SchemaChangeType {
   TYPE_DESCRIPTION_ADDED = 'TYPE_DESCRIPTION_ADDED',
   UNION_MEMBER_REMOVED = 'UNION_MEMBER_REMOVED',
   UNION_MEMBER_ADDED = 'UNION_MEMBER_ADDED',
+  DIRECTIVE_USAGE_UNION_MEMBER_ADDED = 'DIRECTIVE_USAGE_UNION_MEMBER_ADDED',
+  DIRECTIVE_USAGE_UNION_MEMBER_REMOVED = 'DIRECTIVE_USAGE_UNION_MEMBER_REMOVED',
+  DIRECTIVE_USAGE_ENUM_ADDED = 'DIRECTIVE_USAGE_ENUM_ADDED',
+  DIRECTIVE_USAGE_ENUM_REMOVED = 'DIRECTIVE_USAGE_ENUM_REMOVED',
+  DIRECTIVE_USAGE_ENUM_VALUE_ADDED = 'DIRECTIVE_USAGE_ENUM_VALUE_ADDED',
+  DIRECTIVE_USAGE_ENUM_VALUE_REMOVED = 'DIRECTIVE_USAGE_ENUM_VALUE_REMOVED',
+  DIRECTIVE_USAGE_INPUT_OBJECT_ADDED = 'DIRECTIVE_USAGE_INPUT_OBJECT_ADDED',
+  DIRECTIVE_USAGE_INPUT_OBJECT_REMOVED = 'DIRECTIVE_USAGE_INPUT_OBJECT_REMOVED',
+  DIRECTIVE_USAGE_FIELD_ADDED = 'DIRECTIVE_USAGE_FIELD_ADDED',
+  DIRECTIVE_USAGE_FIELD_REMOVED = 'DIRECTIVE_USAGE_FIELD_REMOVED',
+  DIRECTIVE_USAGE_SCALAR_ADDED = 'DIRECTIVE_USAGE_SCALAR_ADDED',
+  DIRECTIVE_USAGE_SCALAR_REMOVED = 'DIRECTIVE_USAGE_SCALAR_REMOVED',
+  DIRECTIVE_USAGE_OBJECT_ADDED = 'DIRECTIVE_USAGE_OBJECT_ADDED',
+  DIRECTIVE_USAGE_OBJECT_REMOVED = 'DIRECTIVE_USAGE_OBJECT_REMOVED',
+  DIRECTIVE_USAGE_INTERFACE_ADDED = 'DIRECTIVE_USAGE_INTERFACE_ADDED',
+  DIRECTIVE_USAGE_INTERFACE_REMOVED = 'DIRECTIVE_USAGE_INTERFACE_REMOVED',
+  DIRECTIVE_USAGE_ARGUMENT_DEFINITION_ADDED = 'DIRECTIVE_USAGE_ARGUMENT_DEFINITION_ADDED',
+  DIRECTIVE_USAGE_ARGUMENT_DEFINITION_REMOVED = 'DIRECTIVE_USAGE_ARGUMENT_DEFINITION_REMOVED',
+  DIRECTIVE_USAGE_SCHEMA_ADDED = 'DIRECTIVE_USAGE_SCHEMA_ADDED',
+  DIRECTIVE_USAGE_SCHEMA_REMOVED = 'DIRECTIVE_USAGE_SCHEMA_REMOVED',
+  DIRECTIVE_USAGE_FIELD_DEFINITION_ADDED = 'DIRECTIVE_USAGE_FIELD_DEFINITION_ADDED',
+  DIRECTIVE_USAGE_FIELD_DEFINITION_REMOVED = 'DIRECTIVE_USAGE_FIELD_DEFINITION_REMOVED',
+  DIRECTIVE_USAGE_INPUT_FIELD_DEFINITION_ADDED = 'DIRECTIVE_USAGE_INPUT_FIELD_DEFINITION_ADDED',
+  DIRECTIVE_USAGE_INPUT_FIELD_DEFINITION_REMOVED = 'DIRECTIVE_USAGE_INPUT_FIELD_DEFINITION_REMOVED',
 }
 
 export interface JWTEncodeParams<Payload extends JWTPayload = JWTPayload, Secret = string> {
@@ -344,6 +401,8 @@ export type CustomAccessTokenClaims = {
   email: string;
   preferred_username: string;
   groups?: string[];
+  given_name?: string;
+  family_name?: string;
 };
 
 export type UserInfoEndpointResponse = {
@@ -365,6 +424,7 @@ export type AuthContext = {
   isAdmin: boolean;
   userId: string;
   userDisplayName: string;
+  apiKeyName?: string;
 };
 
 export interface GraphApiKeyJwtPayload extends JWTPayload {
@@ -376,7 +436,6 @@ export interface GraphApiKeyDTO {
   id: string;
   name: string;
   token: string;
-  lastUsedAt?: string;
   createdAt: string;
   creatorEmail: string | null;
 }
@@ -405,6 +464,19 @@ export interface ClientDTO {
   createdBy: string;
   lastUpdatedAt: string;
   lastUpdatedBy: string;
+}
+
+export interface PersistedOperationWithClientDTO {
+  id: string;
+  operationId: string;
+  hash: string;
+  filePath: string;
+  createdAt: string;
+  createdBy?: string;
+  lastUpdatedAt: string;
+  lastUpdatedBy: string;
+  clientName: string;
+  contents: string;
 }
 
 export interface PersistedOperationDTO {
@@ -439,11 +511,13 @@ export interface GraphCompositionDTO {
   createdAt: string;
   createdBy?: string;
   compositionErrors?: string;
+  compositionWarnings?: string;
   routerConfigSignature?: string;
   isComposable: boolean;
   isLatestValid: boolean;
   admissionError?: string;
   deploymentError?: string;
+  routerCompatibilityVersion: string;
 }
 
 export interface FeatureFlagCompositionDTO {
@@ -453,6 +527,7 @@ export interface FeatureFlagCompositionDTO {
   featureFlagName: string;
   createdBy?: string;
   compositionErrors?: string;
+  compositionWarnings?: string;
   routerConfigSignature?: string;
   isComposable: boolean;
   admissionError?: string;
@@ -465,26 +540,6 @@ export interface SubgraphMemberDTO {
   email: string;
 }
 
-export type DiscussionDTO = {
-  id: string;
-  createdAt: Date;
-  targetId: string;
-  schemaVersionId: string;
-  referenceLine: number;
-  isResolved: boolean;
-  thread: DiscussionThreadDTO;
-}[];
-
-export type DiscussionThreadDTO = {
-  id: string;
-  createdAt: Date;
-  discussionId: string;
-  contentMarkdown: string | null;
-  contentJson: unknown;
-  updatedAt: Date | null;
-  createdById: string | null;
-  isDeleted: boolean;
-}[];
 export interface SubgraphLatencyResult {
   subgraphID: string;
   latency: number;
@@ -548,7 +603,7 @@ export const LintRules: LintRuleType = {
 export type Severity = 1 | 2;
 export type LintSeverityLevel = 'warn' | 'error';
 export type RuleLevel = Severity | LintSeverityLevel;
-export type RuleLevelAndOptions<Options extends any[] = any[]> = Prepend<Partial<Options>, RuleLevel>;
+export type RuleLevelAndOptions<Options extends any[] = any[]> = [RuleLevel, ...Partial<Options>];
 export type RuleEntry<Options extends any[] = any[]> = RuleLevel | RuleLevelAndOptions<Options>;
 
 export interface RulesConfig {
@@ -575,4 +630,94 @@ export interface SchemaLintDTO {
 export interface SchemaLintIssues {
   warnings: LintIssueResult[];
   errors: LintIssueResult[];
+}
+
+type GraphPruningRuleType = Record<GraphPruningRuleEnum, GraphPruningRuleEnum>;
+
+export const GraphPruningRules: GraphPruningRuleType = {
+  UNUSED_FIELDS: 'UNUSED_FIELDS',
+  DEPRECATED_FIELDS: 'DEPRECATED_FIELDS',
+  REQUIRE_DEPRECATION_BEFORE_DELETION: 'REQUIRE_DEPRECATION_BEFORE_DELETION',
+};
+
+export interface SchemaGraphPruningDTO {
+  severity: LintSeverityLevel;
+  ruleName: GraphPruningRuleEnum;
+  gracePeriodInDays: number;
+  schemaUsageCheckPeriodInDays?: number;
+}
+
+export interface GraphPruningIssueResult {
+  graphPruningRuleType: GraphPruningRuleEnum;
+  severity: LintSeverity;
+  fieldPath: string;
+  message: string;
+  issueLocation: {
+    line: number;
+    column: number;
+    endLine?: number;
+    endColumn?: number;
+  };
+  federatedGraphId: string;
+  federatedGraphName: string;
+  subgraphName?: string;
+}
+
+export interface SchemaGraphPruningIssues {
+  warnings: GraphPruningIssueResult[];
+  errors: GraphPruningIssueResult[];
+}
+
+export interface Field {
+  name: string;
+  typeName: string;
+  path: string;
+  location: {
+    line?: number;
+    column?: number;
+    endLine?: number;
+    endColumn?: number;
+  };
+  isDeprecated: boolean;
+}
+export interface S3StorageOptions {
+  url: string;
+  region?: string;
+  endpoint?: string;
+  username?: string;
+  password?: string;
+  forcePathStyle?: boolean;
+}
+
+export interface NamespaceDTO {
+  id: string;
+  name: string;
+  createdBy?: string;
+  organizationId: string;
+  enableLinting: boolean;
+  enableGraphPruning: boolean;
+  enableCacheWarmer: boolean;
+  checksTimeframeInDays?: number;
+  enableProposals: boolean;
+}
+
+export interface ProposalDTO {
+  id: string;
+  name: string;
+  federatedGraphId: string;
+  createdAt: string;
+  createdById: string;
+  createdByEmail?: string;
+  state: string;
+}
+
+export interface ProposalSubgraphDTO {
+  id: string;
+  subgraphName: string;
+  subgraphId?: string;
+  schemaSDL: string;
+  isDeleted: boolean;
+  currentSchemaVersionId?: string;
+  isNew: boolean;
+  labels: Label[];
 }

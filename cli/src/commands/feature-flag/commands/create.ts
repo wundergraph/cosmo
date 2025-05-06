@@ -4,7 +4,7 @@ import ora from 'ora';
 import pc from 'picocolors';
 import { getBaseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
-import { handleFeatureFlagResult } from '../../../handle-feature-flag-result.js';
+import { handleCompositionResult } from '../../../handle-composition-result.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('create');
@@ -28,8 +28,13 @@ export default (opts: BaseCommandOptions) => {
     'Flag that if included will enable the feature flag upon creation.' +
       ' A new feature flag is disabled by default to prevent accidental compositions.',
   );
+  command.option('-j, --json', 'Prints to the console in json format instead of table');
+  command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
   command.action(async (name, options) => {
-    const spinner = ora('The feature flag is being created...').start();
+    const spinner = ora('The feature flag is being created...');
+    if (!options.json) {
+      spinner.start();
+    }
     const resp = await opts.client.platform.createFeatureFlag(
       {
         name,
@@ -44,10 +49,11 @@ export default (opts: BaseCommandOptions) => {
     );
 
     try {
-      handleFeatureFlagResult({
+      handleCompositionResult({
         responseCode: resp.response?.code,
         responseDetails: resp.response?.details,
         compositionErrors: resp.compositionErrors,
+        compositionWarnings: resp.compositionWarnings,
         deploymentErrors: resp.deploymentErrors,
         spinner,
         successMessage: `The feature flag "${name}" was created successfully. ${
@@ -66,9 +72,13 @@ export default (opts: BaseCommandOptions) => {
           `\nThis means the updated composition is not accessible to the router.` +
           `\n${pc.bold('Please check the errors below:')}`,
         defaultErrorMessage: `Failed to create the feature flag "${name}".`,
+        shouldOutputJson: options.json,
+        suppressWarnings: options.suppressWarnings,
       });
     } catch {
-      process.exit(1);
+      process.exitCode = 1;
+      // eslint-disable-next-line no-useless-return
+      return;
     }
   });
 

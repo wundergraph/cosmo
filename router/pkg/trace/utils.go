@@ -2,6 +2,7 @@ package trace
 
 import (
 	"context"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	"go.opentelemetry.io/otel/codes"
 	"net/http"
@@ -46,18 +47,27 @@ func CommonRequestFilter(r *http.Request) bool {
 	if r.Method == "GET" && r.Header.Get("Upgrade") != "" {
 		return false
 	}
+	// Ignore if client disables tracing through header
+	if r.Header.Get("X-WG-DISABLE-TRACING") == "true" {
+		return false
+	}
 	return true
 }
 
-func GetClientInfo(h http.Header, primaryHeader, fallbackHeader, defaultValue string) string {
-	value := h.Get(primaryHeader)
-	if value == "" {
-		value = h.Get(fallbackHeader)
-		if value == "" {
-			value = defaultValue
+func GetClientHeader(h http.Header, headerNames []string, defaultValue string) string {
+	for _, headerName := range headerNames {
+		value := h.Get(headerName)
+		if value != "" {
+			return value
 		}
 	}
-	return value
+	return defaultValue
+}
+
+func GetClientDetails(r *http.Request, clientHeader config.ClientHeader) (string, string) {
+	clientName := GetClientHeader(r.Header, []string{clientHeader.Name, "graphql-client-name", "apollographql-client-name"}, "unknown")
+	clientVersion := GetClientHeader(r.Header, []string{clientHeader.Version, "graphql-client-version", "apollographql-client-version"}, "missing")
+	return clientName, clientVersion
 }
 
 // AttachErrToSpan attaches an error to a span if it is not nil.
@@ -68,4 +78,26 @@ func AttachErrToSpan(span trace.Span, err error) {
 		span.SetAttributes(rotel.WgRequestError.Bool(true))
 		span.RecordError(err)
 	}
+}
+
+func AttachErrToSpanFromContext(ctx context.Context, err error) {
+	span := trace.SpanFromContext(ctx)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.SetAttributes(rotel.WgRequestError.Bool(true))
+		span.RecordError(err)
+	}
+}
+
+func GetTraceID(ctx context.Context) string {
+	if ctx == nil {
+		return ""
+	}
+	span := trace.SpanFromContext(ctx)
+	spanContext := span.SpanContext()
+	if !spanContext.HasTraceID() {
+		return ""
+	}
+	traceID := spanContext.TraceID().String()
+	return traceID
 }

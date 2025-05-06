@@ -2,7 +2,7 @@ import { writeFile } from 'node:fs/promises';
 import { splitLabel } from '@wundergraph/cosmo-shared';
 import { Command } from 'commander';
 import pc from 'picocolors';
-import { join } from 'pathe';
+import { join, resolve } from 'pathe';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { introspectSubgraph } from '../../../utils.js';
 import program from '../../index.js';
@@ -39,7 +39,7 @@ export default (opts: BaseCommandOptions) => {
     }
 
     if (options.out) {
-      await writeFile(join(process.cwd(), options.out), resp.sdl ?? '');
+      await writeFile(resolve(options.out), resp.sdl ?? '');
     } else {
       console.log(resp.sdl);
     }

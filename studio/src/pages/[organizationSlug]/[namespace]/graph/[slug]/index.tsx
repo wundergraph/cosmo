@@ -337,23 +337,51 @@ const GraphOverviewPage: NextPageWithLayout = () => {
                       </span>
                     </Link>
                   </div>
-                  {contract.excludeTags.length > 0 && (
+                  {contract && (
                     <div className="flex items-start gap-x-3">
                       <span className="w-28 flex-shrink-0 text-muted-foreground">
                         Exclude Tags
                       </span>
                       <div className="flex flex-wrap gap-2 overflow-hidden">
-                        {contract.excludeTags.map((tag) => {
-                          return (
-                            <Badge
-                              variant="secondary"
-                              key={tag}
-                              className="truncate"
-                            >
-                              <span className="truncate">{tag}</span>
-                            </Badge>
-                          );
-                        })}
+                        {contract.excludeTags.length > 0 ? (
+                          contract.excludeTags.map((tag) => {
+                            return (
+                              <Badge
+                                variant="secondary"
+                                key={tag}
+                                className="truncate"
+                              >
+                                <span className="truncate">{tag}</span>
+                              </Badge>
+                            );
+                          })
+                        ) : (
+                          <>-</>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {contract && (
+                    <div className="flex items-start gap-x-3">
+                      <span className="w-28 flex-shrink-0 text-muted-foreground">
+                        Include Tags
+                      </span>
+                      <div className="flex flex-wrap gap-2 overflow-hidden">
+                        {contract.includeTags.length > 0 ? (
+                          contract.includeTags.map((tag) => {
+                            return (
+                              <Badge
+                                variant="secondary"
+                                key={tag}
+                                className="truncate"
+                              >
+                                <span className="truncate">{tag}</span>
+                              </Badge>
+                            );
+                          })
+                        ) : (
+                          <>-</>
+                        )}
                       </div>
                     </div>
                   )}

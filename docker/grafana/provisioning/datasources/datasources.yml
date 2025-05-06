@@ -1,0 +1,22 @@
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    url: http://prometheus:9090
+    readOnly: false
+    editable: true
+    jsonData:
+      httpMethod: POST
+      manageAlerts: true
+  - name: ClickHouse
+    type: grafana-clickhouse-datasource
+    readOnly: false
+    editable: true
+    jsonData:
+      defaultDatabase: cosmo
+      port: 9000
+      host: clickhouse
+      username: $__env{CLICKHOUSE_USER}
+    secureJsonData:
+      password: $__env{CLICKHOUSE_PASSWORD}

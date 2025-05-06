@@ -71,6 +71,8 @@
     --success: 142 71% 45%;
     --success-foreground: 210 40% 98%;
 
+    --warning: 41 96% 40%;
+
     --ring: 215 20.2% 65.1%;
 
     --chart-primary: 199 89% 48%; /* sky blue */
@@ -114,6 +116,8 @@
 
     --success: 131 41% 46%;
     --success-foreground: 120 61% 85%;
+
+    --warning: 45 93% 47%;
 
     --ring: var(--gray-400);
 
@@ -179,7 +183,8 @@ pre[class*="language-"] code {
 
 .CodeMirror-vscrollbar,
 .CodeMirror-hscrollbar,
-.graphiql-plugin {
+.graphiql-plugin,
+.graphiql-tabs {
   @apply scrollbar-custom;
 }
 

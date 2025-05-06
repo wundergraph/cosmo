@@ -240,7 +240,7 @@ const UsagesPage: NextPageWithLayout = () => {
                   Breaking Changes Retention
                 </dt>
                 <dd className="w-1/3 px-2 text-right text-sm font-medium">
-                  <FeatureLimit id="breaking-change-retention" fallback={90} />{" "}
+                  <FeatureLimit id="breaking-change-retention" fallback={30} />{" "}
                   days
                 </dd>
               </div>
@@ -250,6 +250,15 @@ const UsagesPage: NextPageWithLayout = () => {
                 </dt>
                 <dd className="w-1/3 px-2 text-right text-sm font-medium">
                   <FeatureLimit id="changelog-retention" fallback={30} /> days
+                </dd>
+              </div>
+              <div className="flex">
+                <dt className="flex-1 px-2 text-sm text-muted-foreground">
+                  Field Grace Period Limit
+                </dt>
+                <dd className="w-1/3 px-2 text-right text-sm font-medium">
+                  <FeatureLimit id="field-pruning-grace-period" fallback={30} />{" "}
+                  days
                 </dd>
               </div>
               <div className="flex">

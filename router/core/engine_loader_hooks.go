@@ -4,76 +4,94 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/requestlogger"
+	"github.com/wundergraph/cosmo/router/internal/unique"
 	"github.com/wundergraph/cosmo/router/pkg/metric"
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	otelmetric "go.opentelemetry.io/otel/metric"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
+	"go.uber.org/zap"
 	"slices"
-	"strings"
+	"time"
 )
 
 var (
-	_ resolve.LoaderHooks = (*EngineLoaderHooks)(nil)
+	_ resolve.LoaderHooks = (*engineLoaderHooks)(nil)
 )
+
+type multiError = interface{ Unwrap() []error }
 
 const EngineLoaderHooksScopeName = "wundergraph/cosmo/router/engine/loader"
 const EngineLoaderHooksScopeVersion = "0.0.1"
 
-// EngineLoaderHooks implements resolve.LoaderHooks
+// engineLoaderHooks implements resolve.LoaderHooks
 // It is used to trace and measure the performance of the engine loader
-type EngineLoaderHooks struct {
-	tracer      trace.Tracer
-	metricStore metric.Provider
+type engineLoaderHooks struct {
+	tracer       trace.Tracer
+	metricStore  metric.Store
+	accessLogger *requestlogger.SubgraphAccessLogger
 }
 
-func NewEngineRequestHooks(metricStore metric.Provider) resolve.LoaderHooks {
-	return &EngineLoaderHooks{
+type engineLoaderHooksRequestContext struct {
+	startTime time.Time
+}
+
+func NewEngineRequestHooks(metricStore metric.Store, logger *requestlogger.SubgraphAccessLogger, tracerProvider *sdktrace.TracerProvider) resolve.LoaderHooks {
+	if tracerProvider != nil {
+		return &engineLoaderHooks{
+			tracer: tracerProvider.Tracer(
+				EngineLoaderHooksScopeName,
+				trace.WithInstrumentationVersion(EngineLoaderHooksScopeVersion),
+			),
+			metricStore:  metricStore,
+			accessLogger: logger,
+		}
+	}
+
+	return &engineLoaderHooks{
 		tracer: otel.GetTracerProvider().Tracer(
 			EngineLoaderHooksScopeName,
 			trace.WithInstrumentationVersion(EngineLoaderHooksScopeVersion),
 		),
-		metricStore: metricStore,
+		metricStore:  metricStore,
+		accessLogger: logger,
 	}
 }
 
-func (f *EngineLoaderHooks) OnLoad(ctx context.Context, dataSourceID string) context.Context {
+func (f *engineLoaderHooks) OnLoad(ctx context.Context, ds resolve.DataSourceInfo) context.Context {
 
-	if resolve.IsIntrospectionDataSource(dataSourceID) {
+	if resolve.IsIntrospectionDataSource(ds.ID) {
 		return ctx
 	}
+
+	start := time.Now()
 
 	reqContext := getRequestContext(ctx)
 	if reqContext == nil {
 		return ctx
 	}
 
-	var baseAttributes []attribute.KeyValue
-
-	if attributes := baseAttributesFromContext(reqContext.Request().Context()); attributes != nil {
-		baseAttributes = append(baseAttributes, attributes...)
-	}
-
-	ctx, span := f.tracer.Start(ctx, "Engine - Fetch", trace.WithAttributes(baseAttributes...))
-
-	subgraph := reqContext.SubgraphByID(dataSourceID)
-	if subgraph != nil {
-		span.SetAttributes(rotel.WgSubgraphName.String(subgraph.Name))
-	}
-
-	span.SetAttributes(
-		rotel.WgSubgraphID.String(dataSourceID),
+	ctx, _ = f.tracer.Start(ctx, "Engine - Fetch",
+		trace.WithAttributes([]attribute.KeyValue{
+			rotel.WgSubgraphName.String(ds.Name),
+			rotel.WgSubgraphID.String(ds.ID),
+		}...),
 	)
 
-	return ctx
+	return context.WithValue(ctx, engineLoaderHooksContextKey, &engineLoaderHooksRequestContext{
+		startTime: start,
+	})
 }
 
-func (f *EngineLoaderHooks) OnFinished(ctx context.Context, statusCode int, dataSourceID string, err error) {
+func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourceInfo, responseInfo *resolve.ResponseInfo) {
 
-	if resolve.IsIntrospectionDataSource(dataSourceID) {
+	if resolve.IsIntrospectionDataSource(ds.ID) {
 		return
 	}
 
@@ -82,84 +100,118 @@ func (f *EngineLoaderHooks) OnFinished(ctx context.Context, statusCode int, data
 	if reqContext == nil {
 		return
 	}
+
+	hookCtx, ok := ctx.Value(engineLoaderHooksContextKey).(*engineLoaderHooksRequestContext)
+	if !ok {
+		return
+	}
+
+	latency := time.Since(hookCtx.startTime)
 
 	span := trace.SpanFromContext(ctx)
 	defer span.End()
 
-	activeSubgraph := reqContext.SubgraphByID(dataSourceID)
-
-	baseAttributes := []attribute.KeyValue{
-		// Subgraph response status code
-		semconv.HTTPStatusCode(statusCode),
-		rotel.WgComponentName.String("engine-loader"),
-		rotel.WgSubgraphID.String(activeSubgraph.Id),
-		rotel.WgSubgraphName.String(activeSubgraph.Name),
+	if responseInfo == nil {
+		responseInfo = &resolve.ResponseInfo{}
 	}
 
-	// Ensure common attributes are set
-	baseAttributes = append(baseAttributes, getAttributesFromOperationContext(reqContext.operation)...)
-
-	if attributes := baseAttributesFromContext(reqContext.Request().Context()); attributes != nil {
-		baseAttributes = append(baseAttributes, attributes...)
+	commonAttrs := []attribute.KeyValue{
+		semconv.HTTPStatusCode(responseInfo.StatusCode),
+		rotel.WgSubgraphID.String(ds.ID),
+		rotel.WgSubgraphName.String(ds.Name),
 	}
 
-	if err != nil {
+	traceAttrs := *reqContext.telemetry.AcquireAttributes()
+	defer reqContext.telemetry.ReleaseAttributes(&traceAttrs)
+	traceAttrs = append(traceAttrs, reqContext.telemetry.traceAttrs...)
+	traceAttrs = append(traceAttrs, rotel.WgComponentName.String("engine-loader"))
+	traceAttrs = append(traceAttrs, commonAttrs...)
 
+	metricAttrs := *reqContext.telemetry.AcquireAttributes()
+	defer reqContext.telemetry.ReleaseAttributes(&metricAttrs)
+	metricAttrs = append(metricAttrs, reqContext.telemetry.metricAttrs...)
+	metricAttrs = append(metricAttrs, commonAttrs...)
+
+	metricAddOpt := otelmetric.WithAttributeSet(attribute.NewSet(metricAttrs...))
+
+	if f.accessLogger != nil {
+		fields := []zap.Field{
+			zap.String("subgraph_name", ds.Name),
+			zap.String("subgraph_id", ds.ID),
+			zap.Int("status", responseInfo.StatusCode),
+			zap.Duration("latency", latency),
+		}
+		path := ds.Name
+		if responseInfo.Request != nil {
+			fields = append(fields, f.accessLogger.RequestFields(responseInfo, fields)...)
+			if responseInfo.Request.URL != nil {
+				path = responseInfo.Request.URL.Path
+			}
+		}
+		f.accessLogger.Info(path, fields)
+	}
+
+	if responseInfo.Err != nil {
 		// Set error status. This is the fetch error from the engine
 		// Downstream errors are extracted from the subgraph response
-		span.SetStatus(codes.Error, err.Error())
-		span.RecordError(err)
+		span.SetStatus(codes.Error, responseInfo.Err.Error())
+		span.RecordError(responseInfo.Err)
 
 		var errorCodesAttr []string
 
-		var subgraphError *resolve.SubgraphError
-
-		if errors.As(err, &subgraphError) {
-
-			// Extract downstream errors
-			if len(subgraphError.DownstreamErrors) > 0 {
-				for i, downstreamError := range subgraphError.DownstreamErrors {
-					var errorCode string
-					if downstreamError.Extensions != nil {
-						if ok := downstreamError.Extensions["code"]; ok != nil {
-							if code, ok := downstreamError.Extensions["code"].(string); ok {
-								errorCode = code
+		if unwrapped, ok := responseInfo.Err.(multiError); ok {
+			errs := unwrapped.Unwrap()
+			for _, e := range errs {
+				var subgraphError *resolve.SubgraphError
+				if errors.As(e, &subgraphError) {
+					for i, downstreamError := range subgraphError.DownstreamErrors {
+						var errorCode string
+						if downstreamError.Extensions != nil {
+							if ok := downstreamError.Extensions["code"]; ok != nil {
+								if code, ok := downstreamError.Extensions["code"].(string); ok {
+									errorCode = code
+								}
 							}
 						}
 
-					}
-
-					if errorCode != "" {
-						errorCodesAttr = append(errorCodesAttr, errorCode)
-						span.AddEvent(fmt.Sprintf("Downstream error %d", i+1),
-							trace.WithAttributes(
-								rotel.WgSubgraphErrorExtendedCode.String(errorCode),
-								rotel.WgSubgraphErrorMessage.String(downstreamError.Message),
-							),
-						)
+						if errorCode != "" {
+							errorCodesAttr = append(errorCodesAttr, errorCode)
+							span.AddEvent(fmt.Sprintf("Downstream error %d", i+1),
+								trace.WithAttributes(
+									rotel.WgSubgraphErrorExtendedCode.String(errorCode),
+									rotel.WgSubgraphErrorMessage.String(downstreamError.Message),
+								),
+							)
+						}
 					}
 				}
 			}
 		}
 
+		errorCodesAttr = unique.SliceElements(errorCodesAttr)
 		// Reduce cardinality of error codes
 		slices.Sort(errorCodesAttr)
 
-		if len(errorCodesAttr) > 0 {
+		metricSliceAttrs := *reqContext.telemetry.AcquireAttributes()
+		defer reqContext.telemetry.ReleaseAttributes(&metricSliceAttrs)
+		metricSliceAttrs = append(metricSliceAttrs, reqContext.telemetry.metricSliceAttrs...)
 
-			// Create individual metrics for each error code
-			for _, code := range errorCodesAttr {
-				f.metricStore.MeasureRequestError(ctx,
-					// Add only the error code as an attribute
-					append(baseAttributes, rotel.WgSubgraphErrorExtendedCode.String(code))...,
-				)
-			}
-
-			// Add this after the metrics have been created
-			// The list might be used for post-processing
-			baseAttributes = append(baseAttributes, rotel.WgSubgraphErrorExtendedCode.String(strings.Join(errorCodesAttr, ",")))
+		// We can't add this earlier because this is done per subgraph response
+		if v, ok := reqContext.telemetry.metricSetAttrs[ContextFieldGraphQLErrorCodes]; ok && len(errorCodesAttr) > 0 {
+			metricSliceAttrs = append(metricSliceAttrs, attribute.StringSlice(v, errorCodesAttr))
 		}
+
+		f.metricStore.MeasureRequestError(ctx, metricSliceAttrs, metricAddOpt)
+
+		metricAttrs = append(metricAttrs, rotel.WgRequestError.Bool(true))
+
+		attrOpt := otelmetric.WithAttributeSet(attribute.NewSet(metricAttrs...))
+		f.metricStore.MeasureRequestCount(ctx, metricSliceAttrs, attrOpt)
+		f.metricStore.MeasureLatency(ctx, latency, metricSliceAttrs, attrOpt)
+	} else {
+		f.metricStore.MeasureRequestCount(ctx, reqContext.telemetry.metricSliceAttrs, metricAddOpt)
+		f.metricStore.MeasureLatency(ctx, latency, reqContext.telemetry.metricSliceAttrs, metricAddOpt)
 	}
 
-	span.SetAttributes(baseAttributes...)
+	span.SetAttributes(traceAttrs...)
 }

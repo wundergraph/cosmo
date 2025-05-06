@@ -2,6 +2,7 @@ import { AnalyticsSelectedFilters } from "@/components/analytics/filters";
 import {
   ErrorMetricsCard,
   ErrorRateOverTimeCard,
+  LatencyDistributionCard,
   LatencyMetricsCard,
   MetricsFilters,
   RequestMetricsCard,
@@ -26,6 +27,7 @@ import { Loader } from "@/components/ui/loader";
 import { Spacer } from "@/components/ui/spacer";
 import { useFeatureLimit } from "@/hooks/use-feature-limit";
 import { NextPageWithLayout } from "@/lib/page";
+import { createConnectQueryKey, useQuery } from "@connectrpc/connect-query";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { UpdateIcon } from "@radix-ui/react-icons";
 import {
@@ -33,12 +35,14 @@ import {
   useIsFetching,
   useQueryClient,
 } from "@tanstack/react-query";
-import { createConnectQueryKey, useQuery } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   getGraphMetrics,
   getMetricsErrorRate,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import {
+  AnalyticsViewResultFilter
+} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { formatISO } from "date-fns";
 import { useContext } from "react";
 
@@ -48,37 +52,20 @@ export type OperationAnalytics = {
   operationType: number;
 };
 
-const OverviewToolbar = () => {
+const OverviewToolbar = ({
+  filters,
+}: {
+  filters?: AnalyticsViewResultFilter[];
+}) => {
   const graphContext = useContext(GraphContext);
   const client = useQueryClient();
 
-  const { filters, range, dateRange, refreshInterval } =
-    useAnalyticsQueryState();
+  const { range, dateRange, refreshInterval } = useAnalyticsQueryState();
 
   const isFetching = useIsFetching();
 
-  const { data } = useQuery(
-    getGraphMetrics,
-    {
-      namespace: graphContext?.graph?.namespace,
-      federatedGraphName: graphContext?.graph?.name,
-      dateRange: range
-        ? undefined
-        : {
-            start: formatISO(dateRange.start),
-            end: formatISO(dateRange.end),
-          },
-      range,
-      filters,
-    },
-    {
-      placeholderData: keepPreviousData,
-      refetchOnWindowFocus: false,
-    },
-  );
-
   const { filtersList, selectedFilters, resetFilters } = useMetricsFilters(
-    data?.filters ?? [],
+    filters ?? [],
   );
 
   const applyParams = useApplyParams();
@@ -124,7 +111,7 @@ const OverviewToolbar = () => {
             calendarDaysLimit={analyticsRetention}
           />
 
-          <MetricsFilters filters={data?.filters ?? []} />
+          <MetricsFilters filters={filters ?? []} />
           <AnalyticsSelectedFilters
             filters={filtersList}
             selectedFilters={selectedFilters}
@@ -167,6 +154,7 @@ const OverviewToolbar = () => {
 
 const AnalyticsPage: NextPageWithLayout = () => {
   const graphContext = useContext(GraphContext);
+  const syncId = `${graphContext?.graph?.namespace}-${graphContext?.graph?.name}`;
 
   const { filters, range, dateRange, refreshInterval } =
     useAnalyticsQueryState();
@@ -211,14 +199,15 @@ const AnalyticsPage: NextPageWithLayout = () => {
 
   return (
     <div className="w-full space-y-4">
-      <OverviewToolbar />
+      <OverviewToolbar filters={data?.filters} />
       <div className="flex flex-col gap-4 lg:grid lg:grid-cols-3">
-        <RequestMetricsCard data={data?.requests} />
-        <LatencyMetricsCard data={data?.latency} />
-        <ErrorMetricsCard data={data?.errors} />
+        <RequestMetricsCard data={data?.requests} syncId={syncId} />
+        <LatencyMetricsCard data={data?.latency} syncId={syncId} />
+        <ErrorMetricsCard data={data?.errors} syncId={syncId} />
       </div>
 
-      <ErrorRateOverTimeCard />
+      <ErrorRateOverTimeCard syncId={syncId} />
+      <LatencyDistributionCard series={data?.latency?.series ?? []} syncId={syncId} />
     </div>
   );
 };

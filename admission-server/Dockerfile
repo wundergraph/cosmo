@@ -3,10 +3,11 @@ FROM --platform=${BUILDPLATFORM} node:lts AS builder
 WORKDIR /app
 
 # Ensure we have pnpm available to us
-RUN npm install --global pnpm@8
+RUN npm install --global pnpm@9
 
 # Files required by pnpm install.
 COPY .npmrc package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY patches patches
 
 # Files required by pnpm install for each package. Tried pnpm fetch but errors.
 COPY admission-server/package.json admission-server/
@@ -23,7 +24,7 @@ FROM --platform=${BUILDPLATFORM} node:lts-slim
 
 WORKDIR /app
 
-ENV NODE_ENV production
+ENV NODE_ENV=production
 
 # Fetch built artifacts
 COPY --from=builder /app/pruned .

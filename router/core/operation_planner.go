@@ -11,17 +11,23 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/postprocess"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+
+	graphqlmetricsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
+	"github.com/wundergraph/cosmo/router/pkg/graphqlschemausage"
 )
 
 type planWithMetaData struct {
 	preparedPlan                      plan.Plan
 	operationDocument, schemaDocument *ast.Document
+	typeFieldUsageInfo                []*graphqlschemausage.TypeFieldUsageInfo
+	argumentUsageInfo                 []*graphqlmetricsv1.ArgumentUsageInfo
 }
 
 type OperationPlanner struct {
-	sf        singleflight.Group
-	planCache ExecutionPlanCache[uint64, *planWithMetaData]
-	executor  *Executor
+	sf             singleflight.Group
+	planCache      ExecutionPlanCache[uint64, *planWithMetaData]
+	executor       *Executor
+	trackUsageInfo bool
 }
 
 type ExecutionPlanCache[K any, V any] interface {
@@ -33,26 +39,11 @@ type ExecutionPlanCache[K any, V any] interface {
 	Close()
 }
 
-func NewNoopExecutionPlanCache() ExecutionPlanCache[uint64, *planWithMetaData] {
-	return &noopExecutionPlanCache{}
-}
-
-type noopExecutionPlanCache struct{}
-
-func (n *noopExecutionPlanCache) Close() {}
-
-func (n *noopExecutionPlanCache) Get(key uint64) (*planWithMetaData, bool) {
-	return nil, false
-}
-
-func (n *noopExecutionPlanCache) Set(key uint64, value *planWithMetaData, cost int64) bool {
-	return true
-}
-
 func NewOperationPlanner(executor *Executor, planCache ExecutionPlanCache[uint64, *planWithMetaData]) *OperationPlanner {
 	return &OperationPlanner{
-		planCache: planCache,
-		executor:  executor,
+		planCache:      planCache,
+		executor:       executor,
+		trackUsageInfo: executor.TrackUsageInfo,
 	}
 }
 
@@ -81,44 +72,34 @@ func (p *OperationPlanner) preparePlan(ctx *operationContext) (*planWithMetaData
 	if report.HasErrors() {
 		return nil, &reportError{report: &report}
 	}
-	post := postprocess.NewProcessor()
+	post := postprocess.NewProcessor(postprocess.CollectDataSourceInfo())
 	post.Process(preparedPlan)
 
-	return &planWithMetaData{
+	out := &planWithMetaData{
 		preparedPlan:      preparedPlan,
 		operationDocument: &doc,
 		schemaDocument:    p.executor.RouterSchema,
-	}, nil
+	}
+
+	if p.trackUsageInfo {
+		out.typeFieldUsageInfo = graphqlschemausage.GetTypeFieldUsageInfo(preparedPlan)
+		out.argumentUsageInfo, err = graphqlschemausage.GetArgumentUsageInfo(&doc, p.executor.RouterSchema)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return out, nil
 }
 
 type PlanOptions struct {
-	Protocol         OperationProtocol
-	ClientInfo       *ClientInfo
-	TraceOptions     resolve.TraceOptions
-	ExecutionOptions resolve.ExecutionOptions
+	ClientInfo           *ClientInfo
+	TraceOptions         resolve.TraceOptions
+	ExecutionOptions     resolve.ExecutionOptions
+	TrackSchemaUsageInfo bool
 }
 
-func (p *OperationPlanner) plan(operation *ParsedOperation, options PlanOptions) (*operationContext, error) {
-	opContext := &operationContext{
-		name:                       operation.Request.OperationName,
-		opType:                     operation.Type,
-		content:                    operation.NormalizedRepresentation,
-		hash:                       operation.ID,
-		clientInfo:                 *options.ClientInfo,
-		variables:                  operation.Request.Variables,
-		files:                      operation.Files,
-		traceOptions:               options.TraceOptions,
-		extensions:                 operation.Request.Extensions,
-		protocol:                   options.Protocol,
-		persistedOperationCacheHit: operation.PersistedOperationCacheHit,
-		normalizationCacheHit:      operation.NormalizationCacheHit,
-		executionOptions:           options.ExecutionOptions,
-	}
-
-	if operation.IsPersistedOperation {
-		opContext.persistedID = operation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash
-	}
-
+func (p *OperationPlanner) plan(opContext *operationContext, options PlanOptions) (err error) {
 	// if we have tracing enabled or want to include a query plan in the response we always prepare a new plan
 	// this is because in case of tracing, we're writing trace data to the plan
 	// in case of including the query plan, we don't want to cache this additional overhead
@@ -127,13 +108,21 @@ func (p *OperationPlanner) plan(operation *ParsedOperation, options PlanOptions)
 	if skipCache {
 		prepared, err := p.preparePlan(opContext)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		opContext.preparedPlan = prepared
-		return opContext, nil
+		if options.TrackSchemaUsageInfo {
+			opContext.typeFieldUsageInfo = prepared.typeFieldUsageInfo
+			opContext.argumentUsageInfo = prepared.argumentUsageInfo
+			opContext.inputUsageInfo, err = graphqlschemausage.GetInputUsageInfo(prepared.operationDocument, p.executor.RouterSchema, opContext.variables)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
 	}
 
-	operationID := opContext.Hash()
+	operationID := opContext.internalHash
 	// try to get a prepared plan for this operation ID from the cache
 	cachedPlan, ok := p.planCache.Get(operationID)
 	if ok && cachedPlan != nil {
@@ -153,12 +142,20 @@ func (p *OperationPlanner) plan(operation *ParsedOperation, options PlanOptions)
 			return prepared, nil
 		})
 		if err != nil {
-			return nil, err
+			return err
 		}
 		opContext.preparedPlan, ok = sharedPreparedPlan.(*planWithMetaData)
 		if !ok {
-			return nil, errors.New("unexpected prepared plan type")
+			return errors.New("unexpected prepared plan type")
 		}
 	}
-	return opContext, nil
+	if options.TrackSchemaUsageInfo {
+		opContext.typeFieldUsageInfo = opContext.preparedPlan.typeFieldUsageInfo
+		opContext.argumentUsageInfo = opContext.preparedPlan.argumentUsageInfo
+		opContext.inputUsageInfo, err = graphqlschemausage.GetInputUsageInfo(opContext.preparedPlan.operationDocument, p.executor.RouterSchema, opContext.variables)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

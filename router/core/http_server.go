@@ -4,11 +4,14 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
-	"github.com/wundergraph/cosmo/router/pkg/health"
-	"go.uber.org/zap"
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/go-chi/chi/v5"
+	"go.uber.org/zap"
+
+	"github.com/wundergraph/cosmo/router/pkg/health"
 )
 
 type server struct {
@@ -23,12 +26,16 @@ type server struct {
 }
 
 type httpServerOptions struct {
-	addr            string
-	logger          *zap.Logger
-	tlsConfig       *TlsConfig
-	tlsServerConfig *tls.Config
-	healthcheck     health.Checker
-	baseURL         string
+	addr               string
+	logger             *zap.Logger
+	tlsConfig          *TlsConfig
+	tlsServerConfig    *tls.Config
+	healthcheck        health.Checker
+	baseURL            string
+	maxHeaderBytes     int
+	livenessCheckPath  string
+	readinessCheckPath string
+	healthCheckPath    string
 }
 
 func newServer(opts *httpServerOptions) *server {
@@ -37,10 +44,17 @@ func newServer(opts *httpServerOptions) *server {
 		ReadTimeout: 60 * time.Second,
 		// Disable write timeout to keep the connection open until the client closes it
 		// This is required for SSE (Server-Sent-Events) subscriptions to work correctly
-		WriteTimeout: 0,
-		ErrorLog:     zap.NewStdLog(opts.logger),
-		TLSConfig:    opts.tlsServerConfig,
+		WriteTimeout:   0,
+		ErrorLog:       zap.NewStdLog(opts.logger),
+		TLSConfig:      opts.tlsServerConfig,
+		MaxHeaderBytes: opts.maxHeaderBytes,
 	}
+
+	// Create default handler for liveness and readiness
+	httpRouter := chi.NewMux()
+	httpRouter.Get(opts.healthCheckPath, opts.healthcheck.Liveness())
+	httpRouter.Get(opts.livenessCheckPath, opts.healthcheck.Liveness())
+	httpRouter.Get(opts.readinessCheckPath, opts.healthcheck.Readiness())
 
 	n := &server{
 		httpServer:  httpServer,
@@ -49,6 +63,7 @@ func newServer(opts *httpServerOptions) *server {
 		mu:          sync.RWMutex{},
 		healthcheck: opts.healthcheck,
 		baseURL:     opts.baseURL,
+		handler:     httpRouter,
 	}
 
 	httpServer.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -82,7 +97,7 @@ func (s *server) HttpServer() *http.Server {
 // NOT SAFE FOR CONCURRENT USE.
 func (s *server) SwapGraphServer(ctx context.Context, svr *graphServer) {
 
-	needsShutdown := s.handler != nil
+	needsShutdown := s.handler != nil && s.graphServer != nil
 
 	// Swap the handler immediately, so we can shut down the old server in the same goroutine
 	// and no other config changes can happen in the meantime.
@@ -98,7 +113,10 @@ func (s *server) SwapGraphServer(ctx context.Context, svr *graphServer) {
 		}
 	}
 
+	// Swap the graph server
+	s.mu.Lock()
 	s.graphServer = svr
+	s.mu.Unlock()
 }
 
 // listenAndServe starts the server and blocks until the server is shutdown.
@@ -119,15 +137,18 @@ func (s *server) listenAndServe() error {
 func (s *server) Shutdown(ctx context.Context) error {
 	var err error
 
-	if s.graphServer != nil {
-		err = errors.Join(s.graphServer.Shutdown(ctx))
-	}
 	if s.httpServer != nil {
-		err = errors.Join(s.httpServer.Shutdown(ctx))
+		err = errors.Join(err, s.httpServer.Shutdown(ctx))
 	}
 
+	if s.graphServer != nil {
+		err = errors.Join(err, s.graphServer.Shutdown(ctx))
+	}
+
+	s.mu.Lock()
 	s.graphServer = nil
 	s.handler = nil
+	s.mu.Unlock()
 
 	return err
 }

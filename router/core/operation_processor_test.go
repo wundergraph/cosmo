@@ -3,7 +3,6 @@ package core
 import (
 	"context"
 	"errors"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -46,15 +45,21 @@ func TestOperationProcessorPersistentOperations(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.Input, func(t *testing.T) {
-			kit, err := parser.NewKitFromReader(strings.NewReader(tc.Input))
+			kit, err := parser.NewKit()
 			require.NoError(t, err)
 			defer kit.Free()
 
-			err = kit.UnmarshalOperation()
+			err = kit.UnmarshalOperationFromBody([]byte(tc.Input))
+			if err != nil {
+				require.NoError(t, err)
+			}
+
 			require.NoError(t, err)
 
-			_, err = kit.FetchPersistedOperation(context.Background(), clientInfo, nil)
+			var isApq bool
+			_, isApq, err = kit.FetchPersistedOperation(context.Background(), clientInfo)
 
+			require.False(t, isApq)
 			if err != nil {
 				require.EqualError(t, tc.ExpectedError, err.Error())
 			} else if kit.parsedOperation != nil {
@@ -67,7 +72,7 @@ func TestOperationProcessorPersistentOperations(t *testing.T) {
 	}
 }
 
-func TestOperationProcessor(t *testing.T) {
+func TestParseOperationProcessor(t *testing.T) {
 	executor := &Executor{
 		PlanConfig:      plan.Configuration{},
 		RouterSchema:    nil,
@@ -184,11 +189,15 @@ func TestOperationProcessor(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.Input, func(t *testing.T) {
-			kit, err := parser.NewKitFromReader(strings.NewReader(tc.Input))
+			kit, err := parser.NewKit()
 			require.NoError(t, err)
 			defer kit.Free()
 
-			err = kit.UnmarshalOperation()
+			err = kit.UnmarshalOperationFromBody([]byte(tc.Input))
+			if err != nil {
+				require.NoError(t, err)
+			}
+
 			require.NoError(t, err)
 
 			err = kit.Parse()
@@ -218,20 +227,25 @@ func TestOperationProcessorUnmarshalExtensions(t *testing.T) {
 		ParseKitPoolSize:        4,
 	})
 	testCases := []struct {
-		Input string
-		Valid bool
+		Input     string
+		HttpError bool
+		Valid     bool
 	}{
 		{
-			Input: `{"query":"subscription { initialPayload(repeat:3) }","extensions":"this_is_not_valid"}`,
+			Input:     `{"query":"subscription { initialPayload(repeat:3) }","extensions":"this_is_not_valid"}`,
+			HttpError: true,
 		},
 		{
-			Input: `{"query":"subscription { initialPayload(repeat:3) }","extensions":42}`,
+			Input:     `{"query":"subscription { initialPayload(repeat:3) }","extensions":42}`,
+			HttpError: true,
 		},
 		{
-			Input: `{"query":"subscription { initialPayload(repeat:3) }","extensions":true}`,
+			Input:     `{"query":"subscription { initialPayload(repeat:3) }","extensions":true}`,
+			HttpError: true,
 		},
 		{
 			Input: `{"query":"subscription { initialPayload(repeat:3) }","extensions":{"foo":bar}}`,
+			Valid: false,
 		},
 		{
 			Input: `{"query":"subscription { initialPayload(repeat:3) }","extensions":{}}`,
@@ -250,17 +264,169 @@ func TestOperationProcessorUnmarshalExtensions(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.Input, func(t *testing.T) {
-			kit, err := parser.NewKitFromReader(strings.NewReader(tc.Input))
+
+			kit, err := parser.NewKit()
 			require.NoError(t, err)
 			defer kit.Free()
 
-			err = kit.UnmarshalOperation()
+			err = kit.UnmarshalOperationFromBody([]byte(tc.Input))
 
-			isInputError := errors.As(err, &inputError)
 			if tc.Valid {
-				assert.False(t, isInputError, "expected invalid extensions to not return an input error, got %s", err)
+				assert.NoError(t, err)
+			} else if tc.HttpError {
+				assert.True(t, errors.As(err, &inputError), "expected invalid extensions to return an http error, got %s", err)
 			} else {
-				assert.True(t, isInputError, "expected invalid extensions to return an input error, got %s", err)
+				assert.Error(t, err)
+			}
+		})
+	}
+}
+
+const namedIntrospectionQuery = `{"operationName":"IntrospectionQuery","variables":{},"query":"query IntrospectionQuery {\n  __schema {\n    queryType {\n      name\n    }\n    mutationType {\n      name\n    }\n    subscriptionType {\n      name\n    }\n    types {\n      ...FullType\n    }\n    directives {\n      name\n      description\n      locations\n      args {\n        ...InputValue\n      }\n    }\n  }\n}\n\nfragment FullType on __Type {\n  kind\n  name\n  description\n  fields(includeDeprecated: true) {\n    name\n    description\n    args {\n      ...InputValue\n    }\n    type {\n      ...TypeRef\n    }\n    isDeprecated\n    deprecationReason\n  }\n  inputFields {\n    ...InputValue\n  }\n  interfaces {\n    ...TypeRef\n  }\n  enumValues(includeDeprecated: true) {\n    name\n    description\n    isDeprecated\n    deprecationReason\n  }\n  possibleTypes {\n    ...TypeRef\n  }\n}\n\nfragment InputValue on __InputValue {\n  name\n  description\n  type {\n    ...TypeRef\n  }\n  defaultValue\n}\n\nfragment TypeRef on __Type {\n  kind\n  name\n  ofType {\n    kind\n    name\n    ofType {\n      kind\n      name\n      ofType {\n        kind\n        name\n        ofType {\n          kind\n          name\n          ofType {\n            kind\n            name\n            ofType {\n              kind\n              name\n              ofType {\n                kind\n                name\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}\n"}`
+const singleNamedIntrospectionQueryWithoutOperationName = `{"operationName":"","variables":{},"query":"query IntrospectionQuery {\n  __schema {\n    queryType {\n      name\n    }\n    mutationType {\n      name\n    }\n    subscriptionType {\n      name\n    }\n    types {\n      ...FullType\n    }\n    directives {\n      name\n      description\n      locations\n      args {\n        ...InputValue\n      }\n    }\n  }\n}\n\nfragment FullType on __Type {\n  kind\n  name\n  description\n  fields(includeDeprecated: true) {\n    name\n    description\n    args {\n      ...InputValue\n    }\n    type {\n      ...TypeRef\n    }\n    isDeprecated\n    deprecationReason\n  }\n  inputFields {\n    ...InputValue\n  }\n  interfaces {\n    ...TypeRef\n  }\n  enumValues(includeDeprecated: true) {\n    name\n    description\n    isDeprecated\n    deprecationReason\n  }\n  possibleTypes {\n    ...TypeRef\n  }\n}\n\nfragment InputValue on __InputValue {\n  name\n  description\n  type {\n    ...TypeRef\n  }\n  defaultValue\n}\n\nfragment TypeRef on __Type {\n  kind\n  name\n  ofType {\n    kind\n    name\n    ofType {\n      kind\n      name\n      ofType {\n        kind\n        name\n        ofType {\n          kind\n          name\n          ofType {\n            kind\n            name\n            ofType {\n              kind\n              name\n              ofType {\n                kind\n                name\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}\n"}`
+const silentIntrospectionQuery = `{"operationName":null,"variables":{},"query":"{\n  __schema {\n    queryType {\n      name\n    }\n    mutationType {\n      name\n    }\n    subscriptionType {\n      name\n    }\n    types {\n      ...FullType\n    }\n    directives {\n      name\n      description\n      locations\n      args {\n        ...InputValue\n      }\n    }\n  }\n}\n\nfragment FullType on __Type {\n  kind\n  name\n  description\n  fields(includeDeprecated: true) {\n    name\n    description\n    args {\n      ...InputValue\n    }\n    type {\n      ...TypeRef\n    }\n    isDeprecated\n    deprecationReason\n  }\n  inputFields {\n    ...InputValue\n  }\n  interfaces {\n    ...TypeRef\n  }\n  enumValues(includeDeprecated: true) {\n    name\n    description\n    isDeprecated\n    deprecationReason\n  }\n  possibleTypes {\n    ...TypeRef\n  }\n}\n\nfragment InputValue on __InputValue {\n  name\n  description\n  type {\n    ...TypeRef\n  }\n  defaultValue\n}\n\nfragment TypeRef on __Type {\n  kind\n  name\n  ofType {\n    kind\n    name\n    ofType {\n      kind\n      name\n      ofType {\n        kind\n        name\n        ofType {\n          kind\n          name\n          ofType {\n            kind\n            name\n            ofType {\n              kind\n              name\n              ofType {\n                kind\n                name\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}\n"}`
+const silentIntrospectionQueryWithOperationName = `{"operationName":"IntrospectionQuery","variables":{},"query":"{\n  __schema {\n    queryType {\n      name\n    }\n    mutationType {\n      name\n    }\n    subscriptionType {\n      name\n    }\n    types {\n      ...FullType\n    }\n    directives {\n      name\n      description\n      locations\n      args {\n        ...InputValue\n      }\n    }\n  }\n}\n\nfragment FullType on __Type {\n  kind\n  name\n  description\n  fields(includeDeprecated: true) {\n    name\n    description\n    args {\n      ...InputValue\n    }\n    type {\n      ...TypeRef\n    }\n    isDeprecated\n    deprecationReason\n  }\n  inputFields {\n    ...InputValue\n  }\n  interfaces {\n    ...TypeRef\n  }\n  enumValues(includeDeprecated: true) {\n    name\n    description\n    isDeprecated\n    deprecationReason\n  }\n  possibleTypes {\n    ...TypeRef\n  }\n}\n\nfragment InputValue on __InputValue {\n  name\n  description\n  type {\n    ...TypeRef\n  }\n  defaultValue\n}\n\nfragment TypeRef on __Type {\n  kind\n  name\n  ofType {\n    kind\n    name\n    ofType {\n      kind\n      name\n      ofType {\n        kind\n        name\n        ofType {\n          kind\n          name\n          ofType {\n            kind\n            name\n            ofType {\n              kind\n              name\n              ofType {\n                kind\n                name\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}\n"}`
+const schemaIntrospectionQueryWithMultipleQueries = `{"operationName":"IntrospectionQuery","query":"query Hello { world } query IntrospectionQuery { __schema { types { name } } }"}`
+const typeIntrospectionQueryWithMultipleQueries = `{"operationName":"IntrospectionQuery","query":"query Hello { world } query IntrospectionQuery { __type(name: \"Droid\") { name } }"}`
+const typeIntrospectionQuery = `{"operationName":null,"variables":{},"query":"{__type(name:\"Foo\"){kind}}"}`
+const nonIntrospectionQuery = `{"operationName":"Foo","query":"query Foo {bar}"}`
+const nonIntrospectionQueryWithIntrospectionQueryName = `{"operationName":"IntrospectionQuery","query":"query IntrospectionQuery {bar}"}`
+const nonSchemaIntrospectionQueryWithAliases = `{"operationName":"IntrospectionQuery","query":"query IntrospectionQuery { __schema: user { name types: account { balance } } }"}`
+const nonTypeIntrospectionQueryWithAliases = `{"operationName":"IntrospectionQuery","query":"query IntrospectionQuery { __type: user { name } }"}`
+const nonSchemaIntrospectionQueryWithAdditionalFields = `{"operationName":"IntrospectionQuery","query":"query IntrospectionQuery { __schema { types { name } } user { name account { balance } } }"}`
+const nonTypeIntrospectionQueryWithAdditionalFields = `{"operationName":"IntrospectionQuery","query":"query IntrospectionQuery { __type(name: \"Droid\") { name } user { name account { balance } } }"}`
+const nonSchemaIntrospectionQueryWithMultipleQueries = `{"operationName":"Hello","query":"query Hello { world } query IntrospectionQuery { __schema { types { name } } }"}`
+const nonTypeIntrospectionQueryWithMultipleQueries = `{"operationName":"Hello","query":"query Hello { world } query IntrospectionQuery { __type(name: \"Droid\") { name } }"}`
+const typeIntrospectionWithAdditionalFields = `{"operationName":null,"variables":{},"query":"query Intro { __typename __type(name: \"Query\"){ name } }"}`
+const mutationQuery = `{"operationName":null,"query":"mutation Foo {bar}"}`
+
+func TestOperationProcessorIntrospectionQuery(t *testing.T) {
+	executor := &Executor{
+		PlanConfig:      plan.Configuration{},
+		RouterSchema:    nil,
+		Resolver:        nil,
+		RenameTypeNames: nil,
+	}
+	parser := NewOperationProcessor(OperationProcessorOptions{
+		Executor:                executor,
+		MaxOperationSizeInBytes: 10 << 20,
+		ParseKitPoolSize:        4,
+		IntrospectionEnabled:    false,
+	})
+	testCases := []struct {
+		Name      string
+		Input     string
+		HttpError bool
+		Valid     bool
+	}{
+		{
+			Name:      "namedIntrospectionQuery",
+			Input:     namedIntrospectionQuery,
+			HttpError: true,
+		},
+		{
+			Name:      "singleNamedIntrospectionQueryWithoutOperationName",
+			Input:     singleNamedIntrospectionQueryWithoutOperationName,
+			HttpError: true,
+		},
+		{
+			Name:      "silentIntrospectionQuery",
+			Input:     silentIntrospectionQuery,
+			HttpError: true,
+		},
+		{
+			Name:      "silentIntrospectionQueryWithOperationName",
+			Input:     silentIntrospectionQueryWithOperationName,
+			HttpError: true,
+		},
+		{
+			Name:      "schemaIntrospectionQueryWithMultipleQueries",
+			Input:     schemaIntrospectionQueryWithMultipleQueries,
+			HttpError: true,
+		},
+		{
+			Name:      "typeIntrospectionQueryWithMultipleQueries",
+			Input:     typeIntrospectionQueryWithMultipleQueries,
+			HttpError: true,
+		},
+		{
+			Name:      "typeIntrospectionQuery",
+			Input:     typeIntrospectionQuery,
+			HttpError: true,
+		},
+		{
+			Name:  "nonIntrospectionQuery",
+			Input: nonIntrospectionQuery,
+			Valid: true,
+		},
+		{
+			Name:  "nonIntrospectionQueryWithIntrospectionQueryName",
+			Input: nonIntrospectionQueryWithIntrospectionQueryName,
+			Valid: true,
+		},
+		{
+			Name:  "nonSchemaIntrospectionQueryWithAliases",
+			Input: nonSchemaIntrospectionQueryWithAliases,
+			Valid: true,
+		},
+		{
+			Name:  "nonTypeIntrospectionQueryWithAliases",
+			Input: nonTypeIntrospectionQueryWithAliases,
+			Valid: true,
+		},
+		{
+			Name:      "nonSchemaIntrospectionQueryWithAdditionalFields",
+			Input:     nonSchemaIntrospectionQueryWithAdditionalFields,
+			HttpError: true,
+		},
+		{
+			Name:      "nonTypeIntrospectionQueryWithAdditionalFields",
+			Input:     nonTypeIntrospectionQueryWithAdditionalFields,
+			HttpError: true,
+		},
+		{
+			Name:      "typeIntrospectionWithAdditionalFields",
+			Input:     typeIntrospectionWithAdditionalFields,
+			HttpError: true,
+		},
+		{
+			Name:  "nonSchemaIntrospectionQueryWithMultipleQueries",
+			Input: nonSchemaIntrospectionQueryWithMultipleQueries,
+			Valid: true,
+		},
+		{
+			Name:  "nonTypeIntrospectionQueryWithMultipleQueries",
+			Input: nonTypeIntrospectionQueryWithMultipleQueries,
+			Valid: true,
+		},
+		{
+			Name:  "mutationQuery",
+			Input: mutationQuery,
+			Valid: true,
+		},
+	}
+
+	var inputError HttpError
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.Name, func(t *testing.T) {
+
+			kit, err := parser.NewKit()
+			require.NoError(t, err)
+			defer kit.Free()
+
+			err = kit.UnmarshalOperationFromBody([]byte(tc.Input))
+			assert.NoError(t, err)
+
+			err = kit.Parse()
+
+			if tc.Valid {
+				assert.NoError(t, err)
+			} else if tc.HttpError {
+				assert.True(t, errors.As(err, &inputError), "expected an http error, got %s", err)
+				assert.Equal(t, err.Error(), "GraphQL introspection is disabled by Cosmo Router, but the query contained __schema or __type. To enable introspection, set introspection_enabled: true in the Router configuration")
+			} else {
+				assert.Error(t, err)
 			}
 		})
 	}

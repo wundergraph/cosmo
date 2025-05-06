@@ -1,4 +1,4 @@
-import { CreateOIDCProviderRequest } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { CreateOIDCProviderRequest, GroupMapper } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { uid } from 'uid';
 import * as schema from '../../db/schema.js';
@@ -41,13 +41,38 @@ export default class OidcProvider {
 
     await oidcRepo.addOidcProvider({ name: input.name, organizationId, endpoint, alias });
 
-    for (const mapper of input.mappers) {
+    await this.addIDPMappers({
+      kcClient,
+      kcRealm,
+      mappers: input.mappers,
+      organizationSlug,
+      alias,
+      endpoint,
+    });
+  }
+
+  public async addIDPMappers({
+    kcClient,
+    kcRealm,
+    mappers,
+    organizationSlug,
+    endpoint,
+    alias,
+  }: {
+    kcClient: Keycloak;
+    kcRealm: string;
+    mappers: GroupMapper[];
+    organizationSlug: string;
+    alias: string;
+    endpoint: string;
+  }) {
+    for (const mapper of mappers) {
       let key = 'ssoGroups';
       // using a different claim name for microsoft entra as it doesnt allow us to change the name of the claim.
       if (endpoint === 'login.microsoftonline.com') {
         key = 'groups';
       }
-      const claims = `[{ "key": "${key}", "value": "${mapper.ssoGroup}" }]`;
+      const claims = `[{ "key": "${key}", "value": "${mapper.ssoGroup.trim()}" }]`;
       let keycloakGroupName;
 
       switch (mapper.role) {
@@ -73,6 +98,63 @@ export default class OidcProvider {
         alias,
         claims,
         keycloakGroupName,
+      });
+    }
+  }
+
+  public async fetchIDPMappers({ kcClient, kcRealm, alias }: { kcClient: Keycloak; kcRealm: string; alias: string }) {
+    const mappers = await kcClient.client.identityProviders.findMappers({
+      alias,
+      realm: kcRealm,
+    });
+
+    const idpMappers: GroupMapper[] = [];
+    for (const mapper of mappers) {
+      if (mapper.identityProviderMapper !== 'oidc-advanced-group-idp-mapper') {
+        continue;
+      }
+      const keycloakGroup = mapper.config.group;
+      const splitKCGroup = keycloakGroup.split('/');
+      if (splitKCGroup.length !== 3) {
+        continue;
+      }
+      const roleInCosmo: string = splitKCGroup[2];
+
+      const stringifiedClaims = mapper.config.claims;
+      const claims = JSON.parse(stringifiedClaims);
+      if (!claims || claims.length === 0) {
+        continue;
+      }
+      // this is a default mapper that is created, so skipping it
+      if (claims[0].value === '.*') {
+        continue;
+      }
+
+      idpMappers.push(
+        new GroupMapper({
+          role: roleInCosmo[0].toUpperCase() + roleInCosmo.slice(1),
+          ssoGroup: claims[0].value,
+        }),
+      );
+    }
+    return [
+      ...idpMappers.filter((mapper) => mapper.role === 'Admin'),
+      ...idpMappers.filter((mapper) => mapper.role === 'Developer'),
+      ...idpMappers.filter((mapper) => mapper.role === 'Viewer'),
+    ];
+  }
+
+  public async deleteIDPMappers({ kcClient, kcRealm, alias }: { kcClient: Keycloak; kcRealm: string; alias: string }) {
+    const mappers = await kcClient.client.identityProviders.findMappers({
+      alias,
+      realm: kcRealm,
+    });
+
+    for (const mapper of mappers) {
+      await kcClient.client.identityProviders.delMapper({
+        alias,
+        id: mapper.id!,
+        realm: kcRealm,
       });
     }
   }

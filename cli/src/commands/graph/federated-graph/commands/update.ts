@@ -34,12 +34,12 @@ export default (opts: BaseCommandOptions) => {
     '--admission-webhook-secret [string]',
     'The admission webhook secret is used to sign requests to the webhook url.',
   );
-
+  command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
   command.option('--readme <path-to-readme>', 'The markdown file which describes the subgraph.');
   command.action(async (name, options) => {
     let readmeFile;
     if (options.readme) {
-      readmeFile = resolve(process.cwd(), options.readme);
+      readmeFile = resolve(options.readme);
       if (!existsSync(readmeFile)) {
         program.error(
           pc.red(
@@ -134,8 +134,31 @@ export default (opts: BaseCommandOptions) => {
         if (resp.response?.details) {
           console.log(pc.red(pc.bold(resp.response?.details)));
         }
-        process.exit(1);
+        process.exitCode = 1;
+        return;
       }
+    }
+
+    if (!options.suppressWarnings && resp.compositionWarnings.length > 0) {
+      const compositionWarningsTable = new Table({
+        head: [
+          pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
+          pc.bold(pc.white('NAMESPACE')),
+          pc.bold(pc.white('WARNING_MESSAGE')),
+        ],
+        colWidths: [30, 30, 120],
+        wordWrap: true,
+      });
+
+      console.log(pc.yellow(`The following warnings were produced while composing the federated graph:`));
+      for (const compositionWarning of resp.compositionWarnings) {
+        compositionWarningsTable.push([
+          compositionWarning.federatedGraphName,
+          compositionWarning.namespace,
+          compositionWarning.message,
+        ]);
+      }
+      console.log(compositionWarningsTable.toString());
     }
   });
 

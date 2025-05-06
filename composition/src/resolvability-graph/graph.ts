@@ -1,5 +1,3 @@
-import { add, getOrThrowError, getValueOrDefault, GraphFieldData } from '../utils/utils';
-import { N_A, ROOT_TYPE_NAMES, RootTypeName } from '../utils/string-constants';
 import { Edge, EntityDataNode, GraphNode, GraphNodeOptions, RootNode } from './graph-nodes';
 import {
   EntityResolvabilityFailure,
@@ -9,6 +7,9 @@ import {
   NodeResolutionData,
   RootFieldData,
 } from './utils';
+import { NOT_APPLICABLE, ROOT_TYPE_NAMES } from '../utils/string-constants';
+import { GraphFieldData, RootTypeName } from '../utils/types';
+import { add, getOrThrowError, getValueOrDefault } from '../utils/utils';
 
 export class Graph {
   edgeId = -1;
@@ -17,7 +18,7 @@ export class Graph {
   nodeByNodeName = new Map<string, GraphNode>();
   nodesByTypeName = new Map<string, Array<GraphNode>>();
   rootNodeByRootTypeName = new Map<RootTypeName, RootNode>();
-  subgraphName = N_A;
+  subgraphName = NOT_APPLICABLE;
   resolvableFieldNamesByRelativeFieldPathByEntityNodeName = new Map<string, Map<string, NodeResolutionData>>();
   nodeResolutionDataByFieldPath = new Map<string, NodeResolutionData>();
   unresolvableFieldPaths = new Set<string>();

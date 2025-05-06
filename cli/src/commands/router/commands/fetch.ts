@@ -3,7 +3,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { Command, program } from 'commander';
 import jwtDecode from 'jwt-decode';
 import pc from 'picocolors';
-import { join } from 'pathe';
+import { resolve } from 'pathe';
 import { getBaseHeaders, config } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { GraphToken } from '../../auth/utils.js';
@@ -11,7 +11,7 @@ import { makeSignature, safeCompare } from '../../../core/signature.js';
 
 export const handleOutput = async (out: string | undefined, config: string) => {
   if (out) {
-    await writeFile(join(process.cwd(), out), config ?? '');
+    await writeFile(resolve(out), config ?? '');
   } else {
     console.log(config);
   }
@@ -45,7 +45,8 @@ export default (opts: BaseCommandOptions) => {
       if (resp.response?.details) {
         console.log(pc.red(pc.bold(resp.response?.details)));
       }
-      process.exit(1);
+      process.exitCode = 1;
+      return;
     }
 
     let decoded: GraphToken;
@@ -82,14 +83,16 @@ export default (opts: BaseCommandOptions) => {
       const signature = response.headers.get('X-Signature-SHA256');
       if (!signature) {
         console.log(pc.red('You provided a signature key, but the router config does not have a signature header.'));
-        process.exit(1);
+        process.exitCode = 1;
+        return;
       }
 
       const hash = await makeSignature(body, options.graphSignKey);
 
       if (!safeCompare(hash, signature)) {
         console.log(pc.red('The signature of the router config does not match the provided signature key.'));
-        process.exit(1);
+        process.exitCode = 1;
+        return;
       }
 
       if (options.out) {

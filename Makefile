@@ -7,7 +7,7 @@ setup-build-tools:
 
 setup-dev-tools: setup-build-tools
 	go install github.com/amacneil/dbmate/v2@v2.6.0
-	go install honnef.co/go/tools/cmd/staticcheck@2023.1.7
+	go install honnef.co/go/tools/cmd/staticcheck@2024.1.1
 	go install github.com/yannh/kubeconform/cmd/kubeconform@v0.6.3
 	go install github.com/norwoodj/helm-docs/cmd/helm-docs@v1.11.3
 
@@ -37,6 +37,15 @@ infra-restart:
 
 infra-down-v:
 	docker compose -f docker-compose.yml --profile dev down --remove-orphans -v
+
+infra-debug-down:
+	docker compose -f docker-compose.yml --profile debug down --remove-orphans
+
+infra-debug-down-v:
+	docker compose -f docker-compose.yml --profile debug down --remove-orphans -v
+
+infra-debug-up:
+	docker compose -f docker-compose.yml --profile debug up --remove-orphans --detach
 
 seed:
 	pnpm -r run --filter './controlplane' seed
@@ -81,6 +90,7 @@ generate:
 generate-go:
 	rm -rf router/gen && buf generate --path proto/wg/cosmo/node --path proto/wg/cosmo/common --path proto/wg/cosmo/graphqlmetrics --template buf.router.go.gen.yaml
 	rm -rf graphqlmetrics/gen && buf generate --path proto/wg/cosmo/graphqlmetrics --path proto/wg/cosmo/common --template buf.graphqlmetrics.go.gen.yaml
+	rm -rf connect-go/wg && buf generate --path proto/wg/cosmo/platform --path proto/wg/cosmo/notifications --path proto/wg/cosmo/common --path proto/wg/cosmo/node --template buf.connect-go.go.gen.yaml
 
 start-cp:
 	pnpm -r run --filter './controlplane' dev
@@ -112,7 +122,10 @@ dc-federation-demo:
 
 DC_FLAGS=
 dc-subgraphs-demo:
-	OTEL_AUTH_TOKEN=$(OTEL_AUTH_TOKEN) docker compose -f docker-compose.full.yml --profile subgraphs up --remove-orphans --detach $(DC_FLAGS)
+	OTEL_AUTH_TOKEN=$(OTEL_AUTH_TOKEN) docker compose -f docker-compose.full.yml --profile subgraphs up --remove-orphans --detach $(DC_FLAGS) && make dc-subgraphs-config
+
+dc-subgraphs-config:
+	pushd router && make compose-demo-config && popd
 
 dc-subgraphs-demo-down:
 	docker compose -f docker-compose.full.yml --profile subgraphs down --remove-orphans
@@ -149,11 +162,7 @@ run-subgraphs-local:
 sync-go-workspace:
 	cd router && go mod tidy
 	cd demo && make bump-deps
-	cd aws-lambda-router && make bump-deps
-	cd composition-go && go mod tidy
-	cd graphqlmetrics && go mod tidy
 	cd router-tests && make bump-deps
-	go work sync
 
 # Validates if any breaking changes has been introduced.
 # Compares the head of the branch with your local changes
@@ -162,3 +171,17 @@ check-buf:
 
 buf-lint:
 	buf lint
+
+new-cp-data-migration:
+	@if [ -z "$(name)" ]; then \
+		echo "Usage: make new-data-migration name=<migration_name>"; \
+		exit 1; \
+	fi
+	mkdir -p data_migrations/controlplane/$(shell date +%s)_$(name)
+
+new-gm-data-migration:
+	@if [ -z "$(name)" ]; then \
+		echo "Usage: make new-data-migration name=<migration_name>"; \
+		exit 1; \
+	fi
+	mkdir -p data_migrations/graphqlmetrics/$(shell date +%s)_$(name)

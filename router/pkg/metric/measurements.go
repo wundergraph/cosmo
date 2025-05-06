@@ -2,6 +2,7 @@ package metric
 
 import (
 	"fmt"
+
 	otelmetric "go.opentelemetry.io/otel/metric"
 )
 
@@ -80,6 +81,26 @@ func createMeasures(meter otelmetric.Meter) (*Measurements, error) {
 	}
 
 	h.upDownCounters[InFlightRequestsUpDownCounter] = inFlightRequestsGauge
+
+	operationPlanningTime, err := meter.Float64Histogram(
+		OperationPlanningTime,
+		OperationPlanningTimeHistogramOptions...,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create operation planning time measure: %w", err)
+	}
+
+	h.histograms[OperationPlanningTime] = operationPlanningTime
+
+	schemaFieldUsage, err := meter.Int64Counter(
+		SchemaFieldUsageCounter,
+		SchemaFieldUsageCounterOptions...,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create schema usage counter: %w", err)
+	}
+
+	h.counters[SchemaFieldUsageCounter] = schemaFieldUsage
 
 	return h, nil
 }

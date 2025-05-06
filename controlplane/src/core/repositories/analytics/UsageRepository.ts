@@ -5,7 +5,8 @@ import {
   RequestSeriesItem,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { ClickHouseClient } from '../../clickhouse/index.js';
-import { DateRange, TimeFilters } from '../../../types/index.js';
+import { DateRange, Field, TimeFilters } from '../../../types/index.js';
+import { flipDateRangeValuesIfNeeded } from '../../util.js';
 import { parseTimeFilters } from './util.js';
 
 export class UsageRepository {
@@ -15,15 +16,13 @@ export class UsageRepository {
     whereSql: string,
     timeFilters: TimeFilters,
   ): Promise<PlainMessage<RequestSeriesItem>[]> {
-    const {
-      dateRange: { start, end },
-      granule,
-    } = timeFilters;
+    const { dateRange, granule } = timeFilters;
+    flipDateRangeValuesIfNeeded(dateRange);
 
     const query = `
       WITH 
-        toStartOfInterval(toDateTime('${start}'), INTERVAL ${granule} MINUTE) AS startDate,
-        toDateTime('${end}') AS endDate
+        toStartOfInterval(toDateTime('${dateRange.start}'), INTERVAL ${granule} MINUTE) AS startDate,
+        toDateTime('${dateRange.end}') AS endDate
       SELECT
           toStartOfInterval(Timestamp, INTERVAL ${granule} MINUTE) AS timestamp,
           SUM(TotalUsages) AS totalRequests,
@@ -32,8 +31,8 @@ export class UsageRepository {
       WHERE Timestamp >= startDate AND Timestamp <= endDate AND ${whereSql}
       GROUP BY timestamp
       ORDER BY timestamp WITH FILL 
-      FROM toStartOfInterval(toDateTime('${start}'), INTERVAL ${granule} MINUTE)
-      TO toDateTime('${end}')
+      FROM toStartOfInterval(toDateTime('${dateRange.start}'), INTERVAL ${granule} MINUTE)
+      TO toDateTime('${dateRange.end}')
       STEP INTERVAL ${granule} minute
     `;
 
@@ -129,7 +128,6 @@ export class UsageRepository {
     namedType?: string;
     range?: number;
     dateRange?: DateRange;
-    routerConfigVersion?: string;
     organizationId: string;
     federatedGraphId: string;
   }) {
@@ -145,9 +143,7 @@ export class UsageRepository {
     if (input.namedType) {
       whereSql += ` AND NamedType = '${input.namedType}'`;
     }
-    if (input.routerConfigVersion) {
-      whereSql += ` AND RouterConfigVersion = '${input.routerConfigVersion}'`;
-    }
+    whereSql += ` AND IsIndirectFieldUsage = false`;
 
     const [requestSeries, clients, meta] = await Promise.all([
       this.getUsageRequestSeries(whereSql, timeFilters),
@@ -160,5 +156,150 @@ export class UsageRepository {
       clients,
       meta,
     };
+  }
+
+  public async getUnusedFields({
+    organizationId,
+    federatedGraphId,
+    rangeInHours,
+    fields,
+  }: {
+    organizationId: string;
+    federatedGraphId: string;
+    rangeInHours: number;
+    fields: Field[];
+  }): Promise<{ name: string; typeName: string }[]> {
+    const arrayJoinFields = fields.map((field) => `('${field.name}', '${field.typeName}')`).join(', ');
+    const {
+      dateRange: { end, start },
+    } = parseTimeFilters(undefined, rangeInHours);
+    // all_fields is a table of all fields and its typenames that we want to check if they are unused.
+    // used_fields is table which contains the fields that are used in the given time range.
+    // We then left join all_fields with used_fields and select the fields that do not have an entry in used_fields.
+    // which will give us the fields that are not used.
+
+    // In the used_fields query, we use ARRAY JOIN to expand the TypeNames array into separate rows.
+
+    const query = `
+      WITH 
+        toStartOfDay(toDateTime('${start}')) AS startDate,
+        toDateTime('${end}') AS endDate,
+        all_fields AS (
+          SELECT
+              field.1 as Name,
+              field.2 as TypeName
+          FROM
+          (
+            SELECT
+                arrayJoin([ ${arrayJoinFields} ]) as field
+          )
+        ),
+        used_fields AS (
+            SELECT
+                DISTINCT on (FieldName, TypeName) FieldName,
+                TypeName
+            from
+                gql_metrics_schema_usage_lite_1d_90d 
+                ARRAY JOIN TypeNames AS TypeName
+            where
+                Timestamp >= startDate AND Timestamp <= endDate
+                AND OrganizationID = '${organizationId}'
+                AND FederatedGraphID = '${federatedGraphId}'
+            GROUP BY
+                FieldName, TypeName
+        )
+      SELECT
+          all_fields.Name as name,
+          all_fields.TypeName as typeName
+      from
+          all_fields
+          LEFT JOIN used_fields ON all_fields.Name = used_fields.FieldName
+          AND all_fields.TypeName = used_fields.TypeName
+      WHERE
+          used_fields.FieldName = ''
+          AND used_fields.TypeName = ''
+    `;
+
+    const res = await this.client.queryPromise(query);
+
+    if (Array.isArray(res)) {
+      return res.map((item) => ({
+        name: item.name,
+        typeName: item.typeName,
+      }));
+    }
+
+    return [];
+  }
+
+  public async getUsedFields({
+    organizationId,
+    federatedGraphId,
+    range,
+    fields,
+  }: {
+    organizationId: string;
+    federatedGraphId: string;
+    range: number;
+    fields: Field[];
+  }): Promise<{ name: string; typeName: string }[]> {
+    const arrayJoinFields = fields.map((field) => `('${field.name}', '${field.typeName}')`).join(', ');
+    const {
+      dateRange: { end, start },
+    } = parseTimeFilters(undefined, range);
+
+    // all_fields is a table of all fields and their typenames that we want to check if they are used.
+    // used_fields is table which contains the fields and their typenames that are used in the given time range.
+    // We then inner join all_fields with used_fields and select all the entries.
+    // which will give us the fields that are used.
+
+    // In the used_fields query, we use ARRAY JOIN to expand the TypeNames array into separate rows.
+    const query = `
+      WITH 
+        toStartOfDay(toDateTime('${start}')) AS startDate,
+        toDateTime('${end}') AS endDate,
+        all_fields AS (
+          SELECT
+              field.1 as Name,
+              field.2 as TypeName
+          FROM
+          (
+            SELECT
+                arrayJoin([ ${arrayJoinFields} ]) as field
+          )
+        ),
+        used_fields AS (
+            SELECT
+                DISTINCT on (FieldName, TypeName) FieldName,
+                TypeName
+            from
+                gql_metrics_schema_usage_lite_1d_90d 
+                ARRAY JOIN TypeNames AS TypeName
+            where
+                Timestamp >= startDate AND Timestamp <= endDate
+                AND OrganizationID = '${organizationId}'
+                AND FederatedGraphID = '${federatedGraphId}'
+            GROUP BY
+                FieldName, TypeName
+        )
+      SELECT
+          all_fields.Name as name,
+          all_fields.TypeName as typeName
+      from
+          all_fields
+          INNER JOIN used_fields ON all_fields.Name = used_fields.FieldName
+          AND all_fields.TypeName = used_fields.TypeName
+    `;
+
+    const res = await this.client.queryPromise(query);
+
+    if (Array.isArray(res)) {
+      return res.map((item) => ({
+        name: item.name,
+        typeName: item.typeName,
+      }));
+    }
+
+    return [];
   }
 }

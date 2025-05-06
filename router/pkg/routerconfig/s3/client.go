@@ -3,14 +3,15 @@ package s3
 import (
 	"context"
 	"errors"
+	"io"
+	"net/http"
+	"time"
+
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
-	"io"
-	"net/http"
-	"time"
 )
 
 type Option func(*Client)
@@ -30,13 +31,30 @@ type ClientOptions struct {
 }
 
 func NewClient(endpoint string, options *ClientOptions) (routerconfig.Client, error) {
-
 	client := &Client{
 		options: options,
 	}
 
+	// The providers credential chain is used to allow multiple authentication methods.
+	providers := []credentials.Provider{
+		// Static credentials allow setting the access key and secret access key directly.
+		&credentials.Static{
+			Value: credentials.Value{
+				AccessKeyID:     options.AccessKeyID,
+				SecretAccessKey: options.SecretAccessKey,
+				SignerType:      credentials.SignatureV4,
+			},
+		},
+		// IAM credentials are retrieved from the EC2 nodes assumed role.
+		&credentials.IAM{
+			Client: &http.Client{
+				Transport: http.DefaultTransport,
+			},
+		},
+	}
+
 	minioClient, err := minio.New(endpoint, &minio.Options{
-		Creds:  credentials.NewStaticV4(options.AccessKeyID, options.SecretAccessKey, ""),
+		Creds:  credentials.NewChainCredentials(providers),
 		Region: options.Region,
 		Secure: options.Secure,
 	})
@@ -48,8 +66,7 @@ func NewClient(endpoint string, options *ClientOptions) (routerconfig.Client, er
 	return client, nil
 }
 
-func (c Client) RouterConfig(ctx context.Context, version string, modifiedSince time.Time) (*routerconfig.Response, error) {
-
+func (c Client) getConfigFile(ctx context.Context, version string, modifiedSince time.Time) ([]byte, error) {
 	options := minio.GetObjectOptions{}
 
 	if !modifiedSince.IsZero() {
@@ -71,22 +88,27 @@ func (c Client) RouterConfig(ctx context.Context, version string, modifiedSince 
 	}
 	defer reader.Close()
 
-	body, err := io.ReadAll(reader)
+	return io.ReadAll(reader)
+}
+
+func (c Client) RouterConfig(ctx context.Context, version string, modifiedSince time.Time) (*routerconfig.Response, error) {
+	res := &routerconfig.Response{}
+
+	body, err := c.getConfigFile(ctx, version, modifiedSince)
 	if err != nil {
 		var minioErr minio.ErrorResponse
-		if errors.As(err, &minioErr) && minioErr.StatusCode == http.StatusNotModified {
-			return nil, configpoller.ErrConfigNotModified
+		if errors.As(err, &minioErr) {
+			if minioErr.StatusCode == http.StatusNotModified {
+				return nil, configpoller.ErrConfigNotModified
+			} else if minioErr.Code == "NoSuchKey" {
+				res.Config = routerconfig.GetDefaultConfig()
+				return res, nil
+			}
 		}
+
 		return nil, err
 	}
 
-	routerConfig, err := execution_config.UnmarshalConfig(body)
-	if err != nil {
-		return nil, err
-	}
-
-	result := &routerconfig.Response{}
-	result.Config = routerConfig
-
-	return result, nil
+	res.Config, err = execution_config.UnmarshalConfig(body)
+	return res, err
 }

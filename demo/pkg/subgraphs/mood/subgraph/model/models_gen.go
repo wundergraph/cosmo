@@ -24,18 +24,20 @@ type Query struct {
 type Mood string
 
 const (
-	MoodHappy Mood = "HAPPY"
-	MoodSad   Mood = "SAD"
+	MoodApathetic Mood = "APATHETIC"
+	MoodHappy     Mood = "HAPPY"
+	MoodSad       Mood = "SAD"
 )
 
 var AllMood = []Mood{
+	MoodApathetic,
 	MoodHappy,
 	MoodSad,
 }
 
 func (e Mood) IsValid() bool {
 	switch e {
-	case MoodHappy, MoodSad:
+	case MoodApathetic, MoodHappy, MoodSad:
 		return true
 	}
 	return false
@@ -45,7 +47,7 @@ func (e Mood) String() string {
 	return string(e)
 }
 
-func (e *Mood) UnmarshalGQL(v interface{}) error {
+func (e *Mood) UnmarshalGQL(v any) error {
 	str, ok := v.(string)
 	if !ok {
 		return fmt.Errorf("enums must be strings")

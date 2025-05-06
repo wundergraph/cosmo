@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
 	"net/url"
 	"slices"
-	"time"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/argument_templates"
 
@@ -29,52 +29,75 @@ import (
 
 type Loader struct {
 	resolver FactoryResolver
-	// includeInfo controls whether additional information like type usage and field usage is included in the plan
+	// includeInfo controls whether additional information like type usage and field usage is included in the plan de
 	includeInfo bool
 }
 
 type FactoryResolver interface {
-	ResolveGraphqlFactory() (plan.PlannerFactory[graphql_datasource.Configuration], error)
+	ResolveGraphqlFactory(subgraphName string) (plan.PlannerFactory[graphql_datasource.Configuration], error)
 	ResolveStaticFactory() (plan.PlannerFactory[staticdatasource.Configuration], error)
 	ResolvePubsubFactory() (plan.PlannerFactory[pubsub_datasource.Configuration], error)
 }
 
 type ApiTransportFactory interface {
 	RoundTripper(enableSingleFlight bool, transport http.RoundTripper) http.RoundTripper
-	DefaultTransportTimeout() time.Duration
 	DefaultHTTPProxyURL() *url.URL
 }
 
 type DefaultFactoryResolver struct {
-	baseTransport    http.RoundTripper
-	transportFactory ApiTransportFactory
-
 	static *staticdatasource.Factory[staticdatasource.Configuration]
 	pubsub *pubsub_datasource.Factory[pubsub_datasource.Configuration]
 	log    *zap.Logger
 
-	engineCtx       context.Context
-	httpClient      *http.Client
-	streamingClient *http.Client
-	factoryLogger   abstractlogger.Logger
+	engineCtx          context.Context
+	enableSingleFlight bool
+	streamingClient    *http.Client
+	subscriptionClient graphql_datasource.GraphQLSubscriptionClient
+
+	httpClient          *http.Client
+	subgraphHTTPClients map[string]*http.Client
+
+	factoryLogger abstractlogger.Logger
 }
 
 func NewDefaultFactoryResolver(
 	ctx context.Context,
-	transportFactory ApiTransportFactory,
+	transportOptions *TransportOptions,
+	subscriptionClientOptions *SubscriptionClientOptions,
 	baseTransport http.RoundTripper,
+	subgraphTransports map[string]http.RoundTripper,
 	log *zap.Logger,
 	enableSingleFlight bool,
+	enableNetPoll bool,
 	natsPubSubBySourceID map[string]pubsub_datasource.NatsPubSub,
 	kafkaPubSubBySourceID map[string]pubsub_datasource.KafkaPubSub,
 ) *DefaultFactoryResolver {
+	transportFactory := NewTransport(transportOptions)
 
-	defaultHttpClient := &http.Client{
-		Timeout:   transportFactory.DefaultTransportTimeout(),
+	defaultHTTPClient := &http.Client{
+		Timeout:   transportOptions.SubgraphTransportOptions.RequestTimeout,
 		Transport: transportFactory.RoundTripper(enableSingleFlight, baseTransport),
 	}
+
 	streamingClient := &http.Client{
 		Transport: transportFactory.RoundTripper(enableSingleFlight, baseTransport),
+	}
+
+	subgraphHTTPClients := map[string]*http.Client{}
+
+	for subgraph, subgraphOpts := range transportOptions.SubgraphTransportOptions.SubgraphMap {
+		subgraphTransport, ok := subgraphTransports[subgraph]
+		if !ok {
+			panic(fmt.Sprintf("subgraph %s not found in subgraphTransports", subgraph))
+		}
+
+		// make a new http client
+		subgraphClient := &http.Client{
+			Transport: transportFactory.RoundTripper(enableSingleFlight, subgraphTransport),
+			Timeout:   subgraphOpts.RequestTimeout,
+		}
+
+		subgraphHTTPClients[subgraph] = subgraphClient
 	}
 
 	var factoryLogger abstractlogger.Logger
@@ -82,29 +105,60 @@ func NewDefaultFactoryResolver(
 		factoryLogger = abstractlogger.NewZapLogger(log, abstractlogger.DebugLevel)
 	}
 
+	var netPollConfig graphql_datasource.NetPollConfiguration
+
+	netPollConfig.ApplyDefaults()
+
+	netPollConfig.Enable = enableNetPoll
+
+	options := []graphql_datasource.Options{
+		graphql_datasource.WithLogger(factoryLogger),
+		graphql_datasource.WithNetPollConfiguration(netPollConfig),
+	}
+
+	if subscriptionClientOptions != nil {
+		if subscriptionClientOptions.PingInterval > 0 {
+			options = append(options, graphql_datasource.WithPingInterval(subscriptionClientOptions.PingInterval))
+		}
+		if subscriptionClientOptions.ReadTimeout > 0 {
+			options = append(options, graphql_datasource.WithReadTimeout(subscriptionClientOptions.ReadTimeout))
+		}
+		if subscriptionClientOptions.PingTimeout > 0 {
+			options = append(options, graphql_datasource.WithPingTimeout(subscriptionClientOptions.PingTimeout))
+		}
+		if subscriptionClientOptions.FrameTimeout > 0 {
+			options = append(options, graphql_datasource.WithFrameTimeout(subscriptionClientOptions.FrameTimeout))
+		}
+	}
+
+	subscriptionClient := graphql_datasource.NewGraphQLSubscriptionClient(
+		defaultHTTPClient,
+		streamingClient,
+		ctx,
+		options...,
+	)
+
 	return &DefaultFactoryResolver{
-		baseTransport:    baseTransport,
-		transportFactory: transportFactory,
-		static:           &staticdatasource.Factory[staticdatasource.Configuration]{},
-		pubsub:           pubsub_datasource.NewFactory(ctx, natsPubSubBySourceID, kafkaPubSubBySourceID),
-		log:              log,
-		factoryLogger:    factoryLogger,
-		engineCtx:        ctx,
-		httpClient:       defaultHttpClient,
-		streamingClient:  streamingClient,
+		static:             &staticdatasource.Factory[staticdatasource.Configuration]{},
+		pubsub:             pubsub_datasource.NewFactory(ctx, natsPubSubBySourceID, kafkaPubSubBySourceID),
+		log:                log,
+		factoryLogger:      factoryLogger,
+		engineCtx:          ctx,
+		enableSingleFlight: enableSingleFlight,
+		streamingClient:    streamingClient,
+		subscriptionClient: subscriptionClient,
+
+		httpClient:          defaultHTTPClient,
+		subgraphHTTPClients: subgraphHTTPClients,
 	}
 }
 
-func (d *DefaultFactoryResolver) ResolveGraphqlFactory() (plan.PlannerFactory[graphql_datasource.Configuration], error) {
-	subscriptionClient := graphql_datasource.NewGraphQLSubscriptionClient(
-		d.httpClient,
-		d.streamingClient,
-		d.engineCtx,
-		graphql_datasource.WithLogger(d.factoryLogger),
-	)
+func (d *DefaultFactoryResolver) ResolveGraphqlFactory(subgraphName string) (plan.PlannerFactory[graphql_datasource.Configuration], error) {
+	if subgraphClient, ok := d.subgraphHTTPClients[subgraphName]; ok {
+		return graphql_datasource.NewFactory(d.engineCtx, subgraphClient, d.subscriptionClient)
+	}
 
-	factory, err := graphql_datasource.NewFactory(d.engineCtx, d.httpClient, subscriptionClient)
-	return factory, err
+	return graphql_datasource.NewFactory(d.engineCtx, d.httpClient, d.subscriptionClient)
 }
 
 func (d *DefaultFactoryResolver) ResolveStaticFactory() (factory plan.PlannerFactory[staticdatasource.Configuration], err error) {
@@ -133,7 +187,7 @@ func (l *Loader) LoadInternedString(engineConfig *nodev1.EngineConfiguration, st
 
 type RouterEngineConfiguration struct {
 	Execution                config.EngineExecutionConfiguration
-	Headers                  config.HeaderRules
+	Headers                  *config.HeaderRules
 	Events                   config.EventsConfiguration
 	SubgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
 }
@@ -192,9 +246,7 @@ func mapProtoFilterToPlanFilter(input *nodev1.SubscriptionFilterCondition, outpu
 }
 
 func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nodev1.Subgraph, routerEngineConfig *RouterEngineConfiguration) (*plan.Configuration, error) {
-	var (
-		outConfig plan.Configuration
-	)
+	var outConfig plan.Configuration
 	// attach field usage information to the plan
 	outConfig.DefaultFlushIntervalMillis = engineConfig.DefaultFlushInterval
 	for _, configuration := range engineConfig.FieldConfigurations {
@@ -236,9 +288,6 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 			factory, err := l.resolver.ResolveStaticFactory()
 			if err != nil {
 				return nil, err
-			}
-			if factory == nil {
-				continue
 			}
 
 			out, err = plan.NewDataSourceConfiguration[staticdatasource.Configuration](
@@ -314,18 +363,10 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 				}
 			}
 
-			dataSourceRules := FetchURLRules(&routerEngineConfig.Headers, subgraphs, subscriptionUrl)
+			dataSourceRules := FetchURLRules(routerEngineConfig.Headers, subgraphs, subscriptionUrl)
 			forwardedClientHeaders, forwardedClientRegexps, err := PropagatedHeaders(dataSourceRules)
 			if err != nil {
 				return nil, fmt.Errorf("error parsing header rules for data source %s: %w", in.Id, err)
-			}
-
-			factory, err := l.resolver.ResolveGraphqlFactory()
-			if err != nil {
-				return nil, err
-			}
-			if factory == nil {
-				continue
 			}
 
 			schemaConfiguration, err := graphql_datasource.NewSchemaConfiguration(
@@ -361,6 +402,12 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 			}
 
 			dataSourceName := l.subgraphName(subgraphs, in.Id)
+
+			factory, err := l.resolver.ResolveGraphqlFactory(dataSourceName)
+			if err != nil {
+				return nil, err
+			}
+
 			out, err = plan.NewDataSourceConfigurationWithName[graphql_datasource.Configuration](
 				in.Id,
 				dataSourceName,
@@ -384,8 +431,9 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 				var streamConfiguration *pubsub_datasource.NatsStreamConfiguration
 				if eventConfiguration.StreamConfiguration != nil {
 					streamConfiguration = &pubsub_datasource.NatsStreamConfiguration{
-						Consumer:   eventConfiguration.StreamConfiguration.GetConsumerName(),
-						StreamName: eventConfiguration.StreamConfiguration.GetStreamName(),
+						Consumer:                  eventConfiguration.StreamConfiguration.GetConsumerName(),
+						StreamName:                eventConfiguration.StreamConfiguration.GetStreamName(),
+						ConsumerInactiveThreshold: eventConfiguration.StreamConfiguration.GetConsumerInactiveThreshold(),
 					}
 				}
 
@@ -425,9 +473,6 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 			factory, err := l.resolver.ResolvePubsubFactory()
 			if err != nil {
 				return nil, err
-			}
-			if factory == nil {
-				continue
 			}
 
 			out, err = plan.NewDataSourceConfiguration[pubsub_datasource.Configuration](
@@ -478,18 +523,16 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 
 	for _, node := range in.RootNodes {
 		out.RootNodes = append(out.RootNodes, plan.TypeField{
-			TypeName:   node.TypeName,
-			FieldNames: node.FieldNames,
-			// TODO requires engine changes
-			//ExternalFieldNames: node.ExternalFieldNames,
+			TypeName:           node.TypeName,
+			FieldNames:         node.FieldNames,
+			ExternalFieldNames: node.ExternalFieldNames,
 		})
 	}
 	for _, node := range in.ChildNodes {
 		out.ChildNodes = append(out.ChildNodes, plan.TypeField{
-			TypeName:   node.TypeName,
-			FieldNames: node.FieldNames,
-			// TODO requires engine changes
-			//ExternalFieldNames: node.ExternalFieldNames,
+			TypeName:           node.TypeName,
+			FieldNames:         node.FieldNames,
+			ExternalFieldNames: node.ExternalFieldNames,
 		})
 	}
 	for _, directive := range in.Directives {
@@ -500,11 +543,32 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 	}
 
 	for _, keyConfiguration := range in.Keys {
+		var conditions []plan.KeyCondition
+
+		if len(keyConfiguration.Conditions) > 0 {
+			conditions = make([]plan.KeyCondition, 0, len(keyConfiguration.Conditions))
+			for _, condition := range keyConfiguration.Conditions {
+				coordinates := make([]plan.KeyConditionCoordinate, 0, len(condition.FieldCoordinatesPath))
+				for _, coordinate := range condition.FieldCoordinatesPath {
+					coordinates = append(coordinates, plan.KeyConditionCoordinate{
+						TypeName:  coordinate.TypeName,
+						FieldName: coordinate.FieldName,
+					})
+				}
+
+				conditions = append(conditions, plan.KeyCondition{
+					Coordinates: coordinates,
+					FieldPath:   condition.FieldPath,
+				})
+			}
+		}
+
 		out.FederationMetaData.Keys = append(out.FederationMetaData.Keys, plan.FederationFieldConfiguration{
 			TypeName:              keyConfiguration.TypeName,
 			FieldName:             keyConfiguration.FieldName,
 			SelectionSet:          keyConfiguration.SelectionSet,
 			DisableEntityResolver: keyConfiguration.DisableEntityResolver,
+			Conditions:            conditions,
 		})
 	}
 	for _, providesConfiguration := range in.Provides {

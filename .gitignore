@@ -2,6 +2,7 @@ node_modules
 .husky
 .idea
 .vscode
+.zed
 **/*.env
 **/*.env.*
 !**/*.env.example
@@ -16,3 +17,7 @@ lerna-debug.log
 .github/scripts/keycloak-22.0.4/**
 .github/scripts/keycloak-22.0.4.zip
 /router-tests/cmd/config-validator/router-configs/**
+
+# Go workspace files
+go.work
+go.work.sum

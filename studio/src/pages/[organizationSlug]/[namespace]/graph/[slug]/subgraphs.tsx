@@ -41,11 +41,11 @@ const SubGraphsPage: NextPageWithLayout = () => {
     if (tab === "featureSubgraphs") {
       const fuse = new Fuse(graphData.featureSubgraphs, {
         keys: ["name"],
-        minMatchCharLength: 1,
+        useExtendedSearch: true,
       });
 
       const searchedFetaureSubgraphs = search
-        ? fuse.search(search).map(({ item }) => item)
+        ? fuse.search(`'${search}`).map(({ item }) => item)
         : graphData.featureSubgraphs;
 
       setTotalCount(searchedFetaureSubgraphs.length);
@@ -54,12 +54,13 @@ const SubGraphsPage: NextPageWithLayout = () => {
       );
     } else {
       const fuse = new Fuse(graphData.subgraphs, {
-        keys: ["name"],
-        minMatchCharLength: 1,
+        keys: ["name", "id"],
+        useExtendedSearch: true,
       });
 
+      // https://www.fusejs.io/examples.html#default-weight:~:text=%23-,Extended%20Search,-This%20form%20of
       const searchedSubgraphs = search
-        ? fuse.search(search).map(({ item }) => item)
+        ? fuse.search(`'${search}`).map(({ item }) => item)
         : graphData.subgraphs;
 
       setTotalCount(searchedSubgraphs.length);
@@ -74,7 +75,7 @@ const SubGraphsPage: NextPageWithLayout = () => {
       <div className="relative mb-4">
         <MagnifyingGlassIcon className="absolute bottom-0 left-3 top-0 my-auto" />
         <Input
-          placeholder="Search by name"
+          placeholder="Search by ID or Name"
           className="pl-8 pr-10"
           value={search}
           onChange={(e) => {

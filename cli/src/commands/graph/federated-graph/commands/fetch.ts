@@ -1,10 +1,10 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { Command } from 'commander';
 import yaml from 'js-yaml';
-import { join } from 'pathe';
+import { join, resolve } from 'pathe';
 import pc from 'picocolors';
 import { BaseCommandOptions } from '../../../../core/types/types.js';
-import { fetchRouterConfig, getFederatedGraphSDL, getSubgraphSDL, getSubgraphsOfFedGraph } from '../utils.js';
+import { fetchRouterConfig, getFederatedGraphSchemas, getSubgraphSDL, getSubgraphsOfFedGraph } from '../utils.js';
 
 export default (opts: BaseCommandOptions) => {
   const cmd = new Command('fetch');
@@ -23,13 +23,13 @@ export default (opts: BaseCommandOptions) => {
 
   cmd.action(async (name, options) => {
     try {
-      const fedGraphSDL = await getFederatedGraphSDL({ client: opts.client, name, namespace: options.namespace });
+      const fedGraphSchemas = await getFederatedGraphSchemas({
+        client: opts.client,
+        name,
+        namespace: options.namespace,
+      });
 
-      const basePath = join(
-        process.cwd(),
-        options.out || '',
-        `/${name}${options.namespace ? `-${options.namespace}` : ''}/`,
-      );
+      const basePath = resolve(options.out, `${name}${options.namespace ? `-${options.namespace}` : ''}`);
       const superGraphPath = join(basePath, '/supergraph/');
       const subgraphPath = join(basePath, '/subgraphs/');
       const scriptsPath = join(basePath, '/scripts/');
@@ -51,7 +51,11 @@ export default (opts: BaseCommandOptions) => {
       });
       writeFileSync(join(superGraphPath, `cosmoConfig.json`), routerConfig);
 
-      writeFileSync(join(superGraphPath, `cosmoSchema.graphql`), fedGraphSDL);
+      writeFileSync(join(superGraphPath, `cosmoSchema.graphql`), fedGraphSchemas.sdl);
+
+      if (fedGraphSchemas.clientSchema) {
+        writeFileSync(join(superGraphPath, `cosmoClientSchema.graphql`), fedGraphSchemas.clientSchema);
+      }
 
       const subgraphs = await getSubgraphsOfFedGraph({ client: opts.client, name, namespace: options.namespace });
 
@@ -174,7 +178,9 @@ rover supergraph compose --config '${join(basePath, `rover-composition.yaml`)}' 
       if (e.message) {
         console.error(pc.red(e.message));
       }
-      process.exit(1);
+      process.exitCode = 1;
+      // eslint-disable-next-line no-useless-return
+      return;
     }
   });
 

@@ -3,14 +3,16 @@ import {
   AnalyticsViewFilterOperator,
   CustomOptions,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { ClickHouseClient } from '../../clickhouse/index.js';
 import { DateRange } from '../../../types/index.js';
+import { ClickHouseClient } from '../../clickhouse/index.js';
+import { flipDateRangeValuesIfNeeded } from '../../util.js';
 import {
   BaseFilters,
   buildAnalyticsViewFilters,
   buildCoercedFilterSqlStatement,
   CoercedFilterValues,
   coerceFilterValues,
+  escapeStringsFromParams,
   getDateRange,
   getGranularity,
   isoDateRangeToTimestamps,
@@ -43,6 +45,14 @@ interface GetMetricsProps {
   queryParams?: CoercedFilterValues;
 }
 
+interface LatencySeries {
+  timestamp: string;
+  value: string;
+  p50?: number;
+  p90?: number;
+  p99?: number;
+}
+
 export class MetricsRepository {
   constructor(private client: ClickHouseClient) {}
 
@@ -61,6 +71,7 @@ export class MetricsRepository {
   }: GetMetricsProps) {
     // to minutes
     const multiplier = rangeInHours * 60;
+    flipDateRangeValuesIfNeeded(dateRange);
 
     // get request rate in last [range]h
     const queryRate = (start: number, end: number) => {
@@ -112,7 +123,7 @@ export class MetricsRepository {
 
     // get time series of last [range] hours
     const querySeries = (start: number, end: number) => {
-      return this.client.queryPromise<{ value: number | null }[]>(
+      return this.client.queryPromise<LatencySeries>(
         `
       WITH
         toStartOfInterval(toDateTime('${start}'), INTERVAL ${granule} MINUTE) AS startDate,
@@ -175,6 +186,8 @@ export class MetricsRepository {
     whereSql,
     queryParams,
   }: GetMetricsProps) {
+    flipDateRangeValuesIfNeeded(dateRange);
+
     const queryLatency = (quantile: string, start: number, end: number) => {
       return this.client.queryPromise<{ value: number }>(
         `
@@ -243,13 +256,14 @@ export class MetricsRepository {
 
     // get time series of last [range] hours
     const querySeries = (quantile: string, start: number, end: number) => {
-      return this.client.queryPromise<{ value: number | null }[]>(
+      return this.client.queryPromise<LatencySeries>(
         `
         WITH
           toStartOfInterval(toDateTime('${start}'), INTERVAL ${granule} MINUTE) AS startDate,
           toDateTime('${end}') AS endDate
         SELECT
             toStartOfInterval(Timestamp, INTERVAL ${granule} MINUTE) AS timestamp,
+            -- Default
             func_rank(${quantile}, BucketCounts) as rank,
             func_rank_bucket_lower_index(rank, BucketCounts) as b,
             func_histogram_v2(
@@ -258,6 +272,33 @@ export class MetricsRepository {
                 BucketCounts,
                 anyLast(ExplicitBounds)
             ) as value,
+            -- P50
+            func_rank(0.50, BucketCounts) as rank50,
+            func_rank_bucket_lower_index(rank50, BucketCounts) as b50,
+            func_histogram_v2(
+                rank50,
+                b50,
+                BucketCounts,
+                anyLast(ExplicitBounds)
+            ) as p50,
+            -- P90
+            func_rank(0.90, BucketCounts) as rank90,
+            func_rank_bucket_lower_index(rank90, BucketCounts) as b90,
+            func_histogram_v2(
+                rank90,
+                b90,
+                BucketCounts,
+                anyLast(ExplicitBounds)
+            ) as p90,
+            -- P90
+            func_rank(0.99, BucketCounts) as rank99,
+            func_rank_bucket_lower_index(rank99, BucketCounts) as b99,
+            func_histogram_v2(
+                rank99,
+                b99,
+                BucketCounts,
+                anyLast(ExplicitBounds)
+            ) as p99,
 
             -- Histogram aggregations
             sumForEachMerge(BucketCounts) as BucketCounts
@@ -316,6 +357,8 @@ export class MetricsRepository {
     whereSql,
     queryParams,
   }: GetMetricsProps) {
+    flipDateRangeValuesIfNeeded(dateRange);
+
     // get request rate in last [range]h
     const queryPercentage = (start: number, end: number) => {
       return this.client.queryPromise<{ errorPercentage: number }>(
@@ -379,7 +422,7 @@ export class MetricsRepository {
 
     // get time series of last [range] hours
     const getSeries = (start: number, end: number) => {
-      return this.client.queryPromise<{ value: number | null }[]>(
+      return this.client.queryPromise<LatencySeries>(
         `
       WITH
         toStartOfInterval(toDateTime('${start}'), INTERVAL ${granule} MINUTE) AS startDate,
@@ -442,6 +485,8 @@ export class MetricsRepository {
     whereSql,
     queryParams,
   }: GetMetricsProps) {
+    flipDateRangeValuesIfNeeded(dateRange);
+
     // get requests in last [range] hours in series of [step]
     const series = await this.client.queryPromise<{ timestamp: string; requestRate: string; errorRate: string }>(
       `
@@ -512,6 +557,11 @@ export class MetricsRepository {
 
   protected getMetricsProps(props: GetMetricsViewProps): GetMetricsProps {
     const { range, dateRange, filters: selectedFilters, organizationId, graphId } = props;
+    if (dateRange && dateRange.start > dateRange.end) {
+      const tmp = dateRange.start;
+      dateRange.start = dateRange.end;
+      dateRange.end = tmp;
+    }
 
     const parsedDateRange = isoDateRangeToTimestamps(dateRange, range);
     const [start, end] = getDateRange(parsedDateRange);
@@ -525,6 +575,8 @@ export class MetricsRepository {
     const coercedFilters = coerceFilterValues({}, selectedFilters, this.baseFilters);
 
     const { whereSql } = buildCoercedFilterSqlStatement({}, coercedFilters.result, coercedFilters.filterMapper, false);
+
+    escapeStringsFromParams(coercedFilters.result);
 
     return {
       granule,
@@ -586,6 +638,7 @@ export class MetricsRepository {
 
   public async getMetricFilters({ dateRange, organizationId, graphId }: GetMetricsProps) {
     const filters = { ...this.baseFilters };
+    flipDateRangeValuesIfNeeded(dateRange);
 
     const query = `
       WITH
@@ -649,17 +702,19 @@ export class MetricsRepository {
    * @param previousSeries
    * @returns
    */
-  protected mapSeries(diff: number, series: any[] = [], previousSeries?: any[]) {
+  protected mapSeries(diff: number, series: LatencySeries[] = [], previousSeries?: LatencySeries[]) {
     return series.map((s) => {
       const timestamp = new Date(s.timestamp + 'Z').getTime();
       const prevTimestamp = toISO9075(new Date(timestamp - diff * 60 * 60 * 1000));
+      const prevValue = previousSeries?.find((s) => s.timestamp === prevTimestamp)?.value ?? '0';
 
       return {
         timestamp: String(timestamp),
         value: String(s.value),
-        previousValue: String(
-          Number.parseFloat(previousSeries?.find((s) => s.timestamp === prevTimestamp)?.value || '0'),
-        ),
+        previousValue: String(Number.parseFloat(prevValue)),
+        p50: s.p50 === undefined ? undefined : String(s.p50),
+        p90: s.p90 === undefined ? undefined : String(s.p90),
+        p99: s.p99 === undefined ? undefined : String(s.p99),
       };
     });
   }

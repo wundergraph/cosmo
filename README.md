@@ -3,157 +3,79 @@
 </p>
 
 <div align="center">
-<h5>WunderGraph Cosmo - The GraphQL federation platform</h5>
+<h5>WunderGraph Cosmo - The GraphQL Federation Platform</h5>
 <h6><i>Reach for the stars, ignite your cosmo!</i></h6>
-<img alt="CLI CI" src="https://github.com/wundergraph/cosmo/actions/workflows/cli-ci.yaml/badge.svg">
-<img alt="Controlplane CI" src="https://github.com/wundergraph/cosmo/actions/workflows/controlplane-ci.yaml/badge.svg">
-<img alt="Studio CI" src="https://github.com/wundergraph/cosmo/actions/workflows/studio-ci.yaml/badge.svg">
-<img alt="Router CI" src="https://github.com/wundergraph/cosmo/actions/workflows/router-ci.yaml/badge.svg"/>
-<hr />
 </div>
 
-## We're hiring!
-
-<br/>
-
-Are you interested in working on graphql-go-tools, the "Engine" of Cosmo Router?
-We're looking for experienced Go developers and DevOps or Platform Engineering specialists to help us run Cosmo Cloud.
-If you're more interested in working with Customers on their GraphQL Strategy,
-we also offer Solution Architect positions.
-
-Check out the [currently open positions](https://wundergraph.com/jobs#open-positions).
+<p align="center">
+  <a href="https://cosmo-docs.wundergraph.com/getting-started/cosmo-cloud-onboarding"><strong>Quickstart</strong></a> ·
+  <a href="/examples"><strong>Examples</strong></a> ·
+  <a href="https://cosmo-docs.wundergraph.com"><strong>Docs</strong></a> ·
+  <a href="https://cosmo-docs.wundergraph.com/cli"><strong>CLI</strong></a> ·
+  <a href="https://wundergraph.com/discord"><strong>Community</strong></a> ·
+  <a href="https://github.com/wundergraph/cosmo/releases"><strong>Changelog</strong></a> ·
+  <a href="https://wundergraph.com/jobs"><strong>Hiring</strong></a>
+</p>
 
 ## Overview
 
-<br/>
+WunderGraph Cosmo is a comprehensive Lifecycle API Management platform tailored for Federated GraphQL. It encompasses everything from Schema Registry, composition checks, and analytics, to metrics, tracing, and routing. Whether you’re looking to deploy 100% on-prem or prefer a [Managed Service](https://cosmo.wundergraph.com/login), Cosmo offers flexibility without vendor lock-in, all under the Apache 2.0 license.
 
-WunderGraph Cosmo is the full Lifecycle API Management for (Federated) GraphQL. Schema Registry, composition checks, analytics, metrics, tracing and routing. Deploy 100% on-prem or use our [Managed Service](https://cosmo.wundergraph.com/login). Apache 2.0 licensed, no vendor-lock. The platform consists of the following components:
+## The State of GraphQL Federation 2024
 
-Core:
+Get insights from industry experts and Federation practicioners across all industries and learn how companies are using GraphQL Federation.
+Head over to the [State of GraphQL Federation 2024](https://wundergraph.com/state-of-graphql-federation/2024) page and download the full **48 page PDF report** for free!
 
-- [CLI](./cli): The Cosmo CLI tool `wgc`. Used to manage the Cosmo platform e.g. pushing schema, check schemas, creating new projects, managing users, etc. It interacts with the control plane.
-- [Control Plane](./controlplane): The control plane is the central component of the Cosmo platform. It consists of a platform API and a node API. The platform API is used by the cosmo `CLI` tool and the `Studio` to manage the platform.
-- [Router](./router): The router is the component that understands the GraphQL Federation protocol. It is responsible for routing requests to the correct service and for aggregating the responses. It is in connection with the control plane to register itself for advanced cluster management.
-- [Studio](./studio): The studio is the web interface for the Cosmo platform. It is used to manage the platform and to collaborate on GraphQL Federation. It is in connection with the control plane through the Platform API to manage the platform.
+### Why Federated GraphQL?
 
-Collectors:
+GraphQL Federation empowers organizations to break down their GraphQL schema into multiple smaller, manageable schemas, each maintained by different teams or services. These individual schemas are then combined into a single, unified graph, ensuring that all teams have consistent access to the data they need. In today's data-driven world, where information is often referred to as the new oil, building a unified API that can be consumed by both internal and external teams is more crucial than ever.
 
-- [OpenTelemetry Collector](./otelcollector): The OpenTelemetry Collector is used to collect and export metrics and traces from the platform. It is configured to collect metrics and traces from the `router` and instrumented `subgraphs`.
-- [GraphQLMetrics Collector](./graphqlmetrics): The GraphQLMetrics collector is used to collect and export metrics from the platform that doesn't fit into the OpenTelemetry model. Primarily, it is used to collect operation usage metrics from the `router` to allow advanced breaking changes analysis of client applications.
+Not all companies start with a federated architecture, Cosmo supports both monolithic and federated architectures.
 
-## Migrate from Apollo GraphOS / Apollo Federation
+## Getting Started
 
-We've made it super easy for you to migrate from Apollo by using our fully automatic [Migration Assistant](https://cosmo-docs.wundergraph.com/studio/migrate-from-apollo).
-[Signup](https://cosmo.wundergraph.com/login) to Cosmo Cloud, enter your Graph API Token and Graph variant, and the Assistant migrates over your Graph in just a few seconds.
-That's it, migrate over with a single click!
+To get started with WunderGraph Cosmo, follow these steps:
 
-## Demo Cosmo on your machine in 3 minutes
+1. **Clone the Repository**: `git clone https://github.com/wundergraph/cosmo.git`
+2. **Choose your Example**: Select the example that best fits your role and use case from the [Try Cosmo Now](#try-cosmo-now) section and follow the instructions.
+3. **Explore Further**: Check out the [Docs](https://cosmo-docs.wundergraph.com) for more information on Cosmo's features and capabilities.
 
-### Prerequisites
+## Try Cosmo Now! :rocket:
 
-- [Docker](https://docs.docker.com/get-docker/)
-- [Docker Compose](https://docs.docker.com/compose/install/) (version 2+ only)
-- [NPM](https://nodejs.org/en/download/) (for the Cosmo CLI)
+Get started with Cosmo by choosing the example that best fits your role and use case:
 
-Running Cosmo is as easy as running a single command. It can take a few minutes (~1-2m) until all services are up and running. A seed container and few migrations are running in the background to bootstrap the platform.
-They might restart a few times until the database is ready. Creates a small demo project and starts the router and subgraphs:
+- [**Developer**](examples/router-simple/README.md): Quickly start with Cosmo by composing a federated GraphQL schema locally from multiple services and running the Cosmo Router.
+- [**Architect**](./examples/full-cosmo-docker/README.md): Evaluate the entire Cosmo Platform for your organization by running it locally with Docker Compose.
+- [**Platform Engineer**](examples/full-cosmo-helm/README.md): Deploy the entire Cosmo Platform to Kubernetes through our official Helm Chart.
+- [**Decision Maker (e.g. Engineering Manager, CTO)**](https://wundergraph.com/contact/sales): Get in touch with the founders to discuss how Cosmo can help your organization.
 
-> [!WARNING]  
-> Please give Docker Desktop enough resources (CPU, Memory) to run the platform. We recommend at least 4 CPUs and 8GB of memory.
+_For any questions, feedback, or support, please [contact](https://wundergraph.com/contact/sales) us._
 
-1. Start the platform:
+<br>
+<p align="center">
+<a href="https://cosmo.wundergraph.com">
+<img width="250" src="./docs/assets/cta_readme.png"/>
+</a>
+</p>
 
-```shell
-make full-demo-up
-```
+## From the WunderGraph Blog
 
-2. Navigate to the [Studio Playground](http://localhost:3000/wundergraph/default/graph/mygraph/playground) and query the router. Login with the default credentials:
+Here's a selection of blog posts that focus on the technical aspects of Cosmo:
 
-```
-Username: foo@wundergraph.com
-Password: wunder@123
-```
+- [**How we scaled Cosmo Router for the SuperBowl**](https://wundergraph.com/blog/scaling-graphql-federation-for-the-superbowl)
+- [**The Architecture of our Observability Stack**](https://wundergraph.com/blog/scaling_graphql_observability)
+- [**How Normalization affects Query Planning**](https://wundergraph.com/blog/normalization_query_planning_graphql_federation)
+- [**Zero cost abstraction for the @skip and @include Directives**](https://wundergraph.com/blog/zero_cost_abstraction_for_skip_include_in_federated_graphql)
+- [**Algorithm to minify GraphQL ASTs by up to 99%**](https://wundergraph.com/blog/graphql_query_ast_minification)
+- [**Federated GraphQL Subscriptions with NATS and Event Driven Architecture**](https://wundergraph.com/blog/distributed_graphql_subscriptions_with_nats_and_event_driven_architecture)
+- [**Implementing the viewer pattern in GraphQL Federation**](https://wundergraph.com/blog/graphql_federation_viewer_pattern)
+- [**How we're using Epoll/Kqueue to scale GraphQL Subscriptions**](https://wundergraph.com/blog/edfs_scaling_graphql_subscriptions_in_go)
+- [**ASTJSON - A fast way to merge JSON objects**](https://wundergraph.com/blog/astjson_high_performance_json_transformations_in_golang)
+- [**Dataloader 3.0, an efficient algorithm for Federation data loading**](https://wundergraph.com/blog/dataloader_3_0_breadth_first_data_loading)
 
-3. If you are done, you can clean up the demo by running `make full-demo-down`.
+## Contributing
 
-## Local Development
-
-### Prerequisites
-
-- [Docker](https://docs.docker.com/get-docker/)
-- [Docker Compose V2](https://docs.docker.com/compose/install/)
-- [NodeJS LTS](https://nodejs.org/en/download/)
-- [PNPM 8+](https://pnpm.io/installation)
-- [Go 1.21+](https://golang.org/doc/install)
-- [wgc](https://www.npmjs.com/package/wgc)
-- .env/.env.local (see below)
-
-All services work with environment variables. You can find the default values in the `.env.example` file. 
-Please copy the variables to `.env` (the same for studio but with `.env.local`) and adjust the values to your needs.
-
-Bootstrapping your development environment is easy. Just run the following commands in order:
-
-```shell
-# 1️⃣ Setup the repository, build libraries and start all services (Wait a few seconds until Keycloak is ready)
-make
-
-# 2️⃣ Run migrations and seed the database
-make migrate && make seed
-
-# 3️⃣ Start the control plane
-make start-cp
-
-# 4️⃣⃣ Create the demo and copy the JWT printed at the bottom
-make create-demo
-
-# 5️⃣ Start the subgraphs
-OTEL_AUTH_TOKEN=<jwt-token> make dc-subgraphs-demo
-
-# 6️⃣⃣ Put the JWT from the previous step into the router/.env as GRAPH_API_TOKEN and start the router
-make start-router
-
-# ✨ Finally, Start the studio (http://localhost:3000) and explore the Cosmo platform
-make start-studio
-```
-
-Navigate to [http://localhost:3000/](http://localhost:3000/) and login with the default credentials:
-
-```
-Username: foo@wundergraph.com
-Password: wunder@123
-```
-
-Your API key to access the platform is: `cosmo_669b576aaadc10ee1ae81d9193425705`. Set the following environment variable to use it with the CLI:
-
-```shell
-export COSMO_API_KEY=cosmo_669b576aaadc10ee1ae81d9193425705
-export COSMO_API_URL=http://localhost:3001
-export KC_API_URL=http://localhost:8080
-export CDN_URL=http://localhost:11000
-
-cd cli && pnpm wgc -h
-```
-
-_Clean up all containers and volumes by running `make infra-down-v`._
-
-### Docker Compose
-
-We manage multiple compose files:
-
-- `docker-compose.yml`: The default compose file. It contains all services that are required to run the platform for development.
-- `docker-compose.full.yml`: This compose file contains the full Cosmo platform. It is used for demo and testing.
-- `docker-compose.cosmo.yml`: This compose file allows to build all Cosmo components and manage them in a single compose file. It is used for testing and releasing.
-
-**Clean up a compose stack before starting another one!**
-
-## On-Premise
-
-Cosmo was designed to be deployed on-premise e.g. Kubernetes. We provide a helm chart to deploy the platform on any Kubernetes like AKS, GKE, AKS or Minikube. You can find the helm chart in the [helm](./helm) directory.
-If you need help with the deployment, please contact us [here](https://form.typeform.com/to/oC6XATf4).
-
-## Managed Service
-
-If you don't want to manage the platform yourself, you can use our managed service [WunderGraph Cosmo Cloud](https://cosmo.wundergraph.com/). It is a fully managed platform that eliminates your worries about infrastructure, allowing you to concentrate on building. This managed service includes a generous free tier of 10 million monthly requests. If you require extended data retention or are subject to strict compliance requirements, please [contact us](https://wundergraph.com/contact/sales). We offer custom plans for Hybrid SaaS and On-Premises deployments.
+We welcome contributions from the community! Whether it's fixing a bug, adding new features, or improving documentation, your help is greatly appreciated. Please take a look in our [Contributing Guide](CONTRIBUTING.md) to get started.
 
 ## License
 

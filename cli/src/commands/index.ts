@@ -13,10 +13,26 @@ import SchemaCommands from './subgraph/index.js';
 import ContractCommands from './contract/index.js';
 import FeatureGraphCommands from './feature-subgraph/index.js';
 import FeatureFlagCommands from './feature-flag/index.js';
+import ProposalCommands from './proposal/index.js';
+import MCPCommands from './mcp/index.js';
+
+const proxyUrl = process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
+
+if (proxyUrl) {
+  // Lazy load undici only when needed
+  const { setGlobalDispatcher, ProxyAgent } = await import('undici');
+
+  // Set the global dispatcher for undici to route through the proxy
+  const dispatcher = new ProxyAgent({
+    uri: new URL(proxyUrl).toString(),
+  });
+  setGlobalDispatcher(dispatcher);
+}
 
 const client = CreateClient({
   baseUrl: config.baseURL,
   apiKey: config.apiKey,
+  proxyUrl,
 });
 
 const program = new Command();
@@ -75,6 +91,18 @@ program.addCommand(
 
 program.addCommand(
   FeatureFlagCommands({
+    client,
+  }),
+);
+
+program.addCommand(
+  MCPCommands({
+    client,
+  }),
+);
+
+program.addCommand(
+  ProposalCommands({
     client,
   }),
 );

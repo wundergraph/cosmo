@@ -1,0 +1,9 @@
+query Test {
+    employees {
+        tag
+        notes
+    }
+    products {
+        __typename
+    }
+}

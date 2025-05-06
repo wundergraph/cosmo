@@ -2,13 +2,14 @@ package integration
 
 import (
 	"encoding/json"
+	"math"
+	"net/http"
+	"testing"
+
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
-	"math"
-	"net/http"
-	"testing"
 )
 
 // Interface guard
@@ -34,8 +35,11 @@ func (m MyPanicModule) Module() core.ModuleInfo {
 }
 
 func TestEnginePanic(t *testing.T) {
+	t.Parallel()
 
 	t.Run("Router is still responsiveness even when panic count is greater than MaxConcurrentResolvers", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			NoRetryClient: true,
 			RouterOptions: []core.Option{
@@ -66,6 +70,8 @@ func TestEnginePanic(t *testing.T) {
 	})
 
 	t.Run("Router is still responsiveness even when panic count is greater than ParseKitPoolSize", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			NoRetryClient: true,
 			RouterOptions: []core.Option{

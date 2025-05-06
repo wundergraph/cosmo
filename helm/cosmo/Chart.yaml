@@ -16,7 +16,7 @@ type: application
 # This is the chart version. This version number should be incremented each time you make changes
 # to the chart and its templates, including the app version.
 # Versions are expected to follow Semantic Versioning (https://semver.org/)
-version: '0.8.0'
+version: '0.13.1'
 
 home: https://github.com/wundergraph/cosmo
 
@@ -73,7 +73,7 @@ dependencies:
     repository: 'https://charts.bitnami.com/bitnami'
     condition: global.keycloak.enabled
   - name: clickhouse
-    version: '5.3.1'
+    version: '6.2.14'
     condition: global.clickhouse.enabled
     repository: 'https://charts.bitnami.com/bitnami'
   - name: minio

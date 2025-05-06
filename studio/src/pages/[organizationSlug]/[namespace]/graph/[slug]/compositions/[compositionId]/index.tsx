@@ -40,8 +40,17 @@ import { formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@connectrpc/connect-query";
-import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
-import { BoxIcon, Component2Icon } from "@radix-ui/react-icons";
+import {
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
+} from "@heroicons/react/24/outline";
+import {
+  BoxIcon,
+  Component2Icon,
+  MinusIcon,
+  PlusIcon,
+  UpdateIcon,
+} from "@radix-ui/react-icons";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   getCompositionDetails,
@@ -149,6 +158,71 @@ export const FeatureFlagCompositionsTable = ({
   );
 };
 
+const SubgraphDetails = ({
+  subgraphs,
+}: {
+  subgraphs: GraphCompositionSubgraph[];
+}) => {
+  const getIcon = (subgraphId: string, isFeatureSubgraph: boolean) => {
+    const isChanged = subgraphs.find((cs) => cs.id === subgraphId);
+    if (isChanged) {
+      switch (isChanged.changeType) {
+        case "added":
+          return <PlusIcon className="h-3 w-3 flex-shrink-0" />;
+        case "removed":
+          return <MinusIcon className="h-3 w-3 flex-shrink-0" />;
+        case "updated":
+          return <UpdateIcon className="h-3 w-3 flex-shrink-0" />;
+      }
+    }
+
+    if (isFeatureSubgraph) {
+      return <RxComponentInstance className="h-4 w-4 flex-shrink-0" />;
+    }
+
+    return <BoxIcon className="h-3 w-3 flex-shrink-0" />;
+  };
+
+  return subgraphs
+    .sort((a, b) => {
+      const sortOrder: { [key: string]: number } = {
+        added: 1,
+        updated: 2,
+        removed: 3,
+        unchanged: 4,
+      };
+
+      if (a.changeType === b.changeType) {
+        return a.name.localeCompare(b.name);
+      }
+
+      return sortOrder[a.changeType] - sortOrder[b.changeType];
+    })
+    .map((subgraph) => {
+      return (
+        <div
+          className={cn("flex flex-col gap-y-1", {
+            "text-success":
+              subgraph.changeType === "added" ||
+              subgraph.changeType === "updated",
+            "text-destructive": subgraph.changeType === "removed",
+          })}
+          key={subgraph.id}
+        >
+          <div className="flex items-start gap-x-1.5 text-sm">
+            <div className="mt-1">
+              {getIcon(subgraph.id, subgraph.isFeatureSubgraph)}
+            </div>
+            <span>{subgraph.name}</span>
+          </div>
+          <span className="pl-5 text-xs">
+            {subgraph.schemaVersionId.split("-")[0]}
+          </span>
+        </div>
+      );
+    });
+};
+
 export const CompositionDetails = ({
   composition,
   changeCounts,
@@ -210,6 +284,7 @@ export const CompositionDetails = ({
     createdBy,
     schemaVersionId,
     compositionErrors,
+    compositionWarnings,
     routerConfigSignature,
     admissionError,
   } = composition;
@@ -219,6 +294,7 @@ export const CompositionDetails = ({
       return {
         name: each.name,
         versionId: each.schemaVersionId,
+        changeType: each.changeType,
       };
     }) ?? [];
 
@@ -330,7 +406,7 @@ export const CompositionDetails = ({
                   {admissionError ? (
                     <>
                       <div>
-                        <MdNearbyError className="h-4 w-4 text-red-500" />
+                        <MdNearbyError className="h-4 w-4 text-destructive" />
                       </div>
                       <span className="text-sm">Failed</span>
                     </>
@@ -373,54 +449,35 @@ export const CompositionDetails = ({
               </dd>
             </div>
           ) : null}
-          {compositionSubgraphs.length > 0 && (
-            <div className="flex-start col-span-full flex flex-1 flex-col gap-2">
-              <dt className="text-sm text-muted-foreground">
-                Composition Inputs
-              </dt>
-              <dd className="mt-2 flex flex-col gap-2">
-                {compositionSubgraphs.length === 0 ? (
-                  <span className="text-sm">No subgraphs stored.</span>
-                ) : (
-                  compositionSubgraphs.map((cs) => {
-                    return (
-                      <div className="flex flex-col gap-y-1" key={cs.id}>
-                        <div className="flex items-start gap-x-1.5 text-sm">
-                          {cs.isFeatureSubgraph ? (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div>
-                                  <RxComponentInstance className="mt-1 h-4 w-4 flex-shrink-0" />
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent side="bottom">
-                                Feature Subgraph
-                              </TooltipContent>
-                            </Tooltip>
-                          ) : (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div>
-                                  <BoxIcon className="mt-1 h-3 w-3 flex-shrink-0" />
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent side="bottom">
-                                Subgraph
-                              </TooltipContent>
-                            </Tooltip>
-                          )}
-                          <span>{cs.name}</span>
-                        </div>
-                        <span className="pl-6 text-xs">
-                          {cs.schemaVersionId.split("-")[0]}
-                        </span>
-                      </div>
-                    );
-                  })
-                )}
-              </dd>
-            </div>
-          )}
+
+          <div className="flex-start col-span-full flex flex-1 flex-col gap-2">
+            <dt className="text-sm text-muted-foreground">Subgraphs</dt>
+            <dd className="mt-2 flex flex-col gap-2">
+              {compositionSubgraphs.length === 0 ? (
+                <span className="text-sm">No subgraphs stored.</span>
+              ) : (
+                <SubgraphDetails
+                  subgraphs={compositionSubgraphs.filter(
+                    (cs) => !cs.isFeatureSubgraph,
+                  )}
+                />
+              )}
+            </dd>
+            {compositionSubgraphs.some((cs) => cs.isFeatureSubgraph) && (
+              <>
+                <dt className="text-sm text-muted-foreground">
+                  Feature Subgraphs
+                </dt>
+                <dd className="mt-2 flex flex-col gap-2">
+                  <SubgraphDetails
+                    subgraphs={compositionSubgraphs.filter(
+                      (cs) => cs.isFeatureSubgraph,
+                    )}
+                  />
+                </dd>
+              </>
+            )}
+          </div>
         </dl>
         <div className="h-full flex-1">
           <Tabs
@@ -437,6 +494,11 @@ export const CompositionDetails = ({
                 <TabsTrigger value="input" asChild>
                   <Link href={{ query: { ...router.query, tab: "input" } }}>
                     Input Schemas
+                  </Link>
+                </TabsTrigger>
+                <TabsTrigger value="warnings" asChild>
+                  <Link href={{ query: { ...router.query, tab: "warnings" } }}>
+                    Composition Warnings
                   </Link>
                 </TabsTrigger>
                 {featureFlagCompositions && (
@@ -471,7 +533,7 @@ export const CompositionDetails = ({
                     <Alert variant="destructive">
                       <AlertTitle>Composition Errors</AlertTitle>
                       <AlertDescription>
-                        <pre className="">
+                        <pre className="whitespace-pre-wrap">
                           {compositionErrors.length > 0
                             ? compositionErrors
                             : "No composition errors"}
@@ -575,18 +637,25 @@ export const CompositionDetails = ({
                                     <Component2Icon className="h-3 w-3" />{" "}
                                     Subgraphs
                                   </SelectLabel>
-                                  {subgraphs.map(({ name, versionId }) => {
-                                    return (
-                                      <SelectItem key={name} value={name}>
-                                        <div>
-                                          <p>{name}</p>
-                                          <p className="text-xs">
-                                            {versionId.split("-")[0]}
-                                          </p>
-                                        </div>
-                                      </SelectItem>
-                                    );
-                                  })}
+                                  {subgraphs.map(
+                                    ({ name, versionId, changeType }) => {
+                                      return (
+                                        <SelectItem key={name} value={name}>
+                                          <div
+                                            className={cn({
+                                              "text-destructive":
+                                                changeType === "removed",
+                                            })}
+                                          >
+                                            <p>{name}</p>
+                                            <p className="text-xs">
+                                              {versionId.split("-")[0]}
+                                            </p>
+                                          </div>
+                                        </SelectItem>
+                                      );
+                                    },
+                                  )}
                                 </SelectGroup>
                               </SelectContent>
                             </Select>
@@ -601,6 +670,25 @@ export const CompositionDetails = ({
                       <SDLViewerMonaco schema={sdlData.sdl} />
                     </div>
                   )
+                )}
+              </TabsContent>
+              <TabsContent value="warnings" className="relative w-full flex-1">
+                {compositionWarnings && compositionWarnings.length ? (
+                  <div className="px-6">
+                    <Alert variant="warn">
+                      <AlertTitle>Composition Warnings</AlertTitle>
+                      <AlertDescription>
+                        <pre className="whitespace-pre-wrap">
+                          {compositionWarnings.split("Warning: ").join("\n")}
+                        </pre>
+                      </AlertDescription>
+                    </Alert>
+                  </div>
+                ) : (
+                  <EmptyState
+                    icon={<CheckCircleIcon className="text-success" />}
+                    title="No composition warnings found."
+                  />
                 )}
               </TabsContent>
               {featureFlagCompositions && (

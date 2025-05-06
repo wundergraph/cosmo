@@ -33,7 +33,7 @@ const FeatureFlagsDashboardPage: NextPageWithLayout = () => {
   const applyParams = useApplyParams();
 
   const { data, isLoading, error, refetch } = useQuery(getFeatureFlags, {
-    namespace,
+    namespace: namespace || "default",
     query,
     limit,
     offset,

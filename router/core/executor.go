@@ -26,13 +26,16 @@ import (
 )
 
 type ExecutorConfigurationBuilder struct {
-	introspection bool
-	includeInfo   bool
-	baseURL       string
-	transport     http.RoundTripper
-	logger        *zap.Logger
+	introspection  bool
+	trackUsageInfo bool
+	baseURL        string
+	logger         *zap.Logger
 
 	transportOptions *TransportOptions
+	baseTripper      http.RoundTripper
+	subgraphTrippers map[string]http.RoundTripper
+
+	subscriptionClientOptions *SubscriptionClientOptions
 }
 
 type Executor struct {
@@ -44,14 +47,18 @@ type Executor struct {
 	RouterSchema    *ast.Document
 	Resolver        *resolve.Resolver
 	RenameTypeNames []resolve.RenameTypeName
+	TrackUsageInfo  bool
 }
 
 type ExecutorBuildOptions struct {
-	EngineConfig       *nodev1.EngineConfiguration
-	Subgraphs          []*nodev1.Subgraph
-	RouterEngineConfig *RouterEngineConfiguration
-	PubSubProviders    *EnginePubSubProviders
-	Reporter           resolve.Reporter
+	EngineConfig                   *nodev1.EngineConfiguration
+	Subgraphs                      []*nodev1.Subgraph
+	RouterEngineConfig             *RouterEngineConfiguration
+	PubSubProviders                *EnginePubSubProviders
+	Reporter                       resolve.Reporter
+	ApolloCompatibilityFlags       config.ApolloCompatibilityFlags
+	ApolloRouterCompatibilityFlags config.ApolloRouterCompatibilityFlags
+	HeartbeatInterval              time.Duration
 }
 
 func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *ExecutorBuildOptions) (*Executor, error) {
@@ -61,14 +68,41 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 	}
 
 	options := resolve.ResolverOptions{
-		MaxConcurrency:               opts.RouterEngineConfig.Execution.MaxConcurrentResolvers,
-		Debug:                        opts.RouterEngineConfig.Execution.Debug.EnableResolverDebugging,
-		Reporter:                     opts.Reporter,
-		PropagateSubgraphErrors:      opts.RouterEngineConfig.SubgraphErrorPropagation.Enabled,
-		PropagateSubgraphStatusCodes: opts.RouterEngineConfig.SubgraphErrorPropagation.PropagateStatusCodes,
-		RewriteSubgraphErrorPaths:    opts.RouterEngineConfig.SubgraphErrorPropagation.RewritePaths,
-		OmitSubgraphErrorLocations:   opts.RouterEngineConfig.SubgraphErrorPropagation.OmitLocations,
-		OmitSubgraphErrorExtensions:  opts.RouterEngineConfig.SubgraphErrorPropagation.OmitExtensions,
+		MaxConcurrency:                     opts.RouterEngineConfig.Execution.MaxConcurrentResolvers,
+		Debug:                              opts.RouterEngineConfig.Execution.Debug.EnableResolverDebugging,
+		Reporter:                           opts.Reporter,
+		PropagateSubgraphErrors:            opts.RouterEngineConfig.SubgraphErrorPropagation.Enabled,
+		PropagateSubgraphStatusCodes:       opts.RouterEngineConfig.SubgraphErrorPropagation.PropagateStatusCodes,
+		RewriteSubgraphErrorPaths:          opts.RouterEngineConfig.SubgraphErrorPropagation.RewritePaths,
+		OmitSubgraphErrorLocations:         opts.RouterEngineConfig.SubgraphErrorPropagation.OmitLocations,
+		OmitSubgraphErrorExtensions:        opts.RouterEngineConfig.SubgraphErrorPropagation.OmitExtensions,
+		AllowedErrorExtensionFields:        opts.RouterEngineConfig.SubgraphErrorPropagation.AllowedExtensionFields,
+		AttachServiceNameToErrorExtensions: opts.RouterEngineConfig.SubgraphErrorPropagation.AttachServiceName,
+		DefaultErrorExtensionCode:          opts.RouterEngineConfig.SubgraphErrorPropagation.DefaultExtensionCode,
+		AllowedSubgraphErrorFields:         opts.RouterEngineConfig.SubgraphErrorPropagation.AllowedFields,
+		MaxRecyclableParserSize:            opts.RouterEngineConfig.Execution.ResolverMaxRecyclableParserSize,
+		MultipartSubHeartbeatInterval:      opts.HeartbeatInterval,
+		MaxSubscriptionFetchTimeout:        opts.RouterEngineConfig.Execution.SubscriptionFetchTimeout,
+	}
+
+	if opts.ApolloCompatibilityFlags.ValueCompletion.Enabled {
+		options.ResolvableOptions.ApolloCompatibilityValueCompletionInExtensions = true
+	}
+	if opts.ApolloCompatibilityFlags.TruncateFloats.Enabled {
+		options.ResolvableOptions.ApolloCompatibilityTruncateFloatValues = true
+	}
+	if opts.ApolloCompatibilityFlags.SuppressFetchErrors.Enabled {
+		options.ResolvableOptions.ApolloCompatibilitySuppressFetchErrors = true
+	}
+	if opts.ApolloCompatibilityFlags.ReplaceUndefinedOpFieldErrors.Enabled {
+		options.ResolvableOptions.ApolloCompatibilityReplaceUndefinedOpFieldError = true
+	}
+	if opts.ApolloCompatibilityFlags.ReplaceInvalidVarErrors.Enabled {
+		options.ResolvableOptions.ApolloCompatibilityReplaceInvalidVarError = true
+	}
+
+	if opts.ApolloRouterCompatibilityFlags.SubrequestHTTPError.Enabled {
+		options.ResolvableOptions.ApolloRouterCompatibilitySubrequestHTTPError = true
 	}
 
 	switch opts.RouterEngineConfig.SubgraphErrorPropagation.Mode {
@@ -161,22 +195,40 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 		RouterSchema:    &routerSchemaDefinition,
 		Resolver:        resolver,
 		RenameTypeNames: renameTypeNames,
+		TrackUsageInfo:  b.trackUsageInfo,
 	}, nil
 }
 
 func buildNatsOptions(eventSource config.NatsEventSource, logger *zap.Logger) ([]nats.Option, error) {
-
 	opts := []nats.Option{
+		nats.Name(fmt.Sprintf("cosmo.router.edfs.nats.%s", eventSource.ID)),
+		nats.ReconnectJitter(500*time.Millisecond, 2*time.Second),
+		nats.ClosedHandler(func(conn *nats.Conn) {
+			logger.Info("NATS connection closed", zap.String("provider_id", eventSource.ID), zap.Error(conn.LastError()))
+		}),
+		nats.ConnectHandler(func(nc *nats.Conn) {
+			logger.Info("NATS connection established", zap.String("provider_id", eventSource.ID), zap.String("url", nc.ConnectedUrlRedacted()))
+		}),
+		nats.DisconnectErrHandler(func(nc *nats.Conn, err error) {
+			if err != nil {
+				logger.Error("NATS disconnected; will attempt to reconnect", zap.Error(err), zap.String("provider_id", eventSource.ID))
+			} else {
+				logger.Info("NATS disconnected", zap.String("provider_id", eventSource.ID))
+			}
+		}),
 		nats.ErrorHandler(func(conn *nats.Conn, subscription *nats.Subscription, err error) {
-
 			if errors.Is(err, nats.ErrSlowConsumer) {
 				logger.Warn(
-					"Nats slow consumer detected. Events are being dropped. Please consider increasing the buffer size or reducing the number of messages being sent.",
+					"NATS slow consumer detected. Events are being dropped. Please consider increasing the buffer size or reducing the number of messages being sent.",
 					zap.Error(err),
+					zap.String("provider_id", eventSource.ID),
 				)
 			} else {
-				logger.Error("nats error", zap.Error(err))
+				logger.Error("NATS error", zap.Error(err))
 			}
+		}),
+		nats.ReconnectHandler(func(conn *nats.Conn) {
+			logger.Info("NATS reconnected", zap.String("provider_id", eventSource.ID), zap.String("url", conn.ConnectedUrlRedacted()))
 		}),
 	}
 
@@ -195,7 +247,6 @@ func buildNatsOptions(eventSource config.NatsEventSource, logger *zap.Logger) ([
 // Only general options like TLS, SASL, etc. are configured here. Specific options like topics, etc. are
 // configured in the KafkaPubSub implementation.
 func buildKafkaOptions(eventSource config.KafkaEventSource) ([]kgo.Opt, error) {
-
 	opts := []kgo.Opt{
 		kgo.SeedBrokers(eventSource.Brokers...),
 		// Ensure proper timeouts are set
@@ -225,12 +276,15 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 	// the plan config is what the engine uses to turn a GraphQL Request into an execution plan
 	// the plan config is stateful as it carries connection pools and other things
 
-	loader := NewLoader(b.includeInfo, NewDefaultFactoryResolver(
+	loader := NewLoader(b.trackUsageInfo, NewDefaultFactoryResolver(
 		ctx,
-		NewTransport(b.transportOptions),
-		b.transport,
+		b.transportOptions,
+		b.subscriptionClientOptions,
+		b.baseTripper,
+		b.subgraphTrippers,
 		b.logger,
 		routerEngineCfg.Execution.EnableSingleFlight,
+		routerEngineCfg.Execution.EnableNetPoll,
 		pubSubProviders.nats,
 		pubSubProviders.kafka,
 	))
@@ -245,12 +299,14 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 		PrintOperationTransformations: debug.PrintOperationTransformations,
 		PrintOperationEnableASTRefs:   debug.PrintOperationEnableASTRefs,
 		PrintPlanningPaths:            debug.PrintPlanningPaths,
-		PrintQueryPlans:               debug.PrintQueryPlans,
+		PrintQueryPlans:               debug.PrintIntermediateQueryPlans,
 		PrintNodeSuggestions:          debug.PrintNodeSuggestions,
 		ConfigurationVisitor:          debug.ConfigurationVisitor,
 		PlanningVisitor:               debug.PlanningVisitor,
 		DatasourceVisitor:             debug.DatasourceVisitor,
 	}
 	planConfig.MinifySubgraphOperations = routerEngineCfg.Execution.MinifySubgraphOperations
+
+	planConfig.EnableOperationNamePropagation = routerEngineCfg.Execution.EnableSubgraphFetchOperationName
 	return planConfig, nil
 }

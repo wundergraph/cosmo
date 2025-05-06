@@ -11,6 +11,10 @@ import {
   targets,
   websocketSubprotocolEnum,
   webhookDeliveries,
+  graphPruningRulesEnum,
+  cacheWarmerOperations,
+  proposalStateEnum,
+  proposalMatchEnum,
 } from './schema.js';
 
 export type FederatedGraph = typeof federatedGraphs.$inferSelect;
@@ -23,8 +27,11 @@ export type NewBillingSubscription = typeof billingSubscriptions.$inferInsert;
 export type NewBillingPlan = typeof billingPlans.$inferInsert;
 export type MemberRole = (typeof memberRoleEnum.enumValues)[number];
 export type LintRuleEnum = (typeof lintRulesEnum.enumValues)[number];
+export type GraphPruningRuleEnum = (typeof graphPruningRulesEnum.enumValues)[number];
 export type WebsocketSubprotocol = (typeof websocketSubprotocolEnum.enumValues)[number];
-
+export type CacheWarmupOperation = typeof cacheWarmerOperations.$inferInsert;
+export type ProposalState = (typeof proposalStateEnum.enumValues)[number];
+export type ProposalMatch = (typeof proposalMatchEnum.enumValues)[number];
 export type WebhookDeliveryInfo = typeof webhookDeliveries.$inferInsert;
 
 export type AuditableType =
@@ -44,7 +51,8 @@ export type AuditableType =
   | 'namespace'
   | 'router_config'
   | 'operation_change_override'
-  | 'operation_ignore_all_override';
+  | 'operation_ignore_all_override'
+  | 'proposal';
 
 export type AuditTargetType = 'organization' | 'subgraph' | 'federated_graph' | 'monograph' | 'user';
 
@@ -54,6 +62,8 @@ export type AuditLogAction =
   | 'created'
   | 'updated'
   | 'deleted'
+  | 'queued_deletion'
+  | 'restore'
   | 'moved'
   | 'accepted'
   | 'declined'
@@ -62,13 +72,17 @@ export type AuditLogAction =
   | 'activated'
   | 'upgraded'
   | 'left'
-  | 'fetched';
+  | 'fetched'
+  | 'disabled'
+  | 'enabled';
 
 export type AuditLogFullAction =
   | 'namespace.created'
   | 'namespace.deleted'
   | 'organization.created'
   | 'organization.updated'
+  | 'organization.deletion_queued'
+  | 'organization.restored'
   | 'graph_token.created'
   | 'graph_token.deleted'
   | 'monograph.created'
@@ -119,4 +133,12 @@ export type AuditLogFullAction =
   | 'operation_change_override.created'
   | 'operation_change_override.deleted'
   | 'operation_ignore_override.created'
-  | 'operation_ignore_override.deleted';
+  | 'operation_ignore_override.deleted'
+  | 'proposal.created'
+  | 'proposal.updated'
+  | 'proposal.approved'
+  | 'proposal.published'
+  | 'proposal.closed'
+  | 'proposal.enabled'
+  | 'proposal.disabled'
+  | 'namespace_proposal_config.updated';

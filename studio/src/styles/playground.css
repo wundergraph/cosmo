@@ -36,7 +36,7 @@ body.graphiql-dark [data-radix-popper-content-wrapper] {
 .graphiql-history-header,
 .graphiql-doc-explorer-title,
 .doc-explorer-title {
-  @apply text-2xl font-bold text-primary-foreground;
+  @apply text-2xl font-bold text-foreground;
 }
 
 .doc-explorer-title {
@@ -61,4 +61,12 @@ body.graphiql-dark [data-radix-popper-content-wrapper] {
 
 .graphiql-explorer-root > :first-child {
   @apply !overflow-hidden;
+}
+
+.graphiql-session-header-right {
+  @apply flex-shrink-0;
+}
+
+.graphiql-tabs {
+  @apply z-10;
 }

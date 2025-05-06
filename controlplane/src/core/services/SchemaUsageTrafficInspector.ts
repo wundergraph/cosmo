@@ -17,6 +17,7 @@ export interface InspectorFilter {
   federatedGraphId: string;
   organizationId: string;
   daysToConsider: number;
+  subgraphId: string;
 }
 
 export interface InspectorOperationResult {
@@ -67,6 +68,7 @@ export class SchemaUsageTrafficInspector {
       } else if (change.isArgument) {
         where.push(`IsArgument = true`);
       }
+      where.push(`IsIndirectFieldUsage = false`);
 
       const query = `
         SELECT OperationHash as operationHash,
@@ -74,11 +76,12 @@ export class SchemaUsageTrafficInspector {
                last_value(OperationName) as operationName,
                min(toUnixTimestamp(Timestamp)) as firstSeen,
                max(toUnixTimestamp(Timestamp)) as lastSeen
-        FROM ${this.client.database}.gql_metrics_schema_usage_5m_90d
+        FROM ${this.client.database}.gql_metrics_schema_usage_lite_1d_90d
         WHERE
           -- Filter first on date and customer to reduce the amount of data
           Timestamp >= toStartOfDay(now()) - interval ${filter.daysToConsider} day AND
           FederatedGraphID = '${filter.federatedGraphId}' AND
+          hasAny(SubgraphIDs, ['${filter.subgraphId}']) AND
           OrganizationID = '${filter.organizationId}' AND
           ${where.join(' AND ')}
         GROUP BY OperationHash
@@ -208,6 +211,7 @@ export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): In
       // This is so that other changes that we can in fact inspect are not skipped over in the schema check.
       return null;
     }
+
     // Safe to ignore
     case ChangeType.DirectiveAdded:
     case ChangeType.FieldArgumentDescriptionChanged:
@@ -236,7 +240,31 @@ export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): In
     case ChangeType.TypeDescriptionAdded:
     case ChangeType.TypeAdded:
     case ChangeType.FieldAdded:
-    case ChangeType.UnionMemberAdded: {
+    case ChangeType.UnionMemberAdded:
+    case ChangeType.DirectiveUsageUnionMemberAdded:
+    case ChangeType.DirectiveUsageUnionMemberRemoved:
+    case ChangeType.DirectiveUsageEnumAdded:
+    case ChangeType.DirectiveUsageEnumRemoved:
+    case ChangeType.DirectiveUsageEnumValueAdded:
+    case ChangeType.DirectiveUsageEnumValueRemoved:
+    case ChangeType.DirectiveUsageInputObjectAdded:
+    case ChangeType.DirectiveUsageInputObjectRemoved:
+    case ChangeType.DirectiveUsageFieldAdded:
+    case ChangeType.DirectiveUsageFieldRemoved:
+    case ChangeType.DirectiveUsageScalarAdded:
+    case ChangeType.DirectiveUsageScalarRemoved:
+    case ChangeType.DirectiveUsageObjectAdded:
+    case ChangeType.DirectiveUsageObjectRemoved:
+    case ChangeType.DirectiveUsageInterfaceAdded:
+    case ChangeType.DirectiveUsageInterfaceRemoved:
+    case ChangeType.DirectiveUsageArgumentDefinitionAdded:
+    case ChangeType.DirectiveUsageArgumentDefinitionRemoved:
+    case ChangeType.DirectiveUsageSchemaAdded:
+    case ChangeType.DirectiveUsageSchemaRemoved:
+    case ChangeType.DirectiveUsageFieldDefinitionAdded:
+    case ChangeType.DirectiveUsageFieldDefinitionRemoved:
+    case ChangeType.DirectiveUsageInputFieldDefinitionAdded:
+    case ChangeType.DirectiveUsageInputFieldDefinitionRemoved: {
       return null;
     }
     // 1. When a type is removed we know the exact type name e.g. 'Engineer'. We have no field name.

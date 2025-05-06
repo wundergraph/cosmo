@@ -1,6 +1,6 @@
 # router
 
-![Version: 0.6.0](https://img.shields.io/badge/Version-0.6.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.102.0](https://img.shields.io/badge/AppVersion-0.102.0-informational?style=flat-square)
+![Version: 0.10.1](https://img.shields.io/badge/Version-0.10.1-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.197.1](https://img.shields.io/badge/AppVersion-0.197.1-informational?style=flat-square)
 
 This is the official Helm Chart for the WunderGraph Cosmo Router.
 
@@ -14,13 +14,18 @@ This is the official Helm Chart for the WunderGraph Cosmo Router.
 | autoscaling.minReplicas | int | `1` |  |
 | autoscaling.targetCPUUtilizationPercentage | int | `80` |  |
 | commonConfiguration | string | `"version: \"1\"\nlog_level: \"info\""` | You can use this to provide the router configuration via yaml. Values here have precedence over the configurations section. For a full list of available configuration options, see https://cosmo-docs.wundergraph.com/router/configuration This value is processed with the helm `tpl` function allowing referencing of variables and inclusion of templates |
+| commonLabels | object | `{}` | Add labels to all deployed resources |
 | configuration.cdnUrl | string | `""` |  |
+| configuration.configPath | string | `""` | The path to the router config file. This does not refer to the execution config. See: https://cosmo-docs.wundergraph.com/router/configuration#config-file |
 | configuration.controlplaneUrl | string | `""` | The URL of the Cosmo Controlplane. Should be internal to the cluster. Default to cloud if not set. |
 | configuration.devMode | bool | `false` | Set to true to enable the development mode. This allows for Advanced Request Tracing (ART) in the GraphQL Playground |
 | configuration.executionConfig | string | `""` | The execution config file to statically configure the router. If set, polling of the config is disabled. If your config exceeds 1MB (Kubernetes limit), you have to mount it as a file and set the path in routerConfigPath instead |
 | configuration.graphApiToken | string | `"replace-me"` | The router token is used to authenticate the router against the controlplane (required) |
 | configuration.graphqlMetricsCollectorUrl | string | `""` | The URL of the Cosmo GraphQL Metrics Collector. Should be internal to the cluster. Default to cloud if not set. |
+| configuration.httpProxy | string | `""` | The URL of the HTTP proxy server. Default is an empty string. |
+| configuration.httpsProxy | string | `""` | The URL of the HTTPS proxy server. Default is an empty string. |
 | configuration.logLevel | string | `"info"` | The log level of the router. Default to info if not set. |
+| configuration.noProxy | string | `""` | NO_PROXY is a comma-separated list of hosts or domains for which the proxy should not be used. |
 | configuration.otelCollectorUrl | string | `""` | The URL of the Cosmo GraphQL OTEL Collector. Should be internal to the cluster. Default to cloud if not set. |
 | configuration.prometheus.enabled | bool | `true` | Enables prometheus metrics support. Default is true. |
 | configuration.prometheus.path | string | `"/metrics"` | The HTTP path where metrics are exposed. Default is "/metrics". |
@@ -39,7 +44,6 @@ This is the official Helm Chart for the WunderGraph Cosmo Router.
 | image.pullPolicy | string | `"IfNotPresent"` |  |
 | image.registry | string | `"ghcr.io"` |  |
 | image.repository | string | `"wundergraph/cosmo/router"` |  |
-| image.version | string | `"latest"` | Overrides the image tag whose default is the chart appVersion. |
 | imagePullSecrets | list | `[]` |  |
 | ingress.hosts | string | `nil` |  |
 | ingress.tls | list | `[]` |  |

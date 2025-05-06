@@ -101,3 +101,19 @@ export const lintCategories = [
     ],
   },
 ];
+
+export const graphPruningRules = [
+  {
+    name: "UNUSED_FIELDS",
+    description: "Returns all the unused fields in the schema.",
+  },
+  {
+    name: "DEPRECATED_FIELDS",
+    description:
+      "Returns all the deprecated fields that need to be removed from the schema.",
+  },
+  {
+    name: "REQUIRE_DEPRECATION_BEFORE_DELETION",
+    description: "Returns all the deleted fields which were not deprecated.",
+  },
+];

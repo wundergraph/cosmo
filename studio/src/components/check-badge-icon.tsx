@@ -6,8 +6,20 @@ const isCheckSuccessful = (
   isBreaking: boolean,
   hasClientTraffic: boolean,
   hasLintErrors: boolean,
+  hasGraphPruningErrors: boolean,
+  clientTrafficCheckSkipped: boolean,
+  hasProposalMatchError: boolean,
 ) => {
-  return isComposable && (!isBreaking || (isBreaking && !hasClientTraffic)) && !hasLintErrors;
+  return (
+    isComposable &&
+    // If no breaking changes found
+    // OR Breaking changes are found, but no client traffic is found and traffic check is not skipped
+    (!isBreaking ||
+      (isBreaking && !hasClientTraffic && !clientTrafficCheckSkipped)) &&
+    !hasLintErrors &&
+    !hasGraphPruningErrors &&
+    !hasProposalMatchError
+  );
 };
 
 const getCheckBadge = (successful: boolean, isForced: boolean) => {

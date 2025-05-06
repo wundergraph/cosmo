@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
-import { createHash } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { buildRouterConfig, normalizeURL } from '@wundergraph/cosmo-shared';
 import { Command, program } from 'commander';
 import { parse, printSchema } from 'graphql';
@@ -12,6 +12,8 @@ import {
   FeatureFlagRouterExecutionConfig,
   FeatureFlagRouterExecutionConfigs,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import Table from 'cli-table3';
+import { ROUTER_COMPATIBILITY_VERSION_ONE } from '@wundergraph/composition';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { composeSubgraphs, introspectSubgraph } from '../../../utils.js';
 
@@ -52,8 +54,9 @@ export default (opts: BaseCommandOptions) => {
   );
   command.requiredOption('-i, --input <path-to-input>', 'The yaml file with data about graph and subgraphs.');
   command.option('-o, --out [string]', 'Destination file for the router config.');
+  command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
   command.action(async (options) => {
-    const inputFile = resolve(process.cwd(), options.input);
+    const inputFile = resolve(options.input);
     const inputFileLocation = dirname(inputFile);
 
     if (!existsSync(inputFile)) {
@@ -104,24 +107,48 @@ export default (opts: BaseCommandOptions) => {
       })),
     );
 
-    if (result.errors && result.errors.length > 0) {
-      program.error(`Failed to compose: ${result.errors[0]}`);
+    if (!result.success) {
+      const compositionErrorsTable = new Table({
+        head: [pc.bold(pc.white('ERROR_MESSAGE'))],
+        colWidths: [120],
+        wordWrap: true,
+      });
+
+      console.log(
+        pc.red(`We found composition errors, while composing.\n${pc.bold('Please check the errors below:')}`),
+      );
+      for (const compositionError of result.errors) {
+        compositionErrorsTable.push([compositionError.message]);
+      }
+      console.log(compositionErrorsTable.toString());
+      process.exitCode = 1;
+      return;
     }
 
-    if (!result.federationResult) {
-      program.error('Failed to compose given subgraphs');
+    if (!options.suppressWarnings && result.warnings.length > 0) {
+      const compositionWarningsTable = new Table({
+        head: [pc.bold(pc.white('WARNING_MESSAGE'))],
+        colWidths: [120],
+        wordWrap: true,
+      });
+
+      console.log(pc.yellow(`The following warnings were produced while composing:`));
+      for (const warning of result.warnings) {
+        compositionWarningsTable.push([warning.message]);
+      }
+      console.log(compositionWarningsTable.toString());
     }
 
-    const federatedClientSDL = result.federationResult.shouldIncludeClientSchema
-      ? printSchema(result.federationResult.federatedGraphClientSchema)
-      : '';
+    const federatedClientSDL = result.shouldIncludeClientSchema ? printSchema(result.federatedGraphClientSchema) : '';
     const routerConfig = buildRouterConfig({
       federatedClientSDL,
-      federatedSDL: printSchemaWithDirectives(result.federationResult.federatedGraphSchema),
-      fieldConfigurations: result.federationResult.fieldConfigurations,
+      federatedSDL: printSchemaWithDirectives(result.federatedGraphSchema),
+      fieldConfigurations: result.fieldConfigurations,
+      // @TODO get router compatibility version programmatically
+      routerCompatibilityVersion: ROUTER_COMPATIBILITY_VERSION_ONE,
       schemaVersionId: 'static',
       subgraphs: config.subgraphs.map((s, index) => {
-        const subgraphConfig = result.federationResult!.subgraphConfigBySubgraphName.get(s.name);
+        const subgraphConfig = result.subgraphConfigBySubgraphName.get(s.name);
         const schema = subgraphConfig?.schema;
         const configurationDataByTypeName = subgraphConfig?.configurationDataByTypeName;
         return {
@@ -139,7 +166,7 @@ export default (opts: BaseCommandOptions) => {
       }),
     });
 
-    routerConfig.version = createHash('sha1').update(routerConfig.toJsonString()).digest('hex');
+    routerConfig.version = randomUUID();
 
     if (config.feature_flags && config.feature_flags.length > 0) {
       const ffConfigs: FeatureFlagRouterExecutionConfigs = new FeatureFlagRouterExecutionConfigs();
@@ -210,24 +237,55 @@ export default (opts: BaseCommandOptions) => {
           })),
         );
 
-        if (result.errors && result.errors.length > 0) {
-          program.error(`Failed to compose for feature flags: ${result.errors[0]}`);
+        if (!result.success) {
+          const compositionErrorsTable = new Table({
+            head: [pc.bold(pc.white('ERROR_MESSAGE'))],
+            colWidths: [120],
+            wordWrap: true,
+          });
+
+          console.log(
+            pc.red(
+              `We found composition errors, while composing the feature flag ${pc.italic(ff.name)}.\n${pc.bold(
+                'Please check the errors below:',
+              )}`,
+            ),
+          );
+          for (const compositionError of result.errors) {
+            compositionErrorsTable.push([compositionError.message]);
+          }
+          console.log(compositionErrorsTable.toString());
+          continue;
         }
 
-        if (!result.federationResult) {
-          program.error('Failed to compose given subgraphs for feature flags');
+        if (!options.suppressWarnings && result.warnings.length > 0) {
+          const compositionWarningsTable = new Table({
+            head: [pc.bold(pc.white('WARNING_MESSAGE'))],
+            colWidths: [120],
+            wordWrap: true,
+          });
+
+          console.log(
+            pc.yellow(`The following warnings were produced while composing the feature flag ${pc.italic(ff.name)}:`),
+          );
+          for (const warning of result.warnings) {
+            compositionWarningsTable.push([warning.message]);
+          }
+          console.log(compositionWarningsTable.toString());
         }
 
-        const federatedClientSDL = result.federationResult.shouldIncludeClientSchema
-          ? printSchema(result.federationResult.federatedGraphClientSchema)
+        const federatedClientSDL = result.shouldIncludeClientSchema
+          ? printSchema(result.federatedGraphClientSchema)
           : '';
         const routerConfig = buildRouterConfig({
           federatedClientSDL,
-          federatedSDL: printSchemaWithDirectives(result.federationResult.federatedGraphSchema),
-          fieldConfigurations: result.federationResult.fieldConfigurations,
+          federatedSDL: printSchemaWithDirectives(result.federatedGraphSchema),
+          fieldConfigurations: result.fieldConfigurations,
+          // @TODO get router compatibility version programmatically
+          routerCompatibilityVersion: ROUTER_COMPATIBILITY_VERSION_ONE,
           schemaVersionId: `static`,
           subgraphs: subgraphs.map((s, index) => {
-            const subgraphConfig = result.federationResult!.subgraphConfigBySubgraphName.get(s.name);
+            const subgraphConfig = result.subgraphConfigBySubgraphName.get(s.name);
             const schema = subgraphConfig?.schema;
             const configurationDataByTypeName = subgraphConfig?.configurationDataByTypeName;
             return {
@@ -251,9 +309,7 @@ export default (opts: BaseCommandOptions) => {
           engineConfig: routerConfig.engineConfig,
         });
 
-        ffConfigs.configByFeatureFlagName[ff.name].version = createHash('sha1')
-          .update(routerConfig.toJsonString())
-          .digest('hex');
+        ffConfigs.configByFeatureFlagName[ff.name].version = randomUUID();
       }
 
       routerConfig.featureFlagConfigs = ffConfigs;
@@ -261,6 +317,7 @@ export default (opts: BaseCommandOptions) => {
 
     if (options.out) {
       await writeFile(options.out, routerConfig.toJsonString());
+      console.log(pc.green(`Router config successfully written to ${pc.bold(options.out)}`));
     } else {
       console.log(routerConfig.toJsonString());
     }

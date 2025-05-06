@@ -1,7 +1,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { Command, program } from 'commander';
-import { join } from 'pathe';
+import { join, resolve } from 'pathe';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import logSymbols from 'log-symbols';
@@ -21,7 +21,7 @@ export default (opts: BaseCommandOptions) => {
   command.option('--out-schema <path-to-out-schema>', 'The path where the fixed schema file should be written.');
 
   command.action(async (name, options) => {
-    const schemaFile = join(process.cwd(), options.schema);
+    const schemaFile = resolve(options.schema);
     if (!existsSync(schemaFile)) {
       program.error(
         pc.red(
@@ -55,7 +55,8 @@ export default (opts: BaseCommandOptions) => {
         console.log(pc.red(pc.bold(resp.response?.details)));
       }
       console.log(logSymbols.error + pc.red(' Schema fix failed.'));
-      process.exit(1);
+      process.exitCode = 1;
+      return;
     }
 
     if (!resp.modified) {
@@ -64,7 +65,7 @@ export default (opts: BaseCommandOptions) => {
     }
 
     if (options.outSchema) {
-      await writeFile(join(process.cwd(), options.outSchema), resp.schema);
+      await writeFile(resolve(options.outSchema), resp.schema);
       console.log(logSymbols.success + pc.green(` Fixed schema written to ${options.outSchema}.`));
       return;
     }

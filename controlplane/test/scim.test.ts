@@ -80,7 +80,7 @@ describe('Scim server v2.0', (ctx) => {
 
     const response = await res.json();
     expect(res.status).toBe(200);
-    expect(response.totalResults).toBe(2);
+    expect(response.totalResults).toBe(4);
   });
 
   test('Should test scim server /Users route with filter', async (testContext) => {

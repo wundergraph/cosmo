@@ -16,7 +16,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "../ui/tooltip";
-import { FetchNode } from "./types";
+import { ARTFetchNode } from "./types";
 import { ViewHeaders } from "./view-headers";
 import { ViewInput } from "./view-input";
 import { ViewLoadStats } from "./view-load-stats";
@@ -71,8 +71,8 @@ export const FetchWaterfall = ({
   isParentDetailsOpen,
   paneWidth,
 }: {
-  fetch: FetchNode;
-  parentFetch?: FetchNode;
+  fetch: ARTFetchNode;
+  parentFetch?: ARTFetchNode;
   level: number;
   globalDuration: bigint;
   globalStartTime: bigint;
@@ -104,7 +104,7 @@ export const FetchWaterfall = ({
     () => level <= initialCollapsedSpanDepth,
   );
 
-  const hasChildrenError = (span: FetchNode) => {
+  const hasChildrenError = (span: ARTFetchNode) => {
     if (statusCode >= 400) {
       return true;
     }

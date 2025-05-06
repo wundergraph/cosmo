@@ -1,0 +1,4 @@
+{
+  "version": 1,
+  "body": "query Find($criteria: SearchInput!) {\n  findEmployees(criteria: $criteria) {\n    id\n    details {\n      forename\n      surname\n    }\n  }\n}"
+}

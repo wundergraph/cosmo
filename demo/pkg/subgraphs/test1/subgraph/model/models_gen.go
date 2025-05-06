@@ -663,6 +663,10 @@ type SBigObject struct {
 
 func (SBigObject) IsBigAbstractResponse() {}
 
+type Secret struct {
+	Value *string `json:"value,omitempty"`
+}
+
 type Subscription struct {
 }
 
@@ -697,6 +701,10 @@ type TBigObject struct {
 
 func (TBigObject) IsBigAbstractResponse() {}
 
+type Thing struct {
+	B string `json:"b"`
+}
+
 type TimestampedString struct {
 	// The value of the string.
 	Value string `json:"value"`
@@ -705,8 +713,8 @@ type TimestampedString struct {
 	// Sequence number
 	Seq int `json:"seq"`
 	// Total number of responses to be sent
-	Total          int                    `json:"total"`
-	InitialPayload map[string]interface{} `json:"initialPayload,omitempty"`
+	Total          int            `json:"total"`
+	InitialPayload map[string]any `json:"initialPayload,omitempty"`
 }
 
 type UBigObject struct {
@@ -921,7 +929,7 @@ func (e EnumType) String() string {
 	return string(e)
 }
 
-func (e *EnumType) UnmarshalGQL(v interface{}) error {
+func (e *EnumType) UnmarshalGQL(v any) error {
 	str, ok := v.(string)
 	if !ok {
 		return fmt.Errorf("enums must be strings")

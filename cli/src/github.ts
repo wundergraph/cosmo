@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { PartialMessage } from '@bufbuild/protobuf';
 import { GitInfo } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import envCi from 'env-ci';
 import { Client } from './core/client/client.js';
 import { getBaseHeaders } from './core/config.js';
 
@@ -24,7 +25,11 @@ export function useGitHub() {
   const isPr =
     process.env.GITHUB_EVENT_NAME === 'pull_request' || process.env.GITHUB_EVENT_NAME === 'pull_request_target';
 
-  const commit = getLatestPRCommit();
+  let commit = getLatestPRCommit();
+  if (!commit) {
+    const env = envCi();
+    commit = env.commit;
+  }
 
   return {
     isPr,

@@ -1,7 +1,7 @@
 SHELL := bash
 
 test:
-	go test -race ./...
+	go test -ldflags=-extldflags=-Wl,-ld_classic $(test_params) -race ./...
 
 update-snapshot:
 	go test -update -race ./...
@@ -11,19 +11,21 @@ test-fresh: clean-testcache test
 test-no-race:
 	go test ./...
 
+test-no-race-fresh: clean-testcache
+	go test ./...
+
 lint:
 	go vet ./...
 	staticcheck ./...
 
-LOOPS=20
 test-stability:
-	for ((i=1; i <= ${LOOPS}; ++i)) do make test-fresh; done
+	@while $(MAKE) test-fresh; do :; done
 
 clean-testcache:
 	go clean -testcache
 
 update-test-config:
-	./update-config.sh
+	./update-config-no-edg.sh
 
 .PHONY: test test-no-race lint test-stability clean-testcache update-test-config test-fresh
 

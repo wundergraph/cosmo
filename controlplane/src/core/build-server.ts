@@ -37,9 +37,22 @@ import { BillingRepository } from './repositories/BillingRepository.js';
 import { BillingService } from './services/BillingService.js';
 import { UserRepository } from './repositories/UserRepository.js';
 import { AIGraphReadmeQueue, createAIGraphReadmeWorker } from './workers/AIGraphReadmeWorker.js';
-import { fastifyLoggerId } from './util.js';
+import { fastifyLoggerId, createS3ClientConfig, extractS3BucketName } from './util.js';
 import { ApiKeyRepository } from './repositories/ApiKeyRepository.js';
 import { createDeleteOrganizationWorker, DeleteOrganizationQueue } from './workers/DeleteOrganizationWorker.js';
+import {
+  createDeleteOrganizationAuditLogsWorker,
+  DeleteOrganizationAuditLogsQueue,
+} from './workers/DeleteOrganizationAuditLogsWorker.js';
+import {
+  createDeactivateOrganizationWorker,
+  DeactivateOrganizationQueue,
+} from './workers/DeactivateOrganizationWorker.js';
+import { createDeleteUserWorker, DeleteUserQueue } from './workers/DeleteUserQueue.js';
+import {
+  createReactivateOrganizationWorker,
+  ReactivateOrganizationQueue,
+} from './workers/ReactivateOrganizationWorker.js';
 
 export interface BuildConfig {
   logger: LoggerOptions;
@@ -86,7 +99,14 @@ export interface BuildConfig {
   };
   slack: { clientID?: string; clientSecret?: string };
   cdnBaseUrl: string;
-  s3StorageUrl: string;
+  s3Storage: {
+    url: string;
+    endpoint?: string;
+    region?: string;
+    username?: string;
+    password?: string;
+    forcePathStyle?: boolean;
+  };
   mailer: {
     smtpEnabled: boolean;
     smtpHost?: string;
@@ -280,6 +300,18 @@ export default async function build(opts: BuildConfig) {
     tls: opts.redis.tls,
   });
 
+  if (!opts.s3Storage || !opts.s3Storage.url) {
+    throw new Error('S3 storage URL is required');
+  }
+
+  const bucketName = extractS3BucketName(opts.s3Storage);
+  const s3Config = createS3ClientConfig(bucketName, opts.s3Storage);
+
+  const s3Client = new S3Client(s3Config);
+  const blobStorage = new S3BlobStorage(s3Client, bucketName);
+
+  const platformWebhooks = new PlatformWebhookService(opts.webhook?.url, opts.webhook?.key, logger);
+
   const readmeQueue = new AIGraphReadmeQueue(logger, fastify.redisForQueue);
 
   if (opts.openaiAPIKey) {
@@ -293,6 +325,15 @@ export default async function build(opts: BuildConfig) {
     );
   }
 
+  const deleteOrganizationAuditLogsQueue = new DeleteOrganizationAuditLogsQueue(logger, fastify.redisForQueue);
+  bullWorkers.push(
+    createDeleteOrganizationAuditLogsWorker({
+      redisConnection: fastify.redisForWorker,
+      db: fastify.db,
+      logger,
+    }),
+  );
+
   const deleteOrganizationQueue = new DeleteOrganizationQueue(logger, fastify.redisForQueue);
   bullWorkers.push(
     createDeleteOrganizationWorker({
@@ -301,6 +342,44 @@ export default async function build(opts: BuildConfig) {
       logger,
       keycloakClient,
       keycloakRealm: opts.keycloak.realm,
+      blobStorage,
+      deleteOrganizationAuditLogsQueue,
+    }),
+  );
+
+  const deactivateOrganizationQueue = new DeactivateOrganizationQueue(logger, fastify.redisForQueue);
+  bullWorkers.push(
+    createDeactivateOrganizationWorker({
+      redisConnection: fastify.redisForWorker,
+      db: fastify.db,
+      logger,
+      keycloakClient,
+      keycloakRealm: opts.keycloak.realm,
+      deleteOrganizationQueue,
+    }),
+  );
+
+  const reactivateOrganizationQueue = new ReactivateOrganizationQueue(logger, fastify.redisForQueue);
+  bullWorkers.push(
+    createReactivateOrganizationWorker({
+      redisConnection: fastify.redisForWorker,
+      db: fastify.db,
+      logger,
+      deleteOrganizationQueue,
+    }),
+  );
+
+  const deleteUserQueue = new DeleteUserQueue(logger, fastify.redisForQueue);
+  bullWorkers.push(
+    createDeleteUserWorker({
+      redisConnection: fastify.redisForWorker,
+      db: fastify.db,
+      logger,
+      keycloakClient,
+      keycloakRealm: opts.keycloak.realm,
+      blobStorage,
+      platformWebhooks,
+      deleteOrganizationAuditLogsQueue,
     }),
   );
 
@@ -343,29 +422,9 @@ export default async function build(opts: BuildConfig) {
     });
   }
 
-  if (!opts.s3StorageUrl) {
-    throw new Error('S3 storage URL is required');
-  }
-
-  const url = new URL(opts.s3StorageUrl);
-  const s3Client = new S3Client({
-    // For AWS S3, the region can be set via the endpoint
-    region: 'auto',
-    endpoint: url.origin,
-    credentials: {
-      accessKeyId: url.username ?? '',
-      secretAccessKey: url.password ?? '',
-    },
-    forcePathStyle: true,
-  });
-  const bucketName = url.pathname.slice(1);
-  const blobStorage = new S3BlobStorage(s3Client, bucketName);
-
   /**
    * Controllers registration
    */
-
-  const platformWebhooks = new PlatformWebhookService(opts.webhook?.url, opts.webhook?.key, logger);
 
   await fastify.register(AuthController, {
     organizationRepository,
@@ -424,6 +483,10 @@ export default async function build(opts: BuildConfig) {
       queues: {
         readmeQueue,
         deleteOrganizationQueue,
+        deleteOrganizationAuditLogsQueue,
+        deactivateOrganizationQueue,
+        reactivateOrganizationQueue,
+        deleteUserQueue,
       },
       stripeSecretKey: opts.stripe?.secret,
       admissionWebhookJWTSecret: opts.admissionWebhook.secret,
@@ -435,7 +498,7 @@ export default async function build(opts: BuildConfig) {
     logLevel: opts.logger.level as pino.LevelWithSilent,
     // Avoid compression for small requests
     compressMinBytes: 1024,
-    maxTimeoutMs: 120_000,
+    maxTimeoutMs: 80_000,
     shutdownTimeoutMs: 30_000,
     // The default limit is the maximum supported value of ~4GiB
     // We go with 32MiB to avoid allocating too much memory for large requests

@@ -2,10 +2,8 @@ import {
   ConstDirectiveNode,
   ConstValueNode,
   DirectiveDefinitionNode,
-  EnumTypeDefinitionNode,
   EnumValueDefinitionNode,
   FieldDefinitionNode,
-  InputObjectTypeDefinitionNode,
   InputValueDefinitionNode,
   InterfaceTypeDefinitionNode,
   InterfaceTypeExtensionNode,
@@ -14,10 +12,8 @@ import {
   NameNode,
   ObjectTypeDefinitionNode,
   ObjectTypeExtensionNode,
-  ScalarTypeDefinitionNode,
   StringValueNode,
   TypeNode,
-  UnionTypeDefinitionNode,
 } from 'graphql';
 import { formatDescription, stringToNameNode } from '../ast/utils';
 import { maximumTypeNestingExceededError, unexpectedTypeNodeKindFatalError } from '../errors/errors';
@@ -51,12 +47,10 @@ export type MutableEnumNode = {
   values?: MutableEnumValueNode[];
 };
 
-export function getMutableEnumNode(node: EnumTypeDefinitionNode): MutableEnumNode {
+export function getMutableEnumNode(nameNode: NameNode): MutableEnumNode {
   return {
-    kind: node.kind,
-    name: { ...node.name },
-    description: formatDescription(node.description),
-    values: node.values?.map((value) => getMutableEnumValueNode(value)),
+    kind: Kind.ENUM_TYPE_DEFINITION,
+    name: { ...nameNode },
   };
 }
 
@@ -104,11 +98,10 @@ export type MutableInputObjectNode = {
   fields?: InputValueDefinitionNode[];
 };
 
-export function getMutableInputObjectNode(node: InputObjectTypeDefinitionNode): MutableInputObjectNode {
+export function getMutableInputObjectNode(nameNode: NameNode): MutableInputObjectNode {
   return {
-    kind: node.kind,
-    name: { ...node.name },
-    description: formatDescription(node.description),
+    kind: Kind.INPUT_OBJECT_TYPE_DEFINITION,
+    name: { ...nameNode },
   };
 }
 
@@ -145,11 +138,10 @@ export type MutableInterfaceNode = {
   interfaces?: NamedTypeNode[];
 };
 
-export function getMutableInterfaceNode(node: InterfaceTypeDefinitionNode): MutableInterfaceNode {
+export function getMutableInterfaceNode(nameNode: NameNode): MutableInterfaceNode {
   return {
-    kind: node.kind,
-    name: { ...node.name },
-    description: formatDescription(node.description),
+    kind: Kind.INTERFACE_TYPE_DEFINITION,
+    name: { ...nameNode },
   };
 }
 
@@ -162,11 +154,10 @@ export type MutableObjectNode = {
   interfaces?: NamedTypeNode[];
 };
 
-export function getMutableObjectNode(node: ObjectTypeDefinitionNode): MutableObjectNode {
+export function getMutableObjectNode(nameNode: NameNode): MutableObjectNode {
   return {
-    kind: node.kind,
-    name: { ...node.name },
-    description: formatDescription(node.description),
+    kind: Kind.OBJECT_TYPE_DEFINITION,
+    name: { ...nameNode },
   };
 }
 
@@ -197,11 +188,10 @@ export type MutableScalarNode = {
   directives?: ConstDirectiveNode[];
 };
 
-export function getMutableScalarNode(node: ScalarTypeDefinitionNode): MutableScalarNode {
+export function getMutableScalarNode(nameNode: NameNode): MutableScalarNode {
   return {
-    kind: node.kind,
-    name: { ...node.name },
-    description: formatDescription(node.description),
+    kind: Kind.SCALAR_TYPE_DEFINITION,
+    name: { ...nameNode },
   };
 }
 
@@ -266,11 +256,10 @@ export type MutableUnionNode = {
   types?: NamedTypeNode[];
 };
 
-export function getMutableUnionNode(node: UnionTypeDefinitionNode): MutableUnionNode {
+export function getMutableUnionNode(nameNode: NameNode): MutableUnionNode {
   return {
-    kind: node.kind,
-    name: { ...node.name },
-    description: formatDescription(node.description),
+    kind: Kind.UNION_TYPE_DEFINITION,
+    name: { ...nameNode },
   };
 }
 
@@ -283,7 +272,7 @@ export type MutableTypeDefinitionNode =
   | MutableScalarNode
   | MutableUnionNode;
 
-export type ObjectLikeTypeNode =
+export type CompositeOutputNode =
   | InterfaceTypeDefinitionNode
   | InterfaceTypeExtensionNode
   | ObjectTypeDefinitionNode
@@ -297,5 +286,14 @@ export function getTypeNodeNamedTypeName(typeNode: TypeNode): string {
     // intentional fallthrough
     case Kind.NON_NULL_TYPE:
       return getTypeNodeNamedTypeName(typeNode.type);
+  }
+}
+
+export function getNamedTypeNode(typeNode: TypeNode): TypeNode {
+  switch (typeNode.kind) {
+    case Kind.NAMED_TYPE:
+      return typeNode;
+    default:
+      return getNamedTypeNode(typeNode.type);
   }
 }

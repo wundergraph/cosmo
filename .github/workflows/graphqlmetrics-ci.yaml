@@ -20,7 +20,7 @@ jobs:
     services:
       clickhouse:
         # Docker Hub image
-        image: clickhouse/clickhouse-server:24
+        image: clickhouse/clickhouse-server:24.12
         ports:
           - "8123:8123"
           - "9000:9000"
@@ -31,18 +31,6 @@ jobs:
           CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          # The go install / version instructions are inside the Makefile, so we need to cache the Makefile.
-          key: ${{ runner.os }}-go-${{ hashFiles('graphqlmetrics/go.sum') }}-makefile-${{ hashFiles('Makefile') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
 
       - uses: ./.github/actions/go
         with:
@@ -79,12 +67,13 @@ jobs:
         run: make build
 
   build_push_image:
+    # This is a limitation of GitHub. Only organization members can push to GitHub Container Registry
+    # For now, we will disable the push to the GitHub Container Registry for external contributors
+    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - uses: ./.github/actions/build-push-image
         with:

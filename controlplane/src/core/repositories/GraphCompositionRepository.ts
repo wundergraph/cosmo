@@ -1,10 +1,10 @@
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { SQL, and, count, desc, eq, gt, lt } from 'drizzle-orm';
+import { SQL, and, count, desc, eq, gt, lt, not } from 'drizzle-orm';
 import { FastifyBaseLogger } from 'fastify';
-import { splitLabel } from '@wundergraph/cosmo-shared';
 import * as schema from '../../db/schema.js';
 import { graphCompositions, graphCompositionSubgraphs, schemaVersion, targets, users } from '../../db/schema.js';
 import { DateRange, GraphCompositionDTO } from '../../types/index.js';
+import { ComposedSubgraph } from '../composition/composer.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 
 export class GraphCompositionRepository {
@@ -14,23 +14,29 @@ export class GraphCompositionRepository {
   ) {}
 
   public async addComposition({
+    fedGraphTargetId,
     fedGraphSchemaVersionId,
     compositionErrorString,
+    compositionWarningString,
     routerConfigSignature,
-    subgraphSchemaVersionIds,
+    composedSubgraphs,
     composedById,
     admissionErrorString,
     deploymentErrorString,
     isFeatureFlagComposition,
+    routerCompatibilityVersion,
   }: {
+    fedGraphTargetId: string;
     fedGraphSchemaVersionId: string;
     compositionErrorString: string;
+    compositionWarningString: string;
     routerConfigSignature?: string;
-    subgraphSchemaVersionIds: string[];
+    composedSubgraphs: ComposedSubgraph[];
     composedById: string;
     admissionErrorString?: string;
     deploymentErrorString?: string;
     isFeatureFlagComposition: boolean;
+    routerCompatibilityVersion: string;
   }) {
     await this.db.transaction(async (tx) => {
       const actor = await tx.query.users.findFirst({
@@ -40,11 +46,27 @@ export class GraphCompositionRepository {
         throw new Error(`Could not find actor ${composedById}`);
       }
 
+      const subgraphSchemaVersionIds = composedSubgraphs.map((subgraph) => subgraph.schemaVersionId!);
+
+      const previousComposition = (
+        await tx
+          .select({
+            id: graphCompositions.id,
+          })
+          .from(graphCompositions)
+          .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositions.schemaVersionId))
+          .where(eq(schemaVersion.targetId, fedGraphTargetId))
+          .orderBy(desc(graphCompositions.createdAt))
+          .limit(1)
+          .execute()
+      )[0];
+
       const insertedComposition = await tx
         .insert(graphCompositions)
         .values({
           schemaVersionId: fedGraphSchemaVersionId,
           compositionErrors: compositionErrorString,
+          compositionWarnings: compositionWarningString,
           isComposable: compositionErrorString === '',
           routerConfigSignature,
           createdById: composedById,
@@ -52,19 +74,89 @@ export class GraphCompositionRepository {
           deploymentError: deploymentErrorString,
           admissionError: admissionErrorString,
           isFeatureFlagComposition,
+          routerCompatibilityVersion,
         })
         .returning()
         .execute();
+
       if (subgraphSchemaVersionIds.length > 0) {
-        await tx
-          .insert(graphCompositionSubgraphs)
-          .values(
-            subgraphSchemaVersionIds.map((schemaVersionId) => ({
-              graphCompositionId: insertedComposition[0].id,
-              schemaVersionId,
-            })),
-          )
-          .execute();
+        const prevCompositionSubgraphs: {
+          id: string;
+          name: string;
+          schemaVersionId: string;
+          targetId: string;
+          isFeatureSubgraph: boolean;
+        }[] = [];
+        if (previousComposition) {
+          const prevSubgraphs = await tx
+            .select({
+              id: graphCompositionSubgraphs.subgraphId,
+              name: graphCompositionSubgraphs.subgraphName,
+              schemaVersionId: graphCompositionSubgraphs.schemaVersionId,
+              targetId: graphCompositionSubgraphs.subgraphTargetId,
+              isFeatureSubgraph: graphCompositionSubgraphs.isFeatureSubgraph,
+            })
+            .from(graphCompositionSubgraphs)
+            .where(
+              and(
+                eq(graphCompositionSubgraphs.graphCompositionId, previousComposition.id),
+                not(eq(graphCompositionSubgraphs.changeType, 'removed')),
+              ),
+            )
+            .execute();
+          prevCompositionSubgraphs.push(...prevSubgraphs);
+        }
+
+        const addedSubgraphs = composedSubgraphs.filter(
+          (subgraph) => !prevCompositionSubgraphs.some((prevSubgraph) => prevSubgraph.id === subgraph.id),
+        );
+        const removedSubgraphs = prevCompositionSubgraphs.filter(
+          (subgraph) => !composedSubgraphs.some((prevSubgraph) => prevSubgraph.id === subgraph.id),
+        );
+
+        const updatedSubgraphs = composedSubgraphs.filter((subgraph) => {
+          const prevSubgraph = prevCompositionSubgraphs.find((prevSubgraph) => prevSubgraph.id === subgraph.id);
+          return (
+            prevSubgraph &&
+            prevSubgraph.schemaVersionId !== subgraphSchemaVersionIds[composedSubgraphs.indexOf(subgraph)]
+          );
+        });
+
+        const unchangedSubgraphs = composedSubgraphs.filter((subgraph) =>
+          prevCompositionSubgraphs.some(
+            (prevSubgraph) =>
+              prevSubgraph.id === subgraph.id &&
+              prevSubgraph.schemaVersionId === subgraphSchemaVersionIds[composedSubgraphs.indexOf(subgraph)],
+          ),
+        );
+
+        const insertValues: (typeof graphCompositionSubgraphs.$inferInsert)[] = [
+          ...addedSubgraphs,
+          ...updatedSubgraphs,
+          ...removedSubgraphs,
+          ...unchangedSubgraphs,
+        ].map((subgraph) => ({
+          graphCompositionId: insertedComposition[0].id,
+          subgraphId: subgraph.id,
+          subgraphTargetId: subgraph.targetId,
+          subgraphName: subgraph.name,
+          schemaVersionId: subgraph.schemaVersionId!,
+          isFeatureSubgraph: subgraph.isFeatureSubgraph,
+          changeType: (() => {
+            if (addedSubgraphs.some((s) => s.id === subgraph.id)) {
+              return 'added';
+            }
+            if (removedSubgraphs.some((s) => s.id === subgraph.id)) {
+              return 'removed';
+            }
+            if (updatedSubgraphs.some((s) => s.id === subgraph.id)) {
+              return 'updated';
+            }
+            return 'unchanged';
+          })(),
+        }));
+
+        await tx.insert(graphCompositionSubgraphs).values(insertValues).execute();
       }
     });
   }
@@ -102,6 +194,7 @@ export class GraphCompositionRepository {
         schemaVersionId: graphCompositions.schemaVersionId,
         isComposable: graphCompositions.isComposable,
         compositionErrors: graphCompositions.compositionErrors,
+        compositionWarnings: graphCompositions.compositionWarnings,
         createdAt: graphCompositions.createdAt,
         createdBy: users.email,
         createdByEmail: graphCompositions.createdByEmail,
@@ -109,6 +202,7 @@ export class GraphCompositionRepository {
         routerConfigSignature: graphCompositions.routerConfigSignature,
         admissionError: graphCompositions.admissionError,
         deploymentError: graphCompositions.deploymentError,
+        routerCompatibilityVersion: graphCompositions.routerCompatibilityVersion,
       })
       .from(graphCompositions)
       .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositions.schemaVersionId))
@@ -134,11 +228,13 @@ export class GraphCompositionRepository {
       createdAt: composition.createdAt.toISOString(),
       isComposable: composition.isComposable || false,
       compositionErrors: composition.compositionErrors || undefined,
+      compositionWarnings: composition.compositionWarnings || undefined,
       createdBy: composition.createdBy || composition.createdByEmail || undefined,
       routerConfigSignature: composition.routerConfigSignature || undefined,
       isLatestValid: isCurrentDeployed,
       admissionError: composition.admissionError || undefined,
       deploymentError: composition.deploymentError || undefined,
+      routerCompatibilityVersion: composition.routerCompatibilityVersion,
     };
   }
 
@@ -161,6 +257,7 @@ export class GraphCompositionRepository {
         routerConfigSignature: graphCompositions.routerConfigSignature,
         admissionError: graphCompositions.admissionError,
         deploymentError: graphCompositions.deploymentError,
+        routerCompatibilityVersion: graphCompositions.routerCompatibilityVersion,
       })
       .from(graphCompositions)
       .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositions.schemaVersionId))
@@ -191,44 +288,25 @@ export class GraphCompositionRepository {
       routerConfigSignature: composition.routerConfigSignature || undefined,
       admissionError: composition.admissionError || undefined,
       deploymentError: composition.deploymentError || undefined,
+      routerCompatibilityVersion: composition.routerCompatibilityVersion,
     };
   }
 
   public async getCompositionSubgraphs(input: { compositionId: string }) {
     const res = await this.db
       .select({
-        id: graphCompositionSubgraphs.id,
-        targetId: targets.id,
-        name: targets.name,
-        routingUrl: schema.subgraphs.routingUrl,
-        subscriptionUrl: schema.subgraphs.subscriptionUrl,
-        subscriptionProtocol: schema.subgraphs.subscriptionProtocol,
-        schemaSDL: schemaVersion.schemaSDL,
+        id: graphCompositionSubgraphs.subgraphId,
         schemaVersionId: graphCompositionSubgraphs.schemaVersionId,
-        labels: schema.targets.labels,
-        namespaceId: schema.namespaces.id,
-        namespace: schema.namespaces.name,
-        lastUpdatedAt: graphCompositionSubgraphs.createdAt,
-        websocketSubprotocol: schema.subgraphs.websocketSubprotocol,
-        isEventDrivenGraph: schema.subgraphs.isEventDrivenGraph,
-        isFeatureSubgraph: schema.subgraphs.isFeatureSubgraph,
+        name: graphCompositionSubgraphs.subgraphName,
+        targetId: graphCompositionSubgraphs.subgraphTargetId,
+        isFeatureSubgraph: graphCompositionSubgraphs.isFeatureSubgraph,
+        changeType: graphCompositionSubgraphs.changeType,
       })
       .from(graphCompositionSubgraphs)
-      .innerJoin(graphCompositions, eq(graphCompositions.id, graphCompositionSubgraphs.graphCompositionId))
-      .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositionSubgraphs.schemaVersionId))
-      .innerJoin(targets, eq(targets.id, schemaVersion.targetId))
-      .innerJoin(schema.subgraphs, eq(schema.subgraphs.targetId, targets.id))
-      .innerJoin(schema.namespaces, eq(schema.namespaces.id, targets.namespaceId))
-      .where(eq(graphCompositions.id, input.compositionId))
+      .where(eq(graphCompositionSubgraphs.graphCompositionId, input.compositionId))
       .execute();
 
-    return res.map((r) => ({
-      ...r,
-      schemaSDL: r.schemaSDL || '',
-      subscriptionUrl: r.subscriptionUrl || '',
-      lastUpdatedAt: r.lastUpdatedAt.toISOString(),
-      labels: r.labels?.map?.((l) => splitLabel(l)) ?? [],
-    }));
+    return res;
   }
 
   public async getGraphCompositions({
@@ -245,7 +323,7 @@ export class GraphCompositionRepository {
     offset: number;
     dateRange: DateRange;
     excludeFeatureFlagCompositions: boolean;
-  }): Promise<GraphCompositionDTO[]> {
+  }) {
     const fedRepo = new FederatedGraphRepository(this.logger, this.db, organizationId);
     const conditions: SQL<unknown>[] = [
       eq(schemaVersion.targetId, fedGraphTargetId),
@@ -257,32 +335,46 @@ export class GraphCompositionRepository {
       conditions.push(eq(graphCompositions.isFeatureFlagComposition, false));
     }
 
-    const resp = await this.db
+    const dbQuery = this.db
       .select({
         id: graphCompositions.id,
         schemaVersionId: graphCompositions.schemaVersionId,
         isComposable: graphCompositions.isComposable,
         compositionErrors: graphCompositions.compositionErrors,
+        compositionWarnings: graphCompositions.compositionWarnings,
         createdAt: graphCompositions.createdAt,
         createdBy: users.email,
         createdByEmail: graphCompositions.createdByEmail,
         routerConfigSignature: graphCompositions.routerConfigSignature,
         admissionError: graphCompositions.admissionError,
         deploymentError: graphCompositions.deploymentError,
+        routerCompatibilityVersion: graphCompositions.routerCompatibilityVersion,
       })
       .from(graphCompositions)
       .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositions.schemaVersionId))
       .leftJoin(users, eq(graphCompositions.createdById, users.id))
       .where(and(...conditions))
-      .orderBy(desc(schemaVersion.createdAt))
-      .limit(limit)
-      .offset(offset)
-      .execute();
+      .orderBy(desc(schemaVersion.createdAt));
 
-    const compositions: GraphCompositionDTO[] = [];
+    if (limit) {
+      dbQuery.limit(limit);
+    }
+
+    if (offset) {
+      dbQuery.offset(offset);
+    }
+
+    const resp = await dbQuery.execute();
+
+    const compositions: (GraphCompositionDTO & {
+      hasMultipleChangedSubgraphs: boolean;
+      triggeredBySubgraphName: string;
+    })[] = [];
 
     for (const r of resp) {
       const isCurrentDeployed = await fedRepo.isLatestValidSchemaVersion(fedGraphTargetId, r.schemaVersionId);
+
+      const compositionSubgraphs = await this.getCompositionSubgraphs({ compositionId: r.id });
 
       compositions.push({
         id: r.id,
@@ -290,11 +382,15 @@ export class GraphCompositionRepository {
         createdAt: r.createdAt.toISOString(),
         isComposable: r.isComposable || false,
         compositionErrors: r.compositionErrors || undefined,
+        compositionWarnings: r.compositionWarnings || undefined,
         createdBy: r.createdBy || r.createdByEmail || undefined,
         isLatestValid: isCurrentDeployed,
         routerConfigSignature: r.routerConfigSignature || undefined,
         admissionError: r.admissionError || undefined,
         deploymentError: r.deploymentError || undefined,
+        hasMultipleChangedSubgraphs: compositionSubgraphs.filter((s) => s.changeType !== 'unchanged').length > 1,
+        triggeredBySubgraphName: compositionSubgraphs.find((s) => s.changeType !== 'unchanged')?.name || '',
+        routerCompatibilityVersion: r.routerCompatibilityVersion,
       });
     }
 

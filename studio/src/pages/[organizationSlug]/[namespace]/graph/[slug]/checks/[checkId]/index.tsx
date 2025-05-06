@@ -5,9 +5,10 @@ import {
   isCheckSuccessful,
 } from "@/components/check-badge-icon";
 import { ChangesTable } from "@/components/checks/changes-table";
+import { GraphPruningIssuesTable } from "@/components/checks/graph-pruning-issues-table";
 import { LintIssuesTable } from "@/components/checks/lint-issues-table";
 import { CheckOperations } from "@/components/checks/operations";
-import { CodeViewerActions } from "@/components/code-viewer";
+import { ProposalMatchesTable } from "@/components/checks/proposal-matches-table";
 import { EmptyState } from "@/components/empty-state";
 import { InfoTooltip } from "@/components/info-tooltip";
 import {
@@ -15,6 +16,7 @@ import {
   GraphPageLayout,
   getGraphLayout,
 } from "@/components/layout/graph-layout";
+import { SDLViewerActions } from "@/components/schema/sdl-viewer";
 import {
   DecorationCollection,
   SDLViewerMonaco,
@@ -35,6 +37,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/components/ui/link";
 import { Loader } from "@/components/ui/loader";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Tooltip,
@@ -45,30 +56,43 @@ import { useToast } from "@/components/ui/use-toast";
 import { useSessionStorage } from "@/hooks/use-session-storage";
 import { formatDate, formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
-import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
+import { cn } from "@/lib/utils";
+import { useMutation, useQuery } from "@connectrpc/connect-query";
+import {
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
+  NoSymbolIcon,
+} from "@heroicons/react/24/outline";
 import {
   ArrowLeftIcon,
   CheckCircledIcon,
+  ClipboardIcon,
+  Component2Icon,
   CrossCircledIcon,
   CubeIcon,
+  LightningBoltIcon,
   ReaderIcon,
   UpdateIcon,
 } from "@radix-ui/react-icons";
-import { useQuery, useMutation } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   forceCheckSuccess,
   getCheckSummary,
-  getFederatedGraphs,
+  getProposedSchemaOfCheckedSubgraph,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import {
   GetCheckSummaryResponse,
+  GraphPruningIssue,
   LintIssue,
+  LintSeverity,
+  SchemaCheck_CheckedSubgraph,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { formatDistanceToNow, subDays } from "date-fns";
 import { useRouter } from "next/router";
 import React, { useContext, useMemo } from "react";
-import { PiBracketsCurlyBold, PiGraphLight } from "react-icons/pi";
+import { HiOutlineScissors } from "react-icons/hi2";
+import { PiBracketsCurlyBold, PiCubeFocus } from "react-icons/pi";
+import { SiLintcode } from "react-icons/si";
 
 const ForceSuccess: React.FC<{ onSubmit: () => void }> = (props) => {
   return (
@@ -98,6 +122,119 @@ const ForceSuccess: React.FC<{ onSubmit: () => void }> = (props) => {
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+  );
+};
+
+const ProposedSchemas = ({
+  checkId,
+  sdl,
+  checkedSubgraphs,
+  lintIssues,
+  graphPruningIssues,
+}: {
+  checkId: string;
+  sdl?: string;
+  checkedSubgraphs: SchemaCheck_CheckedSubgraph[];
+  lintIssues: LintIssue[];
+  graphPruningIssues: GraphPruningIssue[];
+}) => {
+  const router = useRouter();
+  const subgraph = router.query.subgraph as string;
+  const hash = router.asPath.split("#")?.[1];
+
+  const checkedSubgraph = checkedSubgraphs.find(
+    (s) => s.subgraphName === subgraph,
+  );
+
+  const activeSubgraph = checkedSubgraph || checkedSubgraphs?.[0];
+  const activeSubgraphName = activeSubgraph?.subgraphName;
+
+  const { data: sdlData, isLoading: fetchingSdl } = useQuery(
+    getProposedSchemaOfCheckedSubgraph,
+    {
+      checkId,
+      checkedSubgraphId: activeSubgraph?.id,
+    },
+    {
+      enabled: !!activeSubgraph && !!activeSubgraphName,
+    },
+  );
+
+  if (fetchingSdl) return <Loader fullscreen />;
+
+  return (
+    <div className="scrollbar-custom h-full min-h-[300px] w-full overflow-auto">
+      <SDLViewerMonaco
+        schema={
+          (checkedSubgraphs.length > 0 ? sdlData?.proposedSchema : sdl) || ""
+        }
+        disablePrettier
+        decorationCollections={getDecorationCollection(
+          lintIssues,
+          graphPruningIssues,
+        )}
+        line={hash ? Number(hash.slice(1)) : undefined}
+      />
+
+      <div className="right-8 top-0 px-4 md:absolute md:px-0">
+        <div className="flex gap-x-2">
+          {checkedSubgraphs.length > 0 && (
+            <Select
+              value={activeSubgraphName}
+              onValueChange={(subgraph) =>
+                router.push({
+                  pathname: router.pathname,
+                  query: {
+                    ...router.query,
+                    subgraph,
+                  },
+                })
+              }
+            >
+              <SelectTrigger
+                value={activeSubgraphName}
+                className="w-full bg-background md:ml-auto md:w-[200px]"
+              >
+                <SelectValue aria-label={activeSubgraphName}>
+                  {activeSubgraphName}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
+                    <Component2Icon className="h-3 w-3" /> Subgraphs
+                  </SelectLabel>
+                  {checkedSubgraphs.map(
+                    ({ subgraphName: name, id, isDeleted }) => {
+                      return (
+                        <SelectItem key={name} value={name}>
+                          <div
+                            className={cn({
+                              "text-destructive": isDeleted,
+                            })}
+                          >
+                            <p>{name}</p>
+                            <p className="text-xs">{id.split("-")[0]}</p>
+                          </div>
+                        </SelectItem>
+                      );
+                    },
+                  )}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          )}
+          <SDLViewerActions
+            sdl={
+              (checkedSubgraphs.length > 0 ? sdlData?.proposedSchema : sdl) ||
+              ""
+            }
+            size="icon"
+            targetName={activeSubgraphName}
+          />
+        </div>
+      </div>
+    </div>
   );
 };
 
@@ -186,6 +323,7 @@ const CheckOverviewPage: NextPageWithLayout = () => {
 
 const getDecorationCollection = (
   lintIssues: LintIssue[],
+  graphPruningIssues: GraphPruningIssue[],
 ): DecorationCollection[] => {
   const decorationCollection: DecorationCollection[] = [];
 
@@ -205,8 +343,33 @@ const getDecorationCollection = (
           })`,
         },
         inlineClassName:
-          "underline decoration-red-500 decoration-wavy cursor-pointer z-50",
+          "underline decoration-destructive decoration-wavy cursor-pointer z-50",
         isWholeLine: l.issueLocation.endLine === undefined,
+      },
+    });
+  }
+
+  for (const g of graphPruningIssues) {
+    if (!g.issueLocation) continue;
+    decorationCollection.push({
+      range: {
+        startLineNumber: g.issueLocation.line,
+        endLineNumber: g.issueLocation.endLine || g.issueLocation.line,
+        startColumn: g.issueLocation.column,
+        endColumn: g.issueLocation.endColumn || g.issueLocation.column,
+      },
+      options: {
+        hoverMessage: {
+          value: `${g.message}. (Rule: ${
+            g.graphPruningRuleType ? g.graphPruningRuleType : ""
+          })`,
+        },
+        inlineClassName: `underline ${
+          g.severity === LintSeverity.error
+            ? "decoration-destructive"
+            : "decoration-warning"
+        } decoration-wavy cursor-pointer z-50`,
+        isWholeLine: g.issueLocation.endLine === undefined,
       },
     });
   }
@@ -230,9 +393,6 @@ const CheckDetails = ({
   const slug = router.query.slug as string;
   const id = router.query.checkId as string;
   const tab = router.query.tab as string;
-  const hash = router.asPath.split("#")?.[1];
-
-  const { data: allGraphsData } = useQuery(getFederatedGraphs);
 
   const { mutate: forceSuccess } = useMutation(forceCheckSuccess, {
     onSuccess: (data) => {
@@ -285,6 +445,9 @@ const CheckDetails = ({
     data.check.isBreaking,
     data.check.hasClientTraffic,
     data.check.hasLintErrors,
+    data.check.hasGraphPruningErrors,
+    data.check.clientTrafficCheckSkipped,
+    data.check.proposalMatch === "error",
   );
 
   const currentAffectedGraph = data.affectedGraphs.find(
@@ -292,14 +455,29 @@ const CheckDetails = ({
   );
 
   const ghDetails = data.check.ghDetails;
+  const vcsContext = data.check.vcsContext;
 
-  const reason = !data.check.isComposable
-    ? "Composition errors were found"
-    : data.check.isBreaking && data.check.hasClientTraffic
-    ? "Operations were affected by breaking changes"
-    : data.check.isBreaking && !data.check.hasClientTraffic
-    ? "No operations were affected by breaking changes"
-    : "All tasks were successful";
+  const reason = data.check.errorMessage
+    ? data.check.errorMessage
+    : data.check.proposalMatch === "error"
+      ? "Proposal match check failed"
+      : !data.check.isComposable
+      ? "Composition errors were found"
+      : data.check.isBreaking && data.check?.clientTrafficCheckSkipped
+      ? "Breaking changes were detected"
+      : data.check.isBreaking && data.check.hasClientTraffic
+      ? "Operations were affected by breaking changes"
+      : data.check.isBreaking && !data.check.hasClientTraffic
+      ? "No operations were affected by breaking changes"
+      : "All tasks were successful";
+
+  const subgraphName =
+    data.check.subgraphName ||
+    (data.check.checkedSubgraphs.length > 1
+      ? "Multiple Subgraphs"
+      : data.check.checkedSubgraphs.length > 0
+      ? data.check.checkedSubgraphs[0].subgraphName
+      : "Subgraph");
 
   const setTab = (tab: string) => {
     const query: Record<string, any> = {
@@ -334,7 +512,13 @@ const CheckDetails = ({
           <div className="flex-start flex max-w-[200px] flex-1 flex-col gap-1">
             <dt className="text-sm text-muted-foreground">Action</dt>
             <dd className="whitespace-nowrap">
-              {data.check.isDeleted ? "Delete subgraph" : "Update schema"}
+              {data.check.checkedSubgraphs.length > 1
+                ? "Multiple subgraphs updated"
+                : data.check.isDeleted ||
+                  (data.check.checkedSubgraphs.length === 1 &&
+                    data.check.checkedSubgraphs[0].isDeleted)
+                ? "Delete subgraph"
+                : "Update schema"}
             </dd>
           </div>
 
@@ -348,7 +532,24 @@ const CheckDetails = ({
                 >
                   <div className="flex items-center gap-x-1">
                     <CubeIcon />
-                    {data.check.subgraphName}
+                    {subgraphName}
+                  </div>
+                </Link>
+              </dd>
+            </div>
+          )}
+
+          {data.proposalId && data.proposalName && (
+            <div className="flex-start flex max-w-[200px] flex-1 flex-col gap-1 ">
+              <dt className="text-sm text-muted-foreground">Proposal</dt>
+              <dd className="whitespace-nowrap text-sm">
+                <Link
+                  key={data.proposalId}
+                  href={`/${organizationSlug}/${namespace}/graph/${slug}/proposals/${data.proposalId}`}
+                >
+                  <div className="flex items-center gap-x-1">
+                    <ClipboardIcon />
+                    {data.proposalName}
                   </div>
                 </Link>
               </dd>
@@ -373,15 +574,22 @@ const CheckDetails = ({
         </dl>
       </div>
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-        <dl className="flex flex-col flex-shrink-0 space-y-6 overflow-hidden border-b px-4 py-4 lg:block lg:min-h-full lg:w-[240px] lg:space-y-8 lg:overflow-auto lg:border-b-0 lg:border-r lg:px-6 xl:w-[260px] xl:px-8">
+        <dl className="flex flex-shrink-0 flex-col space-y-6 overflow-hidden border-b px-4 py-4 lg:block lg:min-h-full lg:w-[240px] lg:overflow-auto lg:border-b-0 lg:border-r lg:px-6 xl:w-[260px] xl:px-8">
           <div className="col-span-3 flex flex-col">
             <dt className="mb-2 text-sm text-muted-foreground">Tasks</dt>
-            <dd className="flex flex-wrap flex-row gap-2 lg:flex lg:flex-col">
+            <dd className="flex flex-row flex-wrap gap-2 lg:flex lg:flex-col">
               <Badge
                 variant="outline"
-                className="flex items-center space-x-1.5 py-2"
+                className={cn(
+                  "flex items-center space-x-1.5 py-2",
+                  data.check?.compositionSkipped && "text-muted-foreground",
+                )}
               >
-                {getCheckIcon(data.check.isComposable)}
+                {data.check?.compositionSkipped ? (
+                  <NoSymbolIcon className="h-4 w-4" />
+                ) : (
+                  getCheckIcon(data.check.isComposable)
+                )}
                 <span className="flex-1 truncate">Composition</span>
                 <InfoTooltip>
                   Describes if the proposed schema can be composed with all
@@ -391,9 +599,16 @@ const CheckDetails = ({
 
               <Badge
                 variant="outline"
-                className="flex items-center space-x-1.5  py-2"
+                className={cn(
+                  "flex items-center space-x-1.5 py-2",
+                  data.check?.breakingChangesSkipped && "text-muted-foreground",
+                )}
               >
-                {getCheckIcon(!data.check.isBreaking)}
+                {data.check?.breakingChangesSkipped ? (
+                  <NoSymbolIcon className="h-4 w-4" />
+                ) : (
+                  getCheckIcon(!data.check.isBreaking)
+                )}
                 <span className="flex-1 truncate">Breaking Changes</span>
                 <InfoTooltip>
                   Describes if the proposed schema is free of changes that break
@@ -403,49 +618,144 @@ const CheckDetails = ({
 
               <Badge
                 variant="outline"
-                className="flex items-center space-x-1.5  py-2"
+                className={cn(
+                  "flex items-center space-x-1.5 py-2",
+                  data.check?.clientTrafficCheckSkipped &&
+                    "text-muted-foreground",
+                )}
               >
-                {getCheckIcon(!data.check.hasClientTraffic)}
-                <span className="flex-1 truncate">Operations</span>
-                <InfoTooltip>
-                  Describes if the proposed schema affects any client operations
-                  based on real usage data.
-                </InfoTooltip>
+                {data.check?.clientTrafficCheckSkipped ? (
+                  <>
+                    <NoSymbolIcon className="h-4 w-4" />
+                    <span className="flex-1 truncate">Operations</span>
+                    <InfoTooltip>
+                      Describes if the proposed schema affects any client
+                      operations based on real usage data. You skipped this
+                      check.
+                    </InfoTooltip>
+                  </>
+                ) : (
+                  <>
+                    {getCheckIcon(!data.check.hasClientTraffic)}
+                    <span className="flex-1 truncate">Operations</span>
+                    <InfoTooltip>
+                      Describes if the proposed schema affects any client
+                      operations based on real usage data.
+                    </InfoTooltip>
+                  </>
+                )}
               </Badge>
 
               <Badge
                 variant="outline"
-                className="flex items-center space-x-1.5  py-2"
+                className={cn("flex items-center space-x-1.5 py-2", {
+                  "text-muted-foreground": data.check.lintSkipped,
+                })}
               >
-                {getCheckIcon(!data.check.hasLintErrors)}
-                <span className="flex-1 truncate">Lint Errors</span>
-                <InfoTooltip>
-                  Describes if the proposed schema contains linting errors.
-                </InfoTooltip>
+                {data.check?.lintSkipped ? (
+                  <>
+                    <NoSymbolIcon className="h-4 w-4" />
+                    <span className="flex-1 truncate">Lint Errors</span>
+                    <InfoTooltip>
+                      Indicates if the proposed schema contains linting errors.
+                      Enable linting to see lint issues.
+                    </InfoTooltip>
+                  </>
+                ) : (
+                  <>
+                    {getCheckIcon(!data.check.hasLintErrors)}
+                    <span className="flex-1 truncate">Lint Errors</span>
+                    <InfoTooltip>
+                      Indicates if the proposed schema contains linting errors.
+                    </InfoTooltip>
+                  </>
+                )}
+              </Badge>
+
+              <Badge
+                variant="outline"
+                className={cn("flex items-center space-x-1.5 py-2", {
+                  "text-muted-foreground": data.check?.graphPruningSkipped,
+                })}
+              >
+                {data.check?.graphPruningSkipped ? (
+                  <>
+                    <NoSymbolIcon className="h-4 w-4" />
+                    <span className="flex-1 truncate">Pruning Errors</span>
+                    <InfoTooltip>
+                      Indicates if the proposed schema contains graph pruning
+                      errors. Enable graph pruning linter to see graph pruning
+                      issues.
+                    </InfoTooltip>
+                  </>
+                ) : (
+                  <>
+                    {getCheckIcon(!data.check.hasGraphPruningErrors)}
+                    <span className="flex-1 truncate">Pruning Errors</span>
+                    <InfoTooltip>
+                      Indicates if the proposed schema contains graph pruning
+                      errors.
+                    </InfoTooltip>
+                  </>
+                )}
+              </Badge>
+
+              <Badge
+                variant="outline"
+                className={cn("flex items-center space-x-1.5 py-2", {
+                  "text-muted-foreground": !data.check?.proposalMatch,
+                })}
+              >
+                {!data.check?.proposalMatch ? (
+                  <>
+                    <NoSymbolIcon className="h-4 w-4" />
+                    <span className="flex-1 truncate">Proposal Match</span>
+                    <InfoTooltip>
+                      Indicates if the proposed schema matches a proposal.
+                    </InfoTooltip>
+                  </>
+                ) : (
+                  <>
+                    {getCheckIcon(data.check.proposalMatch !== "error")}
+                    <span className="flex-1 truncate">Proposal Match</span>
+                    <InfoTooltip>
+                      Indicates if the proposed schema matches a proposal.
+                    </InfoTooltip>
+                  </>
+                )}
               </Badge>
             </dd>
           </div>
 
-          {data.affectedGraphs.length > 0 && (
+          {data.affectedGraphs.length > 1 && (
             <div className="flex-start flex flex-col gap-1">
-              <dt className="text-sm text-muted-foreground">Affected Graphs</dt>
-              <dd className="flex flex-wrap items-center gap-2">
+              <dt className="mb-2 text-sm text-muted-foreground">
+                Other Affected Graphs
+              </dt>
+              <dd className="flex flex-row flex-wrap gap-2 lg:flex lg:flex-col">
                 {data.affectedGraphs.map((ag) => {
-                  const graph = allGraphsData?.graphs.find(
-                    (g) => g.id === ag.id,
-                  );
-
-                  if (!graph) return null;
-
+                  if (ag.id === graphContext.graph?.id) {
+                    return null;
+                  }
                   return (
-                    <Link
+                    <Badge
                       key={ag.id}
-                      href={`/${organizationSlug}/${graph.namespace}/graph/${graph.name}`}
-                      className="flex items-center gap-x-1 text-sm"
+                      variant="outline"
+                      className="flex items-center space-x-2 py-2"
                     >
-                      <PiGraphLight />
-                      {graph.name}
-                    </Link>
+                      {getCheckIcon(ag.isCheckSuccessful)}
+                      <Link
+                        href={`/${organizationSlug}/${namespace}/graph/${ag.name}/checks/${id}`}
+                        className=" flex-1 truncate hover:underline"
+                      >
+                        <span>{ag.name}</span>
+                      </Link>
+                      <InfoTooltip>
+                        {ag.isCheckSuccessful
+                          ? "Check successful"
+                          : "Check failed"}
+                      </InfoTooltip>
+                    </Badge>
                   );
                 })}
               </dd>
@@ -543,14 +853,66 @@ const CheckDetails = ({
               </dd>
             </div>
           )}
+          {vcsContext && (
+            <>
+              {vcsContext.author && (
+                <div className="flex flex-col">
+                  <dt className="mb-2 text-sm text-muted-foreground">Author</dt>
+                  <dd className="flex items-center gap-x-2 text-sm">
+                    {vcsContext.author}
+                  </dd>
+                </div>
+              )}
+              {vcsContext.commitSha && (
+                <div className="flex flex-col">
+                  <dt className="mb-2 text-sm text-muted-foreground">
+                    Commit sha
+                  </dt>
+                  <dd className="flex items-center gap-x-2 text-sm">
+                    {vcsContext.commitSha}
+                  </dd>
+                </div>
+              )}
+              {vcsContext.branch && (
+                <div className="flex flex-col">
+                  <dt className="mb-2 text-sm text-muted-foreground">Branch</dt>
+                  <dd className="flex items-center gap-x-2 text-sm">
+                    {vcsContext.branch}
+                  </dd>
+                </div>
+              )}
+            </>
+          )}
         </dl>
-        <div className="h-full flex-1">
+        <div className="scrollbar-custom h-full flex-1 overflow-auto">
           <Tabs
-            value={tab ?? "changes"}
+            value={tab ?? "composition"}
             className="flex h-full min-h-0 flex-col"
           >
             <div className="flex flex-row px-4 py-4 lg:px-6">
-              <TabsList className="overflow-x-auto scrollbar-none justify-start">
+              <TabsList className="justify-start overflow-x-auto scrollbar-none">
+                <TabsTrigger
+                  value="composition"
+                  className="flex items-center gap-x-2"
+                  asChild
+                >
+                  <Link
+                    href={{
+                      query: { ...router.query, tab: "composition" },
+                    }}
+                  >
+                    <PiCubeFocus className="flex-shrink-0" />
+                    Composition{" "}
+                    {data.compositionErrors.length ? (
+                      <Badge
+                        variant="muted"
+                        className="bg-white px-1.5 text-current dark:bg-gray-900/60"
+                      >
+                        {data.changes.length}
+                      </Badge>
+                    ) : null}
+                  </Link>
+                </TabsTrigger>
                 <TabsTrigger
                   value="changes"
                   className="flex items-center gap-x-2"
@@ -589,7 +951,7 @@ const CheckDetails = ({
                   <Link
                     href={{ query: { ...router.query, tab: "lintIssues" } }}
                   >
-                    <PiBracketsCurlyBold className="flex-shrink-0" />
+                    <SiLintcode className="flex-shrink-0" />
                     Lint Issues
                     {data.lintIssues.length ? (
                       <Badge
@@ -601,7 +963,48 @@ const CheckDetails = ({
                     ) : null}
                   </Link>
                 </TabsTrigger>
-                {!data.check.isDeleted && (
+                <TabsTrigger
+                  value="graphPruningIssues"
+                  className="flex items-center gap-x-2"
+                  asChild
+                >
+                  <Link
+                    href={{
+                      query: { ...router.query, tab: "graphPruningIssues" },
+                    }}
+                  >
+                    <HiOutlineScissors className="flex-shrink-0" />
+                    Pruning Issues
+                    {data.graphPruningIssues.length ? (
+                      <Badge
+                        variant="muted"
+                        className="bg-white px-1.5 text-current dark:bg-gray-900/60"
+                      >
+                        {data.graphPruningIssues.length}
+                      </Badge>
+                    ) : null}
+                  </Link>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="proposalMatches"
+                  className="flex items-center gap-x-2"
+                  asChild
+                >
+                  <Link
+                    href={{
+                      query: { ...router.query, tab: "proposalMatches" },
+                    }}
+                  >
+                    <LightningBoltIcon className="flex-shrink-0" />
+                    Proposal Matches
+                  </Link>
+                </TabsTrigger>
+
+                {(data.check.checkedSubgraphs.length > 1 ||
+                  (data.check.checkedSubgraphs.length === 1 &&
+                    !data.check.checkedSubgraphs[0].isDeleted) ||
+                  (data.check.checkedSubgraphs.length === 0 &&
+                    !data.check.isDeleted)) && (
                   <TabsTrigger
                     value="schema"
                     onClick={() => setTab("schema")}
@@ -610,7 +1013,7 @@ const CheckDetails = ({
                   >
                     <Link href={{ query: { ...router.query, tab: "schema" } }}>
                       <ReaderIcon />
-                      Schema
+                      Proposed Schema
                     </Link>
                   </TabsTrigger>
                 )}
@@ -618,100 +1021,171 @@ const CheckDetails = ({
             </div>
             <div className="flex min-h-0 flex-1">
               <TabsContent
+                value="composition"
+                className="w-full space-y-4 px-4 lg:px-6"
+              >
+                {data.check?.compositionSkipped ? (
+                  <EmptyState
+                    icon={<NoSymbolIcon className="text-gray-400" />}
+                    title="Composition Check Skipped"
+                    description="The composition check was skipped for this run."
+                  />
+                ) : (
+                  <>
+                    {data.compositionErrors?.length ? (
+                      <Alert variant="destructive">
+                        <AlertTitle>Composition Errors</AlertTitle>
+                        <AlertDescription>
+                          <pre className="whitespace-pre-wrap">
+                            {data.compositionErrors.length > 0
+                              ? data.compositionErrors
+                                  .join("\n")
+                                  .split("Error: ")
+                                  .join("\n")
+                              : "No composition errors"}
+                          </pre>
+                        </AlertDescription>
+                      </Alert>
+                    ) : null}
+
+                    {data.compositionWarnings?.length ? (
+                      <Alert variant="warn">
+                        <AlertTitle>Composition Warnings</AlertTitle>
+                        <AlertDescription>
+                          <pre className="whitespace-pre-wrap">
+                            {data.compositionWarnings.length > 0
+                              ? data.compositionWarnings
+                                  .join("\n")
+                                  .split("Warning: ")
+                                  .join("\n")
+                              : "No composition wanings"}
+                          </pre>
+                        </AlertDescription>
+                      </Alert>
+                    ) : null}
+
+                    {data.compositionErrors.length === 0 &&
+                    data.compositionWarnings.length === 0 &&
+                    !data.check.isComposable ? (
+                      <EmptyState
+                        icon={
+                          <CrossCircledIcon className="h-16 w-16 text-destructive" />
+                        }
+                        title="Composition Check Failed"
+                        description='This check succeeded for the current federated graph, but it failed in one or more other affected federated graphs. Please check the "Affected Graphs" section to identify which graphs encountered composition errors.'
+                      />
+                    ) : data.compositionErrors.length === 0 &&
+                      data.compositionWarnings.length === 0 ? (
+                      <EmptyState
+                        icon={<CheckCircleIcon className="text-success" />}
+                        title="Composition Check Successful"
+                        description="There are no composition errors or warnings."
+                      />
+                    ) : null}
+                  </>
+                )}
+              </TabsContent>
+
+              <TabsContent
                 value="changes"
                 className="w-full space-y-4 px-4 lg:px-6"
               >
-                {data.compositionErrors?.length ? (
-                  <Alert variant="destructive">
-                    <AlertTitle>Composition Errors</AlertTitle>
-                    <AlertDescription>
-                      <pre className="">
-                        {data.compositionErrors.length > 0
-                          ? data.compositionErrors.join("\n")
-                          : "No composition errors"}
-                      </pre>
-                    </AlertDescription>
-                  </Alert>
-                ) : null}
-                {data.check.isBreaking &&
-                data.check.isComposable &&
-                data.check.hasClientTraffic ? (
-                  <Alert variant="default">
-                    {data.check.isForcedSuccess ? (
-                      <CheckCircledIcon className="h-4 w-4" />
+                {data.check?.breakingChangesSkipped ? (
+                  <EmptyState
+                    icon={<NoSymbolIcon className="text-gray-400" />}
+                    title="Breaking Changes Check Skipped"
+                    description="The breaking changes check was skipped for this run."
+                  />
+                ) : (
+                  <>
+                    {data.check.isBreaking &&
+                    data.check.isComposable &&
+                    data.check.hasClientTraffic ? (
+                      <Alert variant="default">
+                        {data.check.isForcedSuccess ? (
+                          <CheckCircledIcon className="h-4 w-4" />
+                        ) : (
+                          <CrossCircledIcon className="h-4 w-4" />
+                        )}
+
+                        <AlertTitle>
+                          {data.check.isForcedSuccess
+                            ? "Forced Success"
+                            : "Checks Failed"}
+                        </AlertTitle>
+                        <AlertDescription>
+                          {data.check.isForcedSuccess ? (
+                            <>This check was manually marked as successful.</>
+                          ) : (
+                            <>
+                              The proposed schema changes can be composed, but
+                              there are breaking changes affecting client
+                              operations.
+                              <br />
+                              You can manually override the state of this check
+                              to accept the changes.
+                            </>
+                          )}
+                        </AlertDescription>
+                        {data.check.isForcedSuccess ? (
+                          <div className="mt-2 flex space-x-2">
+                            <ForceSuccess
+                              onSubmit={() =>
+                                forceSuccess({
+                                  checkId: id,
+                                  graphName: slug,
+                                  namespace,
+                                })
+                              }
+                            />
+                          </div>
+                        ) : null}
+                      </Alert>
+                    ) : null}
+
+                    {isSuccessful ? (
+                      <Alert variant="default">
+                        <CheckCircledIcon className="h-4 w-4" />
+
+                        <AlertTitle>Schema check passed</AlertTitle>
+                        <AlertDescription>
+                          {data.changes.length
+                            ? "This schema change didn't affect any operations from existing client traffic."
+                            : "There were no schema changes detected."}
+                        </AlertDescription>
+                        {data.check.isForcedSuccess ? (
+                          <div className="mt-2 flex space-x-2">
+                            <ForceSuccess
+                              onSubmit={() =>
+                                forceSuccess({
+                                  checkId: id,
+                                  graphName: slug,
+                                })
+                              }
+                            />
+                          </div>
+                        ) : null}
+                      </Alert>
+                    ) : null}
+
+                    {data.changes.length ? (
+                      <ChangesTable
+                        changes={data.changes}
+                        caption={`${data.changes.length} changes found`}
+                        trafficCheckDays={data.trafficCheckDays}
+                        createdAt={data.check.timestamp}
+                      />
                     ) : (
-                      <CrossCircledIcon className="h-4 w-4" />
+                      <EmptyState
+                        icon={<CheckCircleIcon className="text-success" />}
+                        title="No changes found."
+                        description="There are no changes in the proposed schema."
+                      />
                     )}
 
-                    <AlertTitle>
-                      {data.check.isForcedSuccess
-                        ? "Forced Success"
-                        : "Checks Failed"}
-                    </AlertTitle>
-                    <AlertDescription>
-                      {data.check.isForcedSuccess ? (
-                        <>This check was manually marked as successful.</>
-                      ) : (
-                        <>
-                          The proposed schema changes can be composed, but there
-                          are breaking changes affecting client operations.
-                          <br />
-                          You can manually override the state of this check to
-                          accept the changes.
-                        </>
-                      )}
-                    </AlertDescription>
-                    {data.check.isForcedSuccess ? (
-                      <div className="mt-2 flex space-x-2">
-                        <ForceSuccess
-                          onSubmit={() =>
-                            forceSuccess({
-                              checkId: id,
-                              graphName: slug,
-                              namespace,
-                            })
-                          }
-                        />
-                      </div>
-                    ) : null}
-                  </Alert>
-                ) : null}
-
-                {isSuccessful ? (
-                  <Alert variant="default">
-                    <CheckCircledIcon className="h-4 w-4" />
-
-                    <AlertTitle>Schema check passed</AlertTitle>
-                    <AlertDescription>
-                      {data.changes.length
-                        ? "This schema change didn't affect any operations from existing client traffic."
-                        : "There were no schema changes detected."}
-                    </AlertDescription>
-                    {data.check.isForcedSuccess ? (
-                      <div className="mt-2 flex space-x-2">
-                        <ForceSuccess
-                          onSubmit={() =>
-                            forceSuccess({
-                              checkId: id,
-                              graphName: slug,
-                            })
-                          }
-                        />
-                      </div>
-                    ) : null}
-                  </Alert>
-                ) : null}
-
-                {data.changes.length ? (
-                  <ChangesTable
-                    changes={data.changes}
-                    caption={`${data.changes.length} changes found`}
-                    trafficCheckDays={data.trafficCheckDays}
-                    createdAt={data.check.timestamp}
-                  />
-                ) : null}
-
-                <FieldUsageSheet />
+                    <FieldUsageSheet />
+                  </>
+                )}
               </TabsContent>
               <TabsContent value="operations" className="w-full">
                 <CheckOperations />
@@ -723,27 +1197,39 @@ const CheckDetails = ({
                 <LintIssuesTable
                   lintIssues={data.lintIssues}
                   caption={`${data.lintIssues.length} issues found`}
+                  isLintingEnabled={!data.check?.lintSkipped}
+                />
+              </TabsContent>
+              <TabsContent
+                value="graphPruningIssues"
+                className="w-full space-y-4 px-4 lg:px-6"
+              >
+                <GraphPruningIssuesTable
+                  pruneIssues={data.graphPruningIssues}
+                  caption={`${data.graphPruningIssues.length} issues found`}
+                  isGraphPruningEnabled={!data.check?.graphPruningSkipped}
+                  hasGraphPruningErrors={data.check.hasGraphPruningErrors}
+                />
+              </TabsContent>
+              <TabsContent
+                value="proposalMatches"
+                className="w-full space-y-4 px-4 lg:px-6"
+              >
+                <ProposalMatchesTable
+                  proposalMatches={data.proposalMatches}
+                  caption={`${data.proposalMatches.length} matches found`}
+                  isProposalsEnabled={data.isProposalsEnabled}
+                  proposalMatch={data.check.proposalMatch}
                 />
               </TabsContent>
               <TabsContent value="schema" className="relative w-full flex-1">
-                <div className="right-8 top-5 px-4 md:absolute md:px-0">
-                  <CodeViewerActions
-                    code={sdl}
-                    subgraphName={data.check.subgraphName}
-                    size="sm"
-                    variant="outline"
-                  />
-                </div>
-                <div className="scrollbar-custom h-full w-full min-h-[300px] overflow-auto">
-                  <SDLViewerMonaco
-                    schema={sdl}
-                    disablePrettier
-                    decorationCollections={getDecorationCollection(
-                      data.lintIssues,
-                    )}
-                    line={hash ? Number(hash.slice(1)) : undefined}
-                  />
-                </div>
+                <ProposedSchemas
+                  checkId={id}
+                  sdl={sdl}
+                  checkedSubgraphs={data.check.checkedSubgraphs}
+                  lintIssues={data.lintIssues}
+                  graphPruningIssues={data.graphPruningIssues}
+                />
               </TabsContent>
             </div>
           </Tabs>

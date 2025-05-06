@@ -19,10 +19,10 @@ The function must be provided with an array of at least one [`Subgraph` object](
 An example federation of two simple subgraphs:
 
 ```typescript
-import { federateSubgraphs, Subgraph } from '@wundergraph/composition';
+import { federateSubgraphs, FederationResult, Subgraph } from '@wundergraph/composition';
 import { parse } from 'graphql';
 
-const federationResult: FederationResult = federateSubgraphs([subgraphA, subgraphB]);
+const result: FederationResult = federateSubgraphs([subgraphA, subgraphB]);
 
 const subgraphA: Subgraph = {
   name: 'subgraph-a',
@@ -51,26 +51,34 @@ const subgraphB: Subgraph = {
 };
 ```
 
-### FederationResultContainer properties
+### FederationResult
 
-The `federateSubgraphs` function returns a `FederationResultContainer` object.
-If federation was successful, the `errors` property will be undefined, and the `federationResult` object will be 
-defined.
+The `federateSubgraphs` function returns `FederationResult`, which is a union of `FederationResultSuccess` and 
+`FederationResultFailure`. Both types in the union always define the following mutual properties:
 
-| property         | Description                         | type                          |
-|------------------|-------------------------------------|-------------------------------|
-| errors           | array of composition errors         | Error[] \| undefined          |
-| federationResult | FederationResult object (see below) | FederationResult \| undefined |
+| property | Description                            | type           |
+|----------|----------------------------------------|----------------|
+| success  | assertion of composition success       | boolean        |
+| warnings | array of composition warnings (if any) | Array<Warning> |
 
-### FederationResult properties
+#### FederationResultSuccess
+If federation was successful, the return type is `FederationResultSuccess`.
 
-If federation was successful, `FieldResultContainer` will contain a defined `federationResult` property.
+| property             | Description                                                 | type                  |
+|----------------------|-------------------------------------------------------------|-----------------------|
+| federatedGraphAST    | an AST object representation of the federated graph sdl     | graphql.DocumentNode  |
+| federatedGraphSchema | a schema object representation of the federated graph sdl   | graphql.GraphQLSchema |
+| success              | assertion that composition was successful                   | true                  |
+| warnings             | array of composition warnings (if any)                      | Array<Warning>        |
 
-| property               | Description                                               | type                        |
-|------------------------|-----------------------------------------------------------|-----------------------------|
-| argumentConfigurations | array of router argument configurations                   | ArgumentConfigurationData[] |
-| federatedGraphAST      | an AST object representation of the federated graph sdl   | graphql.DocumentNode        |
-| federatedGraphSchema   | a schema object representation of the federated graph sdl | graphql.GraphQLSchema       |
+#### FederationResultFailure
+If federation was unsuccessful, the return type is `FederationResultFailure`.
+
+| property | Description                                 | type           |
+|----------|---------------------------------------------|----------------|
+| errors   | array of composition errors                 | Array<Error>   |
+| success  | assertion that composition was unsuccessful | false          |
+| warnings | array of composition warnings (if any)      | Array<Warning> |
 
 ### Debugging
 
@@ -80,18 +88,22 @@ In these cases, the errors array will be defined and populated.
 An example of a simple debugging framework might be:
 
 ```typescript
-import { federateSubgraphs, Subgraph } from '@wundergraph.composition';
+import { federateSubgraphs, FederationResult, Subgraph } from '@wundergraph.composition';
 import { print, printSchema } from 'graphql';
 
-const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB]);
-if (errors) {
-  for (const err of errors) {
+const result: FederationResult = federateSubgraphs([subgraphA, subgraphB]);
+
+if (result.success) {
+  // Both options to print the federated graph as a string are included for documentational purposes only
+  console.log(print(result.federatedGraphAST)); // log the federated graph AST as a string
+  console.log(printSchema(result.federatedGraphSchema)); // log the federated graph schema as a string
+} else {
+  for (const err of result.errors) {
     console.log(err.message);
   }
-} else {
-  // Both options to print the federated graph as a string are included for documentational purposes only
-  console.log(print(federationResult!.federatedGraphAST)); // log the federated graph AST as a string
-  console.log(printSchema(federationResult!.federatedGraphSchema)); // log the federated graph schema as a string
+}
+for (const warning of result.warnings) {
+  console.log(warning);
 }
 
 // subgraph definitions would be below [removed for brevity]
@@ -105,25 +117,7 @@ Errors can happen in three main stages:
 (if this stage fails, federation will not be attempted)
 3. During the federation process itself.
 
-All errors will be appended to the `FederationResultContainer.errors` array.
-Often, the error message will suggest potential fixes. For instance:
-
-```
-Error: The following root path is unresolvable:
-    Query.user.name
-    This is because:
-        The root type field "Query.user" is defined in the following subgraphs: "subgraph-b".
-    However, "User.name" is only defined in the following subgraphs: "subgraph-c".
-    Consequently, "User.name" cannot be resolved through the root type field "Query.user".
-    Potential solutions:
-        Convert "User" into an entity using a "@key" directive.
-        Add the shareable root type field "Query.user" to the following subgraphs: "subgraph-c".
-            For example (note that V1 fields are shareable by default and do not require a directive):
-                type Query {
-                    ...
-                    user: User @shareable
-                }
-`````
+All errors will be appended to the `FederationResultFailure.errors` array.
 
 ## Subgraph object
 
@@ -158,3 +152,12 @@ const subgraphA: Subgraph = {
 | name        | unique name of the subgraph               | string               |
 | url         | unique endpoint for the subgraph          | string               |
 | definitions | an AST representation of the subgraph SDL | graphql.DocumentNode |
+
+### Contributing
+When adding or changing error, please ensure GraphQL types begin with a capital letter for clarity:
+- Enum
+- Input Object
+- Interface
+- Object
+- Scalar
+- Union

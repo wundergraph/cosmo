@@ -88,6 +88,10 @@ type Mutation struct {
 type Queries struct {
 }
 
+type Thing struct {
+	A string `json:"a"`
+}
+
 type TopSecretFactInput struct {
 	Title       string            `json:"title"`
 	Description string            `json:"description"`
@@ -128,7 +132,7 @@ func (e ProductName) String() string {
 	return string(e)
 }
 
-func (e *ProductName) UnmarshalGQL(v interface{}) error {
+func (e *ProductName) UnmarshalGQL(v any) error {
 	str, ok := v.(string)
 	if !ok {
 		return fmt.Errorf("enums must be strings")
@@ -171,7 +175,7 @@ func (e TopSecretFactType) String() string {
 	return string(e)
 }
 
-func (e *TopSecretFactType) UnmarshalGQL(v interface{}) error {
+func (e *TopSecretFactType) UnmarshalGQL(v any) error {
 	str, ok := v.(string)
 	if !ok {
 		return fmt.Errorf("enums must be strings")

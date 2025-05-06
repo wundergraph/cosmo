@@ -34,7 +34,7 @@ func main() {
 	isDebug := cfg.LogLevel == "debug"
 	logger := logging.New(!cfg.JSONLog, isDebug, logLevel).
 		With(
-			zap.String("component", "@wundergraph/graphqlmetrics"),
+			zap.String("service", "@wundergraph/graphqlmetrics"),
 			zap.String("service_version", core.Version),
 		)
 
@@ -111,7 +111,14 @@ func main() {
 		logger.Info("Migration is up to date")
 	}
 
-	ms := core.NewMetricsService(logger, conn)
+	procConfig := core.ProcessorConfig{
+		MaxBatchSize: cfg.BatchMaxCostThreshold,
+		MaxQueueSize: cfg.BatchMaxQueueSize,
+		MaxWorkers:   cfg.BatchMaxWorkers,
+		Interval:     cfg.BatchProcessingInterval,
+	}
+
+	ms := core.NewMetricsService(logger, conn, procConfig)
 
 	metricsConfig := telemetry.NewTelemetryConfig(
 		core.Version,

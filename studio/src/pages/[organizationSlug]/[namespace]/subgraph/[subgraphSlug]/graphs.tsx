@@ -137,7 +137,7 @@ export const FederatedGraphsTable = ({
                               className="flex items-center gap-x-2"
                             >
                               <>Action required</>
-                              <PiWarningCircle className="h-4 w-4 flex-shrink-0 text-red-500" />
+                              <PiWarningCircle className="h-4 w-4 flex-shrink-0 text-destructive" />
                             </Badge>
                           </TooltipTrigger>
                           <TooltipContent className="w-64">

@@ -34,7 +34,7 @@ export default (opts: BaseCommandOptions) => {
   command.action(async (name, options) => {
     let readmeFile;
     if (options.readme) {
-      readmeFile = resolve(process.cwd(), options.readme);
+      readmeFile = resolve(options.readme);
       if (!existsSync(readmeFile)) {
         program.error(
           pc.red(
@@ -80,7 +80,9 @@ export default (opts: BaseCommandOptions) => {
       if (resp.response?.details) {
         console.log(pc.red(pc.bold(resp.response?.details)));
       }
-      process.exit(1);
+      process.exitCode = 1;
+      // eslint-disable-next-line no-useless-return
+      return;
     }
   });
 

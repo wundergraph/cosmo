@@ -1,0 +1,1 @@
+ALTER TABLE "contracts" ADD COLUMN "include_tags" text[] DEFAULT '{}'::text[] NOT NULL;

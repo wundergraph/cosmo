@@ -3,11 +3,14 @@ import { PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications
 import pino from 'pino';
 import axios, { AxiosError, AxiosInstance } from 'axios';
 import axiosRetry, { exponentialDelay } from 'axios-retry';
+import { webhookAxiosRetryCond } from '../util.js';
 import { makeWebhookRequest } from './utils.js';
 
 interface User {
   user_id: string;
   user_email: string;
+  user_first_name?: string;
+  user_last_name?: string;
 }
 
 interface ApolloMigrate {
@@ -50,6 +53,7 @@ export class PlatformWebhookService implements IPlatformWebhookService {
     });
     axiosRetry(this.httpClient, {
       retries: 6,
+      retryCondition: webhookAxiosRetryCond,
       retryDelay: (retryCount, error) => {
         return exponentialDelay(retryCount, error, 1000);
       },
@@ -57,7 +61,7 @@ export class PlatformWebhookService implements IPlatformWebhookService {
     });
   }
 
-  send<T extends keyof EventMap>(eventName: T, eventData: EventMap[T]) {
+  async send<T extends keyof EventMap>(eventName: T, eventData: EventMap[T]) {
     if (!this.url) {
       return;
     }
@@ -71,7 +75,9 @@ export class PlatformWebhookService implements IPlatformWebhookService {
     };
 
     // @TODO Use a queue to send the events
-    makeWebhookRequest(this.httpClient, data, this.url, this.key).catch((error: AxiosError) => {
+    try {
+      await makeWebhookRequest(this.httpClient, data, this.url, this.key);
+    } catch (error) {
       if (error instanceof AxiosError) {
         logger.error(
           { statusCode: error.response?.status, message: error.message },
@@ -80,7 +86,7 @@ export class PlatformWebhookService implements IPlatformWebhookService {
       } else {
         logger.error(error, 'Could not send platform webhook event');
       }
-    });
+    }
   }
 }
 

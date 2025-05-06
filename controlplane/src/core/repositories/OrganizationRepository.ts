@@ -29,9 +29,12 @@ import {
 import { Feature, FeatureIds, OrganizationDTO, OrganizationMemberDTO, WebhooksConfigDTO } from '../../types/index.js';
 import Keycloak from '../services/Keycloak.js';
 import { DeleteOrganizationQueue } from '../workers/DeleteOrganizationWorker.js';
+import { BlobStorage } from '../blobstorage/index.js';
+import { delayForManualOrgDeletionInDays, delayForOrgAuditLogsDeletionInDays } from '../constants.js';
+import { DeleteOrganizationAuditLogsQueue } from '../workers/DeleteOrganizationAuditLogsWorker.js';
 import { BillingRepository } from './BillingRepository.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
-import { OidcRepository } from './OidcRepository.js';
+import { TargetRepository } from './TargetRepository.js';
 
 /**
  * Repository for organization related operations.
@@ -109,6 +112,8 @@ export class OrganizationRepository {
         isDeactivated: organizations.isDeactivated,
         deactivationReason: organizations.deactivationReason,
         deactivatedAt: organizations.deactivatedAt,
+        queuedForDeletionAt: organizations.queuedForDeletionAt,
+        queuedForDeletionBy: organizations.queuedForDeletionBy,
       })
       .from(organizations)
       .leftJoin(organizationBilling, eq(organizations.id, organizationBilling.organizationId))
@@ -145,6 +150,12 @@ export class OrganizationRepository {
             initiatedAt: org[0].deactivatedAt?.toISOString() ?? '',
           }
         : undefined,
+      deletion: org[0].queuedForDeletionAt
+        ? {
+            queuedAt: org[0].queuedForDeletionAt?.toISOString() ?? '',
+            queuedBy: org[0].queuedForDeletionBy || undefined,
+          }
+        : undefined,
     };
   }
 
@@ -165,6 +176,8 @@ export class OrganizationRepository {
         isDeactivated: organizations.isDeactivated,
         deactivationReason: organizations.deactivationReason,
         deactivatedAt: organizations.deactivatedAt,
+        queuedForDeletionAt: organizations.queuedForDeletionAt,
+        queuedForDeletionBy: organizations.queuedForDeletionBy,
       })
       .from(organizations)
       .leftJoin(organizationBilling, eq(organizations.id, organizationBilling.organizationId))
@@ -199,6 +212,12 @@ export class OrganizationRepository {
         ? {
             reason: org[0].deactivationReason || undefined,
             initiatedAt: org[0].deactivatedAt?.toISOString() ?? '',
+          }
+        : undefined,
+      deletion: org[0].queuedForDeletionAt
+        ? {
+            queuedAt: org[0].queuedForDeletionAt?.toISOString() ?? '',
+            queuedBy: org[0].queuedForDeletionBy || undefined,
           }
         : undefined,
     };
@@ -241,6 +260,8 @@ export class OrganizationRepository {
         isDeactivated: organizations.isDeactivated,
         deactivationReason: organizations.deactivationReason,
         deactivatedAt: organizations.deactivatedAt,
+        queuedForDeletionAt: organizations.queuedForDeletionAt,
+        queuedForDeletionBy: organizations.queuedForDeletionBy,
       })
       .from(organizationsMembers)
       .innerJoin(organizations, eq(organizations.id, organizationsMembers.organizationId))
@@ -281,6 +302,12 @@ export class OrganizationRepository {
             ? {
                 reason: org.deactivationReason || undefined,
                 initiatedAt: org.deactivatedAt?.toISOString() ?? '',
+              }
+            : undefined,
+          deletion: org.queuedForDeletionAt
+            ? {
+                queuedAt: org.queuedForDeletionAt?.toISOString() ?? '',
+                queuedBy: org.queuedForDeletionBy || undefined,
               }
             : undefined,
         };
@@ -669,6 +696,19 @@ export class OrganizationRepository {
             );
             break;
           }
+          case 'proposalStateUpdated': {
+            const ids = eventMeta.meta.value.graphIds;
+            if (ids.length === 0) {
+              break;
+            }
+            await tx.insert(schema.webhookProposalStateUpdate).values(
+              ids.map((id) => ({
+                webhookId: createWebhookResult[0].id,
+                federatedGraphId: id,
+              })),
+            );
+            break;
+          }
         }
       }
 
@@ -713,6 +753,32 @@ export class OrganizationRepository {
       }
     }
 
+    const proposalStateUpdates = await this.db
+      .select({
+        graphId: schema.webhookProposalStateUpdate.federatedGraphId,
+      })
+      .from(schema.webhookProposalStateUpdate)
+      .innerJoin(
+        schema.organizationWebhooks,
+        eq(schema.organizationWebhooks.id, schema.webhookProposalStateUpdate.webhookId),
+      )
+      .where(
+        and(
+          eq(schema.organizationWebhooks.organizationId, organizationId),
+          eq(schema.webhookProposalStateUpdate.webhookId, id),
+        ),
+      );
+
+    const proposalStateUpdateGraphIds = [];
+    for (const graphId of proposalStateUpdates.map((r) => r.graphId)) {
+      const graph = await fedGraphRepo.byId(graphId);
+
+      if (!graph) {
+        continue;
+      }
+      proposalStateUpdateGraphIds.push(graph.id);
+    }
+
     meta.push({
       eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
       meta: {
@@ -730,6 +796,14 @@ export class OrganizationRepository {
         value: {
           graphIds: monographIds,
         },
+      },
+    });
+
+    meta.push({
+      eventName: OrganizationEventName.PROPOSAL_STATE_UPDATED,
+      meta: {
+        case: 'proposalStateUpdated',
+        value: { graphIds: proposalStateUpdateGraphIds },
       },
     });
 
@@ -790,44 +864,51 @@ export class OrganizationRepository {
           and(eq(organizationWebhooks.id, input.id), eq(organizationWebhooks.organizationId, input.organizationId)),
         );
 
-      const graphIds: string[] = [];
-      for (const eventMeta of input.eventsMeta) {
-        switch (eventMeta.meta.case) {
-          case 'federatedGraphSchemaUpdated':
-          case 'monographSchemaUpdated': {
-            graphIds.push(...eventMeta.meta.value.graphIds);
-          }
-        }
-      }
-
+      // First delete all the existing webhook configs meta
       await tx
         .delete(schema.webhookGraphSchemaUpdate)
-        .where(
-          and(
-            eq(schema.webhookGraphSchemaUpdate.webhookId, input.id),
-            graphIds.length > 0 ? not(inArray(schema.webhookGraphSchemaUpdate.federatedGraphId, graphIds)) : undefined,
-          ),
-        );
+        .where(and(eq(schema.webhookGraphSchemaUpdate.webhookId, input.id)));
 
+      await tx
+        .delete(schema.webhookProposalStateUpdate)
+        .where(eq(schema.webhookProposalStateUpdate.webhookId, input.id));
+
+      // Now loop through the new events metas, the thing to note is that the eventsMeta array will contain the meta for all the events, even if the event is not selected.
+      // The reason for this, for the backend to know the current state of the config, as the user might have unselected a event.
       for (const eventMeta of input.eventsMeta) {
         switch (eventMeta.meta.case) {
           case 'federatedGraphSchemaUpdated':
           case 'monographSchemaUpdated': {
-            const ids = eventMeta.meta.value.graphIds;
-            if (ids.length === 0) {
-              continue;
+            const graphIds = eventMeta.meta.value.graphIds;
+            if (graphIds.length > 0) {
+              await tx
+                .insert(schema.webhookGraphSchemaUpdate)
+                .values(
+                  graphIds.map((id) => ({
+                    webhookId: input.id,
+                    federatedGraphId: id,
+                  })),
+                )
+                .onConflictDoNothing()
+                .execute();
             }
+            break;
+          }
+          case 'proposalStateUpdated': {
+            const graphIds = eventMeta.meta.value.graphIds;
 
-            await tx
-              .insert(schema.webhookGraphSchemaUpdate)
-              .values(
-                ids.map((id) => ({
-                  webhookId: input.id,
-                  federatedGraphId: id,
-                })),
-              )
-              .onConflictDoNothing()
-              .execute();
+            if (graphIds.length > 0) {
+              await tx
+                .insert(schema.webhookProposalStateUpdate)
+                .values(
+                  graphIds.map((id) => ({
+                    webhookId: input.id,
+                    federatedGraphId: id,
+                  })),
+                )
+                .onConflictDoNothing()
+                .execute();
+            }
             break;
           }
         }
@@ -849,31 +930,105 @@ export class OrganizationRepository {
     return result[0];
   }
 
-  public deleteOrganization(organizationId: string) {
+  public queueOrganizationDeletion(input: {
+    organizationId: string;
+    queuedBy?: string;
+    deleteOrganizationQueue: DeleteOrganizationQueue;
+  }) {
     return this.db.transaction(async (tx) => {
-      const oidcRepo = new OidcRepository(tx);
-      await oidcRepo.deleteOidcProvider({ organizationId });
+      const now = new Date();
+      await tx
+        .update(schema.organizations)
+        .set({
+          queuedForDeletionAt: now,
+          queuedForDeletionBy: input.queuedBy,
+        })
+        .where(eq(schema.organizations.id, input.organizationId));
 
-      // Delete organization from db
-      await this.db.delete(organizations).where(eq(organizations.id, organizationId)).execute();
+      const deleteAt = addDays(now, delayForManualOrgDeletionInDays);
+      const delay = Number(deleteAt) - Number(now);
+
+      return await input.deleteOrganizationQueue.addJob(
+        {
+          organizationId: input.organizationId,
+        },
+        {
+          delay,
+        },
+      );
     });
   }
 
-  public async updateUserRole(input: {
-    orgMemberID: string;
-    organizationID: string;
-    role: MemberRole;
-    previousRole: MemberRole;
-  }) {
-    await this.db
-      .update(organizationMemberRoles)
-      .set({ role: input.role })
-      .where(
-        and(
-          eq(organizationMemberRoles.organizationMemberId, input.orgMemberID),
-          eq(organizationMemberRoles.role, input.previousRole),
-        ),
-      );
+  public restoreOrganization(input: { organizationId: string; deleteOrganizationQueue: DeleteOrganizationQueue }) {
+    return this.db.transaction(async (tx) => {
+      await tx
+        .update(schema.organizations)
+        .set({
+          queuedForDeletionAt: null,
+          queuedForDeletionBy: null,
+        })
+        .where(eq(schema.organizations.id, input.organizationId));
+
+      await input.deleteOrganizationQueue.removeJob({
+        organizationId: input.organizationId,
+      });
+    });
+  }
+
+  /**
+    This manually deletes graphs from db and blob storage.
+    Everything else is deleted automatically by db constraints
+  */
+  public deleteOrganization(
+    organizationId: string,
+    blobStorage: BlobStorage,
+    deleteOrganizationAuditLogsQueue: DeleteOrganizationAuditLogsQueue,
+  ) {
+    return this.db.transaction(async (tx) => {
+      const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, organizationId);
+      const targetRepo = new TargetRepository(tx, organizationId);
+
+      const graphs = await fedGraphRepo.list({
+        limit: 0,
+        offset: 0,
+      });
+
+      await targetRepo.deleteAll();
+
+      // Clean up blob storage
+      const blobPromises = [];
+      for (const graph of graphs) {
+        const blobStorageDirectory = `${organizationId}/${graph.id}`;
+        blobPromises.push(blobStorage.removeDirectory({ key: blobStorageDirectory }));
+      }
+      await Promise.allSettled(blobPromises);
+
+      // Delete organization from db
+      await tx.delete(organizations).where(eq(organizations.id, organizationId)).execute();
+
+      // Queue audit logs after the organization have been deleted
+      const now = new Date();
+      const deleteAt = addDays(now, delayForOrgAuditLogsDeletionInDays);
+      const delay = Number(deleteAt) - Number(now);
+
+      await deleteOrganizationAuditLogsQueue.addJob({ organizationId }, { delay });
+    });
+  }
+
+  public updateUserRole(input: { orgMemberID: string; role: MemberRole }) {
+    return this.db.transaction(async (tx) => {
+      await tx
+        .delete(organizationMemberRoles)
+        .where(eq(organizationMemberRoles.organizationMemberId, input.orgMemberID));
+
+      await tx
+        .insert(organizationMemberRoles)
+        .values({
+          organizationMemberId: input.orgMemberID,
+          role: input.role,
+        })
+        .execute();
+    });
   }
 
   public async getOrganizationAdmins(input: { organizationID: string }): Promise<OrganizationMemberDTO[]> {
@@ -1206,10 +1361,11 @@ export class OrganizationRepository {
       'analytics-retention': 30,
       'tracing-retention': 30,
       'changelog-retention': 30,
-      'breaking-change-retention': 90,
+      'breaking-change-retention': 30,
       'trace-sampling-rate': 1,
       'federated-graphs': 30,
       'feature-flags': 0,
+      'field-pruning-grace-period': 0,
       users: 25,
       requests: 30,
       rbac: false,
@@ -1219,6 +1375,8 @@ export class OrganizationRepository {
       oidc: false,
       ai: false,
       scim: false,
+      'cache-warmer': false,
+      proposals: false,
     };
 
     for (const feature of features) {

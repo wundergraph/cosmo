@@ -22,7 +22,8 @@ import parserBabel from "prettier/plugins/babel";
 import * as prettierPluginEstree from "prettier/plugins/estree";
 import graphQLPlugin from "prettier/plugins/graphql";
 import * as prettier from "prettier/standalone";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
+import { GraphContext } from "../layout/graph-layout";
 
 export const TraceDetails = ({ ast }: { ast: GraphQLSchema | null }) => {
   const { query } = useRouter();
@@ -33,12 +34,17 @@ export const TraceDetails = ({ ast }: { ast: GraphQLSchema | null }) => {
   const [variables, setVariables] = useState("");
   const [isTruncated, setTruncated] = useState(false);
 
-  const traceID = query.traceID as string;
+  const graphContext = useContext(GraphContext);
+
+  const traceId = query.traceID as string;
+  const spanId = query.spanID as string;
 
   const { data, isLoading, error, refetch } = useQuery(
     getTrace,
     {
-      id: traceID,
+      id: traceId,
+      spanId: spanId,
+      federatedGraphId: graphContext?.graph?.id,
     },
     {
       refetchInterval: 10000,
@@ -57,7 +63,7 @@ export const TraceDetails = ({ ast }: { ast: GraphQLSchema | null }) => {
           plugins: [graphQLPlugin],
         });
       } catch {
-        return false
+        return false;
       }
 
       try {
@@ -66,13 +72,11 @@ export const TraceDetails = ({ ast }: { ast: GraphQLSchema | null }) => {
           plugins: [parserBabel, prettierPluginEstree],
         });
       } catch {
-        return false
+        return false;
       }
 
-      return true
+      return true;
     };
-
-
 
     // Find the operation content and variables span
     // In that way, we don't rely on the order of the spans
@@ -83,7 +87,7 @@ export const TraceDetails = ({ ast }: { ast: GraphQLSchema | null }) => {
 
     if (routerSpan) {
       const content = routerSpan.attributes?.operationContent;
-        const variables = routerSpan.attributes?.operationVariables;
+      const variables = routerSpan.attributes?.operationVariables;
 
       setContent(content);
       setVariables(variables);
@@ -92,9 +96,8 @@ export const TraceDetails = ({ ast }: { ast: GraphQLSchema | null }) => {
         if (!isValid) {
           setTruncated(true);
         }
-      })
+      });
     }
-
   }, [data]);
 
   if (isLoading) {
@@ -119,8 +122,8 @@ export const TraceDetails = ({ ast }: { ast: GraphQLSchema | null }) => {
       <div className="mb-3 mt-4">
         <div className="mb-1">Operation and Variables</div>
         <div className="text-xs text-muted-foreground">
-          Content is truncated to 3KB. To view the GraphQL variables of the operation, please enable variable
-          export in the router.{" "}
+          Content is truncated to 3KB. To view the GraphQL variables of the
+          operation, please enable variable export in the router.{" "}
           <a
             target="_blank"
             rel="noreferrer"
@@ -132,50 +135,72 @@ export const TraceDetails = ({ ast }: { ast: GraphQLSchema | null }) => {
         </div>
       </div>
       <div className="flex max-h-96 justify-between rounded border">
-        <CodeViewer code={content} language="graphql" disableLinking className="w-3/6 scrollbar-custom overflow-auto" />
-        <CodeViewer code={variables} language="json" disableLinking className="w-2/6 scrollbar-custom overflow-auto"/>
+        <CodeViewer
+          code={content}
+          language="graphql"
+          disableLinking
+          className="scrollbar-custom w-3/6 overflow-auto"
+        />
+        <CodeViewer
+          code={variables}
+          language="json"
+          disableLinking
+          className="scrollbar-custom w-2/6 overflow-auto"
+        />
         <div className="px-2 py-2">
-          {isTruncated ? <Tooltip delayDuration={0}>
-            <TooltipTrigger asChild>
-              <Button variant="outline" size="icon" className="relative" asChild>
-                <Link
-                    href={`/${organizationSlug}/${namespace}/graph/${slug}/playground?operation=${encodeURIComponent(
-                        content || "",
-                    )}&variables=${encodeURIComponent(
-                        variables ||
-                        JSON.stringify(extractVariablesFromGraphQL(content, ast)),
-                    )}`}
+          {isTruncated ? (
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="relative"
+                  asChild
                 >
-                  <PlayIcon className="h-5" />
-                  <ExclamationTriangleIcon className="h-3.5 absolute -top-1 -right-1 text-red-500" />
-
-                </Link>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Run in playground with truncated / invalid content</TooltipContent>
-          </Tooltip>: <Tooltip delayDuration={0}>
-            <TooltipTrigger asChild>
-              <Button variant="outline" size="icon" asChild>
-                <Link
+                  <Link
                     href={`/${organizationSlug}/${namespace}/graph/${slug}/playground?operation=${encodeURIComponent(
-                        content || "",
+                      content || "",
                     )}&variables=${encodeURIComponent(
-                        variables ||
-                        JSON.stringify(extractVariablesFromGraphQL(content, ast)),
+                      variables ||
+                        JSON.stringify(
+                          extractVariablesFromGraphQL(content, ast),
+                        ),
                     )}`}
-                >
-                  <PlayIcon className="h-5" />
-                </Link>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Run in playground</TooltipContent>
-          </Tooltip>}
+                  >
+                    <PlayIcon className="h-5" />
+                    <ExclamationTriangleIcon className="absolute -right-1 -top-1 h-3.5 text-destructive" />
+                  </Link>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                Run in playground with truncated / invalid content
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <Button variant="outline" size="icon" asChild>
+                  <Link
+                    href={`/${organizationSlug}/${namespace}/graph/${slug}/playground?operation=${encodeURIComponent(
+                      content || "",
+                    )}&variables=${encodeURIComponent(
+                      variables ||
+                        JSON.stringify(
+                          extractVariablesFromGraphQL(content, ast),
+                        ),
+                    )}`}
+                  >
+                    <PlayIcon className="h-5" />
+                  </Link>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Run in playground</TooltipContent>
+            </Tooltip>
+          )}
         </div>
       </div>
     </div>
   );
 };
-
-
 
 export default TraceDetails;

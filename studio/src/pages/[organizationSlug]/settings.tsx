@@ -1,4 +1,4 @@
-import { UserContext } from "@/components/app-provider";
+import { SessionClientContext, UserContext } from "@/components/app-provider";
 import { EmptyState } from "@/components/empty-state";
 import { getDashboardLayout } from "@/components/layout/dashboard-layout";
 import {
@@ -57,18 +57,16 @@ import { useIsCreator } from "@/hooks/use-is-creator";
 import { useUser } from "@/hooks/use-user";
 import { calURL, docsBaseURL, scimBaseURL } from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
-import { cn } from "@/lib/utils";
 import { MinusCircledIcon, PlusIcon } from "@radix-ui/react-icons";
-import { useQueryClient } from "@tanstack/react-query";
 import { useQuery, useMutation } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   createOIDCProvider,
   deleteOIDCProvider,
-  deleteOrganization,
   getOIDCProvider,
   leaveOrganization,
   updateFeatureSettings,
+  updateIDPMappers,
   updateOrganizationDetails,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import {
@@ -86,11 +84,13 @@ import {
 } from "react";
 import { FaMagic } from "react-icons/fa";
 import { z } from "zod";
+import { DeleteOrganization } from "@/components/settings/delete-organization";
+import { RestoreOrganization } from "@/components/settings/restore-organization";
 
 const OrganizationDetails = () => {
   const user = useContext(UserContext);
   const router = useRouter();
-  const client = useQueryClient();
+  const sessionQueryClient = useContext(SessionClientContext);
 
   const schema = z.object({
     organizationName: z
@@ -142,7 +142,7 @@ const OrganizationDetails = () => {
               description: "Organization details updated successfully.",
               duration: 3000,
             });
-            client.invalidateQueries({
+            sessionQueryClient.invalidateQueries({
               queryKey: ["user", router.asPath],
             });
           } else if (d.response?.details) {
@@ -245,7 +245,7 @@ const NewMapper = ({
   mapper: Mapper;
 }) => {
   type CreateMapperFormInput = z.infer<typeof createMapperSchema>;
-  const [dbRole, setDbRole] = useState(dbRoleOptions[0]);
+  const [dbRole, setDbRole] = useState(mapper.dbRole);
 
   const {
     register,
@@ -293,6 +293,7 @@ const NewMapper = ({
           <Input
             className="w-full"
             type="text"
+            value={mapper.ssoGroup}
             placeholder="groupName or regex"
             {...register("ssoGroup")}
             onInput={(e) => {
@@ -370,6 +371,106 @@ const AddNewMappers = ({
   );
 };
 
+const UpdateIDPMappers = ({
+  currentMappers,
+  refetchProviderData,
+}: {
+  currentMappers: MapperInput[];
+  refetchProviderData: () => void;
+}) => {
+  const [open, setOpen] = useState(false);
+  const { mutate, isPending } = useMutation(updateIDPMappers);
+
+  const { toast } = useToast();
+
+  const [mappers, updateMappers] = useState<MapperInput[]>(currentMappers);
+
+  const mutateMappers = () => {
+    const groupMappers = mappers.map((m) => {
+      return { role: m.dbRole, ssoGroup: m.ssoGroup.trim() };
+    });
+
+    groupMappers.push({
+      role: "Viewer",
+      ssoGroup: ".*",
+    });
+
+    mutate(
+      {
+        mappers: groupMappers,
+      },
+      {
+        onSuccess: (d) => {
+          if (d.response?.code === EnumStatusCode.OK) {
+            toast({
+              description: "Group mappers updated successfully.",
+              duration: 3000,
+            });
+            setOpen(false);
+            refetchProviderData();
+          } else if (d.response?.details) {
+            toast({ description: d.response.details, duration: 4000 });
+            setOpen(false);
+          }
+        },
+        onError: (error) => {
+          toast({
+            description:
+              "Could not update the group mappers. Please try again.",
+            duration: 3000,
+          });
+          setOpen(false);
+        },
+      },
+    );
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={() => {
+        setOpen(!open);
+      }}
+    >
+      <DialogTrigger asChild>
+        <Button className="md:ml-auto" type="submit" variant="secondary">
+          Update Mappers
+        </Button>
+      </DialogTrigger>
+      <DialogContent
+        onInteractOutside={(event) => {
+          event.preventDefault();
+        }}
+        onCloseClick={() => {
+          updateMappers(currentMappers);
+        }}
+      >
+        <DialogHeader>
+          <DialogTitle>Update group mappers</DialogTitle>
+          <DialogDescription>Map your groups to cosmo roles.</DialogDescription>
+        </DialogHeader>
+        <div className="flex justify-between px-1 text-sm font-bold">
+          <span>Role in cosmo</span>
+          <span className="pr-12">Group in the provider</span>
+        </div>
+        <AddNewMappers mappers={mappers} updateMappers={updateMappers} />
+        <Button
+          disabled={!saveSchema.safeParse(mappers).success}
+          variant="default"
+          size="lg"
+          type="submit"
+          isLoading={isPending}
+          onClick={() => {
+            mutateMappers();
+          }}
+        >
+          Update
+        </Button>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 const OpenIDConnectProvider = ({
   currentMode,
   providerData,
@@ -421,7 +522,7 @@ const OpenIDConnectProvider = ({
 
   const onSubmit: SubmitHandler<ConnectOIDCProviderInput> = (data) => {
     const groupMappers = mappers.map((m) => {
-      return { role: m.dbRole, ssoGroup: m.ssoGroup };
+      return { role: m.dbRole, ssoGroup: m.ssoGroup.trim() };
     });
 
     groupMappers.push({
@@ -508,85 +609,97 @@ const OpenIDConnectProvider = ({
         {oidc && (
           <>
             {providerData && providerData.name ? (
-              <AlertDialog
-                open={
-                  user?.currentOrganization.roles.includes("admin")
-                    ? alertOpen
-                    : false
-                }
-                onOpenChange={setAlertOpen}
-              >
-                <AlertDialogTrigger asChild>
-                  <Button
-                    className="md:ml-auto"
-                    type="submit"
-                    variant="destructive"
-                    disabled={
-                      !user?.currentOrganization.roles.includes("admin")
-                    }
-                  >
-                    Disconnect
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>
-                      Are you sure you want to disconnect the oidc provider?
-                    </AlertDialogTitle>
-                    <AlertDialogDescription
-                      className="flex flex-col gap-y-1"
-                      asChild
-                    >
-                      <div>
-                        <p>
-                          All members who are connected to the SSO will be
-                          logged out and downgraded to the viewer role.
-                        </p>
-                        <p>Reconnecting will result in a new login url.</p>
-                        <p>This action cannot be undone.</p>
-                      </div>
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      className={buttonVariants({ variant: "destructive" })}
-                      type="button"
-                      onClick={() => {
-                        deleteOidcProvider(
-                          {},
-                          {
-                            onSuccess: (d) => {
-                              if (d.response?.code === EnumStatusCode.OK) {
-                                refetch();
-                                toast({
-                                  description:
-                                    "OIDC provider disconnected successfully.",
-                                  duration: 3000,
-                                });
-                              } else if (d.response?.details) {
-                                toast({
-                                  description: d.response.details,
-                                  duration: 4000,
-                                });
-                              }
-                            },
-                            onError: (error) => {
-                              toast({
-                                description:
-                                  "Could not disconnect the OIDC provider. Please try again.",
-                                duration: 3000,
-                              });
-                            },
-                          },
-                        );
-                      }}
+              <div className="ml-auto flex gap-x-3">
+                <UpdateIDPMappers
+                  currentMappers={providerData.mappers.map((m) => {
+                    return {
+                      id: Date.now(),
+                      dbRole: m.role,
+                      ssoGroup: m.ssoGroup,
+                    };
+                  })}
+                  refetchProviderData={refetch}
+                />
+                <AlertDialog
+                  open={
+                    user?.currentOrganization.roles.includes("admin")
+                      ? alertOpen
+                      : false
+                  }
+                  onOpenChange={setAlertOpen}
+                >
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      className="md:ml-auto"
+                      type="submit"
+                      variant="destructive"
+                      disabled={
+                        !user?.currentOrganization.roles.includes("admin")
+                      }
                     >
                       Disconnect
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>
+                        Are you sure you want to disconnect the oidc provider?
+                      </AlertDialogTitle>
+                      <AlertDialogDescription
+                        className="flex flex-col gap-y-1"
+                        asChild
+                      >
+                        <div>
+                          <p>
+                            All members who are connected to the SSO will be
+                            logged out and downgraded to the viewer role.
+                          </p>
+                          <p>Reconnecting will result in a new login url.</p>
+                          <p>This action cannot be undone.</p>
+                        </div>
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        className={buttonVariants({ variant: "destructive" })}
+                        type="button"
+                        onClick={() => {
+                          deleteOidcProvider(
+                            {},
+                            {
+                              onSuccess: (d) => {
+                                if (d.response?.code === EnumStatusCode.OK) {
+                                  refetch();
+                                  toast({
+                                    description:
+                                      "OIDC provider disconnected successfully.",
+                                    duration: 3000,
+                                  });
+                                } else if (d.response?.details) {
+                                  toast({
+                                    description: d.response.details,
+                                    duration: 4000,
+                                  });
+                                }
+                              },
+                              onError: (error) => {
+                                toast({
+                                  description:
+                                    "Could not disconnect the OIDC provider. Please try again.",
+                                  duration: 3000,
+                                });
+                              },
+                            },
+                          );
+                        }}
+                      >
+                        Disconnect
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
             ) : (
               <Dialog
                 open={open}
@@ -841,7 +954,7 @@ const OpenIDConnectProvider = ({
 const CosmoAi = () => {
   const router = useRouter();
   const ai = useFeature("ai");
-  const queryClient = useQueryClient();
+  const sessionQueryClient = useContext(SessionClientContext);
   const { mutate, isPending, data } = useMutation(updateFeatureSettings);
   const { toast } = useToast();
 
@@ -854,7 +967,7 @@ const CosmoAi = () => {
       {
         onSuccess: async (d) => {
           if (d.response?.code === EnumStatusCode.OK) {
-            await queryClient.invalidateQueries({
+            await sessionQueryClient.invalidateQueries({
               queryKey: ["user", router.asPath],
             });
             toast({
@@ -887,7 +1000,7 @@ const CosmoAi = () => {
       {
         onSuccess: async (d) => {
           if (d.response?.code === EnumStatusCode.OK) {
-            await queryClient.invalidateQueries({
+            await sessionQueryClient.invalidateQueries({
               queryKey: ["user", router.asPath],
             });
             toast({
@@ -963,7 +1076,7 @@ const CosmoAi = () => {
 
 const RBAC = () => {
   const router = useRouter();
-  const queryClient = useQueryClient();
+  const sessionQueryClient = useContext(SessionClientContext);
   const rbac = useFeature("rbac");
   const { mutate, isPending } = useMutation(updateFeatureSettings);
   const { toast } = useToast();
@@ -977,7 +1090,7 @@ const RBAC = () => {
       {
         onSuccess: async (d) => {
           if (d.response?.code === EnumStatusCode.OK) {
-            await queryClient.invalidateQueries({
+            await sessionQueryClient.invalidateQueries({
               queryKey: ["user", router.asPath],
             });
             toast({
@@ -1010,7 +1123,7 @@ const RBAC = () => {
       {
         onSuccess: async (d) => {
           if (d.response?.code === EnumStatusCode.OK) {
-            await queryClient.invalidateQueries({
+            await sessionQueryClient.invalidateQueries({
               queryKey: ["user", router.asPath],
             });
             toast({
@@ -1098,7 +1211,7 @@ const RBAC = () => {
 
 const Scim = () => {
   const router = useRouter();
-  const queryClient = useQueryClient();
+  const sessionQueryClient = useContext(SessionClientContext);
   const scim = useFeature("scim");
   const { mutate, isPending } = useMutation(updateFeatureSettings);
   const { toast } = useToast();
@@ -1112,7 +1225,7 @@ const Scim = () => {
       {
         onSuccess: async (d) => {
           if (d.response?.code === EnumStatusCode.OK) {
-            await queryClient.invalidateQueries({
+            await sessionQueryClient.invalidateQueries({
               queryKey: ["user", router.asPath],
             });
             toast({
@@ -1145,7 +1258,7 @@ const Scim = () => {
       {
         onSuccess: async (d) => {
           if (d.response?.code === EnumStatusCode.OK) {
-            await queryClient.invalidateQueries({
+            await sessionQueryClient.invalidateQueries({
               queryKey: ["user", router.asPath],
             });
             toast({
@@ -1317,144 +1430,11 @@ const LeaveOrganization = () => {
   );
 };
 
-const DeleteOrganization = () => {
-  const user = useContext(UserContext);
-  const router = useRouter();
-  const [open, setOpen] = useState(false);
-
-  const regex = new RegExp(`^${user?.currentOrganization.name}$`);
-  const schema = z.object({
-    organizationName: z.string().regex(regex, {
-      message: "Please enter the organization name as requested.",
-    }),
-  });
-
-  type DeleteOrgInput = z.infer<typeof schema>;
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isValid },
-  } = useZodForm<DeleteOrgInput>({
-    schema,
-    mode: "onChange",
-  });
-
-  const { mutate, isPending } = useMutation(deleteOrganization);
-
-  const { toast } = useToast();
-
-  const handleDeleteOrg = () => {
-    mutate(
-      {
-        userID: user?.id,
-      },
-      {
-        onSuccess: (d) => {
-          if (d.response?.code === EnumStatusCode.OK) {
-            router.reload();
-            toast({
-              description: "Deleted the organization succesfully.",
-              duration: 3000,
-            });
-          } else if (d.response?.details) {
-            toast({ description: d.response.details, duration: 3000 });
-          }
-        },
-        onError: (error) => {
-          toast({
-            description: "Could not delete the organization. Please try again.",
-            duration: 3000,
-          });
-        },
-      },
-    );
-    setOpen(false);
-  };
-
-  return (
-    <Card className="border-destructive">
-      <CardHeader className="gap-y-6 md:flex-row">
-        <div className="space-y-1.5">
-          <CardTitle>Delete Organization</CardTitle>
-          <CardDescription className="text-sm text-muted-foreground">
-            The organization will be permanently deleted. This action is
-            irreversible and can not be undone.
-          </CardDescription>
-        </div>
-        <Dialog
-          open={
-            user?.currentOrganization.roles.includes("admin") ? open : false
-          }
-          onOpenChange={setOpen}
-        >
-          <DialogTrigger
-            className={cn({
-              "cursor-not-allowed":
-                !user?.currentOrganization.roles.includes("admin"),
-            })}
-            asChild
-          >
-            <Button
-              type="submit"
-              variant="destructive"
-              className="w-full md:ml-auto md:w-max"
-              disabled={!user?.currentOrganization.roles.includes("admin")}
-            >
-              Delete organization
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                Are you sure you want to delete this organization?
-              </DialogTitle>
-              <span className="text-sm text-muted-foreground">
-                This action cannot be undone.
-              </span>
-            </DialogHeader>
-            <form onSubmit={handleSubmit(handleDeleteOrg)} className="mt-2">
-              <div className="flex flex-col gap-y-3">
-                <span className="text-sm">
-                  Enter <strong>{user?.currentOrganization.name}</strong> to
-                  confirm you want to delete this organization.
-                </span>
-                <Input
-                  type="text"
-                  {...register("organizationName")}
-                  autoFocus={true}
-                />
-                {errors.organizationName && (
-                  <span className="px-2 text-xs text-destructive">
-                    {errors.organizationName.message}
-                  </span>
-                )}
-                <div className="mt-2 flex justify-end gap-x-4">
-                  <Button variant="outline" onClick={() => setOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    isLoading={isPending}
-                    type="submit"
-                    disabled={!isValid}
-                  >
-                    Delete
-                  </Button>
-                </div>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </CardHeader>
-    </Card>
-  );
-};
-
 const SettingsDashboardPage: NextPageWithLayout = () => {
   const user = useUser();
   const isAdmin = useIsAdmin();
   const isCreator = useIsCreator();
+  const orgIsPendingDeletion = Boolean(user?.currentOrganization?.deletion);
 
   const {
     data: providerData,
@@ -1511,11 +1491,12 @@ const SettingsDashboardPage: NextPageWithLayout = () => {
         refetch={refetchOIDCProvider}
       />
       <Scim />
-      {(!isCreator || orgs > 1) && <Separator className="my-2" />}
+      {(!isCreator || orgs > 1 || orgIsPendingDeletion) && <Separator className="my-2" />}
 
       {!isCreator && <LeaveOrganization />}
 
-      {orgs > 1 && <DeleteOrganization />}
+      {orgs > 1 && !orgIsPendingDeletion && <DeleteOrganization />}
+      {isAdmin && orgIsPendingDeletion && <RestoreOrganization />}
     </div>
   );
 };

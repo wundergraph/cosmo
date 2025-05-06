@@ -1,15 +1,20 @@
 package subgraphs
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/products_fg"
-	"go.uber.org/zap"
+	"io"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
+
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/products_fg"
+	"github.com/wundergraph/cosmo/router/core"
+	"go.uber.org/zap"
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/handler/debug"
@@ -70,8 +75,10 @@ func (p *Ports) AsArray() []int {
 }
 
 type Config struct {
-	Ports       Ports
-	EnableDebug bool
+	Ports         Ports
+	EnableDebug   bool
+	PubSubPrefix  string
+	GetPubSubName func(string) string
 }
 
 type Subgraphs struct {
@@ -119,7 +126,28 @@ func newServer(name string, enableDebug bool, port int, schema graphql.Executabl
 	}
 	mux := http.NewServeMux()
 	mux.Handle("/", playground.Handler("GraphQL playground", "/graphql"))
-	mux.Handle("/graphql", srv)
+	mux.Handle("/graphql", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Accept") == "text/event-stream" && r.Method == "GET" {
+			r.Method = "POST"
+			query := r.URL.Query().Get("query")
+			variables := r.URL.Query().Get("variables")
+			operationName := r.URL.Query().Get("operationName")
+			gqlRequest := core.GraphQLRequest{
+				Query:         query,
+				OperationName: operationName,
+				Variables:     []byte(variables),
+			}
+			data, err := json.Marshal(gqlRequest)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			r.Body = io.NopCloser(bytes.NewReader(data))
+			r.ContentLength = int64(len(data))
+			r.Header.Set("Content-Type", "application/json")
+		}
+		srv.ServeHTTP(w, r)
+	}))
 	return &http.Server{
 		Addr:    ":" + strconv.Itoa(port),
 		Handler: injector.HTTP(mux),
@@ -135,6 +163,7 @@ func subgraphHandler(schema graphql.ExecutableSchema) http.Handler {
 
 type SubgraphOptions struct {
 	NatsPubSubByProviderID map[string]pubsub_datasource.NatsPubSub
+	GetPubSubName          func(string) string
 }
 
 func EmployeesHandler(opts *SubgraphOptions) http.Handler {
@@ -162,7 +191,7 @@ func Test1Handler(opts *SubgraphOptions) http.Handler {
 }
 
 func AvailabilityHandler(opts *SubgraphOptions) http.Handler {
-	return subgraphHandler(availability.NewSchema(opts.NatsPubSubByProviderID))
+	return subgraphHandler(availability.NewSchema(opts.NatsPubSubByProviderID, opts.GetPubSubName))
 }
 
 func MoodHandler(opts *SubgraphOptions) http.Handler {
@@ -199,8 +228,8 @@ func New(ctx context.Context, config *Config) (*Subgraphs, error) {
 	}
 
 	natsPubSubByProviderID := map[string]pubsub_datasource.NatsPubSub{
-		"default": natsPubsub.NewConnector(zap.NewNop(), defaultConnection, defaultJetStream).New(ctx),
-		"my-nats": natsPubsub.NewConnector(zap.NewNop(), myNatsConnection, myNatsJetStream).New(ctx),
+		"default": natsPubsub.NewConnector(zap.NewNop(), defaultConnection, defaultJetStream, "hostname", "test").New(ctx),
+		"my-nats": natsPubsub.NewConnector(zap.NewNop(), myNatsConnection, myNatsJetStream, "hostname", "test").New(ctx),
 	}
 
 	_, err = defaultJetStream.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
@@ -230,7 +259,7 @@ func New(ctx context.Context, config *Config) (*Subgraphs, error) {
 	if srv := newServer("test1", config.EnableDebug, config.Ports.Test1, test1.NewSchema(natsPubSubByProviderID)); srv != nil {
 		servers = append(servers, srv)
 	}
-	if srv := newServer("availability", config.EnableDebug, config.Ports.Availability, availability.NewSchema(natsPubSubByProviderID)); srv != nil {
+	if srv := newServer("availability", config.EnableDebug, config.Ports.Availability, availability.NewSchema(natsPubSubByProviderID, config.GetPubSubName)); srv != nil {
 		servers = append(servers, srv)
 	}
 	if srv := newServer("mood", config.EnableDebug, config.Ports.Mood, mood.NewSchema(natsPubSubByProviderID)); srv != nil {

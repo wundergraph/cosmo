@@ -1,0 +1,4 @@
+{
+    "version": 1,
+    "body": "mutation updateEmployeeTag {\n  updateEmployeeTag(id: 10, tag: \"dd\") {\n    id\n  }\n}"
+}

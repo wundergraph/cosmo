@@ -39,7 +39,17 @@ type Mutation {
   updateEmployeeTag(id: Int!, tag: String!): Employee
 
   singleUpload(file: Upload!): Boolean!
+  singleUploadWithInput(arg: FileUpload!): Boolean!
   multipleUpload(files: [Upload!]!): Boolean!
+}
+
+input FileUpload {
+  nested: DeeplyNestedFileUpload
+  nestedList: [Upload!]
+}
+
+input DeeplyNestedFileUpload {
+  file: Upload!
 }
 
 type Subscription {
@@ -49,6 +59,7 @@ type Subscription {
   currentTime: Time!
   countEmp(max: Int!, intervalMilliseconds: Int!): Int!
   countEmp2(max: Int!, intervalMilliseconds: Int!): Int!
+  countFor(count: Int!): Int!
 }
 
 enum Department {
@@ -175,4 +186,5 @@ type SDK implements IProduct @key(fields: "upc") {
   upc: ID!
   engineers: [Employee!]!
   owner: Employee!
+  unicode: String!
 }

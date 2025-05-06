@@ -6,6 +6,7 @@ import DeleteFeatureFlagCommand from './commands/delete.js';
 import EnableFeatureFlagCommand from './commands/enable.js';
 import DisableFeatureFlagCommand from './commands/disable.js';
 import UpdateFeatureFlagCommand from './commands/update.js';
+import ListFeatureFlagCommand from './commands/list.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('feature-flag').alias('ff');
@@ -16,6 +17,7 @@ export default (opts: BaseCommandOptions) => {
   command.addCommand(EnableFeatureFlagCommand(opts));
   command.addCommand(DisableFeatureFlagCommand(opts));
   command.addCommand(UpdateFeatureFlagCommand(opts));
+  command.addCommand(ListFeatureFlagCommand(opts));
 
   command.hook('preAction', async () => {
     await checkAuth();

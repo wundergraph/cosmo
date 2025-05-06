@@ -85,7 +85,11 @@ const formatColumnData = (data: string | number, type: Unit): ReactNode => {
     return <span>{mapStatusCode[data]}</span>;
   }
 
-  if (type === Unit.TraceID) {
+  if (type === Unit.Percentage) {
+    return <span>{data}%</span>;
+  }
+
+  if (type === Unit.TraceID || type === Unit.SpanID) {
     return (
       <TooltipProvider>
         <Tooltip>

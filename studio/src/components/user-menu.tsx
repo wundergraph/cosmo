@@ -6,7 +6,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useUser } from "@/hooks/use-user";
-import { resetKoala } from "@/lib/koala";
+import { resetKoala } from "@/lib/track";
 import Link from "next/link";
 import { ThemeToggle } from "./theme-toggle";
 import { Avatar, AvatarFallback } from "./ui/avatar";

@@ -1,4 +1,4 @@
-import { uid } from 'uid';
+import { uid } from 'uid/secure';
 
 export class ApiKeyGenerator {
   public static generate(): string {

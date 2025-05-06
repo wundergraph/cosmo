@@ -1,25 +1,48 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { parse } from 'graphql';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import {
+  FederationResultFailure,
   ImplementationErrors,
   incompatibleArgumentTypesError,
   incompatibleParentKindMergeError,
+  INPUT_OBJECT,
+  INTERFACE,
   InvalidFieldImplementation,
   invalidInterfaceImplementationError,
-  invalidRequiredInputValueError,
+  invalidRequiredInputValueError, LATEST_ROUTER_COMPATIBILITY_VERSION,
+  noBaseDefinitionForExtensionError,
   noQueryRootTypeError,
+  OBJECT,
 } from '@wundergraph/composition';
 import { composeSubgraphs } from '../src/core/composition/composition.js';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
+import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import { SetupTest } from './test-util.js';
 
 let dbname = '';
 
+vi.mock('../src/core/clickhouse/index.js', () => {
+  const ClickHouseClient = vi.fn();
+  ClickHouseClient.prototype.queryPromise = vi.fn();
+
+  return { ClickHouseClient };
+});
+
 describe('Composition error tests', (ctx) => {
+  let chClient: ClickHouseClient;
+
+  beforeEach(() => {
+    chClient = new ClickHouseClient();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
   beforeAll(async () => {
     dbname = await beforeAllSetup();
   });
@@ -28,8 +51,8 @@ describe('Composition error tests', (ctx) => {
     await afterAllSetup(dbname);
   });
 
-  test('Should cause a composition error due to extension of the type which doesnt exist', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname });
+  test('that an error is returned if an Object extension orphan remains after federation', async () => {
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const pandasSchemaBuffer = await readFile(join(process.cwd(), 'test/graphql/federationV1/pandas.graphql'));
     const productsSchemaBuffer = await readFile(join(process.cwd(), 'test/graphql/federationV1/products.graphql'));
@@ -78,14 +101,14 @@ describe('Composition error tests', (ctx) => {
       schema: productsSchema,
     });
     expect(publishFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
-    expect(publishFederatedSubgraphResp.compositionErrors[0].message).toBe(
-      'Extension error:\n Could not extend the type "User" because no base definition exists.',
+    expect(publishFederatedSubgraphResp.compositionErrors[0].message).toStrictEqual(
+      noBaseDefinitionForExtensionError(OBJECT, 'User').message,
     );
 
     await server.close();
   });
 
-  test('Should cause composition errors on merging a list type with a non-list version', () => {
+  test('that an error is returned when attempting federate a List type with a non-List type', () => {
     const subgraph1 = {
       name: 'subgraph1',
       url: '',
@@ -112,9 +135,10 @@ describe('Composition error tests', (ctx) => {
       `),
     };
 
-    const result = composeSubgraphs([subgraph1, subgraph2]);
-    expect(result.errors).toBeDefined();
-    expect(result.errors?.[0].message).toBe(
+    const result = composeSubgraphs([subgraph1, subgraph2], LATEST_ROUTER_COMPATIBILITY_VERSION) as FederationResultFailure;
+    expect(result.success).toBe(false);
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0].message).toBe(
       'Incompatible types when merging two instances of "A.a":\n Expected type "NamedType" but received "ListType"',
     );
   });
@@ -144,9 +168,10 @@ describe('Composition error tests', (ctx) => {
       `),
     };
 
-    const result = composeSubgraphs([subgraph1, subgraph2]);
-    expect(result.errors).toBeDefined();
-    expect(result.errors?.[0].message).toBe(
+    const result = composeSubgraphs([subgraph1, subgraph2], LATEST_ROUTER_COMPATIBILITY_VERSION) as FederationResultFailure;
+    expect(result.success).toBe(false);
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0].message).toBe(
       'Incompatible types when merging two instances of "A.a":\n Expected type "String" but received "Int"',
     );
   });
@@ -178,11 +203,10 @@ describe('Composition error tests', (ctx) => {
       `),
     };
 
-    const { errors } = composeSubgraphs([subgraph1, subgraph2]);
-    expect(errors).toBeDefined();
-    expect(errors![0]).toStrictEqual(
-      incompatibleArgumentTypesError('n', 'Function.g(n: ...)', 'Int', 'String')
-    );
+    const result = composeSubgraphs([subgraph1, subgraph2], LATEST_ROUTER_COMPATIBILITY_VERSION) as FederationResultFailure;
+    expect(result.success).toBe(false);
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]).toStrictEqual(incompatibleArgumentTypesError('n', 'Function.g(n: ...)', 'Int', 'String'));
   });
 
   test.skip('Should cause composition errors when the @tag definition is invalid', () => {
@@ -208,10 +232,11 @@ describe('Composition error tests', (ctx) => {
       name: 'subgraph2',
     };
 
-    const result = composeSubgraphs([subgraph1, subgraph2]);
+    const result = composeSubgraphs([subgraph1, subgraph2], LATEST_ROUTER_COMPATIBILITY_VERSION) as FederationResultFailure;
 
-    expect(result.errors).toBeDefined();
-    expect(result.errors?.[0].message).toBe(
+    expect(result.success).toBe(false);
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0].message).toBe(
       '[subgraph1] Invalid definition for directive "@tag": missing required argument "name"',
     );
   });
@@ -237,10 +262,11 @@ describe('Composition error tests', (ctx) => {
       name: 'subgraph2',
     };
 
-    const result = composeSubgraphs([subgraph1, subgraph2]);
+    const result = composeSubgraphs([subgraph1, subgraph2], LATEST_ROUTER_COMPATIBILITY_VERSION) as FederationResultFailure;
 
-    expect(result.errors).toBeDefined();
-    expect(result.errors?.[0].message).toBe(
+    expect(result.success).toBe(false);
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0].message).toBe(
       '[subgraph1] Name "__something" must not begin with "__", which is reserved by GraphQL introspection.',
     );
   });
@@ -266,11 +292,10 @@ describe('Composition error tests', (ctx) => {
       name: 'subgraph2',
     };
 
-    const { errors } = composeSubgraphs([subgraph1, subgraph2]);
-
-    expect(errors).toBeDefined();
-    expect(errors).toHaveLength(1);
-    expect(errors?.[0]).toStrictEqual(noQueryRootTypeError);
+    const result = composeSubgraphs([subgraph1, subgraph2], LATEST_ROUTER_COMPATIBILITY_VERSION) as FederationResultFailure;
+    expect(result.success).toBe(false);
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors?.[0]).toStrictEqual(noQueryRootTypeError());
   });
 
   test('Should cause an composition error when a type and a interface are defined with the same name in different subgraphs', () => {
@@ -298,13 +323,13 @@ describe('Composition error tests', (ctx) => {
       name: 'subgraph2',
     };
 
-    const { errors } = composeSubgraphs([subgraph1, subgraph2]);
-    expect(errors).toBeDefined();
-    expect(errors).toHaveLength(1);
-    expect(errors![0]).toStrictEqual(incompatibleParentKindMergeError('SameName', 'object', 'interface'));
+    const result = composeSubgraphs([subgraph1, subgraph2], LATEST_ROUTER_COMPATIBILITY_VERSION) as FederationResultFailure;
+    expect(result.success).toBe(false);
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]).toStrictEqual(incompatibleParentKindMergeError('SameName', OBJECT, INTERFACE));
   });
 
-  test('Should cause composition errors if a type does not implement one of its interface after merge', () => {
+  test('that composition errors are returned if a type does not satisfy its implemented Interfaces after federation', () => {
     const subgraph1 = {
       definitions: parse(`
         type Query {
@@ -338,13 +363,14 @@ describe('Composition error tests', (ctx) => {
       name: 'subgraph2',
     };
 
-    const { errors } = composeSubgraphs([subgraph1, subgraph2]);
+    const result = composeSubgraphs([subgraph1, subgraph2], LATEST_ROUTER_COMPATIBILITY_VERSION) as FederationResultFailure;
 
-    expect(errors).toBeDefined();
-    expect(errors![0]).toStrictEqual(
+    expect(result.success).toBe(false);
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]).toStrictEqual(
       invalidInterfaceImplementationError(
         'TypeB',
-        'object',
+        OBJECT,
         new Map<string, ImplementationErrors>([
           [
             'InterfaceA',
@@ -383,8 +409,9 @@ describe('Composition error tests', (ctx) => {
       url: '',
     };
 
-    const result = composeSubgraphs([subgraph1, subgraph2]);
-    expect(result.errors).toBeDefined();
+    const result = composeSubgraphs([subgraph1, subgraph2], LATEST_ROUTER_COMPATIBILITY_VERSION) as FederationResultFailure;
+    expect(result.success).toBe(false);
+    expect(result.errors).toHaveLength(1);
     expect(result.errors?.[0].message).toBe(
       'None of the fields of input object type "InputA" are consistently defined in all the subgraphs defining that type. As only fields common to all subgraphs are merged, this would result in an empty type.',
     );
@@ -420,13 +447,15 @@ describe('Composition error tests', (ctx) => {
       name: 'subgraph2',
     };
 
-    const { errors } = composeSubgraphs([subgraph1, subgraph2]);
-    expect(errors).toBeDefined();
-    expect(errors![0]).toStrictEqual(invalidRequiredInputValueError(
-      'input object',
-      'InputA',
-      [{ inputValueName: 'b', missingSubgraphs: ['subgraph1'], requiredSubgraphs: ['subgraph2'] }],
-      false,
-    ));
+    const result = composeSubgraphs([subgraph1, subgraph2], LATEST_ROUTER_COMPATIBILITY_VERSION) as FederationResultFailure;
+    expect(result.success).toBe(false);
+    expect(result.errors[0]).toStrictEqual(
+      invalidRequiredInputValueError(
+        INPUT_OBJECT,
+        'InputA',
+        [{ inputValueName: 'b', missingSubgraphs: ['subgraph1'], requiredSubgraphs: ['subgraph2'] }],
+        false,
+      ),
+    );
   });
 });

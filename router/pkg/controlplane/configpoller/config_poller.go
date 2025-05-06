@@ -3,8 +3,9 @@ package configpoller
 import (
 	"context"
 	"errors"
-	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane"
@@ -35,7 +36,9 @@ type configPoller struct {
 	latestRouterConfigDate    time.Time
 	poller                    controlplane.Poller
 	pollInterval              time.Duration
+	pollJitter                time.Duration
 	configClient              routerconfig.Client
+	fallbackConfigClient      *routerconfig.Client
 }
 
 func New(token string, opts ...Option) ConfigPoller {
@@ -51,7 +54,7 @@ func New(token string, opts ...Option) ConfigPoller {
 		c.logger = zap.NewNop()
 	}
 
-	c.poller = controlplane.NewPoll(c.pollInterval)
+	c.poller = controlplane.NewPoll(c.pollInterval, c.pollJitter)
 
 	return c
 }
@@ -66,9 +69,7 @@ func (c *configPoller) Stop(_ context.Context) error {
 }
 
 func (c *configPoller) Subscribe(ctx context.Context, handler func(newConfig *nodev1.RouterConfig, _ string) error) {
-
 	c.poller.Subscribe(ctx, func() {
-
 		start := time.Now()
 
 		cfg, err := c.getRouterConfig(ctx)
@@ -122,10 +123,26 @@ func (c *configPoller) Subscribe(ctx context.Context, handler func(newConfig *no
 
 func (c *configPoller) getRouterConfig(ctx context.Context) (*routerconfig.Response, error) {
 	config, err := c.configClient.RouterConfig(ctx, c.latestRouterConfigVersion, c.latestRouterConfigDate)
+	if err == nil {
+		return config, nil
+	}
+
+	if errors.Is(err, ErrConfigNotModified) {
+		return nil, err
+	}
+
+	if c.fallbackConfigClient == nil {
+		return nil, err
+	}
+
+	c.logger.Warn("Failed to retrieve execution config. Attempting with fallback storage")
+
+	config, err = (*c.fallbackConfigClient).RouterConfig(ctx, c.latestRouterConfigVersion, c.latestRouterConfigDate)
 	if err != nil {
 		return nil, err
 	}
-	return config, nil
+
+	return config, err
 }
 
 // GetRouterConfig fetches the latest router config from the provider. Not safe for concurrent use.
@@ -144,14 +161,21 @@ func WithLogger(logger *zap.Logger) Option {
 	}
 }
 
-func WithPollInterval(interval time.Duration) Option {
+func WithPolling(interval time.Duration, jitter time.Duration) Option {
 	return func(s *configPoller) {
 		s.pollInterval = interval
+		s.pollJitter = jitter
 	}
 }
 
-func WithClient(cdnConfigClient routerconfig.Client) Option {
+func WithClient(client routerconfig.Client) Option {
 	return func(s *configPoller) {
-		s.configClient = cdnConfigClient
+		s.configClient = client
+	}
+}
+
+func WithFallbackClient(client *routerconfig.Client) Option {
+	return func(s *configPoller) {
+		s.fallbackConfigClient = client
 	}
 }
