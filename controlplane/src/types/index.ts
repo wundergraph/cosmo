@@ -1,6 +1,7 @@
 import { LintSeverity } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { JWTPayload } from 'jose';
 import { GraphPruningRuleEnum, LintRuleEnum, OrganizationRole, ProposalMatch } from '../db/models.js';
+import { RBACEvaluator } from "../core/services/RBACEvaluator.js";
 
 export type FeatureIds =
   | 'users'
@@ -220,6 +221,7 @@ export interface OrganizationDTO {
   creatorUserId?: string;
   createdAt: string;
   features?: Feature[];
+  groups: Omit<OrganizationGroupDTO, 'membersCount' | 'kcMapperId'>[];
   billing?: {
     plan: string;
     email?: string;
@@ -246,25 +248,15 @@ export interface UserDTO {
 }
 
 export interface OrganizationGroupDTO {
-  id: string;
+  groupId: string;
   name: string;
   description: string;
   kcGroupId: string | null;
   kcMapperId: string | null;
   membersCount: number;
   rules: {
-    role: string;
-    resources: string[];
-  }[];
-}
-
-export interface OrganizationMemberGroupDTO {
-  groupId: string;
-  name: string;
-  kcGroupId: string | null;
-  rules: {
     role: OrganizationRole;
-    resources: string[];
+    resources: string[] | undefined;
   }[];
 }
 
@@ -273,7 +265,7 @@ export interface OrganizationMemberDTO {
   orgMemberID: string;
   email: string;
   roles: string[];
-  groups: OrganizationMemberGroupDTO[];
+  groups: Omit<OrganizationGroupDTO, 'membersCount' | 'kcMapperId'>[];
   active: boolean;
 }
 
@@ -444,6 +436,7 @@ export type AuthContext = {
   auth: 'access_token' | 'api_key' | 'cookie';
   organizationId: string;
   organizationSlug: string;
+  rbac: RBACEvaluator;
   hasWriteAccess: boolean;
   isAdmin: boolean;
   userId: string;

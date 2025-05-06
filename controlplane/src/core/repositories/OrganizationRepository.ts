@@ -10,7 +10,7 @@ import { addDays } from 'date-fns';
 import { SQL, and, asc, count, desc, eq, gt, inArray, like, lt, not, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
-import { MemberRole, NewOrganizationFeature } from '../../db/models.js';
+import { MemberRole, NewOrganizationFeature, OrganizationRole } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import {
   billingSubscriptions,
@@ -31,7 +31,7 @@ import {
   FeatureIds,
   OrganizationDTO,
   OrganizationMemberDTO,
-  OrganizationMemberGroupDTO,
+  OrganizationGroupDTO,
   WebhooksConfigDTO,
 } from '../../types/index.js';
 import Keycloak from '../services/Keycloak.js';
@@ -62,7 +62,7 @@ export class OrganizationRepository {
     organizationName: string;
     organizationSlug: string;
     ownerID: string;
-  }): Promise<OrganizationDTO> {
+  }): Promise<Omit<OrganizationDTO, 'groups'>> {
     const insertedOrg = await this.db
       .insert(organizations)
       .values({
@@ -74,7 +74,7 @@ export class OrganizationRepository {
       .returning()
       .execute();
 
-    const org: OrganizationDTO = {
+    const org: Omit<OrganizationDTO, 'groups'> = {
       id: insertedOrg[0].id,
       name: insertedOrg[0].name,
       slug: insertedOrg[0].slug,
@@ -102,7 +102,7 @@ export class OrganizationRepository {
       .execute();
   }
 
-  public async bySlug(slug: string): Promise<OrganizationDTO | null> {
+  public async bySlug(slug: string): Promise<Omit<OrganizationDTO, 'groups'> | null> {
     const org = await this.db
       .select({
         id: organizations.id,
@@ -166,7 +166,7 @@ export class OrganizationRepository {
     };
   }
 
-  public async byId(id: string): Promise<OrganizationDTO | null> {
+  public async byId(id: string): Promise<Omit<OrganizationDTO, 'groups'> | null> {
     const org = await this.db
       .select({
         id: organizations.id,
@@ -533,11 +533,12 @@ export class OrganizationRepository {
   public async getOrganizationMemberGroups(input: {
     userID: string;
     organizationID: string;
-  }): Promise<OrganizationMemberGroupDTO[]> {
+  }): Promise<Omit<OrganizationGroupDTO, 'membersCount' | 'kcMapperId'>[]> {
     const groups = await this.db
       .select({
         groupId: schema.organizationGroups.id,
         name: schema.organizationGroups.name,
+        description: schema.organizationGroups.description,
         kcGroupId: schema.organizationGroups.kcGroupId,
       })
       .from(schema.organizationGroupMembers)
@@ -568,7 +569,7 @@ export class OrganizationRepository {
         ...group,
         rules: rules.map(({ role, resources }) => ({
           role,
-          resources: resources?.split(',') ?? [],
+          resources: resources?.split(','),
         })),
       };
     }));
@@ -1629,6 +1630,72 @@ export class OrganizationRepository {
           },
         },
       },
+    });
+  }
+
+  public async getGroupsWithHierarchicalResources({ organizationId, groups }: {
+    organizationId: string;
+    groups: Omit<OrganizationGroupDTO, 'membersCount' | 'kcGroupId' | 'kcMapperId'>[]
+  }) {
+    const [namespaces, federatedGraphs, subgraphs] = await Promise.all([
+      this.db
+        .select({
+          id: schema.namespaces.id,
+          name: schema.namespaces.name,
+        })
+        .from(schema.namespaces)
+        .where(eq(schema.namespaces.organizationId, organizationId))
+        .execute(),
+      this.db
+        .select({
+          id: schema.federatedGraphs.id,
+          targetId: schema.federatedGraphs.targetId,
+          namespaceId: schema.targets.namespaceId,
+        })
+        .from(schema.federatedGraphs)
+        .innerJoin(schema.targets, eq(schema.federatedGraphs.targetId, schema.targets.id))
+        .where(and(
+          eq(schema.targets.organizationId, organizationId),
+          eq(schema.targets.type, 'federated')
+        ))
+        .execute(),
+      this.db
+        .select({
+          id: schema.subgraphs.id,
+          targetId: schema.targets.id,
+          namespaceId: schema.targets.namespaceId,
+          federatedGraphId: schema.subgraphsToFederatedGraph.federatedGraphId,
+        })
+        .from(schema.subgraphs)
+        .innerJoin(schema.targets, eq(schema.subgraphs.targetId, schema.targets.id))
+        .innerJoin(
+          schema.subgraphsToFederatedGraph,
+          eq(schema.subgraphsToFederatedGraph.subgraphId, schema.subgraphs.id)
+        )
+        .where(and(
+          eq(schema.targets.organizationId, organizationId),
+          eq(schema.targets.type, 'subgraph')
+        ))
+        .execute()
+    ]);
+
+    const orgRoles = new Set<OrganizationRole>([
+      'organization-owner',
+      'organization-admin',
+      'organization-developer',
+      'organization-viewer'
+    ]);
+
+    const allNamespaces = namespaces.map((ns) => `ns:${ns.id}`);
+    const allFederatedGraphs = federatedGraphs.map((fg) => `fg:${fg.id}`);
+    const allSubgraphs = subgraphs.map((sg) => `sg:${sg.id}`);
+
+    return groups.map((group) => {
+      const newRules: typeof group['rules'] = [];
+      for (const { role, resources } of group.rules) {
+      }
+
+      return { ...group, rules: newRules };
     });
   }
 }

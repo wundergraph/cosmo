@@ -98,6 +98,7 @@ export class OrganizationInvitationRepository {
       id: org.id,
       name: org.name,
       slug: org.slug,
+      groups: [],
       creatorUserId: org.creatorUserId || undefined,
       createdAt: org.createdAt.toISOString(),
       invitedBy: org.invitedBy || undefined,

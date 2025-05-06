@@ -63,7 +63,14 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
       return {
         id: userSession.userId,
         email: userInfoData.email,
-        organizations: orgs.filter((o) => !o.deletion || o.roles.includes('admin')),
+        organizations: orgs
+          .filter((o) => !o.deletion || o.roles.includes('admin'))
+          .map((org) => ({
+            ...org,
+            groups: org.groups.map(({ description, kcGroupId, ...rest }) => ({
+              ...rest,
+            })),
+          })),
         invitations,
         expiresAt: userSession.expiresAt,
       };

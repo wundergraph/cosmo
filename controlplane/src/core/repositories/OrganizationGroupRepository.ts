@@ -25,7 +25,7 @@ export class OrganizationGroupRepository {
       .execute();
 
     return {
-      id: insertedRuleSet[0].id,
+      groupId: insertedRuleSet[0].id,
       name: input.name,
       description: input.description,
       kcGroupId: input.kcGroupId,
@@ -84,12 +84,14 @@ export class OrganizationGroupRepository {
       return undefined;
     }
 
+    const { id, ...rest } = orgGroup;
     return {
-      ...orgGroup,
+      groupId: id,
+      ...rest,
       description: orgGroup.description,
       rules: orgGroup.rules.map(({ role, resources }) => ({
         role,
-        resources: resources?.split('*').filter((r) => r !== '*') ?? [],
+        resources: resources?.split(','),
       })),
     };
   }
@@ -116,11 +118,12 @@ export class OrganizationGroupRepository {
       }),
     });
 
-    return orgGroups.map(({ rules, ...rest }) => ({
+    return orgGroups.map(({ id, rules, ...rest }) => ({
+      groupId: id,
       ...rest,
       rules: rules.map(({ role, resources }) => ({
         role,
-        resources: resources?.split(',').filter((r) => r !== '*') ?? [],
+        resources: resources?.split(','),
       })),
     }));
   }

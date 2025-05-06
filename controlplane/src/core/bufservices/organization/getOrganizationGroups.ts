@@ -27,8 +27,7 @@ export function getOrganizationGroups(
       response: {
         code: EnumStatusCode.OK,
       },
-      groups: groups.map(({ id, kcGroupId, ...rest }) => ({
-        groupId: id,
+      groups: groups.map(({ kcGroupId, kcMapperId, ...rest }) => ({
         ...rest,
       })),
     };

@@ -102,7 +102,7 @@ export function updateOrganizationGroup(
 
     // Finally, update the group roles
     await orgGroupRepo.updateGroup({
-      groupId: orgGroup.id,
+      groupId: orgGroup.groupId,
       description: req.description,
       rules: resourcesByRole,
     });

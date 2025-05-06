@@ -101,7 +101,7 @@ export function createOrganization(
           kcGroupId: kcAdminGroupId,
         });
 
-        await orgGroupRepo.addUserToGroup({ organizationMemberId: orgMember.id, groupId: orgAdminGroup.id });
+        await orgGroupRepo.addUserToGroup({ organizationMemberId: orgMember.id, groupId: orgAdminGroup.groupId });
 
         let sessionId: string | undefined;
         if (opts.stripeSecretKey) {

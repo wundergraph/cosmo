@@ -136,7 +136,7 @@ export function updateOrgMemberGroup(
       organizationID: authContext.organizationId,
     });
 
-    if (userGroups.some((ug) => ug.groupId === orgGroup.id)) {
+    if (userGroups.some((ug) => ug.groupId === orgGroup.groupId)) {
       return {
         response: {
           code: EnumStatusCode.OK,
@@ -165,7 +165,7 @@ export function updateOrgMemberGroup(
 
     await orgRepo.updateUserGroup({
       orgMemberID: orgMember.orgMemberID,
-      groupId: orgGroup.id,
+      groupId: orgGroup.groupId,
     });
 
     await auditLogRepo.addAuditLog({

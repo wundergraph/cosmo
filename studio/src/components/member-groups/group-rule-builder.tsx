@@ -294,7 +294,7 @@ function ResourcesDropdown({ disabled, onRuleUpdated }: {
     let result = [
       ...(accessibleResources?.federatedGraphs.map((fg) => ({
         group: 'namespaces',
-        value: fg.namespace,
+        value: `ns:${fg.namespace}`,
         label: fg.namespace,
       })) ?? []),
       ...(accessibleResources?.federatedGraphs.map((fg) => ({

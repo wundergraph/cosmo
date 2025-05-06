@@ -39,7 +39,7 @@ export function getOrganizationGroupMembers(
       response: {
         code: EnumStatusCode.OK,
       },
-      members: await orgGroupRepo.getGroupMembers(orgGroup.id),
+      members: await orgGroupRepo.getGroupMembers(orgGroup.groupId),
     };
   });
 }

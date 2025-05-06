@@ -93,7 +93,7 @@ export function createOrganizationGroup(
         code: EnumStatusCode.OK,
       },
       group: {
-        groupId: createdGroup.id,
+        groupId: createdGroup.groupId,
         name: createdGroup.name,
         description: createdGroup.description,
         membersCount: 0,
