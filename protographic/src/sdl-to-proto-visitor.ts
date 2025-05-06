@@ -169,9 +169,6 @@ export class GraphQLToProtoTextVisitor {
     // Third: Process all complex types from the message queue
     this.processMessageQueue();
 
-    // Fourth: Process any special types
-    this.processSpecialTypes();
-
     return this.protoText.join('\n');
   }
 
@@ -762,17 +759,5 @@ export class GraphQLToProtoTextVisitor {
    */
   private getIndent(): string {
     return '  '.repeat(this.indent);
-  }
-
-  /**
-   * Process special types like federation _Any and _Entity
-   *
-   * Special types are skipped because we generate dedicated lookup methods
-   * for entity types instead of using the _entities field.
-   */
-  private processSpecialTypes(): void {
-    // Skip generating federation types (_Any, _Entity, etc.) since we:
-    // 1. Generate dedicated lookup methods for entities instead of using the _entities field
-    // 2. Don't want to include these special internal types in the Protocol Buffer definition
   }
 }
