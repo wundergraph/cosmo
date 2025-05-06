@@ -39,7 +39,7 @@ This document outlines the rules and conventions used by Protographic when conve
 
 Each query or mutation field is mapped to an RPC method with request and response messages:
 
-```
+```graphql
 type Query {
   user(id: ID!): User
 }
@@ -63,7 +63,7 @@ message QueryUserResponse {
 
 For types with `@key` directive, lookup methods are generated:
 
-```
+```graphql
 type Product @key(fields: "id") {
   id: ID!
   name: String!
@@ -94,7 +94,7 @@ message LookupProductByIdResponse {
 
 GraphQL interfaces are mapped to Protocol Buffer messages with a `oneof` field containing all implementing types:
 
-```
+```graphql
 interface Node {
   id: ID!
 }
