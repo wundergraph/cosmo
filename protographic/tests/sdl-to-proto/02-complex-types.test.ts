@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { compileGraphQLToProto } from '../../src';
-import { validateProtoDefinition } from '../util';
+import { expectValidProto } from '../util';
 
 describe('SDL to Proto - Complex Types', () => {
   test('should convert enum types correctly', () => {
@@ -24,7 +24,7 @@ describe('SDL to Proto - Complex Types', () => {
     const protoText = compileGraphQLToProto(sdl);
 
     // Validate Proto definition
-    expect(validateProtoDefinition(protoText)).toBe(true);
+    expectValidProto(protoText);
 
     // Check that all required components are present
     expect(protoText).toMatchInlineSnapshot(`
@@ -85,7 +85,7 @@ describe('SDL to Proto - Complex Types', () => {
     const protoText = compileGraphQLToProto(sdl);
 
     // Validate Proto definition
-    expect(validateProtoDefinition(protoText)).toBe(true);
+    expectValidProto(protoText);
 
     // Check that all required components are present
     expect(protoText).toMatchInlineSnapshot(`
@@ -154,7 +154,7 @@ describe('SDL to Proto - Complex Types', () => {
     const protoText = compileGraphQLToProto(sdl);
 
     // Validate Proto definition
-    expect(validateProtoDefinition(protoText)).toBe(true);
+    expectValidProto(protoText);
 
     // Check that all required components are present
     expect(protoText).toMatchInlineSnapshot(`
@@ -208,7 +208,7 @@ describe('SDL to Proto - Complex Types', () => {
     const protoText = compileGraphQLToProto(sdl);
 
     // Validate Proto definition
-    expect(validateProtoDefinition(protoText)).toBe(true);
+    expectValidProto(protoText);
 
     // Check that all required components are present
     expect(protoText).toMatchInlineSnapshot(`
@@ -273,7 +273,7 @@ describe('SDL to Proto - Complex Types', () => {
     const protoText = compileGraphQLToProto(sdl);
 
     // Validate Proto definition
-    expect(validateProtoDefinition(protoText)).toBe(true);
+    expectValidProto(protoText);
 
     // Check that all required components are present
     expect(protoText).toMatchInlineSnapshot(`

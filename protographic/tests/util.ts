@@ -1,22 +1,25 @@
 import * as protobufjs from 'protobufjs';
+import { expect } from 'vitest';
 
 /**
  * Validates a Protocol Buffer text definition using protobufjs
  *
  * @param protoText Protocol Buffer text definition
- * @returns True if valid, false otherwise
+ * @throws Error if the protocol buffer definition is invalid
  */
-export function validateProtoDefinition(protoText: string): boolean {
-  try {
-    // Use protobufjs to parse the text without writing to a file
-    const root = protobufjs.parse(protoText).root;
+export function validateProtoDefinition(protoText: string): void {
+  // Use protobufjs to parse the text without writing to a file
+  const root = protobufjs.parse(protoText).root;
 
-    // Verify the root is loaded by forcing resolution
-    root.resolveAll();
+  // Verify the root is loaded by forcing resolution
+  root.resolveAll();
+}
 
-    return true;
-  } catch (error) {
-    console.error('Proto validation error:', error);
-    return false;
-  }
+/**
+ * Vitest-friendly utility to expect valid protocol buffer definition
+ *
+ * @param protoText Protocol Buffer text definition
+ */
+export function expectValidProto(protoText: string): void {
+  expect(() => validateProtoDefinition(protoText)).not.toThrow();
 }

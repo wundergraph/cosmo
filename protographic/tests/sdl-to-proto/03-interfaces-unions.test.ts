@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { compileGraphQLToProto } from '../../src';
-import { validateProtoDefinition } from '../util';
+import { expectValidProto } from '../util';
 
 describe('SDL to Proto - Interfaces and Unions', () => {
   test('should convert interfaces correctly', () => {
@@ -30,7 +30,7 @@ describe('SDL to Proto - Interfaces and Unions', () => {
     const protoText = compileGraphQLToProto(sdl);
 
     // Validate Proto definition
-    expect(validateProtoDefinition(protoText)).toBe(true);
+    expectValidProto(protoText);
 
     // Check that all required components are present
     expect(protoText).toMatchInlineSnapshot(`
@@ -105,7 +105,7 @@ describe('SDL to Proto - Interfaces and Unions', () => {
     const protoText = compileGraphQLToProto(sdl);
 
     // Validate Proto definition
-    expect(validateProtoDefinition(protoText)).toBe(true);
+    expectValidProto(protoText);
 
     // Check that all required components are present
     expect(protoText).toMatchInlineSnapshot(`
@@ -182,7 +182,7 @@ describe('SDL to Proto - Interfaces and Unions', () => {
     const protoText = compileGraphQLToProto(sdl);
 
     // Validate Proto definition
-    expect(validateProtoDefinition(protoText)).toBe(true);
+    expectValidProto(protoText);
 
     // Check that all required components are present
     expect(protoText).toMatchInlineSnapshot(`
@@ -248,7 +248,7 @@ describe('SDL to Proto - Interfaces and Unions', () => {
     const protoText = compileGraphQLToProto(sdl);
 
     // Validate Proto definition
-    expect(validateProtoDefinition(protoText)).toBe(true);
+    expectValidProto(protoText);
 
     // Check that all required components are present
     expect(protoText).toMatchInlineSnapshot(`

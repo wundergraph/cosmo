@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { compileGraphQLToProto } from '../../src';
-import { validateProtoDefinition } from '../util';
+import { expectValidProto } from '../util';
 
 describe('SDL to Proto - Federation and Special Types', () => {
   test('should handle entity types with @key directive', () => {
@@ -31,7 +31,7 @@ describe('SDL to Proto - Federation and Special Types', () => {
     const protoText = compileGraphQLToProto(sdl);
 
     // Validate Proto definition
-    expect(validateProtoDefinition(protoText)).toBe(true);
+    expectValidProto(protoText);
 
     // Check that entity lookup operations are present
     expect(protoText).toMatchInlineSnapshot(`
@@ -110,7 +110,7 @@ describe('SDL to Proto - Federation and Special Types', () => {
     const protoText = compileGraphQLToProto(sdl);
 
     // Validate Proto definition
-    expect(validateProtoDefinition(protoText)).toBe(true);
+    expectValidProto(protoText);
 
     // Check that all required components are present
     expect(protoText).toMatchInlineSnapshot(`
@@ -184,7 +184,7 @@ describe('SDL to Proto - Federation and Special Types', () => {
     const protoText = compileGraphQLToProto(sdl);
 
     // Validate Proto definition
-    expect(validateProtoDefinition(protoText)).toBe(true);
+    expectValidProto(protoText);
 
     // Check that entity lookup operations are present
     expect(protoText).toMatchInlineSnapshot(`
@@ -274,7 +274,7 @@ describe('SDL to Proto - Federation and Special Types', () => {
     const protoText = compileGraphQLToProto(sdl);
 
     // Validate Proto definition
-    expect(validateProtoDefinition(protoText)).toBe(true);
+    expectValidProto(protoText);
 
     // Check that all required components are present
     expect(protoText).toMatchInlineSnapshot(`

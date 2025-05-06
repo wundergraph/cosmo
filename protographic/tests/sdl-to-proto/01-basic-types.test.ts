@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { compileGraphQLToProto } from '../../src';
-import { validateProtoDefinition } from '../util';
+import { expectValidProto } from '../util';
 
 describe('SDL to Proto - Basic Types', () => {
   test('should convert scalar types correctly', () => {
@@ -17,7 +17,7 @@ describe('SDL to Proto - Basic Types', () => {
     const protoText = compileGraphQLToProto(sdl);
 
     // Validate Proto definition
-    expect(validateProtoDefinition(protoText)).toBe(true);
+    expectValidProto(protoText);
 
     // Check that all required components are present
     expect(protoText).toMatchInlineSnapshot(`
@@ -73,7 +73,7 @@ describe('SDL to Proto - Basic Types', () => {
     const protoText = compileGraphQLToProto(sdl);
 
     // Validate Proto definition
-    expect(validateProtoDefinition(protoText)).toBe(true);
+    expectValidProto(protoText);
 
     // Check that all required components are present
     expect(protoText).toMatchInlineSnapshot(`
@@ -112,7 +112,7 @@ describe('SDL to Proto - Basic Types', () => {
     const protoText = compileGraphQLToProto(sdl);
 
     // Validate Proto definition
-    expect(validateProtoDefinition(protoText)).toBe(true);
+    expectValidProto(protoText);
 
     // Check that all required components are present
     expect(protoText).toMatchInlineSnapshot(`
@@ -161,7 +161,7 @@ describe('SDL to Proto - Basic Types', () => {
     const protoText = compileGraphQLToProto(sdl);
 
     // Validate Proto definition
-    expect(validateProtoDefinition(protoText)).toBe(true);
+    expectValidProto(protoText);
 
     // Check that all required components are present
     expect(protoText).toMatchInlineSnapshot(`
@@ -203,7 +203,7 @@ describe('SDL to Proto - Basic Types', () => {
     const protoText = compileGraphQLToProto(sdl);
 
     // Validate Proto definition
-    expect(validateProtoDefinition(protoText)).toBe(true);
+    expectValidProto(protoText);
 
     // Check that all required components are present
     expect(protoText).toMatchInlineSnapshot(`
@@ -250,7 +250,7 @@ describe('SDL to Proto - Basic Types', () => {
     const protoText = compileGraphQLToProto(sdl, 'CustomService', 'custom.v1', customGoPackage);
 
     // Validate Proto definition
-    expect(validateProtoDefinition(protoText)).toBe(true);
+    expectValidProto(protoText);
 
     // Check that the custom go_package is used
     expect(protoText).toMatchInlineSnapshot(`
