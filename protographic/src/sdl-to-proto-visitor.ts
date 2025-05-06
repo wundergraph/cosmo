@@ -149,6 +149,9 @@ export class GraphQLToProtoTextVisitor {
       ...mutationResult.messageDefinitions,
     ];
 
+    // Add all types from the schema to the queue that weren't already queued
+    this.queueAllSchemaTypes();
+
     // Start with the header
     this.protoText = headerText;
 
@@ -171,7 +174,7 @@ export class GraphQLToProtoTextVisitor {
       this.protoText.push(messageDef);
     }
 
-    // Third: Process all complex types from the message queue
+    // Third: Process all complex types from the message queue in a single pass
     this.processMessageQueue();
 
     return this.protoText.join('\n');
@@ -291,7 +294,6 @@ export class GraphQLToProtoTextVisitor {
   private queueTypeForProcessing(type: GraphQLNamedType): void {
     if (!this.processedTypes.has(type.name)) {
       this.messageQueue.push(type);
-      this.processedTypes.add(type.name);
     }
   }
 
@@ -302,7 +304,6 @@ export class GraphQLToProtoTextVisitor {
     const returnType = getNamedType(field.type);
     if (!isScalarType(returnType) && !this.processedTypes.has(returnType.name)) {
       this.messageQueue.push(returnType);
-      this.processedTypes.add(returnType.name);
     }
   }
 
@@ -395,7 +396,6 @@ export class GraphQLToProtoTextVisitor {
         const namedType = getNamedType(arg.type);
         if (isInputObjectType(namedType) && !this.processedTypes.has(namedType.name)) {
           this.messageQueue.push(namedType);
-          this.processedTypes.add(namedType.name);
         }
       }
     }
@@ -423,6 +423,33 @@ export class GraphQLToProtoTextVisitor {
   }
 
   /**
+   * Queue all types from the schema that need processing
+   */
+  private queueAllSchemaTypes(): void {
+    const typeMap = this.schema.getTypeMap();
+
+    for (const typeName in typeMap) {
+      const type = typeMap[typeName];
+
+      // Skip built-in types, Query type, _Entity, and already processed types
+      if (
+        typeName.startsWith('__') ||
+        typeName === 'Query' ||
+        typeName === '_Entity' ||
+        this.processedTypes.has(typeName)
+      ) {
+        continue;
+      }
+
+      // Queue type for processing if it's a complex type
+      if (isObjectType(type) || isInputObjectType(type) || isInterfaceType(type) || 
+          isUnionType(type) || isEnumType(type)) {
+        this.messageQueue.push(type);
+      }
+    }
+  }
+
+  /**
    * Process all queued complex types for message generation
    *
    * This is a key method that processes the message queue to generate
@@ -435,14 +462,11 @@ export class GraphQLToProtoTextVisitor {
    */
   private processMessageQueue(): void {
     // Process queued types in a single pass
-    const processedTypeIds = new Set<string>();
-
     while (this.messageQueue.length > 0) {
       const type = this.messageQueue.shift()!;
 
-      // Skip already processed types (from this pass), Query type, and _Entity
-      if (processedTypeIds.has(type.name) || type.name === 'Query' || type.name === '_Entity') {
-        this.processedTypes.add(type.name);
+      // Skip already processed types, Query type, and _Entity
+      if (this.processedTypes.has(type.name) || type.name === 'Query' || type.name === '_Entity') {
         continue;
       }
 
@@ -459,51 +483,8 @@ export class GraphQLToProtoTextVisitor {
         this.processEnumType(type);
       }
 
-      // Mark as processed in this pass
-      processedTypeIds.add(type.name);
-    }
-
-    // Add built-in types from schema that weren't explicitly referenced
-    this.addUnprocessedSchemaTypes();
-  }
-
-  /**
-   * Add types from the schema that weren't processed via references
-   *
-   * This ensures that even types not explicitly referenced in operations
-   * are still included in the output.
-   */
-  private addUnprocessedSchemaTypes(): void {
-    const typeMap = this.schema.getTypeMap();
-
-    for (const typeName in typeMap) {
-      const type = typeMap[typeName];
-
-      // Skip built-in types, Query type, _Entity, and already processed types
-      if (
-        typeName.startsWith('__') ||
-        typeName === 'Query' ||
-        typeName === '_Entity' ||
-        this.processedTypes.has(typeName)
-      ) {
-        continue;
-      }
-
-      // Process remaining type based on its kind
-      if (isObjectType(type)) {
-        this.processObjectType(type);
-      } else if (isInputObjectType(type)) {
-        this.processInputObjectType(type);
-      } else if (isInterfaceType(type)) {
-        this.processInterfaceType(type);
-      } else if (isUnionType(type)) {
-        this.processUnionType(type);
-      } else if (isEnumType(type)) {
-        this.processEnumType(type);
-      }
-
       // Mark as processed
-      this.processedTypes.add(typeName);
+      this.processedTypes.add(type.name);
     }
   }
 
@@ -548,7 +529,6 @@ export class GraphQLToProtoTextVisitor {
       const namedType = getNamedType(field.type);
       if (!isScalarType(namedType) && !this.processedTypes.has(namedType.name)) {
         this.messageQueue.push(namedType);
-        this.processedTypes.add(namedType.name);
       }
     }
 
@@ -591,7 +571,6 @@ export class GraphQLToProtoTextVisitor {
       const namedType = getNamedType(field.type);
       if (!isScalarType(namedType) && !this.processedTypes.has(namedType.name)) {
         this.messageQueue.push(namedType);
-        this.processedTypes.add(namedType.name);
       }
     }
 
@@ -637,7 +616,6 @@ export class GraphQLToProtoTextVisitor {
       // Queue implementing types for processing
       if (!this.processedTypes.has(implType.name)) {
         this.messageQueue.push(implType);
-        this.processedTypes.add(implType.name);
       }
     }
 
@@ -681,7 +659,6 @@ export class GraphQLToProtoTextVisitor {
       // Queue member types for processing
       if (!this.processedTypes.has(memberType.name)) {
         this.messageQueue.push(memberType);
-        this.processedTypes.add(memberType.name);
       }
     }
 
