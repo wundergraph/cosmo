@@ -298,10 +298,12 @@ export default class Keycloak {
     return Promise.all(
       organizationRoleEnum.enumValues.map(async (role) => {
         const roleName = `${organizationSlug}:${role}`;
-        await this.createRole({
-          realm: realm || this.realm,
-          roleName,
-        });
+        if (!await this.roleExists({ realm: realm || this.realm, roleName })) {
+          await this.createRole({
+            realm: realm || this.realm,
+            roleName,
+          });
+        }
       }),
     );
   }

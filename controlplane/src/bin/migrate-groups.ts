@@ -5,6 +5,7 @@ import { and, eq } from 'drizzle-orm';
 import { buildDatabaseConnectionConfig } from '../core/plugins/database.js';
 import Keycloak from '../core/services/Keycloak.js';
 import * as schema from '../db/schema.js';
+import { OrganizationRole } from "../db/models.js";
 import { getConfig } from './get-config.js';
 
 const {
@@ -71,7 +72,7 @@ async function migrateGroups(db: PostgresJsDatabase<typeof schema>) {
   await Promise.all(
     organizations.map(async ({ id: organizationId, slug: organizationSlug }) => {
       await keycloakClient.seedRoles({ realm, organizationSlug });
-      await ensureKeycloakSubgroupsForOrganizationExistInDatabase({ db, organizationId, organizationSlug });
+      await ensureOrganizationSubgroupsExistInDatabase({ db, organizationId, organizationSlug });
       await assignOrganizationMembersToCorrespondingGroups({ db, organizationId });
 
       console.log(`- Done processing organization "${organizationSlug}"`);
@@ -79,7 +80,7 @@ async function migrateGroups(db: PostgresJsDatabase<typeof schema>) {
   );
 }
 
-async function ensureKeycloakSubgroupsForOrganizationExistInDatabase({
+async function ensureOrganizationSubgroupsExistInDatabase({
   db,
   organizationId,
   organizationSlug,
@@ -105,7 +106,7 @@ async function ensureKeycloakSubgroupsForOrganizationExistInDatabase({
   });
 
   // Create all the subgroups in the database, ignoring the ones that already have been created
-  await db
+  const createdGroups = await db
     .insert(schema.organizationGroups)
     .values(
       organizationSubgroups.map((sg) => ({
@@ -116,14 +117,30 @@ async function ensureKeycloakSubgroupsForOrganizationExistInDatabase({
       })),
     )
     .onConflictDoNothing()
+    .returning()
     .execute();
+
+  // Create the initial rule for all the created roles
+  if (createdGroups.length > 0) {
+    await db
+      .insert(schema.organizationGroupRules)
+      .values(
+        createdGroups.map((group) => ({
+          groupId: group.id,
+          role: `organization-${group.name}` as OrganizationRole,
+          resources: null,
+        }))
+      )
+      .onConflictDoNothing()
+      .execute();
+  }
 
   // Finally, apply the corresponding organization role to each subgroup
   await Promise.all(
-    organizationSubgroups.map(async (sg) => {
+    organizationSubgroups.map(async (group) => {
       const role = await keycloakClient.client.roles.findOneByName({
         realm,
-        name: `${organizationSlug}:organization-${sg.name}`,
+        name: `${organizationSlug}:organization-${group.name}`,
       });
 
       if (!role) {
@@ -132,7 +149,7 @@ async function ensureKeycloakSubgroupsForOrganizationExistInDatabase({
 
       await keycloakClient.client.groups.addRealmRoleMappings({
         realm,
-        id: sg.id!,
+        id: group.id!,
         roles: [{ id: role.id!, name: role.name! }],
       });
     }),

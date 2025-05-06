@@ -1692,8 +1692,7 @@ export class OrganizationRepository {
 
     return groups.map((group) => {
       const newRules: typeof group['rules'] = [];
-      for (const { role, resources } of group.rules) {
-      }
+      for (const { role, resources } of group.rules) {}
 
       return { ...group, rules: newRules };
     });

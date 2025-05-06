@@ -176,14 +176,14 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
         separator: true,
       },
       {
-        title: "Groups",
-        href: basePath + "/groups",
-        icon: <UserGroupIcon className="size-4" />,
-      },
-      {
         title: "Members",
         href: basePath + "/members",
         icon: <PiUsers className="size-4" />,
+      },
+      {
+        title: "Groups",
+        href: basePath + "/groups",
+        icon: <UserGroupIcon className="size-4" />,
       },
       {
         title: "API Keys",
