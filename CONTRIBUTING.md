@@ -109,46 +109,27 @@ cp cli/.env.example cli/.env
 cp router/.env.example router/.env
 ```
 
-Install and build the dependencies
-
-```shell
-# In the root directory (cosmo/)
-# Clean any existing builds
-pnpm clean
-
-# Install dependencies
-pnpm install
-
-# Generate necessary files
-pnpm generate
-
-# Build all packages
-pnpm build
-```
-
 Bootstrapping Cosmo for local development is easy. Just run the following commands in order:
 
 ```shell
 # In the root directory (cosmo/)
 # 1️⃣ Setup the repository, build libraries and start all services (Wait a few seconds until Keycloak is ready)
+# You can check whether Keycloak is running by going to localhost:8080. It should show sign-in page
 make
 
 # 2️⃣ Run migrations and seed the database
 make migrate && make seed
 
-# 3️⃣ Wait for the services to be ready (especially Redis and PostgreSQL)
-make infra-up
-
-# 4️⃣ Start the control plane
+# 3️⃣ Start the control plane
 make start-cp
 
-# 5️⃣ Create the demo and copy the JWT printed at the bottom
+# 4️⃣ Create the demo and copy the JWT printed at the bottom
 make create-demo
 
-# 6️⃣ Start the subgraphs
+# 5️⃣ Start the subgraphs
 OTEL_AUTH_TOKEN=<jwt-token> make dc-subgraphs-demo
 
-# 7️⃣ Put the JWT from the previous step into the router/.env as GRAPH_API_TOKEN and start the router
+# 6️⃣ Put the JWT from the previous step into the router/.env as GRAPH_API_TOKEN and start the router
 make start-router
 
 # ✨ Finally, Start the studio (http://localhost:3000) and explore the Cosmo platform
