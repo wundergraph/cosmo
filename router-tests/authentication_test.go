@@ -176,6 +176,32 @@ func TestAuthentication(t *testing.T) {
 			require.Equal(t, `{"data":{"employees":[{"id":1,"startDate":"January 2020"},{"id":2,"startDate":"July 2022"},{"id":3,"startDate":"June 2021"},{"id":4,"startDate":"July 2022"},{"id":5,"startDate":"July 2022"},{"id":7,"startDate":"September 2022"},{"id":8,"startDate":"September 2022"},{"id":10,"startDate":"November 2022"},{"id":11,"startDate":"November 2022"},{"id":12,"startDate":"December 2022"}]}}`, string(data))
 		})
 	})
+	t.Run("scopes required valid token AND scopes present with alias", func(t *testing.T) {
+		t.Parallel()
+
+		authenticators, authServer := ConfigureAuth(t)
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, false)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Operations with a token should succeed
+			token, err := authServer.Token(map[string]any{
+				"scope": "read:employee",
+			})
+			require.NoError(t, err)
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(`{"query":"{ alias: secret { value } }"}`))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.alias', Reason: missing required scopes.","path":["alias"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}}],"data":{"alias":null},"extensions":{"authorization":{"missingScopes":[{"coordinate":{"typeName":"Query","fieldName":"secret"},"required":[["read:secret"]]}],"actualScopes":["read:employee"]}}}`, string(data))
+		})
+	})
 	t.Run("scopes required valid token AND scopes partially present", func(t *testing.T) {
 		t.Parallel()
 

@@ -663,6 +663,10 @@ type SBigObject struct {
 
 func (SBigObject) IsBigAbstractResponse() {}
 
+type Secret struct {
+	Value *string `json:"value,omitempty"`
+}
+
 type Subscription struct {
 }
 
