@@ -109,12 +109,12 @@
   "MCP": {
     "Enabled": false,
     "Server": {
-      "Port": 5025
+      "ListenAddr": "localhost:5025"
     },
     "Storage": {
       "ProviderID": ""
     },
-    "GraphName": "cosmo",
+    "GraphName": "mygraph",
     "ExcludeMutations": false,
     "EnableArbitraryOperations": false,
     "ExposeSchema": false,

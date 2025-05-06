@@ -602,7 +602,7 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	if cfg.MCP.Enabled {
-		cfg.MCP.Server.Port = freeport.GetOne(t)
+		cfg.MCP.Server.ListenAddr = fmt.Sprintf("localhost:%d", freeport.GetOne(t))
 	}
 
 	rr, err := configureRouter(listenerAddr, cfg, &routerConfig, cdnServer, natsSetup)
@@ -745,15 +745,8 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	if cfg.MCP.Enabled {
-
-		// Create an MCP client that connects to the router's MCP server
-		mcpPort := cfg.MCP.Server.Port
-		if mcpPort == 0 {
-			mcpPort = 5025
-		}
-
 		// Create MCP client connecting to the MCP server
-		mcpAddr := fmt.Sprintf("http://localhost:%d/mcp", mcpPort)
+		mcpAddr := fmt.Sprintf("http://%s/mcp", cfg.MCP.Server.ListenAddr)
 		client, err := mcpclient.NewSSEMCPClient(mcpAddr)
 		if err != nil {
 			t.Fatalf("Failed to create MCP client: %v", err)
@@ -761,7 +754,7 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 
 		e.MCPClient = client
 
-		err = e.WaitForMCPServer(e.Context, 1000, 10)
+		err = e.WaitForMCPServer(e.Context, 250, 10)
 		if err != nil {
 			return nil, err
 		}

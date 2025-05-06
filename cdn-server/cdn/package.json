@@ -1,6 +1,6 @@
 {
   "name": "@wundergraph/cosmo-cdn",
-  "version": "0.9.2",
+  "version": "0.9.3",
   "author": {
     "name": "WunderGraph Maintainers",
     "email": "info@wundergraph.com"
@@ -33,6 +33,6 @@
     "eslint": "^8.57.1",
     "eslint-config-unjs": "^0.2.1",
     "typescript": "5.5.2",
-    "vitest": "^2.1.9"
+    "vitest": "^3.1.2"
   }
 }
