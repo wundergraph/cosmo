@@ -135,7 +135,7 @@ message Post {
 
 GraphQL unions are mapped similarly to interfaces:
 
-```
+```graphql
 union SearchResult = User | Post
 
 type User {
@@ -164,7 +164,7 @@ message SearchResult {
 
 GraphQL enums are mapped to Protocol Buffer enums with an additional UNSPECIFIED value:
 
-```
+```graphql
 enum UserRole {
   ADMIN
   USER
