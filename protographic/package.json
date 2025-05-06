@@ -1,0 +1,31 @@
+{
+  "name": "protographic",
+  "module": "src/index.ts",
+  "type": "module",
+  "main": "dist/src/index.js",
+  "bin": "dist/src/index.js",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "test": "vitest run",
+    "test:update": "vitest run -u",
+    "build": "tsc",
+    "format": "prettier --write src tests",
+    "lint": "prettier --check src tests",
+    "lint:fix": "prettier --write src tests"
+  },
+  "devDependencies": {
+    "@types/lodash": "^4.17.16",
+    "@types/node": "^20.11.5",
+    "protobufjs": "^7.5.0",
+    "typescript": "^5.0.0",
+    "vitest": "^2.1.9"
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "^1.8.0",
+    "@wundergraph/cosmo-connect": "workspace:*",
+    "graphql": "^16.9.0",
+    "lodash": "^4.17.21"
+  }
+}
