@@ -135,6 +135,7 @@ describe('Proposal schema matching tests', () => {
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
     });
 
     // Setup a federated graph with a single subgraph
@@ -236,6 +237,7 @@ describe('Proposal schema matching tests', () => {
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
     });
 
     // Setup a federated graph with a single subgraph
@@ -336,6 +338,7 @@ describe('Proposal schema matching tests', () => {
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
     });
 
     // Setup a federated graph with a single subgraph
@@ -435,6 +438,7 @@ describe('Proposal schema matching tests', () => {
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
     });
 
     // Setup a federated graph with a single subgraph
@@ -535,6 +539,7 @@ describe('Proposal schema matching tests', () => {
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
     });
 
     // Setup a federated graph with a single subgraph
@@ -669,6 +674,7 @@ describe('Proposal schema matching tests', () => {
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
     });
 
     // Setup a federated graph with a single subgraph
@@ -741,6 +747,7 @@ describe('Proposal schema matching tests', () => {
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
     });
 
     // Setup a federated graph with a single subgraph
@@ -793,6 +800,7 @@ describe('Proposal schema matching tests', () => {
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
     });
 
     // Setup a federated graph with a single subgraph
@@ -844,6 +852,7 @@ describe('Proposal schema matching tests', () => {
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
     });
 
     // Setup a federated graph with multiple subgraphs
@@ -958,6 +967,7 @@ describe('Proposal schema matching tests', () => {
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
     });
 
     // Setup a federated graph with a single subgraph
@@ -1050,6 +1060,7 @@ describe('Proposal schema matching tests', () => {
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
     });
 
     // Setup a federated graph with a single subgraph
@@ -1173,6 +1184,7 @@ describe('Proposal schema matching tests', () => {
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
     });
 
     // Create two namespaces for testing isolation between them
@@ -1369,6 +1381,7 @@ describe('Proposal schema matching tests', () => {
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
     });
 
     // Setup a federated graph with a single subgraph
