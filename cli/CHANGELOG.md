@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.78.3](https://github.com/wundergraph/cosmo/compare/wgc@0.78.2...wgc@0.78.3) (2025-05-02)
+
+### Bug Fixes
+
+* remove schema directives before in memory validation ([#1789](https://github.com/wundergraph/cosmo/issues/1789)) ([fb79930](https://github.com/wundergraph/cosmo/commit/fb79930a40dd06590ab2452371d08e6a7616e05c)) (@jensneuse)
+* vite vulnerability ([#1823](https://github.com/wundergraph/cosmo/issues/1823)) ([05d5300](https://github.com/wundergraph/cosmo/commit/05d53004612958fe1dab2c292ec89ac4ac686b61)) (@JivusAyrus)
+
 ## [0.78.2](https://github.com/wundergraph/cosmo/compare/wgc@0.78.1...wgc@0.78.2) (2025-04-29)
 
 **Note:** Version bump only for package wgc

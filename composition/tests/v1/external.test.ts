@@ -222,9 +222,7 @@ describe('@external directive tests', () => {
       const result = normalizeSubgraphSuccess(nu, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(1);
-      expect(result.warnings[0]).toStrictEqual(
-        requiresDefinedOnNonEntityFieldWarning('NestedOne.field', NOT_APPLICABLE),
-      );
+      expect(result.warnings[0]).toStrictEqual(requiresDefinedOnNonEntityFieldWarning('NestedOne.field', nu.name));
     });
 
     test('that @external is valid on a Field that forms part of a @requires FieldSet #3', () => {

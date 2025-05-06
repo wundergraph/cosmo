@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.113.3](https://github.com/wundergraph/cosmo/compare/studio@0.113.2...studio@0.113.3) (2025-05-02)
+
+### Bug Fixes
+
+* vite vulnerability ([#1823](https://github.com/wundergraph/cosmo/issues/1823)) ([05d5300](https://github.com/wundergraph/cosmo/commit/05d53004612958fe1dab2c292ec89ac4ac686b61)) (@JivusAyrus)
+
 ## [0.113.2](https://github.com/wundergraph/cosmo/compare/studio@0.113.1...studio@0.113.2) (2025-04-29)
 
 ### Bug Fixes
