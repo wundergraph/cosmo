@@ -1,5 +1,8 @@
 import {
+  ArgumentNode,
+  DirectiveNode,
   getNamedType,
+  GraphQLArgument,
   GraphQLEnumType,
   GraphQLField,
   GraphQLInputObjectType,
@@ -7,6 +10,7 @@ import {
   GraphQLNamedType,
   GraphQLObjectType,
   GraphQLSchema,
+  GraphQLType,
   GraphQLUnionType,
   isEnumType,
   isInputObjectType,
@@ -16,6 +20,7 @@ import {
   isObjectType,
   isScalarType,
   isUnionType,
+  StringValueNode,
 } from 'graphql';
 import {
   createEntityLookupMethodName,
@@ -372,7 +377,7 @@ export class GraphQLToProtoTextVisitor {
   /**
    * Generic method to create a request message from field arguments
    */
-  private createRequestMessage(requestName: string, args: readonly any[]): string[] {
+  private createRequestMessage(requestName: string, args: readonly GraphQLArgument[]): string[] {
     const messageLines: string[] = [];
     messageLines.push(`message ${requestName} {`);
 
@@ -408,10 +413,11 @@ export class GraphQLToProtoTextVisitor {
    * @param directive - The @key directive from the GraphQL AST
    * @returns Array of field names that form the key
    */
-  private getKeyFieldsFromDirective(directive: any): string[] {
-    const fieldsArg = directive.arguments?.find((arg: any) => arg.name.value === 'fields');
+  private getKeyFieldsFromDirective(directive: DirectiveNode): string[] {
+    const fieldsArg = directive.arguments?.find((arg: ArgumentNode) => arg.name.value === 'fields');
     if (fieldsArg && fieldsArg.value.kind === 'StringValue') {
-      return fieldsArg.value.value.split(' ');
+      const stringValue = fieldsArg.value as StringValueNode;
+      return stringValue.value.split(' ');
     }
     return [];
   }
@@ -723,7 +729,7 @@ export class GraphQLToProtoTextVisitor {
    * @param graphqlType - The GraphQL type to convert
    * @returns The corresponding Protocol Buffer type name
    */
-  private getProtoTypeFromGraphQL(graphqlType: any): string {
+  private getProtoTypeFromGraphQL(graphqlType: GraphQLType): string {
     if (isScalarType(graphqlType)) {
       return SCALAR_TYPE_MAP[graphqlType.name] || 'string';
     }
@@ -741,17 +747,16 @@ export class GraphQLToProtoTextVisitor {
     }
 
     // Named types (object, interface, union, input)
-    // Handle the case where getNamedType might not return a valid object
-    if (graphqlType && typeof graphqlType.toString === 'function') {
-      const typeName = graphqlType.toString().replace(/[^a-zA-Z0-9_]/g, '');
-      return typeName || 'string'; // Fallback to string if no valid name is found
+    const namedType = graphqlType as GraphQLNamedType;
+    if (namedType && typeof namedType.name === 'string') {
+      return namedType.name;
     }
 
     return 'string'; // Default fallback
   }
 
   /**
-   * Get indentation based on current level
+   * Get indentation based on the current level
    *
    * Helper method to maintain consistent indentation in the output.
    *
