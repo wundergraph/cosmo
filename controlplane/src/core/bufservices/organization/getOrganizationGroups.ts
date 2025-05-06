@@ -30,7 +30,7 @@ export function getOrganizationGroups(
       groups: groups.map(({ id, kcGroupId, ...rest }) => ({
         groupId: id,
         ...rest,
-      }))
+      })),
     };
   });
 }

@@ -9,8 +9,8 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
 import { OrganizationGroupDTO } from '../../../types/index.js';
-import { AuditLogRepository } from "../../repositories/AuditLogRepository.js";
-import { OrganizationRepository } from "../../repositories/OrganizationRepository.js";
+import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
+import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 
 export function createOrganizationGroup(
   opts: RouterOptions,
@@ -27,7 +27,7 @@ export function createOrganizationGroup(
     const orgGroupRepo = new OrganizationGroupRepository(opts.db);
     const auditLogRepo = new AuditLogRepository(opts.db);
 
-    const rbac = await orgRepo.getFeature({ organizationId: authContext.organizationId, featureId: "rbac" });
+    const rbac = await orgRepo.getFeature({ organizationId: authContext.organizationId, featureId: 'rbac' });
     if (!rbac?.enabled) {
       return {
         response: {

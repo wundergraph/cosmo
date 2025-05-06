@@ -295,13 +295,15 @@ export default class Keycloak {
   }
 
   public seedRoles({ realm, organizationSlug }: { realm?: string; organizationSlug: string }) {
-    return Promise.all(organizationRoleEnum.enumValues.map(async (role) => {
-      const roleName = `${organizationSlug}:${role}`;
-      await this.createRole({
-        realm: realm || this.realm,
-        roleName,
-      });
-    }));
+    return Promise.all(
+      organizationRoleEnum.enumValues.map(async (role) => {
+        const roleName = `${organizationSlug}:${role}`;
+        await this.createRole({
+          realm: realm || this.realm,
+          roleName,
+        });
+      }),
+    );
   }
 
   public async seedGroup({
@@ -331,17 +333,19 @@ export default class Keycloak {
         realm: realm || this.realm,
         id: organizationGroup.id,
       },
-      { name: 'admin', },
+      { name: 'admin' },
     );
 
     if (orgAdminRole) {
       await this.client.groups.addRealmRoleMappings({
         realm,
         id: adminGroup.id,
-        roles: [{
-          id: orgAdminRole.id!,
-          name: orgAdminRoleName
-        }]
+        roles: [
+          {
+            id: orgAdminRole.id!,
+            name: orgAdminRoleName,
+          },
+        ],
       });
     }
 

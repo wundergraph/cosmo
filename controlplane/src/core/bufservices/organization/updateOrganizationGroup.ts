@@ -10,7 +10,7 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { organizationRoleEnum } from '../../../db/schema.js';
 import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
 import { OrganizationRole } from '../../../db/models.js';
-import { OrganizationRepository } from "../../repositories/OrganizationRepository.js";
+import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 
 export function updateOrganizationGroup(
   opts: RouterOptions,
@@ -30,7 +30,7 @@ export function updateOrganizationGroup(
       groupId: req.groupId,
     });
 
-    const rbac = await orgRepo.getFeature({ organizationId: authContext.organizationId, featureId: "rbac" });
+    const rbac = await orgRepo.getFeature({ organizationId: authContext.organizationId, featureId: 'rbac' });
     if (!rbac?.enabled) {
       return {
         response: {
@@ -69,11 +69,13 @@ export function updateOrganizationGroup(
     await opts.keycloakClient.authenticateClient();
 
     const rolesToAddToGroup = resourcesByRole.map((r) => `${authContext.organizationSlug}:${r.role}`);
-    await Promise.all(rolesToAddToGroup.map(async (roleName) => {
-      if (!await opts.keycloakClient.roleExists({ realm: opts.keycloakRealm, roleName })) {
-        await opts.keycloakClient.createRole({ realm: opts.keycloakRealm, roleName });
-      }
-    }));
+    await Promise.all(
+      rolesToAddToGroup.map(async (roleName) => {
+        if (!(await opts.keycloakClient.roleExists({ realm: opts.keycloakRealm, roleName }))) {
+          await opts.keycloakClient.createRole({ realm: opts.keycloakRealm, roleName });
+        }
+      }),
+    );
 
     // Swap the Keycloak group's roles
     // - load all the existing roles existing for the organization

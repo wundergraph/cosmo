@@ -32,7 +32,7 @@ import {
   OrganizationDTO,
   OrganizationMemberDTO,
   OrganizationMemberGroupDTO,
-  WebhooksConfigDTO
+  WebhooksConfigDTO,
 } from '../../types/index.js';
 import Keycloak from '../services/Keycloak.js';
 import { DeleteOrganizationQueue } from '../workers/DeleteOrganizationWorker.js';
@@ -530,7 +530,10 @@ export class OrganizationRepository {
     return userRoles.map((role) => role.role);
   }
 
-  public getOrganizationMemberGroups(input: { userID: string; organizationID: string }): Promise<OrganizationMemberGroupDTO[]> {
+  public getOrganizationMemberGroups(input: {
+    userID: string;
+    organizationID: string;
+  }): Promise<OrganizationMemberGroupDTO[]> {
     return this.db
       .select({
         groupId: schema.organizationGroups.id,
@@ -538,7 +541,10 @@ export class OrganizationRepository {
         kcGroupId: schema.organizationGroups.kcGroupId,
       })
       .from(schema.organizationGroupMembers)
-      .innerJoin(organizationsMembers, eq(organizationsMembers.id, schema.organizationGroupMembers.organizationMemberId))
+      .innerJoin(
+        organizationsMembers,
+        eq(organizationsMembers.id, schema.organizationGroupMembers.organizationMemberId),
+      )
       .innerJoin(schema.organizationGroups, eq(schema.organizationGroups.id, schema.organizationGroupMembers.groupId))
       .where(
         and(

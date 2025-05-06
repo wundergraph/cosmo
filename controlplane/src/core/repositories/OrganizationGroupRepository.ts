@@ -55,10 +55,7 @@ export class OrganizationGroupRepository {
     return existingRuleSet.length > 0;
   }
 
-  public async byId(input: {
-    organizationId: string;
-    groupId: string;
-  }): Promise<OrganizationGroupDTO | undefined> {
+  public async byId(input: { organizationId: string; groupId: string }): Promise<OrganizationGroupDTO | undefined> {
     const orgGroup = await this.db.query.organizationGroups.findFirst({
       where: and(
         eq(schema.organizationGroups.organizationId, input.organizationId),
@@ -92,7 +89,7 @@ export class OrganizationGroupRepository {
       description: orgGroup.description,
       rules: orgGroup.rules.map(({ role, resources }) => ({
         role,
-        resources: resources?.split("*").filter((r) => r !== "*") ?? [],
+        resources: resources?.split('*').filter((r) => r !== '*') ?? [],
       })),
     };
   }
@@ -141,7 +138,7 @@ export class OrganizationGroupRepository {
       .from(schema.organizationGroupMembers)
       .rightJoin(
         schema.organizationsMembers,
-        eq(schema.organizationsMembers.id, schema.organizationGroupMembers.organizationMemberId)
+        eq(schema.organizationsMembers.id, schema.organizationGroupMembers.organizationMemberId),
       )
       .rightJoin(schema.users, eq(schema.users.id, schema.organizationsMembers.userId))
       .where(eq(schema.organizationGroupMembers.groupId, groupId))
@@ -149,22 +146,24 @@ export class OrganizationGroupRepository {
   }
 
   public changeMemberGroup({ fromGroupId, toGroupId }: { fromGroupId: string; toGroupId: string }) {
-    return this.db.update(schema.organizationGroupMembers)
+    return this.db
+      .update(schema.organizationGroupMembers)
       .set({ groupId: toGroupId })
       .where(eq(schema.organizationGroupMembers.groupId, fromGroupId));
   }
 
-  public addUserToGroup(input: { organizationMemberId: string; groupId: string;}) {
+  public addUserToGroup(input: { organizationMemberId: string; groupId: string }) {
     return this.db.insert(schema.organizationGroupMembers).values(input).execute();
   }
 
   public updateGroup(input: {
     groupId: string;
     description: string;
-    rules: { role: OrganizationRole; resources: string[] }[]
+    rules: { role: OrganizationRole; resources: string[] }[];
   }) {
     return this.db.transaction(async (tx) => {
-      await tx.update(schema.organizationGroups)
+      await tx
+        .update(schema.organizationGroups)
         .set({ description: input.description })
         .where(eq(schema.organizationGroups.id, input.groupId))
         .execute();
@@ -189,9 +188,6 @@ export class OrganizationGroupRepository {
   }
 
   public deleteById(id: string) {
-    return this.db
-      .delete(schema.organizationGroups)
-      .where(eq(schema.organizationGroups.id, id))
-      .returning();
+    return this.db.delete(schema.organizationGroups).where(eq(schema.organizationGroups.id, id)).returning();
   }
 }

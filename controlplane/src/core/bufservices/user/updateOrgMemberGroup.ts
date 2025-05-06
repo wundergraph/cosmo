@@ -10,7 +10,7 @@ import { OidcRepository } from '../../repositories/OidcRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
-import { OrganizationGroupRepository } from "../../repositories/OrganizationGroupRepository.js";
+import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
 
 export function updateOrgMemberGroup(
   opts: RouterOptions,

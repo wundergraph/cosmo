@@ -1,6 +1,6 @@
 import * as process from 'node:process';
 import postgres from 'postgres';
-import { drizzle , PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { drizzle, PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { and, eq } from 'drizzle-orm';
 import { buildDatabaseConnectionConfig } from '../core/plugins/database.js';
 import Keycloak from '../core/services/Keycloak.js';
@@ -28,7 +28,8 @@ const keycloakClient = new Keycloak({
   adminPassword,
 });
 
-try {  // Ensure keycloak is up and running
+try {
+  // Ensure keycloak is up and running
   await keycloakClient.authenticateClient();
 
   // Create database connection. TLS is optionally.
@@ -42,11 +43,11 @@ try {  // Ensure keycloak is up and running
     ...connectionConfig,
     max: 1,
   });
-  
+
   // Initialize the database connection and load all the existing organizations
   const db = drizzle(queryConnection, { schema: { ...schema } });
   await db.transaction(migrateGroups);
-  
+
   //
   await queryConnection.end({
     timeout: 1,
@@ -64,19 +65,25 @@ try {  // Ensure keycloak is up and running
 
 async function migrateGroups(db: PostgresJsDatabase<typeof schema>) {
   const organizations = await db.query.organizations.findMany({
-    columns: { id: true, slug: true, },
+    columns: { id: true, slug: true },
   });
 
-  await Promise.all(organizations.map(async ({ id: organizationId, slug: organizationSlug }) => {
-    await keycloakClient.seedRoles({ realm, organizationSlug });
-    await ensureKeycloakSubgroupsForOrganizationExistInDatabase({ db, organizationId, organizationSlug });
-    await assignOrganizationMembersToCorrespondingGroups({ db, organizationId });
+  await Promise.all(
+    organizations.map(async ({ id: organizationId, slug: organizationSlug }) => {
+      await keycloakClient.seedRoles({ realm, organizationSlug });
+      await ensureKeycloakSubgroupsForOrganizationExistInDatabase({ db, organizationId, organizationSlug });
+      await assignOrganizationMembersToCorrespondingGroups({ db, organizationId });
 
-    console.log(`- Done processing organization "${organizationSlug}"`);
-  }));
+      console.log(`- Done processing organization "${organizationSlug}"`);
+    }),
+  );
 }
 
-async function ensureKeycloakSubgroupsForOrganizationExistInDatabase({ db, organizationId, organizationSlug }: {
+async function ensureKeycloakSubgroupsForOrganizationExistInDatabase({
+  db,
+  organizationId,
+  organizationSlug,
+}: {
   db: PostgresJsDatabase<typeof schema>;
   organizationId: string;
   organizationSlug: string;
@@ -98,36 +105,44 @@ async function ensureKeycloakSubgroupsForOrganizationExistInDatabase({ db, organ
   });
 
   // Create all the subgroups in the database, ignoring the ones that already have been created
-  await db.insert(schema.organizationGroups)
-    .values(organizationSubgroups.map((sg) => ({
-      organizationId,
-      name: sg.name!,
-      description: '',
-      kcGroupId: sg.id!,
-    })))
+  await db
+    .insert(schema.organizationGroups)
+    .values(
+      organizationSubgroups.map((sg) => ({
+        organizationId,
+        name: sg.name!,
+        description: '',
+        kcGroupId: sg.id!,
+      })),
+    )
     .onConflictDoNothing()
     .execute();
 
   // Finally, apply the corresponding organization role to each subgroup
-  await Promise.all(organizationSubgroups.map(async (sg) => {
-    const role = await keycloakClient.client.roles.findOneByName({
-      realm,
-      name: `${organizationSlug}:organization-${sg.name}`
-    });
+  await Promise.all(
+    organizationSubgroups.map(async (sg) => {
+      const role = await keycloakClient.client.roles.findOneByName({
+        realm,
+        name: `${organizationSlug}:organization-${sg.name}`,
+      });
 
-    if (!role) {
-      return;
-    }
+      if (!role) {
+        return;
+      }
 
-    await keycloakClient.client.groups.addRealmRoleMappings({
-      realm,
-      id: sg.id!,
-      roles: [{ id: role.id!, name: role.name! }],
-    });
-  }));
+      await keycloakClient.client.groups.addRealmRoleMappings({
+        realm,
+        id: sg.id!,
+        roles: [{ id: role.id!, name: role.name! }],
+      });
+    }),
+  );
 }
 
-async function assignOrganizationMembersToCorrespondingGroups({ db, organizationId }: {
+async function assignOrganizationMembersToCorrespondingGroups({
+  db,
+  organizationId,
+}: {
   db: PostgresJsDatabase<typeof schema>;
   organizationId: string;
 }) {
@@ -140,47 +155,51 @@ async function assignOrganizationMembersToCorrespondingGroups({ db, organization
     .from(schema.organizationsMembers)
     .rightJoin(
       schema.organizationMemberRoles,
-      eq(schema.organizationsMembers.id, schema.organizationMemberRoles.organizationMemberId)
+      eq(schema.organizationsMembers.id, schema.organizationMemberRoles.organizationMemberId),
     )
-    .rightJoin(
-      schema.users,
-      eq(schema.organizationsMembers.userId, schema.users.id)
-    )
+    .rightJoin(schema.users, eq(schema.organizationsMembers.userId, schema.users.id))
     .where(eq(schema.organizationsMembers.organizationId, organizationId))
     .execute();
 
   const membersGroupedByRoles = Object.groupBy(organizationMembers, (om) => om.role ?? '');
-  await Promise.all(Object.entries(membersGroupedByRoles).map(async ([role, members]) => {
-    if (!role || !members || members.length === 0) {
-      return;
-    }
+  await Promise.all(
+    Object.entries(membersGroupedByRoles).map(async ([role, members]) => {
+      if (!role || !members || members.length === 0) {
+        return;
+      }
 
-    const orgGroups = await db
-      .select({
-        id: schema.organizationGroups.id,
-        kcGroupId: schema.organizationGroups.kcGroupId,
-      })
-      .from(schema.organizationGroups)
-      .where(and(
-        eq(schema.organizationGroups.organizationId, organizationId),
-        eq(schema.organizationGroups.name, role as string)
-      ))
-      .limit(1)
-      .execute();
+      const orgGroups = await db
+        .select({
+          id: schema.organizationGroups.id,
+          kcGroupId: schema.organizationGroups.kcGroupId,
+        })
+        .from(schema.organizationGroups)
+        .where(
+          and(
+            eq(schema.organizationGroups.organizationId, organizationId),
+            eq(schema.organizationGroups.name, role as string),
+          ),
+        )
+        .limit(1)
+        .execute();
 
-    if (orgGroups.length === 0) {
-      console.warn(`Organization group "${role}" not found. Skipping`);
-      return;
-    }
+      if (orgGroups.length === 0) {
+        console.warn(`Organization group "${role}" not found. Skipping`);
+        return;
+      }
 
-    // Assign all members to the group
-    const orgGroup = orgGroups[0];
-    await db.insert(schema.organizationGroupMembers)
-      .values(members.map(({ memberId }) => ({
-        organizationMemberId: memberId!,
-        groupId: orgGroup.id,
-      })))
-      .onConflictDoNothing()
-      .execute();
-  }));
+      // Assign all members to the group
+      const orgGroup = orgGroups[0];
+      await db
+        .insert(schema.organizationGroupMembers)
+        .values(
+          members.map(({ memberId }) => ({
+            organizationMemberId: memberId!,
+            groupId: orgGroup.id,
+          })),
+        )
+        .onConflictDoNothing()
+        .execute();
+    }),
+  );
 }
