@@ -190,6 +190,8 @@ func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, 
 		return
 	}
 
+	w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
+
 	// According to the tests requestContext can be nil (when called from module WriteResponseError)
 	// As such we have coded this condition defensively to be safe
 	requestContext := getRequestContext(r.Context())
@@ -276,7 +278,7 @@ func writeMultipartError(
 	// before, some clients that rely on both CR and LF strictly to parse blocks were broken and not parsing our
 	// multipart chunks correctly. With this fix here (and in a few other places) the clients are now working.
 	resp = append(resp, []byte("\r\n--graphql--")...)
- 
+
 	if _, err := w.Write([]byte(resp)); err != nil {
 		return err
 	}
