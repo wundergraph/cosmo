@@ -442,9 +442,7 @@ export class GraphQLToProtoTextVisitor {
 
       // Skip already processed types (from this pass), Query type, and _Entity
       if (processedTypeIds.has(type.name) || type.name === 'Query' || type.name === '_Entity') {
-        if (type.name === 'Query' || type.name === '_Entity') {
-          this.processedTypes.add(type.name);
-        }
+        this.processedTypes.add(type.name);
         continue;
       }
 
