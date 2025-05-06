@@ -10,6 +10,7 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
 import { OrganizationGroupDTO } from '../../../types/index.js';
 import { AuditLogRepository } from "../../repositories/AuditLogRepository.js";
+import { OrganizationRepository } from "../../repositories/OrganizationRepository.js";
 
 export function createOrganizationGroup(
   opts: RouterOptions,
@@ -22,8 +23,19 @@ export function createOrganizationGroup(
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
+    const orgRepo = new OrganizationRepository(logger, opts.db);
     const orgGroupRepo = new OrganizationGroupRepository(opts.db);
     const auditLogRepo = new AuditLogRepository(opts.db);
+
+    const rbac = await orgRepo.getFeature({ organizationId: authContext.organizationId, featureId: "rbac" });
+    if (!rbac?.enabled) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_UPGRADE_PLAN,
+          details: `RBAC feature is not enabled for this organization.`,
+        },
+      };
+    }
 
     if (await orgGroupRepo.nameExists({ organizationId: authContext.organizationId, name: req.name })) {
       return {
@@ -55,7 +67,7 @@ export function createOrganizationGroup(
       createdGroup = await orgGroupRepo.create({
         organizationId: authContext.organizationId,
         name: req.name,
-        description: '',
+        description: req.description,
         kcGroupId: createdGroupId,
       });
     } catch (e: unknown) {
@@ -83,6 +95,7 @@ export function createOrganizationGroup(
       group: {
         groupId: createdGroup.id,
         name: createdGroup.name,
+        description: createdGroup.description,
         membersCount: 0,
         rules: [],
       },

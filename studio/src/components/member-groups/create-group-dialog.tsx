@@ -13,13 +13,15 @@ import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb
 import { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { Textarea } from "@/components/ui/textarea";
+import { useFeature } from "@/hooks/use-feature";
 
-export function CreateMemberGroupDialog({ onGroupCreated }: {
+export function CreateGroupDialog({ onGroupCreated }: {
   onGroupCreated(group: OrganizationGroup): Promise<void>
 }) {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const { mutate, isPending } = useMutation(createOrganizationGroup);
+  const rbac = useFeature("rbac");
 
   const createGroupInputSchema = z.object({
     name: z
@@ -47,6 +49,10 @@ export function CreateMemberGroupDialog({ onGroupCreated }: {
   });
 
   const onSubmit: SubmitHandler<CreateGroupInput> = (data) => {
+    if (!rbac?.enabled) {
+      return;
+    }
+
     mutate(
       { name: data.name, description: data.description },
       {
@@ -87,7 +93,9 @@ export function CreateMemberGroupDialog({ onGroupCreated }: {
       }}
     >
       <DialogTrigger asChild>
-        <Button>Create group</Button>
+        <Button disabled={!rbac?.enabled}>
+          {rbac?.enabled ? "Create group" : "Enable RBAC on settings"}
+        </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>

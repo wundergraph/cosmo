@@ -897,6 +897,20 @@ message GetOrganizationGroupsResponse {
   repeated OrganizationGroup groups = 2;
 }
 
+message GetOrganizationGroupMembersRequest {
+  string groupId = 1;
+}
+
+message GetOrganizationGroupMembersResponse {
+  message GroupMember {
+    string id = 1;
+    string email = 2;
+  }
+
+  Response response = 1;
+  repeated GroupMember members = 2;
+}
+
 message UpdateOrganizationGroupRequest {
   message GroupRule {
     string role = 1;
@@ -2868,13 +2882,15 @@ service PlatformService {
   rpc MigrateFromApollo(MigrateFromApolloRequest) returns (MigrateFromApolloResponse) {}
 
   // Organization Member Group management
-  // CreateOrganizationGroup creates a new member group
+  // CreateOrganizationGroup creates a new organization group
   rpc CreateOrganizationGroup(CreateOrganizationGroupRequest) returns (CreateOrganizationGroupResponse) {}
-  // GetOrganizationGroups returns the list of organization member groups
+  // GetOrganizationGroups returns the list of organization groups
   rpc GetOrganizationGroups(GetOrganizationGroupsRequest) returns (GetOrganizationGroupsResponse) {}
-  // UpdateOrganizationGroup updates the rule list for an organization member group
+  // GetOrganizationGroupMembers returns the list of members belonging to the provided organization group
+  rpc GetOrganizationGroupMembers(GetOrganizationGroupMembersRequest) returns (GetOrganizationGroupMembersResponse) {}
+  // UpdateOrganizationGroup updates the rule list for an organization group
   rpc UpdateOrganizationGroup(UpdateOrganizationGroupRequest) returns (UpdateOrganizationGroupResponse) {}
-  // DeleteOrganizationGroup deletes an existing organization member group
+  // DeleteOrganizationGroup deletes an existing organization group
   rpc DeleteOrganizationGroup(DeleteOrganizationGroupRequest) returns (DeleteOrganizationGroupResponse) {}
 
   // CreateOrganizationWebhookConfig create a new webhook config for the organization

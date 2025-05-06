@@ -9,6 +9,9 @@ import { useUser } from "./use-user";
  */
 export const useFeature = (feature: string, orgId?: string) => {
   const user = useUser();
+  if (feature === "rbac") {
+    return { enabled: true };
+  }
 
   return useMemo(() => {
     const org = orgId

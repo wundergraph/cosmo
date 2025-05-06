@@ -1,7 +1,7 @@
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { OrganizationGroup, OrganizationGroupRule } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { Button } from "@/components/ui/button";
-import { PlusIcon } from "@radix-ui/react-icons";
+import { InfoCircledIcon, PlusIcon } from "@radix-ui/react-icons";
 import { ExclamationTriangleIcon, PencilIcon } from "@heroicons/react/24/outline";
 import { useMutation, useQuery } from "@connectrpc/connect-query";
 import {
@@ -15,20 +15,32 @@ import { useToast } from "@/components/ui/use-toast";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { roles } from "@/lib/constants";
+import { useFeature } from "@/hooks/use-feature";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-export function MemberGroupSheet({ group, onGroupUpdated, onOpenChange }: {
+export function GroupSheet({ open, group, onGroupUpdated, onOpenChange }: {
+  open: boolean;
   group?: OrganizationGroup;
   onGroupUpdated(): Promise<unknown>;
   onOpenChange(open: boolean): void;
 }) {
+  const [previousGroup, setPreviousGroup] = useState<OrganizationGroup>();
+  const onSheetOpenChange = (isOpen: boolean) => {
+    onOpenChange(isOpen);
+    if (!isOpen) {
+      setPreviousGroup(group);
+    }
+  };
+
+  const currentGroup = group || previousGroup;
   return (
-    <Sheet open={!!group} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={onSheetOpenChange}>
       <SheetContent className="scrollbar-custom w-full max-w-full overflow-y-scroll sm:max-w-full md:max-w-2xl lg:max-w-3xl">
-        {!group
+        {!currentGroup
           ? null
           : (
             <MemberGroupSheetContent
-              group={group}
+              group={currentGroup}
               onGroupUpdated={async () => {
                 await onGroupUpdated();
                 onOpenChange(false);
@@ -50,6 +62,7 @@ function MemberGroupSheetContent({ group, onGroupUpdated, onCancel }: {
   const [groupRules, setGroupRules] = useState<OrganizationGroupRule[]>([...group.rules]);
   const [description, setDescription] = useState(group.description || '');
   const { toast } = useToast();
+  const rbac = useFeature("rbac");
 
   const allRulesHaveRole = groupRules.every((rule) => !!rule.role);
   const { mutate, isPending } = useMutation(updateOrganizationGroup);
@@ -57,7 +70,7 @@ function MemberGroupSheetContent({ group, onGroupUpdated, onCancel }: {
   const actualRoles = roles.filter((r) => !groupRules.some((gr) => gr.role === r.key));
 
   const onSaveClick = () => {
-    if (!allRulesHaveRole) {
+    if (!allRulesHaveRole || !rbac?.enabled) {
       return;
     }
 
@@ -94,12 +107,24 @@ function MemberGroupSheetContent({ group, onGroupUpdated, onCancel }: {
         <SheetTitle>Rules for &quot;{group.name}&quot;</SheetTitle>
         <SheetDescription className="space-x-2">
           <span>{description || "No description set"}</span>
-          <EditDescriptionDialog
-            description={description}
-            onUpdate={setDescription}
-          />
+          {rbac?.enabled && (
+            <EditDescriptionDialog
+              description={description}
+              onUpdate={setDescription}
+            />
+          )}
         </SheetDescription>
       </SheetHeader>
+
+      {!rbac?.enabled && (
+        <Alert className="mt-6">
+          <InfoCircledIcon className="size-5" />
+          <AlertTitle>Attention!</AlertTitle>
+          <AlertDescription>
+            You need to enable RBAC in the settings to be able to modify groups.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <div className="my-6 space-y-3">
         {groupRules.length
@@ -132,40 +157,52 @@ function MemberGroupSheetContent({ group, onGroupUpdated, onCancel }: {
           )
         }
 
-        <div>
-          <Button
-            variant="link"
-            className="gap-x-2"
-            disabled={!actualRoles.length}
-            onClick={() => {
-              if (!actualRoles.length) {
-                return;
-              }
+        {rbac?.enabled && (
+          <div>
+            <Button
+              variant="link"
+              className="gap-x-2"
+              disabled={!actualRoles.length}
+              onClick={() => {
+                if (!actualRoles.length) {
+                  return;
+                }
 
-              setGroupRules([
-                ...groupRules,
-                OrganizationGroupRule.fromJson({}),
-              ])
-            }}
-          >
-            <PlusIcon className="size-4" />
-            <span>Add rule</span>
-          </Button>
-        </div>
+                setGroupRules([
+                  ...groupRules,
+                  OrganizationGroupRule.fromJson({}),
+                ])
+              }}
+            >
+              <PlusIcon className="size-4" />
+              <span>Add rule</span>
+            </Button>
+          </div>
+        )}
       </div>
 
       <SheetFooter className="gap-y-2">
-        <Button variant="secondary" onClick={onCancel} disabled={isPending}>
-          Cancel
-        </Button>
+        {rbac?.enabled ? (
+          <>
+            <Button variant="secondary" onClick={onCancel} disabled={isPending}>
+              Cancel
+            </Button>
 
-        <Button
-          disabled={isPending || !allRulesHaveRole}
-          isLoading={isPending}
-          onClick={onSaveClick}
-        >
-          Save
-        </Button>
+            <Button
+              disabled={isPending || !allRulesHaveRole}
+              isLoading={isPending}
+              onClick={onSaveClick}
+            >
+              Save
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button variant="secondary" onClick={onCancel} disabled={isPending}>
+              Close
+            </Button>
+          </>
+        )}
       </SheetFooter>
     </>
   );

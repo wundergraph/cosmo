@@ -122,7 +122,7 @@ export const roles = [
   {
     key: "organization-admin",
     category: "organization",
-    displayName: "Admin",
+    displayName: "Organization Admin",
     description: "Blah blah blah admin role description",
   },
   {

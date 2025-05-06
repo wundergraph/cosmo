@@ -9,21 +9,35 @@ import {
 import { EllipsisVerticalIcon } from "@heroicons/react/24/outline";
 import { Button } from "@/components/ui/button";
 
-export function MemberGroupRow({ group, onSelect, onDelete }: {
+export function GroupRow({ group, rbac, onSelect, onDelete }: {
   group: OrganizationGroup;
-  onSelect(): void;
+  rbac: boolean;
+  onSelect(showMembers: boolean): void;
   onDelete(): void;
 }) {
   return (
     <TableRow>
       <TableCell>
-        <Button variant="link" className="px-0 h-auto gap-x-2 whitespace-nowrap" onClick={onSelect}>
+        <Button
+          variant="link"
+          className="px-0 h-auto gap-x-2 whitespace-nowrap"
+          onClick={() => onSelect(false)}
+        >
           {group.name}
         </Button>
       </TableCell>
       <TableCell>{group.description}</TableCell>
-      <TableCell>{group.membersCount}</TableCell>
-      <TableCell>
+      <TableCell className="text-center">
+        <Button
+          variant="link"
+          className="h-auto gap-x-2 whitespace-nowrap"
+          onClick={() => onSelect(true)}
+        >
+          {group.membersCount}
+        </Button>
+      </TableCell>
+      {rbac && (
+        <TableCell>
         <DropdownMenu>
           <div className="flex justify-center">
             <DropdownMenuTrigger asChild>
@@ -38,7 +52,8 @@ export function MemberGroupRow({ group, onSelect, onDelete }: {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      </TableCell>
+        </TableCell>
+      )}
     </TableRow>
   );
 }

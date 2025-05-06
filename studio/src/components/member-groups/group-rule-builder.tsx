@@ -3,18 +3,9 @@ import type {
   GetUserAccessibleResourcesResponse,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { roles as originalRoles } from "@/lib/constants";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
-  DropdownMenuPortal, DropdownMenuItem,
-} from "@/components/ui/dropdown-menu";
 import { useMemo, useState, createContext, useContext } from "react";
 import { Button } from "@/components/ui/button";
-import { TrashIcon, ChevronRightIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
+import { TrashIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 import {
   Command,
   CommandEmpty,
@@ -25,7 +16,6 @@ import {
 } from "@/components/ui/command";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { capitalize, cn } from "@/lib/utils";
-import { Separator } from "@/components/ui/separator";
 import useWindowSize from "@/hooks/use-window-size";
 import { CheckIcon } from "@heroicons/react/20/solid";
 import {
@@ -34,9 +24,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { PopoverContentProps } from "@radix-ui/react-popover";
+import { useFeature } from "@/hooks/use-feature";
 
 type RoleMetadata = (typeof originalRoles)[number];
 type BuilderContextType = {
@@ -66,6 +55,7 @@ export function GroupRuleBuilder({ roles, rule, accessibleResources, disabled, o
   const { isMobile } = useWindowSize();
   const [isPopoverOpen, setPopoverOpen] = useState(false);
   const activeRole = originalRoles.find((r) => r.key === rule.role);
+  const rbac = useFeature("rbac");
 
   const context = useMemo<BuilderContextType>(() => {
     const rolesByCategories = Object.groupBy(roles, (r) => r.category);
@@ -94,7 +84,7 @@ export function GroupRuleBuilder({ roles, rule, accessibleResources, disabled, o
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
-                disabled={disabled}
+                disabled={disabled || !rbac?.enabled}
                 className="w-full justify-start"
               >
                 <span className={cn('truncate', !activeRole && 'text-muted-foreground')}>
@@ -123,17 +113,23 @@ export function GroupRuleBuilder({ roles, rule, accessibleResources, disabled, o
         </div>
 
         <div className="flex justify-start items-start gap-x-2">
-          <ResourcesDropdown disabled={disabled} onRuleUpdated={onRuleUpdated} />
+          {activeRole && activeRole.category !== 'organization' ? (
+            <ResourcesDropdown disabled={disabled} onRuleUpdated={onRuleUpdated} />
+          ) : (<div className="grow h-9 text-sm flex justify-start items-center text-muted-foreground">
+            Grants access to all resources.
+          </div>)}
 
-          <Button
-            variant="ghost"
-            size="icon"
-            className="shrink-0"
-            disabled={disabled}
-            onClick={onRemoveRule}
-          >
-            <TrashIcon className="size-4" />
-          </Button>
+          {rbac?.enabled && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="shrink-0"
+              disabled={disabled}
+              onClick={onRemoveRule}
+            >
+              <TrashIcon className="size-4" />
+            </Button>
+          )}
         </div>
       </div>
     </BuilderContext.Provider>
@@ -294,7 +290,7 @@ function ResourcesDropdown({ disabled, onRuleUpdated }: {
   const { rule, accessibleResources } = useContext(BuilderContext);
   const [searchValue, setSearchValue] = useState<string>();
 
-  const resources = useMemo(() => {
+  const [numberOfResources, resources] = useMemo(() => {
     let result = [
       ...(accessibleResources?.federatedGraphs.map((fg) => ({
         group: 'namespaces',
@@ -313,12 +309,13 @@ function ResourcesDropdown({ disabled, onRuleUpdated }: {
       })) ?? []),
     ];
 
+    const totalNumOfResources = result.length;
     const q = searchValue?.trim().toLowerCase();
     if (q) {
       result = result.filter((item) => item.label.toLowerCase().includes(q));
     }
 
-    return Object.groupBy(result, (item) => item.group);
+    return [totalNumOfResources, Object.groupBy(result, (item) => item.group)];
   }, [accessibleResources?.federatedGraphs, accessibleResources?.subgraphs, searchValue]);
 
   if (!accessibleResources?.response) {
@@ -353,8 +350,8 @@ function ResourcesDropdown({ disabled, onRuleUpdated }: {
           disabled={disabled}
         >
           <span className="truncate">
-            {rule.resources.length === 0
-              ? "No resources selected"
+            {rule.resources.length === 0 || rule.resources.length >= numberOfResources
+              ? "Grants access to all resources."
               : `${rule.resources.length} resource(s) selected`}
           </span>
         </Button>

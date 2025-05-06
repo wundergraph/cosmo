@@ -248,7 +248,7 @@ export interface UserDTO {
 export interface OrganizationGroupDTO {
   id: string;
   name: string;
-  description?: string;
+  description: string;
   kcGroupId: string | null;
   kcMapperId: string | null;
   membersCount: number;

@@ -104,6 +104,7 @@ import { getAuditLogs } from './organization/getAuditLogs.js';
 import { getOrganizationMembers } from './organization/getOrganizationMembers.js';
 import { createOrganizationGroup } from './organization/createOrganizationGroup.js';
 import { getOrganizationGroups } from './organization/getOrganizationGroups.js';
+import { getOrganizationGroupMembers } from './organization/getOrganizationGroupMembers.js';
 import { updateOrganizationGroup } from './organization/updateOrganizationGroup.js';
 import { deleteOrganizationGroup } from './organization/deleteOrganizationGroup.js';
 import { getPendingOrganizationMembers } from './organization/getPendingOrganizationMembers.js';
@@ -556,6 +557,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     getOrganizationGroups: (req, ctx) => {
       return getOrganizationGroups(opts, req, ctx);
+    },
+
+    getOrganizationGroupMembers: (req, ctx) => {
+      return getOrganizationGroupMembers(opts, req, ctx);
     },
 
     updateOrganizationGroup: (req, ctx) => {

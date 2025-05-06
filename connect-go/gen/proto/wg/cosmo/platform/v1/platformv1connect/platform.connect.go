@@ -253,6 +253,9 @@ const (
 	// PlatformServiceGetOrganizationGroupsProcedure is the fully-qualified name of the
 	// PlatformService's GetOrganizationGroups RPC.
 	PlatformServiceGetOrganizationGroupsProcedure = "/wg.cosmo.platform.v1.PlatformService/GetOrganizationGroups"
+	// PlatformServiceGetOrganizationGroupMembersProcedure is the fully-qualified name of the
+	// PlatformService's GetOrganizationGroupMembers RPC.
+	PlatformServiceGetOrganizationGroupMembersProcedure = "/wg.cosmo.platform.v1.PlatformService/GetOrganizationGroupMembers"
 	// PlatformServiceUpdateOrganizationGroupProcedure is the fully-qualified name of the
 	// PlatformService's UpdateOrganizationGroup RPC.
 	PlatformServiceUpdateOrganizationGroupProcedure = "/wg.cosmo.platform.v1.PlatformService/UpdateOrganizationGroup"
@@ -601,6 +604,7 @@ var (
 	platformServiceMigrateFromApolloMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("MigrateFromApollo")
 	platformServiceCreateOrganizationGroupMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("CreateOrganizationGroup")
 	platformServiceGetOrganizationGroupsMethodDescriptor                 = platformServiceServiceDescriptor.Methods().ByName("GetOrganizationGroups")
+	platformServiceGetOrganizationGroupMembersMethodDescriptor           = platformServiceServiceDescriptor.Methods().ByName("GetOrganizationGroupMembers")
 	platformServiceUpdateOrganizationGroupMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("UpdateOrganizationGroup")
 	platformServiceDeleteOrganizationGroupMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("DeleteOrganizationGroup")
 	platformServiceCreateOrganizationWebhookConfigMethodDescriptor       = platformServiceServiceDescriptor.Methods().ByName("CreateOrganizationWebhookConfig")
@@ -825,13 +829,15 @@ type PlatformServiceClient interface {
 	// MigrateFromApollo migrates the graphs from apollo to cosmo
 	MigrateFromApollo(context.Context, *connect.Request[v1.MigrateFromApolloRequest]) (*connect.Response[v1.MigrateFromApolloResponse], error)
 	// Organization Member Group management
-	// CreateOrganizationGroup creates a new member group
+	// CreateOrganizationGroup creates a new organization group
 	CreateOrganizationGroup(context.Context, *connect.Request[v1.CreateOrganizationGroupRequest]) (*connect.Response[v1.CreateOrganizationGroupResponse], error)
-	// GetOrganizationGroups returns the list of organization member groups
+	// GetOrganizationGroups returns the list of organization groups
 	GetOrganizationGroups(context.Context, *connect.Request[v1.GetOrganizationGroupsRequest]) (*connect.Response[v1.GetOrganizationGroupsResponse], error)
-	// UpdateOrganizationGroup updates the rule list for an organization member group
+	// GetOrganizationGroupMembers returns the list of members belonging to the provided organization group
+	GetOrganizationGroupMembers(context.Context, *connect.Request[v1.GetOrganizationGroupMembersRequest]) (*connect.Response[v1.GetOrganizationGroupMembersResponse], error)
+	// UpdateOrganizationGroup updates the rule list for an organization group
 	UpdateOrganizationGroup(context.Context, *connect.Request[v1.UpdateOrganizationGroupRequest]) (*connect.Response[v1.UpdateOrganizationGroupResponse], error)
-	// DeleteOrganizationGroup deletes an existing organization member group
+	// DeleteOrganizationGroup deletes an existing organization group
 	DeleteOrganizationGroup(context.Context, *connect.Request[v1.DeleteOrganizationGroupRequest]) (*connect.Response[v1.DeleteOrganizationGroupResponse], error)
 	// CreateOrganizationWebhookConfig create a new webhook config for the organization
 	CreateOrganizationWebhookConfig(context.Context, *connect.Request[v1.CreateOrganizationWebhookConfigRequest]) (*connect.Response[v1.CreateOrganizationWebhookConfigResponse], error)
@@ -1451,6 +1457,12 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			httpClient,
 			baseURL+PlatformServiceGetOrganizationGroupsProcedure,
 			connect.WithSchema(platformServiceGetOrganizationGroupsMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		getOrganizationGroupMembers: connect.NewClient[v1.GetOrganizationGroupMembersRequest, v1.GetOrganizationGroupMembersResponse](
+			httpClient,
+			baseURL+PlatformServiceGetOrganizationGroupMembersProcedure,
+			connect.WithSchema(platformServiceGetOrganizationGroupMembersMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 		updateOrganizationGroup: connect.NewClient[v1.UpdateOrganizationGroupRequest, v1.UpdateOrganizationGroupResponse](
@@ -2078,6 +2090,7 @@ type platformServiceClient struct {
 	migrateFromApollo                     *connect.Client[v1.MigrateFromApolloRequest, v1.MigrateFromApolloResponse]
 	createOrganizationGroup               *connect.Client[v1.CreateOrganizationGroupRequest, v1.CreateOrganizationGroupResponse]
 	getOrganizationGroups                 *connect.Client[v1.GetOrganizationGroupsRequest, v1.GetOrganizationGroupsResponse]
+	getOrganizationGroupMembers           *connect.Client[v1.GetOrganizationGroupMembersRequest, v1.GetOrganizationGroupMembersResponse]
 	updateOrganizationGroup               *connect.Client[v1.UpdateOrganizationGroupRequest, v1.UpdateOrganizationGroupResponse]
 	deleteOrganizationGroup               *connect.Client[v1.DeleteOrganizationGroupRequest, v1.DeleteOrganizationGroupResponse]
 	createOrganizationWebhookConfig       *connect.Client[v1.CreateOrganizationWebhookConfigRequest, v1.CreateOrganizationWebhookConfigResponse]
@@ -2542,6 +2555,12 @@ func (c *platformServiceClient) CreateOrganizationGroup(ctx context.Context, req
 // GetOrganizationGroups calls wg.cosmo.platform.v1.PlatformService.GetOrganizationGroups.
 func (c *platformServiceClient) GetOrganizationGroups(ctx context.Context, req *connect.Request[v1.GetOrganizationGroupsRequest]) (*connect.Response[v1.GetOrganizationGroupsResponse], error) {
 	return c.getOrganizationGroups.CallUnary(ctx, req)
+}
+
+// GetOrganizationGroupMembers calls
+// wg.cosmo.platform.v1.PlatformService.GetOrganizationGroupMembers.
+func (c *platformServiceClient) GetOrganizationGroupMembers(ctx context.Context, req *connect.Request[v1.GetOrganizationGroupMembersRequest]) (*connect.Response[v1.GetOrganizationGroupMembersResponse], error) {
+	return c.getOrganizationGroupMembers.CallUnary(ctx, req)
 }
 
 // UpdateOrganizationGroup calls wg.cosmo.platform.v1.PlatformService.UpdateOrganizationGroup.
@@ -3149,13 +3168,15 @@ type PlatformServiceHandler interface {
 	// MigrateFromApollo migrates the graphs from apollo to cosmo
 	MigrateFromApollo(context.Context, *connect.Request[v1.MigrateFromApolloRequest]) (*connect.Response[v1.MigrateFromApolloResponse], error)
 	// Organization Member Group management
-	// CreateOrganizationGroup creates a new member group
+	// CreateOrganizationGroup creates a new organization group
 	CreateOrganizationGroup(context.Context, *connect.Request[v1.CreateOrganizationGroupRequest]) (*connect.Response[v1.CreateOrganizationGroupResponse], error)
-	// GetOrganizationGroups returns the list of organization member groups
+	// GetOrganizationGroups returns the list of organization groups
 	GetOrganizationGroups(context.Context, *connect.Request[v1.GetOrganizationGroupsRequest]) (*connect.Response[v1.GetOrganizationGroupsResponse], error)
-	// UpdateOrganizationGroup updates the rule list for an organization member group
+	// GetOrganizationGroupMembers returns the list of members belonging to the provided organization group
+	GetOrganizationGroupMembers(context.Context, *connect.Request[v1.GetOrganizationGroupMembersRequest]) (*connect.Response[v1.GetOrganizationGroupMembersResponse], error)
+	// UpdateOrganizationGroup updates the rule list for an organization group
 	UpdateOrganizationGroup(context.Context, *connect.Request[v1.UpdateOrganizationGroupRequest]) (*connect.Response[v1.UpdateOrganizationGroupResponse], error)
-	// DeleteOrganizationGroup deletes an existing organization member group
+	// DeleteOrganizationGroup deletes an existing organization group
 	DeleteOrganizationGroup(context.Context, *connect.Request[v1.DeleteOrganizationGroupRequest]) (*connect.Response[v1.DeleteOrganizationGroupResponse], error)
 	// CreateOrganizationWebhookConfig create a new webhook config for the organization
 	CreateOrganizationWebhookConfig(context.Context, *connect.Request[v1.CreateOrganizationWebhookConfigRequest]) (*connect.Response[v1.CreateOrganizationWebhookConfigResponse], error)
@@ -3771,6 +3792,12 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		PlatformServiceGetOrganizationGroupsProcedure,
 		svc.GetOrganizationGroups,
 		connect.WithSchema(platformServiceGetOrganizationGroupsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceGetOrganizationGroupMembersHandler := connect.NewUnaryHandler(
+		PlatformServiceGetOrganizationGroupMembersProcedure,
+		svc.GetOrganizationGroupMembers,
+		connect.WithSchema(platformServiceGetOrganizationGroupMembersMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceUpdateOrganizationGroupHandler := connect.NewUnaryHandler(
@@ -4468,6 +4495,8 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceCreateOrganizationGroupHandler.ServeHTTP(w, r)
 		case PlatformServiceGetOrganizationGroupsProcedure:
 			platformServiceGetOrganizationGroupsHandler.ServeHTTP(w, r)
+		case PlatformServiceGetOrganizationGroupMembersProcedure:
+			platformServiceGetOrganizationGroupMembersHandler.ServeHTTP(w, r)
 		case PlatformServiceUpdateOrganizationGroupProcedure:
 			platformServiceUpdateOrganizationGroupHandler.ServeHTTP(w, r)
 		case PlatformServiceDeleteOrganizationGroupProcedure:
@@ -4947,6 +4976,10 @@ func (UnimplementedPlatformServiceHandler) CreateOrganizationGroup(context.Conte
 
 func (UnimplementedPlatformServiceHandler) GetOrganizationGroups(context.Context, *connect.Request[v1.GetOrganizationGroupsRequest]) (*connect.Response[v1.GetOrganizationGroupsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetOrganizationGroups is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetOrganizationGroupMembers(context.Context, *connect.Request[v1.GetOrganizationGroupMembersRequest]) (*connect.Response[v1.GetOrganizationGroupMembersResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetOrganizationGroupMembers is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) UpdateOrganizationGroup(context.Context, *connect.Request[v1.UpdateOrganizationGroupRequest]) (*connect.Response[v1.UpdateOrganizationGroupResponse], error) {

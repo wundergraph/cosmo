@@ -10,6 +10,7 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { organizationRoleEnum } from '../../../db/schema.js';
 import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
 import { OrganizationRole } from '../../../db/models.js';
+import { OrganizationRepository } from "../../repositories/OrganizationRepository.js";
 
 export function updateOrganizationGroup(
   opts: RouterOptions,
@@ -22,11 +23,22 @@ export function updateOrganizationGroup(
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
+    const orgRepo = new OrganizationRepository(logger, opts.db);
     const orgGroupRepo = new OrganizationGroupRepository(opts.db);
     const orgGroup = await orgGroupRepo.byId({
       organizationId: authContext.organizationId,
       groupId: req.groupId,
     });
+
+    const rbac = await orgRepo.getFeature({ organizationId: authContext.organizationId, featureId: "rbac" });
+    if (!rbac?.enabled) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_UPGRADE_PLAN,
+          details: `RBAC feature is not enabled for this organization.`,
+        },
+      };
+    }
 
     if (!orgGroup) {
       return {

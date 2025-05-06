@@ -89,7 +89,7 @@ export class OrganizationGroupRepository {
 
     return {
       ...orgGroup,
-      description: orgGroup.description || undefined,
+      description: orgGroup.description,
       rules: orgGroup.rules.map(({ role, resources }) => ({
         role,
         resources: resources?.split("*").filter((r) => r !== "*") ?? [],
@@ -119,14 +119,33 @@ export class OrganizationGroupRepository {
       }),
     });
 
-    return orgGroups.map(({ rules, description, ...rest }) => ({
+    return orgGroups.map(({ rules, ...rest }) => ({
       ...rest,
-      description: description || undefined,
       rules: rules.map(({ role, resources }) => ({
         role,
         resources: resources?.split(',').filter((r) => r !== '*') ?? [],
       })),
     }));
+  }
+
+  /**
+   * Retrieves the email addresses for all the members that have been added to the group matching the
+   * provided `groupId`
+   */
+  public getGroupMembers(groupId: string) {
+    return this.db
+      .select({
+        id: schema.users.id,
+        email: schema.users.email,
+      })
+      .from(schema.organizationGroupMembers)
+      .rightJoin(
+        schema.organizationsMembers,
+        eq(schema.organizationsMembers.id, schema.organizationGroupMembers.organizationMemberId)
+      )
+      .rightJoin(schema.users, eq(schema.users.id, schema.organizationsMembers.userId))
+      .where(eq(schema.organizationGroupMembers.groupId, groupId))
+      .execute();
   }
 
   public changeMemberGroup({ fromGroupId, toGroupId }: { fromGroupId: string; toGroupId: string }) {

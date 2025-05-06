@@ -9,7 +9,9 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
 import { OidcRepository } from '../../repositories/OidcRepository.js';
-import { AuditLogRepository } from "../../repositories/AuditLogRepository.js";
+import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
+import { OrganizationGroupDTO } from '../../../types/index.js';
+import { OrganizationRepository } from "../../repositories/OrganizationRepository.js";
 
 export function deleteOrganizationGroup(
   opts: RouterOptions,
@@ -23,9 +25,20 @@ export function deleteOrganizationGroup(
     logger = enrichLogger(ctx, logger, authContext);
 
     return opts.db.transaction(async (tx) => {
+      const orgRepo = new OrganizationRepository(logger, tx);
       const orgGroupRepo = new OrganizationGroupRepository(tx);
       const auditLogRepo = new AuditLogRepository(tx);
       const oidcRepo = new OidcRepository(tx);
+
+      const rbac = await orgRepo.getFeature({ organizationId: authContext.organizationId, featureId: "rbac" });
+      if (!rbac?.enabled) {
+        return {
+          response: {
+            code: EnumStatusCode.ERR,
+            details: `RBAC feature is not enabled for this organization.`,
+          },
+        };
+      }
 
       const orgGroup = await orgGroupRepo.byId({
         organizationId: authContext.organizationId,
@@ -41,9 +54,54 @@ export function deleteOrganizationGroup(
         };
       }
 
+      await opts.keycloakClient.authenticateClient();
+
+      let moveToGroup: OrganizationGroupDTO | undefined;
+      if (orgGroup.membersCount > 0) {
+        if (req.toGroupId) {
+          moveToGroup = await orgGroupRepo.byId({ organizationId: authContext.organizationId, groupId: req.toGroupId });
+        }
+
+        if (!moveToGroup) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              detail: 'No group to move existing members to was provided',
+            },
+          };
+        }
+
+        // Change the Keycloak group of all the members belonging to this group
+        const membersOfGroup = await orgGroupRepo.getGroupMembers(orgGroup.id);
+        if (membersOfGroup.length > 0 && orgGroup.kcGroupId) {
+          const kcUsers = await opts.keycloakClient.client.users.find({
+            realm: opts.keycloakRealm,
+            q: membersOfGroup.map((a) => `email:${a.email}`).join(' '),
+          });
+
+          for (const user of kcUsers) {
+            await opts.keycloakClient.client.users.delFromGroup({
+              realm: opts.keycloakRealm,
+              id: user.id!,
+              groupId: orgGroup.kcGroupId,
+            });
+
+            if (moveToGroup.kcGroupId) {
+              await opts.keycloakClient.client.users.addToGroup({
+                realm: opts.keycloakRealm,
+                id: user.id!,
+                groupId: moveToGroup.kcGroupId,
+              });
+            }
+          }
+        }
+
+        // Change the groups in the database too
+        await orgGroupRepo.changeMemberGroup({ fromGroupId: orgGroup.id, toGroupId: moveToGroup.id });
+      }
+
       await orgGroupRepo.deleteById(orgGroup.id);
 
-      await opts.keycloakClient.authenticateClient();
       if (orgGroup.kcGroupId) {
         // Delete the group from Keycloak
         await opts.keycloakClient.client.groups.del({
