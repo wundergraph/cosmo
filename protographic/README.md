@@ -80,7 +80,7 @@ const mappingOutput = compileGraphQLToMapping(
 Protographic follows a set of conventions when converting GraphQL SDL to Protocol Buffers. Please take a look at the following rules:
 
 1. GraphQL SDL to Mapping, see [SDL_MAPPING_RULES.md](SDL_MAPPING_RULES.md)
-2. GraphQL SDL to Proto, see [PROTO_MAPPING_RULES.md](PROTO_MAPPING_RULES.md)
+2. GraphQL SDL to Proto, see [PROTO_MAPPING_RULES.md](SDL_PROTO_RULES.md)
 
 ## Integration with graphql-go-tools
 
