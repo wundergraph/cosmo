@@ -3,17 +3,13 @@ import { useToast } from '@/components/ui/use-toast';
 import { SHARE_OPTIONS } from '@/lib/constants';
 import { buildStateToShare, createCompressedStateUrl } from '@/lib/playground-url-state-encoding';
 import { PlaygroundUrlState } from '@/components/playground/types';
-import { useCallback, useContext, useEffect, useState } from 'react';
+import { useCallback, useContext, useEffect, useState, useMemo } from 'react';
 
 const MAX_URL_LENGTH = 2000;
 const WARNING_MESSAGES = {
   URL_TOO_LONG: {
     title: "Warning!",
     description: "The generated URL is too long and may not work in all browsers. Consider removing scripts",
-  },
-  OPTIONS_CHANGED: {
-    title: "Options Changed!",
-    description: "You've changed which options to include. Click 'Generate Link' to update",
   },
 };
 
@@ -26,32 +22,28 @@ export const useSharePlaygroundModal = (isOpen: boolean) => {
   const [selectedOptions, setSelectedOptions] = useState<Record<ShareOptionId, boolean>>(
     () => DEFAULT_SELECTED_OPTIONS    
   );
-  const [lastOptionsSelected, setLastOptionsSelected] = useState<Record<ShareOptionId, boolean>>(
-    () => DEFAULT_SELECTED_OPTIONS
-  );
   const { toast } = useToast();
   const [shareableUrl, setShareableUrl] = useState("");
   const [warning, setWarning] = useState<{ title: string; description: string } | null>(null);
 
   // sharing state only for the active tab
   const { tabsState } = useContext(PlaygroundContext);
-  const currentActiveTab = tabsState.tabs[tabsState.activeTabIndex] ?? {};
+  const currentActiveTab = useMemo(() => tabsState.tabs[tabsState.activeTabIndex] ?? {}, [tabsState]);
 
   // Reset state when modal is opened
   useEffect(() => {
     if (!isOpen) return;
 
     setSelectedOptions(DEFAULT_SELECTED_OPTIONS);
-    setShareableUrl("");
+    generateShareableUrl(DEFAULT_SELECTED_OPTIONS);
   }, [isOpen]);
 
-  const generateShareableUrl = useCallback(() => {
+  const generateShareableUrl = useCallback((options: Record<ShareOptionId, boolean>) => {
     try {
-      const stateToShare: PlaygroundUrlState = buildStateToShare(selectedOptions, currentActiveTab);
+      const stateToShare: PlaygroundUrlState = buildStateToShare(options, currentActiveTab);
 
       const newUrl = createCompressedStateUrl(stateToShare);
       setShareableUrl(newUrl);
-      setLastOptionsSelected(selectedOptions);
 
       if (newUrl.length > MAX_URL_LENGTH) {
         // todo: add a button in error message to easily remove scripts
@@ -72,7 +64,7 @@ export const useSharePlaygroundModal = (isOpen: boolean) => {
         console.error(error);
       }
     }
-  }, [buildStateToShare, toast, selectedOptions, currentActiveTab]);
+  }, [toast, currentActiveTab]);
 
   const handleCopyLink = useCallback(() => {
     try {
@@ -101,34 +93,18 @@ export const useSharePlaygroundModal = (isOpen: boolean) => {
     setSelectedOptions(prev => {
       const updatedOptions = { ...prev, [id]: !!checked };
 
-      // Check if options have changed and shareableUrl exists
-      if (shareableUrl) {
-        // Check if any option has changed
-        const hasOptionsChanged = Object.keys(updatedOptions).some(
-          key => updatedOptions[key as ShareOptionId] !== lastOptionsSelected[key as ShareOptionId]
-        );
-      
-        if (hasOptionsChanged) {
-          setWarning({
-            title: WARNING_MESSAGES.OPTIONS_CHANGED.title,
-            description: WARNING_MESSAGES.OPTIONS_CHANGED.description,
-          });
-        } else {
-          // If options are back to their original state, remove the warning
-          setWarning(null);
-        }
-      }
+      // generate a new shareable URL on every change
+      generateShareableUrl(updatedOptions);
 
       return updatedOptions;
     });
-  }, [shareableUrl, lastOptionsSelected]);
+  }, [generateShareableUrl]);
 
   return {
     options: SHARE_OPTIONS,
     selectedOptions,
     shareableUrl,
     warning,
-    generateShareableUrl,
     handleCopyLink,
     handleOptionChange,
   };

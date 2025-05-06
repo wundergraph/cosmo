@@ -120,12 +120,48 @@ export const graphPruningRules = [
 
 export const SHARE_OPTIONS = [
   // operation is always checked and disabled
-  { id: "operation", label: "Operation", isChecked: true, isDisabled: true },
-  { id: "variables", label: "Variables", isChecked: false, isDisabled: false },
-  { id: "headers", label: "Headers", isChecked: false, isDisabled: false },
-  { id: "preFlight", label: "Pre-Flight Script", isChecked: false, isDisabled: false },
-  { id: "preOperation", label: "Pre-request Script", isChecked: false, isDisabled: false },
-  { id: "postOperation", label: "Post-request Script", isChecked: false, isDisabled: false },
+  { 
+    id: "operation",
+    label: "Operation",
+    description: "The GraphQL operation (query, mutation, or subscription) to be shared",
+    isChecked: true,
+    isDisabled: true
+  },
+  { 
+    id: "variables",
+    label: "Variables",
+    description: "The variables used in the GraphQL operation",
+    isChecked: false,
+    isDisabled: false
+  },
+  { 
+    id: "headers",
+    label: "Headers",
+    description: "The HTTP headers to include in the shared request",
+    isChecked: false,
+    isDisabled: false
+  },
+  { 
+    id: "preFlight",
+    label: "Pre-Flight Script",
+    description: "A script that runs before the GraphQL operation is executed",
+    isChecked: false,
+    isDisabled: false
+  },
+  { 
+    id: "preOperation",
+    label: "Pre-request Script",
+    description: "A script that runs before sending the GraphQL request",
+    isChecked: false,
+    isDisabled: false
+  },
+  { 
+    id: "postOperation",
+    label: "Post-request Script",
+    description: "A script that runs after the GraphQL request is completed",
+    isChecked: false,
+    isDisabled: false
+  },
 ] as const;
 
 export const PLAYGROUND_STATE_QUERY_PARAM = 'playgroundUrlState';
