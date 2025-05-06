@@ -10,19 +10,19 @@ import (
 func TestUsesSubgraphTrace(t *testing.T) {
 	t.Parallel()
 
-	t.Run("verify valid subgraph.operation.trace access", func(t *testing.T) {
+	t.Run("verify valid subgraph.request.clientTrace access", func(t *testing.T) {
 		t.Parallel()
 
 		subgraphNode := &ast.IdentifierNode{Value: "subgraph"}
-		operationNode := &ast.StringNode{Value: "operation"}
-		subgraphOperation := &ast.MemberNode{
+		requestNode := &ast.StringNode{Value: "request"}
+		subgraphRequest := &ast.MemberNode{
 			Node:     subgraphNode,
-			Property: operationNode,
+			Property: requestNode,
 		}
-		traceNode := &ast.StringNode{Value: "trace"}
+		clientTraceNode := &ast.StringNode{Value: "clientTrace"}
 		member := &ast.MemberNode{
-			Node:     subgraphOperation,
-			Property: traceNode,
+			Node:     subgraphRequest,
+			Property: clientTraceNode,
 		}
 		var n ast.Node = member
 
@@ -31,23 +31,23 @@ func TestUsesSubgraphTrace(t *testing.T) {
 		require.True(t, visitor.UsesSubgraphTrace)
 	})
 
-	t.Run("verify valid subgraph.operation.trace.someProperty access", func(t *testing.T) {
+	t.Run("verify valid subgraph.request.clientTrace.someProperty access", func(t *testing.T) {
 		t.Parallel()
 
 		subgraphNode := &ast.IdentifierNode{Value: "subgraph"}
-		operationNode := &ast.StringNode{Value: "operation"}
-		subgraphOperation := &ast.MemberNode{
+		requestNode := &ast.StringNode{Value: "request"}
+		subgraphRequest := &ast.MemberNode{
 			Node:     subgraphNode,
-			Property: operationNode,
+			Property: requestNode,
 		}
-		traceNode := &ast.StringNode{Value: "trace"}
-		operationTrace := &ast.MemberNode{
-			Node:     subgraphOperation,
-			Property: traceNode,
+		clientTraceNode := &ast.StringNode{Value: "clientTrace"}
+		requestClientTrace := &ast.MemberNode{
+			Node:     subgraphRequest,
+			Property: clientTraceNode,
 		}
 		propertyNode := &ast.StringNode{Value: "someProperty"}
 		member := &ast.MemberNode{
-			Node:     operationTrace,
+			Node:     requestClientTrace,
 			Property: propertyNode,
 		}
 		var n ast.Node = member
@@ -57,18 +57,18 @@ func TestUsesSubgraphTrace(t *testing.T) {
 		require.True(t, visitor.UsesSubgraphTrace)
 	})
 
-	t.Run("verify subgraph.operation.something access", func(t *testing.T) {
+	t.Run("verify subgraph.request.something access", func(t *testing.T) {
 		t.Parallel()
 
 		subgraphNode := &ast.IdentifierNode{Value: "subgraph"}
-		operationNode := &ast.StringNode{Value: "operation"}
-		subgraphOperation := &ast.MemberNode{
+		requestNode := &ast.StringNode{Value: "request"}
+		subgraphRequest := &ast.MemberNode{
 			Node:     subgraphNode,
-			Property: operationNode,
+			Property: requestNode,
 		}
 		somethingNode := &ast.StringNode{Value: "something"}
 		member := &ast.MemberNode{
-			Node:     subgraphOperation,
+			Node:     subgraphRequest,
 			Property: somethingNode,
 		}
 		var n ast.Node = member
@@ -78,7 +78,7 @@ func TestUsesSubgraphTrace(t *testing.T) {
 		require.False(t, visitor.UsesSubgraphTrace)
 	})
 
-	t.Run("verify subgraph.something.trace access", func(t *testing.T) {
+	t.Run("verify subgraph.something.clientTrace access", func(t *testing.T) {
 		t.Parallel()
 
 		subgraphNode := &ast.IdentifierNode{Value: "subgraph"}
@@ -87,10 +87,10 @@ func TestUsesSubgraphTrace(t *testing.T) {
 			Node:     subgraphNode,
 			Property: somethingNode,
 		}
-		traceNode := &ast.StringNode{Value: "trace"}
+		clientTraceNode := &ast.StringNode{Value: "clientTrace"}
 		member := &ast.MemberNode{
 			Node:     subgraphSomething,
-			Property: traceNode,
+			Property: clientTraceNode,
 		}
 		var n ast.Node = member
 

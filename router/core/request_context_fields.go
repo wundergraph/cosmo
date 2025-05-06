@@ -41,7 +41,7 @@ func NewExpressionLogField(val any, key string, defaultValue any) zap.Field {
 	// type, the Error() wont be printed to the output
 	// By wrapping all errors in a common type we can always unwrap it (some types wont be exported
 	// like errors.joinErrors for example), and ensure its Error() function is then called
-	if assertVal, ok := val.(ExprWrapError); ok {
+	if assertVal, ok := val.(expr.WrapError); ok {
 		val = &assertVal
 	}
 

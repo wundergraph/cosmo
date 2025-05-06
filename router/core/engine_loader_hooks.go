@@ -8,6 +8,8 @@ import (
 	"slices"
 	"time"
 
+	"github.com/wundergraph/cosmo/router/internal/httpclient"
+
 	"github.com/expr-lang/expr/vm"
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
@@ -111,8 +113,7 @@ func (f *engineLoaderHooks) OnLoad(ctx context.Context, ds resolve.DataSourceInf
 		return ctx
 	}
 
-	ctx = InitSubgraphTraceContext(ctx)
-	//ctx = expr.SetSubgraphExpressionContext(ctx, &exprCopy)
+	ctx = httpclient.InitTraceContext(ctx)
 
 	ctx, _ = f.tracer.Start(ctx, "Engine - Fetch",
 		trace.WithAttributes([]attribute.KeyValue{
@@ -164,17 +165,17 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 	traceAttrs = append(traceAttrs, rotel.WgComponentName.String("engine-loader"))
 	traceAttrs = append(traceAttrs, commonAttrs...)
 
-	fromTrace := GetSubgraphTraceFromContext(ctx)
+	fromTrace := httpclient.GetClientTraceFromContext(ctx)
 
 	// Note: This copy still points to the same maps like requestClaims etc
 	exprCtx := reqContext.expressionContext
 	exprCtx.Subgraph = expr.Subgraph{
-		Id:        ds.ID,
-		Name:      ds.Name,
-		Operation: expr.SubgraphOperation{},
+		Id:      ds.ID,
+		Name:    ds.Name,
+		Request: expr.SubgraphRequest{},
 	}
-	exprCtx.Subgraph.Operation.Trace = *ConvertToExprTrace(fromTrace)
-	exprCtx.Subgraph.Error = &ExprWrapError{Err: responseInfo.Err}
+	exprCtx.Subgraph.Request.ClientTrace = *expr.ConvertToExprTrace(fromTrace)
+	exprCtx.Subgraph.Request.Error = &expr.WrapError{Err: responseInfo.Err}
 
 	for key, expression := range f.mappedSubgraphExpressions {
 		result, err := expr.ResolveAnyExpression(expression, exprCtx)
@@ -282,42 +283,18 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 }
 
 func convertToAttribute(key string, val any) *attribute.KeyValue {
-	// We ignore nil values for now
 	if val == nil {
 		return nil
 	}
 
 	switch v := val.(type) {
-	case int, *int:
-		return &attribute.KeyValue{Key: attribute.Key(key), Value: attribute.IntValue(unwrapPtr[int](v))}
-	case int64, *int64:
-		return &attribute.KeyValue{Key: attribute.Key(key), Value: attribute.Int64Value(unwrapPtr[int64](v))}
-	case float64, *float64:
-		return &attribute.KeyValue{Key: attribute.Key(key), Value: attribute.Float64Value(unwrapPtr[float64](v))}
-	case string, *string:
-		return &attribute.KeyValue{Key: attribute.Key(key), Value: attribute.StringValue(unwrapPtr[string](v))}
-	case bool, *bool:
-		return &attribute.KeyValue{Key: attribute.Key(key), Value: attribute.BoolValue(unwrapPtr[bool](v))}
-	case []bool, *[]bool:
-		return &attribute.KeyValue{Key: attribute.Key(key), Value: attribute.BoolSliceValue(unwrapPtr[[]bool](v))}
-	case []int64, *[]int64:
-		return &attribute.KeyValue{Key: attribute.Key(key), Value: attribute.Int64SliceValue(unwrapPtr[[]int64](v))}
-	case []float64, *[]float64:
-		return &attribute.KeyValue{Key: attribute.Key(key), Value: attribute.Float64SliceValue(unwrapPtr[[]float64](v))}
-	case []string, *[]string:
-		return &attribute.KeyValue{Key: attribute.Key(key), Value: attribute.StringSliceValue(unwrapPtr[[]string](v))}
+	case int:
+		return &attribute.KeyValue{Key: attribute.Key(key), Value: attribute.IntValue(v)}
+	case string:
+		return &attribute.KeyValue{Key: attribute.Key(key), Value: attribute.StringValue(v)}
+	case bool:
+		return &attribute.KeyValue{Key: attribute.Key(key), Value: attribute.BoolValue(v)}
 	default:
 		return &attribute.KeyValue{Key: attribute.Key(key), Value: attribute.StringValue(fmt.Sprintf("%v", v))}
 	}
-}
-
-func unwrapPtr[T any](v any) T {
-	if ptr, ok := v.(*T); ok {
-		if ptr == nil {
-			var zero T
-			return zero
-		}
-		return *ptr
-	}
-	return v.(T)
 }

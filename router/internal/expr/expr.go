@@ -98,33 +98,76 @@ type RequestAuth struct {
 	Scopes          []string       `expr:"scopes"`
 }
 
-type SubgraphOperation struct {
-	Trace OperationTrace `expr:"trace"`
+type SubgraphRequest struct {
+	Error       error       `expr:"error"`
+	ClientTrace ClientTrace `expr:"clientTrace"`
 }
 
-type SubgraphDNSStart struct {
+type DNSStart struct {
 	Time time.Time `expr:"time"`
 	Host string    `expr:"host"`
 }
 
-type SubgraphDNSDone struct {
+type DNSDone struct {
 	Time      time.Time `expr:"time"`
 	Addresses []string  `expr:"addresses"`
 	Coalesced bool      `expr:"coalesced"`
 	Error     error     `expr:"error"`
 }
 
-type SubgraphTLSStart struct {
+type TLSStart struct {
 	Time time.Time `expr:"time"`
 }
 
-type SubgraphTLSDone struct {
+type TLSDone struct {
 	Time        time.Time `expr:"time"`
 	Complete    bool      `expr:"complete"`
 	CipherSuite string    `expr:"cipherSuite"`
 	DidResume   bool      `expr:"didResume"`
 	Version     string    `expr:"version"`
 	Error       error     `expr:"error"`
+}
+
+type Dial struct {
+	DialStart []SubgraphDialStart `expr:"start"`
+	DialDone  []SubgraphDialDone  `expr:"done"`
+}
+
+type SubgraphDialCombined struct {
+	DialStartTime time.Time  `expr:"dialStartTime"`
+	DialDoneTime  *time.Time `expr:"dialDoneTime"`
+	Error         error      `expr:"error"`
+	Network       string     `expr:"network"`
+	Address       string     `expr:"address"`
+}
+
+// GetGroupedCalls get a list of connection calls that happened, grouped by network and address
+func (r Dial) GetGroupedCalls() []SubgraphDialCombined {
+	dialMap := make(map[string]*SubgraphDialCombined)
+
+	for _, start := range r.DialStart {
+		key := start.Network + "_" + start.Address
+		dialMap[key] = &SubgraphDialCombined{
+			DialStartTime: start.Time,
+			Network:       start.Network,
+			Address:       start.Address,
+		}
+	}
+
+	for _, done := range r.DialDone {
+		key := done.Network + "_" + done.Address
+		if dial, exists := dialMap[key]; exists {
+			dial.DialDoneTime = &done.Time
+			dial.Error = done.Error
+		}
+	}
+
+	dialResults := make([]SubgraphDialCombined, 0, len(dialMap))
+	for _, dial := range dialMap {
+		dialResults = append(dialResults, *dial)
+	}
+
+	return dialResults
 }
 
 type SubgraphDialStart struct {
@@ -140,24 +183,24 @@ type SubgraphDialDone struct {
 	Error   error     `expr:"error"`
 }
 
-type SubgraphWroteHeaders struct {
+type WroteHeaders struct {
 	Time time.Time `expr:"time"`
 }
 
-type SubgraphWait100Continue struct {
+type Wait100Continue struct {
 	Time time.Time `expr:"time"`
 }
 
-type SubgraphWroteRequest struct {
+type WroteRequest struct {
 	Time  time.Time `expr:"time"`
 	Error error     `expr:"error"`
 }
 
-type SubgraphFirstByte struct {
+type FirstByte struct {
 	Time time.Time `expr:"time"`
 }
 
-type SubgraphContinue100 struct {
+type Continue100 struct {
 	Time time.Time `expr:"time"`
 }
 
@@ -178,29 +221,24 @@ type PutIdleConnection struct {
 	Error error     `expr:"error"`
 }
 
-type OperationTrace struct {
+type ClientTrace struct {
 	ConnectionCreate   *CreateSubgraphConnection   `expr:"connCreate"`
 	ConnectionAcquired *AcquiredSubgraphConnection `expr:"connAcquired"`
-	ConnectionPutIdle  *PutIdleConnection          `expr:"connPutIdle"`
-	DNSStart           *SubgraphDNSStart           `expr:"dnsStart"`
-	DNSDone            *SubgraphDNSDone            `expr:"dnsDone"`
-	TLSStart           *SubgraphTLSStart           `expr:"tlsStart"`
-	TLSDone            *SubgraphTLSDone            `expr:"tlsDone"`
-	DialStart          *SubgraphDialStart          `expr:"dialStart"`
-	DialDone           *SubgraphDialDone           `expr:"dialDone"`
-	WroteHeaders       *SubgraphWroteHeaders       `expr:"wroteHeaders"`
-	Wait100Continue    *SubgraphWait100Continue    `expr:"wait100Continue"`
-	WroteRequest       *SubgraphWroteRequest       `expr:"wroteRequest"`
-	FirstByte          *SubgraphFirstByte          `expr:"firstByte"`
-	Continue100        *SubgraphContinue100        `expr:"continue100"`
+	DNSStart           *DNSStart                   `expr:"dnsStart"`
+	DNSDone            *DNSDone                    `expr:"dnsDone"`
+	TLSStart           *TLSStart                   `expr:"tlsStart"`
+	TLSDone            *TLSDone                    `expr:"tlsDone"`
+	Dial               *Dial                       `expr:"dial"`
+	WroteHeaders       *WroteHeaders               `expr:"wroteHeaders"`
+	WroteRequest       *WroteRequest               `expr:"wroteRequest"`
+	FirstByte          *FirstByte                  `expr:"firstByte"`
 }
 
 // Subgraph Related
 type Subgraph struct {
-	Name      string            `expr:"name"`
-	Id        string            `expr:"id"`
-	Error     error             `expr:"error"`
-	Operation SubgraphOperation `expr:"operation"`
+	Id      string          `expr:"id"`
+	Name    string          `expr:"name"`
+	Request SubgraphRequest `expr:"request"`
 }
 
 // Get returns the value of the header with the given key. If the header is not present, an empty string is returned.

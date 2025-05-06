@@ -273,7 +273,7 @@ func (c *requestContext) ResolveAnyExpressionWithWrappedError(expression *vm.Pro
 	if c.expressionContext.Request.Error != nil {
 		// This will create a copy of the base expressionContext which we can modify
 		copyContext := c.expressionContext
-		copyContext.Request.Error = &ExprWrapError{c.expressionContext.Request.Error}
+		copyContext.Request.Error = &expr.WrapError{Err: c.expressionContext.Request.Error}
 		return expr.ResolveAnyExpression(expression, copyContext)
 	}
 	return expr.ResolveAnyExpression(expression, c.expressionContext)

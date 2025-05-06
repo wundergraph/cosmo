@@ -8,6 +8,9 @@
   "Telemetry": {
     "ServiceName": "cosmo-router",
     "Attributes": null,
+    "Subgraph": {
+      "Attributes": null
+    },
     "ResourceAttributes": null,
     "Tracing": {
       "Enabled": true,
@@ -24,9 +27,6 @@
       "ResponseTraceHeader": {
         "Enabled": false,
         "HeaderName": "x-wg-trace-id"
-      },
-      "Subgraph": {
-        "Attributes": null
       },
       "ExportGraphQLVariables": false,
       "WithNewRoot": false

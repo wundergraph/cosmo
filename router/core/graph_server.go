@@ -323,7 +323,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 }
 
 func (s *graphServer) buildMultiGraphHandler(ctx context.Context, baseMux *chi.Mux, featureFlagConfigs map[string]*nodev1.FeatureFlagRouterExecutionConfig) (http.HandlerFunc, error) {
-	if len(featureFlagConfigs) >= 0 {
+	if len(featureFlagConfigs) == 0 {
 		return baseMux.ServeHTTP, nil
 	}
 

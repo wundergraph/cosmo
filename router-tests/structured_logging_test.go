@@ -2710,7 +2710,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 					Key:     "a_nil_value",
 					Default: "empty_value",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "subgraph.operation.trace.tlsStart?.time",
+						Expression: "subgraph.request.clientTrace.tlsStart?.time",
 					},
 				},
 			},
@@ -2753,116 +2753,112 @@ func TestFlakyAccessLogs(t *testing.T) {
 		})
 	})
 
-	t.Run("verify subgraph hooks in logs", func(t *testing.T) {
+	t.Run("verify subgraph log with invalid expression", func(t *testing.T) {
 		t.Parallel()
 
-		testenv.Run(t, &testenv.Config{
+		err := testenv.RunWithError(t, &testenv.Config{
 			SubgraphAccessLogsEnabled: true,
-			AccessLogFields: []config.CustomAttribute{
-				{
-					Key: "request_error",
-					ValueFrom: &config.CustomDynamicAttribute{
-						ContextField: core.ContextFieldRequestError,
-					},
-				},
-			},
 			SubgraphAccessLogFields: []config.CustomAttribute{
 				{
 					Key:     "get_conn",
 					Default: "empty_value",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "subgraph.operation.trace.connCreate?.time",
+						Expression: "subgraph.request2.clientTrace.connCreate?.time",
+					},
+				},
+			},
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			assert.FailNow(t, "should not be called")
+		})
+
+		assert.ErrorContains(t, err, "failed to build base mux: failed building router access log expressions: failed when validating log expressions: line 1, column 9: type expr.Subgraph has no field request2")
+	})
+
+	t.Run("verify subgraph hooks in logs", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			SubgraphAccessLogsEnabled: true,
+			SubgraphAccessLogFields: []config.CustomAttribute{
+				{
+					Key:     "get_conn",
+					Default: "empty_value",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "subgraph.request.clientTrace.connCreate?.time",
 					},
 				},
 				{
 					Key:     "got_conn",
 					Default: "empty_value",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "subgraph.operation.trace.connAcquired?.wasIdle",
-					},
-				},
-				{
-					Key:     "put_idle_conn",
-					Default: "empty_value",
-					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "subgraph.operation.trace.connPutIdle?.time",
+						Expression: "subgraph.request.clientTrace.connAcquired?.wasIdle",
 					},
 				},
 				{
 					Key:     "got_first_response_byte",
 					Default: "empty_value",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "subgraph.operation.trace.firstByte?.time",
-					},
-				},
-				{
-					Key:     "got_100_continue",
-					Default: "empty_value",
-					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "subgraph.operation.trace.continue100?.time",
+						Expression: "subgraph.request.clientTrace.firstByte?.time",
 					},
 				},
 				{
 					Key:     "dns_start",
 					Default: "empty_value",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "subgraph.operation.trace.dnsStart?.host",
+						Expression: "subgraph.request.clientTrace.dnsStart?.host",
 					},
 				},
 				{
 					Key:     "dns_done",
 					Default: "empty_value",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "subgraph.operation.trace.dnsDone?.addresses",
+						Expression: "subgraph.request.clientTrace.dnsDone?.addresses",
 					},
 				},
 				{
 					Key:     "connect_start",
 					Default: "empty_value",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "subgraph.operation.trace.dialStart?.network",
+						Expression: "subgraph.request.clientTrace.dial?.start[0].network",
 					},
 				},
 				{
 					Key:     "connect_done",
 					Default: "empty_value",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "subgraph.operation.trace.dialDone?.network",
+						Expression: "subgraph.request.clientTrace.dial?.done[0].network",
 					},
 				},
 				{
 					Key:     "tls_handshake_start",
 					Default: "empty_value",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "subgraph.operation.trace.tlsStart?.time",
+						Expression: "subgraph.request.clientTrace.tlsStart?.time",
 					},
 				},
 				{
 					Key:     "tls_handshake_done",
 					Default: "empty_value",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "subgraph.operation.trace.tlsDone?.complete",
+						Expression: "subgraph.request.clientTrace.tlsDone?.complete",
 					},
 				},
 				{
 					Key:     "wrote_headers",
 					Default: "empty_value",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "subgraph.operation.trace.wroteHeaders?.time",
-					},
-				},
-				{
-					Key:     "wait_100_continue",
-					Default: "empty_value",
-					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "subgraph.operation.trace.wait100Continue?.time",
+						Expression: "subgraph.request.clientTrace.wroteHeaders?.time",
 					},
 				},
 				{
 					Key:     "wrote_request",
 					Default: "empty_value",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "subgraph.operation.trace.wroteRequest?.time",
+						Expression: "subgraph.request.clientTrace.wroteRequest?.time",
 					},
 				},
 			},
@@ -2887,7 +2883,6 @@ func TestFlakyAccessLogs(t *testing.T) {
 				"request_id",
 				"pid",
 				"url",
-				"put_idle_conn",
 				"get_conn",
 				"got_first_response_byte",
 				"wrote_request",
@@ -2907,18 +2902,12 @@ func TestFlakyAccessLogs(t *testing.T) {
 				"dns_start":           "empty_value",
 				"tls_handshake_start": "empty_value",
 				"dns_done":            "empty_value",
-				"wait_100_continue":   "empty_value",
-				"got_100_continue":    "empty_value",
 				"tls_handshake_done":  "empty_value",
 				"connect_start":       "tcp",
 				"connect_done":        "tcp",
 			}
 
 			checkValues(t, productContext, productSubgraphVals, additionalExpectedKeys)
-
-			idleConnTime, ok := productContext["put_idle_conn"].(time.Time)
-			require.True(t, ok)
-			require.False(t, idleConnTime.IsZero())
 
 			gotFirstResponseByteTime, ok := productContext["got_first_response_byte"].(time.Time)
 			require.True(t, ok)
@@ -2956,21 +2945,21 @@ func TestFlakyAccessLogs(t *testing.T) {
 					Key:     "error_entry",
 					Default: "empty_value",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "subgraph.error",
+						Expression: "subgraph.request.error",
 					},
 				},
 				{
 					Key:     "get_conn",
 					Default: "empty_value",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "subgraph.error ?? subgraph.operation.trace.connCreate?.time",
+						Expression: "subgraph.request.error ?? subgraph.request.clientTrace.connCreate?.time",
 					},
 				},
 				{
 					Key:     "got_conn",
 					Default: "empty_value",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "subgraph.error ?? subgraph.operation.trace.connAcquired?.wasIdle",
+						Expression: "subgraph.request.error ?? subgraph.request.clientTrace.connAcquired?.wasIdle",
 					},
 				},
 			},
@@ -3017,20 +3006,77 @@ func TestFlakyAccessLogs(t *testing.T) {
 		})
 	})
 
+	t.Run("verify subgraph list for dial", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			SubgraphAccessLogsEnabled: true,
+			SubgraphAccessLogFields: []config.CustomAttribute{
+				{
+					Key: "get_list",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "subgraph.request.clientTrace.dial?.GetGroupedCalls()",
+					},
+				},
+			},
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:  `query employees { employees { id details { forename surname } notes } }`,
+				Header: map[string][]string{"service-name": {"service-name"}},
+			})
+			requestLog := xEnv.Observer().FilterMessage("/graphql")
+			productContext := requestLog.All()[1].ContextMap()
+
+			getList := productContext["get_list"]
+
+			type SubgraphDialCombined struct {
+				DialStartTime time.Time
+				DialDoneTime  *time.Time
+				Error         error
+				Network       string
+				Address       string
+			}
+
+			// We don't have access to cast to router.expr since it is an internal package
+			marshalBytes, err := json.Marshal(getList)
+			if err != nil {
+				return
+			}
+			var subgraphDialCombined []SubgraphDialCombined
+			err = json.Unmarshal(marshalBytes, &subgraphDialCombined)
+			if err != nil {
+				return
+			}
+
+			require.Len(t, subgraphDialCombined, 1)
+
+			entry := subgraphDialCombined[0]
+			require.Nil(t, entry.Error)
+			require.False(t, entry.DialStartTime.IsZero())
+			require.False(t, entry.DialDoneTime.IsZero())
+			require.Contains(t, entry.Address, "127.0.0.1")
+			require.Equal(t, entry.Network, "tcp")
+		})
+	})
+
 }
 
 func checkValues(t *testing.T, requestContext map[string]interface{}, expectedValues map[string]interface{}, additionalExpectedKeys []string) {
 	t.Helper()
 
-	require.Lenf(t, requestContext, len(expectedValues)+len(additionalExpectedKeys), "unexpected number of keys")
-
 	for key, val := range expectedValues {
 		mapVal, exists := requestContext[key]
 		require.Truef(t, exists, "key '%s' not found", key)
-		require.Equalf(t, val, mapVal, "expected '%v', got '%v'", val, mapVal)
+		require.Equalf(t, val, mapVal, "expected '%v', got '%v' for %v", val, mapVal, key)
 	}
 	for _, key := range additionalExpectedKeys {
 		_, exists := requestContext[key]
 		require.Truef(t, exists, "key '%s' not found", key)
 	}
+
+	require.Lenf(t, requestContext, len(expectedValues)+len(additionalExpectedKeys), "unexpected number of keys")
 }

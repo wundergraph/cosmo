@@ -8,6 +8,20 @@
   "Telemetry": {
     "ServiceName": "cosmo-router",
     "Attributes": null,
+    "Subgraph": {
+      "Attributes": [
+        {
+          "Key": "wg.tracing.custom.conn.subgraph.hostport",
+          "Default": "",
+          "ValueFrom": {
+            "RequestHeader": "",
+            "ContextField": "",
+            "ResponseHeader": "",
+            "Expression": "subgraph.request.clientTrace.connCreate.hostPort"
+          }
+        }
+      ]
+    },
     "ResourceAttributes": null,
     "Tracing": {
       "Enabled": true,
@@ -34,14 +48,6 @@
       "ResponseTraceHeader": {
         "Enabled": false,
         "HeaderName": "x-wg-trace-id"
-      },
-      "Subgraph": {
-        "Attributes": [
-          {
-            "Key": "wg.tracing.custom.conn.subgraph.hostport",
-            "Expression": "subgraph.operation.trace.conn.create.hostPort"
-          }
-        ]
       },
       "ExportGraphQLVariables": true,
       "WithNewRoot": false

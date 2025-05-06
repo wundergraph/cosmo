@@ -1863,13 +1863,13 @@ func NewSubgraphTransportOptions(cfg config.TrafficShapingRules) *SubgraphTransp
 	return base
 }
 
-func NewSubgraphTracingOptions(cfg config.SubgraphTracing) SubgraphTracingOptions {
+func NewSubgraphTracingOptions(cfg config.SubgraphTelemetry) SubgraphTracingOptions {
 	entries := make([]ExpressionAttribute, 0, len(cfg.Attributes))
 
 	for _, attribute := range cfg.Attributes {
 		entries = append(entries, ExpressionAttribute{
 			Key:        attribute.Key,
-			Expression: attribute.Expression,
+			Expression: attribute.ValueFrom.Expression,
 		})
 	}
 

@@ -9118,7 +9118,29 @@ func TestFlakyTelemetry(t *testing.T) {
 func TestTelemetryExpressions(t *testing.T) {
 	t.Parallel()
 
-	t.Run("verify expression is correctly evaluated", func(t *testing.T) {
+	t.Run("verify invalid expression stops server start", func(t *testing.T) {
+		t.Parallel()
+		metricReader := metric.NewManualReader()
+		exporter := tracetest.NewInMemoryExporter(t)
+
+		err := testenv.RunWithError(t, &testenv.Config{
+			TraceExporter: exporter,
+			MetricReader:  metricReader,
+			SubgraphTracingOptions: &core.SubgraphTracingOptions{
+				ExpressionAttributes: []core.ExpressionAttribute{
+					{
+						Key:        "get_conn",
+						Expression: "subgraph.request.clientTrace2?.connCreate?.hostPort ?? 'default'",
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			assert.FailNow(t, "should not be called")
+		})
+		assert.ErrorContains(t, err, "failed to build base mux: line 1, column 17: type expr.SubgraphRequest has no field clientTrace2")
+	})
+
+	t.Run("verify name and id expressions", func(t *testing.T) {
 		t.Parallel()
 		metricReader := metric.NewManualReader()
 		exporter := tracetest.NewInMemoryExporter(t)
@@ -9129,60 +9151,12 @@ func TestTelemetryExpressions(t *testing.T) {
 			SubgraphTracingOptions: &core.SubgraphTracingOptions{
 				ExpressionAttributes: []core.ExpressionAttribute{
 					{
-						Key:        "get_conn",
-						Expression: "subgraph.operation.trace.connCreate?.hostPort ?? 'default'",
+						Key:        "sg_name",
+						Expression: "subgraph.name",
 					},
 					{
-						Key:        "got_conn",
-						Expression: "subgraph.operation.trace.connAcquired?.wasIdle ?? 'default'",
-					},
-					{
-						Key:        "put_idle_conn",
-						Expression: "subgraph.operation.trace.connPutIdle?.time ?? 'default'",
-					},
-					{
-						Key:        "got_first_response_byte",
-						Expression: "subgraph.operation.trace.firstByte?.time ?? 'default'",
-					},
-					{
-						Key:        "got_100_continue",
-						Expression: "subgraph.operation.trace.continue100?.time ?? 'default'",
-					},
-					{
-						Key:        "dns_start",
-						Expression: "subgraph.operation.trace.dnsStart?.host ?? 'default'",
-					},
-					{
-						Key:        "dns_done",
-						Expression: "subgraph.operation.trace.dnsDone?.addresses ?? 'default'",
-					},
-					{
-						Key:        "connect_start",
-						Expression: "subgraph.operation.trace.dialStart?.network ?? 'default'",
-					},
-					{
-						Key:        "connect_done",
-						Expression: "subgraph.operation.trace.dialDone?.network ?? 'default'",
-					},
-					{
-						Key:        "tls_handshake_start",
-						Expression: "subgraph.operation.trace.tlsStart?.time ?? 'default'",
-					},
-					{
-						Key:        "tls_handshake_done",
-						Expression: "subgraph.operation.trace.tlsDone?.complete ?? 'default'",
-					},
-					{
-						Key:        "wrote_headers",
-						Expression: "subgraph.operation.trace.wroteHeaders?.time ?? 'default'",
-					},
-					{
-						Key:        "wait_100_continue",
-						Expression: "subgraph.operation.trace.wait100Continue?.time ?? 'default'",
-					},
-					{
-						Key:        "wrote_request",
-						Expression: "subgraph.operation.trace.wroteRequest?.time ?? 'default'",
+						Key:        "sg_id",
+						Expression: "subgraph.id",
 					},
 				},
 			},
@@ -9200,7 +9174,87 @@ func TestTelemetryExpressions(t *testing.T) {
 			attributes := engineFetchSpan.Attributes()
 			exprAttributes := attributes[14:]
 
-			require.Len(t, exprAttributes, 14)
+			require.Len(t, exprAttributes, 2)
+
+			sgName := findAttr(exprAttributes, "sg_name")
+			require.Equal(t, "employees", sgName.Value.AsString())
+
+			sgId := findAttr(exprAttributes, "sg_id")
+			require.Equal(t, "0", sgId.Value.AsString())
+		})
+	})
+
+	t.Run("verify available clientTrace expression are correctly evaluated", func(t *testing.T) {
+		t.Parallel()
+		metricReader := metric.NewManualReader()
+		exporter := tracetest.NewInMemoryExporter(t)
+
+		testenv.Run(t, &testenv.Config{
+			TraceExporter: exporter,
+			MetricReader:  metricReader,
+			SubgraphTracingOptions: &core.SubgraphTracingOptions{
+				ExpressionAttributes: []core.ExpressionAttribute{
+					{
+						Key:        "get_conn",
+						Expression: "subgraph.request.clientTrace?.connCreate?.hostPort ?? 'default'",
+					},
+					{
+						Key:        "got_conn",
+						Expression: "subgraph.request.clientTrace?.connAcquired?.wasIdle ?? 'default'",
+					},
+					{
+						Key:        "got_first_response_byte",
+						Expression: "subgraph.request.clientTrace?.firstByte?.time ?? 'default'",
+					},
+					{
+						Key:        "dns_start",
+						Expression: "subgraph.request.clientTrace?.dnsStart?.host ?? 'default'",
+					},
+					{
+						Key:        "dns_done",
+						Expression: "subgraph.request.clientTrace?.dnsDone?.addresses ?? 'default'",
+					},
+					{
+						Key:        "connect_start",
+						Expression: "subgraph.request.clientTrace?.dial?.start[0].network ?? 'default'",
+					},
+					{
+						Key:        "connect_done",
+						Expression: "subgraph.request.clientTrace?.dial?.done[0].network ?? 'default'",
+					},
+					{
+						Key:        "tls_handshake_start",
+						Expression: "subgraph.request.clientTrace?.tlsStart?.time ?? 'default'",
+					},
+					{
+						Key:        "tls_handshake_done",
+						Expression: "subgraph.request.clientTrace?.tlsDone?.complete ?? 'default'",
+					},
+					{
+						Key:        "wrote_headers",
+						Expression: "subgraph.request.clientTrace?.wroteHeaders?.time ?? 'default'",
+					},
+					{
+						Key:        "wrote_request",
+						Expression: "subgraph.request.clientTrace?.wroteRequest?.time ?? 'default'",
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:  `query employees { employees { id details { forename surname } notes } }`,
+				Header: map[string][]string{"service-name": {"service-name"}},
+			})
+
+			sn := exporter.GetSpans().Snapshots()
+			engineFetchSpan := sn[6]
+			require.Equal(t, "Engine - Fetch", engineFetchSpan.Name())
+			require.Equal(t, trace.SpanKindInternal, engineFetchSpan.SpanKind())
+
+			attributes := engineFetchSpan.Attributes()
+			exprAttributes := attributes[14:]
+
+			require.Len(t, exprAttributes, 11)
 
 			getConnAttr := findAttr(exprAttributes, "get_conn")
 			hostPortAttr := getConnAttr.Value.AsString()
@@ -9209,21 +9263,14 @@ func TestTelemetryExpressions(t *testing.T) {
 			gotConnAttr := findAttr(exprAttributes, "got_conn")
 			require.False(t, gotConnAttr.Value.AsBool())
 
-			putIdleConnAttr := findAttr(exprAttributes, "put_idle_conn")
-			validateTime(t, putIdleConnAttr.Value.AsString())
-
 			firstByteAttr := findAttr(exprAttributes, "got_first_response_byte")
 			validateTime(t, firstByteAttr.Value.AsString())
 
-			continue100Attr := findAttr(exprAttributes, "got_100_continue")
-			continue100Time := continue100Attr.Value.AsString()
-			require.Equal(t, continue100Time, "default")
-
 			dnsStartAttr := findAttr(exprAttributes, "dns_start")
-			require.Equal(t, dnsStartAttr.Value.AsString(), "default")
+			require.Equal(t, "default", dnsStartAttr.Value.AsString())
 
 			dnsDoneAttr := findAttr(exprAttributes, "dns_done")
-			require.Equal(t, dnsDoneAttr.Value.AsString(), "default")
+			require.Equal(t, "default", dnsDoneAttr.Value.AsString())
 
 			connectStartAttr := findAttr(exprAttributes, "connect_start")
 			require.Equal(t, "tcp", connectStartAttr.Value.AsString())
@@ -9232,16 +9279,13 @@ func TestTelemetryExpressions(t *testing.T) {
 			require.Equal(t, "tcp", connectDoneAttr.Value.AsString())
 
 			tlsStartAttr := findAttr(exprAttributes, "tls_handshake_start")
-			require.Equal(t, tlsStartAttr.Value.AsString(), "default")
+			require.Equal(t, "default", tlsStartAttr.Value.AsString())
 
 			tlsDoneAttr := findAttr(exprAttributes, "tls_handshake_done")
-			require.Equal(t, tlsDoneAttr.Value.AsString(), "default")
+			require.Equal(t, "default", tlsDoneAttr.Value.AsString())
 
 			wroteHeadersAttr := findAttr(exprAttributes, "wrote_headers")
 			validateTime(t, wroteHeadersAttr.Value.AsString())
-
-			wait100ContinueAttr := findAttr(exprAttributes, "wait_100_continue")
-			require.Equal(t, wait100ContinueAttr.Value.AsString(), "default")
 
 			wroteRequestAttr := findAttr(exprAttributes, "wrote_request")
 			validateTime(t, wroteRequestAttr.Value.AsString())
@@ -9260,7 +9304,7 @@ func TestTelemetryExpressions(t *testing.T) {
 				ExpressionAttributes: []core.ExpressionAttribute{
 					{
 						Key:        "tls_start",
-						Expression: "subgraph.operation.trace.tlsStart?.time",
+						Expression: "subgraph.request.clientTrace.tlsStart?.time",
 					},
 				},
 			},
@@ -9276,9 +9320,10 @@ func TestTelemetryExpressions(t *testing.T) {
 			require.Equal(t, trace.SpanKindInternal, engineFetchSpan.SpanKind())
 
 			attributes := engineFetchSpan.Attributes()
-			exprAttributes := attributes[0:]
 
-			attr := findAttr(exprAttributes, "tls_start")
+			require.Len(t, attributes[14:], 0)
+
+			attr := findAttr(attributes, "tls_start")
 			require.False(t, attr.Valid())
 		})
 	})
@@ -9295,7 +9340,7 @@ func TestTelemetryExpressions(t *testing.T) {
 				ExpressionAttributes: []core.ExpressionAttribute{
 					{
 						Key:        "wrote_headers",
-						Expression: "subgraph.operation.trace.wroteHeaders?.time",
+						Expression: "subgraph.request.clientTrace.wroteHeaders?.time",
 					},
 				},
 			},

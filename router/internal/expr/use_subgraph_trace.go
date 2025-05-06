@@ -21,7 +21,7 @@ func (v *UsesSubgraphTrace) Visit(baseNode *ast.Node) {
 
 	// First check the current node's property
 	propertyNode, ok := memberNode.Property.(*ast.StringNode)
-	if ok && propertyNode.Value == "trace" {
+	if ok && propertyNode.Value == "clientTrace" {
 		// Check if this trace is accessed through subgraph.operation
 		if v.isSubgraphOperation(memberNode.Node) {
 			v.UsesSubgraphTrace = true
@@ -33,7 +33,7 @@ func (v *UsesSubgraphTrace) Visit(baseNode *ast.Node) {
 	if memberNode.Node != nil {
 		// Check if the node itself is a member access with "trace"
 		if nextMember, ok := memberNode.Node.(*ast.MemberNode); ok {
-			if nextProperty, ok := nextMember.Property.(*ast.StringNode); ok && nextProperty.Value == "trace" {
+			if nextProperty, ok := nextMember.Property.(*ast.StringNode); ok && nextProperty.Value == "clientTrace" {
 				if v.isSubgraphOperation(nextMember.Node) {
 					v.UsesSubgraphTrace = true
 					return
@@ -51,9 +51,9 @@ func (v *UsesSubgraphTrace) isSubgraphOperation(node ast.Node) bool {
 		return false
 	}
 
-	// Check if the property is "operation"
-	operationProperty, ok := memberNode.Property.(*ast.StringNode)
-	if !ok || operationProperty.Value != "operation" {
+	// Check if the property is "request"
+	requestProperty, ok := memberNode.Property.(*ast.StringNode)
+	if !ok || requestProperty.Value != "request" {
 		return false
 	}
 

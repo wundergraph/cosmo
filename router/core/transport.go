@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/wundergraph/cosmo/router/internal/expr"
+	traceclient "github.com/wundergraph/cosmo/router/internal/httpclient"
 	"io"
 	"net/http"
 	"net/url"
@@ -73,7 +74,7 @@ func NewCustomTransport(
 	baseRoundTripper := roundTripper
 
 	if visitorManager.IsSubgraphTraceUsedInExpressions() {
-		baseRoundTripper = NewTraceInjectingRoundTripper(roundTripper)
+		baseRoundTripper = traceclient.NewTraceInjectingRoundTripper(roundTripper)
 	}
 
 	if retryOptions.Enabled {
