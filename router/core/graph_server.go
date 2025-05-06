@@ -16,6 +16,8 @@ import (
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	oteltrace "go.opentelemetry.io/otel/trace"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/cloudflare/backoff"
 	"github.com/dgraph-io/ristretto/v2"
@@ -946,13 +948,19 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		subgraphTippers[subgraph] = subgraphTransport
 	}
 
+	subgraphGRPCClients, err := s.buildSubgraphGRPCClients(engineConfig, configSubgraphs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build subgraph grpc clients: %w", err)
+	}
+
 	ecb := &ExecutorConfigurationBuilder{
-		introspection:    s.introspection,
-		baseURL:          s.baseURL,
-		baseTripper:      s.baseTransport,
-		subgraphTrippers: subgraphTippers,
-		logger:           s.logger,
-		trackUsageInfo:   s.graphqlMetricsConfig.Enabled || s.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled,
+		introspection:       s.introspection,
+		baseURL:             s.baseURL,
+		baseTripper:         s.baseTransport,
+		subgraphTrippers:    subgraphTippers,
+		subgraphGRPCClients: subgraphGRPCClients,
+		logger:              s.logger,
+		trackUsageInfo:      s.graphqlMetricsConfig.Enabled || s.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled,
 		subscriptionClientOptions: &SubscriptionClientOptions{
 			PingInterval: s.engineExecutionConfiguration.WebSocketClientPingInterval,
 		},
@@ -1245,6 +1253,31 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	s.graphMuxList = append(s.graphMuxList, gm)
 
 	return gm, nil
+}
+
+func (s *graphServer) buildSubgraphGRPCClients(config *nodev1.EngineConfiguration, configSubgraphs []*nodev1.Subgraph) (map[string]grpc.ClientConnInterface, error) {
+	subgraphGRPCClients := make(map[string]grpc.ClientConnInterface)
+	for _, dsConfig := range config.DatasourceConfigurations {
+		if grpcConfig := dsConfig.GetCustomGraphql().GetGrpc(); grpcConfig != nil {
+			tcpConnection := grpcConfig.GetConnection().GetTcp()
+			if tcpConnection == nil {
+				continue
+			}
+
+			c, err := grpc.NewClient(tcpConnection.Location, grpc.WithTransportCredentials(insecure.NewCredentials()))
+			if err != nil {
+				return nil, fmt.Errorf("failed to create grpc client for subgraph %s: %w", dsConfig.Id, err)
+			}
+
+			for _, subgraph := range configSubgraphs {
+				if subgraph.Id == dsConfig.Id {
+					subgraphGRPCClients[subgraph.Name] = c
+				}
+			}
+		}
+	}
+
+	return subgraphGRPCClients, nil
 }
 
 func (s *graphServer) buildPubSubConfiguration(ctx context.Context, engineConfig *nodev1.EngineConfiguration, routerEngineCfg *RouterEngineConfiguration) error {

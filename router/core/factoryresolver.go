@@ -69,6 +69,7 @@ func NewDefaultFactoryResolver(
 	subscriptionClientOptions *SubscriptionClientOptions,
 	baseTransport http.RoundTripper,
 	subgraphTransports map[string]http.RoundTripper,
+	subgraphGRPCClients map[string]grpc.ClientConnInterface,
 	log *zap.Logger,
 	enableSingleFlight bool,
 	enableNetPoll bool,
@@ -144,10 +145,15 @@ func NewDefaultFactoryResolver(
 
 		httpClient:          defaultHTTPClient,
 		subgraphHTTPClients: subgraphHTTPClients,
+		subgraphGRPCClients: subgraphGRPCClients,
 	}
 }
 
 func (d *DefaultFactoryResolver) ResolveGraphqlFactory(subgraphName string) (plan.PlannerFactory[graphql_datasource.Configuration], error) {
+	if grpcClient, ok := d.subgraphGRPCClients[subgraphName]; ok {
+		return graphql_datasource.NewFactoryGRPC(d.engineCtx, grpcClient)
+	}
+
 	if subgraphClient, ok := d.subgraphHTTPClients[subgraphName]; ok {
 		return graphql_datasource.NewFactory(d.engineCtx, subgraphClient, d.subscriptionClient)
 	}
@@ -626,6 +632,7 @@ func toGRPCConfiguration(config *nodev1.GRPCConfiguration) *grpcdatasource.GRPCC
 		SubscriptionRPCs: make(grpcdatasource.RPCConfigMap),
 		EntityRPCs:       make(map[string]grpcdatasource.EntityRPCConfig),
 		Fields:           make(map[string]grpcdatasource.FieldMap),
+		EnumValues:       make(map[string][]grpcdatasource.EnumValueMapping),
 	}
 
 	for _, operation := range in.OperationMappings {
@@ -670,6 +677,16 @@ func toGRPCConfiguration(config *nodev1.GRPCConfiguration) *grpcdatasource.GRPCC
 		}
 
 		result.Fields[field.Type] = fieldMap
+	}
+
+	for _, enumMapping := range in.EnumMappings {
+		result.EnumValues[enumMapping.Type] = make([]grpcdatasource.EnumValueMapping, 0, len(enumMapping.Values))
+		for _, enumValueMapping := range enumMapping.Values {
+			result.EnumValues[enumMapping.Type] = append(result.EnumValues[enumMapping.Type], grpcdatasource.EnumValueMapping{
+				Value:       enumValueMapping.Original,
+				TargetValue: enumValueMapping.Mapped,
+			})
+		}
 	}
 
 	return &grpcdatasource.GRPCConfiguration{

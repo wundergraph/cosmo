@@ -205,6 +205,43 @@ message DataSourceCustom_GraphQL {
 message GRPCConfiguration {
   GRPCMapping mapping = 1;
   string proto_schema = 2;
+  ConnectionConfiguration connection = 3;
+}
+
+message ConnectionConfiguration {
+  // Only one connection type can be configured at a time
+  oneof connection_type {
+    // Socket connection details
+    SocketConnectionConfiguration socket = 1;
+    // TCP connection details
+    TCPConnectionConfiguration tcp = 2;
+    // Plugin connection details
+    PluginConnectionConfiguration plugin = 3;
+  }
+}
+
+message SocketConnectionConfiguration {
+  // Unix socket location, e.g., "unix:///tmp/service.sock"
+  string location = 1;
+  // SSL configuration
+  SSLConfiguration ssl = 2;
+}
+
+message TCPConnectionConfiguration {
+  // TCP address, e.g., "localhost:50051"
+  string location = 1;
+  // SSL configuration
+  SSLConfiguration ssl = 2;
+}
+
+message PluginConnectionConfiguration {
+  // Plugin name
+  string name = 1;
+}
+
+message SSLConfiguration {
+  // Whether SSL is enabled
+  bool enabled = 1;
 }
 
 message GRPCMapping {
@@ -218,6 +255,8 @@ message GRPCMapping {
   repeated EntityMapping entity_mappings = 4;
   // Mappings for GraphQL type fields to gRPC message fields
   repeated TypeFieldMapping type_field_mappings = 5;
+  // Mappings for GraphQL enum values to gRPC enum values
+  repeated EnumMapping enum_mappings = 6;
 }
 
 // Defines the type of GraphQL operation
@@ -283,6 +322,16 @@ message ArgumentMapping {
   // Original GraphQL argument name
   string original = 1;
   // Mapped gRPC field name
+  string mapped = 2;
+}
+
+message EnumMapping {
+  string type = 1;
+  repeated EnumValueMapping values = 2;
+}
+
+message EnumValueMapping {
+  string original = 1;
   string mapped = 2;
 }
 
