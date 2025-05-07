@@ -11,10 +11,7 @@ export class RBACEvaluator {
 
     const result = new Map<OrganizationRole, string[]>();
     for (const [role, allResources] of Object.entries(rulesGroupedByRole)) {
-      result.set(
-        role as OrganizationRole,
-        [...new Set(allResources.flatMap((res) => res.resources))]
-      );
+      result.set(role as OrganizationRole, [...new Set(allResources.flatMap((res) => res.resources))]);
     }
 
     this.roles = Array.from(result.keys(), (k) => k);
@@ -31,7 +28,7 @@ export class RBACEvaluator {
     return false;
   }
 
-  checkReadGraphAccess(graph: { namespace: string; targetId: string; }) {
+  checkReadGraphAccess(graph: { namespace: string; targetId: string }) {
     if (this.is(['organization-owner', 'organization-admin', 'organization-developer', 'organization-viewer'])) {
       return true;
     }
@@ -42,9 +39,11 @@ export class RBACEvaluator {
       }
 
       const ruleForRole = this.rules.get(role)!;
-      if (ruleForRole.length === 0 ||
+      if (
+        ruleForRole.length === 0 ||
         ruleForRole.includes(`ns:${graph.namespace}`) ||
-        ruleForRole.includes(graph.targetId)) {
+        ruleForRole.includes(graph.targetId)
+      ) {
         return true;
       }
     }
@@ -52,7 +51,7 @@ export class RBACEvaluator {
     return false;
   }
 
-  checkWriteGraphAccess(graph: { namespace: string; targetId: string; }) {
+  checkWriteGraphAccess(graph: { namespace: string; targetId: string }) {
     if (this.is(['organization-owner', 'organization-admin', 'organization-developer'])) {
       return true;
     }
@@ -63,9 +62,11 @@ export class RBACEvaluator {
       }
 
       const ruleForRole = this.rules.get(role)!;
-      if (ruleForRole.length === 0 ||
+      if (
+        ruleForRole.length === 0 ||
         ruleForRole.includes(`ns:${graph.namespace}`) ||
-        ruleForRole.includes(graph.targetId)) {
+        ruleForRole.includes(graph.targetId)
+      ) {
         return true;
       }
     }

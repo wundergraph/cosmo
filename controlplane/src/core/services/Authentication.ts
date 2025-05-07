@@ -87,10 +87,12 @@ export class Authentication implements Authenticator {
       });
 
       const isOrganizationDeactivated = !!organization.deactivation;
-      const rbac = new RBACEvaluator(await this.orgRepo.getOrganizationMemberGroups({
-        organizationID: organization.id,
-        userID: user.userId,
-      }));
+      const rbac = new RBACEvaluator(
+        await this.orgRepo.getOrganizationMemberGroups({
+          organizationID: organization.id,
+          userID: user.userId,
+        }),
+      );
 
       const userContext: AuthContext = {
         auth: user.auth,

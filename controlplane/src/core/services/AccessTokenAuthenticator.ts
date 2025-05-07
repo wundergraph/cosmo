@@ -45,10 +45,12 @@ export default class AccessTokenAuthenticator {
     }
 
     const isOrganizationDeactivated = !!organization.deactivation;
-    const rbac = new RBACEvaluator(await this.orgRepo.getOrganizationMemberGroups({
-      userID: userInfoData.sub,
-      organizationID: organization.id,
-    }));
+    const rbac = new RBACEvaluator(
+      await this.orgRepo.getOrganizationMemberGroups({
+        userID: userInfoData.sub,
+        organizationID: organization.id,
+      }),
+    );
 
     return {
       auth: 'access_token',
