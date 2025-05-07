@@ -457,15 +457,6 @@ export class FederatedGraphRepository {
       eq(schema.targets.organizationId, this.organizationId),
     ];
 
-    const federatedGraphsToInclude = opts.federatedGraphsToInclude;
-    if (federatedGraphsToInclude) {
-      if (federatedGraphsToInclude.length === 0) {
-        return [];
-      }
-
-      conditions.push(inArray(schema.targets.id, federatedGraphsToInclude));
-    }
-
     if (opts.namespaceId) {
       conditions.push(eq(schema.targets.namespaceId, opts.namespaceId));
     }

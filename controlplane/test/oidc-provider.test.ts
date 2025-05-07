@@ -18,6 +18,9 @@ describe('OIDC provider', (ctx) => {
   test('Should be able to create an OIDC provider ', async (testContext) => {
     const { client, server, users } = await SetupTest({ dbname });
 
+    const orgGroups = await client.getOrganizationGroups({});
+    const adminGroup = orgGroups.groups.find((g) => g.name === 'admin');
+
     const createOIDCProviderResponse = await client.createOIDCProvider({
       discoveryEndpoint: 'http://localhost:8080/realms/test/.well-known/openid-configuration',
       clientID: '0oab1c2',

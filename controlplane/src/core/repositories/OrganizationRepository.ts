@@ -569,7 +569,7 @@ export class OrganizationRepository {
         ...group,
         rules: rules.map(({ role, resources }) => ({
           role,
-          resources: resources?.split(','),
+          resources: resources?.split(',') ?? [],
         })),
       };
     }));

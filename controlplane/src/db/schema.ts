@@ -1412,6 +1412,7 @@ export const organizationGroupMembersRelationships = relations(organizationGroup
 
 export const memberRoleEnum = pgEnum('member_role', ['admin', 'developer', 'viewer'] as const);
 
+// @deprecated
 export const organizationMemberRoles = pgTable(
   'organization_member_roles', // omr
   {
@@ -1475,6 +1476,7 @@ export const organizationInvitations = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     invitedBy: uuid('invited_by').references(() => users.id, { onDelete: 'cascade' }),
+    groupId: uuid('group_id').references(() => organizationGroups.id, { onDelete: 'set null' }),
     accepted: boolean('accepted').default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },

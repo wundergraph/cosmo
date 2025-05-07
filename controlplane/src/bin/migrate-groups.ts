@@ -5,7 +5,7 @@ import { and, eq } from 'drizzle-orm';
 import { buildDatabaseConnectionConfig } from '../core/plugins/database.js';
 import Keycloak from '../core/services/Keycloak.js';
 import * as schema from '../db/schema.js';
-import { OrganizationRole } from "../db/models.js";
+import { OrganizationRole } from '../db/models.js';
 import { getConfig } from './get-config.js';
 
 const {
@@ -129,7 +129,7 @@ async function ensureOrganizationSubgroupsExistInDatabase({
           groupId: group.id,
           role: `organization-${group.name}` as OrganizationRole,
           resources: null,
-        }))
+        })),
       )
       .onConflictDoNothing()
       .execute();

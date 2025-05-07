@@ -1,4 +1,4 @@
-CREATE TYPE "public"."organization_role" AS ENUM('organization-admin', 'organization-developer', 'organization-viewer', 'namespace-admin', 'namespace-developer', 'namespace-viewer', 'federated-graph-admin', 'federated-graph-developer', 'federated-graph-viewer');--> statement-breakpoint
+CREATE TYPE "public"."organization_role" AS ENUM('organization-owner', 'organization-admin', 'organization-developer', 'organization-viewer', 'namespace-admin', 'namespace-developer', 'namespace-viewer', 'federated-graph-admin', 'federated-graph-developer', 'federated-graph-viewer');--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "organization_group_members" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"organization_member_id" uuid NOT NULL,
@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS "organization_groups" (
 	CONSTRAINT "organization_groups_kc_mapper_id_unique" UNIQUE("kc_mapper_id")
 );
 --> statement-breakpoint
+ALTER TABLE "organization_invitations" ADD COLUMN "group_id" uuid;--> statement-breakpoint
 DO $$ BEGIN
  ALTER TABLE "organization_group_members" ADD CONSTRAINT "organization_group_members_organization_member_id_organization_members_id_fk" FOREIGN KEY ("organization_member_id") REFERENCES "public"."organization_members"("id") ON DELETE cascade ON UPDATE no action;
 EXCEPTION
@@ -48,4 +49,9 @@ EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
 --> statement-breakpoint
-CREATE UNIQUE INDEX IF NOT EXISTS "organization_group_member_idx" ON "organization_group_members" USING btree ("organization_member_id","group_id");
+CREATE UNIQUE INDEX IF NOT EXISTS "organization_group_member_idx" ON "organization_group_members" USING btree ("organization_member_id","group_id");--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "organization_invitations" ADD CONSTRAINT "organization_invitations_group_id_organization_groups_id_fk" FOREIGN KEY ("group_id") REFERENCES "public"."organization_groups"("id") ON DELETE set null ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;

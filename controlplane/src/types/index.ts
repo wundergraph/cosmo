@@ -256,7 +256,7 @@ export interface OrganizationGroupDTO {
   membersCount: number;
   rules: {
     role: OrganizationRole;
-    resources: string[] | undefined;
+    resources: string[];
   }[];
 }
 
@@ -273,6 +273,7 @@ export interface OrganizationInvitationDTO {
   userID: string;
   email: string;
   invitedBy?: string;
+  groupId?: string;
 }
 
 export interface APIKeyDTO {

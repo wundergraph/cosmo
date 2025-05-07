@@ -8,6 +8,7 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import { UserRepository } from '../../repositories/UserRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { OrganizationGroupRepository } from "../../repositories/OrganizationGroupRepository.js";
 
 export function inviteUser(
   opts: RouterOptions,
@@ -22,6 +23,7 @@ export function inviteUser(
 
     const userRepo = new UserRepository(logger, opts.db);
     const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
+    const orgGroupRepo = new OrganizationGroupRepository(opts.db);
     const orgInvitationRepo = new OrganizationInvitationRepository(logger, opts.db, opts.billingDefaultPlanId);
     const auditLogRepo = new AuditLogRepository(opts.db);
 
@@ -41,6 +43,20 @@ export function inviteUser(
           code: EnumStatusCode.ERR_NOT_FOUND,
           details: `Organization not found`,
         },
+      };
+    }
+
+    const group = await orgGroupRepo.byId({
+      organizationId: authContext.organizationId,
+      groupId: req.groupId,
+    });
+
+    if (!group) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_NOT_FOUND,
+          details: 'Group not found',
+        }
       };
     }
 
@@ -175,6 +191,7 @@ export function inviteUser(
       organizationId: authContext.organizationId,
       dbUser: user,
       inviterUserId: authContext.userId,
+      groupId: group.groupId,
     });
 
     await auditLogRepo.addAuditLog({

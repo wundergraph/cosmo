@@ -1,5 +1,5 @@
 {
-  "id": "e9c21010-9a6c-44a7-b0b7-e701720bb94a",
+  "id": "d2c2634a-2d24-495d-afac-125ef5ec5015",
   "prevId": "1047e67f-16f1-4d7b-bfb6-2031ff10230b",
   "version": "7",
   "dialect": "postgresql",
@@ -4064,6 +4064,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "group_id": {
+          "name": "group_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "accepted": {
           "name": "accepted",
           "type": "boolean",
@@ -4164,6 +4170,19 @@
             "id"
           ],
           "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "organization_invitations_group_id_organization_groups_id_fk": {
+          "name": "organization_invitations_group_id_organization_groups_id_fk",
+          "tableFrom": "organization_invitations",
+          "tableTo": "organization_groups",
+          "columnsFrom": [
+            "group_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -7786,6 +7805,7 @@
       "name": "organization_role",
       "schema": "public",
       "values": [
+        "organization-owner",
         "organization-admin",
         "organization-developer",
         "organization-viewer",

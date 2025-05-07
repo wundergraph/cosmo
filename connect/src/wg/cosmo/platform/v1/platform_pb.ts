@@ -7320,6 +7320,11 @@ export class InviteUserRequest extends Message<InviteUserRequest> {
    */
   email = "";
 
+  /**
+   * @generated from field: string groupId = 2;
+   */
+  groupId = "";
+
   constructor(data?: PartialMessage<InviteUserRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -7329,6 +7334,7 @@ export class InviteUserRequest extends Message<InviteUserRequest> {
   static readonly typeName = "wg.cosmo.platform.v1.InviteUserRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "email", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "groupId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): InviteUserRequest {

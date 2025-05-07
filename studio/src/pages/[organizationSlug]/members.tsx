@@ -52,6 +52,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { OrgMember, OrgMember_Group } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import {
+  getOrganizationGroups,
   getOrganizationMembers,
   getPendingOrganizationMembers,
   inviteUser,
@@ -67,17 +68,22 @@ import { z } from "zod";
 import { usePaginationParams } from "@/hooks/use-pagination-params";
 import { UpdateMemberGroupDialog } from "@/components/members/update-member-group-dialog";
 import { useIsAdmin } from "@/hooks/use-is-admin";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const emailInputSchema = z.object({
   email: z.string().email(),
+  groupId: z.string().uuid(),
 });
 
 type EmailInput = z.infer<typeof emailInputSchema>;
 
 const InviteForm = ({ onSuccess }: { onSuccess: () => void }) => {
+  const { data } = useQuery(getOrganizationGroups);
   const {
     register,
     formState: { isValid, errors },
+    setValue,
+    watch,
     reset,
     handleSubmit,
   } = useZodForm<EmailInput>({
@@ -85,7 +91,12 @@ const InviteForm = ({ onSuccess }: { onSuccess: () => void }) => {
     schema: emailInputSchema,
   });
 
+  const availableGroups = data?.groups ?? [];
+
   const { mutate, isPending } = useMutation(inviteUser);
+
+  const groupId = watch('groupId');
+  const groupLabel = availableGroups.find((g) => g.groupId === groupId)?.name || "Select a group";
 
   const { toast } = useToast();
 
@@ -95,7 +106,7 @@ const InviteForm = ({ onSuccess }: { onSuccess: () => void }) => {
 
   const onSubmit: SubmitHandler<EmailInput> = (data) => {
     mutate(
-      { email: data.email },
+      { email: data.email, groupId: data.groupId },
       {
         onSuccess: (d) => {
           sendToast(d.response?.details || "Invited member successfully.");
@@ -110,8 +121,8 @@ const InviteForm = ({ onSuccess }: { onSuccess: () => void }) => {
   };
 
   return (
-    <form className="flex gap-x-4" onSubmit={handleSubmit(onSubmit)}>
-      <div className="flex-1">
+    <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
+      <div className="space-y-2">
         <Input
           placeholder="janedoe@example.com"
           className="w-full"
@@ -119,19 +130,49 @@ const InviteForm = ({ onSuccess }: { onSuccess: () => void }) => {
           {...register("email")}
         />
         {errors.email && (
-          <span className="mt-2 text-sm text-destructive">
+          <span className="text-sm text-destructive">
             {errors.email.message}
           </span>
         )}
       </div>
-      <Button
-        type="submit"
-        disabled={!isValid}
-        variant="default"
-        isLoading={isPending}
-      >
-        Invite
-      </Button>
+
+      <div className="space-y-2">
+        <span>What group should the member be added to?</span>
+        <Select
+          value={groupId}
+          onValueChange={(value) => setValue('groupId', value)}
+        >
+          <SelectTrigger value={groupId} className="w-full">
+            <SelectValue aria-label={groupLabel}>{groupLabel}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {availableGroups.map((group) => (
+              <SelectItem
+                key={`group-${group.groupId}`}
+                value={group.groupId}
+              >
+                {group.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {errors.groupId && (
+          <span className="text-xs text-destructive">
+            {errors.groupId.message}
+          </span>
+        )}
+      </div>
+
+      <div className="text-right">
+        <Button
+          type="submit"
+          disabled={!isValid}
+          variant="default"
+          isLoading={isPending}
+        >
+          Invite
+        </Button>
+      </div>
     </form>
   );
 };
@@ -173,7 +214,9 @@ const MemberCard = ({
         <div className="flex h-6 items-center justify-between gap-x-4 text-muted-foreground">
           <div className={cn({ "pr-[14px]": isAdmin && isCurrentUser })}>
             {acceptedInvite ? (
-              <span className="text-sm">{group?.name}</span>
+              <span className={cn('text-sm', !group?.name && 'text-muted-foreground')}>
+                {group?.name ?? "No group"}
+              </span>
             ) : (
               <span className="text-sm text-gray-800 dark:text-gray-400">
                 Pending

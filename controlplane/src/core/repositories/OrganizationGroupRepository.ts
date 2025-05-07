@@ -7,32 +7,45 @@ import { OrganizationRole } from '../../db/models.js';
 export class OrganizationGroupRepository {
   constructor(private db: PostgresJsDatabase<typeof schema>) {}
 
-  public async create(input: {
+  public create(input: {
     organizationId: string;
     name: string;
     description: string;
     kcGroupId: string;
+    rules?: { role: OrganizationRole; resources: string[] }[];
   }): Promise<OrganizationGroupDTO> {
-    const insertedRuleSet = await this.db
-      .insert(schema.organizationGroups)
-      .values({
-        organizationId: input.organizationId,
+    return this.db.transaction(async (tx) => {
+      const insertedGroup = await tx
+        .insert(schema.organizationGroups)
+        .values({
+          organizationId: input.organizationId,
+          name: input.name,
+          description: input.description,
+          kcGroupId: input.kcGroupId,
+        })
+        .returning()
+        .execute();
+
+      if (input.rules && insertedGroup.length > 0) {
+        await tx.insert(schema.organizationGroupRules).values(
+          input.rules.map(({ role, resources }) => ({
+            groupId: insertedGroup[0].id,
+            role,
+            resources: resources.length > 0 ? resources.filter(Boolean).join(',') : null,
+          })),
+        );
+      }
+
+      return {
+        groupId: insertedGroup[0].id,
         name: input.name,
         description: input.description,
         kcGroupId: input.kcGroupId,
-      })
-      .returning()
-      .execute();
-
-    return {
-      groupId: insertedRuleSet[0].id,
-      name: input.name,
-      description: input.description,
-      kcGroupId: input.kcGroupId,
-      kcMapperId: null,
-      membersCount: 0,
-      rules: [],
-    };
+        kcMapperId: null,
+        membersCount: 0,
+        rules: [],
+      };
+    })
   }
 
   public async nameExists(input: { organizationId: string; name?: string }) {
@@ -91,7 +104,48 @@ export class OrganizationGroupRepository {
       description: orgGroup.description,
       rules: orgGroup.rules.map(({ role, resources }) => ({
         role,
-        resources: resources?.split(','),
+        resources: resources?.split(',') ?? [],
+      })),
+    };
+  }
+
+  public async byName(input: { organizationId: string; name: string }): Promise<OrganizationGroupDTO | undefined> {
+    const orgGroup = await this.db.query.organizationGroups.findFirst({
+      where: and(
+        eq(schema.organizationGroups.organizationId, input.organizationId),
+        eq(schema.organizationGroups.name, input.name),
+      ),
+      with: {
+        rules: {
+          columns: {
+            role: true,
+            resources: true,
+          },
+        },
+      },
+      extras: (table, { sql }) => ({
+        // There is an active issue that prevents using `schema.organizationRuleSetMembers` instead of directly
+        // using strings (https://github.com/drizzle-team/drizzle-orm/issues/3493)
+        membersCount: sql<number>`CAST((
+          select count(distinct "organization_member_id")
+          from "organization_group_members"
+          where "organization_group_members"."group_id" = ${table.id}
+        ) AS INTEGER)`.as('members_count'),
+      }),
+    });
+
+    if (!orgGroup) {
+      return undefined;
+    }
+
+    const { id, ...rest } = orgGroup;
+    return {
+      groupId: id,
+      ...rest,
+      description: orgGroup.description,
+      rules: orgGroup.rules.map(({ role, resources }) => ({
+        role,
+        resources: resources?.split(',') ?? [],
       })),
     };
   }
@@ -123,7 +177,7 @@ export class OrganizationGroupRepository {
       ...rest,
       rules: rules.map(({ role, resources }) => ({
         role,
-        resources: resources?.split(','),
+        resources: resources?.split(',') ?? [],
       })),
     }));
   }

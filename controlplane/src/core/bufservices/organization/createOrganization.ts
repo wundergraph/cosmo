@@ -14,6 +14,7 @@ import type { RouterOptions } from '../../routes.js';
 import { BillingService } from '../../services/BillingService.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
+import { OrganizationRole } from "../../../db/models.js";
 
 export function createOrganization(
   opts: RouterOptions,
@@ -53,7 +54,7 @@ export function createOrganization(
     await opts.keycloakClient.authenticateClient();
 
     // Create the organization group in Keycloak + subgroups
-    const kcAdminGroupId = await opts.keycloakClient.seedGroup({
+    const kcCreatedGroups = await opts.keycloakClient.seedGroup({
       userID: authContext.userId,
       organizationSlug: req.slug,
       realm: opts.keycloakRealm,
@@ -94,14 +95,22 @@ export function createOrganization(
           userID: authContext.userId,
         });
 
-        const orgAdminGroup = await orgGroupRepo.create({
-          organizationId: organization.id,
-          name: 'admin',
-          description: '',
-          kcGroupId: kcAdminGroupId,
-        });
+        for (const kcGroup of kcCreatedGroups) {
+          const createdGroup = await orgGroupRepo.create({
+            organizationId: organization.id,
+            name: kcGroup.name,
+            description: '',
+            kcGroupId: kcGroup.id,
+            rules: [{
+              role: `organization-${kcGroup.name}` as OrganizationRole,
+              resources: []
+            }],
+          });
 
-        await orgGroupRepo.addUserToGroup({ organizationMemberId: orgMember.id, groupId: orgAdminGroup.groupId });
+          if (kcGroup.name === 'admin') {
+            await orgGroupRepo.addUserToGroup({ organizationMemberId: orgMember.id, groupId: createdGroup.groupId });
+          }
+        }
 
         let sessionId: string | undefined;
         if (opts.stripeSecretKey) {

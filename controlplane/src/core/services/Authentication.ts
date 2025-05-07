@@ -8,7 +8,7 @@ import AccessTokenAuthenticator from './AccessTokenAuthenticator.js';
 import ApiKeyAuthenticator from './ApiKeyAuthenticator.js';
 import GraphApiTokenAuthenticator, { GraphKeyAuthContext } from './GraphApiTokenAuthenticator.js';
 import WebSessionAuthenticator from './WebSessionAuthenticator.js';
-import { RBACEvaluator } from "./RBACEvaluator.js";
+import { RBACEvaluator } from './RBACEvaluator.js';
 
 // The maximum time to cache the user auth context for the web session authentication.
 const maxAuthCacheTtl = 30 * 1000; // 30 seconds
@@ -94,18 +94,16 @@ export class Authentication implements Authenticator {
 
       const isOrganizationDeactivated = !!organization.deactivation;
 
+      const rbac = new RBACEvaluator(memberGroups);
+
       const userContext: AuthContext = {
         auth: user.auth,
         userId: user.userId,
         organizationId: organization.id,
-        rbac: new RBACEvaluator(),
-        // rbac: new RBACEvaluator(await this.orgRepo.getGroupsWithHierarchicalResources({
-        //   organizationId: organization.id,
-        //   groups: memberGroups,
-        // })),
+        rbac,
         organizationSlug: organization.slug,
-        hasWriteAccess: checkUserAccess({ rolesToBe: ['admin', 'developer'], userRoles }) && !isOrganizationDeactivated,
-        isAdmin: userRoles.includes('admin'),
+        hasWriteAccess: rbac.is(['organization-owner', 'organization-admin', 'organization-developer']) && !isOrganizationDeactivated,
+        isAdmin: rbac.is(['organization-owner', 'organization-admin']),
         userDisplayName: user.userDisplayName,
       };
 
