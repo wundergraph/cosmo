@@ -466,7 +466,7 @@ export class GraphQLToProtoTextVisitor {
       const type = this.messageQueue.shift()!;
 
       // Skip already processed types, Query type, and _Entity
-      if (this.processedTypes.has(type.name) || type.name === 'Query' || type.name === '_Entity') {
+      if (this.processedTypes.has(type.name) || type.name === 'Query' || type.name === 'Mutation' || type.name === 'Subscription' || type.name === '_Entity') {
         continue;
       }
 

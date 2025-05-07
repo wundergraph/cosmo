@@ -86,31 +86,37 @@ proto3.util.setEnumType(DataSourceKind, "wg.cosmo.node.v1.DataSourceKind", [
  */
 export enum OperationType {
   /**
+   * @generated from enum value: OPERATION_TYPE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
    * Query operation
    *
-   * @generated from enum value: QUERY = 0;
+   * @generated from enum value: OPERATION_TYPE_QUERY = 1;
    */
-  QUERY = 0,
+  QUERY = 1,
 
   /**
    * Mutation operation
    *
-   * @generated from enum value: MUTATION = 1;
+   * @generated from enum value: OPERATION_TYPE_MUTATION = 2;
    */
-  MUTATION = 1,
+  MUTATION = 2,
 
   /**
    * Subscription operation
    *
-   * @generated from enum value: SUBSCRIPTION = 2;
+   * @generated from enum value: OPERATION_TYPE_SUBSCRIPTION = 3;
    */
-  SUBSCRIPTION = 2,
+  SUBSCRIPTION = 3,
 }
 // Retrieve enum metadata with: proto3.getEnumType(OperationType)
 proto3.util.setEnumType(OperationType, "wg.cosmo.node.v1.OperationType", [
-  { no: 0, name: "QUERY" },
-  { no: 1, name: "MUTATION" },
-  { no: 2, name: "SUBSCRIPTION" },
+  { no: 0, name: "OPERATION_TYPE_UNSPECIFIED" },
+  { no: 1, name: "OPERATION_TYPE_QUERY" },
+  { no: 2, name: "OPERATION_TYPE_MUTATION" },
+  { no: 3, name: "OPERATION_TYPE_SUBSCRIPTION" },
 ]);
 
 /**
@@ -1544,9 +1550,14 @@ export class GRPCConfiguration extends Message<GRPCConfiguration> {
   protoSchema = "";
 
   /**
-   * @generated from field: wg.cosmo.node.v1.ConnectionConfiguration connection = 3;
+   * @generated from field: wg.cosmo.node.v1.PluginConfiguration plugin = 3;
    */
-  connection?: ConnectionConfiguration;
+  plugin?: PluginConfiguration;
+
+  /**
+   * @generated from field: wg.cosmo.node.v1.NetworkConfiguration network = 4;
+   */
+  network?: NetworkConfiguration;
 
   constructor(data?: PartialMessage<GRPCConfiguration>) {
     super();
@@ -1558,7 +1569,8 @@ export class GRPCConfiguration extends Message<GRPCConfiguration> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "mapping", kind: "message", T: GRPCMapping },
     { no: 2, name: "proto_schema", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "connection", kind: "message", T: ConnectionConfiguration },
+    { no: 3, name: "plugin", kind: "message", T: PluginConfiguration },
+    { no: 4, name: "network", kind: "message", T: NetworkConfiguration },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GRPCConfiguration {
@@ -1579,97 +1591,41 @@ export class GRPCConfiguration extends Message<GRPCConfiguration> {
 }
 
 /**
- * @generated from message wg.cosmo.node.v1.ConnectionConfiguration
+ * @generated from message wg.cosmo.node.v1.NetworkConfiguration
  */
-export class ConnectionConfiguration extends Message<ConnectionConfiguration> {
+export class NetworkConfiguration extends Message<NetworkConfiguration> {
   /**
-   * Only one connection type can be configured at a time
-   *
-   * @generated from oneof wg.cosmo.node.v1.ConnectionConfiguration.connection_type
-   */
-  connectionType: {
-    /**
-     * TCP connection details
-     *
-     * @generated from field: wg.cosmo.node.v1.TCPConfiguration tcp = 1;
-     */
-    value: TCPConfiguration;
-    case: "tcp";
-  } | {
-    /**
-     * Plugin connection details
-     *
-     * @generated from field: wg.cosmo.node.v1.PluginConfiguration plugin = 2;
-     */
-    value: PluginConfiguration;
-    case: "plugin";
-  } | { case: undefined; value?: undefined } = { case: undefined };
-
-  constructor(data?: PartialMessage<ConnectionConfiguration>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.node.v1.ConnectionConfiguration";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "tcp", kind: "message", T: TCPConfiguration, oneof: "connection_type" },
-    { no: 2, name: "plugin", kind: "message", T: PluginConfiguration, oneof: "connection_type" },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ConnectionConfiguration {
-    return new ConnectionConfiguration().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ConnectionConfiguration {
-    return new ConnectionConfiguration().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ConnectionConfiguration {
-    return new ConnectionConfiguration().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: ConnectionConfiguration | PlainMessage<ConnectionConfiguration> | undefined, b: ConnectionConfiguration | PlainMessage<ConnectionConfiguration> | undefined): boolean {
-    return proto3.util.equals(ConnectionConfiguration, a, b);
-  }
-}
-
-/**
- * @generated from message wg.cosmo.node.v1.TCPConfiguration
- */
-export class TCPConfiguration extends Message<TCPConfiguration> {
-  /**
-   * TCP address, e.g., "localhost:50051"
+   * Network address, e.g., "localhost:50051" for TCP or "/path/to/socket" for Unix socket
    *
    * @generated from field: string location = 1;
    */
   location = "";
 
-  constructor(data?: PartialMessage<TCPConfiguration>) {
+  constructor(data?: PartialMessage<NetworkConfiguration>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.node.v1.TCPConfiguration";
+  static readonly typeName = "wg.cosmo.node.v1.NetworkConfiguration";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "location", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TCPConfiguration {
-    return new TCPConfiguration().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): NetworkConfiguration {
+    return new NetworkConfiguration().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): TCPConfiguration {
-    return new TCPConfiguration().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): NetworkConfiguration {
+    return new NetworkConfiguration().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): TCPConfiguration {
-    return new TCPConfiguration().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): NetworkConfiguration {
+    return new NetworkConfiguration().fromJsonString(jsonString, options);
   }
 
-  static equals(a: TCPConfiguration | PlainMessage<TCPConfiguration> | undefined, b: TCPConfiguration | PlainMessage<TCPConfiguration> | undefined): boolean {
-    return proto3.util.equals(TCPConfiguration, a, b);
+  static equals(a: NetworkConfiguration | PlainMessage<NetworkConfiguration> | undefined, b: NetworkConfiguration | PlainMessage<NetworkConfiguration> | undefined): boolean {
+    return proto3.util.equals(NetworkConfiguration, a, b);
   }
 }
 
@@ -1849,7 +1805,7 @@ export class OperationMapping extends Message<OperationMapping> {
    *
    * @generated from field: wg.cosmo.node.v1.OperationType type = 1;
    */
-  type = OperationType.QUERY;
+  type = OperationType.UNSPECIFIED;
 
   /**
    * Original GraphQL field name

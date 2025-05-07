@@ -642,11 +642,11 @@ func toGRPCConfiguration(config *nodev1.GRPCConfiguration) *grpcdatasource.GRPCC
 			Response: operation.Response,
 		}
 		switch operation.Type {
-		case nodev1.OperationType_QUERY:
+		case nodev1.OperationType_OPERATION_TYPE_QUERY:
 			result.QueryRPCs[operation.Original] = rpcConfig
-		case nodev1.OperationType_MUTATION:
+		case nodev1.OperationType_OPERATION_TYPE_MUTATION:
 			result.MutationRPCs[operation.Original] = rpcConfig
-		case nodev1.OperationType_SUBSCRIPTION:
+		case nodev1.OperationType_OPERATION_TYPE_SUBSCRIPTION:
 			result.SubscriptionRPCs[operation.Original] = rpcConfig
 		}
 	}

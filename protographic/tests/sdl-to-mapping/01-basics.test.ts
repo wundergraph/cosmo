@@ -27,6 +27,7 @@ describe('Basic GraphQL Schema to Proto Mapping', () => {
             "original": "getSimpleType",
             "request": "QueryGetSimpleTypeRequest",
             "response": "QueryGetSimpleTypeResponse",
+            "type": "OPERATION_TYPE_QUERY",
           },
         ],
         "service": "SimpleService",
@@ -101,18 +102,21 @@ describe('Basic GraphQL Schema to Proto Mapping', () => {
             "original": "items",
             "request": "QueryItemsRequest",
             "response": "QueryItemsResponse",
+            "type": "OPERATION_TYPE_QUERY",
           },
           {
             "mapped": "QueryOptionalItems",
             "original": "optionalItems",
             "request": "QueryOptionalItemsRequest",
             "response": "QueryOptionalItemsResponse",
+            "type": "OPERATION_TYPE_QUERY",
           },
           {
             "mapped": "QueryNestedLists",
             "original": "nestedLists",
             "request": "QueryNestedListsRequest",
             "response": "QueryNestedListsResponse",
+            "type": "OPERATION_TYPE_QUERY",
           },
         ],
         "service": "ListService",
@@ -177,18 +181,21 @@ describe('Basic GraphQL Schema to Proto Mapping', () => {
             "original": "user",
             "request": "QueryUserRequest",
             "response": "QueryUserResponse",
+            "type": "OPERATION_TYPE_QUERY",
           },
           {
             "mapped": "QueryUsers",
             "original": "users",
             "request": "QueryUsersRequest",
             "response": "QueryUsersResponse",
+            "type": "OPERATION_TYPE_QUERY",
           },
           {
             "mapped": "QuerySearchUsers",
             "original": "searchUsers",
             "request": "QuerySearchUsersRequest",
             "response": "QuerySearchUsersResponse",
+            "type": "OPERATION_TYPE_QUERY",
           },
         ],
         "service": "UserService",
@@ -234,6 +241,175 @@ describe('Basic GraphQL Schema to Proto Mapping', () => {
               },
             ],
             "type": "User",
+          },
+        ],
+        "version": 1,
+      }
+    `);
+  });
+
+  it('maps mutation fields correctly', () => {
+    const sdl = `
+      type User {
+        id: ID!
+        name: String!
+        email: String!
+      }
+      
+      input CreateUserInput {
+        name: String!
+        email: String!
+      }
+      
+      input UpdateUserInput {
+        id: ID!
+        name: String
+        email: String
+      }
+      
+      type Mutation {
+        createUser(input: CreateUserInput!): User!
+        updateUser(input: UpdateUserInput!): User
+        deleteUser(id: ID!): Boolean!
+      }
+      
+      type Query {
+        user(id: ID!): User
+      }
+    `;
+
+    const mapping = compileGraphQLToMapping(sdl, 'UserMutationService');
+
+    expect(mapping.toJson()).toMatchInlineSnapshot(`
+      {
+        "operationMappings": [
+          {
+            "mapped": "QueryUser",
+            "original": "user",
+            "request": "QueryUserRequest",
+            "response": "QueryUserResponse",
+            "type": "OPERATION_TYPE_QUERY",
+          },
+          {
+            "mapped": "MutationCreateUser",
+            "original": "createUser",
+            "request": "MutationCreateUserRequest",
+            "response": "MutationCreateUserResponse",
+            "type": "OPERATION_TYPE_MUTATION",
+          },
+          {
+            "mapped": "MutationUpdateUser",
+            "original": "updateUser",
+            "request": "MutationUpdateUserRequest",
+            "response": "MutationUpdateUserResponse",
+            "type": "OPERATION_TYPE_MUTATION",
+          },
+          {
+            "mapped": "MutationDeleteUser",
+            "original": "deleteUser",
+            "request": "MutationDeleteUserRequest",
+            "response": "MutationDeleteUserResponse",
+            "type": "OPERATION_TYPE_MUTATION",
+          },
+        ],
+        "service": "UserMutationService",
+        "typeFieldMappings": [
+          {
+            "fieldMappings": [
+              {
+                "argumentMappings": [
+                  {
+                    "mapped": "id",
+                    "original": "id",
+                  },
+                ],
+                "mapped": "user",
+                "original": "user",
+              },
+            ],
+            "type": "Query",
+          },
+          {
+            "fieldMappings": [
+              {
+                "argumentMappings": [
+                  {
+                    "mapped": "input",
+                    "original": "input",
+                  },
+                ],
+                "mapped": "create_user",
+                "original": "createUser",
+              },
+              {
+                "argumentMappings": [
+                  {
+                    "mapped": "input",
+                    "original": "input",
+                  },
+                ],
+                "mapped": "update_user",
+                "original": "updateUser",
+              },
+              {
+                "argumentMappings": [
+                  {
+                    "mapped": "id",
+                    "original": "id",
+                  },
+                ],
+                "mapped": "delete_user",
+                "original": "deleteUser",
+              },
+            ],
+            "type": "Mutation",
+          },
+          {
+            "fieldMappings": [
+              {
+                "mapped": "id",
+                "original": "id",
+              },
+              {
+                "mapped": "name",
+                "original": "name",
+              },
+              {
+                "mapped": "email",
+                "original": "email",
+              },
+            ],
+            "type": "User",
+          },
+          {
+            "fieldMappings": [
+              {
+                "mapped": "name",
+                "original": "name",
+              },
+              {
+                "mapped": "email",
+                "original": "email",
+              },
+            ],
+            "type": "CreateUserInput",
+          },
+          {
+            "fieldMappings": [
+              {
+                "mapped": "id",
+                "original": "id",
+              },
+              {
+                "mapped": "name",
+                "original": "name",
+              },
+              {
+                "mapped": "email",
+                "original": "email",
+              },
+            ],
+            "type": "UpdateUserInput",
           },
         ],
         "version": 1,

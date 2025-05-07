@@ -8,6 +8,11 @@ import { camelCase, snakeCase, upperFirst } from 'lodash';
  */
 
 /**
+ * The names of the GraphQL operation types
+ */
+export type OperationTypeName = 'Query' | 'Mutation' | 'Subscription';
+
+/**
  * Converts a GraphQL field name to a Protocol Buffer field name (snake_case)
  */
 export function graphqlFieldToProtoField(fieldName: string): string {
@@ -24,7 +29,7 @@ export function graphqlArgumentToProtoField(argName: string): string {
 /**
  * Creates an operation method name from an operation type and field name
  */
-export function createOperationMethodName(operationType: 'Query' | 'Mutation', fieldName: string): string {
+export function createOperationMethodName(operationType: OperationTypeName, fieldName: string): string {
   return `${operationType}${upperFirst(camelCase(fieldName))}`;
 }
 

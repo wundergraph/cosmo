@@ -21,6 +21,7 @@ import {
   graphqlArgumentToProtoField,
   graphqlEnumValueToProtoEnumValue,
   graphqlFieldToProtoField,
+  OperationTypeName,
 } from './naming-conventions';
 import {
   ArgumentMapping,
@@ -33,6 +34,7 @@ import {
   OperationType,
   TypeFieldMapping,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import {Maybe} from 'graphql/jsutils/Maybe';
 
 /**
  * Visitor that converts a GraphQL schema to gRPC mapping definitions
@@ -84,6 +86,12 @@ export class GraphQLToProtoVisitor {
 
     // Process query type
     this.processQueryType();
+
+    // Process mutation type
+    this.processMutationType();
+
+    // Process subscription type
+    this.processSubscriptionType();
 
     // Process all other types for field mappings
     this.processAllTypes();
@@ -177,44 +185,74 @@ export class GraphQLToProtoVisitor {
    * needs to be mapped to a corresponding gRPC RPC method.
    */
   private processQueryType(): void {
-    const queryType = this.schema.getQueryType();
-    if (!queryType) return;
+    this.processType('Query', OperationType.QUERY, this.schema.getQueryType());
+  }
 
-    // Add type field mapping for Query type
-    const queryFieldMapping = new TypeFieldMapping({
-      type: 'Query',
+  /**
+   * Process the GraphQL Mutation type to generate mutation operation mappings
+   *
+   * Each field on the Mutation type represents a GraphQL mutation operation that
+   * needs to be mapped to a corresponding gRPC RPC method.
+   */
+  private processMutationType(): void {
+    this.processType('Mutation', OperationType.MUTATION, this.schema.getMutationType());
+  }
+
+  /**
+   * Process the GraphQL Subscription type to generate subscription operation mappings
+   *
+   * Each field on the Subscription type represents a GraphQL subscription operation that
+   * needs to be mapped to a corresponding gRPC RPC method.
+   */
+  private processSubscriptionType(): void {
+    this.processType('Subscription', OperationType.SUBSCRIPTION, this.schema.getSubscriptionType());
+  }
+
+  /**
+   * Process a GraphQL type to generate operation mappings
+   *
+   * This method processes a specific GraphQL type (e.g., Query, Mutation, Subscription)
+   * and generates mappings for its fields to corresponding gRPC RPC methods.
+   *
+   * @param operationTypeName - The name of the GraphQL type (Query, Mutation, Subscription)
+   * @param operationType - The type of operation (Query, Mutation, Subscription)
+   * @param graphqlType - The GraphQL type to process
+   */
+  private processType(operationTypeName: OperationTypeName, operationType: OperationType, graphqlType: Maybe<GraphQLObjectType>): void {
+    if (!graphqlType) return;
+
+    const typeFieldMapping = new TypeFieldMapping({
+      type: operationTypeName,
       fieldMappings: [],
     });
 
-    const fields = queryType.getFields();
+    const fields = graphqlType.getFields();
 
     for (const fieldName in fields) {
       // Skip special federation fields
       if (fieldName === '_entities') continue;
 
       const field = fields[fieldName];
-      const mappedName = createOperationMethodName('Query', fieldName);
+      const mappedName = createOperationMethodName(operationTypeName, fieldName);
+      this.createOperationMapping(operationType, fieldName, mappedName);
 
-      // Create operation mapping for this query field
-      this.createOperationMapping(fieldName, mappedName);
-
-      // Create field mapping
-      const fieldMapping = this.createFieldMapping('Query', field);
-      queryFieldMapping.fieldMappings.push(fieldMapping);
+      const fieldMapping = this.createFieldMapping(operationTypeName, field);
+      typeFieldMapping.fieldMappings.push(fieldMapping);
     }
 
-    this.mapping.typeFieldMappings.push(queryFieldMapping);
+    this.mapping.typeFieldMappings.push(typeFieldMapping);
   }
 
   /**
    * Create an operation mapping between a GraphQL query and gRPC method
    *
+   * @param operationType - The type of operation (Query, Mutation, Subscription)
    * @param fieldName - Original GraphQL field name
    * @param mappedName - Transformed name for use in gRPC context
    */
-  private createOperationMapping(fieldName: string, mappedName: string): void {
+  private createOperationMapping(operationType: OperationType, fieldName: string, mappedName: string): void {
     const operationMapping = new OperationMapping({
-      type: OperationType.QUERY,
+      type: operationType,
       original: fieldName,
       mapped: mappedName,
       request: createRequestMessageName(mappedName),

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import {describe, expect, it, test} from 'vitest';
 import { compileGraphQLToMapping } from '../../src';
 
 describe('GraphQL Federation to Proto Mapping', () => {
@@ -38,12 +38,14 @@ describe('GraphQL Federation to Proto Mapping', () => {
             "original": "product",
             "request": "QueryProductRequest",
             "response": "QueryProductResponse",
+            "type": "OPERATION_TYPE_QUERY",
           },
           {
             "mapped": "QueryProducts",
             "original": "products",
             "request": "QueryProductsRequest",
             "response": "QueryProductsResponse",
+            "type": "OPERATION_TYPE_QUERY",
           },
         ],
         "service": "ProductService",
@@ -143,24 +145,28 @@ describe('GraphQL Federation to Proto Mapping', () => {
             "original": "user",
             "request": "QueryUserRequest",
             "response": "QueryUserResponse",
+            "type": "OPERATION_TYPE_QUERY",
           },
           {
             "mapped": "QueryUsers",
             "original": "users",
             "request": "QueryUsersRequest",
             "response": "QueryUsersResponse",
+            "type": "OPERATION_TYPE_QUERY",
           },
           {
             "mapped": "QueryOrder",
             "original": "order",
             "request": "QueryOrderRequest",
             "response": "QueryOrderResponse",
+            "type": "OPERATION_TYPE_QUERY",
           },
           {
             "mapped": "QueryOrders",
             "original": "orders",
             "request": "QueryOrdersRequest",
             "response": "QueryOrdersResponse",
+            "type": "OPERATION_TYPE_QUERY",
           },
         ],
         "service": "ECommerceService",
@@ -295,6 +301,7 @@ describe('GraphQL Federation to Proto Mapping', () => {
             "original": "products",
             "request": "QueryProductsRequest",
             "response": "QueryProductsResponse",
+            "type": "OPERATION_TYPE_QUERY",
           },
         ],
         "service": "InventoryService",
@@ -421,18 +428,21 @@ describe('GraphQL Federation to Proto Mapping', () => {
             "original": "product",
             "request": "QueryProductRequest",
             "response": "QueryProductResponse",
+            "type": "OPERATION_TYPE_QUERY",
           },
           {
             "mapped": "QueryTopProducts",
             "original": "topProducts",
             "request": "QueryTopProductsRequest",
             "response": "QueryTopProductsResponse",
+            "type": "OPERATION_TYPE_QUERY",
           },
           {
             "mapped": "QueryReview",
             "original": "review",
             "request": "QueryReviewRequest",
             "response": "QueryReviewResponse",
+            "type": "OPERATION_TYPE_QUERY",
           },
         ],
         "service": "ProductCatalogService",

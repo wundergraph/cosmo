@@ -1259,7 +1259,7 @@ func (s *graphServer) buildSubgraphGRPCClients(config *nodev1.EngineConfiguratio
 	subgraphGRPCClients := make(map[string]grpc.ClientConnInterface)
 	for _, dsConfig := range config.DatasourceConfigurations {
 		if grpcConfig := dsConfig.GetCustomGraphql().GetGrpc(); grpcConfig != nil {
-			networkConnection := grpcConfig.GetConnection().GetNetwork()
+			networkConnection := grpcConfig.GetNetwork()
 			if networkConnection == nil {
 				continue
 			}

@@ -205,17 +205,8 @@ message DataSourceCustom_GraphQL {
 message GRPCConfiguration {
   GRPCMapping mapping = 1;
   string proto_schema = 2;
-  ConnectionConfiguration connection = 3;
-}
-
-message ConnectionConfiguration {
-  // Only one connection type can be configured at a time
-  oneof connection_type {
-    // Network connection details (TCP or Unix socket)
-    NetworkConfiguration network = 1;
-    // Plugin connection details
-    PluginConfiguration plugin = 2;
-  }
+  PluginConfiguration plugin = 3;
+  NetworkConfiguration network = 4;
 }
 
 message NetworkConfiguration {
@@ -252,12 +243,13 @@ message GRPCMapping {
 
 // Defines the type of GraphQL operation
 enum OperationType {
+  OPERATION_TYPE_UNSPECIFIED = 0;
   // Query operation
-  QUERY = 0;
+  OPERATION_TYPE_QUERY = 1;
   // Mutation operation
-  MUTATION = 1;
+  OPERATION_TYPE_MUTATION = 2;
   // Subscription operation
-  SUBSCRIPTION = 2;
+  OPERATION_TYPE_SUBSCRIPTION = 3;
 }
 
 // Defines mapping between a GraphQL operation and a gRPC method
