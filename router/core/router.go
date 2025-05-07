@@ -213,19 +213,18 @@ type (
 		postOriginHandlers              []TransportPostHandler
 		headerRules                     *config.HeaderRules
 		subgraphTransportOptions        *SubgraphTransportOptions
-		//tracingAttributes               []config.CustomAttribute
-		graphqlMetricsConfig *GraphQLMetricsConfig
-		routerTrafficConfig  *config.RouterTrafficConfiguration
-		batchingConfig       *BatchingConfig
-		fileUploadConfig     *config.FileUpload
-		accessController     *AccessController
-		retryOptions         retrytransport.RetryOptions
-		redisClient          rd.RDCloser
-		mcpServer            *mcpserver.GraphQLSchemaServer
-		processStartTime     time.Time
-		developmentMode      bool
-		healthcheck          health.Checker
-		accessLogsConfig     *AccessLogsConfig
+		graphqlMetricsConfig            *GraphQLMetricsConfig
+		routerTrafficConfig             *config.RouterTrafficConfiguration
+		batchingConfig                  *BatchingConfig
+		fileUploadConfig                *config.FileUpload
+		accessController                *AccessController
+		retryOptions                    retrytransport.RetryOptions
+		redisClient                     rd.RDCloser
+		mcpServer                       *mcpserver.GraphQLSchemaServer
+		processStartTime                time.Time
+		developmentMode                 bool
+		healthcheck                     health.Checker
+		accessLogsConfig                *AccessLogsConfig
 		// If connecting to localhost inside Docker fails, fallback to the docker internal address for the host
 		localhostFallbackInsideDocker bool
 		tlsServerConfig               *tls.Config

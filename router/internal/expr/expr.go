@@ -15,51 +15,7 @@ import (
 
 /**
 * Naming conventions:
-* - Fields are named using camelCaset.Run("verify name and id expressions", func(t *testing.T) {
-		t.Parallel()
-		metricReader := metric.NewManualReader()
-		exporter := tracetest.NewInMemoryExporter(t)
-
-		testenv.Run(t, &testenv.Config{
-			TraceExporter: exporter,
-			MetricReader:  metricReader,
-			CustomTracingAttributes: []config.CustomAttribute{
-				{
-					Key: "sg_name",
-					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "subgraph.name",
-					},
-				},
-				{
-					Key: "sg_id",
-					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "subgraph.id",
-					},
-				},
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query:  `query employees { employees { id details { forename surname } notes } }`,
-				Header: map[string][]string{"service-name": {"service-name"}},
-			})
-
-			sn := exporter.GetSpans().Snapshots()
-			engineFetchSpan := sn[6]
-			require.Equal(t, "Engine - Fetch", engineFetchSpan.Name())
-			require.Equal(t, trace.SpanKindInternal, engineFetchSpan.SpanKind())
-
-			attributes := engineFetchSpan.Attributes()
-			exprAttributes := attributes[14:]
-
-			require.Len(t, exprAttributes, 2)
-
-			sgName := findAttr(exprAttributes, "sg_name")
-			require.Equal(t, "employees", sgName.Value.AsString())
-
-			sgId := findAttr(exprAttributes, "sg_id")
-			require.Equal(t, "0", sgId.Value.AsString())
-		})
-	})
+* - Fields are named using camelCase
 * - Methods are named using PascalCase (Required to be exported)
 * - Methods should be exported through a custom type to avoid exposing accidental methods that can mutate the context
 * - Use interface to expose only the required methods. Blocked by https://github.com/expr-lang/expr/issues/744
@@ -71,7 +27,7 @@ import (
 * Recommendations:
 * If possible function calls should be avoided in the expressions as they are much more expensive.
 * See https://github.com/expr-lang/expr/issues/734
-*/
+ */
 
 const ExprRequestKey = "request"
 const ExprRequestAuthKey = "auth"
