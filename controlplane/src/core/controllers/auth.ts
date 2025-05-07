@@ -64,10 +64,10 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
         id: userSession.userId,
         email: userInfoData.email,
         organizations: orgs
-          .filter((o) => !o.deletion || o.roles.includes('admin'))
+          .filter((o) => !o.deletion || o.rbac.is(['organization-owner', 'organization-admin']))
           .map((org) => ({
             ...org,
-            groups: org.groups.map(({ description, kcGroupId, ...rest }) => ({
+            groups: org.rbac.groups.map(({ description, kcGroupId, ...rest }) => ({
               ...rest,
             })),
           })),

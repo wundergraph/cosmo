@@ -432,12 +432,10 @@ export default class Keycloak {
     realm,
     userID,
     groupName,
-    roles,
   }: {
     realm?: string;
     userID: string;
     groupName: string;
-    roles: string[];
   }) {
     const organizationGroup = await this.client.groups.find({
       max: 1,
@@ -449,16 +447,15 @@ export default class Keycloak {
       throw new Error(`Organization group '${groupName}' not found`);
     }
 
-    for (const role of roles) {
-      const childGroup = await this.fetchChildGroup({
-        realm: realm || this.realm,
-        kcGroupId: organizationGroup[0].id!,
-        orgSlug: groupName,
-        childGroupType: role as MemberRole,
-      });
+    const subGroups = await this.fetchAllSubGroups({
+      realm: realm || this.realm,
+      kcGroupId: organizationGroup[0].id!,
+    });
+
+    for (const subGroup of subGroups) {
       await this.client.users.delFromGroup({
         id: userID,
-        groupId: childGroup.id!,
+        groupId: subGroup.id!,
         realm: realm || this.realm,
       });
     }

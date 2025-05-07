@@ -5,7 +5,7 @@ export class RBACEvaluator {
   readonly roles: OrganizationRole[];
   readonly rules: ReadonlyMap<OrganizationRole, string[]>;
 
-  constructor(groups: Omit<OrganizationGroupDTO, 'membersCount' | 'kcMapperId'>[]) {
+  constructor(readonly groups: Omit<OrganizationGroupDTO, 'membersCount' | 'kcMapperId'>[]) {
     const flattenRules = groups.flatMap((group) => group.rules);
     const rulesGroupedByRole = Object.groupBy(flattenRules, (rule) => rule.role);
 
@@ -18,6 +18,14 @@ export class RBACEvaluator {
     this.rules = result;
   }
 
+  get isOrganizationAdmin() {
+    return this.is(['organization-owner', 'organization-admin']);
+  }
+
+  get isOrganizationAdminOrDeveloper() {
+    return this.is(['organization-owner', 'organization-admin', 'organization-developer']);
+  }
+
   is(roles: OrganizationRole[]) {
     for (const role of roles) {
       if (this.roles.includes(role)) {
@@ -28,7 +36,7 @@ export class RBACEvaluator {
     return false;
   }
 
-  checkReadGraphAccess(graph: { namespace: string; targetId: string }) {
+  checkReadAccess(graph: { namespace: string; targetId: string }) {
     if (this.is(['organization-owner', 'organization-admin', 'organization-developer', 'organization-viewer'])) {
       return true;
     }

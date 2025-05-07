@@ -70,8 +70,7 @@ export function updateOrgMemberGroup(
     }
 
     // non admins cannot update the group of an org member
-    const rbac = new RBACEvaluator(user.groups);
-    if (!rbac.is(['organization-owner', 'organization-admin'])) {
+    if (!user.rbac.isOrganizationAdmin) {
       return {
         response: {
           code: EnumStatusCode.ERR,

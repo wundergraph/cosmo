@@ -63,7 +63,7 @@ export class OrganizationRepository {
     organizationName: string;
     organizationSlug: string;
     ownerID: string;
-  }): Promise<Omit<OrganizationDTO, 'groups'>> {
+  }): Promise<Omit<OrganizationDTO, 'rbac'>> {
     const insertedOrg = await this.db
       .insert(organizations)
       .values({
@@ -75,7 +75,7 @@ export class OrganizationRepository {
       .returning()
       .execute();
 
-    const org: Omit<OrganizationDTO, 'groups'> = {
+    const org: Omit<OrganizationDTO, 'rbac'> = {
       id: insertedOrg[0].id,
       name: insertedOrg[0].name,
       slug: insertedOrg[0].slug,
@@ -103,7 +103,7 @@ export class OrganizationRepository {
       .execute();
   }
 
-  public async bySlug(slug: string): Promise<Omit<OrganizationDTO, 'groups'> | null> {
+  public async bySlug(slug: string): Promise<Omit<OrganizationDTO, 'rbac'> | null> {
     const org = await this.db
       .select({
         id: organizations.id,
@@ -167,7 +167,7 @@ export class OrganizationRepository {
     };
   }
 
-  public async byId(id: string): Promise<Omit<OrganizationDTO, 'groups'> | null> {
+  public async byId(id: string): Promise<Omit<OrganizationDTO, 'rbac'> | null> {
     const org = await this.db
       .select({
         id: organizations.id,
@@ -248,7 +248,7 @@ export class OrganizationRepository {
     return userOrganizations.length > 0;
   }
 
-  public async memberships(input: { userId: string }): Promise<(OrganizationDTO & { roles: string[] })[]> {
+  public async memberships(input: { userId: string }): Promise<OrganizationDTO[]> {
     const userOrganizations = await this.db
       .selectDistinctOn([organizations.id], {
         id: organizations.id,
@@ -282,17 +282,19 @@ export class OrganizationRepository {
     return Promise.all(
       userOrganizations.map(async (org) => {
         const plan = org.billing?.plan || this.defaultBillingPlanId;
+        const groups = await this.getOrganizationMemberGroups({
+          userID: input.userId,
+          organizationID: org.id,
+        });
+
         return {
           id: org.id,
           name: org.name,
           slug: org.slug,
           creatorUserId: org.creatorUserId || undefined,
           createdAt: org.createdAt.toISOString(),
-          roles: ['admin'],
-          groups: await this.getOrganizationMemberGroups({
-            userID: input.userId,
-            organizationID: org.id,
-          }),
+          rbac: new RBACEvaluator(groups),
+          groups,
           features: await this.getFeatures({ organizationId: org.id, plan }),
           billing: plan
             ? {
@@ -368,11 +370,12 @@ export class OrganizationRepository {
       userID: orgMember[0].userID,
       orgMemberID: orgMember[0].memberID,
       email: orgMember[0].email,
-      roles: ['admin'],
-      groups: await this.getOrganizationMemberGroups({
-        organizationID: input.organizationID,
-        userID: input.userID,
-      }),
+      rbac: new RBACEvaluator(
+        await this.getOrganizationMemberGroups({
+          organizationID: input.organizationID,
+          userID: input.userID,
+        }),
+      ),
       active: orgMember[0].active,
     };
   }
@@ -407,11 +410,12 @@ export class OrganizationRepository {
       userID: orgMember[0].userID,
       orgMemberID: orgMember[0].memberID,
       email: orgMember[0].email,
-      roles: ['admin'],
-      groups: await this.getOrganizationMemberGroups({
-        organizationID: input.organizationID,
-        userID: orgMember[0].userID,
-      }),
+      rbac: new RBACEvaluator(
+        await this.getOrganizationMemberGroups({
+          organizationID: input.organizationID,
+          userID: orgMember[0].userID,
+        }),
+      ),
       active: orgMember[0].active,
     };
   }
@@ -455,10 +459,12 @@ export class OrganizationRepository {
         userID: member.userID,
         orgMemberID: member.memberID,
         email: member.email,
-        groups: await this.getOrganizationMemberGroups({
-          organizationID,
-          userID: member.userID,
-        }),
+        rbac: new RBACEvaluator(
+          await this.getOrganizationMemberGroups({
+            organizationID,
+            userID: member.userID,
+          }),
+        ),
         active: member.active,
       } as OrganizationMemberDTO);
     }
@@ -475,22 +481,6 @@ export class OrganizationRepository {
       .returning()
       .execute();
     return insertedMember[0];
-  }
-
-  public async addOrganizationMemberRoles(input: { memberID: string; roles: MemberRole[] }) {
-    const values: {
-      organizationMemberId: string;
-      role: MemberRole;
-    }[] = [];
-
-    for (const role of input.roles) {
-      values.push({
-        organizationMemberId: input.memberID,
-        role,
-      });
-    }
-
-    await this.db.insert(organizationMemberRoles).values(values).execute();
   }
 
   public async removeOrganizationMember(input: { userID: string; organizationID: string }) {
@@ -1086,8 +1076,7 @@ export class OrganizationRepository {
     const orgMembers = await this.getMembers({ organizationID: input.organizationID });
 
     for (const member of orgMembers) {
-      const rbac = new RBACEvaluator(member.groups);
-      if (rbac.is(['organization-owner', 'organization-admin'])) {
+      if (member.rbac.isOrganizationAdmin) {
         orgAdmins.push(member);
       }
     }
@@ -1446,9 +1435,7 @@ export class OrganizationRepository {
   public async adminMemberships({ userId }: { userId: string }) {
     const orgs = await this.memberships({ userId });
 
-    const orgsWhereUserIsAdmin = orgs.filter((o) =>
-      new RBACEvaluator(o.groups).is(['organization-owner', 'organization-admin']),
-    );
+    const orgsWhereUserIsAdmin = orgs.filter((o) => o.rbac.isOrganizationAdmin);
 
     // We need to track these orgs to delete them since the user is the only member.
     const soloAdminSoloMemberOrgs: OrganizationDTO[] = [];
@@ -1467,9 +1454,7 @@ export class OrganizationRepository {
         continue;
       }
 
-      const admins = members.filter((m) =>
-        new RBACEvaluator(m.groups).is(['organization-owner', 'organization-admin']),
-      );
+      const admins = members.filter((m) => m.rbac.isOrganizationAdmin);
 
       if (admins.length === 1) {
         soloAdminManyMembersOrgs.push(org);

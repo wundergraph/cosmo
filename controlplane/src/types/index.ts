@@ -221,7 +221,7 @@ export interface OrganizationDTO {
   creatorUserId?: string;
   createdAt: string;
   features?: Feature[];
-  groups: Omit<OrganizationGroupDTO, 'membersCount' | 'kcMapperId'>[];
+  rbac: RBACEvaluator;
   billing?: {
     plan: string;
     email?: string;
@@ -264,8 +264,7 @@ export interface OrganizationMemberDTO {
   userID: string;
   orgMemberID: string;
   email: string;
-  roles: string[];
-  groups: Omit<OrganizationGroupDTO, 'membersCount' | 'kcMapperId'>[];
+  rbac: RBACEvaluator;
   active: boolean;
 }
 

@@ -66,7 +66,7 @@ export function deleteOrganization(
     }
 
     // non admins cannot delete the organization
-    if (!user.roles.includes('admin')) {
+    if (!user.rbac.isOrganizationAdmin) {
       return {
         response: {
           code: EnumStatusCode.ERR,
@@ -95,7 +95,7 @@ export function deleteOrganization(
     }
 
     const organizationMembers = await orgRepo.getMembers({ organizationID: org.id });
-    const orgAdmins = organizationMembers.filter((m) => m.roles.includes('admin'));
+    const orgAdmins = organizationMembers.filter((m) => m.rbac.isOrganizationAdmin);
 
     const now = new Date();
     const oneMonthFromNow = addDays(now, delayForManualOrgDeletionInDays);

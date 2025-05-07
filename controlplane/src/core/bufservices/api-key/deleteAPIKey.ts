@@ -7,6 +7,7 @@ import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { RBACEvaluator } from '../../services/RBACEvaluator.js';
 
 export function deleteAPIKey(
   opts: RouterOptions,
@@ -42,12 +43,14 @@ export function deleteAPIKey(
       };
     }
 
-    const userRoles = await orgRepo.getOrganizationMemberRoles({
-      userID: authContext.userId || '',
-      organizationID: authContext.organizationId,
-    });
+    const rbac = new RBACEvaluator(
+      await orgRepo.getOrganizationMemberGroups({
+        userID: authContext.userId || '',
+        organizationID: authContext.organizationId,
+      }),
+    );
 
-    if (!(apiKey.creatorUserID === authContext.userId || userRoles.includes('admin'))) {
+    if (!(apiKey.creatorUserID === authContext.userId || rbac.isOrganizationAdmin)) {
       return {
         response: {
           code: EnumStatusCode.ERR,

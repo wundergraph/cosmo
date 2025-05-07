@@ -81,11 +81,6 @@ export class Authentication implements Authenticator {
         throw new Error('User is not a member of the organization');
       }
 
-      const userRoles = await this.orgRepo.getOrganizationMemberRoles({
-        userID: user.userId,
-        organizationID: organization.id,
-      });
-
       const isOrganizationDeactivated = !!organization.deactivation;
       const rbac = new RBACEvaluator(
         await this.orgRepo.getOrganizationMemberGroups({

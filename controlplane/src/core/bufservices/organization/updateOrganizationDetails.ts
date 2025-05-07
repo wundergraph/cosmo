@@ -49,7 +49,7 @@ export function updateOrganizationDetails(
     }
 
     // non admins cannot update the organization name
-    if (!orgMember.roles.includes('admin')) {
+    if (!orgMember.rbac.isOrganizationAdmin) {
       return {
         response: {
           code: EnumStatusCode.ERR,

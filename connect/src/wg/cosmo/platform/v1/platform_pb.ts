@@ -6989,22 +6989,17 @@ export class OrgMember extends Message<OrgMember> {
   email = "";
 
   /**
-   * @generated from field: repeated string roles = 3;
-   */
-  roles: string[] = [];
-
-  /**
-   * @generated from field: string orgMemberID = 4;
+   * @generated from field: string orgMemberID = 3;
    */
   orgMemberID = "";
 
   /**
-   * @generated from field: bool active = 5;
+   * @generated from field: bool active = 4;
    */
   active = false;
 
   /**
-   * @generated from field: repeated wg.cosmo.platform.v1.OrgMember.Group groups = 6;
+   * @generated from field: repeated wg.cosmo.platform.v1.OrgMember.Group groups = 5;
    */
   groups: OrgMember_Group[] = [];
 
@@ -7018,10 +7013,9 @@ export class OrgMember extends Message<OrgMember> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "userID", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "email", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "roles", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 4, name: "orgMemberID", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 5, name: "active", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 6, name: "groups", kind: "message", T: OrgMember_Group, repeated: true },
+    { no: 3, name: "orgMemberID", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "active", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 5, name: "groups", kind: "message", T: OrgMember_Group, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): OrgMember {

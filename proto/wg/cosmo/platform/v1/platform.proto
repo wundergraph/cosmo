@@ -943,10 +943,9 @@ message OrgMember{
 
   string userID = 1;
   string email = 2;
-  repeated string roles = 3;
-  string orgMemberID = 4;
-  bool active = 5;
-  repeated Group groups = 6;
+  string orgMemberID = 3;
+  bool active = 4;
+  repeated Group groups = 5;
 }
 
 message PendingOrgInvitation{
