@@ -45,7 +45,7 @@ project_dir
 
 `wgc router compose --config ./config.yaml`
 
-For local development, the user can point to the local plugin directory. The mapping is created from the graphql schema, the other files are picked from the directory by convention.
+For local development, the user can point to the local plugin directory. All required files are picked from the directory by convention.
 
 ```yaml
 version: 1
