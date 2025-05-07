@@ -151,7 +151,6 @@ import { getUserAccessibleResources } from './user/getUserAccessibleResources.js
 import { inviteUser } from './user/inviteUser.js';
 import { removeInvitation } from './user/removeInvitation.js';
 import { removeOrganizationMember } from './user/removeOrganizationMember.js';
-import { updateOrgMemberRole } from './user/updateOrgMemberRole.js';
 import { updateOrgMemberGroup } from './user/updateOrgMemberGroup.js';
 import { deleteCacheWarmerOperation } from './cache-warmer/deleteCacheWarmerOperation.js';
 import { setGraphRouterCompatibilityVersion } from './graph/setGraphRouterCompatibilityVersion.js';
@@ -378,10 +377,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     updateOrganizationDetails: (req, ctx) => {
       return updateOrganizationDetails(opts, req, ctx);
-    },
-
-    updateOrgMemberRole: (req, ctx) => {
-      return updateOrgMemberRole(opts, req, ctx);
     },
 
     updateOrgMemberGroup: (req, ctx) => {

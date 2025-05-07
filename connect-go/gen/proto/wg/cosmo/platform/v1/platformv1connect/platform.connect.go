@@ -313,9 +313,6 @@ const (
 	// PlatformServiceUpdateOrganizationDetailsProcedure is the fully-qualified name of the
 	// PlatformService's UpdateOrganizationDetails RPC.
 	PlatformServiceUpdateOrganizationDetailsProcedure = "/wg.cosmo.platform.v1.PlatformService/UpdateOrganizationDetails"
-	// PlatformServiceUpdateOrgMemberRoleProcedure is the fully-qualified name of the PlatformService's
-	// UpdateOrgMemberRole RPC.
-	PlatformServiceUpdateOrgMemberRoleProcedure = "/wg.cosmo.platform.v1.PlatformService/UpdateOrgMemberRole"
 	// PlatformServiceUpdateOrgMemberGroupProcedure is the fully-qualified name of the PlatformService's
 	// UpdateOrgMemberGroup RPC.
 	PlatformServiceUpdateOrgMemberGroupProcedure = "/wg.cosmo.platform.v1.PlatformService/UpdateOrgMemberGroup"
@@ -624,7 +621,6 @@ var (
 	platformServiceRestoreOrganizationMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("RestoreOrganization")
 	platformServiceLeaveOrganizationMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("LeaveOrganization")
 	platformServiceUpdateOrganizationDetailsMethodDescriptor             = platformServiceServiceDescriptor.Methods().ByName("UpdateOrganizationDetails")
-	platformServiceUpdateOrgMemberRoleMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("UpdateOrgMemberRole")
 	platformServiceUpdateOrgMemberGroupMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("UpdateOrgMemberGroup")
 	platformServiceIsGitHubAppInstalledMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("IsGitHubAppInstalled")
 	platformServiceCreateOIDCProviderMethodDescriptor                    = platformServiceServiceDescriptor.Methods().ByName("CreateOIDCProvider")
@@ -873,8 +869,6 @@ type PlatformServiceClient interface {
 	LeaveOrganization(context.Context, *connect.Request[v1.LeaveOrganizationRequest]) (*connect.Response[v1.LeaveOrganizationResponse], error)
 	// UpdateOrganizationDetails updates the name and slug of the organization
 	UpdateOrganizationDetails(context.Context, *connect.Request[v1.UpdateOrganizationDetailsRequest]) (*connect.Response[v1.UpdateOrganizationDetailsResponse], error)
-	// UpdateOrgMemberRole updates the role of an org member
-	UpdateOrgMemberRole(context.Context, *connect.Request[v1.UpdateOrgMemberRoleRequest]) (*connect.Response[v1.UpdateOrgMemberRoleResponse], error)
 	// UpdateOrgMemberGroup updates the group of an organization member
 	UpdateOrgMemberGroup(context.Context, *connect.Request[v1.UpdateOrgMemberGroupRequest]) (*connect.Response[v1.UpdateOrgMemberGroupResponse], error)
 	// IsGitHubAppInstalled checks if the cosmo github app is installed to a repository
@@ -1579,12 +1573,6 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceUpdateOrganizationDetailsMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
-		updateOrgMemberRole: connect.NewClient[v1.UpdateOrgMemberRoleRequest, v1.UpdateOrgMemberRoleResponse](
-			httpClient,
-			baseURL+PlatformServiceUpdateOrgMemberRoleProcedure,
-			connect.WithSchema(platformServiceUpdateOrgMemberRoleMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
 		updateOrgMemberGroup: connect.NewClient[v1.UpdateOrgMemberGroupRequest, v1.UpdateOrgMemberGroupResponse](
 			httpClient,
 			baseURL+PlatformServiceUpdateOrgMemberGroupProcedure,
@@ -2110,7 +2098,6 @@ type platformServiceClient struct {
 	restoreOrganization                   *connect.Client[v1.RestoreOrganizationRequest, v1.RestoreOrganizationResponse]
 	leaveOrganization                     *connect.Client[v1.LeaveOrganizationRequest, v1.LeaveOrganizationResponse]
 	updateOrganizationDetails             *connect.Client[v1.UpdateOrganizationDetailsRequest, v1.UpdateOrganizationDetailsResponse]
-	updateOrgMemberRole                   *connect.Client[v1.UpdateOrgMemberRoleRequest, v1.UpdateOrgMemberRoleResponse]
 	updateOrgMemberGroup                  *connect.Client[v1.UpdateOrgMemberGroupRequest, v1.UpdateOrgMemberGroupResponse]
 	isGitHubAppInstalled                  *connect.Client[v1.IsGitHubAppInstalledRequest, v1.IsGitHubAppInstalledResponse]
 	createOIDCProvider                    *connect.Client[v1.CreateOIDCProviderRequest, v1.CreateOIDCProviderResponse]
@@ -2664,11 +2651,6 @@ func (c *platformServiceClient) UpdateOrganizationDetails(ctx context.Context, r
 	return c.updateOrganizationDetails.CallUnary(ctx, req)
 }
 
-// UpdateOrgMemberRole calls wg.cosmo.platform.v1.PlatformService.UpdateOrgMemberRole.
-func (c *platformServiceClient) UpdateOrgMemberRole(ctx context.Context, req *connect.Request[v1.UpdateOrgMemberRoleRequest]) (*connect.Response[v1.UpdateOrgMemberRoleResponse], error) {
-	return c.updateOrgMemberRole.CallUnary(ctx, req)
-}
-
 // UpdateOrgMemberGroup calls wg.cosmo.platform.v1.PlatformService.UpdateOrgMemberGroup.
 func (c *platformServiceClient) UpdateOrgMemberGroup(ctx context.Context, req *connect.Request[v1.UpdateOrgMemberGroupRequest]) (*connect.Response[v1.UpdateOrgMemberGroupResponse], error) {
 	return c.updateOrgMemberGroup.CallUnary(ctx, req)
@@ -3212,8 +3194,6 @@ type PlatformServiceHandler interface {
 	LeaveOrganization(context.Context, *connect.Request[v1.LeaveOrganizationRequest]) (*connect.Response[v1.LeaveOrganizationResponse], error)
 	// UpdateOrganizationDetails updates the name and slug of the organization
 	UpdateOrganizationDetails(context.Context, *connect.Request[v1.UpdateOrganizationDetailsRequest]) (*connect.Response[v1.UpdateOrganizationDetailsResponse], error)
-	// UpdateOrgMemberRole updates the role of an org member
-	UpdateOrgMemberRole(context.Context, *connect.Request[v1.UpdateOrgMemberRoleRequest]) (*connect.Response[v1.UpdateOrgMemberRoleResponse], error)
 	// UpdateOrgMemberGroup updates the group of an organization member
 	UpdateOrgMemberGroup(context.Context, *connect.Request[v1.UpdateOrgMemberGroupRequest]) (*connect.Response[v1.UpdateOrgMemberGroupResponse], error)
 	// IsGitHubAppInstalled checks if the cosmo github app is installed to a repository
@@ -3914,12 +3894,6 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceUpdateOrganizationDetailsMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
-	platformServiceUpdateOrgMemberRoleHandler := connect.NewUnaryHandler(
-		PlatformServiceUpdateOrgMemberRoleProcedure,
-		svc.UpdateOrgMemberRole,
-		connect.WithSchema(platformServiceUpdateOrgMemberRoleMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
 	platformServiceUpdateOrgMemberGroupHandler := connect.NewUnaryHandler(
 		PlatformServiceUpdateOrgMemberGroupProcedure,
 		svc.UpdateOrgMemberGroup,
@@ -4535,8 +4509,6 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceLeaveOrganizationHandler.ServeHTTP(w, r)
 		case PlatformServiceUpdateOrganizationDetailsProcedure:
 			platformServiceUpdateOrganizationDetailsHandler.ServeHTTP(w, r)
-		case PlatformServiceUpdateOrgMemberRoleProcedure:
-			platformServiceUpdateOrgMemberRoleHandler.ServeHTTP(w, r)
 		case PlatformServiceUpdateOrgMemberGroupProcedure:
 			platformServiceUpdateOrgMemberGroupHandler.ServeHTTP(w, r)
 		case PlatformServiceIsGitHubAppInstalledProcedure:
@@ -5056,10 +5028,6 @@ func (UnimplementedPlatformServiceHandler) LeaveOrganization(context.Context, *c
 
 func (UnimplementedPlatformServiceHandler) UpdateOrganizationDetails(context.Context, *connect.Request[v1.UpdateOrganizationDetailsRequest]) (*connect.Response[v1.UpdateOrganizationDetailsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.UpdateOrganizationDetails is not implemented"))
-}
-
-func (UnimplementedPlatformServiceHandler) UpdateOrgMemberRole(context.Context, *connect.Request[v1.UpdateOrgMemberRoleRequest]) (*connect.Response[v1.UpdateOrgMemberRoleResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.UpdateOrgMemberRole is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) UpdateOrgMemberGroup(context.Context, *connect.Request[v1.UpdateOrgMemberGroupRequest]) (*connect.Response[v1.UpdateOrgMemberGroupResponse], error) {

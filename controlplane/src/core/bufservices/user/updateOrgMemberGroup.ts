@@ -11,6 +11,7 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
+import { RBACEvaluator } from '../../services/RBACEvaluator.js';
 
 export function updateOrgMemberGroup(
   opts: RouterOptions,
@@ -44,7 +45,7 @@ export function updateOrgMemberGroup(
       groupId: req.groupId,
     });
 
-    if (!orgGroup?.kcGroupId) {
+    if (!orgGroup) {
       return {
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,
@@ -68,17 +69,18 @@ export function updateOrgMemberGroup(
       };
     }
 
-    // non admins cannot update the role of an org member
-    if (!user.roles.includes('admin')) {
+    // non admins cannot update the group of an org member
+    const rbac = new RBACEvaluator(user.groups);
+    if (!rbac.is(['organization-owner', 'organization-admin'])) {
       return {
         response: {
           code: EnumStatusCode.ERR,
-          details: 'User does not have the permissions to update the role of an organization member.',
+          details: 'User does not have the permissions to update the group of an organization member.',
         },
       };
     }
 
-    // fetching the user whose role is being updated.
+    // fetching the user whose group is being updated.
     const orgMember = await orgRepo.getOrganizationMember({
       organizationID: authContext.organizationId,
       userID: req.orgMemberUserID,
@@ -125,7 +127,7 @@ export function updateOrgMemberGroup(
         return {
           response: {
             code: EnumStatusCode.ERR,
-            details: 'User has logged in using the OIDC provider. Please update the role using the provider.',
+            details: 'User has logged in using the OIDC provider. Please update the group using the provider.',
           },
         };
       }
@@ -157,11 +159,13 @@ export function updateOrgMemberGroup(
       });
     }
 
-    await opts.keycloakClient.client.users.addToGroup({
-      id: users[0].id!,
-      realm: opts.keycloakRealm,
-      groupId: orgGroup.kcGroupId,
-    });
+    if (orgGroup.kcGroupId) {
+      await opts.keycloakClient.client.users.addToGroup({
+        id: users[0].id!,
+        realm: opts.keycloakRealm,
+        groupId: orgGroup.kcGroupId,
+      });
+    }
 
     await orgRepo.updateUserGroup({
       orgMemberID: orgMember.orgMemberID,
@@ -175,7 +179,7 @@ export function updateOrgMemberGroup(
       action: 'updated',
       actorId: authContext.userId,
       auditableDisplayName: orgGroup.name,
-      auditableType: 'member_role',
+      auditableType: 'member_group',
       actorDisplayName: authContext.userDisplayName,
       apiKeyName: authContext.apiKeyName,
       targetId: orgMember.userID,

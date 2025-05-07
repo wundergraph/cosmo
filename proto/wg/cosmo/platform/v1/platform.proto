@@ -1332,16 +1332,6 @@ message UpdateOrganizationDetailsResponse {
   Response response = 1;
 }
 
-message UpdateOrgMemberRoleRequest {
-  string userID = 1;
-  string orgMemberUserID = 2;
-  string role = 3;
-}
-
-message UpdateOrgMemberRoleResponse {
-  Response response = 1;
-}
-
 message UpdateOrgMemberGroupRequest {
   string userID = 1;
   string orgMemberUserID = 2;
@@ -2931,8 +2921,6 @@ service PlatformService {
   rpc LeaveOrganization(LeaveOrganizationRequest) returns (LeaveOrganizationResponse) {}
   // UpdateOrganizationDetails updates the name and slug of the organization
   rpc UpdateOrganizationDetails(UpdateOrganizationDetailsRequest) returns (UpdateOrganizationDetailsResponse) {}
-  // UpdateOrgMemberRole updates the role of an org member
-  rpc UpdateOrgMemberRole(UpdateOrgMemberRoleRequest) returns (UpdateOrgMemberRoleResponse) {}
   // UpdateOrgMemberGroup updates the group of an organization member
   rpc UpdateOrgMemberGroup(UpdateOrgMemberGroupRequest) returns (UpdateOrgMemberGroupResponse) {}
 

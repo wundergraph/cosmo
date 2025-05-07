@@ -204,10 +204,13 @@ describe.sequential('Delete user tests', (ctx) => {
     const mainUserContext = users[TestUser.adminAliceCompanyA];
     const tempUserContext = await createTempUser(server.db, keycloakClient, realm, mainUserContext.organizationSlug);
 
-    await client.updateOrgMemberRole({
+    const orgGroups = await client.getOrganizationGroups({});
+    const developerGroup = orgGroups.groups.find((g) => g.name === 'developer')!;
+
+    await client.updateOrgMemberGroup({
       userID: mainUserContext.userId,
       orgMemberUserID: tempUserContext.userId,
-      role: 'developer',
+      groupId: developerGroup.groupId,
     });
 
     const res = await client.deleteUser({});

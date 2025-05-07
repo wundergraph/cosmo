@@ -48,7 +48,7 @@ export type AuditableType =
   | 'api_key'
   | 'webhook_config'
   | 'integration'
-  | 'member_role'
+  | 'member_group'
   | 'user'
   | 'subscription'
   | 'namespace'
