@@ -13,8 +13,8 @@ project_dir
   - myplugin
     - src
       - schema.graphql # User defined schema
-      - main.go # Generated from the schema but editable
-      - service.go # Generated from the schema but editable
+      - main.go # Empty, Generated from the scaffold but editable
+      - service.go # Empty, Generated from the scaffold but editable
       - go.mod
     - README.md # Getting Started guide
 ```
@@ -32,8 +32,8 @@ project_dir
   - myplugin
     - src
       - schema.graphql # User defined schema
-      - main.go # Generated from the schema but editable
-      - service.go # Generated from the schema but editable
+      - main.go # Main entry point of the plugin
+      - service.go # Updated according to the proto file
       - go.mod
     - build
       - binary (NEW) **Optional**
