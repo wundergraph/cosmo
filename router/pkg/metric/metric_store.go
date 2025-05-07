@@ -85,7 +85,7 @@ var (
 
 	RouterInfoDescription = "Router configuration info."
 	RouterInfoOptions     = []otelmetric.Int64ObservableGaugeOption{
-		otelmetric.WithDescription(RequestCounterDescription),
+		otelmetric.WithDescription(RouterInfoDescription),
 	}
 )
 
@@ -124,8 +124,8 @@ type (
 		MeasureOperationPlanningTime(ctx context.Context, planningTime float64, opts ...otelmetric.RecordOption)
 		MeasureSchemaFieldUsage(ctx context.Context, schemaUsage int64, opts ...otelmetric.AddOption)
 		StartRouterInfoCallback(opts ...otelmetric.ObserveOption) error
-		DeregisterRegisteredInstruments() error
 		Flush(ctx context.Context) error
+		Shutdown() error
 	}
 
 	// Store is the unified metric interface for OTEL and Prometheus metrics. The interface can vary depending on
@@ -399,8 +399,14 @@ func (h *Metrics) Shutdown(ctx context.Context) error {
 		err = errors.Join(err, fmt.Errorf("failed to flush metrics: %w", errFlush))
 	}
 
-	h.promRequestMetrics.DeregisterRegisteredInstruments()
-	h.otlpRequestMetrics.DeregisterRegisteredInstruments()
+	errProm := h.promRequestMetrics.Shutdown()
+	if err != nil {
+		err = errors.Join(err, fmt.Errorf("failed to shutdown prom metrics: %w", errProm))
+	}
+	errOtlp := h.otlpRequestMetrics.Shutdown()
+	if err != nil {
+		err = errors.Join(err, fmt.Errorf("failed to shutdown otlp metrics: %w", errOtlp))
+	}
 
 	return err
 }

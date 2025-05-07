@@ -43,18 +43,6 @@ func NewPromMetricStore(logger *zap.Logger, meterProvider *metric.MeterProvider)
 	return m, nil
 }
 
-func (h *PromMetricStore) DeregisterRegisteredInstruments() error {
-	var err error
-
-	for _, reg := range h.instrumentRegistrations {
-		if regErr := reg.Unregister(); regErr != nil {
-			err = errors.Join(regErr)
-		}
-	}
-
-	return err
-}
-
 func (h *PromMetricStore) MeasureInFlight(ctx context.Context, opts ...otelmetric.AddOption) func() {
 	if c, ok := h.measurements.upDownCounters[InFlightRequestsUpDownCounter]; ok {
 		c.Add(ctx, 1, opts...)
@@ -128,8 +116,16 @@ func (h *PromMetricStore) Flush(ctx context.Context) error {
 	return h.meterProvider.ForceFlush(ctx)
 }
 
-func (h *PromMetricStore) Shutdown(ctx context.Context) error {
-	return h.meterProvider.Shutdown(ctx)
+func (h *PromMetricStore) Shutdown() error {
+	var err error
+
+	for _, reg := range h.instrumentRegistrations {
+		if regErr := reg.Unregister(); regErr != nil {
+			err = errors.Join(regErr)
+		}
+	}
+
+	return err
 }
 
 // explodeAddInstrument explodes the metric into multiple metrics with different label values in Prometheus.

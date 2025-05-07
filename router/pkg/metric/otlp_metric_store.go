@@ -43,18 +43,6 @@ func NewOtlpMetricStore(logger *zap.Logger, meterProvider *metric.MeterProvider)
 	return m, nil
 }
 
-func (h *OtlpMetricStore) DeregisterRegisteredInstruments() error {
-	var err error
-
-	for _, reg := range h.instrumentRegistrations {
-		if regErr := reg.Unregister(); regErr != nil {
-			err = errors.Join(regErr)
-		}
-	}
-
-	return err
-}
-
 func (h *OtlpMetricStore) MeasureInFlight(ctx context.Context, opts ...otelmetric.AddOption) func() {
 
 	if c, ok := h.measurements.upDownCounters[InFlightRequestsUpDownCounter]; ok {
@@ -125,4 +113,16 @@ func (h *OtlpMetricStore) MeasureSchemaFieldUsage(_ context.Context, _ int64, _ 
 
 func (h *OtlpMetricStore) Flush(ctx context.Context) error {
 	return h.meterProvider.ForceFlush(ctx)
+}
+
+func (h *OtlpMetricStore) Shutdown() error {
+	var err error
+
+	for _, reg := range h.instrumentRegistrations {
+		if regErr := reg.Unregister(); regErr != nil {
+			err = errors.Join(regErr)
+		}
+	}
+
+	return err
 }
