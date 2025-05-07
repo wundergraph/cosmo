@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/wundergraph/cosmo/router/pkg/pubsub/utils"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/eventdata"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/argument_templates"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
@@ -55,19 +55,19 @@ func (p *Planner) ConfigureFetch() resolve.FetchConfiguration {
 
 	var dataSource resolve.DataSource
 
-	dataSource, err := p.pubSubDataSource.GetResolveDataSource()
+	dataSource, err := p.pubSubDataSource.ResolveDataSource()
 	if err != nil {
 		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to get data source: %w", err))
 		return resolve.FetchConfiguration{}
 	}
 
-	event, err := utils.BuildEventDataBytes(p.rootFieldRef, p.visitor, &p.variables)
+	event, err := eventdata.BuildEventDataBytes(p.rootFieldRef, p.visitor, &p.variables)
 	if err != nil {
 		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to get resolve data source input: %w", err))
 		return resolve.FetchConfiguration{}
 	}
 
-	input, err := p.pubSubDataSource.GetResolveDataSourceInput(event)
+	input, err := p.pubSubDataSource.ResolveDataSourceInput(event)
 	if err != nil {
 		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to get resolve data source input: %w", err))
 		return resolve.FetchConfiguration{}
@@ -78,7 +78,7 @@ func (p *Planner) ConfigureFetch() resolve.FetchConfiguration {
 		Variables:  p.variables,
 		DataSource: dataSource,
 		PostProcessing: resolve.PostProcessingConfiguration{
-			MergePath: []string{p.pubSubDataSource.GetEngineEventConfiguration().GetFieldName()},
+			MergePath: []string{p.pubSubDataSource.EngineEventConfiguration().GetFieldName()},
 		},
 	}
 }
@@ -89,13 +89,13 @@ func (p *Planner) ConfigureSubscription() plan.SubscriptionConfiguration {
 		return plan.SubscriptionConfiguration{}
 	}
 
-	dataSource, err := p.pubSubDataSource.GetResolveDataSourceSubscription()
+	dataSource, err := p.pubSubDataSource.ResolveDataSourceSubscription()
 	if err != nil {
 		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to get resolve data source subscription: %w", err))
 		return plan.SubscriptionConfiguration{}
 	}
 
-	input, err := p.pubSubDataSource.GetResolveDataSourceSubscriptionInput()
+	input, err := p.pubSubDataSource.ResolveDataSourceSubscriptionInput()
 	if err != nil {
 		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to get resolve data source subscription input: %w", err))
 		return plan.SubscriptionConfiguration{}
@@ -106,7 +106,7 @@ func (p *Planner) ConfigureSubscription() plan.SubscriptionConfiguration {
 		Variables:  p.variables,
 		DataSource: dataSource,
 		PostProcessing: resolve.PostProcessingConfiguration{
-			MergePath: []string{p.pubSubDataSource.GetEngineEventConfiguration().GetFieldName()},
+			MergePath: []string{p.pubSubDataSource.EngineEventConfiguration().GetFieldName()},
 		},
 	}
 }

@@ -6,9 +6,9 @@ import (
 )
 
 type PubSubDataSource interface {
-	GetResolveDataSource() (resolve.DataSource, error)
-	GetResolveDataSourceInput(event []byte) (string, error)
-	GetEngineEventConfiguration() *nodev1.EngineEventConfiguration
-	GetResolveDataSourceSubscription() (resolve.SubscriptionDataSource, error)
-	GetResolveDataSourceSubscriptionInput() (string, error)
+	ResolveDataSource() (resolve.DataSource, error)
+	ResolveDataSourceInput(event []byte) (string, error)
+	EngineEventConfiguration() *nodev1.EngineEventConfiguration
+	ResolveDataSourceSubscription() (resolve.SubscriptionDataSource, error)
+	ResolveDataSourceSubscriptionInput() (string, error)
 }

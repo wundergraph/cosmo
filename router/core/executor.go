@@ -34,7 +34,7 @@ type ExecutorConfigurationBuilder struct {
 	subscriptionClientOptions *SubscriptionClientOptions
 	instanceData              InstanceData
 
-	addPubSubProviderCallback func(provider datasource.PubSubProvider)
+	providers []datasource.PubSubProvider
 }
 
 type Executor struct {
@@ -213,7 +213,7 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 		routerEngineCfg.Execution.EnableSingleFlight,
 		routerEngineCfg.Execution.EnableNetPoll,
 		b.instanceData,
-	), b.logger, b.addPubSubProviderCallback)
+	), b.logger)
 
 	// this generates the plan config using the data source factories from the config package
 	planConfig, err := loader.Load(engineConfig, subgraphs, routerEngineCfg)
@@ -234,5 +234,12 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 	planConfig.MinifySubgraphOperations = routerEngineCfg.Execution.MinifySubgraphOperations
 
 	planConfig.EnableOperationNamePropagation = routerEngineCfg.Execution.EnableSubgraphFetchOperationName
+
+	b.providers = loader.GetProviders()
+
 	return planConfig, nil
+}
+
+func (b *ExecutorConfigurationBuilder) GetProviders() []datasource.PubSubProvider {
+	return b.providers
 }

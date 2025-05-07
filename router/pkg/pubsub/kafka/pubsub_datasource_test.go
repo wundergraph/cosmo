@@ -67,11 +67,11 @@ func TestPubSubDataSourceWithMockAdapter(t *testing.T) {
 	}
 
 	// Get the data source
-	ds, err := pubsub.GetResolveDataSource()
+	ds, err := pubsub.ResolveDataSource()
 	require.NoError(t, err)
 
 	// Get the input
-	input, err := pubsub.GetResolveDataSourceInput([]byte(`{"test":"data"}`))
+	input, err := pubsub.ResolveDataSourceInput([]byte(`{"test":"data"}`))
 	require.NoError(t, err)
 
 	// Call Load on the data source
@@ -109,7 +109,7 @@ func TestPubSubDataSource_GetResolveDataSource_WrongType(t *testing.T) {
 	}
 
 	// Get the data source
-	ds, err := pubsub.GetResolveDataSource()
+	ds, err := pubsub.ResolveDataSource()
 	require.Error(t, err)
 	require.Nil(t, ds)
 }
@@ -135,7 +135,7 @@ func TestPubSubDataSource_GetResolveDataSourceInput_MultipleTopics(t *testing.T)
 	}
 
 	// Get the input
-	input, err := pubsub.GetResolveDataSourceInput([]byte(`{"test":"data"}`))
+	input, err := pubsub.ResolveDataSourceInput([]byte(`{"test":"data"}`))
 	require.Error(t, err)
 	require.Empty(t, input)
 }
@@ -161,7 +161,7 @@ func TestPubSubDataSource_GetResolveDataSourceInput_NoTopics(t *testing.T) {
 	}
 
 	// Get the input
-	input, err := pubsub.GetResolveDataSourceInput([]byte(`{"test":"data"}`))
+	input, err := pubsub.ResolveDataSourceInput([]byte(`{"test":"data"}`))
 	require.Error(t, err)
 	require.Empty(t, input)
 }
@@ -189,7 +189,7 @@ func TestKafkaPubSubDataSourceMultiTopicSubscription(t *testing.T) {
 	}
 
 	// Test GetResolveDataSourceSubscriptionInput
-	subscriptionInput, err := pubsub.GetResolveDataSourceSubscriptionInput()
+	subscriptionInput, err := pubsub.ResolveDataSourceSubscriptionInput()
 	require.NoError(t, err, "Expected no error from GetResolveDataSourceSubscriptionInput")
 	require.NotEmpty(t, subscriptionInput, "Expected non-empty subscription input")
 

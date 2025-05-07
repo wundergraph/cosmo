@@ -14,11 +14,11 @@ type PubSubDataSource struct {
 	NatsAdapter        AdapterInterface
 }
 
-func (c *PubSubDataSource) GetEngineEventConfiguration() *nodev1.EngineEventConfiguration {
+func (c *PubSubDataSource) EngineEventConfiguration() *nodev1.EngineEventConfiguration {
 	return c.EventConfiguration.GetEngineEventConfiguration()
 }
 
-func (c *PubSubDataSource) GetResolveDataSource() (resolve.DataSource, error) {
+func (c *PubSubDataSource) ResolveDataSource() (resolve.DataSource, error) {
 	var dataSource resolve.DataSource
 
 	typeName := c.EventConfiguration.GetEngineEventConfiguration().GetType()
@@ -38,7 +38,7 @@ func (c *PubSubDataSource) GetResolveDataSource() (resolve.DataSource, error) {
 	return dataSource, nil
 }
 
-func (c *PubSubDataSource) GetResolveDataSourceInput(event []byte) (string, error) {
+func (c *PubSubDataSource) ResolveDataSourceInput(event []byte) (string, error) {
 	subjects := c.EventConfiguration.GetSubjects()
 
 	if len(subjects) != 1 {
@@ -58,13 +58,13 @@ func (c *PubSubDataSource) GetResolveDataSourceInput(event []byte) (string, erro
 	return evtCfg.MarshalJSONTemplate(), nil
 }
 
-func (c *PubSubDataSource) GetResolveDataSourceSubscription() (resolve.SubscriptionDataSource, error) {
+func (c *PubSubDataSource) ResolveDataSourceSubscription() (resolve.SubscriptionDataSource, error) {
 	return &SubscriptionSource{
 		pubSub: c.NatsAdapter,
 	}, nil
 }
 
-func (c *PubSubDataSource) GetResolveDataSourceSubscriptionInput() (string, error) {
+func (c *PubSubDataSource) ResolveDataSourceSubscriptionInput() (string, error) {
 	providerId := c.GetProviderId()
 
 	evtCfg := SubscriptionEventConfiguration{

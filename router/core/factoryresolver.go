@@ -31,14 +31,14 @@ type Loader struct {
 	ctx      context.Context
 	resolver FactoryResolver
 	// includeInfo controls whether additional information like type usage and field usage is included in the plan de
-	includeInfo               bool
-	logger                    *zap.Logger
-	addPubSubProviderCallback func(provider datasource.PubSubProvider)
+	includeInfo bool
+	logger      *zap.Logger
+	providers   []datasource.PubSubProvider
 }
 
 type InstanceData struct {
-	hostName      string
-	listenAddress string
+	HostName      string
+	ListenAddress string
 }
 
 type FactoryResolver interface {
@@ -175,13 +175,13 @@ func (d *DefaultFactoryResolver) InstanceData() InstanceData {
 	return d.instanceData
 }
 
-func NewLoader(ctx context.Context, includeInfo bool, resolver FactoryResolver, logger *zap.Logger, addPubSubProviderCallback func(provider datasource.PubSubProvider)) *Loader {
+func NewLoader(ctx context.Context, includeInfo bool, resolver FactoryResolver, logger *zap.Logger) *Loader {
 	return &Loader{
-		ctx:                       ctx,
-		resolver:                  resolver,
-		includeInfo:               includeInfo,
-		logger:                    logger,
-		addPubSubProviderCallback: addPubSubProviderCallback,
+		ctx:         ctx,
+		resolver:    resolver,
+		includeInfo: includeInfo,
+		logger:      logger,
+		providers:   []datasource.PubSubProvider{},
 	}
 }
 
@@ -192,6 +192,10 @@ func (l *Loader) LoadInternedString(engineConfig *nodev1.EngineConfiguration, st
 		return "", fmt.Errorf("no string found for key %q", key)
 	}
 	return s, nil
+}
+
+func (l *Loader) GetProviders() []datasource.PubSubProvider {
+	return l.providers
 }
 
 type RouterEngineConfiguration struct {
@@ -431,8 +435,6 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 		case nodev1.DataSourceKind_PUBSUB:
 			var err error
 
-			var providers []datasource.PubSubProvider
-
 			dsMeta := l.dataSourceMetaData(in)
 			providersFactories := pubsub.GetProviderFactories()
 			for _, providerFactory := range providersFactories {
@@ -442,23 +444,22 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 					dsMeta,
 					routerEngineConfig.Events,
 					l.logger,
-					l.resolver.InstanceData().hostName,
-					l.resolver.InstanceData().listenAddress,
+					l.resolver.InstanceData().HostName,
+					l.resolver.InstanceData().ListenAddress,
 				)
 				if err != nil {
 					return nil, err
 				}
 				if provider != nil {
-					providers = append(providers, provider)
-					l.addPubSubProviderCallback(provider)
+					l.providers = append(l.providers, provider)
 				}
 			}
 
 			out, err = plan.NewDataSourceConfiguration(
 				in.Id,
-				datasource.NewFactory(l.ctx, routerEngineConfig.Events, providers),
+				datasource.NewFactory(l.ctx, routerEngineConfig.Events, l.providers),
 				dsMeta,
-				providers,
+				l.providers,
 			)
 			if err != nil {
 				return nil, err

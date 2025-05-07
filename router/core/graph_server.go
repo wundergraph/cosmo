@@ -125,8 +125,8 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		inFlightRequests:        &atomic.Uint64{},
 		graphMuxList:            make([]*graphMux, 0, 1),
 		instanceData: InstanceData{
-			hostName:      r.hostName,
-			listenAddress: r.listenAddr,
+			HostName:      r.hostName,
+			ListenAddress: r.listenAddr,
 		},
 		storageProviders: &r.storageProviders,
 	}
@@ -922,12 +922,6 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		SubgraphErrorPropagation: s.subgraphErrorPropagation,
 	}
 
-	var pubSubProviders []datasource.PubSubProvider
-
-	addPubSubProviderCallback := func(provider datasource.PubSubProvider) {
-		pubSubProviders = append(pubSubProviders, provider)
-	}
-
 	// map[string]*http.Transport cannot be coerced into map[string]http.RoundTripper, unfortunately
 	subgraphTippers := map[string]http.RoundTripper{}
 	for subgraph, subgraphTransport := range s.subgraphTransports {
@@ -966,7 +960,6 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			LocalhostFallbackInsideDocker: s.localhostFallbackInsideDocker,
 			Logger:                        s.logger,
 		},
-		addPubSubProviderCallback: addPubSubProviderCallback,
 	}
 
 	executor, err := ecb.Build(
@@ -986,6 +979,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		return nil, fmt.Errorf("failed to build plan configuration: %w", err)
 	}
 
+	pubSubProviders := ecb.GetProviders()
 	if len(pubSubProviders) > 0 {
 		for _, provider := range pubSubProviders {
 			if err := provider.Startup(ctx); err != nil {

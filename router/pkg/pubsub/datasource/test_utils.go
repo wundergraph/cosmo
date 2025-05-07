@@ -12,17 +12,17 @@ import (
 // This function can be used by other packages to test their PubSubDataSource implementations
 func VerifyPubSubDataSourceImplementation(t *testing.T, pubSub PubSubDataSource) {
 	// Test GetEngineEventConfiguration
-	engineEventConfig := pubSub.GetEngineEventConfiguration()
+	engineEventConfig := pubSub.EngineEventConfiguration()
 	require.NotNil(t, engineEventConfig, "Expected non-nil EngineEventConfiguration")
 
 	// Test GetResolveDataSource
-	dataSource, err := pubSub.GetResolveDataSource()
+	dataSource, err := pubSub.ResolveDataSource()
 	require.NoError(t, err, "Expected no error from GetResolveDataSource")
 	require.NotNil(t, dataSource, "Expected non-nil DataSource")
 
 	// Test GetResolveDataSourceInput with sample event data
 	testEvent := []byte(`{"test":"data"}`)
-	input, err := pubSub.GetResolveDataSourceInput(testEvent)
+	input, err := pubSub.ResolveDataSourceInput(testEvent)
 	require.NoError(t, err, "Expected no error from GetResolveDataSourceInput")
 	assert.NotEmpty(t, input, "Expected non-empty input")
 
@@ -32,12 +32,12 @@ func VerifyPubSubDataSourceImplementation(t *testing.T, pubSub PubSubDataSource)
 	assert.NoError(t, err, "Expected valid JSON from GetResolveDataSourceInput")
 
 	// Test GetResolveDataSourceSubscription
-	subscription, err := pubSub.GetResolveDataSourceSubscription()
+	subscription, err := pubSub.ResolveDataSourceSubscription()
 	require.NoError(t, err, "Expected no error from GetResolveDataSourceSubscription")
 	require.NotNil(t, subscription, "Expected non-nil SubscriptionDataSource")
 
 	// Test GetResolveDataSourceSubscriptionInput
-	subscriptionInput, err := pubSub.GetResolveDataSourceSubscriptionInput()
+	subscriptionInput, err := pubSub.ResolveDataSourceSubscriptionInput()
 	require.NoError(t, err, "Expected no error from GetResolveDataSourceSubscriptionInput")
 	assert.NotEmpty(t, subscriptionInput, "Expected non-empty subscription input")
 

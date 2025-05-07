@@ -10,7 +10,6 @@ import (
 	log "github.com/jensneuse/abstractlogger"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
@@ -275,13 +274,15 @@ func (pg *PlanGenerator) loadConfiguration(routerConfig *nodev1.RouterConfig, lo
 		graphql_datasource.WithNetPollConfiguration(netPollConfig),
 	)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	loader := NewLoader(ctx, false, &DefaultFactoryResolver{
 		engineCtx:          ctx,
 		httpClient:         http.DefaultClient,
 		streamingClient:    http.DefaultClient,
 		subscriptionClient: subscriptionClient,
-	}, logger, func(provider datasource.PubSubProvider) {})
+	}, logger)
 
 	// this generates the plan configuration using the data source factories from the config package
 	planConfig, err := loader.Load(routerConfig.GetEngineConfig(), routerConfig.GetSubgraphs(), &routerEngineConfig)
