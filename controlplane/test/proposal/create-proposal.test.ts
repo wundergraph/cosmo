@@ -56,6 +56,7 @@ describe('Create proposal tests', () => {
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
     });
 
     // Setup a federated graph with a single subgraph
@@ -134,6 +135,7 @@ describe('Create proposal tests', () => {
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
     });
 
     // Setup a federated graph with multiple subgraphs
@@ -266,6 +268,7 @@ describe('Create proposal tests', () => {
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
     });
 
     // Setup a federated graph with a single subgraph
@@ -359,6 +362,7 @@ describe('Create proposal tests', () => {
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
     });
 
     // Setup a federated graph with multiple subgraphs
@@ -451,6 +455,7 @@ describe('Create proposal tests', () => {
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
     });
 
     // Enable proposals for the namespace
@@ -486,6 +491,7 @@ describe('Create proposal tests', () => {
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
     });
 
     // Setup a federated graph with multiple subgraphs
@@ -666,6 +672,7 @@ describe('Create proposal tests', () => {
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
     });
 
     // Don't enable proposals for the namespace
@@ -725,6 +732,7 @@ describe('Create proposal tests', () => {
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
     });
 
     // Setup a federated graph with a single subgraph
@@ -813,6 +821,7 @@ describe('Create proposal tests', () => {
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
     });
 
     // Setup common test data
@@ -936,6 +945,7 @@ describe('Create proposal tests', () => {
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
     });
 
     // Setup a federated graph
@@ -986,6 +996,7 @@ describe('Create proposal tests', () => {
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
     });
 
     // Setup a federated graph with a single subgraph
@@ -1067,6 +1078,7 @@ describe('Create proposal tests', () => {
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
     });
 
     // Setup a federated graph with a single subgraph

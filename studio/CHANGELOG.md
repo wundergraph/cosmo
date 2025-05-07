@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.113.5](https://github.com/wundergraph/cosmo/compare/studio@0.113.4...studio@0.113.5) (2025-05-07)
+
+### Bug Fixes
+
+* make proposals a invite only feature ([#1836](https://github.com/wundergraph/cosmo/issues/1836)) ([28a0ea0](https://github.com/wundergraph/cosmo/commit/28a0ea0decd75b62fd797af6df693437a2fc7240)) (@JivusAyrus)
+
+## [0.113.4](https://github.com/wundergraph/cosmo/compare/studio@0.113.3...studio@0.113.4) (2025-05-06)
+
+### Bug Fixes
+
+* protect against mime type sniffing and clickjacking ([#1829](https://github.com/wundergraph/cosmo/issues/1829)) ([d86364b](https://github.com/wundergraph/cosmo/commit/d86364b8f0dbfb5063fdbcde760bf3248287d50b)) (@StarpTech)
+
 ## [0.113.3](https://github.com/wundergraph/cosmo/compare/studio@0.113.2...studio@0.113.3) (2025-05-02)
 
 ### Bug Fixes
