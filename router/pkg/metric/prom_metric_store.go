@@ -109,21 +109,6 @@ func (h *PromMetricStore) MeasureOperationPlanningTime(ctx context.Context, plan
 	}
 }
 
-func (h *PromMetricStore) StartRecordingRouterInfo(opts ...otelmetric.ObserveOption) error {
-	gauge := h.measurements.observableGauges[RouterInfo]
-
-	rc, err := h.meter.RegisterCallback(func(_ context.Context, o otelmetric.Observer) error {
-		o.ObserveInt64(gauge, 1, opts...)
-		return nil
-	}, gauge)
-	if err != nil {
-		return err
-	}
-
-	h.instrumentRegistrations = append(h.instrumentRegistrations, rc)
-	return nil
-}
-
 func (h *PromMetricStore) MeasureSchemaFieldUsage(ctx context.Context, schemaUsage int64, opts ...otelmetric.AddOption) {
 	if c, ok := h.measurements.counters[SchemaFieldUsageCounter]; ok {
 		c.Add(ctx, schemaUsage, opts...)
