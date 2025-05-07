@@ -924,7 +924,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
     tabs: [],
   });
 
-  useHydratePlaygroundStateFromUrl(tabsState, setQuery, setUpdatedVariables, setHeaders);
+  useHydratePlaygroundStateFromUrl(tabsState, setQuery, setUpdatedVariables, setHeaders, setTabsState);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
