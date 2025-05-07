@@ -22,15 +22,16 @@ type PromMetricStore struct {
 	instrumentRegistrations []otelmetric.Registration
 }
 
-func NewPromMetricStore(logger *zap.Logger, meterProvider *metric.MeterProvider) (Provider, error) {
+func NewPromMetricStore(logger *zap.Logger, meterProvider *metric.MeterProvider, routerInfoAttributes otelmetric.ObserveOption) (Provider, error) {
 	meter := meterProvider.Meter(cosmoRouterPrometheusMeterName,
 		otelmetric.WithInstrumentationVersion(cosmoRouterPrometheusMeterVersion),
 	)
 
 	m := &PromMetricStore{
-		meter:         meter,
-		logger:        logger,
-		meterProvider: meterProvider,
+		meter:                   meter,
+		logger:                  logger,
+		meterProvider:           meterProvider,
+		instrumentRegistrations: make([]otelmetric.Registration, 0, 1),
 	}
 
 	measures, err := createMeasures(meter)
@@ -40,7 +41,24 @@ func NewPromMetricStore(logger *zap.Logger, meterProvider *metric.MeterProvider)
 
 	m.measurements = measures
 
+	m.startInitMetrics(routerInfoAttributes)
+
 	return m, nil
+}
+
+func (h *PromMetricStore) startInitMetrics(initAttributes otelmetric.ObserveOption) error {
+	gauge := h.measurements.observableGauges[RouterInfo]
+
+	rc, err := h.meter.RegisterCallback(func(_ context.Context, o otelmetric.Observer) error {
+		o.ObserveInt64(gauge, 1, initAttributes)
+		return nil
+	}, gauge)
+	if err != nil {
+		return err
+	}
+
+	h.instrumentRegistrations = append(h.instrumentRegistrations, rc)
+	return nil
 }
 
 func (h *PromMetricStore) MeasureInFlight(ctx context.Context, opts ...otelmetric.AddOption) func() {

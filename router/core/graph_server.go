@@ -706,20 +706,6 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	// Prometheus metricStore rely on OTLP metricStore
 	if metricsEnabled {
-		m, err := rmetric.NewStore(
-			rmetric.WithPromMeterProvider(s.promMeterProvider),
-			rmetric.WithOtlpMeterProvider(s.otlpMeterProvider),
-			rmetric.WithBaseAttributes(baseMetricAttributes),
-			rmetric.WithLogger(s.logger),
-			rmetric.WithProcessStartTime(s.processStartTime),
-			rmetric.WithCardinalityLimit(rmetric.DefaultCardinalityLimit),
-		)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create metric handler: %w", err)
-		}
-
-		gm.metricStore = m
-
 		attrKeyValues := []attribute.KeyValue{
 			otel.WgRouterConfigVersion.String(routerConfigVersion),
 			otel.WgRouterVersion.String(Version),
@@ -727,7 +713,22 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		if featureFlagName != "" {
 			attrKeyValues = append(attrKeyValues, otel.WgFeatureFlag.String(featureFlagName))
 		}
-		gm.metricStore.StartRecordingRouterInfo(otelmetric.WithAttributeSet(attribute.NewSet(attrKeyValues...)))
+		routerInfoBaseAttrs := otelmetric.WithAttributeSet(attribute.NewSet(attrKeyValues...))
+
+		m, err := rmetric.NewStore(
+			rmetric.WithPromMeterProvider(s.promMeterProvider),
+			rmetric.WithOtlpMeterProvider(s.otlpMeterProvider),
+			rmetric.WithBaseAttributes(baseMetricAttributes),
+			rmetric.WithLogger(s.logger),
+			rmetric.WithProcessStartTime(s.processStartTime),
+			rmetric.WithCardinalityLimit(rmetric.DefaultCardinalityLimit),
+			rmetric.WithRouterInfoAttributes(routerInfoBaseAttrs),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create metric handler: %w", err)
+		}
+
+		gm.metricStore = m
 	}
 
 	subgraphs, err := configureSubgraphOverwrites(
