@@ -285,6 +285,7 @@ type Config struct {
 	TraceExporter                      trace.SpanExporter
 	CustomMetricAttributes             []config.CustomAttribute
 	CustomTelemetryAttributes          []config.CustomAttribute
+	CustomTracingAttributes            []config.CustomAttribute
 	CustomResourceAttributes           []config.CustomStaticAttribute
 	MetricReader                       metric.Reader
 	PrometheusRegistry                 *prometheus.Registry
@@ -301,7 +302,6 @@ type Config struct {
 	AccessLogger                       *zap.Logger
 	AccessLogFields                    []config.CustomAttribute
 	MetricOptions                      MetricOptions
-	SubgraphTracingOptions             []config.CustomAttribute
 	ModifyEventsConfiguration          func(cfg *config.EventsConfiguration)
 	EnableRuntimeMetrics               bool
 	EnableNats                         bool
@@ -972,6 +972,10 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		routerOpts = append(routerOpts, core.WithTelemetryAttributes(testConfig.CustomTelemetryAttributes))
 	}
 
+	if testConfig.CustomTracingAttributes != nil {
+		routerOpts = append(routerOpts, core.WithTracingAttributes(testConfig.CustomTracingAttributes))
+	}
+
 	var prometheusConfig rmetric.PrometheusConfig
 
 	if testConfig.PrometheusRegistry != nil {
@@ -1075,10 +1079,6 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		}
 		routerOpts = append(routerOpts, core.WithWebSocketConfiguration(wsConfig))
 		routerOpts = append(routerOpts, core.WithClientHeader(testConfig.ClientHeader))
-	}
-
-	if testConfig.SubgraphTracingOptions != nil {
-		routerOpts = append(routerOpts, core.WithTracingAttributes(testConfig.SubgraphTracingOptions))
 	}
 
 	return core.NewRouter(routerOpts...)

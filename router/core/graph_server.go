@@ -704,13 +704,14 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		}
 	}
 
-	//if len(s.tracingAttributes) > 0 {
-	//	var telemetryAttErr error
-	//	telemetryAttExpressions, telemetryAttErr = newAttributeExpressions(s.tracingAttributes, exprManager)
-	//	if telemetryAttErr != nil {
-	//		return nil, telemetryAttErr
-	//	}
-	//}
+	var tracingAttExpressions *attributeExpressions
+	if len(s.tracingAttributes) > 0 {
+		var tracingAttrErr error
+		tracingAttExpressions, tracingAttrErr = newAttributeExpressions(s.tracingAttributes, exprManager)
+		if tracingAttrErr != nil {
+			return nil, tracingAttrErr
+		}
+	}
 
 	// Prometheus metricStore rely on OTLP metricStore
 	if metricsEnabled {
@@ -789,6 +790,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 				mapper:                        mapper,
 				metricAttributeExpressions:    attExpressions,
 				telemetryAttributeExpressions: telemetryAttExpressions,
+				tracingAttributeExpressions:   tracingAttExpressions,
 				w:                             w,
 				r:                             r,
 			})
@@ -960,12 +962,6 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		subgraphTippers[subgraph] = subgraphTransport
 	}
 
-	// We want to compile this before creating the executor, since it relies on a visitor group
-	mappedSubgraphExpressions, err := ProcessEngineHookExpressions(s.tracingAttributes, exprManager)
-	if err != nil {
-		return nil, err
-	}
-
 	ecb := &ExecutorConfigurationBuilder{
 		introspection:    s.introspection,
 		baseURL:          s.baseURL,
@@ -1122,7 +1118,14 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		TracerProvider:                              s.tracerProvider,
 		Authorizer:                                  NewCosmoAuthorizer(authorizerOptions),
 		SubgraphErrorPropagation:                    s.subgraphErrorPropagation,
-		EngineLoaderHooks:                           NewEngineRequestHooks(gm.metricStore, subgraphAccessLogger, s.tracerProvider, mappedSubgraphExpressions),
+		EngineLoaderHooks: NewEngineRequestHooks(
+			gm.metricStore,
+			subgraphAccessLogger,
+			s.tracerProvider,
+			tracingAttExpressions,
+			telemetryAttExpressions,
+			exprManager.VisitorManager,
+		),
 	}
 
 	if s.redisClient != nil {

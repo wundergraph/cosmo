@@ -2,6 +2,7 @@ package telemetry
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"regexp"
@@ -2816,7 +2817,6 @@ func TestFlakyRuntimeTelemetry(t *testing.T) {
 			}
 
 			metricdatatest.AssertEqual(t, processRuntimeGoGcCountMetric, *integration.GetMetricByName(runtimeScope, "process.runtime.go.gc.count"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-
 			processRuntimeGoGoRoutinesCountMetric := metricdata.Metrics{
 				Name:        "process.runtime.go.goroutines.count",
 				Description: "Number of goroutines that currently exist",
@@ -9115,7 +9115,89 @@ func TestFlakyTelemetry(t *testing.T) {
 
 }
 
-func TestTelemetryExpressions(t *testing.T) {
+func TestTracingAttributes(t *testing.T) {
+	t.Parallel()
+
+	t.Run("verify custom tracing attributes are attached to all spans", func(t *testing.T) {
+		t.Parallel()
+		metricReader := metric.NewManualReader()
+		exporter := tracetest.NewInMemoryExporter(t)
+
+		testenv.Run(t, &testenv.Config{
+			TraceExporter: exporter,
+			MetricReader:  metricReader,
+			CustomTracingAttributes: []config.CustomAttribute{
+				{
+					Key: "req_method_name",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "request.url.method",
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:  `query employees { employees { id details { forename surname } notes } }`,
+				Header: map[string][]string{"service-name": {"service-name"}},
+			})
+
+			spans := exporter.GetSpans().Snapshots()
+
+			for _, span := range spans {
+				attributes := span.Attributes()
+
+				sgName := findAttr(attributes, "req_method_name")
+				require.Equal(t, "POST", sgName.Value.AsString())
+			}
+		})
+	})
+
+	t.Run("verify custom tracing attributes with subgraph is only attached to engine fetch", func(t *testing.T) {
+		t.Parallel()
+		metricReader := metric.NewManualReader()
+		exporter := tracetest.NewInMemoryExporter(t)
+
+		testenv.Run(t, &testenv.Config{
+			TraceExporter: exporter,
+			MetricReader:  metricReader,
+			CustomTracingAttributes: []config.CustomAttribute{
+				{
+					Key: "req_method_name",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "request.url.method",
+					},
+				},
+				{
+					Key: "sg_name",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "subgraph.name",
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:  `query employees { employees { id details { forename surname } notes } }`,
+				Header: map[string][]string{"service-name": {"service-name"}},
+			})
+
+			spans := exporter.GetSpans().Snapshots()
+
+			for _, span := range spans {
+				attributes := span.Attributes()
+
+				sgName := findAttr(attributes, "sg_name")
+
+				if span.Name() != "Engine - Fetch" {
+					require.False(t, sgName.Valid())
+					continue
+				}
+
+				require.Contains(t, []string{"employees", "products"}, sgName.Value.AsString())
+			}
+		})
+	})
+}
+
+func TestEngineHookExpressions(t *testing.T) {
 	t.Parallel()
 
 	t.Run("verify invalid expression stops server start", func(t *testing.T) {
@@ -9126,10 +9208,10 @@ func TestTelemetryExpressions(t *testing.T) {
 		err := testenv.RunWithError(t, &testenv.Config{
 			TraceExporter: exporter,
 			MetricReader:  metricReader,
-			SubgraphTracingOptions: &core.SubgraphTracingOptions{
-				ExpressionAttributes: []core.ExpressionAttribute{
-					{
-						Key:        "get_conn",
+			CustomTracingAttributes: []config.CustomAttribute{
+				{
+					Key: "get_conn",
+					ValueFrom: &config.CustomDynamicAttribute{
 						Expression: "subgraph.request.clientTrace2?.connCreate?.hostPort ?? 'default'",
 					},
 				},
@@ -9137,7 +9219,52 @@ func TestTelemetryExpressions(t *testing.T) {
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			assert.FailNow(t, "should not be called")
 		})
-		assert.ErrorContains(t, err, "failed to build base mux: line 1, column 17: type expr.SubgraphRequest has no field clientTrace2")
+		assert.ErrorContains(t, err, "failed to build base mux: custom attribute error, unable to compile 'get_conn' with expression 'subgraph.request.clientTrace2?.connCreate?.hostPort ?? 'default''")
+	})
+
+	t.Run("verify non subgraph specific expressions are also attached", func(t *testing.T) {
+		t.Parallel()
+		metricReader := metric.NewManualReader()
+		exporter := tracetest.NewInMemoryExporter(t)
+
+		testenv.Run(t, &testenv.Config{
+			TraceExporter: exporter,
+			MetricReader:  metricReader,
+			CustomTracingAttributes: []config.CustomAttribute{
+				{
+					Key: "req_method_name",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "request.url.method",
+					},
+				},
+				{
+					Key: "sg_id",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "subgraph.id",
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:  `query employees { employees { id details { forename surname } notes } }`,
+				Header: map[string][]string{"service-name": {"service-name"}},
+			})
+
+			sn := exporter.GetSpans().Snapshots()
+			engineFetchSpan := sn[6]
+			require.Equal(t, "Engine - Fetch", engineFetchSpan.Name())
+			require.Equal(t, trace.SpanKindInternal, engineFetchSpan.SpanKind())
+
+			attributes := engineFetchSpan.Attributes()
+
+			require.Len(t, attributes, 16)
+
+			sgName := findAttr(attributes, "req_method_name")
+			require.Equal(t, "POST", sgName.Value.AsString())
+
+			sgId := findAttr(attributes, "sg_id")
+			require.Equal(t, "0", sgId.Value.AsString())
+		})
 	})
 
 	t.Run("verify name and id expressions", func(t *testing.T) {
@@ -9148,14 +9275,16 @@ func TestTelemetryExpressions(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			TraceExporter: exporter,
 			MetricReader:  metricReader,
-			SubgraphTracingOptions: &core.SubgraphTracingOptions{
-				ExpressionAttributes: []core.ExpressionAttribute{
-					{
-						Key:        "sg_name",
+			CustomTracingAttributes: []config.CustomAttribute{
+				{
+					Key: "sg_name",
+					ValueFrom: &config.CustomDynamicAttribute{
 						Expression: "subgraph.name",
 					},
-					{
-						Key:        "sg_id",
+				},
+				{
+					Key: "sg_id",
+					ValueFrom: &config.CustomDynamicAttribute{
 						Expression: "subgraph.id",
 					},
 				},
@@ -9184,7 +9313,7 @@ func TestTelemetryExpressions(t *testing.T) {
 		})
 	})
 
-	t.Run("verify available clientTrace expression are correctly evaluated", func(t *testing.T) {
+	t.Run("verify available clientTrace expression are correctly evaluated as tracing attributes", func(t *testing.T) {
 		t.Parallel()
 		metricReader := metric.NewManualReader()
 		exporter := tracetest.NewInMemoryExporter(t)
@@ -9192,51 +9321,71 @@ func TestTelemetryExpressions(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			TraceExporter: exporter,
 			MetricReader:  metricReader,
-			SubgraphTracingOptions: &core.SubgraphTracingOptions{
-				ExpressionAttributes: []core.ExpressionAttribute{
-					{
-						Key:        "get_conn",
+			CustomTracingAttributes: []config.CustomAttribute{
+				{
+					Key: "get_conn",
+					ValueFrom: &config.CustomDynamicAttribute{
 						Expression: "subgraph.request.clientTrace?.connCreate?.hostPort ?? 'default'",
 					},
-					{
-						Key:        "got_conn",
-						Expression: "subgraph.request.clientTrace?.connAcquired?.wasIdle ?? 'default'",
+				},
+				{
+					Key: "got_conn",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "string(subgraph.request.clientTrace?.connAcquired?.wasIdle ?? 'default')",
 					},
-					{
-						Key:        "got_first_response_byte",
-						Expression: "subgraph.request.clientTrace?.firstByte?.time ?? 'default'",
+				},
+				{
+					Key: "got_first_response_byte",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "string(subgraph.request.clientTrace?.firstByte?.time ?? 'default')",
 					},
-					{
-						Key:        "dns_start",
+				},
+				{
+					Key: "dns_start",
+					ValueFrom: &config.CustomDynamicAttribute{
 						Expression: "subgraph.request.clientTrace?.dnsStart?.host ?? 'default'",
 					},
-					{
-						Key:        "dns_done",
-						Expression: "subgraph.request.clientTrace?.dnsDone?.addresses ?? 'default'",
+				},
+				{
+					Key: "dns_done",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "string(subgraph.request.clientTrace?.dnsDone?.addresses ?? 'default')",
 					},
-					{
-						Key:        "connect_start",
-						Expression: "subgraph.request.clientTrace?.dial?.start[0].network ?? 'default'",
+				},
+				{
+					Key: "connect_start",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "subgraph.request.clientTrace?.dialStart[0].network ?? 'default'",
 					},
-					{
-						Key:        "connect_done",
-						Expression: "subgraph.request.clientTrace?.dial?.done[0].network ?? 'default'",
+				},
+				{
+					Key: "connect_done",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "subgraph.request.clientTrace?.dialDone[0].network ?? 'default'",
 					},
-					{
-						Key:        "tls_handshake_start",
-						Expression: "subgraph.request.clientTrace?.tlsStart?.time ?? 'default'",
+				},
+				{
+					Key: "tls_handshake_start",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "string(subgraph.request.clientTrace?.tlsStart?.time ?? 'default')",
 					},
-					{
-						Key:        "tls_handshake_done",
-						Expression: "subgraph.request.clientTrace?.tlsDone?.complete ?? 'default'",
+				},
+				{
+					Key: "tls_handshake_done",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "string(subgraph.request.clientTrace?.tlsDone?.complete ?? 'default')",
 					},
-					{
-						Key:        "wrote_headers",
-						Expression: "subgraph.request.clientTrace?.wroteHeaders?.time ?? 'default'",
+				},
+				{
+					Key: "wrote_headers",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "string(subgraph.request.clientTrace?.wroteHeaders?.time ?? 'default')",
 					},
-					{
-						Key:        "wrote_request",
-						Expression: "subgraph.request.clientTrace?.wroteRequest?.time ?? 'default'",
+				},
+				{
+					Key: "wrote_request",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "string(subgraph.request.clientTrace?.wroteRequest?.time ?? 'default')",
 					},
 				},
 			},
@@ -9292,6 +9441,361 @@ func TestTelemetryExpressions(t *testing.T) {
 		})
 	})
 
+	t.Run("verify available clientTrace expression are correctly evaluated as telemetry attributes", func(t *testing.T) {
+		t.Parallel()
+		metricReader := metric.NewManualReader()
+		exporter := tracetest.NewInMemoryExporter(t)
+
+		testenv.Run(t, &testenv.Config{
+			TraceExporter: exporter,
+			MetricReader:  metricReader,
+			CustomTelemetryAttributes: []config.CustomAttribute{
+				{
+					Key: "get_conn",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "subgraph.request.clientTrace?.connCreate?.hostPort ?? 'default'",
+					},
+				},
+				{
+					Key: "got_conn",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "string(subgraph.request.clientTrace?.connAcquired?.wasIdle ?? 'default')",
+					},
+				},
+				{
+					Key: "got_first_response_byte",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "string(subgraph.request.clientTrace?.firstByte?.time ?? 'default')",
+					},
+				},
+				{
+					Key: "dns_start",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "subgraph.request.clientTrace?.dnsStart?.host ?? 'default'",
+					},
+				},
+				{
+					Key: "dns_done",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "string(subgraph.request.clientTrace?.dnsDone?.addresses ?? 'default')",
+					},
+				},
+				{
+					Key: "connect_start",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "subgraph.request.clientTrace?.dialStart[0].network ?? 'default'",
+					},
+				},
+				{
+					Key: "connect_done",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "subgraph.request.clientTrace?.dialDone[0].network ?? 'default'",
+					},
+				},
+				{
+					Key: "tls_handshake_start",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "string(subgraph.request.clientTrace?.tlsStart?.time ?? 'default')",
+					},
+				},
+				{
+					Key: "tls_handshake_done",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "string(subgraph.request.clientTrace?.tlsDone?.complete ?? 'default')",
+					},
+				},
+				{
+					Key: "wrote_headers",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "string(subgraph.request.clientTrace?.wroteHeaders?.time ?? 'default')",
+					},
+				},
+				{
+					Key: "wrote_request",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "string(subgraph.request.clientTrace?.wroteRequest?.time ?? 'default')",
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:  `query employees { employees { id details { forename surname } notes } }`,
+				Header: map[string][]string{"service-name": {"service-name"}},
+			})
+
+			sn := exporter.GetSpans().Snapshots()
+			engineFetchSpan := sn[6]
+			require.Equal(t, "Engine - Fetch", engineFetchSpan.Name())
+			require.Equal(t, trace.SpanKindInternal, engineFetchSpan.SpanKind())
+
+			attributes := engineFetchSpan.Attributes()
+			exprAttributes := attributes[14:]
+
+			require.Len(t, exprAttributes, 11)
+
+			getConnAttr := findAttr(exprAttributes, "get_conn")
+			hostPortAttr := getConnAttr.Value.AsString()
+			require.Contains(t, hostPortAttr, "127.0.0.1:")
+
+			gotConnAttr := findAttr(exprAttributes, "got_conn")
+			require.False(t, gotConnAttr.Value.AsBool())
+
+			firstByteAttr := findAttr(exprAttributes, "got_first_response_byte")
+			validateTime(t, firstByteAttr.Value.AsString())
+
+			dnsStartAttr := findAttr(exprAttributes, "dns_start")
+			require.Equal(t, "default", dnsStartAttr.Value.AsString())
+
+			dnsDoneAttr := findAttr(exprAttributes, "dns_done")
+			require.Equal(t, "default", dnsDoneAttr.Value.AsString())
+
+			connectStartAttr := findAttr(exprAttributes, "connect_start")
+			require.Equal(t, "tcp", connectStartAttr.Value.AsString())
+
+			connectDoneAttr := findAttr(exprAttributes, "connect_done")
+			require.Equal(t, "tcp", connectDoneAttr.Value.AsString())
+
+			tlsStartAttr := findAttr(exprAttributes, "tls_handshake_start")
+			require.Equal(t, "default", tlsStartAttr.Value.AsString())
+
+			tlsDoneAttr := findAttr(exprAttributes, "tls_handshake_done")
+			require.Equal(t, "default", tlsDoneAttr.Value.AsString())
+
+			wroteHeadersAttr := findAttr(exprAttributes, "wrote_headers")
+			validateTime(t, wroteHeadersAttr.Value.AsString())
+
+			wroteRequestAttr := findAttr(exprAttributes, "wrote_request")
+			validateTime(t, wroteRequestAttr.Value.AsString())
+		})
+	})
+
+	t.Run("verify available clientTrace expression are correctly evaluated as mixed tracing and telemetry attributes", func(t *testing.T) {
+		t.Parallel()
+		metricReader := metric.NewManualReader()
+		exporter := tracetest.NewInMemoryExporter(t)
+
+		testenv.Run(t, &testenv.Config{
+			TraceExporter: exporter,
+			MetricReader:  metricReader,
+			CustomTelemetryAttributes: []config.CustomAttribute{
+				{
+					Key: "get_conn",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "subgraph.request.clientTrace?.connCreate?.hostPort ?? 'default'",
+					},
+				},
+				{
+					Key: "got_conn",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "string(subgraph.request.clientTrace?.connAcquired?.wasIdle ?? 'default')",
+					},
+				},
+				{
+					Key: "got_first_response_byte",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "string(subgraph.request.clientTrace?.firstByte?.time ?? 'default')",
+					},
+				},
+				{
+					Key: "dns_start",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "subgraph.request.clientTrace?.dnsStart?.host ?? 'default'",
+					},
+				},
+				{
+					Key: "dns_done",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "string(subgraph.request.clientTrace?.dnsDone?.addresses ?? 'default')",
+					},
+				},
+			},
+			CustomTracingAttributes: []config.CustomAttribute{
+				{
+					Key: "connect_start",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "subgraph.request.clientTrace?.dialStart[0].network ?? 'default'",
+					},
+				},
+				{
+					Key: "connect_done",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "subgraph.request.clientTrace?.dialDone[0].network ?? 'default'",
+					},
+				},
+				{
+					Key: "tls_handshake_start",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "string(subgraph.request.clientTrace?.tlsStart?.time ?? 'default')",
+					},
+				},
+				{
+					Key: "tls_handshake_done",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "string(subgraph.request.clientTrace?.tlsDone?.complete ?? 'default')",
+					},
+				},
+				{
+					Key: "wrote_headers",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "string(subgraph.request.clientTrace?.wroteHeaders?.time ?? 'default')",
+					},
+				},
+				{
+					Key: "wrote_request",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "string(subgraph.request.clientTrace?.wroteRequest?.time ?? 'default')",
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:  `query employees { employees { id details { forename surname } notes } }`,
+				Header: map[string][]string{"service-name": {"service-name"}},
+			})
+
+			sn := exporter.GetSpans().Snapshots()
+			engineFetchSpan := sn[6]
+			require.Equal(t, "Engine - Fetch", engineFetchSpan.Name())
+			require.Equal(t, trace.SpanKindInternal, engineFetchSpan.SpanKind())
+
+			attributes := engineFetchSpan.Attributes()
+			exprAttributes := attributes[14:]
+
+			require.Len(t, exprAttributes, 11)
+
+			getConnAttr := findAttr(exprAttributes, "get_conn")
+			hostPortAttr := getConnAttr.Value.AsString()
+			require.Contains(t, hostPortAttr, "127.0.0.1:")
+
+			gotConnAttr := findAttr(exprAttributes, "got_conn")
+			require.False(t, gotConnAttr.Value.AsBool())
+
+			firstByteAttr := findAttr(exprAttributes, "got_first_response_byte")
+			validateTime(t, firstByteAttr.Value.AsString())
+
+			dnsStartAttr := findAttr(exprAttributes, "dns_start")
+			require.Equal(t, "default", dnsStartAttr.Value.AsString())
+
+			dnsDoneAttr := findAttr(exprAttributes, "dns_done")
+			require.Equal(t, "default", dnsDoneAttr.Value.AsString())
+
+			connectStartAttr := findAttr(exprAttributes, "connect_start")
+			require.Equal(t, "tcp", connectStartAttr.Value.AsString())
+
+			connectDoneAttr := findAttr(exprAttributes, "connect_done")
+			require.Equal(t, "tcp", connectDoneAttr.Value.AsString())
+
+			tlsStartAttr := findAttr(exprAttributes, "tls_handshake_start")
+			require.Equal(t, "default", tlsStartAttr.Value.AsString())
+
+			tlsDoneAttr := findAttr(exprAttributes, "tls_handshake_done")
+			require.Equal(t, "default", tlsDoneAttr.Value.AsString())
+
+			wroteHeadersAttr := findAttr(exprAttributes, "wrote_headers")
+			validateTime(t, wroteHeadersAttr.Value.AsString())
+
+			wroteRequestAttr := findAttr(exprAttributes, "wrote_request")
+			validateTime(t, wroteRequestAttr.Value.AsString())
+		})
+	})
+
+	t.Run("combine clientTrace expressions", func(t *testing.T) {
+		t.Run("calculate connection acquire duration", func(t *testing.T) {
+			t.Parallel()
+			metricReader := metric.NewManualReader()
+			exporter := tracetest.NewInMemoryExporter(t)
+
+			testenv.Run(t, &testenv.Config{
+				TraceExporter: exporter,
+				MetricReader:  metricReader,
+				CustomTracingAttributes: []config.CustomAttribute{
+					{
+						Key: "duration",
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "string(subgraph.request.clientTrace.connAcquired.time - subgraph.request.clientTrace.connCreate.time)",
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:  `query employees { employees { id details { forename surname } notes } }`,
+					Header: map[string][]string{"service-name": {"service-name"}},
+				})
+
+				sn := exporter.GetSpans().Snapshots()
+				engineFetchSpan := sn[6]
+				require.Equal(t, "Engine - Fetch", engineFetchSpan.Name())
+				require.Equal(t, trace.SpanKindInternal, engineFetchSpan.SpanKind())
+
+				attributes := engineFetchSpan.Attributes()
+				exprAttributes := attributes[14:]
+
+				duration := findAttr(exprAttributes, "duration").Value.AsString()
+				parseDuration, err := time.ParseDuration(duration)
+				require.NoError(t, err)
+				require.Greater(t, parseDuration.Nanoseconds(), int64(0))
+			})
+		})
+
+		t.Run("process dial start and dial done", func(t *testing.T) {
+			t.Parallel()
+			metricReader := metric.NewManualReader()
+			exporter := tracetest.NewInMemoryExporter(t)
+
+			testenv.Run(t, &testenv.Config{
+				TraceExporter: exporter,
+				MetricReader:  metricReader,
+				CustomTracingAttributes: []config.CustomAttribute{
+					// TODO: Look at adding more examples
+					{
+						Key: "dialLenEquals",
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "string(len(subgraph.request.clientTrace.dialStart) == len(subgraph.request.clientTrace.dialDone))",
+						},
+					},
+					{
+						Key: "printStartDials",
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "toJSON(subgraph.request.clientTrace.dialStart)",
+						},
+					},
+					{
+						Key: "printDoneDials",
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "toJSON(subgraph.request.clientTrace.dialDone)",
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:  `query employees { employees { id details { forename surname } notes } }`,
+					Header: map[string][]string{"service-name": {"service-name"}},
+				})
+
+				sn := exporter.GetSpans().Snapshots()
+				engineFetchSpan := sn[6]
+				require.Equal(t, "Engine - Fetch", engineFetchSpan.Name())
+				require.Equal(t, trace.SpanKindInternal, engineFetchSpan.SpanKind())
+
+				attributes := engineFetchSpan.Attributes()
+				exprAttributes := attributes[14:]
+
+				dialLenEquals := findAttr(exprAttributes, "dialLenEquals")
+				require.Equal(t, "true", dialLenEquals.Value.AsString())
+
+				var js interface{}
+
+				printStartDials := findAttr(exprAttributes, "printStartDials")
+				err := json.Unmarshal([]byte(printStartDials.Value.AsString()), &js)
+				require.NoError(t, err)
+
+				printDoneDials := findAttr(exprAttributes, "printDoneDials")
+				err = json.Unmarshal([]byte(printDoneDials.Value.AsString()), &js)
+				require.NoError(t, err)
+			})
+		})
+	})
+
 	t.Run("verify nil values not being stored", func(t *testing.T) {
 		t.Parallel()
 		metricReader := metric.NewManualReader()
@@ -9300,11 +9804,11 @@ func TestTelemetryExpressions(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			TraceExporter: exporter,
 			MetricReader:  metricReader,
-			SubgraphTracingOptions: &core.SubgraphTracingOptions{
-				ExpressionAttributes: []core.ExpressionAttribute{
-					{
-						Key:        "tls_start",
-						Expression: "subgraph.request.clientTrace.tlsStart?.time",
+			CustomTracingAttributes: []config.CustomAttribute{
+				{
+					Key: "tls_start",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "subgraph.request.clientTrace.tlsDone?.version",
 					},
 				},
 			},
@@ -9325,42 +9829,6 @@ func TestTelemetryExpressions(t *testing.T) {
 
 			attr := findAttr(attributes, "tls_start")
 			require.False(t, attr.Valid())
-		})
-	})
-
-	t.Run("verify a time becoming a string because we Stringify any non base types", func(t *testing.T) {
-		t.Parallel()
-		metricReader := metric.NewManualReader()
-		exporter := tracetest.NewInMemoryExporter(t)
-
-		testenv.Run(t, &testenv.Config{
-			TraceExporter: exporter,
-			MetricReader:  metricReader,
-			SubgraphTracingOptions: &core.SubgraphTracingOptions{
-				ExpressionAttributes: []core.ExpressionAttribute{
-					{
-						Key:        "wrote_headers",
-						Expression: "subgraph.request.clientTrace.wroteHeaders?.time",
-					},
-				},
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query:  `query employees { employees { id details { forename surname } notes } }`,
-				Header: map[string][]string{"service-name": {"service-name"}},
-			})
-
-			sn := exporter.GetSpans().Snapshots()
-			engineFetchSpan := sn[6]
-			require.Equal(t, "Engine - Fetch", engineFetchSpan.Name())
-			require.Equal(t, trace.SpanKindInternal, engineFetchSpan.SpanKind())
-
-			attributes := engineFetchSpan.Attributes()
-			exprAttributes := attributes[14:]
-
-			wroteHeadersAttr := findAttr(exprAttributes, "wrote_headers")
-			wroteHeadersTime := wroteHeadersAttr.Value.AsString()
-			require.NotEmpty(t, wroteHeadersTime)
 		})
 	})
 }

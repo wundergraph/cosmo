@@ -4,14 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/pkg/config"
-	"reflect"
 	"slices"
 	"time"
 
 	"github.com/wundergraph/cosmo/router/internal/httpclient"
 
-	"github.com/expr-lang/expr/vm"
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
 	"github.com/wundergraph/cosmo/router/internal/unique"
@@ -40,26 +37,37 @@ const EngineLoaderHooksScopeVersion = "0.0.1"
 // engineLoaderHooks implements resolve.LoaderHooks
 // It is used to trace and measure the performance of the engine loader
 type engineLoaderHooks struct {
-	tracer                    trace.Tracer
-	metricStore               metric.Store
-	accessLogger              *requestlogger.SubgraphAccessLogger
-	mappedSubgraphExpressions map[string]*vm.Program
+	tracer              trace.Tracer
+	metricStore         metric.Store
+	accessLogger        *requestlogger.SubgraphAccessLogger
+	tracingAttributes   *attributeExpressions
+	telemetryAttributes *attributeExpressions
+	visitorManager      *expr.VisitorGroup
 }
 
 type engineLoaderHooksRequestContext struct {
 	startTime time.Time
 }
 
-func NewEngineRequestHooks(metricStore metric.Store, logger *requestlogger.SubgraphAccessLogger, tracerProvider *sdktrace.TracerProvider, expressions map[string]*vm.Program) resolve.LoaderHooks {
+func NewEngineRequestHooks(
+	metricStore metric.Store,
+	logger *requestlogger.SubgraphAccessLogger,
+	tracerProvider *sdktrace.TracerProvider,
+	tracingAttributes *attributeExpressions,
+	telemetryAttributes *attributeExpressions,
+	visitorManager *expr.VisitorGroup,
+) resolve.LoaderHooks {
 	if tracerProvider != nil {
 		return &engineLoaderHooks{
 			tracer: tracerProvider.Tracer(
 				EngineLoaderHooksScopeName,
 				trace.WithInstrumentationVersion(EngineLoaderHooksScopeVersion),
 			),
-			metricStore:               metricStore,
-			accessLogger:              logger,
-			mappedSubgraphExpressions: expressions,
+			metricStore:         metricStore,
+			accessLogger:        logger,
+			tracingAttributes:   tracingAttributes,
+			telemetryAttributes: telemetryAttributes,
+			visitorManager:      visitorManager,
 		}
 	}
 
@@ -68,42 +76,12 @@ func NewEngineRequestHooks(metricStore metric.Store, logger *requestlogger.Subgr
 			EngineLoaderHooksScopeName,
 			trace.WithInstrumentationVersion(EngineLoaderHooksScopeVersion),
 		),
-		metricStore:               metricStore,
-		accessLogger:              logger,
-		mappedSubgraphExpressions: expressions,
+		metricStore:         metricStore,
+		accessLogger:        logger,
+		tracingAttributes:   tracingAttributes,
+		telemetryAttributes: telemetryAttributes,
+		visitorManager:      visitorManager,
 	}
-}
-
-func ProcessEngineHookExpressions(tracingAttributes []config.CustomAttribute, exprManager *expr.Manager) (map[string]*vm.Program, error) {
-	mappedSubgraphExpressions := make(map[string]*vm.Program)
-
-	for _, attr := range tracingAttributes {
-		if attr.ValueFrom == nil || attr.ValueFrom.Expression == "" {
-			continue
-		}
-
-		returnType, err := exprManager.ValidateAnyExpression(attr.ValueFrom.Expression)
-		if err != nil {
-			return nil, err
-		}
-		if returnType == nil {
-			return nil, errors.New("disallowed nil")
-		}
-		// We don't want to allow user to specify these return types for expressions
-		// at this moment
-		switch *returnType {
-		case reflect.Complex64, reflect.Complex128, reflect.Map, reflect.UnsafePointer:
-			return nil, fmt.Errorf("disallowed type: %s", *returnType)
-		}
-
-		expression, err := exprManager.CompileAnyExpression(attr.ValueFrom.Expression)
-		if err != nil {
-			return nil, err
-		}
-		mappedSubgraphExpressions[attr.Key] = expression
-	}
-
-	return mappedSubgraphExpressions, nil
 }
 
 func (f *engineLoaderHooks) OnLoad(ctx context.Context, ds resolve.DataSourceInfo) context.Context {
@@ -118,7 +96,9 @@ func (f *engineLoaderHooks) OnLoad(ctx context.Context, ds resolve.DataSourceInf
 		return ctx
 	}
 
-	ctx = httpclient.InitTraceContext(ctx)
+	if f.visitorManager.IsSubgraphTraceUsedInExpressions() {
+		ctx = httpclient.InitTraceContext(ctx)
+	}
 
 	ctx, _ = f.tracer.Start(ctx, "Engine - Fetch",
 		trace.WithAttributes([]attribute.KeyValue{
@@ -179,23 +159,26 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 		Name:    ds.Name,
 		Request: expr.SubgraphRequest{},
 	}
-	exprCtx.Subgraph.Request.ClientTrace = *expr.ConvertToExprTrace(fromTrace)
 	exprCtx.Subgraph.Request.Error = &expr.WrapError{Err: responseInfo.Err}
 
-	for key, expression := range f.mappedSubgraphExpressions {
-		result, err := expr.ResolveAnyExpression(expression, exprCtx)
-		// If the expression fails, we don't want to add it to the attributes but also not block
+	if f.visitorManager.IsSubgraphTraceUsedInExpressions() {
+		exprCtx.Subgraph.Request.ClientTrace = *expr.ConvertToExprTrace(fromTrace)
+	}
+
+	if f.telemetryAttributes != nil {
+		telemetryValues, err := f.telemetryAttributes.expressionsAttributesForSubgraphs(&exprCtx)
 		if err != nil {
-			reqContext.Logger().Warn(
-				"failed to resolve expression",
-				zap.Error(err),
-				zap.String("key", key),
-			)
-			continue
+			reqContext.Logger().Warn("failed to resolve expression for telemetry", zap.Error(err))
 		}
-		if toAttribute := convertToAttribute(key, result); toAttribute != nil {
-			traceAttrs = append(traceAttrs, *toAttribute)
+		traceAttrs = append(traceAttrs, telemetryValues...)
+	}
+
+	if f.tracingAttributes != nil {
+		tracingValues, err := f.tracingAttributes.expressionsAttributesForSubgraphs(&exprCtx)
+		if err != nil {
+			reqContext.Logger().Warn("failed to resolve expression for tracing", zap.Error(err))
 		}
+		traceAttrs = append(traceAttrs, tracingValues...)
 	}
 
 	metricAttrs := *reqContext.telemetry.AcquireAttributes()
@@ -285,21 +268,4 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 	}
 
 	span.SetAttributes(traceAttrs...)
-}
-
-func convertToAttribute(key string, val any) *attribute.KeyValue {
-	if val == nil {
-		return nil
-	}
-
-	switch v := val.(type) {
-	case int:
-		return &attribute.KeyValue{Key: attribute.Key(key), Value: attribute.IntValue(v)}
-	case string:
-		return &attribute.KeyValue{Key: attribute.Key(key), Value: attribute.StringValue(v)}
-	case bool:
-		return &attribute.KeyValue{Key: attribute.Key(key), Value: attribute.BoolValue(v)}
-	default:
-		return &attribute.KeyValue{Key: attribute.Key(key), Value: attribute.StringValue(fmt.Sprintf("%v", v))}
-	}
 }

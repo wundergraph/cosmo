@@ -15,7 +15,51 @@ import (
 
 /**
 * Naming conventions:
-* - Fields are named using camelCase
+* - Fields are named using camelCaset.Run("verify name and id expressions", func(t *testing.T) {
+		t.Parallel()
+		metricReader := metric.NewManualReader()
+		exporter := tracetest.NewInMemoryExporter(t)
+
+		testenv.Run(t, &testenv.Config{
+			TraceExporter: exporter,
+			MetricReader:  metricReader,
+			CustomTracingAttributes: []config.CustomAttribute{
+				{
+					Key: "sg_name",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "subgraph.name",
+					},
+				},
+				{
+					Key: "sg_id",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "subgraph.id",
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:  `query employees { employees { id details { forename surname } notes } }`,
+				Header: map[string][]string{"service-name": {"service-name"}},
+			})
+
+			sn := exporter.GetSpans().Snapshots()
+			engineFetchSpan := sn[6]
+			require.Equal(t, "Engine - Fetch", engineFetchSpan.Name())
+			require.Equal(t, trace.SpanKindInternal, engineFetchSpan.SpanKind())
+
+			attributes := engineFetchSpan.Attributes()
+			exprAttributes := attributes[14:]
+
+			require.Len(t, exprAttributes, 2)
+
+			sgName := findAttr(exprAttributes, "sg_name")
+			require.Equal(t, "employees", sgName.Value.AsString())
+
+			sgId := findAttr(exprAttributes, "sg_id")
+			require.Equal(t, "0", sgId.Value.AsString())
+		})
+	})
 * - Methods are named using PascalCase (Required to be exported)
 * - Methods should be exported through a custom type to avoid exposing accidental methods that can mutate the context
 * - Use interface to expose only the required methods. Blocked by https://github.com/expr-lang/expr/issues/744
@@ -27,7 +71,7 @@ import (
 * Recommendations:
 * If possible function calls should be avoided in the expressions as they are much more expensive.
 * See https://github.com/expr-lang/expr/issues/734
- */
+*/
 
 const ExprRequestKey = "request"
 const ExprRequestAuthKey = "auth"
@@ -120,54 +164,19 @@ type TLSStart struct {
 }
 
 type TLSDone struct {
-	Time        time.Time `expr:"time"`
-	Complete    bool      `expr:"complete"`
-	CipherSuite string    `expr:"cipherSuite"`
-	DidResume   bool      `expr:"didResume"`
-	Version     string    `expr:"version"`
-	Error       error     `expr:"error"`
+	Time      time.Time `expr:"time"`
+	Complete  bool      `expr:"complete"`
+	DidResume bool      `expr:"didResume"`
+	Version   string    `expr:"version"`
+	Error     error     `expr:"error"`
 }
 
-type Dial struct {
-	DialStart []SubgraphDialStart `expr:"start"`
-	DialDone  []SubgraphDialDone  `expr:"done"`
-}
-
-type SubgraphDialCombined struct {
+type DialCombined struct {
 	DialStartTime time.Time  `expr:"dialStartTime"`
 	DialDoneTime  *time.Time `expr:"dialDoneTime"`
 	Error         error      `expr:"error"`
 	Network       string     `expr:"network"`
 	Address       string     `expr:"address"`
-}
-
-// GetGroupedCalls get a list of connection calls that happened, grouped by network and address
-func (r Dial) GetGroupedCalls() []SubgraphDialCombined {
-	dialMap := make(map[string]*SubgraphDialCombined)
-
-	for _, start := range r.DialStart {
-		key := start.Network + "_" + start.Address
-		dialMap[key] = &SubgraphDialCombined{
-			DialStartTime: start.Time,
-			Network:       start.Network,
-			Address:       start.Address,
-		}
-	}
-
-	for _, done := range r.DialDone {
-		key := done.Network + "_" + done.Address
-		if dial, exists := dialMap[key]; exists {
-			dial.DialDoneTime = &done.Time
-			dial.Error = done.Error
-		}
-	}
-
-	dialResults := make([]SubgraphDialCombined, 0, len(dialMap))
-	for _, dial := range dialMap {
-		dialResults = append(dialResults, *dial)
-	}
-
-	return dialResults
 }
 
 type SubgraphDialStart struct {
@@ -199,19 +208,18 @@ type WroteRequest struct {
 type FirstByte struct {
 	Time time.Time `expr:"time"`
 }
-
 type Continue100 struct {
 	Time time.Time `expr:"time"`
 }
 
-type AcquiredSubgraphConnection struct {
+type AcquiredConnection struct {
 	Time     time.Time     `expr:"time"`
 	Reused   bool          `expr:"reused"`
 	WasIdle  bool          `expr:"wasIdle"`
 	IdleTime time.Duration `expr:"idleTime"`
 }
 
-type CreateSubgraphConnection struct {
+type CreateConnection struct {
 	Time     time.Time `expr:"time"`
 	HostPort string    `expr:"hostPort"`
 }
@@ -222,16 +230,17 @@ type PutIdleConnection struct {
 }
 
 type ClientTrace struct {
-	ConnectionCreate   *CreateSubgraphConnection   `expr:"connCreate"`
-	ConnectionAcquired *AcquiredSubgraphConnection `expr:"connAcquired"`
-	DNSStart           *DNSStart                   `expr:"dnsStart"`
-	DNSDone            *DNSDone                    `expr:"dnsDone"`
-	TLSStart           *TLSStart                   `expr:"tlsStart"`
-	TLSDone            *TLSDone                    `expr:"tlsDone"`
-	Dial               *Dial                       `expr:"dial"`
-	WroteHeaders       *WroteHeaders               `expr:"wroteHeaders"`
-	WroteRequest       *WroteRequest               `expr:"wroteRequest"`
-	FirstByte          *FirstByte                  `expr:"firstByte"`
+	ConnectionCreate   *CreateConnection   `expr:"connCreate"`
+	ConnectionAcquired *AcquiredConnection `expr:"connAcquired"`
+	DNSStart           *DNSStart           `expr:"dnsStart"`
+	DNSDone            *DNSDone            `expr:"dnsDone"`
+	TLSStart           *TLSStart           `expr:"tlsStart"`
+	TLSDone            *TLSDone            `expr:"tlsDone"`
+	DialStart          []SubgraphDialStart `expr:"dialStart"`
+	DialDone           []SubgraphDialDone  `expr:"dialDone"`
+	WroteHeaders       *WroteHeaders       `expr:"wroteHeaders"`
+	WroteRequest       *WroteRequest       `expr:"wroteRequest"`
+	FirstByte          *FirstByte          `expr:"firstByte"`
 }
 
 // Subgraph Related

@@ -11,14 +11,14 @@ func ConvertToExprTrace(trace *httpclient.ClientTrace) *ClientTrace {
 	result := &ClientTrace{}
 
 	if trace.ConnectionCreate != nil {
-		result.ConnectionCreate = &CreateSubgraphConnection{
+		result.ConnectionCreate = &CreateConnection{
 			Time:     trace.ConnectionCreate.Time,
 			HostPort: trace.ConnectionCreate.HostPort,
 		}
 	}
 
 	if trace.ConnectionAcquired != nil {
-		result.ConnectionAcquired = &AcquiredSubgraphConnection{
+		result.ConnectionAcquired = &AcquiredConnection{
 			Time:     trace.ConnectionAcquired.Time,
 			Reused:   trace.ConnectionAcquired.Reused,
 			WasIdle:  trace.ConnectionAcquired.WasIdle,
@@ -56,30 +56,25 @@ func ConvertToExprTrace(trace *httpclient.ClientTrace) *ClientTrace {
 		}
 	}
 
-	if trace.DialStart != nil || trace.DialDone != nil {
-		result.Dial = &Dial{}
-
-		result.Dial.DialDone = make([]SubgraphDialDone, 0)
-		result.Dial.DialStart = make([]SubgraphDialStart, 0)
-
-		for _, dialStart := range trace.DialStart {
-			dialStartExpr := SubgraphDialStart{
-				Time:    dialStart.Time,
-				Network: dialStart.Network,
-				Address: dialStart.Address,
-			}
-			result.Dial.DialStart = append(result.Dial.DialStart, dialStartExpr)
+	result.DialStart = make([]SubgraphDialStart, 0, len(trace.DialStart))
+	for _, dialStart := range trace.DialStart {
+		dialStartExpr := SubgraphDialStart{
+			Time:    dialStart.Time,
+			Network: dialStart.Network,
+			Address: dialStart.Address,
 		}
+		result.DialStart = append(result.DialStart, dialStartExpr)
+	}
 
-		for _, dialDone := range trace.DialDone {
-			dialDoneExpr := SubgraphDialDone{
-				Time:    dialDone.Time,
-				Network: dialDone.Network,
-				Address: dialDone.Address,
-				Error:   wrapExprError(dialDone.Error),
-			}
-			result.Dial.DialDone = append(result.Dial.DialDone, dialDoneExpr)
+	result.DialDone = make([]SubgraphDialDone, 0, len(trace.DialDone))
+	for _, dialDone := range trace.DialDone {
+		dialDoneExpr := SubgraphDialDone{
+			Time:    dialDone.Time,
+			Network: dialDone.Network,
+			Address: dialDone.Address,
+			Error:   wrapExprError(dialDone.Error),
 		}
+		result.DialDone = append(result.DialDone, dialDoneExpr)
 	}
 
 	if trace.WroteHeaders != nil {

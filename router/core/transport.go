@@ -115,7 +115,7 @@ func (ct *CustomTransport) measureSubgraphMetrics(req *http.Request) func(err er
 
 	attributes = append(attributes, reqContext.telemetry.metricAttrs...)
 	if reqContext.telemetry.metricAttributeExpressions != nil {
-		additionalAttrs, err := reqContext.telemetry.metricAttributeExpressions.expressionsAttributes(reqContext)
+		additionalAttrs, err := reqContext.telemetry.metricAttributeExpressions.expressionsAttributes(&reqContext.expressionContext)
 		if err != nil {
 			ct.logger.Error("failed to resolve metric attribute expressions", zap.Error(err))
 		}
