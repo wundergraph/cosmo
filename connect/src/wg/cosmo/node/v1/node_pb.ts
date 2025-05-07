@@ -1589,27 +1589,19 @@ export class ConnectionConfiguration extends Message<ConnectionConfiguration> {
    */
   connectionType: {
     /**
-     * Socket connection details
-     *
-     * @generated from field: wg.cosmo.node.v1.SocketConnectionConfiguration socket = 1;
-     */
-    value: SocketConnectionConfiguration;
-    case: "socket";
-  } | {
-    /**
      * TCP connection details
      *
-     * @generated from field: wg.cosmo.node.v1.TCPConnectionConfiguration tcp = 2;
+     * @generated from field: wg.cosmo.node.v1.TCPConfiguration tcp = 1;
      */
-    value: TCPConnectionConfiguration;
+    value: TCPConfiguration;
     case: "tcp";
   } | {
     /**
      * Plugin connection details
      *
-     * @generated from field: wg.cosmo.node.v1.PluginConnectionConfiguration plugin = 3;
+     * @generated from field: wg.cosmo.node.v1.PluginConfiguration plugin = 2;
      */
-    value: PluginConnectionConfiguration;
+    value: PluginConfiguration;
     case: "plugin";
   } | { case: undefined; value?: undefined } = { case: undefined };
 
@@ -1621,9 +1613,8 @@ export class ConnectionConfiguration extends Message<ConnectionConfiguration> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "wg.cosmo.node.v1.ConnectionConfiguration";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "socket", kind: "message", T: SocketConnectionConfiguration, oneof: "connection_type" },
-    { no: 2, name: "tcp", kind: "message", T: TCPConnectionConfiguration, oneof: "connection_type" },
-    { no: 3, name: "plugin", kind: "message", T: PluginConnectionConfiguration, oneof: "connection_type" },
+    { no: 1, name: "tcp", kind: "message", T: TCPConfiguration, oneof: "connection_type" },
+    { no: 2, name: "plugin", kind: "message", T: PluginConfiguration, oneof: "connection_type" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ConnectionConfiguration {
@@ -1644,56 +1635,9 @@ export class ConnectionConfiguration extends Message<ConnectionConfiguration> {
 }
 
 /**
- * @generated from message wg.cosmo.node.v1.SocketConnectionConfiguration
+ * @generated from message wg.cosmo.node.v1.TCPConfiguration
  */
-export class SocketConnectionConfiguration extends Message<SocketConnectionConfiguration> {
-  /**
-   * Unix socket location, e.g., "unix:///tmp/service.sock"
-   *
-   * @generated from field: string location = 1;
-   */
-  location = "";
-
-  /**
-   * SSL configuration
-   *
-   * @generated from field: wg.cosmo.node.v1.SSLConfiguration ssl = 2;
-   */
-  ssl?: SSLConfiguration;
-
-  constructor(data?: PartialMessage<SocketConnectionConfiguration>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.node.v1.SocketConnectionConfiguration";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "location", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "ssl", kind: "message", T: SSLConfiguration },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SocketConnectionConfiguration {
-    return new SocketConnectionConfiguration().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SocketConnectionConfiguration {
-    return new SocketConnectionConfiguration().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SocketConnectionConfiguration {
-    return new SocketConnectionConfiguration().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: SocketConnectionConfiguration | PlainMessage<SocketConnectionConfiguration> | undefined, b: SocketConnectionConfiguration | PlainMessage<SocketConnectionConfiguration> | undefined): boolean {
-    return proto3.util.equals(SocketConnectionConfiguration, a, b);
-  }
-}
-
-/**
- * @generated from message wg.cosmo.node.v1.TCPConnectionConfiguration
- */
-export class TCPConnectionConfiguration extends Message<TCPConnectionConfiguration> {
+export class TCPConfiguration extends Message<TCPConfiguration> {
   /**
    * TCP address, e.g., "localhost:50051"
    *
@@ -1701,46 +1645,38 @@ export class TCPConnectionConfiguration extends Message<TCPConnectionConfigurati
    */
   location = "";
 
-  /**
-   * SSL configuration
-   *
-   * @generated from field: wg.cosmo.node.v1.SSLConfiguration ssl = 2;
-   */
-  ssl?: SSLConfiguration;
-
-  constructor(data?: PartialMessage<TCPConnectionConfiguration>) {
+  constructor(data?: PartialMessage<TCPConfiguration>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.node.v1.TCPConnectionConfiguration";
+  static readonly typeName = "wg.cosmo.node.v1.TCPConfiguration";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "location", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "ssl", kind: "message", T: SSLConfiguration },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TCPConnectionConfiguration {
-    return new TCPConnectionConfiguration().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TCPConfiguration {
+    return new TCPConfiguration().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): TCPConnectionConfiguration {
-    return new TCPConnectionConfiguration().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): TCPConfiguration {
+    return new TCPConfiguration().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): TCPConnectionConfiguration {
-    return new TCPConnectionConfiguration().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): TCPConfiguration {
+    return new TCPConfiguration().fromJsonString(jsonString, options);
   }
 
-  static equals(a: TCPConnectionConfiguration | PlainMessage<TCPConnectionConfiguration> | undefined, b: TCPConnectionConfiguration | PlainMessage<TCPConnectionConfiguration> | undefined): boolean {
-    return proto3.util.equals(TCPConnectionConfiguration, a, b);
+  static equals(a: TCPConfiguration | PlainMessage<TCPConfiguration> | undefined, b: TCPConfiguration | PlainMessage<TCPConfiguration> | undefined): boolean {
+    return proto3.util.equals(TCPConfiguration, a, b);
   }
 }
 
 /**
- * @generated from message wg.cosmo.node.v1.PluginConnectionConfiguration
+ * @generated from message wg.cosmo.node.v1.PluginConfiguration
  */
-export class PluginConnectionConfiguration extends Message<PluginConnectionConfiguration> {
+export class PluginConfiguration extends Message<PluginConfiguration> {
   /**
    * Plugin name
    *
@@ -1748,31 +1684,39 @@ export class PluginConnectionConfiguration extends Message<PluginConnectionConfi
    */
   name = "";
 
-  constructor(data?: PartialMessage<PluginConnectionConfiguration>) {
+  /**
+   * Plugin version
+   *
+   * @generated from field: string version = 2;
+   */
+  version = "";
+
+  constructor(data?: PartialMessage<PluginConfiguration>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.node.v1.PluginConnectionConfiguration";
+  static readonly typeName = "wg.cosmo.node.v1.PluginConfiguration";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "version", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PluginConnectionConfiguration {
-    return new PluginConnectionConfiguration().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PluginConfiguration {
+    return new PluginConfiguration().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PluginConnectionConfiguration {
-    return new PluginConnectionConfiguration().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PluginConfiguration {
+    return new PluginConfiguration().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PluginConnectionConfiguration {
-    return new PluginConnectionConfiguration().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PluginConfiguration {
+    return new PluginConfiguration().fromJsonString(jsonString, options);
   }
 
-  static equals(a: PluginConnectionConfiguration | PlainMessage<PluginConnectionConfiguration> | undefined, b: PluginConnectionConfiguration | PlainMessage<PluginConnectionConfiguration> | undefined): boolean {
-    return proto3.util.equals(PluginConnectionConfiguration, a, b);
+  static equals(a: PluginConfiguration | PlainMessage<PluginConfiguration> | undefined, b: PluginConfiguration | PlainMessage<PluginConfiguration> | undefined): boolean {
+    return proto3.util.equals(PluginConfiguration, a, b);
   }
 }
 

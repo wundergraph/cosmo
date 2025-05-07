@@ -211,32 +211,23 @@ message GRPCConfiguration {
 message ConnectionConfiguration {
   // Only one connection type can be configured at a time
   oneof connection_type {
-    // Socket connection details
-    SocketConnectionConfiguration socket = 1;
-    // TCP connection details
-    TCPConnectionConfiguration tcp = 2;
+    // Network connection details (TCP or Unix socket)
+    NetworkConfiguration network = 1;
     // Plugin connection details
-    PluginConnectionConfiguration plugin = 3;
+    PluginConfiguration plugin = 2;
   }
 }
 
-message SocketConnectionConfiguration {
-  // Unix socket location, e.g., "unix:///tmp/service.sock"
+message NetworkConfiguration {
+  // Network address, e.g., "localhost:50051" for TCP or "/path/to/socket" for Unix socket
   string location = 1;
-  // SSL configuration
-  SSLConfiguration ssl = 2;
 }
 
-message TCPConnectionConfiguration {
-  // TCP address, e.g., "localhost:50051"
-  string location = 1;
-  // SSL configuration
-  SSLConfiguration ssl = 2;
-}
-
-message PluginConnectionConfiguration {
+message PluginConfiguration {
   // Plugin name
   string name = 1;
+  // Plugin version
+  string version = 2;
 }
 
 message SSLConfiguration {

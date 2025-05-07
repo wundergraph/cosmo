@@ -1259,12 +1259,12 @@ func (s *graphServer) buildSubgraphGRPCClients(config *nodev1.EngineConfiguratio
 	subgraphGRPCClients := make(map[string]grpc.ClientConnInterface)
 	for _, dsConfig := range config.DatasourceConfigurations {
 		if grpcConfig := dsConfig.GetCustomGraphql().GetGrpc(); grpcConfig != nil {
-			tcpConnection := grpcConfig.GetConnection().GetTcp()
-			if tcpConnection == nil {
+			networkConnection := grpcConfig.GetConnection().GetNetwork()
+			if networkConnection == nil {
 				continue
 			}
 
-			c, err := grpc.NewClient(tcpConnection.Location, grpc.WithTransportCredentials(insecure.NewCredentials()))
+			c, err := grpc.NewClient(networkConnection.Location, grpc.WithTransportCredentials(insecure.NewCredentials()))
 			if err != nil {
 				return nil, fmt.Errorf("failed to create grpc client for subgraph %s: %w", dsConfig.Id, err)
 			}
