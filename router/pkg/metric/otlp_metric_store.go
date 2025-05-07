@@ -3,9 +3,6 @@ package metric
 import (
 	"context"
 	"errors"
-	"github.com/wundergraph/cosmo/router/pkg/otel"
-	"go.opentelemetry.io/otel/attribute"
-
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.uber.org/zap"
@@ -71,22 +68,11 @@ func (h *OtlpMetricStore) MeasureInFlight(ctx context.Context, opts ...otelmetri
 	}
 }
 
-func (h *OtlpMetricStore) RecordRouterInfo(routerConfigVersion string, featureFlag string, routerVersion string) error {
-	attrKeyValues := []attribute.KeyValue{
-		otel.WgRouterConfigVersion.String(routerConfigVersion),
-		otel.WgRouterVersion.String(routerVersion),
-	}
-	if featureFlag != "" {
-		attrKeyValues = append(attrKeyValues, otel.WgFeatureFlag.String(featureFlag))
-	}
-
-	gauge, err := h.meter.Int64ObservableGauge(operationRouterInfo, otelmetric.WithDescription("Router configuration info."))
-	if err != nil {
-		return err
-	}
+func (h *OtlpMetricStore) StartRouterInfoCallback(opts ...otelmetric.ObserveOption) error {
+	gauge := h.measurements.observableGauges[RouterInfo]
 
 	rc, err := h.meter.RegisterCallback(func(_ context.Context, o otelmetric.Observer) error {
-		o.ObserveInt64(gauge, 1, otelmetric.WithAttributes(attrKeyValues...))
+		o.ObserveInt64(gauge, 1, opts...)
 		return nil
 	}, gauge)
 	if err != nil {

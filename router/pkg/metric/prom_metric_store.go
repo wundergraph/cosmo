@@ -3,7 +3,6 @@ package metric
 import (
 	"context"
 	"errors"
-	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -15,10 +14,6 @@ const (
 	cosmoRouterPrometheusMeterVersion = "0.0.1"
 )
 
-const (
-	operationRouterInfo = "router.info"
-)
-
 type PromMetricStore struct {
 	meter                   otelmetric.Meter
 	meterProvider           *metric.MeterProvider
@@ -28,7 +23,6 @@ type PromMetricStore struct {
 }
 
 func NewPromMetricStore(logger *zap.Logger, meterProvider *metric.MeterProvider) (Provider, error) {
-
 	meter := meterProvider.Meter(cosmoRouterPrometheusMeterName,
 		otelmetric.WithInstrumentationVersion(cosmoRouterPrometheusMeterVersion),
 	)
@@ -79,12 +73,6 @@ func (h *PromMetricStore) MeasureRequestCount(ctx context.Context, opts ...otelm
 	}
 }
 
-func (h *PromMetricStore) RegisterObservable(ctx context.Context, opts ...otelmetric.AddOption) {
-	if c, ok := h.measurements.counters[RequestCounter]; ok {
-		c.Add(ctx, 1, opts...)
-	}
-}
-
 func (h *PromMetricStore) MeasureRequestSize(ctx context.Context, contentLength int64, opts ...otelmetric.AddOption) {
 	if c, ok := h.measurements.counters[RequestContentLengthCounter]; ok {
 		c.Add(ctx, contentLength, opts...)
@@ -115,22 +103,11 @@ func (h *PromMetricStore) MeasureOperationPlanningTime(ctx context.Context, plan
 	}
 }
 
-func (h *PromMetricStore) RecordRouterInfo(routerConfigVersion string, featureFlag string, routerVersion string) error {
-	attrKeyValues := []attribute.KeyValue{
-		otel.WgRouterConfigVersion.String(routerConfigVersion),
-		otel.WgRouterVersion.String(routerVersion),
-	}
-	if featureFlag != "" {
-		attrKeyValues = append(attrKeyValues, otel.WgFeatureFlag.String(featureFlag))
-	}
-
-	gauge, err := h.meter.Int64ObservableGauge(operationRouterInfo, otelmetric.WithDescription("Router configuration info."))
-	if err != nil {
-		return err
-	}
+func (h *PromMetricStore) StartRouterInfoCallback(opts ...otelmetric.ObserveOption) error {
+	gauge := h.measurements.observableGauges[RouterInfo]
 
 	rc, err := h.meter.RegisterCallback(func(_ context.Context, o otelmetric.Observer) error {
-		o.ObserveInt64(gauge, 1, otelmetric.WithAttributes(attrKeyValues...))
+		o.ObserveInt64(gauge, 1, opts...)
 		return nil
 	}, gauge)
 	if err != nil {
