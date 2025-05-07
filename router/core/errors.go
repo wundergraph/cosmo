@@ -276,7 +276,7 @@ func writeMultipartError(
 	// before, some clients that rely on both CR and LF strictly to parse blocks were broken and not parsing our
 	// multipart chunks correctly. With this fix here (and in a few other places) the clients are now working.
 	resp = append(resp, []byte("\r\n--graphql--")...)
-
+ 
 	if _, err := w.Write([]byte(resp)); err != nil {
 		return err
 	}
