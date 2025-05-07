@@ -19,13 +19,13 @@ project_dir
     - README.md # Getting Started guide
 ```
 
-2. Build the plugin
+2. Compile the plugin
 
-`wgc plugin build ./myplugin --compile`
+`wgc plugin build ./myplugin --generate-only`
 
 After initializing the plugin, the user can design the plugin schema. Once the schema is designed, the user can build the plugin. For now, we only support Go plugins.
 
-**Optionally**, the user can compile the plugin `--compile` for local development with the router.
+**Optionally**, the user can skip compile step with `--generate-only` flag for faster iteration.
 
 ```bash
 project_dir
@@ -36,7 +36,7 @@ project_dir
       - service.go # Updated according to the proto file
       - go.mod
     - build
-      - binary (NEW) **Optional**
+      - ${ARCH}_binary (NEW) **Optional**
       - schema.proto (NEW) 
       - mapping.json (NEW)
 ```
@@ -59,7 +59,7 @@ subgraphs:
 
 4. Start the Router
 
-The router will look for the plugins in the directory specified in the config. It is only interested in the `build/binary` directory of each plugin. The available plugins are listed in the router execution config.
+The router will look for the plugins in the directory specified in the config. It is only interested in the `build/${ARCH}_binary` directory of each plugin. The available plugins are listed in the router execution config.
 
 ```yaml
 plugins:
@@ -71,7 +71,7 @@ plugins:
 The plugin binary is hosted on the CDN. The URL is constructed as follows:
 
 ```bash
-/$orgID/$fedID/plugins/$pluginName/$version/$arch/$pluginName
+/$orgID/$fedID/plugins/$pluginName/$version/$arch_binary
 ```
 
 The plugin name, version are embedded in the router execution config. The router will download the plugin binary from the CDN and store it in the plugin directory.
