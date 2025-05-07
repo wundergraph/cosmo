@@ -91,7 +91,7 @@ func (h *PromMetricStore) MeasureOperationPlanningTime(ctx context.Context, plan
 	}
 }
 
-func (h *PromMetricStore) StartRouterInfoCallback(opts ...otelmetric.ObserveOption) error {
+func (h *PromMetricStore) StartRecordingRouterInfo(opts ...otelmetric.ObserveOption) error {
 	gauge := h.measurements.observableGauges[RouterInfo]
 
 	rc, err := h.meter.RegisterCallback(func(_ context.Context, o otelmetric.Observer) error {

@@ -123,7 +123,7 @@ type (
 		MeasureRequestError(ctx context.Context, opts ...otelmetric.AddOption)
 		MeasureOperationPlanningTime(ctx context.Context, planningTime float64, opts ...otelmetric.RecordOption)
 		MeasureSchemaFieldUsage(ctx context.Context, schemaUsage int64, opts ...otelmetric.AddOption)
-		StartRouterInfoCallback(opts ...otelmetric.ObserveOption) error
+		StartRecordingRouterInfo(opts ...otelmetric.ObserveOption) error
 		Flush(ctx context.Context) error
 		Shutdown() error
 	}
@@ -139,7 +139,7 @@ type (
 		MeasureRequestError(ctx context.Context, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption)
 		MeasureOperationPlanningTime(ctx context.Context, planningTime time.Duration, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption)
 		MeasureSchemaFieldUsage(ctx context.Context, schemaUsage int64, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption)
-		RecordRouterInfo(opt otelmetric.ObserveOption)
+		StartRecordingRouterInfo(opt otelmetric.ObserveOption)
 		Flush(ctx context.Context) error
 		Shutdown(ctx context.Context) error
 	}
@@ -355,9 +355,9 @@ func (h *Metrics) MeasureOperationPlanningTime(ctx context.Context, planningTime
 	h.otlpRequestMetrics.MeasureOperationPlanningTime(ctx, elapsedTime, opts...)
 }
 
-func (h *Metrics) RecordRouterInfo(opt otelmetric.ObserveOption) {
-	h.promRequestMetrics.StartRouterInfoCallback(opt)
-	h.otlpRequestMetrics.StartRouterInfoCallback(opt)
+func (h *Metrics) StartRecordingRouterInfo(opt otelmetric.ObserveOption) {
+	h.promRequestMetrics.StartRecordingRouterInfo(opt)
+	h.otlpRequestMetrics.StartRecordingRouterInfo(opt)
 }
 
 func (h *Metrics) MeasureSchemaFieldUsage(ctx context.Context, schemaUsage int64, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption) {

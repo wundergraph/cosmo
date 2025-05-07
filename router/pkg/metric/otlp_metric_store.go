@@ -56,7 +56,7 @@ func (h *OtlpMetricStore) MeasureInFlight(ctx context.Context, opts ...otelmetri
 	}
 }
 
-func (h *OtlpMetricStore) StartRouterInfoCallback(opts ...otelmetric.ObserveOption) error {
+func (h *OtlpMetricStore) StartRecordingRouterInfo(opts ...otelmetric.ObserveOption) error {
 	gauge := h.measurements.observableGauges[RouterInfo]
 
 	rc, err := h.meter.RegisterCallback(func(_ context.Context, o otelmetric.Observer) error {

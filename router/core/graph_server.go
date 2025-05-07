@@ -727,7 +727,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		if featureFlagName != "" {
 			attrKeyValues = append(attrKeyValues, otel.WgFeatureFlag.String(featureFlagName))
 		}
-		gm.metricStore.RecordRouterInfo(otelmetric.WithAttributeSet(attribute.NewSet(attrKeyValues...)))
+		gm.metricStore.StartRecordingRouterInfo(otelmetric.WithAttributeSet(attribute.NewSet(attrKeyValues...)))
 	}
 
 	subgraphs, err := configureSubgraphOverwrites(

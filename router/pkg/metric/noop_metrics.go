@@ -55,7 +55,7 @@ func (n NoopMetrics) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-func (h *NoopMetrics) RecordRouterInfo(opt otelmetric.ObserveOption) {
+func (h *NoopMetrics) StartRecordingRouterInfo(opt otelmetric.ObserveOption) {
 
 }
 func NewNoopMetrics() Store {
