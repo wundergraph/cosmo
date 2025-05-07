@@ -1,6 +1,7 @@
 import { LintSeverity } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { JWTPayload } from 'jose';
 import { GraphPruningRuleEnum, LintRuleEnum, OrganizationRole, ProposalMatch } from '../db/models.js';
+import { RBACEvaluator } from '../core/services/RBACEvaluator.js';
 
 export type FeatureIds =
   | 'users'
@@ -436,10 +437,10 @@ export type AuthContext = {
   auth: 'access_token' | 'api_key' | 'cookie';
   organizationId: string;
   organizationSlug: string;
-  roles: OrganizationRole[];
   hasWriteAccess: boolean;
   isAdmin: boolean;
   userId: string;
+  rbac: RBACEvaluator;
   userDisplayName: string;
   apiKeyName?: string;
 };

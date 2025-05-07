@@ -15,6 +15,7 @@ import { ApiKeyRepository } from './repositories/ApiKeyRepository.js';
 import { DefaultNamespace, NamespaceRepository } from './repositories/NamespaceRepository.js';
 import { verifyJwt } from './crypto/jwt.js';
 import { OrganizationGroupRepository } from './repositories/OrganizationGroupRepository.js';
+import { RBACEvaluator } from './services/RBACEvaluator.js';
 
 export type UserTestData = {
   userId: string;
@@ -24,7 +25,7 @@ export type UserTestData = {
   defaultBillingPlanId?: string;
   email: string;
   apiKey: string;
-  roles: OrganizationRole[];
+  roles: MemberRole[];
 };
 
 export async function beforeAllSetup(): Promise<string> {
@@ -143,7 +144,7 @@ export function createTestContext(
   organizationId = randomUUID(),
   isAdmin = true,
   hasWriteAccess = true,
-  roles: OrganizationRole[] = ['organization-admin'],
+  roles: MemberRole[] = ['admin'],
 ): UserTestData & AuthContext {
   const userId = randomUUID();
 
@@ -159,6 +160,7 @@ export function createTestContext(
     isAdmin,
     userDisplayName: userId,
     roles,
+    rbac: new RBACEvaluator([]),
   };
 }
 
