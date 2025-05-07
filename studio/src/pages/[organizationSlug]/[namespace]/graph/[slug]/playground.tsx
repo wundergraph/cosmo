@@ -906,9 +906,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
     setStoredHeaders(tempHeaders);
   }, [setStoredHeaders, tempHeaders]);
 
-  const [headers, setHeaders] = useState(`{
-  "X-WG-TRACE" : "true"
-}`);
+  const [headers, setHeaders] = useState(PLAYGROUND_DEFAULT_HEADERS_TEMPLATE);
   const [response, setResponse] = useState<string>("");
 
   const [plan, setPlan] = useState<QueryPlan | undefined>(undefined);
@@ -1288,9 +1286,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
             query={query}
             variables={updatedVariables}
             onEditQuery={setQuery}
-            defaultHeaders={`{
-  "X-WG-TRACE" : "true"
-}`}
+            headers={headers}
             onEditHeaders={setHeaders}
             plugins={[
               explorerPlugin({
