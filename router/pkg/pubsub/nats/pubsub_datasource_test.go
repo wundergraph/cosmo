@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/pubsubtest"
 )
 
 func TestNatsPubSubDataSource(t *testing.T) {
@@ -35,7 +35,7 @@ func TestNatsPubSubDataSource(t *testing.T) {
 	}
 
 	// Run the standard test suite
-	datasource.VerifyPubSubDataSourceImplementation(t, pubsub)
+	pubsubtest.VerifyPubSubDataSourceImplementation(t, pubsub)
 }
 
 func TestPubSubDataSourceWithMockAdapter(t *testing.T) {

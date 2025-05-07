@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/pubsubtest"
 )
 
 func TestKafkaPubSubDataSource(t *testing.T) {
@@ -34,7 +34,7 @@ func TestKafkaPubSubDataSource(t *testing.T) {
 	}
 
 	// Run the standard test suite
-	datasource.VerifyPubSubDataSourceImplementation(t, pubsub)
+	pubsubtest.VerifyPubSubDataSourceImplementation(t, pubsub)
 }
 
 // TestPubSubDataSourceWithMockAdapter tests the PubSubDataSource with a mocked adapter
