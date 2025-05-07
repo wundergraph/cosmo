@@ -30,6 +30,12 @@ type Query {
     floatField(arg: Float): Float
 
     sharedThings(numOfA: Int! numOfB: Int!): [Thing!]! @shareable
+
+    secret: Secret @requiresScopes(scopes: [["read:secret"]])
+}
+
+type Secret {
+    value: String
 }
 
 type Thing @shareable {

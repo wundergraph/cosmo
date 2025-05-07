@@ -606,6 +606,7 @@ type ComplexityRoot struct {
 		RootFieldWithListOfEnumArg  func(childComplexity int, arg []model.EnumType) int
 		RootFieldWithListOfInputArg func(childComplexity int, arg []*model.InputType) int
 		RootFieldWithNestedListArg  func(childComplexity int, arg [][]string) int
+		Secret                      func(childComplexity int) int
 		SharedThings                func(childComplexity int, numOfA int, numOfB int) int
 		__resolve__service          func(childComplexity int) int
 		__resolve_entities          func(childComplexity int, representations []map[string]any) int
@@ -667,6 +668,10 @@ type ComplexityRoot struct {
 		XFieldOnSBigObject func(childComplexity int) int
 		YFieldOnSBigObject func(childComplexity int) int
 		ZFieldOnSBigObject func(childComplexity int) int
+	}
+
+	Secret struct {
+		Value func(childComplexity int) int
 	}
 
 	Subscription struct {
@@ -914,6 +919,7 @@ type QueryResolver interface {
 	RootFieldWithInput(ctx context.Context, arg model.InputArg) (string, error)
 	FloatField(ctx context.Context, arg *float64) (*float64, error)
 	SharedThings(ctx context.Context, numOfA int, numOfB int) ([]*model.Thing, error)
+	Secret(ctx context.Context) (*model.Secret, error)
 }
 type SubscriptionResolver interface {
 	HeaderValue(ctx context.Context, name string, repeat *int) (<-chan *model.TimestampedString, error)
@@ -4410,6 +4416,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.RootFieldWithNestedListArg(childComplexity, args["arg"].([][]string)), true
 
+	case "Query.secret":
+		if e.complexity.Query.Secret == nil {
+			break
+		}
+
+		return e.complexity.Query.Secret(childComplexity), true
+
 	case "Query.sharedThings":
 		if e.complexity.Query.SharedThings == nil {
 			break
@@ -4804,6 +4817,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.SBigObject.ZFieldOnSBigObject(childComplexity), true
+
+	case "Secret.value":
+		if e.complexity.Secret.Value == nil {
+			break
+		}
+
+		return e.complexity.Secret.Value(childComplexity), true
 
 	case "Subscription.headerValue":
 		if e.complexity.Subscription.HeaderValue == nil {
@@ -6312,6 +6332,12 @@ type Query {
     floatField(arg: Float): Float
 
     sharedThings(numOfA: Int! numOfB: Int!): [Thing!]! @shareable
+
+    secret: Secret @requiresScopes(scopes: [["read:secret"]])
+}
+
+type Secret {
+    value: String
 }
 
 type Thing @shareable {
@@ -29664,6 +29690,51 @@ func (ec *executionContext) fieldContext_Query_sharedThings(ctx context.Context,
 	return fc, nil
 }
 
+func (ec *executionContext) _Query_secret(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_secret(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().Secret(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.Secret)
+	fc.Result = res
+	return ec.marshalOSecret2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋtest1ᚋsubgraphᚋmodelᚐSecret(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_secret(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "value":
+				return ec.fieldContext_Secret_value(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Secret", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query__entities(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Query__entities(ctx, field)
 	if err != nil {
@@ -32179,6 +32250,47 @@ func (ec *executionContext) fieldContext_SBigObject_zFieldOnSBigObject(_ context
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Secret_value(ctx context.Context, field graphql.CollectedField, obj *model.Secret) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Secret_value(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Value, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Secret_value(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Secret",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -46329,6 +46441,25 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "secret":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_secret(ctx, field)
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "_entities":
 			field := field
 
@@ -46709,6 +46840,42 @@ func (ec *executionContext) _SBigObject(ctx context.Context, sel ast.SelectionSe
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var secretImplementors = []string{"Secret"}
+
+func (ec *executionContext) _Secret(ctx context.Context, sel ast.SelectionSet, obj *model.Secret) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, secretImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Secret")
+		case "value":
+			out.Values[i] = ec._Secret_value(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -49566,6 +49733,13 @@ func (ec *executionContext) marshalOMap2map(ctx context.Context, sel ast.Selecti
 	}
 	res := graphql.MarshalMap(v)
 	return res
+}
+
+func (ec *executionContext) marshalOSecret2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋtest1ᚋsubgraphᚋmodelᚐSecret(ctx context.Context, sel ast.SelectionSet, v *model.Secret) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._Secret(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalOString2string(ctx context.Context, v any) (string, error) {

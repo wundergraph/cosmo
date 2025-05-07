@@ -109,12 +109,12 @@
   "MCP": {
     "Enabled": false,
     "Server": {
-      "Port": 5025
+      "ListenAddr": "localhost:5025"
     },
     "Storage": {
       "ProviderID": ""
     },
-    "GraphName": "cosmo",
+    "GraphName": "mygraph",
     "ExcludeMutations": false,
     "EnableArbitraryOperations": false,
     "ExposeSchema": false,
@@ -318,7 +318,9 @@
     "WebSocketClientConnBufferSize": 128,
     "WebSocketClientReadTimeout": 5000000000,
     "WebSocketClientWriteTimeout": 10000000000,
-    "WebSocketClientPingInterval": 10000000000,
+    "WebSocketClientPingInterval": 15000000000,
+    "WebSocketClientPingTimeout": 30000000000,
+    "WebSocketClientFrameTimeout": 100000000,
     "ExecutionPlanCacheSize": 1024,
     "MinifySubgraphOperations": true,
     "EnablePersistedOperationsCache": true,

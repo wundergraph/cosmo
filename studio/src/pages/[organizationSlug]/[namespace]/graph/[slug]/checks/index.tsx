@@ -117,7 +117,7 @@ const ChecksPage: NextPageWithLayout = () => {
 
   if (!data?.checks || !graphContext?.graph) return null;
 
-  if (data.totalChecksCount === 0)
+  if (data.checks.length === 0)
     return (
       <EmptyState
         icon={<CommandLineIcon />}
@@ -164,7 +164,7 @@ const ChecksPage: NextPageWithLayout = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.checks.length !== 0 ? (
+            {data.checks.length !== 0 &&
               data.checks.map(
                 ({
                   id,
@@ -247,8 +247,7 @@ const ChecksPage: NextPageWithLayout = () => {
                             variant="outline"
                             className={cn(
                               "gap-2 py-1.5",
-                              compositionSkipped &&
-                                "text-muted-foreground",
+                              compositionSkipped && "text-muted-foreground",
                             )}
                           >
                             {compositionSkipped ? (
@@ -262,8 +261,7 @@ const ChecksPage: NextPageWithLayout = () => {
                             variant="outline"
                             className={cn(
                               "gap-2 py-1.5",
-                              breakingChangesSkipped &&
-                                "text-muted-foreground",
+                              breakingChangesSkipped && "text-muted-foreground",
                             )}
                           >
                             {breakingChangesSkipped ? (
@@ -382,14 +380,7 @@ const ChecksPage: NextPageWithLayout = () => {
                     </TableRow>
                   );
                 },
-              )
-            ) : (
-              <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center">
-                  No results.
-                </TableCell>
-              </TableRow>
-            )}
+              )}
           </TableBody>
         </Table>
       </TableWrapper>
