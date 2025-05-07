@@ -24,7 +24,8 @@ project_dir
 `wgc plugin build ./myplugin --compile`
 
 After initializing the plugin, the user can design the plugin schema. Once the schema is designed, the user can build the plugin. For now, we only support Go plugins.
-Optionally, the user can compile the plugin to a binary for local development with the router.
+
+**Optionally**, the user can compile the plugin `--compile` for local development with the router.
 
 ```bash
 project_dir
