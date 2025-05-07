@@ -1,6 +1,6 @@
 ## Plugin development
 
-In the first version we focus on local development of plugins but 
+In the first version we focus on local development of plugins written in Go. We're prefer naming convention over absolute configuration power. The approach is comatible with the CDN deployment.
 
 1. Initialize the plugin
 
