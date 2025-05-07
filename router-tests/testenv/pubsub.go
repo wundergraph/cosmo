@@ -8,20 +8,20 @@ import (
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 )
 
-type NatParams struct {
+type NatsParams struct {
 	Opts []nats.Option
 	Url  string
 }
 
 type NatsData struct {
 	Connections []*nats.Conn
-	Params      []*NatParams
+	Params      []*NatsParams
 }
 
 func setupNatsClients(t testing.TB) (*NatsData, error) {
 	natsData := &NatsData{}
 	for range demoNatsProviders {
-		param := &NatParams{
+		param := &NatsParams{
 			Url: nats.DefaultURL,
 			Opts: []nats.Option{
 				nats.MaxReconnects(10),
