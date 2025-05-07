@@ -1,9 +1,10 @@
 import { PlaygroundContext, ShareOptionId } from '@/components/playground/types';
 import { useToast } from '@/components/ui/use-toast';
-import { SHARE_OPTIONS } from '@/lib/constants';
+import { OPTION_TYPES, SHARE_OPTIONS } from '@/lib/constants';
 import { buildStateToShare, createCompressedStateUrl } from '@/lib/playground-url-state-encoding';
 import { PlaygroundUrlState } from '@/components/playground/types';
 import { useCallback, useContext, useEffect, useState, useMemo } from 'react';
+import { getPreFlightScript, getScriptTabState } from '@/lib/playground-storage';
 
 const MAX_URL_LENGTH = 2000;
 const WARNING_MESSAGES = {
@@ -29,6 +30,53 @@ export const useSharePlaygroundModal = (isOpen: boolean) => {
   // sharing state only for the active tab
   const { tabsState } = useContext(PlaygroundContext);
   const currentActiveTab = useMemo(() => tabsState.tabs[tabsState.activeTabIndex] ?? {}, [tabsState]);
+
+  // Compute which options should be disabled based on available values
+  const optionsWithDisabledState = useMemo(() => {
+    return SHARE_OPTIONS.map(option => {
+      let isDisabled = option.isDisabled;
+      
+      if (!isDisabled) {
+        switch (option.id) {
+          case OPTION_TYPES.OPERATION:
+            break;
+            
+          case OPTION_TYPES.VARIABLES:
+            isDisabled = !currentActiveTab.variables;
+            break;
+
+          case OPTION_TYPES.HEADERS:
+            isDisabled = !currentActiveTab.headers;
+            break;
+
+          case OPTION_TYPES.PRE_FLIGHT:
+            const script = getPreFlightScript();
+            isDisabled = !script || !script.id;
+            break;
+
+          case OPTION_TYPES.PRE_OPERATION: {
+            const script = currentActiveTab.id ? getScriptTabState(currentActiveTab.id, 'pre-operation') : null;
+            isDisabled = !currentActiveTab.id || !script || !script.enabled || !script.id;
+            break;
+          }
+
+          case OPTION_TYPES.POST_OPERATION: {
+            const script = currentActiveTab.id ? getScriptTabState(currentActiveTab.id, 'post-operation') : null;
+            isDisabled = !currentActiveTab.id || !script || !script.enabled || !script.id;
+            break;
+          }
+
+          default:
+            break;
+        }
+      }
+
+      return {
+        ...option,
+        isDisabled,
+      };
+    });
+  }, [currentActiveTab]);
 
   // Reset state when modal is opened
   useEffect(() => {
@@ -101,7 +149,7 @@ export const useSharePlaygroundModal = (isOpen: boolean) => {
   }, [generateShareableUrl]);
 
   return {
-    options: SHARE_OPTIONS,
+    options: optionsWithDisabledState,
     selectedOptions,
     shareableUrl,
     warning,

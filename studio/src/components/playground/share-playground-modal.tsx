@@ -16,7 +16,7 @@ import { CopyIcon, ExclamationTriangleIcon } from "@radix-ui/react-icons";
 import { TooltipContent, TooltipTrigger } from "@radix-ui/react-tooltip";
 import { useState } from "react";
 import { FiShare2 } from "react-icons/fi";
-import { IoHelpCircle } from "react-icons/io5";
+import { OPTION_TYPES } from "@/lib/constants";
 
 interface ShareOptionsListProps {
   options: ReadonlyArray<{
@@ -41,43 +41,55 @@ interface CopyLinkProps {
 }
 
 const ShareOptionsList = ({ options, selectedOptions, onOptionChange }: ShareOptionsListProps) => {
-  return (
-    <div className="space-y-4">
-      {options.map(({ id, label, description, isDisabled }) => (
-        <div key={id} className="flex items-center space-x-2">
-          <Checkbox
-            id={id}
-            checked={selectedOptions[id]}
-            disabled={isDisabled}
-            onCheckedChange={(checked) => onOptionChange(id, checked as boolean)}
-          />
+  const availableOptions = options.filter(opt => opt.id === OPTION_TYPES.OPERATION || !opt.isDisabled);
+  const unavailableOptions = options.filter(opt => opt.id !== OPTION_TYPES.OPERATION && opt.isDisabled);
+
+  const renderOption = ({ id, label, description, isDisabled }: typeof options[0]) => {
+    const textStyles = `select-none ${isDisabled ? 'cursor-not-allowed text-muted-foreground' : 'cursor-pointer'}`;
+
+    return (
+      <div key={id} className="flex items-start space-x-3">
+        <Checkbox
+          id={id}
+          className="mt-1 h-4 w-4"
+          checked={selectedOptions[id]}
+          disabled={isDisabled}
+          onCheckedChange={(checked) => onOptionChange(id, checked as boolean)}
+        />
+        <div className="flex-1">
           <label
             htmlFor={id}
-            className={`select-none ${isDisabled ? 'cursor-not-allowed text-muted-foreground' : 'cursor-pointer'}`}
+            className={`text-sm font-medium ${textStyles}`}
           >
             {label}
           </label>
-          {description && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="text-muted-foreground cursor-pointer">
-                  <IoHelpCircle className="h-4 w-4" />
-                </span>
-              </TooltipTrigger>
-              <TooltipContent
-                side="right"
-                align="center"
-                className="rounded-md border bg-background px-2 py-1 max-w-xs break-words"
-              >
-                {description}
-              </TooltipContent>
-            </Tooltip>
-          )}
+          <div 
+            className={`text-xs text-muted-foreground mt-1 ${textStyles}`}
+            onClick={() => !isDisabled && onOptionChange(id, !selectedOptions[id])}
+          >
+            {description}
+          </div>
         </div>
-      ))}
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-8">
+      <div className="space-y-3">
+        <h3 className="text-sm text-muted-foreground select-none">Select what to share</h3>
+        {availableOptions.map(renderOption)}
+      </div>
+
+      {unavailableOptions.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-sm text-muted-foreground select-none">No content to share</h3>
+          {unavailableOptions.map(renderOption)}
+        </div>
+      )}
     </div>
-  )
-}
+  );
+};
 
 const Warning = ({ data }: WarningProps) => {
   if (!data) return null;
@@ -89,40 +101,38 @@ const Warning = ({ data }: WarningProps) => {
       <AlertDescription>{data.description}</AlertDescription>
     </Alert>
   );
-}
+};
 
-const CopyLink = ({ shareableUrl, isCopyDisabled, onCopy }: CopyLinkProps) => {
-  return (
-    <div className="flex items-center gap-4">
-      <div className="relative group w-full">
-        <Input
-          value={shareableUrl}
-          readOnly
-          disabled={isCopyDisabled}
-          className="pr-10 font-mono text-sm w-full"
-          onClick={(e) => e.currentTarget.select()}
-        />
-        <Button
-          size="icon"
-          variant="ghost"
-          className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-          onClick={onCopy}
-          disabled={isCopyDisabled}
-          aria-disabled={isCopyDisabled}
-          aria-label="Copy URL to clipboard"
-        >
-          <CopyIcon className="h-4 w-4" />
-        </Button>
-      </div>
-      {shareableUrl && (
-        <Button onClick={onCopy} variant="secondary" className="flex-shrink-0" disabled={isCopyDisabled}>
-          <CopyIcon className="mr-2 h-4 w-4" />
-          Copy Link
-        </Button>
-      )}
-    </div> 
-  );
-}
+const CopyLink = ({ shareableUrl, isCopyDisabled, onCopy }: CopyLinkProps) => (
+  <div className="flex items-center gap-4">
+    <div className="relative group w-full">
+      <Input
+        value={shareableUrl}
+        readOnly
+        disabled={isCopyDisabled}
+        className="pr-10 font-mono text-sm w-full"
+        onClick={(e) => e.currentTarget.select()}
+      />
+      <Button
+        size="icon"
+        variant="ghost"
+        className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+        onClick={onCopy}
+        disabled={isCopyDisabled}
+        aria-disabled={isCopyDisabled}
+        aria-label="Copy URL to clipboard"
+      >
+        <CopyIcon className="h-4 w-4" />
+      </Button>
+    </div>
+    {shareableUrl && (
+      <Button onClick={onCopy} variant="secondary" className="flex-shrink-0" disabled={isCopyDisabled}>
+        <CopyIcon className="mr-2 h-4 w-4" />
+        Copy Link
+      </Button>
+    )}
+  </div>
+);
 
 export const SharePlaygroundModal = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -154,13 +164,13 @@ export const SharePlaygroundModal = () => {
         </TooltipContent>
       </Tooltip>
       <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Share Playground State</DialogTitle>
-          <DialogDescription>
-            Select which parts of your playground state to include in the shared URL
+        <DialogHeader className="space-y-2">
+          <DialogTitle className="select-none">Share Playground</DialogTitle>
+          <DialogDescription className="select-none">
+            Choose what to include in your shared playground URL
           </DialogDescription>
         </DialogHeader>
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-6">
           <Warning data={warning} />
           <ShareOptionsList 
             options={options}
