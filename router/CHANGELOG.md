@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.206.0](https://github.com/wundergraph/cosmo/compare/router@0.205.1...router@0.206.0) (2025-05-06)
+
+### Features
+
+* add support for deprecated arguments in introspection ([#1835](https://github.com/wundergraph/cosmo/issues/1835)) ([eb167dd](https://github.com/wundergraph/cosmo/commit/eb167dd2af412f997cf5d3decd1738852c31b825)) (@devsergiy)
+
+## [0.205.1](https://github.com/wundergraph/cosmo/compare/router@0.205.0...router@0.205.1) (2025-05-06)
+
+### Bug Fixes
+
+* update go tools ([#1834](https://github.com/wundergraph/cosmo/issues/1834)) ([5f5664e](https://github.com/wundergraph/cosmo/commit/5f5664e877282f5c60d21b61a937c9cbee1095da)) (@jensneuse)
+
 # [0.205.0](https://github.com/wundergraph/cosmo/compare/router@0.204.2...router@0.205.0) (2025-05-02)
 
 ### Features
