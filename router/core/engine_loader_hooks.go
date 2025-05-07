@@ -150,8 +150,6 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 	traceAttrs = append(traceAttrs, rotel.WgComponentName.String("engine-loader"))
 	traceAttrs = append(traceAttrs, commonAttrs...)
 
-	fromTrace := httpclient.GetClientTraceFromContext(ctx)
-
 	// Note: This copy still points to the same maps like requestClaims etc
 	exprCtx := reqContext.expressionContext
 	exprCtx.Subgraph = expr.Subgraph{
@@ -162,6 +160,7 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 	exprCtx.Subgraph.Request.Error = &expr.WrapError{Err: responseInfo.Err}
 
 	if f.visitorManager.IsSubgraphTraceUsedInExpressions() {
+		fromTrace := httpclient.GetClientTraceFromContext(ctx)
 		exprCtx.Subgraph.Request.ClientTrace = *expr.ConvertToExprTrace(fromTrace)
 	}
 

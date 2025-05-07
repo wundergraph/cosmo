@@ -3,6 +3,7 @@ package httpclient
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -73,7 +74,7 @@ func TestTraceClient(t *testing.T) {
 		t.Parallel()
 		ctx, trace := setupTest()
 
-		expectedErr := fmt.Errorf("dns error")
+		expectedErr := errors.New("dns error")
 		trace.DNSDone(httptrace.DNSDoneInfo{
 			Addrs:     []net.IPAddr{{IP: net.ParseIP("192.168.1.1")}, {IP: net.ParseIP("192.168.1.2")}},
 			Coalesced: true,
@@ -141,7 +142,7 @@ func TestTraceClient(t *testing.T) {
 
 		network := "tcp"
 		addr := "192.168.1.1:80"
-		expectedErr := fmt.Errorf("connection error")
+		expectedErr := errors.New("connection error")
 		trace.ConnectDone(network, addr, expectedErr)
 
 		clientTrace := GetClientTraceFromContext(ctx)
@@ -202,7 +203,7 @@ func TestTraceClient(t *testing.T) {
 		t.Parallel()
 		ctx, trace := setupTest()
 
-		expectedErr := fmt.Errorf("tls error")
+		expectedErr := errors.New("tls error")
 		connectionState := tls.ConnectionState{
 			HandshakeComplete: true,
 			CipherSuite:       tls.TLS_AES_128_GCM_SHA256,
@@ -232,7 +233,7 @@ func TestTraceClient(t *testing.T) {
 		t.Parallel()
 		ctx, trace := setupTest()
 
-		expectedErr := fmt.Errorf("write error")
+		expectedErr := errors.New("write error")
 		trace.WroteRequest(httptrace.WroteRequestInfo{Err: expectedErr})
 
 		clientTrace := GetClientTraceFromContext(ctx)
@@ -274,7 +275,7 @@ func TestTraceInjectingRoundTripper_RoundTrip(t *testing.T) {
 	t.Run("error from base round tripper", func(t *testing.T) {
 		t.Parallel()
 		// Create a mock round tripper that returns an error
-		expectedErr := fmt.Errorf("connection failed")
+		expectedErr := errors.New("connection failed")
 		mockRT := &mockRoundTripper{
 			err: expectedErr,
 		}
@@ -323,7 +324,7 @@ type mockRoundTripper struct {
 	err      error
 }
 
-func (m *mockRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+func (m *mockRoundTripper) RoundTrip(_ *http.Request) (*http.Response, error) {
 	return m.response, m.err
 }
 

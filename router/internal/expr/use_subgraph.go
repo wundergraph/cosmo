@@ -4,6 +4,10 @@ import (
 	"github.com/expr-lang/expr/ast"
 )
 
+const (
+	nodeName = "subgraph"
+)
+
 type UsesSubgraph struct {
 	UsesSubgraph bool
 }
@@ -15,7 +19,7 @@ func (v *UsesSubgraph) Visit(baseNode *ast.Node) {
 
 	// Check if it's an identifier node
 	identifierNode, ok := (*baseNode).(*ast.IdentifierNode)
-	if ok && identifierNode.Value == "subgraph" {
+	if ok && identifierNode.Value == nodeName {
 		v.UsesSubgraph = true
 		return
 	}
@@ -27,7 +31,7 @@ func (v *UsesSubgraph) Visit(baseNode *ast.Node) {
 	}
 
 	// Check if the node itself is "subgraph"
-	if identifierNode, ok := memberNode.Node.(*ast.IdentifierNode); ok && identifierNode.Value == "subgraph" {
+	if identifierNode, ok := memberNode.Node.(*ast.IdentifierNode); ok && identifierNode.Value == nodeName {
 		v.UsesSubgraph = true
 		return
 	}

@@ -25,10 +25,7 @@ func GetClientTraceFromContext(ctx context.Context) *ClientTrace {
 	value := ctx.Value(ClientTraceContextKey{})
 	// Return no-op context if the subgraph context key was never set
 	if value == nil {
-		return &ClientTrace{
-			DialStart: make([]SubgraphDialStart, 0),
-			DialDone:  make([]SubgraphDialDone, 0),
-		}
+		return &ClientTrace{}
 	}
 	return value.(*ClientTrace)
 }
