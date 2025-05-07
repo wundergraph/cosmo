@@ -4,7 +4,7 @@ import { OPTION_TYPES, SHARE_OPTIONS } from '@/lib/constants';
 import { buildStateToShare, createCompressedStateUrl } from '@/lib/playground-url-state-encoding';
 import { PlaygroundUrlState } from '@/components/playground/types';
 import { useCallback, useContext, useEffect, useState, useMemo } from 'react';
-import { getPreFlightScript, getScriptTabState } from '@/lib/playground-storage';
+import { useLocalStorage } from '@/hooks/use-local-storage';
 
 const MAX_URL_LENGTH = 2000;
 const WARNING_MESSAGES = {
@@ -31,6 +31,13 @@ export const useSharePlaygroundModal = (isOpen: boolean) => {
   const { tabsState } = useContext(PlaygroundContext);
   const currentActiveTab = useMemo(() => tabsState.tabs[tabsState.activeTabIndex] ?? {}, [tabsState]);
 
+  // Use useLocalStorage for scripts
+  const [scriptsTabState] = useLocalStorage<{ [key: string]: Record<string, any> }>('playground:script:tabState', {});
+  const [preFlightScript] = useLocalStorage<any>('playground:pre-flight:selected', null);
+
+  // Helper to check if a script is valid
+  const isValidScript = (script: any) => script && typeof script === 'object' && typeof script.id === 'string' && !!script.id && typeof script.content === 'string' && !!script.content;
+
   // Compute which options should be disabled based on available values
   const optionsWithDisabledState = useMemo(() => {
     return SHARE_OPTIONS.map(option => {
@@ -49,20 +56,20 @@ export const useSharePlaygroundModal = (isOpen: boolean) => {
             isDisabled = !currentActiveTab.headers;
             break;
 
-          case OPTION_TYPES.PRE_FLIGHT:
-            const script = getPreFlightScript();
-            isDisabled = !script || !script.id;
+          case OPTION_TYPES.PRE_FLIGHT: {
+            isDisabled = !isValidScript(preFlightScript);
             break;
+          }
 
           case OPTION_TYPES.PRE_OPERATION: {
-            const script = currentActiveTab.id ? getScriptTabState(currentActiveTab.id, 'pre-operation') : null;
-            isDisabled = !currentActiveTab.id || !script || !script.enabled || !script.id;
+            const script = currentActiveTab.id ? scriptsTabState[currentActiveTab.id]?.['pre-operation'] : null;
+            isDisabled = !currentActiveTab.id || !isValidScript(script);
             break;
           }
 
           case OPTION_TYPES.POST_OPERATION: {
-            const script = currentActiveTab.id ? getScriptTabState(currentActiveTab.id, 'post-operation') : null;
-            isDisabled = !currentActiveTab.id || !script || !script.enabled || !script.id;
+            const script = currentActiveTab.id ? scriptsTabState[currentActiveTab.id]?.['post-operation'] : null;
+            isDisabled = !currentActiveTab.id || !isValidScript(script);
             break;
           }
 
@@ -76,7 +83,7 @@ export const useSharePlaygroundModal = (isOpen: boolean) => {
         isDisabled,
       };
     });
-  }, [currentActiveTab]);
+  }, [currentActiveTab, scriptsTabState, preFlightScript]);
 
   // Reset state when modal is opened
   useEffect(() => {
