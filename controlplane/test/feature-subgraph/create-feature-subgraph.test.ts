@@ -276,6 +276,7 @@ describe('Create feature subgraph tests', () => {
     const { client, server } = await SetupTest({
       dbname,
       setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
     });
 
     // Setup: create a base subgraph and a federated graph

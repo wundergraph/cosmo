@@ -116,10 +116,6 @@
         {
           "id": "field-pruning-grace-period",
           "limit": 14
-        },
-        {
-          "id": "proposals",
-          "description": "Proposals"
         }
       ]
     },
@@ -163,11 +159,7 @@
           "id": "field-pruning-grace-period",
           "limit": 30
         },
-        { "id": "cache-warmer", "description": "Cache Warmer" },
-        {
-          "id": "proposals",
-          "description": "Proposals"
-        }
+        { "id": "cache-warmer", "description": "Cache Warmer" }
       ]
     }
   }

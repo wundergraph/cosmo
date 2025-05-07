@@ -86,16 +86,7 @@ const ProposalsPage: NextPageWithLayout = () => {
       <EmptyState
         icon={<InfoCircledIcon className="h-12 w-12" />}
         title="Proposals are not available"
-        description="Please upgrade to the enterprise plan to use the proposals."
-        actions={
-          <Button
-            onClick={() => {
-              router.push(`/${user?.currentOrganization.slug}/billing`);
-            }}
-          >
-            Upgrade
-          </Button>
-        }
+        description="Please contact support to enable the proposals feature."
       />
     );
   }

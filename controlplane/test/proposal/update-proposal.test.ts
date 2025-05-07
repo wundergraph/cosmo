@@ -87,6 +87,7 @@ describe('Update proposal tests', () => {
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
     });
 
     // Setup a federated graph with a single subgraph
@@ -163,6 +164,7 @@ describe('Update proposal tests', () => {
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
     });
 
     // Setup a federated graph with a single subgraph
@@ -239,6 +241,7 @@ describe('Update proposal tests', () => {
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
     });
 
     // Setup a federated graph with a single subgraph
@@ -335,6 +338,7 @@ describe('Update proposal tests', () => {
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
     });
 
     // Setup a federated graph with multiple subgraphs
@@ -488,6 +492,7 @@ describe('Update proposal tests', () => {
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
     });
 
     // Setup a federated graph with multiple subgraphs
@@ -634,6 +639,7 @@ describe('Update proposal tests', () => {
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
     });
 
     // Setup a federated graph with a single subgraph
@@ -685,6 +691,7 @@ describe('Update proposal tests', () => {
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
     });
 
     // Setup a federated graph with a single subgraph
@@ -847,6 +854,7 @@ describe('Update proposal tests', () => {
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
     });
 
     // Setup a federated graph with a single subgraph
@@ -970,6 +978,7 @@ describe('Update proposal tests', () => {
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
     });
 
     // Setup a federated graph with a single subgraph
@@ -1084,6 +1093,7 @@ describe('Update proposal tests', () => {
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
     });
 
     // Setup a federated graph with a single subgraph
@@ -1184,6 +1194,7 @@ describe('Update proposal tests', () => {
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
     });
 
     // Setup a federated graph with a single subgraph
@@ -1303,6 +1314,7 @@ describe('Update proposal tests', () => {
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
     });
 
     // Setup a federated graph with two subgraphs
@@ -1461,6 +1473,7 @@ describe('Update proposal tests', () => {
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
     });
 
     // Setup a federated graph with two subgraphs
@@ -1608,6 +1621,7 @@ describe('Update proposal tests', () => {
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
     });
 
     // Setup a federated graph with one existing subgraph
@@ -1718,6 +1732,7 @@ describe('Update proposal tests', () => {
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
     });
 
     // Setup a federated graph with a single subgraph
@@ -1800,6 +1815,7 @@ describe('Update proposal tests', () => {
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
     });
 
     // Setup a federated graph with a single subgraph
@@ -1914,6 +1930,7 @@ describe('Update proposal tests', () => {
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
     });
 
     // Setup a federated graph with a single subgraph
