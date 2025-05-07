@@ -6,12 +6,16 @@ In the first version we focus on local development of plugins written in Go. We'
 
 `wgc plugin init <pluginName> <directory>`
 
-This will scaffold a new plugin in the given directory.
+This will scaffold a new `hello world` plugin in the given directory.
 
 ```bash
 project_dir
   - myplugin
-    - schema.graphql # User defined schema)
+    - src
+      - schema.graphql # User defined schema
+      - main.go # Generated from the schema but editable
+      - service.go # Generated from the schema but editable
+      - go.mod
     - README.md # Getting Started guide
 ```
 
