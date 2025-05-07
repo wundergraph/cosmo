@@ -3,6 +3,7 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
 import { OrganizationGroupDTO } from '../../types/index.js';
 import { OrganizationRole } from '../../db/models.js';
+import { organizationRoleEnum } from '../../db/schema.js';
 
 export class OrganizationGroupRepository {
   constructor(private db: PostgresJsDatabase<typeof schema>) {}
@@ -11,7 +12,7 @@ export class OrganizationGroupRepository {
     organizationId: string;
     name: string;
     description: string;
-    kcGroupId: string;
+    kcGroupId: string | null;
     rules?: { role: OrganizationRole; resources: string[] }[];
   }): Promise<OrganizationGroupDTO> {
     return this.db.transaction(async (tx) => {
@@ -43,9 +44,9 @@ export class OrganizationGroupRepository {
         kcGroupId: input.kcGroupId,
         kcMapperId: null,
         membersCount: 0,
-        rules: [],
+        rules: input.rules ?? [],
       };
-    })
+    });
   }
 
   public async nameExists(input: { organizationId: string; name?: string }) {
@@ -180,6 +181,24 @@ export class OrganizationGroupRepository {
         resources: resources?.split(',') ?? [],
       })),
     }));
+  }
+
+  public async importKeycloakGroups(input: { organizationId: string; kcGroups: { id: string; name: string }[] }) {
+    for (const group of input.kcGroups) {
+      const roleName = `organization-${group.name}` as OrganizationRole;
+      const rules: { role: OrganizationRole; resources: string[] }[] = [];
+      if (organizationRoleEnum.enumValues.includes(roleName)) {
+        rules.push({ role: roleName, resources: [] });
+      }
+
+      await this.create({
+        organizationId: input.organizationId,
+        name: group.name,
+        description: '',
+        kcGroupId: group.id,
+        rules,
+      });
+    }
   }
 
   /**

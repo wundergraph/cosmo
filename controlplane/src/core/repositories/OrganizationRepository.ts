@@ -10,7 +10,7 @@ import { addDays } from 'date-fns';
 import { SQL, and, asc, count, desc, eq, gt, inArray, like, lt, not, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
-import { MemberRole, NewOrganizationFeature, OrganizationRole } from '../../db/models.js';
+import { MemberRole, NewOrganizationFeature } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import {
   billingSubscriptions,
@@ -39,6 +39,7 @@ import { DeleteOrganizationQueue } from '../workers/DeleteOrganizationWorker.js'
 import { BlobStorage } from '../blobstorage/index.js';
 import { delayForManualOrgDeletionInDays, delayForOrgAuditLogsDeletionInDays } from '../constants.js';
 import { DeleteOrganizationAuditLogsQueue } from '../workers/DeleteOrganizationAuditLogsWorker.js';
+import { RBACEvaluator } from '../services/RBACEvaluator.js';
 import { BillingRepository } from './BillingRepository.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { TargetRepository } from './TargetRepository.js';
@@ -450,18 +451,10 @@ export class OrganizationRepository {
     const members: OrganizationMemberDTO[] = [];
 
     for (const member of orgMembers) {
-      const roles = await this.db
-        .select({
-          role: organizationMemberRoles.role,
-        })
-        .from(organizationMemberRoles)
-        .where(eq(organizationMemberRoles.organizationMemberId, member.memberID))
-        .execute();
       members.push({
         userID: member.userID,
         orgMemberID: member.memberID,
         email: member.email,
-        roles: roles.map((role) => role.role),
         groups: await this.getOrganizationMemberGroups({
           organizationID,
           userID: member.userID,
@@ -555,24 +548,26 @@ export class OrganizationRepository {
       )
       .execute();
 
-    return Promise.all(groups.map(async (group) => {
-      const rules = await this.db
-        .select({
-          role: schema.organizationGroupRules.role,
-          resources: schema.organizationGroupRules.resources,
-        })
-        .from(schema.organizationGroupRules)
-        .where(eq(schema.organizationGroupRules.groupId, group.groupId))
-        .execute();
+    return Promise.all(
+      groups.map(async (group) => {
+        const rules = await this.db
+          .select({
+            role: schema.organizationGroupRules.role,
+            resources: schema.organizationGroupRules.resources,
+          })
+          .from(schema.organizationGroupRules)
+          .where(eq(schema.organizationGroupRules.groupId, group.groupId))
+          .execute();
 
-      return {
-        ...group,
-        rules: rules.map(({ role, resources }) => ({
-          role,
-          resources: resources?.split(',') ?? [],
-        })),
-      };
-    }));
+        return {
+          ...group,
+          rules: rules.map(({ role, resources }) => ({
+            role,
+            resources: resources?.split(',') ?? [],
+          })),
+        };
+      }),
+    );
   }
 
   /**
@@ -1091,7 +1086,8 @@ export class OrganizationRepository {
     const orgMembers = await this.getMembers({ organizationID: input.organizationID });
 
     for (const member of orgMembers) {
-      if (member.roles.includes('admin')) {
+      const rbac = new RBACEvaluator(member.groups);
+      if (rbac.is(['organization-owner', 'organization-admin'])) {
         orgAdmins.push(member);
       }
     }
@@ -1450,7 +1446,9 @@ export class OrganizationRepository {
   public async adminMemberships({ userId }: { userId: string }) {
     const orgs = await this.memberships({ userId });
 
-    const orgsWhereUserIsAdmin = orgs.filter((o) => o.roles.includes('admin'));
+    const orgsWhereUserIsAdmin = orgs.filter((o) =>
+      new RBACEvaluator(o.groups).is(['organization-owner', 'organization-admin']),
+    );
 
     // We need to track these orgs to delete them since the user is the only member.
     const soloAdminSoloMemberOrgs: OrganizationDTO[] = [];
@@ -1469,7 +1467,10 @@ export class OrganizationRepository {
         continue;
       }
 
-      const admins = members.filter((m) => m.roles.includes('admin'));
+      const admins = members.filter((m) =>
+        new RBACEvaluator(m.groups).is(['organization-owner', 'organization-admin']),
+      );
+
       if (admins.length === 1) {
         soloAdminManyMembersOrgs.push(org);
       }
@@ -1630,71 +1631,6 @@ export class OrganizationRepository {
           },
         },
       },
-    });
-  }
-
-  public async getGroupsWithHierarchicalResources({ organizationId, groups }: {
-    organizationId: string;
-    groups: Omit<OrganizationGroupDTO, 'membersCount' | 'kcGroupId' | 'kcMapperId'>[]
-  }) {
-    const [namespaces, federatedGraphs, subgraphs] = await Promise.all([
-      this.db
-        .select({
-          id: schema.namespaces.id,
-          name: schema.namespaces.name,
-        })
-        .from(schema.namespaces)
-        .where(eq(schema.namespaces.organizationId, organizationId))
-        .execute(),
-      this.db
-        .select({
-          id: schema.federatedGraphs.id,
-          targetId: schema.federatedGraphs.targetId,
-          namespaceId: schema.targets.namespaceId,
-        })
-        .from(schema.federatedGraphs)
-        .innerJoin(schema.targets, eq(schema.federatedGraphs.targetId, schema.targets.id))
-        .where(and(
-          eq(schema.targets.organizationId, organizationId),
-          eq(schema.targets.type, 'federated')
-        ))
-        .execute(),
-      this.db
-        .select({
-          id: schema.subgraphs.id,
-          targetId: schema.targets.id,
-          namespaceId: schema.targets.namespaceId,
-          federatedGraphId: schema.subgraphsToFederatedGraph.federatedGraphId,
-        })
-        .from(schema.subgraphs)
-        .innerJoin(schema.targets, eq(schema.subgraphs.targetId, schema.targets.id))
-        .innerJoin(
-          schema.subgraphsToFederatedGraph,
-          eq(schema.subgraphsToFederatedGraph.subgraphId, schema.subgraphs.id)
-        )
-        .where(and(
-          eq(schema.targets.organizationId, organizationId),
-          eq(schema.targets.type, 'subgraph')
-        ))
-        .execute()
-    ]);
-
-    const orgRoles = new Set<OrganizationRole>([
-      'organization-owner',
-      'organization-admin',
-      'organization-developer',
-      'organization-viewer'
-    ]);
-
-    const allNamespaces = namespaces.map((ns) => `ns:${ns.id}`);
-    const allFederatedGraphs = federatedGraphs.map((fg) => `fg:${fg.id}`);
-    const allSubgraphs = subgraphs.map((sg) => `sg:${sg.id}`);
-
-    return groups.map((group) => {
-      const newRules: typeof group['rules'] = [];
-      for (const { role, resources } of group.rules) {}
-
-      return { ...group, rules: newRules };
     });
   }
 }

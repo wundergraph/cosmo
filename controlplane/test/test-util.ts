@@ -363,7 +363,7 @@ export const SetupKeycloak = async ({
   } catch (e: any) {
     if (e.response?.status !== 409) {
       e.message = `Failed to create keycloak realm: ${realmName}.` + e.message;
-      //throw e;
+      // throw e;
     }
   }
 

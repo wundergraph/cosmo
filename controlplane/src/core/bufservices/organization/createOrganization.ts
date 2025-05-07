@@ -14,7 +14,6 @@ import type { RouterOptions } from '../../routes.js';
 import { BillingService } from '../../services/BillingService.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
-import { OrganizationRole } from "../../../db/models.js";
 
 export function createOrganization(
   opts: RouterOptions,
@@ -95,21 +94,23 @@ export function createOrganization(
           userID: authContext.userId,
         });
 
-        for (const kcGroup of kcCreatedGroups) {
-          const createdGroup = await orgGroupRepo.create({
+        if (kcCreatedGroups.length > 0) {
+          await orgGroupRepo.importKeycloakGroups({
             organizationId: organization.id,
-            name: kcGroup.name,
-            description: '',
-            kcGroupId: kcGroup.id,
-            rules: [{
-              role: `organization-${kcGroup.name}` as OrganizationRole,
-              resources: []
-            }],
+            kcGroups: kcCreatedGroups,
           });
+        }
 
-          if (kcGroup.name === 'admin') {
-            await orgGroupRepo.addUserToGroup({ organizationMemberId: orgMember.id, groupId: createdGroup.groupId });
-          }
+        const orgAdminGroup = await orgGroupRepo.byName({
+          organizationId: organization.id,
+          name: 'admin',
+        });
+
+        if (orgAdminGroup) {
+          await orgGroupRepo.addUserToGroup({
+            organizationMemberId: orgMember.id,
+            groupId: orgAdminGroup.groupId,
+          });
         }
 
         let sessionId: string | undefined;

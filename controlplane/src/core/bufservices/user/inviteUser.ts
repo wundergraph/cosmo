@@ -8,7 +8,7 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import { UserRepository } from '../../repositories/UserRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
-import { OrganizationGroupRepository } from "../../repositories/OrganizationGroupRepository.js";
+import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
 
 export function inviteUser(
   opts: RouterOptions,
@@ -56,7 +56,7 @@ export function inviteUser(
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,
           details: 'Group not found',
-        }
+        },
       };
     }
 

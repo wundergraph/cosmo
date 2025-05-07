@@ -11,7 +11,7 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import { UserRepository } from '../../repositories/UserRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
-import { OrganizationGroupRepository } from "../../repositories/OrganizationGroupRepository.js";
+import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
 
 export function acceptOrDeclineInvitation(
   opts: RouterOptions,
@@ -52,7 +52,7 @@ export function acceptOrDeclineInvitation(
 
     const invitation = await orgInvitationRepo.getPendingOrganizationInvitation({
       userID: user.id,
-      organizationID: req.organizationId
+      organizationID: req.organizationId,
     });
 
     if (!invitation) {

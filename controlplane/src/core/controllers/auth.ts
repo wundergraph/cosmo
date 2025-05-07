@@ -8,16 +8,16 @@ import { PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications
 import { cosmoIdpHintCookieName, decodeJWT, DEFAULT_SESSION_MAX_AGE_SEC, encrypt } from '../crypto/jwt.js';
 import { CustomAccessTokenClaims, UserInfoEndpointResponse, UserSession } from '../../types/index.js';
 import * as schema from '../../db/schema.js';
-import { organizationMemberRoles, organizationsMembers, sessions, users } from '../../db/schema.js';
+import { organizationsMembers, sessions, users } from '../../db/schema.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import AuthUtils from '../auth-utils.js';
 import WebSessionAuthenticator from '../services/WebSessionAuthenticator.js';
 import Keycloak from '../services/Keycloak.js';
 import { IPlatformWebhookService } from '../webhooks/PlatformWebhookService.js';
 import { AuthenticationError } from '../errors/errors.js';
-import { MemberRole } from '../../db/models.js';
 import { OrganizationInvitationRepository } from '../repositories/OrganizationInvitationRepository.js';
 import { DefaultNamespace, NamespaceRepository } from '../repositories/NamespaceRepository.js';
+import { OrganizationGroupRepository } from '../repositories/OrganizationGroupRepository.js';
 
 export type AuthControllerOptions = {
   db: PostgresJsDatabase<typeof schema>;
@@ -156,6 +156,7 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
           if (accessTokenPayload.groups && accessTokenPayload.groups.length > 0) {
             const keycloakOrgs = new Set(accessTokenPayload.groups.map((grp) => grp.split('/')[1]));
             const orgRepo = new OrganizationRepository(req.log, tx, opts.defaultBillingPlanId);
+            const orgGroupRepo = new OrganizationGroupRepository(tx);
 
             // delete all the org member roles
             for (const slug of keycloakOrgs) {
@@ -171,8 +172,8 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
               }
 
               await tx
-                .delete(organizationMemberRoles)
-                .where(eq(organizationMemberRoles.organizationMemberId, orgMember.orgMemberID));
+                .delete(schema.organizationGroupMembers)
+                .where(eq(schema.organizationGroupMembers.organizationMemberId, orgMember.orgMemberID));
             }
 
             // upserting the members into the orgs and inserting their roles.
@@ -200,15 +201,25 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
                 .returning()
                 .execute();
 
-              const role = kcGroup.split('/')?.[2] || 'developer';
+              const groupName = kcGroup.split('/')?.[2];
+              if (!groupName) {
+                continue;
+              }
 
-              await tx
-                .insert(organizationMemberRoles)
-                .values({
-                  organizationMemberId: insertedMember[0].id,
-                  role: role as MemberRole,
-                })
-                .execute();
+              const orgGroup = await orgGroupRepo.byName({
+                organizationId: dbOrg.id,
+                name: groupName,
+              });
+
+              if (!orgGroup) {
+                // @todo: Should we fail if the group doesn't exists?
+                continue;
+              }
+
+              await orgGroupRepo.addUserToGroup({
+                organizationMemberId: insertedMember[0].id,
+                groupId: orgGroup.groupId,
+              });
             }
           }
 
@@ -253,10 +264,15 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
 
           const organizationSlug = uid(8);
 
-          await opts.keycloakClient.seedGroup({ userID: userId, organizationSlug, realm: opts.keycloakRealm });
+          const kcCreatedGroups = await opts.keycloakClient.seedGroup({
+            userID: userId,
+            organizationSlug,
+            realm: opts.keycloakRealm,
+          });
 
           await opts.db.transaction(async (tx) => {
             const orgRepo = new OrganizationRepository(req.log, tx, opts.defaultBillingPlanId);
+            const orgGroupRepo = new OrganizationGroupRepository(tx);
 
             const insertedOrg = await orgRepo.createOrganization({
               organizationName: userEmail.split('@')[0],
@@ -269,10 +285,22 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
               userID: userId,
             });
 
-            await orgRepo.addOrganizationMemberRoles({
-              memberID: orgMember.id,
-              roles: ['admin'],
+            await orgGroupRepo.importKeycloakGroups({
+              organizationId: insertedOrg.id,
+              kcGroups: kcCreatedGroups,
             });
+
+            const orgAdminGroup = await orgGroupRepo.byName({
+              organizationId: insertedOrg.id,
+              name: 'admin',
+            });
+
+            if (orgAdminGroup) {
+              await orgGroupRepo.addUserToGroup({
+                organizationMemberId: orgMember.id,
+                groupId: orgAdminGroup.groupId,
+              });
+            }
 
             const namespaceRepo = new NamespaceRepository(tx, insertedOrg.id);
             const ns = await namespaceRepo.create({

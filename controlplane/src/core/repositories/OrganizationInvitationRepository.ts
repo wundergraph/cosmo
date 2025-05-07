@@ -7,7 +7,7 @@ import { organizationInvitations, organizations, users } from '../../db/schema.j
 import { OrganizationDTO, OrganizationInvitationDTO, UserDTO } from '../../types/index.js';
 import { OrganizationRepository } from './OrganizationRepository.js';
 import { UserRepository } from './UserRepository.js';
-import { OrganizationGroupRepository } from "./OrganizationGroupRepository.js";
+import { OrganizationGroupRepository } from './OrganizationGroupRepository.js';
 
 export class OrganizationInvitationRepository {
   constructor(

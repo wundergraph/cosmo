@@ -4,6 +4,7 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
 import { AuthenticationError } from '../errors/errors.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
+import { RBACEvaluator } from './RBACEvaluator.js';
 
 export type ApiKeyAuthContext = {
   auth: 'api_key';
@@ -14,6 +15,7 @@ export type ApiKeyAuthContext = {
   userId: string;
   userDisplayName: string;
   apiKeyName: string;
+  rbac: RBACEvaluator;
 };
 
 export default class ApiKeyAuthenticator {
@@ -68,6 +70,7 @@ export default class ApiKeyAuthenticator {
       apiKeyName: apiKeyModel.name,
       organizationId: apiKeyModel.organizationId,
       organizationSlug: organization.slug,
+      rbac: new RBACEvaluator([]),
       // sending true as the api key has admin permissions
       isAdmin: true,
       hasWriteAccess: !isOrganizationDeactivated,

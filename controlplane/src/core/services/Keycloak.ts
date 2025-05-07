@@ -323,7 +323,7 @@ export default class Keycloak {
 
     await this.seedRoles({ realm, organizationSlug });
 
-    const createdGroups: { id: string; name: string; }[] = [];
+    const createdGroups: { id: string; name: string }[] = [];
     for (const name of ['admin', 'developer', 'viewer']) {
       const roleName = `${organizationSlug}:organization-${name}`;
       const kcRole = await this.client.roles.findOneByName({

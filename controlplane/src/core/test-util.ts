@@ -6,7 +6,7 @@ import { ExpiresAt } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_
 import { pino } from 'pino';
 import { AuthContext, Label } from '../types/index.js';
 import * as schema from '../db/schema.js';
-import { MemberRole } from '../db/models.js';
+import { MemberRole, OrganizationRole } from '../db/models.js';
 import { Authenticator } from './services/Authentication.js';
 import { UserRepository } from './repositories/UserRepository.js';
 import { OrganizationRepository } from './repositories/OrganizationRepository.js';
@@ -14,6 +14,7 @@ import { GraphApiJwtPayload, GraphKeyAuthContext } from './services/GraphApiToke
 import { ApiKeyRepository } from './repositories/ApiKeyRepository.js';
 import { DefaultNamespace, NamespaceRepository } from './repositories/NamespaceRepository.js';
 import { verifyJwt } from './crypto/jwt.js';
+import { OrganizationGroupRepository } from './repositories/OrganizationGroupRepository.js';
 
 export type UserTestData = {
   userId: string;
@@ -23,7 +24,7 @@ export type UserTestData = {
   defaultBillingPlanId?: string;
   email: string;
   apiKey: string;
-  roles: ('admin' | 'developer' | 'viewer')[];
+  roles: OrganizationRole[];
 };
 
 export async function beforeAllSetup(): Promise<string> {
@@ -54,6 +55,7 @@ export async function seedTest(queryConnection: postgres.Sql, userTestData: User
 
   const userRepo = new UserRepository(pino(), db);
   const orgRepo = new OrganizationRepository(pino(), db, userTestData.defaultBillingPlanId);
+  const orgGroupRepo = new OrganizationGroupRepository(db);
   const apiKeyRepo = new ApiKeyRepository(db);
 
   const user = await userRepo.byEmail(userTestData.email);
@@ -75,6 +77,21 @@ export async function seedTest(queryConnection: postgres.Sql, userTestData: User
       organizationSlug: userTestData.organizationSlug,
       ownerID: userTestData.userId,
     });
+
+    for (const role of ['admin', 'developer', 'viewer']) {
+      await orgGroupRepo.create({
+        organizationId: org.id,
+        name: role,
+        description: '',
+        kcGroupId: null,
+        rules: [
+          {
+            role: `organization-${role}` as OrganizationRole,
+            resources: [],
+          },
+        ],
+      });
+    }
   }
 
   const orgMember = await orgRepo.addOrganizationMember({
@@ -82,10 +99,21 @@ export async function seedTest(queryConnection: postgres.Sql, userTestData: User
     userID: userTestData.userId,
   });
 
-  await orgRepo.addOrganizationMemberRoles({
-    memberID: orgMember.id,
-    roles: userTestData.roles,
-  });
+  for (const role of userTestData.roles) {
+    const orgGroup = await orgGroupRepo.byName({
+      organizationId: org.id,
+      name: role,
+    });
+
+    if (!orgGroup) {
+      continue;
+    }
+
+    await orgGroupRepo.addUserToGroup({
+      organizationMemberId: orgMember.id,
+      groupId: orgGroup.groupId,
+    });
+  }
 
   await apiKeyRepo.addAPIKey({
     key: userTestData.apiKey,
@@ -115,7 +143,7 @@ export function createTestContext(
   organizationId = randomUUID(),
   isAdmin = true,
   hasWriteAccess = true,
-  roles: MemberRole[] = ['admin'],
+  roles: OrganizationRole[] = ['organization-admin'],
 ): UserTestData & AuthContext {
   const userId = randomUUID();
 
