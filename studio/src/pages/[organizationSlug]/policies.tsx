@@ -18,10 +18,12 @@ import {
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { useRouter } from "next/router";
 import { ProposalConfig } from "@/components/proposal/proposal-config";
+import { useFeature } from "@/hooks/use-feature";
 
 const PoliciesPage: NextPageWithLayout = () => {
   const router = useRouter();
   const namespace = (router.query.namespace as string) || "default";
+  const proposalsFeature = useFeature("proposals");
 
   const { data, isLoading, refetch, error } = useQuery(getNamespaceLintConfig, {
     namespace,
@@ -46,9 +48,15 @@ const PoliciesPage: NextPageWithLayout = () => {
     isLoading: isLoadingProposalConfig,
     refetch: refetchProposalConfig,
     error: proposalConfigFetchError,
-  } = useQuery(getNamespaceProposalConfig, {
-    namespace,
-  });
+  } = useQuery(
+    getNamespaceProposalConfig,
+    {
+      namespace,
+    },
+    {
+      enabled: proposalsFeature?.enabled,
+    },
+  );
 
   const refetchAll = () => {
     if (error) {
@@ -82,9 +90,10 @@ const PoliciesPage: NextPageWithLayout = () => {
     data?.response?.code !== EnumStatusCode.OK ||
     graphPruningConfig?.response?.code !== EnumStatusCode.OK ||
     checksConfig?.response?.code !== EnumStatusCode.OK ||
-    !proposalConfig ||
-    (proposalConfig?.response?.code !== EnumStatusCode.OK &&
-      proposalConfig?.response?.code !== EnumStatusCode.ERR_UPGRADE_PLAN)
+    (proposalsFeature?.enabled &&
+      (!proposalConfig ||
+        (proposalConfig?.response?.code !== EnumStatusCode.OK &&
+          proposalConfig?.response?.code !== EnumStatusCode.ERR_UPGRADE_PLAN)))
   ) {
     return (
       <EmptyState
@@ -114,11 +123,13 @@ const PoliciesPage: NextPageWithLayout = () => {
         refetch={refetchGraphPruningConfig}
       />
       <ChecksConfig namespace={namespace} data={checksConfig} />
-      <ProposalConfig
-        key={proposalConfig.enabled ? "enabled" : "disabled"}
-        data={proposalConfig}
-        refetch={refetchProposalConfig}
-      />
+      {proposalsFeature?.enabled && proposalConfig && (
+        <ProposalConfig
+          key={proposalConfig.enabled ? "enabled" : "disabled"}
+          data={proposalConfig}
+          refetch={refetchProposalConfig}
+        />
+      )}
     </div>
   );
 };
