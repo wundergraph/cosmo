@@ -166,7 +166,7 @@ export const SHARE_OPTIONS = [
 
 export const PLAYGROUND_STATE_QUERY_PARAM = 'playgroundUrlState';
 
-export const DEFAULT_QUERY_TEMPLATE = `# Welcome to WunderGraph Studio
+export const PLAYGROUND_DEFAULT_QUERY_TEMPLATE = `# Welcome to WunderGraph Studio
 #
 #
 # Type queries into this side of the screen, and you will see intelligent
@@ -195,3 +195,7 @@ export const DEFAULT_QUERY_TEMPLATE = `# Welcome to WunderGraph Studio
 #    Auto Complete:  Ctrl-Space (or just start typing)
 #
 `;
+
+export const PLAYGROUND_DEFAULT_HEADERS_TEMPLATE = `{
+  "X-WG-TRACE" : "true"
+}`;

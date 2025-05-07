@@ -1,6 +1,6 @@
 import { TabsState } from '@/components/playground/types';
 import { useToast } from '@/components/ui/use-toast';
-import { DEFAULT_QUERY_TEMPLATE } from '@/lib/constants';
+import { PLAYGROUND_DEFAULT_QUERY_TEMPLATE } from '@/lib/constants';
 import { setPreFlightScript, setScriptTabState } from '@/lib/playground-storage';
 import { extractStateFromUrl } from '@/lib/playground-url-state-decoding';
 import { useRouter } from 'next/router';
@@ -52,7 +52,7 @@ export const useHydratePlaygroundStateFromUrl = (
         console.error('Error extracting state from URL:', (err as Error)?.message);
       }
       // fallback state when error occurs
-      setQuery(DEFAULT_QUERY_TEMPLATE);
+      setQuery(PLAYGROUND_DEFAULT_QUERY_TEMPLATE);
       toast({
         title: 'Error loading playground state',
         description: 'The playground has been reset to its default state due to invalid URL parameters.',

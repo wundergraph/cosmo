@@ -53,10 +53,10 @@ import {
 } from "@/components/ui/select";
 import { Tooltip } from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
-import { DEFAULT_QUERY_TEMPLATE } from "@/lib/constants";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
-import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useHydratePlaygroundStateFromUrl } from "@/hooks/use-hydrate-playground-state-from-url";
+import { useLocalStorage } from "@/hooks/use-local-storage";
+import { PLAYGROUND_DEFAULT_HEADERS_TEMPLATE, PLAYGROUND_DEFAULT_QUERY_TEMPLATE } from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
 import { parseSchema } from "@/lib/schema-helpers";
 import { cn } from "@/lib/utils";
@@ -101,7 +101,6 @@ import { PiBracketsCurly, PiDevices, PiGraphLight } from "react-icons/pi";
 import { TbDevicesCheck } from "react-icons/tb";
 import { useDebounce } from "use-debounce";
 import { z } from "zod";
-import { setPreFlightScript, setScriptTabState } from "@/lib/playground-storage";
 
 const validateHeaders = (headers: Record<string, string>) => {
   for (const headersKey in headers) {
@@ -1079,7 +1078,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
     if (!isGraphiqlRendered && typeof query === "string") {
       if (!query) {
         // query is empty - fill it with template
-        setQuery(DEFAULT_QUERY_TEMPLATE);
+        setQuery(PLAYGROUND_DEFAULT_QUERY_TEMPLATE);
       }
       // set first render flag to true - to prevent opening new tab / filling data while user is editing
       setIsGraphiqlRendered(true);
