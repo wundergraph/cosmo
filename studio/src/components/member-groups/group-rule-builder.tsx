@@ -78,12 +78,7 @@ export function GroupRuleBuilder({ roles, rule, accessibleResources, disabled, o
 
     const newRule = rule.clone();
     newRule.role = role;
-    if (newSelectedRole.category === 'organization') {
-      newRule.resources = [];
-    } else if (newSelectedRole.category === 'namespace') {
-      newRule.resources = newRule.resources.filter((res) => res.startsWith("ns:"));
-    }
-
+    newRule.resources = [];
     onRuleUpdated(newRule);
   };
 

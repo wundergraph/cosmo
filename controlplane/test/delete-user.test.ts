@@ -17,6 +17,7 @@ import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel, TestUser, UserTes
 import { OidcRepository } from '../src/core/repositories/OidcRepository.js';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import { RBACEvaluator } from "../src/core/services/RBACEvaluator.js";
+import { OrganizationGroupRepository } from "../src/core/repositories/OrganizationGroupRepository.js";
 import {
   createFederatedGraph,
   createThenPublishSubgraph,
@@ -36,6 +37,7 @@ const createTempUser = async (
   try {
     const userRepo = new UserRepository(pino(), db);
     const orgRepo = new OrganizationRepository(pino(), db, undefined);
+    const orgGroupRepo = new OrganizationGroupRepository(db);
     const apiKeyRepo = new ApiKeyRepository(db);
 
     const apiKeyPersonal = ApiKeyGenerator.generate();
@@ -56,7 +58,7 @@ const createTempUser = async (
         organizationSlug: userPersonalOrgSlug,
         email: userEmail,
         apiKey: apiKeyPersonal,
-        roles: ['admin'],
+        groups: ['admin'],
       },
     });
 
@@ -72,14 +74,25 @@ const createTempUser = async (
       organizationSlug: userPersonalOrgSlug,
       ownerID: keycloakUserID,
     });
+
     const personalOrgMember = await orgRepo.addOrganizationMember({
       organizationID: personalOrg.id,
       userID: keycloakUserID,
     });
-    await orgRepo.addOrganizationMemberRoles({
-      memberID: personalOrgMember.id,
-      roles: ['admin'],
+
+    const orgAdminGroup = await orgGroupRepo.create({
+      organizationId: personalOrgMember.organizationId,
+      name: 'admin',
+      description: '',
+      kcGroupId: null,
+      rules: [{ role: 'organization-admin', resources: [] }],
     });
+
+    await orgGroupRepo.addUserToGroup({
+      organizationMemberId: personalOrgMember.id,
+      groupId: orgAdminGroup.groupId,
+    });
+
     await apiKeyRepo.addAPIKey({
       key: apiKeyPersonal,
       name: userEmail,
@@ -106,10 +119,20 @@ const createTempUser = async (
       organizationID: org!.id,
       userID: keycloakUserID,
     });
-    await orgRepo.addOrganizationMemberRoles({
-      memberID: orgMember.id,
-      roles: ['admin'],
+
+    const orgAdminGroup2 = await orgGroupRepo.create({
+      organizationId: org!.id,
+      name: 'admin',
+      description: '',
+      kcGroupId: adminGroup.id!,
+      rules: [{ role: 'organization-admin', resources: [] }],
     });
+
+    await orgGroupRepo.addUserToGroup({
+      organizationMemberId: orgMember.id,
+      groupId: orgAdminGroup2.groupId,
+    });
+
     await apiKeyRepo.addAPIKey({
       key: apiKey,
       name: userEmail,
@@ -131,8 +154,8 @@ const createTempUser = async (
       hasWriteAccess: true,
       isAdmin: true,
       userDisplayName: userEmail,
-      roles: ['admin'],
-      rbac: new RBACEvaluator([]),
+      groups: ['admin'],
+      rbac: new RBACEvaluator([orgAdminGroup]),
     };
   } catch (error) {
     console.log(error);

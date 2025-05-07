@@ -84,39 +84,6 @@ try {
     name: user.organization.slug,
   });
 
-  const adminGroup = await keycloakClient.client.groups.createChildGroup(
-    {
-      realm,
-      id: organizationGroup.id,
-    },
-    {
-      name: 'admin',
-      realmRoles: ['admin'],
-    },
-  );
-
-  const devGroup = await keycloakClient.client.groups.createChildGroup(
-    {
-      realm,
-      id: organizationGroup.id,
-    },
-    {
-      name: 'developer',
-      realmRoles: ['developer'],
-    },
-  );
-
-  const viewerGroup = await keycloakClient.client.groups.createChildGroup(
-    {
-      realm,
-      id: organizationGroup.id,
-    },
-    {
-      name: 'viewer',
-      realmRoles: ['viewer'],
-    },
-  );
-
   const keycloakUserID = await keycloakClient.addKeycloakUser({
     realm,
     email: user.email,
@@ -124,10 +91,10 @@ try {
     isPasswordTemp: false,
   });
 
-  await keycloakClient.client.users.addToGroup({
-    id: keycloakUserID,
+  await keycloakClient.seedGroup({
     realm,
-    groupId: adminGroup.id,
+    userID: keycloakUserID,
+    organizationSlug: user.organization.slug,
   });
 
   await seedTest(queryConnection, {
@@ -137,7 +104,7 @@ try {
     organizationSlug: user.organization.slug,
     userId: keycloakUserID,
     organizationId,
-    roles: ['admin'],
+    groups: ['admin'],
   });
 
   await queryConnection.end({

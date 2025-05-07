@@ -201,7 +201,7 @@ export const SetupTest = async function ({
       organizationSlug: users.adminAliceCompanyA.organizationSlug,
       email: users.adminAliceCompanyA.email,
       apiKey: users.adminAliceCompanyA.apiKey,
-      roles: ['admin'],
+      groups: ['admin'],
     },
   });
   users.adminAliceCompanyA.userId = id;
@@ -219,7 +219,7 @@ export const SetupTest = async function ({
           organizationSlug: users.adminBobCompanyA.organizationSlug,
           email: users.adminBobCompanyA.email,
           apiKey: users.adminBobCompanyA.apiKey,
-          roles: ['admin'],
+          groups: ['admin'],
         },
       });
       users.adminBobCompanyA.userId = id;
@@ -236,7 +236,7 @@ export const SetupTest = async function ({
           organizationSlug: users.devJoeCompanyA.organizationSlug,
           email: users.devJoeCompanyA.email,
           apiKey: users.devJoeCompanyA.apiKey,
-          roles: ['developer'],
+          groups: ['developer'],
         },
       });
       users.devJoeCompanyA.userId = id;
@@ -253,7 +253,7 @@ export const SetupTest = async function ({
           organizationSlug: users.viewerTimCompanyA.organizationSlug,
           email: users.viewerTimCompanyA.email,
           apiKey: users.viewerTimCompanyA.apiKey,
-          roles: ['developer'],
+          groups: ['developer'],
         },
       });
       users.viewerTimCompanyA.userId = id;
@@ -270,7 +270,7 @@ export const SetupTest = async function ({
           organizationSlug: users.adminJimCompanyB.organizationSlug,
           email: users.adminJimCompanyB.email,
           apiKey: users.adminJimCompanyB.apiKey,
-          roles: ['admin'],
+          groups: ['admin'],
         },
       });
       users.adminJimCompanyB.userId = id;

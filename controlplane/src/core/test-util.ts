@@ -6,7 +6,7 @@ import { ExpiresAt } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_
 import { pino } from 'pino';
 import { AuthContext, Label } from '../types/index.js';
 import * as schema from '../db/schema.js';
-import { MemberRole, OrganizationRole } from '../db/models.js';
+import { OrganizationRole } from '../db/models.js';
 import { Authenticator } from './services/Authentication.js';
 import { UserRepository } from './repositories/UserRepository.js';
 import { OrganizationRepository } from './repositories/OrganizationRepository.js';
@@ -25,7 +25,7 @@ export type UserTestData = {
   defaultBillingPlanId?: string;
   email: string;
   apiKey: string;
-  roles: MemberRole[];
+  groups: ('admin' | 'developer' | 'viewer')[];
 };
 
 export async function beforeAllSetup(): Promise<string> {
@@ -100,10 +100,10 @@ export async function seedTest(queryConnection: postgres.Sql, userTestData: User
     userID: userTestData.userId,
   });
 
-  for (const role of userTestData.roles) {
+  for (const groupName of userTestData.groups) {
     const orgGroup = await orgGroupRepo.byName({
       organizationId: org.id,
-      name: role,
+      name: groupName,
     });
 
     if (!orgGroup) {
@@ -144,7 +144,7 @@ export function createTestContext(
   organizationId = randomUUID(),
   isAdmin = true,
   hasWriteAccess = true,
-  roles: MemberRole[] = ['admin'],
+  groups: ('admin' | 'developer' | 'viewer')[] = ['admin'],
 ): UserTestData & AuthContext {
   const userId = randomUUID();
 
@@ -159,7 +159,7 @@ export function createTestContext(
     hasWriteAccess,
     isAdmin,
     userDisplayName: userId,
-    roles,
+    groups,
     rbac: new RBACEvaluator([]),
   };
 }

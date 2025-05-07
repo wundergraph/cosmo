@@ -3,7 +3,6 @@ import { lru } from 'tiny-lru';
 import { AuthContext } from '../../types/index.js';
 import { AuthenticationError } from '../errors/errors.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
-import { checkUserAccess } from '../util.js';
 import AccessTokenAuthenticator from './AccessTokenAuthenticator.js';
 import ApiKeyAuthenticator from './ApiKeyAuthenticator.js';
 import GraphApiTokenAuthenticator, { GraphKeyAuthContext } from './GraphApiTokenAuthenticator.js';
@@ -87,14 +86,11 @@ export class Authentication implements Authenticator {
         organizationID: organization.id,
       });
 
-      const memberGroups = await this.orgRepo.getOrganizationMemberGroups({
+      const isOrganizationDeactivated = !!organization.deactivation;
+      const rbac = new RBACEvaluator(await this.orgRepo.getOrganizationMemberGroups({
         organizationID: organization.id,
         userID: user.userId,
-      });
-
-      const isOrganizationDeactivated = !!organization.deactivation;
-
-      const rbac = new RBACEvaluator(memberGroups);
+      }));
 
       const userContext: AuthContext = {
         auth: user.auth,

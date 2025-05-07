@@ -44,13 +44,11 @@ export default class AccessTokenAuthenticator {
       throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'User is not a member of the organization');
     }
 
-    const memberGroups = await this.orgRepo.getOrganizationMemberGroups({
+    const isOrganizationDeactivated = !!organization.deactivation;
+    const rbac = new RBACEvaluator(await this.orgRepo.getOrganizationMemberGroups({
       userID: userInfoData.sub,
       organizationID: organization.id,
-    });
-
-    const isOrganizationDeactivated = !!organization.deactivation;
-    const rbac = new RBACEvaluator(memberGroups);
+    }));
 
     return {
       auth: 'access_token',
