@@ -87,6 +87,8 @@ We will provide our own SDK for plugin development. It will be a Go package that
 Only imports the service.go file and serves the plugin.
 
 ```go
+cosmo "github.com/wundergraph/cosmo/router-plugin"
+
 package main
 
 func main() {
