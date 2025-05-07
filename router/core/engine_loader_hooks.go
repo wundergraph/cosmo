@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"reflect"
 	"slices"
 	"time"
@@ -73,11 +74,15 @@ func NewEngineRequestHooks(metricStore metric.Store, logger *requestlogger.Subgr
 	}
 }
 
-func ProcessEngineHookExpressions(subgraphTracingAttributes []ExpressionAttribute, exprManager *expr.Manager) (map[string]*vm.Program, error) {
+func ProcessEngineHookExpressions(tracingAttributes []config.CustomAttribute, exprManager *expr.Manager) (map[string]*vm.Program, error) {
 	mappedSubgraphExpressions := make(map[string]*vm.Program)
 
-	for _, attr := range subgraphTracingAttributes {
-		returnType, err := exprManager.ValidateAnyExpression(attr.Expression)
+	for _, attr := range tracingAttributes {
+		if attr.ValueFrom == nil || attr.ValueFrom.Expression == "" {
+			continue
+		}
+
+		returnType, err := exprManager.ValidateAnyExpression(attr.ValueFrom.Expression)
 		if err != nil {
 			return nil, err
 		}
@@ -91,7 +96,7 @@ func ProcessEngineHookExpressions(subgraphTracingAttributes []ExpressionAttribut
 			return nil, fmt.Errorf("disallowed type: %s", *returnType)
 		}
 
-		expression, err := exprManager.CompileAnyExpression(attr.Expression)
+		expression, err := exprManager.CompileAnyExpression(attr.ValueFrom.Expression)
 		if err != nil {
 			return nil, err
 		}

@@ -208,8 +208,8 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		routerSpan.SetAttributes(requestContext.telemetry.traceAttrs...)
 
-		if requestContext.telemetry.traceAttributeExpressions != nil {
-			traceMetrics, err := requestContext.telemetry.traceAttributeExpressions.expressionsAttributes(requestContext)
+		if requestContext.telemetry.telemetryAttributeExpressions != nil {
+			traceMetrics, err := requestContext.telemetry.telemetryAttributeExpressions.expressionsAttributes(requestContext)
 			if err != nil {
 				requestLogger.Error("failed to resolve trace attribute", zap.Error(err))
 			}
@@ -227,6 +227,17 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			requestContext.telemetry.addMetricAttribute(
 				metricAttrs...,
 			)
+		}
+
+		if requestContext.telemetry.tracingAttributeExpressions != nil {
+			traceAttrs, err := requestContext.telemetry.tracingAttributeExpressions.expressionsAttributes(requestContext)
+			if err != nil {
+				requestLogger.Error("failed to resolve trace attribute", zap.Error(err))
+			}
+			requestContext.telemetry.addCommonTraceAttribute(
+				traceAttrs...,
+			)
+			routerSpan.SetAttributes(traceAttrs...)
 		}
 
 		requestContext.operation = &operationContext{
@@ -374,8 +385,8 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			requestContext.expressionContext.Request.Auth = expr.LoadAuth(r.Context())
 		}
 
-		if requestContext.telemetry.traceAttributeExpressions != nil {
-			traceMetrics, err := requestContext.telemetry.traceAttributeExpressions.expressionsAttributesWithAuth(requestContext)
+		if requestContext.telemetry.telemetryAttributeExpressions != nil {
+			traceMetrics, err := requestContext.telemetry.telemetryAttributeExpressions.expressionsAttributesWithAuth(requestContext)
 			if err != nil {
 				requestLogger.Error("failed to resolve trace attribute", zap.Error(err))
 			}
@@ -393,6 +404,17 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			requestContext.telemetry.addMetricAttribute(
 				metricAttrs...,
 			)
+		}
+
+		if requestContext.telemetry.tracingAttributeExpressions != nil {
+			traces, err := requestContext.telemetry.tracingAttributeExpressions.expressionsAttributesWithAuth(requestContext)
+			if err != nil {
+				requestLogger.Error("failed to resolve trace attribute", zap.Error(err))
+			}
+			requestContext.telemetry.addCommonTraceAttribute(
+				traces...,
+			)
+			routerSpan.SetAttributes(traces...)
 		}
 
 		err = h.handleOperation(r, variablesParser, &httpOperation{

@@ -301,7 +301,7 @@ type Config struct {
 	AccessLogger                       *zap.Logger
 	AccessLogFields                    []config.CustomAttribute
 	MetricOptions                      MetricOptions
-	SubgraphTracingOptions             *core.SubgraphTracingOptions
+	SubgraphTracingOptions             []config.CustomAttribute
 	ModifyEventsConfiguration          func(cfg *config.EventsConfiguration)
 	EnableRuntimeMetrics               bool
 	EnableNats                         bool
@@ -1078,7 +1078,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	}
 
 	if testConfig.SubgraphTracingOptions != nil {
-		routerOpts = append(routerOpts, core.WithSubgraphTracingOptions(*testConfig.SubgraphTracingOptions))
+		routerOpts = append(routerOpts, core.WithTracingAttributes(testConfig.SubgraphTracingOptions))
 	}
 
 	return core.NewRouter(routerOpts...)

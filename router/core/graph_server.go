@@ -704,6 +704,14 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		}
 	}
 
+	//if len(s.tracingAttributes) > 0 {
+	//	var telemetryAttErr error
+	//	telemetryAttExpressions, telemetryAttErr = newAttributeExpressions(s.tracingAttributes, exprManager)
+	//	if telemetryAttErr != nil {
+	//		return nil, telemetryAttErr
+	//	}
+	//}
+
 	// Prometheus metricStore rely on OTLP metricStore
 	if metricsEnabled {
 		m, err := rmetric.NewStore(
@@ -953,7 +961,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	}
 
 	// We want to compile this before creating the executor, since it relies on a visitor group
-	mappedSubgraphExpressions, err := ProcessEngineHookExpressions(s.subgraphTracingOptions.ExpressionAttributes, exprManager)
+	mappedSubgraphExpressions, err := ProcessEngineHookExpressions(s.tracingAttributes, exprManager)
 	if err != nil {
 		return nil, err
 	}

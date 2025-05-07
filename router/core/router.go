@@ -112,10 +112,6 @@ type (
 		Expression string
 	}
 
-	SubgraphTracingOptions struct {
-		ExpressionAttributes []ExpressionAttribute
-	}
-
 	GraphQLMetricsConfig struct {
 		Enabled           bool
 		CollectorEndpoint string
@@ -217,24 +213,25 @@ type (
 		postOriginHandlers              []TransportPostHandler
 		headerRules                     *config.HeaderRules
 		subgraphTransportOptions        *SubgraphTransportOptions
-		subgraphTracingOptions          SubgraphTracingOptions
-		graphqlMetricsConfig            *GraphQLMetricsConfig
-		routerTrafficConfig             *config.RouterTrafficConfiguration
-		batchingConfig                  *BatchingConfig
-		fileUploadConfig                *config.FileUpload
-		accessController                *AccessController
-		retryOptions                    retrytransport.RetryOptions
-		redisClient                     rd.RDCloser
-		mcpServer                       *mcpserver.GraphQLSchemaServer
-		processStartTime                time.Time
-		developmentMode                 bool
-		healthcheck                     health.Checker
-		accessLogsConfig                *AccessLogsConfig
+		//tracingAttributes               []config.CustomAttribute
+		graphqlMetricsConfig *GraphQLMetricsConfig
+		routerTrafficConfig  *config.RouterTrafficConfiguration
+		batchingConfig       *BatchingConfig
+		fileUploadConfig     *config.FileUpload
+		accessController     *AccessController
+		retryOptions         retrytransport.RetryOptions
+		redisClient          rd.RDCloser
+		mcpServer            *mcpserver.GraphQLSchemaServer
+		processStartTime     time.Time
+		developmentMode      bool
+		healthcheck          health.Checker
+		accessLogsConfig     *AccessLogsConfig
 		// If connecting to localhost inside Docker fails, fallback to the docker internal address for the host
 		localhostFallbackInsideDocker bool
 		tlsServerConfig               *tls.Config
 		tlsConfig                     *TlsConfig
 		telemetryAttributes           []config.CustomAttribute
+		tracingAttributes             []config.CustomAttribute
 		tracePropagators              []propagation.TextMapPropagator
 		compositePropagator           propagation.TextMapPropagator
 		// Poller
@@ -1750,9 +1747,9 @@ func WithSubgraphTransportOptions(opts *SubgraphTransportOptions) Option {
 	}
 }
 
-func WithSubgraphTracingOptions(opts SubgraphTracingOptions) Option {
+func WithTracingAttributes(opts []config.CustomAttribute) Option {
 	return func(r *Router) {
-		r.subgraphTracingOptions = opts
+		r.tracingAttributes = opts
 	}
 }
 
@@ -1858,23 +1855,6 @@ func NewSubgraphTransportOptions(cfg config.TrafficShapingRules) *SubgraphTransp
 
 	for k, v := range cfg.Subgraphs {
 		base.SubgraphMap[k] = NewTransportRequestOptions(*v)
-	}
-
-	return base
-}
-
-func NewSubgraphTracingOptions(cfg config.SubgraphTelemetry) SubgraphTracingOptions {
-	entries := make([]ExpressionAttribute, 0, len(cfg.Attributes))
-
-	for _, attribute := range cfg.Attributes {
-		entries = append(entries, ExpressionAttribute{
-			Key:        attribute.Key,
-			Expression: attribute.ValueFrom.Expression,
-		})
-	}
-
-	base := SubgraphTracingOptions{
-		ExpressionAttributes: entries,
 	}
 
 	return base

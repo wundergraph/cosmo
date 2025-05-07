@@ -66,10 +66,6 @@ type ResponseTraceHeader struct {
 	HeaderName string `yaml:"header_name" envDefault:"x-wg-trace-id"`
 }
 
-type SubgraphTelemetry struct {
-	Attributes []CustomAttribute `yaml:"attributes"`
-}
-
 type Tracing struct {
 	Enabled             bool                `yaml:"enabled" envDefault:"true" env:"TRACING_ENABLED"`
 	SamplingRate        float64             `yaml:"sampling_rate" envDefault:"1" env:"TRACING_SAMPLING_RATE"`
@@ -77,6 +73,7 @@ type Tracing struct {
 	Exporters           []TracingExporter   `yaml:"exporters"`
 	Propagation         PropagationConfig   `yaml:"propagation"`
 	ResponseTraceHeader ResponseTraceHeader `yaml:"response_trace_id"`
+	Attributes          []CustomAttribute   `yaml:"attributes"`
 
 	TracingGlobalFeatures `yaml:",inline"`
 }
@@ -139,7 +136,6 @@ type MetricsOTLP struct {
 type Telemetry struct {
 	ServiceName        string                  `yaml:"service_name" envDefault:"cosmo-router" env:"TELEMETRY_SERVICE_NAME"`
 	Attributes         []CustomAttribute       `yaml:"attributes"`
-	Subgraph           SubgraphTelemetry       `yaml:"subgraph"`
 	ResourceAttributes []CustomStaticAttribute `yaml:"resource_attributes"`
 	Tracing            Tracing                 `yaml:"tracing"`
 	Metrics            Metrics                 `yaml:"metrics"`

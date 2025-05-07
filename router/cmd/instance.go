@@ -102,7 +102,7 @@ func NewRouter(ctx context.Context, params Params, additionalOptions ...core.Opt
 		core.WithRouterTrafficConfig(&cfg.TrafficShaping.Router),
 		core.WithFileUploadConfig(&cfg.FileUpload),
 		core.WithSubgraphTransportOptions(core.NewSubgraphTransportOptions(cfg.TrafficShaping)),
-		core.WithSubgraphTracingOptions(core.NewSubgraphTracingOptions(cfg.Telemetry.Subgraph)),
+		core.WithTracingAttributes(cfg.Telemetry.Tracing.Attributes),
 		core.WithSubgraphRetryOptions(
 			cfg.TrafficShaping.All.BackoffJitterRetry.Enabled,
 			cfg.TrafficShaping.All.BackoffJitterRetry.MaxAttempts,
