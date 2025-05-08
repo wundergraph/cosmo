@@ -1016,6 +1016,7 @@ const ScriptSetting = ({ type }: { type: ScriptType }) => {
 export const CustomScripts = () => {
   const {
     tabsState: { activeTabIndex, tabs },
+    isHydrated,
   } = useContext(PlaygroundContext);
 
   const [scriptsTabState, setScriptsTabState] = useLocalStorage<{
@@ -1023,6 +1024,9 @@ export const CustomScripts = () => {
   }>("playground:script:tabState", {});
 
   useEffect(() => {
+    // safe check to avoid race condition
+    if (!isHydrated) return;
+
     setScriptsTabState((prev) => {
       if (tabs.length === 0) {
         return prev;
@@ -1042,7 +1046,7 @@ export const CustomScripts = () => {
 
       return next;
     });
-  }, [tabs, setScriptsTabState]);
+  }, [tabs, setScriptsTabState, isHydrated]);
 
   const [selectedPreOp, setSelectedPreOp] = useLocalStorage<
     | (PlaygroundScript & {

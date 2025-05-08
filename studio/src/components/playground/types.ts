@@ -27,6 +27,8 @@ type PlaygroundContextType = {
   statusText?: string;
   view: PlaygroundView;
   setView: (val: PlaygroundView) => void;
+  isHydrated: boolean;
+  setIsHydrated: (v: boolean) => void;
 };
 
 export const PlaygroundContext = createContext<PlaygroundContextType>({
@@ -34,6 +36,8 @@ export const PlaygroundContext = createContext<PlaygroundContextType>({
   tabsState: { tabs: [], activeTabIndex: 0 },
   view: "response",
   setView: () => {},
+  isHydrated: false,
+  setIsHydrated: () => {},
 });
 
 export type LoadStatsEntry = {

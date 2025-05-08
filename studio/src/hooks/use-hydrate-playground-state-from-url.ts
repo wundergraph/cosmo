@@ -1,10 +1,19 @@
-import { TabsState, TabState } from '@/components/playground/types';
+import { PlaygroundContext, TabsState, TabState } from '@/components/playground/types';
 import { useToast } from '@/components/ui/use-toast';
+import { useLocalStorage } from '@/hooks/use-local-storage';
 import { PLAYGROUND_DEFAULT_QUERY_TEMPLATE } from '@/lib/constants';
-import { setPreFlightScript, setScriptTabState } from '@/lib/playground-storage';
 import { extractStateFromUrl } from '@/lib/playground-url-state-decoding';
 import { useRouter } from 'next/router';
-import { useEffect } from 'react';
+import { useContext, useEffect } from 'react';
+
+type ScriptData = {
+  id?: string;
+  title?: string;
+  content?: string;
+  enabled?: boolean;
+  updatedByTabId?: string;
+  type?: string;
+};
 
 export const useHydratePlaygroundStateFromUrl = (
   tabsState: TabsState,
@@ -15,16 +24,30 @@ export const useHydratePlaygroundStateFromUrl = (
 ) => {
   const router = useRouter();
   const { toast } = useToast();
+  // `setIsHydrated` is used to avoid race conditions.
+  // First hydration should be done from the URL, and 
+  // then only childrens of Playground should be able to update state.
+  const { setIsHydrated } = useContext(PlaygroundContext);
+
+  const [scriptsTabState, setScriptsTabState] = useLocalStorage<{ [key: string]: Record<string, any> }>('playground:script:tabState', {});
+  const [preFlightSelected, setPreFlightSelected] = useLocalStorage<any>('playground:pre-flight:selected', null);
+  const [preFlightEnabled, setPreFlightEnabled] = useLocalStorage<any>('playground:pre-flight:enabled', null);
+  const [, setPreOpSelected] = useLocalStorage<ScriptData | null>('playground:pre-operation:selected', null);
+  const [, setPostOpSelected] = useLocalStorage<ScriptData | null>('playground:post-operation:selected', null);
 
   useEffect(() => {
     const { playgroundUrlState } = router.query;
     if (!playgroundUrlState || typeof playgroundUrlState !== 'string') {
+      setIsHydrated(true);
       return;
     }
 
     try {
       const state = extractStateFromUrl();
-      if (!state) return;
+      if (!state) {
+        setIsHydrated(true);
+        return;
+      }
 
       // Create a new tab with the shared state
       const newTabId = crypto.randomUUID();
@@ -57,16 +80,25 @@ export const useHydratePlaygroundStateFromUrl = (
       }
 
       if (state.preFlight) {
-        setPreFlightScript(state.preFlight);
+        setPreFlightSelected(state.preFlight);
       }
 
-      if (state.preOperation) {
-        setScriptTabState('pre-operation', state.preOperation, newTabId);
+      if (state.preOperation || state.postOperation) {
+        setScriptsTabState(prev => {
+          const updated = { ...prev };
+          updated[newTabId] = { ...(updated[newTabId] || {}) };
+          if (state.preOperation) {
+            updated[newTabId]['pre-operation'] = state.preOperation;
+            setPreOpSelected(state.preOperation);
+          }
+          if (state.postOperation) {
+            updated[newTabId]['post-operation'] = state.postOperation;
+            setPostOpSelected(state.postOperation);
+          }
+          return updated;
+        });
       }
-
-      if (state.postOperation) {
-        setScriptTabState('post-operation', state.postOperation, newTabId);
-      }
+      setIsHydrated(true);
     } catch (err) {
       if (process.env.NODE_ENV !== 'development') {
         console.error('Error extracting state from URL:', (err as Error)?.message);
@@ -78,6 +110,7 @@ export const useHydratePlaygroundStateFromUrl = (
         description: 'The playground has been reset to its default state due to invalid URL parameters.',
         variant: 'destructive',
       });
+      setIsHydrated(true);
     } finally {
       // In order to avoid conflicts, it is important to clear the url state after loading it.
       clearState();

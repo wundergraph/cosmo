@@ -924,6 +924,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
     tabs: [],
   });
 
+  const [isHydrated, setIsHydrated] = useState(false);
   useHydratePlaygroundStateFromUrl(tabsState, setQuery, setUpdatedVariables, setHeaders, setTabsState);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1264,6 +1265,8 @@ const PlaygroundPage: NextPageWithLayout = () => {
         statusText,
         view,
         setView,
+        isHydrated,
+        setIsHydrated,
       }}
     >
       <TraceContext.Provider
