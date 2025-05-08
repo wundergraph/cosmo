@@ -1,6 +1,7 @@
 package expr
 
 import (
+	"errors"
 	"fmt"
 	"github.com/expr-lang/expr"
 	"github.com/expr-lang/expr/ast"
@@ -73,15 +74,15 @@ func mergeOptions(typeOption expr.Option, visitors []ast.Visitor) []expr.Option 
 // ValidateAnyExpression compiles the expression to ensure that the expression itself is valid but more
 // importantly it checks if the return type is not nil and is an allowed return type
 // this allows us to ensure that nil and return types such as func or channels are not returned
-func (c *Manager) ValidateAnyExpression(s string) (*reflect.Kind, error) {
+func (c *Manager) ValidateAnyExpression(s string) error {
 	tree, err := parser.Parse(s)
 	if err != nil {
-		return nil, handleExpressionError(err)
+		return handleExpressionError(err)
 	}
 
 	// Check if the expression is just a nil literal
 	if _, ok := tree.Node.(*ast.NilNode); ok {
-		return nil, nil
+		return handleExpressionError(errors.New("disallowed nil"))
 	}
 
 	config := conf.CreateNew()
@@ -91,15 +92,14 @@ func (c *Manager) ValidateAnyExpression(s string) (*reflect.Kind, error) {
 
 	expectedType, err := checker.Check(tree, config)
 	if err != nil {
-		return nil, handleExpressionError(err)
+		return handleExpressionError(err)
 	}
 
 	// Disallowed types
-	kind := expectedType.Kind()
-	switch kind {
+	switch expectedType.Kind() {
 	case reflect.Invalid, reflect.Chan, reflect.Func:
-		return nil, handleExpressionError(fmt.Errorf("disallowed type: %s", expectedType.String()))
+		return handleExpressionError(fmt.Errorf("disallowed type: %s", expectedType.String()))
 	}
 
-	return &kind, nil
+	return nil
 }

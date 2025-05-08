@@ -1,7 +1,6 @@
 package requestlogger
 
 import (
-	"errors"
 	"fmt"
 	"github.com/expr-lang/expr/vm"
 	exprlocal "github.com/wundergraph/cosmo/router/internal/expr"
@@ -21,14 +20,9 @@ func GetAccessLogConfigExpressions(attributes []config.CustomAttribute, exprMana
 			continue
 		}
 
-		returnType, err := exprManager.ValidateAnyExpression(sAttribute.ValueFrom.Expression)
-
+		err := exprManager.ValidateAnyExpression(sAttribute.ValueFrom.Expression)
 		if err != nil {
 			return nil, fmt.Errorf("failed when validating log expressions: %w", err)
-		}
-
-		if returnType == nil {
-			return nil, errors.New("disallowed nil")
 		}
 
 		expression, err := exprManager.CompileAnyExpression(sAttribute.ValueFrom.Expression)
