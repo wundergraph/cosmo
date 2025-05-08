@@ -1,5 +1,5 @@
 import { Command, program } from 'commander';
-import { join, resolve } from 'pathe';
+import { resolve,relative } from 'pathe';
 import pc from 'picocolors';
 import pupa from 'pupa';
 import Spinner from 'ora';
@@ -44,13 +44,15 @@ export default (opts: BaseCommandOptions) => {
       const generatedDir = resolve(pluginDir, 'generated');
       await mkdir(generatedDir, { recursive: true });
 
-      spinner.text = 'Creating files...';
+      spinner.text = 'Checkout templates...';
 
       const readme = await readFile(resolve(__dirname, '..', 'templates/README.md'), 'utf-8');
       await writeFile(resolve(pluginDir, 'README.md'), pupa(readme, { name }));
 
       const schema = await readFile(resolve(__dirname, '..', 'templates/schema.graphql'), 'utf-8');
       await writeFile(resolve(srcDir, 'schema.graphql'), pupa(schema, { name }));
+
+      spinner.text = 'Generating mapping and proto files...';
 
       const mapping = compileGraphQLToMapping(schema, serviceName);
       await writeFile(resolve(generatedDir, 'mapping.json'), JSON.stringify(mapping, null, 2));
@@ -75,22 +77,16 @@ export default (opts: BaseCommandOptions) => {
       const formattedTime =
         elapsedTimeMs > 1000 ? `${(elapsedTimeMs / 1000).toFixed(2)}s` : `${Math.round(elapsedTimeMs)}ms`;
 
-      spinner.succeed(pc.green(`Plugin ${pc.bold(name)} scaffolded successfully!`));
-
-      console.log('\n' + pc.dim('─'.repeat(50)));
-      console.log(`${pc.cyan('Location:')} ${pluginDir}`);
-      console.log(`${pc.cyan('Time:')} ${formattedTime}`);
-      console.log(`${pc.cyan('Next steps:')}`);
-      console.log(`  Go to https://cosmo-docs.wundergraph.com/router/plugins to learn more about.`);
-
-      // Use relative path for the build command
-      const buildPath = options.directory === '.' ? name : join(options.directory, name);
-      console.log(`  3. Run '${pc.bold(`wgc plugin build ${buildPath}`)}'`);
-
-      console.log(pc.dim('─'.repeat(50)));
+      spinner.succeed(pc.green(`Plugin ${pc.bold(name)} scaffolded successfully! ` + `[${formattedTime}]`));
+      console.log('');
+      console.log(
+        `  Checkout the ${pc.bold(pc.italic(relative(process.cwd(), resolve(pluginDir, 'README.md'))))} file for instructions on how to build and run your plugin.`,
+      );
+      console.log(`  Go to https://cosmo-docs.wundergraph.com/router/plugins to learn more about it.`);
+      console.log('');
     } catch (error: any) {
-      spinner.fail(pc.red(`Failed to create plugin: ${error.message}`));
-      program.error(`Failed to create plugin: ${error.message}`);
+      spinner.fail(pc.red(`Failed to init plugin: ${error.message}`));
+      program.error(`Failed to init plugin: ${error.message}`);
     } finally {
       spinner.stop();
     }

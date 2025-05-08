@@ -80,6 +80,7 @@ export default (opts: BaseCommandOptions) => {
       const serviceName = pluginName.charAt(0).toUpperCase() + pluginName.slice(1) + 'Service';
 
       spinner.text = 'Generating mapping and proto files...';
+
       const mapping = compileGraphQLToMapping(schema, serviceName);
       await writeFile(resolve(generatedDir, 'mapping.json'), JSON.stringify(mapping, null, 2));
 
@@ -149,18 +150,10 @@ export default (opts: BaseCommandOptions) => {
         elapsedTimeMs > 1000 ? `${(elapsedTimeMs / 1000).toFixed(2)}s` : `${Math.round(elapsedTimeMs)}ms`;
 
       if (options.generateOnly) {
-        spinner.succeed(pc.green('Generated proto and mapping files successfully!'));
+        spinner.succeed(pc.green('Generated proto and mapping files successfully! ' + `[${formattedTime}]`));
       } else {
         spinner.succeed(pc.green('Plugin built successfully'));
       }
-
-      console.log('\n' + pc.dim('─'.repeat(50)));
-      console.log(`${pc.cyan('Location:')} ${pluginDir}`);
-      console.log(`${pc.cyan('Time:')} ${formattedTime}`);
-      if (!options.generateOnly) {
-        console.log(`${pc.cyan('Platforms:')} ${platforms.join(', ')}`);
-      }
-      console.log(pc.dim('─'.repeat(50)));
     } catch (error: any) {
       spinner.fail(pc.red(`Failed to build plugin: ${error.message}`));
       program.error(`Failed to build plugin: ${error.message}`);
