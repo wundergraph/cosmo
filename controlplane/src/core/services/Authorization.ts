@@ -96,27 +96,26 @@ export class Authorization {
        */
 
       if (targetType === 'federatedGraph') {
+        if (shouldEvaluateRbac && !rbac.checkResourceWriteAccess(targetId)) {
+          throw new Error('User is not authorized to perform the current action in the federated graph');
+        }
+
         const fedGraph = await fedRepo.byTargetId(targetId);
-        if (
-          !(
-            (shouldEvaluateRbac && rbac.checkResourceWriteAccess(targetId)) ||
-            (fedGraph?.creatorUserId && fedGraph.creatorUserId === userId)
-          )
-        ) {
+        if (!(fedGraph?.creatorUserId && fedGraph.creatorUserId === userId)) {
           throw new Error('User is not authorized to perform the current action in the federated graph');
         }
       } else if (targetType === 'subgraph') {
+        if (shouldEvaluateRbac && !rbac.checkResourceWriteAccess(targetId)) {
+          throw new Error(
+            'User is not authorized to perform the current action in the federated graph because the user is not a member of the subgraph',
+          );
+        }
+
         const subgraph = await subgraphRepo.byTargetId(targetId);
         const subgraphMembers = await subgraphRepo.getSubgraphMembersByTargetId(targetId);
         const userIds = subgraphMembers.map((s) => s.userId);
 
-        if (
-          !(
-            (shouldEvaluateRbac && rbac.checkResourceWriteAccess(targetId)) ||
-            (subgraph?.creatorUserId && subgraph.creatorUserId === userId) ||
-            userIds.includes(userId)
-          )
-        ) {
+        if (!((subgraph?.creatorUserId && subgraph.creatorUserId === userId) || userIds.includes(userId))) {
           throw new Error(
             'User is not authorized to perform the current action in the federated graph because the user is not a member of the subgraph',
           );
