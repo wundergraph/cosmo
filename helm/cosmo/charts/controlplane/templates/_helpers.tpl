@@ -71,6 +71,21 @@ extra labels (jobLabels) to each job
 {{- end }}
 
 {{/*
+Job annotations, used to append defaults and
+extra annotations (jobAnnotations) to each job 
+*/}}
+{{- define "controlplane.job.additionalAnnotations" -}}
+{{- range $key, $value := .context.Values.additionalJobAnnotations }}
+{{ $key }}: {{ quote $value }}
+{{- end }}
+{{- if and (hasKey . "additionalAnnotations") -}}
+{{- range $key, $value := .additionalAnnotations }}
+{{ $key }}: {{ quote $value }}
+{{- end }}
+{{- end -}}
+{{- end }}
+
+{{/*
 Selector labels
 */}}
 {{- define "controlplane.selectorLabels" -}}

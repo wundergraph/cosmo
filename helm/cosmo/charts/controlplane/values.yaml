@@ -244,6 +244,9 @@ existingSecret: ""
 # -- Pass additional labels to all jobs
 additionalJobLabels: {}
 
+# -- Pass additional labels to all jobs
+additionalJobAnnotations: {}
+
 # -- Configure jobs to be executed in the control plane
 jobs:
   # -- Used to deactivate an organization with a reason and schedule deletion
@@ -252,6 +255,8 @@ jobs:
     enabled: false
     # -- Adds additional labels to the job
     additionalLabels: {}
+    # -- Adds additional labels to the job
+    additionalAnnotations: {}
     # -- The slug of the organization
     slug: 'foo'
     # -- The unique identifier of the organization
@@ -262,6 +267,8 @@ jobs:
   activateOrganization:
     # -- Adds additional labels to the job
     additionalLabels: {}
+    # -- Adds additional labels to the job
+    additionalAnnotations: {}
     # -- Enables the job to be run
     enabled: false
     # -- The slug of the organization
@@ -272,6 +279,8 @@ jobs:
   deleteUser:
     # -- Adds additional labels to the job
     additionalLabels: {}
+    # -- Adds additional labels to the job
+    additionalAnnotations: {}
     # -- Enables the job to be run
     enabled: false
     # -- The unique identifier of the user
@@ -281,9 +290,15 @@ jobs:
   clickhouseMigration:
     # -- Adds additional labels to the clickhouse migration job (see: .Values.global.otelcollector)
     additionalLabels: {}
+    # -- Adds additional labels to the clickhouse migration job (see: .Values.global.otelcollector)
+    additionalAnnotations: {}
   databaseMigration:
     # -- Adds additional labels to the database-migration job
     additionalLabels: {}
+    # -- Adds additional labels to the database-migration job
+    additionalAnnotations: {}
   seedOrganization:
     # -- Adds additional labels to the job (see: .Values.global.seed)
     additionalLabels: {}
+    # -- Adds additional labels to the job (see: .Values.global.seed)
+    additionalAnnotations: {}

@@ -53,6 +53,7 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | clickhouse.shards | int | `1` |  |
 | clickhouse.zookeeper.enabled | bool | `false` |  |
 | controlplane.additionalJobLabels | object | `{}` | Pass additional labels to all jobs |
+| controlplane.additionalJobAnnotations | object | `{}` | Pass additional annotations to all jobs |
 | controlplane.commonLabels | object | `{}` | Add labels to all deployed resources |
 | controlplane.configuration.allowedOrigins[0] | string | `"http://studio.wundergraph.local"` |  |
 | controlplane.configuration.authRedirectUri | string | `"http://controlplane.wundergraph.local/v1/auth/callback"` |  |
@@ -85,26 +86,32 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | controlplane.configuration.smtp.requireTls | bool | `true` | Forces the client to use STARTTLS. Default is true. |
 | controlplane.configuration.smtp.secure | bool | `true` | Defines if the connection should use SSL. Default is true. |
 | controlplane.configuration.smtp.username | string | `""` | The username to use. Default is "". |
-| controlplane.jobs | object | `{"activateOrganization":{"additionalLabels":{},"enabled":false,"id":"123","slug":"foo"},"clickhouseMigration":{"additionalLabels":{}},"databaseMigration":{"additionalLabels":{}},"deactivateOrganization":{"additionalLabels":{},"enabled":false,"id":"123","reason":"","slug":"foo"},"deleteUser":{"additionalLabels":{},"email":"foo@wundergraph.com","enabled":false,"id":"123"},"seedOrganization":{"additionalLabels":{}}}` | Configure jobs to be executed in the control plane |
-| controlplane.jobs.activateOrganization | object | `{"additionalLabels":{},"enabled":false,"id":"123","slug":"foo"}` | Used to activate an organization and remove the scheduled deletion |
+| controlplane.jobs | object | `{"activateOrganization":{"additionalLabels":{},"additionalAnnotations":{},"enabled":false,"id":"123","slug":"foo"},"clickhouseMigration":{"additionalLabels":{},"additionalAnnotations":{}},"databaseMigration":{"additionalLabels":{},"additionalAnnotations":{}},"deactivateOrganization":{"additionalLabels":{},"additionalAnnotations":{},"enabled":false,"id":"123","reason":"","slug":"foo"},"deleteUser":{"additionalLabels":{},"additionalAnnotations":{},"email":"foo@wundergraph.com","enabled":false,"id":"123"},"seedOrganization":{"additionalLabels":{},"additionalAnnotations":{}}}` | Configure jobs to be executed in the control plane |
+| controlplane.jobs.activateOrganization | object | `{"additionalLabels":{},"additionalAnnotations":{},"enabled":false,"id":"123","slug":"foo"}` | Used to activate an organization and remove the scheduled deletion |
 | controlplane.jobs.activateOrganization.additionalLabels | object | `{}` | Adds additional labels to the job |
+| controlplane.jobs.activateOrganization.additionalAnnotations | object | `{}` | Adds additional annotations to the job |
 | controlplane.jobs.activateOrganization.enabled | bool | `false` | Enables the job to be run |
 | controlplane.jobs.activateOrganization.id | string | `"123"` | The unique identifier of the organization |
 | controlplane.jobs.activateOrganization.slug | string | `"foo"` | The slug of the organization |
 | controlplane.jobs.clickhouseMigration.additionalLabels | object | `{}` | Adds additional labels to the clickhouse migration job (see: .Values.global.otelcollector) |
+| controlplane.jobs.clickhouseMigration.additionalAnnotations | object | `{}` | Adds additional annotations to the clickhouse migration job (see: .Values.global.otelcollector) |
 | controlplane.jobs.databaseMigration.additionalLabels | object | `{}` | Adds additional labels to the database-migration job |
-| controlplane.jobs.deactivateOrganization | object | `{"additionalLabels":{},"enabled":false,"id":"123","reason":"","slug":"foo"}` | Used to deactivate an organization with a reason and schedule deletion |
+| controlplane.jobs.databaseMigration.additionalAnnotations | object | `{}` | Adds additional annotations to the database-migration job |
+| controlplane.jobs.deactivateOrganization | object | `{"additionalLabels":{},"additionalAnnotations":{},"enabled":false,"id":"123","reason":"","slug":"foo"}` | Used to deactivate an organization with a reason and schedule deletion |
 | controlplane.jobs.deactivateOrganization.additionalLabels | object | `{}` | Adds additional labels to the job |
+| controlplane.jobs.deactivateOrganization.additionalAnnotations | object | `{}` | Adds additional annotations to the job |
 | controlplane.jobs.deactivateOrganization.enabled | bool | `false` | Enables the job to be run |
 | controlplane.jobs.deactivateOrganization.id | string | `"123"` | The unique identifier of the organization |
 | controlplane.jobs.deactivateOrganization.reason | string | `""` | The reason for deactivation |
 | controlplane.jobs.deactivateOrganization.slug | string | `"foo"` | The slug of the organization |
-| controlplane.jobs.deleteUser | object | `{"additionalLabels":{},"email":"foo@wundergraph.com","enabled":false,"id":"123"}` | Used to delete the user |
+| controlplane.jobs.deleteUser | object | `{"additionalLabels":{},"additionalAnnotations":{},"email":"foo@wundergraph.com","enabled":false,"id":"123"}` | Used to delete the user |
 | controlplane.jobs.deleteUser.additionalLabels | object | `{}` | Adds additional labels to the job |
+| controlplane.jobs.deleteUser.additionalAnnotations | object | `{}` | Adds additional annotations to the job |
 | controlplane.jobs.deleteUser.email | string | `"foo@wundergraph.com"` | The email of the user |
 | controlplane.jobs.deleteUser.enabled | bool | `false` | Enables the job to be run |
 | controlplane.jobs.deleteUser.id | string | `"123"` | The unique identifier of the user |
 | controlplane.jobs.seedOrganization.additionalLabels | object | `{}` | Adds additional labels to the job (see: .Values.global.seed) |
+| controlplane.jobs.seedOrganization.additionalAnnotations | object | `{}` | Adds additional annotations to the job (see: .Values.global.seed) |
 | global.cdn.enabled | bool | `true` |  |
 | global.cdn.port | int | `8787` |  |
 | global.cdn.webUrl | string | `"http://cdn.wundergraph.local"` |  |
