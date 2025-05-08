@@ -17,6 +17,7 @@ Use the `.env.example` file to create a `.env` file with the specified environme
 make dev
 ```
 
+
 ## Code Generation
 
 Code is committed to the repository, but if you want to regenerate the code, you can run the command in the root of the repository:
