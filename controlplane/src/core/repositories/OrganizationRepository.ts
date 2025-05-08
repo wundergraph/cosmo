@@ -10,7 +10,7 @@ import { addDays } from 'date-fns';
 import { SQL, and, asc, count, desc, eq, gt, inArray, like, lt, not, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
-import { MemberRole, NewOrganizationFeature } from '../../db/models.js';
+import { NewOrganizationFeature } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import {
   billingSubscriptions,
@@ -18,7 +18,6 @@ import {
   organizationBilling,
   organizationFeatures,
   organizationIntegrations,
-  organizationMemberRoles,
   organizationWebhooks,
   organizations,
   organizationsMembers,
@@ -1589,6 +1588,8 @@ export class OrganizationRepository {
           .select({
             id: schema.organizationGroupRules.id,
             role: schema.organizationGroupRules.role,
+            allowAnyNamespace: schema.organizationGroupRules.allowAnyNamespace,
+            allowAnyResource: schema.organizationGroupRules.allowAnyResource,
           })
           .from(schema.organizationGroupRules)
           .where(eq(schema.organizationGroupRules.groupId, group.groupId))
@@ -1615,7 +1616,9 @@ export class OrganizationRepository {
 
               return {
                 role: rule.role,
+                allowAnyNamespace: rule.allowAnyNamespace,
                 namespaces: namespaces.map((ns) => ns.id),
+                allowAnyResource: rule.allowAnyResource,
                 resources: targets.map((targ) => targ.targetId),
               };
             }),

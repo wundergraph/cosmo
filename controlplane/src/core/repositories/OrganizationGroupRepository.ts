@@ -92,7 +92,7 @@ export class OrganizationGroupRepository {
     return this.findMany(eq(schema.organizationGroups.organizationId, organizationId));
   }
 
-  private async findMany(where: SQL<unknown> | undefined) {
+  private async findMany(where: SQL<unknown> | undefined): Promise<OrganizationGroupDTO[]> {
     if (!where) {
       return [];
     }
@@ -103,6 +103,8 @@ export class OrganizationGroupRepository {
         rules: {
           columns: {
             role: true,
+            allowAnyNamespace: true,
+            allowAnyResource: true,
           },
           with: {
             namespaces: {
@@ -134,7 +136,9 @@ export class OrganizationGroupRepository {
       ...rest,
       rules: rules.map((rule) => ({
         role: rule.role,
+        allowAnyNamespace: rule.allowAnyNamespace,
         namespaces: rule.namespaces.map((ns) => ns.namespace.name),
+        allowAnyResource: rule.allowAnyResource,
         resources: rule.targets.map((targ) => targ.targetId),
       })),
     }));
@@ -195,7 +199,13 @@ export class OrganizationGroupRepository {
     organizationId: string;
     groupId: string;
     description?: string;
-    rules: { role: OrganizationRole; namespaces: string[]; resources: string[] }[];
+    rules: {
+      role: OrganizationRole;
+      allowAnyNamespace?: boolean;
+      namespaces: string[];
+      allowAnyResource?: boolean;
+      resources: string[];
+    }[];
   }) {
     return this.db.transaction(async (tx) => {
       if (input.description !== undefined) {
@@ -221,6 +231,8 @@ export class OrganizationGroupRepository {
           .values({
             groupId: input.groupId,
             role: rule.role,
+            allowAnyNamespace: rule.allowAnyNamespace ?? false,
+            allowAnyResource: rule.allowAnyResource ?? false,
           })
           .returning()
           .execute();

@@ -256,7 +256,9 @@ export interface OrganizationGroupDTO {
   membersCount: number;
   rules: {
     role: OrganizationRole;
+    allowAnyNamespace: boolean;
     namespaces: string[];
+    allowAnyResource: boolean;
     resources: string[];
   }[];
 }

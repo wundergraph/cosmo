@@ -6,6 +6,7 @@ import { buildDatabaseConnectionConfig } from '../core/plugins/database.js';
 import Keycloak from '../core/services/Keycloak.js';
 import * as schema from '../db/schema.js';
 import { OrganizationRole } from '../db/models.js';
+import { organizationRoleEnum } from '../db/schema.js';
 import { getConfig } from './get-config.js';
 
 const {
@@ -125,11 +126,14 @@ async function ensureOrganizationSubgroupsExistInDatabase({
     await db
       .insert(schema.organizationGroupRules)
       .values(
-        createdGroups.map((group) => ({
-          groupId: group.id,
-          role: `organization-${group.name}` as OrganizationRole,
-          resources: null,
-        })),
+        createdGroups
+          .filter((group) => organizationRoleEnum.enumValues.includes(`organization-${group.name}` as OrganizationRole))
+          .map((group) => ({
+            groupId: group.id,
+            role: `organization-${group.name}` as OrganizationRole,
+            allowAnyNamespace: true,
+            allowAnyResource: true,
+          })),
       )
       .onConflictDoNothing()
       .execute();

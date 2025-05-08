@@ -1361,6 +1361,8 @@ export const organizationGroupRules = pgTable('organization_group_rules', {
       onDelete: 'cascade',
     }),
   role: organizationRoleEnum('role').notNull(),
+  allowAnyNamespace: boolean('allow_any_namespace').notNull().default(false),
+  allowAnyResource: boolean('allow_any_resource').notNull().default(false),
 });
 
 export const organizationGroupRuleNamespaces = pgTable('organization_group_rule_namespaces', {

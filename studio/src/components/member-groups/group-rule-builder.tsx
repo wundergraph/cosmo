@@ -1,4 +1,4 @@
-import type {
+import {
   UpdateOrganizationGroupRequest_GroupRule,
   GetUserAccessibleResourcesResponse,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
@@ -76,10 +76,7 @@ export function GroupRuleBuilder({ roles, rule, accessibleResources, disabled, o
 
     setPopoverOpen(false);
 
-    const newRule = rule.clone();
-    newRule.role = role;
-    newRule.resources = [];
-    onRuleUpdated(newRule);
+    onRuleUpdated(new UpdateOrganizationGroupRequest_GroupRule({ role }));
   };
 
   return (

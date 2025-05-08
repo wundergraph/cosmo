@@ -86,21 +86,26 @@ try {
     isPasswordTemp: false,
   });
 
-  await keycloakClient.seedGroup({
+  const kcCreatedGroups = await keycloakClient.seedGroup({
     realm,
     userID: keycloakUserID,
     organizationSlug: user.organization.slug,
   });
 
-  await seedTest(queryConnection, {
-    apiKey,
-    email: user.email,
-    organizationName: user.organization.name,
-    organizationSlug: user.organization.slug,
-    userId: keycloakUserID,
-    organizationId,
-    groups: ['admin'],
-  });
+  await seedTest(
+    queryConnection,
+    {
+      apiKey,
+      email: user.email,
+      organizationName: user.organization.name,
+      organizationSlug: user.organization.slug,
+      userId: keycloakUserID,
+      organizationId,
+      groups: ['admin'],
+    },
+    undefined,
+    kcCreatedGroups,
+  );
 
   await queryConnection.end({
     timeout: 1,

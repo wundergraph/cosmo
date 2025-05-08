@@ -1,5 +1,5 @@
 {
-  "id": "c83f60e3-116f-4d47-8180-675e974e19ca",
+  "id": "795a8369-2760-4b43-83fc-8d4b3f4e7829",
   "prevId": "1047e67f-16f1-4d7b-bfb6-2031ff10230b",
   "version": "7",
   "dialect": "postgresql",
@@ -3936,6 +3936,20 @@
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
+        },
+        "allow_any_namespace": {
+          "name": "allow_any_namespace",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "allow_any_resource": {
+          "name": "allow_any_resource",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         }
       },
       "indexes": {},

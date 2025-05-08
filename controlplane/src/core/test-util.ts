@@ -7,6 +7,7 @@ import { pino } from 'pino';
 import { AuthContext, Label } from '../types/index.js';
 import * as schema from '../db/schema.js';
 import { OrganizationRole } from '../db/models.js';
+import { organizationRoleEnum } from '../db/schema.js';
 import { Authenticator } from './services/Authentication.js';
 import { UserRepository } from './repositories/UserRepository.js';
 import { OrganizationRepository } from './repositories/OrganizationRepository.js';
@@ -51,7 +52,12 @@ export function genUniqueLabel(prefix = 'prefix'): Label {
   return { key: prefix + '-' + genID(), value: genID() };
 }
 
-export async function seedTest(queryConnection: postgres.Sql, userTestData: UserTestData, createScimKey?: boolean) {
+export async function seedTest(
+  queryConnection: postgres.Sql,
+  userTestData: UserTestData,
+  createScimKey?: boolean,
+  kcGroups?: { id: string; name: string }[],
+) {
   const db = drizzle(queryConnection, { schema: { ...schema } });
 
   const userRepo = new UserRepository(pino(), db);
@@ -79,25 +85,30 @@ export async function seedTest(queryConnection: postgres.Sql, userTestData: User
       ownerID: userTestData.userId,
     });
 
-    for (const role of ['admin', 'developer', 'viewer']) {
+    for (const groupName of ['admin', 'developer', 'viewer']) {
       const createdGroup = await orgGroupRepo.create({
         organizationId: org.id,
-        name: role,
+        name: groupName,
         description: '',
-        kcGroupId: null,
+        kcGroupId: kcGroups?.find((g) => g.name === groupName)?.id || null,
       });
 
-      await orgGroupRepo.updateGroup({
-        organizationId: org.id,
-        groupId: createdGroup.groupId,
-        rules: [
-          {
-            role: `organization-${role}` as OrganizationRole,
-            namespaces: [],
-            resources: [],
-          },
-        ],
-      });
+      const roleName = `organization-${groupName}` as OrganizationRole;
+      if (organizationRoleEnum.enumValues.includes(roleName)) {
+        await orgGroupRepo.updateGroup({
+          organizationId: org.id,
+          groupId: createdGroup.groupId,
+          rules: [
+            {
+              role: roleName,
+              allowAnyNamespace: true,
+              namespaces: [],
+              allowAnyResource: true,
+              resources: [],
+            },
+          ],
+        });
+      }
     }
   }
 
