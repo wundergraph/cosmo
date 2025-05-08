@@ -1,97 +1,189 @@
 import { describe, expect, test } from 'vitest';
-import { ProtoLock, ProtoLockManager } from '../../src/proto-lock';
+import { ProtoLockManager } from '../../src/proto-lock';
 
-describe('ProtoLock', () => {
-  test('should manage ordering with in-memory data structure', () => {
-    // Create a lock manager with no initial data
+describe('ProtoLockManager', () => {
+  test('should correctly initialize lock data with ordered fields', () => {
     const lockManager = new ProtoLockManager();
-
-    // Add some fields to a message
+    
+    // Reconcile fields for a message
     const orderedFields = lockManager.reconcileMessageFieldOrder('Test', ['field1', 'field2']);
-
-    // Verify initial field order
+    
+    // Expect fields to be ordered by assigned numbers
     expect(orderedFields).toEqual(['field1', 'field2']);
-
+    
     // Get lock data
     const lockData = lockManager.getLockData();
-    expect(lockData.messages.Test.fields).toEqual(['field1', 'field2']);
-
-    // Create a new lock manager with the saved data
-    const newLockManager = new ProtoLockManager(lockData);
-
-    // Add a new field
-    const updatedFields = newLockManager.reconcileMessageFieldOrder('Test', ['field1', 'field2', 'field3']);
-
-    // Verify field order is preserved and new field is added at the end
-    expect(updatedFields).toEqual(['field1', 'field2', 'field3']);
+    
+    // Verify lock data structure
+    expect(lockData.messages).toBeDefined();
+    expect(lockData.messages.Test).toBeDefined();
+    expect(lockData.messages.Test.fields).toBeDefined();
+    
+    // Verify field numbers
+    expect(lockData.messages.Test.fields).toEqual({ field1: 1, field2: 2 });
   });
-
-  test('should use existing order from lock data', () => {
-    // Create initial lock data with a specific order
-    const initialLock: ProtoLock = {
+  
+  test('should maintain existing field ordering from lock', () => {
+    // Create lock manager with existing lock data
+    const lockManager = new ProtoLockManager({
       version: '1.0.0',
       messages: {
-        Test: { fields: ['field2', 'field1'] }, // Reverse order
+        Test: { fields: { field2: 1, field1: 2 } }, // Reverse order
       },
-      services: {},
-      arguments: {},
       enums: {},
-    };
-
-    // Create a lock manager with the initial data
-    const lockManager = new ProtoLockManager(initialLock);
+    });
+    
+    // Reconcile fields for a message
     const orderedFields = lockManager.reconcileMessageFieldOrder('Test', ['field1', 'field2']);
-
-    // Verify order matches the lock data, not the input order
+    
+    // Expect fields to be ordered by existing numbers in lock
     expect(orderedFields).toEqual(['field2', 'field1']);
   });
-
-  test('should add new fields to the end', () => {
-    // Create initial lock data
-    const initialLock: ProtoLock = {
+  
+  test('should add new fields after existing ones', () => {
+    // Create lock manager with existing lock data
+    const lockManager = new ProtoLockManager({
       version: '1.0.0',
       messages: {
-        Test: { fields: ['field1', 'field2'] },
+        Test: { fields: { field1: 1, field2: 2 } },
       },
-      services: {},
-      arguments: {},
       enums: {},
-    };
-
-    // Create a lock manager and add a new field
-    const lockManager = new ProtoLockManager(initialLock);
-    const orderedFields = lockManager.reconcileMessageFieldOrder('Test', ['field1', 'field2', 'field3']);
-
-    // Verify order has new field at the end
+    });
+    
+    // Reconcile fields with a new field
+    const orderedFields = lockManager.reconcileMessageFieldOrder('Test', ['field1', 'field3', 'field2']);
+    
+    // Expect new field to be added with next available number
     expect(orderedFields).toEqual(['field1', 'field2', 'field3']);
-
-    // Verify updated data
+    
+    // Get lock data
     const lockData = lockManager.getLockData();
-    expect(lockData.messages.Test.fields).toEqual(['field1', 'field2', 'field3']);
+    
+    // Verify new field is added to lock
+    expect(lockData.messages.Test.fields).toEqual({ field1: 1, field2: 2, field3: 3 });
   });
-
-  test('should handle removed fields', () => {
-    // Create initial lock data
-    const initialLock: ProtoLock = {
+  
+  test('should track removed fields in reserved numbers', () => {
+    // Create lock manager with existing lock data
+    const lockManager = new ProtoLockManager({
       version: '1.0.0',
       messages: {
-        Test: { fields: ['field1', 'field2', 'field3'] },
+        Test: { fields: { field1: 1, field2: 2, field3: 3 } },
       },
-      services: {},
-      arguments: {},
       enums: {},
-    };
-
-    // Create a lock manager with a removed field
-    const lockManager = new ProtoLockManager(initialLock);
-    const orderedFields = lockManager.reconcileMessageFieldOrder('Test', ['field1', 'field3']);
-
-    // Verify removed field is not in the result but order is preserved
-    expect(orderedFields).toEqual(['field1', 'field3']);
-
-    // Verify field2 is not in the result, but still in the lock data
-    // because we keep the original lock data intact
-    expect(orderedFields.includes('field2')).toBe(false);
-    expect(lockManager.getLockData().messages.Test.fields).toContain('field2');
+    });
+    
+    // Reconcile fields with field2 removed
+    lockManager.reconcileMessageFieldOrder('Test', ['field1', 'field3']);
+    
+    // Verify field2 is removed from fields
+    expect(Object.keys(lockManager.getLockData().messages.Test.fields)).not.toContain('field2');
+    
+    // Verify remaining fields have same numbers
+    expect(lockManager.getLockData().messages.Test.fields.field1).toBe(1);
+    expect(lockManager.getLockData().messages.Test.fields.field3).toBe(3);
+    
+    // Verify field2's number is now in the reserved numbers list
+    expect(lockManager.getLockData().messages.Test.reservedNumbers).toContain(2);
+  });
+  
+  test('should handle argument ordering for fields', () => {
+    const lockManager = new ProtoLockManager();
+    
+    // Define operation name and args
+    const operationName = 'QueryGetUser';
+    const args = ['id', 'includeDetails', 'limit'];
+    
+    // Reconcile argument order
+    const orderedArgs = lockManager.reconcileArgumentOrder(operationName, args);
+    
+    // Expect arguments to be ordered by assigned numbers
+    expect(orderedArgs).toEqual(args);
+    
+    // Get lock data
+    const lockData = lockManager.getLockData();
+    
+    // Verify lock data has assigned sequential numbers to args
+    expect(lockData.messages[operationName].fields).toEqual({
+      id: 1,
+      includeDetails: 2,
+      limit: 3,
+    });
+  });
+  
+  test('should handle field re-addition after removal', () => {
+    // Create lock manager with existing lock data
+    const lockManager = new ProtoLockManager({
+      version: '1.0.0',
+      messages: {
+        Test: { fields: { field1: 1, field2: 2, field3: 3 } },
+      },
+      enums: {},
+    });
+    
+    // First reconcile with field2 removed
+    lockManager.reconcileMessageFieldOrder('Test', ['field1', 'field3']);
+    
+    // Get lock data after first reconcile
+    const lockData = lockManager.getLockData();
+    
+    // Verify field2 is now reserved
+    expect(lockData.messages.Test.reservedNumbers).toContain(2);
+    
+    // Verify fields only contains current fields
+    expect(Object.keys(lockData.messages.Test.fields)).toHaveLength(2);
+    expect(lockData.messages.Test.fields.field1).toBe(1);
+    expect(lockData.messages.Test.fields.field3).toBe(3);
+    
+    // Now reconcile with field2 added back and a new field
+    const result = lockManager.reconcileMessageFieldOrder('Test', ['field1', 'field2', 'field3', 'field4']);
+    
+    // Get updated lock data
+    const updatedLockData = lockManager.getLockData();
+    
+    // When a field is re-added, it gets a new field number (4) rather than reusing the reserved number (2)
+    // This behavior is intentional as it preserves backward compatibility in the proto format
+    expect(updatedLockData.messages.Test.fields.field2).toBe(4);
+    
+    // Verify field4 gets the next available number
+    expect(updatedLockData.messages.Test.fields.field4).toBe(5);
+    
+    // Verify field order is by number value
+    expect(result).toEqual(['field1', 'field3', 'field2', 'field4']);
+  });
+  
+  test('should handle complex field removal and re-addition', () => {
+    // Create a lock manager with multiple fields
+    const lockManager = new ProtoLockManager({
+      version: '1.0.0',
+      messages: {
+        Message: { 
+          fields: { field1: 1, field2: 2, field3: 3, field4: 4 },
+        },
+      },
+      enums: {},
+    });
+    
+    // Remove some fields
+    lockManager.reconcileMessageFieldOrder('Message', ['field1', 'field3']);
+    
+    // Get the lock data
+    const lockData = lockManager.getLockData();
+    
+    // Verify only current fields remain
+    expect(Object.keys(lockData.messages.Message.fields)).toHaveLength(2);
+    
+    // Remove another field and add a new one
+    lockManager.reconcileMessageFieldOrder('Message', ['field1', 'field5']);
+    
+    // Verify only current fields are in fields
+    expect(Object.keys(lockData.messages.Message.fields)).toHaveLength(2);
+    expect(lockData.messages.Message.fields.field1).toBe(1);
+    expect(lockData.messages.Message.fields.field5).toBe(5);
+    
+    // Reserved numbers should have all removed fields
+    expect(lockData.messages.Message.reservedNumbers).toContain(2);
+    expect(lockData.messages.Message.reservedNumbers).toContain(3);
+    expect(lockData.messages.Message.reservedNumbers).toContain(4);
   });
 });

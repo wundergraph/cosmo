@@ -58,11 +58,11 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
       option go_package = "cosmo/pkg/proto/service.v1;servicev1";
 
       service DefaultService {
-        rpc QueryString(QueryStringRequest) returns (QueryStringResponse) {}
-        rpc QueryInt(QueryIntRequest) returns (QueryIntResponse) {}
-        rpc QueryFloat(QueryFloatRequest) returns (QueryFloatResponse) {}
         rpc QueryBoolean(QueryBooleanRequest) returns (QueryBooleanResponse) {}
+        rpc QueryFloat(QueryFloatRequest) returns (QueryFloatResponse) {}
         rpc QueryId(QueryIdRequest) returns (QueryIdResponse) {}
+        rpc QueryInt(QueryIntRequest) returns (QueryIntResponse) {}
+        rpc QueryString(QueryStringRequest) returns (QueryStringResponse) {}
       }
 
       message QueryStringRequest {
@@ -130,9 +130,9 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
       option go_package = "cosmo/pkg/proto/service.v1;servicev1";
 
       service DefaultService {
+        rpc QueryEnumValue(QueryEnumValueRequest) returns (QueryEnumValueResponse) {}
         rpc QueryMessageType(QueryMessageTypeRequest) returns (QueryMessageTypeResponse) {}
         rpc QueryServiceType(QueryServiceTypeRequest) returns (QueryServiceTypeResponse) {}
-        rpc QueryEnumValue(QueryEnumValueRequest) returns (QueryEnumValueResponse) {}
       }
 
       message QueryMessageTypeRequest {
@@ -354,21 +354,21 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
       option go_package = "cosmo/pkg/proto/service.v1;servicev1";
 
       service DefaultService {
-        rpc LookupUserById(LookupUserByIdRequest) returns (LookupUserByIdResponse) {}
         rpc LookupPostById(LookupPostByIdRequest) returns (LookupPostByIdResponse) {}
-        rpc QueryUser(QueryUserRequest) returns (QueryUserResponse) {}
-        rpc QueryUsers(QueryUsersRequest) returns (QueryUsersResponse) {}
-        rpc QueryPost(QueryPostRequest) returns (QueryPostResponse) {}
-        rpc QueryPosts(QueryPostsRequest) returns (QueryPostsResponse) {}
+        rpc LookupUserById(LookupUserByIdRequest) returns (LookupUserByIdResponse) {}
+        rpc MutationCreateComment(MutationCreateCommentRequest) returns (MutationCreateCommentResponse) {}
+        rpc MutationCreatePost(MutationCreatePostRequest) returns (MutationCreatePostResponse) {}
+        rpc MutationCreateUser(MutationCreateUserRequest) returns (MutationCreateUserResponse) {}
+        rpc MutationDeletePost(MutationDeletePostRequest) returns (MutationDeletePostResponse) {}
+        rpc MutationUpdatePost(MutationUpdatePostRequest) returns (MutationUpdatePostResponse) {}
         rpc QueryComment(QueryCommentRequest) returns (QueryCommentResponse) {}
         rpc QueryComments(QueryCommentsRequest) returns (QueryCommentsResponse) {}
-        rpc QuerySearch(QuerySearchRequest) returns (QuerySearchResponse) {}
         rpc QueryNode(QueryNodeRequest) returns (QueryNodeResponse) {}
-        rpc MutationCreateUser(MutationCreateUserRequest) returns (MutationCreateUserResponse) {}
-        rpc MutationCreatePost(MutationCreatePostRequest) returns (MutationCreatePostResponse) {}
-        rpc MutationCreateComment(MutationCreateCommentRequest) returns (MutationCreateCommentResponse) {}
-        rpc MutationUpdatePost(MutationUpdatePostRequest) returns (MutationUpdatePostResponse) {}
-        rpc MutationDeletePost(MutationDeletePostRequest) returns (MutationDeletePostResponse) {}
+        rpc QueryPost(QueryPostRequest) returns (QueryPostResponse) {}
+        rpc QueryPosts(QueryPostsRequest) returns (QueryPostsResponse) {}
+        rpc QuerySearch(QuerySearchRequest) returns (QuerySearchResponse) {}
+        rpc QueryUser(QueryUserRequest) returns (QueryUserResponse) {}
+        rpc QueryUsers(QueryUsersRequest) returns (QueryUsersResponse) {}
       }
 
       message LookupUserByIdRequest {

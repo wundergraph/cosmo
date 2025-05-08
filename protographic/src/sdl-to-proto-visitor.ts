@@ -2,7 +2,6 @@ import {
   ArgumentNode,
   DirectiveNode,
   getNamedType,
-  GraphQLArgument,
   GraphQLEnumType,
   GraphQLField,
   GraphQLInputObjectType,
@@ -160,11 +159,88 @@ export class GraphQLToProtoTextVisitor {
         this.fieldNumbersMap[messageName] = {};
       }
 
-      // Process fields in their original order to maintain proper field numbers
-      messageLock.fields.forEach((fieldName, index) => {
-        // Store field number by field name (field number starts from 1)
-        this.fieldNumbersMap[messageName][fieldName] = index + 1;
-      });
+      // Store field number by field name
+      for (const [fieldName, fieldNumber] of Object.entries(messageLock.fields)) {
+        this.fieldNumbersMap[messageName][fieldName] = fieldNumber;
+      }
+    }
+  }
+
+  /**
+   * Track removed fields for a given message type between schema updates.
+   * This ensures that when fields are removed within a single operation,
+   * their numbers are properly reserved.
+   *
+   * @param typeName - The message type name
+   * @param originalFieldNames - Original field names from the lock data
+   * @param currentFieldNames - Current field names from the schema
+   */
+  private trackRemovedFields(typeName: string, originalFieldNames: string[], currentFieldNames: string[]): void {
+    // Skip if no lock data exists for this type
+    if (!this.lockManager.getLockData().messages[typeName]) {
+      return;
+    }
+
+    const lockData = this.lockManager.getLockData();
+
+    // Find fields that were in the original type but are no longer present
+    const removedFields = originalFieldNames.filter((field) => !currentFieldNames.includes(field));
+
+    if (removedFields.length === 0) {
+      return;
+    }
+
+    // Get the field numbers for removed fields
+    const removedFieldNumbers: number[] = [];
+    for (const field of removedFields) {
+      const fieldNumber = lockData.messages[typeName]?.fields[field];
+      if (fieldNumber !== undefined) {
+        removedFieldNumbers.push(fieldNumber);
+      }
+    }
+
+    // Add to existing reserved numbers
+    if (removedFieldNumbers.length > 0) {
+      const existingReserved = lockData.messages[typeName].reservedNumbers || [];
+      lockData.messages[typeName].reservedNumbers = [...new Set([...existingReserved, ...removedFieldNumbers])];
+    }
+  }
+
+  /**
+   * Track removed enum values for a given enum type.
+   *
+   * @param enumName - The enum type name
+   * @param originalValueNames - Original enum value names from the lock data
+   * @param currentValueNames - Current enum value names from the schema
+   */
+  private trackRemovedEnumValues(enumName: string, originalValueNames: string[], currentValueNames: string[]): void {
+    // Skip if no lock data exists for this enum
+    if (!this.lockManager.getLockData().enums[enumName]) {
+      return;
+    }
+
+    const lockData = this.lockManager.getLockData();
+
+    // Find values that were in the original enum but are no longer present
+    const removedValues = originalValueNames.filter((value) => !currentValueNames.includes(value));
+
+    if (removedValues.length === 0) {
+      return;
+    }
+
+    // Get the value numbers for removed values
+    const removedValueNumbers: number[] = [];
+    for (const value of removedValues) {
+      const valueNumber = lockData.enums[enumName]?.fields[value];
+      if (valueNumber !== undefined) {
+        removedValueNumbers.push(valueNumber);
+      }
+    }
+
+    // Add to existing reserved numbers
+    if (removedValueNumbers.length > 0) {
+      const existingReserved = lockData.enums[enumName].reservedNumbers || [];
+      lockData.enums[enumName].reservedNumbers = [...new Set([...existingReserved, ...removedValueNumbers])];
     }
   }
 
@@ -198,16 +274,23 @@ export class GraphQLToProtoTextVisitor {
     // Check if this field existed in the lock data
     const lockData = this.lockManager.getLockData();
     if (lockData.messages[messageName]) {
-      const lockedFields = lockData.messages[messageName].fields;
+      const fields = lockData.messages[messageName].fields;
 
-      // Check for the field by name or snake_case in the lock
-      const lockIndex = lockedFields.indexOf(fieldName);
-      if (lockIndex !== -1) {
-        const fieldNumber = lockIndex + 1;
+      // Check if the field exists in the fields map
+      if (fields[fieldName] !== undefined) {
+        const fieldNumber = fields[fieldName];
         this.fieldNumbersMap[messageName][fieldName] = fieldNumber;
         if (fieldName !== snakeCaseField) {
           this.fieldNumbersMap[messageName][snakeCaseField] = fieldNumber;
         }
+        return fieldNumber;
+      }
+
+      // Also check for snake_case version
+      if (fieldName !== snakeCaseField && fields[snakeCaseField] !== undefined) {
+        const fieldNumber = fields[snakeCaseField];
+        this.fieldNumbersMap[messageName][fieldName] = fieldNumber;
+        this.fieldNumbersMap[messageName][snakeCaseField] = fieldNumber;
         return fieldNumber;
       }
     }
@@ -245,11 +328,7 @@ export class GraphQLToProtoTextVisitor {
   }
 
   /**
-   * Generate Proto text by walking the GraphQL schema
-   *
-   * This is the main entry point that orchestrates the conversion process:
-   * 1. Creates the service definition with RPC methods only
-   * 2. Generates all message definitions separately outside the service block
+   * Visit the GraphQL schema to generate Proto buffer definition
    *
    * @returns The complete Protocol Buffer definition as a string
    */
@@ -283,8 +362,8 @@ export class GraphQLToProtoTextVisitor {
     this.protoText.push(`service ${this.serviceName} {`);
     this.indent++;
 
-    // Order RPC methods using the lock manager
-    const orderedMethodNames = this.lockManager.reconcileServiceMethodOrder(this.serviceName, allMethodNames);
+    // Sort method names deterministically by alphabetical order
+    const orderedMethodNames = [...allMethodNames].sort();
 
     // Add RPC methods in the ordered sequence
     for (const methodName of orderedMethodNames) {
@@ -399,7 +478,7 @@ export class GraphQLToProtoTextVisitor {
 
     const fields = rootType.getFields();
 
-    // Use lock manager to order fields
+    // Get field names and order them using the lock manager
     const fieldNames = Object.keys(fields);
     const orderedFieldNames = this.lockManager.reconcileMessageFieldOrder(operationType, fieldNames);
 
@@ -462,6 +541,13 @@ export class GraphQLToProtoTextVisitor {
     const messageLines: string[] = [];
     messageLines.push(`message ${requestName} {`);
 
+    // Add reserved field numbers if any exist
+    const lockData = this.lockManager.getLockData();
+    const messageLock = lockData.messages[requestName];
+    if (messageLock?.reservedNumbers && messageLock.reservedNumbers.length > 0) {
+      messageLines.push(`    reserved ${this.formatReservedNumbers(messageLock.reservedNumbers)};`);
+    }
+
     const protoKeyField = graphqlFieldToProtoField(keyField);
 
     // Get the appropriate field number from the lock
@@ -486,6 +572,14 @@ export class GraphQLToProtoTextVisitor {
 
     // Create the result wrapper message
     messageLines.push(`message ${resultName} {`);
+
+    // Add reserved field numbers for result message if any exist
+    const lockData = this.lockManager.getLockData();
+    const resultMessageLock = lockData.messages[resultName];
+    if (resultMessageLock?.reservedNumbers && resultMessageLock.reservedNumbers.length > 0) {
+      messageLines.push(`    reserved ${this.formatReservedNumbers(resultMessageLock.reservedNumbers)};`);
+    }
+
     const protoTypeName = graphqlFieldToProtoField(typeName);
 
     // Get the appropriate field number from the lock
@@ -500,6 +594,12 @@ export class GraphQLToProtoTextVisitor {
 
     // Create the response message with repeated result wrapper
     messageLines.push(`message ${responseName} {`);
+
+    // Add reserved field numbers for response message if any exist
+    const responseMessageLock = lockData.messages[responseName];
+    if (responseMessageLock?.reservedNumbers && responseMessageLock.reservedNumbers.length > 0) {
+      messageLines.push(`    reserved ${this.formatReservedNumbers(responseMessageLock.reservedNumbers)};`);
+    }
 
     // Get the appropriate field number from the lock
     const responseFieldNumber = this.getFieldNumber(responseName, 'results', 1);
@@ -518,7 +618,50 @@ export class GraphQLToProtoTextVisitor {
    * Creates a request message for a query/mutation field
    */
   private createFieldRequestMessage(requestName: string, field: GraphQLField<any, any>): string[] {
-    const messageLines = this.createRequestMessage(requestName, field.args);
+    const messageLines: string[] = [];
+    messageLines.push(`message ${requestName} {`);
+
+    // Add reserved field numbers if any exist
+    const lockData = this.lockManager.getLockData();
+    const messageLock = lockData.messages[requestName];
+    if (messageLock?.reservedNumbers && messageLock.reservedNumbers.length > 0) {
+      messageLines.push(`    reserved ${this.formatReservedNumbers(messageLock.reservedNumbers)};`);
+    }
+
+    if (field.args.length > 0) {
+      const argNames = field.args.map((arg) => arg.name);
+
+      // Extract operation name from the request name (e.g., GetUsersRequest -> GetUsers)
+      const operationName = requestName.replace(/Request$/, '');
+
+      // Use the specific argument ordering for this operation
+      const orderedArgNames = this.lockManager.reconcileArgumentOrder(operationName, argNames);
+
+      // Get the lock data to access field numbers
+      const lockData = this.lockManager.getLockData();
+
+      // Process arguments in the order specified by the lock manager
+      for (const argName of orderedArgNames) {
+        const arg = field.args.find((a) => a.name === argName);
+        if (!arg) continue;
+
+        const argType = this.getProtoTypeFromGraphQL(arg.type);
+        const argProtoName = graphqlFieldToProtoField(arg.name);
+
+        // Get the field number from the messages structure
+        const fieldNumber = lockData.messages[operationName]?.fields[argName];
+
+        messageLines.push(`    ${argType} ${argProtoName} = ${fieldNumber};`);
+
+        // Add complex input types to the queue for processing
+        const namedType = getNamedType(arg.type);
+        if (isInputObjectType(namedType) && !this.processedTypes.has(namedType.name)) {
+          this.messageQueue.push(namedType);
+        }
+      }
+    }
+
+    messageLines.push('}');
 
     // Ensure this message is registered in the lock manager data
     if (field.args.length > 0) {
@@ -535,6 +678,13 @@ export class GraphQLToProtoTextVisitor {
   private createFieldResponseMessage(responseName: string, fieldName: string, field: GraphQLField<any, any>): string[] {
     const messageLines: string[] = [];
     messageLines.push(`message ${responseName} {`);
+
+    // Add reserved field numbers if any exist
+    const lockData = this.lockManager.getLockData();
+    const messageLock = lockData.messages[responseName];
+    if (messageLock?.reservedNumbers && messageLock.reservedNumbers.length > 0) {
+      messageLines.push(`    reserved ${this.formatReservedNumbers(messageLock.reservedNumbers)};`);
+    }
 
     const returnType = this.getProtoTypeFromGraphQL(field.type);
     const isRepeated = isListType(field.type) || (isNonNullType(field.type) && isListType(field.type.ofType));
@@ -554,51 +704,6 @@ export class GraphQLToProtoTextVisitor {
     // Ensure this message is registered in the lock manager data
     this.lockManager.reconcileMessageFieldOrder(responseName, [protoFieldName]);
 
-    return messageLines;
-  }
-
-  /**
-   * Generic method to create a request message from field arguments
-   */
-  private createRequestMessage(requestName: string, args: readonly GraphQLArgument[]): string[] {
-    const messageLines: string[] = [];
-    messageLines.push(`message ${requestName} {`);
-
-    if (args.length > 0) {
-      const argNames = args.map((arg) => arg.name);
-
-      // Extract operation name from the request name (e.g., GetUsersRequest -> GetUsers)
-      const operationName = requestName.replace(/Request$/, '');
-
-      // Use the specific argument ordering for this operation
-      const orderedArgNames = this.lockManager.reconcileArgumentOrder(operationName, argNames);
-
-      // Process arguments in the order specified by the lock manager
-      for (const argName of orderedArgNames) {
-        const arg = args.find((a) => a.name === argName);
-        if (!arg) continue;
-
-        const argType = this.getProtoTypeFromGraphQL(arg.type);
-        const argProtoName = graphqlFieldToProtoField(arg.name);
-
-        // Get the appropriate field number, respecting the lock
-        const fieldNumber = this.getFieldNumber(
-          requestName,
-          argProtoName,
-          this.getNextAvailableFieldNumber(requestName),
-        );
-
-        messageLines.push(`    ${argType} ${argProtoName} = ${fieldNumber};`);
-
-        // Add complex input types to the queue for processing
-        const namedType = getNamedType(arg.type);
-        if (isInputObjectType(namedType) && !this.processedTypes.has(namedType.name)) {
-          this.messageQueue.push(namedType);
-        }
-      }
-    }
-
-    messageLines.push('}');
     return messageLines;
   }
 
@@ -675,15 +780,15 @@ export class GraphQLToProtoTextVisitor {
 
       // Process the type based on its kind
       if (isObjectType(type)) {
-        this.processObjectType(type);
+        this.processObjectType(type as GraphQLObjectType);
       } else if (isInputObjectType(type)) {
-        this.processInputObjectType(type);
+        this.processInputObjectType(type as GraphQLInputObjectType);
       } else if (isInterfaceType(type)) {
-        this.processInterfaceType(type);
+        this.processInterfaceType(type as GraphQLInterfaceType);
       } else if (isUnionType(type)) {
-        this.processUnionType(type);
+        this.processUnionType(type as GraphQLUnionType);
       } else if (isEnumType(type)) {
-        this.processEnumType(type);
+        this.processEnumType(type as GraphQLEnumType);
       }
 
       // Mark as processed
@@ -706,9 +811,23 @@ export class GraphQLToProtoTextVisitor {
       return;
     }
 
+    // Check for field removals if lock data exists for this type
+    const lockData = this.lockManager.getLockData();
+    if (lockData.messages[type.name]) {
+      const originalFieldNames = Object.keys(lockData.messages[type.name].fields);
+      const currentFieldNames = Object.keys(type.getFields());
+      this.trackRemovedFields(type.name, originalFieldNames, currentFieldNames);
+    }
+
     this.protoText.push('');
     this.protoText.push(`message ${type.name} {`);
     this.indent++;
+
+    // Add reserved field numbers if any exist
+    const messageLock = lockData.messages[type.name];
+    if (messageLock?.reservedNumbers && messageLock.reservedNumbers.length > 0) {
+      this.protoText.push(`${this.getIndent()}reserved ${this.formatReservedNumbers(messageLock.reservedNumbers)};`);
+    }
 
     const fields = type.getFields();
 
@@ -753,9 +872,23 @@ export class GraphQLToProtoTextVisitor {
    * @param type - The GraphQL input object type
    */
   private processInputObjectType(type: GraphQLInputObjectType): void {
+    // Check for field removals if lock data exists for this type
+    const lockData = this.lockManager.getLockData();
+    if (lockData.messages[type.name]) {
+      const originalFieldNames = Object.keys(lockData.messages[type.name].fields);
+      const currentFieldNames = Object.keys(type.getFields());
+      this.trackRemovedFields(type.name, originalFieldNames, currentFieldNames);
+    }
+
     this.protoText.push('');
     this.protoText.push(`message ${type.name} {`);
     this.indent++;
+
+    // Add reserved field numbers if any exist
+    const messageLock = lockData.messages[type.name];
+    if (messageLock?.reservedNumbers && messageLock.reservedNumbers.length > 0) {
+      this.protoText.push(`${this.getIndent()}reserved ${this.formatReservedNumbers(messageLock.reservedNumbers)};`);
+    }
 
     const fields = type.getFields();
 
@@ -905,9 +1038,23 @@ export class GraphQLToProtoTextVisitor {
    * @param type - The GraphQL enum type
    */
   private processEnumType(type: GraphQLEnumType): void {
+    // Check for enum value removals if lock data exists for this enum
+    const lockData = this.lockManager.getLockData();
+    if (lockData.enums[type.name]) {
+      const originalValueNames = Object.keys(lockData.enums[type.name].fields);
+      const currentValueNames = type.getValues().map((v) => v.name);
+      this.trackRemovedEnumValues(type.name, originalValueNames, currentValueNames);
+    }
+
     this.protoText.push('');
     this.protoText.push(`enum ${type.name} {`);
     this.indent++;
+
+    // Add reserved enum values first if any exist
+    const enumLock = lockData.enums[type.name];
+    if (enumLock?.reservedNumbers && enumLock.reservedNumbers.length > 0) {
+      this.protoText.push(`${this.getIndent()}reserved ${this.formatReservedNumbers(enumLock.reservedNumbers)};`);
+    }
 
     // Add unspecified value as first enum value (required in proto3)
     const unspecifiedValue = createEnumUnspecifiedValue(type.name);
@@ -918,32 +1065,22 @@ export class GraphQLToProtoTextVisitor {
     const valueNames = values.map((v) => v.name);
     const orderedValueNames = this.lockManager.reconcileEnumValueOrder(type.name, valueNames);
 
-    // Create a map to track enum value numbers
-    const enumValueNumbers: Record<string, number> = {};
-
-    // If we have existing lock data for this enum, extract the value numbers
-    const lockData = this.lockManager.getLockData();
-    if (lockData.enums[type.name]) {
-      // Assign numbers based on locked position
-      lockData.enums[type.name].values.forEach((valueName, index) => {
-        const protoEnumValue = graphqlEnumValueToProtoEnumValue(type.name, valueName);
-        enumValueNumbers[protoEnumValue] = index + 1; // +1 because 0 is reserved for UNSPECIFIED
-      });
-    }
-
     for (const valueName of orderedValueNames) {
       const value = values.find((v) => v.name === valueName);
       if (!value) continue;
 
       const protoEnumValue = graphqlEnumValueToProtoEnumValue(type.name, value.name);
 
-      // Get or assign enum value number
-      let valueNumber = enumValueNumbers[protoEnumValue];
-      if (!valueNumber) {
-        // If no number assigned yet, use the next available number
-        const maxNumber = Object.values(enumValueNumbers).length > 0 ? Math.max(...Object.values(enumValueNumbers)) : 0;
-        valueNumber = maxNumber + 1;
-        enumValueNumbers[protoEnumValue] = valueNumber;
+      // Get value number from lock data
+      const lockData = this.lockManager.getLockData();
+      let valueNumber = 0;
+
+      if (lockData.enums[type.name] && lockData.enums[type.name].fields[value.name]) {
+        valueNumber = lockData.enums[type.name].fields[value.name];
+      } else {
+        // This should never happen since we just reconciled, but just in case
+        console.warn(`Missing enum value number for ${type.name}.${value.name}`);
+        continue;
       }
 
       this.protoText.push(`${this.getIndent()}${protoEnumValue} = ${valueNumber};`);
@@ -1006,5 +1143,57 @@ export class GraphQLToProtoTextVisitor {
    */
   public getGeneratedLockData(): ProtoLock | null {
     return this.generatedLockData;
+  }
+
+  /**
+   * Format reserved numbers for Proto syntax
+   *
+   * Formats a list of reserved field numbers for inclusion in a Proto message.
+   * This handles both individual numbers and ranges.
+   *
+   * @param numbers - The field numbers to be reserved
+   * @returns A formatted string for the reserved statement
+   */
+  private formatReservedNumbers(numbers: number[]): string {
+    if (numbers.length === 0) return '';
+
+    // Sort numbers for better readability
+    const sortedNumbers = [...numbers].sort((a, b) => a - b);
+
+    // Simple case: only one number
+    if (sortedNumbers.length === 1) {
+      return sortedNumbers[0].toString();
+    }
+
+    // Find continuous ranges to compact the representation
+    const ranges: Array<[number, number]> = [];
+    let rangeStart = sortedNumbers[0];
+    let rangeEnd = sortedNumbers[0];
+
+    for (let i = 1; i < sortedNumbers.length; i++) {
+      if (sortedNumbers[i] === rangeEnd + 1) {
+        // Extend the current range
+        rangeEnd = sortedNumbers[i];
+      } else {
+        // End the current range and start a new one
+        ranges.push([rangeStart, rangeEnd]);
+        rangeStart = sortedNumbers[i];
+        rangeEnd = sortedNumbers[i];
+      }
+    }
+
+    // Add the last range
+    ranges.push([rangeStart, rangeEnd]);
+
+    // Format the ranges
+    return ranges
+      .map(([start, end]) => {
+        if (start === end) {
+          return start.toString();
+        } else {
+          return `${start} to ${end}`;
+        }
+      })
+      .join(', ');
   }
 }

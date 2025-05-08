@@ -95,8 +95,8 @@ describe('SDL to Proto - Complex Types', () => {
       option go_package = "cosmo/pkg/proto/service.v1;servicev1";
 
       service DefaultService {
-        rpc QueryDummy(QueryDummyRequest) returns (QueryDummyResponse) {}
         rpc MutationCreateUser(MutationCreateUserRequest) returns (MutationCreateUserResponse) {}
+        rpc QueryDummy(QueryDummyRequest) returns (QueryDummyResponse) {}
       }
 
       message QueryDummyRequest {
@@ -218,8 +218,8 @@ describe('SDL to Proto - Complex Types', () => {
       option go_package = "cosmo/pkg/proto/service.v1;servicev1";
 
       service DefaultService {
-        rpc QueryRootNode(QueryRootNodeRequest) returns (QueryRootNodeResponse) {}
         rpc QueryNode(QueryNodeRequest) returns (QueryNodeResponse) {}
+        rpc QueryRootNode(QueryRootNodeRequest) returns (QueryRootNodeResponse) {}
       }
 
       message QueryRootNodeRequest {

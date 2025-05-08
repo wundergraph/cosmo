@@ -115,8 +115,8 @@ describe('SDL to Proto - Interfaces and Unions', () => {
       option go_package = "cosmo/pkg/proto/service.v1;servicev1";
 
       service DefaultService {
-        rpc QueryNode(QueryNodeRequest) returns (QueryNodeResponse) {}
         rpc QueryActivity(QueryActivityRequest) returns (QueryActivityResponse) {}
+        rpc QueryNode(QueryNodeRequest) returns (QueryNodeResponse) {}
       }
 
       message QueryNodeRequest {

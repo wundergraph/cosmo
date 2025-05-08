@@ -194,8 +194,8 @@ describe('SDL to Proto - Federation and Special Types', () => {
       option go_package = "cosmo/pkg/proto/service.v1;servicev1";
 
       service DefaultService {
-        rpc LookupUserById(LookupUserByIdRequest) returns (LookupUserByIdResponse) {}
         rpc LookupProductById(LookupProductByIdRequest) returns (LookupProductByIdResponse) {}
+        rpc LookupUserById(LookupUserByIdRequest) returns (LookupUserByIdResponse) {}
         rpc QueryNode(QueryNodeRequest) returns (QueryNodeResponse) {}
       }
 
@@ -284,8 +284,8 @@ describe('SDL to Proto - Federation and Special Types', () => {
       option go_package = "cosmo/pkg/proto/service.v1;servicev1";
 
       service DefaultService {
-        rpc QueryEvents(QueryEventsRequest) returns (QueryEventsResponse) {}
         rpc QueryEvent(QueryEventRequest) returns (QueryEventResponse) {}
+        rpc QueryEvents(QueryEventsRequest) returns (QueryEventsResponse) {}
       }
 
       message QueryEventsRequest {

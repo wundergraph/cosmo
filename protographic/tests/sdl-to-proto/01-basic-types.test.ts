@@ -27,11 +27,11 @@ describe('SDL to Proto - Basic Types', () => {
       option go_package = "cosmo/pkg/proto/service.v1;servicev1";
 
       service DefaultService {
-        rpc QueryStringField(QueryStringFieldRequest) returns (QueryStringFieldResponse) {}
-        rpc QueryIntField(QueryIntFieldRequest) returns (QueryIntFieldResponse) {}
-        rpc QueryFloatField(QueryFloatFieldRequest) returns (QueryFloatFieldResponse) {}
         rpc QueryBooleanField(QueryBooleanFieldRequest) returns (QueryBooleanFieldResponse) {}
+        rpc QueryFloatField(QueryFloatFieldRequest) returns (QueryFloatFieldResponse) {}
         rpc QueryIdField(QueryIdFieldRequest) returns (QueryIdFieldResponse) {}
+        rpc QueryIntField(QueryIntFieldRequest) returns (QueryIntFieldResponse) {}
+        rpc QueryStringField(QueryStringFieldRequest) returns (QueryStringFieldResponse) {}
       }
 
       message QueryStringFieldRequest {
@@ -83,8 +83,8 @@ describe('SDL to Proto - Basic Types', () => {
       option go_package = "cosmo/pkg/proto/service.v1;servicev1";
 
       service DefaultService {
-        rpc QueryRequiredString(QueryRequiredStringRequest) returns (QueryRequiredStringResponse) {}
         rpc QueryRequiredInt(QueryRequiredIntRequest) returns (QueryRequiredIntResponse) {}
+        rpc QueryRequiredString(QueryRequiredStringRequest) returns (QueryRequiredStringResponse) {}
       }
 
       message QueryRequiredStringRequest {
@@ -122,9 +122,9 @@ describe('SDL to Proto - Basic Types', () => {
       option go_package = "cosmo/pkg/proto/service.v1;servicev1";
 
       service DefaultService {
-        rpc QueryStringList(QueryStringListRequest) returns (QueryStringListResponse) {}
         rpc QueryIntList(QueryIntListRequest) returns (QueryIntListResponse) {}
         rpc QueryRequiredStrings(QueryRequiredStringsRequest) returns (QueryRequiredStringsResponse) {}
+        rpc QueryStringList(QueryStringListRequest) returns (QueryStringListResponse) {}
       }
 
       message QueryStringListRequest {
@@ -213,8 +213,8 @@ describe('SDL to Proto - Basic Types', () => {
       option go_package = "cosmo/pkg/proto/service.v1;servicev1";
 
       service DefaultService {
-        rpc QueryUser(QueryUserRequest) returns (QueryUserResponse) {}
         rpc QueryFilteredUsers(QueryFilteredUsersRequest) returns (QueryFilteredUsersResponse) {}
+        rpc QueryUser(QueryUserRequest) returns (QueryUserResponse) {}
       }
 
       message QueryUserRequest {

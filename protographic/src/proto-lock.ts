@@ -4,32 +4,24 @@
 export interface ProtoLock {
   version: string;
   messages: Record<string, MessageLock>;
-  services: Record<string, ServiceLock>;
   enums: Record<string, EnumLock>;
-  arguments: Record<string, ArgumentLock>;
 }
 
 interface MessageLock {
-  fields: string[]; // Field names in order
-}
-
-interface ServiceLock {
-  methods: string[]; // Method names in order
+  fields: Record<string, number>; // Maps field name to field number
+  reservedNumbers?: number[]; // Field numbers that have been removed and should be reserved
 }
 
 interface EnumLock {
-  values: string[]; // Enum value names in order
-}
-
-interface ArgumentLock {
-  args: string[]; // Argument names in order
+  fields: Record<string, number>; // Maps enum value to number
+  reservedNumbers?: number[]; // Enum value numbers that have been removed and should be reserved
 }
 
 /**
  * Class to manage proto lock data for deterministic field ordering
  */
 export class ProtoLockManager {
-  private lockData: ProtoLock;
+  private readonly lockData: ProtoLock;
 
   /**
    * Create a new ProtoLockManager
@@ -40,10 +32,122 @@ export class ProtoLockManager {
     this.lockData = initialLockData || {
       version: '1.0.0',
       messages: {},
-      services: {},
       enums: {},
-      arguments: {},
     };
+  }
+
+  /**
+   * Generic method to reconcile items and their numbers
+   *
+   * @param container - The container object (messages or enums)
+   * @param itemName - Name of the item (message or enum)
+   * @param availableItems - Available item names (fields or enum values)
+   * @returns Ordered array of item names
+   */
+  private reconcileItems<T extends MessageLock | EnumLock>(
+    container: Record<string, T>,
+    itemName: string,
+    availableItems: string[],
+  ): string[] {
+    // Ensure container item exists
+    if (!container[itemName]) {
+      container[itemName] = { fields: {} } as T;
+    }
+
+    // Get existing fields map
+    const fieldsMap = container[itemName].fields;
+
+    // Get existing reserved numbers
+    let reservedNumbers: number[] = container[itemName].reservedNumbers || [];
+
+    // Track removed items and their numbers
+    const removedItems: Record<string, number> = {};
+
+    // Identify removed items
+    Object.entries(fieldsMap).forEach(([item, number]) => {
+      if (!availableItems.includes(item)) {
+        reservedNumbers.push(number);
+        removedItems[item] = number;
+      }
+    });
+
+    // Deduplicate reserved numbers
+    reservedNumbers = [...new Set(reservedNumbers)];
+
+    // Create new fields map
+    const newFieldsMap: Record<string, number> = {};
+
+    // Preserve existing numbers for items that are still available
+    availableItems.forEach((item) => {
+      const existingNumber = fieldsMap[item];
+      if (existingNumber !== undefined) {
+        newFieldsMap[item] = existingNumber;
+
+        // Remove from reserved if it's reused
+        const index = reservedNumbers.indexOf(existingNumber);
+        if (index !== -1) {
+          reservedNumbers.splice(index, 1);
+        }
+      }
+    });
+
+    // Get highest assigned number
+    let maxNumber = 0;
+    Object.values(newFieldsMap).forEach((num) => {
+      maxNumber = Math.max(maxNumber, num);
+    });
+
+    // Also consider reserved numbers for max
+    if (reservedNumbers.length > 0) {
+      maxNumber = Math.max(maxNumber, ...reservedNumbers);
+    }
+
+    // Assign numbers to items that don't have one
+    availableItems.forEach((item) => {
+      if (newFieldsMap[item] === undefined) {
+        // Check if the item was previously removed (exists in our reservedNumbers)
+        let reservedNumber: number | undefined;
+        Object.entries(removedItems).forEach(([removedItem, number]) => {
+          if (removedItem === item && reservedNumbers.includes(number)) {
+            reservedNumber = number;
+          }
+        });
+
+        if (reservedNumber !== undefined) {
+          // Reuse the reserved number for this item
+          newFieldsMap[item] = reservedNumber;
+
+          // Remove from reserved list
+          const index = reservedNumbers.indexOf(reservedNumber);
+          if (index !== -1) {
+            reservedNumbers.splice(index, 1);
+          }
+        } else {
+          // Find next available number
+          let nextNumber = maxNumber + 1;
+          while (reservedNumbers.includes(nextNumber)) {
+            nextNumber++;
+          }
+
+          newFieldsMap[item] = nextNumber;
+          maxNumber = nextNumber;
+        }
+      }
+    });
+
+    // Update the fields map and reserved numbers
+    container[itemName].fields = newFieldsMap;
+    if (reservedNumbers.length > 0) {
+      container[itemName].reservedNumbers = reservedNumbers;
+    } else {
+      // If no reserved numbers, make sure the property doesn't exist
+      delete container[itemName].reservedNumbers;
+    }
+
+    // Sort available items by their assigned numbers
+    return [...availableItems].sort((a, b) => {
+      return newFieldsMap[a] - newFieldsMap[b];
+    });
   }
 
   /**
@@ -54,88 +158,7 @@ export class ProtoLockManager {
    * @returns Ordered array of field names
    */
   public reconcileMessageFieldOrder(messageName: string, availableFields: string[]): string[] {
-    if (!this.lockData.messages[messageName]) {
-      this.lockData.messages[messageName] = { fields: [...availableFields] };
-      return availableFields;
-    }
-
-    // Combine fields from lock and available fields, prioritizing lock order
-    const lockedFields = this.lockData.messages[messageName].fields;
-    const result: string[] = [];
-
-    // Only include fields from the lock that are still available
-    for (const field of lockedFields) {
-      if (availableFields.includes(field)) {
-        result.push(field);
-      }
-    }
-
-    // Add any new fields not in the lock
-    for (const field of availableFields) {
-      if (!result.includes(field)) {
-        result.push(field);
-      }
-    }
-
-    // No need to update the lock data when fields are removed
-    // This keeps the original ordering for backward compatibility
-    // if fields are re-added later
-
-    // Only update lock if new fields were added
-    if (availableFields.length > lockedFields.length) {
-      // Add new fields to the lock
-      for (const field of availableFields) {
-        if (!lockedFields.includes(field)) {
-          lockedFields.push(field);
-        }
-      }
-    }
-
-    return result;
-  }
-
-  /**
-   * Reconcile and get the ordered method names for a service
-   *
-   * @param serviceName - Name of the service
-   * @param availableMethods - Available method names (used when no lock exists)
-   * @returns Ordered array of method names
-   */
-  public reconcileServiceMethodOrder(serviceName: string, availableMethods: string[]): string[] {
-    if (!this.lockData.services[serviceName]) {
-      this.lockData.services[serviceName] = { methods: [...availableMethods] };
-      return availableMethods;
-    }
-
-    // Combine methods from lock and available methods, prioritizing lock order
-    const lockedMethods = this.lockData.services[serviceName].methods;
-    const result: string[] = [];
-
-    // Only include methods from the lock that are still available
-    for (const method of lockedMethods) {
-      if (availableMethods.includes(method)) {
-        result.push(method);
-      }
-    }
-
-    // Add any new methods not in the lock
-    for (const method of availableMethods) {
-      if (!result.includes(method)) {
-        result.push(method);
-      }
-    }
-
-    // Only update lock if new methods were added
-    if (availableMethods.length > lockedMethods.length) {
-      // Add new methods to the lock
-      for (const method of availableMethods) {
-        if (!lockedMethods.includes(method)) {
-          lockedMethods.push(method);
-        }
-      }
-    }
-
-    return result;
+    return this.reconcileItems(this.lockData.messages, messageName, availableFields);
   }
 
   /**
@@ -146,40 +169,7 @@ export class ProtoLockManager {
    * @returns Ordered array of enum values
    */
   public reconcileEnumValueOrder(enumName: string, availableValues: string[]): string[] {
-    if (!this.lockData.enums[enumName]) {
-      this.lockData.enums[enumName] = { values: [...availableValues] };
-      return availableValues;
-    }
-
-    // Combine values from lock and available values, prioritizing lock order
-    const lockedValues = this.lockData.enums[enumName].values;
-    const result: string[] = [];
-
-    // Only include values from the lock that are still available
-    for (const value of lockedValues) {
-      if (availableValues.includes(value)) {
-        result.push(value);
-      }
-    }
-
-    // Add any new values not in the lock
-    for (const value of availableValues) {
-      if (!result.includes(value)) {
-        result.push(value);
-      }
-    }
-
-    // Only update lock if new values were added
-    if (availableValues.length > lockedValues.length) {
-      // Add new values to the lock
-      for (const value of availableValues) {
-        if (!lockedValues.includes(value)) {
-          lockedValues.push(value);
-        }
-      }
-    }
-
-    return result;
+    return this.reconcileItems(this.lockData.enums, enumName, availableValues);
   }
 
   /**
@@ -190,40 +180,8 @@ export class ProtoLockManager {
    * @returns Ordered array of argument names
    */
   public reconcileArgumentOrder(fieldPath: string, availableArgs: string[]): string[] {
-    if (!this.lockData.arguments[fieldPath]) {
-      this.lockData.arguments[fieldPath] = { args: [...availableArgs] };
-      return availableArgs;
-    }
-
-    // Combine args from lock and available args, prioritizing lock order
-    const lockedArgs = this.lockData.arguments[fieldPath].args;
-    const result: string[] = [];
-
-    // Only include args from the lock that are still available
-    for (const arg of lockedArgs) {
-      if (availableArgs.includes(arg)) {
-        result.push(arg);
-      }
-    }
-
-    // Add any new args not in the lock
-    for (const arg of availableArgs) {
-      if (!result.includes(arg)) {
-        result.push(arg);
-      }
-    }
-
-    // Only update lock if new args were added
-    if (availableArgs.length > lockedArgs.length) {
-      // Add new args to the lock
-      for (const arg of availableArgs) {
-        if (!lockedArgs.includes(arg)) {
-          lockedArgs.push(arg);
-        }
-      }
-    }
-
-    return result;
+    // Use the regular message field ordering for arguments
+    return this.reconcileMessageFieldOrder(fieldPath, availableArgs);
   }
 
   /**
