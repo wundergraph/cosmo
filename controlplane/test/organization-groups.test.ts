@@ -52,7 +52,7 @@ describe('Organization Group tests', (ctx) => {
   });
 
   test('Should be able to update existing group', async () => {
-    const { client } = await SetupTest({ dbname, enabledFeatures: ['rbac'] });
+    const { client, server } = await SetupTest({ dbname, enabledFeatures: ['rbac'] });
 
     const orgGroups = await client.getOrganizationGroups({});
     const developerGroup = orgGroups.groups.find((g) => g.name === 'developer')!;
@@ -73,6 +73,8 @@ describe('Organization Group tests', (ctx) => {
 
     expect(updatedDeveloperGroup.rules.length).toBe(1);
     expect(updatedDeveloperGroup.rules[0].role).toBe('organization-admin');
+
+    await server.close();
   });
 });
 
