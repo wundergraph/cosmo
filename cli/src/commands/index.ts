@@ -15,7 +15,7 @@ import FeatureGraphCommands from './feature-subgraph/index.js';
 import FeatureFlagCommands from './feature-flag/index.js';
 import ProposalCommands from './proposal/index.js';
 import MCPCommands from './mcp/index.js';
-
+import PluginCommands from './plugin/index.js';
 const proxyUrl = process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
 
 if (proxyUrl) {
@@ -103,6 +103,12 @@ program.addCommand(
 
 program.addCommand(
   ProposalCommands({
+    client,
+  }),
+);
+
+program.addCommand(
+  PluginCommands({
     client,
   }),
 );

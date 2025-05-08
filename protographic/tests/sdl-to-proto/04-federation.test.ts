@@ -28,7 +28,7 @@ describe('SDL to Proto - Federation and Special Types', () => {
       union _Entity = Product | User
     `;
 
-    const protoText = compileGraphQLToProto(sdl);
+    const { proto: protoText } = compileGraphQLToProto(sdl);
 
     // Validate Proto definition
     expectValidProto(protoText);
@@ -107,7 +107,7 @@ describe('SDL to Proto - Federation and Special Types', () => {
       }
     `;
 
-    const protoText = compileGraphQLToProto(sdl);
+    const { proto: protoText } = compileGraphQLToProto(sdl);
 
     // Validate Proto definition
     expectValidProto(protoText);
@@ -181,7 +181,7 @@ describe('SDL to Proto - Federation and Special Types', () => {
       union _Entity = User | Product
     `;
 
-    const protoText = compileGraphQLToProto(sdl);
+    const { proto: protoText } = compileGraphQLToProto(sdl);
 
     // Validate Proto definition
     expectValidProto(protoText);
@@ -271,7 +271,7 @@ describe('SDL to Proto - Federation and Special Types', () => {
       }
     `;
 
-    const protoText = compileGraphQLToProto(sdl);
+    const { proto: protoText } = compileGraphQLToProto(sdl);
 
     // Validate Proto definition
     expectValidProto(protoText);

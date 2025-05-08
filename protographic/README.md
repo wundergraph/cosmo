@@ -17,6 +17,7 @@ Protographic bridges GraphQL and Protocol Buffers (protobuf) ecosystems through 
 - Streamlined mapping of GraphQL operations to RPC methods
 - Robust handling of complex GraphQL features (unions, interfaces, directives)
 - First-class support for Federation entity mapping
+- Deterministic field ordering with proto.lock.json for backward compatibility
 
 ## Installation
 
@@ -44,11 +45,73 @@ type Query {
 
 const protoOutput = compileGraphQLToProto(
   graphqlSchema, // String or GraphQLSchema object
-  'UserService', // Service name
-  'user.v1', // Package name
-  'comso/pkg/my_package', // Go package name
+  {
+    serviceName: 'UserService', // Service name
+    packageName: 'user.v1', // Package name
+    goPackage: 'cosmo/pkg/my_package', // Go package name
+    lockFilePath: './proto.lock.json', // Optional: Path to proto.lock.json for deterministic field ordering
+  }
 );
 ```
+
+### Using proto.lock.json for Deterministic Field Ordering
+
+Protographic supports deterministic field ordering for Protocol Buffer files through a lock file mechanism. This ensures backward compatibility across schema changes:
+
+```typescript
+import { compileGraphQLToProto } from '@wundergraph/protographic';
+
+// First generation with a new lock file
+const result1 = compileGraphQLToProto(initialSchema, {
+  serviceName: 'MyService',
+  lockFilePath: './proto.lock.json' // Creates lock file if it doesn't exist
+});
+
+// Later generation with schema changes but preserving field order
+const result2 = compileGraphQLToProto(updatedSchema, {
+  serviceName: 'MyService',
+  lockFilePath: './proto.lock.json' // Uses existing lock file
+});
+```
+
+When providing a `lockFilePath`, the function returns an object with both the proto definition and the lock data:
+
+```typescript
+const { proto, lockData } = compileGraphQLToProto(schema, { 
+  lockFilePath: './proto.lock.json' 
+});
+```
+
+If you prefer to manage the lock data directly without file I/O, you can use the lock data directly:
+
+```typescript
+import { compileGraphQLToProto, ProtoLock } from '@wundergraph/protographic';
+
+// First generation - creates initial lock data
+const result1 = compileGraphQLToProto(initialSchema, {
+  serviceName: 'MyService'
+});
+const proto1 = result1.proto;
+const lockData = result1.lockData;
+
+// Store the lock data however you want (database, state management, etc.)
+// ...
+
+// Later generation with the saved lock data
+const result2 = compileGraphQLToProto(updatedSchema, {
+  serviceName: 'MyService',
+  lockData: lockData // Use previously generated lock data
+});
+```
+
+The lock data records the order of:
+- Service methods
+- Message fields
+- Enum values
+- Implementers of interfaces
+- Members of unions
+
+New fields are always added at the end, maintaining backward compatibility with existing proto messages.
 
 ### Generating Mapping Definitions
 

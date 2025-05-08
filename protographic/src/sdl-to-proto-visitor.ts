@@ -34,6 +34,8 @@ import {
   graphqlEnumValueToProtoEnumValue,
   graphqlFieldToProtoField,
 } from './naming-conventions';
+import { camelCase } from 'lodash-es';
+import { ProtoLock, ProtoLockManager } from './proto-lock';
 
 /**
  * Maps GraphQL scalar types to Protocol Buffer types
@@ -54,7 +56,18 @@ const SCALAR_TYPE_MAP: Record<string, string> = {
  */
 interface CollectionResult {
   rpcMethods: string[];
+  methodNames: string[];
   messageDefinitions: string[];
+}
+
+/**
+ * Options for GraphQLToProtoTextVisitor
+ */
+export interface GraphQLToProtoTextVisitorOptions {
+  serviceName?: string;
+  packageName?: string;
+  goPackage?: string;
+  lockData?: ProtoLock;
 }
 
 /**
@@ -78,6 +91,12 @@ export class GraphQLToProtoTextVisitor {
   /** The name of the Protocol Buffer service */
   private readonly serviceName: string;
 
+  /** The lock manager for deterministic ordering */
+  private readonly lockManager: ProtoLockManager;
+
+  /** Generated proto lock data */
+  private generatedLockData: ProtoLock | null = null;
+
   /** Accumulates the Protocol Buffer definition text */
   private protoText: string[] = [];
 
@@ -91,21 +110,28 @@ export class GraphQLToProtoTextVisitor {
   private messageQueue: GraphQLNamedType[] = [];
 
   /**
+   * Map of message names to their field numbers for tracking deleted fields
+   * This maintains field numbers even when fields are removed from the schema
+   */
+  private fieldNumbersMap: Record<string, Record<string, number>> = {};
+
+  /**
    * Creates a new visitor to convert a GraphQL schema to Protocol Buffers
    *
    * @param schema - The GraphQL schema to convert
-   * @param serviceName - Name for the generated service (defaults to "DefaultService")
-   * @param packageName - Protocol Buffer package name (defaults to "service.v1")
-   * @param goPackage - Go package option (defaults to "wundergraph.com/pb/{packageName};{packageNameNoDelimiters}")
+   * @param options - Configuration options for the visitor
    */
-  constructor(
-    schema: GraphQLSchema,
-    serviceName: string = 'DefaultService',
-    packageName: string = 'service.v1',
-    goPackage?: string,
-  ) {
+  constructor(schema: GraphQLSchema, options: GraphQLToProtoTextVisitorOptions = {}) {
+    const { serviceName = 'DefaultService', packageName = 'service.v1', goPackage, lockData } = options;
+
     this.schema = schema;
     this.serviceName = serviceName;
+    this.lockManager = new ProtoLockManager(lockData);
+
+    // If we have lock data, initialize the field numbers map
+    if (lockData) {
+      this.initializeFieldNumbersMap(lockData);
+    }
 
     // Generate default go_package if not provided
     const defaultGoPackage = `cosmo/pkg/proto/${packageName};${packageName.replace('.', '')}`;
@@ -119,6 +145,103 @@ export class GraphQLToProtoTextVisitor {
       `option go_package = "${goPackageOption}";`,
       '',
     ];
+  }
+
+  /**
+   * Initialize the field numbers map from the lock data to preserve field numbers
+   * even when fields are removed and later re-added
+   */
+  private initializeFieldNumbersMap(lockData: ProtoLock): void {
+    this.fieldNumbersMap = {};
+
+    // For each message in the lock data, create a mapping of field name to field number
+    for (const [messageName, messageLock] of Object.entries(lockData.messages)) {
+      if (!this.fieldNumbersMap[messageName]) {
+        this.fieldNumbersMap[messageName] = {};
+      }
+
+      // Process fields in their original order to maintain proper field numbers
+      messageLock.fields.forEach((fieldName, index) => {
+        // Store field number by field name (field number starts from 1)
+        this.fieldNumbersMap[messageName][fieldName] = index + 1;
+      });
+    }
+  }
+
+  /**
+   * Get the proper field number for a field in a message, respecting the lock.
+   * This preserves field numbers for fields that were removed and later re-added.
+   */
+  private getFieldNumber(messageName: string, fieldName: string, defaultNumber: number): number {
+    // Initialize message entry if it doesn't exist
+    if (!this.fieldNumbersMap[messageName]) {
+      this.fieldNumbersMap[messageName] = {};
+    }
+
+    // Direct check if field exists as provided
+    if (this.fieldNumbersMap[messageName][fieldName] !== undefined) {
+      return this.fieldNumbersMap[messageName][fieldName];
+    }
+
+    // Always convert to snake_case for Protocol Buffer field names
+    const snakeCaseField = graphqlFieldToProtoField(fieldName);
+
+    // Try the camelCase version for fields that might be stored that way
+    const camelCaseField = camelCase(fieldName);
+    if (fieldName !== camelCaseField && this.fieldNumbersMap[messageName][camelCaseField] !== undefined) {
+      const number = this.fieldNumbersMap[messageName][camelCaseField];
+      this.fieldNumbersMap[messageName][fieldName] = number;
+      this.fieldNumbersMap[messageName][snakeCaseField] = number; // Also store in snake_case
+      return number;
+    }
+
+    // Check if this field existed in the lock data
+    const lockData = this.lockManager.getLockData();
+    if (lockData.messages[messageName]) {
+      const lockedFields = lockData.messages[messageName].fields;
+
+      // Check for the field by name or snake_case in the lock
+      const lockIndex = lockedFields.indexOf(fieldName);
+      if (lockIndex !== -1) {
+        const fieldNumber = lockIndex + 1;
+        this.fieldNumbersMap[messageName][fieldName] = fieldNumber;
+        if (fieldName !== snakeCaseField) {
+          this.fieldNumbersMap[messageName][snakeCaseField] = fieldNumber;
+        }
+        return fieldNumber;
+      }
+    }
+
+    // Assign the next available number if the field wasn't found in any previous step
+    const nextNumber = this.getNextAvailableFieldNumber(messageName);
+
+    // Store with both the original field name and snake_case for consistency
+    this.fieldNumbersMap[messageName][fieldName] = nextNumber;
+    if (fieldName !== snakeCaseField) {
+      this.fieldNumbersMap[messageName][snakeCaseField] = nextNumber;
+    }
+
+    return nextNumber;
+  }
+
+  /**
+   * Get the next available field number for a message, taking care to avoid
+   * collisions with existing field numbers, including for fields that were
+   * removed from the schema but may be re-added in the future.
+   */
+  private getNextAvailableFieldNumber(messageName: string): number {
+    if (!this.fieldNumbersMap[messageName]) {
+      return 1;
+    }
+
+    // Get all assigned field numbers for this message
+    const usedNumbers = Object.values(this.fieldNumbersMap[messageName]);
+    if (usedNumbers.length === 0) {
+      return 1;
+    }
+
+    // Find the maximum field number and add 1
+    return Math.max(...usedNumbers) + 1;
   }
 
   /**
@@ -142,6 +265,7 @@ export class GraphQLToProtoTextVisitor {
 
     // Combine all RPC methods and message definitions
     const allRpcMethods = [...entityResult.rpcMethods, ...queryResult.rpcMethods, ...mutationResult.rpcMethods];
+    const allMethodNames = [...entityResult.methodNames, ...queryResult.methodNames, ...mutationResult.methodNames];
 
     const allMessageDefinitions = [
       ...entityResult.messageDefinitions,
@@ -159,9 +283,15 @@ export class GraphQLToProtoTextVisitor {
     this.protoText.push(`service ${this.serviceName} {`);
     this.indent++;
 
-    // Add all RPC methods to service with proper indentation
-    for (const rpcMethod of allRpcMethods) {
-      this.protoText.push(`${this.getIndent()}${rpcMethod}`);
+    // Order RPC methods using the lock manager
+    const orderedMethodNames = this.lockManager.reconcileServiceMethodOrder(this.serviceName, allMethodNames);
+
+    // Add RPC methods in the ordered sequence
+    for (const methodName of orderedMethodNames) {
+      const methodIndex = allMethodNames.indexOf(methodName);
+      if (methodIndex !== -1) {
+        this.protoText.push(`${this.getIndent()}${allRpcMethods[methodIndex]}`);
+      }
     }
 
     // Close service definition
@@ -177,6 +307,9 @@ export class GraphQLToProtoTextVisitor {
     // Third: Process all complex types from the message queue in a single pass
     this.processMessageQueue();
 
+    // Store the generated lock data for retrieval
+    this.generatedLockData = this.lockManager.getLockData();
+
     return this.protoText.join('\n');
   }
 
@@ -189,7 +322,7 @@ export class GraphQLToProtoTextVisitor {
    * @returns Object containing RPC methods and message definitions
    */
   private collectEntityRpcMethods(): CollectionResult {
-    const result: CollectionResult = { rpcMethods: [], messageDefinitions: [] };
+    const result: CollectionResult = { rpcMethods: [], methodNames: [], messageDefinitions: [] };
     const typeMap = this.schema.getTypeMap();
 
     for (const typeName in typeMap) {
@@ -220,7 +353,8 @@ export class GraphQLToProtoTextVisitor {
             const requestName = createEntityLookupRequestName(typeName);
             const responseName = createEntityLookupResponseName(typeName);
 
-            // Add RPC method
+            // Add method name and RPC method
+            result.methodNames.push(methodName);
             result.rpcMethods.push(this.createRpcMethod(methodName, requestName, responseName));
 
             // Create request and response messages
@@ -256,7 +390,7 @@ export class GraphQLToProtoTextVisitor {
    * Shared method to collect RPC methods for query or mutation operations
    */
   private collectOperationRpcMethods(operationType: 'Query' | 'Mutation'): CollectionResult {
-    const result: CollectionResult = { rpcMethods: [], messageDefinitions: [] };
+    const result: CollectionResult = { rpcMethods: [], methodNames: [], messageDefinitions: [] };
 
     // Get the root operation type (Query or Mutation)
     const rootType = operationType === 'Query' ? this.schema.getQueryType() : this.schema.getMutationType();
@@ -265,16 +399,23 @@ export class GraphQLToProtoTextVisitor {
 
     const fields = rootType.getFields();
 
-    for (const fieldName in fields) {
+    // Use lock manager to order fields
+    const fieldNames = Object.keys(fields);
+    const orderedFieldNames = this.lockManager.reconcileMessageFieldOrder(operationType, fieldNames);
+
+    for (const fieldName of orderedFieldNames) {
       // Skip special fields like _entities
       if (fieldName === '_entities') continue;
+
+      if (!fields[fieldName]) continue;
 
       const field = fields[fieldName];
       const mappedName = createOperationMethodName(operationType, fieldName);
       const requestName = createRequestMessageName(mappedName);
       const responseName = createResponseMessageName(mappedName);
 
-      // Add RPC method
+      // Add method name and RPC method
+      result.methodNames.push(mappedName);
       result.rpcMethods.push(this.createRpcMethod(mappedName, requestName, responseName));
 
       // Create request and response messages
@@ -320,9 +461,19 @@ export class GraphQLToProtoTextVisitor {
   private createKeyRequestMessage(typeName: string, requestName: string, keyField: string): string[] {
     const messageLines: string[] = [];
     messageLines.push(`message ${requestName} {`);
-    messageLines.push(`    string ${graphqlFieldToProtoField(keyField)} = 1;`);
+
+    const protoKeyField = graphqlFieldToProtoField(keyField);
+
+    // Get the appropriate field number from the lock
+    const fieldNumber = this.getFieldNumber(requestName, protoKeyField, 1);
+
+    messageLines.push(`    string ${protoKeyField} = ${fieldNumber};`);
     messageLines.push('}');
     messageLines.push('');
+
+    // Ensure this message is registered in the lock manager data
+    this.lockManager.reconcileMessageFieldOrder(requestName, [protoKeyField]);
+
     return messageLines;
   }
 
@@ -335,15 +486,30 @@ export class GraphQLToProtoTextVisitor {
 
     // Create the result wrapper message
     messageLines.push(`message ${resultName} {`);
-    messageLines.push(`    ${typeName} ${graphqlFieldToProtoField(typeName)} = 1;`);
+    const protoTypeName = graphqlFieldToProtoField(typeName);
+
+    // Get the appropriate field number from the lock
+    const resultFieldNumber = this.getFieldNumber(resultName, protoTypeName, 1);
+
+    messageLines.push(`    ${typeName} ${protoTypeName} = ${resultFieldNumber};`);
     messageLines.push('}');
     messageLines.push('');
 
+    // Ensure the result message is registered in the lock manager data
+    this.lockManager.reconcileMessageFieldOrder(resultName, [protoTypeName]);
+
     // Create the response message with repeated result wrapper
     messageLines.push(`message ${responseName} {`);
-    messageLines.push(`    repeated ${resultName} results = 1;`);
+
+    // Get the appropriate field number from the lock
+    const responseFieldNumber = this.getFieldNumber(responseName, 'results', 1);
+
+    messageLines.push(`    repeated ${resultName} results = ${responseFieldNumber};`);
     messageLines.push('}');
     messageLines.push('');
+
+    // Ensure the response message is registered in the lock manager data
+    this.lockManager.reconcileMessageFieldOrder(responseName, ['results']);
 
     return messageLines;
   }
@@ -352,7 +518,15 @@ export class GraphQLToProtoTextVisitor {
    * Creates a request message for a query/mutation field
    */
   private createFieldRequestMessage(requestName: string, field: GraphQLField<any, any>): string[] {
-    return this.createRequestMessage(requestName, field.args);
+    const messageLines = this.createRequestMessage(requestName, field.args);
+
+    // Ensure this message is registered in the lock manager data
+    if (field.args.length > 0) {
+      const fieldNames = field.args.map((arg) => graphqlFieldToProtoField(arg.name));
+      this.lockManager.reconcileMessageFieldOrder(requestName, fieldNames);
+    }
+
+    return messageLines;
   }
 
   /**
@@ -364,14 +538,22 @@ export class GraphQLToProtoTextVisitor {
 
     const returnType = this.getProtoTypeFromGraphQL(field.type);
     const isRepeated = isListType(field.type) || (isNonNullType(field.type) && isListType(field.type.ofType));
+    const protoFieldName = graphqlFieldToProtoField(fieldName);
+
+    // Get the appropriate field number, respecting the lock
+    const fieldNumber = this.getFieldNumber(responseName, protoFieldName, 1);
 
     if (isRepeated) {
-      messageLines.push(`    repeated ${returnType} ${graphqlFieldToProtoField(fieldName)} = 1;`);
+      messageLines.push(`    repeated ${returnType} ${protoFieldName} = ${fieldNumber};`);
     } else {
-      messageLines.push(`    ${returnType} ${graphqlFieldToProtoField(fieldName)} = 1;`);
+      messageLines.push(`    ${returnType} ${protoFieldName} = ${fieldNumber};`);
     }
 
     messageLines.push('}');
+
+    // Ensure this message is registered in the lock manager data
+    this.lockManager.reconcileMessageFieldOrder(responseName, [protoFieldName]);
+
     return messageLines;
   }
 
@@ -382,15 +564,31 @@ export class GraphQLToProtoTextVisitor {
     const messageLines: string[] = [];
     messageLines.push(`message ${requestName} {`);
 
-    if (args.length === 0) {
-      // Empty request message - no arguments needed
-    } else {
-      let fieldIndex = 1;
-      for (const arg of args) {
-        const argType = this.getProtoTypeFromGraphQL(arg.type);
-        const argName = graphqlFieldToProtoField(arg.name);
+    if (args.length > 0) {
+      const argNames = args.map((arg) => arg.name);
 
-        messageLines.push(`    ${argType} ${argName} = ${fieldIndex++};`);
+      // Extract operation name from the request name (e.g., GetUsersRequest -> GetUsers)
+      const operationName = requestName.replace(/Request$/, '');
+
+      // Use the specific argument ordering for this operation
+      const orderedArgNames = this.lockManager.reconcileArgumentOrder(operationName, argNames);
+
+      // Process arguments in the order specified by the lock manager
+      for (const argName of orderedArgNames) {
+        const arg = args.find((a) => a.name === argName);
+        if (!arg) continue;
+
+        const argType = this.getProtoTypeFromGraphQL(arg.type);
+        const argProtoName = graphqlFieldToProtoField(arg.name);
+
+        // Get the appropriate field number, respecting the lock
+        const fieldNumber = this.getFieldNumber(
+          requestName,
+          argProtoName,
+          this.getNextAvailableFieldNumber(requestName),
+        );
+
+        messageLines.push(`    ${argType} ${argProtoName} = ${fieldNumber};`);
 
         // Add complex input types to the queue for processing
         const namedType = getNamedType(arg.type);
@@ -442,8 +640,13 @@ export class GraphQLToProtoTextVisitor {
       }
 
       // Queue type for processing if it's a complex type
-      if (isObjectType(type) || isInputObjectType(type) || isInterfaceType(type) || 
-          isUnionType(type) || isEnumType(type)) {
+      if (
+        isObjectType(type) ||
+        isInputObjectType(type) ||
+        isInterfaceType(type) ||
+        isUnionType(type) ||
+        isEnumType(type)
+      ) {
         this.messageQueue.push(type);
       }
     }
@@ -465,8 +668,8 @@ export class GraphQLToProtoTextVisitor {
     while (this.messageQueue.length > 0) {
       const type = this.messageQueue.shift()!;
 
-      // Skip already processed types, Query type, and _Entity
-      if (this.processedTypes.has(type.name) || type.name === 'Query' || type.name === 'Mutation' || type.name === 'Subscription' || type.name === '_Entity') {
+      // Skip already processed types and special internal types
+      if (this.processedTypes.has(type.name) || type.name === '_Entity') {
         continue;
       }
 
@@ -497,8 +700,8 @@ export class GraphQLToProtoTextVisitor {
    * @param type - The GraphQL object type
    */
   private processObjectType(type: GraphQLObjectType): void {
-    // Skip creating a message for Query type or _Entity
-    if (type.name === 'Query' || type.name === '_Entity') {
+    // Skip creating a message for special entity type
+    if (type.name === '_Entity') {
       this.processedTypes.add(type.name);
       return;
     }
@@ -508,21 +711,26 @@ export class GraphQLToProtoTextVisitor {
     this.indent++;
 
     const fields = type.getFields();
-    let fieldIndex = 1;
 
-    for (const fieldName in fields) {
+    // Get field names and order them using the lock manager
+    const fieldNames = Object.keys(fields);
+    const orderedFieldNames = this.lockManager.reconcileMessageFieldOrder(type.name, fieldNames);
+
+    for (const fieldName of orderedFieldNames) {
+      if (!fields[fieldName]) continue;
+
       const field = fields[fieldName];
       const fieldType = this.getProtoTypeFromGraphQL(field.type);
       const isRepeated = isListType(field.type) || (isNonNullType(field.type) && isListType(field.type.ofType));
+      const protoFieldName = graphqlFieldToProtoField(fieldName);
+
+      // Get the appropriate field number, respecting the lock
+      const fieldNumber = this.getFieldNumber(type.name, protoFieldName, this.getNextAvailableFieldNumber(type.name));
 
       if (isRepeated) {
-        this.protoText.push(
-          `${this.getIndent()}repeated ${fieldType} ${graphqlFieldToProtoField(fieldName)} = ${fieldIndex++};`,
-        );
+        this.protoText.push(`${this.getIndent()}repeated ${fieldType} ${protoFieldName} = ${fieldNumber};`);
       } else {
-        this.protoText.push(
-          `${this.getIndent()}${fieldType} ${graphqlFieldToProtoField(fieldName)} = ${fieldIndex++};`,
-        );
+        this.protoText.push(`${this.getIndent()}${fieldType} ${protoFieldName} = ${fieldNumber};`);
       }
 
       // Queue complex field types for processing
@@ -550,21 +758,26 @@ export class GraphQLToProtoTextVisitor {
     this.indent++;
 
     const fields = type.getFields();
-    let fieldIndex = 1;
 
-    for (const fieldName in fields) {
+    // Get field names and order them using the lock manager
+    const fieldNames = Object.keys(fields);
+    const orderedFieldNames = this.lockManager.reconcileMessageFieldOrder(type.name, fieldNames);
+
+    for (const fieldName of orderedFieldNames) {
+      if (!fields[fieldName]) continue;
+
       const field = fields[fieldName];
       const fieldType = this.getProtoTypeFromGraphQL(field.type);
       const isRepeated = isListType(field.type) || (isNonNullType(field.type) && isListType(field.type.ofType));
+      const protoFieldName = graphqlFieldToProtoField(fieldName);
+
+      // Get the appropriate field number, respecting the lock
+      const fieldNumber = this.getFieldNumber(type.name, protoFieldName, this.getNextAvailableFieldNumber(type.name));
 
       if (isRepeated) {
-        this.protoText.push(
-          `${this.getIndent()}repeated ${fieldType} ${graphqlFieldToProtoField(fieldName)} = ${fieldIndex++};`,
-        );
+        this.protoText.push(`${this.getIndent()}repeated ${fieldType} ${protoFieldName} = ${fieldNumber};`);
       } else {
-        this.protoText.push(
-          `${this.getIndent()}${fieldType} ${graphqlFieldToProtoField(fieldName)} = ${fieldIndex++};`,
-        );
+        this.protoText.push(`${this.getIndent()}${fieldType} ${protoFieldName} = ${fieldNumber};`);
       }
 
       // Queue complex field types for processing
@@ -609,8 +822,15 @@ export class GraphQLToProtoTextVisitor {
     this.protoText.push(`${this.getIndent()}oneof instance {`);
     this.indent++;
 
-    for (let i = 0; i < implementingTypes.length; i++) {
-      const implType = implementingTypes[i];
+    // Use lock manager to order implementing types
+    const typeNames = implementingTypes.map((t) => t.name);
+    const orderedTypeNames = this.lockManager.reconcileMessageFieldOrder(`${type.name}Implementations`, typeNames);
+
+    for (let i = 0; i < orderedTypeNames.length; i++) {
+      const typeName = orderedTypeNames[i];
+      const implType = implementingTypes.find((t) => t.name === typeName);
+      if (!implType) continue;
+
       this.protoText.push(`${this.getIndent()}${implType.name} ${graphqlFieldToProtoField(implType.name)} = ${i + 1};`);
 
       // Queue implementing types for processing
@@ -649,9 +869,16 @@ export class GraphQLToProtoTextVisitor {
     this.protoText.push(`${this.getIndent()}oneof value {`);
     this.indent++;
 
+    // Use lock manager to order union member types
     const types = type.getTypes();
-    for (let i = 0; i < types.length; i++) {
-      const memberType = types[i];
+    const typeNames = types.map((t) => t.name);
+    const orderedTypeNames = this.lockManager.reconcileMessageFieldOrder(`${type.name}Members`, typeNames);
+
+    for (let i = 0; i < orderedTypeNames.length; i++) {
+      const typeName = orderedTypeNames[i];
+      const memberType = types.find((t) => t.name === typeName);
+      if (!memberType) continue;
+
       this.protoText.push(
         `${this.getIndent()}${memberType.name} ${graphqlFieldToProtoField(memberType.name)} = ${i + 1};`,
       );
@@ -683,12 +910,43 @@ export class GraphQLToProtoTextVisitor {
     this.indent++;
 
     // Add unspecified value as first enum value (required in proto3)
-    this.protoText.push(`${this.getIndent()}${createEnumUnspecifiedValue(type.name)} = 0;`);
+    const unspecifiedValue = createEnumUnspecifiedValue(type.name);
+    this.protoText.push(`${this.getIndent()}${unspecifiedValue} = 0;`);
 
+    // Use lock manager to order enum values
     const values = type.getValues();
-    for (let i = 0; i < values.length; i++) {
-      const value = values[i];
-      this.protoText.push(`${this.getIndent()}${graphqlEnumValueToProtoEnumValue(type.name, value.name)} = ${i + 1};`);
+    const valueNames = values.map((v) => v.name);
+    const orderedValueNames = this.lockManager.reconcileEnumValueOrder(type.name, valueNames);
+
+    // Create a map to track enum value numbers
+    const enumValueNumbers: Record<string, number> = {};
+
+    // If we have existing lock data for this enum, extract the value numbers
+    const lockData = this.lockManager.getLockData();
+    if (lockData.enums[type.name]) {
+      // Assign numbers based on locked position
+      lockData.enums[type.name].values.forEach((valueName, index) => {
+        const protoEnumValue = graphqlEnumValueToProtoEnumValue(type.name, valueName);
+        enumValueNumbers[protoEnumValue] = index + 1; // +1 because 0 is reserved for UNSPECIFIED
+      });
+    }
+
+    for (const valueName of orderedValueNames) {
+      const value = values.find((v) => v.name === valueName);
+      if (!value) continue;
+
+      const protoEnumValue = graphqlEnumValueToProtoEnumValue(type.name, value.name);
+
+      // Get or assign enum value number
+      let valueNumber = enumValueNumbers[protoEnumValue];
+      if (!valueNumber) {
+        // If no number assigned yet, use the next available number
+        const maxNumber = Object.values(enumValueNumbers).length > 0 ? Math.max(...Object.values(enumValueNumbers)) : 0;
+        valueNumber = maxNumber + 1;
+        enumValueNumbers[protoEnumValue] = valueNumber;
+      }
+
+      this.protoText.push(`${this.getIndent()}${protoEnumValue} = ${valueNumber};`);
     }
 
     this.indent--;
@@ -739,5 +997,14 @@ export class GraphQLToProtoTextVisitor {
    */
   private getIndent(): string {
     return '  '.repeat(this.indent);
+  }
+
+  /**
+   * Get the generated lock data after visiting
+   *
+   * @returns The generated ProtoLock data, or null if visit() hasn't been called
+   */
+  public getGeneratedLockData(): ProtoLock | null {
+    return this.generatedLockData;
   }
 }

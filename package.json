@@ -60,7 +60,9 @@
     "husky": "^8.0.3",
     "lint-staged": "^15.2.10",
     "prettier": "^3.0.3",
-    "vitest": "^2.1.9"
+    "vitest": "^2.1.9",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.0.0"
   },
   "pnpm": {
     "overrides": {

@@ -21,7 +21,7 @@ project_dir
 
 2. Compile the plugin
 
-`wgc plugin build ./myplugin --generate-only --arch=amd64,arm64`
+`wgc plugin build ./myplugin --generate-only --platform=linux/amd64`
 
 After initializing the plugin, the user can design the plugin schema. Once the schema is designed, the user can build the plugin. For now, we only support Go plugins.
 

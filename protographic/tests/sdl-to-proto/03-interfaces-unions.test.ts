@@ -27,7 +27,7 @@ describe('SDL to Proto - Interfaces and Unions', () => {
       }
     `;
 
-    const protoText = compileGraphQLToProto(sdl);
+    const { proto: protoText } = compileGraphQLToProto(sdl);
 
     // Validate Proto definition
     expectValidProto(protoText);
@@ -102,7 +102,7 @@ describe('SDL to Proto - Interfaces and Unions', () => {
       }
     `;
 
-    const protoText = compileGraphQLToProto(sdl);
+    const { proto: protoText } = compileGraphQLToProto(sdl);
 
     // Validate Proto definition
     expectValidProto(protoText);
@@ -179,7 +179,7 @@ describe('SDL to Proto - Interfaces and Unions', () => {
       }
     `;
 
-    const protoText = compileGraphQLToProto(sdl);
+    const { proto: protoText } = compileGraphQLToProto(sdl);
 
     // Validate Proto definition
     expectValidProto(protoText);
@@ -245,7 +245,7 @@ describe('SDL to Proto - Interfaces and Unions', () => {
       }
     `;
 
-    const protoText = compileGraphQLToProto(sdl);
+    const { proto: protoText } = compileGraphQLToProto(sdl);
 
     // Validate Proto definition
     expectValidProto(protoText);

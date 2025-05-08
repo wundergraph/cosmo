@@ -1,0 +1,151 @@
+{
+  "version": 1,
+  "service": "FooService",
+  "operationMappings": [
+    {
+      "type": "OPERATION_TYPE_QUERY",
+      "original": "user",
+      "mapped": "QueryUser",
+      "request": "QueryUserRequest",
+      "response": "QueryUserResponse"
+    },
+    {
+      "type": "OPERATION_TYPE_QUERY",
+      "original": "usersByRole",
+      "mapped": "QueryUsersByRole",
+      "request": "QueryUsersByRoleRequest",
+      "response": "QueryUsersByRoleResponse"
+    },
+    {
+      "type": "OPERATION_TYPE_MUTATION",
+      "original": "createUser",
+      "mapped": "MutationCreateUser",
+      "request": "MutationCreateUserRequest",
+      "response": "MutationCreateUserResponse"
+    },
+    {
+      "type": "OPERATION_TYPE_MUTATION",
+      "original": "deleteUser",
+      "mapped": "MutationDeleteUser",
+      "request": "MutationDeleteUserRequest",
+      "response": "MutationDeleteUserResponse"
+    },
+    {
+      "type": "OPERATION_TYPE_MUTATION",
+      "original": "updateUserRole",
+      "mapped": "MutationUpdateUserRole",
+      "request": "MutationUpdateUserRoleRequest",
+      "response": "MutationUpdateUserRoleResponse"
+    }
+  ],
+  "entityMappings": [],
+  "typeFieldMappings": [
+    {
+      "type": "Query",
+      "fieldMappings": [
+        {
+          "original": "user",
+          "mapped": "user",
+          "argumentMappings": [
+            {
+              "original": "id",
+              "mapped": "id"
+            }
+          ]
+        },
+        {
+          "original": "usersByRole",
+          "mapped": "users_by_role",
+          "argumentMappings": [
+            {
+              "original": "role",
+              "mapped": "role"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "Mutation",
+      "fieldMappings": [
+        {
+          "original": "createUser",
+          "mapped": "create_user",
+          "argumentMappings": [
+            {
+              "original": "name",
+              "mapped": "name"
+            },
+            {
+              "original": "role",
+              "mapped": "role"
+            }
+          ]
+        },
+        {
+          "original": "deleteUser",
+          "mapped": "delete_user",
+          "argumentMappings": [
+            {
+              "original": "id",
+              "mapped": "id"
+            }
+          ]
+        },
+        {
+          "original": "updateUserRole",
+          "mapped": "update_user_role",
+          "argumentMappings": [
+            {
+              "original": "id",
+              "mapped": "id"
+            },
+            {
+              "original": "role",
+              "mapped": "role"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "User",
+      "fieldMappings": [
+        {
+          "original": "id",
+          "mapped": "id",
+          "argumentMappings": []
+        },
+        {
+          "original": "name",
+          "mapped": "name",
+          "argumentMappings": []
+        },
+        {
+          "original": "role",
+          "mapped": "role",
+          "argumentMappings": []
+        }
+      ]
+    }
+  ],
+  "enumMappings": [
+    {
+      "type": "UserRole",
+      "values": [
+        {
+          "original": "ADMIN",
+          "mapped": "USER_ROLE_ADMIN"
+        },
+        {
+          "original": "USER",
+          "mapped": "USER_ROLE_USER"
+        },
+        {
+          "original": "GUEST",
+          "mapped": "USER_ROLE_GUEST"
+        }
+      ]
+    }
+  ]
+}

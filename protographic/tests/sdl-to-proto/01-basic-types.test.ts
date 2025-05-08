@@ -14,7 +14,7 @@ describe('SDL to Proto - Basic Types', () => {
       }
     `;
 
-    const protoText = compileGraphQLToProto(sdl);
+    const { proto: protoText } = compileGraphQLToProto(sdl);
 
     // Validate Proto definition
     expectValidProto(protoText);
@@ -70,7 +70,7 @@ describe('SDL to Proto - Basic Types', () => {
       }
     `;
 
-    const protoText = compileGraphQLToProto(sdl);
+    const { proto: protoText } = compileGraphQLToProto(sdl);
 
     // Validate Proto definition
     expectValidProto(protoText);
@@ -109,7 +109,7 @@ describe('SDL to Proto - Basic Types', () => {
       }
     `;
 
-    const protoText = compileGraphQLToProto(sdl);
+    const { proto: protoText } = compileGraphQLToProto(sdl);
 
     // Validate Proto definition
     expectValidProto(protoText);
@@ -158,7 +158,7 @@ describe('SDL to Proto - Basic Types', () => {
       }
     `;
 
-    const protoText = compileGraphQLToProto(sdl);
+    const { proto: protoText } = compileGraphQLToProto(sdl);
 
     // Validate Proto definition
     expectValidProto(protoText);
@@ -200,7 +200,7 @@ describe('SDL to Proto - Basic Types', () => {
       }
     `;
 
-    const protoText = compileGraphQLToProto(sdl);
+    const { proto: protoText } = compileGraphQLToProto(sdl);
 
     // Validate Proto definition
     expectValidProto(protoText);
@@ -247,7 +247,11 @@ describe('SDL to Proto - Basic Types', () => {
     `;
 
     const customGoPackage = 'github.com/example/mypackage;mypackage';
-    const protoText = compileGraphQLToProto(sdl, 'CustomService', 'custom.v1', customGoPackage);
+    const { proto: protoText } = compileGraphQLToProto(sdl, {
+      serviceName: 'CustomService',
+      packageName: 'custom.v1',
+      goPackage: customGoPackage
+    });
 
     // Validate Proto definition
     expectValidProto(protoText);

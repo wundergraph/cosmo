@@ -31,15 +31,15 @@ describe('Complex GraphQL Types to Proto Mapping', () => {
             "type": "UserRole",
             "values": [
               {
-                "mapped": "USERROLE_ADMIN",
+                "mapped": "USER_ROLE_ADMIN",
                 "original": "ADMIN",
               },
               {
-                "mapped": "USERROLE_USER",
+                "mapped": "USER_ROLE_USER",
                 "original": "USER",
               },
               {
-                "mapped": "USERROLE_GUEST",
+                "mapped": "USER_ROLE_GUEST",
                 "original": "GUEST",
               },
             ],

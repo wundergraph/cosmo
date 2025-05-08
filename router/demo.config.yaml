@@ -5,6 +5,10 @@
 
 version: "1"
 
+execution_config:
+  file:
+    path: ./config.yaml
+
 events:
   providers:
     nats:

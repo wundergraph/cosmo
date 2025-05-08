@@ -21,7 +21,7 @@ describe('SDL to Proto - Complex Types', () => {
       }
     `;
 
-    const protoText = compileGraphQLToProto(sdl);
+    const { proto: protoText } = compileGraphQLToProto(sdl);
 
     // Validate Proto definition
     expectValidProto(protoText);
@@ -50,10 +50,10 @@ describe('SDL to Proto - Complex Types', () => {
       }
 
       enum UserRole {
-        USERROLE_UNSPECIFIED = 0;
-        USERROLE_ADMIN = 1;
-        USERROLE_EDITOR = 2;
-        USERROLE_VIEWER = 3;
+        USER_ROLE_UNSPECIFIED = 0;
+        USER_ROLE_ADMIN = 1;
+        USER_ROLE_EDITOR = 2;
+        USER_ROLE_VIEWER = 3;
       }"
     `);
   });
@@ -82,7 +82,7 @@ describe('SDL to Proto - Complex Types', () => {
       }
     `;
 
-    const protoText = compileGraphQLToProto(sdl);
+    const { proto: protoText } = compileGraphQLToProto(sdl);
 
     // Validate Proto definition
     expectValidProto(protoText);
@@ -151,7 +151,7 @@ describe('SDL to Proto - Complex Types', () => {
       }
     `;
 
-    const protoText = compileGraphQLToProto(sdl);
+    const { proto: protoText } = compileGraphQLToProto(sdl);
 
     // Validate Proto definition
     expectValidProto(protoText);
@@ -205,7 +205,7 @@ describe('SDL to Proto - Complex Types', () => {
       }
     `;
 
-    const protoText = compileGraphQLToProto(sdl);
+    const { proto: protoText } = compileGraphQLToProto(sdl);
 
     // Validate Proto definition
     expectValidProto(protoText);
@@ -270,7 +270,7 @@ describe('SDL to Proto - Complex Types', () => {
       }
     `;
 
-    const protoText = compileGraphQLToProto(sdl);
+    const { proto: protoText } = compileGraphQLToProto(sdl);
 
     // Validate Proto definition
     expectValidProto(protoText);

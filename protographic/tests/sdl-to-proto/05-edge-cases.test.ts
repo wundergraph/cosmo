@@ -10,7 +10,7 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
       }
     `;
 
-    const protoText = compileGraphQLToProto(sdl);
+    const { proto: protoText } = compileGraphQLToProto(sdl);
 
     // Validate Proto definition
     expectValidProto(protoText);
@@ -45,7 +45,7 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
       }
     `;
 
-    const protoText = compileGraphQLToProto(sdl);
+    const { proto: protoText } = compileGraphQLToProto(sdl);
 
     // Validate Proto definition
     expectValidProto(protoText);
@@ -117,7 +117,7 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
       }
     `;
 
-    const protoText = compileGraphQLToProto(sdl);
+    const { proto: protoText } = compileGraphQLToProto(sdl);
 
     // Validate Proto definition
     expectValidProto(protoText);
@@ -165,9 +165,9 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
       }
 
       enum EnumValues {
-        ENUMVALUES_UNSPECIFIED = 0;
-        ENUMVALUES_ONE = 1;
-        ENUMVALUES_TWO = 2;
+        ENUM_VALUES_UNSPECIFIED = 0;
+        ENUM_VALUES_ONE = 1;
+        ENUM_VALUES_TWO = 2;
       }"
     `);
   });
@@ -191,7 +191,7 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
       }
     `;
 
-    const protoText = compileGraphQLToProto(sdl);
+    const { proto: protoText } = compileGraphQLToProto(sdl);
 
     // Validate Proto definition
     expectValidProto(protoText);
@@ -341,7 +341,7 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
       union _Entity = User | Post
     `;
 
-    const protoText = compileGraphQLToProto(sdl);
+    const { proto: protoText } = compileGraphQLToProto(sdl);
 
     // Validate Proto definition
     expectValidProto(protoText);
@@ -555,10 +555,10 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
       }
 
       enum UserStatus {
-        USERSTATUS_UNSPECIFIED = 0;
-        USERSTATUS_ACTIVE = 1;
-        USERSTATUS_INACTIVE = 2;
-        USERSTATUS_BANNED = 3;
+        USER_STATUS_UNSPECIFIED = 0;
+        USER_STATUS_ACTIVE = 1;
+        USER_STATUS_INACTIVE = 2;
+        USER_STATUS_BANNED = 3;
       }
 
       message UserProfile {
@@ -569,10 +569,10 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
       }
 
       enum PostStatus {
-        POSTSTATUS_UNSPECIFIED = 0;
-        POSTSTATUS_DRAFT = 1;
-        POSTSTATUS_PUBLISHED = 2;
-        POSTSTATUS_ARCHIVED = 3;
+        POST_STATUS_UNSPECIFIED = 0;
+        POST_STATUS_DRAFT = 1;
+        POST_STATUS_PUBLISHED = 2;
+        POST_STATUS_ARCHIVED = 3;
       }
 
       message Mutation {

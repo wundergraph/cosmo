@@ -1,7 +1,9 @@
 import { buildSchema, GraphQLSchema } from 'graphql';
 import { GRPCMapping } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { GraphQLToProtoVisitor } from './sdl-to-mapping-visitor';
+import type { GraphQLToProtoTextVisitorOptions } from './sdl-to-proto-visitor';
 import { GraphQLToProtoTextVisitor } from './sdl-to-proto-visitor';
+import type { ProtoLock } from './proto-lock';
 
 /**
  * Compiles a GraphQL schema to a mapping structure
@@ -32,17 +34,25 @@ export function compileGraphQLToMapping(
  * Compiles a GraphQL schema directly to Protocol Buffer text definition
  *
  * @param schemaOrSDL GraphQL Schema object or SDL string
- * @param serviceName Name of the Proto service to generate
- * @param packageName Package name for the Proto file
- * @param goPackage Go package option (defaults to auto-generated from packageName)
- * @returns Protocol Buffer text definition
+ * @param options Optional configuration options
+ * @returns Protocol Buffer text definition and generated lock data
+ */
+export interface CompileGraphQLToProtoResult {
+  proto: string;
+  lockData: ProtoLock | null;
+}
+
+/**
+ * Compiles a GraphQL schema directly to Protocol Buffer text definition
+ *
+ * @param schemaOrSDL GraphQL Schema object or SDL string
+ * @param options Optional configuration options
+ * @returns Protocol Buffer text definition and lock data
  */
 export function compileGraphQLToProto(
   schemaOrSDL: GraphQLSchema | string,
-  serviceName: string = 'DefaultService',
-  packageName: string = 'service.v1',
-  goPackage?: string,
-): string {
+  options?: GraphQLToProtoTextVisitorOptions,
+): CompileGraphQLToProtoResult {
   // If a string was provided, build the schema
   const schema =
     typeof schemaOrSDL === 'string'
@@ -52,13 +62,27 @@ export function compileGraphQLToProto(
         })
       : schemaOrSDL;
 
-  // Create and run the visitor
-  const visitor = new GraphQLToProtoTextVisitor(schema, serviceName, packageName, goPackage);
-  return visitor.visit();
+  // Create and run the visitor with lock data if available
+  const visitor = new GraphQLToProtoTextVisitor(schema, options);
+
+  const proto = visitor.visit();
+
+  // Get the generated lock data
+  const generatedLockData = visitor.getGeneratedLockData();
+
+  // Always return the object with both proto and lockData
+  return {
+    proto,
+    lockData: generatedLockData,
+  };
 }
 
 export * from './sdl-to-mapping-visitor';
-export * from './sdl-to-proto-visitor';
+export { GraphQLToProtoTextVisitor } from './sdl-to-proto-visitor';
+export { ProtoLockManager } from './proto-lock';
+
+export type { GraphQLToProtoTextVisitorOptions } from './sdl-to-proto-visitor';
+export type { ProtoLock } from './proto-lock';
 export {
   GRPCMapping,
   OperationMapping,
