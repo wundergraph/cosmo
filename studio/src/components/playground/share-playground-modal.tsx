@@ -83,7 +83,7 @@ const ShareOptionsList = ({ options, selectedOptions, onOptionChange }: ShareOpt
 
       {unavailableOptions.length > 0 && (
         <div className="space-y-3">
-          <h3 className="text-sm text-muted-foreground select-none">No content to share</h3>
+          <h3 className="text-sm text-muted-foreground select-none">No content available to share. Add content to enable sharing this option.</h3>
           {unavailableOptions.map(renderOption)}
         </div>
       )}
