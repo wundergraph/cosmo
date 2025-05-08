@@ -128,8 +128,8 @@ type TLSDone struct {
 }
 
 type DialCombined struct {
-	DialStartTime time.Time  `expr:"dialStartTime"`
-	DialDoneTime  *time.Time `expr:"dialDoneTime"`
+	DialStartTime time.Time  `expr:"startTime"`
+	DialDoneTime  *time.Time `expr:"doneTime"`
 	Error         error      `expr:"error"`
 	Network       string     `expr:"network"`
 	Address       string     `expr:"address"`
@@ -197,6 +197,36 @@ type ClientTrace struct {
 	WroteHeaders       *WroteHeaders       `expr:"wroteHeaders"`
 	WroteRequest       *WroteRequest       `expr:"wroteRequest"`
 	FirstByte          *FirstByte          `expr:"firstByte"`
+}
+
+// GetGroupedDials get a list of connection calls that happened, grouped by network and address
+// in case there are duplicate dialStarts or dialDones with network and address, last write wins
+func (r ClientTrace) GetGroupedDials() []DialCombined {
+	dialMap := make(map[string]*DialCombined)
+
+	for _, start := range r.DialStart {
+		key := start.Network + "_" + start.Address
+		dialMap[key] = &DialCombined{
+			DialStartTime: start.Time,
+			Network:       start.Network,
+			Address:       start.Address,
+		}
+	}
+
+	for _, done := range r.DialDone {
+		key := done.Network + "_" + done.Address
+		if dial, exists := dialMap[key]; exists {
+			dial.DialDoneTime = &done.Time
+			dial.Error = done.Error
+		}
+	}
+
+	dialResults := make([]DialCombined, 0, len(dialMap))
+	for _, dial := range dialMap {
+		dialResults = append(dialResults, *dial)
+	}
+
+	return dialResults
 }
 
 // Subgraph Related

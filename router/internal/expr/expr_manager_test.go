@@ -1,10 +1,12 @@
 package expr
 
 import (
+	"errors"
 	"github.com/expr-lang/expr/ast"
 	"github.com/stretchr/testify/require"
 	"reflect"
 	"testing"
+	"time"
 )
 
 type VisitorExample struct {
@@ -171,6 +173,172 @@ func TestExprManager(t *testing.T) {
 		}
 
 		require.True(t, exprManager.VisitorManager.IsBodyUsedInExpressions())
+	})
+
+	t.Run("subgraph performance metric examples", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("get dial done errors", func(t *testing.T) {
+			exprManager := CreateNewExprManager()
+
+			context := Context{
+				Subgraph: Subgraph{
+					Id:   "subgraph-id",
+					Name: "subgraph-name",
+					Request: SubgraphRequest{
+						Error: nil,
+						ClientTrace: ClientTrace{
+							DialStart: []SubgraphDialStart{
+								{
+									Time:    time.Now(),
+									Network: "tcp",
+									Address: "localhost:8080",
+								},
+								{
+									Time:    time.Now(),
+									Network: "tcp",
+									Address: "localhost:8081",
+								},
+							},
+							DialDone: []SubgraphDialDone{
+								{
+									Time:    time.Now(),
+									Network: "tcp",
+									Address: "localhost:8080",
+									Error:   errors.New("error occurred"),
+								},
+								{
+									Time:    time.Now(),
+									Network: "tcp",
+									Address: "localhost:8081",
+									Error:   nil,
+								},
+							},
+						},
+					},
+				},
+			}
+
+			exprString :=
+				`let filtered = filter(subgraph.request.clientTrace.dialDone, #.error != nil);
+ 				string(map(filtered, #.error))`
+
+			expr, err := exprManager.CompileAnyExpression(exprString)
+			require.NoError(t, err)
+
+			result, err := ResolveAnyExpression(expr, context)
+			require.NoError(t, err)
+			require.Equal(t, "[error occurred]", result)
+		})
+
+		t.Run("verify if dial done did not complete for a dial start", func(t *testing.T) {
+			exprManager := CreateNewExprManager()
+
+			context := Context{
+				Subgraph: Subgraph{
+					Id:   "subgraph-id",
+					Name: "subgraph-name",
+					Request: SubgraphRequest{
+						Error: nil,
+						ClientTrace: ClientTrace{
+							DialStart: []SubgraphDialStart{
+								{
+									Time:    time.Now(),
+									Network: "tcp",
+									Address: "localhost:8080",
+								},
+								{
+									Time:    time.Now(),
+									Network: "tcp",
+									Address: "localhost:8081",
+								},
+							},
+							DialDone: []SubgraphDialDone{
+								{
+									Time:    time.Now(),
+									Network: "tcp",
+									Address: "localhost:8081",
+									Error:   nil,
+								},
+							},
+						},
+					},
+				},
+			}
+
+			exprString :=
+				`string(
+					len(subgraph.request.clientTrace.dialStart) > len(subgraph.request.clientTrace.dialDone)
+				)`
+
+			expr, err := exprManager.CompileAnyExpression(exprString)
+			require.NoError(t, err)
+
+			result, err := ResolveAnyExpression(expr, context)
+			require.NoError(t, err)
+			require.Equal(t, "true", result)
+		})
+
+		t.Run("calculate dial durations", func(t *testing.T) {
+			// NOTE: From our testing we noted that the every dial done will have a dial start
+			exprManager := CreateNewExprManager()
+
+			context := Context{
+				Subgraph: Subgraph{
+					Id:   "subgraph-id",
+					Name: "subgraph-name",
+					Request: SubgraphRequest{
+						Error: nil,
+						ClientTrace: ClientTrace{
+							DialStart: []SubgraphDialStart{
+								{
+									Time:    time.Now(),
+									Network: "tcp",
+									Address: "localhost:8080",
+								},
+								{
+									Time:    time.Now(),
+									Network: "tcp",
+									Address: "localhost:8081",
+								},
+							},
+							DialDone: []SubgraphDialDone{
+								{
+									Time:    time.Now(),
+									Network: "tcp",
+									Address: "localhost:8080",
+									Error:   errors.New("error occurred"),
+								},
+								{
+									Time:    time.Now(),
+									Network: "tcp",
+									Address: "localhost:8081",
+									Error:   nil,
+								},
+							},
+						},
+					},
+				},
+			}
+
+			// Note that
+			exprString :=
+				`let groupedDials = subgraph.request.clientTrace.GetGroupedDials();
+				 let dialDurations = map(groupedDials, #.doneTime - #.startTime);
+     			 dialDurations`
+
+			expr, err := exprManager.CompileAnyExpression(exprString)
+			require.NoError(t, err)
+
+			result, err := ResolveAnyExpression(expr, context)
+			require.NoError(t, err)
+
+			casted := result.([]interface{})
+			require.Equal(t, 2, len(casted))
+			require.Greater(t, casted[0].(time.Duration), time.Duration(0))
+			require.Greater(t, casted[1].(time.Duration), time.Duration(0))
+		})
+
 	})
 
 }
