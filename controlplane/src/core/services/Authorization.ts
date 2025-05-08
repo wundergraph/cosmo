@@ -96,7 +96,11 @@ export class Authorization {
        */
 
       if (targetType === 'federatedGraph') {
-        if (shouldEvaluateRbac && !rbac.checkResourceWriteAccess(targetId)) {
+        if (shouldEvaluateRbac) {
+          if (rbac.checkResourceWriteAccess(targetId)) {
+            return;
+          }
+
           throw new Error('User is not authorized to perform the current action in the federated graph');
         }
 
@@ -105,7 +109,11 @@ export class Authorization {
           throw new Error('User is not authorized to perform the current action in the federated graph');
         }
       } else if (targetType === 'subgraph') {
-        if (shouldEvaluateRbac && !rbac.checkResourceWriteAccess(targetId)) {
+        if (shouldEvaluateRbac) {
+          if (rbac.checkResourceWriteAccess(targetId)) {
+            return;
+          }
+
           throw new Error(
             'User is not authorized to perform the current action in the federated graph because the user is not a member of the subgraph',
           );

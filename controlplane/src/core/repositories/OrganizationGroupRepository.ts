@@ -274,10 +274,18 @@ export class OrganizationGroupRepository {
         }
 
         if (rule.resources.length > 0) {
+          const actualTargets = await this.db
+            .select({ targetId: schema.targets.id })
+            .from(schema.targets)
+            .where(and(
+              eq(schema.targets.organizationId, input.organizationId),
+              inArray(schema.targets.id, rule.resources)
+            ));
+
           await tx.insert(schema.organizationGroupRuleTargets).values(
-            rule.resources.map((targ) => ({
+            actualTargets.map((targ) => ({
               ruleId: insertedRule[0].id,
-              targetId: targ,
+              targetId: targ.targetId,
             })),
           );
         }
