@@ -1,6 +1,6 @@
 import { and, eq, inArray, SQL } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { alias } from "drizzle-orm/pg-core";
+import { alias } from 'drizzle-orm/pg-core';
 import * as schema from '../../db/schema.js';
 import { OrganizationGroupDTO } from '../../types/index.js';
 import { OrganizationRole } from '../../db/models.js';
@@ -356,32 +356,26 @@ export class OrganizationGroupRepository {
             .from(schema.organizationGroupRuleTargets)
             .innerJoin(schema.targets, eq(schema.targets.id, schema.organizationGroupRuleTargets.targetId));
 
-          const federatedGraphs = [...targets, ...ruleTargets.filter((targ) => targ.targetType === 'federated')]
-            .map((targ) => targ.targetId);
-
-          targets.push(
-            ...ruleTargets.map((targ) => ({ targetId: targ.targetId })),
+          const federatedGraphs = [...targets, ...ruleTargets.filter((targ) => targ.targetType === 'federated')].map(
+            (targ) => targ.targetId,
           );
+
+          targets.push(...ruleTargets.map((targ) => ({ targetId: targ.targetId })));
 
           if (federatedGraphs.length > 0) {
             const sgTargetAlias = alias(schema.targets, 'sgTargetAlias');
             targets.push(
-              ...(
-                await this.db
-                  .select({ targetId: sgTargetAlias.id, })
-                  .from(sgTargetAlias)
-                  .innerJoin(schema.targets, inArray(schema.targets.id, federatedGraphs))
-                  .innerJoin(schema.federatedGraphs, eq(schema.federatedGraphs.targetId, schema.targets.id))
-                  .innerJoin(
-                    schema.subgraphsToFederatedGraph,
-                    eq(schema.subgraphsToFederatedGraph.federatedGraphId, schema.federatedGraphs.id)
-                  )
-                  .innerJoin(
-                    schema.subgraphs,
-                    eq(schema.subgraphs.id, schema.subgraphsToFederatedGraph.subgraphId)
-                  )
-                  .where(eq(sgTargetAlias.id, schema.subgraphs.targetId))
-              )
+              ...(await this.db
+                .select({ targetId: sgTargetAlias.id })
+                .from(sgTargetAlias)
+                .innerJoin(schema.targets, inArray(schema.targets.id, federatedGraphs))
+                .innerJoin(schema.federatedGraphs, eq(schema.federatedGraphs.targetId, schema.targets.id))
+                .innerJoin(
+                  schema.subgraphsToFederatedGraph,
+                  eq(schema.subgraphsToFederatedGraph.federatedGraphId, schema.federatedGraphs.id),
+                )
+                .innerJoin(schema.subgraphs, eq(schema.subgraphs.id, schema.subgraphsToFederatedGraph.subgraphId))
+                .where(eq(sgTargetAlias.id, schema.subgraphs.targetId))),
             );
           }
         }
