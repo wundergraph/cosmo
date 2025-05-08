@@ -24,7 +24,7 @@ export default (opts: BaseCommandOptions) => {
   command.option(
     '--label [labels...]',
     'The labels to apply to the subgraph. The labels are passed in the format <key>=<value> <key>=<value>.' +
-      ' This parameter is always ignored if the subgraph has already exists.',
+      ' This parameter is always ignored if the subgraph already exists.',
     [],
   );
 

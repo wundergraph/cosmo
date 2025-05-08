@@ -866,8 +866,21 @@ export class SubgraphRepository {
       id: string;
     }[] = [];
 
-    // eslint-disable-next-line unicorn/no-negated-condition
-    if (selectedSubgraphs.length !== allSubgraphsOfFedGraph.length) {
+    if (selectedSubgraphs.length === allSubgraphsOfFedGraph.length) {
+      checkIds = await this.db
+        .selectDistinct({
+          id: schemaChecks.id,
+        })
+        .from(schemaChecks)
+        .innerJoin(schema.schemaCheckFederatedGraphs, eq(schema.schemaCheckFederatedGraphs.checkId, schemaChecks.id))
+        .where(
+          and(
+            eq(schema.schemaCheckFederatedGraphs.federatedGraphId, federatedGraphId),
+            gt(schemaChecks.createdAt, new Date(startDate)),
+            lt(schemaChecks.createdAt, new Date(endDate)),
+          ),
+        );
+    } else {
       checkIds = await this.db
         .selectDistinct({
           id: schemaChecks.id,
@@ -880,6 +893,8 @@ export class SubgraphRepository {
             eq(schema.schemaCheckFederatedGraphs.federatedGraphId, federatedGraphId),
             gt(schemaChecks.createdAt, new Date(startDate)),
             lt(schemaChecks.createdAt, new Date(endDate)),
+            // We have this or condition because we want to fetch the checks based on the new schema or the old schema
+            // as we are not doing a data migration for the checks table
             or(
               // This is to fetch the checks based on the new schema
               inArray(
@@ -892,20 +907,6 @@ export class SubgraphRepository {
                 selectedSubgraphs.map(({ targetId }) => targetId),
               ),
             ),
-          ),
-        );
-    } else {
-      checkIds = await this.db
-        .selectDistinct({
-          id: schemaChecks.id,
-        })
-        .from(schemaChecks)
-        .innerJoin(schema.schemaCheckFederatedGraphs, eq(schema.schemaCheckFederatedGraphs.checkId, schemaChecks.id))
-        .where(
-          and(
-            eq(schema.schemaCheckFederatedGraphs.federatedGraphId, federatedGraphId),
-            gt(schemaChecks.createdAt, new Date(startDate)),
-            lt(schemaChecks.createdAt, new Date(endDate)),
           ),
         );
     }
@@ -944,13 +945,7 @@ export class SubgraphRepository {
       .limit(limit)
       .offset(offset);
 
-    const checksCount = await this.getChecksCount({
-      federatedGraphTargetId,
-      federatedGraphId,
-      startDate,
-      endDate,
-      includeSubgraphs,
-    });
+    const checksCount = checkIds.length;
 
     const schemaCheckRepo = new SchemaCheckRepository(this.db);
     // Get all checkedSubgraphs for all checks in one go
@@ -997,85 +992,6 @@ export class SubgraphRepository {
       checks: checksWithSubgraphs,
       checksCount,
     };
-  }
-
-  public async getChecksCount({
-    federatedGraphTargetId,
-    federatedGraphId,
-    startDate,
-    endDate,
-    includeSubgraphs,
-  }: {
-    federatedGraphTargetId: string;
-    federatedGraphId: string;
-    startDate: string;
-    endDate: string;
-    includeSubgraphs?: string[];
-  }): Promise<number> {
-    const allSubgraphsOfFedGraph = await this.listByFederatedGraph({
-      federatedGraphTargetId,
-    });
-
-    const subgraphs = await this.listByFederatedGraph({
-      federatedGraphTargetId,
-      includeSubgraphs,
-    });
-
-    if (subgraphs.length === 0) {
-      return 0;
-    }
-
-    let checks: {
-      id: string;
-    }[] = [];
-
-    // eslint-disable-next-line unicorn/no-negated-condition
-    if (subgraphs.length !== allSubgraphsOfFedGraph.length) {
-      checks = await this.db
-        .selectDistinct({
-          id: schemaChecks.id,
-        })
-        .from(schemaChecks)
-        .innerJoin(schema.schemaCheckFederatedGraphs, eq(schema.schemaCheckFederatedGraphs.checkId, schemaChecks.id))
-        .leftJoin(schema.schemaCheckSubgraphs, eq(schema.schemaCheckSubgraphs.schemaCheckId, schemaChecks.id))
-        .where(
-          and(
-            eq(schema.schemaCheckFederatedGraphs.federatedGraphId, federatedGraphId),
-            gt(schemaChecks.createdAt, new Date(startDate)),
-            lt(schemaChecks.createdAt, new Date(endDate)),
-            // We have this or conditions because we want to fetch the checks based on the new schema or the old schema
-            // as we are not doing a data migration for the checks table
-            or(
-              // This is to fetch the checks based on the new schema
-              inArray(
-                schema.schemaCheckSubgraphs.subgraphId,
-                subgraphs.map(({ id }) => id),
-              ),
-              // This is to fetch the checks based on the old schema
-              inArray(
-                schemaChecks.targetId,
-                subgraphs.map(({ targetId }) => targetId),
-              ),
-            ),
-          ),
-        );
-    } else {
-      checks = await this.db
-        .selectDistinct({
-          id: schemaChecks.id,
-        })
-        .from(schemaChecks)
-        .innerJoin(schema.schemaCheckFederatedGraphs, eq(schema.schemaCheckFederatedGraphs.checkId, schemaChecks.id))
-        .where(
-          and(
-            eq(schema.schemaCheckFederatedGraphs.federatedGraphId, federatedGraphId),
-            gt(schemaChecks.createdAt, new Date(startDate)),
-            lt(schemaChecks.createdAt, new Date(endDate)),
-          ),
-        );
-    }
-
-    return checks.length;
   }
 
   public async checkById(data: {
