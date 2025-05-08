@@ -1273,7 +1273,7 @@ export class SubgraphRepository {
     return latestValidVersion[0].schemaSDL;
   }
 
-  public async getAccessibleSubgraphs(userId: string): Promise<SubgraphDTO[]> {
+  public async getAccessibleSubgraphs(userId: string, resources: string[]): Promise<SubgraphDTO[]> {
     const graphs = await this.db
       .selectDistinctOn([targets.id], { targetId: targets.id, name: targets.name })
       .from(targets)
@@ -1288,7 +1288,11 @@ export class SubgraphRepository {
         and(
           eq(targets.type, 'subgraph'),
           eq(targets.organizationId, this.organizationId),
-          or(eq(targets.createdBy, userId), eq(subgraphMembers.userId, userId)),
+          or(
+            eq(targets.createdBy, userId),
+            eq(subgraphMembers.userId, userId),
+            inArray(targets.id, resources),
+          ),
           eq(schema.federatedGraphs.supportsFederation, true),
         ),
       );

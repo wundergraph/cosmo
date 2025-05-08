@@ -1375,12 +1375,12 @@ export class FederatedGraphRepository {
       .sign(ecPrivateKey);
   }
 
-  public async getAccessibleFederatedGraphs(userId: string): Promise<FederatedGraphDTO[]> {
+  public async getAccessibleFederatedGraphs(userId: string, resources: string[]): Promise<FederatedGraphDTO[]> {
     const graphTargets = await this.db.query.targets.findMany({
       where: and(
         eq(targets.type, 'federated'),
         eq(targets.organizationId, this.organizationId),
-        eq(targets.createdBy, userId),
+        or(eq(targets.createdBy, userId), inArray(targets.id, resources)),
       ),
     });
 

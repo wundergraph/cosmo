@@ -53,9 +53,15 @@ export function getUserAccessibleResources(
       };
     }
 
-    const federatedGraphs = await fedRepo.getAccessibleFederatedGraphs(authContext.userId);
+    const federatedGraphs = await fedRepo.getAccessibleFederatedGraphs(
+      authContext.userId,
+      authContext.rbac.resources
+    );
 
-    const subgraphs = await subgraphRepo.getAccessibleSubgraphs(authContext.userId);
+    const subgraphs = await subgraphRepo.getAccessibleSubgraphs(
+      authContext.userId,
+      authContext.rbac.resources
+    );
 
     return {
       response: {

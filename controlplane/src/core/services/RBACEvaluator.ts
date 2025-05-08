@@ -14,7 +14,7 @@ export class RBACEvaluator {
   readonly resources: string[];
   readonly rules: ReadonlyMap<OrganizationRole, RuleData>;
 
-  constructor(readonly groups: Omit<OrganizationGroupDTO, 'membersCount' | 'kcMapperId'>[]) {
+  constructor(readonly groups: Omit<OrganizationGroupDTO, 'membersCount' | 'kcGroupId' | 'kcMapperId'>[]) {
     const flattenRules = groups.flatMap((group) => group.rules);
     const rulesGroupedByRole = Object.groupBy(flattenRules, (rule) => rule.role);
 
