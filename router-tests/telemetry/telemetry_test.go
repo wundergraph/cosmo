@@ -9325,67 +9325,67 @@ func TestEngineHookExpressions(t *testing.T) {
 				{
 					Key: "get_conn",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "subgraph.request.clientTrace?.connCreate?.hostPort ?? 'default'",
+						Expression: "subgraph.request.clientTrace.connCreate?.hostPort ?? 'default'",
 					},
 				},
 				{
 					Key: "got_conn",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "string(subgraph.request.clientTrace?.connAcquired?.wasIdle ?? 'default')",
+						Expression: "string(subgraph.request.clientTrace.connAcquired?.wasIdle ?? 'default')",
 					},
 				},
 				{
 					Key: "got_first_response_byte",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "string(subgraph.request.clientTrace?.firstByte?.time ?? 'default')",
+						Expression: "string(subgraph.request.clientTrace.firstByte?.time ?? 'default')",
 					},
 				},
 				{
 					Key: "dns_start",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "subgraph.request.clientTrace?.dnsStart?.host ?? 'default'",
+						Expression: "subgraph.request.clientTrace.dnsStart?.host ?? 'default'",
 					},
 				},
 				{
 					Key: "dns_done",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "string(subgraph.request.clientTrace?.dnsDone?.addresses ?? 'default')",
+						Expression: "string(subgraph.request.clientTrace.dnsDone?.addresses ?? 'default')",
 					},
 				},
 				{
 					Key: "connect_start",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "subgraph.request.clientTrace?.dialStart[0].network ?? 'default'",
+						Expression: "subgraph.request.clientTrace.dialStart[0].network ?? 'default'",
 					},
 				},
 				{
 					Key: "connect_done",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "subgraph.request.clientTrace?.dialDone[0].network ?? 'default'",
+						Expression: "subgraph.request.clientTrace.dialDone[0].network ?? 'default'",
 					},
 				},
 				{
 					Key: "tls_handshake_start",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "string(subgraph.request.clientTrace?.tlsStart?.time ?? 'default')",
+						Expression: "string(subgraph.request.clientTrace.tlsStart?.time ?? 'default')",
 					},
 				},
 				{
 					Key: "tls_handshake_done",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "string(subgraph.request.clientTrace?.tlsDone?.complete ?? 'default')",
+						Expression: "string(subgraph.request.clientTrace.tlsDone?.complete ?? 'default')",
 					},
 				},
 				{
 					Key: "wrote_headers",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "string(subgraph.request.clientTrace?.wroteHeaders?.time ?? 'default')",
+						Expression: "string(subgraph.request.clientTrace.wroteHeaders?.time ?? 'default')",
 					},
 				},
 				{
 					Key: "wrote_request",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "string(subgraph.request.clientTrace?.wroteRequest?.time ?? 'default')",
+						Expression: "string(subgraph.request.clientTrace.wroteRequest?.time ?? 'default')",
 					},
 				},
 			},
@@ -9453,67 +9453,67 @@ func TestEngineHookExpressions(t *testing.T) {
 				{
 					Key: "get_conn",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "subgraph.request.clientTrace?.connCreate?.hostPort ?? 'default'",
+						Expression: "subgraph.request.clientTrace.connCreate?.hostPort ?? 'default'",
 					},
 				},
 				{
 					Key: "got_conn",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "string(subgraph.request.clientTrace?.connAcquired?.wasIdle ?? 'default')",
+						Expression: "string(subgraph.request.clientTrace.connAcquired?.wasIdle ?? 'default')",
 					},
 				},
 				{
 					Key: "got_first_response_byte",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "string(subgraph.request.clientTrace?.firstByte?.time ?? 'default')",
+						Expression: "string(subgraph.request.clientTrace.firstByte?.time ?? 'default')",
 					},
 				},
 				{
 					Key: "dns_start",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "subgraph.request.clientTrace?.dnsStart?.host ?? 'default'",
+						Expression: "subgraph.request.clientTrace.dnsStart?.host ?? 'default'",
 					},
 				},
 				{
 					Key: "dns_done",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "string(subgraph.request.clientTrace?.dnsDone?.addresses ?? 'default')",
+						Expression: "string(subgraph.request.clientTrace.dnsDone?.addresses ?? 'default')",
 					},
 				},
 				{
 					Key: "connect_start",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "subgraph.request.clientTrace?.dialStart[0].network ?? 'default'",
+						Expression: "subgraph.request.clientTrace.dialStart[0].network ?? 'default'",
 					},
 				},
 				{
 					Key: "connect_done",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "subgraph.request.clientTrace?.dialDone[0].network ?? 'default'",
+						Expression: "subgraph.request.clientTrace.dialDone[0].network ?? 'default'",
 					},
 				},
 				{
 					Key: "tls_handshake_start",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "string(subgraph.request.clientTrace?.tlsStart?.time ?? 'default')",
+						Expression: "string(subgraph.request.clientTrace.tlsStart?.time ?? 'default')",
 					},
 				},
 				{
 					Key: "tls_handshake_done",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "string(subgraph.request.clientTrace?.tlsDone?.complete ?? 'default')",
+						Expression: "string(subgraph.request.clientTrace.tlsDone?.complete ?? 'default')",
 					},
 				},
 				{
 					Key: "wrote_headers",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "string(subgraph.request.clientTrace?.wroteHeaders?.time ?? 'default')",
+						Expression: "string(subgraph.request.clientTrace.wroteHeaders?.time ?? 'default')",
 					},
 				},
 				{
 					Key: "wrote_request",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "string(subgraph.request.clientTrace?.wroteRequest?.time ?? 'default')",
+						Expression: "string(subgraph.request.clientTrace.wroteRequest?.time ?? 'default')",
 					},
 				},
 			},
@@ -9581,31 +9581,31 @@ func TestEngineHookExpressions(t *testing.T) {
 				{
 					Key: "get_conn",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "subgraph.request.clientTrace?.connCreate?.hostPort ?? 'default'",
+						Expression: "subgraph.request.clientTrace.connCreate?.hostPort ?? 'default'",
 					},
 				},
 				{
 					Key: "got_conn",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "string(subgraph.request.clientTrace?.connAcquired?.wasIdle ?? 'default')",
+						Expression: "string(subgraph.request.clientTrace.connAcquired?.wasIdle ?? 'default')",
 					},
 				},
 				{
 					Key: "got_first_response_byte",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "string(subgraph.request.clientTrace?.firstByte?.time ?? 'default')",
+						Expression: "string(subgraph.request.clientTrace.firstByte?.time ?? 'default')",
 					},
 				},
 				{
 					Key: "dns_start",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "subgraph.request.clientTrace?.dnsStart?.host ?? 'default'",
+						Expression: "subgraph.request.clientTrace.dnsStart?.host ?? 'default'",
 					},
 				},
 				{
 					Key: "dns_done",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "string(subgraph.request.clientTrace?.dnsDone?.addresses ?? 'default')",
+						Expression: "string(subgraph.request.clientTrace.dnsDone?.addresses ?? 'default')",
 					},
 				},
 			},
@@ -9613,37 +9613,37 @@ func TestEngineHookExpressions(t *testing.T) {
 				{
 					Key: "connect_start",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "subgraph.request.clientTrace?.dialStart[0].network ?? 'default'",
+						Expression: "subgraph.request.clientTrace.dialStart[0].network ?? 'default'",
 					},
 				},
 				{
 					Key: "connect_done",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "subgraph.request.clientTrace?.dialDone[0].network ?? 'default'",
+						Expression: "subgraph.request.clientTrace.dialDone[0].network ?? 'default'",
 					},
 				},
 				{
 					Key: "tls_handshake_start",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "string(subgraph.request.clientTrace?.tlsStart?.time ?? 'default')",
+						Expression: "string(subgraph.request.clientTrace.tlsStart?.time ?? 'default')",
 					},
 				},
 				{
 					Key: "tls_handshake_done",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "string(subgraph.request.clientTrace?.tlsDone?.complete ?? 'default')",
+						Expression: "string(subgraph.request.clientTrace.tlsDone?.complete ?? 'default')",
 					},
 				},
 				{
 					Key: "wrote_headers",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "string(subgraph.request.clientTrace?.wroteHeaders?.time ?? 'default')",
+						Expression: "string(subgraph.request.clientTrace.wroteHeaders?.time ?? 'default')",
 					},
 				},
 				{
 					Key: "wrote_request",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "string(subgraph.request.clientTrace?.wroteRequest?.time ?? 'default')",
+						Expression: "string(subgraph.request.clientTrace.wroteRequest?.time ?? 'default')",
 					},
 				},
 			},
@@ -9737,7 +9737,102 @@ func TestEngineHookExpressions(t *testing.T) {
 			})
 		})
 
-		t.Run("process dial start and dial done", func(t *testing.T) {
+		t.Run("combine clientTrace expressions", func(t *testing.T) {
+			t.Run("calculate connection acquire duration", func(t *testing.T) {
+				t.Parallel()
+				metricReader := metric.NewManualReader()
+				exporter := tracetest.NewInMemoryExporter(t)
+
+				testenv.Run(t, &testenv.Config{
+					TraceExporter: exporter,
+					MetricReader:  metricReader,
+					CustomTracingAttributes: []config.CustomAttribute{
+						{
+							Key: "duration",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "string(subgraph.request.clientTrace.connAcquired.time - subgraph.request.clientTrace.connCreate.time)",
+							},
+						},
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query:  `query employees { employees { id details { forename surname } notes } }`,
+						Header: map[string][]string{"service-name": {"service-name"}},
+					})
+
+					sn := exporter.GetSpans().Snapshots()
+					engineFetchSpan := sn[6]
+					require.Equal(t, "Engine - Fetch", engineFetchSpan.Name())
+					require.Equal(t, trace.SpanKindInternal, engineFetchSpan.SpanKind())
+
+					attributes := engineFetchSpan.Attributes()
+					exprAttributes := attributes[14:]
+
+					duration := findAttr(exprAttributes, "duration").Value.AsString()
+					parseDuration, err := time.ParseDuration(duration)
+					require.NoError(t, err)
+					require.Greater(t, parseDuration.Nanoseconds(), int64(0))
+				})
+			})
+
+			t.Run("process dial start and dial done", func(t *testing.T) {
+				t.Parallel()
+				metricReader := metric.NewManualReader()
+				exporter := tracetest.NewInMemoryExporter(t)
+
+				testenv.Run(t, &testenv.Config{
+					TraceExporter: exporter,
+					MetricReader:  metricReader,
+					CustomTracingAttributes: []config.CustomAttribute{
+						// TODO: Look at adding more examples
+						{
+							Key: "dialLenEquals",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "string(len(subgraph.request.clientTrace.dialStart) == len(subgraph.request.clientTrace.dialDone))",
+							},
+						},
+						{
+							Key: "printStartDials",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "toJSON(subgraph.request.clientTrace.dialStart)",
+							},
+						},
+						{
+							Key: "printDoneDials",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "toJSON(subgraph.request.clientTrace.dialDone)",
+							},
+						},
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query:  `query employees { employees { id details { forename surname } notes } }`,
+						Header: map[string][]string{"service-name": {"service-name"}},
+					})
+
+					sn := exporter.GetSpans().Snapshots()
+					engineFetchSpan := sn[6]
+					require.Equal(t, "Engine - Fetch", engineFetchSpan.Name())
+					require.Equal(t, trace.SpanKindInternal, engineFetchSpan.SpanKind())
+
+					attributes := engineFetchSpan.Attributes()
+					exprAttributes := attributes[14:]
+
+					dialLenEquals := findAttr(exprAttributes, "dialLenEquals")
+					require.Equal(t, "true", dialLenEquals.Value.AsString())
+
+					var js interface{}
+
+					printStartDials := findAttr(exprAttributes, "printStartDials")
+					err := json.Unmarshal([]byte(printStartDials.Value.AsString()), &js)
+					require.NoError(t, err)
+
+					printDoneDials := findAttr(exprAttributes, "printDoneDials")
+					err = json.Unmarshal([]byte(printDoneDials.Value.AsString()), &js)
+					require.NoError(t, err)
+				})
+			})
+		}t.Run("process dial start and dial done", func(t *testing.T) {
 			t.Parallel()
 			metricReader := metric.NewManualReader()
 			exporter := tracetest.NewInMemoryExporter(t)
