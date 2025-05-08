@@ -172,6 +172,14 @@ func (r *queryResolver) SharedThings(ctx context.Context, numOfA int, numOfB int
 	return things, nil
 }
 
+// Secret is the resolver for the secret field.
+func (r *queryResolver) Secret(ctx context.Context) (*model.Secret, error) {
+	value := "top secret"
+	return &model.Secret{
+		Value: &value,
+	}, nil
+}
+
 // HeaderValue is the resolver for the headerValue field.
 func (r *subscriptionResolver) HeaderValue(ctx context.Context, name string, repeat *int) (<-chan *model.TimestampedString, error) {
 	header := injector.Header(ctx)
@@ -291,7 +299,5 @@ func (r *Resolver) Query() generated.QueryResolver { return &queryResolver{r} }
 // Subscription returns generated.SubscriptionResolver implementation.
 func (r *Resolver) Subscription() generated.SubscriptionResolver { return &subscriptionResolver{r} }
 
-type (
-	queryResolver        struct{ *Resolver }
-	subscriptionResolver struct{ *Resolver }
-)
+type queryResolver struct{ *Resolver }
+type subscriptionResolver struct{ *Resolver }
