@@ -1,11 +1,82 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { uid } from "uid";
 import { afterAllSetup, beforeAllSetup, TestUser } from '../src/core/test-util.js';
 import { SetupTest } from './test-util.js';
 
 let dbname = '';
 
-describe('Organization Member Group tests', (ctx) => {
+describe('Organization Group tests', (ctx) => {
+  beforeAll(async () => {
+    dbname = await beforeAllSetup();
+  });
+
+  afterAll(async () => {
+    await afterAllSetup(dbname);
+  });
+
+  test('Should not be able to create group when RBAC not is enabled', async () => {
+    const { client, server } = await SetupTest({ dbname });
+
+    const createdGroupResponse = await client.createOrganizationGroup({
+      name: uid(),
+      description: '',
+    });
+
+    expect(createdGroupResponse.response?.code).toBe(EnumStatusCode.ERR_UPGRADE_PLAN);
+
+    const groupsResponse = await client.getOrganizationGroups({});
+
+    expect(groupsResponse.response?.code).toBe(EnumStatusCode.OK);
+    expect(groupsResponse.groups.length).toBe(3);
+
+    await server.close();
+  });
+
+  test('Should be able to create group when RBAC is enabled', async () => {
+    const { client, server } = await SetupTest({ dbname, enabledFeatures: ['rbac'] });
+
+    const createdGroupResponse = await client.createOrganizationGroup({
+      name: uid(),
+      description: '',
+    });
+
+    expect(createdGroupResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    const groupsResponse = await client.getOrganizationGroups({});
+
+    expect(groupsResponse.response?.code).toBe(EnumStatusCode.OK);
+    expect(groupsResponse.groups.length).toBe(4);
+
+    await server.close();
+  });
+
+  test('Should be able to update existing group', async () => {
+    const { client } = await SetupTest({ dbname, enabledFeatures: ['rbac'] });
+
+    const orgGroups = await client.getOrganizationGroups({});
+    const developerGroup = orgGroups.groups.find((g) => g.name === 'developer')!;
+
+    const updateResponse = await client.updateOrganizationGroup({
+      groupId: developerGroup.groupId,
+      rules: [{
+        role: 'organization-admin',
+        namespaces: [],
+        resources: [],
+      }],
+    });
+
+    expect(updateResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    const updatedGroupsResponse = await client.getOrganizationGroups({});
+    const updatedDeveloperGroup = updatedGroupsResponse.groups.find((g) => g.name === 'developer')!;
+
+    expect(updatedDeveloperGroup.rules.length).toBe(1);
+    expect(updatedDeveloperGroup.rules[0].role).toBe('organization-admin');
+  });
+});
+
+describe('Group membership tests', () => {
   beforeAll(async () => {
     dbname = await beforeAllSetup();
   });
