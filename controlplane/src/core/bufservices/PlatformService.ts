@@ -128,7 +128,6 @@ import { deleteOIDCProvider } from './sso/deleteOIDCProvider.js';
 import { getOIDCProvider } from './sso/getOIDCProvider.js';
 import { updateIDPMappers } from './sso/updateIDPMappers.js';
 import { addReadme } from './subgraph/addReadme.js';
-import { addSubgraphMember } from './subgraph/addSubgraphMember.js';
 import { checkSubgraphSchema } from './subgraph/checkSubgraphSchema.js';
 import { createFederatedSubgraph } from './subgraph/createFederatedSubgraph.js';
 import { deleteFederatedSubgraph } from './subgraph/deleteFederatedSubgraph.js';
@@ -141,7 +140,6 @@ import { getSubgraphSDLFromLatestComposition } from './subgraph/getSubgraphSDLFr
 import { getSubgraphs } from './subgraph/getSubgraphs.js';
 import { moveSubgraph } from './subgraph/moveSubgraph.js';
 import { publishFederatedSubgraph } from './subgraph/publishFederatedSubgraph.js';
-import { removeSubgraphMember } from './subgraph/removeSubgraphMember.js';
 import { updateSubgraph } from './subgraph/updateSubgraph.js';
 import { acceptOrDeclineInvitation } from './user/acceptOrDeclineInvitation.js';
 import { deleteUser } from './user/deleteUser.js';
@@ -417,14 +415,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     updateFeatureSettings: (req, ctx) => {
       return updateFeatureSettings(opts, req, ctx);
-    },
-
-    addSubgraphMember: (req, ctx) => {
-      return addSubgraphMember(opts, req, ctx);
-    },
-
-    removeSubgraphMember: (req, ctx) => {
-      return removeSubgraphMember(opts, req, ctx);
     },
 
     addReadme: (req, ctx) => {

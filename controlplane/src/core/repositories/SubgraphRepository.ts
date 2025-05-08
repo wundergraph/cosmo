@@ -25,7 +25,6 @@ import {
   users,
 } from '../../db/schema.js';
 import {
-  FeatureSubgraphDTO,
   FederatedGraphDTO,
   GetChecksResponse,
   Label,
@@ -156,14 +155,7 @@ export class SubgraphRepository {
       }
 
       /**
-       * 4. Add the creator as a subgraph member
-       */
-
-      const subgraphRepo = new SubgraphRepository(this.logger, tx, this.organizationId);
-      await subgraphRepo.addSubgraphMember({ subgraphId: insertedSubgraph[0].id, userId: data.createdBy });
-
-      /**
-       * 5. Insert into featureFlagsToSubgraph to map the faeture flag to the base subgraph
+       * 4. Insert into featureFlagsToSubgraph to map the feature flag to the base subgraph
        */
 
       if (data.featureSubgraphOptions) {
@@ -1345,23 +1337,6 @@ export class SubgraphRepository {
       .innerJoin(users, eq(users.id, subgraphMembers.userId))
       .innerJoin(subgraphs, eq(subgraphs.id, subgraphMembers.subgraphId))
       .where(eq(subgraphs.targetId, targetId));
-  }
-
-  public async addSubgraphMember({ subgraphId, userId }: { subgraphId: string; userId: string }) {
-    await this.db.insert(subgraphMembers).values({ subgraphId, userId }).execute();
-  }
-
-  public async removeSubgraphMember({
-    subgraphId,
-    subgraphMemberId,
-  }: {
-    subgraphId: string;
-    subgraphMemberId: string;
-  }) {
-    await this.db
-      .delete(subgraphMembers)
-      .where(and(eq(subgraphMembers.subgraphId, subgraphId), eq(subgraphMembers.id, subgraphMemberId)))
-      .execute();
   }
 
   public async addFieldGracePeriod({

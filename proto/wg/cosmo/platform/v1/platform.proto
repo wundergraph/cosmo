@@ -1868,26 +1868,6 @@ message UpdateFeatureSettingsResponse {
   Response response = 1;
 }
 
-message AddSubgraphMemberRequest {
-  string subgraphName = 1;
-  string userEmail = 2;
-  string namespace = 3;
-}
-
-message AddSubgraphMemberResponse {
-  Response response = 1;
-}
-
-message RemoveSubgraphMemberRequest {
-  string subgraphName = 1;
-  string subgraphMemberId = 2;
-  string namespace = 3;
-}
-
-message RemoveSubgraphMemberResponse {
-  Response response = 1;
-}
-
 message GetSubgraphMembersRequest {
   string subgraphName = 1;
   string namespace = 2;
