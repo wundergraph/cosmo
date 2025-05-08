@@ -1288,11 +1288,7 @@ export class SubgraphRepository {
         and(
           eq(targets.type, 'subgraph'),
           eq(targets.organizationId, this.organizationId),
-          or(
-            eq(targets.createdBy, userId),
-            eq(subgraphMembers.userId, userId),
-            inArray(targets.id, resources),
-          ),
+          or(eq(targets.createdBy, userId), eq(subgraphMembers.userId, userId), inArray(targets.id, resources)),
           eq(schema.federatedGraphs.supportsFederation, true),
         ),
       );
