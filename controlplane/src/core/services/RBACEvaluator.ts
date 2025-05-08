@@ -3,6 +3,8 @@ import { OrganizationGroupDTO } from '../../types/index.js';
 
 export class RBACEvaluator {
   readonly roles: OrganizationRole[];
+  readonly namespaces: string[];
+  readonly resources: string[];
   readonly rules: ReadonlyMap<OrganizationRole, string[]>;
 
   constructor(readonly groups: Omit<OrganizationGroupDTO, 'membersCount' | 'kcMapperId'>[]) {
@@ -15,15 +17,17 @@ export class RBACEvaluator {
     }
 
     this.roles = Array.from(result.keys(), (k) => k);
+    this.namespaces = [...new Set(Array.from(result.values(), (ns) => ns).flat())];
+    this.resources = [...new Set(Array.from(result.values(), (res) => res).flat())];
     this.rules = result;
   }
 
   get isOrganizationAdmin() {
-    return this.is(['organization-owner', 'organization-admin']);
+    return this.is(['organization-admin']);
   }
 
   get isOrganizationAdminOrDeveloper() {
-    return this.is(['organization-owner', 'organization-admin', 'organization-developer']);
+    return this.is(['organization-admin', 'organization-developer']);
   }
 
   is(roles: OrganizationRole[]) {
@@ -37,7 +41,7 @@ export class RBACEvaluator {
   }
 
   checkReadAccess(graph: { namespace: string; targetId: string }) {
-    if (this.is(['organization-owner', 'organization-admin', 'organization-developer', 'organization-viewer'])) {
+    if (this.is(['organization-admin', 'organization-developer', 'organization-viewer'])) {
       return true;
     }
 
@@ -59,8 +63,8 @@ export class RBACEvaluator {
     return false;
   }
 
-  checkWriteGraphAccess(graph: { namespace: string; targetId: string }) {
-    if (this.is(['organization-owner', 'organization-admin', 'organization-developer'])) {
+  checkWriteAccess(graph: { namespace: string; targetId: string }) {
+    if (this.is(['organization-admin', 'organization-developer'])) {
       return true;
     }
 

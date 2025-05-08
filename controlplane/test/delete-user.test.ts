@@ -85,7 +85,12 @@ const createTempUser = async (
       name: 'admin',
       description: '',
       kcGroupId: null,
-      rules: [{ role: 'organization-admin', resources: [] }],
+    });
+
+    await orgGroupRepo.updateGroup({
+      organizationId: personalOrgMember.organizationId,
+      groupId: orgAdminGroup.groupId,
+      rules: [{ role: 'organization-admin', namespaces: [], resources: [] }]
     });
 
     await orgGroupRepo.addUserToGroup({
@@ -125,7 +130,12 @@ const createTempUser = async (
       name: 'admin',
       description: '',
       kcGroupId: adminGroup.id!,
-      rules: [{ role: 'organization-admin', resources: [] }],
+    });
+
+    await orgGroupRepo.updateGroup({
+      organizationId: personalOrgMember.organizationId,
+      groupId: orgAdminGroup2.groupId,
+      rules: [{ role: 'organization-admin', namespaces: [], resources: [] }]
     });
 
     await orgGroupRepo.addUserToGroup({
@@ -148,6 +158,7 @@ const createTempUser = async (
       userId: keycloakUserID,
       organizationId: personalOrg.id,
       organizationName: personalOrg.name,
+      organizationDeactivated: false,
       email: userEmail,
       apiKey: apiKeyPersonal,
       organizationSlug: personalOrg.slug,

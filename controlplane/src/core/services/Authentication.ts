@@ -96,9 +96,8 @@ export class Authentication implements Authenticator {
         organizationSlug: organization.slug,
         organizationDeactivated,
         rbac,
-        hasWriteAccess:
-          rbac.is(['organization-owner', 'organization-admin', 'organization-developer']) && !organizationDeactivated,
-        isAdmin: rbac.is(['organization-owner', 'organization-admin']),
+        hasWriteAccess: rbac.isOrganizationAdminOrDeveloper && !organizationDeactivated,
+        isAdmin: rbac.isOrganizationAdmin,
         userDisplayName: user.userDisplayName,
       };
 

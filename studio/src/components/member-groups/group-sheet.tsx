@@ -1,5 +1,8 @@
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { OrganizationGroup, OrganizationGroupRule } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import {
+  OrganizationGroup,
+  UpdateOrganizationGroupRequest_GroupRule
+} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { Button } from "@/components/ui/button";
 import { InfoCircledIcon, PlusIcon } from "@radix-ui/react-icons";
 import { ExclamationTriangleIcon, PencilIcon } from "@heroicons/react/24/outline";
@@ -59,10 +62,17 @@ function MemberGroupSheetContent({ group, onGroupUpdated, onCancel }: {
   onCancel(): void;
 }) {
   const { data } = useQuery(getUserAccessibleResources);
-  const [groupRules, setGroupRules] = useState<OrganizationGroupRule[]>([...group.rules]);
   const [description, setDescription] = useState(group.description || '');
   const { toast } = useToast();
   const rbac = useFeature("rbac");
+
+  const [groupRules, setGroupRules] = useState<UpdateOrganizationGroupRequest_GroupRule[]>([...group.rules.map(
+    (r) => new UpdateOrganizationGroupRequest_GroupRule({
+      role: r.role,
+      namespaces: r.namespaces,
+      resources: r.resources,
+    })
+  )]);
 
   const allRulesHaveRole = groupRules.every((rule) => !!rule.role);
   const { mutate, isPending } = useMutation(updateOrganizationGroup);
@@ -170,8 +180,8 @@ function MemberGroupSheetContent({ group, onGroupUpdated, onCancel }: {
 
                 setGroupRules([
                   ...groupRules,
-                  OrganizationGroupRule.fromJson({}),
-                ])
+                  UpdateOrganizationGroupRequest_GroupRule.fromJson({}),
+                ]);
               }}
             >
               <PlusIcon className="size-4" />

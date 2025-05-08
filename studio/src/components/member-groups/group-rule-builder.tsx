@@ -1,5 +1,5 @@
 import type {
-  OrganizationGroupRule,
+  UpdateOrganizationGroupRequest_GroupRule,
   GetUserAccessibleResourcesResponse,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { roles as originalRoles } from "@/lib/constants";
@@ -29,7 +29,7 @@ import { useFeature } from "@/hooks/use-feature";
 
 type RoleMetadata = (typeof originalRoles)[number];
 type BuilderContextType = {
-  rule: OrganizationGroupRule;
+  rule: UpdateOrganizationGroupRequest_GroupRule;
   roles: RoleMetadata[];
   categories: string[];
   rolesByCategory: Partial<Record<string, RoleMetadata[]>>;
@@ -46,10 +46,10 @@ const BuilderContext = createContext<BuilderContextType>({
 
 export function GroupRuleBuilder({ roles, rule, accessibleResources, disabled, onRuleUpdated, onRemoveRule }: {
   roles: RoleMetadata[];
-  rule: OrganizationGroupRule;
+  rule: UpdateOrganizationGroupRequest_GroupRule;
   accessibleResources: GetUserAccessibleResourcesResponse | undefined;
   disabled: boolean;
-  onRuleUpdated(rule: OrganizationGroupRule): void;
+  onRuleUpdated(rule: UpdateOrganizationGroupRequest_GroupRule): void;
   onRemoveRule(): void;
 }) {
   const { isMobile } = useWindowSize();
@@ -296,17 +296,18 @@ function RolesAccordion({ onSelectRole }: { onSelectRole(role: string): void; })
 function ResourcesDropdown({ disabled, isNamespaceRole, onRuleUpdated }: {
   disabled: boolean;
   isNamespaceRole: boolean;
-  onRuleUpdated(rule: OrganizationGroupRule): void;
+  onRuleUpdated(rule: UpdateOrganizationGroupRequest_GroupRule): void;
 }) {
   const { rule, accessibleResources } = useContext(BuilderContext);
   const [searchValue, setSearchValue] = useState<string>();
 
-  const [numberOfResources, resources] = useMemo(() => {
-    let result: { group: string; value: string; label: string }[] = [
+  const resources = useMemo(() => {
+    let result: { group: string; value: string; label: string; isNamespace: boolean }[] = [
       ...(accessibleResources?.federatedGraphs.map((fg) => ({
         group: 'namespaces',
-        value: `ns:${fg.namespace}`,
+        value: fg.namespace,
         label: fg.namespace,
+        isNamespace: true,
       })) ?? [])
     ];
 
@@ -316,6 +317,7 @@ function ResourcesDropdown({ disabled, isNamespaceRole, onRuleUpdated }: {
           group: `${fg.namespace} federated graphs`,
           value: fg.targetId,
           label: fg.name,
+          isNamespace: false,
         })) ?? [])
       );
 
@@ -324,33 +326,38 @@ function ResourcesDropdown({ disabled, isNamespaceRole, onRuleUpdated }: {
           group: `${sg.namespace} subgraphs`,
           value: sg.targetId,
           label: sg.name,
+          isNamespace: false,
         })) ?? [])
       );
     }
 
-    const totalNumOfResources = result.length;
     const q = searchValue?.trim().toLowerCase();
     if (q) {
       result = result.filter((item) => item.label.toLowerCase().includes(q));
     }
 
-    return [totalNumOfResources, Object.groupBy(result, (item) => item.group)];
+    return Object.groupBy(result, (item) => item.group);
   }, [accessibleResources?.federatedGraphs, accessibleResources?.subgraphs, isNamespaceRole, searchValue]);
 
   if (!accessibleResources?.response) {
     return null;
   }
 
-  const toggleResource = (res: string) => {
-    const setOfSelectedResources = new Set(rule.resources);
+  const toggleResource = (res: string, isNamespace: boolean) => {
+    const newRule = rule.clone();
+    const setOfSelectedResources = new Set(isNamespace ? rule.namespaces : rule.resources);
     if (setOfSelectedResources.has(res)) {
       setOfSelectedResources.delete(res);
     } else {
       setOfSelectedResources.add(res);
     }
 
-    const newRule = rule.clone();
-    newRule.resources = Array.from(setOfSelectedResources);
+    if (isNamespace) {
+      newRule.namespaces = Array.from(setOfSelectedResources);
+    } else {
+      newRule.resources = Array.from(setOfSelectedResources);
+    }
+
     onRuleUpdated(newRule);
   };
 
@@ -360,6 +367,7 @@ function ResourcesDropdown({ disabled, isNamespaceRole, onRuleUpdated }: {
     }
   };
 
+  const selectedResources = rule.namespaces.length + rule.resources.length;
   return (
     <Popover onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>
@@ -369,9 +377,9 @@ function ResourcesDropdown({ disabled, isNamespaceRole, onRuleUpdated }: {
           disabled={disabled}
         >
           <span className="truncate">
-            {rule.resources.length === 0
+            {selectedResources === 0
               ? "Grants access to all resources."
-              : `${rule.resources.length} resource(s) selected`}
+              : `${selectedResources} resource(s) selected`}
           </span>
         </Button>
       </PopoverTrigger>
@@ -390,12 +398,14 @@ function ResourcesDropdown({ disabled, isNamespaceRole, onRuleUpdated }: {
                 {items?.map((item) => (
                   <CommandItem
                     key={`item-${item.value}`} value={item.value}
-                    onSelect={() => toggleResource(item.value)}
+                    onSelect={() => toggleResource(item.value, item.isNamespace)}
                   >
                     <div
                       className={cn(
                         "mr-2 flex h-4 w-4 items-center justify-center",
-                        rule.resources.includes(item.value) ? "text-primary-foreground" : "[&_svg]:invisible"
+                        rule.namespaces.includes(item.value) || rule.resources.includes(item.value)
+                          ? "text-primary-foreground"
+                          : "[&_svg]:invisible"
                       )}
                     >
                       <CheckIcon className="size-4" />

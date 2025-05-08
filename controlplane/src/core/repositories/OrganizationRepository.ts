@@ -542,8 +542,8 @@ export class OrganizationRepository {
       groups.map(async (group) => {
         const rules = await this.db
           .select({
+            id: schema.organizationGroupRules.id,
             role: schema.organizationGroupRules.role,
-            resources: schema.organizationGroupRules.resources,
           })
           .from(schema.organizationGroupRules)
           .where(eq(schema.organizationGroupRules.groupId, group.groupId))
@@ -551,10 +551,29 @@ export class OrganizationRepository {
 
         return {
           ...group,
-          rules: rules.map(({ role, resources }) => ({
-            role,
-            resources: resources?.split(',') ?? [],
-          })),
+          rules: await Promise.all(
+            rules.map(async (rule) => {
+              const namespaces = await this.db
+                .select({ id: schema.organizationGroupRuleNamespaces.namespaceId })
+                .from(schema.organizationGroupRuleNamespaces)
+                .innerJoin(
+                  schema.namespaces,
+                  eq(schema.namespaces.id, schema.organizationGroupRuleNamespaces.namespaceId),
+                )
+                .where(eq(schema.organizationGroupRuleNamespaces.ruleId, rule.id));
+
+              const targets = await this.db
+                .select({ targetId: schema.organizationGroupRuleTargets.targetId })
+                .from(schema.organizationGroupRuleTargets)
+                .where(eq(schema.organizationGroupRuleTargets.ruleId, rule.id));
+
+              return {
+                role: rule.role,
+                namespaces: namespaces.map((ns) => ns.id),
+                resources: targets.map((targ) => targ.targetId),
+              };
+            }),
+          ),
         };
       }),
     );

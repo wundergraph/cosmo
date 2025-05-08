@@ -1,5 +1,5 @@
 {
-  "id": "d2c2634a-2d24-495d-afac-125ef5ec5015",
+  "id": "c83f60e3-116f-4d47-8180-675e974e19ca",
   "prevId": "1047e67f-16f1-4d7b-bfb6-2031ff10230b",
   "version": "7",
   "dialect": "postgresql",
@@ -3799,6 +3799,120 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
+    "public.organization_group_rule_namespaces": {
+      "name": "organization_group_rule_namespaces",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "rule_id": {
+          "name": "rule_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "namespace_id": {
+          "name": "namespace_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "organization_group_rule_namespaces_rule_id_organization_group_rules_id_fk": {
+          "name": "organization_group_rule_namespaces_rule_id_organization_group_rules_id_fk",
+          "tableFrom": "organization_group_rule_namespaces",
+          "tableTo": "organization_group_rules",
+          "columnsFrom": [
+            "rule_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "organization_group_rule_namespaces_namespace_id_namespaces_id_fk": {
+          "name": "organization_group_rule_namespaces_namespace_id_namespaces_id_fk",
+          "tableFrom": "organization_group_rule_namespaces",
+          "tableTo": "namespaces",
+          "columnsFrom": [
+            "namespace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "public.organization_group_rule_targets": {
+      "name": "organization_group_rule_targets",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "rule_id": {
+          "name": "rule_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "target_id": {
+          "name": "target_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "organization_group_rule_targets_rule_id_organization_group_rules_id_fk": {
+          "name": "organization_group_rule_targets_rule_id_organization_group_rules_id_fk",
+          "tableFrom": "organization_group_rule_targets",
+          "tableTo": "organization_group_rules",
+          "columnsFrom": [
+            "rule_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "organization_group_rule_targets_target_id_targets_id_fk": {
+          "name": "organization_group_rule_targets_target_id_targets_id_fk",
+          "tableFrom": "organization_group_rule_targets",
+          "tableTo": "targets",
+          "columnsFrom": [
+            "target_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
     "public.organization_group_rules": {
       "name": "organization_group_rules",
       "schema": "",
@@ -3822,12 +3936,6 @@
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
-        },
-        "resources": {
-          "name": "resources",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
         }
       },
       "indexes": {},
@@ -7805,7 +7913,6 @@
       "name": "organization_role",
       "schema": "public",
       "values": [
-        "organization-owner",
         "organization-admin",
         "organization-developer",
         "organization-viewer",

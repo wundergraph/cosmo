@@ -50,7 +50,7 @@ export function updateOrganizationGroup(
 
     // Combine resources into a single array of unique values per role
     const allResourcesGroupedByRole = Object.groupBy(req.rules, ({ role }) => role);
-    const resourcesByRole: { role: OrganizationRole; resources: string[] }[] = [];
+    const resourcesByRole: { role: OrganizationRole; namespaces: string[]; resources: string[] }[] = [];
     for (const key of Object.keys(allResourcesGroupedByRole)) {
       const role = organizationRoleEnum.enumValues.find((r) => r === key.toLowerCase());
       if (!role) {
@@ -58,10 +58,10 @@ export function updateOrganizationGroup(
       }
 
       const groupRules = allResourcesGroupedByRole[key] ?? [];
-      const groupResources = groupRules.flatMap((x) => x.resources);
       resourcesByRole.push({
         role,
-        resources: [...new Set(groupResources.map((res) => res.toLowerCase()))],
+        namespaces: groupRules.flatMap((x) => x.namespaces),
+        resources: groupRules.flatMap((x) => x.resources),
       });
     }
 
@@ -102,6 +102,7 @@ export function updateOrganizationGroup(
 
     // Finally, update the group roles
     await orgGroupRepo.updateGroup({
+      organizationId: authContext.organizationId,
       groupId: orgGroup.groupId,
       description: req.description,
       rules: resourcesByRole,

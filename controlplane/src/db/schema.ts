@@ -1328,7 +1328,6 @@ export const organizationsMembers = pgTable(
 );
 
 export const organizationRoleEnum = pgEnum('organization_role', [
-  'organization-owner',
   'organization-admin',
   'organization-developer',
   'organization-viewer',
@@ -1362,7 +1361,26 @@ export const organizationGroupRules = pgTable('organization_group_rules', {
       onDelete: 'cascade',
     }),
   role: organizationRoleEnum('role').notNull(),
-  resources: text('resources'),
+});
+
+export const organizationGroupRuleNamespaces = pgTable('organization_group_rule_namespaces', {
+  id: uuid('id').notNull().primaryKey().defaultRandom(),
+  ruleId: uuid('rule_id')
+    .notNull()
+    .references(() => organizationGroupRules.id, { onDelete: 'cascade' }),
+  namespaceId: uuid('namespace_id')
+    .notNull()
+    .references(() => namespaces.id, { onDelete: 'cascade' }),
+});
+
+export const organizationGroupRuleTargets = pgTable('organization_group_rule_targets', {
+  id: uuid('id').notNull().primaryKey().defaultRandom(),
+  ruleId: uuid('rule_id')
+    .notNull()
+    .references(() => organizationGroupRules.id, { onDelete: 'cascade' }),
+  targetId: uuid('target_id')
+    .notNull()
+    .references(() => targets.id, { onDelete: 'cascade' }),
 });
 
 export const organizationGroupMembers = pgTable(
@@ -1396,10 +1414,30 @@ export const organizationGroupsRelations = relations(organizationGroups, ({ many
   members: many(organizationGroupMembers),
 }));
 
-export const organizationGroupRulesRelations = relations(organizationGroupRules, ({ one }) => ({
+export const organizationGroupRulesRelations = relations(organizationGroupRules, ({ one, many }) => ({
   group: one(organizationGroups, {
     fields: [organizationGroupRules.groupId],
     references: [organizationGroups.id],
+  }),
+  namespaces: many(organizationGroupRuleNamespaces),
+  targets: many(organizationGroupRuleTargets),
+}));
+
+export const organizationGroupRuleNamespaceRelations = relations(organizationGroupRuleNamespaces, ({ one }) => ({
+  rule: one(organizationGroupRules, {
+    fields: [organizationGroupRuleNamespaces.ruleId],
+    references: [organizationGroupRules.id],
+  }),
+  namespace: one(namespaces, {
+    fields: [organizationGroupRuleNamespaces.namespaceId],
+    references: [namespaces.id],
+  }),
+}));
+
+export const organizationGroupRuleTargetRelations = relations(organizationGroupRuleTargets, ({ one }) => ({
+  rule: one(organizationGroupRules, {
+    fields: [organizationGroupRuleTargets.ruleId],
+    references: [organizationGroupRules.id],
   }),
 }));
 

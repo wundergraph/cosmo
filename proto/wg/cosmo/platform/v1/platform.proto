@@ -869,7 +869,8 @@ message CreateFederatedGraphTokenResponse {
 
 message OrganizationGroupRule {
   string role = 1;
-  repeated string resources = 2;
+  repeated string namespaces = 2;
+  repeated string resources = 3;
 }
 
 message OrganizationGroup {
@@ -914,7 +915,8 @@ message GetOrganizationGroupMembersResponse {
 message UpdateOrganizationGroupRequest {
   message GroupRule {
     string role = 1;
-    repeated string resources = 2;
+    repeated string namespaces = 2;
+    repeated string resources = 3;
   }
 
   string groupId = 1;

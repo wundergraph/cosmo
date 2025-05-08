@@ -6388,7 +6388,12 @@ export class OrganizationGroupRule extends Message<OrganizationGroupRule> {
   role = "";
 
   /**
-   * @generated from field: repeated string resources = 2;
+   * @generated from field: repeated string namespaces = 2;
+   */
+  namespaces: string[] = [];
+
+  /**
+   * @generated from field: repeated string resources = 3;
    */
   resources: string[] = [];
 
@@ -6401,7 +6406,8 @@ export class OrganizationGroupRule extends Message<OrganizationGroupRule> {
   static readonly typeName = "wg.cosmo.platform.v1.OrganizationGroupRule";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "role", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "resources", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 2, name: "namespaces", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 3, name: "resources", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): OrganizationGroupRule {
@@ -6824,7 +6830,12 @@ export class UpdateOrganizationGroupRequest_GroupRule extends Message<UpdateOrga
   role = "";
 
   /**
-   * @generated from field: repeated string resources = 2;
+   * @generated from field: repeated string namespaces = 2;
+   */
+  namespaces: string[] = [];
+
+  /**
+   * @generated from field: repeated string resources = 3;
    */
   resources: string[] = [];
 
@@ -6837,7 +6848,8 @@ export class UpdateOrganizationGroupRequest_GroupRule extends Message<UpdateOrga
   static readonly typeName = "wg.cosmo.platform.v1.UpdateOrganizationGroupRequest.GroupRule";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "role", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "resources", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 2, name: "namespaces", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 3, name: "resources", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateOrganizationGroupRequest_GroupRule {

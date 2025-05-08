@@ -80,14 +80,20 @@ export async function seedTest(queryConnection: postgres.Sql, userTestData: User
     });
 
     for (const role of ['admin', 'developer', 'viewer']) {
-      await orgGroupRepo.create({
+      const createdGroup = await orgGroupRepo.create({
         organizationId: org.id,
         name: role,
         description: '',
         kcGroupId: null,
+      });
+
+      await orgGroupRepo.updateGroup({
+        organizationId: org.id,
+        groupId: createdGroup.groupId,
         rules: [
           {
             role: `organization-${role}` as OrganizationRole,
+            namespaces: [],
             resources: [],
           },
         ],
@@ -142,10 +148,10 @@ export async function seedTest(queryConnection: postgres.Sql, userTestData: User
 export function createTestContext(
   organizationName = 'wundergraph',
   organizationId = randomUUID(),
-  organizationDeactivated = false,
   isAdmin = true,
   hasWriteAccess = true,
   groups: ('admin' | 'developer' | 'viewer')[] = ['admin'],
+  organizationDeactivated = false,
 ): UserTestData & AuthContext {
   const userId = randomUUID();
 

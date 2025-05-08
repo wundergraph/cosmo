@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray, SQL } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
 import { OrganizationGroupDTO } from '../../types/index.js';
@@ -13,7 +13,6 @@ export class OrganizationGroupRepository {
     name: string;
     description: string;
     kcGroupId: string | null;
-    rules?: { role: OrganizationRole; resources: string[] }[];
   }): Promise<OrganizationGroupDTO> {
     return this.db.transaction(async (tx) => {
       const insertedGroup = await tx
@@ -27,16 +26,6 @@ export class OrganizationGroupRepository {
         .returning()
         .execute();
 
-      if (input.rules && insertedGroup.length > 0) {
-        await tx.insert(schema.organizationGroupRules).values(
-          input.rules.map(({ role, resources }) => ({
-            groupId: insertedGroup[0].id,
-            role,
-            resources: resources.length > 0 ? resources.filter(Boolean).join(',') : null,
-          })),
-        );
-      }
-
       return {
         groupId: insertedGroup[0].id,
         name: input.name,
@@ -44,7 +33,7 @@ export class OrganizationGroupRepository {
         kcGroupId: input.kcGroupId,
         kcMapperId: null,
         membersCount: 0,
-        rules: input.rules ?? [],
+        rules: [],
       };
     });
   }
@@ -70,95 +59,62 @@ export class OrganizationGroupRepository {
   }
 
   public async byId(input: { organizationId: string; groupId: string }): Promise<OrganizationGroupDTO | undefined> {
-    const orgGroup = await this.db.query.organizationGroups.findFirst({
-      where: and(
+    const orgGroups = await this.findMany(
+      and(
         eq(schema.organizationGroups.organizationId, input.organizationId),
         eq(schema.organizationGroups.id, input.groupId),
       ),
-      with: {
-        rules: {
-          columns: {
-            role: true,
-            resources: true,
-          },
-        },
-      },
-      extras: (table, { sql }) => ({
-        // There is an active issue that prevents using `schema.organizationRuleSetMembers` instead of directly
-        // using strings (https://github.com/drizzle-team/drizzle-orm/issues/3493)
-        membersCount: sql<number>`CAST((
-          select count(distinct "organization_member_id")
-          from "organization_group_members"
-          where "organization_group_members"."group_id" = ${table.id}
-        ) AS INTEGER)`.as('members_count'),
-      }),
-    });
+    );
 
-    if (!orgGroup) {
-      return undefined;
+    if (orgGroups.length !== 1) {
+      return;
     }
 
-    const { id, ...rest } = orgGroup;
-    return {
-      groupId: id,
-      ...rest,
-      description: orgGroup.description,
-      rules: orgGroup.rules.map(({ role, resources }) => ({
-        role,
-        resources: resources?.split(',') ?? [],
-      })),
-    };
+    return orgGroups[0];
   }
 
   public async byName(input: { organizationId: string; name: string }): Promise<OrganizationGroupDTO | undefined> {
-    const orgGroup = await this.db.query.organizationGroups.findFirst({
-      where: and(
+    const orgGroups = await this.findMany(
+      and(
         eq(schema.organizationGroups.organizationId, input.organizationId),
         eq(schema.organizationGroups.name, input.name),
       ),
-      with: {
-        rules: {
-          columns: {
-            role: true,
-            resources: true,
-          },
-        },
-      },
-      extras: (table, { sql }) => ({
-        // There is an active issue that prevents using `schema.organizationRuleSetMembers` instead of directly
-        // using strings (https://github.com/drizzle-team/drizzle-orm/issues/3493)
-        membersCount: sql<number>`CAST((
-          select count(distinct "organization_member_id")
-          from "organization_group_members"
-          where "organization_group_members"."group_id" = ${table.id}
-        ) AS INTEGER)`.as('members_count'),
-      }),
-    });
+    );
 
-    if (!orgGroup) {
-      return undefined;
+    if (orgGroups.length !== 1) {
+      return;
     }
 
-    const { id, ...rest } = orgGroup;
-    return {
-      groupId: id,
-      ...rest,
-      description: orgGroup.description,
-      rules: orgGroup.rules.map(({ role, resources }) => ({
-        role,
-        resources: resources?.split(',') ?? [],
-      })),
-    };
+    return orgGroups[0];
   }
 
-  public async forOrganization(organizationId: string): Promise<OrganizationGroupDTO[]> {
+  public forOrganization(organizationId: string): Promise<OrganizationGroupDTO[]> {
+    return this.findMany(eq(schema.organizationGroups.organizationId, organizationId));
+  }
+
+  private async findMany(where: SQL<unknown> | undefined) {
+    if (!where) {
+      return [];
+    }
+
     const orgGroups = await this.db.query.organizationGroups.findMany({
-      where: eq(schema.organizationGroups.organizationId, organizationId),
+      where,
       with: {
         rules: {
           columns: {
             role: true,
-            resources: true,
+          },
+          with: {
+            namespaces: {
+              with: {
+                namespace: {
+                  columns: {
+                    name: true,
+                  },
+                },
+              },
+            },
+            targets: true,
           },
         },
       },
@@ -176,28 +132,31 @@ export class OrganizationGroupRepository {
     return orgGroups.map(({ id, rules, ...rest }) => ({
       groupId: id,
       ...rest,
-      rules: rules.map(({ role, resources }) => ({
-        role,
-        resources: resources?.split(',') ?? [],
+      rules: rules.map((rule) => ({
+        role: rule.role,
+        namespaces: rule.namespaces.map((ns) => ns.namespace.name),
+        resources: rule.targets.map((targ) => targ.targetId),
       })),
     }));
   }
 
   public async importKeycloakGroups(input: { organizationId: string; kcGroups: { id: string; name: string }[] }) {
     for (const group of input.kcGroups) {
-      const roleName = `organization-${group.name}` as OrganizationRole;
-      const rules: { role: OrganizationRole; resources: string[] }[] = [];
-      if (organizationRoleEnum.enumValues.includes(roleName)) {
-        rules.push({ role: roleName, resources: [] });
-      }
-
-      await this.create({
+      const createdGroup = await this.create({
         organizationId: input.organizationId,
         name: group.name,
         description: '',
         kcGroupId: group.id,
-        rules,
       });
+
+      const roleName = `organization-${group.name}` as OrganizationRole;
+      if (organizationRoleEnum.enumValues.includes(roleName)) {
+        await this.updateGroup({
+          organizationId: input.organizationId,
+          groupId: createdGroup.groupId,
+          rules: [{ role: roleName, namespaces: [], resources: [] }],
+        });
+      }
     }
   }
 
@@ -233,16 +192,19 @@ export class OrganizationGroupRepository {
   }
 
   public updateGroup(input: {
+    organizationId: string;
     groupId: string;
-    description: string;
-    rules: { role: OrganizationRole; resources: string[] }[];
+    description?: string;
+    rules: { role: OrganizationRole; namespaces: string[]; resources: string[] }[];
   }) {
     return this.db.transaction(async (tx) => {
-      await tx
-        .update(schema.organizationGroups)
-        .set({ description: input.description })
-        .where(eq(schema.organizationGroups.id, input.groupId))
-        .execute();
+      if (input.description !== undefined) {
+        await tx
+          .update(schema.organizationGroups)
+          .set({ description: input.description })
+          .where(eq(schema.organizationGroups.id, input.groupId))
+          .execute();
+      }
 
       await tx
         .delete(schema.organizationGroupRules)
@@ -253,13 +215,48 @@ export class OrganizationGroupRepository {
         return;
       }
 
-      await tx.insert(schema.organizationGroupRules).values(
-        input.rules.map(({ role, resources }) => ({
-          groupId: input.groupId,
-          role,
-          resources: resources.length > 0 ? resources.filter(Boolean).join(',') : null,
-        })),
-      );
+      for (const rule of input.rules) {
+        const insertedRule = await tx
+          .insert(schema.organizationGroupRules)
+          .values({
+            groupId: input.groupId,
+            role: rule.role,
+          })
+          .returning()
+          .execute();
+
+        if (insertedRule.length === 0) {
+          throw new Error('Failed to create group rule');
+        }
+
+        if (rule.namespaces.length > 0) {
+          const namespaces = await tx
+            .select({ id: schema.namespaces.id })
+            .from(schema.namespaces)
+            .where(
+              and(
+                eq(schema.namespaces.organizationId, input.organizationId),
+                inArray(schema.namespaces.name, rule.namespaces),
+              ),
+            );
+
+          await tx.insert(schema.organizationGroupRuleNamespaces).values(
+            namespaces.map((ns) => ({
+              ruleId: insertedRule[0].id,
+              namespaceId: ns.id,
+            })),
+          );
+        }
+
+        if (rule.resources.length > 0) {
+          await tx.insert(schema.organizationGroupRuleTargets).values(
+            rule.resources.map((targ) => ({
+              ruleId: insertedRule[0].id,
+              targetId: targ,
+            })),
+          );
+        }
+      }
     });
   }
 

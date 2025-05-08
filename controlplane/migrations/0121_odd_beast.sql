@@ -1,15 +1,26 @@
-CREATE TYPE "public"."organization_role" AS ENUM('organization-owner', 'organization-admin', 'organization-developer', 'organization-viewer', 'namespace-admin', 'namespace-developer', 'namespace-viewer', 'federated-graph-admin', 'federated-graph-developer', 'federated-graph-viewer');--> statement-breakpoint
+CREATE TYPE "public"."organization_role" AS ENUM('organization-admin', 'organization-developer', 'organization-viewer', 'namespace-admin', 'namespace-developer', 'namespace-viewer', 'federated-graph-admin', 'federated-graph-developer', 'federated-graph-viewer');--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "organization_group_members" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"organization_member_id" uuid NOT NULL,
 	"group_id" uuid NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "organization_group_rule_namespaces" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"rule_id" uuid NOT NULL,
+	"namespace_id" uuid NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "organization_group_rule_targets" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"rule_id" uuid NOT NULL,
+	"target_id" uuid NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "organization_group_rules" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"group_id" uuid NOT NULL,
-	"role" "organization_role" NOT NULL,
-	"resources" text
+	"role" "organization_role" NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "organization_groups" (
@@ -33,6 +44,30 @@ END $$;
 --> statement-breakpoint
 DO $$ BEGIN
  ALTER TABLE "organization_group_members" ADD CONSTRAINT "organization_group_members_group_id_organization_groups_id_fk" FOREIGN KEY ("group_id") REFERENCES "public"."organization_groups"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "organization_group_rule_namespaces" ADD CONSTRAINT "organization_group_rule_namespaces_rule_id_organization_group_rules_id_fk" FOREIGN KEY ("rule_id") REFERENCES "public"."organization_group_rules"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "organization_group_rule_namespaces" ADD CONSTRAINT "organization_group_rule_namespaces_namespace_id_namespaces_id_fk" FOREIGN KEY ("namespace_id") REFERENCES "public"."namespaces"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "organization_group_rule_targets" ADD CONSTRAINT "organization_group_rule_targets_rule_id_organization_group_rules_id_fk" FOREIGN KEY ("rule_id") REFERENCES "public"."organization_group_rules"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "organization_group_rule_targets" ADD CONSTRAINT "organization_group_rule_targets_target_id_targets_id_fk" FOREIGN KEY ("target_id") REFERENCES "public"."targets"("id") ON DELETE cascade ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
