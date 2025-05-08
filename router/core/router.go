@@ -220,6 +220,7 @@ type (
 		developmentMode                 bool
 		healthcheck                     health.Checker
 		accessLogsConfig                *AccessLogsConfig
+
 		// If connecting to localhost inside Docker fails, fallback to the docker internal address for the host
 		localhostFallbackInsideDocker bool
 		tlsServerConfig               *tls.Config
@@ -248,6 +249,7 @@ type (
 		hostName                   string
 		mcp                        config.MCPConfiguration
 	}
+
 	// Option defines the method to customize server.
 	Option func(svr *Router)
 )
