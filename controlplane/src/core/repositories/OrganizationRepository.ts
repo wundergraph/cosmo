@@ -1588,7 +1588,10 @@ export class OrganizationRepository {
       groups.map(async (group) => {
         return {
           ...group,
-          rules: await orgGroupRepo.getGroupRules(group.groupId),
+          rules: await orgGroupRepo.getHierarchicalGroupRules({
+            organizationId: input.organizationID,
+            groupId: group.groupId,
+          }),
         };
       }),
     );
@@ -1605,16 +1608,11 @@ export class OrganizationRepository {
         description: schema.organizationGroups.description,
         kcGroupId: schema.organizationGroups.kcGroupId,
       })
-      .from(schema.organizationGroupMembers)
-      .innerJoin(
-        organizationsMembers,
-        eq(organizationsMembers.id, schema.organizationGroupMembers.organizationMemberId),
-      )
-      .innerJoin(schema.organizationGroups, eq(schema.organizationGroups.id, schema.organizationGroupMembers.groupId))
+      .from(schema.organizationGroups)
       .where(
         and(
           eq(schema.organizationGroups.id, input.groupId),
-          eq(organizationsMembers.organizationId, input.organizationId),
+          eq(schema.organizationGroups.organizationId, input.organizationId),
         ),
       )
       .execute();
@@ -1626,7 +1624,10 @@ export class OrganizationRepository {
     const orgGroupRepo = new OrganizationGroupRepository(this.db);
     return {
       ...groups[0],
-      rules: await orgGroupRepo.getGroupRules(groups[0].groupId),
+      rules: await orgGroupRepo.getHierarchicalGroupRules({
+        organizationId: input.organizationId,
+        groupId: groups[0].groupId,
+      }),
     };
   }
 }

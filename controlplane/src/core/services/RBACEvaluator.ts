@@ -4,9 +4,7 @@ import { OrganizationGroupDTO } from '../../types/index.js';
 import * as schema from '../../db/schema.js';
 
 interface RuleData {
-  allowAnyNamespace: boolean;
   namespaces: string[];
-  allowAnyResource: boolean;
   resources: string[];
 }
 
@@ -16,32 +14,16 @@ export class RBACEvaluator {
   readonly resources: string[];
   readonly rules: ReadonlyMap<OrganizationRole, RuleData>;
 
-  private readonly allowAnyNamespace: boolean = false;
-  private readonly allowAnyResource: boolean = false;
-
   constructor(readonly groups: Omit<OrganizationGroupDTO, 'membersCount' | 'kcMapperId'>[]) {
     const flattenRules = groups.flatMap((group) => group.rules);
     const rulesGroupedByRole = Object.groupBy(flattenRules, (rule) => rule.role);
 
     const result = new Map<OrganizationRole, RuleData>();
     for (const [role, ruleData] of Object.entries(rulesGroupedByRole)) {
-      const aan = ruleData.some((r) => r.allowAnyNamespace);
-      const aar = ruleData.some((r) => r.allowAnyResource);
-
       result.set(role as OrganizationRole, {
-        allowAnyNamespace: aan,
         namespaces: [...new Set(ruleData.flatMap((r) => r.namespaces))],
-        allowAnyResource: aar,
         resources: [...new Set(ruleData.flatMap((r) => r.resources))],
       });
-
-      if (aan) {
-        this.allowAnyNamespace = true;
-      }
-
-      if (aar) {
-        this.allowAnyResource = true;
-      }
     }
 
     this.roles = Array.from(result.keys(), (k) => k);
@@ -72,15 +54,52 @@ export class RBACEvaluator {
     return false;
   }
 
-  checkReadAccess(graph: { namespaceIc: string; targetId: string }) {
+  checkReadAccess(graph: { targetId: string }) {
+    if (this.isOrganizationViewer) {
+      return true;
+    }
+
     for (const role of this.rules.keys()) {
       const ruleForRole = this.rules.get(role)!;
-      if (
-        ruleForRole.allowAnyNamespace ||
-        ruleForRole.allowAnyResource ||
-        ruleForRole.namespaces.includes(graph.namespaceIc) ||
-        ruleForRole.resources.includes(graph.targetId)
-      ) {
+      if (ruleForRole.resources.includes(graph.targetId)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  checkNamespaceWriteAccess(namespaceId: string) {
+    if (this.isOrganizationDeveloper) {
+      return true;
+    }
+
+    for (const role of this.rules.keys()) {
+      if (role.endsWith('-viewer')) {
+        continue;
+      }
+
+      const ruleForRole = this.rules.get(role)!;
+      if (ruleForRole.namespaces.includes(namespaceId)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  checkResourceWriteAccess(targetId: string) {
+    if (this.isOrganizationDeveloper) {
+      return true;
+    }
+
+    for (const role of this.rules.keys()) {
+      if (role.endsWith('-viewer')) {
+        continue;
+      }
+
+      const ruleForRole = this.rules.get(role)!;
+      if (ruleForRole.resources.includes(targetId)) {
         return true;
       }
     }
@@ -89,7 +108,7 @@ export class RBACEvaluator {
   }
 
   applyQueryConditions(conditions: (SQL<unknown> | undefined)[]) {
-    if (this.isOrganizationViewer || this.allowAnyNamespace || this.allowAnyResource) {
+    if (this.isOrganizationViewer) {
       return;
     }
 

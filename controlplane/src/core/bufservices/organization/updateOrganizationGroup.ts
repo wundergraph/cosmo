@@ -74,9 +74,9 @@ export function updateOrganizationGroup(
       resourcesByRole.push({
         role,
         allowAnyNamespace: isOrgRole || (isNsRole && namespaces.length === 0),
-        namespaces,
+        namespaces: isOrgRole ? [] : namespaces,
         allowAnyResource: isOrgRole || (isNsRole && namespaces.length === 0 && resources.length === 0),
-        resources,
+        resources: isOrgRole || isNsRole ? [] : resources,
       });
     }
 

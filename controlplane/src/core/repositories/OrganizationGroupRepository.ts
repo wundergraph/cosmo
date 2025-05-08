@@ -1,5 +1,6 @@
 import { and, eq, inArray, SQL } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { alias } from "drizzle-orm/pg-core";
 import * as schema from '../../db/schema.js';
 import { OrganizationGroupDTO } from '../../types/index.js';
 import { OrganizationRole } from '../../db/models.js';
@@ -288,7 +289,7 @@ export class OrganizationGroupRepository {
     return this.db.delete(schema.organizationGroups).where(eq(schema.organizationGroups.id, id)).returning();
   }
 
-  public async getGroupRules(groupId: string) {
+  public async getHierarchicalGroupRules(input: { organizationId: string; groupId: string }) {
     const rules = await this.db
       .select({
         id: schema.organizationGroupRules.id,
@@ -297,29 +298,98 @@ export class OrganizationGroupRepository {
         allowAnyResource: schema.organizationGroupRules.allowAnyResource,
       })
       .from(schema.organizationGroupRules)
-      .where(eq(schema.organizationGroupRules.groupId, groupId))
+      .where(eq(schema.organizationGroupRules.groupId, input.groupId))
       .execute();
 
     return await Promise.all(
       rules.map(async (rule) => {
-        const [namespaces, targets] = await Promise.all([
-          this.db
-            .select({ id: schema.organizationGroupRuleNamespaces.namespaceId })
-            .from(schema.organizationGroupRuleNamespaces)
-            .innerJoin(schema.namespaces, eq(schema.namespaces.id, schema.organizationGroupRuleNamespaces.namespaceId))
-            .where(eq(schema.organizationGroupRuleNamespaces.ruleId, rule.id)),
-          this.db
-            .select({ targetId: schema.organizationGroupRuleTargets.targetId })
+        // First, retrieve all the namespaces this rule grant access to
+        const namespaces = rule.allowAnyNamespace
+          ? await this.db
+              .select({ id: schema.namespaces.id })
+              .from(schema.namespaces)
+              .where(eq(schema.namespaces.organizationId, input.organizationId))
+          : await this.db
+              .select({ id: schema.organizationGroupRuleNamespaces.namespaceId })
+              .from(schema.organizationGroupRuleNamespaces)
+              .innerJoin(
+                schema.namespaces,
+                eq(schema.namespaces.id, schema.organizationGroupRuleNamespaces.namespaceId),
+              )
+              .where(eq(schema.organizationGroupRuleNamespaces.ruleId, rule.id));
+
+        // Retrieve the targets
+        const targets: { targetId: string }[] = [];
+        if (rule.allowAnyResource || rule.allowAnyNamespace) {
+          // All organization resources are allowed
+          targets.push(
+            ...(await this.db
+              .select({ targetId: schema.targets.id })
+              .from(schema.targets)
+              .where(eq(schema.targets.organizationId, input.organizationId))),
+          );
+        } else if (namespaces.length > 0) {
+          // Retrieve the targets only for the allowed namespaces
+          targets.push(
+            ...(await this.db
+              .select({ targetId: schema.targets.id })
+              .from(schema.targets)
+              .where(
+                and(
+                  eq(schema.targets.type, 'federated'),
+                  inArray(
+                    schema.targets.namespaceId,
+                    namespaces.map((ns) => ns.id),
+                  ),
+                ),
+              )),
+          );
+        }
+
+        // Retrieve the allowed resources
+        if (!rule.allowAnyResource && !rule.allowAnyNamespace) {
+          const ruleTargets = await this.db
+            .select({
+              targetId: schema.targets.id,
+              targetType: schema.targets.type,
+            })
             .from(schema.organizationGroupRuleTargets)
-            .where(eq(schema.organizationGroupRuleTargets.ruleId, rule.id)),
-        ]);
+            .innerJoin(schema.targets, eq(schema.targets.id, schema.organizationGroupRuleTargets.targetId));
+
+          const federatedGraphs = [...targets, ...ruleTargets.filter((targ) => targ.targetType === 'federated')]
+            .map((targ) => targ.targetId);
+
+          targets.push(
+            ...ruleTargets.map((targ) => ({ targetId: targ.targetId })),
+          );
+
+          if (federatedGraphs.length > 0) {
+            const sgTargetAlias = alias(schema.targets, 'sgTargetAlias');
+            targets.push(
+              ...(
+                await this.db
+                  .select({ targetId: sgTargetAlias.id, })
+                  .from(sgTargetAlias)
+                  .innerJoin(schema.targets, inArray(schema.targets.id, federatedGraphs))
+                  .innerJoin(schema.federatedGraphs, eq(schema.federatedGraphs.targetId, schema.targets.id))
+                  .innerJoin(
+                    schema.subgraphsToFederatedGraph,
+                    eq(schema.subgraphsToFederatedGraph.federatedGraphId, schema.federatedGraphs.id)
+                  )
+                  .innerJoin(
+                    schema.subgraphs,
+                    eq(schema.subgraphs.id, schema.subgraphsToFederatedGraph.subgraphId)
+                  )
+                  .where(eq(sgTargetAlias.id, schema.subgraphs.targetId))
+              )
+            );
+          }
+        }
 
         return {
           role: rule.role,
-          allowAnyNamespace: rule.allowAnyNamespace,
-          namespaces: namespaces.map((ns) => ns.id),
-          allowAnyResource: rule.allowAnyResource,
-          resources: targets.map((targ) => targ.targetId),
+          namespaces: [...new Set(namespaces.map((ns) => ns.id))],
+          resources: [...new Set(targets.map((targ) => targ.targetId))],
         };
       }),
     );
