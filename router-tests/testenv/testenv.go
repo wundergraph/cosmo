@@ -1743,6 +1743,18 @@ func (e *Environment) GraphQLWebsocketDialWithRetry(header http.Header, query ur
 	return nil, nil, err
 }
 
+func ReadAndCheckJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err error) {
+	_, payload, err := conn.ReadMessage()
+	if err != nil {
+		return err
+	}
+	if err := json.Unmarshal(payload, &v); err != nil {
+		t.Logf("Failed to decode WebSocket message. Raw payload: %s", string(payload))
+		return err
+	}
+	return nil
+}
+
 func (e *Environment) InitGraphQLWebSocketConnection(header http.Header, query url.Values, initialPayload json.RawMessage) *websocket.Conn {
 	conn, _, err := e.GraphQLWebsocketDialWithRetry(header, query)
 	require.NoError(e.t, err)
@@ -1755,14 +1767,7 @@ func (e *Environment) InitGraphQLWebSocketConnection(header http.Header, query u
 	})
 	require.NoError(e.t, err)
 	var ack WebSocketMessage
-	_, payload, err := conn.ReadMessage()
-	if err != nil {
-		require.NoError(e.t, err)
-	}
-	if err := json.Unmarshal(payload, &ack); err != nil {
-		e.t.Logf("Failed to decode WebSocket message. Raw payload: %s", string(payload))
-		require.NoError(e.t, err)
-	}
+	require.NoError(e.t, ReadAndCheckJSON(e.t, conn, &ack))
 	require.Equal(e.t, "connection_ack", ack.Type)
 	return conn
 }
@@ -2123,14 +2128,7 @@ func WSReadJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err error) {
 			return err
 		}
 
-		_, payload, err := conn.ReadMessage()
-		if err != nil {
-			require.NoError(t, err)
-		}
-		if err := json.Unmarshal(payload, &v); err != nil {
-			t.Logf("Failed to decode WebSocket message. Raw payload: %s", string(payload))
-			require.NoError(t, err)
-		}
+		require.NoError(t, ReadAndCheckJSON(t, conn, v))
 
 		// Reset the deadline to prevent future operations from timing out
 		if resetErr := conn.SetReadDeadline(time.Time{}); resetErr != nil {
