@@ -1149,6 +1149,18 @@ func gqlURL(srv *httptest.Server) string {
 	return path
 }
 
+func ReadAndCheckJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err error) {
+	_, payload, err := conn.ReadMessage()
+	if err != nil {
+		return err
+	}
+	if err := json.Unmarshal(payload, &v); err != nil {
+		t.Logf("Failed to decode WebSocket message. Raw payload: %s", string(payload))
+		return err
+	}
+	return nil
+}
+
 type Environment struct {
 	t                     testing.TB
 	cfg                   *Config
@@ -1741,18 +1753,6 @@ func (e *Environment) GraphQLWebsocketDialWithRetry(header http.Header, query ur
 	}
 
 	return nil, nil, err
-}
-
-func ReadAndCheckJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err error) {
-	_, payload, err := conn.ReadMessage()
-	if err != nil {
-		return err
-	}
-	if err := json.Unmarshal(payload, &v); err != nil {
-		t.Logf("Failed to decode WebSocket message. Raw payload: %s", string(payload))
-		return err
-	}
-	return nil
 }
 
 func (e *Environment) InitGraphQLWebSocketConnection(header http.Header, query url.Values, initialPayload json.RawMessage) *websocket.Conn {
