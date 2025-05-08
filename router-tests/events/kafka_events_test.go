@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -1059,6 +1060,30 @@ func TestKafkaEvents(t *testing.T) {
 			require.Equal(t, 1, len(records))
 			require.Equal(t, `{"employeeID":3,"update":{"name":"name test"}}`, string(records[0].Value))
 		})
+	})
+
+	t.Run("kafka startup and shutdown with wrong broker should not stop router from starting indefinitely", func(t *testing.T) {
+		t.Parallel()
+
+		listener := testenv.NewWaitingListener(t, time.Second*10)
+		listener.Start()
+		defer listener.Close()
+
+		// kafka client is lazy and will not connect to the broker until the first message is produced
+		// so the router will start even if the kafka connection fails
+		errRouter := testenv.RunWithError(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
+			EnableKafka:              true,
+			ModifyEventsConfiguration: func(config *config.EventsConfiguration) {
+				for i := range config.Providers.Kafka {
+					config.Providers.Kafka[i].Brokers = []string{"localhost:" + strconv.Itoa(listener.Port())}
+				}
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			t.Log("should be called")
+		})
+
+		assert.NoError(t, errRouter)
 	})
 }
 

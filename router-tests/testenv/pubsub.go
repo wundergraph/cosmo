@@ -20,7 +20,7 @@ type NatsData struct {
 
 func setupNatsClients(t testing.TB) (*NatsData, error) {
 	natsData := &NatsData{}
-	for range demoNatsProviders {
+	for range DemoNatsProviders {
 		param := &NatsParams{
 			Url: nats.DefaultURL,
 			Opts: []nats.Option{

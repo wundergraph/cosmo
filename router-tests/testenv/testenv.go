@@ -80,8 +80,8 @@ var (
 	ConfigWithEdfsKafkaJSONTemplate string
 	//go:embed testdata/configWithEdfsNats.json
 	ConfigWithEdfsNatsJSONTemplate string
-	demoNatsProviders              = []string{natsDefaultSourceName, myNatsProviderID}
-	demoKafkaProviders             = []string{myKafkaProviderID}
+	DemoNatsProviders              = []string{natsDefaultSourceName, myNatsProviderID}
+	DemoKafkaProviders             = []string{myKafkaProviderID}
 )
 
 func init() {
@@ -843,18 +843,18 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		testConfig.ModifySubgraphErrorPropagation(&cfg.SubgraphErrorPropagation)
 	}
 
-	natsEventSources := make([]config.NatsEventSource, len(demoNatsProviders))
-	kafkaEventSources := make([]config.KafkaEventSource, len(demoKafkaProviders))
+	natsEventSources := make([]config.NatsEventSource, len(DemoNatsProviders))
+	kafkaEventSources := make([]config.KafkaEventSource, len(DemoKafkaProviders))
 
 	if natsData != nil {
-		for _, sourceName := range demoNatsProviders {
+		for _, sourceName := range DemoNatsProviders {
 			natsEventSources = append(natsEventSources, config.NatsEventSource{
 				ID:  sourceName,
 				URL: nats.DefaultURL,
 			})
 		}
 	}
-	for _, sourceName := range demoKafkaProviders {
+	for _, sourceName := range DemoKafkaProviders {
 		kafkaEventSources = append(kafkaEventSources, config.KafkaEventSource{
 			ID:      sourceName,
 			Brokers: testConfig.KafkaSeeds,
@@ -2250,8 +2250,8 @@ func subgraphOptions(ctx context.Context, t testing.TB, logger *zap.Logger, nats
 			GetPubSubName:          pubSubName,
 		}
 	}
-	natsPubSubByProviderID := make(map[string]pubsubNats.AdapterInterface, len(demoNatsProviders))
-	for _, sourceName := range demoNatsProviders {
+	natsPubSubByProviderID := make(map[string]pubsubNats.AdapterInterface, len(DemoNatsProviders))
+	for _, sourceName := range DemoNatsProviders {
 		adapter, err := pubsubNats.NewAdapter(ctx, logger, natsData.Params[0].Url, natsData.Params[0].Opts, "hostname", "listenaddr")
 		require.NoError(t, err)
 		require.NoError(t, adapter.Startup(ctx))
