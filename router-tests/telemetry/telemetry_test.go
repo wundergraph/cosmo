@@ -9784,7 +9784,6 @@ func TestEngineHookExpressions(t *testing.T) {
 					TraceExporter: exporter,
 					MetricReader:  metricReader,
 					CustomTracingAttributes: []config.CustomAttribute{
-						// TODO: Look at adding more examples
 						{
 							Key: "dialLenEquals",
 							ValueFrom: &config.CustomDynamicAttribute{
@@ -9831,62 +9830,6 @@ func TestEngineHookExpressions(t *testing.T) {
 					err = json.Unmarshal([]byte(printDoneDials.Value.AsString()), &js)
 					require.NoError(t, err)
 				})
-			})
-		}t.Run("process dial start and dial done", func(t *testing.T) {
-			t.Parallel()
-			metricReader := metric.NewManualReader()
-			exporter := tracetest.NewInMemoryExporter(t)
-
-			testenv.Run(t, &testenv.Config{
-				TraceExporter: exporter,
-				MetricReader:  metricReader,
-				CustomTracingAttributes: []config.CustomAttribute{
-					// TODO: Look at adding more examples
-					{
-						Key: "dialLenEquals",
-						ValueFrom: &config.CustomDynamicAttribute{
-							Expression: "string(len(subgraph.request.clientTrace.dialStart) == len(subgraph.request.clientTrace.dialDone))",
-						},
-					},
-					{
-						Key: "printStartDials",
-						ValueFrom: &config.CustomDynamicAttribute{
-							Expression: "toJSON(subgraph.request.clientTrace.dialStart)",
-						},
-					},
-					{
-						Key: "printDoneDials",
-						ValueFrom: &config.CustomDynamicAttribute{
-							Expression: "toJSON(subgraph.request.clientTrace.dialDone)",
-						},
-					},
-				},
-			}, func(t *testing.T, xEnv *testenv.Environment) {
-				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-					Query:  `query employees { employees { id details { forename surname } notes } }`,
-					Header: map[string][]string{"service-name": {"service-name"}},
-				})
-
-				sn := exporter.GetSpans().Snapshots()
-				engineFetchSpan := sn[6]
-				require.Equal(t, "Engine - Fetch", engineFetchSpan.Name())
-				require.Equal(t, trace.SpanKindInternal, engineFetchSpan.SpanKind())
-
-				attributes := engineFetchSpan.Attributes()
-				exprAttributes := attributes[14:]
-
-				dialLenEquals := findAttr(exprAttributes, "dialLenEquals")
-				require.Equal(t, "true", dialLenEquals.Value.AsString())
-
-				var js interface{}
-
-				printStartDials := findAttr(exprAttributes, "printStartDials")
-				err := json.Unmarshal([]byte(printStartDials.Value.AsString()), &js)
-				require.NoError(t, err)
-
-				printDoneDials := findAttr(exprAttributes, "printDoneDials")
-				err = json.Unmarshal([]byte(printDoneDials.Value.AsString()), &js)
-				require.NoError(t, err)
 			})
 		})
 	})
