@@ -908,8 +908,14 @@ message GetOrganizationGroupMembersResponse {
     string email = 2;
   }
 
+  message GroupApiKey {
+    string id = 1;
+    string name = 2;
+  }
+
   Response response = 1;
   repeated GroupMember members = 2;
+  repeated GroupApiKey apiKeys = 3;
 }
 
 message UpdateOrganizationGroupRequest {
@@ -1013,10 +1019,8 @@ message CreateAPIKeyRequest {
   string name = 1;
   string userID = 2;
   ExpiresAt expires = 3;
-  repeated string federatedGraphTargetIds = 4;
-  repeated string subgraphTargetIds = 5;
-  repeated string permissions = 6;
-  bool allowAllResources = 7;
+  string groupId = 4;
+  repeated string permissions = 5;
 }
 
 message CreateAPIKeyResponse {
@@ -2936,10 +2940,6 @@ service PlatformService {
   rpc GetUserAccessibleResources(GetUserAccessibleResourcesRequest) returns (GetUserAccessibleResourcesResponse) {}
   // UpdateFeatureSettings updates the setinngs of features(ai, rbac, scim) of the organization
   rpc UpdateFeatureSettings(UpdateFeatureSettingsRequest) returns (UpdateFeatureSettingsResponse) {}
-  // AddSubgraphMember adds a user to the subgraph
-  rpc AddSubgraphMember(AddSubgraphMemberRequest) returns (AddSubgraphMemberResponse) {}
-  // RemoveSubgraphMember removes a member from the subgraph
-  rpc RemoveSubgraphMember(RemoveSubgraphMemberRequest) returns (RemoveSubgraphMemberResponse) {}
   // GetSubgraphMembers gets all the members of the subgraph
   rpc GetSubgraphMembers(GetSubgraphMembersRequest) returns (GetSubgraphMembersResponse) {}
   // AddReadme adds a readme of a target, can be a subgraph or a federated graph

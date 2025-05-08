@@ -32,14 +32,17 @@ export function getOrganizationGroupMembers(
           code: EnumStatusCode.ERR_NOT_FOUND,
         },
         members: [],
+        apiKeys: [],
       };
     }
 
+    const [members, apiKeys] = await orgGroupRepo.getGroupMembers(orgGroup.groupId);
     return {
       response: {
         code: EnumStatusCode.OK,
       },
-      members: await orgGroupRepo.getGroupMembers(orgGroup.groupId),
+      members,
+      apiKeys,
     };
   });
 }

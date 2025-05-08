@@ -6,10 +6,16 @@ import {
 import { useQuery } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { EmptyState } from "@/components/empty-state";
-import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
+import { ExclamationTriangleIcon, UserIcon, KeyIcon } from "@heroicons/react/24/outline";
 import { Button } from "@/components/ui/button";
 import { Loader } from "@/components/ui/loader";
 import { useState } from "react";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs"
 
 export function GroupMembersSheet({ open, group, onOpenChange }: {
   open: boolean;
@@ -58,21 +64,55 @@ export function GroupMembersSheet({ open, group, onOpenChange }: {
                   actions={<Button onClick={() => refetch()}>Retry</Button>}
                 />
               ) : (
-                data.members.length > 0 ? (
-                  <div className="rounded-md border border-border divide-y">
-                    {data.members.map((member) => (
-                      <div key={`member-${member.id}`} className="p-2">
-                        {member.email}
+                <Tabs defaultValue="members">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="members">Members</TabsTrigger>
+                    <TabsTrigger value="api-keys">API Keys</TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="members">
+                    {data.members.length > 0 ? (
+                      <div className="rounded-md border border-border divide-y">
+                        {data.members.map((member) => (
+                          <div
+                            key={`member-${member.id}`}
+                            className="px-4 py-2.5 truncate flex justify-start items-center gap-x-2"
+                          >
+                            <UserIcon className="size-4 shrink-0" />
+                            <span className="flex-grow truncate">{member.email}</span>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <EmptyState
-                    icon={<ExclamationTriangleIcon />}
-                    title="No member have been added to this group."
-                    description={"Assign users to this group on the members page."}
-                  />
-                )
+                    ) : (
+                      <EmptyState
+                        icon={<ExclamationTriangleIcon />}
+                        title="No member have been added to this group."
+                        description={"Assign users to this group on the members page."}
+                      />
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="api-keys">
+                    {data.apiKeys.length > 0 ? (
+                      <div className="rounded-md border border-border divide-y">
+                        {data.apiKeys.map((key) => (
+                          <div
+                            key={`key-${key.id}`}
+                            className="px-4 py-2.5 truncate flex justify-start items-center gap-x-2"
+                          >
+                            <KeyIcon className="size-4 shrink-0" />
+                            <span className="flex-grow truncate">{key.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <EmptyState
+                        icon={<ExclamationTriangleIcon />}
+                        title="No API keys have been added to this group."
+                      />
+                    )}
+                  </TabsContent>
+                </Tabs>
               )}
             </>
           )}

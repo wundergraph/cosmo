@@ -74,6 +74,7 @@ import { FiCheck, FiCopy } from "react-icons/fi";
 import { z } from "zod";
 import { useCheckUserAccess } from "@/hooks/use-check-user-access";
 import { useIsAdmin } from "@/hooks/use-is-admin";
+import { GroupSelect } from "@/components/group-select";
 
 const CreateAPIKeyDialog = ({
   existingApiKeys,
@@ -90,10 +91,7 @@ const CreateAPIKeyDialog = ({
 
   const { mutate, isPending } = useMutation(createAPIKey);
 
-  const { data } = useQuery(getUserAccessibleResources);
   const { data: permissionsData } = useQuery(getUserAccessiblePermissions);
-  const federatedGraphs = data?.federatedGraphs || [];
-  const subgraphs = data?.subgraphs || [];
   const isAdmin = useIsAdmin();
 
   const expiresOptions = ["Never", "30 days", "6 months", "1 year"];
@@ -108,13 +106,7 @@ const CreateAPIKeyDialog = ({
 
   const [expires, setExpires] = useState(expiresOptions[0]);
   const [open, setOpen] = useState(false);
-  const [selectedAllResources, setSelectedAllResources] = useState(false);
-  // target ids of the selected federated graphs
-  const [selectedFedGraphs, setSelectedFedGraphs] = useState<string[]>([]);
-  // target ids of the selected subgraphs
-  const [selectedSubgraphs, setSelectedSubgraphs] = useState<string[]>([]);
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
-  const [errorMsg, setErrorMsg] = useState<string>();
 
   const createAPIKeyInputSchema = z.object({
     name: z
@@ -132,6 +124,9 @@ const CreateAPIKeyDialog = ({
           message: `An API key with the name ${arg} already exists`
         });
       }),
+    groupId: z
+      .string()
+      .uuid({ message: "Select a valid group" })
   });
 
   type CreateAPIKeyInput = z.infer<typeof createAPIKeyInputSchema>;
@@ -142,39 +137,26 @@ const CreateAPIKeyDialog = ({
     handleSubmit,
     reset,
     setError,
+    setValue,
+    watch,
   } = useZodForm<CreateAPIKeyInput>({
     mode: "onBlur",
     schema: createAPIKeyInputSchema,
   });
 
   const onSubmit: SubmitHandler<CreateAPIKeyInput> = (data) => {
-    if (
-      rbac?.enabled &&
-      !selectedAllResources &&
-      selectedFedGraphs.length === 0 &&
-      selectedSubgraphs.length === 0
-    ) {
-      setErrorMsg("Please select at least one of the resources.");
-      return;
-    }
-
     mutate(
       {
         name: data.name,
         userID: user?.id,
         expires: expiresOptionsMappingToEnum[expires],
-        federatedGraphTargetIds: selectedAllResources ? [] : selectedFedGraphs,
-        subgraphTargetIds: selectedAllResources ? [] : selectedSubgraphs,
+        groupId: data.groupId,
         permissions: selectedPermissions,
-        allowAllResources: selectedAllResources,
       },
       {
         onSuccess: (d) => {
           if (d.response?.code === EnumStatusCode.OK) {
             setOpen(false);
-            setSelectedAllResources(false);
-            setSelectedFedGraphs([]);
-            setSelectedSubgraphs([]);
             setSelectedPermissions([]);
 
             setApiKey(d.apiKey);
@@ -194,26 +176,9 @@ const CreateAPIKeyDialog = ({
     );
   };
 
-  const groupedSubgraphs = subgraphs.reduce<
-    Record<string, GetUserAccessibleResourcesResponse_Graph[]>
-  >((result, graph) => {
-    const { namespace, name } = graph;
-
-    if (!result[namespace]) {
-      result[namespace] = [];
-    }
-
-    result[namespace].push(graph);
-
-    return result;
-  }, {});
-
   // When rbac is enabled and this is the case for enterprise users
-  // you can only create an API key if you are an admin or have access to at least one federated graph or subgraph
-  if (
-    rbac?.enabled &&
-    !(isAdmin || federatedGraphs.length > 0 || subgraphs.length > 0)
-  ) {
+  // you can only create an API key if you are an admin
+  if (rbac?.enabled && !isAdmin) {
     return (
       <Button disabled>
         <div className="flex items-center gap-x-2">
@@ -224,27 +189,10 @@ const CreateAPIKeyDialog = ({
     );
   }
 
-  const groupedFederatedGraphs = federatedGraphs.reduce<
-    Record<string, GetUserAccessibleResourcesResponse_Graph[]>
-  >((result, graph) => {
-    const { namespace, name } = graph;
-
-    if (!result[namespace]) {
-      result[namespace] = [];
-    }
-
-    result[namespace].push(graph);
-
-    return result;
-  }, {});
-
   return (
     <Dialog open={open} onOpenChange={(v) => {
       setOpen(v);
       if (!v) {
-        setSelectedAllResources(false);
-        setSelectedFedGraphs([]);
-        setSelectedSubgraphs([]);
         setSelectedPermissions([]);
         reset();
       }
@@ -294,6 +242,25 @@ const CreateAPIKeyDialog = ({
               </SelectContent>
             </Select>
           </div>
+
+          <div className="flex flex-col gap-y-2">
+            <span className="text-sm font-semibold">Group</span>
+            <GroupSelect
+              value={watch('groupId')}
+              onGroupChange={(group) => setValue(
+                'groupId',
+                group.groupId,
+                { shouldValidate: true, shouldDirty: true, shouldTouch: true },
+              )}
+            />
+
+            {errors.groupId && (
+              <span className="px-2 text-xs text-destructive">
+                {errors.groupId.message}
+              </span>
+            )}
+          </div>
+
           {isAdmin &&
             permissionsData &&
             permissionsData.permissions.length > 0 && (
@@ -343,195 +310,11 @@ const CreateAPIKeyDialog = ({
                 })}
               </div>
             )}
-          {rbac?.enabled && (
-            <div className="mt-3 flex flex-col gap-y-3">
-              <div className="flex flex-col gap-y-1">
-                <span className="text-base font-semibold">
-                  Select Resources
-                </span>
-                <span className="text-sm text-muted-foreground">
-                  {"Select resources the API key can access."}
-                </span>
-              </div>
-              <div className="flex flex-col gap-y-2">
-                {federatedGraphs.length > 0 && (
-                  <div className="flex flex-col gap-y-1">
-                    <div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger
-                          asChild
-                          disabled={selectedAllResources}
-                        >
-                          <Button size="sm" variant="outline">
-                            {selectedFedGraphs.length > 0
-                              ? `${selectedFedGraphs.length} graphs selected`
-                              : "Select graphs"}
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                          align="start"
-                          className="scrollbar-custom max-h-[min(calc(var(--radix-dropdown-menu-content-available-height)_-24px),384px)] overflow-y-auto"
-                        >
-                          {Object.entries(groupedFederatedGraphs ?? {}).map(
-                            ([namespace, graphs]) => {
-                              return (
-                                <SelectGroup key={namespace}>
-                                  <SelectLabel>{namespace}</SelectLabel>
-                                  {graphs.map((graph) => {
-                                    return (
-                                      <DropdownMenuCheckboxItem
-                                        key={graph.targetId}
-                                        checked={selectedFedGraphs.includes(
-                                          graph.targetId,
-                                        )}
-                                        onCheckedChange={(val) => {
-                                          if (val) {
-                                            setSelectedFedGraphs([
-                                              ...Array.from(
-                                                new Set([
-                                                  ...selectedFedGraphs,
-                                                  graph.targetId,
-                                                ]),
-                                              ),
-                                            ]);
-                                            setErrorMsg(undefined);
-                                          } else {
-                                            setSelectedFedGraphs([
-                                              ...selectedFedGraphs.filter(
-                                                (g) => g !== graph.targetId,
-                                              ),
-                                            ]);
-                                          }
-                                        }}
-                                        onSelect={(e) => e.preventDefault()}
-                                      >
-                                        {graph.name}
-                                      </DropdownMenuCheckboxItem>
-                                    );
-                                  })}
-                                </SelectGroup>
-                              );
-                            },
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-                )}
-                {subgraphs.length > 0 && (
-                  <div className="flex flex-col gap-y-1">
-                    <div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger
-                          asChild
-                          disabled={selectedAllResources}
-                        >
-                          <Button size="sm" variant="outline">
-                            {selectedSubgraphs.length > 0
-                              ? `${selectedSubgraphs.length} subgraphs selected`
-                              : "Select subgraphs"}
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                          align="start"
-                          className="scrollbar-custom max-h-[min(calc(var(--radix-dropdown-menu-content-available-height)_-24px),384px)] overflow-y-auto"
-                        >
-                          {Object.entries(groupedSubgraphs ?? {}).map(
-                            ([namespace, graphs]) => {
-                              return (
-                                <SelectGroup key={namespace}>
-                                  <SelectLabel>{namespace}</SelectLabel>
-                                  {graphs.map((graph) => {
-                                    return (
-                                      <DropdownMenuCheckboxItem
-                                        key={graph.targetId}
-                                        checked={selectedSubgraphs.includes(
-                                          graph.targetId,
-                                        )}
-                                        onCheckedChange={(val) => {
-                                          if (val) {
-                                            setSelectedSubgraphs([
-                                              ...Array.from(
-                                                new Set([
-                                                  ...selectedSubgraphs,
-                                                  graph.targetId,
-                                                ]),
-                                              ),
-                                            ]);
-                                            setErrorMsg(undefined);
-                                          } else {
-                                            setSelectedSubgraphs([
-                                              ...selectedSubgraphs.filter(
-                                                (g) => g !== graph.targetId,
-                                              ),
-                                            ]);
-                                          }
-                                        }}
-                                        onSelect={(e) => e.preventDefault()}
-                                      >
-                                        {graph.name}
-                                      </DropdownMenuCheckboxItem>
-                                    );
-                                  })}
-                                </SelectGroup>
-                              );
-                            },
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-                )}
-                {isAdmin && (
-                  <div className="mt-2 flex flex-col gap-y-2">
-                    <div className="flex items-start gap-x-2">
-                      <Checkbox
-                        id="all-resources"
-                        checked={selectedAllResources}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setSelectedAllResources(true);
-                            setErrorMsg(undefined);
-                          } else {
-                            setSelectedAllResources(false);
-                          }
-                        }}
-                      />
-                      <div className="flex flex-col gap-y-1">
-                        <label
-                          htmlFor="all-resources"
-                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                        >
-                          All Resources
-                        </label>
-                        <span className="text-sm text-muted-foreground">
-                          {
-                            "Choose 'All resources' to include all the current and future resources"
-                          }
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-          {errorMsg && (
-            <span className="px-2 text-xs text-destructive">{errorMsg}</span>
-          )}
 
           <Button
             className="mt-2"
             type="submit"
-            disabled={
-              // should be disabled if the form is invalid or if either the resources or the all resources option is not selected
-              !isValid ||
-              !!errorMsg ||
-              (rbac?.enabled &&
-                !selectedAllResources &&
-                selectedFedGraphs.length === 0 &&
-                selectedSubgraphs.length === 0)
-            }
+            disabled={!isValid}
             variant="default"
             isLoading={isPending}
           >

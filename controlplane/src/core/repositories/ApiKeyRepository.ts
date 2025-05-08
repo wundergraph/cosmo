@@ -17,7 +17,7 @@ export class ApiKeyRepository {
     organizationID: string;
     userID: string;
     expiresAt: ExpiresAt;
-    targetIds: string[];
+    groupId: string;
     permissions: string[];
   }) {
     let expiresAtDate: Date | undefined;
@@ -53,18 +53,12 @@ export class ApiKeyRepository {
           name: input.name,
           organizationId: input.organizationID,
           userId: input.userID,
+          groupId: input.groupId,
           expiresAt: expiresAtDate,
         })
         .returning()
         .execute();
-      if (input.targetIds.length > 0) {
-        await apiKeyRepo.addAPIKeyResources({
-          resources: input.targetIds.map((t) => ({
-            apiKeyId: apiKey[0].id,
-            targetId: t,
-          })),
-        });
-      }
+
       if (input.permissions.length > 0) {
         await apiKeyRepo.addAPIKeyPermissions({
           permissions: input.permissions.map((p) => ({

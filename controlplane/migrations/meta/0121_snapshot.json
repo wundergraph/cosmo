@@ -1,5 +1,5 @@
 {
-  "id": "795a8369-2760-4b43-83fc-8d4b3f4e7829",
+  "id": "96c3f0a5-d4b3-4833-b4bc-010fff0e8ba9",
   "prevId": "1047e67f-16f1-4d7b-bfb6-2031ff10230b",
   "version": "7",
   "dialect": "postgresql",
@@ -187,6 +187,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "group_id": {
+          "name": "group_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "last_used_at": {
           "name": "last_used_at",
           "type": "timestamp with time zone",
@@ -280,6 +286,19 @@
           "tableTo": "organizations",
           "columnsFrom": [
             "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "api_keys_group_id_organization_groups_id_fk": {
+          "name": "api_keys_group_id_organization_groups_id_fk",
+          "tableFrom": "api_keys",
+          "tableTo": "organization_groups",
+          "columnsFrom": [
+            "group_id"
           ],
           "columnsTo": [
             "id"

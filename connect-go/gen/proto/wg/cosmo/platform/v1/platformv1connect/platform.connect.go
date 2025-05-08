@@ -361,12 +361,6 @@ const (
 	// PlatformServiceUpdateFeatureSettingsProcedure is the fully-qualified name of the
 	// PlatformService's UpdateFeatureSettings RPC.
 	PlatformServiceUpdateFeatureSettingsProcedure = "/wg.cosmo.platform.v1.PlatformService/UpdateFeatureSettings"
-	// PlatformServiceAddSubgraphMemberProcedure is the fully-qualified name of the PlatformService's
-	// AddSubgraphMember RPC.
-	PlatformServiceAddSubgraphMemberProcedure = "/wg.cosmo.platform.v1.PlatformService/AddSubgraphMember"
-	// PlatformServiceRemoveSubgraphMemberProcedure is the fully-qualified name of the PlatformService's
-	// RemoveSubgraphMember RPC.
-	PlatformServiceRemoveSubgraphMemberProcedure = "/wg.cosmo.platform.v1.PlatformService/RemoveSubgraphMember"
 	// PlatformServiceGetSubgraphMembersProcedure is the fully-qualified name of the PlatformService's
 	// GetSubgraphMembers RPC.
 	PlatformServiceGetSubgraphMembersProcedure = "/wg.cosmo.platform.v1.PlatformService/GetSubgraphMembers"
@@ -637,8 +631,6 @@ var (
 	platformServiceGetChangelogBySchemaVersionMethodDescriptor           = platformServiceServiceDescriptor.Methods().ByName("GetChangelogBySchemaVersion")
 	platformServiceGetUserAccessibleResourcesMethodDescriptor            = platformServiceServiceDescriptor.Methods().ByName("GetUserAccessibleResources")
 	platformServiceUpdateFeatureSettingsMethodDescriptor                 = platformServiceServiceDescriptor.Methods().ByName("UpdateFeatureSettings")
-	platformServiceAddSubgraphMemberMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("AddSubgraphMember")
-	platformServiceRemoveSubgraphMemberMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("RemoveSubgraphMember")
 	platformServiceGetSubgraphMembersMethodDescriptor                    = platformServiceServiceDescriptor.Methods().ByName("GetSubgraphMembers")
 	platformServiceAddReadmeMethodDescriptor                             = platformServiceServiceDescriptor.Methods().ByName("AddReadme")
 	platformServiceGetUserAccessiblePermissionsMethodDescriptor          = platformServiceServiceDescriptor.Methods().ByName("GetUserAccessiblePermissions")
@@ -901,10 +893,6 @@ type PlatformServiceClient interface {
 	GetUserAccessibleResources(context.Context, *connect.Request[v1.GetUserAccessibleResourcesRequest]) (*connect.Response[v1.GetUserAccessibleResourcesResponse], error)
 	// UpdateFeatureSettings updates the setinngs of features(ai, rbac, scim) of the organization
 	UpdateFeatureSettings(context.Context, *connect.Request[v1.UpdateFeatureSettingsRequest]) (*connect.Response[v1.UpdateFeatureSettingsResponse], error)
-	// AddSubgraphMember adds a user to the subgraph
-	AddSubgraphMember(context.Context, *connect.Request[v1.AddSubgraphMemberRequest]) (*connect.Response[v1.AddSubgraphMemberResponse], error)
-	// RemoveSubgraphMember removes a member from the subgraph
-	RemoveSubgraphMember(context.Context, *connect.Request[v1.RemoveSubgraphMemberRequest]) (*connect.Response[v1.RemoveSubgraphMemberResponse], error)
 	// GetSubgraphMembers gets all the members of the subgraph
 	GetSubgraphMembers(context.Context, *connect.Request[v1.GetSubgraphMembersRequest]) (*connect.Response[v1.GetSubgraphMembersResponse], error)
 	// AddReadme adds a readme of a target, can be a subgraph or a federated graph
@@ -1669,18 +1657,6 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceUpdateFeatureSettingsMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
-		addSubgraphMember: connect.NewClient[v1.AddSubgraphMemberRequest, v1.AddSubgraphMemberResponse](
-			httpClient,
-			baseURL+PlatformServiceAddSubgraphMemberProcedure,
-			connect.WithSchema(platformServiceAddSubgraphMemberMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
-		removeSubgraphMember: connect.NewClient[v1.RemoveSubgraphMemberRequest, v1.RemoveSubgraphMemberResponse](
-			httpClient,
-			baseURL+PlatformServiceRemoveSubgraphMemberProcedure,
-			connect.WithSchema(platformServiceRemoveSubgraphMemberMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
 		getSubgraphMembers: connect.NewClient[v1.GetSubgraphMembersRequest, v1.GetSubgraphMembersResponse](
 			httpClient,
 			baseURL+PlatformServiceGetSubgraphMembersProcedure,
@@ -2114,8 +2090,6 @@ type platformServiceClient struct {
 	getChangelogBySchemaVersion           *connect.Client[v1.GetChangelogBySchemaVersionRequest, v1.GetChangelogBySchemaVersionResponse]
 	getUserAccessibleResources            *connect.Client[v1.GetUserAccessibleResourcesRequest, v1.GetUserAccessibleResourcesResponse]
 	updateFeatureSettings                 *connect.Client[v1.UpdateFeatureSettingsRequest, v1.UpdateFeatureSettingsResponse]
-	addSubgraphMember                     *connect.Client[v1.AddSubgraphMemberRequest, v1.AddSubgraphMemberResponse]
-	removeSubgraphMember                  *connect.Client[v1.RemoveSubgraphMemberRequest, v1.RemoveSubgraphMemberResponse]
 	getSubgraphMembers                    *connect.Client[v1.GetSubgraphMembersRequest, v1.GetSubgraphMembersResponse]
 	addReadme                             *connect.Client[v1.AddReadmeRequest, v1.AddReadmeResponse]
 	getUserAccessiblePermissions          *connect.Client[v1.GetUserAccessiblePermissionsRequest, v1.GetUserAccessiblePermissionsResponse]
@@ -2732,16 +2706,6 @@ func (c *platformServiceClient) UpdateFeatureSettings(ctx context.Context, req *
 	return c.updateFeatureSettings.CallUnary(ctx, req)
 }
 
-// AddSubgraphMember calls wg.cosmo.platform.v1.PlatformService.AddSubgraphMember.
-func (c *platformServiceClient) AddSubgraphMember(ctx context.Context, req *connect.Request[v1.AddSubgraphMemberRequest]) (*connect.Response[v1.AddSubgraphMemberResponse], error) {
-	return c.addSubgraphMember.CallUnary(ctx, req)
-}
-
-// RemoveSubgraphMember calls wg.cosmo.platform.v1.PlatformService.RemoveSubgraphMember.
-func (c *platformServiceClient) RemoveSubgraphMember(ctx context.Context, req *connect.Request[v1.RemoveSubgraphMemberRequest]) (*connect.Response[v1.RemoveSubgraphMemberResponse], error) {
-	return c.removeSubgraphMember.CallUnary(ctx, req)
-}
-
 // GetSubgraphMembers calls wg.cosmo.platform.v1.PlatformService.GetSubgraphMembers.
 func (c *platformServiceClient) GetSubgraphMembers(ctx context.Context, req *connect.Request[v1.GetSubgraphMembersRequest]) (*connect.Response[v1.GetSubgraphMembersResponse], error) {
 	return c.getSubgraphMembers.CallUnary(ctx, req)
@@ -3226,10 +3190,6 @@ type PlatformServiceHandler interface {
 	GetUserAccessibleResources(context.Context, *connect.Request[v1.GetUserAccessibleResourcesRequest]) (*connect.Response[v1.GetUserAccessibleResourcesResponse], error)
 	// UpdateFeatureSettings updates the setinngs of features(ai, rbac, scim) of the organization
 	UpdateFeatureSettings(context.Context, *connect.Request[v1.UpdateFeatureSettingsRequest]) (*connect.Response[v1.UpdateFeatureSettingsResponse], error)
-	// AddSubgraphMember adds a user to the subgraph
-	AddSubgraphMember(context.Context, *connect.Request[v1.AddSubgraphMemberRequest]) (*connect.Response[v1.AddSubgraphMemberResponse], error)
-	// RemoveSubgraphMember removes a member from the subgraph
-	RemoveSubgraphMember(context.Context, *connect.Request[v1.RemoveSubgraphMemberRequest]) (*connect.Response[v1.RemoveSubgraphMemberResponse], error)
 	// GetSubgraphMembers gets all the members of the subgraph
 	GetSubgraphMembers(context.Context, *connect.Request[v1.GetSubgraphMembersRequest]) (*connect.Response[v1.GetSubgraphMembersResponse], error)
 	// AddReadme adds a readme of a target, can be a subgraph or a federated graph
@@ -3990,18 +3950,6 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceUpdateFeatureSettingsMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
-	platformServiceAddSubgraphMemberHandler := connect.NewUnaryHandler(
-		PlatformServiceAddSubgraphMemberProcedure,
-		svc.AddSubgraphMember,
-		connect.WithSchema(platformServiceAddSubgraphMemberMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
-	platformServiceRemoveSubgraphMemberHandler := connect.NewUnaryHandler(
-		PlatformServiceRemoveSubgraphMemberProcedure,
-		svc.RemoveSubgraphMember,
-		connect.WithSchema(platformServiceRemoveSubgraphMemberMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
 	platformServiceGetSubgraphMembersHandler := connect.NewUnaryHandler(
 		PlatformServiceGetSubgraphMembersProcedure,
 		svc.GetSubgraphMembers,
@@ -4541,10 +4489,6 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceGetUserAccessibleResourcesHandler.ServeHTTP(w, r)
 		case PlatformServiceUpdateFeatureSettingsProcedure:
 			platformServiceUpdateFeatureSettingsHandler.ServeHTTP(w, r)
-		case PlatformServiceAddSubgraphMemberProcedure:
-			platformServiceAddSubgraphMemberHandler.ServeHTTP(w, r)
-		case PlatformServiceRemoveSubgraphMemberProcedure:
-			platformServiceRemoveSubgraphMemberHandler.ServeHTTP(w, r)
 		case PlatformServiceGetSubgraphMembersProcedure:
 			platformServiceGetSubgraphMembersHandler.ServeHTTP(w, r)
 		case PlatformServiceAddReadmeProcedure:
@@ -5092,14 +5036,6 @@ func (UnimplementedPlatformServiceHandler) GetUserAccessibleResources(context.Co
 
 func (UnimplementedPlatformServiceHandler) UpdateFeatureSettings(context.Context, *connect.Request[v1.UpdateFeatureSettingsRequest]) (*connect.Response[v1.UpdateFeatureSettingsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.UpdateFeatureSettings is not implemented"))
-}
-
-func (UnimplementedPlatformServiceHandler) AddSubgraphMember(context.Context, *connect.Request[v1.AddSubgraphMemberRequest]) (*connect.Response[v1.AddSubgraphMemberResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.AddSubgraphMember is not implemented"))
-}
-
-func (UnimplementedPlatformServiceHandler) RemoveSubgraphMember(context.Context, *connect.Request[v1.RemoveSubgraphMemberRequest]) (*connect.Response[v1.RemoveSubgraphMemberResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.RemoveSubgraphMember is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) GetSubgraphMembers(context.Context, *connect.Request[v1.GetSubgraphMembersRequest]) (*connect.Response[v1.GetSubgraphMembersResponse], error) {

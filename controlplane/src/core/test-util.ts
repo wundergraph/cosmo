@@ -133,15 +133,24 @@ export async function seedTest(
     });
   }
 
-  await apiKeyRepo.addAPIKey({
-    key: userTestData.apiKey,
-    name: userTestData.email,
-    organizationID: org.id,
-    userID: userTestData.userId,
-    expiresAt: ExpiresAt.NEVER,
-    targetIds: [],
-    permissions: createScimKey ? ['scim'] : [],
-  });
+  if (userTestData.groups.length > 0) {
+    const orgGroup = await orgGroupRepo.byName({
+      organizationId: org.id,
+      name: userTestData.groups[0],
+    });
+
+    if (orgGroup) {
+      await apiKeyRepo.addAPIKey({
+        key: userTestData.apiKey,
+        name: userTestData.email,
+        organizationID: org.id,
+        userID: userTestData.userId,
+        expiresAt: ExpiresAt.NEVER,
+        groupId: orgGroup.groupId,
+        permissions: createScimKey ? ['scim'] : [],
+      });
+    }
+  }
 
   const namespaceRepo = new NamespaceRepository(db, org.id);
   const ns = await namespaceRepo.byName(DefaultNamespace);

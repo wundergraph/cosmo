@@ -123,11 +123,15 @@ export class OrganizationGroupRepository {
       extras: (table, { sql }) => ({
         // There is an active issue that prevents using `schema.organizationRuleSetMembers` instead of directly
         // using strings (https://github.com/drizzle-team/drizzle-orm/issues/3493)
-        membersCount: sql<number>`CAST((
-          select count(distinct "organization_member_id")
-          from "organization_group_members"
-          where "organization_group_members"."group_id" = ${table.id}
-        ) AS INTEGER)`.as('members_count'),
+        membersCount: sql<number>`
+          CAST((
+            select count(distinct "organization_member_id")
+            from "organization_group_members"
+            where "organization_group_members"."group_id" = ${table.id}
+          ) AS INTEGER)
+          +
+          CAST((select count("id") from "api_keys" where "api_keys"."group_id" = ${table.id}) AS INTEGER)
+        `.as('members_count'),
       }),
     });
 
@@ -164,31 +168,39 @@ export class OrganizationGroupRepository {
     }
   }
 
-  /**
-   * Retrieves the email addresses for all the members that have been added to the group matching the
-   * provided `groupId`
-   */
   public getGroupMembers(groupId: string) {
-    return this.db
-      .select({
-        id: schema.users.id,
-        email: schema.users.email,
-      })
-      .from(schema.organizationGroupMembers)
-      .rightJoin(
-        schema.organizationsMembers,
-        eq(schema.organizationsMembers.id, schema.organizationGroupMembers.organizationMemberId),
-      )
-      .rightJoin(schema.users, eq(schema.users.id, schema.organizationsMembers.userId))
-      .where(eq(schema.organizationGroupMembers.groupId, groupId))
-      .execute();
+    return Promise.all([
+      this.db
+        .select({
+          id: schema.users.id,
+          email: schema.users.email,
+        })
+        .from(schema.organizationGroupMembers)
+        .rightJoin(
+          schema.organizationsMembers,
+          eq(schema.organizationsMembers.id, schema.organizationGroupMembers.organizationMemberId),
+        )
+        .rightJoin(schema.users, eq(schema.users.id, schema.organizationsMembers.userId))
+        .where(eq(schema.organizationGroupMembers.groupId, groupId)),
+      this.db
+        .select({
+          id: schema.apiKeys.id,
+          name: schema.apiKeys.name,
+        })
+        .from(schema.apiKeys)
+        .where(eq(schema.apiKeys.groupId, groupId)),
+    ]);
   }
 
   public changeMemberGroup({ fromGroupId, toGroupId }: { fromGroupId: string; toGroupId: string }) {
-    return this.db
-      .update(schema.organizationGroupMembers)
-      .set({ groupId: toGroupId })
-      .where(eq(schema.organizationGroupMembers.groupId, fromGroupId));
+    return this.db.transaction(async (tx) => {
+      await tx
+        .update(schema.organizationGroupMembers)
+        .set({ groupId: toGroupId })
+        .where(eq(schema.organizationGroupMembers.groupId, fromGroupId));
+
+      await tx.update(schema.apiKeys).set({ groupId: toGroupId }).where(eq(schema.apiKeys.groupId, fromGroupId));
+    });
   }
 
   public addUserToGroup(input: { organizationMemberId: string; groupId: string }) {
@@ -274,5 +286,42 @@ export class OrganizationGroupRepository {
 
   public deleteById(id: string) {
     return this.db.delete(schema.organizationGroups).where(eq(schema.organizationGroups.id, id)).returning();
+  }
+
+  public async getGroupRules(groupId: string) {
+    const rules = await this.db
+      .select({
+        id: schema.organizationGroupRules.id,
+        role: schema.organizationGroupRules.role,
+        allowAnyNamespace: schema.organizationGroupRules.allowAnyNamespace,
+        allowAnyResource: schema.organizationGroupRules.allowAnyResource,
+      })
+      .from(schema.organizationGroupRules)
+      .where(eq(schema.organizationGroupRules.groupId, groupId))
+      .execute();
+
+    return await Promise.all(
+      rules.map(async (rule) => {
+        const [namespaces, targets] = await Promise.all([
+          this.db
+            .select({ id: schema.organizationGroupRuleNamespaces.namespaceId })
+            .from(schema.organizationGroupRuleNamespaces)
+            .innerJoin(schema.namespaces, eq(schema.namespaces.id, schema.organizationGroupRuleNamespaces.namespaceId))
+            .where(eq(schema.organizationGroupRuleNamespaces.ruleId, rule.id)),
+          this.db
+            .select({ targetId: schema.organizationGroupRuleTargets.targetId })
+            .from(schema.organizationGroupRuleTargets)
+            .where(eq(schema.organizationGroupRuleTargets.ruleId, rule.id)),
+        ]);
+
+        return {
+          role: rule.role,
+          allowAnyNamespace: rule.allowAnyNamespace,
+          namespaces: namespaces.map((ns) => ns.id),
+          allowAnyResource: rule.allowAnyResource,
+          resources: targets.map((targ) => targ.targetId),
+        };
+      }),
+    );
   }
 }
