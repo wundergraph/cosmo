@@ -4,9 +4,9 @@ In the first version we focus on local development of plugins written in Go. We'
 
 1. Initialize the plugin
 
-`wgc plugin init <pluginName> <directory>`
+`wgc plugin init <directory>`
 
-This will scaffold a new `hello world` plugin in the given directory.
+This will scaffold a new plugin in the given directory.
 
 ```bash
 project_dir
@@ -14,18 +14,21 @@ project_dir
     - src
       - schema.graphql # User defined schema
       - main.go # Empty, Generated from the scaffold but editable
-      - service.go # Empty, Generated from the scaffold but editable
-      - go.mod
+    - generated
+      - service.proto # Generated from schema
+      - mapping.json # Generated from schema
+      - service.proto.lock.json # Generated lock file
+    - go.mod
     - README.md # Getting Started guide
 ```
 
 2. Compile the plugin
 
-`wgc plugin build ./myplugin --generate-only --platform=linux/amd64`
+`wgc plugin build <directory> --generate-only --platform darwin-arm64 linux-amd64`
 
 After initializing the plugin, the user can design the plugin schema. Once the schema is designed, the user can build the plugin. For now, we only support Go plugins.
 
-**Optionally**, the user can skip compile step with `--generate-only` flag for faster iteration.
+**Optionally**, the user can skip the compile step with `--generate-only` flag for faster iteration.
 
 ```bash
 project_dir
@@ -33,12 +36,16 @@ project_dir
     - src
       - schema.graphql # User defined schema
       - main.go # Main entry point of the plugin
-      - service.go # Updated according to the proto file
-      - go.mod
-    - build
-      - ${ARCH}_binary (NEW) **Optional**
-      - schema.proto (NEW) 
-      - mapping.json (NEW)
+    - generated
+      - service.proto # Generated from schema 
+      - mapping.json # Generated from schema
+      - service.proto.lock.json # Generated lock file
+      - service.pb.go # Generated gRPC code
+      - service_grpc.pb.go # Generated gRPC code
+    - bin
+      - darwin_arm64 (NEW) **Optional**
+      - linux_amd64 (NEW) **Optional**
+    - go.mod
 ```
 
 3. Build execution config "compose"
@@ -59,7 +66,7 @@ subgraphs:
 
 4. Start the Router
 
-The router will look for the plugins in the directory specified in the config. It is only interested in the `build/${ARCH}_binary` directory of each plugin. The available plugins are listed in the router execution config.
+The router will look for the plugins in the directory specified in the config. It is only interested in the `bin/${PLATFORM}_${ARCH}` binaries of each plugin. The available plugins are listed in the router execution config.
 
 ```yaml
 plugins:
@@ -71,7 +78,7 @@ plugins:
 The plugin binary is hosted on the CDN. The URL is constructed as follows:
 
 ```bash
-/$orgID/$fedID/plugins/$pluginName/$version/$arch_binary
+/$orgID/$fedID/plugins/$pluginName/$version/$platform_$arch
 ```
 
 The plugin name, version are embedded in the router execution config. The router will download the plugin binary from the CDN and store it in the plugin directory.
