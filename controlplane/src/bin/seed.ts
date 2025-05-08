@@ -79,11 +79,6 @@ try {
     process.exit(0);
   }
 
-  const organizationGroup = await keycloakClient.client.groups.create({
-    realm,
-    name: user.organization.slug,
-  });
-
   const keycloakUserID = await keycloakClient.addKeycloakUser({
     realm,
     email: user.email,

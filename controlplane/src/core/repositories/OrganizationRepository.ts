@@ -495,90 +495,6 @@ export class OrganizationRepository {
       .execute();
   }
 
-  public async getOrganizationMemberRoles(input: { userID: string; organizationID: string }): Promise<MemberRole[]> {
-    const userRoles = await this.db
-      .select({
-        role: organizationMemberRoles.role,
-      })
-      .from(organizationMemberRoles)
-      .innerJoin(organizationsMembers, eq(organizationsMembers.id, organizationMemberRoles.organizationMemberId))
-      .where(
-        and(
-          eq(organizationsMembers.userId, input.userID),
-          eq(organizationsMembers.organizationId, input.organizationID),
-        ),
-      )
-      .execute();
-
-    return userRoles.map((role) => role.role);
-  }
-
-  public async getOrganizationMemberGroups(input: {
-    userID: string;
-    organizationID: string;
-  }): Promise<Omit<OrganizationGroupDTO, 'membersCount' | 'kcMapperId'>[]> {
-    const groups = await this.db
-      .select({
-        groupId: schema.organizationGroups.id,
-        name: schema.organizationGroups.name,
-        description: schema.organizationGroups.description,
-        kcGroupId: schema.organizationGroups.kcGroupId,
-      })
-      .from(schema.organizationGroupMembers)
-      .innerJoin(
-        organizationsMembers,
-        eq(organizationsMembers.id, schema.organizationGroupMembers.organizationMemberId),
-      )
-      .innerJoin(schema.organizationGroups, eq(schema.organizationGroups.id, schema.organizationGroupMembers.groupId))
-      .where(
-        and(
-          eq(organizationsMembers.userId, input.userID),
-          eq(organizationsMembers.organizationId, input.organizationID),
-        ),
-      )
-      .execute();
-
-    return Promise.all(
-      groups.map(async (group) => {
-        const rules = await this.db
-          .select({
-            id: schema.organizationGroupRules.id,
-            role: schema.organizationGroupRules.role,
-          })
-          .from(schema.organizationGroupRules)
-          .where(eq(schema.organizationGroupRules.groupId, group.groupId))
-          .execute();
-
-        return {
-          ...group,
-          rules: await Promise.all(
-            rules.map(async (rule) => {
-              const namespaces = await this.db
-                .select({ id: schema.organizationGroupRuleNamespaces.namespaceId })
-                .from(schema.organizationGroupRuleNamespaces)
-                .innerJoin(
-                  schema.namespaces,
-                  eq(schema.namespaces.id, schema.organizationGroupRuleNamespaces.namespaceId),
-                )
-                .where(eq(schema.organizationGroupRuleNamespaces.ruleId, rule.id));
-
-              const targets = await this.db
-                .select({ targetId: schema.organizationGroupRuleTargets.targetId })
-                .from(schema.organizationGroupRuleTargets)
-                .where(eq(schema.organizationGroupRuleTargets.ruleId, rule.id));
-
-              return {
-                role: rule.role,
-                namespaces: namespaces.map((ns) => ns.id),
-                resources: targets.map((targ) => targ.targetId),
-              };
-            }),
-          ),
-        };
-      }),
-    );
-  }
-
   /**
    * Get the features for an organization. A feature can be enabled or disabled and can have a limit.
    * Usually, a feature without a limit is just a boolean flag.
@@ -1636,5 +1552,76 @@ export class OrganizationRepository {
         },
       },
     });
+  }
+
+  public async getOrganizationMemberGroups(input: {
+    userID: string;
+    organizationID: string;
+  }): Promise<Omit<OrganizationGroupDTO, 'membersCount' | 'kcMapperId'>[]> {
+    const groups = await this.db
+      .select({
+        groupId: schema.organizationGroups.id,
+        name: schema.organizationGroups.name,
+        description: schema.organizationGroups.description,
+        kcGroupId: schema.organizationGroups.kcGroupId,
+      })
+      .from(schema.organizationGroupMembers)
+      .innerJoin(
+        organizationsMembers,
+        eq(organizationsMembers.id, schema.organizationGroupMembers.organizationMemberId),
+      )
+      .innerJoin(schema.organizationGroups, eq(schema.organizationGroups.id, schema.organizationGroupMembers.groupId))
+      .where(
+        and(
+          eq(organizationsMembers.userId, input.userID),
+          eq(organizationsMembers.organizationId, input.organizationID),
+        ),
+      )
+      .execute();
+
+    if (groups.length === 0) {
+      return [];
+    }
+
+    return Promise.all(
+      groups.map(async (group) => {
+        const rules = await this.db
+          .select({
+            id: schema.organizationGroupRules.id,
+            role: schema.organizationGroupRules.role,
+          })
+          .from(schema.organizationGroupRules)
+          .where(eq(schema.organizationGroupRules.groupId, group.groupId))
+          .execute();
+
+        return {
+          ...group,
+          rules: await Promise.all(
+            rules.map(async (rule) => {
+              const [namespaces, targets] = await Promise.all([
+                this.db
+                  .select({ id: schema.organizationGroupRuleNamespaces.namespaceId })
+                  .from(schema.organizationGroupRuleNamespaces)
+                  .innerJoin(
+                    schema.namespaces,
+                    eq(schema.namespaces.id, schema.organizationGroupRuleNamespaces.namespaceId),
+                  )
+                  .where(eq(schema.organizationGroupRuleNamespaces.ruleId, rule.id)),
+                this.db
+                  .select({ targetId: schema.organizationGroupRuleTargets.targetId })
+                  .from(schema.organizationGroupRuleTargets)
+                  .where(eq(schema.organizationGroupRuleTargets.ruleId, rule.id)),
+              ]);
+
+              return {
+                role: rule.role,
+                namespaces: namespaces.map((ns) => ns.id),
+                resources: targets.map((targ) => targ.targetId),
+              };
+            }),
+          ),
+        };
+      }),
+    );
   }
 }
