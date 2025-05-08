@@ -2653,6 +2653,23 @@ message GetNamespaceProposalConfigResponse {
   LintSeverity publishSeverityLevel = 4;
 }
 
+message GetOperationsRequest {
+  string federatedGraphName = 1;
+  string namespace = 2;
+}
+
+message GetOperationsResponse {
+  message Operation {
+  string hash = 1;
+  string name = 2;
+  string content = 3;
+  float latency = 4;
+}
+
+  Response response = 1;
+  repeated Operation operations = 2;
+}
+
 service PlatformService {
   // PlaygroundScripts
   rpc CreatePlaygroundScript(CreatePlaygroundScriptRequest) returns (CreatePlaygroundScriptResponse) {}
@@ -3002,4 +3019,6 @@ service PlatformService {
   rpc GetProposalsByFederatedGraph(GetProposalsByFederatedGraphRequest) returns (GetProposalsByFederatedGraphResponse) {}
   // GetProposalChecks returns checks for a proposal.
   rpc GetProposalChecks(GetProposalChecksRequest) returns (GetProposalChecksResponse) {}
+  // GetOperations returns the operations of a federated graph.
+  rpc GetOperations(GetOperationsRequest) returns (GetOperationsResponse) {}
 }
