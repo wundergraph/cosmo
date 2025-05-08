@@ -20,7 +20,8 @@ export const useHydratePlaygroundStateFromUrl = (
   setQuery: (query: string) => void,
   setVariables: (variables: string) => void,
   setHeaders: (headers: string) => void,
-  setTabsState: (state: TabsState) => void
+  setTabsState: (state: TabsState) => void,
+  isGraphiqlRendered: boolean,
 ) => {
   const router = useRouter();
   const { toast } = useToast();
@@ -36,6 +37,15 @@ export const useHydratePlaygroundStateFromUrl = (
   const [, setPostOpSelected] = useLocalStorage<ScriptData | null>('playground:post-operation:selected', null);
 
   useEffect(() => {
+    // We have an early bailout condition to avoid race condition with GraphiQL.
+    // Let GraphiQL first render and complete its logic related to `onTabChange`.
+    // Once that's completed, we can hydrate the state from URL
+    // For hydration, we avoid making changes into the active tab index.
+    // We instead created a new tab and updated the PlaygroundContext.tabsState
+    if (!isGraphiqlRendered || tabsState.tabs.length === 0) {
+      return;
+    }
+
     const { playgroundUrlState } = router.query;
     if (!playgroundUrlState || typeof playgroundUrlState !== 'string') {
       setIsHydrated(true);
@@ -113,14 +123,14 @@ export const useHydratePlaygroundStateFromUrl = (
       setIsHydrated(true);
     } finally {
       // In order to avoid conflicts, it is important to clear the url state after loading it.
-      clearState();
+      // clearState();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router.query]);
+  }, [router.query, isGraphiqlRendered, tabsState.tabs.length]);
 
-  const clearState = () => {
-    const { playgroundUrlState, ...query } = router.query;
-    // critical to do this so that page refresh doesn't show the old state
-    router.replace({ pathname: router.pathname, query }, undefined, { shallow: true });
-  };
+  // const clearState = () => {
+  //   const { playgroundUrlState, ...query } = router.query;
+  //   // critical to do this so that page refresh doesn't show the old state
+  //   router.replace({ pathname: router.pathname, query }, undefined, { shallow: true });
+  // };
 };
