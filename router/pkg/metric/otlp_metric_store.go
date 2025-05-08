@@ -21,16 +21,17 @@ type OtlpMetricStore struct {
 	instrumentRegistrations []otelmetric.Registration
 }
 
-func NewOtlpMetricStore(logger *zap.Logger, meterProvider *metric.MeterProvider) (Provider, error) {
+func NewOtlpMetricStore(logger *zap.Logger, meterProvider *metric.MeterProvider, routerInfoAttributes otelmetric.ObserveOption) (Provider, error) {
 
 	meter := meterProvider.Meter(cosmoRouterMeterName,
 		otelmetric.WithInstrumentationVersion(cosmoRouterMeterVersion),
 	)
 
 	m := &OtlpMetricStore{
-		meter:         meter,
-		logger:        logger,
-		meterProvider: meterProvider,
+		meter:                   meter,
+		logger:                  logger,
+		meterProvider:           meterProvider,
+		instrumentRegistrations: make([]otelmetric.Registration, 0, 1),
 	}
 
 	measures, err := createMeasures(meter)
@@ -40,7 +41,27 @@ func NewOtlpMetricStore(logger *zap.Logger, meterProvider *metric.MeterProvider)
 
 	m.measurements = measures
 
+	err = m.startInitMetrics(routerInfoAttributes)
+	if err != nil {
+		return nil, err
+	}
+
 	return m, nil
+}
+
+func (h *OtlpMetricStore) startInitMetrics(initAttributes otelmetric.ObserveOption) error {
+	gauge := h.measurements.observableGauges[RouterInfo]
+
+	rc, err := h.meter.RegisterCallback(func(_ context.Context, o otelmetric.Observer) error {
+		o.ObserveInt64(gauge, 1, initAttributes)
+		return nil
+	}, gauge)
+	if err != nil {
+		return err
+	}
+
+	h.instrumentRegistrations = append(h.instrumentRegistrations, rc)
+	return nil
 }
 
 func (h *OtlpMetricStore) MeasureInFlight(ctx context.Context, opts ...otelmetric.AddOption) func() {
@@ -54,21 +75,6 @@ func (h *OtlpMetricStore) MeasureInFlight(ctx context.Context, opts ...otelmetri
 			c.Add(ctx, -1, opts...)
 		}
 	}
-}
-
-func (h *OtlpMetricStore) StartRouterInfoCallback(opts ...otelmetric.ObserveOption) error {
-	gauge := h.measurements.observableGauges[RouterInfo]
-
-	rc, err := h.meter.RegisterCallback(func(_ context.Context, o otelmetric.Observer) error {
-		o.ObserveInt64(gauge, 1, opts...)
-		return nil
-	}, gauge)
-	if err != nil {
-		return err
-	}
-
-	h.instrumentRegistrations = append(h.instrumentRegistrations, rc)
-	return nil
 }
 
 func (h *OtlpMetricStore) MeasureRequestCount(ctx context.Context, opts ...otelmetric.AddOption) {
