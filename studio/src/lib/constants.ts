@@ -156,19 +156,19 @@ export const roles = [
     description: "Namespace readonly access.",
   },
   {
-    key: "federated-graph-admin",
+    key: "graph-admin",
     category: "graph",
     displayName: "Admin",
     description: "Graph administrator access.",
   },
   {
-    key: "federated-graph-developer",
+    key: "graph-developer",
     category: "graph",
     displayName: "Developer",
     description: "Graph developer access.",
   },
   {
-    key: "federated-graph-viewer",
+    key: "graph-viewer",
     category: "graph",
     displayName: "Readonly",
     description: "Graph readonly access.",

@@ -1337,9 +1337,9 @@ export const organizationRoleEnum = pgEnum('organization_role', [
   'namespace-admin',
   'namespace-developer',
   'namespace-viewer',
-  'federated-graph-admin',
-  'federated-graph-developer',
-  'federated-graph-viewer',
+  'graph-admin',
+  'graph-developer',
+  'graph-viewer',
 ] as const);
 
 export const organizationGroups = pgTable('organization_groups', {

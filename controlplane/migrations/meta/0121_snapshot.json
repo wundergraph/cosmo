@@ -1,5 +1,5 @@
 {
-  "id": "96c3f0a5-d4b3-4833-b4bc-010fff0e8ba9",
+  "id": "cfe208fa-6eb2-409b-ba05-894004d83177",
   "prevId": "1047e67f-16f1-4d7b-bfb6-2031ff10230b",
   "version": "7",
   "dialect": "postgresql",
@@ -7952,9 +7952,9 @@
         "namespace-admin",
         "namespace-developer",
         "namespace-viewer",
-        "federated-graph-admin",
-        "federated-graph-developer",
-        "federated-graph-viewer"
+        "graph-admin",
+        "graph-developer",
+        "graph-viewer"
       ]
     },
     "public.playground_script_type": {

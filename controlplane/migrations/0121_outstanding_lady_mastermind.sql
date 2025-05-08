@@ -1,4 +1,4 @@
-CREATE TYPE "public"."organization_role" AS ENUM('organization-admin', 'organization-developer', 'organization-viewer', 'namespace-admin', 'namespace-developer', 'namespace-viewer', 'federated-graph-admin', 'federated-graph-developer', 'federated-graph-viewer');--> statement-breakpoint
+CREATE TYPE "public"."organization_role" AS ENUM('organization-admin', 'organization-developer', 'organization-viewer', 'namespace-admin', 'namespace-developer', 'namespace-viewer', 'graph-admin', 'graph-developer', 'graph-viewer');--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "organization_group_members" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"organization_member_id" uuid NOT NULL,
