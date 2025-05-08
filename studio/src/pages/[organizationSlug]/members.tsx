@@ -52,7 +52,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { OrgMember, OrgMember_Group } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import {
-  getOrganizationGroups,
   getOrganizationMembers,
   getPendingOrganizationMembers,
   inviteUser,
@@ -68,7 +67,7 @@ import { z } from "zod";
 import { usePaginationParams } from "@/hooks/use-pagination-params";
 import { UpdateMemberGroupDialog } from "@/components/members/update-member-group-dialog";
 import { useIsAdmin } from "@/hooks/use-is-admin";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { GroupSelect } from "@/components/group-select";
 
 const emailInputSchema = z.object({
   email: z.string().email(),
@@ -78,7 +77,6 @@ const emailInputSchema = z.object({
 type EmailInput = z.infer<typeof emailInputSchema>;
 
 const InviteForm = ({ onSuccess }: { onSuccess: () => void }) => {
-  const { data } = useQuery(getOrganizationGroups);
   const {
     register,
     formState: { isValid, errors },
@@ -91,12 +89,8 @@ const InviteForm = ({ onSuccess }: { onSuccess: () => void }) => {
     schema: emailInputSchema,
   });
 
-  const availableGroups = data?.groups ?? [];
 
   const { mutate, isPending } = useMutation(inviteUser);
-
-  const groupId = watch('groupId');
-  const groupLabel = availableGroups.find((g) => g.groupId === groupId)?.name || "Select a group";
 
   const { toast } = useToast();
 
@@ -138,24 +132,14 @@ const InviteForm = ({ onSuccess }: { onSuccess: () => void }) => {
 
       <div className="space-y-2">
         <span>What group should the member be added to?</span>
-        <Select
-          value={groupId}
-          onValueChange={(value) => setValue('groupId', value)}
-        >
-          <SelectTrigger value={groupId} className="w-full">
-            <SelectValue aria-label={groupLabel}>{groupLabel}</SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            {availableGroups.map((group) => (
-              <SelectItem
-                key={`group-${group.groupId}`}
-                value={group.groupId}
-              >
-                {group.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <GroupSelect
+          value={watch('groupId')}
+          onGroupChange={(group) => setValue(
+            'groupId',
+            group.groupId,
+            { shouldValidate: true, shouldDirty: true, shouldTouch: true },
+          )}
+        />
         {errors.groupId && (
           <span className="text-xs text-destructive">
             {errors.groupId.message}
