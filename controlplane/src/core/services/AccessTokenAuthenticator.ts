@@ -10,6 +10,7 @@ export type AccessTokenAuthContext = {
   userDisplayName: string;
   organizationId: string;
   organizationSlug: string;
+  organizationDeactivated: boolean;
   hasWriteAccess: boolean;
   isAdmin: boolean;
   rbac: RBACEvaluator;
@@ -44,7 +45,7 @@ export default class AccessTokenAuthenticator {
       throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'User is not a member of the organization');
     }
 
-    const isOrganizationDeactivated = !!organization.deactivation;
+    const organizationDeactivated = !!organization.deactivation;
     const rbac = new RBACEvaluator(
       await this.orgRepo.getOrganizationMemberGroups({
         userID: userInfoData.sub,
@@ -58,8 +59,9 @@ export default class AccessTokenAuthenticator {
       organizationSlug: organization.slug,
       userId: userInfoData.sub,
       userDisplayName: userInfoData.email,
+      organizationDeactivated,
       hasWriteAccess:
-        rbac.is(['organization-owner', 'organization-admin', 'organization-developer']) && !isOrganizationDeactivated,
+        rbac.is(['organization-owner', 'organization-admin', 'organization-developer']) && !organizationDeactivated,
       isAdmin: rbac.is(['organization-owner', 'organization-admin']),
       rbac,
     };

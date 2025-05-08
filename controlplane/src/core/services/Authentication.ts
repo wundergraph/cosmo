@@ -81,7 +81,7 @@ export class Authentication implements Authenticator {
         throw new Error('User is not a member of the organization');
       }
 
-      const isOrganizationDeactivated = !!organization.deactivation;
+      const organizationDeactivated = !!organization.deactivation;
       const rbac = new RBACEvaluator(
         await this.orgRepo.getOrganizationMemberGroups({
           organizationID: organization.id,
@@ -93,10 +93,11 @@ export class Authentication implements Authenticator {
         auth: user.auth,
         userId: user.userId,
         organizationId: organization.id,
-        rbac,
         organizationSlug: organization.slug,
+        organizationDeactivated,
+        rbac,
         hasWriteAccess:
-          rbac.is(['organization-owner', 'organization-admin', 'organization-developer']) && !isOrganizationDeactivated,
+          rbac.is(['organization-owner', 'organization-admin', 'organization-developer']) && !organizationDeactivated,
         isAdmin: rbac.is(['organization-owner', 'organization-admin']),
         userDisplayName: user.userDisplayName,
       };

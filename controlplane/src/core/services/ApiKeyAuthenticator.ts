@@ -10,6 +10,7 @@ export type ApiKeyAuthContext = {
   auth: 'api_key';
   organizationId: string;
   organizationSlug: string;
+  organizationDeactivated: boolean;
   hasWriteAccess: boolean;
   isAdmin: boolean;
   userId: string;
@@ -61,7 +62,7 @@ export default class ApiKeyAuthenticator {
       })
       .where(eq(schema.apiKeys.id, apiKeyModel.id));
 
-    const isOrganizationDeactivated = !!organization.deactivation;
+    const organizationDeactivated = !!organization.deactivation;
 
     return {
       auth: 'api_key',
@@ -70,10 +71,11 @@ export default class ApiKeyAuthenticator {
       apiKeyName: apiKeyModel.name,
       organizationId: apiKeyModel.organizationId,
       organizationSlug: organization.slug,
+      organizationDeactivated,
       rbac: new RBACEvaluator([]),
       // sending true as the api key has admin permissions
       isAdmin: true,
-      hasWriteAccess: !isOrganizationDeactivated,
+      hasWriteAccess: !organizationDeactivated,
     };
   }
 }

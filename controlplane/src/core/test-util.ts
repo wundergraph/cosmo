@@ -142,6 +142,7 @@ export async function seedTest(queryConnection: postgres.Sql, userTestData: User
 export function createTestContext(
   organizationName = 'wundergraph',
   organizationId = randomUUID(),
+  organizationDeactivated = false,
   isAdmin = true,
   hasWriteAccess = true,
   groups: ('admin' | 'developer' | 'viewer')[] = ['admin'],
@@ -156,6 +157,7 @@ export function createTestContext(
     email: userId + '@wg.com',
     apiKey: nuid.next(),
     organizationSlug: `slug-${organizationId}`,
+    organizationDeactivated,
     hasWriteAccess,
     isAdmin,
     userDisplayName: userId,
