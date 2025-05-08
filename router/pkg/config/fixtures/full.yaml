@@ -86,11 +86,6 @@ compliance:
 telemetry:
   # Common options
   service_name: "cosmo-router"
-  subgraph:
-    attributes:
-      - key: "wg.tracing.custom.conn.subgraph.hostport"
-        value_from:
-          expression: "subgraph.request.clientTrace.connCreate.hostPort"
 
   # If no exporter is specified it uses https://cosmo-otel.wundergraph.com for tracing and metrics
 
@@ -120,6 +115,10 @@ telemetry:
         export_timeout: 30s
         path: "/v1/traces"
         headers: {}
+    attributes:
+      - key: "wg.tracing.custom.conn.subgraph.hostport"
+        value_from:
+          expression: "subgraph.request.clientTrace.connCreate.hostPort"
 
   # OpenTelemetry Metrics
   metrics:

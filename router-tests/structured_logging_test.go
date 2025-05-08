@@ -2823,14 +2823,14 @@ func TestFlakyAccessLogs(t *testing.T) {
 					Key:     "connect_start",
 					Default: "empty_value",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "subgraph.request.clientTrace.dial?.start[0].network",
+						Expression: "subgraph.request.clientTrace.dialStart[0].network",
 					},
 				},
 				{
 					Key:     "connect_done",
 					Default: "empty_value",
 					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "subgraph.request.clientTrace.dial?.done[0].network",
+						Expression: "subgraph.request.clientTrace.dialDone[0].network",
 					},
 				},
 				{
@@ -3003,63 +3003,6 @@ func TestFlakyAccessLogs(t *testing.T) {
 			}
 
 			checkValues(t, productContext, productSubgraphVals, additionalExpectedKeys)
-		})
-	})
-
-	t.Run("verify subgraph list for dial", func(t *testing.T) {
-		t.Parallel()
-
-		testenv.Run(t, &testenv.Config{
-			SubgraphAccessLogsEnabled: true,
-			SubgraphAccessLogFields: []config.CustomAttribute{
-				{
-					Key: "get_list",
-					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "subgraph.request.clientTrace.dial?.GetGroupedCalls()",
-					},
-				},
-			},
-			LogObservation: testenv.LogObservationConfig{
-				Enabled:  true,
-				LogLevel: zapcore.InfoLevel,
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query:  `query employees { employees { id details { forename surname } notes } }`,
-				Header: map[string][]string{"service-name": {"service-name"}},
-			})
-			requestLog := xEnv.Observer().FilterMessage("/graphql")
-			productContext := requestLog.All()[1].ContextMap()
-
-			getList := productContext["get_list"]
-
-			type SubgraphDialCombined struct {
-				DialStartTime time.Time
-				DialDoneTime  *time.Time
-				Error         error
-				Network       string
-				Address       string
-			}
-
-			// We don't have access to cast to router.expr since it is an internal package
-			marshalBytes, err := json.Marshal(getList)
-			if err != nil {
-				return
-			}
-			var subgraphDialCombined []SubgraphDialCombined
-			err = json.Unmarshal(marshalBytes, &subgraphDialCombined)
-			if err != nil {
-				return
-			}
-
-			require.Len(t, subgraphDialCombined, 1)
-
-			entry := subgraphDialCombined[0]
-			require.Nil(t, entry.Error)
-			require.False(t, entry.DialStartTime.IsZero())
-			require.False(t, entry.DialDoneTime.IsZero())
-			require.Contains(t, entry.Address, "127.0.0.1")
-			require.Equal(t, entry.Network, "tcp")
 		})
 	})
 
