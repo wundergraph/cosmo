@@ -116,7 +116,10 @@ func PlanGenerator(ctx context.Context, cfg QueryPlanConfig) error {
 			defer wg.Done()
 			planner, err := pg.GetPlanner()
 			if err != nil {
+				// if we fail to get the planner, we need to cancel the context to stop the other goroutines
+				// and return here to stop the current goroutine
 				cancelError(fmt.Errorf("failed to get planner: %v", err))
+				return
 			}
 			for {
 				select {
