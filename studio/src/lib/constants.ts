@@ -127,6 +127,8 @@ export const OPTION_TYPES = {
   POST_OPERATION: 'postOperation',
 } as const;
 
+const hideScriptsSharing = true;
+
 export const SHARE_OPTIONS = [
   // operation is always checked and disabled
   { 
@@ -150,27 +152,28 @@ export const SHARE_OPTIONS = [
     isChecked: false,
     isDisabled: false
   },
-  // { 
-  //   id: OPTION_TYPES.PRE_FLIGHT,
-  //   label: "Pre-Flight Script",
-  //   description: "A script that runs before the GraphQL operation is executed",
-  //   isChecked: false,
-  //   isDisabled: false
-  // },
-  // { 
-  //   id: OPTION_TYPES.PRE_OPERATION,
-  //   label: "Pre-Operation Script",
-  //   description: "A script that runs before sending the GraphQL request",
-  //   isChecked: false,
-  //   isDisabled: false
-  // },
-  // { 
-  //   id: OPTION_TYPES.POST_OPERATION,
-  //   label: "Post-Operation Script",
-  //   description: "A script that runs after the GraphQL request is completed",
-  //   isChecked: false,
-  //   isDisabled: false
-  // },
+  // [ENG-7093] hiding scripts sharing for now
+  ...!hideScriptsSharing ? [{ 
+    id: OPTION_TYPES.PRE_FLIGHT,
+    label: "Pre-Flight Script",
+    description: "A script that runs before the GraphQL operation is executed",
+    isChecked: false,
+    isDisabled: false
+  },
+  { 
+    id: OPTION_TYPES.PRE_OPERATION,
+    label: "Pre-Operation Script",
+    description: "A script that runs before sending the GraphQL request",
+    isChecked: false,
+    isDisabled: false
+  },
+  { 
+    id: OPTION_TYPES.POST_OPERATION,
+    label: "Post-Operation Script",
+    description: "A script that runs after the GraphQL request is completed",
+    isChecked: false,
+    isDisabled: false
+  }] : [],
 ] as const;
 
 export const PLAYGROUND_STATE_QUERY_PARAM = 'playgroundUrlState';
