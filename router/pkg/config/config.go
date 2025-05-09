@@ -269,7 +269,7 @@ type RequestHeaderRule struct {
 
 type PluginConfiguration struct {
 	Enabled  bool   `yaml:"enabled" envDefault:"false" env:"PLUGIN_ENABLED"`
-	BasePath string `yaml:"base_path" envDefault:"plugins" env:"PLUGIN_BASE_PATH"`
+	BasePath string `yaml:"base_path" envDefault:"__plugins" env:"PLUGIN_BASE_PATH"`
 }
 
 func (r *RequestHeaderRule) GetOperation() HeaderRuleOperation {

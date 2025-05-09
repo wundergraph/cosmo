@@ -472,6 +472,6 @@
   },
   "PluginConfiguration": {
     "Enabled": false,
-    "BasePath": "plugins"
+    "BasePath": "__plugins"
   }
 }
