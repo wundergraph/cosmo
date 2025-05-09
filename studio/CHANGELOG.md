@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.114.0](https://github.com/wundergraph/cosmo/compare/studio@0.113.5...studio@0.114.0) (2025-05-09)
+
+### Features
+
+* **playground:** add support for state sharing via URL with user control over what to include ([#1833](https://github.com/wundergraph/cosmo/issues/1833)) ([c630c9f](https://github.com/wundergraph/cosmo/commit/c630c9f6833de3d071e12f825ed75f2630a9b7e9)) (@akshaygarg576)
+
 ## [0.113.5](https://github.com/wundergraph/cosmo/compare/studio@0.113.4...studio@0.113.5) (2025-05-07)
 
 ### Bug Fixes
