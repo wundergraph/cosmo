@@ -150,27 +150,27 @@ export const SHARE_OPTIONS = [
     isChecked: false,
     isDisabled: false
   },
-  { 
-    id: OPTION_TYPES.PRE_FLIGHT,
-    label: "Pre-Flight Script",
-    description: "A script that runs before the GraphQL operation is executed",
-    isChecked: false,
-    isDisabled: false
-  },
-  { 
-    id: OPTION_TYPES.PRE_OPERATION,
-    label: "Pre-Operation Script",
-    description: "A script that runs before sending the GraphQL request",
-    isChecked: false,
-    isDisabled: false
-  },
-  { 
-    id: OPTION_TYPES.POST_OPERATION,
-    label: "Post-Operation Script",
-    description: "A script that runs after the GraphQL request is completed",
-    isChecked: false,
-    isDisabled: false
-  },
+  // { 
+  //   id: OPTION_TYPES.PRE_FLIGHT,
+  //   label: "Pre-Flight Script",
+  //   description: "A script that runs before the GraphQL operation is executed",
+  //   isChecked: false,
+  //   isDisabled: false
+  // },
+  // { 
+  //   id: OPTION_TYPES.PRE_OPERATION,
+  //   label: "Pre-Operation Script",
+  //   description: "A script that runs before sending the GraphQL request",
+  //   isChecked: false,
+  //   isDisabled: false
+  // },
+  // { 
+  //   id: OPTION_TYPES.POST_OPERATION,
+  //   label: "Post-Operation Script",
+  //   description: "A script that runs after the GraphQL request is completed",
+  //   isChecked: false,
+  //   isDisabled: false
+  // },
 ] as const;
 
 export const PLAYGROUND_STATE_QUERY_PARAM = 'playgroundUrlState';
