@@ -127,7 +127,7 @@ export const OPTION_TYPES = {
   POST_OPERATION: 'postOperation',
 } as const;
 
-const hideScriptsSharing = true;
+export const hideScriptsSharing = true;
 
 export const SHARE_OPTIONS = [
   // operation is always checked and disabled

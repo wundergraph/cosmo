@@ -1,10 +1,9 @@
 /**
  * This lib focuses on serialization logic for sharing state
  */
-import { ShareOptionId, TabState } from '../components/playground/types';
-import { PlaygroundUrlState } from '../components/playground/types';
 import { compressToEncodedURIComponent } from 'lz-string';
-import { PLAYGROUND_STATE_QUERY_PARAM } from './constants';
+import { PlaygroundUrlState, ShareOptionId, TabState } from '../components/playground/types';
+import { hideScriptsSharing, PLAYGROUND_STATE_QUERY_PARAM } from './constants';
 import { getPreFlightScript, getScriptTabState } from './playground-storage';
 
 /**
@@ -30,19 +29,22 @@ export const buildStateToShare = (
   }
 
   // todo: [ENG-7093] when adding the pre-flight, pre-operation and post-operation options,
-  // uncomment these lines. Make sure we instead rely on useLocalStorage here
-  // if (selectedOptions.preFlight) {
-  //   const preFlight = getPreFlightScript();
-  //   if (preFlight) stateToShare.preFlight = preFlight;
-  // }
-
-  // if (selectedOptions.preOperation && id) {
-  //   stateToShare.preOperation = getScriptTabState(id, 'pre-operation');
-  // }
-
-  // if (selectedOptions.postOperation && id) {
-  //   stateToShare.postOperation = getScriptTabState(id, 'post-operation');
-  // }
+  // remove this !hideScriptsSharing check.
+  // Instead of using playground-storage, make sure we instead rely on useLocalStorage here
+  if (!hideScriptsSharing) {
+    if (selectedOptions.preFlight) {
+      const preFlight = getPreFlightScript();
+      if (preFlight) stateToShare.preFlight = preFlight;
+    }
+  
+    if (selectedOptions.preOperation && id) {
+      stateToShare.preOperation = getScriptTabState(id, 'pre-operation');
+    }
+  
+    if (selectedOptions.postOperation && id) {
+      stateToShare.postOperation = getScriptTabState(id, 'post-operation');
+    }
+  }
 
   if (process.env.NODE_ENV === 'development') {
     console.log('[Playground] compressed state:', stateToShare);
