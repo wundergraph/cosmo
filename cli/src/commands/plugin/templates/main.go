@@ -13,7 +13,7 @@ import (
 
 func main() {
 	pl, err := routerplugin.NewRouterPlugin(func(s *grpc.Server) {
-		s.RegisterService(&service.FooService_ServiceDesc, &FooService{
+		s.RegisterService(&service.{serviceName}_ServiceDesc, &{serviceName}{
 			users:  make(map[string]*service.User),
 			nextID: 1,
 		})
@@ -26,13 +26,13 @@ func main() {
 	pl.Serve()
 }
 
-type FooService struct {
-	service.UnimplementedFooServiceServer
+type {serviceName} struct {
+	service.Unimplemented{serviceName}Server
 	users  map[string]*service.User
 	nextID int
 }
 
-func (s *FooService) QueryUser(ctx context.Context, req *service.QueryUserRequest) (*service.QueryUserResponse, error) {
+func (s *{serviceName}) QueryUser(ctx context.Context, req *service.QueryUserRequest) (*service.QueryUserResponse, error) {
 	user, exists := s.users[req.Id]
 	if !exists {
 		// Return a default user if not found (for demo purposes)
@@ -50,7 +50,7 @@ func (s *FooService) QueryUser(ctx context.Context, req *service.QueryUserReques
 	}, nil
 }
 
-func (s *FooService) QueryUsersByRole(ctx context.Context, req *service.QueryUsersByRoleRequest) (*service.QueryUsersByRoleResponse, error) {
+func (s *{serviceName}) QueryUsersByRole(ctx context.Context, req *service.QueryUsersByRoleRequest) (*service.QueryUsersByRoleResponse, error) {
 	var filteredUsers []*service.User
 
 	for _, user := range s.users {
@@ -64,7 +64,7 @@ func (s *FooService) QueryUsersByRole(ctx context.Context, req *service.QueryUse
 	}, nil
 }
 
-func (s *FooService) MutationCreateUser(ctx context.Context, req *service.MutationCreateUserRequest) (*service.MutationCreateUserResponse, error) {
+func (s *{serviceName}) MutationCreateUser(ctx context.Context, req *service.MutationCreateUserRequest) (*service.MutationCreateUserResponse, error) {
 	id := strconv.Itoa(s.nextID)
 	s.nextID++
 
@@ -87,7 +87,7 @@ func (s *FooService) MutationCreateUser(ctx context.Context, req *service.Mutati
 	}, nil
 }
 
-func (s *FooService) MutationDeleteUser(ctx context.Context, req *service.MutationDeleteUserRequest) (*service.MutationDeleteUserResponse, error) {
+func (s *{serviceName}) MutationDeleteUser(ctx context.Context, req *service.MutationDeleteUserRequest) (*service.MutationDeleteUserResponse, error) {
 	user, exists := s.users[req.Id]
 
 	// If user doesn't exist, just return a canned response for demo purposes
@@ -108,7 +108,7 @@ func (s *FooService) MutationDeleteUser(ctx context.Context, req *service.Mutati
 	}, nil
 }
 
-func (s *FooService) MutationUpdateUserRole(ctx context.Context, req *service.MutationUpdateUserRoleRequest) (*service.MutationUpdateUserRoleResponse, error) {
+func (s *{serviceName}) MutationUpdateUserRole(ctx context.Context, req *service.MutationUpdateUserRoleRequest) (*service.MutationUpdateUserRoleResponse, error) {
 	user, exists := s.users[req.Id]
 
 	// If user doesn't exist, return a canned response for demo purposes

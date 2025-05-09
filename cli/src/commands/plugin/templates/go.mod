@@ -1,4 +1,4 @@
-module {{modulePath}}
+module {modulePath}
 
 go 1.24.1
 

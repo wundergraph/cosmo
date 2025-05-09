@@ -1,4 +1,4 @@
-# ${name}  Plugin - Cosmo gRPC Subgraph Example
+# {name} Plugin - Cosmo gRPC Subgraph Example
 
 This repository contains a demo Cosmo gRPC subgraph plugin that showcases how to design APIs with GraphQL but implement them using gRPC methods instead of traditional resolvers.
 

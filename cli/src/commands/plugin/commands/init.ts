@@ -66,7 +66,7 @@ export default (opts: BaseCommandOptions) => {
       await writeFile(resolve(generatedDir, 'service.proto.lock.json'), JSON.stringify(proto.lockData, null, 2));
 
       const mainGo = await readFile(resolve(__dirname, '..', 'templates/main.go'), 'utf-8');
-      await writeFile(resolve(srcDir, 'main.go'), mainGo);
+      await writeFile(resolve(srcDir, 'main.go'), pupa(mainGo, { serviceName }));
 
       // go mod init
       const goMod = await readFile(resolve(__dirname, '..', 'templates/go.mod'), 'utf-8');
