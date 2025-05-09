@@ -291,6 +291,7 @@ export const RunRouterCommand = ({
   --add-host=host.docker.internal:host-gateway \\
   --pull always \\
   -e DEV_MODE=true \\
+  -e DEMO_MODE=true \\
   -e LISTEN_ADDR=0.0.0.0:3002 \\
   -e GRAPH_API_TOKEN=${token ? token : "<graph-api-token>"} \\
   ghcr.io/wundergraph/cosmo/router:latest`;
@@ -304,6 +305,7 @@ export const RunRouterCommand = ({
       <span>{`  --add-host=host.docker.internal:host-gateway \\`}</span>
       <span>{`  -e pull=always \\`}</span>
       <span>{`  -e DEV_MODE=true \\`}</span>
+      <span>{`  -e DEMO_MODE=true \\`}</span>
       <span>{`  -e LISTEN_ADDR=0.0.0.0:3002 \\`}</span>
       <span>
         <span>{`  -e GRAPH_API_TOKEN=`}</span>
