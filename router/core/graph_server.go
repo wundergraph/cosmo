@@ -31,6 +31,7 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"golang.org/x/exp/maps"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
@@ -1340,30 +1341,9 @@ func (s *graphServer) startupPubSubProviders(ctx context.Context) error {
 	// Default timeout for pubsub provider startup
 	const defaultStartupTimeout = 5 * time.Second
 
-	cancellableCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	for _, provider := range s.pubSubProviders {
-		startupDone := make(chan error, 1)
-
-		go func(p datasource.PubSubProvider) {
-			startupDone <- p.Startup(cancellableCtx)
-		}(provider)
-
-		timer := time.NewTimer(defaultStartupTimeout)
-		defer timer.Stop()
-
-		select {
-		case err := <-startupDone:
-			if err != nil {
-				return fmt.Errorf("failed to startup pubsub provider within allowed time: %s", err.Error())
-			}
-		case <-timer.C:
-			return fmt.Errorf("pubsub provider startup timed out after %s", defaultStartupTimeout)
-		}
-	}
-
-	return nil
+	return s.providersActionWithTimeout(ctx, func(ctx context.Context, provider datasource.PubSubProvider) error {
+		return provider.Startup(ctx)
+	}, defaultStartupTimeout, "pubsub provider startup timed out")
 }
 
 // shutdownPubSubProviders shuts down all pubsub providers
@@ -1372,37 +1352,36 @@ func (s *graphServer) startupPubSubProviders(ctx context.Context) error {
 func (s *graphServer) shutdownPubSubProviders(ctx context.Context) error {
 	// Default timeout for pubsub provider shutdown
 	const defaultShutdownTimeout = 5 * time.Second
+
+	return s.providersActionWithTimeout(ctx, func(ctx context.Context, provider datasource.PubSubProvider) error {
+		return provider.Shutdown(ctx)
+	}, defaultShutdownTimeout, "pubsub provider shutdown timed out")
+}
+
+func (s *graphServer) providersActionWithTimeout(ctx context.Context, action func(ctx context.Context, provider datasource.PubSubProvider) error, timeout time.Duration, timeoutMessage string) error {
 	cancellableCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	var finalErrs []error
-	var wg sync.WaitGroup
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+
+	providersGroup := new(errgroup.Group)
 	for _, provider := range s.pubSubProviders {
-		shutdownDone := make(chan error, 1)
-
-		wg.Add(1)
-		go func(p datasource.PubSubProvider) {
-			shutdownDone <- p.Shutdown(cancellableCtx)
-		}(provider)
-
-		timer := time.NewTimer(defaultShutdownTimeout)
-		defer timer.Stop()
-
-		select {
-		case err := <-shutdownDone:
-			wg.Done()
-			if err != nil {
-				finalErrs = append(finalErrs, fmt.Errorf("failed to shutdown pubsub provider within allowed time: %s", err.Error()))
+		providersGroup.Go(func() error {
+			actionDone := make(chan error, 1)
+			go func() {
+				actionDone <- action(cancellableCtx, provider)
+			}()
+			select {
+			case err := <-actionDone:
+				return err
+			case <-timer.C:
+				return fmt.Errorf(timeoutMessage, timeout)
 			}
-		case <-timer.C:
-			wg.Done()
-			finalErrs = append(finalErrs, fmt.Errorf("pubsub provider shutdown timed out after %s", defaultShutdownTimeout))
-		}
+		})
 	}
 
-	wg.Wait()
-
-	return errors.Join(finalErrs...)
+	return providersGroup.Wait()
 }
 
 func configureSubgraphOverwrites(
