@@ -843,7 +843,7 @@ func TestCacheWarmup(t *testing.T) {
 			metricScope := GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 			require.NotNil(t, metricScope)
 
-			require.Len(t, metricScope.Metrics, 6)
+			require.Len(t, metricScope.Metrics, 7)
 
 			operationPlanningTimeMetric := metricdata.Metrics{
 				Name:        "router.graphql.operation.planning_time",

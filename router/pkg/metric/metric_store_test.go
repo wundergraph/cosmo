@@ -135,6 +135,7 @@ func createTestStore(t *testing.T, limit int, metricReader *metric.ManualReader)
 		WithCardinalityLimit(limit),
 		WithOtlpMeterProvider(mp),
 		WithPromMeterProvider(prom),
+		WithRouterInfoAttributes(otelmetric.WithAttributeSet(attribute.NewSet())),
 	)
 
 	require.NoError(t, err)
