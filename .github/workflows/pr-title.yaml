@@ -38,5 +38,5 @@ jobs:
           # https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#using-an-intermediate-environment-variable
           PR_TITLE: ${{ github.event.pull_request.title }}
         run: |
-          npm i -g @commitlint/cli@17.0.2 @commitlint/config-conventional@17.0.2
+          npm i -g @commitlint/cli@19.8.0 @commitlint/config-conventional@19.8.0
           echo "$PR_TITLE" | commitlint
