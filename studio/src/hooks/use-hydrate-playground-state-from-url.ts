@@ -63,10 +63,9 @@ export const useHydratePlaygroundStateFromUrl = (
         }
   
         setPendingHydrationState(state);
-        // Clear the URL param immediately
-        router.replace({ pathname: router.pathname, query }, undefined, { shallow: true });
       } else {
         setIsHydrated(true);
+        return;
       }
     }
     catch (err) {
@@ -79,6 +78,10 @@ export const useHydratePlaygroundStateFromUrl = (
         variant: 'destructive',
       });
       setIsHydrated(true);
+    }
+    finally {
+      // Clear the URL param immediately
+      router.replace({ pathname: router.pathname, query }, undefined, { shallow: true });
     }
     // eslint-disable-next-line
   }, []);
