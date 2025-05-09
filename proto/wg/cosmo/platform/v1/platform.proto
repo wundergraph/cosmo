@@ -90,6 +90,7 @@ message CheckSubgraphSchemaRequest {
   string namespace = 5;
   optional bool skip_traffic_check = 6;
   optional VCSContext vcsContext = 7;
+  repeated Label labels = 8;
 }
 
 message FixSubgraphSchemaRequest {
@@ -469,6 +470,7 @@ message SchemaCheck {
     optional string subgraphId = 3;
     bool isDeleted = 4;
     bool isNew = 5;
+    repeated Label labels = 6;
   }
 
   string id = 1;

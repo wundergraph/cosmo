@@ -2,7 +2,6 @@ import { PlainMessage } from '@bufbuild/protobuf';
 import { buildASTSchema } from '@wundergraph/composition';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
-  CheckOperationUsageStats,
   CompositionError,
   CompositionWarning,
   GraphPruningIssue,
@@ -11,6 +10,7 @@ import {
   SchemaChange,
   VCSContext,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
@@ -28,6 +28,7 @@ import {
 import {
   CheckedSubgraphDTO,
   FederatedGraphDTO,
+  Label,
   NamespaceDTO,
   SchemaGraphPruningIssues,
   SchemaLintIssues,
@@ -42,7 +43,7 @@ import {
   InspectorSchemaChange,
   SchemaUsageTrafficInspector,
 } from '../services/SchemaUsageTrafficInspector.js';
-import { createBatches, getFederatedGraphRouterCompatibilityVersion } from '../util.js';
+import { createBatches, getFederatedGraphRouterCompatibilityVersion, normalizeLabels } from '../util.js';
 import { FederatedGraphConfig, FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { OrganizationRepository } from './OrganizationRepository.js';
 import { ProposalRepository } from './ProposalRepository.js';
@@ -461,9 +462,17 @@ export class SchemaCheckRepository {
       proposedSubgraphSchemaSDL: string;
       isDeleted: boolean;
       isNew: boolean;
+      namespaceId: string;
+      labels?: Label[];
     };
   }) {
-    const schemaCheckSubgraph = await this.db.insert(schema.schemaCheckSubgraphs).values(data).returning();
+    const schemaCheckSubgraph = await this.db
+      .insert(schema.schemaCheckSubgraphs)
+      .values({
+        ...data,
+        labels: data.isNew && data.labels ? normalizeLabels(data.labels).map((l) => joinLabel(l)) : undefined,
+      })
+      .returning();
     return schemaCheckSubgraph[0].id;
   }
 
@@ -481,6 +490,7 @@ export class SchemaCheckRepository {
         subgraphName: schema.schemaCheckSubgraphs.subgraphName,
         isDeleted: schema.schemaCheckSubgraphs.isDeleted,
         isNew: schema.schemaCheckSubgraphs.isNew,
+        labels: schema.schemaCheckSubgraphs.labels,
       })
       .from(schema.schemaCheckFederatedGraphs)
       .innerJoin(
@@ -507,6 +517,7 @@ export class SchemaCheckRepository {
       subgraphName: subgraph.subgraphName,
       isDeleted: subgraph.isDeleted,
       isNew: subgraph.isNew,
+      labels: subgraph.labels ? subgraph.labels.map((l) => splitLabel(l)) : [],
     }));
   }
 
@@ -626,6 +637,8 @@ export class SchemaCheckRepository {
           proposedSubgraphSchemaSDL: newSchemaSDL,
           isDeleted: newSchemaSDL === '',
           isNew: !subgraph,
+          namespaceId: namespace.id,
+          labels: subgraph ? undefined : s.labels,
         },
       });
 

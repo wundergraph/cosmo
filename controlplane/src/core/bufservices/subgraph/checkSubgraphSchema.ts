@@ -36,6 +36,8 @@ import {
   getLogger,
   handleError,
   clamp,
+  isValidLabels,
+  isValidGraphName,
 } from '../../util.js';
 import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 
@@ -122,27 +124,7 @@ export function checkSubgraphSchema(
     }
 
     const subgraph = await subgraphRepo.byName(req.subgraphName, req.namespace);
-
-    if (!subgraph) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR_NOT_FOUND,
-          details: `Subgraph '${req.subgraphName}' not found`,
-        },
-        breakingChanges: [],
-        nonBreakingChanges: [],
-        compositionErrors: [],
-        checkId: '',
-        checkedFederatedGraphs: [],
-        lintWarnings: [],
-        lintErrors: [],
-        graphPruneWarnings: [],
-        graphPruneErrors: [],
-        compositionWarnings: [],
-      };
-    }
-
-    if (subgraph.isFeatureSubgraph) {
+    if (subgraph && subgraph.isFeatureSubgraph) {
       return {
         response: {
           code: EnumStatusCode.ERR,
@@ -163,8 +145,48 @@ export function checkSubgraphSchema(
       };
     }
 
+    if (!subgraph) {
+      if (!isValidLabels(req.labels)) {
+        return {
+          response: {
+            code: EnumStatusCode.ERR_INVALID_LABELS,
+            details: `One or more labels were found to be invalid`,
+          },
+          breakingChanges: [],
+          nonBreakingChanges: [],
+          compositionErrors: [],
+          checkId: '',
+          checkedFederatedGraphs: [],
+          lintWarnings: [],
+          lintErrors: [],
+          graphPruneWarnings: [],
+          graphPruneErrors: [],
+          compositionWarnings: [],
+        };
+      } else if (!isValidGraphName(req.subgraphName)) {
+        return {
+          response: {
+            code: EnumStatusCode.ERR_INVALID_NAME,
+            details: `The name of the subgraph is invalid. Name should start and end with an alphanumeric character. Only '.', '_', '@', '/', and '-' are allowed as separators in between and must be between 1 and 100 characters in length.`,
+          },
+          breakingChanges: [],
+          nonBreakingChanges: [],
+          compositionErrors: [],
+          checkId: '',
+          checkedFederatedGraphs: [],
+          lintWarnings: [],
+          lintErrors: [],
+          graphPruneWarnings: [],
+          graphPruneErrors: [],
+          compositionWarnings: [],
+        };
+      }
+    }
+
+    const subgraphName = subgraph?.name || req.subgraphName;
+
     const federatedGraphs = await fedGraphRepo.bySubgraphLabels({
-      labels: subgraph.labels,
+      labels: subgraph ? subgraph.labels : req.labels,
       namespaceId: namespace.id,
       excludeContracts: true,
     });
@@ -243,11 +265,13 @@ export function checkSubgraphSchema(
     const schemaCheckSubgraphId = await schemaCheckRepo.createSchemaCheckSubgraph({
       data: {
         schemaCheckId: schemaCheckID,
-        subgraphId: subgraph.id,
-        subgraphName: subgraph.name,
+        subgraphId: subgraph?.id,
+        subgraphName,
         proposedSubgraphSchemaSDL: newSchemaSDL,
         isDeleted: !!req.delete,
-        isNew: false,
+        isNew: !subgraph,
+        namespaceId: namespace.id,
+        labels: subgraph ? undefined : req.labels,
       },
     });
 
@@ -264,7 +288,7 @@ export function checkSubgraphSchema(
       const proposalConfig = await proposalRepo.getProposalConfig({ namespaceId: namespace.id });
       if (proposalConfig) {
         const match = await proposalRepo.matchSchemaWithProposal({
-          subgraphName: subgraph.name,
+          subgraphName,
           namespaceId: namespace.id,
           schemaSDL: newSchemaSDL,
           routerCompatibilityVersion,
@@ -314,7 +338,11 @@ export function checkSubgraphSchema(
       }
     }
 
-    const schemaChanges = await getDiffBetweenGraphs(subgraph.schemaSDL, newSchemaSDL, routerCompatibilityVersion);
+    const schemaChanges = await getDiffBetweenGraphs(
+      subgraph?.schemaSDL || '',
+      newSchemaSDL,
+      routerCompatibilityVersion,
+    );
     if (schemaChanges.kind === 'failure') {
       logger.warn(`Error finding diff between graphs: ${schemaChanges.error}`);
       await schemaCheckRepo.update({
@@ -324,7 +352,7 @@ export function checkSubgraphSchema(
         trafficCheckSkipped: true,
         graphPruningSkipped: true,
         lintSkipped: true,
-        errorMessage: `Breaking change detection failed for the subgraph '${subgraph.name}'`,
+        errorMessage: `Breaking change detection failed for the subgraph '${subgraphName}'`,
       });
       return {
         response: {
@@ -370,7 +398,7 @@ export function checkSubgraphSchema(
     );
 
     const checkSubgraphs = new Map<string, CheckSubgraph>();
-    checkSubgraphs.set(subgraph.name, {
+    checkSubgraphs.set(subgraphName, {
       subgraph,
       checkSubgraphId: schemaCheckSubgraphId,
       newSchemaSDL,
@@ -379,6 +407,7 @@ export function checkSubgraphSchema(
       storedBreakingChanges,
       inspectorChanges: [],
       routerCompatibilityVersion,
+      labels: subgraph ? undefined : req.labels,
     });
 
     const { composedGraphs } = await composer.composeWithProposedSchemas({
@@ -432,7 +461,7 @@ export function checkSubgraphSchema(
           3. When user wants to skip the traffic check altogether
           That means any breaking change is really breaking
           */
-      if (composedGraph.errors.length > 0 || inspectorChanges.length === 0 || req.skipTrafficCheck) {
+      if (composedGraph.errors.length > 0 || inspectorChanges.length === 0 || req.skipTrafficCheck || !subgraph) {
         continue;
       }
 
@@ -472,20 +501,27 @@ export function checkSubgraphSchema(
       schemaCheckSubgraphId,
     });
 
-    const graphPruningIssues: SchemaGraphPruningIssues = await schemaGraphPruningRepo.performSchemaGraphPruningCheck({
-      newGraphQLSchema,
-      schemaCheckID,
-      subgraph,
-      namespaceID: namespace.id,
-      organizationID: authContext.organizationId,
-      isGraphPruningEnabled: namespace.enableGraphPruning,
-      schemaChanges,
-      chClient: opts.chClient,
-      fedGraphRepo,
-      subgraphRepo,
-      rangeInDays: limit,
-      schemaCheckSubgraphId,
-    });
+    let graphPruningIssues: SchemaGraphPruningIssues = {
+      warnings: [],
+      errors: [],
+    };
+
+    if (subgraph) {
+      graphPruningIssues = await schemaGraphPruningRepo.performSchemaGraphPruningCheck({
+        newGraphQLSchema,
+        schemaCheckID,
+        subgraph,
+        namespaceID: namespace.id,
+        organizationID: authContext.organizationId,
+        isGraphPruningEnabled: namespace.enableGraphPruning,
+        schemaChanges,
+        chClient: opts.chClient,
+        fedGraphRepo,
+        subgraphRepo,
+        rangeInDays: limit,
+        schemaCheckSubgraphId,
+      });
+    }
 
     // Update the overall schema check with the results
     await schemaCheckRepo.update({
@@ -506,7 +542,7 @@ export function checkSubgraphSchema(
           compositionErrors,
           breakingChangesCount: schemaChanges.breakingChanges.length,
           hasClientTraffic,
-          subgraphName: subgraph.name,
+          subgraphName,
           organizationSlug: org.slug,
           webBaseUrl: opts.webBaseUrl,
           composedGraphs: composedGraphs.map((c) => c.name),
