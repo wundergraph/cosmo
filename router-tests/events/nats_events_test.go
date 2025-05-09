@@ -1816,8 +1816,6 @@ func TestNatsEvents(t *testing.T) {
 		listener.Start()
 		defer listener.Close()
 
-		// kafka client is lazy and will not connect to the broker until the first message is produced
-		// so the router will start even if the kafka connection fails
 		errRouter := testenv.RunWithError(t, &testenv.Config{
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
 			EnableNats:               false,
