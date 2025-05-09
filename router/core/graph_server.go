@@ -1286,8 +1286,8 @@ func (s *graphServer) buildSubgraphGRPCClients(ctx context.Context, config *node
 		if pluginConfig := grpcConfig.GetPlugin(); pluginConfig != nil {
 			basePath := ""
 
-			if s.pluginConfig.Enabled {
-				basePath = s.pluginConfig.BasePath
+			if s.plugins.Enabled {
+				basePath = s.plugins.BasePath
 			}
 
 			if s.pluginHost == nil {
@@ -1299,15 +1299,13 @@ func (s *graphServer) buildSubgraphGRPCClients(ctx context.Context, config *node
 					continue
 				}
 
-				pluginName := pluginConfig.GetName()
-
-				pluginPath, err := filepath.Abs(filepath.Join(basePath, "bin", fmt.Sprintf("%s_%s", runtime.GOOS, runtime.GOARCH)))
+				pluginPath, err := filepath.Abs(filepath.Join(basePath, pluginConfig.GetName(), "bin", fmt.Sprintf("%s_%s", runtime.GOOS, runtime.GOARCH)))
 				if err != nil {
 					return nil, fmt.Errorf("failed to get plugin path: %w", err)
 				}
 
 				grpcPlugin, err := routerplugin.NewGRPCPlugin(routerplugin.GRPCPluginConfig{
-					PluginName:    pluginName,
+					PluginName:    pluginConfig.GetName(),
 					PluginPath:    pluginPath,
 					PluginCommand: []string{pluginPath},
 				})

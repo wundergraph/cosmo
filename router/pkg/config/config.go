@@ -267,11 +267,6 @@ type RequestHeaderRule struct {
 	ValueFrom *CustomDynamicAttribute `yaml:"value_from,omitempty"`
 }
 
-type PluginConfiguration struct {
-	Enabled  bool   `yaml:"enabled" envDefault:"false" env:"PLUGIN_ENABLED"`
-	BasePath string `yaml:"base_path" envDefault:"__plugins" env:"PLUGIN_BASE_PATH"`
-}
-
 func (r *RequestHeaderRule) GetOperation() HeaderRuleOperation {
 	return r.Operation
 }
@@ -906,6 +901,11 @@ type MCPServer struct {
 	Port int `yaml:"port" envDefault:"5025" env:"MCP_SERVER_PORT"`
 }
 
+type PluginConfiguration struct {
+	Enabled  bool   `yaml:"enabled" envDefault:"false" env:"PLUGIN_ENABLED"`
+	BasePath string `yaml:"base_path" envDefault:"__plugins" env:"PLUGIN_BASE_PATH"`
+}
+
 type Config struct {
 	Version string `yaml:"version,omitempty" ignored:"true"`
 
@@ -976,7 +976,7 @@ type Config struct {
 	ApolloRouterCompatibilityFlags ApolloRouterCompatibilityFlags  `yaml:"apollo_router_compatibility_flags"`
 	ClientHeader                   ClientHeader                    `yaml:"client_header"`
 
-	PluginConfiguration PluginConfiguration `yaml:"plugin_configuration"`
+	Plugins PluginConfiguration `yaml:"plugins"`
 }
 
 type PlaygroundConfig struct {

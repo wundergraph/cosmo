@@ -6,7 +6,7 @@ version: "1"
 graph:
   token: "mytoken"
 
-plugin_configuration:
+plugins:
   enabled: true
   base_path: "some/path/to/plugins"
 

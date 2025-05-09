@@ -470,7 +470,7 @@
     "Name": "",
     "Version": ""
   },
-  "PluginConfiguration": {
+  "Plugins": {
     "Enabled": false,
     "BasePath": "__plugins"
   }

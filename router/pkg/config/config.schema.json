@@ -2796,7 +2796,7 @@
         }
       }
     },
-    "plugin_configuration": {
+    "plugins": {
       "type": "object",
       "description": "The configuration for the router plugins.",
       "additionalProperties": false,
