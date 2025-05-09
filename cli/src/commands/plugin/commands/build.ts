@@ -3,7 +3,7 @@ import { basename, join, resolve } from 'pathe';
 import pc from 'picocolors';
 import Spinner from 'ora';
 import { access, readFile, writeFile } from 'node:fs/promises';
-import spawn from 'nano-spawn';
+import { execa } from 'execa';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { compileGraphQLToMapping, compileGraphQLToProto, ProtoLock } from '@wundergraph/protographic';
 import os from 'node:os';
@@ -94,7 +94,7 @@ export default (opts: BaseCommandOptions) => {
       await writeFile(resolve(generatedDir, 'service.proto.lock.json'), JSON.stringify(proto.lockData, null, 2));
 
       spinner.text = 'Generating gRPC code...';
-      await spawn(
+      await execa(
         'protoc',
         [
           '--go_out=.',
@@ -103,12 +103,12 @@ export default (opts: BaseCommandOptions) => {
           '--go-grpc_opt=paths=source_relative',
           'generated/service.proto',
         ],
-        { cwd: pluginDir },
+        { cwd: pluginDir, stderr: process.stdout },
       );
 
       if (!options.generateOnly) {
         spinner.text = 'Installing dependencies...';
-        await spawn('go', ['mod', 'tidy'], { cwd: pluginDir });
+        await execa('go', ['mod', 'tidy'], { cwd: pluginDir, stderr: process.stdout });
 
         // Build binaries concurrently for each platform-architecture combination
         spinner.text = 'Building binaries...';
@@ -125,13 +125,15 @@ export default (opts: BaseCommandOptions) => {
 
             const binaryName = `${platform}_${arch}`;
 
-            const flags = ['build', '-o', join(binDir, binaryName), 'src/main.go'];
+            const flags = ['build'];
 
             if (options.debug) {
               flags.push('-gcflags', 'all=-N -l');
             }
 
-            await spawn('go', flags, {
+            flags.push('-o', join(binDir, binaryName), 'src/main.go');
+
+            await execa('go', flags, {
               cwd: pluginDir,
               env: {
                 GOOS: platform,
@@ -139,6 +141,7 @@ export default (opts: BaseCommandOptions) => {
                 // For better compatibility with different platforms
                 CGO_ENABLED: '0',
               },
+              stderr: process.stdout,
             });
           }),
         );

@@ -261,6 +261,137 @@ describe('Argument Ordering and Field Numbers', () => {
       const maxNumber = Math.max(queryNumber, offsetNumber);
       expect(searchRequestFields3['filter_by']).toBeGreaterThan(maxNumber);
     });
+    
+    test('should verify field numbers are preserved when fields are removed and reserved tags are added', () => {
+      // Initial schema with arguments
+      const initialSchema = buildSchema(`
+        type User {
+          id: ID!
+          name: String!
+        }
+        
+        type Query {
+          findUsers(
+            id: ID, 
+            name: String, 
+            age: Int, 
+            email: String, 
+            active: Boolean
+          ): [User]
+        }
+      `);
+
+      // Create the visitor with no initial lock data
+      const visitor1 = new GraphQLToProtoTextVisitor(initialSchema, {
+        serviceName: 'UserService',
+      });
+
+      // Generate the first proto
+      const proto1 = visitor1.visit();
+
+      // Parse the proto with protobufjs
+      const root1 = loadProtoFromText(proto1);
+      const findRequestFields1 = getFieldNumbersFromMessage(root1, 'QueryFindUsersRequest');
+
+      // Remember original field numbers
+      const idNumber = findRequestFields1['id'];
+      const nameNumber = findRequestFields1['name'];
+      const ageNumber = findRequestFields1['age'];
+      const emailNumber = findRequestFields1['email'];
+      const activeNumber = findRequestFields1['active'];
+
+      // Get the generated lock data
+      const lockData = visitor1.getGeneratedLockData();
+      expect(lockData).not.toBeNull();
+
+      // Modified schema with some fields removed and order changed
+      const modifiedSchema = buildSchema(`
+        type User {
+          id: ID!
+          name: String!
+        }
+        
+        type Query {
+          findUsers(
+            active: Boolean,  # moved from position 5 to position 1
+            name: String,     # moved from position 2 to position 2 (unchanged)
+            # id: ID,         # removed
+            # age: Int,       # removed
+            # email: String,  # removed
+            status: String    # new field
+          ): [User]
+        }
+      `);
+
+      // Create another visitor using the generated lock data
+      const visitor2 = new GraphQLToProtoTextVisitor(modifiedSchema, {
+        serviceName: 'UserService',
+        lockData: lockData || undefined,
+      });
+
+      // Generate the second proto
+      const proto2 = visitor2.visit();
+
+      // Parse the proto with protobufjs
+      const root2 = loadProtoFromText(proto2);
+      const findRequestFields2 = getFieldNumbersFromMessage(root2, 'QueryFindUsersRequest');
+
+      // Preserved fields should maintain their numbers despite reordering
+      expect(findRequestFields2['name']).toBe(nameNumber);
+      expect(findRequestFields2['active']).toBe(activeNumber);
+      
+      // Removed fields should not be present
+      expect(findRequestFields2['id']).toBeUndefined();
+      expect(findRequestFields2['age']).toBeUndefined();
+      expect(findRequestFields2['email']).toBeUndefined();
+      
+      // New field should have a higher number than any existing field
+      const maxNumber = Math.max(idNumber, nameNumber, ageNumber, emailNumber, activeNumber);
+      expect(findRequestFields2['status']).toBeGreaterThan(maxNumber);
+      
+      // Check for reserved tag in the proto text
+      expect(proto2).toContain('reserved');
+      
+      // Now add back a previously removed field and check it gets a new number
+      const modifiedSchema3 = buildSchema(`
+        type User {
+          id: ID!
+          name: String!
+        }
+        
+        type Query {
+          findUsers(
+            active: Boolean,
+            name: String,
+            status: String,
+            id: ID,        # re-added
+            # age: Int,    # still removed
+            # email: String, # still removed
+            created: String # another new field
+          ): [User]
+        }
+      `);
+
+      // Create a third visitor using the same lock data
+      const visitor3 = new GraphQLToProtoTextVisitor(modifiedSchema, {
+        serviceName: 'UserService',
+        lockData: lockData || undefined,
+      });
+
+      // Generate the third proto
+      const proto3 = visitor3.visit();
+
+      // Parse the proto with protobufjs
+      const root3 = loadProtoFromText(proto3);
+      const findRequestFields3 = getFieldNumbersFromMessage(root3, 'QueryFindUsersRequest');
+
+      // Check that existing fields still maintain their numbers
+      expect(findRequestFields3['name']).toBe(nameNumber);
+      expect(findRequestFields3['active']).toBe(activeNumber);
+      
+      // The status field from the second version should still have its number
+      expect(findRequestFields3['status']).toBe(findRequestFields2['status']);
+    });
   });
 
   describe('Complex Input Arguments', () => {

@@ -3,7 +3,7 @@
   "compilerOptions": {
     "target": "ES2019",
     "module": "esnext",
-    "moduleResolution": "nodenext",
+    "moduleResolution": "node",
     "declarationDir": "./dist",
     "outDir": "./dist",
     "typeRoots": ["./node_modules/@types", "./src/typedefinitions"],
