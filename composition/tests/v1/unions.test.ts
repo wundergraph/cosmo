@@ -1,14 +1,10 @@
+import { parse } from 'graphql';
+import { describe, expect, test } from 'vitest';
 import {
   duplicateUnionMemberDefinitionError,
-  federateSubgraphs,
-  FederationResultFailure,
-  FederationResultSuccess,
   invalidUnionMemberTypeError,
   noBaseDefinitionForExtensionError,
   noDefinedUnionMembersError,
-  NormalizationResultFailure,
-  NormalizationResultSuccess,
-  normalizeSubgraph,
   OBJECT,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   Subgraph,
@@ -16,21 +12,20 @@ import {
   UNION,
   UnionDefinitionData,
 } from '../../src';
-import { parse } from 'graphql';
-import { describe, expect, test } from 'vitest';
+import {
+  federateSubgraphsFailure,
+  federateSubgraphsSuccess,
+  normalizeString,
+  normalizeSubgraphFailure,
+  normalizeSubgraphSuccess,
+  schemaToSortedNormalizedString,
+} from '../utils/utils';
 import { baseDirectiveDefinitions, versionOneRouterDefinitions, versionTwoRouterDefinitions } from './utils/utils';
-import { normalizeString, schemaToSortedNormalizedString } from '../utils/utils';
 
 describe('Union tests', () => {
   describe('Normalization tests', () => {
     test('that a Union extension orphan is valid', () => {
-      const result = normalizeSubgraph(
-        subgraphI.definitions,
-        subgraphI.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
-      expect(result.success).toBe(true);
+      const result = normalizeSubgraphSuccess(subgraphI, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
           baseDirectiveDefinitions +
@@ -48,13 +43,7 @@ describe('Union tests', () => {
     });
 
     test('that a Union can be extended #1', () => {
-      const result = normalizeSubgraph(
-        subgraphJ.definitions,
-        subgraphJ.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
-      expect(result.success).toBe(true);
+      const result = normalizeSubgraphSuccess(subgraphJ, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
           baseDirectiveDefinitions +
@@ -76,13 +65,7 @@ describe('Union tests', () => {
     });
 
     test('that a Union can be extended #2', () => {
-      const result = normalizeSubgraph(
-        subgraphK.definitions,
-        subgraphK.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
-      expect(result.success).toBe(true);
+      const result = normalizeSubgraphSuccess(subgraphK, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
           baseDirectiveDefinitions +
@@ -104,13 +87,7 @@ describe('Union tests', () => {
     });
 
     test('that a Union stub can be extended #1', () => {
-      const result = normalizeSubgraph(
-        subgraphL.definitions,
-        subgraphL.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
-      expect(result.success).toBe(true);
+      const result = normalizeSubgraphSuccess(subgraphL, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
           baseDirectiveDefinitions +
@@ -128,13 +105,7 @@ describe('Union tests', () => {
     });
 
     test('that a Union stub can be extended #2', () => {
-      const result = normalizeSubgraph(
-        subgraphM.definitions,
-        subgraphM.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
-      expect(result.success).toBe(true);
+      const result = normalizeSubgraphSuccess(subgraphM, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
           baseDirectiveDefinitions +
@@ -152,13 +123,7 @@ describe('Union tests', () => {
     });
 
     test('that a Union stub can be extended #3', () => {
-      const result = normalizeSubgraph(
-        subgraphN.definitions,
-        subgraphN.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
-      expect(result.success).toBe(true);
+      const result = normalizeSubgraphSuccess(subgraphN, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
           baseDirectiveDefinitions +
@@ -176,13 +141,7 @@ describe('Union tests', () => {
     });
 
     test('that a Union stub can be extended #4', () => {
-      const result = normalizeSubgraph(
-        subgraphO.definitions,
-        subgraphO.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
-      expect(result.success).toBe(true);
+      const result = normalizeSubgraphSuccess(subgraphO, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
           baseDirectiveDefinitions +
@@ -200,13 +159,7 @@ describe('Union tests', () => {
     });
 
     test('that a Union stub can be extended #5', () => {
-      const result = normalizeSubgraph(
-        subgraphP.definitions,
-        subgraphP.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
-      expect(result.success).toBe(true);
+      const result = normalizeSubgraphSuccess(subgraphP, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
           baseDirectiveDefinitions +
@@ -224,13 +177,7 @@ describe('Union tests', () => {
     });
 
     test('that a Union can be extended with just a directive #1', () => {
-      const result = normalizeSubgraph(
-        subgraphQ.definitions,
-        subgraphQ.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
-      expect(result.success).toBe(true);
+      const result = normalizeSubgraphSuccess(subgraphQ, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
           baseDirectiveDefinitions +
@@ -248,13 +195,7 @@ describe('Union tests', () => {
     });
 
     test('that a Union can be extended with just a directive #2', () => {
-      const result = normalizeSubgraph(
-        subgraphR.definitions,
-        subgraphR.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
-      expect(result.success).toBe(true);
+      const result = normalizeSubgraphSuccess(subgraphR, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
           baseDirectiveDefinitions +
@@ -272,13 +213,7 @@ describe('Union tests', () => {
     });
 
     test('that a Union extension can be extended with just a directive #1', () => {
-      const result = normalizeSubgraph(
-        subgraphS.definitions,
-        subgraphS.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
-      expect(result.success).toBe(true);
+      const result = normalizeSubgraphSuccess(subgraphS, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
           baseDirectiveDefinitions +
@@ -296,13 +231,7 @@ describe('Union tests', () => {
     });
 
     test('that a Union extension can be extended with just a directive #2', () => {
-      const result = normalizeSubgraph(
-        subgraphT.definitions,
-        subgraphT.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
-      expect(result.success).toBe(true);
+      const result = normalizeSubgraphSuccess(subgraphT, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
           baseDirectiveDefinitions +
@@ -320,109 +249,55 @@ describe('Union tests', () => {
     });
 
     test('that an error is returned if a final Union defines no Union Members', () => {
-      const result = normalizeSubgraph(
-        subgraphU.definitions,
-        subgraphU.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
-      expect(result.success).toBe(false);
+      const result = normalizeSubgraphFailure(subgraphU, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(noDefinedUnionMembersError(UNION));
     });
 
     test('that an error is returned if a final Union extension defines no Union Members', () => {
-      const result = normalizeSubgraph(
-        subgraphV.definitions,
-        subgraphV.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
-      expect(result.success).toBe(false);
+      const result = normalizeSubgraphFailure(subgraphV, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(noDefinedUnionMembersError(UNION));
     });
 
     test('that an error is returned if a final extended Union defines no Union Members #1', () => {
-      const result = normalizeSubgraph(
-        subgraphW.definitions,
-        subgraphW.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
-      expect(result.success).toBe(false);
+      const result = normalizeSubgraphFailure(subgraphW, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(noDefinedUnionMembersError(UNION));
     });
 
     test('that an error is returned if a final extended Union defines no Union Members #2', () => {
-      const result = normalizeSubgraph(
-        subgraphX.definitions,
-        subgraphX.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
-      expect(result.success).toBe(false);
+      const result = normalizeSubgraphFailure(subgraphX, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(noDefinedUnionMembersError(UNION));
     });
 
     test('that an error is returned if a Union defines a duplicate Union Member', () => {
-      const result = normalizeSubgraph(
-        subgraphY.definitions,
-        subgraphY.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
-      expect(result.success).toBe(false);
+      const result = normalizeSubgraphFailure(subgraphY, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(duplicateUnionMemberDefinitionError(UNION, OBJECT));
     });
 
     test('that an error is returned if a Union extension defines a duplicate Union Member', () => {
-      const result = normalizeSubgraph(
-        subgraphZ.definitions,
-        subgraphZ.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
-      expect(result.success).toBe(false);
+      const result = normalizeSubgraphFailure(subgraphZ, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(duplicateUnionMemberDefinitionError(UNION, OBJECT));
     });
 
     test('that an error is returned if an extended Union defines a duplicate Union Member #1', () => {
-      const result = normalizeSubgraph(
-        subgraphAA.definitions,
-        subgraphAA.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
-      expect(result.success).toBe(false);
+      const result = normalizeSubgraphFailure(subgraphAA, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(duplicateUnionMemberDefinitionError(UNION, OBJECT));
     });
 
     test('that an error is returned if an extended Union defines a duplicate Union Member #2', () => {
-      const result = normalizeSubgraph(
-        subgraphAB.definitions,
-        subgraphAB.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
-      expect(result.success).toBe(false);
+      const result = normalizeSubgraphFailure(subgraphAB, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(duplicateUnionMemberDefinitionError(UNION, OBJECT));
     });
 
     test('that an error is returned if non-Objects are defined as Union Members', () => {
-      const result = normalizeSubgraph(
-        subgraphF.definitions,
-        subgraphF.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
-      expect(result.success).toBe(false);
+      const result = normalizeSubgraphFailure(subgraphF, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         invalidUnionMemberTypeError('Union', [
@@ -435,13 +310,7 @@ describe('Union tests', () => {
     });
 
     test('that an error is returned if non-objects are defined as union members through an extension', () => {
-      const result = normalizeSubgraph(
-        subgraphG.definitions,
-        subgraphG.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
-      expect(result.success).toBe(false);
+      const result = normalizeSubgraphFailure(subgraphG, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         invalidUnionMemberTypeError('Union', ['"Scalar", which is type "Scalar"']),
@@ -449,13 +318,7 @@ describe('Union tests', () => {
     });
 
     test('that an error is returned if non-objects are defined as union members and the union is extended', () => {
-      const result = normalizeSubgraph(
-        subgraphH.definitions,
-        subgraphH.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
-      expect(result.success).toBe(false);
+      const result = normalizeSubgraphFailure(subgraphH, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         invalidUnionMemberTypeError('Union', ['"Scalar", which is type "Scalar"']),
@@ -465,11 +328,7 @@ describe('Union tests', () => {
 
   describe('Federation tests', () => {
     test('that a Union type and extension definition federate successfully #1.1', () => {
-      const result = federateSubgraphs(
-        [subgraphAC, subgraphAD, subgraphAE],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
-      expect(result.success).toBe(true);
+      const result = federateSubgraphsSuccess([subgraphAC, subgraphAD, subgraphAE], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
           versionOneRouterDefinitions +
@@ -493,11 +352,7 @@ describe('Union tests', () => {
     });
 
     test('that a Union type and extension definition federate successfully #1.2', () => {
-      const result = federateSubgraphs(
-        [subgraphAC, subgraphAE, subgraphAD],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
-      expect(result.success).toBe(true);
+      const result = federateSubgraphsSuccess([subgraphAC, subgraphAE, subgraphAD], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
           versionOneRouterDefinitions +
@@ -521,21 +376,13 @@ describe('Union tests', () => {
     });
 
     test('that an error is returned if federation results in a Union extension orphan', () => {
-      const result = federateSubgraphs(
-        [subgraphAC, subgraphAE],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultFailure;
-      expect(result.success).toBe(false);
+      const result = federateSubgraphsFailure([subgraphAC, subgraphAE], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(noBaseDefinitionForExtensionError(UNION, UNION));
     });
 
     test('that unions merge by union #1.1', () => {
-      const result = federateSubgraphs(
-        [subgraphA, subgraphB],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
-      expect(result.success).toBe(true);
+      const result = federateSubgraphsSuccess([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
           versionOneRouterDefinitions +
@@ -575,11 +422,7 @@ describe('Union tests', () => {
     });
 
     test('that unions merge by union #1.2', () => {
-      const result = federateSubgraphs(
-        [subgraphB, subgraphA],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
-      expect(result.success).toBe(true);
+      const result = federateSubgraphsSuccess([subgraphB, subgraphA], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
           versionOneRouterDefinitions +
@@ -619,11 +462,7 @@ describe('Union tests', () => {
     });
 
     test('that an error is returned if a union has no members #1.1', () => {
-      const result = federateSubgraphs(
-        [subgraphB, subgraphC],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultFailure;
-      expect(result.success).toBe(false);
+      const result = federateSubgraphsFailure([subgraphB, subgraphC], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         subgraphValidationError('subgraph-c', [noDefinedUnionMembersError('Starters')]),
@@ -631,11 +470,7 @@ describe('Union tests', () => {
     });
 
     test('that an error is returned if a union has no members #1.1', () => {
-      const result = federateSubgraphs(
-        [subgraphC, subgraphB],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultFailure;
-      expect(result.success).toBe(false);
+      const result = federateSubgraphsFailure([subgraphC, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         subgraphValidationError('subgraph-c', [noDefinedUnionMembersError('Starters')]),
@@ -643,11 +478,7 @@ describe('Union tests', () => {
     });
 
     test('that union extensions federate correctly #1.1', () => {
-      const result = federateSubgraphs(
-        [subgraphD, subgraphE],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
-      expect(result.success).toBe(true);
+      const result = federateSubgraphsSuccess([subgraphD, subgraphE], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
           versionOneRouterDefinitions +
@@ -726,11 +557,7 @@ describe('Union tests', () => {
     });
 
     test('that Union extensions federate correctly #1.2', () => {
-      const result = federateSubgraphs(
-        [subgraphE, subgraphD],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
-      expect(result.success).toBe(true);
+      const result = federateSubgraphsSuccess([subgraphE, subgraphD], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
           versionOneRouterDefinitions +
@@ -809,11 +636,7 @@ describe('Union tests', () => {
     });
 
     test('that Field named types can coerce Union Members into Unions #1.1', () => {
-      const result = federateSubgraphs(
-        [subgraphAF, subgraphAG],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
-      expect(result.success).toBe(true);
+      const result = federateSubgraphsSuccess([subgraphAF, subgraphAG], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
           versionTwoRouterDefinitions +
@@ -846,11 +669,7 @@ describe('Union tests', () => {
     });
 
     test('that Field named types can coerce Union Members into Unions #1.2', () => {
-      const result = federateSubgraphs(
-        [subgraphAG, subgraphAF],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
-      expect(result.success).toBe(true);
+      const result = federateSubgraphsSuccess([subgraphAG, subgraphAF], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
           versionTwoRouterDefinitions +
@@ -883,11 +702,7 @@ describe('Union tests', () => {
     });
 
     test('that Field named types can coerce Union Members into Unions #2.1', () => {
-      const result = federateSubgraphs(
-        [subgraphAH, subgraphAI, subgraphAJ],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
-      expect(result.success).toBe(true);
+      const result = federateSubgraphsSuccess([subgraphAH, subgraphAI, subgraphAJ], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
           versionTwoRouterDefinitions +
@@ -913,11 +728,7 @@ describe('Union tests', () => {
     });
 
     test('that Field named types can coerce Union Members into Unions #3.1', () => {
-      const result = federateSubgraphs(
-        [subgraphAK, subgraphAL],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
-      expect(result.success).toBe(true);
+      const result = federateSubgraphsSuccess([subgraphAK, subgraphAL], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
           versionTwoRouterDefinitions +
@@ -958,11 +769,7 @@ describe('Union tests', () => {
     });
 
     test('that Field named types can coerce Union Members into Unions #3.2', () => {
-      const result = federateSubgraphs(
-        [subgraphAK, subgraphAL],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
-      expect(result.success).toBe(true);
+      const result = federateSubgraphsSuccess([subgraphAK, subgraphAL], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
           versionTwoRouterDefinitions +
@@ -1003,11 +810,7 @@ describe('Union tests', () => {
     });
 
     test('that a Union has subgraphs data', () => {
-      const result = federateSubgraphs(
-        [subgraphA, subgraphB, subgraphAC],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
-      expect(result.success).toBe(true);
+      const result = federateSubgraphsSuccess([subgraphA, subgraphB, subgraphAC], ROUTER_COMPATIBILITY_VERSION_ONE);
 
       const unionDef = result.parentDefinitionDataByTypeName.get('Starters') as UnionDefinitionData;
 
