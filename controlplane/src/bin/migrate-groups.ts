@@ -7,6 +7,7 @@ import Keycloak from '../core/services/Keycloak.js';
 import * as schema from '../db/schema.js';
 import { OrganizationRole } from '../db/models.js';
 import { organizationRoleEnum } from '../db/schema.js';
+import { OidcRepository } from "../core/repositories/OidcRepository.js";
 import { getConfig } from './get-config.js';
 
 const {
@@ -74,6 +75,7 @@ async function migrateGroups(db: PostgresJsDatabase<typeof schema>) {
     organizations.map(async ({ id: organizationId, slug: organizationSlug }) => {
       await keycloakClient.seedRoles({ realm, organizationSlug });
       await ensureOrganizationSubgroupsExistInDatabase({ db, organizationId, organizationSlug });
+      await updateAndLinkExistingOrganizationOidcMappers({ db, keycloakClient, organizationId, organizationSlug });
       await assignOrganizationMembersToCorrespondingGroups({ db, organizationId });
 
       console.log(`- Done processing organization "${organizationSlug}"`);
@@ -158,6 +160,64 @@ async function ensureOrganizationSubgroupsExistInDatabase({
       });
     }),
   );
+}
+
+async function updateAndLinkExistingOrganizationOidcMappers({ db, keycloakClient, organizationId, organizationSlug } : {
+  db: PostgresJsDatabase<typeof schema>;
+  keycloakClient: Keycloak;
+  organizationId: string;
+  organizationSlug: string;
+}) {
+  const kcOrgGroups = await keycloakClient.client.groups.find({
+    realm,
+    search: organizationSlug,
+    max: 1,
+  });
+
+  if (kcOrgGroups.length !== 1) {
+    return;
+  }
+
+  const oidcRepo = new OidcRepository(db);
+  const oidcProvider = await oidcRepo.getOidcProvider({ organizationId });
+  if (!oidcProvider) {
+    return;
+  }
+
+  const existingMappers = await keycloakClient.client.identityProviders.findMappers({
+    realm,
+    alias: oidcProvider.alias
+  });
+
+  const key = 'ssoGroups';
+  for (const mapper of existingMappers) {
+    const kcGroupName = mapper.config.group as string;
+    const kcGroupNameParts = kcGroupName.split('/');
+    if (kcGroupNameParts.length !== 3) {
+      continue;
+    }
+
+    const claims = JSON.parse(mapper.config.claims) as { value: string }[];
+    if (claims.length === 1 && claims[0].value === '.*') {
+      await keycloakClient.client.identityProviders.delMapper({
+        realm,
+        alias: oidcProvider.alias,
+        id: mapper.id!,
+      });
+
+      await keycloakClient.createIDPMapper({
+        realm,
+        claims: `[{ "key": "${key}", "value": ".*" }]`,
+        alias: oidcProvider.alias,
+        keycloakGroupName: `/${organizationSlug}`,
+      });
+    } else {
+      await db
+        .update(schema.organizationGroups)
+        .set({ kcMapperId: mapper.id!, })
+        .where(eq(schema.organizationGroups.name, kcGroupNameParts[2]));
+    }
+  }
 }
 
 async function assignOrganizationMembersToCorrespondingGroups({
