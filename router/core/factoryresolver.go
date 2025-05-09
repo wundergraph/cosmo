@@ -12,6 +12,7 @@ import (
 	"github.com/buger/jsonparser"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
+	pubsub_datasource "github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/argument_templates"
 
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -33,7 +34,6 @@ type Loader struct {
 	// includeInfo controls whether additional information like type usage and field usage is included in the plan de
 	includeInfo bool
 	logger      *zap.Logger
-	providers   []datasource.PubSubProvider
 }
 
 type InstanceData struct {
@@ -182,7 +182,6 @@ func NewLoader(ctx context.Context, includeInfo bool, resolver FactoryResolver, 
 		resolver:    resolver,
 		includeInfo: includeInfo,
 		logger:      logger,
-		providers:   []datasource.PubSubProvider{},
 	}
 }
 
@@ -193,10 +192,6 @@ func (l *Loader) LoadInternedString(engineConfig *nodev1.EngineConfiguration, st
 		return "", fmt.Errorf("no string found for key %q", key)
 	}
 	return s, nil
-}
-
-func (l *Loader) GetProviders() []datasource.PubSubProvider {
-	return l.providers
 }
 
 type RouterEngineConfiguration struct {
@@ -259,7 +254,7 @@ func mapProtoFilterToPlanFilter(input *nodev1.SubscriptionFilterCondition, outpu
 	return nil
 }
 
-func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nodev1.Subgraph, routerEngineConfig *RouterEngineConfiguration) (*plan.Configuration, error) {
+func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nodev1.Subgraph, routerEngineConfig *RouterEngineConfiguration) (*plan.Configuration, []pubsub_datasource.PubSubProvider, error) {
 	var outConfig plan.Configuration
 	// attach field usage information to the plan
 	outConfig.DefaultFlushIntervalMillis = engineConfig.DefaultFlushInterval
@@ -294,6 +289,8 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 		})
 	}
 
+	var providers []pubsub_datasource.PubSubProvider
+
 	for _, in := range engineConfig.DatasourceConfigurations {
 		var out plan.DataSource
 
@@ -301,7 +298,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 		case nodev1.DataSourceKind_STATIC:
 			factory, err := l.resolver.ResolveStaticFactory()
 			if err != nil {
-				return nil, err
+				return nil, providers, err
 			}
 
 			out, err = plan.NewDataSourceConfiguration[staticdatasource.Configuration](
@@ -313,7 +310,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 				},
 			)
 			if err != nil {
-				return nil, fmt.Errorf("error creating data source configuration for data source %s: %w", in.Id, err)
+				return nil, providers, fmt.Errorf("error creating data source configuration for data source %s: %w", in.Id, err)
 			}
 
 		case nodev1.DataSourceKind_GRAPHQL:
@@ -341,7 +338,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 
 			graphqlSchema, err := l.LoadInternedString(engineConfig, in.CustomGraphql.GetUpstreamSchema())
 			if err != nil {
-				return nil, fmt.Errorf("could not load GraphQL schema for data source %s: %w", in.Id, err)
+				return nil, providers, fmt.Errorf("could not load GraphQL schema for data source %s: %w", in.Id, err)
 			}
 
 			var subscriptionUseSSE bool
@@ -380,7 +377,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 			dataSourceRules := FetchURLRules(routerEngineConfig.Headers, subgraphs, subscriptionUrl)
 			forwardedClientHeaders, forwardedClientRegexps, err := PropagatedHeaders(dataSourceRules)
 			if err != nil {
-				return nil, fmt.Errorf("error parsing header rules for data source %s: %w", in.Id, err)
+				return nil, providers, fmt.Errorf("error parsing header rules for data source %s: %w", in.Id, err)
 			}
 
 			schemaConfiguration, err := graphql_datasource.NewSchemaConfiguration(
@@ -391,7 +388,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 				},
 			)
 			if err != nil {
-				return nil, fmt.Errorf("error creating schema configuration for data source %s: %w", in.Id, err)
+				return nil, providers, fmt.Errorf("error creating schema configuration for data source %s: %w", in.Id, err)
 			}
 
 			customConfiguration, err := graphql_datasource.NewConfiguration(graphql_datasource.ConfigurationInput{
@@ -412,14 +409,14 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 				CustomScalarTypeFields: customScalarTypeFields,
 			})
 			if err != nil {
-				return nil, fmt.Errorf("error creating custom configuration for data source %s: %w", in.Id, err)
+				return nil, providers, fmt.Errorf("error creating custom configuration for data source %s: %w", in.Id, err)
 			}
 
 			dataSourceName := l.subgraphName(subgraphs, in.Id)
 
 			factory, err := l.resolver.ResolveGraphqlFactory(dataSourceName)
 			if err != nil {
-				return nil, err
+				return nil, providers, err
 			}
 
 			out, err = plan.NewDataSourceConfigurationWithName[graphql_datasource.Configuration](
@@ -430,7 +427,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 				customConfiguration,
 			)
 			if err != nil {
-				return nil, fmt.Errorf("error creating data source configuration for data source %s: %w", in.Id, err)
+				return nil, providers, fmt.Errorf("error creating data source configuration for data source %s: %w", in.Id, err)
 			}
 
 		case nodev1.DataSourceKind_PUBSUB:
@@ -449,29 +446,29 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 					l.resolver.InstanceData().ListenAddress,
 				)
 				if err != nil {
-					return nil, err
+					return nil, providers, err
 				}
 				if provider != nil {
-					l.providers = append(l.providers, provider)
+					providers = append(providers, provider)
 				}
 			}
 
 			out, err = plan.NewDataSourceConfiguration(
 				in.Id,
-				datasource.NewFactory(l.ctx, routerEngineConfig.Events, l.providers),
+				datasource.NewFactory(l.ctx, routerEngineConfig.Events, providers),
 				dsMeta,
-				l.providers,
+				providers,
 			)
 			if err != nil {
-				return nil, err
+				return nil, providers, err
 			}
 		default:
-			return nil, fmt.Errorf("unknown data source type %q", in.Kind)
+			return nil, providers, fmt.Errorf("unknown data source type %q", in.Kind)
 		}
 
 		outConfig.DataSources = append(outConfig.DataSources, out)
 	}
-	return &outConfig, nil
+	return &outConfig, providers, nil
 }
 
 func (l *Loader) subgraphName(subgraphs []*nodev1.Subgraph, dataSourceID string) string {

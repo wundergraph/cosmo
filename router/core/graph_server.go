@@ -963,7 +963,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		},
 	}
 
-	executor, err := ecb.Build(
+	executor, providers, err := ecb.Build(
 		ctx,
 		&ExecutorBuildOptions{
 			EngineConfig:                   engineConfig,
@@ -980,7 +980,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		return nil, fmt.Errorf("failed to build plan configuration: %w", err)
 	}
 
-	s.pubSubProviders = ecb.GetProviders()
+	s.pubSubProviders = providers
 	if pubSubStartupErr := s.startupPubSubProviders(ctx); pubSubStartupErr != nil {
 		return nil, pubSubStartupErr
 	}
