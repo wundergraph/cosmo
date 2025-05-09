@@ -21,13 +21,13 @@ func NewTraceInjectingRoundTripper(base http.RoundTripper) *TraceInjectingRoundT
 	}
 }
 
-func GetClientTraceFromContext(ctx context.Context) *ClientTrace {
+func GetClientTraceFromContext(ctx context.Context) *ClientTraceInfo {
 	value := ctx.Value(ClientTraceContextKey{})
 	// Return no-op context if the subgraph context key was never set
 	if value == nil {
-		return &ClientTrace{}
+		return &ClientTraceInfo{}
 	}
-	return value.(*ClientTrace)
+	return value.(*ClientTraceInfo)
 }
 
 func (t *TraceInjectingRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
@@ -39,17 +39,25 @@ func (t *TraceInjectingRoundTripper) RoundTrip(req *http.Request) (*http.Respons
 	return trip, err
 }
 
+func IncrementRetryCount(ctx context.Context) {
+	fromContext := GetClientTraceFromContext(ctx)
+	fromContext.RetryCountLatestIndex++
+	fromContext.ClientTraces = append(fromContext.ClientTraces, &ClientTrace{})
+}
+
 func InitTraceContext(ctx context.Context) context.Context {
-	trace := &ClientTrace{
-		DialStart: make([]SubgraphDialStart, 0),
-		DialDone:  make([]SubgraphDialDone, 0),
+	trace := &ClientTraceInfo{
+		ClientTraces: []*ClientTrace{
+			{},
+		},
 	}
 	ctx = context.WithValue(ctx, ClientTraceContextKey{}, trace)
 	return ctx
 }
 
 func (t *TraceInjectingRoundTripper) getClientTrace(ctx context.Context) *httptrace.ClientTrace {
-	eC := GetClientTraceFromContext(ctx)
+	ecList := GetClientTraceFromContext(ctx)
+	eC := ecList.ClientTraces[ecList.RetryCountLatestIndex]
 
 	var dialStartMu sync.Mutex
 	var dialDoneMu sync.Mutex

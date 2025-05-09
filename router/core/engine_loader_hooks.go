@@ -161,7 +161,10 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 
 	if f.visitorManager.IsSubgraphTraceUsedInExpressions() {
 		fromTrace := httpclient.GetClientTraceFromContext(ctx)
-		exprCtx.Subgraph.Request.ClientTrace = *expr.ConvertToExprTrace(fromTrace)
+		exprTrace, traces, retryAttempts := expr.ConvertToExprTrace(fromTrace)
+		exprCtx.Subgraph.Request.RetryAttempts = retryAttempts
+		exprCtx.Subgraph.Request.RetryClientTraces = traces
+		exprCtx.Subgraph.Request.ClientTrace = exprTrace
 	}
 
 	if f.telemetryAttributes != nil {

@@ -101,6 +101,9 @@ type RequestAuth struct {
 type SubgraphRequest struct {
 	Error       error       `expr:"error"`
 	ClientTrace ClientTrace `expr:"clientTrace"`
+	// This is outside in the subgraph request to prevent even deeper nesting
+	RetryClientTraces []ClientTrace `expr:"retryClientTraces"`
+	RetryAttempts     int           `expr:"retryAttempts"`
 }
 
 type DNSStart struct {

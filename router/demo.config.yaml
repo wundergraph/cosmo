@@ -16,3 +16,15 @@ events:
       - id: my-kafka
         brokers:
           - "localhost:9092"
+
+telemetry:
+  attributes:
+    - key: "ee"
+      value_from:
+        expression: "subgraph.request.clientTrace.connCreate?.hostPort"
+
+traffic_shaping:
+  all:
+    retry:
+      enabled: true
+      algorithm: backoff_jitter

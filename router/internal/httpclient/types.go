@@ -75,3 +75,8 @@ type ClientTrace struct {
 	WroteRequest       *SubgraphWroteRequest
 	FirstByte          *SubgraphFirstByte
 }
+
+type ClientTraceInfo struct {
+	ClientTraces          []*ClientTrace
+	RetryCountLatestIndex int
+}

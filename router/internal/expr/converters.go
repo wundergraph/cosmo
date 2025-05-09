@@ -2,13 +2,19 @@ package expr
 
 import "github.com/wundergraph/cosmo/router/internal/httpclient"
 
-// ConvertToExprTrace converts an OperationTrace to an expr.ClientTrace
-func ConvertToExprTrace(trace *httpclient.ClientTrace) *ClientTrace {
-	if trace == nil {
-		return nil
+func ConvertToExprTrace(trace *httpclient.ClientTraceInfo) (ClientTrace, []ClientTrace, int) {
+	retryClientTraces := make([]ClientTrace, 0, trace.RetryCountLatestIndex)
+	for k := 0; k < trace.RetryCountLatestIndex; k++ {
+		ConvertClientTrace(trace.ClientTraces[k])
 	}
 
-	result := &ClientTrace{}
+	base := ConvertClientTrace(trace.ClientTraces[trace.RetryCountLatestIndex])
+
+	return base, retryClientTraces, trace.RetryCountLatestIndex + 1
+}
+
+func ConvertClientTrace(trace *httpclient.ClientTrace) ClientTrace {
+	result := ClientTrace{}
 
 	if trace.ConnectionCreate != nil {
 		result.ConnectionCreate = &CreateConnection{

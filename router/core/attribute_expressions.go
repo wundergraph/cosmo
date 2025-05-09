@@ -1,6 +1,7 @@
 package core
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 
@@ -59,16 +60,18 @@ func expressionAttributes(expressions map[string]*vm.Program, exprCtx *expr.Cont
 		return nil, nil
 	}
 
+	var err error
 	result := make([]attribute.KeyValue, 0, len(expressions))
 	for exprKey, exprVal := range expressions {
 		val, err := expr.ResolveStringExpression(exprVal, *exprCtx)
 		if err != nil {
-			return nil, err
+			err = errors.Join(err, fmt.Errorf("custom attribute error, unable to resolve '%s': %w", exprKey, err))
+			continue
 		}
 		result = append(result, attribute.String(exprKey, val))
 	}
 
-	return result, nil
+	return result, err
 }
 
 func (r *attributeExpressions) expressionsAttributes(exprCtx *expr.Context) ([]attribute.KeyValue, error) {
