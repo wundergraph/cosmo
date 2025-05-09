@@ -277,10 +277,9 @@ export class OrganizationGroupRepository {
           const actualTargets = await this.db
             .select({ targetId: schema.targets.id })
             .from(schema.targets)
-            .where(and(
-              eq(schema.targets.organizationId, input.organizationId),
-              inArray(schema.targets.id, rule.resources)
-            ));
+            .where(
+              and(eq(schema.targets.organizationId, input.organizationId), inArray(schema.targets.id, rule.resources)),
+            );
 
           await tx.insert(schema.organizationGroupRuleTargets).values(
             actualTargets.map((targ) => ({
