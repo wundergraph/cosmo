@@ -1,22 +1,9 @@
-import { PlaygroundUrlState, TabState } from "../components/playground/types";
 import { compressToEncodedURIComponent } from "lz-string";
 import { describe, expect, test, vi } from "vitest";
+import { PlaygroundUrlState, TabState } from "../components/playground/types";
 import { PLAYGROUND_STATE_QUERY_PARAM } from "../lib/constants";
 import { decompressState, extractStateFromUrl } from "../lib/playground-url-state-decoding";
 import { buildStateToShare } from "../lib/playground-url-state-encoding";
-
-vi.mock("../lib/playground-storage", () => ({
-  getPreFlightScript: () => ({
-    content: "console.log('preflight')",
-    id: "tab1",
-    title: "Preflight script",
-    type: "js",
-    updatedByTabId: "tab1",
-    enabled: true,
-  }),
-  getScriptTabState: (tabId: string, key: "pre-operation" | "post-operation") =>
-    `// ${key} script for ${tabId}`,
-}));
 
 describe("buildStateToShare", () => {
   const tab: TabState = {
@@ -35,9 +22,6 @@ describe("buildStateToShare", () => {
       operation: true,
       variables: false,
       headers: false,
-      preFlight: false,
-      preOperation: false,
-      postOperation: false,
     };
 
     const result = buildStateToShare(selected, tab);
@@ -45,9 +29,6 @@ describe("buildStateToShare", () => {
     expect(result).toEqual({ operation: "query MyEmployees { hello }" });
     expect(result).not.toHaveProperty("headers");
     expect(result).not.toHaveProperty("variables");
-    expect(result).not.toHaveProperty("preFlight");
-    expect(result).not.toHaveProperty("preOperation");
-    expect(result).not.toHaveProperty("postOperation");
   });
 
   test("includes all selected fields", () => {
@@ -55,9 +36,6 @@ describe("buildStateToShare", () => {
       operation: true,
       variables: true,
       headers: true,
-      preFlight: true,
-      preOperation: true,
-      postOperation: true,
     };
 
     const result = buildStateToShare(selected, tab);
@@ -65,9 +43,6 @@ describe("buildStateToShare", () => {
     expect(result.operation).toBe("query MyEmployees { hello }");
     expect(result.variables).toBe('{ "x": 1 }');
     expect(result.headers).toEqual('{ "X-Test": "1" }');
-    expect(result.preFlight?.content).toBe("console.log('preflight')");
-    expect(result.preOperation).toBe("// pre-operation script for tab-1");
-    expect(result.postOperation).toBe("// post-operation script for tab-1");
   });
 
   test("excludes unselected optional fields", () => {
@@ -75,9 +50,6 @@ describe("buildStateToShare", () => {
       operation: true,
       variables: true,
       headers: false,
-      preFlight: false,
-      preOperation: false,
-      postOperation: false,
     };
 
     const result = buildStateToShare(selected, tab);
@@ -85,9 +57,6 @@ describe("buildStateToShare", () => {
     expect(result.operation).toBe("query MyEmployees { hello }");
     expect(result.variables).toBe('{ "x": 1 }');
     expect(result).not.toHaveProperty("headers");
-    expect(result).not.toHaveProperty("preFlight");
-    expect(result).not.toHaveProperty("preOperation");
-    expect(result).not.toHaveProperty("postOperation");
   });
 });
 
