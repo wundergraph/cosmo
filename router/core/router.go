@@ -247,6 +247,7 @@ type (
 		multipartHeartbeatInterval time.Duration
 		hostName                   string
 		mcp                        config.MCPConfiguration
+		requestTransportTrace      config.RequestTransportTrace
 	}
 	// Option defines the method to customize server.
 	Option func(svr *Router)
@@ -1962,6 +1963,12 @@ func WithPersistedOperationsConfig(cfg config.PersistedOperationsConfig) Option 
 func WithAutomatedPersistedQueriesConfig(cfg config.AutomaticPersistedQueriesConfig) Option {
 	return func(r *Router) {
 		r.automaticPersistedQueriesConfig = cfg
+	}
+}
+
+func WithRequestTransportTrace(cfg config.RequestTransportTrace) Option {
+	return func(r *Router) {
+		r.requestTransportTrace = cfg
 	}
 }
 

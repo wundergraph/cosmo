@@ -76,6 +76,10 @@
           "IncludeOperationSha": false
         }
       }
+    },
+    "RequestTransportTrace": {
+      "LogHooks": false,
+      "TraceHooks": false
     }
   },
   "GraphqlMetrics": {
