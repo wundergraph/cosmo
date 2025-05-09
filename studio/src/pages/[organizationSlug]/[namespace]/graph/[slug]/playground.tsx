@@ -13,6 +13,7 @@ import {
   PreFlightScript,
 } from "@/components/playground/custom-scripts";
 import { PlanView } from "@/components/playground/plan-view";
+import { SharePlaygroundModal } from "@/components/playground/share-playground-modal";
 import { TraceContext, TraceView } from "@/components/playground/trace-view";
 import {
   PlaygroundContext,
@@ -53,7 +54,9 @@ import {
 import { Tooltip } from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
+import { useHydratePlaygroundStateFromUrl } from "@/hooks/use-hydrate-playground-state-from-url";
 import { useLocalStorage } from "@/hooks/use-local-storage";
+import { PLAYGROUND_DEFAULT_HEADERS_TEMPLATE, PLAYGROUND_DEFAULT_QUERY_TEMPLATE } from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
 import { parseSchema } from "@/lib/schema-helpers";
 import { cn } from "@/lib/utils";
@@ -83,8 +86,6 @@ import crypto from "crypto";
 import { GraphiQL } from "graphiql";
 import {
   GraphQLSchema,
-  Kind,
-  OperationTypeNode,
   parse,
   validate,
 } from "graphql";
@@ -793,6 +794,7 @@ const PlaygroundPortal = () => {
   const preFlightScriptSection = document.getElementById(
     "pre-flight-script-section",
   );
+  const shareButton = document.getElementById("share-button");
 
   if (
     !responseToolbar ||
@@ -801,6 +803,7 @@ const PlaygroundPortal = () => {
     !saveDiv ||
     !toggleClientValidation ||
     !scriptsSection ||
+    !shareButton ||
     !preFlightScriptSection
   ) {
     return null;
@@ -815,6 +818,7 @@ const PlaygroundPortal = () => {
       {createPortal(<ToggleClientValidation />, toggleClientValidation)}
       {createPortal(<CustomScripts />, scriptsSection)}
       {createPortal(<PreFlightScript />, preFlightScriptSection)}
+      {createPortal(<SharePlaygroundModal />, shareButton)}
     </>
   );
 };
@@ -870,6 +874,10 @@ const PlaygroundPage: NextPageWithLayout = () => {
     operation ? decodeURIComponent(operation) : undefined,
   );
 
+  const [updatedVariables, setUpdatedVariables] = useState<string | undefined>(
+    variables ? decodeURIComponent(variables) : undefined,
+  );
+
   const [storedHeaders, setStoredHeaders] = useLocalStorage(
     "graphiql:headers",
     "",
@@ -898,9 +906,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
     setStoredHeaders(tempHeaders);
   }, [setStoredHeaders, tempHeaders]);
 
-  const [headers, setHeaders] = useState(`{
-  "X-WG-TRACE" : "true"
-}`);
+  const [headers, setHeaders] = useState(PLAYGROUND_DEFAULT_HEADERS_TEMPLATE);
   const [response, setResponse] = useState<string>("");
 
   const [plan, setPlan] = useState<QueryPlan | undefined>(undefined);
@@ -912,6 +918,14 @@ const PlaygroundPage: NextPageWithLayout = () => {
   const [isMounted, setIsMounted] = useState(false);
 
   const [view, setView] = useState<PlaygroundView>("response");
+
+  const [tabsState, setTabsState] = useState<TabsState>({
+    activeTabIndex: 0,
+    tabs: [],
+  });
+
+  const [isHydrated, setIsHydrated] = useState(false);
+  useHydratePlaygroundStateFromUrl(tabsState, setQuery, setUpdatedVariables, setHeaders, setTabsState, isGraphiqlRendered);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -1041,6 +1055,10 @@ const PlaygroundPage: NextPageWithLayout = () => {
       const toggleClientValidation = document.createElement("div");
       toggleClientValidation.id = "toggle-client-validation";
       toolbar.append(toggleClientValidation);
+
+      const shareButton = document.createElement("div");
+      shareButton.id = "share-button";
+      toolbar.append(shareButton);
     }
 
     // remove settings button
@@ -1059,35 +1077,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
     if (!isGraphiqlRendered && typeof query === "string") {
       if (!query) {
         // query is empty - fill it with template
-        setQuery(`# Welcome to WunderGraph Studio
-#
-#
-# Type queries into this side of the screen, and you will see intelligent
-# typeaheads aware of the current GraphQL type schema and live syntax and
-# validation errors highlighted within the text.
-#
-# GraphQL queries typically start with a "{" character. Lines that start
-# with a # are ignored.
-#
-# An example GraphQL query might look like:
-#
-#     {
-#       field(arg: "value") {
-#         subField
-#       }
-#     }
-#
-# Keyboard shortcuts:
-#
-#   Prettify query:  Shift-Ctrl-P (or press the prettify button)
-#
-#  Merge fragments:  Shift-Ctrl-M (or press the merge button)
-#
-#        Run Query:  Ctrl-Enter (or press the play button)
-#
-#    Auto Complete:  Ctrl-Space (or just start typing)
-#
-`);
+        setQuery(PLAYGROUND_DEFAULT_QUERY_TEMPLATE);
       }
       // set first render flag to true - to prevent opening new tab / filling data while user is editing
       setIsGraphiqlRendered(true);
@@ -1263,10 +1253,6 @@ const PlaygroundPage: NextPageWithLayout = () => {
     };
   }, [theme]);
 
-  const [tabsState, setTabsState] = useState<TabsState>({
-    activeTabIndex: 0,
-    tabs: [],
-  });
 
   if (!graphContext?.graph) return null;
 
@@ -1279,6 +1265,8 @@ const PlaygroundPage: NextPageWithLayout = () => {
         statusText,
         view,
         setView,
+        isHydrated,
+        setIsHydrated,
       }}
     >
       <TraceContext.Provider
@@ -1299,11 +1287,9 @@ const PlaygroundPage: NextPageWithLayout = () => {
             showPersistHeadersSettings={false}
             fetcher={fetcher}
             query={query}
-            variables={variables ? decodeURIComponent(variables) : undefined}
+            variables={updatedVariables}
             onEditQuery={setQuery}
-            defaultHeaders={`{
-  "X-WG-TRACE" : "true"
-}`}
+            headers={headers}
             onEditHeaders={setHeaders}
             plugins={[
               explorerPlugin({

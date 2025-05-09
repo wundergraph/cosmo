@@ -94,10 +94,27 @@ We merge all pull requests in `squash merge` mode. You're not enforced to use [c
 All services work with environment variables. You can find the default values in the `.env.example` file.
 Please copy the variables to `.env` (the same for studio but with `.env.local`) and adjust the values to your needs.
 
+```shell
+# In the root directory (cosmo/)
+# Copy controlplane environment file
+cp controlplane/.env.example controlplane/.env
+
+# Copy studio environment file
+cp studio/.env.local.example studio/.env.local
+
+# Copy cli environment file
+cp cli/.env.example cli/.env
+
+# Copy router environment file
+cp router/.env.example router/.env
+```
+
 Bootstrapping Cosmo for local development is easy. Just run the following commands in order:
 
 ```shell
+# In the root directory (cosmo/)
 # 1️⃣ Setup the repository, build libraries and start all services (Wait a few seconds until Keycloak is ready)
+# You can check whether Keycloak is running by going to localhost:8080. It should show sign-in page
 make
 
 # 2️⃣ Run migrations and seed the database
