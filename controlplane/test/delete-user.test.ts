@@ -16,6 +16,8 @@ import { OrganizationRepository } from '../src/core/repositories/OrganizationRep
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel, TestUser, UserTestData } from '../src/core/test-util.js';
 import { OidcRepository } from '../src/core/repositories/OidcRepository.js';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
+import { RBACEvaluator } from "../src/core/services/RBACEvaluator.js";
+import { OrganizationGroupRepository } from "../src/core/repositories/OrganizationGroupRepository.js";
 import {
   createFederatedGraph,
   createThenPublishSubgraph,
@@ -35,6 +37,7 @@ const createTempUser = async (
   try {
     const userRepo = new UserRepository(pino(), db);
     const orgRepo = new OrganizationRepository(pino(), db, undefined);
+    const orgGroupRepo = new OrganizationGroupRepository(db);
     const apiKeyRepo = new ApiKeyRepository(db);
 
     const apiKeyPersonal = ApiKeyGenerator.generate();
@@ -55,7 +58,7 @@ const createTempUser = async (
         organizationSlug: userPersonalOrgSlug,
         email: userEmail,
         apiKey: apiKeyPersonal,
-        roles: ['admin'],
+        groups: ['admin'],
       },
     });
 
@@ -71,21 +74,37 @@ const createTempUser = async (
       organizationSlug: userPersonalOrgSlug,
       ownerID: keycloakUserID,
     });
+
     const personalOrgMember = await orgRepo.addOrganizationMember({
       organizationID: personalOrg.id,
       userID: keycloakUserID,
     });
-    await orgRepo.addOrganizationMemberRoles({
-      memberID: personalOrgMember.id,
-      roles: ['admin'],
+
+    const orgAdminGroup = await orgGroupRepo.create({
+      organizationId: personalOrgMember.organizationId,
+      name: 'admin',
+      description: '',
+      kcGroupId: null,
     });
+
+    await orgGroupRepo.updateGroup({
+      organizationId: personalOrgMember.organizationId,
+      groupId: orgAdminGroup.groupId,
+      rules: [{ role: 'organization-admin', namespaces: [], resources: [] }]
+    });
+
+    await orgGroupRepo.addUserToGroup({
+      organizationMemberId: personalOrgMember.id,
+      groupId: orgAdminGroup.groupId,
+    });
+
     await apiKeyRepo.addAPIKey({
       key: apiKeyPersonal,
       name: userEmail,
       organizationID: personalOrg.id,
       userID: keycloakUserID,
       expiresAt: ExpiresAt.NEVER,
-      targetIds: [],
+      groupId: orgAdminGroup.groupId,
       permissions: [],
     });
 
@@ -105,17 +124,32 @@ const createTempUser = async (
       organizationID: org!.id,
       userID: keycloakUserID,
     });
-    await orgRepo.addOrganizationMemberRoles({
-      memberID: orgMember.id,
-      roles: ['admin'],
+
+    const orgAdminGroup2 = await orgGroupRepo.create({
+      organizationId: org!.id,
+      name: 'admin',
+      description: '',
+      kcGroupId: adminGroup.id!,
     });
+
+    await orgGroupRepo.updateGroup({
+      organizationId: personalOrgMember.organizationId,
+      groupId: orgAdminGroup2.groupId,
+      rules: [{ role: 'organization-admin', namespaces: [], resources: [] }]
+    });
+
+    await orgGroupRepo.addUserToGroup({
+      organizationMemberId: orgMember.id,
+      groupId: orgAdminGroup2.groupId,
+    });
+
     await apiKeyRepo.addAPIKey({
       key: apiKey,
       name: userEmail,
       organizationID: org!.id,
       userID: keycloakUserID,
       expiresAt: ExpiresAt.NEVER,
-      targetIds: [],
+      groupId: orgAdminGroup2.groupId,
       permissions: [],
     });
 
@@ -124,13 +158,15 @@ const createTempUser = async (
       userId: keycloakUserID,
       organizationId: personalOrg.id,
       organizationName: personalOrg.name,
+      organizationDeactivated: false,
       email: userEmail,
       apiKey: apiKeyPersonal,
       organizationSlug: personalOrg.slug,
       hasWriteAccess: true,
       isAdmin: true,
       userDisplayName: userEmail,
-      roles: ['admin'],
+      groups: ['admin'],
+      rbac: new RBACEvaluator([orgAdminGroup]),
     };
   } catch (error) {
     console.log(error);
@@ -202,10 +238,13 @@ describe.sequential('Delete user tests', (ctx) => {
     const mainUserContext = users[TestUser.adminAliceCompanyA];
     const tempUserContext = await createTempUser(server.db, keycloakClient, realm, mainUserContext.organizationSlug);
 
-    await client.updateOrgMemberRole({
+    const orgGroups = await client.getOrganizationGroups({});
+    const developerGroup = orgGroups.groups.find((g) => g.name === 'developer')!;
+
+    await client.updateOrgMemberGroup({
       userID: mainUserContext.userId,
       orgMemberUserID: tempUserContext.userId,
-      role: 'developer',
+      groupId: developerGroup.groupId,
     });
 
     const res = await client.deleteUser({});

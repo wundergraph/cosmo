@@ -100,7 +100,6 @@ export function removeOrganizationMember(
       realm: opts.keycloakRealm,
       userID: user.id,
       groupName: org.slug,
-      roles: orgMember.roles,
     });
 
     await orgRepo.removeOrganizationMember({ organizationID: authContext.organizationId, userID: user.id });

@@ -117,3 +117,62 @@ export const graphPruningRules = [
     description: "Returns all the deleted fields which were not deprecated.",
   },
 ];
+
+export const roles = [
+  {
+    key: "organization-admin",
+    category: "organization",
+    displayName: "Admin",
+    description: "Organization administrator access.",
+  },
+  {
+    key: "organization-developer",
+    category: "organization",
+    displayName: "Developer",
+    description: "Organization developer access.",
+  },
+  {
+    key: "organization-viewer",
+    category: "organization",
+    displayName: "Readonly",
+    description: "Organization readonly access.",
+  },
+  {
+    key: "namespace-admin",
+    category: "namespace",
+    displayName: "Admin",
+    description: "Namespace administrator access.",
+  },
+  {
+    key: "namespace-developer",
+    category: "namespace",
+    displayName: "Developer",
+    description: "Namespace developer access.",
+  },
+  {
+    key: "namespace-viewer",
+    category: "namespace",
+    displayName: "Readonly",
+    description: "Namespace readonly access.",
+  },
+  {
+    key: "graph-admin",
+    category: "graph",
+    displayName: "Admin",
+    description: "Graph administrator access.",
+  },
+  {
+    key: "graph-developer",
+    category: "graph",
+    displayName: "Developer",
+    description: "Graph developer access.",
+  },
+  {
+    key: "graph-viewer",
+    category: "graph",
+    displayName: "Readonly",
+    description: "Graph readonly access.",
+  },
+];
+
+export type OrganizationRole = typeof roles[number]["key"];

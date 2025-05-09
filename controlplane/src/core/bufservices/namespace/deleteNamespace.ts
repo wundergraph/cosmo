@@ -61,7 +61,7 @@ export function deleteNamespace(
     }
 
     // Ensure that only creator and admin can delete a namespace because it will delete all underlying resources
-    if (ns.createdBy !== authContext.userId && !orgMember.roles.includes('admin')) {
+    if (ns.createdBy !== authContext.userId && !orgMember.rbac.isOrganizationAdmin) {
       return {
         response: {
           code: EnumStatusCode.ERR,

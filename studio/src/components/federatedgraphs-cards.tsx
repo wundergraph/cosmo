@@ -4,7 +4,7 @@ import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { docsBaseURL } from "@/lib/constants";
 import { formatMetric } from "@/lib/format-metric";
 import { useChartData } from "@/lib/insights-helpers";
-import { checkUserAccess, cn } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import {
   ChevronDoubleRightIcon,
   CommandLineIcon,
@@ -56,7 +56,7 @@ import {
 } from "./ui/tooltip";
 import { useToast } from "./ui/use-toast";
 import { useMutation } from "@connectrpc/connect-query";
-import { GraphContext } from "@/components/layout/graph-layout";
+import { useCheckUserAccess } from "@/hooks/use-check-user-access";
 
 // this is required to render a blank line with LineChart
 const fallbackData = [
@@ -464,7 +464,7 @@ export const Empty = ({
   isMigrating: boolean;
   setIsMigrating: Dispatch<SetStateAction<boolean>>;
 }) => {
-  const user = useContext(UserContext);
+  const checkUserAccess = useCheckUserAccess();
   const router = useRouter();
 
   let labels = "team=A";
@@ -515,10 +515,7 @@ export const Empty = ({
             </TabsContent>
           </Tabs>
 
-          {checkUserAccess({
-            rolesToBe: ["admin", "developer"],
-            userRoles: user?.currentOrganization.roles || [],
-          }) && (
+          {checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] }) && (
             <>
               <span className="text-sm font-bold">OR</span>
               <MigrationDialog
@@ -704,7 +701,7 @@ export const FederatedGraphsCards = ({
   const [isMigrationSuccess, setIsMigrationSuccess] = useState(false);
   const [token, setToken] = useState<string | undefined>();
   const [isMigrating, setIsMigrating] = useState(false);
-  const user = useContext(UserContext);
+  const checkUserAccess = useCheckUserAccess();
 
   useEffect(() => {
     if (isMigrationSuccess) {
@@ -744,10 +741,7 @@ export const FederatedGraphsCards = ({
         {graphs.map((graph, graphIndex) => {
           return <GraphCard key={graphIndex.toString()} graph={graph} />;
         })}
-        {checkUserAccess({
-          rolesToBe: ["admin", "developer"],
-          userRoles: user?.currentOrganization.roles || [],
-        }) && (
+        {checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] }) && (
           <MigrationDialog
             refetch={refetch}
             setIsMigrationSuccess={setIsMigrationSuccess}

@@ -4,6 +4,7 @@ import {
   federatedGraphs,
   lintRulesEnum,
   memberRoleEnum,
+  organizationRoleEnum,
   organizationFeatures,
   schemaCheckChangeAction,
   schemaCheckChangeActionOperationUsage,
@@ -26,6 +27,7 @@ export type NewOrganizationFeature = typeof organizationFeatures.$inferInsert;
 export type NewBillingSubscription = typeof billingSubscriptions.$inferInsert;
 export type NewBillingPlan = typeof billingPlans.$inferInsert;
 export type MemberRole = (typeof memberRoleEnum.enumValues)[number];
+export type OrganizationRole = (typeof organizationRoleEnum.enumValues)[number];
 export type LintRuleEnum = (typeof lintRulesEnum.enumValues)[number];
 export type GraphPruningRuleEnum = (typeof graphPruningRulesEnum.enumValues)[number];
 export type WebsocketSubprotocol = (typeof websocketSubprotocolEnum.enumValues)[number];
@@ -36,6 +38,7 @@ export type WebhookDeliveryInfo = typeof webhookDeliveries.$inferInsert;
 
 export type AuditableType =
   | 'organization'
+  | 'group'
   | 'subgraph'
   | 'federated_graph'
   | 'monograph'
@@ -45,7 +48,7 @@ export type AuditableType =
   | 'api_key'
   | 'webhook_config'
   | 'integration'
-  | 'member_role'
+  | 'member_group'
   | 'user'
   | 'subscription'
   | 'namespace'
@@ -83,6 +86,8 @@ export type AuditLogFullAction =
   | 'organization.updated'
   | 'organization.deletion_queued'
   | 'organization.restored'
+  | 'group.created'
+  | 'group.deleted'
   | 'graph_token.created'
   | 'graph_token.deleted'
   | 'monograph.created'
@@ -129,6 +134,7 @@ export type AuditLogFullAction =
   | 'organization_invitation.declined'
   | 'organization_member.deleted'
   | 'member_role.updated'
+  | 'member_group.updated'
   | 'router_config.fetched'
   | 'operation_change_override.created'
   | 'operation_change_override.deleted'

@@ -2,8 +2,6 @@ import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
-  GetOIDCProviderRequest,
-  GetOIDCProviderResponse,
   UpdateIDPMappersRequest,
   UpdateIDPMappersResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
@@ -57,9 +55,11 @@ export function updateIDPMappers(
       kcClient: opts.keycloakClient,
       kcRealm: opts.keycloakRealm,
       mappers: req.mappers,
+      organizationId: authContext.organizationId,
       organizationSlug: authContext.organizationSlug,
       endpoint: provider.endpoint,
       alias: provider.alias,
+      db: opts.db,
     });
 
     return {

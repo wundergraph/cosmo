@@ -17,6 +17,7 @@
     "deactivate-org": "tsx src/bin/deactivate-org.ts",
     "reactivate-org": "tsx src/bin/reactivate-org.ts",
     "seed:billing": "tsx src/bin/seed-billing.ts",
+    "migrate-groups": "tsx src/bin/migrate-groups.ts",
     "db:generate": "drizzle-kit generate --config=drizzle.config.ts",
     "db:custom": "drizzle-kit generate --custom --config=drizzle.config.ts",
     "db:check": "drizzle-kit check --config=drizzle.config.ts",

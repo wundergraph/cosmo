@@ -64,13 +64,19 @@ export class Authorization {
       return;
     }
 
+    const { rbac } = authContext;
+    const shouldEvaluateRbac = rbac && rbac.groups.length > 0;
+
     try {
       /**
        * If the user is using an API key, we verify if the API key has access to the resource.
        * We only do this because RBAC is enabled otherwise the key is handled as an admin key.
        */
       if (token && token.startsWith('cosmo')) {
-        const verified = await apiKeyRepo.verifyAPIKeyResources({ apiKey: token, accessedTargetId: targetId });
+        const verified = shouldEvaluateRbac
+          ? rbac.checkResourceWriteAccess(targetId)
+          : await apiKeyRepo.verifyAPIKeyResources({ apiKey: token, accessedTargetId: targetId });
+
         if (verified) {
           return;
         } else {
@@ -90,11 +96,29 @@ export class Authorization {
        */
 
       if (targetType === 'federatedGraph') {
+        if (shouldEvaluateRbac) {
+          if (rbac.checkResourceWriteAccess(targetId)) {
+            return;
+          }
+
+          throw new Error('User is not authorized to perform the current action in the federated graph');
+        }
+
         const fedGraph = await fedRepo.byTargetId(targetId);
         if (!(fedGraph?.creatorUserId && fedGraph.creatorUserId === userId)) {
           throw new Error('User is not authorized to perform the current action in the federated graph');
         }
       } else if (targetType === 'subgraph') {
+        if (shouldEvaluateRbac) {
+          if (rbac.checkResourceWriteAccess(targetId)) {
+            return;
+          }
+
+          throw new Error(
+            'User is not authorized to perform the current action in the federated graph because the user is not a member of the subgraph',
+          );
+        }
+
         const subgraph = await subgraphRepo.byTargetId(targetId);
         const subgraphMembers = await subgraphRepo.getSubgraphMembersByTargetId(targetId);
         const userIds = subgraphMembers.map((s) => s.userId);
