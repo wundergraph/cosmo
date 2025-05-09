@@ -61,7 +61,7 @@ func (p *Planner) ConfigureFetch() resolve.FetchConfiguration {
 		return resolve.FetchConfiguration{}
 	}
 
-	event, err := eventdata.BuildEventDataBytes(p.rootFieldRef, p.visitor, &p.variables)
+	event, err := eventdata.BuildEventDataBytes(p.rootFieldRef, p.visitor.Operation, &p.variables)
 	if err != nil {
 		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to get resolve data source input: %w", err))
 		return resolve.FetchConfiguration{}
