@@ -1914,6 +1914,17 @@
                             }
                           }
                         }
+                      },
+                      {
+                        "type": "object",
+                        "required": ["credentials_file"],
+                        "additionalProperties": false,
+                        "properties": {
+                          "credentials_file": {
+                            "type": "string",
+                            "description": "The path to a NATS credentials file for authentication."
+                          }
+                        }
                       }
                     ]
                   }
