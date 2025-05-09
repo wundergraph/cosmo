@@ -704,6 +704,15 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		}
 	}
 
+	var tracingAttExpressions *attributeExpressions
+	if len(s.tracingAttributes) > 0 {
+		var tracingAttrErr error
+		tracingAttExpressions, tracingAttrErr = newAttributeExpressions(s.tracingAttributes, exprManager)
+		if tracingAttrErr != nil {
+			return nil, tracingAttrErr
+		}
+	}
+
 	// Prometheus metricStore rely on OTLP metricStore
 	if metricsEnabled {
 		attrKeyValues := []attribute.KeyValue{
@@ -791,6 +800,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 				mapper:                        mapper,
 				metricAttributeExpressions:    attExpressions,
 				telemetryAttributeExpressions: telemetryAttExpressions,
+				tracingAttributeExpressions:   tracingAttExpressions,
 				w:                             w,
 				r:                             r,
 			})
@@ -925,6 +935,11 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		httpRouter.Use(requestLogger)
 
 		if s.accessLogsConfig.SubgraphEnabled {
+			subgraphExprAttributes, err := requestlogger.GetAccessLogConfigExpressions(s.accessLogsConfig.SubgraphAttributes, exprManager)
+			if err != nil {
+				return nil, fmt.Errorf("failed building router access log expressions: %w", err)
+			}
+
 			s.accessLogsConfig.SubgraphAttributes = requestlogger.CleanupExpressionAttributes(s.accessLogsConfig.SubgraphAttributes)
 
 			subgraphAccessLogger = requestlogger.NewSubgraphAccessLogger(
@@ -934,6 +949,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 					FieldsHandler:         SubgraphAccessLogsFieldHandler,
 					Fields:                baseLogFields,
 					Attributes:            s.accessLogsConfig.SubgraphAttributes,
+					ExprAttributes:        subgraphExprAttributes,
 				})
 		}
 	}
@@ -987,6 +1003,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			TracePropagators:              s.compositePropagator,
 			LocalhostFallbackInsideDocker: s.localhostFallbackInsideDocker,
 			Logger:                        s.logger,
+			VisitorManager:                exprManager.VisitorManager,
 		},
 	}
 
@@ -1113,7 +1130,14 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		TracerProvider:                              s.tracerProvider,
 		Authorizer:                                  NewCosmoAuthorizer(authorizerOptions),
 		SubgraphErrorPropagation:                    s.subgraphErrorPropagation,
-		EngineLoaderHooks:                           NewEngineRequestHooks(gm.metricStore, subgraphAccessLogger, s.tracerProvider),
+		EngineLoaderHooks: NewEngineRequestHooks(
+			gm.metricStore,
+			subgraphAccessLogger,
+			s.tracerProvider,
+			tracingAttExpressions,
+			telemetryAttExpressions,
+			exprManager.VisitorManager,
+		),
 	}
 
 	if s.redisClient != nil {

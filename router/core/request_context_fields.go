@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/expr"
 	"net/http"
 	"strconv"
 	"time"
@@ -40,11 +41,11 @@ func NewExpressionLogField(val any, key string, defaultValue any) zap.Field {
 	// type, the Error() wont be printed to the output
 	// By wrapping all errors in a common type we can always unwrap it (some types wont be exported
 	// like errors.joinErrors for example), and ensure its Error() function is then called
-	if assertVal, ok := val.(ExprWrapError); ok {
+	if assertVal, ok := val.(expr.WrapError); ok {
 		val = &assertVal
 	}
 
-	if v := val; v != "" {
+	if v := val; v != "" && v != nil {
 		return zap.Any(key, v)
 	} else if defaultValue != "" {
 		return zap.Any(key, defaultValue)
@@ -95,6 +96,7 @@ func RouterAccessLogsFieldHandler(
 	passedErr any,
 	request *http.Request,
 	responseHeader *http.Header,
+	_ *expr.Context,
 ) []zapcore.Field {
 	resFields := make([]zapcore.Field, 0, len(attributes))
 
@@ -106,17 +108,19 @@ func RouterAccessLogsFieldHandler(
 }
 
 func SubgraphAccessLogsFieldHandler(
-	_ *zap.Logger,
+	logger *zap.Logger,
 	attributes []config.CustomAttribute,
-	_ []requestlogger.ExpressionAttribute,
+	exprAttributes []requestlogger.ExpressionAttribute,
 	passedErr any,
 	request *http.Request,
 	responseHeader *http.Header,
+	overrideExprContext *expr.Context,
 ) []zapcore.Field {
 	resFields := make([]zapcore.Field, 0, len(attributes))
 
 	reqContext, resFields := processRequestIDField(request, resFields)
 	resFields = processCustomAttributes(attributes, responseHeader, resFields, request, reqContext, passedErr)
+	resFields = processSubgraphExpressionAttributes(logger, exprAttributes, resFields, overrideExprContext)
 
 	return resFields
 }
@@ -135,6 +139,23 @@ func processRequestIDField(request *http.Request, resFields []zapcore.Field) (*r
 	}
 
 	return reqContext, resFields
+}
+
+func processSubgraphExpressionAttributes(
+	logger *zap.Logger,
+	exprAttributes []requestlogger.ExpressionAttribute,
+	resFields []zapcore.Field,
+	overrideExprContext *expr.Context,
+) []zapcore.Field {
+	for _, exprField := range exprAttributes {
+		result, err := expr.ResolveAnyExpression(exprField.Expr, *overrideExprContext)
+		if err != nil {
+			logger.Error("unable to process expression for access logs", zap.String("fieldKey", exprField.Key), zap.Error(err))
+			continue
+		}
+		resFields = append(resFields, NewExpressionLogField(result, exprField.Key, exprField.Default))
+	}
+	return resFields
 }
 
 func processExpressionAttributes(logger *zap.Logger, exprAttributes []requestlogger.ExpressionAttribute, reqContext *requestContext, resFields []zapcore.Field) []zapcore.Field {

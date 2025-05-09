@@ -158,10 +158,12 @@ type requestTelemetryAttributes struct {
 	// configured in the custom attributes list. The mapper will potentially filter out attributes or include them.
 	// It will also remap the key if configured.
 	mapper *attributeMapper
-	// traceAttributeExpressions is a map of expressions that can be used to resolve dynamic attributes in traces
-	traceAttributeExpressions *attributeExpressions
+	// traceAttributeExpressions is a map of expressions that can be used to resolve dynamic attributes in telemetry
+	telemetryAttributeExpressions *attributeExpressions
 	// metricAttributeExpressions is a map of expressions that can be used to resolve dynamic attributes in metrics
 	metricAttributeExpressions *attributeExpressions
+	// tracingAttributeExpressions is a map of expressions that can be used to resolve dynamic attributes in traces
+	tracingAttributeExpressions *attributeExpressions
 
 	// metricsEnabled indicates if metrics are enabled. If false, no metrics attributes will be added
 	metricsEnabled bool
@@ -273,7 +275,7 @@ func (c *requestContext) ResolveAnyExpressionWithWrappedError(expression *vm.Pro
 	if c.expressionContext.Request.Error != nil {
 		// This will create a copy of the base expressionContext which we can modify
 		copyContext := c.expressionContext
-		copyContext.Request.Error = &ExprWrapError{c.expressionContext.Request.Error}
+		copyContext.Request.Error = &expr.WrapError{Err: c.expressionContext.Request.Error}
 		return expr.ResolveAnyExpression(expression, copyContext)
 	}
 	return expr.ResolveAnyExpression(expression, c.expressionContext)
@@ -653,6 +655,7 @@ type requestContextOptions struct {
 	mapper                        *attributeMapper
 	metricAttributeExpressions    *attributeExpressions
 	telemetryAttributeExpressions *attributeExpressions
+	tracingAttributeExpressions   *attributeExpressions
 	w                             http.ResponseWriter
 	r                             *http.Request
 }
@@ -670,12 +673,13 @@ func buildRequestContext(opts requestContextOptions) *requestContext {
 		request:        opts.r,
 		operation:      opts.operationContext,
 		telemetry: &requestTelemetryAttributes{
-			metricSetAttrs:             opts.metricSetAttributes,
-			metricsEnabled:             opts.metricsEnabled,
-			traceEnabled:               opts.traceEnabled,
-			mapper:                     opts.mapper,
-			traceAttributeExpressions:  opts.telemetryAttributeExpressions,
-			metricAttributeExpressions: opts.metricAttributeExpressions,
+			metricSetAttrs:                opts.metricSetAttributes,
+			metricsEnabled:                opts.metricsEnabled,
+			traceEnabled:                  opts.traceEnabled,
+			mapper:                        opts.mapper,
+			telemetryAttributeExpressions: opts.telemetryAttributeExpressions,
+			metricAttributeExpressions:    opts.metricAttributeExpressions,
+			tracingAttributeExpressions:   opts.tracingAttributeExpressions,
 		},
 		expressionContext: rootCtx,
 		subgraphResolver:  subgraphResolverFromContext(opts.r.Context()),

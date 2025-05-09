@@ -4,6 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
+	"time"
+
+	"github.com/wundergraph/cosmo/router/internal/httpclient"
+
+	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
 	"github.com/wundergraph/cosmo/router/internal/unique"
 	"github.com/wundergraph/cosmo/router/pkg/metric"
@@ -17,8 +23,6 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
-	"slices"
-	"time"
 )
 
 var (
@@ -33,24 +37,37 @@ const EngineLoaderHooksScopeVersion = "0.0.1"
 // engineLoaderHooks implements resolve.LoaderHooks
 // It is used to trace and measure the performance of the engine loader
 type engineLoaderHooks struct {
-	tracer       trace.Tracer
-	metricStore  metric.Store
-	accessLogger *requestlogger.SubgraphAccessLogger
+	tracer              trace.Tracer
+	metricStore         metric.Store
+	accessLogger        *requestlogger.SubgraphAccessLogger
+	tracingAttributes   *attributeExpressions
+	telemetryAttributes *attributeExpressions
+	visitorManager      *expr.VisitorGroup
 }
 
 type engineLoaderHooksRequestContext struct {
 	startTime time.Time
 }
 
-func NewEngineRequestHooks(metricStore metric.Store, logger *requestlogger.SubgraphAccessLogger, tracerProvider *sdktrace.TracerProvider) resolve.LoaderHooks {
+func NewEngineRequestHooks(
+	metricStore metric.Store,
+	logger *requestlogger.SubgraphAccessLogger,
+	tracerProvider *sdktrace.TracerProvider,
+	tracingAttributes *attributeExpressions,
+	telemetryAttributes *attributeExpressions,
+	visitorManager *expr.VisitorGroup,
+) resolve.LoaderHooks {
 	if tracerProvider != nil {
 		return &engineLoaderHooks{
 			tracer: tracerProvider.Tracer(
 				EngineLoaderHooksScopeName,
 				trace.WithInstrumentationVersion(EngineLoaderHooksScopeVersion),
 			),
-			metricStore:  metricStore,
-			accessLogger: logger,
+			metricStore:         metricStore,
+			accessLogger:        logger,
+			tracingAttributes:   tracingAttributes,
+			telemetryAttributes: telemetryAttributes,
+			visitorManager:      visitorManager,
 		}
 	}
 
@@ -59,13 +76,15 @@ func NewEngineRequestHooks(metricStore metric.Store, logger *requestlogger.Subgr
 			EngineLoaderHooksScopeName,
 			trace.WithInstrumentationVersion(EngineLoaderHooksScopeVersion),
 		),
-		metricStore:  metricStore,
-		accessLogger: logger,
+		metricStore:         metricStore,
+		accessLogger:        logger,
+		tracingAttributes:   tracingAttributes,
+		telemetryAttributes: telemetryAttributes,
+		visitorManager:      visitorManager,
 	}
 }
 
 func (f *engineLoaderHooks) OnLoad(ctx context.Context, ds resolve.DataSourceInfo) context.Context {
-
 	if resolve.IsIntrospectionDataSource(ds.ID) {
 		return ctx
 	}
@@ -75,6 +94,10 @@ func (f *engineLoaderHooks) OnLoad(ctx context.Context, ds resolve.DataSourceInf
 	reqContext := getRequestContext(ctx)
 	if reqContext == nil {
 		return ctx
+	}
+
+	if f.visitorManager.IsSubgraphTraceUsedInExpressions() {
+		ctx = httpclient.InitTraceContext(ctx)
 	}
 
 	ctx, _ = f.tracer.Start(ctx, "Engine - Fetch",
@@ -127,6 +150,36 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 	traceAttrs = append(traceAttrs, rotel.WgComponentName.String("engine-loader"))
 	traceAttrs = append(traceAttrs, commonAttrs...)
 
+	// Note: This copy still points to the same maps like requestClaims etc
+	exprCtx := reqContext.expressionContext
+	exprCtx.Subgraph = expr.Subgraph{
+		Id:      ds.ID,
+		Name:    ds.Name,
+		Request: expr.SubgraphRequest{},
+	}
+	exprCtx.Subgraph.Request.Error = &expr.WrapError{Err: responseInfo.Err}
+
+	if f.visitorManager.IsSubgraphTraceUsedInExpressions() {
+		fromTrace := httpclient.GetClientTraceFromContext(ctx)
+		exprCtx.Subgraph.Request.ClientTrace = *expr.ConvertToExprTrace(fromTrace)
+	}
+
+	if f.telemetryAttributes != nil {
+		telemetryValues, err := f.telemetryAttributes.expressionsAttributesForSubgraphs(&exprCtx)
+		if err != nil {
+			reqContext.Logger().Warn("failed to resolve expression for telemetry", zap.Error(err))
+		}
+		traceAttrs = append(traceAttrs, telemetryValues...)
+	}
+
+	if f.tracingAttributes != nil {
+		tracingValues, err := f.tracingAttributes.expressionsAttributesForSubgraphs(&exprCtx)
+		if err != nil {
+			reqContext.Logger().Warn("failed to resolve expression for tracing", zap.Error(err))
+		}
+		traceAttrs = append(traceAttrs, tracingValues...)
+	}
+
 	metricAttrs := *reqContext.telemetry.AcquireAttributes()
 	defer reqContext.telemetry.ReleaseAttributes(&metricAttrs)
 	metricAttrs = append(metricAttrs, reqContext.telemetry.metricAttrs...)
@@ -143,7 +196,7 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 		}
 		path := ds.Name
 		if responseInfo.Request != nil {
-			fields = append(fields, f.accessLogger.RequestFields(responseInfo, fields)...)
+			fields = append(fields, f.accessLogger.RequestFields(responseInfo, &exprCtx)...)
 			if responseInfo.Request.URL != nil {
 				path = responseInfo.Request.URL.Path
 			}
