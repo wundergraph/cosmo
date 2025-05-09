@@ -156,6 +156,7 @@ func NewDefaultFactoryResolver(
 
 		httpClient:          defaultHTTPClient,
 		subgraphHTTPClients: subgraphHTTPClients,
+		instanceData:        instanceData,
 	}
 }
 
