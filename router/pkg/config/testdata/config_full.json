@@ -794,5 +794,9 @@
   "ClientHeader": {
     "Name": "Client-Name",
     "Version": "Client_Version"
+  },
+  "PluginConfiguration": {
+    "Enabled": true,
+    "BasePath": "some/path/to/plugins"
   }
 }

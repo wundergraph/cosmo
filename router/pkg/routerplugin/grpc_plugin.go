@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"sync"
 	"sync/atomic"
 
@@ -16,9 +15,9 @@ import (
 )
 
 type GRPCPluginConfig struct {
-	pluginDir     string
-	pluginName    string
-	pluginCommand []string
+	PluginPath    string
+	PluginName    string
+	PluginCommand []string
 }
 
 type GRPCPlugin struct {
@@ -29,12 +28,23 @@ type GRPCPlugin struct {
 	mu       *sync.Mutex
 	disposed atomic.Bool
 
-	pluginDir     string
+	pluginPath    string
 	pluginName    string
 	pluginCommand []string
 
 	cp *GRPCPluginClient
 }
+
+// GetClient implements Plugin.
+func (s *GRPCPlugin) GetClient() grpc.ClientConnInterface {
+	if s.cp == nil {
+		return nil
+	}
+
+	return s.cp.cc
+}
+
+var _ Plugin = &GRPCPlugin{}
 
 var _ plugin.GRPCPlugin = &GRPCPlugin{}
 
@@ -44,9 +54,9 @@ func NewGRPCPlugin(config GRPCPluginConfig) (*GRPCPlugin, error) {
 		mu:       &sync.Mutex{},
 		disposed: atomic.Bool{},
 
-		pluginDir:     config.pluginDir,
-		pluginName:    config.pluginName,
-		pluginCommand: config.pluginCommand,
+		pluginPath:    config.PluginPath,
+		pluginName:    config.PluginName,
+		pluginCommand: config.PluginCommand,
 	}, nil
 }
 
@@ -89,6 +99,8 @@ func (s *GRPCPlugin) Start(ctx context.Context, logger *zap.Logger) error {
 		Cmd:              exec.Command(filePath),
 		AllowedProtocols: []plugin.Protocol{plugin.ProtocolGRPC},
 		HandshakeConfig:  handshakeConfig,
+		SyncStdout:       os.Stdout,
+		SyncStderr:       os.Stderr,
 		Plugins: map[string]plugin.Plugin{
 			s.pluginName: s,
 		},
@@ -145,7 +157,7 @@ func (s *GRPCPlugin) GRPCClient(ctx context.Context, broker *plugin.GRPCBroker, 
 }
 
 func (s *GRPCPlugin) validatePluginPath() (string, error) {
-	filePath := filepath.Join(s.pluginDir, s.pluginName)
+	filePath := s.pluginPath
 	info, err := os.Stat(filePath)
 	if err != nil {
 		return "", fmt.Errorf("failed to stat plugin: %w", err)

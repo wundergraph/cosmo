@@ -267,6 +267,11 @@ type RequestHeaderRule struct {
 	ValueFrom *CustomDynamicAttribute `yaml:"value_from,omitempty"`
 }
 
+type PluginConfiguration struct {
+	Enabled  bool   `yaml:"enabled" envDefault:"false" env:"PLUGIN_ENABLED"`
+	BasePath string `yaml:"base_path" envDefault:"plugins" env:"PLUGIN_BASE_PATH"`
+}
+
 func (r *RequestHeaderRule) GetOperation() HeaderRuleOperation {
 	return r.Operation
 }
@@ -970,6 +975,8 @@ type Config struct {
 	ApolloCompatibilityFlags       ApolloCompatibilityFlags        `yaml:"apollo_compatibility_flags"`
 	ApolloRouterCompatibilityFlags ApolloRouterCompatibilityFlags  `yaml:"apollo_router_compatibility_flags"`
 	ClientHeader                   ClientHeader                    `yaml:"client_header"`
+
+	PluginConfiguration PluginConfiguration `yaml:"plugin_configuration"`
 }
 
 type PlaygroundConfig struct {

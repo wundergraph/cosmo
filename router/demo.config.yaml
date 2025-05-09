@@ -4,6 +4,15 @@
 # This file is used for the demo environment
 
 version: "1"
+
+execution_config:
+  file:
+    path: ./__schemas/router.json
+
+plugin_configuration:
+  enabled: true
+  base_path: "__plugins"
+
 events:
   providers:
     nats:

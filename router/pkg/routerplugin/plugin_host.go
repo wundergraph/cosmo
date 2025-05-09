@@ -11,6 +11,7 @@ import (
 type PluginConfig struct {
 	SubgraphName  string
 	PluginName    string
+	PluginVersion string
 	PluginCommand []string
 }
 
@@ -18,26 +19,26 @@ type HostConfig struct {
 	PluginConfigs []PluginConfig
 }
 
-type Host[T any] struct {
+type Host struct {
 	mu        sync.RWMutex
-	pluginMap map[string]Plugin[T]
+	pluginMap map[string]Plugin
 }
 
-func NewHost[T any](config HostConfig) (*Host[T], error) {
-	return &Host[T]{
-		pluginMap: make(map[string]Plugin[T]),
-	}, nil
+func NewHost() *Host {
+	return &Host{
+		pluginMap: make(map[string]Plugin),
+	}
 }
 
-func (h *Host[T]) RegisterPlugin(pluginName string, plugin Plugin[T]) error {
+func (h *Host) RegisterPlugin(subgraphName string, plugin Plugin) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	h.pluginMap[pluginName] = plugin
+	h.pluginMap[subgraphName] = plugin
 	return nil
 }
 
-func (h *Host[T]) GetPlugin(pluginName string) (Plugin[T], error) {
+func (h *Host) GetPlugin(pluginName string) (Plugin, error) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
@@ -49,7 +50,7 @@ func (h *Host[T]) GetPlugin(pluginName string) (Plugin[T], error) {
 	return plugin, nil
 }
 
-func (h *Host[T]) StopPlugin(pluginName string) error {
+func (h *Host) StopPlugin(pluginName string) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -64,7 +65,7 @@ func (h *Host[T]) StopPlugin(pluginName string) error {
 	return nil
 }
 
-func (h *Host[T]) RunPluginHost(ctx context.Context, logger *zap.Logger) error {
+func (h *Host) RunPluginHost(ctx context.Context, logger *zap.Logger) error {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 

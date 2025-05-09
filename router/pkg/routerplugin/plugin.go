@@ -4,12 +4,13 @@ import (
 	"context"
 
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
 )
 
 // TODO define plugin handling
-type Plugin[T any] interface {
+type Plugin interface {
 	Name() string
 	Start(ctx context.Context, logger *zap.Logger) error
-	Client() T
+	GetClient() grpc.ClientConnInterface
 	Stop() error
 }

@@ -7,12 +7,15 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/cespare/xxhash/v2"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
+	"github.com/wundergraph/cosmo/router/pkg/routerplugin"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -100,6 +103,7 @@ type (
 		prometheusEngineMetrics *rmetric.EngineMetrics
 		hostName                string
 		routerListenAddr        string
+		pluginHost              *routerplugin.Host
 	}
 )
 
@@ -948,7 +952,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		subgraphTippers[subgraph] = subgraphTransport
 	}
 
-	subgraphGRPCClients, err := s.buildSubgraphGRPCClients(engineConfig, configSubgraphs)
+	subgraphGRPCClients, err := s.buildSubgraphGRPCClients(ctx, engineConfig, configSubgraphs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build subgraph grpc clients: %w", err)
 	}
@@ -1255,15 +1259,15 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	return gm, nil
 }
 
-func (s *graphServer) buildSubgraphGRPCClients(config *nodev1.EngineConfiguration, configSubgraphs []*nodev1.Subgraph) (map[string]grpc.ClientConnInterface, error) {
+func (s *graphServer) buildSubgraphGRPCClients(ctx context.Context, config *nodev1.EngineConfiguration, configSubgraphs []*nodev1.Subgraph) (map[string]grpc.ClientConnInterface, error) {
 	subgraphGRPCClients := make(map[string]grpc.ClientConnInterface)
 	for _, dsConfig := range config.DatasourceConfigurations {
-		if grpcConfig := dsConfig.GetCustomGraphql().GetGrpc(); grpcConfig != nil {
-			networkConnection := grpcConfig.GetNetwork()
-			if networkConnection == nil {
-				continue
-			}
+		grpcConfig := dsConfig.GetCustomGraphql().GetGrpc()
+		if grpcConfig == nil {
+			continue
+		}
 
+		if networkConnection := grpcConfig.GetNetwork(); networkConnection != nil {
 			c, err := grpc.NewClient(networkConnection.Location, grpc.WithTransportCredentials(insecure.NewCredentials()))
 			if err != nil {
 				return nil, fmt.Errorf("failed to create grpc client for subgraph %s: %w", dsConfig.Id, err)
@@ -1272,7 +1276,53 @@ func (s *graphServer) buildSubgraphGRPCClients(config *nodev1.EngineConfiguratio
 			for _, subgraph := range configSubgraphs {
 				if subgraph.Id == dsConfig.Id {
 					subgraphGRPCClients[subgraph.Name] = c
+					break
 				}
+			}
+
+			continue
+		}
+
+		if pluginConfig := grpcConfig.GetPlugin(); pluginConfig != nil {
+			basePath := ""
+
+			if s.pluginConfig.Enabled {
+				basePath = s.pluginConfig.BasePath
+			}
+
+			if s.pluginHost == nil {
+				s.pluginHost = routerplugin.NewHost()
+			}
+
+			for _, subgraph := range configSubgraphs {
+				if subgraph.Id != dsConfig.Id {
+					continue
+				}
+
+				pluginName := pluginConfig.GetName()
+
+				pluginPath, err := filepath.Abs(filepath.Join(basePath, "bin", fmt.Sprintf("%s_%s", runtime.GOOS, runtime.GOARCH)))
+				if err != nil {
+					return nil, fmt.Errorf("failed to get plugin path: %w", err)
+				}
+
+				grpcPlugin, err := routerplugin.NewGRPCPlugin(routerplugin.GRPCPluginConfig{
+					PluginName:    pluginName,
+					PluginPath:    pluginPath,
+					PluginCommand: []string{pluginPath},
+				})
+
+				err = s.pluginHost.RegisterPlugin(subgraph.Name, grpcPlugin)
+				if err != nil {
+					return nil, fmt.Errorf("failed to register grpc plugin: %w", err)
+				}
+
+				if err := grpcPlugin.Start(ctx, s.logger); err != nil {
+					return nil, fmt.Errorf("failed to start grpc plugin: %w", err)
+				}
+
+				subgraphGRPCClients[subgraph.Name] = grpcPlugin.GetClient()
+				break
 			}
 		}
 	}

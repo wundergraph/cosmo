@@ -2796,6 +2796,21 @@
         }
       }
     },
+    "plugin_configuration": {
+      "type": "object",
+      "description": "The configuration for the router plugins.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "base_path": {
+          "type": "string",
+          "default": "plugins"
+        }
+      }
+    },
     "apollo_router_compatibility_flags": {
       "type": "object",
       "description": "To enable full compatibility with Apollo Router you can enable certain compatibility flags, allowing you to use Cosmo Router as a drop-in replacement for Apollo Router",

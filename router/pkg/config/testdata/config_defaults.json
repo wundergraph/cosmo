@@ -469,5 +469,9 @@
   "ClientHeader": {
     "Name": "",
     "Version": ""
+  },
+  "PluginConfiguration": {
+    "Enabled": false,
+    "BasePath": "plugins"
   }
 }
