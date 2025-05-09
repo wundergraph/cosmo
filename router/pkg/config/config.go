@@ -901,9 +901,9 @@ type MCPServer struct {
 	Port int `yaml:"port" envDefault:"5025" env:"MCP_SERVER_PORT"`
 }
 
-type PluginConfiguration struct {
-	Enabled  bool   `yaml:"enabled" envDefault:"false" env:"PLUGIN_ENABLED"`
-	BasePath string `yaml:"base_path" envDefault:"__plugins" env:"PLUGIN_BASE_PATH"`
+type PluginsConfiguration struct {
+	Enabled bool   `yaml:"enabled" envDefault:"false" env:"PLUGINS_ENABLED"`
+	Path    string `yaml:"path" envDefault:"plugins" env:"PLUGINS_BASE_PATH"`
 }
 
 type Config struct {
@@ -976,7 +976,7 @@ type Config struct {
 	ApolloRouterCompatibilityFlags ApolloRouterCompatibilityFlags  `yaml:"apollo_router_compatibility_flags"`
 	ClientHeader                   ClientHeader                    `yaml:"client_header"`
 
-	Plugins PluginConfiguration `yaml:"plugins"`
+	Plugins PluginsConfiguration `yaml:"plugins"`
 }
 
 type PlaygroundConfig struct {

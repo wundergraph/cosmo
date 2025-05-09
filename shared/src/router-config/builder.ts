@@ -17,18 +17,22 @@ import {
   ConfigurationVariable,
   ConfigurationVariableKind,
   DataSourceConfiguration,
-  DataSourceCustomEvents,
-  // eslint-disable-next-line camelcase
   DataSourceCustom_GraphQL,
+  DataSourceCustomEvents,
   DataSourceKind,
   EngineConfiguration,
+  GraphQLSubscriptionConfiguration,
+  GRPCConfiguration,
+  GRPCMapping,
   HTTPMethod,
   InternedString,
+  PluginConfiguration,
   RouterConfig,
   TypeField,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { configurationDatasToDataSourceConfiguration, generateFieldConfigurations } from './graphql-configuration.js';
 import { invalidRouterCompatibilityVersion, normalizationFailureError } from './errors.js';
+import { PartialMessage } from '@bufbuild/protobuf';
 
 export interface Input {
   federatedClientSDL: string;
@@ -36,7 +40,7 @@ export interface Input {
   fieldConfigurations: FieldConfiguration[];
   routerCompatibilityVersion: string;
   schemaVersionId: string;
-  subgraphs: ComposedSubgraph[];
+  subgraphs: Subgraph[];
 }
 
 /**
@@ -49,15 +53,32 @@ export interface Input {
 export type SubscriptionProtocol = 'ws' | 'sse' | 'sse_post';
 export type WebsocketSubprotocol = 'auto' | 'graphql-ws' | 'graphql-transport-ws';
 
+export type Subgraph = ComposedSubgraph | ComposedSubgraphPlugin;
+
 export interface ComposedSubgraph {
+  kind: 'standard';
   id: string;
   name: string;
   sdl: string;
-  schemaVersionId?: string;
   url: string;
   subscriptionUrl: string;
   subscriptionProtocol: SubscriptionProtocol;
-  websocketSubprotocol?: WebsocketSubprotocol;
+  websocketSubprotocol: WebsocketSubprotocol;
+  // The intermediate representation of the engine configuration for the subgraph
+  configurationDataByTypeName?: Map<string, ConfigurationData>;
+  // The normalized GraphQL schema for the subgraph
+  schema?: GraphQLSchema;
+}
+
+export interface ComposedSubgraphPlugin {
+  kind: 'plugin';
+  id: string;
+  version: string;
+  name: string;
+  sdl: string;
+  url: string;
+  protoSchema: string;
+  mapping: GRPCMapping;
   // The intermediate representation of the engine configuration for the subgraph
   configurationDataByTypeName?: Map<string, ConfigurationData>;
   // The normalized GraphQL schema for the subgraph
@@ -123,6 +144,10 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
       throw normalizationFailureError('GraphQLSchema');
     }
 
+    let subscriptionConfig: PartialMessage<GraphQLSubscriptionConfiguration> = {
+      enabled: true,
+    };
+
     // IMPORTANT NOTE: printSchema and printSchemaWithDirectives promotes extension types to "full" types
     const upstreamSchema = internString(
       engineConfig,
@@ -130,8 +155,29 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
     );
     const { childNodes, entityInterfaces, events, interfaceObjects, keys, provides, requires, rootNodes } =
       configurationDatasToDataSourceConfiguration(subgraph.configurationDataByTypeName);
-    const subscriptionProtocol = parseGraphQLSubscriptionProtocol(subgraph.subscriptionProtocol || 'ws');
-    const websocketSubprotocol = parseGraphQLWebsocketSubprotocol(subgraph.websocketSubprotocol || 'auto');
+
+    let grcpConfig: GRPCConfiguration | undefined;
+
+    if (subgraph.kind === 'standard') {
+      subscriptionConfig.enabled = true;
+      subscriptionConfig.protocol = parseGraphQLSubscriptionProtocol(subgraph.subscriptionProtocol);
+      subscriptionConfig.websocketSubprotocol = parseGraphQLWebsocketSubprotocol(subgraph.websocketSubprotocol);
+      // When changing this, please do it in the router subgraph override as well
+      subscriptionConfig.url = new ConfigurationVariable({
+        kind: ConfigurationVariableKind.STATIC_CONFIGURATION_VARIABLE,
+        staticVariableContent: subgraph.subscriptionUrl || subgraph.url,
+      });
+    } else if (subgraph.kind === 'plugin') {
+      grcpConfig = new GRPCConfiguration({
+        mapping: subgraph.mapping,
+        protoSchema: subgraph.protoSchema,
+        plugin: new PluginConfiguration({
+          name: subgraph.name,
+          version: subgraph.version,
+        }),
+      });
+    }
+
     let kind: DataSourceKind;
     // eslint-disable-next-line camelcase
     let customGraphql: DataSourceCustom_GraphQL | undefined;
@@ -170,6 +216,7 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
           serviceSdl: subgraph.sdl,
         },
         upstreamSchema,
+        grpc: grcpConfig,
         fetch: {
           url: new ConfigurationVariable({
             kind: ConfigurationVariableKind.STATIC_CONFIGURATION_VARIABLE,
@@ -181,18 +228,10 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
           baseUrl: {},
           path: {},
         },
-        subscription: {
-          enabled: true,
-          // When changing this, please do it in the router subgraph override as well
-          url: new ConfigurationVariable({
-            kind: ConfigurationVariableKind.STATIC_CONFIGURATION_VARIABLE,
-            staticVariableContent: subgraph.subscriptionUrl || subgraph.url,
-          }),
-          protocol: subscriptionProtocol,
-          websocketSubprotocol,
-        },
+        subscription: subscriptionConfig,
       });
     }
+
     const datasourceConfig = new DataSourceConfiguration({
       // When changing the id, make sure to change it in the router subgraph override also
       // https://github.com/wundergraph/cosmo/blob/main/router/core/router.go#L342

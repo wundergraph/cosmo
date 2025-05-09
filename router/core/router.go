@@ -247,7 +247,7 @@ type (
 		multipartHeartbeatInterval time.Duration
 		hostName                   string
 		mcp                        config.MCPConfiguration
-		plugins                    config.PluginConfiguration
+		plugins                    config.PluginsConfiguration
 	}
 	// Option defines the method to customize server.
 	Option func(svr *Router)
@@ -1999,7 +1999,7 @@ func WithMCP(cfg config.MCPConfiguration) Option {
 	}
 }
 
-func WithPlugins(cfg config.PluginConfiguration) Option {
+func WithPlugins(cfg config.PluginsConfiguration) Option {
 	return func(r *Router) {
 		r.plugins = cfg
 	}

@@ -1,10 +1,13 @@
 import { Command, program } from 'commander';
-import { resolve,relative } from 'pathe';
+import { relative, resolve } from 'pathe';
 import pc from 'picocolors';
 import pupa from 'pupa';
 import Spinner from 'ora';
-import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { access, mkdir, rename, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { randomUUID } from 'node:crypto';
 import { BaseCommandOptions } from '../../../core/types/types.js';
+import { goMod, mainGo, readme, schema } from '../templates/go-plugin.js';
 import { compileGraphQLToMapping, compileGraphQLToProto } from '@wundergraph/protographic';
 
 export default (opts: BaseCommandOptions) => {
@@ -19,8 +22,7 @@ export default (opts: BaseCommandOptions) => {
   );
   command.action(async (name, options) => {
     const startTime = performance.now();
-    const pluginDir = resolve(options.directory, name);
-    const __dirname = import.meta.dirname;
+    const pluginDir = resolve(process.cwd(), options.directory, name);
     const serviceName = name.charAt(0).toUpperCase() + name.slice(1) + 'Service';
 
     // Check if a directory exists
@@ -32,24 +34,23 @@ export default (opts: BaseCommandOptions) => {
     }
 
     const spinner = Spinner({ text: 'Creating plugin...' });
+    // Create a temporary directory
+    const tempDir = resolve(tmpdir(), `cosmo-plugin-${randomUUID()}`);
 
     spinner.start();
 
     try {
       spinner.text = 'Creating directories...';
 
-      await mkdir(pluginDir, { recursive: true });
-      const srcDir = resolve(pluginDir, 'src');
+      await mkdir(tempDir, { recursive: true });
+      const srcDir = resolve(tempDir, 'src');
       await mkdir(srcDir, { recursive: true });
-      const generatedDir = resolve(pluginDir, 'generated');
+      const generatedDir = resolve(tempDir, 'generated');
       await mkdir(generatedDir, { recursive: true });
 
       spinner.text = 'Checkout templates...';
 
-      const readme = await readFile(resolve(__dirname, '..', 'templates/README.md'), 'utf-8');
-      await writeFile(resolve(pluginDir, 'README.md'), pupa(readme, { name }));
-
-      const schema = await readFile(resolve(__dirname, '..', 'templates/schema.graphql'), 'utf-8');
+      await writeFile(resolve(tempDir, 'README.md'), pupa(readme, { name }));
       await writeFile(resolve(srcDir, 'schema.graphql'), pupa(schema, { name }));
 
       spinner.text = 'Generating mapping and proto files...';
@@ -65,12 +66,13 @@ export default (opts: BaseCommandOptions) => {
       await writeFile(resolve(generatedDir, 'service.proto'), proto.proto);
       await writeFile(resolve(generatedDir, 'service.proto.lock.json'), JSON.stringify(proto.lockData, null, 2));
 
-      const mainGo = await readFile(resolve(__dirname, '..', 'templates/main.go'), 'utf-8');
       await writeFile(resolve(srcDir, 'main.go'), pupa(mainGo, { serviceName }));
 
       // go mod init
-      const goMod = await readFile(resolve(__dirname, '..', 'templates/go.mod'), 'utf-8');
-      await writeFile(resolve(pluginDir, 'go.mod'), pupa(goMod, { modulePath: options.goModulePath }));
+      await writeFile(resolve(tempDir, 'go.mod'), pupa(goMod, { modulePath: options.goModulePath }));
+
+      await mkdir(resolve(process.cwd(), options.directory), { recursive: true });
+      await rename(tempDir, pluginDir);
 
       const endTime = performance.now();
       const elapsedTimeMs = endTime - startTime;
@@ -85,8 +87,14 @@ export default (opts: BaseCommandOptions) => {
       console.log(`  Go to https://cosmo-docs.wundergraph.com/router/plugins to learn more about it.`);
       console.log('');
     } catch (error: any) {
+      // Clean up temp directory in case of error
+      try {
+        await rm(tempDir, { recursive: true, force: true });
+      } catch (cleanupError) {
+        // Ignore cleanup errors
+      }
       spinner.fail(pc.red(`Failed to init plugin: ${error.message}`));
-      program.error(`Failed to init plugin: ${error.message}`);
+      throw error;
     } finally {
       spinner.stop();
     }

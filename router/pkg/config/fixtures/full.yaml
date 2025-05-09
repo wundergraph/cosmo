@@ -8,7 +8,7 @@ graph:
 
 plugins:
   enabled: true
-  base_path: "some/path/to/plugins"
+  path: "some/path/to/plugins"
 
 log_level: "info"
 listen_addr: "localhost:3002"

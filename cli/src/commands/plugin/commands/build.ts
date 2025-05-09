@@ -103,12 +103,12 @@ export default (opts: BaseCommandOptions) => {
           '--go-grpc_opt=paths=source_relative',
           'generated/service.proto',
         ],
-        { cwd: pluginDir, stderr: process.stdout },
+        { cwd: pluginDir, stdout: 'inherit', stderr: 'inherit' },
       );
 
       if (!options.generateOnly) {
         spinner.text = 'Installing dependencies...';
-        await execa('go', ['mod', 'tidy'], { cwd: pluginDir, stderr: process.stdout });
+        await execa('go', ['mod', 'tidy'], { cwd: pluginDir, stdout: 'inherit', stderr: 'inherit' });
 
         // Build binaries concurrently for each platform-architecture combination
         spinner.text = 'Building binaries...';
@@ -141,7 +141,8 @@ export default (opts: BaseCommandOptions) => {
                 // For better compatibility with different platforms
                 CGO_ENABLED: '0',
               },
-              stderr: process.stdout,
+              stdout: 'inherit',
+              stderr: 'inherit',
             });
           }),
         );

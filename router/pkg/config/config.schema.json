@@ -2805,7 +2805,7 @@
           "type": "boolean",
           "default": false
         },
-        "base_path": {
+        "path": {
           "type": "string",
           "default": "plugins"
         }

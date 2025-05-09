@@ -1287,7 +1287,7 @@ func (s *graphServer) buildSubgraphGRPCClients(ctx context.Context, config *node
 			basePath := ""
 
 			if s.plugins.Enabled {
-				basePath = s.plugins.BasePath
+				basePath = s.plugins.Path
 			}
 
 			if s.pluginHost == nil {
