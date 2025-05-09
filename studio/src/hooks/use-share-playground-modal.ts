@@ -10,7 +10,7 @@ const MAX_URL_LENGTH = 2000;
 const WARNING_MESSAGES = {
   URL_TOO_LONG: {
     title: "Warning!",
-    description: "The generated URL is too long and may not work in all browsers. Consider removing scripts",
+    description: "The generated URL is too long and may not work in all browsers. Consider removing some options.",
   },
 };
 
