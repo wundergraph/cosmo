@@ -135,6 +135,9 @@ jobs:
   integration_test:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      matrix:
+        test_target: [non_flaky, flaky]
     services:
       nats:
         image: ghcr.io/wundergraph/cosmo/nats:2.11.0-alpine
@@ -208,9 +211,11 @@ jobs:
             echo "ACL user 'cosmo' created with full access on port $port"
           done
       - name: Run Integration tests
+        if: matrix.test_target == 'non_flaky'
         working-directory: ./router-tests
         run: make test test_params="-run '^Test[^(Flaky)]' --timeout=5m --parallel 10"
       - name: Run Flaky Integration tests
+        if: matrix.test_target == 'flaky'
         uses: nick-fields/retry@v3
         with:
           timeout_minutes: 30
