@@ -29,18 +29,20 @@ export const buildStateToShare = (
     stateToShare.headers = headers;
   }
 
-  if (selectedOptions.preFlight) {
-    const preFlight = getPreFlightScript();
-    if (preFlight) stateToShare.preFlight = preFlight;
-  }
+  // todo: [ENG-7093] when adding the pre-flight, pre-operation and post-operation options,
+  // uncomment these lines. Make sure we instead rely on useLocalStorage here
+  // if (selectedOptions.preFlight) {
+  //   const preFlight = getPreFlightScript();
+  //   if (preFlight) stateToShare.preFlight = preFlight;
+  // }
 
-  if (selectedOptions.preOperation && id) {
-    stateToShare.preOperation = getScriptTabState(id, 'pre-operation');
-  }
+  // if (selectedOptions.preOperation && id) {
+  //   stateToShare.preOperation = getScriptTabState(id, 'pre-operation');
+  // }
 
-  if (selectedOptions.postOperation && id) {
-    stateToShare.postOperation = getScriptTabState(id, 'post-operation');
-  }
+  // if (selectedOptions.postOperation && id) {
+  //   stateToShare.postOperation = getScriptTabState(id, 'post-operation');
+  // }
 
   if (process.env.NODE_ENV === 'development') {
     console.log('[Playground] compressed state:', stateToShare);

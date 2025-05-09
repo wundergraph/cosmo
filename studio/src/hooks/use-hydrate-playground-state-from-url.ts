@@ -16,8 +16,8 @@ type ScriptData = {
 
 /**
  * Pending Items:
- *
- * 1. Ensure sharing of scripts is working. Right now, after the hydration is completed, the GraphiQL
+ * 
+ * 1. [ENG-7093] Ensure sharing of scripts is working. Right now, after the hydration is completed, the GraphiQL
  *    is adding a new tab internally which overrides the script:tabsState as for the new tab, 
  *    it is missing in the localstorage. We don't have a clean way to prevent GraphiQL from 
  *    adding a new tab. Instead of building hacks on top of hacks, we should revisit this
