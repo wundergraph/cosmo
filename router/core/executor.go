@@ -18,7 +18,7 @@ import (
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
+	pubsub_datasource "github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 )
 
 type ExecutorConfigurationBuilder struct {
@@ -34,7 +34,7 @@ type ExecutorConfigurationBuilder struct {
 	subscriptionClientOptions *SubscriptionClientOptions
 	instanceData              InstanceData
 
-	providers []datasource.PubSubProvider
+	providers []pubsub_datasource.PubSubProvider
 }
 
 type Executor struct {
@@ -240,6 +240,6 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 	return planConfig, nil
 }
 
-func (b *ExecutorConfigurationBuilder) GetProviders() []datasource.PubSubProvider {
+func (b *ExecutorConfigurationBuilder) GetProviders() []pubsub_datasource.PubSubProvider {
 	return b.providers
 }
