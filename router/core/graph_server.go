@@ -1376,7 +1376,7 @@ func (s *graphServer) providersActionWithTimeout(ctx context.Context, action fun
 			case err := <-actionDone:
 				return err
 			case <-timer.C:
-				return fmt.Errorf(timeoutMessage, timeout)
+				return errors.New(timeoutMessage)
 			}
 		})
 	}
