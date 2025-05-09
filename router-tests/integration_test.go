@@ -17,6 +17,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
 
@@ -47,6 +48,36 @@ func TestSimpleQuery(t *testing.T) {
 		})
 		require.Equal(t, res.Response.Header.Get("Content-Type"), "application/json; charset=utf-8")
 		require.JSONEq(t, employeesIDData, res.Body)
+	})
+}
+
+func TestConfigReload(t *testing.T) {
+	t.Parallel()
+
+	// Can be very slow, compiles the router binary if needed
+	testenv.RunRouterBinary(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		t.Logf("running router binary, cwd: %s", xEnv.GetRouterProcessCwd())
+
+		ctx := context.Background()
+
+		require.NoError(t, xEnv.WaitForServer(ctx, xEnv.RouterURL+"/health/ready", 600, 60), "healthcheck pre-reload failed")
+
+		f, err := os.Create(filepath.Join(xEnv.GetRouterProcessCwd(), "config.yaml"))
+		require.NoError(t, err)
+
+		_, err = f.WriteString(`
+version: "1"
+
+readiness_check_path: "/after"
+`)
+		require.NoError(t, err)
+
+		require.NoError(t, f.Close())
+
+		err = xEnv.SignalRouterProcess(syscall.SIGHUP)
+		require.NoError(t, err)
+
+		require.NoError(t, xEnv.WaitForServer(ctx, xEnv.RouterURL+"/after", 600, 60), "healthcheck post-reload failed")
 	})
 }
 
