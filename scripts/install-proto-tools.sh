@@ -2,10 +2,10 @@
 set -euo pipefail
 
 # Versions
-GO_VERSION="1.24.1"
-PROTOC_VERSION="29.3"
-PROTOC_GEN_GO_VERSION="v1.36.5"
-PROTOC_GEN_GO_GRPC_VERSION="v1.5.1"
+GO_VERSION="${GO_VERSION:-1.24.1}"
+PROTOC_VERSION="${PROTOC_VERSION:-29.3}"
+PROTOC_GEN_GO_VERSION="${PROTOC_GEN_GO_VERSION:-v1.36.5}"
+PROTOC_GEN_GO_GRPC_VERSION="${PROTOC_GEN_GO_GRPC_VERSION:-v1.5.1}"
 
 # Directory to install tools
 INSTALL_DIR="${INSTALL_DIR:-$HOME/.proto-tools}"
@@ -207,7 +207,7 @@ download_protoc_gen_go_grpc
 rm -rf "$TMP_DIR"
 
 # Instructions for updating PATH
-if [ "$PRINT_INSTRUCTIONS" = "true" ]; then
+if [[ "$PRINT_INSTRUCTIONS" != "false" ]]; then
     echo
     info_bold "Installation complete!"
     info "To use the installed tools, add the following to your shell profile:"
