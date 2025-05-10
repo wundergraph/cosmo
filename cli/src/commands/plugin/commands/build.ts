@@ -250,8 +250,8 @@ async function installTools() {
     // Set up environment variables from tool versions
     const env: NodeJS.ProcessEnv = {
       ...process.env,
-      PRINT_INSTRUCTIONS: 'false',
       INSTALL_DIR: TOOLS_DIR,
+      PRINT_INSTRUCTIONS: 'false',
     };
 
     // Add version variables to env

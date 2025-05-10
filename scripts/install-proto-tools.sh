@@ -13,7 +13,8 @@ BIN_DIR="$INSTALL_DIR/bin"
 TMP_DIR="$INSTALL_DIR/tmp"
 
 # Flag to control printing instructions (default: true)
-PRINT_INSTRUCTIONS=true
+# Can be overridden with the PRINT_INSTRUCTIONS environment variable
+PRINT_INSTRUCTIONS=${PRINT_INSTRUCTIONS:-true}
 
 # Reset
 Color_Off=''
@@ -206,7 +207,7 @@ download_protoc_gen_go_grpc
 rm -rf "$TMP_DIR"
 
 # Instructions for updating PATH
-if [ "$PRINT_INSTRUCTIONS" = true ]; then
+if [ "$PRINT_INSTRUCTIONS" = "true" ]; then
     echo
     info_bold "Installation complete!"
     info "To use the installed tools, add the following to your shell profile:"
