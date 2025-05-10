@@ -73,7 +73,8 @@
     "pupa": "^3.1.0",
     "trieve-ts-sdk": "^0.0.80",
     "undici": "^6.21.1",
-    "zod": "^3.22.4"
+    "zod": "^3.22.4",
+    "semver": "^7.7.1"
   },
   "devDependencies": {
     "@types/bun": "^1.2.3",
@@ -84,6 +85,7 @@
     "@types/inquirer": "^9.0.3",
     "@types/js-yaml": "^4.0.5",
     "@types/node": "^20.3.1",
+    "@types/semver": "^7.7.0",
     "del-cli": "^5.0.0",
     "eslint": "^8.57.1",
     "eslint-config-unjs": "^0.2.1",

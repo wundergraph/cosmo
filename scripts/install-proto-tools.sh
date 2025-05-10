@@ -4,8 +4,8 @@ set -euo pipefail
 # Versions
 GO_VERSION="${GO_VERSION:-1.24.1}"
 PROTOC_VERSION="${PROTOC_VERSION:-29.3}"
-PROTOC_GEN_GO_VERSION="${PROTOC_GEN_GO_VERSION:-v1.36.5}"
-PROTOC_GEN_GO_GRPC_VERSION="${PROTOC_GEN_GO_GRPC_VERSION:-v1.5.1}"
+PROTOC_GEN_GO_VERSION="${PROTOC_GEN_GO_VERSION:-1.36.5}"
+PROTOC_GEN_GO_GRPC_VERSION="${PROTOC_GEN_GO_GRPC_VERSION:-1.5.1}"
 
 # Directory to install tools
 INSTALL_DIR="${INSTALL_DIR:-$HOME/.proto-tools}"
@@ -142,9 +142,8 @@ download_protoc() {
 # Download protoc-gen-go directly from GitHub releases
 download_protoc_gen_go() {
     info "Downloading protoc-gen-go $PROTOC_GEN_GO_VERSION..."
-    
     # Using the correct URL format with version in the filename
-    plugin_url="https://github.com/protocolbuffers/protobuf-go/releases/download/${PROTOC_GEN_GO_VERSION}/protoc-gen-go.${PROTOC_GEN_GO_VERSION}.${protoc_gen_go_platform}.tar.gz"
+    plugin_url="https://github.com/protocolbuffers/protobuf-go/releases/download/v${PROTOC_GEN_GO_VERSION}/protoc-gen-go.v${PROTOC_GEN_GO_VERSION}.${protoc_gen_go_platform}.tar.gz"
     tmp_file="$TMP_DIR/protoc-gen-go.tar.gz"
     
     curl --fail --location --progress-bar --output "$tmp_file" "$plugin_url" ||
@@ -174,7 +173,7 @@ download_protoc_gen_go_grpc() {
     # URL format: https://github.com/grpc/grpc-go/releases/download/cmd%2Fprotoc-gen-go-grpc%2Fv1.4.0/protoc-gen-go-grpc.v1.4.0.linux.386.tar.gz
     # We'll create the URL based on OS and architecture
     
-    grpc_url="https://github.com/grpc/grpc-go/releases/download/cmd%2Fprotoc-gen-go-grpc%2F${PROTOC_GEN_GO_GRPC_VERSION}/protoc-gen-go-grpc.${PROTOC_GEN_GO_GRPC_VERSION}.${grpc_platform}.tar.gz"
+    grpc_url="https://github.com/grpc/grpc-go/releases/download/cmd%2Fprotoc-gen-go-grpc%2Fv${PROTOC_GEN_GO_GRPC_VERSION}/protoc-gen-go-grpc.v${PROTOC_GEN_GO_GRPC_VERSION}.${grpc_platform}.tar.gz"
     tar_file="$TMP_DIR/protoc-gen-go-grpc.tar.gz"
     
     info "Downloading official binary from $grpc_url"

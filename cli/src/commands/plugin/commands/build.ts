@@ -10,6 +10,7 @@ import os from 'node:os';
 import { existsSync } from 'node:fs';
 import prompts from 'prompts';
 import { dataDir } from '../../../core/config';
+import semver from 'semver';
 
 // Define platform-architecture combinations
 const HOST_PLATFORM = `${os.platform()}-${os.arch()}`;
@@ -20,12 +21,14 @@ const TOOLS_DIR = join(dataDir, 'proto-tools');
 const TOOLS_BIN_DIR = join(TOOLS_DIR, 'bin');
 const TOOLS_VERSIONS_FILE = join(TOOLS_DIR, 'versions.json');
 
-// Tool versions configuration
+// Exact tool versions to be installed
+// The version need to match with the download URL in the install-proto-tools.sh script
+// but can contain a semver range for compatibility
 const TOOL_VERSIONS = {
-  protoc: '29.3',
-  protocGenGo: 'v1.36.5',
-  protocGenGoGrpc: 'v1.5.1',
-  go: '1.24.1',
+  protoc: '~29.3',
+  protocGenGo: '~1.36.5',
+  protocGenGoGrpc: '~1.5.1',
+  go: '1.22.0',
 };
 
 // Mapping between tool names and environment variable names
@@ -127,40 +130,146 @@ async function shouldReinstallTools(force = false): Promise<boolean> {
     return true;
   }
 
-  // If the tools directory doesn't exist, we need to install
-  if (!existsSync(TOOLS_DIR) || !existsSync(TOOLS_BIN_DIR)) {
-    return true;
+  // If a version file exists, we assume the user manages the tools via toolchain
+  if (existsSync(TOOLS_VERSIONS_FILE)) {
+    try {
+      // Read stored versions and compare with current versions
+      const storedVersionsStr = await readFile(TOOLS_VERSIONS_FILE, 'utf-8');
+      const storedVersions = JSON.parse(storedVersionsStr) as Record<string, string>;
+
+      // Compare each tool version
+      for (const [tool, version] of Object.entries(TOOL_VERSIONS)) {
+        if (storedVersions[tool] !== version) {
+          return true;
+        }
+      }
+
+      // Check for any new tools that weren't in the stored versions
+      for (const tool of Object.keys(TOOL_VERSIONS)) {
+        if (!(tool in storedVersions)) {
+          return true;
+        }
+      }
+
+      // If we got here, all versions match
+      return false;
+    } catch (error) {
+      // If any error occurs during version checking, assume reinstallation is needed
+      return true;
+    }
   }
 
-  // If a version file doesn't exist, we need to install
-  if (!existsSync(TOOLS_VERSIONS_FILE)) {
-    return true;
-  }
-
+  // if we haven't installed the tools yet, we check first if the tools are installed on the host system
+  // and if they are not, we need to install them through the toolchain installation
   try {
-    // Read stored versions and compare with current versions
-    const storedVersionsStr = await readFile(TOOLS_VERSIONS_FILE, 'utf-8');
-    const storedVersions = JSON.parse(storedVersionsStr) as Record<string, string>;
-
-    // Compare each tool version
-    for (const [tool, version] of Object.entries(TOOL_VERSIONS)) {
-      if (storedVersions[tool] !== version) {
-        return true;
-      }
+    const toolsOnHost = await areToolsInstalledOnHost();
+    if (toolsOnHost) {
+      return false;
     }
-
-    // Check for any new tools that weren't in the stored versions
-    for (const tool of Object.keys(TOOL_VERSIONS)) {
-      if (!(tool in storedVersions)) {
-        return true;
-      }
-    }
-
-    // If we got here, all versions match
-    return false;
-  } catch (error) {
-    // If any error occurs during version checking, assume reinstallation is needed
     return true;
+  } catch (error) {
+    // If error checking host tools, installation is needed
+    return true;
+  }
+}
+
+/**
+ * Check if all required tools are installed on the host system with correct versions
+ */
+async function areToolsInstalledOnHost(): Promise<boolean> {
+  try {
+    // Check Go version
+    const goVersion = await getCommandVersion('go', 'version', /go(\d+\.\d+\.\d+)/);
+    if (!isSemverSatisfied(goVersion, TOOL_VERSIONS.go)) {
+      console.log(pc.yellow(`Go version mismatch: found ${goVersion}, required ${TOOL_VERSIONS.go}`));
+      return false;
+    }
+
+    // Check Protoc version
+    const protocVersion = await getCommandVersion('protoc', '--version', /(\d+\.\d+)/);
+    if (!isSemverSatisfied(protocVersion, TOOL_VERSIONS.protoc)) {
+      console.log(pc.yellow(`Protoc version mismatch: found ${protocVersion}, required ${TOOL_VERSIONS.protoc}`));
+      return false;
+    }
+
+    // Check protoc-gen-go version
+    // The output format is typically "protoc-gen-go v1.36.5"
+    const protocGenGoVersion = await getCommandVersion('protoc-gen-go', '--version', /v(\d+\.\d+\.\d+)/);
+    const requiredProtocGenGoVersion = TOOL_VERSIONS.protocGenGo.replace(/^v/, '');
+    if (!isSemverSatisfied(protocGenGoVersion, requiredProtocGenGoVersion)) {
+      console.log(
+        pc.yellow(
+          `protoc-gen-go version mismatch: found ${protocGenGoVersion}, required ${requiredProtocGenGoVersion}`,
+        ),
+      );
+      return false;
+    }
+
+    // Check protoc-gen-go-grpc version
+    // The output format is typically "protoc-gen-go-grpc 1.5.1"
+    const protocGenGoGrpcVersion = await getCommandVersion('protoc-gen-go-grpc', '--version', /[vV]?(\d+\.\d+\.\d+)/);
+    const requiredProtocGenGoGrpcVersion = TOOL_VERSIONS.protocGenGoGrpc.replace(/^v/, '');
+    if (!isSemverSatisfied(protocGenGoGrpcVersion, requiredProtocGenGoGrpcVersion)) {
+      console.log(
+        pc.yellow(
+          `protoc-gen-go-grpc version mismatch: found ${protocGenGoGrpcVersion}, required ${requiredProtocGenGoGrpcVersion}`,
+        ),
+      );
+      return false;
+    }
+
+    return true;
+  } catch (error: any) {
+    console.log(pc.yellow(`Error checking tools: ${error.message}`));
+    return false;
+  }
+}
+
+/**
+ * Compare versions using semver
+ */
+function isSemverSatisfied(version: string, requiredVersion: string): boolean {
+  try {
+    // Clean versions using semver.clean that handle v prefix
+    const cleanVersion = semver.clean(version) || version;
+
+    // For actual version, always coerce to a clean semver string
+    const coercedVersion = semver.coerce(cleanVersion)?.version;
+    if (!coercedVersion) {
+      return false;
+    }
+
+    // For ranges, use as is (ranges are not supported for tool versions)
+    if (semver.validRange(requiredVersion)) {
+      return semver.satisfies(coercedVersion, requiredVersion);
+    }
+
+    // If not a range, coerce the required version too
+    const coercedRequiredVersion = semver.coerce(requiredVersion)?.version;
+    if (!coercedRequiredVersion) {
+      return false;
+    }
+
+    return semver.satisfies(coercedVersion, coercedRequiredVersion);
+  } catch (error) {
+    // If any error in semver processing, fall back to string comparison
+    return version === requiredVersion;
+  }
+}
+
+/**
+ * Extract version from command output using regex
+ */
+async function getCommandVersion(command: string, versionFlag: string, versionRegex: RegExp): Promise<string> {
+  try {
+    const { stdout } = await execa(command, [versionFlag]);
+    const match = stdout.match(versionRegex);
+    if (!match || !match[1]) {
+      throw new Error(`Could not parse version from output: ${stdout}`);
+    }
+    return match[1];
+  } catch (error) {
+    throw new Error(`Failed to get version for ${command}: ${error}`);
   }
 }
 
@@ -256,8 +365,18 @@ async function installTools() {
 
     // Add version variables to env
     for (const [tool, envVar] of Object.entries(TOOL_ENV_VARS)) {
-      env[envVar] = TOOL_VERSIONS[tool as keyof typeof TOOL_VERSIONS];
+      const version = TOOL_VERSIONS[tool as keyof typeof TOOL_VERSIONS];
+      // Extract semver but support also versions like 29.0 with just two segments
+      // we can't coerce it because it defines the download URL
+      const v = version.match(/^v?~?(\d+\.\d+(?:\.\d+)?)$/)?.[1];
+
+      if (!v) {
+        throw new Error(`Invalid version ${TOOL_VERSIONS[tool as keyof typeof TOOL_VERSIONS]} for ${tool}`);
+      }
+
+      env[envVar] = v;
     }
+    console.log('Installing tools with versions:', env);
 
     await execa(scriptPath, [], {
       env,
