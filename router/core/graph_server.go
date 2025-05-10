@@ -326,16 +326,6 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	return s, nil
 }
 
-func getRouterConfigVersionOverride(attributes []config.CustomAttribute, configVersion string) []attribute.KeyValue {
-	routerConfigVersionOverride := make([]attribute.KeyValue, 0)
-	for _, attr := range attributes {
-		if attr.ValueFrom.ContextField == ContextFieldRouterConfigVersion {
-			routerConfigVersionOverride = append(routerConfigVersionOverride, attribute.String(attr.Key, configVersion))
-		}
-	}
-	return routerConfigVersionOverride
-}
-
 func (s *graphServer) buildMultiGraphHandler(ctx context.Context, baseMux *chi.Mux, featureFlagConfigs map[string]*nodev1.FeatureFlagRouterExecutionConfig) (http.HandlerFunc, error) {
 	if len(featureFlagConfigs) == 0 {
 		return baseMux.ServeHTTP, nil
@@ -382,10 +372,10 @@ func (s *graphServer) buildMultiGraphHandler(ctx context.Context, baseMux *chi.M
 
 // setupEngineStatistics creates the engine statistics for the server.
 // It creates the OTLP and Prometheus metrics for the engine statistics.
-func (s *graphServer) setupEngineStatistics(routerOtelOverride []attribute.KeyValue) (err error) {
+func (s *graphServer) setupEngineStatistics(additionalAttrs []attribute.KeyValue) (err error) {
 	// We only include the base router config version in the attributes for the engine statistics.
 	// Same approach is used for the runtime metrics.
-	baseAttributes := append([]attribute.KeyValue{}, routerOtelOverride...)
+	baseAttributes := append([]attribute.KeyValue{}, additionalAttrs...)
 	baseAttributes = append(baseAttributes, s.baseOtelAttributes...)
 
 	s.otlpEngineMetrics, err = rmetric.NewEngineMetrics(

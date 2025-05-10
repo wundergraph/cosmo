@@ -2198,3 +2198,13 @@ func or[T any](maybe *T, or T) T {
 	}
 	return or
 }
+
+func getRouterConfigVersionOverride(attributes []config.CustomAttribute, configVersion string) []attribute.KeyValue {
+	routerConfigVersionOverride := make([]attribute.KeyValue, 0)
+	for _, attr := range attributes {
+		if attr.ValueFrom.ContextField == ContextFieldRouterConfigVersion {
+			routerConfigVersionOverride = append(routerConfigVersionOverride, attribute.String(attr.Key, configVersion))
+		}
+	}
+	return routerConfigVersionOverride
+}
