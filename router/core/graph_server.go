@@ -159,14 +159,13 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 
 	s.baseOtelAttributes = baseOtelAttributes
 
-	var routerConfigVersionOverride []attribute.KeyValue
-	for _, attr := range s.metricConfig.Attributes {
-		if attr.ValueFrom.ContextField == ContextFieldRouterConfigVersion {
-			routerConfigVersionOverride = append(routerConfigVersionOverride, attribute.String(attr.Key, s.baseRouterConfigVersion))
-		}
-	}
+	routerConfigVersionOverride := getRouterConfigVersionOverride(s.metricConfig.Attributes, s.baseRouterConfigVersion)
 
 	if s.metricConfig.OpenTelemetry.RouterRuntime {
+		routerMetricAttributes := make([]attribute.KeyValue, 0)
+		routerMetricAttributes = append([]attribute.KeyValue{}, baseOtelAttributes...)
+		routerMetricAttributes = append(routerMetricAttributes, routerConfigVersionOverride...)
+
 		s.runtimeMetrics = rmetric.NewRuntimeMetrics(
 			s.logger,
 			s.otlpMeterProvider,
@@ -220,7 +219,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		httpRouter.Use(cors.New(*s.corsOptions))
 	}
 
-	gm, err := s.buildGraphMux(ctx, "", s.baseRouterConfigVersion, routerConfig.GetEngineConfig(), routerConfigVersionOverride, routerConfig.GetSubgraphs())
+	gm, err := s.buildGraphMux(ctx, "", s.baseRouterConfigVersion, routerConfig.GetEngineConfig(), routerConfig.GetSubgraphs())
 	if err != nil {
 		return nil, fmt.Errorf("failed to build base mux: %w", err)
 	}
@@ -230,7 +229,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		s.logger.Info("Feature flags enabled", zap.Strings("flags", maps.Keys(featureFlagConfigMap)))
 	}
 
-	multiGraphHandler, err := s.buildMultiGraphHandler(ctx, gm.mux, routerConfigVersionOverride, featureFlagConfigMap)
+	multiGraphHandler, err := s.buildMultiGraphHandler(ctx, gm.mux, featureFlagConfigMap)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build feature flag handler: %w", err)
 	}
@@ -328,7 +327,17 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	return s, nil
 }
 
-func (s *graphServer) buildMultiGraphHandler(ctx context.Context, baseMux *chi.Mux, override []attribute.KeyValue, featureFlagConfigs map[string]*nodev1.FeatureFlagRouterExecutionConfig) (http.HandlerFunc, error) {
+func getRouterConfigVersionOverride(attributes []config.CustomAttribute, configVersion string) []attribute.KeyValue {
+	routerConfigVersionOverride := make([]attribute.KeyValue, 0)
+	for _, attr := range attributes {
+		if attr.ValueFrom.ContextField == ContextFieldRouterConfigVersion {
+			routerConfigVersionOverride = append(routerConfigVersionOverride, attribute.String(attr.Key, configVersion))
+		}
+	}
+	return routerConfigVersionOverride
+}
+
+func (s *graphServer) buildMultiGraphHandler(ctx context.Context, baseMux *chi.Mux, featureFlagConfigs map[string]*nodev1.FeatureFlagRouterExecutionConfig) (http.HandlerFunc, error) {
 	if len(featureFlagConfigs) == 0 {
 		return baseMux.ServeHTTP, nil
 	}
@@ -341,7 +350,6 @@ func (s *graphServer) buildMultiGraphHandler(ctx context.Context, baseMux *chi.M
 			featureFlagName,
 			executionConfig.GetVersion(),
 			executionConfig.GetEngineConfig(),
-			override,
 			executionConfig.Subgraphs,
 		)
 		if err != nil {
@@ -673,7 +681,6 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	featureFlagName string,
 	routerConfigVersion string,
 	engineConfig *nodev1.EngineConfiguration,
-	routerConfigVersionOverride []attribute.KeyValue,
 	configSubgraphs []*nodev1.Subgraph,
 ) (*graphMux, error) {
 	gm := &graphMux{
@@ -681,6 +688,8 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	}
 
 	httpRouter := chi.NewRouter()
+
+	routerConfigVersionOverride := getRouterConfigVersionOverride(s.metricConfig.Attributes, routerConfigVersion)
 
 	baseMetricAttributes := append([]attribute.KeyValue{}, s.baseOtelAttributes...)
 	baseMetricAttributes = append([]attribute.KeyValue{}, routerConfigVersionOverride...)

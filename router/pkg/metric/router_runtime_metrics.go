@@ -39,10 +39,6 @@ func NewRuntimeMetrics(logger *zap.Logger, meterProvider *metric.MeterProvider, 
 		otelmetric.WithInstrumentationVersion(cosmoRouterRuntimeMeterVersion),
 	)
 
-	newBaseAttributes := make([]attribute.KeyValue, 0, len(baseAttributes)+len(override))
-	newBaseAttributes = append(newBaseAttributes, baseAttributes...)
-	newBaseAttributes = append(newBaseAttributes, override...)
-
 	return &RuntimeMetrics{
 		meter:            meter,
 		baseAttributes:   newBaseAttributes,
