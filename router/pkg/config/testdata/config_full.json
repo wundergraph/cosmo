@@ -133,7 +133,8 @@
   "MCP": {
     "Enabled": false,
     "Server": {
-      "ListenAddr": "localhost:5025"
+      "ListenAddr": "localhost:5025",
+      "BaseURL": "http://localhost:5025"
     },
     "Storage": {
       "ProviderID": "mcp"
