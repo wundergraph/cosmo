@@ -2202,7 +2202,7 @@ func or[T any](maybe *T, or T) T {
 func getRouterConfigVersionOverride(attributes []config.CustomAttribute, configVersion string) []attribute.KeyValue {
 	routerConfigVersionOverride := make([]attribute.KeyValue, 0)
 	for _, attr := range attributes {
-		if attr.ValueFrom.ContextField == ContextFieldRouterConfigVersion {
+		if attr.ValueFrom != nil && attr.ValueFrom.ContextField == ContextFieldRouterConfigVersion {
 			routerConfigVersionOverride = append(routerConfigVersionOverride, attribute.String(attr.Key, configVersion))
 		}
 	}
