@@ -1812,7 +1812,7 @@
             },
             "base_url": {
               "type": "string",
-              "description": "The base URL of the MCP server. It is the URL that the MCP server will communicate to all clients. If you are using a reverse proxy, you need to set this to the URL where the MCP server is reachable. The URL is specified as a string with the format 'scheme://host:port'.",
+              "description": "The base URL of the MCP server. This is the URL advertised to the LLM clients. By default, the base URL is relative to the URL that the router is running on. The URL is specified as a string with the format 'scheme://host:port'.",
               "format": "http-url"
             }
           }

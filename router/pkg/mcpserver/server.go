@@ -53,7 +53,8 @@ type Options struct {
 	OperationsDir string
 	// ListenAddr is the address where the server should listen to
 	ListenAddr string
-	// BaseURL is the base URL for the MCP server
+	// BaseURL of the MCP server. This is the URL advertised to the LLM clients.
+	// By default, the base URL is relative to the URL that the router is running on.
 	BaseURL string
 	// Enabled determines whether the MCP server should be started
 	Enabled bool
@@ -275,7 +276,6 @@ func WithExposeSchema(exposeSchema bool) func(*Options) {
 // ServeSSE starts the server with SSE transport
 func (s *GraphQLSchemaServer) ServeSSE() (*server.SSEServer, error) {
 	sseServer := server.NewSSEServer(s.server,
-		// Only HTTP transport is supported for now, no TLS
 		server.WithBaseURL(s.baseURL),
 		server.WithSSEEndpoint("/mcp"),
 		server.WithSSEContextFunc(authFromRequest),
