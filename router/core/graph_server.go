@@ -691,7 +691,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	routerConfigVersionOverride := getRouterConfigVersionOverride(s.metricConfig.Attributes, routerConfigVersion)
 
 	baseMetricAttributes := append([]attribute.KeyValue{}, s.baseOtelAttributes...)
-	baseMetricAttributes = append([]attribute.KeyValue{}, routerConfigVersionOverride...)
+	baseMetricAttributes = append(baseMetricAttributes, routerConfigVersionOverride...)
 	baseTraceAttributes := append([]attribute.KeyValue{otel.WgRouterConfigVersion.String(routerConfigVersion)}, s.baseOtelAttributes...)
 	if featureFlagName != "" {
 		baseTraceAttributes = append(baseTraceAttributes, otel.WgFeatureFlag.String(featureFlagName))
