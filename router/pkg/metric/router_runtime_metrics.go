@@ -33,7 +33,7 @@ type RuntimeMetrics struct {
 
 // NewRuntimeMetrics creates a new instance of RuntimeMetrics. Runtime metrics are metrics that are collected from the Go and process runtime.
 // These metrics are shared across feature flags.
-func NewRuntimeMetrics(logger *zap.Logger, meterProvider *metric.MeterProvider, baseAttributes []attribute.KeyValue, override []attribute.KeyValue, processStartTime time.Time) *RuntimeMetrics {
+func NewRuntimeMetrics(logger *zap.Logger, meterProvider *metric.MeterProvider, baseAttributes []attribute.KeyValue, processStartTime time.Time) *RuntimeMetrics {
 	// Calling meter with the same name and version will return the same instance of the meter.
 	meter := meterProvider.Meter(cosmoRouterRuntimeMeterName,
 		otelmetric.WithInstrumentationVersion(cosmoRouterRuntimeMeterVersion),
@@ -41,7 +41,7 @@ func NewRuntimeMetrics(logger *zap.Logger, meterProvider *metric.MeterProvider, 
 
 	return &RuntimeMetrics{
 		meter:            meter,
-		baseAttributes:   newBaseAttributes,
+		baseAttributes:   baseAttributes,
 		logger:           logger,
 		processStartTime: processStartTime,
 	}
