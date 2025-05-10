@@ -38,7 +38,7 @@ import { CacheWarmerRepository } from '../repositories/CacheWarmerRepository.js'
 import { NamespaceRepository } from '../repositories/NamespaceRepository.js';
 import { InspectorSchemaChange } from '../services/SchemaUsageTrafficInspector.js';
 import { SchemaCheckChangeAction } from '../../db/models.js';
-import { composeSubgraphs, composeFederatedGraphWithPotentialContracts } from './composition.js';
+import { composeFederatedGraphWithPotentialContracts, composeSubgraphs } from './composition.js';
 import { getDiffBetweenGraphs, GetDiffBetweenGraphsResult, GetDiffBetweenGraphsSuccess } from './schemaCheck.js';
 
 export function getRouterCompatibilityVersionPath(routerCompatibilityVersion: string): string {
@@ -124,6 +124,7 @@ export function subgraphDTOsToComposedSubgraphs(
     const schema = subgraphConfig?.schema;
     const configurationDataByTypeName = subgraphConfig?.configurationDataByTypeName;
     return {
+      kind: 'standard',
       id: subgraph.id,
       name: subgraph.name,
       targetId: subgraph.targetId,

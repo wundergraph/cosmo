@@ -56,13 +56,14 @@
     "@lerna-lite/cli": "3.3.1",
     "@lerna-lite/publish": "3.7.1",
     "@lerna-lite/version": "3.7.1",
+    "@types/prompts": "^2.4.9",
     "del-cli": "^5.1.0",
     "husky": "^8.0.3",
     "lint-staged": "^15.2.10",
     "prettier": "^3.0.3",
-    "vitest": "^2.1.9",
     "ts-node": "^10.9.1",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "vitest": "^2.1.9"
   },
   "pnpm": {
     "overrides": {

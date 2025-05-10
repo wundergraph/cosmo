@@ -61,9 +61,10 @@ export interface ComposedSubgraph {
   name: string;
   sdl: string;
   url: string;
+  schemaVersionId?: string;
   subscriptionUrl: string;
-  subscriptionProtocol: SubscriptionProtocol;
-  websocketSubprotocol: WebsocketSubprotocol;
+  subscriptionProtocol: SubscriptionProtocol | undefined;
+  websocketSubprotocol: WebsocketSubprotocol | undefined;
   // The intermediate representation of the engine configuration for the subgraph
   configurationDataByTypeName?: Map<string, ConfigurationData>;
   // The normalized GraphQL schema for the subgraph
@@ -120,7 +121,6 @@ export const parseGraphQLWebsocketSubprotocol = (protocolName: WebsocketSubproto
       return GraphQLWebsocketSubprotocol.GRAPHQL_WEBSOCKET_SUBPROTOCOL_TRANSPORT_WS;
     }
   }
-  throw new Error(`Unsupported  websocket subprotocol '${protocolName}'`);
 };
 
 export const buildRouterConfig = function (input: Input): RouterConfig {
@@ -160,8 +160,10 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
 
     if (subgraph.kind === 'standard') {
       subscriptionConfig.enabled = true;
-      subscriptionConfig.protocol = parseGraphQLSubscriptionProtocol(subgraph.subscriptionProtocol);
-      subscriptionConfig.websocketSubprotocol = parseGraphQLWebsocketSubprotocol(subgraph.websocketSubprotocol);
+      subscriptionConfig.protocol = parseGraphQLSubscriptionProtocol(subgraph.subscriptionProtocol || 'ws');
+      subscriptionConfig.websocketSubprotocol = parseGraphQLWebsocketSubprotocol(
+        subgraph.websocketSubprotocol || 'auto',
+      );
       // When changing this, please do it in the router subgraph override as well
       subscriptionConfig.url = new ConfigurationVariable({
         kind: ConfigurationVariableKind.STATIC_CONFIGURATION_VARIABLE,
