@@ -163,8 +163,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 
 	if s.metricConfig.OpenTelemetry.RouterRuntime {
 		// We track runtime metrics with base router config version
-		routerMetricAttributes := make([]attribute.KeyValue, 0)
-		routerMetricAttributes = append([]attribute.KeyValue{}, baseOtelAttributes...)
+		routerMetricAttributes := append([]attribute.KeyValue{}, baseOtelAttributes...)
 		routerMetricAttributes = append(routerMetricAttributes, routerConfigVersionOverride...)
 
 		s.runtimeMetrics = rmetric.NewRuntimeMetrics(
