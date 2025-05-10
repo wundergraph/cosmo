@@ -52,7 +52,11 @@ export default (opts: BaseCommandOptions) => {
   ]);
   command.option('--all-platforms', 'Build for all supported platforms', false);
   command.option('--skip-tools-installation', 'Skip tool installation', false);
-  command.option('--force-tools-installation', 'Force tools installation regardless of version check', false);
+  command.option(
+    '--force-tools-installation',
+    'Force tools installation regardless of version check or confirmation',
+    false,
+  );
 
   command.action(async (directory, options) => {
     const startTime = performance.now();
@@ -232,7 +236,7 @@ async function installTools() {
   try {
     // Download the script from GitHub
     const scriptUrl =
-      'https://raw.githubusercontent.com/wundergraph/cosmo/refs/heads/ludwig/eng-6940-router-go-plugin-host-system/install-proto-tools.sh';
+      'https://raw.githubusercontent.com/wundergraph/cosmo/refs/heads/ludwig/eng-6940-router-go-plugin-host-system/scripts/install-proto-tools.sh';
 
     try {
       await execa('curl', ['-fsSL', scriptUrl, '-o', scriptPath]);
