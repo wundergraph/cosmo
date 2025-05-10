@@ -12,6 +12,9 @@ INSTALL_DIR="${INSTALL_DIR:-$HOME/.proto-tools}"
 BIN_DIR="$INSTALL_DIR/bin"
 TMP_DIR="$INSTALL_DIR/tmp"
 
+# Flag to control printing instructions (default: true)
+PRINT_INSTRUCTIONS=true
+
 # Reset
 Color_Off=''
 
@@ -203,16 +206,22 @@ download_protoc_gen_go_grpc
 rm -rf "$TMP_DIR"
 
 # Instructions for updating PATH
-echo
-info_bold "Installation complete!"
-info "To use the installed tools, add the following to your shell profile:"
-echo
-info_bold "  export PATH=\"$BIN_DIR:\$PATH\""
-echo
-info "You can also use the tools directly by running:"
-echo
-info_bold "  $BIN_DIR/go"
-info_bold "  $BIN_DIR/protoc"
-info_bold "  $BIN_DIR/protoc-gen-go"
-info_bold "  $BIN_DIR/protoc-gen-go-grpc"
-echo 
+if [ "$PRINT_INSTRUCTIONS" = true ]; then
+    echo
+    info_bold "Installation complete!"
+    info "To use the installed tools, add the following to your shell profile:"
+    echo
+    info_bold "  export PATH=\"$BIN_DIR:\$PATH\""
+    echo
+    info "You can also use the tools directly by running:"
+    echo
+    info_bold "  $BIN_DIR/go"
+    info_bold "  $BIN_DIR/protoc"
+    info_bold "  $BIN_DIR/protoc-gen-go"
+    info_bold "  $BIN_DIR/protoc-gen-go-grpc"
+    echo 
+else
+    echo
+    info_bold "Installation complete!"
+    echo
+fi 
