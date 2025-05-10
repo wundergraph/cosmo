@@ -22,10 +22,10 @@ const TOOLS_VERSIONS_FILE = join(TOOLS_DIR, 'versions.json');
 
 // Tool versions configuration
 const TOOL_VERSIONS = {
-  protoc: '21.12',
-  protocGenGo: 'v1.28.1',
-  protocGenGoGrpc: 'v1.2.0',
-  go: '1.21.0',
+  protoc: '29.3',
+  protocGenGo: 'v1.36.5',
+  protocGenGoGrpc: 'v1.5.1',
+  go: '1.24.1',
 };
 
 // Mapping between tool names and environment variable names
