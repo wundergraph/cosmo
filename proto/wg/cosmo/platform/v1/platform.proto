@@ -2659,12 +2659,19 @@ message GetOperationsRequest {
 }
 
 message GetOperationsResponse {
+  enum OperationType {
+    QUERY = 0;
+    MUTATION = 1;
+    SUBSCRIPTION = 2;
+  }
+
   message Operation {
-  string hash = 1;
-  string name = 2;
-  string content = 3;
-  float latency = 4;
-}
+    string hash = 1;
+    string name = 2;
+    string content = 3;
+    float latency = 4;
+    OperationType type = 5;
+  }
 
   Response response = 1;
   repeated Operation operations = 2;

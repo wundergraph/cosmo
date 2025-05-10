@@ -729,6 +729,7 @@ export class MetricsRepository {
     SELECT
       OperationHash as operationHash,
       OperationName as operationName,
+      OperationType as operationType,
       func_rank(0.95, BucketCounts) as rank,
       func_rank_bucket_lower_index(rank, BucketCounts) as b,
       round(func_histogram_v2(
@@ -749,6 +750,7 @@ export class MetricsRepository {
     const res: {
       operationHash: string;
       operationName: string;
+      operationType: string;
       latency: number;
     }[] = await this.client.queryPromise(query);
 

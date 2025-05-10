@@ -21002,6 +21002,32 @@ export class GetOperationsResponse extends Message<GetOperationsResponse> {
 }
 
 /**
+ * @generated from enum wg.cosmo.platform.v1.GetOperationsResponse.OperationType
+ */
+export enum GetOperationsResponse_OperationType {
+  /**
+   * @generated from enum value: QUERY = 0;
+   */
+  QUERY = 0,
+
+  /**
+   * @generated from enum value: MUTATION = 1;
+   */
+  MUTATION = 1,
+
+  /**
+   * @generated from enum value: SUBSCRIPTION = 2;
+   */
+  SUBSCRIPTION = 2,
+}
+// Retrieve enum metadata with: proto3.getEnumType(GetOperationsResponse_OperationType)
+proto3.util.setEnumType(GetOperationsResponse_OperationType, "wg.cosmo.platform.v1.GetOperationsResponse.OperationType", [
+  { no: 0, name: "QUERY" },
+  { no: 1, name: "MUTATION" },
+  { no: 2, name: "SUBSCRIPTION" },
+]);
+
+/**
  * @generated from message wg.cosmo.platform.v1.GetOperationsResponse.Operation
  */
 export class GetOperationsResponse_Operation extends Message<GetOperationsResponse_Operation> {
@@ -21025,6 +21051,11 @@ export class GetOperationsResponse_Operation extends Message<GetOperationsRespon
    */
   latency = 0;
 
+  /**
+   * @generated from field: wg.cosmo.platform.v1.GetOperationsResponse.OperationType type = 5;
+   */
+  type = GetOperationsResponse_OperationType.QUERY;
+
   constructor(data?: PartialMessage<GetOperationsResponse_Operation>) {
     super();
     proto3.util.initPartial(data, this);
@@ -21037,6 +21068,7 @@ export class GetOperationsResponse_Operation extends Message<GetOperationsRespon
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "content", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "latency", kind: "scalar", T: 2 /* ScalarType.FLOAT */ },
+    { no: 5, name: "type", kind: "enum", T: proto3.getEnumType(GetOperationsResponse_OperationType) },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOperationsResponse_Operation {
