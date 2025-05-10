@@ -159,14 +159,20 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 
 	s.baseOtelAttributes = baseOtelAttributes
 
+	var routerConfigVersionOverride []attribute.KeyValue
+	for _, attr := range s.metricConfig.Attributes {
+		if attr.ValueFrom.ContextField == ContextFieldRouterConfigVersion {
+			routerConfigVersionOverride = append(routerConfigVersionOverride, attribute.String(attr.Key, s.baseRouterConfigVersion))
+		}
+	}
+
 	if s.metricConfig.OpenTelemetry.RouterRuntime {
 		s.runtimeMetrics = rmetric.NewRuntimeMetrics(
 			s.logger,
 			s.otlpMeterProvider,
 			// We track runtime metrics with base router config version
-			append([]attribute.KeyValue{
-				otel.WgRouterConfigVersion.String(s.baseRouterConfigVersion),
-			}, baseOtelAttributes...),
+			baseOtelAttributes,
+			routerConfigVersionOverride,
 			s.processStartTime,
 		)
 
@@ -176,7 +182,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		}
 	}
 
-	if err := s.setupEngineStatistics(); err != nil {
+	if err := s.setupEngineStatistics(routerConfigVersionOverride); err != nil {
 		return nil, fmt.Errorf("failed to setup engine statistics: %w", err)
 	}
 
@@ -214,7 +220,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		httpRouter.Use(cors.New(*s.corsOptions))
 	}
 
-	gm, err := s.buildGraphMux(ctx, "", s.baseRouterConfigVersion, routerConfig.GetEngineConfig(), routerConfig.GetSubgraphs())
+	gm, err := s.buildGraphMux(ctx, "", s.baseRouterConfigVersion, routerConfig.GetEngineConfig(), routerConfigVersionOverride, routerConfig.GetSubgraphs())
 	if err != nil {
 		return nil, fmt.Errorf("failed to build base mux: %w", err)
 	}
@@ -224,7 +230,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		s.logger.Info("Feature flags enabled", zap.Strings("flags", maps.Keys(featureFlagConfigMap)))
 	}
 
-	multiGraphHandler, err := s.buildMultiGraphHandler(ctx, gm.mux, featureFlagConfigMap)
+	multiGraphHandler, err := s.buildMultiGraphHandler(ctx, gm.mux, routerConfigVersionOverride, featureFlagConfigMap)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build feature flag handler: %w", err)
 	}
@@ -322,7 +328,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	return s, nil
 }
 
-func (s *graphServer) buildMultiGraphHandler(ctx context.Context, baseMux *chi.Mux, featureFlagConfigs map[string]*nodev1.FeatureFlagRouterExecutionConfig) (http.HandlerFunc, error) {
+func (s *graphServer) buildMultiGraphHandler(ctx context.Context, baseMux *chi.Mux, override []attribute.KeyValue, featureFlagConfigs map[string]*nodev1.FeatureFlagRouterExecutionConfig) (http.HandlerFunc, error) {
 	if len(featureFlagConfigs) == 0 {
 		return baseMux.ServeHTTP, nil
 	}
@@ -335,6 +341,7 @@ func (s *graphServer) buildMultiGraphHandler(ctx context.Context, baseMux *chi.M
 			featureFlagName,
 			executionConfig.GetVersion(),
 			executionConfig.GetEngineConfig(),
+			override,
 			executionConfig.Subgraphs,
 		)
 		if err != nil {
@@ -368,12 +375,11 @@ func (s *graphServer) buildMultiGraphHandler(ctx context.Context, baseMux *chi.M
 
 // setupEngineStatistics creates the engine statistics for the server.
 // It creates the OTLP and Prometheus metrics for the engine statistics.
-func (s *graphServer) setupEngineStatistics() (err error) {
+func (s *graphServer) setupEngineStatistics(routerOtelOverride []attribute.KeyValue) (err error) {
 	// We only include the base router config version in the attributes for the engine statistics.
 	// Same approach is used for the runtime metrics.
-	baseAttributes := append([]attribute.KeyValue{
-		otel.WgRouterConfigVersion.String(s.baseRouterConfigVersion),
-	}, s.baseOtelAttributes...)
+	baseAttributes := append([]attribute.KeyValue{}, routerOtelOverride...)
+	baseAttributes = append(baseAttributes, s.baseOtelAttributes...)
 
 	s.otlpEngineMetrics, err = rmetric.NewEngineMetrics(
 		s.logger,
@@ -667,6 +673,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	featureFlagName string,
 	routerConfigVersion string,
 	engineConfig *nodev1.EngineConfiguration,
+	routerConfigVersionOverride []attribute.KeyValue,
 	configSubgraphs []*nodev1.Subgraph,
 ) (*graphMux, error) {
 	gm := &graphMux{
@@ -675,10 +682,12 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	httpRouter := chi.NewRouter()
 
-	baseOtelAttributes := append([]attribute.KeyValue{otel.WgRouterConfigVersion.String(routerConfigVersion)}, s.baseOtelAttributes...)
-
+	baseMetricAttributes := append([]attribute.KeyValue{}, s.baseOtelAttributes...)
+	baseMetricAttributes = append([]attribute.KeyValue{}, routerConfigVersionOverride...)
+	baseTraceAttributes := append([]attribute.KeyValue{otel.WgRouterConfigVersion.String(routerConfigVersion)}, s.baseOtelAttributes...)
 	if featureFlagName != "" {
-		baseOtelAttributes = append(baseOtelAttributes, otel.WgFeatureFlag.String(featureFlagName))
+		baseTraceAttributes = append(baseTraceAttributes, otel.WgFeatureFlag.String(featureFlagName))
+		baseMetricAttributes = append(baseMetricAttributes, otel.WgFeatureFlag.String(featureFlagName))
 	}
 
 	metricsEnabled := s.metricConfig.IsEnabled()
@@ -694,7 +703,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	if attErr != nil {
 		return nil, attErr
 	}
-	baseMetricAttributes := mapper.mapAttributes(baseOtelAttributes)
+	mappedMetricAttributes := mapper.mapAttributes(baseMetricAttributes)
 	var telemetryAttExpressions *attributeExpressions
 	if len(s.telemetryAttributes) > 0 {
 		var telemetryAttErr error
@@ -718,7 +727,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		m, err := rmetric.NewStore(
 			rmetric.WithPromMeterProvider(s.promMeterProvider),
 			rmetric.WithOtlpMeterProvider(s.otlpMeterProvider),
-			rmetric.WithBaseAttributes(baseMetricAttributes),
+			rmetric.WithBaseAttributes(mappedMetricAttributes),
 			rmetric.WithLogger(s.logger),
 			rmetric.WithProcessStartTime(s.processStartTime),
 			rmetric.WithCardinalityLimit(rmetric.DefaultCardinalityLimit),
@@ -746,7 +755,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		return nil, err
 	}
 
-	if err = gm.configureCacheMetrics(s, baseMetricAttributes); err != nil {
+	if err = gm.configureCacheMetrics(s, mappedMetricAttributes); err != nil {
 		return nil, err
 	}
 
@@ -850,7 +859,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			reqContext := getRequestContext(r.Context())
 
-			reqContext.telemetry.addCommonTraceAttribute(baseOtelAttributes...)
+			reqContext.telemetry.addCommonTraceAttribute(baseTraceAttributes...)
 			reqContext.telemetry.addCommonTraceAttribute(otel.WgRouterConfigVersion.String(routerConfigVersion))
 
 			if commonAttrRequestMapper != nil {
@@ -1069,7 +1078,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 						otel.WgOperationHash.String(item.OperationHash),
 						otel.WgOperationType.String(item.OperationType),
 						otel.WgEnginePlanCacheHit.Bool(false),
-					}, baseMetricAttributes...)...,
+					}, mappedMetricAttributes...)...,
 				),
 			)
 		}
@@ -1207,7 +1216,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			NetPollConnBufferSize:     s.engineExecutionConfiguration.WebSocketClientConnBufferSize,
 			WebSocketConfiguration:    s.webSocketConfiguration,
 			ClientHeader:              s.clientHeader,
-			Attributes:                baseOtelAttributes,
+			Attributes:                baseTraceAttributes,
 			DisableVariablesRemapping: s.engineExecutionConfiguration.DisableVariablesRemapping,
 			ApolloCompatibilityFlags:  s.apolloCompatibilityFlags,
 		})
