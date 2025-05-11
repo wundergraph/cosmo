@@ -706,6 +706,15 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	// Prometheus metricStore rely on OTLP metricStore
 	if metricsEnabled {
+		attrKeyValues := []attribute.KeyValue{
+			otel.WgRouterConfigVersion.String(routerConfigVersion),
+			otel.WgRouterVersion.String(Version),
+		}
+		if featureFlagName != "" {
+			attrKeyValues = append(attrKeyValues, otel.WgFeatureFlag.String(featureFlagName))
+		}
+		routerInfoBaseAttrs := otelmetric.WithAttributeSet(attribute.NewSet(attrKeyValues...))
+
 		m, err := rmetric.NewStore(
 			rmetric.WithPromMeterProvider(s.promMeterProvider),
 			rmetric.WithOtlpMeterProvider(s.otlpMeterProvider),
@@ -713,6 +722,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			rmetric.WithLogger(s.logger),
 			rmetric.WithProcessStartTime(s.processStartTime),
 			rmetric.WithCardinalityLimit(rmetric.DefaultCardinalityLimit),
+			rmetric.WithRouterInfoAttributes(routerInfoBaseAttrs),
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create metric handler: %w", err)
