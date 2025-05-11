@@ -367,7 +367,7 @@ func (s *GraphQLSchemaServer) registerTools() error {
 				mcp.WithDescription("Provides the full GraphQL schema of the API."),
 				mcp.WithToolAnnotation(mcp.ToolAnnotation{
 					Title:        "Get GraphQL Schema",
-					ReadOnlyHint: true,
+					ReadOnlyHint: mcp.ToBoolPtr(true),
 				}),
 			),
 			s.handleGetGraphQLSchema(),
@@ -410,9 +410,9 @@ func (s *GraphQLSchemaServer) registerTools() error {
 
 		tool.Annotations = mcp.ToolAnnotation{
 			Title:           "Execute GraphQL Query",
-			DestructiveHint: true,
-			IdempotentHint:  false,
-			OpenWorldHint:   true,
+			DestructiveHint: mcp.ToBoolPtr(true),
+			IdempotentHint:  mcp.ToBoolPtr(false),
+			OpenWorldHint:   mcp.ToBoolPtr(true),
 		}
 
 		s.server.AddTool(
@@ -480,10 +480,10 @@ func (s *GraphQLSchemaServer) registerTools() error {
 		)
 
 		tool.Annotations = mcp.ToolAnnotation{
-			IdempotentHint: op.OperationType != "mutation",
+			IdempotentHint: mcp.ToBoolPtr(op.OperationType != "mutation"),
 			Title:          fmt.Sprintf("Execute operation %s", op.Name),
-			ReadOnlyHint:   op.OperationType == "query",
-			OpenWorldHint:  true,
+			ReadOnlyHint:   mcp.ToBoolPtr(op.OperationType == "query"),
+			OpenWorldHint:  mcp.ToBoolPtr(true),
 		}
 
 		s.server.AddTool(
@@ -500,7 +500,7 @@ func (s *GraphQLSchemaServer) registerTools() error {
 			mcp.WithDescription("Provides instructions on how to execute the GraphQL operation via HTTP and how to integrate it into your application."),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
 				Title:        "Get GraphQL Operation Info",
-				ReadOnlyHint: true,
+				ReadOnlyHint: mcp.ToBoolPtr(true),
 			}),
 			mcp.WithString("operationName",
 				mcp.Required(),
