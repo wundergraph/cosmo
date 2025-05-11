@@ -15,28 +15,21 @@ import semver from 'semver';
 // Define platform-architecture combinations
 const HOST_PLATFORM = `${os.platform()}-${os.arch()}`;
 const ALL_PLATFORMS = ['linux-amd64', 'linux-arm64', 'darwin-amd64', 'darwin-arm64', 'windows-amd64'];
+const installScriptUrl =
+  'https://raw.githubusercontent.com/wundergraph/cosmo/refs/heads/ludwig/eng-6940-router-go-plugin-host-system/scripts/install-proto-tools.sh';
 
 // Get paths for tool installation
 const TOOLS_DIR = join(dataDir, 'proto-tools');
 const TOOLS_BIN_DIR = join(TOOLS_DIR, 'bin');
 const TOOLS_VERSIONS_FILE = join(TOOLS_DIR, 'versions.json');
 
-// Exact tool versions to be installed
-// The version need to match with the download URL in the install-proto-tools.sh script
-// but can contain a semver range for compatibility
+// Exact tool versions to be installed for the script, but you can specify a semver range to express compatibility
+// The version needs to match with the download URL in the install-proto-tools.sh script
 const TOOL_VERSIONS = {
-  protoc: '~29.3',
-  protocGenGo: '~1.36.5',
-  protocGenGoGrpc: '~1.5.1',
-  go: '1.22.0',
-};
-
-// Mapping between tool names and environment variable names
-const TOOL_ENV_VARS = {
-  protoc: 'PROTOC_VERSION',
-  protocGenGo: 'PROTOC_GEN_GO_VERSION',
-  protocGenGoGrpc: 'PROTOC_GEN_GO_GRPC_VERSION',
-  go: 'GO_VERSION',
+  protoc: { version: '~29.3', envVar: 'PROTOC_VERSION' },
+  protocGenGo: { version: '~1.34.2', envVar: 'PROTOC_GEN_GO_VERSION' },
+  protocGenGoGrpc: { version: '~1.5.1', envVar: 'PROTOC_GEN_GO_GRPC_VERSION' },
+  go: { version: '>=1.22.0', envVar: 'GO_VERSION' },
 };
 
 export default (opts: BaseCommandOptions) => {
@@ -139,7 +132,8 @@ async function shouldReinstallTools(force = false): Promise<boolean> {
 
       // Compare each tool version
       for (const [tool, version] of Object.entries(TOOL_VERSIONS)) {
-        if (storedVersions[tool] !== version) {
+        // Check if the stored exact version satisfies the required range
+        if (!storedVersions[tool] || !isSemverSatisfied(storedVersions[tool], version.version)) {
           return true;
         }
       }
@@ -159,7 +153,7 @@ async function shouldReinstallTools(force = false): Promise<boolean> {
     }
   }
 
-  // if we haven't installed the tools yet, we check first if the tools are installed on the host system
+  // if we haven't installed the tools yet, we check first if the tools are installed on the host system,
   // and if they are not, we need to install them through the toolchain installation
   try {
     const toolsOnHost = await areToolsInstalledOnHost();
@@ -179,27 +173,28 @@ async function shouldReinstallTools(force = false): Promise<boolean> {
 async function areToolsInstalledOnHost(): Promise<boolean> {
   try {
     // Check Go version
-    const goVersion = await getCommandVersion('go', 'version', /go(\d+\.\d+\.\d+)/);
-    if (!isSemverSatisfied(goVersion, TOOL_VERSIONS.go)) {
-      console.log(pc.yellow(`Go version mismatch: found ${goVersion}, required ${TOOL_VERSIONS.go}`));
+    const goVersion = await getCommandVersion('go', 'version');
+    if (!isSemverSatisfied(goVersion, TOOL_VERSIONS.go.version)) {
+      console.log(pc.yellow(`Go version mismatch: found ${goVersion}, required ${TOOL_VERSIONS.go.version}`));
       return false;
     }
 
     // Check Protoc version
-    const protocVersion = await getCommandVersion('protoc', '--version', /(\d+\.\d+)/);
-    if (!isSemverSatisfied(protocVersion, TOOL_VERSIONS.protoc)) {
-      console.log(pc.yellow(`Protoc version mismatch: found ${protocVersion}, required ${TOOL_VERSIONS.protoc}`));
+    const protocVersion = await getCommandVersion('protoc', '--version');
+    if (!isSemverSatisfied(protocVersion, TOOL_VERSIONS.protoc.version)) {
+      console.log(
+        pc.yellow(`Protoc version mismatch: found ${protocVersion}, required ${TOOL_VERSIONS.protoc.version}`),
+      );
       return false;
     }
 
     // Check protoc-gen-go version
     // The output format is typically "protoc-gen-go v1.36.5"
-    const protocGenGoVersion = await getCommandVersion('protoc-gen-go', '--version', /v(\d+\.\d+\.\d+)/);
-    const requiredProtocGenGoVersion = TOOL_VERSIONS.protocGenGo.replace(/^v/, '');
-    if (!isSemverSatisfied(protocGenGoVersion, requiredProtocGenGoVersion)) {
+    const protocGenGoVersion = await getCommandVersion('protoc-gen-go', '--version');
+    if (!isSemverSatisfied(protocGenGoVersion, TOOL_VERSIONS.protocGenGo.version)) {
       console.log(
         pc.yellow(
-          `protoc-gen-go version mismatch: found ${protocGenGoVersion}, required ${requiredProtocGenGoVersion}`,
+          `protoc-gen-go version mismatch: found ${protocGenGoVersion}, required ${TOOL_VERSIONS.protocGenGo.version}`,
         ),
       );
       return false;
@@ -207,12 +202,11 @@ async function areToolsInstalledOnHost(): Promise<boolean> {
 
     // Check protoc-gen-go-grpc version
     // The output format is typically "protoc-gen-go-grpc 1.5.1"
-    const protocGenGoGrpcVersion = await getCommandVersion('protoc-gen-go-grpc', '--version', /[vV]?(\d+\.\d+\.\d+)/);
-    const requiredProtocGenGoGrpcVersion = TOOL_VERSIONS.protocGenGoGrpc.replace(/^v/, '');
-    if (!isSemverSatisfied(protocGenGoGrpcVersion, requiredProtocGenGoGrpcVersion)) {
+    const protocGenGoGrpcVersion = await getCommandVersion('protoc-gen-go-grpc', '--version');
+    if (!isSemverSatisfied(protocGenGoGrpcVersion, TOOL_VERSIONS.protocGenGoGrpc.version)) {
       console.log(
         pc.yellow(
-          `protoc-gen-go-grpc version mismatch: found ${protocGenGoGrpcVersion}, required ${requiredProtocGenGoGrpcVersion}`,
+          `protoc-gen-go-grpc version mismatch: found ${protocGenGoGrpcVersion}, required ${TOOL_VERSIONS.protocGenGoGrpc.version}`,
         ),
       );
       return false;
@@ -258,9 +252,16 @@ function isSemverSatisfied(version: string, requiredVersion: string): boolean {
 }
 
 /**
- * Extract version from command output using regex
+ * Extract version from command output
  */
-async function getCommandVersion(command: string, versionFlag: string, versionRegex: RegExp): Promise<string> {
+async function getCommandVersion(command: string, versionFlag: string): Promise<string> {
+  // This pattern will match:
+  // Optional "v" or "V" prefix
+  // Versions with 2 or 3 components like "1.22", "29.3", or "1.22.0"
+  // Captures the version number in group 1
+
+  const versionRegex = /[vV]?(\d+(?:\.\d+){1,2})/;
+
   try {
     const { stdout } = await execa(command, [versionFlag]);
     const match = stdout.match(versionRegex);
@@ -274,7 +275,7 @@ async function getCommandVersion(command: string, versionFlag: string, versionRe
 }
 
 /**
- * Check if tools need installation and ask user if needed
+ * Check if tools need installation and ask the user if needed
  */
 async function checkAndInstallTools(force = false): Promise<boolean> {
   const needsReinstall = await shouldReinstallTools(force);
@@ -288,11 +289,28 @@ async function checkAndInstallTools(force = false): Promise<boolean> {
     ? 'Version changes detected. Install required toolchain?'
     : 'Install required toolchain?';
 
+  // Create a more informative message with simple formatting
+  const toolsInfo = Object.entries(TOOL_VERSIONS)
+    .map(([tool, { version }]) => `  ${pc.cyan('•')} ${pc.bold(tool)}: ${version}`)
+    .join('\n');
+
+  console.log(
+    pc.yellow('\n=== Required Toolchain ===') +
+      '\n\n' +
+      pc.white('The following tools are needed to build the router plugin:') +
+      '\n\n' +
+      toolsInfo +
+      '\n\n' +
+      pc.white('You can install them automatically or manually install them yourself') +
+      '\n' +
+      pc.white('by following the documentation at https://cosmo-docs.wundergraph.com') +
+      '\n',
+  );
+
   const response = await prompts({
     type: 'confirm',
     name: 'installTools',
     message: installMessage,
-    initial: true,
   });
 
   if (!response.installTools) {
@@ -343,12 +361,8 @@ async function installTools() {
   }
 
   try {
-    // Download the script from GitHub
-    const scriptUrl =
-      'https://raw.githubusercontent.com/wundergraph/cosmo/refs/heads/ludwig/eng-6940-router-go-plugin-host-system/scripts/install-proto-tools.sh';
-
     try {
-      await execa('curl', ['-fsSL', scriptUrl, '-o', scriptPath]);
+      await execa('curl', ['-fsSL', installScriptUrl, '-o', scriptPath]);
     } catch (error) {
       throw new Error(`Failed to download installation script: ${error}`);
     }
@@ -363,28 +377,29 @@ async function installTools() {
       PRINT_INSTRUCTIONS: 'false',
     };
 
+    // Store exact versions that we install
+    const exactVersions: Record<string, string> = {};
+
     // Add version variables to env
-    for (const [tool, envVar] of Object.entries(TOOL_ENV_VARS)) {
-      const version = TOOL_VERSIONS[tool as keyof typeof TOOL_VERSIONS];
-      // Extract semver but support also versions like 29.0 with just two segments
-      // we can't coerce it because it defines the download URL
-      const v = version.match(/^v?~?(\d+\.\d+(?:\.\d+)?)$/)?.[1];
+    for (const [tool, version] of Object.entries(TOOL_VERSIONS)) {
+      // The scripts work with all versions without the prefix or semver range
+      const v = version.version.replace(/^[v~^>=<]+/, '');
 
       if (!v) {
-        throw new Error(`Invalid version ${TOOL_VERSIONS[tool as keyof typeof TOOL_VERSIONS]} for ${tool}`);
+        throw new Error(`Invalid version ${version.version} for ${tool}`);
       }
 
-      env[envVar] = v;
+      env[version.envVar] = v;
+      exactVersions[tool] = v;
     }
-    console.log('Installing tools with versions:', env);
 
     await execa(scriptPath, [], {
       env,
       stdio: 'inherit',
     });
 
-    // Write the complete versions file
-    await writeFile(TOOLS_VERSIONS_FILE, JSON.stringify(TOOL_VERSIONS, null, 2));
+    // Write the exact versions file
+    await writeFile(TOOLS_VERSIONS_FILE, JSON.stringify(exactVersions, null, 2));
   } finally {
     // Clean up
     if (existsSync(tmpDir)) {
