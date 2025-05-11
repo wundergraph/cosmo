@@ -278,7 +278,7 @@ func (s *GraphQLSchemaServer) ServeSSE() (*server.SSEServer, error) {
 	sseServer := server.NewSSEServer(s.server,
 		server.WithBaseURL(s.baseURL),
 		server.WithSSEEndpoint("/mcp"),
-		server.WithSSEContextFunc(authFromRequest),
+		server.WithHTTPContextFunc(authFromRequest),
 	)
 
 	logger := []zap.Field{
