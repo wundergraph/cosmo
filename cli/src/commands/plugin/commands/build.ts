@@ -23,13 +23,19 @@ const TOOLS_DIR = join(dataDir, 'proto-tools');
 const TOOLS_BIN_DIR = join(TOOLS_DIR, 'bin');
 const TOOLS_VERSIONS_FILE = join(TOOLS_DIR, 'versions.json');
 
+// Tool version structure
+interface ToolVersion {
+  range: string; // Semver range for version checking. Must be compatible with script version
+  envVar: string; // Environment variable name used in install script
+  scriptVersion: string; // Exact version to pass to install a script
+}
+
 // Exact tool versions to be installed for the script, but you can specify a semver range to express compatibility
-// The version needs to match with the download URL in the install-proto-tools.sh script
-const TOOL_VERSIONS = {
-  protoc: { version: '~29.3', envVar: 'PROTOC_VERSION' },
-  protocGenGo: { version: '~1.34.2', envVar: 'PROTOC_GEN_GO_VERSION' },
-  protocGenGoGrpc: { version: '~1.5.1', envVar: 'PROTOC_GEN_GO_GRPC_VERSION' },
-  go: { version: '>=1.22.0', envVar: 'GO_VERSION' },
+const TOOL_VERSIONS: Record<string, ToolVersion> = {
+  protoc: { range: '~29.3', envVar: 'PROTOC_VERSION', scriptVersion: '29.3' },
+  protocGenGo: { range: '~1.34.2', envVar: 'PROTOC_GEN_GO_VERSION', scriptVersion: '1.34.2' },
+  protocGenGoGrpc: { range: '~1.5.1', envVar: 'PROTOC_GEN_GO_GRPC_VERSION', scriptVersion: '1.5.1' },
+  go: { range: '>=1.22.0', envVar: 'GO_VERSION', scriptVersion: '1.24.1' },
 };
 
 export default (opts: BaseCommandOptions) => {
@@ -133,7 +139,7 @@ async function shouldReinstallTools(force = false): Promise<boolean> {
       // Compare each tool version
       for (const [tool, version] of Object.entries(TOOL_VERSIONS)) {
         // Check if the stored exact version satisfies the required range
-        if (!storedVersions[tool] || !isSemverSatisfied(storedVersions[tool], version.version)) {
+        if (!storedVersions[tool] || !isSemverSatisfied(storedVersions[tool], version.range)) {
           return true;
         }
       }
@@ -174,16 +180,16 @@ async function areToolsInstalledOnHost(): Promise<boolean> {
   try {
     // Check Go version
     const goVersion = await getCommandVersion('go', 'version');
-    if (!isSemverSatisfied(goVersion, TOOL_VERSIONS.go.version)) {
-      console.log(pc.yellow(`Go version mismatch: found ${goVersion}, required ${TOOL_VERSIONS.go.version}`));
+    if (!isSemverSatisfied(goVersion, TOOL_VERSIONS.go.range)) {
+      console.log(pc.yellow(`Go version mismatch: found ${goVersion}, required ${TOOL_VERSIONS.go.range}`));
       return false;
     }
 
     // Check Protoc version
     const protocVersion = await getCommandVersion('protoc', '--version');
-    if (!isSemverSatisfied(protocVersion, TOOL_VERSIONS.protoc.version)) {
+    if (!isSemverSatisfied(protocVersion, TOOL_VERSIONS.protoc.range)) {
       console.log(
-        pc.yellow(`Protoc version mismatch: found ${protocVersion}, required ${TOOL_VERSIONS.protoc.version}`),
+        pc.yellow(`Protoc version mismatch: found ${protocVersion}, required ${TOOL_VERSIONS.protoc.range}`),
       );
       return false;
     }
@@ -191,10 +197,10 @@ async function areToolsInstalledOnHost(): Promise<boolean> {
     // Check protoc-gen-go version
     // The output format is typically "protoc-gen-go v1.36.5"
     const protocGenGoVersion = await getCommandVersion('protoc-gen-go', '--version');
-    if (!isSemverSatisfied(protocGenGoVersion, TOOL_VERSIONS.protocGenGo.version)) {
+    if (!isSemverSatisfied(protocGenGoVersion, TOOL_VERSIONS.protocGenGo.range)) {
       console.log(
         pc.yellow(
-          `protoc-gen-go version mismatch: found ${protocGenGoVersion}, required ${TOOL_VERSIONS.protocGenGo.version}`,
+          `protoc-gen-go version mismatch: found ${protocGenGoVersion}, required ${TOOL_VERSIONS.protocGenGo.range}`,
         ),
       );
       return false;
@@ -203,10 +209,10 @@ async function areToolsInstalledOnHost(): Promise<boolean> {
     // Check protoc-gen-go-grpc version
     // The output format is typically "protoc-gen-go-grpc 1.5.1"
     const protocGenGoGrpcVersion = await getCommandVersion('protoc-gen-go-grpc', '--version');
-    if (!isSemverSatisfied(protocGenGoGrpcVersion, TOOL_VERSIONS.protocGenGoGrpc.version)) {
+    if (!isSemverSatisfied(protocGenGoGrpcVersion, TOOL_VERSIONS.protocGenGoGrpc.range)) {
       console.log(
         pc.yellow(
-          `protoc-gen-go-grpc version mismatch: found ${protocGenGoGrpcVersion}, required ${TOOL_VERSIONS.protocGenGoGrpc.version}`,
+          `protoc-gen-go-grpc version mismatch: found ${protocGenGoGrpcVersion}, required ${TOOL_VERSIONS.protocGenGoGrpc.range}`,
         ),
       );
       return false;
@@ -291,7 +297,7 @@ async function checkAndInstallTools(force = false): Promise<boolean> {
 
   // Create a more informative message with simple formatting
   const toolsInfo = Object.entries(TOOL_VERSIONS)
-    .map(([tool, { version }]) => `  ${pc.cyan('•')} ${pc.bold(tool)}: ${version}`)
+    .map(([tool, { range: version }]) => `  ${pc.cyan('•')} ${pc.bold(tool)}: ${version}`)
     .join('\n');
 
   console.log(
@@ -382,15 +388,8 @@ async function installTools() {
 
     // Add version variables to env
     for (const [tool, version] of Object.entries(TOOL_VERSIONS)) {
-      // The scripts work with all versions without the prefix or semver range
-      const v = version.version.replace(/^[v~^>=<]+/, '');
-
-      if (!v) {
-        throw new Error(`Invalid version ${version.version} for ${tool}`);
-      }
-
-      env[version.envVar] = v;
-      exactVersions[tool] = v;
+      env[version.envVar] = version.scriptVersion;
+      exactVersions[tool] = version.scriptVersion;
     }
 
     await execa(scriptPath, [], {
