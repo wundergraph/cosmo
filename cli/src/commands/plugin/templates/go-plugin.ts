@@ -1,4 +1,4 @@
-// We store the templates in code to avoid having to deal with file system issues when
+// We store the templates in code to avoid dealing with file system issues when
 // building for bun and transpiling TypeScript.
 
 export const goMod = `
