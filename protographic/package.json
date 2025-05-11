@@ -3,10 +3,15 @@
   "module": "src/index.ts",
   "type": "module",
   "main": "dist/src/index.js",
-  "license": "Apache-2.0",
+  "types": "dist/src/index.d.ts",
+  "author": {
+    "name": "WunderGraph Maintainers",
+    "email": "info@wundergraph.com"
+  },
   "files": [
     "dist"
   ],
+  "license": "Apache-2.0",
   "publishConfig": {
     "access": "public"
   },
