@@ -133,7 +133,11 @@ func (c *configPoller) getRouterConfig(ctx context.Context) (*routerconfig.Respo
 		return nil, err
 	}
 
-	if errors.Is(err, ErrConfigNotFound) && c.fallbackConfigClient == nil && c.demoMode {
+	if c.demoMode {
+		c.logger.Warn("The router is running in demo mode. If no execution config is found, the router will start with a demo execution config that can be used for testing purposes.")
+	}
+
+	if c.demoMode && c.fallbackConfigClient == nil && errors.Is(err, ErrConfigNotFound) {
 		return &routerconfig.Response{Config: routerconfig.GetDefaultConfig()}, nil
 	}
 
@@ -144,7 +148,7 @@ func (c *configPoller) getRouterConfig(ctx context.Context) (*routerconfig.Respo
 	c.logger.Warn("Failed to retrieve execution config. Attempting with fallback storage")
 
 	config, err = (*c.fallbackConfigClient).RouterConfig(ctx, c.latestRouterConfigVersion, c.latestRouterConfigDate)
-	if errors.Is(err, ErrConfigNotFound) && c.demoMode {
+	if c.demoMode && errors.Is(err, ErrConfigNotFound) {
 		return &routerconfig.Response{Config: routerconfig.GetDefaultConfig()}, nil
 	}
 	if err != nil {

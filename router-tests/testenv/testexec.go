@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -91,7 +90,7 @@ func runRouterBin(t *testing.T, ctx context.Context, cfg *Config, binaryPath str
 		return nil, err
 	}
 	testCdn := SetupCDNServer(t, freeport.GetOne(t))
-	vals := ""
+	var envs []string
 
 	for key, val := range map[string]string{
 		"GRAPH_API_TOKEN":      token,
@@ -103,15 +102,11 @@ func runRouterBin(t *testing.T, ctx context.Context, cfg *Config, binaryPath str
 		"CDN_CACHE_SIZE":       fmt.Sprintf("%d", 1024*1024),
 		"DEMO_MODE":            fmt.Sprintf("%t", cfg.DemoMode),
 	} {
-		vals += fmt.Sprintf("\n%s=%s", key, val)
-	}
-	envFile := filepath.Join(os.TempDir(), RandString(6)+".env")
-	err = os.WriteFile(envFile, []byte(strings.TrimSpace(vals)), os.ModePerm)
-	if err != nil {
-		return nil, err
+		envs = append(envs, fmt.Sprintf("%s=%s", key, val))
 	}
 
-	cmd := exec.Command(fullBinPath, "--override-env", envFile)
+	cmd := exec.Command(fullBinPath)
+	cmd.Env = envs
 	cmd.Dir = t.TempDir()
 	newCtx, cancel := context.WithCancelCause(ctx)
 	err = runCmdWithLogs(t, ctx, cmd, false)
