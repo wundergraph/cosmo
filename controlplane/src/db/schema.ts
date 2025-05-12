@@ -808,6 +808,10 @@ export const schemaCheckSubgraphs = pgTable(
     proposedSubgraphSchemaSDL: text('proposed_subgraph_schema_sdl'),
     isDeleted: boolean('is_deleted').default(false).notNull(),
     isNew: boolean('is_new').default(false).notNull(),
+    namespaceId: uuid('namespace_id').references(() => namespaces.id, {
+      onDelete: 'cascade',
+    }),
+    labels: text('labels').array(),
   },
   (t) => {
     return {

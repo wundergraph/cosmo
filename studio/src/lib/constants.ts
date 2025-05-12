@@ -118,68 +118,96 @@ export const graphPruningRules = [
   },
 ];
 
-export const roles = [
-  {
-    key: "organization-admin",
-    category: "organization",
-    displayName: "Admin",
-    description: "Organization administrator access.",
-  },
-  {
-    key: "organization-developer",
-    category: "organization",
-    displayName: "Developer",
-    description: "Organization developer access.",
-  },
-  {
-    key: "organization-viewer",
-    category: "organization",
-    displayName: "Readonly",
-    description: "Organization readonly access.",
-  },
-  {
-    key: "namespace-admin",
-    category: "namespace",
-    displayName: "Admin",
-    description: "Namespace administrator access.",
-  },
-  // {
-  //   key: "namespace-developer",
-  //   category: "namespace",
-  //   displayName: "Developer",
-  //   description: "Namespace developer access.",
-  // },
-  {
-    key: "namespace-viewer",
-    category: "namespace",
-    displayName: "Readonly",
-    description: "Namespace readonly access.",
-  },
-  {
-    key: "graph-admin",
-    category: "graph",
-    displayName: "Admin",
-    description: "Graph administrator access.",
-  },
-  // {
-  //   key: "graph-developer",
-  //   category: "graph",
-  //   displayName: "Developer",
-  //   description: "Graph developer access.",
-  // },
-  {
-    key: "graph-viewer",
-    category: "graph",
-    displayName: "Readonly",
-    description: "Graph readonly access.",
-  },
-  {
-    key: "graph-publisher",
-    category: "subgraph",
-    displayName: "Publisher",
-    description: "Grants publish permission.",
-  }
-];
+export const OPTION_TYPES = {
+  OPERATION: 'operation',
+  VARIABLES: 'variables',
+  HEADERS: 'headers',
+  PRE_FLIGHT: 'preFlight',
+  PRE_OPERATION: 'preOperation',
+  POST_OPERATION: 'postOperation',
+} as const;
 
-export type OrganizationRole = typeof roles[number]["key"];
-export type OrganizationRoleCategory = typeof roles[number]["category"];
+export const hideScriptsSharing = true;
+
+export const SHARE_OPTIONS = [
+  // operation is always checked and disabled
+  { 
+    id: OPTION_TYPES.OPERATION,
+    label: "Operation",
+    description: "The GraphQL operation (query, mutation, or subscription) to be shared",
+    isChecked: true,
+    isDisabled: true
+  },
+  { 
+    id: OPTION_TYPES.VARIABLES,
+    label: "Variables",
+    description: "The variables used in the GraphQL operation",
+    isChecked: false,
+    isDisabled: false
+  },
+  { 
+    id: OPTION_TYPES.HEADERS,
+    label: "Headers",
+    description: "The HTTP headers to include in the shared request",
+    isChecked: false,
+    isDisabled: false
+  },
+  // [ENG-7093] hiding scripts sharing for now
+  ...!hideScriptsSharing ? [{ 
+    id: OPTION_TYPES.PRE_FLIGHT,
+    label: "Pre-Flight Script",
+    description: "A script that runs before the GraphQL operation is executed",
+    isChecked: false,
+    isDisabled: false
+  },
+  { 
+    id: OPTION_TYPES.PRE_OPERATION,
+    label: "Pre-Operation Script",
+    description: "A script that runs before sending the GraphQL request",
+    isChecked: false,
+    isDisabled: false
+  },
+  { 
+    id: OPTION_TYPES.POST_OPERATION,
+    label: "Post-Operation Script",
+    description: "A script that runs after the GraphQL request is completed",
+    isChecked: false,
+    isDisabled: false
+  }] : [],
+] as const;
+
+export const PLAYGROUND_STATE_QUERY_PARAM = 'playgroundUrlState';
+
+export const PLAYGROUND_DEFAULT_QUERY_TEMPLATE = `# Welcome to WunderGraph Studio
+#
+#
+# Type queries into this side of the screen, and you will see intelligent
+# typeaheads aware of the current GraphQL type schema and live syntax and
+# validation errors highlighted within the text.
+#
+# GraphQL queries typically start with a "{" character. Lines that start
+# with a # are ignored.
+#
+# An example GraphQL query might look like:
+#
+#     {
+#       field(arg: "value") {
+#         subField
+#       }
+#     }
+#
+# Keyboard shortcuts:
+#
+#   Prettify query:  Shift-Ctrl-P (or press the prettify button)
+#
+#  Merge fragments:  Shift-Ctrl-M (or press the merge button)
+#
+#        Run Query:  Ctrl-Enter (or press the play button)
+#
+#    Auto Complete:  Ctrl-Space (or just start typing)
+#
+`;
+
+export const PLAYGROUND_DEFAULT_HEADERS_TEMPLATE = `{
+  "X-WG-TRACE" : "true"
+}`;
