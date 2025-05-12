@@ -9,12 +9,12 @@ import (
 	"go.uber.org/zap"
 )
 
-type ProviderFactory func(ctx context.Context, in *nodev1.DataSourceConfiguration, dsMeta *plan.DataSourceMetadata, config config.EventsConfiguration, logger *zap.Logger, hostName string, routerListenAddr string) (PubSubProvider, error)
+type ProviderFactory func(ctx context.Context, in *nodev1.DataSourceConfiguration, dsMeta *plan.DataSourceMetadata, config config.EventsConfiguration, logger *zap.Logger, hostName string, routerListenAddr string) ([]PubSubProvider, []plan.DataSource, error)
 
 type ArgumentTemplateCallback func(tpl string) (string, error)
 
 type PubSubProvider interface {
+	Id() string
 	Startup(ctx context.Context) error
 	Shutdown(ctx context.Context) error
-	FindPubSubDataSource(typeName string, fieldName string, extractFn ArgumentTemplateCallback) (PubSubDataSource, error)
 }

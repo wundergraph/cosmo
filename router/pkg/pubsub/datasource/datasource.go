@@ -14,6 +14,7 @@ import (
 // For detailed implementation guidelines, see:
 // https://github.com/wundergraph/cosmo/blob/main/router/pkg/pubsub/README.md
 type PubSubDataSource interface {
+	SetCurrentField(typeName string, fieldName string, extractFn ArgumentTemplateCallback) error
 	// ResolveDataSource returns the engine DataSource implementation that contains
 	// methods which will be called by the Planner when resolving a field
 	ResolveDataSource() (resolve.DataSource, error)

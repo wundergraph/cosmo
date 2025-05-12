@@ -31,11 +31,11 @@ func TestNatsPubSubDataSource(t *testing.T) {
 	adapter := &Adapter{}
 	pubsub := &PubSubDataSource{
 		EventConfiguration: natsCfg,
-		NatsAdapter:        adapter,
+		NatsAdapters:       map[string]AdapterInterface{"test-provider": adapter},
 	}
 
 	// Run the standard test suite
-	pubsubtest.VerifyPubSubDataSourceImplementation(t, pubsub)
+	pubsubtest.VerifyPubSubDataSourceImplementation(t, pubsub, "TestType", "testField")
 }
 
 func TestPubSubDataSourceWithMockAdapter(t *testing.T) {
@@ -63,7 +63,7 @@ func TestPubSubDataSourceWithMockAdapter(t *testing.T) {
 	// Create the data source with mock adapter
 	pubsub := &PubSubDataSource{
 		EventConfiguration: natsCfg,
-		NatsAdapter:        mockAdapter,
+		NatsAdapters:       map[string]AdapterInterface{"test-provider": mockAdapter},
 	}
 
 	// Get the data source
@@ -104,7 +104,7 @@ func TestPubSubDataSource_GetResolveDataSource_WrongType(t *testing.T) {
 	// Create the data source with mock adapter
 	pubsub := &PubSubDataSource{
 		EventConfiguration: natsCfg,
-		NatsAdapter:        mockAdapter,
+		NatsAdapters:       map[string]AdapterInterface{"test-provider": mockAdapter},
 	}
 
 	// Get the data source
@@ -129,7 +129,7 @@ func TestPubSubDataSource_GetResolveDataSourceInput_MultipleSubjects(t *testing.
 
 	// Create the data source with mock adapter
 	pubsub := &PubSubDataSource{
-		EventConfiguration: natsCfg,
+		EventConfigurations: []*nodev1.NatsEventConfiguration{natsCfg},
 	}
 
 	// Get the input
@@ -217,7 +217,7 @@ func TestNatsPubSubDataSourceWithStreamConfiguration(t *testing.T) {
 
 	// Create the data source to test
 	pubsub := &PubSubDataSource{
-		EventConfiguration: natsCfg,
+		EventConfigurations: []*nodev1.NatsEventConfiguration{natsCfg},
 	}
 
 	// Test GetResolveDataSourceSubscriptionInput with stream configuration
@@ -262,8 +262,8 @@ func TestPubSubDataSource_RequestDataSource(t *testing.T) {
 
 	// Create the data source with mock adapter
 	pubsub := &PubSubDataSource{
-		EventConfiguration: natsCfg,
-		NatsAdapter:        mockAdapter,
+		EventConfigurations: []*nodev1.NatsEventConfiguration{natsCfg},
+		NatsAdapters:        map[string]AdapterInterface{"test-provider": mockAdapter},
 	}
 
 	// Get the data source

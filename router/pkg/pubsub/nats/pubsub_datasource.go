@@ -5,13 +5,35 @@ import (
 	"fmt"
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
 type PubSubDataSource struct {
-	EventConfiguration *nodev1.NatsEventConfiguration
-	NatsAdapter        AdapterInterface
+	EventConfiguration  *nodev1.NatsEventConfiguration
+	EventConfigurations []*nodev1.NatsEventConfiguration
+	NatsAdapters        map[string]AdapterInterface
+}
+
+func (c *PubSubDataSource) SetCurrentField(typeName string, fieldName string, extractFn datasource.ArgumentTemplateCallback) error {
+	for _, event := range c.EventConfigurations {
+		if event.GetEngineEventConfiguration().GetTypeName() == typeName && event.GetEngineEventConfiguration().GetFieldName() == fieldName {
+			event, err := transformEventConfig(event, extractFn)
+			if err != nil {
+				return err
+			}
+			c.EventConfiguration = event
+
+			return nil
+		}
+	}
+
+	if c.EventConfiguration == nil {
+		return fmt.Errorf("failed to find event configuration for typeName: %s, fieldName: %s", typeName, fieldName)
+	}
+
+	return nil
 }
 
 func (c *PubSubDataSource) EngineEventConfiguration() *nodev1.EngineEventConfiguration {
@@ -20,25 +42,26 @@ func (c *PubSubDataSource) EngineEventConfiguration() *nodev1.EngineEventConfigu
 
 func (c *PubSubDataSource) ResolveDataSource() (resolve.DataSource, error) {
 	var dataSource resolve.DataSource
+	eventType := c.EventConfiguration.GetEngineEventConfiguration().GetType()
+	providerId := c.EventConfiguration.GetEngineEventConfiguration().GetProviderId()
 
-	typeName := c.EventConfiguration.GetEngineEventConfiguration().GetType()
-	switch typeName {
+	switch eventType {
 	case nodev1.EventType_PUBLISH:
 		dataSource = &NatsPublishDataSource{
-			pubSub: c.NatsAdapter,
+			pubSub: c.NatsAdapters[providerId],
 		}
 	case nodev1.EventType_REQUEST:
 		dataSource = &NatsRequestDataSource{
-			pubSub: c.NatsAdapter,
+			pubSub: c.NatsAdapters[providerId],
 		}
 	default:
-		return nil, fmt.Errorf("failed to configure fetch: invalid event type \"%s\" for Nats", typeName.String())
+		return nil, fmt.Errorf("failed to configure fetch: invalid event type \"%s\" for Nats", eventType.String())
 	}
 
 	return dataSource, nil
 }
 
-func (c *PubSubDataSource) ResolveDataSourceInput(event []byte) (string, error) {
+func (c *PubSubDataSource) ResolveDataSourceInput(eventData []byte) (string, error) {
 	subjects := c.EventConfiguration.GetSubjects()
 
 	if len(subjects) != 1 {
@@ -47,12 +70,12 @@ func (c *PubSubDataSource) ResolveDataSourceInput(event []byte) (string, error) 
 
 	subject := subjects[0]
 
-	providerId := c.GetProviderId()
+	providerId := c.EventConfiguration.GetEngineEventConfiguration().GetProviderId()
 
 	evtCfg := PublishEventConfiguration{
 		ProviderID: providerId,
 		Subject:    subject,
-		Data:       event,
+		Data:       eventData,
 	}
 
 	return evtCfg.MarshalJSONTemplate(), nil
@@ -60,22 +83,22 @@ func (c *PubSubDataSource) ResolveDataSourceInput(event []byte) (string, error) 
 
 func (c *PubSubDataSource) ResolveDataSourceSubscription() (resolve.SubscriptionDataSource, error) {
 	return &SubscriptionSource{
-		pubSub: c.NatsAdapter,
+		pubSub: c.NatsAdapters[c.EventConfiguration.GetEngineEventConfiguration().GetProviderId()],
 	}, nil
 }
 
 func (c *PubSubDataSource) ResolveDataSourceSubscriptionInput() (string, error) {
-	providerId := c.GetProviderId()
+	providerId := c.EventConfiguration.GetEngineEventConfiguration().GetProviderId()
 
 	evtCfg := SubscriptionEventConfiguration{
 		ProviderID: providerId,
 		Subjects:   c.EventConfiguration.GetSubjects(),
 	}
-	if c.EventConfiguration.StreamConfiguration != nil {
+	if c.EventConfiguration.GetStreamConfiguration() != nil {
 		evtCfg.StreamConfiguration = &StreamConfiguration{
-			Consumer:                  c.EventConfiguration.StreamConfiguration.ConsumerName,
-			StreamName:                c.EventConfiguration.StreamConfiguration.StreamName,
-			ConsumerInactiveThreshold: c.EventConfiguration.StreamConfiguration.ConsumerInactiveThreshold,
+			Consumer:                  c.EventConfiguration.GetStreamConfiguration().GetConsumerName(),
+			StreamName:                c.EventConfiguration.GetStreamConfiguration().GetStreamName(),
+			ConsumerInactiveThreshold: c.EventConfiguration.GetStreamConfiguration().GetConsumerInactiveThreshold(),
 		}
 	}
 	object, err := json.Marshal(evtCfg)
@@ -83,10 +106,6 @@ func (c *PubSubDataSource) ResolveDataSourceSubscriptionInput() (string, error) 
 		return "", fmt.Errorf("failed to marshal event subscription streamConfiguration")
 	}
 	return string(object), nil
-}
-
-func (c *PubSubDataSource) GetProviderId() string {
-	return c.EventConfiguration.GetEngineEventConfiguration().GetProviderId()
 }
 
 type StreamConfiguration struct {

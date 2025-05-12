@@ -5,12 +5,39 @@ import (
 	"fmt"
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
 type PubSubDataSource struct {
-	EventConfiguration *nodev1.KafkaEventConfiguration
-	KafkaAdapter       AdapterInterface
+	EventConfiguration  *nodev1.KafkaEventConfiguration
+	EventConfigurations []*nodev1.KafkaEventConfiguration
+	KafkaAdapters       map[string]AdapterInterface
+}
+
+func (c *PubSubDataSource) SetCurrentField(typeName string, fieldName string, extractFn datasource.ArgumentTemplateCallback) error {
+	for _, event := range c.EventConfigurations {
+		if event.GetEngineEventConfiguration().GetTypeName() == typeName && event.GetEngineEventConfiguration().GetFieldName() == fieldName {
+			var newTopics []string
+			for _, topic := range event.GetTopics() {
+				newTopic, err := extractFn(topic)
+				if err != nil {
+					return err
+				}
+				newTopics = append(newTopics, newTopic)
+			}
+			event.Topics = newTopics
+			c.EventConfiguration = event
+
+			return nil
+		}
+	}
+
+	if c.EventConfiguration == nil {
+		return fmt.Errorf("failed to find event configuration for typeName: %s, fieldName: %s", typeName, fieldName)
+	}
+
+	return nil
 }
 
 func (c *PubSubDataSource) EngineEventConfiguration() *nodev1.EngineEventConfiguration {
@@ -20,34 +47,34 @@ func (c *PubSubDataSource) EngineEventConfiguration() *nodev1.EngineEventConfigu
 func (c *PubSubDataSource) ResolveDataSource() (resolve.DataSource, error) {
 	var dataSource resolve.DataSource
 
-	typeName := c.EventConfiguration.GetEngineEventConfiguration().GetType()
-	switch typeName {
+	eventType := c.EventConfiguration.GetEngineEventConfiguration().GetType()
+	switch eventType {
 	case nodev1.EventType_PUBLISH:
 		dataSource = &PublishDataSource{
-			pubSub: c.KafkaAdapter,
+			pubSub: c.KafkaAdapters[c.EventConfiguration.GetEngineEventConfiguration().GetProviderId()],
 		}
 	default:
-		return nil, fmt.Errorf("failed to configure fetch: invalid event type \"%s\" for Kafka", typeName.String())
+		return nil, fmt.Errorf("failed to configure fetch: invalid event type \"%s\" for Kafka", eventType.String())
 	}
 
 	return dataSource, nil
 }
 
-func (c *PubSubDataSource) ResolveDataSourceInput(event []byte) (string, error) {
+func (c *PubSubDataSource) ResolveDataSourceInput(eventData []byte) (string, error) {
 	topics := c.EventConfiguration.GetTopics()
 
 	if len(topics) != 1 {
-		return "", fmt.Errorf("publish and request events should define one topic but received %d", len(topics))
+		return "", fmt.Errorf("publish events should define one topic but received %d", len(topics))
 	}
 
 	topic := topics[0]
 
-	providerId := c.GetProviderId()
+	providerId := c.EventConfiguration.GetEngineEventConfiguration().GetProviderId()
 
 	evtCfg := PublishEventConfiguration{
 		ProviderID: providerId,
 		Topic:      topic,
-		Data:       event,
+		Data:       eventData,
 	}
 
 	return evtCfg.MarshalJSONTemplate(), nil
@@ -55,12 +82,12 @@ func (c *PubSubDataSource) ResolveDataSourceInput(event []byte) (string, error) 
 
 func (c *PubSubDataSource) ResolveDataSourceSubscription() (resolve.SubscriptionDataSource, error) {
 	return &SubscriptionDataSource{
-		pubSub: c.KafkaAdapter,
+		pubSub: c.KafkaAdapters[c.EventConfiguration.GetEngineEventConfiguration().GetProviderId()],
 	}, nil
 }
 
 func (c *PubSubDataSource) ResolveDataSourceSubscriptionInput() (string, error) {
-	providerId := c.GetProviderId()
+	providerId := c.EventConfiguration.GetEngineEventConfiguration().GetProviderId()
 	evtCfg := SubscriptionEventConfiguration{
 		ProviderID: providerId,
 		Topics:     c.EventConfiguration.GetTopics(),
@@ -70,10 +97,6 @@ func (c *PubSubDataSource) ResolveDataSourceSubscriptionInput() (string, error) 
 		return "", fmt.Errorf("failed to marshal event subscription streamConfiguration")
 	}
 	return string(object), nil
-}
-
-func (c *PubSubDataSource) GetProviderId() string {
-	return c.EventConfiguration.GetEngineEventConfiguration().GetProviderId()
 }
 
 type SubscriptionEventConfiguration struct {

@@ -100,7 +100,7 @@ func TestGetProvider(t *testing.T) {
 		cfg := config.EventsConfiguration{}
 		logger := zaptest.NewLogger(t)
 
-		provider, err := GetProvider(ctx, in, dsMeta, cfg, logger, "host", "addr")
+		provider, _, err := GetProvider(ctx, in, dsMeta, cfg, logger, "host", "addr")
 		require.NoError(t, err)
 		require.Nil(t, provider)
 	})
@@ -129,7 +129,7 @@ func TestGetProvider(t *testing.T) {
 		}
 		logger := zaptest.NewLogger(t)
 
-		provider, err := GetProvider(ctx, in, dsMeta, cfg, logger, "host", "addr")
+		provider, _, err := GetProvider(ctx, in, dsMeta, cfg, logger, "host", "addr")
 		require.Error(t, err)
 		require.Nil(t, provider)
 		assert.Contains(t, err.Error(), "failed to find Kafka provider with ID")
@@ -161,56 +161,37 @@ func TestGetProvider(t *testing.T) {
 		logger := zaptest.NewLogger(t)
 
 		// Create mock adapter for testing
-		provider, err := GetProvider(context.Background(), in, &plan.DataSourceMetadata{}, cfg, logger, "host", "addr")
+		provider, _, err := GetProvider(context.Background(), in, &plan.DataSourceMetadata{}, cfg, logger, "host", "addr")
 		require.NoError(t, err)
 		require.NotNil(t, provider)
 
 		// Check the returned provider
-		kafkaProvider, ok := provider.(*PubSubProvider)
+		kafkaProvider, ok := provider[0].(*PubSubProvider)
 		require.True(t, ok)
 		assert.NotNil(t, kafkaProvider.Logger)
-		assert.NotNil(t, kafkaProvider.Providers)
-		assert.Contains(t, kafkaProvider.Providers, providerId)
+		assert.NotNil(t, kafkaProvider.Adapter)
 	})
 }
 
 func TestPubSubProvider_FindPubSubDataSource(t *testing.T) {
 	mock := &mockAdapter{}
-	providerId := "test-provider"
-	typeName := "TestType"
-	fieldName := "testField"
 
 	provider := &PubSubProvider{
-		EventConfiguration: []*nodev1.KafkaEventConfiguration{
-			{
-				EngineEventConfiguration: &nodev1.EngineEventConfiguration{
-					TypeName:   typeName,
-					FieldName:  fieldName,
-					ProviderId: providerId,
-				},
-			},
-		},
-		Logger: zap.NewNop(),
-		Providers: map[string]AdapterInterface{
-			providerId: mock,
-		},
+		Logger:  zap.NewNop(),
+		Adapter: mock,
 	}
 
-	t.Run("find matching datasource", func(t *testing.T) {
-		ds, err := provider.FindPubSubDataSource(typeName, fieldName, nil)
+	t.Run("calling Shutdown calls adapter Shutdown", func(t *testing.T) {
+		mock.On("Shutdown", context.Background()).Return(nil)
+		err := provider.Shutdown(context.Background())
 		require.NoError(t, err)
-		require.NotNil(t, ds)
-
-		// Check the returned datasource
-		kafkaDs, ok := ds.(*PubSubDataSource)
-		require.True(t, ok)
-		assert.Equal(t, mock, kafkaDs.KafkaAdapter)
-		assert.Equal(t, provider.EventConfiguration[0], kafkaDs.EventConfiguration)
+		mock.AssertCalled(t, "Shutdown", context.Background())
 	})
 
-	t.Run("return nil if no match", func(t *testing.T) {
-		ds, err := provider.FindPubSubDataSource("OtherType", fieldName, nil)
+	t.Run("calling Startup calls adapter Startup", func(t *testing.T) {
+		mock.On("Startup", context.Background()).Return(nil)
+		err := provider.Startup(context.Background())
 		require.NoError(t, err)
-		require.Nil(t, ds)
+		mock.AssertCalled(t, "Startup", context.Background())
 	})
 }

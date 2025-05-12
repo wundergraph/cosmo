@@ -89,81 +89,109 @@ func transformEventConfig(cfg *nodev1.NatsEventConfiguration, fn datasource.Argu
 }
 
 type PubSubProvider struct {
+	id                 string
 	EventConfiguration []*nodev1.NatsEventConfiguration
 	Logger             *zap.Logger
-	Providers          map[string]AdapterInterface
+	Adapter            AdapterInterface
 }
 
-func (c *PubSubProvider) FindPubSubDataSource(typeName string, fieldName string, extractFn datasource.ArgumentTemplateCallback) (datasource.PubSubDataSource, error) {
-	for _, cfg := range c.EventConfiguration {
-		if cfg.GetEngineEventConfiguration().GetTypeName() == typeName && cfg.GetEngineEventConfiguration().GetFieldName() == fieldName {
-			transformedCfg, err := transformEventConfig(cfg, extractFn)
-			if err != nil {
-				return nil, err
-			}
-			return &PubSubDataSource{
-				EventConfiguration: transformedCfg,
-				NatsAdapter:        c.Providers[cfg.GetEngineEventConfiguration().GetProviderId()],
-			}, nil
-		}
+func (c *PubSubProvider) Id() string {
+	return c.id
+}
+
+func GetProviderDataSources(ctx context.Context, in *nodev1.DataSourceConfiguration, dsMeta *plan.DataSourceMetadata, config config.EventsConfiguration, logger *zap.Logger, hostName string, routerListenAddr string) ([]datasource.PubSubProvider, []plan.DataSource, error) {
+	providers := make(map[string]AdapterInterface)
+	pubSubProviders := []datasource.PubSubProvider{}
+	definedProviders := make(map[string]bool)
+	for _, provider := range config.Providers.Nats {
+		definedProviders[provider.ID] = true
 	}
-	return nil, nil
-}
-
-func GetProvider(ctx context.Context, in *nodev1.DataSourceConfiguration, dsMeta *plan.DataSourceMetadata, config config.EventsConfiguration, logger *zap.Logger, hostName string, routerListenAddr string) (datasource.PubSubProvider, error) {
-	var providers map[string]AdapterInterface
 	if natsData := in.GetCustomEvents().GetNats(); natsData != nil {
-		definedProviders := make(map[string]bool)
-		for _, provider := range config.Providers.Nats {
-			definedProviders[provider.ID] = true
-		}
+		// prepare providers and root fields
 		usedProviders := make(map[string]bool)
+		rootFields := make(map[string][]string)
 		for _, event := range natsData {
-			if _, found := definedProviders[event.EngineEventConfiguration.ProviderId]; !found {
-				return nil, fmt.Errorf("failed to find Nats provider with ID %s", event.EngineEventConfiguration.ProviderId)
+			providerId := event.EngineEventConfiguration.ProviderId
+			if !definedProviders[providerId] {
+				return nil, nil, fmt.Errorf("failed to find Nats provider with ID %s", providerId)
 			}
-			usedProviders[event.EngineEventConfiguration.ProviderId] = true
+			usedProviders[providerId] = true
+			typeName := event.GetEngineEventConfiguration().GetTypeName()
+			fieldName := event.GetEngineEventConfiguration().GetFieldName()
+			if _, ok := rootFields[typeName]; !ok {
+				rootFields[typeName] = []string{}
+			}
+			rootFields[typeName] = append(rootFields[typeName], fieldName)
 		}
-		providers = map[string]AdapterInterface{}
+
+		// create providers only if they are used
 		for _, provider := range config.Providers.Nats {
 			if !usedProviders[provider.ID] {
 				continue
 			}
 			options, err := buildNatsOptions(provider, logger)
 			if err != nil {
-				return nil, fmt.Errorf("failed to build options for Nats provider with ID \"%s\": %w", provider.ID, err)
+				return nil, nil, fmt.Errorf("failed to build options for Nats provider with ID \"%s\": %w", provider.ID, err)
 			}
-
 			adapter, err := NewAdapter(ctx, logger, provider.URL, options, hostName, routerListenAddr)
 			if err != nil {
-				return nil, fmt.Errorf("failed to create adapter for Nats provider with ID \"%s\": %w", provider.ID, err)
+				return nil, nil, fmt.Errorf("failed to create adapter for Nats provider with ID \"%s\": %w", provider.ID, err)
 			}
 			providers[provider.ID] = adapter
+			pubSubProvider := &PubSubProvider{
+				id:      provider.ID,
+				Adapter: adapter,
+			}
+			pubSubProviders = append(pubSubProviders, pubSubProvider)
 		}
-		return &PubSubProvider{
-			EventConfiguration: natsData,
-			Logger:             logger,
-			Providers:          providers,
-		}, nil
+
+		// create data sources
+		ds := &PubSubDataSource{
+			EventConfigurations: natsData,
+			NatsAdapters:        providers,
+		}
+		// filter dsMeta.RootNodes
+		newRootNodes := []plan.TypeField{}
+		for _, node := range dsMeta.RootNodes {
+			newRootNode := plan.TypeField{
+				TypeName:           node.TypeName,
+				FieldNames:         []string{},
+				ExternalFieldNames: node.ExternalFieldNames,
+			}
+			for _, fieldName := range node.FieldNames {
+				if slices.Contains(rootFields[node.TypeName], fieldName) {
+					newRootNode.FieldNames = append(newRootNode.FieldNames, fieldName)
+				}
+			}
+			newRootNodes = append(newRootNodes, newRootNode)
+		}
+		newDsMets := *dsMeta
+		newDsMets.RootNodes = newRootNodes
+
+		out, err := plan.NewDataSourceConfiguration(
+			in.Id+"-nats",
+			datasource.NewFactory(ctx, datasource.PubSubDataSource(ds)),
+			&newDsMets,
+			datasource.PubSubDataSource(ds),
+		)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return pubSubProviders, []plan.DataSource{out}, nil
 	}
 
-	return nil, nil
+	return nil, nil, nil
+}
+
+func GetProvider(ctx context.Context, in *nodev1.DataSourceConfiguration, dsMeta *plan.DataSourceMetadata, config config.EventsConfiguration, logger *zap.Logger, hostName string, routerListenAddr string) ([]datasource.PubSubProvider, []plan.DataSource, error) {
+	return GetProviderDataSources(ctx, in, dsMeta, config, logger, hostName, routerListenAddr)
 }
 
 func (c *PubSubProvider) Startup(ctx context.Context) error {
-	for _, provider := range c.Providers {
-		if err := provider.Startup(ctx); err != nil {
-			return err
-		}
-	}
-	return nil
+	return c.Adapter.Startup(ctx)
 }
 
 func (c *PubSubProvider) Shutdown(ctx context.Context) error {
-	for _, provider := range c.Providers {
-		if err := provider.Shutdown(ctx); err != nil {
-			return err
-		}
-	}
-	return nil
+	return c.Adapter.Shutdown(ctx)
 }

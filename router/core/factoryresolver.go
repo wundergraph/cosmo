@@ -11,7 +11,6 @@ import (
 
 	"github.com/buger/jsonparser"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	pubsub_datasource "github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/argument_templates"
 
@@ -292,7 +291,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 	var providers []pubsub_datasource.PubSubProvider
 
 	for _, in := range engineConfig.DatasourceConfigurations {
-		var out plan.DataSource
+		var outs []plan.DataSource
 
 		switch in.Kind {
 		case nodev1.DataSourceKind_STATIC:
@@ -301,7 +300,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 				return nil, providers, err
 			}
 
-			out, err = plan.NewDataSourceConfiguration[staticdatasource.Configuration](
+			out, err := plan.NewDataSourceConfiguration[staticdatasource.Configuration](
 				in.Id,
 				factory,
 				l.dataSourceMetaData(in),
@@ -312,6 +311,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 			if err != nil {
 				return nil, providers, fmt.Errorf("error creating data source configuration for data source %s: %w", in.Id, err)
 			}
+			outs = append(outs, out)
 
 		case nodev1.DataSourceKind_GRAPHQL:
 			header := http.Header{}
@@ -419,7 +419,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 				return nil, providers, err
 			}
 
-			out, err = plan.NewDataSourceConfigurationWithName[graphql_datasource.Configuration](
+			out, err := plan.NewDataSourceConfigurationWithName[graphql_datasource.Configuration](
 				in.Id,
 				dataSourceName,
 				factory,
@@ -429,44 +429,32 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 			if err != nil {
 				return nil, providers, fmt.Errorf("error creating data source configuration for data source %s: %w", in.Id, err)
 			}
+			outs = append(outs, out)
 
 		case nodev1.DataSourceKind_PUBSUB:
 			var err error
 
 			dsMeta := l.dataSourceMetaData(in)
-			providersFactories := pubsub.GetProviderFactories()
-			for _, providerFactory := range providersFactories {
-				provider, err := providerFactory(
-					l.ctx,
-					in,
-					dsMeta,
-					routerEngineConfig.Events,
-					l.logger,
-					l.resolver.InstanceData().HostName,
-					l.resolver.InstanceData().ListenAddress,
-				)
-				if err != nil {
-					return nil, providers, err
-				}
-				if provider != nil {
-					providers = append(providers, provider)
-				}
-			}
-
-			out, err = plan.NewDataSourceConfiguration(
-				in.Id,
-				datasource.NewFactory(l.ctx, routerEngineConfig.Events, providers),
+			providersDs, pubsubDataSources, err := pubsub.GetProviderDataSources(
+				l.ctx,
+				in,
 				dsMeta,
-				providers,
+				routerEngineConfig.Events,
+				l.logger,
+				l.resolver.InstanceData().HostName,
+				l.resolver.InstanceData().ListenAddress,
 			)
 			if err != nil {
 				return nil, providers, err
 			}
+			outs = append(outs, pubsubDataSources...)
+			providers = append(providers, providersDs...)
+
 		default:
 			return nil, providers, fmt.Errorf("unknown data source type %q", in.Kind)
 		}
 
-		outConfig.DataSources = append(outConfig.DataSources, out)
+		outConfig.DataSources = append(outConfig.DataSources, outs...)
 	}
 	return &outConfig, providers, nil
 }

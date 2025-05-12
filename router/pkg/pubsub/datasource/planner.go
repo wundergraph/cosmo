@@ -13,7 +13,6 @@ import (
 
 type Planner struct {
 	id               int
-	providers        []PubSubProvider
 	pubSubDataSource PubSubDataSource
 	rootFieldRef     int
 	variables        resolve.Variables
@@ -40,11 +39,12 @@ func (p *Planner) DataSourcePlanningBehavior() plan.DataSourcePlanningBehavior {
 	}
 }
 
-func (p *Planner) Register(visitor *plan.Visitor, configuration plan.DataSourceConfiguration[[]PubSubProvider], _ plan.DataSourcePlannerConfiguration) error {
+func (p *Planner) Register(visitor *plan.Visitor, configuration plan.DataSourceConfiguration[PubSubDataSource], _ plan.DataSourcePlannerConfiguration) error {
 	p.visitor = visitor
 	visitor.Walker.RegisterEnterFieldVisitor(p)
 	visitor.Walker.RegisterEnterDocumentVisitor(p)
-	p.providers = configuration.CustomConfiguration()
+	p.pubSubDataSource = configuration.CustomConfiguration()
+
 	return nil
 }
 
@@ -192,23 +192,8 @@ func (p *Planner) EnterField(ref int) {
 		return p.extractArgumentTemplate(ref, tpl)
 	}
 
-	var pubSubDataSource PubSubDataSource
-	var err error
-
-	for _, pubSub := range p.providers {
-		pubSubDataSource, err = pubSub.FindPubSubDataSource(typeName, fieldName, extractFn)
-		if err != nil {
-			p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to find event config for type name \"%s\" and field name \"%s\": %w", typeName, fieldName, err))
-			return
-		}
-		if pubSubDataSource != nil {
-			break
-		}
+	err := p.pubSubDataSource.SetCurrentField(typeName, fieldName, extractFn)
+	if err != nil {
+		p.visitor.Walker.StopWithInternalErr(err)
 	}
-
-	if pubSubDataSource == nil {
-		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to find event config for type name \"%s\" and field name \"%s\"", typeName, fieldName))
-	}
-
-	p.pubSubDataSource = pubSubDataSource
 }

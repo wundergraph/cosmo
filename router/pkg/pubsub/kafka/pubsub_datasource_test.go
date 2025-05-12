@@ -29,12 +29,12 @@ func TestKafkaPubSubDataSource(t *testing.T) {
 	// Create the data source to test with a real adapter
 	adapter := &Adapter{}
 	pubsub := &PubSubDataSource{
-		EventConfiguration: kafkaCfg,
-		KafkaAdapter:       adapter,
+		EventConfigurations: []*nodev1.KafkaEventConfiguration{kafkaCfg},
+		KafkaAdapters:       map[string]AdapterInterface{kafkaCfg.GetEngineEventConfiguration().GetProviderId(): adapter},
 	}
 
 	// Run the standard test suite
-	pubsubtest.VerifyPubSubDataSourceImplementation(t, pubsub)
+	pubsubtest.VerifyPubSubDataSourceImplementation(t, pubsub, "TestType", "testField")
 }
 
 // TestPubSubDataSourceWithMockAdapter tests the PubSubDataSource with a mocked adapter
@@ -63,7 +63,7 @@ func TestPubSubDataSourceWithMockAdapter(t *testing.T) {
 	// Create the data source with mock adapter
 	pubsub := &PubSubDataSource{
 		EventConfiguration: kafkaCfg,
-		KafkaAdapter:       mockAdapter,
+		KafkaAdapters:      map[string]AdapterInterface{kafkaCfg.GetEngineEventConfiguration().GetProviderId(): mockAdapter},
 	}
 
 	// Get the data source
@@ -105,7 +105,7 @@ func TestPubSubDataSource_GetResolveDataSource_WrongType(t *testing.T) {
 	// Create the data source with mock adapter
 	pubsub := &PubSubDataSource{
 		EventConfiguration: kafkaCfg,
-		KafkaAdapter:       mockAdapter,
+		KafkaAdapters:      map[string]AdapterInterface{kafkaCfg.GetEngineEventConfiguration().GetProviderId(): mockAdapter},
 	}
 
 	// Get the data source

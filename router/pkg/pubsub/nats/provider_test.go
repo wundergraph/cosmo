@@ -169,7 +169,7 @@ func TestGetProvider(t *testing.T) {
 		cfg := config.EventsConfiguration{}
 		logger := zaptest.NewLogger(t)
 
-		provider, err := GetProvider(ctx, in, dsMeta, cfg, logger, "host", "addr")
+		provider, _, err := GetProvider(ctx, in, dsMeta, cfg, logger, "host", "addr")
 		require.NoError(t, err)
 		require.Nil(t, provider)
 	})
@@ -198,7 +198,7 @@ func TestGetProvider(t *testing.T) {
 		}
 		logger := zaptest.NewLogger(t)
 
-		provider, err := GetProvider(ctx, in, dsMeta, cfg, logger, "host", "addr")
+		provider, _, err := GetProvider(ctx, in, dsMeta, cfg, logger, "host", "addr")
 		require.Error(t, err)
 		require.Nil(t, provider)
 		assert.Contains(t, err.Error(), "failed to find Nats provider with ID")
@@ -223,65 +223,21 @@ func TestPubSubProvider_FindPubSubDataSource(t *testing.T) {
 				Subjects: []string{"test.subject"},
 			},
 		},
-		Logger: zap.NewNop(),
-		Providers: map[string]AdapterInterface{
-			providerId: mockNats,
-		},
+		Logger:  zap.NewNop(),
+		Adapter: mockNats,
 	}
 
-	t.Run("find matching datasource", func(t *testing.T) {
-		// Identity transform function
-		transformFn := func(s string) (string, error) {
-			return s, nil
-		}
-
-		ds, err := provider.FindPubSubDataSource(typeName, fieldName, transformFn)
+	t.Run("calling Startup", func(t *testing.T) {
+		mockNats.On("Startup", context.Background()).Return(nil)
+		err := provider.Startup(context.Background())
 		require.NoError(t, err)
-		require.NotNil(t, ds)
-
-		// Check the returned datasource
-		natsDs, ok := ds.(*PubSubDataSource)
-		require.True(t, ok)
-		assert.Equal(t, mockNats, natsDs.NatsAdapter)
-		assert.Equal(t, provider.EventConfiguration[0], natsDs.EventConfiguration)
+		mockNats.AssertCalled(t, "Startup", context.Background())
 	})
 
-	t.Run("return nil if no match", func(t *testing.T) {
-		ds, err := provider.FindPubSubDataSource("OtherType", fieldName, nil)
+	t.Run("calling Shutdown", func(t *testing.T) {
+		mockNats.On("Shutdown", context.Background()).Return(nil)
+		err := provider.Shutdown(context.Background())
 		require.NoError(t, err)
-		require.Nil(t, ds)
-	})
-
-	t.Run("handle error in transform function", func(t *testing.T) {
-		// Function that returns error
-		errorFn := func(s string) (string, error) {
-			return "", assert.AnError
-		}
-
-		ds, err := provider.FindPubSubDataSource(typeName, fieldName, errorFn)
-		require.Error(t, err)
-		require.Nil(t, ds)
-	})
-
-	t.Run("handle error in transform function", func(t *testing.T) {
-		// Function that returns error
-		errorFn := func(s string) (string, error) {
-			return "", assert.AnError
-		}
-
-		ds, err := provider.FindPubSubDataSource(typeName, fieldName, errorFn)
-		require.Error(t, err)
-		require.Nil(t, ds)
-	})
-
-	t.Run("handle error in transform function with invalid subject", func(t *testing.T) {
-		// Function that returns error
-		errorFn := func(s string) (string, error) {
-			return " ", nil
-		}
-
-		ds, err := provider.FindPubSubDataSource(typeName, fieldName, errorFn)
-		require.Error(t, err)
-		require.Nil(t, ds)
+		mockNats.AssertCalled(t, "Shutdown", context.Background())
 	})
 }
