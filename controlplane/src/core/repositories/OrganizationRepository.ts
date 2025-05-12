@@ -1563,6 +1563,7 @@ export class OrganizationRepository {
         groupId: schema.organizationGroups.id,
         name: schema.organizationGroups.name,
         description: schema.organizationGroups.description,
+        builtin: schema.organizationGroups.builtin,
         kcGroupId: schema.organizationGroups.kcGroupId,
       })
       .from(schema.organizationGroupMembers)
@@ -1606,6 +1607,7 @@ export class OrganizationRepository {
         groupId: schema.organizationGroups.id,
         name: schema.organizationGroups.name,
         description: schema.organizationGroups.description,
+        builtin: schema.organizationGroups.builtin,
         kcGroupId: schema.organizationGroups.kcGroupId,
       })
       .from(schema.organizationGroups)

@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/dialog";
 import {
   DropdownMenu,
-  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
@@ -21,9 +20,7 @@ import { Loader } from "@/components/ui/loader";
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -56,12 +53,8 @@ import {
   deleteAPIKey,
   getAPIKeys,
   getUserAccessiblePermissions,
-  getUserAccessibleResources,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import {
-  ExpiresAt,
-  GetUserAccessibleResourcesResponse_Graph,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import { ExpiresAt } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import copy from "copy-to-clipboard";
 import Link from "next/link";
 import {

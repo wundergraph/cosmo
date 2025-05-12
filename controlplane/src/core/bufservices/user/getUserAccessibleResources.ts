@@ -24,38 +24,14 @@ export function getUserAccessibleResources(
     const fedRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
     const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
 
-    if (authContext.isAdmin) {
-      const federatedGraphs = await fedRepo.list({
-        limit: 0,
-        offset: 0,
-      });
+    const isOrgAdminOrDeveloper = authContext.rbac.isOrganizationAdminOrDeveloper;
+    const federatedGraphs = isOrgAdminOrDeveloper
+      ? await fedRepo.list({ limit: 0, offset: 0 })
+      : await fedRepo.getAccessibleFederatedGraphs(authContext.userId, authContext.rbac.resources);
 
-      const subgraphs = await subgraphRepo.list({
-        limit: 0,
-        offset: 0,
-        excludeFeatureSubgraphs: false,
-      });
-
-      return {
-        response: {
-          code: EnumStatusCode.OK,
-        },
-        federatedGraphs: federatedGraphs.map((g) => ({
-          targetId: g.targetId,
-          name: g.name,
-          namespace: g.namespace,
-        })),
-        subgraphs: subgraphs.map((g) => ({
-          targetId: g.targetId,
-          name: g.name,
-          namespace: g.namespace,
-        })),
-      };
-    }
-
-    const federatedGraphs = await fedRepo.getAccessibleFederatedGraphs(authContext.userId, authContext.rbac.resources);
-
-    const subgraphs = await subgraphRepo.getAccessibleSubgraphs(authContext.userId, authContext.rbac.resources);
+    const subgraphs = isOrgAdminOrDeveloper
+      ? await subgraphRepo.list({ limit: 0, offset: 0, excludeFeatureSubgraphs: false })
+      : await subgraphRepo.getAccessibleSubgraphs(authContext.userId, authContext.rbac.resources);
 
     return {
       response: {
@@ -70,6 +46,7 @@ export function getUserAccessibleResources(
         targetId: g.targetId,
         name: g.name,
         namespace: g.namespace,
+        federatedGraphId: g.federatedGraphId,
       })),
     };
   });

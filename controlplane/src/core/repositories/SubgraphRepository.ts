@@ -573,7 +573,7 @@ export class SubgraphRepository {
     });
   }
 
-  public async list(opts: SubgraphListFilterOptions): Promise<SubgraphDTO[]> {
+  public async list(opts: SubgraphListFilterOptions) {
     const conditions: (SQL<unknown> | undefined)[] = [
       eq(schema.targets.organizationId, this.organizationId),
       eq(schema.targets.type, 'subgraph'),
@@ -600,10 +600,16 @@ export class SubgraphRepository {
       .select({
         id: schema.targets.id,
         name: schema.targets.name,
+        federatedGraphId: schema.federatedGraphs.targetId,
         lastUpdatedAt: schema.schemaVersion.createdAt,
       })
       .from(schema.targets)
       .innerJoin(schema.subgraphs, eq(schema.subgraphs.targetId, schema.targets.id))
+      .innerJoin(schema.subgraphsToFederatedGraph, eq(schema.subgraphs.id, schema.subgraphsToFederatedGraph.subgraphId))
+      .innerJoin(
+        schema.federatedGraphs,
+        eq(schema.federatedGraphs.id, schema.subgraphsToFederatedGraph.federatedGraphId),
+      )
       // Left join because version is optional
       .leftJoin(schema.schemaVersion, eq(schema.subgraphs.schemaVersionId, schema.schemaVersion.id))
       .orderBy(asc(schema.targets.createdAt), asc(schemaVersion.createdAt))
@@ -618,7 +624,7 @@ export class SubgraphRepository {
 
     const targets = await targetsQuery;
 
-    const subgraphs: SubgraphDTO[] = [];
+    const subgraphs: (SubgraphDTO & { federatedGraphId: string })[] = [];
 
     for (const target of targets) {
       const sg = await this.byTargetId(target.id);
@@ -626,7 +632,7 @@ export class SubgraphRepository {
         throw new Error(`Subgraph ${target.name} not found`);
       }
 
-      subgraphs.push(sg);
+      subgraphs.push({ ...sg, federatedGraphId: target.federatedGraphId });
     }
 
     return subgraphs;
@@ -1250,9 +1256,13 @@ export class SubgraphRepository {
     return latestValidVersion[0].schemaSDL;
   }
 
-  public async getAccessibleSubgraphs(userId: string, resources: string[]): Promise<SubgraphDTO[]> {
+  public async getAccessibleSubgraphs(userId: string, resources: string[]) {
     const graphs = await this.db
-      .selectDistinctOn([targets.id], { targetId: targets.id, name: targets.name })
+      .selectDistinctOn([targets.id], {
+        targetId: targets.id,
+        name: targets.name,
+        federatedGraphId: schema.federatedGraphs.targetId
+      })
       .from(targets)
       .innerJoin(subgraphs, eq(targets.id, subgraphs.targetId))
       .innerJoin(subgraphMembers, eq(subgraphs.id, subgraphMembers.subgraphId))
@@ -1270,7 +1280,7 @@ export class SubgraphRepository {
         ),
       );
 
-    const accessibleSubgraphs: SubgraphDTO[] = [];
+    const accessibleSubgraphs: (SubgraphDTO & { federatedGraphId: string })[] = [];
 
     for (const graph of graphs) {
       const sg = await this.byTargetId(graph.targetId);
@@ -1278,7 +1288,7 @@ export class SubgraphRepository {
         throw new Error(`Subgraph ${graph.name} not found`);
       }
 
-      accessibleSubgraphs.push(sg);
+      accessibleSubgraphs.push({ ...sg, federatedGraphId: graph.federatedGraphId });
     }
 
     return accessibleSubgraphs;

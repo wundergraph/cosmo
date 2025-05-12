@@ -96,6 +96,7 @@ export function createOrganizationGroup(
         groupId: createdGroup.groupId,
         name: createdGroup.name,
         description: createdGroup.description,
+        builtin: createdGroup.builtin,
         membersCount: 0,
         rules: [],
       },

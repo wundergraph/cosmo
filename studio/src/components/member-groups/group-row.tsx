@@ -9,6 +9,8 @@ import {
 import { EllipsisVerticalIcon } from "@heroicons/react/24/outline";
 import { Button } from "@/components/ui/button";
 import { useCheckUserAccess } from "@/hooks/use-check-user-access";
+import { Badge } from "@/components/ui/badge";
+import { InfoCircledIcon } from "@radix-ui/react-icons";
 
 export function GroupRow({ group, rbac, onSelect, onDelete }: {
   group: OrganizationGroup;
@@ -21,7 +23,7 @@ export function GroupRow({ group, rbac, onSelect, onDelete }: {
 
   return (
     <TableRow>
-      <TableCell>
+      <TableCell className="space-x-3">
         {isAdminOrDeveloper ? (
           <Button
             variant="link"
@@ -31,6 +33,13 @@ export function GroupRow({ group, rbac, onSelect, onDelete }: {
             {group.name}
           </Button>
         ) : group.name}
+
+        {group.builtin && (
+          <Badge variant="outline" className="space-x-1">
+            <InfoCircledIcon className="size-3" />
+            <span>builtin</span>
+          </Badge>
+        )}
       </TableCell>
       <TableCell>{group.description}</TableCell>
       <TableCell className="text-center">
@@ -46,20 +55,21 @@ export function GroupRow({ group, rbac, onSelect, onDelete }: {
       </TableCell>
       {rbac && isAdminOrDeveloper && (
         <TableCell>
-        <DropdownMenu>
-          <div className="flex justify-center">
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <EllipsisVerticalIcon className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
-          </div>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={onDelete}>
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+          {!group.builtin && (
+            <DropdownMenu>
+              <div className="flex justify-center">
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <EllipsisVerticalIcon className="size-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+              </div>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={onDelete}>
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>)}
         </TableCell>
       )}
     </TableRow>

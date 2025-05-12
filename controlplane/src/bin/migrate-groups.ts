@@ -1,7 +1,7 @@
 import * as process from 'node:process';
 import postgres from 'postgres';
 import { drizzle, PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, not } from 'drizzle-orm';
 import { buildDatabaseConnectionConfig } from '../core/plugins/database.js';
 import Keycloak from '../core/services/Keycloak.js';
 import * as schema from '../db/schema.js';
@@ -73,6 +73,7 @@ async function migrateGroups(db: PostgresJsDatabase<typeof schema>) {
 
   await Promise.all(
     organizations.map(async ({ id: organizationId, slug: organizationSlug }) => {
+      // await g({ db, organizationId });
       await keycloakClient.seedRoles({ realm, organizationSlug });
       await ensureOrganizationSubgroupsExistInDatabase({ db, organizationId, organizationSlug });
       await updateAndLinkExistingOrganizationOidcMappers({ db, keycloakClient, organizationId, organizationSlug });
@@ -81,6 +82,31 @@ async function migrateGroups(db: PostgresJsDatabase<typeof schema>) {
       console.log(`- Done processing organization "${organizationSlug}"`);
     }),
   );
+}
+
+async function g({ db, organizationId }: {
+  db: PostgresJsDatabase<typeof schema>,
+  organizationId: string;
+}) {
+  const subgraphMembers = await db
+    .select({
+      subgraphId: schema.subgraphMembers.subgraphId,
+      userId: schema.subgraphMembers.userId,
+    })
+    .from(schema.subgraphMembers)
+    .innerJoin(schema.subgraphs, eq(schema.subgraphs.id, schema.subgraphMembers.subgraphId))
+    .innerJoin(schema.targets, eq(schema.targets.id, schema.subgraphs.targetId))
+    .where(and(
+      eq(schema.targets.organizationId, organizationId),
+      // not(eq(schema.targets.createdBy, schema.subgraphMembers.userId))
+    ));
+
+  const groupedSubgraphsByUser = Object.groupBy(subgraphMembers, (m) => m.userId);
+  for (const [userId, subgraphs] of Object.entries(groupedSubgraphsByUser)) {
+    console.log({ userId, subgraphs });
+  }
+
+  console.log(subgraphMembers);
 }
 
 async function ensureOrganizationSubgroupsExistInDatabase({
@@ -116,6 +142,7 @@ async function ensureOrganizationSubgroupsExistInDatabase({
         organizationId,
         name: sg.name!,
         description: '',
+        builtin: true,
         kcGroupId: sg.id!,
       })),
     )

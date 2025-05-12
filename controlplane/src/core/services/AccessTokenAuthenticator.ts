@@ -60,7 +60,7 @@ export default class AccessTokenAuthenticator {
       userId: userInfoData.sub,
       userDisplayName: userInfoData.email,
       organizationDeactivated,
-      hasWriteAccess: rbac.isOrganizationDeveloper && !organizationDeactivated,
+      hasWriteAccess: rbac.isOrganizationAdminOrDeveloper && !organizationDeactivated,
       isAdmin: rbac.isOrganizationAdmin,
       rbac,
     };

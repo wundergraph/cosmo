@@ -36,12 +36,12 @@ export class RBACEvaluator {
     return this.is(['organization-admin']);
   }
 
-  get isOrganizationDeveloper() {
+  get isOrganizationAdminOrDeveloper() {
     return this.isOrganizationAdmin || this.is(['organization-developer']);
   }
 
   get isOrganizationViewer() {
-    return this.isOrganizationDeveloper || this.is(['organization-viewer']);
+    return this.isOrganizationAdminOrDeveloper || this.is(['organization-viewer']);
   }
 
   is(roles: OrganizationRole[]) {
@@ -70,7 +70,7 @@ export class RBACEvaluator {
   }
 
   checkNamespaceWriteAccess(namespaceId: string) {
-    if (this.isOrganizationDeveloper) {
+    if (this.isOrganizationAdminOrDeveloper) {
       return true;
     }
 
@@ -89,7 +89,7 @@ export class RBACEvaluator {
   }
 
   checkResourceWriteAccess(targetId: string) {
-    if (this.isOrganizationDeveloper) {
+    if (this.isOrganizationAdminOrDeveloper) {
       return true;
     }
 

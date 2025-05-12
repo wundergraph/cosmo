@@ -862,6 +862,13 @@
       "when": 1746470953849,
       "tag": "0122_abandoned_molly_hayes",
       "breakpoints": true
+    },
+    {
+      "idx": 123,
+      "version": "7",
+      "when": 1747067351095,
+      "tag": "0123_brief_jack_power",
+      "breakpoints": true
     }
   ]
 }

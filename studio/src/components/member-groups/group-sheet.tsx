@@ -117,7 +117,7 @@ function MemberGroupSheetContent({ group, onGroupUpdated, onCancel }: {
         <SheetTitle>Rules for &quot;{group.name}&quot;</SheetTitle>
         <SheetDescription className="space-x-2">
           <span>{description || "No description set"}</span>
-          {rbac?.enabled && (
+          {rbac?.enabled && !group.builtin && (
             <EditDescriptionDialog
               description={description}
               onUpdate={setDescription}
@@ -136,12 +136,23 @@ function MemberGroupSheetContent({ group, onGroupUpdated, onCancel }: {
         </Alert>
       )}
 
+      {group.builtin && (
+        <Alert className="mt-6">
+          <InfoCircledIcon className="size-5" />
+          <AlertTitle>Attention!</AlertTitle>
+          <AlertDescription>
+            Modifying builtin groups is not allowed.
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="my-6 space-y-3">
         {groupRules.length
           ? (
             groupRules.map((rule, index) => (
               <GroupRuleBuilder
                 key={`rule-${rule.role}-${index}`}
+                builtin={group.builtin}
                 roles={roles.filter((r) => r.key === rule.role || !groupRules.some((gr) => gr.role === r.key))}
                 rule={rule}
                 accessibleResources={data}
@@ -167,7 +178,7 @@ function MemberGroupSheetContent({ group, onGroupUpdated, onCancel }: {
           )
         }
 
-        {rbac?.enabled && (
+        {rbac?.enabled && !group.builtin && (
           <div>
             <Button
               variant="link"
@@ -192,7 +203,7 @@ function MemberGroupSheetContent({ group, onGroupUpdated, onCancel }: {
       </div>
 
       <SheetFooter className="gap-y-2">
-        {rbac?.enabled ? (
+        {rbac?.enabled && !group.builtin ? (
           <>
             <Button variant="secondary" onClick={onCancel} disabled={isPending}>
               Cancel
