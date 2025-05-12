@@ -63,15 +63,12 @@ const identify = ({
   // Identify with PostHog
   if (typeof process !== "undefined" && process.env.NEXT_PUBLIC_POSTHOG_KEY) {
     const posthog = PostHogClient();
-    posthog.identify({
-      distinctId: id,
-      properties: {
-        email,
-        organizationId,
-        organizationName,
-        organizationSlug,
-        plan,
-      },
+    posthog.identify(id, {
+      email,
+      organizationId,
+      organizationName,
+      organizationSlug,
+      plan,
     });
   }
 };
