@@ -4377,6 +4377,46 @@ func TestPrometheusWithModule(t *testing.T) {
 			},
 		}, requestDurationMetrics[1].Label)
 	})
+
+	t.Run("Verify router_info attributes", func(t *testing.T) {
+		t.Parallel()
+
+		exporter := tracetest.NewInMemoryExporter(t)
+		metricReader := metric.NewManualReader()
+		promRegistry := prometheus.NewRegistry()
+
+		testenv.Run(t, &testenv.Config{
+			TraceExporter:      exporter,
+			MetricReader:       metricReader,
+			PrometheusRegistry: promRegistry,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query myQuery { employees { id } }`,
+			})
+			require.JSONEq(t, employeesIDData, res.Body)
+
+			mf, err := promRegistry.Gather()
+			require.NoError(t, err)
+
+			routerConfigVersion := findMetricFamilyByName(mf, "router_info")
+			routerConfigVersionMetrics := routerConfigVersion.GetMetric()
+
+			expectedMainConfig := xEnv.RouterConfigVersionMain()
+			mainBase := routerConfigVersionMetrics[0]
+			require.Len(t, mainBase.Label, 4)
+			require.Equal(t, expectedMainConfig, *mainBase.Label[2].Value)
+			require.Equal(t, 1.0, *mainBase.Gauge.Value)
+			require.Equal(t, "dev", *mainBase.Label[3].Value)
+
+			expectedFeatureFlagConfig := xEnv.RouterConfigVersionMyFF()
+			featureFlag := routerConfigVersionMetrics[1]
+			require.Len(t, featureFlag.Label, 5)
+			require.Equal(t, "myff", *featureFlag.Label[2].Value)
+			require.Equal(t, expectedFeatureFlagConfig, *featureFlag.Label[3].Value)
+			require.Equal(t, 1.0, *featureFlag.Gauge.Value)
+			require.Equal(t, "dev", *featureFlag.Label[4].Value)
+		})
+	})
 }
 
 // Creates a separate prometheus metric when service error codes are used as custom attributes

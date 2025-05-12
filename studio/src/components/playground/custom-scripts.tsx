@@ -1016,6 +1016,7 @@ const ScriptSetting = ({ type }: { type: ScriptType }) => {
 export const CustomScripts = () => {
   const {
     tabsState: { activeTabIndex, tabs },
+    isHydrated,
   } = useContext(PlaygroundContext);
 
   const [scriptsTabState, setScriptsTabState] = useLocalStorage<{
@@ -1023,6 +1024,9 @@ export const CustomScripts = () => {
   }>("playground:script:tabState", {});
 
   useEffect(() => {
+    // safe check to avoid race condition
+    if (!isHydrated) return;
+
     setScriptsTabState((prev) => {
       if (tabs.length === 0) {
         return prev;
@@ -1031,15 +1035,18 @@ export const CustomScripts = () => {
       const ids = Object.keys(prev);
       const tabIds = tabs.map((t) => t.id);
 
+      // Create a shallow copy -- this ensures state update is predictable
+      // and accidently doesn't mutate previous setState
+      const next = { ...prev };
       ids.forEach((id) => {
         if (!tabIds.includes(id)) {
-          delete prev[id];
+          delete next[id];
         }
       });
 
-      return prev;
+      return next;
     });
-  }, [tabs, setScriptsTabState]);
+  }, [tabs, setScriptsTabState, isHydrated]);
 
   const [selectedPreOp, setSelectedPreOp] = useLocalStorage<
     | (PlaygroundScript & {
