@@ -2302,6 +2302,24 @@
               "default": false
             }
           }
+        },
+        "max_recursion_depth": {
+          "type": "object",
+          "description": "The depth limit for one particular object, will count how many times an object of one particular type is selected and will abort the operation if the limit has been reached.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "Enable query max recursion depth limits. If the value is true (default: false)"
+            },
+            "limit": {
+              "type": "integer",
+              "description": "The depth limit for query. If the limit is 0, this limit isn't applied.",
+              "default": 0,
+              "minimum": 0
+            }
+          }
         }
       }
     },

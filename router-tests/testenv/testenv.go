@@ -346,6 +346,7 @@ type SubgraphsConfig struct {
 	Availability     SubgraphConfig
 	Mood             SubgraphConfig
 	Countries        SubgraphConfig
+	RecursionTest    SubgraphConfig
 }
 
 type SubgraphConfig struct {
@@ -423,16 +424,17 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	counters := &SubgraphRequestCount{
-		Global:       atomic.NewInt64(0),
-		Employees:    atomic.NewInt64(0),
-		Family:       atomic.NewInt64(0),
-		Hobbies:      atomic.NewInt64(0),
-		Products:     atomic.NewInt64(0),
-		ProductFg:    atomic.NewInt64(0),
-		Test1:        atomic.NewInt64(0),
-		Availability: atomic.NewInt64(0),
-		Mood:         atomic.NewInt64(0),
-		Countries:    atomic.NewInt64(0),
+		Global:        atomic.NewInt64(0),
+		Employees:     atomic.NewInt64(0),
+		Family:        atomic.NewInt64(0),
+		Hobbies:       atomic.NewInt64(0),
+		Products:      atomic.NewInt64(0),
+		ProductFg:     atomic.NewInt64(0),
+		Test1:         atomic.NewInt64(0),
+		Availability:  atomic.NewInt64(0),
+		Mood:          atomic.NewInt64(0),
+		Countries:     atomic.NewInt64(0),
+		RecursionTest: atomic.NewInt64(0),
 	}
 
 	requiredPorts := 2
@@ -533,6 +535,16 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		localDelay:       cfg.Subgraphs.Countries.Delay,
 	}
 
+	recursionTest := &Subgraph{
+		handler:          subgraphs.RecursionTestHandler(subgraphOptions(ctx, t, cfg.Logger, natsSetup, getPubSubName)),
+		middleware:       cfg.Subgraphs.RecursionTest.Middleware,
+		globalMiddleware: cfg.Subgraphs.GlobalMiddleware,
+		globalCounter:    counters.Global,
+		localCounter:     counters.RecursionTest,
+		globalDelay:      cfg.Subgraphs.GlobalDelay,
+		localDelay:       cfg.Subgraphs.RecursionTest.Delay,
+	}
+
 	employeesServer := makeSafeHttpTestServer(t, employees)
 	familyServer := makeSafeHttpTestServer(t, family)
 	hobbiesServer := makeSafeHttpTestServer(t, hobbies)
@@ -542,17 +554,18 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	moodServer := makeSafeHttpTestServer(t, mood)
 	countriesServer := makeSafeHttpTestServer(t, countries)
 	productFgServer := makeSafeHttpTestServer(t, productsFg)
+	recursionTestServer := makeSafeHttpTestServer(t, recursionTest)
 
 	replacements := map[string]string{
-		subgraphs.EmployeesDefaultDemoURL:    gqlURL(employeesServer),
-		subgraphs.FamilyDefaultDemoURL:       gqlURL(familyServer),
-		subgraphs.HobbiesDefaultDemoURL:      gqlURL(hobbiesServer),
-		subgraphs.ProductsDefaultDemoURL:     gqlURL(productsServer),
-		subgraphs.Test1DefaultDemoURL:        gqlURL(test1Server),
-		subgraphs.AvailabilityDefaultDemoURL: gqlURL(availabilityServer),
-		subgraphs.MoodDefaultDemoURL:         gqlURL(moodServer),
-		subgraphs.CountriesDefaultDemoURL:    gqlURL(countriesServer),
-		subgraphs.ProductsFgDefaultDemoURL:   gqlURL(productFgServer),
+		subgraphs.EmployeesDefaultDemoURL:     gqlURL(employeesServer),
+		subgraphs.FamilyDefaultDemoURL:        gqlURL(familyServer),
+		subgraphs.HobbiesDefaultDemoURL:       gqlURL(hobbiesServer),
+		subgraphs.ProductsDefaultDemoURL:      gqlURL(productsServer),
+		subgraphs.Test1DefaultDemoURL:         gqlURL(test1Server),
+		subgraphs.AvailabilityDefaultDemoURL:  gqlURL(availabilityServer),
+		subgraphs.MoodDefaultDemoURL:          gqlURL(moodServer),
+		subgraphs.CountriesDefaultDemoURL:     gqlURL(countriesServer),
+		subgraphs.RecursionTestDefaultDemoURL: gqlURL(recursionTestServer),
 	}
 
 	if cfg.RouterConfigJSONTemplate == "" {
@@ -687,6 +700,9 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 	if cfg.Subgraphs.ProductsFg.CloseOnStart {
 		productFgServer.Close()
+	}
+	if cfg.Subgraphs.RecursionTest.CloseOnStart {
+		recursionTestServer.Close()
 	}
 
 	if cfg.ShutdownDelay == 0 {
@@ -1293,16 +1309,17 @@ func (e *Environment) Shutdown() {
 }
 
 type SubgraphRequestCount struct {
-	Global       *atomic.Int64
-	Employees    *atomic.Int64
-	Family       *atomic.Int64
-	Hobbies      *atomic.Int64
-	Products     *atomic.Int64
-	ProductFg    *atomic.Int64
-	Test1        *atomic.Int64
-	Availability *atomic.Int64
-	Mood         *atomic.Int64
-	Countries    *atomic.Int64
+	Global        *atomic.Int64
+	Employees     *atomic.Int64
+	Family        *atomic.Int64
+	Hobbies       *atomic.Int64
+	Products      *atomic.Int64
+	ProductFg     *atomic.Int64
+	Test1         *atomic.Int64
+	Availability  *atomic.Int64
+	Mood          *atomic.Int64
+	Countries     *atomic.Int64
+	RecursionTest *atomic.Int64
 }
 
 type GraphQLRequest struct {

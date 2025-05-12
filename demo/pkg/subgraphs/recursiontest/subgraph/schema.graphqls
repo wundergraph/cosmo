@@ -1,0 +1,47 @@
+extend schema
+  @link(
+    url: "https://specs.apollo.dev/federation/v2.5"
+    import: [
+      "@authenticated"
+      "@composeDirective"
+      "@external"
+      "@extends"
+      "@inaccessible"
+      "@interfaceObject"
+      "@override"
+      "@provides"
+      "@key"
+      "@requires"
+      "@requiresScopes"
+      "@shareable"
+      "@tag"
+    ]
+  )
+
+directive @goField(
+  forceResolver: Boolean
+  name: String
+  omittable: Boolean
+) on INPUT_FIELD_DEFINITION | FIELD_DEFINITION
+
+
+type Query {
+  manager(id: ID!): Manager # direct recursion
+  book(id: ID!): Book # indirect recursion
+}
+
+type Book {
+  id: ID!,
+  author: Author
+}
+
+type Author {
+  id: ID!,
+  works: [Book]
+}
+
+type Manager {
+  id: ID!,
+  manager: Manager
+}
+

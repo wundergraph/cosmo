@@ -33,19 +33,21 @@ import (
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/hobbies"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/mood"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/products"
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/recursiontest"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/test1"
 )
 
 const (
-	EmployeesDefaultDemoURL    = "http://localhost:4001/graphql"
-	FamilyDefaultDemoURL       = "http://localhost:4002/graphql"
-	HobbiesDefaultDemoURL      = "http://localhost:4003/graphql"
-	ProductsDefaultDemoURL     = "http://localhost:4004/graphql"
-	Test1DefaultDemoURL        = "http://localhost:4006/graphql"
-	AvailabilityDefaultDemoURL = "http://localhost:4007/graphql"
-	MoodDefaultDemoURL         = "http://localhost:4008/graphql"
-	CountriesDefaultDemoURL    = "http://localhost:4009/graphql"
-	ProductsFgDefaultDemoURL   = "http://localhost:4010/graphql"
+	EmployeesDefaultDemoURL     = "http://localhost:4001/graphql"
+	FamilyDefaultDemoURL        = "http://localhost:4002/graphql"
+	HobbiesDefaultDemoURL       = "http://localhost:4003/graphql"
+	ProductsDefaultDemoURL      = "http://localhost:4004/graphql"
+	Test1DefaultDemoURL         = "http://localhost:4006/graphql"
+	AvailabilityDefaultDemoURL  = "http://localhost:4007/graphql"
+	MoodDefaultDemoURL          = "http://localhost:4008/graphql"
+	CountriesDefaultDemoURL     = "http://localhost:4009/graphql"
+	ProductsFgDefaultDemoURL    = "http://localhost:4010/graphql"
+	RecursionTestDefaultDemoURL = "http://localhost:4011/graphql"
 )
 
 type Ports struct {
@@ -200,6 +202,10 @@ func MoodHandler(opts *SubgraphOptions) http.Handler {
 
 func CountriesHandler(opts *SubgraphOptions) http.Handler {
 	return subgraphHandler(countries.NewSchema(opts.NatsPubSubByProviderID))
+}
+
+func RecursionTestHandler(opts *SubgraphOptions) http.Handler {
+	return subgraphHandler(recursiontest.NewSchema(opts.NatsPubSubByProviderID))
 }
 
 func New(ctx context.Context, config *Config) (*Subgraphs, error) {
