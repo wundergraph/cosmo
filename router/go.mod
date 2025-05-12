@@ -67,7 +67,7 @@ require (
 	github.com/goccy/go-json v0.10.3
 	github.com/iancoleman/strcase v0.3.0
 	github.com/klauspost/compress v1.17.9
-	github.com/mark3labs/mcp-go v0.23.0
+	github.com/mark3labs/mcp-go v0.27.0
 	github.com/minio/minio-go/v7 v7.0.74
 	github.com/pquerna/cachecontrol v0.2.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.1
