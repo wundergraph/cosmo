@@ -1,7 +1,7 @@
 import {
-  FieldConfiguration,
   federateSubgraphs as realFederateSubgraphs,
-  LATEST_ROUTER_COMPATIBILITY_VERSION
+  FieldConfiguration,
+  LATEST_ROUTER_COMPATIBILITY_VERSION,
 } from '@wundergraph/composition';
 import { buildRouterConfig, normalizeURL, SubscriptionProtocol, WebsocketSubprotocol } from '@wundergraph/cosmo-shared';
 import { DocumentNode, parse, print, printSchema } from 'graphql';
@@ -61,13 +61,14 @@ export function buildRouterConfiguration(subgraphs: Subgraph[]): string {
       const schema = subgraphConfig?.schema;
       const configurationDataByTypeName = subgraphConfig?.configurationDataByTypeName;
       return {
+        kind: 'standard',
         id: `${index}`,
         name: s.name,
         url: normalizeURL(s.url),
         sdl: s.schema,
         subscriptionUrl: normalizeURL(s.subscription_url ?? s.url),
         subscriptionProtocol: s.subscription_protocol ?? 'ws',
-        websocketSubprotocol: s.subscription_protocol === 'ws' ? s.websocketSubprotocol || 'auto': undefined,
+        websocketSubprotocol: s.subscription_protocol === 'ws' ? s.websocketSubprotocol || 'auto' : undefined,
         schema,
         configurationDataByTypeName,
       };

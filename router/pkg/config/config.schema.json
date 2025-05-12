@@ -300,7 +300,7 @@
                   "description": "The interval at which the file is checked for changes. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
                   "default": "1s",
                   "duration": {
-                    "minimum": "1s"
+                    "minimum": "100ms"
                   }
                 }
               }
