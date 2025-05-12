@@ -725,7 +725,6 @@ export class Composer {
             ...(checkSubgraphsByFedGraph.get(graph.id) || []),
             subgraph.checkSubgraphId,
           ]);
-
           subgraphsToBeComposed.push({
             name: subgraphName,
             url: '',

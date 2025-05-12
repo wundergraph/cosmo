@@ -124,6 +124,15 @@ func NewDefaultFactoryResolver(
 		if subscriptionClientOptions.PingInterval > 0 {
 			options = append(options, graphql_datasource.WithPingInterval(subscriptionClientOptions.PingInterval))
 		}
+		if subscriptionClientOptions.ReadTimeout > 0 {
+			options = append(options, graphql_datasource.WithReadTimeout(subscriptionClientOptions.ReadTimeout))
+		}
+		if subscriptionClientOptions.PingTimeout > 0 {
+			options = append(options, graphql_datasource.WithPingTimeout(subscriptionClientOptions.PingTimeout))
+		}
+		if subscriptionClientOptions.FrameTimeout > 0 {
+			options = append(options, graphql_datasource.WithFrameTimeout(subscriptionClientOptions.FrameTimeout))
+		}
 	}
 
 	subscriptionClient := graphql_datasource.NewGraphQLSubscriptionClient(

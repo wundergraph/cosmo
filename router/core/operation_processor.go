@@ -387,7 +387,7 @@ func (o *OperationKit) ComputeOperationSha256() error {
 
 // FetchPersistedOperation fetches the persisted operation from the cache or the client. If the operation is fetched from the cache it returns true.
 // UnmarshalOperationFromBody or UnmarshalOperationFromURL must be called before calling this method.
-func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *ClientInfo) (bool, bool, error) {
+func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *ClientInfo) (skipParse bool, isAPQ bool, err error) {
 	if o.operationProcessor.persistedOperationClient == nil {
 		return false, false, &httpGraphqlError{
 			message:    "could not resolve persisted query, feature is not configured",
@@ -425,6 +425,10 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 	// we might modify it later, so we don't want to modify the cached data
 	if persistedOperationData != nil {
 		o.parsedOperation.Request.Query = string(persistedOperationData)
+		// when we have successfully loaded the operation content from the storage,
+		// but it was passed via body instead of hash, we need to mark operation as persisted
+		// to populate persisted operation cache
+		o.parsedOperation.IsPersistedOperation = true
 	}
 
 	// If the operation was fetched with APQ, save it again to renew the TTL
@@ -902,6 +906,10 @@ func (o *OperationKit) loadPersistedOperationFromCache(clientName string) (ok bo
 
 func (o *OperationKit) handleFoundPersistedOperationEntry(entry NormalizationCacheEntry) error {
 	o.parsedOperation.PersistedOperationCacheHit = true
+	// we need to mark operation as persisted when it was called by query body
+	// otherwise in case it was already cached we will try to normalize an empty document
+	// as we skip parse for the cached persisted operations
+	o.parsedOperation.IsPersistedOperation = true
 	o.parsedOperation.NormalizationCacheHit = true
 	o.parsedOperation.InternalID = entry.operationID
 	o.parsedOperation.NormalizedRepresentation = entry.normalizedRepresentation

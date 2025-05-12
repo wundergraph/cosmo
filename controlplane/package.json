@@ -1,6 +1,6 @@
 {
   "name": "controlplane",
-  "version": "0.137.0",
+  "version": "0.137.3",
   "private": true,
   "description": "WunderGraph Cosmo Controlplane",
   "type": "module",
@@ -113,6 +113,6 @@
     "prettier": "^3.2.4",
     "tsx": "^4.16.0",
     "typescript": "5.5.2",
-    "vitest": "^2.1.9"
+    "vitest": "^3.1.2"
   }
 }

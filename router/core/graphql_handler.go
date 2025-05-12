@@ -177,8 +177,24 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		defer propagateSubgraphErrors(ctx)
 
-		resp, err := h.executor.Resolver.ResolveGraphQLResponse(ctx, p.Response, nil, HeaderPropagationWriter(w, ctx.Context()))
+		respBuf := bytes.Buffer{}
+
+		resp, err := h.executor.Resolver.ResolveGraphQLResponse(ctx, p.Response, nil, &respBuf)
 		requestContext.dataSourceNames = getSubgraphNames(p.Response.DataSources)
+
+		if err != nil {
+			trackFinalResponseError(ctx.Context(), err)
+			h.WriteError(ctx, err, p.Response, w)
+			return
+		}
+
+		if errs := ctx.SubgraphErrors(); errs != nil {
+			w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
+		}
+
+		// Write contents of buf to the header propagation writer
+		hpw := HeaderPropagationWriter(w, ctx.Context())
+		_, err = respBuf.WriteTo(hpw)
 
 		if err != nil {
 			trackFinalResponseError(ctx.Context(), err)

@@ -1,11 +1,11 @@
 import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { validate as isValidUuid } from 'uuid';
 import {
   GetChecksByFederatedGraphNameRequest,
   GetChecksByFederatedGraphNameResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { validate as isValidUuid } from 'uuid';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
@@ -38,7 +38,6 @@ export function getChecksByFederatedGraphName(
         },
         checks: [],
         checksCountBasedOnDateRange: 0,
-        totalChecksCount: 0,
       };
     }
 
@@ -63,7 +62,6 @@ export function getChecksByFederatedGraphName(
         },
         checks: [],
         checksCountBasedOnDateRange: 0,
-        totalChecksCount: 0,
       };
     }
 
@@ -76,7 +74,6 @@ export function getChecksByFederatedGraphName(
         },
         checks: [],
         checksCountBasedOnDateRange: 0,
-        totalChecksCount: 0,
       };
     }
 
@@ -91,15 +88,12 @@ export function getChecksByFederatedGraphName(
       includeSubgraphs,
     });
 
-    const totalChecksCount = await subgraphRepo.getChecksCount({ federatedGraphTargetId: federatedGraph.targetId });
-
     return {
       response: {
         code: EnumStatusCode.OK,
       },
       checks: checksData.checks,
       checksCountBasedOnDateRange: checksData.checksCount,
-      totalChecksCount,
     };
   });
 }
