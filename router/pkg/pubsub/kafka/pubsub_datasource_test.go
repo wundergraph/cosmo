@@ -29,8 +29,8 @@ func TestKafkaPubSubDataSource(t *testing.T) {
 	// Create the data source to test with a real adapter
 	adapter := &Adapter{}
 	pubsub := &PubSubDataSource{
-		EventConfigurations: []*nodev1.KafkaEventConfiguration{kafkaCfg},
-		KafkaAdapters:       map[string]AdapterInterface{kafkaCfg.GetEngineEventConfiguration().GetProviderId(): adapter},
+		EventConfiguration: kafkaCfg,
+		KafkaAdapters:      map[string]AdapterInterface{kafkaCfg.GetEngineEventConfiguration().GetProviderId(): adapter},
 	}
 
 	// Run the standard test suite

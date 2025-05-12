@@ -129,7 +129,7 @@ func TestPubSubDataSource_GetResolveDataSourceInput_MultipleSubjects(t *testing.
 
 	// Create the data source with mock adapter
 	pubsub := &PubSubDataSource{
-		EventConfigurations: []*nodev1.NatsEventConfiguration{natsCfg},
+		EventConfiguration: natsCfg,
 	}
 
 	// Get the input
@@ -217,7 +217,7 @@ func TestNatsPubSubDataSourceWithStreamConfiguration(t *testing.T) {
 
 	// Create the data source to test
 	pubsub := &PubSubDataSource{
-		EventConfigurations: []*nodev1.NatsEventConfiguration{natsCfg},
+		EventConfiguration: natsCfg,
 	}
 
 	// Test GetResolveDataSourceSubscriptionInput with stream configuration
@@ -262,8 +262,8 @@ func TestPubSubDataSource_RequestDataSource(t *testing.T) {
 
 	// Create the data source with mock adapter
 	pubsub := &PubSubDataSource{
-		EventConfigurations: []*nodev1.NatsEventConfiguration{natsCfg},
-		NatsAdapters:        map[string]AdapterInterface{"test-provider": mockAdapter},
+		EventConfiguration: natsCfg,
+		NatsAdapters:       map[string]AdapterInterface{"test-provider": mockAdapter},
 	}
 
 	// Get the data source
