@@ -83,6 +83,7 @@ type (
 		Config
 		httpServer        *server
 		modules           []Module
+		coreModuleHooks       *coreModuleHooks
 		EngineStats       statistics.EngineStatistics
 		playgroundHandler func(http.Handler) http.Handler
 		proxy             ProxyFunc
@@ -637,6 +638,16 @@ func (r *Router) listenAndServe() error {
 	return nil
 }
 
+// initCoreModuleSystem initializes the new module system
+func (r *Router) initCoreModuleSystem(ctx context.Context) error {
+	coreModuleHooks := newCoreModuleHooks(r.logger)
+	coreModuleHooks.initCoreModuleHooks(ctx, defaultModuleRegistry.getMyModules())
+
+	r.coreModuleHooks = coreModuleHooks
+
+	return nil
+}
+
 func (r *Router) initModules(ctx context.Context) error {
 	moduleList := make([]ModuleInfo, 0, len(modules)+len(r.customModules))
 
@@ -997,6 +1008,11 @@ func (r *Router) bootstrap(ctx context.Context) error {
 	// Modules are only initialized once and not on every config change
 	if err := r.initModules(ctx); err != nil {
 		return fmt.Errorf("failed to init user modules: %w", err)
+	}
+
+	// Initialize the core module system
+	if err := r.initCoreModuleSystem(ctx); err != nil {
+		return fmt.Errorf("failed to init core module system: %w", err)
 	}
 
 	if r.traceConfig.Enabled && len(r.tracePropagators) > 0 {
