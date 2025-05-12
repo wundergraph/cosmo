@@ -2,7 +2,7 @@ import {
   UpdateOrganizationGroupRequest_GroupRule,
   GetUserAccessibleResourcesResponse,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { roles as originalRoles } from "@/lib/constants";
+import { OrganizationRoleCategory, roles as originalRoles } from "@/lib/constants";
 import { useMemo, useState, createContext, useContext } from "react";
 import { Button } from "@/components/ui/button";
 import { TrashIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
@@ -118,9 +118,9 @@ export function GroupRuleBuilder({ roles, rule, accessibleResources, disabled, o
         <div className="flex justify-start items-start gap-x-2">
           {activeRole && activeRole.category !== 'organization' ? (
             <ResourcesDropdown
+              category={activeRole.category}
               disabled={disabled}
               onRuleUpdated={onRuleUpdated}
-              isNamespaceRole={activeRole?.category === "namespace"}
             />
           ) : (<div className="grow h-9 text-sm flex justify-start items-center text-muted-foreground">
             Grants access to all resources.
@@ -290,25 +290,29 @@ function RolesAccordion({ onSelectRole }: { onSelectRole(role: string): void; })
   );
 }
 
-function ResourcesDropdown({ disabled, isNamespaceRole, onRuleUpdated }: {
+function ResourcesDropdown({ category, disabled, onRuleUpdated }: {
+  category: OrganizationRoleCategory;
   disabled: boolean;
-  isNamespaceRole: boolean;
   onRuleUpdated(rule: UpdateOrganizationGroupRequest_GroupRule): void;
 }) {
   const { rule, accessibleResources } = useContext(BuilderContext);
   const [searchValue, setSearchValue] = useState<string>();
 
   const resources = useMemo(() => {
-    let result: { group: string; value: string; label: string; isNamespace: boolean }[] = [
-      ...(accessibleResources?.federatedGraphs.map((fg) => ({
-        group: 'namespaces',
-        value: fg.namespace,
-        label: fg.namespace,
-        isNamespace: true,
-      })) ?? [])
-    ];
+    let result: { group: string; value: string; label: string; isNamespace: boolean }[] = [];
 
-    if (!isNamespaceRole) {
+    if (category === 'namespace') {
+      result.push(
+        ...(accessibleResources?.federatedGraphs.map((fg) => ({
+          group: 'namespaces',
+          value: fg.namespace,
+          label: fg.namespace,
+          isNamespace: true,
+        })) ?? [])
+      );
+    }
+
+    if (category === 'graph') {
       result.push(
         ...(accessibleResources?.federatedGraphs.map((fg) => ({
           group: `${fg.namespace} federated graphs`,
@@ -317,7 +321,9 @@ function ResourcesDropdown({ disabled, isNamespaceRole, onRuleUpdated }: {
           isNamespace: false,
         })) ?? [])
       );
+    }
 
+    if (category === 'subgraph') {
       result.push(
         ...(accessibleResources?.subgraphs.map((sg) => ({
           group: `${sg.namespace} subgraphs`,
@@ -334,7 +340,7 @@ function ResourcesDropdown({ disabled, isNamespaceRole, onRuleUpdated }: {
     }
 
     return Object.groupBy(result, (item) => item.group);
-  }, [accessibleResources?.federatedGraphs, accessibleResources?.subgraphs, isNamespaceRole, searchValue]);
+  }, [accessibleResources?.federatedGraphs, accessibleResources?.subgraphs, category, searchValue]);
 
   if (!accessibleResources?.response) {
     return null;

@@ -90,6 +90,7 @@ export async function seedTest(
         organizationId: org.id,
         name: groupName,
         description: '',
+        builtin: true,
         kcGroupId: kcGroups?.find((g) => g.name === groupName)?.id || null,
       });
 

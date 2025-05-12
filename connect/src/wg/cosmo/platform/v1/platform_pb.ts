@@ -6447,12 +6447,17 @@ export class OrganizationGroup extends Message<OrganizationGroup> {
   description = "";
 
   /**
-   * @generated from field: int32 membersCount = 4;
+   * @generated from field: bool builtin = 4;
+   */
+  builtin = false;
+
+  /**
+   * @generated from field: int32 membersCount = 5;
    */
   membersCount = 0;
 
   /**
-   * @generated from field: repeated wg.cosmo.platform.v1.OrganizationGroupRule rules = 5;
+   * @generated from field: repeated wg.cosmo.platform.v1.OrganizationGroupRule rules = 6;
    */
   rules: OrganizationGroupRule[] = [];
 
@@ -6467,8 +6472,9 @@ export class OrganizationGroup extends Message<OrganizationGroup> {
     { no: 1, name: "groupId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "description", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "membersCount", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 5, name: "rules", kind: "message", T: OrganizationGroupRule, repeated: true },
+    { no: 4, name: "builtin", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 5, name: "membersCount", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 6, name: "rules", kind: "message", T: OrganizationGroupRule, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): OrganizationGroup {

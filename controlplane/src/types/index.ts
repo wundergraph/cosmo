@@ -251,6 +251,7 @@ export interface OrganizationGroupDTO {
   groupId: string;
   name: string;
   description: string;
+  builtin: boolean;
   kcGroupId: string | null;
   kcMapperId: string | null;
   membersCount: number;

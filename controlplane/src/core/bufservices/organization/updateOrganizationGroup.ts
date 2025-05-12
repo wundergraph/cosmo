@@ -25,10 +25,6 @@ export function updateOrganizationGroup(
 
     const orgRepo = new OrganizationRepository(logger, opts.db);
     const orgGroupRepo = new OrganizationGroupRepository(opts.db);
-    const orgGroup = await orgGroupRepo.byId({
-      organizationId: authContext.organizationId,
-      groupId: req.groupId,
-    });
 
     const rbac = await orgRepo.getFeature({ organizationId: authContext.organizationId, featureId: 'rbac' });
     if (!rbac?.enabled) {
@@ -40,10 +36,24 @@ export function updateOrganizationGroup(
       };
     }
 
+    const orgGroup = await orgGroupRepo.byId({
+      organizationId: authContext.organizationId,
+      groupId: req.groupId,
+    });
+
     if (!orgGroup) {
       return {
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,
+        },
+      };
+    }
+
+    if (orgGroup.builtin) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          detail: 'Builtin groups cannot be updated.',
         },
       };
     }

@@ -54,6 +54,15 @@ export function deleteOrganizationGroup(
         };
       }
 
+      if (orgGroup.builtin) {
+        return {
+          response: {
+            code: EnumStatusCode.ERR,
+            detail: 'Builtin groups cannot be deleted.',
+          },
+        };
+      }
+
       await opts.keycloakClient.authenticateClient();
 
       let moveToGroup: OrganizationGroupDTO | undefined;

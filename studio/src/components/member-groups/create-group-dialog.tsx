@@ -1,6 +1,6 @@
 import { OrganizationGroup } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { useMutation } from "@connectrpc/connect-query";
 import {
   createOrganizationGroup,
@@ -15,6 +15,8 @@ import { useToast } from "@/components/ui/use-toast";
 import { Textarea } from "@/components/ui/textarea";
 import { useFeature } from "@/hooks/use-feature";
 import { useCheckUserAccess } from "@/hooks/use-check-user-access";
+import { Link } from "@/components/ui/link";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 export function CreateGroupDialog({ onGroupCreated }: {
   onGroupCreated(group: OrganizationGroup): Promise<void>
@@ -86,6 +88,21 @@ export function CreateGroupDialog({ onGroupCreated }: {
 
   if (!checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] })) {
     return null;
+  }
+
+  if (!rbac?.enabled) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Link href="/" className={buttonVariants({})}>
+            Create a group
+          </Link>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-[300px] text-center">
+          You need to enable RBAC on the organization settings to be able to create new groups.
+        </TooltipContent>
+      </Tooltip>
+    );
   }
 
   return (

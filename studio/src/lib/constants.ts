@@ -143,12 +143,12 @@ export const roles = [
     displayName: "Admin",
     description: "Namespace administrator access.",
   },
-  {
-    key: "namespace-developer",
-    category: "namespace",
-    displayName: "Developer",
-    description: "Namespace developer access.",
-  },
+  // {
+  //   key: "namespace-developer",
+  //   category: "namespace",
+  //   displayName: "Developer",
+  //   description: "Namespace developer access.",
+  // },
   {
     key: "namespace-viewer",
     category: "namespace",
@@ -161,18 +161,25 @@ export const roles = [
     displayName: "Admin",
     description: "Graph administrator access.",
   },
-  {
-    key: "graph-developer",
-    category: "graph",
-    displayName: "Developer",
-    description: "Graph developer access.",
-  },
+  // {
+  //   key: "graph-developer",
+  //   category: "graph",
+  //   displayName: "Developer",
+  //   description: "Graph developer access.",
+  // },
   {
     key: "graph-viewer",
     category: "graph",
     displayName: "Readonly",
     description: "Graph readonly access.",
   },
+  {
+    key: "graph-publisher",
+    category: "subgraph",
+    displayName: "Publisher",
+    description: "Grants publish permission.",
+  }
 ];
 
 export type OrganizationRole = typeof roles[number]["key"];
+export type OrganizationRoleCategory = typeof roles[number]["category"];

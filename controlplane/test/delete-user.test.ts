@@ -84,6 +84,7 @@ const createTempUser = async (
       organizationId: personalOrgMember.organizationId,
       name: 'admin',
       description: '',
+      builtin: true,
       kcGroupId: null,
     });
 
@@ -129,6 +130,7 @@ const createTempUser = async (
       organizationId: org!.id,
       name: 'admin',
       description: '',
+      builtin: true,
       kcGroupId: adminGroup.id!,
     });
 

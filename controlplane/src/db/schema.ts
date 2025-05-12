@@ -1351,6 +1351,7 @@ export const organizationGroups = pgTable('organization_groups', {
     }),
   name: text('name').notNull(),
   description: text('description').notNull(),
+  builtin: boolean('builtin').notNull(),
   kcGroupId: text('kc_group_id').unique(),
   kcMapperId: text('kc_mapper_id').unique(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

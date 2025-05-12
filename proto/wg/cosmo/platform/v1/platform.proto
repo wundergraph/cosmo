@@ -877,8 +877,9 @@ message OrganizationGroup {
   string groupId = 1;
   string name = 2;
   string description = 3;
-  int32 membersCount = 4;
-  repeated OrganizationGroupRule rules = 5;
+  bool builtin = 4;
+  int32 membersCount = 5;
+  repeated OrganizationGroupRule rules = 6;
 }
 
 message CreateOrganizationGroupRequest {

@@ -13,6 +13,7 @@ export class OrganizationGroupRepository {
     organizationId: string;
     name: string;
     description: string;
+    builtin?: boolean;
     kcGroupId: string | null;
   }): Promise<OrganizationGroupDTO> {
     return this.db.transaction(async (tx) => {
@@ -22,6 +23,7 @@ export class OrganizationGroupRepository {
           organizationId: input.organizationId,
           name: input.name,
           description: input.description,
+          builtin: input.builtin ?? false,
           kcGroupId: input.kcGroupId,
         })
         .returning()
@@ -31,6 +33,7 @@ export class OrganizationGroupRepository {
         groupId: insertedGroup[0].id,
         name: input.name,
         description: input.description,
+        builtin: input.builtin ?? false,
         kcGroupId: input.kcGroupId,
         kcMapperId: null,
         membersCount: 0,
@@ -155,6 +158,7 @@ export class OrganizationGroupRepository {
         organizationId: input.organizationId,
         name: group.name,
         description: '',
+        builtin: true,
         kcGroupId: group.id,
       });
 
