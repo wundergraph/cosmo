@@ -119,7 +119,7 @@ const config = {
   async headers() {
     return [
       {
-        source: "(.*)",
+        source: "/(.*)",
         headers: [
           {
             key: "X-Content-Type-Options",
