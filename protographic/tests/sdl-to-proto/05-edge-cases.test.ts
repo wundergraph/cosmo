@@ -573,14 +573,6 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
         POST_STATUS_DRAFT = 1;
         POST_STATUS_PUBLISHED = 2;
         POST_STATUS_ARCHIVED = 3;
-      }
-
-      message Mutation {
-        User create_user = 1;
-        Post create_post = 2;
-        Comment create_comment = 3;
-        Post update_post = 4;
-        bool delete_post = 5;
       }"
     `);
   });

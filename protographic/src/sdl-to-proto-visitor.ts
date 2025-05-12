@@ -539,7 +539,7 @@ export class GraphQLToProtoTextVisitor {
    */
   private createKeyRequestMessage(typeName: string, requestName: string, keyField: string): string[] {
     const messageLines: string[] = [];
-    
+
     // Check for field removals if lock data exists for this type
     const lockData = this.lockManager.getLockData();
     if (lockData.messages[requestName]) {
@@ -547,7 +547,7 @@ export class GraphQLToProtoTextVisitor {
       const currentFieldNames = [graphqlFieldToProtoField(keyField)];
       this.trackRemovedFields(requestName, originalFieldNames, currentFieldNames);
     }
-    
+
     messageLines.push(`message ${requestName} {`);
 
     // Add reserved field numbers if any exist
@@ -578,7 +578,7 @@ export class GraphQLToProtoTextVisitor {
     const messageLines: string[] = [];
     const resultName = createEntityLookupResultName(typeName);
     const lockData = this.lockManager.getLockData();
-    
+
     // Check for field removals for the result message
     const protoTypeName = graphqlFieldToProtoField(typeName);
     if (lockData.messages[resultName]) {
@@ -640,16 +640,16 @@ export class GraphQLToProtoTextVisitor {
    */
   private createFieldRequestMessage(requestName: string, field: GraphQLField<any, any>): string[] {
     const messageLines: string[] = [];
-    
+
     // Get current field names and check for removals
     const lockData = this.lockManager.getLockData();
-    const argNames = field.args.map(arg => graphqlFieldToProtoField(arg.name));
-    
+    const argNames = field.args.map((arg) => graphqlFieldToProtoField(arg.name));
+
     if (lockData.messages[requestName]) {
       const originalFieldNames = Object.keys(lockData.messages[requestName].fields);
       this.trackRemovedFields(requestName, originalFieldNames, argNames);
     }
-    
+
     messageLines.push(`message ${requestName} {`);
 
     // Add reserved field numbers if any exist
@@ -704,16 +704,16 @@ export class GraphQLToProtoTextVisitor {
    */
   private createFieldResponseMessage(responseName: string, fieldName: string, field: GraphQLField<any, any>): string[] {
     const messageLines: string[] = [];
-    
+
     // Check for field removals
     const lockData = this.lockManager.getLockData();
     const protoFieldName = graphqlFieldToProtoField(fieldName);
-    
+
     if (lockData.messages[responseName]) {
       const originalFieldNames = Object.keys(lockData.messages[responseName].fields);
       this.trackRemovedFields(responseName, originalFieldNames, [protoFieldName]);
     }
-    
+
     messageLines.push(`message ${responseName} {`);
 
     // Add reserved field numbers if any exist
@@ -773,6 +773,7 @@ export class GraphQLToProtoTextVisitor {
       if (
         typeName.startsWith('__') ||
         typeName === 'Query' ||
+        typeName === 'Mutation' ||
         typeName === '_Entity' ||
         this.processedTypes.has(typeName)
       ) {

@@ -122,10 +122,6 @@ describe('SDL to Proto - Complex Types', () => {
         string name = 2;
         string email = 3;
         int32 age = 4;
-      }
-
-      message Mutation {
-        User create_user = 1;
       }"
     `);
   });

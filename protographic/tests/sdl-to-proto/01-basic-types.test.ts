@@ -250,7 +250,7 @@ describe('SDL to Proto - Basic Types', () => {
     const { proto: protoText } = compileGraphQLToProto(sdl, {
       serviceName: 'CustomService',
       packageName: 'custom.v1',
-      goPackage: customGoPackage
+      goPackage: customGoPackage,
     });
 
     // Validate Proto definition
@@ -271,6 +271,48 @@ describe('SDL to Proto - Basic Types', () => {
       }
       message QueryHelloResponse {
           string hello = 1;
+      }"
+    `);
+  });
+
+  test('should not create messages for root operation types', () => {
+    const sdl = `
+      type Query {
+        field1: String
+      }
+      
+      type Mutation {
+        field2(input: String): Int
+      }
+    `;
+
+    const { proto: protoText } = compileGraphQLToProto(sdl);
+
+    // Validate Proto definition
+    expectValidProto(protoText);
+
+    // Snapshot the output to ensure stability
+    expect(protoText).toMatchInlineSnapshot(`
+      "syntax = "proto3";
+      package service.v1;
+
+      option go_package = "cosmo/pkg/proto/service.v1;servicev1";
+
+      service DefaultService {
+        rpc MutationField2(MutationField2Request) returns (MutationField2Response) {}
+        rpc QueryField1(QueryField1Request) returns (QueryField1Response) {}
+      }
+
+      message QueryField1Request {
+      }
+      message QueryField1Response {
+          string field_1 = 1;
+      }
+      message MutationField2Request {
+          string input = 1;
+      }
+      message MutationField2Response {
+          int32 field_2 = 1;
       }"
     `);
   });
