@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	"net"
 	"net/http"
 	"net/url"
@@ -2199,12 +2200,11 @@ func or[T any](maybe *T, or T) T {
 	return or
 }
 
-func getRouterConfigVersionOverride(attributes []config.CustomAttribute, configVersion string) []attribute.KeyValue {
-	routerConfigVersionOverride := make([]attribute.KeyValue, 0)
-	for _, attr := range attributes {
-		if attr.ValueFrom != nil && attr.ValueFrom.ContextField == ContextFieldRouterConfigVersion {
-			routerConfigVersionOverride = append(routerConfigVersionOverride, attribute.String(attr.Key, configVersion))
-		}
+// There are base attributes that are unique to a mux with unique ff name and config version entries
+func getBaseMuxAttributes(routerConfigVersion string, baseOtelAttributes []attribute.KeyValue, featureFlagName string) []attribute.KeyValue {
+	baseMuxAttributes := append([]attribute.KeyValue{rotel.WgRouterConfigVersion.String(routerConfigVersion)}, baseOtelAttributes...)
+	if featureFlagName != "" {
+		baseMuxAttributes = append(baseMuxAttributes, rotel.WgFeatureFlag.String(featureFlagName))
 	}
-	return routerConfigVersionOverride
+	return baseMuxAttributes
 }

@@ -159,17 +159,16 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 
 	s.baseOtelAttributes = baseOtelAttributes
 
-	routerConfigVersionOverride := getRouterConfigVersionOverride(s.metricConfig.Attributes, s.baseRouterConfigVersion)
+	baseDefaultMuxAttributes := getBaseMuxAttributes(s.baseRouterConfigVersion, baseOtelAttributes, "")
+	mapper := newAttributeMapper(s.isNotDefaultCloudExporter(), s.metricConfig.Attributes)
+	mappedMetricAttributes := mapper.mapAttributes(baseDefaultMuxAttributes)
 
 	if s.metricConfig.OpenTelemetry.RouterRuntime {
 		// We track runtime metrics with base router config version
-		routerMetricAttributes := append([]attribute.KeyValue{}, baseOtelAttributes...)
-		routerMetricAttributes = append(routerMetricAttributes, routerConfigVersionOverride...)
-
 		s.runtimeMetrics = rmetric.NewRuntimeMetrics(
 			s.logger,
 			s.otlpMeterProvider,
-			routerMetricAttributes,
+			mappedMetricAttributes,
 			s.processStartTime,
 		)
 
@@ -179,7 +178,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		}
 	}
 
-	if err := s.setupEngineStatistics(routerConfigVersionOverride); err != nil {
+	if err := s.setupEngineStatistics(mappedMetricAttributes); err != nil {
 		return nil, fmt.Errorf("failed to setup engine statistics: %w", err)
 	}
 
@@ -371,12 +370,9 @@ func (s *graphServer) buildMultiGraphHandler(ctx context.Context, baseMux *chi.M
 
 // setupEngineStatistics creates the engine statistics for the server.
 // It creates the OTLP and Prometheus metrics for the engine statistics.
-func (s *graphServer) setupEngineStatistics(additionalAttrs []attribute.KeyValue) (err error) {
+func (s *graphServer) setupEngineStatistics(baseAttributes []attribute.KeyValue) (err error) {
 	// We only include the base router config version in the attributes for the engine statistics.
 	// Same approach is used for the runtime metrics.
-	baseAttributes := append([]attribute.KeyValue{}, additionalAttrs...)
-	baseAttributes = append(baseAttributes, s.baseOtelAttributes...)
-
 	s.otlpEngineMetrics, err = rmetric.NewEngineMetrics(
 		s.logger,
 		baseAttributes,
@@ -677,30 +673,21 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	httpRouter := chi.NewRouter()
 
-	routerConfigVersionOverride := getRouterConfigVersionOverride(s.metricConfig.Attributes, routerConfigVersion)
-
-	baseMetricAttributes := append([]attribute.KeyValue{}, s.baseOtelAttributes...)
-	baseMetricAttributes = append(baseMetricAttributes, routerConfigVersionOverride...)
-	baseTraceAttributes := append([]attribute.KeyValue{otel.WgRouterConfigVersion.String(routerConfigVersion)}, s.baseOtelAttributes...)
-	if featureFlagName != "" {
-		baseTraceAttributes = append(baseTraceAttributes, otel.WgFeatureFlag.String(featureFlagName))
-		baseMetricAttributes = append(baseMetricAttributes, otel.WgFeatureFlag.String(featureFlagName))
-	}
+	exprManager := expr.CreateNewExprManager()
 
 	metricsEnabled := s.metricConfig.IsEnabled()
 
 	// we only enable the attribute mapper if we are not using the default cloud exporter
-	enableAttributeMapper := !(s.metricConfig.IsUsingCloudExporter || rmetric.IsDefaultCloudExporterConfigured(s.metricConfig.OpenTelemetry.Exporters))
-
-	exprManager := expr.CreateNewExprManager()
+	baseMuxAttributes := getBaseMuxAttributes(routerConfigVersion, s.baseOtelAttributes, featureFlagName)
 
 	// We might want to remap or exclude known attributes based on the configuration for metrics
-	mapper := newAttributeMapper(enableAttributeMapper, s.metricConfig.Attributes)
+	mapper := newAttributeMapper(s.isNotDefaultCloudExporter(), s.metricConfig.Attributes)
+	mappedMetricAttributes := mapper.mapAttributes(baseMuxAttributes)
+
 	attExpressions, attErr := newAttributeExpressions(s.metricConfig.Attributes, exprManager)
 	if attErr != nil {
 		return nil, attErr
 	}
-	mappedMetricAttributes := mapper.mapAttributes(baseMetricAttributes)
 	var telemetryAttExpressions *attributeExpressions
 	if len(s.telemetryAttributes) > 0 {
 		var telemetryAttErr error
@@ -856,8 +843,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			reqContext := getRequestContext(r.Context())
 
-			reqContext.telemetry.addCommonTraceAttribute(baseTraceAttributes...)
-			reqContext.telemetry.addCommonTraceAttribute(otel.WgRouterConfigVersion.String(routerConfigVersion))
+			reqContext.telemetry.addCommonTraceAttribute(baseMuxAttributes...)
 
 			if commonAttrRequestMapper != nil {
 				reqContext.telemetry.addCommonAttribute(commonAttrRequestMapper(r)...)
@@ -1559,4 +1545,8 @@ func configureSubgraphOverwrites(
 	}
 
 	return subgraphs, nil
+}
+
+func (s *graphServer) isNotDefaultCloudExporter() bool {
+	return !(s.metricConfig.IsUsingCloudExporter || rmetric.IsDefaultCloudExporterConfigured(s.metricConfig.OpenTelemetry.Exporters))
 }
