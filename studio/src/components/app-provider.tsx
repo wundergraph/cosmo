@@ -106,8 +106,6 @@ const fetchSession = async () => {
     }
     return null;
   } catch (e) {
-    // Reset koala if user is not authenticated
-    resetTracking();
     throw e;
   }
 };
