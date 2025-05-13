@@ -2200,6 +2200,13 @@ func or[T any](maybe *T, or T) T {
 	return or
 }
 
+func isNotDefaultCloudExporter(metricConfig *rmetric.Config) bool {
+	if metricConfig == nil {
+		return false
+	}
+	return !(metricConfig.IsUsingCloudExporter || rmetric.IsDefaultCloudExporterConfigured(metricConfig.OpenTelemetry.Exporters))
+}
+
 // There are base attributes that are unique to a mux with unique ff name and config version entries
 func getBaseMuxAttributes(routerConfigVersion string, baseOtelAttributes []attribute.KeyValue, featureFlagName string) []attribute.KeyValue {
 	baseMuxAttributes := append([]attribute.KeyValue{rotel.WgRouterConfigVersion.String(routerConfigVersion)}, baseOtelAttributes...)

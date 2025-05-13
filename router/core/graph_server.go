@@ -160,7 +160,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	s.baseOtelAttributes = baseOtelAttributes
 
 	baseDefaultMuxAttributes := getBaseMuxAttributes(s.baseRouterConfigVersion, baseOtelAttributes, "")
-	mapper := newAttributeMapper(s.isNotDefaultCloudExporter(), s.metricConfig.Attributes)
+	mapper := newAttributeMapper(isNotDefaultCloudExporter(s.metricConfig), s.metricConfig.Attributes)
 	mappedMetricAttributes := mapper.mapAttributes(baseDefaultMuxAttributes)
 
 	if s.metricConfig.OpenTelemetry.RouterRuntime {
@@ -681,7 +681,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	baseMuxAttributes := getBaseMuxAttributes(routerConfigVersion, s.baseOtelAttributes, featureFlagName)
 
 	// We might want to remap or exclude known attributes based on the configuration for metrics
-	mapper := newAttributeMapper(s.isNotDefaultCloudExporter(), s.metricConfig.Attributes)
+	mapper := newAttributeMapper(isNotDefaultCloudExporter(s.metricConfig), s.metricConfig.Attributes)
 	mappedMetricAttributes := mapper.mapAttributes(baseMuxAttributes)
 
 	attExpressions, attErr := newAttributeExpressions(s.metricConfig.Attributes, exprManager)
@@ -1545,8 +1545,4 @@ func configureSubgraphOverwrites(
 	}
 
 	return subgraphs, nil
-}
-
-func (s *graphServer) isNotDefaultCloudExporter() bool {
-	return !(s.metricConfig.IsUsingCloudExporter || rmetric.IsDefaultCloudExporterConfigured(s.metricConfig.OpenTelemetry.Exporters))
 }
