@@ -539,34 +539,62 @@ export class GraphQLToProtoTextVisitor {
    */
   private createKeyRequestMessage(typeName: string, requestName: string, keyField: string): string[] {
     const messageLines: string[] = [];
-
-    // Check for field removals if lock data exists for this type
+    const keyMessageName = `${requestName}Key`;
     const lockData = this.lockManager.getLockData();
+
+    // First create the key message
+    messageLines.push(`message ${keyMessageName} {`);
+    
+    // Add reserved field numbers if any exist for the key message
+    const keyMessageLock = lockData.messages[keyMessageName];
+    if (keyMessageLock?.reservedNumbers && keyMessageLock.reservedNumbers.length > 0) {
+      messageLines.push(`    reserved ${this.formatReservedNumbers(keyMessageLock.reservedNumbers)};`);
+    }
+
+    // Check for field removals in the key message
+    if (lockData.messages[keyMessageName]) {
+      const originalKeyFieldNames = Object.keys(lockData.messages[keyMessageName].fields);
+      const currentKeyFieldNames = [graphqlFieldToProtoField(keyField)];
+      this.trackRemovedFields(keyMessageName, originalKeyFieldNames, currentKeyFieldNames);
+    }
+
+    const protoKeyField = graphqlFieldToProtoField(keyField);
+    
+    // Get the appropriate field number for the key field
+    const keyFieldNumber = this.getFieldNumber(keyMessageName, protoKeyField, 1);
+    
+    messageLines.push(`    string ${protoKeyField} = ${keyFieldNumber};`);
+    messageLines.push('}');
+    messageLines.push('');
+
+    // Ensure the key message is registered in the lock manager data
+    this.lockManager.reconcileMessageFieldOrder(keyMessageName, [protoKeyField]);
+
+    // Now create the main request message with a repeated key field
+    // Check for field removals in the request message
     if (lockData.messages[requestName]) {
       const originalFieldNames = Object.keys(lockData.messages[requestName].fields);
-      const currentFieldNames = [graphqlFieldToProtoField(keyField)];
+      const currentFieldNames = ['key'];
       this.trackRemovedFields(requestName, originalFieldNames, currentFieldNames);
     }
 
     messageLines.push(`message ${requestName} {`);
 
-    // Add reserved field numbers if any exist
+    // Add reserved field numbers if any exist for the request message
     const messageLock = lockData.messages[requestName];
     if (messageLock?.reservedNumbers && messageLock.reservedNumbers.length > 0) {
       messageLines.push(`    reserved ${this.formatReservedNumbers(messageLock.reservedNumbers)};`);
     }
 
-    const protoKeyField = graphqlFieldToProtoField(keyField);
-
-    // Get the appropriate field number from the lock
-    const fieldNumber = this.getFieldNumber(requestName, protoKeyField, 1);
-
-    messageLines.push(`    string ${protoKeyField} = ${fieldNumber};`);
+    // Get the appropriate field number for the repeated key field
+    const repeatFieldNumber = this.getFieldNumber(requestName, 'key', 1);
+    
+    messageLines.push(`    repeated ${keyMessageName} key = ${repeatFieldNumber};`);
     messageLines.push('}');
     messageLines.push('');
 
-    // Ensure this message is registered in the lock manager data
-    this.lockManager.reconcileMessageFieldOrder(requestName, [protoKeyField]);
+    // Ensure the request message is registered in the lock manager data
+    this.lockManager.reconcileMessageFieldOrder(requestName, ['key']);
 
     return messageLines;
   }
@@ -576,44 +604,16 @@ export class GraphQLToProtoTextVisitor {
    */
   private createKeyResponseMessage(typeName: string, responseName: string): string[] {
     const messageLines: string[] = [];
-    const resultName = createEntityLookupResultName(typeName);
     const lockData = this.lockManager.getLockData();
-
-    // Check for field removals for the result message
-    const protoTypeName = graphqlFieldToProtoField(typeName);
-    if (lockData.messages[resultName]) {
-      const originalFieldNames = Object.keys(lockData.messages[resultName].fields);
-      const currentFieldNames = [protoTypeName];
-      this.trackRemovedFields(resultName, originalFieldNames, currentFieldNames);
-    }
-
-    // Create the result wrapper message
-    messageLines.push(`message ${resultName} {`);
-
-    // Add reserved field numbers for result message if any exist
-    const resultMessageLock = lockData.messages[resultName];
-    if (resultMessageLock?.reservedNumbers && resultMessageLock.reservedNumbers.length > 0) {
-      messageLines.push(`    reserved ${this.formatReservedNumbers(resultMessageLock.reservedNumbers)};`);
-    }
-
-    // Get the appropriate field number from the lock
-    const resultFieldNumber = this.getFieldNumber(resultName, protoTypeName, 1);
-
-    messageLines.push(`    ${typeName} ${protoTypeName} = ${resultFieldNumber};`);
-    messageLines.push('}');
-    messageLines.push('');
-
-    // Ensure the result message is registered in the lock manager data
-    this.lockManager.reconcileMessageFieldOrder(resultName, [protoTypeName]);
 
     // Check for field removals for the response message
     if (lockData.messages[responseName]) {
       const originalFieldNames = Object.keys(lockData.messages[responseName].fields);
-      const currentFieldNames = ['results'];
+      const currentFieldNames = ['result'];
       this.trackRemovedFields(responseName, originalFieldNames, currentFieldNames);
     }
 
-    // Create the response message with repeated result wrapper
+    // Create the response message with repeated entity directly
     messageLines.push(`message ${responseName} {`);
 
     // Add reserved field numbers for response message if any exist
@@ -623,14 +623,14 @@ export class GraphQLToProtoTextVisitor {
     }
 
     // Get the appropriate field number from the lock
-    const responseFieldNumber = this.getFieldNumber(responseName, 'results', 1);
+    const responseFieldNumber = this.getFieldNumber(responseName, 'result', 1);
 
-    messageLines.push(`    repeated ${resultName} results = ${responseFieldNumber};`);
+    messageLines.push(`    repeated ${typeName} result = ${responseFieldNumber};`);
     messageLines.push('}');
     messageLines.push('');
 
     // Ensure the response message is registered in the lock manager data
-    this.lockManager.reconcileMessageFieldOrder(responseName, ['results']);
+    this.lockManager.reconcileMessageFieldOrder(responseName, ['result']);
 
     return messageLines;
   }

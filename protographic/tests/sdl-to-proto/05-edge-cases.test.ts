@@ -371,28 +371,28 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
         rpc QueryUsers(QueryUsersRequest) returns (QueryUsersResponse) {}
       }
 
-      message LookupUserByIdRequest {
+      message LookupUserByIdRequestKey {
           string id = 1;
       }
 
-      message LookupUserByIdResult {
-          User user = 1;
+      message LookupUserByIdRequest {
+          repeated LookupUserByIdRequestKey key = 1;
       }
 
       message LookupUserByIdResponse {
-          repeated LookupUserByIdResult results = 1;
+          repeated User result = 1;
       }
 
-      message LookupPostByIdRequest {
+      message LookupPostByIdRequestKey {
           string id = 1;
       }
 
-      message LookupPostByIdResult {
-          Post post = 1;
+      message LookupPostByIdRequest {
+          repeated LookupPostByIdRequestKey key = 1;
       }
 
       message LookupPostByIdResponse {
-          repeated LookupPostByIdResult results = 1;
+          repeated Post result = 1;
       }
 
       message QueryUserRequest {

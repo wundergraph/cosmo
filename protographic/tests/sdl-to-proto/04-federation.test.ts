@@ -46,28 +46,28 @@ describe('SDL to Proto - Federation and Special Types', () => {
         rpc QueryProduct(QueryProductRequest) returns (QueryProductResponse) {}
       }
 
-      message LookupProductByIdRequest {
+      message LookupProductByIdRequestKey {
           string id = 1;
       }
 
-      message LookupProductByIdResult {
-          Product product = 1;
+      message LookupProductByIdRequest {
+          repeated LookupProductByIdRequestKey key = 1;
       }
 
       message LookupProductByIdResponse {
-          repeated LookupProductByIdResult results = 1;
+          repeated Product result = 1;
       }
 
-      message LookupUserByIdRequest {
+      message LookupUserByIdRequestKey {
           string id = 1;
       }
 
-      message LookupUserByIdResult {
-          User user = 1;
+      message LookupUserByIdRequest {
+          repeated LookupUserByIdRequestKey key = 1;
       }
 
       message LookupUserByIdResponse {
-          repeated LookupUserByIdResult results = 1;
+          repeated User result = 1;
       }
 
       message QueryProductRequest {
@@ -124,16 +124,16 @@ describe('SDL to Proto - Federation and Special Types', () => {
         rpc QueryOrderItem(QueryOrderItemRequest) returns (QueryOrderItemResponse) {}
       }
 
-      message LookupOrderItemByIdRequest {
+      message LookupOrderItemByIdRequestKey {
           string order_id = 1;
       }
 
-      message LookupOrderItemByIdResult {
-          OrderItem order_item = 1;
+      message LookupOrderItemByIdRequest {
+          repeated LookupOrderItemByIdRequestKey key = 1;
       }
 
       message LookupOrderItemByIdResponse {
-          repeated LookupOrderItemByIdResult results = 1;
+          repeated OrderItem result = 1;
       }
 
       message QueryOrderItemRequest {
@@ -199,28 +199,28 @@ describe('SDL to Proto - Federation and Special Types', () => {
         rpc QueryNode(QueryNodeRequest) returns (QueryNodeResponse) {}
       }
 
-      message LookupUserByIdRequest {
+      message LookupUserByIdRequestKey {
           string id = 1;
       }
 
-      message LookupUserByIdResult {
-          User user = 1;
+      message LookupUserByIdRequest {
+          repeated LookupUserByIdRequestKey key = 1;
       }
 
       message LookupUserByIdResponse {
-          repeated LookupUserByIdResult results = 1;
+          repeated User result = 1;
       }
 
-      message LookupProductByIdRequest {
+      message LookupProductByIdRequestKey {
           string id = 1;
       }
 
-      message LookupProductByIdResult {
-          Product product = 1;
+      message LookupProductByIdRequest {
+          repeated LookupProductByIdRequestKey key = 1;
       }
 
       message LookupProductByIdResponse {
-          repeated LookupProductByIdResult results = 1;
+          repeated Product result = 1;
       }
 
       message QueryNodeRequest {

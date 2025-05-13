@@ -31,7 +31,6 @@ import (
 func main() {
 	pl, err := routerplugin.NewRouterPlugin(func(s *grpc.Server) {
 		s.RegisterService(&service.{serviceName}_ServiceDesc, &{serviceName}{
-			users:  make(map[string]*service.User),
 			nextID: 1,
 		})
 	})
@@ -45,112 +44,24 @@ func main() {
 
 type {serviceName} struct {
 	service.Unimplemented{serviceName}Server
-	users  map[string]*service.User
 	nextID int
 }
 
-func (s *{serviceName}) QueryUser(ctx context.Context, req *service.QueryUserRequest) (*service.QueryUserResponse, error) {
-	user, exists := s.users[req.Id]
-	if !exists {
-		// Return a default user if not found (for demo purposes)
-		return &service.QueryUserResponse{
-			User: &service.User{
-				Id:   req.Id,
-				Name: "Demo User",
-				Role: service.UserRole_USER_ROLE_USER, // Default role
-			},
-		}, nil
+func (s *{serviceName}) QueryHello(ctx context.Context, in *service.QueryHelloRequest, opts ...grpc.CallOption) (*service.QueryHelloResponse, error) {
+	response := &service.QueryHelloResponse{
+		Hello: &service.World{
+			Id:   strconv.Itoa(s.nextID),
+			Name: in.Name,
+		},
 	}
-
-	return &service.QueryUserResponse{
-		User: user,
-	}, nil
-}
-
-func (s *{serviceName}) QueryUsersByRole(ctx context.Context, req *service.QueryUsersByRoleRequest) (*service.QueryUsersByRoleResponse, error) {
-	var filteredUsers []*service.User
-
-	for _, user := range s.users {
-		if user.Role == req.Role {
-			filteredUsers = append(filteredUsers, user)
-		}
-	}
-
-	return &service.QueryUsersByRoleResponse{
-		UsersByRole: filteredUsers,
-	}, nil
-}
-
-func (s *{serviceName}) MutationCreateUser(ctx context.Context, req *service.MutationCreateUserRequest) (*service.MutationCreateUserResponse, error) {
-	id := strconv.Itoa(s.nextID)
 	s.nextID++
+	return response, nil
 
-	// Use provided role or default to USER
-	role := req.Role
-	if role == service.UserRole_USER_ROLE_UNSPECIFIED {
-		role = service.UserRole_USER_ROLE_USER
-	}
-
-	user := &service.User{
-		Id:   id,
-		Name: req.Name,
-		Role: role,
-	}
-
-	s.users[id] = user
-
-	return &service.MutationCreateUserResponse{
-		CreateUser: user,
-	}, nil
-}
-
-func (s *{serviceName}) MutationDeleteUser(ctx context.Context, req *service.MutationDeleteUserRequest) (*service.MutationDeleteUserResponse, error) {
-	user, exists := s.users[req.Id]
-
-	// If user doesn't exist, just return a canned response for demo purposes
-	if !exists {
-		return &service.MutationDeleteUserResponse{
-			DeleteUser: &service.User{
-				Id:   req.Id,
-				Name: "Demo User",
-				Role: service.UserRole_USER_ROLE_USER, // Default role
-			},
-		}, nil
-	}
-
-	delete(s.users, req.Id)
-
-	return &service.MutationDeleteUserResponse{
-		DeleteUser: user,
-	}, nil
-}
-
-func (s *{serviceName}) MutationUpdateUserRole(ctx context.Context, req *service.MutationUpdateUserRoleRequest) (*service.MutationUpdateUserRoleResponse, error) {
-	user, exists := s.users[req.Id]
-
-	// If user doesn't exist, return a canned response for demo purposes
-	if !exists {
-		return &service.MutationUpdateUserRoleResponse{
-			UpdateUserRole: &service.User{
-				Id:   req.Id,
-				Name: "Demo User",
-				Role: req.Role,
-			},
-		}, nil
-	}
-
-	// Update the user's role
-	user.Role = req.Role
-	s.users[req.Id] = user
-
-	return &service.MutationUpdateUserRoleResponse{
-		UpdateUserRole: user,
-	}, nil
 }
 `;
 export const readme = `# {name} Plugin - Cosmo gRPC Subgraph Example
 
-This repository contains a demo Cosmo gRPC subgraph plugin that showcases how to design APIs with GraphQL but implement them using gRPC methods instead of traditional resolvers.
+This repository contains a simple Cosmo gRPC subgraph plugin that showcases how to design APIs with GraphQL but implement them using gRPC methods instead of traditional resolvers.
 
 ## What is this demo about?
 
@@ -161,7 +72,7 @@ This demo illustrates a key pattern in Cosmo subgraph development:
 
 The plugin demonstrates:
 - How GraphQL types and operations map to gRPC service methods
-- Simple in-memory user service with CRUD operations
+- Simple "Hello World" implementation
 - Proper structure for a Cosmo gRPC subgraph plugin
 
 ## Plugin Structure
@@ -178,36 +89,18 @@ The plugin shows how GraphQL operations map to gRPC methods:
 
 | GraphQL Operation | gRPC Method |
 |-------------------|-------------|
-| \`query { user }\` | \`QueryUser()\` |
-| \`query { usersByRole }\` | \`QueryUsersByRole()\` |
-| \`mutation { createUser }\` | \`MutationCreateUser()\` |
-| \`mutation { deleteUser }\` | \`MutationDeleteUser()\` |
-| \`mutation { updateUserRole }\` | \`MutationUpdateUserRole()\` |
+| \`query { hello }\` | \`QueryHello()\` |
 
 ## GraphQL Schema
 
 \`\`\`graphql
-enum UserRole {
-  ADMIN
-  USER
-  GUEST
-}
-
-type User {
+type World {
   id: ID!
   name: String!
-  role: UserRole!
 }
 
 type Query {
-  user(id: ID!): User
-  usersByRole(role: UserRole!): [User!]!
-}
-
-type Mutation {
-  createUser(name: String!, role: UserRole = USER): User
-  deleteUser(id: ID!): User
-  updateUserRole(id: ID!, role: UserRole!): User
+  hello(name: String!): World!
 }
 \`\`\`
 
@@ -246,52 +139,16 @@ type Mutation {
     - <plugin-directory>
    \`\`\`
 
-3. **Query and mutate user data**
+5. **Query the hello endpoint**
 
    Once running, you can perform GraphQL operations like:
    
    \`\`\`graphql
-   # Create a user
-   mutation {
-     createUser(name: "John Doe") {
-       id
-       name
-       role
-     }
-   }
-   
-   # Create a user with specific role
-   mutation {
-     createUser(name: "Admin User", role: ADMIN) {
-       id
-       name
-       role
-     }
-   }
-   
-   # Query a user
+   # Hello query
    query {
-     user(id: "1") {
+     hello(name: "World") {
        id
        name
-       role
-     }
-   }
-   
-   # Query users by role
-   query {
-     usersByRole(role: ADMIN) {
-       id
-       name
-     }
-   }
-   
-   # Update a user's role
-   mutation {
-     updateUserRole(id: "1", role: GUEST) {
-       id
-       name
-       role
      }
    }
    \`\`\`
@@ -305,25 +162,13 @@ type Mutation {
 
 For more information about Cosmo and building subgraph plugins, visit the [Cosmo documentation](https://cosmo-docs.wundergraph.com).`;
 
-export const schema = `enum UserRole {
-  ADMIN
-  USER
-  GUEST
-}
-
-type User {
+export const schema = `
+type World {
   id: ID!
   name: String!
-  role: UserRole!
 }
 
 type Query {
-  user(id: ID!): User
-  usersByRole(role: UserRole!): [User!]!
+  hello(name: String!): World!
 }
-
-type Mutation {
-  createUser(name: String!, role: UserRole = USER): User
-  deleteUser(id: ID!): User
-  updateUserRole(id: ID!, role: UserRole!): User
-}`;
+`;
