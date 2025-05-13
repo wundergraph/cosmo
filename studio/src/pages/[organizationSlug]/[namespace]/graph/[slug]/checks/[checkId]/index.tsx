@@ -193,7 +193,10 @@ const ProposedSchemas = ({
             >
               <SelectTrigger
                 value={activeSubgraphName}
-                className="w-full bg-background md:ml-auto md:w-[200px]"
+                className={cn("w-full bg-background md:ml-auto md:w-[200px]", {
+                  "text-destructive": activeSubgraph?.isDeleted,
+                  "text-success": activeSubgraph?.isNew,
+                })}
               >
                 <SelectValue aria-label={activeSubgraphName}>
                   {activeSubgraphName}
@@ -205,12 +208,13 @@ const ProposedSchemas = ({
                     <Component2Icon className="h-3 w-3" /> Subgraphs
                   </SelectLabel>
                   {checkedSubgraphs.map(
-                    ({ subgraphName: name, id, isDeleted }) => {
+                    ({ subgraphName: name, id, isDeleted, isNew }) => {
                       return (
                         <SelectItem key={name} value={name}>
                           <div
                             className={cn({
                               "text-destructive": isDeleted,
+                              "text-success": isNew,
                             })}
                           >
                             <p>{name}</p>
@@ -460,16 +464,16 @@ const CheckDetails = ({
   const reason = data.check.errorMessage
     ? data.check.errorMessage
     : data.check.proposalMatch === "error"
-      ? "Proposal match check failed"
-      : !data.check.isComposable
-      ? "Composition errors were found"
-      : data.check.isBreaking && data.check?.clientTrafficCheckSkipped
-      ? "Breaking changes were detected"
-      : data.check.isBreaking && data.check.hasClientTraffic
-      ? "Operations were affected by breaking changes"
-      : data.check.isBreaking && !data.check.hasClientTraffic
-      ? "No operations were affected by breaking changes"
-      : "All tasks were successful";
+    ? "Proposal match check failed"
+    : !data.check.isComposable
+    ? "Composition errors were found"
+    : data.check.isBreaking && data.check?.clientTrafficCheckSkipped
+    ? "Breaking changes were detected"
+    : data.check.isBreaking && data.check.hasClientTraffic
+    ? "Operations were affected by breaking changes"
+    : data.check.isBreaking && !data.check.hasClientTraffic
+    ? "No operations were affected by breaking changes"
+    : "All tasks were successful";
 
   const subgraphName =
     data.check.subgraphName ||
@@ -518,26 +522,31 @@ const CheckDetails = ({
                   (data.check.checkedSubgraphs.length === 1 &&
                     data.check.checkedSubgraphs[0].isDeleted)
                 ? "Delete subgraph"
+                : data.check.checkedSubgraphs.length === 1 &&
+                  data.check.checkedSubgraphs[0].isNew
+                ? "New subgraph"
                 : "Update schema"}
             </dd>
           </div>
 
-          {graphContext.graph?.supportsFederation && (
-            <div className="flex-start flex max-w-[200px] flex-1 flex-col gap-1 ">
-              <dt className="text-sm text-muted-foreground">Subgraph</dt>
-              <dd>
-                <Link
-                  key={id}
-                  href={`/${organizationSlug}/${namespace}/graph/${slug}/schema/sdl?subgraph=${data.check.subgraphName}`}
-                >
-                  <div className="flex items-center gap-x-1">
-                    <CubeIcon />
-                    {subgraphName}
-                  </div>
-                </Link>
-              </dd>
-            </div>
-          )}
+          {graphContext.graph?.supportsFederation &&
+            data.check.checkedSubgraphs.length === 1 &&
+            !data.check.checkedSubgraphs[0].isNew && (
+              <div className="flex-start flex max-w-[200px] flex-1 flex-col gap-1 ">
+                <dt className="text-sm text-muted-foreground">Subgraph</dt>
+                <dd>
+                  <Link
+                    key={id}
+                    href={`/${organizationSlug}/${namespace}/graph/${slug}/schema/sdl?subgraph=${subgraphName}`}
+                  >
+                    <div className="flex items-center gap-x-1">
+                      <CubeIcon />
+                      {subgraphName}
+                    </div>
+                  </Link>
+                </dd>
+              </div>
+            )}
 
           {data.proposalId && data.proposalName && (
             <div className="flex-start flex max-w-[200px] flex-1 flex-col gap-1 ">
@@ -836,6 +845,37 @@ const CheckDetails = ({
               </dd>
             </div>
           )}
+          {data.check.checkedSubgraphs.length === 1 &&
+            data.check.checkedSubgraphs[0].isNew && (
+              <div className="flex flex-col">
+                <dt className="mb-2 text-sm text-muted-foreground">
+                  Labels of new subgraph
+                </dt>
+                <dd className="flex items-center gap-x-2 text-sm">
+                  {data.check.checkedSubgraphs[0].labels.length === 0 ? (
+                    <div className="italic">
+                      <Tooltip delayDuration={200}>
+                        <TooltipTrigger>No labels passed</TooltipTrigger>
+                        <TooltipContent>
+                        Only graphs with empty label matchers will compose this
+                        subgraph
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                  ) : (
+                    data.check.checkedSubgraphs[0].labels.map(
+                      ({ key, value }) => {
+                        return (
+                          <Badge variant="secondary" key={key + value}>
+                            {key}={value}
+                          </Badge>
+                        );
+                      },
+                    )
+                  )}
+                </dd>
+              </div>
+            )}
           {ghDetails && (
             <div className="flex flex-col">
               <dt className="mb-2 text-sm text-muted-foreground">
