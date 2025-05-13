@@ -1,3 +1,4 @@
+import os from 'node:os';
 import { PostHog } from 'posthog-node';
 import { config, getBaseHeaders } from './config.js';
 
@@ -96,6 +97,8 @@ const getMetadata = (): Record<string, any> => {
     node_version: process.version,
     os_name: process.platform,
     os_version: process.release?.name || '',
+    platform: process.arch,
+    machine_id: os.hostname(),
     is_ci: isCI(),
   };
 };
