@@ -63,7 +63,9 @@ const identify = ({
   // Identify with PostHog
 
   const posthog = PostHogClient();
-  posthog.identify(id, {
+  // We set the distinct id to undefined to allow posthog to use its own id. This way we do not lose cross domain tracking.
+  posthog.identify(undefined, {
+    id,
     email,
     organizationId,
     organizationName,
