@@ -36,6 +36,7 @@ export const initTelemetry = () => {
     host: posthogHost,
     flushAt: 1, // For CLI, we want to send events immediately
     flushInterval: 0, // Don't wait to flush events
+    disableGeoip: false,
   });
 
   // Handle errors silently to not interrupt CLI operations
