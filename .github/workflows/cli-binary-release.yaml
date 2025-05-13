@@ -35,6 +35,8 @@ jobs:
 
       - name: Build
         run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition run build
+        env:
+          DO_NOT_TRACK: '0'
 
       - uses: winterjung/split@v2
         id: split
