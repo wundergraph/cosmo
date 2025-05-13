@@ -1339,10 +1339,8 @@ export const organizationRoleEnum = pgEnum('organization_role', [
   'organization-developer',
   'organization-viewer',
   'namespace-admin',
-  'namespace-developer',
   'namespace-viewer',
   'graph-admin',
-  'graph-developer',
   'graph-viewer',
   'subgraph-publisher',
 ] as const);
@@ -1370,8 +1368,6 @@ export const organizationGroupRules = pgTable('organization_group_rules', {
       onDelete: 'cascade',
     }),
   role: organizationRoleEnum('role').notNull(),
-  allowAnyNamespace: boolean('allow_any_namespace').notNull().default(false),
-  allowAnyResource: boolean('allow_any_resource').notNull().default(false),
 });
 
 export const organizationGroupRuleNamespaces = pgTable('organization_group_rule_namespaces', {

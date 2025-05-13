@@ -1261,7 +1261,7 @@ export class SubgraphRepository {
       .selectDistinctOn([targets.id], {
         targetId: targets.id,
         name: targets.name,
-        federatedGraphId: schema.federatedGraphs.targetId
+        federatedGraphId: schema.federatedGraphs.targetId,
       })
       .from(targets)
       .innerJoin(subgraphs, eq(targets.id, subgraphs.targetId))

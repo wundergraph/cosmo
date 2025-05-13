@@ -62,12 +62,11 @@ export function updateOrganizationGroup(
     const allResourcesGroupedByRole = Object.groupBy(req.rules, ({ role }) => role);
     const resourcesByRole: {
       role: OrganizationRole;
-      allowAnyNamespace: boolean;
       namespaces: string[];
-      allowAnyResource: boolean;
       resources: string[];
     }[] = [];
 
+    const orgRoles = new Set<OrganizationRole>(['organization-admin', 'organization-developer', 'organization-viewer']);
     for (const key of Object.keys(allResourcesGroupedByRole)) {
       const role = organizationRoleEnum.enumValues.find((r) => r === key.toLowerCase());
       if (!role) {
@@ -78,15 +77,11 @@ export function updateOrganizationGroup(
       const namespaces = groupRules.flatMap((x) => x.namespaces);
       const resources = groupRules.flatMap((x) => x.resources);
 
-      const isOrgRole = ['organization-admin', 'organization-developer', 'organization-viewer'].includes(role);
-      const isNsRole = ['namespace-admin', 'namespace-developer', 'namespace-viewer'].includes(role);
-
+      const isOrganizationRole = orgRoles.has(role);
       resourcesByRole.push({
         role,
-        allowAnyNamespace: isOrgRole || (isNsRole && namespaces.length === 0),
-        namespaces: isOrgRole ? [] : namespaces,
-        allowAnyResource: isOrgRole || (isNsRole && namespaces.length === 0 && resources.length === 0),
-        resources: isOrgRole || isNsRole ? [] : resources,
+        namespaces: isOrganizationRole ? [] : namespaces,
+        resources: isOrganizationRole ? [] : resources,
       });
     }
 

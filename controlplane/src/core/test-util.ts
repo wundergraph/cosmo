@@ -102,9 +102,7 @@ export async function seedTest(
           rules: [
             {
               role: roleName,
-              allowAnyNamespace: true,
               namespaces: [],
-              allowAnyResource: true,
               resources: [],
             },
           ],

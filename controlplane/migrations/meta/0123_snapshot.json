@@ -1,5 +1,5 @@
 {
-  "id": "9f8c508c-5a8e-496b-9810-f075d455151e",
+  "id": "3a658ece-c06d-43aa-b82c-78ba28543696",
   "prevId": "27c44862-d1fd-47d6-96f8-0fa43e2ce806",
   "version": "7",
   "dialect": "postgresql",
@@ -3955,20 +3955,6 @@
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
-        },
-        "allow_any_namespace": {
-          "name": "allow_any_namespace",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "allow_any_resource": {
-          "name": "allow_any_resource",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
         }
       },
       "indexes": {},
@@ -7981,10 +7967,8 @@
         "organization-developer",
         "organization-viewer",
         "namespace-admin",
-        "namespace-developer",
         "namespace-viewer",
         "graph-admin",
-        "graph-developer",
         "graph-viewer",
         "subgraph-publisher"
       ]

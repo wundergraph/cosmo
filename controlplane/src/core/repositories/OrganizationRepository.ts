@@ -1589,7 +1589,7 @@ export class OrganizationRepository {
       groups.map(async (group) => {
         return {
           ...group,
-          rules: await orgGroupRepo.getHierarchicalGroupRules({
+          rules: await orgGroupRepo.getGroupRules({
             organizationId: input.organizationID,
             groupId: group.groupId,
           }),
@@ -1626,7 +1626,7 @@ export class OrganizationRepository {
     const orgGroupRepo = new OrganizationGroupRepository(this.db);
     return {
       ...groups[0],
-      rules: await orgGroupRepo.getHierarchicalGroupRules({
+      rules: await orgGroupRepo.getGroupRules({
         organizationId: input.organizationId,
         groupId: groups[0].groupId,
       }),

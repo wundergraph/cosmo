@@ -7,7 +7,7 @@ import Keycloak from '../core/services/Keycloak.js';
 import * as schema from '../db/schema.js';
 import { OrganizationRole } from '../db/models.js';
 import { organizationRoleEnum } from '../db/schema.js';
-import { OidcRepository } from "../core/repositories/OidcRepository.js";
+import { OidcRepository } from '../core/repositories/OidcRepository.js';
 import { getConfig } from './get-config.js';
 
 const {
@@ -84,10 +84,7 @@ async function migrateGroups(db: PostgresJsDatabase<typeof schema>) {
   );
 }
 
-async function g({ db, organizationId }: {
-  db: PostgresJsDatabase<typeof schema>,
-  organizationId: string;
-}) {
+async function g({ db, organizationId }: { db: PostgresJsDatabase<typeof schema>; organizationId: string }) {
   const subgraphMembers = await db
     .select({
       subgraphId: schema.subgraphMembers.subgraphId,
@@ -96,10 +93,12 @@ async function g({ db, organizationId }: {
     .from(schema.subgraphMembers)
     .innerJoin(schema.subgraphs, eq(schema.subgraphs.id, schema.subgraphMembers.subgraphId))
     .innerJoin(schema.targets, eq(schema.targets.id, schema.subgraphs.targetId))
-    .where(and(
-      eq(schema.targets.organizationId, organizationId),
-      // not(eq(schema.targets.createdBy, schema.subgraphMembers.userId))
-    ));
+    .where(
+      and(
+        eq(schema.targets.organizationId, organizationId),
+        // not(eq(schema.targets.createdBy, schema.subgraphMembers.userId))
+      ),
+    );
 
   const groupedSubgraphsByUser = Object.groupBy(subgraphMembers, (m) => m.userId);
   for (const [userId, subgraphs] of Object.entries(groupedSubgraphsByUser)) {
@@ -189,7 +188,12 @@ async function ensureOrganizationSubgroupsExistInDatabase({
   );
 }
 
-async function updateAndLinkExistingOrganizationOidcMappers({ db, keycloakClient, organizationId, organizationSlug } : {
+async function updateAndLinkExistingOrganizationOidcMappers({
+  db,
+  keycloakClient,
+  organizationId,
+  organizationSlug,
+}: {
   db: PostgresJsDatabase<typeof schema>;
   keycloakClient: Keycloak;
   organizationId: string;
@@ -213,7 +217,7 @@ async function updateAndLinkExistingOrganizationOidcMappers({ db, keycloakClient
 
   const existingMappers = await keycloakClient.client.identityProviders.findMappers({
     realm,
-    alias: oidcProvider.alias
+    alias: oidcProvider.alias,
   });
 
   const key = 'ssoGroups';
@@ -241,7 +245,7 @@ async function updateAndLinkExistingOrganizationOidcMappers({ db, keycloakClient
     } else {
       await db
         .update(schema.organizationGroups)
-        .set({ kcMapperId: mapper.id!, })
+        .set({ kcMapperId: mapper.id! })
         .where(eq(schema.organizationGroups.name, kcGroupNameParts[2]));
     }
   }
