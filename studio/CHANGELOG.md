@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.115.0](https://github.com/wundergraph/cosmo/compare/studio@0.114.0...studio@0.115.0) (2025-05-13)
+
+### Features
+
+* add posthog ([#1847](https://github.com/wundergraph/cosmo/issues/1847)) ([f49ebfb](https://github.com/wundergraph/cosmo/commit/f49ebfb5f66dc4807104ebb63eea1418511010aa)) (@thisisnithin)
+* allow to check new subgraphs ([#1761](https://github.com/wundergraph/cosmo/issues/1761)) ([5b0bfbf](https://github.com/wundergraph/cosmo/commit/5b0bfbf38e77893453dc6bdfb4d524df1f59881b)) (@JivusAyrus)
+
 # [0.114.0](https://github.com/wundergraph/cosmo/compare/studio@0.113.5...studio@0.114.0) (2025-05-09)
 
 ### Features
