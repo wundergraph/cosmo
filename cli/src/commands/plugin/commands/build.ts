@@ -2,7 +2,7 @@ import { Command, program } from 'commander';
 import { basename, join, resolve } from 'pathe';
 import pc from 'picocolors';
 import Spinner from 'ora';
-import { chmod, readFile, rm, writeFile } from 'node:fs/promises';
+import { chmod, readFile, rm, writeFile, mkdir } from 'node:fs/promises';
 import { execa } from 'execa';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { compileGraphQLToMapping, compileGraphQLToProto, ProtoLock } from '@wundergraph/protographic';
@@ -361,7 +361,7 @@ async function installTools() {
 
   // Create tools directory structure
   try {
-    await execa('mkdir', ['-p', tmpDir]);
+    await mkdir(tmpDir, { recursive: true });
   } catch (error) {
     throw new Error(`Failed to create temporary directory: ${error}`);
   }
@@ -415,6 +415,9 @@ async function installTools() {
 async function generateProtoAndMapping(pluginDir: string, goModulePath: string, spinner: any) {
   const srcDir = resolve(pluginDir, 'src');
   const generatedDir = resolve(pluginDir, 'generated');
+
+  // Ensure generated directory exists
+  await mkdir(generatedDir, { recursive: true });
 
   spinner.text = 'Reading schema...';
   const schema = await readFile(resolve(srcDir, 'schema.graphql'), 'utf-8');
@@ -496,6 +499,10 @@ async function installGoDependencies(pluginDir: string, spinner: any) {
 async function buildBinaries(pluginDir: string, platforms: string[], debug: boolean, spinner: any) {
   spinner.text = 'Building binaries...';
   const binDir = resolve(pluginDir, 'bin');
+  
+  // Ensure bin directory exists
+  await mkdir(binDir, { recursive: true });
+  
   const env = getToolsEnv();
   const goPath = getToolPath('go');
 
