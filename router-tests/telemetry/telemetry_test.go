@@ -9462,7 +9462,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 		UseCustomExporterWithRouterConfigAttribute = "use_custom_exporter_with_router_config_attribute"
 	)
 
-	appendRouterConfigVersionConditionally := func(before []attribute.KeyValue, useCustomExporter string, routerConfigVersion string, addOperationInfo bool) []attribute.KeyValue {
+	appendRouterConfigAndOperationInfoConditionally := func(before []attribute.KeyValue, useCustomExporter string, routerConfigVersion string, addOperationInfo bool) []attribute.KeyValue {
 		var mid []attribute.KeyValue
 		if useCustomExporter == UseCloudExporter || useCustomExporter == UseCustomExporterWithRouterConfigAttribute {
 			mid = append(mid, otel.WgRouterConfigVersion.String(routerConfigVersion))
@@ -9524,7 +9524,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 							DataPoints: []metricdata.DataPoint[int64]{
 								{
 									Attributes: attribute.NewSet(
-										appendRouterConfigVersionConditionally([]attribute.KeyValue{
+										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
 											semconv.HTTPStatusCode(200),
 											otel.WgClientName.String("unknown"),
 											otel.WgClientVersion.String("missing"),
@@ -9541,7 +9541,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 								},
 								{
 									Attributes: attribute.NewSet(
-										appendRouterConfigVersionConditionally([]attribute.KeyValue{
+										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
 											semconv.HTTPStatusCode(200),
 											otel.WgClientName.String("unknown"),
 											otel.WgClientVersion.String("missing"),
@@ -9567,7 +9567,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 							DataPoints: []metricdata.HistogramDataPoint[float64]{
 								{
 									Attributes: attribute.NewSet(
-										appendRouterConfigVersionConditionally([]attribute.KeyValue{
+										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
 											semconv.HTTPStatusCode(200),
 											otel.WgClientName.String("unknown"),
 											otel.WgClientVersion.String("missing"),
@@ -9584,7 +9584,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 								},
 								{
 									Attributes: attribute.NewSet(
-										appendRouterConfigVersionConditionally([]attribute.KeyValue{
+										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
 											semconv.HTTPStatusCode(200),
 											otel.WgClientName.String("unknown"),
 											otel.WgClientVersion.String("missing"),
@@ -9611,7 +9611,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 							DataPoints: []metricdata.DataPoint[int64]{
 								{
 									Attributes: attribute.NewSet(
-										appendRouterConfigVersionConditionally([]attribute.KeyValue{
+										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
 											otel.WgClientName.String("unknown"),
 											otel.WgClientVersion.String("missing"),
 											otel.WgFederatedGraphID.String("graph"),
@@ -9627,7 +9627,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 								},
 								{
 									Attributes: attribute.NewSet(
-										appendRouterConfigVersionConditionally([]attribute.KeyValue{
+										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
 											semconv.HTTPStatusCode(200),
 											otel.WgClientName.String("unknown"),
 											otel.WgClientVersion.String("missing"),
@@ -9654,7 +9654,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 							DataPoints: []metricdata.DataPoint[int64]{
 								{
 									Attributes: attribute.NewSet(
-										appendRouterConfigVersionConditionally([]attribute.KeyValue{
+										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
 											semconv.HTTPStatusCode(200),
 											otel.WgClientName.String("unknown"),
 											otel.WgClientVersion.String("missing"),
@@ -9671,7 +9671,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 								},
 								{
 									Attributes: attribute.NewSet(
-										appendRouterConfigVersionConditionally([]attribute.KeyValue{
+										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
 											semconv.HTTPStatusCode(200),
 											otel.WgClientName.String("unknown"),
 											otel.WgClientVersion.String("missing"),
@@ -9697,7 +9697,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 							DataPoints: []metricdata.DataPoint[int64]{
 								{
 									Attributes: attribute.NewSet(
-										appendRouterConfigVersionConditionally([]attribute.KeyValue{
+										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
 											otel.WgClientName.String("unknown"),
 											otel.WgClientVersion.String("missing"),
 											otel.WgFederatedGraphID.String("graph"),
@@ -9710,7 +9710,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 								},
 								{
 									Attributes: attribute.NewSet(
-										appendRouterConfigVersionConditionally([]attribute.KeyValue{
+										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
 											otel.WgClientName.String("unknown"),
 											otel.WgClientVersion.String("missing"),
 											otel.WgFederatedGraphID.String("graph"),
@@ -9737,7 +9737,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 							DataPoints: []metricdata.HistogramDataPoint[float64]{
 								{
 									Attributes: attribute.NewSet(
-										appendRouterConfigVersionConditionally([]attribute.KeyValue{
+										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
 											otel.WgEnginePlanCacheHit.Bool(false),
 											otel.WgClientName.String("unknown"),
 											otel.WgClientVersion.String("missing"),
@@ -9864,7 +9864,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 							DataPoints: []metricdata.DataPoint[int64]{
 								{
 									Attributes: attribute.NewSet(
-										appendRouterConfigVersionConditionally([]attribute.KeyValue{
+										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
 											semconv.HTTPStatusCode(200),
 											otel.WgClientName.String("unknown"),
 											otel.WgClientVersion.String("missing"),
@@ -9882,7 +9882,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 								},
 								{
 									Attributes: attribute.NewSet(
-										appendRouterConfigVersionConditionally([]attribute.KeyValue{
+										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
 											semconv.HTTPStatusCode(200),
 											otel.WgClientName.String("unknown"),
 											otel.WgClientVersion.String("missing"),
@@ -9909,7 +9909,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 							DataPoints: []metricdata.HistogramDataPoint[float64]{
 								{
 									Attributes: attribute.NewSet(
-										appendRouterConfigVersionConditionally([]attribute.KeyValue{
+										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
 											semconv.HTTPStatusCode(200),
 											otel.WgClientName.String("unknown"),
 											otel.WgClientVersion.String("missing"),
@@ -9927,7 +9927,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 								},
 								{
 									Attributes: attribute.NewSet(
-										appendRouterConfigVersionConditionally([]attribute.KeyValue{
+										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
 											semconv.HTTPStatusCode(200),
 											otel.WgClientName.String("unknown"),
 											otel.WgClientVersion.String("missing"),
@@ -9955,7 +9955,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 							DataPoints: []metricdata.DataPoint[int64]{
 								{
 									Attributes: attribute.NewSet(
-										appendRouterConfigVersionConditionally([]attribute.KeyValue{
+										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
 											otel.WgClientName.String("unknown"),
 											otel.WgClientVersion.String("missing"),
 											otel.WgFederatedGraphID.String("graph"),
@@ -9972,7 +9972,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 								},
 								{
 									Attributes: attribute.NewSet(
-										appendRouterConfigVersionConditionally([]attribute.KeyValue{
+										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
 											semconv.HTTPStatusCode(200),
 											otel.WgClientName.String("unknown"),
 											otel.WgClientVersion.String("missing"),
@@ -10000,7 +10000,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 							DataPoints: []metricdata.DataPoint[int64]{
 								{
 									Attributes: attribute.NewSet(
-										appendRouterConfigVersionConditionally([]attribute.KeyValue{
+										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
 											semconv.HTTPStatusCode(200),
 											otel.WgClientName.String("unknown"),
 											otel.WgClientVersion.String("missing"),
@@ -10018,7 +10018,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 								},
 								{
 									Attributes: attribute.NewSet(
-										appendRouterConfigVersionConditionally([]attribute.KeyValue{
+										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
 											semconv.HTTPStatusCode(200),
 											otel.WgClientName.String("unknown"),
 											otel.WgClientVersion.String("missing"),
@@ -10045,7 +10045,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 							DataPoints: []metricdata.DataPoint[int64]{
 								{
 									Attributes: attribute.NewSet(
-										appendRouterConfigVersionConditionally([]attribute.KeyValue{
+										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
 											otel.WgClientName.String("unknown"),
 											otel.WgClientVersion.String("missing"),
 											otel.WgFederatedGraphID.String("graph"),
@@ -10059,7 +10059,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 								},
 								{
 									Attributes: attribute.NewSet(
-										appendRouterConfigVersionConditionally([]attribute.KeyValue{
+										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
 											otel.WgClientName.String("unknown"),
 											otel.WgClientVersion.String("missing"),
 											otel.WgFederatedGraphID.String("graph"),
@@ -10087,7 +10087,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 							DataPoints: []metricdata.HistogramDataPoint[float64]{
 								{
 									Attributes: attribute.NewSet(
-										appendRouterConfigVersionConditionally([]attribute.KeyValue{
+										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
 											otel.WgEnginePlanCacheHit.Bool(false),
 											otel.WgClientName.String("unknown"),
 											otel.WgClientVersion.String("missing"),
@@ -10221,7 +10221,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 							DataPoints: []metricdata.DataPoint[int64]{
 								{
 									Attributes: attribute.NewSet(
-										appendRouterConfigVersionConditionally([]attribute.KeyValue{
+										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
 											otel.WgRouterClusterName.String(""),
 											otel.WgFederatedGraphID.String("graph"),
 											otel.WgRouterVersion.String("dev"),
@@ -10243,7 +10243,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 							DataPoints: []metricdata.DataPoint[float64]{
 								{
 									Attributes: attribute.NewSet(
-										appendRouterConfigVersionConditionally([]attribute.KeyValue{
+										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
 											otel.WgRouterClusterName.String(""),
 											otel.WgFederatedGraphID.String("graph"),
 											otel.WgRouterVersion.String("dev"),
@@ -10269,7 +10269,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 							DataPoints: []metricdata.DataPoint[int64]{
 								{
 									Attributes: attribute.NewSet(
-										appendRouterConfigVersionConditionally([]attribute.KeyValue{
+										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
 											otel.WgRouterClusterName.String(""),
 											otel.WgFederatedGraphID.String("graph"),
 											otel.WgRouterVersion.String("dev"),
@@ -10293,7 +10293,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 							DataPoints: []metricdata.DataPoint[int64]{
 								{
 									Attributes: attribute.NewSet(
-										appendRouterConfigVersionConditionally([]attribute.KeyValue{
+										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
 											otel.WgRouterClusterName.String(""),
 											otel.WgFederatedGraphID.String("graph"),
 											otel.WgRouterVersion.String("dev"),
@@ -10317,7 +10317,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 							DataPoints: []metricdata.DataPoint[int64]{
 								{
 									Attributes: attribute.NewSet(
-										appendRouterConfigVersionConditionally([]attribute.KeyValue{
+										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
 											otel.WgRouterClusterName.String(""),
 											otel.WgFederatedGraphID.String("graph"),
 											otel.WgRouterVersion.String("dev"),
@@ -10341,7 +10341,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 							DataPoints: []metricdata.DataPoint[int64]{
 								{
 									Attributes: attribute.NewSet(
-										appendRouterConfigVersionConditionally([]attribute.KeyValue{
+										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
 											otel.WgRouterClusterName.String(""),
 											otel.WgFederatedGraphID.String("graph"),
 											otel.WgRouterVersion.String("dev"),
@@ -10365,7 +10365,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 							DataPoints: []metricdata.DataPoint[int64]{
 								{
 									Attributes: attribute.NewSet(
-										appendRouterConfigVersionConditionally([]attribute.KeyValue{
+										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
 											otel.WgRouterClusterName.String(""),
 											otel.WgFederatedGraphID.String("graph"),
 											otel.WgRouterVersion.String("dev"),
@@ -10389,7 +10389,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 							DataPoints: []metricdata.DataPoint[int64]{
 								{
 									Attributes: attribute.NewSet(
-										appendRouterConfigVersionConditionally([]attribute.KeyValue{
+										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
 											otel.WgRouterClusterName.String(""),
 											otel.WgFederatedGraphID.String("graph"),
 											otel.WgRouterVersion.String("dev"),
@@ -10413,7 +10413,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 							DataPoints: []metricdata.DataPoint[int64]{
 								{
 									Attributes: attribute.NewSet(
-										appendRouterConfigVersionConditionally([]attribute.KeyValue{
+										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
 											otel.WgRouterClusterName.String(""),
 											otel.WgFederatedGraphID.String("graph"),
 											otel.WgRouterVersion.String("dev"),
@@ -10437,7 +10437,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 							DataPoints: []metricdata.DataPoint[int64]{
 								{
 									Attributes: attribute.NewSet(
-										appendRouterConfigVersionConditionally([]attribute.KeyValue{
+										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
 											otel.WgRouterClusterName.String(""),
 											otel.WgFederatedGraphID.String("graph"),
 											otel.WgRouterVersion.String("dev"),
@@ -10461,7 +10461,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 							DataPoints: []metricdata.DataPoint[int64]{
 								{
 									Attributes: attribute.NewSet(
-										appendRouterConfigVersionConditionally([]attribute.KeyValue{
+										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
 											otel.WgRouterClusterName.String(""),
 											otel.WgFederatedGraphID.String("graph"),
 											otel.WgRouterVersion.String("dev"),
@@ -10485,7 +10485,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 							DataPoints: []metricdata.DataPoint[int64]{
 								{
 									Attributes: attribute.NewSet(
-										appendRouterConfigVersionConditionally([]attribute.KeyValue{
+										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
 											otel.WgRouterClusterName.String(""),
 											otel.WgFederatedGraphID.String("graph"),
 											otel.WgRouterVersion.String("dev"),
@@ -10509,7 +10509,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 							DataPoints: []metricdata.DataPoint[int64]{
 								{
 									Attributes: attribute.NewSet(
-										appendRouterConfigVersionConditionally([]attribute.KeyValue{
+										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
 											otel.WgRouterClusterName.String(""),
 											otel.WgFederatedGraphID.String("graph"),
 											otel.WgRouterVersion.String("dev"),
@@ -10534,7 +10534,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 							DataPoints: []metricdata.DataPoint[int64]{
 								{
 									Attributes: attribute.NewSet(
-										appendRouterConfigVersionConditionally([]attribute.KeyValue{
+										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
 											otel.WgRouterClusterName.String(""),
 											otel.WgFederatedGraphID.String("graph"),
 											otel.WgRouterVersion.String("dev"),
@@ -10605,7 +10605,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 					err = metricReader.Collect(context.Background(), &rm)
 					require.NoError(t, err)
 
-					baseAttributes := appendRouterConfigVersionConditionally([]attribute.KeyValue{
+					baseAttributes := appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
 						otel.WgRouterClusterName.String(""),
 						otel.WgFederatedGraphID.String("graph"),
 						otel.WgRouterVersion.String("dev"),
