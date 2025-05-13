@@ -1,7 +1,10 @@
 package datasource
 
 import (
+	"slices"
+
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
@@ -14,7 +17,6 @@ import (
 // For detailed implementation guidelines, see:
 // https://github.com/wundergraph/cosmo/blob/main/router/pkg/pubsub/README.md
 type PubSubDataSource interface {
-	SetCurrentField(typeName string, fieldName string, extractFn ArgumentTemplateCallback) error
 	// ResolveDataSource returns the engine DataSource implementation that contains
 	// methods which will be called by the Planner when resolving a field
 	ResolveDataSource() (resolve.DataSource, error)
@@ -28,4 +30,43 @@ type PubSubDataSource interface {
 	ResolveDataSourceSubscription() (resolve.SubscriptionDataSource, error)
 	// ResolveDataSourceSubscriptionInput build the input that will be passed to the engine SubscriptionDataSource
 	ResolveDataSourceSubscriptionInput() (string, error)
+}
+
+type EngineEventConfiguration interface {
+	GetEngineEventConfiguration() *nodev1.EngineEventConfiguration
+}
+
+type PubSubDataSourceMatcherFn func(typeName string, fieldName string, extractFn ArgumentTemplateCallback) (PubSubDataSource, error)
+
+func GetFilteredDataSourceMetadata[E EngineEventConfiguration](data []E, dsMeta *plan.DataSourceMetadata) *plan.DataSourceMetadata {
+	// find used root types and fields
+	rootFields := make(map[string][]string)
+	for _, event := range data {
+		typeName := event.GetEngineEventConfiguration().GetTypeName()
+		fieldName := event.GetEngineEventConfiguration().GetFieldName()
+		if _, ok := rootFields[typeName]; !ok {
+			rootFields[typeName] = []string{}
+		}
+		rootFields[typeName] = append(rootFields[typeName], fieldName)
+	}
+
+	// filter dsMeta.RootNodes
+	newRootNodes := []plan.TypeField{}
+	for _, node := range dsMeta.RootNodes {
+		newRootNode := plan.TypeField{
+			TypeName:           node.TypeName,
+			FieldNames:         []string{},
+			ExternalFieldNames: node.ExternalFieldNames,
+		}
+		for _, fieldName := range node.FieldNames {
+			if slices.Contains(rootFields[node.TypeName], fieldName) {
+				newRootNode.FieldNames = append(newRootNode.FieldNames, fieldName)
+			}
+		}
+		newRootNodes = append(newRootNodes, newRootNode)
+	}
+	newDsMets := *dsMeta
+	newDsMets.RootNodes = newRootNodes
+
+	return &newDsMets
 }

@@ -8,21 +8,21 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 )
 
-func NewFactory(executionContext context.Context, pubSubDataSource PubSubDataSource) *Factory {
+func NewFactory(executionContext context.Context, pubSubDataSourceMatcher PubSubDataSourceMatcherFn) *Factory {
 	return &Factory{
-		pubSubDataSource: pubSubDataSource,
-		executionContext: executionContext,
+		pubSubDataSourceMatcher: pubSubDataSourceMatcher,
+		executionContext:        executionContext,
 	}
 }
 
 type Factory struct {
-	pubSubDataSource PubSubDataSource
-	executionContext context.Context
+	pubSubDataSourceMatcher PubSubDataSourceMatcherFn
+	executionContext        context.Context
 }
 
-func (f *Factory) Planner(_ abstractlogger.Logger) plan.DataSourcePlanner[PubSubDataSource] {
+func (f *Factory) Planner(_ abstractlogger.Logger) plan.DataSourcePlanner[PubSubDataSourceMatcherFn] {
 	return &Planner{
-		pubSubDataSource: f.pubSubDataSource,
+		pubSubDataSourceMatcher: f.pubSubDataSourceMatcher,
 	}
 }
 
@@ -30,6 +30,6 @@ func (f *Factory) Context() context.Context {
 	return f.executionContext
 }
 
-func (f *Factory) UpstreamSchema(dataSourceConfig plan.DataSourceConfiguration[PubSubDataSource]) (*ast.Document, bool) {
+func (f *Factory) UpstreamSchema(dataSourceConfig plan.DataSourceConfiguration[PubSubDataSourceMatcherFn]) (*ast.Document, bool) {
 	return nil, false
 }

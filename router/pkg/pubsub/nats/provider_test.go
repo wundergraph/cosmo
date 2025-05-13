@@ -201,28 +201,14 @@ func TestGetProvider(t *testing.T) {
 		provider, _, err := GetProvider(ctx, in, dsMeta, cfg, logger, "host", "addr")
 		require.Error(t, err)
 		require.Nil(t, provider)
-		assert.Contains(t, err.Error(), "failed to find Nats provider with ID")
+		assert.Contains(t, err.Error(), "provider with ID unknown is not defined")
 	})
 }
 
 func TestPubSubProvider_FindPubSubDataSource(t *testing.T) {
 	mockNats := &mockAdapter{}
-	providerId := "test-provider"
-	typeName := "TestType"
-	fieldName := "testField"
 
 	provider := &PubSubProvider{
-		EventConfiguration: []*nodev1.NatsEventConfiguration{
-			{
-				EngineEventConfiguration: &nodev1.EngineEventConfiguration{
-					TypeName:   typeName,
-					FieldName:  fieldName,
-					ProviderId: providerId,
-					Type:       nodev1.EventType_PUBLISH,
-				},
-				Subjects: []string{"test.subject"},
-			},
-		},
 		Logger:  zap.NewNop(),
 		Adapter: mockNats,
 	}

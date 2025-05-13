@@ -132,7 +132,7 @@ func TestGetProvider(t *testing.T) {
 		provider, _, err := GetProvider(ctx, in, dsMeta, cfg, logger, "host", "addr")
 		require.Error(t, err)
 		require.Nil(t, provider)
-		assert.Contains(t, err.Error(), "failed to find Kafka provider with ID")
+		assert.Contains(t, err.Error(), "provider with ID unknown is not defined")
 	})
 
 	t.Run("creates provider with configured adapters", func(t *testing.T) {

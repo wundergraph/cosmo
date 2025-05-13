@@ -12,11 +12,12 @@ import (
 )
 
 type Planner struct {
-	id               int
-	pubSubDataSource PubSubDataSource
-	rootFieldRef     int
-	variables        resolve.Variables
-	visitor          *plan.Visitor
+	id                      int
+	pubSubDataSource        PubSubDataSource
+	pubSubDataSourceMatcher PubSubDataSourceMatcherFn
+	rootFieldRef            int
+	variables               resolve.Variables
+	visitor                 *plan.Visitor
 }
 
 func (p *Planner) SetID(id int) {
@@ -39,20 +40,16 @@ func (p *Planner) DataSourcePlanningBehavior() plan.DataSourcePlanningBehavior {
 	}
 }
 
-func (p *Planner) Register(visitor *plan.Visitor, configuration plan.DataSourceConfiguration[PubSubDataSource], _ plan.DataSourcePlannerConfiguration) error {
+func (p *Planner) Register(visitor *plan.Visitor, configuration plan.DataSourceConfiguration[PubSubDataSourceMatcherFn], _ plan.DataSourcePlannerConfiguration) error {
 	p.visitor = visitor
 	visitor.Walker.RegisterEnterFieldVisitor(p)
 	visitor.Walker.RegisterEnterDocumentVisitor(p)
-	p.pubSubDataSource = configuration.CustomConfiguration()
+	p.pubSubDataSourceMatcher = configuration.CustomConfiguration()
 
 	return nil
 }
 
 func (p *Planner) ConfigureFetch() resolve.FetchConfiguration {
-	if p.pubSubDataSource == nil {
-		return resolve.FetchConfiguration{}
-	}
-
 	var dataSource resolve.DataSource
 
 	dataSource, err := p.pubSubDataSource.ResolveDataSource()
@@ -84,11 +81,6 @@ func (p *Planner) ConfigureFetch() resolve.FetchConfiguration {
 }
 
 func (p *Planner) ConfigureSubscription() plan.SubscriptionConfiguration {
-	if p.pubSubDataSource == nil {
-		// p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to configure subscription: event manager is nil"))
-		return plan.SubscriptionConfiguration{}
-	}
-
 	dataSource, err := p.pubSubDataSource.ResolveDataSourceSubscription()
 	if err != nil {
 		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to get resolve data source subscription: %w", err))
@@ -192,8 +184,10 @@ func (p *Planner) EnterField(ref int) {
 		return p.extractArgumentTemplate(ref, tpl)
 	}
 
-	err := p.pubSubDataSource.SetCurrentField(typeName, fieldName, extractFn)
+	ds, err := p.pubSubDataSourceMatcher(typeName, fieldName, extractFn)
 	if err != nil {
 		p.visitor.Walker.StopWithInternalErr(err)
 	}
+
+	p.pubSubDataSource = ds
 }

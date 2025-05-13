@@ -31,11 +31,11 @@ func TestNatsPubSubDataSource(t *testing.T) {
 	adapter := &Adapter{}
 	pubsub := &PubSubDataSource{
 		EventConfiguration: natsCfg,
-		NatsAdapters:       map[string]AdapterInterface{"test-provider": adapter},
+		NatsAdapter:        adapter,
 	}
 
 	// Run the standard test suite
-	pubsubtest.VerifyPubSubDataSourceImplementation(t, pubsub, "TestType", "testField")
+	pubsubtest.VerifyPubSubDataSourceImplementation(t, pubsub)
 }
 
 func TestPubSubDataSourceWithMockAdapter(t *testing.T) {
@@ -63,7 +63,7 @@ func TestPubSubDataSourceWithMockAdapter(t *testing.T) {
 	// Create the data source with mock adapter
 	pubsub := &PubSubDataSource{
 		EventConfiguration: natsCfg,
-		NatsAdapters:       map[string]AdapterInterface{"test-provider": mockAdapter},
+		NatsAdapter:        mockAdapter,
 	}
 
 	// Get the data source
@@ -104,7 +104,7 @@ func TestPubSubDataSource_GetResolveDataSource_WrongType(t *testing.T) {
 	// Create the data source with mock adapter
 	pubsub := &PubSubDataSource{
 		EventConfiguration: natsCfg,
-		NatsAdapters:       map[string]AdapterInterface{"test-provider": mockAdapter},
+		NatsAdapter:        mockAdapter,
 	}
 
 	// Get the data source
@@ -263,7 +263,7 @@ func TestPubSubDataSource_RequestDataSource(t *testing.T) {
 	// Create the data source with mock adapter
 	pubsub := &PubSubDataSource{
 		EventConfiguration: natsCfg,
-		NatsAdapters:       map[string]AdapterInterface{"test-provider": mockAdapter},
+		NatsAdapter:        mockAdapter,
 	}
 
 	// Get the data source

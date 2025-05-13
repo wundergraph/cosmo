@@ -5,35 +5,13 @@ import (
 	"fmt"
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
 type PubSubDataSource struct {
-	EventConfiguration  *nodev1.NatsEventConfiguration
-	EventConfigurations []*nodev1.NatsEventConfiguration
-	NatsAdapters        map[string]AdapterInterface
-}
-
-func (c *PubSubDataSource) SetCurrentField(typeName string, fieldName string, extractFn datasource.ArgumentTemplateCallback) error {
-	for _, event := range c.EventConfigurations {
-		if event.GetEngineEventConfiguration().GetTypeName() == typeName && event.GetEngineEventConfiguration().GetFieldName() == fieldName {
-			event, err := transformEventConfig(event, extractFn)
-			if err != nil {
-				return err
-			}
-			c.EventConfiguration = event
-
-			return nil
-		}
-	}
-
-	if c.EventConfiguration == nil {
-		return fmt.Errorf("failed to find event configuration for typeName: %s, fieldName: %s", typeName, fieldName)
-	}
-
-	return nil
+	EventConfiguration *nodev1.NatsEventConfiguration
+	NatsAdapter        AdapterInterface
 }
 
 func (c *PubSubDataSource) EngineEventConfiguration() *nodev1.EngineEventConfiguration {
@@ -43,16 +21,15 @@ func (c *PubSubDataSource) EngineEventConfiguration() *nodev1.EngineEventConfigu
 func (c *PubSubDataSource) ResolveDataSource() (resolve.DataSource, error) {
 	var dataSource resolve.DataSource
 	eventType := c.EventConfiguration.GetEngineEventConfiguration().GetType()
-	providerId := c.EventConfiguration.GetEngineEventConfiguration().GetProviderId()
 
 	switch eventType {
 	case nodev1.EventType_PUBLISH:
 		dataSource = &NatsPublishDataSource{
-			pubSub: c.NatsAdapters[providerId],
+			pubSub: c.NatsAdapter,
 		}
 	case nodev1.EventType_REQUEST:
 		dataSource = &NatsRequestDataSource{
-			pubSub: c.NatsAdapters[providerId],
+			pubSub: c.NatsAdapter,
 		}
 	default:
 		return nil, fmt.Errorf("failed to configure fetch: invalid event type \"%s\" for Nats", eventType.String())
@@ -83,7 +60,7 @@ func (c *PubSubDataSource) ResolveDataSourceInput(eventData []byte) (string, err
 
 func (c *PubSubDataSource) ResolveDataSourceSubscription() (resolve.SubscriptionDataSource, error) {
 	return &SubscriptionSource{
-		pubSub: c.NatsAdapters[c.EventConfiguration.GetEngineEventConfiguration().GetProviderId()],
+		pubSub: c.NatsAdapter,
 	}, nil
 }
 

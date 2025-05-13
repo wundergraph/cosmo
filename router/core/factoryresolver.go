@@ -435,7 +435,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 			var err error
 
 			dsMeta := l.dataSourceMetaData(in)
-			providersDs, pubsubDataSources, err := pubsub.GetProviderDataSources(
+			providersDs, pubsubDataSources, err := pubsub.GetProvidersDataSources(
 				l.ctx,
 				in,
 				dsMeta,
