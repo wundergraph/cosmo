@@ -47,16 +47,15 @@ type {serviceName} struct {
 	nextID int
 }
 
-func (s *{serviceName}) QueryHello(ctx context.Context, in *service.QueryHelloRequest, opts ...grpc.CallOption) (*service.QueryHelloResponse, error) {
+func (s *{serviceName}) QueryHello(ctx context.Context, req *service.QueryHelloRequest) (*service.QueryHelloResponse, error) {
 	response := &service.QueryHelloResponse{
 		Hello: &service.World{
 			Id:   strconv.Itoa(s.nextID),
-			Name: in.Name,
+			Name: req.Name,
 		},
 	}
 	s.nextID++
 	return response, nil
-
 }
 `;
 export const readme = `# {name} Plugin - Cosmo gRPC Subgraph Example
