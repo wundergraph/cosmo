@@ -4,7 +4,8 @@ import { config, getBaseHeaders } from './config.js';
 
 // Environment variables to allow opting out of telemetry
 // Support for COSMO_TELEMETRY_DISABLED and Console Do Not Track standard
-const TELEMETRY_DISABLED = process.env.COSMO_TELEMETRY_DISABLED === 'true' || process.env.DO_NOT_TRACK === '1';
+const TELEMETRY_DISABLED =
+  process.env.COSMO_TELEMETRY_DISABLED === 'true' || process.env.DO_NOT_TRACK === '1' || !process.env.POSTHOG_API_KEY;
 
 let client: PostHog | null = null;
 
