@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
-  DialogContent,
+  DialogContent, DialogDescription, DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -53,6 +53,7 @@ import {
   deleteAPIKey,
   getAPIKeys,
   getUserAccessiblePermissions,
+  updateAPIKey,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { ExpiresAt } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import copy from "copy-to-clipboard";
@@ -571,6 +572,91 @@ export const CreateAPIKey = ({
   );
 };
 
+const UpdateAPIKey = ({ selectedApiKeyName, open, selectedGroupId, refresh, onOpenChange }: {
+  open: boolean;
+  selectedApiKeyName: string | undefined;
+  selectedGroupId: string | undefined;
+  refresh(): void;
+  onOpenChange(open: boolean): void;
+}) => {
+  const { mutate, isPending } = useMutation(updateAPIKey);
+  const { toast } = useToast();
+  const [groupId, setGroupId] = useState<string | undefined>();
+
+  useEffect(() => {
+    if (open) {
+      setGroupId(selectedGroupId);
+    }
+  }, [open, selectedGroupId]);
+
+  const onOpenChangeCallback = (isOpen: boolean) => {
+    if (isPending) {
+      return;
+    }
+
+    onOpenChange(isOpen);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChangeCallback}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Update API key group</DialogTitle>
+          <DialogDescription>
+            Select the new group for the API key.
+          </DialogDescription>
+        </DialogHeader>
+        <GroupSelect
+          value={groupId}
+          onGroupChange={(group) => setGroupId(group.groupId)}
+        />
+
+        <DialogFooter>
+          <Button variant="secondary" onClick={() => onOpenChangeCallback(false)}>
+            Cancel
+          </Button>
+          <Button
+            disabled={isPending || !groupId}
+            isLoading={isPending}
+            onClick={() => {
+              if (isPending || !selectedApiKeyName || !groupId) {
+                return;
+              }
+
+              mutate({ name: selectedApiKeyName, groupId }, {
+                onSuccess(d){
+                  if (d.response?.code === EnumStatusCode.OK) {
+                    onOpenChange(false);
+                    toast({
+                      description: "API key group updated successfully.",
+                      duration: 3000,
+                    });
+
+                    refresh();
+                  } else {
+                    toast({
+                      description: d.response?.details ?? "Could not update the API key. Please try again.",
+                      duration: 3000,
+                    });
+                  }
+                },
+                onError(){
+                  toast({
+                    description: "Could not update the API key. Please try again.",
+                    duration: 3000,
+                  });
+                },
+              });
+            }}
+          >
+            Save
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 const APIKeysPage: NextPageWithLayout = () => {
   const checkUserAccess = useCheckUserAccess();
   const { data, isLoading, error, refetch } = useQuery(getAPIKeys);
@@ -578,6 +664,8 @@ const APIKeysPage: NextPageWithLayout = () => {
   const isUserOrAdmin = checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer" ]});
 
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [openUpdateDialog, setOpenUpdateDialog] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState<{ apiKeyName: string; groupId: string | undefined; }>();
   const [apiKey, setApiKey] = useState<string | undefined>();
   const [deleteApiKeyName, setDeleteApiKeyName] = useState<
     string | undefined
@@ -616,6 +704,17 @@ const APIKeysPage: NextPageWithLayout = () => {
         />
       ) : (
         <>
+          <UpdateAPIKey
+            open={openUpdateDialog}
+            selectedApiKeyName={selectedGroup?.apiKeyName}
+            selectedGroupId={selectedGroup?.groupId}
+            refresh={refetch}
+            onOpenChange={() => {
+              setOpenUpdateDialog(false);
+              setSelectedGroup(undefined);
+            }}
+          />
+
           <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
             <div>
               <p className="text-sm text-muted-foreground">
@@ -672,6 +771,7 @@ const APIKeysPage: NextPageWithLayout = () => {
                   <TableHead>Name</TableHead>
                   <TableHead>Created By</TableHead>
                   <TableHead>Expires At</TableHead>
+                  <TableHead>Group</TableHead>
                   <TableHead>Created At</TableHead>
                   <TableHead>Last Used At</TableHead>
                   {isUserOrAdmin && (
@@ -681,7 +781,7 @@ const APIKeysPage: NextPageWithLayout = () => {
               </TableHeader>
               <TableBody>
                 {apiKeys.map(
-                  ({ name, createdBy, createdAt, lastUsedAt, expiresAt }) => {
+                  ({ name, createdBy, createdAt, lastUsedAt, expiresAt, group }) => {
                     return (
                       <TableRow key={name}>
                         <TableCell className="font-medium">{name}</TableCell>
@@ -690,6 +790,27 @@ const APIKeysPage: NextPageWithLayout = () => {
                           {expiresAt
                             ? formatDateTime(new Date(expiresAt))
                             : "Never"}
+                        </TableCell>
+                        <TableCell>
+                          {isUserOrAdmin ? (
+                            <Button
+                              variant="link"
+                              className="p-0 h-auto"
+                              onClick={() => {
+                                setOpenUpdateDialog(true);
+                                setSelectedGroup({
+                                  apiKeyName: name,
+                                  groupId: group?.id,
+                                });
+                              }}
+                            >
+                              {group?.name ?? "Assign group"}
+                            </Button>
+                            ) : (
+                            <span className={!group?.id ? "text-muted-foreground" : undefined}>
+                              {group?.name ?? "Group not assigned"}
+                            </span>
+                          )}
                         </TableCell>
                         <TableCell>
                           {createdAt

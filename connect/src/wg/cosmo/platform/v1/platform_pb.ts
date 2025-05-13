@@ -7498,6 +7498,11 @@ export class APIKey extends Message<APIKey> {
    */
   expiresAt = "";
 
+  /**
+   * @generated from field: optional wg.cosmo.platform.v1.APIKey.Group group = 7;
+   */
+  group?: APIKey_Group;
+
   constructor(data?: PartialMessage<APIKey>) {
     super();
     proto3.util.initPartial(data, this);
@@ -7512,6 +7517,7 @@ export class APIKey extends Message<APIKey> {
     { no: 4, name: "createdAt", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "lastUsedAt", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 6, name: "expiresAt", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "group", kind: "message", T: APIKey_Group, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): APIKey {
@@ -7528,6 +7534,49 @@ export class APIKey extends Message<APIKey> {
 
   static equals(a: APIKey | PlainMessage<APIKey> | undefined, b: APIKey | PlainMessage<APIKey> | undefined): boolean {
     return proto3.util.equals(APIKey, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.APIKey.Group
+ */
+export class APIKey_Group extends Message<APIKey_Group> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  constructor(data?: PartialMessage<APIKey_Group>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.APIKey.Group";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): APIKey_Group {
+    return new APIKey_Group().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): APIKey_Group {
+    return new APIKey_Group().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): APIKey_Group {
+    return new APIKey_Group().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: APIKey_Group | PlainMessage<APIKey_Group> | undefined, b: APIKey_Group | PlainMessage<APIKey_Group> | undefined): boolean {
+    return proto3.util.equals(APIKey_Group, a, b);
   }
 }
 
@@ -7780,6 +7829,86 @@ export class DeleteAPIKeyResponse extends Message<DeleteAPIKeyResponse> {
 
   static equals(a: DeleteAPIKeyResponse | PlainMessage<DeleteAPIKeyResponse> | undefined, b: DeleteAPIKeyResponse | PlainMessage<DeleteAPIKeyResponse> | undefined): boolean {
     return proto3.util.equals(DeleteAPIKeyResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.UpdateAPIKeyRequest
+ */
+export class UpdateAPIKeyRequest extends Message<UpdateAPIKeyRequest> {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name = "";
+
+  /**
+   * @generated from field: string groupId = 2;
+   */
+  groupId = "";
+
+  constructor(data?: PartialMessage<UpdateAPIKeyRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.UpdateAPIKeyRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "groupId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateAPIKeyRequest {
+    return new UpdateAPIKeyRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateAPIKeyRequest {
+    return new UpdateAPIKeyRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateAPIKeyRequest {
+    return new UpdateAPIKeyRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateAPIKeyRequest | PlainMessage<UpdateAPIKeyRequest> | undefined, b: UpdateAPIKeyRequest | PlainMessage<UpdateAPIKeyRequest> | undefined): boolean {
+    return proto3.util.equals(UpdateAPIKeyRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.UpdateAPIKeyResponse
+ */
+export class UpdateAPIKeyResponse extends Message<UpdateAPIKeyResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<UpdateAPIKeyResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.UpdateAPIKeyResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateAPIKeyResponse {
+    return new UpdateAPIKeyResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateAPIKeyResponse {
+    return new UpdateAPIKeyResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateAPIKeyResponse {
+    return new UpdateAPIKeyResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateAPIKeyResponse | PlainMessage<UpdateAPIKeyResponse> | undefined, b: UpdateAPIKeyResponse | PlainMessage<UpdateAPIKeyResponse> | undefined): boolean {
+    return proto3.util.equals(UpdateAPIKeyResponse, a, b);
   }
 }
 

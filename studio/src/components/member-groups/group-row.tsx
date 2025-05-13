@@ -32,7 +32,9 @@ export function GroupRow({ group, rbac, onSelect, onDelete }: {
           >
             {group.name}
           </Button>
-        ) : group.name}
+        ) : (
+          <span>{group.name}</span>
+        )}
 
         {group.builtin && (
           <Badge variant="outline" className="space-x-1">

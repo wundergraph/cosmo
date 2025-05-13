@@ -117,26 +117,38 @@ export class ApiKeyRepository {
         lastUsedAt: apiKeys.lastUsedAt,
         expiresAt: apiKeys.expiresAt,
         createdBy: users.email,
+        groupId: schema.organizationGroups.id,
+        groupName: schema.organizationGroups.name,
         creatorUserID: users.id,
       })
       .from(apiKeys)
       .innerJoin(users, eq(users.id, apiKeys.userId))
+      .leftJoin(schema.organizationGroups, eq(schema.organizationGroups.id, apiKeys.groupId))
       .where(eq(apiKeys.organizationId, input.organizationID))
       .orderBy(asc(apiKeys.createdAt))
       .execute();
 
     return keys.map(
-      (key) =>
+      ({ groupId, groupName, ...key }) =>
         ({
           id: key.id,
           name: key.name,
           createdAt: key.createdAt.toISOString(),
           lastUsedAt: key.lastUsedAt?.toISOString() ?? '',
           expiresAt: key.expiresAt?.toISOString() ?? '',
+          group: groupId ? { id: groupId, name: groupName } : undefined,
           createdBy: key.createdBy,
           creatorUserID: key.creatorUserID,
         }) as APIKeyDTO,
     );
+  }
+
+  public updateAPIKeyGroup(input: { apiKeyId: string; groupId: string }) {
+    return this.db
+      .update(schema.apiKeys)
+      .set({ groupId: input.groupId })
+      .where(eq(apiKeys.id, input.apiKeyId))
+      .execute();
   }
 
   public async addAPIKeyResources({ resources }: { resources: { apiKeyId: string; targetId: string }[] }) {

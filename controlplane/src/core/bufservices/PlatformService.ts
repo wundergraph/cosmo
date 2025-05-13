@@ -12,6 +12,7 @@ import { getSubgraphMetrics } from './analytics/getSubgraphMetrics.js';
 import { getSubgraphMetricsErrorRate } from './analytics/getSubgraphMetricsErrorRate.js';
 import { getTrace } from './analytics/getTrace.js';
 import { createAPIKey } from './api-key/createAPIKey.js';
+import { updateAPIKey } from './api-key/updateAPIKey.js';
 import { deleteAPIKey } from './api-key/deleteAPIKey.js';
 import { getAPIKeys } from './api-key/getAPIKeys.js';
 import { createBillingPortalSession } from './billing/createBillingPortalSession.js';
@@ -331,6 +332,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     createAPIKey: (req, ctx) => {
       return createAPIKey(opts, req, ctx);
+    },
+
+    updateAPIKey: (req, ctx) => {
+      return updateAPIKey(opts, req, ctx);
     },
 
     deleteAPIKey: (req, ctx) => {

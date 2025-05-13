@@ -122,6 +122,7 @@ export type AuditLogFullAction =
   | 'integration.updated'
   | 'api_key.created'
   | 'api_key.deleted'
+  | 'api_key.group_updated'
   | 'subscription.created'
   | 'subscription.activated'
   | 'subscription.deleted'

@@ -235,6 +235,9 @@ const (
 	// PlatformServiceCreateAPIKeyProcedure is the fully-qualified name of the PlatformService's
 	// CreateAPIKey RPC.
 	PlatformServiceCreateAPIKeyProcedure = "/wg.cosmo.platform.v1.PlatformService/CreateAPIKey"
+	// PlatformServiceUpdateAPIKeyProcedure is the fully-qualified name of the PlatformService's
+	// UpdateAPIKey RPC.
+	PlatformServiceUpdateAPIKeyProcedure = "/wg.cosmo.platform.v1.PlatformService/UpdateAPIKey"
 	// PlatformServiceDeleteAPIKeyProcedure is the fully-qualified name of the PlatformService's
 	// DeleteAPIKey RPC.
 	PlatformServiceDeleteAPIKeyProcedure = "/wg.cosmo.platform.v1.PlatformService/DeleteAPIKey"
@@ -589,6 +592,7 @@ var (
 	platformServiceInviteUserMethodDescriptor                            = platformServiceServiceDescriptor.Methods().ByName("InviteUser")
 	platformServiceGetAPIKeysMethodDescriptor                            = platformServiceServiceDescriptor.Methods().ByName("GetAPIKeys")
 	platformServiceCreateAPIKeyMethodDescriptor                          = platformServiceServiceDescriptor.Methods().ByName("CreateAPIKey")
+	platformServiceUpdateAPIKeyMethodDescriptor                          = platformServiceServiceDescriptor.Methods().ByName("UpdateAPIKey")
 	platformServiceDeleteAPIKeyMethodDescriptor                          = platformServiceServiceDescriptor.Methods().ByName("DeleteAPIKey")
 	platformServiceRemoveOrganizationMemberMethodDescriptor              = platformServiceServiceDescriptor.Methods().ByName("RemoveOrganizationMember")
 	platformServiceRemoveInvitationMethodDescriptor                      = platformServiceServiceDescriptor.Methods().ByName("RemoveInvitation")
@@ -808,6 +812,8 @@ type PlatformServiceClient interface {
 	GetAPIKeys(context.Context, *connect.Request[v1.GetAPIKeysRequest]) (*connect.Response[v1.GetAPIKeysResponse], error)
 	// CreateAPIKey creates an API key for the organization
 	CreateAPIKey(context.Context, *connect.Request[v1.CreateAPIKeyRequest]) (*connect.Response[v1.CreateAPIKeyResponse], error)
+	// UpdateAPIKey updates an API key for the organization
+	UpdateAPIKey(context.Context, *connect.Request[v1.UpdateAPIKeyRequest]) (*connect.Response[v1.UpdateAPIKeyResponse], error)
 	// DeleteAPIKey deletes an API key for the organization
 	DeleteAPIKey(context.Context, *connect.Request[v1.DeleteAPIKeyRequest]) (*connect.Response[v1.DeleteAPIKeyResponse], error)
 	// RemoveOrganizationMember removes the user from the organization
@@ -1403,6 +1409,12 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			httpClient,
 			baseURL+PlatformServiceCreateAPIKeyProcedure,
 			connect.WithSchema(platformServiceCreateAPIKeyMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		updateAPIKey: connect.NewClient[v1.UpdateAPIKeyRequest, v1.UpdateAPIKeyResponse](
+			httpClient,
+			baseURL+PlatformServiceUpdateAPIKeyProcedure,
+			connect.WithSchema(platformServiceUpdateAPIKeyMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 		deleteAPIKey: connect.NewClient[v1.DeleteAPIKeyRequest, v1.DeleteAPIKeyResponse](
@@ -2048,6 +2060,7 @@ type platformServiceClient struct {
 	inviteUser                            *connect.Client[v1.InviteUserRequest, v1.InviteUserResponse]
 	getAPIKeys                            *connect.Client[v1.GetAPIKeysRequest, v1.GetAPIKeysResponse]
 	createAPIKey                          *connect.Client[v1.CreateAPIKeyRequest, v1.CreateAPIKeyResponse]
+	updateAPIKey                          *connect.Client[v1.UpdateAPIKeyRequest, v1.UpdateAPIKeyResponse]
 	deleteAPIKey                          *connect.Client[v1.DeleteAPIKeyRequest, v1.DeleteAPIKeyResponse]
 	removeOrganizationMember              *connect.Client[v1.RemoveOrganizationMemberRequest, v1.RemoveOrganizationMemberResponse]
 	removeInvitation                      *connect.Client[v1.RemoveInvitationRequest, v1.RemoveInvitationResponse]
@@ -2486,6 +2499,11 @@ func (c *platformServiceClient) GetAPIKeys(ctx context.Context, req *connect.Req
 // CreateAPIKey calls wg.cosmo.platform.v1.PlatformService.CreateAPIKey.
 func (c *platformServiceClient) CreateAPIKey(ctx context.Context, req *connect.Request[v1.CreateAPIKeyRequest]) (*connect.Response[v1.CreateAPIKeyResponse], error) {
 	return c.createAPIKey.CallUnary(ctx, req)
+}
+
+// UpdateAPIKey calls wg.cosmo.platform.v1.PlatformService.UpdateAPIKey.
+func (c *platformServiceClient) UpdateAPIKey(ctx context.Context, req *connect.Request[v1.UpdateAPIKeyRequest]) (*connect.Response[v1.UpdateAPIKeyResponse], error) {
+	return c.updateAPIKey.CallUnary(ctx, req)
 }
 
 // DeleteAPIKey calls wg.cosmo.platform.v1.PlatformService.DeleteAPIKey.
@@ -3105,6 +3123,8 @@ type PlatformServiceHandler interface {
 	GetAPIKeys(context.Context, *connect.Request[v1.GetAPIKeysRequest]) (*connect.Response[v1.GetAPIKeysResponse], error)
 	// CreateAPIKey creates an API key for the organization
 	CreateAPIKey(context.Context, *connect.Request[v1.CreateAPIKeyRequest]) (*connect.Response[v1.CreateAPIKeyResponse], error)
+	// UpdateAPIKey updates an API key for the organization
+	UpdateAPIKey(context.Context, *connect.Request[v1.UpdateAPIKeyRequest]) (*connect.Response[v1.UpdateAPIKeyResponse], error)
 	// DeleteAPIKey deletes an API key for the organization
 	DeleteAPIKey(context.Context, *connect.Request[v1.DeleteAPIKeyRequest]) (*connect.Response[v1.DeleteAPIKeyResponse], error)
 	// RemoveOrganizationMember removes the user from the organization
@@ -3696,6 +3716,12 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		PlatformServiceCreateAPIKeyProcedure,
 		svc.CreateAPIKey,
 		connect.WithSchema(platformServiceCreateAPIKeyMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceUpdateAPIKeyHandler := connect.NewUnaryHandler(
+		PlatformServiceUpdateAPIKeyProcedure,
+		svc.UpdateAPIKey,
+		connect.WithSchema(platformServiceUpdateAPIKeyMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceDeleteAPIKeyHandler := connect.NewUnaryHandler(
@@ -4405,6 +4431,8 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceGetAPIKeysHandler.ServeHTTP(w, r)
 		case PlatformServiceCreateAPIKeyProcedure:
 			platformServiceCreateAPIKeyHandler.ServeHTTP(w, r)
+		case PlatformServiceUpdateAPIKeyProcedure:
+			platformServiceUpdateAPIKeyHandler.ServeHTTP(w, r)
 		case PlatformServiceDeleteAPIKeyProcedure:
 			platformServiceDeleteAPIKeyHandler.ServeHTTP(w, r)
 		case PlatformServiceRemoveOrganizationMemberProcedure:
@@ -4868,6 +4896,10 @@ func (UnimplementedPlatformServiceHandler) GetAPIKeys(context.Context, *connect.
 
 func (UnimplementedPlatformServiceHandler) CreateAPIKey(context.Context, *connect.Request[v1.CreateAPIKeyRequest]) (*connect.Response[v1.CreateAPIKeyResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.CreateAPIKey is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) UpdateAPIKey(context.Context, *connect.Request[v1.UpdateAPIKeyRequest]) (*connect.Response[v1.UpdateAPIKeyResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.UpdateAPIKey is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) DeleteAPIKey(context.Context, *connect.Request[v1.DeleteAPIKeyRequest]) (*connect.Response[v1.DeleteAPIKeyResponse], error) {

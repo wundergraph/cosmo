@@ -996,12 +996,18 @@ message InviteUserResponse {
 }
 
 message APIKey{
+  message Group {
+    string id = 1;
+    string name = 2;
+  }
+
   string id = 1;
   string name = 2;
   string createdBy = 3;
   string createdAt = 4;
   string lastUsedAt = 5;
   string expiresAt = 6;
+  optional Group group = 7;
 }
 
 message GetAPIKeysRequest {}
@@ -1036,6 +1042,15 @@ message DeleteAPIKeyRequest {
 }
 
 message DeleteAPIKeyResponse {
+  Response response = 1;
+}
+
+message UpdateAPIKeyRequest {
+  string name = 1;
+  string groupId = 2;
+}
+
+message UpdateAPIKeyResponse {
   Response response = 1;
 }
 
@@ -2859,6 +2874,8 @@ service PlatformService {
   rpc GetAPIKeys(GetAPIKeysRequest) returns (GetAPIKeysResponse){}
   // CreateAPIKey creates an API key for the organization
   rpc CreateAPIKey(CreateAPIKeyRequest) returns (CreateAPIKeyResponse){}
+  // UpdateAPIKey updates an API key for the organization
+  rpc UpdateAPIKey(UpdateAPIKeyRequest) returns (UpdateAPIKeyResponse) {}
   // DeleteAPIKey deletes an API key for the organization
   rpc DeleteAPIKey(DeleteAPIKeyRequest) returns (DeleteAPIKeyResponse){}
   // RemoveOrganizationMember removes the user from the organization
