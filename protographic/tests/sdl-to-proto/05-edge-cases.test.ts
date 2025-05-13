@@ -376,7 +376,7 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
       }
 
       message LookupUserByIdRequest {
-          repeated LookupUserByIdRequestKey key = 1;
+          repeated LookupUserByIdRequestKey keys = 1;
       }
 
       message LookupUserByIdResponse {
@@ -388,7 +388,7 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
       }
 
       message LookupPostByIdRequest {
-          repeated LookupPostByIdRequestKey key = 1;
+          repeated LookupPostByIdRequestKey keys = 1;
       }
 
       message LookupPostByIdResponse {

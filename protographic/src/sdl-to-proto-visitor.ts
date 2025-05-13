@@ -25,7 +25,6 @@ import {
   createEntityLookupMethodName,
   createEntityLookupRequestName,
   createEntityLookupResponseName,
-  createEntityLookupResultName,
   createEnumUnspecifiedValue,
   createOperationMethodName,
   createRequestMessageName,
@@ -544,7 +543,7 @@ export class GraphQLToProtoTextVisitor {
 
     // First create the key message
     messageLines.push(`message ${keyMessageName} {`);
-    
+
     // Add reserved field numbers if any exist for the key message
     const keyMessageLock = lockData.messages[keyMessageName];
     if (keyMessageLock?.reservedNumbers && keyMessageLock.reservedNumbers.length > 0) {
@@ -559,10 +558,10 @@ export class GraphQLToProtoTextVisitor {
     }
 
     const protoKeyField = graphqlFieldToProtoField(keyField);
-    
+
     // Get the appropriate field number for the key field
     const keyFieldNumber = this.getFieldNumber(keyMessageName, protoKeyField, 1);
-    
+
     messageLines.push(`    string ${protoKeyField} = ${keyFieldNumber};`);
     messageLines.push('}');
     messageLines.push('');
@@ -574,7 +573,7 @@ export class GraphQLToProtoTextVisitor {
     // Check for field removals in the request message
     if (lockData.messages[requestName]) {
       const originalFieldNames = Object.keys(lockData.messages[requestName].fields);
-      const currentFieldNames = ['key'];
+      const currentFieldNames = ['keys'];
       this.trackRemovedFields(requestName, originalFieldNames, currentFieldNames);
     }
 
@@ -587,14 +586,14 @@ export class GraphQLToProtoTextVisitor {
     }
 
     // Get the appropriate field number for the repeated key field
-    const repeatFieldNumber = this.getFieldNumber(requestName, 'key', 1);
-    
-    messageLines.push(`    repeated ${keyMessageName} key = ${repeatFieldNumber};`);
+    const repeatFieldNumber = this.getFieldNumber(requestName, 'keys', 1);
+
+    messageLines.push(`    repeated ${keyMessageName} keys = ${repeatFieldNumber};`);
     messageLines.push('}');
     messageLines.push('');
 
     // Ensure the request message is registered in the lock manager data
-    this.lockManager.reconcileMessageFieldOrder(requestName, ['key']);
+    this.lockManager.reconcileMessageFieldOrder(requestName, ['keys']);
 
     return messageLines;
   }

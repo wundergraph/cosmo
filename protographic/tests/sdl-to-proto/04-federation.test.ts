@@ -51,7 +51,7 @@ describe('SDL to Proto - Federation and Special Types', () => {
       }
 
       message LookupProductByIdRequest {
-          repeated LookupProductByIdRequestKey key = 1;
+          repeated LookupProductByIdRequestKey keys = 1;
       }
 
       message LookupProductByIdResponse {
@@ -63,7 +63,7 @@ describe('SDL to Proto - Federation and Special Types', () => {
       }
 
       message LookupUserByIdRequest {
-          repeated LookupUserByIdRequestKey key = 1;
+          repeated LookupUserByIdRequestKey keys = 1;
       }
 
       message LookupUserByIdResponse {
@@ -129,7 +129,7 @@ describe('SDL to Proto - Federation and Special Types', () => {
       }
 
       message LookupOrderItemByIdRequest {
-          repeated LookupOrderItemByIdRequestKey key = 1;
+          repeated LookupOrderItemByIdRequestKey keys = 1;
       }
 
       message LookupOrderItemByIdResponse {
@@ -204,7 +204,7 @@ describe('SDL to Proto - Federation and Special Types', () => {
       }
 
       message LookupUserByIdRequest {
-          repeated LookupUserByIdRequestKey key = 1;
+          repeated LookupUserByIdRequestKey keys = 1;
       }
 
       message LookupUserByIdResponse {
@@ -216,7 +216,7 @@ describe('SDL to Proto - Federation and Special Types', () => {
       }
 
       message LookupProductByIdRequest {
-          repeated LookupProductByIdRequestKey key = 1;
+          repeated LookupProductByIdRequestKey keys = 1;
       }
 
       message LookupProductByIdResponse {
