@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.79.1](https://github.com/wundergraph/cosmo/compare/wgc@0.79.0...wgc@0.79.1) (2025-05-13)
+
+### Bug Fixes
+
+* enhance telemetry opt-out logic to include missing POSTHOG_API_K… ([#1850](https://github.com/wundergraph/cosmo/issues/1850)) ([3bcd02c](https://github.com/wundergraph/cosmo/commit/3bcd02ccd3900256b3a52f71d0fb2e8c9b050e26)) (@thisisnithin)
+
 # [0.79.0](https://github.com/wundergraph/cosmo/compare/wgc@0.78.3...wgc@0.79.0) (2025-05-13)
 
 ### Features
