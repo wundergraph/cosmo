@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.79.0](https://github.com/wundergraph/cosmo/compare/wgc@0.78.3...wgc@0.79.0) (2025-05-13)
+
+### Features
+
+* add posthog ([#1847](https://github.com/wundergraph/cosmo/issues/1847)) ([f49ebfb](https://github.com/wundergraph/cosmo/commit/f49ebfb5f66dc4807104ebb63eea1418511010aa)) (@thisisnithin)
+* allow to check new subgraphs ([#1761](https://github.com/wundergraph/cosmo/issues/1761)) ([5b0bfbf](https://github.com/wundergraph/cosmo/commit/5b0bfbf38e77893453dc6bdfb4d524df1f59881b)) (@JivusAyrus)
+
 ## [0.78.3](https://github.com/wundergraph/cosmo/compare/wgc@0.78.2...wgc@0.78.3) (2025-05-02)
 
 ### Bug Fixes
