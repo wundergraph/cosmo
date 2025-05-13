@@ -106,7 +106,25 @@ export function deleteOrganizationGroup(
         }
 
         // Change the groups in the database too
-        await orgGroupRepo.changeMemberGroup({ fromGroupId: orgGroup.groupId, toGroupId: moveToGroup.groupId });
+        await orgGroupRepo.changeMemberGroup({
+          fromGroupId: orgGroup.groupId,
+          toGroupId: moveToGroup.groupId
+        });
+
+        await auditLogRepo.addAuditLog({
+          organizationId: authContext.organizationId,
+          organizationSlug: authContext.organizationSlug,
+          auditAction: 'group.members_moved',
+          action: 'updated',
+          actorId: authContext.userId,
+          auditableDisplayName: moveToGroup.name,
+          auditableType: 'group',
+          actorDisplayName: authContext.userDisplayName,
+          targetType: 'group',
+          targetDisplayName: orgGroup.name,
+          apiKeyName: authContext.apiKeyName,
+          actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+        });
       }
 
       await orgGroupRepo.deleteById(orgGroup.groupId);
