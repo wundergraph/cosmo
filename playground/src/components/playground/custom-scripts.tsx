@@ -614,13 +614,16 @@ export const CustomScripts = () => {
       const ids = Object.keys(prev);
       const tabIds = tabs.map((t) => t.id);
 
+      // Create a shallow copy -- this ensures state update is predictable
+      // and accidently doesn't mutate previous setState
+      const next = { ...prev };
       ids.forEach((id) => {
         if (!tabIds.includes(id)) {
-          delete prev[id];
+          delete next[id];
         }
       });
 
-      return prev;
+      return next;
     });
   }, [tabs, setScriptsTabState]);
 

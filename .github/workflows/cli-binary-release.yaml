@@ -7,6 +7,10 @@ permissions:
   contents: write
   packages: write
 
+env:
+  POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
+  POSTHOG_HOST: 'https://eu.i.posthog.com'
+
 jobs:
   wgc-releases-matrix:
     if: startsWith(github.event.release.tag_name, 'wgc@')
@@ -31,6 +35,8 @@ jobs:
 
       - name: Build
         run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition run build
+        env:
+          DO_NOT_TRACK: '0'
 
       - uses: winterjung/split@v2
         id: split
@@ -41,6 +47,8 @@ jobs:
       - name: 'Build wgc binary'
         working-directory: cli
         run: bun build --compile --minify --sourcemap --target ${{ matrix.target }} src/index.ts --outfile out/wgc-experimental-${{ steps.split.outputs._1 }}-${{ matrix.target }}
+        env:
+          DO_NOT_TRACK: '0'
 
       - name: 'Gzip wgc binary'
         working-directory: cli
