@@ -39,10 +39,14 @@ jobs:
 
       - name: Build Node.js NPM Package
         run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition run build
+        env:
+          DO_NOT_TRACK: '0'
 
       - name: 'Build wgc binary'
         working-directory: cli
         run: bun build --compile --minify --sourcemap src/index.ts --outfile wgc
+        env:
+          DO_NOT_TRACK: '0'
 
       - name: E2E test
         working-directory: cli
@@ -69,6 +73,8 @@ jobs:
 
       - name: Build Node.js NPM Package
         run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition run build
+        env:
+          DO_NOT_TRACK: '0'
 
       - name: Unit Test
         run: pnpm run --filter wgc test
@@ -94,6 +100,7 @@ jobs:
           github-sha: ${{ github.sha }}
           posthog-api-key: ${{ secrets.POSTHOG_API_KEY }}
           posthog-host: 'https://eu.i.posthog.com'
+          do-not-track: '0'
 
   build_test:
     runs-on: ubuntu-latest
