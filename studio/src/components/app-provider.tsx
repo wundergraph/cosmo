@@ -1,4 +1,4 @@
-import { identify, resetKoala } from "@/lib/track";
+import { identify, resetTracking } from "@/lib/track";
 import { Transport } from "@connectrpc/connect";
 import { TransportProvider } from "@connectrpc/connect-query";
 import { createConnectTransport } from "@connectrpc/connect-web";
@@ -71,7 +71,7 @@ export interface Organization {
   deletion?: {
     queuedAt: string;
     queuedBy?: string;
-  }
+  };
 }
 
 export interface Session {
@@ -107,7 +107,7 @@ const fetchSession = async () => {
     return null;
   } catch (e) {
     // Reset koala if user is not authenticated
-    resetKoala();
+    resetTracking();
     throw e;
   }
 };
