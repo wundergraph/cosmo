@@ -9473,7 +9473,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 				otel.WgOperationName.String(""),
 			)
 		}
-		return append(append(before, mid...))
+		return append(before, mid...)
 	}
 
 	t.Run("Verify metrics when there is a router config version metric attribute", func(t *testing.T) {
