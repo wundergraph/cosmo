@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.115.2](https://github.com/wundergraph/cosmo/compare/studio@0.115.1...studio@0.115.2) (2025-05-13)
+
+### Bug Fixes
+
+* reset tracking and fix cli cmd description ([#1853](https://github.com/wundergraph/cosmo/issues/1853)) ([580f92a](https://github.com/wundergraph/cosmo/commit/580f92a0af8372b6c4d69ffe3f5cdf9351f4f5aa)) (@thisisnithin)
+
 ## [0.115.1](https://github.com/wundergraph/cosmo/compare/studio@0.115.0...studio@0.115.1) (2025-05-13)
 
 ### Bug Fixes
