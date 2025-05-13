@@ -102,17 +102,19 @@ export class OrganizationGroupRepository {
 
     const orgGroups = await this.db.query.organizationGroups.findMany({
       where,
-      extras: (table, { sql }) => ({
+      extras: (_, { sql }) => ({
         // There is an active issue that prevents using `schema.organizationRuleSetMembers` instead of directly
         // using strings (https://github.com/drizzle-team/drizzle-orm/issues/3493)
         membersCount: sql<number>`
           CAST((
-            select count(distinct "organization_member_id")
-            from "organization_group_members"
-            where "organization_group_members"."group_id" = ${table.id}
+            SELECT COUNT(DISTINCT "ogm"."organization_member_id")
+            FROM "organization_group_members" as "ogm"
+            WHERE "ogm"."group_id" = "organizationGroups"."id"
           ) AS INTEGER)
           +
-          CAST((select count("id") from "api_keys" where "api_keys"."group_id" = ${table.id}) AS INTEGER)
+          CAST((
+            SELECT COUNT("api_keys"."id") FROM "api_keys" WHERE "api_keys"."group_id" = "organizationGroups"."id"
+          ) AS INTEGER)
         `.as('members_count'),
       }),
     });

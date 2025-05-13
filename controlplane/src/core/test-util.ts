@@ -29,6 +29,12 @@ export type UserTestData = {
   groups: ('admin' | 'developer' | 'viewer')[];
 };
 
+export const defaultGroupDescription: Record<string, string> = {
+  admin: 'Grants administrative access for the organization.',
+  developer: 'Grants developer access for the organization.',
+  viewer: 'Grants readonly access for the organization.',
+};
+
 export async function beforeAllSetup(): Promise<string> {
   const dbname = nuid.next();
   const sql = postgres('postgresql://postgres:changeme@localhost:5432/postgres', { max: 1 });
@@ -89,7 +95,7 @@ export async function seedTest(
       const createdGroup = await orgGroupRepo.create({
         organizationId: org.id,
         name: groupName,
-        description: '',
+        description: defaultGroupDescription[groupName] ?? '',
         builtin: true,
         kcGroupId: kcGroups?.find((g) => g.name === groupName)?.id || null,
       });

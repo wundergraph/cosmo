@@ -2,12 +2,15 @@ import * as process from 'node:process';
 import postgres from 'postgres';
 import { drizzle, PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { and, eq, not } from 'drizzle-orm';
+import { uid } from 'uid';
 import { buildDatabaseConnectionConfig } from '../core/plugins/database.js';
 import Keycloak from '../core/services/Keycloak.js';
 import * as schema from '../db/schema.js';
 import { OrganizationRole } from '../db/models.js';
 import { organizationRoleEnum } from '../db/schema.js';
 import { OidcRepository } from '../core/repositories/OidcRepository.js';
+import { OrganizationGroupRepository } from '../core/repositories/OrganizationGroupRepository.js';
+import { defaultGroupDescription } from '../core/test-util.js';
 import { getConfig } from './get-config.js';
 
 const {
@@ -73,39 +76,15 @@ async function migrateGroups(db: PostgresJsDatabase<typeof schema>) {
 
   await Promise.all(
     organizations.map(async ({ id: organizationId, slug: organizationSlug }) => {
-      // await g({ db, organizationId });
       await keycloakClient.seedRoles({ realm, organizationSlug });
       await ensureOrganizationSubgroupsExistInDatabase({ db, organizationId, organizationSlug });
       await updateAndLinkExistingOrganizationOidcMappers({ db, keycloakClient, organizationId, organizationSlug });
       await assignOrganizationMembersToCorrespondingGroups({ db, organizationId });
+      await createGroupsForSubgraphMembers({ db, organizationId, organizationSlug });
 
       console.log(`- Done processing organization "${organizationSlug}"`);
     }),
   );
-}
-
-async function g({ db, organizationId }: { db: PostgresJsDatabase<typeof schema>; organizationId: string }) {
-  const subgraphMembers = await db
-    .select({
-      subgraphId: schema.subgraphMembers.subgraphId,
-      userId: schema.subgraphMembers.userId,
-    })
-    .from(schema.subgraphMembers)
-    .innerJoin(schema.subgraphs, eq(schema.subgraphs.id, schema.subgraphMembers.subgraphId))
-    .innerJoin(schema.targets, eq(schema.targets.id, schema.subgraphs.targetId))
-    .where(
-      and(
-        eq(schema.targets.organizationId, organizationId),
-        // not(eq(schema.targets.createdBy, schema.subgraphMembers.userId))
-      ),
-    );
-
-  const groupedSubgraphsByUser = Object.groupBy(subgraphMembers, (m) => m.userId);
-  for (const [userId, subgraphs] of Object.entries(groupedSubgraphsByUser)) {
-    console.log({ userId, subgraphs });
-  }
-
-  console.log(subgraphMembers);
 }
 
 async function ensureOrganizationSubgroupsExistInDatabase({
@@ -140,7 +119,7 @@ async function ensureOrganizationSubgroupsExistInDatabase({
       organizationSubgroups.map((sg) => ({
         organizationId,
         name: sg.name!,
-        description: '',
+        description: defaultGroupDescription[sg.name!] ?? '',
         builtin: true,
         kcGroupId: sg.id!,
       })),
@@ -314,4 +293,110 @@ async function assignOrganizationMembersToCorrespondingGroups({
         .execute();
     }),
   );
+}
+
+async function createGroupsForSubgraphMembers({
+  db,
+  organizationId,
+  organizationSlug,
+}: {
+  db: PostgresJsDatabase<typeof schema>;
+  organizationId: string;
+  organizationSlug: string;
+}) {
+  const subgraphMembers = await db
+    .select({
+      targetId: schema.subgraphs.targetId,
+      userId: schema.subgraphMembers.userId,
+      email: schema.users.email,
+      orgMemberId: schema.organizationsMembers.id,
+    })
+    .from(schema.subgraphMembers)
+    .innerJoin(schema.subgraphs, eq(schema.subgraphs.id, schema.subgraphMembers.subgraphId))
+    .innerJoin(schema.targets, eq(schema.targets.id, schema.subgraphs.targetId))
+    .innerJoin(schema.users, eq(schema.users.id, schema.subgraphMembers.userId))
+    .innerJoin(schema.organizationsMembers, eq(schema.organizationsMembers.userId, schema.users.id))
+    .where(
+      and(
+        eq(schema.targets.organizationId, organizationId),
+        not(eq(schema.targets.createdBy, schema.subgraphMembers.userId)),
+      ),
+    );
+
+  if (subgraphMembers.length === 0) {
+    return;
+  }
+
+  const orgGroupRepo = new OrganizationGroupRepository(db);
+  const groupedSubgraphsByUser = Object.groupBy(subgraphMembers, (m) => m.email);
+
+  for (const [email, subgraphs] of Object.entries(groupedSubgraphsByUser)) {
+    if (!subgraphs || subgraphs.length === 0) {
+      continue;
+    }
+
+    // Retrieve user from Keycloak
+    const kcUsers = await keycloakClient.client.users.find({ realm, email });
+    if (kcUsers.length === 0) {
+      // Keycloak user not found, skip update
+      continue;
+    }
+
+    // Retrieve the subgraph publisher role from Keycloak
+    const kcRole = await keycloakClient.client.roles.findOneByName({
+      realm,
+      name: `${organizationSlug}:subgraph-publisher`,
+    });
+
+    if (!kcRole) {
+      // Keycloak role doesn't exists
+      continue;
+    }
+
+    // Create a new group with the corresponding role
+    const groupName = `generated-${uid()}`;
+    const kcCreatedGroup = await keycloakClient.createSubGroup({
+      realm,
+      organizationSlug,
+      groupName,
+    });
+
+    if (!kcCreatedGroup) {
+      continue;
+    }
+
+    // Add the role to the created role
+    await keycloakClient.client.groups.addRealmRoleMappings({
+      realm,
+      id: kcCreatedGroup!,
+      roles: [{ id: kcRole!.id!, name: kcRole!.name! }],
+    });
+
+    // Create the new group in the database
+    const createdGroup = await orgGroupRepo.create({
+      organizationId,
+      name: groupName,
+      description: `Subgraph memberships for organization member ${email}`,
+      kcGroupId: kcCreatedGroup!,
+    });
+
+    // Attach all the subgraphs the user is allowed to publish to
+    await orgGroupRepo.updateGroup({
+      groupId: createdGroup.groupId,
+      organizationId,
+      rules: [
+        {
+          role: 'subgraph-publisher',
+          namespaces: [],
+          resources: subgraphs?.map((g) => g.targetId) ?? [],
+        },
+      ],
+    });
+
+    // Finally, add the user to the group
+    await orgGroupRepo.addUserToGroup({
+      organizationMemberId: subgraphs[0].orgMemberId,
+      groupId: createdGroup.groupId,
+    });
+  }
 }
