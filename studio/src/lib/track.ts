@@ -1,5 +1,8 @@
 // Tracking. This will be available if the following scripts are embedded though CUSTOM_HEAD_SCRIPTS
-// Koala, Reo
+// Koala, Reo, PostHog
+
+import posthog from "posthog-js";
+import PostHogClient from "./posthog";
 
 declare global {
   interface Window {
@@ -8,11 +11,12 @@ declare global {
   }
 }
 
-const resetKoala = () => {
+const resetTracking = () => {
   if (typeof window === "undefined") {
     return;
   }
 
+  posthog.reset();
   window.ko?.reset;
 };
 
@@ -39,6 +43,7 @@ const identify = ({
     return;
   }
 
+  // Identify with Koala
   window.ko?.identify(email, {
     id,
     $account: {
@@ -49,10 +54,22 @@ const identify = ({
     },
   });
 
+  // Identify with Reo
   window.Reo?.identify({
     username: email,
     type: "email",
   });
+
+  // Identify with PostHog
+
+  const posthog = PostHogClient();
+  posthog.identify(id, {
+    email,
+    organizationId,
+    organizationName,
+    organizationSlug,
+    plan,
+  });
 };
 
-export { resetKoala, identify };
+export { resetTracking, identify };

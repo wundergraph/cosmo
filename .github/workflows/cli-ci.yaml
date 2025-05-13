@@ -15,6 +15,8 @@ concurrency:
 env:
   CI: true
   DO_NOT_TRACK: '1'
+  POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
+  POSTHOG_HOST: 'https://eu.i.posthog.com'
 
 jobs:
   build_test_default:
@@ -90,6 +92,8 @@ jobs:
         with:
           target: ${{ matrix.target }}
           github-sha: ${{ github.sha }}
+          posthog-api-key: ${{ secrets.POSTHOG_API_KEY }}
+          posthog-host: 'https://eu.i.posthog.com'
 
   build_test:
     runs-on: ubuntu-latest
@@ -102,4 +106,3 @@ jobs:
       - name: 'Some tests failed'
         if: ${{ contains(needs.*.result, 'failure') }}
         run: exit 1
-

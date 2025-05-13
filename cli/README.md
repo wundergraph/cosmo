@@ -22,10 +22,17 @@ npm install -g wgc --help
 
 ### Telemetry
 
-The CLI tool collects anonymous usage data to improve the tool. You can disable this by setting this variable in accordance to the [Console Do Not Track](https://consoledonottrack.com/) standard:
-```shell
-export DO_NOT_TRACK=1
-```
+The CLI tool collects usage data to help us improve the tool and understand how users interact with it. You can disable telemetry in one of the following ways:
+
+1. Set the environment variable:
+   ```shell
+   export COSMO_TELEMETRY_DISABLED=true
+   ```
+
+2. Follow the [Console Do Not Track](https://consoledonottrack.com/) standard:
+   ```shell
+   export DO_NOT_TRACK=1
+   ```
 
 ### Development
 

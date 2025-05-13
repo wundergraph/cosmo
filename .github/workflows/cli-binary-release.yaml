@@ -7,6 +7,10 @@ permissions:
   contents: write
   packages: write
 
+env:
+  POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
+  POSTHOG_HOST: 'https://eu.i.posthog.com'
+
 jobs:
   wgc-releases-matrix:
     if: startsWith(github.event.release.tag_name, 'wgc@')
