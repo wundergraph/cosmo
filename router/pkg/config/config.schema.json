@@ -1809,6 +1809,11 @@
               "description": "The address on which the MCP server listens for incoming requests. The address is specified as a string with the format 'host:port'.",
               "default": "localhost:5025",
               "format": "hostname-port"
+            },
+            "base_url": {
+              "type": "string",
+              "description": "The base URL of the MCP server. This is the URL advertised to the LLM clients when SSE is used as primary transport. By default, the base URL is relative to the URL that the router is running on. The URL is specified as a string with the format 'scheme://host:port'.",
+              "format": "http-url"
             }
           }
         },

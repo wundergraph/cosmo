@@ -49,6 +49,10 @@ Get started with Cosmo by choosing the example that best fits your role and use 
 - [**Platform Engineer**](examples/full-cosmo-helm/README.md): Deploy the entire Cosmo Platform to Kubernetes through our official Helm Chart.
 - [**Decision Maker (e.g. Engineering Manager, CTO)**](https://wundergraph.com/contact/sales): Get in touch with the founders to discuss how Cosmo can help your organization.
 
+## Local Development
+
+To contribute to this repo and get the local environment up and running, please refer to [**CONTRIBUTING.md**](./CONTRIBUTING.md#local-development)
+
 _For any questions, feedback, or support, please [contact](https://wundergraph.com/contact/sales) us._
 
 <br>
