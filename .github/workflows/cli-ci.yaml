@@ -43,6 +43,8 @@ jobs:
       - name: 'Build wgc binary'
         working-directory: cli
         run: bun build --compile --minify --sourcemap src/index.ts --outfile wgc
+        env:
+          DO_NOT_TRACK: '0'
 
       - name: E2E test
         working-directory: cli

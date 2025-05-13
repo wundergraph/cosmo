@@ -45,6 +45,8 @@ jobs:
       - name: 'Build wgc binary'
         working-directory: cli
         run: bun build --compile --minify --sourcemap --target ${{ matrix.target }} src/index.ts --outfile out/wgc-experimental-${{ steps.split.outputs._1 }}-${{ matrix.target }}
+        env:
+          DO_NOT_TRACK: '0'
 
       - name: 'Gzip wgc binary'
         working-directory: cli

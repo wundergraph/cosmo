@@ -61,6 +61,7 @@ runs:
       env:
         POSTHOG_API_KEY: ${{ inputs.posthog-api-key }}
         POSTHOG_HOST: ${{ inputs.posthog-host }}
+        DO_NOT_TRACK: '0'
 
     - name: 'Upload builds as artifacts'
       id: upload
