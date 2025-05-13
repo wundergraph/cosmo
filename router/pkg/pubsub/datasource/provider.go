@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strconv"
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -23,8 +24,8 @@ type PubSubProvider interface {
 
 type PubSubProviderBuilder[A any] interface {
 	Id() string
-	BuildProviders(usedProviders []string) (map[string]A, []PubSubProvider, error)
-	GetMatcher(data []EngineEventConfiguration, adapters map[string]A) PubSubDataSourceMatcherFn
+	Providers(usedProviders []string) (map[string]A, []PubSubProvider, error)
+	DataSource(data EngineEventConfiguration, adapters map[string]A) (PubSubDataSource, error)
 }
 
 func BuildProviderDataSources[A any](providerBuilder PubSubProviderBuilder[A], ctx context.Context, in *nodev1.DataSourceConfiguration, dsMeta *plan.DataSourceMetadata, config config.EventsConfiguration, logger *zap.Logger, hostName string, routerListenAddr string, data []EngineEventConfiguration) ([]PubSubProvider, []plan.DataSource, error) {
@@ -42,7 +43,7 @@ func BuildProviderDataSources[A any](providerBuilder PubSubProviderBuilder[A], c
 	}
 
 	// Initialize used providers
-	adapters, pubSubProviders, err := providerBuilder.BuildProviders(usedProviders)
+	adapters, pubSubProviders, err := providerBuilder.Providers(usedProviders)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -59,16 +60,23 @@ func BuildProviderDataSources[A any](providerBuilder PubSubProviderBuilder[A], c
 	}
 
 	// Create data sources
-	matcherFn := providerBuilder.GetMatcher(data, adapters)
-	out, err := plan.NewDataSourceConfiguration(
-		in.Id+"-"+providerBuilder.Id(),
-		NewFactory(ctx, matcherFn),
-		GetFilteredDataSourceMetadata(data, dsMeta),
-		matcherFn,
-	)
-	if err != nil {
-		return nil, nil, err
+	var outs []plan.DataSource
+	for i, event := range data {
+		pubsubDataSource, err := providerBuilder.DataSource(event, adapters)
+		if err != nil {
+			return nil, nil, err
+		}
+		out, err := plan.NewDataSourceConfiguration(
+			in.Id+"-"+providerBuilder.Id()+"-"+strconv.Itoa(i),
+			NewFactory(ctx, pubsubDataSource),
+			GetFilteredDataSourceMetadata(event, dsMeta),
+			pubsubDataSource,
+		)
+		if err != nil {
+			return nil, nil, err
+		}
+		outs = append(outs, out)
 	}
 
-	return pubSubProviders, []plan.DataSource{out}, nil
+	return pubSubProviders, outs, nil
 }

@@ -30,25 +30,24 @@ type PubSubDataSource interface {
 	ResolveDataSourceSubscription() (resolve.SubscriptionDataSource, error)
 	// ResolveDataSourceSubscriptionInput build the input that will be passed to the engine SubscriptionDataSource
 	ResolveDataSourceSubscriptionInput() (string, error)
+	// TransformEventData allows the data source to transform the event data using the extractFn
+	TransformEventData(extractFn ArgumentTemplateCallback) error
 }
 
 type EngineEventConfiguration interface {
 	GetEngineEventConfiguration() *nodev1.EngineEventConfiguration
 }
 
-type PubSubDataSourceMatcherFn func(typeName string, fieldName string, extractFn ArgumentTemplateCallback) (PubSubDataSource, error)
-
-func GetFilteredDataSourceMetadata[E EngineEventConfiguration](data []E, dsMeta *plan.DataSourceMetadata) *plan.DataSourceMetadata {
+func GetFilteredDataSourceMetadata[E EngineEventConfiguration](event E, dsMeta *plan.DataSourceMetadata) *plan.DataSourceMetadata {
 	// find used root types and fields
 	rootFields := make(map[string][]string)
-	for _, event := range data {
-		typeName := event.GetEngineEventConfiguration().GetTypeName()
-		fieldName := event.GetEngineEventConfiguration().GetFieldName()
-		if _, ok := rootFields[typeName]; !ok {
-			rootFields[typeName] = []string{}
-		}
-		rootFields[typeName] = append(rootFields[typeName], fieldName)
+
+	typeName := event.GetEngineEventConfiguration().GetTypeName()
+	fieldName := event.GetEngineEventConfiguration().GetFieldName()
+	if _, ok := rootFields[typeName]; !ok {
+		rootFields[typeName] = []string{}
 	}
+	rootFields[typeName] = append(rootFields[typeName], fieldName)
 
 	// filter dsMeta.RootNodes
 	newRootNodes := []plan.TypeField{}

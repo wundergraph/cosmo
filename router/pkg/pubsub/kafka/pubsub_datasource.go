@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
@@ -70,6 +71,10 @@ func (c *PubSubDataSource) ResolveDataSourceSubscriptionInput() (string, error) 
 		return "", fmt.Errorf("failed to marshal event subscription streamConfiguration")
 	}
 	return string(object), nil
+}
+
+func (c *PubSubDataSource) TransformEventData(extractFn datasource.ArgumentTemplateCallback) error {
+	return nil
 }
 
 type SubscriptionEventConfiguration struct {

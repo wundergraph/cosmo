@@ -12,12 +12,11 @@ import (
 )
 
 type Planner struct {
-	id                      int
-	pubSubDataSource        PubSubDataSource
-	pubSubDataSourceMatcher PubSubDataSourceMatcherFn
-	rootFieldRef            int
-	variables               resolve.Variables
-	visitor                 *plan.Visitor
+	id               int
+	pubSubDataSource PubSubDataSource
+	rootFieldRef     int
+	variables        resolve.Variables
+	visitor          *plan.Visitor
 }
 
 func (p *Planner) SetID(id int) {
@@ -40,17 +39,22 @@ func (p *Planner) DataSourcePlanningBehavior() plan.DataSourcePlanningBehavior {
 	}
 }
 
-func (p *Planner) Register(visitor *plan.Visitor, configuration plan.DataSourceConfiguration[PubSubDataSourceMatcherFn], _ plan.DataSourcePlannerConfiguration) error {
+func (p *Planner) Register(visitor *plan.Visitor, configuration plan.DataSourceConfiguration[PubSubDataSource], _ plan.DataSourcePlannerConfiguration) error {
 	p.visitor = visitor
 	visitor.Walker.RegisterEnterFieldVisitor(p)
 	visitor.Walker.RegisterEnterDocumentVisitor(p)
-	p.pubSubDataSourceMatcher = configuration.CustomConfiguration()
+	p.pubSubDataSource = configuration.CustomConfiguration()
 
 	return nil
 }
 
 func (p *Planner) ConfigureFetch() resolve.FetchConfiguration {
 	var dataSource resolve.DataSource
+
+	if p.pubSubDataSource == nil {
+		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("data source not set"))
+		return resolve.FetchConfiguration{}
+	}
 
 	dataSource, err := p.pubSubDataSource.ResolveDataSource()
 	if err != nil {
@@ -81,6 +85,11 @@ func (p *Planner) ConfigureFetch() resolve.FetchConfiguration {
 }
 
 func (p *Planner) ConfigureSubscription() plan.SubscriptionConfiguration {
+	if p.pubSubDataSource == nil {
+		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("data source not set"))
+		return plan.SubscriptionConfiguration{}
+	}
+
 	dataSource, err := p.pubSubDataSource.ResolveDataSourceSubscription()
 	if err != nil {
 		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to get resolve data source subscription: %w", err))
@@ -177,17 +186,12 @@ func (p *Planner) EnterField(ref int) {
 	}
 	p.rootFieldRef = ref
 
-	fieldName := p.visitor.Operation.FieldNameString(ref)
-	typeName := p.visitor.Walker.EnclosingTypeDefinition.NameString(p.visitor.Definition)
-
 	extractFn := func(tpl string) (string, error) {
 		return p.extractArgumentTemplate(ref, tpl)
 	}
 
-	ds, err := p.pubSubDataSourceMatcher(typeName, fieldName, extractFn)
+	err := p.pubSubDataSource.TransformEventData(extractFn)
 	if err != nil {
 		p.visitor.Walker.StopWithInternalErr(err)
 	}
-
-	p.pubSubDataSource = ds
 }

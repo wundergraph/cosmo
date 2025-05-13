@@ -25,26 +25,19 @@ func (p *PubSubProviderBuilder) Id() string {
 	return providerId
 }
 
-func (p *PubSubProviderBuilder) GetMatcher(data []datasource.EngineEventConfiguration, adapters map[string]AdapterInterface) datasource.PubSubDataSourceMatcherFn {
-	return func(typeName string, fieldName string, extractFn datasource.ArgumentTemplateCallback) (datasource.PubSubDataSource, error) {
-		for _, event := range data {
-			kafkaEvent, ok := event.(*nodev1.KafkaEventConfiguration)
-			if !ok {
-				continue
-			}
-			if kafkaEvent.GetEngineEventConfiguration().GetTypeName() == typeName && kafkaEvent.GetEngineEventConfiguration().GetFieldName() == fieldName {
-				providerId := kafkaEvent.GetEngineEventConfiguration().GetProviderId()
-				return &PubSubDataSource{
-					EventConfiguration: kafkaEvent,
-					KafkaAdapter:       adapters[providerId],
-				}, nil
-			}
-		}
-		return nil, fmt.Errorf("failed to find Kafka event configuration for typeName: %s, fieldName: %s", typeName, fieldName)
+func (p *PubSubProviderBuilder) DataSource(data datasource.EngineEventConfiguration, adapters map[string]AdapterInterface) (datasource.PubSubDataSource, error) {
+	kafkaEvent, ok := data.(*nodev1.KafkaEventConfiguration)
+	if !ok {
+		return nil, fmt.Errorf("failed to cast data to KafkaEventConfiguration")
 	}
+	providerId := kafkaEvent.GetEngineEventConfiguration().GetProviderId()
+	return &PubSubDataSource{
+		EventConfiguration: kafkaEvent,
+		KafkaAdapter:       adapters[providerId],
+	}, nil
 }
 
-func (p *PubSubProviderBuilder) BuildProviders(usedProviders []string) (map[string]AdapterInterface, []datasource.PubSubProvider, error) {
+func (p *PubSubProviderBuilder) Providers(usedProviders []string) (map[string]AdapterInterface, []datasource.PubSubProvider, error) {
 	adapters := make(map[string]AdapterInterface)
 	pubSubProviders := []datasource.PubSubProvider{}
 
