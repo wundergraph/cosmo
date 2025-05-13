@@ -3,6 +3,7 @@ import { Command } from 'commander';
 import { CreateClient } from '../core/client/client.js';
 import { config, configDir } from '../core/config.js';
 import { checkForUpdates } from '../utils.js';
+import { capture } from '../core/telemetry.js';
 import AuthCommands from './auth/index.js';
 import MonographCommands from './graph/monograph/index.js';
 import FederatedGraphCommands from './graph/federated-graph/index.js';
@@ -110,6 +111,32 @@ program.addCommand(
 program.hook('preAction', async () => {
   mkdirSync(configDir, { recursive: true });
   await checkForUpdates();
+});
+
+// Hook to capture command usage
+program.hook('preAction', (thisCommand, actionCommand) => {
+  const commandPath = actionCommand.name();
+  const parentNames = [];
+  let current = actionCommand.parent;
+
+  // Build the full command path (e.g., "federated-graph publish")
+  while (current) {
+    if (current.name() !== '') {
+      parentNames.unshift(current.name());
+    }
+    current = current.parent;
+  }
+
+  const fullCommandPath = [...parentNames, commandPath].join(' ');
+
+  const args = actionCommand.args || [];
+
+  // Capture command execution event
+  capture('command_executed', {
+    command_path: fullCommandPath,
+    command_options: actionCommand.opts(),
+    command_args: args,
+  });
 });
 
 export default program;

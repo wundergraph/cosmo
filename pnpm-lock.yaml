@@ -249,6 +249,9 @@ importers:
       picocolors:
         specifier: ^1.0.0
         version: 1.0.0
+      posthog-node:
+        specifier: ^4.17.1
+        version: 4.17.1
       trieve-ts-sdk:
         specifier: ^0.0.80
         version: 0.0.80
@@ -11836,6 +11839,10 @@ packages:
         optional: true
       rrweb-snapshot:
         optional: true
+
+  posthog-node@4.17.1:
+    resolution: {integrity: sha512-cVlQPOwOPjakUnrueKRCQe1m2Ku+XzKaOos7Tn/zDZkkZFeBT/byP7tbNf7LiwhaBRWFBRowZZb/MsTtSRaorg==}
+    engines: {node: '>=15.0.0'}
 
   preact@10.26.6:
     resolution: {integrity: sha512-5SRRBinwpwkaD+OqlBDeITlRgvd8I8QlxHJw9AxSdMNV6O+LodN9nUyYGpSF7sadHjs6RzeFShMexC6DbtWr9g==}
@@ -26788,6 +26795,12 @@ snapshots:
       fflate: 0.4.8
       preact: 10.26.6
       web-vitals: 4.2.4
+
+  posthog-node@4.17.1:
+    dependencies:
+      axios: 1.8.4
+    transitivePeerDependencies:
+      - debug
 
   preact@10.26.6: {}
 
