@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.115.1](https://github.com/wundergraph/cosmo/compare/studio@0.115.0...studio@0.115.1) (2025-05-13)
+
+### Bug Fixes
+
+* update PostHog identification to allow cross-domain tracking ([#1851](https://github.com/wundergraph/cosmo/issues/1851)) ([3bd2991](https://github.com/wundergraph/cosmo/commit/3bd29916e10758478fc194e66f16e91783a16787)) (@thisisnithin)
+
 # [0.115.0](https://github.com/wundergraph/cosmo/compare/studio@0.114.0...studio@0.115.0) (2025-05-13)
 
 ### Features
