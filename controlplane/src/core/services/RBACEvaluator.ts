@@ -14,6 +14,12 @@ export class RBACEvaluator {
   readonly resources: string[];
   readonly rules: ReadonlyMap<OrganizationRole, RuleData>;
 
+  readonly isOrganizationAdmin: boolean;
+  readonly isOrganizationAdminOrDeveloper: boolean;
+  readonly isOrganizationViewer: boolean;
+  readonly canAdminAnyNamespace: boolean;
+  readonly canViewAnyNamespace: boolean;
+
   constructor(readonly groups: Omit<OrganizationGroupDTO, 'membersCount' | 'kcGroupId' | 'kcMapperId'>[]) {
     const flattenRules = groups.flatMap((group) => group.rules);
     const rulesGroupedByRole = Object.groupBy(flattenRules, (rule) => rule.role);
@@ -30,23 +36,55 @@ export class RBACEvaluator {
     this.namespaces = [...new Set(Array.from(result.values(), (res) => res.namespaces).flat())];
     this.resources = [...new Set(Array.from(result.values(), (res) => res.resources).flat())];
     this.rules = result;
+
+    this.isOrganizationAdmin = this.is('organization-admin');
+    this.isOrganizationAdminOrDeveloper = this.isOrganizationAdmin || this.is('organization-developer');
+    this.isOrganizationViewer = this.isOrganizationAdminOrDeveloper || this.is('organization-viewer');
+
+    const nsAdminRule = this.rules.get('namespace-admin');
+    const nsViewerRule = this.rules.get('namespace-viewer');
+    this.canAdminAnyNamespace =
+      this.isOrganizationAdminOrDeveloper || (!!nsAdminRule && nsAdminRule.namespaces.length === 0);
+    this.canViewAnyNamespace = this.canAdminAnyNamespace || (!!nsViewerRule && nsViewerRule.namespaces.length === 0);
   }
 
-  get isOrganizationAdmin() {
-    return this.is(['organization-admin']);
-  }
+  is(...roles: OrganizationRole[]) {
+    if (roles.length === 0) {
+      return false;
+    }
 
-  get isOrganizationAdminOrDeveloper() {
-    return this.isOrganizationAdmin || this.is(['organization-developer']);
-  }
-
-  get isOrganizationViewer() {
-    return this.isOrganizationAdminOrDeveloper || this.is(['organization-viewer']);
-  }
-
-  is(roles: OrganizationRole[]) {
     for (const role of roles) {
       if (this.roles.includes(role)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  checkNamespaceAccess(namespace: string, ...roles: OrganizationRole[]) {
+    if (!roles || roles.length === 0) {
+      return this.namespaces.includes(namespace);
+    }
+
+    for (const role of roles) {
+      const rule = this.rules.get(role);
+      if (rule && (rule.namespaces.length === 0 || rule.namespaces.includes(namespace))) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  checkTargetAccess(target: string, ...roles: OrganizationRole[]) {
+    if (!roles || roles.length === 0) {
+      return this.resources.includes(target);
+    }
+
+    for (const role of roles) {
+      const rule = this.rules.get(role);
+      if (rule && (rule.resources.length === 0 || rule.resources.includes(target))) {
         return true;
       }
     }

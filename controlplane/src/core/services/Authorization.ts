@@ -49,9 +49,77 @@ export class Authorization {
     if (!org) {
       throw new Error(`Organization ${organizationId} not found`);
     }
+
     if (org.deactivation) {
       throw new Error(`The organization is deactivated and is in read-only mode`);
     }
+
+    /**
+     * Here we check access permissions using the new RBAC system. The idea is that when the no group have been
+     * added to the user/api key performing the request, we'll fall back to how the authorization checks were made
+     * before.
+     *
+     * The RBAC instance we are using is created by:
+     *    - `ApiKeyAuthenticator`
+     *    - `AccessTokenAuthenticator`
+     *    - `Authentication`
+     */
+    const { rbac } = authContext;
+    if (rbac && rbac.groups.length > 0) {
+      if (rbac.isOrganizationAdminOrDeveloper) {
+        // When the client have the organization admin or developer roles, they are allowed to access any organization
+        // resource, we don't need to perform any additional validation
+        return;
+      }
+
+      if (targetType === 'federatedGraph') {
+        // Validate that the client have write access to the provided federated graph. This is defined by the
+        // `graph admin` role. If the resources assigned to the role are empty or the target graph is part of the
+        // role resources, the client have been granted write access to the federated graph
+        const rule = rbac.rules.get('graph-admin');
+        if (rule && (rule.resources.length === 0 || rule.resources.includes(targetId))) {
+          return;
+        }
+
+        // The client wasn't granted write access to the federated graph, but they should always have write access
+        // to any federated graph they created
+        const federatedGraph = await fedRepo.byTargetId(targetId);
+        if (federatedGraph?.creatorUserId && federatedGraph.creatorUserId === userId) {
+          return;
+        }
+
+        // The client doesn't have write access to the requested federated graph
+        throw new AuthorizationError(
+          EnumStatusCode.ERROR_NOT_AUTHORIZED,
+          'You are not authorized to perform the current action. Please communicate with the organization admin to gain access.'
+        );
+      } else if (targetType === 'subgraph') {
+        // Validate that the client have write access to the provided subgraph. This is defined by the
+        // `graph publisher` role. If the resources assigned to the role are empty or the target graph is part of
+        // the resources, the client have been granted write access to the subgraph
+        const rule = rbac.rules.get('subgraph-publisher');
+        if (rule && (rule.resources.length === 0 || rule.resources.includes(targetId))) {
+          return;
+        }
+
+        // The client wasn't granted write access to the subgraph, but they should always have write access
+        // to any subgraph they created
+        const subgraph = await subgraphRepo.byTargetId(targetId);
+        if (subgraph?.creatorUserId && subgraph.creatorUserId === userId) {
+          return;
+        }
+
+        // The user doesn't have access to the requested subgraph
+        throw new AuthorizationError(
+          EnumStatusCode.ERROR_NOT_AUTHORIZED,
+          'You are not authorized to perform the current action. Please communicate with the organization admin to gain access.',
+        );
+      }
+    }
+
+    /**
+     * Below this point is legacy fallback, in case we couldn't retrieve any group for the requesting client
+     */
 
     /**
      * We check if the organization has the rbac feature enabled.
@@ -64,19 +132,13 @@ export class Authorization {
       return;
     }
 
-    const { rbac } = authContext;
-    const shouldEvaluateRbac = rbac && rbac.groups.length > 0;
-
     try {
       /**
        * If the user is using an API key, we verify if the API key has access to the resource.
        * We only do this because RBAC is enabled otherwise the key is handled as an admin key.
        */
       if (token && token.startsWith('cosmo')) {
-        const verified = shouldEvaluateRbac
-          ? rbac.checkResourceWriteAccess(targetId)
-          : await apiKeyRepo.verifyAPIKeyResources({ apiKey: token, accessedTargetId: targetId });
-
+        const verified = await apiKeyRepo.verifyAPIKeyResources({ apiKey: token, accessedTargetId: targetId });
         if (verified) {
           return;
         } else {
@@ -96,29 +158,11 @@ export class Authorization {
        */
 
       if (targetType === 'federatedGraph') {
-        if (shouldEvaluateRbac) {
-          if (rbac.checkResourceWriteAccess(targetId)) {
-            return;
-          }
-
-          throw new Error('User is not authorized to perform the current action in the federated graph');
-        }
-
         const fedGraph = await fedRepo.byTargetId(targetId);
         if (!(fedGraph?.creatorUserId && fedGraph.creatorUserId === userId)) {
           throw new Error('User is not authorized to perform the current action in the federated graph');
         }
       } else if (targetType === 'subgraph') {
-        if (shouldEvaluateRbac) {
-          if (rbac.checkResourceWriteAccess(targetId)) {
-            return;
-          }
-
-          throw new Error(
-            'User is not authorized to perform the current action in the federated graph because the user is not a member of the subgraph',
-          );
-        }
-
         const subgraph = await subgraphRepo.byTargetId(targetId);
         const subgraphMembers = await subgraphRepo.getSubgraphMembersByTargetId(targetId);
         const userIds = subgraphMembers.map((s) => s.userId);
