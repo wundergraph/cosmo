@@ -414,12 +414,7 @@ async function generateProtoAndMapping(pluginDir: string, goModulePath: string, 
   const srcDir = resolve(pluginDir, 'src');
   const generatedDir = resolve(pluginDir, 'generated');
 
-  // Delete generated directory if it exists
-  if (existsSync(generatedDir)) {
-    await rm(generatedDir, { recursive: true, force: true });
-  }
-
-  // Ensure generated directory exists
+  // Ensure a generated directory exists
   await mkdir(generatedDir, { recursive: true });
 
   spinner.text = 'Reading schema...';
