@@ -118,17 +118,6 @@ type (
 		MeasureOperationPlanningTime(ctx context.Context, planningTime float64, opts ...otelmetric.RecordOption)
 		MeasureSchemaFieldUsage(ctx context.Context, schemaUsage int64, opts ...otelmetric.AddOption)
 		Flush(ctx context.Context) error
-
-		RecordDNSDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
-		RecordTCPDialDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
-		RecordTLSHandshakeDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
-		RecordTotalConnectionDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
-		RecordPoolWaitDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
-		RecordPoolWaitCountTotal(ctx context.Context, count int64, opts ...otelmetric.AddOption)
-		RecordConnectionNewTotal(ctx context.Context, count int64, opts ...otelmetric.AddOption)
-		RecordConnectionReuseTotal(ctx context.Context, count int64, opts ...otelmetric.AddOption)
-		RecordPoolActiveConnections(ctx context.Context, delta int64, opts ...otelmetric.AddOption)
-		RecordPoolIdleConnections(ctx context.Context, delta int64, opts ...otelmetric.AddOption)
 	}
 
 	// Store is the unified metric interface for OTEL and Prometheus metrics. The interface can vary depending on
@@ -143,17 +132,6 @@ type (
 		MeasureRequestError(ctx context.Context, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption)
 		MeasureOperationPlanningTime(ctx context.Context, planningTime time.Duration, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption)
 		MeasureSchemaFieldUsage(ctx context.Context, schemaUsage int64, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption)
-
-		RecordDNSDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
-		RecordTCPDialDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
-		RecordTLSHandshakeDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
-		RecordTotalConnectionDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
-		RecordPoolWaitDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
-		RecordPoolWaitCountTotal(ctx context.Context, count int64, attrs ...attribute.KeyValue)
-		RecordConnectionNewTotal(ctx context.Context, count int64, attrs ...attribute.KeyValue)
-		RecordConnectionReuseTotal(ctx context.Context, count int64, attrs ...attribute.KeyValue)
-		RecordPoolActiveConnections(ctx context.Context, delta int64, attrs ...attribute.KeyValue)
-		RecordPoolIdleConnections(ctx context.Context, delta int64, attrs ...attribute.KeyValue)
 
 		Flush(ctx context.Context) error
 		Shutdown(ctx context.Context) error
@@ -446,64 +424,4 @@ func WithCardinalityLimit(cardinalityLimit int) Option {
 	return func(h *Metrics) {
 		h.cardinalityLimit = cardinalityLimit
 	}
-}
-
-func (h *Metrics) RecordDNSDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
-	opts := []otelmetric.RecordOption{otelmetric.WithAttributes(append(h.baseAttributes, attrs...)...)}
-	h.promRequestMetrics.RecordDNSDuration(ctx, duration, opts...)
-	h.otlpRequestMetrics.RecordDNSDuration(ctx, duration, opts...)
-}
-
-func (h *Metrics) RecordTCPDialDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
-	opts := []otelmetric.RecordOption{otelmetric.WithAttributes(append(h.baseAttributes, attrs...)...)}
-	h.promRequestMetrics.RecordTCPDialDuration(ctx, duration, opts...)
-	h.otlpRequestMetrics.RecordTCPDialDuration(ctx, duration, opts...)
-}
-
-func (h *Metrics) RecordTLSHandshakeDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
-	opts := []otelmetric.RecordOption{otelmetric.WithAttributes(append(h.baseAttributes, attrs...)...)}
-	h.promRequestMetrics.RecordTLSHandshakeDuration(ctx, duration, opts...)
-	h.otlpRequestMetrics.RecordTLSHandshakeDuration(ctx, duration, opts...)
-}
-
-func (h *Metrics) RecordTotalConnectionDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
-	opts := []otelmetric.RecordOption{otelmetric.WithAttributes(append(h.baseAttributes, attrs...)...)}
-	h.promRequestMetrics.RecordTotalConnectionDuration(ctx, duration, opts...)
-	h.otlpRequestMetrics.RecordTotalConnectionDuration(ctx, duration, opts...)
-}
-
-func (h *Metrics) RecordPoolWaitDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
-	opts := []otelmetric.RecordOption{otelmetric.WithAttributes(append(h.baseAttributes, attrs...)...)}
-	h.promRequestMetrics.RecordPoolWaitDuration(ctx, duration, opts...)
-	h.otlpRequestMetrics.RecordPoolWaitDuration(ctx, duration, opts...)
-}
-
-func (h *Metrics) RecordPoolWaitCountTotal(ctx context.Context, count int64, attrs ...attribute.KeyValue) {
-	opts := []otelmetric.AddOption{otelmetric.WithAttributes(append(h.baseAttributes, attrs...)...)}
-	h.promRequestMetrics.RecordPoolWaitCountTotal(ctx, count, opts...)
-	h.otlpRequestMetrics.RecordPoolWaitCountTotal(ctx, count, opts...)
-}
-
-func (h *Metrics) RecordConnectionNewTotal(ctx context.Context, count int64, attrs ...attribute.KeyValue) {
-	opts := []otelmetric.AddOption{otelmetric.WithAttributes(append(h.baseAttributes, attrs...)...)}
-	h.promRequestMetrics.RecordConnectionNewTotal(ctx, count, opts...)
-	h.otlpRequestMetrics.RecordConnectionNewTotal(ctx, count, opts...)
-}
-
-func (h *Metrics) RecordConnectionReuseTotal(ctx context.Context, count int64, attrs ...attribute.KeyValue) {
-	opts := []otelmetric.AddOption{otelmetric.WithAttributes(append(h.baseAttributes, attrs...)...)}
-	h.promRequestMetrics.RecordConnectionReuseTotal(ctx, count, opts...)
-	h.otlpRequestMetrics.RecordConnectionReuseTotal(ctx, count, opts...)
-}
-
-func (h *Metrics) RecordPoolActiveConnections(ctx context.Context, delta int64, attrs ...attribute.KeyValue) {
-	opts := []otelmetric.AddOption{otelmetric.WithAttributes(append(h.baseAttributes, attrs...)...)}
-	h.promRequestMetrics.RecordPoolActiveConnections(ctx, delta, opts...)
-	h.otlpRequestMetrics.RecordPoolActiveConnections(ctx, delta, opts...)
-}
-
-func (h *Metrics) RecordPoolIdleConnections(ctx context.Context, delta int64, attrs ...attribute.KeyValue) {
-	opts := []otelmetric.AddOption{otelmetric.WithAttributes(append(h.baseAttributes, attrs...)...)}
-	h.promRequestMetrics.RecordPoolIdleConnections(ctx, delta, opts...)
-	h.otlpRequestMetrics.RecordPoolIdleConnections(ctx, delta, opts...)
 }

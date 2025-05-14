@@ -410,6 +410,7 @@ type graphMux struct {
 	operationHashCache         *ristretto.Cache[uint64, string]
 	accessLogsFileLogger       *logging.BufferedLogger
 	metricStore                rmetric.Store
+	connectionMetricStore      rmetric.ConnectionMetricStore
 	prometheusCacheMetrics     *rmetric.CacheMetrics
 	otelCacheMetrics           *rmetric.CacheMetrics
 }
@@ -728,6 +729,23 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		}
 
 		gm.metricStore = m
+
+		connStore, err := rmetric.NewConnectionMetricStore(
+			s.logger,
+			baseOtelAttributes,
+			s.otlpMeterProvider,
+			s.promMeterProvider,
+			s.metricConfig,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		// If connStore is nil it means that either prom or oltp conn metrics
+		// are not enabled
+		if connStore != nil {
+			gm.connectionMetricStore = connStore
+		}
 	}
 
 	subgraphs, err := configureSubgraphOverwrites(
@@ -1125,6 +1143,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			tracingAttExpressions,
 			telemetryAttExpressions,
 			exprManager.VisitorManager,
+			gm.connectionMetricStore,
 		),
 	}
 

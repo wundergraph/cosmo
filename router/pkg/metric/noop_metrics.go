@@ -55,27 +55,6 @@ func (n NoopMetrics) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-func (n NoopMetrics) RecordDNSDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
-}
-func (n NoopMetrics) RecordTCPDialDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
-}
-func (n NoopMetrics) RecordTLSHandshakeDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
-}
-func (n NoopMetrics) RecordTotalConnectionDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
-}
-func (n NoopMetrics) RecordPoolWaitDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
-}
-func (n NoopMetrics) RecordPoolWaitCountTotal(ctx context.Context, count int64, attrs ...attribute.KeyValue) {
-}
-func (n NoopMetrics) RecordConnectionNewTotal(ctx context.Context, count int64, attrs ...attribute.KeyValue) {
-}
-func (n NoopMetrics) RecordConnectionReuseTotal(ctx context.Context, count int64, attrs ...attribute.KeyValue) {
-}
-func (n NoopMetrics) RecordPoolActiveConnections(ctx context.Context, delta int64, attrs ...attribute.KeyValue) {
-}
-func (n NoopMetrics) RecordPoolIdleConnections(ctx context.Context, delta int64, attrs ...attribute.KeyValue) {
-}
-
 func NewNoopMetrics() Store {
 	return &NoopMetrics{}
 }

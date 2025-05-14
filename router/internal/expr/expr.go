@@ -99,35 +99,8 @@ type RequestAuth struct {
 }
 
 type SubgraphRequest struct {
-	Error       error       `expr:"error"`
-	ClientTrace ClientTrace `expr:"clientTrace"`
-	// This is outside in the subgraph request to prevent even deeper nesting
-	RetryClientTraces []ClientTrace `expr:"retryClientTraces"`
-	RetryAttempts     int           `expr:"retryAttempts"`
-}
-
-type DNSStart struct {
-	Time time.Time `expr:"time"`
-	Host string    `expr:"host"`
-}
-
-type DNSDone struct {
-	Time      time.Time `expr:"time"`
-	Addresses []string  `expr:"addresses"`
-	Coalesced bool      `expr:"coalesced"`
-	Error     error     `expr:"error"`
-}
-
-type TLSStart struct {
-	Time time.Time `expr:"time"`
-}
-
-type TLSDone struct {
-	Time      time.Time `expr:"time"`
-	Complete  bool      `expr:"complete"`
-	DidResume bool      `expr:"didResume"`
-	Version   string    `expr:"version"`
-	Error     error     `expr:"error"`
+	Error                   error         `expr:"error"`
+	TotalConnectionDuration time.Duration `expr:"totalConnDuration"`
 }
 
 type DialCombined struct {
@@ -136,100 +109,6 @@ type DialCombined struct {
 	Error         error      `expr:"error"`
 	Network       string     `expr:"network"`
 	Address       string     `expr:"address"`
-}
-
-type SubgraphDialStart struct {
-	Time    time.Time `expr:"time"`
-	Network string    `expr:"network"`
-	Address string    `expr:"address"`
-}
-
-type SubgraphDialDone struct {
-	Time    time.Time `expr:"time"`
-	Network string    `expr:"network"`
-	Address string    `expr:"address"`
-	Error   error     `expr:"error"`
-}
-
-type WroteHeaders struct {
-	Time time.Time `expr:"time"`
-}
-
-type Wait100Continue struct {
-	Time time.Time `expr:"time"`
-}
-
-type WroteRequest struct {
-	Time  time.Time `expr:"time"`
-	Error error     `expr:"error"`
-}
-
-type FirstByte struct {
-	Time time.Time `expr:"time"`
-}
-type Continue100 struct {
-	Time time.Time `expr:"time"`
-}
-
-type AcquiredConnection struct {
-	Time     time.Time     `expr:"time"`
-	Reused   bool          `expr:"reused"`
-	WasIdle  bool          `expr:"wasIdle"`
-	IdleTime time.Duration `expr:"idleTime"`
-}
-
-type CreateConnection struct {
-	Time     time.Time `expr:"time"`
-	HostPort string    `expr:"hostPort"`
-}
-
-type PutIdleConnection struct {
-	Time  time.Time `expr:"time"`
-	Error error     `expr:"error"`
-}
-
-type ClientTrace struct {
-	ConnectionCreate   *CreateConnection   `expr:"connCreate"`
-	ConnectionAcquired *AcquiredConnection `expr:"connAcquired"`
-	DNSStart           *DNSStart           `expr:"dnsStart"`
-	DNSDone            *DNSDone            `expr:"dnsDone"`
-	TLSStart           *TLSStart           `expr:"tlsStart"`
-	TLSDone            *TLSDone            `expr:"tlsDone"`
-	DialStart          []SubgraphDialStart `expr:"dialStart"`
-	DialDone           []SubgraphDialDone  `expr:"dialDone"`
-	WroteHeaders       *WroteHeaders       `expr:"wroteHeaders"`
-	WroteRequest       *WroteRequest       `expr:"wroteRequest"`
-	FirstByte          *FirstByte          `expr:"firstByte"`
-}
-
-// GetGroupedDials get a list of connection calls that happened, grouped by network and address
-// in case there are duplicate dialStarts or dialDones with network and address, last write wins
-func (r ClientTrace) GetGroupedDials() []DialCombined {
-	dialMap := make(map[string]*DialCombined)
-
-	for _, start := range r.DialStart {
-		key := start.Network + "_" + start.Address
-		dialMap[key] = &DialCombined{
-			DialStartTime: start.Time,
-			Network:       start.Network,
-			Address:       start.Address,
-		}
-	}
-
-	for _, done := range r.DialDone {
-		key := done.Network + "_" + done.Address
-		if dial, exists := dialMap[key]; exists {
-			dial.DialDoneTime = &done.Time
-			dial.Error = done.Error
-		}
-	}
-
-	dialResults := make([]DialCombined, 0, len(dialMap))
-	for _, dial := range dialMap {
-		dialResults = append(dialResults, *dial)
-	}
-
-	return dialResults
 }
 
 // Subgraph Related

@@ -64,13 +64,13 @@ func (t *TraceInjectingRoundTripper) getClientTrace(ctx context.Context) *httptr
 
 	trace := &httptrace.ClientTrace{
 		GetConn: func(hostPort string) {
-			eC.ConnectionCreate = &CreateSubgraphConnection{
+			eC.ConnectionGet = &GetConnection{
 				Time:     time.Now(),
 				HostPort: hostPort,
 			}
 		},
 		GotConn: func(info httptrace.GotConnInfo) {
-			eC.ConnectionAcquired = &AcquiredSubgraphConnection{
+			eC.ConnectionAcquired = &AcquiredConnection{
 				Time:     time.Now(),
 				Reused:   info.Reused,
 				WasIdle:  info.WasIdle,
@@ -136,12 +136,7 @@ func (t *TraceInjectingRoundTripper) getClientTrace(ctx context.Context) *httptr
 				Time: time.Now(),
 			}
 		},
-		WroteRequest: func(wroteRequestInfo httptrace.WroteRequestInfo) {
-			eC.WroteRequest = &SubgraphWroteRequest{
-				Time:  time.Now(),
-				Error: wroteRequestInfo.Err,
-			}
-		},
+		WroteRequest:     nil,
 		PutIdleConn:      nil,
 		Got100Continue:   nil,
 		Got1xxResponse:   nil,

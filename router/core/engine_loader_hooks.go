@@ -37,37 +37,32 @@ const EngineLoaderHooksScopeVersion = "0.0.1"
 // engineLoaderHooks implements resolve.LoaderHooks
 // It is used to trace and measure the performance of the engine loader
 type engineLoaderHooks struct {
-	tracer              trace.Tracer
-	metricStore         metric.Store
-	accessLogger        *requestlogger.SubgraphAccessLogger
-	tracingAttributes   *attributeExpressions
-	telemetryAttributes *attributeExpressions
-	visitorManager      *expr.VisitorGroup
+	tracer                trace.Tracer
+	metricStore           metric.Store
+	accessLogger          *requestlogger.SubgraphAccessLogger
+	tracingAttributes     *attributeExpressions
+	telemetryAttributes   *attributeExpressions
+	visitorManager        *expr.VisitorGroup
+	connectionMetricStore metric.ConnectionMetricStore
 }
 
 type engineLoaderHooksRequestContext struct {
 	startTime time.Time
 }
 
-func NewEngineRequestHooks(
-	metricStore metric.Store,
-	logger *requestlogger.SubgraphAccessLogger,
-	tracerProvider *sdktrace.TracerProvider,
-	tracingAttributes *attributeExpressions,
-	telemetryAttributes *attributeExpressions,
-	visitorManager *expr.VisitorGroup,
-) resolve.LoaderHooks {
+func NewEngineRequestHooks(metricStore metric.Store, logger *requestlogger.SubgraphAccessLogger, tracerProvider *sdktrace.TracerProvider, tracingAttributes *attributeExpressions, telemetryAttributes *attributeExpressions, visitorManager *expr.VisitorGroup, connectionMetricStore metric.ConnectionMetricStore) resolve.LoaderHooks {
 	if tracerProvider != nil {
 		return &engineLoaderHooks{
 			tracer: tracerProvider.Tracer(
 				EngineLoaderHooksScopeName,
 				trace.WithInstrumentationVersion(EngineLoaderHooksScopeVersion),
 			),
-			metricStore:         metricStore,
-			accessLogger:        logger,
-			tracingAttributes:   tracingAttributes,
-			telemetryAttributes: telemetryAttributes,
-			visitorManager:      visitorManager,
+			metricStore:           metricStore,
+			accessLogger:          logger,
+			tracingAttributes:     tracingAttributes,
+			telemetryAttributes:   telemetryAttributes,
+			visitorManager:        visitorManager,
+			connectionMetricStore: connectionMetricStore,
 		}
 	}
 
@@ -96,7 +91,7 @@ func (f *engineLoaderHooks) OnLoad(ctx context.Context, ds resolve.DataSourceInf
 		return ctx
 	}
 
-	if f.visitorManager.IsSubgraphTraceUsedInExpressions() {
+	if f.connectionMetricStore != nil || f.visitorManager.IsSubgraphTraceUsedInExpressions() {
 		ctx = httpclient.InitTraceContext(ctx)
 	}
 
@@ -159,12 +154,10 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 	}
 	exprCtx.Subgraph.Request.Error = &expr.WrapError{Err: responseInfo.Err}
 
+	f.calculateMetrics(ctx)
+
 	if f.visitorManager.IsSubgraphTraceUsedInExpressions() {
-		fromTrace := httpclient.GetClientTraceFromContext(ctx)
-		exprTrace, traces, retryAttempts := expr.ConvertToExprTrace(fromTrace)
-		exprCtx.Subgraph.Request.RetryAttempts = retryAttempts
-		exprCtx.Subgraph.Request.RetryClientTraces = traces
-		exprCtx.Subgraph.Request.ClientTrace = exprTrace
+		//exprTrace, traces, retryAttempts := expr.ConvertToExprTrace(fromTrace)
 	}
 
 	if f.telemetryAttributes != nil {
@@ -270,4 +263,63 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 	}
 
 	span.SetAttributes(traceAttrs...)
+}
+
+func (f *engineLoaderHooks) calculateMetrics(ctx context.Context) {
+	if f.connectionMetricStore == nil {
+		return
+	}
+
+	fromTrace := httpclient.GetClientTraceFromContext(ctx)
+
+	// We calculate the rates separately per retry
+	for _, trace := range fromTrace.ClientTraces {
+		totalDuration := 0.0
+
+		if trace.ConnectionAcquired != nil {
+			if trace.ConnectionAcquired.Reused {
+				f.connectionMetricStore.MeasureConnectionReuseTotal(ctx, 1)
+			} else {
+				f.connectionMetricStore.MeasureConnectionNewTotal(ctx, 1)
+			}
+
+			if trace.ConnectionGet != nil {
+				connAquireTime := trace.ConnectionAcquired.Time.Sub(trace.ConnectionGet.Time).Seconds()
+				f.connectionMetricStore.MeasureConnectionAcquireDuration(ctx, connAquireTime)
+			}
+		}
+
+		// Measure DNS duration for both success and error cases
+		// We skip if DNSDone was not recorded
+		if trace.DNSStart != nil && trace.DNSDone != nil {
+			sub := trace.DNSDone.Time.Sub(trace.DNSStart.Time).Seconds()
+			totalDuration += sub
+			f.connectionMetricStore.MeasureDNSDuration(ctx, sub)
+		}
+
+		// Measure TLS duration for both success and error cases
+		// We skip if DNSDone was not recorded
+		if trace.TLSStart != nil && trace.TLSDone != nil {
+			sub := trace.TLSDone.Time.Sub(trace.TLSStart.Time).Seconds()
+			totalDuration += sub
+			f.connectionMetricStore.MeasureTLSHandshakeDuration(ctx, sub)
+		}
+
+		dials := trace.GetGroupedDials()
+		if len(dials) > 0 {
+			// Since the dials are sorted by error and address
+			fastestCompletionDial := dials[0]
+			if fastestCompletionDial.Error == nil && fastestCompletionDial.DialDoneTime != nil {
+				dialSeconds := fastestCompletionDial.DialDoneTime.Sub(fastestCompletionDial.DialStartTime).Seconds()
+				totalDuration += dialSeconds
+				f.connectionMetricStore.MeasureDialDuration(ctx, dialSeconds)
+			}
+		}
+
+		// In case of no dials, we dont record 0 which will be a false positive
+		if totalDuration != 0.0 {
+			f.connectionMetricStore.MeasureTotalConnectionDuration(ctx, totalDuration)
+		}
+	}
+
 }

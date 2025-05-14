@@ -2163,9 +2163,10 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 		Attributes:         cfg.Metrics.Attributes,
 		ResourceAttributes: buildResourceAttributes(cfg.ResourceAttributes),
 		OpenTelemetry: rmetric.OpenTelemetry{
-			Enabled:       cfg.Metrics.OTLP.Enabled,
-			RouterRuntime: cfg.Metrics.OTLP.RouterRuntime,
-			GraphqlCache:  cfg.Metrics.OTLP.GraphqlCache,
+			Enabled:         cfg.Metrics.OTLP.Enabled,
+			RouterRuntime:   cfg.Metrics.OTLP.RouterRuntime,
+			GraphqlCache:    cfg.Metrics.OTLP.GraphqlCache,
+			ConnectionStats: cfg.Metrics.OTLP.ConnectionStats,
 			EngineStats: rmetric.EngineStatsConfig{
 				Subscription: cfg.Metrics.OTLP.EngineStats.Subscriptions,
 			},
@@ -2174,10 +2175,11 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 			ExcludeMetricLabels: cfg.Metrics.OTLP.ExcludeMetricLabels,
 		},
 		Prometheus: rmetric.PrometheusConfig{
-			Enabled:      cfg.Metrics.Prometheus.Enabled,
-			ListenAddr:   cfg.Metrics.Prometheus.ListenAddr,
-			Path:         cfg.Metrics.Prometheus.Path,
-			GraphqlCache: cfg.Metrics.Prometheus.GraphqlCache,
+			Enabled:         cfg.Metrics.Prometheus.Enabled,
+			ListenAddr:      cfg.Metrics.Prometheus.ListenAddr,
+			Path:            cfg.Metrics.Prometheus.Path,
+			GraphqlCache:    cfg.Metrics.Prometheus.GraphqlCache,
+			ConnectionStats: cfg.Metrics.OTLP.ConnectionStats,
 			EngineStats: rmetric.EngineStatsConfig{
 				Subscription: cfg.Metrics.Prometheus.EngineStats.Subscriptions,
 			},
