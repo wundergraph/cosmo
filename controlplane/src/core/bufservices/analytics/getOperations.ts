@@ -104,8 +104,8 @@ export function getOperations(
             operation.operationType === 'query'
               ? GetOperationsResponse_OperationType.QUERY
               : operation.operationType === 'mutation'
-              ? GetOperationsResponse_OperationType.MUTATION
-              : GetOperationsResponse_OperationType.SUBSCRIPTION,
+                ? GetOperationsResponse_OperationType.MUTATION
+                : GetOperationsResponse_OperationType.SUBSCRIPTION,
           content: operationContent,
         }),
       );
