@@ -6,7 +6,6 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	"net"
 	"net/http"
 	"net/url"
@@ -2198,20 +2197,4 @@ func or[T any](maybe *T, or T) T {
 		return *maybe
 	}
 	return or
-}
-
-func isNotDefaultCloudExporter(metricConfig *rmetric.Config) bool {
-	if metricConfig == nil {
-		return false
-	}
-	return !(metricConfig.IsUsingCloudExporter || rmetric.IsDefaultCloudExporterConfigured(metricConfig.OpenTelemetry.Exporters))
-}
-
-// There are base attributes that are unique to a mux with unique ff name and config version entries
-func getBaseMuxAttributes(routerConfigVersion string, baseOtelAttributes []attribute.KeyValue, featureFlagName string) []attribute.KeyValue {
-	baseMuxAttributes := append([]attribute.KeyValue{rotel.WgRouterConfigVersion.String(routerConfigVersion)}, baseOtelAttributes...)
-	if featureFlagName != "" {
-		baseMuxAttributes = append(baseMuxAttributes, rotel.WgFeatureFlag.String(featureFlagName))
-	}
-	return baseMuxAttributes
 }

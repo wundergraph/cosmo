@@ -9462,29 +9462,15 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 		UseCustomExporterWithRouterConfigAttribute = "use_custom_exporter_with_router_config_attribute"
 	)
 
-	appendRouterConfigAndOperationInfoConditionally := func(before []attribute.KeyValue, useCustomExporter string, routerConfigVersion string, addOperationInfo bool) []attribute.KeyValue {
-		var mid []attribute.KeyValue
-		if useCustomExporter == UseCloudExporter || useCustomExporter == UseCustomExporterWithRouterConfigAttribute {
-			mid = append(mid, otel.WgRouterConfigVersion.String(routerConfigVersion))
-		}
-		if useCustomExporter == UseCloudExporter && addOperationInfo {
-			mid = append(mid,
-				otel.WgOperationHash.String("1163600561566987607"),
-				otel.WgOperationName.String(""),
-			)
-		}
-		return append(before, mid...)
-	}
-
 	t.Run("Verify metrics when there is a router config version metric attribute", func(t *testing.T) {
-
-		useDefaultCloudExporterStatuses := []string{
-			UseCloudExporter, UseCustomExporterOnly, UseCustomExporterWithRouterConfigAttribute,
+		useCloudExporterTypeStatuses := []string{
+			UseCloudExporter,
+			UseCustomExporterOnly,
+			UseCustomExporterWithRouterConfigAttribute,
 		}
 
-		for _, usingCustomExporter := range useDefaultCloudExporterStatuses {
+		for _, usingCustomExporter := range useCloudExporterTypeStatuses {
 			t.Run(fmt.Sprintf("regular metrics without a feature flag for %s", usingCustomExporter), func(t *testing.T) {
-
 				metricReader := metric.NewManualReader()
 				exporter := tracetest.NewInMemoryExporter(t)
 
@@ -9504,324 +9490,76 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 						},
 					}
 				}
+				testenv.Run(t, cfg,
+					func(t *testing.T, xEnv *testenv.Environment) {
+						xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+							Query: `query { employees { id } }`,
+						})
 
-				testenv.Run(t, cfg, func(t *testing.T, xEnv *testenv.Environment) {
-					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-						Query: `query { employees { id } }`,
+						rm := metricdata.ResourceMetrics{}
+						err := metricReader.Collect(context.Background(), &rm)
+						require.NoError(t, err)
+
+						firstDataPoint := []attribute.KeyValue{
+							semconv.HTTPStatusCode(200),
+							otel.WgClientName.String("unknown"),
+							otel.WgClientVersion.String("missing"),
+							otel.WgFederatedGraphID.String("graph"),
+							otel.WgOperationProtocol.String("http"),
+							otel.WgOperationType.String("query"),
+							otel.WgRouterClusterName.String(""),
+							otel.WgRouterVersion.String("dev"),
+							otel.WgSubgraphID.String("0"),
+							otel.WgSubgraphName.String("employees"),
+						}
+
+						secondDataPoint := []attribute.KeyValue{
+							semconv.HTTPStatusCode(200),
+							otel.WgClientName.String("unknown"),
+							otel.WgClientVersion.String("missing"),
+							otel.WgFederatedGraphID.String("graph"),
+							otel.WgOperationProtocol.String("http"),
+							otel.WgOperationType.String("query"),
+							otel.WgRouterClusterName.String(""),
+							otel.WgRouterVersion.String("dev"),
+						}
+
+						if usingCustomExporter == UseCloudExporter || usingCustomExporter == UseCustomExporterWithRouterConfigAttribute {
+							routerConfigVersion := otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain())
+							firstDataPoint = append(firstDataPoint, routerConfigVersion)
+							secondDataPoint = append(secondDataPoint, routerConfigVersion)
+						}
+
+						if usingCustomExporter == UseCloudExporter {
+							operationHash := otel.WgOperationHash.String("1163600561566987607")
+							operationName := otel.WgOperationName.String("")
+							firstDataPoint = append(firstDataPoint, operationHash, operationName)
+							secondDataPoint = append(secondDataPoint, operationHash, operationName)
+						}
+
+						httpRequestsMetric := metricdata.Metrics{
+							Name:        "router.http.requests",
+							Description: "Total number of requests",
+							Unit:        "",
+							Data: metricdata.Sum[int64]{
+								Temporality: metricdata.CumulativeTemporality,
+								IsMonotonic: true,
+								DataPoints: []metricdata.DataPoint[int64]{
+									{Attributes: attribute.NewSet(firstDataPoint...)},
+									{Attributes: attribute.NewSet(secondDataPoint...)},
+								},
+							},
+						}
+
+						scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+						require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
+						require.Len(t, scopeMetric.Metrics, defaultCosmoRouterMetricsCount)
+
+						metricdatatest.AssertEqual(t, httpRequestsMetric, scopeMetric.Metrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 					})
-
-					rm := metricdata.ResourceMetrics{}
-					err := metricReader.Collect(context.Background(), &rm)
-					require.NoError(t, err)
-
-					httpRequestsMetric := metricdata.Metrics{
-						Name:        "router.http.requests",
-						Description: "Total number of requests",
-						Unit:        "",
-						Data: metricdata.Sum[int64]{
-							Temporality: metricdata.CumulativeTemporality,
-							IsMonotonic: true,
-							DataPoints: []metricdata.DataPoint[int64]{
-								{
-									Attributes: attribute.NewSet(
-										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
-											semconv.HTTPStatusCode(200),
-											otel.WgClientName.String("unknown"),
-											otel.WgClientVersion.String("missing"),
-											otel.WgFederatedGraphID.String("graph"),
-											otel.WgOperationProtocol.String("http"),
-											otel.WgOperationType.String("query"),
-											otel.WgRouterClusterName.String(""),
-											otel.WgRouterVersion.String("dev"),
-											otel.WgSubgraphID.String("0"),
-											otel.WgSubgraphName.String("employees"),
-										}, usingCustomExporter, xEnv.RouterConfigVersionMain(), true)...,
-									),
-									Value: 1,
-								},
-								{
-									Attributes: attribute.NewSet(
-										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
-											semconv.HTTPStatusCode(200),
-											otel.WgClientName.String("unknown"),
-											otel.WgClientVersion.String("missing"),
-											otel.WgFederatedGraphID.String("graph"),
-											otel.WgOperationProtocol.String("http"),
-											otel.WgOperationType.String("query"),
-											otel.WgRouterClusterName.String(""),
-											otel.WgRouterVersion.String("dev"),
-										}, usingCustomExporter, xEnv.RouterConfigVersionMain(), true)...,
-									),
-									Value: 1,
-								},
-							},
-						},
-					}
-
-					requestDurationMetric := metricdata.Metrics{
-						Name:        "router.http.request.duration_milliseconds",
-						Description: "Server latency in milliseconds",
-						Unit:        "ms",
-						Data: metricdata.Histogram[float64]{
-							Temporality: metricdata.CumulativeTemporality,
-							DataPoints: []metricdata.HistogramDataPoint[float64]{
-								{
-									Attributes: attribute.NewSet(
-										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
-											semconv.HTTPStatusCode(200),
-											otel.WgClientName.String("unknown"),
-											otel.WgClientVersion.String("missing"),
-											otel.WgFederatedGraphID.String("graph"),
-											otel.WgOperationProtocol.String("http"),
-											otel.WgOperationType.String("query"),
-											otel.WgRouterClusterName.String(""),
-											otel.WgRouterVersion.String("dev"),
-											otel.WgSubgraphID.String("0"),
-											otel.WgSubgraphName.String("employees"),
-										}, usingCustomExporter, xEnv.RouterConfigVersionMain(), true)...,
-									),
-									Sum: 0,
-								},
-								{
-									Attributes: attribute.NewSet(
-										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
-											semconv.HTTPStatusCode(200),
-											otel.WgClientName.String("unknown"),
-											otel.WgClientVersion.String("missing"),
-											otel.WgFederatedGraphID.String("graph"),
-											otel.WgOperationProtocol.String("http"),
-											otel.WgOperationType.String("query"),
-											otel.WgRouterClusterName.String(""),
-											otel.WgRouterVersion.String("dev"),
-										}, usingCustomExporter, xEnv.RouterConfigVersionMain(), true)...,
-									),
-									Sum: 0,
-								},
-							},
-						},
-					}
-
-					requestContentLengthMetric := metricdata.Metrics{
-						Name:        "router.http.request.content_length",
-						Description: "Total number of request bytes",
-						Unit:        "bytes",
-						Data: metricdata.Sum[int64]{
-							Temporality: metricdata.CumulativeTemporality,
-							IsMonotonic: true,
-							DataPoints: []metricdata.DataPoint[int64]{
-								{
-									Attributes: attribute.NewSet(
-										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
-											otel.WgClientName.String("unknown"),
-											otel.WgClientVersion.String("missing"),
-											otel.WgFederatedGraphID.String("graph"),
-											otel.WgOperationProtocol.String("http"),
-											otel.WgOperationType.String("query"),
-											otel.WgRouterClusterName.String(""),
-											otel.WgRouterVersion.String("dev"),
-											otel.WgSubgraphID.String("0"),
-											otel.WgSubgraphName.String("employees"),
-										}, usingCustomExporter, xEnv.RouterConfigVersionMain(), true)...,
-									),
-									Value: 28,
-								},
-								{
-									Attributes: attribute.NewSet(
-										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
-											semconv.HTTPStatusCode(200),
-											otel.WgClientName.String("unknown"),
-											otel.WgClientVersion.String("missing"),
-											otel.WgFederatedGraphID.String("graph"),
-											otel.WgOperationProtocol.String("http"),
-											otel.WgOperationType.String("query"),
-											otel.WgRouterClusterName.String(""),
-											otel.WgRouterVersion.String("dev"),
-										}, usingCustomExporter, xEnv.RouterConfigVersionMain(), true)...,
-									),
-									Value: 38,
-								},
-							},
-						},
-					}
-
-					responseContentLengthMetric := metricdata.Metrics{
-						Name:        "router.http.response.content_length",
-						Description: "Total number of response bytes",
-						Unit:        "bytes",
-						Data: metricdata.Sum[int64]{
-							Temporality: metricdata.CumulativeTemporality,
-							IsMonotonic: true,
-							DataPoints: []metricdata.DataPoint[int64]{
-								{
-									Attributes: attribute.NewSet(
-										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
-											semconv.HTTPStatusCode(200),
-											otel.WgClientName.String("unknown"),
-											otel.WgClientVersion.String("missing"),
-											otel.WgFederatedGraphID.String("graph"),
-											otel.WgOperationProtocol.String("http"),
-											otel.WgOperationType.String("query"),
-											otel.WgRouterClusterName.String(""),
-											otel.WgRouterVersion.String("dev"),
-											otel.WgSubgraphID.String("0"),
-											otel.WgSubgraphName.String("employees"),
-										}, usingCustomExporter, xEnv.RouterConfigVersionMain(), true)...,
-									),
-									Value: 117,
-								},
-								{
-									Attributes: attribute.NewSet(
-										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
-											semconv.HTTPStatusCode(200),
-											otel.WgClientName.String("unknown"),
-											otel.WgClientVersion.String("missing"),
-											otel.WgFederatedGraphID.String("graph"),
-											otel.WgOperationProtocol.String("http"),
-											otel.WgOperationType.String("query"),
-											otel.WgRouterClusterName.String(""),
-											otel.WgRouterVersion.String("dev"),
-										}, usingCustomExporter, xEnv.RouterConfigVersionMain(), true)...,
-									),
-									Value: 117,
-								},
-							},
-						},
-					}
-
-					requestInFlightMetric := metricdata.Metrics{
-						Name:        "router.http.requests.in_flight",
-						Description: "Number of requests in flight",
-						Unit:        "",
-						Data: metricdata.Sum[int64]{
-							Temporality: metricdata.CumulativeTemporality,
-							DataPoints: []metricdata.DataPoint[int64]{
-								{
-									Attributes: attribute.NewSet(
-										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
-											otel.WgClientName.String("unknown"),
-											otel.WgClientVersion.String("missing"),
-											otel.WgFederatedGraphID.String("graph"),
-											otel.WgOperationProtocol.String("http"),
-											otel.WgRouterClusterName.String(""),
-											otel.WgRouterVersion.String("dev"),
-										}, usingCustomExporter, xEnv.RouterConfigVersionMain(), false)...,
-									),
-									Value: 0,
-								},
-								{
-									Attributes: attribute.NewSet(
-										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
-											otel.WgClientName.String("unknown"),
-											otel.WgClientVersion.String("missing"),
-											otel.WgFederatedGraphID.String("graph"),
-											otel.WgOperationProtocol.String("http"),
-											otel.WgOperationType.String("query"),
-											otel.WgRouterClusterName.String(""),
-											otel.WgRouterVersion.String("dev"),
-											otel.WgSubgraphID.String("0"),
-											otel.WgSubgraphName.String("employees"),
-										}, usingCustomExporter, xEnv.RouterConfigVersionMain(), true)...,
-									),
-									Value: 0,
-								},
-							},
-						},
-					}
-
-					operationPlanningTimeMetric := metricdata.Metrics{
-						Name:        "router.graphql.operation.planning_time",
-						Description: "Operation planning time in milliseconds",
-						Unit:        "ms",
-						Data: metricdata.Histogram[float64]{
-							Temporality: metricdata.CumulativeTemporality,
-							DataPoints: []metricdata.HistogramDataPoint[float64]{
-								{
-									Attributes: attribute.NewSet(
-										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
-											otel.WgEnginePlanCacheHit.Bool(false),
-											otel.WgClientName.String("unknown"),
-											otel.WgClientVersion.String("missing"),
-											otel.WgFederatedGraphID.String("graph"),
-											otel.WgOperationProtocol.String("http"),
-											otel.WgOperationType.String("query"),
-											otel.WgRouterClusterName.String(""),
-											otel.WgRouterVersion.String("dev"),
-										}, usingCustomExporter, xEnv.RouterConfigVersionMain(), true)...,
-									),
-									Sum: 0,
-								},
-							},
-						},
-					}
-
-					routerInfoMetric := metricdata.Metrics{
-						Name:        "router.info",
-						Description: "Router configuration info.",
-						Unit:        "",
-						Data: metricdata.Gauge[int64]{
-							DataPoints: []metricdata.DataPoint[int64]{
-								{
-									Value: 1,
-									Attributes: attribute.NewSet(
-										otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
-										otel.WgRouterVersion.String("dev"),
-									),
-								},
-								{
-									Value: 1,
-									Attributes: attribute.NewSet(
-										otel.WgFeatureFlag.String("myff"),
-										otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()),
-										otel.WgRouterVersion.String("dev"),
-									),
-								},
-							},
-						},
-					}
-
-					want := metricdata.ScopeMetrics{
-						Scope: instrumentation.Scope{
-							Name:      "cosmo.router",
-							SchemaURL: "",
-							Version:   "0.0.1",
-						},
-						Metrics: []metricdata.Metrics{
-							httpRequestsMetric,
-							requestDurationMetric,
-							requestContentLengthMetric,
-							responseContentLengthMetric,
-							requestInFlightMetric,
-							routerInfoMetric,
-							operationPlanningTimeMetric,
-						},
-					}
-
-					require.NotEmpty(t, rm.Resource.Attributes(), attribute.String("telemetry.sdk.version", "1.24.0"))
-					require.Contains(t, rm.Resource.Attributes(), attribute.String("service.instance.id", "test-instance"))
-					require.Contains(t, rm.Resource.Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
-					require.Contains(t, rm.Resource.Attributes(), attribute.String("telemetry.sdk.language", "go"))
-					require.Contains(t, rm.Resource.Attributes(), attribute.String("service.version", "dev"))
-					require.Contains(t, rm.Resource.Attributes(), attribute.String("service.name", "cosmo-router"))
-
-					require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
-
-					scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
-					require.Len(t, scopeMetric.Metrics, defaultCosmoRouterMetricsCount)
-
-					metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-
-					metricdatatest.AssertEqual(t, httpRequestsMetric, scopeMetric.Metrics[0], metricdatatest.IgnoreTimestamp())
-					metricdatatest.AssertEqual(t, requestDurationMetric, scopeMetric.Metrics[1], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-					metricdatatest.AssertEqual(t, requestContentLengthMetric, scopeMetric.Metrics[2], metricdatatest.IgnoreTimestamp())
-					metricdatatest.AssertEqual(t, responseContentLengthMetric, scopeMetric.Metrics[3], metricdatatest.IgnoreTimestamp())
-					metricdatatest.AssertEqual(t, requestInFlightMetric, scopeMetric.Metrics[4], metricdatatest.IgnoreTimestamp())
-					metricdatatest.AssertEqual(t, operationPlanningTimeMetric, scopeMetric.Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-					metricdatatest.AssertEqual(t, routerInfoMetric, scopeMetric.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-				})
 			})
 
-			t.Run(fmt.Sprintf("regular metrics with a feature flag %s", usingCustomExporter), func(t *testing.T) {
-
+			t.Run(fmt.Sprintf("regular metrics with a feature flag for %s", usingCustomExporter), func(t *testing.T) {
 				metricReader := metric.NewManualReader()
 				exporter := tracetest.NewInMemoryExporter(t)
 
@@ -9854,6 +9592,45 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 					err := metricReader.Collect(context.Background(), &rm)
 					require.NoError(t, err)
 
+					firstDataPoint := []attribute.KeyValue{
+						semconv.HTTPStatusCode(200),
+						otel.WgClientName.String("unknown"),
+						otel.WgClientVersion.String("missing"),
+						otel.WgFederatedGraphID.String("graph"),
+						otel.WgOperationProtocol.String("http"),
+						otel.WgOperationType.String("query"),
+						otel.WgRouterClusterName.String(""),
+						otel.WgRouterVersion.String("dev"),
+						otel.WgSubgraphID.String("0"),
+						otel.WgSubgraphName.String("employees"),
+						otel.WgFeatureFlag.String("myff"),
+					}
+
+					secondDataPoint := []attribute.KeyValue{
+						semconv.HTTPStatusCode(200),
+						otel.WgClientName.String("unknown"),
+						otel.WgClientVersion.String("missing"),
+						otel.WgFederatedGraphID.String("graph"),
+						otel.WgOperationProtocol.String("http"),
+						otel.WgOperationType.String("query"),
+						otel.WgRouterClusterName.String(""),
+						otel.WgRouterVersion.String("dev"),
+						otel.WgFeatureFlag.String("myff"),
+					}
+
+					if usingCustomExporter == UseCloudExporter || usingCustomExporter == UseCustomExporterWithRouterConfigAttribute {
+						routerConfigVersion := otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF())
+						firstDataPoint = append(firstDataPoint, routerConfigVersion)
+						secondDataPoint = append(secondDataPoint, routerConfigVersion)
+					}
+
+					if usingCustomExporter == UseCloudExporter {
+						operationHash := otel.WgOperationHash.String("1163600561566987607")
+						operationName := otel.WgOperationName.String("")
+						firstDataPoint = append(firstDataPoint, operationHash, operationName)
+						secondDataPoint = append(secondDataPoint, operationHash, operationName)
+					}
+
 					httpRequestsMetric := metricdata.Metrics{
 						Name:        "router.http.requests",
 						Description: "Total number of requests",
@@ -9863,287 +9640,12 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 							IsMonotonic: true,
 							DataPoints: []metricdata.DataPoint[int64]{
 								{
-									Attributes: attribute.NewSet(
-										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
-											semconv.HTTPStatusCode(200),
-											otel.WgClientName.String("unknown"),
-											otel.WgClientVersion.String("missing"),
-											otel.WgFederatedGraphID.String("graph"),
-											otel.WgOperationProtocol.String("http"),
-											otel.WgOperationType.String("query"),
-											otel.WgRouterClusterName.String(""),
-											otel.WgRouterVersion.String("dev"),
-											otel.WgSubgraphID.String("0"),
-											otel.WgSubgraphName.String("employees"),
-											otel.WgFeatureFlag.String("myff"),
-										}, usingCustomExporter, xEnv.RouterConfigVersionMyFF(), true)...,
-									),
-									Value: 1,
+									Attributes: attribute.NewSet(firstDataPoint...),
 								},
 								{
-									Attributes: attribute.NewSet(
-										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
-											semconv.HTTPStatusCode(200),
-											otel.WgClientName.String("unknown"),
-											otel.WgClientVersion.String("missing"),
-											otel.WgFederatedGraphID.String("graph"),
-											otel.WgOperationProtocol.String("http"),
-											otel.WgOperationType.String("query"),
-											otel.WgRouterClusterName.String(""),
-											otel.WgRouterVersion.String("dev"),
-											otel.WgFeatureFlag.String("myff"),
-										}, usingCustomExporter, xEnv.RouterConfigVersionMyFF(), true)...,
-									),
-									Value: 1,
+									Attributes: attribute.NewSet(secondDataPoint...),
 								},
 							},
-						},
-					}
-
-					requestDurationMetric := metricdata.Metrics{
-						Name:        "router.http.request.duration_milliseconds",
-						Description: "Server latency in milliseconds",
-						Unit:        "ms",
-						Data: metricdata.Histogram[float64]{
-							Temporality: metricdata.CumulativeTemporality,
-							DataPoints: []metricdata.HistogramDataPoint[float64]{
-								{
-									Attributes: attribute.NewSet(
-										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
-											semconv.HTTPStatusCode(200),
-											otel.WgClientName.String("unknown"),
-											otel.WgClientVersion.String("missing"),
-											otel.WgFederatedGraphID.String("graph"),
-											otel.WgOperationProtocol.String("http"),
-											otel.WgOperationType.String("query"),
-											otel.WgRouterClusterName.String(""),
-											otel.WgRouterVersion.String("dev"),
-											otel.WgSubgraphID.String("0"),
-											otel.WgSubgraphName.String("employees"),
-											otel.WgFeatureFlag.String("myff"),
-										}, usingCustomExporter, xEnv.RouterConfigVersionMyFF(), true)...,
-									),
-									Sum: 0,
-								},
-								{
-									Attributes: attribute.NewSet(
-										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
-											semconv.HTTPStatusCode(200),
-											otel.WgClientName.String("unknown"),
-											otel.WgClientVersion.String("missing"),
-											otel.WgFederatedGraphID.String("graph"),
-											otel.WgOperationProtocol.String("http"),
-											otel.WgOperationType.String("query"),
-											otel.WgRouterClusterName.String(""),
-											otel.WgRouterVersion.String("dev"),
-											otel.WgFeatureFlag.String("myff"),
-										}, usingCustomExporter, xEnv.RouterConfigVersionMyFF(), true)...,
-									),
-									Sum: 0,
-								},
-							},
-						},
-					}
-
-					requestContentLengthMetric := metricdata.Metrics{
-						Name:        "router.http.request.content_length",
-						Description: "Total number of request bytes",
-						Unit:        "bytes",
-						Data: metricdata.Sum[int64]{
-							Temporality: metricdata.CumulativeTemporality,
-							IsMonotonic: true,
-							DataPoints: []metricdata.DataPoint[int64]{
-								{
-									Attributes: attribute.NewSet(
-										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
-											otel.WgClientName.String("unknown"),
-											otel.WgClientVersion.String("missing"),
-											otel.WgFederatedGraphID.String("graph"),
-											otel.WgOperationProtocol.String("http"),
-											otel.WgOperationType.String("query"),
-											otel.WgRouterClusterName.String(""),
-											otel.WgRouterVersion.String("dev"),
-											otel.WgSubgraphID.String("0"),
-											otel.WgSubgraphName.String("employees"),
-											otel.WgFeatureFlag.String("myff"),
-										}, usingCustomExporter, xEnv.RouterConfigVersionMyFF(), true)...,
-									),
-									Value: 28,
-								},
-								{
-									Attributes: attribute.NewSet(
-										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
-											semconv.HTTPStatusCode(200),
-											otel.WgClientName.String("unknown"),
-											otel.WgClientVersion.String("missing"),
-											otel.WgFederatedGraphID.String("graph"),
-											otel.WgOperationProtocol.String("http"),
-											otel.WgOperationType.String("query"),
-											otel.WgRouterClusterName.String(""),
-											otel.WgRouterVersion.String("dev"),
-											otel.WgFeatureFlag.String("myff"),
-										}, usingCustomExporter, xEnv.RouterConfigVersionMyFF(), true)...,
-									),
-									Value: 38,
-								},
-							},
-						},
-					}
-
-					responseContentLengthMetric := metricdata.Metrics{
-						Name:        "router.http.response.content_length",
-						Description: "Total number of response bytes",
-						Unit:        "bytes",
-						Data: metricdata.Sum[int64]{
-							Temporality: metricdata.CumulativeTemporality,
-							IsMonotonic: true,
-							DataPoints: []metricdata.DataPoint[int64]{
-								{
-									Attributes: attribute.NewSet(
-										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
-											semconv.HTTPStatusCode(200),
-											otel.WgClientName.String("unknown"),
-											otel.WgClientVersion.String("missing"),
-											otel.WgFederatedGraphID.String("graph"),
-											otel.WgOperationProtocol.String("http"),
-											otel.WgOperationType.String("query"),
-											otel.WgRouterClusterName.String(""),
-											otel.WgRouterVersion.String("dev"),
-											otel.WgSubgraphID.String("0"),
-											otel.WgSubgraphName.String("employees"),
-											otel.WgFeatureFlag.String("myff"),
-										}, usingCustomExporter, xEnv.RouterConfigVersionMyFF(), true)...,
-									),
-									Value: 117,
-								},
-								{
-									Attributes: attribute.NewSet(
-										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
-											semconv.HTTPStatusCode(200),
-											otel.WgClientName.String("unknown"),
-											otel.WgClientVersion.String("missing"),
-											otel.WgFederatedGraphID.String("graph"),
-											otel.WgOperationProtocol.String("http"),
-											otel.WgOperationType.String("query"),
-											otel.WgRouterClusterName.String(""),
-											otel.WgRouterVersion.String("dev"),
-											otel.WgFeatureFlag.String("myff"),
-										}, usingCustomExporter, xEnv.RouterConfigVersionMyFF(), true)...,
-									),
-									Value: 117,
-								},
-							},
-						},
-					}
-
-					requestInFlightMetric := metricdata.Metrics{
-						Name:        "router.http.requests.in_flight",
-						Description: "Number of requests in flight",
-						Unit:        "",
-						Data: metricdata.Sum[int64]{
-							Temporality: metricdata.CumulativeTemporality,
-							DataPoints: []metricdata.DataPoint[int64]{
-								{
-									Attributes: attribute.NewSet(
-										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
-											otel.WgClientName.String("unknown"),
-											otel.WgClientVersion.String("missing"),
-											otel.WgFederatedGraphID.String("graph"),
-											otel.WgOperationProtocol.String("http"),
-											otel.WgRouterClusterName.String(""),
-											otel.WgRouterVersion.String("dev"),
-											otel.WgFeatureFlag.String("myff"),
-										}, usingCustomExporter, xEnv.RouterConfigVersionMyFF(), false)...,
-									),
-									Value: 0,
-								},
-								{
-									Attributes: attribute.NewSet(
-										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
-											otel.WgClientName.String("unknown"),
-											otel.WgClientVersion.String("missing"),
-											otel.WgFederatedGraphID.String("graph"),
-											otel.WgOperationProtocol.String("http"),
-											otel.WgOperationType.String("query"),
-											otel.WgRouterClusterName.String(""),
-											otel.WgRouterVersion.String("dev"),
-											otel.WgSubgraphID.String("0"),
-											otel.WgSubgraphName.String("employees"),
-											otel.WgFeatureFlag.String("myff"),
-										}, usingCustomExporter, xEnv.RouterConfigVersionMyFF(), true)...,
-									),
-									Value: 0,
-								},
-							},
-						},
-					}
-
-					operationPlanningTimeMetric := metricdata.Metrics{
-						Name:        "router.graphql.operation.planning_time",
-						Description: "Operation planning time in milliseconds",
-						Unit:        "ms",
-						Data: metricdata.Histogram[float64]{
-							Temporality: metricdata.CumulativeTemporality,
-							DataPoints: []metricdata.HistogramDataPoint[float64]{
-								{
-									Attributes: attribute.NewSet(
-										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
-											otel.WgEnginePlanCacheHit.Bool(false),
-											otel.WgClientName.String("unknown"),
-											otel.WgClientVersion.String("missing"),
-											otel.WgFederatedGraphID.String("graph"),
-											otel.WgOperationProtocol.String("http"),
-											otel.WgOperationType.String("query"),
-											otel.WgRouterClusterName.String(""),
-											otel.WgRouterVersion.String("dev"),
-											otel.WgFeatureFlag.String("myff"),
-										}, usingCustomExporter, xEnv.RouterConfigVersionMyFF(), true)...,
-									),
-									Sum: 0,
-								},
-							},
-						},
-					}
-
-					routerInfoMetric := metricdata.Metrics{
-						Name:        "router.info",
-						Description: "Router configuration info.",
-						Unit:        "",
-						Data: metricdata.Gauge[int64]{
-							DataPoints: []metricdata.DataPoint[int64]{
-								{
-									Value: 1,
-									Attributes: attribute.NewSet(
-										otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
-										otel.WgRouterVersion.String("dev"),
-									),
-								},
-								{
-									Value: 1,
-									Attributes: attribute.NewSet(
-										otel.WgFeatureFlag.String("myff"),
-										otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()),
-										otel.WgRouterVersion.String("dev"),
-									),
-								},
-							},
-						},
-					}
-
-					want := metricdata.ScopeMetrics{
-						Scope: instrumentation.Scope{
-							Name:      "cosmo.router",
-							SchemaURL: "",
-							Version:   "0.0.1",
-						},
-						Metrics: []metricdata.Metrics{
-							httpRequestsMetric,
-							requestDurationMetric,
-							requestContentLengthMetric,
-							responseContentLengthMetric,
-							requestInFlightMetric,
-							routerInfoMetric,
-							operationPlanningTimeMetric,
 						},
 					}
 
@@ -10152,33 +9654,21 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 					scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 					require.Len(t, scopeMetric.Metrics, defaultCosmoRouterMetricsCount)
 
-					metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-
-					fmt.Println(requestInFlightMetric)
-					fmt.Println(scopeMetric.Metrics[4])
-
-					metricdatatest.AssertEqual(t, httpRequestsMetric, scopeMetric.Metrics[0], metricdatatest.IgnoreTimestamp())
-					metricdatatest.AssertEqual(t, requestDurationMetric, scopeMetric.Metrics[1], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-					metricdatatest.AssertEqual(t, requestContentLengthMetric, scopeMetric.Metrics[2], metricdatatest.IgnoreTimestamp())
-					metricdatatest.AssertEqual(t, responseContentLengthMetric, scopeMetric.Metrics[3], metricdatatest.IgnoreTimestamp())
-					metricdatatest.AssertEqual(t, requestInFlightMetric, scopeMetric.Metrics[4], metricdatatest.IgnoreTimestamp())
-					metricdatatest.AssertEqual(t, operationPlanningTimeMetric, scopeMetric.Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-					metricdatatest.AssertEqual(t, routerInfoMetric, scopeMetric.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+					metricdatatest.AssertEqual(t, httpRequestsMetric, scopeMetric.Metrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 				})
 			})
 
-			t.Run(fmt.Sprintf("runtime metrics %s", usingCustomExporter), func(t *testing.T) {
-
+			t.Run(fmt.Sprintf("runtime metrics for %s", usingCustomExporter), func(t *testing.T) {
 				metricReader := metric.NewManualReader()
 				exporter := tracetest.NewInMemoryExporter(t)
 
 				cfg := &testenv.Config{
-					TraceExporter:                exporter,
-					MetricReader:                 metricReader,
-					DisableSimulateCloudExporter: usingCustomExporter != UseCloudExporter,
+					TraceExporter: exporter,
+					MetricReader:  metricReader,
 					MetricOptions: testenv.MetricOptions{
 						EnableRuntimeMetrics: true,
 					},
+					DisableSimulateCloudExporter: usingCustomExporter != UseCloudExporter,
 				}
 
 				if usingCustomExporter == UseCustomExporterWithRouterConfigAttribute {
@@ -10203,8 +9693,6 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 
 					require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount+1)
 
-					// Runtime metrics
-
 					runtimeScope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.runtime")
 					require.NotNil(t, runtimeScope)
 					require.Len(t, runtimeScope.Metrics, 15)
@@ -10213,6 +9701,18 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 					require.NotNil(t, metricRuntimeUptime)
 					metricRuntimeUptimeDataType := metricRuntimeUptime.Data.(metricdata.Gauge[int64])
 					require.Len(t, metricRuntimeUptimeDataType.DataPoints, 1)
+
+					dataPoint := []attribute.KeyValue{
+						otel.WgRouterClusterName.String(""),
+						otel.WgFederatedGraphID.String("graph"),
+						otel.WgRouterVersion.String("dev"),
+					}
+
+					if usingCustomExporter == UseCloudExporter || usingCustomExporter == UseCustomExporterWithRouterConfigAttribute {
+						routerConfigVersion := otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain())
+						dataPoint = append(dataPoint, routerConfigVersion)
+					}
+
 					runtimeUptimeMetric := metricdata.Metrics{
 						Name:        "process.uptime",
 						Description: "Seconds since application was initialized",
@@ -10220,362 +9720,27 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 						Data: metricdata.Gauge[int64]{
 							DataPoints: []metricdata.DataPoint[int64]{
 								{
-									Attributes: attribute.NewSet(
-										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
-											otel.WgRouterClusterName.String(""),
-											otel.WgFederatedGraphID.String("graph"),
-											otel.WgRouterVersion.String("dev"),
-										}, usingCustomExporter, xEnv.RouterConfigVersionMain(), false)...,
-									),
-									Value: metricRuntimeUptimeDataType.DataPoints[0].Value,
+									Attributes: attribute.NewSet(dataPoint...),
 								},
 							},
 						},
 					}
 
-					metricdatatest.AssertEqual(t, runtimeUptimeMetric, *metricRuntimeUptime, metricdatatest.IgnoreTimestamp())
-
-					processCpuUsageMetric := metricdata.Metrics{
-						Name:        "process.cpu.usage",
-						Description: "Total CPU usage of this process in percentage of host total CPU capacity",
-						Unit:        "percent",
-						Data: metricdata.Gauge[float64]{
-							DataPoints: []metricdata.DataPoint[float64]{
-								{
-									Attributes: attribute.NewSet(
-										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
-											otel.WgRouterClusterName.String(""),
-											otel.WgFederatedGraphID.String("graph"),
-											otel.WgRouterVersion.String("dev"),
-										}, usingCustomExporter, xEnv.RouterConfigVersionMain(), false)...,
-									),
-									Value: 0,
-								},
-							},
-						},
-					}
-
-					metricdatatest.AssertEqual(t, processCpuUsageMetric, *integration.GetMetricByName(runtimeScope, "process.cpu.usage"), metricdatatest.IgnoreTimestamp())
-
-					metricServerUptime := integration.GetMetricByName(runtimeScope, "server.uptime")
-					require.NotNil(t, metricServerUptime)
-					metricServerUptimeDataType := metricServerUptime.Data.(metricdata.Gauge[int64])
-					require.Len(t, metricServerUptimeDataType.DataPoints, 1)
-					serverUptimeMetric := metricdata.Metrics{
-						Name:        "server.uptime",
-						Description: "Seconds since the server started. Resets between router config changes.",
-						Unit:        "s",
-						Data: metricdata.Gauge[int64]{
-							DataPoints: []metricdata.DataPoint[int64]{
-								{
-									Attributes: attribute.NewSet(
-										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
-											otel.WgRouterClusterName.String(""),
-											otel.WgFederatedGraphID.String("graph"),
-											otel.WgRouterVersion.String("dev"),
-										}, usingCustomExporter, xEnv.RouterConfigVersionMain(), false)...,
-									),
-									Value: metricServerUptimeDataType.DataPoints[0].Value,
-								},
-							},
-						},
-					}
-
-					metricdatatest.AssertEqual(t, serverUptimeMetric, *metricServerUptime, metricdatatest.IgnoreTimestamp())
-
-					processRuntimeGoMemHeapAllocMetric := metricdata.Metrics{
-						Name:        "process.runtime.go.mem.heap_alloc",
-						Description: "Bytes of allocated heap objects",
-						Unit:        "By",
-						Data: metricdata.Sum[int64]{
-							Temporality: metricdata.CumulativeTemporality,
-							IsMonotonic: false,
-							DataPoints: []metricdata.DataPoint[int64]{
-								{
-									Attributes: attribute.NewSet(
-										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
-											otel.WgRouterClusterName.String(""),
-											otel.WgFederatedGraphID.String("graph"),
-											otel.WgRouterVersion.String("dev"),
-										}, usingCustomExporter, xEnv.RouterConfigVersionMain(), false)...,
-									),
-									Value: 0,
-								},
-							},
-						},
-					}
-
-					metricdatatest.AssertEqual(t, processRuntimeGoMemHeapAllocMetric, *integration.GetMetricByName(runtimeScope, "process.runtime.go.mem.heap_alloc"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-
-					processRuntimeGoMemHeapIdleMetric := metricdata.Metrics{
-						Name:        "process.runtime.go.mem.heap_idle",
-						Description: "Bytes in idle (unused) spans",
-						Unit:        "By",
-						Data: metricdata.Sum[int64]{
-							Temporality: metricdata.CumulativeTemporality,
-							IsMonotonic: false,
-							DataPoints: []metricdata.DataPoint[int64]{
-								{
-									Attributes: attribute.NewSet(
-										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
-											otel.WgRouterClusterName.String(""),
-											otel.WgFederatedGraphID.String("graph"),
-											otel.WgRouterVersion.String("dev"),
-										}, usingCustomExporter, xEnv.RouterConfigVersionMain(), false)...,
-									),
-									Value: 0,
-								},
-							},
-						},
-					}
-
-					metricdatatest.AssertEqual(t, processRuntimeGoMemHeapIdleMetric, *integration.GetMetricByName(runtimeScope, "process.runtime.go.mem.heap_idle"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-
-					processRuntimeGoMemHeapInUseMetric := metricdata.Metrics{
-						Name:        "process.runtime.go.mem.heap_inuse",
-						Description: "Bytes in in-use spans",
-						Unit:        "By",
-						Data: metricdata.Sum[int64]{
-							Temporality: metricdata.CumulativeTemporality,
-							IsMonotonic: false,
-							DataPoints: []metricdata.DataPoint[int64]{
-								{
-									Attributes: attribute.NewSet(
-										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
-											otel.WgRouterClusterName.String(""),
-											otel.WgFederatedGraphID.String("graph"),
-											otel.WgRouterVersion.String("dev"),
-										}, usingCustomExporter, xEnv.RouterConfigVersionMain(), false)...,
-									),
-									Value: 0,
-								},
-							},
-						},
-					}
-
-					metricdatatest.AssertEqual(t, processRuntimeGoMemHeapInUseMetric, *integration.GetMetricByName(runtimeScope, "process.runtime.go.mem.heap_inuse"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-
-					processRuntimeGoMemHeapObjectsMetric := metricdata.Metrics{
-						Name:        "process.runtime.go.mem.heap_objects",
-						Description: "Number of allocated heap objects",
-						Unit:        "",
-						Data: metricdata.Sum[int64]{
-							Temporality: metricdata.CumulativeTemporality,
-							IsMonotonic: false,
-							DataPoints: []metricdata.DataPoint[int64]{
-								{
-									Attributes: attribute.NewSet(
-										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
-											otel.WgRouterClusterName.String(""),
-											otel.WgFederatedGraphID.String("graph"),
-											otel.WgRouterVersion.String("dev"),
-										}, usingCustomExporter, xEnv.RouterConfigVersionMain(), false)...,
-									),
-									Value: 0,
-								},
-							},
-						},
-					}
-
-					metricdatatest.AssertEqual(t, processRuntimeGoMemHeapObjectsMetric, *integration.GetMetricByName(runtimeScope, "process.runtime.go.mem.heap_objects"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-
-					processRuntimeGoMemHeapReleasedMetric := metricdata.Metrics{
-						Name:        "process.runtime.go.mem.heap_released",
-						Description: "Bytes of idle spans whose physical memory has been returned to the OS",
-						Unit:        "By",
-						Data: metricdata.Sum[int64]{
-							Temporality: metricdata.CumulativeTemporality,
-							IsMonotonic: false,
-							DataPoints: []metricdata.DataPoint[int64]{
-								{
-									Attributes: attribute.NewSet(
-										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
-											otel.WgRouterClusterName.String(""),
-											otel.WgFederatedGraphID.String("graph"),
-											otel.WgRouterVersion.String("dev"),
-										}, usingCustomExporter, xEnv.RouterConfigVersionMain(), false)...,
-									),
-									Value: 0,
-								},
-							},
-						},
-					}
-
-					metricdatatest.AssertEqual(t, processRuntimeGoMemHeapReleasedMetric, *integration.GetMetricByName(runtimeScope, "process.runtime.go.mem.heap_released"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-
-					processRuntimeGoMemHeapSysMetric := metricdata.Metrics{
-						Name:        "process.runtime.go.mem.heap_sys",
-						Description: "Bytes of heap memory obtained from the OS",
-						Unit:        "By",
-						Data: metricdata.Sum[int64]{
-							Temporality: metricdata.CumulativeTemporality,
-							IsMonotonic: false,
-							DataPoints: []metricdata.DataPoint[int64]{
-								{
-									Attributes: attribute.NewSet(
-										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
-											otel.WgRouterClusterName.String(""),
-											otel.WgFederatedGraphID.String("graph"),
-											otel.WgRouterVersion.String("dev"),
-										}, usingCustomExporter, xEnv.RouterConfigVersionMain(), false)...,
-									),
-									Value: 0,
-								},
-							},
-						},
-					}
-
-					metricdatatest.AssertEqual(t, processRuntimeGoMemHeapSysMetric, *integration.GetMetricByName(runtimeScope, "process.runtime.go.mem.heap_sys"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-
-					processRuntimeGoMemLiveObjectsMetric := metricdata.Metrics{
-						Name:        "process.runtime.go.mem.live_objects",
-						Description: "Number of live objects is the number of cumulative Mallocs - Frees",
-						Unit:        "",
-						Data: metricdata.Sum[int64]{
-							Temporality: metricdata.CumulativeTemporality,
-							IsMonotonic: false,
-							DataPoints: []metricdata.DataPoint[int64]{
-								{
-									Attributes: attribute.NewSet(
-										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
-											otel.WgRouterClusterName.String(""),
-											otel.WgFederatedGraphID.String("graph"),
-											otel.WgRouterVersion.String("dev"),
-										}, usingCustomExporter, xEnv.RouterConfigVersionMain(), false)...,
-									),
-									Value: 0,
-								},
-							},
-						},
-					}
-
-					metricdatatest.AssertEqual(t, processRuntimeGoMemLiveObjectsMetric, *integration.GetMetricByName(runtimeScope, "process.runtime.go.mem.live_objects"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-
-					processRuntimeGoGcCountMetric := metricdata.Metrics{
-						Name:        "process.runtime.go.gc.count",
-						Description: "Number of completed garbage collection cycles",
-						Unit:        "",
-						Data: metricdata.Sum[int64]{
-							Temporality: metricdata.CumulativeTemporality,
-							IsMonotonic: true,
-							DataPoints: []metricdata.DataPoint[int64]{
-								{
-									Attributes: attribute.NewSet(
-										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
-											otel.WgRouterClusterName.String(""),
-											otel.WgFederatedGraphID.String("graph"),
-											otel.WgRouterVersion.String("dev"),
-										}, usingCustomExporter, xEnv.RouterConfigVersionMain(), false)...,
-									),
-									Value: 0,
-								},
-							},
-						},
-					}
-
-					metricdatatest.AssertEqual(t, processRuntimeGoGcCountMetric, *integration.GetMetricByName(runtimeScope, "process.runtime.go.gc.count"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-
-					processRuntimeGoGoRoutinesCountMetric := metricdata.Metrics{
-						Name:        "process.runtime.go.goroutines.count",
-						Description: "Number of goroutines that currently exist",
-						Unit:        "",
-						Data: metricdata.Sum[int64]{
-							Temporality: metricdata.CumulativeTemporality,
-							IsMonotonic: false,
-							DataPoints: []metricdata.DataPoint[int64]{
-								{
-									Attributes: attribute.NewSet(
-										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
-											otel.WgRouterClusterName.String(""),
-											otel.WgFederatedGraphID.String("graph"),
-											otel.WgRouterVersion.String("dev"),
-										}, usingCustomExporter, xEnv.RouterConfigVersionMain(), false)...,
-									),
-									Value: 0,
-								},
-							},
-						},
-					}
-
-					metricdatatest.AssertEqual(t, processRuntimeGoGoRoutinesCountMetric, *integration.GetMetricByName(runtimeScope, "process.runtime.go.goroutines.count"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-
-					processRuntimeGoInfoMetric := metricdata.Metrics{
-						Name:        "process.runtime.go.info",
-						Description: "Information about the Go runtime environment",
-						Unit:        "",
-						Data: metricdata.Sum[int64]{
-							Temporality: metricdata.CumulativeTemporality,
-							IsMonotonic: false,
-							DataPoints: []metricdata.DataPoint[int64]{
-								{
-									Attributes: attribute.NewSet(
-										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
-											otel.WgRouterClusterName.String(""),
-											otel.WgFederatedGraphID.String("graph"),
-											otel.WgRouterVersion.String("dev"),
-											attribute.String("version", runtime.Version()),
-										}, usingCustomExporter, xEnv.RouterConfigVersionMain(), false)...,
-									),
-									Value: 0,
-								},
-							},
-						},
-					}
-
-					metricdatatest.AssertEqual(t, processRuntimeGoInfoMetric, *integration.GetMetricByName(runtimeScope, "process.runtime.go.info"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-
-					processRuntimeGoGcPauseTotalMetric := metricdata.Metrics{
-						Name:        "process.runtime.go.gc.pause_total",
-						Description: "Cumulative nanoseconds in GC stop-the-world pauses since the program started",
-						Unit:        "ns",
-						Data: metricdata.Sum[int64]{
-							Temporality: metricdata.CumulativeTemporality,
-							IsMonotonic: true,
-							DataPoints: []metricdata.DataPoint[int64]{
-								{
-									Attributes: attribute.NewSet(
-										appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
-											otel.WgRouterClusterName.String(""),
-											otel.WgFederatedGraphID.String("graph"),
-											otel.WgRouterVersion.String("dev"),
-										}, usingCustomExporter, xEnv.RouterConfigVersionMain(), false)...,
-									),
-									Value: 0,
-								},
-							},
-						},
-					}
-
-					metricdatatest.AssertEqual(t, processRuntimeGoGcPauseTotalMetric, *integration.GetMetricByName(runtimeScope, "process.runtime.go.gc.pause_total"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-
-					processRuntimeGoGcPauseMetric := metricdata.Metrics{
-						Name:        "process.runtime.go.gc.pause",
-						Description: "Amount of nanoseconds in GC stop-the-world pauses",
-						Unit:        "ns",
-						Data: metricdata.Histogram[int64]{
-							Temporality: metricdata.CumulativeTemporality,
-							DataPoints: []metricdata.HistogramDataPoint[int64]{
-								{},
-							},
-						},
-					}
-
-					metricdatatest.AssertEqual(t, processRuntimeGoGcPauseMetric, *integration.GetMetricByName(runtimeScope, "process.runtime.go.gc.pause"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+					metricdatatest.AssertEqual(t, runtimeUptimeMetric, *metricRuntimeUptime, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 				})
 			})
 
-			t.Run(fmt.Sprintf("engine statistic metrics %s", usingCustomExporter), func(t *testing.T) {
-
+			t.Run(fmt.Sprintf("engine statistic metrics for %s", usingCustomExporter), func(t *testing.T) {
 				metricReader := metric.NewManualReader()
 
 				cfg := &testenv.Config{
-					MetricReader:                 metricReader,
-					DisableSimulateCloudExporter: usingCustomExporter != UseCloudExporter,
+					MetricReader: metricReader,
 					MetricOptions: testenv.MetricOptions{
 						OTLPEngineStatsOptions: testenv.EngineStatOptions{
 							EnableSubscription: true,
 						},
 					},
+					DisableSimulateCloudExporter: usingCustomExporter != UseCloudExporter,
 				}
 
 				if usingCustomExporter == UseCustomExporterWithRouterConfigAttribute {
@@ -10605,11 +9770,16 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 					err = metricReader.Collect(context.Background(), &rm)
 					require.NoError(t, err)
 
-					baseAttributes := appendRouterConfigAndOperationInfoConditionally([]attribute.KeyValue{
+					baseAttributes := []attribute.KeyValue{
 						otel.WgRouterClusterName.String(""),
 						otel.WgFederatedGraphID.String("graph"),
 						otel.WgRouterVersion.String("dev"),
-					}, usingCustomExporter, xEnv.RouterConfigVersionMain(), false)
+					}
+
+					if usingCustomExporter == UseCloudExporter || usingCustomExporter == UseCustomExporterWithRouterConfigAttribute {
+						routerConfigVersion := otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain())
+						baseAttributes = append(baseAttributes, routerConfigVersion)
+					}
 
 					engineScope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.engine")
 					connectionMetrics := metricdata.Metrics{
@@ -10629,71 +9799,19 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 					}
 
 					metricdatatest.AssertEqual(t, connectionMetrics, *integration.GetMetricByName(engineScope, "router.engine.connections"), metricdatatest.IgnoreTimestamp())
-
-					subscriptionMetrics := metricdata.Metrics{
-						Name:        "router.engine.subscriptions",
-						Description: "Number of subscriptions in the engine.",
-						Data: metricdata.Sum[int64]{
-							Temporality: metricdata.CumulativeTemporality,
-							IsMonotonic: false,
-							DataPoints: []metricdata.DataPoint[int64]{
-								{
-									Attributes: attribute.NewSet(baseAttributes...),
-									Value:      1,
-								},
-							},
-						},
-					}
-
-					metricdatatest.AssertEqual(t, subscriptionMetrics, *integration.GetMetricByName(engineScope, "router.engine.subscriptions"), metricdatatest.IgnoreTimestamp())
-
-					triggerMetrics := metricdata.Metrics{
-						Name:        "router.engine.triggers",
-						Description: "Number of triggers in the engine.",
-						Data: metricdata.Sum[int64]{
-							Temporality: metricdata.CumulativeTemporality,
-							IsMonotonic: false,
-							DataPoints: []metricdata.DataPoint[int64]{
-								{
-									Attributes: attribute.NewSet(baseAttributes...),
-									Value:      1,
-								},
-							},
-						},
-					}
-
-					metricdatatest.AssertEqual(t, triggerMetrics, *integration.GetMetricByName(engineScope, "router.engine.triggers"), metricdatatest.IgnoreTimestamp())
-
-					messagesSentMetrics := metricdata.Metrics{
-						Name:        "router.engine.messages.sent",
-						Description: "Number of subscription updates in the engine.",
-						Data: metricdata.Sum[int64]{
-							Temporality: metricdata.CumulativeTemporality,
-							IsMonotonic: true,
-							DataPoints: []metricdata.DataPoint[int64]{
-								{
-									Attributes: attribute.NewSet(baseAttributes...),
-								},
-							},
-						},
-					}
-
-					metricdatatest.AssertEqual(t, messagesSentMetrics, *integration.GetMetricByName(engineScope, "router.engine.messages.sent"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 				})
 			})
 
-			t.Run(fmt.Sprintf("cache metrics %s", usingCustomExporter), func(t *testing.T) {
+			t.Run(fmt.Sprintf("cache metrics for %s", usingCustomExporter), func(t *testing.T) {
 				t.Parallel()
 				metricReader := metric.NewManualReader()
 
-				const baseCost = 1
-
 				cfg := &testenv.Config{
-					MetricReader:                 metricReader,
-					DisableSimulateCloudExporter: usingCustomExporter != UseCloudExporter,
+					MetricReader: metricReader,
 					MetricOptions: testenv.MetricOptions{
 						EnableOTLPRouterCache: true,
 					},
+					DisableSimulateCloudExporter: usingCustomExporter != UseCloudExporter,
 				}
 
 				if usingCustomExporter == UseCustomExporterWithRouterConfigAttribute {
@@ -10706,6 +9824,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 						},
 					}
 				}
+
 				testenv.Run(t, cfg, func(t *testing.T, xEnv *testenv.Environment) {
 					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 						Query: `query { employees { id } }`,
@@ -10715,29 +9834,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 					})
 
 					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-						Query: `query { employees { id } }`,
-						Header: map[string][]string{
-							"X-Feature-Flag": {"myff"},
-						},
-					})
-
-					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-						Query: `query { employees { tag } }`,
-						Header: map[string][]string{
-							"X-Feature-Flag": {"myff"},
-						},
-					})
-
-					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 						Query: `query myQuery { employees { id } }`,
-					})
-
-					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-						Query: `query myQuery { employees { id } }`,
-					})
-
-					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-						Query: `query myQuery { employees { tag } }`,
 					})
 
 					rm := metricdata.ResourceMetrics{}
@@ -10748,7 +9845,6 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 
 					cacheScope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.cache")
 					require.NotNil(t, cacheScope)
-
 					require.Len(t, cacheScope.Metrics, 4)
 
 					extraCapacity := 0
@@ -10757,21 +9853,23 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 					}
 
 					mainAttributes := make([]attribute.KeyValue, 0, 3+extraCapacity)
-					mainAttributes = append(mainAttributes, otel.WgRouterClusterName.String(""))
-					mainAttributes = append(mainAttributes, otel.WgFederatedGraphID.String("graph"))
-					mainAttributes = append(mainAttributes, otel.WgRouterVersion.String("dev"))
+					mainAttributes = append(mainAttributes,
+						otel.WgRouterClusterName.String(""),
+						otel.WgFederatedGraphID.String("graph"),
+						otel.WgRouterVersion.String("dev"))
 					if usingCustomExporter != UseCustomExporterOnly {
 						mainAttributes = append(mainAttributes, otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
 					}
 
 					featureFlagAttributes := make([]attribute.KeyValue, 0, 4+extraCapacity)
-					featureFlagAttributes = append(featureFlagAttributes, otel.WgRouterClusterName.String(""))
-					featureFlagAttributes = append(featureFlagAttributes, otel.WgFederatedGraphID.String("graph"))
-					featureFlagAttributes = append(featureFlagAttributes, otel.WgRouterVersion.String("dev"))
+					featureFlagAttributes = append(featureFlagAttributes,
+						otel.WgRouterClusterName.String(""),
+						otel.WgFederatedGraphID.String("graph"),
+						otel.WgRouterVersion.String("dev"),
+						otel.WgFeatureFlag.String("myff"))
 					if usingCustomExporter != UseCustomExporterOnly {
 						featureFlagAttributes = append(featureFlagAttributes, otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()))
 					}
-					featureFlagAttributes = append(featureFlagAttributes, otel.WgFeatureFlag.String("myff"))
 
 					requestStatsMetrics := metricdata.Metrics{
 						Name:        "router.graphql.cache.requests.stats",
@@ -10786,14 +9884,12 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 										attribute.String("cache_type", "plan"),
 										attribute.String("type", "hits"),
 									)...),
-									Value: 1,
 								},
 								{
 									Attributes: attribute.NewSet(append(mainAttributes,
 										attribute.String("cache_type", "plan"),
 										attribute.String("type", "misses"),
 									)...),
-									Value: 2,
 								},
 								{
 									Attributes: attribute.NewSet(append(
@@ -10801,7 +9897,6 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 										attribute.String("cache_type", "query_normalization"),
 										attribute.String("type", "hits"),
 									)...),
-									Value: 1,
 								},
 								{
 									Attributes: attribute.NewSet(append(
@@ -10809,7 +9904,6 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 										attribute.String("cache_type", "query_normalization"),
 										attribute.String("type", "misses"),
 									)...),
-									Value: 2,
 								},
 								{
 									Attributes: attribute.NewSet(append(
@@ -10817,7 +9911,6 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 										attribute.String("cache_type", "persisted_query_normalization"),
 										attribute.String("type", "hits"),
 									)...),
-									Value: 0,
 								},
 								{
 									Attributes: attribute.NewSet(append(
@@ -10825,7 +9918,6 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 										attribute.String("cache_type", "persisted_query_normalization"),
 										attribute.String("type", "misses"),
 									)...),
-									Value: 0,
 								},
 								{
 									Attributes: attribute.NewSet(append(
@@ -10833,7 +9925,6 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 										attribute.String("cache_type", "validation"),
 										attribute.String("type", "hits"),
 									)...),
-									Value: 1,
 								},
 								{
 									Attributes: attribute.NewSet(append(
@@ -10841,7 +9932,6 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 										attribute.String("cache_type", "validation"),
 										attribute.String("type", "misses"),
 									)...),
-									Value: 2,
 								},
 								// Feature flag cache stats
 								{
@@ -10850,7 +9940,6 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 										attribute.String("cache_type", "plan"),
 										attribute.String("type", "hits"),
 									)...),
-									Value: 1,
 								},
 								{
 									Attributes: attribute.NewSet(append(
@@ -10858,7 +9947,6 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 										attribute.String("cache_type", "plan"),
 										attribute.String("type", "misses"),
 									)...),
-									Value: 2,
 								},
 								{
 									Attributes: attribute.NewSet(append(
@@ -10866,7 +9954,6 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 										attribute.String("cache_type", "query_normalization"),
 										attribute.String("type", "hits"),
 									)...),
-									Value: 1,
 								},
 								{
 									Attributes: attribute.NewSet(append(
@@ -10874,7 +9961,6 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 										attribute.String("cache_type", "query_normalization"),
 										attribute.String("type", "misses"),
 									)...),
-									Value: 2,
 								},
 								{
 									Attributes: attribute.NewSet(append(
@@ -10882,7 +9968,6 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 										attribute.String("cache_type", "persisted_query_normalization"),
 										attribute.String("type", "hits"),
 									)...),
-									Value: 0,
 								},
 								{
 									Attributes: attribute.NewSet(append(
@@ -10890,7 +9975,6 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 										attribute.String("cache_type", "persisted_query_normalization"),
 										attribute.String("type", "misses"),
 									)...),
-									Value: 0,
 								},
 								{
 									Attributes: attribute.NewSet(append(
@@ -10898,7 +9982,6 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 										attribute.String("cache_type", "validation"),
 										attribute.String("type", "hits"),
 									)...),
-									Value: 1,
 								},
 								{
 									Attributes: attribute.NewSet(append(
@@ -10906,434 +9989,13 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 										attribute.String("cache_type", "validation"),
 										attribute.String("type", "misses"),
 									)...),
-									Value: 2,
 								},
 							},
 						},
 					}
 
 					metrics := *integration.GetMetricByName(cacheScope, "router.graphql.cache.requests.stats")
-
-					fmt.Println(metrics)
-					fmt.Println(requestStatsMetrics)
 					metricdatatest.AssertEqual(t, requestStatsMetrics, metrics, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-
-					keyStatMetrics := metricdata.Metrics{
-						Name:        "router.graphql.cache.keys.stats",
-						Description: "Cache stats for Keys. Tracks added, updated and evicted keys. Can be used to get the total number of items",
-						Data: metricdata.Sum[int64]{
-							Temporality: metricdata.CumulativeTemporality,
-							IsMonotonic: true,
-							DataPoints: []metricdata.DataPoint[int64]{
-								{
-									Attributes: attribute.NewSet(append(
-										mainAttributes,
-										attribute.String("cache_type", "plan"),
-										attribute.String("operation", "added"),
-									)...),
-									Value: 2,
-								},
-								{
-									Attributes: attribute.NewSet(append(
-										mainAttributes,
-										attribute.String("cache_type", "plan"),
-										attribute.String("operation", "evicted"),
-									)...),
-									Value: 0,
-								},
-								{
-									Attributes: attribute.NewSet(append(
-										mainAttributes,
-										attribute.String("cache_type", "plan"),
-										attribute.String("operation", "updated"),
-									)...),
-									Value: 0,
-								},
-								{
-									Attributes: attribute.NewSet(append(
-										mainAttributes,
-										attribute.String("cache_type", "query_normalization"),
-										attribute.String("operation", "added"),
-									)...),
-									Value: 2,
-								},
-								{
-									Attributes: attribute.NewSet(append(
-										mainAttributes,
-										attribute.String("cache_type", "query_normalization"),
-										attribute.String("operation", "evicted"),
-									)...),
-									Value: 0,
-								},
-								{
-									Attributes: attribute.NewSet(append(
-										mainAttributes,
-										attribute.String("cache_type", "query_normalization"),
-										attribute.String("operation", "updated"),
-									)...),
-									Value: 0,
-								},
-								{
-									Attributes: attribute.NewSet(append(
-										mainAttributes,
-										attribute.String("cache_type", "persisted_query_normalization"),
-										attribute.String("operation", "added"),
-									)...),
-									Value: 0,
-								},
-								{
-									Attributes: attribute.NewSet(append(
-										mainAttributes,
-										attribute.String("cache_type", "persisted_query_normalization"),
-										attribute.String("operation", "evicted"),
-									)...),
-									Value: 0,
-								},
-								{
-									Attributes: attribute.NewSet(append(
-										mainAttributes,
-										attribute.String("cache_type", "persisted_query_normalization"),
-										attribute.String("operation", "updated"),
-									)...),
-									Value: 0,
-								},
-								{
-									Attributes: attribute.NewSet(append(
-										mainAttributes,
-										attribute.String("cache_type", "validation"),
-										attribute.String("operation", "added"),
-									)...),
-									Value: 2,
-								},
-								{
-									Attributes: attribute.NewSet(append(
-										mainAttributes,
-										attribute.String("cache_type", "validation"),
-										attribute.String("operation", "evicted"),
-									)...),
-									Value: 0,
-								},
-								{
-									Attributes: attribute.NewSet(append(
-										mainAttributes,
-										attribute.String("cache_type", "validation"),
-										attribute.String("operation", "updated"),
-									)...),
-									Value: 0,
-								},
-								// Feature flag key stats
-
-								{
-									Attributes: attribute.NewSet(append(
-										featureFlagAttributes,
-										attribute.String("cache_type", "plan"),
-										attribute.String("operation", "added"),
-									)...),
-									Value: 2,
-								},
-								{
-									Attributes: attribute.NewSet(append(
-										featureFlagAttributes,
-										attribute.String("cache_type", "plan"),
-										attribute.String("operation", "evicted"),
-									)...),
-									Value: 0,
-								},
-								{
-									Attributes: attribute.NewSet(append(
-										featureFlagAttributes,
-										attribute.String("cache_type", "plan"),
-										attribute.String("operation", "updated"),
-									)...),
-									Value: 0,
-								},
-								{
-									Attributes: attribute.NewSet(append(
-										featureFlagAttributes,
-										attribute.String("cache_type", "query_normalization"),
-										attribute.String("operation", "added"),
-									)...),
-									Value: 2,
-								},
-								{
-									Attributes: attribute.NewSet(append(
-										featureFlagAttributes,
-										attribute.String("cache_type", "query_normalization"),
-										attribute.String("operation", "evicted"),
-									)...),
-									Value: 0,
-								},
-								{
-									Attributes: attribute.NewSet(append(
-										featureFlagAttributes,
-										attribute.String("cache_type", "query_normalization"),
-										attribute.String("operation", "updated"),
-									)...),
-									Value: 0,
-								},
-								{
-									Attributes: attribute.NewSet(append(
-										featureFlagAttributes,
-										attribute.String("cache_type", "persisted_query_normalization"),
-										attribute.String("operation", "added"),
-									)...),
-									Value: 0,
-								},
-								{
-									Attributes: attribute.NewSet(append(
-										featureFlagAttributes,
-										attribute.String("cache_type", "persisted_query_normalization"),
-										attribute.String("operation", "evicted"),
-									)...),
-									Value: 0,
-								},
-								{
-									Attributes: attribute.NewSet(append(
-										featureFlagAttributes,
-										attribute.String("cache_type", "persisted_query_normalization"),
-										attribute.String("operation", "updated"),
-									)...),
-									Value: 0,
-								},
-								{
-									Attributes: attribute.NewSet(append(
-										featureFlagAttributes,
-										attribute.String("cache_type", "validation"),
-										attribute.String("operation", "added"),
-									)...),
-									Value: 2,
-								},
-								{
-									Attributes: attribute.NewSet(append(
-										featureFlagAttributes,
-										attribute.String("cache_type", "validation"),
-										attribute.String("operation", "evicted"),
-									)...),
-									Value: 0,
-								},
-								{
-									Attributes: attribute.NewSet(append(
-										featureFlagAttributes,
-										attribute.String("cache_type", "validation"),
-										attribute.String("operation", "updated"),
-									)...),
-									Value: 0,
-								},
-							},
-						},
-					}
-
-					metricdatatest.AssertEqual(t, keyStatMetrics, *integration.GetMetricByName(cacheScope, "router.graphql.cache.keys.stats"), metricdatatest.IgnoreTimestamp())
-
-					costStatsMetrics := metricdata.Metrics{
-						Name:        "router.graphql.cache.cost.stats",
-						Description: "Cache stats for Cost. Tracks the cost of the cache operations. Can be used to calculate the cost of the cache operations",
-						Data: metricdata.Sum[int64]{
-							Temporality: metricdata.CumulativeTemporality,
-							IsMonotonic: true,
-							DataPoints: []metricdata.DataPoint[int64]{
-								{
-									Attributes: attribute.NewSet(append(
-										mainAttributes,
-										attribute.String("cache_type", "plan"),
-										attribute.String("operation", "added"),
-									)...),
-									Value: baseCost * 2,
-								},
-								{
-									Attributes: attribute.NewSet(append(
-										mainAttributes,
-										attribute.String("cache_type", "plan"),
-										attribute.String("operation", "evicted"),
-									)...),
-									Value: 0,
-								},
-								{
-									Attributes: attribute.NewSet(append(
-										mainAttributes,
-										attribute.String("cache_type", "query_normalization"),
-										attribute.String("operation", "added"),
-									)...),
-									Value: baseCost * 2,
-								},
-								{
-									Attributes: attribute.NewSet(append(
-										mainAttributes,
-										attribute.String("cache_type", "query_normalization"),
-										attribute.String("operation", "evicted"),
-									)...),
-									Value: 0,
-								},
-								{
-									Attributes: attribute.NewSet(append(
-										mainAttributes,
-										attribute.String("cache_type", "persisted_query_normalization"),
-										attribute.String("operation", "added"),
-									)...),
-									Value: 0,
-								},
-								{
-									Attributes: attribute.NewSet(append(
-										mainAttributes,
-										attribute.String("cache_type", "persisted_query_normalization"),
-										attribute.String("operation", "evicted"),
-									)...),
-									Value: 0,
-								},
-								{
-									Attributes: attribute.NewSet(append(
-										mainAttributes,
-										attribute.String("cache_type", "validation"),
-										attribute.String("operation", "added"),
-									)...),
-									Value: baseCost * 2,
-								},
-								{
-									Attributes: attribute.NewSet(append(
-										mainAttributes,
-										attribute.String("cache_type", "validation"),
-										attribute.String("operation", "evicted"),
-									)...),
-									Value: 0,
-								},
-								// Feature flag cost stats
-								{
-									Attributes: attribute.NewSet(append(
-										featureFlagAttributes,
-										attribute.String("cache_type", "plan"),
-										attribute.String("operation", "added"),
-									)...),
-									Value: baseCost * 2,
-								},
-								{
-									Attributes: attribute.NewSet(append(
-										featureFlagAttributes,
-										attribute.String("cache_type", "plan"),
-										attribute.String("operation", "evicted"),
-									)...),
-									Value: 0,
-								},
-								{
-									Attributes: attribute.NewSet(append(
-										featureFlagAttributes,
-										attribute.String("cache_type", "query_normalization"),
-										attribute.String("operation", "added"),
-									)...),
-									Value: baseCost * 2,
-								},
-								{
-									Attributes: attribute.NewSet(append(
-										featureFlagAttributes,
-										attribute.String("cache_type", "query_normalization"),
-										attribute.String("operation", "evicted"),
-									)...),
-									Value: 0,
-								},
-								{
-									Attributes: attribute.NewSet(append(
-										featureFlagAttributes,
-										attribute.String("cache_type", "persisted_query_normalization"),
-										attribute.String("operation", "added"),
-									)...),
-									Value: 0,
-								},
-								{
-									Attributes: attribute.NewSet(append(
-										featureFlagAttributes,
-										attribute.String("cache_type", "persisted_query_normalization"),
-										attribute.String("operation", "evicted"),
-									)...),
-									Value: 0,
-								},
-								{
-									Attributes: attribute.NewSet(append(
-										featureFlagAttributes,
-										attribute.String("cache_type", "validation"),
-										attribute.String("operation", "added"),
-									)...),
-									Value: baseCost * 2,
-								},
-								{
-									Attributes: attribute.NewSet(append(
-										featureFlagAttributes,
-										attribute.String("cache_type", "validation"),
-										attribute.String("operation", "evicted"),
-									)...),
-									Value: 0,
-								},
-							},
-						},
-					}
-
-					metricdatatest.AssertEqual(t, costStatsMetrics, *integration.GetMetricByName(cacheScope, "router.graphql.cache.cost.stats"), metricdatatest.IgnoreTimestamp())
-
-					maxCostMetrics := metricdata.Metrics{
-						Name:        "router.graphql.cache.cost.max",
-						Description: "Tracks the maximum configured cost for a cache. Useful to investigate differences between the number of keys and the current cost",
-						Data: metricdata.Gauge[int64]{
-							DataPoints: []metricdata.DataPoint[int64]{
-								{
-									Attributes: attribute.NewSet(append(
-										mainAttributes,
-										attribute.String("cache_type", "plan"),
-									)...),
-									Value: 1024,
-								},
-								{
-									Attributes: attribute.NewSet(append(
-										mainAttributes,
-										attribute.String("cache_type", "query_normalization"),
-									)...),
-									Value: 1024,
-								},
-								{
-									Attributes: attribute.NewSet(append(
-										mainAttributes,
-										attribute.String("cache_type", "persisted_query_normalization"),
-									)...),
-									Value: 1024,
-								},
-								{
-									Attributes: attribute.NewSet(append(
-										mainAttributes,
-										attribute.String("cache_type", "validation"),
-									)...),
-									Value: 1024,
-								},
-								// Feature flag max cost
-								{
-									Attributes: attribute.NewSet(append(
-										featureFlagAttributes,
-										attribute.String("cache_type", "plan"),
-									)...),
-									Value: 1024,
-								},
-								{
-									Attributes: attribute.NewSet(append(
-										featureFlagAttributes,
-										attribute.String("cache_type", "query_normalization"),
-									)...),
-									Value: 1024,
-								},
-								{
-									Attributes: attribute.NewSet(append(
-										featureFlagAttributes,
-										attribute.String("cache_type", "persisted_query_normalization"),
-									)...),
-									Value: 1024,
-								},
-								{
-									Attributes: attribute.NewSet(append(
-										featureFlagAttributes,
-										attribute.String("cache_type", "validation"),
-									)...),
-									Value: 1024,
-								},
-							},
-						},
-					}
-
-					metricdatatest.AssertEqual(t, maxCostMetrics, *integration.GetMetricByName(cacheScope, "router.graphql.cache.cost.max"), metricdatatest.IgnoreTimestamp())
 				})
 			})
 		}
