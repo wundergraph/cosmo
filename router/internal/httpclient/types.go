@@ -92,6 +92,10 @@ type DialCombined struct {
 	Address       string
 }
 
+// GetGroupedDials returns a slice of DialCombined structs
+// Which are combined based on the network (tcp/udp/...) and address
+// We sort by the first dial that was successful, so that the most likely
+// used dial is first in the list
 func (r ClientTrace) GetGroupedDials() []DialCombined {
 	dialMap := make(map[string]*DialCombined)
 
@@ -119,25 +123,21 @@ func (r ClientTrace) GetGroupedDials() []DialCombined {
 
 	// Sort the results by DialDoneTime without error
 	sort.Slice(dialResults, func(i, j int) bool {
-		// Sort only those without errors and with non-nil DialDoneTime
-		combined1 := dialResults[i]
-		combined2 := dialResults[j]
+		iDone, jDone := dialResults[i].DialDoneTime, dialResults[j].DialDoneTime
+		iErr, jErr := dialResults[i].Error, dialResults[j].Error
 
-		if combined1.DialDoneTime == nil {
+		switch {
+		case iDone == nil:
 			return false
-		}
-		if combined2.DialDoneTime == nil {
+		case jDone == nil:
 			return true
-		}
-
-		if combined1.Error != nil && combined2.Error == nil {
+		case iErr == nil && jErr != nil:
+			return true
+		case iErr != nil && jErr == nil:
 			return false
+		default:
+			return iDone.Before(*jDone)
 		}
-		if combined1.Error == nil && combined2.Error != nil {
-			return true
-		}
-
-		return combined1.DialDoneTime.Before(*combined2.DialDoneTime)
 	})
 
 	return dialResults

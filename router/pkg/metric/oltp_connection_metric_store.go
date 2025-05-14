@@ -3,6 +3,7 @@ package metric
 import (
 	"context"
 	"fmt"
+
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.uber.org/zap"
@@ -62,6 +63,10 @@ func (m *otlpConnectionMetrics) MeasureNewConnections(ctx context.Context, count
 
 func (m *otlpConnectionMetrics) MeasureReusedConnections(ctx context.Context, count int64, opts ...otelmetric.AddOption) {
 	m.instruments.connectionReuseTotal.Add(ctx, count, opts...)
+}
+
+func (m *otlpConnectionMetrics) MeasureConnectionRetries(ctx context.Context, count int64, opts ...otelmetric.AddOption) {
+	m.instruments.connectionRetriesTotal.Add(ctx, count, opts...)
 }
 
 func (m *otlpConnectionMetrics) Flush(ctx context.Context) error {

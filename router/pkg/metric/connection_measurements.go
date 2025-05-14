@@ -9,8 +9,9 @@ import (
 // Connection metric constants
 const (
 	// Counters
-	connectionNewTotal   = "router.connection.new_total"   // Total number of new connections
-	connectionReuseTotal = "router.connection.reuse_total" // Total number of reused connections
+	connectionNewTotal     = "router.connection.new_total"     // Total number of new connections
+	connectionReuseTotal   = "router.connection.reuse_total"   // Total number of reused connections
+	connectionRetriesTotal = "router.connection.retries_total" // Total number of connection retries
 
 	// Histograms
 	dnsDuration               = "router.connection.dns_duration_ms"           // DNS resolution duration in milliseconds
@@ -28,6 +29,10 @@ var (
 
 	connectionReuseTotalOptions = []otelmetric.Int64CounterOption{
 		otelmetric.WithDescription("Total number of reused connections"),
+	}
+
+	connectionRetriesTotalOptions = []otelmetric.Int64CounterOption{
+		otelmetric.WithDescription("Total number of connection retries"),
 	}
 
 	// Histogram options
@@ -59,8 +64,9 @@ var (
 
 type connectionInstruments struct {
 	// Counters
-	connectionNewTotal   otelmetric.Int64Counter
-	connectionReuseTotal otelmetric.Int64Counter
+	connectionNewTotal     otelmetric.Int64Counter
+	connectionReuseTotal   otelmetric.Int64Counter
+	connectionRetriesTotal otelmetric.Int64Counter
 
 	// Histograms
 	dnsDuration               otelmetric.Float64Histogram
@@ -87,6 +93,14 @@ func newConnectionInstruments(meter otelmetric.Meter) (*connectionInstruments, e
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create connection reuse total counter: %w", err)
+	}
+
+	connectionRetriesTotalCounter, err := meter.Int64Counter(
+		connectionRetriesTotal,
+		connectionRetriesTotalOptions...,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create connection retries total counter: %w", err)
 	}
 
 	// Initialize histograms
@@ -133,6 +147,7 @@ func newConnectionInstruments(meter otelmetric.Meter) (*connectionInstruments, e
 	return &connectionInstruments{
 		connectionNewTotal:        newTotalCounter,
 		connectionReuseTotal:      reuseTotalCounter,
+		connectionRetriesTotal:    connectionRetriesTotalCounter,
 		dnsDuration:               dnsDurationHistogram,
 		dialDuration:              dialDurationHistogram,
 		tlsHandshakeDuration:      tlsHandshakeDurationHistogram,

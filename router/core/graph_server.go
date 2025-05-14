@@ -734,7 +734,6 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	}
 
 	isConnStoreEnabled := s.metricConfig.OpenTelemetry.ConnectionStats || s.metricConfig.Prometheus.ConnectionStats
-
 	if isConnStoreEnabled {
 		connStore, err := rmetric.NewConnectionMetricStore(
 			s.logger,

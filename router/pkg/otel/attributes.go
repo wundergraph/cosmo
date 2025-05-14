@@ -46,9 +46,10 @@ const (
 	WgIsBatchingOperation              = attribute.Key("wg.operation.batching.is_batched")
 	WgBatchingOperationsCount          = attribute.Key("wg.operation.batching.operations_count")
 	WgBatchingOperationIndex           = attribute.Key("wg.operation.batching.operation_index")
-
 	// HTTPRequestUploadFileCount is the number of files uploaded in a request (Not specified in the OpenTelemetry specification)
 	HTTPRequestUploadFileCount = attribute.Key("http.request.upload.file_count")
+
+	WgHost = attribute.Key("wg.host")
 
 	// Prometheus Schema Field Usage Attrs
 

@@ -3,6 +3,7 @@ package retrytransport
 import (
 	"errors"
 	"github.com/cloudflare/backoff"
+	"github.com/wundergraph/cosmo/router/internal/httpclient"
 	"go.uber.org/zap"
 	"io"
 	"net/http"
@@ -98,6 +99,8 @@ func (rt *RetryHTTPTransport) RoundTrip(req *http.Request) (*http.Response, erro
 
 		// drain the previous response before retrying
 		rt.drainBody(resp, requestLogger)
+
+		httpclient.IncrementRetryCount(req.Context())
 
 		// Retry the request
 		resp, err = rt.RoundTripper.RoundTrip(req)
