@@ -193,17 +193,21 @@ export function createTestContext(
     isAdmin,
     userDisplayName: userId,
     groups,
-    rbac: new RBACEvaluator(groups.map((g) => ({
-      groupId: randomUUID(),
-      name: g,
-      description: '',
-      builtin: true,
-      rules: [{
-        role: `organization-${g}` as OrganizationRole,
-        namespaces: [],
-        resources: [],
-      }],
-    }))),
+    rbac: new RBACEvaluator(
+      groups.map((g) => ({
+        groupId: randomUUID(),
+        name: g,
+        description: '',
+        builtin: true,
+        rules: [
+          {
+            role: `organization-${g}` as OrganizationRole,
+            namespaces: [],
+            resources: [],
+          },
+        ],
+      })),
+    ),
   };
 }
 

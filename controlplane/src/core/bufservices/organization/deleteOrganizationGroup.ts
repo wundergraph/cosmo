@@ -108,7 +108,7 @@ export function deleteOrganizationGroup(
         // Change the groups in the database too
         await orgGroupRepo.changeMemberGroup({
           fromGroupId: orgGroup.groupId,
-          toGroupId: moveToGroup.groupId
+          toGroupId: moveToGroup.groupId,
         });
 
         await auditLogRepo.addAuditLog({
