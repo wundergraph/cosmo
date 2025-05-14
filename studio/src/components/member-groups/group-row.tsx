@@ -8,9 +8,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { EllipsisVerticalIcon } from "@heroicons/react/24/outline";
 import { Button } from "@/components/ui/button";
-import { useCheckUserAccess } from "@/hooks/use-check-user-access";
 import { Badge } from "@/components/ui/badge";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
+import { useIsAdmin } from "@/hooks/use-is-admin";
 
 export function GroupRow({ group, rbac, onSelect, onDelete }: {
   group: OrganizationGroup;
@@ -18,13 +18,12 @@ export function GroupRow({ group, rbac, onSelect, onDelete }: {
   onSelect(showMembers: boolean): void;
   onDelete(): void;
 }) {
-  const checkUserAccess = useCheckUserAccess();
-  const isAdminOrDeveloper = checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] });
+  const isAdmin = useIsAdmin();
 
   return (
     <TableRow>
       <TableCell className="space-x-3">
-        {isAdminOrDeveloper ? (
+        {isAdmin ? (
           <Button
             variant="link"
             className="px-0 h-auto gap-x-2 whitespace-nowrap"
@@ -45,7 +44,7 @@ export function GroupRow({ group, rbac, onSelect, onDelete }: {
       </TableCell>
       <TableCell>{group.description}</TableCell>
       <TableCell className="text-center">
-        {isAdminOrDeveloper ? (
+        {isAdmin ? (
           <Button
             variant="link"
             className="h-auto gap-x-2 whitespace-nowrap"
@@ -55,7 +54,7 @@ export function GroupRow({ group, rbac, onSelect, onDelete }: {
           </Button>
         ) : group.membersCount}
       </TableCell>
-      {rbac && isAdminOrDeveloper && (
+      {rbac && isAdmin && (
         <TableCell>
           {!group.builtin && (
             <DropdownMenu>

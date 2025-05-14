@@ -14,9 +14,9 @@ import { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { Textarea } from "@/components/ui/textarea";
 import { useFeature } from "@/hooks/use-feature";
-import { useCheckUserAccess } from "@/hooks/use-check-user-access";
 import { Link } from "@/components/ui/link";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useIsAdmin } from "@/hooks/use-is-admin";
 
 export function CreateGroupDialog({ onGroupCreated }: {
   onGroupCreated(group: OrganizationGroup): Promise<void>
@@ -25,7 +25,7 @@ export function CreateGroupDialog({ onGroupCreated }: {
   const [open, setOpen] = useState(false);
   const { mutate, isPending } = useMutation(createOrganizationGroup);
   const rbac = useFeature("rbac");
-  const checkUserAccess = useCheckUserAccess();
+  const isAdmin = useIsAdmin();
 
   const createGroupInputSchema = z.object({
     name: z
@@ -86,7 +86,7 @@ export function CreateGroupDialog({ onGroupCreated }: {
     )
   };
 
-  if (!checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] })) {
+  if (!isAdmin) {
     return null;
   }
 

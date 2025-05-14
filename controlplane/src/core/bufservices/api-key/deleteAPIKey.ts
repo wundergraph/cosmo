@@ -24,10 +24,10 @@ export function deleteAPIKey(
     const apiKeyRepo = new ApiKeyRepository(opts.db);
     const auditLogRepo = new AuditLogRepository(opts.db);
 
-    if (!authContext.hasWriteAccess) {
+    if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdminOrDeveloper) {
       return {
         response: {
-          code: EnumStatusCode.ERR,
+          code: EnumStatusCode.ERROR_NOT_AUTHORIZED,
           details: `The user doesnt have the permissions to perform this operation`,
         },
       };

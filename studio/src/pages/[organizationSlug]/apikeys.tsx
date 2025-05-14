@@ -66,7 +66,6 @@ import {
 } from "react";
 import { FiCheck, FiCopy } from "react-icons/fi";
 import { z } from "zod";
-import { useCheckUserAccess } from "@/hooks/use-check-user-access";
 import { useIsAdmin } from "@/hooks/use-is-admin";
 import { GroupSelect } from "@/components/group-select";
 
@@ -505,7 +504,7 @@ export const Empty = ({
   setOpen: Dispatch<SetStateAction<boolean>>;
   refetch: () => void;
 }) => {
-  const checkUserAccess = useCheckUserAccess();
+  const isAdmin = useIsAdmin();
 
   return (
     <EmptyState
@@ -526,7 +525,7 @@ export const Empty = ({
       }
       actions={
         <div className="mt-2">
-          {checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] }) && (
+          {isAdmin && (
             <CreateAPIKey
               apiKey={apiKey}
               existingApiKeys={[]}
@@ -658,10 +657,8 @@ const UpdateAPIKey = ({ selectedApiKeyName, open, selectedGroupId, refresh, onOp
 };
 
 const APIKeysPage: NextPageWithLayout = () => {
-  const checkUserAccess = useCheckUserAccess();
+  const isAdmin = useIsAdmin();
   const { data, isLoading, error, refetch } = useQuery(getAPIKeys);
-
-  const isUserOrAdmin = checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer" ]});
 
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [openUpdateDialog, setOpenUpdateDialog] = useState(false);
@@ -743,19 +740,17 @@ const APIKeysPage: NextPageWithLayout = () => {
               </p>
             </div>
             <div>
-              {isUserOrAdmin && (
-                <CreateAPIKey
-                  apiKey={apiKey}
-                  existingApiKeys={apiKeys.map((k) => k.name)}
-                  setApiKey={setApiKey}
-                  open={openApiKeyCreatedDialog}
-                  setOpen={setOpenApiKeyCreatedDialog}
-                  refetch={refetch}
-                />
-              )}
+              <CreateAPIKey
+                apiKey={apiKey}
+                existingApiKeys={apiKeys.map((k) => k.name)}
+                setApiKey={setApiKey}
+                open={openApiKeyCreatedDialog}
+                setOpen={setOpenApiKeyCreatedDialog}
+                refetch={refetch}
+              />
             </div>
           </div>
-          {deleteApiKeyName && isUserOrAdmin && (
+          {deleteApiKeyName && isAdmin && (
             <DeleteAPIKeyDialog
               apiKeyName={deleteApiKeyName}
               refresh={refetch}
@@ -774,7 +769,7 @@ const APIKeysPage: NextPageWithLayout = () => {
                   <TableHead>Group</TableHead>
                   <TableHead>Created At</TableHead>
                   <TableHead>Last Used At</TableHead>
-                  {isUserOrAdmin && (
+                  {isAdmin && (
                     <TableHead className="flex items-center justify-center" />
                   )}
                 </TableRow>
@@ -792,7 +787,7 @@ const APIKeysPage: NextPageWithLayout = () => {
                             : "Never"}
                         </TableCell>
                         <TableCell>
-                          {isUserOrAdmin ? (
+                          {isAdmin ? (
                             <Button
                               variant="link"
                               className="p-0 h-auto"
@@ -822,7 +817,7 @@ const APIKeysPage: NextPageWithLayout = () => {
                             ? formatDateTime(new Date(lastUsedAt))
                             : "Never"}
                         </TableCell>
-                        {isUserOrAdmin && (
+                        {isAdmin && (
                           <TableCell>
                             <DropdownMenu>
                               <div className="flex justify-center">

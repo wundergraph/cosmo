@@ -130,6 +130,7 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
     setIsStarBannerDisabled(isStarBannerDisabledOnClient === "true");
   }, [isStarBannerDisabledOnClient]);
 
+  const isAdmin = checkUserAccess({ rolesToBe: ["organization-admin" ]});
   const isAdminOrDeveloper = checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] });
   const isOrganizationDeactivated = !!user?.currentOrganization.deactivation;
   const isOrganizationPendingDeletion = !!user?.currentOrganization?.deletion;
@@ -218,7 +219,7 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
       });
     }
 
-    if (isAdminOrDeveloper) {
+    if (isAdmin) {
       navigation.push({
         title: "Audit log",
         href: basePath + "/audit-log",

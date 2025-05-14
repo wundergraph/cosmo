@@ -24,10 +24,10 @@ export function createAPIKey(
     const auditLogRepo = new AuditLogRepository(opts.db);
     const orgGroupRepo = new OrganizationGroupRepository(opts.db);
 
-    if (!authContext.hasWriteAccess) {
+    if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdminOrDeveloper) {
       return {
         response: {
-          code: EnumStatusCode.ERR,
+          code: EnumStatusCode.ERROR_NOT_AUTHORIZED,
           details: `The user doesnt have the permissions to perform this operation`,
         },
         apiKey: '',

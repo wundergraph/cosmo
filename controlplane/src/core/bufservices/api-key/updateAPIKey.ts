@@ -26,7 +26,7 @@ export function updateAPIKey(
     if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdminOrDeveloper) {
       return {
         response: {
-          code: EnumStatusCode.ERR,
+          code: EnumStatusCode.ERROR_NOT_AUTHORIZED,
           details: `The user doesnt have the permissions to perform this operation`,
         },
         apiKey: '',
