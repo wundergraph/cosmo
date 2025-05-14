@@ -26,6 +26,14 @@ const isCI = (): boolean => {
 };
 
 /**
+ * Check if the CLI is talking to Cosmo Cloud or a self-hosted instance
+ */
+const isTalkingToCosmoCloud = (): boolean => {
+  const cloudUrl = 'https://cosmo-cp.wundergraph.com';
+  return config.baseURL.startsWith(cloudUrl);
+};
+
+/**
  * Initialize PostHog client
  * This should be called once at the start of the CLI
  */
@@ -149,6 +157,7 @@ const getMetadata = (): Record<string, any> => {
     platform: process.arch,
     machine_id: os.hostname(),
     is_ci: isCI(),
+    is_cosmo_cloud: isTalkingToCosmoCloud(),
   };
 };
 
