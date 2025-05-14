@@ -674,15 +674,16 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	httpRouter := chi.NewRouter()
 
-	exprManager := expr.CreateNewExprManager()
-
-	metricsEnabled := s.metricConfig.IsEnabled()
-
 	// we only enable the attribute mapper if we are not using the default cloud exporter
 	baseMuxAttributes := append([]attribute.KeyValue{otel.WgRouterConfigVersion.String(routerConfigVersion)}, s.baseOtelAttributes...)
+
 	if featureFlagName != "" {
 		baseMuxAttributes = append(baseMuxAttributes, otel.WgFeatureFlag.String(featureFlagName))
 	}
+
+	exprManager := expr.CreateNewExprManager()
+
+	metricsEnabled := s.metricConfig.IsEnabled()
 
 	// We might want to remap or exclude known attributes based on the configuration for metrics
 	mapper := newAttributeMapper(!rmetric.IsUsingDefaultCloudExporter(s.metricConfig), s.metricConfig.Attributes)
