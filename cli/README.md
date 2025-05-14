@@ -233,29 +233,16 @@ docker run \
 
 Here's a selection of blog posts that focus on the technical aspects of Cosmo:
 
-- **How we scaled Cosmo Router for the SuperBowl**: [https://wundergraph.com/blog/scaling-graphql-federation-for-the-superbowl](https://wundergraph.com/blog/scaling-graphql-federation-for-the-superbowl)
-- **The Architecture of our Observability Stack**: [https://wundergraph.com/blog/scaling_graphql_observability](https://wundergraph.com/blog/scaling_graphql_observability)
-- **How Normalization affects Query Planning** [https://wundergraph.com/blog/normalization_query_planning_graphql_federation](https://wundergraph.com/blog/normalization_query_planning_graphql_federation)
-- **Zero cost abstraction for the @skip and @include Directives** [https://wundergraph.com/blog/zero_cost_abstraction_for_skip_include_in_federated_graphql](https://wundergraph.com/blog/zero_cost_abstraction_for_skip_include_in_federated_graphql)
-- **Algorithm to minify GraphQL ASTs by up to 99%** [https://wundergraph.com/blog/graphql_query_ast_minification](https://wundergraph.com/blog/graphql_query_ast_minification)
-- **Federated GraphQL Subscriptions with NATS and Event Driven Architecture** [https://wundergraph.com/blog/distributed_graphql_subscriptions_with_nats_and_event_driven_architecture](https://wundergraph.com/blog/distributed_graphql_subscriptions_with_nats_and_event_driven_architecture)
-- **Implementing the viewer pattern in GraphQL Federation** [https://wundergraph.com/blog/graphql_federation_viewer_pattern](https://wundergraph.com/blog/graphql_federation_viewer_pattern)
-- **How we're using Epoll/Kqueue to scale GraphQL Subscriptions** [https://wundergraph.com/blog/edfs_scaling_graphql_subscriptions_in_go](https://wundergraph.com/blog/edfs_scaling_graphql_subscriptions_in_go)
-- **ASTJSON - A fast way to merge JSON objects** [https://wundergraph.com/blog/astjson_high_performance_json_transformations_in_golang](https://wundergraph.com/blog/astjson_high_performance_json_transformations_in_golang)
-- **Dataloader 3.0, an efficient algorithm for Federation data loading** [https://wundergraph.com/blog/dataloader_3_0_breadth_first_data_loading](https://wundergraph.com/blog/dataloader_3_0_breadth_first_data_loading)
-
----
-
-## 📄 License
-
-This project is licensed under the [Apache 2.0 License](https://github.com/wundergraph/cosmo/blob/main/LICENSE).
-
----
-
-## 📬 Support & Community
-
-* **Discord**: Join our [Discord community](https://wundergraph.com/discord) for support and discussions
-* **GitHub Issues**: Report issues or request features on our [GitHub repository](https://github.com/wundergraph/cosmo/issues)
+- [**How we scaled Cosmo Router for the SuperBowl**](https://wundergraph.com/blog/scaling-graphql-federation-for-the-superbowl)
+- [**The Architecture of our Observability Stack**](https://wundergraph.com/blog/scaling_graphql_observability)
+- [**How Normalization affects Query Planning**](https://wundergraph.com/blog/normalization_query_planning_graphql_federation)
+- [**Zero cost abstraction for the @skip and @include Directives**](https://wundergraph.com/blog/zero_cost_abstraction_for_skip_include_in_federated_graphql)
+- [**Algorithm to minify GraphQL ASTs by up to 99%**](https://wundergraph.com/blog/graphql_query_ast_minification)
+- [**Federated GraphQL Subscriptions with NATS and Event Driven Architecture**](https://wundergraph.com/blog/distributed_graphql_subscriptions_with_nats_and_event_driven_architecture)
+- [**Implementing the viewer pattern in GraphQL Federation**](https://wundergraph.com/blog/graphql_federation_viewer_pattern)
+- [**How we're using Epoll/Kqueue to scale GraphQL Subscriptions**](https://wundergraph.com/blog/edfs_scaling_graphql_subscriptions_in_go)
+- [**ASTJSON - A fast way to merge JSON objects**](https://wundergraph.com/blog/astjson_high_performance_json_transformations_in_golang)
+- [**Dataloader 3.0, an efficient algorithm for Federation data loading**](https://wundergraph.com/blog/dataloader_3_0_breadth_first_data_loading)
 
 ---
 
@@ -273,6 +260,19 @@ or
 ```shell
 export DO_NOT_TRACK=1
 ```
+
+---
+
+## 📄 License
+
+This project is licensed under the [Apache 2.0 License](https://github.com/wundergraph/cosmo/blob/main/LICENSE).
+
+---
+
+## 📬 Support & Community
+
+* **Discord**: Join our [Discord community](https://wundergraph.com/discord) for support and discussions
+* **GitHub Issues**: Report issues or request features on our [GitHub repository](https://github.com/wundergraph/cosmo/issues)
 
 ---
 
