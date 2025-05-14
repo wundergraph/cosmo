@@ -124,6 +124,20 @@ export const capture = async (eventName: string, properties: Record<string, any>
 };
 
 /**
+ * Capture a command failure event with error details
+ */
+export const captureCommandFailure = async (command: string, error: Error | string) => {
+  const errorMessage = error instanceof Error ? error.message : error;
+  const errorStack = error instanceof Error ? error.stack : undefined;
+
+  await capture('command_failure', {
+    command,
+    error_message: errorMessage,
+    error_stack: errorStack,
+  });
+};
+
+/**
  * Get CLI metadata to include with all events
  */
 const getMetadata = (): Record<string, any> => {
