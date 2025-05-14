@@ -285,7 +285,7 @@ export interface APIKeyDTO {
   lastUsedAt: string;
   expiresAt: string;
   createdBy: string;
-  group: { id: string; name: string; } | undefined;
+  group: { id: string; name: string } | undefined;
   creatorUserID: string;
 }
 

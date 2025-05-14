@@ -58,7 +58,14 @@ export type AuditableType =
   | 'operation_ignore_all_override'
   | 'proposal';
 
-export type AuditTargetType = 'organization' | 'subgraph' | 'federated_graph' | 'monograph' | 'user' | 'group' | 'api_key';
+export type AuditTargetType =
+  | 'organization'
+  | 'subgraph'
+  | 'federated_graph'
+  | 'monograph'
+  | 'user'
+  | 'group'
+  | 'api_key';
 
 export type AuditActorType = 'user' | 'system' | 'api_key';
 

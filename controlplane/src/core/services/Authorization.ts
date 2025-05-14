@@ -91,7 +91,7 @@ export class Authorization {
         // The client doesn't have write access to the requested federated graph
         throw new AuthorizationError(
           EnumStatusCode.ERROR_NOT_AUTHORIZED,
-          'You are not authorized to perform the current action. Please communicate with the organization admin to gain access.'
+          'You are not authorized to perform the current action. Please communicate with the organization admin to gain access.',
         );
       } else if (targetType === 'subgraph') {
         // Validate that the client have write access to the provided subgraph. This is defined by the

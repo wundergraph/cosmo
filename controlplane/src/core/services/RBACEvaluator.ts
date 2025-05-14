@@ -17,8 +17,14 @@ export class RBACEvaluator {
   readonly isOrganizationAdmin: boolean;
   readonly isOrganizationAdminOrDeveloper: boolean;
   readonly isOrganizationViewer: boolean;
+
   readonly canAdminAnyNamespace: boolean;
   readonly canViewAnyNamespace: boolean;
+
+  readonly canAdminAnyGraph: boolean;
+  readonly canViewAnyGraph: boolean;
+
+  readonly canPublishToAnySubgraph: boolean;
 
   constructor(readonly groups: Omit<OrganizationGroupDTO, 'membersCount' | 'kcGroupId' | 'kcMapperId'>[]) {
     const flattenRules = groups.flatMap((group) => group.rules);
@@ -46,6 +52,16 @@ export class RBACEvaluator {
     this.canAdminAnyNamespace =
       this.isOrganizationAdminOrDeveloper || (!!nsAdminRule && nsAdminRule.namespaces.length === 0);
     this.canViewAnyNamespace = this.canAdminAnyNamespace || (!!nsViewerRule && nsViewerRule.namespaces.length === 0);
+
+    const graphAdminRule = this.rules.get('graph-admin');
+    const graphViewerRule = this.rules.get('graph-viewer');
+    this.canAdminAnyGraph =
+      this.isOrganizationAdminOrDeveloper || (!!graphAdminRule && graphAdminRule.resources.length === 0);
+    this.canViewAnyGraph = this.canAdminAnyGraph || (!!graphViewerRule && graphViewerRule.namespaces.length === 0);
+
+    const subgraphPublisherRole = this.rules.get('subgraph-publisher');
+    this.canPublishToAnySubgraph =
+      this.isOrganizationAdminOrDeveloper || (!!subgraphPublisherRole && subgraphPublisherRole.resources.length === 0);
   }
 
   is(...roles: OrganizationRole[]) {
@@ -90,74 +106,5 @@ export class RBACEvaluator {
     }
 
     return false;
-  }
-
-  checkReadAccess(graph: { targetId: string }) {
-    if (this.isOrganizationViewer) {
-      return true;
-    }
-
-    for (const role of this.rules.keys()) {
-      const ruleForRole = this.rules.get(role)!;
-      if (ruleForRole.resources.includes(graph.targetId)) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  checkNamespaceWriteAccess(namespaceId: string) {
-    if (this.isOrganizationAdminOrDeveloper) {
-      return true;
-    }
-
-    for (const role of this.rules.keys()) {
-      if (role.endsWith('-viewer')) {
-        continue;
-      }
-
-      const ruleForRole = this.rules.get(role)!;
-      if (ruleForRole.namespaces.includes(namespaceId)) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  checkResourceWriteAccess(targetId: string) {
-    if (this.isOrganizationAdminOrDeveloper) {
-      return true;
-    }
-
-    for (const role of this.rules.keys()) {
-      if (role.endsWith('-viewer')) {
-        continue;
-      }
-
-      const ruleForRole = this.rules.get(role)!;
-      if (ruleForRole.resources.includes(targetId)) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  applyQueryConditions(conditions: (SQL<unknown> | undefined)[]) {
-    if (this.isOrganizationViewer) {
-      return;
-    }
-
-    if (this.namespaces.length > 0) {
-      conditions.push(
-        this.resources.length > 0
-          ? or(inArray(schema.targets.namespaceId, this.namespaces), inArray(schema.targets.id, this.resources))
-          : inArray(schema.targets.namespaceId, this.namespaces),
-      );
-    } else if (this.resources.length > 0) {
-      conditions.push(inArray(schema.targets.id, this.resources));
-    }
   }
 }
