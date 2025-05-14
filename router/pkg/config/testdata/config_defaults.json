@@ -109,7 +109,8 @@
   "MCP": {
     "Enabled": false,
     "Server": {
-      "ListenAddr": "localhost:5025"
+      "ListenAddr": "localhost:5025",
+      "BaseURL": ""
     },
     "Storage": {
       "ProviderID": ""
@@ -120,6 +121,7 @@
     "ExposeSchema": false,
     "RouterURL": ""
   },
+  "DemoMode": false,
   "Modules": null,
   "Headers": {
     "All": null,

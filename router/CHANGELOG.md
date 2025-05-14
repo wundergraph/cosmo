@@ -4,6 +4,48 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.210.0](https://github.com/wundergraph/cosmo/compare/router@0.209.0...router@0.210.0) (2025-05-13)
+
+### Features
+
+* add demo configuration ([#1796](https://github.com/wundergraph/cosmo/issues/1796)) ([af1d37b](https://github.com/wundergraph/cosmo/commit/af1d37bb833a9dadf3de9d6cd210f048e3c0687c)) (@alepane21)
+
+# [0.209.0](https://github.com/wundergraph/cosmo/compare/router@0.208.0...router@0.209.0) (2025-05-13)
+
+### Features
+
+* add support for mcp base server url, upgrade mcp-go ([#1845](https://github.com/wundergraph/cosmo/issues/1845)) ([7045d4c](https://github.com/wundergraph/cosmo/commit/7045d4cabb9fd01b924360b426316c034b088625)) (@StarpTech)
+
+# [0.208.0](https://github.com/wundergraph/cosmo/compare/router@0.207.0...router@0.208.0) (2025-05-09)
+
+### Features
+
+* **playground:** add support for state sharing via URL with user control over what to include ([#1833](https://github.com/wundergraph/cosmo/issues/1833)) ([c630c9f](https://github.com/wundergraph/cosmo/commit/c630c9f6833de3d071e12f825ed75f2630a9b7e9)) (@akshaygarg576)
+
+# [0.207.0](https://github.com/wundergraph/cosmo/compare/router@0.206.1...router@0.207.0) (2025-05-09)
+
+### Features
+
+* expose router version as a gauge value ([#1803](https://github.com/wundergraph/cosmo/issues/1803)) ([ec7c826](https://github.com/wundergraph/cosmo/commit/ec7c826870e63f8986061580ea6a6ca73a0a33f5)) (@SkArchon)
+
+## [0.206.1](https://github.com/wundergraph/cosmo/compare/router@0.206.0...router@0.206.1) (2025-05-08)
+
+### Bug Fixes
+
+* call safelisted operation after persisted one; feat: add file storage for persisted operations ([#1837](https://github.com/wundergraph/cosmo/issues/1837)) ([679445e](https://github.com/wundergraph/cosmo/commit/679445e4934b7cb86c535b98901b9e0db1df47b9)) (@devsergiy)
+
+# [0.206.0](https://github.com/wundergraph/cosmo/compare/router@0.205.1...router@0.206.0) (2025-05-06)
+
+### Features
+
+* add support for deprecated arguments in introspection ([#1835](https://github.com/wundergraph/cosmo/issues/1835)) ([eb167dd](https://github.com/wundergraph/cosmo/commit/eb167dd2af412f997cf5d3decd1738852c31b825)) (@devsergiy)
+
+## [0.205.1](https://github.com/wundergraph/cosmo/compare/router@0.205.0...router@0.205.1) (2025-05-06)
+
+### Bug Fixes
+
+* update go tools ([#1834](https://github.com/wundergraph/cosmo/issues/1834)) ([5f5664e](https://github.com/wundergraph/cosmo/commit/5f5664e877282f5c60d21b61a937c9cbee1095da)) (@jensneuse)
+
 # [0.205.0](https://github.com/wundergraph/cosmo/compare/router@0.204.2...router@0.205.0) (2025-05-02)
 
 ### Features

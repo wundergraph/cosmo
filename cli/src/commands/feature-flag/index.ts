@@ -10,7 +10,7 @@ import ListFeatureFlagCommand from './commands/list.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('feature-flag').alias('ff');
-  command.description('Provides commands for creating and managing a feature flags.');
+  command.description('Provides commands for creating and managing feature flags.');
 
   command.addCommand(CreateFeatureFlagCommand(opts));
   command.addCommand(DeleteFeatureFlagCommand(opts));

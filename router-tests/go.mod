@@ -13,7 +13,7 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-retryablehttp v0.7.7
 	github.com/hasura/go-graphql-client v0.12.2
-	github.com/mark3labs/mcp-go v0.23.0
+	github.com/mark3labs/mcp-go v0.27.0
 	github.com/nats-io/nats.go v1.35.0
 	github.com/ory/dockertest/v3 v3.11.0
 	github.com/prometheus/client_golang v1.19.1
@@ -24,9 +24,9 @@ require (
 	github.com/tidwall/gjson v1.18.0
 	github.com/twmb/franz-go v1.16.1
 	github.com/twmb/franz-go/pkg/kadm v1.11.0
-	github.com/wundergraph/cosmo/demo v0.0.0-20250430083711-97402d671ffa
-	github.com/wundergraph/cosmo/router v0.0.0-20250430083711-97402d671ffa
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.176
+	github.com/wundergraph/cosmo/demo v0.0.0-20250506154008-98e3b3080bb8
+	github.com/wundergraph/cosmo/router v0.0.0-20250506154008-98e3b3080bb8
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.178
 	go.opentelemetry.io/otel v1.28.0
 	go.opentelemetry.io/otel/sdk v1.28.0
 	go.opentelemetry.io/otel/sdk/metric v1.28.0

@@ -14,9 +14,6 @@ import (
 	"sync"
 	"time"
 
-	rd "github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/redis"
-	"github.com/wundergraph/cosmo/router/pkg/mcpserver"
-
 	"connectrpc.com/connect"
 	"github.com/mitchellh/mapstructure"
 	"github.com/nats-io/nuid"
@@ -37,6 +34,8 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/apq"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/cdn"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/fs"
+	rd "github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/redis"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/s3"
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/internal/stringsx"
@@ -46,6 +45,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"github.com/wundergraph/cosmo/router/pkg/health"
+	"github.com/wundergraph/cosmo/router/pkg/mcpserver"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
@@ -198,6 +198,7 @@ type (
 		apolloCompatibilityFlags        config.ApolloCompatibilityFlags
 		apolloRouterCompatibilityFlags  config.ApolloRouterCompatibilityFlags
 		storageProviders                config.StorageProviders
+		demoMode                        bool
 		eventsConfig                    config.EventsConfiguration
 		prometheusServer                *http.Server
 		modulesConfig                   map[string]interface{}
@@ -925,6 +926,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			mcpserver.WithGraphName(r.mcp.GraphName),
 			mcpserver.WithOperationsDir(operationsDir),
 			mcpserver.WithListenAddr(r.mcp.Server.ListenAddr),
+			mcpserver.WithBaseURL(r.mcp.Server.BaseURL),
 			mcpserver.WithLogger(r.logger.With(logFields...)),
 			mcpserver.WithExcludeMutations(r.mcp.ExcludeMutations),
 			mcpserver.WithEnableArbitraryOperations(r.mcp.EnableArbitraryOperations),
@@ -1014,6 +1016,7 @@ func (r *Router) buildClients() error {
 	s3Providers := map[string]config.S3StorageProvider{}
 	cdnProviders := map[string]config.CDNStorageProvider{}
 	redisProviders := map[string]config.RedisStorageProvider{}
+	fileSystemProviders := map[string]config.FileSystemStorageProvider{}
 
 	for _, provider := range r.storageProviders.S3 {
 		if _, ok := s3Providers[provider.ID]; ok {
@@ -1034,6 +1037,13 @@ func (r *Router) buildClients() error {
 			return fmt.Errorf("duplicate Redis storage provider with id '%s'", provider.ID)
 		}
 		redisProviders[provider.ID] = provider
+	}
+
+	for _, provider := range r.storageProviders.FileSystem {
+		if _, ok := fileSystemProviders[provider.ID]; ok {
+			return fmt.Errorf("duplicate file system storage provider with id '%s'", provider.ID)
+		}
+		fileSystemProviders[provider.ID] = provider
 	}
 
 	var pClient persistedoperation.Client
@@ -1071,6 +1081,18 @@ func (r *Router) buildClients() error {
 		pClient = c
 
 		r.logger.Info("Use S3 as storage provider for persisted operations",
+			zap.String("provider_id", provider.ID),
+		)
+	} else if provider, ok := fileSystemProviders[r.persistedOperationsConfig.Storage.ProviderID]; ok {
+		c, err := fs.NewClient(provider.Path, &fs.Options{
+			ObjectPathPrefix: r.persistedOperationsConfig.Storage.ObjectPrefix,
+		})
+		if err != nil {
+			return err
+		}
+		pClient = c
+
+		r.logger.Info("Use file system as storage provider for persisted operations",
 			zap.String("provider_id", provider.ID),
 		)
 	} else if r.graphApiToken != "" {
@@ -1987,6 +2009,12 @@ func WithCacheWarmupConfig(cfg *config.CacheWarmupConfiguration) Option {
 func WithMCP(cfg config.MCPConfiguration) Option {
 	return func(r *Router) {
 		r.mcp = cfg
+	}
+}
+
+func WithDemoMode(demoMode bool) Option {
+	return func(r *Router) {
+		r.demoMode = demoMode
 	}
 }
 
