@@ -8,20 +8,31 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	cosmoRouterConnectionMeterName    = "cosmo.router.connection"
+	cosmoRouterConnectionMeterVersion = "0.0.1"
+)
+
 type otlpConnectionMetrics struct {
-	instruments *connectionInstruments
-	logger      *zap.Logger
+	instruments   *connectionInstruments
+	meterProvider *metric.MeterProvider
+	logger        *zap.Logger
 }
 
 func newOtlpConnectionMetrics(logger *zap.Logger, meterProvider *metric.MeterProvider) (*otlpConnectionMetrics, error) {
-	instruments, err := newConnectionInstruments(meterProvider)
+	meter := meterProvider.Meter(cosmoRouterConnectionMeterName,
+		otelmetric.WithInstrumentationVersion(cosmoRouterConnectionMeterVersion),
+	)
+
+	instruments, err := newConnectionInstruments(meter)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create otlp connection instruments: %w", err)
 	}
 
 	return &otlpConnectionMetrics{
-		instruments: instruments,
-		logger:      logger,
+		instruments:   instruments,
+		meterProvider: meterProvider,
+		logger:        logger,
 	}, nil
 }
 
@@ -54,5 +65,5 @@ func (m *otlpConnectionMetrics) MeasureReusedConnections(ctx context.Context, co
 }
 
 func (m *otlpConnectionMetrics) Flush(ctx context.Context) error {
-	return nil
+	return m.meterProvider.ForceFlush(ctx)
 }

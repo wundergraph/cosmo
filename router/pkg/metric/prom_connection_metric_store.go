@@ -8,20 +8,31 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	cosmoRouterConnectionPrometheusMeterName    = "cosmo.router.connection.prometheus"
+	cosmoRouterConnectionPrometheusMeterVersion = "0.0.1"
+)
+
 type promConnectionMetrics struct {
-	instruments *connectionInstruments
-	logger      *zap.Logger
+	instruments   *connectionInstruments
+	meterProvider *metric.MeterProvider
+	logger        *zap.Logger
 }
 
 func newPromConnectionMetrics(logger *zap.Logger, meterProvider *metric.MeterProvider) (*promConnectionMetrics, error) {
-	instruments, err := newConnectionInstruments(meterProvider)
+	meter := meterProvider.Meter(cosmoRouterConnectionPrometheusMeterName,
+		otelmetric.WithInstrumentationVersion(cosmoRouterConnectionPrometheusMeterVersion),
+	)
+
+	instruments, err := newConnectionInstruments(meter)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create prometheus connection instruments: %w", err)
 	}
 
 	return &promConnectionMetrics{
-		instruments: instruments,
-		logger:      logger,
+		instruments:   instruments,
+		meterProvider: meterProvider,
+		logger:        logger,
 	}, nil
 }
 
