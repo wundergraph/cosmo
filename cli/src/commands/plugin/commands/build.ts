@@ -2,7 +2,7 @@ import { Command, program } from 'commander';
 import { basename, join, resolve } from 'pathe';
 import pc from 'picocolors';
 import Spinner from 'ora';
-import { chmod, readFile, rm, writeFile, mkdir } from 'node:fs/promises';
+import { chmod, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { execa } from 'execa';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { compileGraphQLToMapping, compileGraphQLToProto, ProtoLock } from '@wundergraph/protographic';
@@ -188,9 +188,7 @@ async function areToolsInstalledOnHost(): Promise<boolean> {
     // Check Protoc version
     const protocVersion = await getCommandVersion('protoc', '--version');
     if (!isSemverSatisfied(protocVersion, TOOL_VERSIONS.protoc.range)) {
-      console.log(
-        pc.yellow(`Protoc version mismatch: found ${protocVersion}, required ${TOOL_VERSIONS.protoc.range}`),
-      );
+      console.log(pc.yellow(`Protoc version mismatch: found ${protocVersion}, required ${TOOL_VERSIONS.protoc.range}`));
       return false;
     }
 
@@ -416,6 +414,11 @@ async function generateProtoAndMapping(pluginDir: string, goModulePath: string, 
   const srcDir = resolve(pluginDir, 'src');
   const generatedDir = resolve(pluginDir, 'generated');
 
+  // Delete generated directory if it exists
+  if (existsSync(generatedDir)) {
+    await rm(generatedDir, { recursive: true, force: true });
+  }
+
   // Ensure generated directory exists
   await mkdir(generatedDir, { recursive: true });
 
@@ -499,10 +502,10 @@ async function installGoDependencies(pluginDir: string, spinner: any) {
 async function buildBinaries(pluginDir: string, platforms: string[], debug: boolean, spinner: any) {
   spinner.text = 'Building binaries...';
   const binDir = resolve(pluginDir, 'bin');
-  
+
   // Ensure bin directory exists
   await mkdir(binDir, { recursive: true });
-  
+
   const env = getToolsEnv();
   const goPath = getToolPath('go');
 

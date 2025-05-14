@@ -15,11 +15,7 @@ export default (opts: BaseCommandOptions) => {
   command.description('Scaffold a new gRPC router plugin');
   command.argument('name', 'Name of the plugin');
   command.option('-d, --directory <directory>', 'Directory to create the plugin in', '.');
-  command.option(
-    '--go-module-path <path>',
-    'Go module path to use for the plugin',
-    'github.com/wundergraph/cosmo/plugin',
-  );
+  command.option('-l, --language <language>', 'Programming language to use for the plugin', 'go');
   command.action(async (name, options) => {
     const startTime = performance.now();
     const pluginDir = resolve(process.cwd(), options.directory, name);
@@ -50,6 +46,11 @@ export default (opts: BaseCommandOptions) => {
 
       spinner.text = 'Checkout templates...';
 
+      if (options.language.toLowerCase() !== 'go') {
+        spinner.fail(pc.yellow(`Language '${options.language}' is not supported yet. Using 'go' instead.`));
+        options.language = 'go';
+      }
+
       await writeFile(resolve(tempDir, 'README.md'), pupa(readme, { name }));
       await writeFile(resolve(srcDir, 'schema.graphql'), pupa(schema, { name }));
 
@@ -58,10 +59,12 @@ export default (opts: BaseCommandOptions) => {
       const mapping = compileGraphQLToMapping(schema, serviceName);
       await writeFile(resolve(generatedDir, 'mapping.json'), JSON.stringify(mapping, null, 2));
 
+      const goModulePath = 'github.com/wundergraph/cosmo/plugin';
+
       const proto = compileGraphQLToProto(schema, {
         serviceName,
         packageName: 'service',
-        goPackage: options.goModulePath,
+        goPackage: goModulePath,
       });
       await writeFile(resolve(generatedDir, 'service.proto'), proto.proto);
       await writeFile(resolve(generatedDir, 'service.proto.lock.json'), JSON.stringify(proto.lockData, null, 2));
@@ -69,7 +72,7 @@ export default (opts: BaseCommandOptions) => {
       await writeFile(resolve(srcDir, 'main.go'), pupa(mainGo, { serviceName }));
 
       // go mod init
-      await writeFile(resolve(tempDir, 'go.mod'), pupa(goMod, { modulePath: options.goModulePath }));
+      await writeFile(resolve(tempDir, 'go.mod'), pupa(goMod, { modulePath: goModulePath }));
 
       await mkdir(resolve(process.cwd(), options.directory), { recursive: true });
       await rename(tempDir, pluginDir);
