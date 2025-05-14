@@ -5,51 +5,51 @@ import (
 	"time"
 )
 
-type SubgraphDNSStart struct {
+type DNSStart struct {
 	Time time.Time
 	Host string
 }
 
-type SubgraphDNSDone struct {
+type DNSDone struct {
 	Time      time.Time
 	Coalesced bool
 	Error     error
 }
 
-type SubgraphTLSStart struct {
+type TLSStart struct {
 	Time time.Time
 }
 
-type SubgraphTLSDone struct {
+type TLSDone struct {
 	Time      time.Time
 	Complete  bool
 	DidResume bool
 	Error     error
 }
 
-type SubgraphDialStart struct {
+type DialStart struct {
 	Time    time.Time
 	Network string
 	Address string
 }
 
-type SubgraphDialDone struct {
+type DialDone struct {
 	Time    time.Time
 	Network string
 	Address string
 	Error   error
 }
 
-type SubgraphWroteHeaders struct {
+type WroteHeaders struct {
 	Time time.Time
 }
 
-type SubgraphWroteRequest struct {
+type WroteRequest struct {
 	Time  time.Time
 	Error error
 }
 
-type SubgraphFirstByte struct {
+type FirstByte struct {
 	Time time.Time
 }
 
@@ -68,15 +68,15 @@ type GetConnection struct {
 type ClientTrace struct {
 	ConnectionGet      *GetConnection
 	ConnectionAcquired *AcquiredConnection
-	DNSStart           *SubgraphDNSStart
-	DNSDone            *SubgraphDNSDone
-	TLSStart           *SubgraphTLSStart
-	TLSDone            *SubgraphTLSDone
-	DialStart          []SubgraphDialStart
-	DialDone           []SubgraphDialDone
-	WroteHeaders       *SubgraphWroteHeaders
-	WroteRequest       *SubgraphWroteRequest
-	FirstByte          *SubgraphFirstByte
+	DNSStart           *DNSStart
+	DNSDone            *DNSDone
+	TLSStart           *TLSStart
+	TLSDone            *TLSDone
+	DialStart          []DialStart
+	DialDone           []DialDone
+	WroteHeaders       *WroteHeaders
+	WroteRequest       *WroteRequest
+	FirstByte          *FirstByte
 }
 
 type ClientTraceInfo struct {

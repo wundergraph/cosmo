@@ -113,11 +113,11 @@ func TestCalculateConnectionMetrics_DNS(t *testing.T) {
 	startTime := time.Now()
 	fromTrace.ClientTraces = []*httpclient.ClientTrace{
 		{
-			DNSStart: &httpclient.SubgraphDNSStart{
+			DNSStart: &httpclient.DNSStart{
 				Time: startTime,
 				Host: "example.com",
 			},
-			DNSDone: &httpclient.SubgraphDNSDone{
+			DNSDone: &httpclient.DNSDone{
 				Time: startTime.Add(50 * time.Millisecond),
 			},
 		},
@@ -146,10 +146,10 @@ func TestCalculateConnectionMetrics_TLS(t *testing.T) {
 				Time:     startTime,
 				HostPort: "example.com:443",
 			},
-			TLSStart: &httpclient.SubgraphTLSStart{
+			TLSStart: &httpclient.TLSStart{
 				Time: startTime.Add(60 * time.Millisecond),
 			},
-			TLSDone: &httpclient.SubgraphTLSDone{
+			TLSDone: &httpclient.TLSDone{
 				Time: startTime.Add(110 * time.Millisecond),
 			},
 		},
@@ -178,14 +178,14 @@ func TestCalculateConnectionMetrics_Dial(t *testing.T) {
 				Time:     startTime,
 				HostPort: "example.com:443",
 			},
-			DialStart: []httpclient.SubgraphDialStart{
+			DialStart: []httpclient.DialStart{
 				{
 					Time:    startTime.Add(120 * time.Millisecond),
 					Network: "tcp",
 					Address: "example.com:443",
 				},
 			},
-			DialDone: []httpclient.SubgraphDialDone{
+			DialDone: []httpclient.DialDone{
 				{
 					Time:    startTime.Add(170 * time.Millisecond),
 					Network: "tcp",
@@ -249,17 +249,17 @@ func TestCalculateConnectionMetrics_TotalDuration(t *testing.T) {
 				Time:     startTime,
 				HostPort: "example.com:443",
 			},
-			DNSStart: &httpclient.SubgraphDNSStart{
+			DNSStart: &httpclient.DNSStart{
 				Time: startTime,
 				Host: "example.com",
 			},
-			DNSDone: &httpclient.SubgraphDNSDone{
+			DNSDone: &httpclient.DNSDone{
 				Time: startTime.Add(50 * time.Millisecond),
 			},
-			TLSStart: &httpclient.SubgraphTLSStart{
+			TLSStart: &httpclient.TLSStart{
 				Time: startTime.Add(60 * time.Millisecond),
 			},
-			TLSDone: &httpclient.SubgraphTLSDone{
+			TLSDone: &httpclient.TLSDone{
 				Time: startTime.Add(110 * time.Millisecond),
 			},
 		},

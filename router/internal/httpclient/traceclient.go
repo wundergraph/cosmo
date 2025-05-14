@@ -78,25 +78,25 @@ func (t *TraceInjectingRoundTripper) getClientTrace(ctx context.Context) *httptr
 			}
 		},
 		GotFirstResponseByte: func() {
-			eC.FirstByte = &SubgraphFirstByte{
+			eC.FirstByte = &FirstByte{
 				Time: time.Now(),
 			}
 		},
 		DNSStart: func(dnsStartInfo httptrace.DNSStartInfo) {
-			eC.DNSStart = &SubgraphDNSStart{
+			eC.DNSStart = &DNSStart{
 				Time: time.Now(),
 				Host: dnsStartInfo.Host,
 			}
 		},
 		DNSDone: func(dnsDoneInfo httptrace.DNSDoneInfo) {
-			eC.DNSDone = &SubgraphDNSDone{
+			eC.DNSDone = &DNSDone{
 				Time:      time.Now(),
 				Coalesced: dnsDoneInfo.Coalesced,
 				Error:     dnsDoneInfo.Err,
 			}
 		},
 		ConnectStart: func(network, addr string) {
-			start := SubgraphDialStart{
+			start := DialStart{
 				Time:    time.Now(),
 				Network: network,
 				Address: addr,
@@ -107,7 +107,7 @@ func (t *TraceInjectingRoundTripper) getClientTrace(ctx context.Context) *httptr
 			eC.DialStart = append(eC.DialStart, start)
 		},
 		ConnectDone: func(network, addr string, err error) {
-			done := SubgraphDialDone{
+			done := DialDone{
 				Time:    time.Now(),
 				Network: network,
 				Address: addr,
@@ -119,12 +119,12 @@ func (t *TraceInjectingRoundTripper) getClientTrace(ctx context.Context) *httptr
 			eC.DialDone = append(eC.DialDone, done)
 		},
 		TLSHandshakeStart: func() {
-			eC.TLSStart = &SubgraphTLSStart{
+			eC.TLSStart = &TLSStart{
 				Time: time.Now(),
 			}
 		},
 		TLSHandshakeDone: func(connectionState tls.ConnectionState, err error) {
-			eC.TLSDone = &SubgraphTLSDone{
+			eC.TLSDone = &TLSDone{
 				Time:      time.Now(),
 				Complete:  connectionState.HandshakeComplete,
 				DidResume: connectionState.DidResume,
@@ -132,7 +132,7 @@ func (t *TraceInjectingRoundTripper) getClientTrace(ctx context.Context) *httptr
 			}
 		},
 		WroteHeaders: func() {
-			eC.WroteHeaders = &SubgraphWroteHeaders{
+			eC.WroteHeaders = &WroteHeaders{
 				Time: time.Now(),
 			}
 		},
