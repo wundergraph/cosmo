@@ -174,7 +174,6 @@ export function createTestContext(
   organizationName = 'wundergraph',
   organizationId = randomUUID(),
   isAdmin = true,
-  hasWriteAccess = true,
   groups: ('admin' | 'developer' | 'viewer')[] = ['admin'],
   organizationDeactivated = false,
 ): UserTestData & AuthContext {
@@ -189,8 +188,6 @@ export function createTestContext(
     apiKey: nuid.next(),
     organizationSlug: `slug-${organizationId}`,
     organizationDeactivated,
-    hasWriteAccess,
-    isAdmin,
     userDisplayName: userId,
     groups,
     rbac: new RBACEvaluator(

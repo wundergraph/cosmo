@@ -441,8 +441,6 @@ export type AuthContext = {
   organizationId: string;
   organizationSlug: string;
   organizationDeactivated: boolean;
-  hasWriteAccess: boolean;
-  isAdmin: boolean;
   userId: string;
   rbac: RBACEvaluator;
   userDisplayName: string;

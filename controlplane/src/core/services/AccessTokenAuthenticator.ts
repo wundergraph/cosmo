@@ -11,8 +11,6 @@ export type AccessTokenAuthContext = {
   organizationId: string;
   organizationSlug: string;
   organizationDeactivated: boolean;
-  hasWriteAccess: boolean;
-  isAdmin: boolean;
   rbac: RBACEvaluator;
 };
 
@@ -60,8 +58,6 @@ export default class AccessTokenAuthenticator {
       userId: userInfoData.sub,
       userDisplayName: userInfoData.email,
       organizationDeactivated,
-      hasWriteAccess: rbac.isOrganizationAdminOrDeveloper && !organizationDeactivated,
-      isAdmin: rbac.isOrganizationAdmin,
       rbac,
     };
   }

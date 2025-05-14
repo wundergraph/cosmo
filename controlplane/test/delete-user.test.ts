@@ -164,8 +164,6 @@ const createTempUser = async (
       email: userEmail,
       apiKey: apiKeyPersonal,
       organizationSlug: personalOrg.slug,
-      hasWriteAccess: true,
-      isAdmin: true,
       userDisplayName: userEmail,
       groups: ['admin'],
       rbac: new RBACEvaluator([orgAdminGroup]),

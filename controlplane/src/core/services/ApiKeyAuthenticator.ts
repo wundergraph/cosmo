@@ -11,8 +11,6 @@ export type ApiKeyAuthContext = {
   organizationId: string;
   organizationSlug: string;
   organizationDeactivated: boolean;
-  hasWriteAccess: boolean;
-  isAdmin: boolean;
   userId: string;
   userDisplayName: string;
   apiKeyName: string;
@@ -84,9 +82,6 @@ export default class ApiKeyAuthenticator {
       organizationSlug: organization.slug,
       organizationDeactivated,
       rbac,
-      // sending true as the api key has admin permissions
-      isAdmin: rbac.isOrganizationAdmin,
-      hasWriteAccess: !organizationDeactivated,
     };
   }
 }

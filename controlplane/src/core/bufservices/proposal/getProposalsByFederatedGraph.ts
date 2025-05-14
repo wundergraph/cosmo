@@ -12,6 +12,7 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function getProposalsByFederatedGraph(
   opts: RouterOptions,
@@ -64,6 +65,16 @@ export function getProposalsByFederatedGraph(
         proposals: [],
         isProposalsEnabled: namespace.enableProposals,
       };
+    }
+
+    if (
+      !(
+        authContext.rbac.isOrganizationAdminOrDeveloper ||
+        authContext.rbac.checkTargetAccess(federatedGraph.targetId, 'graph-admin') ||
+        authContext.rbac.checkTargetAccess(federatedGraph.targetId, 'graph-viewer')
+      )
+    ) {
+      throw new UnauthorizedError();
     }
 
     const breakingChangeRetention = await orgRepo.getFeature({

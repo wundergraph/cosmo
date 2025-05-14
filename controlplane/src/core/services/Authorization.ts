@@ -35,7 +35,7 @@ export class Authorization {
     authContext: AuthContext;
   }) {
     const { targetId, targetType } = graph;
-    const { userId, organizationId, isAdmin } = authContext;
+    const { userId, organizationId } = authContext;
 
     const orgRepo = new OrganizationRepository(this.logger, db, this.defaultBillingPlanId);
     const fedRepo = new FederatedGraphRepository(this.logger, db, organizationId);
@@ -138,13 +138,6 @@ export class Authorization {
         } else {
           throw new AuthorizationError(EnumStatusCode.ERROR_NOT_AUTHORIZED, 'Not authorized');
         }
-      }
-
-      /**
-       * An admin is authorized to perform all the actions even if RBAC is enabled.
-       */
-      if (isAdmin) {
-        return;
       }
 
       /**
