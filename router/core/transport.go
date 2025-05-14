@@ -60,17 +60,19 @@ type sfCacheItem struct {
 }
 
 func NewCustomTransport(
-	logger *zap.Logger,
 	baseRoundTripper http.RoundTripper,
 	retryOptions retrytransport.RetryOptions,
 	metricStore metric.Store,
 	enableSingleFlight bool,
+	enableTraceClient bool,
 ) *CustomTransport {
 	ct := &CustomTransport{
 		metricStore: metricStore,
 	}
 
-	baseRoundTripper = traceclient.NewTraceInjectingRoundTripper(baseRoundTripper)
+	if enableTraceClient {
+		baseRoundTripper = traceclient.NewTraceInjectingRoundTripper(baseRoundTripper)
+	}
 
 	if retryOptions.Enabled {
 		// The round trip method is almost always called via the http.Client RoundTripper interface
@@ -324,6 +326,7 @@ type TransportFactory struct {
 	logger                        *zap.Logger
 	tracerProvider                *sdktrace.TracerProvider
 	tracePropagators              propagation.TextMapPropagator
+	enableTraceClient             bool
 }
 
 var _ ApiTransportFactory = TransportFactory{}
@@ -338,6 +341,7 @@ type TransportOptions struct {
 	Logger                        *zap.Logger
 	TracerProvider                *sdktrace.TracerProvider
 	TracePropagators              propagation.TextMapPropagator
+	EnableTraceClient             bool
 }
 
 type SubscriptionClientOptions struct {
@@ -357,6 +361,7 @@ func NewTransport(opts *TransportOptions) *TransportFactory {
 		logger:                        opts.Logger,
 		tracerProvider:                opts.TracerProvider,
 		tracePropagators:              opts.TracePropagators,
+		enableTraceClient:             opts.EnableTraceClient,
 	}
 }
 
@@ -396,11 +401,11 @@ func (t TransportFactory) RoundTripper(enableSingleFlight bool, baseTransport ht
 		}),
 	)
 	tp := NewCustomTransport(
-		t.logger,
 		traceTransport,
 		t.retryOptions,
 		t.metricStore,
 		enableSingleFlight,
+		t.enableTraceClient,
 	)
 
 	tp.preHandlers = t.preHandlers

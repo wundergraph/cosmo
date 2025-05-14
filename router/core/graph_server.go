@@ -410,6 +410,7 @@ type graphMux struct {
 	operationHashCache         *ristretto.Cache[uint64, string]
 	accessLogsFileLogger       *logging.BufferedLogger
 	metricStore                rmetric.Store
+	connectionMetricStore      rmetric.ConnectionMetricStore
 	prometheusCacheMetrics     *rmetric.CacheMetrics
 	otelCacheMetrics           *rmetric.CacheMetrics
 }
@@ -729,6 +730,24 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		}
 
 		gm.metricStore = m
+
+	}
+
+	isConnStoreEnabled := !s.metricConfig.OpenTelemetry.ConnectionStats && !s.metricConfig.Prometheus.ConnectionStats
+
+	if isConnStoreEnabled {
+		connStore, err := rmetric.NewConnectionMetricStore(
+			s.logger,
+			baseOtelAttributes,
+			s.otlpMeterProvider,
+			s.promMeterProvider,
+			s.metricConfig,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		gm.connectionMetricStore = connStore
 	}
 
 	subgraphs, err := configureSubgraphOverwrites(
@@ -987,6 +1006,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			TracePropagators:              s.compositePropagator,
 			LocalhostFallbackInsideDocker: s.localhostFallbackInsideDocker,
 			Logger:                        s.logger,
+			EnableTraceClient:             isConnStoreEnabled,
 		},
 	}
 
@@ -1113,7 +1133,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		TracerProvider:                              s.tracerProvider,
 		Authorizer:                                  NewCosmoAuthorizer(authorizerOptions),
 		SubgraphErrorPropagation:                    s.subgraphErrorPropagation,
-		EngineLoaderHooks:                           NewEngineRequestHooks(gm.metricStore, subgraphAccessLogger, s.tracerProvider),
+		EngineLoaderHooks:                           NewEngineRequestHooks(gm.metricStore, subgraphAccessLogger, s.tracerProvider, gm.connectionMetricStore),
 	}
 
 	if s.redisClient != nil {

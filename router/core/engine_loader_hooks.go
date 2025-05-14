@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/httpclient"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
 	"github.com/wundergraph/cosmo/router/internal/unique"
 	"github.com/wundergraph/cosmo/router/pkg/metric"
@@ -33,24 +34,26 @@ const EngineLoaderHooksScopeVersion = "0.0.1"
 // engineLoaderHooks implements resolve.LoaderHooks
 // It is used to trace and measure the performance of the engine loader
 type engineLoaderHooks struct {
-	tracer       trace.Tracer
-	metricStore  metric.Store
-	accessLogger *requestlogger.SubgraphAccessLogger
+	tracer                trace.Tracer
+	metricStore           metric.Store
+	accessLogger          *requestlogger.SubgraphAccessLogger
+	connectionMetricStore metric.ConnectionMetricStore
 }
 
 type engineLoaderHooksRequestContext struct {
 	startTime time.Time
 }
 
-func NewEngineRequestHooks(metricStore metric.Store, logger *requestlogger.SubgraphAccessLogger, tracerProvider *sdktrace.TracerProvider) resolve.LoaderHooks {
+func NewEngineRequestHooks(metricStore metric.Store, logger *requestlogger.SubgraphAccessLogger, tracerProvider *sdktrace.TracerProvider, connectionMetricStore metric.ConnectionMetricStore) resolve.LoaderHooks {
 	if tracerProvider != nil {
 		return &engineLoaderHooks{
 			tracer: tracerProvider.Tracer(
 				EngineLoaderHooksScopeName,
 				trace.WithInstrumentationVersion(EngineLoaderHooksScopeVersion),
 			),
-			metricStore:  metricStore,
-			accessLogger: logger,
+			metricStore:           metricStore,
+			connectionMetricStore: connectionMetricStore,
+			accessLogger:          logger,
 		}
 	}
 
@@ -59,8 +62,9 @@ func NewEngineRequestHooks(metricStore metric.Store, logger *requestlogger.Subgr
 			EngineLoaderHooksScopeName,
 			trace.WithInstrumentationVersion(EngineLoaderHooksScopeVersion),
 		),
-		metricStore:  metricStore,
-		accessLogger: logger,
+		metricStore:           metricStore,
+		connectionMetricStore: connectionMetricStore,
+		accessLogger:          logger,
 	}
 }
 
@@ -151,6 +155,10 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 		f.accessLogger.Info(path, fields)
 	}
 
+	if f.connectionMetricStore != nil {
+		ctx = httpclient.InitTraceContext(ctx)
+	}
+
 	if responseInfo.Err != nil {
 		// Set error status. This is the fetch error from the engine
 		// Downstream errors are extracted from the subgraph response
@@ -214,4 +222,63 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 	}
 
 	span.SetAttributes(traceAttrs...)
+}
+
+func (f *engineLoaderHooks) calculateMetrics(ctx context.Context) {
+	if f.connectionMetricStore == nil {
+		return
+	}
+
+	fromTrace := httpclient.GetClientTraceFromContext(ctx)
+
+	// We calculate the rates separately per retry
+	for _, trace := range fromTrace.ClientTraces {
+		totalDuration := 0.0
+
+		if trace.ConnectionAcquired != nil {
+			if trace.ConnectionAcquired.Reused {
+				f.connectionMetricStore.MeasureConnectionReuseTotal(ctx, 1)
+			} else {
+				f.connectionMetricStore.MeasureConnectionNewTotal(ctx, 1)
+			}
+
+			if trace.ConnectionGet != nil {
+				connAquireTime := trace.ConnectionAcquired.Time.Sub(trace.ConnectionGet.Time).Seconds()
+				f.connectionMetricStore.MeasureConnectionAcquireDuration(ctx, connAquireTime)
+			}
+		}
+
+		// Measure DNS duration for both success and error cases
+		// We skip if DNSDone was not recorded
+		if trace.DNSStart != nil && trace.DNSDone != nil {
+			sub := trace.DNSDone.Time.Sub(trace.DNSStart.Time).Seconds()
+			totalDuration += sub
+			f.connectionMetricStore.MeasureDNSDuration(ctx, sub)
+		}
+
+		// Measure TLS duration for both success and error cases
+		// We skip if DNSDone was not recorded
+		if trace.TLSStart != nil && trace.TLSDone != nil {
+			sub := trace.TLSDone.Time.Sub(trace.TLSStart.Time).Seconds()
+			totalDuration += sub
+			f.connectionMetricStore.MeasureTLSHandshakeDuration(ctx, sub)
+		}
+
+		dials := trace.GetGroupedDials()
+		if len(dials) > 0 {
+			// Since the dials are sorted by error and address
+			fastestCompletionDial := dials[0]
+			if fastestCompletionDial.Error == nil && fastestCompletionDial.DialDoneTime != nil {
+				dialSeconds := fastestCompletionDial.DialDoneTime.Sub(fastestCompletionDial.DialStartTime).Seconds()
+				totalDuration += dialSeconds
+				f.connectionMetricStore.MeasureDialDuration(ctx, dialSeconds)
+			}
+		}
+
+		// In case of no dials, we dont record 0 which will be a false positive
+		if totalDuration != 0.0 {
+			f.connectionMetricStore.MeasureTotalConnectionDuration(ctx, totalDuration)
+		}
+	}
+
 }

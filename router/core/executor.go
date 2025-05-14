@@ -59,6 +59,7 @@ type ExecutorBuildOptions struct {
 	ApolloCompatibilityFlags       config.ApolloCompatibilityFlags
 	ApolloRouterCompatibilityFlags config.ApolloRouterCompatibilityFlags
 	HeartbeatInterval              time.Duration
+	TraceClientRequired            bool
 }
 
 func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *ExecutorBuildOptions) (*Executor, error) {
