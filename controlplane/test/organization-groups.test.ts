@@ -51,7 +51,7 @@ describe('Organization Group tests', (ctx) => {
     await server.close();
   });
 
-  test('Should be able to update existing group', async () => {
+  test('Should not be able to update builtin group', async () => {
     const { client, server } = await SetupTest({ dbname, enabledFeatures: ['rbac'] });
 
     const orgGroups = await client.getOrganizationGroups({});
@@ -66,10 +66,34 @@ describe('Organization Group tests', (ctx) => {
       }],
     });
 
+    expect(updateResponse.response?.code).toBe(EnumStatusCode.ERR);
+
+    await server.close();
+  });
+
+  test('Should be able to update existing group', async () => {
+    const { client, server } = await SetupTest({ dbname, enabledFeatures: ['rbac'] });
+
+    const createdGroupResponse = await client.createOrganizationGroup({
+      name: uid(),
+      description: '',
+    });
+
+    expect(createdGroupResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    const updateResponse = await client.updateOrganizationGroup({
+      groupId: createdGroupResponse.group?.groupId,
+      rules: [{
+        role: 'organization-admin',
+        namespaces: [],
+        resources: [],
+      }],
+    });
+
     expect(updateResponse.response?.code).toBe(EnumStatusCode.OK);
 
     const updatedGroupsResponse = await client.getOrganizationGroups({});
-    const updatedDeveloperGroup = updatedGroupsResponse.groups.find((g) => g.name === 'developer')!;
+    const updatedDeveloperGroup = updatedGroupsResponse.groups.find((g) => g.groupId === createdGroupResponse.group?.groupId)!;
 
     expect(updatedDeveloperGroup.rules.length).toBe(1);
     expect(updatedDeveloperGroup.rules[0].role).toBe('organization-admin');
