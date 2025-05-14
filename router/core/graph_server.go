@@ -687,7 +687,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	// We might want to remap or exclude known attributes based on the configuration for metrics
 	mapper := newAttributeMapper(!rmetric.IsUsingDefaultCloudExporter(s.metricConfig), s.metricConfig.Attributes)
-	mappedMetricAttributes := mapper.mapAttributes(baseMuxAttributes)
+	baseMetricAttributes := mapper.mapAttributes(baseMuxAttributes)
 
 	attExpressions, attErr := newAttributeExpressions(s.metricConfig.Attributes, exprManager)
 	if attErr != nil {
@@ -716,7 +716,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		m, err := rmetric.NewStore(
 			rmetric.WithPromMeterProvider(s.promMeterProvider),
 			rmetric.WithOtlpMeterProvider(s.otlpMeterProvider),
-			rmetric.WithBaseAttributes(mappedMetricAttributes),
+			rmetric.WithBaseAttributes(baseMetricAttributes),
 			rmetric.WithLogger(s.logger),
 			rmetric.WithProcessStartTime(s.processStartTime),
 			rmetric.WithCardinalityLimit(rmetric.DefaultCardinalityLimit),
@@ -744,7 +744,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		return nil, err
 	}
 
-	if err = gm.configureCacheMetrics(s, mappedMetricAttributes); err != nil {
+	if err = gm.configureCacheMetrics(s, baseMetricAttributes); err != nil {
 		return nil, err
 	}
 
@@ -1066,7 +1066,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 						otel.WgOperationHash.String(item.OperationHash),
 						otel.WgOperationType.String(item.OperationType),
 						otel.WgEnginePlanCacheHit.Bool(false),
-					}, mappedMetricAttributes...)...,
+					}, baseMetricAttributes...)...,
 				),
 			)
 		}
