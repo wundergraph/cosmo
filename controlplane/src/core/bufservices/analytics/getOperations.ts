@@ -57,12 +57,12 @@ export function getOperations(
 
     const limit = analyticsRetention?.limit ?? 7;
 
-    const { range, dateRange } = validateDateRanges({
+    const { range } = validateDateRanges({
       limit,
       range: limit * 24,
     });
 
-    if (!range || !dateRange) {
+    if (!range) {
       return {
         response: {
           code: EnumStatusCode.ERR,
@@ -74,7 +74,6 @@ export function getOperations(
 
     const operations = await metricsRepo.getOperations({
       range,
-      dateRange,
       organizationId: authContext.organizationId,
       graphId: graph.id,
       filters: [],

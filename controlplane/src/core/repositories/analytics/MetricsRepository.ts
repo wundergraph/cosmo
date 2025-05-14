@@ -745,7 +745,7 @@ export class MetricsRepository {
     WHERE Timestamp >= startDate AND Timestamp <= endDate
       AND OrganizationID = '${organizationId}'
       AND FederatedGraphID = '${graphId}'
-    GROUP BY OperationName, OperationHash, OperationPersistedID ORDER BY latency DESC`;
+    GROUP BY OperationName, OperationHash, OperationType ORDER BY latency DESC`;
 
     const res: {
       operationHash: string;
