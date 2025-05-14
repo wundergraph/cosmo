@@ -218,12 +218,14 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
       });
     }
 
-    navigation.push({
-      title: "Audit log",
-      href: basePath + "/audit-log",
-      icon: <AiOutlineAudit className="size-4" />,
-      separator: !isAdminOrDeveloper,
-    });
+    if (isAdminOrDeveloper) {
+      navigation.push({
+        title: "Audit log",
+        href: basePath + "/audit-log",
+        icon: <AiOutlineAudit className="size-4"/>,
+        separator: !isAdminOrDeveloper,
+      });
+    }
 
     if (isAdminOrDeveloper) {
       navigation.push({
