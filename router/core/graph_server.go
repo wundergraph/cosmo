@@ -681,9 +681,9 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		baseMuxAttributes = append(baseMuxAttributes, otel.WgFeatureFlag.String(featureFlagName))
 	}
 
-	exprManager := expr.CreateNewExprManager()
-
 	metricsEnabled := s.metricConfig.IsEnabled()
+	
+	exprManager := expr.CreateNewExprManager()
 
 	// We might want to remap or exclude known attributes based on the configuration for metrics
 	mapper := newAttributeMapper(!rmetric.IsUsingDefaultCloudExporter(s.metricConfig), s.metricConfig.Attributes)
