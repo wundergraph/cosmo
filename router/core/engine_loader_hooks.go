@@ -81,6 +81,10 @@ func (f *engineLoaderHooks) OnLoad(ctx context.Context, ds resolve.DataSourceInf
 		return ctx
 	}
 
+	if f.connectionMetricStore != nil {
+		ctx = httpclient.InitTraceContext(ctx)
+	}
+
 	ctx, _ = f.tracer.Start(ctx, "Engine - Fetch",
 		trace.WithAttributes([]attribute.KeyValue{
 			rotel.WgSubgraphName.String(ds.Name),
@@ -135,8 +139,9 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 	defer reqContext.telemetry.ReleaseAttributes(&metricAttrs)
 	metricAttrs = append(metricAttrs, reqContext.telemetry.metricAttrs...)
 	metricAttrs = append(metricAttrs, commonAttrs...)
-
 	metricAddOpt := otelmetric.WithAttributeSet(attribute.NewSet(metricAttrs...))
+
+	f.calculateMetrics(ctx)
 
 	if f.accessLogger != nil {
 		fields := []zap.Field{
@@ -232,39 +237,39 @@ func (f *engineLoaderHooks) calculateMetrics(ctx context.Context) {
 	fromTrace := httpclient.GetClientTraceFromContext(ctx)
 
 	// We calculate the rates separately per retry
-	for _, trace := range fromTrace.ClientTraces {
+	for _, retryTrace := range fromTrace.ClientTraces {
 		totalDuration := 0.0
 
-		if trace.ConnectionAcquired != nil {
-			if trace.ConnectionAcquired.Reused {
+		if retryTrace.ConnectionAcquired != nil {
+			if retryTrace.ConnectionAcquired.Reused {
 				f.connectionMetricStore.MeasureConnectionReuseTotal(ctx, 1)
 			} else {
 				f.connectionMetricStore.MeasureConnectionNewTotal(ctx, 1)
 			}
 
-			if trace.ConnectionGet != nil {
-				connAquireTime := trace.ConnectionAcquired.Time.Sub(trace.ConnectionGet.Time).Seconds()
+			if retryTrace.ConnectionGet != nil {
+				connAquireTime := retryTrace.ConnectionAcquired.Time.Sub(retryTrace.ConnectionGet.Time).Seconds()
 				f.connectionMetricStore.MeasureConnectionAcquireDuration(ctx, connAquireTime)
 			}
 		}
 
 		// Measure DNS duration for both success and error cases
 		// We skip if DNSDone was not recorded
-		if trace.DNSStart != nil && trace.DNSDone != nil {
-			sub := trace.DNSDone.Time.Sub(trace.DNSStart.Time).Seconds()
+		if retryTrace.DNSStart != nil && retryTrace.DNSDone != nil {
+			sub := retryTrace.DNSDone.Time.Sub(retryTrace.DNSStart.Time).Seconds()
 			totalDuration += sub
 			f.connectionMetricStore.MeasureDNSDuration(ctx, sub)
 		}
 
 		// Measure TLS duration for both success and error cases
 		// We skip if DNSDone was not recorded
-		if trace.TLSStart != nil && trace.TLSDone != nil {
-			sub := trace.TLSDone.Time.Sub(trace.TLSStart.Time).Seconds()
+		if retryTrace.TLSStart != nil && retryTrace.TLSDone != nil {
+			sub := retryTrace.TLSDone.Time.Sub(retryTrace.TLSStart.Time).Seconds()
 			totalDuration += sub
 			f.connectionMetricStore.MeasureTLSHandshakeDuration(ctx, sub)
 		}
 
-		dials := trace.GetGroupedDials()
+		dials := retryTrace.GetGroupedDials()
 		if len(dials) > 0 {
 			// Since the dials are sorted by error and address
 			fastestCompletionDial := dials[0]
@@ -280,5 +285,7 @@ func (f *engineLoaderHooks) calculateMetrics(ctx context.Context) {
 			f.connectionMetricStore.MeasureTotalConnectionDuration(ctx, totalDuration)
 		}
 	}
+
+	fmt.Println("DONE")
 
 }

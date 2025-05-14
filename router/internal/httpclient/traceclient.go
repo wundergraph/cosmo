@@ -9,17 +9,6 @@ import (
 	"time"
 )
 
-package httpclient
-
-import (
-"context"
-"crypto/tls"
-"net/http"
-"net/http/httptrace"
-"sync"
-"time"
-)
-
 type ClientTraceContextKey struct{}
 
 type TraceInjectingRoundTripper struct {
@@ -156,4 +145,3 @@ func (t *TraceInjectingRoundTripper) getClientTrace(ctx context.Context) *httptr
 	}
 	return trace
 }
-

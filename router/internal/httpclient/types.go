@@ -5,13 +5,6 @@ import (
 	"time"
 )
 
-package httpclient
-
-import (
-"sort"
-"time"
-)
-
 type SubgraphDNSStart struct {
 	Time time.Time
 	Host string
@@ -127,29 +120,25 @@ func (r ClientTrace) GetGroupedDials() []DialCombined {
 	// Sort the results by DialDoneTime without error
 	sort.Slice(dialResults, func(i, j int) bool {
 		// Sort only those without errors and with non-nil DialDoneTime
-		iDone := dialResults[i].DialDoneTime
-		jDone := dialResults[j].DialDoneTime
+		combined1 := dialResults[i]
+		combined2 := dialResults[j]
 
-		if iDone == nil && jDone != nil {
+		if combined1.DialDoneTime == nil {
 			return false
 		}
-		if iDone != nil && jDone == nil {
+		if combined2.DialDoneTime == nil {
 			return true
 		}
-		if iDone == nil && jDone == nil {
-			return false
-		}
 
-		if dialResults[i].Error != nil && dialResults[j].Error == nil {
+		if combined1.Error != nil && combined2.Error == nil {
 			return false
 		}
-		if dialResults[i].Error == nil && dialResults[j].Error != nil {
+		if combined1.Error == nil && combined2.Error != nil {
 			return true
 		}
-		return iDone.Before(*jDone)
+
+		return combined1.DialDoneTime.Before(*combined2.DialDoneTime)
 	})
 
 	return dialResults
 }
-
-

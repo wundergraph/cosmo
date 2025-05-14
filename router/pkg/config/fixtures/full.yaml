@@ -125,6 +125,7 @@ telemetry:
       enabled: true
       router_runtime: true
       graphql_cache: true
+      connection_stats: true
       engine_stats:
         subscriptions: true
       exclude_metric_labels: []
