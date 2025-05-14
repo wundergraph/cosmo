@@ -389,6 +389,14 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 				return nil, fmt.Errorf("error creating schema configuration for data source %s: %w", in.Id, err)
 			}
 
+			grpcConfig := toGRPCConfiguration(in.CustomGraphql.Grpc)
+			if grpcConfig != nil {
+				grpcConfig.Compiler, err = grpcdatasource.NewProtoCompiler(in.CustomGraphql.Grpc.ProtoSchema, grpcConfig.Mapping)
+				if err != nil {
+					return nil, fmt.Errorf("error creating proto compiler for data source %s: %w", in.Id, err)
+				}
+			}
+
 			customConfiguration, err := graphql_datasource.NewConfiguration(graphql_datasource.ConfigurationInput{
 				Fetch: &graphql_datasource.FetchConfiguration{
 					URL:    fetchUrl,
@@ -405,7 +413,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 				},
 				SchemaConfiguration:    schemaConfiguration,
 				CustomScalarTypeFields: customScalarTypeFields,
-				GRPC:                   toGRPCConfiguration(in.CustomGraphql.Grpc),
+				GRPC:                   grpcConfig,
 			})
 			if err != nil {
 				return nil, fmt.Errorf("error creating custom configuration for data source %s: %w", in.Id, err)
@@ -699,7 +707,6 @@ func toGRPCConfiguration(config *nodev1.GRPCConfiguration) *grpcdatasource.GRPCC
 	}
 
 	return &grpcdatasource.GRPCConfiguration{
-		Mapping:     result,
-		ProtoSchema: config.ProtoSchema,
+		Mapping: result,
 	}
 }
