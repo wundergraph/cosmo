@@ -118,8 +118,6 @@ The package includes several built-in middleware implementations:
 
 - `AuthBearerMiddleware`: Adds a Bearer token to the Authorization header
 - `BasicAuthMiddleware`: Adds basic authentication to the request
-- `RequestIDMiddleware`: Adds a request ID to the request header
-- `UserAgentMiddleware`: Adds a user agent to the request
 
 ## Custom Middleware
 

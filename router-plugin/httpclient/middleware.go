@@ -19,19 +19,3 @@ func BasicAuthMiddleware(username, password string) Middleware {
 		return req, nil
 	}
 }
-
-// RequestIDMiddleware adds a request ID to the request header
-func RequestIDMiddleware(headerName, requestID string) Middleware {
-	return func(req *http.Request) (*http.Request, error) {
-		req.Header.Set(headerName, requestID)
-		return req, nil
-	}
-}
-
-// UserAgentMiddleware adds a user agent to the request
-func UserAgentMiddleware(userAgent string) Middleware {
-	return func(req *http.Request) (*http.Request, error) {
-		req.Header.Set("User-Agent", userAgent)
-		return req, nil
-	}
-}
