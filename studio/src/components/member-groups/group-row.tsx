@@ -12,9 +12,9 @@ import { Badge } from "@/components/ui/badge";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
 import { useIsAdmin } from "@/hooks/use-is-admin";
 
-export function GroupRow({ group, rbac, onSelect, onDelete }: {
+export function GroupRow({ group, rbacEnabled, onSelect, onDelete }: {
   group: OrganizationGroup;
-  rbac: boolean;
+  rbacEnabled: boolean;
   onSelect(showMembers: boolean): void;
   onDelete(): void;
 }) {
@@ -54,7 +54,7 @@ export function GroupRow({ group, rbac, onSelect, onDelete }: {
           </Button>
         ) : group.membersCount}
       </TableCell>
-      {rbac && isAdmin && (
+      {rbacEnabled && isAdmin && (
         <TableCell>
           {!group.builtin && (
             <DropdownMenu>

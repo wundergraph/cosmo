@@ -17,11 +17,13 @@ import { useFeature } from "@/hooks/use-feature";
 import { Link } from "@/components/ui/link";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useIsAdmin } from "@/hooks/use-is-admin";
+import { useUser } from "@/hooks/use-user";
 
 export function CreateGroupDialog({ onGroupCreated }: {
   onGroupCreated(group: OrganizationGroup): Promise<void>
 }) {
   const { toast } = useToast();
+  const user = useUser();
   const [open, setOpen] = useState(false);
   const { mutate, isPending } = useMutation(createOrganizationGroup);
   const rbac = useFeature("rbac");
@@ -94,7 +96,10 @@ export function CreateGroupDialog({ onGroupCreated }: {
     return (
       <Tooltip>
         <TooltipTrigger asChild>
-          <Link href="/" className={buttonVariants({})}>
+          <Link
+            href={`/${user?.currentOrganization.slug}/billing`}
+            className={buttonVariants()}
+          >
             Create a group
           </Link>
         </TooltipTrigger>

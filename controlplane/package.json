@@ -50,7 +50,7 @@
     "@graphql-eslint/eslint-plugin": "^3.20.1",
     "@graphql-inspector/core": "^6.2.1",
     "@graphql-tools/utils": "^10.1.2",
-    "@keycloak/keycloak-admin-client": "^25.0.2",
+    "@keycloak/keycloak-admin-client": "^26.2.4",
     "@octokit/webhooks-types": "^7.6.1",
     "@tiptap/core": "^2.1.13",
     "@wundergraph/composition": "workspace:*",

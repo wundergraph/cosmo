@@ -160,7 +160,7 @@ const GroupsPage: NextPageWithLayout = () => {
                     <GroupRow
                       key={group.groupId}
                       group={group}
-                      rbac={rbac?.enabled ?? false}
+                      rbacEnabled={rbac?.enabled ?? false}
                       onSelect={(showMembers) => openSheet(group, showMembers)}
                       onDelete={() => {
                         setSelectedGroup(group);

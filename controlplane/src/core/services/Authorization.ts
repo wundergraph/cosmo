@@ -76,7 +76,7 @@ export class Authorization {
         // Validate that the client have write access to the provided federated graph. This is defined by the
         // `graph admin` role. If the resources assigned to the role are empty or the target graph is part of the
         // role resources, the client have been granted write access to the federated graph
-        const rule = rbac.rules.get('graph-admin');
+        const rule = rbac.ruleFor('graph-admin');
         if (rule && (rule.resources.length === 0 || rule.resources.includes(targetId))) {
           return;
         }
@@ -94,7 +94,7 @@ export class Authorization {
         // Validate that the client have write access to the provided subgraph. This is defined by the
         // `graph publisher` role. If the resources assigned to the role are empty or the target graph is part of
         // the resources, the client have been granted write access to the subgraph
-        const rule = rbac.rules.get('subgraph-publisher');
+        const rule = rbac.ruleFor('subgraph-publisher');
         if (rule && (rule.resources.length === 0 || rule.resources.includes(targetId))) {
           return;
         }

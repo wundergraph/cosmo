@@ -12,10 +12,11 @@ type OrganizationRoleWithoutOrg = Exclude<
 >;
 
 export class RBACEvaluator {
-  readonly roles: OrganizationRole[];
+  private readonly roles: OrganizationRole[];
+  private readonly rules: ReadonlyMap<OrganizationRole, RuleData>;
+
   readonly namespaces: string[];
   readonly resources: string[];
-  readonly rules: ReadonlyMap<OrganizationRole, RuleData>;
 
   readonly isOrganizationAdmin: boolean;
   readonly isOrganizationAdminOrDeveloper: boolean;
@@ -38,9 +39,9 @@ export class RBACEvaluator {
     this.resources = [...new Set(Array.from(result.values(), (res) => res.resources).flat())];
     this.rules = result;
 
-    this.isOrganizationAdmin = this.is('organization-admin');
-    this.isOrganizationAdminOrDeveloper = this.isOrganizationAdmin || this.is('organization-developer');
-    this.isOrganizationViewer = this.isOrganizationAdminOrDeveloper || this.is('organization-viewer');
+    this.isOrganizationAdmin = this.roles.includes('organization-admin');
+    this.isOrganizationAdminOrDeveloper = this.isOrganizationAdmin || this.roles.includes('organization-developer');
+    this.isOrganizationViewer = this.isOrganizationAdminOrDeveloper || this.roles.includes('organization-viewer');
   }
 
   is(...roles: OrganizationRole[]) {
@@ -55,6 +56,10 @@ export class RBACEvaluator {
     }
 
     return false;
+  }
+
+  ruleFor(role: OrganizationRole): RuleData | undefined {
+    return this.rules.get(role);
   }
 
   checkNamespaceAccess(
