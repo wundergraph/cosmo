@@ -50,15 +50,31 @@ func TestSimpleQuery(t *testing.T) {
 	})
 }
 
-func TestNoSubgraphConfig(t *testing.T) {
+func TestNoSubgraphConfigWithoutDemoMode(t *testing.T) {
 	t.Parallel()
 
-	testenv.RunRouterBinary(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+	err := testenv.RunRouterBinary(t, &testenv.Config{
+		DemoMode:      false,
+		NoRetryClient: true,
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		require.Fail(t, "Router should not start without execution config")
+	})
+	require.Error(t, err)
+}
+
+func TestNoSubgraphConfigWithDemoMode(t *testing.T) {
+	t.Parallel()
+
+	err := testenv.RunRouterBinary(t, &testenv.Config{
+		DemoMode:      true,
+		NoRetryClient: true,
+	}, func(t *testing.T, xEnv *testenv.Environment) {
 		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 			Query: `query { hello }`,
 		})
 		require.JSONEq(t, `{"data":{"hello":"Cosmo Router is ready! Follow this guide to deploy your first Supergraph: https://cosmo-docs.wundergraph.com/tutorial/from-zero-to-federation-in-5-steps-using-cosmo"}}`, res.Body)
 	})
+	require.NoError(t, err)
 }
 
 func TestContentTypes(t *testing.T) {

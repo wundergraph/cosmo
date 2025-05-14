@@ -4,11 +4,15 @@ import * as dotenv from 'dotenv';
 import pc from 'picocolors';
 import boxen from 'boxen';
 import program from './commands/index.js';
+import { initTelemetry, shutdownTelemetry } from './core/telemetry.js';
 
 dotenv.config();
 
+initTelemetry();
+
 try {
   await program.parseAsync(process.argv);
+  await shutdownTelemetry();
 } catch (e) {
   console.log('');
 
@@ -32,4 +36,6 @@ Please try the below steps to solve the issue
   );
 
   process.exitCode = 1;
+
+  await shutdownTelemetry();
 }
