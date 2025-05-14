@@ -2,10 +2,11 @@ package metric
 
 import (
 	"context"
+	"net"
+
 	"github.com/wundergraph/cosmo/router/internal/httpclient"
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	"go.uber.org/zap"
-	"net"
 )
 
 func CalculateConnectionMetrics(ctx context.Context, logger *zap.Logger, store ConnectionMetricStore) {
@@ -36,13 +37,7 @@ func CalculateConnectionMetrics(ctx context.Context, logger *zap.Logger, store C
 				connAcquireTime := trace.ConnectionAcquired.Time.Sub(trace.ConnectionGet.Time).Seconds()
 				store.MeasureConnectionAcquireDuration(ctx, connAcquireTime, rotel.WgHost.String(host))
 			}
-
-			// TODO: To clarify do we need separate metrics for reused and new connections, split by dimension?
-			if trace.ConnectionAcquired.Reused {
-				store.MeasureReusedConnections(ctx, rotel.WgHost.String(host))
-			} else {
-				store.MeasureNewConnections(ctx, rotel.WgHost.String(host))
-			}
+			store.MeasureConnections(ctx, trace.ConnectionAcquired.Reused, rotel.WgHost.String(host))
 		}
 
 		// Measure DNS duration for both success and error cases

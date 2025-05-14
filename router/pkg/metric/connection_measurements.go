@@ -9,8 +9,7 @@ import (
 // Connection metric constants
 const (
 	// Counters
-	connectionNewTotal     = "router.connection.new_total"     // Total number of new connections
-	connectionReuseTotal   = "router.connection.reuse_total"   // Total number of reused connections
+	connectionTotal        = "router.connection.total"         // Total number of connections with reused attribute
 	connectionRetriesTotal = "router.connection.retries_total" // Total number of connection retries
 
 	// Histograms
@@ -23,12 +22,8 @@ const (
 
 var (
 	// Counter options
-	connectionNewTotalOptions = []otelmetric.Int64CounterOption{
-		otelmetric.WithDescription("Total number of new connections"),
-	}
-
-	connectionReuseTotalOptions = []otelmetric.Int64CounterOption{
-		otelmetric.WithDescription("Total number of reused connections"),
+	connectionTotalOptions = []otelmetric.Int64CounterOption{
+		otelmetric.WithDescription("Total number of connections with reused attribute"),
 	}
 
 	connectionRetriesTotalOptions = []otelmetric.Int64CounterOption{
@@ -64,8 +59,7 @@ var (
 
 type connectionInstruments struct {
 	// Counters
-	connectionNewTotal     otelmetric.Int64Counter
-	connectionReuseTotal   otelmetric.Int64Counter
+	connectionTotal        otelmetric.Int64Counter
 	connectionRetriesTotal otelmetric.Int64Counter
 
 	// Histograms
@@ -77,22 +71,13 @@ type connectionInstruments struct {
 }
 
 func newConnectionInstruments(meter otelmetric.Meter) (*connectionInstruments, error) {
-
 	// Initialize counters
-	newTotalCounter, err := meter.Int64Counter(
-		connectionNewTotal,
-		connectionNewTotalOptions...,
+	connectionTotalCounter, err := meter.Int64Counter(
+		connectionTotal,
+		connectionTotalOptions...,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create connection new total counter: %w", err)
-	}
-
-	reuseTotalCounter, err := meter.Int64Counter(
-		connectionReuseTotal,
-		connectionReuseTotalOptions...,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create connection reuse total counter: %w", err)
+		return nil, fmt.Errorf("failed to create connection total counter: %w", err)
 	}
 
 	connectionRetriesTotalCounter, err := meter.Int64Counter(
@@ -145,8 +130,7 @@ func newConnectionInstruments(meter otelmetric.Meter) (*connectionInstruments, e
 	}
 
 	return &connectionInstruments{
-		connectionNewTotal:        newTotalCounter,
-		connectionReuseTotal:      reuseTotalCounter,
+		connectionTotal:           connectionTotalCounter,
 		connectionRetriesTotal:    connectionRetriesTotalCounter,
 		dnsDuration:               dnsDurationHistogram,
 		dialDuration:              dialDurationHistogram,

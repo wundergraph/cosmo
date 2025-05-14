@@ -18,8 +18,7 @@ type ConnectionMetricProvider interface {
 	MeasureTLSHandshakeDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
 	MeasureTotalConnectionDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
 	MeasureConnectionAcquireDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
-	MeasureNewConnections(ctx context.Context, count int64, opts ...otelmetric.AddOption)
-	MeasureReusedConnections(ctx context.Context, count int64, opts ...otelmetric.AddOption)
+	MeasureConnections(ctx context.Context, count int64, opts ...otelmetric.AddOption)
 	MeasureConnectionRetries(ctx context.Context, count int64, opts ...otelmetric.AddOption)
 	Flush(ctx context.Context) error
 }
@@ -30,8 +29,7 @@ type ConnectionMetricStore interface {
 	MeasureDialDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
 	MeasureTLSHandshakeDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
 	MeasureTotalConnectionDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
-	MeasureNewConnections(ctx context.Context, attrs ...attribute.KeyValue)
-	MeasureReusedConnections(ctx context.Context, attrs ...attribute.KeyValue)
+	MeasureConnections(ctx context.Context, reused bool, attrs ...attribute.KeyValue)
 	MeasureConnectionAcquireDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
 	MeasureConnectionRetries(ctx context.Context, attrs ...attribute.KeyValue)
 }
@@ -109,23 +107,19 @@ func (c *ConnectionMetrics) MeasureTotalConnectionDuration(ctx context.Context, 
 	}
 }
 
-func (c *ConnectionMetrics) MeasureNewConnections(ctx context.Context, attrs ...attribute.KeyValue) {
-	opts := otelmetric.WithAttributes(append(c.baseAttributes, attrs...)...)
-	if c.otlpConnectionMetrics != nil {
-		c.otlpConnectionMetrics.MeasureNewConnections(ctx, 1, opts)
-	}
-	if c.promConnectionMetrics != nil {
-		c.promConnectionMetrics.MeasureNewConnections(ctx, 1, opts)
-	}
-}
+func (c *ConnectionMetrics) MeasureConnections(ctx context.Context, reused bool, attrs ...attribute.KeyValue) {
+	// Add the reused attribute to the base attributes
+	reusedAttr := attribute.Bool("reused", reused)
+	allAttrs := append(c.baseAttributes, reusedAttr)
+	allAttrs = append(allAttrs, attrs...)
 
-func (c *ConnectionMetrics) MeasureReusedConnections(ctx context.Context, attrs ...attribute.KeyValue) {
-	opts := otelmetric.WithAttributes(append(c.baseAttributes, attrs...)...)
+	opts := otelmetric.WithAttributes(allAttrs...)
+
 	if c.otlpConnectionMetrics != nil {
-		c.otlpConnectionMetrics.MeasureReusedConnections(ctx, 1, opts)
+		c.otlpConnectionMetrics.MeasureConnections(ctx, 1, opts)
 	}
 	if c.promConnectionMetrics != nil {
-		c.promConnectionMetrics.MeasureReusedConnections(ctx, 1, opts)
+		c.promConnectionMetrics.MeasureConnections(ctx, 1, opts)
 	}
 }
 

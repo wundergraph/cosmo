@@ -57,12 +57,8 @@ func (m *promConnectionMetrics) MeasureConnectionAcquireDuration(ctx context.Con
 	m.instruments.connectionAcquireDuration.Record(ctx, duration, opts...)
 }
 
-func (m *promConnectionMetrics) MeasureNewConnections(ctx context.Context, count int64, opts ...otelmetric.AddOption) {
-	m.instruments.connectionNewTotal.Add(ctx, count, opts...)
-}
-
-func (m *promConnectionMetrics) MeasureReusedConnections(ctx context.Context, count int64, opts ...otelmetric.AddOption) {
-	m.instruments.connectionReuseTotal.Add(ctx, count, opts...)
+func (m *promConnectionMetrics) MeasureConnections(ctx context.Context, count int64, opts ...otelmetric.AddOption) {
+	m.instruments.connectionTotal.Add(ctx, count, opts...)
 }
 
 func (m *promConnectionMetrics) MeasureConnectionRetries(ctx context.Context, count int64, opts ...otelmetric.AddOption) {
