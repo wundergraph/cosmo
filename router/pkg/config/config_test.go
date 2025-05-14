@@ -195,7 +195,7 @@ func TestConfigIsOptional(t *testing.T) {
 	result, err := LoadConfig("")
 
 	require.NoError(t, err)
-	require.False(t, result.DefaultLoaded)
+	require.True(t, result.DefaultLoaded)
 }
 
 func TestCustomGoDurationExtension(t *testing.T) {

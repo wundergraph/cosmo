@@ -112,7 +112,7 @@ func (rs *RouterSupervisor) loadResources() error {
 		return fmt.Errorf("could not load config: %w", err)
 	}
 
-	if result.DefaultLoaded {
+	if !result.DefaultLoaded {
 		if rs.configPath == config.DefaultConfigPath {
 			rs.logger.Info("Found default config file. Values in the config file have higher priority than environment variables",
 				zap.String("config_file", config.DefaultConfigPath),
