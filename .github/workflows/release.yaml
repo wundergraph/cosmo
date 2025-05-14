@@ -14,8 +14,6 @@ concurrency:
 env:
   CI: true
   DO_NOT_TRACK: '1'
-  POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
-  POSTHOG_HOST: 'https://eu.i.posthog.com'
 
 jobs:
   stable-version:
