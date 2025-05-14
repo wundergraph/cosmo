@@ -259,4 +259,21 @@ This project is licensed under the [Apache 2.0 License](https://github.com/wunde
 
 ---
 
+## Telemetry
+
+The CLI tool collects usage data to help us improve the tool and understand how users interact with it.
+You can disable telemetry in one of the following ways:
+
+```shell
+export COSMO_TELEMETRY_DISABLED=true
+```
+
+or
+
+```shell
+export DO_NOT_TRACK=1
+```
+
+---
+
 Empower your GraphQL Federation development with `wgc` and WunderGraph Cosmo!
