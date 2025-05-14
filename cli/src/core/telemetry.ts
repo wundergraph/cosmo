@@ -1,13 +1,16 @@
 import os from 'node:os';
 import { PostHog } from 'posthog-node';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { config, getBaseHeaders } from './config.js';
+import { CreateClient } from './client/client.js';
 
 // Environment variables to allow opting out of telemetry
 // Support for COSMO_TELEMETRY_DISABLED and Console Do Not Track standard
-const TELEMETRY_DISABLED =
-  process.env.COSMO_TELEMETRY_DISABLED === 'true' || process.env.DO_NOT_TRACK === '1' || !process.env.POSTHOG_API_KEY;
+const TELEMETRY_DISABLED = process.env.COSMO_TELEMETRY_DISABLED === 'true' || process.env.DO_NOT_TRACK === '1';
 
 let client: PostHog | null = null;
+
+let apiClient: ReturnType<typeof CreateClient> | null = null;
 
 // Detect if running in a CI environment
 const isCI = (): boolean => {
@@ -31,7 +34,7 @@ export const initTelemetry = () => {
     return;
   }
 
-  const posthogApiKey = process.env.POSTHOG_API_KEY || '';
+  const posthogApiKey = process.env.POSTHOG_API_KEY || 'phc_CEnvoyw3KcTuC5E1seDPrgvAamgGRDLfzPi1e7RU1G1';
   const posthogHost = process.env.POSTHOG_HOST || 'https://eu.i.posthog.com';
 
   client = new PostHog(posthogApiKey, {
@@ -39,6 +42,13 @@ export const initTelemetry = () => {
     flushAt: 1, // For CLI, we want to send events immediately
     flushInterval: 0, // Don't wait to flush events
     disableGeoip: false,
+  });
+
+  const proxyUrl = process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
+  apiClient = CreateClient({
+    baseUrl: config.baseURL,
+    apiKey: config.apiKey,
+    proxyUrl,
   });
 
   // Handle errors silently to not interrupt CLI operations
@@ -49,20 +59,62 @@ export const initTelemetry = () => {
   });
 };
 
+// Fallback to using headers if the API call fails
+const getFallbackIdentity = () => {
+  const headers = getBaseHeaders();
+  const headersRecord = Object.fromEntries(Object.entries(headers).map(([key, value]) => [key, value.toString()]));
+  const organizationSlug = headersRecord['cosmo-org-slug'] || 'anonymous';
+  return organizationSlug;
+};
+
+/**
+ * Generate a consistent distinct ID
+ * Uses the platform API to get the organization slug if available
+ */
+const getIdentity = async (): Promise<string> => {
+  try {
+    // If no API key is available, return anonymous
+    if (!config.apiKey) {
+      return 'anonymous';
+    }
+
+    // If the API client is not initialized, return anonymous
+    if (!apiClient) {
+      return 'anonymous';
+    }
+
+    // Call the whoAmI API to get organization information
+    const resp = await apiClient.platform.whoAmI(
+      {},
+      {
+        headers: getBaseHeaders(),
+      },
+    );
+
+    if (resp.response?.code === EnumStatusCode.OK) {
+      return resp.organizationSlug;
+    }
+
+    return getFallbackIdentity();
+  } catch {
+    return getFallbackIdentity();
+  }
+};
+
 /**
  * Capture a usage event
  */
-export const capture = (eventName: string, properties: Record<string, any> = {}) => {
+export const capture = async (eventName: string, properties: Record<string, any> = {}) => {
   if (TELEMETRY_DISABLED || !client) {
     return;
   }
 
   try {
-    const distinctId = getDistinctId();
+    const identity = await getIdentity();
     const metadata = getMetadata();
 
     client.capture({
-      distinctId,
+      distinctId: identity,
       event: eventName,
       properties: {
         ...metadata,
@@ -75,18 +127,6 @@ export const capture = (eventName: string, properties: Record<string, any> = {})
       console.error('Failed to capture telemetry event:', err);
     }
   }
-};
-
-/**
- * Generate a consistent distinct ID
- */
-const getDistinctId = (): string => {
-  // Use organization slug if available
-  const headers = getBaseHeaders();
-  // Convert HeadersInit to Record to safely access properties
-  const headersRecord = Object.fromEntries(Object.entries(headers).map(([key, value]) => [key, value.toString()]));
-  const organizationSlug = headersRecord['cosmo-org-slug'] || 'anonymous';
-  return `cli_${organizationSlug}`;
 };
 
 /**
