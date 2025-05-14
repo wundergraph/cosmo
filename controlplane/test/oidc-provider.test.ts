@@ -65,7 +65,7 @@ describe('OIDC provider', (ctx) => {
       ],
       name: 'okta',
     });
-    expect(createOIDCProviderResponse.response?.code).toBe(EnumStatusCode.ERR);
+    expect(createOIDCProviderResponse.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
     expect(createOIDCProviderResponse.response?.details).toBe(
       'The user doesnt have the permissions to perform this operation',
     );
@@ -84,7 +84,7 @@ describe('OIDC provider', (ctx) => {
       ],
       name: 'okta',
     });
-    expect(createOIDCProviderResponse.response?.code).toBe(EnumStatusCode.ERR);
+    expect(createOIDCProviderResponse.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
     expect(createOIDCProviderResponse.response?.details).toBe(
       'The user doesnt have the permissions to perform this operation',
     );
@@ -160,7 +160,7 @@ describe('OIDC provider', (ctx) => {
     authenticator.changeUser(TestUser.devJoeCompanyA);
 
     let deleteOIDCProviderResponse = await client.deleteOIDCProvider({});
-    expect(deleteOIDCProviderResponse.response?.code).toBe(EnumStatusCode.ERR);
+    expect(deleteOIDCProviderResponse.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
     expect(deleteOIDCProviderResponse.response?.details).toBe(
       'The user doesnt have the permissions to perform this operation',
     );
@@ -168,7 +168,7 @@ describe('OIDC provider', (ctx) => {
     authenticator.changeUser(TestUser.viewerTimCompanyA);
 
     deleteOIDCProviderResponse = await client.deleteOIDCProvider({});
-    expect(deleteOIDCProviderResponse.response?.code).toBe(EnumStatusCode.ERR);
+    expect(deleteOIDCProviderResponse.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
     expect(deleteOIDCProviderResponse.response?.details).toBe(
       'The user doesnt have the permissions to perform this operation',
     );
@@ -270,7 +270,7 @@ describe('OIDC provider', (ctx) => {
         }),
       ],
     });
-    expect(updateMappersResponse.response?.code).toBe(EnumStatusCode.ERR);
+    expect(updateMappersResponse.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
     expect(updateMappersResponse.response?.details).toBe(
       'The user doesnt have the permissions to perform this operation',
     );
@@ -289,7 +289,7 @@ describe('OIDC provider', (ctx) => {
         }),
       ],
     });
-    expect(updateMappersResponse.response?.code).toBe(EnumStatusCode.ERR);
+    expect(updateMappersResponse.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
     expect(updateMappersResponse.response?.details).toBe(
       'The user doesnt have the permissions to perform this operation',
     );

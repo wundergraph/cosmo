@@ -113,8 +113,8 @@ export const SetupTest = async function ({
 
   if (enableMultiUsers) {
     users.adminBobCompanyA = createTestContext('company-a', companyAOrganizationId);
-    users.devJoeCompanyA = createTestContext('company-a', companyAOrganizationId, false, true, ['developer']);
-    users.viewerTimCompanyA = createTestContext('company-a', companyAOrganizationId, false, false, ['viewer']);
+    users.devJoeCompanyA = createTestContext('company-a', companyAOrganizationId, ['developer']);
+    users.viewerTimCompanyA = createTestContext('company-a', companyAOrganizationId, ['viewer']);
     users.adminJimCompanyB = createTestContext('company-b', randomUUID());
   }
 

@@ -24,7 +24,7 @@ export class UnauthorizedError extends AuthorizationError {
   constructor() {
     super(
       EnumStatusCode.ERROR_NOT_AUTHORIZED,
-      'You are not authorized to perform the current action. Please communicate with the organization admin to gain access.',
+      'The user doesnt have the permissions to perform this operation'
     );
   }
 }

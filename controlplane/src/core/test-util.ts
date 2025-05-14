@@ -173,7 +173,6 @@ export async function seedTest(
 export function createTestContext(
   organizationName = 'wundergraph',
   organizationId = randomUUID(),
-  isAdmin = true,
   groups: ('admin' | 'developer' | 'viewer')[] = ['admin'],
   organizationDeactivated = false,
 ): UserTestData & AuthContext {
