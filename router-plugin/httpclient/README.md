@@ -120,8 +120,6 @@ The package includes several built-in middleware implementations:
 - `BasicAuthMiddleware`: Adds basic authentication to the request
 - `RequestIDMiddleware`: Adds a request ID to the request header
 - `UserAgentMiddleware`: Adds a user agent to the request
-- `LoggingMiddleware`: Logs request details using the provided logger
-- `RetryMiddleware`: Retries failed requests with exponential backoff
 
 ## Custom Middleware
 
