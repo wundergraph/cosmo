@@ -3,6 +3,7 @@ package core
 import (
 	"bytes"
 	"fmt"
+	traceclient "github.com/wundergraph/cosmo/router/internal/httpclient"
 	"io"
 	"net/http"
 	"net/url"
@@ -60,7 +61,7 @@ type sfCacheItem struct {
 
 func NewCustomTransport(
 	logger *zap.Logger,
-	roundTripper http.RoundTripper,
+	baseRoundTripper http.RoundTripper,
 	retryOptions retrytransport.RetryOptions,
 	metricStore metric.Store,
 	enableSingleFlight bool,
@@ -68,6 +69,8 @@ func NewCustomTransport(
 	ct := &CustomTransport{
 		metricStore: metricStore,
 	}
+
+	baseRoundTripper = traceclient.NewTraceInjectingRoundTripper(baseRoundTripper)
 
 	if retryOptions.Enabled {
 		// The round trip method is almost always called via the http.Client RoundTripper interface
@@ -79,9 +82,9 @@ func NewCustomTransport(
 			reqContext := getRequestContext(req.Context())
 			return reqContext.Logger()
 		}
-		ct.roundTripper = retrytransport.NewRetryHTTPTransport(roundTripper, retryOptions, getRequestContextLogger)
+		ct.roundTripper = retrytransport.NewRetryHTTPTransport(baseRoundTripper, retryOptions, getRequestContextLogger)
 	} else {
-		ct.roundTripper = roundTripper
+		ct.roundTripper = baseRoundTripper
 	}
 	if enableSingleFlight {
 		ct.sf = make(map[uint64]*sfCacheItem)
