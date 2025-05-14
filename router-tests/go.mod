@@ -15,7 +15,7 @@ require (
 	github.com/hasura/go-graphql-client v0.12.2
 	github.com/mark3labs/mcp-go v0.27.0
 	github.com/nats-io/nats.go v1.35.0
-	github.com/ory/dockertest/v3 v3.11.0
+	github.com/ory/dockertest/v3 v3.12.0
 	github.com/prometheus/client_golang v1.19.1
 	github.com/prometheus/client_model v0.6.1
 	github.com/redis/go-redis/v9 v9.4.0
@@ -24,8 +24,8 @@ require (
 	github.com/tidwall/gjson v1.18.0
 	github.com/twmb/franz-go v1.16.1
 	github.com/twmb/franz-go/pkg/kadm v1.11.0
-	github.com/wundergraph/cosmo/demo v0.0.0-20250506154008-98e3b3080bb8
-	github.com/wundergraph/cosmo/router v0.0.0-20250506154008-98e3b3080bb8
+	github.com/wundergraph/cosmo/demo v0.0.0-20250514093620-557041b34b62
+	github.com/wundergraph/cosmo/router v0.0.0-20250514093620-557041b34b62
 	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.178
 	go.opentelemetry.io/otel v1.28.0
 	go.opentelemetry.io/otel/sdk v1.28.0
@@ -54,12 +54,12 @@ require (
 	github.com/caarlos0/env/v11 v11.3.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/containerd/continuity v0.4.3 // indirect
+	github.com/containerd/continuity v0.4.5 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.5 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dgraph-io/ristretto/v2 v2.1.0 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
-	github.com/docker/cli v26.1.4+incompatible // indirect
+	github.com/docker/cli v27.4.1+incompatible // indirect
 	github.com/docker/docker v27.1.1+incompatible // indirect
 	github.com/docker/go-connections v0.5.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
@@ -100,13 +100,14 @@ require (
 	github.com/minio/minio-go/v7 v7.0.74 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
+	github.com/moby/sys/user v0.3.0 // indirect
 	github.com/moby/term v0.5.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/nats-io/nkeys v0.4.7 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0 // indirect
-	github.com/opencontainers/runc v1.1.13 // indirect
+	github.com/opencontainers/runc v1.2.3 // indirect
 	github.com/phf/go-queue v0.0.0-20170504031614-9abe38d0371d // indirect
 	github.com/pierrec/lz4/v4 v4.1.21 // indirect
 	github.com/pkg/errors v0.9.1 // indirect

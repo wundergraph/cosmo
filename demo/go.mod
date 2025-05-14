@@ -11,9 +11,9 @@ require (
 	github.com/rs/cors v1.11.0
 	github.com/vektah/gqlparser/v2 v2.5.21
 	github.com/wundergraph/cosmo/composition-go v0.0.0-20240124120900-5effe48a4a1d
-	github.com/wundergraph/cosmo/router v0.0.0-20250505160605-d86364b8f0db
-	github.com/wundergraph/cosmo/router-tests v0.0.0-20250505160605-d86364b8f0db
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.176
+	github.com/wundergraph/cosmo/router v0.0.0-20250514093620-557041b34b62
+	github.com/wundergraph/cosmo/router-tests v0.0.0-20250514093620-557041b34b62
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.178
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1
 	go.opentelemetry.io/otel v1.28.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.23.1
@@ -88,7 +88,7 @@ require (
 	github.com/klauspost/cpuid/v2 v2.2.8 // indirect
 	github.com/logrusorgru/aurora/v4 v4.0.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
-	github.com/mark3labs/mcp-go v0.23.0 // indirect
+	github.com/mark3labs/mcp-go v0.27.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/minio/md5-simd v1.1.2 // indirect
