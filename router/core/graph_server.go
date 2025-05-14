@@ -1530,6 +1530,13 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 		subgraphTransport.CloseIdleConnections()
 	}
 
+	if s.pluginHost != nil {
+		s.logger.Debug("Stopping old plugins")
+		if err := s.pluginHost.StopAllPlugins(); err != nil {
+			finalErr = errors.Join(finalErr, err)
+		}
+	}
+
 	return finalErr
 }
 

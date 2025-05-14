@@ -99,8 +99,7 @@ func (s *GRPCPlugin) Start(ctx context.Context, logger *zap.Logger) error {
 		Cmd:              exec.Command(filePath),
 		AllowedProtocols: []plugin.Protocol{plugin.ProtocolGRPC},
 		HandshakeConfig:  handshakeConfig,
-		SyncStdout:       os.Stdout,
-		SyncStderr:       os.Stderr,
+		Logger:           NewPluginLogger(logger),
 		Plugins: map[string]plugin.Plugin{
 			s.pluginName: s,
 		},
