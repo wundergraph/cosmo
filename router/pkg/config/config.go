@@ -998,12 +998,7 @@ type PlaygroundConfig struct {
 type LoadResult struct {
 	Config Config
 
-	// This is set to true unless the config had default path and did not exist.
-	// The name is confusing, and should probably just be "Loaded", as it is true
-	// even if the config is loaded from a non-default path.
-	//
-	// It's also only used in tests and for a single log message, so we could probably
-	// remove it entirely.
+	// DefaultLoaded is set to true when no config is found at the default path and the defaults are used.
 	DefaultLoaded bool
 }
 
@@ -1013,7 +1008,7 @@ func LoadConfig(configFilePath string) (*LoadResult, error) {
 	}
 	cfg := &LoadResult{
 		Config:        Config{},
-		DefaultLoaded: true,
+		DefaultLoaded: false,
 	}
 
 	// Try to load the environment variables into the config
@@ -1028,7 +1023,7 @@ func LoadConfig(configFilePath string) (*LoadResult, error) {
 	configFileBytes, err = os.ReadFile(configFilePath)
 	if err != nil {
 		if configFilePath == DefaultConfigPath {
-			cfg.DefaultLoaded = false
+			cfg.DefaultLoaded = true
 		} else {
 			return nil, fmt.Errorf("could not read custom config file %s: %w", configFilePath, err)
 		}
