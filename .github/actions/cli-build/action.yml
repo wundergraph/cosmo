@@ -20,10 +20,6 @@ inputs:
     description: 'PostHog Host URL'
     required: false
     default: 'https://eu.i.posthog.com'
-  do-not-track:
-    description: 'Disable telemetry'
-    required: false
-    default: '1'
 
 outputs:
   artifact-url:
@@ -57,7 +53,6 @@ runs:
       env:
         POSTHOG_API_KEY: ${{ inputs.posthog-api-key }}
         POSTHOG_HOST: ${{ inputs.posthog-host }}
-        DO_NOT_TRACK: ${{ inputs.do-not-track }}
 
     - name: 'Build wgc binary'
       shell: bash
@@ -66,7 +61,6 @@ runs:
       env:
         POSTHOG_API_KEY: ${{ inputs.posthog-api-key }}
         POSTHOG_HOST: ${{ inputs.posthog-host }}
-        DO_NOT_TRACK: ${{ inputs.do-not-track }}
 
     - name: 'Upload builds as artifacts'
       id: upload

@@ -59,8 +59,6 @@ jobs:
         # Build with the versions from the dry-run
       - name: Build
         run: pnpm run --filter='!./studio' build
-        env:
-          DO_NOT_TRACK: '0'
 
         # Reset dry-run changes to let publish do the real thing for the release
       - name: Revert changes
