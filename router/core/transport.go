@@ -3,6 +3,8 @@ package core
 import (
 	"bytes"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/expr"
+	traceclient "github.com/wundergraph/cosmo/router/internal/httpclient"
 	"io"
 	"net/http"
 	"net/url"
@@ -59,14 +61,20 @@ type sfCacheItem struct {
 }
 
 func NewCustomTransport(
-	logger *zap.Logger,
 	roundTripper http.RoundTripper,
 	retryOptions retrytransport.RetryOptions,
 	metricStore metric.Store,
 	enableSingleFlight bool,
+	visitorManager *expr.VisitorGroup,
 ) *CustomTransport {
 	ct := &CustomTransport{
 		metricStore: metricStore,
+	}
+
+	baseRoundTripper := roundTripper
+
+	if visitorManager.IsSubgraphTraceUsedInExpressions() {
+		baseRoundTripper = traceclient.NewTraceInjectingRoundTripper(roundTripper)
 	}
 
 	if retryOptions.Enabled {
@@ -79,9 +87,10 @@ func NewCustomTransport(
 			reqContext := getRequestContext(req.Context())
 			return reqContext.Logger()
 		}
-		ct.roundTripper = retrytransport.NewRetryHTTPTransport(roundTripper, retryOptions, getRequestContextLogger)
+
+		ct.roundTripper = retrytransport.NewRetryHTTPTransport(baseRoundTripper, retryOptions, getRequestContextLogger)
 	} else {
-		ct.roundTripper = roundTripper
+		ct.roundTripper = baseRoundTripper
 	}
 	if enableSingleFlight {
 		ct.sf = make(map[uint64]*sfCacheItem)
@@ -106,7 +115,7 @@ func (ct *CustomTransport) measureSubgraphMetrics(req *http.Request) func(err er
 
 	attributes = append(attributes, reqContext.telemetry.metricAttrs...)
 	if reqContext.telemetry.metricAttributeExpressions != nil {
-		additionalAttrs, err := reqContext.telemetry.metricAttributeExpressions.expressionsAttributes(reqContext)
+		additionalAttrs, err := reqContext.telemetry.metricAttributeExpressions.expressionsAttributes(&reqContext.expressionContext)
 		if err != nil {
 			ct.logger.Error("failed to resolve metric attribute expressions", zap.Error(err))
 		}
@@ -321,6 +330,7 @@ type TransportFactory struct {
 	logger                        *zap.Logger
 	tracerProvider                *sdktrace.TracerProvider
 	tracePropagators              propagation.TextMapPropagator
+	visitorManager                *expr.VisitorGroup
 }
 
 var _ ApiTransportFactory = TransportFactory{}
@@ -335,6 +345,7 @@ type TransportOptions struct {
 	Logger                        *zap.Logger
 	TracerProvider                *sdktrace.TracerProvider
 	TracePropagators              propagation.TextMapPropagator
+	VisitorManager                *expr.VisitorGroup
 }
 
 type SubscriptionClientOptions struct {
@@ -354,6 +365,7 @@ func NewTransport(opts *TransportOptions) *TransportFactory {
 		logger:                        opts.Logger,
 		tracerProvider:                opts.TracerProvider,
 		tracePropagators:              opts.TracePropagators,
+		visitorManager:                opts.VisitorManager,
 	}
 }
 
@@ -393,11 +405,11 @@ func (t TransportFactory) RoundTripper(enableSingleFlight bool, baseTransport ht
 		}),
 	)
 	tp := NewCustomTransport(
-		t.logger,
 		traceTransport,
 		t.retryOptions,
 		t.metricStore,
 		enableSingleFlight,
+		t.visitorManager,
 	)
 
 	tp.preHandlers = t.preHandlers

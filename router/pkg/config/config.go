@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/unique"
 	"os"
 	"time"
 
@@ -9,7 +10,6 @@ import (
 	"github.com/goccy/go-yaml"
 	"github.com/joho/godotenv"
 
-	"github.com/wundergraph/cosmo/router/internal/unique"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
 )
 
@@ -73,6 +73,7 @@ type Tracing struct {
 	Exporters           []TracingExporter   `yaml:"exporters"`
 	Propagation         PropagationConfig   `yaml:"propagation"`
 	ResponseTraceHeader ResponseTraceHeader `yaml:"response_trace_id"`
+	Attributes          []CustomAttribute   `yaml:"attributes"`
 
 	TracingGlobalFeatures `yaml:",inline"`
 }

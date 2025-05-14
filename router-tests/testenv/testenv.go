@@ -286,6 +286,7 @@ type Config struct {
 	TraceExporter                      trace.SpanExporter
 	CustomMetricAttributes             []config.CustomAttribute
 	CustomTelemetryAttributes          []config.CustomAttribute
+	CustomTracingAttributes            []config.CustomAttribute
 	CustomResourceAttributes           []config.CustomStaticAttribute
 	MetricReader                       metric.Reader
 	PrometheusRegistry                 *prometheus.Registry
@@ -969,6 +970,10 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		routerOpts = append(routerOpts, core.WithTelemetryAttributes(testConfig.CustomTelemetryAttributes))
 	}
 
+	if testConfig.CustomTracingAttributes != nil {
+		routerOpts = append(routerOpts, core.WithTracingAttributes(testConfig.CustomTracingAttributes))
+	}
+
 	var prometheusConfig rmetric.PrometheusConfig
 
 	if testConfig.PrometheusRegistry != nil {
@@ -1073,6 +1078,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		routerOpts = append(routerOpts, core.WithWebSocketConfiguration(wsConfig))
 		routerOpts = append(routerOpts, core.WithClientHeader(testConfig.ClientHeader))
 	}
+
 	return core.NewRouter(routerOpts...)
 }
 

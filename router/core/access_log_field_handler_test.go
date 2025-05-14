@@ -32,6 +32,7 @@ func TestAccessLogsFieldHandler(t *testing.T) {
 			nil,
 			req,
 			nil,
+			nil,
 		)
 
 		require.Len(t, response, 1)
@@ -67,6 +68,7 @@ func TestAccessLogsFieldHandler(t *testing.T) {
 			exprAttributes,
 			nil,
 			req,
+			nil,
 			nil,
 		)
 
@@ -116,12 +118,13 @@ func TestAccessLogsFieldHandler(t *testing.T) {
 			nil,
 			req,
 			nil,
+			nil,
 		)
 
 		expressionResponse := response[1]
-		require.IsType(t, &ExprWrapError{}, expressionResponse.Interface)
+		require.IsType(t, &expr.WrapError{}, expressionResponse.Interface)
 		require.Equal(t, expressionResponseKey, expressionResponse.Key)
-		require.Equal(t, &ExprWrapError{requestError}, expressionResponse.Interface)
+		require.Equal(t, &expr.WrapError{Err: requestError}, expressionResponse.Interface)
 	})
 
 }

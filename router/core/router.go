@@ -107,6 +107,11 @@ type (
 		SubgraphMap map[string]*TransportRequestOptions
 	}
 
+	ExpressionAttribute struct {
+		Key        string
+		Expression string
+	}
+
 	GraphQLMetricsConfig struct {
 		Enabled           bool
 		CollectorEndpoint string
@@ -226,6 +231,7 @@ type (
 		tlsServerConfig               *tls.Config
 		tlsConfig                     *TlsConfig
 		telemetryAttributes           []config.CustomAttribute
+		tracingAttributes             []config.CustomAttribute
 		tracePropagators              []propagation.TextMapPropagator
 		compositePropagator           propagation.TextMapPropagator
 		// Poller
@@ -1751,6 +1757,12 @@ func WithCustomModules(modules ...Module) Option {
 func WithSubgraphTransportOptions(opts *SubgraphTransportOptions) Option {
 	return func(r *Router) {
 		r.subgraphTransportOptions = opts
+	}
+}
+
+func WithTracingAttributes(opts []config.CustomAttribute) Option {
+	return func(r *Router) {
+		r.tracingAttributes = opts
 	}
 }
 

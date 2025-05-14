@@ -6,6 +6,11 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router/core"
+	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/logging"
+	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -14,12 +19,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-
-	"github.com/wundergraph/cosmo/router-tests/testenv"
-	"github.com/wundergraph/cosmo/router/core"
-	"github.com/wundergraph/cosmo/router/pkg/config"
-	"github.com/wundergraph/cosmo/router/pkg/logging"
-	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
+	"time"
 )
 
 // Interface guard
@@ -2142,101 +2142,6 @@ func TestFlakyAccessLogs(t *testing.T) {
 			})
 		})
 
-		t.Run("validate that expressions dont get processed yet in the subgraph logger", func(t *testing.T) {
-			t.Parallel()
-
-			testenv.Run(t, &testenv.Config{
-				SubgraphAccessLogsEnabled: true,
-				AccessLogFields: []config.CustomAttribute{
-					{
-						Key: "request_error",
-						ValueFrom: &config.CustomDynamicAttribute{
-							ContextField: core.ContextFieldRequestError,
-						},
-					},
-				},
-				SubgraphAccessLogFields: []config.CustomAttribute{
-					{
-						Key: "service_name",
-						ValueFrom: &config.CustomDynamicAttribute{
-							RequestHeader: "service-name",
-						},
-					},
-					{
-						Key: "response_header",
-						ValueFrom: &config.CustomDynamicAttribute{
-							ResponseHeader: "response-header-name",
-						},
-					},
-					{
-						Key: "custom_error_message",
-						ValueFrom: &config.CustomDynamicAttribute{
-							Expression: "request.error ?? 'request-data'",
-						},
-					},
-				},
-				LogObservation: testenv.LogObservationConfig{
-					Enabled:  true,
-					LogLevel: zapcore.InfoLevel,
-				},
-				RouterOptions: []core.Option{
-					core.WithHeaderRules(config.HeaderRules{
-						All: &config.GlobalHeaderRule{
-							Request: []*config.RequestHeaderRule{
-								{
-									Operation: config.HeaderRuleOperationPropagate,
-									Named:     "service-name",
-								},
-							},
-						},
-					}),
-				},
-				Subgraphs: testenv.SubgraphsConfig{
-					Products: testenv.SubgraphConfig{
-						Middleware: func(_ http.Handler) http.Handler {
-							return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-								w.Header().Set("Content-Type", "application/json")
-								w.WriteHeader(http.StatusForbidden)
-								_, _ = w.Write([]byte(`{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}]}`))
-							})
-						},
-					},
-				},
-			}, func(t *testing.T, xEnv *testenv.Environment) {
-				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-					Query:  `query employees { employees { id details { forename surname } notes } }`,
-					Header: map[string][]string{"service-name": {"service-name"}},
-				})
-				requestLog := xEnv.Observer().FilterMessage("/graphql")
-				productContext := requestLog.All()[1].ContextMap()
-
-				additionalExpectedKeys := []string{
-					"user_agent",
-					"trace_id",
-					"hostname",
-					"latency",
-					"config_version",
-					"request_id",
-					"pid",
-					"url",
-				}
-
-				productSubgraphVals := map[string]interface{}{
-					"log_type":      "client/subgraph",
-					"subgraph_name": "products",
-					"subgraph_id":   "3",
-					"status":        int64(403),
-					"method":        "POST",
-					"path":          "/graphql",
-					"query":         "", // http query is empty
-					"ip":            "[REDACTED]",
-					"service_name":  "service-name", // From request header
-					// custom_error_message is removed
-				}
-				checkValues(t, productContext, productSubgraphVals, additionalExpectedKeys)
-			})
-		})
-
 		t.Run("validate the evaluation of the body.raw expression for a query", func(t *testing.T) {
 			t.Parallel()
 
@@ -2787,20 +2692,334 @@ func TestFlakyAccessLogs(t *testing.T) {
 		)
 	})
 
+	t.Run("verify that nil values from optional chaining now get default values", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			SubgraphAccessLogsEnabled: true,
+			AccessLogFields: []config.CustomAttribute{
+				{
+					Key: "request_error",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.ContextFieldRequestError,
+					},
+				},
+			},
+			SubgraphAccessLogFields: []config.CustomAttribute{
+				{
+					Key:     "a_nil_value",
+					Default: "empty_value",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "subgraph.request.clientTrace.tlsStart?.time",
+					},
+				},
+			},
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:  `query employees { employees { id details { forename surname } notes } }`,
+				Header: map[string][]string{"service-name": {"service-name"}},
+			})
+			requestLog := xEnv.Observer().FilterMessage("/graphql")
+			productContext := requestLog.All()[1].ContextMap()
+
+			additionalExpectedKeys := []string{
+				"user_agent",
+				"trace_id",
+				"hostname",
+				"latency",
+				"config_version",
+				"request_id",
+				"pid",
+				"url",
+			}
+
+			productSubgraphVals := map[string]interface{}{
+				"log_type":      "client/subgraph",
+				"subgraph_name": "products",
+				"subgraph_id":   "3",
+				"status":        int64(200),
+				"method":        "POST",
+				"path":          "/graphql",
+				"query":         "", // http query is empty
+				"ip":            "[REDACTED]",
+				"a_nil_value":   "empty_value",
+			}
+
+			checkValues(t, productContext, productSubgraphVals, additionalExpectedKeys)
+		})
+	})
+
+	t.Run("verify subgraph log with invalid expression", func(t *testing.T) {
+		t.Parallel()
+
+		err := testenv.RunWithError(t, &testenv.Config{
+			SubgraphAccessLogsEnabled: true,
+			SubgraphAccessLogFields: []config.CustomAttribute{
+				{
+					Key:     "get_conn",
+					Default: "empty_value",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "subgraph.request2.clientTrace.connCreate?.time",
+					},
+				},
+			},
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			assert.FailNow(t, "should not be called")
+		})
+
+		assert.ErrorContains(t, err, "failed to build base mux: failed building router access log expressions: failed when validating log expressions: line 1, column 9: type expr.Subgraph has no field request2")
+	})
+
+	t.Run("verify subgraph hooks in logs", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			SubgraphAccessLogsEnabled: true,
+			SubgraphAccessLogFields: []config.CustomAttribute{
+				{
+					Key:     "get_conn",
+					Default: "empty_value",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "subgraph.request.clientTrace.connCreate?.time",
+					},
+				},
+				{
+					Key:     "got_conn",
+					Default: "empty_value",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "subgraph.request.clientTrace.connAcquired?.wasIdle",
+					},
+				},
+				{
+					Key:     "got_first_response_byte",
+					Default: "empty_value",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "subgraph.request.clientTrace.firstByte?.time",
+					},
+				},
+				{
+					Key:     "dns_start",
+					Default: "empty_value",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "subgraph.request.clientTrace.dnsStart?.host",
+					},
+				},
+				{
+					Key:     "dns_done",
+					Default: "empty_value",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "subgraph.request.clientTrace.dnsDone?.addresses",
+					},
+				},
+				{
+					Key:     "connect_start",
+					Default: "empty_value",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "subgraph.request.clientTrace.dialStart[0].network",
+					},
+				},
+				{
+					Key:     "connect_done",
+					Default: "empty_value",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "subgraph.request.clientTrace.dialDone[0].network",
+					},
+				},
+				{
+					Key:     "tls_handshake_start",
+					Default: "empty_value",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "subgraph.request.clientTrace.tlsStart?.time",
+					},
+				},
+				{
+					Key:     "tls_handshake_done",
+					Default: "empty_value",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "subgraph.request.clientTrace.tlsDone?.complete",
+					},
+				},
+				{
+					Key:     "wrote_headers",
+					Default: "empty_value",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "subgraph.request.clientTrace.wroteHeaders?.time",
+					},
+				},
+				{
+					Key:     "wrote_request",
+					Default: "empty_value",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "subgraph.request.clientTrace.wroteRequest?.time",
+					},
+				},
+			},
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:  `query employees { employees { id details { forename surname } notes } }`,
+				Header: map[string][]string{"service-name": {"service-name"}},
+			})
+			requestLog := xEnv.Observer().FilterMessage("/graphql")
+			productContext := requestLog.All()[1].ContextMap()
+
+			additionalExpectedKeys := []string{
+				"user_agent",
+				"trace_id",
+				"hostname",
+				"latency",
+				"config_version",
+				"request_id",
+				"pid",
+				"url",
+				"get_conn",
+				"got_first_response_byte",
+				"wrote_request",
+				"wrote_headers",
+			}
+
+			productSubgraphVals := map[string]interface{}{
+				"log_type":            "client/subgraph",
+				"subgraph_name":       "products",
+				"subgraph_id":         "3",
+				"status":              int64(200),
+				"method":              "POST",
+				"path":                "/graphql",
+				"query":               "", // http query is empty
+				"ip":                  "[REDACTED]",
+				"got_conn":            false,
+				"dns_start":           "empty_value",
+				"tls_handshake_start": "empty_value",
+				"dns_done":            "empty_value",
+				"tls_handshake_done":  "empty_value",
+				"connect_start":       "tcp",
+				"connect_done":        "tcp",
+			}
+
+			checkValues(t, productContext, productSubgraphVals, additionalExpectedKeys)
+
+			gotFirstResponseByteTime, ok := productContext["got_first_response_byte"].(time.Time)
+			require.True(t, ok)
+			require.False(t, gotFirstResponseByteTime.IsZero())
+
+			getConnTime, ok := productContext["get_conn"].(time.Time)
+			require.True(t, ok)
+			require.False(t, getConnTime.IsZero())
+
+			wroteRequestTime, ok := productContext["wrote_request"].(time.Time)
+			require.True(t, ok)
+			require.False(t, wroteRequestTime.IsZero())
+
+			wroteHeaders, ok := productContext["wrote_headers"].(time.Time)
+			require.True(t, ok)
+			require.False(t, wroteHeaders.IsZero())
+		})
+	})
+
+	t.Run("verify subgraph hooks in logs when error", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			SubgraphAccessLogsEnabled: true,
+			AccessLogFields: []config.CustomAttribute{
+				{
+					Key: "request_error",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.ContextFieldRequestError,
+					},
+				},
+			},
+			SubgraphAccessLogFields: []config.CustomAttribute{
+				{
+					Key:     "error_entry",
+					Default: "empty_value",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "subgraph.request.error",
+					},
+				},
+				{
+					Key:     "get_conn",
+					Default: "empty_value",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "subgraph.request.error ?? subgraph.request.clientTrace.connCreate?.time",
+					},
+				},
+				{
+					Key:     "got_conn",
+					Default: "empty_value",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "subgraph.request.error ?? subgraph.request.clientTrace.connAcquired?.wasIdle",
+					},
+				},
+			},
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:  `query employees { employees { id details { forename surname } notes rootFieldThrowsError } }`,
+				Header: map[string][]string{"service-name": {"service-name"}},
+			})
+			requestLog := xEnv.Observer().FilterMessage("/graphql")
+			productContext := requestLog.All()[1].ContextMap()
+
+			additionalExpectedKeys := []string{
+				"user_agent",
+				"trace_id",
+				"hostname",
+				"latency",
+				"config_version",
+				"request_id",
+				"pid",
+				"url",
+				"get_conn",
+			}
+
+			errString := "Failed to fetch from Subgraph 'employees'."
+
+			productSubgraphVals := map[string]interface{}{
+				"log_type":      "client/subgraph",
+				"subgraph_name": "products",
+				"subgraph_id":   "3",
+				"status":        int64(200),
+				"method":        "POST",
+				"path":          "/graphql",
+				"query":         "", // http query is empty
+				"ip":            "[REDACTED]",
+				"got_conn":      errString,
+				"error_entry":   errString,
+			}
+
+			checkValues(t, productContext, productSubgraphVals, additionalExpectedKeys)
+		})
+	})
+
 }
 
 func checkValues(t *testing.T, requestContext map[string]interface{}, expectedValues map[string]interface{}, additionalExpectedKeys []string) {
 	t.Helper()
 
-	require.Lenf(t, requestContext, len(expectedValues)+len(additionalExpectedKeys), "unexpected number of keys")
-
 	for key, val := range expectedValues {
 		mapVal, exists := requestContext[key]
 		require.Truef(t, exists, "key '%s' not found", key)
-		require.Equalf(t, val, mapVal, "expected '%v', got '%v'", val, mapVal)
+		require.Equalf(t, val, mapVal, "expected '%v', got '%v' for %v", val, mapVal, key)
 	}
 	for _, key := range additionalExpectedKeys {
 		_, exists := requestContext[key]
 		require.Truef(t, exists, "key '%s' not found", key)
 	}
+
+	require.Lenf(t, requestContext, len(expectedValues)+len(additionalExpectedKeys), "unexpected number of keys")
 }
