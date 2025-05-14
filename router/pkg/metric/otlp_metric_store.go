@@ -99,3 +99,63 @@ func (h *OtlpMetricStore) MeasureSchemaFieldUsage(_ context.Context, _ int64, _ 
 func (h *OtlpMetricStore) Flush(ctx context.Context) error {
 	return h.meterProvider.ForceFlush(ctx)
 }
+
+func (h *OtlpMetricStore) RecordDNSDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
+	if c, ok := h.measurements.histograms[DNSDurationKey]; ok {
+		c.Record(ctx, duration, opts...)
+	}
+}
+
+func (h *OtlpMetricStore) RecordTCPDialDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
+	if c, ok := h.measurements.histograms[TCPDialDurationKey]; ok {
+		c.Record(ctx, duration, opts...)
+	}
+}
+
+func (h *OtlpMetricStore) RecordTLSHandshakeDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
+	if c, ok := h.measurements.histograms[TLSHandshakeDurationKey]; ok {
+		c.Record(ctx, duration, opts...)
+	}
+}
+
+func (h *OtlpMetricStore) RecordTotalConnectionDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
+	if c, ok := h.measurements.histograms[TotalConnectionDurationKey]; ok {
+		c.Record(ctx, duration, opts...)
+	}
+}
+
+func (h *OtlpMetricStore) RecordPoolWaitDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
+	if c, ok := h.measurements.histograms[PoolWaitDurationKey]; ok {
+		c.Record(ctx, duration, opts...)
+	}
+}
+
+func (h *OtlpMetricStore) RecordPoolWaitCountTotal(ctx context.Context, count int64, opts ...otelmetric.AddOption) {
+	if c, ok := h.measurements.counters[PoolWaitCountTotalKey]; ok {
+		c.Add(ctx, count, opts...)
+	}
+}
+
+func (h *OtlpMetricStore) RecordConnectionNewTotal(ctx context.Context, count int64, opts ...otelmetric.AddOption) {
+	if c, ok := h.measurements.counters[ConnectionNewTotalKey]; ok {
+		c.Add(ctx, count, opts...)
+	}
+}
+
+func (h *OtlpMetricStore) RecordConnectionReuseTotal(ctx context.Context, count int64, opts ...otelmetric.AddOption) {
+	if c, ok := h.measurements.counters[ConnectionReuseTotalKey]; ok {
+		c.Add(ctx, count, opts...)
+	}
+}
+
+func (h *OtlpMetricStore) RecordPoolActiveConnections(ctx context.Context, delta int64, opts ...otelmetric.AddOption) {
+	if c, ok := h.measurements.upDownCounters[PoolActiveConnectionsKey]; ok {
+		c.Add(ctx, delta, opts...)
+	}
+}
+
+func (h *OtlpMetricStore) RecordPoolIdleConnections(ctx context.Context, delta int64, opts ...otelmetric.AddOption) {
+	if c, ok := h.measurements.upDownCounters[PoolIdleConnectionsKey]; ok {
+		c.Add(ctx, delta, opts...)
+	}
+}
