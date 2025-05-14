@@ -62,6 +62,7 @@ const identify = ({
 
   // Identify with PostHog
   // We use the id posthog sets to identify the user. This way we do not lose cross domain tracking.
+  const posthog = PostHogClient();
   posthog.identify(posthog.get_distinct_id(), {
     id,
     email,
