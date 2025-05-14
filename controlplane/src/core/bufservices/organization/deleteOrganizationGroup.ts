@@ -12,6 +12,7 @@ import { OidcRepository } from '../../repositories/OidcRepository.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { OrganizationGroupDTO } from '../../../types/index.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function deleteOrganizationGroup(
   opts: RouterOptions,
@@ -29,6 +30,10 @@ export function deleteOrganizationGroup(
       const orgGroupRepo = new OrganizationGroupRepository(tx);
       const auditLogRepo = new AuditLogRepository(tx);
       const oidcRepo = new OidcRepository(tx);
+
+      if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdmin) {
+        throw new UnauthorizedError();
+      }
 
       const rbac = await orgRepo.getFeature({ organizationId: authContext.organizationId, featureId: 'rbac' });
       if (!rbac?.enabled) {

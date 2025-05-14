@@ -21,6 +21,7 @@ import {
   handleError,
   isValidGraphName,
 } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function createMonograph(
   opts: RouterOptions,
@@ -42,13 +43,8 @@ export function createMonograph(
       const auditLogRepo = new AuditLogRepository(opts.db);
       const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
-      if (!authContext.hasWriteAccess) {
-        return {
-          response: {
-            code: EnumStatusCode.ERR,
-            details: `The user doesn't have the permissions to perform this operation`,
-          },
-        };
+      if (authContext.organizationDeactivated) {
+        throw new UnauthorizedError();
       }
 
       const namespace = await namespaceRepo.byName(req.namespace);
@@ -59,6 +55,15 @@ export function createMonograph(
             details: `Could not find namespace ${req.namespace}`,
           },
         };
+      }
+
+      if (
+        !(
+          authContext.rbac.isOrganizationAdminOrDeveloper ||
+          authContext.rbac.checkNamespaceAccess(namespace.id, 'namespace-admin')
+        )
+      ) {
+        throw new UnauthorizedError();
       }
 
       if (await fedGraphRepo.exists(req.name, req.namespace)) {

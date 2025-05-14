@@ -16,6 +16,7 @@ import { DefaultNamespace, NamespaceRepository } from '../../repositories/Namesp
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function deleteFeatureFlag(
   opts: RouterOptions,
@@ -39,16 +40,8 @@ export function deleteFeatureFlag(
 
     req.namespace = req.namespace || DefaultNamespace;
 
-    if (!authContext.hasWriteAccess) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `The user does not have the permissions to perform this operation.`,
-        },
-        compositionErrors: [],
-        deploymentErrors: [],
-        compositionWarnings: [],
-      };
+    if (authContext.organizationDeactivated) {
+      throw new UnauthorizedError();
     }
 
     const namespace = await namespaceRepo.byName(req.namespace);
@@ -62,6 +55,15 @@ export function deleteFeatureFlag(
         deploymentErrors: [],
         compositionWarnings: [],
       };
+    }
+
+    if (
+      !(
+        authContext.rbac.isOrganizationAdminOrDeveloper ||
+        authContext.rbac.checkNamespaceAccess(namespace.id, 'namespace-admin')
+      )
+    ) {
+      throw new UnauthorizedError();
     }
 
     const featureFlag = await featureFlagRepo.getFeatureFlagByName({

@@ -12,6 +12,7 @@ import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepos
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function createFederatedGraphToken(
   opts: RouterOptions,
@@ -29,14 +30,8 @@ export function createFederatedGraphToken(
 
     req.namespace = req.namespace || DefaultNamespace;
 
-    if (!authContext.hasWriteAccess) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `The user doesnt have the permissions to perform this operation`,
-        },
-        token: '',
-      };
+    if (authContext.organizationDeactivated) {
+      throw new UnauthorizedError();
     }
 
     const graph = await fedGraphRepo.byName(req.graphName, req.namespace);
@@ -48,6 +43,15 @@ export function createFederatedGraphToken(
         },
         token: '',
       };
+    }
+
+    if (
+      !(
+        authContext.rbac.isOrganizationAdminOrDeveloper ||
+        authContext.rbac.checkTargetAccess(graph.targetId, 'graph-admin')
+      )
+    ) {
+      throw new UnauthorizedError();
     }
 
     const currToken = await fedGraphRepo.getRouterToken({

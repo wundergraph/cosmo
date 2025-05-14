@@ -5,7 +5,7 @@ import {
   CreateIgnoreOverridesForAllOperationsRequest,
   CreateIgnoreOverridesForAllOperationsResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { PublicError } from '../../errors/errors.js';
+import { UnauthorizedError, PublicError } from '../../errors/errors.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { OperationsRepository } from '../../repositories/OperationsRepository.js';
@@ -27,13 +27,8 @@ export function createIgnoreOverridesForAllOperations(
     const schemaCheckRepo = new SchemaCheckRepository(opts.db);
     const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
 
-    if (!authContext.hasWriteAccess) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `The user does not have permissions to perform this operation`,
-        },
-      };
+    if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdminOrDeveloper) {
+      throw new UnauthorizedError();
     }
 
     const graph = await fedGraphRepo.byName(req.graphName, req.namespace);

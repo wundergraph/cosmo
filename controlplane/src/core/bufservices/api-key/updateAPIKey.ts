@@ -7,6 +7,7 @@ import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function updateAPIKey(
   opts: RouterOptions,
@@ -23,14 +24,8 @@ export function updateAPIKey(
     const auditLogRepo = new AuditLogRepository(opts.db);
     const orgGroupRepo = new OrganizationGroupRepository(opts.db);
 
-    if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdminOrDeveloper) {
-      return {
-        response: {
-          code: EnumStatusCode.ERROR_NOT_AUTHORIZED,
-          details: `The user doesnt have the permissions to perform this operation`,
-        },
-        apiKey: '',
-      };
+    if (authContext.organizationDeactivated) {
+      throw new UnauthorizedError();
     }
 
     const apiKey = await apiKeyRepo.getAPIKeyByName({ organizationID: authContext.organizationId, name: req.name });
@@ -41,6 +36,10 @@ export function updateAPIKey(
           details: `An API key with the name ${req.name} doesnt exists`,
         },
       };
+    }
+
+    if (!(apiKey.creatorUserID === authContext.userId || authContext.rbac.isOrganizationAdmin)) {
+      throw new UnauthorizedError();
     }
 
     const orgGroup = await orgGroupRepo.byId({

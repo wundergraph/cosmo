@@ -11,7 +11,7 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
-import { RBACEvaluator } from '../../services/RBACEvaluator.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function updateOrgMemberGroup(
   opts: RouterOptions,
@@ -28,6 +28,10 @@ export function updateOrgMemberGroup(
     const orgGroupRepo = new OrganizationGroupRepository(opts.db);
     const oidcRepo = new OidcRepository(opts.db);
     const auditLogRepo = new AuditLogRepository(opts.db);
+
+    if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdminOrDeveloper) {
+      throw new UnauthorizedError();
+    }
 
     const org = await orgRepo.byId(authContext.organizationId);
     if (!org) {

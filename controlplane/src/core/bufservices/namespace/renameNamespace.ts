@@ -8,6 +8,7 @@ import {
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, isValidNamespaceName } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function renameNamespace(
   opts: RouterOptions,
@@ -21,6 +22,9 @@ export function renameNamespace(
     logger = enrichLogger(ctx, logger, authContext);
 
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
+    if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdminOrDeveloper) {
+      throw new UnauthorizedError();
+    }
 
     const isValid = isValidNamespaceName(req.name);
     if (!isValid) {

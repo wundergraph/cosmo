@@ -9,6 +9,7 @@ import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, clamp } from '../../util.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function updateNamespaceChecksConfig(
   opts: RouterOptions,
@@ -32,6 +33,16 @@ export function updateNamespaceChecksConfig(
           details: `Namespace '${req.namespace}' not found`,
         },
       };
+    }
+
+    if (
+      authContext.organizationDeactivated ||
+      !(
+        authContext.rbac.isOrganizationAdminOrDeveloper ||
+        authContext.rbac.checkNamespaceAccess(namespace.id, 'namespace-admin')
+      )
+    ) {
+      throw new UnauthorizedError();
     }
 
     const changeRetention = await orgRepo.getFeature({

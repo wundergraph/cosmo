@@ -11,6 +11,7 @@ import { OrganizationGroupRepository } from '../../repositories/OrganizationGrou
 import { OrganizationGroupDTO } from '../../../types/index.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function createOrganizationGroup(
   opts: RouterOptions,
@@ -35,6 +36,10 @@ export function createOrganizationGroup(
           details: `RBAC feature is not enabled for this organization.`,
         },
       };
+    }
+
+    if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdmin) {
+      throw new UnauthorizedError();
     }
 
     if (await orgGroupRepo.nameExists({ organizationId: authContext.organizationId, name: req.name })) {

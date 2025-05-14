@@ -2,7 +2,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import * as schema from '../../db/schema.js';
-import { AuthorizationError } from '../errors/errors.js';
+import { AuthorizationError, UnauthorizedError } from '../errors/errors.js';
 import { ApiKeyRepository } from '../repositories/ApiKeyRepository.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
@@ -89,10 +89,7 @@ export class Authorization {
         }
 
         // The client doesn't have write access to the requested federated graph
-        throw new AuthorizationError(
-          EnumStatusCode.ERROR_NOT_AUTHORIZED,
-          'You are not authorized to perform the current action. Please communicate with the organization admin to gain access.',
-        );
+        throw new UnauthorizedError();
       } else if (targetType === 'subgraph') {
         // Validate that the client have write access to the provided subgraph. This is defined by the
         // `graph publisher` role. If the resources assigned to the role are empty or the target graph is part of
@@ -110,10 +107,7 @@ export class Authorization {
         }
 
         // The user doesn't have access to the requested subgraph
-        throw new AuthorizationError(
-          EnumStatusCode.ERROR_NOT_AUTHORIZED,
-          'You are not authorized to perform the current action. Please communicate with the organization admin to gain access.',
-        );
+        throw new UnauthorizedError();
       }
     }
 

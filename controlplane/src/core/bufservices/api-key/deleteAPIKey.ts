@@ -8,6 +8,7 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { RBACEvaluator } from '../../services/RBACEvaluator.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function deleteAPIKey(
   opts: RouterOptions,
@@ -24,13 +25,8 @@ export function deleteAPIKey(
     const apiKeyRepo = new ApiKeyRepository(opts.db);
     const auditLogRepo = new AuditLogRepository(opts.db);
 
-    if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdminOrDeveloper) {
-      return {
-        response: {
-          code: EnumStatusCode.ERROR_NOT_AUTHORIZED,
-          details: `The user doesnt have the permissions to perform this operation`,
-        },
-      };
+    if (authContext.organizationDeactivated) {
+      throw new UnauthorizedError();
     }
 
     const apiKey = await apiKeyRepo.getAPIKeyByName({ organizationID: authContext.organizationId, name: req.name });
@@ -43,20 +39,15 @@ export function deleteAPIKey(
       };
     }
 
-    const rbac = new RBACEvaluator(
+    const rbacEvaluator = new RBACEvaluator(
       await orgRepo.getOrganizationMemberGroups({
         userID: authContext.userId || '',
         organizationID: authContext.organizationId,
       }),
     );
 
-    if (!(apiKey.creatorUserID === authContext.userId || rbac.isOrganizationAdmin)) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `You are not authorized to delete the api key '${apiKey.name}'`,
-        },
-      };
+    if (!(apiKey.creatorUserID === authContext.userId || rbacEvaluator.isOrganizationAdmin)) {
+      throw new UnauthorizedError();
     }
 
     await apiKeyRepo.removeAPIKey({

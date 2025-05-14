@@ -15,6 +15,7 @@ import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function publishMonograph(
   opts: RouterOptions,
@@ -38,6 +39,10 @@ export function publishMonograph(
     const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
     const federatedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
 
+    if (authContext.organizationDeactivated) {
+      throw new UnauthorizedError();
+    }
+
     req.namespace = req.namespace || DefaultNamespace;
 
     const graph = await federatedGraphRepo.byName(req.name, req.namespace, {
@@ -48,18 +53,6 @@ export function publishMonograph(
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,
           details: `The graph ${req.name} was not found in namespace ${req.namespace}`,
-        },
-        compositionErrors: [],
-        deploymentErrors: [],
-        compositionWarnings: [],
-      };
-    }
-
-    if (!authContext.hasWriteAccess) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `The user does not have the permissions to perform this operation`,
         },
         compositionErrors: [],
         deploymentErrors: [],

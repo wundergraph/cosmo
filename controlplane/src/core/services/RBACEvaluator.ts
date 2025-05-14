@@ -1,12 +1,15 @@
-import { inArray, or, SQL } from 'drizzle-orm';
 import { OrganizationRole } from '../../db/models.js';
 import { OrganizationGroupDTO } from '../../types/index.js';
-import * as schema from '../../db/schema.js';
 
 interface RuleData {
   namespaces: string[];
   resources: string[];
 }
+
+type OrganizationRoleWithoutOrg = Exclude<
+  OrganizationRole,
+  'organization-admin' | 'organization-developer' | 'organization-viewer'
+>;
 
 export class RBACEvaluator {
   readonly roles: OrganizationRole[];
@@ -17,14 +20,6 @@ export class RBACEvaluator {
   readonly isOrganizationAdmin: boolean;
   readonly isOrganizationAdminOrDeveloper: boolean;
   readonly isOrganizationViewer: boolean;
-
-  readonly canAdminAnyNamespace: boolean;
-  readonly canViewAnyNamespace: boolean;
-
-  readonly canAdminAnyGraph: boolean;
-  readonly canViewAnyGraph: boolean;
-
-  readonly canPublishToAnySubgraph: boolean;
 
   constructor(readonly groups: Omit<OrganizationGroupDTO, 'membersCount' | 'kcGroupId' | 'kcMapperId'>[]) {
     const flattenRules = groups.flatMap((group) => group.rules);
@@ -46,22 +41,6 @@ export class RBACEvaluator {
     this.isOrganizationAdmin = this.is('organization-admin');
     this.isOrganizationAdminOrDeveloper = this.isOrganizationAdmin || this.is('organization-developer');
     this.isOrganizationViewer = this.isOrganizationAdminOrDeveloper || this.is('organization-viewer');
-
-    const nsAdminRule = this.rules.get('namespace-admin');
-    const nsViewerRule = this.rules.get('namespace-viewer');
-    this.canAdminAnyNamespace =
-      this.isOrganizationAdminOrDeveloper || (!!nsAdminRule && nsAdminRule.namespaces.length === 0);
-    this.canViewAnyNamespace = this.canAdminAnyNamespace || (!!nsViewerRule && nsViewerRule.namespaces.length === 0);
-
-    const graphAdminRule = this.rules.get('graph-admin');
-    const graphViewerRule = this.rules.get('graph-viewer');
-    this.canAdminAnyGraph =
-      this.isOrganizationAdminOrDeveloper || (!!graphAdminRule && graphAdminRule.resources.length === 0);
-    this.canViewAnyGraph = this.canAdminAnyGraph || (!!graphViewerRule && graphViewerRule.namespaces.length === 0);
-
-    const subgraphPublisherRole = this.rules.get('subgraph-publisher');
-    this.canPublishToAnySubgraph =
-      this.isOrganizationAdminOrDeveloper || (!!subgraphPublisherRole && subgraphPublisherRole.resources.length === 0);
   }
 
   is(...roles: OrganizationRole[]) {
@@ -78,33 +57,35 @@ export class RBACEvaluator {
     return false;
   }
 
-  checkNamespaceAccess(namespace: string, ...roles: OrganizationRole[]) {
-    if (!roles || roles.length === 0) {
-      return this.namespaces.includes(namespace);
+  checkNamespaceAccess(
+    namespace: string,
+    requiredRole: Exclude<OrganizationRoleWithoutOrg, 'graph-admin' | 'graph-viewer' | 'subgraph-publisher'>,
+  ) {
+    const rule = this.rules.get(requiredRole);
+    if (!rule) {
+      return false;
     }
 
-    for (const role of roles) {
-      const rule = this.rules.get(role);
-      if (rule && (rule.namespaces.length === 0 || rule.namespaces.includes(namespace))) {
-        return true;
-      }
+    if (namespace === '*') {
+      return rule.namespaces.length === 0;
     }
 
-    return false;
+    return rule.namespaces.length === 0 || rule.namespaces.includes(namespace);
   }
 
-  checkTargetAccess(target: string, ...roles: OrganizationRole[]) {
-    if (!roles || roles.length === 0) {
-      return this.resources.includes(target);
+  checkTargetAccess(
+    target: string,
+    requiredRole: Exclude<OrganizationRoleWithoutOrg, 'namespace-admin' | 'namespace-viewer'>,
+  ) {
+    const rule = this.rules.get(requiredRole);
+    if (!rule) {
+      return false;
     }
 
-    for (const role of roles) {
-      const rule = this.rules.get(role);
-      if (rule && (rule.resources.length === 0 || rule.resources.includes(target))) {
-        return true;
-      }
+    if (target === '*') {
+      return rule.resources.length === 0;
     }
 
-    return false;
+    return rule.resources.length === 0 || rule.resources.includes(target);
   }
 }

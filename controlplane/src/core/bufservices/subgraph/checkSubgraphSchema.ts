@@ -40,6 +40,7 @@ import {
   isValidGraphName,
 } from '../../util.js';
 import { ProposalRepository } from '../../repositories/ProposalRepository.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function checkSubgraphSchema(
   opts: RouterOptions,
@@ -64,23 +65,8 @@ export function checkSubgraphSchema(
     const proposalRepo = new ProposalRepository(opts.db);
     req.namespace = req.namespace || DefaultNamespace;
 
-    if (!authContext.hasWriteAccess) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `The user does not have the permissions to perform this operation`,
-        },
-        breakingChanges: [],
-        nonBreakingChanges: [],
-        compositionErrors: [],
-        checkId: '',
-        checkedFederatedGraphs: [],
-        lintWarnings: [],
-        lintErrors: [],
-        graphPruneWarnings: [],
-        graphPruneErrors: [],
-        compositionWarnings: [],
-      };
+    if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdminOrDeveloper) {
+      throw new UnauthorizedError();
     }
 
     const org = await orgRepo.byId(authContext.organizationId);

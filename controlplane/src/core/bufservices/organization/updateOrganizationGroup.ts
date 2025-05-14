@@ -11,6 +11,7 @@ import { organizationRoleEnum } from '../../../db/schema.js';
 import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
 import { OrganizationRole } from '../../../db/models.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function updateOrganizationGroup(
   opts: RouterOptions,
@@ -34,6 +35,10 @@ export function updateOrganizationGroup(
           details: `RBAC feature is not enabled for this organization.`,
         },
       };
+    }
+
+    if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdmin) {
+      throw new UnauthorizedError();
     }
 
     const orgGroup = await orgGroupRepo.byId({

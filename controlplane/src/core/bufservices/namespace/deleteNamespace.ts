@@ -12,6 +12,7 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function deleteNamespace(
   opts: RouterOptions,
@@ -26,6 +27,10 @@ export function deleteNamespace(
 
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
     const orgRepo = new OrganizationRepository(logger, opts.db);
+
+    if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdminOrDeveloper) {
+      throw new UnauthorizedError();
+    }
 
     if (req.name === DefaultNamespace) {
       return {
