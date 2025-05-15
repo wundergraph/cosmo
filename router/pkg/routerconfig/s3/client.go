@@ -101,8 +101,7 @@ func (c Client) RouterConfig(ctx context.Context, version string, modifiedSince 
 			if minioErr.StatusCode == http.StatusNotModified {
 				return nil, configpoller.ErrConfigNotModified
 			} else if minioErr.Code == "NoSuchKey" {
-				res.Config = routerconfig.GetDefaultConfig()
-				return res, nil
+				return nil, configpoller.ErrConfigNotFound
 			}
 		}
 
