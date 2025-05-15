@@ -32,22 +32,25 @@ export default (opts: BaseCommandOptions) => {
 
       spinner.text = 'Running tests...';
 
-      const { failed } = await runGoTests(srcDir, spinner);
+      try {
+        const { failed } = await runGoTests(srcDir, spinner);
 
-      // Calculate elapsed time
-      const endTime = performance.now();
-      const elapsedTimeMs = endTime - startTime;
-      const formattedTime =
-        elapsedTimeMs > 1000 ? `${(elapsedTimeMs / 1000).toFixed(2)}s` : `${Math.round(elapsedTimeMs)}ms`;
+        // Calculate elapsed time
+        const endTime = performance.now();
+        const elapsedTimeMs = endTime - startTime;
+        const formattedTime =
+          elapsedTimeMs > 1000 ? `${(elapsedTimeMs / 1000).toFixed(2)}s` : `${Math.round(elapsedTimeMs)}ms`;
 
-      if (failed) {
-        spinner.fail(pc.red(`Tests failed! [${formattedTime}]`));
-      } else {
-        spinner.succeed(pc.green(`Tests completed successfully! [${formattedTime}]`));
+        if (failed) {
+          spinner.fail(pc.red(`Failed to run tests!`));
+        } else {
+          spinner.succeed(pc.green(`Tests completed successfully! [${formattedTime}]`));
+        }
+      } catch (error: any) {
+        spinner.fail(pc.red(`Tests failed: ${error.message}`));
       }
     } catch (error: any) {
       spinner.fail(pc.red(`Failed to run tests: ${error.message}`));
-      throw error;
     } finally {
       spinner.stop();
     }

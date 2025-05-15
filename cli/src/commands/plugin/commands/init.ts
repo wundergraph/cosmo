@@ -91,7 +91,7 @@ export default (opts: BaseCommandOptions) => {
       console.log(`  Go to https://cosmo-docs.wundergraph.com/router/plugins to learn more about it.`);
       console.log('');
     } catch (error: any) {
-      // Clean up temp directory in case of error
+      // Clean up the temp directory in case of error
       try {
         await rm(tempDir, { recursive: true, force: true });
       } catch (cleanupError) {
