@@ -5,6 +5,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/httpclient"
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	"go.uber.org/zap"
+	"math"
 )
 
 func CalculateConnectionMetrics(ctx context.Context, logger *zap.Logger, store ConnectionMetricStore) {
@@ -67,9 +68,14 @@ func CalculateConnectionMetrics(ctx context.Context, logger *zap.Logger, store C
 			}
 		}
 
+		// we keep upto 5 decimals
+		// TODO: To look at rounding a bit more
+		roundedDuration := math.Round(totalDuration*100000) / 100000
+
 		// In case of no dials, we dont record 0 which will be a false positive
-		if totalDuration != 0.0 {
-			store.MeasureTotalConnectionDuration(ctx, totalDuration,
+		if roundedDuration != 0.0 {
+			// Round duration to avoid weird float values
+			store.MeasureTotalConnectionDuration(ctx, roundedDuration,
 				// Dns Lookup and Tls Handshake could be skipped because of internal caching
 				// so we use these attributes as dimensions
 				rotel.WgHost.String(host),

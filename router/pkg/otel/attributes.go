@@ -53,6 +53,7 @@ const (
 	WgDnsHost      = attribute.Key("wg.conn.host.from.dns")
 	WgDnsLookup    = attribute.Key("wg.conn.dns.lookup")
 	WgTlsHandshake = attribute.Key("wg.conn.tls.handshake")
+	WgConnReused   = attribute.Key("wg.conn.reused")
 
 	// Prometheus Schema Field Usage Attrs
 

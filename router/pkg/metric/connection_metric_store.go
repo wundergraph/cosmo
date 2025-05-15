@@ -3,6 +3,7 @@ package metric
 import (
 	"context"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/pkg/otel"
 
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
@@ -121,7 +122,7 @@ func (c *ConnectionMetrics) MeasureTotalConnectionDuration(ctx context.Context, 
 
 func (c *ConnectionMetrics) MeasureConnections(ctx context.Context, reused bool, attrs ...attribute.KeyValue) {
 	// Add the reused attribute to the base attributes
-	reusedAttr := attribute.Bool("reused", reused)
+	reusedAttr := otel.WgConnReused.Bool(reused)
 	allAttrs := append([]attribute.KeyValue{}, c.baseAttributes...)
 	allAttrs = append(allAttrs, reusedAttr)
 	allAttrs = append(allAttrs, attrs...)
