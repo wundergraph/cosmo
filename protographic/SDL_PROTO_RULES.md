@@ -13,11 +13,13 @@ Rules should follow [Proto Best Practices](https://protobuf.dev/best-practices/d
 ### 🚀 Supported Features
 
 #### Operation Types
+
 - ✓ Query operations
 - ✓ Mutation operations
 - ✓ Federation entity lookups with a single key
 
 #### Data Types
+
 - ✓ Scalar arguments
 - ✓ Complex input types
 - ✓ Enum values with bidirectional mapping
@@ -32,11 +34,13 @@ Rules should follow [Proto Best Practices](https://protobuf.dev/best-practices/d
 ### 🚧 Current Limitations
 
 #### Federation Features
+
 - ✗ Federation entity lookups with multiple keys
 - ✗ Federation entity lookups with nested keys
 - ✗ @requires directive
 
 #### GraphQL Features
+
 - ✗ Subscriptions (only Query and Mutation operations)
 - ✗ Custom scalar conversion (fixed mappings only)
 - ✗ Field resolvers
@@ -50,7 +54,7 @@ Rules should follow [Proto Best Practices](https://protobuf.dev/best-practices/d
 ### Scalar Types
 
 | GraphQL Type | Protocol Buffer Type |
-|--------------|----------------------|
+| ------------ | -------------------- |
 | ID           | string               |
 | String       | string               |
 | Int          | int32                |
@@ -59,16 +63,16 @@ Rules should follow [Proto Best Practices](https://protobuf.dev/best-practices/d
 
 ### Complex Types
 
-| GraphQL Type       | Protocol Buffer Representation         |
-|--------------------|---------------------------------------|
-| Object Type        | message                               |
-| Input Object Type  | message                               |
-| Enum Type          | enum with prefixed values             |
-| Interface Type     | message with oneof for implementations|
-| Union Type         | message with oneof for member types   |
-| List Type          | repeated field                        |
-| Nested List Type   | message with repeated field           |
-| Non-Null Type      | regular field (Proto3 has no nullability) |
+| GraphQL Type      | Protocol Buffer Representation            |
+| ----------------- | ----------------------------------------- |
+| Object Type       | message                                   |
+| Input Object Type | message                                   |
+| Enum Type         | enum with prefixed values                 |
+| Interface Type    | message with oneof for implementations    |
+| Union Type        | message with oneof for member types       |
+| List Type         | repeated field                            |
+| Nested List Type  | message with repeated field               |
+| Non-Null Type     | regular field (Proto3 has no nullability) |
 
 ## Naming Conventions
 
@@ -267,18 +271,20 @@ This mechanism ensures backward compatibility when fields are added, removed, or
 Consider this evolution of a GraphQL type over time:
 
 #### Initial Schema (v1)
+
 ```graphql
 type User {
-  id: ID!         # Field number 1
-  name: String!   # Field number 2
-  email: String!  # Field number 3
-  age: Int        # Field number 4
-  bio: String     # Field number 5
+  id: ID! # Field number 1
+  name: String! # Field number 2
+  email: String! # Field number 3
+  age: Int # Field number 4
+  bio: String # Field number 5
   isActive: Boolean # Field number 6
 }
 ```
 
 Generates:
+
 ```protobuf
 message User {
   string id = 1;
@@ -291,6 +297,7 @@ message User {
 ```
 
 #### Schema Change (v2) - Removed multiple fields
+
 ```graphql
 type User {
   id: ID!
@@ -303,9 +310,10 @@ type User {
 ```
 
 Generates (with range notation for reserved fields):
+
 ```protobuf
 message User {
-  reserved 3 to 5;  # Efficiently reserves fields 3, 4, and 5
+  reserved 3 to 5;  // Efficiently reserves fields 3, 4, and 5
   string id = 1;
   string name = 2;
   bool is_active = 6;
@@ -313,25 +321,27 @@ message User {
 ```
 
 #### Schema Change (v3) - Added and restored some fields
+
 ```graphql
 type User {
   id: ID!
   name: String!
-  bio: String     # Restoring previously removed field
+  bio: String # Restoring previously removed field
   isActive: Boolean
   createdAt: String # New field gets number 7, not 3, 4, or 5
 }
 ```
 
 Generates:
+
 ```protobuf
 message User {
-  reserved 3 to 4;  # Fields 3 and 4 remain reserved
+  reserved 3 to 4;  // Fields 3 and 4 remain reserved
   string id = 1;
   string name = 2;
-  string bio = 5;   # Restored field keeps its original number
+  string bio = 5;   // Restored field keeps its original number
   bool is_active = 6;
-  string created_at = 7; # New field gets next available number
+  string created_at = 7; // New field gets next available number
 }
 ```
 
@@ -339,4 +349,4 @@ This careful tracking of field numbers ensures that clients using older versions
 
 ## Federation Support
 
-Types with Federation's `@key` directive generate dedicated lookup methods rather than using the `_entities` field approach used in pure GraphQL. The lookup methods are optimized for batch processing of entities. 
+Types with Federation's `@key` directive generate dedicated lookup methods rather than using the `_entities` field approach used in pure GraphQL. The lookup methods are optimized for batch processing of entities.
