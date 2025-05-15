@@ -1,10 +1,7 @@
 package datasource
 
 import (
-	"slices"
-
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
@@ -36,36 +33,4 @@ type PubSubDataSource interface {
 
 type EngineEventConfiguration interface {
 	GetEngineEventConfiguration() *nodev1.EngineEventConfiguration
-}
-
-func GetFilteredDataSourceMetadata[E EngineEventConfiguration](event E, dsMeta *plan.DataSourceMetadata) *plan.DataSourceMetadata {
-	// find used root types and fields
-	rootFields := make(map[string][]string)
-
-	typeName := event.GetEngineEventConfiguration().GetTypeName()
-	fieldName := event.GetEngineEventConfiguration().GetFieldName()
-	if _, ok := rootFields[typeName]; !ok {
-		rootFields[typeName] = []string{}
-	}
-	rootFields[typeName] = append(rootFields[typeName], fieldName)
-
-	// filter dsMeta.RootNodes
-	newRootNodes := []plan.TypeField{}
-	for _, node := range dsMeta.RootNodes {
-		newRootNode := plan.TypeField{
-			TypeName:           node.TypeName,
-			FieldNames:         []string{},
-			ExternalFieldNames: node.ExternalFieldNames,
-		}
-		for _, fieldName := range node.FieldNames {
-			if slices.Contains(rootFields[node.TypeName], fieldName) {
-				newRootNode.FieldNames = append(newRootNode.FieldNames, fieldName)
-			}
-		}
-		newRootNodes = append(newRootNodes, newRootNode)
-	}
-	newDsMets := *dsMeta
-	newDsMets.RootNodes = newRootNodes
-
-	return &newDsMets
 }

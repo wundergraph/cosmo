@@ -169,7 +169,7 @@ func TestGetProvider(t *testing.T) {
 		cfg := config.EventsConfiguration{}
 		logger := zaptest.NewLogger(t)
 
-		provider, _, err := GetProvider(ctx, in, dsMeta, cfg, logger, "host", "addr")
+		provider, _, err := BuildProvidersAndDataSources(ctx, in, dsMeta, cfg, logger, "host", "addr")
 		require.NoError(t, err)
 		require.Nil(t, provider)
 	})
@@ -198,7 +198,7 @@ func TestGetProvider(t *testing.T) {
 		}
 		logger := zaptest.NewLogger(t)
 
-		provider, _, err := GetProvider(ctx, in, dsMeta, cfg, logger, "host", "addr")
+		provider, _, err := BuildProvidersAndDataSources(ctx, in, dsMeta, cfg, logger, "host", "addr")
 		require.Error(t, err)
 		require.Nil(t, provider)
 		assert.Contains(t, err.Error(), "provider with ID unknown is not defined")

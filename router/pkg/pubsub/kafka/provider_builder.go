@@ -2,9 +2,13 @@ package kafka
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"slices"
+	"time"
 
+	"github.com/twmb/franz-go/pkg/kgo"
+	"github.com/twmb/franz-go/pkg/sasl/plain"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
@@ -21,7 +25,7 @@ type PubSubProviderBuilder struct {
 	routerListenAddr string
 }
 
-func (p *PubSubProviderBuilder) Id() string {
+func (p *PubSubProviderBuilder) TypeID() string {
 	return providerId
 }
 
@@ -43,7 +47,7 @@ func (p *PubSubProviderBuilder) Providers(usedProviders []string) (map[string]Ad
 
 	// create providers
 	for _, provider := range p.config.Providers.Kafka {
-		if usedProviders != nil && !slices.Contains(usedProviders, provider.ID) {
+		if !slices.Contains(usedProviders, provider.ID) {
 			continue
 		}
 		adapter, pubSubProvider, err := buildProvider(p.ctx, provider, p.logger)
@@ -55,6 +59,34 @@ func (p *PubSubProviderBuilder) Providers(usedProviders []string) (map[string]Ad
 	}
 
 	return adapters, pubSubProviders, nil
+}
+
+// buildKafkaOptions creates a list of kgo.Opt options for the given Kafka event source configuration.
+// Only general options like TLS, SASL, etc. are configured here. Specific options like topics, etc. are
+// configured in the KafkaPubSub implementation.
+func buildKafkaOptions(eventSource config.KafkaEventSource) ([]kgo.Opt, error) {
+	opts := []kgo.Opt{
+		kgo.SeedBrokers(eventSource.Brokers...),
+		// Ensure proper timeouts are set
+		kgo.ProduceRequestTimeout(10 * time.Second),
+		kgo.ConnIdleTimeout(60 * time.Second),
+	}
+
+	if eventSource.TLS != nil && eventSource.TLS.Enabled {
+		opts = append(opts,
+			// Configure TLS. Uses SystemCertPool for RootCAs by default.
+			kgo.DialTLSConfig(new(tls.Config)),
+		)
+	}
+
+	if eventSource.Authentication != nil && eventSource.Authentication.SASLPlain.Username != nil && eventSource.Authentication.SASLPlain.Password != nil {
+		opts = append(opts, kgo.SASL(plain.Auth{
+			User: *eventSource.Authentication.SASLPlain.Username,
+			Pass: *eventSource.Authentication.SASLPlain.Password,
+		}.AsMechanism()))
+	}
+
+	return opts, nil
 }
 
 func buildProvider(ctx context.Context, provider config.KafkaEventSource, logger *zap.Logger) (AdapterInterface, datasource.PubSubProvider, error) {

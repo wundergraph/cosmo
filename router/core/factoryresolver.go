@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-
 	"net/url"
 	"slices"
 
@@ -432,24 +431,23 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 			outs = append(outs, out)
 
 		case nodev1.DataSourceKind_PUBSUB:
-			var err error
-
 			dsMeta := l.dataSourceMetaData(in)
-			providersDs, pubsubDataSources, err := pubsub.GetProvidersDataSources(
-				l.ctx,
-				in,
-				dsMeta,
-				routerEngineConfig.Events,
-				l.logger,
-				l.resolver.InstanceData().HostName,
-				l.resolver.InstanceData().ListenAddress,
-			)
-			if err != nil {
-				return nil, providers, err
+			for _, providerFactory := range pubsub.ProvidersAndDataSourcesBuilders() {
+				factoryProviders, factoryDataSources, err := providerFactory(
+					l.ctx,
+					in,
+					dsMeta,
+					routerEngineConfig.Events,
+					l.logger,
+					l.resolver.InstanceData().HostName,
+					l.resolver.InstanceData().ListenAddress,
+				)
+				if err != nil {
+					return nil, providers, err
+				}
+				providers = append(providers, factoryProviders...)
+				outs = append(outs, factoryDataSources...)
 			}
-			outs = append(outs, pubsubDataSources...)
-			providers = append(providers, providersDs...)
-
 		default:
 			return nil, providers, fmt.Errorf("unknown data source type %q", in.Kind)
 		}

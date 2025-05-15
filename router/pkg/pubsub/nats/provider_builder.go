@@ -21,7 +21,7 @@ type PubSubProviderBuilder struct {
 	routerListenAddr string
 }
 
-func (p *PubSubProviderBuilder) Id() string {
+func (p *PubSubProviderBuilder) TypeID() string {
 	return providerId
 }
 
@@ -43,7 +43,7 @@ func (p *PubSubProviderBuilder) Providers(usedProviders []string) (map[string]Ad
 
 	// create providers
 	for _, provider := range p.config.Providers.Nats {
-		if usedProviders != nil && !slices.Contains(usedProviders, provider.ID) {
+		if !slices.Contains(usedProviders, provider.ID) {
 			continue
 		}
 		adapter, pubSubProvider, err := buildProvider(p.ctx, provider, p.logger, p.hostName, p.routerListenAddr)

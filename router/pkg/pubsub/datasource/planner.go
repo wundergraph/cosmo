@@ -150,7 +150,7 @@ func (p *Planner) extractArgumentTemplate(fieldRef int, template string) (string
 	}
 	templateWithVariableTemplateReplacements := template
 	for templateNumber, groups := range matches {
-		// The first group is the whole template; the second is the period delimited argument path
+		// The first group is the whole template; the second is the period-delimited argument path
 		if len(groups) != 2 {
 			return "", fmt.Errorf(`argument template #%d defined on field "%s" is invalid: expected 2 matching groups but received %d`, templateNumber+1, fieldNameBytes, len(groups)-1)
 		}

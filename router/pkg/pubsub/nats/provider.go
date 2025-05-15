@@ -90,7 +90,7 @@ func transformEventConfig(cfg *nodev1.NatsEventConfiguration, fn datasource.Argu
 	return cfg, nil
 }
 
-func GetProvider(ctx context.Context, in *nodev1.DataSourceConfiguration, dsMeta *plan.DataSourceMetadata, config config.EventsConfiguration, logger *zap.Logger, hostName string, routerListenAddr string) ([]datasource.PubSubProvider, []plan.DataSource, error) {
+func BuildProvidersAndDataSources(ctx context.Context, in *nodev1.DataSourceConfiguration, dsMeta *plan.DataSourceMetadata, config config.EventsConfiguration, logger *zap.Logger, hostName string, routerListenAddr string) ([]datasource.PubSubProvider, []plan.DataSource, error) {
 	natsData := make([]datasource.EngineEventConfiguration, 0, len(in.GetCustomEvents().GetNats()))
 	for _, natsEvent := range in.GetCustomEvents().GetNats() {
 		natsData = append(natsData, natsEvent)
@@ -102,7 +102,7 @@ func GetProvider(ctx context.Context, in *nodev1.DataSourceConfiguration, dsMeta
 		hostName:         hostName,
 		routerListenAddr: routerListenAddr,
 	}
-	return datasource.BuildProviderDataSources(providerBuilder, ctx, in, dsMeta, config, logger, hostName, routerListenAddr, natsData)
+	return datasource.BuildProvidersAndDataSources(providerBuilder, ctx, in, dsMeta, config, logger, hostName, routerListenAddr, natsData)
 }
 
 type PubSubProvider struct {
@@ -111,7 +111,7 @@ type PubSubProvider struct {
 	Logger  *zap.Logger
 }
 
-func (c *PubSubProvider) Id() string {
+func (c *PubSubProvider) ID() string {
 	return c.id
 }
 
