@@ -21,7 +21,6 @@ type value[T any] struct {
 
 type mockConnectionMetricStore struct {
 	connectionAcquireDurations []value[float64]
-	connectionHosts            []attribute.KeyValue
 	reusedConnections          []value[bool]
 	dnsDurations               []float64
 	dnsHosts                   []attribute.KeyValue
@@ -29,7 +28,6 @@ type mockConnectionMetricStore struct {
 	tlsHosts                   []attribute.KeyValue
 	dialDurations              []float64
 	dialHosts                  []attribute.KeyValue
-	retryHosts                 []attribute.KeyValue
 	totalDurations             []float64
 	totalHosts                 []attribute.KeyValue
 }
