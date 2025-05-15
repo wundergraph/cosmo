@@ -16,4 +16,7 @@ pnpx tsx --env-file ../../cli/.env ../../cli/src/index.ts plugin build ../plugin
 echo "Step 4: Composing router from graph.yaml to config.json..."
 pnpx tsx --env-file ../../cli/.env ../../cli/src/index.ts router compose -i graph.yaml -o config.json
 
+echo "Step 5: Run plugin test..."
+pnpx tsx --env-file ../../cli/.env ../../cli/src/index.ts plugin test ../plugins/foo
+
 echo "All steps completed successfully!"

@@ -221,16 +221,19 @@ This demo illustrates a key pattern in Cosmo subgraph development:
 - **Design with GraphQL**: Define your API using GraphQL schema
 - **Implement with gRPC**: Instead of writing GraphQL resolvers, implement gRPC service methods
 - **Bridge the gap**: The Cosmo router connects GraphQL operations to your gRPC implementations
+- **Test-Driven Development**: Test your gRPC service implementation with gRPC client and server without external dependencies
 
 The plugin demonstrates:
 - How GraphQL types and operations map to gRPC service methods
 - Simple "Hello World" implementation
 - Proper structure for a Cosmo gRPC subgraph plugin
+- How to test your gRPC service implementation with gRPC client and server without external dependencies
 
 ## Plugin Structure
 
 - \`src/\` - Contains the plugin source code
   - \`main.go\` - The gRPC service implementation with methods that replace GraphQL resolvers
+  - \`main_test.go\` - The gRPC service implementation with methods that replace GraphQL resolvers
   - \`schema.graphql\` - The GraphQL schema defining the API contract
 - \`generated/\` - Contains generated code from the plugin schema
 - \`bin/\` - Contains compiled binaries of the plugin
@@ -281,7 +284,18 @@ type Query {
     wgc router compose config.yaml
     \`\`\`
 
-4. **Start the router**
+4. **Test the plugin**
+
+   \`\`\`bash
+   wgc plugin test <plugin-directory>/<plugin-name>
+   \`\`\`
+   or
+   \`\`\`bash
+   go test src -v
+   \`\`\`
+   if you have the Go toolchain already installed.
+
+5. **Start the router**
 
    \`\`\`yaml
    execution_config:
@@ -291,7 +305,7 @@ type Query {
     - <plugin-directory>
    \`\`\`
 
-5. **Query the hello endpoint**
+6. **Query the hello endpoint**
 
    Once running, you can perform GraphQL operations like:
    
