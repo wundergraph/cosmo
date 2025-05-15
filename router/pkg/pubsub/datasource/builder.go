@@ -7,12 +7,18 @@ import (
 	"strconv"
 
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
-	"go.uber.org/zap"
 )
 
-func BuildProvidersAndDataSources[A any](providerBuilder PubSubProviderBuilder[A], ctx context.Context, in *nodev1.DataSourceConfiguration, dsMeta *plan.DataSourceMetadata, config config.EventsConfiguration, logger *zap.Logger, hostName string, routerListenAddr string, data []EngineEventConfiguration) ([]PubSubProvider, []plan.DataSource, error) {
+// BuildProvidersAndDataSources is a generic function that builds providers and data sources for the given provider
+// builder and event configurations.
+func BuildProvidersAndDataSources[A any](
+	providerBuilder PubSubProviderBuilder[A],
+	ctx context.Context,
+	in *nodev1.DataSourceConfiguration,
+	dsMeta *plan.DataSourceMetadata,
+	data []EngineEventConfiguration,
+) ([]PubSubProvider, []plan.DataSource, error) {
 	if len(data) == 0 {
 		return nil, nil, nil
 	}

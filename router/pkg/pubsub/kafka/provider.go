@@ -48,5 +48,5 @@ func BuildProvidersAndDataSources(ctx context.Context, in *nodev1.DataSourceConf
 		hostName:         hostName,
 		routerListenAddr: routerListenAddr,
 	}
-	return datasource.BuildProvidersAndDataSources(providerBuilder, ctx, in, dsMeta, config, logger, hostName, routerListenAddr, kafkaData)
+	return datasource.BuildProvidersAndDataSources(providerBuilder, ctx, in, dsMeta, kafkaData)
 }

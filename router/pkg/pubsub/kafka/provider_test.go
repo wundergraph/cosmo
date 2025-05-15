@@ -53,11 +53,10 @@ func TestBuildKafkaOptions(t *testing.T) {
 	})
 
 	t.Run("with TLS", func(t *testing.T) {
-		enabled := true
 		cfg := config.KafkaEventSource{
 			Brokers: []string{"localhost:9092"},
 			TLS: &config.KafkaTLSConfiguration{
-				Enabled: enabled,
+				Enabled: true,
 			},
 		}
 
@@ -160,7 +159,7 @@ func TestGetProvider(t *testing.T) {
 
 		logger := zaptest.NewLogger(t)
 
-		// Create mock adapter for testing
+		// Create a mock adapter for testing
 		provider, _, err := BuildProvidersAndDataSources(context.Background(), in, &plan.DataSourceMetadata{}, cfg, logger, "host", "addr")
 		require.NoError(t, err)
 		require.NotNil(t, provider)
@@ -174,24 +173,24 @@ func TestGetProvider(t *testing.T) {
 }
 
 func TestPubSubProvider_FindPubSubDataSource(t *testing.T) {
-	mock := &mockAdapter{}
+	mocked := &mockAdapter{}
 
 	provider := &PubSubProvider{
 		Logger:  zap.NewNop(),
-		Adapter: mock,
+		Adapter: mocked,
 	}
 
 	t.Run("calling Shutdown calls adapter Shutdown", func(t *testing.T) {
-		mock.On("Shutdown", context.Background()).Return(nil)
+		mocked.On("Shutdown", context.Background()).Return(nil)
 		err := provider.Shutdown(context.Background())
 		require.NoError(t, err)
-		mock.AssertCalled(t, "Shutdown", context.Background())
+		mocked.AssertCalled(t, "Shutdown", context.Background())
 	})
 
 	t.Run("calling Startup calls adapter Startup", func(t *testing.T) {
-		mock.On("Startup", context.Background()).Return(nil)
+		mocked.On("Startup", context.Background()).Return(nil)
 		err := provider.Startup(context.Background())
 		require.NoError(t, err)
-		mock.AssertCalled(t, "Startup", context.Background())
+		mocked.AssertCalled(t, "Startup", context.Background())
 	})
 }

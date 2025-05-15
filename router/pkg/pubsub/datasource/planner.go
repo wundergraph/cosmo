@@ -128,14 +128,6 @@ func (p *Planner) addContextVariableByArgumentRef(argumentRef int, argumentPath 
 	return variablePlaceHolder, nil
 }
 
-func StringParser(subject string) (string, error) {
-	matches := argument_templates.ArgumentTemplateRegex.FindAllStringSubmatch(subject, -1)
-	if len(matches) < 1 {
-		return subject, nil
-	}
-	return "", fmt.Errorf(`subject "%s" is not a valid NATS subject`, subject)
-}
-
 func (p *Planner) extractArgumentTemplate(fieldRef int, template string) (string, error) {
 	matches := argument_templates.ArgumentTemplateRegex.FindAllStringSubmatch(template, -1)
 	// If no argument templates are defined, there are only static values
