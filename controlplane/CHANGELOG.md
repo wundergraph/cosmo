@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.138.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.138.0...controlplane@0.138.1) (2025-05-14)
+
+### Bug Fixes
+
+* upgrade octokit, runc, esbuild to mitigate security issues ([#1859](https://github.com/wundergraph/cosmo/issues/1859)) ([8b6285d](https://github.com/wundergraph/cosmo/commit/8b6285df41ab8537ab751fbf59390723829793c4)) (@endigma)
+
+# [0.138.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.137.3...controlplane@0.138.0) (2025-05-13)
+
+### Features
+
+* allow to check new subgraphs ([#1761](https://github.com/wundergraph/cosmo/issues/1761)) ([5b0bfbf](https://github.com/wundergraph/cosmo/commit/5b0bfbf38e77893453dc6bdfb4d524df1f59881b)) (@JivusAyrus)
+
 ## [0.137.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.137.2...controlplane@0.137.3) (2025-05-07)
 
 ### Bug Fixes

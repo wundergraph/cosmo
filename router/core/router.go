@@ -198,6 +198,7 @@ type (
 		apolloCompatibilityFlags        config.ApolloCompatibilityFlags
 		apolloRouterCompatibilityFlags  config.ApolloRouterCompatibilityFlags
 		storageProviders                config.StorageProviders
+		demoMode                        bool
 		eventsConfig                    config.EventsConfiguration
 		prometheusServer                *http.Server
 		modulesConfig                   map[string]interface{}
@@ -925,6 +926,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			mcpserver.WithGraphName(r.mcp.GraphName),
 			mcpserver.WithOperationsDir(operationsDir),
 			mcpserver.WithListenAddr(r.mcp.Server.ListenAddr),
+			mcpserver.WithBaseURL(r.mcp.Server.BaseURL),
 			mcpserver.WithLogger(r.logger.With(logFields...)),
 			mcpserver.WithExcludeMutations(r.mcp.ExcludeMutations),
 			mcpserver.WithEnableArbitraryOperations(r.mcp.EnableArbitraryOperations),
@@ -2007,6 +2009,12 @@ func WithCacheWarmupConfig(cfg *config.CacheWarmupConfiguration) Option {
 func WithMCP(cfg config.MCPConfiguration) Option {
 	return func(r *Router) {
 		r.mcp = cfg
+	}
+}
+
+func WithDemoMode(demoMode bool) Option {
+	return func(r *Router) {
+		r.demoMode = demoMode
 	}
 }
 

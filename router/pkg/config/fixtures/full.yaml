@@ -42,8 +42,11 @@ mcp:
   router_url: https://cosmo-router.wundergraph.com
   server:
     listen_addr: localhost:5025
+    base_url: "http://localhost:5025"
   storage:
     provider_id: mcp
+
+demo_mode: true
 
 # Cross-Origin Resource Sharing (CORS)
 cors:
