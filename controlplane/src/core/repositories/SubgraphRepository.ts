@@ -39,6 +39,7 @@ import { BlobStorage } from '../blobstorage/index.js';
 import { getDiffBetweenGraphs } from '../composition/schemaCheck.js';
 import { getFederatedGraphRouterCompatibilityVersion, hasLabelsChanged, normalizeLabels } from '../util.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
+import { RBACEvaluator } from '../services/RBACEvaluator.js';
 import { FeatureFlagRepository } from './FeatureFlagRepository.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { TargetRepository } from './TargetRepository.js';
@@ -596,6 +597,19 @@ export class SubgraphRepository {
       conditions.push(eq(schema.subgraphs.isFeatureSubgraph, false));
     }
 
+    if (opts.rbac && !opts.rbac.isOrganizationAdminOrDeveloper) {
+      const graphPublisher = opts.rbac.ruleFor('subgraph-publisher');
+      if (!graphPublisher) {
+        // The actor doesn't have publisher access to any subgraph
+        return [];
+      }
+
+      if (graphPublisher.resources.length > 0) {
+        // Only limit the subgraphs the actor have access to when it hasn't been given access to all resources
+        conditions.push(inArray(schema.targets.id, graphPublisher.resources));
+      }
+    }
+
     const targetsQuery = this.db
       .select({
         id: schema.targets.id,
@@ -683,6 +697,7 @@ export class SubgraphRepository {
     federatedGraphTargetId: string;
     published?: boolean;
     includeSubgraphs?: string[];
+    rbac?: RBACEvaluator;
   }): Promise<SubgraphDTO[]> {
     const target = await this.db.query.targets.findFirst({
       where: and(
@@ -701,6 +716,24 @@ export class SubgraphRepository {
 
     if (target === undefined) {
       return [];
+    }
+
+    const conditions: (SQL<unknown> | undefined)[] = [
+      eq(schema.targets.organizationId, this.organizationId),
+      eq(schema.subgraphsToFederatedGraph.federatedGraphId, target.federatedGraph.id),
+    ];
+
+    if (data.rbac && !data.rbac.isOrganizationAdminOrDeveloper) {
+      const graphPublisher = data.rbac.ruleFor('subgraph-publisher');
+      if (!graphPublisher) {
+        // The actor doesn't have publisher access to any subgraph
+        return [];
+      }
+
+      if (graphPublisher.resources.length > 0) {
+        // Only limit the subgraphs the actor have access to when it hasn't been given access to all resources
+        conditions.push(inArray(schema.targets.id, graphPublisher.resources));
+      }
     }
 
     const targets = await this.db
@@ -722,12 +755,7 @@ export class SubgraphRepository {
       )
       .innerJoin(schema.subgraphsToFederatedGraph, eq(schema.subgraphsToFederatedGraph.subgraphId, schema.subgraphs.id))
       .orderBy(asc(schema.schemaVersion.createdAt))
-      .where(
-        and(
-          eq(schema.targets.organizationId, this.organizationId),
-          eq(schema.subgraphsToFederatedGraph.federatedGraphId, target.federatedGraph.id),
-        ),
-      );
+      .where(and(...conditions));
 
     const subgraphs: SubgraphDTO[] = [];
 

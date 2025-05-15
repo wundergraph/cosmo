@@ -44,10 +44,12 @@ export interface ListFilterOptions {
 
 export interface FederatedGraphListFilterOptions extends ListFilterOptions {
   supportsFederation?: boolean;
+  rbac?: RBACEvaluator;
 }
 
 export interface SubgraphListFilterOptions extends ListFilterOptions {
   excludeFeatureSubgraphs: boolean;
+  rbac?: RBACEvaluator;
 }
 
 export interface Label {

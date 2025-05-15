@@ -37,13 +37,13 @@ export function createMonograph(
       const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
       logger = enrichLogger(ctx, logger, authContext);
 
-      const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
-      const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
-      const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
-      const auditLogRepo = new AuditLogRepository(opts.db);
-      const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
+      const orgRepo = new OrganizationRepository(logger, tx, opts.billingDefaultPlanId);
+      const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
+      const subgraphRepo = new SubgraphRepository(logger, tx, authContext.organizationId);
+      const auditLogRepo = new AuditLogRepository(tx);
+      const namespaceRepo = new NamespaceRepository(tx, authContext.organizationId);
 
-      if (authContext.organizationDeactivated) {
+      if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdminOrDeveloper) {
         throw new UnauthorizedError();
       }
 
@@ -55,15 +55,6 @@ export function createMonograph(
             details: `Could not find namespace ${req.namespace}`,
           },
         };
-      }
-
-      if (
-        !(
-          authContext.rbac.isOrganizationAdminOrDeveloper ||
-          authContext.rbac.checkNamespaceAccess(namespace.id, 'namespace-admin')
-        )
-      ) {
-        throw new UnauthorizedError();
       }
 
       if (await fedGraphRepo.exists(req.name, req.namespace)) {

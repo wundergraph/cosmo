@@ -26,7 +26,7 @@ export function createOperationIgnoreAllOverride(
     const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
     const auditLogRepo = new AuditLogRepository(opts.db);
 
-    if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdminOrDeveloper) {
+    if (authContext.organizationDeactivated) {
       throw new UnauthorizedError();
     }
 
@@ -39,6 +39,15 @@ export function createOperationIgnoreAllOverride(
           details: 'Requested graph does not exist',
         },
       };
+    }
+
+    if (
+      !(
+        authContext.rbac.isOrganizationAdminOrDeveloper ||
+        authContext.rbac.checkTargetAccess(graph.targetId, 'graph-admin')
+      )
+    ) {
+      throw new UnauthorizedError();
     }
 
     const operationsRepo = new OperationsRepository(opts.db, graph.id);

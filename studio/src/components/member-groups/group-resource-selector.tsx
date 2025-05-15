@@ -31,14 +31,11 @@ export function GroupResourceSelector({ rule, disabled, activeRole, accessibleRe
 
     switch (activeRole?.category) {
       case "namespace": {
-        return accessibleResources.federatedGraphs
-          .map((g) => g.namespace)
-          .filter((value, index, array) => array.indexOf(value) === index)
-          .map((ns) => ({
-            label: ns,
-            value: ns,
-            selected: rule.namespaces.includes(ns),
-          }));
+        return accessibleResources.namespaces.map((ns) => ({
+          label: ns.name,
+          value: ns.id,
+          selected: rule.namespaces.includes(ns.id),
+        }));
       }
       case "graph": {
         return Object.entries(Object.groupBy(accessibleResources.federatedGraphs, (g) => g.namespace))

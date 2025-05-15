@@ -237,7 +237,7 @@ export class OrganizationGroupRepository {
             .where(
               and(
                 eq(schema.namespaces.organizationId, input.organizationId),
-                inArray(schema.namespaces.name, rule.namespaces),
+                inArray(schema.namespaces.id, rule.namespaces),
               ),
             );
 
@@ -298,8 +298,8 @@ export class OrganizationGroupRepository {
 
         return {
           role: rule.role,
-          namespaces: [...new Set(namespaces.map((ns) => ns.id))],
-          resources: [...new Set(targets.map((targ) => targ.targetId))],
+          namespaces: namespaces.map((ns) => ns.id),
+          resources: targets.map((targ) => targ.targetId),
         };
       }),
     );

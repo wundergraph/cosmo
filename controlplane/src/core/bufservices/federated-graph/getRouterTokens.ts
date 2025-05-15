@@ -25,7 +25,7 @@ export function getRouterTokens(
     const fedRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
 
     req.namespace = req.namespace || DefaultNamespace;
-    if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdminOrDeveloper) {
+    if (authContext.organizationDeactivated) {
       throw new UnauthorizedError();
     }
 
@@ -38,6 +38,16 @@ export function getRouterTokens(
         },
         tokens: [],
       };
+    }
+
+    if (
+      !(
+        authContext.rbac.isOrganizationAdminOrDeveloper ||
+        authContext.rbac.checkTargetAccess(federatedGraph.targetId, 'graph-admin') ||
+        authContext.rbac.checkTargetAccess(federatedGraph.targetId, 'graph-viewer')
+      )
+    ) {
+      throw new UnauthorizedError();
     }
 
     const tokens = await fedRepo.getRouterTokens({

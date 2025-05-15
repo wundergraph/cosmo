@@ -1865,6 +1865,11 @@ message GetChangelogBySchemaVersionResponse {
 message GetUserAccessibleResourcesRequest {}
 
 message GetUserAccessibleResourcesResponse {
+  message Namespace {
+    string id = 1;
+    string name = 2;
+  }
+
   message FederatedGraph {
     string targetId = 1;
     string name = 2;
@@ -1879,8 +1884,9 @@ message GetUserAccessibleResourcesResponse {
   }
 
   Response response = 1;
-  repeated FederatedGraph federatedGraphs = 2;
-  repeated SubGraph subgraphs = 3;
+  repeated Namespace namespaces = 2;
+  repeated FederatedGraph federatedGraphs = 3;
+  repeated SubGraph subgraphs = 4;
 }
 
 enum Feature {

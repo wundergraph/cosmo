@@ -45,14 +45,16 @@ export function createFederatedGraphToken(
       };
     }
 
-    if (
-      !(
-        authContext.rbac.isOrganizationAdminOrDeveloper ||
-        authContext.rbac.checkTargetAccess(graph.targetId, 'graph-admin')
-      )
-    ) {
-      throw new UnauthorizedError();
-    }
+    // check if the user is authorized to perform the action
+    await opts.authorizer.authorize({
+      db: opts.db,
+      graph: {
+        targetId: graph.targetId,
+        targetType: 'federatedGraph',
+      },
+      headers: ctx.requestHeader,
+      authContext,
+    });
 
     const currToken = await fedGraphRepo.getRouterToken({
       federatedGraphId: graph.id,

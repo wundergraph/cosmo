@@ -45,7 +45,7 @@ export function createFederatedGraph(
     const auditLogRepo = new AuditLogRepository(opts.db);
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
-    if (authContext.organizationDeactivated) {
+    if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdminOrDeveloper) {
       throw new UnauthorizedError();
     }
 
@@ -60,15 +60,6 @@ export function createFederatedGraph(
         deploymentErrors: [],
         compositionWarnings: [],
       };
-    }
-
-    if (
-      !(
-        authContext.rbac.isOrganizationAdminOrDeveloper ||
-        authContext.rbac.checkNamespaceAccess(namespace.id, 'namespace-admin')
-      )
-    ) {
-      throw new UnauthorizedError();
     }
 
     if (await fedGraphRepo.exists(req.name, req.namespace)) {

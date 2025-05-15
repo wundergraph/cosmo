@@ -14547,12 +14547,17 @@ export class GetUserAccessibleResourcesResponse extends Message<GetUserAccessibl
   response?: Response;
 
   /**
-   * @generated from field: repeated wg.cosmo.platform.v1.GetUserAccessibleResourcesResponse.FederatedGraph federatedGraphs = 2;
+   * @generated from field: repeated wg.cosmo.platform.v1.GetUserAccessibleResourcesResponse.Namespace namespaces = 2;
+   */
+  namespaces: GetUserAccessibleResourcesResponse_Namespace[] = [];
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.GetUserAccessibleResourcesResponse.FederatedGraph federatedGraphs = 3;
    */
   federatedGraphs: GetUserAccessibleResourcesResponse_FederatedGraph[] = [];
 
   /**
-   * @generated from field: repeated wg.cosmo.platform.v1.GetUserAccessibleResourcesResponse.SubGraph subgraphs = 3;
+   * @generated from field: repeated wg.cosmo.platform.v1.GetUserAccessibleResourcesResponse.SubGraph subgraphs = 4;
    */
   subgraphs: GetUserAccessibleResourcesResponse_SubGraph[] = [];
 
@@ -14565,8 +14570,9 @@ export class GetUserAccessibleResourcesResponse extends Message<GetUserAccessibl
   static readonly typeName = "wg.cosmo.platform.v1.GetUserAccessibleResourcesResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
-    { no: 2, name: "federatedGraphs", kind: "message", T: GetUserAccessibleResourcesResponse_FederatedGraph, repeated: true },
-    { no: 3, name: "subgraphs", kind: "message", T: GetUserAccessibleResourcesResponse_SubGraph, repeated: true },
+    { no: 2, name: "namespaces", kind: "message", T: GetUserAccessibleResourcesResponse_Namespace, repeated: true },
+    { no: 3, name: "federatedGraphs", kind: "message", T: GetUserAccessibleResourcesResponse_FederatedGraph, repeated: true },
+    { no: 4, name: "subgraphs", kind: "message", T: GetUserAccessibleResourcesResponse_SubGraph, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetUserAccessibleResourcesResponse {
@@ -14583,6 +14589,49 @@ export class GetUserAccessibleResourcesResponse extends Message<GetUserAccessibl
 
   static equals(a: GetUserAccessibleResourcesResponse | PlainMessage<GetUserAccessibleResourcesResponse> | undefined, b: GetUserAccessibleResourcesResponse | PlainMessage<GetUserAccessibleResourcesResponse> | undefined): boolean {
     return proto3.util.equals(GetUserAccessibleResourcesResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetUserAccessibleResourcesResponse.Namespace
+ */
+export class GetUserAccessibleResourcesResponse_Namespace extends Message<GetUserAccessibleResourcesResponse_Namespace> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  constructor(data?: PartialMessage<GetUserAccessibleResourcesResponse_Namespace>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetUserAccessibleResourcesResponse.Namespace";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetUserAccessibleResourcesResponse_Namespace {
+    return new GetUserAccessibleResourcesResponse_Namespace().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetUserAccessibleResourcesResponse_Namespace {
+    return new GetUserAccessibleResourcesResponse_Namespace().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetUserAccessibleResourcesResponse_Namespace {
+    return new GetUserAccessibleResourcesResponse_Namespace().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetUserAccessibleResourcesResponse_Namespace | PlainMessage<GetUserAccessibleResourcesResponse_Namespace> | undefined, b: GetUserAccessibleResourcesResponse_Namespace | PlainMessage<GetUserAccessibleResourcesResponse_Namespace> | undefined): boolean {
+    return proto3.util.equals(GetUserAccessibleResourcesResponse_Namespace, a, b);
   }
 }
 

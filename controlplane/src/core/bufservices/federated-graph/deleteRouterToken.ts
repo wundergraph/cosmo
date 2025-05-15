@@ -42,6 +42,17 @@ export function deleteRouterToken(
       };
     }
 
+    // check if the user is authorized to perform the action
+    await opts.authorizer.authorize({
+      db: opts.db,
+      graph: {
+        targetId: federatedGraph.targetId,
+        targetType: 'federatedGraph',
+      },
+      headers: ctx.requestHeader,
+      authContext,
+    });
+
     const currToken = await fedGraphRepo.getRouterToken({
       federatedGraphId: federatedGraph.id,
       organizationId: authContext.organizationId,

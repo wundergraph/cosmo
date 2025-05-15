@@ -80,6 +80,7 @@ import {
 } from '../util.js';
 import { unsuccessfulBaseCompositionError } from '../errors/errors.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
+import { RBACEvaluator } from '../services/RBACEvaluator.js';
 import { ContractRepository } from './ContractRepository.js';
 import { FeatureFlagRepository, SubgraphsToCompose } from './FeatureFlagRepository.js';
 import { GraphCompositionRepository } from './GraphCompositionRepository.js';
@@ -463,6 +464,21 @@ export class FederatedGraphRepository {
 
     if (opts.supportsFederation !== undefined) {
       conditions.push(eq(schema.federatedGraphs.supportsFederation, opts.supportsFederation));
+    }
+
+    if (opts.rbac && !opts.rbac.isOrganizationAdminOrDeveloper) {
+      const graphAdmin = opts.rbac.ruleFor('graph-admin');
+      const graphViewer = opts.rbac.ruleFor('graph-viewer');
+      if (!graphAdmin && !graphViewer) {
+        // The actor doesn't have admin or viewer access to any federated graph
+        return [];
+      }
+
+      if (!((graphAdmin && graphAdmin.resources.length === 0) || (graphViewer && graphViewer.resources.length === 0))) {
+        // Only limit the federated graphs the actor have access to when it hasn't been given access to all resources
+        const resources = [...new Set([...(graphAdmin?.resources ?? []), ...(graphViewer?.resources ?? [])])];
+        conditions.push(inArray(schema.targets.id, resources));
+      }
     }
 
     const targetsQuery = this.db
