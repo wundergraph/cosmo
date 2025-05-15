@@ -16,6 +16,8 @@ status: Accepted
 
 This ADR describes an overhaul of the current module system in the router. The new module system is designed to be more flexible and native to GraphQL. It allows developers to hook into the router lifecycle as well as outgoing and incoming requests to subgraphs. The goal is to provide a clear API for developers to implement custom logic without having to understand the internal workings of the router or advanced Go programming concepts.
 
+The new module system must be used to implement existing router features in a modular way. Only in that way, users can swap the implementation e.g. for metrics or tracing backends.
+
 ## Decision
 
 A developer can implement a custom module by creating a struct that implements one or more of the following interfaces:
