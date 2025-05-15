@@ -180,6 +180,7 @@ func (rs *RouterSupervisor) Start() error {
 func (rs *RouterSupervisor) Stop() {
 	rs.logger.Info("Stopping Router")
 
+	// true == kill
 	rs.shutdownChan <- true
 }
 
@@ -187,5 +188,6 @@ func (rs *RouterSupervisor) Stop() {
 func (rs *RouterSupervisor) Reload() {
 	rs.logger.Info("Reloading Router")
 
+	// false == don't kill
 	rs.shutdownChan <- false
 }
