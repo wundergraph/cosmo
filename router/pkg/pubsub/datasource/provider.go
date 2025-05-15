@@ -13,7 +13,7 @@ type ProvidersAndDataSourcesBuilder func(ctx context.Context, in *nodev1.DataSou
 
 type ArgumentTemplateCallback func(tpl string) (string, error)
 
-// PubSubProvider is the interface that the single PubSub provider must implement.
+// PubSubProvider is the interface that the PubSub provider must implement
 type PubSubProvider interface {
 	// ID Get the provider ID as specified in the configuration
 	ID() string
@@ -27,6 +27,7 @@ type EngineEventConfiguration interface {
 	GetEngineEventConfiguration() *nodev1.EngineEventConfiguration
 }
 
+// PubSubProviderBuilder is the interface that the provider builder must implement.
 type PubSubProviderBuilder[A any] interface {
 	// TypeID Get the provider type id (e.g. "kafka", "nats")
 	TypeID() string
