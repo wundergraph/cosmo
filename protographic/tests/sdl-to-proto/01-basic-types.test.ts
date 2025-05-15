@@ -389,4 +389,83 @@ describe('SDL to Proto - Basic Types', () => {
       }"
     `);
   });
+
+  test('should handle nested list types correctly', () => {
+    const sdl = `
+      type Matrix {
+        values: [[Int!]!]!
+        labels: [String!]!
+      }
+      
+      type Query {
+        getMatrix: Matrix
+        processMatrix(matrix: [[Float!]!]!): [[Int!]!]!
+        transformData(points: [[Point!]]): [String]
+      }
+      
+      type Point {
+        x: Float!
+        y: Float!
+      }
+    `;
+
+    const { proto: protoText } = compileGraphQLToProto(sdl);
+
+    // Validate Proto definition
+    expectValidProto(protoText);
+    
+    // Full snapshot to ensure overall structure is correct
+    expect(protoText).toMatchInlineSnapshot(`
+      "syntax = "proto3";
+      package service.v1;
+
+      option go_package = "cosmo/pkg/proto/service.v1;servicev1";
+
+      service DefaultService {
+        rpc QueryGetMatrix(QueryGetMatrixRequest) returns (QueryGetMatrixResponse) {}
+        rpc QueryProcessMatrix(QueryProcessMatrixRequest) returns (QueryProcessMatrixResponse) {}
+        rpc QueryTransformData(QueryTransformDataRequest) returns (QueryTransformDataResponse) {}
+      }
+
+      message FloatList {
+        repeated double result = 1;
+      }
+
+      message IntList {
+        repeated int32 result = 1;
+      }
+
+      message PointList {
+        repeated Point result = 1;
+      }
+
+      message QueryGetMatrixRequest {
+      }
+      message QueryGetMatrixResponse {
+          Matrix get_matrix = 1;
+      }
+      message QueryProcessMatrixRequest {
+          repeated FloatList matrix = 1;
+      }
+      message QueryProcessMatrixResponse {
+          repeated IntList process_matrix = 1;
+      }
+      message QueryTransformDataRequest {
+          repeated PointList points = 1;
+      }
+      message QueryTransformDataResponse {
+          repeated string transform_data = 1;
+      }
+
+      message Matrix {
+        repeated IntList values = 1;
+        repeated string labels = 2;
+      }
+
+      message Point {
+        double x = 1;
+        double y = 2;
+      }"
+    `);
+  });
 });
