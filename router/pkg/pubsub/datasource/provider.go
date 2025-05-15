@@ -23,6 +23,10 @@ type PubSubProvider interface {
 	Shutdown(ctx context.Context) error
 }
 
+type EngineEventConfiguration interface {
+	GetEngineEventConfiguration() *nodev1.EngineEventConfiguration
+}
+
 type PubSubProviderBuilder[A any] interface {
 	// TypeID Get the provider type id (e.g. "kafka", "nats")
 	TypeID() string

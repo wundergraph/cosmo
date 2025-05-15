@@ -30,7 +30,3 @@ type PubSubDataSource interface {
 	// TransformEventData allows the data source to transform the event data using the extractFn
 	TransformEventData(extractFn ArgumentTemplateCallback) error
 }
-
-type EngineEventConfiguration interface {
-	GetEngineEventConfiguration() *nodev1.EngineEventConfiguration
-}
