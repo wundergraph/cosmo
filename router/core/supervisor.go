@@ -65,10 +65,7 @@ func (rs *RouterSupervisor) createRouter() error {
 	// Don't use the parent context that is canceled by the signal handler
 	routerCtx, routerCancel := context.WithCancel(context.Background())
 
-	router, err := newRouter(routerCtx, RouterCreateParams{
-		Config: rs.resources.Config,
-		Logger: rs.resources.Logger,
-	})
+	router, err := newRouter(routerCtx, *rs.resources)
 	if err != nil {
 		routerCancel()
 		return fmt.Errorf("failed to create router: %w", err)
