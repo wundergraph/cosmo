@@ -275,6 +275,7 @@ type Config struct {
 	ModifySubgraphErrorPropagation     func(subgraphErrorPropagation *config.SubgraphErrorPropagationConfiguration)
 	ModifyWebsocketConfiguration       func(websocketConfiguration *config.WebSocketConfiguration)
 	ModifyCDNConfig                    func(cdnConfig *config.CDNConfiguration)
+	DemoMode                           bool
 	KafkaSeeds                         []string
 	DisableWebSockets                  bool
 	DisableParentBasedSampler          bool
@@ -794,6 +795,10 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 
 	if testConfig.ModifyCDNConfig != nil {
 		testConfig.ModifyCDNConfig(&cfg.CDN)
+	}
+
+	if testConfig.DemoMode {
+		cfg.DemoMode = true
 	}
 
 	graphApiToken, err := generateJwtToken()
@@ -1342,11 +1347,11 @@ type TestResponse struct {
 func (e *Environment) WaitForServer(ctx context.Context, url string, timeoutMs int, maxAttempts int) error {
 	for {
 		if maxAttempts == 0 {
-			return errors.New("timed out waiting for server to be ready")
+			return errors.New("max attempts reached, timed out waiting for server to be ready")
 		}
 		select {
 		case <-ctx.Done():
-			return errors.New("timed out waiting for router to be ready")
+			return errors.New("context timed out waiting for router to be ready")
 		default:
 			reqCtx, cancelFn := context.WithTimeout(context.Background(), time.Second)
 			req, err := http.NewRequestWithContext(reqCtx, "GET", url, nil)
