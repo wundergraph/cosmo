@@ -52,10 +52,6 @@ func (m *mockConnectionMetricStore) MeasureDialDuration(ctx context.Context, dur
 	m.dialHosts = append(m.dialHosts, attrs...)
 }
 
-func (m *mockConnectionMetricStore) MeasureConnectionRetries(ctx context.Context, attrs ...attribute.KeyValue) {
-	m.retryHosts = append(m.retryHosts, attrs...)
-}
-
 func (m *mockConnectionMetricStore) MeasureTotalConnectionDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
 	m.totalDurations = append(m.totalDurations, duration)
 	m.totalHosts = append(m.totalHosts, attrs...)

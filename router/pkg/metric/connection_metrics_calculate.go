@@ -16,7 +16,7 @@ func CalculateConnectionMetrics(ctx context.Context, logger *zap.Logger, store C
 
 	// We calculate the rates separately per retry
 	// if in case of non retries we have 1 entry always
-	for i, trace := range fromTrace.ClientTraces {
+	for _, trace := range fromTrace.ClientTraces {
 		totalDuration := 0.0
 		host := ""
 
@@ -65,11 +65,6 @@ func CalculateConnectionMetrics(ctx context.Context, logger *zap.Logger, store C
 				totalDuration += dialSeconds
 				store.MeasureDialDuration(ctx, dialSeconds, rotel.WgHost.String(host))
 			}
-		}
-
-		// If it's the second index (index 1) onwards we know that we have a retry
-		if i >= 1 {
-			store.MeasureConnectionRetries(ctx, rotel.WgHost.String(host))
 		}
 
 		// In case of no dials, we dont record 0 which will be a false positive

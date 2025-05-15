@@ -90,10 +90,6 @@ func (m *promConnectionMetrics) MeasureConnections(ctx context.Context, count in
 	m.instruments.connectionTotal.Add(ctx, count, opts...)
 }
 
-func (m *promConnectionMetrics) MeasureConnectionRetries(ctx context.Context, count int64, opts ...otelmetric.AddOption) {
-	m.instruments.connectionRetriesTotal.Add(ctx, count, opts...)
-}
-
 func (m *promConnectionMetrics) Flush(ctx context.Context) error {
 	return nil
 }

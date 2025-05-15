@@ -19,7 +19,6 @@ type ConnectionMetricProvider interface {
 	MeasureTotalConnectionDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
 	MeasureConnectionAcquireDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
 	MeasureConnections(ctx context.Context, count int64, opts ...otelmetric.AddOption)
-	MeasureConnectionRetries(ctx context.Context, count int64, opts ...otelmetric.AddOption)
 	Flush(ctx context.Context) error
 }
 
@@ -31,7 +30,6 @@ type ConnectionMetricStore interface {
 	MeasureTotalConnectionDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
 	MeasureConnections(ctx context.Context, reused bool, attrs ...attribute.KeyValue)
 	MeasureConnectionAcquireDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
-	MeasureConnectionRetries(ctx context.Context, attrs ...attribute.KeyValue)
 }
 
 type ConnectionMetrics struct {
@@ -147,17 +145,5 @@ func (c *ConnectionMetrics) MeasureConnectionAcquireDuration(ctx context.Context
 	}
 	if c.promConnectionMetrics != nil {
 		c.promConnectionMetrics.MeasureConnectionAcquireDuration(ctx, duration, opts)
-	}
-}
-
-func (c *ConnectionMetrics) MeasureConnectionRetries(ctx context.Context, attrs ...attribute.KeyValue) {
-	copied := append([]attribute.KeyValue{}, c.baseAttributes...)
-	opts := otelmetric.WithAttributes(append(copied, attrs...)...)
-
-	if c.otlpConnectionMetrics != nil {
-		c.otlpConnectionMetrics.MeasureConnectionRetries(ctx, 1, opts)
-	}
-	if c.promConnectionMetrics != nil {
-		c.promConnectionMetrics.MeasureConnectionRetries(ctx, 1, opts)
 	}
 }

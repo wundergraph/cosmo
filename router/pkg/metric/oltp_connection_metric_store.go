@@ -90,10 +90,6 @@ func (h *otlpConnectionMetrics) MeasureConnections(ctx context.Context, count in
 	h.instruments.connectionTotal.Add(ctx, count, opts...)
 }
 
-func (h *otlpConnectionMetrics) MeasureConnectionRetries(ctx context.Context, count int64, opts ...otelmetric.AddOption) {
-	h.instruments.connectionRetriesTotal.Add(ctx, count, opts...)
-}
-
 func (h *otlpConnectionMetrics) Flush(ctx context.Context) error {
 	return h.meterProvider.ForceFlush(ctx)
 }

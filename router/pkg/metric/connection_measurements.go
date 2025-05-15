@@ -7,9 +7,8 @@ import (
 
 // Connection metric constants
 const (
-	connectionTotal        = "router.connection.total"
-	connectionRetriesTotal = "router.connection.retries_total"
-	connectionsActive      = "router.connection.active"
+	connectionTotal   = "router.connection.total"
+	connectionsActive = "router.connection.active"
 
 	dnsDuration               = "router.connection.dns_duration"
 	dialDuration              = "router.connection.dial_duration"
@@ -19,16 +18,10 @@ const (
 )
 
 var (
-	// Counter options
 	connectionTotalOptions = []otelmetric.Int64CounterOption{
 		otelmetric.WithDescription("Total number of connections with reused attribute"),
 	}
 
-	connectionRetriesTotalOptions = []otelmetric.Int64CounterOption{
-		otelmetric.WithDescription("Total number of connection retries"),
-	}
-
-	// Histogram options
 	dnsDurationOptions = []otelmetric.Float64HistogramOption{
 		otelmetric.WithUnit("s"),
 		otelmetric.WithDescription("DNS resolution duration"),
@@ -60,8 +53,7 @@ var (
 )
 
 type connectionInstruments struct {
-	connectionTotal        otelmetric.Int64Counter
-	connectionRetriesTotal otelmetric.Int64Counter
+	connectionTotal otelmetric.Int64Counter
 
 	dnsDuration               otelmetric.Float64Histogram
 	dialDuration              otelmetric.Float64Histogram
@@ -73,7 +65,6 @@ type connectionInstruments struct {
 }
 
 func newConnectionInstruments(meter otelmetric.Meter) (*connectionInstruments, error) {
-	// Initialize counters
 	connectionTotalCounter, err := meter.Int64Counter(
 		connectionTotal,
 		connectionTotalOptions...,
@@ -82,15 +73,6 @@ func newConnectionInstruments(meter otelmetric.Meter) (*connectionInstruments, e
 		return nil, fmt.Errorf("failed to create connection total counter: %w", err)
 	}
 
-	connectionRetriesTotalCounter, err := meter.Int64Counter(
-		connectionRetriesTotal,
-		connectionRetriesTotalOptions...,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create connection retries total counter: %w", err)
-	}
-
-	// Initialize histograms
 	dnsDurationHistogram, err := meter.Float64Histogram(
 		dnsDuration,
 		dnsDurationOptions...,
@@ -141,7 +123,6 @@ func newConnectionInstruments(meter otelmetric.Meter) (*connectionInstruments, e
 
 	return &connectionInstruments{
 		connectionTotal:           connectionTotalCounter,
-		connectionRetriesTotal:    connectionRetriesTotalCounter,
 		dnsDuration:               dnsDurationHistogram,
 		dialDuration:              dialDurationHistogram,
 		tlsHandshakeDuration:      tlsHandshakeDurationHistogram,
