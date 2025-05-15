@@ -2,9 +2,12 @@ package nats
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
+	"time"
 
+	"github.com/nats-io/nats.go"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
@@ -55,6 +58,50 @@ func (p *PubSubProviderBuilder) Providers(usedProviders []string) (map[string]Ad
 	}
 
 	return adapters, pubSubProviders, nil
+}
+
+func buildNatsOptions(eventSource config.NatsEventSource, logger *zap.Logger) ([]nats.Option, error) {
+	opts := []nats.Option{
+		nats.Name(fmt.Sprintf("cosmo.router.edfs.nats.%s", eventSource.ID)),
+		nats.ReconnectJitter(500*time.Millisecond, 2*time.Second),
+		nats.ClosedHandler(func(conn *nats.Conn) {
+			logger.Info("NATS connection closed", zap.String("provider_id", eventSource.ID), zap.Error(conn.LastError()))
+		}),
+		nats.ConnectHandler(func(nc *nats.Conn) {
+			logger.Info("NATS connection established", zap.String("provider_id", eventSource.ID), zap.String("url", nc.ConnectedUrlRedacted()))
+		}),
+		nats.DisconnectErrHandler(func(nc *nats.Conn, err error) {
+			if err != nil {
+				logger.Error("NATS disconnected; will attempt to reconnect", zap.Error(err), zap.String("provider_id", eventSource.ID))
+			} else {
+				logger.Info("NATS disconnected", zap.String("provider_id", eventSource.ID))
+			}
+		}),
+		nats.ErrorHandler(func(conn *nats.Conn, subscription *nats.Subscription, err error) {
+			if errors.Is(err, nats.ErrSlowConsumer) {
+				logger.Warn(
+					"NATS slow consumer detected. Events are being dropped. Please consider increasing the buffer size or reducing the number of messages being sent.",
+					zap.Error(err),
+					zap.String("provider_id", eventSource.ID),
+				)
+			} else {
+				logger.Error("NATS error", zap.Error(err))
+			}
+		}),
+		nats.ReconnectHandler(func(conn *nats.Conn) {
+			logger.Info("NATS reconnected", zap.String("provider_id", eventSource.ID), zap.String("url", conn.ConnectedUrlRedacted()))
+		}),
+	}
+
+	if eventSource.Authentication != nil {
+		if eventSource.Authentication.Token != nil {
+			opts = append(opts, nats.Token(*eventSource.Authentication.Token))
+		} else if eventSource.Authentication.UserInfo.Username != nil && eventSource.Authentication.UserInfo.Password != nil {
+			opts = append(opts, nats.UserInfo(*eventSource.Authentication.UserInfo.Username, *eventSource.Authentication.UserInfo.Password))
+		}
+	}
+
+	return opts, nil
 }
 
 func buildProvider(ctx context.Context, provider config.NatsEventSource, logger *zap.Logger, hostName string, routerListenAddr string) (AdapterInterface, datasource.PubSubProvider, error) {

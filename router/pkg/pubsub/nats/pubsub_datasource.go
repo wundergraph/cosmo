@@ -3,6 +3,7 @@ package nats
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
@@ -125,4 +126,33 @@ type PublishEventConfiguration struct {
 
 func (s *PublishEventConfiguration) MarshalJSONTemplate() string {
 	return fmt.Sprintf(`{"subject":"%s", "data": %s, "providerId":"%s"}`, s.Subject, s.Data, s.ProviderID)
+}
+
+func transformEventConfig(cfg *nodev1.NatsEventConfiguration, fn datasource.ArgumentTemplateCallback) (*nodev1.NatsEventConfiguration, error) {
+	switch v := cfg.GetEngineEventConfiguration().GetType(); v {
+	case nodev1.EventType_PUBLISH, nodev1.EventType_REQUEST:
+		extractedSubject, err := fn(cfg.GetSubjects()[0])
+		if err != nil {
+			return cfg, fmt.Errorf("unable to parse subject with id %s", cfg.GetSubjects()[0])
+		}
+		if !isValidNatsSubject(extractedSubject) {
+			return cfg, fmt.Errorf("invalid subject: %s", extractedSubject)
+		}
+		cfg.Subjects = []string{extractedSubject}
+	case nodev1.EventType_SUBSCRIBE:
+		extractedSubjects := make([]string, 0, len(cfg.Subjects))
+		for _, rawSubject := range cfg.Subjects {
+			extractedSubject, err := fn(rawSubject)
+			if err != nil {
+				return cfg, nil
+			}
+			if !isValidNatsSubject(extractedSubject) {
+				return cfg, fmt.Errorf("invalid subject: %s", extractedSubject)
+			}
+			extractedSubjects = append(extractedSubjects, extractedSubject)
+		}
+		slices.Sort(extractedSubjects)
+		cfg.Subjects = extractedSubjects
+	}
+	return cfg, nil
 }
