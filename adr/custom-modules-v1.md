@@ -644,18 +644,12 @@ func (m *ModuleB) OnRouterRequest(req *core.RouterRequest, err error) error {
 # Module Registration
 
 Modules are registered in the `main.go` file of the router application. The router will load the modules at startup and call the provision method to initialize them.
-The order in which modules are registered determines the order in which they are executed. The first argument of `core.RegisterModule` accepts the module struct, and the second argument is a variadic list of options that can be passed to the module.
+The order in which modules are registered determines the order in which they are executed. Modules are attached to a module registry. This registry needs to be set in the router before starting it.
+In the example below, we use a singleton of the module registry to register the modules. For testing purposes, we will provide a way to create a new module registry and set it in the router. This allows for testing modules in isolation without affecting the global module registry.
 
 ```go
 func main() {
-
-	// Create a new module registry, can be easily constructed for testing purposes
-	// We avoid global variables and state. The registration order is significant.
-	registry := core.NewModuleRegistry()
-	registry.RegisterModule(&MyModule{}, core.WithXyz("abc"))
-
-	// Set the module registry to be used by the router
-    core.SetModuleRegistry(registry)
+	core.RegisterModule(&MyModule{}, core.WithXyz("abc"))
 
     // Start the router
     routercmd.Main()
