@@ -73,7 +73,7 @@ export function createAPIKey(
       return {
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,
-          detail: 'Group not found',
+          details: 'Group not found',
         },
         apiKey: '',
       };

@@ -54,7 +54,7 @@ export function deleteOrganizationGroup(
         return {
           response: {
             code: EnumStatusCode.ERR_NOT_FOUND,
-            detail: 'Group not found',
+            details: 'Group not found',
           },
         };
       }
@@ -63,7 +63,7 @@ export function deleteOrganizationGroup(
         return {
           response: {
             code: EnumStatusCode.ERR,
-            detail: 'Builtin groups cannot be deleted.',
+            details: 'Builtin groups cannot be deleted.',
           },
         };
       }
@@ -80,7 +80,7 @@ export function deleteOrganizationGroup(
           return {
             response: {
               code: EnumStatusCode.ERR,
-              detail: 'No group to move existing members to was provided',
+              details: 'No group to move existing members to was provided',
             },
           };
         }

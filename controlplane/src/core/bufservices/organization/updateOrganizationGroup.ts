@@ -58,7 +58,7 @@ export function updateOrganizationGroup(
       return {
         response: {
           code: EnumStatusCode.ERR,
-          detail: 'Builtin groups cannot be updated.',
+          details: 'Builtin groups cannot be updated.',
         },
       };
     }

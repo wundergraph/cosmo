@@ -93,4 +93,37 @@ describe('API Keys', (ctx) => {
 
     await server.close();
   });
+
+  test('Should be able to update API key group', async (testContext) => {
+    const { client, server, users } = await SetupTest({ dbname, enableMultiUsers: true });
+
+    const orgGroups = await client.getOrganizationGroups({});
+    const adminGroup = orgGroups.groups.find((g) => g.name === 'admin')!;
+    const developerGroup = orgGroups.groups.find((g) => g.name === 'developer')!;
+
+    const apiKeyName = uid();
+    const createApiKeyResponse = await client.createAPIKey({
+      name: apiKeyName,
+      expires: ExpiresAt.NEVER,
+      groupId: adminGroup.groupId,
+    });
+
+    expect(createApiKeyResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    const updateApiKeyResponse = await client.updateAPIKey({
+      name: apiKeyName,
+      groupId: developerGroup.groupId,
+    });
+
+    expect(updateApiKeyResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    const apiKeysResponse = await client.getAPIKeys({});
+    const apiKey = apiKeysResponse.apiKeys?.find((k) => k.name === apiKeyName);
+
+    expect(apiKeysResponse.response?.code).toBe(EnumStatusCode.OK);
+    expect(apiKey?.group).not.toBeUndefined();
+    expect(apiKey?.group?.name).toBe('developer');
+
+    await server.close();
+  });
 });
