@@ -7,7 +7,7 @@ import { access, mkdir, rename, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { BaseCommandOptions } from '../../../core/types/types.js';
-import { goMod, mainGo, readme, schema } from '../templates/go-plugin.js';
+import { goMod, mainGo, mainGoTest, readme, schema } from '../templates/go-plugin.js';
 import { compileGraphQLToMapping, compileGraphQLToProto } from '@wundergraph/protographic';
 
 export default (opts: BaseCommandOptions) => {
@@ -70,6 +70,7 @@ export default (opts: BaseCommandOptions) => {
       await writeFile(resolve(generatedDir, 'service.proto.lock.json'), JSON.stringify(proto.lockData, null, 2));
 
       await writeFile(resolve(srcDir, 'main.go'), pupa(mainGo, { serviceName }));
+      await writeFile(resolve(srcDir, 'main_test.go'), pupa(mainGoTest, { serviceName }));
 
       // go mod init
       await writeFile(resolve(tempDir, 'go.mod'), pupa(goMod, { modulePath: goModulePath }));
