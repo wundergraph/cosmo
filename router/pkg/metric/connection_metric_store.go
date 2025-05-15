@@ -42,14 +42,20 @@ type ConnectionMetrics struct {
 	promConnectionMetrics ConnectionMetricProvider
 }
 
-func NewConnectionMetricStore(logger *zap.Logger, baseAttributes []attribute.KeyValue, otelProvider, promProvider *metric.MeterProvider, metricsConfig *Config) (*ConnectionMetrics, error) {
+func NewConnectionMetricStore(
+	logger *zap.Logger,
+	baseAttributes []attribute.KeyValue,
+	otelProvider, promProvider *metric.MeterProvider,
+	metricsConfig *Config,
+	connectionPoolStats *ConnectionPoolStats,
+) (*ConnectionMetrics, error) {
 	connMetrics := &ConnectionMetrics{
 		baseAttributes: baseAttributes,
 		logger:         logger,
 	}
 
 	if metricsConfig.OpenTelemetry.ConnectionStats {
-		otlpMetrics, err := newOtlpConnectionMetrics(logger, otelProvider)
+		otlpMetrics, err := newOtlpConnectionMetrics(logger, otelProvider, connectionPoolStats, baseAttributes)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create otlp connection metrics: %w", err)
 		}
@@ -57,7 +63,7 @@ func NewConnectionMetricStore(logger *zap.Logger, baseAttributes []attribute.Key
 	}
 
 	if metricsConfig.Prometheus.ConnectionStats {
-		promMetrics, err := newPromConnectionMetrics(logger, promProvider)
+		promMetrics, err := newPromConnectionMetrics(logger, promProvider, connectionPoolStats, baseAttributes)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create prometheus connection metrics: %w", err)
 		}
@@ -68,7 +74,9 @@ func NewConnectionMetricStore(logger *zap.Logger, baseAttributes []attribute.Key
 }
 
 func (c *ConnectionMetrics) MeasureDNSDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
-	opts := otelmetric.WithAttributes(append(c.baseAttributes, attrs...)...)
+	copied := append([]attribute.KeyValue{}, c.baseAttributes...)
+	opts := otelmetric.WithAttributes(append(copied, attrs...)...)
+
 	if c.otlpConnectionMetrics != nil {
 		c.otlpConnectionMetrics.MeasureDNSDuration(ctx, duration, opts)
 	}
@@ -78,7 +86,9 @@ func (c *ConnectionMetrics) MeasureDNSDuration(ctx context.Context, duration flo
 }
 
 func (c *ConnectionMetrics) MeasureDialDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
-	opts := otelmetric.WithAttributes(append(c.baseAttributes, attrs...)...)
+	copied := append([]attribute.KeyValue{}, c.baseAttributes...)
+	opts := otelmetric.WithAttributes(append(copied, attrs...)...)
+
 	if c.otlpConnectionMetrics != nil {
 		c.otlpConnectionMetrics.MeasureDialDuration(ctx, duration, opts)
 	}
@@ -88,7 +98,9 @@ func (c *ConnectionMetrics) MeasureDialDuration(ctx context.Context, duration fl
 }
 
 func (c *ConnectionMetrics) MeasureTLSHandshakeDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
-	opts := otelmetric.WithAttributes(append(c.baseAttributes, attrs...)...)
+	copied := append([]attribute.KeyValue{}, c.baseAttributes...)
+	opts := otelmetric.WithAttributes(append(copied, attrs...)...)
+
 	if c.otlpConnectionMetrics != nil {
 		c.otlpConnectionMetrics.MeasureTLSHandshakeDuration(ctx, duration, opts)
 	}
@@ -98,7 +110,9 @@ func (c *ConnectionMetrics) MeasureTLSHandshakeDuration(ctx context.Context, dur
 }
 
 func (c *ConnectionMetrics) MeasureTotalConnectionDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
-	opts := otelmetric.WithAttributes(append(c.baseAttributes, attrs...)...)
+	copied := append([]attribute.KeyValue{}, c.baseAttributes...)
+	opts := otelmetric.WithAttributes(append(copied, attrs...)...)
+
 	if c.otlpConnectionMetrics != nil {
 		c.otlpConnectionMetrics.MeasureTotalConnectionDuration(ctx, duration, opts)
 	}
@@ -110,7 +124,8 @@ func (c *ConnectionMetrics) MeasureTotalConnectionDuration(ctx context.Context, 
 func (c *ConnectionMetrics) MeasureConnections(ctx context.Context, reused bool, attrs ...attribute.KeyValue) {
 	// Add the reused attribute to the base attributes
 	reusedAttr := attribute.Bool("reused", reused)
-	allAttrs := append(c.baseAttributes, reusedAttr)
+	allAttrs := append([]attribute.KeyValue{}, c.baseAttributes...)
+	allAttrs = append(c.baseAttributes, reusedAttr)
 	allAttrs = append(allAttrs, attrs...)
 
 	opts := otelmetric.WithAttributes(allAttrs...)
@@ -124,7 +139,9 @@ func (c *ConnectionMetrics) MeasureConnections(ctx context.Context, reused bool,
 }
 
 func (c *ConnectionMetrics) MeasureConnectionAcquireDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
-	opts := otelmetric.WithAttributes(append(c.baseAttributes, attrs...)...)
+	copied := append([]attribute.KeyValue{}, c.baseAttributes...)
+	opts := otelmetric.WithAttributes(append(copied, attrs...)...)
+
 	if c.otlpConnectionMetrics != nil {
 		c.otlpConnectionMetrics.MeasureConnectionAcquireDuration(ctx, duration, opts)
 	}
@@ -134,7 +151,9 @@ func (c *ConnectionMetrics) MeasureConnectionAcquireDuration(ctx context.Context
 }
 
 func (c *ConnectionMetrics) MeasureConnectionRetries(ctx context.Context, attrs ...attribute.KeyValue) {
-	opts := otelmetric.WithAttributes(append(c.baseAttributes, attrs...)...)
+	copied := append([]attribute.KeyValue{}, c.baseAttributes...)
+	opts := otelmetric.WithAttributes(append(copied, attrs...)...)
+
 	if c.otlpConnectionMetrics != nil {
 		c.otlpConnectionMetrics.MeasureConnectionRetries(ctx, 1, opts)
 	}

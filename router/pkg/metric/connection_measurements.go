@@ -2,7 +2,6 @@ package metric
 
 import (
 	"fmt"
-
 	otelmetric "go.opentelemetry.io/otel/metric"
 )
 
@@ -18,6 +17,8 @@ const (
 	tlsHandshakeDuration      = "router.connection.tls_handshake_duration"
 	totalConnectionDuration   = "router.connection.total_duration"
 	connectionAcquireDuration = "router.connection.acquire_duration"
+
+	availableConnections = "router.connection.available_connections"
 )
 
 var (
@@ -55,6 +56,10 @@ var (
 		otelmetric.WithUnit("s"),
 		otelmetric.WithDescription("Connection acquire duration"),
 	}
+
+	connectionsAvailableOptions = []otelmetric.Int64ObservableGaugeOption{
+		otelmetric.WithDescription("Connections available"),
+	}
 )
 
 type connectionInstruments struct {
@@ -68,6 +73,8 @@ type connectionInstruments struct {
 	tlsHandshakeDuration      otelmetric.Float64Histogram
 	totalConnectionDuration   otelmetric.Float64Histogram
 	connectionAcquireDuration otelmetric.Float64Histogram
+
+	connectionsAvailable otelmetric.Int64ObservableGauge
 }
 
 func newConnectionInstruments(meter otelmetric.Meter) (*connectionInstruments, error) {
@@ -129,6 +136,14 @@ func newConnectionInstruments(meter otelmetric.Meter) (*connectionInstruments, e
 		return nil, fmt.Errorf("failed to create connection acquire duration histogram: %w", err)
 	}
 
+	connectionsAvailable, err := meter.Int64ObservableGauge(
+		availableConnections,
+		connectionsAvailableOptions...,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create connections available: %w", err)
+	}
+
 	return &connectionInstruments{
 		connectionTotal:           connectionTotalCounter,
 		connectionRetriesTotal:    connectionRetriesTotalCounter,
@@ -137,5 +152,6 @@ func newConnectionInstruments(meter otelmetric.Meter) (*connectionInstruments, e
 		tlsHandshakeDuration:      tlsHandshakeDurationHistogram,
 		totalConnectionDuration:   totalConnectionDurationHistogram,
 		connectionAcquireDuration: acquireDurationHistogram,
+		connectionsAvailable:      connectionsAvailable,
 	}, nil
 }

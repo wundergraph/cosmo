@@ -2,7 +2,10 @@ package metric
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/pkg/otel"
+	"go.opentelemetry.io/otel/attribute"
 
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -15,13 +18,16 @@ const (
 )
 
 type otlpConnectionMetrics struct {
-	instruments   *connectionInstruments
-	meterProvider *metric.MeterProvider
-	logger        *zap.Logger
+	instruments             *connectionInstruments
+	meterProvider           *metric.MeterProvider
+	logger                  *zap.Logger
+	meter                   otelmetric.Meter
+	instrumentRegistrations []otelmetric.Registration
 }
 
-func newOtlpConnectionMetrics(logger *zap.Logger, meterProvider *metric.MeterProvider) (*otlpConnectionMetrics, error) {
-	meter := meterProvider.Meter(cosmoRouterConnectionMeterName,
+func newOtlpConnectionMetrics(logger *zap.Logger, meterProvider *metric.MeterProvider, stats *ConnectionPoolStats, baseAttributes []attribute.KeyValue) (*otlpConnectionMetrics, error) {
+	meter := meterProvider.Meter(
+		cosmoRouterConnectionMeterName,
 		otelmetric.WithInstrumentationVersion(cosmoRouterConnectionMeterVersion),
 	)
 
@@ -30,41 +36,76 @@ func newOtlpConnectionMetrics(logger *zap.Logger, meterProvider *metric.MeterPro
 		return nil, fmt.Errorf("failed to create otlp connection instruments: %w", err)
 	}
 
-	return &otlpConnectionMetrics{
+	metrics := &otlpConnectionMetrics{
 		instruments:   instruments,
 		meterProvider: meterProvider,
 		logger:        logger,
-	}, nil
+		meter:         meter,
+	}
+
+	metrics.startInitMetrics(stats, baseAttributes)
+	return metrics, nil
 }
 
-func (m *otlpConnectionMetrics) MeasureDNSDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
-	m.instruments.dnsDuration.Record(ctx, duration, opts...)
+func (h *otlpConnectionMetrics) startInitMetrics(connStats *ConnectionPoolStats, attributes []attribute.KeyValue) error {
+	rc, err := h.meter.RegisterCallback(func(_ context.Context, o otelmetric.Observer) error {
+		stats := connStats.GetStats()
+		for host, connectionsAvailable := range stats {
+			o.ObserveInt64(h.instruments.connectionsAvailable, connectionsAvailable,
+				otelmetric.WithAttributes(attributes...),
+				otelmetric.WithAttributes(otel.WgHost.String(host)),
+			)
+		}
+		return nil
+	}, h.instruments.connectionsAvailable)
+	if err != nil {
+		return err
+	}
+
+	h.instrumentRegistrations = append(h.instrumentRegistrations, rc)
+	return nil
 }
 
-func (m *otlpConnectionMetrics) MeasureDialDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
-	m.instruments.dialDuration.Record(ctx, duration, opts...)
+func (h *otlpConnectionMetrics) MeasureDNSDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
+	h.instruments.dnsDuration.Record(ctx, duration, opts...)
 }
 
-func (m *otlpConnectionMetrics) MeasureTLSHandshakeDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
-	m.instruments.tlsHandshakeDuration.Record(ctx, duration, opts...)
+func (h *otlpConnectionMetrics) MeasureDialDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
+	h.instruments.dialDuration.Record(ctx, duration, opts...)
 }
 
-func (m *otlpConnectionMetrics) MeasureTotalConnectionDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
-	m.instruments.totalConnectionDuration.Record(ctx, duration, opts...)
+func (h *otlpConnectionMetrics) MeasureTLSHandshakeDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
+	h.instruments.tlsHandshakeDuration.Record(ctx, duration, opts...)
 }
 
-func (m *otlpConnectionMetrics) MeasureConnectionAcquireDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
-	m.instruments.connectionAcquireDuration.Record(ctx, duration, opts...)
+func (h *otlpConnectionMetrics) MeasureTotalConnectionDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
+	h.instruments.totalConnectionDuration.Record(ctx, duration, opts...)
 }
 
-func (m *otlpConnectionMetrics) MeasureConnections(ctx context.Context, count int64, opts ...otelmetric.AddOption) {
-	m.instruments.connectionTotal.Add(ctx, count, opts...)
+func (h *otlpConnectionMetrics) MeasureConnectionAcquireDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
+	h.instruments.connectionAcquireDuration.Record(ctx, duration, opts...)
 }
 
-func (m *otlpConnectionMetrics) MeasureConnectionRetries(ctx context.Context, count int64, opts ...otelmetric.AddOption) {
-	m.instruments.connectionRetriesTotal.Add(ctx, count, opts...)
+func (h *otlpConnectionMetrics) MeasureConnections(ctx context.Context, count int64, opts ...otelmetric.AddOption) {
+	h.instruments.connectionTotal.Add(ctx, count, opts...)
 }
 
-func (m *otlpConnectionMetrics) Flush(ctx context.Context) error {
-	return m.meterProvider.ForceFlush(ctx)
+func (h *otlpConnectionMetrics) MeasureConnectionRetries(ctx context.Context, count int64, opts ...otelmetric.AddOption) {
+	h.instruments.connectionRetriesTotal.Add(ctx, count, opts...)
+}
+
+func (h *otlpConnectionMetrics) Flush(ctx context.Context) error {
+	return h.meterProvider.ForceFlush(ctx)
+}
+
+func (h *otlpConnectionMetrics) Shutdown() error {
+	var err error
+
+	for _, reg := range h.instrumentRegistrations {
+		if regErr := reg.Unregister(); regErr != nil {
+			err = errors.Join(regErr)
+		}
+	}
+
+	return err
 }
