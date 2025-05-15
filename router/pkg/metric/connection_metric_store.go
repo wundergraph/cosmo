@@ -123,7 +123,7 @@ func (c *ConnectionMetrics) MeasureConnections(ctx context.Context, reused bool,
 	// Add the reused attribute to the base attributes
 	reusedAttr := attribute.Bool("reused", reused)
 	allAttrs := append([]attribute.KeyValue{}, c.baseAttributes...)
-	allAttrs = append(c.baseAttributes, reusedAttr)
+	allAttrs = append(allAttrs, reusedAttr)
 	allAttrs = append(allAttrs, attrs...)
 
 	opts := otelmetric.WithAttributes(allAttrs...)
