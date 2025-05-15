@@ -110,6 +110,9 @@ func Main() {
 		},
 	})
 
+	rootCtx, rootCancel := context.WithCancel(context.Background())
+	defer rootCancel()
+
 	// Handling shutdown signals
 	{
 		killChan := make(chan os.Signal, 1)
@@ -121,8 +124,12 @@ func Main() {
 		)
 
 		go func() {
-			<-killChan
-			rs.Stop()
+			select {
+			case <-rootCtx.Done():
+				return
+			case <-killChan:
+				rs.Stop()
+			}
 		}()
 	}
 
@@ -133,8 +140,14 @@ func Main() {
 		signal.Notify(reloadChan, syscall.SIGHUP)
 
 		go func() {
-			<-reloadChan
-			rs.Reload()
+			for {
+				select {
+				case <-rootCtx.Done():
+					return
+				case <-reloadChan:
+					rs.Reload()
+				}
+			}
 		}()
 	}
 
@@ -168,17 +181,16 @@ func Main() {
 			return
 		}
 
-		watcherCtx, watcherCancel := context.WithCancel(context.Background())
-		defer watcherCancel()
-
 		go func() {
 			// Sleep for startupDelay to prevent synchronized reloads across
 			// different instances of the router
 			time.Sleep(startupDelay)
 
-			if err := watchFunc(watcherCtx); err != nil {
-				if err != context.Canceled {
+			if err := watchFunc(rootCtx); err != nil {
+				if !errors.Is(err, context.Canceled) {
 					ll.Error("Error watching execution config", zap.Error(err))
+				} else {
+					ll.Debug("Watcher context cancelled, shutting down")
 				}
 			}
 		}()
