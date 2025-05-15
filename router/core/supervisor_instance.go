@@ -17,16 +17,13 @@ import (
 	"go.uber.org/zap"
 )
 
-// RouterCreateParams are all required for the router to start up
-type RouterCreateParams struct {
-	Config *config.Config
-	Logger *zap.Logger
-}
-
 // newRouter creates a new router instance.
 //
 // additionalOptions can be used to override default options or options provided in the config.
-func newRouter(ctx context.Context, params RouterCreateParams, additionalOptions ...Option) (*Router, error) {
+func newRouter(ctx context.Context, params RouterResources, additionalOptions ...Option) (*Router, error) {
+	cfg := params.Config
+	logger := params.Logger
+
 	// Automatically set GOMAXPROCS to avoid CPU throttling on containerized environments
 	_, err := maxprocs.Set(maxprocs.Logger(params.Logger.Sugar().Debugf))
 	if err != nil {
@@ -51,105 +48,22 @@ func newRouter(ctx context.Context, params RouterCreateParams, additionalOptions
 		}
 	}
 
-	cfg := params.Config
-	logger := params.Logger
+	options := optionsFromResources(logger, cfg)
+	options = append(options, additionalOptions...)
 
 	authenticators, err := setupAuthenticators(ctx, logger, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("could not setup authenticators: %w", err)
 	}
 
-	options := []Option{
-		WithListenerAddr(cfg.ListenAddr),
-		WithOverrideRoutingURL(cfg.OverrideRoutingURL),
-		WithOverrides(cfg.Overrides),
-		WithLogger(logger),
-		WithIntrospection(cfg.IntrospectionEnabled),
-		WithQueryPlans(cfg.QueryPlansEnabled),
-		WithPlayground(cfg.PlaygroundEnabled),
-		WithGraphApiToken(cfg.Graph.Token),
-		WithPersistedOperationsConfig(cfg.PersistedOperationsConfig),
-		WithAutomatedPersistedQueriesConfig(cfg.AutomaticPersistedQueries),
-		WithApolloCompatibilityFlagsConfig(cfg.ApolloCompatibilityFlags),
-		WithApolloRouterCompatibilityFlags(cfg.ApolloRouterCompatibilityFlags),
-		WithStorageProviders(cfg.StorageProviders),
-		WithGraphQLPath(cfg.GraphQLPath),
-		WithModulesConfig(cfg.Modules),
-		WithGracePeriod(cfg.GracePeriod),
-		WithPlaygroundConfig(cfg.PlaygroundConfig),
-		WithPlaygroundPath(cfg.PlaygroundPath),
-		WithHealthCheckPath(cfg.HealthCheckPath),
-		WithLivenessCheckPath(cfg.LivenessCheckPath),
-		WithGraphQLMetrics(&GraphQLMetricsConfig{
-			Enabled:           cfg.GraphqlMetrics.Enabled,
-			CollectorEndpoint: cfg.GraphqlMetrics.CollectorEndpoint,
-		}),
-		WithAnonymization(&IPAnonymizationConfig{
-			Enabled: cfg.Compliance.AnonymizeIP.Enabled,
-			Method:  IPAnonymizationMethod(cfg.Compliance.AnonymizeIP.Method),
-		}),
-		WithBatching(&BatchingConfig{
-			Enabled:               cfg.Batching.Enabled,
-			MaxConcurrentRoutines: cfg.Batching.MaxConcurrency,
-			MaxEntriesPerBatch:    cfg.Batching.MaxEntriesPerBatch,
-			OmitExtensions:        cfg.Batching.OmitExtensions,
-		}),
-		WithClusterName(cfg.Cluster.Name),
-		WithInstanceID(cfg.InstanceID),
-		WithReadinessCheckPath(cfg.ReadinessCheckPath),
-		WithHeaderRules(cfg.Headers),
-		WithRouterTrafficConfig(&cfg.TrafficShaping.Router),
-		WithFileUploadConfig(&cfg.FileUpload),
-		WithSubgraphTransportOptions(NewSubgraphTransportOptions(cfg.TrafficShaping)),
-		WithSubgraphRetryOptions(
-			cfg.TrafficShaping.All.BackoffJitterRetry.Enabled,
-			cfg.TrafficShaping.All.BackoffJitterRetry.MaxAttempts,
-			cfg.TrafficShaping.All.BackoffJitterRetry.MaxDuration,
-			cfg.TrafficShaping.All.BackoffJitterRetry.Interval,
-		),
-		WithCors(&cors.Config{
-			Enabled:          cfg.CORS.Enabled,
-			AllowOrigins:     cfg.CORS.AllowOrigins,
-			AllowMethods:     cfg.CORS.AllowMethods,
-			AllowCredentials: cfg.CORS.AllowCredentials,
-			AllowHeaders:     cfg.CORS.AllowHeaders,
-			MaxAge:           cfg.CORS.MaxAge,
-		}),
-		WithTLSConfig(&TlsConfig{
-			Enabled:  cfg.TLS.Server.Enabled,
-			CertFile: cfg.TLS.Server.CertFile,
-			KeyFile:  cfg.TLS.Server.KeyFile,
-			ClientAuth: &TlsClientAuthConfig{
-				CertFile: cfg.TLS.Server.ClientAuth.CertFile,
-				Required: cfg.TLS.Server.ClientAuth.Required,
-			},
-		}),
-		WithDevelopmentMode(cfg.DevelopmentMode),
-		WithTracing(TraceConfigFromTelemetry(&cfg.Telemetry)),
-		WithMetrics(MetricConfigFromTelemetry(&cfg.Telemetry)),
-		WithTelemetryAttributes(cfg.Telemetry.Attributes),
-		WithEngineExecutionConfig(cfg.EngineExecutionConfiguration),
-		WithCacheControlPolicy(cfg.CacheControl),
-		WithSecurityConfig(cfg.SecurityConfiguration),
-		WithAuthorizationConfig(&cfg.Authorization),
-		WithWebSocketConfiguration(&cfg.WebSocket),
-		WithSubgraphErrorPropagation(cfg.SubgraphErrorPropagation),
-		WithLocalhostFallbackInsideDocker(cfg.LocalhostFallbackInsideDocker),
-		WithCDN(cfg.CDN),
-		WithEvents(cfg.Events),
-		WithRateLimitConfig(&cfg.RateLimit),
-		WithClientHeader(cfg.ClientHeader),
-		WithCacheWarmupConfig(&cfg.CacheWarmup),
-		WithMCP(cfg.MCP),
-		WithDemoMode(cfg.DemoMode),
+	if len(authenticators) > 0 {
+		options = append(options, WithAccessController(NewAccessController(authenticators, cfg.Authorization.RequireAuthentication)))
 	}
 
 	// HTTP_PROXY, HTTPS_PROXY and NO_PROXY
 	if hasProxyConfigured() {
-		WithProxy(http.ProxyFromEnvironment)
+		options = append(options, WithProxy(http.ProxyFromEnvironment))
 	}
-
-	options = append(options, additionalOptions...)
 
 	if cfg.AccessLogs.Enabled {
 		c := &AccessLogsConfig{
@@ -231,11 +145,96 @@ func newRouter(ctx context.Context, params RouterCreateParams, additionalOptions
 		}))
 	}
 
-	if len(authenticators) > 0 {
-		options = append(options, WithAccessController(NewAccessController(authenticators, cfg.Authorization.RequireAuthentication)))
+	return NewRouter(options...)
+}
+
+func optionsFromResources(logger *zap.Logger, config *config.Config) []Option {
+	options := []Option{
+		WithListenerAddr(config.ListenAddr),
+		WithOverrideRoutingURL(config.OverrideRoutingURL),
+		WithOverrides(config.Overrides),
+		WithLogger(logger),
+		WithIntrospection(config.IntrospectionEnabled),
+		WithQueryPlans(config.QueryPlansEnabled),
+		WithPlayground(config.PlaygroundEnabled),
+		WithGraphApiToken(config.Graph.Token),
+		WithPersistedOperationsConfig(config.PersistedOperationsConfig),
+		WithAutomatedPersistedQueriesConfig(config.AutomaticPersistedQueries),
+		WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags),
+		WithApolloRouterCompatibilityFlags(config.ApolloRouterCompatibilityFlags),
+		WithStorageProviders(config.StorageProviders),
+		WithGraphQLPath(config.GraphQLPath),
+		WithModulesConfig(config.Modules),
+		WithGracePeriod(config.GracePeriod),
+		WithPlaygroundConfig(config.PlaygroundConfig),
+		WithPlaygroundPath(config.PlaygroundPath),
+		WithHealthCheckPath(config.HealthCheckPath),
+		WithLivenessCheckPath(config.LivenessCheckPath),
+		WithGraphQLMetrics(&GraphQLMetricsConfig{
+			Enabled:           config.GraphqlMetrics.Enabled,
+			CollectorEndpoint: config.GraphqlMetrics.CollectorEndpoint,
+		}),
+		WithAnonymization(&IPAnonymizationConfig{
+			Enabled: config.Compliance.AnonymizeIP.Enabled,
+			Method:  IPAnonymizationMethod(config.Compliance.AnonymizeIP.Method),
+		}),
+		WithBatching(&BatchingConfig{
+			Enabled:               config.Batching.Enabled,
+			MaxConcurrentRoutines: config.Batching.MaxConcurrency,
+			MaxEntriesPerBatch:    config.Batching.MaxEntriesPerBatch,
+			OmitExtensions:        config.Batching.OmitExtensions,
+		}),
+		WithClusterName(config.Cluster.Name),
+		WithInstanceID(config.InstanceID),
+		WithReadinessCheckPath(config.ReadinessCheckPath),
+		WithHeaderRules(config.Headers),
+		WithRouterTrafficConfig(&config.TrafficShaping.Router),
+		WithFileUploadConfig(&config.FileUpload),
+		WithSubgraphTransportOptions(NewSubgraphTransportOptions(config.TrafficShaping)),
+		WithSubgraphRetryOptions(
+			config.TrafficShaping.All.BackoffJitterRetry.Enabled,
+			config.TrafficShaping.All.BackoffJitterRetry.MaxAttempts,
+			config.TrafficShaping.All.BackoffJitterRetry.MaxDuration,
+			config.TrafficShaping.All.BackoffJitterRetry.Interval,
+		),
+		WithCors(&cors.Config{
+			Enabled:          config.CORS.Enabled,
+			AllowOrigins:     config.CORS.AllowOrigins,
+			AllowMethods:     config.CORS.AllowMethods,
+			AllowCredentials: config.CORS.AllowCredentials,
+			AllowHeaders:     config.CORS.AllowHeaders,
+			MaxAge:           config.CORS.MaxAge,
+		}),
+		WithTLSConfig(&TlsConfig{
+			Enabled:  config.TLS.Server.Enabled,
+			CertFile: config.TLS.Server.CertFile,
+			KeyFile:  config.TLS.Server.KeyFile,
+			ClientAuth: &TlsClientAuthConfig{
+				CertFile: config.TLS.Server.ClientAuth.CertFile,
+				Required: config.TLS.Server.ClientAuth.Required,
+			},
+		}),
+		WithDevelopmentMode(config.DevelopmentMode),
+		WithTracing(TraceConfigFromTelemetry(&config.Telemetry)),
+		WithMetrics(MetricConfigFromTelemetry(&config.Telemetry)),
+		WithTelemetryAttributes(config.Telemetry.Attributes),
+		WithEngineExecutionConfig(config.EngineExecutionConfiguration),
+		WithCacheControlPolicy(config.CacheControl),
+		WithSecurityConfig(config.SecurityConfiguration),
+		WithAuthorizationConfig(&config.Authorization),
+		WithWebSocketConfiguration(&config.WebSocket),
+		WithSubgraphErrorPropagation(config.SubgraphErrorPropagation),
+		WithLocalhostFallbackInsideDocker(config.LocalhostFallbackInsideDocker),
+		WithCDN(config.CDN),
+		WithEvents(config.Events),
+		WithRateLimitConfig(&config.RateLimit),
+		WithClientHeader(config.ClientHeader),
+		WithCacheWarmupConfig(&config.CacheWarmup),
+		WithMCP(config.MCP),
+		WithDemoMode(config.DemoMode),
 	}
 
-	return NewRouter(options...)
+	return options
 }
 
 func setupAuthenticators(ctx context.Context, logger *zap.Logger, cfg *config.Config) ([]authentication.Authenticator, error) {
