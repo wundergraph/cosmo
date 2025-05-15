@@ -7,18 +7,15 @@ import (
 
 // Connection metric constants
 const (
-	// Counters
 	connectionTotal        = "router.connection.total"
 	connectionRetriesTotal = "router.connection.retries_total"
+	connectionsActive      = "router.connection.active"
 
-	// Histograms
 	dnsDuration               = "router.connection.dns_duration"
 	dialDuration              = "router.connection.dial_duration"
 	tlsHandshakeDuration      = "router.connection.tls_handshake_duration"
 	totalConnectionDuration   = "router.connection.total_duration"
 	connectionAcquireDuration = "router.connection.acquire_duration"
-
-	availableConnections = "router.connection.available_connections"
 )
 
 var (
@@ -57,24 +54,22 @@ var (
 		otelmetric.WithDescription("Connection acquire duration"),
 	}
 
-	connectionsAvailableOptions = []otelmetric.Int64ObservableGaugeOption{
-		otelmetric.WithDescription("Connections available"),
+	connectionsActiveOptions = []otelmetric.Int64ObservableGaugeOption{
+		otelmetric.WithDescription("Connections active"),
 	}
 )
 
 type connectionInstruments struct {
-	// Counters
 	connectionTotal        otelmetric.Int64Counter
 	connectionRetriesTotal otelmetric.Int64Counter
 
-	// Histograms
 	dnsDuration               otelmetric.Float64Histogram
 	dialDuration              otelmetric.Float64Histogram
 	tlsHandshakeDuration      otelmetric.Float64Histogram
 	totalConnectionDuration   otelmetric.Float64Histogram
 	connectionAcquireDuration otelmetric.Float64Histogram
 
-	connectionsAvailable otelmetric.Int64ObservableGauge
+	connectionsActive otelmetric.Int64ObservableGauge
 }
 
 func newConnectionInstruments(meter otelmetric.Meter) (*connectionInstruments, error) {
@@ -136,9 +131,9 @@ func newConnectionInstruments(meter otelmetric.Meter) (*connectionInstruments, e
 		return nil, fmt.Errorf("failed to create connection acquire duration histogram: %w", err)
 	}
 
-	connectionsAvailable, err := meter.Int64ObservableGauge(
-		availableConnections,
-		connectionsAvailableOptions...,
+	connectionsActiveGauge, err := meter.Int64ObservableGauge(
+		connectionsActive,
+		connectionsActiveOptions...,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create connections available: %w", err)
@@ -152,6 +147,6 @@ func newConnectionInstruments(meter otelmetric.Meter) (*connectionInstruments, e
 		tlsHandshakeDuration:      tlsHandshakeDurationHistogram,
 		totalConnectionDuration:   totalConnectionDurationHistogram,
 		connectionAcquireDuration: acquireDurationHistogram,
-		connectionsAvailable:      connectionsAvailable,
+		connectionsActive:         connectionsActiveGauge,
 	}, nil
 }

@@ -50,14 +50,14 @@ func newOtlpConnectionMetrics(logger *zap.Logger, meterProvider *metric.MeterPro
 func (h *otlpConnectionMetrics) startInitMetrics(connStats *ConnectionPoolStats, attributes []attribute.KeyValue) error {
 	rc, err := h.meter.RegisterCallback(func(_ context.Context, o otelmetric.Observer) error {
 		stats := connStats.GetStats()
-		for host, connectionsAvailable := range stats {
-			o.ObserveInt64(h.instruments.connectionsAvailable, connectionsAvailable,
+		for host, activeConnections := range stats {
+			o.ObserveInt64(h.instruments.connectionsActive, activeConnections,
 				otelmetric.WithAttributes(attributes...),
 				otelmetric.WithAttributes(otel.WgHost.String(host)),
 			)
 		}
 		return nil
-	}, h.instruments.connectionsAvailable)
+	}, h.instruments.connectionsActive)
 	if err != nil {
 		return err
 	}
