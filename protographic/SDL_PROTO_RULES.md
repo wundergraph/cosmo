@@ -2,6 +2,8 @@
 
 This document outlines the rules and conventions used by Protographic when converting GraphQL Schema Definition Language (SDL) to Protocol Buffers.
 
+Rules should follow [Proto Best Practices](https://protobuf.dev/best-practices/dos-donts/).
+
 ## ✨ Features and Limitations
 
 <table>
