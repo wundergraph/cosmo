@@ -143,6 +143,17 @@ func TestErrorWhenConfigNotExists(t *testing.T) {
 	require.ErrorContains(t, err, "could not read custom config file ./fixtures/not_exists.yaml: open ./fixtures/not_exists.yaml: no such file or directory")
 }
 
+func TestConfigIsOptional(t *testing.T) {
+	t.Setenv("GRAPH_API_TOKEN", "XXX")
+
+	// DefaultConfigPath will not exist for this test, so we expect
+	// LoadConfig to load default values.
+	result, err := LoadConfig(DefaultConfigPath)
+
+	require.NoError(t, err)
+	require.True(t, result.DefaultLoaded)
+}
+
 func TestRegexDecoding(t *testing.T) {
 	t.Parallel()
 
@@ -187,15 +198,6 @@ telemetry:
 	require.Len(t, cfg.Config.Telemetry.Metrics.Prometheus.ExcludeMetricLabels, 1)
 	require.Equal(t, RegExArray{regexp.MustCompile("^go_.*"), regexp.MustCompile("^process_.*")}, cfg.Config.Telemetry.Metrics.Prometheus.ExcludeMetrics)
 	require.Equal(t, RegExArray{regexp.MustCompile("^instance")}, cfg.Config.Telemetry.Metrics.Prometheus.ExcludeMetricLabels)
-}
-
-func TestConfigIsOptional(t *testing.T) {
-	t.Setenv("GRAPH_API_TOKEN", "XXX")
-
-	result, err := LoadConfig("")
-
-	require.NoError(t, err)
-	require.True(t, result.DefaultLoaded)
 }
 
 func TestCustomGoDurationExtension(t *testing.T) {
