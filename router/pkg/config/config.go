@@ -1003,9 +1003,6 @@ type LoadResult struct {
 }
 
 func LoadConfig(configFilePath string) (*LoadResult, error) {
-	if configFilePath == "" {
-		configFilePath = DefaultConfigPath
-	}
 	cfg := &LoadResult{
 		Config:        Config{},
 		DefaultLoaded: false,

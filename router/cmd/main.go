@@ -69,8 +69,6 @@ func Main() {
 		configPath = os.Getenv("CONFIG_PATH")
 	}
 
-	// This is redundant with the check inside config.LoadConfig, but we need to have the path
-	// here as well to watch it.
 	if configPath == "" {
 		configPath = config.DefaultConfigPath
 	}
