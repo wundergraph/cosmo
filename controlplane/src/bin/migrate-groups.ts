@@ -52,14 +52,14 @@ try {
 
   // Initialize the database connection and load all the existing organizations
   const db = drizzle(queryConnection, { schema: { ...schema } });
-  await db.transaction(migrateGroups);
+  await migrateGroups(db);
 
   //
   await queryConnection.end({
     timeout: 1,
   });
 
-  console.log('Done');
+  console.log('Migration done');
 
   // eslint-disable-next-line unicorn/no-process-exit
   process.exit(0);
@@ -70,21 +70,48 @@ try {
 }
 
 async function migrateGroups(db: PostgresJsDatabase<typeof schema>) {
-  const organizations = await db.query.organizations.findMany({
-    columns: { id: true, slug: true },
-  });
+  // Doing migrations in chunks of 100, up to 1,000 this way we have a hard limit and the script doesn't loop forever.
+  // That means we'll migrate 100,000 organizations at most, if needed, we could increment this limit
+  let i = 0;
+  while (i < 1000) {
+    const organizations = await db.query.organizations.findMany({
+      columns: { id: true, slug: true },
+      orderBy: (orgs, { asc }) => [asc(orgs.createdAt)],
+      offset: i * 100,
+      limit: 100,
+    });
 
-  await Promise.all(
-    organizations.map(async ({ id: organizationId, slug: organizationSlug }) => {
-      await keycloakClient.seedRoles({ realm, organizationSlug });
-      await ensureOrganizationSubgroupsExistInDatabase({ db, organizationId, organizationSlug });
-      await updateAndLinkExistingOrganizationOidcMappers({ db, keycloakClient, organizationId, organizationSlug });
-      await assignOrganizationMembersToCorrespondingGroups({ db, organizationId });
-      await createGroupsForSubgraphMembers({ db, organizationId, organizationSlug });
+    if (organizations.length === 0) {
+      // We reached the end of the organizations table
+      break;
+    }
 
-      console.log(`- Done processing organization "${organizationSlug}"`);
-    }),
-  );
+    console.log(`Migrating from organization id ${organizations[0].id} to ${organizations.at(-1)?.id}`);
+
+    await db.transaction(async (tx) => {
+      for (const { id: organizationId, slug: organizationSlug } of organizations) {
+        console.log(`\tProcessing organization ${organizationId} - "${organizationSlug}`);
+        await keycloakClient.seedRoles({ realm, organizationSlug });
+        await ensureOrganizationSubgroupsExistInDatabase({ db: tx, organizationId, organizationSlug });
+        await updateAndLinkExistingOrganizationOidcMappers({
+          db: tx,
+          keycloakClient,
+          organizationId,
+          organizationSlug,
+        });
+        await assignOrganizationMembersToCorrespondingGroups({ db: tx, organizationId });
+
+        // TODO: The next step is not repeatable as it would create the groups every time
+        // await createGroupsForSubgraphMembers({ tx, organizationId, organizationSlug });
+
+        console.log(`\t\tDone processing organization ${organizationId} - "${organizationSlug}"`);
+      }
+    });
+
+    i++;
+    console.log('Done migrating chunk of organizations');
+    console.log();
+  }
 }
 
 async function ensureOrganizationSubgroupsExistInDatabase({
