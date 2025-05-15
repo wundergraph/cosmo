@@ -4,6 +4,14 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.79.4](https://github.com/wundergraph/cosmo/compare/wgc@0.79.3...wgc@0.79.4) (2025-05-14)
+
+### Bug Fixes
+
+* check if CLI is connected to Cosmo Cloud ([#1860](https://github.com/wundergraph/cosmo/issues/1860)) ([c4de91e](https://github.com/wundergraph/cosmo/commit/c4de91eda181bafe02215c933448e0bbdc56d1b5)) (@thisisnithin)
+* optimize identity call and track failure ([#1858](https://github.com/wundergraph/cosmo/issues/1858)) ([490438c](https://github.com/wundergraph/cosmo/commit/490438c610b1e17d9d78bc45ac7631a61f9f6c4b)) (@thisisnithin)
+* upgrade octokit, runc, esbuild to mitigate security issues ([#1859](https://github.com/wundergraph/cosmo/issues/1859)) ([8b6285d](https://github.com/wundergraph/cosmo/commit/8b6285df41ab8537ab751fbf59390723829793c4)) (@endigma)
+
 ## [0.79.3](https://github.com/wundergraph/cosmo/compare/wgc@0.79.2...wgc@0.79.3) (2025-05-14)
 
 ### Bug Fixes

@@ -1,7 +1,7 @@
 import os from 'node:os';
 import { PostHog } from 'posthog-node';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { config, getBaseHeaders } from './config.js';
+import { config, getBaseHeaders, getLoginDetails } from './config.js';
 import { CreateClient } from './client/client.js';
 
 // Environment variables to allow opting out of telemetry
@@ -23,6 +23,14 @@ const isCI = (): boolean => {
       process.env.GITHUB_ACTIONS ||
       process.env.BUILDKITE,
   );
+};
+
+/**
+ * Check if the CLI is talking to Cosmo Cloud or a self-hosted instance
+ */
+const isTalkingToCosmoCloud = (): boolean => {
+  const cloudUrl = 'https://cosmo-cp.wundergraph.com';
+  return config.baseURL.startsWith(cloudUrl);
 };
 
 /**
@@ -59,31 +67,25 @@ export const initTelemetry = () => {
   });
 };
 
-// Fallback to using headers if the API call fails
-const getFallbackIdentity = () => {
-  const headers = getBaseHeaders();
-  const headersRecord = Object.fromEntries(Object.entries(headers).map(([key, value]) => [key, value.toString()]));
-  const organizationSlug = headersRecord['cosmo-org-slug'] || 'anonymous';
-  return organizationSlug;
-};
-
 /**
  * Generate a consistent distinct ID
  * Uses the platform API to get the organization slug if available
  */
 const getIdentity = async (): Promise<string> => {
   try {
-    // If no API key is available, return anonymous
-    if (!config.apiKey) {
-      return 'anonymous';
+    // First try to get the identity from the config file
+    const loginDetails = getLoginDetails();
+    if (loginDetails?.organizationSlug) {
+      return loginDetails.organizationSlug;
     }
 
-    // If the API client is not initialized, return anonymous
+    // If not found, the user might be using an API key.
+    // Call the whoAmI API to get organization information
+
     if (!apiClient) {
       return 'anonymous';
     }
 
-    // Call the whoAmI API to get organization information
     const resp = await apiClient.platform.whoAmI(
       {},
       {
@@ -95,9 +97,9 @@ const getIdentity = async (): Promise<string> => {
       return resp.organizationSlug;
     }
 
-    return getFallbackIdentity();
+    return 'anonymous';
   } catch {
-    return getFallbackIdentity();
+    return 'anonymous';
   }
 };
 
@@ -130,6 +132,20 @@ export const capture = async (eventName: string, properties: Record<string, any>
 };
 
 /**
+ * Capture a command failure event with error details
+ */
+export const captureCommandFailure = async (command: string, error: Error | string) => {
+  const errorMessage = error instanceof Error ? error.message : error;
+  const errorStack = error instanceof Error ? error.stack : undefined;
+
+  await capture('command_failure', {
+    command,
+    error_message: errorMessage,
+    error_stack: errorStack,
+  });
+};
+
+/**
  * Get CLI metadata to include with all events
  */
 const getMetadata = (): Record<string, any> => {
@@ -141,6 +157,7 @@ const getMetadata = (): Record<string, any> => {
     platform: process.arch,
     machine_id: os.hostname(),
     is_ci: isCI(),
+    is_cosmo_cloud: isTalkingToCosmoCloud(),
   };
 };
 
