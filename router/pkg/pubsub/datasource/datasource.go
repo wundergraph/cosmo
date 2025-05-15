@@ -27,4 +27,6 @@ type PubSubDataSource interface {
 	ResolveDataSourceSubscription() (resolve.SubscriptionDataSource, error)
 	// ResolveDataSourceSubscriptionInput build the input that will be passed to the engine SubscriptionDataSource
 	ResolveDataSourceSubscriptionInput() (string, error)
+	// TransformEventData allows the data source to transform the event data using the extractFn
+	TransformEventData(extractFn ArgumentTemplateCallback) error
 }

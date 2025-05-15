@@ -4,28 +4,25 @@ import (
 	"context"
 
 	"github.com/jensneuse/abstractlogger"
-	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 )
 
-func NewFactory(executionContext context.Context, config config.EventsConfiguration, providers []PubSubProvider) *Factory {
+func NewFactory(executionContext context.Context, pubSubDataSource PubSubDataSource) *Factory {
 	return &Factory{
-		providers:        providers,
+		pubSubDataSource: pubSubDataSource,
 		executionContext: executionContext,
-		config:           config,
 	}
 }
 
 type Factory struct {
-	providers        []PubSubProvider
+	pubSubDataSource PubSubDataSource
 	executionContext context.Context
-	config           config.EventsConfiguration
 }
 
-func (f *Factory) Planner(_ abstractlogger.Logger) plan.DataSourcePlanner[[]PubSubProvider] {
+func (f *Factory) Planner(_ abstractlogger.Logger) plan.DataSourcePlanner[PubSubDataSource] {
 	return &Planner{
-		providers: f.providers,
+		pubSubDataSource: f.pubSubDataSource,
 	}
 }
 
@@ -33,6 +30,6 @@ func (f *Factory) Context() context.Context {
 	return f.executionContext
 }
 
-func (f *Factory) UpstreamSchema(dataSourceConfig plan.DataSourceConfiguration[[]PubSubProvider]) (*ast.Document, bool) {
+func (f *Factory) UpstreamSchema(dataSourceConfig plan.DataSourceConfiguration[PubSubDataSource]) (*ast.Document, bool) {
 	return nil, false
 }

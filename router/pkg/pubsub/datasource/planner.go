@@ -13,7 +13,6 @@ import (
 
 type Planner struct {
 	id               int
-	providers        []PubSubProvider
 	pubSubDataSource PubSubDataSource
 	rootFieldRef     int
 	variables        resolve.Variables
@@ -40,20 +39,22 @@ func (p *Planner) DataSourcePlanningBehavior() plan.DataSourcePlanningBehavior {
 	}
 }
 
-func (p *Planner) Register(visitor *plan.Visitor, configuration plan.DataSourceConfiguration[[]PubSubProvider], _ plan.DataSourcePlannerConfiguration) error {
+func (p *Planner) Register(visitor *plan.Visitor, configuration plan.DataSourceConfiguration[PubSubDataSource], _ plan.DataSourcePlannerConfiguration) error {
 	p.visitor = visitor
 	visitor.Walker.RegisterEnterFieldVisitor(p)
 	visitor.Walker.RegisterEnterDocumentVisitor(p)
-	p.providers = configuration.CustomConfiguration()
+	p.pubSubDataSource = configuration.CustomConfiguration()
+
 	return nil
 }
 
 func (p *Planner) ConfigureFetch() resolve.FetchConfiguration {
+	var dataSource resolve.DataSource
+
 	if p.pubSubDataSource == nil {
+		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("data source not set"))
 		return resolve.FetchConfiguration{}
 	}
-
-	var dataSource resolve.DataSource
 
 	dataSource, err := p.pubSubDataSource.ResolveDataSource()
 	if err != nil {
@@ -85,7 +86,7 @@ func (p *Planner) ConfigureFetch() resolve.FetchConfiguration {
 
 func (p *Planner) ConfigureSubscription() plan.SubscriptionConfiguration {
 	if p.pubSubDataSource == nil {
-		// p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to configure subscription: event manager is nil"))
+		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("data source not set"))
 		return plan.SubscriptionConfiguration{}
 	}
 
@@ -127,14 +128,6 @@ func (p *Planner) addContextVariableByArgumentRef(argumentRef int, argumentPath 
 	return variablePlaceHolder, nil
 }
 
-func StringParser(subject string) (string, error) {
-	matches := argument_templates.ArgumentTemplateRegex.FindAllStringSubmatch(subject, -1)
-	if len(matches) < 1 {
-		return subject, nil
-	}
-	return "", fmt.Errorf(`subject "%s" is not a valid NATS subject`, subject)
-}
-
 func (p *Planner) extractArgumentTemplate(fieldRef int, template string) (string, error) {
 	matches := argument_templates.ArgumentTemplateRegex.FindAllStringSubmatch(template, -1)
 	// If no argument templates are defined, there are only static values
@@ -149,7 +142,7 @@ func (p *Planner) extractArgumentTemplate(fieldRef int, template string) (string
 	}
 	templateWithVariableTemplateReplacements := template
 	for templateNumber, groups := range matches {
-		// The first group is the whole template; the second is the period delimited argument path
+		// The first group is the whole template; the second is the period-delimited argument path
 		if len(groups) != 2 {
 			return "", fmt.Errorf(`argument template #%d defined on field "%s" is invalid: expected 2 matching groups but received %d`, templateNumber+1, fieldNameBytes, len(groups)-1)
 		}
@@ -185,30 +178,12 @@ func (p *Planner) EnterField(ref int) {
 	}
 	p.rootFieldRef = ref
 
-	fieldName := p.visitor.Operation.FieldNameString(ref)
-	typeName := p.visitor.Walker.EnclosingTypeDefinition.NameString(p.visitor.Definition)
-
 	extractFn := func(tpl string) (string, error) {
 		return p.extractArgumentTemplate(ref, tpl)
 	}
 
-	var pubSubDataSource PubSubDataSource
-	var err error
-
-	for _, pubSub := range p.providers {
-		pubSubDataSource, err = pubSub.FindPubSubDataSource(typeName, fieldName, extractFn)
-		if err != nil {
-			p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to find event config for type name \"%s\" and field name \"%s\": %w", typeName, fieldName, err))
-			return
-		}
-		if pubSubDataSource != nil {
-			break
-		}
+	err := p.pubSubDataSource.TransformEventData(extractFn)
+	if err != nil {
+		p.visitor.Walker.StopWithInternalErr(err)
 	}
-
-	if pubSubDataSource == nil {
-		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to find event config for type name \"%s\" and field name \"%s\"", typeName, fieldName))
-	}
-
-	p.pubSubDataSource = pubSubDataSource
 }
