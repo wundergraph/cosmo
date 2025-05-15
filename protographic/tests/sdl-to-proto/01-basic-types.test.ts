@@ -316,4 +316,77 @@ describe('SDL to Proto - Basic Types', () => {
       }"
     `);
   });
+
+  test('should handle list arguments correctly', () => {
+    const sdl = `
+      enum CategoryKind {
+        BOOK
+        ELECTRONICS
+        FURNITURE
+        OTHER
+      }
+      
+      type Category {
+        id: ID!
+        name: String!
+        kind: CategoryKind!
+      }
+      
+      type Query {
+        categoriesByKinds(kinds: [CategoryKind!]!): [Category!]!
+        filterItems(ids: [ID!], tags: [String]): [String]
+      }
+    `;
+
+    const { proto: protoText } = compileGraphQLToProto(sdl);
+
+    // Validate Proto definition
+    expectValidProto(protoText);
+
+    // Check that list arguments have the 'repeated' keyword
+    expect(protoText).toContain('repeated CategoryKind kinds = ');
+    expect(protoText).toContain('repeated string ids = ');
+    expect(protoText).toContain('repeated string tags = ');
+    
+    // Full snapshot to ensure overall structure is correct
+    expect(protoText).toMatchInlineSnapshot(`
+      "syntax = "proto3";
+      package service.v1;
+
+      option go_package = "cosmo/pkg/proto/service.v1;servicev1";
+
+      service DefaultService {
+        rpc QueryCategoriesByKinds(QueryCategoriesByKindsRequest) returns (QueryCategoriesByKindsResponse) {}
+        rpc QueryFilterItems(QueryFilterItemsRequest) returns (QueryFilterItemsResponse) {}
+      }
+
+      message QueryCategoriesByKindsRequest {
+          repeated CategoryKind kinds = 1;
+      }
+      message QueryCategoriesByKindsResponse {
+          repeated Category categories_by_kinds = 1;
+      }
+      message QueryFilterItemsRequest {
+          repeated string ids = 1;
+          repeated string tags = 2;
+      }
+      message QueryFilterItemsResponse {
+          repeated string filter_items = 1;
+      }
+
+      message Category {
+        string id = 1;
+        string name = 2;
+        CategoryKind kind = 3;
+      }
+
+      enum CategoryKind {
+        CATEGORY_KIND_UNSPECIFIED = 0;
+        CATEGORY_KIND_BOOK = 1;
+        CATEGORY_KIND_ELECTRONICS = 2;
+        CATEGORY_KIND_FURNITURE = 3;
+        CATEGORY_KIND_OTHER = 4;
+      }"
+    `);
+  });
 });

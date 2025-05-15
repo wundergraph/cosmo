@@ -677,7 +677,13 @@ export class GraphQLToProtoTextVisitor {
         // Get the field number from the messages structure using the original field name
         const fieldNumber = lockData.messages[operationName]?.fields[argName];
 
-        messageLines.push(`    ${argType} ${argProtoName} = ${fieldNumber};`);
+        // Check if the argument is a list type and add the repeated keyword if needed
+        const isRepeated = isListType(arg.type) || (isNonNullType(arg.type) && isListType(arg.type.ofType));
+        if (isRepeated) {
+          messageLines.push(`    repeated ${argType} ${argProtoName} = ${fieldNumber};`);
+        } else {
+          messageLines.push(`    ${argType} ${argProtoName} = ${fieldNumber};`);
+        }
 
         // Add complex input types to the queue for processing
         const namedType = getNamedType(arg.type);
