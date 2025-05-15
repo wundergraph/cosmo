@@ -9,15 +9,15 @@ import (
 // Connection metric constants
 const (
 	// Counters
-	connectionTotal        = "router.connection.total"         // Total number of connections with reused attribute
-	connectionRetriesTotal = "router.connection.retries_total" // Total number of connection retries
+	connectionTotal        = "router.connection.total"
+	connectionRetriesTotal = "router.connection.retries_total"
 
 	// Histograms
-	dnsDuration               = "router.connection.dns_duration_ms"           // DNS resolution duration in milliseconds
-	dialDuration              = "router.connection.dial_duration_ms"          // TCP dial duration in milliseconds
-	tlsHandshakeDuration      = "router.connection.tls_handshake_duration_ms" // TLS handshake duration in milliseconds
-	totalConnectionDuration   = "router.connection.total_duration_ms"         // Total connection duration in milliseconds
-	connectionAcquireDuration = "router.connection.acquire_duration_ms"       // Connection acquire duration in milliseconds
+	dnsDuration               = "router.connection.dns_duration"
+	dialDuration              = "router.connection.dial_duration"
+	tlsHandshakeDuration      = "router.connection.tls_handshake_duration"
+	totalConnectionDuration   = "router.connection.total_duration"
+	connectionAcquireDuration = "router.connection.acquire_duration"
 )
 
 var (
@@ -32,28 +32,28 @@ var (
 
 	// Histogram options
 	dnsDurationOptions = []otelmetric.Float64HistogramOption{
-		otelmetric.WithUnit("ms"),
-		otelmetric.WithDescription("DNS resolution duration in milliseconds"),
+		otelmetric.WithUnit("s"),
+		otelmetric.WithDescription("DNS resolution duration"),
 	}
 
 	dialDurationOptions = []otelmetric.Float64HistogramOption{
-		otelmetric.WithUnit("ms"),
-		otelmetric.WithDescription("TCP dial duration in milliseconds"),
+		otelmetric.WithUnit("s"),
+		otelmetric.WithDescription("TCP dial duration"),
 	}
 
 	tlsHandshakeDurationOptions = []otelmetric.Float64HistogramOption{
-		otelmetric.WithUnit("ms"),
-		otelmetric.WithDescription("TLS handshake duration in milliseconds"),
+		otelmetric.WithUnit("s"),
+		otelmetric.WithDescription("TLS handshake duration"),
 	}
 
 	totalConnectionDurationOptions = []otelmetric.Float64HistogramOption{
-		otelmetric.WithUnit("ms"),
-		otelmetric.WithDescription("Total connection duration in milliseconds"),
+		otelmetric.WithUnit("s"),
+		otelmetric.WithDescription("Total connection duration"),
 	}
 
 	connectionAcquireDurationOptions = []otelmetric.Float64HistogramOption{
-		otelmetric.WithUnit("ms"),
-		otelmetric.WithDescription("Connection acquire duration in milliseconds"),
+		otelmetric.WithUnit("s"),
+		otelmetric.WithDescription("Connection acquire duration"),
 	}
 )
 

@@ -2,8 +2,6 @@ package metric
 
 import (
 	"context"
-	"net"
-
 	"github.com/wundergraph/cosmo/router/internal/httpclient"
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	"go.uber.org/zap"
@@ -20,33 +18,35 @@ func CalculateConnectionMetrics(ctx context.Context, logger *zap.Logger, store C
 	// if in case of non retries we have 1 entry always
 	for i, trace := range fromTrace.ClientTraces {
 		totalDuration := 0.0
+		host := ""
 
-		// In case for some reason the connection get hook is not called we default to unknown
-		host := "unknown"
+		if trace.ConnectionGet != nil {
+			host = trace.ConnectionGet.HostPort
+		}
 
 		if trace.ConnectionAcquired != nil {
-			if trace.ConnectionGet != nil {
-				splitHost, _, err := net.SplitHostPort(trace.ConnectionGet.HostPort)
-				if err != nil {
-					logger.Error("failed to split host port", zap.Error(err))
-				} else {
-					// If there is no error we set the connection host
-					host = splitHost
-				}
-
-				connAcquireTime := trace.ConnectionAcquired.Time.Sub(trace.ConnectionGet.Time).Seconds()
-				store.MeasureConnectionAcquireDuration(ctx, connAcquireTime, rotel.WgHost.String(host))
-			}
 			store.MeasureConnections(ctx, trace.ConnectionAcquired.Reused, rotel.WgHost.String(host))
 		}
+
+		// We skip if ConnectionAcquired was not recorded
+		if trace.ConnectionGet != nil && trace.ConnectionAcquired != nil {
+			connAcquireTime := trace.ConnectionAcquired.Time.Sub(trace.ConnectionGet.Time).Seconds()
+			store.MeasureConnectionAcquireDuration(ctx, connAcquireTime, rotel.WgHost.String(host))
+		}
+
+		// Dns Lookup can be cached
+		dnsLookupOccurred := trace.DNSStart != nil || trace.DNSDone != nil
 
 		// Measure DNS duration for both success and error cases
 		// We skip if DNSDone was not recorded
 		if trace.DNSStart != nil && trace.DNSDone != nil {
 			sub := trace.DNSDone.Time.Sub(trace.DNSStart.Time).Seconds()
 			totalDuration += sub
-			store.MeasureDNSDuration(ctx, sub, rotel.WgHost.String(trace.DNSStart.Host))
+			store.MeasureDNSDuration(ctx, sub, rotel.WgHost.String(host), rotel.WgDnsHost.String(trace.DNSStart.Host))
 		}
+
+		// Tls Handshake can be cached
+		tlsHandshakeOccurred := trace.TLSStart != nil || trace.TLSDone != nil
 
 		// Measure TLS duration for both success and error cases
 		// We skip if TLSDone was not recorded
@@ -74,7 +74,13 @@ func CalculateConnectionMetrics(ctx context.Context, logger *zap.Logger, store C
 
 		// In case of no dials, we dont record 0 which will be a false positive
 		if totalDuration != 0.0 {
-			store.MeasureTotalConnectionDuration(ctx, totalDuration, rotel.WgHost.String(host))
+			store.MeasureTotalConnectionDuration(ctx, totalDuration,
+				// Dns Lookup and Tls Handshake could be skipped because of internal caching
+				// so we use these attributes as dimensions
+				rotel.WgHost.String(host),
+				rotel.WgDnsLookup.Bool(dnsLookupOccurred),
+				rotel.WgTlsHandshake.Bool(tlsHandshakeOccurred),
+			)
 		}
 	}
 
