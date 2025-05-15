@@ -2,7 +2,6 @@ package datasource
 
 import (
 	"context"
-	"fmt"
 	"slices"
 	"strconv"
 
@@ -10,62 +9,55 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 )
 
+type DataSourceConfigurationWithMetadata struct {
+	Configuration *nodev1.DataSourceConfiguration
+	Metadata      *plan.DataSourceMetadata
+}
+
 // BuildProvidersAndDataSources is a generic function that builds providers and data sources for the given provider
 // builder and event configurations.
-func BuildProvidersAndDataSources[A any](
-	providerBuilder PubSubProviderBuilder[A],
+func BuildProvidersAndDataSources(
 	ctx context.Context,
-	in *nodev1.DataSourceConfiguration,
-	dsMeta *plan.DataSourceMetadata,
-	data []EngineEventConfiguration,
+	providerBuilder PubSubProviderBuilder,
+	dsConfs []DataSourceConfigurationWithMetadata,
 ) ([]PubSubProvider, []plan.DataSource, error) {
-	if len(data) == 0 {
-		return nil, nil, nil
-	}
 
-	// Collect all used providers
-	var usedProviders []string
-	for _, event := range data {
-		providerId := event.GetEngineEventConfiguration().GetProviderId()
-		if !slices.Contains(usedProviders, providerId) {
-			usedProviders = append(usedProviders, providerId)
+	// Collect providers to initialize
+	var providerIds []string
+	for _, dsConf := range dsConfs {
+		for _, event := range providerBuilder.EngineEventConfigurations(dsConf.Configuration) {
+			providerId := event.GetEngineEventConfiguration().GetProviderId()
+			if !slices.Contains(providerIds, providerId) {
+				providerIds = append(providerIds, providerId)
+			}
 		}
 	}
 
 	// Initialize used providers
-	adapters, pubSubProviders, err := providerBuilder.Providers(usedProviders)
+	pubSubProviders, err := providerBuilder.Providers(providerIds)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	// Verify that all used providers are defined
-	definedProviders := make([]string, 0, len(adapters))
-	for providerID := range adapters {
-		definedProviders = append(definedProviders, providerID)
-	}
-	for _, event := range data {
-		if !slices.Contains(definedProviders, event.GetEngineEventConfiguration().GetProviderId()) {
-			return nil, nil, fmt.Errorf(providerBuilder.TypeID()+" provider with ID %s is not defined", event.GetEngineEventConfiguration().GetProviderId())
-		}
-	}
-
 	// Create data sources
 	var outs []plan.DataSource
-	for i, event := range data {
-		pubsubDataSource, err := providerBuilder.DataSource(event, adapters)
-		if err != nil {
-			return nil, nil, err
+	for _, dsConf := range dsConfs {
+		for i, event := range providerBuilder.EngineEventConfigurations(dsConf.Configuration) {
+			pubSubDataSource, err := providerBuilder.DataSource(event)
+			if err != nil {
+				return nil, nil, err
+			}
+			out, err := plan.NewDataSourceConfiguration(
+				dsConf.Configuration.Id+"-"+providerBuilder.TypeID()+"-"+strconv.Itoa(i),
+				NewFactory(ctx, pubSubDataSource),
+				getFilteredDataSourceMetadata(event, dsConf.Metadata),
+				pubSubDataSource,
+			)
+			if err != nil {
+				return nil, nil, err
+			}
+			outs = append(outs, out)
 		}
-		out, err := plan.NewDataSourceConfiguration(
-			in.Id+"-"+providerBuilder.TypeID()+"-"+strconv.Itoa(i),
-			NewFactory(ctx, pubsubDataSource),
-			getFilteredDataSourceMetadata(event, dsMeta),
-			pubsubDataSource,
-		)
-		if err != nil {
-			return nil, nil, err
-		}
-		outs = append(outs, out)
 	}
 
 	return pubSubProviders, outs, nil

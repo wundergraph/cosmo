@@ -7,9 +7,9 @@ import (
 )
 
 // ProvidersAndDataSourcesBuilders returns a list of all PubSub builders
-func ProvidersAndDataSourcesBuilders() []datasource.ProvidersAndDataSourcesBuilder {
-	return []datasource.ProvidersAndDataSourcesBuilder{
-		kafka.BuildProvidersAndDataSources,
-		nats.BuildProvidersAndDataSources,
+func ProviderBuilderFactories() []datasource.PubSubProviderBuilderFactory {
+	return []datasource.PubSubProviderBuilderFactory{
+		kafka.PubSubProviderBuilderFactory,
+		nats.PubSubProviderBuilderFactory,
 	}
 }

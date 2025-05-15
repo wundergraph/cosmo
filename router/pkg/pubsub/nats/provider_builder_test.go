@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
@@ -158,50 +157,61 @@ func TestTransformEventConfig(t *testing.T) {
 	})
 }
 
-func TestGetProvider(t *testing.T) {
+func TestPubSubProviderBuilderFactory(t *testing.T) {
 	t.Run("returns nil if no NATS configuration", func(t *testing.T) {
 		ctx := context.Background()
-		in := &nodev1.DataSourceConfiguration{
-			CustomEvents: &nodev1.DataSourceCustomEvents{},
-		}
-
-		dsMeta := &plan.DataSourceMetadata{}
 		cfg := config.EventsConfiguration{}
 		logger := zaptest.NewLogger(t)
 
-		provider, _, err := BuildProvidersAndDataSources(ctx, in, dsMeta, cfg, logger, "host", "addr")
+		builder := PubSubProviderBuilderFactory(ctx, cfg, logger, "host", "addr")
+		require.NotNil(t, builder)
+		providers, err := builder.Providers(nil)
 		require.NoError(t, err)
-		require.Nil(t, provider)
+		require.Empty(t, providers)
 	})
 
 	t.Run("errors if provider not found", func(t *testing.T) {
 		ctx := context.Background()
-		in := &nodev1.DataSourceConfiguration{
-			CustomEvents: &nodev1.DataSourceCustomEvents{
-				Nats: []*nodev1.NatsEventConfiguration{
+		cfg := config.EventsConfiguration{}
+		logger := zaptest.NewLogger(t)
+
+		builder := PubSubProviderBuilderFactory(ctx, cfg, logger, "host", "addr")
+		require.NotNil(t, builder)
+		providers, err := builder.Providers([]string{"unknown"})
+		require.Error(t, err)
+		require.Empty(t, providers)
+		assert.Contains(t, err.Error(), "provider with ID unknown is not defined")
+	})
+
+	t.Run("creates provider with configured adapters", func(t *testing.T) {
+		providerId := "test-provider"
+
+		cfg := config.EventsConfiguration{
+			Providers: config.EventProviders{
+				Nats: []config.NatsEventSource{
 					{
-						EngineEventConfiguration: &nodev1.EngineEventConfiguration{
-							ProviderId: "unknown",
-						},
+						ID:  providerId,
+						URL: "nats://localhost:4222",
 					},
 				},
 			},
 		}
 
-		dsMeta := &plan.DataSourceMetadata{}
-		cfg := config.EventsConfiguration{
-			Providers: config.EventProviders{
-				Nats: []config.NatsEventSource{
-					{ID: "provider1", URL: "nats://localhost:4222"},
-				},
-			},
-		}
 		logger := zaptest.NewLogger(t)
 
-		provider, _, err := BuildProvidersAndDataSources(ctx, in, dsMeta, cfg, logger, "host", "addr")
-		require.Error(t, err)
-		require.Nil(t, provider)
-		assert.Contains(t, err.Error(), "provider with ID unknown is not defined")
+		ctx := context.Background()
+
+		builder := PubSubProviderBuilderFactory(ctx, cfg, logger, "host", "addr")
+		require.NotNil(t, builder)
+		providers, err := builder.Providers([]string{providerId})
+		require.NoError(t, err)
+		require.Len(t, providers, 1)
+
+		// Check the returned provider
+		kafkaProvider, ok := providers[0].(*PubSubProvider)
+		require.True(t, ok)
+		assert.NotNil(t, kafkaProvider.Logger)
+		assert.NotNil(t, kafkaProvider.Adapter)
 	})
 }
 

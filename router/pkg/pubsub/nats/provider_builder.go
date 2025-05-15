@@ -14,21 +14,20 @@ import (
 	"go.uber.org/zap"
 )
 
-var _ datasource.PubSubProviderBuilder[AdapterInterface] = &PubSubProviderBuilder{}
-
 type PubSubProviderBuilder struct {
 	ctx              context.Context
-	config           config.EventsConfiguration
+	config           []config.NatsEventSource
 	logger           *zap.Logger
 	hostName         string
 	routerListenAddr string
+	adapters         map[string]AdapterInterface
 }
 
 func (p *PubSubProviderBuilder) TypeID() string {
-	return providerId
+	return providerTypeID
 }
 
-func (p *PubSubProviderBuilder) DataSource(data datasource.EngineEventConfiguration, adapters map[string]AdapterInterface) (datasource.PubSubDataSource, error) {
+func (p *PubSubProviderBuilder) DataSource(data datasource.EngineEventConfiguration) (datasource.PubSubDataSource, error) {
 	natsEvent, ok := data.(*nodev1.NatsEventConfiguration)
 	if !ok {
 		return nil, fmt.Errorf("failed to cast data to NatsEventConfiguration")
@@ -36,28 +35,43 @@ func (p *PubSubProviderBuilder) DataSource(data datasource.EngineEventConfigurat
 	providerId := natsEvent.GetEngineEventConfiguration().GetProviderId()
 	return &PubSubDataSource{
 		EventConfiguration: natsEvent,
-		NatsAdapter:        adapters[providerId],
+		NatsAdapter:        p.adapters[providerId],
 	}, nil
 }
 
-func (p *PubSubProviderBuilder) Providers(usedProviders []string) (map[string]AdapterInterface, []datasource.PubSubProvider, error) {
-	adapters := make(map[string]AdapterInterface)
+func (p *PubSubProviderBuilder) Providers(ids []string) ([]datasource.PubSubProvider, error) {
+	p.adapters = make(map[string]AdapterInterface)
 	pubSubProviders := []datasource.PubSubProvider{}
 
 	// create providers
-	for _, provider := range p.config.Providers.Nats {
-		if !slices.Contains(usedProviders, provider.ID) {
+	for _, provider := range p.config {
+		if !slices.Contains(ids, provider.ID) {
 			continue
 		}
 		adapter, pubSubProvider, err := buildProvider(p.ctx, provider, p.logger, p.hostName, p.routerListenAddr)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
-		adapters[provider.ID] = adapter
+		p.adapters[provider.ID] = adapter
 		pubSubProviders = append(pubSubProviders, pubSubProvider)
 	}
 
-	return adapters, pubSubProviders, nil
+	for _, id := range ids {
+		if _, ok := p.adapters[id]; !ok {
+			return nil, fmt.Errorf("%s provider with ID %s is not defined", p.TypeID(), id)
+		}
+	}
+
+	return pubSubProviders, nil
+}
+
+func (p *PubSubProviderBuilder) EngineEventConfigurations(in *nodev1.DataSourceConfiguration) []datasource.EngineEventConfiguration {
+	natsData := make([]datasource.EngineEventConfiguration, 0, len(in.GetCustomEvents().GetNats()))
+	for _, kafkaEvent := range in.GetCustomEvents().GetNats() {
+		natsData = append(natsData, kafkaEvent)
+	}
+
+	return natsData
 }
 
 func buildNatsOptions(eventSource config.NatsEventSource, logger *zap.Logger) ([]nats.Option, error) {
@@ -120,4 +134,20 @@ func buildProvider(ctx context.Context, provider config.NatsEventSource, logger 
 	}
 
 	return adapter, pubSubProvider, nil
+}
+
+func PubSubProviderBuilderFactory(
+	ctx context.Context,
+	config config.EventsConfiguration,
+	logger *zap.Logger,
+	hostName string,
+	routerListenAddr string,
+) datasource.PubSubProviderBuilder {
+	return &PubSubProviderBuilder{
+		ctx:              ctx,
+		config:           config.Providers.Nats,
+		logger:           logger,
+		hostName:         hostName,
+		routerListenAddr: routerListenAddr,
+	}
 }

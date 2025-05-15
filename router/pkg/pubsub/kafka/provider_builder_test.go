@@ -7,13 +7,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
-
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 )
 
 // mockAdapter is a mock of AdapterInterface
@@ -88,66 +85,34 @@ func TestBuildKafkaOptions(t *testing.T) {
 	})
 }
 
-func TestGetProvider(t *testing.T) {
+func TestPubSubProviderBuilderFactory(t *testing.T) {
 	t.Run("returns nil if no Kafka configuration", func(t *testing.T) {
 		ctx := context.Background()
-		in := &nodev1.DataSourceConfiguration{
-			CustomEvents: &nodev1.DataSourceCustomEvents{},
-		}
-
-		dsMeta := &plan.DataSourceMetadata{}
 		cfg := config.EventsConfiguration{}
 		logger := zaptest.NewLogger(t)
 
-		provider, _, err := BuildProvidersAndDataSources(ctx, in, dsMeta, cfg, logger, "host", "addr")
+		builder := PubSubProviderBuilderFactory(ctx, cfg, logger, "host", "addr")
+		require.NotNil(t, builder)
+		providers, err := builder.Providers(nil)
 		require.NoError(t, err)
-		require.Nil(t, provider)
+		require.Empty(t, providers)
 	})
 
 	t.Run("errors if provider not found", func(t *testing.T) {
 		ctx := context.Background()
-		in := &nodev1.DataSourceConfiguration{
-			CustomEvents: &nodev1.DataSourceCustomEvents{
-				Kafka: []*nodev1.KafkaEventConfiguration{
-					{
-						EngineEventConfiguration: &nodev1.EngineEventConfiguration{
-							ProviderId: "unknown",
-						},
-					},
-				},
-			},
-		}
-
-		dsMeta := &plan.DataSourceMetadata{}
-		cfg := config.EventsConfiguration{
-			Providers: config.EventProviders{
-				Kafka: []config.KafkaEventSource{
-					{ID: "provider1", Brokers: []string{"localhost:9092"}},
-				},
-			},
-		}
+		cfg := config.EventsConfiguration{}
 		logger := zaptest.NewLogger(t)
 
-		provider, _, err := BuildProvidersAndDataSources(ctx, in, dsMeta, cfg, logger, "host", "addr")
+		builder := PubSubProviderBuilderFactory(ctx, cfg, logger, "host", "addr")
+		require.NotNil(t, builder)
+		providers, err := builder.Providers([]string{"unknown"})
 		require.Error(t, err)
-		require.Nil(t, provider)
+		require.Empty(t, providers)
 		assert.Contains(t, err.Error(), "provider with ID unknown is not defined")
 	})
 
 	t.Run("creates provider with configured adapters", func(t *testing.T) {
 		providerId := "test-provider"
-
-		in := &nodev1.DataSourceConfiguration{
-			CustomEvents: &nodev1.DataSourceCustomEvents{
-				Kafka: []*nodev1.KafkaEventConfiguration{
-					{
-						EngineEventConfiguration: &nodev1.EngineEventConfiguration{
-							ProviderId: providerId,
-						},
-					},
-				},
-			},
-		}
 
 		cfg := config.EventsConfiguration{
 			Providers: config.EventProviders{
@@ -159,20 +124,23 @@ func TestGetProvider(t *testing.T) {
 
 		logger := zaptest.NewLogger(t)
 
-		// Create a mock adapter for testing
-		provider, _, err := BuildProvidersAndDataSources(context.Background(), in, &plan.DataSourceMetadata{}, cfg, logger, "host", "addr")
+		ctx := context.Background()
+
+		builder := PubSubProviderBuilderFactory(ctx, cfg, logger, "host", "addr")
+		require.NotNil(t, builder)
+		providers, err := builder.Providers([]string{providerId})
 		require.NoError(t, err)
-		require.NotNil(t, provider)
+		require.Len(t, providers, 1)
 
 		// Check the returned provider
-		kafkaProvider, ok := provider[0].(*PubSubProvider)
+		kafkaProvider, ok := providers[0].(*PubSubProvider)
 		require.True(t, ok)
 		assert.NotNil(t, kafkaProvider.Logger)
 		assert.NotNil(t, kafkaProvider.Adapter)
 	})
 }
 
-func TestPubSubProvider_FindPubSubDataSource(t *testing.T) {
+func TestPubSubProvider(t *testing.T) {
 	mocked := &mockAdapter{}
 
 	provider := &PubSubProvider{
