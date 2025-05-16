@@ -1,6 +1,7 @@
 package otel
 
 import (
+	"fmt"
 	"go.opentelemetry.io/otel/attribute"
 )
 
@@ -58,6 +59,14 @@ const (
 )
 
 const (
+	DnsQuestionName = attribute.Key("dns.question.name")
+
+	TlsCipher          = attribute.Key("tls.cipher")
+	TlsResumed         = attribute.Key("tls.resumed")
+	TlsProtocolVersion = attribute.Key("tls.protocol.version")
+)
+
+const (
 	CacheMetricsOperationTypeAdded   = "added"
 	CacheMetricsOperationTypeUpdated = "updated"
 	CacheMetricsOperationTypeEvicted = "evicted"
@@ -76,3 +85,13 @@ var (
 	RouterServerAttribute    = WgComponentName.String("router-server")
 	EngineTransportAttribute = WgComponentName.String("engine-transport")
 )
+
+// debug attributes
+const (
+	transportRequestTraceBaseKey = "wg.transport.request.trace"
+)
+
+func GetTransportRequestTraceKey(name string) attribute.Key {
+	keyName := fmt.Sprintf("%s.%s", transportRequestTraceBaseKey, name)
+	return attribute.Key(keyName)
+}
