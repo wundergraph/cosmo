@@ -3,6 +3,7 @@ package core
 import (
 	"bytes"
 	"fmt"
+	traceclient "github.com/wundergraph/cosmo/router/internal/httpclient"
 	"io"
 	"net/http"
 	"net/url"
@@ -59,14 +60,18 @@ type sfCacheItem struct {
 }
 
 func NewCustomTransport(
-	logger *zap.Logger,
-	roundTripper http.RoundTripper,
+	baseRoundTripper http.RoundTripper,
 	retryOptions retrytransport.RetryOptions,
 	metricStore metric.Store,
 	enableSingleFlight bool,
+	enableTraceClient bool,
 ) *CustomTransport {
 	ct := &CustomTransport{
 		metricStore: metricStore,
+	}
+
+	if enableTraceClient {
+		baseRoundTripper = traceclient.NewTraceInjectingRoundTripper(baseRoundTripper)
 	}
 
 	if retryOptions.Enabled {
@@ -79,9 +84,9 @@ func NewCustomTransport(
 			reqContext := getRequestContext(req.Context())
 			return reqContext.Logger()
 		}
-		ct.roundTripper = retrytransport.NewRetryHTTPTransport(roundTripper, retryOptions, getRequestContextLogger)
+		ct.roundTripper = retrytransport.NewRetryHTTPTransport(baseRoundTripper, retryOptions, getRequestContextLogger)
 	} else {
-		ct.roundTripper = roundTripper
+		ct.roundTripper = baseRoundTripper
 	}
 	if enableSingleFlight {
 		ct.sf = make(map[uint64]*sfCacheItem)
@@ -321,6 +326,7 @@ type TransportFactory struct {
 	logger                        *zap.Logger
 	tracerProvider                *sdktrace.TracerProvider
 	tracePropagators              propagation.TextMapPropagator
+	enableTraceClient             bool
 }
 
 var _ ApiTransportFactory = TransportFactory{}
@@ -335,6 +341,7 @@ type TransportOptions struct {
 	Logger                        *zap.Logger
 	TracerProvider                *sdktrace.TracerProvider
 	TracePropagators              propagation.TextMapPropagator
+	EnableTraceClient             bool
 }
 
 type SubscriptionClientOptions struct {
@@ -354,6 +361,7 @@ func NewTransport(opts *TransportOptions) *TransportFactory {
 		logger:                        opts.Logger,
 		tracerProvider:                opts.TracerProvider,
 		tracePropagators:              opts.TracePropagators,
+		enableTraceClient:             opts.EnableTraceClient,
 	}
 }
 
@@ -393,11 +401,11 @@ func (t TransportFactory) RoundTripper(enableSingleFlight bool, baseTransport ht
 		}),
 	)
 	tp := NewCustomTransport(
-		t.logger,
 		traceTransport,
 		t.retryOptions,
 		t.metricStore,
 		enableSingleFlight,
+		t.enableTraceClient,
 	)
 
 	tp.preHandlers = t.preHandlers

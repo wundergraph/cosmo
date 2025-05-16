@@ -98,6 +98,7 @@ type (
 		prometheusEngineMetrics *rmetric.EngineMetrics
 		hostName                string
 		routerListenAddr        string
+		traceDialer             *TraceDialer
 	}
 )
 
@@ -113,13 +114,25 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		return nil, fmt.Errorf(`the compatibility version "%s" is not compatible with this router version`, routerConfig.CompatibilityVersion)
 	}
 
+	isConnStoreEnabled := r.Config.metricConfig.OpenTelemetry.ConnectionStats || r.Config.metricConfig.Prometheus.ConnectionStats
+	var traceDialer *TraceDialer
+	if isConnStoreEnabled {
+		// An important caveat is that since we create http transports per base and subgraph
+		// they will have their own connection pool, BUT we maintain one map for all of these
+		// pools, normally this would mean that it's harder to track if the connection pool
+		// is exhausted, however we have the capability of slicing the metric by subgraph
+		// dimensions AND host, to ensure we get accurate metrics, and even if we slice
+		// by host only, this is only a problem if we have multiple subgraphs on the same host and port
+		traceDialer = NewTraceDialer()
+	}
+
 	// Base transport
-	baseTransport := newHTTPTransport(r.subgraphTransportOptions.TransportRequestOptions, proxy)
+	baseTransport := newHTTPTransport(r.subgraphTransportOptions.TransportRequestOptions, proxy, traceDialer)
 
 	// Subgraph transports
 	subgraphTransports := map[string]*http.Transport{}
 	for subgraph, subgraphOpts := range r.subgraphTransportOptions.SubgraphMap {
-		subgraphBaseTransport := newHTTPTransport(subgraphOpts, proxy)
+		subgraphBaseTransport := newHTTPTransport(subgraphOpts, proxy, traceDialer)
 		subgraphTransports[subgraph] = subgraphBaseTransport
 	}
 
@@ -132,6 +145,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		baseTransport:           baseTransport,
 		subgraphTransports:      subgraphTransports,
 		playgroundHandler:       r.playgroundHandler,
+		traceDialer:             traceDialer,
 		baseRouterConfigVersion: routerConfig.GetVersion(),
 		inFlightRequests:        &atomic.Uint64{},
 		graphMuxList:            make([]*graphMux, 0, 1),
@@ -409,6 +423,7 @@ type graphMux struct {
 	operationHashCache         *ristretto.Cache[uint64, string]
 	accessLogsFileLogger       *logging.BufferedLogger
 	metricStore                rmetric.Store
+	connectionMetricStore      rmetric.ConnectionMetricStore
 	prometheusCacheMetrics     *rmetric.CacheMetrics
 	otelCacheMetrics           *rmetric.CacheMetrics
 }
@@ -729,6 +744,23 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		gm.metricStore = m
 	}
 
+	isConnStoreEnabled := s.metricConfig.OpenTelemetry.ConnectionStats || s.metricConfig.Prometheus.ConnectionStats
+	if isConnStoreEnabled {
+		connStore, err := rmetric.NewConnectionMetricStore(
+			s.logger,
+			nil,
+			s.otlpMeterProvider,
+			s.promMeterProvider,
+			s.metricConfig,
+			s.traceDialer.connectionPoolStats,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		gm.connectionMetricStore = connStore
+	}
+
 	subgraphs, err := configureSubgraphOverwrites(
 		engineConfig,
 		configSubgraphs,
@@ -984,6 +1016,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			TracePropagators:              s.compositePropagator,
 			LocalhostFallbackInsideDocker: s.localhostFallbackInsideDocker,
 			Logger:                        s.logger,
+			EnableTraceClient:             isConnStoreEnabled,
 		},
 	}
 
@@ -1110,7 +1143,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		TracerProvider:                              s.tracerProvider,
 		Authorizer:                                  NewCosmoAuthorizer(authorizerOptions),
 		SubgraphErrorPropagation:                    s.subgraphErrorPropagation,
-		EngineLoaderHooks:                           NewEngineRequestHooks(gm.metricStore, subgraphAccessLogger, s.tracerProvider),
+		EngineLoaderHooks:                           NewEngineRequestHooks(gm.metricStore, subgraphAccessLogger, s.tracerProvider, gm.connectionMetricStore),
 	}
 
 	if s.redisClient != nil {
