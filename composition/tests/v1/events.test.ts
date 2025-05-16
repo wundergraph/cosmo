@@ -7,6 +7,8 @@ import {
   EDFS_NATS_PUBLISH,
   EDFS_NATS_REQUEST,
   EDFS_NATS_SUBSCRIBE,
+  EDFS_REDIS_PUBLISH,
+  EDFS_REDIS_SUBSCRIBE,
   federateSubgraphs,
   FederationResultFailure,
   FederationResultSuccess,
@@ -36,6 +38,7 @@ import {
   PROVIDER_ID,
   PROVIDER_TYPE_KAFKA,
   PROVIDER_TYPE_NATS,
+  PROVIDER_TYPE_REDIS,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   Subgraph,
   subgraphValidationError,
@@ -859,6 +862,139 @@ describe('events Configuration tests', () => {
     expect(result.errors[0]).toStrictEqual(
       invalidEventDirectiveError('edfs__kafkaPublish', 'Mutation.entityPublish', [
         undefinedEventSubjectsArgumentErrorMessage('invalid'),
+      ]),
+    );
+  });
+
+
+  test('that an error is returned if a Redis subscribe subject references a valid argument and an invalid one', () => {
+    const result = normalizeSubgraph(
+      subgraphAS.definitions,
+      subgraphAS.name,
+      undefined,
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    ) as NormalizationResultFailure;
+    expect(result.success).toBe(false);
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]).toStrictEqual(
+      invalidEventDirectiveError('edfs__redisSubscribe', 'Subscription.entitySubscription', [
+        undefinedEventSubjectsArgumentErrorMessage('invalid'),
+      ]),
+    );
+  });
+
+  test('that an error is returned if a Redis publish subject references a valid argument and an invalid one', () => {
+    const result = normalizeSubgraph(
+      subgraphAT.definitions,
+      subgraphAT.name,
+      undefined,
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    ) as NormalizationResultFailure;
+    expect(result.success).toBe(false);
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]).toStrictEqual(
+      invalidEventDirectiveError('edfs__redisPublish', 'Mutation.entityPublish', [
+        undefinedEventSubjectsArgumentErrorMessage('invalid'),
+      ]),
+    );
+  });
+
+  test('that an error is returned if a Redis subscribe subject references two invalid arguments', () => {
+    const result = normalizeSubgraph(
+      subgraphAU.definitions,
+      subgraphAU.name,
+      undefined,
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    ) as NormalizationResultFailure;
+    expect(result.success).toBe(false);
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]).toStrictEqual(
+      invalidEventDirectiveError('edfs__redisSubscribe', 'Subscription.entitySubscription', [
+        undefinedEventSubjectsArgumentErrorMessage('invalid'),
+        undefinedEventSubjectsArgumentErrorMessage('alsoinvalid'),
+      ]),
+    );
+  });
+
+  test('that an error is returned if a Redis publish subject references two invalid arguments', () => {
+    const result = normalizeSubgraph(
+      subgraphAV.definitions,
+      subgraphAV.name,
+      undefined,
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    ) as NormalizationResultFailure;
+    expect(result.success).toBe(false);
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]).toStrictEqual(
+      invalidEventDirectiveError('edfs__redisPublish', 'Mutation.entityPublish', [
+        undefinedEventSubjectsArgumentErrorMessage('invalid'),
+        undefinedEventSubjectsArgumentErrorMessage('alsoinvalid'),
+      ]),
+    );
+  });
+
+  test('that Redis configuration is correctly generated', () => {
+    const result = normalizeSubgraph(
+      subgraphAW.definitions,
+      subgraphAW.name,
+      undefined,
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    ) as NormalizationResultSuccess;
+    expect(result.success).toBe(true);
+    expect(result.configurationDataByTypeName).toStrictEqual(
+      new Map<string, ConfigurationData>([
+        [
+          'Entity',
+          {
+            externalFieldNames: new Set<string>(['id']),
+            fieldNames: new Set<string>(['id']),
+            isRootNode: true,
+            keys: [{ fieldName: '', selectionSet: 'id', disableEntityResolver: true }],
+            typeName: 'Entity',
+          },
+        ],
+        [
+          'Mutation',
+          {
+            fieldNames: new Set<string>(['redisMutation']),
+            isRootNode: true,
+            typeName: 'Mutation',
+            events: [
+              {
+                fieldName: 'redisMutation',
+                providerId: 'myRedis',
+                providerType: PROVIDER_TYPE_REDIS,
+                channels: ['entityAdded'],
+                type: 'publish',
+              },
+            ],
+          },
+        ],
+        [
+          'Subscription',
+          {
+            fieldNames: new Set<string>(['redisSubscription']),
+            isRootNode: true,
+            typeName: 'Subscription',
+            events: [
+              {
+                fieldName: 'redisSubscription',
+                providerId: 'myRedis',
+                providerType: PROVIDER_TYPE_REDIS,
+                channels: ['entityAdded', 'entityUpdated'],
+                type: 'subscribe',
+              },
+            ],
+          },
+        ],
+        [
+          'edfs__PublishResult',
+          {
+            fieldNames: new Set<string>(['success']),
+            isRootNode: false,
+            typeName: 'edfs__PublishResult',
+          },
+        ],
       ]),
     );
   });
@@ -1951,6 +2087,89 @@ const subgraphAR: Subgraph = {
       consumerInactiveThreshold: Int! = 40
       consumerName: String!
       streamName: String!
+    }
+  `),
+};
+
+
+const subgraphAS: Subgraph = {
+  name: 'subgraph-as',
+  url: '',
+  definitions: parse(`
+    type Subscription {
+      entitySubscription(id: ID!): Entity! @edfs__redisSubscribe(
+        channels: ["entities.{{ args.invalid }}{{ args.id }}"],
+      )
+    }
+    type Entity @key(fields: "id", resolvable: false) {
+      id: ID! @external
+    }
+  `),
+};
+
+const subgraphAT: Subgraph = {
+  name: 'subgraph-at',
+  url: '',
+  definitions: parse(`
+    type Mutation {
+      entityPublish(id: ID!): edfs__PublishResult! @edfs__redisPublish(
+        channel: "entities.{{ args.invalid }}{{ args.id }}",
+      )
+    }
+    type edfs__PublishResult {
+      success: Boolean!
+    }
+  `),
+};
+
+const subgraphAU: Subgraph = {
+  name: 'subgraph-au',
+  url: '',
+  definitions: parse(`
+    type Subscription {
+      entitySubscription(id: ID!): Entity! @edfs__redisSubscribe(
+        channels: ["entities.{{ args.invalid }}{{ args.alsoinvalid }}"],
+      )
+    }
+    type Entity @key(fields: "id", resolvable: false) {
+      id: ID! @external
+    }
+  `),
+};
+
+const subgraphAV: Subgraph = {
+  name: 'subgraph-av',
+  url: '',
+  definitions: parse(`
+    type Mutation {
+      entityPublish(id: ID!): edfs__PublishResult! @edfs__redisPublish(
+        channel: "entities.{{ args.invalid }}{{ args.alsoinvalid }}",
+      )
+    }
+    type edfs__PublishResult {
+      success: Boolean!
+    }
+  `),
+};
+
+const subgraphAW: Subgraph = {
+  name: 'subgraph-aw',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id", resolvable: false) {
+      id: ID! @external
+    }
+    
+    type Mutation {
+      redisMutation: edfs__PublishResult! @edfs__redisPublish(channel: "entityAdded", providerId: "myRedis")
+    }
+    
+    type Subscription {
+      redisSubscription: Entity! @edfs__redisSubscribe(channels: ["entityAdded", "entityUpdated"], providerId: "myRedis")
+    }
+    
+    type edfs__PublishResult {
+      success: Boolean!
     }
   `),
 };
