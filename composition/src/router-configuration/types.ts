@@ -2,6 +2,8 @@ export type NatsEventType = 'subscribe' | 'publish' | 'request';
 
 export type KafkaEventType = 'subscribe' | 'publish';
 
+export type RedisEventType = 'subscribe' | 'publish';
+
 export type StreamConfiguration = {
   consumerInactiveThreshold: number;
   consumerName: string;
@@ -25,7 +27,18 @@ export type NatsEventConfiguration = {
   streamConfiguration?: StreamConfiguration;
 };
 
-export type EventConfiguration = KafkaEventConfiguration | NatsEventConfiguration;
+export type RedisEventConfiguration = {
+  fieldName: string;
+  providerId: string;
+  providerType: 'redis';
+  channels: string[];
+  type: RedisEventType;
+};
+
+export type EventConfiguration =
+  | KafkaEventConfiguration
+  | NatsEventConfiguration
+  | RedisEventConfiguration;
 
 export type SubscriptionFilterValue = boolean | null | number | string;
 

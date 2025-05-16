@@ -224,6 +224,11 @@ message KafkaEventConfiguration {
   repeated string topics = 2;
 }
 
+message RedisEventConfiguration {
+  EngineEventConfiguration engine_event_configuration = 1;
+  repeated string channels = 2;
+}
+
 message EngineEventConfiguration {
   string provider_id = 1;
   EventType type = 2;
@@ -234,6 +239,7 @@ message EngineEventConfiguration {
 message DataSourceCustomEvents {
   repeated NatsEventConfiguration nats = 1;
   repeated KafkaEventConfiguration kafka = 2;
+  repeated RedisEventConfiguration redis = 3;
 }
 
 message DataSourceCustom_Static {

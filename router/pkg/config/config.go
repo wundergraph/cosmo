@@ -530,9 +530,15 @@ type KafkaEventSource struct {
 	TLS            *KafkaTLSConfiguration `yaml:"tls,omitempty"`
 }
 
+type RedisEventSource struct {
+	ID   string   `yaml:"id,omitempty" env:"STORAGE_PROVIDER_REDIS_ID"`
+	URLs []string `yaml:"urls,omitempty" env:"STORAGE_PROVIDER_REDIS_URLS"`
+}
+
 type EventProviders struct {
 	Nats  []NatsEventSource  `yaml:"nats,omitempty"`
 	Kafka []KafkaEventSource `yaml:"kafka,omitempty"`
+	Redis []RedisEventSource `yaml:"redis,omitempty"`
 }
 
 type EventsConfiguration struct {

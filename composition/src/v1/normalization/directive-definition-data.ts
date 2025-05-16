@@ -10,6 +10,8 @@ import {
   EDFS_NATS_PUBLISH_DEFINITION,
   EDFS_NATS_REQUEST_DEFINITION,
   EDFS_NATS_SUBSCRIBE_DEFINITION,
+  EDFS_REDIS_PUBLISH_DEFINITION,
+  EDFS_REDIS_SUBSCRIBE_DEFINITION,
   EXTENDS_DEFINITION,
   EXTERNAL_DEFINITION,
   INACCESSIBLE_DEFINITION,
@@ -92,6 +94,10 @@ import {
   TOPICS,
   UNION_UPPER,
   URL_LOWER,
+  CHANNEL,
+  CHANNELS,
+  EDFS_REDIS_PUBLISH,
+  EDFS_REDIS_SUBSCRIBE,
 } from '../../utils/string-constants';
 
 export const AUTHENTICATED_DEFINITION_DATA: DirectiveDefinitionData = {
@@ -431,6 +437,70 @@ export const NATS_SUBSCRIBE_DEFINITION_DATA: DirectiveDefinitionData = {
   node: EDFS_NATS_SUBSCRIBE_DEFINITION,
   optionalArgumentNames: new Set<string>([PROVIDER_ID]),
   requiredArgumentNames: new Set<string>([SUBJECTS]),
+};
+
+export const REDIS_PUBLISH_DEFINITION_DATA: DirectiveDefinitionData = {
+  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
+    [
+      CHANNEL,
+      {
+        name: CHANNEL,
+        typeNode: REQUIRED_STRING_TYPE_NODE,
+      },
+    ],
+    [
+      PROVIDER_ID,
+      {
+        name: PROVIDER_ID,
+        typeNode: REQUIRED_STRING_TYPE_NODE,
+        defaultValue: {
+          kind: Kind.STRING,
+          value: DEFAULT_EDFS_PROVIDER_ID,
+        },
+      },
+    ],
+  ]),
+  isRepeatable: false,
+  locations: new Set<string>([FIELD_DEFINITION_UPPER]),
+  name: EDFS_REDIS_PUBLISH,
+  node: EDFS_REDIS_PUBLISH_DEFINITION,
+  optionalArgumentNames: new Set<string>([PROVIDER_ID]),
+  requiredArgumentNames: new Set<string>([CHANNEL]),
+};
+
+export const REDIS_SUBSCRIBE_DEFINITION_DATA: DirectiveDefinitionData = {
+  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
+    [
+      CHANNELS,
+      {
+        name: CHANNELS,
+        typeNode: {
+          kind: Kind.NON_NULL_TYPE,
+          type: {
+            kind: Kind.LIST_TYPE,
+            type: REQUIRED_STRING_TYPE_NODE,
+          },
+        },
+      },
+    ],
+    [
+      PROVIDER_ID,
+      {
+        name: PROVIDER_ID,
+        typeNode: REQUIRED_STRING_TYPE_NODE,
+        defaultValue: {
+          kind: Kind.STRING,
+          value: DEFAULT_EDFS_PROVIDER_ID,
+        },
+      },
+    ],
+  ]),
+  isRepeatable: false,
+  locations: new Set<string>([FIELD_DEFINITION_UPPER]),
+  name: EDFS_REDIS_SUBSCRIBE,
+  node: EDFS_REDIS_SUBSCRIBE_DEFINITION,
+  optionalArgumentNames: new Set<string>([PROVIDER_ID]),
+  requiredArgumentNames: new Set<string>([CHANNELS]),
 };
 
 export const OVERRIDE_DEFINITION_DATA: DirectiveDefinitionData = {
