@@ -6,7 +6,8 @@ import { ExpiresAt } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_
 import { pino } from 'pino';
 import { AuthContext, Label } from '../types/index.js';
 import * as schema from '../db/schema.js';
-import { MemberRole } from '../db/models.js';
+import { OrganizationRole } from '../db/models.js';
+import { organizationRoleEnum } from '../db/schema.js';
 import { Authenticator } from './services/Authentication.js';
 import { UserRepository } from './repositories/UserRepository.js';
 import { OrganizationRepository } from './repositories/OrganizationRepository.js';
@@ -14,6 +15,8 @@ import { GraphApiJwtPayload, GraphKeyAuthContext } from './services/GraphApiToke
 import { ApiKeyRepository } from './repositories/ApiKeyRepository.js';
 import { DefaultNamespace, NamespaceRepository } from './repositories/NamespaceRepository.js';
 import { verifyJwt } from './crypto/jwt.js';
+import { OrganizationGroupRepository } from './repositories/OrganizationGroupRepository.js';
+import { RBACEvaluator } from './services/RBACEvaluator.js';
 
 export type UserTestData = {
   userId: string;
@@ -23,7 +26,13 @@ export type UserTestData = {
   defaultBillingPlanId?: string;
   email: string;
   apiKey: string;
-  roles: ('admin' | 'developer' | 'viewer')[];
+  groups: ('admin' | 'developer' | 'viewer')[];
+};
+
+export const defaultGroupDescription: Record<string, string> = {
+  admin: 'Grants administrative access for the organization.',
+  developer: 'Grants developer access for the organization.',
+  viewer: 'Grants readonly access for the organization.',
 };
 
 export async function beforeAllSetup(): Promise<string> {
@@ -49,11 +58,17 @@ export function genUniqueLabel(prefix = 'prefix'): Label {
   return { key: prefix + '-' + genID(), value: genID() };
 }
 
-export async function seedTest(queryConnection: postgres.Sql, userTestData: UserTestData, createScimKey?: boolean) {
+export async function seedTest(
+  queryConnection: postgres.Sql,
+  userTestData: UserTestData,
+  createScimKey?: boolean,
+  kcGroups?: { id: string; name: string }[],
+) {
   const db = drizzle(queryConnection, { schema: { ...schema } });
 
   const userRepo = new UserRepository(pino(), db);
   const orgRepo = new OrganizationRepository(pino(), db, userTestData.defaultBillingPlanId);
+  const orgGroupRepo = new OrganizationGroupRepository(db);
   const apiKeyRepo = new ApiKeyRepository(db);
 
   const user = await userRepo.byEmail(userTestData.email);
@@ -75,6 +90,31 @@ export async function seedTest(queryConnection: postgres.Sql, userTestData: User
       organizationSlug: userTestData.organizationSlug,
       ownerID: userTestData.userId,
     });
+
+    for (const groupName of ['admin', 'developer', 'viewer']) {
+      const createdGroup = await orgGroupRepo.create({
+        organizationId: org.id,
+        name: groupName,
+        description: defaultGroupDescription[groupName] ?? '',
+        builtin: true,
+        kcGroupId: kcGroups?.find((g) => g.name === groupName)?.id || null,
+      });
+
+      const roleName = `organization-${groupName}` as OrganizationRole;
+      if (organizationRoleEnum.enumValues.includes(roleName)) {
+        await orgGroupRepo.updateGroup({
+          organizationId: org.id,
+          groupId: createdGroup.groupId,
+          rules: [
+            {
+              role: roleName,
+              namespaces: [],
+              resources: [],
+            },
+          ],
+        });
+      }
+    }
   }
 
   const orgMember = await orgRepo.addOrganizationMember({
@@ -82,20 +122,40 @@ export async function seedTest(queryConnection: postgres.Sql, userTestData: User
     userID: userTestData.userId,
   });
 
-  await orgRepo.addOrganizationMemberRoles({
-    memberID: orgMember.id,
-    roles: userTestData.roles,
-  });
+  for (const groupName of userTestData.groups) {
+    const orgGroup = await orgGroupRepo.byName({
+      organizationId: org.id,
+      name: groupName,
+    });
 
-  await apiKeyRepo.addAPIKey({
-    key: userTestData.apiKey,
-    name: userTestData.email,
-    organizationID: org.id,
-    userID: userTestData.userId,
-    expiresAt: ExpiresAt.NEVER,
-    targetIds: [],
-    permissions: createScimKey ? ['scim'] : [],
-  });
+    if (!orgGroup) {
+      continue;
+    }
+
+    await orgGroupRepo.addUserToGroup({
+      organizationMemberId: orgMember.id,
+      groupId: orgGroup.groupId,
+    });
+  }
+
+  if (userTestData.groups.length > 0) {
+    const orgGroup = await orgGroupRepo.byName({
+      organizationId: org.id,
+      name: userTestData.groups[0],
+    });
+
+    if (orgGroup) {
+      await apiKeyRepo.addAPIKey({
+        key: userTestData.apiKey,
+        name: userTestData.email,
+        organizationID: org.id,
+        userID: userTestData.userId,
+        expiresAt: ExpiresAt.NEVER,
+        groupId: orgGroup.groupId,
+        permissions: createScimKey ? ['scim'] : [],
+      });
+    }
+  }
 
   const namespaceRepo = new NamespaceRepository(db, org.id);
   const ns = await namespaceRepo.byName(DefaultNamespace);
@@ -113,9 +173,8 @@ export async function seedTest(queryConnection: postgres.Sql, userTestData: User
 export function createTestContext(
   organizationName = 'wundergraph',
   organizationId = randomUUID(),
-  isAdmin = true,
-  hasWriteAccess = true,
-  roles: MemberRole[] = ['admin'],
+  groups: ('admin' | 'developer' | 'viewer')[] = ['admin'],
+  organizationDeactivated = false,
 ): UserTestData & AuthContext {
   const userId = randomUUID();
 
@@ -127,10 +186,24 @@ export function createTestContext(
     email: userId + '@wg.com',
     apiKey: nuid.next(),
     organizationSlug: `slug-${organizationId}`,
-    hasWriteAccess,
-    isAdmin,
+    organizationDeactivated,
     userDisplayName: userId,
-    roles,
+    groups,
+    rbac: new RBACEvaluator(
+      groups.map((g) => ({
+        groupId: randomUUID(),
+        name: g,
+        description: '',
+        builtin: true,
+        rules: [
+          {
+            role: `organization-${g}` as OrganizationRole,
+            namespaces: [],
+            resources: [],
+          },
+        ],
+      })),
+    ),
   };
 }
 

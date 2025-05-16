@@ -16,9 +16,7 @@ import {
 } from "@/components/ui/select";
 import { Toolbar } from "@/components/ui/toolbar";
 import { useCurrentOrganization } from "@/hooks/use-current-organization";
-import { useUser } from "@/hooks/use-user";
 import { NextPageWithLayout } from "@/lib/page";
-import { checkUserAccess } from "@/lib/utils";
 import { useQuery } from "@connectrpc/connect-query";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
@@ -27,15 +25,17 @@ import { capitalCase } from "change-case";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useContext } from "react";
+import { useCheckUserAccess } from "@/hooks/use-check-user-access";
 
 const GraphToolbar = () => {
-  const user = useUser();
+  const checkUserAccess = useCheckUserAccess();
   const org = useCurrentOrganization();
   const router = useRouter();
   const applyParams = useApplyParams();
 
   const type = (router.query.type as string) || "all-graphs";
   const namespace = router.query.namespace;
+  const isAdminOrDeveloper = checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] });
 
   return (
     <Toolbar className="py-0 md:w-auto">
@@ -57,16 +57,8 @@ const GraphToolbar = () => {
         </SelectContent>
       </Select>
       <Button
-        asChild={checkUserAccess({
-          rolesToBe: ["admin", "developer"],
-          userRoles: user?.currentOrganization.roles || [],
-        })}
-        disabled={
-          !checkUserAccess({
-            rolesToBe: ["admin", "developer"],
-            userRoles: user?.currentOrganization.roles || [],
-          })
-        }
+        asChild={isAdminOrDeveloper}
+        disabled={!isAdminOrDeveloper}
       >
         <Link href={`/${org?.slug}/new?namespace=${namespace}`}>Create</Link>
       </Button>

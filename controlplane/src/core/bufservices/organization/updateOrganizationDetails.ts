@@ -9,6 +9,7 @@ import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, isValidOrganizationName, isValidOrganizationSlug } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function updateOrganizationDetails(
   opts: RouterOptions,
@@ -49,13 +50,8 @@ export function updateOrganizationDetails(
     }
 
     // non admins cannot update the organization name
-    if (!orgMember.roles.includes('admin')) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: 'User does not have the permissions to update the organization name.',
-        },
-      };
+    if (!orgMember.rbac.isOrganizationAdmin) {
+      throw new UnauthorizedError();
     }
 
     if (!isValidOrganizationSlug(req.organizationSlug)) {

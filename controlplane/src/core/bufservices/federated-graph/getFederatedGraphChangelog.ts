@@ -10,6 +10,7 @@ import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function getFederatedGraphChangelog(
   opts: RouterOptions,
@@ -36,6 +37,16 @@ export function getFederatedGraphChangelog(
         federatedGraphChangelogOutput: [],
         hasNextPage: false,
       };
+    }
+
+    if (
+      !(
+        authContext.rbac.isOrganizationAdminOrDeveloper ||
+        authContext.rbac.checkTargetAccess(federatedGraph.targetId, 'graph-admin') ||
+        authContext.rbac.checkTargetAccess(federatedGraph.targetId, 'graph-viewer')
+      )
+    ) {
+      throw new UnauthorizedError();
     }
 
     if (!req.pagination || !req.dateRange) {

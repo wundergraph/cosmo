@@ -1,4 +1,3 @@
-import { UserContext } from "@/components/app-provider";
 import { EmptyState } from "@/components/empty-state";
 import { getDashboardLayout } from "@/components/layout/dashboard-layout";
 import {
@@ -43,7 +42,6 @@ import { useToast } from "@/components/ui/use-toast";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { docsBaseURL } from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
-import { checkUserAccess } from "@/lib/utils";
 import {
   ExclamationTriangleIcon,
   Pencil1Icon,
@@ -61,9 +59,10 @@ import {
 import { IntegrationConfig } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { FiSlack } from "react-icons/fi";
 import { z } from "zod";
+import { useCheckUserAccess } from "@/hooks/use-check-user-access";
 
 const CreateIntegrationFormSchema = z.object({
   name: z.string(),
@@ -532,8 +531,10 @@ const Integration = ({
 };
 
 const IntegrationsPage: NextPageWithLayout = () => {
-  const user = useContext(UserContext);
   const router = useRouter();
+  const checkUserAccess = useCheckUserAccess();
+
+  const isAdminOrDeveloper = checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] });
 
   const organizationSlug = router.query.organizationSlug as string;
   const code = router.query.code as string;
@@ -591,18 +592,8 @@ const IntegrationsPage: NextPageWithLayout = () => {
             <Button
               variant="default"
               size="default"
-              asChild={
-                checkUserAccess({
-                  rolesToBe: ["admin", "developer"],
-                  userRoles: user?.currentOrganization.roles || [],
-                })
-              }
-              disabled={
-                !checkUserAccess({
-                  rolesToBe: ["admin", "developer"],
-                  userRoles: user?.currentOrganization.roles || [],
-                })
-              }
+              asChild={isAdminOrDeveloper}
+              disabled={!isAdminOrDeveloper}
             >
               <Link
                 href={`https://slack.com/oauth/v2/authorize?scope=incoming-webhook%2Cchat%3Awrite&user_scope=&redirect_uri=${slackRedirectURL}&client_id=${process.env.NEXT_PUBLIC_SLACK_CLIENT_ID}`}
@@ -639,10 +630,7 @@ const IntegrationsPage: NextPageWithLayout = () => {
             Learn more
           </Link>
         </p>
-        {checkUserAccess({
-          rolesToBe: ["admin", "developer"],
-          userRoles: user?.currentOrganization.roles || [],
-        }) && (
+        {isAdminOrDeveloper && (
           <>
             <Button variant="default" size="default" asChild>
               <Link
@@ -668,10 +656,7 @@ const IntegrationsPage: NextPageWithLayout = () => {
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Events</TableHead>
-              {checkUserAccess({
-                rolesToBe: ["admin", "developer"],
-                userRoles: user?.currentOrganization.roles || [],
-              }) && <TableHead aria-label="Actions"></TableHead>}
+              {isAdminOrDeveloper && <TableHead aria-label="Actions"></TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -694,10 +679,7 @@ const IntegrationsPage: NextPageWithLayout = () => {
                         )}
                       </div>
                     </TableCell>
-                    {checkUserAccess({
-                      rolesToBe: ["admin", "developer"],
-                      userRoles: user?.currentOrganization.roles || [],
-                    }) && (
+                    {isAdminOrDeveloper && (
                       <TableCell className="flex justify-end space-x-2">
                         <Integration
                           mode="update"

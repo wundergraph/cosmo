@@ -11,6 +11,7 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import { UserRepository } from '../../repositories/UserRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
 
 export function acceptOrDeclineInvitation(
   opts: RouterOptions,
@@ -26,6 +27,7 @@ export function acceptOrDeclineInvitation(
     const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
     const userRepo = new UserRepository(logger, opts.db);
     const orgInvitationRepo = new OrganizationInvitationRepository(logger, opts.db, opts.billingDefaultPlanId);
+    const orgGroupRepo = new OrganizationGroupRepository(opts.db);
     const auditLogRepo = new AuditLogRepository(opts.db);
 
     const user = await userRepo.byId(authContext.userId);
@@ -48,47 +50,45 @@ export function acceptOrDeclineInvitation(
       };
     }
 
+    const invitation = await orgInvitationRepo.getPendingOrganizationInvitation({
+      userID: user.id,
+      organizationID: req.organizationId,
+    });
+
+    if (!invitation) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_NOT_FOUND,
+          details: 'Invitation not found',
+        },
+      };
+    }
+
     if (req.accept) {
-      const groupName = organization.slug;
+      if (invitation.groupId) {
+        const group = await orgGroupRepo.byId({
+          organizationId: authContext.organizationId,
+          groupId: invitation.groupId,
+        });
 
-      await opts.keycloakClient.authenticateClient();
+        if (group?.kcGroupId) {
+          await opts.keycloakClient.authenticateClient();
+          const keycloakUser = await opts.keycloakClient.client.users.find({
+            max: 1,
+            email: user.email,
+            realm: opts.keycloakRealm,
+            exact: true,
+          });
 
-      const organizationGroups = await opts.keycloakClient.client.groups.find({
-        max: 1,
-        search: groupName,
-        realm: opts.keycloakRealm,
-      });
-
-      if (organizationGroups.length === 0) {
-        throw new Error(`Organization group '${groupName}' not found`);
+          await opts.keycloakClient.client.users.addToGroup({
+            id: keycloakUser[0].id!,
+            groupId: group.kcGroupId,
+            realm: opts.keycloakRealm,
+          });
+        }
       }
-
-      const devGroup = await opts.keycloakClient.fetchChildGroup({
-        realm: opts.keycloakRealm,
-        kcGroupId: organizationGroups[0].id!,
-        orgSlug: groupName,
-        childGroupType: 'developer',
-      });
-
-      const keycloakUser = await opts.keycloakClient.client.users.find({
-        max: 1,
-        email: user.email,
-        realm: opts.keycloakRealm,
-        exact: true,
-      });
-
-      if (keycloakUser.length === 0) {
-        throw new Error(`Keycloak user with email '${user.email}' not found`);
-      }
-
-      await opts.keycloakClient.client.users.addToGroup({
-        id: keycloakUser[0].id!,
-        groupId: devGroup.id!,
-        realm: opts.keycloakRealm,
-      });
 
       await orgInvitationRepo.acceptInvite({ userId: user.id, organizationId: req.organizationId });
-
       await auditLogRepo.addAuditLog({
         organizationId: req.organizationId,
         organizationSlug: organization.slug,

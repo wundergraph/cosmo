@@ -16,6 +16,7 @@ import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, isValidSchemaTags } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function updateContract(
   opts: RouterOptions,
@@ -43,16 +44,8 @@ export function updateContract(
     req.excludeTags = [...new Set(req.excludeTags)];
     req.includeTags = [...new Set(req.includeTags)];
 
-    if (!authContext.hasWriteAccess) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `The user doesn't have the permissions to perform this operation`,
-        },
-        compositionErrors: [],
-        deploymentErrors: [],
-        compositionWarnings: [],
-      };
+    if (authContext.organizationDeactivated) {
+      throw new UnauthorizedError();
     }
 
     if (req.includeTags.length > 0 && req.excludeTags.length > 0) {
@@ -104,6 +97,15 @@ export function updateContract(
         deploymentErrors: [],
         compositionWarnings: [],
       };
+    }
+
+    if (
+      !(
+        authContext.rbac.isOrganizationAdminOrDeveloper ||
+        authContext.rbac.checkTargetAccess(graph.targetId, 'graph-admin')
+      )
+    ) {
+      throw new UnauthorizedError();
     }
 
     if (!graph.contract?.id) {

@@ -1,4 +1,3 @@
-import { UserContext } from "@/components/app-provider";
 import { useCurrentOrganization } from "@/hooks/use-current-organization";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { formatDateTime } from "@/lib/format-date";
@@ -16,7 +15,6 @@ import { useRouter } from "next/router";
 import {
   Dispatch,
   SetStateAction,
-  useContext,
   useEffect,
   useMemo,
   useState,
@@ -39,7 +37,9 @@ import { LayoutProps } from "./layout";
 import { NavLink, SideNav } from "./sidenav";
 import { TitleLayout } from "./title-layout";
 import { FaGripfire } from "react-icons/fa";
-import { DocumentPlusIcon } from "@heroicons/react/24/outline";
+import { UserGroupIcon } from "@heroicons/react/24/outline";
+import { useCheckUserAccess } from "@/hooks/use-check-user-access";
+import { useUser } from "@/hooks/use-user";
 
 export const StarBanner = ({
   isDisabled,
@@ -117,8 +117,9 @@ export const OrganizationBanner = () => {
 
 export const DashboardLayout = ({ children }: LayoutProps) => {
   const router = useRouter();
-  const user = useContext(UserContext);
+  const user = useUser();
   const organizationSlug = router.query.organizationSlug as string;
+  const checkUserAccess = useCheckUserAccess();
 
   const [isStarBannerDisabled, setIsStarBannerDisabled] = useState(true);
   const [isStarBannerDisabledOnClient, setDisableStarBanner] = useLocalStorage(
@@ -129,6 +130,8 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
     setIsStarBannerDisabled(isStarBannerDisabledOnClient === "true");
   }, [isStarBannerDisabledOnClient]);
 
+  const isAdmin = checkUserAccess({ rolesToBe: ["organization-admin" ]});
+  const isAdminOrDeveloper = checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] });
   const isOrganizationDeactivated = !!user?.currentOrganization.deactivation;
   const isOrganizationPendingDeletion = !!user?.currentOrganization?.deletion;
 
@@ -149,54 +152,59 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
       {
         title: "Graphs",
         href: basePath + "/graphs",
-        icon: <PiGraphLight className="h-4 w-4" />,
+        icon: <PiGraphLight className="size-4" />,
       },
       {
         title: "Subgraphs",
         href: basePath + "/subgraphs",
-        icon: <Component2Icon className="h-4 w-4" />,
+        icon: <Component2Icon className="size-4" />,
       },
       {
         title: "Feature Flags",
         href: basePath + "/feature-flags",
-        icon: <MdOutlineFeaturedPlayList className="h-4 w-4" />,
+        icon: <MdOutlineFeaturedPlayList className="size-4" />,
         matchExact: false,
       },
       {
         title: "Policies",
         href: basePath + "/policies",
-        icon: <MdOutlinePolicy className="h-4 w-4" />,
+        icon: <MdOutlinePolicy className="size-4" />,
       },
       {
         title: "Cache Warmer",
         href: basePath + "/cache-warmer",
-        icon: <FaGripfire className="h-4 w-4" />,
+        icon: <FaGripfire className="size-4" />,
         separator: true,
       },
       {
         title: "Members",
         href: basePath + "/members",
-        icon: <PiUsers className="h-4 w-4" />,
+        icon: <PiUsers className="size-4" />,
+      },
+      {
+        title: "Groups",
+        href: basePath + "/groups",
+        icon: <UserGroupIcon className="size-4" />,
       },
       {
         title: "API Keys",
         href: basePath + "/apikeys",
-        icon: <PiKey className="h-4 w-4" />,
+        icon: <PiKey className="size-4" />,
       },
       {
         title: "Notifications",
         href: basePath + "/webhooks",
-        icon: <PiBell className="h-4 w-4" />,
+        icon: <PiBell className="size-4" />,
       },
       {
         title: "Webhook History",
         href: basePath + "/webhook-history",
-        icon: <PiWebhooksLogo className="h-4 w-4" />,
+        icon: <PiWebhooksLogo className="size-4" />,
       },
       {
         title: "Usage",
         href: basePath + "/usages",
-        icon: <PiChartDonut className="h-4 w-4" />,
+        icon: <PiChartDonut className="size-4" />,
       },
     ];
 
@@ -207,35 +215,41 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
       navigation.push({
         title: "Billing",
         href: basePath + "/billing",
-        icon: <PiReceipt className="h-4 w-4" />,
+        icon: <PiReceipt className="size-4" />,
       });
     }
 
-    navigation.push({
-      title: "Audit log",
-      href: basePath + "/audit-log",
-      icon: <AiOutlineAudit className="h-4 w-4" />,
-    });
+    if (isAdmin) {
+      navigation.push({
+        title: "Audit log",
+        href: basePath + "/audit-log",
+        icon: <AiOutlineAudit className="size-4"/>,
+        separator: !isAdminOrDeveloper,
+      });
+    }
 
-    navigation.push(
-      {
+    if (isAdminOrDeveloper) {
+      navigation.push({
         title: "Settings",
         href: basePath + "/settings",
-        icon: <PiGear className="h-4 w-4" />,
+        icon: <PiGear className="size-4" />,
         separator: true,
-      },
+      });
+    }
+
+    navigation.push(
       {
         title: "Account",
       },
       {
         title: "Invitations",
         href: "/account/invitations",
-        icon: <EnvelopeClosedIcon className="h-4 w-4" />,
+        icon: <EnvelopeClosedIcon className="size-4" />,
       },
       {
         title: "Manage",
         href: "/account/manage",
-        icon: <PiUserGear className="h-4 w-4" />,
+        icon: <PiUserGear className="size-4" />,
       },
     );
 
@@ -244,6 +258,7 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
     organizationSlug,
     plans.data?.plans?.length,
     user?.currentOrganization.slug,
+    isAdminOrDeveloper,
   ]);
 
   return (

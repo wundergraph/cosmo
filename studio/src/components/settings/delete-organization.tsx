@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
+import { useIsAdmin } from "@/hooks/use-is-admin";
 
 export const DeleteOrganization = () => {
   const user = useContext(UserContext);
@@ -25,7 +26,9 @@ export const DeleteOrganization = () => {
     !!user?.currentOrganization?.billing?.plan &&
     user?.currentOrganization?.billing?.plan !== 'developer'
   );
-  const canDeleteOrganization = !hasActiveSubscription && user?.currentOrganization.roles.includes("admin");
+
+  const isOrganizationAdmin = useIsAdmin();
+  const canDeleteOrganization = !hasActiveSubscription && isOrganizationAdmin;
 
   const regex = new RegExp(`^I want to delete the organization ${user?.currentOrganization.name}$`);
   const schema = z.object({

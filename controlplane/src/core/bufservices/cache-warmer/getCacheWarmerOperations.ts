@@ -11,6 +11,7 @@ import { DefaultNamespace, NamespaceRepository } from '../../../core/repositorie
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationRepository } from '../../../core/repositories/OrganizationRepository.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function getCacheWarmerOperations(
   opts: RouterOptions,
@@ -58,6 +59,16 @@ export function getCacheWarmerOperations(
         totalCount: 0,
         isCacheWarmerEnabled: false,
       };
+    }
+
+    if (
+      !(
+        authContext.rbac.isOrganizationAdminOrDeveloper ||
+        authContext.rbac.checkTargetAccess(federatedGraph.targetId, 'graph-admin') ||
+        authContext.rbac.checkTargetAccess(federatedGraph.targetId, 'graph-viewer')
+      )
+    ) {
+      throw new UnauthorizedError();
     }
 
     const namespace = await namespaceRepo.byName(req.namespace);

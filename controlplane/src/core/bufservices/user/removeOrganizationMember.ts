@@ -10,6 +10,7 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import { UserRepository } from '../../repositories/UserRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function removeOrganizationMember(
   opts: RouterOptions,
@@ -26,13 +27,8 @@ export function removeOrganizationMember(
     const auditLogRepo = new AuditLogRepository(opts.db);
     const userRepo = new UserRepository(logger, opts.db);
 
-    if (!authContext.hasWriteAccess) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `The user doesnt have the permissions to perform this operation`,
-        },
-      };
+    if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdminOrDeveloper) {
+      throw new UnauthorizedError();
     }
 
     await opts.keycloakClient.authenticateClient();
@@ -100,7 +96,6 @@ export function removeOrganizationMember(
       realm: opts.keycloakRealm,
       userID: user.id,
       groupName: org.slug,
-      roles: orgMember.roles,
     });
 
     await orgRepo.removeOrganizationMember({ organizationID: authContext.organizationId, userID: user.id });

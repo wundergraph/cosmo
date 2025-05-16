@@ -10,6 +10,7 @@ import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { NamespaceDTO } from '../../../types/index.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function getNamespace(
   opts: RouterOptions,
@@ -38,6 +39,16 @@ export function getNamespace(
           details: `Namespace '${req.id || req.name}' not found`,
         },
       };
+    }
+
+    if (
+      !(
+        authContext.rbac.isOrganizationAdminOrDeveloper ||
+        authContext.rbac.checkNamespaceAccess(namespace.id, 'namespace-admin') ||
+        authContext.rbac.checkNamespaceAccess(namespace.id, 'namespace-viewer')
+      )
+    ) {
+      throw new UnauthorizedError();
     }
 
     return {

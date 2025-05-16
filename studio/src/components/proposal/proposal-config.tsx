@@ -15,7 +15,6 @@ import {
   SelectValue,
 } from "../ui/select";
 import { useUser } from "@/hooks/use-user";
-import { checkUserAccess } from "@/lib/utils";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { useState } from "react";
 import { useToast } from "../ui/use-toast";
@@ -33,6 +32,7 @@ import { useFeature } from "@/hooks/use-feature";
 import { docsBaseURL } from "@/lib/constants";
 import Link from "next/link";
 import { Switch } from "../ui/switch";
+import { useCheckUserAccess } from "@/hooks/use-check-user-access";
 
 export const ProposalConfig = ({
   data,
@@ -43,6 +43,7 @@ export const ProposalConfig = ({
 }) => {
   const router = useRouter();
   const user = useUser();
+  const checkUserAccess = useCheckUserAccess();
   const namespace = router.query.namespace as string;
 
   const proposalsFeature = useFeature("proposals");
@@ -88,10 +89,7 @@ export const ProposalConfig = ({
           checked={proposalsEnabled}
           disabled={
             !proposalsFeature?.enabled ||
-            !checkUserAccess({
-              rolesToBe: ["admin"],
-              userRoles: user?.currentOrganization.roles || [],
-            })
+            !checkUserAccess({ rolesToBe: ["organization-admin"] })
           }
           onCheckedChange={(checked) => {
             setProposalsEnabled(checked);
@@ -148,10 +146,7 @@ export const ProposalConfig = ({
               isLoading={isPending}
               disabled={
                 !proposalsEnabled ||
-                !checkUserAccess({
-                  rolesToBe: ["admin"],
-                  userRoles: user?.currentOrganization.roles || [],
-                })
+                !checkUserAccess({ rolesToBe: ["organization-admin"] })
               }
               onClick={() => {
                 configureProposalConfig(

@@ -79,44 +79,6 @@ try {
     process.exit(0);
   }
 
-  const organizationGroup = await keycloakClient.client.groups.create({
-    realm,
-    name: user.organization.slug,
-  });
-
-  const adminGroup = await keycloakClient.client.groups.createChildGroup(
-    {
-      realm,
-      id: organizationGroup.id,
-    },
-    {
-      name: 'admin',
-      realmRoles: ['admin'],
-    },
-  );
-
-  const devGroup = await keycloakClient.client.groups.createChildGroup(
-    {
-      realm,
-      id: organizationGroup.id,
-    },
-    {
-      name: 'developer',
-      realmRoles: ['developer'],
-    },
-  );
-
-  const viewerGroup = await keycloakClient.client.groups.createChildGroup(
-    {
-      realm,
-      id: organizationGroup.id,
-    },
-    {
-      name: 'viewer',
-      realmRoles: ['viewer'],
-    },
-  );
-
   const keycloakUserID = await keycloakClient.addKeycloakUser({
     realm,
     email: user.email,
@@ -124,21 +86,26 @@ try {
     isPasswordTemp: false,
   });
 
-  await keycloakClient.client.users.addToGroup({
-    id: keycloakUserID,
+  const kcCreatedGroups = await keycloakClient.seedGroup({
     realm,
-    groupId: adminGroup.id,
+    userID: keycloakUserID,
+    organizationSlug: user.organization.slug,
   });
 
-  await seedTest(queryConnection, {
-    apiKey,
-    email: user.email,
-    organizationName: user.organization.name,
-    organizationSlug: user.organization.slug,
-    userId: keycloakUserID,
-    organizationId,
-    roles: ['admin'],
-  });
+  await seedTest(
+    queryConnection,
+    {
+      apiKey,
+      email: user.email,
+      organizationName: user.organization.name,
+      organizationSlug: user.organization.slug,
+      userId: keycloakUserID,
+      organizationId,
+      groups: ['admin'],
+    },
+    undefined,
+    kcCreatedGroups,
+  );
 
   await queryConnection.end({
     timeout: 1,

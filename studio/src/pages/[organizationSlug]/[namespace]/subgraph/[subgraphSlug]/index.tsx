@@ -242,14 +242,7 @@ const SubgraphOverviewPage = () => {
         <div className="scrollbar-custom col-span-1 flex flex-col rounded-md border">
           <h3 className="border-b px-4 py-2 font-semibold">Subgraph Members</h3>
           <div className="px-4 py-4">
-            <AddSubgraphUsersContent
-              subgraphName={subgraph.name}
-              namespace={subgraph.namespace}
-              inviteOptions={inviteOptions}
-              subgraphMembers={subgraphMembersData?.members || []}
-              refetchSubgraphMembers={refetch}
-              creatorUserId={subgraph.creatorUserId}
-            />
+            <AddSubgraphUsersContent subgraphMembers={subgraphMembersData?.members || []} />
           </div>
         </div>
       </div>

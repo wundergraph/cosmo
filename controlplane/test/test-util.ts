@@ -51,6 +51,28 @@ export const DEFAULT_SUBGRAPH_URL_TWO = 'http://localhost:4002';
 export const DEFAULT_SUBGRAPH_URL_THREE = 'http://localhost:4003';
 export const DEFAULT_NAMESPACE = 'default';
 
+const getKeycloakGroups = async (realm: string, keycloak: Keycloak, organizationSlug: string) => {
+  const organizationGroup = await keycloak.client.groups.find({
+    max: 1,
+    search: organizationSlug,
+    realm,
+  });
+
+  if (organizationGroup.length === 0) {
+    return [];
+  }
+
+  const subgroups = await keycloak.fetchAllSubGroups({
+    realm,
+    kcGroupId: organizationGroup[0].id!,
+  });
+
+  return subgroups.map((group) => ({
+    id: group.id!,
+    name: group.name!,
+  }));
+}
+
 export const SetupTest = async function ({
   dbname,
   chClient,
@@ -91,8 +113,8 @@ export const SetupTest = async function ({
 
   if (enableMultiUsers) {
     users.adminBobCompanyA = createTestContext('company-a', companyAOrganizationId);
-    users.devJoeCompanyA = createTestContext('company-a', companyAOrganizationId, false, true, ['developer']);
-    users.viewerTimCompanyA = createTestContext('company-a', companyAOrganizationId, false, false, ['viewer']);
+    users.devJoeCompanyA = createTestContext('company-a', companyAOrganizationId, ['developer']);
+    users.viewerTimCompanyA = createTestContext('company-a', companyAOrganizationId, ['viewer']);
     users.adminJimCompanyB = createTestContext('company-b', randomUUID());
   }
 
@@ -201,11 +223,17 @@ export const SetupTest = async function ({
       organizationSlug: users.adminAliceCompanyA.organizationSlug,
       email: users.adminAliceCompanyA.email,
       apiKey: users.adminAliceCompanyA.apiKey,
-      roles: ['admin'],
+      groups: ['admin'],
     },
   });
+
   users.adminAliceCompanyA.userId = id;
-  await seedTest(queryConnection, users.adminAliceCompanyA, createScimKey);
+  await seedTest(
+    queryConnection,
+    users.adminAliceCompanyA,
+    createScimKey,
+    await getKeycloakGroups(realm, keycloakClient, users.adminAliceCompanyA.organizationSlug),
+  );
 
   if (enableMultiUsers) {
     if (users.adminBobCompanyA) {
@@ -219,12 +247,18 @@ export const SetupTest = async function ({
           organizationSlug: users.adminBobCompanyA.organizationSlug,
           email: users.adminBobCompanyA.email,
           apiKey: users.adminBobCompanyA.apiKey,
-          roles: ['admin'],
+          groups: ['admin'],
         },
       });
       users.adminBobCompanyA.userId = id;
-      await seedTest(queryConnection, users.adminBobCompanyA, createScimKey);
+      await seedTest(
+        queryConnection,
+        users.adminBobCompanyA,
+        createScimKey,
+        await getKeycloakGroups(realm, keycloakClient, users.adminBobCompanyA.organizationSlug),
+      );
     }
+
     if (users.devJoeCompanyA) {
       const id = await addKeycloakUser({
         keycloakClient,
@@ -236,12 +270,18 @@ export const SetupTest = async function ({
           organizationSlug: users.devJoeCompanyA.organizationSlug,
           email: users.devJoeCompanyA.email,
           apiKey: users.devJoeCompanyA.apiKey,
-          roles: ['developer'],
+          groups: ['developer'],
         },
       });
       users.devJoeCompanyA.userId = id;
-      await seedTest(queryConnection, users.devJoeCompanyA);
+      await seedTest(
+        queryConnection,
+        users.devJoeCompanyA,
+        undefined,
+        await getKeycloakGroups(realm, keycloakClient, users.devJoeCompanyA.organizationSlug),
+      );
     }
+
     if (users.viewerTimCompanyA) {
       const id = await addKeycloakUser({
         keycloakClient,
@@ -253,12 +293,18 @@ export const SetupTest = async function ({
           organizationSlug: users.viewerTimCompanyA.organizationSlug,
           email: users.viewerTimCompanyA.email,
           apiKey: users.viewerTimCompanyA.apiKey,
-          roles: ['developer'],
+          groups: ['developer'],
         },
       });
       users.viewerTimCompanyA.userId = id;
-      await seedTest(queryConnection, users.viewerTimCompanyA);
+      await seedTest(
+        queryConnection,
+        users.viewerTimCompanyA,
+        undefined,
+        await getKeycloakGroups(realm, keycloakClient, users.viewerTimCompanyA.organizationSlug),
+      );
     }
+
     if (users.adminJimCompanyB) {
       const id = await addKeycloakUser({
         keycloakClient,
@@ -270,11 +316,16 @@ export const SetupTest = async function ({
           organizationSlug: users.adminJimCompanyB.organizationSlug,
           email: users.adminJimCompanyB.email,
           apiKey: users.adminJimCompanyB.apiKey,
-          roles: ['admin'],
+          groups: ['admin'],
         },
       });
       users.adminJimCompanyB.userId = id;
-      await seedTest(queryConnection, users.adminJimCompanyB, createScimKey);
+      await seedTest(
+        queryConnection,
+        users.adminJimCompanyB,
+        createScimKey,
+        await getKeycloakGroups(realm, keycloakClient, users.adminJimCompanyB.organizationSlug),
+      );
     }
   }
 

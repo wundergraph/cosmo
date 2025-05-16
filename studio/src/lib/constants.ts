@@ -211,3 +211,68 @@ export const PLAYGROUND_DEFAULT_QUERY_TEMPLATE = `# Welcome to WunderGraph Studi
 export const PLAYGROUND_DEFAULT_HEADERS_TEMPLATE = `{
   "X-WG-TRACE" : "true"
 }`;
+
+export const roles = [
+  {
+    key: "organization-admin",
+    category: "organization",
+    displayName: "Admin",
+    description: "Organization administrator access.",
+  },
+  {
+    key: "organization-developer",
+    category: "organization",
+    displayName: "Developer",
+    description: "Organization developer access.",
+  },
+  {
+    key: "organization-apikey-manager",
+    category: "organization",
+    displayName: "API Key Manager",
+    description: "...",
+  },
+  {
+    key: "organization-viewer",
+    category: "organization",
+    displayName: "Viewer",
+    description: "Organization readonly access.",
+  },
+  {
+    key: "namespace-admin",
+    category: "namespace",
+    displayName: "Admin",
+    description: "Namespace administrator access.",
+  },
+  {
+    key: "namespace-viewer",
+    category: "namespace",
+    displayName: "Viewer",
+    description: "Namespace readonly access.",
+  },
+  {
+    key: "graph-admin",
+    category: "graph",
+    displayName: "Admin",
+    description: "Graph administrator access.",
+  },
+  {
+    key: "graph-viewer",
+    category: "graph",
+    displayName: "Viewer",
+    description: "Graph readonly access.",
+  },
+  {
+    key: "subgraph-admin",
+    category: "subgraph",
+    displayName: "Admin",
+    description: "Grants publish permission.",
+  },
+  {
+    key: "subgraph-publisher",
+    category: "subgraph",
+    displayName: "Publisher",
+    description: "Grants publish permission.",
+  }
+];
+
+export type OrganizationRole = typeof roles[number]["key"];

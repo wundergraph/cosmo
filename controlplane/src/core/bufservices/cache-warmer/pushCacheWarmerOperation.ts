@@ -13,6 +13,7 @@ import { OperationsRepository } from '../../../core/repositories/OperationsRepos
 import { OrganizationRepository } from '../../../core/repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function pushCacheWarmerOperation(
   opts: RouterOptions,
@@ -31,13 +32,8 @@ export function pushCacheWarmerOperation(
     const namespaceRepository = new NamespaceRepository(opts.db, authContext.organizationId);
     const organizationRepo = new OrganizationRepository(logger, opts.db);
 
-    if (!authContext.hasWriteAccess) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `The user doesnt have the permissions to perform this operation`,
-        },
-      };
+    if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdminOrDeveloper) {
+      throw new UnauthorizedError();
     }
 
     const cacheWarmerFeature = await organizationRepo.getFeature({

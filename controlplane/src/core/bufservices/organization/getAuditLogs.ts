@@ -10,6 +10,7 @@ import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function getAuditLogs(
   opts: RouterOptions,
@@ -25,15 +26,8 @@ export function getAuditLogs(
     const orgRepo = new OrganizationRepository(logger, opts.db);
     const auditLogRepo = new AuditLogRepository(opts.db);
 
-    if (!authContext.isAdmin) {
-      return {
-        response: {
-          code: EnumStatusCode.ERROR_NOT_AUTHORIZED,
-          details: `The user doesnt have the permissions to perform this operation`,
-        },
-        logs: [],
-        count: 0,
-      };
+    if (!authContext.rbac.isOrganizationAdmin) {
+      throw new UnauthorizedError();
     }
 
     const analyticsRetention = await orgRepo.getFeature({
