@@ -34,7 +34,7 @@ export function createAPIKey(
       featureId: 'rbac',
     });
 
-    if (authContext.organizationDeactivated || (rbac?.enabled && !authContext.rbac.isOrganizationAdmin)) {
+    if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdminOrDeveloper) {
       throw new UnauthorizedError();
     }
 

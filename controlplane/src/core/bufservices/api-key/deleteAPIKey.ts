@@ -46,7 +46,7 @@ export function deleteAPIKey(
       }),
     );
 
-    if (!(apiKey.creatorUserID === authContext.userId || rbacEvaluator.isOrganizationAdmin)) {
+    if (!(apiKey.creatorUserID === authContext.userId || rbacEvaluator.isOrganizationAdminOrDeveloper)) {
       throw new UnauthorizedError();
     }
 

@@ -38,7 +38,7 @@ export function updateAPIKey(
       };
     }
 
-    if (!(apiKey.creatorUserID === authContext.userId || authContext.rbac.isOrganizationAdmin)) {
+    if (!(apiKey.creatorUserID === authContext.userId || authContext.rbac.isOrganizationAdminOrDeveloper)) {
       throw new UnauthorizedError();
     }
 

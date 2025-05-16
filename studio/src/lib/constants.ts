@@ -264,4 +264,3 @@ export const roles = [
 ];
 
 export type OrganizationRole = typeof roles[number]["key"];
-export type OrganizationRoleCategory = typeof roles[number]["category"];

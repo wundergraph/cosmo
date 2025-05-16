@@ -25,6 +25,7 @@ import { Toolbar } from "@/components/ui/toolbar";
 import { useFeature } from "@/hooks/use-feature";
 import { GroupMembersSheet } from "@/components/member-groups/group-members-sheet";
 import { useCheckUserAccess } from "@/hooks/use-check-user-access";
+import { docsBaseURL } from "@/lib/constants";
 
 const GroupsToolbar = () => {
   const router = useRouter();
@@ -182,7 +183,17 @@ GroupsPage.getLayout = (page) => {
   return getDashboardLayout(
     page,
     "Groups",
-    "An overview of all your federated graphs and monographs",
+    <>
+      Manage all the groups of your organization.{" "}
+      <a
+        target="_blank"
+        rel="noreferrer"
+        href={docsBaseURL + "/studio/groups"}
+        className="text-primary"
+      >
+        Learn more.
+      </a>
+    </>,
     null,
     <GroupsToolbar />,
   );
