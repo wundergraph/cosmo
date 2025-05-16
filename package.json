@@ -56,7 +56,6 @@
     "@lerna-lite/cli": "4.1.1",
     "@lerna-lite/publish": "4.1.1",
     "@lerna-lite/version": "4.1.1",
-    "@types/prompts": "^2.4.9",
     "del-cli": "^5.1.0",
     "husky": "^8.0.3",
     "lint-staged": "^15.2.10",

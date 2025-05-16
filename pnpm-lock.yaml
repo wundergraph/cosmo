@@ -60,9 +60,6 @@ importers:
       '@lerna-lite/version':
         specifier: 4.1.1
         version: 4.1.1(@lerna-lite/publish@4.1.1(@types/node@22.5.0)(babel-plugin-macros@3.1.0)(conventional-commits-filter@5.0.0)(typescript@5.5.2))(@types/node@22.5.0)(babel-plugin-macros@3.1.0)(conventional-commits-filter@5.0.0)(typescript@5.5.2)
-      '@types/prompts':
-        specifier: ^2.4.9
-        version: 2.4.9
       del-cli:
         specifier: ^5.1.0
         version: 5.1.0
@@ -6978,9 +6975,6 @@ packages:
 
   '@types/prismjs@1.26.3':
     resolution: {integrity: sha512-A0D0aTXvjlqJ5ZILMz3rNfDBOx9hHxLZYv2by47Sm/pqW35zzjusrZTryatjN/Rf8Us2gZrJD+KeHbUSTux1Cw==}
-
-  '@types/prompts@2.4.9':
-    resolution: {integrity: sha512-qTxFi6Buiu8+50/+3DGIWLHM6QuWsEKugJnnP6iv2Mc4ncxE4A/OJkjuVOA+5X0X1S/nq5VJRa8Lu+nwcvbrKA==}
 
   '@types/prop-types@15.7.14':
     resolution: {integrity: sha512-gNMvNH49DJ7OJYv+KAKn0Xp45p8PLl6zo2YnvDIbTd4J6MER2BmWN49TG7n9LvkyihINxeKW8+3bfS2yDC9dzQ==}
@@ -20842,11 +20836,6 @@ snapshots:
       prettier: 3.2.4
 
   '@types/prismjs@1.26.3': {}
-
-  '@types/prompts@2.4.9':
-    dependencies:
-      '@types/node': 20.12.12
-      kleur: 3.0.3
 
   '@types/prop-types@15.7.14': {}
 
