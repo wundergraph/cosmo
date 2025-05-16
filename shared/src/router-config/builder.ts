@@ -13,11 +13,11 @@ import {
   GraphQLSubscriptionProtocol,
   GraphQLWebsocketSubprotocol,
 } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+
 import {
   ConfigurationVariable,
   ConfigurationVariableKind,
   DataSourceConfiguration,
-  // eslint-disable-next-line camelcase
   DataSourceCustom_GraphQL,
   DataSourceCustomEvents,
   DataSourceKind,
@@ -64,8 +64,8 @@ export interface ComposedSubgraph {
   url: string;
   schemaVersionId?: string;
   subscriptionUrl: string;
-  subscriptionProtocol: SubscriptionProtocol | undefined;
-  websocketSubprotocol: WebsocketSubprotocol | undefined;
+  subscriptionProtocol?: SubscriptionProtocol | undefined;
+  websocketSubprotocol?: WebsocketSubprotocol | undefined;
   // The intermediate representation of the engine configuration for the subgraph
   configurationDataByTypeName?: Map<string, ConfigurationData>;
   // The normalized GraphQL schema for the subgraph
@@ -107,7 +107,6 @@ export const parseGraphQLSubscriptionProtocol = (protocolName: SubscriptionProto
       return GraphQLSubscriptionProtocol.GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE_POST;
     }
   }
-  throw new Error(`Unsupported subscription protocol '${protocolName}'`);
 };
 
 export const parseGraphQLWebsocketSubprotocol = (protocolName: WebsocketSubprotocol): GraphQLWebsocketSubprotocol => {
@@ -182,9 +181,7 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
     }
 
     let kind: DataSourceKind;
-    // eslint-disable-next-line camelcase
     let customGraphql: DataSourceCustom_GraphQL | undefined;
-    // eslint-disable-next-line camelcase
     let customEvents: DataSourceCustomEvents | undefined;
     if (events.kafka.length > 0 || events.nats.length > 0) {
       kind = DataSourceKind.PUBSUB;
