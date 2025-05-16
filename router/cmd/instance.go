@@ -142,6 +142,7 @@ func NewRouter(ctx context.Context, params Params, additionalOptions ...core.Opt
 		core.WithClientHeader(cfg.ClientHeader),
 		core.WithCacheWarmupConfig(&cfg.CacheWarmup),
 		core.WithMCP(cfg.MCP),
+		core.WithDemoMode(cfg.DemoMode),
 		core.WithPlugins(cfg.Plugins),
 	}
 

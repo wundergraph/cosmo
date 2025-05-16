@@ -3,8 +3,9 @@ package routerconfig
 import (
 	"context"
 	"fmt"
-	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"time"
+
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 )
 
 type Response struct {

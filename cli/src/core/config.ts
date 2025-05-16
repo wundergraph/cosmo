@@ -10,7 +10,7 @@ export const configDir = paths.config;
 export const dataDir = paths.data;
 export const configFile = join(configDir, 'config.yaml');
 
-const getLoginDetails = (): { accessToken: string; organizationSlug: string } | null => {
+export const getLoginDetails = (): { accessToken: string; organizationSlug: string } | null => {
   try {
     const data = yaml.load(readFileSync(configFile, 'utf8'));
     const loginData = JSON.parse(JSON.stringify(data));

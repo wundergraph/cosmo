@@ -145,6 +145,7 @@
     "ExposeSchema": false,
     "RouterURL": "https://cosmo-router.wundergraph.com"
   },
+  "DemoMode": true,
   "Modules": {
     "myModule": {
       "value": 1
