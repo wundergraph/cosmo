@@ -6,7 +6,7 @@ import Spinner from 'ora';
 import { access, mkdir, rename, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { randomUUID } from 'node:crypto';
-import { BaseCommandOptions } from '../../../core/types/types.js';
+import { BaseCommandOptions } from '../../../../core/types/types.js';
 import { goMod, mainGo, mainGoTest, readme, schema } from '../templates/go-plugin.js';
 import { compileGraphQLToMapping, compileGraphQLToProto } from '@wundergraph/protographic';
 

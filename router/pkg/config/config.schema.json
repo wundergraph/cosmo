@@ -2683,15 +2683,17 @@
     },
     "plugins": {
       "type": "object",
-      "description": "The configuration for the router plugins.",
+      "description": "The configuration for the router gRPC plugins.",
       "additionalProperties": false,
       "properties": {
         "enabled": {
           "type": "boolean",
-          "default": false
+          "default": false,
+          "description": "Enable the router plugins. If the value is true, the router plugins are enabled."
         },
         "path": {
           "type": "string",
+          "description": "The path to the plugins directory. The plugins directory is used to load the plugins.",
           "default": "plugins"
         }
       }

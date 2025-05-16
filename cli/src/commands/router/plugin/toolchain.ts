@@ -1,4 +1,3 @@
-import { Command, program } from 'commander';
 import { basename, join, resolve } from 'pathe';
 import pc from 'picocolors';
 import { chmod, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
@@ -7,7 +6,7 @@ import { compileGraphQLToMapping, compileGraphQLToProto, ProtoLock } from '@wund
 import os from 'node:os';
 import { existsSync } from 'node:fs';
 import prompts from 'prompts';
-import { dataDir } from '../../core/config';
+import { dataDir } from '../../../core/config';
 import semver from 'semver';
 
 // Define platform-architecture combinations
@@ -406,7 +405,7 @@ export async function runGoTests(pluginDir: string, spinner: any) {
   const env = getToolsEnv();
   const goPath = getToolPath('go');
 
- return execa(goPath, ['test', './...'], {
+  return execa(goPath, ['test', './...'], {
     cwd: pluginDir,
     stdout: 'inherit',
     stderr: 'inherit',

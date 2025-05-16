@@ -2,19 +2,22 @@ import { Command, program } from 'commander';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
 import Spinner from 'ora';
-import { BaseCommandOptions } from '../../../core/types/types.js';
-import { buildBinaries, checkAndInstallTools, generateGRPCCode, generateProtoAndMapping, HOST_PLATFORM, installGoDependencies, normalizePlatforms } from '../toolchain.js';
+import { BaseCommandOptions } from '../../../../core/types/types.js';
+import {
+  buildBinaries,
+  checkAndInstallTools,
+  generateGRPCCode,
+  generateProtoAndMapping,
+  HOST_PLATFORM,
+  installGoDependencies,
+  normalizePlatforms,
+} from '../toolchain.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('build');
   command.description('Build a gRPC router plugin');
   command.argument('[directory]', 'Directory of the plugin', '.');
   command.option('--generate-only', 'Generate only the proto and mapping files, do not compile the plugin');
-  command.option(
-    '--go-module-path <path>',
-    'Go module path to use for the plugin',
-    'github.com/wundergraph/cosmo/plugin',
-  );
   command.option('--debug', 'Build the binary with debug information');
   command.option('--platform [platforms...]', 'Platform-architecture combinations (e.g., darwin-arm64 linux-amd64)', [
     HOST_PLATFORM,
@@ -44,8 +47,10 @@ export default (opts: BaseCommandOptions) => {
       // Start the main build process
       spinner.start('Building plugin...');
 
+      const goModulePath = 'github.com/wundergraph/cosmo/plugin';
+
       // Generate proto and mapping files
-      await generateProtoAndMapping(pluginDir, options.goModulePath, spinner);
+      await generateProtoAndMapping(pluginDir, goModulePath, spinner);
 
       // Generate gRPC code
       await generateGRPCCode(pluginDir, spinner);

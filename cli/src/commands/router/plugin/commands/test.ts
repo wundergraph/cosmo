@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
 import Spinner from 'ora';
-import { BaseCommandOptions } from '../../../core/types/types.js';
+import { BaseCommandOptions } from '../../../../core/types/types.js';
 import { checkAndInstallTools, runGoTests } from '../toolchain.js';
 
 export default (opts: BaseCommandOptions) => {
@@ -10,6 +10,12 @@ export default (opts: BaseCommandOptions) => {
   command.description('Run tests for a gRPC router plugin');
   command.argument('[directory]', 'Directory of the plugin', '.');
   command.option('-l, --language <language>', 'Programming language of the plugin', 'go');
+  command.option('--skip-tools-installation', 'Skip tool installation', false);
+  command.option(
+    '--force-tools-installation',
+    'Force tools installation regardless of version check or confirmation',
+    false,
+  );
   command.action(async (directory, options) => {
     const startTime = performance.now();
     const pluginDir = resolve(directory);

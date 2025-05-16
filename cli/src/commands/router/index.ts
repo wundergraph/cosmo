@@ -7,10 +7,11 @@ import RouterTokenCommands from './commands/token/index.js';
 import DownloadRouterBinaryConfig from './commands/download-binary.js';
 import CompatibilityVersionCommands from './commands/compatibility-version/index.js';
 import RouterCacheCommands from './commands/cache/index.js';
+import PluginCommands from './plugin/index.js';
 
 export default (opts: BaseCommandOptions) => {
   const cmd = new Command('router');
-  cmd.description('Provides commands for fetching and composing router configs');
+  cmd.description('Manages router configurations and deployment - fetch configs, compose locally, manage tokens, download binary, configure plugins');
   cmd.addCommand(FetchRouterConfig(opts));
   cmd.addCommand(ComposeRouterConfig(opts));
   cmd.addCommand(
@@ -26,6 +27,11 @@ export default (opts: BaseCommandOptions) => {
   );
   cmd.addCommand(
     CompatibilityVersionCommands({
+      client: opts.client,
+    }),
+  );
+  cmd.addCommand(
+    PluginCommands({
       client: opts.client,
     }),
   );
