@@ -7,6 +7,7 @@ import pc from 'picocolors';
 import pupa from 'pupa';
 import Spinner from 'ora';
 import { compileGraphQLToMapping, compileGraphQLToProto } from '@wundergraph/protographic';
+import { camelCase, upperFirst } from 'lodash-es';
 import { BaseCommandOptions } from '../../../../core/types/types.js';
 import { goMod, mainGo, mainGoTest, readme, schema } from '../templates/go-plugin.js';
 
@@ -19,7 +20,9 @@ export default (opts: BaseCommandOptions) => {
   command.action(async (name, options) => {
     const startTime = performance.now();
     const pluginDir = resolve(process.cwd(), options.directory, name);
-    const serviceName = name.charAt(0).toUpperCase() + name.slice(1) + 'Service';
+
+    name = upperFirst(camelCase(name));
+    const serviceName = name + 'Service';
 
     // Check if a directory exists
     try {
@@ -66,6 +69,7 @@ export default (opts: BaseCommandOptions) => {
         packageName: 'service',
         goPackage: goModulePath,
       });
+
       await writeFile(resolve(generatedDir, 'service.proto'), proto.proto);
       await writeFile(resolve(generatedDir, 'service.proto.lock.json'), JSON.stringify(proto.lockData, null, 2));
 

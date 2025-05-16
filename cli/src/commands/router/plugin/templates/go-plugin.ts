@@ -328,8 +328,7 @@ type Query {
 
 For more information about Cosmo and building subgraph plugins, visit the [Cosmo documentation](https://cosmo-docs.wundergraph.com).`;
 
-export const schema = `
-type World {
+export const schema = `type World {
   id: ID!
   name: String!
 }

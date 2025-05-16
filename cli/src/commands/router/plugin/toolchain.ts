@@ -7,6 +7,7 @@ import { execa } from 'execa';
 import { compileGraphQLToMapping, compileGraphQLToProto, ProtoLock } from '@wundergraph/protographic';
 import prompts from 'prompts';
 import semver from 'semver';
+import { camelCase, upperFirst } from 'lodash-es';
 import { dataDir } from '../../../core/config.js';
 
 // Define platform-architecture combinations
@@ -352,7 +353,8 @@ export async function generateProtoAndMapping(pluginDir: string, goModulePath: s
 
   // Get plugin name from the last segment of the directory path
   const pluginName = basename(pluginDir);
-  const serviceName = pluginName.charAt(0).toUpperCase() + pluginName.slice(1) + 'Service';
+
+  const serviceName = upperFirst(camelCase(pluginName)) + 'Service';
 
   spinner.text = 'Generating mapping and proto files...';
 
