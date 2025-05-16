@@ -41,7 +41,7 @@ export interface Input {
   fieldConfigurations: FieldConfiguration[];
   routerCompatibilityVersion: string;
   schemaVersionId: string;
-  subgraphs: Subgraph[];
+  subgraphs: RouterSubgraph[];
 }
 
 /**
@@ -59,7 +59,7 @@ export enum SubgraphKind {
   Standard,
 }
 
-export type Subgraph = ComposedSubgraph | ComposedSubgraphPlugin;
+export type RouterSubgraph = ComposedSubgraph | ComposedSubgraphPlugin;
 
 export interface ComposedSubgraph {
   kind: SubgraphKind.Standard;

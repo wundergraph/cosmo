@@ -6,7 +6,8 @@ import {
   type ComposedSubgraph,
   type ComposedSubgraphPlugin,
   normalizeURL,
-  type Subgraph,
+  type RouterSubgraph,
+  SubgraphKind,
   type SubscriptionProtocol,
   type WebsocketSubprotocol,
 } from '@wundergraph/cosmo-shared';
@@ -58,7 +59,7 @@ type SubgraphPluginConfig = {
 type SubgraphMetadata = StandardSubgraphMetaData | SubgraphPluginMetadata;
 
 type StandardSubgraphMetaData = {
-  kind: 'standard';
+  kind: SubgraphKind.Standard;
   name: string;
   sdl: string;
   routingUrl: string;
@@ -68,7 +69,7 @@ type StandardSubgraphMetaData = {
 };
 
 type SubgraphPluginMetadata = {
-  kind: 'plugin';
+  kind: SubgraphKind.Plugin;
   name: string;
   sdl: string;
   mapping: GRPCMapping;
@@ -135,7 +136,7 @@ export default (opts: BaseCommandOptions) => {
         const protoSchema = await readFile(protoSchemaFilePath, 'utf8');
 
         subgraphs.push({
-          kind: 'plugin',
+          kind: SubgraphKind.Plugin,
           name: pluginName,
           protoSchema,
           version: s.plugin.version,
@@ -174,7 +175,7 @@ export default (opts: BaseCommandOptions) => {
         }
 
         subgraphs.push({
-          kind: 'standard',
+          kind: SubgraphKind.Standard,
           name: s.name,
           sdl: schemaSDL,
           subscriptionUrl: s.subscription?.url || s.routing_url,
@@ -187,7 +188,7 @@ export default (opts: BaseCommandOptions) => {
 
     const result = composeSubgraphs(
       subgraphs.map((s, index) => {
-        if (s.kind === 'plugin') {
+        if (s.kind === SubgraphKind.Plugin) {
           return {
             name: s.name,
             url: `http://localhost:3000/plugin/${index}`,
@@ -242,14 +243,14 @@ export default (opts: BaseCommandOptions) => {
       // @TODO get router compatibility version programmatically
       routerCompatibilityVersion: ROUTER_COMPATIBILITY_VERSION_ONE,
       schemaVersionId: 'static',
-      subgraphs: subgraphs.map((s, index): Subgraph => {
+      subgraphs: subgraphs.map((s, index): RouterSubgraph => {
         const subgraphConfig = result.subgraphConfigBySubgraphName.get(s.name);
         const schema = subgraphConfig?.schema;
         const configurationDataByTypeName = subgraphConfig?.configurationDataByTypeName;
 
-        if (s.kind === 'standard') {
+        if (s.kind === SubgraphKind.Standard) {
           const composedSubgraph: ComposedSubgraph = {
-            kind: 'standard',
+            kind: SubgraphKind.Standard,
             id: `${index}`,
             name: s.name,
             url: s.routingUrl,
@@ -263,7 +264,7 @@ export default (opts: BaseCommandOptions) => {
           return composedSubgraph;
         }
         const composedSubgraphPlugin: ComposedSubgraphPlugin = {
-          kind: 'plugin',
+          kind: SubgraphKind.Plugin,
           id: `${index}`,
           name: s.name,
           url: `http://localhost:3000/plugin/${index}`,
@@ -333,7 +334,7 @@ export default (opts: BaseCommandOptions) => {
             }
 
             featureSubgraphs.push({
-              kind: 'standard',
+              kind: SubgraphKind.Standard,
               name: featureSubgraph.name,
               sdl: schemaSDL,
               routingUrl: featureSubgraph.routing_url,
@@ -348,7 +349,7 @@ export default (opts: BaseCommandOptions) => {
             // Use the base subgraph as is
             // Find the corresponding metadata in the original subgraphs array
             const originalSubgraph = subgraphs.find(
-              (sub) => sub.kind === 'standard' && sub.name === s.name,
+              (sub) => sub.kind === SubgraphKind.Standard && sub.name === s.name,
             ) as StandardSubgraphMetaData;
 
             if (originalSubgraph) {
@@ -412,13 +413,13 @@ export default (opts: BaseCommandOptions) => {
           // @TODO get router compatibility version programmatically
           routerCompatibilityVersion: ROUTER_COMPATIBILITY_VERSION_ONE,
           schemaVersionId: `static`,
-          subgraphs: featureSubgraphs.map((s, index): Subgraph => {
+          subgraphs: featureSubgraphs.map((s, index): RouterSubgraph => {
             const subgraphConfig = featureResult.subgraphConfigBySubgraphName.get(s.name);
             const schema = subgraphConfig?.schema;
             const configurationDataByTypeName = subgraphConfig?.configurationDataByTypeName;
 
             const composedSubgraph: ComposedSubgraph = {
-              kind: 'standard',
+              kind: SubgraphKind.Standard,
               id: `${index}`,
               name: s.name,
               url: s.routingUrl,
