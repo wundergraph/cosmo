@@ -19,7 +19,7 @@ const (
 
 type RequestIDKey struct{}
 
-func New(pretty bool, development bool, level zapcore.Level) *zap.Logger {
+func New(pretty bool, development bool, level zapcore.LevelEnabler) *zap.Logger {
 	return NewZapLogger(zapcore.AddSync(os.Stdout), pretty, development, level)
 }
 
@@ -85,7 +85,7 @@ func NewZapLoggerWithCore(core zapcore.Core, development bool) *zap.Logger {
 	return zapLogger
 }
 
-func NewZapLogger(syncer zapcore.WriteSyncer, pretty, development bool, level zapcore.Level) *zap.Logger {
+func NewZapLogger(syncer zapcore.WriteSyncer, pretty, development bool, level zapcore.LevelEnabler) *zap.Logger {
 	var encoder zapcore.Encoder
 
 	if pretty {

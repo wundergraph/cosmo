@@ -29,6 +29,10 @@ var (
 func RunRouterBinary(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) error {
 	t.Helper()
 
+	if testing.Short() {
+		t.Skip("router binary tests are slow due to compilation time")
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -42,6 +46,14 @@ func RunRouterBinary(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Envir
 	// Execute the test case with the environment
 	f(t, env)
 	return nil
+}
+
+func (e *Environment) GetRouterProcessCwd() string {
+	return e.routerCmd.Dir
+}
+
+func (e *Environment) SignalRouterProcess(sig os.Signal) error {
+	return e.routerCmd.Process.Signal(sig)
 }
 
 // BuildRouter runs `make build` inside the router directory and fails the test on error.

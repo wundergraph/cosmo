@@ -2729,6 +2729,46 @@
           "description": "The custom client version header."
         }
       }
+    },
+    "watch_config": {
+      "type": "object",
+      "description": "Configuration for watching changes to the router configuration.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable watching for configuration changes."
+        },
+        "interval": {
+          "type": "string",
+          "description": "The interval at which the config file is checked for changes. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+          "default": "10s",
+          "duration": {
+            "minimum": "5s"
+          }
+        },
+        "startup_delay": {
+          "type": "object",
+          "description": "Configuration for delaying the initial file watcher start to prevent synchronized reloads across multiple routers. If enabled, a random delay lasting between 0 and `maximum` will be added before the file watcher polling begins.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "Enable startup delay for the configuration watcher"
+            },
+            "maximum": {
+              "type": "string",
+              "description": "The maximum time to wait before starting the config file watcher. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+              "default": "10s",
+              "duration": {
+                "minimum": "5s"
+              }
+            }
+          }
+        }
+      }
     }
   },
   "$defs": {
