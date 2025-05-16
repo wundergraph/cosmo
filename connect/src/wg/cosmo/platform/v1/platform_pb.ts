@@ -21688,3 +21688,176 @@ export class GetNamespaceProposalConfigResponse extends Message<GetNamespaceProp
   }
 }
 
+/**
+ * @generated from message wg.cosmo.platform.v1.GetOperationsRequest
+ */
+export class GetOperationsRequest extends Message<GetOperationsRequest> {
+  /**
+   * @generated from field: string federatedGraphName = 1;
+   */
+  federatedGraphName = "";
+
+  /**
+   * @generated from field: string namespace = 2;
+   */
+  namespace = "";
+
+  constructor(data?: PartialMessage<GetOperationsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetOperationsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "federatedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOperationsRequest {
+    return new GetOperationsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetOperationsRequest {
+    return new GetOperationsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetOperationsRequest {
+    return new GetOperationsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetOperationsRequest | PlainMessage<GetOperationsRequest> | undefined, b: GetOperationsRequest | PlainMessage<GetOperationsRequest> | undefined): boolean {
+    return proto3.util.equals(GetOperationsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetOperationsResponse
+ */
+export class GetOperationsResponse extends Message<GetOperationsResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.GetOperationsResponse.Operation operations = 2;
+   */
+  operations: GetOperationsResponse_Operation[] = [];
+
+  constructor(data?: PartialMessage<GetOperationsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetOperationsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "operations", kind: "message", T: GetOperationsResponse_Operation, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOperationsResponse {
+    return new GetOperationsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetOperationsResponse {
+    return new GetOperationsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetOperationsResponse {
+    return new GetOperationsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetOperationsResponse | PlainMessage<GetOperationsResponse> | undefined, b: GetOperationsResponse | PlainMessage<GetOperationsResponse> | undefined): boolean {
+    return proto3.util.equals(GetOperationsResponse, a, b);
+  }
+}
+
+/**
+ * @generated from enum wg.cosmo.platform.v1.GetOperationsResponse.OperationType
+ */
+export enum GetOperationsResponse_OperationType {
+  /**
+   * @generated from enum value: QUERY = 0;
+   */
+  QUERY = 0,
+
+  /**
+   * @generated from enum value: MUTATION = 1;
+   */
+  MUTATION = 1,
+
+  /**
+   * @generated from enum value: SUBSCRIPTION = 2;
+   */
+  SUBSCRIPTION = 2,
+}
+// Retrieve enum metadata with: proto3.getEnumType(GetOperationsResponse_OperationType)
+proto3.util.setEnumType(GetOperationsResponse_OperationType, "wg.cosmo.platform.v1.GetOperationsResponse.OperationType", [
+  { no: 0, name: "QUERY" },
+  { no: 1, name: "MUTATION" },
+  { no: 2, name: "SUBSCRIPTION" },
+]);
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetOperationsResponse.Operation
+ */
+export class GetOperationsResponse_Operation extends Message<GetOperationsResponse_Operation> {
+  /**
+   * @generated from field: string hash = 1;
+   */
+  hash = "";
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  /**
+   * @generated from field: string content = 3;
+   */
+  content = "";
+
+  /**
+   * @generated from field: float latency = 4;
+   */
+  latency = 0;
+
+  /**
+   * @generated from field: wg.cosmo.platform.v1.GetOperationsResponse.OperationType type = 5;
+   */
+  type = GetOperationsResponse_OperationType.QUERY;
+
+  constructor(data?: PartialMessage<GetOperationsResponse_Operation>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetOperationsResponse.Operation";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "hash", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "content", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "latency", kind: "scalar", T: 2 /* ScalarType.FLOAT */ },
+    { no: 5, name: "type", kind: "enum", T: proto3.getEnumType(GetOperationsResponse_OperationType) },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOperationsResponse_Operation {
+    return new GetOperationsResponse_Operation().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetOperationsResponse_Operation {
+    return new GetOperationsResponse_Operation().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetOperationsResponse_Operation {
+    return new GetOperationsResponse_Operation().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetOperationsResponse_Operation | PlainMessage<GetOperationsResponse_Operation> | undefined, b: GetOperationsResponse_Operation | PlainMessage<GetOperationsResponse_Operation> | undefined): boolean {
+    return proto3.util.equals(GetOperationsResponse_Operation, a, b);
+  }
+}
+

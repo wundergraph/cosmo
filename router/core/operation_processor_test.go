@@ -5,9 +5,11 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/asttransform"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 )
 
@@ -194,14 +196,9 @@ func TestParseOperationProcessor(t *testing.T) {
 			defer kit.Free()
 
 			err = kit.UnmarshalOperationFromBody([]byte(tc.Input))
-			if err != nil {
-				require.NoError(t, err)
-			}
-
 			require.NoError(t, err)
 
 			err = kit.Parse()
-
 			if err != nil {
 				require.EqualError(t, tc.ExpectedError, err.Error())
 			} else if kit.parsedOperation != nil {
@@ -210,6 +207,64 @@ func TestParseOperationProcessor(t *testing.T) {
 				require.Equal(t, uint64(0), kit.parsedOperation.ID)
 				require.Equal(t, "", kit.parsedOperation.NormalizedRepresentation)
 			}
+		})
+	}
+}
+
+func TestNormalizeVariablesOperationProcessor(t *testing.T) {
+	testCases := []struct {
+		Name                             string
+		ClientSchema                     string
+		Input                            string
+		ExpectedNormalizedRepresentation string
+		ExpectedVariables                string
+	}{
+		{
+			Name:                             "Should detect operation change and update normalized representation",
+			ClientSchema:                     `type Query { team(id: [ID!]!): String }`,
+			Input:                            `{"query":"query Q($teamId: ID!) {team(id: [$teamId])}","operationName":"Q","variables":{"teamId": "bar"}}`,
+			ExpectedNormalizedRepresentation: `query Q($a: [ID!]!){team(id: $a)}`,
+			ExpectedVariables:                `{"a":["bar"]}`,
+		},
+	}
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.Name, func(t *testing.T) {
+			clientSchema, report := astparser.ParseGraphqlDocumentString(tc.ClientSchema)
+			require.False(t, report.HasErrors(), "failed to parse client schema")
+			require.NoError(t, asttransform.MergeDefinitionWithBaseSchema(&clientSchema))
+
+			executor := &Executor{
+				PlanConfig:      plan.Configuration{},
+				RouterSchema:    nil,
+				Resolver:        nil,
+				RenameTypeNames: nil,
+				ClientSchema:    &clientSchema,
+			}
+			parser := NewOperationProcessor(OperationProcessorOptions{
+				Executor:                executor,
+				MaxOperationSizeInBytes: 10 << 20,
+				ParseKitPoolSize:        4,
+			})
+
+			kit, err := parser.NewKit()
+			require.NoError(t, err)
+			defer kit.Free()
+
+			err = kit.UnmarshalOperationFromBody([]byte(tc.Input))
+			require.NoError(t, err)
+
+			err = kit.Parse()
+			require.NoError(t, err)
+
+			_, err = kit.NormalizeOperation("test", false)
+			require.NoError(t, err)
+
+			_, err = kit.NormalizeVariables()
+			require.NoError(t, err)
+
+			assert.Equal(t, tc.ExpectedNormalizedRepresentation, kit.parsedOperation.NormalizedRepresentation)
+			assert.Equal(t, tc.ExpectedVariables, string(kit.parsedOperation.Request.Variables))
 		})
 	}
 }
