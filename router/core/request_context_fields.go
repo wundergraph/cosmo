@@ -30,6 +30,7 @@ const (
 	ContextFieldOperationSha256            = "operation_sha256"
 	ContextFieldResponseErrorMessage       = "response_error_message"
 	ContextFieldRequestError               = "request_error"
+	ContextFieldRouterConfigVersion        = "router_config_version"
 )
 
 // Helper functions to create zap fields for custom attributes.

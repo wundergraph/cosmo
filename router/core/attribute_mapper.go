@@ -27,7 +27,7 @@ func newAttributeMapper(enabled bool, attr []config.CustomAttribute) *attributeM
 	set := map[attribute.Key]string{
 		otel.WgOperationName:       ContextFieldOperationName,
 		otel.WgOperationHash:       ContextFieldOperationHash,
-		otel.WgRouterConfigVersion: "router_config_version",
+		otel.WgRouterConfigVersion: ContextFieldRouterConfigVersion,
 	}
 
 	attrMap := make(map[string]config.CustomAttribute)
