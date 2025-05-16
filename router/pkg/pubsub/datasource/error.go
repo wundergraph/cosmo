@@ -1,4 +1,4 @@
-package pubsub
+package datasource
 
 type Error struct {
 	Internal  error
