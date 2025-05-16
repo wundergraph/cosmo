@@ -14,14 +14,6 @@ import (
 	"time"
 
 	"github.com/cespare/xxhash/v2"
-	"github.com/wundergraph/cosmo/router/pkg/execution_config"
-	"github.com/wundergraph/cosmo/router/pkg/routerplugin"
-	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
-	otelmetric "go.opentelemetry.io/otel/metric"
-	oteltrace "go.opentelemetry.io/otel/trace"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-
 	"github.com/cloudflare/backoff"
 	"github.com/dgraph-io/ristretto/v2"
 	"github.com/go-chi/chi/v5"
@@ -31,23 +23,27 @@ import (
 	"github.com/klauspost/compress/gzip"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
-	"github.com/wundergraph/cosmo/router/internal/expr"
-	"github.com/wundergraph/cosmo/router/internal/retrytransport"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"go.opentelemetry.io/otel/attribute"
+	otelmetric "go.opentelemetry.io/otel/metric"
+	oteltrace "go.opentelemetry.io/otel/trace"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"golang.org/x/exp/maps"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/internal/expr"
 	rjwt "github.com/wundergraph/cosmo/router/internal/jwt"
 	rmiddleware "github.com/wundergraph/cosmo/router/internal/middleware"
 	"github.com/wundergraph/cosmo/router/internal/recoveryhandler"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
+	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
+	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"github.com/wundergraph/cosmo/router/pkg/health"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
@@ -55,7 +51,10 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/pubsub"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
 	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
+	"github.com/wundergraph/cosmo/router/pkg/routerplugin"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
+	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 )
 
 const (
@@ -1322,6 +1321,10 @@ func (s *graphServer) buildSubgraphGRPCClients(ctx context.Context, config *node
 					PluginPath:    pluginPath,
 					PluginCommand: []string{pluginPath},
 				})
+
+				if err != nil {
+					return nil, fmt.Errorf("failed to create grpc plugin for subgraph %s: %w", dsConfig.Id, err)
+				}
 
 				err = s.pluginHost.RegisterPlugin(subgraph.Name, grpcPlugin)
 				if err != nil {
