@@ -3,7 +3,13 @@ import {
   FieldConfiguration,
   LATEST_ROUTER_COMPATIBILITY_VERSION,
 } from '@wundergraph/composition';
-import { buildRouterConfig, normalizeURL, SubscriptionProtocol, WebsocketSubprotocol } from '@wundergraph/cosmo-shared';
+import {
+  buildRouterConfig,
+  normalizeURL,
+  SubgraphKind,
+  SubscriptionProtocol,
+  WebsocketSubprotocol,
+} from '@wundergraph/cosmo-shared';
 import { DocumentNode, parse, print, printSchema } from 'graphql';
 
 export type Subgraph = {
@@ -61,7 +67,7 @@ export function buildRouterConfiguration(subgraphs: Subgraph[]): string {
       const schema = subgraphConfig?.schema;
       const configurationDataByTypeName = subgraphConfig?.configurationDataByTypeName;
       return {
-        kind: 'standard',
+        kind: SubgraphKind.Standard,
         id: `${index}`,
         name: s.name,
         url: normalizeURL(s.url),

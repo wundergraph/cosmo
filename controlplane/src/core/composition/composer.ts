@@ -11,7 +11,7 @@ import {
   SupportedRouterCompatibilityVersion,
   Warning,
 } from '@wundergraph/composition';
-import { buildRouterConfig, ComposedSubgraph as IComposedSubgraph } from '@wundergraph/cosmo-shared';
+import { buildRouterConfig, ComposedSubgraph as IComposedSubgraph, SubgraphKind } from '@wundergraph/cosmo-shared';
 import { FastifyBaseLogger } from 'fastify';
 import { DocumentNode, GraphQLSchema, parse, printSchema } from 'graphql';
 import {
@@ -124,7 +124,7 @@ export function subgraphDTOsToComposedSubgraphs(
     const schema = subgraphConfig?.schema;
     const configurationDataByTypeName = subgraphConfig?.configurationDataByTypeName;
     return {
-      kind: 'standard',
+      kind: SubgraphKind.Standard,
       id: subgraph.id,
       name: subgraph.name,
       targetId: subgraph.targetId,
