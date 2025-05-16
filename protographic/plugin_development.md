@@ -4,7 +4,7 @@ In the first version we focus on local development of plugins written in Go. We'
 
 1. Initialize the plugin
 
-`wgc plugin init <directory>`
+`wgc router plugin init <directory>`
 
 This will scaffold a new plugin in the given directory.
 
@@ -24,7 +24,7 @@ project_dir
 
 2. Compile the plugin
 
-`wgc plugin build <directory> --generate-only --platform darwin-arm64 linux-amd64`
+`wgc router plugin build <directory> --generate-only --platform darwin-arm64 linux-amd64`
 
 After initializing the plugin, the user can design the plugin schema. Once the schema is designed, the user can build the plugin. For now, we only support Go plugins.
 
@@ -36,6 +36,7 @@ project_dir
     - src
       - schema.graphql # User defined schema
       - main.go # Main entry point of the plugin
+        - main_test.go # Test of the plugin
     - generated
       - service.proto # Generated from schema 
       - mapping.json # Generated from schema

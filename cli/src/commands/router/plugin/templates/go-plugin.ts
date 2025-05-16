@@ -264,7 +264,7 @@ type Query {
 1. **Build the plugin**
 
    \`\`\`
-   wgc plugin build <plugin-directory>
+   wgc router plugin build <plugin-directory>
    \`\`\`
 
 2. **Compose your supergraph with your gRPC subgraph**
@@ -287,7 +287,7 @@ type Query {
 4. **Test the plugin**
 
    \`\`\`bash
-   wgc plugin test <plugin-directory>/<plugin-name>
+   wgc router plugin test <plugin-directory>/<plugin-name>
    \`\`\`
    or
    \`\`\`bash
