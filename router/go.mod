@@ -31,7 +31,7 @@ require (
 	github.com/tidwall/gjson v1.18.0
 	github.com/tidwall/sjson v1.2.5
 	github.com/twmb/franz-go v1.16.1
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.178
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.178.0.20250515124108-e0ba64ba2b27
 	// Do not upgrade, it renames attributes we rely on
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1
 	go.opentelemetry.io/contrib/propagators/b3 v1.23.0
@@ -65,6 +65,7 @@ require (
 	github.com/dgraph-io/ristretto/v2 v2.1.0
 	github.com/expr-lang/expr v1.17.0
 	github.com/goccy/go-json v0.10.3
+	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/go-plugin v1.6.3
 	github.com/iancoleman/strcase v0.3.0
 	github.com/klauspost/compress v1.17.9
@@ -108,7 +109,6 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.19.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
-	github.com/hashicorp/go-hclog v1.6.3 // indirect
 	github.com/hashicorp/yamux v0.1.1 // indirect
 	github.com/jensneuse/byte-template v0.0.0-20231025215717-69252eb3ed56 // indirect
 	github.com/kingledion/go-tools v0.6.0 // indirect
@@ -158,4 +158,4 @@ require (
 // Remember you can use Go workspaces to avoid using replace directives in multiple go.mod files
 // Use what is best for your personal workflow. See CONTRIBUTING.md for more information
 
-replace github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2
+// replace github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2
