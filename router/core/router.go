@@ -17,6 +17,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/mitchellh/mapstructure"
 	"github.com/nats-io/nuid"
+	"github.com/wundergraph/cosmo/router/internal/track"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
@@ -86,6 +87,12 @@ type (
 		EngineStats       statistics.EngineStatistics
 		playgroundHandler func(http.Handler) http.Handler
 		proxy             ProxyFunc
+		usage             UsageTracker
+	}
+
+	UsageTracker interface {
+		Close()
+		TrackUptime(ctx context.Context)
 	}
 
 	TransportRequestOptions struct {
@@ -1186,6 +1193,10 @@ func (r *Router) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to bootstrap router: %w", err)
 	}
 
+	if err := r.setupUsageTracking(ctx); err != nil {
+		return err
+	}
+
 	r.httpServer = newServer(&httpServerOptions{
 		addr:               r.listenAddr,
 		logger:             r.logger,
@@ -1352,6 +1363,26 @@ func (r *Router) Start(ctx context.Context) error {
 	return nil
 }
 
+type UsageTrackerNoOp struct{}
+
+func (_ *UsageTrackerNoOp) Close() {}
+
+func (_ *UsageTrackerNoOp) TrackUptime(ctx context.Context) {}
+
+func (r *Router) setupUsageTracking(ctx context.Context) (err error) {
+	if os.Getenv("COSMO_TELEMETRY_DISABLED") == "true" || os.Getenv("DO_NOT_TRACK") == "1" {
+		r.usage = &UsageTrackerNoOp{}
+		r.logger.Info("Cosmo telemetry is disabled. Usage tracking is disabled.")
+		return nil
+	}
+	r.usage, err = track.NewUsageTracker(r.logger)
+	if err != nil {
+		return fmt.Errorf("failed to create usage tracker: %w", err)
+	}
+	go r.usage.TrackUptime(ctx)
+	return nil
+}
+
 type concSafeErrorJoiner struct {
 	errs []error
 	mu   sync.Mutex
@@ -1501,6 +1532,8 @@ func (r *Router) Shutdown(ctx context.Context) error {
 	if r.persistedOperationClient != nil {
 		r.persistedOperationClient.Close()
 	}
+
+	r.usage.Close()
 
 	wg.Wait()
 
