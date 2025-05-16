@@ -378,6 +378,12 @@ type SecurityConfiguration struct {
 	ComplexityCalculationCache  *ComplexityCalculationCache `yaml:"complexity_calculation_cache"`
 	ComplexityLimits            *ComplexityLimits           `yaml:"complexity_limits"`
 	DepthLimit                  *QueryDepthConfiguration    `yaml:"depth_limit"`
+	MaxRecursionDepth           *ObjectDepthLimit           `yaml:"max_recursion_depth"`
+}
+
+type ObjectDepthLimit struct {
+	Enabled bool `yaml:"enabled" envDefault:"false"`
+	Limit   int  `yaml:"limit,omitempty" envDefault:"0"`
 }
 
 type QueryDepthConfiguration struct {

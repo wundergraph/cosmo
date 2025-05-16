@@ -50,6 +50,7 @@ type PreHandlerOptions struct {
 	RouterPublicKey    *ecdsa.PublicKey
 	TracerProvider     *sdktrace.TracerProvider
 	ComplexityLimits   *config.ComplexityLimits
+	MaxRecursionDepth  *config.ObjectDepthLimit
 	MaxUploadFiles     int
 	MaxUploadFileSize  int
 
@@ -94,6 +95,7 @@ type PreHandler struct {
 	maxUploadFiles              int
 	maxUploadFileSize           int
 	complexityLimits            *config.ComplexityLimits
+	maxRecursionDepth           *config.ObjectDepthLimit
 	trackSchemaUsageInfo        bool
 	clientHeader                config.ClientHeader
 	computeOperationSha256      bool
@@ -137,6 +139,7 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		maxUploadFiles:            opts.MaxUploadFiles,
 		maxUploadFileSize:         opts.MaxUploadFileSize,
 		complexityLimits:          opts.ComplexityLimits,
+		maxRecursionDepth:         opts.MaxRecursionDepth,
 		alwaysIncludeQueryPlan:    opts.AlwaysIncludeQueryPlan,
 		alwaysSkipLoader:          opts.AlwaysSkipLoader,
 		queryPlansEnabled:         opts.QueryPlansEnabled,
@@ -910,6 +913,14 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 			engineValidateSpan.End()
 
 			return queryDepthErr
+		}
+	}
+
+	// Validate the object recursion depth if config is present and enabled, an error will be returned and exit early if
+	// the max recursion depth limit has been reached
+	if h.maxRecursionDepth != nil && h.maxRecursionDepth.Enabled {
+		if err := LimitRecursionDepth(operationKit.kit.doc, h.executor.RouterSchema, h.maxRecursionDepth.Limit); err != nil {
+			return err
 		}
 	}
 

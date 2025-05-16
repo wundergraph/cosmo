@@ -43,3 +43,6 @@ subgraphs:
   - name: employeeupdated
     schema:
       file: ./pkg/subgraphs/employeeupdated/subgraph/schema.graphqls
+  - name: recursiontest
+    schema:
+      file: ./pkg/subgraphs/recursiontest/subgraph/schema.graphqls
