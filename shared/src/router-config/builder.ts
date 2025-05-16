@@ -54,10 +54,15 @@ export interface Input {
 export type SubscriptionProtocol = 'ws' | 'sse' | 'sse_post';
 export type WebsocketSubprotocol = 'auto' | 'graphql-ws' | 'graphql-transport-ws';
 
+export enum SubgraphKind {
+  Plugin,
+  Standard,
+}
+
 export type Subgraph = ComposedSubgraph | ComposedSubgraphPlugin;
 
 export interface ComposedSubgraph {
-  kind: 'standard';
+  kind: SubgraphKind.Standard;
   id: string;
   name: string;
   sdl: string;
@@ -73,7 +78,7 @@ export interface ComposedSubgraph {
 }
 
 export interface ComposedSubgraphPlugin {
-  kind: 'plugin';
+  kind: SubgraphKind.Plugin;
   id: string;
   version: string;
   name: string;
@@ -158,7 +163,7 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
 
     let grcpConfig: GRPCConfiguration | undefined;
 
-    if (subgraph.kind === 'standard') {
+    if (subgraph.kind === SubgraphKind.Standard) {
       subscriptionConfig.enabled = true;
       subscriptionConfig.protocol = parseGraphQLSubscriptionProtocol(subgraph.subscriptionProtocol || 'ws');
       subscriptionConfig.websocketSubprotocol = parseGraphQLWebsocketSubprotocol(
@@ -169,7 +174,7 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
         kind: ConfigurationVariableKind.STATIC_CONFIGURATION_VARIABLE,
         staticVariableContent: subgraph.subscriptionUrl || subgraph.url,
       });
-    } else if (subgraph.kind === 'plugin') {
+    } else if (subgraph.kind === SubgraphKind.Plugin) {
       grcpConfig = new GRPCConfiguration({
         mapping: subgraph.mapping,
         protoSchema: subgraph.protoSchema,

@@ -8,8 +8,14 @@ import {
   FederationResultSuccess,
   LATEST_ROUTER_COMPATIBILITY_VERSION,
 } from '@wundergraph/composition';
-import { EntityMapping, EnumMapping, GRPCMapping, OperationMapping, TypeFieldMapping } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import { buildRouterConfig, ComposedSubgraph, ComposedSubgraphPlugin } from '../src';
+import {
+  EntityMapping,
+  EnumMapping,
+  GRPCMapping,
+  OperationMapping,
+  TypeFieldMapping,
+} from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import { buildRouterConfig, ComposedSubgraph, ComposedSubgraphPlugin, SubgraphKind } from '../src';
 import { normalizationFailureError } from '../src/router-config/errors';
 import {
   federateTestSubgraphs,
@@ -32,7 +38,7 @@ describe('Router Config Builder', () => {
     const inventorySubgraphConfig = result.subgraphConfigBySubgraphName.get('inventory');
 
     const accounts: ComposedSubgraph = {
-      kind: 'standard',
+      kind: SubgraphKind.Standard,
       id: '0',
       name: 'accounts',
       sdl: fs.readFileSync(path.join(__dirname, 'testdata', 'accounts.graphql'), {
@@ -46,7 +52,7 @@ describe('Router Config Builder', () => {
       configurationDataByTypeName: accountsSubgraphConfig!.configurationDataByTypeName,
     };
     const products: ComposedSubgraph = {
-      kind: 'standard',
+      kind: SubgraphKind.Standard,
       id: '1',
       name: 'products',
       sdl: fs.readFileSync(path.join(__dirname, 'testdata', 'products.graphql'), {
@@ -60,7 +66,7 @@ describe('Router Config Builder', () => {
       configurationDataByTypeName: productsSubgraphConfig!.configurationDataByTypeName,
     };
     const reviews: ComposedSubgraph = {
-      kind: 'standard',
+      kind: SubgraphKind.Standard,
       id: '2',
       name: 'reviews',
       sdl: fs.readFileSync(path.join(__dirname, 'testdata', 'reviews.graphql'), {
@@ -74,7 +80,7 @@ describe('Router Config Builder', () => {
       configurationDataByTypeName: reviewsSubgraphConfig!.configurationDataByTypeName,
     };
     const inventory: ComposedSubgraph = {
-      kind: 'standard',
+      kind: SubgraphKind.Standard,
       id: '3',
       name: 'inventory',
       sdl: fs.readFileSync(path.join(__dirname, 'testdata', 'inventory.graphql'), {
@@ -113,7 +119,7 @@ describe('Router Config Builder', () => {
     const inventorySubgraphConfig = result.subgraphConfigBySubgraphName.get('inventory');
 
     const accounts: ComposedSubgraph = {
-      kind: 'standard',
+      kind: SubgraphKind.Standard,
       id: '0',
       name: 'accounts',
       sdl: fs.readFileSync(path.join(__dirname, 'testdata', 'accounts.graphql'), {
@@ -127,7 +133,7 @@ describe('Router Config Builder', () => {
       configurationDataByTypeName: accountsSubgraphConfig!.configurationDataByTypeName,
     };
     const products: ComposedSubgraph = {
-      kind: 'standard',
+      kind: SubgraphKind.Standard,
       id: '1',
       name: 'products',
       sdl: fs.readFileSync(path.join(__dirname, 'testdata', 'products.graphql'), {
@@ -141,7 +147,7 @@ describe('Router Config Builder', () => {
       configurationDataByTypeName: productsSubgraphConfig!.configurationDataByTypeName,
     };
     const reviews: ComposedSubgraph = {
-      kind: 'standard',
+      kind: SubgraphKind.Standard,
       id: '2',
       name: 'reviews',
       sdl: fs.readFileSync(path.join(__dirname, 'testdata', 'reviews.graphql'), {
@@ -155,7 +161,7 @@ describe('Router Config Builder', () => {
       configurationDataByTypeName: reviewsSubgraphConfig!.configurationDataByTypeName,
     };
     const inventory: ComposedSubgraphPlugin = {
-      kind: 'plugin',
+      kind: SubgraphKind.Plugin,
       id: '3',
       name: 'inventory',
       version: '0.0.1',
@@ -204,7 +210,7 @@ describe('Router Config Builder', () => {
     const productsSubgraphConfig = result.subgraphConfigBySubgraphName.get('products');
 
     const accounts: ComposedSubgraph = {
-      kind: 'standard',
+      kind: SubgraphKind.Standard,
       id: '0',
       name: 'accounts',
       sdl: fs.readFileSync(path.join(__dirname, 'testdata', 'simple-accounts.graphql'), {
@@ -217,7 +223,7 @@ describe('Router Config Builder', () => {
       configurationDataByTypeName: accountsSubgraphConfig!.configurationDataByTypeName,
     };
     const products: ComposedSubgraph = {
-      kind: 'standard',
+      kind: SubgraphKind.Standard,
       id: '1',
       name: 'products',
       sdl: fs.readFileSync(path.join(__dirname, 'testdata', 'simple-products.graphql'), {
@@ -258,7 +264,7 @@ describe('Router Config Builder', () => {
     const productsSubgraphConfig = result.subgraphConfigBySubgraphName.get('products');
 
     const accounts: ComposedSubgraph = {
-      kind: 'standard',
+      kind: SubgraphKind.Standard,
       id: '0',
       name: 'accounts',
       sdl: fs.readFileSync(path.join(__dirname, 'testdata', 'simple-accounts.graphql'), {
@@ -271,7 +277,7 @@ describe('Router Config Builder', () => {
       configurationDataByTypeName: accountsSubgraphConfig!.configurationDataByTypeName,
     };
     const products: ComposedSubgraph = {
-      kind: 'standard',
+      kind: SubgraphKind.Standard,
       id: '1',
       name: 'products',
       sdl: fs.readFileSync(path.join(__dirname, 'testdata', 'simple-products-with-tags.graphql'), {
@@ -312,7 +318,7 @@ describe('Router Config Builder', () => {
     const productsSubgraphConfig = result.subgraphConfigBySubgraphName.get('products');
 
     const accounts: ComposedSubgraph = {
-      kind: 'standard',
+      kind: SubgraphKind.Standard,
       id: '0',
       name: 'accounts',
       sdl: fs.readFileSync(path.join(__dirname, 'testdata', 'simple-accounts.graphql'), {
@@ -325,7 +331,7 @@ describe('Router Config Builder', () => {
       configurationDataByTypeName: accountsSubgraphConfig!.configurationDataByTypeName,
     };
     const products: ComposedSubgraph = {
-      kind: 'standard',
+      kind: SubgraphKind.Standard,
       id: '1',
       name: 'products',
       sdl: fs.readFileSync(path.join(__dirname, 'testdata', 'simple-products-with-inaccessible.graphql'), {
@@ -356,7 +362,7 @@ describe('Router Config Builder', () => {
 
   test('that the builder config throws an error if normalization has failed', () => {
     const subgraph: ComposedSubgraph = {
-      kind: 'standard',
+      kind: SubgraphKind.Standard,
       id: '',
       name: '',
       sdl: `extend input Human {
