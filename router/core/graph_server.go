@@ -7,16 +7,13 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/cespare/xxhash/v2"
-	"github.com/wundergraph/cosmo/router/pkg/execution_config"
-	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
-	otelmetric "go.opentelemetry.io/otel/metric"
-	oteltrace "go.opentelemetry.io/otel/trace"
-
 	"github.com/cloudflare/backoff"
 	"github.com/dgraph-io/ristretto/v2"
 	"github.com/go-chi/chi/v5"
@@ -26,23 +23,26 @@ import (
 	"github.com/klauspost/compress/gzip"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
-	"github.com/wundergraph/cosmo/router/internal/expr"
-	"github.com/wundergraph/cosmo/router/internal/retrytransport"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"go.opentelemetry.io/otel/attribute"
+	otelmetric "go.opentelemetry.io/otel/metric"
+	oteltrace "go.opentelemetry.io/otel/trace"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"golang.org/x/exp/maps"
+	"google.golang.org/grpc"
 
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/internal/expr"
 	rjwt "github.com/wundergraph/cosmo/router/internal/jwt"
 	rmiddleware "github.com/wundergraph/cosmo/router/internal/middleware"
 	"github.com/wundergraph/cosmo/router/internal/recoveryhandler"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
+	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
+	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"github.com/wundergraph/cosmo/router/pkg/health"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
@@ -50,7 +50,10 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/pubsub"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
 	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
+	"github.com/wundergraph/cosmo/router/pkg/routerplugin"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
+	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 )
 
 const (
@@ -98,6 +101,7 @@ type (
 		prometheusEngineMetrics *rmetric.EngineMetrics
 		hostName                string
 		routerListenAddr        string
+		pluginHost              *routerplugin.Host
 	}
 )
 
@@ -682,7 +686,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	}
 
 	metricsEnabled := s.metricConfig.IsEnabled()
-	
+
 	exprManager := expr.CreateNewExprManager()
 
 	// We might want to remap or exclude known attributes based on the configuration for metrics
@@ -953,13 +957,19 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		subgraphTippers[subgraph] = subgraphTransport
 	}
 
+	subgraphGRPCClients, err := s.buildSubgraphGRPCClients(ctx, engineConfig, configSubgraphs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build subgraph grpc clients: %w", err)
+	}
+
 	ecb := &ExecutorConfigurationBuilder{
-		introspection:    s.introspection,
-		baseURL:          s.baseURL,
-		baseTripper:      s.baseTransport,
-		subgraphTrippers: subgraphTippers,
-		logger:           s.logger,
-		trackUsageInfo:   s.graphqlMetricsConfig.Enabled || s.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled,
+		introspection:       s.introspection,
+		baseURL:             s.baseURL,
+		baseTripper:         s.baseTransport,
+		subgraphTrippers:    subgraphTippers,
+		subgraphGRPCClients: subgraphGRPCClients,
+		logger:              s.logger,
+		trackUsageInfo:      s.graphqlMetricsConfig.Enabled || s.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled,
 		subscriptionClientOptions: &SubscriptionClientOptions{
 			PingInterval: s.engineExecutionConfiguration.WebSocketClientPingInterval,
 			PingTimeout:  s.engineExecutionConfiguration.WebSocketClientPingTimeout,
@@ -1256,6 +1266,63 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	return gm, nil
 }
 
+func (s *graphServer) buildSubgraphGRPCClients(ctx context.Context, config *nodev1.EngineConfiguration, configSubgraphs []*nodev1.Subgraph) (map[string]grpc.ClientConnInterface, error) {
+	subgraphGRPCClients := make(map[string]grpc.ClientConnInterface)
+	for _, dsConfig := range config.DatasourceConfigurations {
+		grpcConfig := dsConfig.GetCustomGraphql().GetGrpc()
+		if grpcConfig == nil {
+			continue
+		}
+
+		if pluginConfig := grpcConfig.GetPlugin(); pluginConfig != nil {
+			basePath := ""
+
+			if s.plugins.Enabled {
+				basePath = s.plugins.Path
+			}
+
+			if s.pluginHost == nil {
+				s.pluginHost = routerplugin.NewHost()
+			}
+
+			for _, subgraph := range configSubgraphs {
+				if subgraph.Id != dsConfig.Id {
+					continue
+				}
+
+				pluginPath, err := filepath.Abs(filepath.Join(basePath, pluginConfig.GetName(), "bin", fmt.Sprintf("%s_%s", runtime.GOOS, runtime.GOARCH)))
+				if err != nil {
+					return nil, fmt.Errorf("failed to get plugin path: %w", err)
+				}
+
+				grpcPlugin, err := routerplugin.NewGRPCPlugin(routerplugin.GRPCPluginConfig{
+					PluginName:    pluginConfig.GetName(),
+					PluginPath:    pluginPath,
+					PluginCommand: []string{pluginPath},
+				})
+
+				if err != nil {
+					return nil, fmt.Errorf("failed to create grpc plugin for subgraph %s: %w", dsConfig.Id, err)
+				}
+
+				err = s.pluginHost.RegisterPlugin(subgraph.Name, grpcPlugin)
+				if err != nil {
+					return nil, fmt.Errorf("failed to register grpc plugin: %w", err)
+				}
+
+				if err := grpcPlugin.Start(ctx, s.logger); err != nil {
+					return nil, fmt.Errorf("failed to start grpc plugin: %w", err)
+				}
+
+				subgraphGRPCClients[subgraph.Name] = grpcPlugin.GetClient()
+				break
+			}
+		}
+	}
+
+	return subgraphGRPCClients, nil
+}
+
 func (s *graphServer) buildPubSubConfiguration(ctx context.Context, engineConfig *nodev1.EngineConfiguration, routerEngineCfg *RouterEngineConfiguration) error {
 	datasourceConfigurations := engineConfig.GetDatasourceConfigurations()
 	for _, datasourceConfiguration := range datasourceConfigurations {
@@ -1443,6 +1510,13 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 	s.baseTransport.CloseIdleConnections()
 	for _, subgraphTransport := range s.subgraphTransports {
 		subgraphTransport.CloseIdleConnections()
+	}
+
+	if s.pluginHost != nil {
+		s.logger.Debug("Stopping old plugins")
+		if err := s.pluginHost.StopAllPlugins(); err != nil {
+			finalErr = errors.Join(finalErr, err)
+		}
 	}
 
 	return finalErr

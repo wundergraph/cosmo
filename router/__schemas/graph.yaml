@@ -15,3 +15,7 @@ subgraphs:
   - name: employeeUpdates
     schema:
       file: ../../demo/pkg/subgraphs/employeeupdated/subgraph/schema.graphqls
+  - name: hello-world
+    plugin:
+      version: 0.0.1
+      path: ../plugins/hello-world

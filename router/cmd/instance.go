@@ -143,6 +143,7 @@ func NewRouter(ctx context.Context, params Params, additionalOptions ...core.Opt
 		core.WithCacheWarmupConfig(&cfg.CacheWarmup),
 		core.WithMCP(cfg.MCP),
 		core.WithDemoMode(cfg.DemoMode),
+		core.WithPlugins(cfg.Plugins),
 	}
 
 	// HTTP_PROXY, HTTPS_PROXY and NO_PROXY
