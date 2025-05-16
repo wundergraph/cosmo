@@ -226,9 +226,15 @@ export const roles = [
     description: "Organization developer access.",
   },
   {
+    key: "organization-apikey-manager",
+    category: "organization",
+    displayName: "API Key Manager",
+    description: "...",
+  },
+  {
     key: "organization-viewer",
     category: "organization",
-    displayName: "Readonly",
+    displayName: "Viewer",
     description: "Organization readonly access.",
   },
   {
@@ -240,7 +246,7 @@ export const roles = [
   {
     key: "namespace-viewer",
     category: "namespace",
-    displayName: "Readonly",
+    displayName: "Viewer",
     description: "Namespace readonly access.",
   },
   {
@@ -252,8 +258,14 @@ export const roles = [
   {
     key: "graph-viewer",
     category: "graph",
-    displayName: "Readonly",
+    displayName: "Viewer",
     description: "Graph readonly access.",
+  },
+  {
+    key: "subgraph-admin",
+    category: "subgraph",
+    displayName: "Admin",
+    description: "Grants publish permission.",
   },
   {
     key: "subgraph-publisher",

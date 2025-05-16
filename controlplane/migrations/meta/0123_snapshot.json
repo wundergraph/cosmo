@@ -1,5 +1,5 @@
 {
-  "id": "3a658ece-c06d-43aa-b82c-78ba28543696",
+  "id": "4abedbbd-9ed7-4388-9a78-64b65828eba0",
   "prevId": "27c44862-d1fd-47d6-96f8-0fa43e2ce806",
   "version": "7",
   "dialect": "postgresql",
@@ -7966,10 +7966,12 @@
         "organization-admin",
         "organization-developer",
         "organization-viewer",
+        "organization-apikey-manager",
         "namespace-admin",
         "namespace-viewer",
         "graph-admin",
         "graph-viewer",
+        "subgraph-admin",
         "subgraph-publisher"
       ]
     },

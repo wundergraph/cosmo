@@ -1338,10 +1338,12 @@ export const organizationRoleEnum = pgEnum('organization_role', [
   'organization-admin',
   'organization-developer',
   'organization-viewer',
+  'organization-apikey-manager',
   'namespace-admin',
   'namespace-viewer',
   'graph-admin',
   'graph-viewer',
+  'subgraph-admin',
   'subgraph-publisher',
 ] as const);
 
