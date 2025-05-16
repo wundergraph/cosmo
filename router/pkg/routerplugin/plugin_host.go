@@ -39,30 +39,14 @@ func (h *Host) RegisterPlugin(subgraphName string, plugin Plugin) error {
 	return nil
 }
 
-func (h *Host) GetPlugin(pluginName string) (Plugin, error) {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-
-	plugin, ok := h.pluginMap[pluginName]
-	if !ok {
-		return nil, fmt.Errorf("plugin %s not found", pluginName)
-	}
-
-	return plugin, nil
-}
-
-func (h *Host) GetAllPlugins() map[string]Plugin {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-
-	return h.pluginMap
-}
-
 func (h *Host) StopAllPlugins() error {
 	var resErr error
 
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
 	for name := range h.pluginMap {
-		if err := h.StopPlugin(name); err != nil {
+		if err := h.stopPlugin(name); err != nil {
 			resErr = errors.Join(resErr, err)
 		}
 	}
@@ -71,9 +55,7 @@ func (h *Host) StopAllPlugins() error {
 	return resErr
 }
 
-func (h *Host) StopPlugin(pluginName string) error {
-	h.mu.Lock()
-	defer h.mu.Unlock()
+func (h *Host) stopPlugin(pluginName string) error {
 
 	plugin, ok := h.pluginMap[pluginName]
 	if !ok {
