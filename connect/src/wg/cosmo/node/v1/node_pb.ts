@@ -1554,11 +1554,6 @@ export class GRPCConfiguration extends Message<GRPCConfiguration> {
    */
   plugin?: PluginConfiguration;
 
-  /**
-   * @generated from field: wg.cosmo.node.v1.NetworkConfiguration network = 4;
-   */
-  network?: NetworkConfiguration;
-
   constructor(data?: PartialMessage<GRPCConfiguration>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1570,7 +1565,6 @@ export class GRPCConfiguration extends Message<GRPCConfiguration> {
     { no: 1, name: "mapping", kind: "message", T: GRPCMapping },
     { no: 2, name: "proto_schema", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "plugin", kind: "message", T: PluginConfiguration },
-    { no: 4, name: "network", kind: "message", T: NetworkConfiguration },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GRPCConfiguration {
@@ -1587,45 +1581,6 @@ export class GRPCConfiguration extends Message<GRPCConfiguration> {
 
   static equals(a: GRPCConfiguration | PlainMessage<GRPCConfiguration> | undefined, b: GRPCConfiguration | PlainMessage<GRPCConfiguration> | undefined): boolean {
     return proto3.util.equals(GRPCConfiguration, a, b);
-  }
-}
-
-/**
- * @generated from message wg.cosmo.node.v1.NetworkConfiguration
- */
-export class NetworkConfiguration extends Message<NetworkConfiguration> {
-  /**
-   * Network address, e.g., "localhost:50051" for TCP or "/path/to/socket" for Unix socket
-   *
-   * @generated from field: string location = 1;
-   */
-  location = "";
-
-  constructor(data?: PartialMessage<NetworkConfiguration>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.node.v1.NetworkConfiguration";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "location", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): NetworkConfiguration {
-    return new NetworkConfiguration().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): NetworkConfiguration {
-    return new NetworkConfiguration().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): NetworkConfiguration {
-    return new NetworkConfiguration().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: NetworkConfiguration | PlainMessage<NetworkConfiguration> | undefined, b: NetworkConfiguration | PlainMessage<NetworkConfiguration> | undefined): boolean {
-    return proto3.util.equals(NetworkConfiguration, a, b);
   }
 }
 

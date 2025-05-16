@@ -206,12 +206,6 @@ message GRPCConfiguration {
   GRPCMapping mapping = 1;
   string proto_schema = 2;
   PluginConfiguration plugin = 3;
-  NetworkConfiguration network = 4;
-}
-
-message NetworkConfiguration {
-  // Network address, e.g., "localhost:50051" for TCP or "/path/to/socket" for Unix socket
-  string location = 1;
 }
 
 message PluginConfiguration {

@@ -31,7 +31,6 @@ import (
 	"go.uber.org/zap/zapcore"
 	"golang.org/x/exp/maps"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
@@ -687,7 +686,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	}
 
 	metricsEnabled := s.metricConfig.IsEnabled()
-	
+
 	exprManager := expr.CreateNewExprManager()
 
 	// We might want to remap or exclude known attributes based on the configuration for metrics
@@ -828,8 +827,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	httpRouter.Use(recoveryHandler)
 
 	// Setup any router on request middlewares so that they can be used to manipulate
-	// other downstream internal middlewares such as tracing or authentication
-	httpRouter.Use(s.routerOnRequestHandlers...)
+	// other downstream internal middlewares such as tracing or authentication	httpRouter.Use(s.routerOnRequestHandlers...)
 
 	/**
 	* Initialize base attributes from headers and other sources
@@ -1272,22 +1270,6 @@ func (s *graphServer) buildSubgraphGRPCClients(ctx context.Context, config *node
 	for _, dsConfig := range config.DatasourceConfigurations {
 		grpcConfig := dsConfig.GetCustomGraphql().GetGrpc()
 		if grpcConfig == nil {
-			continue
-		}
-
-		if networkConnection := grpcConfig.GetNetwork(); networkConnection != nil {
-			c, err := grpc.NewClient(networkConnection.Location, grpc.WithTransportCredentials(insecure.NewCredentials()))
-			if err != nil {
-				return nil, fmt.Errorf("failed to create grpc client for subgraph %s: %w", dsConfig.Id, err)
-			}
-
-			for _, subgraph := range configSubgraphs {
-				if subgraph.Id == dsConfig.Id {
-					subgraphGRPCClients[subgraph.Name] = c
-					break
-				}
-			}
-
 			continue
 		}
 
