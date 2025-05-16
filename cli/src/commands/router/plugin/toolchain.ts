@@ -260,7 +260,7 @@ function getToolsEnv(): NodeJS.ProcessEnv {
   const env = { ...process.env };
   if (existsSync(TOOLS_BIN_DIR)) {
     env.PATH = `${TOOLS_BIN_DIR}:${env.PATH}`;
-    
+
     // Set GOROOT to the parent directory of bin if Go is managed by the toolchain
     if (existsSync(join(TOOLS_BIN_DIR, 'go'))) {
       env.GOROOT = join(TOOLS_DIR, 'go');
