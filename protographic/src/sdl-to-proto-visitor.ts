@@ -1168,29 +1168,27 @@ export class GraphQLToProtoTextVisitor {
     if (isListType(graphqlType)) {
       // Handle nested list types (e.g., [[Type]])
       const innerType = graphqlType.ofType;
-      
+
       // If the inner type is also a list, we need to use a wrapper message
       if (isListType(innerType) || (isNonNullType(innerType) && isListType(innerType.ofType))) {
         // Find the most inner type by unwrapping all lists and non-nulls
         let currentType: GraphQLType = innerType;
         while (isListType(currentType) || isNonNullType(currentType)) {
-          currentType = isListType(currentType) 
-            ? currentType.ofType 
-            : (currentType as any).ofType;
+          currentType = isListType(currentType) ? currentType.ofType : (currentType as any).ofType;
         }
-        
+
         // Get the name of the inner type and create wrapper name
         const namedInnerType = currentType as GraphQLNamedType;
         const wrapperName = `${namedInnerType.name}List`;
-        
+
         // Generate the wrapper message if not already created
         if (!this.processedTypes.has(wrapperName) && !this.nestedListWrappers.has(wrapperName)) {
           this.createNestedListWrapper(wrapperName, namedInnerType);
         }
-        
+
         return wrapperName;
       }
-      
+
       return this.getProtoTypeFromGraphQL(innerType);
     }
 
@@ -1211,10 +1209,10 @@ export class GraphQLToProtoTextVisitor {
     if (this.processedTypes.has(wrapperName) || this.nestedListWrappers.has(wrapperName)) {
       return;
     }
-    
+
     // Mark as processed to avoid recursion
     this.processedTypes.add(wrapperName);
-    
+
     // Check for field removals if lock data exists for this wrapper
     const lockData = this.lockManager.getLockData();
     if (lockData.messages[wrapperName]) {
@@ -1222,31 +1220,31 @@ export class GraphQLToProtoTextVisitor {
       const currentFieldNames = ['result'];
       this.trackRemovedFields(wrapperName, originalFieldNames, currentFieldNames);
     }
-    
+
     // Create a temporary array for the wrapper definition
     const messageLines: string[] = [];
-    
+
     messageLines.push(`message ${wrapperName} {`);
-    
+
     // Add reserved field numbers if any exist
     const messageLock = lockData.messages[wrapperName];
     if (messageLock?.reservedNumbers && messageLock.reservedNumbers.length > 0) {
       messageLines.push(`  reserved ${this.formatReservedNumbers(messageLock.reservedNumbers)};`);
     }
-    
+
     // Get the appropriate field number from the lock
     const fieldNumber = this.getFieldNumber(wrapperName, 'result', 1);
-    
+
     // For the inner type, we need to get the proto type for the base type
     const protoType = this.getProtoTypeFromGraphQL(baseType);
     messageLines.push(`  repeated ${protoType} result = ${fieldNumber};`);
-    
+
     messageLines.push('}');
     messageLines.push('');
-    
+
     // Ensure the wrapper message is registered in the lock manager data
     this.lockManager.reconcileMessageFieldOrder(wrapperName, ['result']);
-    
+
     // Store the wrapper message for later inclusion in the output
     this.nestedListWrappers.set(wrapperName, messageLines.join('\n'));
   }

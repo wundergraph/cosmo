@@ -1,14 +1,14 @@
+import { access, mkdir, rename, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { randomUUID } from 'node:crypto';
 import { Command, program } from 'commander';
 import { relative, resolve } from 'pathe';
 import pc from 'picocolors';
 import pupa from 'pupa';
 import Spinner from 'ora';
-import { access, mkdir, rename, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { randomUUID } from 'node:crypto';
+import { compileGraphQLToMapping, compileGraphQLToProto } from '@wundergraph/protographic';
 import { BaseCommandOptions } from '../../../../core/types/types.js';
 import { goMod, mainGo, mainGoTest, readme, schema } from '../templates/go-plugin.js';
-import { compileGraphQLToMapping, compileGraphQLToProto } from '@wundergraph/protographic';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('init');
@@ -94,7 +94,7 @@ export default (opts: BaseCommandOptions) => {
       // Clean up the temp directory in case of error
       try {
         await rm(tempDir, { recursive: true, force: true });
-      } catch (cleanupError) {
+      } catch {
         // Ignore cleanup errors
       }
       spinner.fail(pc.red(`Failed to init plugin: ${error.message}`));

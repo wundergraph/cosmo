@@ -3,12 +3,12 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import {
   buildRouterConfig,
-  ComposedSubgraph,
-  ComposedSubgraphPlugin,
+  type ComposedSubgraph,
+  type ComposedSubgraphPlugin,
   normalizeURL,
-  Subgraph,
-  SubscriptionProtocol,
-  WebsocketSubprotocol,
+  type Subgraph,
+  type SubscriptionProtocol,
+  type WebsocketSubprotocol,
 } from '@wundergraph/cosmo-shared';
 import { Command, program } from 'commander';
 import { parse, printSchema } from 'graphql';
@@ -128,11 +128,11 @@ export default (opts: BaseCommandOptions) => {
 
         const pluginName = basename(s.plugin.path);
         const mappingFilePath = resolve(s.plugin.path, 'generated', 'mapping.json');
-        const mappingFile = await readFile(mappingFilePath, 'utf-8');
+        const mappingFile = await readFile(mappingFilePath, 'utf8');
         const schemaFilePath = resolve(s.plugin.path, 'src', 'schema.graphql');
-        const sdl = await readFile(schemaFilePath, 'utf-8');
+        const sdl = await readFile(schemaFilePath, 'utf8');
         const protoSchemaFilePath = resolve(s.plugin.path, 'generated', 'service.proto');
-        const protoSchema = await readFile(protoSchemaFilePath, 'utf-8');
+        const protoSchema = await readFile(protoSchemaFilePath, 'utf8');
 
         subgraphs.push({
           kind: 'plugin',
@@ -302,7 +302,7 @@ export default (opts: BaseCommandOptions) => {
 
             if (featureSubgraph.schema?.file) {
               const schemaFile = resolve(inputFileLocation, featureSubgraph.schema.file);
-              schemaSDL = await readFile(schemaFile, 'utf-8');
+              schemaSDL = await readFile(schemaFile, 'utf8');
             } else {
               try {
                 const result = await introspectSubgraph({

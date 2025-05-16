@@ -211,12 +211,12 @@ describe('Argument Ordering and Field Numbers', () => {
 
       // Generate the second proto
       const proto2 = visitor2.visit();
-      
+
       // Parse the proto to verify limit field is removed
       const root2 = loadProtoFromText(proto2);
       const searchRequestFields2 = getFieldNumbersFromMessage(root2, 'QueryAdvancedSearchRequest');
       expect(searchRequestFields2['limit']).toBeUndefined();
-      
+
       // But the existing fields should maintain their numbers
       expect(searchRequestFields2['query']).toBe(queryNumber);
       expect(searchRequestFields2['offset']).toBe(offsetNumber);
@@ -261,7 +261,7 @@ describe('Argument Ordering and Field Numbers', () => {
       const maxNumber = Math.max(queryNumber, offsetNumber);
       expect(searchRequestFields3['filter_by']).toBeGreaterThan(maxNumber);
     });
-    
+
     test('should verify field numbers are preserved when fields are removed and reserved tags are added', () => {
       // Initial schema with arguments
       const initialSchema = buildSchema(`
@@ -339,19 +339,19 @@ describe('Argument Ordering and Field Numbers', () => {
       // Preserved fields should maintain their numbers despite reordering
       expect(findRequestFields2['name']).toBe(nameNumber);
       expect(findRequestFields2['active']).toBe(activeNumber);
-      
+
       // Removed fields should not be present
       expect(findRequestFields2['id']).toBeUndefined();
       expect(findRequestFields2['age']).toBeUndefined();
       expect(findRequestFields2['email']).toBeUndefined();
-      
+
       // New field should have a higher number than any existing field
       const maxNumber = Math.max(idNumber, nameNumber, ageNumber, emailNumber, activeNumber);
       expect(findRequestFields2['status']).toBeGreaterThan(maxNumber);
-      
+
       // Check for reserved tag in the proto text
       expect(proto2).toContain('reserved');
-      
+
       // Now add back a previously removed field and check it gets a new number
       const modifiedSchema3 = buildSchema(`
         type User {
@@ -388,7 +388,7 @@ describe('Argument Ordering and Field Numbers', () => {
       // Check that existing fields still maintain their numbers
       expect(findRequestFields3['name']).toBe(nameNumber);
       expect(findRequestFields3['active']).toBe(activeNumber);
-      
+
       // The status field from the second version should still have its number
       expect(findRequestFields3['status']).toBe(findRequestFields2['status']);
     });
@@ -476,10 +476,10 @@ describe('Argument Ordering and Field Numbers', () => {
       // Verify input object field numbers are preserved
       expect(filterOptionsFields2['max_price']).toBe(maxPriceNumber);
       expect(filterOptionsFields2['category']).toBe(categoryNumber);
-      
+
       // Verify removed field is gone
       expect(filterOptionsFields2['min_price']).toBeUndefined();
-      
+
       // Verify new field has a higher number than existing fields
       const maxFieldNumber = Math.max(maxPriceNumber, categoryNumber);
       expect(filterOptionsFields2['in_stock']).toBeGreaterThan(maxFieldNumber);
@@ -593,18 +593,18 @@ describe('Argument Ordering and Field Numbers', () => {
       // Verify all field numbers are preserved at each level
       // 1. Top-level request
       expect(searchRequestFields2['options']).toBe(optionsNumber);
-      
+
       // 2. SearchOptions
       expect(searchOptionsFields2['query']).toBe(queryNumber);
       expect(searchOptionsFields2['pagination']).toBe(paginationNumber);
       expect(searchOptionsFields2['sort']).toBe(sortNumber);
       expect(searchOptionsFields2['filters']).toBeGreaterThan(Math.max(queryNumber, paginationNumber, sortNumber));
-      
+
       // 3. PaginationOptions
       expect(paginationOptionsFields2['page']).toBe(pageNumber);
       expect(paginationOptionsFields2['per_page']).toBe(perPageNumber);
       expect(paginationOptionsFields2['offset']).toBeGreaterThan(Math.max(pageNumber, perPageNumber));
-      
+
       // 4. SortOptions
       expect(sortOptionsFields2['field']).toBeUndefined(); // Removed field
       expect(sortOptionsFields2['direction']).toBe(directionNumber);
@@ -648,7 +648,7 @@ describe('Argument Ordering and Field Numbers', () => {
       const ascNumber = enumValues1['SORT_DIRECTION_ASC'];
       const descNumber = enumValues1['SORT_DIRECTION_DESC'];
       const neutralNumber = enumValues1['SORT_DIRECTION_NEUTRAL'];
-      
+
       // Get the generated lock data
       const lockData = visitor1.getGeneratedLockData();
       expect(lockData).not.toBeNull();
@@ -687,13 +687,13 @@ describe('Argument Ordering and Field Numbers', () => {
       // Verify that existing enum values keep their numbers
       expect(enumValues2['SORT_DIRECTION_ASC']).toBe(ascNumber);
       expect(enumValues2['SORT_DIRECTION_DESC']).toBe(descNumber);
-      
+
       // Verify that the deleted enum value is not present
       expect(enumValues2['SORT_DIRECTION_NEUTRAL']).toBeUndefined();
 
       // Get updated lock data with the NEUTRAL value removed
       const lockData2 = visitor2.getGeneratedLockData();
-      
+
       // Verify that NEUTRAL's number is now in the reserved list
       expect(lockData2!.enums['SortDirection'].reservedNumbers).toContain(neutralNumber);
 
@@ -732,12 +732,12 @@ describe('Argument Ordering and Field Numbers', () => {
       // Verify that all original enum values keep their numbers
       expect(enumValues3['SORT_DIRECTION_ASC']).toBe(ascNumber);
       expect(enumValues3['SORT_DIRECTION_DESC']).toBe(descNumber);
-      
+
       // The NEUTRAL value gets a new number since the original enum value was actually removed
       // from the lock data, not just marked as reserved
       const neutralValue = enumValues3['SORT_DIRECTION_NEUTRAL'];
       expect(neutralValue).toBeGreaterThan(Math.max(ascNumber, descNumber));
-      
+
       // Verify that new enum value has a higher number than all others
       const maxEnumNumber = Math.max(ascNumber, descNumber, neutralValue);
       expect(enumValues3['SORT_DIRECTION_RANDOM']).toBeGreaterThan(maxEnumNumber);
@@ -826,10 +826,10 @@ describe('Argument Ordering and Field Numbers', () => {
       expect(mutationFields2['input']).toBe(inputNumber);
       expect(userInputFields2['name']).toBe(nameNumber);
       expect(userInputFields2['email']).toBe(emailNumber);
-      
+
       // Verify that the removed field is not present
       expect(userInputFields2['age']).toBeUndefined();
-      
+
       // Verify that the new field has a higher number
       const maxFieldNumber = Math.max(nameNumber, emailNumber, ageNumber || 0);
       expect(userInputFields2['active']).toBeGreaterThan(maxFieldNumber);
@@ -878,10 +878,10 @@ describe('Argument Ordering and Field Numbers', () => {
       // Remember original field numbers
       const createInputNumber = createFields1['input'];
       const updateInputNumber = updateFields1['input'];
-      
+
       const createNameNumber = createInputFields1['name'];
       const createEmailNumber = createInputFields1['email'];
-      
+
       const updateIdNumber = updateInputFields1['id'];
       const updateNameNumber = updateInputFields1['name'];
       const updateEmailNumber = updateInputFields1['email'];
@@ -937,18 +937,18 @@ describe('Argument Ordering and Field Numbers', () => {
       // Verify that all field numbers are preserved at top level
       expect(createFields2['input']).toBe(createInputNumber);
       expect(updateFields2['input']).toBe(updateInputNumber);
-      
+
       // Verify that field numbers in CreateUserInput are preserved
       expect(createInputFields2['name']).toBe(createNameNumber);
       expect(createInputFields2['email']).toBe(createEmailNumber);
       expect(createInputFields2['role']).toBeGreaterThan(Math.max(createNameNumber, createEmailNumber));
-      
+
       // Verify that field numbers in UpdateUserInput are preserved
       expect(updateInputFields2['id']).toBe(updateIdNumber);
       expect(updateInputFields2['name']).toBeUndefined(); // removed
       expect(updateInputFields2['email']).toBe(updateEmailNumber);
       expect(updateInputFields2['active']).toBeGreaterThan(Math.max(updateIdNumber, updateEmailNumber));
-      
+
       // Verify new mutation has a field
       expect(deleteFields['id']).toBeDefined();
     });
@@ -1001,10 +1001,10 @@ describe('Argument Ordering and Field Numbers', () => {
 
       // Parse the proto with protobufjs
       const root1 = loadProtoFromText(proto1);
-      
+
       // Get request field numbers
       const searchRequestFields1 = getFieldNumbersFromMessage(root1, 'QueryComplexSearchRequest');
-      
+
       // Get input type field numbers
       const filterOptionsFields1 = getFieldNumbersFromMessage(root1, 'FilterOptions');
       const paginationOptionsFields1 = getFieldNumbersFromMessage(root1, 'PaginationOptions');
@@ -1020,11 +1020,11 @@ describe('Argument Ordering and Field Numbers', () => {
       const minPriceNumber = filterOptionsFields1['min_price'];
       const maxPriceNumber = filterOptionsFields1['max_price'];
       const inStockNumber = filterOptionsFields1['in_stock'];
-      
+
       const pageNumber = paginationOptionsFields1['page'];
       const perPageNumber = paginationOptionsFields1['per_page'];
       const offsetNumber = paginationOptionsFields1['offset'];
-      
+
       const fieldNumber = sortOptionsFields1['field'];
       const directionNumber = sortOptionsFields1['direction'];
       const priorityNumber = sortOptionsFields1['priority'];
@@ -1089,10 +1089,10 @@ describe('Argument Ordering and Field Numbers', () => {
 
       // Parse the proto with protobufjs
       const root2 = loadProtoFromText(proto2);
-      
+
       // Get request field numbers from modified proto
       const searchRequestFields2 = getFieldNumbersFromMessage(root2, 'QueryComplexSearchRequest');
-      
+
       // Get input type field numbers from modified proto
       const filterOptionsFields2 = getFieldNumbersFromMessage(root2, 'FilterOptions');
       const paginationOptionsFields2 = getFieldNumbersFromMessage(root2, 'PaginationOptions');
@@ -1102,7 +1102,7 @@ describe('Argument Ordering and Field Numbers', () => {
       expect(searchRequestFields2['filter']).toBe(filterNumber);
       expect(searchRequestFields2['pagination']).toBe(paginationNumber);
       expect(searchRequestFields2['sort']).toBe(sortNumber);
-      
+
       // Verify that new top-level argument gets a higher number
       const maxTopLevelNumber = Math.max(filterNumber, paginationNumber, sortNumber);
       expect(searchRequestFields2['additional_filter']).toBeGreaterThan(maxTopLevelNumber);
@@ -1112,11 +1112,11 @@ describe('Argument Ordering and Field Numbers', () => {
       expect(filterOptionsFields2['max_price']).toBe(maxPriceNumber);
       expect(filterOptionsFields2['min_price']).toBeUndefined(); // Removed
       expect(filterOptionsFields2['in_stock']).toBeUndefined(); // Removed
-      
+
       // New field should have higher number
       const maxFilterNumber = Math.max(categoryNumber, maxPriceNumber, minPriceNumber, inStockNumber);
       expect(filterOptionsFields2['brand']).toBeGreaterThan(maxFilterNumber);
-      
+
       // Moved field should have a new field number in the new input type
       expect(filterOptionsFields2['priority']).toBeGreaterThan(maxFilterNumber);
 
@@ -1124,7 +1124,7 @@ describe('Argument Ordering and Field Numbers', () => {
       expect(paginationOptionsFields2['page']).toBe(pageNumber);
       expect(paginationOptionsFields2['per_page']).toBe(perPageNumber);
       expect(paginationOptionsFields2['offset']).toBeUndefined(); // Removed
-      
+
       // New field should have higher number
       const maxPaginationNumber = Math.max(pageNumber, perPageNumber, offsetNumber);
       expect(paginationOptionsFields2['total_count']).toBeGreaterThan(maxPaginationNumber);
@@ -1133,11 +1133,11 @@ describe('Argument Ordering and Field Numbers', () => {
       expect(sortOptionsFields2['direction']).toBe(directionNumber);
       expect(sortOptionsFields2['field']).toBeUndefined(); // Removed
       expect(sortOptionsFields2['priority']).toBeUndefined(); // Moved
-      
+
       // New field should have higher number
       const maxSortNumber = Math.max(fieldNumber, directionNumber, priorityNumber);
       expect(sortOptionsFields2['ascending']).toBeGreaterThan(maxSortNumber);
-      
+
       // Moved field should have a new field number in the new input type
       expect(sortOptionsFields2['in_stock']).toBeGreaterThan(maxSortNumber);
     });

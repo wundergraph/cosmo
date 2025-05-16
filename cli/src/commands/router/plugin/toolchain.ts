@@ -55,7 +55,7 @@ async function shouldReinstallTools(force = false): Promise<boolean> {
   if (existsSync(TOOLS_VERSIONS_FILE)) {
     try {
       // Read stored versions and compare with current versions
-      const storedVersionsStr = await readFile(TOOLS_VERSIONS_FILE, 'utf-8');
+      const storedVersionsStr = await readFile(TOOLS_VERSIONS_FILE, 'utf8');
       const storedVersions = JSON.parse(storedVersionsStr) as Record<string, string>;
 
       // Compare each tool version
@@ -75,7 +75,7 @@ async function shouldReinstallTools(force = false): Promise<boolean> {
 
       // If we got here, all versions match
       return false;
-    } catch (error) {
+    } catch {
       // If any error occurs during version checking, assume reinstallation is needed
       return true;
     }
@@ -89,7 +89,7 @@ async function shouldReinstallTools(force = false): Promise<boolean> {
       return false;
     }
     return true;
-  } catch (error) {
+  } catch {
     // If error checking host tools, installation is needed
     return true;
   }
@@ -171,7 +171,7 @@ function isSemverSatisfied(version: string, requiredVersion: string): boolean {
     }
 
     return semver.satisfies(coercedVersion, coercedRequiredVersion);
-  } catch (error) {
+  } catch {
     // If any error in semver processing, fall back to string comparison
     return version === requiredVersion;
   }
@@ -186,7 +186,7 @@ async function getCommandVersion(command: string, versionFlag: string): Promise<
   // Versions with 2 or 3 components like "1.22", "29.3", or "1.22.0"
   // Captures the version number in group 1
 
-  const versionRegex = /[vV]?(\d+(?:\.\d+){1,2})/;
+  const versionRegex = /[Vv]?(\d+(?:\.\d+){1,2})/;
 
   try {
     const { stdout } = await execa(command, [versionFlag]);
@@ -340,14 +340,14 @@ export async function generateProtoAndMapping(pluginDir: string, goModulePath: s
   await mkdir(generatedDir, { recursive: true });
 
   spinner.text = 'Reading schema...';
-  const schema = await readFile(resolve(srcDir, 'schema.graphql'), 'utf-8');
+  const schema = await readFile(resolve(srcDir, 'schema.graphql'), 'utf8');
   const lockFile = resolve(generatedDir, 'service.proto.lock.json');
 
   let lockData: ProtoLock | undefined;
 
   // check if file exists
   if (existsSync(lockFile)) {
-    lockData = JSON.parse(await readFile(lockFile, 'utf-8'));
+    lockData = JSON.parse(await readFile(lockFile, 'utf8'));
   }
 
   // Get plugin name from the last segment of the directory path
@@ -405,7 +405,7 @@ export async function runGoTests(pluginDir: string, spinner: any) {
   const env = getToolsEnv();
   const goPath = getToolPath('go');
 
-  return execa(goPath, ['test', './...'], {
+  await execa(goPath, ['test', './...'], {
     cwd: pluginDir,
     stdout: 'inherit',
     stderr: 'inherit',

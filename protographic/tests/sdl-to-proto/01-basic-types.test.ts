@@ -347,7 +347,7 @@ describe('SDL to Proto - Basic Types', () => {
     expect(protoText).toContain('repeated CategoryKind kinds = ');
     expect(protoText).toContain('repeated string ids = ');
     expect(protoText).toContain('repeated string tags = ');
-    
+
     // Full snapshot to ensure overall structure is correct
     expect(protoText).toMatchInlineSnapshot(`
       "syntax = "proto3";
@@ -413,7 +413,7 @@ describe('SDL to Proto - Basic Types', () => {
 
     // Validate Proto definition
     expectValidProto(protoText);
-    
+
     // Full snapshot to ensure overall structure is correct
     expect(protoText).toMatchInlineSnapshot(`
       "syntax = "proto3";

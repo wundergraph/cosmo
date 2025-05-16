@@ -1,4 +1,4 @@
-import {describe, expect, it, test} from 'vitest';
+import { describe, expect, it, test } from 'vitest';
 import { compileGraphQLToMapping } from '../../src';
 
 describe('GraphQL Federation to Proto Mapping', () => {

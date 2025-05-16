@@ -1,14 +1,14 @@
 import { describe, expect, test } from 'vitest';
 import { buildSchema } from 'graphql';
 import { GraphQLToProtoTextVisitor } from '../../src/sdl-to-proto-visitor';
-import { 
-  getEnumValuesWithNumbers, 
-  getFieldNumbersFromMessage, 
+import {
+  getEnumValuesWithNumbers,
+  getFieldNumbersFromMessage,
   loadProtoFromText,
   getMessageContent,
   getEnumContent,
   getServiceMethods,
-  getReservedNumbers
+  getReservedNumbers,
 } from '../util';
 
 describe('Field Ordering and Preservation', () => {
@@ -294,11 +294,11 @@ describe('Field Ordering and Preservation', () => {
 
       // Generate the first proto to establish the initial field numbers
       const proto1 = visitor1.visit();
-      
+
       // Get the lock data with all fields
       const lockData = visitor1.getGeneratedLockData();
       expect(lockData).not.toBeNull();
-      
+
       // Now modify the schema to remove some fields (still in first-time operation)
       const modifiedSchema = buildSchema(`
         type User {
@@ -313,28 +313,28 @@ describe('Field Ordering and Preservation', () => {
           getUsers: [User]
         }
       `);
-      
+
       // Create a second visitor WITH the initial lock data
       const visitor2 = new GraphQLToProtoTextVisitor(modifiedSchema, {
         serviceName: 'UserService',
         lockData: lockData || undefined,
       });
-      
+
       // Generate the proto with some fields removed
       const proto2 = visitor2.visit();
-      
+
       // Parse the proto using protobufjs
       const root2 = loadProtoFromText(proto2);
-      
+
       // Verify reserved numbers exist for User message
       const reservedNumbers = getReservedNumbers(root2, 'User');
       expect(reservedNumbers.length).toBeGreaterThan(0);
-      
+
       // Get updated lock data and verify it contains reserved numbers
       const lockData2 = visitor2.getGeneratedLockData();
       expect(lockData2!.messages['User'].reservedNumbers).toBeDefined();
       expect(lockData2!.messages['User'].reservedNumbers!.length).toBeGreaterThan(0);
-      
+
       // Now add a field back and add a new field
       const modifiedSchema2 = buildSchema(`
         type User {
@@ -350,25 +350,25 @@ describe('Field Ordering and Preservation', () => {
           getUsers: [User]
         }
       `);
-      
+
       // Create a third visitor using the lock data from visitor2
       const visitor3 = new GraphQLToProtoTextVisitor(modifiedSchema2, {
         serviceName: 'UserService',
         lockData: lockData2 || undefined,
       });
-      
+
       // Generate the third proto
       const proto3 = visitor3.visit();
-      
+
       // Parse the proto using protobufjs
       const root3 = loadProtoFromText(proto3);
-      
+
       // Get message content using our utility
       const userContent = getMessageContent(root3, 'User');
-      
+
       // Verify there are still reserved numbers
       expect(userContent.reserved.length).toBeGreaterThan(0);
-      
+
       // Verify fields exist
       expect(userContent.fields['email']).toBeDefined();
       expect(userContent.fields['phone']).toBeDefined();
@@ -592,11 +592,11 @@ describe('Field Ordering and Preservation', () => {
 
       // Generate the first proto
       const proto1 = visitor1.visit();
-      
+
       // Get the generated lock data with all enum values
       const lockData = visitor1.getGeneratedLockData();
       expect(lockData).not.toBeNull();
-      
+
       // Modified schema with removed enum values
       const modifiedSchema = buildSchema(`
         enum UserRole {
@@ -622,14 +622,14 @@ describe('Field Ordering and Preservation', () => {
         serviceName: 'UserService',
         lockData: lockData || undefined,
       });
-      
+
       // Generate the second proto
       const proto2 = visitor2.visit();
       const lockData2 = visitor2.getGeneratedLockData();
-      
+
       // Verify the lock data contains reserved numbers for the removed enum values
       expect(lockData2!.enums['UserRole'].reservedNumbers).toBeDefined();
-      
+
       // Third schema with one removed value re-added
       const modifiedSchema2 = buildSchema(`
         enum UserRole {
@@ -650,26 +650,26 @@ describe('Field Ordering and Preservation', () => {
           getUsers: [User]
         }
       `);
-      
+
       // Create a third visitor using the lock data
       const visitor3 = new GraphQLToProtoTextVisitor(modifiedSchema2, {
         serviceName: 'UserService',
         lockData: lockData2 || undefined,
       });
-      
+
       // Generate the third proto
       const proto3 = visitor3.visit();
-      
+
       // Parse the proto and check for reserved values
       const root3 = loadProtoFromText(proto3);
       const enumContent = getEnumContent(root3, 'UserRole');
-      
+
       // Verify reserved numbers exist
       expect(enumContent.reserved.length).toBeGreaterThan(0);
-      
+
       // Verify VIEWER is present in the enum values
       expect(enumContent.values['USER_ROLE_VIEWER']).toBeDefined();
-      
+
       // Verify new value exists
       expect(enumContent.values['USER_ROLE_MODERATOR']).toBeDefined();
     });
@@ -703,10 +703,10 @@ describe('Field Ordering and Preservation', () => {
 
       // Load the proto using protobufjs
       const root1 = loadProtoFromText(proto1);
-      
+
       // Get service methods using our utility
       const methods1 = getServiceMethods(root1, 'UserService');
-      
+
       // Verify the methods are in the proto output
       expect(methods1).toContain('QueryGetUsers');
       expect(methods1).toContain('QueryGetUser');
@@ -735,10 +735,10 @@ describe('Field Ordering and Preservation', () => {
 
       // Generate the second proto
       const proto2 = visitor2.visit();
-      
+
       // Load the proto using protobufjs
       const root2 = loadProtoFromText(proto2);
-      
+
       // Get service methods using our utility
       const methods2 = getServiceMethods(root2, 'UserService');
 
@@ -781,7 +781,7 @@ describe('Field Ordering and Preservation', () => {
       const proto1 = visitor1.visit();
       const lockData = visitor1.getGeneratedLockData();
       expect(lockData).not.toBeNull();
-      
+
       // Parse the proto with protobufjs
       const root1 = loadProtoFromText(proto1);
       const methods1 = getServiceMethods(root1, 'UserService');
@@ -820,7 +820,7 @@ describe('Field Ordering and Preservation', () => {
 
       // Generate the second proto
       const proto2 = visitor2.visit();
-      
+
       // Parse the proto with protobufjs
       const root2 = loadProtoFromText(proto2);
       const methods2 = getServiceMethods(root2, 'UserService');
@@ -861,7 +861,7 @@ describe('Field Ordering and Preservation', () => {
 
       // Generate the third proto
       const proto3 = visitor3.visit();
-      
+
       // Parse the proto with protobufjs
       const root3 = loadProtoFromText(proto3);
       const methods3 = getServiceMethods(root3, 'UserService');
@@ -919,7 +919,7 @@ describe('Field Ordering and Preservation', () => {
       const userIdNumber = userFields1['id'];
       const userNameNumber = userFields1['name'];
       const userAddressNumber = userFields1['address'];
-      
+
       const streetNumber = addressFields1['street'];
       const cityNumber = addressFields1['city'];
       const stateNumber = addressFields1['state'];
@@ -967,7 +967,7 @@ describe('Field Ordering and Preservation', () => {
       expect(userFields2['id']).toBe(userIdNumber);
       expect(userFields2['name']).toBe(userNameNumber);
       expect(userFields2['address']).toBe(userAddressNumber);
-      
+
       // Verify that field numbers are preserved in Address
       expect(addressFields2['street']).toBe(streetNumber);
       expect(addressFields2['city']).toBe(cityNumber);
@@ -1013,12 +1013,12 @@ describe('Field Ordering and Preservation', () => {
 
       // Parse the proto with protobufjs
       const root1 = loadProtoFromText(proto1);
-      
+
       // Get field numbers from mutation request messages
       const createProductFields = getFieldNumbersFromMessage(root1, 'MutationCreateProductRequest');
       const updateProductFields = getFieldNumbersFromMessage(root1, 'MutationUpdateProductRequest');
       const filterProductsFields = getFieldNumbersFromMessage(root1, 'MutationFilterProductsRequest');
-      
+
       // Get field numbers from nested input types
       const productFilterFields = getFieldNumbersFromMessage(root1, 'ProductFilter');
       const priceRangeFields = getFieldNumbersFromMessage(root1, 'PriceRange');
@@ -1028,20 +1028,20 @@ describe('Field Ordering and Preservation', () => {
       const createNameNumber = createProductFields['name'];
       const createPriceNumber = createProductFields['price'];
       const createDescNumber = createProductFields['description'];
-      
+
       // Update product mutation
       const updateIdNumber = updateProductFields['id'];
       const updateNameNumber = updateProductFields['name'];
       const updatePriceNumber = updateProductFields['price'];
-      
+
       // Filter products mutation
       const filterNumber = filterProductsFields['filter'];
-      
+
       // ProductFilter input type
       const nameContainsNumber = productFilterFields['name_contains'];
       const priceRangeNumber = productFilterFields['price_range'];
       const inStockNumber = productFilterFields['in_stock'];
-      
+
       // PriceRange input type
       const minNumber = priceRangeFields['min'];
       const maxNumber = priceRangeFields['max'];
@@ -1089,7 +1089,7 @@ describe('Field Ordering and Preservation', () => {
 
       // Parse the proto with protobufjs
       const root2 = loadProtoFromText(proto2);
-      
+
       // Get field numbers from the second proto
       const createProductFields2 = getFieldNumbersFromMessage(root2, 'MutationCreateProductRequest');
       const updateProductFields2 = getFieldNumbersFromMessage(root2, 'MutationUpdateProductRequest');
@@ -1102,21 +1102,21 @@ describe('Field Ordering and Preservation', () => {
       expect(createProductFields2['name']).toBe(createNameNumber);
       expect(createProductFields2['price']).toBe(createPriceNumber);
       expect(createProductFields2['description']).toBe(createDescNumber);
-      
+
       // Update product
       expect(updateProductFields2['id']).toBe(updateIdNumber);
       expect(updateProductFields2['name']).toBe(updateNameNumber);
       expect(updateProductFields2['price']).toBe(updatePriceNumber);
-      
+
       // Filter products
       expect(filterProductsFields2['filter']).toBe(filterNumber);
-      
+
       // Verify nested input type field numbers are preserved
       // ProductFilter
       expect(productFilterFields2['name_contains']).toBe(nameContainsNumber);
       expect(productFilterFields2['price_range']).toBe(priceRangeNumber);
       expect(productFilterFields2['in_stock']).toBe(inStockNumber);
-      
+
       // PriceRange
       expect(priceRangeFields2['min']).toBe(minNumber);
       expect(priceRangeFields2['max']).toBe(maxNumber);

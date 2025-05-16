@@ -34,7 +34,7 @@ import {
   OperationType,
   TypeFieldMapping,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import {Maybe} from 'graphql/jsutils/Maybe.js';
+import { Maybe } from 'graphql/jsutils/Maybe.js';
 
 /**
  * Visitor that converts a GraphQL schema to gRPC mapping definitions
@@ -218,7 +218,11 @@ export class GraphQLToProtoVisitor {
    * @param operationType - The type of operation (Query, Mutation, Subscription)
    * @param graphqlType - The GraphQL type to process
    */
-  private processType(operationTypeName: OperationTypeName, operationType: OperationType, graphqlType: Maybe<GraphQLObjectType>): void {
+  private processType(
+    operationTypeName: OperationTypeName,
+    operationType: OperationType,
+    graphqlType: Maybe<GraphQLObjectType>,
+  ): void {
     if (!graphqlType) return;
 
     const typeFieldMapping = new TypeFieldMapping({

@@ -11,7 +11,9 @@ import PluginCommands from './plugin/index.js';
 
 export default (opts: BaseCommandOptions) => {
   const cmd = new Command('router');
-  cmd.description('Manages router configurations and deployment - fetch configs, compose locally, manage tokens, download binary, configure plugins');
+  cmd.description(
+    'Manages router configurations and deployment - fetch configs, compose locally, manage tokens, download binary, configure plugins',
+  );
   cmd.addCommand(FetchRouterConfig(opts));
   cmd.addCommand(ComposeRouterConfig(opts));
   cmd.addCommand(

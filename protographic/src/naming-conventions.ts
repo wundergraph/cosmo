@@ -2,7 +2,7 @@ import { camelCase, snakeCase, upperFirst } from 'lodash-es';
 
 /**
  * Shared naming conventions for converting GraphQL to Protocol Buffers
- * 
+ *
  * This utility file ensures consistent naming transformations between
  * the Proto compiler and mapping compiler implementations.
  */
@@ -87,4 +87,4 @@ export function graphqlEnumValueToProtoEnumValue(enumTypeName: string, enumValue
  */
 export function createEnumUnspecifiedValue(enumTypeName: string): string {
   return `${snakeCase(enumTypeName).toUpperCase()}_UNSPECIFIED`;
-} 
+}
