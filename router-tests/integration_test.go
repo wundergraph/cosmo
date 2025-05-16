@@ -54,35 +54,68 @@ func TestSimpleQuery(t *testing.T) {
 func TestConfigReload(t *testing.T) {
 	t.Parallel()
 
-	// Can be very slow, compiles the router binary if needed
-	err := testenv.RunRouterBinary(t, &testenv.Config{
-		DemoMode: true,
-	}, func(t *testing.T, xEnv *testenv.Environment) {
-		t.Logf("running router binary, cwd: %s", xEnv.GetRouterProcessCwd())
+	t.Run("Successfully reloads to a valid new configuration file with SIGHUP", func(t *testing.T) {
+		// Can be very slow, compiles the router binary if needed
+		err := testenv.RunRouterBinary(t, &testenv.Config{
+			DemoMode: true,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			t.Logf("running router binary, cwd: %s", xEnv.GetRouterProcessCwd())
 
-		ctx := context.Background()
+			ctx := context.Background()
 
-		require.NoError(t, xEnv.WaitForServer(ctx, xEnv.RouterURL+"/health/ready", 600, 60), "healthcheck pre-reload failed")
+			require.NoError(t, xEnv.WaitForServer(ctx, xEnv.RouterURL+"/health/ready", 600, 60), "healthcheck pre-reload failed")
 
-		f, err := os.Create(filepath.Join(xEnv.GetRouterProcessCwd(), "config.yaml"))
-		require.NoError(t, err)
+			f, err := os.Create(filepath.Join(xEnv.GetRouterProcessCwd(), "config.yaml"))
+			require.NoError(t, err)
 
-		_, err = f.WriteString(`
+			_, err = f.WriteString(`
 version: "1"
 
 readiness_check_path: "/after"
 `)
+			require.NoError(t, err)
+
+			require.NoError(t, f.Close())
+
+			err = xEnv.SignalRouterProcess(syscall.SIGHUP)
+			require.NoError(t, err)
+
+			require.NoError(t, xEnv.WaitForServer(ctx, xEnv.RouterURL+"/after", 600, 60), "healthcheck post-reload failed")
+		})
+
 		require.NoError(t, err)
-
-		require.NoError(t, f.Close())
-
-		err = xEnv.SignalRouterProcess(syscall.SIGHUP)
-		require.NoError(t, err)
-
-		require.NoError(t, xEnv.WaitForServer(ctx, xEnv.RouterURL+"/after", 600, 60), "healthcheck post-reload failed")
 	})
 
-	require.NoError(t, err)
+	t.Run("Falls back to initial configuration if new configuration file is invalid", func(t *testing.T) {
+		// Can be very slow, compiles the router binary if needed
+		err := testenv.RunRouterBinary(t, &testenv.Config{
+			DemoMode: true,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			t.Logf("running router binary, cwd: %s", xEnv.GetRouterProcessCwd())
+
+			ctx := context.Background()
+
+			require.NoError(t, xEnv.WaitForServer(ctx, xEnv.RouterURL+"/health/ready", 600, 60), "healthcheck pre-reload failed")
+
+			f, err := os.Create(filepath.Join(xEnv.GetRouterProcessCwd(), "config.yaml"))
+			require.NoError(t, err)
+
+			_, err = f.WriteString(`
+asdasdasdasdas: "NOT WORKING CONFIG!!!"
+`)
+			require.NoError(t, err)
+
+			require.NoError(t, f.Close())
+
+			err = xEnv.SignalRouterProcess(syscall.SIGHUP)
+			require.NoError(t, err)
+
+			require.NoError(t, xEnv.WaitForServer(ctx, xEnv.RouterURL+"/health/ready", 600, 60), "healthcheck post-reload failed")
+		})
+
+		require.NoError(t, err)
+	})
+
 }
 
 func TestNoSubgraphConfigWithoutDemoMode(t *testing.T) {
