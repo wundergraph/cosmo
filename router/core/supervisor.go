@@ -133,11 +133,11 @@ var (
 
 // Start starts the router supervisor.
 func (rs *RouterSupervisor) Start() error {
-	for {
-		if err := rs.loadResources(); err != nil {
-			return fmt.Errorf("%w: failed to load resources: %w", ErrStartupFailed, err)
-		}
+	if err := rs.loadResources(); err != nil {
+		return fmt.Errorf("%w: failed to load resources: %w", ErrStartupFailed, err)
+	}
 
+	for {
 		if err := rs.lifecycleHooks.PreCreate(rs.resources); err != nil {
 			return fmt.Errorf("%w: failed pre create hook: %w", ErrStartupFailed, err)
 		}
@@ -170,6 +170,12 @@ func (rs *RouterSupervisor) Start() error {
 		if shutdown {
 			rs.logger.Debug("Router exiting")
 			break
+		}
+
+		// Reload resources for new router, if failed, continue to restart with the old resources
+		if err := rs.loadResources(); err != nil {
+			rs.logger.Warn("reloading resources failed, keeping old ones", zap.Error(err))
+			continue
 		}
 	}
 
