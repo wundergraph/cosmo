@@ -17,6 +17,7 @@ import {
   ConfigurationVariable,
   ConfigurationVariableKind,
   DataSourceConfiguration,
+  // eslint-disable-next-line camelcase
   DataSourceCustom_GraphQL,
   DataSourceCustomEvents,
   DataSourceKind,
@@ -30,9 +31,9 @@ import {
   RouterConfig,
   TypeField,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import { PartialMessage } from '@bufbuild/protobuf';
 import { configurationDatasToDataSourceConfiguration, generateFieldConfigurations } from './graphql-configuration.js';
 import { invalidRouterCompatibilityVersion, normalizationFailureError } from './errors.js';
-import { PartialMessage } from '@bufbuild/protobuf';
 
 export interface Input {
   federatedClientSDL: string;
@@ -144,7 +145,7 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
       throw normalizationFailureError('GraphQLSchema');
     }
 
-    let subscriptionConfig: PartialMessage<GraphQLSubscriptionConfiguration> = {
+    const subscriptionConfig: PartialMessage<GraphQLSubscriptionConfiguration> = {
       enabled: true,
     };
 
