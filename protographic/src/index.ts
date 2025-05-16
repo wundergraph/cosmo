@@ -1,9 +1,9 @@
 import { buildSchema, GraphQLSchema } from 'graphql';
 import { GRPCMapping } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import { GraphQLToProtoVisitor } from './sdl-to-mapping-visitor';
-import type { GraphQLToProtoTextVisitorOptions } from './sdl-to-proto-visitor';
-import { GraphQLToProtoTextVisitor } from './sdl-to-proto-visitor';
-import type { ProtoLock } from './proto-lock';
+import { GraphQLToProtoVisitor } from './sdl-to-mapping-visitor.js';
+import type { GraphQLToProtoTextVisitorOptions } from './sdl-to-proto-visitor.js';
+import { GraphQLToProtoTextVisitor } from './sdl-to-proto-visitor.js';
+import type { ProtoLock } from './proto-lock.js';
 
 /**
  * Compiles a GraphQL schema to a mapping structure
@@ -77,12 +77,12 @@ export function compileGraphQLToProto(
   };
 }
 
-export * from './sdl-to-mapping-visitor';
-export { GraphQLToProtoTextVisitor } from './sdl-to-proto-visitor';
-export { ProtoLockManager } from './proto-lock';
+export * from './sdl-to-mapping-visitor.js';
+export { GraphQLToProtoTextVisitor } from './sdl-to-proto-visitor.js';
+export { ProtoLockManager } from './proto-lock.js';
 
-export type { GraphQLToProtoTextVisitorOptions } from './sdl-to-proto-visitor';
-export type { ProtoLock } from './proto-lock';
+export type { GraphQLToProtoTextVisitorOptions } from './sdl-to-proto-visitor.js';
+export type { ProtoLock } from './proto-lock.js';
 export {
   GRPCMapping,
   OperationMapping,

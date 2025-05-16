@@ -31,9 +31,9 @@ import {
   createResponseMessageName,
   graphqlEnumValueToProtoEnumValue,
   graphqlFieldToProtoField,
-} from './naming-conventions';
+} from './naming-conventions.js';
 import { camelCase } from 'lodash-es';
-import { ProtoLock, ProtoLockManager } from './proto-lock';
+import { ProtoLock, ProtoLockManager } from './proto-lock.js';
 
 /**
  * Maps GraphQL scalar types to Protocol Buffer types

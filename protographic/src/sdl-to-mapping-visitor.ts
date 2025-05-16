@@ -22,7 +22,7 @@ import {
   graphqlEnumValueToProtoEnumValue,
   graphqlFieldToProtoField,
   OperationTypeName,
-} from './naming-conventions';
+} from './naming-conventions.js';
 import {
   ArgumentMapping,
   EntityMapping,
@@ -34,7 +34,7 @@ import {
   OperationType,
   TypeFieldMapping,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import {Maybe} from 'graphql/jsutils/Maybe';
+import {Maybe} from 'graphql/jsutils/Maybe.js';
 
 /**
  * Visitor that converts a GraphQL schema to gRPC mapping definitions

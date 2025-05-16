@@ -1,13 +1,13 @@
-import { basename, join, resolve } from 'pathe';
-import pc from 'picocolors';
 import { chmod, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { execa } from 'execa';
-import { compileGraphQLToMapping, compileGraphQLToProto, ProtoLock } from '@wundergraph/protographic';
 import os from 'node:os';
 import { existsSync } from 'node:fs';
+import { basename, join, resolve } from 'pathe';
+import pc from 'picocolors';
+import { execa } from 'execa';
+import { compileGraphQLToMapping, compileGraphQLToProto, ProtoLock } from '@wundergraph/protographic';
 import prompts from 'prompts';
-import { dataDir } from '../../../core/config';
 import semver from 'semver';
+import { dataDir } from '../../../core/config.js';
 
 // Define platform-architecture combinations
 export const HOST_PLATFORM = `${os.platform()}-${os.arch()}`;
