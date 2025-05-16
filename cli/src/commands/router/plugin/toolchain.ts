@@ -399,13 +399,13 @@ export async function generateGRPCCode(pluginDir: string, spinner: any) {
 /**
  * Run Go tests
  */
-export async function runGoTests(pluginDir: string, spinner: any) {
+export function runGoTests(pluginDir: string, spinner: any) {
   spinner.text = 'Running tests...\n';
 
   const env = getToolsEnv();
   const goPath = getToolPath('go');
 
-  await execa(goPath, ['test', './...'], {
+  return execa(goPath, ['test', './...'], {
     cwd: pluginDir,
     stdout: 'inherit',
     stderr: 'inherit',
