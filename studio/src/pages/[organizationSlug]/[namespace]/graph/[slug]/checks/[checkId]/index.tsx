@@ -53,6 +53,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
+import { useFeature } from "@/hooks/use-feature";
 import { useSessionStorage } from "@/hooks/use-session-storage";
 import { formatDate, formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
@@ -391,7 +392,7 @@ const CheckDetails = ({
   const graphContext = useContext(GraphContext);
   const router = useRouter();
   const { toast } = useToast();
-
+  const proposalsFeature = useFeature("proposals");
   const organizationSlug = router.query.organizationSlug as string;
   const namespace = router.query.namespace as string;
   const slug = router.query.slug as string;
@@ -857,8 +858,8 @@ const CheckDetails = ({
                       <Tooltip delayDuration={200}>
                         <TooltipTrigger>No labels passed</TooltipTrigger>
                         <TooltipContent>
-                        Only graphs with empty label matchers will compose this
-                        subgraph
+                          Only graphs with empty label matchers will compose
+                          this subgraph
                         </TooltipContent>
                       </Tooltip>
                     </div>
@@ -1025,20 +1026,22 @@ const CheckDetails = ({
                     ) : null}
                   </Link>
                 </TabsTrigger>
-                <TabsTrigger
-                  value="proposalMatches"
-                  className="flex items-center gap-x-2"
-                  asChild
-                >
-                  <Link
-                    href={{
-                      query: { ...router.query, tab: "proposalMatches" },
-                    }}
+                {proposalsFeature?.enabled && (
+                  <TabsTrigger
+                    value="proposalMatches"
+                    className="flex items-center gap-x-2"
+                    asChild
                   >
-                    <LightningBoltIcon className="flex-shrink-0" />
-                    Proposal Matches
-                  </Link>
-                </TabsTrigger>
+                    <Link
+                      href={{
+                        query: { ...router.query, tab: "proposalMatches" },
+                      }}
+                    >
+                      <LightningBoltIcon className="flex-shrink-0" />
+                      Proposal Matches
+                    </Link>
+                  </TabsTrigger>
+                )}
 
                 {(data.check.checkedSubgraphs.length > 1 ||
                   (data.check.checkedSubgraphs.length === 1 &&
@@ -1251,17 +1254,21 @@ const CheckDetails = ({
                   hasGraphPruningErrors={data.check.hasGraphPruningErrors}
                 />
               </TabsContent>
-              <TabsContent
-                value="proposalMatches"
-                className="w-full space-y-4 px-4 lg:px-6"
-              >
-                <ProposalMatchesTable
-                  proposalMatches={data.proposalMatches}
-                  caption={`${data.proposalMatches.length} matches found`}
-                  isProposalsEnabled={data.isProposalsEnabled}
-                  proposalMatch={data.check.proposalMatch}
-                />
-              </TabsContent>
+
+              {proposalsFeature?.enabled && (
+                <TabsContent
+                  value="proposalMatches"
+                  className="w-full space-y-4 px-4 lg:px-6"
+                >
+                  <ProposalMatchesTable
+                    proposalMatches={data.proposalMatches}
+                    caption={`${data.proposalMatches.length} matches found`}
+                    isProposalsEnabled={data.isProposalsEnabled}
+                    proposalMatch={data.check.proposalMatch}
+                  />
+                </TabsContent>
+              )}
+              
               <TabsContent value="schema" className="relative w-full flex-1">
                 <ProposedSchemas
                   checkId={id}
