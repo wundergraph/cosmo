@@ -668,6 +668,12 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 		}
 	}
 
+	if s.connectionMetricStore != nil {
+		if aErr := s.connectionMetricStore.Shutdown(ctx); aErr != nil {
+			err = errors.Join(err, aErr)
+		}
+	}
+
 	if err != nil {
 		return fmt.Errorf("shutdown graph mux: %w", err)
 	}

@@ -2,6 +2,7 @@ package metric
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 
@@ -21,6 +22,7 @@ type ConnectionMetricProvider interface {
 	MeasureConnectionAcquireDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
 	MeasureConnections(ctx context.Context, count int64, opts ...otelmetric.AddOption)
 	Flush(ctx context.Context) error
+	Shutdown() error
 }
 
 // ConnectionMetricStore is the interface for connection and pool metrics only.
@@ -31,6 +33,8 @@ type ConnectionMetricStore interface {
 	MeasureTotalConnectionDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
 	MeasureConnections(ctx context.Context, reused bool, attrs ...attribute.KeyValue)
 	MeasureConnectionAcquireDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
+	Flush(ctx context.Context) error
+	Shutdown(ctx context.Context) error
 }
 
 type ConnectionMetrics struct {
@@ -147,4 +151,51 @@ func (c *ConnectionMetrics) MeasureConnectionAcquireDuration(ctx context.Context
 	if c.promConnectionMetrics != nil {
 		c.promConnectionMetrics.MeasureConnectionAcquireDuration(ctx, duration, opts)
 	}
+}
+
+// Flush flushes the metrics to the backend synchronously.
+func (h *ConnectionMetrics) Flush(ctx context.Context) error {
+
+	var err error
+
+	if h.otlpConnectionMetrics != nil {
+		errOtlp := h.otlpConnectionMetrics.Flush(ctx)
+		if errOtlp != nil {
+			err = errors.Join(err, fmt.Errorf("failed to flush otlp metrics: %w", errOtlp))
+		}
+	}
+	if h.promConnectionMetrics != nil {
+		errProm := h.promConnectionMetrics.Flush(ctx)
+		if errProm != nil {
+			err = errors.Join(err, fmt.Errorf("failed to flush prometheus metrics: %w", errProm))
+		}
+	}
+
+	return err
+}
+
+// Shutdown flushes the metrics and stops the runtime metrics.
+func (h *ConnectionMetrics) Shutdown(ctx context.Context) error {
+
+	var err error
+
+	if errFlush := h.Flush(ctx); errFlush != nil {
+		err = errors.Join(err, fmt.Errorf("failed to flush metrics: %w", errFlush))
+	}
+
+	if h.promConnectionMetrics != nil {
+		errProm := h.promConnectionMetrics.Shutdown()
+		if err != nil {
+			err = errors.Join(err, fmt.Errorf("failed to shutdown prom metrics: %w", errProm))
+		}
+	}
+
+	if h.otlpConnectionMetrics != nil {
+		errOtlp := h.otlpConnectionMetrics.Shutdown()
+		if err != nil {
+			err = errors.Join(err, fmt.Errorf("failed to shutdown otlp metrics: %w", errOtlp))
+		}
+	}
+
+	return err
 }
