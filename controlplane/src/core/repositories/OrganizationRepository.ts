@@ -375,7 +375,7 @@ export class OrganizationRepository {
           organizationID: input.organizationID,
           userID: input.userID,
         }),
-        orgMember[0].userID
+        orgMember[0].userID,
       ),
       active: orgMember[0].active,
     };
@@ -416,7 +416,7 @@ export class OrganizationRepository {
           organizationID: input.organizationID,
           userID: orgMember[0].userID,
         }),
-        orgMember[0].userID
+        orgMember[0].userID,
       ),
       active: orgMember[0].active,
     };
@@ -466,7 +466,7 @@ export class OrganizationRepository {
             organizationID,
             userID: member.userID,
           }),
-          member.userID
+          member.userID,
         ),
         active: member.active,
       } as OrganizationMemberDTO);

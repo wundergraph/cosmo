@@ -29,7 +29,7 @@ export class RBACEvaluator {
   constructor(
     readonly groups: Omit<OrganizationGroupDTO, 'membersCount' | 'kcGroupId' | 'kcMapperId'>[],
     private readonly userId?: string,
-    private readonly isRBACFeatureEnabled?: boolean
+    private readonly isRBACFeatureEnabled?: boolean,
   ) {
     const flattenRules = groups.flatMap((group) => group.rules);
     const rulesGroupedByRole = Object.groupBy(flattenRules, (rule) => rule.role);
@@ -51,11 +51,8 @@ export class RBACEvaluator {
     this.isOrganizationAdminOrDeveloper = this.isOrganizationAdmin || this.roles.includes('organization-developer');
     this.isOrganizationViewer = this.isOrganizationAdminOrDeveloper || this.roles.includes('organization-viewer');
 
-    this.canManageAPIKeys = this.isOrganizationAdmin || (
-      this.isRBACFeatureEnabled
-        ? !!this.ruleFor('organization-apikey-manager')
-        : true
-    );
+    this.canManageAPIKeys =
+      this.isOrganizationAdmin || (this.isRBACFeatureEnabled ? !!this.ruleFor('organization-apikey-manager') : true);
 
     this.canCreateNamespace =
       this.isOrganizationAdminOrDeveloper || this.ruleFor('namespace-admin')?.namespaces.length === 0;
