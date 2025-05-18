@@ -193,6 +193,16 @@ export function publishFederatedSubgraph(
         };
       }
     } else {
+      if (
+        !(
+          authContext.rbac.isOrganizationAdminOrDeveloper ||
+          authContext.rbac.checkNamespaceAccess(namespace.id, 'subgraph-admin') ||
+          authContext.rbac.checkTargetAccess('*', 'subgraph-admin')
+        )
+      ) {
+        throw new UnauthorizedError();
+      }
+
       if (req.isFeatureSubgraph) {
         if (req.baseSubgraphName) {
           const baseSubgraph = await subgraphRepo.byName(req.baseSubgraphName, req.namespace);

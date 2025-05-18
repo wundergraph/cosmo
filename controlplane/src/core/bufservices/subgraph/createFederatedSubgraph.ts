@@ -144,7 +144,8 @@ export function createFederatedSubgraph(
     if (
       !(
         authContext.rbac.isOrganizationAdminOrDeveloper ||
-        authContext.rbac.checkNamespaceAccess(namespace.id, 'namespace-admin')
+        authContext.rbac.checkNamespaceAccess(namespace.id, 'subgraph-admin') ||
+        authContext.rbac.checkTargetAccess('*', 'subgraph-admin')
       )
     ) {
       throw new UnauthorizedError();
