@@ -574,6 +574,54 @@ export class SubgraphRepository {
     });
   }
 
+  /**
+   * Applies conditions based on the provided RBAC. If the actor can't access any subgraph, the
+   * returned value is false; otherwise, true.
+   *
+   * @param rbac
+   * @param conditions
+   * @private
+   */
+  private applyRbacConditionsToQuery(rbac: RBACEvaluator | undefined, conditions: (SQL<unknown> | undefined)[]) {
+    if (!rbac || rbac.isOrganizationAdminOrDeveloper) {
+      return true;
+    }
+
+    const graphAdmin = rbac.ruleFor('subgraph-admin');
+    const graphPublisher = rbac.ruleFor('subgraph-publisher');
+    if (!graphAdmin && !graphPublisher) {
+      return false;
+    }
+
+    const namespaces: string[] = [];
+    const resources: string[] = [];
+
+    if (graphAdmin) {
+      namespaces.push(...graphAdmin.namespaces);
+      resources.push(...graphAdmin.resources);
+    }
+
+    if (graphPublisher) {
+      namespaces.push(...graphPublisher.namespaces);
+      resources.push(...graphPublisher.resources);
+    }
+
+    if (namespaces.length > 0 && resources.length > 0) {
+      conditions.push(
+        or(
+          inArray(schema.targets.namespaceId, [...new Set(namespaces)]),
+          inArray(schema.targets.id, [...new Set(resources)]),
+        ),
+      );
+    } else if (namespaces.length > 0) {
+      conditions.push(inArray(schema.targets.namespaceId, [...new Set(namespaces)]));
+    } else if (resources.length > 0) {
+      conditions.push(inArray(schema.targets.id, [...new Set(resources)]));
+    }
+
+    return true;
+  }
+
   public async list(opts: SubgraphListFilterOptions) {
     const conditions: (SQL<unknown> | undefined)[] = [
       eq(schema.targets.organizationId, this.organizationId),
@@ -597,17 +645,8 @@ export class SubgraphRepository {
       conditions.push(eq(schema.subgraphs.isFeatureSubgraph, false));
     }
 
-    if (opts.rbac && !opts.rbac.isOrganizationAdminOrDeveloper) {
-      const graphPublisher = opts.rbac.ruleFor('subgraph-publisher');
-      if (!graphPublisher) {
-        // The actor doesn't have publisher access to any subgraph
-        return [];
-      }
-
-      if (graphPublisher.resources.length > 0) {
-        // Only limit the subgraphs the actor have access to when it hasn't been given access to all resources
-        conditions.push(inArray(schema.targets.id, graphPublisher.resources));
-      }
+    if (!this.applyRbacConditionsToQuery(opts.rbac, conditions)) {
+      return [];
     }
 
     const targetsQuery = this.db
@@ -723,17 +762,8 @@ export class SubgraphRepository {
       eq(schema.subgraphsToFederatedGraph.federatedGraphId, target.federatedGraph.id),
     ];
 
-    if (data.rbac && !data.rbac.isOrganizationAdminOrDeveloper) {
-      const graphPublisher = data.rbac.ruleFor('subgraph-publisher');
-      if (!graphPublisher) {
-        // The actor doesn't have publisher access to any subgraph
-        return [];
-      }
-
-      if (graphPublisher.resources.length > 0) {
-        // Only limit the subgraphs the actor have access to when it hasn't been given access to all resources
-        conditions.push(inArray(schema.targets.id, graphPublisher.resources));
-      }
+    if (!this.applyRbacConditionsToQuery(data.rbac, conditions)) {
+      return [];
     }
 
     const targets = await this.db
@@ -1282,44 +1312,6 @@ export class SubgraphRepository {
     }
 
     return latestValidVersion[0].schemaSDL;
-  }
-
-  public async getAccessibleSubgraphs(userId: string, resources: string[]) {
-    const graphs = await this.db
-      .selectDistinctOn([targets.id], {
-        targetId: targets.id,
-        name: targets.name,
-        federatedGraphId: schema.federatedGraphs.targetId,
-      })
-      .from(targets)
-      .innerJoin(subgraphs, eq(targets.id, subgraphs.targetId))
-      .innerJoin(subgraphMembers, eq(subgraphs.id, subgraphMembers.subgraphId))
-      .innerJoin(schema.subgraphsToFederatedGraph, eq(subgraphs.id, schema.subgraphsToFederatedGraph.subgraphId))
-      .innerJoin(
-        schema.federatedGraphs,
-        eq(schema.federatedGraphs.id, schema.subgraphsToFederatedGraph.federatedGraphId),
-      )
-      .where(
-        and(
-          eq(targets.type, 'subgraph'),
-          eq(targets.organizationId, this.organizationId),
-          or(eq(targets.createdBy, userId), eq(subgraphMembers.userId, userId), inArray(targets.id, resources)),
-          eq(schema.federatedGraphs.supportsFederation, true),
-        ),
-      );
-
-    const accessibleSubgraphs: (SubgraphDTO & { federatedGraphId: string })[] = [];
-
-    for (const graph of graphs) {
-      const sg = await this.byTargetId(graph.targetId);
-      if (sg === undefined) {
-        throw new Error(`Subgraph ${graph.name} not found`);
-      }
-
-      accessibleSubgraphs.push({ ...sg, federatedGraphId: graph.federatedGraphId });
-    }
-
-    return accessibleSubgraphs;
   }
 
   public updateReadme({ targetId, readme }: { targetId: string; readme: string }) {

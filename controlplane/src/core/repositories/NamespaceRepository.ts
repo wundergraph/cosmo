@@ -1,6 +1,5 @@
 import { and, eq, inArray, or, SQL } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { namespace } from 'axios-retry';
 import * as schema from '../../db/schema.js';
 import { NamespaceDTO } from '../../types/index.js';
 import { RBACEvaluator } from '../services/RBACEvaluator.js';

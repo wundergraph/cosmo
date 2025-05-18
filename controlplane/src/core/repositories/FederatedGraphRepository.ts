@@ -80,7 +80,6 @@ import {
 } from '../util.js';
 import { unsuccessfulBaseCompositionError } from '../errors/errors.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
-import { RBACEvaluator } from '../services/RBACEvaluator.js';
 import { ContractRepository } from './ContractRepository.js';
 import { FeatureFlagRepository, SubgraphsToCompose } from './FeatureFlagRepository.js';
 import { GraphCompositionRepository } from './GraphCompositionRepository.js';
@@ -474,10 +473,27 @@ export class FederatedGraphRepository {
         return [];
       }
 
-      if (!((graphAdmin && graphAdmin.resources.length === 0) || (graphViewer && graphViewer.resources.length === 0))) {
-        // Only limit the federated graphs the actor have access to when it hasn't been given access to all resources
-        const resources = [...new Set([...(graphAdmin?.resources ?? []), ...(graphViewer?.resources ?? [])])];
-        conditions.push(inArray(schema.targets.id, resources));
+      const resources: string[] = [];
+      const namespaces: string[] = [];
+
+      if (graphAdmin) {
+        resources.push(...graphAdmin.resources);
+        namespaces.push(...graphAdmin.namespaces);
+      }
+
+      if (graphViewer) {
+        resources.push(...graphViewer.resources);
+        namespaces.push(...graphViewer.namespaces);
+      }
+
+      if (namespaces.length > 0 && resources.length > 0) {
+        conditions.push(
+          or(inArray(schema.targets.id, [...new Set(namespaces)]), inArray(schema.targets.id, [...new Set(resources)])),
+        );
+      } else if (namespaces.length > 0) {
+        conditions.push(inArray(schema.targets.id, [...new Set(namespaces)]));
+      } else if (resources.length > 0) {
+        conditions.push(inArray(schema.targets.id, [...new Set(resources)]));
       }
     }
 
@@ -1389,28 +1405,6 @@ export class FederatedGraphRepository {
       .setAudience(input.federatedGraphId)
       .setExpirationTime('1d')
       .sign(ecPrivateKey);
-  }
-
-  public async getAccessibleFederatedGraphs(userId: string, resources: string[]): Promise<FederatedGraphDTO[]> {
-    const graphTargets = await this.db.query.targets.findMany({
-      where: and(
-        eq(targets.type, 'federated'),
-        eq(targets.organizationId, this.organizationId),
-        or(eq(targets.createdBy, userId), inArray(targets.id, resources)),
-      ),
-    });
-
-    const federatedGraphs: FederatedGraphDTO[] = [];
-
-    for (const target of graphTargets) {
-      const fg = await this.byTargetId(target.id);
-      if (fg === undefined) {
-        throw new Error(`FederatedGraph ${target.name} not found`);
-      }
-      federatedGraphs.push(fg);
-    }
-
-    return federatedGraphs;
   }
 
   public enableFederationSupport({ targetId }: { targetId: string }) {
