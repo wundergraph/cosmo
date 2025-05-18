@@ -203,14 +203,8 @@ export function createProposal(
 
     for (const proposalSubgraph of req.subgraphs) {
       const subgraph = await subgraphRepo.byName(proposalSubgraph.name, req.namespace);
-
       if (subgraph) {
-        if (
-          !(
-            authContext.rbac.isOrganizationAdminOrDeveloper ||
-            authContext.rbac.checkTargetAccess(subgraph.targetId, 'subgraph-publisher')
-          )
-        ) {
+        if (!authContext.rbac.hasSubGraphWriteAccess(subgraph)) {
           throw new UnauthorizedError();
         }
 
@@ -282,6 +276,8 @@ export function createProposal(
             checkUrl: '',
           };
         }
+      } else if (!authContext.rbac.canCreateSubGraph(namespace.id)) {
+        throw new UnauthorizedError();
       }
 
       proposalSubgraphs.push({

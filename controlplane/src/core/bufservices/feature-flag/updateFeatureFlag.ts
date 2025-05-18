@@ -58,15 +58,6 @@ export function updateFeatureFlag(
       };
     }
 
-    if (
-      !(
-        authContext.rbac.isOrganizationAdminOrDeveloper ||
-        authContext.rbac.checkNamespaceAccess(namespace.id, 'namespace-admin')
-      )
-    ) {
-      throw new UnauthorizedError();
-    }
-
     if (!isValidLabels(req.labels)) {
       return {
         response: {
@@ -93,6 +84,10 @@ export function updateFeatureFlag(
         deploymentErrors: [],
         compositionWarnings: [],
       };
+    }
+
+    if (!authContext.rbac.hasFeatureFlagWriteAccess(featureFlagDTO)) {
+      throw new UnauthorizedError();
     }
 
     const { errorMessages, featureSubgraphIds } = await featureFlagRepo.checkConstituentFeatureSubgraphs({

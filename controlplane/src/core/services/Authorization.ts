@@ -73,40 +73,18 @@ export class Authorization {
       }
 
       if (targetType === 'federatedGraph') {
-        // Validate that the client have write access to the provided federated graph. This is defined by the
-        // `graph admin` role. If the resources assigned to the role are empty or the target graph is part of the
-        // role resources, the client have been granted write access to the federated graph
-        const rule = rbac.ruleFor('graph-admin');
-        if (rule && (rule.resources.length === 0 || rule.resources.includes(targetId))) {
-          return;
-        }
-
-        // The client wasn't granted write access to the federated graph, but they should always have write access
-        // to any federated graph they created
         const federatedGraph = await fedRepo.byTargetId(targetId);
-        if (federatedGraph?.creatorUserId && federatedGraph.creatorUserId === userId) {
+        if (federatedGraph && rbac.hasFederatedGraphWriteAccess(federatedGraph)) {
           return;
         }
 
-        // The client doesn't have write access to the requested federated graph
         throw new UnauthorizedError();
       } else if (targetType === 'subgraph') {
-        // Validate that the client have write access to the provided subgraph. This is defined by the
-        // `graph publisher` role. If the resources assigned to the role are empty or the target graph is part of
-        // the resources, the client have been granted write access to the subgraph
-        const rule = rbac.ruleFor('subgraph-publisher');
-        if (rule && (rule.resources.length === 0 || rule.resources.includes(targetId))) {
-          return;
-        }
-
-        // The client wasn't granted write access to the subgraph, but they should always have write access
-        // to any subgraph they created
         const subgraph = await subgraphRepo.byTargetId(targetId);
-        if (subgraph?.creatorUserId && subgraph.creatorUserId === userId) {
+        if (subgraph && rbac.hasSubGraphWriteAccess(subgraph)) {
           return;
         }
 
-        // The user doesn't have access to the requested subgraph
         throw new UnauthorizedError();
       }
     }

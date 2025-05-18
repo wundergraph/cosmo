@@ -29,12 +29,11 @@ export function forceCheckSuccess(
 
     req.namespace = req.namespace || DefaultNamespace;
 
-    if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdminOrDeveloper) {
+    if (authContext.organizationDeactivated) {
       throw new UnauthorizedError();
     }
 
     const graph = await fedGraphRepo.byName(req.graphName, req.namespace);
-
     if (!graph) {
       return {
         response: {
@@ -42,6 +41,10 @@ export function forceCheckSuccess(
           details: 'Requested graph does not exist',
         },
       };
+    }
+
+    if (!authContext.rbac.hasFederatedGraphWriteAccess(graph)) {
+      throw new UnauthorizedError();
     }
 
     const check = await subgraphRepo.checkById({

@@ -28,7 +28,7 @@ export function deleteNamespace(
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
     const orgRepo = new OrganizationRepository(logger, opts.db);
 
-    if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdminOrDeveloper) {
+    if (authContext.organizationDeactivated) {
       throw new UnauthorizedError();
     }
 
@@ -49,6 +49,10 @@ export function deleteNamespace(
           details: 'The namespace was not found',
         },
       };
+    }
+
+    if (!authContext.rbac.hasNamespaceWriteAccess(ns.id)) {
+      throw new UnauthorizedError();
     }
 
     const orgMember = await orgRepo.getOrganizationMember({

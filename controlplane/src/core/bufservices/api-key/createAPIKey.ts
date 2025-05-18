@@ -8,7 +8,6 @@ import type { RouterOptions } from '../../routes.js';
 import { ApiKeyGenerator } from '../../services/ApiGenerator.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
-import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
 export function createAPIKey(
@@ -25,16 +24,8 @@ export function createAPIKey(
     const apiKeyRepo = new ApiKeyRepository(opts.db);
     const auditLogRepo = new AuditLogRepository(opts.db);
     const orgGroupRepo = new OrganizationGroupRepository(opts.db);
-    const orgRepo = new OrganizationRepository(logger, opts.db);
 
-    // When rbac is enabled and this is the case for enterprise users you can only create an API
-    // key if you are an admin
-    const rbac = await orgRepo.getFeature({
-      organizationId: authContext.organizationId,
-      featureId: 'rbac',
-    });
-
-    if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdminOrDeveloper) {
+    if (authContext.organizationDeactivated || !authContext.rbac.canManageAPIKeys) {
       throw new UnauthorizedError();
     }
 

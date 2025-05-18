@@ -59,12 +59,7 @@ export function createFeatureFlag(
       };
     }
 
-    if (
-      !(
-        authContext.rbac.isOrganizationAdminOrDeveloper ||
-        authContext.rbac.checkNamespaceAccess(namespace.id, 'namespace-admin')
-      )
-    ) {
+    if (!authContext.rbac.canCreateFeatureFlag(namespace.id)) {
       throw new UnauthorizedError();
     }
 

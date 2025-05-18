@@ -43,7 +43,7 @@ export function createMonograph(
       const auditLogRepo = new AuditLogRepository(tx);
       const namespaceRepo = new NamespaceRepository(tx, authContext.organizationId);
 
-      if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdminOrDeveloper) {
+      if (authContext.organizationDeactivated) {
         throw new UnauthorizedError();
       }
 
@@ -55,6 +55,10 @@ export function createMonograph(
             details: `Could not find namespace ${req.namespace}`,
           },
         };
+      }
+
+      if (!authContext.rbac.canCreateFederatedGraph(namespace.id)) {
+        throw new UnauthorizedError();
       }
 
       if (await fedGraphRepo.exists(req.name, req.namespace)) {

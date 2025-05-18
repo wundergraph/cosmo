@@ -47,12 +47,7 @@ export function createContract(
         throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Could not find namespace ${req.namespace}`);
       }
 
-      if (
-        !(
-          authContext.rbac.isOrganizationAdminOrDeveloper ||
-          authContext.rbac.checkNamespaceAccess(namespace.id, 'namespace-admin')
-        )
-      ) {
+      if (!authContext.rbac.canCreateContract(namespace.id)) {
         throw new UnauthorizedError();
       }
 

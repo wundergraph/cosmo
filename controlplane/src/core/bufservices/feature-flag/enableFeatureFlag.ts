@@ -58,15 +58,6 @@ export function enableFeatureFlag(
       };
     }
 
-    if (
-      !(
-        authContext.rbac.isOrganizationAdminOrDeveloper ||
-        authContext.rbac.checkNamespaceAccess(namespace.id, 'namespace-admin')
-      )
-    ) {
-      throw new UnauthorizedError();
-    }
-
     const featureFlag = await featureFlagRepo.getFeatureFlagByName({
       featureFlagName: req.name,
       namespaceId: namespace.id,
@@ -81,6 +72,10 @@ export function enableFeatureFlag(
         deploymentErrors: [],
         compositionWarnings: [],
       };
+    }
+
+    if (!authContext.rbac.hasFeatureFlagWriteAccess(featureFlag)) {
+      throw new UnauthorizedError();
     }
 
     if (featureFlag.isEnabled === req.enabled) {

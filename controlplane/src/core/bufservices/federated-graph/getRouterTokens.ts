@@ -40,13 +40,7 @@ export function getRouterTokens(
       };
     }
 
-    if (
-      !(
-        authContext.rbac.isOrganizationAdminOrDeveloper ||
-        authContext.rbac.checkTargetAccess(federatedGraph.targetId, 'graph-admin') ||
-        authContext.rbac.checkTargetAccess(federatedGraph.targetId, 'graph-viewer')
-      )
-    ) {
+    if (!authContext.rbac.hasFederatedGraphReadAccess(federatedGraph)) {
       throw new UnauthorizedError();
     }
 

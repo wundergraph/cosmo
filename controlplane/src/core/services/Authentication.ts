@@ -87,6 +87,8 @@ export class Authentication implements Authenticator {
           organizationID: organization.id,
           userID: user.userId,
         }),
+        user.userId,
+        await this.orgRepo.isFeatureEnabled(organization.id, 'rbac'),
       );
 
       const userContext: AuthContext = {

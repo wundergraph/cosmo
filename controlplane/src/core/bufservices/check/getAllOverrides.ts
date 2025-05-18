@@ -36,13 +36,7 @@ export function getAllOverrides(
       };
     }
 
-    if (
-      !(
-        authContext.rbac.isOrganizationAdminOrDeveloper ||
-        authContext.rbac.checkTargetAccess(graph.targetId, 'graph-admin') ||
-        authContext.rbac.checkTargetAccess(graph.targetId, 'graph-viewer')
-      )
-    ) {
+    if (!authContext.rbac.hasFederatedGraphReadAccess(graph)) {
       throw new UnauthorizedError();
     }
 

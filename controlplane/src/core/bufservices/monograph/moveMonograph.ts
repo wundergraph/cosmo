@@ -132,6 +132,10 @@ export function moveMonograph(
       };
     }
 
+    if (!authContext.rbac.hasNamespaceWriteAccess(newNamespace.id)) {
+      throw new UnauthorizedError();
+    }
+
     await targetRepo.moveWithoutRecomposition({
       targetIds: targetIdsToMove,
       newNamespaceId: newNamespace.id,

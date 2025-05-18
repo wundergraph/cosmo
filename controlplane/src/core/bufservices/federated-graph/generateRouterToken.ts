@@ -44,12 +44,7 @@ export function generateRouterToken(
       };
     }
 
-    if (
-      !(
-        authContext.rbac.isOrganizationAdminOrDeveloper ||
-        authContext.rbac.checkTargetAccess(federatedGraph.targetId, 'graph-admin')
-      )
-    ) {
+    if (!authContext.rbac.hasFederatedGraphWriteAccess(federatedGraph)) {
       throw new UnauthorizedError();
     }
 

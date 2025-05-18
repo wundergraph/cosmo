@@ -4,10 +4,8 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { DeleteAPIKeyRequest, DeleteAPIKeyResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { ApiKeyRepository } from '../../repositories/ApiKeyRepository.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
-import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
-import { RBACEvaluator } from '../../services/RBACEvaluator.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
 export function deleteAPIKey(
@@ -21,7 +19,6 @@ export function deleteAPIKey(
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
-    const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
     const apiKeyRepo = new ApiKeyRepository(opts.db);
     const auditLogRepo = new AuditLogRepository(opts.db);
 
@@ -39,14 +36,7 @@ export function deleteAPIKey(
       };
     }
 
-    const rbacEvaluator = new RBACEvaluator(
-      await orgRepo.getOrganizationMemberGroups({
-        userID: authContext.userId || '',
-        organizationID: authContext.organizationId,
-      }),
-    );
-
-    if (!(apiKey.creatorUserID === authContext.userId || rbacEvaluator.isOrganizationAdminOrDeveloper)) {
+    if (!(apiKey.creatorUserID === authContext.userId || authContext.rbac.canManageAPIKeys)) {
       throw new UnauthorizedError();
     }
 

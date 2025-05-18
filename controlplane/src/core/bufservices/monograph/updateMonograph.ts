@@ -92,6 +92,10 @@ export function updateMonograph(
         };
       }
 
+      if (!authContext.rbac.hasFederatedGraphWriteAccess(graph)) {
+        throw new UnauthorizedError();
+      }
+
       const subgraphs = await subgraphRepo.listByFederatedGraph({
         federatedGraphTargetId: graph.targetId,
       });

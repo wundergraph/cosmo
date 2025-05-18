@@ -57,12 +57,7 @@ export function enableProposalsForNamespace(
       };
     }
 
-    if (
-      !(
-        authContext.rbac.isOrganizationAdminOrDeveloper ||
-        authContext.rbac.checkNamespaceAccess(namespace.id, 'namespace-admin')
-      )
-    ) {
+    if (!authContext.rbac.hasNamespaceWriteAccess(namespace.id)) {
       throw new UnauthorizedError();
     }
 

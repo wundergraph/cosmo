@@ -42,12 +42,7 @@ export function createIgnoreOverridesForAllOperations(
       };
     }
 
-    if (
-      !(
-        authContext.rbac.isOrganizationAdminOrDeveloper ||
-        authContext.rbac.checkTargetAccess(graph.targetId, 'graph-admin')
-      )
-    ) {
+    if (!authContext.rbac.hasFederatedGraphWriteAccess(graph)) {
       throw new UnauthorizedError();
     }
 

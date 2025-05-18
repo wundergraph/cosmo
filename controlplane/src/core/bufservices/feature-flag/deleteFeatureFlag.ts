@@ -57,15 +57,6 @@ export function deleteFeatureFlag(
       };
     }
 
-    if (
-      !(
-        authContext.rbac.isOrganizationAdminOrDeveloper ||
-        authContext.rbac.checkNamespaceAccess(namespace.id, 'namespace-admin')
-      )
-    ) {
-      throw new UnauthorizedError();
-    }
-
     const featureFlag = await featureFlagRepo.getFeatureFlagByName({
       featureFlagName: req.name,
       namespaceId: namespace.id,
@@ -80,6 +71,10 @@ export function deleteFeatureFlag(
         deploymentErrors: [],
         compositionWarnings: [],
       };
+    }
+
+    if (!authContext.rbac.hasFeatureFlagWriteAccess(featureFlag)) {
+      throw new UnauthorizedError();
     }
 
     // Collect the federated graph DTOs that have the feature flag enabled because they will be re-composed

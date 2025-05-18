@@ -60,6 +60,10 @@ export function publishMonograph(
       };
     }
 
+    if (!authContext.rbac.hasFederatedGraphWriteAccess(graph)) {
+      throw new UnauthorizedError();
+    }
+
     const subgraphSchemaSDL = req.schema;
 
     let isV2Graph: boolean | undefined;

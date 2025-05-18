@@ -49,6 +49,8 @@ export default class AccessTokenAuthenticator {
         userID: userInfoData.sub,
         organizationID: organization.id,
       }),
+      userInfoData.sub,
+      await this.orgRepo.isFeatureEnabled(organization.id, 'rbac'),
     );
 
     return {

@@ -171,7 +171,7 @@ const createTempUser = async (
       organizationSlug: personalOrg.slug,
       userDisplayName: userEmail,
       groups: ['admin'],
-      rbac: new RBACEvaluator([updatedOrgAdminGroup!]),
+      rbac: new RBACEvaluator([updatedOrgAdminGroup!], keycloakUserID, true),
     };
   } catch (error) {
     console.log(error);

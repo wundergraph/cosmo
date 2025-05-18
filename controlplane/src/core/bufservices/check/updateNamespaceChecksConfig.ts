@@ -35,13 +35,7 @@ export function updateNamespaceChecksConfig(
       };
     }
 
-    if (
-      authContext.organizationDeactivated ||
-      !(
-        authContext.rbac.isOrganizationAdminOrDeveloper ||
-        authContext.rbac.checkNamespaceAccess(namespace.id, 'namespace-admin')
-      )
-    ) {
+    if (authContext.organizationDeactivated || !authContext.rbac.hasNamespaceWriteAccess(namespace.id)) {
       throw new UnauthorizedError();
     }
 

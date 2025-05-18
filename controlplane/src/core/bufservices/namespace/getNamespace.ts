@@ -41,13 +41,7 @@ export function getNamespace(
       };
     }
 
-    if (
-      !(
-        authContext.rbac.isOrganizationAdminOrDeveloper ||
-        authContext.rbac.checkNamespaceAccess(namespace.id, 'namespace-admin') ||
-        authContext.rbac.checkNamespaceAccess(namespace.id, 'namespace-viewer')
-      )
-    ) {
+    if (!authContext.rbac.hasNamespaceReadAccess(namespace.id)) {
       throw new UnauthorizedError();
     }
 

@@ -22,7 +22,7 @@ export function renameNamespace(
     logger = enrichLogger(ctx, logger, authContext);
 
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
-    if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdminOrDeveloper) {
+    if (authContext.organizationDeactivated) {
       throw new UnauthorizedError();
     }
 
@@ -54,6 +54,10 @@ export function renameNamespace(
           details: 'The namespace was not found',
         },
       };
+    }
+
+    if (!authContext.rbac.hasNamespaceWriteAccess(exists.id)) {
+      throw new UnauthorizedError();
     }
 
     await namespaceRepo.rename({

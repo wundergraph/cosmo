@@ -108,12 +108,7 @@ export function moveFederatedGraph(
         };
       }
 
-      if (
-        !(
-          authContext.rbac.isOrganizationAdminOrDeveloper ||
-          authContext.rbac.checkNamespaceAccess(newNamespace.id, 'namespace-admin')
-        )
-      ) {
+      if (!authContext.rbac.hasNamespaceWriteAccess(newNamespace.id)) {
         throw new UnauthorizedError();
       }
 

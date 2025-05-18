@@ -62,13 +62,7 @@ export function createFederatedGraph(
       };
     }
 
-    if (
-      !(
-        authContext.rbac.isOrganizationAdminOrDeveloper ||
-        authContext.rbac.checkNamespaceAccess(namespace.id, 'graph-admin') ||
-        authContext.rbac.checkTargetAccess('*', 'graph-admin')
-      )
-    ) {
+    if (!authContext.rbac.canCreateFederatedGraph(namespace.id)) {
       throw new UnauthorizedError();
     }
 

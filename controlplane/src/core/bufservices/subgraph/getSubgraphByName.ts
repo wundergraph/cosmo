@@ -40,12 +40,7 @@ export function getSubgraphByName(
       };
     }
 
-    if (
-      !(
-        authContext.rbac.isOrganizationAdminOrDeveloper ||
-        authContext.rbac.checkTargetAccess(subgraph.targetId, 'subgraph-publisher')
-      )
-    ) {
+    if (!authContext.rbac.hasSubGraphReadAccess(subgraph)) {
       throw new UnauthorizedError();
     }
 

@@ -311,12 +311,7 @@ export function updateProposal(
         if (subgraph) {
           // If the actor is not an organization admin or developer and doesn't have publish permission for
           // the subgraph, throw an unauthorized error
-          if (
-            !(
-              authContext.rbac.isOrganizationAdminOrDeveloper ||
-              authContext.rbac.checkTargetAccess(subgraph.targetId, 'subgraph-publisher')
-            )
-          ) {
+          if (!authContext.rbac.hasSubGraphWriteAccess(subgraph)) {
             throw new UnauthorizedError();
           }
 
@@ -387,6 +382,8 @@ export function updateProposal(
               checkUrl: '',
             };
           }
+        } else if (!authContext.rbac.canCreateSubGraph(namespace.id)) {
+          throw new UnauthorizedError();
         }
 
         proposalSubgraphs.push({
