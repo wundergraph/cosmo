@@ -30,9 +30,9 @@ interface ToolVersion {
 
 // Exact tool versions to be installed for the script, but you can specify a semver range to express compatibility
 const TOOL_VERSIONS: Record<string, ToolVersion> = {
-  protoc: { range: '~29.3', envVar: 'PROTOC_VERSION', scriptVersion: '29.3' },
-  protocGenGo: { range: '~1.34.2', envVar: 'PROTOC_GEN_GO_VERSION', scriptVersion: '1.34.2' },
-  protocGenGoGrpc: { range: '~1.5.1', envVar: 'PROTOC_GEN_GO_GRPC_VERSION', scriptVersion: '1.5.1' },
+  protoc: { range: '^29.3', envVar: 'PROTOC_VERSION', scriptVersion: '29.3' },
+  protocGenGo: { range: '^1.34.2', envVar: 'PROTOC_GEN_GO_VERSION', scriptVersion: '1.34.2' },
+  protocGenGoGrpc: { range: '^1.5.1', envVar: 'PROTOC_GEN_GO_GRPC_VERSION', scriptVersion: '1.5.1' },
   go: { range: '>=1.22.0', envVar: 'GO_VERSION', scriptVersion: '1.24.1' },
 };
 
@@ -63,6 +63,11 @@ async function shouldReinstallTools(force = false): Promise<boolean> {
       for (const [tool, version] of Object.entries(TOOL_VERSIONS)) {
         // Check if the stored exact version satisfies the required range
         if (!storedVersions[tool] || !isSemverSatisfied(storedVersions[tool], version.range)) {
+          console.log(
+            pc.yellow(
+              `Version mismatch for ${tool}: found ${storedVersions[tool]}, required ${version.range}. Reinstalling...`,
+            ),
+          );
           return true;
         }
       }
