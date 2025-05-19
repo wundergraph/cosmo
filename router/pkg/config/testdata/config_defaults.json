@@ -475,5 +475,13 @@
   "ClientHeader": {
     "Name": "",
     "Version": ""
+  },
+  "WatchConfig": {
+    "Enabled": false,
+    "Interval": 10000000000,
+    "StartupDelay": {
+      "Enabled": false,
+      "Maximum": 10000000000
+    }
   }
 }

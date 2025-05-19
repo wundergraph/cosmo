@@ -800,5 +800,13 @@
   "ClientHeader": {
     "Name": "Client-Name",
     "Version": "Client_Version"
+  },
+  "WatchConfig": {
+    "Enabled": true,
+    "Interval": 10000000000,
+    "StartupDelay": {
+      "Enabled": true,
+      "Maximum": 10000000000
+    }
   }
 }
