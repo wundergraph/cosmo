@@ -1,0 +1,34 @@
+name: Protographic CI
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/protographic-ci.yaml"
+
+concurrency:
+  group: ${{github.workflow}}-${{github.head_ref}}
+  cancel-in-progress: true
+
+env:
+  CI: true
+  DO_NOT_TRACK: '1'
+
+jobs:
+  build_test:
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/node
+
+      - name: Install dependencies
+        run: pnpm install --filter ./connect --filter ./protographic
+
+      - name: Build
+        run: pnpm run --filter ./protographic build
+
+      - name: Test
+        run: pnpm run --filter ./protographic test
+
+      - name: Lint
+        run: pnpm run --filter ./protographic lint
