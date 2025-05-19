@@ -6,9 +6,13 @@ version: '1'
 graph:
   token: 'mytoken'
 
-log_level: 'info'
-listen_addr: 'localhost:3002'
-controlplane_url: 'https://cosmo-cp.wundergraph.com'
+plugins:
+  enabled: true
+  path: "some/path/to/plugins"
+
+log_level: "info"
+listen_addr: "localhost:3002"
+controlplane_url: "https://cosmo-cp.wundergraph.com"
 playground_enabled: true
 playground_path: '/'
 playground:

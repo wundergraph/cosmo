@@ -32,12 +32,12 @@ runs:
 
     - name: Install dependencies
       shell: bash
-      run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition install --frozen-lockfile
+      run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic install --frozen-lockfile
       working-directory: ${{ inputs.working-directory }}
 
     - name: Build
       shell: bash
-      run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition run build
+      run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic run build
       working-directory: ${{ inputs.working-directory }}
 
     - name: 'Build wgc binary'

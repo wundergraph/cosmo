@@ -7,6 +7,7 @@ import info from '../../package.json' with { type: 'json' };
 
 const paths = envPaths('cosmo', { suffix: '' });
 export const configDir = paths.config;
+export const dataDir = paths.data;
 export const configFile = join(configDir, 'config.yaml');
 
 export const getLoginDetails = (): { accessToken: string; organizationSlug: string } | null => {
