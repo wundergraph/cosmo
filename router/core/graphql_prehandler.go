@@ -30,6 +30,7 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/middleware/recursion_depth_limiter"
 
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
@@ -50,6 +51,7 @@ type PreHandlerOptions struct {
 	RouterPublicKey    *ecdsa.PublicKey
 	TracerProvider     *sdktrace.TracerProvider
 	ComplexityLimits   *config.ComplexityLimits
+	MaxRecursionDepth  *config.ObjectDepthLimit
 	MaxUploadFiles     int
 	MaxUploadFileSize  int
 
@@ -94,6 +96,7 @@ type PreHandler struct {
 	maxUploadFiles              int
 	maxUploadFileSize           int
 	complexityLimits            *config.ComplexityLimits
+	maxRecursionDepth           *config.ObjectDepthLimit
 	trackSchemaUsageInfo        bool
 	clientHeader                config.ClientHeader
 	computeOperationSha256      bool
@@ -137,6 +140,7 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		maxUploadFiles:            opts.MaxUploadFiles,
 		maxUploadFileSize:         opts.MaxUploadFileSize,
 		complexityLimits:          opts.ComplexityLimits,
+		maxRecursionDepth:         opts.MaxRecursionDepth,
 		alwaysIncludeQueryPlan:    opts.AlwaysIncludeQueryPlan,
 		alwaysSkipLoader:          opts.AlwaysSkipLoader,
 		queryPlansEnabled:         opts.QueryPlansEnabled,
@@ -910,6 +914,17 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 			engineValidateSpan.End()
 
 			return queryDepthErr
+		}
+	}
+
+	// Validate the object recursion depth if config is present and enabled, an error will be returned and exit early if
+	// the max recursion depth limit has been reached
+	if h.maxRecursionDepth != nil && h.maxRecursionDepth.Enabled {
+		if err := recursion_depth_limiter.LimitRecursionDepth(h.executor.RouterSchema, operationKit.kit.doc, h.maxRecursionDepth.Limit); err != nil {
+			return &httpGraphqlError{
+				message:    err.Error(),
+				statusCode: http.StatusBadRequest,
+			}
 		}
 	}
 
