@@ -23,10 +23,16 @@ jobs:
       - uses: ./.github/actions/node
 
       - name: Install dependencies
-        run: pnpm install --filter ./connect --filter ./protographic
+        run: pnpm install --filter ./protographic
+
+      - name: Generate code
+        run: pnpm generate
+
+      - name: Check if git is not dirty after generating files
+        run: git diff --no-ext-diff --exit-code
 
       - name: Build
-        run: pnpm run --filter ./protographic build
+        run: pnpm run --filter ./connect --filter ./protographic build
 
       - name: Test
         run: pnpm run --filter ./protographic test
