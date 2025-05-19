@@ -3,7 +3,8 @@ import { readFile } from 'node:fs/promises';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { allExternalFieldInstancesError, noBaseDefinitionForExtensionError, OBJECT } from '@wundergraph/composition';
-import { afterAllSetup, beforeAllSetup, genID } from '../src/core/test-util.js';
+import { joinLabel } from '@wundergraph/cosmo-shared';
+import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import { DEFAULT_NAMESPACE, SetupTest } from './test-util.js';
 
@@ -131,6 +132,71 @@ describe('CheckFederatedGraph', (ctx) => {
         ]),
       ).message,
     );
+
+    await server.close();
+  });
+
+  test('Should handle composition when one of the subgraphs has an empty schema', async () => {
+    const { client, server } = await SetupTest({ dbname, chClient });
+
+    const emptySubgraphName = genID('empty-subgraph');
+    const validSubgraphName = genID('valid-subgraph');
+    const label = genUniqueLabel();
+
+    // Create federated graph
+    const fedGraphName = genID('federated-graph');
+    await client.createFederatedGraph({
+      name: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      labelMatchers: [joinLabel(label)],
+      routingUrl: 'http://localhost:8081',
+    });
+
+    // Create first subgraph with empty schema
+    await client.createFederatedSubgraph({
+      name: emptySubgraphName,
+      namespace: DEFAULT_NAMESPACE,
+      labels: [label],
+      routingUrl: 'http://localhost:8081',
+    });
+
+    // Create second subgraph with valid schema
+    await client.createFederatedSubgraph({
+      name: validSubgraphName,
+      namespace: DEFAULT_NAMESPACE,
+      labels: [label],
+      routingUrl: 'http://localhost:8081',
+    });
+
+    // Publish valid schema
+    let validSchema = `
+    type Query {
+      hello: String
+    }
+  `;
+    const publishValidResp = await client.publishFederatedSubgraph({
+      name: validSubgraphName,
+      namespace: DEFAULT_NAMESPACE,
+      schema: validSchema,
+    });
+    expect(publishValidResp.response?.code).toBe(EnumStatusCode.OK);
+
+    validSchema = `
+    type Query {
+      hello2: String
+    }
+  `;
+
+    // Check valid subgraph with empty schema
+    const checkValidResp = await client.checkFederatedGraph({
+      name: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      labelMatchers: [joinLabel(label)],
+    });
+    expect(checkValidResp.response?.code).toBe(EnumStatusCode.OK);
+    expect(checkValidResp.compositionErrors.length).toBe(0);
+    expect(checkValidResp.subgraphs.length).toBe(1);
+    expect(checkValidResp.subgraphs[0].name).toBe(validSubgraphName);
 
     await server.close();
   });
