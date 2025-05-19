@@ -906,7 +906,7 @@ type MCPServer struct {
 
 type PluginsConfiguration struct {
 	Enabled bool   `yaml:"enabled" envDefault:"false" env:"PLUGINS_ENABLED"`
-	Path    string `yaml:"path" envDefault:"plugins" env:"PLUGINS_BASE_PATH"`
+	Path    string `yaml:"path" envDefault:"plugins" env:"PLUGINS_PATH"`
 }
 
 type Config struct {
