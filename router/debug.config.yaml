@@ -11,6 +11,14 @@ execution_config:
 
 log_level: debug
 
+watch_config:
+  enabled: true
+  interval: '10s'
+
+  startup_delay:
+    enabled: false
+    maximum: '10s'
+
 engine:
   max_concurrent_resolvers: 1024
   debug:

@@ -19,7 +19,7 @@ version: "1"
 
 router_config_path: "config.json"
 `)
-	_, err := LoadConfig(f, "")
+	_, err := LoadConfig(f)
 
 	require.NoError(t, err)
 }
@@ -39,7 +39,7 @@ traffic_shaping:
   router:
     max_request_body_size: 1KB
 `)
-	_, err := LoadConfig(f, "")
+	_, err := LoadConfig(f)
 
 	var js *jsonschema.ValidationError
 	require.ErrorAs(t, err, &js)
@@ -60,11 +60,31 @@ graph:
 poll_interval: "${TEST_POLL_INTERVAL}"
 `)
 
-	cfg, err := LoadConfig(f, "")
+	cfg, err := LoadConfig(f)
 
 	require.NoError(t, err)
 
 	require.Equal(t, time.Second*20, cfg.Config.PollInterval)
+}
+
+func TestLoadWatchCfgFromEnvars(t *testing.T) {
+	t.Setenv("WATCH_CONFIG_ENABLED", "true")
+	t.Setenv("WATCH_CONFIG_INTERVAL", "30s")
+	t.Setenv("WATCH_CONFIG_STARTUP_DELAY_ENABLED", "true")
+	t.Setenv("WATCH_CONFIG_STARTUP_DELAY_MAXIMUM", "20s")
+
+	f := createTempFileFromFixture(t, `
+version: "1"
+`)
+
+	cfg, err := LoadConfig(f)
+
+	require.NoError(t, err)
+
+	require.True(t, cfg.Config.WatchConfig.Enabled)
+	require.True(t, cfg.Config.WatchConfig.StartupDelay.Enabled)
+	require.Equal(t, time.Second*30, cfg.Config.WatchConfig.Interval)
+	require.Equal(t, time.Second*20, cfg.Config.WatchConfig.StartupDelay.Maximum)
 }
 
 func TestConfigHasPrecedence(t *testing.T) {
@@ -79,7 +99,7 @@ graph:
 poll_interval: 11s
 `)
 
-	cfg, err := LoadConfig(f, "")
+	cfg, err := LoadConfig(f)
 
 	require.NoError(t, err)
 
@@ -117,10 +137,21 @@ func TestConfigSlicesHaveDefaults(t *testing.T) {
 func TestErrorWhenConfigNotExists(t *testing.T) {
 	t.Parallel()
 
-	_, err := LoadConfig("./fixtures/not_exists.yaml", "")
+	_, err := LoadConfig("./fixtures/not_exists.yaml")
 
 	require.Error(t, err)
 	require.ErrorContains(t, err, "could not read custom config file ./fixtures/not_exists.yaml: open ./fixtures/not_exists.yaml: no such file or directory")
+}
+
+func TestConfigIsOptional(t *testing.T) {
+	t.Setenv("GRAPH_API_TOKEN", "XXX")
+
+	// DefaultConfigPath will not exist for this test, so we expect
+	// LoadConfig to load default values.
+	result, err := LoadConfig(DefaultConfigPath)
+
+	require.NoError(t, err)
+	require.True(t, result.DefaultLoaded)
 }
 
 func TestRegexDecoding(t *testing.T) {
@@ -140,7 +171,7 @@ telemetry:
       exclude_metric_labels: []
 `)
 
-	cfg, err := LoadConfig(f, "")
+	cfg, err := LoadConfig(f)
 
 	require.NoError(t, err)
 	require.Empty(t, cfg.Config.Telemetry.Metrics.Prometheus.ExcludeMetrics)
@@ -160,31 +191,13 @@ telemetry:
       exclude_metric_labels: ["^instance"]
 `)
 
-	cfg, err = LoadConfig(f, "")
+	cfg, err = LoadConfig(f)
 
 	require.NoError(t, err)
 	require.Len(t, cfg.Config.Telemetry.Metrics.Prometheus.ExcludeMetrics, 2)
 	require.Len(t, cfg.Config.Telemetry.Metrics.Prometheus.ExcludeMetricLabels, 1)
 	require.Equal(t, RegExArray{regexp.MustCompile("^go_.*"), regexp.MustCompile("^process_.*")}, cfg.Config.Telemetry.Metrics.Prometheus.ExcludeMetrics)
 	require.Equal(t, RegExArray{regexp.MustCompile("^instance")}, cfg.Config.Telemetry.Metrics.Prometheus.ExcludeMetricLabels)
-}
-
-func TestErrorWhenEnvVariableConfigNotExists(t *testing.T) {
-	t.Setenv("CONFIG_PATH", "not_exists.yaml")
-
-	_, err := LoadConfig("", "")
-
-	require.Error(t, err)
-	require.ErrorContains(t, err, "could not read custom config file not_exists.yaml: open not_exists.yaml: no such file or directory")
-}
-
-func TestConfigIsOptional(t *testing.T) {
-	t.Setenv("GRAPH_API_TOKEN", "XXX")
-
-	result, err := LoadConfig("", "")
-
-	require.NoError(t, err)
-	require.False(t, result.DefaultLoaded)
 }
 
 func TestCustomGoDurationExtension(t *testing.T) {
@@ -203,7 +216,7 @@ telemetry:
         export_timeout: 1s
 `)
 
-	_, err := LoadConfig(f, "")
+	_, err := LoadConfig(f)
 
 	var js *jsonschema.ValidationError
 	require.ErrorAs(t, err, &js)
@@ -224,7 +237,7 @@ telemetry:
         export_timeout: 5m
 `)
 
-	_, err = LoadConfig(f, "")
+	_, err = LoadConfig(f)
 
 	require.ErrorAs(t, err, &js)
 
@@ -235,7 +248,7 @@ telemetry:
 func TestLoadFullConfig(t *testing.T) {
 	t.Parallel()
 
-	cfg, err := LoadConfig("./fixtures/full.yaml", "")
+	cfg, err := LoadConfig("./fixtures/full.yaml")
 	require.NoError(t, err)
 
 	g := goldie.New(
@@ -259,7 +272,7 @@ graph:
   token: "token"
 `)
 
-	cfg, err := LoadConfig(f, "")
+	cfg, err := LoadConfig(f)
 	require.NoError(t, err)
 
 	g := goldie.New(
@@ -289,7 +302,7 @@ overrides:
       subscription_protocol: ws
       subscription_websocket_subprotocol: graphql-ws
 `)
-	_, err := LoadConfig(f, "")
+	_, err := LoadConfig(f)
 	require.NoError(t, err)
 }
 
@@ -310,7 +323,7 @@ overrides:
       subscription_protocol: ws
       subscription_websocket_subprotocol: graphql-ws
 `)
-	_, err := LoadConfig(f, "")
+	_, err := LoadConfig(f)
 	var js *jsonschema.ValidationError
 	require.ErrorAs(t, err, &js)
 	require.Equal(t, "at '/overrides/subgraphs/some-subgraph/routing_url': 'a' is not valid http-url: invalid URL", js.Causes[0].Error())
@@ -338,7 +351,7 @@ persisted_operations:
     provider_id: s3
     object_prefix: "5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/operations/foo"
 `)
-	_, err := LoadConfig(f, "")
+	_, err := LoadConfig(f)
 	var js *jsonschema.ValidationError
 	require.NoError(t, err, &js)
 
@@ -357,7 +370,7 @@ persisted_operations:
     provider_id: cdn
     object_prefix: "5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/operations/foo"
 `)
-	_, err = LoadConfig(f, "")
+	_, err = LoadConfig(f)
 	js = &jsonschema.ValidationError{}
 	require.NoError(t, err, &js)
 }
@@ -384,7 +397,7 @@ persisted_operations:
     provider_id: s3
     # Missing object_prefix
 `)
-	_, err := LoadConfig(f, "")
+	_, err := LoadConfig(f)
 	var js *jsonschema.ValidationError
 	require.ErrorAs(t, err, &js)
 	require.Equal(t, "at '/persisted_operations/storage': missing property 'object_prefix'", js.Causes[0].Error())
@@ -412,7 +425,7 @@ execution_config:
     provider_id: s3
     object_path: "5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/routerconfigs/latest.json"
 `)
-		_, err := LoadConfig(f, "")
+		_, err := LoadConfig(f)
 		var js *jsonschema.ValidationError
 		require.NoError(t, err, &js)
 	})
@@ -432,7 +445,7 @@ execution_config:
     provider_id: cdn
     object_path: "5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/routerconfigs/latest.json"
 `)
-		_, err := LoadConfig(f, "")
+		_, err := LoadConfig(f)
 		js := &jsonschema.ValidationError{}
 		require.NoError(t, err, &js)
 
@@ -449,7 +462,7 @@ execution_config:
     watch: true
     watch_interval: "1s"
 `)
-		_, err := LoadConfig(f, "")
+		_, err := LoadConfig(f)
 		js := &jsonschema.ValidationError{}
 		require.NoError(t, err, &js)
 	})
@@ -477,7 +490,7 @@ execution_config:
     provider_id: s3
     # Missing object_path
 `)
-		_, err := LoadConfig(f, "")
+		_, err := LoadConfig(f)
 		var js *jsonschema.ValidationError
 		require.ErrorAs(t, err, &js)
 		require.Equal(t, "at '/execution_config': oneOf failed, none matched\n- at '/execution_config': additional properties 'storage' not allowed\n- at '/execution_config/storage': missing property 'object_path'\n- at '/execution_config': additional properties 'storage' not allowed", js.Causes[0].Error())
@@ -495,7 +508,7 @@ execution_config:
     watch_interval: "500ms"
 `)
 
-		_, err := LoadConfig(f, "")
+		_, err := LoadConfig(f)
 		var js *jsonschema.ValidationError
 		require.ErrorAs(t, err, &js)
 		require.Equal(t, "at '/execution_config': oneOf failed, none matched\n- at '/execution_config/file/watch_interval': duration must be greater or equal than 1s\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'file' not allowed", js.Causes[0].Error())
@@ -512,7 +525,7 @@ execution_config:
     watch: false
     watch_interval: "1s"
 `)
-		_, err := LoadConfig(f, "")
+		_, err := LoadConfig(f)
 		var js *jsonschema.ValidationError
 		require.ErrorAs(t, err, &js)
 		require.Equal(t, "at '/execution_config': oneOf failed, none matched\n- at '/execution_config/file/watch': value must be true\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'file' not allowed", js.Causes[0].Error())
@@ -529,7 +542,7 @@ execution_config:
   file:
     path: "router.json"
 `)
-	_, err := LoadConfig(f, "")
+	_, err := LoadConfig(f)
 	require.NoError(t, err)
 }
 
@@ -555,7 +568,7 @@ execution_config:
     provider_id: s3
     object_path: "5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/routerconfigs/latest.json"
 `)
-	_, err := LoadConfig(f, "")
+	_, err := LoadConfig(f)
 	var js *jsonschema.ValidationError
 	require.ErrorAs(t, err, &js)
 	require.True(t,
@@ -573,7 +586,7 @@ client_header:
   name: "Client_Name"
   version: "Client_Version"
 `)
-	_, err := LoadConfig(f, "")
+	_, err := LoadConfig(f)
 	require.NoError(t, err)
 }
 
@@ -589,7 +602,7 @@ telemetry:
         enabled: true
         include_operation_sha: true
 `)
-		c, err := LoadConfig(f, "")
+		c, err := LoadConfig(f)
 		require.NoError(t, err)
 
 		require.True(t, c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.Enabled)
@@ -601,7 +614,7 @@ telemetry:
 version: "1"
 `)
 
-		c, err := LoadConfig(f, "")
+		c, err := LoadConfig(f)
 		require.NoError(t, err)
 
 		require.False(t, c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.Enabled)
@@ -610,7 +623,7 @@ version: "1"
 		t.Setenv("PROMETHEUS_SCHEMA_FIELD_USAGE_ENABLED", "true")
 		t.Setenv("PROMETHEUS_SCHEMA_FIELD_USAGE_INCLUDE_OPERATION_SHA", "true")
 
-		c, err = LoadConfig(f, "")
+		c, err = LoadConfig(f)
 		require.NoError(t, err)
 
 		require.True(t, c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.Enabled)
@@ -622,7 +635,7 @@ func TestPrefixedMetricEngineConfig(t *testing.T) {
 	f := createTempFileFromFixture(t, `
 version: "1"
 `)
-	c, err := LoadConfig(f, "")
+	c, err := LoadConfig(f)
 	require.NoError(t, err)
 
 	require.False(t, c.Config.Telemetry.Metrics.Prometheus.EngineStats.Subscriptions)
@@ -631,7 +644,7 @@ version: "1"
 	t.Setenv("PROMETHEUS_ENGINE_STATS_SUBSCRIPTIONS", "true")
 	t.Setenv("METRICS_OTLP_ENGINE_STATS_SUBSCRIPTIONS", "true")
 
-	c, err = LoadConfig(f, "")
+	c, err = LoadConfig(f)
 	require.NoError(t, err)
 
 	require.True(t, c.Config.Telemetry.Metrics.Prometheus.EngineStats.Subscriptions)
