@@ -30,6 +30,7 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/middleware/recursion_depth_limiter"
 
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
@@ -919,8 +920,11 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	// Validate the object recursion depth if config is present and enabled, an error will be returned and exit early if
 	// the max recursion depth limit has been reached
 	if h.maxRecursionDepth != nil && h.maxRecursionDepth.Enabled {
-		if err := LimitRecursionDepth(operationKit.kit.doc, h.executor.RouterSchema, h.maxRecursionDepth.Limit); err != nil {
-			return err
+		if err := recursion_depth_limiter.LimitRecursionDepth(h.executor.RouterSchema, operationKit.kit.doc, h.maxRecursionDepth.Limit); err != nil {
+			return &httpGraphqlError{
+				message:    err.Error(),
+				statusCode: http.StatusBadRequest,
+			}
 		}
 	}
 

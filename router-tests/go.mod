@@ -180,4 +180,6 @@ replace (
 // github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2
 )
 
+replace github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.178 => github.com/danielvladco/graphql-go-tools/v2 v2.0.0-rc.178.0.20250519124214-a99ec88e062c
+
 replace github.com/hashicorp/consul/sdk => github.com/wundergraph/consul/sdk v0.0.0-20250204115147-ed842a8fd301

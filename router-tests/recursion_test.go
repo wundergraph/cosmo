@@ -37,6 +37,7 @@ const (
 		author {
 			works {
 				id
+				author { id }
 			}
 		}
 	}
@@ -57,8 +58,8 @@ fragment ManagerFragment on Manager {
 	}
 }`
 	responseRecursionSuccess         = `{"data":{"manager1":{"id":"1","manager":{"id":"2","manager":{"id":"3"}}},"manager2":{"id":"1","manager":{"id":"2","manager":{"id":"3"}}}}}`
-	responseRecursionErrorDepth1     = `{"errors":[{"message":"external: Recursion detected: type 'Manager' exceeds allowed depth of 1, locations: [], path: [query,manager1,manager]"}]}`
-	responseRecursionBookErrorDepth1 = `{"errors":[{"message":"external: Recursion detected: type 'Book' exceeds allowed depth of 1, locations: [], path: [query,book,author,works]"}]}`
+	responseRecursionErrorDepth1     = `{"errors":[{"message":"external: Recursion detected: type 'Manager' exceeds allowed depth of 1, locations: [], path: [query,manager1,manager,manager]"}]}`
+	responseRecursionBookErrorDepth1 = `{"errors":[{"message":"external: Recursion detected: type 'Author' exceeds allowed depth of 1, locations: [], path: [query,book,author,works,author]"}]}`
 )
 
 func TestRecursion(t *testing.T) {
@@ -108,14 +109,14 @@ func TestRecursion(t *testing.T) {
 			require.Equal(t, responseRecursionErrorDepth1, res.Body)
 		})
 	})
-	t.Run("recursion depth 4", func(t *testing.T) {
+	t.Run("recursion depth 2", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
 				securityConfiguration.MaxRecursionDepth = &config.ObjectDepthLimit{
 					Enabled: true,
-					Limit:   4,
+					Limit:   2,
 				}
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
