@@ -275,7 +275,7 @@
                   "description": "The interval at which the file is checked for changes. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
                   "default": "1s",
                   "duration": {
-                    "minimum": "1s"
+                    "minimum": "100ms"
                   }
                 }
               }
@@ -2693,6 +2693,23 @@
               "default": false
             }
           }
+        }
+      }
+    },
+    "plugins": {
+      "type": "object",
+      "description": "The configuration for the router gRPC plugins.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable the router plugins. If the value is true, the router plugins are enabled."
+        },
+        "path": {
+          "type": "string",
+          "description": "The path to the plugins directory. The plugins directory is used to load the plugins.",
+          "default": "plugins"
         }
       }
     },

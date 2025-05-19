@@ -476,6 +476,10 @@
     "Name": "",
     "Version": ""
   },
+  "Plugins": {
+    "Enabled": false,
+    "Path": "plugins"
+  },
   "WatchConfig": {
     "Enabled": false,
     "Interval": 10000000000,

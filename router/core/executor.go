@@ -12,6 +12,7 @@ import (
 	"github.com/twmb/franz-go/pkg/kgo"
 	"github.com/twmb/franz-go/pkg/sasl/plain"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
@@ -31,9 +32,10 @@ type ExecutorConfigurationBuilder struct {
 	baseURL        string
 	logger         *zap.Logger
 
-	transportOptions *TransportOptions
-	baseTripper      http.RoundTripper
-	subgraphTrippers map[string]http.RoundTripper
+	transportOptions    *TransportOptions
+	baseTripper         http.RoundTripper
+	subgraphTrippers    map[string]http.RoundTripper
+	subgraphGRPCClients map[string]grpc.ClientConnInterface
 
 	subscriptionClientOptions *SubscriptionClientOptions
 }
@@ -283,6 +285,7 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 		b.subscriptionClientOptions,
 		b.baseTripper,
 		b.subgraphTrippers,
+		b.subgraphGRPCClients,
 		b.logger,
 		routerEngineCfg.Execution.EnableSingleFlight,
 		routerEngineCfg.Execution.EnableNetPoll,

@@ -906,6 +906,11 @@ type MCPServer struct {
 	BaseURL    string `yaml:"base_url,omitempty" env:"MCP_SERVER_BASE_URL"`
 }
 
+type PluginsConfiguration struct {
+	Enabled bool   `yaml:"enabled" envDefault:"false" env:"PLUGINS_ENABLED"`
+	Path    string `yaml:"path" envDefault:"plugins" env:"PLUGINS_PATH"`
+}
+
 type Config struct {
 	Version string `yaml:"version,omitempty" ignored:"true"`
 
@@ -976,6 +981,8 @@ type Config struct {
 	ApolloCompatibilityFlags       ApolloCompatibilityFlags        `yaml:"apollo_compatibility_flags"`
 	ApolloRouterCompatibilityFlags ApolloRouterCompatibilityFlags  `yaml:"apollo_router_compatibility_flags"`
 	ClientHeader                   ClientHeader                    `yaml:"client_header"`
+
+	Plugins PluginsConfiguration `yaml:"plugins"`
 
 	WatchConfig WatchConfig `yaml:"watch_config" envPrefix:"WATCH_CONFIG_"`
 }
