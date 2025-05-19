@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -139,7 +140,7 @@ func TestNatsEvents(t *testing.T) {
 			natsLogs := xEnv.Observer().FilterMessageSnippet("Nats").All()
 			require.Len(t, natsLogs, 4)
 			providerIDFields := xEnv.Observer().FilterField(zap.String("provider_id", "my-nats")).All()
-			require.Len(t, providerIDFields, 2)
+			require.Len(t, providerIDFields, 3)
 		})
 	})
 
@@ -1806,6 +1807,34 @@ func TestNatsEvents(t *testing.T) {
 
 			assert.Eventually(t, completed.Load, NatsWaitTimeout, time.Millisecond*100)
 		})
+	})
+
+	t.Run("NATS startup and shutdown with wrong URLs should not stop router from starting indefinitely", func(t *testing.T) {
+		t.Parallel()
+
+		listener := testenv.NewWaitingListener(t, time.Second*10)
+		listener.Start()
+		defer listener.Close()
+
+		errRouter := testenv.RunWithError(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+			EnableNats:               false,
+			ModifyEventsConfiguration: func(cfg *config.EventsConfiguration) {
+				url := "nats://127.0.0.1:" + strconv.Itoa(listener.Port())
+				natsEventSources := make([]config.NatsEventSource, len(testenv.DemoNatsProviders))
+				for _, sourceName := range testenv.DemoNatsProviders {
+					natsEventSources = append(natsEventSources, config.NatsEventSource{
+						ID:  sourceName,
+						URL: url,
+					})
+				}
+				cfg.Providers.Nats = natsEventSources
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			assert.Fail(t, "Should not be called")
+		})
+
+		assert.Error(t, errRouter)
 	})
 }
 
