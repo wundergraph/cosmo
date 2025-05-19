@@ -80,10 +80,6 @@ func (h *promConnectionMetrics) startInitMetrics(connStats *ConnectionPoolStats,
 	return nil
 }
 
-func (m *promConnectionMetrics) MeasureTotalConnectionDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
-	m.instruments.totalConnectionDuration.Record(ctx, duration, opts...)
-}
-
 func (m *promConnectionMetrics) MeasureConnectionAcquireDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
 	m.instruments.connectionAcquireDuration.Record(ctx, duration, opts...)
 }

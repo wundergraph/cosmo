@@ -79,10 +79,6 @@ func (h *otlpConnectionMetrics) startInitMetrics(connStats *ConnectionPoolStats,
 	return nil
 }
 
-func (h *otlpConnectionMetrics) MeasureTotalConnectionDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
-	h.instruments.totalConnectionDuration.Record(ctx, duration, opts...)
-}
-
 func (h *otlpConnectionMetrics) MeasureConnectionAcquireDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
 	h.instruments.connectionAcquireDuration.Record(ctx, duration, opts...)
 }
