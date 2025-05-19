@@ -48,14 +48,28 @@ func newPromConnectionMetrics(logger *zap.Logger, meterProvider *metric.MeterPro
 }
 
 func (h *promConnectionMetrics) startInitMetrics(connStats *ConnectionPoolStats, attributes []attribute.KeyValue) error {
+	for subgraph, maxConns := range connStats.MaxConnsPerSubgraph {
+		attrs := make([]attribute.KeyValue, 0, 1)
+		if subgraph != "" {
+			attrs = append(attrs, otel.WgSubgraphName.String(subgraph))
+		}
+		h.MeasureMaxConnections(context.Background(), maxConns, otelmetric.WithAttributes(attrs...))
+	}
+
 	rc, err := h.meter.RegisterCallback(func(_ context.Context, o otelmetric.Observer) error {
 		stats := connStats.GetStats()
-		for host, connectionsActiveStat := range stats {
-			o.ObserveInt64(h.instruments.connectionsActive, connectionsActiveStat,
+		for key, activeConnections := range stats {
+			attrs := make([]attribute.KeyValue, 0, 2)
+			attrs = append(attrs, otel.WgHost.String(key.Host))
+			if key.Subgraph != "" {
+				attrs = append(attrs, otel.WgSubgraphName.String(key.Subgraph))
+			}
+			o.ObserveInt64(h.instruments.connectionsActive, activeConnections,
 				otelmetric.WithAttributes(attributes...),
-				otelmetric.WithAttributes(otel.WgHost.String(host)),
+				otelmetric.WithAttributes(attrs...),
 			)
 		}
+
 		return nil
 	}, h.instruments.connectionsActive)
 	if err != nil {
