@@ -1,5 +1,6 @@
 import Spinner from 'ora';
 import pc from 'picocolors';
+
 /**
  * Renders a tree-formatted result display
  * @param spinner The spinner instance
@@ -53,9 +54,9 @@ export function renderResultTree(
 
   // Add the last detail with the corner character
   if (keys.length > 0) {
-    const lastKey = keys[keys.length - 1];
-    const formattedKey = keyFormatters[lastKey];
-    output += `\n ${pc.dim('└' + formattedKey)}: ${details[lastKey]}`;
+    const lastKey = keys.at(-1);
+    const formattedKey = keyFormatters[lastKey as string];
+    output += `\n ${pc.dim('└' + formattedKey)}: ${details[lastKey as string]}`;
   }
 
   console.log(output);
