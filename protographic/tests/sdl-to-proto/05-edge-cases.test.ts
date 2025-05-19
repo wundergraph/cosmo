@@ -22,14 +22,17 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
 
       option go_package = "cosmo/pkg/proto/service.v1;servicev1";
 
+      // Service definition for DefaultService
       service DefaultService {
         rpc QueryDummy(QueryDummyRequest) returns (QueryDummyResponse) {}
       }
 
+      // Request message for dummy operation
       message QueryDummyRequest {
       }
+      // Response message for dummy operation
       message QueryDummyResponse {
-          string dummy = 1;
+        string dummy = 1;
       }"
     `);
   });
@@ -57,6 +60,7 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
 
       option go_package = "cosmo/pkg/proto/service.v1;servicev1";
 
+      // Service definition for DefaultService
       service DefaultService {
         rpc QueryBoolean(QueryBooleanRequest) returns (QueryBooleanResponse) {}
         rpc QueryFloat(QueryFloatRequest) returns (QueryFloatResponse) {}
@@ -65,30 +69,40 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
         rpc QueryString(QueryStringRequest) returns (QueryStringResponse) {}
       }
 
+      // Request message for string operation
       message QueryStringRequest {
       }
+      // Response message for string operation
       message QueryStringResponse {
-          string string = 1;
+        string string = 1;
       }
+      // Request message for int operation
       message QueryIntRequest {
       }
+      // Response message for int operation
       message QueryIntResponse {
-          int32 int = 1;
+        int32 int = 1;
       }
+      // Request message for float operation
       message QueryFloatRequest {
       }
+      // Response message for float operation
       message QueryFloatResponse {
-          double float = 1;
+        double float = 1;
       }
+      // Request message for boolean operation
       message QueryBooleanRequest {
       }
+      // Response message for boolean operation
       message QueryBooleanResponse {
-          bool boolean = 1;
+        bool boolean = 1;
       }
+      // Request message for id operation
       message QueryIdRequest {
       }
+      // Response message for id operation
       message QueryIdResponse {
-          string id = 1;
+        string id = 1;
       }"
     `);
   });
@@ -129,29 +143,36 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
 
       option go_package = "cosmo/pkg/proto/service.v1;servicev1";
 
+      // Service definition for DefaultService
       service DefaultService {
         rpc QueryEnumValue(QueryEnumValueRequest) returns (QueryEnumValueResponse) {}
         rpc QueryMessageType(QueryMessageTypeRequest) returns (QueryMessageTypeResponse) {}
         rpc QueryServiceType(QueryServiceTypeRequest) returns (QueryServiceTypeResponse) {}
       }
 
+      // Request message for messageType operation
       message QueryMessageTypeRequest {
-          string id = 1;
+        string id = 1;
       }
+      // Response message for messageType operation
       message QueryMessageTypeResponse {
-          MessageType message_type = 1;
+        MessageType message_type = 1;
       }
+      // Request message for serviceType operation
       message QueryServiceTypeRequest {
-          string id = 1;
+        string id = 1;
       }
+      // Response message for serviceType operation
       message QueryServiceTypeResponse {
-          ServiceType service_type = 1;
+        ServiceType service_type = 1;
       }
+      // Request message for enumValue operation
       message QueryEnumValueRequest {
-          EnumValues type = 1;
+        EnumValues type = 1;
       }
+      // Response message for enumValue operation
       message QueryEnumValueResponse {
-          string enum_value = 1;
+        string enum_value = 1;
       }
 
       message MessageType {
@@ -203,15 +224,18 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
 
       option go_package = "cosmo/pkg/proto/service.v1;servicev1";
 
+      // Service definition for DefaultService
       service DefaultService {
         rpc QueryUser(QueryUserRequest) returns (QueryUserResponse) {}
       }
 
+      // Request message for user operation
       message QueryUserRequest {
-          string id = 1;
+        string id = 1;
       }
+      // Response message for user operation
       message QueryUserResponse {
-          User user = 1;
+        User user = 1;
       }
 
       message User {
@@ -353,8 +377,11 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
 
       option go_package = "cosmo/pkg/proto/service.v1;servicev1";
 
+      // Service definition for DefaultService
       service DefaultService {
+        // Lookup Post entity by id
         rpc LookupPostById(LookupPostByIdRequest) returns (LookupPostByIdResponse) {}
+        // Lookup User entity by id
         rpc LookupUserById(LookupUserByIdRequest) returns (LookupUserByIdResponse) {}
         rpc MutationCreateComment(MutationCreateCommentRequest) returns (MutationCreateCommentResponse) {}
         rpc MutationCreatePost(MutationCreatePostRequest) returns (MutationCreatePostResponse) {}
@@ -371,115 +398,153 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
         rpc QueryUsers(QueryUsersRequest) returns (QueryUsersResponse) {}
       }
 
+      // Key message for User entity lookup
       message LookupUserByIdRequestKey {
-          string id = 1;
+        // Key field for User entity lookup
+        string id = 1;
       }
 
+      // Request message for User entity lookup
       message LookupUserByIdRequest {
-          repeated LookupUserByIdRequestKey keys = 1;
+        // List of keys to look up User entities
+        repeated LookupUserByIdRequestKey keys = 1;
       }
 
+      // Response message for User entity lookup
       message LookupUserByIdResponse {
-          repeated User result = 1;
+        // List of User entities matching the requested keys
+        repeated User result = 1;
       }
 
+      // Key message for Post entity lookup
       message LookupPostByIdRequestKey {
-          string id = 1;
+        // Key field for Post entity lookup
+        string id = 1;
       }
 
+      // Request message for Post entity lookup
       message LookupPostByIdRequest {
-          repeated LookupPostByIdRequestKey keys = 1;
+        // List of keys to look up Post entities
+        repeated LookupPostByIdRequestKey keys = 1;
       }
 
+      // Response message for Post entity lookup
       message LookupPostByIdResponse {
-          repeated Post result = 1;
+        // List of Post entities matching the requested keys
+        repeated Post result = 1;
       }
 
+      // Request message for user operation
       message QueryUserRequest {
-          string id = 1;
+        string id = 1;
       }
+      // Response message for user operation
       message QueryUserResponse {
-          User user = 1;
+        User user = 1;
       }
+      // Request message for users operation
       message QueryUsersRequest {
-          int32 limit = 1;
-          int32 offset = 2;
+        int32 limit = 1;
+        int32 offset = 2;
       }
+      // Response message for users operation
       message QueryUsersResponse {
-          repeated User users = 1;
+        repeated User users = 1;
       }
+      // Request message for post operation
       message QueryPostRequest {
-          string id = 1;
+        string id = 1;
       }
+      // Response message for post operation
       message QueryPostResponse {
-          Post post = 1;
+        Post post = 1;
       }
+      // Request message for posts operation
       message QueryPostsRequest {
-          int32 limit = 1;
-          int32 offset = 2;
-          PostStatus status = 3;
+        int32 limit = 1;
+        int32 offset = 2;
+        PostStatus status = 3;
       }
+      // Response message for posts operation
       message QueryPostsResponse {
-          repeated Post posts = 1;
+        repeated Post posts = 1;
       }
+      // Request message for comment operation
       message QueryCommentRequest {
-          string id = 1;
+        string id = 1;
       }
+      // Response message for comment operation
       message QueryCommentResponse {
-          Comment comment = 1;
+        Comment comment = 1;
       }
+      // Request message for comments operation
       message QueryCommentsRequest {
-          string post_id = 1;
-          int32 limit = 2;
-          int32 offset = 3;
+        string post_id = 1;
+        int32 limit = 2;
+        int32 offset = 3;
       }
+      // Response message for comments operation
       message QueryCommentsResponse {
-          repeated Comment comments = 1;
+        repeated Comment comments = 1;
       }
+      // Request message for search operation
       message QuerySearchRequest {
-          SearchInput input = 1;
+        SearchInput input = 1;
       }
+      // Response message for search operation
       message QuerySearchResponse {
-          repeated SearchResult search = 1;
+        repeated SearchResult search = 1;
       }
+      // Request message for node operation
       message QueryNodeRequest {
-          string id = 1;
+        string id = 1;
       }
+      // Response message for node operation
       message QueryNodeResponse {
-          Node node = 1;
+        Node node = 1;
       }
+      // Request message for createUser operation
       message MutationCreateUserRequest {
-          UserInput input = 1;
+        UserInput input = 1;
       }
+      // Response message for createUser operation
       message MutationCreateUserResponse {
-          User create_user = 1;
+        User create_user = 1;
       }
+      // Request message for createPost operation
       message MutationCreatePostRequest {
-          string author_id = 1;
-          PostInput input = 2;
+        string author_id = 1;
+        PostInput input = 2;
       }
+      // Response message for createPost operation
       message MutationCreatePostResponse {
-          Post create_post = 1;
+        Post create_post = 1;
       }
+      // Request message for createComment operation
       message MutationCreateCommentRequest {
-          string author_id = 1;
-          CommentInput input = 2;
+        string author_id = 1;
+        CommentInput input = 2;
       }
+      // Response message for createComment operation
       message MutationCreateCommentResponse {
-          Comment create_comment = 1;
+        Comment create_comment = 1;
       }
+      // Request message for updatePost operation
       message MutationUpdatePostRequest {
-          string id = 1;
-          PostInput input = 2;
+        string id = 1;
+        PostInput input = 2;
       }
+      // Response message for updatePost operation
       message MutationUpdatePostResponse {
-          Post update_post = 1;
+        Post update_post = 1;
       }
+      // Request message for deletePost operation
       message MutationDeletePostRequest {
-          string id = 1;
+        string id = 1;
       }
+      // Response message for deletePost operation
       message MutationDeletePostResponse {
-          bool delete_post = 1;
+        bool delete_post = 1;
       }
 
       message User {
@@ -523,17 +588,17 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
 
       message SearchResult {
         oneof value {
-          User user = 1;
-          Post post = 2;
-          Comment comment = 3;
+        User user = 1;
+        Post post = 2;
+        Comment comment = 3;
         }
       }
 
       message Node {
         oneof instance {
-          User user = 1;
-          Post post = 2;
-          Comment comment = 3;
+        User user = 1;
+        Post post = 2;
+        Comment comment = 3;
         }
       }
 

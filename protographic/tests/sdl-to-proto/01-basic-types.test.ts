@@ -26,6 +26,7 @@ describe('SDL to Proto - Basic Types', () => {
 
       option go_package = "cosmo/pkg/proto/service.v1;servicev1";
 
+      // Service definition for DefaultService
       service DefaultService {
         rpc QueryBooleanField(QueryBooleanFieldRequest) returns (QueryBooleanFieldResponse) {}
         rpc QueryFloatField(QueryFloatFieldRequest) returns (QueryFloatFieldResponse) {}
@@ -34,30 +35,40 @@ describe('SDL to Proto - Basic Types', () => {
         rpc QueryStringField(QueryStringFieldRequest) returns (QueryStringFieldResponse) {}
       }
 
+      // Request message for stringField operation
       message QueryStringFieldRequest {
       }
+      // Response message for stringField operation
       message QueryStringFieldResponse {
-          string string_field = 1;
+        string string_field = 1;
       }
+      // Request message for intField operation
       message QueryIntFieldRequest {
       }
+      // Response message for intField operation
       message QueryIntFieldResponse {
-          int32 int_field = 1;
+        int32 int_field = 1;
       }
+      // Request message for floatField operation
       message QueryFloatFieldRequest {
       }
+      // Response message for floatField operation
       message QueryFloatFieldResponse {
-          double float_field = 1;
+        double float_field = 1;
       }
+      // Request message for booleanField operation
       message QueryBooleanFieldRequest {
       }
+      // Response message for booleanField operation
       message QueryBooleanFieldResponse {
-          bool boolean_field = 1;
+        bool boolean_field = 1;
       }
+      // Request message for idField operation
       message QueryIdFieldRequest {
       }
+      // Response message for idField operation
       message QueryIdFieldResponse {
-          string id_field = 1;
+        string id_field = 1;
       }"
     `);
   });
@@ -82,20 +93,25 @@ describe('SDL to Proto - Basic Types', () => {
 
       option go_package = "cosmo/pkg/proto/service.v1;servicev1";
 
+      // Service definition for DefaultService
       service DefaultService {
         rpc QueryRequiredInt(QueryRequiredIntRequest) returns (QueryRequiredIntResponse) {}
         rpc QueryRequiredString(QueryRequiredStringRequest) returns (QueryRequiredStringResponse) {}
       }
 
+      // Request message for requiredString operation
       message QueryRequiredStringRequest {
       }
+      // Response message for requiredString operation
       message QueryRequiredStringResponse {
-          string required_string = 1;
+        string required_string = 1;
       }
+      // Request message for requiredInt operation
       message QueryRequiredIntRequest {
       }
+      // Response message for requiredInt operation
       message QueryRequiredIntResponse {
-          int32 required_int = 1;
+        int32 required_int = 1;
       }"
     `);
   });
@@ -121,26 +137,33 @@ describe('SDL to Proto - Basic Types', () => {
 
       option go_package = "cosmo/pkg/proto/service.v1;servicev1";
 
+      // Service definition for DefaultService
       service DefaultService {
         rpc QueryIntList(QueryIntListRequest) returns (QueryIntListResponse) {}
         rpc QueryRequiredStrings(QueryRequiredStringsRequest) returns (QueryRequiredStringsResponse) {}
         rpc QueryStringList(QueryStringListRequest) returns (QueryStringListResponse) {}
       }
 
+      // Request message for stringList operation
       message QueryStringListRequest {
       }
+      // Response message for stringList operation
       message QueryStringListResponse {
-          repeated string string_list = 1;
+        repeated string string_list = 1;
       }
+      // Request message for intList operation
       message QueryIntListRequest {
       }
+      // Response message for intList operation
       message QueryIntListResponse {
-          repeated int32 int_list = 1;
+        repeated int32 int_list = 1;
       }
+      // Request message for requiredStrings operation
       message QueryRequiredStringsRequest {
       }
+      // Response message for requiredStrings operation
       message QueryRequiredStringsResponse {
-          repeated string required_strings = 1;
+        repeated string required_strings = 1;
       }"
     `);
   });
@@ -170,14 +193,17 @@ describe('SDL to Proto - Basic Types', () => {
 
       option go_package = "cosmo/pkg/proto/service.v1;servicev1";
 
+      // Service definition for DefaultService
       service DefaultService {
         rpc QueryUser(QueryUserRequest) returns (QueryUserResponse) {}
       }
 
+      // Request message for user operation
       message QueryUserRequest {
       }
+      // Response message for user operation
       message QueryUserResponse {
-          User user = 1;
+        User user = 1;
       }
 
       message User {
@@ -212,24 +238,29 @@ describe('SDL to Proto - Basic Types', () => {
 
       option go_package = "cosmo/pkg/proto/service.v1;servicev1";
 
+      // Service definition for DefaultService
       service DefaultService {
         rpc QueryFilteredUsers(QueryFilteredUsersRequest) returns (QueryFilteredUsersResponse) {}
         rpc QueryUser(QueryUserRequest) returns (QueryUserResponse) {}
       }
 
+      // Request message for user operation
       message QueryUserRequest {
-          string id = 1;
+        string id = 1;
       }
+      // Response message for user operation
       message QueryUserResponse {
-          User user = 1;
+        User user = 1;
       }
+      // Request message for filteredUsers operation
       message QueryFilteredUsersRequest {
-          int32 limit = 1;
-          int32 offset = 2;
-          string name_filter = 3;
+        int32 limit = 1;
+        int32 offset = 2;
+        string name_filter = 3;
       }
+      // Response message for filteredUsers operation
       message QueryFilteredUsersResponse {
-          repeated User filtered_users = 1;
+        repeated User filtered_users = 1;
       }
 
       message User {
@@ -263,14 +294,17 @@ describe('SDL to Proto - Basic Types', () => {
 
       option go_package = "github.com/example/mypackage;mypackage";
 
+      // Service definition for CustomService
       service CustomService {
         rpc QueryHello(QueryHelloRequest) returns (QueryHelloResponse) {}
       }
 
+      // Request message for hello operation
       message QueryHelloRequest {
       }
+      // Response message for hello operation
       message QueryHelloResponse {
-          string hello = 1;
+        string hello = 1;
       }"
     `);
   });
@@ -298,21 +332,26 @@ describe('SDL to Proto - Basic Types', () => {
 
       option go_package = "cosmo/pkg/proto/service.v1;servicev1";
 
+      // Service definition for DefaultService
       service DefaultService {
         rpc MutationField2(MutationField2Request) returns (MutationField2Response) {}
         rpc QueryField1(QueryField1Request) returns (QueryField1Response) {}
       }
 
+      // Request message for field1 operation
       message QueryField1Request {
       }
+      // Response message for field1 operation
       message QueryField1Response {
-          string field_1 = 1;
+        string field_1 = 1;
       }
+      // Request message for field2 operation
       message MutationField2Request {
-          string input = 1;
+        string input = 1;
       }
+      // Response message for field2 operation
       message MutationField2Response {
-          int32 field_2 = 1;
+        int32 field_2 = 1;
       }"
     `);
   });
@@ -355,23 +394,28 @@ describe('SDL to Proto - Basic Types', () => {
 
       option go_package = "cosmo/pkg/proto/service.v1;servicev1";
 
+      // Service definition for DefaultService
       service DefaultService {
         rpc QueryCategoriesByKinds(QueryCategoriesByKindsRequest) returns (QueryCategoriesByKindsResponse) {}
         rpc QueryFilterItems(QueryFilterItemsRequest) returns (QueryFilterItemsResponse) {}
       }
 
+      // Request message for categoriesByKinds operation
       message QueryCategoriesByKindsRequest {
-          repeated CategoryKind kinds = 1;
+        repeated CategoryKind kinds = 1;
       }
+      // Response message for categoriesByKinds operation
       message QueryCategoriesByKindsResponse {
-          repeated Category categories_by_kinds = 1;
+        repeated Category categories_by_kinds = 1;
       }
+      // Request message for filterItems operation
       message QueryFilterItemsRequest {
-          repeated string ids = 1;
-          repeated string tags = 2;
+        repeated string ids = 1;
+        repeated string tags = 2;
       }
+      // Response message for filterItems operation
       message QueryFilterItemsResponse {
-          repeated string filter_items = 1;
+        repeated string filter_items = 1;
       }
 
       message Category {
@@ -421,40 +465,50 @@ describe('SDL to Proto - Basic Types', () => {
 
       option go_package = "cosmo/pkg/proto/service.v1;servicev1";
 
+      // Service definition for DefaultService
       service DefaultService {
         rpc QueryGetMatrix(QueryGetMatrixRequest) returns (QueryGetMatrixResponse) {}
         rpc QueryProcessMatrix(QueryProcessMatrixRequest) returns (QueryProcessMatrixResponse) {}
         rpc QueryTransformData(QueryTransformDataRequest) returns (QueryTransformDataResponse) {}
       }
 
+      // Wrapper message for a list of Float
       message FloatList {
         repeated double result = 1;
       }
 
+      // Wrapper message for a list of Int
       message IntList {
         repeated int32 result = 1;
       }
 
+      // Wrapper message for a list of Point
       message PointList {
         repeated Point result = 1;
       }
 
+      // Request message for getMatrix operation
       message QueryGetMatrixRequest {
       }
+      // Response message for getMatrix operation
       message QueryGetMatrixResponse {
-          Matrix get_matrix = 1;
+        Matrix get_matrix = 1;
       }
+      // Request message for processMatrix operation
       message QueryProcessMatrixRequest {
-          repeated FloatList matrix = 1;
+        repeated FloatList matrix = 1;
       }
+      // Response message for processMatrix operation
       message QueryProcessMatrixResponse {
-          repeated IntList process_matrix = 1;
+        repeated IntList process_matrix = 1;
       }
+      // Request message for transformData operation
       message QueryTransformDataRequest {
-          repeated PointList points = 1;
+        repeated PointList points = 1;
       }
+      // Response message for transformData operation
       message QueryTransformDataResponse {
-          repeated string transform_data = 1;
+        repeated string transform_data = 1;
       }
 
       message Matrix {

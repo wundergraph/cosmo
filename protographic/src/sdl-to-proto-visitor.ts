@@ -66,6 +66,8 @@ export interface GraphQLToProtoTextVisitorOptions {
   packageName?: string;
   goPackage?: string;
   lockData?: ProtoLock;
+  /** Whether to include descriptions/comments from GraphQL schema */
+  includeComments?: boolean;
 }
 
 /**
@@ -78,6 +80,7 @@ export interface GraphQLToProtoTextVisitorOptions {
  * 2. Federation entity types with @key directives
  * 3. Query and Mutation operations as RPC methods
  * 4. Field and argument mappings with proper naming conventions
+ * 5. Comments/descriptions from GraphQL types and fields
  *
  * The visitor uses a queue-based approach to resolve dependencies between
  * types and ensure all referenced types are processed.
@@ -101,6 +104,9 @@ export class GraphQLToProtoTextVisitor {
   /** Current indentation level for formatted output */
   private indent = 0;
 
+  /** Whether to include descriptions/comments from GraphQL schema */
+  private includeComments: boolean;
+
   /** Tracks types that have already been processed to avoid duplication */
   private processedTypes = new Set<string>();
 
@@ -123,11 +129,18 @@ export class GraphQLToProtoTextVisitor {
    * @param options - Configuration options for the visitor
    */
   constructor(schema: GraphQLSchema, options: GraphQLToProtoTextVisitorOptions = {}) {
-    const { serviceName = 'DefaultService', packageName = 'service.v1', goPackage, lockData } = options;
+    const {
+      serviceName = 'DefaultService',
+      packageName = 'service.v1',
+      goPackage,
+      lockData,
+      includeComments = true,
+    } = options;
 
     this.schema = schema;
     this.serviceName = serviceName;
     this.lockManager = new ProtoLockManager(lockData);
+    this.includeComments = includeComments;
 
     // If we have lock data, initialize the field numbers map
     if (lockData) {
@@ -360,6 +373,12 @@ export class GraphQLToProtoTextVisitor {
     // Start with the header
     this.protoText = headerText;
 
+    // Add a service description comment
+    if (this.includeComments) {
+      const serviceComment = `Service definition for ${this.serviceName}`;
+      this.protoText.push(...this.formatComment(serviceComment, 0)); // Top-level comment, no indent
+    }
+
     // First: Create service block containing only RPC methods
     this.protoText.push(`service ${this.serviceName} {`);
     this.indent++;
@@ -371,7 +390,16 @@ export class GraphQLToProtoTextVisitor {
     for (const methodName of orderedMethodNames) {
       const methodIndex = allMethodNames.indexOf(methodName);
       if (methodIndex !== -1) {
-        this.protoText.push(`${this.getIndent()}${allRpcMethods[methodIndex]}`);
+        // Handle multi-line RPC definitions that include comments
+        const rpcMethodText = allRpcMethods[methodIndex];
+        if (rpcMethodText.includes('\n')) {
+          // For multi-line RPC method definitions (with comments), add each line separately
+          const lines = rpcMethodText.split('\n');
+          this.protoText.push(...lines);
+        } else {
+          // For simple one-line RPC method definitions (ensure 2-space indentation)
+          this.protoText.push(`  ${rpcMethodText}`);
+        }
       }
     }
 
@@ -439,13 +467,17 @@ export class GraphQLToProtoTextVisitor {
 
           const keyFields = this.getKeyFieldsFromDirective(keyDirective);
           if (keyFields.length > 0) {
-            const methodName = createEntityLookupMethodName(typeName);
-            const requestName = createEntityLookupRequestName(typeName);
-            const responseName = createEntityLookupResponseName(typeName);
+            const keyField = keyFields[0];
+            const methodName = createEntityLookupMethodName(typeName, keyField);
+            const requestName = createEntityLookupRequestName(typeName, keyField);
+            const responseName = createEntityLookupResponseName(typeName, keyField);
 
-            // Add method name and RPC method
+            // Add method name and RPC method with description from the entity type
             result.methodNames.push(methodName);
-            result.rpcMethods.push(this.createRpcMethod(methodName, requestName, responseName));
+            const description = `Lookup ${typeName} entity by ${keyField}${
+              type.description ? ': ' + type.description : ''
+            }`;
+            result.rpcMethods.push(this.createRpcMethod(methodName, requestName, responseName, description));
 
             // Create request and response messages
             result.messageDefinitions.push(...this.createKeyRequestMessage(typeName, requestName, keyFields[0]));
@@ -504,9 +536,9 @@ export class GraphQLToProtoTextVisitor {
       const requestName = createRequestMessageName(mappedName);
       const responseName = createResponseMessageName(mappedName);
 
-      // Add method name and RPC method
+      // Add method name and RPC method with the field description
       result.methodNames.push(mappedName);
-      result.rpcMethods.push(this.createRpcMethod(mappedName, requestName, responseName));
+      result.rpcMethods.push(this.createRpcMethod(mappedName, requestName, responseName, field.description));
 
       // Create request and response messages
       result.messageDefinitions.push(...this.createFieldRequestMessage(requestName, field));
@@ -539,10 +571,29 @@ export class GraphQLToProtoTextVisitor {
   }
 
   /**
-   * Create an RPC method definition
+   * Create an RPC method definition with optional comment
+   *
+   * @param methodName - The name of the RPC method
+   * @param requestName - The request message name
+   * @param responseName - The response message name
+   * @param description - Optional description for the method
+   * @returns The RPC method definition with or without comment
    */
-  private createRpcMethod(methodName: string, requestName: string, responseName: string): string {
-    return `rpc ${methodName}(${requestName}) returns (${responseName}) {}`;
+  private createRpcMethod(
+    methodName: string,
+    requestName: string,
+    responseName: string,
+    description?: string | null,
+  ): string {
+    if (!this.includeComments || !description) {
+      return `rpc ${methodName}(${requestName}) returns (${responseName}) {}`;
+    }
+
+    // RPC method comments should be indented 1 level (2 spaces)
+    const commentLines = this.formatComment(description, 1);
+    const methodLine = `  rpc ${methodName}(${requestName}) returns (${responseName}) {}`;
+
+    return [...commentLines, methodLine].join('\n');
   }
 
   /**
@@ -554,12 +605,16 @@ export class GraphQLToProtoTextVisitor {
     const lockData = this.lockManager.getLockData();
 
     // First create the key message
+    if (this.includeComments) {
+      const keyMessageComment = `Key message for ${typeName} entity lookup`;
+      messageLines.push(...this.formatComment(keyMessageComment, 0)); // Top-level comment, no indent
+    }
     messageLines.push(`message ${keyMessageName} {`);
 
     // Add reserved field numbers if any exist for the key message
     const keyMessageLock = lockData.messages[keyMessageName];
     if (keyMessageLock?.reservedNumbers && keyMessageLock.reservedNumbers.length > 0) {
-      messageLines.push(`    reserved ${this.formatReservedNumbers(keyMessageLock.reservedNumbers)};`);
+      messageLines.push(`  reserved ${this.formatReservedNumbers(keyMessageLock.reservedNumbers)};`);
     }
 
     // Check for field removals in the key message
@@ -574,7 +629,11 @@ export class GraphQLToProtoTextVisitor {
     // Get the appropriate field number for the key field
     const keyFieldNumber = this.getFieldNumber(keyMessageName, protoKeyField, 1);
 
-    messageLines.push(`    string ${protoKeyField} = ${keyFieldNumber};`);
+    if (this.includeComments) {
+      const keyFieldComment = `Key field for ${typeName} entity lookup`;
+      messageLines.push(...this.formatComment(keyFieldComment, 1)); // Field comment, indent 1 level
+    }
+    messageLines.push(`  string ${protoKeyField} = ${keyFieldNumber};`);
     messageLines.push('}');
     messageLines.push('');
 
@@ -589,18 +648,26 @@ export class GraphQLToProtoTextVisitor {
       this.trackRemovedFields(requestName, originalFieldNames, currentFieldNames);
     }
 
+    if (this.includeComments) {
+      const requestComment = `Request message for ${typeName} entity lookup`;
+      messageLines.push(...this.formatComment(requestComment, 0)); // Top-level comment, no indent
+    }
     messageLines.push(`message ${requestName} {`);
 
     // Add reserved field numbers if any exist for the request message
     const messageLock = lockData.messages[requestName];
     if (messageLock?.reservedNumbers && messageLock.reservedNumbers.length > 0) {
-      messageLines.push(`    reserved ${this.formatReservedNumbers(messageLock.reservedNumbers)};`);
+      messageLines.push(`  reserved ${this.formatReservedNumbers(messageLock.reservedNumbers)};`);
     }
 
     // Get the appropriate field number for the repeated key field
     const repeatFieldNumber = this.getFieldNumber(requestName, 'keys', 1);
 
-    messageLines.push(`    repeated ${keyMessageName} keys = ${repeatFieldNumber};`);
+    if (this.includeComments) {
+      const keysComment = `List of keys to look up ${typeName} entities`;
+      messageLines.push(...this.formatComment(keysComment, 1)); // Field comment, indent 1 level
+    }
+    messageLines.push(`  repeated ${keyMessageName} keys = ${repeatFieldNumber};`);
     messageLines.push('}');
     messageLines.push('');
 
@@ -625,18 +692,26 @@ export class GraphQLToProtoTextVisitor {
     }
 
     // Create the response message with repeated entity directly
+    if (this.includeComments) {
+      const responseComment = `Response message for ${typeName} entity lookup`;
+      messageLines.push(...this.formatComment(responseComment, 0)); // Top-level comment, no indent
+    }
     messageLines.push(`message ${responseName} {`);
 
     // Add reserved field numbers for response message if any exist
     const responseMessageLock = lockData.messages[responseName];
     if (responseMessageLock?.reservedNumbers && responseMessageLock.reservedNumbers.length > 0) {
-      messageLines.push(`    reserved ${this.formatReservedNumbers(responseMessageLock.reservedNumbers)};`);
+      messageLines.push(`  reserved ${this.formatReservedNumbers(responseMessageLock.reservedNumbers)};`);
     }
 
     // Get the appropriate field number from the lock
     const responseFieldNumber = this.getFieldNumber(responseName, 'result', 1);
 
-    messageLines.push(`    repeated ${typeName} result = ${responseFieldNumber};`);
+    if (this.includeComments) {
+      const resultComment = `List of ${typeName} entities matching the requested keys`;
+      messageLines.push(...this.formatComment(resultComment, 1)); // Field comment, indent 1 level
+    }
+    messageLines.push(`  repeated ${typeName} result = ${responseFieldNumber};`);
     messageLines.push('}');
     messageLines.push('');
 
@@ -661,12 +736,20 @@ export class GraphQLToProtoTextVisitor {
       this.trackRemovedFields(requestName, originalFieldNames, argNames);
     }
 
+    // Add a description comment for the request message
+    if (this.includeComments) {
+      const description = field.description
+        ? `Request message for ${field.name} operation${field.description ? ': ' + field.description : ''}`
+        : `Request message for ${field.name} operation`;
+      messageLines.push(...this.formatComment(description, 0)); // Top-level comment, no indent
+    }
+
     messageLines.push(`message ${requestName} {`);
 
     // Add reserved field numbers if any exist
     const messageLock = lockData.messages[requestName];
     if (messageLock?.reservedNumbers && messageLock.reservedNumbers.length > 0) {
-      messageLines.push(`    reserved ${this.formatReservedNumbers(messageLock.reservedNumbers)};`);
+      messageLines.push(`  reserved ${this.formatReservedNumbers(messageLock.reservedNumbers)};`);
     }
 
     if (field.args.length > 0) {
@@ -689,12 +772,18 @@ export class GraphQLToProtoTextVisitor {
         // Get the field number from the messages structure using the original field name
         const fieldNumber = lockData.messages[operationName]?.fields[argName];
 
+        // Add argument description as comment
+        if (arg.description) {
+          // Use 1 level indent for field comments
+          messageLines.push(...this.formatComment(arg.description, 1));
+        }
+
         // Check if the argument is a list type and add the repeated keyword if needed
         const isRepeated = isListType(arg.type) || (isNonNullType(arg.type) && isListType(arg.type.ofType));
         if (isRepeated) {
-          messageLines.push(`    repeated ${argType} ${argProtoName} = ${fieldNumber};`);
+          messageLines.push(`  repeated ${argType} ${argProtoName} = ${fieldNumber};`);
         } else {
-          messageLines.push(`    ${argType} ${argProtoName} = ${fieldNumber};`);
+          messageLines.push(`  ${argType} ${argProtoName} = ${fieldNumber};`);
         }
 
         // Add complex input types to the queue for processing
@@ -731,12 +820,20 @@ export class GraphQLToProtoTextVisitor {
       this.trackRemovedFields(responseName, originalFieldNames, [protoFieldName]);
     }
 
+    // Add a description comment for the response message
+    if (this.includeComments) {
+      const description = field.description
+        ? `Response message for ${fieldName} operation${field.description ? ': ' + field.description : ''}`
+        : `Response message for ${fieldName} operation`;
+      messageLines.push(...this.formatComment(description, 0)); // Top-level comment, no indent
+    }
+
     messageLines.push(`message ${responseName} {`);
 
     // Add reserved field numbers if any exist
     const messageLock = lockData.messages[responseName];
     if (messageLock?.reservedNumbers && messageLock.reservedNumbers.length > 0) {
-      messageLines.push(`    reserved ${this.formatReservedNumbers(messageLock.reservedNumbers)};`);
+      messageLines.push(`  reserved ${this.formatReservedNumbers(messageLock.reservedNumbers)};`);
     }
 
     const returnType = this.getProtoTypeFromGraphQL(field.type);
@@ -745,10 +842,16 @@ export class GraphQLToProtoTextVisitor {
     // Get the appropriate field number, respecting the lock
     const fieldNumber = this.getFieldNumber(responseName, protoFieldName, 1);
 
+    // Add description for the response field based on field description
+    if (field.description) {
+      // Use 1 level indent for field comments
+      messageLines.push(...this.formatComment(field.description, 1));
+    }
+
     if (isRepeated) {
-      messageLines.push(`    repeated ${returnType} ${protoFieldName} = ${fieldNumber};`);
+      messageLines.push(`  repeated ${returnType} ${protoFieldName} = ${fieldNumber};`);
     } else {
-      messageLines.push(`    ${returnType} ${protoFieldName} = ${fieldNumber};`);
+      messageLines.push(`  ${returnType} ${protoFieldName} = ${fieldNumber};`);
     }
 
     messageLines.push('}');
@@ -873,13 +976,19 @@ export class GraphQLToProtoTextVisitor {
     }
 
     this.protoText.push('');
+
+    // Add type description as comment before message definition
+    if (type.description) {
+      this.protoText.push(...this.formatComment(type.description, 0)); // Top-level comment, no indent
+    }
+
     this.protoText.push(`message ${type.name} {`);
     this.indent++;
 
     // Add reserved field numbers if any exist
     const messageLock = lockData.messages[type.name];
     if (messageLock?.reservedNumbers && messageLock.reservedNumbers.length > 0) {
-      this.protoText.push(`${this.getIndent()}reserved ${this.formatReservedNumbers(messageLock.reservedNumbers)};`);
+      this.protoText.push(`  reserved ${this.formatReservedNumbers(messageLock.reservedNumbers)};`);
     }
 
     const fields = type.getFields();
@@ -899,10 +1008,15 @@ export class GraphQLToProtoTextVisitor {
       // Get the appropriate field number, respecting the lock
       const fieldNumber = this.getFieldNumber(type.name, protoFieldName, this.getNextAvailableFieldNumber(type.name));
 
+      // Add field description as comment
+      if (field.description) {
+        this.protoText.push(...this.formatComment(field.description, 1)); // Field comment, indent 1 level
+      }
+
       if (isRepeated) {
-        this.protoText.push(`${this.getIndent()}repeated ${fieldType} ${protoFieldName} = ${fieldNumber};`);
+        this.protoText.push(`  repeated ${fieldType} ${protoFieldName} = ${fieldNumber};`);
       } else {
-        this.protoText.push(`${this.getIndent()}${fieldType} ${protoFieldName} = ${fieldNumber};`);
+        this.protoText.push(`  ${fieldType} ${protoFieldName} = ${fieldNumber};`);
       }
 
       // Queue complex field types for processing
@@ -934,13 +1048,19 @@ export class GraphQLToProtoTextVisitor {
     }
 
     this.protoText.push('');
+
+    // Add type description as comment before message definition
+    if (type.description) {
+      this.protoText.push(...this.formatComment(type.description, 0)); // Top-level comment, no indent
+    }
+
     this.protoText.push(`message ${type.name} {`);
     this.indent++;
 
     // Add reserved field numbers if any exist
     const messageLock = lockData.messages[type.name];
     if (messageLock?.reservedNumbers && messageLock.reservedNumbers.length > 0) {
-      this.protoText.push(`${this.getIndent()}reserved ${this.formatReservedNumbers(messageLock.reservedNumbers)};`);
+      this.protoText.push(`  reserved ${this.formatReservedNumbers(messageLock.reservedNumbers)};`);
     }
 
     const fields = type.getFields();
@@ -960,10 +1080,15 @@ export class GraphQLToProtoTextVisitor {
       // Get the appropriate field number, respecting the lock
       const fieldNumber = this.getFieldNumber(type.name, protoFieldName, this.getNextAvailableFieldNumber(type.name));
 
+      // Add field description as comment
+      if (field.description) {
+        this.protoText.push(...this.formatComment(field.description, 1)); // Field comment, indent 1 level
+      }
+
       if (isRepeated) {
-        this.protoText.push(`${this.getIndent()}repeated ${fieldType} ${protoFieldName} = ${fieldNumber};`);
+        this.protoText.push(`  repeated ${fieldType} ${protoFieldName} = ${fieldNumber};`);
       } else {
-        this.protoText.push(`${this.getIndent()}${fieldType} ${protoFieldName} = ${fieldNumber};`);
+        this.protoText.push(`  ${fieldType} ${protoFieldName} = ${fieldNumber};`);
       }
 
       // Queue complex field types for processing
@@ -1001,11 +1126,17 @@ export class GraphQLToProtoTextVisitor {
     }
 
     this.protoText.push('');
+
+    // Add interface description as comment
+    if (type.description) {
+      this.protoText.push(...this.formatComment(type.description, 0)); // Top-level comment, no indent
+    }
+
     this.protoText.push(`message ${type.name} {`);
     this.indent++;
 
     // Create a oneof field with all implementing types
-    this.protoText.push(`${this.getIndent()}oneof instance {`);
+    this.protoText.push(`  oneof instance {`);
     this.indent++;
 
     // Use lock manager to order implementing types
@@ -1017,7 +1148,12 @@ export class GraphQLToProtoTextVisitor {
       const implType = implementingTypes.find((t) => t.name === typeName);
       if (!implType) continue;
 
-      this.protoText.push(`${this.getIndent()}${implType.name} ${graphqlFieldToProtoField(implType.name)} = ${i + 1};`);
+      // Add implementing type description as comment if available
+      if (implType.description) {
+        this.protoText.push(...this.formatComment(implType.description, 1)); // Field comment, indent 1 level
+      }
+
+      this.protoText.push(`  ${implType.name} ${graphqlFieldToProtoField(implType.name)} = ${i + 1};`);
 
       // Queue implementing types for processing
       if (!this.processedTypes.has(implType.name)) {
@@ -1026,7 +1162,7 @@ export class GraphQLToProtoTextVisitor {
     }
 
     this.indent--;
-    this.protoText.push(`${this.getIndent()}}`);
+    this.protoText.push(`  }`);
 
     this.indent--;
     this.protoText.push('}');
@@ -1048,11 +1184,17 @@ export class GraphQLToProtoTextVisitor {
     }
 
     this.protoText.push('');
+
+    // Add union description as comment
+    if (type.description) {
+      this.protoText.push(...this.formatComment(type.description, 0)); // Top-level comment, no indent
+    }
+
     this.protoText.push(`message ${type.name} {`);
     this.indent++;
 
     // Create a oneof field with all member types
-    this.protoText.push(`${this.getIndent()}oneof value {`);
+    this.protoText.push(`  oneof value {`);
     this.indent++;
 
     // Use lock manager to order union member types
@@ -1065,9 +1207,12 @@ export class GraphQLToProtoTextVisitor {
       const memberType = types.find((t) => t.name === typeName);
       if (!memberType) continue;
 
-      this.protoText.push(
-        `${this.getIndent()}${memberType.name} ${graphqlFieldToProtoField(memberType.name)} = ${i + 1};`,
-      );
+      // Add member type description as comment if available
+      if (memberType.description) {
+        this.protoText.push(...this.formatComment(memberType.description, 1)); // Field comment, indent 1 level
+      }
+
+      this.protoText.push(`  ${memberType.name} ${graphqlFieldToProtoField(memberType.name)} = ${i + 1};`);
 
       // Queue member types for processing
       if (!this.processedTypes.has(memberType.name)) {
@@ -1076,7 +1221,7 @@ export class GraphQLToProtoTextVisitor {
     }
 
     this.indent--;
-    this.protoText.push(`${this.getIndent()}}`);
+    this.protoText.push(`  }`);
 
     this.indent--;
     this.protoText.push('}');
@@ -1100,18 +1245,24 @@ export class GraphQLToProtoTextVisitor {
     }
 
     this.protoText.push('');
+
+    // Add enum description as comment
+    if (type.description) {
+      this.protoText.push(...this.formatComment(type.description, 0)); // Top-level comment, no indent
+    }
+
     this.protoText.push(`enum ${type.name} {`);
     this.indent++;
 
     // Add reserved enum values first if any exist
     const enumLock = lockData.enums[type.name];
     if (enumLock?.reservedNumbers && enumLock.reservedNumbers.length > 0) {
-      this.protoText.push(`${this.getIndent()}reserved ${this.formatReservedNumbers(enumLock.reservedNumbers)};`);
+      this.protoText.push(`  reserved ${this.formatReservedNumbers(enumLock.reservedNumbers)};`);
     }
 
     // Add unspecified value as first enum value (required in proto3)
     const unspecifiedValue = createEnumUnspecifiedValue(type.name);
-    this.protoText.push(`${this.getIndent()}${unspecifiedValue} = 0;`);
+    this.protoText.push(`  ${unspecifiedValue} = 0;`);
 
     // Use lock manager to order enum values
     const values = type.getValues();
@@ -1123,6 +1274,11 @@ export class GraphQLToProtoTextVisitor {
       if (!value) continue;
 
       const protoEnumValue = graphqlEnumValueToProtoEnumValue(type.name, value.name);
+
+      // Add enum value description as comment
+      if (value.description) {
+        this.protoText.push(...this.formatComment(value.description, 1)); // Field comment, indent 1 level
+      }
 
       // Get value number from lock data
       const lockData = this.lockManager.getLockData();
@@ -1136,7 +1292,7 @@ export class GraphQLToProtoTextVisitor {
         continue;
       }
 
-      this.protoText.push(`${this.getIndent()}${protoEnumValue} = ${valueNumber};`);
+      this.protoText.push(`  ${protoEnumValue} = ${valueNumber};`);
     }
 
     this.indent--;
@@ -1223,6 +1379,12 @@ export class GraphQLToProtoTextVisitor {
 
     // Create a temporary array for the wrapper definition
     const messageLines: string[] = [];
+
+    // Add a description comment for the wrapper message
+    if (this.includeComments) {
+      const wrapperComment = `Wrapper message for a list of ${baseType.name}`;
+      messageLines.push(...this.formatComment(wrapperComment, 0)); // Top-level comment, no indent
+    }
 
     messageLines.push(`message ${wrapperName} {`);
 
@@ -1319,5 +1481,27 @@ export class GraphQLToProtoTextVisitor {
         }
       })
       .join(', ');
+  }
+
+  /**
+   * Convert a GraphQL description to Protocol Buffer comment
+   * @param description - The GraphQL description text
+   * @param indentLevel - The level of indentation for the comment (in number of 2-space blocks)
+   * @returns Array of comment lines with proper indentation
+   */
+  private formatComment(description: string | undefined | null, indentLevel: number = 0): string[] {
+    if (!this.includeComments || !description) {
+      return [];
+    }
+
+    // Use 2-space indentation consistently
+    const indent = '  '.repeat(indentLevel);
+    const lines = description.trim().split('\n');
+
+    if (lines.length === 1) {
+      return [`${indent}// ${lines[0]}`];
+    } else {
+      return [`${indent}/*`, ...lines.map((line) => `${indent} * ${line}`), `${indent} */`];
+    }
   }
 }

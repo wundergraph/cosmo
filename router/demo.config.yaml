@@ -5,15 +5,6 @@
 
 version: "1"
 
-execution_config:
-  file:
-    path: ./__schemas/config.json
-
-# Run compose.sh inside __schemas
-plugins:
-  enabled: true
-  path: "plugins"
-
 events:
   providers:
     nats:

@@ -152,9 +152,9 @@ export class GraphQLToProtoVisitor {
       typeName,
       kind: 'entity',
       key: keyField,
-      rpc: createEntityLookupMethodName(typeName),
-      request: createEntityLookupRequestName(typeName),
-      response: createEntityLookupResponseName(typeName),
+      rpc: createEntityLookupMethodName(typeName, keyField),
+      request: createEntityLookupRequestName(typeName, keyField),
+      response: createEntityLookupResponseName(typeName, keyField),
     });
 
     this.mapping.entityMappings.push(entityMapping);

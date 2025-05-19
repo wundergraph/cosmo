@@ -33,15 +33,18 @@ describe('SDL to Proto - Complex Types', () => {
 
       option go_package = "cosmo/pkg/proto/service.v1;servicev1";
 
+      // Service definition for DefaultService
       service DefaultService {
         rpc QueryUsersByRole(QueryUsersByRoleRequest) returns (QueryUsersByRoleResponse) {}
       }
 
+      // Request message for usersByRole operation
       message QueryUsersByRoleRequest {
-          UserRole role = 1;
+        UserRole role = 1;
       }
+      // Response message for usersByRole operation
       message QueryUsersByRoleResponse {
-          repeated User users_by_role = 1;
+        repeated User users_by_role = 1;
       }
 
       message User {
@@ -94,21 +97,26 @@ describe('SDL to Proto - Complex Types', () => {
 
       option go_package = "cosmo/pkg/proto/service.v1;servicev1";
 
+      // Service definition for DefaultService
       service DefaultService {
         rpc MutationCreateUser(MutationCreateUserRequest) returns (MutationCreateUserResponse) {}
         rpc QueryDummy(QueryDummyRequest) returns (QueryDummyResponse) {}
       }
 
+      // Request message for dummy operation
       message QueryDummyRequest {
       }
+      // Response message for dummy operation
       message QueryDummyResponse {
-          string dummy = 1;
+        string dummy = 1;
       }
+      // Request message for createUser operation
       message MutationCreateUserRequest {
-          UserInput input = 1;
+        UserInput input = 1;
       }
+      // Response message for createUser operation
       message MutationCreateUserResponse {
-          User create_user = 1;
+        User create_user = 1;
       }
 
       message UserInput {
@@ -159,15 +167,18 @@ describe('SDL to Proto - Complex Types', () => {
 
       option go_package = "cosmo/pkg/proto/service.v1;servicev1";
 
+      // Service definition for DefaultService
       service DefaultService {
         rpc QueryUser(QueryUserRequest) returns (QueryUserResponse) {}
       }
 
+      // Request message for user operation
       message QueryUserRequest {
-          string id = 1;
+        string id = 1;
       }
+      // Response message for user operation
       message QueryUserResponse {
-          User user = 1;
+        User user = 1;
       }
 
       message User {
@@ -213,21 +224,26 @@ describe('SDL to Proto - Complex Types', () => {
 
       option go_package = "cosmo/pkg/proto/service.v1;servicev1";
 
+      // Service definition for DefaultService
       service DefaultService {
         rpc QueryNode(QueryNodeRequest) returns (QueryNodeResponse) {}
         rpc QueryRootNode(QueryRootNodeRequest) returns (QueryRootNodeResponse) {}
       }
 
+      // Request message for rootNode operation
       message QueryRootNodeRequest {
       }
+      // Response message for rootNode operation
       message QueryRootNodeResponse {
-          TreeNode root_node = 1;
+        TreeNode root_node = 1;
       }
+      // Request message for node operation
       message QueryNodeRequest {
-          string id = 1;
+        string id = 1;
       }
+      // Response message for node operation
       message QueryNodeResponse {
-          TreeNode node = 1;
+        TreeNode node = 1;
       }
 
       message TreeNode {
@@ -278,15 +294,18 @@ describe('SDL to Proto - Complex Types', () => {
 
       option go_package = "cosmo/pkg/proto/service.v1;servicev1";
 
+      // Service definition for DefaultService
       service DefaultService {
         rpc QueryUsers(QueryUsersRequest) returns (QueryUsersResponse) {}
       }
 
+      // Request message for users operation
       message QueryUsersRequest {
-          UserFilterInput filter = 1;
+        UserFilterInput filter = 1;
       }
+      // Response message for users operation
       message QueryUsersResponse {
-          repeated User users = 1;
+        repeated User users = 1;
       }
 
       message UserFilterInput {

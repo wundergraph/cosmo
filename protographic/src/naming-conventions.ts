@@ -50,29 +50,22 @@ export function createResponseMessageName(methodName: string): string {
 /**
  * Creates an entity lookup method name for an entity type
  */
-export function createEntityLookupMethodName(typeName: string): string {
-  return `Lookup${typeName}ById`;
+export function createEntityLookupMethodName(typeName: string, keyField: string = 'id'): string {
+  return `Lookup${typeName}By${upperFirst(camelCase(keyField))}`;
 }
 
 /**
  * Creates a request message name for an entity lookup
  */
-export function createEntityLookupRequestName(typeName: string): string {
-  return `Lookup${typeName}ByIdRequest`;
+export function createEntityLookupRequestName(typeName: string, keyField: string = 'id'): string {
+  return `Lookup${typeName}By${upperFirst(camelCase(keyField))}Request`;
 }
 
 /**
  * Creates a response message name for an entity lookup
  */
-export function createEntityLookupResponseName(typeName: string): string {
-  return `Lookup${typeName}ByIdResponse`;
-}
-
-/**
- * Creates a result message name for an entity lookup
- */
-export function createEntityLookupResultName(typeName: string): string {
-  return `Lookup${typeName}ByIdResult`;
+export function createEntityLookupResponseName(typeName: string, keyField: string = 'id'): string {
+  return `Lookup${typeName}By${upperFirst(camelCase(keyField))}Response`;
 }
 
 /**

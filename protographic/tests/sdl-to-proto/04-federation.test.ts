@@ -40,41 +40,58 @@ describe('SDL to Proto - Federation and Special Types', () => {
 
       option go_package = "cosmo/pkg/proto/service.v1;servicev1";
 
+      // Service definition for DefaultService
       service DefaultService {
+        // Lookup Product entity by id
         rpc LookupProductById(LookupProductByIdRequest) returns (LookupProductByIdResponse) {}
+        // Lookup User entity by id
         rpc LookupUserById(LookupUserByIdRequest) returns (LookupUserByIdResponse) {}
         rpc QueryProduct(QueryProductRequest) returns (QueryProductResponse) {}
       }
 
+      // Key message for Product entity lookup
       message LookupProductByIdRequestKey {
-          string id = 1;
+        // Key field for Product entity lookup
+        string id = 1;
       }
 
+      // Request message for Product entity lookup
       message LookupProductByIdRequest {
-          repeated LookupProductByIdRequestKey keys = 1;
+        // List of keys to look up Product entities
+        repeated LookupProductByIdRequestKey keys = 1;
       }
 
+      // Response message for Product entity lookup
       message LookupProductByIdResponse {
-          repeated Product result = 1;
+        // List of Product entities matching the requested keys
+        repeated Product result = 1;
       }
 
+      // Key message for User entity lookup
       message LookupUserByIdRequestKey {
-          string id = 1;
+        // Key field for User entity lookup
+        string id = 1;
       }
 
+      // Request message for User entity lookup
       message LookupUserByIdRequest {
-          repeated LookupUserByIdRequestKey keys = 1;
+        // List of keys to look up User entities
+        repeated LookupUserByIdRequestKey keys = 1;
       }
 
+      // Response message for User entity lookup
       message LookupUserByIdResponse {
-          repeated User result = 1;
+        // List of User entities matching the requested keys
+        repeated User result = 1;
       }
 
+      // Request message for product operation
       message QueryProductRequest {
-          string id = 1;
+        string id = 1;
       }
+      // Response message for product operation
       message QueryProductResponse {
-          Product product = 1;
+        Product product = 1;
       }
 
       message Product {
@@ -119,29 +136,39 @@ describe('SDL to Proto - Federation and Special Types', () => {
 
       option go_package = "cosmo/pkg/proto/service.v1;servicev1";
 
+      // Service definition for DefaultService
       service DefaultService {
-        rpc LookupOrderItemById(LookupOrderItemByIdRequest) returns (LookupOrderItemByIdResponse) {}
+        // Lookup OrderItem entity by orderId
+        rpc LookupOrderItemByOrderId(LookupOrderItemByOrderIdRequest) returns (LookupOrderItemByOrderIdResponse) {}
         rpc QueryOrderItem(QueryOrderItemRequest) returns (QueryOrderItemResponse) {}
       }
 
-      message LookupOrderItemByIdRequestKey {
-          string order_id = 1;
+      // Key message for OrderItem entity lookup
+      message LookupOrderItemByOrderIdRequestKey {
+        // Key field for OrderItem entity lookup
+        string order_id = 1;
       }
 
-      message LookupOrderItemByIdRequest {
-          repeated LookupOrderItemByIdRequestKey keys = 1;
+      // Request message for OrderItem entity lookup
+      message LookupOrderItemByOrderIdRequest {
+        // List of keys to look up OrderItem entities
+        repeated LookupOrderItemByOrderIdRequestKey keys = 1;
       }
 
-      message LookupOrderItemByIdResponse {
-          repeated OrderItem result = 1;
+      // Response message for OrderItem entity lookup
+      message LookupOrderItemByOrderIdResponse {
+        // List of OrderItem entities matching the requested keys
+        repeated OrderItem result = 1;
       }
 
+      // Request message for orderItem operation
       message QueryOrderItemRequest {
-          string order_id = 1;
-          string item_id = 2;
+        string order_id = 1;
+        string item_id = 2;
       }
+      // Response message for orderItem operation
       message QueryOrderItemResponse {
-          OrderItem order_item = 1;
+        OrderItem order_item = 1;
       }
 
       message OrderItem {
@@ -193,41 +220,58 @@ describe('SDL to Proto - Federation and Special Types', () => {
 
       option go_package = "cosmo/pkg/proto/service.v1;servicev1";
 
+      // Service definition for DefaultService
       service DefaultService {
+        // Lookup Product entity by id
         rpc LookupProductById(LookupProductByIdRequest) returns (LookupProductByIdResponse) {}
+        // Lookup User entity by id
         rpc LookupUserById(LookupUserByIdRequest) returns (LookupUserByIdResponse) {}
         rpc QueryNode(QueryNodeRequest) returns (QueryNodeResponse) {}
       }
 
+      // Key message for User entity lookup
       message LookupUserByIdRequestKey {
-          string id = 1;
+        // Key field for User entity lookup
+        string id = 1;
       }
 
+      // Request message for User entity lookup
       message LookupUserByIdRequest {
-          repeated LookupUserByIdRequestKey keys = 1;
+        // List of keys to look up User entities
+        repeated LookupUserByIdRequestKey keys = 1;
       }
 
+      // Response message for User entity lookup
       message LookupUserByIdResponse {
-          repeated User result = 1;
+        // List of User entities matching the requested keys
+        repeated User result = 1;
       }
 
+      // Key message for Product entity lookup
       message LookupProductByIdRequestKey {
-          string id = 1;
+        // Key field for Product entity lookup
+        string id = 1;
       }
 
+      // Request message for Product entity lookup
       message LookupProductByIdRequest {
-          repeated LookupProductByIdRequestKey keys = 1;
+        // List of keys to look up Product entities
+        repeated LookupProductByIdRequestKey keys = 1;
       }
 
+      // Response message for Product entity lookup
       message LookupProductByIdResponse {
-          repeated Product result = 1;
+        // List of Product entities matching the requested keys
+        repeated Product result = 1;
       }
 
+      // Request message for node operation
       message QueryNodeRequest {
-          string id = 1;
+        string id = 1;
       }
+      // Response message for node operation
       message QueryNodeResponse {
-          Node node = 1;
+        Node node = 1;
       }
 
       message User {
@@ -243,8 +287,8 @@ describe('SDL to Proto - Federation and Special Types', () => {
 
       message Node {
         oneof instance {
-          User user = 1;
-          Product product = 2;
+        User user = 1;
+        Product product = 2;
         }
       }"
     `);
@@ -283,21 +327,26 @@ describe('SDL to Proto - Federation and Special Types', () => {
 
       option go_package = "cosmo/pkg/proto/service.v1;servicev1";
 
+      // Service definition for DefaultService
       service DefaultService {
         rpc QueryEvent(QueryEventRequest) returns (QueryEventResponse) {}
         rpc QueryEvents(QueryEventsRequest) returns (QueryEventsResponse) {}
       }
 
+      // Request message for events operation
       message QueryEventsRequest {
       }
+      // Response message for events operation
       message QueryEventsResponse {
-          repeated Event events = 1;
+        repeated Event events = 1;
       }
+      // Request message for event operation
       message QueryEventRequest {
-          string id = 1;
+        string id = 1;
       }
+      // Response message for event operation
       message QueryEventResponse {
-          Event event = 1;
+        Event event = 1;
       }
 
       message Event {
