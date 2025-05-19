@@ -29,6 +29,11 @@ export default (opts: BaseCommandOptions) => {
     'Force tools installation regardless of version check or confirmation',
     false,
   );
+  command.option(
+    '--go-module-path <path>',
+    'Go module path to use for the plugin',
+    'github.com/wundergraph/cosmo/plugin',
+  );
 
   command.action(async (directory, options) => {
     const startTime = performance.now();
@@ -47,7 +52,7 @@ export default (opts: BaseCommandOptions) => {
       // Start the main build process
       spinner.start('Building plugin...');
 
-      const goModulePath = 'github.com/wundergraph/cosmo/plugin';
+      const goModulePath = options.goModulePath;
 
       // Generate proto and mapping files
       await generateProtoAndMapping(pluginDir, goModulePath, spinner);
