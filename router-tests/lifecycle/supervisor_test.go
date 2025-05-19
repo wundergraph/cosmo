@@ -6,10 +6,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	integration "github.com/wundergraph/cosmo/router-tests"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
-	"github.com/wundergraph/cosmo/router/core"
-	"github.com/wundergraph/cosmo/router/pkg/config"
 	"go.uber.org/goleak"
 )
 
@@ -19,43 +16,31 @@ func TestRouterSupervisor(t *testing.T) {
 		goleak.IgnoreAnyFunction("net/http.(*conn).serve"),                                   // HTTPTest server I can't close if I want to keep the problematic goroutine open for the test
 	)
 
-	xEnv, err := testenv.CreateTestSupervisorEnv(t, &testenv.Config{
-		NoRetryClient:        true, // No need for this, just complicates the checks
-		NoShutdownTestServer: true, // Shutting down test server will close idle connections
-
-		RouterOptions: []core.Option{
-			core.WithSubgraphTransportOptions(core.NewSubgraphTransportOptions(config.TrafficShapingRules{
-				Subgraphs: map[string]*config.GlobalSubgraphRequestRule{
-					"employees": {
-						MaxIdleConns: integration.ToPtr(10),
-					},
-					"products": {
-						MaxIdleConns: integration.ToPtr(10),
-					},
-					"mood": {
-						MaxIdleConns: integration.ToPtr(10),
-					},
-				},
-			})),
-		},
-	})
+	xEnv, err := testenv.CreateTestSupervisorEnv(t, &testenv.Config{})
 	require.NoError(t, err)
 
+	// Start in untracked goroutine, should get cleaned up automatically
 	go xEnv.RouterSupervisor.Start()
 
+	// Ready 1
 	err = xEnv.WaitForServer(context.Background(), xEnv.RouterURL+"/health/ready", 250, 30)
 	require.NoError(t, err)
 
+	// Reload the router
 	xEnv.RouterSupervisor.Reload()
 
+	// Ready 2
 	err = xEnv.WaitForServer(context.Background(), xEnv.RouterURL+"/health/ready", 250, 30)
 	require.NoError(t, err)
 
+	// Shutdown the router and all the httptest servers
 	xEnv.RouterSupervisor.Stop()
 	xEnv.Shutdown()
 
+	// Let everything settle
 	time.Sleep(1 * time.Second)
 
+	// Should fail, since everything should be off now
 	err = xEnv.WaitForServer(context.Background(), xEnv.RouterURL+"/health/ready", 250, 1)
 	require.Error(t, err)
 }
