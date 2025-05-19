@@ -799,6 +799,10 @@
     "Name": "Client-Name",
     "Version": "Client_Version"
   },
+  "Plugins": {
+    "Enabled": true,
+    "Path": "some/path/to/plugins"
+  },
   "WatchConfig": {
     "Enabled": true,
     "Interval": 10000000000,

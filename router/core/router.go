@@ -248,6 +248,7 @@ type (
 		multipartHeartbeatInterval time.Duration
 		hostName                   string
 		mcp                        config.MCPConfiguration
+		plugins                    config.PluginsConfiguration
 	}
 	// Option defines the method to customize server.
 	Option func(svr *Router)
@@ -2011,6 +2012,12 @@ func WithCacheWarmupConfig(cfg *config.CacheWarmupConfiguration) Option {
 func WithMCP(cfg config.MCPConfiguration) Option {
 	return func(r *Router) {
 		r.mcp = cfg
+	}
+}
+
+func WithPlugins(cfg config.PluginsConfiguration) Option {
+	return func(r *Router) {
+		r.plugins = cfg
 	}
 }
 

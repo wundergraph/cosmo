@@ -10,6 +10,7 @@ import (
 	"slices"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/argument_templates"
+	"google.golang.org/grpc"
 
 	"github.com/buger/jsonparser"
 
@@ -19,6 +20,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
+	grpcdatasource "github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/grpc_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/staticdatasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
@@ -56,6 +58,7 @@ type DefaultFactoryResolver struct {
 
 	httpClient          *http.Client
 	subgraphHTTPClients map[string]*http.Client
+	subgraphGRPCClients map[string]grpc.ClientConnInterface
 
 	factoryLogger abstractlogger.Logger
 }
@@ -66,6 +69,7 @@ func NewDefaultFactoryResolver(
 	subscriptionClientOptions *SubscriptionClientOptions,
 	baseTransport http.RoundTripper,
 	subgraphTransports map[string]http.RoundTripper,
+	subgraphGRPCClients map[string]grpc.ClientConnInterface,
 	log *zap.Logger,
 	enableSingleFlight bool,
 	enableNetPoll bool,
@@ -150,10 +154,15 @@ func NewDefaultFactoryResolver(
 
 		httpClient:          defaultHTTPClient,
 		subgraphHTTPClients: subgraphHTTPClients,
+		subgraphGRPCClients: subgraphGRPCClients,
 	}
 }
 
 func (d *DefaultFactoryResolver) ResolveGraphqlFactory(subgraphName string) (plan.PlannerFactory[graphql_datasource.Configuration], error) {
+	if grpcClient, ok := d.subgraphGRPCClients[subgraphName]; ok {
+		return graphql_datasource.NewFactoryGRPC(d.engineCtx, grpcClient)
+	}
+
 	if subgraphClient, ok := d.subgraphHTTPClients[subgraphName]; ok {
 		return graphql_datasource.NewFactory(d.engineCtx, subgraphClient, d.subscriptionClient)
 	}
@@ -380,6 +389,14 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 				return nil, fmt.Errorf("error creating schema configuration for data source %s: %w", in.Id, err)
 			}
 
+			grpcConfig := toGRPCConfiguration(in.CustomGraphql.Grpc)
+			if grpcConfig != nil {
+				grpcConfig.Compiler, err = grpcdatasource.NewProtoCompiler(in.CustomGraphql.Grpc.ProtoSchema, grpcConfig.Mapping)
+				if err != nil {
+					return nil, fmt.Errorf("error creating proto compiler for data source %s: %w", in.Id, err)
+				}
+			}
+
 			customConfiguration, err := graphql_datasource.NewConfiguration(graphql_datasource.ConfigurationInput{
 				Fetch: &graphql_datasource.FetchConfiguration{
 					URL:    fetchUrl,
@@ -396,6 +413,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 				},
 				SchemaConfiguration:    schemaConfiguration,
 				CustomScalarTypeFields: customScalarTypeFields,
+				GRPC:                   grpcConfig,
 			})
 			if err != nil {
 				return nil, fmt.Errorf("error creating custom configuration for data source %s: %w", in.Id, err)
@@ -615,4 +633,80 @@ func (l *Loader) fieldHasAuthorizationRule(fieldConfiguration *nodev1.FieldConfi
 		return true
 	}
 	return false
+}
+
+func toGRPCConfiguration(config *nodev1.GRPCConfiguration) *grpcdatasource.GRPCConfiguration {
+	if config == nil || config.Mapping == nil {
+		return nil
+	}
+
+	in := config.Mapping
+
+	result := &grpcdatasource.GRPCMapping{
+		Service:          in.Service,
+		QueryRPCs:        make(grpcdatasource.RPCConfigMap),
+		MutationRPCs:     make(grpcdatasource.RPCConfigMap),
+		SubscriptionRPCs: make(grpcdatasource.RPCConfigMap),
+		EntityRPCs:       make(map[string]grpcdatasource.EntityRPCConfig),
+		Fields:           make(map[string]grpcdatasource.FieldMap),
+		EnumValues:       make(map[string][]grpcdatasource.EnumValueMapping),
+	}
+
+	for _, operation := range in.OperationMappings {
+		rpcConfig := grpcdatasource.RPCConfig{
+			RPC:      operation.Mapped,
+			Request:  operation.Request,
+			Response: operation.Response,
+		}
+		switch operation.Type {
+		case nodev1.OperationType_OPERATION_TYPE_QUERY:
+			result.QueryRPCs[operation.Original] = rpcConfig
+		case nodev1.OperationType_OPERATION_TYPE_MUTATION:
+			result.MutationRPCs[operation.Original] = rpcConfig
+		case nodev1.OperationType_OPERATION_TYPE_SUBSCRIPTION:
+			result.SubscriptionRPCs[operation.Original] = rpcConfig
+		}
+	}
+
+	for _, entity := range in.EntityMappings {
+		result.EntityRPCs[entity.Key] = grpcdatasource.EntityRPCConfig{
+			Key: entity.Key,
+			RPCConfig: grpcdatasource.RPCConfig{
+				RPC:      entity.Rpc,
+				Request:  entity.Request,
+				Response: entity.Response,
+			},
+		}
+	}
+
+	for _, field := range in.TypeFieldMappings {
+		fieldMap := grpcdatasource.FieldMap{}
+
+		for _, fieldMapping := range field.FieldMappings {
+			fieldMap[fieldMapping.Original] = grpcdatasource.FieldMapData{
+				TargetName:       fieldMapping.Mapped,
+				ArgumentMappings: grpcdatasource.FieldArgumentMap{},
+			}
+
+			for _, argumentMapping := range fieldMapping.ArgumentMappings {
+				fieldMap[fieldMapping.Original].ArgumentMappings[argumentMapping.Original] = argumentMapping.Mapped
+			}
+		}
+
+		result.Fields[field.Type] = fieldMap
+	}
+
+	for _, enumMapping := range in.EnumMappings {
+		result.EnumValues[enumMapping.Type] = make([]grpcdatasource.EnumValueMapping, 0, len(enumMapping.Values))
+		for _, enumValueMapping := range enumMapping.Values {
+			result.EnumValues[enumMapping.Type] = append(result.EnumValues[enumMapping.Type], grpcdatasource.EnumValueMapping{
+				Value:       enumValueMapping.Original,
+				TargetValue: enumValueMapping.Mapped,
+			})
+		}
+	}
+
+	return &grpcdatasource.GRPCConfiguration{
+		Mapping: result,
+	}
 }
