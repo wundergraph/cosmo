@@ -159,14 +159,17 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 
 	s.baseOtelAttributes = baseOtelAttributes
 
+	baseDefaultMuxAttributes := append([]attribute.KeyValue{otel.WgRouterConfigVersion.String(s.baseRouterConfigVersion)}, baseOtelAttributes...)
+
+	mapper := newAttributeMapper(!rmetric.IsUsingDefaultCloudExporter(s.metricConfig), s.metricConfig.Attributes)
+	mappedMetricAttributes := mapper.mapAttributes(baseDefaultMuxAttributes)
+
 	if s.metricConfig.OpenTelemetry.RouterRuntime {
+		// We track runtime metrics with base router config version
 		s.runtimeMetrics = rmetric.NewRuntimeMetrics(
 			s.logger,
 			s.otlpMeterProvider,
-			// We track runtime metrics with base router config version
-			append([]attribute.KeyValue{
-				otel.WgRouterConfigVersion.String(s.baseRouterConfigVersion),
-			}, baseOtelAttributes...),
+			mappedMetricAttributes,
 			s.processStartTime,
 		)
 
@@ -176,7 +179,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		}
 	}
 
-	if err := s.setupEngineStatistics(); err != nil {
+	if err := s.setupEngineStatistics(mappedMetricAttributes); err != nil {
 		return nil, fmt.Errorf("failed to setup engine statistics: %w", err)
 	}
 
@@ -368,13 +371,9 @@ func (s *graphServer) buildMultiGraphHandler(ctx context.Context, baseMux *chi.M
 
 // setupEngineStatistics creates the engine statistics for the server.
 // It creates the OTLP and Prometheus metrics for the engine statistics.
-func (s *graphServer) setupEngineStatistics() (err error) {
+func (s *graphServer) setupEngineStatistics(baseAttributes []attribute.KeyValue) (err error) {
 	// We only include the base router config version in the attributes for the engine statistics.
 	// Same approach is used for the runtime metrics.
-	baseAttributes := append([]attribute.KeyValue{
-		otel.WgRouterConfigVersion.String(s.baseRouterConfigVersion),
-	}, s.baseOtelAttributes...)
-
 	s.otlpEngineMetrics, err = rmetric.NewEngineMetrics(
 		s.logger,
 		baseAttributes,
@@ -675,26 +674,25 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	httpRouter := chi.NewRouter()
 
-	baseOtelAttributes := append([]attribute.KeyValue{otel.WgRouterConfigVersion.String(routerConfigVersion)}, s.baseOtelAttributes...)
+	// we only enable the attribute mapper if we are not using the default cloud exporter
+	baseMuxAttributes := append([]attribute.KeyValue{otel.WgRouterConfigVersion.String(routerConfigVersion)}, s.baseOtelAttributes...)
 
 	if featureFlagName != "" {
-		baseOtelAttributes = append(baseOtelAttributes, otel.WgFeatureFlag.String(featureFlagName))
+		baseMuxAttributes = append(baseMuxAttributes, otel.WgFeatureFlag.String(featureFlagName))
 	}
 
 	metricsEnabled := s.metricConfig.IsEnabled()
-
-	// we only enable the attribute mapper if we are not using the default cloud exporter
-	enableAttributeMapper := !(s.metricConfig.IsUsingCloudExporter || rmetric.IsDefaultCloudExporterConfigured(s.metricConfig.OpenTelemetry.Exporters))
-
+	
 	exprManager := expr.CreateNewExprManager()
 
 	// We might want to remap or exclude known attributes based on the configuration for metrics
-	mapper := newAttributeMapper(enableAttributeMapper, s.metricConfig.Attributes)
+	mapper := newAttributeMapper(!rmetric.IsUsingDefaultCloudExporter(s.metricConfig), s.metricConfig.Attributes)
+	baseMetricAttributes := mapper.mapAttributes(baseMuxAttributes)
+
 	attExpressions, attErr := newAttributeExpressions(s.metricConfig.Attributes, exprManager)
 	if attErr != nil {
 		return nil, attErr
 	}
-	baseMetricAttributes := mapper.mapAttributes(baseOtelAttributes)
 	var telemetryAttExpressions *attributeExpressions
 	if len(s.telemetryAttributes) > 0 {
 		var telemetryAttErr error
@@ -706,6 +704,15 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	// Prometheus metricStore rely on OTLP metricStore
 	if metricsEnabled {
+		attrKeyValues := []attribute.KeyValue{
+			otel.WgRouterConfigVersion.String(routerConfigVersion),
+			otel.WgRouterVersion.String(Version),
+		}
+		if featureFlagName != "" {
+			attrKeyValues = append(attrKeyValues, otel.WgFeatureFlag.String(featureFlagName))
+		}
+		routerInfoBaseAttrs := otelmetric.WithAttributeSet(attribute.NewSet(attrKeyValues...))
+
 		m, err := rmetric.NewStore(
 			rmetric.WithPromMeterProvider(s.promMeterProvider),
 			rmetric.WithOtlpMeterProvider(s.otlpMeterProvider),
@@ -713,6 +720,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			rmetric.WithLogger(s.logger),
 			rmetric.WithProcessStartTime(s.processStartTime),
 			rmetric.WithCardinalityLimit(rmetric.DefaultCardinalityLimit),
+			rmetric.WithRouterInfoAttributes(routerInfoBaseAttrs),
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create metric handler: %w", err)
@@ -840,8 +848,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			reqContext := getRequestContext(r.Context())
 
-			reqContext.telemetry.addCommonTraceAttribute(baseOtelAttributes...)
-			reqContext.telemetry.addCommonTraceAttribute(otel.WgRouterConfigVersion.String(routerConfigVersion))
+			reqContext.telemetry.addCommonTraceAttribute(baseMuxAttributes...)
 
 			if commonAttrRequestMapper != nil {
 				reqContext.telemetry.addCommonAttribute(commonAttrRequestMapper(r)...)
@@ -955,7 +962,9 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		trackUsageInfo:   s.graphqlMetricsConfig.Enabled || s.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled,
 		subscriptionClientOptions: &SubscriptionClientOptions{
 			PingInterval: s.engineExecutionConfiguration.WebSocketClientPingInterval,
+			PingTimeout:  s.engineExecutionConfiguration.WebSocketClientPingTimeout,
 			ReadTimeout:  s.engineExecutionConfiguration.WebSocketClientReadTimeout,
+			FrameTimeout: s.engineExecutionConfiguration.WebSocketClientFrameTimeout,
 		},
 		transportOptions: &TransportOptions{
 			SubgraphTransportOptions: s.subgraphTransportOptions,
@@ -1196,7 +1205,6 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			NetPollConnBufferSize:     s.engineExecutionConfiguration.WebSocketClientConnBufferSize,
 			WebSocketConfiguration:    s.webSocketConfiguration,
 			ClientHeader:              s.clientHeader,
-			Attributes:                baseOtelAttributes,
 			DisableVariablesRemapping: s.engineExecutionConfiguration.DisableVariablesRemapping,
 			ApolloCompatibilityFlags:  s.apolloCompatibilityFlags,
 		})

@@ -4,6 +4,24 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.104.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.103.0...@wundergraph/cosmo-connect@0.104.0) (2025-05-16)
+
+### Features
+
+* get all the operations of a federated graph ([#1856](https://github.com/wundergraph/cosmo/issues/1856)) ([246b514](https://github.com/wundergraph/cosmo/commit/246b5149921827d2e2c4954086e3e5f4dd5815b2)) (@JivusAyrus)
+
+# [0.103.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.102.1...@wundergraph/cosmo-connect@0.103.0) (2025-05-13)
+
+### Features
+
+* allow to check new subgraphs ([#1761](https://github.com/wundergraph/cosmo/issues/1761)) ([5b0bfbf](https://github.com/wundergraph/cosmo/commit/5b0bfbf38e77893453dc6bdfb4d524df1f59881b)) (@JivusAyrus)
+
+## [0.102.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.102.0...@wundergraph/cosmo-connect@0.102.1) (2025-04-29)
+
+### Bug Fixes
+
+* improve the queries of the check page ([#1811](https://github.com/wundergraph/cosmo/issues/1811)) ([ce4f377](https://github.com/wundergraph/cosmo/commit/ce4f377c53584299a86c0af1bc5b4bb87c825bfe)) (@JivusAyrus)
+
 # [0.102.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.101.0...@wundergraph/cosmo-connect@0.102.0) (2025-04-15)
 
 ### Features

@@ -4,6 +4,24 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.36.17](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.36.16...@wundergraph/cosmo-shared@0.36.17) (2025-05-16)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
+## [0.36.16](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.36.15...@wundergraph/cosmo-shared@0.36.16) (2025-05-13)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
+## [0.36.15](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.36.14...@wundergraph/cosmo-shared@0.36.15) (2025-05-02)
+
+### Bug Fixes
+
+* vite vulnerability ([#1823](https://github.com/wundergraph/cosmo/issues/1823)) ([05d5300](https://github.com/wundergraph/cosmo/commit/05d53004612958fe1dab2c292ec89ac4ac686b61)) (@JivusAyrus)
+
+## [0.36.14](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.36.13...@wundergraph/cosmo-shared@0.36.14) (2025-04-29)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
 ## [0.36.13](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.36.12...@wundergraph/cosmo-shared@0.36.13) (2025-04-15)
 
 **Note:** Version bump only for package @wundergraph/cosmo-shared

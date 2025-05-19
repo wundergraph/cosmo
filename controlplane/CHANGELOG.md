@@ -4,6 +4,48 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.139.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.139.0...controlplane@0.139.1) (2025-05-19)
+
+### Bug Fixes
+
+* checkFederatedGraph by filtering out subgraphs without schemas for composition ([#1867](https://github.com/wundergraph/cosmo/issues/1867)) ([6a8c7f5](https://github.com/wundergraph/cosmo/commit/6a8c7f5b5bf9f6121a8a70eb38f7705997811746)) (@JivusAyrus)
+
+# [0.139.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.138.1...controlplane@0.139.0) (2025-05-16)
+
+### Features
+
+* get all the operations of a federated graph ([#1856](https://github.com/wundergraph/cosmo/issues/1856)) ([246b514](https://github.com/wundergraph/cosmo/commit/246b5149921827d2e2c4954086e3e5f4dd5815b2)) (@JivusAyrus)
+
+## [0.138.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.138.0...controlplane@0.138.1) (2025-05-14)
+
+### Bug Fixes
+
+* upgrade octokit, runc, esbuild to mitigate security issues ([#1859](https://github.com/wundergraph/cosmo/issues/1859)) ([8b6285d](https://github.com/wundergraph/cosmo/commit/8b6285df41ab8537ab751fbf59390723829793c4)) (@endigma)
+
+# [0.138.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.137.3...controlplane@0.138.0) (2025-05-13)
+
+### Features
+
+* allow to check new subgraphs ([#1761](https://github.com/wundergraph/cosmo/issues/1761)) ([5b0bfbf](https://github.com/wundergraph/cosmo/commit/5b0bfbf38e77893453dc6bdfb4d524df1f59881b)) (@JivusAyrus)
+
+## [0.137.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.137.2...controlplane@0.137.3) (2025-05-07)
+
+### Bug Fixes
+
+* make proposals a invite only feature ([#1836](https://github.com/wundergraph/cosmo/issues/1836)) ([28a0ea0](https://github.com/wundergraph/cosmo/commit/28a0ea0decd75b62fd797af6df693437a2fc7240)) (@JivusAyrus)
+
+## [0.137.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.137.1...controlplane@0.137.2) (2025-05-02)
+
+### Bug Fixes
+
+* vite vulnerability ([#1823](https://github.com/wundergraph/cosmo/issues/1823)) ([05d5300](https://github.com/wundergraph/cosmo/commit/05d53004612958fe1dab2c292ec89ac4ac686b61)) (@JivusAyrus)
+
+## [0.137.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.137.0...controlplane@0.137.1) (2025-04-29)
+
+### Bug Fixes
+
+* improve the queries of the check page ([#1811](https://github.com/wundergraph/cosmo/issues/1811)) ([ce4f377](https://github.com/wundergraph/cosmo/commit/ce4f377c53584299a86c0af1bc5b4bb87c825bfe)) (@JivusAyrus)
+
 # [0.137.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.136.0...controlplane@0.137.0) (2025-04-18)
 
 ### Features

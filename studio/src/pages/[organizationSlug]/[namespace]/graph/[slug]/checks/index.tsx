@@ -60,6 +60,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useContext } from "react";
 import { cn } from "@/lib/utils";
+import { useFeature } from "@/hooks/use-feature";
 
 const ChecksPage: NextPageWithLayout = () => {
   const router = useRouter();
@@ -78,6 +79,7 @@ const ChecksPage: NextPageWithLayout = () => {
   const endDate = range ? createDateRange(range).end : end;
 
   const graphContext = useContext(GraphContext);
+  const proposalsFeature = useFeature("proposals");
 
   const [, setRouteCache] = useSessionStorage("checks.route", router.asPath);
 
@@ -117,7 +119,7 @@ const ChecksPage: NextPageWithLayout = () => {
 
   if (!data?.checks || !graphContext?.graph) return null;
 
-  if (data.totalChecksCount === 0)
+  if (data.checks.length === 0)
     return (
       <EmptyState
         icon={<CommandLineIcon />}
@@ -164,7 +166,7 @@ const ChecksPage: NextPageWithLayout = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.checks.length !== 0 ? (
+            {data.checks.length !== 0 &&
               data.checks.map(
                 ({
                   id,
@@ -247,8 +249,7 @@ const ChecksPage: NextPageWithLayout = () => {
                             variant="outline"
                             className={cn(
                               "gap-2 py-1.5",
-                              compositionSkipped &&
-                                "text-muted-foreground",
+                              compositionSkipped && "text-muted-foreground",
                             )}
                           >
                             {compositionSkipped ? (
@@ -262,8 +263,7 @@ const ChecksPage: NextPageWithLayout = () => {
                             variant="outline"
                             className={cn(
                               "gap-2 py-1.5",
-                              breakingChangesSkipped &&
-                                "text-muted-foreground",
+                              breakingChangesSkipped && "text-muted-foreground",
                             )}
                           >
                             {breakingChangesSkipped ? (
@@ -318,22 +318,24 @@ const ChecksPage: NextPageWithLayout = () => {
                               Pruning Errors
                             </span>
                           </Badge>
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "gap-2 py-1.5",
-                              !proposalMatch && "text-muted-foreground",
-                            )}
-                          >
-                            {!proposalMatch ? (
-                              <NoSymbolIcon className="h-4 w-4" />
-                            ) : (
-                              getCheckIcon(proposalMatch !== "error")
-                            )}
-                            <span className="flex-1 truncate">
-                              Proposal Match
-                            </span>
-                          </Badge>
+                          {proposalsFeature?.enabled && (
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "gap-2 py-1.5",
+                                !proposalMatch && "text-muted-foreground",
+                              )}
+                            >
+                              {!proposalMatch ? (
+                                <NoSymbolIcon className="h-4 w-4" />
+                              ) : (
+                                getCheckIcon(proposalMatch !== "error")
+                              )}
+                              <span className="flex-1 truncate">
+                                Proposal Match
+                              </span>
+                            </Badge>
+                          )}
                         </div>
                       </TableCell>
 
@@ -382,14 +384,7 @@ const ChecksPage: NextPageWithLayout = () => {
                     </TableRow>
                   );
                 },
-              )
-            ) : (
-              <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center">
-                  No results.
-                </TableCell>
-              </TableRow>
-            )}
+              )}
           </TableBody>
         </Table>
       </TableWrapper>

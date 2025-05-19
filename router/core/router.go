@@ -14,9 +14,6 @@ import (
 	"sync"
 	"time"
 
-	rd "github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/redis"
-	"github.com/wundergraph/cosmo/router/pkg/mcpserver"
-
 	"connectrpc.com/connect"
 	"github.com/mitchellh/mapstructure"
 	"github.com/nats-io/nuid"
@@ -37,6 +34,8 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/apq"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/cdn"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/fs"
+	rd "github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/redis"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/s3"
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/internal/stringsx"
@@ -46,6 +45,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"github.com/wundergraph/cosmo/router/pkg/health"
+	"github.com/wundergraph/cosmo/router/pkg/mcpserver"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
@@ -198,6 +198,7 @@ type (
 		apolloCompatibilityFlags        config.ApolloCompatibilityFlags
 		apolloRouterCompatibilityFlags  config.ApolloRouterCompatibilityFlags
 		storageProviders                config.StorageProviders
+		demoMode                        bool
 		eventsConfig                    config.EventsConfiguration
 		prometheusServer                *http.Server
 		modulesConfig                   map[string]interface{}
@@ -917,12 +918,17 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			}
 		}
 
+		logFields := []zap.Field{
+			zap.String("storage_provider_id", r.mcp.Storage.ProviderID),
+		}
+
 		// Initialize the MCP server with the resolved operations directory
 		mcpOpts := []func(*mcpserver.Options){
 			mcpserver.WithGraphName(r.mcp.GraphName),
 			mcpserver.WithOperationsDir(operationsDir),
-			mcpserver.WithPort(r.mcp.Server.Port),
-			mcpserver.WithLogger(r.logger),
+			mcpserver.WithListenAddr(r.mcp.Server.ListenAddr),
+			mcpserver.WithBaseURL(r.mcp.Server.BaseURL),
+			mcpserver.WithLogger(r.logger.With(logFields...)),
 			mcpserver.WithExcludeMutations(r.mcp.ExcludeMutations),
 			mcpserver.WithEnableArbitraryOperations(r.mcp.EnableArbitraryOperations),
 			mcpserver.WithExposeSchema(r.mcp.ExposeSchema),
@@ -952,18 +958,6 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		}
 
 		r.mcpServer = mcpss
-
-		logFields := []zap.Field{
-			zap.Int("port", r.mcp.Server.Port),
-			zap.String("operations_dir", operationsDir),
-			zap.String("graph_name", r.mcp.GraphName),
-			zap.Bool("exclude_mutations", r.mcp.ExcludeMutations),
-			zap.String("storage_provider_id", r.mcp.Storage.ProviderID),
-			zap.Bool("enable_arbitrary_operations", r.mcp.EnableArbitraryOperations),
-			zap.Bool("expose_schema", r.mcp.ExposeSchema),
-		}
-
-		r.logger.Info("MCP server started", logFields...)
 	}
 
 	if r.metricConfig.OpenTelemetry.EngineStats.Enabled() || r.metricConfig.Prometheus.EngineStats.Enabled() || r.engineExecutionConfiguration.Debug.ReportWebSocketConnections {
@@ -1023,6 +1017,7 @@ func (r *Router) buildClients() error {
 	s3Providers := map[string]config.S3StorageProvider{}
 	cdnProviders := map[string]config.CDNStorageProvider{}
 	redisProviders := map[string]config.RedisStorageProvider{}
+	fileSystemProviders := map[string]config.FileSystemStorageProvider{}
 
 	for _, provider := range r.storageProviders.S3 {
 		if _, ok := s3Providers[provider.ID]; ok {
@@ -1043,6 +1038,13 @@ func (r *Router) buildClients() error {
 			return fmt.Errorf("duplicate Redis storage provider with id '%s'", provider.ID)
 		}
 		redisProviders[provider.ID] = provider
+	}
+
+	for _, provider := range r.storageProviders.FileSystem {
+		if _, ok := fileSystemProviders[provider.ID]; ok {
+			return fmt.Errorf("duplicate file system storage provider with id '%s'", provider.ID)
+		}
+		fileSystemProviders[provider.ID] = provider
 	}
 
 	var pClient persistedoperation.Client
@@ -1080,6 +1082,18 @@ func (r *Router) buildClients() error {
 		pClient = c
 
 		r.logger.Info("Use S3 as storage provider for persisted operations",
+			zap.String("provider_id", provider.ID),
+		)
+	} else if provider, ok := fileSystemProviders[r.persistedOperationsConfig.Storage.ProviderID]; ok {
+		c, err := fs.NewClient(provider.Path, &fs.Options{
+			ObjectPathPrefix: r.persistedOperationsConfig.Storage.ObjectPrefix,
+		})
+		if err != nil {
+			return err
+		}
+		pClient = c
+
+		r.logger.Info("Use file system as storage provider for persisted operations",
 			zap.String("provider_id", provider.ID),
 		)
 	} else if r.graphApiToken != "" {
@@ -1208,32 +1222,34 @@ func (r *Router) Start(ctx context.Context) error {
 		}()
 
 		if r.executionConfig != nil && r.executionConfig.Watch {
+			ll := r.logger.With(zap.String("watcher_label", "execution_config"))
+
 			w, err := watcher.New(watcher.Options{
-				Logger:   r.logger.With(zap.String("watcher_label", "execution_config")),
+				Logger:   ll,
 				Path:     r.executionConfig.Path,
 				Interval: r.executionConfig.WatchInterval,
 				Callback: func() {
 					if r.shutdown.Load() {
-						r.logger.Warn("Router is in shutdown state. Skipping config update")
+						ll.Warn("Router is in shutdown state. Skipping config update")
 						return
 					}
 
 					data, err := os.ReadFile(r.executionConfig.Path)
 					if err != nil {
-						r.logger.Error("Failed to read config file", zap.Error(err))
+						ll.Error("Failed to read config file", zap.Error(err))
 						return
 					}
 
-					r.logger.Info("Config file changed. Updating server with new config", zap.String("path", r.executionConfig.Path))
+					ll.Info("Config file changed. Updating server with new config", zap.String("path", r.executionConfig.Path))
 
 					cfg, err := execution_config.UnmarshalConfig(data)
 					if err != nil {
-						r.logger.Error("Failed to unmarshal config file", zap.Error(err))
+						ll.Error("Failed to unmarshal config file", zap.Error(err))
 						return
 					}
 
 					if err := r.newServer(ctx, cfg); err != nil {
-						r.logger.Error("Failed to update server with new config", zap.Error(err))
+						ll.Error("Failed to update server with new config", zap.Error(err))
 						return
 					}
 				},
@@ -1997,6 +2013,12 @@ func WithCacheWarmupConfig(cfg *config.CacheWarmupConfiguration) Option {
 func WithMCP(cfg config.MCPConfiguration) Option {
 	return func(r *Router) {
 		r.mcp = cfg
+	}
+}
+
+func WithDemoMode(demoMode bool) Option {
+	return func(r *Router) {
+		r.demoMode = demoMode
 	}
 }
 

@@ -17,6 +17,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
 
@@ -50,15 +51,98 @@ func TestSimpleQuery(t *testing.T) {
 	})
 }
 
-func TestNoSubgraphConfig(t *testing.T) {
+func TestConfigReload(t *testing.T) {
 	t.Parallel()
 
-	testenv.RunRouterBinary(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+	t.Run("Successfully reloads to a valid new configuration file with SIGHUP", func(t *testing.T) {
+		// Can be very slow, compiles the router binary if needed
+		err := testenv.RunRouterBinary(t, &testenv.Config{
+			DemoMode: true,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			t.Logf("running router binary, cwd: %s", xEnv.GetRouterProcessCwd())
+
+			ctx := context.Background()
+
+			require.NoError(t, xEnv.WaitForServer(ctx, xEnv.RouterURL+"/health/ready", 600, 60), "healthcheck pre-reload failed")
+
+			f, err := os.Create(filepath.Join(xEnv.GetRouterProcessCwd(), "config.yaml"))
+			require.NoError(t, err)
+
+			_, err = f.WriteString(`
+version: "1"
+
+readiness_check_path: "/after"
+`)
+			require.NoError(t, err)
+
+			require.NoError(t, f.Close())
+
+			err = xEnv.SignalRouterProcess(syscall.SIGHUP)
+			require.NoError(t, err)
+
+			require.NoError(t, xEnv.WaitForServer(ctx, xEnv.RouterURL+"/after", 600, 60), "healthcheck post-reload failed")
+		})
+
+		require.NoError(t, err)
+	})
+
+	t.Run("Falls back to initial configuration if new configuration file is invalid", func(t *testing.T) {
+		// Can be very slow, compiles the router binary if needed
+		err := testenv.RunRouterBinary(t, &testenv.Config{
+			DemoMode: true,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			t.Logf("running router binary, cwd: %s", xEnv.GetRouterProcessCwd())
+
+			ctx := context.Background()
+
+			require.NoError(t, xEnv.WaitForServer(ctx, xEnv.RouterURL+"/health/ready", 600, 60), "healthcheck pre-reload failed")
+
+			f, err := os.Create(filepath.Join(xEnv.GetRouterProcessCwd(), "config.yaml"))
+			require.NoError(t, err)
+
+			_, err = f.WriteString(`
+asdasdasdasdas: "NOT WORKING CONFIG!!!"
+`)
+			require.NoError(t, err)
+
+			require.NoError(t, f.Close())
+
+			err = xEnv.SignalRouterProcess(syscall.SIGHUP)
+			require.NoError(t, err)
+
+			require.NoError(t, xEnv.WaitForServer(ctx, xEnv.RouterURL+"/health/ready", 600, 60), "healthcheck post-reload failed")
+		})
+
+		require.NoError(t, err)
+	})
+
+}
+
+func TestNoSubgraphConfigWithoutDemoMode(t *testing.T) {
+	t.Parallel()
+
+	err := testenv.RunRouterBinary(t, &testenv.Config{
+		DemoMode:      false,
+		NoRetryClient: true,
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		require.Fail(t, "Router should not start without execution config")
+	})
+	require.Error(t, err)
+}
+
+func TestNoSubgraphConfigWithDemoMode(t *testing.T) {
+	t.Parallel()
+
+	err := testenv.RunRouterBinary(t, &testenv.Config{
+		DemoMode:      true,
+		NoRetryClient: true,
+	}, func(t *testing.T, xEnv *testenv.Environment) {
 		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 			Query: `query { hello }`,
 		})
 		require.JSONEq(t, `{"data":{"hello":"Cosmo Router is ready! Follow this guide to deploy your first Supergraph: https://cosmo-docs.wundergraph.com/tutorial/from-zero-to-federation-in-5-steps-using-cosmo"}}`, res.Body)
 	})
+	require.NoError(t, err)
 }
 
 func TestContentTypes(t *testing.T) {

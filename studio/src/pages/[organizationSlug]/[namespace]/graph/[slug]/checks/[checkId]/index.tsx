@@ -53,6 +53,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
+import { useFeature } from "@/hooks/use-feature";
 import { useSessionStorage } from "@/hooks/use-session-storage";
 import { formatDate, formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
@@ -193,7 +194,10 @@ const ProposedSchemas = ({
             >
               <SelectTrigger
                 value={activeSubgraphName}
-                className="w-full bg-background md:ml-auto md:w-[200px]"
+                className={cn("w-full bg-background md:ml-auto md:w-[200px]", {
+                  "text-destructive": activeSubgraph?.isDeleted,
+                  "text-success": activeSubgraph?.isNew,
+                })}
               >
                 <SelectValue aria-label={activeSubgraphName}>
                   {activeSubgraphName}
@@ -205,12 +209,13 @@ const ProposedSchemas = ({
                     <Component2Icon className="h-3 w-3" /> Subgraphs
                   </SelectLabel>
                   {checkedSubgraphs.map(
-                    ({ subgraphName: name, id, isDeleted }) => {
+                    ({ subgraphName: name, id, isDeleted, isNew }) => {
                       return (
                         <SelectItem key={name} value={name}>
                           <div
                             className={cn({
                               "text-destructive": isDeleted,
+                              "text-success": isNew,
                             })}
                           >
                             <p>{name}</p>
@@ -387,7 +392,7 @@ const CheckDetails = ({
   const graphContext = useContext(GraphContext);
   const router = useRouter();
   const { toast } = useToast();
-
+  const proposalsFeature = useFeature("proposals");
   const organizationSlug = router.query.organizationSlug as string;
   const namespace = router.query.namespace as string;
   const slug = router.query.slug as string;
@@ -460,16 +465,16 @@ const CheckDetails = ({
   const reason = data.check.errorMessage
     ? data.check.errorMessage
     : data.check.proposalMatch === "error"
-      ? "Proposal match check failed"
-      : !data.check.isComposable
-      ? "Composition errors were found"
-      : data.check.isBreaking && data.check?.clientTrafficCheckSkipped
-      ? "Breaking changes were detected"
-      : data.check.isBreaking && data.check.hasClientTraffic
-      ? "Operations were affected by breaking changes"
-      : data.check.isBreaking && !data.check.hasClientTraffic
-      ? "No operations were affected by breaking changes"
-      : "All tasks were successful";
+    ? "Proposal match check failed"
+    : !data.check.isComposable
+    ? "Composition errors were found"
+    : data.check.isBreaking && data.check?.clientTrafficCheckSkipped
+    ? "Breaking changes were detected"
+    : data.check.isBreaking && data.check.hasClientTraffic
+    ? "Operations were affected by breaking changes"
+    : data.check.isBreaking && !data.check.hasClientTraffic
+    ? "No operations were affected by breaking changes"
+    : "All tasks were successful";
 
   const subgraphName =
     data.check.subgraphName ||
@@ -518,26 +523,31 @@ const CheckDetails = ({
                   (data.check.checkedSubgraphs.length === 1 &&
                     data.check.checkedSubgraphs[0].isDeleted)
                 ? "Delete subgraph"
+                : data.check.checkedSubgraphs.length === 1 &&
+                  data.check.checkedSubgraphs[0].isNew
+                ? "New subgraph"
                 : "Update schema"}
             </dd>
           </div>
 
-          {graphContext.graph?.supportsFederation && (
-            <div className="flex-start flex max-w-[200px] flex-1 flex-col gap-1 ">
-              <dt className="text-sm text-muted-foreground">Subgraph</dt>
-              <dd>
-                <Link
-                  key={id}
-                  href={`/${organizationSlug}/${namespace}/graph/${slug}/schema/sdl?subgraph=${data.check.subgraphName}`}
-                >
-                  <div className="flex items-center gap-x-1">
-                    <CubeIcon />
-                    {subgraphName}
-                  </div>
-                </Link>
-              </dd>
-            </div>
-          )}
+          {graphContext.graph?.supportsFederation &&
+            data.check.checkedSubgraphs.length === 1 &&
+            !data.check.checkedSubgraphs[0].isNew && (
+              <div className="flex-start flex max-w-[200px] flex-1 flex-col gap-1 ">
+                <dt className="text-sm text-muted-foreground">Subgraph</dt>
+                <dd>
+                  <Link
+                    key={id}
+                    href={`/${organizationSlug}/${namespace}/graph/${slug}/schema/sdl?subgraph=${subgraphName}`}
+                  >
+                    <div className="flex items-center gap-x-1">
+                      <CubeIcon />
+                      {subgraphName}
+                    </div>
+                  </Link>
+                </dd>
+              </div>
+            )}
 
           {data.proposalId && data.proposalName && (
             <div className="flex-start flex max-w-[200px] flex-1 flex-col gap-1 ">
@@ -700,30 +710,32 @@ const CheckDetails = ({
                 )}
               </Badge>
 
-              <Badge
-                variant="outline"
-                className={cn("flex items-center space-x-1.5 py-2", {
-                  "text-muted-foreground": !data.check?.proposalMatch,
-                })}
-              >
-                {!data.check?.proposalMatch ? (
-                  <>
-                    <NoSymbolIcon className="h-4 w-4" />
-                    <span className="flex-1 truncate">Proposal Match</span>
-                    <InfoTooltip>
-                      Indicates if the proposed schema matches a proposal.
-                    </InfoTooltip>
-                  </>
-                ) : (
-                  <>
-                    {getCheckIcon(data.check.proposalMatch !== "error")}
-                    <span className="flex-1 truncate">Proposal Match</span>
-                    <InfoTooltip>
-                      Indicates if the proposed schema matches a proposal.
-                    </InfoTooltip>
-                  </>
-                )}
-              </Badge>
+              {proposalsFeature?.enabled && (
+                <Badge
+                  variant="outline"
+                  className={cn("flex items-center space-x-1.5 py-2", {
+                    "text-muted-foreground": !data.check?.proposalMatch,
+                  })}
+                >
+                  {!data.check?.proposalMatch ? (
+                    <>
+                      <NoSymbolIcon className="h-4 w-4" />
+                      <span className="flex-1 truncate">Proposal Match</span>
+                      <InfoTooltip>
+                        Indicates if the proposed schema matches a proposal.
+                      </InfoTooltip>
+                    </>
+                  ) : (
+                    <>
+                      {getCheckIcon(data.check.proposalMatch !== "error")}
+                      <span className="flex-1 truncate">Proposal Match</span>
+                      <InfoTooltip>
+                        Indicates if the proposed schema matches a proposal.
+                      </InfoTooltip>
+                    </>
+                  )}
+                </Badge>
+              )}
             </dd>
           </div>
 
@@ -836,6 +848,37 @@ const CheckDetails = ({
               </dd>
             </div>
           )}
+          {data.check.checkedSubgraphs.length === 1 &&
+            data.check.checkedSubgraphs[0].isNew && (
+              <div className="flex flex-col">
+                <dt className="mb-2 text-sm text-muted-foreground">
+                  Labels of new subgraph
+                </dt>
+                <dd className="flex items-center gap-x-2 text-sm">
+                  {data.check.checkedSubgraphs[0].labels.length === 0 ? (
+                    <div className="italic">
+                      <Tooltip delayDuration={200}>
+                        <TooltipTrigger>No labels passed</TooltipTrigger>
+                        <TooltipContent>
+                          Only graphs with empty label matchers will compose
+                          this subgraph
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                  ) : (
+                    data.check.checkedSubgraphs[0].labels.map(
+                      ({ key, value }) => {
+                        return (
+                          <Badge variant="secondary" key={key + value}>
+                            {key}={value}
+                          </Badge>
+                        );
+                      },
+                    )
+                  )}
+                </dd>
+              </div>
+            )}
           {ghDetails && (
             <div className="flex flex-col">
               <dt className="mb-2 text-sm text-muted-foreground">
@@ -985,20 +1028,22 @@ const CheckDetails = ({
                     ) : null}
                   </Link>
                 </TabsTrigger>
-                <TabsTrigger
-                  value="proposalMatches"
-                  className="flex items-center gap-x-2"
-                  asChild
-                >
-                  <Link
-                    href={{
-                      query: { ...router.query, tab: "proposalMatches" },
-                    }}
+                {proposalsFeature?.enabled && (
+                  <TabsTrigger
+                    value="proposalMatches"
+                    className="flex items-center gap-x-2"
+                    asChild
                   >
-                    <LightningBoltIcon className="flex-shrink-0" />
-                    Proposal Matches
-                  </Link>
-                </TabsTrigger>
+                    <Link
+                      href={{
+                        query: { ...router.query, tab: "proposalMatches" },
+                      }}
+                    >
+                      <LightningBoltIcon className="flex-shrink-0" />
+                      Proposal Matches
+                    </Link>
+                  </TabsTrigger>
+                )}
 
                 {(data.check.checkedSubgraphs.length > 1 ||
                   (data.check.checkedSubgraphs.length === 1 &&
@@ -1211,17 +1256,21 @@ const CheckDetails = ({
                   hasGraphPruningErrors={data.check.hasGraphPruningErrors}
                 />
               </TabsContent>
-              <TabsContent
-                value="proposalMatches"
-                className="w-full space-y-4 px-4 lg:px-6"
-              >
-                <ProposalMatchesTable
-                  proposalMatches={data.proposalMatches}
-                  caption={`${data.proposalMatches.length} matches found`}
-                  isProposalsEnabled={data.isProposalsEnabled}
-                  proposalMatch={data.check.proposalMatch}
-                />
-              </TabsContent>
+
+              {proposalsFeature?.enabled && (
+                <TabsContent
+                  value="proposalMatches"
+                  className="w-full space-y-4 px-4 lg:px-6"
+                >
+                  <ProposalMatchesTable
+                    proposalMatches={data.proposalMatches}
+                    caption={`${data.proposalMatches.length} matches found`}
+                    isProposalsEnabled={data.isProposalsEnabled}
+                    proposalMatch={data.check.proposalMatch}
+                  />
+                </TabsContent>
+              )}
+              
               <TabsContent value="schema" className="relative w-full flex-1">
                 <ProposedSchemas
                   checkId={id}

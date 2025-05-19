@@ -4,6 +4,54 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.79.5](https://github.com/wundergraph/cosmo/compare/wgc@0.79.4...wgc@0.79.5) (2025-05-16)
+
+**Note:** Version bump only for package wgc
+
+## [0.79.4](https://github.com/wundergraph/cosmo/compare/wgc@0.79.3...wgc@0.79.4) (2025-05-14)
+
+### Bug Fixes
+
+* check if CLI is connected to Cosmo Cloud ([#1860](https://github.com/wundergraph/cosmo/issues/1860)) ([c4de91e](https://github.com/wundergraph/cosmo/commit/c4de91eda181bafe02215c933448e0bbdc56d1b5)) (@thisisnithin)
+* optimize identity call and track failure ([#1858](https://github.com/wundergraph/cosmo/issues/1858)) ([490438c](https://github.com/wundergraph/cosmo/commit/490438c610b1e17d9d78bc45ac7631a61f9f6c4b)) (@thisisnithin)
+* upgrade octokit, runc, esbuild to mitigate security issues ([#1859](https://github.com/wundergraph/cosmo/issues/1859)) ([8b6285d](https://github.com/wundergraph/cosmo/commit/8b6285df41ab8537ab751fbf59390723829793c4)) (@endigma)
+
+## [0.79.3](https://github.com/wundergraph/cosmo/compare/wgc@0.79.2...wgc@0.79.3) (2025-05-14)
+
+### Bug Fixes
+
+* posthog cli env ([#1857](https://github.com/wundergraph/cosmo/issues/1857)) ([87e4f7d](https://github.com/wundergraph/cosmo/commit/87e4f7dfeca0b8c30c88c2d86602093fdeef98d4)) (@thisisnithin)
+
+## [0.79.2](https://github.com/wundergraph/cosmo/compare/wgc@0.79.1...wgc@0.79.2) (2025-05-13)
+
+### Bug Fixes
+
+* reset tracking and fix cli cmd description ([#1853](https://github.com/wundergraph/cosmo/issues/1853)) ([580f92a](https://github.com/wundergraph/cosmo/commit/580f92a0af8372b6c4d69ffe3f5cdf9351f4f5aa)) (@thisisnithin)
+
+## [0.79.1](https://github.com/wundergraph/cosmo/compare/wgc@0.79.0...wgc@0.79.1) (2025-05-13)
+
+### Bug Fixes
+
+* enhance telemetry opt-out logic to include missing POSTHOG_API_K… ([#1850](https://github.com/wundergraph/cosmo/issues/1850)) ([3bcd02c](https://github.com/wundergraph/cosmo/commit/3bcd02ccd3900256b3a52f71d0fb2e8c9b050e26)) (@thisisnithin)
+
+# [0.79.0](https://github.com/wundergraph/cosmo/compare/wgc@0.78.3...wgc@0.79.0) (2025-05-13)
+
+### Features
+
+* add posthog ([#1847](https://github.com/wundergraph/cosmo/issues/1847)) ([f49ebfb](https://github.com/wundergraph/cosmo/commit/f49ebfb5f66dc4807104ebb63eea1418511010aa)) (@thisisnithin)
+* allow to check new subgraphs ([#1761](https://github.com/wundergraph/cosmo/issues/1761)) ([5b0bfbf](https://github.com/wundergraph/cosmo/commit/5b0bfbf38e77893453dc6bdfb4d524df1f59881b)) (@JivusAyrus)
+
+## [0.78.3](https://github.com/wundergraph/cosmo/compare/wgc@0.78.2...wgc@0.78.3) (2025-05-02)
+
+### Bug Fixes
+
+* remove schema directives before in memory validation ([#1789](https://github.com/wundergraph/cosmo/issues/1789)) ([fb79930](https://github.com/wundergraph/cosmo/commit/fb79930a40dd06590ab2452371d08e6a7616e05c)) (@jensneuse)
+* vite vulnerability ([#1823](https://github.com/wundergraph/cosmo/issues/1823)) ([05d5300](https://github.com/wundergraph/cosmo/commit/05d53004612958fe1dab2c292ec89ac4ac686b61)) (@JivusAyrus)
+
+## [0.78.2](https://github.com/wundergraph/cosmo/compare/wgc@0.78.1...wgc@0.78.2) (2025-04-29)
+
+**Note:** Version bump only for package wgc
+
 ## [0.78.1](https://github.com/wundergraph/cosmo/compare/wgc@0.78.0...wgc@0.78.1) (2025-04-22)
 
 ### Bug Fixes

@@ -8,18 +8,20 @@ import (
 
 // Measurements holds the metrics for the request.
 type Measurements struct {
-	counters       map[string]otelmetric.Int64Counter
-	histograms     map[string]otelmetric.Float64Histogram
-	upDownCounters map[string]otelmetric.Int64UpDownCounter
+	counters         map[string]otelmetric.Int64Counter
+	histograms       map[string]otelmetric.Float64Histogram
+	upDownCounters   map[string]otelmetric.Int64UpDownCounter
+	observableGauges map[string]otelmetric.Int64ObservableGauge
 }
 
 // createMeasures creates the measures. Used to create measures for both Prometheus and OTLP metric stores.
 func createMeasures(meter otelmetric.Meter) (*Measurements, error) {
 
 	h := &Measurements{
-		counters:       map[string]otelmetric.Int64Counter{},
-		histograms:     map[string]otelmetric.Float64Histogram{},
-		upDownCounters: map[string]otelmetric.Int64UpDownCounter{},
+		counters:         map[string]otelmetric.Int64Counter{},
+		histograms:       map[string]otelmetric.Float64Histogram{},
+		upDownCounters:   map[string]otelmetric.Int64UpDownCounter{},
+		observableGauges: map[string]otelmetric.Int64ObservableGauge{},
 	}
 
 	requestCounter, err := meter.Int64Counter(
@@ -101,6 +103,15 @@ func createMeasures(meter otelmetric.Meter) (*Measurements, error) {
 	}
 
 	h.counters[SchemaFieldUsageCounter] = schemaFieldUsage
+
+	routerInfo, err := meter.Int64ObservableGauge(
+		RouterInfo,
+		RouterInfoOptions...,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create router info: %w", err)
+	}
+	h.observableGauges[RouterInfo] = routerInfo
 
 	return h, nil
 }

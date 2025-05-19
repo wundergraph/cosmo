@@ -7,7 +7,7 @@ import (
 
 	"github.com/caarlos0/env/v11"
 	"github.com/goccy/go-yaml"
-	"github.com/joho/godotenv"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/wundergraph/cosmo/router/internal/unique"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
@@ -347,7 +347,9 @@ type EngineExecutionConfiguration struct {
 	WebSocketClientConnBufferSize                    int                      `envDefault:"128" env:"ENGINE_WEBSOCKET_CLIENT_CONN_BUFFER_SIZE" yaml:"websocket_client_conn_buffer_size,omitempty"`
 	WebSocketClientReadTimeout                       time.Duration            `envDefault:"5s" env:"ENGINE_WEBSOCKET_CLIENT_READ_TIMEOUT" yaml:"websocket_client_read_timeout,omitempty"`
 	WebSocketClientWriteTimeout                      time.Duration            `envDefault:"10s" env:"ENGINE_WEBSOCKET_CLIENT_WRITE_TIMEOUT" yaml:"websocket_client_write_timeout,omitempty"`
-	WebSocketClientPingInterval                      time.Duration            `envDefault:"10s" env:"ENGINE_WEBSOCKET_CLIENT_PING_INTERVAL" yaml:"websocket_client_ping_interval,omitempty"`
+	WebSocketClientPingInterval                      time.Duration            `envDefault:"15s" env:"ENGINE_WEBSOCKET_CLIENT_PING_INTERVAL" yaml:"websocket_client_ping_interval,omitempty"`
+	WebSocketClientPingTimeout                       time.Duration            `envDefault:"30s" env:"ENGINE_WEBSOCKET_CLIENT_PING_TIMEOUT" yaml:"websocket_client_ping_timeout,omitempty"`
+	WebSocketClientFrameTimeout                      time.Duration            `envDefault:"100ms" env:"ENGINE_WEBSOCKET_CLIENT_FRAME_TIMEOUT" yaml:"websocket_client_frame_timeout,omitempty"`
 	ExecutionPlanCacheSize                           int64                    `envDefault:"1024" env:"ENGINE_EXECUTION_PLAN_CACHE_SIZE" yaml:"execution_plan_cache_size,omitempty"`
 	MinifySubgraphOperations                         bool                     `envDefault:"true" env:"ENGINE_MINIFY_SUBGRAPH_OPERATIONS" yaml:"minify_subgraph_operations"`
 	EnablePersistedOperationsCache                   bool                     `envDefault:"true" env:"ENGINE_ENABLE_PERSISTED_OPERATIONS_CACHE" yaml:"enable_persisted_operations_cache"`
@@ -887,7 +889,7 @@ type MCPConfiguration struct {
 	Enabled                   bool             `yaml:"enabled" envDefault:"false" env:"MCP_ENABLED"`
 	Server                    MCPServer        `yaml:"server,omitempty"`
 	Storage                   MCPStorageConfig `yaml:"storage,omitempty"`
-	GraphName                 string           `yaml:"graph_name" envDefault:"cosmo" env:"MCP_GRAPH_NAME"`
+	GraphName                 string           `yaml:"graph_name" envDefault:"mygraph" env:"MCP_GRAPH_NAME"`
 	ExcludeMutations          bool             `yaml:"exclude_mutations" envDefault:"false" env:"MCP_EXCLUDE_MUTATIONS"`
 	EnableArbitraryOperations bool             `yaml:"enable_arbitrary_operations" envDefault:"false" env:"MCP_ENABLE_ARBITRARY_OPERATIONS"`
 	ExposeSchema              bool             `yaml:"expose_schema" envDefault:"false" env:"MCP_EXPOSE_SCHEMA"`
@@ -899,7 +901,8 @@ type MCPStorageConfig struct {
 }
 
 type MCPServer struct {
-	Port int `yaml:"port" envDefault:"5025" env:"MCP_SERVER_PORT"`
+	ListenAddr string `yaml:"listen_addr" envDefault:"localhost:5025" env:"MCP_SERVER_LISTEN_ADDR"`
+	BaseURL    string `yaml:"base_url,omitempty" env:"MCP_SERVER_BASE_URL"`
 }
 
 type Config struct {
@@ -915,6 +918,7 @@ type Config struct {
 	TLS            TLSConfiguration   `yaml:"tls,omitempty"`
 	CacheControl   CacheControlPolicy `yaml:"cache_control_policy"`
 	MCP            MCPConfiguration   `yaml:"mcp,omitempty"`
+	DemoMode       bool               `yaml:"demo_mode,omitempty" envDefault:"false" env:"DEMO_MODE"`
 
 	Modules        map[string]interface{} `yaml:"modules,omitempty"`
 	Headers        HeaderRules            `yaml:"headers,omitempty"`
@@ -929,7 +933,7 @@ type Config struct {
 	PlaygroundEnabled             bool                        `yaml:"playground_enabled" envDefault:"true" env:"PLAYGROUND_ENABLED"`
 	IntrospectionEnabled          bool                        `yaml:"introspection_enabled" envDefault:"true" env:"INTROSPECTION_ENABLED"`
 	QueryPlansEnabled             bool                        `yaml:"query_plans_enabled" envDefault:"true" env:"QUERY_PLANS_ENABLED"`
-	LogLevel                      string                      `yaml:"log_level" envDefault:"info" env:"LOG_LEVEL"`
+	LogLevel                      zapcore.Level               `yaml:"log_level" envDefault:"info" env:"LOG_LEVEL"`
 	JSONLog                       bool                        `yaml:"json_log" envDefault:"true" env:"JSON_LOG"`
 	ShutdownDelay                 time.Duration               `yaml:"shutdown_delay" envDefault:"60s" env:"SHUTDOWN_DELAY"`
 	GracePeriod                   time.Duration               `yaml:"grace_period" envDefault:"30s" env:"GRACE_PERIOD"`
@@ -971,6 +975,19 @@ type Config struct {
 	ApolloCompatibilityFlags       ApolloCompatibilityFlags        `yaml:"apollo_compatibility_flags"`
 	ApolloRouterCompatibilityFlags ApolloRouterCompatibilityFlags  `yaml:"apollo_router_compatibility_flags"`
 	ClientHeader                   ClientHeader                    `yaml:"client_header"`
+
+	WatchConfig WatchConfig `yaml:"watch_config" envPrefix:"WATCH_CONFIG_"`
+}
+
+type WatchConfig struct {
+	Enabled      bool                    `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	Interval     time.Duration           `yaml:"interval" envDefault:"10s" env:"INTERVAL"`
+	StartupDelay WatchConfigStartupDelay `yaml:"startup_delay" envPrefix:"STARTUP_DELAY_"`
+}
+
+type WatchConfigStartupDelay struct {
+	Enabled bool          `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	Maximum time.Duration `yaml:"maximum" envDefault:"10s" env:"MAXIMUM"`
 }
 
 type PlaygroundConfig struct {
@@ -980,21 +997,16 @@ type PlaygroundConfig struct {
 }
 
 type LoadResult struct {
-	Config        Config
+	Config Config
+
+	// DefaultLoaded is set to true when no config is found at the default path and the defaults are used.
 	DefaultLoaded bool
 }
 
-func LoadConfig(configFilePath string, envOverride string) (*LoadResult, error) {
-	_ = godotenv.Load(".env.local")
-	_ = godotenv.Load()
-
-	if envOverride != "" {
-		_ = godotenv.Overload(envOverride)
-	}
-
+func LoadConfig(configFilePath string) (*LoadResult, error) {
 	cfg := &LoadResult{
 		Config:        Config{},
-		DefaultLoaded: true,
+		DefaultLoaded: false,
 	}
 
 	// Try to load the environment variables into the config
@@ -1005,21 +1017,11 @@ func LoadConfig(configFilePath string, envOverride string) (*LoadResult, error) 
 	}
 
 	// Read the custom config file
-
 	var configFileBytes []byte
-
-	if configFilePath == "" {
-		configFilePath = os.Getenv("CONFIG_PATH")
-		if configFilePath == "" {
-			configFilePath = DefaultConfigPath
-		}
-	}
-
-	isDefaultConfigPath := configFilePath == DefaultConfigPath
 	configFileBytes, err = os.ReadFile(configFilePath)
 	if err != nil {
-		if isDefaultConfigPath {
-			cfg.DefaultLoaded = false
+		if configFilePath == DefaultConfigPath {
+			cfg.DefaultLoaded = true
 		} else {
 			return nil, fmt.Errorf("could not read custom config file %s: %w", configFilePath, err)
 		}

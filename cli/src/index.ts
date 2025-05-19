@@ -4,12 +4,25 @@ import * as dotenv from 'dotenv';
 import pc from 'picocolors';
 import boxen from 'boxen';
 import program from './commands/index.js';
+import { initTelemetry, shutdownTelemetry, captureCommandFailure } from './core/telemetry.js';
 
 dotenv.config();
 
+initTelemetry();
+
 try {
   await program.parseAsync(process.argv);
+  await shutdownTelemetry();
 } catch (e) {
+  try {
+    const commandPath = process.argv.slice(2).join(' ');
+    await captureCommandFailure(commandPath, e as Error | string);
+  } catch (telemetryError) {
+    if (process.env.DEBUG) {
+      console.error('Failed to capture command failure telemetry:', telemetryError);
+    }
+  }
+
   console.log('');
 
   console.error(e);
@@ -32,4 +45,6 @@ Please try the below steps to solve the issue
   );
 
   process.exitCode = 1;
+
+  await shutdownTelemetry();
 }

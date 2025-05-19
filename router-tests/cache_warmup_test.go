@@ -6,13 +6,15 @@ import (
 	"testing"
 	"time"
 
-	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 
-	"github.com/wundergraph/cosmo/router/pkg/otel"
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+
+	"github.com/wundergraph/cosmo/router/pkg/otel"
 
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -445,8 +447,8 @@ func TestCacheWarmup(t *testing.T) {
 				},
 				AssertCacheMetrics: &testenv.CacheMetricsAssertions{
 					BaseGraphAssertions: testenv.CacheMetricsAssertion{
-						QueryNormalizationMisses:          1, // 1x miss during first safelist call
-						QueryNormalizationHits:            1, // 1x hit during second safelist call
+						QueryNormalizationMisses:          0, // 0x miss during first safelist call - safelisted operation counted as persisted operation
+						QueryNormalizationHits:            0, // 0x hit during second safelist call - safelisted operation counted as persisted operation
 						PersistedQueryNormalizationHits:   2, // 1x hit after warmup, when called with operation name. No hit from second request because of missing operation name, it recomputes it
 						PersistedQueryNormalizationMisses: 5, // 1x miss during warmup, 1 miss for first operation trying without operation name, 1 miss for second operation trying without operation name, 2x miss during safelist because went to normal query normalization cache
 						ValidationHits:                    4,
@@ -841,7 +843,7 @@ func TestCacheWarmup(t *testing.T) {
 			metricScope := GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 			require.NotNil(t, metricScope)
 
-			require.Len(t, metricScope.Metrics, 6)
+			require.Len(t, metricScope.Metrics, 7)
 
 			operationPlanningTimeMetric := metricdata.Metrics{
 				Name:        "router.graphql.operation.planning_time",

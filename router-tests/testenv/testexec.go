@@ -4,18 +4,18 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"github.com/hashicorp/consul/sdk/freeport"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/atomic"
 	"io"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/consul/sdk/freeport"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/atomic"
 )
 
 const routerDir = "../router"
@@ -26,18 +26,34 @@ var (
 )
 
 // RunRouterBinary starts the router binary, sets up the test environment, and runs the provided test function.
-func RunRouterBinary(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) {
+func RunRouterBinary(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) error {
 	t.Helper()
+
+	if testing.Short() {
+		t.Skip("router binary tests are slow due to compilation time")
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	routerPath := getRouterBinary(t, ctx)
-	env := runRouterBin(t, ctx, cfg, routerPath)
+	env, err := runRouterBin(t, ctx, cfg, routerPath)
+	if err != nil {
+		return err
+	}
 	t.Cleanup(env.Shutdown)
 
 	// Execute the test case with the environment
 	f(t, env)
+	return nil
+}
+
+func (e *Environment) GetRouterProcessCwd() string {
+	return e.routerCmd.Dir
+}
+
+func (e *Environment) SignalRouterProcess(sig os.Signal) error {
+	return e.routerCmd.Process.Signal(sig)
 }
 
 // BuildRouter runs `make build` inside the router directory and fails the test on error.
@@ -50,7 +66,10 @@ func buildRouterBin(t *testing.T, ctx context.Context) {
 
 		cmd := exec.Command("make", "build-race")
 		cmd.Dir = routerDir
-		runCmdWithLogs(t, ctx, cmd, true) // Run the build command
+		err := runCmdWithLogs(t, ctx, cmd, true) // Run the build command
+		if err != nil {
+			t.Fatalf("failed to execute runCmdWithLogs: %v", err)
+		}
 
 		// Determine the binary path after successful build
 		binPath := filepath.Join(routerDir, "router") // Adjust if needed for Windows
@@ -68,18 +87,22 @@ func getRouterBinary(t *testing.T, ctx context.Context) string {
 }
 
 // runRouterBin starts the router binary and returns an Environment.
-func runRouterBin(t *testing.T, ctx context.Context, cfg *Config, binaryPath string) *Environment {
+func runRouterBin(t *testing.T, ctx context.Context, cfg *Config, binaryPath string) (*Environment, error) {
 	t.Helper()
 
 	fullBinPath, err := filepath.Abs(binaryPath)
-	require.NoError(t, err)
+	if err != nil {
+		return nil, err
+	}
 
 	port := freeport.GetOne(t)
 	listenerAddr := fmt.Sprintf("localhost:%d", port)
 	token, err := generateJwtToken()
-	require.NoError(t, err)
+	if err != nil {
+		return nil, err
+	}
 	testCdn := SetupCDNServer(t, freeport.GetOne(t))
-	vals := ""
+	var envs []string
 
 	for key, val := range map[string]string{
 		"GRAPH_API_TOKEN":      token,
@@ -89,21 +112,29 @@ func runRouterBin(t *testing.T, ctx context.Context, cfg *Config, binaryPath str
 		"RETRY_ENABLED":        "false",
 		"SHUTDOWN_DELAY":       "30s",
 		"CDN_CACHE_SIZE":       fmt.Sprintf("%d", 1024*1024),
+		"DEMO_MODE":            fmt.Sprintf("%t", cfg.DemoMode),
 	} {
-		vals += fmt.Sprintf("\n%s=%s", key, val)
+		envs = append(envs, fmt.Sprintf("%s=%s", key, val))
 	}
-	envFile := filepath.Join(os.TempDir(), RandString(6)+".env")
-	require.NoError(t, os.WriteFile(envFile, []byte(strings.TrimSpace(vals)), os.ModePerm))
 
-	cmd := exec.Command(fullBinPath, "--override-env", envFile)
+	cmd := exec.Command(fullBinPath)
+	cmd.Env = envs
 	cmd.Dir = t.TempDir()
-	newCtx, cancel := context.WithCancelCause(context.Background())
-	runCmdWithLogs(t, ctx, cmd, false)
+	newCtx, cancel := context.WithCancelCause(ctx)
+	err = runCmdWithLogs(t, ctx, cmd, false)
+	if err != nil {
+		return nil, err
+	}
 
 	// Graceful shutdown on context cancel
 	go func() {
 		<-newCtx.Done()
 		_ = cmd.Process.Signal(os.Interrupt)
+	}()
+
+	go func() {
+		err := cmd.Wait()
+		cancel(err)
 	}()
 
 	// Create test environment
@@ -122,12 +153,15 @@ func runRouterBin(t *testing.T, ctx context.Context, cfg *Config, binaryPath str
 	}
 
 	// Wait for server readiness
-	require.NoError(t, env.WaitForServer(ctx, env.RouterURL+"/health/ready", 600, 60))
+	err = env.WaitForServer(newCtx, env.RouterURL+"/health/ready", 600, 60)
+	if err != nil {
+		return nil, err
+	}
 
-	return env
+	return env, nil
 }
 
-func runCmdWithLogs(t *testing.T, ctx context.Context, cmd *exec.Cmd, waitToComplete bool) {
+func runCmdWithLogs(t *testing.T, ctx context.Context, cmd *exec.Cmd, waitToComplete bool) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	r, w := io.Pipe()
@@ -151,8 +185,16 @@ func runCmdWithLogs(t *testing.T, ctx context.Context, cmd *exec.Cmd, waitToComp
 	}()
 
 	if waitToComplete {
-		require.NoError(t, cmd.Run(), "Failed to start router")
+		err := cmd.Run()
+		if err != nil {
+			return fmt.Errorf("failed to run router: %w", err)
+		}
 	} else {
-		require.NoError(t, cmd.Start(), "Failed to start router")
+		err := cmd.Start()
+		if err != nil {
+			return fmt.Errorf("failed to start router: %w", err)
+		}
+
 	}
+	return nil
 }

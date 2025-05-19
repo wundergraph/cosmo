@@ -6,7 +6,7 @@
 
 echo "Generating config using 'wgc router compose'"
 cd "../cli" || exit
-pnpm wgc router compose -i ../demo/graph.yaml -o ../router-tests/testenv/testdata/config.json
+pnpm wgc router compose -i ../demo/graph.yaml -o ../router-tests/testenv/testdata/configWithEdfs.json
 
 ## using npm package
 
@@ -21,5 +21,5 @@ pnpm wgc router compose -i ../demo/graph.yaml -o ../router-tests/testenv/testdat
 # format test config
 
 echo "Formatting config"
-jq . ../router-tests/testenv/testdata/config.json > ../router-tests/testenv/testdata/config.json.tmp
-mv ../router-tests/testenv/testdata/config.json.tmp ../router-tests/testenv/testdata/config.json
+jq . ../router-tests/testenv/testdata/configWithEdfs.json > ../router-tests/testenv/testdata/configWithEdfs.json.tmp
+mv ../router-tests/testenv/testdata/configWithEdfs.json.tmp ../router-tests/testenv/testdata/configWithEdfs.json

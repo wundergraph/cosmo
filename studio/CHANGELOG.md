@@ -4,6 +4,77 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.116.3](https://github.com/wundergraph/cosmo/compare/studio@0.116.2...studio@0.116.3) (2025-05-19)
+
+### Bug Fixes
+
+* display proposal matches only if the organization has access to proposals ([#1868](https://github.com/wundergraph/cosmo/issues/1868)) ([2233d1b](https://github.com/wundergraph/cosmo/commit/2233d1b297b4774295649c41340fadcb879b8d77)) (@JivusAyrus)
+
+## [0.116.2](https://github.com/wundergraph/cosmo/compare/studio@0.116.1...studio@0.116.2) (2025-05-16)
+
+**Note:** Version bump only for package studio
+
+## [0.116.1](https://github.com/wundergraph/cosmo/compare/studio@0.116.0...studio@0.116.1) (2025-05-14)
+
+### Bug Fixes
+
+* posthog distinct id for identify ([#1854](https://github.com/wundergraph/cosmo/issues/1854)) ([84bcf00](https://github.com/wundergraph/cosmo/commit/84bcf00c83a8873671f5bd8892be07f87352f472)) (@thisisnithin)
+
+# [0.116.0](https://github.com/wundergraph/cosmo/compare/studio@0.115.2...studio@0.116.0) (2025-05-13)
+
+### Features
+
+* add demo configuration ([#1796](https://github.com/wundergraph/cosmo/issues/1796)) ([af1d37b](https://github.com/wundergraph/cosmo/commit/af1d37bb833a9dadf3de9d6cd210f048e3c0687c)) (@alepane21)
+
+## [0.115.2](https://github.com/wundergraph/cosmo/compare/studio@0.115.1...studio@0.115.2) (2025-05-13)
+
+### Bug Fixes
+
+* reset tracking and fix cli cmd description ([#1853](https://github.com/wundergraph/cosmo/issues/1853)) ([580f92a](https://github.com/wundergraph/cosmo/commit/580f92a0af8372b6c4d69ffe3f5cdf9351f4f5aa)) (@thisisnithin)
+
+## [0.115.1](https://github.com/wundergraph/cosmo/compare/studio@0.115.0...studio@0.115.1) (2025-05-13)
+
+### Bug Fixes
+
+* update PostHog identification to allow cross-domain tracking ([#1851](https://github.com/wundergraph/cosmo/issues/1851)) ([3bd2991](https://github.com/wundergraph/cosmo/commit/3bd29916e10758478fc194e66f16e91783a16787)) (@thisisnithin)
+
+# [0.115.0](https://github.com/wundergraph/cosmo/compare/studio@0.114.0...studio@0.115.0) (2025-05-13)
+
+### Features
+
+* add posthog ([#1847](https://github.com/wundergraph/cosmo/issues/1847)) ([f49ebfb](https://github.com/wundergraph/cosmo/commit/f49ebfb5f66dc4807104ebb63eea1418511010aa)) (@thisisnithin)
+* allow to check new subgraphs ([#1761](https://github.com/wundergraph/cosmo/issues/1761)) ([5b0bfbf](https://github.com/wundergraph/cosmo/commit/5b0bfbf38e77893453dc6bdfb4d524df1f59881b)) (@JivusAyrus)
+
+# [0.114.0](https://github.com/wundergraph/cosmo/compare/studio@0.113.5...studio@0.114.0) (2025-05-09)
+
+### Features
+
+* **playground:** add support for state sharing via URL with user control over what to include ([#1833](https://github.com/wundergraph/cosmo/issues/1833)) ([c630c9f](https://github.com/wundergraph/cosmo/commit/c630c9f6833de3d071e12f825ed75f2630a9b7e9)) (@akshaygarg576)
+
+## [0.113.5](https://github.com/wundergraph/cosmo/compare/studio@0.113.4...studio@0.113.5) (2025-05-07)
+
+### Bug Fixes
+
+* make proposals a invite only feature ([#1836](https://github.com/wundergraph/cosmo/issues/1836)) ([28a0ea0](https://github.com/wundergraph/cosmo/commit/28a0ea0decd75b62fd797af6df693437a2fc7240)) (@JivusAyrus)
+
+## [0.113.4](https://github.com/wundergraph/cosmo/compare/studio@0.113.3...studio@0.113.4) (2025-05-06)
+
+### Bug Fixes
+
+* protect against mime type sniffing and clickjacking ([#1829](https://github.com/wundergraph/cosmo/issues/1829)) ([d86364b](https://github.com/wundergraph/cosmo/commit/d86364b8f0dbfb5063fdbcde760bf3248287d50b)) (@StarpTech)
+
+## [0.113.3](https://github.com/wundergraph/cosmo/compare/studio@0.113.2...studio@0.113.3) (2025-05-02)
+
+### Bug Fixes
+
+* vite vulnerability ([#1823](https://github.com/wundergraph/cosmo/issues/1823)) ([05d5300](https://github.com/wundergraph/cosmo/commit/05d53004612958fe1dab2c292ec89ac4ac686b61)) (@JivusAyrus)
+
+## [0.113.2](https://github.com/wundergraph/cosmo/compare/studio@0.113.1...studio@0.113.2) (2025-04-29)
+
+### Bug Fixes
+
+* improve the queries of the check page ([#1811](https://github.com/wundergraph/cosmo/issues/1811)) ([ce4f377](https://github.com/wundergraph/cosmo/commit/ce4f377c53584299a86c0af1bc5b4bb87c825bfe)) (@JivusAyrus)
+
 ## [0.113.1](https://github.com/wundergraph/cosmo/compare/studio@0.113.0...studio@0.113.1) (2025-04-16)
 
 ### Bug Fixes

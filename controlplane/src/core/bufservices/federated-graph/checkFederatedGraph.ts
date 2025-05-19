@@ -76,7 +76,9 @@ export function checkFederatedGraph(
       namespaceId: federatedGraph.namespaceId,
     });
 
-    const subgraphsDetails: PlainMessage<Subgraph>[] = subgraphs.map((s) => ({
+    const subgraphsUsedForComposition = subgraphs.filter((s) => !!s.schemaSDL);
+
+    const subgraphsDetails: PlainMessage<Subgraph>[] = subgraphsUsedForComposition.map((s) => ({
       id: s.id,
       name: s.name,
       routingURL: s.routingUrl,
@@ -92,7 +94,7 @@ export function checkFederatedGraph(
     }));
 
     const result = composeSubgraphs(
-      subgraphs.map((s) => ({
+      subgraphsUsedForComposition.map((s) => ({
         id: s.id,
         name: s.name,
         url: s.routingUrl,
