@@ -1,8 +1,10 @@
+import path from 'node:path';
+import os from 'node:os';
 import { Command, program } from 'commander';
 import { resolve } from 'pathe';
-import pc from 'picocolors';
 import Spinner from 'ora';
 import { BaseCommandOptions } from '../../../../core/types/types.js';
+import { renderResultTree } from '../helper.js';
 import {
   buildBinaries,
   checkAndInstallTools,
@@ -18,7 +20,7 @@ export default (opts: BaseCommandOptions) => {
   command.description('Build a gRPC router plugin');
   command.argument('[directory]', 'Directory of the plugin', '.');
   command.option('--generate-only', 'Generate only the proto and mapping files, do not compile the plugin');
-  command.option('--debug', 'Build the binary with debug information');
+  command.option('--debug', 'Build the binary with debug information', false);
   command.option('--platform [platforms...]', 'Platform-architecture combinations (e.g., darwin-arm64 linux-amd64)', [
     HOST_PLATFORM,
   ]);
@@ -39,6 +41,9 @@ export default (opts: BaseCommandOptions) => {
     const startTime = performance.now();
     const pluginDir = resolve(directory);
     const spinner = Spinner();
+    const pluginName = path.basename(pluginDir);
+    const goModulePath = options.goModulePath;
+    let platforms: string[] = [];
 
     try {
       // Check and install tools if needed
@@ -47,12 +52,10 @@ export default (opts: BaseCommandOptions) => {
       }
 
       // Normalize platform list
-      const platforms = normalizePlatforms(options.platform, options.allPlatforms);
+      platforms = normalizePlatforms(options.platform, options.allPlatforms);
 
       // Start the main build process
       spinner.start('Building plugin...');
-
-      const goModulePath = options.goModulePath;
 
       // Generate proto and mapping files
       await generateProtoAndMapping(pluginDir, goModulePath, spinner);
@@ -74,16 +77,27 @@ export default (opts: BaseCommandOptions) => {
       const formattedTime =
         elapsedTimeMs > 1000 ? `${(elapsedTimeMs / 1000).toFixed(2)}s` : `${Math.round(elapsedTimeMs)}ms`;
 
-      if (options.generateOnly) {
-        spinner.succeed(pc.green('Generated proto and mapping files successfully! ' + `[${formattedTime}]`));
-      } else {
-        spinner.succeed(pc.green('Plugin built successfully! ' + `[${formattedTime}]`));
-      }
+      renderResultTree(spinner, 'Plugin built successfully!', true, pluginName, {
+        output: pluginDir,
+        'go module': goModulePath,
+        platforms: platforms.join(', '),
+        env: `${os.platform()} ${os.arch()}`,
+        build: options.debug ? 'debug' : 'release',
+        type: options.generateOnly ? 'generate-only' : 'full',
+        time: formattedTime,
+      });
     } catch (error: any) {
-      spinner.fail(pc.red(`Failed to build plugin: ${error.message}`));
-      program.error(`Failed to build plugin: ${error.message}`);
-    } finally {
-      spinner.stop();
+      renderResultTree(spinner, 'Plugin build failed!', false, pluginName, {
+        output: pluginDir,
+        'go module': goModulePath,
+        platforms: platforms.join(', '),
+        env: `${os.platform()} ${os.arch()}`,
+        build: options.debug ? 'debug' : 'release',
+        type: options.generateOnly ? 'generate-only' : 'full',
+        error: error.message,
+      });
+
+      program.error('');
     }
   });
 

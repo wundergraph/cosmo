@@ -10,6 +10,7 @@ import { compileGraphQLToMapping, compileGraphQLToProto } from '@wundergraph/pro
 import { camelCase, upperFirst } from 'lodash-es';
 import { BaseCommandOptions } from '../../../../core/types/types.js';
 import { goMod, mainGo, mainGoTest, readme, schema } from '../templates/go-plugin.js';
+import { renderResultTree } from '../helper.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('init');
@@ -87,10 +88,14 @@ export default (opts: BaseCommandOptions) => {
       const formattedTime =
         elapsedTimeMs > 1000 ? `${(elapsedTimeMs / 1000).toFixed(2)}s` : `${Math.round(elapsedTimeMs)}ms`;
 
-      spinner.succeed(pc.green(`Plugin ${pc.bold(name)} scaffolded successfully! ` + `[${formattedTime}]`));
+      renderResultTree(spinner, 'Plugin scaffolded!', true, name, {
+        language: options.language,
+        time: formattedTime,
+        location: pluginDir,
+      });
       console.log('');
       console.log(
-        `  Checkout the ${pc.bold(pc.italic(relative(process.cwd(), resolve(pluginDir, 'README.md'))))} file for instructions on how to build and run your plugin.`,
+        `  Checkout the ${pc.bold(pc.italic('README.md'))} file for instructions on how to build and run your plugin.`,
       );
       console.log(`  Go to https://cosmo-docs.wundergraph.com/router/plugins to learn more about it.`);
       console.log('');
@@ -101,8 +106,9 @@ export default (opts: BaseCommandOptions) => {
       } catch {
         // Ignore cleanup errors
       }
-      spinner.fail(pc.red(`Failed to init plugin: ${error.message}`));
-      throw error;
+      renderResultTree(spinner, 'Plugin scaffolding', false, name, {
+        error: error.message,
+      });
     } finally {
       spinner.stop();
     }
