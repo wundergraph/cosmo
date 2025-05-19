@@ -347,6 +347,34 @@ message User {
 
 This careful tracking of field numbers ensures that clients using older versions of the Protobuf schema won't misinterpret data when fields are added, removed, or changed. The proto lock manager maintains this state across schema evolutions automatically.
 
+## Documentation and Comments
+
+Protographic preserves documentation from GraphQL schemas and converts it to Protocol Buffer comments:
+
+### Comment Conversion
+
+| GraphQL Documentation | Protocol Buffer Representation |
+| -------------------- | ------------------------------ |
+| Single-line descriptions (`"description"`) | Single-line comments (`// comment`) |
+| Multi-line descriptions (`"""description"""`) | Multi-line comments (`/* comment */`) |
+| Field descriptions | Field comments |
+| Type descriptions | Message/enum comments |
+| Enum value descriptions | Enum value comments |
+| Operation descriptions | RPC method comments |
+
+### Comment Preservation
+
+When generating Protocol Buffers, Protographic:
+
+1. **Type Documentation**: Preserves descriptions from GraphQL types and converts them to comments before message/enum definitions
+2. **Field Documentation**: Preserves descriptions from GraphQL fields and converts them to comments before field definitions
+3. **Enum Value Documentation**: Preserves descriptions from GraphQL enum values and converts them to comments before enum value definitions
+4. **Operation Documentation**: Preserves descriptions from GraphQL operations (Query/Mutation fields) and uses them for RPC method documentation
+5. **Entity Documentation**: Uses entity type descriptions for adding documentation to lookup methods for Federation entities
+6. **Request/Response Documentation**: Generates contextual documentation for request/response messages based on operation descriptions
+
+This approach ensures that documentation and business context from the GraphQL schema is properly reflected in the generated Protocol Buffer definitions, making it easier for developers to understand the purpose and usage of messages and fields.
+
 ## Federation Support
 
 Types with Federation's `@key` directive generate dedicated lookup methods rather than using the `_entities` field approach used in pure GraphQL. The lookup methods are optimized for batch processing of entities.
