@@ -802,5 +802,13 @@
   "Plugins": {
     "Enabled": true,
     "Path": "some/path/to/plugins"
+  },
+  "WatchConfig": {
+    "Enabled": true,
+    "Interval": 10000000000,
+    "StartupDelay": {
+      "Enabled": true,
+      "Maximum": 10000000000
+    }
   }
 }
