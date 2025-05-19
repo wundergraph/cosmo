@@ -145,11 +145,11 @@ Protographic follows a set of conventions when converting GraphQL SDL to Protoco
 
 ## Integration with graphql-go-tools
 
-Protographic integrates with [graphql-go-tools](https://github.com/wundergraph/graphql-go-tools) to enable seamless GraphQL-to-gRPC translation. This integration allows you to:
+Protographic generates a mapping file as well as a proto file that can be used with [graphql-go-tools](https://github.com/wundergraph/graphql-go-tools) to enable seamless GraphQL-to-gRPC translation. This integration allows you to:
 
-- Convert GraphQL queries to Protocol Buffer messages automatically
-- Transform Protocol Buffer responses back to GraphQL format
-- Handle advanced GraphQL features (fragments, variables, aliases) within a Protocol Buffer context
+- Translate GraphQL queries to gRPC requests
+- Translate gRPC responses back to GraphQL format
+- Handle advanced GraphQL features (fragments, variables, aliases) within a gRPC context
 
 This bidirectional translation preserves type safety while combining the benefits of both GraphQL and gRPC ecosystems.
 

@@ -128,6 +128,14 @@ export default (opts: BaseCommandOptions) => {
         }
 
         const pluginName = basename(s.plugin.path);
+        
+        // Check if a plugin with the same name already exists
+        if (subgraphs.some(sg => sg.kind === SubgraphKind.Plugin && sg.name === pluginName)) {
+          program.error(
+            pc.red(pc.bold(`A plugin with the name '${pc.bold(pluginName)}' is already registered. Plugin names must be unique.`)),
+          );
+        }
+        
         const mappingFilePath = resolve(s.plugin.path, 'generated', 'mapping.json');
         const mappingFile = await readFile(mappingFilePath, 'utf8');
         const schemaFilePath = resolve(s.plugin.path, 'src', 'schema.graphql');
@@ -145,6 +153,14 @@ export default (opts: BaseCommandOptions) => {
         } as SubgraphPluginMetadata);
       } else {
         const url = s.introspection?.url ?? s.routing_url;
+        
+        // Check if a subgraph with the same name already exists
+        if (subgraphs.some(sg => sg.name === s.name)) {
+          program.error(
+            pc.red(pc.bold(`A subgraph with the name '${pc.bold(s.name)}' is already registered. Subgraph names must be unique.`)),
+          );
+        }
+        
         let schemaSDL = '';
 
         // The GraphQL schema is provided in the input file
