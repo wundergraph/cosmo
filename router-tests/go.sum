@@ -339,8 +339,8 @@ github.com/wundergraph/astjson v0.0.0-20250106123708-be463c97e083 h1:8/D7f8gKxTB
 github.com/wundergraph/astjson v0.0.0-20250106123708-be463c97e083/go.mod h1:eOTL6acwctsN4F3b7YE+eE2t8zcJ/doLm9sZzsxxxrE=
 github.com/wundergraph/consul/sdk v0.0.0-20250204115147-ed842a8fd301 h1:EzfKHQoTjFDDcgaECCCR2aTePqMu9QBmPbyhqIYOhV0=
 github.com/wundergraph/consul/sdk v0.0.0-20250204115147-ed842a8fd301/go.mod h1:wxI0Nak5dI5RvJuzGyiEK4nZj0O9X+Aw6U0tC1wPKq0=
-github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.178.0.20250515124108-e0ba64ba2b27 h1:yPmzT00zfpCBw/3xLRbwj/4FDCq2TwVd5Q4Yv4EgUSc=
-github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.178.0.20250515124108-e0ba64ba2b27/go.mod h1:8N4c4JRDknFdph84ZCcHxgNBjnW7f3aiIycmpG/IhCc=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.179 h1:xgvz2Zk7lmQ8KFUY+HRgY/AUNmybLtMdYGbxWY97DIo=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.179/go.mod h1:8N4c4JRDknFdph84ZCcHxgNBjnW7f3aiIycmpG/IhCc=
 github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f/go.mod h1:N2zxlSyiKSe5eX1tZViRH5QA0qijqEDrYZiPEAiq3wU=
 github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb h1:zGWFAtiMcyryUHoUjUJX0/lt1H2+i2Ka2n+D3DImSNo=
 github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb/go.mod h1:N2zxlSyiKSe5eX1tZViRH5QA0qijqEDrYZiPEAiq3wU=
