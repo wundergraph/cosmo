@@ -10,6 +10,23 @@ import (
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 )
 
+type AcquiredConnection struct {
+	Time     time.Time
+	IdleTime time.Duration
+	Reused   bool
+	WasIdle  bool
+}
+
+type GetConnection struct {
+	Time     time.Time
+	HostPort string
+}
+
+type ClientTrace struct {
+	ConnectionGet      *GetConnection
+	ConnectionAcquired *AcquiredConnection
+}
+
 type ClientTraceContextKey struct{}
 type CurrentSubgraphContextKey struct{}
 
@@ -72,20 +89,6 @@ func (t *TraceInjectingRoundTripper) getClientTrace(ctx context.Context) *httptr
 				IdleTime: info.IdleTime,
 			}
 		},
-		DNSStart:             nil,
-		DNSDone:              nil,
-		ConnectStart:         nil,
-		ConnectDone:          nil,
-		TLSHandshakeStart:    nil,
-		TLSHandshakeDone:     nil,
-		GotFirstResponseByte: nil,
-		WroteHeaders:         nil,
-		WroteRequest:         nil,
-		PutIdleConn:          nil,
-		Got100Continue:       nil,
-		Got1xxResponse:       nil,
-		WroteHeaderField:     nil,
-		Wait100Continue:      nil,
 	}
 	return trace
 }
