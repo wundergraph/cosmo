@@ -14,12 +14,12 @@ const (
 
 var (
 	maxConnectionOptions = []otelmetric.Int64GaugeOption{
-		otelmetric.WithDescription("Total number of max connections per host"),
+		otelmetric.WithDescription("Total number of max connections per subgraph"),
 	}
 
 	connectionAcquireDurationOptions = []otelmetric.Float64HistogramOption{
 		otelmetric.WithUnit("s"),
-		otelmetric.WithDescription("Connection acquire duration"),
+		otelmetric.WithDescription("Total connection acquire duration"),
 	}
 
 	connectionsActiveOptions = []otelmetric.Int64ObservableGaugeOption{
