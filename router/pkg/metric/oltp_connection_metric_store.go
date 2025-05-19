@@ -48,14 +48,26 @@ func newOtlpConnectionMetrics(logger *zap.Logger, meterProvider *metric.MeterPro
 }
 
 func (h *otlpConnectionMetrics) startInitMetrics(connStats *ConnectionPoolStats, attributes []attribute.KeyValue) error {
+	for subgraph, maxConns := range connStats.MaxConnsPerSubgraph {
+		h.MeasureMaxConnections(context.Background(), maxConns,
+			otelmetric.WithAttributes(otel.WgSubgraphName.String(subgraph)),
+		)
+	}
+
 	rc, err := h.meter.RegisterCallback(func(_ context.Context, o otelmetric.Observer) error {
 		stats := connStats.GetStats()
-		for host, activeConnections := range stats {
+		for key, activeConnections := range stats {
+			subgraphName := make([]attribute.KeyValue, 0, 1)
+			if key.Subgraph == "" {
+				subgraphName = append(subgraphName, otel.WgSubgraphName.String(key.Subgraph))
+			}
 			o.ObserveInt64(h.instruments.connectionsActive, activeConnections,
 				otelmetric.WithAttributes(attributes...),
-				otelmetric.WithAttributes(otel.WgHost.String(host)),
+				otelmetric.WithAttributes(subgraphName...),
+				otelmetric.WithAttributes(otel.WgHost.String(key.Host)),
 			)
 		}
+
 		return nil
 	}, h.instruments.connectionsActive)
 	if err != nil {

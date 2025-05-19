@@ -15,7 +15,7 @@ import (
 // ConnectionMetricProvider is the interface that wraps the basic connection metric methods.
 // We maintain two providers, one for OTEL and one for Prometheus.
 type ConnectionMetricProvider interface {
-	MeasureTotalConnectionDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
+	MeasureConnectionAcquireDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
 	MeasureMaxConnections(ctx context.Context, count int64, opts ...otelmetric.RecordOption)
 	Flush(ctx context.Context) error
 	Shutdown() error
@@ -23,8 +23,7 @@ type ConnectionMetricProvider interface {
 
 // ConnectionMetricStore is the interface for connection and pool metrics only.
 type ConnectionMetricStore interface {
-	MeasureTotalConnectionDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
-	MeasureMaxConnections(ctx context.Context, reused bool, attrs ...attribute.KeyValue)
+	MeasureConnectionAcquireDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
 	Flush(ctx context.Context) error
 	Shutdown(ctx context.Context) error
 }
@@ -66,18 +65,6 @@ func NewConnectionMetricStore(
 	}
 
 	return connMetrics, nil
-}
-
-func (c *ConnectionMetrics) MeasureTotalConnectionDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
-	copied := append([]attribute.KeyValue{}, c.baseAttributes...)
-	opts := otelmetric.WithAttributes(append(copied, attrs...)...)
-
-	if c.otlpConnectionMetrics != nil {
-		c.otlpConnectionMetrics.MeasureTotalConnectionDuration(ctx, duration, opts)
-	}
-	if c.promConnectionMetrics != nil {
-		c.promConnectionMetrics.MeasureTotalConnectionDuration(ctx, duration, opts)
-	}
 }
 
 func (c *ConnectionMetrics) MeasureMaxConnections(ctx context.Context, reused bool, attrs ...attribute.KeyValue) {

@@ -18,9 +18,14 @@ func NewTraceDialer() *TraceDialer {
 
 type dialerFunc func(ctx context.Context, network, address string) (net.Conn, error)
 
-func (t *TraceDialer) WrapDial(base dialerFunc) dialerFunc {
+func (t *TraceDialer) WrapDial(base dialerFunc, subgraph string) dialerFunc {
 	return func(ctx context.Context, network, address string) (net.Conn, error) {
-		counter := t.connectionPoolStats.GetCounter(address)
+		key := metric.SubgraphHostKey{
+			Subgraph: subgraph,
+			Host:     address,
+		}
+
+		counter := t.connectionPoolStats.GetCounter(key)
 		counter.Add(1)
 
 		conn, err := base(ctx, network, address)

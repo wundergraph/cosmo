@@ -2052,7 +2052,8 @@ func newHTTPTransport(opts *TransportRequestOptions, proxy ProxyFunc, traceDiale
 	}
 
 	if traceDialer != nil {
-		transport.DialContext = traceDialer.WrapDial(transport.DialContext)
+		transport.DialContext = traceDialer.WrapDial(transport.DialContext, subgraph)
+		traceDialer.connectionPoolStats.AddSubgraphHostCount(subgraph, int64(opts.MaxConnsPerHost))
 	}
 
 	return transport
