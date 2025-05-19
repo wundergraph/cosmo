@@ -329,11 +329,20 @@ type Query {
 For more information about Cosmo and building subgraph plugins, visit the [Cosmo documentation](https://cosmo-docs.wundergraph.com).`;
 
 export const schema = `type World {
+  """
+  The ID of the world
+  """
   id: ID!
+  """
+  The name of the world
+  """
   name: String!
 }
 
 type Query {
+  """
+  The hello query
+  """
   hello(name: String!): World!
 }
 `;
