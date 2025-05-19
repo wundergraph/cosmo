@@ -66,18 +66,6 @@ func (h *otlpConnectionMetrics) startInitMetrics(connStats *ConnectionPoolStats,
 	return nil
 }
 
-func (h *otlpConnectionMetrics) MeasureDNSDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
-	h.instruments.dnsDuration.Record(ctx, duration, opts...)
-}
-
-func (h *otlpConnectionMetrics) MeasureDialDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
-	h.instruments.dialDuration.Record(ctx, duration, opts...)
-}
-
-func (h *otlpConnectionMetrics) MeasureTLSHandshakeDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
-	h.instruments.tlsHandshakeDuration.Record(ctx, duration, opts...)
-}
-
 func (h *otlpConnectionMetrics) MeasureTotalConnectionDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
 	h.instruments.totalConnectionDuration.Record(ctx, duration, opts...)
 }
@@ -86,8 +74,8 @@ func (h *otlpConnectionMetrics) MeasureConnectionAcquireDuration(ctx context.Con
 	h.instruments.connectionAcquireDuration.Record(ctx, duration, opts...)
 }
 
-func (h *otlpConnectionMetrics) MeasureConnections(ctx context.Context, count int64, opts ...otelmetric.AddOption) {
-	h.instruments.connectionTotal.Add(ctx, count, opts...)
+func (h *otlpConnectionMetrics) MeasureMaxConnections(ctx context.Context, count int64, opts ...otelmetric.RecordOption) {
+	h.instruments.maxConnections.Record(ctx, count, opts...)
 }
 
 func (h *otlpConnectionMetrics) Flush(ctx context.Context) error {

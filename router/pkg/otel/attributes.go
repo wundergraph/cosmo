@@ -50,7 +50,6 @@ const (
 	HTTPRequestUploadFileCount = attribute.Key("http.request.upload.file_count")
 
 	WgHost         = attribute.Key("wg.conn.host")
-	WgDnsHost      = attribute.Key("wg.conn.host.from.dns")
 	WgDnsLookup    = attribute.Key("wg.conn.dns.lookup")
 	WgTlsHandshake = attribute.Key("wg.conn.tls.handshake")
 	WgConnReused   = attribute.Key("wg.conn.reused")

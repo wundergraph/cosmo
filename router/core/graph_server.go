@@ -96,6 +96,7 @@ type (
 		runtimeMetrics          *rmetric.RuntimeMetrics
 		otlpEngineMetrics       *rmetric.EngineMetrics
 		prometheusEngineMetrics *rmetric.EngineMetrics
+		connectionMetrics       *rmetric.ConnectionMetrics
 		hostName                string
 		routerListenAddr        string
 		traceDialer             *TraceDialer
@@ -127,12 +128,12 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	}
 
 	// Base transport
-	baseTransport := newHTTPTransport(r.subgraphTransportOptions.TransportRequestOptions, proxy, traceDialer)
+	baseTransport := newHTTPTransport(r.subgraphTransportOptions.TransportRequestOptions, proxy, traceDialer, "")
 
 	// Subgraph transports
 	subgraphTransports := map[string]*http.Transport{}
 	for subgraph, subgraphOpts := range r.subgraphTransportOptions.SubgraphMap {
-		subgraphBaseTransport := newHTTPTransport(subgraphOpts, proxy, traceDialer)
+		subgraphBaseTransport := newHTTPTransport(subgraphOpts, proxy, traceDialer, subgraph)
 		subgraphTransports[subgraph] = subgraphBaseTransport
 	}
 
@@ -188,6 +189,21 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		if err := s.runtimeMetrics.Start(); err != nil {
 			return nil, err
 		}
+	}
+
+	if isConnStoreEnabled {
+		connStore, err := rmetric.NewConnectionMetricStore(
+			s.logger,
+			nil,
+			s.otlpMeterProvider,
+			s.promMeterProvider,
+			s.metricConfig,
+			s.traceDialer.connectionPoolStats,
+		)
+		if err != nil {
+			return nil, err
+		}
+		s.connectionMetrics = connStore
 	}
 
 	if err := s.setupEngineStatistics(); err != nil {
@@ -752,23 +768,6 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		gm.metricStore = m
 	}
 
-	isConnStoreEnabled := s.metricConfig.OpenTelemetry.ConnectionStats || s.metricConfig.Prometheus.ConnectionStats
-	if isConnStoreEnabled {
-		connStore, err := rmetric.NewConnectionMetricStore(
-			s.logger,
-			nil,
-			s.otlpMeterProvider,
-			s.promMeterProvider,
-			s.metricConfig,
-			s.traceDialer.connectionPoolStats,
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		gm.connectionMetricStore = connStore
-	}
-
 	subgraphs, err := configureSubgraphOverwrites(
 		engineConfig,
 		configSubgraphs,
@@ -1012,6 +1011,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			PreHandlers:              s.preOriginHandlers,
 			PostHandlers:             s.postOriginHandlers,
 			MetricStore:              gm.metricStore,
+			ConnectionMetricStore:    s.connectionMetrics,
 			RetryOptions: retrytransport.RetryOptions{
 				Enabled:       s.retryOptions.Enabled,
 				MaxRetryCount: s.retryOptions.MaxRetryCount,
@@ -1025,7 +1025,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			TracePropagators:              s.compositePropagator,
 			LocalhostFallbackInsideDocker: s.localhostFallbackInsideDocker,
 			Logger:                        s.logger,
-			EnableTraceClient:             isConnStoreEnabled,
+			EnableTraceClient:             s.connectionMetrics != nil,
 		},
 	}
 
@@ -1152,7 +1152,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		TracerProvider:                              s.tracerProvider,
 		Authorizer:                                  NewCosmoAuthorizer(authorizerOptions),
 		SubgraphErrorPropagation:                    s.subgraphErrorPropagation,
-		EngineLoaderHooks:                           NewEngineRequestHooks(gm.metricStore, subgraphAccessLogger, s.tracerProvider, gm.connectionMetricStore),
+		EngineLoaderHooks:                           NewEngineRequestHooks(gm.metricStore, subgraphAccessLogger, s.tracerProvider),
 	}
 
 	if s.redisClient != nil {

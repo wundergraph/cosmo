@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/httpclient"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
 	"github.com/wundergraph/cosmo/router/internal/unique"
 	"github.com/wundergraph/cosmo/router/pkg/metric"
@@ -34,26 +33,24 @@ const EngineLoaderHooksScopeVersion = "0.0.1"
 // engineLoaderHooks implements resolve.LoaderHooks
 // It is used to trace and measure the performance of the engine loader
 type engineLoaderHooks struct {
-	tracer                trace.Tracer
-	metricStore           metric.Store
-	accessLogger          *requestlogger.SubgraphAccessLogger
-	connectionMetricStore metric.ConnectionMetricStore
+	tracer       trace.Tracer
+	metricStore  metric.Store
+	accessLogger *requestlogger.SubgraphAccessLogger
 }
 
 type engineLoaderHooksRequestContext struct {
 	startTime time.Time
 }
 
-func NewEngineRequestHooks(metricStore metric.Store, logger *requestlogger.SubgraphAccessLogger, tracerProvider *sdktrace.TracerProvider, connectionMetricStore metric.ConnectionMetricStore) resolve.LoaderHooks {
+func NewEngineRequestHooks(metricStore metric.Store, logger *requestlogger.SubgraphAccessLogger, tracerProvider *sdktrace.TracerProvider) resolve.LoaderHooks {
 	if tracerProvider != nil {
 		return &engineLoaderHooks{
 			tracer: tracerProvider.Tracer(
 				EngineLoaderHooksScopeName,
 				trace.WithInstrumentationVersion(EngineLoaderHooksScopeVersion),
 			),
-			metricStore:           metricStore,
-			connectionMetricStore: connectionMetricStore,
-			accessLogger:          logger,
+			metricStore:  metricStore,
+			accessLogger: logger,
 		}
 	}
 
@@ -62,13 +59,13 @@ func NewEngineRequestHooks(metricStore metric.Store, logger *requestlogger.Subgr
 			EngineLoaderHooksScopeName,
 			trace.WithInstrumentationVersion(EngineLoaderHooksScopeVersion),
 		),
-		metricStore:           metricStore,
-		connectionMetricStore: connectionMetricStore,
-		accessLogger:          logger,
+		metricStore:  metricStore,
+		accessLogger: logger,
 	}
 }
 
 func (f *engineLoaderHooks) OnLoad(ctx context.Context, ds resolve.DataSourceInfo) context.Context {
+
 	if resolve.IsIntrospectionDataSource(ds.ID) {
 		return ctx
 	}
@@ -78,10 +75,6 @@ func (f *engineLoaderHooks) OnLoad(ctx context.Context, ds resolve.DataSourceInf
 	reqContext := getRequestContext(ctx)
 	if reqContext == nil {
 		return ctx
-	}
-
-	if f.connectionMetricStore != nil {
-		ctx = httpclient.InitTraceContext(ctx)
 	}
 
 	ctx, _ = f.tracer.Start(ctx, "Engine - Fetch",
@@ -138,6 +131,7 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 	defer reqContext.telemetry.ReleaseAttributes(&metricAttrs)
 	metricAttrs = append(metricAttrs, reqContext.telemetry.metricAttrs...)
 	metricAttrs = append(metricAttrs, commonAttrs...)
+
 	metricAddOpt := otelmetric.WithAttributeSet(attribute.NewSet(metricAttrs...))
 
 	if f.accessLogger != nil {
@@ -156,8 +150,6 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 		}
 		f.accessLogger.Info(path, fields)
 	}
-
-	metric.CalculateConnectionMetrics(ctx, reqContext.Logger(), f.connectionMetricStore)
 
 	if responseInfo.Err != nil {
 		// Set error status. This is the fetch error from the engine

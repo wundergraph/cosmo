@@ -2020,7 +2020,7 @@ func WithDemoMode(demoMode bool) Option {
 
 type ProxyFunc func(req *http.Request) (*url.URL, error)
 
-func newHTTPTransport(opts *TransportRequestOptions, proxy ProxyFunc, traceDialer *TraceDialer) *http.Transport {
+func newHTTPTransport(opts *TransportRequestOptions, proxy ProxyFunc, traceDialer *TraceDialer, subgraph string) *http.Transport {
 	dialer := &net.Dialer{
 		Timeout:   opts.DialTimeout,
 		KeepAlive: opts.KeepAliveProbeInterval,

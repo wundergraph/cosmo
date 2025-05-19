@@ -15,24 +15,16 @@ import (
 // ConnectionMetricProvider is the interface that wraps the basic connection metric methods.
 // We maintain two providers, one for OTEL and one for Prometheus.
 type ConnectionMetricProvider interface {
-	MeasureDNSDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
-	MeasureDialDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
-	MeasureTLSHandshakeDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
 	MeasureTotalConnectionDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
-	MeasureConnectionAcquireDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption)
-	MeasureConnections(ctx context.Context, count int64, opts ...otelmetric.AddOption)
+	MeasureMaxConnections(ctx context.Context, count int64, opts ...otelmetric.RecordOption)
 	Flush(ctx context.Context) error
 	Shutdown() error
 }
 
 // ConnectionMetricStore is the interface for connection and pool metrics only.
 type ConnectionMetricStore interface {
-	MeasureDNSDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
-	MeasureDialDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
-	MeasureTLSHandshakeDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
 	MeasureTotalConnectionDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
-	MeasureConnections(ctx context.Context, reused bool, attrs ...attribute.KeyValue)
-	MeasureConnectionAcquireDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue)
+	MeasureMaxConnections(ctx context.Context, reused bool, attrs ...attribute.KeyValue)
 	Flush(ctx context.Context) error
 	Shutdown(ctx context.Context) error
 }
@@ -76,42 +68,6 @@ func NewConnectionMetricStore(
 	return connMetrics, nil
 }
 
-func (c *ConnectionMetrics) MeasureDNSDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
-	copied := append([]attribute.KeyValue{}, c.baseAttributes...)
-	opts := otelmetric.WithAttributes(append(copied, attrs...)...)
-
-	if c.otlpConnectionMetrics != nil {
-		c.otlpConnectionMetrics.MeasureDNSDuration(ctx, duration, opts)
-	}
-	if c.promConnectionMetrics != nil {
-		c.promConnectionMetrics.MeasureDNSDuration(ctx, duration, opts)
-	}
-}
-
-func (c *ConnectionMetrics) MeasureDialDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
-	copied := append([]attribute.KeyValue{}, c.baseAttributes...)
-	opts := otelmetric.WithAttributes(append(copied, attrs...)...)
-
-	if c.otlpConnectionMetrics != nil {
-		c.otlpConnectionMetrics.MeasureDialDuration(ctx, duration, opts)
-	}
-	if c.promConnectionMetrics != nil {
-		c.promConnectionMetrics.MeasureDialDuration(ctx, duration, opts)
-	}
-}
-
-func (c *ConnectionMetrics) MeasureTLSHandshakeDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
-	copied := append([]attribute.KeyValue{}, c.baseAttributes...)
-	opts := otelmetric.WithAttributes(append(copied, attrs...)...)
-
-	if c.otlpConnectionMetrics != nil {
-		c.otlpConnectionMetrics.MeasureTLSHandshakeDuration(ctx, duration, opts)
-	}
-	if c.promConnectionMetrics != nil {
-		c.promConnectionMetrics.MeasureTLSHandshakeDuration(ctx, duration, opts)
-	}
-}
-
 func (c *ConnectionMetrics) MeasureTotalConnectionDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
 	copied := append([]attribute.KeyValue{}, c.baseAttributes...)
 	opts := otelmetric.WithAttributes(append(copied, attrs...)...)
@@ -124,7 +80,7 @@ func (c *ConnectionMetrics) MeasureTotalConnectionDuration(ctx context.Context, 
 	}
 }
 
-func (c *ConnectionMetrics) MeasureConnections(ctx context.Context, reused bool, attrs ...attribute.KeyValue) {
+func (c *ConnectionMetrics) MeasureMaxConnections(ctx context.Context, reused bool, attrs ...attribute.KeyValue) {
 	// Add the reused attribute to the base attributes
 	reusedAttr := otel.WgConnReused.Bool(reused)
 	allAttrs := append([]attribute.KeyValue{}, c.baseAttributes...)
@@ -134,10 +90,10 @@ func (c *ConnectionMetrics) MeasureConnections(ctx context.Context, reused bool,
 	opts := otelmetric.WithAttributes(allAttrs...)
 
 	if c.otlpConnectionMetrics != nil {
-		c.otlpConnectionMetrics.MeasureConnections(ctx, 1, opts)
+		c.otlpConnectionMetrics.MeasureMaxConnections(ctx, 1, opts)
 	}
 	if c.promConnectionMetrics != nil {
-		c.promConnectionMetrics.MeasureConnections(ctx, 1, opts)
+		c.promConnectionMetrics.MeasureMaxConnections(ctx, 1, opts)
 	}
 }
 

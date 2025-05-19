@@ -7,34 +7,16 @@ import (
 
 // Connection metric constants
 const (
-	connectionTotal   = "router.connection.total"
-	connectionsActive = "router.connection.active"
+	maxConnections    = "router.http.client.connection.total"
+	connectionsActive = "router.http.client.connection.active"
 
-	dnsDuration               = "router.connection.dns_duration"
-	dialDuration              = "router.connection.dial_duration"
-	tlsHandshakeDuration      = "router.connection.tls_handshake_duration"
-	totalConnectionDuration   = "router.connection.total_duration"
-	connectionAcquireDuration = "router.connection.acquire_duration"
+	totalConnectionDuration   = "router.http.client.connection.total_duration"
+	connectionAcquireDuration = "router.http.client.connection.acquire_duration"
 )
 
 var (
-	connectionTotalOptions = []otelmetric.Int64CounterOption{
-		otelmetric.WithDescription("Total number of connections with reused attribute"),
-	}
-
-	dnsDurationOptions = []otelmetric.Float64HistogramOption{
-		otelmetric.WithUnit("s"),
-		otelmetric.WithDescription("DNS resolution duration"),
-	}
-
-	dialDurationOptions = []otelmetric.Float64HistogramOption{
-		otelmetric.WithUnit("s"),
-		otelmetric.WithDescription("TCP dial duration"),
-	}
-
-	tlsHandshakeDurationOptions = []otelmetric.Float64HistogramOption{
-		otelmetric.WithUnit("s"),
-		otelmetric.WithDescription("TLS handshake duration"),
+	maxConnectionOptions = []otelmetric.Int64GaugeOption{
+		otelmetric.WithDescription("Total number of max connections per host"),
 	}
 
 	totalConnectionDurationOptions = []otelmetric.Float64HistogramOption{
@@ -53,48 +35,19 @@ var (
 )
 
 type connectionInstruments struct {
-	connectionTotal otelmetric.Int64Counter
-
-	dnsDuration               otelmetric.Float64Histogram
-	dialDuration              otelmetric.Float64Histogram
-	tlsHandshakeDuration      otelmetric.Float64Histogram
+	maxConnections            otelmetric.Int64Gauge
 	totalConnectionDuration   otelmetric.Float64Histogram
 	connectionAcquireDuration otelmetric.Float64Histogram
-
-	connectionsActive otelmetric.Int64ObservableGauge
+	connectionsActive         otelmetric.Int64ObservableGauge
 }
 
 func newConnectionInstruments(meter otelmetric.Meter) (*connectionInstruments, error) {
-	connectionTotalCounter, err := meter.Int64Counter(
-		connectionTotal,
-		connectionTotalOptions...,
+	maxConnectionsGauge, err := meter.Int64Gauge(
+		maxConnections,
+		maxConnectionOptions...,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create connection total counter: %w", err)
-	}
-
-	dnsDurationHistogram, err := meter.Float64Histogram(
-		dnsDuration,
-		dnsDurationOptions...,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create DNS duration histogram: %w", err)
-	}
-
-	dialDurationHistogram, err := meter.Float64Histogram(
-		dialDuration,
-		dialDurationOptions...,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create dial duration histogram: %w", err)
-	}
-
-	tlsHandshakeDurationHistogram, err := meter.Float64Histogram(
-		tlsHandshakeDuration,
-		tlsHandshakeDurationOptions...,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create TLS handshake duration histogram: %w", err)
 	}
 
 	totalConnectionDurationHistogram, err := meter.Float64Histogram(
@@ -122,10 +75,7 @@ func newConnectionInstruments(meter otelmetric.Meter) (*connectionInstruments, e
 	}
 
 	return &connectionInstruments{
-		connectionTotal:           connectionTotalCounter,
-		dnsDuration:               dnsDurationHistogram,
-		dialDuration:              dialDurationHistogram,
-		tlsHandshakeDuration:      tlsHandshakeDurationHistogram,
+		maxConnections:            maxConnectionsGauge,
 		totalConnectionDuration:   totalConnectionDurationHistogram,
 		connectionAcquireDuration: acquireDurationHistogram,
 		connectionsActive:         connectionsActiveGauge,

@@ -63,6 +63,7 @@ func NewCustomTransport(
 	baseRoundTripper http.RoundTripper,
 	retryOptions retrytransport.RetryOptions,
 	metricStore metric.Store,
+	connectionMetricStore metric.ConnectionMetricStore,
 	enableSingleFlight bool,
 	enableTraceClient bool,
 ) *CustomTransport {
@@ -71,7 +72,7 @@ func NewCustomTransport(
 	}
 
 	if enableTraceClient {
-		baseRoundTripper = traceclient.NewTraceInjectingRoundTripper(baseRoundTripper)
+		baseRoundTripper = traceclient.NewTraceInjectingRoundTripper(baseRoundTripper, connectionMetricStore)
 	}
 
 	if retryOptions.Enabled {
@@ -323,6 +324,7 @@ type TransportFactory struct {
 	retryOptions                  retrytransport.RetryOptions
 	localhostFallbackInsideDocker bool
 	metricStore                   metric.Store
+	connectionMetricStore         metric.ConnectionMetricStore
 	logger                        *zap.Logger
 	tracerProvider                *sdktrace.TracerProvider
 	tracePropagators              propagation.TextMapPropagator
@@ -338,6 +340,7 @@ type TransportOptions struct {
 	RetryOptions                  retrytransport.RetryOptions
 	LocalhostFallbackInsideDocker bool
 	MetricStore                   metric.Store
+	ConnectionMetricStore         metric.ConnectionMetricStore
 	Logger                        *zap.Logger
 	TracerProvider                *sdktrace.TracerProvider
 	TracePropagators              propagation.TextMapPropagator
@@ -358,6 +361,7 @@ func NewTransport(opts *TransportOptions) *TransportFactory {
 		retryOptions:                  opts.RetryOptions,
 		localhostFallbackInsideDocker: opts.LocalhostFallbackInsideDocker,
 		metricStore:                   opts.MetricStore,
+		connectionMetricStore:         opts.ConnectionMetricStore,
 		logger:                        opts.Logger,
 		tracerProvider:                opts.TracerProvider,
 		tracePropagators:              opts.TracePropagators,
@@ -404,6 +408,7 @@ func (t TransportFactory) RoundTripper(enableSingleFlight bool, baseTransport ht
 		traceTransport,
 		t.retryOptions,
 		t.metricStore,
+		t.connectionMetricStore,
 		enableSingleFlight,
 		t.enableTraceClient,
 	)

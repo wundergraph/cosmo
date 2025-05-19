@@ -50,8 +50,8 @@ func newPromConnectionMetrics(logger *zap.Logger, meterProvider *metric.MeterPro
 func (h *promConnectionMetrics) startInitMetrics(connStats *ConnectionPoolStats, attributes []attribute.KeyValue) error {
 	rc, err := h.meter.RegisterCallback(func(_ context.Context, o otelmetric.Observer) error {
 		stats := connStats.GetStats()
-		for host, connectionsAvailable := range stats {
-			o.ObserveInt64(h.instruments.connectionsActive, connectionsAvailable,
+		for host, connectionsActiveStat := range stats {
+			o.ObserveInt64(h.instruments.connectionsActive, connectionsActiveStat,
 				otelmetric.WithAttributes(attributes...),
 				otelmetric.WithAttributes(otel.WgHost.String(host)),
 			)
@@ -66,18 +66,6 @@ func (h *promConnectionMetrics) startInitMetrics(connStats *ConnectionPoolStats,
 	return nil
 }
 
-func (m *promConnectionMetrics) MeasureDNSDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
-	m.instruments.dnsDuration.Record(ctx, duration, opts...)
-}
-
-func (m *promConnectionMetrics) MeasureDialDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
-	m.instruments.dialDuration.Record(ctx, duration, opts...)
-}
-
-func (m *promConnectionMetrics) MeasureTLSHandshakeDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
-	m.instruments.tlsHandshakeDuration.Record(ctx, duration, opts...)
-}
-
 func (m *promConnectionMetrics) MeasureTotalConnectionDuration(ctx context.Context, duration float64, opts ...otelmetric.RecordOption) {
 	m.instruments.totalConnectionDuration.Record(ctx, duration, opts...)
 }
@@ -86,8 +74,8 @@ func (m *promConnectionMetrics) MeasureConnectionAcquireDuration(ctx context.Con
 	m.instruments.connectionAcquireDuration.Record(ctx, duration, opts...)
 }
 
-func (m *promConnectionMetrics) MeasureConnections(ctx context.Context, count int64, opts ...otelmetric.AddOption) {
-	m.instruments.connectionTotal.Add(ctx, count, opts...)
+func (m *promConnectionMetrics) MeasureMaxConnections(ctx context.Context, count int64, opts ...otelmetric.RecordOption) {
+	m.instruments.maxConnections.Record(ctx, count, opts...)
 }
 
 func (m *promConnectionMetrics) Flush(ctx context.Context) error {
