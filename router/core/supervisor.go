@@ -17,21 +17,15 @@ type RouterSupervisor struct {
 	routerCtx    context.Context
 	routerCancel context.CancelFunc
 
-	configPath string
-
 	// Sending to this channel will trigger a graceful shutdown of the router
 	// Sending true will result in a Reload, false will result in a Shutdown
 	// Value means "to kill or not to kill"
 	shutdownChan chan bool
 
-	lifecycleHooks *LifecycleHooks
+	configFactory func() (*config.Config, error)
+	routerFactory func(ctx context.Context, res *RouterResources) (*Router, error)
 
 	resources *RouterResources
-}
-
-// LifecycleHooks is a struct for holding router lifecycle hooks.
-type LifecycleHooks struct {
-	PreCreate func(*RouterResources) error
 }
 
 // RouterResources is a struct for holding resources used by the router.
@@ -42,22 +36,42 @@ type RouterResources struct {
 
 // RouterSupervisorOpts is a struct for configuring the router supervisor.
 type RouterSupervisorOpts struct {
-	ConfigPath     string
-	BaseLogger     *zap.Logger
-	LifecycleHooks *LifecycleHooks
+	BaseLogger    *zap.Logger
+	ConfigFactory func() (*config.Config, error)
+	RouterFactory func(ctx context.Context, res *RouterResources) (*Router, error)
 }
 
 // NewRouterSupervisor creates a new RouterSupervisor instance.
-func NewRouterSupervisor(opts *RouterSupervisorOpts) *RouterSupervisor {
-	return &RouterSupervisor{
-		shutdownChan:   make(chan bool),
-		logger:         opts.BaseLogger.With(zap.String("component", "supervisor")),
-		lifecycleHooks: opts.LifecycleHooks,
-		configPath:     opts.ConfigPath,
+func NewRouterSupervisor(opts *RouterSupervisorOpts) (*RouterSupervisor, error) {
+	rs := &RouterSupervisor{
+		shutdownChan:  make(chan bool),
+		logger:        opts.BaseLogger.With(zap.String("component", "supervisor")),
+		configFactory: opts.ConfigFactory,
 		resources: &RouterResources{
 			Logger: opts.BaseLogger,
 		},
 	}
+
+	if rs.configFactory == nil {
+		return nil, errors.New("a config factory is required")
+	}
+
+	if opts.RouterFactory == nil {
+		rs.routerFactory = DefaultRouterFactory
+	} else {
+		rs.routerFactory = opts.RouterFactory
+	}
+
+	return rs, nil
+}
+
+func DefaultRouterFactory(ctx context.Context, res *RouterResources) (*Router, error) {
+	router, err := newRouter(ctx, *res)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create router: %w", err)
+	}
+
+	return router, nil
 }
 
 func (rs *RouterSupervisor) createRouter() error {
@@ -65,7 +79,7 @@ func (rs *RouterSupervisor) createRouter() error {
 	// Don't use the parent context that is canceled by the signal handler
 	routerCtx, routerCancel := context.WithCancel(context.Background())
 
-	router, err := newRouter(routerCtx, *rs.resources)
+	router, err := rs.routerFactory(routerCtx, rs.resources)
 	if err != nil {
 		routerCancel()
 		return fmt.Errorf("failed to create router: %w", err)
@@ -103,26 +117,13 @@ func (rs *RouterSupervisor) stopRouter() error {
 	return nil
 }
 
-func (rs *RouterSupervisor) loadResources() error {
-	result, err := config.LoadConfig(rs.configPath)
+func (rs *RouterSupervisor) loadConfig() error {
+	cfg, err := rs.configFactory()
 	if err != nil {
-		return fmt.Errorf("could not load config: %w", err)
+		return err
 	}
 
-	if !result.DefaultLoaded {
-		if rs.configPath == config.DefaultConfigPath {
-			rs.logger.Info("Found default config file. Values in the config file have higher priority than environment variables",
-				zap.String("config_file", config.DefaultConfigPath),
-			)
-		} else {
-			rs.logger.Info(
-				"Config file path provided. Values in the config file have higher priority than environment variables",
-				zap.String("config_file", rs.configPath),
-			)
-		}
-	}
-
-	rs.resources.Config = &result.Config
+	rs.resources.Config = cfg
 
 	return nil
 }
@@ -133,15 +134,11 @@ var (
 
 // Start starts the router supervisor.
 func (rs *RouterSupervisor) Start() error {
-	if err := rs.loadResources(); err != nil {
-		return fmt.Errorf("%w: failed to load resources: %w", ErrStartupFailed, err)
+	if err := rs.loadConfig(); err != nil {
+		return fmt.Errorf("%w: failed to load config: %w", ErrStartupFailed, err)
 	}
 
 	for {
-		if err := rs.lifecycleHooks.PreCreate(rs.resources); err != nil {
-			return fmt.Errorf("%w: failed pre create hook: %w", ErrStartupFailed, err)
-		}
-
 		rs.logger.Debug("Creating Router")
 		if err := rs.createRouter(); err != nil {
 			return fmt.Errorf("%w: failed to create router: %w", ErrStartupFailed, err)
@@ -173,7 +170,7 @@ func (rs *RouterSupervisor) Start() error {
 		}
 
 		// Reload resources for new router, if failed, continue to restart with the old resources
-		if err := rs.loadResources(); err != nil {
+		if err := rs.loadConfig(); err != nil {
 			rs.logger.Warn("reloading resources failed, keeping old ones", zap.Error(err))
 			continue
 		}

@@ -97,16 +97,35 @@ func Main() {
 	profiler := profile.Start(baseLogger, *cpuProfilePath, *memProfilePath)
 	defer profiler.Finish()
 
-	rs := core.NewRouterSupervisor(&core.RouterSupervisorOpts{
+	rs, err := core.NewRouterSupervisor(&core.RouterSupervisorOpts{
 		BaseLogger: baseLogger,
-		ConfigPath: configPath,
-		LifecycleHooks: &core.LifecycleHooks{
-			PreCreate: func(rr *core.RouterResources) error {
-				logLevelAtomic.SetLevel(rr.Config.LogLevel)
-				return nil
-			},
+		ConfigFactory: func() (*config.Config, error) {
+			result, err := config.LoadConfig(configPath)
+			if err != nil {
+				return nil, fmt.Errorf("could not load config: %w", err)
+			}
+
+			if !result.DefaultLoaded {
+				if configPath == config.DefaultConfigPath {
+					baseLogger.Info("Found default config file. Values in the config file have higher priority than environment variables",
+						zap.String("config_file", config.DefaultConfigPath),
+					)
+				} else {
+					baseLogger.Info(
+						"Config file path provided. Values in the config file have higher priority than environment variables",
+						zap.String("config_file", configPath),
+					)
+				}
+			}
+
+			logLevelAtomic.SetLevel(result.Config.LogLevel)
+
+			return &result.Config, nil
 		},
 	})
+	if err != nil {
+		log.Fatalf("Could not create router supervisor: %s", err)
+	}
 
 	rootCtx, rootCancel := context.WithCancel(context.Background())
 	defer rootCancel()
