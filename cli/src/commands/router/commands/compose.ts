@@ -11,6 +11,7 @@ import {
   type SubscriptionProtocol,
   type WebsocketSubprotocol,
 } from '@wundergraph/cosmo-shared';
+import semver from 'semver';
 import { Command, program } from 'commander';
 import { parse, printSchema } from 'graphql';
 import * as yaml from 'js-yaml';
@@ -122,6 +123,23 @@ export default (opts: BaseCommandOptions) => {
             pc.red(
               pc.bold(
                 `The plugin path '${pc.bold(s.plugin.path)}' does not exist. Please check the path and try again.`,
+              ),
+            ),
+          );
+        }
+
+        if (!s.plugin.version) {
+          program.error(
+            pc.red(pc.bold(`The plugin version is missing in the input file. Please check the path and try again.`)),
+          );
+        }
+
+        // Check if valid semver
+        if (!semver.valid(s.plugin.version)) {
+          program.error(
+            pc.red(
+              pc.bold(
+                `The plugin version '${pc.bold(s.plugin.version)}' is not a valid semver. Please check the version and try again.`,
               ),
             ),
           );
