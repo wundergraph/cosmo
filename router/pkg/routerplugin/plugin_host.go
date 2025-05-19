@@ -35,6 +35,10 @@ func (h *Host) RegisterPlugin(subgraphName string, plugin Plugin) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
+	if _, ok := h.pluginMap[subgraphName]; ok {
+		return fmt.Errorf("plugin %s already registered", subgraphName)
+	}
+
 	h.pluginMap[subgraphName] = plugin
 	return nil
 }
