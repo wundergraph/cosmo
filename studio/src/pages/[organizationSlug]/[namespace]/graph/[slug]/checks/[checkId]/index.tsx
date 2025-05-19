@@ -710,30 +710,32 @@ const CheckDetails = ({
                 )}
               </Badge>
 
-              <Badge
-                variant="outline"
-                className={cn("flex items-center space-x-1.5 py-2", {
-                  "text-muted-foreground": !data.check?.proposalMatch,
-                })}
-              >
-                {!data.check?.proposalMatch ? (
-                  <>
-                    <NoSymbolIcon className="h-4 w-4" />
-                    <span className="flex-1 truncate">Proposal Match</span>
-                    <InfoTooltip>
-                      Indicates if the proposed schema matches a proposal.
-                    </InfoTooltip>
-                  </>
-                ) : (
-                  <>
-                    {getCheckIcon(data.check.proposalMatch !== "error")}
-                    <span className="flex-1 truncate">Proposal Match</span>
-                    <InfoTooltip>
-                      Indicates if the proposed schema matches a proposal.
-                    </InfoTooltip>
-                  </>
-                )}
-              </Badge>
+              {proposalsFeature?.enabled && (
+                <Badge
+                  variant="outline"
+                  className={cn("flex items-center space-x-1.5 py-2", {
+                    "text-muted-foreground": !data.check?.proposalMatch,
+                  })}
+                >
+                  {!data.check?.proposalMatch ? (
+                    <>
+                      <NoSymbolIcon className="h-4 w-4" />
+                      <span className="flex-1 truncate">Proposal Match</span>
+                      <InfoTooltip>
+                        Indicates if the proposed schema matches a proposal.
+                      </InfoTooltip>
+                    </>
+                  ) : (
+                    <>
+                      {getCheckIcon(data.check.proposalMatch !== "error")}
+                      <span className="flex-1 truncate">Proposal Match</span>
+                      <InfoTooltip>
+                        Indicates if the proposed schema matches a proposal.
+                      </InfoTooltip>
+                    </>
+                  )}
+                </Badge>
+              )}
             </dd>
           </div>
 
