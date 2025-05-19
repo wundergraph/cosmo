@@ -130,7 +130,7 @@ export default (opts: BaseCommandOptions) => {
 
         if (!s.plugin.version) {
           program.error(
-            pc.red(pc.bold(`The plugin version is missing in the input file. Please check the path and try again.`)),
+            pc.red(pc.bold(`The plugin version is missing in the input file. Please check the version and try again.`)),
           );
         }
 
