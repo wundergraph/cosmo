@@ -86,7 +86,7 @@ export function updateOrganizationGroup(
       resourcesByRole.push({
         role,
         namespaces: isOrganizationRole ? [] : [...new Set(namespaces)],
-        resources: isOrganizationRole ? [] : [...new Set(resources)],
+        resources: isOrganizationRole || namespaces.length > 0 ? [] : [...new Set(resources)],
       });
     }
 

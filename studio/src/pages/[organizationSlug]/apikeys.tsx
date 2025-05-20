@@ -66,15 +66,17 @@ import {
 } from "react";
 import { FiCheck, FiCopy } from "react-icons/fi";
 import { z } from "zod";
-import { useIsAdmin } from "@/hooks/use-is-admin";
 import { GroupSelect } from "@/components/group-select";
+import { useCheckUserAccess } from "@/hooks/use-check-user-access";
 
 const CreateAPIKeyDialog = ({
   existingApiKeys,
+  canManageAPIKeys,
   setApiKey,
   refresh,
 }: {
   existingApiKeys: string[];
+  canManageAPIKeys: boolean;
   setApiKey: Dispatch<SetStateAction<string | undefined>>;
   refresh: () => void;
 }) => {
@@ -85,7 +87,6 @@ const CreateAPIKeyDialog = ({
   const { mutate, isPending } = useMutation(createAPIKey);
 
   const { data: permissionsData } = useQuery(getUserAccessiblePermissions);
-  const isAdmin = useIsAdmin();
 
   const expiresOptions = ["Never", "30 days", "6 months", "1 year"];
   const expiresOptionsMappingToEnum: {
@@ -159,7 +160,7 @@ const CreateAPIKeyDialog = ({
             setError('name', { message: d.response.details });
           }
         },
-        onError: (error) => {
+        onError: () => {
           toast({
             description: "Could not create an API key. Please try again.",
             duration: 3000,
@@ -171,7 +172,7 @@ const CreateAPIKeyDialog = ({
 
   // When rbac is enabled and this is the case for enterprise users
   // you can only create an API key if you are an admin
-  if (rbac?.enabled && !isAdmin) {
+  if (rbac?.enabled && !canManageAPIKeys) {
     return (
       <Button disabled>
         <div className="flex items-center gap-x-2">
@@ -254,7 +255,7 @@ const CreateAPIKeyDialog = ({
             )}
           </div>
 
-          {isAdmin &&
+          {canManageAPIKeys &&
             permissionsData &&
             permissionsData.permissions.length > 0 && (
               <div className="mt-2 flex flex-col gap-y-3">
@@ -368,7 +369,7 @@ const DeleteAPIKeyDialog = ({
           reset();
           setDeleteApiKeyName(undefined);
         },
-        onError: (error) => {
+        onError: () => {
           toast({
             description: "Could not delete an API key. Please try again.",
             duration: 3000,
@@ -495,17 +496,17 @@ export const Empty = ({
   apiKey,
   setApiKey,
   open,
+  canManageAPIKeys,
   setOpen,
   refetch,
 }: {
   apiKey: string | undefined;
   setApiKey: Dispatch<SetStateAction<string | undefined>>;
   open: boolean;
+  canManageAPIKeys: boolean;
   setOpen: Dispatch<SetStateAction<boolean>>;
   refetch: () => void;
 }) => {
-  const isAdmin = useIsAdmin();
-
   return (
     <EmptyState
       icon={<KeyIcon />}
@@ -525,10 +526,11 @@ export const Empty = ({
       }
       actions={
         <div className="mt-2">
-          {isAdmin && (
+          {canManageAPIKeys && (
             <CreateAPIKey
               apiKey={apiKey}
               existingApiKeys={[]}
+              canManageAPIKeys={canManageAPIKeys}
               setApiKey={setApiKey}
               open={open}
               setOpen={setOpen}
@@ -544,6 +546,7 @@ export const Empty = ({
 export const CreateAPIKey = ({
   apiKey,
   existingApiKeys,
+  canManageAPIKeys,
   setApiKey,
   open,
   setOpen,
@@ -551,6 +554,7 @@ export const CreateAPIKey = ({
 }: {
   apiKey: string | undefined;
   existingApiKeys: string[];
+  canManageAPIKeys: boolean;
   setApiKey: Dispatch<SetStateAction<string | undefined>>;
   open: boolean;
   setOpen: Dispatch<SetStateAction<boolean>>;
@@ -563,7 +567,12 @@ export const CreateAPIKey = ({
 
   return (
     <>
-      <CreateAPIKeyDialog refresh={refetch} setApiKey={setApiKey} existingApiKeys={existingApiKeys} />
+      <CreateAPIKeyDialog
+        refresh={refetch}
+        setApiKey={setApiKey}
+        existingApiKeys={existingApiKeys}
+        canManageAPIKeys={canManageAPIKeys}
+      />
       {apiKey && (
         <APIKeyCreatedDialog open={open} setOpen={setOpen} apiKey={apiKey} />
       )}
@@ -657,7 +666,7 @@ const UpdateAPIKey = ({ selectedApiKeyName, open, selectedGroupId, refresh, onOp
 };
 
 const APIKeysPage: NextPageWithLayout = () => {
-  const isAdmin = useIsAdmin();
+  const checkUserAccess = useCheckUserAccess();
   const { data, isLoading, error, refetch } = useQuery(getAPIKeys);
 
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
@@ -668,6 +677,9 @@ const APIKeysPage: NextPageWithLayout = () => {
     string | undefined
   >();
   const [openApiKeyCreatedDialog, setOpenApiKeyCreatedDialog] = useState(false);
+
+  const canCreateAPIKey = checkUserAccess({ rolesToBe: ['organization-admin', 'organization-developer'] });
+  const canManageAPIKeys = canCreateAPIKey || checkUserAccess({ rolesToBe: ['organization-apikey-manager'] });
 
   useEffect(() => {
     if (!openApiKeyCreatedDialog) setApiKey(undefined);
@@ -696,6 +708,7 @@ const APIKeysPage: NextPageWithLayout = () => {
           apiKey={apiKey}
           setApiKey={setApiKey}
           open={openApiKeyCreatedDialog}
+          canManageAPIKeys={canManageAPIKeys}
           setOpen={setOpenApiKeyCreatedDialog}
           refetch={refetch}
         />
@@ -743,6 +756,7 @@ const APIKeysPage: NextPageWithLayout = () => {
               <CreateAPIKey
                 apiKey={apiKey}
                 existingApiKeys={apiKeys.map((k) => k.name)}
+                canManageAPIKeys={canManageAPIKeys}
                 setApiKey={setApiKey}
                 open={openApiKeyCreatedDialog}
                 setOpen={setOpenApiKeyCreatedDialog}
@@ -750,7 +764,7 @@ const APIKeysPage: NextPageWithLayout = () => {
               />
             </div>
           </div>
-          {deleteApiKeyName && isAdmin && (
+          {deleteApiKeyName && canManageAPIKeys && (
             <DeleteAPIKeyDialog
               apiKeyName={deleteApiKeyName}
               refresh={refetch}
@@ -769,7 +783,7 @@ const APIKeysPage: NextPageWithLayout = () => {
                   <TableHead>Group</TableHead>
                   <TableHead>Created At</TableHead>
                   <TableHead>Last Used At</TableHead>
-                  {isAdmin && (
+                  {canManageAPIKeys && (
                     <TableHead className="flex items-center justify-center" />
                   )}
                 </TableRow>
@@ -787,7 +801,7 @@ const APIKeysPage: NextPageWithLayout = () => {
                             : "Never"}
                         </TableCell>
                         <TableCell>
-                          {isAdmin ? (
+                          {canManageAPIKeys ? (
                             <Button
                               variant="link"
                               className="p-0 h-auto"
@@ -817,7 +831,7 @@ const APIKeysPage: NextPageWithLayout = () => {
                             ? formatDateTime(new Date(lastUsedAt))
                             : "Never"}
                         </TableCell>
-                        {isAdmin && (
+                        {canManageAPIKeys && (
                           <TableCell>
                             <DropdownMenu>
                               <div className="flex justify-center">

@@ -9,13 +9,7 @@ import { HackyPopoverContent } from "./hacky-popover-content";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ChevronRightIcon, CheckIcon, MinusIcon } from "@heroicons/react/24/outline";
-
-interface GroupResource {
-  label: string;
-  value: string;
-  selected: boolean;
-  children?: GroupResource[];
-}
+import { useGroupResources, GroupResource, GroupResourceItem } from "./use-group-resources";
 
 export function GroupResourceSelector({ rule, disabled, activeRole, accessibleResources, onRuleUpdated }: {
   rule: UpdateOrganizationGroupRequest_GroupRule,
@@ -24,69 +18,11 @@ export function GroupResourceSelector({ rule, disabled, activeRole, accessibleRe
   accessibleResources: GetUserAccessibleResourcesResponse | undefined;
   onRuleUpdated(rule: UpdateOrganizationGroupRequest_GroupRule): void;
 }) {
-  const availableResources = useMemo<GroupResource[]>(() => {
-    if (!accessibleResources) {
-      return [];
-    }
+  const availableResources = useGroupResources({ rule, activeRole, accessibleResources });
 
-    switch (activeRole?.category) {
-      case "namespace": {
-        return accessibleResources.namespaces.map((ns) => ({
-          label: ns.name,
-          value: ns.id,
-          selected: rule.namespaces.includes(ns.id),
-        }));
-      }
-      case "graph": {
-        return Object.entries(Object.groupBy(accessibleResources.federatedGraphs, (g) => g.namespace))
-          .map(([ns, graphs]) => ({
-            label: ns,
-            value: ns,
-            selected: false,
-            children: graphs!.map((g) => ({
-              label: g.name,
-              value: g.targetId,
-              selected: rule.resources.includes(g.targetId),
-            })),
-          }))
-          .filter((d) => d.children.length > 0);
-      }
-      case "subgraph": {
-        return Object.entries(Object.groupBy(accessibleResources.subgraphs, (g) => g.namespace))
-          .map(([ns, graphs]) => ({
-            label: ns,
-            value: ns,
-            selected: false,
-            children: Object
-              .entries(Object.groupBy(graphs!, (g) => g.federatedGraphId))
-              .map(([graph, subgraphs]) => ({
-                federatedGraph: accessibleResources.federatedGraphs.find((g) => g.targetId === graph)!,
-                subgraphs: subgraphs!,
-              }))
-              .filter((m) => Boolean(m.federatedGraph))
-              .map((m) => ({
-                label: m.federatedGraph.name,
-                value: m.federatedGraph.targetId,
-                selected: false,
-                children: m.subgraphs.map((g) => ({
-                  label: g.name,
-                  value: g.targetId,
-                  selected: rule.resources.includes(g.targetId),
-                })),
-              }))
-              .filter((d) => d.children.length > 0),
-          }))
-          .filter((d) => d.children.length > 0);
-      }
-      default:
-        return [];
-    }
-  }, [activeRole, accessibleResources, rule]);
-
-  const toggleResources = (resources: string[]) => {
+  const toggleResources = (resources: string[], isNamespaceResource: boolean) => {
     const newRule = rule.clone();
-    const isNamespaceRule = activeRole?.category === 'namespace';
-    const setOfSelectedResources = new Set(isNamespaceRule ? rule.namespaces : rule.resources);
+    const setOfSelectedResources = new Set(isNamespaceResource ? rule.namespaces : rule.resources);
     for (const res of resources) {
       if (setOfSelectedResources.has(res)) {
         setOfSelectedResources.delete(res);
@@ -95,7 +31,7 @@ export function GroupResourceSelector({ rule, disabled, activeRole, accessibleRe
       }
     }
 
-    if (isNamespaceRule) {
+    if (isNamespaceResource) {
       newRule.namespaces = Array.from(setOfSelectedResources);
     } else {
       newRule.resources = Array.from(setOfSelectedResources);
@@ -123,9 +59,9 @@ export function GroupResourceSelector({ rule, disabled, activeRole, accessibleRe
       <HackyPopoverContent className="p-1 text-sm w-[400px]">
         <div className="max-h-72 overflow-auto">
           {availableResources.length > 0
-            ? availableResources.map((res) => (
+            ? availableResources.map((res, index) => (
               <GroupSelectorItem
-                key={res.value}
+                key={`resource-${index}`}
                 depth={0}
                 toggleResources={toggleResources}
                 {...res}
@@ -140,8 +76,8 @@ export function GroupResourceSelector({ rule, disabled, activeRole, accessibleRe
   );
 }
 
-function flatten(children: GroupResource[]): GroupResource[] {
-  const result: GroupResource[] = [];
+function flatten(children: GroupResourceItem[]): GroupResourceItem[] {
+  const result: GroupResourceItem[] = [];
   for (const child of children) {
     if (!child.children) {
       result.push(child);
@@ -156,9 +92,9 @@ function flatten(children: GroupResource[]): GroupResource[] {
   return result;
 }
 
-function GroupSelectorItem({ label, value, selected, children, depth, toggleResources }: GroupResource & {
+function GroupSelectorItem({ type, label, children, depth, toggleResources, ...rest }: GroupResource & {
   depth: number;
-  toggleResources(res: string[]) : void;
+  toggleResources(res: string[], isNamespaceResource: boolean) : void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const flattenChildren = useMemo(() => flatten(children ?? []), [children]);
@@ -166,43 +102,78 @@ function GroupSelectorItem({ label, value, selected, children, depth, toggleReso
     return null;
   }
 
+  if (type === "section") {
+    return (
+      <>
+        <div className="text-xs text-muted-foreground p-1.5 uppercase select-none">
+          {label}
+        </div>
+        {children?.map((child) => (
+          <GroupSelectorItem
+            key={child.value}
+            depth={depth}
+            toggleResources={toggleResources}
+            {...child}
+          />
+        ))}
+      </>
+    );
+  }
+
+  const { value, isNamespaceResource, disabled, selected } = rest as GroupResourceItem;
   const hasChildren = children && children.length > 0;
+  const isExpanded = expanded;
   const hasSelectedSomeChildren = hasChildren && flattenChildren.some((c) => c.selected);
   const hasSelectedEveryChildren = hasChildren && flattenChildren.every((c) => c.selected);
+
   return (
     <>
       <div
-        className="flex justify-start items-center gap-x-1.5 px-2.5 py-1.5 hover:bg-accent rounded select-none w-full group/item"
+        className={cn(
+          "flex justify-start items-center gap-x-1.5 px-2.5 py-1.5 hover:bg-accent rounded select-none w-full group/item",
+          disabled && "opacity-50 cursor-not-allowed hover:bg-transparent"
+        )}
         role="button"
         onClick={() => {
+          if (disabled) {
+            return;
+          }
+
           if (hasChildren) {
             setExpanded(!expanded);
           } else {
-            toggleResources([value]);
+            toggleResources([value], isNamespaceResource);
           }
         }}
       >
         {hasChildren ? (
           <ChevronRightIcon
-            className={cn("size-3 transition-all duration-200 shrink-0", expanded && "rotate-90")}
+            className={cn("size-3 transition-all duration-200 shrink-0", isExpanded && "rotate-90")}
           />
         ) : depth > 0 && <span className="w-4 shrink-0" /> }
 
         <span
-          className="group/check shrink-0"
+          className={cn("group/check shrink-0", disabled && "pointer-events-none")}
           role="button"
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
+            if (disabled) {
+              return;
+            }
+
             if (hasChildren) {
               const flattenChildren = flatten(children);
               if (hasSelectedEveryChildren) {
-                toggleResources(flattenChildren.map((res) => res.value));
+                toggleResources(flattenChildren.map((res) => res.value), isNamespaceResource);
               } else {
-                toggleResources(flattenChildren.filter((res) => !res.selected).map((res) => res.value));
+                toggleResources(
+                  flattenChildren.filter((res) => !res.selected).map((res) => res.value),
+                  isNamespaceResource
+                );
               }
             } else {
-              toggleResources([value]);
+              toggleResources([value], isNamespaceResource);
             }
           }}
         >
@@ -226,7 +197,7 @@ function GroupSelectorItem({ label, value, selected, children, depth, toggleReso
           {label}
         </span>
       </div>
-      {children && children.length > 0 && expanded && (
+      {children && children.length > 0 && isExpanded && (
         <div className="pl-[18px]">
           {children.map((child) => (
             <GroupSelectorItem key={child.value} {...child} depth={depth + 1} toggleResources={toggleResources} />
