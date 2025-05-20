@@ -25,7 +25,7 @@ events:
             password: "password"
 `)
 
-	_, err := LoadConfig(f, "")
+	_, err := LoadConfig(f)
 	// Note: If none of the oneOf array matches, the first in the array is compared
 	require.ErrorContains(t, err, "router config validation error: jsonschema validation failed with 'https://raw.githubusercontent.com/wundergraph/cosmo/main/router/pkg/config/config.schema.json#'\n- at '/events/providers/nats/0/authentication': oneOf failed, none matched\n  - at '/events/providers/nats/0/authentication': validation failed\n    - at '/events/providers/nats/0/authentication': missing property 'token'\n    - at '/events/providers/nats/0/authentication': additional properties 'user_info' not allowed\n  - at '/events/providers/nats/0/authentication/user_info': missing property 'username'")
 }
@@ -48,7 +48,7 @@ events:
           user_info:
             username: "admin"
 `)
-	_, err := LoadConfig(f, "")
+	_, err := LoadConfig(f)
 	// Note: If none of the oneOf array matches, the first in the array is compared
 	require.ErrorContains(t, err, "router config validation error: jsonschema validation failed with 'https://raw.githubusercontent.com/wundergraph/cosmo/main/router/pkg/config/config.schema.json#'\n- at '/events/providers/nats/0/authentication': oneOf failed, none matched\n  - at '/events/providers/nats/0/authentication': validation failed\n    - at '/events/providers/nats/0/authentication': missing property 'token'\n    - at '/events/providers/nats/0/authentication': additional properties 'user_info' not allowed\n  - at '/events/providers/nats/0/authentication/user_info': missing property 'password'")
 }
@@ -71,7 +71,7 @@ events:
           token: 'token'
 
 `)
-	_, err := LoadConfig(f, "")
+	_, err := LoadConfig(f)
 	require.NoError(t, err)
 }
 
@@ -96,6 +96,6 @@ events:
 
 `)
 
-	_, err := LoadConfig(f, "")
+	_, err := LoadConfig(f)
 	require.NoError(t, err)
 }

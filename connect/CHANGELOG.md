@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.105.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.104.0...@wundergraph/cosmo-connect@0.105.0) (2025-05-19)
+
+### Features
+
+* **router:** grpc go plugin system ([#1866](https://github.com/wundergraph/cosmo/issues/1866)) ([280a61d](https://github.com/wundergraph/cosmo/commit/280a61de4bd1328549a023d1a3a0b702d78453b8)) (@Noroth)
+
+# [0.104.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.103.0...@wundergraph/cosmo-connect@0.104.0) (2025-05-16)
+
+### Features
+
+* get all the operations of a federated graph ([#1856](https://github.com/wundergraph/cosmo/issues/1856)) ([246b514](https://github.com/wundergraph/cosmo/commit/246b5149921827d2e2c4954086e3e5f4dd5815b2)) (@JivusAyrus)
+
 # [0.103.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.102.1...@wundergraph/cosmo-connect@0.103.0) (2025-05-13)
 
 ### Features
