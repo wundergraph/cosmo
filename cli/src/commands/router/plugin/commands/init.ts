@@ -2,7 +2,7 @@ import { access, mkdir, rename, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { Command, program } from 'commander';
-import { relative, resolve } from 'pathe';
+import { join, relative, resolve } from 'pathe';
 import pc from 'picocolors';
 import pupa from 'pupa';
 import Spinner from 'ora';
@@ -16,11 +16,13 @@ export default (opts: BaseCommandOptions) => {
   const command = new Command('init');
   command.description('Scaffold a new gRPC router plugin');
   command.argument('name', 'Name of the plugin');
-  command.option('-d, --directory <directory>', 'Directory to create the plugin in', '.');
+  command.option('-d, --directory <directory>', 'Directory to create the plugin in', 'plugins');
   command.option('-l, --language <language>', 'Programming language to use for the plugin', 'go');
   command.action(async (name, options) => {
     const startTime = performance.now();
-    const pluginDir = resolve(process.cwd(), options.directory, name);
+    const cwd = process.cwd();
+    const pluginDir = resolve(cwd, options.directory, name);
+    const originalPluginName = name;
 
     name = upperFirst(camelCase(name));
     const serviceName = name + 'Service';
@@ -55,7 +57,7 @@ export default (opts: BaseCommandOptions) => {
         options.language = 'go';
       }
 
-      await writeFile(resolve(tempDir, 'README.md'), pupa(readme, { name }));
+      await writeFile(resolve(tempDir, 'README.md'), pupa(readme, { name, originalPluginName }));
       await writeFile(resolve(srcDir, 'schema.graphql'), pupa(schema, { name }));
 
       spinner.text = 'Generating mapping and proto files...';

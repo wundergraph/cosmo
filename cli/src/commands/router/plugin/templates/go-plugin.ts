@@ -211,7 +211,7 @@ func TestSequentialIDs(t *testing.T) {
 
 export const readme = `# {name} Plugin - Cosmo gRPC Subgraph Example
 
-This repository contains a simple Cosmo gRPC subgraph plugin that showcases how to design APIs with GraphQL but implement them using gRPC methods instead of traditional resolvers.
+This repository contains a simple Cosmo gRPC subgraph plugin that showcases how to design APIs with GraphQL Federation but implement them using gRPC methods instead of traditional resolvers.
 
 ## What is this demo about?
 
@@ -227,85 +227,100 @@ The plugin demonstrates:
 - Proper structure for a Cosmo gRPC subgraph plugin
 - How to test your gRPC service implementation with gRPC client and server without external dependencies
 
-## Plugin Structure
-
-- \`src/\` - Contains the plugin source code
-  - \`main.go\` - The gRPC service implementation with methods that replace GraphQL resolvers
-  - \`main_test.go\` - The gRPC service implementation with methods that replace GraphQL resolvers
-  - \`schema.graphql\` - The GraphQL schema defining the API contract
-- \`generated/\` - Contains generated code from the plugin schema
-- \`bin/\` - Contains compiled binaries of the plugin
-
-## GraphQL to gRPC Mapping
-
-The plugin shows how GraphQL operations map to gRPC methods:
-
-| GraphQL Operation | gRPC Method |
-|-------------------|-------------|
-| \`query { hello }\` | \`QueryHello()\` |
-
-## GraphQL Schema
-
-\`\`\`graphql
-type World {
-  id: ID!
-  name: String!
-}
-
-type Query {
-  hello(name: String!): World!
-}
-\`\`\`
-
 ## Getting Started
 
-1. **Build the plugin**
+1. **Generate the plugin code**
 
+   \`\`\`bash
+   npx wgc@latest router plugin build .
    \`\`\`
-   wgc router plugin build <plugin-directory>
+
+2. **Compose your supergraph**
+
+  Create a \`graph.yaml\` file with the following content in the project root directory:
+
+  \`\`\`yaml
+  version: 1
+  subgraphs:
+    # Add your other subgraphs here
+    - plugin:
+        version: 0.0.1
+        path: plugins/{name}
    \`\`\`
 
-2. **Compose your supergraph with your gRPC subgraph**
+   Then compose your supergraph to generate the \`config.json\` file:
 
-   config.yaml
+   \`\`\`bash
+   npx wgc@latest router compose -i graph.yaml -o config.json
+   \`\`\`
+
+3. **Configure the router**
+
+  Create a \`config.yaml\` file with the following content in the project root directory:
+
    \`\`\`yaml
-   subgraphs:
-     - name: <plugin-name>
-       plugin:
-         version: 0.0.1
-         directory: <plugin-directory>/<plugin-name>
+    version: "1"
+
+    listen_addr: localhost:3010
+
+    dev_mode: true
+
+    execution_config:
+      file:
+        path: config.json
+
+    plugins:
+      enabled: true
+      path: "plugins"
    \`\`\`
 
-3. **Build the federated graph**
+4. **Directory Structure**
 
-    \`\`\`bash
-    wgc router compose config.yaml
-    \`\`\`
+   The plugin directory should have the following structure:
 
-4. **Test the plugin**
-
-   \`\`\`bash
-   wgc router plugin test <plugin-directory>/<plugin-name>
    \`\`\`
-   or
-   \`\`\`bash
-   go test src -v
+    plugins/{originalPluginName}/
+    ├── go.mod                # Go module file with dependencies
+    ├── go.sum                # Go checksums file
+    ├── src/
+    │   ├── main.go           # Main plugin implementation
+    │   ├── main_test.go      # Tests for the plugin
+    │   └── schema.graphql    # GraphQL schema defining the API
+    ├── generated/            # Generated code (created during build)
+    └── bin/                  # Compiled binaries (created during build)
+        └── plugin            # The compiled plugin binary
    \`\`\`
-   if you have the Go toolchain already installed.
+
+   Your project root directory would then typically contain:
+   
+   \`\`\`
+   project-root/
+   ├── config.yaml         # Router configuration file
+   ├── config.json         # Composed supergraph configuration
+   ├── graph.yaml          # Supergraph definition file
+   ├── plugins/            # Directory containing all plugins
+   │   └── {originalPluginName}/  # Your plugin directory (structure above)
+   └── release/            # Router binary location
+       └── router          # Router binary
+   \`\`\`
 
 5. **Start the router**
 
-   \`\`\`yaml
-   execution_config:
-    file:
-        path: ./config.yaml
-   plugins:
-    - <plugin-directory>
+   Download the router binary in the project root directory:
+
+   \`\`\`bash
+   npx wgc@latest router download-binary -o release && chmod +x release/router
    \`\`\`
 
-6. **Query the hello endpoint**
+   Then start the router in the project root directory:
 
-   Once running, you can perform GraphQL operations like:
+   \`\`\`bash
+   ./release/router
+   \`\`\`
+
+## Open the GraphQL Playground
+
+   Once running, you can open the GraphQL Playground at [http://localhost:3010](http://localhost:3010) and perform GraphQL operations like:
    
    \`\`\`graphql
    # Hello query
@@ -320,11 +335,11 @@ type Query {
 ## Further Steps
 
 - Change the plugin code in \`src/main.go\` and rebuild the plugin
-- Change the GraphQL schema in \`src/schema.graphql\` and rebuild the plugin
+- Change the GraphQL schema in \`src/schema.graphql\` and rebuild the plugin. You can also skip compilation when passing the \`--generate-only\` flag to the \`wgc router plugin build\` command.
 
 ## Learn More
 
-For more information about Cosmo and building subgraph plugins, visit the [Cosmo documentation](https://cosmo-docs.wundergraph.com).`;
+For more information about Cosmo and building subgraph plugins, visit the [Cosmo plugins documentation](https://cosmo-docs.wundergraph.com/router/plugins).`;
 
 export const schema = `type World {
   """
