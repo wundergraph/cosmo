@@ -122,12 +122,6 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	isConnStoreEnabled := r.Config.metricConfig.OpenTelemetry.ConnectionStats || r.Config.metricConfig.Prometheus.ConnectionStats
 	var traceDialer *TraceDialer
 	if isConnStoreEnabled {
-		// An important caveat is that since we create http transports per base and subgraph
-		// they will have their own connection pool, BUT we maintain one map for all of these
-		// pools, normally this would mean that it's harder to track if the connection pool
-		// is exhausted, however we have the capability of slicing the metric by subgraph
-		// dimensions AND host, to ensure we get accurate metrics, and even if we slice
-		// by host only, this is only a problem if we have multiple subgraphs on the same host and port
 		traceDialer = NewTraceDialer()
 	}
 
