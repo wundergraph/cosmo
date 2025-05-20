@@ -65,9 +65,9 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
         email: userInfoData.email,
         organizations: orgs
           .filter((o) => !o.deletion || o.rbac.isOrganizationAdmin)
-          .map((org) => ({
+          .map(({ rbac, ...org }) => ({
             ...org,
-            groups: org.rbac.groups.map(({ description, ...rest }) => ({
+            groups: rbac.groups.map(({ description, kcGroupId, ...rest }) => ({
               ...rest,
             })),
           })),

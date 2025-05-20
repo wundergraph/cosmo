@@ -194,6 +194,7 @@ export function createTestContext(
         groupId: randomUUID(),
         name: g,
         description: '',
+        kcGroupId: randomUUID(),
         builtin: g === 'admin',
         rules: [
           {
