@@ -1408,7 +1408,7 @@ export const organizationGroupMembers = pgTable(
       }),
   },
   (t) => ({
-    nameIndex: uniqueIndex('organization_group_member_idx').on(t.organizationMemberId, t.groupId),
+    orgMemberIdx: uniqueIndex('organization_group_member_idx').on(t.organizationMemberId),
   }),
 );
 

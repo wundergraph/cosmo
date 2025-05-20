@@ -4,6 +4,7 @@ import * as schema from '../../db/schema.js';
 import { OrganizationGroupDTO } from '../../types/index.js';
 import { OrganizationRole } from '../../db/models.js';
 import { organizationRoleEnum } from '../../db/schema.js';
+import { defaultGroupDescription } from '../test-util.js';
 
 export class OrganizationGroupRepository {
   constructor(private db: PostgresJsDatabase<typeof schema>) {}
@@ -133,11 +134,16 @@ export class OrganizationGroupRepository {
 
   public async importKeycloakGroups(input: { organizationId: string; kcGroups: { id: string; name: string }[] }) {
     for (const group of input.kcGroups) {
+      if (await this.nameExists({ organizationId: input.organizationId, name: group.name })) {
+        // The group already exists, no need to try to create
+        continue;
+      }
+
       const createdGroup = await this.create({
         organizationId: input.organizationId,
         name: group.name,
-        description: '',
-        builtin: true,
+        description: defaultGroupDescription[group.name] ?? '',
+        builtin: group.name === 'admin',
         kcGroupId: group.id,
       });
 

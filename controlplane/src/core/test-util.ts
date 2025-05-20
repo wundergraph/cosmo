@@ -96,7 +96,7 @@ export async function seedTest(
         organizationId: org.id,
         name: groupName,
         description: defaultGroupDescription[groupName] ?? '',
-        builtin: true,
+        builtin: groupName === 'admin',
         kcGroupId: kcGroups?.find((g) => g.name === groupName)?.id || null,
       });
 
@@ -194,7 +194,7 @@ export function createTestContext(
         groupId: randomUUID(),
         name: g,
         description: '',
-        builtin: true,
+        builtin: g === 'admin',
         rules: [
           {
             role: `organization-${g}` as OrganizationRole,

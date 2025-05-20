@@ -1,15 +1,13 @@
 import * as process from 'node:process';
 import postgres from 'postgres';
 import { drizzle, PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { and, eq, not } from 'drizzle-orm';
-import { uid } from 'uid';
+import { and, eq, isNull } from 'drizzle-orm';
 import { buildDatabaseConnectionConfig } from '../core/plugins/database.js';
 import Keycloak from '../core/services/Keycloak.js';
 import * as schema from '../db/schema.js';
 import { OrganizationRole } from '../db/models.js';
 import { organizationRoleEnum } from '../db/schema.js';
 import { OidcRepository } from '../core/repositories/OidcRepository.js';
-import { OrganizationGroupRepository } from '../core/repositories/OrganizationGroupRepository.js';
 import { defaultGroupDescription } from '../core/test-util.js';
 import { getConfig } from './get-config.js';
 
@@ -92,19 +90,37 @@ async function migrateGroups(db: PostgresJsDatabase<typeof schema>) {
       for (const { id: organizationId, slug: organizationSlug } of organizations) {
         console.log(`\tProcessing organization ${organizationId} - "${organizationSlug}`);
         await keycloakClient.seedRoles({ realm, organizationSlug });
-        await ensureOrganizationSubgroupsExistInDatabase({ db: tx, organizationId, organizationSlug });
-        await updateAndLinkExistingOrganizationOidcMappers({
+
+        // Load all the existing organization groups and roles once so we don't keep fetching them over and over
+        const kcOrganizationGroups = await getOrganizationGroups(organizationSlug);
+        const kcOrganizationRoles = await getOrganizationRoles(organizationSlug);
+
+        await ensureOrganizationGroupsExistInDatabase({
           db: tx,
-          keycloakClient,
           organizationId,
           organizationSlug,
+          kcOrganizationGroups,
+          kcOrganizationRoles,
         });
+
+        await updateAndLinkExistingOrganizationOidcMappers({
+          db: tx,
+          organizationId,
+          organizationSlug,
+          kcOrganizationGroups,
+        });
+
         await assignOrganizationMembersToCorrespondingGroups({ db: tx, organizationId });
 
-        // TODO: The next step is not repeatable as it would create the groups every time
-        // await createGroupsForSubgraphMembers({ tx, organizationId, organizationSlug });
+        await createGroupsForExistingAPIKeys({
+          db: tx,
+          organizationId,
+          organizationSlug,
+          kcOrganizationGroups,
+          kcOrganizationRoles,
+        });
 
-        console.log(`\t\tDone processing organization ${organizationId} - "${organizationSlug}"`);
+        console.log(`\tDone processing organization ${organizationId} - "${organizationSlug}"`);
       }
     });
 
@@ -114,41 +130,74 @@ async function migrateGroups(db: PostgresJsDatabase<typeof schema>) {
   }
 }
 
-async function ensureOrganizationSubgroupsExistInDatabase({
+/**
+ * Retrieve all organization groups
+ */
+async function getOrganizationGroups(organizationSlug: string) {
+  const kcPrimaryOrganizationGroups = await keycloakClient.client.groups.find({
+    realm,
+    max: 1,
+    exact: true,
+    search: organizationSlug,
+  });
+
+  if (kcPrimaryOrganizationGroups.length === 0) {
+    return [];
+  }
+
+  const kcGroupId = kcPrimaryOrganizationGroups[0].id!;
+  const kcOrganizationSubGroups = await keycloakClient.fetchAllSubGroups({ realm, kcGroupId });
+  return kcOrganizationSubGroups.map((group) => ({
+    id: group.id!,
+    name: group.name!,
+  }));
+}
+
+/**
+ * Retrieve all organization roles
+ */
+async function getOrganizationRoles(organizationSlug: string) {
+  const kcOrganizationRoles = await keycloakClient.client.roles.find({
+    realm,
+    max: -1,
+    search: `${organizationSlug}:`,
+  });
+
+  return kcOrganizationRoles.map((role) => ({
+    id: role.id!,
+    name: role.name!,
+  }));
+}
+
+async function ensureOrganizationGroupsExistInDatabase({
   db,
   organizationId,
   organizationSlug,
+  kcOrganizationGroups,
+  kcOrganizationRoles,
 }: {
   db: PostgresJsDatabase<typeof schema>;
   organizationId: string;
   organizationSlug: string;
+  kcOrganizationGroups: { id: string; name: string }[];
+  kcOrganizationRoles: { id: string; name: string }[];
 }) {
-  const organizationGroups = await keycloakClient.client.groups.find({
-    max: -1,
-    realm,
-    search: organizationSlug,
-  });
-
-  if (organizationGroups.length === 0) {
+  if (kcOrganizationGroups.length === 0) {
+    // We don't need to create any group in the database
     return;
   }
-
-  // Retrieve all the subgroups
-  const organizationSubgroups = await keycloakClient.fetchAllSubGroups({
-    realm,
-    kcGroupId: organizationGroups[0].id!,
-  });
 
   // Create all the subgroups in the database, ignoring the ones that already have been created
   const createdGroups = await db
     .insert(schema.organizationGroups)
     .values(
-      organizationSubgroups.map((sg) => ({
+      kcOrganizationGroups.map((group) => ({
         organizationId,
-        name: sg.name!,
-        description: defaultGroupDescription[sg.name!] ?? '',
-        builtin: true,
-        kcGroupId: sg.id!,
+        name: group.name,
+        description: defaultGroupDescription[group.name] ?? '',
+        // Only the admin group should be considered builtin
+        builtin: group.name === 'admin',
+        kcGroupId: group.id,
       })),
     )
     .onConflictDoNothing()
@@ -157,104 +206,115 @@ async function ensureOrganizationSubgroupsExistInDatabase({
 
   // Create the initial rule for all the created roles
   if (createdGroups.length > 0) {
-    await db
-      .insert(schema.organizationGroupRules)
-      .values(
-        createdGroups
-          .filter((group) => organizationRoleEnum.enumValues.includes(`organization-${group.name}` as OrganizationRole))
-          .map((group) => ({
-            groupId: group.id,
-            role: `organization-${group.name}` as OrganizationRole,
-            allowAnyNamespace: true,
-            allowAnyResource: true,
-          })),
-      )
-      .onConflictDoNothing()
-      .execute();
+    const rulesToInsert = createdGroups
+      .filter((group) => organizationRoleEnum.enumValues.includes(`organization-${group.name}` as OrganizationRole))
+      .map((group) => ({
+        groupId: group.id,
+        role: `organization-${group.name}` as OrganizationRole,
+      }));
+
+    await db.insert(schema.organizationGroupRules).values(rulesToInsert).onConflictDoNothing().execute();
   }
 
   // Finally, apply the corresponding organization role to each subgroup
-  await Promise.all(
-    organizationSubgroups.map(async (group) => {
-      const role = await keycloakClient.client.roles.findOneByName({
-        realm,
-        name: `${organizationSlug}:organization-${group.name}`,
-      });
+  for (const kcGroup of kcOrganizationGroups) {
+    if (!organizationRoleEnum.enumValues.includes(`organization-${kcGroup.name}` as OrganizationRole)) {
+      // The role is not valid, we don't need to attach the group to any role
+      continue;
+    }
 
-      if (!role) {
-        return;
-      }
+    const roleName = `${organizationSlug}:organization-${kcGroup.name}`;
+    const kcRole = kcOrganizationRoles.find((r) => r.name === roleName);
+    if (!kcRole) {
+      // The role doesn't exist in Keycloak, skip
+      continue;
+    }
 
-      await keycloakClient.client.groups.addRealmRoleMappings({
-        realm,
-        id: group.id!,
-        roles: [{ id: role.id!, name: role.name! }],
-      });
-    }),
-  );
+    // Add the group to the role
+    await keycloakClient.client.groups.addRealmRoleMappings({ realm, id: kcGroup.id, roles: [kcRole] });
+  }
 }
 
 async function updateAndLinkExistingOrganizationOidcMappers({
   db,
-  keycloakClient,
   organizationId,
   organizationSlug,
+  kcOrganizationGroups,
 }: {
   db: PostgresJsDatabase<typeof schema>;
-  keycloakClient: Keycloak;
   organizationId: string;
   organizationSlug: string;
+  kcOrganizationGroups: { id: string; name: string }[];
 }) {
-  const kcOrgGroups = await keycloakClient.client.groups.find({
-    realm,
-    search: organizationSlug,
-    max: 1,
-  });
-
-  if (kcOrgGroups.length !== 1) {
+  if (kcOrganizationGroups.length === 0) {
+    // We don't have any group to map
     return;
   }
 
   const oidcRepo = new OidcRepository(db);
   const oidcProvider = await oidcRepo.getOidcProvider({ organizationId });
   if (!oidcProvider) {
+    // The organization haven't configured any OIDC provider
     return;
   }
 
-  const existingMappers = await keycloakClient.client.identityProviders.findMappers({
+  // Retrieve all the organization's OIDC provider mappers
+  const kcExistingOidcMappers = await keycloakClient.client.identityProviders.findMappers({
     realm,
     alias: oidcProvider.alias,
   });
 
+  // Walk through the existing OIDC mappers and link them with the corresponding group in our database
   const key = 'ssoGroups';
-  for (const mapper of existingMappers) {
-    const kcGroupName = mapper.config.group as string;
-    const kcGroupNameParts = kcGroupName.split('/');
+  let shouldCreateFallbackMapper = true;
+
+  for (const kcOidcMapper of kcExistingOidcMappers) {
+    const kcGroupNameParts = kcOidcMapper.config.group?.split('/');
     if (kcGroupNameParts.length !== 3) {
+      // The format of the mapper group doesn't match the expected format we want
+      if (kcGroupNameParts.length === 2 && shouldCreateFallbackMapper) {
+        // We shouldn't create the fallback mapper
+        shouldCreateFallbackMapper = false;
+      }
+
       continue;
     }
 
-    const claims = JSON.parse(mapper.config.claims) as { value: string }[];
+    const claims = JSON.parse(kcOidcMapper.config.claims) as { value: string }[];
     if (claims.length === 1 && claims[0].value === '.*') {
+      // Previously, we used the group `/<org>/viewer` as fallback group, however, we have decided that the
+      // fallback group will be `/<org>` instead
       await keycloakClient.client.identityProviders.delMapper({
         realm,
         alias: oidcProvider.alias,
-        id: mapper.id!,
-      });
-
-      await keycloakClient.createIDPMapper({
-        realm,
-        claims: `[{ "key": "${key}", "value": ".*" }]`,
-        alias: oidcProvider.alias,
-        keycloakGroupName: `/${organizationSlug}`,
+        id: kcOidcMapper.id!,
       });
     } else {
+      // Link the OIDC mapper to with the existing group in our database
       await db
         .update(schema.organizationGroups)
-        .set({ kcMapperId: mapper.id! })
-        .where(eq(schema.organizationGroups.name, kcGroupNameParts[2]));
+        .set({ kcMapperId: kcOidcMapper.id! })
+        .where(
+          and(
+            eq(schema.organizationGroups.organizationId, organizationId),
+            eq(schema.organizationGroups.name, kcGroupNameParts[2]),
+          ),
+        );
     }
   }
+
+  // Finally, we create the fallback mapper pointing to the group `/<org>`
+  if (!shouldCreateFallbackMapper) {
+    // We have determined that we don't need to create the mapper
+    return;
+  }
+
+  await keycloakClient.createIDPMapper({
+    realm,
+    claims: `[{ "key": "${key}", "value": ".*" }]`,
+    alias: oidcProvider.alias,
+    keycloakGroupName: `/${organizationSlug}`,
+  });
 }
 
 async function assignOrganizationMembersToCorrespondingGroups({
@@ -264,6 +324,7 @@ async function assignOrganizationMembersToCorrespondingGroups({
   db: PostgresJsDatabase<typeof schema>;
   organizationId: string;
 }) {
+  // First, we retrieve all the organization members with their roles from the database
   const organizationMembers = await db
     .select({
       memberId: schema.organizationsMembers.id,
@@ -279,151 +340,235 @@ async function assignOrganizationMembersToCorrespondingGroups({
     .where(eq(schema.organizationsMembers.organizationId, organizationId))
     .execute();
 
-  const membersGroupedByRoles = Object.groupBy(organizationMembers, (om) => om.role ?? '');
-  await Promise.all(
-    Object.entries(membersGroupedByRoles).map(async ([role, members]) => {
-      if (!role || !members || members.length === 0) {
-        return;
-      }
+  // Group all the members by roles, falling back to `viewer` if the member doesn't have a role (which should
+  // never be the case)
+  const membersGroupedByRoles = Object.groupBy(organizationMembers, (om) => om.role ?? 'viewer');
 
-      const orgGroups = await db
-        .select({
-          id: schema.organizationGroups.id,
-          kcGroupId: schema.organizationGroups.kcGroupId,
-        })
-        .from(schema.organizationGroups)
-        .where(
-          and(
-            eq(schema.organizationGroups.organizationId, organizationId),
-            eq(schema.organizationGroups.name, role as string),
-          ),
-        )
-        .limit(1)
-        .execute();
+  // Add all the members to the corresponding group
+  for (const [role, members] of Object.entries(membersGroupedByRoles)) {
+    if (!role || !members || members.length === 0) {
+      continue;
+    }
 
-      if (orgGroups.length === 0) {
-        console.warn(`Organization group "${role}" not found. Skipping`);
-        return;
-      }
+    // Retrieve the group we are adding the members to
+    const organizationGroup = await db.query.organizationGroups
+      .findFirst({
+        where: and(
+          eq(schema.organizationGroups.organizationId, organizationId),
+          eq(schema.organizationGroups.name, role),
+        ),
+        columns: { id: true },
+      })
+      .execute();
 
-      // Assign all members to the group
-      const orgGroup = orgGroups[0];
-      await db
-        .insert(schema.organizationGroupMembers)
-        .values(
-          members.map(({ memberId }) => ({
-            organizationMemberId: memberId!,
-            groupId: orgGroup.id,
-          })),
-        )
-        .onConflictDoNothing()
-        .execute();
-    }),
-  );
+    if (!organizationGroup) {
+      // The group doesn't exist, this should never be the case, but we'll allow it
+      console.warn(`Organization group "${role}" not found. Skipping`);
+      continue;
+    }
+
+    // Create all the group members, ignoring members that already exist
+    await db
+      .insert(schema.organizationGroupMembers)
+      .values(
+        members.map(({ memberId }) => ({
+          organizationMemberId: memberId!,
+          groupId: organizationGroup.id,
+        })),
+      )
+      .onConflictDoUpdate({
+        target: [schema.organizationGroupMembers.organizationMemberId],
+        set: { groupId: organizationGroup.id },
+      })
+      .execute();
+  }
 }
 
-async function createGroupsForSubgraphMembers({
+async function createGroupsForExistingAPIKeys({
   db,
   organizationId,
   organizationSlug,
+  kcOrganizationGroups,
+  kcOrganizationRoles,
 }: {
   db: PostgresJsDatabase<typeof schema>;
   organizationId: string;
   organizationSlug: string;
+  kcOrganizationGroups: { id: string; name: string }[];
+  kcOrganizationRoles: { id: string; name: string }[];
 }) {
-  const subgraphMembers = await db
+  // Retrieve all the API keys that haven't been assigned a group including the role for the user that
+  // created the API key
+  const apiKeys = await db
     .select({
-      targetId: schema.subgraphs.targetId,
-      userId: schema.subgraphMembers.userId,
-      email: schema.users.email,
-      orgMemberId: schema.organizationsMembers.id,
+      id: schema.apiKeys.id,
+      name: schema.apiKeys.name,
+      ownerRole: schema.organizationMemberRoles.role,
     })
-    .from(schema.subgraphMembers)
-    .innerJoin(schema.subgraphs, eq(schema.subgraphs.id, schema.subgraphMembers.subgraphId))
-    .innerJoin(schema.targets, eq(schema.targets.id, schema.subgraphs.targetId))
-    .innerJoin(schema.users, eq(schema.users.id, schema.subgraphMembers.userId))
-    .innerJoin(schema.organizationsMembers, eq(schema.organizationsMembers.userId, schema.users.id))
-    .where(
-      and(
-        eq(schema.targets.organizationId, organizationId),
-        not(eq(schema.targets.createdBy, schema.subgraphMembers.userId)),
+    .from(schema.apiKeys)
+    .leftJoin(schema.organizationsMembers, eq(schema.organizationsMembers.userId, schema.apiKeys.userId))
+    .innerJoin(
+      schema.organizationMemberRoles,
+      eq(schema.organizationMemberRoles.organizationMemberId, schema.organizationsMembers.id),
+    )
+    .where(and(eq(schema.apiKeys.organizationId, organizationId), isNull(schema.apiKeys.groupId)))
+    .execute();
+
+  for (const key of apiKeys) {
+    // Retrieve all the resources that have been assigned to the API key
+    const apiKeyResources = await db
+      .select({
+        targetId: schema.apiKeyResources.targetId,
+        targetType: schema.targets.type,
+      })
+      .from(schema.apiKeyResources)
+      .innerJoin(schema.targets, eq(schema.targets.id, schema.apiKeyResources.targetId))
+      .where(eq(schema.apiKeyResources.apiKeyId, key.id))
+      .execute();
+
+    if (apiKeyResources.length === 0) {
+      // No resources have been assigned to the API key, apply the same group as the owner
+      if (!key.ownerRole) {
+        // The owner doesn't have a role, skip
+        continue;
+      }
+
+      // Retrieve the group we are adding the API key to
+      const organizationGroup = await db.query.organizationGroups.findFirst({
+        where: and(
+          eq(schema.organizationGroups.organizationId, organizationId),
+          eq(schema.organizationGroups.name, key.ownerRole),
+        ),
+        columns: { id: true },
+      });
+
+      if (!organizationGroup) {
+        // The group doesn't exist, this should never be the case, but we'll allow it
+        continue;
+      }
+
+      // Update the API key with the corresponding group
+      await db
+        .update(schema.apiKeys)
+        .set({ groupId: organizationGroup.id })
+        .where(eq(schema.apiKeys.id, key.id))
+        .execute();
+
+      continue;
+    }
+
+    // The API key have been assigned one or more resources, we need to create a group just for it,
+    // if it doesn't already exist
+    const groupName = `key-${key.name}`;
+    let organizationGroup = await db.query.organizationGroups.findFirst({
+      where: and(
+        eq(schema.organizationGroups.organizationId, organizationId),
+        eq(schema.organizationGroups.name, groupName),
       ),
-    );
+      columns: { id: true },
+    });
 
-  if (subgraphMembers.length === 0) {
-    return;
-  }
+    if (!organizationGroup) {
+      // The group doesn't exist, we need to create a new group
+      const hasFederatedTargets = apiKeyResources.some((target) => target.targetType === 'federated');
+      const hasSubgraphTargets = apiKeyResources.some((target) => target.targetType === 'subgraph');
 
-  const orgGroupRepo = new OrganizationGroupRepository(db);
-  const groupedSubgraphsByUser = Object.groupBy(subgraphMembers, (m) => m.email);
+      let kcGroup = kcOrganizationGroups.find((group) => group.name === groupName);
+      if (!kcGroup) {
+        // The group doesn't exist in Keycloak, create it
+        const kcCreatedGroup = await keycloakClient.createSubGroup({
+          realm,
+          groupName,
+          organizationSlug,
+        });
 
-  for (const [email, subgraphs] of Object.entries(groupedSubgraphsByUser)) {
-    if (!subgraphs || subgraphs.length === 0) {
-      continue;
+        if (!kcCreatedGroup) {
+          // Failed to create the Keycloak group
+          continue;
+        }
+
+        kcGroup = { id: kcCreatedGroup!, name: groupName };
+
+        if (hasFederatedTargets) {
+          // The API key have access to one or more federated graphs, add the role to the Keycloak group
+          const kcRole = kcOrganizationRoles.find((role) => role.name === `${organizationSlug}:graph-admin`);
+          if (kcRole) {
+            await keycloakClient.client.groups.addRealmRoleMappings({ realm, id: kcGroup.id, roles: [kcRole] });
+          }
+        }
+
+        if (hasSubgraphTargets) {
+          // The API key have access to one or more subgraphs, add the role to the Keycloak group
+          const kcRole = kcOrganizationRoles.find((role) => role.name === `${organizationSlug}:subgraph-admin`);
+          if (kcRole) {
+            await keycloakClient.client.groups.addRealmRoleMappings({ realm, id: kcGroup.id, roles: [kcRole] });
+          }
+        }
+      }
+
+      // Create the group in the database
+      const createdGroup = await db
+        .insert(schema.organizationGroups)
+        .values({
+          organizationId,
+          name: groupName,
+          description: `Group created automatically for the API key "${key.name}".`,
+          builtin: false,
+          kcGroupId: kcGroup.id,
+        })
+        .returning()
+        .execute();
+
+      organizationGroup = { id: createdGroup[0].id };
+
+      // Assign the `graph-admin` role, if needed
+      if (hasFederatedTargets) {
+        const createdRule = await db
+          .insert(schema.organizationGroupRules)
+          .values({ groupId: organizationGroup.id, role: 'graph-admin' })
+          .returning()
+          .execute();
+
+        await db
+          .insert(schema.organizationGroupRuleTargets)
+          .values(
+            apiKeyResources
+              .filter((target) => target.targetType === 'federated')
+              .map((target) => ({
+                ruleId: createdRule[0].id,
+                targetId: target.targetId!,
+              })),
+          )
+          .execute();
+      }
+
+      // Assign the `subgraph-admin` role, if needed
+      if (hasFederatedTargets) {
+        const createdRule = await db
+          .insert(schema.organizationGroupRules)
+          .values({ groupId: organizationGroup.id, role: 'subgraph-admin' })
+          .returning()
+          .execute();
+
+        await db
+          .insert(schema.organizationGroupRuleTargets)
+          .values(
+            apiKeyResources
+              .filter((target) => target.targetType === 'subgraph')
+              .map((target) => ({
+                ruleId: createdRule[0].id,
+                targetId: target.targetId!,
+              })),
+          )
+          .execute();
+      }
     }
 
-    // Retrieve user from Keycloak
-    const kcUsers = await keycloakClient.client.users.find({ realm, email });
-    if (kcUsers.length === 0) {
-      // Keycloak user not found, skip update
-      continue;
-    }
-
-    // Retrieve the subgraph publisher role from Keycloak
-    const kcRole = await keycloakClient.client.roles.findOneByName({
-      realm,
-      name: `${organizationSlug}:subgraph-publisher`,
-    });
-
-    if (!kcRole) {
-      // Keycloak role doesn't exists
-      continue;
-    }
-
-    // Create a new group with the corresponding role
-    const groupName = `generated-${uid()}`;
-    const kcCreatedGroup = await keycloakClient.createSubGroup({
-      realm,
-      organizationSlug,
-      groupName,
-    });
-
-    if (!kcCreatedGroup) {
-      continue;
-    }
-
-    // Add the role to the created role
-    await keycloakClient.client.groups.addRealmRoleMappings({
-      realm,
-      id: kcCreatedGroup!,
-      roles: [{ id: kcRole!.id!, name: kcRole!.name! }],
-    });
-
-    // Create the new group in the database
-    const createdGroup = await orgGroupRepo.create({
-      organizationId,
-      name: groupName,
-      description: `Subgraph memberships for organization member ${email}`,
-      kcGroupId: kcCreatedGroup!,
-    });
-
-    // Attach all the subgraphs the user is allowed to publish to
-    await orgGroupRepo.updateGroup({
-      groupId: createdGroup.groupId,
-      organizationId,
-      rules: [
-        {
-          role: 'subgraph-publisher',
-          namespaces: [],
-          resources: subgraphs?.map((g) => g.targetId) ?? [],
-        },
-      ],
-    });
-
-    // Finally, add the user to the group
-    await orgGroupRepo.addUserToGroup({
-      organizationMemberId: subgraphs[0].orgMemberId,
-      groupId: createdGroup.groupId,
-    });
+    // Finally, assign the API key to the group
+    await db
+      .update(schema.apiKeys)
+      .set({ groupId: organizationGroup.id })
+      .where(eq(schema.apiKeys.id, key.id))
+      .execute();
   }
 }
