@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.212.0](https://github.com/wundergraph/cosmo/compare/router@0.211.0...router@0.212.0) (2025-05-19)
+
+### Features
+
+* **router:** grpc go plugin system ([#1866](https://github.com/wundergraph/cosmo/issues/1866)) ([280a61d](https://github.com/wundergraph/cosmo/commit/280a61de4bd1328549a023d1a3a0b702d78453b8)) (@Noroth)
+
+# [0.211.0](https://github.com/wundergraph/cosmo/compare/router@0.210.2...router@0.211.0) (2025-05-19)
+
+### Features
+
+* **router:** hot config reloading ([#1746](https://github.com/wundergraph/cosmo/issues/1746)) ([e87d727](https://github.com/wundergraph/cosmo/commit/e87d727dd5c1bcd0f67b8f0f17294cc07ee372d8)) (@endigma)
+
 ## [0.210.2](https://github.com/wundergraph/cosmo/compare/router@0.210.1...router@0.210.2) (2025-05-16)
 
 ### Bug Fixes

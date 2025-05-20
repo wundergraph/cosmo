@@ -1,8 +1,8 @@
 {
   "name": "router",
-  "version": "0.210.2",
+  "version": "0.212.0",
   "private": true,
-  "description": "Placeholder package to simplify versioning and releasing with lerna.",
+  "description": "The WunderGraph Router",
   "keywords": [
     "wundergraph",
     "router",

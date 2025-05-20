@@ -275,7 +275,7 @@
                   "description": "The interval at which the file is checked for changes. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
                   "default": "1s",
                   "duration": {
-                    "minimum": "1s"
+                    "minimum": "100ms"
                   }
                 }
               }
@@ -2686,6 +2686,23 @@
         }
       }
     },
+    "plugins": {
+      "type": "object",
+      "description": "The configuration for the router gRPC plugins.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable the router plugins. If the value is true, the router plugins are enabled."
+        },
+        "path": {
+          "type": "string",
+          "description": "The path to the plugins directory. The plugins directory is used to load the plugins.",
+          "default": "plugins"
+        }
+      }
+    },
     "apollo_router_compatibility_flags": {
       "type": "object",
       "description": "To enable full compatibility with Apollo Router you can enable certain compatibility flags, allowing you to use Cosmo Router as a drop-in replacement for Apollo Router",
@@ -2727,6 +2744,46 @@
         "version": {
           "type": "string",
           "description": "The custom client version header."
+        }
+      }
+    },
+    "watch_config": {
+      "type": "object",
+      "description": "Configuration for watching changes to the router configuration.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable watching for configuration changes."
+        },
+        "interval": {
+          "type": "string",
+          "description": "The interval at which the config file is checked for changes. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+          "default": "10s",
+          "duration": {
+            "minimum": "5s"
+          }
+        },
+        "startup_delay": {
+          "type": "object",
+          "description": "Configuration for delaying the initial file watcher start to prevent synchronized reloads across multiple routers. If enabled, a random delay lasting between 0 and `maximum` will be added before the file watcher polling begins.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "Enable startup delay for the configuration watcher"
+            },
+            "maximum": {
+              "type": "string",
+              "description": "The maximum time to wait before starting the config file watcher. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+              "default": "10s",
+              "duration": {
+                "minimum": "5s"
+              }
+            }
+          }
         }
       }
     }
