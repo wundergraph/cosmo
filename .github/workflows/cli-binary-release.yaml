@@ -27,10 +27,10 @@ jobs:
       - uses: ./.github/actions/node
 
       - name: Install dependencies
-        run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition install --frozen-lockfile
+        run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic install --frozen-lockfile
 
       - name: Build
-        run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition run build
+        run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic run build
 
       - uses: winterjung/split@v2
         id: split
