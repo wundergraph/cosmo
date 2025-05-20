@@ -85,8 +85,8 @@ func Main() {
 			zap.String("service", "@wundergraph/router"),
 			zap.String("service_version", core.Version),
 		)
-
-	baseLogger.Info("=========Starting router in main========")
+	fmt.Println("=========Starting router fmt in main========")
+	baseLogger.Info("=========Starting router logger in main========")
 	// Start pprof server if address is provided
 	if *pprofListenAddr != "" {
 		pprofSvr := profile.NewServer(*pprofListenAddr, baseLogger)
