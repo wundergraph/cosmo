@@ -7,7 +7,6 @@ graph:
   token: 'mytoken'
 
 plugins:
-  enabled: true
   path: "some/path/to/plugins"
 
 log_level: "info"
