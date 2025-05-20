@@ -55,10 +55,10 @@ describe('Organization Group tests', (ctx) => {
     const { client, server } = await SetupTest({ dbname, enabledFeatures: ['rbac'] });
 
     const orgGroups = await client.getOrganizationGroups({});
-    const developerGroup = orgGroups.groups.find((g) => g.name === 'developer')!;
+    const adminGroup = orgGroups.groups.find((g) => g.name === 'admin')!;
 
     const updateResponse = await client.updateOrganizationGroup({
-      groupId: developerGroup.groupId,
+      groupId: adminGroup.groupId,
       rules: [{
         role: 'organization-admin',
         namespaces: [],
@@ -75,10 +75,10 @@ describe('Organization Group tests', (ctx) => {
     const { client, server } = await SetupTest({ dbname, enabledFeatures: ['rbac'] });
 
     const orgGroups = await client.getOrganizationGroups({});
-    const developerGroup = orgGroups.groups.find((g) => g.name === 'developer')!;
+    const adminGroup = orgGroups.groups.find((g) => g.name === 'admin')!;
 
     const deleteResponse = await client.deleteOrganizationGroup({
-      groupId: developerGroup.groupId,
+      groupId: adminGroup.groupId,
     });
 
     expect(deleteResponse.response?.code).toBe(EnumStatusCode.ERR);
