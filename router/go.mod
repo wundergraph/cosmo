@@ -54,6 +54,7 @@ require (
 	golang.org/x/sys v0.30.0 // indirect
 	google.golang.org/grpc v1.68.1
 	google.golang.org/protobuf v1.36.4
+	github.corp.ebay.com/security-platform/pfsecapi v0.0.0-20250213062742-896baf30041f
 )
 
 require (
