@@ -34,7 +34,11 @@ export function CreateGroupDialog({ onGroupCreated }: {
       .string()
       .trim()
       .min(3, { message: "Group name must be a minimum of 3 characters" })
-      .max(50, { message: "Group name must be maximum 50 characters" }),
+      .max(50, { message: "Group name must be maximum 50 characters" })
+      .regex(
+        new RegExp("^[a-zA-Z0-9]+(?:[_.@/-][a-zA-Z0-9]+)*$"),
+        "The name should start and end with an alphanumeric character. Only '.', '_', '@', '/', and '-' are allowed as separators in between.",
+      ),
     description: z
       .string()
       .trim()

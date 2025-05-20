@@ -108,6 +108,10 @@ const CreateAPIKeyDialog = ({
       .trim()
       .min(3, { message: "API key name must be a minimum of 3 characters" })
       .max(50, { message: "API key name must be maximum 50 characters" })
+      .regex(
+        new RegExp("^[a-zA-Z0-9]+(?:[_.@/-][a-zA-Z0-9]+)*$"),
+        "The name should start and end with an alphanumeric character. Only '.', '_', '@', '/', and '-' are allowed as separators in between.",
+      )
       .superRefine((arg, ctx) => {
         if (!existingApiKeys.includes(arg)) {
           return;
