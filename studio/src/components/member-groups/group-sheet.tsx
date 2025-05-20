@@ -5,7 +5,7 @@ import {
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { Button } from "@/components/ui/button";
 import { InfoCircledIcon, PlusIcon } from "@radix-ui/react-icons";
-import { ExclamationTriangleIcon, PencilIcon } from "@heroicons/react/24/outline";
+import { PencilIcon } from "@heroicons/react/24/outline";
 import { useMutation, useQuery } from "@connectrpc/connect-query";
 import {
   getUserAccessibleResources,
@@ -147,41 +147,33 @@ function MemberGroupSheetContent({ group, onGroupUpdated, onCancel }: {
       )}
 
       <div className="my-6 space-y-3">
-        {groupRules.length
-          ? (
-            groupRules.map((rule, index) => (
-              <GroupRuleBuilder
-                key={`rule-${rule.role}-${index}`}
-                builtin={group.builtin}
-                roles={roles.filter((r) => r.key === rule.role || !groupRules.some((gr) => gr.role === r.key))}
-                rule={rule}
-                accessibleResources={data}
-                disabled={isPending}
-                onRuleUpdated={(newRule) => {
-                  const newGroupRules = [...groupRules];
-                  newGroupRules[index] = newRule;
-                  setGroupRules(newGroupRules);
-                }}
-                onRemoveRule={() => {
-                  const newGroupRules = [...groupRules];
-                  newGroupRules.splice(index, 1);
-                  setGroupRules(newGroupRules);
-                }}
-              />
-            ))
-          )
-          : (
-            <div className="border rounded-lg flex justify-start text-sm items-center gap-x-2 px-4 h-9">
-              <ExclamationTriangleIcon className="size-4" />
-              <span>No rules have been added to this group.</span>
-            </div>
-          )
-        }
+        {groupRules.length > 0 && (
+          groupRules.map((rule, index) => (
+            <GroupRuleBuilder
+              key={`rule-${rule.role}-${index}`}
+              builtin={group.builtin}
+              roles={roles.filter((r) => r.key === rule.role || !groupRules.some((gr) => gr.role === r.key))}
+              rule={rule}
+              accessibleResources={data}
+              disabled={isPending}
+              onRuleUpdated={(newRule) => {
+                const newGroupRules = [...groupRules];
+                newGroupRules[index] = newRule;
+                setGroupRules(newGroupRules);
+              }}
+              onRemoveRule={() => {
+                const newGroupRules = [...groupRules];
+                newGroupRules.splice(index, 1);
+                setGroupRules(newGroupRules);
+              }}
+            />
+          ))
+        )}
 
         {rbac?.enabled && !group.builtin && (
           <div>
             <Button
-              variant="link"
+              variant="secondary"
               className="gap-x-2"
               disabled={!actualRoles.length}
               onClick={() => {
