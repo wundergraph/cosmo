@@ -136,7 +136,7 @@ function MemberGroupSheetContent({ group, onGroupUpdated, onCancel }: {
         </Alert>
       )}
 
-      {group.builtin && (
+      {rbac?.enabled && group.builtin && (
         <Alert className="mt-6">
           <InfoCircledIcon className="size-5" />
           <AlertTitle>Attention!</AlertTitle>
