@@ -403,14 +403,9 @@ async function createGroupsForExistingAPIKeys({
     .select({
       id: schema.apiKeys.id,
       name: schema.apiKeys.name,
-      ownerRole: schema.organizationMemberRoles.role,
+      userId: schema.apiKeys.userId,
     })
     .from(schema.apiKeys)
-    .leftJoin(schema.organizationsMembers, eq(schema.organizationsMembers.userId, schema.apiKeys.userId))
-    .innerJoin(
-      schema.organizationMemberRoles,
-      eq(schema.organizationMemberRoles.organizationMemberId, schema.organizationsMembers.id),
-    )
     .where(and(eq(schema.apiKeys.organizationId, organizationId), isNull(schema.apiKeys.groupId)))
     .execute();
 
@@ -428,7 +423,13 @@ async function createGroupsForExistingAPIKeys({
 
     if (apiKeyResources.length === 0) {
       // No resources have been assigned to the API key, apply the same group as the owner
-      if (!key.ownerRole) {
+      const ownerRole = await db
+        .select({ role: schema.organizationMemberRoles.role })
+        .from(schema.organizationMemberRoles)
+        .innerJoin(schema.organizationsMembers, eq(schema.organizationsMembers.userId, key.userId))
+        .limit(1);
+
+      if (ownerRole.length === 0) {
         // The owner doesn't have a role, skip
         continue;
       }
@@ -437,7 +438,7 @@ async function createGroupsForExistingAPIKeys({
       const organizationGroup = await db.query.organizationGroups.findFirst({
         where: and(
           eq(schema.organizationGroups.organizationId, organizationId),
-          eq(schema.organizationGroups.name, key.ownerRole),
+          eq(schema.organizationGroups.name, ownerRole[0].role),
         ),
         columns: { id: true },
       });
@@ -543,7 +544,7 @@ async function createGroupsForExistingAPIKeys({
       }
 
       // Assign the `subgraph-admin` role, if needed
-      if (hasFederatedTargets) {
+      if (hasSubgraphTargets) {
         const createdRule = await db
           .insert(schema.organizationGroupRules)
           .values({ groupId: organizationGroup.id, role: 'subgraph-admin' })
