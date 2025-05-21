@@ -56,7 +56,7 @@ export function GroupRuleBuilder({ builtin, roles, rule, accessibleResources, di
             <Button
               variant="outline"
               disabled={disabled || !rbac?.enabled || builtin}
-              className="w-full justify-start !opacity-100"
+              className="w-full justify-start"
             >
             <span className={cn('truncate', !activeRole && 'text-muted-foreground')}>
               {activeRole ? (

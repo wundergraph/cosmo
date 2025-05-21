@@ -36,13 +36,16 @@ export function getOrganizationGroupMembers(
       };
     }
 
-    const [members, apiKeys] = await orgGroupRepo.getGroupMembers(orgGroup.groupId);
+    const [groupMembers, groupApiKeys] = await orgGroupRepo.getGroupMembers(orgGroup.groupId);
     return {
       response: {
         code: EnumStatusCode.OK,
       },
-      members,
-      apiKeys,
+      members: groupMembers.map((member) => ({
+        ...member,
+        createdAt: member.createdAt?.toISOString() ?? '',
+      })),
+      apiKeys: groupApiKeys,
     };
   });
 }

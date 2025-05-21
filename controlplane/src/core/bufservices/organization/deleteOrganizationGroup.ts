@@ -88,22 +88,27 @@ export function deleteOrganizationGroup(
         // Change the Keycloak group of all the members belonging to this group
         const [usersOfGroup] = await orgGroupRepo.getGroupMembers(orgGroup.groupId);
         if (usersOfGroup.length > 0 && orgGroup.kcGroupId) {
-          const kcUsers = await opts.keycloakClient.client.users.find({
-            realm: opts.keycloakRealm,
-            q: usersOfGroup.map((a) => `email:${a.email}`).join(' '),
-          });
+          for (const user of usersOfGroup) {
+            const kcUser = await opts.keycloakClient.client.users.find({
+              realm: opts.keycloakRealm,
+              email: user.email,
+              exact: true,
+            });
 
-          for (const user of kcUsers) {
+            if (kcUser.length === 0) {
+              continue;
+            }
+
             await opts.keycloakClient.client.users.delFromGroup({
               realm: opts.keycloakRealm,
-              id: user.id!,
+              id: kcUser[0].id!,
               groupId: orgGroup.kcGroupId,
             });
 
             if (moveToGroup.kcGroupId) {
               await opts.keycloakClient.client.users.addToGroup({
                 realm: opts.keycloakRealm,
-                id: user.id!,
+                id: kcUser[0].id!,
                 groupId: moveToGroup.kcGroupId,
               });
             }

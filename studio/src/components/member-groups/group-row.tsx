@@ -8,9 +8,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { EllipsisVerticalIcon } from "@heroicons/react/24/outline";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { badgeVariants } from "@/components/ui/badge";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
 import { useIsAdmin } from "@/hooks/use-is-admin";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 export function GroupRow({ group, rbacEnabled, onSelect, onDelete }: {
   group: OrganizationGroup;
@@ -23,23 +24,19 @@ export function GroupRow({ group, rbacEnabled, onSelect, onDelete }: {
   return (
     <TableRow>
       <TableCell className="space-x-3">
-        {isAdmin ? (
-          <Button
-            variant="link"
-            className="px-0 h-auto gap-x-2 whitespace-nowrap"
-            onClick={() => onSelect(false)}
-          >
-            {group.name}
-          </Button>
-        ) : (
-          <span>{group.name}</span>
-        )}
-
+        <span>{group.name}</span>
         {group.builtin && (
-          <Badge variant="outline" className="space-x-1">
-            <InfoCircledIcon className="size-3" />
-            <span>builtin</span>
-          </Badge>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className={badgeVariants({ variant: "outline", className: "space-x-1" })}>
+                <InfoCircledIcon className="size-3 pointer-events-none" />
+                <span className="pointer-events-none">Built-In</span>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>
+              Built-in groups cannot be modified or deleted.
+            </TooltipContent>
+          </Tooltip>
         )}
       </TableCell>
       <TableCell>{group.description}</TableCell>
@@ -66,6 +63,9 @@ export function GroupRow({ group, rbacEnabled, onSelect, onDelete }: {
                 </DropdownMenuTrigger>
               </div>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => onSelect(false)}>
+                  Edit
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={onDelete}>
                   Delete
                 </DropdownMenuItem>

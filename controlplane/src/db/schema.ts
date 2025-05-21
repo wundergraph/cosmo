@@ -1406,6 +1406,7 @@ export const organizationGroupMembers = pgTable(
       .references(() => organizationGroups.id, {
         onDelete: 'cascade',
       }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
     orgMemberIdx: uniqueIndex('organization_group_member_idx').on(t.organizationMemberId),

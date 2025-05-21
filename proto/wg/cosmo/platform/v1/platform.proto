@@ -909,6 +909,7 @@ message GetOrganizationGroupMembersResponse {
   message GroupMember {
     string id = 1;
     string email = 2;
+    string createdAt = 3;
   }
 
   message GroupApiKey {

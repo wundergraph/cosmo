@@ -92,7 +92,7 @@ export function DeleteGroupDialog({ open, group, existingGroups, onGroupDeleted,
 
   return (
     <Dialog open={!!group && open} onOpenChange={handleOnOpenChange}>
-      <DialogTrigger />
+      <DialogTrigger asChild />
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Delete group</DialogTitle>

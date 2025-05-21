@@ -136,16 +136,6 @@ function MemberGroupSheetContent({ group, onGroupUpdated, onCancel }: {
         </Alert>
       )}
 
-      {rbac?.enabled && group.builtin && (
-        <Alert className="mt-6">
-          <InfoCircledIcon className="size-5" />
-          <AlertTitle>Attention!</AlertTitle>
-          <AlertDescription>
-            Modifying builtin groups is not allowed.
-          </AlertDescription>
-        </Alert>
-      )}
-
       <div className="my-6 space-y-3">
         {groupRules.length > 0 && (
           groupRules.map((rule, index) => (
@@ -195,7 +185,7 @@ function MemberGroupSheetContent({ group, onGroupUpdated, onCancel }: {
       </div>
 
       <SheetFooter className="gap-y-2">
-        {rbac?.enabled && !group.builtin ? (
+        {rbac?.enabled && !group.builtin && (
           <>
             <Button variant="secondary" onClick={onCancel} disabled={isPending}>
               Cancel
@@ -207,12 +197,6 @@ function MemberGroupSheetContent({ group, onGroupUpdated, onCancel }: {
               onClick={onSaveClick}
             >
               Save
-            </Button>
-          </>
-        ) : (
-          <>
-            <Button variant="secondary" onClick={onCancel} disabled={isPending}>
-              Close
             </Button>
           </>
         )}

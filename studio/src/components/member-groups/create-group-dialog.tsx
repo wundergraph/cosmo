@@ -14,16 +14,13 @@ import { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { Textarea } from "@/components/ui/textarea";
 import { useFeature } from "@/hooks/use-feature";
-import { Link } from "@/components/ui/link";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useIsAdmin } from "@/hooks/use-is-admin";
-import { useUser } from "@/hooks/use-user";
 
 export function CreateGroupDialog({ onGroupCreated }: {
   onGroupCreated(group: OrganizationGroup): Promise<void>
 }) {
   const { toast } = useToast();
-  const user = useUser();
   const [open, setOpen] = useState(false);
   const { mutate, isPending } = useMutation(createOrganizationGroup);
   const rbac = useFeature("rbac");
@@ -100,12 +97,9 @@ export function CreateGroupDialog({ onGroupCreated }: {
     return (
       <Tooltip>
         <TooltipTrigger asChild>
-          <Link
-            href={`/${user?.currentOrganization.slug}/billing`}
-            className={buttonVariants()}
-          >
-            Create a group
-          </Link>
+          <span className={buttonVariants({ className: "cursor-default opacity-50 hover:!bg-primary" })}>
+            Create Group
+          </span>
         </TooltipTrigger>
         <TooltipContent className="max-w-[300px] text-center">
           You need to enable RBAC on the organization settings to be able to create new groups.
@@ -125,9 +119,7 @@ export function CreateGroupDialog({ onGroupCreated }: {
       }}
     >
       <DialogTrigger asChild>
-        <Button disabled={!rbac?.enabled}>
-          {rbac?.enabled ? "Create group" : "Enable RBAC on settings"}
-        </Button>
+        <Button>Create Group</Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>

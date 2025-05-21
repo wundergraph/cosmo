@@ -71,6 +71,7 @@ try {
   const users = await keycloakClient.client.users.find({
     realm,
     email: user.email,
+    exact: true,
   });
 
   if (users.length > 0) {

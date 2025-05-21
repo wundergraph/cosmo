@@ -2,7 +2,8 @@ CREATE TYPE "public"."organization_role" AS ENUM('organization-admin', 'organiza
 CREATE TABLE IF NOT EXISTS "organization_group_members" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"organization_member_id" uuid NOT NULL,
-	"group_id" uuid NOT NULL
+	"group_id" uuid NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "organization_group_rule_namespaces" (

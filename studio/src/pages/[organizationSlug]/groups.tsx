@@ -145,7 +145,21 @@ const GroupsPage: NextPageWithLayout = () => {
             onOpenChange={onSheetOpenChange}
           />
 
-          <div className="flex h-full flex-col gap-y-6">
+          <div className="flex h-full flex-col gap-y-4">
+            <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
+              <p className="text-muted-foreground text-sm">
+                asd
+                <a
+                  target="_blank"
+                  rel="noreferrer"
+                  href={docsBaseURL + "/studio/groups"}
+                  className="text-primary"
+                >
+                  Learn more.
+                </a>
+              </p>
+            </div>
+
             <TableWrapper className="max-h-full">
               <Table>
                 <TableHeader>
@@ -183,17 +197,7 @@ GroupsPage.getLayout = (page) => {
   return getDashboardLayout(
     page,
     "Groups",
-    <>
-      Manage all the groups of your organization.{" "}
-      <a
-        target="_blank"
-        rel="noreferrer"
-        href={docsBaseURL + "/studio/groups"}
-        className="text-primary"
-      >
-        Learn more.
-      </a>
-    </>,
+    "Manage all the groups of your organization.",
     null,
     <GroupsToolbar />,
   );

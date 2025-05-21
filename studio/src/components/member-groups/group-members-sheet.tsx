@@ -1,5 +1,5 @@
 import { OrganizationGroup } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import {
   getOrganizationGroupMembers,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
@@ -16,6 +16,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs"
+import { formatDateTime } from "@/lib/format-date";
 
 export function GroupMembersSheet({ open, group, onOpenChange }: {
   open: boolean;
@@ -39,6 +40,7 @@ export function GroupMembersSheet({ open, group, onOpenChange }: {
 
   return (
     <Sheet open={open} onOpenChange={onSheetOpenChange}>
+      <SheetTrigger asChild />
       <SheetContent className="scrollbar-custom w-full max-w-full overflow-y-scroll sm:max-w-full md:max-w-xl">
         <SheetHeader>
           <SheetTitle>Members of &quot;{currentGroup?.name}&quot;</SheetTitle>
@@ -76,10 +78,15 @@ export function GroupMembersSheet({ open, group, onOpenChange }: {
                         {data.members.map((member) => (
                           <div
                             key={`member-${member.id}`}
-                            className="px-4 py-2.5 truncate flex justify-start items-center gap-x-2"
+                            className="px-4 py-2.5 space-y-1"
                           >
-                            <UserIcon className="size-4 shrink-0" />
-                            <span className="flex-grow truncate">{member.email}</span>
+                            <div className="truncate flex justify-start items-center gap-x-2">
+                              <UserIcon className="size-4 shrink-0" />
+                              <span className="flex-grow truncate">{member.email}</span>
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Member since {formatDateTime(new Date(member.createdAt))}
+                            </div>
                           </div>
                         ))}
                       </div>

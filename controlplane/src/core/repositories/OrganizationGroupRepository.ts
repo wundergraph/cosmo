@@ -103,6 +103,7 @@ export class OrganizationGroupRepository {
 
     const orgGroups = await this.db.query.organizationGroups.findMany({
       where,
+      orderBy: (table, { asc }) => [asc(table.name)],
       extras: (_, { sql }) => ({
         // There is an active issue that prevents using `schema.organizationRuleSetMembers` instead of directly
         // using strings (https://github.com/drizzle-team/drizzle-orm/issues/3493)
@@ -164,6 +165,7 @@ export class OrganizationGroupRepository {
         .select({
           id: schema.users.id,
           email: schema.users.email,
+          createdAt: schema.organizationGroupMembers.createdAt,
         })
         .from(schema.organizationGroupMembers)
         .rightJoin(
