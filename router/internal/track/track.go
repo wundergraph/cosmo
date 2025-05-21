@@ -2,6 +2,7 @@ package track
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -15,6 +16,26 @@ type UsageTracker struct {
 
 	start time.Time
 	uid   string
+}
+
+func (u *UsageTracker) TrackRouterConfigUsage(usage map[string]any) {
+
+	props := posthog.NewProperties().
+		Set("$process_person_profile", false)
+
+	for k, v := range usage {
+		props.Set(fmt.Sprintf("router_config_%s", k), v)
+	}
+
+	err := u.client.Enqueue(posthog.Capture{
+		Event:      "router_config_usage",
+		Uuid:       u.uid,
+		DistinctId: "router",
+		Properties: props,
+	})
+	if err != nil {
+		u.log.Error("failed to track event", zap.Error(err))
+	}
 }
 
 func NewUsageTracker(log *zap.Logger) (*UsageTracker, error) {
