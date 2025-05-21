@@ -36,7 +36,7 @@ export function enableLintingForTheNamespace(
       };
     }
 
-    if (!authContext.rbac.hasNamespaceWriteAccess(namespace.id)) {
+    if (!authContext.rbac.hasNamespaceWriteAccess(namespace)) {
       throw new UnauthorizedError();
     }
 

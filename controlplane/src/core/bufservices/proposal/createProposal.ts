@@ -276,7 +276,7 @@ export function createProposal(
             checkUrl: '',
           };
         }
-      } else if (!authContext.rbac.canCreateSubGraph(namespace.id)) {
+      } else if (!authContext.rbac.canCreateSubGraph(namespace)) {
         throw new UnauthorizedError();
       }
 

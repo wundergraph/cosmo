@@ -212,7 +212,7 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
               });
 
               if (!orgGroup) {
-                // @todo: Should we fail if the group doesn't exists?
+                // The group doesn't exist for the organization, instead of failing, we'll just skip the group
                 continue;
               }
 

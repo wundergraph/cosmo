@@ -57,7 +57,7 @@ export function enableProposalsForNamespace(
       };
     }
 
-    if (!authContext.rbac.hasNamespaceWriteAccess(namespace.id)) {
+    if (!authContext.rbac.hasNamespaceWriteAccess(namespace)) {
       throw new UnauthorizedError();
     }
 

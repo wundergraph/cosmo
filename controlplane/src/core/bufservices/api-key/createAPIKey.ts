@@ -25,7 +25,7 @@ export function createAPIKey(
     const auditLogRepo = new AuditLogRepository(opts.db);
     const orgGroupRepo = new OrganizationGroupRepository(opts.db);
 
-    if (authContext.organizationDeactivated || !authContext.rbac.canManageAPIKeys) {
+    if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationApiKeyManager) {
       throw new UnauthorizedError();
     }
 

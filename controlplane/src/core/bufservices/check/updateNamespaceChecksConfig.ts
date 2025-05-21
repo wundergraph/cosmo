@@ -35,7 +35,7 @@ export function updateNamespaceChecksConfig(
       };
     }
 
-    if (authContext.organizationDeactivated || !authContext.rbac.hasNamespaceWriteAccess(namespace.id)) {
+    if (authContext.organizationDeactivated || !authContext.rbac.hasNamespaceWriteAccess(namespace)) {
       throw new UnauthorizedError();
     }
 

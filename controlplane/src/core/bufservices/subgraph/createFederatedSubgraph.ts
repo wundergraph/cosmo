@@ -141,7 +141,7 @@ export function createFederatedSubgraph(
       };
     }
 
-    if (!authContext.rbac.canCreateSubGraph(namespace.id)) {
+    if (!authContext.rbac.canCreateSubGraph(namespace)) {
       throw new UnauthorizedError();
     }
 

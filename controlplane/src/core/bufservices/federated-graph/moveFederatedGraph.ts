@@ -108,7 +108,7 @@ export function moveFederatedGraph(
         };
       }
 
-      if (!authContext.rbac.hasNamespaceWriteAccess(newNamespace.id)) {
+      if (!authContext.rbac.hasNamespaceWriteAccess(newNamespace)) {
         throw new UnauthorizedError();
       }
 

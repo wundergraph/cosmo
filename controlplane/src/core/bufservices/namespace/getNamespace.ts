@@ -41,7 +41,7 @@ export function getNamespace(
       };
     }
 
-    if (!authContext.rbac.hasNamespaceReadAccess(namespace.id)) {
+    if (!authContext.rbac.hasNamespaceReadAccess(namespace)) {
       throw new UnauthorizedError();
     }
 

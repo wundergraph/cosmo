@@ -287,15 +287,20 @@ export class OrganizationRepository {
           organizationID: org.id,
         });
 
+        const features = await this.getFeatures({ organizationId: org.id, plan });
         return {
           id: org.id,
           name: org.name,
           slug: org.slug,
           creatorUserId: org.creatorUserId || undefined,
           createdAt: org.createdAt.toISOString(),
-          rbac: new RBACEvaluator(groups, input.userId),
+          rbac: new RBACEvaluator(
+            groups,
+            input.userId,
+            features.some((f) => f.id === 'rbac'),
+          ),
           groups,
-          features: await this.getFeatures({ organizationId: org.id, plan }),
+          features,
           billing: plan
             ? {
                 plan,
@@ -376,6 +381,7 @@ export class OrganizationRepository {
           userID: input.userID,
         }),
         orgMember[0].userID,
+        await this.isFeatureEnabled(input.organizationID, 'rbac'),
       ),
       active: orgMember[0].active,
     };
@@ -417,6 +423,7 @@ export class OrganizationRepository {
           userID: orgMember[0].userID,
         }),
         orgMember[0].userID,
+        await this.isFeatureEnabled(input.organizationID, 'rbac'),
       ),
       active: orgMember[0].active,
     };
@@ -454,6 +461,7 @@ export class OrganizationRepository {
       .limit(limit)
       .execute();
 
+    const isRBACEnabled = await this.isFeatureEnabled(organizationID, 'rbac');
     const members: OrganizationMemberDTO[] = [];
 
     for (const member of orgMembers) {
@@ -467,6 +475,7 @@ export class OrganizationRepository {
             userID: member.userID,
           }),
           member.userID,
+          isRBACEnabled,
         ),
         active: member.active,
       } as OrganizationMemberDTO);

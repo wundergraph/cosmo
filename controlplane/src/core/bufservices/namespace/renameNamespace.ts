@@ -56,7 +56,7 @@ export function renameNamespace(
       };
     }
 
-    if (!authContext.rbac.hasNamespaceWriteAccess(exists.id)) {
+    if (!authContext.rbac.hasNamespaceWriteAccess(exists)) {
       throw new UnauthorizedError();
     }
 

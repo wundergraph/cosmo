@@ -40,7 +40,7 @@ export function configureNamespaceGraphPruningConfig(
       };
     }
 
-    if (!authContext.rbac.hasNamespaceWriteAccess(namespace.id)) {
+    if (!authContext.rbac.hasNamespaceWriteAccess(namespace)) {
       throw new UnauthorizedError();
     }
 
