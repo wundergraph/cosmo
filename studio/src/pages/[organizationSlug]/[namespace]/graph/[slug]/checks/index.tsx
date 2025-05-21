@@ -60,6 +60,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useContext } from "react";
 import { cn } from "@/lib/utils";
+import { useFeature } from "@/hooks/use-feature";
 
 const ChecksPage: NextPageWithLayout = () => {
   const router = useRouter();
@@ -78,6 +79,7 @@ const ChecksPage: NextPageWithLayout = () => {
   const endDate = range ? createDateRange(range).end : end;
 
   const graphContext = useContext(GraphContext);
+  const proposalsFeature = useFeature("proposals");
 
   const [, setRouteCache] = useSessionStorage("checks.route", router.asPath);
 
@@ -316,22 +318,24 @@ const ChecksPage: NextPageWithLayout = () => {
                               Pruning Errors
                             </span>
                           </Badge>
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "gap-2 py-1.5",
-                              !proposalMatch && "text-muted-foreground",
-                            )}
-                          >
-                            {!proposalMatch ? (
-                              <NoSymbolIcon className="h-4 w-4" />
-                            ) : (
-                              getCheckIcon(proposalMatch !== "error")
-                            )}
-                            <span className="flex-1 truncate">
-                              Proposal Match
-                            </span>
-                          </Badge>
+                          {proposalsFeature?.enabled && (
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "gap-2 py-1.5",
+                                !proposalMatch && "text-muted-foreground",
+                              )}
+                            >
+                              {!proposalMatch ? (
+                                <NoSymbolIcon className="h-4 w-4" />
+                              ) : (
+                                getCheckIcon(proposalMatch !== "error")
+                              )}
+                              <span className="flex-1 truncate">
+                                Proposal Match
+                              </span>
+                            </Badge>
+                          )}
                         </div>
                       </TableCell>
 

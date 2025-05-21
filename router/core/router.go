@@ -255,6 +255,7 @@ type (
 		multipartHeartbeatInterval time.Duration
 		hostName                   string
 		mcp                        config.MCPConfiguration
+		plugins                    config.PluginsConfiguration
 	}
 	// Option defines the method to customize server.
 	Option func(svr *Router)
@@ -1232,32 +1233,34 @@ func (r *Router) Start(ctx context.Context) error {
 		}()
 
 		if r.executionConfig != nil && r.executionConfig.Watch {
+			ll := r.logger.With(zap.String("watcher_label", "execution_config"))
+
 			w, err := watcher.New(watcher.Options{
-				Logger:   r.logger.With(zap.String("watcher_label", "execution_config")),
+				Logger:   ll,
 				Path:     r.executionConfig.Path,
 				Interval: r.executionConfig.WatchInterval,
 				Callback: func() {
 					if r.shutdown.Load() {
-						r.logger.Warn("Router is in shutdown state. Skipping config update")
+						ll.Warn("Router is in shutdown state. Skipping config update")
 						return
 					}
 
 					data, err := os.ReadFile(r.executionConfig.Path)
 					if err != nil {
-						r.logger.Error("Failed to read config file", zap.Error(err))
+						ll.Error("Failed to read config file", zap.Error(err))
 						return
 					}
 
-					r.logger.Info("Config file changed. Updating server with new config", zap.String("path", r.executionConfig.Path))
+					ll.Info("Config file changed. Updating server with new config", zap.String("path", r.executionConfig.Path))
 
 					cfg, err := execution_config.UnmarshalConfig(data)
 					if err != nil {
-						r.logger.Error("Failed to unmarshal config file", zap.Error(err))
+						ll.Error("Failed to unmarshal config file", zap.Error(err))
 						return
 					}
 
 					if err := r.newServer(ctx, cfg); err != nil {
-						r.logger.Error("Failed to update server with new config", zap.Error(err))
+						ll.Error("Failed to update server with new config", zap.Error(err))
 						return
 					}
 				},
@@ -2042,6 +2045,12 @@ func WithCacheWarmupConfig(cfg *config.CacheWarmupConfiguration) Option {
 func WithMCP(cfg config.MCPConfiguration) Option {
 	return func(r *Router) {
 		r.mcp = cfg
+	}
+}
+
+func WithPlugins(cfg config.PluginsConfiguration) Option {
+	return func(r *Router) {
+		r.plugins = cfg
 	}
 }
 
