@@ -360,6 +360,7 @@ export class OrganizationRepository {
         email: users.email,
         memberID: organizationsMembers.id,
         active: users.active,
+        createdAt: organizationsMembers.createdAt,
       })
       .from(organizationsMembers)
       .innerJoin(users, eq(users.id, organizationsMembers.userId))
@@ -384,6 +385,7 @@ export class OrganizationRepository {
         await this.isFeatureEnabled(input.organizationID, 'rbac'),
       ),
       active: orgMember[0].active,
+      joinedAt: orgMember[0].createdAt.toISOString(),
     };
   }
 
@@ -397,6 +399,7 @@ export class OrganizationRepository {
         email: users.email,
         memberID: organizationsMembers.id,
         active: users.active,
+        createdAt: organizationsMembers.createdAt,
       })
       .from(organizationsMembers)
       .innerJoin(users, eq(users.id, organizationsMembers.userId))
@@ -426,6 +429,7 @@ export class OrganizationRepository {
         await this.isFeatureEnabled(input.organizationID, 'rbac'),
       ),
       active: orgMember[0].active,
+      joinedAt: orgMember[0].createdAt.toISOString(),
     };
   }
 
@@ -452,6 +456,7 @@ export class OrganizationRepository {
         email: users.email,
         memberID: organizationsMembers.id,
         active: users.active,
+        createdAt: organizationsMembers.createdAt,
       })
       .from(organizationsMembers)
       .innerJoin(users, eq(users.id, organizationsMembers.userId))
@@ -478,7 +483,8 @@ export class OrganizationRepository {
           isRBACEnabled,
         ),
         active: member.active,
-      } as OrganizationMemberDTO);
+        joinedAt: member.createdAt.toISOString(),
+      } satisfies OrganizationMemberDTO);
     }
     return members;
   }
@@ -1569,7 +1575,7 @@ export class OrganizationRepository {
   public async getOrganizationMemberGroups(input: {
     userID: string;
     organizationID: string;
-  }): Promise<Omit<OrganizationGroupDTO, 'membersCount' | 'kcMapperId'>[]> {
+  }): Promise<Omit<OrganizationGroupDTO, 'membersCount'>[]> {
     const groups = await this.db
       .select({
         groupId: schema.organizationGroups.id,
@@ -1613,7 +1619,7 @@ export class OrganizationRepository {
   public async getOrganizationGroup(input: {
     organizationId: string;
     groupId: string;
-  }): Promise<Omit<OrganizationGroupDTO, 'membersCount' | 'kcMapperId'> | null> {
+  }): Promise<Omit<OrganizationGroupDTO, 'membersCount'> | null> {
     const groups = await this.db
       .select({
         groupId: schema.organizationGroups.id,

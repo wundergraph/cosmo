@@ -10,8 +10,8 @@ import { z } from "zod";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { useToast } from "@/components/ui/use-toast";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
+import { GroupSelect } from "@/components/group-select";
 
 const groupIdValidator = z
   .string()
@@ -98,70 +98,45 @@ export function DeleteGroupDialog({ open, group, existingGroups, onGroupDeleted,
           <DialogTitle>Delete group</DialogTitle>
         </DialogHeader>
 
-        {group?.membersCount && otherGroups.length === 0 ? (
-          <></>
-        ) : (
-          <Form {...deleteForm}>
-            <form
-              className="mt-4 flex flex-col gap-y-3"
-              onSubmit={deleteForm.handleSubmit(onSubmit)}
-            >
-              <div>Are you sure you want to delete this group?</div>
+        <Form {...deleteForm}>
+          <form
+            className="mt-4 flex flex-col gap-y-3"
+            onSubmit={deleteForm.handleSubmit(onSubmit)}
+          >
+            <div>Are you sure you want to delete this group?</div>
 
-              {group?.membersCount ? (
-                <>
-                  <div>
-                    {group.membersCount === 1 ? "One member is " : "Multiple members are "}
-                    part of this group, to continue with the deletion you must select a new group for the
-                    member(s) using the box below.
-                  </div>
+            {group?.membersCount || group?.hasOidcMappers ? (
+              <>
 
-                  <FormField
-                    control={deleteForm.control}
-                    name="toGroupId"
-                    render={({ field: { value, onChange } }) => (
-                      <FormItem>
-                        <FormControl>
-                          <Select value={value} onValueChange={onChange}>
-                            <SelectTrigger>
-                              <SelectValue>
-                                {otherGroups.find((g) => g.groupId === value)?.name ?? "Select a role"}
-                              </SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                              {otherGroups.map((group) => (
-                                <SelectItem key={`group-${group.groupId}`} value={group.groupId}>
-                                  {group.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </FormControl>
+                <span>
+                <span className="font-semibold">Before deleting</span> the group, you must select a new group. This is because:
+                </span>
 
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </>
-              ) : null}
+                <ol className="list-disc ml-6 text-sm space-y-2">
+                  {group.hasOidcMappers && (
+                    <li>
+                      One or more OIDC mapper targets this group, we need to update the mappers so{" "}
+                      when user sign in using SSO they don&apos;t lose access to the organization.
+                    </li>
+                  )}
+                  {!!group.membersCount && (
+                    <li>
+                      {group.membersCount === 1 ? "One member " : "Multiple members "} have been
+                      assigned to this group.
+                    </li>
+                  )}
+                </ol>
 
-              <div>
-                Enter <strong>{group?.name}</strong> to confirm you want to delete this group.
-              </div>
-
-              <div className="space-y-2">
                 <FormField
                   control={deleteForm.control}
-                  name="name"
-                  render={({ field }) => (
+                  name="toGroupId"
+                  render={({ field: { value, onChange } }) => (
                     <FormItem>
                       <FormControl>
-                        <Input
-                          className="w-full"
-                          type="text"
-                          autoFocus
-                          disabled={isPending}
-                          {...field}
+                        <GroupSelect
+                          value={value}
+                          groups={otherGroups}
+                          onGroupChange={(group) => onChange(group.groupId)}
                         />
                       </FormControl>
 
@@ -169,19 +144,45 @@ export function DeleteGroupDialog({ open, group, existingGroups, onGroupDeleted,
                     </FormItem>
                   )}
                 />
-              </div>
+              </>
+            ) : null}
 
-              <Button
-                type="submit"
-                variant="destructive"
-                disabled={!deleteForm.formState.isValid || isPending}
-                isLoading={isPending}
-              >
-                Delete group
-              </Button>
-            </form>
-          </Form>
-        )}
+            <div>
+              Enter <strong>{group?.name}</strong> to confirm you want to delete this group.
+            </div>
+
+            <div className="space-y-2">
+              <FormField
+                control={deleteForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <Input
+                        className="w-full"
+                        type="text"
+                        autoFocus
+                        disabled={isPending}
+                        {...field}
+                      />
+                    </FormControl>
+
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <Button
+              type="submit"
+              variant="destructive"
+              disabled={!deleteForm.formState.isValid || isPending}
+              isLoading={isPending}
+            >
+              Delete group
+            </Button>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );

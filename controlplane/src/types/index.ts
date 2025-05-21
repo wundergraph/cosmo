@@ -256,7 +256,6 @@ export interface OrganizationGroupDTO {
   description: string;
   builtin: boolean;
   kcGroupId: string | null;
-  kcMapperId: string | null;
   membersCount: number;
   rules: {
     role: OrganizationRole;
@@ -271,6 +270,7 @@ export interface OrganizationMemberDTO {
   email: string;
   rbac: RBACEvaluator;
   active: boolean;
+  joinedAt: string;
 }
 
 export interface OrganizationInvitationDTO {

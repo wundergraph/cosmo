@@ -6,7 +6,7 @@ import { buildDatabaseConnectionConfig } from '../core/plugins/database.js';
 import Keycloak from '../core/services/Keycloak.js';
 import * as schema from '../db/schema.js';
 import { OrganizationRole } from '../db/models.js';
-import { organizationRoleEnum } from '../db/schema.js';
+import { organizationGroups, organizationRoleEnum } from '../db/schema.js';
 import { OidcRepository } from '../core/repositories/OidcRepository.js';
 import { defaultGroupDescription } from '../core/test-util.js';
 import { getConfig } from './get-config.js';
@@ -103,13 +103,6 @@ async function migrateGroups(db: PostgresJsDatabase<typeof schema>) {
           kcOrganizationRoles,
         });
 
-        await updateAndLinkExistingOrganizationOidcMappers({
-          db: tx,
-          organizationId,
-          organizationSlug,
-          kcOrganizationGroups,
-        });
-
         await assignOrganizationMembersToCorrespondingGroups({ db: tx, organizationId });
 
         await createGroupsForExistingAPIKeys({
@@ -188,7 +181,7 @@ async function ensureOrganizationGroupsExistInDatabase({
   }
 
   // Create all the subgroups in the database, ignoring the ones that already have been created
-  const organizationGroups: { id: string; name: string; }[] = [];
+  const organizationGroups: { id: string; name: string }[] = [];
   for (const kcGroup of kcOrganizationGroups) {
     const existingGroup = await db
       .select({
@@ -196,10 +189,12 @@ async function ensureOrganizationGroupsExistInDatabase({
         kcGroupId: schema.organizationGroups.kcGroupId,
       })
       .from(schema.organizationGroups)
-      .where(and(
-        eq(schema.organizationGroups.organizationId, organizationId),
-        eq(schema.organizationGroups.name, kcGroup.name)
-      ))
+      .where(
+        and(
+          eq(schema.organizationGroups.organizationId, organizationId),
+          eq(schema.organizationGroups.name, kcGroup.name),
+        ),
+      )
       .limit(1);
 
     if (existingGroup.length === 0) {
@@ -207,13 +202,13 @@ async function ensureOrganizationGroupsExistInDatabase({
       const createdGroup = await db
         .insert(schema.organizationGroups)
         .values({
-            organizationId,
-            name: kcGroup.name,
-            description: defaultGroupDescription[kcGroup.name] ?? '',
-            // Only the admin group should be considered builtin
-            builtin: kcGroup.name === 'admin',
-            kcGroupId: kcGroup.id,
-          })
+          organizationId,
+          name: kcGroup.name,
+          description: defaultGroupDescription[kcGroup.name] ?? '',
+          // Only the admin group should be considered builtin
+          builtin: kcGroup.name === 'admin',
+          kcGroupId: kcGroup.id,
+        })
         .returning();
 
       if (createdGroup.length > 0) {
@@ -221,10 +216,7 @@ async function ensureOrganizationGroupsExistInDatabase({
       }
     } else if (!existingGroup[0].kcGroupId) {
       // Make sure that the existing group is linked to the Keycloak group
-      await db
-        .update(schema.organizationGroups)
-        .set({ kcGroupId: existingGroup[0].kcGroupId })
-        .execute();
+      await db.update(schema.organizationGroups).set({ kcGroupId: existingGroup[0].kcGroupId }).execute();
     }
   }
 
@@ -257,88 +249,6 @@ async function ensureOrganizationGroupsExistInDatabase({
     // Add the group to the role
     await keycloakClient.client.groups.addRealmRoleMappings({ realm, id: kcGroup.id, roles: [kcRole] });
   }
-}
-
-async function updateAndLinkExistingOrganizationOidcMappers({
-  db,
-  organizationId,
-  organizationSlug,
-  kcOrganizationGroups,
-}: {
-  db: PostgresJsDatabase<typeof schema>;
-  organizationId: string;
-  organizationSlug: string;
-  kcOrganizationGroups: { id: string; name: string }[];
-}) {
-  if (kcOrganizationGroups.length === 0) {
-    // We don't have any group to map
-    return;
-  }
-
-  const oidcRepo = new OidcRepository(db);
-  const oidcProvider = await oidcRepo.getOidcProvider({ organizationId });
-  if (!oidcProvider) {
-    // The organization haven't configured any OIDC provider
-    return;
-  }
-
-  // Retrieve all the organization's OIDC provider mappers
-  const kcExistingOidcMappers = await keycloakClient.client.identityProviders.findMappers({
-    realm,
-    alias: oidcProvider.alias,
-  });
-
-  // Walk through the existing OIDC mappers and link them with the corresponding group in our database
-  const key = 'ssoGroups';
-  let shouldCreateFallbackMapper = true;
-
-  for (const kcOidcMapper of kcExistingOidcMappers) {
-    const kcGroupNameParts = kcOidcMapper.config.group?.split('/');
-    if (kcGroupNameParts.length !== 3) {
-      // The format of the mapper group doesn't match the expected format we want
-      if (kcGroupNameParts.length === 2 && shouldCreateFallbackMapper) {
-        // We shouldn't create the fallback mapper
-        shouldCreateFallbackMapper = false;
-      }
-
-      continue;
-    }
-
-    const claims = JSON.parse(kcOidcMapper.config.claims) as { value: string }[];
-    if (claims.length === 1 && claims[0].value === '.*') {
-      // Previously, we used the group `/<org>/viewer` as fallback group, however, we have decided that the
-      // fallback group will be `/<org>` instead
-      await keycloakClient.client.identityProviders.delMapper({
-        realm,
-        alias: oidcProvider.alias,
-        id: kcOidcMapper.id!,
-      });
-    } else {
-      // Link the OIDC mapper to with the existing group in our database
-      await db
-        .update(schema.organizationGroups)
-        .set({ kcMapperId: kcOidcMapper.id! })
-        .where(
-          and(
-            eq(schema.organizationGroups.organizationId, organizationId),
-            eq(schema.organizationGroups.name, kcGroupNameParts[2]),
-          ),
-        );
-    }
-  }
-
-  // Finally, we create the fallback mapper pointing to the group `/<org>`
-  if (!shouldCreateFallbackMapper) {
-    // We have determined that we don't need to create the mapper
-    return;
-  }
-
-  await keycloakClient.createIDPMapper({
-    realm,
-    claims: `[{ "key": "${key}", "value": ".*" }]`,
-    alias: oidcProvider.alias,
-    keycloakGroupName: `/${organizationSlug}`,
-  });
 }
 
 async function assignOrganizationMembersToCorrespondingGroups({
@@ -392,19 +302,28 @@ async function assignOrganizationMembersToCorrespondingGroups({
     }
 
     // Create all the group members, ignoring members that already exist
-    await db
-      .insert(schema.organizationGroupMembers)
-      .values(
-        members.map(({ memberId }) => ({
-          organizationMemberId: memberId!,
-          groupId: organizationGroup.id,
-        })),
-      )
-      .onConflictDoUpdate({
-        target: [schema.organizationGroupMembers.organizationMemberId],
-        set: { groupId: organizationGroup.id },
-      })
-      .execute();
+    await Promise.all(
+      members.map(async (member) => {
+        const groupMember = await db.query.organizationGroupMembers.findFirst({
+          where: and(
+            eq(schema.organizationGroupMembers.organizationMemberId, member.memberId!),
+            eq(schema.organizationGroupMembers.groupId, organizationGroup.id)
+          ),
+        });
+
+        if (groupMember) {
+          return;
+        }
+
+        await db
+          .insert(schema.organizationGroupMembers)
+          .values({
+            organizationMemberId: member.memberId!,
+            groupId: organizationGroup.id,
+          })
+          .execute();
+      }),
+    );
   }
 }
 

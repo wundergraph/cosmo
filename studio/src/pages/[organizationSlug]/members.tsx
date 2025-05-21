@@ -50,7 +50,7 @@ import {
 import { Cross1Icon, MagnifyingGlassIcon } from "@radix-ui/react-icons";
 import { useQueryClient } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
-import { OrgMember, OrgMember_Group } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import { OrgMember } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import {
   getOrganizationMembers,
   getPendingOrganizationMembers,
@@ -68,6 +68,7 @@ import { usePaginationParams } from "@/hooks/use-pagination-params";
 import { UpdateMemberGroupDialog } from "@/components/members/update-member-group-dialog";
 import { useIsAdmin } from "@/hooks/use-is-admin";
 import { GroupSelect } from "@/components/group-select";
+import { formatDateTime } from "@/lib/format-date";
 
 const emailInputSchema = z.object({
   email: z.string().email(),
@@ -163,8 +164,8 @@ const InviteForm = ({ onSuccess }: { onSuccess: () => void }) => {
 
 const MemberCard = ({
   email,
-  group,
   acceptedInvite,
+  joinedAt,
   isAdmin,
   isCurrentUser,
   active,
@@ -172,8 +173,8 @@ const MemberCard = ({
   onSelect,
 }: {
   email: string;
-  group?: OrgMember_Group;
   acceptedInvite: boolean;
+  joinedAt?: string;
   isAdmin: boolean;
   isCurrentUser: boolean;
   active?: boolean;
@@ -190,24 +191,21 @@ const MemberCard = ({
     <TableRow>
       <TableCell>{email}</TableCell>
       {acceptedInvite && (
-        <TableCell>
-          {!active && <Badge variant="destructive">Disabled</Badge>}
+        <TableCell className="w-1 whitespace-nowrap">
+          {formatDateTime(new Date(joinedAt!))}
         </TableCell>
       )}
+      {acceptedInvite ? (
+        <TableCell>
+          {active ? (<Badge variant="success">Active</Badge>) : (<Badge variant="destructive">Disabled</Badge>)}
+        </TableCell>
+      ) : (
+        <span className="text-sm text-gray-800 dark:text-gray-400">
+          Pending
+        </span>
+      )}
       <TableCell>
-        <div className="flex h-6 items-center justify-between gap-x-4 text-muted-foreground">
-          <div className={cn({ "pr-[14px]": isAdmin && isCurrentUser })}>
-            {acceptedInvite ? (
-              <span className={cn('text-sm', !group?.name && 'text-muted-foreground')}>
-                {group?.name ?? "No group"}
-              </span>
-            ) : (
-              <span className="text-sm text-gray-800 dark:text-gray-400">
-                Pending
-              </span>
-            )}
-          </div>
-
+        <div className="flex min-h-6 items-center justify-between gap-x-4 text-muted-foreground">
           <div>
             {isAdmin && !isCurrentUser && (
               <DropdownMenu>
@@ -442,8 +440,8 @@ const AcceptedMembers = () => {
           <TableHeader>
             <TableRow>
               <TableHead className="w-full">Email</TableHead>
-              <TableHead className=""></TableHead>
-              <TableHead className="">Group</TableHead>
+              <TableHead>Joined At</TableHead>
+              <TableHead>Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -452,8 +450,8 @@ const AcceptedMembers = () => {
                 <MemberCard
                   key={member.userID}
                   email={member.email}
-                  group={member.groups?.[0]}
                   acceptedInvite={true}
+                  joinedAt={member.joinedAt}
                   isAdmin={isAdmin || false}
                   isCurrentUser={member.email === user.email}
                   active={member.active}

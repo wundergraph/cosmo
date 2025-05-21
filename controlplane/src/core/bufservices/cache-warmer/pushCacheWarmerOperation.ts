@@ -6,11 +6,11 @@ import {
   PushCacheWarmerOperationRequest,
   PushCacheWarmerOperationResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { CacheWarmerRepository } from '../../../core/repositories/CacheWarmerRepository.js';
-import { FederatedGraphRepository } from '../../../core/repositories/FederatedGraphRepository.js';
-import { DefaultNamespace, NamespaceRepository } from '../../../core/repositories/NamespaceRepository.js';
-import { OperationsRepository } from '../../../core/repositories/OperationsRepository.js';
-import { OrganizationRepository } from '../../../core/repositories/OrganizationRepository.js';
+import { CacheWarmerRepository } from '../../repositories/CacheWarmerRepository.js';
+import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
+import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
+import { OperationsRepository } from '../../repositories/OperationsRepository.js';
+import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
@@ -32,7 +32,7 @@ export function pushCacheWarmerOperation(
     const namespaceRepository = new NamespaceRepository(opts.db, authContext.organizationId);
     const organizationRepo = new OrganizationRepository(logger, opts.db);
 
-    if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdminOrDeveloper) {
+    if (authContext.organizationDeactivated) {
       throw new UnauthorizedError();
     }
 
@@ -59,6 +59,10 @@ export function pushCacheWarmerOperation(
           details: `Federated graph '${req.federatedGraphName}' not found`,
         },
       };
+    }
+
+    if (!authContext.rbac.hasFederatedGraphWriteAccess(federatedGraph)) {
+      throw new UnauthorizedError();
     }
 
     const namespace = await namespaceRepository.byId(federatedGraph!.namespaceId);

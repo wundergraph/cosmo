@@ -13,6 +13,7 @@ import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { OrganizationGroupDTO } from '../../../types/index.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import OidcProvider from '../../services/OidcProvider.js';
 
 export function deleteOrganizationGroup(
   opts: RouterOptions,
@@ -68,10 +69,14 @@ export function deleteOrganizationGroup(
         };
       }
 
+      const oidc = await oidcRepo.getOidcProvider({ organizationId: authContext.organizationId });
+
       await opts.keycloakClient.authenticateClient();
 
+      // If the group have one member or the organization OIDC is enabled, we need to move the members to the
+      // destination group and update the OIDC mappers
       let moveToGroup: OrganizationGroupDTO | undefined;
-      if (orgGroup.membersCount > 0) {
+      if (orgGroup.membersCount > 0 || oidc) {
         if (req.toGroupId) {
           moveToGroup = await orgGroupRepo.byId({ organizationId: authContext.organizationId, groupId: req.toGroupId });
         }
@@ -86,8 +91,10 @@ export function deleteOrganizationGroup(
         }
 
         // Change the Keycloak group of all the members belonging to this group
+        // We don't need to delete group for the user since it will be automatically deleted when the
+        // group is deleted
         const [usersOfGroup] = await orgGroupRepo.getGroupMembers(orgGroup.groupId);
-        if (usersOfGroup.length > 0 && orgGroup.kcGroupId) {
+        if (usersOfGroup.length > 0 && moveToGroup.kcGroupId) {
           for (const user of usersOfGroup) {
             const kcUser = await opts.keycloakClient.client.users.find({
               realm: opts.keycloakRealm,
@@ -99,23 +106,15 @@ export function deleteOrganizationGroup(
               continue;
             }
 
-            await opts.keycloakClient.client.users.delFromGroup({
+            await opts.keycloakClient.client.users.addToGroup({
               realm: opts.keycloakRealm,
               id: kcUser[0].id!,
-              groupId: orgGroup.kcGroupId,
+              groupId: moveToGroup.kcGroupId,
             });
-
-            if (moveToGroup.kcGroupId) {
-              await opts.keycloakClient.client.users.addToGroup({
-                realm: opts.keycloakRealm,
-                id: kcUser[0].id!,
-                groupId: moveToGroup.kcGroupId,
-              });
-            }
           }
         }
 
-        // Change the groups in the database too
+        // Change all the group members and API keys to the target group
         await orgGroupRepo.changeMemberGroup({
           fromGroupId: orgGroup.groupId,
           toGroupId: moveToGroup.groupId,
@@ -137,25 +136,54 @@ export function deleteOrganizationGroup(
         });
       }
 
-      await orgGroupRepo.deleteById(orgGroup.groupId);
+      // When the organization have linked an OIDC provider, we need to update the mappers that were tied
+      // to the group we are deleting
+      if (oidc && moveToGroup) {
+        // First, we need to retrieve all the OIDC mappers attached to the organization
+        const oidcProvider = new OidcProvider();
+        const oidcMappers = await oidcProvider.fetchIDPMappers({
+          kcClient: opts.keycloakClient,
+          kcRealm: opts.keycloakRealm,
+          organizationId: authContext.organizationId,
+          db: tx,
+          alias: oidc.alias,
+        });
 
+        // Then, we update the mappers linked to the group we are deleting to the target group
+        const mappersToUpdate = oidcMappers.filter((mapper) => mapper.groupId === orgGroup.groupId);
+        for (const mapper of mappersToUpdate) {
+          // To update the mapper, we need to delete the existing mapper and create a new one with the same claims.
+          //
+          // NOTES:
+          // I tried using the `updateMapper` Keycloak method, however, it throw an exception with "internal error"
+          // every time, the Keycloak log said tried to update a mapper that didn't exist, even when using the
+          // parameters as returned by Keycloak
+          await opts.keycloakClient.client.identityProviders.delMapper({
+            realm: opts.keycloakRealm,
+            alias: oidc.alias,
+            id: mapper.id,
+          });
+
+          await opts.keycloakClient.createIDPMapper({
+            realm: opts.keycloakRealm,
+            alias: oidc.alias,
+            keycloakGroupName: `/${authContext.organizationSlug}/${moveToGroup.name}`,
+            claims: mapper.claims,
+          });
+        }
+      }
+
+      // Delete the group from Keycloak and the database
       if (orgGroup.kcGroupId) {
-        // Delete the group from Keycloak
         await opts.keycloakClient.client.groups.del({
           realm: opts.keycloakRealm,
           id: orgGroup.kcGroupId,
         });
       }
 
-      const oidc = await oidcRepo.getOidcProvider({ organizationId: authContext.organizationId });
-      if (oidc && orgGroup.kcMapperId) {
-        await opts.keycloakClient.client.identityProviders.delMapper({
-          realm: opts.keycloakRealm,
-          alias: oidc.alias,
-          id: orgGroup.kcMapperId,
-        });
-      }
+      await orgGroupRepo.deleteById(orgGroup.groupId);
 
+      // Finally, create a log entry for the deleted group
       await auditLogRepo.addAuditLog({
         organizationId: authContext.organizationId,
         organizationSlug: authContext.organizationSlug,

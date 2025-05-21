@@ -37,7 +37,7 @@ export class RBACEvaluator {
   readonly canCreateNamespace: boolean;
 
   constructor(
-    readonly groups: Omit<OrganizationGroupDTO, 'membersCount' | 'kcMapperId'>[],
+    readonly groups: Omit<OrganizationGroupDTO, 'membersCount'>[],
     private readonly userId?: string,
     isRBACFeatureEnabled?: boolean,
   ) {
@@ -86,7 +86,7 @@ export class RBACEvaluator {
   }
 
   canCreateContract(namespace: Namespace) {
-    return this.isOrganizationAdminOrDeveloper || this.hasNamespaceWriteAccess(namespace);
+    return this.canCreateFederatedGraph(namespace);
   }
 
   canCreateFeatureFlag(namespace: Namespace) {

@@ -882,6 +882,7 @@ message OrganizationGroup {
   bool builtin = 4;
   int32 membersCount = 5;
   repeated OrganizationGroupRule rules = 6;
+  bool hasOidcMappers = 7;
 }
 
 message CreateOrganizationGroupRequest {
@@ -948,16 +949,11 @@ message DeleteOrganizationGroupResponse {
 }
 
 message OrgMember{
-  message Group {
-    string groupId = 1;
-    string name = 2;
-  }
-
   string userID = 1;
   string email = 2;
   string orgMemberID = 3;
   bool active = 4;
-  repeated Group groups = 5;
+  string joinedAt = 5;
 }
 
 message PendingOrgInvitation{

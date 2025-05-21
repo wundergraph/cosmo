@@ -29,7 +29,7 @@ export function updateOrgMemberGroup(
     const oidcRepo = new OidcRepository(opts.db);
     const auditLogRepo = new AuditLogRepository(opts.db);
 
-    if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdminOrDeveloper) {
+    if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdmin) {
       throw new UnauthorizedError();
     }
 
@@ -69,16 +69,6 @@ export function updateOrgMemberGroup(
         response: {
           code: EnumStatusCode.ERR,
           details: 'User is not a part of this organization.',
-        },
-      };
-    }
-
-    // non admins cannot update the group of an org member
-    if (!user.rbac.isOrganizationAdmin) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: 'User does not have the permissions to update the group of an organization member.',
         },
       };
     }

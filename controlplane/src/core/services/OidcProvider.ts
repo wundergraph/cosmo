@@ -78,7 +78,7 @@ export default class OidcProvider {
       return;
     }
 
-    const organizationMemberGroups = await db
+    const organizationGroups = await db
       .select({
         id: schema.organizationGroups.id,
         name: schema.organizationGroups.name,
@@ -107,23 +107,17 @@ export default class OidcProvider {
     for (const mapper of mappers) {
       const claims = `[{ "key": "${key}", "value": "${mapper.ssoGroup.trim()}" }]`;
 
-      const memberGroup = organizationMemberGroups.find((g) => g.id === mapper.groupId);
+      const memberGroup = organizationGroups.find((g) => g.id === mapper.groupId);
       if (!memberGroup) {
         throw new Error(`The group ${mapper.groupId} doesn't exist.`);
       }
 
-      const createdMapper = await kcClient.createIDPMapper({
+      await kcClient.createIDPMapper({
         realm: kcRealm,
         alias,
         claims,
         keycloakGroupName: `/${organizationSlug}/${memberGroup.name}`,
       });
-
-      await db
-        .update(schema.organizationGroups)
-        .set({ kcMapperId: createdMapper.id })
-        .where(eq(schema.organizationGroups.id, memberGroup.id))
-        .execute();
     }
   }
 
@@ -140,7 +134,7 @@ export default class OidcProvider {
     organizationId: string;
     db: PostgresJsDatabase<typeof schema>;
   }) {
-    const organizationMemberGroups = await db
+    const organizationGroups = await db
       .select({
         id: schema.organizationGroups.id,
         name: schema.organizationGroups.name,
@@ -153,7 +147,7 @@ export default class OidcProvider {
       realm: kcRealm,
     });
 
-    const idpMappers: GroupMapper[] = [];
+    const idpMappers: { id: string; groupId: string; ssoGroup: string; claims: string; }[] = [];
     for (const mapper of mappers) {
       if (mapper.identityProviderMapper !== 'oidc-advanced-group-idp-mapper') {
         continue;
@@ -165,12 +159,12 @@ export default class OidcProvider {
       }
 
       const groupInCosmo: string = splitKCGroup[2];
-      const memberGroup = organizationMemberGroups.find((g) => g.name === groupInCosmo);
+      const memberGroup = organizationGroups.find((g) => g.name === groupInCosmo);
       if (!memberGroup) {
         continue;
       }
 
-      const stringifiedClaims = mapper.config.claims;
+      const stringifiedClaims = mapper.config.claims as string;
       const claims = JSON.parse(stringifiedClaims);
       if (!claims || claims.length === 0) {
         continue;
@@ -180,12 +174,12 @@ export default class OidcProvider {
         continue;
       }
 
-      idpMappers.push(
-        new GroupMapper({
-          groupId: memberGroup.id,
-          ssoGroup: claims[0].value,
-        }),
-      );
+      idpMappers.push({
+        id: mapper.id!,
+        groupId: memberGroup.id,
+        ssoGroup: claims[0].value,
+        claims: stringifiedClaims,
+      });
     }
 
     return idpMappers;

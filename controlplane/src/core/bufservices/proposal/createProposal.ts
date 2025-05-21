@@ -93,6 +93,10 @@ export function createProposal(
       };
     }
 
+    if (!authContext.rbac.hasFederatedGraphWriteAccess(federatedGraph)) {
+      throw new UnauthorizedError();
+    }
+
     if (!namespace.enableProposals) {
       return {
         response: {
@@ -276,8 +280,6 @@ export function createProposal(
             checkUrl: '',
           };
         }
-      } else if (!authContext.rbac.canCreateSubGraph(namespace)) {
-        throw new UnauthorizedError();
       }
 
       proposalSubgraphs.push({

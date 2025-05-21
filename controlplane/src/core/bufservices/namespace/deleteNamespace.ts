@@ -69,14 +69,9 @@ export function deleteNamespace(
       };
     }
 
-    // Ensure that only creator and admin can delete a namespace because it will delete all underlying resources
-    if (ns.createdBy !== authContext.userId && !orgMember.rbac.isOrganizationAdmin) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: 'User does not have the permissions to delete the namespace.',
-        },
-      };
+    // Ensure that only admin can delete a namespace because it will delete all underlying resources
+    if (!orgMember.rbac.isOrganizationAdmin) {
+      throw new UnauthorizedError();
     }
 
     await opts.db.transaction(async (tx) => {

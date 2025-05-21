@@ -65,7 +65,7 @@ export function checkSubgraphSchema(
     const proposalRepo = new ProposalRepository(opts.db);
     req.namespace = req.namespace || DefaultNamespace;
 
-    if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdminOrDeveloper) {
+    if (authContext.organizationDeactivated) {
       throw new UnauthorizedError();
     }
 
@@ -132,6 +132,10 @@ export function checkSubgraphSchema(
     }
 
     if (!subgraph) {
+      if (!authContext.rbac.canCreateSubGraph(namespace)) {
+        throw new UnauthorizedError();
+      }
+
       if (!isValidLabels(req.labels)) {
         return {
           response: {
@@ -167,6 +171,8 @@ export function checkSubgraphSchema(
           compositionWarnings: [],
         };
       }
+    } else if (!authContext.rbac.hasSubGraphWriteAccess(subgraph)) {
+      throw new UnauthorizedError();
     }
 
     const subgraphName = subgraph?.name || req.subgraphName;

@@ -104,6 +104,7 @@ export function createOrganizationGroup(
         builtin: createdGroup.builtin,
         membersCount: 0,
         rules: [],
+        hasOidcMappers: false,
       },
     };
   });

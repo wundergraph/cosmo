@@ -1,5 +1,5 @@
 {
-  "id": "805d7d60-cf51-49f5-bb57-6d5fae34b7e1",
+  "id": "0d2713ae-e7b7-4cb7-9c9d-bab235346068",
   "prevId": "27c44862-d1fd-47d6-96f8-0fa43e2ce806",
   "version": "7",
   "dialect": "postgresql",
@@ -3770,23 +3770,7 @@
           "default": "now()"
         }
       },
-      "indexes": {
-        "organization_group_member_idx": {
-          "name": "organization_group_member_idx",
-          "columns": [
-            {
-              "expression": "organization_member_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
+      "indexes": {},
       "foreignKeys": {
         "organization_group_members_organization_member_id_organization_members_id_fk": {
           "name": "organization_group_members_organization_member_id_organization_members_id_fk",
@@ -4019,12 +4003,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "kc_mapper_id": {
-          "name": "kc_mapper_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -4056,13 +4034,6 @@
           "nullsNotDistinct": false,
           "columns": [
             "kc_group_id"
-          ]
-        },
-        "organization_groups_kc_mapper_id_unique": {
-          "name": "organization_groups_kc_mapper_id_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "kc_mapper_id"
           ]
         }
       },

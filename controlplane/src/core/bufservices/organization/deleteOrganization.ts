@@ -12,6 +12,7 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { delayForManualOrgDeletionInDays } from '../../constants.js';
+import { UnauthorizedError } from 'src/core/errors/errors.js';
 
 export function deleteOrganization(
   opts: RouterOptions,
@@ -67,12 +68,7 @@ export function deleteOrganization(
 
     // non admins cannot delete the organization
     if (!user.rbac.isOrganizationAdmin) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: 'User does not have the permissions to delete the organization.',
-        },
-      };
+      throw new UnauthorizedError();
     }
 
     // Minimum one organization is required for a user

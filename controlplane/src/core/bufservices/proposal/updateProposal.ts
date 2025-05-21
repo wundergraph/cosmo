@@ -121,6 +121,10 @@ export function updateProposal(
       };
     }
 
+    if (!authContext.rbac.hasFederatedGraphWriteAccess(federatedGraph)) {
+      throw new UnauthorizedError();
+    }
+
     const proposal = await proposalRepo.ByName({
       name: req.proposalName,
       federatedGraphId: federatedGraph.id,
@@ -147,10 +151,6 @@ export function updateProposal(
     }
 
     if (req.updateAction.case === 'state') {
-      if (!authContext.rbac.isOrganizationAdminOrDeveloper) {
-        throw new UnauthorizedError();
-      }
-
       const stateValue = req.updateAction.value as ProposalState;
       await proposalRepo.updateProposal({
         id: proposal.proposal.id,
@@ -309,12 +309,6 @@ export function updateProposal(
         const subgraph = await subgraphRepo.byName(proposalSubgraph.name, req.namespace);
 
         if (subgraph) {
-          // If the actor is not an organization admin or developer and doesn't have publish permission for
-          // the subgraph, throw an unauthorized error
-          if (!authContext.rbac.hasSubGraphWriteAccess(subgraph)) {
-            throw new UnauthorizedError();
-          }
-
           // If the subgraph exists and is not part of the federated graph, return an error
           const isSubgraphPartOfFedGraph = subgraphsOfFedGraph.some((s) => s.name === proposalSubgraph.name);
           if (!isSubgraphPartOfFedGraph) {

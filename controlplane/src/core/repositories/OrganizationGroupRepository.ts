@@ -35,7 +35,6 @@ export class OrganizationGroupRepository {
         description: input.description,
         builtin: input.builtin ?? false,
         kcGroupId: input.kcGroupId,
-        kcMapperId: null,
         membersCount: 0,
         rules: [],
       };

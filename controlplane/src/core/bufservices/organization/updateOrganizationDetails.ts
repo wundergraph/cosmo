@@ -25,6 +25,10 @@ export function updateOrganizationDetails(
     const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
     const auditLogRepo = new AuditLogRepository(opts.db);
 
+    if (authContext.organizationDeactivated) {
+      throw new UnauthorizedError();
+    }
+
     const org = await orgRepo.byId(authContext.organizationId);
     if (!org) {
       return {

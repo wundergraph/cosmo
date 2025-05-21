@@ -132,7 +132,7 @@ export function moveMonograph(
       };
     }
 
-    if (!authContext.rbac.hasNamespaceWriteAccess(newNamespace)) {
+    if (!authContext.rbac.isOrganizationAdminOrDeveloper) {
       throw new UnauthorizedError();
     }
 

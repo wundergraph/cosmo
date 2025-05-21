@@ -26,7 +26,7 @@ export function restoreOrganization(
     const auditLogRepo = new AuditLogRepository(opts.db);
 
     // Ensure that the user is an admin of the organization
-    if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdmin) {
+    if (!authContext.rbac.isOrganizationAdmin) {
       throw new UnauthorizedError();
     }
 

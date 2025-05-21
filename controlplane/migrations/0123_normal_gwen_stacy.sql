@@ -31,10 +31,8 @@ CREATE TABLE IF NOT EXISTS "organization_groups" (
 	"description" text NOT NULL,
 	"builtin" boolean NOT NULL,
 	"kc_group_id" text,
-	"kc_mapper_id" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "organization_groups_kc_group_id_unique" UNIQUE("kc_group_id"),
-	CONSTRAINT "organization_groups_kc_mapper_id_unique" UNIQUE("kc_mapper_id")
+	CONSTRAINT "organization_groups_kc_group_id_unique" UNIQUE("kc_group_id")
 );
 --> statement-breakpoint
 ALTER TABLE "api_keys" ADD COLUMN "group_id" uuid;--> statement-breakpoint
@@ -87,7 +85,6 @@ EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
 --> statement-breakpoint
-CREATE UNIQUE INDEX IF NOT EXISTS "organization_group_member_idx" ON "organization_group_members" USING btree ("organization_member_id");--> statement-breakpoint
 DO $$ BEGIN
  ALTER TABLE "api_keys" ADD CONSTRAINT "api_keys_group_id_organization_groups_id_fk" FOREIGN KEY ("group_id") REFERENCES "public"."organization_groups"("id") ON DELETE cascade ON UPDATE no action;
 EXCEPTION
