@@ -21,13 +21,13 @@ export default (opts: BaseCommandOptions) => {
   command.argument('name', 'Name of the plugin');
   command.option('-p, --project <project>', 'Project name', 'cosmo');
   command.option('-d, --directory <directory>', 'Directory to create the project in', '.');
-  command.option('--plugin-only', 'Only create the plugin, not the project');
+  command.option('--only-plugin', 'Only create the plugin, no router project', false);
   command.option('-l, --language <language>', 'Programming language to use for the plugin', 'go');
   command.action(async (name, options) => {
     const startTime = performance.now();
     const cwd = process.cwd();
 
-    if (options.pluginOnly) {
+    if (options.onlyPlugin) {
       options.project = '';
     }
 
@@ -74,7 +74,7 @@ export default (opts: BaseCommandOptions) => {
 
       spinner.text = 'Generating mapping and proto files...';
 
-      if (options.project) {
+      if (!options.onlyPlugin && options.project) {
         await writeFile(resolve(tempDir, 'README.md'), pupa(FullGoPlugin.readme, { name, originalPluginName }));
         await writeFile(resolve(srcDir, 'schema.graphql'), pupa(FullGoPlugin.schema, { name }));
 
