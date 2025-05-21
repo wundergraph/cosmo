@@ -188,25 +188,49 @@ async function ensureOrganizationGroupsExistInDatabase({
   }
 
   // Create all the subgroups in the database, ignoring the ones that already have been created
-  const createdGroups = await db
-    .insert(schema.organizationGroups)
-    .values(
-      kcOrganizationGroups.map((group) => ({
-        organizationId,
-        name: group.name,
-        description: defaultGroupDescription[group.name] ?? '',
-        // Only the admin group should be considered builtin
-        builtin: group.name === 'admin',
-        kcGroupId: group.id,
-      })),
-    )
-    .onConflictDoNothing()
-    .returning()
-    .execute();
+  const organizationGroups: { id: string; name: string; }[] = [];
+  for (const kcGroup of kcOrganizationGroups) {
+    const existingGroup = await db
+      .select({
+        id: schema.organizationGroups.id,
+        kcGroupId: schema.organizationGroups.kcGroupId,
+      })
+      .from(schema.organizationGroups)
+      .where(and(
+        eq(schema.organizationGroups.organizationId, organizationId),
+        eq(schema.organizationGroups.name, kcGroup.name)
+      ))
+      .limit(1);
+
+    if (existingGroup.length === 0) {
+      // The organization group doesn't exist
+      const createdGroup = await db
+        .insert(schema.organizationGroups)
+        .values({
+            organizationId,
+            name: kcGroup.name,
+            description: defaultGroupDescription[kcGroup.name] ?? '',
+            // Only the admin group should be considered builtin
+            builtin: kcGroup.name === 'admin',
+            kcGroupId: kcGroup.id,
+          })
+        .returning();
+
+      if (createdGroup.length > 0) {
+        organizationGroups.push(...createdGroup);
+      }
+    } else if (!existingGroup[0].kcGroupId) {
+      // Make sure that the existing group is linked to the Keycloak group
+      await db
+        .update(schema.organizationGroups)
+        .set({ kcGroupId: existingGroup[0].kcGroupId })
+        .execute();
+    }
+  }
 
   // Create the initial rule for all the created roles
-  if (createdGroups.length > 0) {
-    const rulesToInsert = createdGroups
+  if (organizationGroups.length > 0) {
+    const rulesToInsert = organizationGroups
       .filter((group) => organizationRoleEnum.enumValues.includes(`organization-${group.name}` as OrganizationRole))
       .map((group) => ({
         groupId: group.id,

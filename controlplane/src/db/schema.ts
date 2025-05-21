@@ -1408,9 +1408,6 @@ export const organizationGroupMembers = pgTable(
       }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => ({
-    orgMemberIdx: uniqueIndex('organization_group_member_idx').on(t.organizationMemberId),
-  }),
 );
 
 export const organizationRelations = relations(organizations, ({ many }) => ({
