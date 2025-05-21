@@ -229,54 +229,7 @@ The plugin demonstrates:
 
 ## Getting Started
 
-1. **Generate the plugin code**
-
-   \`\`\`bash
-   npx wgc@latest router plugin build .
-   \`\`\`
-
-2. **Compose your supergraph**
-
-  Create a \`graph.yaml\` file with the following content in the project root directory:
-
-  \`\`\`yaml
-  version: 1
-  subgraphs:
-    # Add your other subgraphs here
-    - plugin:
-        version: 0.0.1
-        path: plugins/{name}
-   \`\`\`
-
-   Then compose your supergraph to generate the \`config.json\` file:
-
-   \`\`\`bash
-   npx wgc@latest router compose -i graph.yaml -o config.json
-   \`\`\`
-
-3. **Configure the router**
-
-  Create a \`config.yaml\` file with the following content in the project root directory:
-
-   \`\`\`yaml
-    version: "1"
-
-    listen_addr: localhost:3010
-
-    dev_mode: true
-
-    execution_config:
-      file:
-        path: config.json
-
-    plugins:
-      enabled: true
-      path: "plugins"
-   \`\`\`
-
-4. **Directory Structure**
-
-   The plugin directory should have the following structure:
+Plugin structure:
 
    \`\`\`
     plugins/{originalPluginName}/
@@ -291,55 +244,22 @@ The plugin demonstrates:
         └── plugin            # The compiled plugin binary
    \`\`\`
 
-   Your project root directory would then typically contain:
-   
-   \`\`\`
-   project-root/
-   ├── config.yaml         # Router configuration file
-   ├── config.json         # Composed supergraph configuration
-   ├── graph.yaml          # Supergraph definition file
-   ├── plugins/            # Directory containing all plugins
-   │   └── {originalPluginName}/  # Your plugin directory (structure above)
-   └── release/            # Router binary location
-       └── router          # Router binary
-   \`\`\`
+## 🔧 Customizing Your Plugin
 
-5. **Start the router**
+- Change the GraphQL schema in \`src/schema.graphql\` and regenerate the code.
+- Implement the changes in \`src/main.go\` and test your implementation.
+- Compose your supergraph with [wgc router compose](https://cosmo-docs.wundergraph.com/router/cli/compose)
+- Start the router!
 
-   Download the router binary in the project root directory:
+## 📚 Learn More
 
-   \`\`\`bash
-   npx wgc@latest router download-binary -o release && chmod +x release/router
-   \`\`\`
+For more information about Cosmo and building router plugins:
+- [Cosmo Documentation](https://cosmo-docs.wundergraph.com/)
+- [Cosmo Router Plugins Guide](https://cosmo-docs.wundergraph.com/router/plugins)
 
-   Then start the router in the project root directory:
+---
 
-   \`\`\`bash
-   ./release/router
-   \`\`\`
-
-## Open the GraphQL Playground
-
-   Once running, you can open the GraphQL Playground at [http://localhost:3010](http://localhost:3010) and perform GraphQL operations like:
-   
-   \`\`\`graphql
-   # Hello query
-   query {
-     hello(name: "World") {
-       id
-       name
-     }
-   }
-   \`\`\`
-
-## Further Steps
-
-- Change the plugin code in \`src/main.go\` and rebuild the plugin
-- Change the GraphQL schema in \`src/schema.graphql\` and rebuild the plugin. You can also skip compilation when passing the \`--generate-only\` flag to the \`wgc router plugin build\` command.
-
-## Learn More
-
-For more information about Cosmo and building subgraph plugins, visit the [Cosmo plugins documentation](https://cosmo-docs.wundergraph.com/router/plugins).`;
+<p align="center">Made with ❤️ by <a href="https://wundergraph.com">WunderGraph</a></p>`;
 
 export const schema = `type World {
   """
@@ -359,3 +279,11 @@ type Query {
   hello(name: String!): World!
 }
 `;
+
+export default {
+  goMod,
+  mainGo,
+  mainGoTest,
+  readme,
+  schema,
+};
