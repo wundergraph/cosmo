@@ -223,7 +223,11 @@ compose:
 	npx wgc@latest router compose -i graph.yaml -o config.json
 
 download:
-	rm -rf release && npx wgc@latest router download-binary -o release && chmod +x release/router
+	@if [ ! -f release/router ]; then \\
+		rm -rf release && npx wgc@latest router download-binary -o release && chmod +x release/router; \\
+	else \\
+		echo "Router binary already exists, skipping download"; \\
+	fi
 
 generate:
 	npx wgc@latest router plugin build plugins/{originalPluginName} --generate-only
