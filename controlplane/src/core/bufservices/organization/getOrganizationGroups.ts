@@ -8,8 +8,8 @@ import {
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
-import { OidcRepository } from "../../repositories/OidcRepository.js";
-import OidcProvider from "../../services/OidcProvider.js";
+import { OidcRepository } from '../../repositories/OidcRepository.js';
+import OidcProvider from '../../services/OidcProvider.js';
 
 export function getOrganizationGroups(
   opts: RouterOptions,
@@ -28,18 +28,20 @@ export function getOrganizationGroups(
 
     const groups = await orgGroupRepo.forOrganization(authContext.organizationId);
 
-    const oidcMappers: { groupId: string; }[] = [];
+    const oidcMappers: { groupId: string }[] = [];
     const oidc = await oidcRepo.getOidcProvider({ organizationId: authContext.organizationId });
     if (oidc) {
       // Retrieve all the OIDC mappers from Keycloak
       await opts.keycloakClient.authenticateClient();
-      oidcMappers.push(...await oidcProvider.fetchIDPMappers({
-        kcClient: opts.keycloakClient,
-        kcRealm: opts.keycloakRealm,
-        alias: oidc.alias,
-        organizationId: authContext.organizationId,
-        db: opts.db,
-      }));
+      oidcMappers.push(
+        ...(await oidcProvider.fetchIDPMappers({
+          kcClient: opts.keycloakClient,
+          kcRealm: opts.keycloakRealm,
+          alias: oidc.alias,
+          organizationId: authContext.organizationId,
+          db: opts.db,
+        })),
+      );
     }
 
     return {

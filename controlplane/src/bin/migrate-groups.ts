@@ -307,7 +307,7 @@ async function assignOrganizationMembersToCorrespondingGroups({
         const groupMember = await db.query.organizationGroupMembers.findFirst({
           where: and(
             eq(schema.organizationGroupMembers.organizationMemberId, member.memberId!),
-            eq(schema.organizationGroupMembers.groupId, organizationGroup.id)
+            eq(schema.organizationGroupMembers.groupId, organizationGroup.id),
           ),
         });
 

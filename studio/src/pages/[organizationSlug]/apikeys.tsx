@@ -804,26 +804,8 @@ const APIKeysPage: NextPageWithLayout = () => {
                             ? formatDateTime(new Date(expiresAt))
                             : "Never"}
                         </TableCell>
-                        <TableCell>
-                          {canManageAPIKeys ? (
-                            <Button
-                              variant="link"
-                              className="p-0 h-auto"
-                              onClick={() => {
-                                setOpenUpdateDialog(true);
-                                setSelectedGroup({
-                                  apiKeyName: name,
-                                  groupId: group?.id,
-                                });
-                              }}
-                            >
-                              {group?.name ?? "Assign group"}
-                            </Button>
-                            ) : (
-                            <span className={!group?.id ? "text-muted-foreground" : undefined}>
-                              {group?.name ?? "Group not assigned"}
-                            </span>
-                          )}
+                        <TableCell className={!group?.id ? "text-muted-foreground" : undefined}>
+                          {group?.name ?? "-"}
                         </TableCell>
                         <TableCell>
                           {createdAt
@@ -846,6 +828,17 @@ const APIKeysPage: NextPageWithLayout = () => {
                                 </DropdownMenuTrigger>
                               </div>
                               <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setOpenUpdateDialog(true);
+                                    setSelectedGroup({
+                                      apiKeyName: name,
+                                      groupId: group?.id,
+                                    });
+                                  }}
+                                >
+                                  Update group
+                                </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={() => {
                                     setDeleteApiKeyName(name);

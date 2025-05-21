@@ -147,7 +147,7 @@ export default class OidcProvider {
       realm: kcRealm,
     });
 
-    const idpMappers: { id: string; groupId: string; ssoGroup: string; claims: string; }[] = [];
+    const idpMappers: { id: string; groupId: string; ssoGroup: string; claims: string }[] = [];
     for (const mapper of mappers) {
       if (mapper.identityProviderMapper !== 'oidc-advanced-group-idp-mapper') {
         continue;

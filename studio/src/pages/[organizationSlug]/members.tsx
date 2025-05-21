@@ -200,9 +200,9 @@ const MemberCard = ({
           {active ? (<Badge variant="success">Active</Badge>) : (<Badge variant="destructive">Disabled</Badge>)}
         </TableCell>
       ) : (
-        <span className="text-sm text-gray-800 dark:text-gray-400">
+        <TableCell className="text-sm text-gray-800 dark:text-gray-400">
           Pending
-        </span>
+        </TableCell>
       )}
       <TableCell>
         <div className="flex min-h-6 items-center justify-between gap-x-4 text-muted-foreground">

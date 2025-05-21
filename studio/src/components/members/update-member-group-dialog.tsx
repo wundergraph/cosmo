@@ -12,7 +12,7 @@ import {
   updateOrgMemberGroup,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { useMutation } from "@connectrpc/connect-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useUser } from "@/hooks/use-user";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { useToast } from "@/components/ui/use-toast";
@@ -24,10 +24,8 @@ export function UpdateMemberGroupDialog({ open, member, onOpenChange, refresh }:
   onOpenChange(open: boolean): void;
   refresh(): Promise<unknown>;
 }) {
-  const [selectedGroup, setSelectedGroup] = useState<{ groupId: string; name: string; } | undefined>();
-  useEffect(() => setSelectedGroup(member?.groups?.[0]), [member]);
-
   const user = useUser();
+  const [selectedGroup, setSelectedGroup] = useState<{ groupId: string; name: string; } | undefined>();
 
   const { toast } = useToast();
   const { mutate, isPending } = useMutation(updateOrgMemberGroup);

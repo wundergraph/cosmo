@@ -118,6 +118,7 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
 
   const isAdmin = checkUserAccess({ rolesToBe: ["organization-admin" ]});
   const isAdminOrDeveloper = checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] });
+  const isApiKeyManager = checkUserAccess({ rolesToBe: ["organization-apikey-manager"] });
   const isOrganizationDeactivated = !!user?.currentOrganization.deactivation;
   const isOrganizationPendingDeletion = !!user?.currentOrganization?.deletion;
 
@@ -172,31 +173,41 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
         href: basePath + "/groups",
         icon: <UserGroupIcon className="size-4" />,
       },
+    ];
+
+    if (isAdmin || isApiKeyManager) {
+      navigation.push(
       {
         title: "API Keys",
         href: basePath + "/apikeys",
         icon: <PiKey className="size-4" />,
-      },
-      {
-        title: "Notifications",
-        href: basePath + "/webhooks",
-        icon: <PiBell className="size-4" />,
-      },
-      {
-        title: "Webhook History",
-        href: basePath + "/webhook-history",
-        icon: <PiWebhooksLogo className="size-4" />,
-      },
-      {
-        title: "Usage",
-        href: basePath + "/usages",
-        icon: <PiChartDonut className="size-4" />,
-      },
-    ];
+      });
+    }
+
+    if (isAdminOrDeveloper) {
+      navigation.push(
+        {
+          title: "Notifications",
+          href: basePath + "/webhooks",
+          icon: <PiBell className="size-4" />,
+        },
+        {
+          title: "Webhook History",
+          href: basePath + "/webhook-history",
+          icon: <PiWebhooksLogo className="size-4" />,
+        },
+        {
+          title: "Usage",
+          href: basePath + "/usages",
+          icon: <PiChartDonut className="size-4" />,
+        },
+      );
+    }
 
     if (
       plans.data?.plans?.length &&
-      process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+      process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY &&
+      isAdmin
     ) {
       navigation.push({
         title: "Billing",
