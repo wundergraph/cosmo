@@ -71,9 +71,9 @@ export function CreateGroupDialog({ onGroupCreated }: {
                 duration: 3000,
               });
 
-              await onGroupCreated(data.group);
               setOpen(false);
               reset();
+              await onGroupCreated(data.group);
             }
           } else if (data.response?.details) {
             setError('name', { message: data.response.details });
@@ -98,7 +98,7 @@ export function CreateGroupDialog({ onGroupCreated }: {
       <Tooltip>
         <TooltipTrigger asChild>
           <span className={buttonVariants({ className: "cursor-default opacity-50 hover:!bg-primary" })}>
-            Create Group
+            New Group
           </span>
         </TooltipTrigger>
         <TooltipContent className="max-w-[300px] text-center">
@@ -119,7 +119,7 @@ export function CreateGroupDialog({ onGroupCreated }: {
       }}
     >
       <DialogTrigger asChild>
-        <Button>Create Group</Button>
+        <Button>New Group</Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
@@ -139,6 +139,7 @@ export function CreateGroupDialog({ onGroupCreated }: {
             <Input
               id="create-group-name"
               className="w-full"
+              disabled={isPending}
               type="text" {...register("name")}
             />
 
@@ -159,6 +160,7 @@ export function CreateGroupDialog({ onGroupCreated }: {
             <Textarea
               id="create-group-description"
               className="w-full"
+              disabled={isPending}
               rows={5}
               {...register("description")}
             />
@@ -172,11 +174,11 @@ export function CreateGroupDialog({ onGroupCreated }: {
 
           <Button
             type="submit"
-            disabled={!isValid}
+            disabled={!isValid || isPending}
             variant="default"
             isLoading={isPending}
           >
-            Create group
+            New Group
           </Button>
         </form>
       </DialogContent>

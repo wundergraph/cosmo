@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ChevronRightIcon, CheckIcon, MinusIcon } from "@heroicons/react/24/outline";
 import { useGroupResources, GroupResource, GroupResourceItem } from "./use-group-resources";
+import { RiLoader5Fill } from "react-icons/ri";
 
 export function GroupResourceSelector({ rule, disabled, activeRole, accessibleResources, onRuleUpdated }: {
   rule: UpdateOrganizationGroupRequest_GroupRule,
@@ -23,7 +24,7 @@ export function GroupResourceSelector({ rule, disabled, activeRole, accessibleRe
   const toggleResources = (resources: string[], isNamespaceResource: boolean) => {
     const newRule = rule.clone();
     const setOfSelectedResources = new Set(isNamespaceResource ? rule.namespaces : rule.resources);
-    for (const res of resources) {
+    for (const res of Array.from(new Set(resources))) {
       if (setOfSelectedResources.has(res)) {
         setOfSelectedResources.delete(res);
       } else {
@@ -41,7 +42,7 @@ export function GroupResourceSelector({ rule, disabled, activeRole, accessibleRe
   };
 
   const selectedResources = rule.namespaces.length + rule.resources.length;
-  return (
+  return accessibleResources ? (
     <Popover>
       <PopoverTrigger asChild>
         <Button
@@ -57,7 +58,7 @@ export function GroupResourceSelector({ rule, disabled, activeRole, accessibleRe
         </Button>
       </PopoverTrigger>
       <HackyPopoverContent className="p-1 text-sm w-[400px]">
-        <div className="max-h-72 overflow-auto">
+        <div className="max-h-[32rem] overflow-auto">
           {availableResources.length > 0
             ? availableResources.map((res, index) => (
               <GroupSelectorItem
@@ -73,6 +74,11 @@ export function GroupResourceSelector({ rule, disabled, activeRole, accessibleRe
         </div>
       </HackyPopoverContent>
     </Popover>
+  ) : (
+    <div className="flex justify-start items-center grow truncate h-9 text-sm gap-x-2">
+      <RiLoader5Fill className="size-4 animate-spin" />
+      <span>Loading resources...</span>
+    </div>
   );
 }
 
@@ -102,7 +108,7 @@ function GroupSelectorItem({ type, label, children, depth, toggleResources, ...r
     return null;
   }
 
-  if (type === "section") {
+  if (type === "segment") {
     return (
       <>
         <div className="text-xs text-muted-foreground p-1.5 uppercase select-none">
@@ -163,7 +169,6 @@ function GroupSelectorItem({ type, label, children, depth, toggleResources, ...r
             }
 
             if (hasChildren) {
-              const flattenChildren = flatten(children);
               if (hasSelectedEveryChildren) {
                 toggleResources(flattenChildren.map((res) => res.value), isNamespaceResource);
               } else {

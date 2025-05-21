@@ -1,5 +1,4 @@
 import { useCurrentOrganization } from "@/hooks/use-current-organization";
-import { useLocalStorage } from "@/hooks/use-local-storage";
 import { formatDateTime } from "@/lib/format-date";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@connectrpc/connect-query";
@@ -12,13 +11,7 @@ import {
 import { getBillingPlans } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { addDays } from "date-fns";
 import { useRouter } from "next/router";
-import {
-  Dispatch,
-  SetStateAction,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { Dispatch, SetStateAction, useMemo } from "react";
 import { AiOutlineAudit } from "react-icons/ai";
 import { MdOutlineFeaturedPlayList, MdOutlinePolicy } from "react-icons/md";
 import {
@@ -40,6 +33,7 @@ import { FaGripfire } from "react-icons/fa";
 import { UserGroupIcon } from "@heroicons/react/24/outline";
 import { useCheckUserAccess } from "@/hooks/use-check-user-access";
 import { useUser } from "@/hooks/use-user";
+import { useStarBannerDisabled } from "@/hooks/use-star-banner-disabled";
 
 export const StarBanner = ({
   isDisabled,
@@ -120,15 +114,7 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
   const user = useUser();
   const organizationSlug = router.query.organizationSlug as string;
   const checkUserAccess = useCheckUserAccess();
-
-  const [isStarBannerDisabled, setIsStarBannerDisabled] = useState(true);
-  const [isStarBannerDisabledOnClient, setDisableStarBanner] = useLocalStorage(
-    "disableStarBanner",
-    "false",
-  );
-  useEffect(() => {
-    setIsStarBannerDisabled(isStarBannerDisabledOnClient === "true");
-  }, [isStarBannerDisabledOnClient]);
+  const [isStarBannerDisabled, setDisableStarBanner] = useStarBannerDisabled();
 
   const isAdmin = checkUserAccess({ rolesToBe: ["organization-admin" ]});
   const isAdminOrDeveloper = checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] });
@@ -258,6 +244,7 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
     organizationSlug,
     plans.data?.plans?.length,
     user?.currentOrganization.slug,
+    isAdmin,
     isAdminOrDeveloper,
   ]);
 

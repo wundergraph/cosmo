@@ -58,7 +58,7 @@ export function GroupSheet({ open, group, onGroupUpdated, onOpenChange }: {
 
 function MemberGroupSheetContent({ group, onGroupUpdated, onCancel }: {
   group: OrganizationGroup;
-  onGroupUpdated(): void;
+  onGroupUpdated(): Promise<unknown>;
   onCancel(): void;
 }) {
   const { data } = useQuery(getUserAccessibleResources);
@@ -75,10 +75,11 @@ function MemberGroupSheetContent({ group, onGroupUpdated, onCancel }: {
   )]);
 
   const allRulesHaveRole = groupRules.every((rule) => !!rule.role);
-  const { mutate, isPending } = useMutation(updateOrganizationGroup);
+  const { mutate, isPending, isSuccess } = useMutation(updateOrganizationGroup);
 
   const actualRoles = roles.filter((r) => !groupRules.some((gr) => gr.role === r.key));
 
+  const isDisabled = isPending || isSuccess;
   const onSaveClick = () => {
     if (!allRulesHaveRole || !rbac?.enabled) {
       return;
@@ -89,10 +90,11 @@ function MemberGroupSheetContent({ group, onGroupUpdated, onCancel }: {
       {
         onSuccess(resp) {
           if (resp?.response?.code === EnumStatusCode.OK) {
-            onGroupUpdated();
-            toast({
-              description: "Group updated successfully",
-              duration: 3000,
+            onGroupUpdated().finally(() => {
+              toast({
+                description: "Group updated successfully",
+                duration: 3000,
+              });
             });
           } else {
             toast({
@@ -120,6 +122,7 @@ function MemberGroupSheetContent({ group, onGroupUpdated, onCancel }: {
           {rbac?.enabled && !group.builtin && (
             <EditDescriptionDialog
               description={description}
+              disabled={isDisabled}
               onUpdate={setDescription}
             />
           )}
@@ -145,7 +148,7 @@ function MemberGroupSheetContent({ group, onGroupUpdated, onCancel }: {
               roles={roles.filter((r) => r.key === rule.role || !groupRules.some((gr) => gr.role === r.key))}
               rule={rule}
               accessibleResources={data}
-              disabled={isPending}
+              disabled={isDisabled}
               onRuleUpdated={(newRule) => {
                 const newGroupRules = [...groupRules];
                 newGroupRules[index] = newRule;
@@ -165,7 +168,7 @@ function MemberGroupSheetContent({ group, onGroupUpdated, onCancel }: {
             <Button
               variant="secondary"
               className="gap-x-2"
-              disabled={!actualRoles.length}
+              disabled={!actualRoles.length || isDisabled}
               onClick={() => {
                 if (!actualRoles.length) {
                   return;
@@ -187,13 +190,13 @@ function MemberGroupSheetContent({ group, onGroupUpdated, onCancel }: {
       <SheetFooter className="gap-y-2">
         {rbac?.enabled && !group.builtin && (
           <>
-            <Button variant="secondary" onClick={onCancel} disabled={isPending}>
+            <Button variant="secondary" onClick={onCancel} disabled={isDisabled}>
               Cancel
             </Button>
 
             <Button
-              disabled={isPending || !allRulesHaveRole}
-              isLoading={isPending}
+              disabled={isDisabled || !allRulesHaveRole}
+              isLoading={isPending || isSuccess}
               onClick={onSaveClick}
             >
               Save
@@ -205,14 +208,18 @@ function MemberGroupSheetContent({ group, onGroupUpdated, onCancel }: {
   );
 }
 
-function EditDescriptionDialog({ description, onUpdate }: { description: string; onUpdate(description: string): void }) {
+function EditDescriptionDialog({ description, disabled, onUpdate }: {
+  description: string;
+  disabled: boolean;
+  onUpdate(description: string): void;
+}) {
   const [tmpDescription, setTmpDescription] = useState(description);
   const [open, setOpen] = useState(false);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="icon-sm" variant="ghost">
+        <Button size="icon-sm" variant="ghost" disabled={disabled}>
           <PencilIcon className="size-4" />
         </Button>
       </DialogTrigger>

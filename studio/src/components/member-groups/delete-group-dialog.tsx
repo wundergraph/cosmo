@@ -70,9 +70,9 @@ export function DeleteGroupDialog({ open, group, existingGroups, onGroupDeleted,
               duration: 3000,
             });
 
-            await onGroupDeleted();
             onOpenChange(false);
             deleteForm.reset();
+            await onGroupDeleted();
           } else {
             toast({
               description: resp?.response?.details ?? "Could not delete the group. Please try again.",

@@ -104,7 +104,7 @@ export function GroupRuleBuilder({ builtin, roles, rule, accessibleResources, di
               onRuleUpdated={onRuleUpdated}
           />
         ) : (<div className="grow h-9 text-sm flex justify-start items-center text-muted-foreground">
-          Grants access to all resources.
+          {activeRole && "Grants access to all resources."}
         </div>)}
 
         {rbac?.enabled && !builtin && (

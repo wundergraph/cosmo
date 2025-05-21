@@ -148,7 +148,7 @@ const GroupsPage: NextPageWithLayout = () => {
           <div className="flex h-full flex-col gap-y-4">
             <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
               <p className="text-muted-foreground text-sm">
-                asd
+                Groups are used to control the access to resources in the organization.{" "}
                 <a
                   target="_blank"
                   rel="noreferrer"
