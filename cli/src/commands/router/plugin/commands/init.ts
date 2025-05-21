@@ -1,3 +1,5 @@
+/* eslint-disable import/no-named-as-default-member */
+
 import { access, mkdir, rename, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { randomUUID } from 'node:crypto';

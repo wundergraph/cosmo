@@ -1,7 +1,9 @@
+/* eslint-disable no-tabs */
+
 // We store the templates in code to avoid dealing with file system issues when
 // building for bun and transpiling TypeScript.
 
-export const goMod = `
+const goMod = `
 module {modulePath}
 
 go 1.24.1
@@ -14,7 +16,7 @@ require (
 )
 `;
 
-export const mainGo = `package main
+const mainGo = `package main
 
 import (
   "context"
@@ -58,7 +60,7 @@ func (s *{serviceName}) QueryHello(ctx context.Context, req *service.QueryHelloR
 }
 `;
 
-export const mainGoTest = `package main
+const mainGoTest = `package main
 
 import (
   "context"
@@ -209,7 +211,7 @@ func TestSequentialIDs(t *testing.T) {
 }
 `;
 
-export const makefile = `
+const makefile = `
 .PHONY: build download start compose
 
 make: download build compose start
@@ -230,7 +232,7 @@ build:
 	npx wgc@latest router plugin build plugins/{originalPluginName} --debug
 `;
 
-export const graphConfig = `version: 1
+const graphConfig = `version: 1
 subgraphs:
   # Add your other subgraphs here
   - plugin:
@@ -238,7 +240,7 @@ subgraphs:
       path: plugins/{originalPluginName}
 `;
 
-export const routerConfig = `version: "1"
+const routerConfig = `version: "1"
 
 listen_addr: localhost:3010
 
@@ -253,7 +255,7 @@ plugins:
   path: plugins
 `;
 
-export const projectReadme = `# {name} - Cosmo Router Plugin Project
+const projectReadme = `# {name} - Cosmo Router Plugin Project
 
 Design your API with GraphQL Federation and implement with gRPC using Cosmo Router Plugins
 
@@ -354,7 +356,7 @@ For more information about Cosmo and building router plugins:
 <p align="center">Made with ❤️ by <a href="https://wundergraph.com">WunderGraph</a></p>
 `;
 
-export const pluginReadme = `# {name} Plugin - Cosmo gRPC Subgraph Example
+const pluginReadme = `# {name} Plugin - Cosmo gRPC Subgraph Example
 
 This repository contains a simple Cosmo gRPC subgraph plugin that showcases how to design APIs with GraphQL Federation but implement them using gRPC methods instead of traditional resolvers.
 
@@ -405,7 +407,7 @@ For more information about Cosmo and building router plugins:
 
 <p align="center">Made with ❤️ by <a href="https://wundergraph.com">WunderGraph</a></p>`;
 
-export const schema = `type World {
+const schema = `type World {
   """
   The ID of the world
   """

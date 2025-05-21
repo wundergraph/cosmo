@@ -1,7 +1,7 @@
 // We store the templates in code to avoid dealing with file system issues when
 // building for bun and transpiling TypeScript.
 
-export const goMod = `
+const goMod = `
 module {modulePath}
 
 go 1.24.1
@@ -14,7 +14,7 @@ require (
 )
 `;
 
-export const mainGo = `package main
+const mainGo = `package main
 
 import (
   "context"
@@ -58,7 +58,7 @@ func (s *{serviceName}) QueryHello(ctx context.Context, req *service.QueryHelloR
 }
 `;
 
-export const mainGoTest = `package main
+const mainGoTest = `package main
 
 import (
   "context"
@@ -209,7 +209,7 @@ func TestSequentialIDs(t *testing.T) {
 }
 `;
 
-export const readme = `# {name} Plugin - Cosmo gRPC Subgraph Example
+const readme = `# {name} Plugin - Cosmo gRPC Subgraph Example
 
 This repository contains a simple Cosmo gRPC subgraph plugin that showcases how to design APIs with GraphQL Federation but implement them using gRPC methods instead of traditional resolvers.
 
@@ -261,7 +261,7 @@ For more information about Cosmo and building router plugins:
 
 <p align="center">Made with ❤️ by <a href="https://wundergraph.com">WunderGraph</a></p>`;
 
-export const schema = `type World {
+const schema = `type World {
   """
   The ID of the world
   """
