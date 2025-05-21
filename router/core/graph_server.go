@@ -1277,7 +1277,7 @@ func (s *graphServer) buildSubgraphGRPCClients(ctx context.Context, config *node
 		if pluginConfig := grpcConfig.GetPlugin(); pluginConfig != nil {
 			basePath := ""
 
-			if s.plugins.Enabled {
+			if s.plugins.Path != "" {
 				basePath = s.plugins.Path
 			}
 

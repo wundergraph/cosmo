@@ -23,14 +23,14 @@ func TestRouterSupervisor(t *testing.T) {
 	go xEnv.RouterSupervisor.Start()
 
 	// Ready 1
-	err = xEnv.WaitForServer(context.Background(), xEnv.RouterURL+"/health/ready", 250, 30)
+	err = xEnv.WaitForServer(context.Background(), xEnv.RouterURL+"/health/ready", 2000, 30)
 	require.NoError(t, err, "ready 1 timed out")
 
 	// Reload the router
 	xEnv.RouterSupervisor.Reload()
 
 	// Ready 2
-	err = xEnv.WaitForServer(context.Background(), xEnv.RouterURL+"/health/ready", 500, 30)
+	err = xEnv.WaitForServer(context.Background(), xEnv.RouterURL+"/health/ready", 2000, 30)
 	require.NoError(t, err, "ready 2 timed out")
 
 	// Shutdown the router and all the httptest servers

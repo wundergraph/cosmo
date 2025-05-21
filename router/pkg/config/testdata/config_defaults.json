@@ -475,7 +475,6 @@
     "Version": ""
   },
   "Plugins": {
-    "Enabled": false,
     "Path": "plugins"
   },
   "WatchConfig": {

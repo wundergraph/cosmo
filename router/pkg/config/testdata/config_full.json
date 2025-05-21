@@ -800,7 +800,6 @@
     "Version": "Client_Version"
   },
   "Plugins": {
-    "Enabled": true,
     "Path": "some/path/to/plugins"
   },
   "WatchConfig": {
