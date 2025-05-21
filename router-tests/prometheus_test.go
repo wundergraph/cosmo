@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"net/http"
 	"regexp"
@@ -4229,17 +4230,22 @@ func TestPrometheus(t *testing.T) {
 
 }
 
-func getHost(connectionTotal *io_prometheus_client.Metric) string {
-	host := ""
+func getPort(connectionTotal *io_prometheus_client.Metric) string {
+	// We can get the key from the otel attribute, but we need to make an initialization
+	// also convert the key to prometheus which uses _ instead of . like otel
+	serverPortKey := strings.ReplaceAll(string(otel.ServerPort.String("").Key), ".", "_")
+
 	for _, label := range connectionTotal.Label {
 		if label.Name == nil || label.Value == nil {
 			continue
 		}
-		if *label.Name == "wg_conn_host" {
-			host = *label.Value
+
+		if *label.Name == serverPortKey {
+			return *label.Value
 		}
 	}
-	return host
+
+	return ""
 }
 
 func TestPrometheusWithModule(t *testing.T) {
@@ -4488,7 +4494,7 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 			require.NoError(t, err)
 
 			t.Run("verify max connections", func(t *testing.T) {
-				metricFamily := findMetricFamilyByName(mf, "router_http_client_connection_max")
+				metricFamily := findMetricFamilyByName(mf, "router_http_client_max_connections")
 
 				metrics := metricFamily.GetMetric()
 				require.Len(t, metrics, 1)
@@ -4500,7 +4506,7 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 				expected := []*io_prometheus_client.LabelPair{
 					{
 						Name:  PointerOf("otel_scope_name"),
-						Value: PointerOf("cosmo.router.connection.prometheus"),
+						Value: PointerOf("cosmo.router.connections.prometheus"),
 					},
 					{
 						Name:  PointerOf("otel_scope_version"),
@@ -4512,7 +4518,7 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 			})
 
 			t.Run("verify connections active", func(t *testing.T) {
-				metricFamily := findMetricFamilyByName(mf, "router_http_client_connection_active")
+				metricFamily := findMetricFamilyByName(mf, "router_http_client_active_connections")
 				metrics := metricFamily.GetMetric()
 				require.Len(t, metrics, 2)
 
@@ -4521,15 +4527,19 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 				expected1 := []*io_prometheus_client.LabelPair{
 					{
 						Name:  PointerOf("otel_scope_name"),
-						Value: PointerOf("cosmo.router.connection.prometheus"),
+						Value: PointerOf("cosmo.router.connections.prometheus"),
 					},
 					{
 						Name:  PointerOf("otel_scope_version"),
 						Value: PointerOf("0.0.1"),
 					},
 					{
-						Name:  PointerOf("wg_conn_host"),
-						Value: PointerOf(getHost(metricDataPoint1)),
+						Name:  PointerOf("server_address"),
+						Value: PointerOf("127.0.0.1"),
+					},
+					{
+						Name:  PointerOf("server_port"),
+						Value: PointerOf(getPort(metricDataPoint1)),
 					},
 				}
 				require.Equal(t, expected1, metricDataPoint1.Label)
@@ -4539,22 +4549,26 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 				expected2 := []*io_prometheus_client.LabelPair{
 					{
 						Name:  PointerOf("otel_scope_name"),
-						Value: PointerOf("cosmo.router.connection.prometheus"),
+						Value: PointerOf("cosmo.router.connections.prometheus"),
 					},
 					{
 						Name:  PointerOf("otel_scope_version"),
 						Value: PointerOf("0.0.1"),
 					},
 					{
-						Name:  PointerOf("wg_conn_host"),
-						Value: PointerOf(getHost(metricDataPoint2)),
+						Name:  PointerOf("server_address"),
+						Value: PointerOf("127.0.0.1"),
+					},
+					{
+						Name:  PointerOf("server_port"),
+						Value: PointerOf(getPort(metricDataPoint2)),
 					},
 				}
 				require.Equal(t, expected2, metricDataPoint2.Label)
 			})
 
 			t.Run("verify connection total duration", func(t *testing.T) {
-				metricFamily := findMetricFamilyByName(mf, "router_http_client_connection_acquire_duration")
+				metricFamily := findMetricFamilyByName(mf, "router_http_client_connections_acquire_duration")
 				metrics := metricFamily.GetMetric()
 				require.Len(t, metrics, 2)
 
@@ -4563,15 +4577,19 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 				expected1 := []*io_prometheus_client.LabelPair{
 					{
 						Name:  PointerOf("otel_scope_name"),
-						Value: PointerOf("cosmo.router.connection.prometheus"),
+						Value: PointerOf("cosmo.router.connections.prometheus"),
 					},
 					{
 						Name:  PointerOf("otel_scope_version"),
 						Value: PointerOf("0.0.1"),
 					},
 					{
-						Name:  PointerOf("wg_conn_host"),
-						Value: PointerOf(getHost(metricDataPoint1)),
+						Name:  PointerOf("server_address"),
+						Value: PointerOf("127.0.0.1"),
+					},
+					{
+						Name:  PointerOf("server_port"),
+						Value: PointerOf(getPort(metricDataPoint1)),
 					},
 					{
 						Name:  PointerOf("wg_conn_reused"),
@@ -4589,15 +4607,19 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 				expected2 := []*io_prometheus_client.LabelPair{
 					{
 						Name:  PointerOf("otel_scope_name"),
-						Value: PointerOf("cosmo.router.connection.prometheus"),
+						Value: PointerOf("cosmo.router.connections.prometheus"),
 					},
 					{
 						Name:  PointerOf("otel_scope_version"),
 						Value: PointerOf("0.0.1"),
 					},
 					{
-						Name:  PointerOf("wg_conn_host"),
-						Value: PointerOf(getHost(metricDataPoint2)),
+						Name:  PointerOf("server_address"),
+						Value: PointerOf("127.0.0.1"),
+					},
+					{
+						Name:  PointerOf("server_port"),
+						Value: PointerOf(getPort(metricDataPoint2)),
 					},
 					{
 						Name:  PointerOf("wg_conn_reused"),
@@ -4653,7 +4675,7 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 			require.NoError(t, err)
 
 			t.Run("verify max connections", func(t *testing.T) {
-				metricFamily := findMetricFamilyByName(mf, "router_http_client_connection_max")
+				metricFamily := findMetricFamilyByName(mf, "router_http_client_max_connections")
 
 				metrics := metricFamily.GetMetric()
 				require.Len(t, metrics, 2)
@@ -4663,7 +4685,7 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 				expected1 := []*io_prometheus_client.LabelPair{
 					{
 						Name:  PointerOf("otel_scope_name"),
-						Value: PointerOf("cosmo.router.connection.prometheus"),
+						Value: PointerOf("cosmo.router.connections.prometheus"),
 					},
 					{
 						Name:  PointerOf("otel_scope_version"),
@@ -4677,7 +4699,7 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 				expected2 := []*io_prometheus_client.LabelPair{
 					{
 						Name:  PointerOf("otel_scope_name"),
-						Value: PointerOf("cosmo.router.connection.prometheus"),
+						Value: PointerOf("cosmo.router.connections.prometheus"),
 					},
 					{
 						Name:  PointerOf("otel_scope_version"),
@@ -4693,7 +4715,7 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 			})
 
 			t.Run("verify connections active", func(t *testing.T) {
-				metricFamily := findMetricFamilyByName(mf, "router_http_client_connection_active")
+				metricFamily := findMetricFamilyByName(mf, "router_http_client_active_connections")
 				metrics := metricFamily.GetMetric()
 				require.Len(t, metrics, 2)
 
@@ -4702,15 +4724,19 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 				expected1 := []*io_prometheus_client.LabelPair{
 					{
 						Name:  PointerOf("otel_scope_name"),
-						Value: PointerOf("cosmo.router.connection.prometheus"),
+						Value: PointerOf("cosmo.router.connections.prometheus"),
 					},
 					{
 						Name:  PointerOf("otel_scope_version"),
 						Value: PointerOf("0.0.1"),
 					},
 					{
-						Name:  PointerOf("wg_conn_host"),
-						Value: PointerOf(getHost(metricDataPoint1)),
+						Name:  PointerOf("server_address"),
+						Value: PointerOf("127.0.0.1"),
+					},
+					{
+						Name:  PointerOf("server_port"),
+						Value: PointerOf(getPort(metricDataPoint1)),
 					},
 				}
 				require.Equal(t, expected1, metricDataPoint1.Label)
@@ -4720,15 +4746,19 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 				expected2 := []*io_prometheus_client.LabelPair{
 					{
 						Name:  PointerOf("otel_scope_name"),
-						Value: PointerOf("cosmo.router.connection.prometheus"),
+						Value: PointerOf("cosmo.router.connections.prometheus"),
 					},
 					{
 						Name:  PointerOf("otel_scope_version"),
 						Value: PointerOf("0.0.1"),
 					},
 					{
-						Name:  PointerOf("wg_conn_host"),
-						Value: PointerOf(getHost(metricDataPoint2)),
+						Name:  PointerOf("server_address"),
+						Value: PointerOf("127.0.0.1"),
+					},
+					{
+						Name:  PointerOf("server_port"),
+						Value: PointerOf(getPort(metricDataPoint2)),
 					},
 					{
 						Name:  PointerOf("wg_subgraph_name"),

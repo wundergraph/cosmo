@@ -33,7 +33,7 @@ func TestFlakyConnectionMetrics(t *testing.T) {
 			err := metricReader.Collect(context.Background(), &rm)
 			require.NoError(t, err)
 
-			scopeMetric := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.connection")
+			scopeMetric := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.connections")
 			require.Nil(t, scopeMetric)
 		})
 	})
@@ -61,13 +61,13 @@ func TestFlakyConnectionMetrics(t *testing.T) {
 			err := metricReader.Collect(context.Background(), &rm)
 			require.NoError(t, err)
 
-			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.connection")
+			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.connections")
 
 			require.Len(t, scopeMetric.Metrics, 3)
 
 			t.Run("verify max connections", func(t *testing.T) {
 				expected := metricdata.Metrics{
-					Name:        "router.http.client.connection.max",
+					Name:        "router.http.client.max_connections",
 					Description: "Total number of max connections per subgraph",
 					Unit:        "",
 					Data: metricdata.Gauge[int64]{
@@ -83,20 +83,22 @@ func TestFlakyConnectionMetrics(t *testing.T) {
 				metrics := scopeMetric.Metrics[2]
 
 				expected := metricdata.Metrics{
-					Name:        "router.http.client.connection.active",
+					Name:        "router.http.client.active_connections",
 					Description: "Connections active",
 					Unit:        "",
 					Data: metricdata.Gauge[int64]{
 						DataPoints: []metricdata.DataPoint[int64]{
 							{
 								Attributes: attribute.NewSet(
-									otel.WgHost.String(getHost(t, metrics, 0, "gauge")),
+									otel.ServerAddress.String("127.0.0.1"),
+									otel.ServerPort.String(getPort(t, metrics, 0, "gauge")),
 								),
 								Value: 1,
 							},
 							{
 								Attributes: attribute.NewSet(
-									otel.WgHost.String(getHost(t, metrics, 1, "gauge")),
+									otel.ServerAddress.String("127.0.0.1"),
+									otel.ServerPort.String(getPort(t, metrics, 1, "gauge")),
 								),
 								Value: 1,
 							},
@@ -115,7 +117,7 @@ func TestFlakyConnectionMetrics(t *testing.T) {
 				require.Greater(t, actualHistogram.DataPoints[0].Sum, 0.0)
 
 				expected := metricdata.Metrics{
-					Name:        "router.http.client.connection.acquire_duration",
+					Name:        "router.http.client.connections.acquire_duration",
 					Description: "Total connection acquire duration",
 					Unit:        "s",
 					Data: metricdata.Histogram[float64]{
@@ -123,21 +125,24 @@ func TestFlakyConnectionMetrics(t *testing.T) {
 						DataPoints: []metricdata.HistogramDataPoint[float64]{
 							{
 								Attributes: attribute.NewSet(
-									otel.WgHost.String(getHost(t, metrics, 0, "")),
+									otel.ServerAddress.String("127.0.0.1"),
+									otel.ServerPort.String(getPort(t, metrics, 0, "")),
 									otel.WgConnReused.Bool(false),
 									otel.WgSubgraphName.String("employees"),
 								),
 							},
 							{
 								Attributes: attribute.NewSet(
-									otel.WgHost.String(getHost(t, metrics, 1, "")),
+									otel.ServerAddress.String("127.0.0.1"),
+									otel.ServerPort.String(getPort(t, metrics, 1, "")),
 									otel.WgConnReused.Bool(true),
 									otel.WgSubgraphName.String("employees"),
 								),
 							},
 							{
 								Attributes: attribute.NewSet(
-									otel.WgHost.String(getHost(t, metrics, 2, "")),
+									otel.ServerAddress.String("127.0.0.1"),
+									otel.ServerPort.String(getPort(t, metrics, 2, "")),
 									otel.WgConnReused.Bool(false),
 									otel.WgSubgraphName.String("availability"),
 								),
@@ -184,13 +189,13 @@ func TestFlakyConnectionMetrics(t *testing.T) {
 			err := metricReader.Collect(context.Background(), &rm)
 			require.NoError(t, err)
 
-			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.connection")
+			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.connections")
 
 			require.Len(t, scopeMetric.Metrics, 3)
 
 			t.Run("verify max connections", func(t *testing.T) {
 				expected := metricdata.Metrics{
-					Name:        "router.http.client.connection.max",
+					Name:        "router.http.client.max_connections",
 					Description: "Total number of max connections per subgraph",
 					Unit:        "",
 					Data: metricdata.Gauge[int64]{
@@ -211,20 +216,22 @@ func TestFlakyConnectionMetrics(t *testing.T) {
 				metrics := scopeMetric.Metrics[2]
 
 				expected := metricdata.Metrics{
-					Name:        "router.http.client.connection.active",
+					Name:        "router.http.client.active_connections",
 					Description: "Connections active",
 					Unit:        "",
 					Data: metricdata.Gauge[int64]{
 						DataPoints: []metricdata.DataPoint[int64]{
 							{
 								Attributes: attribute.NewSet(
-									otel.WgHost.String(getHost(t, metrics, 0, "gauge")),
+									otel.ServerAddress.String("127.0.0.1"),
+									otel.ServerPort.String(getPort(t, metrics, 0, "gauge")),
 								),
 								Value: 1,
 							},
 							{
 								Attributes: attribute.NewSet(
-									otel.WgHost.String(getHost(t, metrics, 1, "gauge")),
+									otel.ServerAddress.String("127.0.0.1"),
+									otel.ServerPort.String(getPort(t, metrics, 1, "gauge")),
 									otel.WgSubgraphName.String("availability"),
 								),
 								Value: 1,
@@ -241,7 +248,7 @@ func TestFlakyConnectionMetrics(t *testing.T) {
 }
 
 // Since we cannot really predict the host and port we use this to get the host
-func getHost(t *testing.T, metric metricdata.Metrics, dataPointIndex int, typeName string) string {
+func getPort(t *testing.T, metric metricdata.Metrics, dataPointIndex int, typeName string) string {
 	t.Helper()
 
 	if typeName == "" {
@@ -254,10 +261,10 @@ func getHost(t *testing.T, metric metricdata.Metrics, dataPointIndex int, typeNa
 	switch typeName {
 	case "histogram":
 		histogramDp := metric.Data.(metricdata.Histogram[float64]).DataPoints[dataPointIndex]
-		hostAttribute, retrieved = histogramDp.Attributes.Get(0)
+		hostAttribute, retrieved = histogramDp.Attributes.Get(1)
 	case "gauge":
 		actualDp := metric.Data.(metricdata.Gauge[int64]).DataPoints[dataPointIndex]
-		hostAttribute, retrieved = actualDp.Attributes.Get(0)
+		hostAttribute, retrieved = actualDp.Attributes.Get(1)
 	}
 
 	require.True(t, retrieved)

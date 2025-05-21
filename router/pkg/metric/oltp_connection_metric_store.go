@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"go.opentelemetry.io/otel/attribute"
 
@@ -14,7 +13,7 @@ import (
 )
 
 const (
-	cosmoRouterConnectionMeterName    = "cosmo.router.connection"
+	cosmoRouterConnectionMeterName    = "cosmo.router.connections"
 	cosmoRouterConnectionMeterVersion = "0.0.1"
 )
 
@@ -60,11 +59,11 @@ func (h *otlpConnectionMetrics) startInitMetrics(connStats *ConnectionPoolStats,
 	rc, err := h.meter.RegisterCallback(func(_ context.Context, o otelmetric.Observer) error {
 		stats := connStats.GetStats()
 		for key, activeConnections := range stats {
-			attrs := make([]attribute.KeyValue, 0, 2)
-			attrs = append(attrs, otel.WgHost.String(key.Host))
+			attrs := otel.GetServerAttributes(key.Host)
 			if key.Subgraph != "" {
 				attrs = append(attrs, otel.WgSubgraphName.String(key.Subgraph))
 			}
+
 			o.ObserveInt64(h.instruments.connectionsActive, activeConnections,
 				otelmetric.WithAttributes(attributes...),
 				otelmetric.WithAttributes(attrs...),

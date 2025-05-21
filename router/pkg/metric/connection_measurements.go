@@ -7,9 +7,9 @@ import (
 
 // Connection metric constants
 const (
-	maxConnections            = "router.http.client.connection.max"
-	connectionsActive         = "router.http.client.connection.active"
-	connectionAcquireDuration = "router.http.client.connection.acquire_duration"
+	maxConnections            = "router.http.client.max_connections"
+	connectionsActive         = "router.http.client.active_connections"
+	connectionAcquireDuration = "router.http.client.connections.acquire_duration"
 )
 
 var (

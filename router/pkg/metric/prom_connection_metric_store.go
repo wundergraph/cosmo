@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	cosmoRouterConnectionPrometheusMeterName    = "cosmo.router.connection.prometheus"
+	cosmoRouterConnectionPrometheusMeterName    = "cosmo.router.connections.prometheus"
 	cosmoRouterConnectionPrometheusMeterVersion = "0.0.1"
 )
 
@@ -59,8 +59,7 @@ func (h *promConnectionMetrics) startInitMetrics(connStats *ConnectionPoolStats,
 	rc, err := h.meter.RegisterCallback(func(_ context.Context, o otelmetric.Observer) error {
 		stats := connStats.GetStats()
 		for key, activeConnections := range stats {
-			attrs := make([]attribute.KeyValue, 0, 2)
-			attrs = append(attrs, otel.WgHost.String(key.Host))
+			attrs := otel.GetServerAttributes(key.Host)
 			if key.Subgraph != "" {
 				attrs = append(attrs, otel.WgSubgraphName.String(key.Subgraph))
 			}

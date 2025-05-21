@@ -108,10 +108,17 @@ func CalculateConnectionMetrics(ctx context.Context, store metric.ConnectionMetr
 
 	if trace.ConnectionGet != nil && trace.ConnectionAcquired != nil {
 		connAcquireTime := trace.ConnectionAcquired.Time.Sub(trace.ConnectionGet.Time).Seconds()
+
+		serverAttributes := rotel.GetServerAttributes(trace.ConnectionGet.HostPort)
+		serverAttributes = append(
+			serverAttributes,
+			rotel.WgConnReused.Bool(trace.ConnectionAcquired.Reused),
+			rotel.WgSubgraphName.String(subgraph),
+		)
+
 		store.MeasureConnectionAcquireDuration(ctx,
 			connAcquireTime,
-			rotel.WgConnReused.Bool(trace.ConnectionAcquired.Reused),
-			rotel.WgHost.String(trace.ConnectionGet.HostPort),
-			rotel.WgSubgraphName.String(subgraph))
+			serverAttributes...,
+		)
 	}
 }
