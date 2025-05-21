@@ -2691,11 +2691,6 @@
       "description": "The configuration for the router gRPC plugins.",
       "additionalProperties": false,
       "properties": {
-        "enabled": {
-          "type": "boolean",
-          "default": false,
-          "description": "Enable the router plugins. If the value is true, the router plugins are enabled."
-        },
         "path": {
           "type": "string",
           "description": "The path to the plugins directory. The plugins directory is used to load the plugins.",
