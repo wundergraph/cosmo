@@ -4567,7 +4567,7 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 			})
 
 			t.Run("verify connection total duration", func(t *testing.T) {
-				metricFamily := findMetricFamilyByName(mf, "router_http_client_acquire_connection_duration")
+				metricFamily := findMetricFamilyByName(mf, "router_http_client_connection_acquire_duration")
 				metrics := metricFamily.GetMetric()
 				require.Len(t, metrics, 2)
 

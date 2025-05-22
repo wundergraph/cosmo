@@ -117,7 +117,7 @@ func TestFlakyConnectionMetrics(t *testing.T) {
 				require.Greater(t, actualHistogram.DataPoints[0].Sum, 0.0)
 
 				expected := metricdata.Metrics{
-					Name:        "router.http.client.acquire_connection_duration",
+					Name:        "router.http.client.connection.acquire_duration",
 					Description: "Total connection acquire duration",
 					Unit:        "s",
 					Data: metricdata.Histogram[float64]{
