@@ -8,7 +8,7 @@ import {
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
-import { UnauthorizedError } from "../../errors/errors.js";
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function getOrganizationIntegrations(
   opts: RouterOptions,

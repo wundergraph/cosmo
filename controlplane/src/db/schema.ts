@@ -1391,20 +1391,28 @@ export const organizationGroupRuleTargets = pgTable('organization_group_rule_tar
     .references(() => targets.id, { onDelete: 'cascade' }),
 });
 
-export const organizationGroupMembers = pgTable('organization_group_members', {
-  id: uuid('id').notNull().primaryKey().defaultRandom(),
-  organizationMemberId: uuid('organization_member_id')
-    .notNull()
-    .references(() => organizationsMembers.id, {
-      onDelete: 'cascade',
-    }),
-  groupId: uuid('group_id')
-    .notNull()
-    .references(() => organizationGroups.id, {
-      onDelete: 'cascade',
-    }),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-});
+export const organizationGroupMembers = pgTable(
+  'organization_group_members',
+  {
+    id: uuid('id').notNull().primaryKey().defaultRandom(),
+    organizationMemberId: uuid('organization_member_id')
+      .notNull()
+      .references(() => organizationsMembers.id, {
+        onDelete: 'cascade',
+      }),
+    groupId: uuid('group_id')
+      .notNull()
+      .references(() => organizationGroups.id, {
+        onDelete: 'cascade',
+      }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => {
+    return {
+      nameIndex: uniqueIndex('organization_member_group_idx').on(t.organizationMemberId, t.groupId),
+    };
+  },
+);
 
 export const organizationRelations = relations(organizations, ({ many }) => ({
   members: many(organizationsMembers),

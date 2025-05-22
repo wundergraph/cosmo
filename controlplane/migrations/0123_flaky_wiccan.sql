@@ -85,6 +85,7 @@ EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
 --> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "organization_member_group_idx" ON "organization_group_members" USING btree ("organization_member_id","group_id");--> statement-breakpoint
 DO $$ BEGIN
  ALTER TABLE "api_keys" ADD CONSTRAINT "api_keys_group_id_organization_groups_id_fk" FOREIGN KEY ("group_id") REFERENCES "public"."organization_groups"("id") ON DELETE cascade ON UPDATE no action;
 EXCEPTION
