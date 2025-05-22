@@ -7,4 +7,4 @@ access.log
 __debug_bin*
 
 # Router plugins
-plugins
+/plugins
