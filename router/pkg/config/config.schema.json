@@ -2694,7 +2694,7 @@
         "enabled": {
           "type": "boolean",
           "default": false,
-          "description": "Enable the router plugins. If the value is true, the router plugins are enabled."
+          "description": "Enable the router gRPC plugins."
         },
         "path": {
           "type": "string",

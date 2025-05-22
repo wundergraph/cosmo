@@ -905,8 +905,8 @@ type MCPServer struct {
 }
 
 type PluginsConfiguration struct {
-	Enabled bool   `yaml:"enabled" envDefault:"false" env:"PLUGINS_ENABLED"`
-	Path    string `yaml:"path" envDefault:"plugins" env:"PLUGINS_PATH"`
+	Enabled bool   `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	Path    string `yaml:"path" envDefault:"plugins" env:"PATH"`
 }
 
 type Config struct {
@@ -980,7 +980,7 @@ type Config struct {
 	ApolloRouterCompatibilityFlags ApolloRouterCompatibilityFlags  `yaml:"apollo_router_compatibility_flags"`
 	ClientHeader                   ClientHeader                    `yaml:"client_header"`
 
-	Plugins PluginsConfiguration `yaml:"plugins"`
+	Plugins PluginsConfiguration `yaml:"plugins" envPrefix:"PLUGINS_"`
 
 	WatchConfig WatchConfig `yaml:"watch_config" envPrefix:"WATCH_CONFIG_"`
 }
