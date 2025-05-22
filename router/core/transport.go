@@ -65,7 +65,7 @@ func NewCustomTransport(
 	baseRoundTripper http.RoundTripper,
 	retryOptions retrytransport.RetryOptions,
 	metricStore metric.Store,
-	connectionMetricStore *metric.ConnectionMetrics,
+	connectionMetricStore metric.ConnectionMetricStore,
 	enableSingleFlight bool,
 	enableTraceClient bool,
 ) *CustomTransport {
@@ -330,7 +330,7 @@ type TransportFactory struct {
 	retryOptions                  retrytransport.RetryOptions
 	localhostFallbackInsideDocker bool
 	metricStore                   metric.Store
-	connectionMetricStore         *metric.ConnectionMetrics
+	connectionMetricStore         metric.ConnectionMetricStore
 	logger                        *zap.Logger
 	tracerProvider                *sdktrace.TracerProvider
 	tracePropagators              propagation.TextMapPropagator
@@ -346,7 +346,7 @@ type TransportOptions struct {
 	RetryOptions                  retrytransport.RetryOptions
 	LocalhostFallbackInsideDocker bool
 	MetricStore                   metric.Store
-	ConnectionMetricStore         *metric.ConnectionMetrics
+	ConnectionMetricStore         metric.ConnectionMetricStore
 	Logger                        *zap.Logger
 	TracerProvider                *sdktrace.TracerProvider
 	TracePropagators              propagation.TextMapPropagator

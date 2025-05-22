@@ -32,22 +32,20 @@ type ClientTraceContextKey struct{}
 type CurrentSubgraphContextKey struct{}
 
 type TraceInjectingRoundTripper struct {
-	base                     http.RoundTripper
-	connectionMetricStore    metric.ConnectionMetricStore
-	getExprContext           func(req context.Context) *expr.Context
-	isConnMetricStoreEnabled bool
+	base                  http.RoundTripper
+	connectionMetricStore metric.ConnectionMetricStore
+	getExprContext        func(req context.Context) *expr.Context
 }
 
 func NewTraceInjectingRoundTripper(
 	base http.RoundTripper,
-	connectionMetricStore *metric.ConnectionMetrics,
+	connectionMetricStore metric.ConnectionMetricStore,
 	exprContext func(req context.Context) *expr.Context,
 ) *TraceInjectingRoundTripper {
 	return &TraceInjectingRoundTripper{
-		base:                     base,
-		connectionMetricStore:    connectionMetricStore,
-		getExprContext:           exprContext,
-		isConnMetricStoreEnabled: connectionMetricStore != nil,
+		base:                  base,
+		connectionMetricStore: connectionMetricStore,
+		getExprContext:        exprContext,
 	}
 }
 
@@ -118,17 +116,16 @@ func (t *TraceInjectingRoundTripper) processConnectionMetrics(ctx context.Contex
 
 		exprContext.Subgraph.Request.ClientTrace.ConnectionAcquireDuration = connAcquireTime
 
-		if t.isConnMetricStoreEnabled {
-			serverAttributes := rotel.GetServerAttributes(trace.ConnectionGet.HostPort)
-			serverAttributes = append(
-				serverAttributes,
-				rotel.WgClientReusedConnection.Bool(trace.ConnectionAcquired.Reused),
-				rotel.WgSubgraphName.String(subgraph),
-			)
+		serverAttributes := rotel.GetServerAttributes(trace.ConnectionGet.HostPort)
+		serverAttributes = append(
+			serverAttributes,
+			rotel.WgClientReusedConnection.Bool(trace.ConnectionAcquired.Reused),
+			rotel.WgSubgraphName.String(subgraph),
+		)
 
-			t.connectionMetricStore.MeasureConnectionAcquireDuration(ctx,
-				connAcquireTime,
-				serverAttributes...)
-		}
+		t.connectionMetricStore.MeasureConnectionAcquireDuration(ctx,
+			connAcquireTime,
+			serverAttributes...)
+
 	}
 }

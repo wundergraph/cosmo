@@ -1011,6 +1011,11 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	enableTraceClient := s.connectionMetrics != nil || exprManager.VisitorManager.IsSubgraphTraceUsedInExpressions()
 
+	var baseConnMetricStore rmetric.ConnectionMetricStore = &rmetric.NoopConnectionMetricStore{}
+	if s.connectionMetrics != nil {
+		baseConnMetricStore = s.connectionMetrics
+	}
+
 	ecb := &ExecutorConfigurationBuilder{
 		introspection:       s.introspection,
 		baseURL:             s.baseURL,
@@ -1030,7 +1035,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			PreHandlers:              s.preOriginHandlers,
 			PostHandlers:             s.postOriginHandlers,
 			MetricStore:              gm.metricStore,
-			ConnectionMetricStore:    s.connectionMetrics,
+			ConnectionMetricStore:    baseConnMetricStore,
 			RetryOptions: retrytransport.RetryOptions{
 				Enabled:       s.retryOptions.Enabled,
 				MaxRetryCount: s.retryOptions.MaxRetryCount,
