@@ -111,6 +111,7 @@ export default (opts: BaseCommandOptions) => {
         await writeFile(resolve(projectDir, 'config.yaml'), ProjectTemplates.routerConfig);
         await writeFile(resolve(projectDir, 'graph.yaml'), pupa(ProjectTemplates.graphConfig, { originalPluginName }));
         await writeFile(resolve(projectDir, 'Makefile'), pupa(ProjectTemplates.makefile, { originalPluginName }));
+        await writeFile(resolve(projectDir, '.gitignore'), ProjectTemplates.gitignore);
         await writeFile(
           resolve(projectDir, 'README.md'),
           pupa(ProjectTemplates.projectReadme, { name, originalPluginName }),

@@ -4,7 +4,7 @@
 // building for bun and transpiling TypeScript.
 
 const gitignore = `# Ignore the binary files
-bin/
+release/
 `;
 
 const makefile = `
