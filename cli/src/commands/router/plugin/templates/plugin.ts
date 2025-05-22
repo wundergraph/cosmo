@@ -312,6 +312,8 @@ alwaysApply: false
 
 This rule explains the structure and workflow for the Cosmo Router {name} plugin.
 
+The working directory is \`plugins/{originalPluginName}\`. Make sure to run \`make\` commands from this directory. If you already inside the plugin directory, you can just run \`make\` without \`cd\`.
+
 ## Plugin Structure
 
 The {name} plugin demonstrates how to implement a GraphQL API using gRPC methods:
@@ -324,9 +326,15 @@ The {name} plugin demonstrates how to implement a GraphQL API using gRPC methods
 
 1. Make changes to @schema.graphql
 2. Run \`make generate\` from the plugin directory to regenerate code
-3. Implement the service in @main.go
-4. Run \`make test\` to test your implementation
-5. Run \`make build\` to build the plugin
+3. Implement the service in @main.go:
+   - Review generated @generated/service.pb.go and @generated/service_grpc.pb.go
+   - Ensure ALL generated RPC methods and types are fully implemented
+   - Partial implementations will cause runtime errors
+4. Update tests in @main_test.go:
+   - Add test cases for ALL new functionality
+   - Test both success and error scenarios
+   - Verify ALL edge cases
+5. Run \`make test\` to ensure complete test coverage
 
 ## Generated Code
 
@@ -338,6 +346,8 @@ The code generation creates:
 
 If the files doesn't exist, you need to generate them with \`make generate\`
 
+**Important**: Never manipulate the generated files yourself. The source of truth for the API contract is the GraphQL schema. Use \`make generate\` to update the proto and service interface.
+
 ## Important Implementation Pattern
 
 When implementing a plugin:
@@ -345,17 +355,6 @@ When implementing a plugin:
 1. Implement the generated service interface in \`main.go\`
 2. Handle the context properly in your implementation methods
 3. Ensure proper error handling
-
-## Makefile Commands
-
-Always use the plugin-specific Makefile:
-
-\`\`\`
-cd plugins/hello-world
-make generate  # Generate code without compilation
-make test      # Run plugin tests
-make build     # Build the plugin
-\`\`\`
 `;
 
 const cursorIgnore = `# Ignore the mapping and lock files
