@@ -61,6 +61,7 @@ type ExecutorBuildOptions struct {
 	ApolloCompatibilityFlags       config.ApolloCompatibilityFlags
 	ApolloRouterCompatibilityFlags config.ApolloRouterCompatibilityFlags
 	HeartbeatInterval              time.Duration
+	TraceClientRequired            bool
 	PluginsEnabled                 bool
 }
 
