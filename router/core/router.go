@@ -81,18 +81,20 @@ type (
 	// Router is the main application instance.
 	Router struct {
 		Config
-		httpServer        *server
-		modules           []Module
-		EngineStats       statistics.EngineStatistics
-		playgroundHandler func(http.Handler) http.Handler
-		proxy             ProxyFunc
-		usage             UsageTracker
+		httpServer          *server
+		modules             []Module
+		EngineStats         statistics.EngineStatistics
+		playgroundHandler   func(http.Handler) http.Handler
+		proxy               ProxyFunc
+		enableUsageTracking bool
+		usage               UsageTracker
 	}
 
 	UsageTracker interface {
 		Close()
 		TrackUptime(ctx context.Context)
 		TrackRouterConfigUsage(usage map[string]any)
+		TrackExecutionConfigUsage(usage map[string]any)
 	}
 
 	TransportRequestOptions struct {
@@ -669,8 +671,6 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 		healthCheckPath:    r.healthCheckPath,
 	})
 
-	r.trackRouterConfigUsage()
-
 	// Start the server with the static config without polling
 	if r.staticExecutionConfig != nil {
 		r.logger.Info("Static execution config provided. Polling is disabled. Updating execution config is only possible by providing a config.")
@@ -686,8 +686,6 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get initial execution config: %w", err)
 	}
-
-	r.trackExecutionConfigUsage(cfg.Config)
 
 	if err := r.newServer(ctx, cfg.Config); err != nil {
 		r.logger.Error("Failed to start server with initial config", zap.Error(err))
@@ -1106,9 +1104,11 @@ func (r *Router) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to bootstrap router: %w", err)
 	}
 
-	if err := r.setupUsageTracking(ctx); err != nil {
+	if err := r.configureUsageTracking(ctx); err != nil {
 		return err
 	}
+
+	r.trackRouterConfigUsage()
 
 	r.httpServer = newServer(&httpServerOptions{
 		addr:               r.listenAddr,
@@ -1125,6 +1125,9 @@ func (r *Router) Start(ctx context.Context) error {
 
 	// Start the server with the static config without polling
 	if r.staticExecutionConfig != nil {
+
+		r.trackExecutionConfigUsage(r.staticExecutionConfig, true)
+
 		if err := r.listenAndServe(); err != nil {
 			return err
 		}
@@ -1211,6 +1214,8 @@ func (r *Router) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to get initial execution config: %w", err)
 	}
 
+	r.trackExecutionConfigUsage(cfg.Config, false)
+
 	if err := r.listenAndServe(); err != nil {
 		r.logger.Error("Failed to start server with initial config", zap.Error(err))
 		return err
@@ -1258,6 +1263,8 @@ func (r *Router) Start(ctx context.Context) error {
 			return nil
 		}
 
+		r.trackExecutionConfigUsage(newConfig, false)
+
 		if err := r.newServer(ctx, newConfig); err != nil {
 			return err
 		}
@@ -1280,19 +1287,26 @@ func (r *Router) Start(ctx context.Context) error {
 
 type UsageTrackerNoOp struct{}
 
-func (_ *UsageTrackerNoOp) TrackRouterConfigUsage(usage map[string]any) {}
+func (_ *UsageTrackerNoOp) TrackExecutionConfigUsage(_ map[string]any) {}
+
+func (_ *UsageTrackerNoOp) TrackRouterConfigUsage(_ map[string]any) {}
 
 func (_ *UsageTrackerNoOp) Close() {}
 
-func (_ *UsageTrackerNoOp) TrackUptime(ctx context.Context) {}
+func (_ *UsageTrackerNoOp) TrackUptime(_ context.Context) {}
 
-func (r *Router) setupUsageTracking(ctx context.Context) (err error) {
+func (r *Router) configureUsageTracking(ctx context.Context) (err error) {
+	if !r.enableUsageTracking {
+		r.usage = &UsageTrackerNoOp{}
+		r.logger.Info("Cosmo Usage Tracking is disabled. (dev build)")
+		return nil
+	}
 	if os.Getenv("COSMO_TELEMETRY_DISABLED") == "true" || os.Getenv("DO_NOT_TRACK") == "1" {
 		r.usage = &UsageTrackerNoOp{}
 		r.logger.Info("Cosmo telemetry is disabled. Usage tracking is disabled.")
 		return nil
 	}
-	r.usage, err = track.NewUsageTracker(r.logger)
+	r.usage, err = track.NewUsageTracker(r.logger, r.graphApiToken)
 	if err != nil {
 		return fmt.Errorf("failed to create usage tracker: %w", err)
 	}
@@ -1302,10 +1316,6 @@ func (r *Router) setupUsageTracking(ctx context.Context) (err error) {
 
 func (r *Router) trackRouterConfigUsage() {
 	r.usage.TrackRouterConfigUsage(r.Config.Usage())
-}
-
-func (r *Router) trackExecutionConfigUsage(cfg *nodev1.RouterConfig) {
-
 }
 
 type concSafeErrorJoiner struct {

@@ -24,13 +24,14 @@ import (
 )
 
 var (
-	overrideEnvFlag = flag.String("override-env", os.Getenv("OVERRIDE_ENV"), "Path to .env file to override environment variables")
-	configPathFlag  = flag.String("config", os.Getenv("CONFIG_PATH"), "Path to the router config file e.g. config.yaml")
-	routerVersion   = flag.Bool("version", false, "Prints the version and dependency information")
-	pprofListenAddr = flag.String("pprof-addr", os.Getenv("PPROF_ADDR"), "Address to listen for pprof requests. e.g. :6060 for localhost:6060")
-	memProfilePath  = flag.String("memprofile", "", "Path to write memory profile. Memory is a snapshot taken at the time the program exits")
-	cpuProfilePath  = flag.String("cpuprofile", "", "Path to write cpu profile. CPU is measured from when the program starts until the program exits")
-	help            = flag.Bool("help", false, "Prints the help message")
+	overrideEnvFlag     = flag.String("override-env", os.Getenv("OVERRIDE_ENV"), "Path to .env file to override environment variables")
+	configPathFlag      = flag.String("config", os.Getenv("CONFIG_PATH"), "Path to the router config file e.g. config.yaml")
+	routerVersion       = flag.Bool("version", false, "Prints the version and dependency information")
+	pprofListenAddr     = flag.String("pprof-addr", os.Getenv("PPROF_ADDR"), "Address to listen for pprof requests. e.g. :6060 for localhost:6060")
+	memProfilePath      = flag.String("memprofile", "", "Path to write memory profile. Memory is a snapshot taken at the time the program exits")
+	cpuProfilePath      = flag.String("cpuprofile", "", "Path to write cpu profile. CPU is measured from when the program starts until the program exits")
+	help                = flag.Bool("help", false, "Prints the help message")
+	enableUsageTracking = flag.Bool("enable-anonymous-usage-tracking", core.Version != "dev", "Usage tracking can be disabled by setting one of the following environment variables: COSMO_TELEMETRY_DISABLED=true, COSMO_TELEMETRY_DISABLED=1, COSMO_TELEMETRY_DISABLED=0. By default, usage tracking is only enabled for production builds. If you wish to enable it during development, e.g. for testing purposes, set the flag to true.")
 )
 
 func Main() {
@@ -98,7 +99,8 @@ func Main() {
 	defer profiler.Finish()
 
 	rs, err := core.NewRouterSupervisor(&core.RouterSupervisorOpts{
-		BaseLogger: baseLogger,
+		BaseLogger:          baseLogger,
+		EnableUsageTracking: *enableUsageTracking,
 		ConfigFactory: func() (*config.Config, error) {
 			result, err := config.LoadConfig(configPath)
 			if err != nil {

@@ -277,7 +277,10 @@ func (c *Config) Usage() map[string]any {
 		usage["subgraph_error_propagation_allowed_extension_fields"] = c.subgraphErrorPropagation.AllowedExtensionFields
 		usage["subgraph_error_propagation_allowed_fields"] = c.subgraphErrorPropagation.AllowedFields
 	}
-	usage["fallback_execution_config_storage_enabled"] = c.routerConfigPollerConfig.ExecutionConfig.FallbackStorage.Enabled
+
+	if c.routerConfigPollerConfig != nil {
+		usage["fallback_execution_config_storage_enabled"] = c.routerConfigPollerConfig.ExecutionConfig.FallbackStorage.Enabled
+	}
 	usage["cache_warmup"] = c.cacheWarmup != nil && c.cacheWarmup.Enabled
 	if c.cacheWarmup != nil && c.cacheWarmup.Enabled {
 		if c.cacheWarmup.Source.Filesystem != nil {

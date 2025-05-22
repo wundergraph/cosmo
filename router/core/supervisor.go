@@ -22,8 +22,9 @@ type RouterSupervisor struct {
 	// Value means "to kill or not to kill"
 	shutdownChan chan bool
 
-	configFactory func() (*config.Config, error)
-	routerFactory func(ctx context.Context, res *RouterResources) (*Router, error)
+	enableUsageTracking bool
+	configFactory       func() (*config.Config, error)
+	routerFactory       func(ctx context.Context, res *RouterResources) (*Router, error)
 
 	resources *RouterResources
 }
@@ -36,17 +37,19 @@ type RouterResources struct {
 
 // RouterSupervisorOpts is a struct for configuring the router supervisor.
 type RouterSupervisorOpts struct {
-	BaseLogger    *zap.Logger
-	ConfigFactory func() (*config.Config, error)
-	RouterFactory func(ctx context.Context, res *RouterResources) (*Router, error)
+	BaseLogger          *zap.Logger
+	ConfigFactory       func() (*config.Config, error)
+	RouterFactory       func(ctx context.Context, res *RouterResources) (*Router, error)
+	EnableUsageTracking bool
 }
 
 // NewRouterSupervisor creates a new RouterSupervisor instance.
 func NewRouterSupervisor(opts *RouterSupervisorOpts) (*RouterSupervisor, error) {
 	rs := &RouterSupervisor{
-		shutdownChan:  make(chan bool),
-		logger:        opts.BaseLogger.With(zap.String("component", "supervisor")),
-		configFactory: opts.ConfigFactory,
+		shutdownChan:        make(chan bool),
+		logger:              opts.BaseLogger.With(zap.String("component", "supervisor")),
+		configFactory:       opts.ConfigFactory,
+		enableUsageTracking: opts.EnableUsageTracking,
 		resources: &RouterResources{
 			Logger: opts.BaseLogger,
 		},
@@ -84,6 +87,8 @@ func (rs *RouterSupervisor) createRouter() error {
 		routerCancel()
 		return fmt.Errorf("failed to create router: %w", err)
 	}
+
+	router.enableUsageTracking = rs.enableUsageTracking
 
 	rs.router = router
 	rs.routerCtx = routerCtx
