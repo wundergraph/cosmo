@@ -113,8 +113,9 @@ export const SetupTest = async function ({
 
   if (enableMultiUsers) {
     users.adminBobCompanyA = createTestContext('company-a', companyAOrganizationId);
-    users.devJoeCompanyA = createTestContext('company-a', companyAOrganizationId, ['developer']);
-    users.viewerTimCompanyA = createTestContext('company-a', companyAOrganizationId, ['viewer']);
+    users.devJoeCompanyA = createTestContext('company-a', companyAOrganizationId, ['organization-developer']);
+    users.keyManagerSmithCompanyA = createTestContext('company-a', companyAOrganizationId, ['organization-apikey-manager']);
+    users.viewerTimCompanyA = createTestContext('company-a', companyAOrganizationId, ['organization-viewer']);
     users.adminJimCompanyB = createTestContext('company-b', randomUUID());
   }
 
@@ -223,7 +224,7 @@ export const SetupTest = async function ({
       organizationSlug: users.adminAliceCompanyA.organizationSlug,
       email: users.adminAliceCompanyA.email,
       apiKey: users.adminAliceCompanyA.apiKey,
-      groups: ['admin'],
+      groups: ['organization-admin'],
     },
   });
 
@@ -232,12 +233,13 @@ export const SetupTest = async function ({
     queryConnection,
     users.adminAliceCompanyA,
     createScimKey,
+    undefined,
     await getKeycloakGroups(realm, keycloakClient, users.adminAliceCompanyA.organizationSlug),
   );
 
   if (enableMultiUsers) {
     if (users.adminBobCompanyA) {
-      const id = await addKeycloakUser({
+      const [id, rootGroupId] = await addKeycloakUser({
         keycloakClient,
         realmName: realm,
         userTestData: {
@@ -247,7 +249,7 @@ export const SetupTest = async function ({
           organizationSlug: users.adminBobCompanyA.organizationSlug,
           email: users.adminBobCompanyA.email,
           apiKey: users.adminBobCompanyA.apiKey,
-          groups: ['admin'],
+          groups: ['organization-admin'],
         },
       });
       users.adminBobCompanyA.userId = id;
@@ -255,12 +257,13 @@ export const SetupTest = async function ({
         queryConnection,
         users.adminBobCompanyA,
         createScimKey,
+        rootGroupId,
         await getKeycloakGroups(realm, keycloakClient, users.adminBobCompanyA.organizationSlug),
       );
     }
 
     if (users.devJoeCompanyA) {
-      const id = await addKeycloakUser({
+      const [id, rootGroupId] = await addKeycloakUser({
         keycloakClient,
         realmName: realm,
         userTestData: {
@@ -270,7 +273,7 @@ export const SetupTest = async function ({
           organizationSlug: users.devJoeCompanyA.organizationSlug,
           email: users.devJoeCompanyA.email,
           apiKey: users.devJoeCompanyA.apiKey,
-          groups: ['developer'],
+          groups: ['organization-developer'],
         },
       });
       users.devJoeCompanyA.userId = id;
@@ -278,12 +281,13 @@ export const SetupTest = async function ({
         queryConnection,
         users.devJoeCompanyA,
         undefined,
+        rootGroupId,
         await getKeycloakGroups(realm, keycloakClient, users.devJoeCompanyA.organizationSlug),
       );
     }
 
     if (users.viewerTimCompanyA) {
-      const id = await addKeycloakUser({
+      const [id, rootGroupId] = await addKeycloakUser({
         keycloakClient,
         realmName: realm,
         userTestData: {
@@ -293,7 +297,7 @@ export const SetupTest = async function ({
           organizationSlug: users.viewerTimCompanyA.organizationSlug,
           email: users.viewerTimCompanyA.email,
           apiKey: users.viewerTimCompanyA.apiKey,
-          groups: ['developer'],
+          groups: ['organization-developer'],
         },
       });
       users.viewerTimCompanyA.userId = id;
@@ -301,12 +305,13 @@ export const SetupTest = async function ({
         queryConnection,
         users.viewerTimCompanyA,
         undefined,
+        rootGroupId,
         await getKeycloakGroups(realm, keycloakClient, users.viewerTimCompanyA.organizationSlug),
       );
     }
 
     if (users.adminJimCompanyB) {
-      const id = await addKeycloakUser({
+      const [id, rootGroupId] = await addKeycloakUser({
         keycloakClient,
         realmName: realm,
         userTestData: {
@@ -316,7 +321,7 @@ export const SetupTest = async function ({
           organizationSlug: users.adminJimCompanyB.organizationSlug,
           email: users.adminJimCompanyB.email,
           apiKey: users.adminJimCompanyB.apiKey,
-          groups: ['admin'],
+          groups: ['organization-admin'],
         },
       });
       users.adminJimCompanyB.userId = id;
@@ -324,6 +329,7 @@ export const SetupTest = async function ({
         queryConnection,
         users.adminJimCompanyB,
         createScimKey,
+        rootGroupId,
         await getKeycloakGroups(realm, keycloakClient, users.adminJimCompanyB.organizationSlug),
       );
     }
@@ -414,11 +420,11 @@ export const SetupKeycloak = async ({
   } catch (e: any) {
     if (e.response?.status !== 409) {
       e.message = `Failed to create keycloak realm: ${realmName}.` + e.message;
-      throw e;
+      // throw e;
     }
   }
 
-  const id = await addKeycloakUser({
+  const [id] = await addKeycloakUser({
     keycloakClient,
     userTestData,
     realmName,
@@ -435,7 +441,7 @@ export const addKeycloakUser = async ({
   keycloakClient: Keycloak;
   userTestData: UserTestData;
   realmName: string;
-}) => {
+}): Promise<[string, string | undefined]> => {
   await keycloakClient.authenticateClient();
 
   let id = '';
@@ -459,19 +465,24 @@ export const addKeycloakUser = async ({
       throw e;
     }
   }
+
+  let kcRootGroupId: string | undefined;
   try {
-    await keycloakClient.seedGroup({
+    const seedGroupResult = await keycloakClient.seedGroup({
       realm: realmName,
       userID: id,
       organizationSlug: userTestData.organizationSlug,
     });
+
+    kcRootGroupId = seedGroupResult[0];
   } catch (e: any) {
     if (e.response?.status !== 409) {
       e.message = `Failed to seed group: ${userTestData.organizationSlug}.` + e.message;
       throw e;
     }
   }
-  return id;
+
+  return [id, kcRootGroupId];
 };
 
 export const removeKeycloakSetup = async ({

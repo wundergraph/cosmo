@@ -4,7 +4,7 @@ import nuid from 'nuid';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { ExpiresAt } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { pino } from 'pino';
-import { AuthContext, Label } from '../types/index.js';
+import { AuthContext, Label, OrganizationGroupDTO } from '../types/index.js';
 import * as schema from '../db/schema.js';
 import { OrganizationRole } from '../db/models.js';
 import { organizationRoleEnum } from '../db/schema.js';
@@ -26,7 +26,7 @@ export type UserTestData = {
   defaultBillingPlanId?: string;
   email: string;
   apiKey: string;
-  groups: ('admin' | 'developer' | 'viewer')[];
+  groups: OrganizationRole[];
 };
 
 export const defaultGroupDescription: Record<string, string> = {
@@ -62,6 +62,7 @@ export async function seedTest(
   queryConnection: postgres.Sql,
   userTestData: UserTestData,
   createScimKey?: boolean,
+  kcRootGroupId?: string,
   kcGroups?: { id: string; name: string }[],
 ) {
   const db = drizzle(queryConnection, { schema: { ...schema } });
@@ -122,7 +123,8 @@ export async function seedTest(
     userID: userTestData.userId,
   });
 
-  for (const groupName of userTestData.groups) {
+  for (const role of userTestData.groups) {
+    const groupName = role.split('-').splice(1).join('-');
     const orgGroup = await orgGroupRepo.byName({
       organizationId: org.id,
       name: groupName,
@@ -170,10 +172,32 @@ export async function seedTest(
   }
 }
 
+export function createTestRBACEvaluator(...groups: OrganizationGroupDTO[]) {
+  return new RBACEvaluator(groups, undefined, true);
+}
+
+export function createTestGroup(
+  ...rules: { role: OrganizationRole; namespaces?: string[]; resources?: string[] }[]
+): OrganizationGroupDTO {
+  return {
+    groupId: randomUUID(),
+    name: genID('group'),
+    description: '',
+    kcGroupId: randomUUID(),
+    membersCount: 0,
+    builtin: false,
+    rules: rules.map((r) => ({
+      role: r.role,
+      namespaces: r.namespaces ?? [],
+      resources: r.resources ?? [],
+    })),
+  } satisfies OrganizationGroupDTO;
+}
+
 export function createTestContext(
   organizationName = 'wundergraph',
   organizationId = randomUUID(),
-  groups: ('admin' | 'developer' | 'viewer')[] = ['admin'],
+  groups: OrganizationRole[] = ['organization-admin'],
   organizationDeactivated = false,
 ): UserTestData & AuthContext {
   const userId = randomUUID();
@@ -189,22 +213,7 @@ export function createTestContext(
     organizationDeactivated,
     userDisplayName: userId,
     groups,
-    rbac: new RBACEvaluator(
-      groups.map((g) => ({
-        groupId: randomUUID(),
-        name: g,
-        description: '',
-        kcGroupId: randomUUID(),
-        builtin: g === 'admin',
-        rules: [
-          {
-            role: `organization-${g}` as OrganizationRole,
-            namespaces: [],
-            resources: [],
-          },
-        ],
-      })),
-    ),
+    rbac: createTestRBACEvaluator(...groups.map((g) => createTestGroup({ role: g }))),
   };
 }
 
@@ -217,6 +226,7 @@ export enum TestUser {
   adminAliceCompanyA = 'adminAliceCompanyA',
   adminBobCompanyA = 'adminBobCompanyA',
   devJoeCompanyA = 'devJoeCompanyA',
+  keyManagerSmithCompanyA = 'keyManagerSmithCompanyA',
   viewerTimCompanyA = 'viewerTimCompanyA',
   adminJimCompanyB = 'adminJimCompanyB',
 }

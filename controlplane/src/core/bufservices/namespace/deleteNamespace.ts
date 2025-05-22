@@ -51,7 +51,7 @@ export function deleteNamespace(
       };
     }
 
-    if (!authContext.rbac.hasNamespaceWriteAccess(ns)) {
+    if (!authContext.rbac.canDeleteNamespace(ns)) {
       throw new UnauthorizedError();
     }
 

@@ -87,7 +87,7 @@ try {
     isPasswordTemp: false,
   });
 
-  const kcCreatedGroups = await keycloakClient.seedGroup({
+  const [kcRootGroupId, kcCreatedGroups] = await keycloakClient.seedGroup({
     realm,
     userID: keycloakUserID,
     organizationSlug: user.organization.slug,
@@ -102,9 +102,10 @@ try {
       organizationSlug: user.organization.slug,
       userId: keycloakUserID,
       organizationId,
-      groups: ['admin'],
+      groups: ['organization-admin'],
     },
     undefined,
+    kcRootGroupId,
     kcCreatedGroups,
   );
 

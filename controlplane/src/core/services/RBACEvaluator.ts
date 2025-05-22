@@ -198,8 +198,6 @@ export class RBACEvaluator {
         (rule.namespaces.length === 0 && rule.resources.length === 0) ||
         // The rule was given write access to the namespace
         (rule.namespaces.length > 0 && rule.namespaces.includes(target.namespaceId)) ||
-        // The rule was given write access to all resources
-        rule.resources.length === 0 ||
         // The rule was given write access to the resource
         (rule.resources.length > 0 && rule.resources.includes(target.id))
       ) {
