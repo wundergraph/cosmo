@@ -957,9 +957,12 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		subgraphTippers[subgraph] = subgraphTransport
 	}
 
-	subgraphGRPCClients, err := s.buildSubgraphGRPCClients(ctx, engineConfig, configSubgraphs)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build subgraph grpc clients: %w", err)
+	subgraphGRPCClients := make(map[string]grpc.ClientConnInterface)
+	if s.plugins.Enabled {
+		subgraphGRPCClients, err = s.buildSubgraphGRPCClients(ctx, engineConfig, configSubgraphs)
+		if err != nil {
+			return nil, fmt.Errorf("failed to build subgraph grpc clients: %w", err)
+		}
 	}
 
 	ecb := &ExecutorConfigurationBuilder{
@@ -1008,6 +1011,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			ApolloCompatibilityFlags:       s.apolloCompatibilityFlags,
 			ApolloRouterCompatibilityFlags: s.apolloRouterCompatibilityFlags,
 			HeartbeatInterval:              s.multipartHeartbeatInterval,
+			PluginsEnabled:                 s.plugins.Enabled,
 		},
 	)
 	if err != nil {
