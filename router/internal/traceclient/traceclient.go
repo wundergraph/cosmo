@@ -1,7 +1,8 @@
-package httpclient
+package traceclient
 
 import (
 	"context"
+	"github.com/wundergraph/cosmo/router/internal/expr"
 	"net/http"
 	"net/http/httptrace"
 	"time"
@@ -31,14 +32,22 @@ type ClientTraceContextKey struct{}
 type CurrentSubgraphContextKey struct{}
 
 type TraceInjectingRoundTripper struct {
-	base                  http.RoundTripper
-	connectionMetricStore metric.ConnectionMetricStore
+	base                     http.RoundTripper
+	connectionMetricStore    metric.ConnectionMetricStore
+	getExprContext           func(req context.Context) *expr.Context
+	isConnMetricStoreEnabled bool
 }
 
-func NewTraceInjectingRoundTripper(base http.RoundTripper, connectionMetricStore metric.ConnectionMetricStore) *TraceInjectingRoundTripper {
+func NewTraceInjectingRoundTripper(
+	base http.RoundTripper,
+	connectionMetricStore *metric.ConnectionMetrics,
+	exprContext func(req context.Context) *expr.Context,
+) *TraceInjectingRoundTripper {
 	return &TraceInjectingRoundTripper{
-		base:                  base,
-		connectionMetricStore: connectionMetricStore,
+		base:                     base,
+		connectionMetricStore:    connectionMetricStore,
+		getExprContext:           exprContext,
+		isConnMetricStoreEnabled: connectionMetricStore != nil,
 	}
 }
 
@@ -66,7 +75,7 @@ func (t *TraceInjectingRoundTripper) RoundTrip(req *http.Request) (*http.Respons
 	req = req.WithContext(httptrace.WithClientTrace(ctx, trace))
 	trip, err := t.base.RoundTrip(req)
 
-	CalculateConnectionMetrics(ctx, t.connectionMetricStore)
+	t.processConnectionMetrics(ctx)
 
 	return trip, err
 }
@@ -93,10 +102,8 @@ func (t *TraceInjectingRoundTripper) getClientTrace(ctx context.Context) *httptr
 	return trace
 }
 
-func CalculateConnectionMetrics(ctx context.Context, store metric.ConnectionMetricStore) {
-	if store == nil {
-		return
-	}
+func (t *TraceInjectingRoundTripper) processConnectionMetrics(ctx context.Context) {
+	trace := GetClientTraceFromContext(ctx)
 
 	var subgraph string
 	subgraphCtxVal := ctx.Value(CurrentSubgraphContextKey{})
@@ -104,21 +111,24 @@ func CalculateConnectionMetrics(ctx context.Context, store metric.ConnectionMetr
 		subgraph = subgraphCtxVal.(string)
 	}
 
-	trace := GetClientTraceFromContext(ctx)
+	exprContext := t.getExprContext(ctx)
 
 	if trace.ConnectionGet != nil && trace.ConnectionAcquired != nil {
 		connAcquireTime := trace.ConnectionAcquired.Time.Sub(trace.ConnectionGet.Time).Seconds()
 
-		serverAttributes := rotel.GetServerAttributes(trace.ConnectionGet.HostPort)
-		serverAttributes = append(
-			serverAttributes,
-			rotel.WgClientReusedConnection.Bool(trace.ConnectionAcquired.Reused),
-			rotel.WgSubgraphName.String(subgraph),
-		)
+		exprContext.Subgraph.Request.ClientTrace.ConnectionAcquireDuration = connAcquireTime
 
-		store.MeasureConnectionAcquireDuration(ctx,
-			connAcquireTime,
-			serverAttributes...,
-		)
+		if t.isConnMetricStoreEnabled {
+			serverAttributes := rotel.GetServerAttributes(trace.ConnectionGet.HostPort)
+			serverAttributes = append(
+				serverAttributes,
+				rotel.WgClientReusedConnection.Bool(trace.ConnectionAcquired.Reused),
+				rotel.WgSubgraphName.String(subgraph),
+			)
+
+			t.connectionMetricStore.MeasureConnectionAcquireDuration(ctx,
+				connAcquireTime,
+				serverAttributes...)
+		}
 	}
 }

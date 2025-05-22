@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"runtime"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -9447,6 +9448,409 @@ func TestFlakyTelemetry(t *testing.T) {
 			}
 
 			metricdatatest.AssertEqual(t, routerInfoMetric, scopeMetric.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+		})
+	})
+
+	t.Run("verify trace attributes", func(t *testing.T) {
+		t.Run("verify trace attribute key and default value are present", func(t *testing.T) {
+			t.Parallel()
+
+			exporter := tracetest.NewInMemoryExporter(t)
+
+			key := "custom"
+			value := "value"
+
+			testenv.Run(t, &testenv.Config{
+				TraceExporter: exporter,
+				CustomTracingAttributes: []config.CustomAttribute{
+					{
+						Key:     key,
+						Default: value,
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Header: map[string][]string{
+						"x-custom-header": {"value_different"},
+					},
+					Query: `query { employees { id } }`,
+				})
+
+				sn := exporter.GetSpans().Snapshots()
+				require.Len(t, sn, 9)
+
+				for _, snapshot := range sn {
+					require.Contains(t, snapshot.Attributes(), attribute.String(key, value))
+				}
+			})
+		})
+
+		t.Run("verify trace attribute key and header value are present", func(t *testing.T) {
+			t.Parallel()
+
+			exporter := tracetest.NewInMemoryExporter(t)
+
+			key := "custom"
+			value := "value_different"
+
+			testenv.Run(t, &testenv.Config{
+				TraceExporter: exporter,
+				CustomTelemetryAttributes: []config.CustomAttribute{
+					{
+						Key:     key,
+						Default: "value",
+						ValueFrom: &config.CustomDynamicAttribute{
+							RequestHeader: "x-custom-header",
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Header: map[string][]string{
+						"x-custom-header": {value},
+					},
+					Query: `query { employees { id } }`,
+				})
+
+				sn := exporter.GetSpans().Snapshots()
+				require.Len(t, sn, 9)
+
+				for _, snapshot := range sn {
+					require.Contains(t, snapshot.Attributes(), attribute.String(key, value))
+				}
+			})
+		})
+
+		t.Run("verify custom tracing expressions", func(t *testing.T) {
+			t.Parallel()
+
+			claimKeyWithAuth := "extraclaim"
+			claimValWithAuth := "extravalue"
+			headerKey := "X-Custom-Header"
+			headerVal := "extravalue2"
+
+			exporter := tracetest.NewInMemoryExporter(t)
+			authenticators, authServer := integration.ConfigureAuth(t)
+
+			testenv.Run(t, &testenv.Config{
+				TraceExporter: exporter,
+				CustomTracingAttributes: []config.CustomAttribute{
+					{
+						Key: claimKeyWithAuth,
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "request.auth.claims.custom_value." + claimKeyWithAuth,
+						},
+					},
+					{
+						Key: headerKey,
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "request.header.Get('" + headerKey + "')",
+						},
+					},
+				},
+				RouterOptions: []core.Option{
+					core.WithAccessController(core.NewAccessController(authenticators, false)),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				// Operations with a token should succeed
+				token, err := authServer.Token(map[string]any{
+					"scope": "read:employee read:private",
+					"custom_value": map[string]string{
+						claimKeyWithAuth: claimValWithAuth,
+					},
+				})
+				require.NoError(t, err)
+				header := http.Header{
+					"Authorization": []string{"Bearer " + token},
+					headerKey:       []string{headerVal},
+				}
+				_, err = xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(`{"query":"{ employees { id startDate } }"}`))
+				require.NoError(t, err)
+
+				sn := exporter.GetSpans().Snapshots()
+
+				var authenticateSpanDetected bool
+				require.Len(t, sn, 10)
+
+				for i := 0; i < len(sn); i++ {
+					traceAttribute := attribute.String(claimKeyWithAuth, claimValWithAuth)
+					attributes := sn[i].Attributes()
+
+					if slices.Contains([]string{"HTTP - Read Body", "Authenticate"}, sn[i].Name()) {
+						authenticateSpanDetected = true
+						assert.NotContains(t, attributes, traceAttribute)
+					} else {
+						assert.Contains(t, attributes, traceAttribute)
+					}
+
+					assert.Contains(t, attributes, attribute.String(headerKey, headerVal))
+				}
+
+				require.True(t, authenticateSpanDetected)
+			})
+		})
+	})
+
+	t.Run("verify attribute expressions with subgraph in the expression", func(t *testing.T) {
+		t.Run("verify subgraph expression should only be present for engine fetch", func(t *testing.T) {
+			t.Parallel()
+
+			t.Run("with tracing attributes", func(t *testing.T) {
+				metricReader := metric.NewManualReader()
+				exporter := tracetest.NewInMemoryExporter(t)
+
+				key := "custom.subgraph"
+				testenv.Run(t, &testenv.Config{
+					TraceExporter: exporter,
+					MetricReader:  metricReader,
+					CustomTracingAttributes: []config.CustomAttribute{
+						{
+							Key: key,
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "subgraph.name",
+							},
+						},
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query { employees { id } }`,
+					})
+
+					sn := exporter.GetSpans().Snapshots()
+					require.Len(t, sn, 9)
+
+					var engineSpanDetected bool
+
+					for i := 0; i < len(sn); i++ {
+						subgraphTraceAttribute := attribute.String("custom.subgraph", "employees")
+						attributes := sn[i].Attributes()
+
+						if slices.Contains([]string{"Engine - Fetch"}, sn[i].Name()) {
+							engineSpanDetected = true
+							assert.Contains(t, attributes, subgraphTraceAttribute)
+						} else {
+							assert.NotContains(t, attributes, subgraphTraceAttribute)
+						}
+					}
+
+					require.True(t, engineSpanDetected)
+
+					rm := metricdata.ResourceMetrics{}
+					err := metricReader.Collect(context.Background(), &rm)
+					require.NoError(t, err)
+
+					scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+					require.Greater(t, len(rm.ScopeMetrics), 0)
+					require.Greater(t, len(scopeMetric.Metrics), 0)
+
+					httpRequestsMetric := scopeMetric.Metrics[0]
+					require.Equal(t, "router.http.requests", httpRequestsMetric.Name)
+					require.IsType(t, metricdata.Sum[int64]{}, httpRequestsMetric.Data)
+
+					data2 := httpRequestsMetric.Data.(metricdata.Sum[int64])
+					attrs := data2.DataPoints[0].Attributes
+					_, ok := attrs.Value(attribute.Key(key))
+					require.False(t, ok)
+				})
+			})
+
+			t.Run("with telemetry attributes", func(t *testing.T) {
+				exporter := tracetest.NewInMemoryExporter(t)
+				metricReader := metric.NewManualReader()
+
+				key := "custom.subgraph"
+				expectedValue := "employees"
+
+				testenv.Run(t, &testenv.Config{
+					TraceExporter: exporter,
+					MetricReader:  metricReader,
+					CustomTelemetryAttributes: []config.CustomAttribute{
+						{
+							Key: key,
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "subgraph.name",
+							},
+						},
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query { employees { id } }`,
+					})
+
+					sn := exporter.GetSpans().Snapshots()
+					require.Len(t, sn, 9)
+
+					var engineSpanDetected bool
+
+					subgraphTraceAttribute := attribute.String(key, expectedValue)
+					for i := 0; i < len(sn); i++ {
+						attributes := sn[i].Attributes()
+
+						if slices.Contains([]string{"Engine - Fetch"}, sn[i].Name()) {
+							engineSpanDetected = true
+							assert.Contains(t, attributes, subgraphTraceAttribute)
+						} else {
+							assert.NotContains(t, attributes, subgraphTraceAttribute)
+						}
+					}
+
+					require.True(t, engineSpanDetected)
+
+					rm := metricdata.ResourceMetrics{}
+					err := metricReader.Collect(context.Background(), &rm)
+					require.NoError(t, err)
+
+					scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+					require.Greater(t, len(rm.ScopeMetrics), 0)
+					require.Greater(t, len(scopeMetric.Metrics), 0)
+
+					httpRequestsMetric := scopeMetric.Metrics[0]
+					require.Equal(t, "router.http.requests", httpRequestsMetric.Name)
+					require.IsType(t, metricdata.Sum[int64]{}, httpRequestsMetric.Data)
+
+					atts := httpRequestsMetric.Data.(metricdata.Sum[int64]).DataPoints[0].Attributes
+					val, ok := atts.Value(attribute.Key(key))
+					require.True(t, ok)
+					require.Equal(t, expectedValue, val.AsString())
+
+					subgraphNonMetric := scopeMetric.Metrics[5]
+					require.Equal(t, "router.graphql.operation.planning_time", subgraphNonMetric.Name)
+					require.IsType(t, metricdata.Histogram[float64]{}, subgraphNonMetric.Data)
+					atts = subgraphNonMetric.Data.(metricdata.Histogram[float64]).DataPoints[0].Attributes
+					_, ok = atts.Value(attribute.Key(key))
+					require.False(t, ok)
+				})
+			})
+
+			t.Run("with metric attributes", func(t *testing.T) {
+				exporter := tracetest.NewInMemoryExporter(t)
+				metricReader := metric.NewManualReader()
+
+				key := "custom.subgraph"
+				expectedValue := "employees"
+
+				testenv.Run(t, &testenv.Config{
+					TraceExporter: exporter,
+					MetricReader:  metricReader,
+					CustomMetricAttributes: []config.CustomAttribute{
+						{
+							Key: key,
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "subgraph.name",
+							},
+						},
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query { employees { id } }`,
+					})
+
+					sn := exporter.GetSpans().Snapshots()
+					require.Len(t, sn, 9)
+
+					subgraphTraceAttribute := attribute.String(key, expectedValue)
+					for i := 0; i < len(sn); i++ {
+						attributes := sn[i].Attributes()
+						assert.NotContains(t, attributes, subgraphTraceAttribute)
+					}
+
+					rm := metricdata.ResourceMetrics{}
+					err := metricReader.Collect(context.Background(), &rm)
+					require.NoError(t, err)
+
+					scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+					require.Greater(t, len(rm.ScopeMetrics), 0)
+					require.Greater(t, len(scopeMetric.Metrics), 0)
+
+					httpRequestsMetric := scopeMetric.Metrics[0]
+					require.Equal(t, "router.http.requests", httpRequestsMetric.Name)
+					require.IsType(t, metricdata.Sum[int64]{}, httpRequestsMetric.Data)
+
+					data2 := httpRequestsMetric.Data.(metricdata.Sum[int64])
+					atts := data2.DataPoints[0].Attributes
+					val, ok := atts.Value(attribute.Key(key))
+					require.True(t, ok)
+					require.Equal(t, expectedValue, val.AsString())
+
+					subgraphNonMetric := scopeMetric.Metrics[5]
+					require.Equal(t, "router.graphql.operation.planning_time", subgraphNonMetric.Name)
+					require.IsType(t, metricdata.Histogram[float64]{}, subgraphNonMetric.Data)
+					atts = subgraphNonMetric.Data.(metricdata.Histogram[float64]).DataPoints[0].Attributes
+					_, ok = atts.Value(attribute.Key(key))
+					require.False(t, ok)
+				})
+			})
+		})
+
+		t.Run("verify trace attributes are processed", func(t *testing.T) {
+			exporter := tracetest.NewInMemoryExporter(t)
+			metricReader := metric.NewManualReader()
+
+			testenv.Run(t, &testenv.Config{
+				TraceExporter: exporter,
+				MetricReader:  metricReader,
+				CustomTelemetryAttributes: []config.CustomAttribute{
+					{
+						Key: "custom.subgraph",
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "string(subgraph.request.clientTrace.connAcquireDuration)",
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { employees { id } }`,
+				})
+
+				sn := exporter.GetSpans().Snapshots()
+				require.Len(t, sn, 9)
+
+				var attributeDetected bool
+
+				for i := 0; i < len(sn); i++ {
+					attributes := sn[i].Attributes()
+
+					if slices.Contains([]string{"Engine - Fetch"}, sn[i].Name()) {
+						for _, attribute := range attributes {
+							if attribute.Key == "custom.subgraph" {
+								attributeDetected = true
+								valueString := attribute.Value.AsString()
+								floatValue, err := strconv.ParseFloat(valueString, 64)
+								require.NoError(t, err)
+								require.Greater(t, floatValue, 0.0)
+							}
+						}
+					}
+				}
+
+				require.True(t, attributeDetected)
+
+				rm := metricdata.ResourceMetrics{}
+				err := metricReader.Collect(context.Background(), &rm)
+				require.NoError(t, err)
+
+				scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+				require.Greater(t, len(rm.ScopeMetrics), 0)
+				require.Greater(t, len(scopeMetric.Metrics), 0)
+
+				httpRequestsMetric := scopeMetric.Metrics[0]
+				require.Equal(t, "router.http.requests", httpRequestsMetric.Name)
+				require.IsType(t, metricdata.Sum[int64]{}, httpRequestsMetric.Data)
+
+				atts := httpRequestsMetric.Data.(metricdata.Sum[int64]).DataPoints[0].Attributes
+				val, ok := atts.Value("custom.subgraph")
+				require.True(t, ok)
+				floatValue, err := strconv.ParseFloat(val.AsString(), 64)
+				require.NoError(t, err)
+				require.Greater(t, floatValue, 0.0)
+
+				subgraphNonMetric := scopeMetric.Metrics[5]
+				require.Equal(t, "router.graphql.operation.planning_time", subgraphNonMetric.Name)
+				require.IsType(t, metricdata.Histogram[float64]{}, subgraphNonMetric.Data)
+				atts = subgraphNonMetric.Data.(metricdata.Histogram[float64]).DataPoints[0].Attributes
+				_, ok = atts.Value("custom.subgraph")
+				require.False(t, ok)
+			})
 		})
 	})
 

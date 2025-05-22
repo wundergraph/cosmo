@@ -2,8 +2,10 @@ package core
 
 import (
 	"bytes"
+	"context"
 	"fmt"
-	traceclient "github.com/wundergraph/cosmo/router/internal/httpclient"
+	"github.com/wundergraph/cosmo/router/internal/expr"
+	"github.com/wundergraph/cosmo/router/internal/traceclient"
 	"io"
 	"net/http"
 	"net/url"
@@ -63,7 +65,7 @@ func NewCustomTransport(
 	baseRoundTripper http.RoundTripper,
 	retryOptions retrytransport.RetryOptions,
 	metricStore metric.Store,
-	connectionMetricStore metric.ConnectionMetricStore,
+	connectionMetricStore *metric.ConnectionMetrics,
 	enableSingleFlight bool,
 	enableTraceClient bool,
 ) *CustomTransport {
@@ -72,7 +74,11 @@ func NewCustomTransport(
 	}
 
 	if enableTraceClient {
-		baseRoundTripper = traceclient.NewTraceInjectingRoundTripper(baseRoundTripper, connectionMetricStore)
+		getExprContext := func(ctx context.Context) *expr.Context {
+			reqContext := getRequestContext(ctx)
+			return &reqContext.expressionContext
+		}
+		baseRoundTripper = traceclient.NewTraceInjectingRoundTripper(baseRoundTripper, connectionMetricStore, getExprContext)
 	}
 
 	if retryOptions.Enabled {
@@ -112,7 +118,7 @@ func (ct *CustomTransport) measureSubgraphMetrics(req *http.Request) func(err er
 
 	attributes = append(attributes, reqContext.telemetry.metricAttrs...)
 	if reqContext.telemetry.metricAttributeExpressions != nil {
-		additionalAttrs, err := reqContext.telemetry.metricAttributeExpressions.expressionsAttributes(reqContext)
+		additionalAttrs, err := reqContext.telemetry.metricAttributeExpressions.expressionsAttributes(&reqContext.expressionContext)
 		if err != nil {
 			ct.logger.Error("failed to resolve metric attribute expressions", zap.Error(err))
 		}
@@ -324,7 +330,7 @@ type TransportFactory struct {
 	retryOptions                  retrytransport.RetryOptions
 	localhostFallbackInsideDocker bool
 	metricStore                   metric.Store
-	connectionMetricStore         metric.ConnectionMetricStore
+	connectionMetricStore         *metric.ConnectionMetrics
 	logger                        *zap.Logger
 	tracerProvider                *sdktrace.TracerProvider
 	tracePropagators              propagation.TextMapPropagator
@@ -340,7 +346,7 @@ type TransportOptions struct {
 	RetryOptions                  retrytransport.RetryOptions
 	LocalhostFallbackInsideDocker bool
 	MetricStore                   metric.Store
-	ConnectionMetricStore         metric.ConnectionMetricStore
+	ConnectionMetricStore         *metric.ConnectionMetrics
 	Logger                        *zap.Logger
 	TracerProvider                *sdktrace.TracerProvider
 	TracePropagators              propagation.TextMapPropagator
