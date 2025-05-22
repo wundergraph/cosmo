@@ -950,11 +950,17 @@ message DeleteOrganizationGroupResponse {
 }
 
 message OrgMember{
+  message Group {
+    string groupId = 1;
+    string name = 2;
+  }
+
   string userID = 1;
   string email = 2;
   string orgMemberID = 3;
   bool active = 4;
   string joinedAt = 5;
+  repeated Group groups = 6;
 }
 
 message PendingOrgInvitation{

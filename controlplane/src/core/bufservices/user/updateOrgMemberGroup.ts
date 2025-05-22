@@ -73,6 +73,15 @@ export function updateOrgMemberGroup(
       };
     }
 
+    if (user.rbac.groups.some((g) => g.groupId === orgGroup.groupId)) {
+      // The user is already a member of the provided group
+      return {
+        response: {
+          code: EnumStatusCode.OK,
+        },
+      };
+    }
+
     // fetching the user whose group is being updated.
     const orgMember = await orgRepo.getOrganizationMember({
       organizationID: authContext.organizationId,
