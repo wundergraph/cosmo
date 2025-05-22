@@ -45,7 +45,10 @@ export function getOrganizationGroupMembers(
         ...member,
         createdAt: member.createdAt?.toISOString() ?? '',
       })),
-      apiKeys: groupApiKeys,
+      apiKeys: groupApiKeys.map((apiKey) => ({
+        ...apiKey,
+        createdAt: apiKey.createdAt.toISOString(),
+      })),
     };
   });
 }

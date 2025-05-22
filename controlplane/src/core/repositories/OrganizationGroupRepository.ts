@@ -177,6 +177,7 @@ export class OrganizationGroupRepository {
         .select({
           id: schema.apiKeys.id,
           name: schema.apiKeys.name,
+          createdAt: schema.apiKeys.createdAt,
         })
         .from(schema.apiKeys)
         .where(eq(schema.apiKeys.groupId, groupId)),

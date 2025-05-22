@@ -76,10 +76,7 @@ export function GroupMembersSheet({ open, group, onOpenChange }: {
                     {data.members.length > 0 ? (
                       <div className="rounded-md border border-border divide-y">
                         {data.members.map((member) => (
-                          <div
-                            key={`member-${member.id}`}
-                            className="px-4 py-2.5 space-y-1"
-                          >
+                          <div key={`member-${member.id}`} className="px-4 py-2.5 space-y-1">
                             <div className="truncate flex justify-start items-center gap-x-2">
                               <UserIcon className="size-4 shrink-0" />
                               <span className="flex-grow truncate">{member.email}</span>
@@ -94,7 +91,6 @@ export function GroupMembersSheet({ open, group, onOpenChange }: {
                       <EmptyState
                         icon={<ExclamationTriangleIcon />}
                         title="No member have been added to this group."
-                        description={"Assign users to this group on the members page."}
                       />
                     )}
                   </TabsContent>
@@ -103,12 +99,14 @@ export function GroupMembersSheet({ open, group, onOpenChange }: {
                     {data.apiKeys.length > 0 ? (
                       <div className="rounded-md border border-border divide-y">
                         {data.apiKeys.map((key) => (
-                          <div
-                            key={`key-${key.id}`}
-                            className="px-4 py-2.5 truncate flex justify-start items-center gap-x-2"
-                          >
-                            <KeyIcon className="size-4 shrink-0" />
-                            <span className="flex-grow truncate">{key.name}</span>
+                          <div key={`key-${key.id}`} className="px-4 py-2.5 space-y-1">
+                            <div className="truncate flex justify-start items-center gap-x-2">
+                              <KeyIcon className="size-4 shrink-0" />
+                              <span className="flex-grow truncate">{key.name}</span>
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Created at {formatDateTime(new Date(key.createdAt))}
+                            </div>
                           </div>
                         ))}
                       </div>

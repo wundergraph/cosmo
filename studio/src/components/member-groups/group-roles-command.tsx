@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { ReactNode, useState } from "react";
 import { Command, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { capitalize } from "@/lib/utils";
 import { roles as originalRoles } from "@/lib/constants";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { ChevronRightIcon } from "@heroicons/react/24/outline";
 
 export function GroupRolesCommand({ roles, categories, rolesByCategory, onSelectRole }: {
   roles: (typeof originalRoles)[number][];
@@ -42,8 +43,17 @@ export function GroupRolesCommand({ roles, categories, rolesByCategory, onSelect
             <CommandGroup heading="Roles">
               {filteredRoles.map((role) => (
                 <CommandRoleItem
-                  key={`role-${role.key}`}
-                  name={role.displayName}
+                  key={`role-${role.category}-${role.key}`}
+                  value={role.key}
+                  label={(
+                    <span className="flex justify-start items-center gap-x-1">
+                      <span>
+                        {capitalize(role.category).replace('-', ' ')}
+                      </span>
+                      <ChevronRightIcon className="size-3 text-muted-foreground" />
+                      <span className="truncate">{role.displayName}</span>
+                    </span>
+                  )}
                   description={role.description}
                   onSelect={() => onSelectRole(role.key)}
                 />
@@ -78,7 +88,8 @@ export function GroupRolesCommand({ roles, categories, rolesByCategory, onSelect
                   {rolesForSelectedCategory.map((role) => (
                     <CommandRoleItem
                       key={`role-${role.key}`}
-                      name={role.displayName}
+                      value={role.key}
+                      label={role.displayName}
                       description={role.description}
                       onSelect={() => onSelectRole(role.key)}
                     />
@@ -111,7 +122,8 @@ export function GroupRolesAccordion({ rolesByCategory, onSelectRole }: {
                 {roles!.map((role) => (
                   <CommandRoleItem
                     key={`role-${role.key}`}
-                    name={role.displayName}
+                    value={role.key}
+                    label={role.displayName}
                     description={role.description}
                     onSelect={() => onSelectRole(role.key)}
                   />
@@ -125,18 +137,19 @@ export function GroupRolesAccordion({ rolesByCategory, onSelectRole }: {
   );
 }
 
-function CommandRoleItem({ name, description, onSelect }: {
-  name: string;
+function CommandRoleItem({ value, label, description, onSelect }: {
+  value: string;
+  label: ReactNode;
   description?: string;
   onSelect(): void;
 }) {
   return (
     <CommandItem
-      value={name}
+      value={value}
       className="gap-y-1 flex-col justify-start items-start"
       onSelect={onSelect}
     >
-      {name}
+      {label}
       {description && <div className="text-muted-foreground text-sm">{description}</div>}
     </CommandItem>
   );

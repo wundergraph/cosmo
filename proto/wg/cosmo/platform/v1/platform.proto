@@ -916,6 +916,7 @@ message GetOrganizationGroupMembersResponse {
   message GroupApiKey {
     string id = 1;
     string name = 2;
+    string createdAt = 3;
   }
 
   Response response = 1;

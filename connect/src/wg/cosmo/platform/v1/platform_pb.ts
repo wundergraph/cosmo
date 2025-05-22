@@ -6821,6 +6821,11 @@ export class GetOrganizationGroupMembersResponse_GroupApiKey extends Message<Get
    */
   name = "";
 
+  /**
+   * @generated from field: string createdAt = 3;
+   */
+  createdAt = "";
+
   constructor(data?: PartialMessage<GetOrganizationGroupMembersResponse_GroupApiKey>) {
     super();
     proto3.util.initPartial(data, this);
@@ -6831,6 +6836,7 @@ export class GetOrganizationGroupMembersResponse_GroupApiKey extends Message<Get
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "createdAt", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOrganizationGroupMembersResponse_GroupApiKey {
