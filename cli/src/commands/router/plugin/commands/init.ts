@@ -11,8 +11,8 @@ import Spinner from 'ora';
 import { compileGraphQLToMapping, compileGraphQLToProto } from '@wundergraph/protographic';
 import { camelCase, upperFirst } from 'lodash-es';
 import { BaseCommandOptions } from '../../../../core/types/types.js';
-import SimpleGoPlugin from '../templates/simple-go-plugin.js';
-import FullGoPlugin from '../templates/full-go-plugin.js';
+import PluginTemplates from '../templates/plugin.js';
+import ProjectTemplates from '../templates/project.js';
 import { renderResultTree } from '../helper.js';
 
 export default (opts: BaseCommandOptions) => {
@@ -75,13 +75,13 @@ export default (opts: BaseCommandOptions) => {
       spinner.text = 'Generating mapping and proto files...';
 
       if (!options.onlyPlugin && options.project) {
-        await writeFile(resolve(tempDir, 'README.md'), pupa(FullGoPlugin.readme, { name, originalPluginName }));
-        await writeFile(resolve(srcDir, 'schema.graphql'), pupa(FullGoPlugin.schema, { name }));
+        await writeFile(resolve(tempDir, 'README.md'), pupa(ProjectTemplates.readme, { name, originalPluginName }));
+        await writeFile(resolve(srcDir, 'schema.graphql'), pupa(PluginTemplates.schema, { name }));
 
-        const mapping = compileGraphQLToMapping(FullGoPlugin.schema, serviceName);
+        const mapping = compileGraphQLToMapping(PluginTemplates.schema, serviceName);
         await writeFile(resolve(generatedDir, 'mapping.json'), JSON.stringify(mapping, null, 2));
 
-        const proto = compileGraphQLToProto(FullGoPlugin.schema, {
+        const proto = compileGraphQLToProto(PluginTemplates.schema, {
           serviceName,
           packageName: 'service',
           goPackage: goModulePath,
@@ -89,34 +89,51 @@ export default (opts: BaseCommandOptions) => {
 
         await writeFile(resolve(generatedDir, 'service.proto'), proto.proto);
         await writeFile(resolve(generatedDir, 'service.proto.lock.json'), JSON.stringify(proto.lockData, null, 2));
-        await writeFile(resolve(srcDir, 'main.go'), pupa(FullGoPlugin.mainGo, { serviceName }));
-        await writeFile(resolve(srcDir, 'main_test.go'), pupa(FullGoPlugin.mainGoTest, { serviceName }));
-        await writeFile(resolve(tempDir, 'go.mod'), pupa(FullGoPlugin.goMod, { modulePath: goModulePath }));
-        await writeFile(resolve(tempDir, '.gitignore'), SimpleGoPlugin.gitignore);
+        await writeFile(resolve(srcDir, 'main.go'), pupa(PluginTemplates.mainGo, { serviceName }));
+        await writeFile(resolve(srcDir, 'main_test.go'), pupa(PluginTemplates.mainGoTest, { serviceName }));
+        await writeFile(resolve(tempDir, 'go.mod'), pupa(PluginTemplates.goMod, { modulePath: goModulePath }));
+        await writeFile(resolve(tempDir, 'Makefile'), pupa(PluginTemplates.makefile, { originalPluginName }));
+        await writeFile(resolve(tempDir, '.gitignore'), PluginTemplates.gitignore);
+        await writeFile(resolve(tempDir, '.cursorignore'), PluginTemplates.cursorIgnore);
+
+        // Create cursor rules in .cursor/rules
+        await mkdir(resolve(tempDir, '.cursor', 'rules'), { recursive: true });
+        await writeFile(
+          resolve(tempDir, '.cursor', 'rules', 'plugin-development.mdc'),
+          pupa(PluginTemplates.cursorRules, { name, originalPluginName }),
+        );
 
         // Create a project directory structure
         await mkdir(projectDir, { recursive: true });
         await mkdir(resolve(projectDir, 'plugins'), { recursive: true });
 
         // Write router config to the project root
-        await writeFile(resolve(projectDir, 'config.yaml'), FullGoPlugin.routerConfig);
-        await writeFile(resolve(projectDir, 'graph.yaml'), pupa(FullGoPlugin.graphConfig, { originalPluginName }));
-        await writeFile(resolve(projectDir, 'Makefile'), pupa(FullGoPlugin.makefile, { originalPluginName }));
+        await writeFile(resolve(projectDir, 'config.yaml'), ProjectTemplates.routerConfig);
+        await writeFile(resolve(projectDir, 'graph.yaml'), pupa(ProjectTemplates.graphConfig, { originalPluginName }));
+        await writeFile(resolve(projectDir, 'Makefile'), pupa(ProjectTemplates.makefile, { originalPluginName }));
         await writeFile(
           resolve(projectDir, 'README.md'),
-          pupa(FullGoPlugin.projectReadme, { name, originalPluginName }),
+          pupa(ProjectTemplates.projectReadme, { name, originalPluginName }),
         );
 
         // Move plugin from temp directory to project plugins directory
         await rename(tempDir, pluginDir);
       } else {
-        await writeFile(resolve(tempDir, 'README.md'), pupa(SimpleGoPlugin.readme, { name, originalPluginName }));
-        await writeFile(resolve(srcDir, 'schema.graphql'), pupa(SimpleGoPlugin.schema, { name }));
+        await writeFile(resolve(tempDir, 'README.md'), pupa(PluginTemplates.readme, { name, originalPluginName }));
+        await writeFile(resolve(tempDir, 'Makefile'), pupa(PluginTemplates.makefile, { originalPluginName }));
+        await writeFile(resolve(srcDir, 'schema.graphql'), pupa(PluginTemplates.schema, { name }));
 
-        const mapping = compileGraphQLToMapping(SimpleGoPlugin.schema, serviceName);
+        const mapping = compileGraphQLToMapping(PluginTemplates.schema, serviceName);
         await writeFile(resolve(generatedDir, 'mapping.json'), JSON.stringify(mapping, null, 2));
 
-        const proto = compileGraphQLToProto(SimpleGoPlugin.schema, {
+        // Create cursor rules in .cursor/rules
+        await mkdir(resolve(tempDir, '.cursor', 'rules'), { recursive: true });
+        await writeFile(
+          resolve(tempDir, '.cursor', 'rules', 'plugin-development.mdc'),
+          pupa(PluginTemplates.cursorRules, { name, originalPluginName }),
+        );
+
+        const proto = compileGraphQLToProto(PluginTemplates.schema, {
           serviceName,
           packageName: 'service',
           goPackage: goModulePath,
@@ -124,10 +141,11 @@ export default (opts: BaseCommandOptions) => {
 
         await writeFile(resolve(generatedDir, 'service.proto'), proto.proto);
         await writeFile(resolve(generatedDir, 'service.proto.lock.json'), JSON.stringify(proto.lockData, null, 2));
-        await writeFile(resolve(srcDir, 'main.go'), pupa(SimpleGoPlugin.mainGo, { serviceName }));
-        await writeFile(resolve(srcDir, 'main_test.go'), pupa(SimpleGoPlugin.mainGoTest, { serviceName }));
-        await writeFile(resolve(tempDir, 'go.mod'), pupa(SimpleGoPlugin.goMod, { modulePath: goModulePath }));
-        await writeFile(resolve(tempDir, '.gitignore'), SimpleGoPlugin.gitignore);
+        await writeFile(resolve(srcDir, 'main.go'), pupa(PluginTemplates.mainGo, { serviceName }));
+        await writeFile(resolve(srcDir, 'main_test.go'), pupa(PluginTemplates.mainGoTest, { serviceName }));
+        await writeFile(resolve(tempDir, 'go.mod'), pupa(PluginTemplates.goMod, { modulePath: goModulePath }));
+        await writeFile(resolve(tempDir, '.gitignore'), PluginTemplates.gitignore);
+        await writeFile(resolve(tempDir, '.cursorignore'), PluginTemplates.cursorIgnore);
 
         await mkdir(resolve(projectDir, 'plugins'), { recursive: true });
 
