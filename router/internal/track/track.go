@@ -144,6 +144,9 @@ func (u *UsageTracker) TrackUptime(ctx context.Context) {
 	defer tick.Stop()
 
 	err = u.trackRouterUptime(uptimeOptions{})
+	if err != nil {
+		u.log.Error("failed to track event", zap.Error(err))
+	}
 
 	for {
 		select {
