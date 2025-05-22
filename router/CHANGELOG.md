@@ -4,6 +4,14 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.213.0](https://github.com/wundergraph/cosmo/compare/router@0.212.1...router@0.213.0) (2025-05-22)
+
+### Features
+
+* add new metric store with trace connection metrics ([#1862](https://github.com/wundergraph/cosmo/issues/1862)) ([772773d](https://github.com/wundergraph/cosmo/commit/772773d9b7b44485505cd90306f95f9504552a79)) (@SkArchon)
+* add proper enabled config for plugins ([#1881](https://github.com/wundergraph/cosmo/issues/1881)) ([3114d38](https://github.com/wundergraph/cosmo/commit/3114d38ee39bd68a56c847e59fab253e18f7fabe)) (@Noroth)
+* plugin init should bootstrap fully functional project ([#1878](https://github.com/wundergraph/cosmo/issues/1878)) ([69132da](https://github.com/wundergraph/cosmo/commit/69132da0f6a3560afcd6bdab348dec0bb37c3496)) (@StarpTech)
+
 ## [0.212.1](https://github.com/wundergraph/cosmo/compare/router@0.212.0...router@0.212.1) (2025-05-22)
 
 **Note:** Version bump only for package router
