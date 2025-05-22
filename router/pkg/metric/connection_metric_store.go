@@ -44,8 +44,10 @@ func NewConnectionMetricStore(
 	connectionPoolStats *ConnectionPoolStats,
 ) (*ConnectionMetrics, error) {
 	connMetrics := &ConnectionMetrics{
-		baseAttributes: baseAttributes,
-		logger:         logger,
+		baseAttributes:        baseAttributes,
+		logger:                logger,
+		otlpConnectionMetrics: &noopConnectionMetricProvider{},
+		promConnectionMetrics: &noopConnectionMetricProvider{},
 	}
 
 	if metricsConfig.OpenTelemetry.ConnectionStats {
@@ -69,49 +71,37 @@ func NewConnectionMetricStore(
 
 func (c *ConnectionMetrics) MeasureMaxConnections(ctx context.Context, reused bool, attrs ...attribute.KeyValue) {
 	// Add the reused attribute to the base attributes
-	reusedAttr := otel.WgConnReused.Bool(reused)
+	reusedAttr := otel.WgClientReusedConnection.Bool(reused)
 	allAttrs := append([]attribute.KeyValue{}, c.baseAttributes...)
 	allAttrs = append(allAttrs, reusedAttr)
 	allAttrs = append(allAttrs, attrs...)
 
 	opts := otelmetric.WithAttributes(allAttrs...)
 
-	if c.otlpConnectionMetrics != nil {
-		c.otlpConnectionMetrics.MeasureMaxConnections(ctx, 1, opts)
-	}
-	if c.promConnectionMetrics != nil {
-		c.promConnectionMetrics.MeasureMaxConnections(ctx, 1, opts)
-	}
+	c.otlpConnectionMetrics.MeasureMaxConnections(ctx, 1, opts)
+	c.promConnectionMetrics.MeasureMaxConnections(ctx, 1, opts)
 }
 
 func (c *ConnectionMetrics) MeasureConnectionAcquireDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
 	copied := append([]attribute.KeyValue{}, c.baseAttributes...)
 	opts := otelmetric.WithAttributes(append(copied, attrs...)...)
 
-	if c.otlpConnectionMetrics != nil {
-		c.otlpConnectionMetrics.MeasureConnectionAcquireDuration(ctx, duration, opts)
-	}
-	if c.promConnectionMetrics != nil {
-		c.promConnectionMetrics.MeasureConnectionAcquireDuration(ctx, duration, opts)
-	}
+	c.otlpConnectionMetrics.MeasureConnectionAcquireDuration(ctx, duration, opts)
+	c.promConnectionMetrics.MeasureConnectionAcquireDuration(ctx, duration, opts)
 }
 
 // Flush flushes the metrics to the backend synchronously.
 func (h *ConnectionMetrics) Flush(ctx context.Context) error {
-
 	var err error
 
-	if h.otlpConnectionMetrics != nil {
-		errOtlp := h.otlpConnectionMetrics.Flush(ctx)
-		if errOtlp != nil {
-			err = errors.Join(err, fmt.Errorf("failed to flush otlp metrics: %w", errOtlp))
-		}
+	errOtlp := h.otlpConnectionMetrics.Flush(ctx)
+	if errOtlp != nil {
+		err = errors.Join(err, fmt.Errorf("failed to flush otlp metrics: %w", errOtlp))
 	}
-	if h.promConnectionMetrics != nil {
-		errProm := h.promConnectionMetrics.Flush(ctx)
-		if errProm != nil {
-			err = errors.Join(err, fmt.Errorf("failed to flush prometheus metrics: %w", errProm))
-		}
+
+	errProm := h.promConnectionMetrics.Flush(ctx)
+	if errProm != nil {
+		err = errors.Join(err, fmt.Errorf("failed to flush prometheus metrics: %w", errProm))
 	}
 
 	return err
@@ -119,25 +109,20 @@ func (h *ConnectionMetrics) Flush(ctx context.Context) error {
 
 // Shutdown flushes the metrics and stops the runtime metrics.
 func (h *ConnectionMetrics) Shutdown(ctx context.Context) error {
-
 	var err error
 
 	if errFlush := h.Flush(ctx); errFlush != nil {
 		err = errors.Join(err, fmt.Errorf("failed to flush metrics: %w", errFlush))
 	}
 
-	if h.promConnectionMetrics != nil {
-		errProm := h.promConnectionMetrics.Shutdown()
-		if err != nil {
-			err = errors.Join(err, fmt.Errorf("failed to shutdown prom metrics: %w", errProm))
-		}
+	errProm := h.promConnectionMetrics.Shutdown()
+	if err != nil {
+		err = errors.Join(err, fmt.Errorf("failed to shutdown prom metrics: %w", errProm))
 	}
 
-	if h.otlpConnectionMetrics != nil {
-		errOtlp := h.otlpConnectionMetrics.Shutdown()
-		if err != nil {
-			err = errors.Join(err, fmt.Errorf("failed to shutdown otlp metrics: %w", errOtlp))
-		}
+	errOtlp := h.otlpConnectionMetrics.Shutdown()
+	if err != nil {
+		err = errors.Join(err, fmt.Errorf("failed to shutdown otlp metrics: %w", errOtlp))
 	}
 
 	return err

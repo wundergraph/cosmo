@@ -9,7 +9,7 @@ import (
 const (
 	maxConnections            = "router.http.client.max_connections"
 	connectionsActive         = "router.http.client.active_connections"
-	connectionAcquireDuration = "router.http.client.connections.acquire_duration"
+	connectionAcquireDuration = "router.http.client.acquire_connection_duration"
 )
 
 var (

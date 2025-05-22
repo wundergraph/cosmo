@@ -112,7 +112,7 @@ func CalculateConnectionMetrics(ctx context.Context, store metric.ConnectionMetr
 		serverAttributes := rotel.GetServerAttributes(trace.ConnectionGet.HostPort)
 		serverAttributes = append(
 			serverAttributes,
-			rotel.WgConnReused.Bool(trace.ConnectionAcquired.Reused),
+			rotel.WgClientReusedConnection.Bool(trace.ConnectionAcquired.Reused),
 			rotel.WgSubgraphName.String(subgraph),
 		)
 

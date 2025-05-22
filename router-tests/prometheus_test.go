@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"net/http"
@@ -4231,9 +4232,7 @@ func TestPrometheus(t *testing.T) {
 }
 
 func getPort(connectionTotal *io_prometheus_client.Metric) string {
-	// We can get the key from the otel attribute, but we need to make an initialization
-	// also convert the key to prometheus which uses _ instead of . like otel
-	serverPortKey := strings.ReplaceAll(string(otel.ServerPort.String("").Key), ".", "_")
+	serverPortKey := rmetric.SanitizeName(string(otel.ServerPort.String("").Key))
 
 	for _, label := range connectionTotal.Label {
 		if label.Name == nil || label.Value == nil {
@@ -4568,7 +4567,7 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 			})
 
 			t.Run("verify connection total duration", func(t *testing.T) {
-				metricFamily := findMetricFamilyByName(mf, "router_http_client_connections_acquire_duration")
+				metricFamily := findMetricFamilyByName(mf, "router_http_client_acquire_connection_duration")
 				metrics := metricFamily.GetMetric()
 				require.Len(t, metrics, 2)
 
@@ -4592,7 +4591,7 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 						Value: PointerOf(getPort(metricDataPoint1)),
 					},
 					{
-						Name:  PointerOf("wg_conn_reused"),
+						Name:  PointerOf("wg_http_client_reused_connection"),
 						Value: PointerOf("false"),
 					},
 					{
@@ -4622,7 +4621,7 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 						Value: PointerOf(getPort(metricDataPoint2)),
 					},
 					{
-						Name:  PointerOf("wg_conn_reused"),
+						Name:  PointerOf("wg_http_client_reused_connection"),
 						Value: PointerOf("false"),
 					},
 					{

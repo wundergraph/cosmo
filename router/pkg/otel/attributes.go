@@ -50,7 +50,7 @@ const (
 	// HTTPRequestUploadFileCount is the number of files uploaded in a request (Not specified in the OpenTelemetry specification)
 	HTTPRequestUploadFileCount = attribute.Key("http.request.upload.file_count")
 
-	WgConnReused = attribute.Key("wg.conn.reused")
+	WgClientReusedConnection = attribute.Key("wg.http.client.reused_connection")
 
 	// Prometheus Schema Field Usage Attrs
 

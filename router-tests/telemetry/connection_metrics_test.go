@@ -117,7 +117,7 @@ func TestFlakyConnectionMetrics(t *testing.T) {
 				require.Greater(t, actualHistogram.DataPoints[0].Sum, 0.0)
 
 				expected := metricdata.Metrics{
-					Name:        "router.http.client.connections.acquire_duration",
+					Name:        "router.http.client.acquire_connection_duration",
 					Description: "Total connection acquire duration",
 					Unit:        "s",
 					Data: metricdata.Histogram[float64]{
@@ -127,7 +127,7 @@ func TestFlakyConnectionMetrics(t *testing.T) {
 								Attributes: attribute.NewSet(
 									otel.ServerAddress.String("127.0.0.1"),
 									otel.ServerPort.String(getPort(t, metrics, 0, "")),
-									otel.WgConnReused.Bool(false),
+									otel.WgClientReusedConnection.Bool(false),
 									otel.WgSubgraphName.String("employees"),
 								),
 							},
@@ -135,7 +135,7 @@ func TestFlakyConnectionMetrics(t *testing.T) {
 								Attributes: attribute.NewSet(
 									otel.ServerAddress.String("127.0.0.1"),
 									otel.ServerPort.String(getPort(t, metrics, 1, "")),
-									otel.WgConnReused.Bool(true),
+									otel.WgClientReusedConnection.Bool(true),
 									otel.WgSubgraphName.String("employees"),
 								),
 							},
@@ -143,7 +143,7 @@ func TestFlakyConnectionMetrics(t *testing.T) {
 								Attributes: attribute.NewSet(
 									otel.ServerAddress.String("127.0.0.1"),
 									otel.ServerPort.String(getPort(t, metrics, 2, "")),
-									otel.WgConnReused.Bool(false),
+									otel.WgClientReusedConnection.Bool(false),
 									otel.WgSubgraphName.String("availability"),
 								),
 							},

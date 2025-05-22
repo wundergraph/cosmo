@@ -354,7 +354,7 @@ func defaultPrometheusMetricOptions(ctx context.Context, serviceInstanceID strin
 		if isKeyInSlice(value.Key, defaultExcludedOtelKeys) {
 			return false
 		}
-		name := sanitizeName(string(value.Key))
+		name := SanitizeName(string(value.Key))
 		for _, re := range c.Prometheus.ExcludeMetricLabels {
 			if re.MatchString(name) {
 				return false
@@ -376,7 +376,7 @@ func defaultPrometheusMetricOptions(ctx context.Context, serviceInstanceID strin
 
 		// Filter out metrics that match the excludeMetrics regexes
 		for _, re := range c.Prometheus.ExcludeMetrics {
-			promName := sanitizeName(i.Name)
+			promName := SanitizeName(i.Name)
 			if re.MatchString(promName) {
 				// Drop the metric
 				s.Aggregation = sdkmetric.AggregationDrop{}
