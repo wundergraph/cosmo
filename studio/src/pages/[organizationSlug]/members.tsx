@@ -36,7 +36,6 @@ import { useFeature } from "@/hooks/use-feature";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { useUser } from "@/hooks/use-user";
 import { NextPageWithLayout } from "@/lib/page";
-import { cn } from "@/lib/utils";
 import {
   createConnectQueryKey,
   useMutation,
@@ -248,6 +247,11 @@ const MemberCard = ({
                       Resend invitation
                     </DropdownMenuItem>
                   )}
+                  {acceptedInvite && onSelect && (
+                    <DropdownMenuItem onClick={onSelect}>
+                      Update member group
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem
                     onClick={() => {
                       if (acceptedInvite) {
@@ -299,11 +303,6 @@ const MemberCard = ({
                   >
                     {acceptedInvite ? "Remove member" : "Remove invitation"}
                   </DropdownMenuItem>
-                  {acceptedInvite && onSelect && (
-                    <DropdownMenuItem onClick={onSelect}>
-                      Update member group
-                    </DropdownMenuItem>
-                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
