@@ -312,8 +312,6 @@ alwaysApply: false
 
 This rule explains the structure and workflow for the Cosmo Router {name} plugin.
 
-The working directory is \`plugins/{originalPluginName}\`. Make sure to run \`make\` commands from this directory. If you already inside the plugin directory, you can just run \`make\` without \`cd\`.
-
 ## Plugin Structure
 
 The {name} plugin demonstrates how to implement a GraphQL API using gRPC methods:
@@ -324,7 +322,7 @@ The {name} plugin demonstrates how to implement a GraphQL API using gRPC methods
 
 ## Development Workflow
 
-1. Make changes to @schema.graphql
+1. Make changes to @src/schema.graphql
 2. Run \`make generate\` from the plugin directory to regenerate code
 3. Implement the service in @main.go:
    - Review generated @generated/service.pb.go and @generated/service_grpc.pb.go
@@ -346,7 +344,7 @@ The code generation creates:
 
 If the files doesn't exist, you need to generate them with \`make generate\`
 
-**Important**: Never manipulate the generated files yourself. The source of truth for the API contract is the GraphQL schema. Use \`make generate\` to update the proto and service interface.
+**Important**: Never manipulate the @generated/ files yourself. The source of truth for the API contract is the GraphQL schema. Use \`make generate\` to update the proto and service interface.
 
 ## Important Implementation Pattern
 
@@ -355,6 +353,7 @@ When implementing a plugin:
 1. Implement the generated service interface in \`main.go\`
 2. Handle the context properly in your implementation methods
 3. Ensure proper error handling
+4. Follow Go conventions for naming and structuring your code
 `;
 
 const cursorIgnore = `# Ignore the mapping and lock files
