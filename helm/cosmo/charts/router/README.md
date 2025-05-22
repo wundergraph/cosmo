@@ -1,6 +1,6 @@
 # router
 
-![Version: 0.10.1](https://img.shields.io/badge/Version-0.10.1-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.197.1](https://img.shields.io/badge/AppVersion-0.197.1-informational?style=flat-square)
+![Version: 0.10.2](https://img.shields.io/badge/Version-0.10.2-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.197.1](https://img.shields.io/badge/AppVersion-0.197.1-informational?style=flat-square)
 
 This is the official Helm Chart for the WunderGraph Cosmo Router.
 
@@ -30,6 +30,8 @@ This is the official Helm Chart for the WunderGraph Cosmo Router.
 | configuration.prometheus.enabled | bool | `true` | Enables prometheus metrics support. Default is true. |
 | configuration.prometheus.path | string | `"/metrics"` | The HTTP path where metrics are exposed. Default is "/metrics". |
 | configuration.prometheus.port | int | `8088` | The port where metrics are exposed. Default is port 8088. |
+| configuration.mcp.enabled | bool | `false` | Enables MCP server support. Default is false. |
+| configuration.mcp.port | int | `5025` | The port where the MCP server is exposed. Default is port 5025. |
 | configuration.routerConfigPath | string | `""` | The path to the router execution config file. Before, you have to mount the file as a volume and set the path here. A possible to solution could be to use an init container to download the file from a CDN. If set, polling of the config is disabled. |
 | deploymentStrategy | object | `{}` |  |
 | existingConfigmap | string | `""` | The name of the configmap to use for the router configuration. The key "config.yaml" is required in the configmap. If this is set, the commonConfiguration section is ignored. |

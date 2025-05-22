@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.10.2](https://github.com/wundergraph/cosmo/compare/helm-cosmo-router@0.10.1...helm-cosmo-router@0.10.2) (2025-04-21)
+
+### Features
+
+* add optional MCP server configuration to router helm chart
+
 ## [0.10.1](https://github.com/wundergraph/cosmo/compare/helm-cosmo-router@0.10.0...helm-cosmo-router@0.10.1) (2025-04-14)
 
 
