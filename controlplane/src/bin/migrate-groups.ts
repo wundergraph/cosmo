@@ -432,10 +432,12 @@ async function assignOrganizationMembersToCorrespondingGroups({
   await db
     .update(schema.organizationInvitations)
     .set({ groupId: devGroup.id })
-    .where(and(
-      eq(schema.organizationInvitations.organizationId, organizationId),
-      isNull(schema.organizationInvitations.groupId)
-    ));
+    .where(
+      and(
+        eq(schema.organizationInvitations.organizationId, organizationId),
+        isNull(schema.organizationInvitations.groupId),
+      ),
+    );
 }
 
 async function remapFallbackOidcGroupMapper({
