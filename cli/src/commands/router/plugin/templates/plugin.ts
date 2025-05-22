@@ -268,10 +268,9 @@ Plugin structure:
 
 ## 🔧 Customizing Your Plugin
 
-- Change the GraphQL schema in \`src/schema.graphql\` and regenerate the code.
-- Implement the changes in \`src/main.go\` and test your implementation.
-- Compose your supergraph with [wgc router compose](https://cosmo-docs.wundergraph.com/router/cli/compose)
-- Start the router!
+- Change the GraphQL schema in \`src/schema.graphql\` and regenerate the code with \`make generate\`.
+- Implement the changes in \`src/main.go\` and test your implementation with \`make test\`.
+- Build the plugin with \`make build\`.
 
 ## 📚 Learn More
 
