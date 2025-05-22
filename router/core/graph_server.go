@@ -99,8 +99,10 @@ type (
 		runtimeMetrics          *rmetric.RuntimeMetrics
 		otlpEngineMetrics       *rmetric.EngineMetrics
 		prometheusEngineMetrics *rmetric.EngineMetrics
+		connectionMetrics       *rmetric.ConnectionMetrics
 		hostName                string
 		routerListenAddr        string
+		traceDialer             *TraceDialer
 		pluginHost              *routerplugin.Host
 	}
 )
@@ -117,13 +119,19 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		return nil, fmt.Errorf(`the compatibility version "%s" is not compatible with this router version`, routerConfig.CompatibilityVersion)
 	}
 
+	isConnStoreEnabled := r.Config.metricConfig.OpenTelemetry.ConnectionStats || r.Config.metricConfig.Prometheus.ConnectionStats
+	var traceDialer *TraceDialer
+	if isConnStoreEnabled {
+		traceDialer = NewTraceDialer()
+	}
+
 	// Base transport
-	baseTransport := newHTTPTransport(r.subgraphTransportOptions.TransportRequestOptions, proxy)
+	baseTransport := newHTTPTransport(r.subgraphTransportOptions.TransportRequestOptions, proxy, traceDialer, "")
 
 	// Subgraph transports
 	subgraphTransports := map[string]*http.Transport{}
 	for subgraph, subgraphOpts := range r.subgraphTransportOptions.SubgraphMap {
-		subgraphBaseTransport := newHTTPTransport(subgraphOpts, proxy)
+		subgraphBaseTransport := newHTTPTransport(subgraphOpts, proxy, traceDialer, subgraph)
 		subgraphTransports[subgraph] = subgraphBaseTransport
 	}
 
@@ -136,6 +144,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		baseTransport:           baseTransport,
 		subgraphTransports:      subgraphTransports,
 		playgroundHandler:       r.playgroundHandler,
+		traceDialer:             traceDialer,
 		baseRouterConfigVersion: routerConfig.GetVersion(),
 		inFlightRequests:        &atomic.Uint64{},
 		graphMuxList:            make([]*graphMux, 0, 1),
@@ -181,6 +190,21 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		if err := s.runtimeMetrics.Start(); err != nil {
 			return nil, err
 		}
+	}
+
+	if isConnStoreEnabled {
+		connStore, err := rmetric.NewConnectionMetricStore(
+			s.logger,
+			nil,
+			s.otlpMeterProvider,
+			s.promMeterProvider,
+			s.metricConfig,
+			s.traceDialer.connectionPoolStats,
+		)
+		if err != nil {
+			return nil, err
+		}
+		s.connectionMetrics = connStore
 	}
 
 	if err := s.setupEngineStatistics(mappedMetricAttributes); err != nil {
@@ -957,9 +981,12 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		subgraphTippers[subgraph] = subgraphTransport
 	}
 
-	subgraphGRPCClients, err := s.buildSubgraphGRPCClients(ctx, engineConfig, configSubgraphs)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build subgraph grpc clients: %w", err)
+	subgraphGRPCClients := make(map[string]grpc.ClientConnInterface)
+	if s.plugins.Enabled {
+		subgraphGRPCClients, err = s.buildSubgraphGRPCClients(ctx, engineConfig, configSubgraphs)
+		if err != nil {
+			return nil, fmt.Errorf("failed to build subgraph grpc clients: %w", err)
+		}
 	}
 
 	ecb := &ExecutorConfigurationBuilder{
@@ -981,6 +1008,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			PreHandlers:              s.preOriginHandlers,
 			PostHandlers:             s.postOriginHandlers,
 			MetricStore:              gm.metricStore,
+			ConnectionMetricStore:    s.connectionMetrics,
 			RetryOptions: retrytransport.RetryOptions{
 				Enabled:       s.retryOptions.Enabled,
 				MaxRetryCount: s.retryOptions.MaxRetryCount,
@@ -994,6 +1022,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			TracePropagators:              s.compositePropagator,
 			LocalhostFallbackInsideDocker: s.localhostFallbackInsideDocker,
 			Logger:                        s.logger,
+			EnableTraceClient:             s.connectionMetrics != nil,
 		},
 	}
 
@@ -1008,6 +1037,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			ApolloCompatibilityFlags:       s.apolloCompatibilityFlags,
 			ApolloRouterCompatibilityFlags: s.apolloRouterCompatibilityFlags,
 			HeartbeatInterval:              s.multipartHeartbeatInterval,
+			PluginsEnabled:                 s.plugins.Enabled,
 		},
 	)
 	if err != nil {
@@ -1277,7 +1307,7 @@ func (s *graphServer) buildSubgraphGRPCClients(ctx context.Context, config *node
 		if pluginConfig := grpcConfig.GetPlugin(); pluginConfig != nil {
 			basePath := ""
 
-			if s.plugins.Enabled {
+			if s.plugins.Path != "" {
 				basePath = s.plugins.Path
 			}
 
@@ -1461,6 +1491,12 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 	if s.runtimeMetrics != nil {
 		if err := s.runtimeMetrics.Shutdown(); err != nil {
 			finalErr = errors.Join(finalErr, err)
+		}
+	}
+
+	if s.connectionMetrics != nil {
+		if aErr := s.connectionMetrics.Shutdown(ctx); aErr != nil {
+			finalErr = errors.Join(finalErr, aErr)
 		}
 	}
 

@@ -14,7 +14,7 @@ import { dataDir } from '../../../core/config.js';
 export const HOST_PLATFORM = `${os.platform()}-${os.arch()}`;
 const ALL_PLATFORMS = ['linux-amd64', 'linux-arm64', 'darwin-amd64', 'darwin-arm64', 'windows-amd64'];
 const installScriptUrl =
-  'https://raw.githubusercontent.com/wundergraph/cosmo/257409ced5561ecf6e7a5bb83fa5de7f4abb3572/scripts/install-proto-tools.sh';
+  'https://raw.githubusercontent.com/wundergraph/cosmo/refs/tags/wgc%400.80.0/scripts/install-proto-tools.sh';
 
 // Get paths for tool installation
 const TOOLS_DIR = join(dataDir, 'proto-tools');
@@ -478,7 +478,7 @@ export async function buildBinaries(pluginDir: string, platforms: string[], debu
         flags.push('-gcflags', 'all=-N -l');
       }
 
-      flags.push('-o', join(binDir, binaryName), 'src/main.go');
+      flags.push('-o', join(binDir, binaryName), './src');
 
       await execa(goPath, flags, {
         cwd: pluginDir,
