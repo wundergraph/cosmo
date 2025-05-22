@@ -208,10 +208,6 @@ export function createProposal(
     for (const proposalSubgraph of req.subgraphs) {
       const subgraph = await subgraphRepo.byName(proposalSubgraph.name, req.namespace);
       if (subgraph) {
-        if (!authContext.rbac.hasSubGraphWriteAccess(subgraph)) {
-          throw new UnauthorizedError();
-        }
-
         const isSubgraphPartOfFedGraph = subgraphsOfFedGraph.some((s) => s.name === proposalSubgraph.name);
         if (!isSubgraphPartOfFedGraph) {
           return {
