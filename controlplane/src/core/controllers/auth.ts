@@ -264,7 +264,7 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
 
           const organizationSlug = uid(8);
 
-          const kcCreatedGroups = await opts.keycloakClient.seedGroup({
+          const [kcRootGroupId, kcCreatedGroups] = await opts.keycloakClient.seedGroup({
             userID: userId,
             organizationSlug,
             realm: opts.keycloakRealm,
@@ -278,6 +278,7 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
               organizationName: userEmail.split('@')[0],
               organizationSlug,
               ownerID: userId,
+              kcGroupId: kcRootGroupId,
             });
 
             const orgMember = await orgRepo.addOrganizationMember({

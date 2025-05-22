@@ -315,7 +315,7 @@ export default class Keycloak {
     realm?: string;
     userID: string;
     organizationSlug: string;
-  }) {
+  }): Promise<[string, { id: string; name: string }[]]> {
     const organizationGroup = await this.client.groups.create({
       realm: realm || this.realm,
       name: organizationSlug,
@@ -363,7 +363,7 @@ export default class Keycloak {
       }
     }
 
-    return createdGroups;
+    return [organizationGroup.id, createdGroups];
   }
 
   public async createSubGroup({

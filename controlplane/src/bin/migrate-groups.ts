@@ -168,7 +168,7 @@ async function processChunkOfOrganizations(
      * a reference to a group or role there
      */
     const rootGroup = kcAllRootGroups.find((group) => group.name === organizationSlug);
-    if (!rootGroup) {
+    if (!rootGroup?.id) {
       console.log(`\t- Organization group not found: "${organizationSlug}"`);
     }
 
@@ -176,7 +176,18 @@ async function processChunkOfOrganizations(
     const kcOrganizationRoles = await getOrganizationRoles(organizationSlug);
 
     /**
-     * 3. Make sure that the Keycloak groups have been created in the database.
+     * 3. Make sure the organization and the group representing the organization in Keycloak are linked.
+     */
+    if (rootGroup?.id) {
+      await db
+        .update(schema.organizations)
+        .set({ kcGroupId: rootGroup?.id })
+        .where(eq(schema.organizations.id, organizationId))
+        .execute();
+    }
+
+    /**
+     * 4. Make sure that the Keycloak groups have been created in the database.
      */
     await ensureOrganizationGroupsExistInDatabase({
       db,
@@ -187,12 +198,12 @@ async function processChunkOfOrganizations(
     });
 
     /**
-     * 4. Assign all the organization members to the corresponding groups based on the current member roles
+     * 5. Assign all the organization members to the corresponding groups based on the current member roles
      */
     await assignOrganizationMembersToCorrespondingGroups({ db, organizationId });
 
     /**
-     * 5. Override the fallback OIDC mapper for organizations that have configured an OIDC provider.
+     * 6. Override the fallback OIDC mapper for organizations that have configured an OIDC provider.
      *
      * This is because, previously, the fallback mapper was pointing to the `viewer` organization group, this is
      * no longer the case, now the mapper should point to the root organization group, which is `/<org>` in Keycloak
@@ -200,7 +211,7 @@ async function processChunkOfOrganizations(
     await remapFallbackOidcGroupMapper({ db, organizationId, organizationSlug });
 
     /**
-     * 6. Create groups for each API key that have been assigned custom resources, or to the creator group if
+     * 7. Create groups for each API key that have been assigned custom resources, or to the creator group if
      * no resources were selected when the API key was created.
      *
      * This is a heavy operation. Because of this, we are disabling it for now - @Wilson 05-21-2025
@@ -304,15 +315,15 @@ async function ensureOrganizationGroupsExistInDatabase({
     }
   }
 
-  // Create the initial rule for all the created roles
-  if (organizationGroups.length > 0) {
-    const rulesToInsert = organizationGroups
-      .filter((group) => organizationRoleEnum.enumValues.includes(`organization-${group.name}` as OrganizationRole))
-      .map((group) => ({
-        groupId: group.id,
-        role: `organization-${group.name}` as OrganizationRole,
-      }));
+  // Create the initial rule for all the created roles, if needed
+  const rulesToInsert = organizationGroups
+    .filter((group) => organizationRoleEnum.enumValues.includes(`organization-${group.name}` as OrganizationRole))
+    .map((group) => ({
+      groupId: group.id,
+      role: `organization-${group.name}` as OrganizationRole,
+    }));
 
+  if (rulesToInsert.length > 0) {
     await db.insert(schema.organizationGroupRules).values(rulesToInsert).onConflictDoNothing().execute();
   }
 

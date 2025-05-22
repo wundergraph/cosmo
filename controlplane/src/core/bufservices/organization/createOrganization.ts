@@ -53,7 +53,7 @@ export function createOrganization(
     await opts.keycloakClient.authenticateClient();
 
     // Create the organization group in Keycloak + subgroups
-    const kcCreatedGroups = await opts.keycloakClient.seedGroup({
+    const [kcRootGroupId, kcCreatedGroups] = await opts.keycloakClient.seedGroup({
       userID: authContext.userId,
       organizationSlug: req.slug,
       realm: opts.keycloakRealm,
@@ -71,6 +71,7 @@ export function createOrganization(
           organizationName: req.name,
           organizationSlug: req.slug,
           ownerID: authContext.userId,
+          kcGroupId: kcRootGroupId,
         });
 
         await auditLogRepo.addAuditLog({

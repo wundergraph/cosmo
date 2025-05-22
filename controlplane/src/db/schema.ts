@@ -1196,6 +1196,7 @@ export const organizations = pgTable(
     createdBy: uuid('user_id').references(() => users.id, {
       onDelete: 'set null',
     }),
+    kcGroupId: uuid('kc_group_id').unique(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     isDeactivated: boolean('is_deactivated').default(false),
     deactivationReason: text('deactivation_reason'),

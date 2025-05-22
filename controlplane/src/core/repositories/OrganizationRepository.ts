@@ -63,6 +63,7 @@ export class OrganizationRepository {
     organizationName: string;
     organizationSlug: string;
     ownerID: string;
+    kcGroupId?: string;
   }): Promise<Omit<OrganizationDTO, 'rbac'>> {
     const insertedOrg = await this.db
       .insert(organizations)
@@ -70,6 +71,7 @@ export class OrganizationRepository {
         id: input.organizationID,
         name: input.organizationName,
         slug: input.organizationSlug,
+        kcGroupId: input.kcGroupId,
         createdBy: input.ownerID,
       })
       .returning()
