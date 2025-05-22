@@ -368,21 +368,21 @@ Example:
 \`\`\`go
 // Initialize HTTP client for external API calls
 // The base URL is the URL of the external API
-httpClient := httpclient.New(
+client := httpclient.New(
   httpclient.WithBaseURL("<replace_with_base_url>"),
   httpclient.WithTimeout(5*time.Second),
   httpclient.WithHeaders(map[string]string{}),
 )
 // A HTTP GET request to the external API
-resp, err := httpClient.Get(ctx, "/<replace_with_path>")
+resp, err := client.Get(ctx, "/<replace_with_path>")
 // A HTTP POST/PUT/DELETE request to the external API with a struct that is marshalled to JSON
-resp, err := httpClient.Post(ctx, "/<replace_with_path>", payload)
+resp, err := client.Post(ctx, "/<replace_with_path>", payload)
 // Passing payload with custom request options
-resp, err := httpClient.Put(ctx, "/<replace_with_path>", payload,
+resp, err := client.Put(ctx, "/<replace_with_path>", payload,
   httpclient.WithHeaders(map[string]string{}),
 )
 // Unmarshal the JSON response into our data structure
-data, err := httpclient.UnmarshalTo[[]ResponseType](resp)
+data, err := client.UnmarshalTo[[]ResponseType](resp)
 // The response offers the following fields:
 type Response struct {
 	StatusCode int
