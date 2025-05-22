@@ -21,7 +21,7 @@ export default (opts: BaseCommandOptions) => {
   command.argument('name', 'Name of the plugin');
   command.option('-p, --project <project>', 'Project name', 'cosmo');
   command.option('-d, --directory <directory>', 'Directory to create the project in', '.');
-  command.option('--only-plugin', 'Only create the plugin, no router project', false);
+  command.option('--only-plugin', 'Only create the plugin without a router project', false);
   command.option('-l, --language <language>', 'Programming language to use for the plugin', 'go');
   command.action(async (name, options) => {
     const startTime = performance.now();
