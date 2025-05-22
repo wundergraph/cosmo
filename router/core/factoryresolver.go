@@ -254,7 +254,7 @@ func mapProtoFilterToPlanFilter(input *nodev1.SubscriptionFilterCondition, outpu
 	return nil
 }
 
-func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nodev1.Subgraph, routerEngineConfig *RouterEngineConfiguration) (*plan.Configuration, error) {
+func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nodev1.Subgraph, routerEngineConfig *RouterEngineConfiguration, pluginsEnabled bool) (*plan.Configuration, error) {
 	var outConfig plan.Configuration
 	// attach field usage information to the plan
 	outConfig.DefaultFlushIntervalMillis = engineConfig.DefaultFlushInterval
@@ -312,6 +312,10 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 			}
 
 		case nodev1.DataSourceKind_GRAPHQL:
+			if in.GetCustomGraphql().GetGrpc() != nil && !pluginsEnabled {
+				continue
+			}
+
 			header := http.Header{}
 			for s, httpHeader := range in.CustomGraphql.Fetch.Header {
 				for _, value := range httpHeader.Values {
