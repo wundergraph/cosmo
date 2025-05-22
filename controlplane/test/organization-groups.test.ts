@@ -243,7 +243,7 @@ describe('Group membership tests', () => {
       orgMemberUserID: users.viewerTimCompanyA?.userId,
       groupId: developerGroup.groupId,
     });
-    expect(updateGroupResponse.response?.code).toBe(EnumStatusCode.ERR);
+    expect(updateGroupResponse.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
     expect(updateGroupResponse.response?.details).toBe(
       'User does not have the permissions to update the group of an organization member.',
     );

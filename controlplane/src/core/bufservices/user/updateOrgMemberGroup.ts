@@ -73,15 +73,6 @@ export function updateOrgMemberGroup(
       };
     }
 
-    if (user.rbac.groups.some((g) => g.groupId === orgGroup.groupId)) {
-      // The user is already a member of the provided group
-      return {
-        response: {
-          code: EnumStatusCode.OK,
-        },
-      };
-    }
-
     // fetching the user whose group is being updated.
     const orgMember = await orgRepo.getOrganizationMember({
       organizationID: authContext.organizationId,
@@ -93,6 +84,15 @@ export function updateOrgMemberGroup(
         response: {
           code: EnumStatusCode.ERR,
           details: 'User is not a part of this organization.',
+        },
+      };
+    }
+
+    if (orgMember.rbac.groups.some((g) => g.groupId === orgGroup.groupId)) {
+      // The user is already a member of the provided group
+      return {
+        response: {
+          code: EnumStatusCode.OK,
         },
       };
     }
