@@ -58,7 +58,7 @@ const createTempUser = async (
         organizationSlug: userPersonalOrgSlug,
         email: userEmail,
         apiKey: apiKeyPersonal,
-        groups: ['admin'],
+        groups: ['organization-admin'],
       },
     });
 
@@ -110,39 +110,23 @@ const createTempUser = async (
     });
 
     // Add to existing org
-    const groups = await keycloakClient.client.groups.find({
-      realm,
-      search: organizationSlug,
-    });
-    const adminGroup = groups[0];
-    await keycloakClient.client.users.addToGroup({
-      id: keycloakUserID,
-      realm,
-      groupId: adminGroup.id!,
-    });
+    if (orgAdminGroup.kcGroupId) {
+      await keycloakClient.client.users.addToGroup({
+        id: keycloakUserID,
+        realm,
+        groupId: orgAdminGroup.kcGroupId,
+      });
+    }
+
     const org = await orgRepo.bySlug(organizationSlug);
     const orgMember = await orgRepo.addOrganizationMember({
       organizationID: org!.id,
       userID: keycloakUserID,
     });
 
-    const orgAdminGroup2 = await orgGroupRepo.create({
-      organizationId: org!.id,
-      name: 'admin',
-      description: '',
-      builtin: true,
-      kcGroupId: adminGroup.id!,
-    });
-
-    await orgGroupRepo.updateGroup({
-      organizationId: personalOrgMember.organizationId,
-      groupId: orgAdminGroup2.groupId,
-      rules: [{ role: 'organization-admin', namespaces: [], resources: [] }]
-    });
-
     await orgGroupRepo.addUserToGroup({
       organizationMemberId: orgMember.id,
-      groupId: orgAdminGroup2.groupId,
+      groupId: orgAdminGroup.groupId,
     });
 
     await apiKeyRepo.addAPIKey({
@@ -151,7 +135,7 @@ const createTempUser = async (
       organizationID: org!.id,
       userID: keycloakUserID,
       expiresAt: ExpiresAt.NEVER,
-      groupId: orgAdminGroup2.groupId,
+      groupId: orgAdminGroup.groupId,
       permissions: [],
     });
 
@@ -170,7 +154,7 @@ const createTempUser = async (
       apiKey: apiKeyPersonal,
       organizationSlug: personalOrg.slug,
       userDisplayName: userEmail,
-      groups: ['admin'],
+      groups: ['organization-admin'],
       rbac: new RBACEvaluator([updatedOrgAdminGroup!], keycloakUserID, true),
     };
   } catch (error) {
