@@ -381,7 +381,7 @@ resp, err := client.Put(ctx, "/<replace_with_path>", payload,
   httpclient.WithHeaders(map[string]string{}),
 )
 // Unmarshal the JSON response into our data structure
-data, err := client.UnmarshalTo[[]ResponseType](resp)
+data, err := httpclient.UnmarshalTo[[]ResponseType](resp)
 // The response offers the following fields:
 type Response struct {
 	StatusCode int
