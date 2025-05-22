@@ -35,8 +35,6 @@ export default (opts: BaseCommandOptions) => {
     const pluginDir = resolve(cwd, projectDir, 'plugins', name);
     const originalPluginName = name;
 
-    console.log(projectDir);
-
     name = upperFirst(camelCase(name));
     const serviceName = name + 'Service';
 

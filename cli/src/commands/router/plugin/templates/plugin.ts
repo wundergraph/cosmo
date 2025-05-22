@@ -324,7 +324,8 @@ The {name} plugin demonstrates how to implement a GraphQL API using gRPC methods
 
 1. Make changes to @src/schema.graphql
 2. Run \`make generate\` from the plugin directory to regenerate code
-3. Implement the service in @main.go:
+3. Implement the service:
+   - Implement the service in @main.go but you can create different files for each method if you think it leads to more readable code
    - Review generated @generated/service.pb.go and @generated/service_grpc.pb.go
    - Ensure ALL generated RPC methods and types are fully implemented
    - Partial implementations will cause runtime errors
@@ -332,6 +333,7 @@ The {name} plugin demonstrates how to implement a GraphQL API using gRPC methods
    - Add test cases for ALL new functionality
    - Test both success and error scenarios
    - Verify ALL edge cases
+   - Create different test files if it leads to more readable tests
 5. Run \`make test\` to ensure complete test coverage
 
 ## Generated Code
@@ -352,8 +354,44 @@ When implementing a plugin:
 
 1. Implement the generated service interface in \`main.go\`
 2. Handle the context properly in your implementation methods
-3. Ensure proper error handling
+3. Ensure proper error handling and error messages
 4. Follow Go conventions for naming and structuring your code
+
+## Service Integration
+
+If you need to integrate with other HTTP services, you should prefer to use the \`github.com/wundergraph/cosmo/router-plugin/httpclient\` package.
+Always prefer a real integration over mocking. In the tests, you can mock the service by bootstrapping an http server that returns the expected response.
+In tests, focus on a well-defined contract and the expected behavior of your service. Structure tests by endpoint, use-cases and use table-driven tests to cover all cases.
+
+Example:
+
+\`\`\`go
+// Initialize HTTP client for external API calls
+// The base URL is the URL of the external API
+httpClient := httpclient.New(
+  httpclient.WithBaseURL("<replace_with_base_url>"),
+  httpclient.WithTimeout(5*time.Second),
+  httpclient.WithHeaders(map[string]string{}),
+)
+// A HTTP GET request to the external API
+resp, err := httpClient.Get(ctx, "/<replace_with_path>")
+// A HTTP POST/PUT/DELETE request to the external API with a struct that is marshalled to JSON
+resp, err := httpClient.Post(ctx, "/<replace_with_path>", payload)
+// Passing payload with custom request options
+resp, err := httpClient.Put(ctx, "/<replace_with_path>", payload,
+  httpclient.WithHeaders(map[string]string{}),
+)
+// Unmarshal the JSON response into our data structure
+data, err := httpclient.UnmarshalTo[[]ResponseType](resp)
+// The response offers the following fields:
+type Response struct {
+	StatusCode int
+	Headers    http.Header
+	Body       []byte
+}
+// You can check for success (StatusCode >= 200 && StatusCode < 300)
+resp.IsSuccess()
+\`\`\`
 `;
 
 const cursorIgnore = `# Ignore the mapping and lock files
