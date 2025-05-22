@@ -275,7 +275,7 @@
                   "description": "The interval at which the file is checked for changes. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
                   "default": "1s",
                   "duration": {
-                    "minimum": "1s"
+                    "minimum": "100ms"
                   }
                 }
               }
@@ -1809,6 +1809,11 @@
               "description": "The address on which the MCP server listens for incoming requests. The address is specified as a string with the format 'host:port'.",
               "default": "localhost:5025",
               "format": "hostname-port"
+            },
+            "base_url": {
+              "type": "string",
+              "description": "The base URL of the MCP server. This is the URL advertised to the LLM clients when SSE is used as primary transport. By default, the base URL is relative to the URL that the router is running on. The URL is specified as a string with the format 'scheme://host:port'.",
+              "format": "http-url"
             }
           }
         },
@@ -1850,6 +1855,11 @@
           "description": "Expose the full GraphQL schema through MCP. When enabled, AI models can request the complete schema of your API."
         }
       }
+    },
+    "demo_mode": {
+      "type": "boolean",
+      "description": "Launch the router in demo mode. If no execution config is found, the router will start with a demo execution config and deploy a demo federated graph that can be used for testing purposes.",
+      "default": false
     },
     "events": {
       "type": "object",
@@ -2676,6 +2686,18 @@
         }
       }
     },
+    "plugins": {
+      "type": "object",
+      "description": "The configuration for the router gRPC plugins.",
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "The path to the plugins directory. The plugins directory is used to load the plugins.",
+          "default": "plugins"
+        }
+      }
+    },
     "apollo_router_compatibility_flags": {
       "type": "object",
       "description": "To enable full compatibility with Apollo Router you can enable certain compatibility flags, allowing you to use Cosmo Router as a drop-in replacement for Apollo Router",
@@ -2717,6 +2739,46 @@
         "version": {
           "type": "string",
           "description": "The custom client version header."
+        }
+      }
+    },
+    "watch_config": {
+      "type": "object",
+      "description": "Configuration for watching changes to the router configuration.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable watching for configuration changes."
+        },
+        "interval": {
+          "type": "string",
+          "description": "The interval at which the config file is checked for changes. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+          "default": "10s",
+          "duration": {
+            "minimum": "5s"
+          }
+        },
+        "startup_delay": {
+          "type": "object",
+          "description": "Configuration for delaying the initial file watcher start to prevent synchronized reloads across multiple routers. If enabled, a random delay lasting between 0 and `maximum` will be added before the file watcher polling begins.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "Enable startup delay for the configuration watcher"
+            },
+            "maximum": {
+              "type": "string",
+              "description": "The maximum time to wait before starting the config file watcher. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+              "default": "10s",
+              "duration": {
+                "minimum": "5s"
+              }
+            }
+          }
         }
       }
     }

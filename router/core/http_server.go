@@ -96,8 +96,9 @@ func (s *server) HttpServer() *http.Server {
 // a complete message to the client and wait until in-flight messages are delivered before closing the connection.
 // NOT SAFE FOR CONCURRENT USE.
 func (s *server) SwapGraphServer(ctx context.Context, svr *graphServer) {
-
+	s.mu.RLock()
 	needsShutdown := s.handler != nil && s.graphServer != nil
+	s.mu.RUnlock()
 
 	// Swap the handler immediately, so we can shut down the old server in the same goroutine
 	// and no other config changes can happen in the meantime.
@@ -137,12 +138,19 @@ func (s *server) listenAndServe() error {
 func (s *server) Shutdown(ctx context.Context) error {
 	var err error
 
-	if s.httpServer != nil {
-		err = errors.Join(err, s.httpServer.Shutdown(ctx))
+	s.mu.RLock()
+
+	httpServer := s.httpServer
+	graphServer := s.graphServer
+
+	s.mu.RUnlock()
+
+	if httpServer != nil {
+		err = errors.Join(err, httpServer.Shutdown(ctx))
 	}
 
-	if s.graphServer != nil {
-		err = errors.Join(err, s.graphServer.Shutdown(ctx))
+	if graphServer != nil {
+		err = errors.Join(err, graphServer.Shutdown(ctx))
 	}
 
 	s.mu.Lock()

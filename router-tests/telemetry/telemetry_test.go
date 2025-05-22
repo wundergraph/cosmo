@@ -3,6 +3,7 @@ package telemetry
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"regexp"
 	"runtime"
@@ -37,6 +38,7 @@ import (
 
 const (
 	defaultExposedScopedMetricsCount = 1
+	defaultCosmoRouterMetricsCount   = 7
 )
 
 func TestFlakyEngineStatisticsTelemetry(t *testing.T) {
@@ -3535,6 +3537,31 @@ func TestFlakyTelemetry(t *testing.T) {
 				},
 			}
 
+			routerInfoMetric := metricdata.Metrics{
+				Name:        "router.info",
+				Description: "Router configuration info.",
+				Unit:        "",
+				Data: metricdata.Gauge[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Value: 1,
+							Attributes: attribute.NewSet(
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+								otel.WgRouterVersion.String("dev"),
+							),
+						},
+						{
+							Value: 1,
+							Attributes: attribute.NewSet(
+								otel.WgFeatureFlag.String("myff"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()),
+								otel.WgRouterVersion.String("dev"),
+							),
+						},
+					},
+				},
+			}
+
 			want := metricdata.ScopeMetrics{
 				Scope: instrumentation.Scope{
 					Name:      "cosmo.router",
@@ -3547,6 +3574,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					requestContentLengthMetric,
 					responseContentLengthMetric,
 					requestInFlightMetric,
+					routerInfoMetric,
 					operationPlanningTimeMetric,
 				},
 			}
@@ -3567,7 +3595,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
 			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
-			require.Len(t, scopeMetric.Metrics, 6)
+			require.Len(t, scopeMetric.Metrics, defaultCosmoRouterMetricsCount)
 
 			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 
@@ -3577,6 +3605,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			metricdatatest.AssertEqual(t, responseContentLengthMetric, scopeMetric.Metrics[3], metricdatatest.IgnoreTimestamp())
 			metricdatatest.AssertEqual(t, requestInFlightMetric, scopeMetric.Metrics[4], metricdatatest.IgnoreTimestamp())
 			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, scopeMetric.Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, routerInfoMetric, scopeMetric.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 
 			// make a second request and assert that we're now hitting the validation cache
 
@@ -3995,7 +4024,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
 			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
-			require.Len(t, scopeMetric.Metrics, 6)
+			require.Len(t, scopeMetric.Metrics, defaultCosmoRouterMetricsCount)
 		})
 	})
 
@@ -4648,6 +4677,31 @@ func TestFlakyTelemetry(t *testing.T) {
 				},
 			}
 
+			routerInfoMetric := metricdata.Metrics{
+				Name:        "router.info",
+				Description: "Router configuration info.",
+				Unit:        "",
+				Data: metricdata.Gauge[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Value: 1,
+							Attributes: attribute.NewSet(
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+								otel.WgRouterVersion.String("dev"),
+							),
+						},
+						{
+							Value: 1,
+							Attributes: attribute.NewSet(
+								otel.WgFeatureFlag.String("myff"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()),
+								otel.WgRouterVersion.String("dev"),
+							),
+						},
+					},
+				},
+			}
+
 			want := metricdata.ScopeMetrics{
 				Scope: instrumentation.Scope{
 					Name:      "cosmo.router",
@@ -4660,6 +4714,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					requestContentLengthMetric,
 					responseContentLengthMetric,
 					requestInFlightMetric,
+					routerInfoMetric,
 					operationPlanningTimeMetric,
 				},
 			}
@@ -4680,7 +4735,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
 			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
-			require.Len(t, scopeMetric.Metrics, 6)
+			require.Len(t, scopeMetric.Metrics, defaultCosmoRouterMetricsCount)
 
 			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 
@@ -4690,6 +4745,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			metricdatatest.AssertEqual(t, responseContentLengthMetric, scopeMetric.Metrics[3], metricdatatest.IgnoreTimestamp())
 			metricdatatest.AssertEqual(t, requestInFlightMetric, scopeMetric.Metrics[4], metricdatatest.IgnoreTimestamp())
 			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, scopeMetric.Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, routerInfoMetric, rm.ScopeMetrics[0].Metrics[6], metricdatatest.IgnoreTimestamp())
 
 			// make a second request and assert that we're now hitting the validation cache
 
@@ -4976,6 +5032,31 @@ func TestFlakyTelemetry(t *testing.T) {
 				},
 			}
 
+			routerInfoMetric := metricdata.Metrics{
+				Name:        "router.info",
+				Description: "Router configuration info.",
+				Unit:        "",
+				Data: metricdata.Gauge[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Value: 1,
+							Attributes: attribute.NewSet(
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+								otel.WgRouterVersion.String("dev"),
+							),
+						},
+						{
+							Value: 1,
+							Attributes: attribute.NewSet(
+								otel.WgFeatureFlag.String("myff"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()),
+								otel.WgRouterVersion.String("dev"),
+							),
+						},
+					},
+				},
+			}
+
 			want := metricdata.ScopeMetrics{
 				Scope: instrumentation.Scope{
 					Name:      "cosmo.router",
@@ -4988,6 +5069,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					requestContentLengthMetric,
 					responseContentLengthMetric,
 					requestInFlightMetric,
+					routerInfoMetric,
 					operationPlanningTimeMetric,
 				},
 			}
@@ -5008,7 +5090,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
 			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
-			require.Len(t, scopeMetric.Metrics, 6)
+			require.Len(t, scopeMetric.Metrics, defaultCosmoRouterMetricsCount)
 
 			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 
@@ -5018,6 +5100,8 @@ func TestFlakyTelemetry(t *testing.T) {
 			metricdatatest.AssertEqual(t, responseContentLengthMetric, scopeMetric.Metrics[3], metricdatatest.IgnoreTimestamp())
 			metricdatatest.AssertEqual(t, requestInFlightMetric, scopeMetric.Metrics[4], metricdatatest.IgnoreTimestamp())
 			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, scopeMetric.Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, routerInfoMetric, scopeMetric.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+
 		})
 	})
 
@@ -5290,6 +5374,31 @@ func TestFlakyTelemetry(t *testing.T) {
 				},
 			}
 
+			routerInfoMetric := metricdata.Metrics{
+				Name:        "router.info",
+				Description: "Router configuration info.",
+				Unit:        "",
+				Data: metricdata.Gauge[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Value: 1,
+							Attributes: attribute.NewSet(
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+								otel.WgRouterVersion.String("dev"),
+							),
+						},
+						{
+							Value: 1,
+							Attributes: attribute.NewSet(
+								otel.WgFeatureFlag.String("myff"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()),
+								otel.WgRouterVersion.String("dev"),
+							),
+						},
+					},
+				},
+			}
+
 			want := metricdata.ScopeMetrics{
 				Scope: instrumentation.Scope{
 					Name:      "cosmo.router",
@@ -5302,6 +5411,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					requestContentLengthMetric,
 					responseContentLengthMetric,
 					requestInFlightMetric,
+					routerInfoMetric,
 					operationPlanningTimeMetric,
 				},
 			}
@@ -5322,7 +5432,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
 			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
-			require.Len(t, scopeMetric.Metrics, 6)
+			require.Len(t, scopeMetric.Metrics, defaultCosmoRouterMetricsCount)
 
 			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 
@@ -5332,6 +5442,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			metricdatatest.AssertEqual(t, responseContentLengthMetric, scopeMetric.Metrics[3], metricdatatest.IgnoreTimestamp())
 			metricdatatest.AssertEqual(t, requestInFlightMetric, scopeMetric.Metrics[4], metricdatatest.IgnoreTimestamp())
 			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, scopeMetric.Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, routerInfoMetric, scopeMetric.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 		})
 	})
 
@@ -5695,6 +5806,31 @@ func TestFlakyTelemetry(t *testing.T) {
 				},
 			}
 
+			routerInfoMetric := metricdata.Metrics{
+				Name:        "router.info",
+				Description: "Router configuration info.",
+				Unit:        "",
+				Data: metricdata.Gauge[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Value: 1,
+							Attributes: attribute.NewSet(
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+								otel.WgRouterVersion.String("dev"),
+							),
+						},
+						{
+							Value: 1,
+							Attributes: attribute.NewSet(
+								otel.WgFeatureFlag.String("myff"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()),
+								otel.WgRouterVersion.String("dev"),
+							),
+						},
+					},
+				},
+			}
+
 			want := metricdata.ScopeMetrics{
 				Scope: instrumentation.Scope{
 					Name:      "cosmo.router",
@@ -5707,6 +5843,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					requestContentLengthMetric,
 					responseContentLengthMetric,
 					requestInFlightMetric,
+					routerInfoMetric,
 					operationPlanningTimeMetric,
 				},
 			}
@@ -5728,7 +5865,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
 			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
-			require.Len(t, scopeMetric.Metrics, 6)
+			require.Len(t, scopeMetric.Metrics, defaultCosmoRouterMetricsCount)
 
 			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 			metricdatatest.AssertEqual(t, httpRequestsMetric, scopeMetric.Metrics[0], metricdatatest.IgnoreTimestamp())
@@ -5737,6 +5874,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			metricdatatest.AssertEqual(t, responseContentLengthMetric, scopeMetric.Metrics[3], metricdatatest.IgnoreTimestamp())
 			metricdatatest.AssertEqual(t, requestInFlightMetric, scopeMetric.Metrics[4], metricdatatest.IgnoreTimestamp())
 			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, scopeMetric.Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, routerInfoMetric, scopeMetric.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 		})
 	})
 
@@ -6097,6 +6235,31 @@ func TestFlakyTelemetry(t *testing.T) {
 				},
 			}
 
+			routerInfoMetric := metricdata.Metrics{
+				Name:        "router.info",
+				Description: "Router configuration info.",
+				Unit:        "",
+				Data: metricdata.Gauge[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Value: 1,
+							Attributes: attribute.NewSet(
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+								otel.WgRouterVersion.String("dev"),
+							),
+						},
+						{
+							Value: 1,
+							Attributes: attribute.NewSet(
+								otel.WgFeatureFlag.String("myff"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()),
+								otel.WgRouterVersion.String("dev"),
+							),
+						},
+					},
+				},
+			}
+
 			want := metricdata.ScopeMetrics{
 				Scope: instrumentation.Scope{
 					Name:      "cosmo.router",
@@ -6109,6 +6272,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					requestContentLengthMetric,
 					responseContentLengthMetric,
 					requestInFlightMetric,
+					routerInfoMetric,
 					operationPlanningTimeMetric,
 				},
 			}
@@ -6130,7 +6294,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
 			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
-			require.Len(t, scopeMetric.Metrics, 6)
+			require.Len(t, scopeMetric.Metrics, defaultCosmoRouterMetricsCount)
 
 			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 
@@ -6140,6 +6304,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			metricdatatest.AssertEqual(t, responseContentLengthMetric, scopeMetric.Metrics[3], metricdatatest.IgnoreTimestamp())
 			metricdatatest.AssertEqual(t, requestInFlightMetric, scopeMetric.Metrics[4], metricdatatest.IgnoreTimestamp())
 			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, scopeMetric.Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, routerInfoMetric, scopeMetric.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 		})
 	})
 
@@ -6477,6 +6642,31 @@ func TestFlakyTelemetry(t *testing.T) {
 				},
 			}
 
+			routerInfoMetric := metricdata.Metrics{
+				Name:        "router.info",
+				Description: "Router configuration info.",
+				Unit:        "",
+				Data: metricdata.Gauge[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Value: 1,
+							Attributes: attribute.NewSet(
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+								otel.WgRouterVersion.String("dev"),
+							),
+						},
+						{
+							Value: 1,
+							Attributes: attribute.NewSet(
+								otel.WgFeatureFlag.String("myff"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()),
+								otel.WgRouterVersion.String("dev"),
+							),
+						},
+					},
+				},
+			}
+
 			want := metricdata.ScopeMetrics{
 				Scope: instrumentation.Scope{
 					Name:      "cosmo.router",
@@ -6489,6 +6679,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					requestContentLengthMetric,
 					responseContentLengthMetric,
 					requestInFlightMetric,
+					routerInfoMetric,
 					operationPlanningTimeMetric,
 				},
 			}
@@ -6496,7 +6687,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
 			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
-			require.Len(t, scopeMetric.Metrics, 6)
+			require.Len(t, scopeMetric.Metrics, defaultCosmoRouterMetricsCount)
 
 			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 
@@ -6506,6 +6697,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			metricdatatest.AssertEqual(t, responseContentLengthMetric, scopeMetric.Metrics[3], metricdatatest.IgnoreTimestamp())
 			metricdatatest.AssertEqual(t, requestInFlightMetric, scopeMetric.Metrics[4], metricdatatest.IgnoreTimestamp())
 			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, scopeMetric.Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, routerInfoMetric, scopeMetric.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 		})
 	})
 
@@ -7256,7 +7448,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			scopeMetrics := *integration.GetMetricScopeByName(rmFull.ScopeMetrics, "cosmo.router")
 			require.Len(t, rmFull.ScopeMetrics, defaultExposedScopedMetricsCount)
-			require.Len(t, scopeMetrics.Metrics, 6)
+			require.Len(t, scopeMetrics.Metrics, defaultCosmoRouterMetricsCount)
 
 			require.Equal(t, "router.http.requests", scopeMetrics.Metrics[0].Name)
 			require.True(t, metricdatatest.AssertHasAttributes(t, scopeMetrics.Metrics[0], otel.WgClientName.String("unknown")))
@@ -7303,7 +7495,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			rmFullScopeMetrics := *integration.GetMetricScopeByName(rmFull.ScopeMetrics, "cosmo.router")
 
 			require.Len(t, rmFiltered.ScopeMetrics, defaultExposedScopedMetricsCount)
-			require.Len(t, rmFilteredScopeMetrics.Metrics, 5)
+			require.Len(t, rmFilteredScopeMetrics.Metrics, 6)
 
 			// Check if the excluded attributes are not present in the Resource
 			// The first metric completely excluded, the second one should be the first in filtered
@@ -7421,7 +7613,7 @@ func TestFlakyTelemetry(t *testing.T) {
 				require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
 				scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
-				require.Len(t, scopeMetric.Metrics, 7)
+				require.Len(t, scopeMetric.Metrics, defaultCosmoRouterMetricsCount+1)
 
 				httpRequestsMetric := metricdata.Metrics{
 					Name:        "router.http.requests",
@@ -7863,6 +8055,31 @@ func TestFlakyTelemetry(t *testing.T) {
 					},
 				}
 
+				routerInfoMetric := metricdata.Metrics{
+					Name:        "router.info",
+					Description: "Router configuration info.",
+					Unit:        "",
+					Data: metricdata.Gauge[int64]{
+						DataPoints: []metricdata.DataPoint[int64]{
+							{
+								Value: 1,
+								Attributes: attribute.NewSet(
+									otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+									otel.WgRouterVersion.String("dev"),
+								),
+							},
+							{
+								Value: 1,
+								Attributes: attribute.NewSet(
+									otel.WgFeatureFlag.String("myff"),
+									otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()),
+									otel.WgRouterVersion.String("dev"),
+								),
+							},
+						},
+					},
+				}
+
 				want := metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
 						Name:      "cosmo.router",
@@ -7875,6 +8092,7 @@ func TestFlakyTelemetry(t *testing.T) {
 						requestContentLengthMetric,
 						responseContentLengthMetric,
 						requestInFlightMetric,
+						routerInfoMetric,
 						operationPlanningTimeMetric,
 						failedRequestsMetric,
 					},
@@ -7972,7 +8190,7 @@ func TestFlakyTelemetry(t *testing.T) {
 				require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
 				scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
-				require.Len(t, scopeMetric.Metrics, 7)
+				require.Len(t, scopeMetric.Metrics, defaultCosmoRouterMetricsCount+1)
 
 				httpRequestsMetric := metricdata.Metrics{
 					Name:        "router.http.requests",
@@ -8414,6 +8632,31 @@ func TestFlakyTelemetry(t *testing.T) {
 					},
 				}
 
+				routerInfoMetric := metricdata.Metrics{
+					Name:        "router.info",
+					Description: "Router configuration info.",
+					Unit:        "",
+					Data: metricdata.Gauge[int64]{
+						DataPoints: []metricdata.DataPoint[int64]{
+							{
+								Value: 1,
+								Attributes: attribute.NewSet(
+									otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+									otel.WgRouterVersion.String("dev"),
+								),
+							},
+							{
+								Value: 1,
+								Attributes: attribute.NewSet(
+									otel.WgFeatureFlag.String("myff"),
+									otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()),
+									otel.WgRouterVersion.String("dev"),
+								),
+							},
+						},
+					},
+				}
+
 				want := metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
 						Name:      "cosmo.router",
@@ -8426,6 +8669,7 @@ func TestFlakyTelemetry(t *testing.T) {
 						requestContentLengthMetric,
 						responseContentLengthMetric,
 						requestInFlightMetric,
+						routerInfoMetric,
 						operationPlanningTimeMetric,
 						failedRequestsMetric,
 					},
@@ -9155,4 +9399,603 @@ func TestFlakyTelemetry(t *testing.T) {
 		})
 	})
 
+	t.Run("Should include cosmo router info metrics", func(t *testing.T) {
+		t.Parallel()
+
+		metricReader := metric.NewManualReader()
+
+		testenv.Run(t, &testenv.Config{
+			MetricReader: metricReader,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employees { id } }`,
+			})
+			require.JSONEq(t, employeesIDData, res.Body)
+
+			rm := metricdata.ResourceMetrics{}
+			err := metricReader.Collect(context.Background(), &rm)
+			require.NoError(t, err)
+
+			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
+
+			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+			require.Len(t, scopeMetric.Metrics, defaultCosmoRouterMetricsCount)
+
+			routerInfoMetric := metricdata.Metrics{
+				Name:        "router.info",
+				Description: "Router configuration info.",
+				Unit:        "",
+				Data: metricdata.Gauge[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Value: 1,
+							Attributes: attribute.NewSet(
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+								otel.WgRouterVersion.String("dev"),
+							),
+						},
+						{
+							Value: 1,
+							Attributes: attribute.NewSet(
+								otel.WgFeatureFlag.String("myff"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()),
+								otel.WgRouterVersion.String("dev"),
+							),
+						},
+					},
+				},
+			}
+
+			metricdatatest.AssertEqual(t, routerInfoMetric, scopeMetric.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+		})
+	})
+
+}
+
+func TestExcludeAttributesWithCustomExporter(t *testing.T) {
+	const (
+		UseCloudExporter                           = "use_cloud_exporter"
+		UseCustomExporterOnly                      = "use_custom_exporter_only"
+		UseCustomExporterWithRouterConfigAttribute = "use_custom_exporter_with_router_config_attribute"
+	)
+
+	t.Run("Verify metrics when there is a router config version metric attribute", func(t *testing.T) {
+		useCloudExporterTypeStatuses := []string{
+			UseCloudExporter,
+			UseCustomExporterOnly,
+			UseCustomExporterWithRouterConfigAttribute,
+		}
+
+		for _, usingCustomExporter := range useCloudExporterTypeStatuses {
+			t.Run(fmt.Sprintf("regular metrics without a feature flag for %s", usingCustomExporter), func(t *testing.T) {
+				metricReader := metric.NewManualReader()
+				exporter := tracetest.NewInMemoryExporter(t)
+
+				cfg := &testenv.Config{
+					TraceExporter:                exporter,
+					MetricReader:                 metricReader,
+					DisableSimulateCloudExporter: usingCustomExporter != UseCloudExporter,
+				}
+
+				if usingCustomExporter == UseCustomExporterWithRouterConfigAttribute {
+					cfg.CustomMetricAttributes = []config.CustomAttribute{
+						{
+							Key: "wg.router.config.version",
+							ValueFrom: &config.CustomDynamicAttribute{
+								ContextField: "router_config_version",
+							},
+						},
+					}
+				}
+				testenv.Run(t, cfg,
+					func(t *testing.T, xEnv *testenv.Environment) {
+						xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+							Query: `query { employees { id } }`,
+						})
+
+						rm := metricdata.ResourceMetrics{}
+						err := metricReader.Collect(context.Background(), &rm)
+						require.NoError(t, err)
+
+						firstDataPoint := []attribute.KeyValue{
+							semconv.HTTPStatusCode(200),
+							otel.WgClientName.String("unknown"),
+							otel.WgClientVersion.String("missing"),
+							otel.WgFederatedGraphID.String("graph"),
+							otel.WgOperationProtocol.String("http"),
+							otel.WgOperationType.String("query"),
+							otel.WgRouterClusterName.String(""),
+							otel.WgRouterVersion.String("dev"),
+							otel.WgSubgraphID.String("0"),
+							otel.WgSubgraphName.String("employees"),
+						}
+
+						secondDataPoint := []attribute.KeyValue{
+							semconv.HTTPStatusCode(200),
+							otel.WgClientName.String("unknown"),
+							otel.WgClientVersion.String("missing"),
+							otel.WgFederatedGraphID.String("graph"),
+							otel.WgOperationProtocol.String("http"),
+							otel.WgOperationType.String("query"),
+							otel.WgRouterClusterName.String(""),
+							otel.WgRouterVersion.String("dev"),
+						}
+
+						if usingCustomExporter == UseCloudExporter || usingCustomExporter == UseCustomExporterWithRouterConfigAttribute {
+							routerConfigVersion := otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain())
+							firstDataPoint = append(firstDataPoint, routerConfigVersion)
+							secondDataPoint = append(secondDataPoint, routerConfigVersion)
+						}
+
+						if usingCustomExporter == UseCloudExporter {
+							operationHash := otel.WgOperationHash.String("1163600561566987607")
+							operationName := otel.WgOperationName.String("")
+							firstDataPoint = append(firstDataPoint, operationHash, operationName)
+							secondDataPoint = append(secondDataPoint, operationHash, operationName)
+						}
+
+						httpRequestsMetric := metricdata.Metrics{
+							Name:        "router.http.requests",
+							Description: "Total number of requests",
+							Unit:        "",
+							Data: metricdata.Sum[int64]{
+								Temporality: metricdata.CumulativeTemporality,
+								IsMonotonic: true,
+								DataPoints: []metricdata.DataPoint[int64]{
+									{Attributes: attribute.NewSet(firstDataPoint...)},
+									{Attributes: attribute.NewSet(secondDataPoint...)},
+								},
+							},
+						}
+
+						scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+						require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
+						require.Len(t, scopeMetric.Metrics, defaultCosmoRouterMetricsCount)
+
+						metricdatatest.AssertEqual(t, httpRequestsMetric, scopeMetric.Metrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+					})
+			})
+
+			t.Run(fmt.Sprintf("regular metrics with a feature flag for %s", usingCustomExporter), func(t *testing.T) {
+				metricReader := metric.NewManualReader()
+				exporter := tracetest.NewInMemoryExporter(t)
+
+				cfg := &testenv.Config{
+					TraceExporter:                exporter,
+					MetricReader:                 metricReader,
+					DisableSimulateCloudExporter: usingCustomExporter != UseCloudExporter,
+				}
+
+				if usingCustomExporter == UseCustomExporterWithRouterConfigAttribute {
+					cfg.CustomMetricAttributes = []config.CustomAttribute{
+						{
+							Key: "wg.router.config.version",
+							ValueFrom: &config.CustomDynamicAttribute{
+								ContextField: "router_config_version",
+							},
+						},
+					}
+				}
+
+				testenv.Run(t, cfg, func(t *testing.T, xEnv *testenv.Environment) {
+					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query { employees { id } }`,
+						Header: map[string][]string{
+							"X-Feature-Flag": {"myff"},
+						},
+					})
+
+					rm := metricdata.ResourceMetrics{}
+					err := metricReader.Collect(context.Background(), &rm)
+					require.NoError(t, err)
+
+					firstDataPoint := []attribute.KeyValue{
+						semconv.HTTPStatusCode(200),
+						otel.WgClientName.String("unknown"),
+						otel.WgClientVersion.String("missing"),
+						otel.WgFederatedGraphID.String("graph"),
+						otel.WgOperationProtocol.String("http"),
+						otel.WgOperationType.String("query"),
+						otel.WgRouterClusterName.String(""),
+						otel.WgRouterVersion.String("dev"),
+						otel.WgSubgraphID.String("0"),
+						otel.WgSubgraphName.String("employees"),
+						otel.WgFeatureFlag.String("myff"),
+					}
+
+					secondDataPoint := []attribute.KeyValue{
+						semconv.HTTPStatusCode(200),
+						otel.WgClientName.String("unknown"),
+						otel.WgClientVersion.String("missing"),
+						otel.WgFederatedGraphID.String("graph"),
+						otel.WgOperationProtocol.String("http"),
+						otel.WgOperationType.String("query"),
+						otel.WgRouterClusterName.String(""),
+						otel.WgRouterVersion.String("dev"),
+						otel.WgFeatureFlag.String("myff"),
+					}
+
+					if usingCustomExporter == UseCloudExporter || usingCustomExporter == UseCustomExporterWithRouterConfigAttribute {
+						routerConfigVersion := otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF())
+						firstDataPoint = append(firstDataPoint, routerConfigVersion)
+						secondDataPoint = append(secondDataPoint, routerConfigVersion)
+					}
+
+					if usingCustomExporter == UseCloudExporter {
+						operationHash := otel.WgOperationHash.String("1163600561566987607")
+						operationName := otel.WgOperationName.String("")
+						firstDataPoint = append(firstDataPoint, operationHash, operationName)
+						secondDataPoint = append(secondDataPoint, operationHash, operationName)
+					}
+
+					httpRequestsMetric := metricdata.Metrics{
+						Name:        "router.http.requests",
+						Description: "Total number of requests",
+						Unit:        "",
+						Data: metricdata.Sum[int64]{
+							Temporality: metricdata.CumulativeTemporality,
+							IsMonotonic: true,
+							DataPoints: []metricdata.DataPoint[int64]{
+								{
+									Attributes: attribute.NewSet(firstDataPoint...),
+								},
+								{
+									Attributes: attribute.NewSet(secondDataPoint...),
+								},
+							},
+						},
+					}
+
+					require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
+
+					scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+					require.Len(t, scopeMetric.Metrics, defaultCosmoRouterMetricsCount)
+
+					metricdatatest.AssertEqual(t, httpRequestsMetric, scopeMetric.Metrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+				})
+			})
+
+			t.Run(fmt.Sprintf("runtime metrics for %s", usingCustomExporter), func(t *testing.T) {
+				metricReader := metric.NewManualReader()
+				exporter := tracetest.NewInMemoryExporter(t)
+
+				cfg := &testenv.Config{
+					TraceExporter: exporter,
+					MetricReader:  metricReader,
+					MetricOptions: testenv.MetricOptions{
+						EnableRuntimeMetrics: true,
+					},
+					DisableSimulateCloudExporter: usingCustomExporter != UseCloudExporter,
+				}
+
+				if usingCustomExporter == UseCustomExporterWithRouterConfigAttribute {
+					cfg.CustomMetricAttributes = []config.CustomAttribute{
+						{
+							Key: "wg.router.config.version",
+							ValueFrom: &config.CustomDynamicAttribute{
+								ContextField: "router_config_version",
+							},
+						},
+					}
+				}
+
+				testenv.Run(t, cfg, func(t *testing.T, xEnv *testenv.Environment) {
+					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query { employees { id } }`,
+					})
+
+					rm := metricdata.ResourceMetrics{}
+					err := metricReader.Collect(context.Background(), &rm)
+					require.NoError(t, err)
+
+					require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount+1)
+
+					runtimeScope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.runtime")
+					require.NotNil(t, runtimeScope)
+					require.Len(t, runtimeScope.Metrics, 15)
+
+					metricRuntimeUptime := integration.GetMetricByName(runtimeScope, "process.uptime")
+					require.NotNil(t, metricRuntimeUptime)
+					metricRuntimeUptimeDataType := metricRuntimeUptime.Data.(metricdata.Gauge[int64])
+					require.Len(t, metricRuntimeUptimeDataType.DataPoints, 1)
+
+					dataPoint := []attribute.KeyValue{
+						otel.WgRouterClusterName.String(""),
+						otel.WgFederatedGraphID.String("graph"),
+						otel.WgRouterVersion.String("dev"),
+					}
+
+					if usingCustomExporter == UseCloudExporter || usingCustomExporter == UseCustomExporterWithRouterConfigAttribute {
+						routerConfigVersion := otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain())
+						dataPoint = append(dataPoint, routerConfigVersion)
+					}
+
+					runtimeUptimeMetric := metricdata.Metrics{
+						Name:        "process.uptime",
+						Description: "Seconds since application was initialized",
+						Unit:        "s",
+						Data: metricdata.Gauge[int64]{
+							DataPoints: []metricdata.DataPoint[int64]{
+								{
+									Attributes: attribute.NewSet(dataPoint...),
+								},
+							},
+						},
+					}
+
+					metricdatatest.AssertEqual(t, runtimeUptimeMetric, *metricRuntimeUptime, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+				})
+			})
+
+			t.Run(fmt.Sprintf("engine statistic metrics for %s", usingCustomExporter), func(t *testing.T) {
+				metricReader := metric.NewManualReader()
+
+				cfg := &testenv.Config{
+					MetricReader: metricReader,
+					MetricOptions: testenv.MetricOptions{
+						OTLPEngineStatsOptions: testenv.EngineStatOptions{
+							EnableSubscription: true,
+						},
+					},
+					DisableSimulateCloudExporter: usingCustomExporter != UseCloudExporter,
+				}
+
+				if usingCustomExporter == UseCustomExporterWithRouterConfigAttribute {
+					cfg.CustomMetricAttributes = []config.CustomAttribute{
+						{
+							Key: "wg.router.config.version",
+							ValueFrom: &config.CustomDynamicAttribute{
+								ContextField: "router_config_version",
+							},
+						},
+					}
+				}
+
+				testenv.Run(t, cfg, func(t *testing.T, xEnv *testenv.Environment) {
+					conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+					err := conn.WriteJSON(&testenv.WebSocketMessage{
+						ID:      "1",
+						Type:    "subscribe",
+						Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp }}"}`),
+					})
+
+					require.NoError(t, err)
+
+					xEnv.WaitForSubscriptionCount(1, time.Second*5)
+
+					rm := metricdata.ResourceMetrics{}
+					err = metricReader.Collect(context.Background(), &rm)
+					require.NoError(t, err)
+
+					baseAttributes := []attribute.KeyValue{
+						otel.WgRouterClusterName.String(""),
+						otel.WgFederatedGraphID.String("graph"),
+						otel.WgRouterVersion.String("dev"),
+					}
+
+					if usingCustomExporter == UseCloudExporter || usingCustomExporter == UseCustomExporterWithRouterConfigAttribute {
+						routerConfigVersion := otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain())
+						baseAttributes = append(baseAttributes, routerConfigVersion)
+					}
+
+					engineScope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.engine")
+					connectionMetrics := metricdata.Metrics{
+						Name:        "router.engine.connections",
+						Description: "Number of connections in the engine. Contains both websocket and http connections",
+
+						Data: metricdata.Sum[int64]{
+							Temporality: metricdata.CumulativeTemporality,
+							IsMonotonic: false,
+							DataPoints: []metricdata.DataPoint[int64]{
+								{
+									Attributes: attribute.NewSet(baseAttributes...),
+									Value:      1,
+								},
+							},
+						},
+					}
+
+					metricdatatest.AssertEqual(t, connectionMetrics, *integration.GetMetricByName(engineScope, "router.engine.connections"), metricdatatest.IgnoreTimestamp())
+				})
+			})
+
+			t.Run(fmt.Sprintf("cache metrics for %s", usingCustomExporter), func(t *testing.T) {
+				t.Parallel()
+				metricReader := metric.NewManualReader()
+
+				cfg := &testenv.Config{
+					MetricReader: metricReader,
+					MetricOptions: testenv.MetricOptions{
+						EnableOTLPRouterCache: true,
+					},
+					DisableSimulateCloudExporter: usingCustomExporter != UseCloudExporter,
+				}
+
+				if usingCustomExporter == UseCustomExporterWithRouterConfigAttribute {
+					cfg.CustomMetricAttributes = []config.CustomAttribute{
+						{
+							Key: "wg.router.config.version",
+							ValueFrom: &config.CustomDynamicAttribute{
+								ContextField: "router_config_version",
+							},
+						},
+					}
+				}
+
+				testenv.Run(t, cfg, func(t *testing.T, xEnv *testenv.Environment) {
+					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query { employees { id } }`,
+						Header: map[string][]string{
+							"X-Feature-Flag": {"myff"},
+						},
+					})
+
+					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query myQuery { employees { id } }`,
+					})
+
+					rm := metricdata.ResourceMetrics{}
+					err := metricReader.Collect(context.Background(), &rm)
+
+					require.NoError(t, err)
+					require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount+1)
+
+					cacheScope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.cache")
+					require.NotNil(t, cacheScope)
+					require.Len(t, cacheScope.Metrics, 4)
+
+					extraCapacity := 0
+					if usingCustomExporter != UseCustomExporterOnly {
+						extraCapacity++
+					}
+
+					mainAttributes := make([]attribute.KeyValue, 0, 3+extraCapacity)
+					mainAttributes = append(mainAttributes,
+						otel.WgRouterClusterName.String(""),
+						otel.WgFederatedGraphID.String("graph"),
+						otel.WgRouterVersion.String("dev"))
+					if usingCustomExporter != UseCustomExporterOnly {
+						mainAttributes = append(mainAttributes, otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
+					}
+
+					featureFlagAttributes := make([]attribute.KeyValue, 0, 4+extraCapacity)
+					featureFlagAttributes = append(featureFlagAttributes,
+						otel.WgRouterClusterName.String(""),
+						otel.WgFederatedGraphID.String("graph"),
+						otel.WgRouterVersion.String("dev"),
+						otel.WgFeatureFlag.String("myff"))
+					if usingCustomExporter != UseCustomExporterOnly {
+						featureFlagAttributes = append(featureFlagAttributes, otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()))
+					}
+
+					requestStatsMetrics := metricdata.Metrics{
+						Name:        "router.graphql.cache.requests.stats",
+						Description: "Cache stats related to cache requests. Tracks cache hits and misses. Can be used to calculate the ratio",
+						Data: metricdata.Sum[int64]{
+							Temporality: metricdata.CumulativeTemporality,
+							IsMonotonic: true,
+							DataPoints: []metricdata.DataPoint[int64]{
+								{
+									Attributes: attribute.NewSet(append(
+										mainAttributes,
+										attribute.String("cache_type", "plan"),
+										attribute.String("type", "hits"),
+									)...),
+								},
+								{
+									Attributes: attribute.NewSet(append(mainAttributes,
+										attribute.String("cache_type", "plan"),
+										attribute.String("type", "misses"),
+									)...),
+								},
+								{
+									Attributes: attribute.NewSet(append(
+										mainAttributes,
+										attribute.String("cache_type", "query_normalization"),
+										attribute.String("type", "hits"),
+									)...),
+								},
+								{
+									Attributes: attribute.NewSet(append(
+										mainAttributes,
+										attribute.String("cache_type", "query_normalization"),
+										attribute.String("type", "misses"),
+									)...),
+								},
+								{
+									Attributes: attribute.NewSet(append(
+										mainAttributes,
+										attribute.String("cache_type", "persisted_query_normalization"),
+										attribute.String("type", "hits"),
+									)...),
+								},
+								{
+									Attributes: attribute.NewSet(append(
+										mainAttributes,
+										attribute.String("cache_type", "persisted_query_normalization"),
+										attribute.String("type", "misses"),
+									)...),
+								},
+								{
+									Attributes: attribute.NewSet(append(
+										mainAttributes,
+										attribute.String("cache_type", "validation"),
+										attribute.String("type", "hits"),
+									)...),
+								},
+								{
+									Attributes: attribute.NewSet(append(
+										mainAttributes,
+										attribute.String("cache_type", "validation"),
+										attribute.String("type", "misses"),
+									)...),
+								},
+								// Feature flag cache stats
+								{
+									Attributes: attribute.NewSet(append(
+										featureFlagAttributes,
+										attribute.String("cache_type", "plan"),
+										attribute.String("type", "hits"),
+									)...),
+								},
+								{
+									Attributes: attribute.NewSet(append(
+										featureFlagAttributes,
+										attribute.String("cache_type", "plan"),
+										attribute.String("type", "misses"),
+									)...),
+								},
+								{
+									Attributes: attribute.NewSet(append(
+										featureFlagAttributes,
+										attribute.String("cache_type", "query_normalization"),
+										attribute.String("type", "hits"),
+									)...),
+								},
+								{
+									Attributes: attribute.NewSet(append(
+										featureFlagAttributes,
+										attribute.String("cache_type", "query_normalization"),
+										attribute.String("type", "misses"),
+									)...),
+								},
+								{
+									Attributes: attribute.NewSet(append(
+										featureFlagAttributes,
+										attribute.String("cache_type", "persisted_query_normalization"),
+										attribute.String("type", "hits"),
+									)...),
+								},
+								{
+									Attributes: attribute.NewSet(append(
+										featureFlagAttributes,
+										attribute.String("cache_type", "persisted_query_normalization"),
+										attribute.String("type", "misses"),
+									)...),
+								},
+								{
+									Attributes: attribute.NewSet(append(
+										featureFlagAttributes,
+										attribute.String("cache_type", "validation"),
+										attribute.String("type", "hits"),
+									)...),
+								},
+								{
+									Attributes: attribute.NewSet(append(
+										featureFlagAttributes,
+										attribute.String("cache_type", "validation"),
+										attribute.String("type", "misses"),
+									)...),
+								},
+							},
+						},
+					}
+
+					metrics := *integration.GetMetricByName(cacheScope, "router.graphql.cache.requests.stats")
+					metricdatatest.AssertEqual(t, requestStatsMetrics, metrics, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+				})
+			})
+		}
+
+	})
 }

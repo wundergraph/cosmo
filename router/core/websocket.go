@@ -22,7 +22,6 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/tidwall/gjson"
 	"github.com/wundergraph/astjson"
-	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 
@@ -62,7 +61,6 @@ type WebsocketMiddlewareOptions struct {
 
 	WebSocketConfiguration *config.WebSocketConfiguration
 	ClientHeader           config.ClientHeader
-	Attributes             []attribute.KeyValue
 
 	DisableVariablesRemapping bool
 
@@ -86,7 +84,6 @@ func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions
 		writeTimeout:              opts.WriteTimeout,
 		config:                    opts.WebSocketConfiguration,
 		clientHeader:              opts.ClientHeader,
-		attributes:                opts.Attributes,
 		disableVariablesRemapping: opts.DisableVariablesRemapping,
 		apolloCompatibilityFlags:  opts.ApolloCompatibilityFlags,
 	}
@@ -241,8 +238,7 @@ type WebsocketHandler struct {
 	connections   map[int]*WebSocketConnectionHandler
 	connectionsMu sync.RWMutex
 
-	stats      statistics.EngineStatistics
-	attributes []attribute.KeyValue
+	stats statistics.EngineStatistics
 
 	readTimeout  time.Duration
 	writeTimeout time.Duration
@@ -361,7 +357,6 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 		InitRequestID:                requestID,
 		ForwardUpgradeHeaders:        h.forwardUpgradeHeadersConfig,
 		ForwardQueryParams:           h.forwardQueryParamsConfig,
-		Attributes:                   h.attributes,
 		DisableVariablesRemapping:    h.disableVariablesRemapping,
 		ApolloCompatibilityFlags:     h.apolloCompatibilityFlags,
 	})
@@ -704,7 +699,6 @@ type WebSocketConnectionHandlerOptions struct {
 	InitRequestID                string
 	ForwardUpgradeHeaders        forwardConfig
 	ForwardQueryParams           forwardConfig
-	Attributes                   []attribute.KeyValue
 	DisableVariablesRemapping    bool
 	ApolloCompatibilityFlags     config.ApolloCompatibilityFlags
 }
@@ -736,8 +730,6 @@ type WebSocketConnectionHandler struct {
 	subscriptionIDs atomic.Int64
 	subscriptions   sync.Map
 	stats           statistics.EngineStatistics
-
-	attributes []attribute.KeyValue
 
 	forwardInitialPayload bool
 
@@ -785,7 +777,6 @@ func NewWebsocketConnectionHandler(ctx context.Context, opts WebSocketConnection
 		forwardQueryParams:           &opts.ForwardQueryParams,
 		forwardInitialPayload:        opts.ForwardInitialPayload,
 		plannerOptions:               opts.PlanOptions,
-		attributes:                   opts.Attributes,
 		disableVariablesRemapping:    opts.DisableVariablesRemapping,
 		apolloCompatibilityFlags:     opts.ApolloCompatibilityFlags,
 		clientInfoFromInitialPayload: opts.ClientInfoFromInitialPayload,

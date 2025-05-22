@@ -27,7 +27,7 @@ jobs:
       - uses: oven-sh/setup-bun@v2
 
       - name: Install dependencies
-        run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition install --frozen-lockfile
+        run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic install --frozen-lockfile
 
       - name: Generate code
         run: pnpm buf generate --template buf.ts.gen.yaml
@@ -36,7 +36,7 @@ jobs:
         run: git diff --no-ext-diff --exit-code
 
       - name: Build Node.js NPM Package
-        run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition run build
+        run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic run build
 
       - name: 'Build wgc binary'
         working-directory: cli
@@ -63,10 +63,10 @@ jobs:
       - uses: oven-sh/setup-bun@v2
 
       - name: Install dependencies
-        run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition install --frozen-lockfile
+        run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic install --frozen-lockfile
 
       - name: Build Node.js NPM Package
-        run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition run build
+        run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic run build
 
       - name: Unit Test
         run: pnpm run --filter wgc test
@@ -102,4 +102,3 @@ jobs:
       - name: 'Some tests failed'
         if: ${{ contains(needs.*.result, 'failure') }}
         run: exit 1
-

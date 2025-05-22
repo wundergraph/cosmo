@@ -3,6 +3,11 @@ package integration
 import (
 	"context"
 	"encoding/json"
+	"github.com/wundergraph/cosmo/router/pkg/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"os"
 	"sync/atomic"
 	"testing"
@@ -397,6 +402,7 @@ func TestConfigHotReloadFile(t *testing.T) {
 			}, time.Second*5, time.Millisecond*100)
 		})
 	})
+
 }
 
 func TestSwapConfig(t *testing.T) {
@@ -481,6 +487,91 @@ func TestSwapConfig(t *testing.T) {
 			}()
 
 			require.Eventually(t, done.Load, time.Second*20, time.Millisecond*100)
+		})
+	})
+}
+
+func TestFlakyConfigHotReloadPoller(t *testing.T) {
+	t.Run("verify the config version is updated after config reload", func(t *testing.T) {
+		t.Parallel()
+
+		metricReader := metric.NewManualReader()
+
+		// Create a temporary file for the router config
+		configFile := t.TempDir() + "/config.json"
+
+		// Initial config with just the employees subgraph
+		writeTestConfig(t, "initial", configFile)
+
+		testenv.Run(t, &testenv.Config{
+			MetricReader: metricReader,
+			RouterOptions: []core.Option{
+				core.WithConfigVersionHeader(true),
+				core.WithExecutionConfig(&core.ExecutionConfig{
+					Path:          configFile,
+					Watch:         true,
+					WatchInterval: 100 * time.Millisecond,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { hello }`,
+			})
+			rm := metricdata.ResourceMetrics{}
+			err := metricReader.Collect(context.Background(), &rm)
+			require.NoError(t, err)
+			scopeMetric := *GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+
+			beforeUpdate := metricdata.Metrics{
+				Name:        "router.info",
+				Description: "Router configuration info.",
+				Unit:        "",
+				Data: metricdata.Gauge[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Value: 1,
+							Attributes: attribute.NewSet(
+								otel.WgRouterConfigVersion.String("initial"),
+								otel.WgRouterVersion.String("dev"),
+							),
+						},
+					},
+				},
+			}
+
+			metricdatatest.AssertEqual(t, beforeUpdate, scopeMetric.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+
+			writeTestConfig(t, "updated", configFile)
+
+			require.EventuallyWithT(t, func(collectT *assert.CollectT) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { hello }`,
+				})
+				require.Equal(collectT, "updated", res.Response.Header.Get("X-Router-Config-Version"))
+
+				rm := metricdata.ResourceMetrics{}
+				err := metricReader.Collect(context.Background(), &rm)
+				require.NoError(collectT, err)
+				scopeMetricAfterUpdate := *GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+				afterUpdate := metricdata.Metrics{
+					Name:        "router.info",
+					Description: "Router configuration info.",
+					Unit:        "",
+					Data: metricdata.Gauge[int64]{
+						DataPoints: []metricdata.DataPoint[int64]{
+							{
+								Value: 1,
+								Attributes: attribute.NewSet(
+									otel.WgRouterConfigVersion.String("updated"),
+									otel.WgRouterVersion.String("dev"),
+								),
+							},
+						},
+					},
+				}
+
+				metricdatatest.AssertEqual(t, afterUpdate, scopeMetricAfterUpdate.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			}, 2*time.Second, 100*time.Millisecond)
 		})
 	})
 }

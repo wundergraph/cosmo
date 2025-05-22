@@ -146,6 +146,7 @@ func InitializeConfigPoller(r *Router, cdnProviders map[string]config.CDNStorage
 		configpoller.WithPolling(r.routerConfigPollerConfig.PollInterval, r.routerConfigPollerConfig.PollJitter),
 		configpoller.WithClient(*primaryClient),
 		configpoller.WithFallbackClient(fallbackClient),
+		configpoller.WithDemoMode(r.demoMode),
 	)
 
 	return &configPoller, nil

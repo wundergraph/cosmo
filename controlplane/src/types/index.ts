@@ -152,6 +152,7 @@ export interface CheckedSubgraphDTO {
   subgraphName: string;
   isDeleted: boolean;
   isNew: boolean;
+  labels: Label[];
 }
 
 export interface SchemaCheckDTO {

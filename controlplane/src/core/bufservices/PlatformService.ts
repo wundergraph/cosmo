@@ -159,6 +159,7 @@ import { getProposal } from './proposal/getProposal.js';
 import { enableProposalsForNamespace } from './proposal/enableProposalsForNamespace.js';
 import { getNamespaceProposalConfig } from './proposal/getNamespaceProposalConfig.js';
 import { configureNamespaceProposalConfig } from './proposal/configureNamespaceProposalConfig.js';
+import { getOperations } from './analytics/getOperations.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -803,6 +804,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     getNamespaceProposalConfig: (req, ctx) => {
       return getNamespaceProposalConfig(opts, req, ctx);
+    },
+
+    getOperations: (req, ctx) => {
+      return getOperations(opts, req, ctx);
     },
   };
 }

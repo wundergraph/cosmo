@@ -34,7 +34,10 @@ func TestMCP(t *testing.T) {
 						Properties: map[string]interface{}{"operationName": map[string]interface{}{"description": "The exact name of the GraphQL operation to retrieve information for.", "enum": []interface{}{"UpdateMood", "MyEmployees"}, "type": "string"}},
 						Required:   []string{"operationName"}},
 					RawInputSchema: json.RawMessage(nil),
-					Annotations:    mcp.ToolAnnotation{Title: "Get GraphQL Operation Info", ReadOnlyHint: true, DestructiveHint: false, IdempotentHint: false, OpenWorldHint: false},
+					Annotations: mcp.ToolAnnotation{
+						Title:        "Get GraphQL Operation Info",
+						ReadOnlyHint: mcp.ToBoolPtr(true),
+					},
 				})
 			})
 		})
@@ -57,16 +60,17 @@ func TestMCP(t *testing.T) {
 
 				// Verify get_schema tool with proper schema
 				require.Contains(t, resp.Tools, mcp.Tool{
-					Name:           "get_schema",
-					Description:    "Provides the full GraphQL schema of the API.",
-					InputSchema:    mcp.ToolInputSchema{Type: "object", Properties: map[string]interface{}(nil), Required: []string(nil)},
+					Name:        "get_schema",
+					Description: "Provides the full GraphQL schema of the API.",
+					InputSchema: mcp.ToolInputSchema{
+						Type:       "object",
+						Properties: map[string]interface{}{},
+						Required:   []string(nil),
+					},
 					RawInputSchema: json.RawMessage(nil),
 					Annotations: mcp.ToolAnnotation{
-						Title:           "Get GraphQL Schema",
-						ReadOnlyHint:    true,
-						DestructiveHint: false,
-						IdempotentHint:  false,
-						OpenWorldHint:   false,
+						Title:        "Get GraphQL Schema",
+						ReadOnlyHint: mcp.ToBoolPtr(true),
 					},
 				})
 
@@ -89,10 +93,12 @@ func TestMCP(t *testing.T) {
 						},
 						Required: []string{"query"},
 					},
+					RawInputSchema: json.RawMessage(nil),
 					Annotations: mcp.ToolAnnotation{
 						Title:           "Execute GraphQL Query",
-						DestructiveHint: true,
-						OpenWorldHint:   true,
+						DestructiveHint: mcp.ToBoolPtr(true),
+						OpenWorldHint:   mcp.ToBoolPtr(true),
+						IdempotentHint:  mcp.ToBoolPtr(false),
 					},
 				})
 
@@ -113,10 +119,34 @@ func TestMCP(t *testing.T) {
 				require.NotNil(t, resp)
 
 				// Verify MyEmployees operation
-				require.Contains(t, resp.Tools, mcp.Tool{Name: "execute_operation_my_employees", Description: "Executes the GraphQL operation 'MyEmployees' of type query. This is a GraphQL query that retrieves a list of employees.", InputSchema: mcp.ToolInputSchema{Type: "object", Properties: map[string]interface{}{"criteria": map[string]interface{}{"additionalProperties": false, "description": "Allows to filter employees by their details.", "nullable": false, "properties": map[string]interface{}{"hasPets": map[string]interface{}{"nullable": true, "type": "boolean"}, "nationality": map[string]interface{}{"enum": []interface{}{"AMERICAN", "DUTCH", "ENGLISH", "GERMAN", "INDIAN", "SPANISH", "UKRAINIAN"}, "nullable": true, "type": "string"}, "nested": map[string]interface{}{"additionalProperties": false, "nullable": true, "properties": map[string]interface{}{"hasChildren": map[string]interface{}{"nullable": true, "type": "boolean"}, "maritalStatus": map[string]interface{}{"enum": []interface{}{"ENGAGED", "MARRIED"}, "nullable": true, "type": "string"}}, "type": "object"}}, "type": "object"}}, Required: []string(nil)}, RawInputSchema: json.RawMessage(nil), Annotations: mcp.ToolAnnotation{Title: "Execute operation MyEmployees", ReadOnlyHint: true, DestructiveHint: false, IdempotentHint: true, OpenWorldHint: true}})
+				require.Contains(t, resp.Tools, mcp.Tool{
+					Name:        "execute_operation_my_employees",
+					Description: "Executes the GraphQL operation 'MyEmployees' of type query. This is a GraphQL query that retrieves a list of employees.",
+					InputSchema: mcp.ToolInputSchema{
+						Type:       "object",
+						Properties: map[string]interface{}{"criteria": map[string]interface{}{"additionalProperties": false, "description": "Allows to filter employees by their details.", "nullable": false, "properties": map[string]interface{}{"hasPets": map[string]interface{}{"nullable": true, "type": "boolean"}, "nationality": map[string]interface{}{"enum": []interface{}{"AMERICAN", "DUTCH", "ENGLISH", "GERMAN", "INDIAN", "SPANISH", "UKRAINIAN"}, "nullable": true, "type": "string"}, "nested": map[string]interface{}{"additionalProperties": false, "nullable": true, "properties": map[string]interface{}{"hasChildren": map[string]interface{}{"nullable": true, "type": "boolean"}, "maritalStatus": map[string]interface{}{"enum": []interface{}{"ENGAGED", "MARRIED"}, "nullable": true, "type": "string"}}, "type": "object"}}, "type": "object"}},
+						Required:   []string(nil)},
+					RawInputSchema: json.RawMessage(nil),
+					Annotations: mcp.ToolAnnotation{
+						Title:          "Execute operation MyEmployees",
+						ReadOnlyHint:   mcp.ToBoolPtr(true),
+						IdempotentHint: mcp.ToBoolPtr(true),
+						OpenWorldHint:  mcp.ToBoolPtr(true),
+					},
+				})
 
 				// Verify UpdateMood operation
-				require.Contains(t, resp.Tools, mcp.Tool{Name: "execute_operation_update_mood", Description: "Executes the GraphQL operation 'UpdateMood' of type mutation. This mutation update the mood of an employee.", InputSchema: mcp.ToolInputSchema{Type: "object", Properties: map[string]interface{}{"employeeID": map[string]interface{}{"type": "integer"}, "mood": map[string]interface{}{"enum": []interface{}{"HAPPY", "SAD"}, "type": "string"}}, Required: []string{"employeeID", "mood"}}, RawInputSchema: json.RawMessage(nil), Annotations: mcp.ToolAnnotation{Title: "Execute operation UpdateMood", ReadOnlyHint: false, DestructiveHint: false, IdempotentHint: false, OpenWorldHint: true}})
+				require.Contains(t, resp.Tools, mcp.Tool{
+					Name:        "execute_operation_update_mood",
+					Description: "Executes the GraphQL operation 'UpdateMood' of type mutation. This mutation update the mood of an employee.",
+					InputSchema: mcp.ToolInputSchema{Type: "object", Properties: map[string]interface{}{"employeeID": map[string]interface{}{"type": "integer"}, "mood": map[string]interface{}{"enum": []interface{}{"HAPPY", "SAD"}, "type": "string"}}, Required: []string{"employeeID", "mood"}}, RawInputSchema: json.RawMessage(nil),
+					Annotations: mcp.ToolAnnotation{
+						Title:          "Execute operation UpdateMood",
+						OpenWorldHint:  mcp.ToBoolPtr(true),
+						ReadOnlyHint:   mcp.ToBoolPtr(false),
+						IdempotentHint: mcp.ToBoolPtr(false),
+					},
+				})
 			})
 
 			t.Run("List user Operations / Static operations of type mutation aren't exposed when excludeMutations is set", func(t *testing.T) {

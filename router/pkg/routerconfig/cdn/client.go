@@ -11,15 +11,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/httpclient"
-	"github.com/wundergraph/cosmo/router/internal/jwt"
-	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
-	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 	"hash"
 	"io"
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/internal/httpclient"
+	"github.com/wundergraph/cosmo/router/internal/jwt"
+	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
+	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"go.uber.org/zap"
@@ -228,8 +229,7 @@ func (cdn *Client) RouterConfig(ctx context.Context, version string, modifiedSin
 
 	body, err := cdn.getRouterConfig(ctx, version, modifiedSince)
 	if err != nil && errors.Is(err, ErrConfigNotFound) {
-		res.Config = routerconfig.GetDefaultConfig()
-		return res, nil
+		return nil, configpoller.ErrConfigNotFound
 	} else if err != nil {
 		return nil, err
 	}

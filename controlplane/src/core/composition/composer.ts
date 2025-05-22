@@ -11,7 +11,7 @@ import {
   SupportedRouterCompatibilityVersion,
   Warning,
 } from '@wundergraph/composition';
-import { buildRouterConfig, ComposedSubgraph as IComposedSubgraph } from '@wundergraph/cosmo-shared';
+import { buildRouterConfig, ComposedSubgraph as IComposedSubgraph, SubgraphKind } from '@wundergraph/cosmo-shared';
 import { FastifyBaseLogger } from 'fastify';
 import { DocumentNode, GraphQLSchema, parse, printSchema } from 'graphql';
 import {
@@ -38,7 +38,7 @@ import { CacheWarmerRepository } from '../repositories/CacheWarmerRepository.js'
 import { NamespaceRepository } from '../repositories/NamespaceRepository.js';
 import { InspectorSchemaChange } from '../services/SchemaUsageTrafficInspector.js';
 import { SchemaCheckChangeAction } from '../../db/models.js';
-import { composeSubgraphs, composeFederatedGraphWithPotentialContracts } from './composition.js';
+import { composeFederatedGraphWithPotentialContracts, composeSubgraphs } from './composition.js';
 import { getDiffBetweenGraphs, GetDiffBetweenGraphsResult, GetDiffBetweenGraphsSuccess } from './schemaCheck.js';
 
 export function getRouterCompatibilityVersionPath(routerCompatibilityVersion: string): string {
@@ -124,6 +124,7 @@ export function subgraphDTOsToComposedSubgraphs(
     const schema = subgraphConfig?.schema;
     const configurationDataByTypeName = subgraphConfig?.configurationDataByTypeName;
     return {
+      kind: SubgraphKind.Standard,
       id: subgraph.id,
       name: subgraph.name,
       targetId: subgraph.targetId,
@@ -724,7 +725,6 @@ export class Composer {
             ...(checkSubgraphsByFedGraph.get(graph.id) || []),
             subgraph.checkSubgraphId,
           ]);
-
           subgraphsToBeComposed.push({
             name: subgraphName,
             url: '',

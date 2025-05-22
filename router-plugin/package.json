@@ -1,0 +1,17 @@
+{
+  "name": "router-plugin",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The WunderGraph Router Plugin SDK to build subgraphs as gRPC plugins.",
+  "keywords": [
+    "wundergraph",
+    "router",
+    "cosmo",
+    "plugin"
+  ],
+  "author": {
+    "name": "WunderGraph Maintainers",
+    "email": "info@wundergraph.com"
+  },
+  "license": "Apache-2.0"
+}

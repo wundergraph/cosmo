@@ -15,6 +15,7 @@ import (
 type Option func(cp *configPoller)
 
 var ErrConfigNotModified = errors.New("config not modified")
+var ErrConfigNotFound = errors.New("config not found")
 
 type ConfigPoller interface {
 	// Subscribe subscribes to the config poller with a handler function that will be invoked
@@ -39,6 +40,7 @@ type configPoller struct {
 	pollJitter                time.Duration
 	configClient              routerconfig.Client
 	fallbackConfigClient      *routerconfig.Client
+	demoMode                  bool
 }
 
 func New(token string, opts ...Option) ConfigPoller {
@@ -131,6 +133,14 @@ func (c *configPoller) getRouterConfig(ctx context.Context) (*routerconfig.Respo
 		return nil, err
 	}
 
+	if c.demoMode {
+		c.logger.Warn("The router is running in demo mode. If no execution config is found, the router will start with a demo execution config that can be used for testing purposes.")
+	}
+
+	if c.demoMode && c.fallbackConfigClient == nil && errors.Is(err, ErrConfigNotFound) {
+		return &routerconfig.Response{Config: routerconfig.GetDefaultConfig()}, nil
+	}
+
 	if c.fallbackConfigClient == nil {
 		return nil, err
 	}
@@ -138,6 +148,9 @@ func (c *configPoller) getRouterConfig(ctx context.Context) (*routerconfig.Respo
 	c.logger.Warn("Failed to retrieve execution config. Attempting with fallback storage")
 
 	config, err = (*c.fallbackConfigClient).RouterConfig(ctx, c.latestRouterConfigVersion, c.latestRouterConfigDate)
+	if c.demoMode && errors.Is(err, ErrConfigNotFound) {
+		return &routerconfig.Response{Config: routerconfig.GetDefaultConfig()}, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -177,5 +190,11 @@ func WithClient(client routerconfig.Client) Option {
 func WithFallbackClient(client *routerconfig.Client) Option {
 	return func(s *configPoller) {
 		s.fallbackConfigClient = client
+	}
+}
+
+func WithDemoMode(demoMode bool) Option {
+	return func(s *configPoller) {
+		s.demoMode = demoMode
 	}
 }
