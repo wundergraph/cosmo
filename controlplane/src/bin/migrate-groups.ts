@@ -1,7 +1,7 @@
 import * as process from 'node:process';
 import postgres from 'postgres';
 import { drizzle, PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { and, eq, inArray, isNull } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { buildDatabaseConnectionConfig } from '../core/plugins/database.js';
 import Keycloak from '../core/services/Keycloak.js';
 import * as schema from '../db/schema.js';
@@ -26,7 +26,7 @@ const {
 } = getConfig();
 
 // Number of concurrent tasks. We'll allocate the same number of database connections + 1, so keep this number reasonable
-const MAX_DEGREE_OF_PARALLELISM = 15;
+const MAX_DEGREE_OF_PARALLELISM = 5;
 // How many organizations to retrieve from the database to migrate in a transaction. This is used to not load
 // all organizations at once and perform the migration in buckets
 const ORGANIZATIONS_PER_BUCKET = 100;
@@ -129,9 +129,11 @@ async function migrateGroups(db: PostgresJsDatabase<typeof schema>) {
 
     const start = performance.now();
     await Promise.all(
-      chunkArray(organizations).map((chunk) => db.transaction((tx) => {
-        return processChunkOfOrganizations(chunk, tx, kcAllRootGroups);
-      })),
+      chunkArray(organizations).map((chunk) =>
+        db.transaction((tx) => {
+          return processChunkOfOrganizations(chunk, tx, kcAllRootGroups);
+        }),
+      ),
     );
 
     const duration = ((performance.now() - start) / 1000).toFixed(3);
@@ -149,7 +151,7 @@ async function migrateGroups(db: PostgresJsDatabase<typeof schema>) {
 async function processChunkOfOrganizations(
   organizations: { id: string; slug: string }[],
   db: PostgresJsDatabase<typeof schema>,
-  kcAllRootGroups: { id?: string; name?: string; }[]
+  kcAllRootGroups: { id?: string; name?: string }[],
 ) {
   for (const { id: organizationId, slug: organizationSlug } of organizations) {
     const start = performance.now();
