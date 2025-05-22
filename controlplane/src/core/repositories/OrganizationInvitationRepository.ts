@@ -199,7 +199,7 @@ export class OrganizationInvitationRepository {
         organizationID: input.organizationId,
       });
 
-      const groupId = invitation?.[0]?.groupId;
+      const groupId = invitation[0]?.groupId;
       if (groupId) {
         const orgGroupRepo = new OrganizationGroupRepository(tx);
         await orgGroupRepo.addUserToGroup({

@@ -1,5 +1,5 @@
 {
-  "id": "3a4aa06e-aa3a-47d5-8e5e-aa171f43a969",
+  "id": "b4d778de-5901-4697-8a8e-54ce6d542120",
   "prevId": "27c44862-d1fd-47d6-96f8-0fa43e2ce806",
   "version": "7",
   "dialect": "postgresql",
@@ -4498,6 +4498,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "kc_group_id": {
+          "name": "kc_group_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -4576,6 +4582,13 @@
           "nullsNotDistinct": false,
           "columns": [
             "slug"
+          ]
+        },
+        "organizations_kc_group_id_unique": {
+          "name": "organizations_kc_group_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "kc_group_id"
           ]
         }
       },

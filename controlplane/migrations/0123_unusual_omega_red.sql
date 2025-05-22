@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS "organization_groups" (
 --> statement-breakpoint
 ALTER TABLE "api_keys" ADD COLUMN "group_id" uuid;--> statement-breakpoint
 ALTER TABLE "organization_invitations" ADD COLUMN "group_id" uuid;--> statement-breakpoint
+ALTER TABLE "organizations" ADD COLUMN "kc_group_id" uuid;--> statement-breakpoint
 DO $$ BEGIN
  ALTER TABLE "organization_group_members" ADD CONSTRAINT "organization_group_members_organization_member_id_organization_members_id_fk" FOREIGN KEY ("organization_member_id") REFERENCES "public"."organization_members"("id") ON DELETE cascade ON UPDATE no action;
 EXCEPTION
@@ -97,3 +98,5 @@ DO $$ BEGIN
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
+--> statement-breakpoint
+ALTER TABLE "organizations" ADD CONSTRAINT "organizations_kc_group_id_unique" UNIQUE("kc_group_id");

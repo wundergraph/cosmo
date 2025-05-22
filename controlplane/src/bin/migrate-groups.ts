@@ -417,6 +417,25 @@ async function assignOrganizationMembersToCorrespondingGroups({
         .execute();
     }),
   );
+
+  // Finally, assign all invited members to the `developer` group. This is to persist how old implementation
+  // worked, where members were added to the `developer` role automatically when the invitation was accepted,
+  // however, since the invitations were created before the migration, we need to retroactively set the
+  // target group
+  const devGroup = organizationGroups.find((group) => group.name === 'developer');
+  if (!devGroup) {
+    // The organization developer group doesn't exist, an organization admin will have to assign the group
+    // manually once the invitation is accepted
+    return;
+  }
+
+  await db
+    .update(schema.organizationInvitations)
+    .set({ groupId: devGroup.id })
+    .where(and(
+      eq(schema.organizationInvitations.organizationId, organizationId),
+      isNull(schema.organizationInvitations.groupId)
+    ));
 }
 
 async function remapFallbackOidcGroupMapper({
