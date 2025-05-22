@@ -58,6 +58,16 @@ func (s *{serviceName}) QueryHello(ctx context.Context, req *service.QueryHelloR
 }
 `;
 
+const gitignore = `# Ignore the binary files
+bin/
+
+# Ignore the generated files
+generated/**
+
+# Lock file is important for reproducible builds
+!generated/service.proto.lock.json
+`;
+
 const mainGoTest = `package main
 
 import (
@@ -286,4 +296,5 @@ export default {
   mainGoTest,
   readme,
   schema,
+  gitignore,
 };

@@ -211,6 +211,16 @@ func TestSequentialIDs(t *testing.T) {
 }
 `;
 
+const gitignore = `# Ignore the binary files
+bin/
+
+# Ignore the generated files
+generated/**
+
+# Lock file is important for reproducible builds
+!generated/service.proto.lock.json
+`;
+
 const makefile = `
 .PHONY: build download start compose
 
@@ -440,4 +450,5 @@ export default {
   graphConfig,
   makefile,
   projectReadme,
+  gitignore,
 };

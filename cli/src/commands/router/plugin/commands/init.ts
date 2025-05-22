@@ -89,17 +89,16 @@ export default (opts: BaseCommandOptions) => {
 
         await writeFile(resolve(generatedDir, 'service.proto'), proto.proto);
         await writeFile(resolve(generatedDir, 'service.proto.lock.json'), JSON.stringify(proto.lockData, null, 2));
-
         await writeFile(resolve(srcDir, 'main.go'), pupa(FullGoPlugin.mainGo, { serviceName }));
         await writeFile(resolve(srcDir, 'main_test.go'), pupa(FullGoPlugin.mainGoTest, { serviceName }));
-
         await writeFile(resolve(tempDir, 'go.mod'), pupa(FullGoPlugin.goMod, { modulePath: goModulePath }));
+        await writeFile(resolve(tempDir, '.gitignore'), SimpleGoPlugin.gitignore);
 
-        // Create project directory structure
+        // Create a project directory structure
         await mkdir(projectDir, { recursive: true });
         await mkdir(resolve(projectDir, 'plugins'), { recursive: true });
 
-        // Write router config to project root
+        // Write router config to the project root
         await writeFile(resolve(projectDir, 'config.yaml'), FullGoPlugin.routerConfig);
         await writeFile(resolve(projectDir, 'graph.yaml'), pupa(FullGoPlugin.graphConfig, { originalPluginName }));
         await writeFile(resolve(projectDir, 'Makefile'), pupa(FullGoPlugin.makefile, { originalPluginName }));
@@ -125,11 +124,10 @@ export default (opts: BaseCommandOptions) => {
 
         await writeFile(resolve(generatedDir, 'service.proto'), proto.proto);
         await writeFile(resolve(generatedDir, 'service.proto.lock.json'), JSON.stringify(proto.lockData, null, 2));
-
         await writeFile(resolve(srcDir, 'main.go'), pupa(SimpleGoPlugin.mainGo, { serviceName }));
         await writeFile(resolve(srcDir, 'main_test.go'), pupa(SimpleGoPlugin.mainGoTest, { serviceName }));
-
         await writeFile(resolve(tempDir, 'go.mod'), pupa(SimpleGoPlugin.goMod, { modulePath: goModulePath }));
+        await writeFile(resolve(tempDir, '.gitignore'), SimpleGoPlugin.gitignore);
 
         await mkdir(resolve(projectDir, 'plugins'), { recursive: true });
 
