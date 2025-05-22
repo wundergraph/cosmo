@@ -478,7 +478,7 @@ export async function buildBinaries(pluginDir: string, platforms: string[], debu
         flags.push('-gcflags', 'all=-N -l');
       }
 
-      flags.push('-o', join(binDir, binaryName), 'src/main.go');
+      flags.push('-o', join(binDir, binaryName), './src');
 
       await execa(goPath, flags, {
         cwd: pluginDir,
