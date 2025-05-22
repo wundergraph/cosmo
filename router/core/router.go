@@ -1287,13 +1287,13 @@ func (r *Router) Start(ctx context.Context) error {
 
 type UsageTrackerNoOp struct{}
 
-func (_ *UsageTrackerNoOp) TrackExecutionConfigUsage(_ map[string]any) {}
+func (u *UsageTrackerNoOp) TrackExecutionConfigUsage(_ map[string]any) {}
 
-func (_ *UsageTrackerNoOp) TrackRouterConfigUsage(_ map[string]any) {}
+func (u *UsageTrackerNoOp) TrackRouterConfigUsage(_ map[string]any) {}
 
-func (_ *UsageTrackerNoOp) Close() {}
+func (u *UsageTrackerNoOp) Close() {}
 
-func (_ *UsageTrackerNoOp) TrackUptime(_ context.Context) {}
+func (u *UsageTrackerNoOp) TrackUptime(_ context.Context) {}
 
 func (r *Router) configureUsageTracking(ctx context.Context) (err error) {
 	if !r.enableUsageTracking {
