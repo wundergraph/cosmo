@@ -88,7 +88,7 @@ func (m *promConnectionMetrics) MeasureMaxConnections(ctx context.Context, count
 }
 
 func (m *promConnectionMetrics) Flush(ctx context.Context) error {
-	return nil
+	return m.meterProvider.ForceFlush(ctx)
 }
 
 func (h *promConnectionMetrics) Shutdown() error {

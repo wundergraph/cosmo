@@ -98,6 +98,7 @@ var (
 	defaultCloudTemporalitySelector = func(kind sdkmetric.InstrumentKind) metricdata.Temporality {
 		switch kind {
 		case sdkmetric.InstrumentKindCounter,
+			sdkmetric.InstrumentKindGauge,
 			sdkmetric.InstrumentKindUpDownCounter,
 			sdkmetric.InstrumentKindHistogram:
 			return metricdata.DeltaTemporality

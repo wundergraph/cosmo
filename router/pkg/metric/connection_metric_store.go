@@ -115,13 +115,11 @@ func (h *ConnectionMetrics) Shutdown(ctx context.Context) error {
 		err = errors.Join(err, fmt.Errorf("failed to flush metrics: %w", errFlush))
 	}
 
-	errProm := h.promConnectionMetrics.Shutdown()
-	if err != nil {
+	if errProm := h.promConnectionMetrics.Shutdown(); errProm != nil {
 		err = errors.Join(err, fmt.Errorf("failed to shutdown prom metrics: %w", errProm))
 	}
 
-	errOtlp := h.otlpConnectionMetrics.Shutdown()
-	if err != nil {
+	if errOtlp := h.otlpConnectionMetrics.Shutdown(); errOtlp != nil {
 		err = errors.Join(err, fmt.Errorf("failed to shutdown otlp metrics: %w", errOtlp))
 	}
 

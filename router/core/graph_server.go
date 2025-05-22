@@ -437,7 +437,6 @@ type graphMux struct {
 	operationHashCache         *ristretto.Cache[uint64, string]
 	accessLogsFileLogger       *logging.BufferedLogger
 	metricStore                rmetric.Store
-	connectionMetricStore      rmetric.ConnectionMetricStore
 	prometheusCacheMetrics     *rmetric.CacheMetrics
 	otelCacheMetrics           *rmetric.CacheMetrics
 }
@@ -677,12 +676,6 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 
 	if s.metricStore != nil {
 		if aErr := s.metricStore.Shutdown(ctx); aErr != nil {
-			err = errors.Join(err, aErr)
-		}
-	}
-
-	if s.connectionMetricStore != nil {
-		if aErr := s.connectionMetricStore.Shutdown(ctx); aErr != nil {
 			err = errors.Join(err, aErr)
 		}
 	}
@@ -1498,6 +1491,12 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 	if s.runtimeMetrics != nil {
 		if err := s.runtimeMetrics.Shutdown(); err != nil {
 			finalErr = errors.Join(finalErr, err)
+		}
+	}
+
+	if s.connectionMetrics != nil {
+		if aErr := s.connectionMetrics.Shutdown(ctx); aErr != nil {
+			finalErr = errors.Join(finalErr, aErr)
 		}
 	}
 
