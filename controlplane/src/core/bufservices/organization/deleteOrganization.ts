@@ -12,7 +12,7 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { delayForManualOrgDeletionInDays } from '../../constants.js';
-import { UnauthorizedError } from 'src/core/errors/errors.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function deleteOrganization(
   opts: RouterOptions,
