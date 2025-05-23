@@ -720,6 +720,10 @@
                               "request_error",
                               "response_error_message"
                             ]
+                          },
+                          "expression": {
+                            "type": "string",
+                            "description": "The name of the request header from which to extract the value."
                           }
                         }
                       }
@@ -928,6 +932,42 @@
                   "description": "The name of the header which the holds the trace_id. The default value is x-wg-trace-id."
                 }
               }
+            },
+            "attributes": {
+              "type": "array",
+              "description": "Custom span attributes for subgraphs",
+              "items": {
+                "type": "object",
+                "description": "The configuration for custom span attributes for subgraph tracing.",
+                "additionalProperties": false,
+                "required": [
+                  "key"
+                ],
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "description": "The key of the field."
+                  },
+                  "value_from": {
+                    "type": "object",
+                    "description": "Defines a source for the field value e.g. from a request header. If both default and value_from are set, value_from has precedence.",
+                    "additionalProperties": false,
+                    "properties": {
+                      "expression": {
+                        "type": "string",
+                        "description": "The name of the request header from which to extract the value. The value is only extracted when a request context is available otherwise the default value is used."
+                      }
+                    },
+                    "oneOf": [
+                      {
+                        "required": [
+                          "expression"
+                        ]
+                      }
+                    ]
+                  }
+                }
+              }
             }
           }
         },
@@ -999,6 +1039,11 @@
                   "type": "boolean",
                   "default": false,
                   "description": "Enable the collection of metrics for the GraphQL operation router caches. The default value is false."
+                },
+                "connection_stats": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable the collection of connection stats. The default value is false."
                 },
                 "engine_stats": {
                   "type": "object",
@@ -1094,6 +1139,11 @@
                   "type": "boolean",
                   "default": false,
                   "description": "Enable the collection of metrics for the GraphQL operation router caches. The default value is false."
+                },
+                "connection_stats": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable the collection of connection stats. The default value is false."
                 },
                 "engine_stats": {
                   "type": "object",

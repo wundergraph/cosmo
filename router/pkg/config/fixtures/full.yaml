@@ -130,6 +130,10 @@ telemetry:
         export_timeout: 30s
         path: '/v1/traces'
         headers: {}
+    attributes:
+      - key: "wg.tracing.custom.conn.subgraph.hostport"
+        value_from:
+          expression: "subgraph.name"
 
   # OpenTelemetry Metrics
   metrics:
@@ -137,6 +141,7 @@ telemetry:
       enabled: true
       router_runtime: true
       graphql_cache: true
+      connection_stats: true
       engine_stats:
         subscriptions: true
       exclude_metric_labels: []
@@ -156,6 +161,7 @@ telemetry:
       path: '/metrics'
       listen_addr: '127.0.0.1:8088'
       graphql_cache: true
+      connection_stats: true
       engine_stats:
         subscriptions: true
       exclude_metrics: []
