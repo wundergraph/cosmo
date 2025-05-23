@@ -76,6 +76,9 @@ func NewCustomTransport(
 	if enableTraceClient {
 		getExprContext := func(ctx context.Context) *expr.Context {
 			reqContext := getRequestContext(ctx)
+			if reqContext == nil {
+				return &expr.Context{}
+			}
 			return &reqContext.expressionContext
 		}
 		baseRoundTripper = traceclient.NewTraceInjectingRoundTripper(baseRoundTripper, connectionMetricStore, getExprContext)
