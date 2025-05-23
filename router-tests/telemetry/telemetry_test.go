@@ -9521,7 +9521,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			})
 		})
 
-		t.Run("verify custom tracing expressions", func(t *testing.T) {
+		t.Run("verify custom tracing expressions without and with auth", func(t *testing.T) {
 			t.Parallel()
 
 			claimKeyWithAuth := "extraclaim"
