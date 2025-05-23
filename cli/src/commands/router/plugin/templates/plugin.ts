@@ -250,21 +250,7 @@ The plugin demonstrates:
 
 ## Getting Started
 
-Plugin structure:
-
-   \`\`\`
-    plugins/{originalPluginName}/
-    ├── Makefile              # Automation scripts
-    ├── go.mod                # Go module file with dependencies
-    ├── go.sum                # Go checksums file
-    ├── src/
-    │   ├── main.go           # Main plugin implementation
-    │   ├── main_test.go      # Tests for the plugin
-    │   └── schema.graphql    # GraphQL schema defining the API
-    ├── generated/            # Generated code (created during build)
-    └── bin/                  # Compiled binaries (created during build)
-        └── plugin            # The compiled plugin binary
-   \`\`\`
+For plugin structure and detailed workflow see the [Plugin Development Guide] in the Cursor Rules tab.
 
 ## 🔧 Customizing Your Plugin
 
@@ -307,62 +293,57 @@ globs: src/**
 alwaysApply: false
 ---
 
-# {name} Plugin Guide
+# {name} Plugin Development Guide
 
-This rule explains the structure and workflow for the Cosmo Router {name} plugin.
+You are an expert in developing Cosmo Router plugins. You are given a GraphQL schema, and you need to implement the Go code for the plugin.
+Your goal is to implement the plugin in a way that is easy to understand and maintain. You add tests to ensure the plugin works as expected.
+
+All make commands need to be run from the plugin directory \`{pluginDir}\`.
 
 ## Plugin Structure
 
-The {name} plugin demonstrates how to implement a GraphQL API using gRPC methods:
+A plugin is structured as follows:
 
-- @src/schema.graphql - Defines the GraphQL schema
-- @src/main.go - Contains the plugin implementation
-- @src/main_test.go - Contains tests for the plugin
+\`\`\`
+plugins/{originalPluginName}/
+├── Makefile                     # Build automation
+├── go.mod                       # Go module definition
+├── go.sum                       # Go module checksums
+├── src/
+│   ├── schema.graphql           # GraphQL schema (API contract)
+│   ├── main.go                  # Plugin implementation
+│   └── main_test.go             # Tests for the plugin
+├── generated/                   # Auto-generated files (DO NOT EDIT)
+│   ├── service.proto            # Generated Protocol Buffers
+│   ├── service.pb.go            # Generated Go structures
+│   ├── service.proto.lock.json  # Generated Protobuf lock file
+│   └── service_grpc.pb.go       # Generated gRPC service
+└── bin/                         # Compiled binaries
+    └── plugin                   # The compiled plugin binary
+\`\`\`
 
 ## Development Workflow
 
-1. Make changes to @src/schema.graphql
-2. Run \`make generate\` from the plugin directory to regenerate code
-3. Implement the service:
-   - Implement the service in @main.go but you can create different files for each method if you think it leads to more readable code
-   - Review generated @generated/service.pb.go and @generated/service_grpc.pb.go
-   - Ensure ALL generated RPC methods and types are fully implemented
-   - Partial implementations will cause runtime errors
-4. Update tests in @main_test.go:
-   - Add test cases for ALL new functionality
-   - Test both success and error scenarios
-   - Verify ALL edge cases
-   - Create different test files if it leads to more readable tests
-5. Run \`make test\` to ensure complete test coverage
+1. When modifying the GraphQL schema in \`src/schema.graphql\`, you need to regenerate the code with \`make generate\`.
+2. Look into the generated code in \`generated/service.proto\` and \`generated/service.pb.go\` to understand the updated API contract and service methods.
+3. Implement the new RPC methods in \`src/main.go\`.
+4. Add tests to \`src/main_test.go\` to ensure the plugin works as expected. You need to run \`make test\` to ensure the tests pass.
+5. Finally, build the plugin with \`make build\` to ensure the plugin is working as expected.
+6. Your job is done after successfully building the plugin. Don't verify if the binary was created. The build command will take care of that.
 
-## Generated Code
+**Important**: Never manipulate the files inside \`generated\` directory yourself. Don't touch the \`service.proto\`,  \`service.proto.lock.json\`, \`service.pb.go\` and \`service_grpc.pb.go\` files.
 
-The code generation creates:
+You can update the Go dependencies by running \`make test\` to ensure the dependencies are up to date. It runs \`go mod tidy\` under the hood.
 
-- @generated/service.proto - The protobuf service definition
-- @generated/service.pb.go - Go structures for requests/responses
-- @generated/service_grpc.pb.go - The gRPC service interface
+## Implementation Pattern
 
-If the files doesn't exist, you need to generate them with \`make generate\`
-
-**Important**: Never manipulate the @generated/ files yourself. The source of truth for the API contract is the GraphQL schema. Use \`make generate\` to update the proto and service interface.
-
-## Important Implementation Pattern
-
-When implementing a plugin:
-
-1. Implement the generated service interface in \`main.go\`
-2. Handle the context properly in your implementation methods
-3. Ensure proper error handling and error messages
-4. Follow Go conventions for naming and structuring your code
-
-## Service Integration
+### Service Integration
 
 If you need to integrate with other HTTP services, you should prefer to use the \`github.com/wundergraph/cosmo/router-plugin/httpclient\` package.
-Always prefer a real integration over mocking. In the tests, you can mock the service by bootstrapping an http server that returns the expected response.
-In tests, focus on a well-defined contract and the expected behavior of your service. Structure tests by endpoint, use-cases and use table-driven tests to cover all cases.
+Always prefer a real integration over mocking. In the tests, you can mock the external service by bootstrapping an http server that returns the expected response.
+In tests, focus on a well-defined contract and the expected behavior of your service. Structure tests by endpoint, use-cases and use table-driven tests when possible.
 
-Example:
+Here is an example of how to use the \`httpclient\` package:
 
 \`\`\`go
 // Initialize HTTP client for external API calls
@@ -396,6 +377,8 @@ resp.IsSuccess()
 const cursorIgnore = `# Ignore the mapping and lock files
 generated/mapping.json
 generated/service.proto.lock.json
+# Ignore the proto to avoid interpretation issues
+generated/service.proto
 # Ignore the plugin binary
 bin/
 `;
