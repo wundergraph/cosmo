@@ -112,7 +112,8 @@ func (t *TraceInjectingRoundTripper) processConnectionMetrics(ctx context.Contex
 	exprContext := t.getExprContext(ctx)
 
 	if trace.ConnectionGet != nil && trace.ConnectionAcquired != nil {
-		connAcquireTime := trace.ConnectionAcquired.Time.Sub(trace.ConnectionGet.Time).Seconds()
+		duration := trace.ConnectionAcquired.Time.Sub(trace.ConnectionGet.Time)
+		connAcquireTime := float64(duration) / float64(time.Millisecond)
 
 		exprContext.Subgraph.Request.ClientTrace.ConnectionAcquireDuration = connAcquireTime
 
