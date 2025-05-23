@@ -226,6 +226,7 @@ type (
 		tlsServerConfig               *tls.Config
 		tlsConfig                     *TlsConfig
 		telemetryAttributes           []config.CustomAttribute
+		tracingAttributes             []config.CustomAttribute
 		tracePropagators              []propagation.TextMapPropagator
 		compositePropagator           propagation.TextMapPropagator
 		// Poller
@@ -1952,6 +1953,12 @@ func WithTelemetryAttributes(attributes []config.CustomAttribute) Option {
 	}
 }
 
+func WithTracingAttributes(attributes []config.CustomAttribute) Option {
+	return func(r *Router) {
+		r.tracingAttributes = attributes
+	}
+}
+
 func WithConfigPollerConfig(cfg *RouterConfigPollerConfig) Option {
 	return func(r *Router) {
 		r.routerConfigPollerConfig = cfg
@@ -2029,14 +2036,14 @@ func WithDemoMode(demoMode bool) Option {
 
 type ProxyFunc func(req *http.Request) (*url.URL, error)
 
-func newHTTPTransport(opts *TransportRequestOptions, proxy ProxyFunc) *http.Transport {
+func newHTTPTransport(opts *TransportRequestOptions, proxy ProxyFunc, traceDialer *TraceDialer, subgraph string) *http.Transport {
 	dialer := &net.Dialer{
 		Timeout:   opts.DialTimeout,
 		KeepAlive: opts.KeepAliveProbeInterval,
 	}
 	// Great source of inspiration: https://gitlab.com/gitlab-org/gitlab-pages
 	// A pages proxy in go that handles tls to upstreams, rate limiting, and more
-	return &http.Transport{
+	transport := &http.Transport{
 		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
 			return dialer.DialContext(ctx, network, addr)
 		},
@@ -2059,6 +2066,13 @@ func newHTTPTransport(opts *TransportRequestOptions, proxy ProxyFunc) *http.Tran
 		// This will prevent the transport from handling the proxy when it is not needed.
 		Proxy: proxy,
 	}
+
+	if traceDialer != nil {
+		transport.DialContext = traceDialer.WrapDial(transport.DialContext, subgraph)
+		traceDialer.connectionPoolStats.AddSubgraphHostCount(subgraph, int64(opts.MaxConnsPerHost))
+	}
+
+	return transport
 }
 
 func TraceConfigFromTelemetry(cfg *config.Telemetry) *rtrace.Config {
@@ -2180,9 +2194,10 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 		Attributes:         cfg.Metrics.Attributes,
 		ResourceAttributes: buildResourceAttributes(cfg.ResourceAttributes),
 		OpenTelemetry: rmetric.OpenTelemetry{
-			Enabled:       cfg.Metrics.OTLP.Enabled,
-			RouterRuntime: cfg.Metrics.OTLP.RouterRuntime,
-			GraphqlCache:  cfg.Metrics.OTLP.GraphqlCache,
+			Enabled:         cfg.Metrics.OTLP.Enabled,
+			RouterRuntime:   cfg.Metrics.OTLP.RouterRuntime,
+			GraphqlCache:    cfg.Metrics.OTLP.GraphqlCache,
+			ConnectionStats: cfg.Metrics.OTLP.ConnectionStats,
 			EngineStats: rmetric.EngineStatsConfig{
 				Subscription: cfg.Metrics.OTLP.EngineStats.Subscriptions,
 			},
@@ -2191,10 +2206,11 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 			ExcludeMetricLabels: cfg.Metrics.OTLP.ExcludeMetricLabels,
 		},
 		Prometheus: rmetric.PrometheusConfig{
-			Enabled:      cfg.Metrics.Prometheus.Enabled,
-			ListenAddr:   cfg.Metrics.Prometheus.ListenAddr,
-			Path:         cfg.Metrics.Prometheus.Path,
-			GraphqlCache: cfg.Metrics.Prometheus.GraphqlCache,
+			Enabled:         cfg.Metrics.Prometheus.Enabled,
+			ListenAddr:      cfg.Metrics.Prometheus.ListenAddr,
+			Path:            cfg.Metrics.Prometheus.Path,
+			GraphqlCache:    cfg.Metrics.Prometheus.GraphqlCache,
+			ConnectionStats: cfg.Metrics.Prometheus.ConnectionStats,
 			EngineStats: rmetric.EngineStatsConfig{
 				Subscription: cfg.Metrics.Prometheus.EngineStats.Subscriptions,
 			},

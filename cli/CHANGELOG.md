@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.81.1](https://github.com/wundergraph/cosmo/compare/wgc@0.81.0...wgc@0.81.1) (2025-05-22)
+
+### Bug Fixes
+
+* **wgc:** cursor instructions for plugin http client usage ([#1884](https://github.com/wundergraph/cosmo/issues/1884)) ([849ae02](https://github.com/wundergraph/cosmo/commit/849ae02c35e61c47232fb4dff943f0197a002a72)) (@StarpTech)
+
+# [0.81.0](https://github.com/wundergraph/cosmo/compare/wgc@0.80.1...wgc@0.81.0) (2025-05-22)
+
+### Features
+
+* plugin init should bootstrap fully functional project ([#1878](https://github.com/wundergraph/cosmo/issues/1878)) ([69132da](https://github.com/wundergraph/cosmo/commit/69132da0f6a3560afcd6bdab348dec0bb37c3496)) (@StarpTech)
+
 ## [0.80.1](https://github.com/wundergraph/cosmo/compare/wgc@0.80.0...wgc@0.80.1) (2025-05-20)
 
 **Note:** Version bump only for package wgc

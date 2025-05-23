@@ -1,8 +1,8 @@
 package integration
 
 import (
+	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"regexp"
-	"strings"
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -332,7 +332,7 @@ func assertLabelValue(t *testing.T, labels []*io_prometheus_client.LabelPair, la
 }
 
 func findLabel(labels []*io_prometheus_client.LabelPair, labelKey attribute.Key) *io_prometheus_client.LabelPair {
-	key := strings.ReplaceAll(string(labelKey), ".", "_")
+	key := rmetric.SanitizeName(string(labelKey))
 
 	for _, label := range labels {
 		if label.Name != nil && *label.Name == key {

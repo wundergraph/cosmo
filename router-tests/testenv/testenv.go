@@ -251,13 +251,15 @@ type EngineStatOptions struct {
 }
 
 type MetricOptions struct {
-	MetricExclusions             MetricExclusions
-	EnableRuntimeMetrics         bool
-	EnableOTLPRouterCache        bool
-	EnablePrometheusRouterCache  bool
-	OTLPEngineStatsOptions       EngineStatOptions
-	PrometheusEngineStatsOptions EngineStatOptions
-	PrometheusSchemaFieldUsage   PrometheusSchemaFieldUsage
+	MetricExclusions                  MetricExclusions
+	EnableRuntimeMetrics              bool
+	EnableOTLPRouterCache             bool
+	EnablePrometheusRouterCache       bool
+	OTLPEngineStatsOptions            EngineStatOptions
+	PrometheusEngineStatsOptions      EngineStatOptions
+	PrometheusSchemaFieldUsage        PrometheusSchemaFieldUsage
+	EnableOTLPConnectionMetrics       bool
+	EnablePrometheusConnectionMetrics bool
 }
 
 type PrometheusSchemaFieldUsage struct {
@@ -286,6 +288,7 @@ type Config struct {
 	TraceExporter                      trace.SpanExporter
 	CustomMetricAttributes             []config.CustomAttribute
 	CustomTelemetryAttributes          []config.CustomAttribute
+	CustomTracingAttributes            []config.CustomAttribute
 	CustomResourceAttributes           []config.CustomStaticAttribute
 	MetricReader                       metric.Reader
 	PrometheusRegistry                 *prometheus.Registry
@@ -1373,15 +1376,20 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		routerOpts = append(routerOpts, core.WithTelemetryAttributes(testConfig.CustomTelemetryAttributes))
 	}
 
+	if testConfig.CustomTracingAttributes != nil {
+		routerOpts = append(routerOpts, core.WithTracingAttributes(testConfig.CustomTracingAttributes))
+	}
+
 	var prometheusConfig rmetric.PrometheusConfig
 
 	if testConfig.PrometheusRegistry != nil {
 		prometheusConfig = rmetric.PrometheusConfig{
-			Enabled:      true,
-			ListenAddr:   fmt.Sprintf("localhost:%d", testConfig.PrometheusPort),
-			Path:         "/metrics",
-			TestRegistry: testConfig.PrometheusRegistry,
-			GraphqlCache: testConfig.MetricOptions.EnablePrometheusRouterCache,
+			Enabled:         true,
+			ListenAddr:      fmt.Sprintf("localhost:%d", testConfig.PrometheusPort),
+			Path:            "/metrics",
+			TestRegistry:    testConfig.PrometheusRegistry,
+			GraphqlCache:    testConfig.MetricOptions.EnablePrometheusRouterCache,
+			ConnectionStats: testConfig.MetricOptions.EnablePrometheusConnectionMetrics,
 			EngineStats: rmetric.EngineStatsConfig{
 				Subscription: testConfig.MetricOptions.PrometheusEngineStatsOptions.EnableSubscription,
 			},
@@ -1406,9 +1414,10 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 					Enabled: true,
 				},
 				OTLP: config.MetricsOTLP{
-					Enabled:       true,
-					RouterRuntime: testConfig.MetricOptions.EnableRuntimeMetrics,
-					GraphqlCache:  testConfig.MetricOptions.EnableOTLPRouterCache,
+					Enabled:         true,
+					RouterRuntime:   testConfig.MetricOptions.EnableRuntimeMetrics,
+					GraphqlCache:    testConfig.MetricOptions.EnableOTLPRouterCache,
+					ConnectionStats: testConfig.MetricOptions.EnableOTLPConnectionMetrics,
 					EngineStats: config.EngineStats{
 						Subscriptions: testConfig.MetricOptions.OTLPEngineStatsOptions.EnableSubscription,
 					},

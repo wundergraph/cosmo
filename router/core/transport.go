@@ -2,7 +2,10 @@ package core
 
 import (
 	"bytes"
+	"context"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/expr"
+	"github.com/wundergraph/cosmo/router/internal/traceclient"
 	"io"
 	"net/http"
 	"net/url"
@@ -59,14 +62,26 @@ type sfCacheItem struct {
 }
 
 func NewCustomTransport(
-	logger *zap.Logger,
-	roundTripper http.RoundTripper,
+	baseRoundTripper http.RoundTripper,
 	retryOptions retrytransport.RetryOptions,
 	metricStore metric.Store,
+	connectionMetricStore metric.ConnectionMetricStore,
 	enableSingleFlight bool,
+	enableTraceClient bool,
 ) *CustomTransport {
 	ct := &CustomTransport{
 		metricStore: metricStore,
+	}
+
+	if enableTraceClient {
+		getExprContext := func(ctx context.Context) *expr.Context {
+			reqContext := getRequestContext(ctx)
+			if reqContext == nil {
+				return &expr.Context{}
+			}
+			return &reqContext.expressionContext
+		}
+		baseRoundTripper = traceclient.NewTraceInjectingRoundTripper(baseRoundTripper, connectionMetricStore, getExprContext)
 	}
 
 	if retryOptions.Enabled {
@@ -79,9 +94,9 @@ func NewCustomTransport(
 			reqContext := getRequestContext(req.Context())
 			return reqContext.Logger()
 		}
-		ct.roundTripper = retrytransport.NewRetryHTTPTransport(roundTripper, retryOptions, getRequestContextLogger)
+		ct.roundTripper = retrytransport.NewRetryHTTPTransport(baseRoundTripper, retryOptions, getRequestContextLogger)
 	} else {
-		ct.roundTripper = roundTripper
+		ct.roundTripper = baseRoundTripper
 	}
 	if enableSingleFlight {
 		ct.sf = make(map[uint64]*sfCacheItem)
@@ -106,7 +121,7 @@ func (ct *CustomTransport) measureSubgraphMetrics(req *http.Request) func(err er
 
 	attributes = append(attributes, reqContext.telemetry.metricAttrs...)
 	if reqContext.telemetry.metricAttributeExpressions != nil {
-		additionalAttrs, err := reqContext.telemetry.metricAttributeExpressions.expressionsAttributes(reqContext)
+		additionalAttrs, err := reqContext.telemetry.metricAttributeExpressions.expressionsAttributes(&reqContext.expressionContext)
 		if err != nil {
 			ct.logger.Error("failed to resolve metric attribute expressions", zap.Error(err))
 		}
@@ -318,9 +333,11 @@ type TransportFactory struct {
 	retryOptions                  retrytransport.RetryOptions
 	localhostFallbackInsideDocker bool
 	metricStore                   metric.Store
+	connectionMetricStore         metric.ConnectionMetricStore
 	logger                        *zap.Logger
 	tracerProvider                *sdktrace.TracerProvider
 	tracePropagators              propagation.TextMapPropagator
+	enableTraceClient             bool
 }
 
 var _ ApiTransportFactory = TransportFactory{}
@@ -332,9 +349,11 @@ type TransportOptions struct {
 	RetryOptions                  retrytransport.RetryOptions
 	LocalhostFallbackInsideDocker bool
 	MetricStore                   metric.Store
+	ConnectionMetricStore         metric.ConnectionMetricStore
 	Logger                        *zap.Logger
 	TracerProvider                *sdktrace.TracerProvider
 	TracePropagators              propagation.TextMapPropagator
+	EnableTraceClient             bool
 }
 
 type SubscriptionClientOptions struct {
@@ -351,9 +370,11 @@ func NewTransport(opts *TransportOptions) *TransportFactory {
 		retryOptions:                  opts.RetryOptions,
 		localhostFallbackInsideDocker: opts.LocalhostFallbackInsideDocker,
 		metricStore:                   opts.MetricStore,
+		connectionMetricStore:         opts.ConnectionMetricStore,
 		logger:                        opts.Logger,
 		tracerProvider:                opts.TracerProvider,
 		tracePropagators:              opts.TracePropagators,
+		enableTraceClient:             opts.EnableTraceClient,
 	}
 }
 
@@ -393,11 +414,12 @@ func (t TransportFactory) RoundTripper(enableSingleFlight bool, baseTransport ht
 		}),
 	)
 	tp := NewCustomTransport(
-		t.logger,
 		traceTransport,
 		t.retryOptions,
 		t.metricStore,
+		t.connectionMetricStore,
 		enableSingleFlight,
+		t.enableTraceClient,
 	)
 
 	tp.preHandlers = t.preHandlers
