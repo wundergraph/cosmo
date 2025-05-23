@@ -442,7 +442,6 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
           return;
         }
         nf.lastChildNodeKind = node.kind;
-        const valuePath = `${nf.originalParentTypeName}.${name}`;
         const namedInputValueTypeName = getTypeNodeNamedTypeName(node.type);
         if (!BASE_SCALARS.has(namedInputValueTypeName)) {
           nf.referencedTypeNames.add(namedInputValueTypeName);
@@ -468,7 +467,12 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
           nf.errors.push(duplicateInputFieldDefinitionError(nf.originalParentTypeName, name));
           return;
         }
-        nf.addInputValueDataByNode(parentData.inputValueDataByValueName, node, valuePath);
+        nf.addInputValueDataByNode({
+          inputValueDataByName: parentData.inputValueDataByValueName,
+          isArgument: false,
+          node,
+          originalParentTypeName: nf.originalParentTypeName,
+        });
       },
       leave() {
         nf.argumentName = '';
