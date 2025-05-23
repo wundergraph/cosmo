@@ -25,6 +25,11 @@ func (r *Router) trackExecutionConfigUsage(cfg *nodev1.RouterConfig, static bool
 		UsesFederationRequires         bool `json:"uses_federation_requires,omitempty"`
 		UsesFederationEntityInterfaces bool `json:"uses_federation_entity_interfaces,omitempty"`
 		UsesFederationInterfaceObjects bool `json:"uses_federation_interface_objects,omitempty"`
+
+		UsesGrpc      bool   `json:"uses_grpc,omitempty"`
+		UsesPlugin    bool   `json:"uses_plugin,omitempty"`
+		PluginName    string `json:"plugin_name,omitempty"`
+		PluginVersion string `json:"plugin_version,omitempty"`
 	}
 
 	dataSources := make([]DataSource, len(cfg.EngineConfig.DatasourceConfigurations))
@@ -44,6 +49,14 @@ func (r *Router) trackExecutionConfigUsage(cfg *nodev1.RouterConfig, static bool
 					dataSources[i].UsesFederationRequires = len(ds.Requires) > 0
 					dataSources[i].UsesFederationEntityInterfaces = len(ds.EntityInterfaces) > 0
 					dataSources[i].UsesFederationInterfaceObjects = len(ds.InterfaceObjects) > 0
+				}
+				if ds.CustomGraphql.Grpc != nil {
+					dataSources[i].UsesGrpc = true
+					if ds.CustomGraphql.Grpc.Plugin != nil {
+						dataSources[i].UsesPlugin = true
+						dataSources[i].PluginName = ds.CustomGraphql.Grpc.Plugin.Name
+						dataSources[i].PluginVersion = ds.CustomGraphql.Grpc.Plugin.Version
+					}
 				}
 			}
 		case nodev1.DataSourceKind_PUBSUB:

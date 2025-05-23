@@ -116,6 +116,7 @@ type Config struct {
 	hostName                   string
 	mcp                        config.MCPConfiguration
 	plugins                    config.PluginsConfiguration
+	tracingAttributes          []config.CustomAttribute
 }
 
 // Usage returns an anonymized version of the config for usage tracking
@@ -313,6 +314,8 @@ func (c *Config) Usage() map[string]any {
 	} else {
 		usage["instance_id"] = "unknown"
 	}
+
+	usage["plugins_enabled"] = c.plugins.Enabled
 
 	return usage
 }

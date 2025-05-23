@@ -120,10 +120,14 @@ func (u *UsageTracker) baseProperties() posthog.Properties {
 }
 
 func (u *UsageTracker) findRepositoryURL() {
-	cmd := exec.Command("git", "remote", "get-url", "origin")
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "git", "remote", "get-url", "origin")
 	out, err := cmd.Output()
 	if err != nil {
-		cmd = exec.Command("git", "config", "--get", "remote.origin.url")
+		ctx, cancel = context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		cmd = exec.CommandContext(ctx, "git", "config", "--get", "remote.origin.url")
 		out, err = cmd.Output()
 		if err != nil {
 			u.repositoryURL = "unknown"
