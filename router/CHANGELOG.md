@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.214.1](https://github.com/wundergraph/cosmo/compare/router@0.214.0...router@0.214.1) (2025-05-23)
+
+### Bug Fixes
+
+* use ms measurements instead of float seconds for conn_acquire_time ([#1889](https://github.com/wundergraph/cosmo/issues/1889)) ([fc8e440](https://github.com/wundergraph/cosmo/commit/fc8e440c26eb50218ef8dd97abedf6a2b9a15958)) (@SkArchon)
+
 # [0.214.0](https://github.com/wundergraph/cosmo/compare/router@0.213.0...router@0.214.0) (2025-05-23)
 
 ### Features
