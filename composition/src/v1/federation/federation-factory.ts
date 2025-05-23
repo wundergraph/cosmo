@@ -930,6 +930,7 @@ export class FederationFactory {
       configureDescriptionDataBySubgraphName: copyObjectValueMap(sourceData.configureDescriptionDataBySubgraphName),
       directivesByDirectiveName: copyArrayValueMap(sourceData.directivesByDirectiveName),
       federatedCoords: sourceData.federatedCoords,
+      fieldName: sourceData.fieldName,
       includeDefaultValue: sourceData.includeDefaultValue,
       isArgument: sourceData.isArgument,
       kind: sourceData.kind,

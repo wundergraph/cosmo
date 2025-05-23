@@ -145,6 +145,7 @@ export type InputValueData = {
   type: MutableTypeNode;
   defaultValue?: ConstValueNode;
   description?: StringValueNode;
+  fieldName?: string;
 };
 
 export type InterfaceDefinitionData = {

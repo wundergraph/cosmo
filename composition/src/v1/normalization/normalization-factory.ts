@@ -1149,6 +1149,7 @@ export class NormalizationFactory {
       configureDescriptionDataBySubgraphName: new Map<string, ConfigureDescriptionData>(),
       directivesByDirectiveName: this.extractDirectives(node, new Map<string, ConstDirectiveNode[]>()),
       federatedCoords,
+      fieldName,
       includeDefaultValue: !!node.defaultValue,
       isArgument,
       kind: isArgument ? Kind.ARGUMENT : Kind.INPUT_VALUE_DEFINITION,
