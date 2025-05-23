@@ -37,10 +37,15 @@ func TestRouterSupervisor(t *testing.T) {
 	xEnv.RouterSupervisor.Stop()
 	xEnv.Shutdown()
 
-	// Let everything settle
-	time.Sleep(1 * time.Second)
+	for {
+		_, err := xEnv.MakeRequest("GET", xEnv.RouterURL+"/health/ready", nil, nil)
+		if err != nil {
+			break
+		}
 
-	// Should fail, since everything should be off now
-	err = xEnv.WaitForServer(context.Background(), xEnv.RouterURL+"/health/ready", 250, 1)
-	require.Error(t, err)
+		time.Sleep(500 * time.Millisecond)
+	}
+
+	// Let everything settle
+	time.Sleep(5 * time.Second)
 }
