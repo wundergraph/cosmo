@@ -717,7 +717,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	mapper := newAttributeMapper(!rmetric.IsUsingDefaultCloudExporter(s.metricConfig), s.metricConfig.Attributes)
 	baseMetricAttributes := mapper.mapAttributes(baseMuxAttributes)
 
-	attExpressions, attErr := newAttributeExpressions(s.metricConfig.Attributes, exprManager)
+	metricAttExpressions, attErr := newAttributeExpressions(s.metricConfig.Attributes, exprManager)
 	if attErr != nil {
 		return nil, attErr
 	}
@@ -727,6 +727,15 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		telemetryAttExpressions, telemetryAttErr = newAttributeExpressions(s.telemetryAttributes, exprManager)
 		if telemetryAttErr != nil {
 			return nil, telemetryAttErr
+		}
+	}
+
+	var tracingAttExpressions *attributeExpressions
+	if len(s.tracingAttributes) > 0 {
+		var tracingAttrErr error
+		tracingAttExpressions, tracingAttrErr = newAttributeExpressions(s.tracingAttributes, exprManager)
+		if tracingAttrErr != nil {
+			return nil, tracingAttrErr
 		}
 	}
 
@@ -815,8 +824,9 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 				metricsEnabled:                metricsEnabled,
 				traceEnabled:                  s.traceConfig.Enabled,
 				mapper:                        mapper,
-				metricAttributeExpressions:    attExpressions,
+				metricAttributeExpressions:    metricAttExpressions,
 				telemetryAttributeExpressions: telemetryAttExpressions,
+				tracingAttributeExpressions:   tracingAttExpressions,
 				w:                             w,
 				r:                             r,
 			})
@@ -859,16 +869,19 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	 */
 
 	var commonAttrRequestMapper func(r *http.Request) []attribute.KeyValue
-
 	if len(s.telemetryAttributes) > 0 {
 		// Common attributes across traces and metrics
 		commonAttrRequestMapper = buildHeaderAttributesMapper(s.telemetryAttributes)
 	}
 
-	var metricAttrRequestMapper func(r *http.Request) []attribute.KeyValue
+	var tracingAttrRequestMapper func(r *http.Request) []attribute.KeyValue
+	if len(s.tracingAttributes) > 0 {
+		tracingAttrRequestMapper = buildHeaderAttributesMapper(s.tracingAttributes)
+	}
 
-	// Metric attributes are only used for OTLP metrics and Prometheus metrics
+	var metricAttrRequestMapper func(r *http.Request) []attribute.KeyValue
 	if s.metricConfig.IsEnabled() {
+		// Metric attributes are only used for OTLP metrics and Prometheus metrics
 		metricAttrRequestMapper = buildHeaderAttributesMapper(s.metricConfig.Attributes)
 	}
 
@@ -880,6 +893,9 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 			if commonAttrRequestMapper != nil {
 				reqContext.telemetry.addCommonAttribute(commonAttrRequestMapper(r)...)
+			}
+			if tracingAttrRequestMapper != nil {
+				reqContext.telemetry.addCommonTraceAttribute(tracingAttrRequestMapper(r)...)
 			}
 			if metricAttrRequestMapper != nil {
 				reqContext.telemetry.addMetricAttribute(metricAttrRequestMapper(r)...)
@@ -950,6 +966,11 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		httpRouter.Use(requestLogger)
 
 		if s.accessLogsConfig.SubgraphEnabled {
+			subgraphExprAttributes, err := requestlogger.GetAccessLogConfigExpressions(s.accessLogsConfig.SubgraphAttributes, exprManager)
+			if err != nil {
+				return nil, fmt.Errorf("failed building router access log expressions: %w", err)
+			}
+
 			s.accessLogsConfig.SubgraphAttributes = requestlogger.CleanupExpressionAttributes(s.accessLogsConfig.SubgraphAttributes)
 
 			subgraphAccessLogger = requestlogger.NewSubgraphAccessLogger(
@@ -959,6 +980,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 					FieldsHandler:         SubgraphAccessLogsFieldHandler,
 					Fields:                baseLogFields,
 					Attributes:            s.accessLogsConfig.SubgraphAttributes,
+					ExprAttributes:        subgraphExprAttributes,
 				})
 		}
 	}
@@ -989,6 +1011,13 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		}
 	}
 
+	enableTraceClient := s.connectionMetrics != nil || exprManager.VisitorManager.IsSubgraphTraceUsedInExpressions()
+
+	var baseConnMetricStore rmetric.ConnectionMetricStore = &rmetric.NoopConnectionMetricStore{}
+	if s.connectionMetrics != nil {
+		baseConnMetricStore = s.connectionMetrics
+	}
+
 	ecb := &ExecutorConfigurationBuilder{
 		introspection:       s.introspection,
 		baseURL:             s.baseURL,
@@ -1008,7 +1037,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			PreHandlers:              s.preOriginHandlers,
 			PostHandlers:             s.postOriginHandlers,
 			MetricStore:              gm.metricStore,
-			ConnectionMetricStore:    s.connectionMetrics,
+			ConnectionMetricStore:    baseConnMetricStore,
 			RetryOptions: retrytransport.RetryOptions{
 				Enabled:       s.retryOptions.Enabled,
 				MaxRetryCount: s.retryOptions.MaxRetryCount,
@@ -1022,7 +1051,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			TracePropagators:              s.compositePropagator,
 			LocalhostFallbackInsideDocker: s.localhostFallbackInsideDocker,
 			Logger:                        s.logger,
-			EnableTraceClient:             s.connectionMetrics != nil,
+			EnableTraceClient:             enableTraceClient,
 		},
 	}
 
@@ -1150,7 +1179,14 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		TracerProvider:                              s.tracerProvider,
 		Authorizer:                                  NewCosmoAuthorizer(authorizerOptions),
 		SubgraphErrorPropagation:                    s.subgraphErrorPropagation,
-		EngineLoaderHooks:                           NewEngineRequestHooks(gm.metricStore, subgraphAccessLogger, s.tracerProvider),
+		EngineLoaderHooks: NewEngineRequestHooks(
+			gm.metricStore,
+			subgraphAccessLogger,
+			s.tracerProvider,
+			tracingAttExpressions,
+			telemetryAttExpressions,
+			metricAttExpressions,
+		),
 	}
 
 	if s.redisClient != nil {
