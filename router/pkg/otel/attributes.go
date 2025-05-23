@@ -2,6 +2,7 @@ package otel
 
 import (
 	"go.opentelemetry.io/otel/attribute"
+	"net"
 )
 
 const (
@@ -46,9 +47,10 @@ const (
 	WgIsBatchingOperation              = attribute.Key("wg.operation.batching.is_batched")
 	WgBatchingOperationsCount          = attribute.Key("wg.operation.batching.operations_count")
 	WgBatchingOperationIndex           = attribute.Key("wg.operation.batching.operation_index")
-
 	// HTTPRequestUploadFileCount is the number of files uploaded in a request (Not specified in the OpenTelemetry specification)
 	HTTPRequestUploadFileCount = attribute.Key("http.request.upload.file_count")
+
+	WgClientReusedConnection = attribute.Key("wg.http.client.reused_connection")
 
 	// Prometheus Schema Field Usage Attrs
 
@@ -76,3 +78,25 @@ var (
 	RouterServerAttribute    = WgComponentName.String("router-server")
 	EngineTransportAttribute = WgComponentName.String("engine-transport")
 )
+
+const (
+	ServerAddress = attribute.Key("server.address")
+	ServerPort    = attribute.Key("server.port")
+)
+
+func GetServerAttributes(host string) []attribute.KeyValue {
+	parsedHost, parsedPort, err := net.SplitHostPort(host)
+	if err != nil {
+		// If we are unable to parse the host string
+		// (e.g. :- if there was no port attached at all)
+		// we skip the server port and just return the host as is
+		return []attribute.KeyValue{
+			ServerAddress.String(host),
+		}
+	}
+
+	return []attribute.KeyValue{
+		ServerAddress.String(parsedHost),
+		ServerPort.String(parsedPort),
+	}
+}

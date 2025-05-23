@@ -1000,6 +1000,11 @@
                   "default": false,
                   "description": "Enable the collection of metrics for the GraphQL operation router caches. The default value is false."
                 },
+                "connection_stats": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable the collection of connection stats. The default value is false."
+                },
                 "engine_stats": {
                   "type": "object",
                   "additionalProperties": false,
@@ -1094,6 +1099,11 @@
                   "type": "boolean",
                   "default": false,
                   "description": "Enable the collection of metrics for the GraphQL operation router caches. The default value is false."
+                },
+                "connection_stats": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable the collection of connection stats. The default value is false."
                 },
                 "engine_stats": {
                   "type": "object",
