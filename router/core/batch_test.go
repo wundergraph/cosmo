@@ -2,11 +2,8 @@ package core
 
 import (
 	"bytes"
-	"fmt"
-	"github.com/cespare/xxhash/v2"
 	"github.com/stretchr/testify/require"
 	"io"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -153,21 +150,6 @@ func TestBatch(t *testing.T) {
 		require.Equal(t, "", string(readString))
 	})
 
-	t.Run("test testcase", func(t *testing.T) {
-		t.Parallel()
-
-		stringBody := "awesome"
-
-		digest := xxhash.New()
-		digest.WriteString(stringBody)
-		operationHashBatch := strconv.FormatUint(digest.Sum64(), 10)
-		fmt.Println(operationHashBatch)
-
-		digest.Reset()
-		digest.WriteString(stringBody)
-		operationHashBatch = strconv.FormatUint(digest.Sum64(), 10)
-		fmt.Println(operationHashBatch)
-	})
 }
 
 func randomString(n int, generateRune rune) string {

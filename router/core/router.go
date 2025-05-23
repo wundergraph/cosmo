@@ -1930,6 +1930,12 @@ func WithTelemetryAttributes(attributes []config.CustomAttribute) Option {
 	}
 }
 
+func WithTracingAttributes(attributes []config.CustomAttribute) Option {
+	return func(r *Router) {
+		r.tracingAttributes = attributes
+	}
+}
+
 func WithConfigPollerConfig(cfg *RouterConfigPollerConfig) Option {
 	return func(r *Router) {
 		r.routerConfigPollerConfig = cfg
