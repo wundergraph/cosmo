@@ -2658,6 +2658,7 @@ message GetNamespaceProposalConfigResponse {
 message GetOperationsRequest {
   string federatedGraphName = 1;
   string namespace = 2;
+  optional string clientName = 3;
 }
 
 message GetOperationsResponse {

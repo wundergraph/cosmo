@@ -7,6 +7,8 @@ import {
   GetOperationsResponse,
   GetOperationsResponse_Operation,
   GetOperationsResponse_OperationType,
+  AnalyticsViewFilterOperator,
+  AnalyticsFilter,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { MetricsRepository } from '../../repositories/analytics/MetricsRepository.js';
 import { CacheWarmerRepository } from '../../repositories/CacheWarmerRepository.js';
@@ -76,39 +78,49 @@ export function getOperations(
       range,
       organizationId: authContext.organizationId,
       graphId: graph.id,
-      filters: [],
-    });
-
-    const operationHashes = operations.map((op) => op.operationHash);
-    const operationContentMap = await cacheWarmerRepo.getOperationContent({
-      operationHashes,
-      federatedGraphID: graph.id,
-      organizationID: authContext.organizationId,
-      rangeInHours: range,
+      filters: req.clientName
+        ? [
+            new AnalyticsFilter({
+              field: 'ClientName',
+              operator: AnalyticsViewFilterOperator.EQUALS,
+              value: req.clientName,
+            }),
+          ]
+        : [],
     });
 
     const computedOperations: GetOperationsResponse_Operation[] = [];
 
-    for (const operation of operations) {
-      const operationContent = operationContentMap.get(operation.operationHash);
-      if (!operationContent) {
-        continue;
-      }
+    if (operations.length > 0) {
+      const operationHashes = operations.map((op) => op.operationHash);
+      const operationContentMap = await cacheWarmerRepo.getOperationContent({
+        operationHashes,
+        federatedGraphID: graph.id,
+        organizationID: authContext.organizationId,
+        rangeInHours: range,
+      });
 
-      computedOperations.push(
-        new GetOperationsResponse_Operation({
-          name: operation.operationName,
-          hash: operation.operationHash,
-          latency: operation.latency,
-          type:
-            operation.operationType === 'query'
-              ? GetOperationsResponse_OperationType.QUERY
-              : operation.operationType === 'mutation'
-                ? GetOperationsResponse_OperationType.MUTATION
-                : GetOperationsResponse_OperationType.SUBSCRIPTION,
-          content: operationContent,
-        }),
-      );
+      for (const operation of operations) {
+        const operationContent = operationContentMap.get(operation.operationHash);
+        if (!operationContent) {
+          continue;
+        }
+
+        computedOperations.push(
+          new GetOperationsResponse_Operation({
+            name: operation.operationName,
+            hash: operation.operationHash,
+            latency: operation.latency,
+            type:
+              operation.operationType === 'query'
+                ? GetOperationsResponse_OperationType.QUERY
+                : operation.operationType === 'mutation'
+                  ? GetOperationsResponse_OperationType.MUTATION
+                  : GetOperationsResponse_OperationType.SUBSCRIPTION,
+            content: operationContent,
+          }),
+        );
+      }
     }
 
     return {

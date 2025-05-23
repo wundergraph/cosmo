@@ -720,7 +720,7 @@ export class MetricsRepository {
   }
 
   public async getOperations(props: GetMetricsViewProps) {
-    const { dateRange, organizationId, graphId } = this.getMetricsProps(props);
+    const { dateRange, organizationId, graphId, whereSql } = this.getMetricsProps(props);
 
     const query = `
     WITH
@@ -745,6 +745,7 @@ export class MetricsRepository {
     WHERE Timestamp >= startDate AND Timestamp <= endDate
       AND OrganizationID = '${organizationId}'
       AND FederatedGraphID = '${graphId}'
+      ${whereSql ? `AND ${whereSql}` : ''}
     GROUP BY OperationName, OperationHash, OperationType ORDER BY latency DESC`;
 
     const res: {
