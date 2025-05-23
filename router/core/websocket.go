@@ -613,6 +613,13 @@ func (rw *websocketResponseWriter) Complete() {
 	}
 }
 
+func (rw *websocketResponseWriter) Close() {
+	err := rw.protocol.Close(rw.id, true)
+	if err != nil {
+		rw.logger.Debug("Sending error message", zap.Error(err))
+	}
+}
+
 func (rw *websocketResponseWriter) Write(data []byte) (int, error) {
 	rw.writtenBytes += len(data)
 	return rw.buf.Write(data)
