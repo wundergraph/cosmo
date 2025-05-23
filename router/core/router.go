@@ -1310,6 +1310,8 @@ func (r *Router) configureUsageTracking(ctx context.Context) (err error) {
 		Version:       Version,
 		Commit:        Commit,
 		Date:          Date,
+		InstanceID:    r.instanceID,
+		ClusterName:   r.clusterName,
 	}
 	r.usage, err = track.NewUsageTracker(r.logger, cfg)
 	if err != nil {

@@ -15,8 +15,9 @@ import (
 )
 
 type UsageTrackerConfig struct {
-	GraphApiToken         string
-	Version, Commit, Date string
+	GraphApiToken           string
+	ClusterName, InstanceID string
+	Version, Commit, Date   string
 }
 
 func NewUsageTracker(log *zap.Logger, config UsageTrackerConfig) (*UsageTracker, error) {
@@ -35,8 +36,16 @@ func NewUsageTracker(log *zap.Logger, config UsageTrackerConfig) (*UsageTracker,
 	tracker.findRepositoryURL()
 	hostName, err := os.Hostname()
 	if err != nil {
-		hostName = "unknown"
+		tracker.hostName = "unknown"
+	} else {
+		tracker.hostName = hostName
 	}
+	if config.ClusterName != "" {
+		tracker.clusterName = config.ClusterName
+	} else {
+		tracker.clusterName = "unknown"
+	}
+	tracker.distinctID = config.InstanceID
 	if config.GraphApiToken != "" {
 		claims, err := jwt.ExtractFederatedGraphTokenClaims(config.GraphApiToken)
 		if err != nil {
@@ -45,14 +54,6 @@ func NewUsageTracker(log *zap.Logger, config UsageTrackerConfig) (*UsageTracker,
 		}
 		tracker.organizationID = claims.OrganizationID
 		tracker.federatedGraphID = claims.FederatedGraphID
-		tracker.distinctID = fmt.Sprintf("%s:%s:%s", tracker.organizationID, tracker.federatedGraphID, hostName)
-	} else {
-		id, err := uuid.NewUUID()
-		if err != nil {
-			log.Error("failed to create uuid", zap.Error(err))
-			return nil, err
-		}
-		tracker.distinctID = fmt.Sprintf("%s:%s", hostName, id.String())
 	}
 	cfg := posthog.Config{
 		Logger:   tracker.posthogLogger(),
@@ -75,12 +76,13 @@ type UsageTracker struct {
 	organizationID   string
 	federatedGraphID string
 	distinctID       string
-	clusterID        string
+	clusterName      string
 	instanceID       string
 	repositoryURL    string
 	version          string
 	commit           string
 	date             string
+	hostName         string
 }
 
 func (u *UsageTracker) baseProperties() posthog.Properties {
@@ -93,8 +95,8 @@ func (u *UsageTracker) baseProperties() posthog.Properties {
 	if u.federatedGraphID != "" {
 		props.Set("$federated_graph_id", u.federatedGraphID)
 	}
-	if u.clusterID != "" {
-		props.Set("$cluster_id", u.clusterID)
+	if u.clusterName != "" {
+		props.Set("$cluster_name", u.clusterName)
 	}
 	if u.instanceID != "" {
 		props.Set("$instance_id", u.instanceID)
@@ -110,6 +112,9 @@ func (u *UsageTracker) baseProperties() posthog.Properties {
 	}
 	if u.date != "" {
 		props.Set("$router_build_date", u.date)
+	}
+	if u.hostName != "" {
+		props.Set("$router_host_name", u.hostName)
 	}
 	return props
 }
