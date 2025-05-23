@@ -333,11 +333,13 @@ plugins/{originalPluginName}/
 
 **Important**: Never manipulate the files inside \`generated\` directory yourself. Don't touch the \`service.proto\`,  \`service.proto.lock.json\`, \`service.pb.go\` and \`service_grpc.pb.go\` files.
 
+You can update the Go dependencies by running \`make test\` to ensure the dependencies are up to date. It runs \`go mod tidy\` under the hood.
+
 ## Implementation Pattern
 
 ### Service Integration
 
-If you need to integrate with other HTTP services, you should prefer to use the \`github.com/wundergraph/cosmo/router-plugin/httpclient\` package. The package is already included in the \`go.mod\` file, but you might need to run \`go mod test\` to ensure the dependencies are up to date.
+If you need to integrate with other HTTP services, you should prefer to use the \`github.com/wundergraph/cosmo/router-plugin/httpclient\` package.
 Always prefer a real integration over mocking. In the tests, you can mock the external service by bootstrapping an http server that returns the expected response.
 In tests, focus on a well-defined contract and the expected behavior of your service. Structure tests by endpoint, use-cases and use table-driven tests when possible.
 
