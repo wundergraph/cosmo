@@ -33,10 +33,10 @@ type graphQLWSMessage struct {
 }
 
 type graphQLWSProtocol struct {
-	conn JSONConn
+	conn ProtoConn
 }
 
-func newGraphQLWSProtocol(conn JSONConn) *graphQLWSProtocol {
+func newGraphQLWSProtocol(conn ProtoConn) *graphQLWSProtocol {
 	return &graphQLWSProtocol{
 		conn: conn,
 	}
@@ -112,6 +112,22 @@ func (p *graphQLWSProtocol) WriteGraphQLErrors(id string, errors json.RawMessage
 		Payload:    errors,
 		Extensions: extensions,
 	})
+}
+
+func (p *graphQLWSProtocol) Close(id string, downstreamErrorMessage bool) error {
+	if downstreamErrorMessage {
+		if err := p.conn.WriteJSON(
+			graphQLWSMessage{ID: id, Type: graphQLWSMessageTypeError, Payload: DownstreamErrorMessage},
+		); err != nil {
+			return err
+		}
+	}
+
+	if err := p.conn.Close(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (p *graphQLWSProtocol) Done(id string) error {
