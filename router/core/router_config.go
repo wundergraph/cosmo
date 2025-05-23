@@ -302,5 +302,17 @@ func (c *Config) Usage() map[string]any {
 
 	usage["static_execution_config"] = c.staticExecutionConfig != nil
 
+	if c.clusterName != "" {
+		usage["cluster_name"] = c.clusterName
+	} else {
+		usage["cluster_name"] = "unknown"
+	}
+
+	if c.instanceID != "" {
+		usage["instance_id"] = c.instanceID
+	} else {
+		usage["instance_id"] = "unknown"
+	}
+
 	return usage
 }

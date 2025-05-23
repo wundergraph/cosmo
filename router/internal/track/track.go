@@ -1,9 +1,11 @@
 package track
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"time"
 
 	"github.com/google/uuid"
@@ -12,79 +14,31 @@ import (
 	"go.uber.org/zap"
 )
 
-type UsageTracker struct {
-	log    *zap.Logger
-	client posthog.Client
-
-	start            time.Time
-	uid              string
-	organizationID   string
-	federatedGraphID string
-	distinctID       string
+type UsageTrackerConfig struct {
+	GraphApiToken         string
+	Version, Commit, Date string
 }
 
-func (u *UsageTracker) baseProperties() posthog.Properties {
-	props := posthog.NewProperties().
-		Set("$process_person_profile", false)
-
-	if u.organizationID != "" {
-		props.Set("$organization_id", u.organizationID)
-	}
-	if u.federatedGraphID != "" {
-		props.Set("$federated_graph_id", u.federatedGraphID)
-	}
-
-	return props
-}
-
-func (u *UsageTracker) TrackExecutionConfigUsage(usage map[string]any) {
-	props := u.baseProperties()
-	for k, v := range usage {
-		props.Set(fmt.Sprintf("execution_config_%s", k), v)
-	}
-
-	err := u.client.Enqueue(posthog.Capture{
-		Event:      "execution_config_usage",
-		Properties: props,
-		DistinctId: u.distinctID,
-	})
-	if err != nil {
-		u.log.Error("failed to track event", zap.Error(err))
-	}
-}
-
-func (u *UsageTracker) TrackRouterConfigUsage(usage map[string]any) {
-	props := u.baseProperties()
-	for k, v := range usage {
-		props.Set(fmt.Sprintf("router_config_%s", k), v)
-	}
-	err := u.client.Enqueue(posthog.Capture{
-		Event:      "router_config_usage",
-		Uuid:       u.uid,
-		DistinctId: u.distinctID,
-		Properties: props,
-	})
-	if err != nil {
-		u.log.Error("failed to track event", zap.Error(err))
-	}
-}
-
-func NewUsageTracker(log *zap.Logger, graphApiToken string) (*UsageTracker, error) {
+func NewUsageTracker(log *zap.Logger, config UsageTrackerConfig) (*UsageTracker, error) {
 	uid, err := uuid.NewUUID()
 	if err != nil {
 		log.Error("failed to create uuid", zap.Error(err))
 		return nil, err
 	}
 	tracker := &UsageTracker{
-		log: log,
-		uid: uid.String(),
+		log:     log,
+		uid:     uid.String(),
+		version: config.Version,
+		commit:  config.Commit,
+		date:    config.Date,
 	}
+	tracker.findRepositoryURL()
 	hostName, err := os.Hostname()
 	if err != nil {
 		hostName = "unknown"
 	}
-	if graphApiToken != "" {
-		claims, err := jwt.ExtractFederatedGraphTokenClaims(graphApiToken)
+	if config.GraphApiToken != "" {
+		claims, err := jwt.ExtractFederatedGraphTokenClaims(config.GraphApiToken)
 		if err != nil {
 			log.Error("failed to extract claims from graph api token", zap.Error(err))
 			return nil, err
@@ -110,6 +64,104 @@ func NewUsageTracker(log *zap.Logger, graphApiToken string) (*UsageTracker, erro
 		return nil, err
 	}
 	return tracker, nil
+}
+
+type UsageTracker struct {
+	log    *zap.Logger
+	client posthog.Client
+
+	start            time.Time
+	uid              string
+	organizationID   string
+	federatedGraphID string
+	distinctID       string
+	clusterID        string
+	instanceID       string
+	repositoryURL    string
+	version          string
+	commit           string
+	date             string
+}
+
+func (u *UsageTracker) baseProperties() posthog.Properties {
+	props := posthog.NewProperties().
+		Set("$process_person_profile", false)
+
+	if u.organizationID != "" {
+		props.Set("$organization_id", u.organizationID)
+	}
+	if u.federatedGraphID != "" {
+		props.Set("$federated_graph_id", u.federatedGraphID)
+	}
+	if u.clusterID != "" {
+		props.Set("$cluster_id", u.clusterID)
+	}
+	if u.instanceID != "" {
+		props.Set("$instance_id", u.instanceID)
+	}
+	if u.repositoryURL != "" {
+		props.Set("$repository_url", u.repositoryURL)
+	}
+	if u.version != "" {
+		props.Set("$router_build_version", u.version)
+	}
+	if u.commit != "" {
+		props.Set("$router_build_commit", u.commit)
+	}
+	if u.date != "" {
+		props.Set("$router_build_date", u.date)
+	}
+	return props
+}
+
+func (u *UsageTracker) findRepositoryURL() {
+	cmd := exec.Command("git", "remote", "get-url", "origin")
+	out, err := cmd.Output()
+	if err != nil {
+		cmd = exec.Command("git", "config", "--get", "remote.origin.url")
+		out, err = cmd.Output()
+		if err != nil {
+			u.repositoryURL = "unknown"
+			return
+		}
+	}
+	if len(out) == 0 {
+		u.repositoryURL = "unknown"
+		return
+	}
+	u.repositoryURL = string(bytes.TrimSpace(out))
+}
+
+func (u *UsageTracker) TrackExecutionConfigUsage(usage map[string]any) {
+	props := u.baseProperties()
+	for k, v := range usage {
+		props.Set(fmt.Sprintf("execution_config_%s", k), v)
+	}
+
+	err := u.client.Enqueue(posthog.Capture{
+		Event:      "router_execution_config",
+		Properties: props,
+		DistinctId: u.distinctID,
+	})
+	if err != nil {
+		u.log.Error("failed to track event", zap.Error(err))
+	}
+}
+
+func (u *UsageTracker) TrackRouterConfigUsage(usage map[string]any) {
+	props := u.baseProperties()
+	for k, v := range usage {
+		props.Set(fmt.Sprintf("router_config_%s", k), v)
+	}
+	err := u.client.Enqueue(posthog.Capture{
+		Event:      "router_base_config",
+		Uuid:       u.uid,
+		DistinctId: u.distinctID,
+		Properties: props,
+	})
+	if err != nil {
+		u.log.Error("failed to track event", zap.Error(err))
+	}
 }
 
 type hogLog struct {
@@ -175,7 +227,7 @@ func (u *UsageTracker) trackRouterUptime(options uptimeOptions) error {
 	}
 
 	return u.client.Enqueue(posthog.Capture{
-		Event:      "router_uptime",
+		Event:      "cosmo_router_uptime",
 		Uuid:       u.uid,
 		DistinctId: u.distinctID,
 		Properties: props,

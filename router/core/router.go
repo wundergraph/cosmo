@@ -81,13 +81,13 @@ type (
 	// Router is the main application instance.
 	Router struct {
 		Config
-		httpServer          *server
-		modules             []Module
-		EngineStats         statistics.EngineStatistics
-		playgroundHandler   func(http.Handler) http.Handler
-		proxy               ProxyFunc
-		enableUsageTracking bool
-		usage               UsageTracker
+		httpServer           *server
+		modules              []Module
+		EngineStats          statistics.EngineStatistics
+		playgroundHandler    func(http.Handler) http.Handler
+		proxy                ProxyFunc
+		disableUsageTracking bool
+		usage                UsageTracker
 	}
 
 	UsageTracker interface {
@@ -1296,17 +1296,22 @@ func (u *UsageTrackerNoOp) Close() {}
 func (u *UsageTrackerNoOp) TrackUptime(_ context.Context) {}
 
 func (r *Router) configureUsageTracking(ctx context.Context) (err error) {
-	if !r.enableUsageTracking {
+	if r.disableUsageTracking {
 		r.usage = &UsageTrackerNoOp{}
-		r.logger.Info("Cosmo Usage Tracking is disabled. (dev build)")
 		return nil
 	}
 	if os.Getenv("COSMO_TELEMETRY_DISABLED") == "true" || os.Getenv("DO_NOT_TRACK") == "1" {
 		r.usage = &UsageTrackerNoOp{}
-		r.logger.Info("Cosmo telemetry is disabled. Usage tracking is disabled.")
+		r.logger.Info("Usage tracking is disabled.")
 		return nil
 	}
-	r.usage, err = track.NewUsageTracker(r.logger, r.graphApiToken)
+	cfg := track.UsageTrackerConfig{
+		GraphApiToken: r.graphApiToken,
+		Version:       Version,
+		Commit:        Commit,
+		Date:          Date,
+	}
+	r.usage, err = track.NewUsageTracker(r.logger, cfg)
 	if err != nil {
 		return fmt.Errorf("failed to create usage tracker: %w", err)
 	}
@@ -1766,6 +1771,12 @@ func WithRateLimitConfig(cfg *config.RateLimitConfiguration) Option {
 func WithLocalhostFallbackInsideDocker(fallback bool) Option {
 	return func(r *Router) {
 		r.localhostFallbackInsideDocker = fallback
+	}
+}
+
+func WithDisableUsageTracking() Option {
+	return func(r *Router) {
+		r.disableUsageTracking = true
 	}
 }
 
