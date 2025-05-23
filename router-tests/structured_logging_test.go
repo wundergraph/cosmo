@@ -2807,7 +2807,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 			})
 		})
 
-		t.Run("verify cleanup of expression attributes", func(t *testing.T) {
+		t.Run("verify cleanup of attributes which contains expression and other attributes", func(t *testing.T) {
 			t.Parallel()
 
 			key := "conn_acquire_duration"
