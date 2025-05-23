@@ -2807,6 +2807,49 @@ func TestFlakyAccessLogs(t *testing.T) {
 			})
 		})
 
+		t.Run("verify cleanup of expression attributes", func(t *testing.T) {
+			t.Parallel()
+
+			key := "conn_acquire_duration"
+			testenv.Run(t, &testenv.Config{
+				SubgraphAccessLogsEnabled: true,
+				SubgraphAccessLogFields: []config.CustomAttribute{
+					{
+						Key: key,
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: "operation_hash",
+							Expression:   "subgraph.request.clientTrace.connAcquireDuration",
+						},
+					},
+				},
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query myQuery { employees { id } }`,
+				})
+				requestLog := xEnv.Observer().FilterMessage("/graphql")
+				requestLogAll := requestLog.All()
+				requestContextMap := requestLogAll[0].ContextMap()
+
+				keyCount := 0
+				for _, entry := range requestLogAll[0].Context {
+					if entry.Key == key {
+						keyCount++
+					}
+				}
+
+				// There should  only be one instance of the key
+				require.Equal(t, 1, keyCount)
+
+				connAcquireDuration, ok := requestContextMap["conn_acquire_duration"].(float64)
+				require.True(t, ok)
+				require.Greater(t, connAcquireDuration, 0.0)
+			})
+		})
+
 	})
 
 }
