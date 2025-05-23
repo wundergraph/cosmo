@@ -3,6 +3,7 @@ package wsproto
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/tidwall/sjson"
 )
 
@@ -36,10 +37,10 @@ type subscriptionsTransportWSMessage struct {
 }
 
 type subscriptionsTransportWSProtocol struct {
-	conn JSONConn
+	conn ProtoConn
 }
 
-func newSubscriptionsTransportWSProtocol(conn JSONConn) *subscriptionsTransportWSProtocol {
+func newSubscriptionsTransportWSProtocol(conn ProtoConn) *subscriptionsTransportWSProtocol {
 	return &subscriptionsTransportWSProtocol{
 		conn: conn,
 	}
@@ -117,6 +118,27 @@ func (p *subscriptionsTransportWSProtocol) WriteGraphQLErrors(id string, errors 
 		Payload:    data,
 		Extensions: extensions,
 	})
+}
+
+func (p *subscriptionsTransportWSProtocol) Close(id string, downstreamErrorMessage bool) error {
+	if downstreamErrorMessage {
+		// This protocol has errors inside an object, so we need to wrap it
+		data, err := sjson.SetBytes([]byte(`{}`), "errors", DownstreamErrorMessage)
+		if err != nil {
+			return fmt.Errorf("encoding JSON: %w", err)
+		}
+		return p.conn.WriteJSON(subscriptionsTransportWSMessage{
+			ID:      id,
+			Type:    subscriptionsTransportWSMessageTypeData,
+			Payload: data,
+		})
+	}
+
+	if err := p.conn.Close(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (p *subscriptionsTransportWSProtocol) Done(id string) error {

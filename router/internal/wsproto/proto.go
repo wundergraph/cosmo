@@ -6,6 +6,8 @@ import (
 	"strings"
 )
 
+var DownstreamErrorMessage = json.RawMessage(`[{"message":"downstream service error","extensions":{"code":"DOWNSTREAM_ERROR"}}]`)
+
 type Proto interface {
 	Subprotocol() string
 	// Initialize starts the protocol and returns the initial payload received from the client
@@ -15,13 +17,18 @@ type Proto interface {
 	Pong(*Message) error
 	WriteGraphQLData(id string, data json.RawMessage, extensions json.RawMessage) error
 	WriteGraphQLErrors(id string, errors json.RawMessage, extensions json.RawMessage) error
+
 	// Done is sent to indicate the requested operation is done and no more results will come in
 	Done(id string) error
+
+	// Close uncerimoniously closes the connection, with an optional error message ahead of it
+	Close(id string, downstreamErrorMessage bool) error
 }
 
-type JSONConn interface {
+type ProtoConn interface {
 	ReadJSON(v interface{}) error
 	WriteJSON(v interface{}) error
+	Close() error
 }
 
 // MessageType indicates the type of the message received from the client
@@ -58,7 +65,7 @@ func IsSupportedSubprotocol(subProtocol string) bool {
 	return false
 }
 
-func NewProtocol(subProtocol string, conn JSONConn) (Proto, error) {
+func NewProtocol(subProtocol string, conn ProtoConn) (Proto, error) {
 	switch subProtocol {
 	case GraphQLWSSubprotocol:
 		return newGraphQLWSProtocol(conn), nil
