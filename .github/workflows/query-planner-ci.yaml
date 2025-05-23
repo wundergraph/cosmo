@@ -9,6 +9,9 @@ on:
       - 'router/**/*'
       - 'connect/**/*'
       - '.github/workflows/router-ci.yaml'
+env:
+  CI: true
+  DO_NOT_TRACK: '1'
 permissions:
   pull-requests: write
   contents: read
