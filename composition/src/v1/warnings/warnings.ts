@@ -91,7 +91,7 @@ export function invalidExternalFieldWarning(fieldCoords: string, subgraphName: s
     message:
       versionOneWarningPropagationMessage(subgraphName) +
       ` The Object Field "${fieldCoords}" is invalidly declared "@external". An Object field should only` +
-      ` be declared "@external" if it is part of a "@key", "@provides", or "@requires" filed set, or the field is` +
+      ` be declared "@external" if it is part of a "@key", "@provides", or "@requires" field set, or the field is` +
       ` necessary to satisfy an Interface implementation. In the case that none of these conditions is true, the` +
       ` "@external" directive should be removed.`,
     subgraph: {
