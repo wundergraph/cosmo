@@ -120,12 +120,12 @@ func TestNewAttributeExpressions_SplitsExpressionsUsingAuth(t *testing.T) {
 		},
 	}
 
-	val, err := attrExpr.expressionsAttributes(&reqCtx)
+	val, err := attrExpr.expressionsAttributes(&reqCtx.expressionContext)
 	assert.NoError(t, err)
 	require.Len(t, val, 1)
 	assert.Equal(t, "/some/path", val[0].Value.AsString())
 
-	val2, err2 := attrExpr.expressionsAttributesWithAuth(&reqCtx)
+	val2, err2 := attrExpr.expressionsAttributesWithAuth(&reqCtx.expressionContext)
 	assert.NoError(t, err2)
 	require.Len(t, val2, 1)
 	assert.Equal(t, "yes", val2[0].Value.AsString())

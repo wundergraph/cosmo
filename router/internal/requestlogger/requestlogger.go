@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"github.com/wundergraph/cosmo/router/internal/errors"
+	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
@@ -24,6 +25,7 @@ type ContextFunc func(
 	err any,
 	r *http.Request,
 	rh *http.Header,
+	overrideExprCtx *expr.Context,
 ) []zapcore.Field
 
 // Option provides a functional approach to define
@@ -146,7 +148,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			// This is only called on panic so it is safe to call it here again
 			// to gather all the fields that are needed for logging
 			if h.accessLogger.fieldsHandler != nil {
-				fields = append(fields, h.accessLogger.fieldsHandler(h.logger, h.accessLogger.attributes, h.accessLogger.exprAttributes, err, r, nil)...)
+				fields = append(fields, h.accessLogger.fieldsHandler(h.logger, h.accessLogger.attributes, h.accessLogger.exprAttributes, err, r, nil, nil)...)
 			}
 
 			if brokenPipe {
@@ -175,7 +177,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if h.accessLogger.fieldsHandler != nil {
-		resFields = append(resFields, h.accessLogger.fieldsHandler(h.logger, h.accessLogger.attributes, h.accessLogger.exprAttributes, nil, r, nil)...)
+		resFields = append(resFields, h.accessLogger.fieldsHandler(h.logger, h.accessLogger.attributes, h.accessLogger.exprAttributes, nil, r, nil, nil)...)
 	}
 
 	h.logger.Info(path, append(fields, resFields...)...)

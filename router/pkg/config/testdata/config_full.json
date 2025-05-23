@@ -35,6 +35,18 @@
         "Enabled": false,
         "HeaderName": "x-wg-trace-id"
       },
+      "Attributes": [
+        {
+          "Key": "wg.tracing.custom.conn.subgraph.hostport",
+          "Default": "",
+          "ValueFrom": {
+            "RequestHeader": "",
+            "ContextField": "",
+            "ResponseHeader": "",
+            "Expression": "subgraph.name"
+          }
+        }
+      ],
       "ExportGraphQLVariables": true,
       "WithNewRoot": false
     },

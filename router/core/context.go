@@ -9,7 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/expr-lang/expr/vm"
 	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
 
@@ -159,10 +158,11 @@ type requestTelemetryAttributes struct {
 	// It will also remap the key if configured.
 	mapper *attributeMapper
 	// traceAttributeExpressions is a map of expressions that can be used to resolve dynamic attributes in traces
-	traceAttributeExpressions *attributeExpressions
+	telemetryAttributeExpressions *attributeExpressions
 	// metricAttributeExpressions is a map of expressions that can be used to resolve dynamic attributes in metrics
 	metricAttributeExpressions *attributeExpressions
-
+	// traceAttributeExpressions is a map of expressions that can be used to resolve dynamic attributes in traces
+	tracingAttributeExpressions *attributeExpressions
 	// metricsEnabled indicates if metrics are enabled. If false, no metrics attributes will be added
 	metricsEnabled bool
 	// traceEnabled indicates if traces are enabled, if false, no trace attributes will be added
@@ -266,25 +266,6 @@ type requestContext struct {
 func (c *requestContext) SetError(err error) {
 	c.error = err
 	c.expressionContext.Request.Error = err
-}
-
-func (c *requestContext) ResolveAnyExpressionWithWrappedError(expression *vm.Program) (any, error) {
-	// If an error exists already, wrap it and resolve the expression with the copied context
-	if c.expressionContext.Request.Error != nil {
-		// This will create a copy of the base expressionContext which we can modify
-		copyContext := c.expressionContext
-		copyContext.Request.Error = &ExprWrapError{c.expressionContext.Request.Error}
-		return expr.ResolveAnyExpression(expression, copyContext)
-	}
-	return expr.ResolveAnyExpression(expression, c.expressionContext)
-}
-
-func (c *requestContext) ResolveStringExpression(expression *vm.Program) (string, error) {
-	return expr.ResolveStringExpression(expression, c.expressionContext)
-}
-
-func (c *requestContext) ResolveBoolExpression(expression *vm.Program) (bool, error) {
-	return expr.ResolveBoolExpression(expression, c.expressionContext)
 }
 
 func (c *requestContext) Operation() OperationContext {
@@ -653,6 +634,7 @@ type requestContextOptions struct {
 	mapper                        *attributeMapper
 	metricAttributeExpressions    *attributeExpressions
 	telemetryAttributeExpressions *attributeExpressions
+	tracingAttributeExpressions   *attributeExpressions
 	w                             http.ResponseWriter
 	r                             *http.Request
 }
@@ -670,12 +652,13 @@ func buildRequestContext(opts requestContextOptions) *requestContext {
 		request:        opts.r,
 		operation:      opts.operationContext,
 		telemetry: &requestTelemetryAttributes{
-			metricSetAttrs:             opts.metricSetAttributes,
-			metricsEnabled:             opts.metricsEnabled,
-			traceEnabled:               opts.traceEnabled,
-			mapper:                     opts.mapper,
-			traceAttributeExpressions:  opts.telemetryAttributeExpressions,
-			metricAttributeExpressions: opts.metricAttributeExpressions,
+			metricSetAttrs:                opts.metricSetAttributes,
+			metricsEnabled:                opts.metricsEnabled,
+			traceEnabled:                  opts.traceEnabled,
+			mapper:                        opts.mapper,
+			telemetryAttributeExpressions: opts.telemetryAttributeExpressions,
+			metricAttributeExpressions:    opts.metricAttributeExpressions,
+			tracingAttributeExpressions:   opts.tracingAttributeExpressions,
 		},
 		expressionContext: rootCtx,
 		subgraphResolver:  subgraphResolverFromContext(opts.r.Context()),

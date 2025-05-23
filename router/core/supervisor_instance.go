@@ -218,6 +218,7 @@ func optionsFromResources(logger *zap.Logger, config *config.Config) []Option {
 		WithTracing(TraceConfigFromTelemetry(&config.Telemetry)),
 		WithMetrics(MetricConfigFromTelemetry(&config.Telemetry)),
 		WithTelemetryAttributes(config.Telemetry.Attributes),
+		WithTracingAttributes(config.Telemetry.Tracing.Attributes),
 		WithEngineExecutionConfig(config.EngineExecutionConfiguration),
 		WithCacheControlPolicy(config.CacheControl),
 		WithSecurityConfig(config.SecurityConfiguration),

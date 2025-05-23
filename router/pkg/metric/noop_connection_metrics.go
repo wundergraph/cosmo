@@ -2,6 +2,7 @@ package metric
 
 import (
 	"context"
+	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
 )
 
@@ -22,3 +23,10 @@ func (h *noopConnectionMetricProvider) Flush(ctx context.Context) error {
 func (h *noopConnectionMetricProvider) Shutdown() error {
 	return nil
 }
+
+type NoopConnectionMetricStore struct{}
+
+func (h *NoopConnectionMetricStore) MeasureConnectionAcquireDuration(ctx context.Context, duration float64, attrs ...attribute.KeyValue) {
+}
+func (h *NoopConnectionMetricStore) Flush(ctx context.Context) error    { return nil }
+func (h *NoopConnectionMetricStore) Shutdown(ctx context.Context) error { return nil }

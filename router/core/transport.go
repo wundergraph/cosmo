@@ -2,8 +2,10 @@ package core
 
 import (
 	"bytes"
+	"context"
 	"fmt"
-	traceclient "github.com/wundergraph/cosmo/router/internal/httpclient"
+	"github.com/wundergraph/cosmo/router/internal/expr"
+	"github.com/wundergraph/cosmo/router/internal/traceclient"
 	"io"
 	"net/http"
 	"net/url"
@@ -72,7 +74,14 @@ func NewCustomTransport(
 	}
 
 	if enableTraceClient {
-		baseRoundTripper = traceclient.NewTraceInjectingRoundTripper(baseRoundTripper, connectionMetricStore)
+		getExprContext := func(ctx context.Context) *expr.Context {
+			reqContext := getRequestContext(ctx)
+			if reqContext == nil {
+				return &expr.Context{}
+			}
+			return &reqContext.expressionContext
+		}
+		baseRoundTripper = traceclient.NewTraceInjectingRoundTripper(baseRoundTripper, connectionMetricStore, getExprContext)
 	}
 
 	if retryOptions.Enabled {
@@ -112,7 +121,7 @@ func (ct *CustomTransport) measureSubgraphMetrics(req *http.Request) func(err er
 
 	attributes = append(attributes, reqContext.telemetry.metricAttrs...)
 	if reqContext.telemetry.metricAttributeExpressions != nil {
-		additionalAttrs, err := reqContext.telemetry.metricAttributeExpressions.expressionsAttributes(reqContext)
+		additionalAttrs, err := reqContext.telemetry.metricAttributeExpressions.expressionsAttributes(&reqContext.expressionContext)
 		if err != nil {
 			ct.logger.Error("failed to resolve metric attribute expressions", zap.Error(err))
 		}
