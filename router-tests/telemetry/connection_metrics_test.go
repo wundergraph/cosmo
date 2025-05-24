@@ -119,7 +119,7 @@ func TestFlakyConnectionMetrics(t *testing.T) {
 				expected := metricdata.Metrics{
 					Name:        "router.http.client.connection.acquire_duration",
 					Description: "Total connection acquire duration",
-					Unit:        "s",
+					Unit:        "ms",
 					Data: metricdata.Histogram[float64]{
 						Temporality: metricdata.CumulativeTemporality,
 						DataPoints: []metricdata.HistogramDataPoint[float64]{

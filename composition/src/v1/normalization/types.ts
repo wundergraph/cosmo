@@ -3,11 +3,13 @@ import {
   CompositeOutputData,
   DirectiveDefinitionData,
   FieldData,
+  InputValueData,
   NodeData,
   SchemaData,
 } from '../../schema-building/types';
 import { ConstDirectiveNode, DocumentNode, ValueNode } from 'graphql';
 import { RequiredFieldConfiguration } from '../../router-configuration/types';
+import { InputValueDefinitionNode } from 'graphql/index';
 
 export type KeyFieldSetData = {
   documentNode: DocumentNode;
@@ -62,4 +64,13 @@ export type HandleRequiresScopesDirectiveParams = {
   directiveCoords: string;
   orScopes: ReadonlyArray<ValueNode>;
   requiredScopes: Array<Set<string>>;
+};
+
+export type AddInputValueDataByNodeParams = {
+  inputValueDataByName: Map<string, InputValueData>;
+  isArgument: boolean;
+  node: InputValueDefinitionNode;
+  originalParentTypeName: string;
+  fieldName?: string;
+  renamedParentTypeName?: string;
 };
