@@ -1,4 +1,4 @@
-import { and, eq, inArray, or, SQL } from 'drizzle-orm';
+import { and, eq, inArray, SQL } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
 import { NamespaceDTO } from '../../types/index.js';
@@ -113,18 +113,33 @@ export class NamespaceRepository {
       .where(and(eq(schema.namespaces.name, data.name), eq(schema.namespaces.organizationId, this.organizationId)));
   }
 
-  public list(rbac?: RBACEvaluator) {
+  public async list(rbac?: RBACEvaluator) {
     const conditions: (SQL<unknown> | undefined)[] = [eq(schema.namespaces.organizationId, this.organizationId)];
 
     if (rbac && !rbac.isOrganizationAdminOrDeveloper) {
-      const nsAdmin = rbac.ruleFor('namespace-admin');
-      const nsViewer = rbac.ruleFor('namespace-viewer');
-      if (!nsAdmin && !nsViewer) {
-        // The default namespace should always be included
+      const namespacesBasedOnResources: string[] = [];
+      if (rbac.resources.length > 0) {
+        const targets = await this.db
+          .selectDistinct({ namespaceId: schema.targets.namespaceId })
+          .from(schema.targets)
+          .where(
+            and(
+              eq(schema.targets.organizationId, this.organizationId),
+              eq(schema.targets.type, 'subgraph'),
+              inArray(schema.targets.id, rbac.resources),
+            ),
+          );
+
+        namespacesBasedOnResources.push(...targets.map((ns) => ns.namespaceId));
+      }
+
+      const namespaces = [...new Set([...rbac.namespaces, ...namespacesBasedOnResources])];
+      if (namespaces.length === 0) {
         conditions.push(eq(schema.namespaces.name, DefaultNamespace));
-      } else if ((nsAdmin && nsAdmin.namespaces.length > 0) || (nsViewer && nsViewer.namespaces.length > 0)) {
-        const namespaces = [...new Set([...(nsAdmin?.namespaces ?? []), ...(nsViewer?.namespaces ?? [])])];
-        conditions.push(inArray(schema.namespaces.id, namespaces));
+      } else {
+        conditions.push(
+          inArray(schema.namespaces.id, [...new Set([...rbac.namespaces, ...namespacesBasedOnResources])]),
+        );
       }
     }
 

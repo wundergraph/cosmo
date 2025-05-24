@@ -237,6 +237,54 @@ export class FeatureFlagRepository {
     return featureFlagsCount[0].count;
   }
 
+  /**
+   * Applies conditions based on the provided RBAC. If the actor can't access any subgraph, the
+   * returned value is false; otherwise, true.
+   *
+   * @param rbac
+   * @param conditions
+   * @private
+   */
+  private applyRbacConditionsToQuery(rbac: RBACEvaluator | undefined, conditions: (SQL<unknown> | undefined)[]) {
+    if (!rbac || rbac.isOrganizationAdminOrDeveloper) {
+      return true;
+    }
+
+    const graphAdmin = rbac.ruleFor('subgraph-admin');
+    const graphPublisher = rbac.ruleFor('subgraph-publisher');
+    if (!graphAdmin && !graphPublisher) {
+      return false;
+    }
+
+    const namespaces: string[] = [];
+    const resources: string[] = [];
+
+    if (graphAdmin) {
+      namespaces.push(...graphAdmin.namespaces);
+      resources.push(...graphAdmin.resources);
+    }
+
+    if (graphPublisher) {
+      namespaces.push(...graphPublisher.namespaces);
+      resources.push(...graphPublisher.resources);
+    }
+
+    if (namespaces.length > 0 && resources.length > 0) {
+      conditions.push(
+        or(
+          inArray(schema.targets.namespaceId, [...new Set(namespaces)]),
+          inArray(schema.targets.id, [...new Set(resources)]),
+        ),
+      );
+    } else if (namespaces.length > 0) {
+      conditions.push(inArray(schema.targets.namespaceId, [...new Set(namespaces)]));
+    } else if (resources.length > 0) {
+      conditions.push(inArray(schema.targets.id, [...new Set(resources)]));
+    }
+
+    return true;
+  }
+
   public async getFeatureSubgraphs({
     namespaceId,
     limit,
@@ -264,17 +312,8 @@ export class FeatureFlagRepository {
       );
     }
 
-    if (rbac && !rbac.isOrganizationAdminOrDeveloper) {
-      const graphPublisher = rbac.ruleFor('subgraph-publisher');
-      if (!graphPublisher) {
-        // The actor doesn't have publisher access to any subgraph
-        return [];
-      }
-
-      if (graphPublisher.resources.length > 0) {
-        // Only limit the subgraphs the actor have access to when it hasn't been given access to all resources
-        conditions.push(inArray(schema.targets.id, graphPublisher.resources));
-      }
+    if (!this.applyRbacConditionsToQuery(rbac, conditions)) {
+      return [];
     }
 
     const dbQuery = this.db
@@ -339,17 +378,8 @@ export class FeatureFlagRepository {
       conditions.push(like(targets.name, `%${query}%`));
     }
 
-    if (rbac && !rbac.isOrganizationAdminOrDeveloper) {
-      const graphPublisher = rbac.ruleFor('subgraph-publisher');
-      if (!graphPublisher) {
-        // The actor doesn't have publisher access to any subgraph
-        return 0;
-      }
-
-      if (graphPublisher.resources.length > 0) {
-        // Only limit the subgraphs the actor have access to when it hasn't been given access to all resources
-        conditions.push(inArray(schema.targets.id, graphPublisher.resources));
-      }
+    if (!this.applyRbacConditionsToQuery(rbac, conditions)) {
+      return 0;
     }
 
     const featureSubgraphTargets = await this.db
