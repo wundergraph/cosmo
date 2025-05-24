@@ -12,7 +12,7 @@ import useWindowSize from "@/hooks/use-window-size";
 import { useFeature } from "@/hooks/use-feature";
 import { GroupRolesCommand, GroupRolesAccordion } from "./group-roles-command";
 import { GroupResourceSelector } from "@/components/member-groups/group-resource-selector";
-import { HackyPopoverContent } from "./hacky-popover-content";
+import { PopoverContentWithScrollableContent } from "./popover-content-with-scrollable-content";
 
 export function GroupRuleBuilder({ builtin, roles, rule, accessibleResources, disabled, onRuleUpdated, onRemoveRule }: {
   builtin: boolean;
@@ -72,7 +72,7 @@ export function GroupRuleBuilder({ builtin, roles, rule, accessibleResources, di
             </Button>
           </PopoverTrigger>
 
-          <HackyPopoverContent
+          <PopoverContentWithScrollableContent
             className="p-0 w-[calc(100vw-54px)] sm:w-[350px] md:w-[500px]"
             align="start"
           >
@@ -90,7 +90,7 @@ export function GroupRuleBuilder({ builtin, roles, rule, accessibleResources, di
                   onSelectRole={onSelectRole}
                 />
               )}
-          </HackyPopoverContent>
+          </PopoverContentWithScrollableContent>
         </Popover>
       </div>
 

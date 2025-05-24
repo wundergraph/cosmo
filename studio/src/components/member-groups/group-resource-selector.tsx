@@ -5,7 +5,7 @@ import {
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { roles } from "@/lib/constants";
 import { useMemo, useState } from "react";
-import { HackyPopoverContent } from "./hacky-popover-content";
+import { PopoverContentWithScrollableContent } from "./popover-content-with-scrollable-content";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ChevronRightIcon, CheckIcon, MinusIcon } from "@heroicons/react/24/outline";
@@ -57,7 +57,7 @@ export function GroupResourceSelector({ rule, disabled, activeRole, accessibleRe
           </span>
         </Button>
       </PopoverTrigger>
-      <HackyPopoverContent className="p-1 text-sm w-[400px]">
+      <PopoverContentWithScrollableContent className="p-1 text-sm w-[400px]">
         <div className="max-h-[32rem] overflow-auto">
           {availableResources.length > 0
             ? availableResources.map((res, index) => (
@@ -72,7 +72,7 @@ export function GroupResourceSelector({ rule, disabled, activeRole, accessibleRe
               <div className="p-2 text-center text-muted-foreground">No resources available</div>
             )}
         </div>
-      </HackyPopoverContent>
+      </PopoverContentWithScrollableContent>
     </Popover>
   ) : (
     <div className="flex justify-start items-center grow truncate h-9 text-sm gap-x-2">

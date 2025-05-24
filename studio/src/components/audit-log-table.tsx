@@ -79,12 +79,11 @@ export const AuditLogTable = ({ logs }: { logs?: AuditLog[] }) => {
 
               if (auditAction === "organization_invitation.created" || action === "queued_deletion") {
                 postParagraph = "for";
-              } else if (
-                auditAction === "member_role.updated" ||
-                auditAction === "member_group.updated" ||
-                auditAction === "api_key.group_updated"
-              ) {
+              } else if (auditAction === "member_role.updated") {
                 preParagraph = "role for";
+                postParagraph = "to";
+              } else if (auditAction === "member_group.updated" || auditAction === "api_key.group_updated") {
+                preParagraph = "group for";
                 postParagraph = "to";
               } else if (auditAction === "group.members_moved") {
                 preParagraph = "members from group";
