@@ -22,7 +22,6 @@ interface Target {
 }
 
 export class RBACEvaluator {
-  private readonly isRBACFeatureEnabled: boolean;
   readonly roles: OrganizationRole[];
   private readonly rules: ReadonlyMap<OrganizationRole, RuleData>;
 
@@ -39,7 +38,6 @@ export class RBACEvaluator {
   constructor(
     readonly groups: Omit<OrganizationGroupDTO, 'membersCount'>[],
     private readonly userId?: string,
-    isRBACFeatureEnabled?: boolean,
   ) {
     const flattenRules = groups.flatMap((group) => group.rules);
     const rulesGroupedByRole = Object.groupBy(flattenRules, (rule) => rule.role);
@@ -52,7 +50,6 @@ export class RBACEvaluator {
       });
     }
 
-    this.isRBACFeatureEnabled = isRBACFeatureEnabled ?? true;
     this.roles = Array.from(result.keys(), (k) => k);
     this.namespaces = [...new Set(Array.from(result.values(), (res) => res.namespaces).flat())];
     this.resources = [...new Set(Array.from(result.values(), (res) => res.resources).flat())];
@@ -60,9 +57,7 @@ export class RBACEvaluator {
 
     this.isOrganizationAdmin = this.roles.includes('organization-admin');
     this.isOrganizationAdminOrDeveloper = this.isOrganizationAdmin || this.roles.includes('organization-developer');
-    this.isOrganizationApiKeyManager = this.isRBACFeatureEnabled
-      ? this.isOrganizationAdmin || !!this.ruleFor('organization-apikey-manager')
-      : this.isOrganizationAdmin;
+    this.isOrganizationApiKeyManager = this.isOrganizationAdmin || !!this.ruleFor('organization-apikey-manager');
     this.isOrganizationViewer = this.isOrganizationAdminOrDeveloper || this.roles.includes('organization-viewer');
 
     this.canCreateNamespace =
@@ -120,6 +115,23 @@ export class RBACEvaluator {
     return false;
   }
 
+  canDeleteFederatedGraph(graph: Target) {
+    if (graph.creatorUserId && this.userId && graph.creatorUserId === this.userId) {
+      // The graph creator should always have access to the provided target
+      return true;
+    }
+
+    if (this.isOrganizationAdminOrDeveloper) {
+      return true;
+    }
+
+    const rule = this.ruleFor('graph-admin');
+    return (
+      !!rule &&
+      ((rule.namespaces.length === 0 && rule.resources.length === 0) || rule.namespaces.includes(graph.namespaceId))
+    );
+  }
+
   hasFederatedGraphWriteAccess(graph: Target) {
     return this.isOrganizationAdminOrDeveloper || this.checkTargetAccess(graph, ['graph-admin']);
   }
@@ -145,6 +157,23 @@ export class RBACEvaluator {
     }
 
     return false;
+  }
+
+  canDeleteSubGraph(graph: Target) {
+    if (graph.creatorUserId && this.userId && graph.creatorUserId === this.userId) {
+      // The graph creator should always have access to the provided target
+      return true;
+    }
+
+    if (this.isOrganizationAdminOrDeveloper) {
+      return true;
+    }
+
+    const rule = this.ruleFor('subgraph-admin');
+    return (
+      !!rule &&
+      ((rule.namespaces.length === 0 && rule.resources.length === 0) || rule.namespaces.includes(graph.namespaceId))
+    );
   }
 
   hasSubGraphWriteAccess(graph: Target) {

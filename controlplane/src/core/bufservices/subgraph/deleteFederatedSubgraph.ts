@@ -79,6 +79,7 @@ export function deleteFederatedSubgraph(
       },
       headers: ctx.requestHeader,
       authContext,
+      isDeleteOperation: true,
     });
 
     let proposalMatchMessage: string | undefined;

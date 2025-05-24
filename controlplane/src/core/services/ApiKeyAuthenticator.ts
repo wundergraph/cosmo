@@ -61,8 +61,6 @@ export default class ApiKeyAuthenticator {
       .where(eq(schema.apiKeys.id, apiKeyModel.id));
 
     const organizationDeactivated = !!organization.deactivation;
-    const isRbacFeatureEnabled = await this.orgRepo.isFeatureEnabled(organization.id, 'rbac');
-
     let rbac: RBACEvaluator;
     if (apiKeyModel.groupId) {
       const keyGroup = await this.orgRepo.getOrganizationGroup({
@@ -70,9 +68,9 @@ export default class ApiKeyAuthenticator {
         groupId: apiKeyModel.groupId,
       });
 
-      rbac = new RBACEvaluator(keyGroup ? [keyGroup] : [], apiKeyModel.userId, isRbacFeatureEnabled);
+      rbac = new RBACEvaluator(keyGroup ? [keyGroup] : [], apiKeyModel.userId);
     } else {
-      rbac = new RBACEvaluator([], apiKeyModel.userId, isRbacFeatureEnabled);
+      rbac = new RBACEvaluator([], apiKeyModel.userId);
     }
 
     return {

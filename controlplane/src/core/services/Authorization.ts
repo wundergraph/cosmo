@@ -25,6 +25,7 @@ export class Authorization {
     graph,
     db,
     authContext,
+    isDeleteOperation,
   }: {
     headers: Headers;
     graph: {
@@ -33,6 +34,7 @@ export class Authorization {
     };
     db: PostgresJsDatabase<typeof schema>;
     authContext: AuthContext;
+    isDeleteOperation?: boolean;
   }) {
     const { targetId, targetType } = graph;
     const { userId, organizationId } = authContext;
@@ -74,14 +76,22 @@ export class Authorization {
 
       if (targetType === 'federatedGraph') {
         const federatedGraph = await fedRepo.byTargetId(targetId);
-        if (federatedGraph && rbac.hasFederatedGraphWriteAccess(federatedGraph)) {
+        if (
+          federatedGraph &&
+          ((isDeleteOperation && rbac.canDeleteFederatedGraph(federatedGraph)) ||
+            (!isDeleteOperation && rbac.hasFederatedGraphWriteAccess(federatedGraph)))
+        ) {
           return;
         }
 
         throw new UnauthorizedError();
       } else if (targetType === 'subgraph') {
         const subgraph = await subgraphRepo.byTargetId(targetId);
-        if (subgraph && rbac.hasSubGraphWriteAccess(subgraph)) {
+        if (
+          subgraph &&
+          ((isDeleteOperation && rbac.canDeleteSubGraph(subgraph)) ||
+            (!isDeleteOperation && rbac.hasSubGraphWriteAccess(subgraph)))
+        ) {
           return;
         }
 

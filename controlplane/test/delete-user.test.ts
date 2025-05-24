@@ -80,7 +80,7 @@ const createTempUser = async (
       userID: keycloakUserID,
     });
 
-    const orgAdminGroup = await orgGroupRepo.create({
+    const personalOrgAdminGroup = await orgGroupRepo.create({
       organizationId: personalOrgMember.organizationId,
       name: 'admin',
       description: '',
@@ -90,13 +90,13 @@ const createTempUser = async (
 
     await orgGroupRepo.updateGroup({
       organizationId: personalOrgMember.organizationId,
-      groupId: orgAdminGroup.groupId,
+      groupId: personalOrgAdminGroup.groupId,
       rules: [{ role: 'organization-admin', namespaces: [], resources: [] }]
     });
 
     await orgGroupRepo.addUserToGroup({
       organizationMemberId: personalOrgMember.id,
-      groupId: orgAdminGroup.groupId,
+      groupId: personalOrgAdminGroup.groupId,
     });
 
     await apiKeyRepo.addAPIKey({
@@ -105,16 +105,16 @@ const createTempUser = async (
       organizationID: personalOrg.id,
       userID: keycloakUserID,
       expiresAt: ExpiresAt.NEVER,
-      groupId: orgAdminGroup.groupId,
+      groupId: personalOrgAdminGroup.groupId,
       permissions: [],
     });
 
     // Add to existing org
-    if (orgAdminGroup.kcGroupId) {
+    if (personalOrgAdminGroup.kcGroupId) {
       await keycloakClient.client.users.addToGroup({
         id: keycloakUserID,
         realm,
-        groupId: orgAdminGroup.kcGroupId,
+        groupId: personalOrgAdminGroup.kcGroupId,
       });
     }
 
@@ -124,9 +124,14 @@ const createTempUser = async (
       userID: keycloakUserID,
     });
 
+    const orgAdminGroup = await orgGroupRepo.byName({
+      organizationId: org!.id,
+      name: 'admin',
+    });
+
     await orgGroupRepo.addUserToGroup({
       organizationMemberId: orgMember.id,
-      groupId: orgAdminGroup.groupId,
+      groupId: orgAdminGroup!.groupId,
     });
 
     await apiKeyRepo.addAPIKey({
@@ -135,13 +140,13 @@ const createTempUser = async (
       organizationID: org!.id,
       userID: keycloakUserID,
       expiresAt: ExpiresAt.NEVER,
-      groupId: orgAdminGroup.groupId,
+      groupId: orgAdminGroup!.groupId,
       permissions: [],
     });
 
     const updatedOrgAdminGroup = await orgGroupRepo.byId({
-      organizationId: personalOrgMember.organizationId,
-      groupId: orgAdminGroup.groupId,
+      organizationId: org!.id,
+      groupId: orgAdminGroup!.groupId,
     });
 
     return {
@@ -155,7 +160,7 @@ const createTempUser = async (
       organizationSlug: personalOrg.slug,
       userDisplayName: userEmail,
       groups: ['organization-admin'],
-      rbac: new RBACEvaluator([updatedOrgAdminGroup!], keycloakUserID, true),
+      rbac: new RBACEvaluator([updatedOrgAdminGroup!], keycloakUserID),
     };
   } catch (error) {
     console.log(error);

@@ -1,6 +1,13 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import { afterAllSetup, beforeAllSetup, genID } from '../../src/core/test-util.js';
+import {
+  afterAllSetup,
+  beforeAllSetup,
+  createTestGroup,
+  createTestRBACEvaluator,
+  genID,
+  TestUser
+} from '../../src/core/test-util.js';
 import {
   createBaseAndFeatureSubgraph,
   createNamespace,
@@ -18,26 +25,6 @@ describe('Create feature flag tests', () => {
 
   afterAll(async () => {
     await afterAllSetup(dbname);
-  });
-
-  test('that a feature flag can be created with a feature subgraph', async () => {
-    const { client, server } = await SetupTest({ dbname });
-
-    const subgraphName = genID('subgraph');
-    const featureSubgraphName = genID('featureSubgraph');
-
-    await createBaseAndFeatureSubgraph(client, subgraphName, featureSubgraphName, DEFAULT_SUBGRAPH_URL_ONE, DEFAULT_SUBGRAPH_URL_TWO);
-
-    const flagName = genID('flag');
-
-    const featureFlagResponse = await client.createFeatureFlag({
-      name: flagName,
-      featureSubgraphNames: [featureSubgraphName],
-    });
-
-    expect(featureFlagResponse.response?.code).toBe(EnumStatusCode.OK);
-
-    await server.close();
   });
 
   test('that an error is returned if a feature flag is created without any feature subgraphs', async () => {
@@ -197,6 +184,68 @@ describe('Create feature flag tests', () => {
     expect(featureFlagResponse.response?.code).toBe(EnumStatusCode.ERR);
     expect(featureFlagResponse.response?.details)
       .toBe('1. Feature subgraphs with the same base subgraph cannot compose the same feature flag.');
+
+    await server.close();
+  });
+
+  test.each([
+    'organization-admin',
+    'organization-developer',
+  ])('%s should be able to create feature graph with a feature subgraph', async (role) => {
+    const { client, server, authenticator, users } = await SetupTest({ dbname });
+
+    const subgraphName = genID('subgraph');
+    const featureSubgraphName = genID('featureSubgraph');
+
+    authenticator.changeUserWithSuppliedContext({
+      ...users[TestUser.adminAliceCompanyA],
+      rbac: createTestRBACEvaluator(createTestGroup({ role })),
+    });
+
+    await createBaseAndFeatureSubgraph(client, subgraphName, featureSubgraphName, DEFAULT_SUBGRAPH_URL_ONE, DEFAULT_SUBGRAPH_URL_TWO);
+
+    const flagName = genID('flag');
+
+    const featureFlagResponse = await client.createFeatureFlag({
+      name: flagName,
+      featureSubgraphNames: [featureSubgraphName],
+    });
+
+    expect(featureFlagResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    await server.close();
+  });
+
+  test.each([
+    'organization-apikey-manager',
+    'organization-viewer',
+    'namespace-admin',
+    'namespace-viewer',
+    'graph-admin',
+    'graph-viewer',
+    'subgraph-admin',
+    'subgraph-publisher',
+  ])('%s should not be able to create feature flag', async (role) => {
+    const { client, server, authenticator, users } = await SetupTest({ dbname });
+
+    const subgraphName = genID('subgraph');
+    const featureSubgraphName = genID('featureSubgraph');
+
+    await createBaseAndFeatureSubgraph(client, subgraphName, featureSubgraphName, DEFAULT_SUBGRAPH_URL_ONE, DEFAULT_SUBGRAPH_URL_TWO);
+
+    const flagName = genID('flag');
+
+    authenticator.changeUserWithSuppliedContext({
+      ...users[TestUser.adminAliceCompanyA],
+      rbac: createTestRBACEvaluator(createTestGroup({ role })),
+    });
+
+    const featureFlagResponse = await client.createFeatureFlag({
+      name: flagName,
+      featureSubgraphNames: [featureSubgraphName],
+    });
+
+    expect(featureFlagResponse.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
 
     await server.close();
   });

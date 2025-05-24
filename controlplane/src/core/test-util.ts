@@ -90,6 +90,7 @@ export async function seedTest(
       organizationName: userTestData.organizationName,
       organizationSlug: userTestData.organizationSlug,
       ownerID: userTestData.userId,
+      kcGroupId: kcRootGroupId,
     });
 
     for (const groupName of ['admin', 'developer', 'viewer']) {
@@ -123,8 +124,9 @@ export async function seedTest(
     userID: userTestData.userId,
   });
 
-  for (const role of userTestData.groups) {
-    const groupName = role.split('-').splice(1).join('-');
+  const userGroups = userTestData.groups.map((group) => group.split('-').splice(1).join('-'));
+
+  for (const groupName of userGroups) {
     const orgGroup = await orgGroupRepo.byName({
       organizationId: org.id,
       name: groupName,
@@ -140,10 +142,10 @@ export async function seedTest(
     });
   }
 
-  if (userTestData.groups.length > 0) {
+  if (userGroups.length > 0) {
     const orgGroup = await orgGroupRepo.byName({
       organizationId: org.id,
-      name: userTestData.groups[0],
+      name: userGroups[0],
     });
 
     if (orgGroup) {
@@ -173,11 +175,11 @@ export async function seedTest(
 }
 
 export function createTestRBACEvaluator(...groups: OrganizationGroupDTO[]) {
-  return new RBACEvaluator(groups, undefined, true);
+  return new RBACEvaluator(groups);
 }
 
 export function createTestGroup(
-  ...rules: { role: OrganizationRole; namespaces?: string[]; resources?: string[] }[]
+  ...rules: { role: OrganizationRole | string; namespaces?: string[]; resources?: string[] }[]
 ): OrganizationGroupDTO {
   return {
     groupId: randomUUID(),
@@ -187,7 +189,7 @@ export function createTestGroup(
     membersCount: 0,
     builtin: false,
     rules: rules.map((r) => ({
-      role: r.role,
+      role: r.role as OrganizationRole,
       namespaces: r.namespaces ?? [],
       resources: r.resources ?? [],
     })),

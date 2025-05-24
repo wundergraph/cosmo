@@ -1,6 +1,14 @@
+import { randomUUID } from "node:crypto";
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import { afterAllSetup, beforeAllSetup, genID } from '../../src/core/test-util.js';
+import {
+  afterAllSetup,
+  beforeAllSetup,
+  createTestGroup,
+  createTestRBACEvaluator,
+  genID,
+  TestUser
+} from '../../src/core/test-util.js';
 import {
   createBaseAndFeatureSubgraph,
   createSubgraph,
@@ -9,6 +17,7 @@ import {
   DEFAULT_SUBGRAPH_URL_TWO,
   SetupTest,
 } from '../test-util.js';
+import { OrganizationRole } from "../../src/db/models.js";
 
 let dbname = '';
 
@@ -256,4 +265,99 @@ describe('Create subgraph tests', () => {
 
     await server.close();
   });
+
+  test.each([
+    'organization-admin', 'organization-developer', 'subgraph-admin'
+  ])('%s should be able to create subgraphs', async (role) => {
+    const { client, server, users, authenticator } = await SetupTest({ dbname, enableMultiUsers: true, enabledFeatures: ['rbac'] });
+
+    const subgraphName = genID('subgraph');
+
+    authenticator.changeUserWithSuppliedContext({
+      ...users[TestUser.adminAliceCompanyA],
+      rbac: createTestRBACEvaluator(createTestGroup({ role: role as OrganizationRole }))
+    })
+
+    const createFederatedSubgraphResp = await client.createFederatedSubgraph({
+      name: subgraphName,
+      namespace: DEFAULT_NAMESPACE,
+      isEventDrivenGraph: true,
+    });
+
+    expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+    await server.close();
+  });
+
+  test.each([
+    'organization-apikey-manager',
+    'organization-viewer',
+    'namespace-admin',
+    'namespace-viewer',
+    'graph-admin',
+    'graph-viewer',
+    'subgraph-viewer',
+  ])('%s should not be able to create subgraphs', async (role) => {
+    const { client, server, users, authenticator } = await SetupTest({ dbname, enableMultiUsers: true, enabledFeatures: ['rbac'] });
+
+    const subgraphName = genID('subgraph');
+
+    authenticator.changeUserWithSuppliedContext({
+      ...users[TestUser.adminAliceCompanyA],
+      rbac: createTestRBACEvaluator(createTestGroup({ role: role as OrganizationRole }))
+    })
+
+    const createFederatedSubgraphResp = await client.createFederatedSubgraph({
+      name: subgraphName,
+      namespace: DEFAULT_NAMESPACE,
+      isEventDrivenGraph: true,
+    });
+
+    expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
+
+    await server.close();
+  });
+
+  test('Should be able to create subgraphs only on allowed namespaces', async () => {
+    const { client, server, users, authenticator } = await SetupTest({ dbname, enableMultiUsers: true, enabledFeatures: ['rbac'] });
+
+    const subgraphName = genID('subgraph');
+
+    const getNamespaceResponse = await client.getNamespace({ name: DEFAULT_NAMESPACE });
+    expect(getNamespaceResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    authenticator.changeUserWithSuppliedContext({
+      ...users[TestUser.adminAliceCompanyA],
+      rbac: createTestRBACEvaluator(createTestGroup({
+        role: 'subgraph-admin',
+        namespaces: [getNamespaceResponse.namespace!.id],
+      })),
+    });
+
+    let createFederatedSubgraphResp = await client.createFederatedSubgraph({
+      name: subgraphName,
+      namespace: DEFAULT_NAMESPACE,
+      isEventDrivenGraph: true,
+    });
+
+    expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+    authenticator.changeUserWithSuppliedContext({
+      ...users[TestUser.adminAliceCompanyA],
+      rbac: createTestRBACEvaluator(createTestGroup({
+        role: 'subgraph-admin',
+        namespaces: [randomUUID()],
+      })),
+    });
+
+    createFederatedSubgraphResp = await client.createFederatedSubgraph({
+      name: subgraphName,
+      namespace: DEFAULT_NAMESPACE,
+      isEventDrivenGraph: true,
+    });
+
+    expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
+
+    await server.close();
+  })
 });

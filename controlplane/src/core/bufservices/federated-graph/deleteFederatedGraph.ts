@@ -57,6 +57,7 @@ export function deleteFederatedGraph(
         },
         headers: ctx.requestHeader,
         authContext,
+        isDeleteOperation: true,
       });
 
       const deletedContracts = await contractRepo.deleteContractGraphs(federatedGraph.id);
