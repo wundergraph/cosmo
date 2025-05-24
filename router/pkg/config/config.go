@@ -249,6 +249,9 @@ type HeaderRule interface {
 type RequestHeaderRule struct {
 	// Operation describes the header operation to perform e.g. "propagate"
 	Operation HeaderRuleOperation `yaml:"op"`
+	// Expression is the Expr Lang expression to evaluate for dynamic header values
+	Expression string `yaml:"expression"`
+
 	// Propagate options
 	// Matching is the regex to match the header name against
 	Matching string `yaml:"matching"`
@@ -264,8 +267,6 @@ type RequestHeaderRule struct {
 	Name string `yaml:"name"`
 	// Value is the static value to set for the header
 	Value string `yaml:"value"`
-	// Expression is the Expr Lang expression to evaluate for dynamic header values
-	Expression string `yaml:"expression"`
 	// ValueFrom is deprecated in favor of Expression. Use Expression instead.
 	ValueFrom *CustomDynamicAttribute `yaml:"value_from,omitempty"`
 }

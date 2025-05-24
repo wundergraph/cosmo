@@ -119,9 +119,14 @@ func (h *headerPropagationWriter) Write(p []byte) (n int, err error) {
 type HeaderPropagation struct {
 	regex            map[string]*regexp.Regexp
 	rules            *config.HeaderRules
-	compiledRules    map[string]*vm.Program
+	compiledRules    map[HeaderPropagationKey]*vm.Program
 	hasRequestRules  bool
 	hasResponseRules bool
+}
+
+type HeaderPropagationKey struct {
+	opType     config.HeaderRuleOperation
+	expression string
 }
 
 func initHeaderRules(rules *config.HeaderRules) {
@@ -248,14 +253,22 @@ func (hf *HeaderPropagation) compileExpressionRules(rules []*config.RequestHeade
 		if rule.Expression == "" {
 			continue
 		}
-		if _, ok := hf.compiledRules[rule.Expression]; ok {
+		key := HeaderPropagationKey{
+			opType:     rule.Operation,
+			expression: rule.Expression,
+		}
+		if _, ok := hf.compiledRules[key]; ok {
 			continue
 		}
-		program, err := manager.CompileExpression(rule.Expression, reflect.String)
+		reflectType := reflect.String
+		if key.opType == config.HeaderRuleOperationPropagate {
+			reflectType = reflect.Bool
+		}
+		program, err := manager.CompileExpression(rule.Expression, reflectType)
 		if err != nil {
 			return fmt.Errorf("error compiling expression %s for header rule %s: %w", rule.Expression, rule.Name, err)
 		}
-		hf.compiledRules[rule.Expression] = program
+		hf.compiledRules[key] = program
 	}
 	return nil
 }
@@ -387,8 +400,9 @@ func (h *HeaderPropagation) applyResponseRuleKeyValue(res *http.Response, propag
 }
 
 func (h *HeaderPropagation) applyRequestRule(ctx RequestContext, request *http.Request, rule *config.RequestHeaderRule) {
+	reqCtx := getRequestContext(request.Context())
+
 	if rule.Operation == config.HeaderRuleOperationSet {
-		reqCtx := getRequestContext(request.Context())
 		if rule.ValueFrom != nil && rule.ValueFrom.ContextField != "" {
 			val := getCustomDynamicAttributeValue(rule.ValueFrom, reqCtx, nil)
 			value := fmt.Sprintf("%v", val)
@@ -399,11 +413,11 @@ func (h *HeaderPropagation) applyRequestRule(ctx RequestContext, request *http.R
 		}
 
 		if rule.Expression != "" {
-			value, err := h.getRequestRuleExpressionValue(rule, reqCtx)
+			value, err := h.getRequestRuleExpressionValue(rule, reqCtx, rule.Operation)
 			if err != nil {
 				reqCtx.SetError(err)
-			} else if value != "" {
-				request.Header.Set(rule.Name, value)
+			} else if castedVal, ok := value.(string); ok && castedVal != "" {
+				request.Header.Set(rule.Name, castedVal)
 			}
 			return
 		}
@@ -414,6 +428,17 @@ func (h *HeaderPropagation) applyRequestRule(ctx RequestContext, request *http.R
 
 	if rule.Operation != config.HeaderRuleOperationPropagate {
 		return
+	}
+
+	if rule.Expression != "" {
+		value, err := h.getRequestRuleExpressionValue(rule, reqCtx, rule.Operation)
+		if err != nil {
+			reqCtx.SetError(err)
+			return
+		}
+		if castedVal, ok := value.(bool); !ok || !castedVal {
+			return
+		}
 	}
 
 	/**
@@ -586,19 +611,33 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 	}
 }
 
-func (h *HeaderPropagation) getRequestRuleExpressionValue(rule *config.RequestHeaderRule, reqCtx *requestContext) (value string, err error) {
+func (h *HeaderPropagation) getRequestRuleExpressionValue(rule *config.RequestHeaderRule, reqCtx *requestContext, operation config.HeaderRuleOperation) (any, error) {
 	if reqCtx == nil {
 		return "", fmt.Errorf("context cannot be nil")
 	}
-	program, ok := h.compiledRules[rule.Expression]
+	key := HeaderPropagationKey{
+		opType:     operation,
+		expression: rule.Expression,
+	}
+	program, ok := h.compiledRules[key]
 	if !ok {
 		return "", fmt.Errorf("expression %s not found in compiled rules for header rule %s", rule.Expression, rule.Name)
 	}
-	value, err = expr.ResolveStringExpression(program, reqCtx.expressionContext)
+	value, err := expr.ResolveAnyExpression(program, reqCtx.expressionContext)
 	if err != nil {
 		return "", fmt.Errorf("unable to resolve expression %q for header rule %s: %s", rule.Expression, rule.Name, err.Error())
 	}
-	return
+	switch v := value.(type) {
+	case string:
+		if operation == config.HeaderRuleOperationSet {
+			return v, nil
+		}
+	case bool:
+		if operation == config.HeaderRuleOperationPropagate {
+			return v, nil
+		}
+	}
+	return "", fmt.Errorf("unexpecter value")
 }
 
 func createMostRestrictivePolicy(policies []*cachedirective.Object) (*cachedirective.Object, string) {

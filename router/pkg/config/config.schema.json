@@ -2959,6 +2959,10 @@
           "examples": ["X-Rename-Test-Header"],
           "description": "Rename is used to  rename the named or the matching headers. It can be used with either the named or the matching."
         },
+        "expression": {
+          "type": "string",
+          "description": "The template expression to evaluate. The expression must return a boolean value."
+        },
         "default": {
           "type": "string",
           "examples": ["default-value"],
