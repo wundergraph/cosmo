@@ -34,7 +34,7 @@ describe('RBAC Evaluator', () => {
     expect(rbac.canDeleteFederatedGraph(fakeTarget())).toBe(false);
     expect(rbac.hasFederatedGraphWriteAccess(fakeTarget())).toBe(false);
     expect(rbac.hasFederatedGraphReadAccess(fakeTarget())).toBe(false);
-    expect(rbac.canCreateSubGraph(fakeTarget())).toBe(false);
+    expect(rbac.canCreateSubGraph(fakeNamespace())).toBe(false);
     expect(rbac.canDeleteSubGraph(fakeTarget())).toBe(false);
     expect(rbac.hasSubGraphWriteAccess(fakeTarget())).toBe(false);
     expect(rbac.hasSubGraphReadAccess(fakeTarget())).toBe(false);
@@ -312,7 +312,7 @@ describe('RBAC Evaluator', () => {
     });
 
     test('Should have write access to every graph granted namespace', () => {
-      const ns1 = fakeTarget();
+      const ns1 = fakeNamespace();
       const ns2 = fakeNamespace();
       const rbac = createTestRBACEvaluator(createTestGroup({ role: 'graph-admin', namespaces: [ns1.id] }));
 
@@ -348,7 +348,7 @@ describe('RBAC Evaluator', () => {
       const ns = randomUUID();
       const graph1 = fakeTarget({ namespace: ns });
       const graph2 = fakeTarget();
-      const rbac = createTestRBACEvaluator(createTestGroup({ role: 'graph-admin', resources: [graph1.id] }));
+      const rbac = createTestRBACEvaluator(createTestGroup({ role: 'graph-admin', resources: [graph1.targetId] }));
 
       expect(rbac.groups).toHaveLength(1);
       expect(rbac.isOrganizationAdmin).toBe(false);
@@ -401,7 +401,7 @@ describe('RBAC Evaluator', () => {
     });
 
     test('Should have readonly access to every graph in granted namespace', () => {
-      const ns1 = fakeTarget();
+      const ns1 = fakeNamespace();
       const ns2 = fakeNamespace();
       const rbac = createTestRBACEvaluator(createTestGroup({ role: 'graph-viewer', namespaces: [ns1.id] }));
 
@@ -430,7 +430,7 @@ describe('RBAC Evaluator', () => {
       const ns = randomUUID();
       const graph1 = fakeTarget({ namespace: ns });
       const graph2 = fakeTarget();
-      const rbac = createTestRBACEvaluator(createTestGroup({ role: 'graph-viewer', resources: [graph1.id] }));
+      const rbac = createTestRBACEvaluator(createTestGroup({ role: 'graph-viewer', resources: [graph1.targetId] }));
 
       expect(rbac.groups).toHaveLength(1);
       expect(rbac.isOrganizationAdmin).toBe(false);
@@ -480,7 +480,7 @@ describe('RBAC Evaluator', () => {
     });
 
     test('Should have write access to every graph in granted namespace', () => {
-      const ns1 = fakeTarget();
+      const ns1 = fakeNamespace();
       const ns2 = fakeNamespace();
       const rbac = createTestRBACEvaluator(createTestGroup({ role: 'subgraph-admin', namespaces: [ns1.id] }));
 
@@ -514,7 +514,7 @@ describe('RBAC Evaluator', () => {
       const ns = randomUUID();
       const graph1 = fakeTarget({ namespace: ns });
       const graph2 = fakeTarget();
-      const rbac = createTestRBACEvaluator(createTestGroup({ role: 'subgraph-admin', resources: [graph1.id] }));
+      const rbac = createTestRBACEvaluator(createTestGroup({ role: 'subgraph-admin', resources: [graph1.targetId] }));
 
       expect(rbac.groups).toHaveLength(1);
       expect(rbac.isOrganizationAdmin).toBe(false);
@@ -568,7 +568,7 @@ describe('RBAC Evaluator', () => {
     });
 
     test('Should have publish access to every graph in granted namespace', () => {
-      const ns1 = fakeTarget();
+      const ns1 = fakeNamespace();
       const ns2 = fakeNamespace();
       const rbac = createTestRBACEvaluator(createTestGroup({ role: 'subgraph-publisher', namespaces: [ns1.id] }));
 
@@ -600,7 +600,7 @@ describe('RBAC Evaluator', () => {
       const ns = randomUUID();
       const graph1 = fakeTarget({ namespace: ns });
       const graph2 = fakeTarget();
-      const rbac = createTestRBACEvaluator(createTestGroup({ role: 'subgraph-publisher', resources: [graph1.id] }));
+      const rbac = createTestRBACEvaluator(createTestGroup({ role: 'subgraph-publisher', resources: [graph1.targetId] }));
 
       expect(rbac.groups).toHaveLength(1);
       expect(rbac.isOrganizationAdmin).toBe(false);
@@ -638,7 +638,7 @@ function fakeFeatureFlag(namespace?: string) {
 
 function fakeTarget(input?: { id?: string, namespace?: string, userId?: string }) {
   return {
-    id: input?.id ?? randomUUID(),
+    targetId: input?.id ?? randomUUID(),
     namespaceId: input?.namespace ?? randomUUID(),
     creatorUserId: input?.userId,
   };

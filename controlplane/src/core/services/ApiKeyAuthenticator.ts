@@ -68,9 +68,9 @@ export default class ApiKeyAuthenticator {
         groupId: apiKeyModel.groupId,
       });
 
-      rbac = new RBACEvaluator(keyGroup ? [keyGroup] : [], apiKeyModel.userId);
+      rbac = new RBACEvaluator(keyGroup ? [keyGroup] : [], apiKeyModel.userId, true);
     } else {
-      rbac = new RBACEvaluator([], apiKeyModel.userId);
+      rbac = new RBACEvaluator([], apiKeyModel.userId, true);
     }
 
     return {

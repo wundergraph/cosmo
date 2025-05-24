@@ -16,7 +16,7 @@ interface FeatureFlag {
 }
 
 interface Target {
-  id: string;
+  targetId: string;
   namespaceId: string;
   creatorUserId?: string;
 }
@@ -38,6 +38,7 @@ export class RBACEvaluator {
   constructor(
     readonly groups: Omit<OrganizationGroupDTO, 'membersCount'>[],
     private readonly userId?: string,
+    private readonly isApiKey?: boolean,
   ) {
     const flattenRules = groups.flatMap((group) => group.rules);
     const rulesGroupedByRole = Object.groupBy(flattenRules, (rule) => rule.role);
@@ -160,7 +161,7 @@ export class RBACEvaluator {
   }
 
   canDeleteSubGraph(graph: Target) {
-    if (graph.creatorUserId && this.userId && graph.creatorUserId === this.userId) {
+    if (!this.isApiKey && graph.creatorUserId && this.userId && graph.creatorUserId === this.userId) {
       // The graph creator should always have access to the provided target
       return true;
     }
@@ -187,8 +188,9 @@ export class RBACEvaluator {
   }
 
   private checkNamespaceAccess(ns: Namespace, requiredRoles: OrganizationRole[]) {
-    if (ns.createdBy && this.userId && ns.createdBy === this.userId) {
+    if (!this.isApiKey && ns.createdBy && this.userId && ns.createdBy === this.userId) {
       // The namespace creator should always have access to the provided namespace
+      return true;
     }
 
     for (const role of requiredRoles) {
@@ -211,7 +213,7 @@ export class RBACEvaluator {
   }
 
   private checkTargetAccess(target: Target, requiredRoles: OrganizationRole[]) {
-    if (target.creatorUserId && this.userId && target.creatorUserId === this.userId) {
+    if (!this.isApiKey && target.creatorUserId && this.userId && target.creatorUserId === this.userId) {
       // The target creator should always have access to the provided target
       return true;
     }
@@ -228,7 +230,7 @@ export class RBACEvaluator {
         // The rule was given write access to the namespace
         (rule.namespaces.length > 0 && rule.namespaces.includes(target.namespaceId)) ||
         // The rule was given write access to the resource
-        (rule.resources.length > 0 && rule.resources.includes(target.id))
+        (rule.resources.length > 0 && rule.resources.includes(target.targetId))
       ) {
         return true;
       }
