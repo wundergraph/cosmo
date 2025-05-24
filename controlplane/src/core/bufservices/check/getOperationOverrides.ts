@@ -9,6 +9,7 @@ import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepos
 import { OperationsRepository } from '../../repositories/OperationsRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function getOperationOverrides(
   opts: RouterOptions,
@@ -34,6 +35,10 @@ export function getOperationOverrides(
         changes: [],
         ignoreAll: false,
       };
+    }
+
+    if (!authContext.rbac.hasFederatedGraphReadAccess(graph)) {
+      throw new UnauthorizedError();
     }
 
     const operationsRepo = new OperationsRepository(opts.db, graph.id);

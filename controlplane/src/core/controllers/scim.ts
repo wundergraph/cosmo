@@ -290,7 +290,7 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
         );
       }
 
-      // fecthing the org from keycloak
+      // fetching the org from keycloak
       const organizationGroups = await opts.keycloakClient.client.groups.find({
         max: 1,
         search: authContext.organizationSlug,
@@ -302,25 +302,6 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
           ScimError({
             detail: `Organization group '${authContext.organizationSlug}' not found`,
             status: 400,
-          }),
-        );
-      }
-
-      let viewerGroupId = '';
-      try {
-        // viewer group of that org
-        const viewerGroup = await opts.keycloakClient.fetchChildGroup({
-          realm: opts.keycloakRealm,
-          kcGroupId: organizationGroups[0].id!,
-          orgSlug: authContext.organizationSlug,
-          childGroupType: 'viewer',
-        });
-        viewerGroupId = viewerGroup.id!;
-      } catch (err: any) {
-        return res.code(500).send(
-          ScimError({
-            detail: err.message,
-            status: 500,
           }),
         );
       }
@@ -345,17 +326,12 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
           await opts.keycloakClient.client.users.addToGroup({
             id: user.id,
             realm: opts.keycloakRealm,
-            groupId: viewerGroupId,
+            groupId: organizationGroups[0].id!,
           });
 
-          const newOrgMember = await opts.organizationRepository.addOrganizationMember({
+          await opts.organizationRepository.addOrganizationMember({
             userID: user.id,
             organizationID: authContext.organizationId,
-          });
-
-          await opts.organizationRepository.addOrganizationMemberRoles({
-            memberID: newOrgMember.id,
-            roles: ['viewer'],
           });
 
           return res.code(201).send({
@@ -402,17 +378,13 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
       await opts.keycloakClient.client.users.addToGroup({
         id: keycloakUserID,
         realm: opts.keycloakRealm,
-        groupId: viewerGroupId,
+        groupId: organizationGroups[0].id!,
       });
 
       await opts.userRepository.addUser({ id: keycloakUserID, email });
-      const newOrgMember = await opts.organizationRepository.addOrganizationMember({
+      await opts.organizationRepository.addOrganizationMember({
         userID: keycloakUserID,
         organizationID: authContext.organizationId,
-      });
-      await opts.organizationRepository.addOrganizationMemberRoles({
-        memberID: newOrgMember.id,
-        roles: ['viewer'],
       });
 
       return res.code(201).send({

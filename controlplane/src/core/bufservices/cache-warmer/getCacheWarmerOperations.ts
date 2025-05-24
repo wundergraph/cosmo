@@ -5,12 +5,13 @@ import {
   GetCacheWarmerOperationsRequest,
   GetCacheWarmerOperationsResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { CacheWarmerRepository } from '../../../core/repositories/CacheWarmerRepository.js';
-import { FederatedGraphRepository } from '../../../core/repositories/FederatedGraphRepository.js';
-import { DefaultNamespace, NamespaceRepository } from '../../../core/repositories/NamespaceRepository.js';
+import { CacheWarmerRepository } from '../../repositories/CacheWarmerRepository.js';
+import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
+import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
-import { OrganizationRepository } from '../../../core/repositories/OrganizationRepository.js';
+import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function getCacheWarmerOperations(
   opts: RouterOptions,
@@ -58,6 +59,10 @@ export function getCacheWarmerOperations(
         totalCount: 0,
         isCacheWarmerEnabled: false,
       };
+    }
+
+    if (!authContext.rbac.hasFederatedGraphReadAccess(federatedGraph)) {
+      throw new UnauthorizedError();
     }
 
     const namespace = await namespaceRepo.byName(req.namespace);

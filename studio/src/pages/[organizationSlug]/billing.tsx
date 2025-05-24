@@ -33,8 +33,8 @@ import { GetBillingPlansResponse_BillingPlan } from "@wundergraph/cosmo-connect/
 import { useRouter } from "next/router";
 import React, { useEffect } from "react";
 import { PiCheck } from "react-icons/pi";
-import { checkUserAccess } from "@/lib/utils";
 import Link from "next/link";
+import { useCheckUserAccess } from "@/hooks/use-check-user-access";
 
 const billingContactLink = process.env.NEXT_PUBLIC_BILLING_CONTACT_LINK;
 
@@ -275,7 +275,7 @@ const UpgradeButton = ({
   isCurrent: boolean;
   isDowngrade?: boolean;
 }) => {
-  const user = useUser();
+  const checkUserAccess = useCheckUserAccess();
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const { mutateAsync, isPending } = useMutation(createCheckoutSession);
@@ -365,10 +365,7 @@ const UpgradeButton = ({
         variant="secondary"
         disabled={
           isPending ||
-          !checkUserAccess({
-            rolesToBe: ["admin", "developer"],
-            userRoles: user?.currentOrganization.roles || [],
-          })
+          !checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] })
         }
         onClick={() => upgrade()}
       >

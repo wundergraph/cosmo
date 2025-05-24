@@ -1,4 +1,4 @@
-import { useUser } from "./use-user";
+import { useCheckUserAccess } from "@/hooks/use-check-user-access";
 
 /**
  * Returns true if the current user is an admin of the current organization or the organization with the given id.
@@ -6,13 +6,10 @@ import { useUser } from "./use-user";
  * @returns {boolean}
  */
 export const useIsAdmin = (orgId?: string) => {
-  const user = useUser();
+  const checkUserAccess = useCheckUserAccess();
 
-  if (!orgId) {
-    return user?.currentOrganization.roles.includes("admin");
-  }
-
-  return !!user?.organizations
-    .find((org) => org.id === orgId)
-    ?.roles.includes("admin");
+  return checkUserAccess({
+    organizationId: orgId,
+    rolesToBe: ["organization-admin"],
+  });
 };

@@ -17,7 +17,7 @@ export class ApiKeyRepository {
     organizationID: string;
     userID: string;
     expiresAt: ExpiresAt;
-    targetIds: string[];
+    groupId: string;
     permissions: string[];
   }) {
     let expiresAtDate: Date | undefined;
@@ -53,18 +53,12 @@ export class ApiKeyRepository {
           name: input.name,
           organizationId: input.organizationID,
           userId: input.userID,
+          groupId: input.groupId,
           expiresAt: expiresAtDate,
         })
         .returning()
         .execute();
-      if (input.targetIds.length > 0) {
-        await apiKeyRepo.addAPIKeyResources({
-          resources: input.targetIds.map((t) => ({
-            apiKeyId: apiKey[0].id,
-            targetId: t,
-          })),
-        });
-      }
+
       if (input.permissions.length > 0) {
         await apiKeyRepo.addAPIKeyPermissions({
           permissions: input.permissions.map((p) => ({
@@ -123,26 +117,38 @@ export class ApiKeyRepository {
         lastUsedAt: apiKeys.lastUsedAt,
         expiresAt: apiKeys.expiresAt,
         createdBy: users.email,
+        groupId: schema.organizationGroups.id,
+        groupName: schema.organizationGroups.name,
         creatorUserID: users.id,
       })
       .from(apiKeys)
       .innerJoin(users, eq(users.id, apiKeys.userId))
+      .leftJoin(schema.organizationGroups, eq(schema.organizationGroups.id, apiKeys.groupId))
       .where(eq(apiKeys.organizationId, input.organizationID))
       .orderBy(asc(apiKeys.createdAt))
       .execute();
 
     return keys.map(
-      (key) =>
+      ({ groupId, groupName, ...key }) =>
         ({
           id: key.id,
           name: key.name,
           createdAt: key.createdAt.toISOString(),
           lastUsedAt: key.lastUsedAt?.toISOString() ?? '',
           expiresAt: key.expiresAt?.toISOString() ?? '',
+          group: groupId ? { id: groupId, name: groupName } : undefined,
           createdBy: key.createdBy,
           creatorUserID: key.creatorUserID,
         }) as APIKeyDTO,
     );
+  }
+
+  public updateAPIKeyGroup(input: { apiKeyId: string; groupId: string }) {
+    return this.db
+      .update(schema.apiKeys)
+      .set({ groupId: input.groupId })
+      .where(eq(apiKeys.id, input.apiKeyId))
+      .execute();
   }
 
   public async addAPIKeyResources({ resources }: { resources: { apiKeyId: string; targetId: string }[] }) {

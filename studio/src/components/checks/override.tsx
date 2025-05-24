@@ -60,16 +60,19 @@ import {
 } from "../ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { OperationContentDialog } from "./operation-content";
+import { useCheckUserAccess } from "@/hooks/use-check-user-access";
 
 const Override = ({
   changeType,
   path,
   operationHash,
+  isAdminOrDeveloper,
   refresh,
 }: {
   changeType: string;
   path?: string;
   operationHash: string;
+  isAdminOrDeveloper: boolean;
   refresh?: () => void;
 }) => {
   const router = useRouter();
@@ -146,51 +149,53 @@ const Override = ({
                 : "Cannot open in explorer. Path to type unavailable"}
             </TooltipContent>
           </Tooltip>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button
-                variant="ghost"
-                className="table-action text-destructive"
-                size="icon-sm"
-              >
-                <TrashIcon className="h-4 w-4" />
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent
-              onEscapeKeyDown={(event) => {
-                event.preventDefault();
-              }}
-            >
-              <AlertDialogHeader>
-                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Future checks will fail if this breaking change is detected
-                  for this operation.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
+          {isAdminOrDeveloper && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
                 <Button
-                  variant="destructive"
-                  onClick={() => {
-                    removeOverrides({
-                      graphName: graphContext?.graph?.name,
-                      namespace: graphContext?.graph?.namespace,
-                      operationHash,
-                      changes: [
-                        {
-                          changeType,
-                          path,
-                        },
-                      ],
-                    });
-                  }}
+                  variant="ghost"
+                  className="table-action text-destructive"
+                  size="icon-sm"
                 >
-                  Confirm
+                  <TrashIcon className="h-4 w-4" />
                 </Button>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+              </AlertDialogTrigger>
+              <AlertDialogContent
+                onEscapeKeyDown={(event) => {
+                  event.preventDefault();
+                }}
+              >
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Future checks will fail if this breaking change is detected
+                    for this operation.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <Button
+                    variant="destructive"
+                    onClick={() => {
+                      removeOverrides({
+                        graphName: graphContext?.graph?.name,
+                        namespace: graphContext?.graph?.namespace,
+                        operationHash,
+                        changes: [
+                          {
+                            changeType,
+                            path,
+                          },
+                        ],
+                      });
+                    }}
+                  >
+                    Confirm
+                  </Button>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
         </div>
       </TableCell>
     </TableRow>
@@ -199,6 +204,8 @@ const Override = ({
 
 export const ConfigureOverride = () => {
   const graphContext = useContext(GraphContext);
+  const checkUserAccess = useCheckUserAccess();
+  const isAdminOrDeveloper = checkUserAccess({ rolesToBe: ['organization-admin', 'organization-developer'] })
 
   const router = useRouter();
   const operationHash = router.query.override as string;
@@ -301,36 +308,41 @@ export const ConfigureOverride = () => {
   } else {
     content = (
       <div className="relative flex flex-1 flex-col">
-        <div className="flex w-full flex-row items-center justify-between rounded-lg border px-4 py-3 shadow-sm">
-          <div className="flex flex-col gap-y-2">
-            <Label htmlFor="ignore-all">Ignore All</Label>
-            <p className="text-[0.8rem] text-muted-foreground">
-              Future checks will not fail if any breaking changes are observed
-              for this operation
-            </p>
-          </div>
+        {isAdminOrDeveloper && (
+          <>
+            <div className="flex w-full flex-row items-center justify-between rounded-lg border px-4 py-3 shadow-sm">
+              <div className="flex flex-col gap-y-2">
+                <Label htmlFor="ignore-all">Ignore All</Label>
+                <p className="text-[0.8rem] text-muted-foreground">
+                  Future checks will not fail if any breaking changes are observed
+                  for this operation
+                </p>
+              </div>
 
-          <Switch
-            id="ignore-all"
-            checked={data.ignoreAll}
-            disabled={ignoring || removing}
-            onCheckedChange={() =>
-              data.ignoreAll
-                ? removeIgnoreAll({
-                    graphName: graphContext?.graph?.name,
-                    namespace: graphContext?.graph?.namespace,
-                    operationHash,
-                  })
-                : createIgnoreAll({
-                    operationHash,
-                    operationName,
-                    graphName: graphContext?.graph?.name,
-                    namespace: graphContext?.graph?.namespace,
-                  })
-            }
-          />
-        </div>
-        <Separator className="my-4" />
+              <Switch
+                id="ignore-all"
+                checked={data.ignoreAll}
+                disabled={ignoring || removing}
+                onCheckedChange={() =>
+                  data.ignoreAll
+                    ? removeIgnoreAll({
+                        graphName: graphContext?.graph?.name,
+                        namespace: graphContext?.graph?.namespace,
+                        operationHash,
+                      })
+                    : createIgnoreAll({
+                        operationHash,
+                        operationName,
+                        graphName: graphContext?.graph?.name,
+                        namespace: graphContext?.graph?.namespace,
+                      })
+                }
+              />
+            </div>
+
+            <Separator className="my-4" />
+          </>
+        )}
         <div className="relative h-full w-full">
           {data.ignoreAll && (
             <div className="absolute flex h-full w-full items-center justify-center">
@@ -363,6 +375,7 @@ export const ConfigureOverride = () => {
                       key={i}
                       {...c}
                       operationHash={operationHash}
+                      isAdminOrDeveloper={isAdminOrDeveloper}
                       refresh={() => {
                         refetch();
                         invalidateOverrides();

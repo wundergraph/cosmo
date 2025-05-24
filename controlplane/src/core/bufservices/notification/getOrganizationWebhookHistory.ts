@@ -8,6 +8,7 @@ import {
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function getOrganizationWebhookHistory(
   opts: RouterOptions,
@@ -20,6 +21,10 @@ export function getOrganizationWebhookHistory(
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
     const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
+
+    if (!authContext.rbac.isOrganizationAdminOrDeveloper) {
+      throw new UnauthorizedError();
+    }
 
     const analyticsRetention = await orgRepo.getFeature({
       organizationId: authContext.organizationId,

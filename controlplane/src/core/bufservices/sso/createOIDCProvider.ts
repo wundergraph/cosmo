@@ -9,6 +9,7 @@ import { uid } from 'uid';
 import type { RouterOptions } from '../../routes.js';
 import OidcProvider from '../../services/OidcProvider.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function createOIDCProvider(
   opts: RouterOptions,
@@ -22,17 +23,8 @@ export function createOIDCProvider(
     logger = enrichLogger(ctx, logger, authContext);
 
     const oidcProvider = new OidcProvider();
-
-    if (!authContext.isAdmin) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `The user doesnt have the permissions to perform this operation`,
-        },
-        signInURL: '',
-        signOutURL: '',
-        loginURL: '',
-      };
+    if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdmin) {
+      throw new UnauthorizedError();
     }
 
     await opts.keycloakClient.authenticateClient();

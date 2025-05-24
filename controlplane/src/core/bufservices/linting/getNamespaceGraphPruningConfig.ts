@@ -11,6 +11,7 @@ import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { SchemaGraphPruningRepository } from '../../repositories/SchemaGraphPruningRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function getNamespaceGraphPruningConfig(
   opts: RouterOptions,
@@ -36,6 +37,10 @@ export function getNamespaceGraphPruningConfig(
         configs: [],
         graphPrunerEnabled: false,
       };
+    }
+
+    if (!authContext.rbac.hasNamespaceReadAccess(namespace)) {
+      throw new UnauthorizedError();
     }
 
     const graphPruningConfigs = await schemaGraphPruningRepo.getNamespaceGraphPruningConfig(namespace.id);

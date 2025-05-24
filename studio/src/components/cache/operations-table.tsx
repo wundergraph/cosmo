@@ -14,7 +14,7 @@ import {
   TableWrapper,
 } from "../ui/table";
 import Link from "next/link";
-import { Dispatch, SetStateAction, useContext, useState } from "react";
+import { useContext, useState } from "react";
 import { GraphContext } from "../layout/graph-layout";
 import { useUser } from "@/hooks/use-user";
 import { nanoTimestampToTime } from "@/components/analytics/charts";
@@ -29,7 +29,7 @@ import { useToast } from "../ui/use-toast";
 import { useMutation } from "@connectrpc/connect-query";
 import { deleteCacheWarmerOperation } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
-import { checkUserAccess, cn } from "@/lib/utils";
+import { useCheckUserAccess } from "@/hooks/use-check-user-access";
 
 export const CacheOperationsTable = ({
   operations,
@@ -42,6 +42,7 @@ export const CacheOperationsTable = ({
 }) => {
   const router = useRouter();
   const user = useUser();
+  const checkUserAccess = useCheckUserAccess();
   const { toast } = useToast();
   const graphData = useContext(GraphContext);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
@@ -57,10 +58,7 @@ export const CacheOperationsTable = ({
   return (
     <>
       {operationId &&
-        checkUserAccess({
-          rolesToBe: ["admin", "developer"],
-          userRoles: user?.currentOrganization.roles || [],
-        }) && (
+        checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] }) && (
           <Dialog open={openDeleteDialog} onOpenChange={setOpenDeleteDialog}>
             <DialogContent>
               <DialogHeader>
@@ -209,11 +207,8 @@ export const CacheOperationsTable = ({
                               setOpenDeleteDialog(true);
                             }}
                             disabled={
-                              !checkUserAccess({
-                                rolesToBe: ["admin", "developer"],
-                                userRoles:
-                                  user?.currentOrganization.roles || [],
-                              }) || !isManuallyAdded
+                              !checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] }) ||
+                              !isManuallyAdded
                             }
                           >
                             Delete

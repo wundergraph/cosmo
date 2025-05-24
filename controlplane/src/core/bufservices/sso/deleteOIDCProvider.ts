@@ -10,6 +10,7 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import type { RouterOptions } from '../../routes.js';
 import OidcProvider from '../../services/OidcProvider.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function deleteOIDCProvider(
   opts: RouterOptions,
@@ -26,13 +27,8 @@ export function deleteOIDCProvider(
     const oidcRepo = new OidcRepository(opts.db);
     const oidcProvider = new OidcProvider();
 
-    if (!authContext.isAdmin) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `The user doesnt have the permissions to perform this operation`,
-        },
-      };
+    if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdmin) {
+      throw new UnauthorizedError();
     }
 
     await opts.keycloakClient.authenticateClient();

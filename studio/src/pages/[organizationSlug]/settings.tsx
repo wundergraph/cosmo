@@ -68,10 +68,12 @@ import {
   updateFeatureSettings,
   updateIDPMappers,
   updateOrganizationDetails,
+  getOrganizationGroups,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import {
   Feature,
   GetOIDCProviderResponse,
+  OrganizationGroup,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -90,6 +92,7 @@ import { RestoreOrganization } from "@/components/settings/restore-organization"
 const OrganizationDetails = () => {
   const user = useContext(UserContext);
   const router = useRouter();
+  const isAdmin = useIsAdmin();
   const sessionQueryClient = useContext(SessionClientContext);
 
   const schema = z.object({
@@ -206,10 +209,7 @@ const OrganizationDetails = () => {
           className="ml-auto"
           isLoading={isPending}
           type="submit"
-          disabled={
-            !form.formState.isValid ||
-            !user?.currentOrganization.roles.includes("admin")
-          }
+          disabled={!form.formState.isValid || !isAdmin}
         >
           Save
         </Button>
@@ -219,7 +219,7 @@ const OrganizationDetails = () => {
 };
 
 interface Mapper {
-  dbRole: string;
+  groupId: string;
   ssoGroup: string;
 }
 
@@ -227,9 +227,8 @@ type MapperInput = Mapper & {
   id: number;
 };
 
-const dbRoleOptions = ["Admin", "Developer", "Viewer"];
 const createMapperSchema = z.object({
-  dbRole: z.string().min(1).default(dbRoleOptions[0]),
+  groupId: z.string().uuid(),
   ssoGroup: z.string().min(1, { message: "Please enter a value" }),
 });
 
@@ -239,13 +238,17 @@ const NewMapper = ({
   remove,
   onChange,
   mapper,
+  availableGroups,
 }: {
   remove: () => void;
   onChange: (secret: Mapper) => void;
   mapper: Mapper;
+  availableGroups: OrganizationGroup[];
 }) => {
   type CreateMapperFormInput = z.infer<typeof createMapperSchema>;
-  const [dbRole, setDbRole] = useState(mapper.dbRole);
+  const [groupId, setGroupId] = useState(mapper.groupId);
+
+  const groupLabel = availableGroups.find((g) => g.groupId === groupId)?.name || "Select a group";
 
   const {
     register,
@@ -260,32 +263,33 @@ const NewMapper = ({
       <div className="grid flex-1 grid-cols-6 gap-x-2">
         <div className="col-span-3">
           <Select
-            value={dbRole}
+            value={groupId}
             onValueChange={(value) => {
               onChange({
-                dbRole: value,
+                groupId: value,
                 ssoGroup: mapper.ssoGroup,
               });
-              setDbRole(value);
+              setGroupId(value);
             }}
-            {...register("dbRole")}
+            {...register("groupId")}
           >
-            <SelectTrigger value={dbRole} className="w-[200px] lg:w-full">
-              <SelectValue aria-label={dbRole}>{dbRole}</SelectValue>
+            <SelectTrigger value={groupId} className="w-[200px] lg:w-full">
+              <SelectValue aria-label={groupLabel}>{groupLabel}</SelectValue>
             </SelectTrigger>
             <SelectContent>
-              {dbRoleOptions.map((option) => {
-                return (
-                  <SelectItem key={option} value={option}>
-                    {option}
-                  </SelectItem>
-                );
-              })}
+              {availableGroups.map((group) => (
+                <SelectItem
+                  key={`group-${group.groupId}`}
+                  value={group.groupId}
+                >
+                  {group.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
-          {errors.dbRole && (
+          {errors.groupId && (
             <span className="px-2 text-xs text-destructive">
-              {errors.dbRole.message}
+              {errors.groupId.message}
             </span>
           )}
         </div>
@@ -298,7 +302,7 @@ const NewMapper = ({
             {...register("ssoGroup")}
             onInput={(e) => {
               onChange({
-                dbRole: mapper.dbRole,
+                groupId: mapper.groupId,
                 ssoGroup: e.currentTarget.value,
               });
             }}
@@ -326,17 +330,24 @@ const NewMapper = ({
 
 const AddNewMappers = ({
   mappers,
+  availableGroups,
   updateMappers,
 }: {
   mappers: MapperInput[];
+  availableGroups: OrganizationGroup[];
   updateMappers: Dispatch<SetStateAction<MapperInput[]>>;
 }) => {
   return (
     <>
-      {mappers.map((mapper, index) => (
+      {mappers.length === 0 ? (
+        <div className="text-muted-foreground text-sm px-1">
+          No mappers have been added.
+        </div>
+      ) : mappers.map((mapper, index) => (
         <NewMapper
           key={mapper.id}
           mapper={mapper}
+          availableGroups={availableGroups}
           remove={() => {
             const newMappers = [...mappers];
             newMappers.splice(index, 1);
@@ -357,7 +368,7 @@ const AddNewMappers = ({
             ...mappers,
             {
               id: Date.now(),
-              dbRole: dbRoleOptions[0],
+              groupId: "",
               ssoGroup: "",
             },
           ];
@@ -385,14 +396,11 @@ const UpdateIDPMappers = ({
 
   const [mappers, updateMappers] = useState<MapperInput[]>(currentMappers);
 
+  const { data: orgMemberGroups } = useQuery(getOrganizationGroups);
+
   const mutateMappers = () => {
     const groupMappers = mappers.map((m) => {
-      return { role: m.dbRole, ssoGroup: m.ssoGroup.trim() };
-    });
-
-    groupMappers.push({
-      role: "Viewer",
-      ssoGroup: ".*",
+      return { groupId: m.groupId, ssoGroup: m.ssoGroup.trim() };
     });
 
     mutate(
@@ -447,13 +455,17 @@ const UpdateIDPMappers = ({
       >
         <DialogHeader>
           <DialogTitle>Update group mappers</DialogTitle>
-          <DialogDescription>Map your groups to cosmo roles.</DialogDescription>
+          <DialogDescription>Map your groups to cosmo groups.</DialogDescription>
         </DialogHeader>
         <div className="flex justify-between px-1 text-sm font-bold">
-          <span>Role in cosmo</span>
+          <span>Group in cosmo</span>
           <span className="pr-12">Group in the provider</span>
         </div>
-        <AddNewMappers mappers={mappers} updateMappers={updateMappers} />
+        <AddNewMappers
+          mappers={mappers}
+          availableGroups={orgMemberGroups?.groups ?? []}
+          updateMappers={updateMappers}
+        />
         <Button
           disabled={!saveSchema.safeParse(mappers).success}
           variant="default"
@@ -485,9 +497,14 @@ const OpenIDConnectProvider = ({
   const [open, setOpen] = useState(false);
   const [alertOpen, setAlertOpen] = useState(false);
   const [mode, setMode] = useState(currentMode);
+  const isAdmin = useIsAdmin();
 
   const { mutate, isPending, data } = useMutation(createOIDCProvider);
   const { mutate: deleteOidcProvider } = useMutation(deleteOIDCProvider);
+
+  const { data: orgMemberGroups } = useQuery(getOrganizationGroups, undefined, {
+    enabled: mode === "map",
+  });
 
   const { toast } = useToast();
 
@@ -512,22 +529,11 @@ const OpenIDConnectProvider = ({
     schema: connectOIDCProviderInputSchema,
   });
 
-  const [mappers, updateMappers] = useState<MapperInput[]>([
-    {
-      id: Date.now(),
-      dbRole: dbRoleOptions[0],
-      ssoGroup: "",
-    },
-  ]);
+  const [mappers, updateMappers] = useState<MapperInput[]>([]);
 
   const onSubmit: SubmitHandler<ConnectOIDCProviderInput> = (data) => {
     const groupMappers = mappers.map((m) => {
-      return { role: m.dbRole, ssoGroup: m.ssoGroup.trim() };
-    });
-
-    groupMappers.push({
-      role: "Viewer",
-      ssoGroup: ".*",
+      return { groupId: m.groupId, ssoGroup: m.ssoGroup.trim() };
     });
 
     mutate(
@@ -545,7 +551,10 @@ const OpenIDConnectProvider = ({
               description: "OIDC provider connected successfully.",
               duration: 3000,
             });
+
             setMode("result");
+            reset();
+            updateMappers([]);
           } else if (d.response?.details) {
             toast({ description: d.response.details, duration: 4000 });
             setMode("create");
@@ -563,14 +572,6 @@ const OpenIDConnectProvider = ({
         },
       },
     );
-    reset();
-    updateMappers([
-      {
-        id: Date.now(),
-        dbRole: dbRoleOptions[0],
-        ssoGroup: "",
-      },
-    ]);
   };
 
   return (
@@ -614,18 +615,14 @@ const OpenIDConnectProvider = ({
                   currentMappers={providerData.mappers.map((m) => {
                     return {
                       id: Date.now(),
-                      dbRole: m.role,
+                      groupId: m.groupId,
                       ssoGroup: m.ssoGroup,
                     };
                   })}
                   refetchProviderData={refetch}
                 />
                 <AlertDialog
-                  open={
-                    user?.currentOrganization.roles.includes("admin")
-                      ? alertOpen
-                      : false
-                  }
+                  open={isAdmin && alertOpen}
                   onOpenChange={setAlertOpen}
                 >
                   <AlertDialogTrigger asChild>
@@ -633,9 +630,7 @@ const OpenIDConnectProvider = ({
                       className="md:ml-auto"
                       type="submit"
                       variant="destructive"
-                      disabled={
-                        !user?.currentOrganization.roles.includes("admin")
-                      }
+                      disabled={!isAdmin}
                     >
                       Disconnect
                     </Button>
@@ -764,7 +759,7 @@ const OpenIDConnectProvider = ({
                           <>
                             <DialogTitle>Configure group mappers</DialogTitle>
                             <DialogDescription>
-                              Map your groups to cosmo roles.
+                              Map your groups to cosmo groups.
                             </DialogDescription>
                           </>
                         )}
@@ -864,13 +859,14 @@ const OpenIDConnectProvider = ({
                           {mode === "map" && (
                             <>
                               <div className="flex justify-between px-1 text-sm font-bold">
-                                <span>Role in cosmo</span>
+                                <span>Group in cosmo</span>
                                 <span className="pr-12">
                                   Group in the provider
                                 </span>
                               </div>
                               <AddNewMappers
                                 mappers={mappers}
+                                availableGroups={orgMemberGroups?.groups ?? []}
                                 updateMappers={updateMappers}
                               />
                               <Button

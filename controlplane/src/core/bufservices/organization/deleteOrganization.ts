@@ -12,6 +12,7 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { delayForManualOrgDeletionInDays } from '../../constants.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function deleteOrganization(
   opts: RouterOptions,
@@ -66,13 +67,8 @@ export function deleteOrganization(
     }
 
     // non admins cannot delete the organization
-    if (!user.roles.includes('admin')) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: 'User does not have the permissions to delete the organization.',
-        },
-      };
+    if (!user.rbac.isOrganizationAdmin) {
+      throw new UnauthorizedError();
     }
 
     // Minimum one organization is required for a user
@@ -95,7 +91,7 @@ export function deleteOrganization(
     }
 
     const organizationMembers = await orgRepo.getMembers({ organizationID: org.id });
-    const orgAdmins = organizationMembers.filter((m) => m.roles.includes('admin'));
+    const orgAdmins = organizationMembers.filter((m) => m.rbac.isOrganizationAdmin);
 
     const now = new Date();
     const oneMonthFromNow = addDays(now, delayForManualOrgDeletionInDays);

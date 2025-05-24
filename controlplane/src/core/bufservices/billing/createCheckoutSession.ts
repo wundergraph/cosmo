@@ -9,6 +9,7 @@ import { BillingRepository } from '../../repositories/BillingRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { BillingService } from '../../services/BillingService.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function createCheckoutSession(
   opts: RouterOptions,
@@ -23,6 +24,10 @@ export function createCheckoutSession(
 
     const billingRepo = new BillingRepository(opts.db);
     const billingService = new BillingService(opts.db, billingRepo);
+
+    if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdmin) {
+      throw new UnauthorizedError();
+    }
 
     if (!opts.stripeSecretKey) {
       return {

@@ -1,5 +1,4 @@
 import { createFilterState } from "@/components/analytics/constructAnalyticsTableQueryState";
-import { UserContext } from "@/components/app-provider";
 import { CodeViewer } from "@/components/code-viewer";
 import { EmptyState } from "@/components/empty-state";
 import {
@@ -70,7 +69,7 @@ import {
   extractVariablesFromGraphQL,
   useParseSchema,
 } from "@/lib/schema-helpers";
-import { checkUserAccess, cn } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import {
   CommandLineIcon,
   ExclamationTriangleIcon,
@@ -100,7 +99,7 @@ import { useContext, useState } from "react";
 import { BiAnalyse } from "react-icons/bi";
 import { IoBarcodeSharp } from "react-icons/io5";
 import { z } from "zod";
-import { useUser } from "@/hooks/use-user";
+import { useCheckUserAccess } from "@/hooks/use-check-user-access";
 
 const getSnippets = ({
   clientName,
@@ -491,7 +490,7 @@ const FormSchema = z.object({
 type Input = z.infer<typeof FormSchema>;
 
 const CreateClient = ({ refresh }: { refresh: () => void }) => {
-  const user = useUser();
+  const checkUserAccess = useCheckUserAccess();
   const router = useRouter();
   const namespace = router.query.namespace as string;
   const slug = router.query.slug as string;
@@ -537,12 +536,7 @@ const CreateClient = ({ refresh }: { refresh: () => void }) => {
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button
-          disabled={
-            !checkUserAccess({
-              rolesToBe: ["admin", "developer"],
-              userRoles: user?.currentOrganization.roles || [],
-            })
-          }
+          disabled={!checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] })}
         >
           <PlusIcon className="mr-2" />
           Create Client
@@ -588,7 +582,7 @@ const CreateClient = ({ refresh }: { refresh: () => void }) => {
 };
 
 const ClientsPage: NextPageWithLayout = () => {
-  const user = useContext(UserContext);
+  const checkUserAccess = useCheckUserAccess();
   const router = useRouter();
   const organizationSlug = router.query.organizationSlug as string;
   const namespace = router.query.namespace as string;
@@ -675,10 +669,9 @@ const ClientsPage: NextPageWithLayout = () => {
                 Learn more
               </Link>
             </p>
-            {checkUserAccess({
-              rolesToBe: ["admin", "developer"],
-              userRoles: user?.currentOrganization.roles || [],
-            }) && <CreateClient refresh={() => refetch()} />}
+            {checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] }) && (
+              <CreateClient refresh={() => refetch()} />
+            )}
           </div>
 
           <TableWrapper>

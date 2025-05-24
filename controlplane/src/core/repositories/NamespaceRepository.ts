@@ -1,7 +1,8 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray, or, SQL } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
 import { NamespaceDTO } from '../../types/index.js';
+import { RBACEvaluator } from '../services/RBACEvaluator.js';
 
 export const DefaultNamespace = 'default';
 
@@ -112,10 +113,22 @@ export class NamespaceRepository {
       .where(and(eq(schema.namespaces.name, data.name), eq(schema.namespaces.organizationId, this.organizationId)));
   }
 
-  public list() {
-    return this.db.query.namespaces.findMany({
-      where: eq(schema.namespaces.organizationId, this.organizationId),
-    });
+  public list(rbac?: RBACEvaluator) {
+    const conditions: (SQL<unknown> | undefined)[] = [eq(schema.namespaces.organizationId, this.organizationId)];
+
+    if (rbac && !rbac.isOrganizationAdminOrDeveloper) {
+      const nsAdmin = rbac.ruleFor('namespace-admin');
+      const nsViewer = rbac.ruleFor('namespace-viewer');
+      if (!nsAdmin && !nsViewer) {
+        // The default namespace should always be included
+        conditions.push(eq(schema.namespaces.name, DefaultNamespace));
+      } else if ((nsAdmin && nsAdmin.namespaces.length > 0) || (nsViewer && nsViewer.namespaces.length > 0)) {
+        const namespaces = [...new Set([...(nsAdmin?.namespaces ?? []), ...(nsViewer?.namespaces ?? [])])];
+        conditions.push(inArray(schema.namespaces.id, namespaces));
+      }
+    }
+
+    return this.db.query.namespaces.findMany({ where: and(...conditions) });
   }
 
   public async updateConfiguration(data: {

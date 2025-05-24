@@ -465,6 +465,38 @@ export class FederatedGraphRepository {
       conditions.push(eq(schema.federatedGraphs.supportsFederation, opts.supportsFederation));
     }
 
+    if (opts.rbac && !opts.rbac.isOrganizationAdminOrDeveloper) {
+      const graphAdmin = opts.rbac.ruleFor('graph-admin');
+      const graphViewer = opts.rbac.ruleFor('graph-viewer');
+      if (!graphAdmin && !graphViewer) {
+        // The actor doesn't have admin or viewer access to any federated graph
+        return [];
+      }
+
+      const resources: string[] = [];
+      const namespaces: string[] = [];
+
+      if (graphAdmin) {
+        resources.push(...graphAdmin.resources);
+        namespaces.push(...graphAdmin.namespaces);
+      }
+
+      if (graphViewer) {
+        resources.push(...graphViewer.resources);
+        namespaces.push(...graphViewer.namespaces);
+      }
+
+      if (namespaces.length > 0 && resources.length > 0) {
+        conditions.push(
+          or(inArray(schema.targets.id, [...new Set(namespaces)]), inArray(schema.targets.id, [...new Set(resources)])),
+        );
+      } else if (namespaces.length > 0) {
+        conditions.push(inArray(schema.targets.id, [...new Set(namespaces)]));
+      } else if (resources.length > 0) {
+        conditions.push(inArray(schema.targets.id, [...new Set(resources)]));
+      }
+    }
+
     const targetsQuery = this.db
       .select({
         id: schema.targets.id,
@@ -1373,28 +1405,6 @@ export class FederatedGraphRepository {
       .setAudience(input.federatedGraphId)
       .setExpirationTime('1d')
       .sign(ecPrivateKey);
-  }
-
-  public async getAccessibleFederatedGraphs(userId: string): Promise<FederatedGraphDTO[]> {
-    const graphTargets = await this.db.query.targets.findMany({
-      where: and(
-        eq(targets.type, 'federated'),
-        eq(targets.organizationId, this.organizationId),
-        eq(targets.createdBy, userId),
-      ),
-    });
-
-    const federatedGraphs: FederatedGraphDTO[] = [];
-
-    for (const target of graphTargets) {
-      const fg = await this.byTargetId(target.id);
-      if (fg === undefined) {
-        throw new Error(`FederatedGraph ${target.name} not found`);
-      }
-      federatedGraphs.push(fg);
-    }
-
-    return federatedGraphs;
   }
 
   public enableFederationSupport({ targetId }: { targetId: string }) {

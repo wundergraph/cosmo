@@ -59,7 +59,7 @@ export function leaveOrganization(
     }
 
     // checking if the user is a single admin
-    if (orgMember.roles.includes('admin')) {
+    if (orgMember.rbac.isOrganizationAdmin) {
       const orgAdmins = await orgRepo.getOrganizationAdmins({ organizationID: authContext.organizationId });
       if (orgAdmins.length === 1) {
         return {

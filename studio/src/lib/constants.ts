@@ -211,3 +211,68 @@ export const PLAYGROUND_DEFAULT_QUERY_TEMPLATE = `# Welcome to WunderGraph Studi
 export const PLAYGROUND_DEFAULT_HEADERS_TEMPLATE = `{
   "X-WG-TRACE" : "true"
 }`;
+
+export const roles = [
+  {
+    key: "organization-admin",
+    category: "organization",
+    displayName: "Admin",
+    description: "Grants full access to the organization and all its resources.",
+  },
+  {
+    key: "organization-developer",
+    category: "organization",
+    displayName: "Developer",
+    description: "Grants write access to all the organization resources.",
+  },
+  {
+    key: "organization-apikey-manager",
+    category: "organization",
+    displayName: "API Key Manager",
+    description: "Grants access to creating, updating and deleting API keys in the organization.",
+  },
+  {
+    key: "organization-viewer",
+    category: "organization",
+    displayName: "Viewer",
+    description: "Grants readonly access to all the organization resources.",
+  },
+  {
+    key: "namespace-admin",
+    category: "namespace",
+    displayName: "Admin",
+    description: "Grants write access to the selected namespaces.",
+  },
+  {
+    key: "namespace-viewer",
+    category: "namespace",
+    displayName: "Viewer",
+    description: "Grants readonly access to the selected namespaces.",
+  },
+  {
+    key: "graph-admin",
+    category: "graph",
+    displayName: "Admin",
+    description: "Grants write access to the selected federated graphs.",
+  },
+  {
+    key: "graph-viewer",
+    category: "graph",
+    displayName: "Viewer",
+    description: "Grants readonly access to the selected federated graphs.",
+  },
+  {
+    key: "subgraph-admin",
+    category: "subgraph",
+    displayName: "Admin",
+    description: "Grants write access to the selected subgraphs.",
+  },
+  {
+    key: "subgraph-publisher",
+    category: "subgraph",
+    displayName: "Publisher",
+    description: "Grants publish access to the selected subgraphs.",
+  }
+];
+
+export type OrganizationRole = typeof roles[number]["key"];

@@ -13,6 +13,7 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import type { RouterOptions } from '../../routes.js';
 import { BillingService } from '../../services/BillingService.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
 
 export function createOrganization(
   opts: RouterOptions,
@@ -52,7 +53,7 @@ export function createOrganization(
     await opts.keycloakClient.authenticateClient();
 
     // Create the organization group in Keycloak + subgroups
-    await opts.keycloakClient.seedGroup({
+    const [kcRootGroupId, kcCreatedGroups] = await opts.keycloakClient.seedGroup({
       userID: authContext.userId,
       organizationSlug: req.slug,
       realm: opts.keycloakRealm,
@@ -61,6 +62,7 @@ export function createOrganization(
     try {
       const data = await opts.db.transaction(async (tx) => {
         const orgRepo = new OrganizationRepository(logger, tx, opts.billingDefaultPlanId);
+        const orgGroupRepo = new OrganizationGroupRepository(tx);
         const billingRepo = new BillingRepository(tx);
         const billingService = new BillingService(tx, billingRepo);
         const auditLogRepo = new AuditLogRepository(tx);
@@ -69,6 +71,7 @@ export function createOrganization(
           organizationName: req.name,
           organizationSlug: req.slug,
           ownerID: authContext.userId,
+          kcGroupId: kcRootGroupId,
         });
 
         await auditLogRepo.addAuditLog({
@@ -92,10 +95,24 @@ export function createOrganization(
           userID: authContext.userId,
         });
 
-        await orgRepo.addOrganizationMemberRoles({
-          memberID: orgMember.id,
-          roles: ['admin'],
+        if (kcCreatedGroups.length > 0) {
+          await orgGroupRepo.importKeycloakGroups({
+            organizationId: organization.id,
+            kcGroups: kcCreatedGroups,
+          });
+        }
+
+        const orgAdminGroup = await orgGroupRepo.byName({
+          organizationId: organization.id,
+          name: 'admin',
         });
+
+        if (orgAdminGroup) {
+          await orgGroupRepo.addUserToGroup({
+            organizationMemberId: orgMember.id,
+            groupId: orgAdminGroup.groupId,
+          });
+        }
 
         let sessionId: string | undefined;
         if (opts.stripeSecretKey) {

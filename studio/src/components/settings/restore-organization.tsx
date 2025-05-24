@@ -1,5 +1,5 @@
 import { useContext, useState } from "react";
-import { SessionClientContext, UserContext } from "@/components/app-provider";
+import { SessionClientContext } from "@/components/app-provider";
 import { useToast } from "@/components/ui/use-toast";
 import { useMutation } from "@connectrpc/connect-query";
 import {
@@ -9,16 +9,13 @@ import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb
 import { Card, CardDescription, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { useRouter } from "next/router";
+import { useIsAdmin } from "@/hooks/use-is-admin";
+import { useUser } from "@/hooks/use-user";
 
-export const RestoreOrganization = ({
-  isRestorePage = false,
-} : {
-  isRestorePage?: boolean;
-}) => {
-  const user = useContext(UserContext);
+export const RestoreOrganization = () => {
+  const user = useUser();
   const sessionQueryClient = useContext(SessionClientContext);
-  const router = useRouter();
+  const isAdmin = useIsAdmin();
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
 
@@ -64,7 +61,7 @@ export const RestoreOrganization = ({
             <Button
               className="w-full md:ml-auto md:w-max"
               isLoading={isPending}
-              disabled={!user?.currentOrganization.roles.includes('admin')}
+              disabled={!isAdmin}
             >
               Restore Organization
             </Button>

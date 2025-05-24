@@ -10,6 +10,7 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationRepository } from '../../../core/repositories/OrganizationRepository.js';
 import { CacheWarmerRepository } from '../../../core/repositories/CacheWarmerRepository.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function getCacheWarmerConfig(
   opts: RouterOptions,
@@ -49,6 +50,10 @@ export function getCacheWarmerConfig(
         isCacheWarmerEnabled: false,
         maxOperationsCount: 0,
       };
+    }
+
+    if (!authContext.rbac.hasNamespaceReadAccess(namespace)) {
+      throw new UnauthorizedError();
     }
 
     if (!namespace.enableCacheWarmer) {

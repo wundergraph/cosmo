@@ -46,6 +46,7 @@ export function getFeatureSubgraphs(
       offset: req.offset,
       namespaceId,
       query: req.query,
+      rbac: authContext.rbac,
     });
 
     const count = await featureFlagRepo.getFeatureSubgraphsCount({
@@ -53,6 +54,7 @@ export function getFeatureSubgraphs(
       query: req.query,
       limit: 0,
       offset: 0,
+      rbac: authContext.rbac,
     });
 
     return {

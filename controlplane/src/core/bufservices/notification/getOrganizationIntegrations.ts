@@ -8,6 +8,7 @@ import {
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function getOrganizationIntegrations(
   opts: RouterOptions,
@@ -19,6 +20,10 @@ export function getOrganizationIntegrations(
   return handleError<PlainMessage<GetOrganizationIntegrationsResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
+
+    if (!authContext.rbac.isOrganizationAdminOrDeveloper) {
+      throw new UnauthorizedError();
+    }
 
     const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
 

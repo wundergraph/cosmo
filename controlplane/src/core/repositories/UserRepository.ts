@@ -116,7 +116,7 @@ export class UserRepository {
     id: string;
     oidcProviders: { alias: string; orgSlug: string }[];
     orgMemberships: {
-      memberships: { slug: string; roles: string[] }[];
+      memberships: { slug: string }[];
       soloAdminSoloMemberOrgs: { slug: string }[];
     };
     keycloakClient: Keycloak;
@@ -141,7 +141,6 @@ export class UserRepository {
           realm: input.keycloakRealm,
           userID: input.id,
           groupName: org.slug,
-          roles: org.roles,
         });
       }
 

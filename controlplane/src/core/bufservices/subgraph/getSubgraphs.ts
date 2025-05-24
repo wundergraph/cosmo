@@ -45,6 +45,7 @@ export function getSubgraphs(
       namespaceId,
       query: req.query,
       excludeFeatureSubgraphs: req.excludeFeatureSubgraphs,
+      rbac: authContext.rbac,
     });
 
     const count = await repo.count({
@@ -53,6 +54,7 @@ export function getSubgraphs(
       limit: 0,
       offset: 0,
       excludeFeatureSubgraphs: req.excludeFeatureSubgraphs,
+      rbac: authContext.rbac,
     });
 
     return {
