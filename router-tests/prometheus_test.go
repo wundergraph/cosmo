@@ -4768,6 +4768,101 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 			})
 		})
 	})
+
+	t.Run("subgraph custom attributes", func(t *testing.T) {
+		t.Run("with telemetry attributes", func(t *testing.T) {
+			promRegistry := prometheus.NewRegistry()
+			metricReader := metric.NewManualReader()
+
+			testenv.Run(t, &testenv.Config{
+				PrometheusRegistry: promRegistry,
+				MetricReader:       metricReader,
+				CustomTelemetryAttributes: []config.CustomAttribute{
+					{
+						Key: "custom.subgraph",
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "subgraph.name",
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { employees { id } }`,
+				})
+
+				rm := metricdata.ResourceMetrics{}
+				err := metricReader.Collect(context.Background(), &rm)
+				require.NoError(t, err)
+
+				metricFamily, err := promRegistry.Gather()
+				require.NoError(t, err)
+
+				expected := &io_prometheus_client.LabelPair{
+					Name:  PointerOf("custom_subgraph"),
+					Value: PointerOf("employees"),
+				}
+
+				requestsInFlight := findMetricFamilyByName(metricFamily, "router_http_requests_in_flight")
+				requestsInFlightMetrics := requestsInFlight.GetMetric()[1]
+				require.NotContains(t, requestsInFlightMetrics.Label, expected)
+
+				requestTotal := findMetricFamilyByName(metricFamily, "router_http_requests_total")
+				requestTotalMetrics := requestTotal.GetMetric()[1]
+				require.Contains(t, requestTotalMetrics.Label, expected)
+
+				requestDuration := findMetricFamilyByName(metricFamily, "router_http_request_duration_milliseconds")
+				requestDurationMetrics := requestDuration.GetMetric()[1]
+				require.Contains(t, requestDurationMetrics.Label, expected)
+			})
+		})
+
+		t.Run("with metric attributes", func(t *testing.T) {
+			promRegistry := prometheus.NewRegistry()
+			metricReader := metric.NewManualReader()
+
+			testenv.Run(t, &testenv.Config{
+				PrometheusRegistry: promRegistry,
+				MetricReader:       metricReader,
+				CustomMetricAttributes: []config.CustomAttribute{
+					{
+						Key: "custom.subgraph",
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "subgraph.name",
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { employees { id } }`,
+				})
+
+				rm := metricdata.ResourceMetrics{}
+				err := metricReader.Collect(context.Background(), &rm)
+				require.NoError(t, err)
+
+				metricFamily, err := promRegistry.Gather()
+				require.NoError(t, err)
+
+				expected := &io_prometheus_client.LabelPair{
+					Name:  PointerOf("custom_subgraph"),
+					Value: PointerOf("employees"),
+				}
+
+				requestsInFlight := findMetricFamilyByName(metricFamily, "router_http_requests_in_flight")
+				requestsInFlightMetrics := requestsInFlight.GetMetric()[1]
+				require.NotContains(t, requestsInFlightMetrics.Label, expected)
+
+				requestTotal := findMetricFamilyByName(metricFamily, "router_http_requests_total")
+				requestTotalMetrics := requestTotal.GetMetric()[1]
+				require.Contains(t, requestTotalMetrics.Label, expected)
+
+				requestDuration := findMetricFamilyByName(metricFamily, "router_http_request_duration_milliseconds")
+				requestDurationMetrics := requestDuration.GetMetric()[1]
+				require.Contains(t, requestDurationMetrics.Label, expected)
+			})
+		})
+	})
+
 }
 
 func TestExcludeAttributesWithCustomExporterPrometheus(t *testing.T) {

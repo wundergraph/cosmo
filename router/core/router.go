@@ -226,6 +226,7 @@ type (
 		tlsServerConfig               *tls.Config
 		tlsConfig                     *TlsConfig
 		telemetryAttributes           []config.CustomAttribute
+		tracingAttributes             []config.CustomAttribute
 		tracePropagators              []propagation.TextMapPropagator
 		compositePropagator           propagation.TextMapPropagator
 		// Poller
@@ -1949,6 +1950,12 @@ func WithTLSConfig(cfg *TlsConfig) Option {
 func WithTelemetryAttributes(attributes []config.CustomAttribute) Option {
 	return func(r *Router) {
 		r.telemetryAttributes = attributes
+	}
+}
+
+func WithTracingAttributes(attributes []config.CustomAttribute) Option {
+	return func(r *Router) {
+		r.tracingAttributes = attributes
 	}
 }
 

@@ -243,10 +243,10 @@ export class FederationFactory {
   fieldCoordsByNamedTypeName: Map<string, Set<string>>;
   inaccessibleCoords = new Set<string>();
   inaccessibleRequiredInputValueErrorByCoords = new Map<string, Error>();
-  isMaxDepth = false;
   internalGraph: Graph;
   internalSubgraphBySubgraphName: Map<string, InternalSubgraph>;
   invalidORScopesCoords = new Set<string>();
+  isMaxDepth = false;
   isVersionTwo = false;
   namedInputValueTypeNames = new Set<string>();
   namedOutputTypeNames = new Set<string>();
@@ -929,6 +929,8 @@ export class FederationFactory {
     return {
       configureDescriptionDataBySubgraphName: copyObjectValueMap(sourceData.configureDescriptionDataBySubgraphName),
       directivesByDirectiveName: copyArrayValueMap(sourceData.directivesByDirectiveName),
+      federatedCoords: sourceData.federatedCoords,
+      fieldName: sourceData.fieldName,
       includeDefaultValue: sourceData.includeDefaultValue,
       isArgument: sourceData.isArgument,
       kind: sourceData.kind,
@@ -941,12 +943,13 @@ export class FederationFactory {
         type: sourceData.type,
       },
       originalCoords: sourceData.originalCoords,
+      originalParentTypeName: sourceData.originalParentTypeName,
       persistedDirectivesData: extractPersistedDirectives(
         newPersistedDirectivesData(),
         sourceData.directivesByDirectiveName,
         this.persistedDirectiveDefinitionByDirectiveName,
       ),
-      federatedCoords: sourceData.federatedCoords,
+      renamedParentTypeName: sourceData.renamedParentTypeName,
       requiredSubgraphNames: new Set(sourceData.requiredSubgraphNames),
       subgraphNames: new Set(sourceData.subgraphNames),
       type: sourceData.type,
@@ -1573,15 +1576,15 @@ export class FederationFactory {
           subgraphName,
           'internalSubgraphBySubgraphName',
         );
-        const configurationDataMap = internalSubgraph.configurationDataByTypeName;
+        const configurationDataByTypeName = internalSubgraph.configurationDataByTypeName;
         const concreteTypeNames = this.concreteTypeNamesByAbstractTypeName.get(entityInterfaceTypeName);
         if (!concreteTypeNames) {
           continue;
         }
         const interfaceObjectConfiguration = getOrThrowError(
-          configurationDataMap,
+          configurationDataByTypeName,
           entityInterfaceTypeName,
-          'configurationDataMap',
+          'configurationDataByTypeName',
         );
         const keys = interfaceObjectConfiguration.keys;
         if (!keys) {
@@ -1589,14 +1592,9 @@ export class FederationFactory {
           continue;
         }
         interfaceObjectConfiguration.entityInterfaceConcreteTypeNames = entityInterfaceData.concreteTypeNames;
-        const fieldNames = interfaceObjectConfiguration.fieldNames;
         this.internalGraph.setSubgraphName(subgraphName);
         const interfaceObjectNode = this.internalGraph.addOrUpdateNode(entityInterfaceTypeName, { isAbstract: true });
         for (const concreteTypeName of concreteTypeNames) {
-          if (configurationDataMap.has(concreteTypeName)) {
-            // error TODO
-            continue;
-          }
           const concreteTypeData = getOrThrowError(
             this.parentDefinitionDataByTypeName,
             concreteTypeName,
@@ -1608,12 +1606,29 @@ export class FederationFactory {
           // The subgraph locations of the interface object must be added to the concrete types that implement it
           const entityData = getOrThrowError(this.entityDataByTypeName, concreteTypeName, 'entityDataByTypeName');
           entityData.subgraphNames.add(subgraphName);
-          const configurationData: ConfigurationData = {
-            fieldNames,
-            isRootNode: true,
-            keys,
-            typeName: concreteTypeName,
-          };
+          const configurationData = configurationDataByTypeName.get(concreteTypeName);
+          if (configurationData) {
+            addIterableValuesToSet(interfaceObjectConfiguration.fieldNames, configurationData.fieldNames);
+            if (!configurationData.keys) {
+              configurationData.keys = [...keys];
+            } else {
+              parentLoop: for (const key of keys) {
+                for (const { selectionSet } of configurationData.keys) {
+                  if (key.selectionSet === selectionSet) {
+                    continue parentLoop;
+                  }
+                }
+                configurationData.keys.push(key);
+              }
+            }
+          } else {
+            configurationDataByTypeName.set(concreteTypeName, {
+              fieldNames: new Set<string>(interfaceObjectConfiguration.fieldNames),
+              isRootNode: true,
+              keys: [...keys],
+              typeName: concreteTypeName,
+            });
+          }
           const resolvableKeyFieldSets = new Set<string>();
           for (const key of keys.filter((k) => !k.disableEntityResolver)) {
             resolvableKeyFieldSets.add(key.selectionSet);
@@ -1652,7 +1667,6 @@ export class FederationFactory {
               this.copyFieldData(interfaceFieldData, isInaccessible),
             );
           }
-          configurationDataMap.set(concreteTypeName, configurationData);
           this.handleInterfaceObjectForInternalGraph({
             internalSubgraph,
             subgraphName,

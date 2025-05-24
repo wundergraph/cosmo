@@ -335,6 +335,7 @@ import {
 } from '../../utils/utils';
 import { BREAK, visit } from 'graphql/index';
 import {
+  AddInputValueDataByNodeParams,
   ConditionalFieldSetValidationResult,
   ExtractArgumentDataResult,
   FieldSetData,
@@ -384,6 +385,7 @@ export class NormalizationFactory {
   fieldSetDataByTypeName = new Map<string, FieldSetData>();
   internalGraph: Graph;
   invalidConfigureDescriptionNodeDatas: Array<NodeData> = [];
+  invalidORScopesCoords = new Set<string>();
   invalidRepeatedDirectiveNameByCoords = new Map<string, Set<string>>();
   isCurrentParentExtension = false;
   isParentObjectExternal = false;
@@ -401,10 +403,9 @@ export class NormalizationFactory {
   operationTypeNodeByTypeName = new Map<string, OperationTypeNode>();
   originalParentTypeName = '';
   originalTypeNameByRenamedTypeName = new Map<string, string>();
+  overridesByTargetSubgraphName = new Map<string, Map<string, Set<string>>>();
   parentDefinitionDataByTypeName = new Map<string, ParentDefinitionData>();
   parentsWithChildArguments = new Set<string>();
-  overridesByTargetSubgraphName = new Map<string, Map<string, Set<string>>>();
-  invalidORScopesCoords = new Set<string>();
   schemaData: SchemaData;
   referencedDirectiveNames = new Set<string>();
   referencedTypeNames = new Set<string>();
@@ -917,34 +918,35 @@ export class NormalizationFactory {
   }
 
   extractArguments(
-    argumentDataByArgumentName: Map<string, InputValueData>,
+    argumentDataByName: Map<string, InputValueData>,
     node: FieldDefinitionNode,
   ): Map<string, InputValueData> {
     if (!node.arguments?.length) {
-      return argumentDataByArgumentName;
+      return argumentDataByName;
     }
     const fieldName = node.name.value;
     const originalFieldPath = `${this.originalParentTypeName}.${fieldName}`;
-    const renamedFieldPath = `${this.renamedParentTypeName}.${fieldName}`;
     this.parentsWithChildArguments.add(this.originalParentTypeName);
     const duplicatedArguments = new Set<string>();
     for (const argumentNode of node.arguments) {
       const argumentName = argumentNode.name.value;
-      if (argumentDataByArgumentName.has(argumentName)) {
+      if (argumentDataByName.has(argumentName)) {
         duplicatedArguments.add(argumentName);
         continue;
       }
-      this.addInputValueDataByNode(
-        argumentDataByArgumentName,
-        argumentNode,
-        `${originalFieldPath}(${argumentName}: ...)`,
-        `${renamedFieldPath}(${argumentName}: ...)`,
-      );
+      this.addInputValueDataByNode({
+        fieldName,
+        inputValueDataByName: argumentDataByName,
+        isArgument: true,
+        node: argumentNode,
+        originalParentTypeName: this.originalParentTypeName,
+        renamedParentTypeName: this.renamedParentTypeName,
+      });
     }
     if (duplicatedArguments.size > 0) {
       this.errors.push(duplicateArgumentsError(originalFieldPath, [...duplicatedArguments]));
     }
-    return argumentDataByArgumentName;
+    return argumentDataByName;
   }
 
   addPersistedDirectiveDefinitionDataByNode(
@@ -953,13 +955,18 @@ export class NormalizationFactory {
     executableLocations: Set<string>,
   ) {
     const name = node.name.value;
-    const argumentDataByArgumentName = new Map<string, InputValueData>();
+    const directiveName = `@${name}`;
+    const argumentDataByName = new Map<string, InputValueData>();
     for (const argumentNode of node.arguments || []) {
-      const originalPath = `@${name}(${argumentNode.name.value}: ...)`;
-      this.addInputValueDataByNode(argumentDataByArgumentName, argumentNode, originalPath, originalPath);
+      this.addInputValueDataByNode({
+        inputValueDataByName: argumentDataByName,
+        isArgument: true,
+        node: argumentNode,
+        originalParentTypeName: directiveName,
+      });
     }
     persistedDirectiveDefinitionDataByDirectiveName.set(name, {
-      argumentDataByArgumentName,
+      argumentDataByArgumentName: argumentDataByName,
       executableLocations,
       name,
       repeatable: node.repeatable,
@@ -1111,45 +1118,56 @@ export class NormalizationFactory {
     return fieldData;
   }
 
-  addInputValueDataByNode(
-    inputValueDataByValueName: Map<string, InputValueData>,
-    node: InputValueDefinitionNode,
-    originalPath: string,
-    renamedPath?: string,
-  ) {
+  addInputValueDataByNode({
+    fieldName,
+    inputValueDataByName,
+    isArgument,
+    node,
+    originalParentTypeName,
+    renamedParentTypeName,
+  }: AddInputValueDataByNodeParams) {
+    const federatedParentTypeName = renamedParentTypeName || originalParentTypeName;
     const name = node.name.value;
-    // Only arguments have renamed paths
-    const isArgument = !!renamedPath;
+    // directives do not have field names
+    const originalCoords = isArgument
+      ? `${originalParentTypeName}${fieldName ? `.${fieldName}` : ''}(${name}: ...)`
+      : `${originalParentTypeName}.${name}`;
     if (node.defaultValue && !areDefaultValuesCompatible(node.type, node.defaultValue)) {
       this.errors.push(
         incompatibleInputValueDefaultValueTypeError(
           (isArgument ? ARGUMENT : INPUT_FIELD) + ` "${name}"`,
-          originalPath,
+          originalCoords,
           printTypeNode(node.type),
           print(node.defaultValue),
         ),
       );
     }
+    const federatedCoords = isArgument
+      ? `${federatedParentTypeName}${fieldName ? `.${fieldName}` : ''}(${name}: ...)`
+      : `${federatedParentTypeName}.${name}`;
     const inputValueData: InputValueData = {
       configureDescriptionDataBySubgraphName: new Map<string, ConfigureDescriptionData>(),
       directivesByDirectiveName: this.extractDirectives(node, new Map<string, ConstDirectiveNode[]>()),
+      federatedCoords,
+      fieldName,
       includeDefaultValue: !!node.defaultValue,
       isArgument,
       kind: isArgument ? Kind.ARGUMENT : Kind.INPUT_VALUE_DEFINITION,
       name,
       namedTypeName: getTypeNodeNamedTypeName(node.type),
-      node: getMutableInputValueNode(node, originalPath, this.errors),
-      originalCoords: originalPath,
+      node: getMutableInputValueNode(node, originalParentTypeName, this.errors),
+      originalCoords,
+      originalParentTypeName: originalParentTypeName,
       persistedDirectivesData: newPersistedDirectivesData(),
-      federatedCoords: renamedPath || originalPath,
+      renamedParentTypeName: federatedParentTypeName,
       requiredSubgraphNames: new Set<string>(isTypeRequired(node.type) ? [this.subgraphName] : []),
       subgraphNames: new Set<string>([this.subgraphName]),
-      type: getMutableTypeNode(node.type, originalPath, this.errors),
+      type: getMutableTypeNode(node.type, originalParentTypeName, this.errors),
       defaultValue: node.defaultValue, // TODO validate
       description: formatDescription(node.description),
     };
     this.extractConfigureDescriptionsData(inputValueData);
-    inputValueDataByValueName.set(name, inputValueData);
+    inputValueDataByName.set(name, inputValueData);
   }
 
   upsertInterfaceDataByNode(node: InterfaceTypeNode, isRealExtension: boolean = false) {

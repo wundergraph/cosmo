@@ -97,7 +97,7 @@ func (c *CosmoRateLimiter) generateKey(ctx *resolve.Context) (string, error) {
 	if rc == nil {
 		return "", errors.New("no request context")
 	}
-	str, err := rc.ResolveStringExpression(c.keySuffixProgram)
+	str, err := expr.ResolveStringExpression(c.keySuffixProgram, rc.expressionContext)
 	if err != nil {
 		return "", fmt.Errorf("failed to resolve key suffix expression: %w", err)
 	}
