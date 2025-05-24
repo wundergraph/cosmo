@@ -1,6 +1,6 @@
-import { randomUUID } from "node:crypto";
+import { randomUUID } from 'node:crypto';
 import { describe, expect, test } from 'vitest';
-import { createTestGroup, createTestRBACEvaluator } from "../src/core/test-util.js";
+import { createTestGroup, createTestRBACEvaluator } from '../src/core/test-util.js';
 
 describe('RBAC Evaluator', () => {
   const orgAdmin = createTestGroup({ role: 'organization-admin' });

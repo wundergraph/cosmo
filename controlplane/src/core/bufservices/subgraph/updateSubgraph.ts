@@ -167,6 +167,10 @@ export function updateSubgraph(
       authContext,
     });
 
+    if (!authContext.rbac.canUpdateSubGraph(subgraph)) {
+      throw new UnauthorizedError();
+    }
+
     const { compositionErrors, updatedFederatedGraphs, deploymentErrors, compositionWarnings } =
       await subgraphRepo.update(
         {

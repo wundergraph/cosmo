@@ -16,8 +16,8 @@ import { OrganizationRepository } from '../src/core/repositories/OrganizationRep
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel, TestUser, UserTestData } from '../src/core/test-util.js';
 import { OidcRepository } from '../src/core/repositories/OidcRepository.js';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
-import { RBACEvaluator } from "../src/core/services/RBACEvaluator.js";
-import { OrganizationGroupRepository } from "../src/core/repositories/OrganizationGroupRepository.js";
+import { RBACEvaluator } from '../src/core/services/RBACEvaluator.js';
+import { OrganizationGroupRepository } from '../src/core/repositories/OrganizationGroupRepository.js';
 import {
   createFederatedGraph,
   createThenPublishSubgraph,

@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomUUID } from 'node:crypto';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import {
@@ -11,13 +11,13 @@ import {
 } from '../../src/core/test-util.js';
 import {
   createBaseAndFeatureSubgraph,
-  createSubgraph,
+  createNamespace,
   DEFAULT_NAMESPACE,
   DEFAULT_SUBGRAPH_URL_ONE,
   DEFAULT_SUBGRAPH_URL_TWO,
   SetupTest,
 } from '../test-util.js';
-import { OrganizationRole } from "../../src/db/models.js";
+import { OrganizationRole } from '../../src/db/models.js';
 
 let dbname = '';
 
@@ -46,10 +46,19 @@ describe('Create subgraph tests', () => {
     await server.close();
   });
 
-  test('that a regular subgraph can be created', async () => {
-    const { client, server } = await SetupTest({ dbname });
+  test.each([
+    'organization-admin',
+    'organization-developer',
+    'subgraph-admin',
+  ])('%s should create regular subgraph can be created', async (role) => {
+    const { client, server, authenticator, users } = await SetupTest({ dbname });
 
     const subgraphName = genID('subgraph');
+
+    authenticator.changeUserWithSuppliedContext({
+      ...users.adminAliceCompanyA,
+      rbac: createTestRBACEvaluator(createTestGroup({ role })),
+    });
 
     const createFederatedSubgraphResp = await client.createFederatedSubgraph({
       name: subgraphName,
@@ -62,43 +71,154 @@ describe('Create subgraph tests', () => {
     await server.close();
   });
 
-    test('that an error is returned if the name is invalid', async () => {
-      const { client, server } = await SetupTest({ dbname });
+  test('subgraph-admin should create regular subgraph can be created on allowed namespace', async (role) => {
+    const { client, server, authenticator, users } = await SetupTest({ dbname });
+    await createNamespace(client, 'prod');
 
-      let createFederatedSubgraphResp = await client.createFederatedSubgraph({
-        name: "a*a",
-        namespace: DEFAULT_NAMESPACE,
-        routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
-      });
+    const subgraphName = genID('subgraph');
 
-      expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR_INVALID_NAME);
+    const getNamespaceResponses = await client.getNamespaces({});
+    expect(getNamespaceResponses.response?.code).toBe(EnumStatusCode.OK);
 
-      createFederatedSubgraphResp = await client.createFederatedSubgraph({
-        name: "a*a/",
-        namespace: DEFAULT_NAMESPACE,
-        routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
-      });
+    const defaultNamespace = getNamespaceResponses.namespaces?.find((ns) => ns.name === DEFAULT_NAMESPACE);
+    const prodNamespace = getNamespaceResponses.namespaces?.find((ns) => ns.name === 'prod');
+    expect(defaultNamespace).toBeDefined();
+    expect(prodNamespace).toBeDefined();
 
-      expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR_INVALID_NAME);
-
-      createFederatedSubgraphResp = await client.createFederatedSubgraph({
-        name: "^a*a/",
-        namespace: DEFAULT_NAMESPACE,
-        routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
-      });
-
-      expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR_INVALID_NAME);
-
-      createFederatedSubgraphResp = await client.createFederatedSubgraph({
-        name: "Test".repeat(26),
-        namespace: DEFAULT_NAMESPACE,
-        routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
-      });
-
-      expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR_INVALID_NAME);
-
-      await server.close();
+    authenticator.changeUserWithSuppliedContext({
+      ...users.adminAliceCompanyA,
+      rbac: createTestRBACEvaluator(createTestGroup({
+        role: 'subgraph-admin',
+        namespaces: [defaultNamespace!.id],
+      })),
     });
+
+    let createFederatedSubgraphResp = await client.createFederatedSubgraph({
+      name: subgraphName,
+      namespace: DEFAULT_NAMESPACE,
+      routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
+    });
+
+    expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+    authenticator.changeUserWithSuppliedContext({
+      ...users.adminAliceCompanyA,
+      rbac: createTestRBACEvaluator(createTestGroup({
+        role: 'subgraph-admin',
+        namespaces: [prodNamespace!.id],
+      })),
+    });
+
+    createFederatedSubgraphResp = await client.createFederatedSubgraph({
+      name: subgraphName,
+      namespace: DEFAULT_NAMESPACE,
+      routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
+    });
+
+    expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
+
+    await server.close();
+  });
+
+  test('subgraph-admin should not create regular subgraph can be created when allowed resources', async (role) => {
+    const { client, server, authenticator, users } = await SetupTest({ dbname });
+    await createNamespace(client, 'prod');
+
+    const subgraphName = genID('subgraph');
+
+    const getNamespaceResponses = await client.getNamespaces({});
+    expect(getNamespaceResponses.response?.code).toBe(EnumStatusCode.OK);
+
+    const defaultNamespace = getNamespaceResponses.namespaces?.find((ns) => ns.name === DEFAULT_NAMESPACE);
+    const prodNamespace = getNamespaceResponses.namespaces?.find((ns) => ns.name === 'prod');
+    expect(defaultNamespace).toBeDefined();
+    expect(prodNamespace).toBeDefined();
+
+    authenticator.changeUserWithSuppliedContext({
+      ...users.adminAliceCompanyA,
+      rbac: createTestRBACEvaluator(createTestGroup({
+        role: 'subgraph-admin',
+        resources: [randomUUID()],
+      })),
+    });
+
+    const createFederatedSubgraphResp = await client.createFederatedSubgraph({
+      name: subgraphName,
+      namespace: DEFAULT_NAMESPACE,
+      routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
+    });
+
+    expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
+
+    await server.close();
+  });
+
+  test.each([
+    'organization-apikey-manager',
+    'organization-viewer',
+    'namespace-admin',
+    'namespace-viewer',
+    'graph-admin',
+    'graph-viewer',
+    'subgraph-publisher',
+  ])('%s should not create regular subgraph can be created', async (role) => {
+    const { client, server, authenticator, users } = await SetupTest({ dbname });
+
+    const subgraphName = genID('subgraph');
+
+    authenticator.changeUserWithSuppliedContext({
+      ...users.adminAliceCompanyA,
+      rbac: createTestRBACEvaluator(createTestGroup({ role })),
+    });
+
+    const createFederatedSubgraphResp = await client.createFederatedSubgraph({
+      name: subgraphName,
+      namespace: DEFAULT_NAMESPACE,
+      routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
+    });
+
+    expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
+
+    await server.close();
+  });
+
+  test('that an error is returned if the name is invalid', async () => {
+    const { client, server } = await SetupTest({ dbname });
+
+    let createFederatedSubgraphResp = await client.createFederatedSubgraph({
+      name: "a*a",
+      namespace: DEFAULT_NAMESPACE,
+      routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
+    });
+
+    expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR_INVALID_NAME);
+
+    createFederatedSubgraphResp = await client.createFederatedSubgraph({
+      name: "a*a/",
+      namespace: DEFAULT_NAMESPACE,
+      routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
+    });
+
+    expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR_INVALID_NAME);
+
+    createFederatedSubgraphResp = await client.createFederatedSubgraph({
+      name: "^a*a/",
+      namespace: DEFAULT_NAMESPACE,
+      routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
+    });
+
+    expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR_INVALID_NAME);
+
+    createFederatedSubgraphResp = await client.createFederatedSubgraph({
+      name: "Test".repeat(26),
+      namespace: DEFAULT_NAMESPACE,
+      routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
+    });
+
+    expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR_INVALID_NAME);
+
+    await server.close();
+  });
 
   test('that an error is returned if an Event-Driven subgraph defines a routing URL', async () => {
     const { client, server } = await SetupTest({ dbname });

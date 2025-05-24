@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { uid } from "uid";
+import { uid } from 'uid';
 import { afterAllSetup, beforeAllSetup, TestUser } from '../src/core/test-util.js';
 import { SetupTest } from './test-util.js';
 

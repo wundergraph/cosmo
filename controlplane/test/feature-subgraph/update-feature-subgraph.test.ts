@@ -112,7 +112,6 @@ describe('Update feature subgraph tests', () => {
     'organization-admin',
     'organization-developer',
     'subgraph-admin',
-    'subgraph-publisher',
   ])('%s should be able to update feature subgraph', async (role) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname });
 
@@ -145,10 +144,7 @@ describe('Update feature subgraph tests', () => {
     await server.close();
   });
 
-  test.each([
-    'subgraph-admin',
-    'subgraph-publisher',
-  ])('%s should be able to update feature subgraph from allowed namespaces', async (role) => {
+  test('subgraph-admin should be able to update feature subgraph from allowed namespaces', async (role) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname });
 
     const baseSubgraphName = genID('subgraph');
@@ -168,7 +164,7 @@ describe('Update feature subgraph tests', () => {
     authenticator.changeUserWithSuppliedContext({
       ...users.adminAliceCompanyA,
       rbac: createTestRBACEvaluator(createTestGroup({
-        role,
+        role: 'subgraph-admin',
         namespaces: [getNamespaceResponse.namespace!.id],
       })),
     });
@@ -186,10 +182,7 @@ describe('Update feature subgraph tests', () => {
     await server.close();
   });
 
-  test.each([
-    'subgraph-admin',
-    'subgraph-publisher',
-  ])('%s should be able to update allowed feature subgraph', async (role) => {
+  test('subgraph-admin should be able to update allowed feature subgraph', async (role) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname });
 
     const baseSubgraphName = genID('subgraph');
@@ -225,8 +218,8 @@ describe('Update feature subgraph tests', () => {
     authenticator.changeUserWithSuppliedContext({
       ...users.adminAliceCompanyA,
       rbac: createTestRBACEvaluator(createTestGroup({
-        role,
-        resources: [featureSubgraph!.id],
+        role: 'subgraph-admin',
+        resources: [featureSubgraph!.targetId],
       })),
     });
 
@@ -256,6 +249,7 @@ describe('Update feature subgraph tests', () => {
     'namespace-viewer',
     'graph-admin',
     'graph-viewer',
+    'subgraph-publisher',
   ])('%s should not be able to update feature subgraph from allowed namespaces', async (role) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname });
 

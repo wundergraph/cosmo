@@ -160,6 +160,10 @@ export class RBACEvaluator {
     return false;
   }
 
+  canUpdateSubGraph(graph: Target) {
+    return this.isOrganizationAdminOrDeveloper || this.checkTargetAccess(graph, ['subgraph-admin']);
+  }
+
   canDeleteSubGraph(graph: Target) {
     if (!this.isApiKey && graph.creatorUserId && this.userId && graph.creatorUserId === this.userId) {
       // The graph creator should always have access to the provided target

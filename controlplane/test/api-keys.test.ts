@@ -9,7 +9,7 @@ import {
   createTestRBACEvaluator,
   TestUser
 } from '../src/core/test-util.js';
-import { OrganizationRole } from "../src/db/models.js";
+import { OrganizationRole } from '../src/db/models.js';
 import { SetupTest } from './test-util.js';
 
 let dbname = '';
