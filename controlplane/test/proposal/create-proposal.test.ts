@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
@@ -18,7 +19,6 @@ import {
   DEFAULT_SUBGRAPH_URL_TWO,
   SetupTest,
 } from '../test-util.js';
-import { randomUUID } from "node:crypto";
 
 let dbname = '';
 
