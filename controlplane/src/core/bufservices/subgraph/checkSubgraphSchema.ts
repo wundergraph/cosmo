@@ -40,6 +40,7 @@ import {
   isValidGraphName,
 } from '../../util.js';
 import { ProposalRepository } from '../../repositories/ProposalRepository.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function checkSubgraphSchema(
   opts: RouterOptions,
@@ -64,23 +65,8 @@ export function checkSubgraphSchema(
     const proposalRepo = new ProposalRepository(opts.db);
     req.namespace = req.namespace || DefaultNamespace;
 
-    if (!authContext.hasWriteAccess) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `The user does not have the permissions to perform this operation`,
-        },
-        breakingChanges: [],
-        nonBreakingChanges: [],
-        compositionErrors: [],
-        checkId: '',
-        checkedFederatedGraphs: [],
-        lintWarnings: [],
-        lintErrors: [],
-        graphPruneWarnings: [],
-        graphPruneErrors: [],
-        compositionWarnings: [],
-      };
+    if (authContext.organizationDeactivated) {
+      throw new UnauthorizedError();
     }
 
     const org = await orgRepo.byId(authContext.organizationId);
@@ -146,6 +132,10 @@ export function checkSubgraphSchema(
     }
 
     if (!subgraph) {
+      if (!authContext.rbac.canCreateSubGraph(namespace)) {
+        throw new UnauthorizedError();
+      }
+
       if (!isValidLabels(req.labels)) {
         return {
           response: {
@@ -181,6 +171,8 @@ export function checkSubgraphSchema(
           compositionWarnings: [],
         };
       }
+    } else if (!authContext.rbac.hasSubGraphWriteAccess(subgraph)) {
+      throw new UnauthorizedError();
     }
 
     const subgraphName = subgraph?.name || req.subgraphName;

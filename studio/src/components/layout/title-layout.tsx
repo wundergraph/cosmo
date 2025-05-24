@@ -1,7 +1,7 @@
 import { useCurrentOrganization } from "@/hooks/use-current-organization";
-import { useLocalStorage } from "@/hooks/use-local-storage";
 import { cn } from "@/lib/utils";
 import { Fragment } from "react";
+import { useStarBannerDisabled } from "@/hooks/use-star-banner-disabled";
 
 export interface TitleLayoutProps {
   title: React.ReactNode;
@@ -24,7 +24,7 @@ export const TitleLayout = ({
 }: TitleLayoutProps) => {
   const org = useCurrentOrganization();
 
-  const [isStarBannerDisabled] = useLocalStorage("disableStarBanner", "false");
+  const [isStarBannerDisabled] = useStarBannerDisabled();
   const isOrganizationDeactivated = !!org?.deactivation;
   const isOrganizationPendingDeletion = !!org?.deletion;
   const isBannerDisplayed = isOrganizationDeactivated || isOrganizationPendingDeletion || !isStarBannerDisabled;

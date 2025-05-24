@@ -2,8 +2,6 @@ import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
-  GetOIDCProviderRequest,
-  GetOIDCProviderResponse,
   UpdateIDPMappersRequest,
   UpdateIDPMappersResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
@@ -11,6 +9,7 @@ import { OidcRepository } from '../../repositories/OidcRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import OidcProvider from '../../services/OidcProvider.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function updateIDPMappers(
   opts: RouterOptions,
@@ -23,13 +22,8 @@ export function updateIDPMappers(
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
-    if (!authContext.isAdmin) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `The user doesnt have the permissions to perform this operation`,
-        },
-      };
+    if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdmin) {
+      throw new UnauthorizedError();
     }
 
     const oidcProvider = new OidcProvider();
@@ -57,9 +51,11 @@ export function updateIDPMappers(
       kcClient: opts.keycloakClient,
       kcRealm: opts.keycloakRealm,
       mappers: req.mappers,
+      organizationId: authContext.organizationId,
       organizationSlug: authContext.organizationSlug,
       endpoint: provider.endpoint,
       alias: provider.alias,
+      db: opts.db,
     });
 
     return {

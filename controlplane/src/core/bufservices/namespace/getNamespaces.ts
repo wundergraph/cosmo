@@ -19,7 +19,7 @@ export function getNamespaces(
 
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
-    const namespaces = await namespaceRepo.list();
+    const namespaces = await namespaceRepo.list(authContext.rbac);
 
     return {
       response: {

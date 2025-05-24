@@ -235,6 +235,9 @@ const (
 	// PlatformServiceCreateAPIKeyProcedure is the fully-qualified name of the PlatformService's
 	// CreateAPIKey RPC.
 	PlatformServiceCreateAPIKeyProcedure = "/wg.cosmo.platform.v1.PlatformService/CreateAPIKey"
+	// PlatformServiceUpdateAPIKeyProcedure is the fully-qualified name of the PlatformService's
+	// UpdateAPIKey RPC.
+	PlatformServiceUpdateAPIKeyProcedure = "/wg.cosmo.platform.v1.PlatformService/UpdateAPIKey"
 	// PlatformServiceDeleteAPIKeyProcedure is the fully-qualified name of the PlatformService's
 	// DeleteAPIKey RPC.
 	PlatformServiceDeleteAPIKeyProcedure = "/wg.cosmo.platform.v1.PlatformService/DeleteAPIKey"
@@ -247,6 +250,21 @@ const (
 	// PlatformServiceMigrateFromApolloProcedure is the fully-qualified name of the PlatformService's
 	// MigrateFromApollo RPC.
 	PlatformServiceMigrateFromApolloProcedure = "/wg.cosmo.platform.v1.PlatformService/MigrateFromApollo"
+	// PlatformServiceCreateOrganizationGroupProcedure is the fully-qualified name of the
+	// PlatformService's CreateOrganizationGroup RPC.
+	PlatformServiceCreateOrganizationGroupProcedure = "/wg.cosmo.platform.v1.PlatformService/CreateOrganizationGroup"
+	// PlatformServiceGetOrganizationGroupsProcedure is the fully-qualified name of the
+	// PlatformService's GetOrganizationGroups RPC.
+	PlatformServiceGetOrganizationGroupsProcedure = "/wg.cosmo.platform.v1.PlatformService/GetOrganizationGroups"
+	// PlatformServiceGetOrganizationGroupMembersProcedure is the fully-qualified name of the
+	// PlatformService's GetOrganizationGroupMembers RPC.
+	PlatformServiceGetOrganizationGroupMembersProcedure = "/wg.cosmo.platform.v1.PlatformService/GetOrganizationGroupMembers"
+	// PlatformServiceUpdateOrganizationGroupProcedure is the fully-qualified name of the
+	// PlatformService's UpdateOrganizationGroup RPC.
+	PlatformServiceUpdateOrganizationGroupProcedure = "/wg.cosmo.platform.v1.PlatformService/UpdateOrganizationGroup"
+	// PlatformServiceDeleteOrganizationGroupProcedure is the fully-qualified name of the
+	// PlatformService's DeleteOrganizationGroup RPC.
+	PlatformServiceDeleteOrganizationGroupProcedure = "/wg.cosmo.platform.v1.PlatformService/DeleteOrganizationGroup"
 	// PlatformServiceCreateOrganizationWebhookConfigProcedure is the fully-qualified name of the
 	// PlatformService's CreateOrganizationWebhookConfig RPC.
 	PlatformServiceCreateOrganizationWebhookConfigProcedure = "/wg.cosmo.platform.v1.PlatformService/CreateOrganizationWebhookConfig"
@@ -298,9 +316,9 @@ const (
 	// PlatformServiceUpdateOrganizationDetailsProcedure is the fully-qualified name of the
 	// PlatformService's UpdateOrganizationDetails RPC.
 	PlatformServiceUpdateOrganizationDetailsProcedure = "/wg.cosmo.platform.v1.PlatformService/UpdateOrganizationDetails"
-	// PlatformServiceUpdateOrgMemberRoleProcedure is the fully-qualified name of the PlatformService's
-	// UpdateOrgMemberRole RPC.
-	PlatformServiceUpdateOrgMemberRoleProcedure = "/wg.cosmo.platform.v1.PlatformService/UpdateOrgMemberRole"
+	// PlatformServiceUpdateOrgMemberGroupProcedure is the fully-qualified name of the PlatformService's
+	// UpdateOrgMemberGroup RPC.
+	PlatformServiceUpdateOrgMemberGroupProcedure = "/wg.cosmo.platform.v1.PlatformService/UpdateOrgMemberGroup"
 	// PlatformServiceIsGitHubAppInstalledProcedure is the fully-qualified name of the PlatformService's
 	// IsGitHubAppInstalled RPC.
 	PlatformServiceIsGitHubAppInstalledProcedure = "/wg.cosmo.platform.v1.PlatformService/IsGitHubAppInstalled"
@@ -346,12 +364,6 @@ const (
 	// PlatformServiceUpdateFeatureSettingsProcedure is the fully-qualified name of the
 	// PlatformService's UpdateFeatureSettings RPC.
 	PlatformServiceUpdateFeatureSettingsProcedure = "/wg.cosmo.platform.v1.PlatformService/UpdateFeatureSettings"
-	// PlatformServiceAddSubgraphMemberProcedure is the fully-qualified name of the PlatformService's
-	// AddSubgraphMember RPC.
-	PlatformServiceAddSubgraphMemberProcedure = "/wg.cosmo.platform.v1.PlatformService/AddSubgraphMember"
-	// PlatformServiceRemoveSubgraphMemberProcedure is the fully-qualified name of the PlatformService's
-	// RemoveSubgraphMember RPC.
-	PlatformServiceRemoveSubgraphMemberProcedure = "/wg.cosmo.platform.v1.PlatformService/RemoveSubgraphMember"
 	// PlatformServiceGetSubgraphMembersProcedure is the fully-qualified name of the PlatformService's
 	// GetSubgraphMembers RPC.
 	PlatformServiceGetSubgraphMembersProcedure = "/wg.cosmo.platform.v1.PlatformService/GetSubgraphMembers"
@@ -583,10 +595,16 @@ var (
 	platformServiceInviteUserMethodDescriptor                            = platformServiceServiceDescriptor.Methods().ByName("InviteUser")
 	platformServiceGetAPIKeysMethodDescriptor                            = platformServiceServiceDescriptor.Methods().ByName("GetAPIKeys")
 	platformServiceCreateAPIKeyMethodDescriptor                          = platformServiceServiceDescriptor.Methods().ByName("CreateAPIKey")
+	platformServiceUpdateAPIKeyMethodDescriptor                          = platformServiceServiceDescriptor.Methods().ByName("UpdateAPIKey")
 	platformServiceDeleteAPIKeyMethodDescriptor                          = platformServiceServiceDescriptor.Methods().ByName("DeleteAPIKey")
 	platformServiceRemoveOrganizationMemberMethodDescriptor              = platformServiceServiceDescriptor.Methods().ByName("RemoveOrganizationMember")
 	platformServiceRemoveInvitationMethodDescriptor                      = platformServiceServiceDescriptor.Methods().ByName("RemoveInvitation")
 	platformServiceMigrateFromApolloMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("MigrateFromApollo")
+	platformServiceCreateOrganizationGroupMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("CreateOrganizationGroup")
+	platformServiceGetOrganizationGroupsMethodDescriptor                 = platformServiceServiceDescriptor.Methods().ByName("GetOrganizationGroups")
+	platformServiceGetOrganizationGroupMembersMethodDescriptor           = platformServiceServiceDescriptor.Methods().ByName("GetOrganizationGroupMembers")
+	platformServiceUpdateOrganizationGroupMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("UpdateOrganizationGroup")
+	platformServiceDeleteOrganizationGroupMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("DeleteOrganizationGroup")
 	platformServiceCreateOrganizationWebhookConfigMethodDescriptor       = platformServiceServiceDescriptor.Methods().ByName("CreateOrganizationWebhookConfig")
 	platformServiceGetOrganizationWebhookConfigsMethodDescriptor         = platformServiceServiceDescriptor.Methods().ByName("GetOrganizationWebhookConfigs")
 	platformServiceGetOrganizationWebhookMetaMethodDescriptor            = platformServiceServiceDescriptor.Methods().ByName("GetOrganizationWebhookMeta")
@@ -604,7 +622,7 @@ var (
 	platformServiceRestoreOrganizationMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("RestoreOrganization")
 	platformServiceLeaveOrganizationMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("LeaveOrganization")
 	platformServiceUpdateOrganizationDetailsMethodDescriptor             = platformServiceServiceDescriptor.Methods().ByName("UpdateOrganizationDetails")
-	platformServiceUpdateOrgMemberRoleMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("UpdateOrgMemberRole")
+	platformServiceUpdateOrgMemberGroupMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("UpdateOrgMemberGroup")
 	platformServiceIsGitHubAppInstalledMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("IsGitHubAppInstalled")
 	platformServiceCreateOIDCProviderMethodDescriptor                    = platformServiceServiceDescriptor.Methods().ByName("CreateOIDCProvider")
 	platformServiceGetOIDCProviderMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("GetOIDCProvider")
@@ -620,8 +638,6 @@ var (
 	platformServiceGetChangelogBySchemaVersionMethodDescriptor           = platformServiceServiceDescriptor.Methods().ByName("GetChangelogBySchemaVersion")
 	platformServiceGetUserAccessibleResourcesMethodDescriptor            = platformServiceServiceDescriptor.Methods().ByName("GetUserAccessibleResources")
 	platformServiceUpdateFeatureSettingsMethodDescriptor                 = platformServiceServiceDescriptor.Methods().ByName("UpdateFeatureSettings")
-	platformServiceAddSubgraphMemberMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("AddSubgraphMember")
-	platformServiceRemoveSubgraphMemberMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("RemoveSubgraphMember")
 	platformServiceGetSubgraphMembersMethodDescriptor                    = platformServiceServiceDescriptor.Methods().ByName("GetSubgraphMembers")
 	platformServiceAddReadmeMethodDescriptor                             = platformServiceServiceDescriptor.Methods().ByName("AddReadme")
 	platformServiceGetUserAccessiblePermissionsMethodDescriptor          = platformServiceServiceDescriptor.Methods().ByName("GetUserAccessiblePermissions")
@@ -800,6 +816,8 @@ type PlatformServiceClient interface {
 	GetAPIKeys(context.Context, *connect.Request[v1.GetAPIKeysRequest]) (*connect.Response[v1.GetAPIKeysResponse], error)
 	// CreateAPIKey creates an API key for the organization
 	CreateAPIKey(context.Context, *connect.Request[v1.CreateAPIKeyRequest]) (*connect.Response[v1.CreateAPIKeyResponse], error)
+	// UpdateAPIKey updates an API key for the organization
+	UpdateAPIKey(context.Context, *connect.Request[v1.UpdateAPIKeyRequest]) (*connect.Response[v1.UpdateAPIKeyResponse], error)
 	// DeleteAPIKey deletes an API key for the organization
 	DeleteAPIKey(context.Context, *connect.Request[v1.DeleteAPIKeyRequest]) (*connect.Response[v1.DeleteAPIKeyResponse], error)
 	// RemoveOrganizationMember removes the user from the organization
@@ -808,6 +826,17 @@ type PlatformServiceClient interface {
 	RemoveInvitation(context.Context, *connect.Request[v1.RemoveInvitationRequest]) (*connect.Response[v1.RemoveInvitationResponse], error)
 	// MigrateFromApollo migrates the graphs from apollo to cosmo
 	MigrateFromApollo(context.Context, *connect.Request[v1.MigrateFromApolloRequest]) (*connect.Response[v1.MigrateFromApolloResponse], error)
+	// Organization Member Group management
+	// CreateOrganizationGroup creates a new organization group
+	CreateOrganizationGroup(context.Context, *connect.Request[v1.CreateOrganizationGroupRequest]) (*connect.Response[v1.CreateOrganizationGroupResponse], error)
+	// GetOrganizationGroups returns the list of organization groups
+	GetOrganizationGroups(context.Context, *connect.Request[v1.GetOrganizationGroupsRequest]) (*connect.Response[v1.GetOrganizationGroupsResponse], error)
+	// GetOrganizationGroupMembers returns the list of members belonging to the provided organization group
+	GetOrganizationGroupMembers(context.Context, *connect.Request[v1.GetOrganizationGroupMembersRequest]) (*connect.Response[v1.GetOrganizationGroupMembersResponse], error)
+	// UpdateOrganizationGroup updates the rule list for an organization group
+	UpdateOrganizationGroup(context.Context, *connect.Request[v1.UpdateOrganizationGroupRequest]) (*connect.Response[v1.UpdateOrganizationGroupResponse], error)
+	// DeleteOrganizationGroup deletes an existing organization group
+	DeleteOrganizationGroup(context.Context, *connect.Request[v1.DeleteOrganizationGroupRequest]) (*connect.Response[v1.DeleteOrganizationGroupResponse], error)
 	// CreateOrganizationWebhookConfig create a new webhook config for the organization
 	CreateOrganizationWebhookConfig(context.Context, *connect.Request[v1.CreateOrganizationWebhookConfigRequest]) (*connect.Response[v1.CreateOrganizationWebhookConfigResponse], error)
 	// GetOrganizationWebhookConfigs returns all webhooks for the organization
@@ -842,8 +871,8 @@ type PlatformServiceClient interface {
 	LeaveOrganization(context.Context, *connect.Request[v1.LeaveOrganizationRequest]) (*connect.Response[v1.LeaveOrganizationResponse], error)
 	// UpdateOrganizationDetails updates the name and slug of the organization
 	UpdateOrganizationDetails(context.Context, *connect.Request[v1.UpdateOrganizationDetailsRequest]) (*connect.Response[v1.UpdateOrganizationDetailsResponse], error)
-	// UpdateOrgMemberRole updates the role of an org member
-	UpdateOrgMemberRole(context.Context, *connect.Request[v1.UpdateOrgMemberRoleRequest]) (*connect.Response[v1.UpdateOrgMemberRoleResponse], error)
+	// UpdateOrgMemberGroup updates the group of an organization member
+	UpdateOrgMemberGroup(context.Context, *connect.Request[v1.UpdateOrgMemberGroupRequest]) (*connect.Response[v1.UpdateOrgMemberGroupResponse], error)
 	// IsGitHubAppInstalled checks if the cosmo github app is installed to a repository
 	IsGitHubAppInstalled(context.Context, *connect.Request[v1.IsGitHubAppInstalledRequest]) (*connect.Response[v1.IsGitHubAppInstalledResponse], error)
 	// CreateOIDCProvider adds an oidc provider to the organization
@@ -874,10 +903,6 @@ type PlatformServiceClient interface {
 	GetUserAccessibleResources(context.Context, *connect.Request[v1.GetUserAccessibleResourcesRequest]) (*connect.Response[v1.GetUserAccessibleResourcesResponse], error)
 	// UpdateFeatureSettings updates the setinngs of features(ai, rbac, scim) of the organization
 	UpdateFeatureSettings(context.Context, *connect.Request[v1.UpdateFeatureSettingsRequest]) (*connect.Response[v1.UpdateFeatureSettingsResponse], error)
-	// AddSubgraphMember adds a user to the subgraph
-	AddSubgraphMember(context.Context, *connect.Request[v1.AddSubgraphMemberRequest]) (*connect.Response[v1.AddSubgraphMemberResponse], error)
-	// RemoveSubgraphMember removes a member from the subgraph
-	RemoveSubgraphMember(context.Context, *connect.Request[v1.RemoveSubgraphMemberRequest]) (*connect.Response[v1.RemoveSubgraphMemberResponse], error)
 	// GetSubgraphMembers gets all the members of the subgraph
 	GetSubgraphMembers(context.Context, *connect.Request[v1.GetSubgraphMembersRequest]) (*connect.Response[v1.GetSubgraphMembersResponse], error)
 	// AddReadme adds a readme of a target, can be a subgraph or a federated graph
@@ -1392,6 +1417,12 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceCreateAPIKeyMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		updateAPIKey: connect.NewClient[v1.UpdateAPIKeyRequest, v1.UpdateAPIKeyResponse](
+			httpClient,
+			baseURL+PlatformServiceUpdateAPIKeyProcedure,
+			connect.WithSchema(platformServiceUpdateAPIKeyMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 		deleteAPIKey: connect.NewClient[v1.DeleteAPIKeyRequest, v1.DeleteAPIKeyResponse](
 			httpClient,
 			baseURL+PlatformServiceDeleteAPIKeyProcedure,
@@ -1414,6 +1445,36 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			httpClient,
 			baseURL+PlatformServiceMigrateFromApolloProcedure,
 			connect.WithSchema(platformServiceMigrateFromApolloMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		createOrganizationGroup: connect.NewClient[v1.CreateOrganizationGroupRequest, v1.CreateOrganizationGroupResponse](
+			httpClient,
+			baseURL+PlatformServiceCreateOrganizationGroupProcedure,
+			connect.WithSchema(platformServiceCreateOrganizationGroupMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		getOrganizationGroups: connect.NewClient[v1.GetOrganizationGroupsRequest, v1.GetOrganizationGroupsResponse](
+			httpClient,
+			baseURL+PlatformServiceGetOrganizationGroupsProcedure,
+			connect.WithSchema(platformServiceGetOrganizationGroupsMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		getOrganizationGroupMembers: connect.NewClient[v1.GetOrganizationGroupMembersRequest, v1.GetOrganizationGroupMembersResponse](
+			httpClient,
+			baseURL+PlatformServiceGetOrganizationGroupMembersProcedure,
+			connect.WithSchema(platformServiceGetOrganizationGroupMembersMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		updateOrganizationGroup: connect.NewClient[v1.UpdateOrganizationGroupRequest, v1.UpdateOrganizationGroupResponse](
+			httpClient,
+			baseURL+PlatformServiceUpdateOrganizationGroupProcedure,
+			connect.WithSchema(platformServiceUpdateOrganizationGroupMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		deleteOrganizationGroup: connect.NewClient[v1.DeleteOrganizationGroupRequest, v1.DeleteOrganizationGroupResponse](
+			httpClient,
+			baseURL+PlatformServiceDeleteOrganizationGroupProcedure,
+			connect.WithSchema(platformServiceDeleteOrganizationGroupMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 		createOrganizationWebhookConfig: connect.NewClient[v1.CreateOrganizationWebhookConfigRequest, v1.CreateOrganizationWebhookConfigResponse](
@@ -1518,10 +1579,10 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceUpdateOrganizationDetailsMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
-		updateOrgMemberRole: connect.NewClient[v1.UpdateOrgMemberRoleRequest, v1.UpdateOrgMemberRoleResponse](
+		updateOrgMemberGroup: connect.NewClient[v1.UpdateOrgMemberGroupRequest, v1.UpdateOrgMemberGroupResponse](
 			httpClient,
-			baseURL+PlatformServiceUpdateOrgMemberRoleProcedure,
-			connect.WithSchema(platformServiceUpdateOrgMemberRoleMethodDescriptor),
+			baseURL+PlatformServiceUpdateOrgMemberGroupProcedure,
+			connect.WithSchema(platformServiceUpdateOrgMemberGroupMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 		isGitHubAppInstalled: connect.NewClient[v1.IsGitHubAppInstalledRequest, v1.IsGitHubAppInstalledResponse](
@@ -1612,18 +1673,6 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			httpClient,
 			baseURL+PlatformServiceUpdateFeatureSettingsProcedure,
 			connect.WithSchema(platformServiceUpdateFeatureSettingsMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
-		addSubgraphMember: connect.NewClient[v1.AddSubgraphMemberRequest, v1.AddSubgraphMemberResponse](
-			httpClient,
-			baseURL+PlatformServiceAddSubgraphMemberProcedure,
-			connect.WithSchema(platformServiceAddSubgraphMemberMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
-		removeSubgraphMember: connect.NewClient[v1.RemoveSubgraphMemberRequest, v1.RemoveSubgraphMemberResponse](
-			httpClient,
-			baseURL+PlatformServiceRemoveSubgraphMemberProcedure,
-			connect.WithSchema(platformServiceRemoveSubgraphMemberMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 		getSubgraphMembers: connect.NewClient[v1.GetSubgraphMembersRequest, v1.GetSubgraphMembersResponse](
@@ -2023,10 +2072,16 @@ type platformServiceClient struct {
 	inviteUser                            *connect.Client[v1.InviteUserRequest, v1.InviteUserResponse]
 	getAPIKeys                            *connect.Client[v1.GetAPIKeysRequest, v1.GetAPIKeysResponse]
 	createAPIKey                          *connect.Client[v1.CreateAPIKeyRequest, v1.CreateAPIKeyResponse]
+	updateAPIKey                          *connect.Client[v1.UpdateAPIKeyRequest, v1.UpdateAPIKeyResponse]
 	deleteAPIKey                          *connect.Client[v1.DeleteAPIKeyRequest, v1.DeleteAPIKeyResponse]
 	removeOrganizationMember              *connect.Client[v1.RemoveOrganizationMemberRequest, v1.RemoveOrganizationMemberResponse]
 	removeInvitation                      *connect.Client[v1.RemoveInvitationRequest, v1.RemoveInvitationResponse]
 	migrateFromApollo                     *connect.Client[v1.MigrateFromApolloRequest, v1.MigrateFromApolloResponse]
+	createOrganizationGroup               *connect.Client[v1.CreateOrganizationGroupRequest, v1.CreateOrganizationGroupResponse]
+	getOrganizationGroups                 *connect.Client[v1.GetOrganizationGroupsRequest, v1.GetOrganizationGroupsResponse]
+	getOrganizationGroupMembers           *connect.Client[v1.GetOrganizationGroupMembersRequest, v1.GetOrganizationGroupMembersResponse]
+	updateOrganizationGroup               *connect.Client[v1.UpdateOrganizationGroupRequest, v1.UpdateOrganizationGroupResponse]
+	deleteOrganizationGroup               *connect.Client[v1.DeleteOrganizationGroupRequest, v1.DeleteOrganizationGroupResponse]
 	createOrganizationWebhookConfig       *connect.Client[v1.CreateOrganizationWebhookConfigRequest, v1.CreateOrganizationWebhookConfigResponse]
 	getOrganizationWebhookConfigs         *connect.Client[v1.GetOrganizationWebhookConfigsRequest, v1.GetOrganizationWebhookConfigsResponse]
 	getOrganizationWebhookMeta            *connect.Client[v1.GetOrganizationWebhookMetaRequest, v1.GetOrganizationWebhookMetaResponse]
@@ -2044,7 +2099,7 @@ type platformServiceClient struct {
 	restoreOrganization                   *connect.Client[v1.RestoreOrganizationRequest, v1.RestoreOrganizationResponse]
 	leaveOrganization                     *connect.Client[v1.LeaveOrganizationRequest, v1.LeaveOrganizationResponse]
 	updateOrganizationDetails             *connect.Client[v1.UpdateOrganizationDetailsRequest, v1.UpdateOrganizationDetailsResponse]
-	updateOrgMemberRole                   *connect.Client[v1.UpdateOrgMemberRoleRequest, v1.UpdateOrgMemberRoleResponse]
+	updateOrgMemberGroup                  *connect.Client[v1.UpdateOrgMemberGroupRequest, v1.UpdateOrgMemberGroupResponse]
 	isGitHubAppInstalled                  *connect.Client[v1.IsGitHubAppInstalledRequest, v1.IsGitHubAppInstalledResponse]
 	createOIDCProvider                    *connect.Client[v1.CreateOIDCProviderRequest, v1.CreateOIDCProviderResponse]
 	getOIDCProvider                       *connect.Client[v1.GetOIDCProviderRequest, v1.GetOIDCProviderResponse]
@@ -2060,8 +2115,6 @@ type platformServiceClient struct {
 	getChangelogBySchemaVersion           *connect.Client[v1.GetChangelogBySchemaVersionRequest, v1.GetChangelogBySchemaVersionResponse]
 	getUserAccessibleResources            *connect.Client[v1.GetUserAccessibleResourcesRequest, v1.GetUserAccessibleResourcesResponse]
 	updateFeatureSettings                 *connect.Client[v1.UpdateFeatureSettingsRequest, v1.UpdateFeatureSettingsResponse]
-	addSubgraphMember                     *connect.Client[v1.AddSubgraphMemberRequest, v1.AddSubgraphMemberResponse]
-	removeSubgraphMember                  *connect.Client[v1.RemoveSubgraphMemberRequest, v1.RemoveSubgraphMemberResponse]
 	getSubgraphMembers                    *connect.Client[v1.GetSubgraphMembersRequest, v1.GetSubgraphMembersResponse]
 	addReadme                             *connect.Client[v1.AddReadmeRequest, v1.AddReadmeResponse]
 	getUserAccessiblePermissions          *connect.Client[v1.GetUserAccessiblePermissionsRequest, v1.GetUserAccessiblePermissionsResponse]
@@ -2461,6 +2514,11 @@ func (c *platformServiceClient) CreateAPIKey(ctx context.Context, req *connect.R
 	return c.createAPIKey.CallUnary(ctx, req)
 }
 
+// UpdateAPIKey calls wg.cosmo.platform.v1.PlatformService.UpdateAPIKey.
+func (c *platformServiceClient) UpdateAPIKey(ctx context.Context, req *connect.Request[v1.UpdateAPIKeyRequest]) (*connect.Response[v1.UpdateAPIKeyResponse], error) {
+	return c.updateAPIKey.CallUnary(ctx, req)
+}
+
 // DeleteAPIKey calls wg.cosmo.platform.v1.PlatformService.DeleteAPIKey.
 func (c *platformServiceClient) DeleteAPIKey(ctx context.Context, req *connect.Request[v1.DeleteAPIKeyRequest]) (*connect.Response[v1.DeleteAPIKeyResponse], error) {
 	return c.deleteAPIKey.CallUnary(ctx, req)
@@ -2479,6 +2537,32 @@ func (c *platformServiceClient) RemoveInvitation(ctx context.Context, req *conne
 // MigrateFromApollo calls wg.cosmo.platform.v1.PlatformService.MigrateFromApollo.
 func (c *platformServiceClient) MigrateFromApollo(ctx context.Context, req *connect.Request[v1.MigrateFromApolloRequest]) (*connect.Response[v1.MigrateFromApolloResponse], error) {
 	return c.migrateFromApollo.CallUnary(ctx, req)
+}
+
+// CreateOrganizationGroup calls wg.cosmo.platform.v1.PlatformService.CreateOrganizationGroup.
+func (c *platformServiceClient) CreateOrganizationGroup(ctx context.Context, req *connect.Request[v1.CreateOrganizationGroupRequest]) (*connect.Response[v1.CreateOrganizationGroupResponse], error) {
+	return c.createOrganizationGroup.CallUnary(ctx, req)
+}
+
+// GetOrganizationGroups calls wg.cosmo.platform.v1.PlatformService.GetOrganizationGroups.
+func (c *platformServiceClient) GetOrganizationGroups(ctx context.Context, req *connect.Request[v1.GetOrganizationGroupsRequest]) (*connect.Response[v1.GetOrganizationGroupsResponse], error) {
+	return c.getOrganizationGroups.CallUnary(ctx, req)
+}
+
+// GetOrganizationGroupMembers calls
+// wg.cosmo.platform.v1.PlatformService.GetOrganizationGroupMembers.
+func (c *platformServiceClient) GetOrganizationGroupMembers(ctx context.Context, req *connect.Request[v1.GetOrganizationGroupMembersRequest]) (*connect.Response[v1.GetOrganizationGroupMembersResponse], error) {
+	return c.getOrganizationGroupMembers.CallUnary(ctx, req)
+}
+
+// UpdateOrganizationGroup calls wg.cosmo.platform.v1.PlatformService.UpdateOrganizationGroup.
+func (c *platformServiceClient) UpdateOrganizationGroup(ctx context.Context, req *connect.Request[v1.UpdateOrganizationGroupRequest]) (*connect.Response[v1.UpdateOrganizationGroupResponse], error) {
+	return c.updateOrganizationGroup.CallUnary(ctx, req)
+}
+
+// DeleteOrganizationGroup calls wg.cosmo.platform.v1.PlatformService.DeleteOrganizationGroup.
+func (c *platformServiceClient) DeleteOrganizationGroup(ctx context.Context, req *connect.Request[v1.DeleteOrganizationGroupRequest]) (*connect.Response[v1.DeleteOrganizationGroupResponse], error) {
+	return c.deleteOrganizationGroup.CallUnary(ctx, req)
 }
 
 // CreateOrganizationWebhookConfig calls
@@ -2572,9 +2656,9 @@ func (c *platformServiceClient) UpdateOrganizationDetails(ctx context.Context, r
 	return c.updateOrganizationDetails.CallUnary(ctx, req)
 }
 
-// UpdateOrgMemberRole calls wg.cosmo.platform.v1.PlatformService.UpdateOrgMemberRole.
-func (c *platformServiceClient) UpdateOrgMemberRole(ctx context.Context, req *connect.Request[v1.UpdateOrgMemberRoleRequest]) (*connect.Response[v1.UpdateOrgMemberRoleResponse], error) {
-	return c.updateOrgMemberRole.CallUnary(ctx, req)
+// UpdateOrgMemberGroup calls wg.cosmo.platform.v1.PlatformService.UpdateOrgMemberGroup.
+func (c *platformServiceClient) UpdateOrgMemberGroup(ctx context.Context, req *connect.Request[v1.UpdateOrgMemberGroupRequest]) (*connect.Response[v1.UpdateOrgMemberGroupResponse], error) {
+	return c.updateOrgMemberGroup.CallUnary(ctx, req)
 }
 
 // IsGitHubAppInstalled calls wg.cosmo.platform.v1.PlatformService.IsGitHubAppInstalled.
@@ -2651,16 +2735,6 @@ func (c *platformServiceClient) GetUserAccessibleResources(ctx context.Context, 
 // UpdateFeatureSettings calls wg.cosmo.platform.v1.PlatformService.UpdateFeatureSettings.
 func (c *platformServiceClient) UpdateFeatureSettings(ctx context.Context, req *connect.Request[v1.UpdateFeatureSettingsRequest]) (*connect.Response[v1.UpdateFeatureSettingsResponse], error) {
 	return c.updateFeatureSettings.CallUnary(ctx, req)
-}
-
-// AddSubgraphMember calls wg.cosmo.platform.v1.PlatformService.AddSubgraphMember.
-func (c *platformServiceClient) AddSubgraphMember(ctx context.Context, req *connect.Request[v1.AddSubgraphMemberRequest]) (*connect.Response[v1.AddSubgraphMemberResponse], error) {
-	return c.addSubgraphMember.CallUnary(ctx, req)
-}
-
-// RemoveSubgraphMember calls wg.cosmo.platform.v1.PlatformService.RemoveSubgraphMember.
-func (c *platformServiceClient) RemoveSubgraphMember(ctx context.Context, req *connect.Request[v1.RemoveSubgraphMemberRequest]) (*connect.Response[v1.RemoveSubgraphMemberResponse], error) {
-	return c.removeSubgraphMember.CallUnary(ctx, req)
 }
 
 // GetSubgraphMembers calls wg.cosmo.platform.v1.PlatformService.GetSubgraphMembers.
@@ -3067,6 +3141,8 @@ type PlatformServiceHandler interface {
 	GetAPIKeys(context.Context, *connect.Request[v1.GetAPIKeysRequest]) (*connect.Response[v1.GetAPIKeysResponse], error)
 	// CreateAPIKey creates an API key for the organization
 	CreateAPIKey(context.Context, *connect.Request[v1.CreateAPIKeyRequest]) (*connect.Response[v1.CreateAPIKeyResponse], error)
+	// UpdateAPIKey updates an API key for the organization
+	UpdateAPIKey(context.Context, *connect.Request[v1.UpdateAPIKeyRequest]) (*connect.Response[v1.UpdateAPIKeyResponse], error)
 	// DeleteAPIKey deletes an API key for the organization
 	DeleteAPIKey(context.Context, *connect.Request[v1.DeleteAPIKeyRequest]) (*connect.Response[v1.DeleteAPIKeyResponse], error)
 	// RemoveOrganizationMember removes the user from the organization
@@ -3075,6 +3151,17 @@ type PlatformServiceHandler interface {
 	RemoveInvitation(context.Context, *connect.Request[v1.RemoveInvitationRequest]) (*connect.Response[v1.RemoveInvitationResponse], error)
 	// MigrateFromApollo migrates the graphs from apollo to cosmo
 	MigrateFromApollo(context.Context, *connect.Request[v1.MigrateFromApolloRequest]) (*connect.Response[v1.MigrateFromApolloResponse], error)
+	// Organization Member Group management
+	// CreateOrganizationGroup creates a new organization group
+	CreateOrganizationGroup(context.Context, *connect.Request[v1.CreateOrganizationGroupRequest]) (*connect.Response[v1.CreateOrganizationGroupResponse], error)
+	// GetOrganizationGroups returns the list of organization groups
+	GetOrganizationGroups(context.Context, *connect.Request[v1.GetOrganizationGroupsRequest]) (*connect.Response[v1.GetOrganizationGroupsResponse], error)
+	// GetOrganizationGroupMembers returns the list of members belonging to the provided organization group
+	GetOrganizationGroupMembers(context.Context, *connect.Request[v1.GetOrganizationGroupMembersRequest]) (*connect.Response[v1.GetOrganizationGroupMembersResponse], error)
+	// UpdateOrganizationGroup updates the rule list for an organization group
+	UpdateOrganizationGroup(context.Context, *connect.Request[v1.UpdateOrganizationGroupRequest]) (*connect.Response[v1.UpdateOrganizationGroupResponse], error)
+	// DeleteOrganizationGroup deletes an existing organization group
+	DeleteOrganizationGroup(context.Context, *connect.Request[v1.DeleteOrganizationGroupRequest]) (*connect.Response[v1.DeleteOrganizationGroupResponse], error)
 	// CreateOrganizationWebhookConfig create a new webhook config for the organization
 	CreateOrganizationWebhookConfig(context.Context, *connect.Request[v1.CreateOrganizationWebhookConfigRequest]) (*connect.Response[v1.CreateOrganizationWebhookConfigResponse], error)
 	// GetOrganizationWebhookConfigs returns all webhooks for the organization
@@ -3109,8 +3196,8 @@ type PlatformServiceHandler interface {
 	LeaveOrganization(context.Context, *connect.Request[v1.LeaveOrganizationRequest]) (*connect.Response[v1.LeaveOrganizationResponse], error)
 	// UpdateOrganizationDetails updates the name and slug of the organization
 	UpdateOrganizationDetails(context.Context, *connect.Request[v1.UpdateOrganizationDetailsRequest]) (*connect.Response[v1.UpdateOrganizationDetailsResponse], error)
-	// UpdateOrgMemberRole updates the role of an org member
-	UpdateOrgMemberRole(context.Context, *connect.Request[v1.UpdateOrgMemberRoleRequest]) (*connect.Response[v1.UpdateOrgMemberRoleResponse], error)
+	// UpdateOrgMemberGroup updates the group of an organization member
+	UpdateOrgMemberGroup(context.Context, *connect.Request[v1.UpdateOrgMemberGroupRequest]) (*connect.Response[v1.UpdateOrgMemberGroupResponse], error)
 	// IsGitHubAppInstalled checks if the cosmo github app is installed to a repository
 	IsGitHubAppInstalled(context.Context, *connect.Request[v1.IsGitHubAppInstalledRequest]) (*connect.Response[v1.IsGitHubAppInstalledResponse], error)
 	// CreateOIDCProvider adds an oidc provider to the organization
@@ -3141,10 +3228,6 @@ type PlatformServiceHandler interface {
 	GetUserAccessibleResources(context.Context, *connect.Request[v1.GetUserAccessibleResourcesRequest]) (*connect.Response[v1.GetUserAccessibleResourcesResponse], error)
 	// UpdateFeatureSettings updates the setinngs of features(ai, rbac, scim) of the organization
 	UpdateFeatureSettings(context.Context, *connect.Request[v1.UpdateFeatureSettingsRequest]) (*connect.Response[v1.UpdateFeatureSettingsResponse], error)
-	// AddSubgraphMember adds a user to the subgraph
-	AddSubgraphMember(context.Context, *connect.Request[v1.AddSubgraphMemberRequest]) (*connect.Response[v1.AddSubgraphMemberResponse], error)
-	// RemoveSubgraphMember removes a member from the subgraph
-	RemoveSubgraphMember(context.Context, *connect.Request[v1.RemoveSubgraphMemberRequest]) (*connect.Response[v1.RemoveSubgraphMemberResponse], error)
 	// GetSubgraphMembers gets all the members of the subgraph
 	GetSubgraphMembers(context.Context, *connect.Request[v1.GetSubgraphMembersRequest]) (*connect.Response[v1.GetSubgraphMembersResponse], error)
 	// AddReadme adds a readme of a target, can be a subgraph or a federated graph
@@ -3655,6 +3738,12 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceCreateAPIKeyMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformServiceUpdateAPIKeyHandler := connect.NewUnaryHandler(
+		PlatformServiceUpdateAPIKeyProcedure,
+		svc.UpdateAPIKey,
+		connect.WithSchema(platformServiceUpdateAPIKeyMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	platformServiceDeleteAPIKeyHandler := connect.NewUnaryHandler(
 		PlatformServiceDeleteAPIKeyProcedure,
 		svc.DeleteAPIKey,
@@ -3677,6 +3766,36 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		PlatformServiceMigrateFromApolloProcedure,
 		svc.MigrateFromApollo,
 		connect.WithSchema(platformServiceMigrateFromApolloMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceCreateOrganizationGroupHandler := connect.NewUnaryHandler(
+		PlatformServiceCreateOrganizationGroupProcedure,
+		svc.CreateOrganizationGroup,
+		connect.WithSchema(platformServiceCreateOrganizationGroupMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceGetOrganizationGroupsHandler := connect.NewUnaryHandler(
+		PlatformServiceGetOrganizationGroupsProcedure,
+		svc.GetOrganizationGroups,
+		connect.WithSchema(platformServiceGetOrganizationGroupsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceGetOrganizationGroupMembersHandler := connect.NewUnaryHandler(
+		PlatformServiceGetOrganizationGroupMembersProcedure,
+		svc.GetOrganizationGroupMembers,
+		connect.WithSchema(platformServiceGetOrganizationGroupMembersMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceUpdateOrganizationGroupHandler := connect.NewUnaryHandler(
+		PlatformServiceUpdateOrganizationGroupProcedure,
+		svc.UpdateOrganizationGroup,
+		connect.WithSchema(platformServiceUpdateOrganizationGroupMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceDeleteOrganizationGroupHandler := connect.NewUnaryHandler(
+		PlatformServiceDeleteOrganizationGroupProcedure,
+		svc.DeleteOrganizationGroup,
+		connect.WithSchema(platformServiceDeleteOrganizationGroupMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceCreateOrganizationWebhookConfigHandler := connect.NewUnaryHandler(
@@ -3781,10 +3900,10 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceUpdateOrganizationDetailsMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
-	platformServiceUpdateOrgMemberRoleHandler := connect.NewUnaryHandler(
-		PlatformServiceUpdateOrgMemberRoleProcedure,
-		svc.UpdateOrgMemberRole,
-		connect.WithSchema(platformServiceUpdateOrgMemberRoleMethodDescriptor),
+	platformServiceUpdateOrgMemberGroupHandler := connect.NewUnaryHandler(
+		PlatformServiceUpdateOrgMemberGroupProcedure,
+		svc.UpdateOrgMemberGroup,
+		connect.WithSchema(platformServiceUpdateOrgMemberGroupMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceIsGitHubAppInstalledHandler := connect.NewUnaryHandler(
@@ -3875,18 +3994,6 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		PlatformServiceUpdateFeatureSettingsProcedure,
 		svc.UpdateFeatureSettings,
 		connect.WithSchema(platformServiceUpdateFeatureSettingsMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
-	platformServiceAddSubgraphMemberHandler := connect.NewUnaryHandler(
-		PlatformServiceAddSubgraphMemberProcedure,
-		svc.AddSubgraphMember,
-		connect.WithSchema(platformServiceAddSubgraphMemberMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
-	platformServiceRemoveSubgraphMemberHandler := connect.NewUnaryHandler(
-		PlatformServiceRemoveSubgraphMemberProcedure,
-		svc.RemoveSubgraphMember,
-		connect.WithSchema(platformServiceRemoveSubgraphMemberMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetSubgraphMembersHandler := connect.NewUnaryHandler(
@@ -4350,6 +4457,8 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceGetAPIKeysHandler.ServeHTTP(w, r)
 		case PlatformServiceCreateAPIKeyProcedure:
 			platformServiceCreateAPIKeyHandler.ServeHTTP(w, r)
+		case PlatformServiceUpdateAPIKeyProcedure:
+			platformServiceUpdateAPIKeyHandler.ServeHTTP(w, r)
 		case PlatformServiceDeleteAPIKeyProcedure:
 			platformServiceDeleteAPIKeyHandler.ServeHTTP(w, r)
 		case PlatformServiceRemoveOrganizationMemberProcedure:
@@ -4358,6 +4467,16 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceRemoveInvitationHandler.ServeHTTP(w, r)
 		case PlatformServiceMigrateFromApolloProcedure:
 			platformServiceMigrateFromApolloHandler.ServeHTTP(w, r)
+		case PlatformServiceCreateOrganizationGroupProcedure:
+			platformServiceCreateOrganizationGroupHandler.ServeHTTP(w, r)
+		case PlatformServiceGetOrganizationGroupsProcedure:
+			platformServiceGetOrganizationGroupsHandler.ServeHTTP(w, r)
+		case PlatformServiceGetOrganizationGroupMembersProcedure:
+			platformServiceGetOrganizationGroupMembersHandler.ServeHTTP(w, r)
+		case PlatformServiceUpdateOrganizationGroupProcedure:
+			platformServiceUpdateOrganizationGroupHandler.ServeHTTP(w, r)
+		case PlatformServiceDeleteOrganizationGroupProcedure:
+			platformServiceDeleteOrganizationGroupHandler.ServeHTTP(w, r)
 		case PlatformServiceCreateOrganizationWebhookConfigProcedure:
 			platformServiceCreateOrganizationWebhookConfigHandler.ServeHTTP(w, r)
 		case PlatformServiceGetOrganizationWebhookConfigsProcedure:
@@ -4392,8 +4511,8 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceLeaveOrganizationHandler.ServeHTTP(w, r)
 		case PlatformServiceUpdateOrganizationDetailsProcedure:
 			platformServiceUpdateOrganizationDetailsHandler.ServeHTTP(w, r)
-		case PlatformServiceUpdateOrgMemberRoleProcedure:
-			platformServiceUpdateOrgMemberRoleHandler.ServeHTTP(w, r)
+		case PlatformServiceUpdateOrgMemberGroupProcedure:
+			platformServiceUpdateOrgMemberGroupHandler.ServeHTTP(w, r)
 		case PlatformServiceIsGitHubAppInstalledProcedure:
 			platformServiceIsGitHubAppInstalledHandler.ServeHTTP(w, r)
 		case PlatformServiceCreateOIDCProviderProcedure:
@@ -4424,10 +4543,6 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceGetUserAccessibleResourcesHandler.ServeHTTP(w, r)
 		case PlatformServiceUpdateFeatureSettingsProcedure:
 			platformServiceUpdateFeatureSettingsHandler.ServeHTTP(w, r)
-		case PlatformServiceAddSubgraphMemberProcedure:
-			platformServiceAddSubgraphMemberHandler.ServeHTTP(w, r)
-		case PlatformServiceRemoveSubgraphMemberProcedure:
-			platformServiceRemoveSubgraphMemberHandler.ServeHTTP(w, r)
 		case PlatformServiceGetSubgraphMembersProcedure:
 			platformServiceGetSubgraphMembersHandler.ServeHTTP(w, r)
 		case PlatformServiceAddReadmeProcedure:
@@ -4811,6 +4926,10 @@ func (UnimplementedPlatformServiceHandler) CreateAPIKey(context.Context, *connec
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.CreateAPIKey is not implemented"))
 }
 
+func (UnimplementedPlatformServiceHandler) UpdateAPIKey(context.Context, *connect.Request[v1.UpdateAPIKeyRequest]) (*connect.Response[v1.UpdateAPIKeyResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.UpdateAPIKey is not implemented"))
+}
+
 func (UnimplementedPlatformServiceHandler) DeleteAPIKey(context.Context, *connect.Request[v1.DeleteAPIKeyRequest]) (*connect.Response[v1.DeleteAPIKeyResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.DeleteAPIKey is not implemented"))
 }
@@ -4825,6 +4944,26 @@ func (UnimplementedPlatformServiceHandler) RemoveInvitation(context.Context, *co
 
 func (UnimplementedPlatformServiceHandler) MigrateFromApollo(context.Context, *connect.Request[v1.MigrateFromApolloRequest]) (*connect.Response[v1.MigrateFromApolloResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.MigrateFromApollo is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) CreateOrganizationGroup(context.Context, *connect.Request[v1.CreateOrganizationGroupRequest]) (*connect.Response[v1.CreateOrganizationGroupResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.CreateOrganizationGroup is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetOrganizationGroups(context.Context, *connect.Request[v1.GetOrganizationGroupsRequest]) (*connect.Response[v1.GetOrganizationGroupsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetOrganizationGroups is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetOrganizationGroupMembers(context.Context, *connect.Request[v1.GetOrganizationGroupMembersRequest]) (*connect.Response[v1.GetOrganizationGroupMembersResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetOrganizationGroupMembers is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) UpdateOrganizationGroup(context.Context, *connect.Request[v1.UpdateOrganizationGroupRequest]) (*connect.Response[v1.UpdateOrganizationGroupResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.UpdateOrganizationGroup is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) DeleteOrganizationGroup(context.Context, *connect.Request[v1.DeleteOrganizationGroupRequest]) (*connect.Response[v1.DeleteOrganizationGroupResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.DeleteOrganizationGroup is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) CreateOrganizationWebhookConfig(context.Context, *connect.Request[v1.CreateOrganizationWebhookConfigRequest]) (*connect.Response[v1.CreateOrganizationWebhookConfigResponse], error) {
@@ -4895,8 +5034,8 @@ func (UnimplementedPlatformServiceHandler) UpdateOrganizationDetails(context.Con
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.UpdateOrganizationDetails is not implemented"))
 }
 
-func (UnimplementedPlatformServiceHandler) UpdateOrgMemberRole(context.Context, *connect.Request[v1.UpdateOrgMemberRoleRequest]) (*connect.Response[v1.UpdateOrgMemberRoleResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.UpdateOrgMemberRole is not implemented"))
+func (UnimplementedPlatformServiceHandler) UpdateOrgMemberGroup(context.Context, *connect.Request[v1.UpdateOrgMemberGroupRequest]) (*connect.Response[v1.UpdateOrgMemberGroupResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.UpdateOrgMemberGroup is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) IsGitHubAppInstalled(context.Context, *connect.Request[v1.IsGitHubAppInstalledRequest]) (*connect.Response[v1.IsGitHubAppInstalledResponse], error) {
@@ -4957,14 +5096,6 @@ func (UnimplementedPlatformServiceHandler) GetUserAccessibleResources(context.Co
 
 func (UnimplementedPlatformServiceHandler) UpdateFeatureSettings(context.Context, *connect.Request[v1.UpdateFeatureSettingsRequest]) (*connect.Response[v1.UpdateFeatureSettingsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.UpdateFeatureSettings is not implemented"))
-}
-
-func (UnimplementedPlatformServiceHandler) AddSubgraphMember(context.Context, *connect.Request[v1.AddSubgraphMemberRequest]) (*connect.Response[v1.AddSubgraphMemberResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.AddSubgraphMember is not implemented"))
-}
-
-func (UnimplementedPlatformServiceHandler) RemoveSubgraphMember(context.Context, *connect.Request[v1.RemoveSubgraphMemberRequest]) (*connect.Response[v1.RemoveSubgraphMemberResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.RemoveSubgraphMember is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) GetSubgraphMembers(context.Context, *connect.Request[v1.GetSubgraphMembersRequest]) (*connect.Response[v1.GetSubgraphMembersResponse], error) {
