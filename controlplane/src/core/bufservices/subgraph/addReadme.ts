@@ -5,6 +5,7 @@ import { AddReadmeRequest, AddReadmeResponse } from '@wundergraph/cosmo-connect/
 import { TargetRepository } from '../../repositories/TargetRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function addReadme(
   opts: RouterOptions,
@@ -18,6 +19,9 @@ export function addReadme(
     logger = enrichLogger(ctx, logger, authContext);
 
     const targetRepo = new TargetRepository(opts.db, authContext.organizationId);
+    if (authContext.organizationDeactivated) {
+      throw new UnauthorizedError();
+    }
 
     const target = await targetRepo.byName(req.targetName, req.namespace);
     if (!target) {
@@ -28,6 +32,17 @@ export function addReadme(
         },
       };
     }
+
+    // check whether the user is authorized to perform the action
+    await opts.authorizer.authorize({
+      db: opts.db,
+      graph: {
+        targetId: target.id,
+        targetType: target.type === 'federated' ? 'federatedGraph' : 'subgraph',
+      },
+      headers: ctx.requestHeader,
+      authContext,
+    });
 
     await targetRepo.updateReadmeOfTarget({ id: target.id, readme: req.readme });
 

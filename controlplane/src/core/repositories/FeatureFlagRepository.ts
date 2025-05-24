@@ -27,6 +27,7 @@ import {
   SubgraphDTO,
 } from '../../types/index.js';
 import { normalizeLabels } from '../util.js';
+import { RBACEvaluator } from '../services/RBACEvaluator.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { SubgraphRepository } from './SubgraphRepository.js';
 import { UserRepository } from './UserRepository.js';
@@ -50,6 +51,7 @@ export interface FeatureFlagListFilterOptions {
   limit: number;
   offset: number;
   query?: string;
+  rbac?: RBACEvaluator;
 }
 
 export type CheckConstituentFeatureSubgraphsResult = {
@@ -240,6 +242,7 @@ export class FeatureFlagRepository {
     limit,
     offset,
     query,
+    rbac,
   }: FeatureFlagListFilterOptions): Promise<FeatureSubgraphDTO[]> {
     const subgraphRepo = new SubgraphRepository(this.logger, this.db, this.organizationId);
     const conditions: (SQL<unknown> | undefined)[] = [
@@ -259,6 +262,19 @@ export class FeatureFlagRepository {
           sql.raw(`${getTableName(schema.subgraphs)}.${schema.subgraphs.id.name}::text like '%${query}%'`),
         ),
       );
+    }
+
+    if (rbac && !rbac.isOrganizationAdminOrDeveloper) {
+      const graphPublisher = rbac.ruleFor('subgraph-publisher');
+      if (!graphPublisher) {
+        // The actor doesn't have publisher access to any subgraph
+        return [];
+      }
+
+      if (graphPublisher.resources.length > 0) {
+        // Only limit the subgraphs the actor have access to when it hasn't been given access to all resources
+        conditions.push(inArray(schema.targets.id, graphPublisher.resources));
+      }
     }
 
     const dbQuery = this.db
@@ -308,7 +324,7 @@ export class FeatureFlagRepository {
     return featureSubgraphs;
   }
 
-  public async getFeatureSubgraphsCount({ namespaceId, query }: FeatureFlagListFilterOptions) {
+  public async getFeatureSubgraphsCount({ namespaceId, query, rbac }: FeatureFlagListFilterOptions) {
     const conditions: SQL<unknown>[] = [
       eq(targets.organizationId, this.organizationId),
       eq(targets.type, 'subgraph'),
@@ -321,6 +337,19 @@ export class FeatureFlagRepository {
 
     if (query) {
       conditions.push(like(targets.name, `%${query}%`));
+    }
+
+    if (rbac && !rbac.isOrganizationAdminOrDeveloper) {
+      const graphPublisher = rbac.ruleFor('subgraph-publisher');
+      if (!graphPublisher) {
+        // The actor doesn't have publisher access to any subgraph
+        return 0;
+      }
+
+      if (graphPublisher.resources.length > 0) {
+        // Only limit the subgraphs the actor have access to when it hasn't been given access to all resources
+        conditions.push(inArray(schema.targets.id, graphPublisher.resources));
+      }
     }
 
     const featureSubgraphTargets = await this.db
@@ -490,9 +519,11 @@ export class FeatureFlagRepository {
   public async getFeatureFlagsByFederatedGraph({
     namespaceId,
     federatedGraph,
+    rbac,
   }: {
     namespaceId: string;
     federatedGraph: FederatedGraphDTO;
+    rbac?: RBACEvaluator;
   }): Promise<FeatureFlagDTO[]> {
     const fetaureFlags: FeatureFlagDTO[] = [];
     const subgraphRepo = new SubgraphRepository(this.logger, this.db, this.organizationId);
@@ -500,6 +531,7 @@ export class FeatureFlagRepository {
     const subgraphs = await subgraphRepo.listByFederatedGraph({
       federatedGraphTargetId: federatedGraph.targetId,
       published: true,
+      rbac,
     });
 
     const baseSubgraphNames = subgraphs.map((s) => s.name);

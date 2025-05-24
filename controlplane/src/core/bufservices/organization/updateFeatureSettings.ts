@@ -10,6 +10,7 @@ import { FeatureIds } from '../../../types/index.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function updateFeatureSettings(
   opts: RouterOptions,
@@ -23,14 +24,8 @@ export function updateFeatureSettings(
     logger = enrichLogger(ctx, logger, authContext);
 
     const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
-
-    if (!authContext.isAdmin) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `The user doesnt have the permissions to perform this operation`,
-        },
-      };
+    if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdmin) {
+      throw new UnauthorizedError();
     }
 
     let featureId: FeatureIds;

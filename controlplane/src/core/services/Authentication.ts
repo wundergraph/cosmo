@@ -3,11 +3,11 @@ import { lru } from 'tiny-lru';
 import { AuthContext } from '../../types/index.js';
 import { AuthenticationError } from '../errors/errors.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
-import { checkUserAccess } from '../util.js';
 import AccessTokenAuthenticator from './AccessTokenAuthenticator.js';
 import ApiKeyAuthenticator from './ApiKeyAuthenticator.js';
 import GraphApiTokenAuthenticator, { GraphKeyAuthContext } from './GraphApiTokenAuthenticator.js';
 import WebSessionAuthenticator from './WebSessionAuthenticator.js';
+import { RBACEvaluator } from './RBACEvaluator.js';
 
 // The maximum time to cache the user auth context for the web session authentication.
 const maxAuthCacheTtl = 30 * 1000; // 30 seconds
@@ -81,20 +81,22 @@ export class Authentication implements Authenticator {
         throw new Error('User is not a member of the organization');
       }
 
-      const userRoles = await this.orgRepo.getOrganizationMemberRoles({
-        userID: user.userId,
-        organizationID: organization.id,
-      });
-
-      const isOrganizationDeactivated = !!organization.deactivation;
+      const organizationDeactivated = !!organization.deactivation;
+      const rbac = new RBACEvaluator(
+        await this.orgRepo.getOrganizationMemberGroups({
+          organizationID: organization.id,
+          userID: user.userId,
+        }),
+        user.userId,
+      );
 
       const userContext: AuthContext = {
         auth: user.auth,
         userId: user.userId,
         organizationId: organization.id,
         organizationSlug: organization.slug,
-        hasWriteAccess: checkUserAccess({ rolesToBe: ['admin', 'developer'], userRoles }) && !isOrganizationDeactivated,
-        isAdmin: userRoles.includes('admin'),
+        organizationDeactivated,
+        rbac,
         userDisplayName: user.userDisplayName,
       };
 

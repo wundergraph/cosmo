@@ -9,6 +9,7 @@ import { GraphCompositionRepository } from '../../repositories/GraphCompositionR
 import { RouterMetricsRepository } from '../../repositories/analytics/RouterMetricsRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function getRouters(
   opts: RouterOptions,
@@ -20,6 +21,10 @@ export function getRouters(
   return handleError<PlainMessage<GetRoutersResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
+
+    if (authContext.organizationDeactivated) {
+      throw new UnauthorizedError();
+    }
 
     if (!opts.chClient) {
       return {
@@ -41,6 +46,10 @@ export function getRouters(
         },
         routers: [],
       };
+    }
+
+    if (!authContext.rbac.hasFederatedGraphReadAccess(federatedGraph)) {
+      throw new UnauthorizedError();
     }
 
     const routers: PlainMessage<Router>[] = [];

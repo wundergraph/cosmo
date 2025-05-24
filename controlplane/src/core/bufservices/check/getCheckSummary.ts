@@ -17,6 +17,7 @@ import { SchemaLintRepository } from '../../repositories/SchemaLintRepository.js
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, isCheckSuccessful } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function getCheckSummary(
   opts: RouterOptions,
@@ -80,6 +81,10 @@ export function getCheckSummary(
         proposalMatches: [],
         isProposalsEnabled: false,
       };
+    }
+
+    if (!authContext.rbac.hasFederatedGraphReadAccess(graph)) {
+      throw new UnauthorizedError();
     }
 
     const check = await subgraphRepo.checkById({

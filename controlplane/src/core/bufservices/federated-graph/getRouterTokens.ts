@@ -9,6 +9,7 @@ import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepos
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function getRouterTokens(
   opts: RouterOptions,
@@ -24,15 +25,8 @@ export function getRouterTokens(
     const fedRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
 
     req.namespace = req.namespace || DefaultNamespace;
-
-    if (!authContext.hasWriteAccess) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `The user doesnt have the permissions to perform this operation`,
-        },
-        tokens: [],
-      };
+    if (authContext.organizationDeactivated) {
+      throw new UnauthorizedError();
     }
 
     const federatedGraph = await fedRepo.byName(req.fedGraphName, req.namespace);
@@ -44,6 +38,10 @@ export function getRouterTokens(
         },
         tokens: [],
       };
+    }
+
+    if (!authContext.rbac.hasFederatedGraphReadAccess(federatedGraph)) {
+      throw new UnauthorizedError();
     }
 
     const tokens = await fedRepo.getRouterTokens({

@@ -12,6 +12,7 @@ import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepos
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function deleteFederatedGraph(
   opts: RouterOptions,
@@ -30,19 +31,14 @@ export function deleteFederatedGraph(
       const contractRepo = new ContractRepository(logger, tx, authContext.organizationId);
 
       req.namespace = req.namespace || DefaultNamespace;
-
-      if (!authContext.hasWriteAccess) {
-        return {
-          response: {
-            code: EnumStatusCode.ERR,
-            details: `The user does not have the permissions to perform this operation`,
-          },
-        };
+      if (authContext.organizationDeactivated) {
+        throw new UnauthorizedError();
       }
 
       const federatedGraph = await fedGraphRepo.byName(req.name, req.namespace, {
         supportsFederation: true,
       });
+
       if (!federatedGraph) {
         return {
           response: {
@@ -61,6 +57,7 @@ export function deleteFederatedGraph(
         },
         headers: ctx.requestHeader,
         authContext,
+        isDeleteOperation: true,
       });
 
       const deletedContracts = await contractRepo.deleteContractGraphs(federatedGraph.id);

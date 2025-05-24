@@ -14,14 +14,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
-import { useUser } from "@/hooks/use-user";
-import { checkUserAccess } from "@/lib/utils";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { useState } from "react";
 import { useToast } from "../ui/use-toast";
 import { configureCacheWarmer } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { useMutation } from "@connectrpc/connect-query";
 import { Button } from "../ui/button";
+import { useCheckUserAccess } from "@/hooks/use-check-user-access";
 
 export const CacheWarmerConfig = ({
   currentOperationsCount,
@@ -33,7 +32,6 @@ export const CacheWarmerConfig = ({
   refetch: () => void;
 }) => {
   const router = useRouter();
-  const user = useUser();
   const namespace = router.query.namespace as string;
   const { mutate: configureCacheWarmerConfig, isPending } =
     useMutation(configureCacheWarmer);
@@ -41,6 +39,7 @@ export const CacheWarmerConfig = ({
     currentOperationsCount.toString(),
   );
   const { toast } = useToast();
+  const checkUserAccess = useCheckUserAccess();
 
   const operationsCountOptions = [
     { value: "100", label: "100" },
@@ -68,10 +67,7 @@ export const CacheWarmerConfig = ({
             isLoading={isPending}
             disabled={
               !cacheWarmerEnabled ||
-              !checkUserAccess({
-                rolesToBe: ["admin", "developer"],
-                userRoles: user?.currentOrganization.roles || [],
-              })
+              !checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] })
             }
             onClick={() => {
               configureCacheWarmerConfig(
@@ -132,10 +128,7 @@ export const CacheWarmerConfig = ({
                 }}
                 disabled={
                   !cacheWarmerEnabled ||
-                  !checkUserAccess({
-                    rolesToBe: ["admin", "developer"],
-                    userRoles: user?.currentOrganization.roles || [],
-                  })
+                  !checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] })
                 }
               >
                 <SelectTrigger className="h-8 w-36">

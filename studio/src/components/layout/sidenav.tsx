@@ -141,7 +141,7 @@ export const SideNav = (props: SideNavLayoutProps) => {
         className={cn(
           "z-40 flex min-w-[210px] flex-shrink-0 flex-col bg-background pt-4 lg:px-3 lg:pb-4",
           {
-            "lg:h-[calc(100vh-36px)]": props.isBannerDisplayed,
+            "lg:h-[calc(100vh-32px)]": props.isBannerDisplayed,
             "lg:h-screen": !props.isBannerDisplayed,
           },
         )}

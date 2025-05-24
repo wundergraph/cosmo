@@ -1,8 +1,8 @@
 import KeycloakAdminClient from '@keycloak/keycloak-admin-client';
 import { RequiredActionAlias } from '@keycloak/keycloak-admin-client/lib/defs/requiredActionProviderRepresentation.js';
 import { uid } from 'uid';
-import { GroupMapper } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { MemberRole } from '../../db/models.js';
+import { organizationRoleEnum } from '../../db/schema.js';
 
 export default class Keycloak {
   client: KeycloakAdminClient;
@@ -241,7 +241,7 @@ export default class Keycloak {
     await this.client.identityProviders.del({ alias, realm: realm || this.realm });
   }
 
-  public async createIDPMapper({
+  public createIDPMapper({
     realm,
     claims,
     alias,
@@ -252,7 +252,7 @@ export default class Keycloak {
     alias: string;
     keycloakGroupName: string;
   }) {
-    await this.client.identityProviders.createMapper({
+    return this.client.identityProviders.createMapper({
       alias,
       realm: realm || this.realm,
       identityProviderMapper: {
@@ -293,6 +293,20 @@ export default class Keycloak {
     });
   }
 
+  public seedRoles({ realm, organizationSlug }: { realm?: string; organizationSlug: string }) {
+    return Promise.all(
+      organizationRoleEnum.enumValues.map(async (role) => {
+        const roleName = `${organizationSlug}:${role}`;
+        if (!(await this.roleExists({ realm: realm || this.realm, roleName }))) {
+          await this.createRole({
+            realm: realm || this.realm,
+            roleName,
+          });
+        }
+      }),
+    );
+  }
+
   public async seedGroup({
     realm,
     userID,
@@ -301,50 +315,85 @@ export default class Keycloak {
     realm?: string;
     userID: string;
     organizationSlug: string;
-  }) {
+  }): Promise<[string, { id: string; name: string }[]]> {
     const organizationGroup = await this.client.groups.create({
       realm: realm || this.realm,
       name: organizationSlug,
     });
 
-    const adminGroup = await this.client.groups.createChildGroup(
+    await this.seedRoles({ realm, organizationSlug });
+
+    const createdGroups: { id: string; name: string }[] = [];
+    for (const name of ['admin', 'developer', 'viewer']) {
+      const roleName = `${organizationSlug}:organization-${name}`;
+      const kcRole = await this.client.roles.findOneByName({
+        realm,
+        name: roleName,
+      });
+
+      const kcGroup = await this.client.groups.createChildGroup(
+        {
+          realm: realm || this.realm,
+          id: organizationGroup.id,
+        },
+        { name },
+      );
+
+      if (kcGroup && kcRole) {
+        await this.client.groups.addRealmRoleMappings({
+          realm,
+          id: kcGroup.id,
+          roles: [
+            {
+              id: kcRole.id!,
+              name: roleName,
+            },
+          ],
+        });
+
+        if (name === 'admin') {
+          await this.client.users.addToGroup({
+            id: userID,
+            realm: realm || this.realm,
+            groupId: kcGroup.id,
+          });
+        }
+
+        createdGroups.push({ id: kcGroup.id!, name });
+      }
+    }
+
+    return [organizationGroup.id, createdGroups];
+  }
+
+  public async createSubGroup({
+    realm,
+    groupName,
+    organizationSlug,
+  }: {
+    realm?: string;
+    groupName: string;
+    organizationSlug: string;
+  }) {
+    const organizationGroup = await this.client.groups.find({
+      max: 1,
+      realm: realm || this.realm,
+      search: organizationSlug,
+    });
+
+    if (organizationGroup.length === 0) {
+      return undefined;
+    }
+
+    const newGroup = await this.client.groups.createChildGroup(
       {
         realm: realm || this.realm,
-        id: organizationGroup.id,
+        id: organizationGroup[0].id!,
       },
-      {
-        name: 'admin',
-        realmRoles: ['admin'],
-      },
+      { name: groupName },
     );
 
-    await this.client.groups.createChildGroup(
-      {
-        realm,
-        id: organizationGroup.id,
-      },
-      {
-        name: 'developer',
-        realmRoles: ['developer'],
-      },
-    );
-
-    await this.client.groups.createChildGroup(
-      {
-        realm,
-        id: organizationGroup.id,
-      },
-      {
-        name: 'viewer',
-        realmRoles: ['viewer'],
-      },
-    );
-
-    await this.client.users.addToGroup({
-      id: userID,
-      realm: realm || this.realm,
-      groupId: adminGroup.id,
-    });
+    return newGroup?.id;
   }
 
   public fetchAllSubGroups({ realm, kcGroupId }: { realm?: string; kcGroupId: string }) {
@@ -383,12 +432,10 @@ export default class Keycloak {
     realm,
     userID,
     groupName,
-    roles,
   }: {
     realm?: string;
     userID: string;
     groupName: string;
-    roles: string[];
   }) {
     const organizationGroup = await this.client.groups.find({
       max: 1,
@@ -400,16 +447,15 @@ export default class Keycloak {
       throw new Error(`Organization group '${groupName}' not found`);
     }
 
-    for (const role of roles) {
-      const childGroup = await this.fetchChildGroup({
-        realm: realm || this.realm,
-        kcGroupId: organizationGroup[0].id!,
-        orgSlug: groupName,
-        childGroupType: role as MemberRole,
-      });
+    const subGroups = await this.fetchAllSubGroups({
+      realm: realm || this.realm,
+      kcGroupId: organizationGroup[0].id!,
+    });
+
+    for (const subGroup of subGroups) {
       await this.client.users.delFromGroup({
         id: userID,
-        groupId: childGroup.id!,
+        groupId: subGroup.id!,
         realm: realm || this.realm,
       });
     }
