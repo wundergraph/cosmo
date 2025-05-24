@@ -35,6 +35,7 @@ describe('RBAC Evaluator', () => {
     expect(rbac.hasFederatedGraphWriteAccess(fakeTarget())).toBe(false);
     expect(rbac.hasFederatedGraphReadAccess(fakeTarget())).toBe(false);
     expect(rbac.canCreateSubGraph(fakeNamespace())).toBe(false);
+    expect(rbac.canUpdateSubGraph(fakeTarget())).toBe(false);
     expect(rbac.canDeleteSubGraph(fakeTarget())).toBe(false);
     expect(rbac.hasSubGraphWriteAccess(fakeTarget())).toBe(false);
     expect(rbac.hasSubGraphReadAccess(fakeTarget())).toBe(false);
@@ -90,6 +91,7 @@ describe('RBAC Evaluator', () => {
       expect(rbac.hasFederatedGraphWriteAccess(fakeTarget())).toBe(true);
       expect(rbac.hasFederatedGraphReadAccess(fakeTarget())).toBe(true);
       expect(rbac.canCreateSubGraph(fakeNamespace())).toBe(true);
+      expect(rbac.canUpdateSubGraph(fakeTarget())).toBe(true);
       expect(rbac.canDeleteSubGraph(fakeTarget())).toBe(true);
       expect(rbac.hasSubGraphWriteAccess(fakeTarget())).toBe(true);
       expect(rbac.hasSubGraphReadAccess(fakeTarget())).toBe(true);
@@ -117,6 +119,7 @@ describe('RBAC Evaluator', () => {
       expect(rbac.hasFederatedGraphWriteAccess(fakeTarget())).toBe(true);
       expect(rbac.hasFederatedGraphReadAccess(fakeTarget())).toBe(true);
       expect(rbac.canCreateSubGraph(fakeNamespace())).toBe(true);
+      expect(rbac.canUpdateSubGraph(fakeTarget())).toBe(true);
       expect(rbac.canDeleteSubGraph(fakeTarget())).toBe(true);
       expect(rbac.hasSubGraphWriteAccess(fakeTarget())).toBe(true);
       expect(rbac.hasSubGraphReadAccess(fakeTarget())).toBe(true);
@@ -144,6 +147,7 @@ describe('RBAC Evaluator', () => {
       expect(rbac.hasFederatedGraphWriteAccess(fakeTarget())).toBe(false);
       expect(rbac.hasFederatedGraphReadAccess(fakeTarget())).toBe(false);
       expect(rbac.canCreateSubGraph(fakeNamespace())).toBe(false);
+      expect(rbac.canUpdateSubGraph(fakeTarget())).toBe(false);
       expect(rbac.canDeleteSubGraph(fakeTarget())).toBe(false);
       expect(rbac.hasSubGraphWriteAccess(fakeTarget())).toBe(false);
       expect(rbac.hasSubGraphReadAccess(fakeTarget())).toBe(false);
@@ -171,6 +175,7 @@ describe('RBAC Evaluator', () => {
       expect(rbac.hasFederatedGraphWriteAccess(fakeTarget())).toBe(false);
       expect(rbac.hasFederatedGraphReadAccess(fakeTarget())).toBe(true);
       expect(rbac.canCreateSubGraph(fakeNamespace())).toBe(false);
+      expect(rbac.canUpdateSubGraph(fakeTarget())).toBe(false);
       expect(rbac.canDeleteSubGraph(fakeTarget())).toBe(false);
       expect(rbac.hasSubGraphWriteAccess(fakeTarget())).toBe(false);
       expect(rbac.hasSubGraphReadAccess(fakeTarget())).toBe(true);
@@ -198,6 +203,7 @@ describe('RBAC Evaluator', () => {
       expect(rbac.hasFederatedGraphWriteAccess(fakeTarget())).toBe(false);
       expect(rbac.hasFederatedGraphReadAccess(fakeTarget())).toBe(false);
       expect(rbac.canCreateSubGraph(fakeNamespace())).toBe(false);
+      expect(rbac.canUpdateSubGraph(fakeTarget())).toBe(false);
       expect(rbac.canDeleteSubGraph(fakeTarget())).toBe(false);
       expect(rbac.hasSubGraphWriteAccess(fakeTarget())).toBe(false);
       expect(rbac.hasSubGraphReadAccess(fakeTarget())).toBe(false);
@@ -226,6 +232,8 @@ describe('RBAC Evaluator', () => {
       expect(rbac.hasFederatedGraphWriteAccess(fakeTarget({ namespace: ns1.id }))).toBe(false);
       expect(rbac.hasFederatedGraphReadAccess(fakeTarget({ namespace: ns1.id }))).toBe(false);
       expect(rbac.canCreateSubGraph(ns1)).toBe(false);
+      expect(rbac.canUpdateSubGraph(fakeTarget({ namespace: ns1.id }))).toBe(false);
+      expect(rbac.canDeleteSubGraph(fakeTarget({ namespace: ns1.id }))).toBe(false);
       expect(rbac.hasSubGraphWriteAccess(fakeTarget({ namespace: ns1.id }))).toBe(false);
       expect(rbac.hasSubGraphReadAccess(fakeTarget({ namespace: ns1.id }))).toBe(false);
     });
@@ -252,6 +260,7 @@ describe('RBAC Evaluator', () => {
       expect(rbac.hasFederatedGraphWriteAccess(fakeTarget())).toBe(false);
       expect(rbac.hasFederatedGraphReadAccess(fakeTarget())).toBe(false);
       expect(rbac.canCreateSubGraph(fakeNamespace())).toBe(false);
+      expect(rbac.canUpdateSubGraph(fakeTarget())).toBe(false);
       expect(rbac.canDeleteSubGraph(fakeTarget())).toBe(false);
       expect(rbac.hasSubGraphWriteAccess(fakeTarget())).toBe(false);
       expect(rbac.hasSubGraphReadAccess(fakeTarget())).toBe(false);
@@ -280,6 +289,7 @@ describe('RBAC Evaluator', () => {
       expect(rbac.hasFederatedGraphWriteAccess(fakeTarget({ namespace: ns1.id }))).toBe(false);
       expect(rbac.hasFederatedGraphReadAccess(fakeTarget({ namespace: ns1.id }))).toBe(false);
       expect(rbac.canCreateSubGraph(ns1)).toBe(false);
+      expect(rbac.canDeleteSubGraph(fakeTarget({ namespace: ns1.id }))).toBe(false);
       expect(rbac.hasSubGraphWriteAccess(fakeTarget({ namespace: ns1.id }))).toBe(false);
       expect(rbac.hasSubGraphReadAccess(fakeTarget({ namespace: ns1.id }))).toBe(false);
     });
@@ -306,6 +316,8 @@ describe('RBAC Evaluator', () => {
       expect(rbac.hasFederatedGraphWriteAccess(fakeTarget())).toBe(true);
       expect(rbac.hasFederatedGraphReadAccess(fakeTarget())).toBe(true);
       expect(rbac.canCreateSubGraph(fakeNamespace())).toBe(false);
+      expect(rbac.canUpdateSubGraph(fakeTarget())).toBe(false);
+      expect(rbac.canUpdateSubGraph(fakeTarget())).toBe(false);
       expect(rbac.canDeleteSubGraph(fakeTarget())).toBe(false);
       expect(rbac.hasSubGraphWriteAccess(fakeTarget())).toBe(false);
       expect(rbac.hasSubGraphReadAccess(fakeTarget())).toBe(false);
@@ -338,7 +350,7 @@ describe('RBAC Evaluator', () => {
       expect(rbac.hasFederatedGraphReadAccess(fakeTarget({ namespace: ns1.id }))).toBe(true);
       expect(rbac.hasFederatedGraphReadAccess(fakeTarget({ namespace: ns2.id }))).toBe(false);
       expect(rbac.canCreateSubGraph(ns1)).toBe(false);
-      expect(rbac.canDeleteSubGraph(fakeTarget({ namespace: ns1.id }))).toBe(false);
+      expect(rbac.canUpdateSubGraph(fakeTarget({ namespace: ns1.id }))).toBe(false);
       expect(rbac.canDeleteSubGraph(fakeTarget({ namespace: ns2.id }))).toBe(false);
       expect(rbac.hasSubGraphWriteAccess(fakeTarget({ namespace: ns1.id }))).toBe(false);
       expect(rbac.hasSubGraphReadAccess(fakeTarget({ namespace: ns1.id }))).toBe(false);
@@ -368,6 +380,7 @@ describe('RBAC Evaluator', () => {
       expect(rbac.hasFederatedGraphReadAccess(graph1)).toBe(true);
       expect(rbac.hasFederatedGraphReadAccess(graph2)).toBe(false);
       expect(rbac.canCreateSubGraph(fakeNamespace(ns))).toBe(false);
+      expect(rbac.canUpdateSubGraph(fakeTarget({ namespace: ns }))).toBe(false);
       expect(rbac.canDeleteSubGraph(fakeTarget({ namespace: ns }))).toBe(false);
       expect(rbac.hasSubGraphWriteAccess(fakeTarget({ namespace: ns }))).toBe(false);
       expect(rbac.hasSubGraphReadAccess(fakeTarget({ namespace: ns }))).toBe(false);
@@ -395,6 +408,8 @@ describe('RBAC Evaluator', () => {
       expect(rbac.hasFederatedGraphWriteAccess(fakeTarget())).toBe(false);
       expect(rbac.hasFederatedGraphReadAccess(fakeTarget())).toBe(true);
       expect(rbac.canCreateSubGraph(fakeNamespace())).toBe(false);
+      expect(rbac.canUpdateSubGraph(fakeTarget())).toBe(false);
+      expect(rbac.canUpdateSubGraph(fakeTarget())).toBe(false);
       expect(rbac.canDeleteSubGraph(fakeTarget())).toBe(false);
       expect(rbac.hasSubGraphWriteAccess(fakeTarget())).toBe(false);
       expect(rbac.hasSubGraphReadAccess(fakeTarget())).toBe(false);
@@ -422,6 +437,9 @@ describe('RBAC Evaluator', () => {
       expect(rbac.hasFederatedGraphReadAccess(fakeTarget({ namespace: ns1.id }))).toBe(true);
       expect(rbac.hasFederatedGraphReadAccess(fakeTarget({ namespace: ns2.id }))).toBe(false);
       expect(rbac.canCreateSubGraph(ns1)).toBe(false);
+      expect(rbac.canUpdateSubGraph(fakeTarget({ namespace: ns1.id }))).toBe(false);
+      expect(rbac.canUpdateSubGraph(fakeTarget({ namespace: ns1.id }))).toBe(false);
+      expect(rbac.canDeleteSubGraph(fakeTarget({ namespace: ns1.id }))).toBe(false);
       expect(rbac.hasSubGraphWriteAccess(fakeTarget({ namespace: ns1.id }))).toBe(false);
       expect(rbac.hasSubGraphReadAccess(fakeTarget({ namespace: ns1.id }))).toBe(false);
     });
@@ -448,6 +466,8 @@ describe('RBAC Evaluator', () => {
       expect(rbac.hasFederatedGraphReadAccess(graph1)).toBe(true);
       expect(rbac.hasFederatedGraphReadAccess(graph2)).toBe(false);
       expect(rbac.canCreateSubGraph(fakeNamespace(ns))).toBe(false);
+      expect(rbac.canUpdateSubGraph(fakeTarget({ namespace: ns }))).toBe(false);
+      expect(rbac.canDeleteSubGraph(fakeTarget({ namespace: ns }))).toBe(false);
       expect(rbac.hasSubGraphWriteAccess(fakeTarget({ namespace: ns }))).toBe(false);
       expect(rbac.hasSubGraphReadAccess(fakeTarget({ namespace: ns }))).toBe(false);
     });
@@ -474,6 +494,7 @@ describe('RBAC Evaluator', () => {
       expect(rbac.hasFederatedGraphWriteAccess(fakeTarget())).toBe(false);
       expect(rbac.hasFederatedGraphReadAccess(fakeTarget())).toBe(false);
       expect(rbac.canCreateSubGraph(fakeNamespace())).toBe(true);
+      expect(rbac.canUpdateSubGraph(fakeTarget())).toBe(true);
       expect(rbac.canDeleteSubGraph(fakeTarget())).toBe(true);
       expect(rbac.hasSubGraphWriteAccess(fakeTarget())).toBe(true);
       expect(rbac.hasSubGraphReadAccess(fakeTarget())).toBe(true);
@@ -502,6 +523,8 @@ describe('RBAC Evaluator', () => {
       expect(rbac.hasFederatedGraphReadAccess(fakeTarget({ namespace: ns1.id }))).toBe(false);
       expect(rbac.canCreateSubGraph(ns1)).toBe(true);
       expect(rbac.canCreateSubGraph(ns2)).toBe(false);
+      expect(rbac.canUpdateSubGraph(fakeTarget({ namespace: ns1.id }))).toBe(true);
+      expect(rbac.canUpdateSubGraph(fakeTarget({ namespace: ns2.id }))).toBe(false);
       expect(rbac.canDeleteSubGraph(fakeTarget({ namespace: ns1.id }))).toBe(true);
       expect(rbac.canDeleteSubGraph(fakeTarget({ namespace: ns2.id }))).toBe(false);
       expect(rbac.hasSubGraphWriteAccess(fakeTarget({ namespace: ns1.id }))).toBe(true);
@@ -533,7 +556,10 @@ describe('RBAC Evaluator', () => {
       expect(rbac.hasFederatedGraphReadAccess(fakeTarget({ namespace: ns }))).toBe(false);
       expect(rbac.hasFederatedGraphReadAccess(fakeTarget({ namespace: ns }))).toBe(false);
       expect(rbac.canCreateSubGraph(fakeNamespace(ns))).toBe(false);
+      expect(rbac.canUpdateSubGraph(graph1)).toBe(true);
+      expect(rbac.canUpdateSubGraph(graph2)).toBe(false);
       expect(rbac.canDeleteSubGraph(graph1)).toBe(false);
+      expect(rbac.canDeleteSubGraph(graph2)).toBe(false);
       expect(rbac.hasSubGraphWriteAccess(graph1)).toBe(true);
       expect(rbac.hasSubGraphWriteAccess(graph2)).toBe(false);
       expect(rbac.hasSubGraphReadAccess(graph1)).toBe(true);
@@ -562,6 +588,7 @@ describe('RBAC Evaluator', () => {
       expect(rbac.hasFederatedGraphWriteAccess(fakeTarget())).toBe(false);
       expect(rbac.hasFederatedGraphReadAccess(fakeTarget())).toBe(false);
       expect(rbac.canCreateSubGraph(fakeNamespace())).toBe(false);
+      expect(rbac.canUpdateSubGraph(fakeTarget())).toBe(false);
       expect(rbac.canDeleteSubGraph(fakeTarget())).toBe(false);
       expect(rbac.hasSubGraphWriteAccess(fakeTarget())).toBe(true);
       expect(rbac.hasSubGraphReadAccess(fakeTarget())).toBe(true);
@@ -589,6 +616,7 @@ describe('RBAC Evaluator', () => {
       expect(rbac.hasFederatedGraphWriteAccess(fakeTarget({ namespace: ns1.id }))).toBe(false);
       expect(rbac.hasFederatedGraphReadAccess(fakeTarget({ namespace: ns1.id }))).toBe(false);
       expect(rbac.canCreateSubGraph(ns1)).toBe(false);
+      expect(rbac.canUpdateSubGraph(fakeTarget({ namespace: ns1.id }))).toBe(false);
       expect(rbac.canDeleteSubGraph(fakeTarget({ namespace: ns1.id }))).toBe(false);
       expect(rbac.hasSubGraphWriteAccess(fakeTarget({ namespace: ns1.id }))).toBe(true);
       expect(rbac.hasSubGraphWriteAccess(fakeTarget({ namespace: ns2.id }))).toBe(false);
@@ -619,6 +647,7 @@ describe('RBAC Evaluator', () => {
       expect(rbac.hasFederatedGraphReadAccess(fakeTarget({ namespace: ns }))).toBe(false);
       expect(rbac.hasFederatedGraphReadAccess(fakeTarget({ namespace: ns }))).toBe(false);
       expect(rbac.canCreateSubGraph(fakeNamespace(ns))).toBe(false);
+      expect(rbac.canUpdateSubGraph(graph1)).toBe(false);
       expect(rbac.canDeleteSubGraph(graph1)).toBe(false);
       expect(rbac.hasSubGraphWriteAccess(graph1)).toBe(true);
       expect(rbac.hasSubGraphWriteAccess(graph2)).toBe(false);
