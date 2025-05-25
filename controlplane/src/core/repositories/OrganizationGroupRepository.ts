@@ -36,6 +36,7 @@ export class OrganizationGroupRepository {
         builtin: input.builtin ?? false,
         kcGroupId: input.kcGroupId,
         membersCount: 0,
+        apiKeysCount: 0,
         rules: [],
       };
     });

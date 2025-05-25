@@ -100,19 +100,19 @@ export function DeleteGroupDialog({ open, group, existingGroups, onGroupDeleted,
 
         <Form {...deleteForm}>
           <form
-            className="mt-4 flex flex-col gap-y-3"
+            className="mt-1 flex flex-col gap-y-4"
             onSubmit={deleteForm.handleSubmit(onSubmit)}
           >
             <div>Are you sure you want to delete this group?</div>
 
-            {group?.membersCount || group?.hasOidcMappers ? (
+            {group?.membersCount || group?.apiKeysCount || group?.hasOidcMappers ? (
               <>
 
                 <span>
                 <span className="font-semibold">Before deleting</span> the group, you must select a new group. This is because:
                 </span>
 
-                <ol className="list-disc ml-6 text-sm space-y-2">
+                <ol className="list-disc ml-8 space-y-2">
                   {group.hasOidcMappers && (
                     <li>
                       One or more OIDC mapper targets this group, we need to update the mappers so{" "}
@@ -122,6 +122,12 @@ export function DeleteGroupDialog({ open, group, existingGroups, onGroupDeleted,
                   {!!group.membersCount && (
                     <li>
                       {group.membersCount === 1 ? "One member " : "Multiple members "} have been
+                      assigned to this group.
+                    </li>
+                  )}
+                  {!!group.apiKeysCount && (
+                    <li>
+                      {group.apiKeysCount === 1 ? "One API Key" : "Multiple API Keys"} have been
                       assigned to this group.
                     </li>
                   )}
