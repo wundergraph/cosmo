@@ -211,18 +211,10 @@ async function processChunkOfOrganizations(
     await remapFallbackOidcGroupMapper({ db, organizationId, organizationSlug });
 
     /**
-     * 7. Create groups for each API key that have been assigned custom resources, or to the creator group if
-     * no resources were selected when the API key was created.
-     *
-     * This is a heavy operation. Because of this, we are disabling it for now - @Wilson 05-21-2025
+     * 7. Assign any API key that doesn't have a group yet and wasn't limited to specific resources to the same
+     * group as the creator
      */
-    // await createAndAssignAPIKeysToCorrespondingGroups({
-    //   db,
-    //   organizationId,
-    //   organizationSlug,
-    //   kcOrganizationGroups,
-    //   kcOrganizationRoles,
-    // });
+    await assignAPIKeysToCreatorRole({ db, organizationId });
 
     // Done
     const duration = (performance.now() - start).toFixed(3);
@@ -493,19 +485,24 @@ async function remapFallbackOidcGroupMapper({
   }
 }
 
-async function createAndAssignAPIKeysToCorrespondingGroups({
-  db,
-  organizationId,
-  organizationSlug,
-  kcOrganizationGroups,
-  kcOrganizationRoles,
-}: {
+async function assignAPIKeysToCreatorRole({ db, organizationId, }: {
   db: PostgresJsDatabase<typeof schema>;
   organizationId: string;
-  organizationSlug: string;
-  kcOrganizationGroups: { id: string; name: string }[];
-  kcOrganizationRoles: { id: string; name: string }[];
 }) {
+  // Retrieve all organization groups
+  const organizationGroups = await db
+    .select({
+      id: schema.organizationGroups.id,
+      name: schema.organizationGroups.name,
+    })
+    .from(schema.organizationGroups)
+    .where(eq(schema.organizationGroups.organizationId, organizationId))
+    .execute();
+
+  if (organizationGroups.length === 0) {
+    return;
+  }
+
   // Retrieve all the API keys that haven't been assigned a group including the role for the user that
   // created the API key
   const apiKeys = await db
@@ -518,167 +515,52 @@ async function createAndAssignAPIKeysToCorrespondingGroups({
     .where(and(eq(schema.apiKeys.organizationId, organizationId), isNull(schema.apiKeys.groupId)))
     .execute();
 
-  for (const key of apiKeys) {
-    // Retrieve all the resources that have been assigned to the API key
-    const apiKeyResources = await db
-      .select({
-        targetId: schema.apiKeyResources.targetId,
-        targetType: schema.targets.type,
-      })
-      .from(schema.apiKeyResources)
-      .innerJoin(schema.targets, eq(schema.targets.id, schema.apiKeyResources.targetId))
-      .where(eq(schema.apiKeyResources.apiKeyId, key.id))
-      .execute();
+  await Promise.all(apiKeys.map(async (key) => {
+    // Retrieve the number of resources that have been assigned to the API key
+    const numberOfAssignedResources = await db
+      .$count(schema.apiKeyResources, eq(schema.apiKeyResources.apiKeyId, key.id));
 
-    if (apiKeyResources.length === 0) {
-      // No resources have been assigned to the API key, apply the same group as the owner
-      const ownerRole = await db
-        .select({ role: schema.organizationMemberRoles.role })
-        .from(schema.organizationMemberRoles)
-        .innerJoin(schema.organizationsMembers, eq(schema.organizationsMembers.userId, key.userId))
-        .limit(1);
-
-      if (ownerRole.length === 0) {
-        // The owner doesn't have a role, skip
-        continue;
-      }
-
-      // Retrieve the group we are adding the API key to
-      const organizationGroup = await db.query.organizationGroups.findFirst({
-        where: and(
-          eq(schema.organizationGroups.organizationId, organizationId),
-          eq(schema.organizationGroups.name, ownerRole[0].role),
-        ),
-        columns: { id: true },
-      });
-
-      if (!organizationGroup) {
-        // The group doesn't exist, this should never be the case, but we'll allow it
-        continue;
-      }
-
-      // Update the API key with the corresponding group
-      await db
-        .update(schema.apiKeys)
-        .set({ groupId: organizationGroup.id })
-        .where(eq(schema.apiKeys.id, key.id))
-        .execute();
-
-      continue;
+    if (numberOfAssignedResources > 0) {
+      // We are not going to assign the API key to any group so the legacy resource verification takes place
+      return;
     }
 
-    // The API key have been assigned one or more resources, we need to create a group just for it,
-    // if it doesn't already exist
-    const groupName = `key-${key.name}`;
-    let organizationGroup = await db.query.organizationGroups.findFirst({
-      where: and(
-        eq(schema.organizationGroups.organizationId, organizationId),
-        eq(schema.organizationGroups.name, groupName),
-      ),
-      columns: { id: true },
-    });
+    // No resources have been assigned to the API key, apply the same group as the owner
+    const ownerRole = await db
+      .select({ role: schema.organizationMemberRoles.role })
+      .from(schema.organizationMemberRoles)
+      .innerJoin(schema.organizationsMembers, eq(schema.organizationsMembers.userId, key.userId));
 
+    if (ownerRole.length === 0) {
+      // The API key owner doesn't have any role
+      return;
+    }
+
+    // Determine which group the API key should be assigned to based on the highest role the owner has
+    let role: 'admin' | 'developer' | 'viewer';
+    if (ownerRole.some((r) => r.role === 'admin')) {
+      role = 'admin';
+    } else if (ownerRole.some((r) => r.role === 'developer')) {
+      role = 'developer';
+    } else if (ownerRole.some((r) => r.role === 'viewer')) {
+      role = 'viewer';
+    } else {
+      // Unknown or invalid role
+      return;
+    }
+
+    // Retrieve the organization group
+    const organizationGroup = organizationGroups.find((group) => group.name === role);
     if (!organizationGroup) {
-      // The group doesn't exist, we need to create a new group
-      const hasFederatedTargets = apiKeyResources.some((target) => target.targetType === 'federated');
-      const hasSubgraphTargets = apiKeyResources.some((target) => target.targetType === 'subgraph');
-
-      let kcGroup = kcOrganizationGroups.find((group) => group.name === groupName);
-      if (!kcGroup) {
-        // The group doesn't exist in Keycloak, create it
-        const kcCreatedGroup = await keycloakClient.createSubGroup({
-          realm,
-          groupName,
-          organizationSlug,
-        });
-
-        if (!kcCreatedGroup) {
-          // Failed to create the Keycloak group
-          continue;
-        }
-
-        kcGroup = { id: kcCreatedGroup!, name: groupName };
-
-        if (hasFederatedTargets) {
-          // The API key have access to one or more federated graphs, add the role to the Keycloak group
-          const kcRole = kcOrganizationRoles.find((role) => role.name === `${organizationSlug}:graph-admin`);
-          if (kcRole) {
-            await keycloakClient.client.groups.addRealmRoleMappings({ realm, id: kcGroup.id, roles: [kcRole] });
-          }
-        }
-
-        if (hasSubgraphTargets) {
-          // The API key have access to one or more subgraphs, add the role to the Keycloak group
-          const kcRole = kcOrganizationRoles.find((role) => role.name === `${organizationSlug}:subgraph-admin`);
-          if (kcRole) {
-            await keycloakClient.client.groups.addRealmRoleMappings({ realm, id: kcGroup.id, roles: [kcRole] });
-          }
-        }
-      }
-
-      // Create the group in the database
-      const createdGroup = await db
-        .insert(schema.organizationGroups)
-        .values({
-          organizationId,
-          name: groupName,
-          description: `Group created automatically for the API key "${key.name}".`,
-          builtin: false,
-          kcGroupId: kcGroup.id,
-        })
-        .returning()
-        .execute();
-
-      organizationGroup = { id: createdGroup[0].id };
-
-      // Assign the `graph-admin` role, if needed
-      if (hasFederatedTargets) {
-        const createdRule = await db
-          .insert(schema.organizationGroupRules)
-          .values({ groupId: organizationGroup.id, role: 'graph-admin' })
-          .returning()
-          .execute();
-
-        await db
-          .insert(schema.organizationGroupRuleTargets)
-          .values(
-            apiKeyResources
-              .filter((target) => target.targetType === 'federated')
-              .map((target) => ({
-                ruleId: createdRule[0].id,
-                targetId: target.targetId!,
-              })),
-          )
-          .execute();
-      }
-
-      // Assign the `subgraph-admin` role, if needed
-      if (hasSubgraphTargets) {
-        const createdRule = await db
-          .insert(schema.organizationGroupRules)
-          .values({ groupId: organizationGroup.id, role: 'subgraph-admin' })
-          .returning()
-          .execute();
-
-        await db
-          .insert(schema.organizationGroupRuleTargets)
-          .values(
-            apiKeyResources
-              .filter((target) => target.targetType === 'subgraph')
-              .map((target) => ({
-                ruleId: createdRule[0].id,
-                targetId: target.targetId!,
-              })),
-          )
-          .execute();
-      }
+      // A group with the role name doesn't exists for the organization, skip API key
+      return;
     }
 
-    // Finally, assign the API key to the group
+    // Update the API key with the corresponding group
     await db
       .update(schema.apiKeys)
       .set({ groupId: organizationGroup.id })
       .where(eq(schema.apiKeys.id, key.id))
       .execute();
-  }
+  }));
 }
