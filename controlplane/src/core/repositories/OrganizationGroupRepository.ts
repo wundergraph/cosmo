@@ -112,11 +112,12 @@ export class OrganizationGroupRepository {
             FROM "organization_group_members" as "ogm"
             WHERE "ogm"."group_id" = "organizationGroups"."id"
           ) AS INTEGER)
-          +
+        `.as('members_count'),
+        apiKeysCount: sql<number>`
           CAST((
             SELECT COUNT("api_keys"."id") FROM "api_keys" WHERE "api_keys"."group_id" = "organizationGroups"."id"
           ) AS INTEGER)
-        `.as('members_count'),
+        `.as('api_keys_count'),
       }),
     });
 
