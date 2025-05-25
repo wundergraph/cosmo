@@ -1,5 +1,12 @@
 import type { OrganizationGroup } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useMutation } from "@connectrpc/connect-query";
@@ -96,6 +103,7 @@ export function DeleteGroupDialog({ open, group, existingGroups, onGroupDeleted,
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Delete group</DialogTitle>
+          <DialogDescription>Are you sure you want to delete this group?</DialogDescription>
         </DialogHeader>
 
         <Form {...deleteForm}>
@@ -103,8 +111,6 @@ export function DeleteGroupDialog({ open, group, existingGroups, onGroupDeleted,
             className="mt-1 flex flex-col gap-y-4"
             onSubmit={deleteForm.handleSubmit(onSubmit)}
           >
-            <div>Are you sure you want to delete this group?</div>
-
             {group?.membersCount || group?.apiKeysCount || group?.hasOidcMappers ? (
               <>
 
