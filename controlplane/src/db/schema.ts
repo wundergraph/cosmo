@@ -1112,7 +1112,7 @@ export const apiKeys = pgTable(
     name: text('name').notNull(),
     key: text('key').unique().notNull(),
     groupId: uuid('group_id').references(() => organizationGroups.id, {
-      onDelete: 'cascade',
+      onDelete: 'set null',
     }),
     lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
