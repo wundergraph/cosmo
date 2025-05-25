@@ -883,6 +883,7 @@ message OrganizationGroup {
   int32 membersCount = 5;
   repeated OrganizationGroupRule rules = 6;
   bool hasOidcMappers = 7;
+  int32 apiKeysCount = 8;
 }
 
 message CreateOrganizationGroupRequest {

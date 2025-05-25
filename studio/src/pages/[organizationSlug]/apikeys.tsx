@@ -61,7 +61,7 @@ import Link from "next/link";
 import {
   Dispatch,
   SetStateAction,
-  useEffect,
+  useEffect, useId,
   useState,
 } from "react";
 import { FiCheck, FiCopy } from "react-icons/fi";
@@ -174,6 +174,10 @@ const CreateAPIKeyDialog = ({
     );
   };
 
+  const nameInputId = `${useId()}-key-name`;
+  const expiresInputLabel = `${useId()}-expires`;
+  const groupInputLabel = `${useId()}-group`;
+
   // When rbac is enabled and this is the case for enterprise users
   // you can only create an API key if you are an admin
   if (rbac?.enabled && !canManageAPIKeys) {
@@ -212,8 +216,8 @@ const CreateAPIKeyDialog = ({
           onSubmit={handleSubmit(onSubmit)}
         >
           <div className="flex flex-col gap-y-2">
-            <span className="text-sm font-semibold">Name</span>
-            <Input className="w-full" type="text" {...register("name")} />
+            <label className="text-sm font-semibold" htmlFor={nameInputId}>Name</label>
+            <Input className="w-full" id={nameInputId} type="text" {...register("name")} />
             {errors.name && (
               <span className="px-2 text-xs text-destructive">
                 {errors.name.message}
@@ -221,12 +225,12 @@ const CreateAPIKeyDialog = ({
             )}
           </div>
           <div className="flex flex-col gap-y-2">
-            <span className="text-sm font-semibold">Expires</span>
+            <label className="text-sm font-semibold" htmlFor={expiresInputLabel}>Expires</label>
             <Select
               value={expires}
               onValueChange={(value) => setExpires(value)}
             >
-              <SelectTrigger value={expires} className="w-[200px] lg:w-full">
+              <SelectTrigger value={expires} className="w-[200px] lg:w-full" id={expiresInputLabel}>
                 <SelectValue aria-label={expires}>{expires}</SelectValue>
               </SelectTrigger>
               <SelectContent>
@@ -242,8 +246,9 @@ const CreateAPIKeyDialog = ({
           </div>
 
           <div className="flex flex-col gap-y-2">
-            <span className="text-sm font-semibold">Group</span>
+            <label className="text-sm font-semibold" htmlFor={groupInputLabel}>Group</label>
             <GroupSelect
+              id={groupInputLabel}
               value={watch('groupId')}
               onGroupChange={(group) => setValue(
                 'groupId',

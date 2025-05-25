@@ -103,6 +103,7 @@ export function createOrganizationGroup(
         description: createdGroup.description,
         builtin: createdGroup.builtin,
         membersCount: 0,
+        apiKeysCount: 0,
         rules: [],
         hasOidcMappers: false,
       },

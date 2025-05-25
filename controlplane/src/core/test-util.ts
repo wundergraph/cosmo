@@ -187,6 +187,7 @@ export function createTestGroup(
     description: '',
     kcGroupId: randomUUID(),
     membersCount: 0,
+    apiKeysCount: 0,
     builtin: false,
     rules: rules.map((r) => ({
       role: r.role as OrganizationRole,
