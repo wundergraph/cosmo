@@ -16,7 +16,6 @@
     "delete-user": "tsx src/bin/delete-user.ts",
     "deactivate-org": "tsx src/bin/deactivate-org.ts",
     "reactivate-org": "tsx src/bin/reactivate-org.ts",
-    "migrate-groups": "tsx src/bin/migrate-groups.ts",
     "seed:billing": "tsx src/bin/seed-billing.ts",
     "db:generate": "drizzle-kit generate --config=drizzle.config.ts",
     "db:custom": "drizzle-kit generate --custom --config=drizzle.config.ts",
