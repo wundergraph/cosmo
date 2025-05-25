@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.118.0](https://github.com/wundergraph/cosmo/compare/studio@0.117.0...studio@0.118.0) (2025-05-25)
+
+### Features
+
+* improve available namespaces ([#1895](https://github.com/wundergraph/cosmo/issues/1895)) ([135de0a](https://github.com/wundergraph/cosmo/commit/135de0a4c57ce815e1177be34e96c2a5900f031e)) (@wilsonrivera)
+
 # [0.117.0](https://github.com/wundergraph/cosmo/compare/studio@0.116.4...studio@0.117.0) (2025-05-24)
 
 ### Features
