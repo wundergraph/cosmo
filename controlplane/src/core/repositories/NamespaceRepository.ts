@@ -113,7 +113,10 @@ export class NamespaceRepository {
       .where(and(eq(schema.namespaces.name, data.name), eq(schema.namespaces.organizationId, this.organizationId)));
   }
 
-  private async applyRbacConditionsToQuery(rbac: RBACEvaluator | undefined, conditions: (SQL<unknown> | undefined)[]): Promise<void> {
+  private async applyRbacConditionsToQuery(
+    rbac: RBACEvaluator | undefined,
+    conditions: (SQL<unknown> | undefined)[],
+  ): Promise<void> {
     if (!rbac || rbac.isOrganizationViewer) {
       return;
     }
@@ -151,16 +154,14 @@ export class NamespaceRepository {
     if (namespaces.length === 0) {
       conditions.push(eq(schema.namespaces.name, DefaultNamespace));
     } else {
-      conditions.push(
-        inArray(schema.namespaces.id, [...new Set([...rbac.namespaces, ...namespacesBasedOnResources])]),
-      );
+      conditions.push(inArray(schema.namespaces.id, [...new Set([...rbac.namespaces, ...namespacesBasedOnResources])]));
     }
   }
 
   public async list(rbac?: RBACEvaluator) {
     const conditions: (SQL<unknown> | undefined)[] = [eq(schema.namespaces.organizationId, this.organizationId)];
 
-    await this.applyRbacConditionsToQuery(rbac, conditions)
+    await this.applyRbacConditionsToQuery(rbac, conditions);
     return this.db.query.namespaces.findMany({ where: and(...conditions) });
   }
 

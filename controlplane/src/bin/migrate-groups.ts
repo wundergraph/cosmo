@@ -485,7 +485,10 @@ async function remapFallbackOidcGroupMapper({
   }
 }
 
-async function assignAPIKeysToCreatorRole({ db, organizationId, }: {
+async function assignAPIKeysToCreatorRole({
+  db,
+  organizationId,
+}: {
   db: PostgresJsDatabase<typeof schema>;
   organizationId: string;
 }) {
@@ -515,52 +518,56 @@ async function assignAPIKeysToCreatorRole({ db, organizationId, }: {
     .where(and(eq(schema.apiKeys.organizationId, organizationId), isNull(schema.apiKeys.groupId)))
     .execute();
 
-  await Promise.all(apiKeys.map(async (key) => {
-    // Retrieve the number of resources that have been assigned to the API key
-    const numberOfAssignedResources = await db
-      .$count(schema.apiKeyResources, eq(schema.apiKeyResources.apiKeyId, key.id));
+  await Promise.all(
+    apiKeys.map(async (key) => {
+      // Retrieve the number of resources that have been assigned to the API key
+      const numberOfAssignedResources = await db.$count(
+        schema.apiKeyResources,
+        eq(schema.apiKeyResources.apiKeyId, key.id),
+      );
 
-    if (numberOfAssignedResources > 0) {
-      // We are not going to assign the API key to any group so the legacy resource verification takes place
-      return;
-    }
+      if (numberOfAssignedResources > 0) {
+        // We are not going to assign the API key to any group so the legacy resource verification takes place
+        return;
+      }
 
-    // No resources have been assigned to the API key, apply the same group as the owner
-    const ownerRole = await db
-      .select({ role: schema.organizationMemberRoles.role })
-      .from(schema.organizationMemberRoles)
-      .innerJoin(schema.organizationsMembers, eq(schema.organizationsMembers.userId, key.userId));
+      // No resources have been assigned to the API key, apply the same group as the owner
+      const ownerRole = await db
+        .select({ role: schema.organizationMemberRoles.role })
+        .from(schema.organizationMemberRoles)
+        .innerJoin(schema.organizationsMembers, eq(schema.organizationsMembers.userId, key.userId));
 
-    if (ownerRole.length === 0) {
-      // The API key owner doesn't have any role
-      return;
-    }
+      if (ownerRole.length === 0) {
+        // The API key owner doesn't have any role
+        return;
+      }
 
-    // Determine which group the API key should be assigned to based on the highest role the owner has
-    let role: 'admin' | 'developer' | 'viewer';
-    if (ownerRole.some((r) => r.role === 'admin')) {
-      role = 'admin';
-    } else if (ownerRole.some((r) => r.role === 'developer')) {
-      role = 'developer';
-    } else if (ownerRole.some((r) => r.role === 'viewer')) {
-      role = 'viewer';
-    } else {
-      // Unknown or invalid role
-      return;
-    }
+      // Determine which group the API key should be assigned to based on the highest role the owner has
+      let role: 'admin' | 'developer' | 'viewer';
+      if (ownerRole.some((r) => r.role === 'admin')) {
+        role = 'admin';
+      } else if (ownerRole.some((r) => r.role === 'developer')) {
+        role = 'developer';
+      } else if (ownerRole.some((r) => r.role === 'viewer')) {
+        role = 'viewer';
+      } else {
+        // Unknown or invalid role
+        return;
+      }
 
-    // Retrieve the organization group
-    const organizationGroup = organizationGroups.find((group) => group.name === role);
-    if (!organizationGroup) {
-      // A group with the role name doesn't exists for the organization, skip API key
-      return;
-    }
+      // Retrieve the organization group
+      const organizationGroup = organizationGroups.find((group) => group.name === role);
+      if (!organizationGroup) {
+        // A group with the role name doesn't exists for the organization, skip API key
+        return;
+      }
 
-    // Update the API key with the corresponding group
-    await db
-      .update(schema.apiKeys)
-      .set({ groupId: organizationGroup.id })
-      .where(eq(schema.apiKeys.id, key.id))
-      .execute();
-  }));
+      // Update the API key with the corresponding group
+      await db
+        .update(schema.apiKeys)
+        .set({ groupId: organizationGroup.id })
+        .where(eq(schema.apiKeys.id, key.id))
+        .execute();
+    }),
+  );
 }

@@ -120,7 +120,7 @@ export function updateOrganizationDetails(
         await opts.keycloakClient.client.roles.updateById(
           { realm: opts.keycloakRealm, id: kcRole.id! },
           {
-            name: kcRole.name!.replace(`${org.slug}:`, `${req.organizationSlug}:`)
+            name: kcRole.name!.replace(`${org.slug}:`, `${req.organizationSlug}:`),
           },
         );
       }
