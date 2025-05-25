@@ -108,6 +108,22 @@ export function updateOrganizationDetails(
         },
         { name: req.organizationSlug },
       );
+
+      // Rename all the organization roles
+      const kcOrganizationRoles = await opts.keycloakClient.client.roles.find({
+        realm: opts.keycloakRealm,
+        max: -1,
+        search: `${org.slug}:`,
+      });
+
+      for (const kcRole of kcOrganizationRoles) {
+        await opts.keycloakClient.client.roles.updateById(
+          { realm: opts.keycloakRealm, id: kcRole.id! },
+          {
+            name: kcRole.name!.replace(`${org.slug}:`, `${req.organizationSlug}:`)
+          },
+        );
+      }
     }
 
     await orgRepo.updateOrganization({
