@@ -76,7 +76,7 @@ export function deleteOrganizationGroup(
       // If the group have one member or the organization OIDC is enabled, we need to move the members to the
       // destination group and update the OIDC mappers
       let moveToGroup: OrganizationGroupDTO | undefined;
-      if (orgGroup.membersCount > 0 || oidc) {
+      if (orgGroup.membersCount > 0 || orgGroup.apiKeysCount > 0 || oidc) {
         if (req.toGroupId) {
           moveToGroup = await orgGroupRepo.byId({ organizationId: authContext.organizationId, groupId: req.toGroupId });
         }

@@ -257,6 +257,7 @@ export interface OrganizationGroupDTO {
   builtin: boolean;
   kcGroupId: string | null;
   membersCount: number;
+  apiKeysCount: number;
   rules: {
     role: OrganizationRole;
     namespaces: string[];

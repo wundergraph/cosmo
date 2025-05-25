@@ -5,7 +5,8 @@ import { getOrganizationGroups } from "@wundergraph/cosmo-connect/dist/platform/
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { Button } from "@/components/ui/button";
 
-export function GroupSelect({ value, disabled = false, groups, onGroupChange }: {
+export function GroupSelect({ id, value, disabled = false, groups, onGroupChange }: {
+  id?: string;
   value?: string;
   disabled?: boolean;
   groups?: OrganizationGroup[];
@@ -51,7 +52,7 @@ export function GroupSelect({ value, disabled = false, groups, onGroupChange }: 
       }}
       disabled={disabled}
     >
-      <SelectTrigger value={value}>
+      <SelectTrigger value={value} id={id}>
         <SelectValue aria-label={groupLabel}>{groupLabel}</SelectValue>
       </SelectTrigger>
       <SelectContent>

@@ -6478,6 +6478,11 @@ export class OrganizationGroup extends Message<OrganizationGroup> {
    */
   hasOidcMappers = false;
 
+  /**
+   * @generated from field: int32 apiKeysCount = 8;
+   */
+  apiKeysCount = 0;
+
   constructor(data?: PartialMessage<OrganizationGroup>) {
     super();
     proto3.util.initPartial(data, this);
@@ -6493,6 +6498,7 @@ export class OrganizationGroup extends Message<OrganizationGroup> {
     { no: 5, name: "membersCount", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 6, name: "rules", kind: "message", T: OrganizationGroupRule, repeated: true },
     { no: 7, name: "hasOidcMappers", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 8, name: "apiKeysCount", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): OrganizationGroup {
