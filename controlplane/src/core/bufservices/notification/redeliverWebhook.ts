@@ -9,6 +9,7 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { RedeliverWebhookService } from '../../webhooks/RedeliverWebhookService.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function redeliverWebhook(
   opts: RouterOptions,
@@ -21,13 +22,8 @@ export function redeliverWebhook(
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
-    if (!authContext.hasWriteAccess) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `The user does not have permissions to perform this operation`,
-        },
-      };
+    if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdminOrDeveloper) {
+      throw new UnauthorizedError();
     }
 
     const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);

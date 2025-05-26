@@ -35,7 +35,10 @@ export function getOrganizationMembers(
       response: {
         code: EnumStatusCode.OK,
       },
-      members: orgMembers,
+      members: orgMembers.map(({ rbac, ...rest }) => ({
+        ...rest,
+        groups: rbac.groups,
+      })),
       totalCount: count,
     };
   });

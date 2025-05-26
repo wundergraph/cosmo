@@ -1,18 +1,16 @@
-import { UserContext } from "@/components/app-provider";
 import { EmptyState } from "@/components/empty-state";
 import { getDashboardLayout } from "@/components/layout/dashboard-layout";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
-  DialogContent,
+  DialogContent, DialogDescription, DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   DropdownMenu,
-  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
@@ -22,9 +20,7 @@ import { Loader } from "@/components/ui/loader";
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -44,7 +40,6 @@ import { useUser } from "@/hooks/use-user";
 import { docsBaseURL } from "@/lib/constants";
 import { formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
-import { checkUserAccess } from "@/lib/utils";
 import {
   EllipsisVerticalIcon,
   ExclamationTriangleIcon,
@@ -58,30 +53,30 @@ import {
   deleteAPIKey,
   getAPIKeys,
   getUserAccessiblePermissions,
-  getUserAccessibleResources,
+  updateAPIKey,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import {
-  ExpiresAt,
-  GetUserAccessibleResourcesResponse_Graph,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import { ExpiresAt } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import copy from "copy-to-clipboard";
 import Link from "next/link";
 import {
   Dispatch,
   SetStateAction,
-  useContext,
-  useEffect,
+  useEffect, useId,
   useState,
 } from "react";
 import { FiCheck, FiCopy } from "react-icons/fi";
 import { z } from "zod";
+import { GroupSelect } from "@/components/group-select";
+import { useCheckUserAccess } from "@/hooks/use-check-user-access";
 
 const CreateAPIKeyDialog = ({
   existingApiKeys,
+  canManageAPIKeys,
   setApiKey,
   refresh,
 }: {
   existingApiKeys: string[];
+  canManageAPIKeys: boolean;
   setApiKey: Dispatch<SetStateAction<string | undefined>>;
   refresh: () => void;
 }) => {
@@ -91,11 +86,7 @@ const CreateAPIKeyDialog = ({
 
   const { mutate, isPending } = useMutation(createAPIKey);
 
-  const { data } = useQuery(getUserAccessibleResources);
   const { data: permissionsData } = useQuery(getUserAccessiblePermissions);
-  const federatedGraphs = data?.federatedGraphs || [];
-  const subgraphs = data?.subgraphs || [];
-  const isAdmin = user?.currentOrganization.roles.includes("admin");
 
   const expiresOptions = ["Never", "30 days", "6 months", "1 year"];
   const expiresOptionsMappingToEnum: {
@@ -109,13 +100,7 @@ const CreateAPIKeyDialog = ({
 
   const [expires, setExpires] = useState(expiresOptions[0]);
   const [open, setOpen] = useState(false);
-  const [selectedAllResources, setSelectedAllResources] = useState(false);
-  // target ids of the selected federated graphs
-  const [selectedFedGraphs, setSelectedFedGraphs] = useState<string[]>([]);
-  // target ids of the selected subgraphs
-  const [selectedSubgraphs, setSelectedSubgraphs] = useState<string[]>([]);
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
-  const [errorMsg, setErrorMsg] = useState<string>();
 
   const createAPIKeyInputSchema = z.object({
     name: z
@@ -123,6 +108,10 @@ const CreateAPIKeyDialog = ({
       .trim()
       .min(3, { message: "API key name must be a minimum of 3 characters" })
       .max(50, { message: "API key name must be maximum 50 characters" })
+      .regex(
+        new RegExp("^[a-zA-Z0-9]+(?:[_.@/-][a-zA-Z0-9]+)*$"),
+        "The name should start and end with an alphanumeric character. Only '.', '_', '@', '/', and '-' are allowed as separators in between.",
+      )
       .superRefine((arg, ctx) => {
         if (!existingApiKeys.includes(arg)) {
           return;
@@ -133,6 +122,9 @@ const CreateAPIKeyDialog = ({
           message: `An API key with the name ${arg} already exists`
         });
       }),
+    groupId: z
+      .string()
+      .uuid({ message: "Select a valid group" })
   });
 
   type CreateAPIKeyInput = z.infer<typeof createAPIKeyInputSchema>;
@@ -143,39 +135,26 @@ const CreateAPIKeyDialog = ({
     handleSubmit,
     reset,
     setError,
+    setValue,
+    watch,
   } = useZodForm<CreateAPIKeyInput>({
     mode: "onBlur",
     schema: createAPIKeyInputSchema,
   });
 
   const onSubmit: SubmitHandler<CreateAPIKeyInput> = (data) => {
-    if (
-      rbac?.enabled &&
-      !selectedAllResources &&
-      selectedFedGraphs.length === 0 &&
-      selectedSubgraphs.length === 0
-    ) {
-      setErrorMsg("Please select at least one of the resources.");
-      return;
-    }
-
     mutate(
       {
         name: data.name,
         userID: user?.id,
         expires: expiresOptionsMappingToEnum[expires],
-        federatedGraphTargetIds: selectedAllResources ? [] : selectedFedGraphs,
-        subgraphTargetIds: selectedAllResources ? [] : selectedSubgraphs,
+        groupId: data.groupId,
         permissions: selectedPermissions,
-        allowAllResources: selectedAllResources,
       },
       {
         onSuccess: (d) => {
           if (d.response?.code === EnumStatusCode.OK) {
             setOpen(false);
-            setSelectedAllResources(false);
-            setSelectedFedGraphs([]);
-            setSelectedSubgraphs([]);
             setSelectedPermissions([]);
 
             setApiKey(d.apiKey);
@@ -185,7 +164,7 @@ const CreateAPIKeyDialog = ({
             setError('name', { message: d.response.details });
           }
         },
-        onError: (error) => {
+        onError: () => {
           toast({
             description: "Could not create an API key. Please try again.",
             duration: 3000,
@@ -195,26 +174,13 @@ const CreateAPIKeyDialog = ({
     );
   };
 
-  const groupedSubgraphs = subgraphs.reduce<
-    Record<string, GetUserAccessibleResourcesResponse_Graph[]>
-  >((result, graph) => {
-    const { namespace, name } = graph;
-
-    if (!result[namespace]) {
-      result[namespace] = [];
-    }
-
-    result[namespace].push(graph);
-
-    return result;
-  }, {});
+  const nameInputId = `${useId()}-key-name`;
+  const expiresInputLabel = `${useId()}-expires`;
+  const groupInputLabel = `${useId()}-group`;
 
   // When rbac is enabled and this is the case for enterprise users
-  // you can only create an API key if you are an admin or have access to at least one federated graph or subgraph
-  if (
-    rbac?.enabled &&
-    !(isAdmin || federatedGraphs.length > 0 || subgraphs.length > 0)
-  ) {
+  // you can only create an API key if you are an admin
+  if (rbac?.enabled && !canManageAPIKeys) {
     return (
       <Button disabled>
         <div className="flex items-center gap-x-2">
@@ -225,24 +191,11 @@ const CreateAPIKeyDialog = ({
     );
   }
 
-  const groupedFederatedGraphs = federatedGraphs.reduce<
-    Record<string, GetUserAccessibleResourcesResponse_Graph[]>
-  >((result, graph) => {
-    const { namespace, name } = graph;
-
-    if (!result[namespace]) {
-      result[namespace] = [];
-    }
-
-    result[namespace].push(graph);
-
-    return result;
-  }, {});
-
   return (
     <Dialog open={open} onOpenChange={(v) => {
       setOpen(v);
       if (!v) {
+        setSelectedPermissions([]);
         reset();
       }
     }}>
@@ -263,8 +216,8 @@ const CreateAPIKeyDialog = ({
           onSubmit={handleSubmit(onSubmit)}
         >
           <div className="flex flex-col gap-y-2">
-            <span className="text-sm font-semibold">Name</span>
-            <Input className="w-full" type="text" {...register("name")} />
+            <label className="text-sm font-semibold" htmlFor={nameInputId}>Name</label>
+            <Input className="w-full" id={nameInputId} type="text" {...register("name")} />
             {errors.name && (
               <span className="px-2 text-xs text-destructive">
                 {errors.name.message}
@@ -272,12 +225,12 @@ const CreateAPIKeyDialog = ({
             )}
           </div>
           <div className="flex flex-col gap-y-2">
-            <span className="text-sm font-semibold">Expires</span>
+            <label className="text-sm font-semibold" htmlFor={expiresInputLabel}>Expires</label>
             <Select
               value={expires}
               onValueChange={(value) => setExpires(value)}
             >
-              <SelectTrigger value={expires} className="w-[200px] lg:w-full">
+              <SelectTrigger value={expires} className="w-[200px] lg:w-full" id={expiresInputLabel}>
                 <SelectValue aria-label={expires}>{expires}</SelectValue>
               </SelectTrigger>
               <SelectContent>
@@ -291,7 +244,27 @@ const CreateAPIKeyDialog = ({
               </SelectContent>
             </Select>
           </div>
-          {isAdmin &&
+
+          <div className="flex flex-col gap-y-2">
+            <label className="text-sm font-semibold" htmlFor={groupInputLabel}>Group</label>
+            <GroupSelect
+              id={groupInputLabel}
+              value={watch('groupId')}
+              onGroupChange={(group) => setValue(
+                'groupId',
+                group.groupId,
+                { shouldValidate: true, shouldDirty: true, shouldTouch: true },
+              )}
+            />
+
+            {errors.groupId && (
+              <span className="px-2 text-xs text-destructive">
+                {errors.groupId.message}
+              </span>
+            )}
+          </div>
+
+          {canManageAPIKeys &&
             permissionsData &&
             permissionsData.permissions.length > 0 && (
               <div className="mt-2 flex flex-col gap-y-3">
@@ -340,195 +313,11 @@ const CreateAPIKeyDialog = ({
                 })}
               </div>
             )}
-          {rbac?.enabled && (
-            <div className="mt-3 flex flex-col gap-y-3">
-              <div className="flex flex-col gap-y-1">
-                <span className="text-base font-semibold">
-                  Select Resources
-                </span>
-                <span className="text-sm text-muted-foreground">
-                  {"Select resources the API key can access."}
-                </span>
-              </div>
-              <div className="flex flex-col gap-y-2">
-                {federatedGraphs.length > 0 && (
-                  <div className="flex flex-col gap-y-1">
-                    <div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger
-                          asChild
-                          disabled={selectedAllResources}
-                        >
-                          <Button size="sm" variant="outline">
-                            {selectedFedGraphs.length > 0
-                              ? `${selectedFedGraphs.length} graphs selected`
-                              : "Select graphs"}
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                          align="start"
-                          className="scrollbar-custom max-h-[min(calc(var(--radix-dropdown-menu-content-available-height)_-24px),384px)] overflow-y-auto"
-                        >
-                          {Object.entries(groupedFederatedGraphs ?? {}).map(
-                            ([namespace, graphs]) => {
-                              return (
-                                <SelectGroup key={namespace}>
-                                  <SelectLabel>{namespace}</SelectLabel>
-                                  {graphs.map((graph) => {
-                                    return (
-                                      <DropdownMenuCheckboxItem
-                                        key={graph.targetId}
-                                        checked={selectedFedGraphs.includes(
-                                          graph.targetId,
-                                        )}
-                                        onCheckedChange={(val) => {
-                                          if (val) {
-                                            setSelectedFedGraphs([
-                                              ...Array.from(
-                                                new Set([
-                                                  ...selectedFedGraphs,
-                                                  graph.targetId,
-                                                ]),
-                                              ),
-                                            ]);
-                                            setErrorMsg(undefined);
-                                          } else {
-                                            setSelectedFedGraphs([
-                                              ...selectedFedGraphs.filter(
-                                                (g) => g !== graph.targetId,
-                                              ),
-                                            ]);
-                                          }
-                                        }}
-                                        onSelect={(e) => e.preventDefault()}
-                                      >
-                                        {graph.name}
-                                      </DropdownMenuCheckboxItem>
-                                    );
-                                  })}
-                                </SelectGroup>
-                              );
-                            },
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-                )}
-                {subgraphs.length > 0 && (
-                  <div className="flex flex-col gap-y-1">
-                    <div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger
-                          asChild
-                          disabled={selectedAllResources}
-                        >
-                          <Button size="sm" variant="outline">
-                            {selectedSubgraphs.length > 0
-                              ? `${selectedSubgraphs.length} subgraphs selected`
-                              : "Select subgraphs"}
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                          align="start"
-                          className="scrollbar-custom max-h-[min(calc(var(--radix-dropdown-menu-content-available-height)_-24px),384px)] overflow-y-auto"
-                        >
-                          {Object.entries(groupedSubgraphs ?? {}).map(
-                            ([namespace, graphs]) => {
-                              return (
-                                <SelectGroup key={namespace}>
-                                  <SelectLabel>{namespace}</SelectLabel>
-                                  {graphs.map((graph) => {
-                                    return (
-                                      <DropdownMenuCheckboxItem
-                                        key={graph.targetId}
-                                        checked={selectedSubgraphs.includes(
-                                          graph.targetId,
-                                        )}
-                                        onCheckedChange={(val) => {
-                                          if (val) {
-                                            setSelectedSubgraphs([
-                                              ...Array.from(
-                                                new Set([
-                                                  ...selectedSubgraphs,
-                                                  graph.targetId,
-                                                ]),
-                                              ),
-                                            ]);
-                                            setErrorMsg(undefined);
-                                          } else {
-                                            setSelectedSubgraphs([
-                                              ...selectedSubgraphs.filter(
-                                                (g) => g !== graph.targetId,
-                                              ),
-                                            ]);
-                                          }
-                                        }}
-                                        onSelect={(e) => e.preventDefault()}
-                                      >
-                                        {graph.name}
-                                      </DropdownMenuCheckboxItem>
-                                    );
-                                  })}
-                                </SelectGroup>
-                              );
-                            },
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-                )}
-                {isAdmin && (
-                  <div className="mt-2 flex flex-col gap-y-2">
-                    <div className="flex items-start gap-x-2">
-                      <Checkbox
-                        id="all-resources"
-                        checked={selectedAllResources}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setSelectedAllResources(true);
-                            setErrorMsg(undefined);
-                          } else {
-                            setSelectedAllResources(false);
-                          }
-                        }}
-                      />
-                      <div className="flex flex-col gap-y-1">
-                        <label
-                          htmlFor="all-resources"
-                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                        >
-                          All Resources
-                        </label>
-                        <span className="text-sm text-muted-foreground">
-                          {
-                            "Choose 'All resources' to include all the current and future resources"
-                          }
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-          {errorMsg && (
-            <span className="px-2 text-xs text-destructive">{errorMsg}</span>
-          )}
 
           <Button
             className="mt-2"
             type="submit"
-            disabled={
-              // should be disabled if the form is invalid or if either the resources or the all resources option is not selected
-              !isValid ||
-              !!errorMsg ||
-              (rbac?.enabled &&
-                !selectedAllResources &&
-                selectedFedGraphs.length === 0 &&
-                selectedSubgraphs.length === 0)
-            }
+            disabled={!isValid}
             variant="default"
             isLoading={isPending}
           >
@@ -589,7 +378,7 @@ const DeleteAPIKeyDialog = ({
           reset();
           setDeleteApiKeyName(undefined);
         },
-        onError: (error) => {
+        onError: () => {
           toast({
             description: "Could not delete an API key. Please try again.",
             duration: 3000,
@@ -716,17 +505,17 @@ export const Empty = ({
   apiKey,
   setApiKey,
   open,
+  canManageAPIKeys,
   setOpen,
   refetch,
 }: {
   apiKey: string | undefined;
   setApiKey: Dispatch<SetStateAction<string | undefined>>;
   open: boolean;
+  canManageAPIKeys: boolean;
   setOpen: Dispatch<SetStateAction<boolean>>;
   refetch: () => void;
 }) => {
-  const user = useContext(UserContext);
-
   return (
     <EmptyState
       icon={<KeyIcon />}
@@ -746,13 +535,11 @@ export const Empty = ({
       }
       actions={
         <div className="mt-2">
-          {checkUserAccess({
-            rolesToBe: ["admin", "developer"],
-            userRoles: user?.currentOrganization.roles || [],
-          }) && (
+          {canManageAPIKeys && (
             <CreateAPIKey
               apiKey={apiKey}
               existingApiKeys={[]}
+              canManageAPIKeys={canManageAPIKeys}
               setApiKey={setApiKey}
               open={open}
               setOpen={setOpen}
@@ -768,6 +555,7 @@ export const Empty = ({
 export const CreateAPIKey = ({
   apiKey,
   existingApiKeys,
+  canManageAPIKeys,
   setApiKey,
   open,
   setOpen,
@@ -775,6 +563,7 @@ export const CreateAPIKey = ({
 }: {
   apiKey: string | undefined;
   existingApiKeys: string[];
+  canManageAPIKeys: boolean;
   setApiKey: Dispatch<SetStateAction<string | undefined>>;
   open: boolean;
   setOpen: Dispatch<SetStateAction<boolean>>;
@@ -787,7 +576,12 @@ export const CreateAPIKey = ({
 
   return (
     <>
-      <CreateAPIKeyDialog refresh={refetch} setApiKey={setApiKey} existingApiKeys={existingApiKeys} />
+      <CreateAPIKeyDialog
+        refresh={refetch}
+        setApiKey={setApiKey}
+        existingApiKeys={existingApiKeys}
+        canManageAPIKeys={canManageAPIKeys}
+      />
       {apiKey && (
         <APIKeyCreatedDialog open={open} setOpen={setOpen} apiKey={apiKey} />
       )}
@@ -795,16 +589,106 @@ export const CreateAPIKey = ({
   );
 };
 
+const UpdateAPIKey = ({ selectedApiKeyName, open, selectedGroupId, refresh, onOpenChange }: {
+  open: boolean;
+  selectedApiKeyName: string | undefined;
+  selectedGroupId: string | undefined;
+  refresh(): void;
+  onOpenChange(open: boolean): void;
+}) => {
+  const { mutate, isPending } = useMutation(updateAPIKey);
+  const { toast } = useToast();
+  const [groupId, setGroupId] = useState<string | undefined>();
+
+  useEffect(() => {
+    if (open) {
+      setGroupId(selectedGroupId);
+    }
+  }, [open, selectedGroupId]);
+
+  const onOpenChangeCallback = (isOpen: boolean) => {
+    if (isPending) {
+      return;
+    }
+
+    onOpenChange(isOpen);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChangeCallback}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Update API key group</DialogTitle>
+          <DialogDescription>
+            Select the new group for the API key.
+          </DialogDescription>
+        </DialogHeader>
+        <GroupSelect
+          value={groupId}
+          onGroupChange={(group) => setGroupId(group.groupId)}
+        />
+
+        <DialogFooter>
+          <Button variant="secondary" onClick={() => onOpenChangeCallback(false)}>
+            Cancel
+          </Button>
+          <Button
+            disabled={isPending || !groupId}
+            isLoading={isPending}
+            onClick={() => {
+              if (isPending || !selectedApiKeyName || !groupId) {
+                return;
+              }
+
+              mutate({ name: selectedApiKeyName, groupId }, {
+                onSuccess(d){
+                  if (d.response?.code === EnumStatusCode.OK) {
+                    onOpenChange(false);
+                    toast({
+                      description: "API key group updated successfully.",
+                      duration: 3000,
+                    });
+
+                    refresh();
+                  } else {
+                    toast({
+                      description: d.response?.details ?? "Could not update the API key. Please try again.",
+                      duration: 3000,
+                    });
+                  }
+                },
+                onError(){
+                  toast({
+                    description: "Could not update the API key. Please try again.",
+                    duration: 3000,
+                  });
+                },
+              });
+            }}
+          >
+            Save
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 const APIKeysPage: NextPageWithLayout = () => {
-  const user = useContext(UserContext);
+  const checkUserAccess = useCheckUserAccess();
   const { data, isLoading, error, refetch } = useQuery(getAPIKeys);
 
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [openUpdateDialog, setOpenUpdateDialog] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState<{ apiKeyName: string; groupId: string | undefined; }>();
   const [apiKey, setApiKey] = useState<string | undefined>();
   const [deleteApiKeyName, setDeleteApiKeyName] = useState<
     string | undefined
   >();
   const [openApiKeyCreatedDialog, setOpenApiKeyCreatedDialog] = useState(false);
+
+  const canCreateAPIKey = checkUserAccess({ rolesToBe: ['organization-admin', 'organization-developer'] });
+  const canManageAPIKeys = canCreateAPIKey || checkUserAccess({ rolesToBe: ['organization-apikey-manager'] });
 
   useEffect(() => {
     if (!openApiKeyCreatedDialog) setApiKey(undefined);
@@ -833,11 +717,23 @@ const APIKeysPage: NextPageWithLayout = () => {
           apiKey={apiKey}
           setApiKey={setApiKey}
           open={openApiKeyCreatedDialog}
+          canManageAPIKeys={canManageAPIKeys}
           setOpen={setOpenApiKeyCreatedDialog}
           refetch={refetch}
         />
       ) : (
         <>
+          <UpdateAPIKey
+            open={openUpdateDialog}
+            selectedApiKeyName={selectedGroup?.apiKeyName}
+            selectedGroupId={selectedGroup?.groupId}
+            refresh={refetch}
+            onOpenChange={() => {
+              setOpenUpdateDialog(false);
+              setSelectedGroup(undefined);
+            }}
+          />
+
           <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
             <div>
               <p className="text-sm text-muted-foreground">
@@ -866,34 +762,26 @@ const APIKeysPage: NextPageWithLayout = () => {
               </p>
             </div>
             <div>
-              {checkUserAccess({
-                rolesToBe: ["admin", "developer"],
-                userRoles: user?.currentOrganization.roles || [],
-              }) && (
-                <CreateAPIKey
-                  apiKey={apiKey}
-                  existingApiKeys={apiKeys.map((k) => k.name)}
-                  setApiKey={setApiKey}
-                  open={openApiKeyCreatedDialog}
-                  setOpen={setOpenApiKeyCreatedDialog}
-                  refetch={refetch}
-                />
-              )}
+              <CreateAPIKey
+                apiKey={apiKey}
+                existingApiKeys={apiKeys.map((k) => k.name)}
+                canManageAPIKeys={canManageAPIKeys}
+                setApiKey={setApiKey}
+                open={openApiKeyCreatedDialog}
+                setOpen={setOpenApiKeyCreatedDialog}
+                refetch={refetch}
+              />
             </div>
           </div>
-          {deleteApiKeyName &&
-            checkUserAccess({
-              rolesToBe: ["admin", "developer"],
-              userRoles: user?.currentOrganization.roles || [],
-            }) && (
-              <DeleteAPIKeyDialog
-                apiKeyName={deleteApiKeyName}
-                refresh={refetch}
-                open={openDeleteDialog}
-                setOpen={setOpenDeleteDialog}
-                setDeleteApiKeyName={setDeleteApiKeyName}
-              />
-            )}
+          {deleteApiKeyName && canManageAPIKeys && (
+            <DeleteAPIKeyDialog
+              apiKeyName={deleteApiKeyName}
+              refresh={refetch}
+              open={openDeleteDialog}
+              setOpen={setOpenDeleteDialog}
+              setDeleteApiKeyName={setDeleteApiKeyName}
+            />
+          )}
           <TableWrapper>
             <Table>
               <TableHeader>
@@ -901,19 +789,17 @@ const APIKeysPage: NextPageWithLayout = () => {
                   <TableHead>Name</TableHead>
                   <TableHead>Created By</TableHead>
                   <TableHead>Expires At</TableHead>
+                  <TableHead>Group</TableHead>
                   <TableHead>Created At</TableHead>
                   <TableHead>Last Used At</TableHead>
-                  {checkUserAccess({
-                    rolesToBe: ["admin", "developer"],
-                    userRoles: user?.currentOrganization.roles || [],
-                  }) && (
+                  {canManageAPIKeys && (
                     <TableHead className="flex items-center justify-center" />
                   )}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {apiKeys.map(
-                  ({ name, createdBy, createdAt, lastUsedAt, expiresAt }) => {
+                  ({ name, createdBy, createdAt, lastUsedAt, expiresAt, group }) => {
                     return (
                       <TableRow key={name}>
                         <TableCell className="font-medium">{name}</TableCell>
@@ -922,6 +808,9 @@ const APIKeysPage: NextPageWithLayout = () => {
                           {expiresAt
                             ? formatDateTime(new Date(expiresAt))
                             : "Never"}
+                        </TableCell>
+                        <TableCell className={!group?.id ? "text-muted-foreground" : undefined}>
+                          {group?.name ?? "-"}
                         </TableCell>
                         <TableCell>
                           {createdAt
@@ -933,10 +822,7 @@ const APIKeysPage: NextPageWithLayout = () => {
                             ? formatDateTime(new Date(lastUsedAt))
                             : "Never"}
                         </TableCell>
-                        {checkUserAccess({
-                          rolesToBe: ["admin", "developer"],
-                          userRoles: user?.currentOrganization.roles || [],
-                        }) && (
+                        {canManageAPIKeys && (
                           <TableCell>
                             <DropdownMenu>
                               <div className="flex justify-center">
@@ -947,6 +833,17 @@ const APIKeysPage: NextPageWithLayout = () => {
                                 </DropdownMenuTrigger>
                               </div>
                               <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setOpenUpdateDialog(true);
+                                    setSelectedGroup({
+                                      apiKeyName: name,
+                                      groupId: group?.id,
+                                    });
+                                  }}
+                                >
+                                  Update group
+                                </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={() => {
                                     setDeleteApiKeyName(name);

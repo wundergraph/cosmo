@@ -10,6 +10,7 @@ import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import { TargetRepository } from '../../repositories/TargetRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function moveMonograph(
   opts: RouterOptions,
@@ -21,6 +22,10 @@ export function moveMonograph(
   return handleError<PlainMessage<MoveGraphResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
+
+    if (authContext.organizationDeactivated) {
+      throw new UnauthorizedError();
+    }
 
     const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
     const targetRepo = new TargetRepository(opts.db, authContext.organizationId);
@@ -70,6 +75,7 @@ export function moveMonograph(
       };
     }
 
+    // check if the user is authorized to perform the action
     await opts.authorizer.authorize({
       db: opts.db,
       graph: {
@@ -124,6 +130,10 @@ export function moveMonograph(
         deploymentErrors: [],
         compositionWarnings: [],
       };
+    }
+
+    if (!authContext.rbac.isOrganizationAdminOrDeveloper) {
+      throw new UnauthorizedError();
     }
 
     await targetRepo.moveWithoutRecomposition({
