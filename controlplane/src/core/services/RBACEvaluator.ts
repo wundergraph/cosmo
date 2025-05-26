@@ -104,7 +104,7 @@ export class RBACEvaluator {
       return true;
     }
 
-    return this.isOrganizationViewer || (this.groups.length === 0 && this.isApiKey);
+    return this.isOrganizationViewer;
   }
 
   canCreateFederatedGraph(namespace: Namespace) {
