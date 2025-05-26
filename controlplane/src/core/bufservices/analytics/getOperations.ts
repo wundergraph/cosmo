@@ -89,38 +89,45 @@ export function getOperations(
         : [],
     });
 
+    if (operations.length === 0) {
+      return {
+        response: {
+          code: EnumStatusCode.OK,
+        },
+        operations: [],
+      };
+    }
+
     const computedOperations: GetOperationsResponse_Operation[] = [];
 
-    if (operations.length > 0) {
-      const operationHashes = operations.map((op) => op.operationHash);
-      const operationContentMap = await cacheWarmerRepo.getOperationContent({
-        operationHashes,
-        federatedGraphID: graph.id,
-        organizationID: authContext.organizationId,
-        rangeInHours: range,
-      });
+    const operationHashes = operations.map((op) => op.operationHash);
+    const operationContentMap = await cacheWarmerRepo.getOperationContent({
+      operationHashes,
+      federatedGraphID: graph.id,
+      organizationID: authContext.organizationId,
+      rangeInHours: range,
+    });
 
-      for (const operation of operations) {
-        const operationContent = operationContentMap.get(operation.operationHash);
-        if (!operationContent) {
-          continue;
-        }
-
-        computedOperations.push(
-          new GetOperationsResponse_Operation({
-            name: operation.operationName,
-            hash: operation.operationHash,
-            latency: operation.latency,
-            type:
-              operation.operationType === 'query'
-                ? GetOperationsResponse_OperationType.QUERY
-                : operation.operationType === 'mutation'
-                  ? GetOperationsResponse_OperationType.MUTATION
-                  : GetOperationsResponse_OperationType.SUBSCRIPTION,
-            content: operationContent,
-          }),
-        );
+    for (const operation of operations) {
+      const operationContent = operationContentMap.get(operation.operationHash);
+      if (!operationContent) {
+        continue;
       }
+
+      computedOperations.push(
+        new GetOperationsResponse_Operation({
+          name: operation.operationName,
+          hash: operation.operationHash,
+          latency: operation.latency,
+          type:
+            operation.operationType === 'query'
+              ? GetOperationsResponse_OperationType.QUERY
+              : operation.operationType === 'mutation'
+                ? GetOperationsResponse_OperationType.MUTATION
+                : GetOperationsResponse_OperationType.SUBSCRIPTION,
+          content: operationContent,
+        }),
+      );
     }
 
     return {
