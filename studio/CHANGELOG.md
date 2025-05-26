@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.118.2](https://github.com/wundergraph/cosmo/compare/studio@0.118.1...studio@0.118.2) (2025-05-26)
+
+### Bug Fixes
+
+* fix infinite loop caused by namespace selector ([#1898](https://github.com/wundergraph/cosmo/issues/1898)) ([2a65c48](https://github.com/wundergraph/cosmo/commit/2a65c483d7a6ca100c2a209304730657336ece7a)) (@wilsonrivera)
+
 ## [0.118.1](https://github.com/wundergraph/cosmo/compare/studio@0.118.0...studio@0.118.1) (2025-05-26)
 
 ### Bug Fixes
