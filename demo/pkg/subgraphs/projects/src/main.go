@@ -5,6 +5,7 @@ import (
 	"log"
 	"strconv"
 	"sync"
+	"syscall"
 
 	service "github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects/generated"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects/src/data"
@@ -32,9 +33,23 @@ func main() {
 var _ service.ProjectsServiceServer = &ProjectsService{}
 
 type ProjectsService struct {
-	lock sync.RWMutex
 	service.UnimplementedProjectsServiceServer
+	lock   sync.RWMutex
 	nextID int
+}
+
+// QueryKillService implements projects.ProjectsServiceServer.
+func (p *ProjectsService) QueryKillService(context.Context, *service.QueryKillServiceRequest) (*service.QueryKillServiceResponse, error) {
+	syscall.Kill(syscall.Getpid(), syscall.SIGKILL)
+
+	return &service.QueryKillServiceResponse{
+		KillService: true,
+	}, nil
+}
+
+// QueryPanic implements projects.ProjectsServiceServer.
+func (p *ProjectsService) QueryPanic(context.Context, *service.QueryPanicRequest) (*service.QueryPanicResponse, error) {
+	panic("Panic")
 }
 
 // LookupEmployeeById implements projects.ProjectsServiceServer.
