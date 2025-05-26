@@ -32,8 +32,9 @@ const ExprRequestAuthKey = "auth"
 
 // Context is the context for expressions parser when evaluating dynamic expressions
 type Context struct {
-	Request  Request  `expr:"request"` // if changing the expr tag, the ExprRequestKey should be updated
-	Subgraph Subgraph `expr:"subgraph"`
+	Request      Request      `expr:"request"` // if changing the expr tag, the ExprRequestKey should be updated
+	Subgraph     Subgraph     `expr:"subgraph"`
+	ScopedValues ScopedValues `expr:"-"`
 }
 
 // Clone creates a deep copy of the Context
@@ -107,8 +108,7 @@ type RequestURL struct {
 }
 
 type RequestHeaders struct {
-	CurrentHeader string      `expr:"currentHeader"`
-	Header        http.Header `expr:"-"` // Do not expose the full header
+	Header http.Header `expr:"-"` // Do not expose the full header
 }
 
 type RequestAuth struct {
@@ -132,6 +132,15 @@ type Subgraph struct {
 	Id      string          `expr:"id"`
 	Name    string          `expr:"name"`
 	Request SubgraphRequest `expr:"request"`
+}
+
+// ScopedValues This struct contains values which are scoped for a particular use case
+type ScopedValues struct {
+	CurrentHeader string
+}
+
+func (ctx Context) GetCurrentHeader() string {
+	return ctx.ScopedValues.CurrentHeader
 }
 
 // Get returns the value of the header with the given key. If the header is not present, an empty string is returned.

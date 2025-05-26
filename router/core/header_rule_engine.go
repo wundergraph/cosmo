@@ -545,9 +545,8 @@ func (h *HeaderPropagation) isApplyHeader(rule *config.RequestHeaderRule, reqCtx
 			return false
 		}
 
-		// TODO: Figure out if we are keeping this
 		exprCtx := reqCtx.expressionContext
-		exprCtx.Request.Header.CurrentHeader = headerName
+		exprCtx.ScopedValues.CurrentHeader = headerName
 
 		addHeaderAny, err := h.getRequestRuleExpressionValue(rule, exprCtx, rule.Operation)
 		if err != nil {
