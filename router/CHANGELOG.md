@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.214.2](https://github.com/wundergraph/cosmo/compare/router@0.214.1...router@0.214.2) (2025-05-26)
+
+### Bug Fixes
+
+* **mcp:** enable PING events by default to prevent proxy timeouts ([#1897](https://github.com/wundergraph/cosmo/issues/1897)) ([5b1a1b2](https://github.com/wundergraph/cosmo/commit/5b1a1b27a31bbf03c4b34f3dd2bcb5c6846a26d2)) (@StarpTech)
+
 ## [0.214.1](https://github.com/wundergraph/cosmo/compare/router@0.214.0...router@0.214.1) (2025-05-23)
 
 ### Bug Fixes

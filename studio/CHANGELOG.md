@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.118.1](https://github.com/wundergraph/cosmo/compare/studio@0.118.0...studio@0.118.1) (2025-05-26)
+
+### Bug Fixes
+
+* error caused by `useCheckUserAccess` ([#1896](https://github.com/wundergraph/cosmo/issues/1896)) ([40d1167](https://github.com/wundergraph/cosmo/commit/40d116784b917fae801a5d5743963e2fe430401b)) (@wilsonrivera)
+
 # [0.118.0](https://github.com/wundergraph/cosmo/compare/studio@0.117.0...studio@0.118.0) (2025-05-25)
 
 ### Features
