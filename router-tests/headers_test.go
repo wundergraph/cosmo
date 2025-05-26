@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"testing"
@@ -629,5 +630,339 @@ func TestForwardRenamedHeaders(t *testing.T) {
 				})
 			}
 		})
+	})
+
+	t.Run("Verify forwarding based on expressions", func(t *testing.T) {
+		applyRule := func(typeRules string, rule *config.GlobalHeaderRule) config.HeaderRules {
+			headerRules := config.HeaderRules{}
+
+			switch typeRules {
+			case "all":
+				headerRules.All = rule
+			case "subgraph":
+				headerRules.Subgraphs = map[string]*config.GlobalHeaderRule{
+					"test1": rule,
+				}
+			}
+
+			return headerRules
+		}
+
+		testCases := []string{"subgraph", "all"}
+
+		for _, typeRules := range testCases {
+			t.Run(fmt.Sprintf("when expression evaluates to true for %s", typeRules), func(t *testing.T) {
+				t.Parallel()
+
+				header1, value1 := "header1", "value1"
+				header2, value2 := "header2", "value2"
+
+				headerRules := applyRule(typeRules, &config.GlobalHeaderRule{
+					Request: []*config.RequestHeaderRule{
+						{
+							Operation:  config.HeaderRuleOperationPropagate,
+							Expression: "true",
+						},
+					},
+				})
+
+				testenv.Run(t, &testenv.Config{
+					ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+						cfg.WebSocketClientReadTimeout = time.Millisecond * 10
+					},
+					RouterOptions: []core.Option{
+						core.WithHeaderRules(headerRules),
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Header: http.Header{
+							header1: []string{value1},
+							header2: []string{value2},
+						},
+						Query: `query { val1: headerValue(name:"` + header1 + `"), val2: headerValue(name:"` + header2 + `") }`,
+					})
+					require.Equal(t, `{"data":{"val1":"`+value1+`","val2":"`+value2+`"}}`, res.Body)
+				})
+			})
+
+			t.Run(fmt.Sprintf("when expression evaluates to false for %s", typeRules), func(t *testing.T) {
+				t.Parallel()
+
+				header1, value1 := "header1", "value1"
+				header2, value2 := "header2", "value2"
+
+				headerRules := applyRule(typeRules, &config.GlobalHeaderRule{
+					Request: []*config.RequestHeaderRule{
+						{
+							Operation:  config.HeaderRuleOperationPropagate,
+							Expression: "false",
+						},
+					},
+				})
+
+				testenv.Run(t, &testenv.Config{
+					ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+						cfg.WebSocketClientReadTimeout = time.Millisecond * 10
+					},
+					RouterOptions: []core.Option{
+						core.WithHeaderRules(headerRules),
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Header: http.Header{
+							header1: []string{value1},
+							header2: []string{value2},
+						},
+						Query: `query { val1: headerValue(name:"` + header1 + `"), val2: headerValue(name:"` + header2 + `") }`,
+					})
+					require.Equal(t, `{"data":{"val1":"","val2":""}}`, res.Body)
+				})
+			})
+
+			t.Run(fmt.Sprintf("when expression evaluates to false with `default` for %s", typeRules), func(t *testing.T) {
+				t.Parallel()
+
+				header1, value1 := "header1", ""
+				header2, value2 := "header2", "value2"
+				renameHeader := "header1a"
+				defaultValue := "defaultValue"
+
+				headerRules := applyRule(typeRules, &config.GlobalHeaderRule{
+					Request: []*config.RequestHeaderRule{
+						{
+							Operation:  config.HeaderRuleOperationPropagate,
+							Rename:     renameHeader,
+							Default:    defaultValue,
+							Expression: "GetCurrentHeader() == '" + http.CanonicalHeaderKey(header1) + "'",
+						},
+					},
+				})
+
+				testenv.Run(t, &testenv.Config{
+					ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+						cfg.WebSocketClientReadTimeout = time.Millisecond * 10
+					},
+					RouterOptions: []core.Option{
+						core.WithHeaderRules(headerRules),
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Header: http.Header{
+							header1: []string{value1},
+							header2: []string{value2},
+						},
+						Query: `query { val1: headerValue(name:"` + renameHeader + `"), val2: headerValue(name:"` + header2 + `") }`,
+					})
+					require.Equal(t, `{"data":{"val1":"`+defaultValue+`","val2":""}}`, res.Body)
+				})
+			})
+
+			t.Run(fmt.Sprintf("when expression filters out partial headers via current header name for %s", typeRules), func(t *testing.T) {
+				t.Parallel()
+
+				t.Run("non canonicalized header name", func(t *testing.T) {
+					t.Parallel()
+
+					header1, value1 := "header1", "value1"
+					header2, value2 := "header2", "value2"
+					header3, value3 := "header3", "value3"
+
+					headerRules := applyRule(typeRules, &config.GlobalHeaderRule{
+						Request: []*config.RequestHeaderRule{
+							{
+								Operation:  config.HeaderRuleOperationPropagate,
+								Expression: `GetCurrentHeader() != '` + header2 + `'`,
+							},
+						},
+					})
+
+					testenv.Run(t, &testenv.Config{
+						ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+							cfg.WebSocketClientReadTimeout = time.Millisecond * 10
+						},
+						RouterOptions: []core.Option{
+							core.WithHeaderRules(headerRules),
+						},
+					}, func(t *testing.T, xEnv *testenv.Environment) {
+
+						res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+							Header: http.Header{
+								header1: []string{value1},
+								header2: []string{value2},
+								header3: []string{value3},
+							},
+							Query: `query {
+							val1: headerValue(name:"` + header1 + `")
+							val2: headerValue(name:"` + header2 + `")
+							val3: headerValue(name:"` + header3 + `")
+						}`,
+						})
+						require.Equal(t, `{"data":{"val1":"`+value1+`","val2":"`+value2+`","val3":"`+value3+`"}}`, res.Body)
+					})
+				})
+
+				t.Run("canonicalized header name", func(t *testing.T) {
+					t.Parallel()
+
+					header1, value1 := "header-name-1", "value1"
+					header2, value2 := "header-name-2", "value2"
+					header3, value3 := "header-name-3", "value3"
+
+					headerRules := applyRule(typeRules, &config.GlobalHeaderRule{
+						Request: []*config.RequestHeaderRule{
+							{
+								Operation:  config.HeaderRuleOperationPropagate,
+								Expression: `GetCurrentHeader() != '` + http.CanonicalHeaderKey(header2) + `'`,
+							},
+						},
+					})
+					testenv.Run(t, &testenv.Config{
+						ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+							cfg.WebSocketClientReadTimeout = time.Millisecond * 10
+						},
+						RouterOptions: []core.Option{
+							core.WithHeaderRules(headerRules),
+						},
+					}, func(t *testing.T, xEnv *testenv.Environment) {
+
+						res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+							Header: http.Header{
+								header1: []string{value1},
+								header2: []string{value2},
+								header3: []string{value3},
+							},
+							Query: `query {
+							val1: headerValue(name:"` + http.CanonicalHeaderKey(header1) + `")
+							val2: headerValue(name:"` + http.CanonicalHeaderKey(header2) + `")
+							val3: headerValue(name:"` + http.CanonicalHeaderKey(header3) + `")
+						}`,
+						})
+						require.Equal(t, `{"data":{"val1":"`+value1+`","val2":"","val3":"`+value3+`"}}`, res.Body)
+					})
+				})
+			})
+
+			t.Run(fmt.Sprintf("when expression filters out partial headers via current header value for %s", typeRules), func(t *testing.T) {
+				t.Parallel()
+
+				sharedVal := "valueNewer"
+				header1, value1 := "header1", "value1"
+				header2, value2 := "header2", sharedVal
+				header3, value3 := "header3", sharedVal
+
+				headerRules := applyRule(typeRules, &config.GlobalHeaderRule{
+					Request: []*config.RequestHeaderRule{
+						{
+							Operation:  config.HeaderRuleOperationPropagate,
+							Expression: `request.header.Get(GetCurrentHeader()) != '` + sharedVal + `'`,
+						},
+					},
+				})
+				testenv.Run(t, &testenv.Config{
+					ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+						cfg.WebSocketClientReadTimeout = time.Millisecond * 10
+					},
+					RouterOptions: []core.Option{
+						core.WithHeaderRules(headerRules),
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Header: http.Header{
+							header1: []string{value1},
+							header2: []string{value2},
+							header3: []string{value3},
+						},
+						Query: `query {
+							val1: headerValue(name:"` + header1 + `")
+							val2: headerValue(name:"` + header2 + `")
+							val3: headerValue(name:"` + header3 + `")
+						}`,
+					})
+					require.Equal(t, `{"data":{"val1":"`+value1+`","val2":"","val3":""}}`, res.Body)
+				})
+			})
+
+			t.Run(fmt.Sprintf("ws with a filtered value for %s", typeRules), func(t *testing.T) {
+				t.Parallel()
+
+				header1, value1 := "Barista", "bar"
+
+				headerRules := applyRule(typeRules, &config.GlobalHeaderRule{
+					Request: []*config.RequestHeaderRule{
+						{
+							Operation:  config.HeaderRuleOperationPropagate,
+							Expression: "false",
+						},
+					},
+				})
+
+				testenv.Run(t, &testenv.Config{
+					ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+						cfg.WebSocketClientReadTimeout = time.Millisecond * 10
+					},
+					RouterOptions: []core.Option{
+						core.WithHeaderRules(headerRules),
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+
+					header := http.Header{
+						"barista": []string{value1},
+					}
+					conn := xEnv.InitGraphQLWebSocketConnection(header, nil, nil)
+					err := conn.WriteJSON(&testenv.WebSocketMessage{
+						ID:      "1",
+						Type:    "subscribe",
+						Payload: []byte(`{"query": "subscription { headerValue(name:\"` + header1 + `\", repeat:3) { value }}"}`),
+					})
+					require.NoError(t, err)
+					var msg testenv.WebSocketMessage
+					err = conn.ReadJSON(&msg)
+					require.NoError(t, err)
+					require.JSONEq(t, `{"data":{"headerValue":{"value":""}}}`, string(msg.Payload))
+				})
+			})
+
+			t.Run(fmt.Sprintf("ws with non filtered value for %s", typeRules), func(t *testing.T) {
+				t.Parallel()
+
+				header1, value1 := "Barista", "bar"
+
+				headerRules := applyRule(typeRules, &config.GlobalHeaderRule{
+					Request: []*config.RequestHeaderRule{
+						{
+							Operation:  config.HeaderRuleOperationPropagate,
+							Expression: "GetCurrentHeader() == '" + header1 + "'",
+						},
+					},
+				})
+
+				testenv.Run(t, &testenv.Config{
+					ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+						cfg.WebSocketClientReadTimeout = time.Millisecond * 10
+					},
+					RouterOptions: []core.Option{
+						core.WithHeaderRules(headerRules),
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+
+					header := http.Header{
+						"barista": []string{value1},
+					}
+					conn := xEnv.InitGraphQLWebSocketConnection(header, nil, nil)
+					err := conn.WriteJSON(&testenv.WebSocketMessage{
+						ID:      "1",
+						Type:    "subscribe",
+						Payload: []byte(`{"query": "subscription { headerValue(name:\"` + header1 + `\", repeat:3) { value }}"}`),
+					})
+					require.NoError(t, err)
+					var msg testenv.WebSocketMessage
+					err = conn.ReadJSON(&msg)
+					require.NoError(t, err)
+					require.JSONEq(t, `{"data":{"headerValue":{"value":"`+value1+`"}}}`, string(msg.Payload))
+				})
+			})
+		}
 	})
 }
