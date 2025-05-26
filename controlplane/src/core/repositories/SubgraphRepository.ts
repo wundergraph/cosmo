@@ -583,7 +583,7 @@ export class SubgraphRepository {
    * @private
    */
   private applyRbacConditionsToQuery(rbac: RBACEvaluator | undefined, conditions: (SQL<unknown> | undefined)[]) {
-    if (!rbac || rbac.isOrganizationViewer) {
+    if (!rbac || rbac.isOrganizationViewer || (rbac.isApiKey && rbac.groups.length === 0)) {
       return true;
     }
 
