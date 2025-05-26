@@ -38,7 +38,7 @@ export class RBACEvaluator {
   constructor(
     readonly groups: Omit<OrganizationGroupDTO, 'membersCount' | 'apiKeysCount'>[],
     private readonly userId?: string,
-    private readonly isApiKey?: boolean,
+    readonly isApiKey?: boolean,
   ) {
     const flattenRules = groups.flatMap((group) => group.rules);
     const rulesGroupedByRole = Object.groupBy(flattenRules, (rule) => rule.role);
@@ -78,6 +78,11 @@ export class RBACEvaluator {
   }
 
   hasNamespaceReadAccess(namespace: Namespace) {
+    if (this.isApiKey && this.groups.length === 0) {
+      // When using an API without a group, fallback to always allow (legacy implementation)
+      return true;
+    }
+
     return this.isOrganizationViewer || this.checkNamespaceAccess(namespace, ['namespace-admin', 'namespace-viewer']);
   }
 
@@ -94,7 +99,12 @@ export class RBACEvaluator {
   }
 
   hasFeatureFlagReadAccess(featureFlag: FeatureFlag) {
-    return this.isOrganizationViewer;
+    if (this.isApiKey && this.groups.length === 0) {
+      // When using an API without a group, fallback to always allow (legacy implementation)
+      return true;
+    }
+
+    return this.isOrganizationViewer || (this.groups.length === 0 && this.isApiKey);
   }
 
   canCreateFederatedGraph(namespace: Namespace) {
@@ -138,6 +148,11 @@ export class RBACEvaluator {
   }
 
   hasFederatedGraphReadAccess(graph: Target) {
+    if (this.isApiKey && this.groups.length === 0) {
+      // When using an API without a group, fallback to always allow (legacy implementation)
+      return true;
+    }
+
     return this.isOrganizationViewer || this.checkTargetAccess(graph, ['graph-admin', 'graph-viewer']);
   }
 
@@ -188,6 +203,11 @@ export class RBACEvaluator {
   }
 
   hasSubGraphReadAccess(graph: Target) {
+    if (this.isApiKey && this.groups.length === 0) {
+      // When using an API without a group, fallback to always allow (legacy implementation)
+      return true;
+    }
+
     return this.isOrganizationViewer || this.hasSubGraphWriteAccess(graph);
   }
 
