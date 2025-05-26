@@ -67,8 +67,8 @@ func (p *PubSubProviderBuilder) Providers(ids []string) ([]datasource.PubSubProv
 
 func (p *PubSubProviderBuilder) EngineEventConfigurations(in *nodev1.DataSourceConfiguration) []datasource.EngineEventConfiguration {
 	natsData := make([]datasource.EngineEventConfiguration, 0, len(in.GetCustomEvents().GetNats()))
-	for _, kafkaEvent := range in.GetCustomEvents().GetNats() {
-		natsData = append(natsData, kafkaEvent)
+	for _, natsEvent := range in.GetCustomEvents().GetNats() {
+		natsData = append(natsData, natsEvent)
 	}
 
 	return natsData
