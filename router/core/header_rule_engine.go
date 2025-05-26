@@ -485,7 +485,7 @@ func (h *HeaderPropagation) applyRequestRule(ctx RequestContext, request *http.R
 	}
 
 	/**
-	 * Matching based on regex
+	 * Matching based on regex and template expressions
 	 */
 
 	var regex *regexp.Regexp
@@ -493,77 +493,76 @@ func (h *HeaderPropagation) applyRequestRule(ctx RequestContext, request *http.R
 		regex = matchRegex
 	}
 
-	// Note that both of these values cannot be present together but we handle this on startup
+	// Note that both of these values cannot be present together, but we handle this on startup
 	if regex == nil && rule.Expression == "" {
 		// Exit early if none of the values were found
 		return
 	}
 
 	for name := range ctx.Request().Header {
-		if regex != nil {
-			// Headers are case-insensitive, but Go canonicalize them
-			// Issue: https://github.com/golang/go/issues/37834
-			if regex.MatchString(name) {
+		if h.isApplyHeader(rule, reqCtx, name, regex) {
+			/**
+			 *	Rename the header before propagating and delete the original
+			 */
+			if rule.Rename != "" && rule.Named == "" {
 
-				/**
-				 *	Rename the header before propagating and delete the original
-				 */
-				if rule.Rename != "" && rule.Named == "" {
-
-					if slices.Contains(ignoredHeaders, rule.Rename) {
-						continue
-					}
-
-					value := ctx.Request().Header.Get(name)
-					if value != "" {
-						request.Header.Set(rule.Rename, ctx.Request().Header.Get(name))
-						request.Header.Del(name)
-					} else if rule.Default != "" {
-						request.Header.Set(rule.Rename, rule.Default)
-						request.Header.Del(name)
-					}
-
+				if slices.Contains(ignoredHeaders, rule.Rename) {
 					continue
 				}
 
-				/**
-				 *	Propagate the header as is
-				 */
-				if slices.Contains(ignoredHeaders, name) {
-					continue
+				value := ctx.Request().Header.Get(name)
+				if value != "" {
+					request.Header.Set(rule.Rename, ctx.Request().Header.Get(name))
+					request.Header.Del(name)
+				} else if rule.Default != "" {
+					request.Header.Set(rule.Rename, rule.Default)
+					request.Header.Del(name)
 				}
-				request.Header.Set(name, ctx.Request().Header.Get(name))
-			}
-			continue
-		}
 
-		if rule.Expression != "" {
-			if reqCtx == nil {
 				continue
 			}
 
-			// TODO: Figure out if we are keeping this
-			exprCtx := reqCtx.expressionContext
-			exprCtx.Request.Header.CurrentHeader = name
-
-			addHeaderAny, err := h.getRequestRuleExpressionValue(rule, exprCtx, rule.Operation)
-			if err != nil {
-				reqCtx.logger.Error("error occurred while evaluating expression", zap.String("expression", rule.Expression), zap.Error(err))
+			/**
+			 *	Propagate the header as is
+			 */
+			if slices.Contains(ignoredHeaders, name) {
 				continue
-			} else {
-				addHeader, ok := addHeaderAny.(bool)
-				if !ok {
-					reqCtx.logger.Error("non bool value when evaluating expression", zap.String("expression", rule.Expression), zap.Any("value", addHeaderAny))
-					continue
-				}
-				if addHeader {
-					request.Header.Set(name, ctx.Request().Header.Get(name))
-				}
 			}
-			continue
+			request.Header.Set(name, ctx.Request().Header.Get(name))
 		}
-
 	}
+}
+
+func (h *HeaderPropagation) isApplyHeader(rule *config.RequestHeaderRule, reqCtx *requestContext, headerName string, regex *regexp.Regexp) bool {
+	if regex != nil {
+		// Headers are case-insensitive, but Go canonicalize them
+		// Issue: https://github.com/golang/go/issues/37834
+		return regex.MatchString(headerName)
+	}
+
+	if rule.Expression != "" {
+		if reqCtx == nil {
+			return false
+		}
+
+		// TODO: Figure out if we are keeping this
+		exprCtx := reqCtx.expressionContext
+		exprCtx.Request.Header.CurrentHeader = headerName
+
+		addHeaderAny, err := h.getRequestRuleExpressionValue(rule, exprCtx, rule.Operation)
+		if err != nil {
+			reqCtx.logger.Error("error occurred while evaluating expression", zap.String("expression", rule.Expression), zap.Error(err))
+			return false
+		} else {
+			addHeader, ok := addHeaderAny.(bool)
+			if !ok {
+				reqCtx.logger.Error("non bool value when evaluating expression", zap.String("expression", rule.Expression), zap.Any("value", addHeaderAny))
+				return false
+			}
+			return addHeader
+		}
+	}
+	return false
 }
 
 func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *http.Response, propagation *responseHeaderPropagation, rule *config.ResponseHeaderRule) {

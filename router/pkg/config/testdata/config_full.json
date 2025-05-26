@@ -170,57 +170,68 @@
       "Request": [
         {
           "Operation": "propagate",
+          "Expression": "",
           "Matching": "",
           "Named": "X-Test-Header",
           "Rename": "",
           "Default": "",
           "Name": "",
           "Value": "",
-          "Expression": "",
           "ValueFrom": null
         },
         {
           "Operation": "propagate",
+          "Expression": "",
           "Matching": "(?i)^X-Custom-.*",
           "Named": "",
           "Rename": "",
           "Default": "",
           "Name": "",
           "Value": "",
-          "Expression": "",
           "ValueFrom": null
         },
         {
           "Operation": "propagate",
+          "Expression": "",
           "Matching": "",
           "Named": "X-User-Id",
           "Rename": "",
           "Default": "123",
           "Name": "",
           "Value": "",
-          "Expression": "",
+          "ValueFrom": null
+        },
+        {
+          "Operation": "propagate",
+          "Expression": "request.header.currentHeader != 'X-Header'",
+          "Matching": "",
+          "Named": "",
+          "Rename": "",
+          "Default": "",
+          "Name": "",
+          "Value": "",
           "ValueFrom": null
         },
         {
           "Operation": "set",
+          "Expression": "",
           "Matching": "",
           "Named": "",
           "Rename": "",
           "Default": "",
           "Name": "X-API-Key",
           "Value": "some-secret",
-          "Expression": "",
           "ValueFrom": null
         },
         {
           "Operation": "set",
+          "Expression": "",
           "Matching": "",
           "Named": "",
           "Rename": "",
           "Default": "",
           "Name": "x-operation-name",
           "Value": "",
-          "Expression": "",
           "ValueFrom": {
             "RequestHeader": "",
             "ContextField": "operation_name",
@@ -230,13 +241,13 @@
         },
         {
           "Operation": "set",
+          "Expression": "request.header.Get('X-Operation-Name')",
           "Matching": "",
           "Named": "",
           "Rename": "",
           "Default": "",
           "Name": "x-expression-header",
           "Value": "",
-          "Expression": "request.header.Get('X-Operation-Name')",
           "ValueFrom": null
         }
       ],
@@ -258,13 +269,13 @@
         "Request": [
           {
             "Operation": "propagate",
+            "Expression": "",
             "Matching": "",
             "Named": "Subgraph-Secret",
             "Rename": "",
             "Default": "some-secret",
             "Name": "",
             "Value": "",
-            "Expression": "",
             "ValueFrom": null
           }
         ],

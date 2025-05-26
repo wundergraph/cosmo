@@ -232,16 +232,23 @@ headers:
       - op: 'propagate'
         named: 'X-User-Id'
         default: '123' # Set the value when the header was not set
+
+      - op: 'propagate'
+        expression: "request.header.currentHeader != 'X-Header'"
+
       - op: 'set'
         name: 'X-API-Key'
         value: 'some-secret'
+
       - op: 'set'
         name: 'x-operation-name'
         value_from:
           context_field: 'operation_name'
+
       - op: 'set'
         name: 'x-expression-header'
         expression: "request.header.Get('X-Operation-Name')"
+
     response:
       - op: 'propagate'
         algorithm: 'append'
