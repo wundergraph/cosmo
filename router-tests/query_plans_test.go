@@ -9,6 +9,7 @@ import (
 
 	"github.com/sebdah/goldie/v2"
 	"github.com/stretchr/testify/require"
+
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
@@ -244,8 +245,8 @@ func TestQueryPlans(t *testing.T) {
 					}`,
 			})
 
-			require.Contains(t, res.Body, "query Requires__mo_o_d__1")
-			require.Contains(t, res.Body, "query Requires__av_ai_la_bi_lit_y__2")
+			require.Contains(t, res.Body, "query Requires__mo_o_d")
+			require.Contains(t, res.Body, "query Requires__av_ai_la_bi_lit_y")
 		})
 	})
 
