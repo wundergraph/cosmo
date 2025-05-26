@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.215.0](https://github.com/wundergraph/cosmo/compare/router@0.214.2...router@0.215.0) (2025-05-26)
+
+### Bug Fixes
+
+* **mcp:** rollback mcp library upgrade due to protocol support ([#1900](https://github.com/wundergraph/cosmo/issues/1900)) ([20c0959](https://github.com/wundergraph/cosmo/commit/20c09593f76b4586a919332a12adb83fbe6b9ab4)) (@StarpTech)
+
+### Features
+
+* add posthog to router ([#1882](https://github.com/wundergraph/cosmo/issues/1882)) ([27b4451](https://github.com/wundergraph/cosmo/commit/27b44514b2e13b815d0dd581fcd7edd65a0e8db0)) (@jensneuse)
+
 ## [0.214.2](https://github.com/wundergraph/cosmo/compare/router@0.214.1...router@0.214.2) (2025-05-26)
 
 ### Bug Fixes
