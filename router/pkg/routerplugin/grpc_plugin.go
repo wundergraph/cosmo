@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/hashicorp/go-plugin"
 	"go.uber.org/zap"
@@ -15,6 +15,7 @@ import (
 )
 
 type GRPCPluginConfig struct {
+	Logger        *zap.Logger
 	PluginPath    string
 	PluginName    string
 	PluginCommand []string
@@ -24,35 +25,30 @@ type GRPCPlugin struct {
 	plugin.Plugin
 	plugin.GRPCPlugin
 
+	logger *zap.Logger
+
 	done     chan struct{}
-	mu       *sync.Mutex
+	mu       sync.RWMutex
 	disposed atomic.Bool
 
 	pluginPath    string
 	pluginName    string
 	pluginCommand []string
 
-	cp *GRPCPluginClient
+	client *GRPCPluginClient
 }
-
-// GetClient implements Plugin.
-func (s *GRPCPlugin) GetClient() grpc.ClientConnInterface {
-	if s.cp == nil {
-		return nil
-	}
-
-	return s.cp.cc
-}
-
-var _ Plugin = &GRPCPlugin{}
-
-var _ plugin.GRPCPlugin = &GRPCPlugin{}
 
 func NewGRPCPlugin(config GRPCPluginConfig) (*GRPCPlugin, error) {
+	if config.Logger == nil {
+		config.Logger = zap.NewNop()
+	}
+
 	return &GRPCPlugin{
 		done:     make(chan struct{}),
-		mu:       &sync.Mutex{},
+		mu:       sync.RWMutex{},
 		disposed: atomic.Bool{},
+
+		logger: config.Logger,
 
 		pluginPath:    config.PluginPath,
 		pluginName:    config.PluginName,
@@ -60,57 +56,65 @@ func NewGRPCPlugin(config GRPCPluginConfig) (*GRPCPlugin, error) {
 	}, nil
 }
 
-// Name implements Plugin.
-func (s *GRPCPlugin) Name() string {
-	return s.pluginName
-}
-
-// Start implements Plugin.
-func (s *GRPCPlugin) Start(ctx context.Context, logger *zap.Logger) error {
-	if logger == nil {
-		logger = zap.NewNop()
+// GetClient implements Plugin.
+func (p *GRPCPlugin) GetClient() grpc.ClientConnInterface {
+	if p.client == nil {
+		return nil
 	}
 
-	go func() {
-		select {
-		case <-ctx.Done():
-			err := s.Stop()
-			if err != nil {
-				logger.Error("failed to stop plugin", zap.Error(err))
-			}
-		case <-s.done:
-			return
-		}
-	}()
+	return p.client
+}
 
-	filePath, err := s.validatePluginPath()
+func (p *GRPCPlugin) handlePluginExit() {
+	if p.client.IsPluginProcessExited() {
+		if err := p.fork(); err != nil {
+			p.logger.Error("failed to restart plugin", zap.Error(err))
+		}
+	}
+}
+
+func (p *GRPCPlugin) fork() error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if p.client != nil {
+		p.client.Close()
+	}
+
+	filePath, err := p.validatePluginPath()
 	if err != nil {
 		return fmt.Errorf("failed to validate plugin path: %w", err)
 	}
 
-	// 2. Start the plugin
 	handshakeConfig := plugin.HandshakeConfig{
 		ProtocolVersion:  1,
 		MagicCookieKey:   "GRPC_DATASOURCE_PLUGIN",
 		MagicCookieValue: "GRPC_DATASOURCE_PLUGIN",
 	}
 
+	pluginCmd := newPluginCommand(filePath)
+
 	pluginClient := plugin.NewClient(&plugin.ClientConfig{
-		Cmd:              exec.Command(filePath),
+		Cmd:              pluginCmd,
 		AllowedProtocols: []plugin.Protocol{plugin.ProtocolGRPC},
 		HandshakeConfig:  handshakeConfig,
-		Logger:           NewPluginLogger(logger),
+		Logger:           NewPluginLogger(p.logger),
 		Plugins: map[string]plugin.Plugin{
-			s.pluginName: s,
+			p.pluginName: p,
+		},
+		Reattach: &plugin.ReattachConfig{
+			Protocol: "stdio",
+			Pid:      os.Getpid(),
+			Addr:     plugin.DefaultAddr,
 		},
 	})
 
-	cp, err := pluginClient.Client()
+	clientProtocol, err := pluginClient.Client()
 	if err != nil {
-		return fmt.Errorf("failed to create plugin client: %w", err)
+		return fmt.Errorf("failed to create plugin client protocol: %w", err)
 	}
 
-	rawClient, err := cp.Dispense(s.pluginName)
+	rawClient, err := clientProtocol.Dispense(p.pluginName)
 	if err != nil {
 		return fmt.Errorf("failed to dispense plugin: %w", err)
 	}
@@ -120,43 +124,94 @@ func (s *GRPCPlugin) Start(ctx context.Context, logger *zap.Logger) error {
 		return fmt.Errorf("plugin does not implement grpc.ClientConnInterface")
 	}
 
-	s.cp, err = newGRPCPluginClient(pluginClient, grpcClient)
-	if err != nil {
-		return fmt.Errorf("failed to create grpc plugin client: %w", err)
+	if p.client == nil {
+		// first time we start the plugin, we need to create a new client
+		p.client, err = newGRPCPluginClient(pluginClient, grpcClient)
+		if err != nil {
+			return fmt.Errorf("failed to create grpc plugin client: %w", err)
+		}
+		return nil
 	}
+
+	// if the plugin is already running, we need to update the client
+	p.client.pc = pluginClient
+	p.client.cc = grpcClient
+
+	return nil
+
+}
+
+// Name implements Plugin.
+func (p *GRPCPlugin) Name() string {
+	return p.pluginName
+}
+
+// Start implements Plugin.
+func (p *GRPCPlugin) Start(ctx context.Context, logger *zap.Logger) error {
+	if logger == nil {
+		logger = zap.NewNop()
+	}
+
+	go func() {
+		select {
+		case <-ctx.Done():
+			err := p.Stop()
+			if err != nil {
+				logger.Error("failed to stop plugin", zap.Error(err))
+			}
+		case <-p.done:
+			return
+		}
+	}()
+
+	if err := p.fork(); err != nil {
+		return fmt.Errorf("failed to start plugin process: %w", err)
+	}
+
+	go func() {
+		for {
+			select {
+			case <-p.done:
+				return
+			default:
+				p.handlePluginExit()
+				time.Sleep(time.Second * 2)
+			}
+		}
+	}()
 
 	return nil
 }
 
 // Stop implements Plugin.
-func (s *GRPCPlugin) Stop() error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (p *GRPCPlugin) Stop() error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
 
-	if s.disposed.Load() {
+	if p.disposed.Load() {
 		return nil
 	}
 
 	var retErr error
-	if s.cp != nil {
-		if err := s.cp.Close(); err != nil {
+	if p.client != nil {
+		if err := p.client.Close(); err != nil {
 			retErr = errors.Join(retErr, err)
 		}
 	}
 
-	s.disposed.Store(true)
+	p.disposed.Store(true)
 
-	close(s.done)
+	close(p.done)
 	return retErr
 }
 
 // GRPCClient implements plugin.GRPCPlugin.
-func (s *GRPCPlugin) GRPCClient(ctx context.Context, broker *plugin.GRPCBroker, conn *grpc.ClientConn) (interface{}, error) {
+func (p *GRPCPlugin) GRPCClient(ctx context.Context, broker *plugin.GRPCBroker, conn *grpc.ClientConn) (interface{}, error) {
 	return conn, nil
 }
 
-func (s *GRPCPlugin) validatePluginPath() (string, error) {
-	filePath := s.pluginPath
+func (p *GRPCPlugin) validatePluginPath() (string, error) {
+	filePath := p.pluginPath
 	info, err := os.Stat(filePath)
 	if err != nil {
 		return "", fmt.Errorf("failed to stat plugin: %w", err)

@@ -15,6 +15,7 @@ var ServiceProjects = []*projects.Project{
 			{Id: 2},
 			{Id: 3},
 		},
+		MilestoneIds: []string{"1", "2", "3"},
 	},
 	{
 		Id:          "2",
@@ -27,6 +28,7 @@ var ServiceProjects = []*projects.Project{
 			{Id: 7},
 			{Id: 8},
 		},
+		MilestoneIds: []string{"4", "5", "6"},
 	},
 	{
 		Id:          "3",
@@ -51,6 +53,7 @@ var ServiceProjects = []*projects.Project{
 			{Id: 1},
 			{Id: 4},
 		},
+		MilestoneIds: []string{},
 	},
 	{
 		Id:          "5",
@@ -63,6 +66,7 @@ var ServiceProjects = []*projects.Project{
 			{Id: 2},
 			{Id: 10},
 		},
+		MilestoneIds: []string{},
 	},
 	{
 		Id:          "6",
@@ -75,6 +79,7 @@ var ServiceProjects = []*projects.Project{
 			{Id: 3},
 			{Id: 11},
 		},
+		MilestoneIds: []string{"1", "4", "5", "6"},
 	},
 	{
 		Id:          "7",
@@ -87,5 +92,6 @@ var ServiceProjects = []*projects.Project{
 			{Id: 5},
 			{Id: 12},
 		},
+		MilestoneIds: []string{"1", "2", "3", "4", "5", "6"},
 	},
 }

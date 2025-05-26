@@ -1357,11 +1357,10 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		routerOpts = append(routerOpts, core.WithMCP(testConfig.MCP))
 	}
 
-	if testConfig.Plugins.Enabled {
-		routerOpts = append(routerOpts, core.WithPlugins(config.PluginsConfiguration{
-			Path: testConfig.Plugins.Path,
-		}))
-	}
+	routerOpts = append(routerOpts, core.WithPlugins(config.PluginsConfiguration{
+		Path:    testConfig.Plugins.Path,
+		Enabled: testConfig.Plugins.Enabled,
+	}))
 
 	if testConfig.TraceExporter != nil {
 		testConfig.PropagationConfig.TraceContext = true

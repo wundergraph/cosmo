@@ -11,6 +11,10 @@ type Query {
   project(id: ID!): Project
   projectStatuses: [ProjectStatus!]!
   projectsByStatus(status: ProjectStatus!): [Project!]!
+
+  # query to simulate that the service goes down
+  killService: Boolean!
+  panic: Boolean!
 }
 
 type Mutation {
@@ -35,6 +39,8 @@ type Project @key(fields: "id") {
   # Federated references:
   teamMembers: [Employee!]! 
   relatedProducts: [Product!]!  # from products subgraph
+  # Project milestones or checkpoints
+  milestoneIds: [String!]  # Array of milestone identifiers
 }
 
 enum ProjectStatus {

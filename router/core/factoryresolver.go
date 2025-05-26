@@ -10,11 +10,11 @@ import (
 	"slices"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/argument_templates"
-	"google.golang.org/grpc"
 
 	"github.com/buger/jsonparser"
 
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/routerplugin"
 
 	"github.com/jensneuse/abstractlogger"
 	"go.uber.org/zap"
@@ -58,7 +58,7 @@ type DefaultFactoryResolver struct {
 
 	httpClient          *http.Client
 	subgraphHTTPClients map[string]*http.Client
-	subgraphGRPCClients map[string]grpc.ClientConnInterface
+	pluginHost          *routerplugin.Host
 
 	factoryLogger abstractlogger.Logger
 }
@@ -69,7 +69,7 @@ func NewDefaultFactoryResolver(
 	subscriptionClientOptions *SubscriptionClientOptions,
 	baseTransport http.RoundTripper,
 	subgraphTransports map[string]http.RoundTripper,
-	subgraphGRPCClients map[string]grpc.ClientConnInterface,
+	pluginHost *routerplugin.Host,
 	log *zap.Logger,
 	enableSingleFlight bool,
 	enableNetPoll bool,
@@ -154,13 +154,16 @@ func NewDefaultFactoryResolver(
 
 		httpClient:          defaultHTTPClient,
 		subgraphHTTPClients: subgraphHTTPClients,
-		subgraphGRPCClients: subgraphGRPCClients,
+		pluginHost:          pluginHost,
 	}
 }
 
 func (d *DefaultFactoryResolver) ResolveGraphqlFactory(subgraphName string) (plan.PlannerFactory[graphql_datasource.Configuration], error) {
-	if grpcClient, ok := d.subgraphGRPCClients[subgraphName]; ok {
-		return graphql_datasource.NewFactoryGRPC(d.engineCtx, grpcClient)
+	if d.pluginHost != nil {
+		plugin, exists := d.pluginHost.GetPlugin(subgraphName)
+		if exists {
+			return graphql_datasource.NewFactoryGRPCClientProvider(d.engineCtx, plugin.GetClient)
+		}
 	}
 
 	if subgraphClient, ok := d.subgraphHTTPClients[subgraphName]; ok {
@@ -312,9 +315,6 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 			}
 
 		case nodev1.DataSourceKind_GRAPHQL:
-			if in.GetCustomGraphql().GetGrpc() != nil && !pluginsEnabled {
-				continue
-			}
 
 			header := http.Header{}
 			for s, httpHeader := range in.CustomGraphql.Fetch.Header {
@@ -428,6 +428,10 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 			factory, err := l.resolver.ResolveGraphqlFactory(dataSourceName)
 			if err != nil {
 				return nil, err
+			}
+
+			if in.GetCustomGraphql().GetGrpc() != nil && !pluginsEnabled {
+				factory = &routerplugin.FallbackFactory{}
 			}
 
 			out, err = plan.NewDataSourceConfigurationWithName[graphql_datasource.Configuration](
