@@ -81,7 +81,7 @@ export function getOperations(
       filters: req.clientName
         ? [
             new AnalyticsFilter({
-              field: 'ClientName',
+              field: 'clientName',
               operator: AnalyticsViewFilterOperator.EQUALS,
               value: req.clientName,
             }),
