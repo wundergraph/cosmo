@@ -55,6 +55,6 @@ func TestEventsConfig(t *testing.T) {
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			assert.Fail(t, "should not be called")
 		})
-		assert.ErrorContains(t, err, "failed to find Redis provider with ID")
+		assert.ErrorContains(t, err, "redis provider with ID my-redis is not defined")
 	})
 }
