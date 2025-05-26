@@ -6,6 +6,12 @@ import { lintCategories } from "./constants";
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
+
+export function clamp(value: number, min: number, max: number): number {
+  const result = Math.min(Math.max(value, min), max);
+  return Number.isNaN(result) ? min : result;
+}
+
 export const checkUserAccess = ({
   rolesToBe,
   userRoles,

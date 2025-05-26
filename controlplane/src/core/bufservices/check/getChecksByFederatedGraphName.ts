@@ -12,6 +12,8 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
+import { federatedGraphs } from '../../../db/schema.js';
 
 export function getChecksByFederatedGraphName(
   opts: RouterOptions,
@@ -39,6 +41,10 @@ export function getChecksByFederatedGraphName(
         checks: [],
         checksCountBasedOnDateRange: 0,
       };
+    }
+
+    if (!authContext.rbac.hasFederatedGraphReadAccess(federatedGraph)) {
+      throw new UnauthorizedError();
     }
 
     const breakingChangeRetention = await orgRepo.getFeature({

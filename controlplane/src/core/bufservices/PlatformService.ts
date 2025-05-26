@@ -12,6 +12,7 @@ import { getSubgraphMetrics } from './analytics/getSubgraphMetrics.js';
 import { getSubgraphMetricsErrorRate } from './analytics/getSubgraphMetricsErrorRate.js';
 import { getTrace } from './analytics/getTrace.js';
 import { createAPIKey } from './api-key/createAPIKey.js';
+import { updateAPIKey } from './api-key/updateAPIKey.js';
 import { deleteAPIKey } from './api-key/deleteAPIKey.js';
 import { getAPIKeys } from './api-key/getAPIKeys.js';
 import { createBillingPortalSession } from './billing/createBillingPortalSession.js';
@@ -102,6 +103,11 @@ import { deleteOrganization } from './organization/deleteOrganization.js';
 import { restoreOrganization } from './organization/restoreOrganization.js';
 import { getAuditLogs } from './organization/getAuditLogs.js';
 import { getOrganizationMembers } from './organization/getOrganizationMembers.js';
+import { createOrganizationGroup } from './organization/createOrganizationGroup.js';
+import { getOrganizationGroups } from './organization/getOrganizationGroups.js';
+import { getOrganizationGroupMembers } from './organization/getOrganizationGroupMembers.js';
+import { updateOrganizationGroup } from './organization/updateOrganizationGroup.js';
+import { deleteOrganizationGroup } from './organization/deleteOrganizationGroup.js';
 import { getPendingOrganizationMembers } from './organization/getPendingOrganizationMembers.js';
 import { isMemberLimitReached } from './organization/isMemberLimitReached.js';
 import { leaveOrganization } from './organization/leaveOrganization.js';
@@ -123,7 +129,6 @@ import { deleteOIDCProvider } from './sso/deleteOIDCProvider.js';
 import { getOIDCProvider } from './sso/getOIDCProvider.js';
 import { updateIDPMappers } from './sso/updateIDPMappers.js';
 import { addReadme } from './subgraph/addReadme.js';
-import { addSubgraphMember } from './subgraph/addSubgraphMember.js';
 import { checkSubgraphSchema } from './subgraph/checkSubgraphSchema.js';
 import { createFederatedSubgraph } from './subgraph/createFederatedSubgraph.js';
 import { deleteFederatedSubgraph } from './subgraph/deleteFederatedSubgraph.js';
@@ -136,7 +141,6 @@ import { getSubgraphSDLFromLatestComposition } from './subgraph/getSubgraphSDLFr
 import { getSubgraphs } from './subgraph/getSubgraphs.js';
 import { moveSubgraph } from './subgraph/moveSubgraph.js';
 import { publishFederatedSubgraph } from './subgraph/publishFederatedSubgraph.js';
-import { removeSubgraphMember } from './subgraph/removeSubgraphMember.js';
 import { updateSubgraph } from './subgraph/updateSubgraph.js';
 import { acceptOrDeclineInvitation } from './user/acceptOrDeclineInvitation.js';
 import { deleteUser } from './user/deleteUser.js';
@@ -146,7 +150,7 @@ import { getUserAccessibleResources } from './user/getUserAccessibleResources.js
 import { inviteUser } from './user/inviteUser.js';
 import { removeInvitation } from './user/removeInvitation.js';
 import { removeOrganizationMember } from './user/removeOrganizationMember.js';
-import { updateOrgMemberRole } from './user/updateOrgMemberRole.js';
+import { updateOrgMemberGroup } from './user/updateOrgMemberGroup.js';
 import { deleteCacheWarmerOperation } from './cache-warmer/deleteCacheWarmerOperation.js';
 import { setGraphRouterCompatibilityVersion } from './graph/setGraphRouterCompatibilityVersion.js';
 import { getOrganizationBySlug } from './organization/getOrganizationBySlug.js';
@@ -331,6 +335,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return createAPIKey(opts, req, ctx);
     },
 
+    updateAPIKey: (req, ctx) => {
+      return updateAPIKey(opts, req, ctx);
+    },
+
     deleteAPIKey: (req, ctx) => {
       return deleteAPIKey(opts, req, ctx);
     },
@@ -375,8 +383,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return updateOrganizationDetails(opts, req, ctx);
     },
 
-    updateOrgMemberRole: (req, ctx) => {
-      return updateOrgMemberRole(opts, req, ctx);
+    updateOrgMemberGroup: (req, ctx) => {
+      return updateOrgMemberGroup(opts, req, ctx);
     },
 
     deleteRouterToken: (req, ctx) => {
@@ -413,14 +421,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     updateFeatureSettings: (req, ctx) => {
       return updateFeatureSettings(opts, req, ctx);
-    },
-
-    addSubgraphMember: (req, ctx) => {
-      return addSubgraphMember(opts, req, ctx);
-    },
-
-    removeSubgraphMember: (req, ctx) => {
-      return removeSubgraphMember(opts, req, ctx);
     },
 
     addReadme: (req, ctx) => {
@@ -540,6 +540,26 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     getPendingOrganizationMembers: (req, ctx) => {
       return getPendingOrganizationMembers(opts, req, ctx);
+    },
+
+    createOrganizationGroup: (req, ctx) => {
+      return createOrganizationGroup(opts, req, ctx);
+    },
+
+    getOrganizationGroups: (req, ctx) => {
+      return getOrganizationGroups(opts, req, ctx);
+    },
+
+    getOrganizationGroupMembers: (req, ctx) => {
+      return getOrganizationGroupMembers(opts, req, ctx);
+    },
+
+    updateOrganizationGroup: (req, ctx) => {
+      return updateOrganizationGroup(opts, req, ctx);
+    },
+
+    deleteOrganizationGroup: (req, ctx) => {
+      return deleteOrganizationGroup(opts, req, ctx);
     },
 
     getAPIKeys: (req, ctx) => {

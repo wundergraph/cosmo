@@ -2,7 +2,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import * as schema from '../../db/schema.js';
-import { AuthorizationError } from '../errors/errors.js';
+import { AuthorizationError, UnauthorizedError } from '../errors/errors.js';
 import { ApiKeyRepository } from '../repositories/ApiKeyRepository.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
@@ -25,6 +25,7 @@ export class Authorization {
     graph,
     db,
     authContext,
+    isDeleteOperation,
   }: {
     headers: Headers;
     graph: {
@@ -33,9 +34,10 @@ export class Authorization {
     };
     db: PostgresJsDatabase<typeof schema>;
     authContext: AuthContext;
+    isDeleteOperation?: boolean;
   }) {
     const { targetId, targetType } = graph;
-    const { userId, organizationId, isAdmin } = authContext;
+    const { userId, organizationId } = authContext;
 
     const orgRepo = new OrganizationRepository(this.logger, db, this.defaultBillingPlanId);
     const fedRepo = new FederatedGraphRepository(this.logger, db, organizationId);
@@ -49,9 +51,57 @@ export class Authorization {
     if (!org) {
       throw new Error(`Organization ${organizationId} not found`);
     }
+
     if (org.deactivation) {
       throw new Error(`The organization is deactivated and is in read-only mode`);
     }
+
+    /**
+     * Here we check access permissions using the new RBAC system. The idea is that when the no group have been
+     * added to the user/api key performing the request, we'll fall back to how the authorization checks were made
+     * before.
+     *
+     * The RBAC instance we are using is created by:
+     *    - `ApiKeyAuthenticator`
+     *    - `AccessTokenAuthenticator`
+     *    - `Authentication`
+     */
+    const { rbac } = authContext;
+    if (rbac && rbac.groups.length > 0) {
+      if (rbac.isOrganizationAdminOrDeveloper) {
+        // When the client have the organization admin or developer roles, they are allowed to access any organization
+        // resource, we don't need to perform any additional validation
+        return;
+      }
+
+      if (targetType === 'federatedGraph') {
+        const federatedGraph = await fedRepo.byTargetId(targetId);
+        if (
+          federatedGraph &&
+          ((isDeleteOperation && rbac.canDeleteFederatedGraph(federatedGraph)) ||
+            (!isDeleteOperation && rbac.hasFederatedGraphWriteAccess(federatedGraph)))
+        ) {
+          return;
+        }
+
+        throw new UnauthorizedError();
+      } else if (targetType === 'subgraph') {
+        const subgraph = await subgraphRepo.byTargetId(targetId);
+        if (
+          subgraph &&
+          ((isDeleteOperation && rbac.canDeleteSubGraph(subgraph)) ||
+            (!isDeleteOperation && rbac.hasSubGraphWriteAccess(subgraph)))
+        ) {
+          return;
+        }
+
+        throw new UnauthorizedError();
+      }
+    }
+
+    /**
+     * Below this point is legacy fallback, in case we couldn't retrieve any group for the requesting client
+     */
 
     /**
      * We check if the organization has the rbac feature enabled.
@@ -76,13 +126,6 @@ export class Authorization {
         } else {
           throw new AuthorizationError(EnumStatusCode.ERROR_NOT_AUTHORIZED, 'Not authorized');
         }
-      }
-
-      /**
-       * An admin is authorized to perform all the actions even if RBAC is enabled.
-       */
-      if (isAdmin) {
-        return;
       }
 
       /**

@@ -2,30 +2,36 @@ import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
-  UpdateOrgMemberRoleRequest,
-  UpdateOrgMemberRoleResponse,
+  UpdateOrgMemberGroupRequest,
+  UpdateOrgMemberGroupResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { OidcRepository } from '../../repositories/OidcRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getHighestPriorityRole, getLogger, handleError } from '../../util.js';
-import type { MemberRole } from '../../../db/models.js';
+import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
-export function updateOrgMemberRole(
+export function updateOrgMemberGroup(
   opts: RouterOptions,
-  req: UpdateOrgMemberRoleRequest,
+  req: UpdateOrgMemberGroupRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<UpdateOrgMemberRoleResponse>> {
+): Promise<PlainMessage<UpdateOrgMemberGroupResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<UpdateOrgMemberRoleResponse>>(ctx, logger, async () => {
+  return handleError<PlainMessage<UpdateOrgMemberGroupResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
     const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
+    const orgGroupRepo = new OrganizationGroupRepository(opts.db);
     const oidcRepo = new OidcRepository(opts.db);
     const auditLogRepo = new AuditLogRepository(opts.db);
+
+    if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdmin) {
+      throw new UnauthorizedError();
+    }
 
     const org = await orgRepo.byId(authContext.organizationId);
     if (!org) {
@@ -33,6 +39,21 @@ export function updateOrgMemberRole(
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,
           details: `Organization not found`,
+        },
+      };
+    }
+
+    // fetch the group the member will be added to
+    const orgGroup = await orgGroupRepo.byId({
+      organizationId: authContext.organizationId,
+      groupId: req.groupId,
+    });
+
+    if (!orgGroup) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_NOT_FOUND,
+          details: `Group is not part of this organization`,
         },
       };
     }
@@ -52,17 +73,7 @@ export function updateOrgMemberRole(
       };
     }
 
-    // non admins cannot update the role of an org member
-    if (!user.roles.includes('admin')) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: 'User does not have the permissions to update the role of an organization member.',
-        },
-      };
-    }
-
-    // fetching the user whose role is being updated.
+    // fetching the user whose group is being updated.
     const orgMember = await orgRepo.getOrganizationMember({
       organizationID: authContext.organizationId,
       userID: req.orgMemberUserID,
@@ -73,6 +84,15 @@ export function updateOrgMemberRole(
         response: {
           code: EnumStatusCode.ERR,
           details: 'User is not a part of this organization.',
+        },
+      };
+    }
+
+    if (orgMember.rbac.groups.some((g) => g.groupId === orgGroup.groupId)) {
+      // The user is already a member of the provided group
+      return {
+        response: {
+          code: EnumStatusCode.OK,
         },
       };
     }
@@ -109,29 +129,18 @@ export function updateOrgMemberRole(
         return {
           response: {
             code: EnumStatusCode.ERR,
-            details: 'User has logged in using the OIDC provider. Please update the role using the provider.',
+            details: 'User has logged in using the OIDC provider. Please update the group using the provider.',
           },
         };
       }
     }
 
-    const organizationGroups = await opts.keycloakClient.client.groups.find({
-      max: 1,
-      search: org.slug,
-      realm: opts.keycloakRealm,
-      briefRepresentation: false,
-    });
-
-    if (organizationGroups.length === 0) {
-      throw new Error(`Organization group '${org.slug}' not found`);
-    }
-
-    const userRoles = await orgRepo.getOrganizationMemberRoles({
+    const userGroups = await orgRepo.getOrganizationMemberGroups({
       userID: orgMember.userID,
       organizationID: authContext.organizationId,
     });
-    const highPriorityRole = getHighestPriorityRole({ userRoles });
-    if (highPriorityRole === req.role) {
+
+    if (userGroups.some((ug) => ug.groupId === orgGroup.groupId)) {
       return {
         response: {
           code: EnumStatusCode.OK,
@@ -139,49 +148,40 @@ export function updateOrgMemberRole(
       };
     }
 
-    const organizationSubGroups = await opts.keycloakClient.fetchAllSubGroups({
-      realm: opts.keycloakRealm,
-      kcGroupId: organizationGroups[0].id!,
-    });
-
-    const targetGroup = organizationSubGroups.find((group) => group.name === req.role);
-    if (!targetGroup) {
-      throw new Error(`Invalid role ${req.role}`);
-    }
-
-    // deleting current roles
-    for (const role of userRoles) {
-      const childGroup = organizationSubGroups.find((group) => group.name === role);
-      if (!childGroup) {
+    // delete current groups
+    for (const group of userGroups) {
+      if (!group.kcGroupId) {
         continue;
       }
 
       await opts.keycloakClient.client.users.delFromGroup({
         id: users[0].id!,
         realm: opts.keycloakRealm,
-        groupId: childGroup.id!,
+        groupId: group.kcGroupId,
       });
     }
 
-    await opts.keycloakClient.client.users.addToGroup({
-      id: users[0].id!,
-      realm: opts.keycloakRealm,
-      groupId: targetGroup.id!,
-    });
+    if (orgGroup.kcGroupId) {
+      await opts.keycloakClient.client.users.addToGroup({
+        id: users[0].id!,
+        realm: opts.keycloakRealm,
+        groupId: orgGroup.kcGroupId,
+      });
+    }
 
-    await orgRepo.updateUserRole({
+    await orgRepo.updateUserGroup({
       orgMemberID: orgMember.orgMemberID,
-      role: req.role as MemberRole,
+      groupId: orgGroup.groupId,
     });
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
       organizationSlug: authContext.organizationSlug,
-      auditAction: 'member_role.updated',
+      auditAction: 'member_group.updated',
       action: 'updated',
       actorId: authContext.userId,
-      auditableDisplayName: req.role,
-      auditableType: 'member_role',
+      auditableDisplayName: orgGroup.name,
+      auditableType: 'member_group',
       actorDisplayName: authContext.userDisplayName,
       apiKeyName: authContext.apiKeyName,
       targetId: orgMember.userID,

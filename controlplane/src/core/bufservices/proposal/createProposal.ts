@@ -22,6 +22,7 @@ import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { SchemaUsageTrafficInspector } from '../../services/SchemaUsageTrafficInspector.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function createProposal(
   opts: RouterOptions,
@@ -42,26 +43,8 @@ export function createProposal(
 
     req.namespace = req.namespace || DefaultNamespace;
 
-    if (!authContext.hasWriteAccess) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `The user does not have the permissions to perform this operation`,
-        },
-        proposalId: '',
-        breakingChanges: [],
-        nonBreakingChanges: [],
-        compositionErrors: [],
-        checkId: '',
-        lintWarnings: [],
-        lintErrors: [],
-        graphPruneWarnings: [],
-        graphPruneErrors: [],
-        compositionWarnings: [],
-        lintingSkipped: false,
-        graphPruningSkipped: false,
-        checkUrl: '',
-      };
+    if (authContext.organizationDeactivated) {
+      throw new UnauthorizedError();
     }
 
     const namespace = await namespaceRepo.byName(req.namespace);
@@ -108,6 +91,10 @@ export function createProposal(
         graphPruningSkipped: false,
         checkUrl: '',
       };
+    }
+
+    if (!authContext.rbac.hasFederatedGraphWriteAccess(federatedGraph)) {
+      throw new UnauthorizedError();
     }
 
     if (!namespace.enableProposals) {
@@ -220,7 +207,6 @@ export function createProposal(
 
     for (const proposalSubgraph of req.subgraphs) {
       const subgraph = await subgraphRepo.byName(proposalSubgraph.name, req.namespace);
-
       if (subgraph) {
         const isSubgraphPartOfFedGraph = subgraphsOfFedGraph.some((s) => s.name === proposalSubgraph.name);
         if (!isSubgraphPartOfFedGraph) {
