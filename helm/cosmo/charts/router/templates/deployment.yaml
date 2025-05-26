@@ -203,7 +203,7 @@ spec:
               subPath: execution-config.json
             {{- end }}
             {{- if .Values.extraVolumeMounts }}
-            {{- .Values.extraVolumeMounts | nindent 12 }}
+            {{- toYaml .Values.extraVolumeMounts | nindent 12 }}
             {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
@@ -223,7 +223,7 @@ spec:
             name: {{ include "router.fullname" . }}
         {{- end }}
         {{- if .Values.extraVolumes }}
-        {{- .Values.extraVolumes | nindent 8 }}
+        {{- toYaml .Values.extraVolumes | nindent 8 }}
         {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
