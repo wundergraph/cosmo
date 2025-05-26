@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.143.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.142.0...controlplane@0.143.0) (2025-05-26)
+
+### Features
+
+* fallback to legacy read access check for api keys ([#1899](https://github.com/wundergraph/cosmo/issues/1899)) ([371edb2](https://github.com/wundergraph/cosmo/commit/371edb2226f3c9a7b4b2ef277406b36cb29be5db)) (@wilsonrivera)
+
 # [0.142.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.141.0...controlplane@0.142.0) (2025-05-25)
 
 ### Features
