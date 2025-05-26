@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"fmt"
+	"go.uber.org/zap"
 	"io"
 	"net/http"
 	"reflect"
@@ -147,7 +148,7 @@ func NewHeaderPropagation(rules *config.HeaderRules) (*HeaderPropagation, error)
 	hf := HeaderPropagation{
 		rules:         rules,
 		regex:         map[string]*regexp.Regexp{},
-		compiledRules: map[string]*vm.Program{},
+		compiledRules: map[HeaderPropagationKey]*vm.Program{},
 	}
 
 	rhrs, rhrrs := hf.getAllRules()
@@ -413,11 +414,21 @@ func (h *HeaderPropagation) applyRequestRule(ctx RequestContext, request *http.R
 		}
 
 		if rule.Expression != "" {
-			value, err := h.getRequestRuleExpressionValue(rule, reqCtx, rule.Operation)
+			// If reqCtx is nil we still don't want to add the header because there is an expression
+			if reqCtx == nil {
+				return
+			}
+			value, err := h.getRequestRuleExpressionValue(rule, reqCtx.expressionContext, rule.Operation)
 			if err != nil {
+				reqCtx.logger.Error("error occurred while getting expr val", zap.Error(err))
 				reqCtx.SetError(err)
-			} else if castedVal, ok := value.(string); ok && castedVal != "" {
-				request.Header.Set(rule.Name, castedVal)
+			} else {
+				stringVal, ok := value.(string)
+				if !ok {
+					reqCtx.logger.Error("unexpected non string value", zap.Any("value", value))
+				} else if stringVal != "" {
+					request.Header.Set(rule.Name, stringVal)
+				}
 			}
 			return
 		}
@@ -428,17 +439,6 @@ func (h *HeaderPropagation) applyRequestRule(ctx RequestContext, request *http.R
 
 	if rule.Operation != config.HeaderRuleOperationPropagate {
 		return
-	}
-
-	if rule.Expression != "" {
-		value, err := h.getRequestRuleExpressionValue(rule, reqCtx, rule.Operation)
-		if err != nil {
-			reqCtx.SetError(err)
-			return
-		}
-		if castedVal, ok := value.(bool); !ok || !castedVal {
-			return
-		}
 	}
 
 	/**
@@ -488,8 +488,19 @@ func (h *HeaderPropagation) applyRequestRule(ctx RequestContext, request *http.R
 	 * Matching based on regex
 	 */
 
-	if regex, ok := h.regex[rule.Matching]; ok {
-		for name := range ctx.Request().Header {
+	var regex *regexp.Regexp
+	if matchRegex, ok := h.regex[rule.Matching]; ok {
+		regex = matchRegex
+	}
+
+	// Note that both of these values cannot be present together but we handle this on startup
+	if regex == nil && rule.Expression == "" {
+		// Exit early if none of the values were found
+		return
+	}
+
+	for name := range ctx.Request().Header {
+		if regex != nil {
 			// Headers are case-insensitive, but Go canonicalize them
 			// Issue: https://github.com/golang/go/issues/37834
 			if regex.MatchString(name) {
@@ -523,7 +534,35 @@ func (h *HeaderPropagation) applyRequestRule(ctx RequestContext, request *http.R
 				}
 				request.Header.Set(name, ctx.Request().Header.Get(name))
 			}
+			continue
 		}
+
+		if rule.Expression != "" {
+			if reqCtx == nil {
+				continue
+			}
+
+			// TODO: Figure out if we are keeping this
+			exprCtx := reqCtx.expressionContext
+			exprCtx.Request.Header.CurrentHeader = name
+
+			addHeaderAny, err := h.getRequestRuleExpressionValue(rule, exprCtx, rule.Operation)
+			if err != nil {
+				reqCtx.logger.Error("error occurred while evaluating expression", zap.String("expression", rule.Expression), zap.Error(err))
+				continue
+			} else {
+				addHeader, ok := addHeaderAny.(bool)
+				if !ok {
+					reqCtx.logger.Error("non bool value when evaluating expression", zap.String("expression", rule.Expression), zap.Any("value", addHeaderAny))
+					continue
+				}
+				if addHeader {
+					request.Header.Set(name, ctx.Request().Header.Get(name))
+				}
+			}
+			continue
+		}
+
 	}
 }
 
@@ -611,10 +650,7 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 	}
 }
 
-func (h *HeaderPropagation) getRequestRuleExpressionValue(rule *config.RequestHeaderRule, reqCtx *requestContext, operation config.HeaderRuleOperation) (any, error) {
-	if reqCtx == nil {
-		return "", fmt.Errorf("context cannot be nil")
-	}
+func (h *HeaderPropagation) getRequestRuleExpressionValue(rule *config.RequestHeaderRule, exprCtx expr.Context, operation config.HeaderRuleOperation) (any, error) {
 	key := HeaderPropagationKey{
 		opType:     operation,
 		expression: rule.Expression,
@@ -623,21 +659,11 @@ func (h *HeaderPropagation) getRequestRuleExpressionValue(rule *config.RequestHe
 	if !ok {
 		return "", fmt.Errorf("expression %s not found in compiled rules for header rule %s", rule.Expression, rule.Name)
 	}
-	value, err := expr.ResolveAnyExpression(program, reqCtx.expressionContext)
+	value, err := expr.ResolveAnyExpression(program, exprCtx)
 	if err != nil {
 		return "", fmt.Errorf("unable to resolve expression %q for header rule %s: %s", rule.Expression, rule.Name, err.Error())
 	}
-	switch v := value.(type) {
-	case string:
-		if operation == config.HeaderRuleOperationSet {
-			return v, nil
-		}
-	case bool:
-		if operation == config.HeaderRuleOperationPropagate {
-			return v, nil
-		}
-	}
-	return "", fmt.Errorf("unexpecter value")
+	return value, nil
 }
 
 func createMostRestrictivePolicy(policies []*cachedirective.Object) (*cachedirective.Object, string) {
@@ -748,8 +774,8 @@ func PropagatedHeaders(rules []*config.RequestHeaderRule) (headerNames []string,
 				headerNameRegexps = append(headerNameRegexps, re)
 			} else if rule.Named != "" {
 				headerNames = append(headerNames, rule.Named)
-			} else {
-				return nil, nil, fmt.Errorf("invalid header propagation rule %+v, no header name nor regular expression", rule)
+			} else if rule.Expression == "" {
+				return nil, nil, fmt.Errorf("invalid header propagation rule %+v, no header name, regular expression or template expression", rule)
 			}
 		default:
 			return nil, nil, fmt.Errorf("invalid header rule operation %q in rule %+v", rule.Operation, rule)

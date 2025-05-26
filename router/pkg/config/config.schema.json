@@ -2969,7 +2969,18 @@
           "description": "The default value of the header in case it is not present in the request."
         }
       },
-      "required": ["op"]
+      "required": ["op"],
+      "oneOf": [
+        {
+          "required": ["named"]
+        },
+        {
+          "required": ["matching"]
+        },
+        {
+          "required": ["expression"]
+        }
+      ]
     },
     "traffic_shaping_header_response_rule": {
       "type": "object",
@@ -3006,7 +3017,7 @@
           "type": "string",
           "enum": ["first_write", "last_write", "append"],
           "examples": ["first_write"],
-          "description": "The algorith, to use when multiple headers are present. The supported operations are '\"first_write\", \"last_write\", and \"append\". The 'first_write' retains the first value of a given header. The 'last_write' retains the last value of a given header. The 'append' appends all values of a given header."
+          "description": "The algorithm, to use when multiple headers are present. The supported operations are '\"first_write\", \"last_write\", and \"append\". The 'first_write' retains the first value of a given header. The 'last_write' retains the last value of a given header. The 'append' appends all values of a given header."
         }
       },
       "required": ["op", "algorithm"]

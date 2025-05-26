@@ -107,7 +107,8 @@ type RequestURL struct {
 }
 
 type RequestHeaders struct {
-	Header http.Header `expr:"-"` // Do not expose the full header
+	CurrentHeader string      `expr:"currentHeader"`
+	Header        http.Header `expr:"-"` // Do not expose the full header
 }
 
 type RequestAuth struct {
