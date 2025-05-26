@@ -29,6 +29,7 @@ func TestRedisEvents(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
+
 	t.Run("subscribe async", func(t *testing.T) {
 		t.Parallel()
 
@@ -868,6 +869,7 @@ func TestRedisEvents(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsRedisJSONTemplate,
 			EnableRedis:              true,
+			NoRetryClient:            true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			var msgCh <-chan *redis.Message
 			var started atomic.Bool

@@ -48,17 +48,13 @@ func (c *PubSubDataSource) ResolveDataSourceInput(eventData []byte) (string, err
 	channel := channels[0]
 	providerId := c.EventConfiguration.GetEngineEventConfiguration().GetProviderId()
 
-	evtCfg := PublishAndRequestEventConfiguration{
+	evtCfg := PublishEventConfiguration{
 		ProviderID: providerId,
 		Channel:    channel,
 		Data:       eventData,
 	}
 
-	object, err := json.Marshal(evtCfg)
-	if err != nil {
-		return "", fmt.Errorf("failed to marshal publish event configuration: %w", err)
-	}
-	return string(object), nil
+	return evtCfg.MarshalJSONTemplate()
 }
 
 // ResolveDataSourceSubscription returns the subscription data source

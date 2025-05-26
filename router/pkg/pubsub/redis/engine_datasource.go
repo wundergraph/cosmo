@@ -61,7 +61,7 @@ type PublishDataSource struct {
 
 // Load processes a request to publish to Redis
 func (s *PublishDataSource) Load(ctx context.Context, input []byte, out *bytes.Buffer) error {
-	var publishConfiguration PublishAndRequestEventConfiguration
+	var publishConfiguration PublishEventConfiguration
 	err := json.Unmarshal(input, &publishConfiguration)
 	if err != nil {
 		return err

@@ -18,11 +18,15 @@ type SubscriptionEventConfiguration struct {
 	Channels   []string `json:"channels"`
 }
 
-// PublishAndRequestEventConfiguration contains configuration for publish events
-type PublishAndRequestEventConfiguration struct {
+// PublishEventConfiguration contains configuration for publish events
+type PublishEventConfiguration struct {
 	ProviderID string          `json:"providerId"`
 	Channel    string          `json:"channel"`
 	Data       json.RawMessage `json:"data"`
+}
+
+func (s *PublishEventConfiguration) MarshalJSONTemplate() (string, error) {
+	return fmt.Sprintf(`{"channel":"%s", "data": %s, "providerId":"%s"}`, s.Channel, s.Data, s.ProviderID), nil
 }
 
 // AdapterInterface defines the methods that a Redis adapter should implement
@@ -30,7 +34,7 @@ type AdapterInterface interface {
 	// Subscribe subscribes to the given events and sends updates to the updater
 	Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error
 	// Publish publishes the given event to the specified channel
-	Publish(ctx context.Context, event PublishAndRequestEventConfiguration) error
+	Publish(ctx context.Context, event PublishEventConfiguration) error
 	// Startup initializes the adapter
 	Startup(ctx context.Context) error
 	// Shutdown gracefully shuts down the adapter
@@ -46,7 +50,6 @@ func NewAdapter(logger *zap.Logger, urls []string) AdapterInterface {
 }
 
 type Adapter struct {
-	ctx            context.Context
 	conn           rd.RDCloser
 	logger         *zap.Logger
 	closeWg        sync.WaitGroup
@@ -65,7 +68,6 @@ func (p *Adapter) Startup(ctx context.Context) error {
 	}
 
 	p.conn = rdCloser
-	p.ctx = ctx
 
 	return nil
 }
@@ -80,7 +82,7 @@ func (p *Adapter) Subscribe(ctx context.Context, event SubscriptionEventConfigur
 		zap.String("method", "subscribe"),
 		zap.Strings("channels", event.Channels),
 	)
-	sub := p.conn.PSubscribe(p.ctx, event.Channels...)
+	sub := p.conn.PSubscribe(ctx, event.Channels...)
 	msgChan := sub.Channel()
 
 	p.closeWg.Add(1)
@@ -94,16 +96,12 @@ func (p *Adapter) Subscribe(ctx context.Context, event SubscriptionEventConfigur
 			case msg := <-msgChan:
 				log.Debug("subscription update", zap.String("message_channel", msg.Channel), zap.String("data", msg.Payload))
 				updater.Update([]byte(msg.Payload))
-			case <-p.ctx.Done():
+			case <-ctx.Done():
 				// When the application context is done, we stop the subscriptions
 				err = sub.PUnsubscribe(ctx, event.Channels...)
 				if err != nil {
 					log.Error(fmt.Sprintf("error unsubscribing from redis for topics %v", event.Channels), zap.Error(err))
 				}
-				return
-			case <-ctx.Done():
-				// When the subscription context is done, we stop the subscription
-				err = sub.PUnsubscribe(context.Background(), event.Channels...)
 				return
 			}
 		}
@@ -112,7 +110,7 @@ func (p *Adapter) Subscribe(ctx context.Context, event SubscriptionEventConfigur
 	return err
 }
 
-func (p *Adapter) Publish(ctx context.Context, event PublishAndRequestEventConfiguration) error {
+func (p *Adapter) Publish(ctx context.Context, event PublishEventConfiguration) error {
 	log := p.logger.With(
 		zap.String("provider_id", event.ProviderID),
 		zap.String("method", "publish"),
