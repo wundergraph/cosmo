@@ -278,7 +278,9 @@ func (s *GraphQLSchemaServer) ServeSSE() (*server.SSEServer, error) {
 	sseServer := server.NewSSEServer(s.server,
 		server.WithBaseURL(s.baseURL),
 		server.WithSSEEndpoint("/mcp"),
-		server.WithHTTPContextFunc(authFromRequest),
+		server.WithSSEContextFunc(authFromRequest),
+		server.WithKeepAlive(true),
+		server.WithKeepAliveInterval(10*time.Second),
 	)
 
 	logger := []zap.Field{
@@ -520,7 +522,7 @@ func (s *GraphQLSchemaServer) registerTools() error {
 func (s *GraphQLSchemaServer) handleOperation(handler *operationHandler) func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 
-		jsonBytes, err := json.Marshal(request.Params.Arguments)
+		jsonBytes, err := json.Marshal(request.GetArguments())
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal arguments: %w", err)
 		}
@@ -541,7 +543,7 @@ func (s *GraphQLSchemaServer) handleOperation(handler *operationHandler) func(ct
 func (s *GraphQLSchemaServer) handleGraphQLOperationInfo() func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		var input GraphQLOperationInfoInput
-		inputBytes, err := json.Marshal(request.Params.Arguments)
+		inputBytes, err := json.Marshal(request.GetArguments())
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal input arguments: %w", err)
 		}
@@ -685,7 +687,7 @@ func (s *GraphQLSchemaServer) executeGraphQLQuery(ctx context.Context, query str
 func (s *GraphQLSchemaServer) handleExecuteGraphQL() func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		// Parse the JSON input
-		jsonBytes, err := json.Marshal(request.Params.Arguments)
+		jsonBytes, err := json.Marshal(request.GetArguments())
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal arguments: %w", err)
 		}
