@@ -246,7 +246,7 @@ export class FeatureFlagRepository {
    * @private
    */
   private applyRbacConditionsToQuery(rbac: RBACEvaluator | undefined, conditions: (SQL<unknown> | undefined)[]) {
-    if (!rbac || rbac.isOrganizationAdminOrDeveloper) {
+    if (!rbac || rbac.isOrganizationAdminOrDeveloper || (rbac.isApiKey && rbac.groups.length === 0)) {
       return true;
     }
 
