@@ -866,7 +866,6 @@ describe('events Configuration tests', () => {
     );
   });
 
-
   test('that an error is returned if a Redis subscribe subject references a valid argument and an invalid one', () => {
     const result = normalizeSubgraph(
       subgraphAS.definitions,
@@ -2090,7 +2089,6 @@ const subgraphAR: Subgraph = {
     }
   `),
 };
-
 
 const subgraphAS: Subgraph = {
   name: 'subgraph-as',

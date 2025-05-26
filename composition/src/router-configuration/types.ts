@@ -35,10 +35,7 @@ export type RedisEventConfiguration = {
   type: RedisEventType;
 };
 
-export type EventConfiguration =
-  | KafkaEventConfiguration
-  | NatsEventConfiguration
-  | RedisEventConfiguration;
+export type EventConfiguration = KafkaEventConfiguration | NatsEventConfiguration | RedisEventConfiguration;
 
 export type SubscriptionFilterValue = boolean | null | number | string;
 

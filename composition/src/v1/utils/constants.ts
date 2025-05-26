@@ -419,7 +419,6 @@ export const TAG_DEFINITION: MutableDirectiveDefinitionNode = {
   repeatable: true,
 };
 
-
 // directive @edfs__redisPublish(channel: String!, providerId: String! = "default") on FIELD_DEFINITION
 export const EDFS_REDIS_PUBLISH_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
