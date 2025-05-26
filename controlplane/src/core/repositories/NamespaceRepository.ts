@@ -117,7 +117,7 @@ export class NamespaceRepository {
     rbac: RBACEvaluator | undefined,
     conditions: (SQL<unknown> | undefined)[],
   ): Promise<void> {
-    if (!rbac || rbac.isOrganizationViewer) {
+    if (!rbac || rbac.isOrganizationViewer || (rbac.isApiKey && rbac.groups.length === 0)) {
       return;
     }
 
