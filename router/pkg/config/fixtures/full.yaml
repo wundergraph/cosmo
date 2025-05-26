@@ -292,6 +292,10 @@ events:
           sasl_plain:
             username: "admin"
             password: "admin"
+    redis:
+      - id: my-redis
+        urls:
+          - "localhost:6379"
 
 engine:
   enable_single_flight: true

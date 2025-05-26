@@ -1990,6 +1990,29 @@
                   }
                 }
               }
+            },
+            "redis": {
+              "type": "array",
+              "description": "The Redis configuration. The Redis is used to configure the event-driven federated subscriptions.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["id", "urls"],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "description": "The provider ID. The provider ID is used to identify the provider in the configuration."
+                  },
+                  "urls": {
+                    "type": "array",
+                    "description": "The list of Redis URLs. The URLs are used to connect to the Redis provider.",
+                    "items": {
+                      "type": "string",
+                      "format": "hostname-port"
+                    }
+                  }
+                }
+              }
             }
           }
         }

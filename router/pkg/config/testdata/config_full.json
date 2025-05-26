@@ -523,6 +523,14 @@
             "Enabled": true
           }
         }
+      ],
+      "Redis": [
+        {
+          "ID": "my-redis",
+          "URLs": [
+            "localhost:6379"
+          ]
+        }
       ]
     }
   },

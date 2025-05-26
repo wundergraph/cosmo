@@ -255,7 +255,8 @@
   "Events": {
     "Providers": {
       "Nats": null,
-      "Kafka": null
+      "Kafka": null,
+      "Redis": null
     }
   },
   "CacheWarmup": {
