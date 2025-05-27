@@ -377,8 +377,6 @@ export function updateProposal(
               checkUrl: '',
             };
           }
-        } else if (!authContext.rbac.canCreateSubGraph(namespace)) {
-          throw new UnauthorizedError();
         }
 
         proposalSubgraphs.push({
