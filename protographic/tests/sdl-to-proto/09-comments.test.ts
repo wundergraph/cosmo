@@ -95,19 +95,19 @@ describe('SDL to Proto Comments', () => {
         rpc QueryUsers(QueryUsersRequest) returns (QueryUsersResponse) {}
       }
 
-      // Request message for user operation: Get a user by ID
+      // Request message for user operation: Get a user by ID.
       message QueryUserRequest {
         // The ID of the user to fetch
         string id = 1;
       }
-      // Response message for user operation: Get a user by ID
+      // Response message for user operation: Get a user by ID.
       message QueryUserResponse {
         // Get a user by ID
         User user = 1;
       }
       /*
        * Request message for users operation: List all users with pagination.
-       * Returns a list of User objects.
+       * Returns a list of User objects..
        */
       message QueryUsersRequest {
         /*
@@ -120,7 +120,7 @@ describe('SDL to Proto Comments', () => {
       }
       /*
        * Response message for users operation: List all users with pagination.
-       * Returns a list of User objects.
+       * Returns a list of User objects..
        */
       message QueryUsersResponse {
         /*
@@ -243,22 +243,22 @@ describe('SDL to Proto Comments', () => {
         rpc QuerySearch(QuerySearchRequest) returns (QuerySearchResponse) {}
       }
 
-      // Request message for search operation: Search for entities by name
+      // Request message for search operation: Search for entities by name.
       message QuerySearchRequest {
         // Search query string
         string query = 1;
       }
-      // Response message for search operation: Search for entities by name
+      // Response message for search operation: Search for entities by name.
       message QuerySearchResponse {
         // Search for entities by name
         repeated SearchResult search = 1;
       }
-      // Request message for node operation: Get node by ID
+      // Request message for node operation: Get node by ID.
       message QueryNodeRequest {
         // The ID of the node
         string id = 1;
       }
-      // Response message for node operation: Get node by ID
+      // Response message for node operation: Get node by ID.
       message QueryNodeResponse {
         // Get node by ID
         Node node = 1;
@@ -398,54 +398,86 @@ describe('SDL to Proto Comments', () => {
 
       // Key message for User entity lookup
       message LookupUserByIdRequestKey {
-        // Key field for User entity lookup
+        // Key field for User entity lookup.
         string id = 1;
       }
 
-      // Request message for User entity lookup
+      // Request message for User entity lookup.
       message LookupUserByIdRequest {
-        // List of keys to look up User entities
+        /*
+         * List of keys to look up User entities.
+         * Order matters - each key maps to one entity in LookupUserByIdResponse.
+         */
         repeated LookupUserByIdRequestKey keys = 1;
       }
 
-      // Response message for User entity lookup
+      // Response message for User entity lookup.
       message LookupUserByIdResponse {
-        // List of User entities matching the requested keys
+        /*
+         * List of User entities in the same order as the keys in LookupUserByIdRequest.
+         * Always return the same number of entities as keys. Use null for entities that cannot be found.
+         * 
+         * Example:
+         *   LookupUserByIdRequest:
+         *     keys:
+         *       - id: 1
+         *       - id: 2
+         *   LookupUserByIdResponse:
+         *     result:
+         *       - id: 1 # User with id 1 found
+         *       - null  # User with id 2 not found
+         */
         repeated User result = 1;
       }
 
       // Key message for Product entity lookup
       message LookupProductByUpcRequestKey {
-        // Key field for Product entity lookup
+        // Key field for Product entity lookup.
         string upc = 1;
       }
 
-      // Request message for Product entity lookup
+      // Request message for Product entity lookup.
       message LookupProductByUpcRequest {
-        // List of keys to look up Product entities
+        /*
+         * List of keys to look up Product entities.
+         * Order matters - each key maps to one entity in LookupProductByUpcResponse.
+         */
         repeated LookupProductByUpcRequestKey keys = 1;
       }
 
-      // Response message for Product entity lookup
+      // Response message for Product entity lookup.
       message LookupProductByUpcResponse {
-        // List of Product entities matching the requested keys
+        /*
+         * List of Product entities in the same order as the keys in LookupProductByUpcRequest.
+         * Always return the same number of entities as keys. Use null for entities that cannot be found.
+         * 
+         * Example:
+         *   LookupUserByIdRequest:
+         *     keys:
+         *       - id: 1
+         *       - id: 2
+         *   LookupUserByIdResponse:
+         *     result:
+         *       - id: 1 # User with id 1 found
+         *       - null  # User with id 2 not found
+         */
         repeated Product result = 1;
       }
 
-      // Request message for products operation: Get all available products
+      // Request message for products operation: Get all available products.
       message QueryProductsRequest {
       }
-      // Response message for products operation: Get all available products
+      // Response message for products operation: Get all available products.
       message QueryProductsResponse {
         // Get all available products
         repeated Product products = 1;
       }
-      // Request message for product operation: Get a single product by UPC
+      // Request message for product operation: Get a single product by UPC.
       message QueryProductRequest {
         // The product UPC
         string upc = 1;
       }
-      // Response message for product operation: Get a single product by UPC
+      // Response message for product operation: Get a single product by UPC.
       message QueryProductResponse {
         // Get a single product by UPC
         Product product = 1;

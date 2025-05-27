@@ -37,7 +37,9 @@ subgraphs:
       path: plugins/{originalPluginName}
 `;
 
-const routerConfig = `version: "1"
+const routerConfig = `# yaml-language-server: $schema=https://raw.githubusercontent.com/wundergraph/cosmo/main/router/pkg/config/config.schema.json
+
+version: "1"
 
 listen_addr: localhost:3010
 
