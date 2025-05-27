@@ -63,7 +63,7 @@ require (
 	github.com/alicebob/miniredis/v2 v2.34.0
 	github.com/caarlos0/env/v11 v11.3.1
 	github.com/dgraph-io/ristretto/v2 v2.1.0
-	github.com/expr-lang/expr v1.17.0
+	github.com/expr-lang/expr v1.17.3
 	github.com/goccy/go-json v0.10.3
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/go-hclog v1.6.3
