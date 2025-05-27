@@ -3,7 +3,6 @@ package routerplugin
 import (
 	"context"
 	"errors"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -18,8 +17,6 @@ type GRPCPluginClient struct {
 
 	pc *plugin.Client
 	cc grpc.ClientConnInterface
-
-	mu sync.Mutex
 
 	config GRPCPluginClientConfig
 }
