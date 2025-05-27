@@ -58,7 +58,7 @@ func (p *ProjectsService) LookupEmployeeById(ctx context.Context, req *service.L
 
 	for _, employee := range data.Employees {
 		for _, key := range req.Keys {
-			id, err := strconv.Atoi(key.Id)
+			id, err := strconv.ParseInt(key.Id, 10, 32)
 			if err != nil {
 				return nil, status.Errorf(codes.InvalidArgument, "invalid employee id: %v", err)
 			}
