@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/gobwas/ws"
 	"github.com/tidwall/sjson"
 )
 
@@ -212,6 +213,10 @@ func (p *absintheWSProtocol) Close(id string, downstreamErrorMessage bool) error
 			Type:     absintheMessageEventTypeReply,
 			Payload:  absintheErrorPayload,
 		})
+	}
+
+	if err := p.conn.WriteCloser(ws.StatusGoingAway, "Downstream service error"); err != nil {
+		return err
 	}
 
 	if err := p.conn.Close(); err != nil {

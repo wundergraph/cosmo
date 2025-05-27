@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/gobwas/ws"
 	"github.com/tidwall/sjson"
 )
 
@@ -132,6 +133,10 @@ func (p *subscriptionsTransportWSProtocol) Close(id string, downstreamErrorMessa
 			Type:    subscriptionsTransportWSMessageTypeData,
 			Payload: data,
 		})
+	}
+
+	if err := p.conn.WriteCloser(ws.StatusGoingAway, "Downstream service error"); err != nil {
+		return err
 	}
 
 	if err := p.conn.Close(); err != nil {
