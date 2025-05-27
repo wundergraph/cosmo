@@ -3,13 +3,16 @@ package main
 import (
 	"context"
 	"net"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	service "github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects/generated"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/test/bufconn"
 )
 
@@ -69,79 +72,225 @@ func setupTestService(t *testing.T) *testService {
 	}
 }
 
-func TestQueryHello(t *testing.T) {
-	// Set up basic service
+func TestQueryProjects(t *testing.T) {
+	svc := setupTestService(t)
+	defer svc.cleanup()
+
+	resp, err := svc.client.QueryProjects(context.Background(), &service.QueryProjectsRequest{})
+	require.NoError(t, err)
+	assert.NotNil(t, resp.Projects)
+	assert.Len(t, resp.Projects, 7) // Based on the data in projects.go
+}
+
+func TestQueryProject(t *testing.T) {
 	svc := setupTestService(t)
 	defer svc.cleanup()
 
 	tests := []struct {
-		name     string
-		userName string
-		wantId   string
-		wantName string
-		wantErr  bool
+		name    string
+		id      string
+		wantErr bool
 	}{
 		{
-			name:     "valid hello",
-			userName: "Alice",
-			wantId:   "1",
-			wantName: "Alice",
-			wantErr:  false,
+			name:    "existing project",
+			id:      "1",
+			wantErr: false,
 		},
 		{
-			name:     "empty name",
-			userName: "",
-			wantId:   "2",
-			wantName: "", // Empty name should be preserved
-			wantErr:  false,
-		},
-		{
-			name:     "special characters",
-			userName: "John & Jane",
-			wantId:   "3",
-			wantName: "John & Jane",
-			wantErr:  false,
+			name:    "non-existent project",
+			id:      "999",
+			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := &service.QueryProjectsRequest{}
-
-			resp, err := svc.client.QueryProjects(context.Background(), req)
+			resp, err := svc.client.QueryProject(context.Background(), &service.QueryProjectRequest{Id: tt.id})
 			if tt.wantErr {
 				assert.Error(t, err)
+				assert.Equal(t, codes.NotFound, status.Code(err))
 				return
 			}
 
-			assert.NoError(t, err)
-			assert.NotNil(t, resp.Projects)
-			assert.Equal(t, tt.wantId, resp.Projects[0].Id)
-			assert.Equal(t, tt.wantName, resp.Projects[0].Name)
+			require.NoError(t, err)
+			assert.NotNil(t, resp.Project)
+			assert.Equal(t, tt.id, resp.Project.Id)
 		})
 	}
 }
 
-// func TestSequentialIDs(t *testing.T) {
-// 	// Set up basic service
-// 	svc := setupTestService(t)
-// 	defer svc.cleanup()
+func TestQueryProjectStatuses(t *testing.T) {
+	svc := setupTestService(t)
+	defer svc.cleanup()
 
-// 	// The first request should get ID "1"
-// 	firstReq := &service.QueryHelloRequest{Name: "First"}
-// 	firstResp, err := svc.client.QueryHello(context.Background(), firstReq)
-// 	require.NoError(t, err)
-// 	assert.Equal(t, "1", firstResp.Hello.Id)
+	resp, err := svc.client.QueryProjectStatuses(context.Background(), &service.QueryProjectStatusesRequest{})
+	require.NoError(t, err)
+	assert.NotNil(t, resp.ProjectStatuses)
+	assert.Len(t, resp.ProjectStatuses, 4) // ACTIVE, PLANNING, ON_HOLD, COMPLETED
+}
 
-// 	// The second request should get ID "2"
-// 	secondReq := &service.QueryHelloRequest{Name: "Second"}
-// 	secondResp, err := svc.client.QueryHello(context.Background(), secondReq)
-// 	require.NoError(t, err)
-// 	assert.Equal(t, "2", secondResp.Hello.Id)
+func TestQueryProjectsByStatus(t *testing.T) {
+	svc := setupTestService(t)
+	defer svc.cleanup()
 
-// 	// The third request should get ID "3"
-// 	thirdReq := &service.QueryHelloRequest{Name: "Third"}
-// 	thirdResp, err := svc.client.QueryHello(context.Background(), thirdReq)
-// 	require.NoError(t, err)
-// 	assert.Equal(t, "3", thirdResp.Hello.Id)
-// }
+	tests := []struct {
+		name   string
+		status service.ProjectStatus
+		count  int
+	}{
+		{
+			name:   "active projects",
+			status: service.ProjectStatus_PROJECT_STATUS_ACTIVE,
+			count:  4, // Based on the data
+		},
+		{
+			name:   "planning projects",
+			status: service.ProjectStatus_PROJECT_STATUS_PLANNING,
+			count:  1,
+		},
+		{
+			name:   "on hold projects",
+			status: service.ProjectStatus_PROJECT_STATUS_ON_HOLD,
+			count:  1,
+		},
+		{
+			name:   "completed projects",
+			status: service.ProjectStatus_PROJECT_STATUS_COMPLETED,
+			count:  1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp, err := svc.client.QueryProjectsByStatus(context.Background(), &service.QueryProjectsByStatusRequest{
+				Status: tt.status,
+			})
+			require.NoError(t, err)
+			assert.NotNil(t, resp.ProjectsByStatus)
+			assert.Len(t, resp.ProjectsByStatus, tt.count)
+		})
+	}
+}
+
+func TestLookupProjectById(t *testing.T) {
+	svc := setupTestService(t)
+	defer svc.cleanup()
+
+	tests := []struct {
+		name    string
+		ids     []string
+		wantErr bool
+	}{
+		{
+			name:    "existing project",
+			ids:     []string{"1"},
+			wantErr: false,
+		},
+		{
+			name:    "non-existent project",
+			ids:     []string{"999"},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			keys := make([]*service.LookupProjectByIdRequestKey, len(tt.ids))
+			for i, id := range tt.ids {
+				keys[i] = &service.LookupProjectByIdRequestKey{Id: id}
+			}
+
+			resp, err := svc.client.LookupProjectById(context.Background(), &service.LookupProjectByIdRequest{
+				Keys: keys,
+			})
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Equal(t, codes.NotFound, status.Code(err))
+				return
+			}
+
+			require.NoError(t, err)
+			assert.NotNil(t, resp.Result)
+			assert.Len(t, resp.Result, 1)
+			assert.Equal(t, tt.ids[0], resp.Result[0].Id)
+		})
+	}
+}
+
+func TestLookupEmployeeById(t *testing.T) {
+	svc := setupTestService(t)
+	defer svc.cleanup()
+
+	tests := []struct {
+		name    string
+		ids     []int32
+		wantErr bool
+	}{
+		{
+			name:    "existing employee",
+			ids:     []int32{1},
+			wantErr: false,
+		},
+		{
+			name:    "non-existent employee",
+			ids:     []int32{999},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			keys := make([]*service.LookupEmployeeByIdRequestKey, len(tt.ids))
+			for i, id := range tt.ids {
+				keys[i] = &service.LookupEmployeeByIdRequestKey{Id: strconv.Itoa(int(id))}
+			}
+
+			resp, err := svc.client.LookupEmployeeById(context.Background(), &service.LookupEmployeeByIdRequest{
+				Keys: keys,
+			})
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Equal(t, codes.NotFound, status.Code(err))
+				return
+			}
+
+			require.NoError(t, err)
+			assert.NotNil(t, resp.Result)
+			assert.Len(t, resp.Result, 1)
+			assert.Equal(t, tt.ids[0], resp.Result[0].Id)
+		})
+	}
+}
+
+func TestMutationAddProject(t *testing.T) {
+	svc := setupTestService(t)
+	defer svc.cleanup()
+
+	newProject := &service.ProjectInput{
+		Name:        "Test Project",
+		Description: "Test Description",
+		Status:      service.ProjectStatus_PROJECT_STATUS_ACTIVE,
+		StartDate:   "2024-01-01",
+		EndDate:     "2024-12-31",
+	}
+
+	resp, err := svc.client.MutationAddProject(context.Background(), &service.MutationAddProjectRequest{
+		Project: newProject,
+	})
+	require.NoError(t, err)
+	assert.NotNil(t, resp.AddProject)
+	assert.Equal(t, "8", resp.AddProject.Id) // Next ID after the last project in data
+	assert.Equal(t, newProject.Name, resp.AddProject.Name)
+	assert.Equal(t, newProject.Description, resp.AddProject.Description)
+	assert.Equal(t, newProject.Status, resp.AddProject.Status)
+	assert.Equal(t, newProject.StartDate, resp.AddProject.StartDate)
+	assert.Equal(t, newProject.EndDate, resp.AddProject.EndDate)
+}
+
+func TestQueryPanic(t *testing.T) {
+	t.Skip("Skipping because panics in gRPC handlers crash the test server. This is only meant for testing the router.")
+}
+
+func TestQueryKillService(t *testing.T) {
+	t.Skip("Skipping because it kills the test server. This is only meant for testing the router.")
+}
