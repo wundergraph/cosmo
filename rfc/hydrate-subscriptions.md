@@ -6,7 +6,7 @@ author: Alessandro Pagnin
 Upon initiation of an event driven federated subscripton, the router currently has to wait to receive a message from the message broker before any data at all would be returned.
 Users of EDFS have requested that the subscription serves a starting state prior to the first message being received.
 
-The current constraints of an Event Driven Graph is that each root field must return a named type that is one of two things:
+The current constraints of an Event Driven Graph is that each root field must return a named type that is one of three things:
 1. an Entity defined in the EDG;
 2. an Interface implemented by at least one Entity defined in the EDG;
 3. an Union (to check) whose members are all Entities defined in the EDG.
@@ -25,7 +25,6 @@ That requested data can be sent to the client prior to the delivery of the first
 - @edfs__prefetch
 - @edfs__initialResolve
 - @edfs__preload
-
 
 ```graphql
 directive @edfs__hydrateSubscription on ARGUMENT
