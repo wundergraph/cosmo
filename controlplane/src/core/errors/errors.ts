@@ -22,7 +22,7 @@ export class AuthorizationError extends ServiceError {}
 
 export class UnauthorizedError extends AuthorizationError {
   constructor() {
-    super(EnumStatusCode.ERROR_NOT_AUTHORIZED, 'The user doesnt have the permissions to perform this operation');
+    super(EnumStatusCode.ERROR_NOT_AUTHORIZED, 'The user does not have the permissions to perform this operation');
   }
 }
 
