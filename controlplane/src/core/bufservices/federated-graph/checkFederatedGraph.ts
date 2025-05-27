@@ -52,7 +52,8 @@ export function checkFederatedGraph(
       };
     }
 
-    if (!authContext.rbac.hasFederatedGraphWriteAccess(federatedGraph)) {
+    // Only check for permission when we are not supposed to use the legacy flow
+    if (!authContext.rbac.useLegacyFlow && !authContext.rbac.hasFederatedGraphWriteAccess(federatedGraph)) {
       throw new UnauthorizedError();
     }
 
