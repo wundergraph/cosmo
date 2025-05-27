@@ -27,10 +27,10 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
         rpc QueryDummy(QueryDummyRequest) returns (QueryDummyResponse) {}
       }
 
-      // Request message for dummy operation
+      // Request message for dummy operation.
       message QueryDummyRequest {
       }
-      // Response message for dummy operation
+      // Response message for dummy operation.
       message QueryDummyResponse {
         string dummy = 1;
       }"
@@ -69,38 +69,38 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
         rpc QueryString(QueryStringRequest) returns (QueryStringResponse) {}
       }
 
-      // Request message for string operation
+      // Request message for string operation.
       message QueryStringRequest {
       }
-      // Response message for string operation
+      // Response message for string operation.
       message QueryStringResponse {
         string string = 1;
       }
-      // Request message for int operation
+      // Request message for int operation.
       message QueryIntRequest {
       }
-      // Response message for int operation
+      // Response message for int operation.
       message QueryIntResponse {
         int32 int = 1;
       }
-      // Request message for float operation
+      // Request message for float operation.
       message QueryFloatRequest {
       }
-      // Response message for float operation
+      // Response message for float operation.
       message QueryFloatResponse {
         double float = 1;
       }
-      // Request message for boolean operation
+      // Request message for boolean operation.
       message QueryBooleanRequest {
       }
-      // Response message for boolean operation
+      // Response message for boolean operation.
       message QueryBooleanResponse {
         bool boolean = 1;
       }
-      // Request message for id operation
+      // Request message for id operation.
       message QueryIdRequest {
       }
-      // Response message for id operation
+      // Response message for id operation.
       message QueryIdResponse {
         string id = 1;
       }"
@@ -150,27 +150,27 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
         rpc QueryServiceType(QueryServiceTypeRequest) returns (QueryServiceTypeResponse) {}
       }
 
-      // Request message for messageType operation
+      // Request message for messageType operation.
       message QueryMessageTypeRequest {
         string id = 1;
       }
-      // Response message for messageType operation
+      // Response message for messageType operation.
       message QueryMessageTypeResponse {
         MessageType message_type = 1;
       }
-      // Request message for serviceType operation
+      // Request message for serviceType operation.
       message QueryServiceTypeRequest {
         string id = 1;
       }
-      // Response message for serviceType operation
+      // Response message for serviceType operation.
       message QueryServiceTypeResponse {
         ServiceType service_type = 1;
       }
-      // Request message for enumValue operation
+      // Request message for enumValue operation.
       message QueryEnumValueRequest {
         EnumValues type = 1;
       }
-      // Response message for enumValue operation
+      // Response message for enumValue operation.
       message QueryEnumValueResponse {
         string enum_value = 1;
       }
@@ -229,11 +229,11 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
         rpc QueryUser(QueryUserRequest) returns (QueryUserResponse) {}
       }
 
-      // Request message for user operation
+      // Request message for user operation.
       message QueryUserRequest {
         string id = 1;
       }
-      // Response message for user operation
+      // Response message for user operation.
       message QueryUserResponse {
         User user = 1;
       }
@@ -400,149 +400,181 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
 
       // Key message for User entity lookup
       message LookupUserByIdRequestKey {
-        // Key field for User entity lookup
+        // Key field for User entity lookup.
         string id = 1;
       }
 
-      // Request message for User entity lookup
+      // Request message for User entity lookup.
       message LookupUserByIdRequest {
-        // List of keys to look up User entities
+        /*
+         * List of keys to look up User entities.
+         * Order matters - each key maps to one entity in LookupUserByIdResponse.
+         */
         repeated LookupUserByIdRequestKey keys = 1;
       }
 
-      // Response message for User entity lookup
+      // Response message for User entity lookup.
       message LookupUserByIdResponse {
-        // List of User entities matching the requested keys
+        /*
+         * List of User entities in the same order as the keys in LookupUserByIdRequest.
+         * Always return the same number of entities as keys. Use null for entities that cannot be found.
+         * 
+         * Example:
+         *   LookupUserByIdRequest:
+         *     keys:
+         *       - id: 1
+         *       - id: 2
+         *   LookupUserByIdResponse:
+         *     result:
+         *       - id: 1 # User with id 1 found
+         *       - null  # User with id 2 not found
+         */
         repeated User result = 1;
       }
 
       // Key message for Post entity lookup
       message LookupPostByIdRequestKey {
-        // Key field for Post entity lookup
+        // Key field for Post entity lookup.
         string id = 1;
       }
 
-      // Request message for Post entity lookup
+      // Request message for Post entity lookup.
       message LookupPostByIdRequest {
-        // List of keys to look up Post entities
+        /*
+         * List of keys to look up Post entities.
+         * Order matters - each key maps to one entity in LookupPostByIdResponse.
+         */
         repeated LookupPostByIdRequestKey keys = 1;
       }
 
-      // Response message for Post entity lookup
+      // Response message for Post entity lookup.
       message LookupPostByIdResponse {
-        // List of Post entities matching the requested keys
+        /*
+         * List of Post entities in the same order as the keys in LookupPostByIdRequest.
+         * Always return the same number of entities as keys. Use null for entities that cannot be found.
+         * 
+         * Example:
+         *   LookupUserByIdRequest:
+         *     keys:
+         *       - id: 1
+         *       - id: 2
+         *   LookupUserByIdResponse:
+         *     result:
+         *       - id: 1 # User with id 1 found
+         *       - null  # User with id 2 not found
+         */
         repeated Post result = 1;
       }
 
-      // Request message for user operation
+      // Request message for user operation.
       message QueryUserRequest {
         string id = 1;
       }
-      // Response message for user operation
+      // Response message for user operation.
       message QueryUserResponse {
         User user = 1;
       }
-      // Request message for users operation
+      // Request message for users operation.
       message QueryUsersRequest {
         int32 limit = 1;
         int32 offset = 2;
       }
-      // Response message for users operation
+      // Response message for users operation.
       message QueryUsersResponse {
         repeated User users = 1;
       }
-      // Request message for post operation
+      // Request message for post operation.
       message QueryPostRequest {
         string id = 1;
       }
-      // Response message for post operation
+      // Response message for post operation.
       message QueryPostResponse {
         Post post = 1;
       }
-      // Request message for posts operation
+      // Request message for posts operation.
       message QueryPostsRequest {
         int32 limit = 1;
         int32 offset = 2;
         PostStatus status = 3;
       }
-      // Response message for posts operation
+      // Response message for posts operation.
       message QueryPostsResponse {
         repeated Post posts = 1;
       }
-      // Request message for comment operation
+      // Request message for comment operation.
       message QueryCommentRequest {
         string id = 1;
       }
-      // Response message for comment operation
+      // Response message for comment operation.
       message QueryCommentResponse {
         Comment comment = 1;
       }
-      // Request message for comments operation
+      // Request message for comments operation.
       message QueryCommentsRequest {
         string post_id = 1;
         int32 limit = 2;
         int32 offset = 3;
       }
-      // Response message for comments operation
+      // Response message for comments operation.
       message QueryCommentsResponse {
         repeated Comment comments = 1;
       }
-      // Request message for search operation
+      // Request message for search operation.
       message QuerySearchRequest {
         SearchInput input = 1;
       }
-      // Response message for search operation
+      // Response message for search operation.
       message QuerySearchResponse {
         repeated SearchResult search = 1;
       }
-      // Request message for node operation
+      // Request message for node operation.
       message QueryNodeRequest {
         string id = 1;
       }
-      // Response message for node operation
+      // Response message for node operation.
       message QueryNodeResponse {
         Node node = 1;
       }
-      // Request message for createUser operation
+      // Request message for createUser operation.
       message MutationCreateUserRequest {
         UserInput input = 1;
       }
-      // Response message for createUser operation
+      // Response message for createUser operation.
       message MutationCreateUserResponse {
         User create_user = 1;
       }
-      // Request message for createPost operation
+      // Request message for createPost operation.
       message MutationCreatePostRequest {
         string author_id = 1;
         PostInput input = 2;
       }
-      // Response message for createPost operation
+      // Response message for createPost operation.
       message MutationCreatePostResponse {
         Post create_post = 1;
       }
-      // Request message for createComment operation
+      // Request message for createComment operation.
       message MutationCreateCommentRequest {
         string author_id = 1;
         CommentInput input = 2;
       }
-      // Response message for createComment operation
+      // Response message for createComment operation.
       message MutationCreateCommentResponse {
         Comment create_comment = 1;
       }
-      // Request message for updatePost operation
+      // Request message for updatePost operation.
       message MutationUpdatePostRequest {
         string id = 1;
         PostInput input = 2;
       }
-      // Response message for updatePost operation
+      // Response message for updatePost operation.
       message MutationUpdatePostResponse {
         Post update_post = 1;
       }
-      // Request message for deletePost operation
+      // Request message for deletePost operation.
       message MutationDeletePostRequest {
         string id = 1;
       }
-      // Response message for deletePost operation
+      // Response message for deletePost operation.
       message MutationDeletePostResponse {
         bool delete_post = 1;
       }

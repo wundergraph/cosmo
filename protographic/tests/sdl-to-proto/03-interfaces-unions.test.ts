@@ -45,18 +45,18 @@ describe('SDL to Proto - Interfaces and Unions', () => {
         rpc QueryNodes(QueryNodesRequest) returns (QueryNodesResponse) {}
       }
 
-      // Request message for node operation
+      // Request message for node operation.
       message QueryNodeRequest {
         string id = 1;
       }
-      // Response message for node operation
+      // Response message for node operation.
       message QueryNodeResponse {
         Node node = 1;
       }
-      // Request message for nodes operation
+      // Request message for nodes operation.
       message QueryNodesRequest {
       }
-      // Response message for nodes operation
+      // Response message for nodes operation.
       message QueryNodesResponse {
         repeated Node nodes = 1;
       }
@@ -125,18 +125,18 @@ describe('SDL to Proto - Interfaces and Unions', () => {
         rpc QueryNode(QueryNodeRequest) returns (QueryNodeResponse) {}
       }
 
-      // Request message for node operation
+      // Request message for node operation.
       message QueryNodeRequest {
         string id = 1;
       }
-      // Response message for node operation
+      // Response message for node operation.
       message QueryNodeResponse {
         Node node = 1;
       }
-      // Request message for activity operation
+      // Request message for activity operation.
       message QueryActivityRequest {
       }
-      // Response message for activity operation
+      // Response message for activity operation.
       message QueryActivityResponse {
         repeated Timestamped activity = 1;
       }
@@ -206,11 +206,11 @@ describe('SDL to Proto - Interfaces and Unions', () => {
         rpc QuerySearch(QuerySearchRequest) returns (QuerySearchResponse) {}
       }
 
-      // Request message for search operation
+      // Request message for search operation.
       message QuerySearchRequest {
         string term = 1;
       }
-      // Response message for search operation
+      // Response message for search operation.
       message QuerySearchResponse {
         repeated SearchResult search = 1;
       }
@@ -275,10 +275,10 @@ describe('SDL to Proto - Interfaces and Unions', () => {
         rpc QuerySomething(QuerySomethingRequest) returns (QuerySomethingResponse) {}
       }
 
-      // Request message for something operation
+      // Request message for something operation.
       message QuerySomethingRequest {
       }
-      // Response message for something operation
+      // Response message for something operation.
       message QuerySomethingResponse {
         Something something = 1;
       }

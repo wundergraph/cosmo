@@ -51,45 +51,77 @@ describe('SDL to Proto - Federation and Special Types', () => {
 
       // Key message for Product entity lookup
       message LookupProductByIdRequestKey {
-        // Key field for Product entity lookup
+        // Key field for Product entity lookup.
         string id = 1;
       }
 
-      // Request message for Product entity lookup
+      // Request message for Product entity lookup.
       message LookupProductByIdRequest {
-        // List of keys to look up Product entities
+        /*
+         * List of keys to look up Product entities.
+         * Order matters - each key maps to one entity in LookupProductByIdResponse.
+         */
         repeated LookupProductByIdRequestKey keys = 1;
       }
 
-      // Response message for Product entity lookup
+      // Response message for Product entity lookup.
       message LookupProductByIdResponse {
-        // List of Product entities matching the requested keys
+        /*
+         * List of Product entities in the same order as the keys in LookupProductByIdRequest.
+         * Always return the same number of entities as keys. Use null for entities that cannot be found.
+         * 
+         * Example:
+         *   LookupUserByIdRequest:
+         *     keys:
+         *       - id: 1
+         *       - id: 2
+         *   LookupUserByIdResponse:
+         *     result:
+         *       - id: 1 # User with id 1 found
+         *       - null  # User with id 2 not found
+         */
         repeated Product result = 1;
       }
 
       // Key message for User entity lookup
       message LookupUserByIdRequestKey {
-        // Key field for User entity lookup
+        // Key field for User entity lookup.
         string id = 1;
       }
 
-      // Request message for User entity lookup
+      // Request message for User entity lookup.
       message LookupUserByIdRequest {
-        // List of keys to look up User entities
+        /*
+         * List of keys to look up User entities.
+         * Order matters - each key maps to one entity in LookupUserByIdResponse.
+         */
         repeated LookupUserByIdRequestKey keys = 1;
       }
 
-      // Response message for User entity lookup
+      // Response message for User entity lookup.
       message LookupUserByIdResponse {
-        // List of User entities matching the requested keys
+        /*
+         * List of User entities in the same order as the keys in LookupUserByIdRequest.
+         * Always return the same number of entities as keys. Use null for entities that cannot be found.
+         * 
+         * Example:
+         *   LookupUserByIdRequest:
+         *     keys:
+         *       - id: 1
+         *       - id: 2
+         *   LookupUserByIdResponse:
+         *     result:
+         *       - id: 1 # User with id 1 found
+         *       - null  # User with id 2 not found
+         */
         repeated User result = 1;
       }
 
-      // Request message for product operation
+      // Request message for product operation.
       message QueryProductRequest {
         string id = 1;
       }
-      // Response message for product operation
+      // Response message for product operation.
       message QueryProductResponse {
         Product product = 1;
       }
@@ -145,28 +177,44 @@ describe('SDL to Proto - Federation and Special Types', () => {
 
       // Key message for OrderItem entity lookup
       message LookupOrderItemByOrderIdRequestKey {
-        // Key field for OrderItem entity lookup
+        // Key field for OrderItem entity lookup.
         string order_id = 1;
       }
 
-      // Request message for OrderItem entity lookup
+      // Request message for OrderItem entity lookup.
       message LookupOrderItemByOrderIdRequest {
-        // List of keys to look up OrderItem entities
+        /*
+         * List of keys to look up OrderItem entities.
+         * Order matters - each key maps to one entity in LookupOrderItemByOrderIdResponse.
+         */
         repeated LookupOrderItemByOrderIdRequestKey keys = 1;
       }
 
-      // Response message for OrderItem entity lookup
+      // Response message for OrderItem entity lookup.
       message LookupOrderItemByOrderIdResponse {
-        // List of OrderItem entities matching the requested keys
+        /*
+         * List of OrderItem entities in the same order as the keys in LookupOrderItemByOrderIdRequest.
+         * Always return the same number of entities as keys. Use null for entities that cannot be found.
+         * 
+         * Example:
+         *   LookupUserByIdRequest:
+         *     keys:
+         *       - id: 1
+         *       - id: 2
+         *   LookupUserByIdResponse:
+         *     result:
+         *       - id: 1 # User with id 1 found
+         *       - null  # User with id 2 not found
+         */
         repeated OrderItem result = 1;
       }
 
-      // Request message for orderItem operation
+      // Request message for orderItem operation.
       message QueryOrderItemRequest {
         string order_id = 1;
         string item_id = 2;
       }
-      // Response message for orderItem operation
+      // Response message for orderItem operation.
       message QueryOrderItemResponse {
         OrderItem order_item = 1;
       }
@@ -231,45 +279,77 @@ describe('SDL to Proto - Federation and Special Types', () => {
 
       // Key message for User entity lookup
       message LookupUserByIdRequestKey {
-        // Key field for User entity lookup
+        // Key field for User entity lookup.
         string id = 1;
       }
 
-      // Request message for User entity lookup
+      // Request message for User entity lookup.
       message LookupUserByIdRequest {
-        // List of keys to look up User entities
+        /*
+         * List of keys to look up User entities.
+         * Order matters - each key maps to one entity in LookupUserByIdResponse.
+         */
         repeated LookupUserByIdRequestKey keys = 1;
       }
 
-      // Response message for User entity lookup
+      // Response message for User entity lookup.
       message LookupUserByIdResponse {
-        // List of User entities matching the requested keys
+        /*
+         * List of User entities in the same order as the keys in LookupUserByIdRequest.
+         * Always return the same number of entities as keys. Use null for entities that cannot be found.
+         * 
+         * Example:
+         *   LookupUserByIdRequest:
+         *     keys:
+         *       - id: 1
+         *       - id: 2
+         *   LookupUserByIdResponse:
+         *     result:
+         *       - id: 1 # User with id 1 found
+         *       - null  # User with id 2 not found
+         */
         repeated User result = 1;
       }
 
       // Key message for Product entity lookup
       message LookupProductByIdRequestKey {
-        // Key field for Product entity lookup
+        // Key field for Product entity lookup.
         string id = 1;
       }
 
-      // Request message for Product entity lookup
+      // Request message for Product entity lookup.
       message LookupProductByIdRequest {
-        // List of keys to look up Product entities
+        /*
+         * List of keys to look up Product entities.
+         * Order matters - each key maps to one entity in LookupProductByIdResponse.
+         */
         repeated LookupProductByIdRequestKey keys = 1;
       }
 
-      // Response message for Product entity lookup
+      // Response message for Product entity lookup.
       message LookupProductByIdResponse {
-        // List of Product entities matching the requested keys
+        /*
+         * List of Product entities in the same order as the keys in LookupProductByIdRequest.
+         * Always return the same number of entities as keys. Use null for entities that cannot be found.
+         * 
+         * Example:
+         *   LookupUserByIdRequest:
+         *     keys:
+         *       - id: 1
+         *       - id: 2
+         *   LookupUserByIdResponse:
+         *     result:
+         *       - id: 1 # User with id 1 found
+         *       - null  # User with id 2 not found
+         */
         repeated Product result = 1;
       }
 
-      // Request message for node operation
+      // Request message for node operation.
       message QueryNodeRequest {
         string id = 1;
       }
-      // Response message for node operation
+      // Response message for node operation.
       message QueryNodeResponse {
         Node node = 1;
       }
@@ -333,18 +413,18 @@ describe('SDL to Proto - Federation and Special Types', () => {
         rpc QueryEvents(QueryEventsRequest) returns (QueryEventsResponse) {}
       }
 
-      // Request message for events operation
+      // Request message for events operation.
       message QueryEventsRequest {
       }
-      // Response message for events operation
+      // Response message for events operation.
       message QueryEventsResponse {
         repeated Event events = 1;
       }
-      // Request message for event operation
+      // Request message for event operation.
       message QueryEventRequest {
         string id = 1;
       }
-      // Response message for event operation
+      // Response message for event operation.
       message QueryEventResponse {
         Event event = 1;
       }
