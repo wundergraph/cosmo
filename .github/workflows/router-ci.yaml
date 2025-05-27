@@ -22,6 +22,8 @@ env:
   CI: true
   ROUTER_REGISTRATION: false
   DO_NOT_TRACK: '1'
+  GOOS: linux
+  GOARCH: amd64
 
 # Both jobs need to kept in sync. We need to distinguish between forks and people with write access to the repository.
 jobs:
