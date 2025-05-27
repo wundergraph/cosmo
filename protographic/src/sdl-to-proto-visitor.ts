@@ -480,7 +480,9 @@ export class GraphQLToProtoTextVisitor {
             result.rpcMethods.push(this.createRpcMethod(methodName, requestName, responseName, description));
 
             // Create request and response messages
-            result.messageDefinitions.push(...this.createKeyRequestMessage(typeName, requestName, keyFields[0], responseName));
+            result.messageDefinitions.push(
+              ...this.createKeyRequestMessage(typeName, requestName, keyFields[0], responseName),
+            );
             result.messageDefinitions.push(...this.createKeyResponseMessage(typeName, responseName, requestName));
           }
         }
@@ -599,7 +601,12 @@ export class GraphQLToProtoTextVisitor {
   /**
    * Creates a request message for entity lookup without adding to protoText
    */
-  private createKeyRequestMessage(typeName: string, requestName: string, keyField: string, responseName: string): string[] {
+  private createKeyRequestMessage(
+    typeName: string,
+    requestName: string,
+    keyField: string,
+    responseName: string,
+  ): string[] {
     const messageLines: string[] = [];
     const keyMessageName = `${requestName}Key`;
     const lockData = this.lockManager.getLockData();
