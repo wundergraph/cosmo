@@ -168,10 +168,8 @@ export function updateSubgraph(
         headers: ctx.requestHeader,
         authContext,
       });
-    } else {
-      if (!authContext.rbac.canUpdateSubGraph(subgraph)) {
-        throw new UnauthorizedError();
-      }
+    } else if (!authContext.rbac.canUpdateSubGraph(subgraph)) {
+      throw new UnauthorizedError();
     }
 
     const { compositionErrors, updatedFederatedGraphs, deploymentErrors, compositionWarnings } =
