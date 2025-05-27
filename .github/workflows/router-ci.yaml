@@ -194,7 +194,8 @@ jobs:
             router-tests/go.sum
       - name: Install dependencies
         run: make build-pnpm
-      
+      - name: Install plugin tools
+        run: make install-plugin-tools
       - name: Setup Redis Cluster (for Cluster tests)
         uses: vishnudxb/redis-cluster@1.0.9
         with:

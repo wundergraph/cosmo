@@ -18,6 +18,12 @@ prerequisites: setup-dev-tools
 	docker -v
 	dbmate -v
 
+install-plugin-tools: setup-dev-tools
+	curl -LO https://github.com/protocolbuffers/protobuf/releases/download/v29.3/protoc-29.3-linux-x86_64.zip
+	unzip protoc-29.3-linux-x86_64.zip -d $HOME/.local
+	export PATH="$PATH:$HOME/.local/bin"
+	rm protoc-29.3-linux-x86_64.zip
+
 infra-up: dc-dev
 
 edfs-infra-up:
