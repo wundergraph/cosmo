@@ -88,15 +88,21 @@ func (p *ProjectsService) LookupProjectById(ctx context.Context, req *service.Lo
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
+	var result []*service.Project
+
 	for _, project := range data.ServiceProjects {
 		for _, key := range req.Keys {
 			if project.Id == key.Id {
-				return &service.LookupProjectByIdResponse{Result: []*service.Project{project}}, nil
+				result = append(result, project)
 			}
 		}
 	}
 
-	return nil, status.Errorf(codes.NotFound, "project not found")
+	if len(result) == 0 {
+		return nil, status.Errorf(codes.NotFound, "project not found")
+	}
+
+	return &service.LookupProjectByIdResponse{Result: result}, nil
 }
 
 // MutationAddProject implements projects.ProjectsServiceServer.
