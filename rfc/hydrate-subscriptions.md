@@ -1,5 +1,5 @@
 ---
-title: "@edfs__hydrateSubscription"
+title: "@openfed__hydrateSubscription"
 author: Alessandro Pagnin
 ---
 
@@ -17,17 +17,17 @@ Consequently, as long as the value(s) of the key(s) are provided we can make one
 
 That requested data can be sent to the client prior to the delivery of the first event from the message broker.
 
-# @edfs__hydrateSubscription
+# @openfed__hydrateSubscription
 
 ## Potential other names
 
-- @edfs__initialState
-- @edfs__prefetch
-- @edfs__initialResolve
-- @edfs__preload
+- @openfed__initialState
+- @openfed__prefetch
+- @openfed__initialResolve
+- @openfed__preload
 
 ```graphql
-directive @edfs__hydrateSubscription on ARGUMENT
+directive @openfed__hydrateSubscription on ARGUMENT
 ```
 
 This directive would rely on an argument supplying the necessary data to resolve the Entity.
@@ -62,10 +62,10 @@ This could potentially close the subscription.
 This is the simplest example, where we have an input that refers to an Entity with a single key field. That same input is also used for the subjects argument.
 
 ```graphql
-directive @edfs__hydrateSubscription on ARGUMENT
+directive @openfed__hydrateSubscription on ARGUMENT
 
 type Subscription {
-    employeeUpdated(input: EmployeeInput! @edfs__hydrateSubscription): Employee! @edfs__natsSubscribe(subjects: ["employeeUpdated.{{ args.input.key }}"]) 
+    employeeUpdated(input: EmployeeInput! @openfed__hydrateSubscription): Employee! @edfs__natsSubscribe(subjects: ["employeeUpdated.{{ args.input.key }}"]) 
 }
 
 type Employee @key(fields: "id", resolvable: false) {
@@ -84,10 +84,10 @@ input EmployeeInput {
 In this example we are returning more than one entity, and so the input is a list of `EmployeeInput`.
 
 ```graphql
-directive @edfs__hydrateSubscription on ARGUMENT
+directive @openfed__hydrateSubscription on ARGUMENT
 
 type Subscription {
-    employeesUpdated(input: [EmployeeInput]! @edfs__hydrateSubscription): [Employee!] @edfs__natsSubscribe(subjects: ["employeesUpdated"]) 
+    employeesUpdated(input: [EmployeeInput]! @openfed__hydrateSubscription): [Employee!] @edfs__natsSubscribe(subjects: ["employeesUpdated"]) 
 }
 
 type Employee @key(fields: "id", resolvable: false) {
@@ -105,10 +105,10 @@ input EmployeeInput {
 In this example the Entity needs a Composite Key, and an Input type is created to replicate the key structure.
 
 ```graphql
-directive @edfs__hydrateSubscription on ARGUMENT
+directive @openfed__hydrateSubscription on ARGUMENT
 
 type Subscription {
-    employeeUpdated(input: EmployeeInput! @edfs__hydrateSubscription): Employee! @edfs__natsSubscribe(subjects: ["employeeUpdated.{{ args.input.key.id }}_{{ args.input.key.object.id }}"]) 
+    employeeUpdated(input: EmployeeInput! @openfed__hydrateSubscription): Employee! @edfs__natsSubscribe(subjects: ["employeeUpdated.{{ args.input.key.id }}_{{ args.input.key.object.id }}"]) 
 }
 
 type Employee @key(fields: "id object { id }", resolvable: false){
@@ -141,10 +141,10 @@ input ObjectKey {
 In this example, we show that arbitrary fields can be added to the input type, and used in the subjects argument.
 
 ```graphql
-directive @edfs__hydrateSubscription on ARGUMENT
+directive @openfed__hydrateSubscription on ARGUMENT
 
 type Subscription {
-    employeeUpdated(input: [EmployeeInput]! @edfs__hydrateSubscription): Employee! @edfs__natsSubscribe(subjects: ["employeeUpdated.{{ args.input.arbitrary }}"]) 
+    employeeUpdated(input: [EmployeeInput]! @openfed__hydrateSubscription): Employee! @edfs__natsSubscribe(subjects: ["employeeUpdated.{{ args.input.arbitrary }}"]) 
 }
 
 type Employee @key(fields: "id", resolvable: false) {
@@ -163,10 +163,10 @@ input EmployeeInput {
 In this example we show how we can propagate an inital payload where the return type of the subscription is an abstract type. 
 
 ```graphql
-directive @edfs__hydrateSubscription on ARGUMENT
+directive @openfed__hydrateSubscription on ARGUMENT
 
 type Subscription {
-    employeeUpdated(input: EmployeeInput! @edfs__hydrateSubscription): Interface! @edfs__natsSubscribe(subjects: ["employeeUpdated.{{ args.input.key.id }}_{{ args.input.key.object.id }}"]) 
+    employeeUpdated(input: EmployeeInput! @openfed__hydrateSubscription): Interface! @edfs__natsSubscribe(subjects: ["employeeUpdated.{{ args.input.key.id }}_{{ args.input.key.object.id }}"]) 
 }
 
 interface Interface {
@@ -192,10 +192,10 @@ input EmployeeInput {
 In this example we show how we can propagate an inital payload where the return type of the subscription is a list of abstract type and, an additional input can be used to specify the subject argument.
 
 ```graphql
-directive @edfs__hydrateSubscription on ARGUMENT
+directive @openfed__hydrateSubscription on ARGUMENT
 
 type Subscription {
-    employeeUpdated(input: [EmployeeInput!]! @edfs__hydrateSubscription, subject: String): [Interface!]! @edfs__natsSubscribe(subjects: ["employeeUpdated.{{ args.subject }}"]) 
+    employeeUpdated(input: [EmployeeInput!]! @openfed__hydrateSubscription, subject: String): [Interface!]! @edfs__natsSubscribe(subjects: ["employeeUpdated.{{ args.subject }}"]) 
 }
 
 interface Interface {
