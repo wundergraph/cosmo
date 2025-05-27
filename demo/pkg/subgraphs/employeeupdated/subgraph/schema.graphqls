@@ -62,9 +62,9 @@ type Subscription {
                 { IN: { fieldPath: "id", values: ["1"] } },
             ],
         })
-    filteredEmployeeUpdatedMyRedis(id: ID!): Employee!
+    filteredEmployeeUpdatedMyRedis(ids: [ID!]!): Employee!
         @edfs__redisSubscribe(channels: ["employeeUpdatedMyRedis"], providerId: "my-redis")
-        @openfed__subscriptionFilter(condition: { IN: { fieldPath: "id", values: [1, 3, 4, 7, 11] } })
+        @openfed__subscriptionFilter(condition: { IN: { fieldPath: "id", values: ["{{ args.ids }}"] } })
 }
 
 input KafkaInput {

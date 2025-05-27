@@ -528,7 +528,7 @@
         {
           "ID": "my-redis",
           "URLs": [
-            "localhost:6379"
+            "redis://localhost:6379/11"
           ]
         }
       ]
