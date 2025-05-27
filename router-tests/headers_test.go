@@ -963,6 +963,62 @@ func TestForwardRenamedHeaders(t *testing.T) {
 					require.JSONEq(t, `{"data":{"headerValue":{"value":"`+value1+`"}}}`, string(msg.Payload))
 				})
 			})
+
+			t.Run(fmt.Sprintf("verify that expressions and matching cannot exist together for %s", typeRules), func(t *testing.T) {
+				t.Parallel()
+
+				header1 := "header-name-1"
+
+				headerRules := applyRule(typeRules, &config.GlobalHeaderRule{
+					Request: []*config.RequestHeaderRule{
+						{
+							Operation:  config.HeaderRuleOperationPropagate,
+							Expression: `headerName not in ['` + http.CanonicalHeaderKey(header1) + `']`,
+							Matching:   "matching",
+						},
+					},
+				})
+				err := testenv.RunWithError(t, &testenv.Config{
+					ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+						cfg.WebSocketClientReadTimeout = time.Millisecond * 10
+					},
+					RouterOptions: []core.Option{
+						core.WithHeaderRules(headerRules),
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					require.Fail(t, "should not be called")
+				})
+
+				require.ErrorContains(t, err, `expression "headerName not in ['Header-Name-1']" for header rule matching cannot be used with matching propagation`)
+			})
+
+			t.Run(fmt.Sprintf("verify that expressions and named cannot exist together for %s", typeRules), func(t *testing.T) {
+				t.Parallel()
+
+				header1 := "header-name-1"
+
+				headerRules := applyRule(typeRules, &config.GlobalHeaderRule{
+					Request: []*config.RequestHeaderRule{
+						{
+							Operation:  config.HeaderRuleOperationPropagate,
+							Expression: `headerName not in ['` + http.CanonicalHeaderKey(header1) + `']`,
+							Named:      "named",
+						},
+					},
+				})
+				err := testenv.RunWithError(t, &testenv.Config{
+					ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+						cfg.WebSocketClientReadTimeout = time.Millisecond * 10
+					},
+					RouterOptions: []core.Option{
+						core.WithHeaderRules(headerRules),
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					require.Fail(t, "should not be called")
+				})
+
+				require.ErrorContains(t, err, `expression "headerName not in ['Header-Name-1']" for header rule named cannot be used with named propagation`)
+			})
 		}
 	})
 }

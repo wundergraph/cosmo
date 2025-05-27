@@ -74,7 +74,7 @@ func NewOperationBlocker(opts *OperationBlockerOptions) (*OperationBlocker, erro
 func (o *OperationBlocker) compileExpressions(exprManager *expr.Manager) error {
 	if o.blockMutations.Enabled && o.blockMutations.Condition != "" {
 
-		v, err := exprManager.CompileExpression(o.blockMutations.Condition, reflect.Bool, expr.UseDefaultContext())
+		v, err := exprManager.CompileExpression(o.blockMutations.Condition, reflect.Bool, expr.NewDefaultContext())
 		if err != nil {
 			return fmt.Errorf("failed to compile mutation expression: %w", err)
 		}
@@ -82,7 +82,7 @@ func (o *OperationBlocker) compileExpressions(exprManager *expr.Manager) error {
 	}
 
 	if o.blockSubscriptions.Enabled && o.blockSubscriptions.Condition != "" {
-		v, err := exprManager.CompileExpression(o.blockSubscriptions.Condition, reflect.Bool, expr.UseDefaultContext())
+		v, err := exprManager.CompileExpression(o.blockSubscriptions.Condition, reflect.Bool, expr.NewDefaultContext())
 		if err != nil {
 			return fmt.Errorf("failed to compile subscription expression: %w", err)
 		}
@@ -90,7 +90,7 @@ func (o *OperationBlocker) compileExpressions(exprManager *expr.Manager) error {
 	}
 
 	if o.blockNonPersisted.Enabled && o.blockNonPersisted.Condition != "" {
-		v, err := exprManager.CompileExpression(o.blockNonPersisted.Condition, reflect.Bool, expr.UseDefaultContext())
+		v, err := exprManager.CompileExpression(o.blockNonPersisted.Condition, reflect.Bool, expr.NewDefaultContext())
 		if err != nil {
 			return fmt.Errorf("failed to compile non-persisted expression: %w", err)
 		}

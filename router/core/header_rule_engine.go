@@ -123,6 +123,7 @@ type HeaderPropagation struct {
 	compiledRules    map[HeaderPropagationKey]*vm.Program
 	hasRequestRules  bool
 	hasResponseRules bool
+	logger           *zap.Logger
 }
 
 type HeaderPropagationKey struct {
@@ -139,16 +140,22 @@ func initHeaderRules(rules *config.HeaderRules) {
 	}
 }
 
-func NewHeaderPropagation(rules *config.HeaderRules) (*HeaderPropagation, error) {
+func NewHeaderPropagation(rules *config.HeaderRules, logger *zap.Logger) (*HeaderPropagation, error) {
 	if rules == nil {
 		return nil, nil
 	}
+
+	if logger == nil {
+		logger = zap.NewNop()
+	}
+	logger = logger.With(zap.String("component", "header_rule_engine"))
 
 	initHeaderRules(rules)
 	hf := HeaderPropagation{
 		rules:         rules,
 		regex:         map[string]*regexp.Regexp{},
 		compiledRules: map[HeaderPropagationKey]*vm.Program{},
+		logger:        logger,
 	}
 
 	rhrs, rhrrs := hf.getAllRules()
@@ -262,10 +269,16 @@ func (hf *HeaderPropagation) compileExpressionRules(rules []*config.RequestHeade
 			continue
 		}
 		reflectType := reflect.String
-		var exprContext expr.ExpressionContext = expr.UseDefaultContext()
+		var exprContext expr.ExpressionContext = expr.NewDefaultContext()
 		if key.opType == config.HeaderRuleOperationPropagate {
+			if rule.Named != "" {
+				return fmt.Errorf("expression \"%s\" for header rule %s cannot be used with named propagation", rule.Expression, rule.Named)
+			} else if rule.Matching != "" {
+				return fmt.Errorf("expression \"%s\" for header rule %s cannot be used with matching propagation", rule.Expression, rule.Matching)
+			}
+
 			reflectType = reflect.Bool
-			exprContext = expr.UseHeaderContext()
+			exprContext = expr.NewHeaderContext()
 		}
 		program, err := manager.CompileExpression(rule.Expression, reflectType, exprContext)
 		if err != nil {
@@ -422,12 +435,12 @@ func (h *HeaderPropagation) applyRequestRule(ctx RequestContext, request *http.R
 			}
 			value, err := h.getRequestRuleExpressionValue(rule, reqCtx.expressionContext, rule.Operation)
 			if err != nil {
-				reqCtx.logger.Error("error occurred while getting expr val", zap.Error(err))
+				h.logger.Error("error occurred while getting expr val", zap.Error(err))
 				reqCtx.SetError(err)
 			} else {
 				stringVal, ok := value.(string)
 				if !ok {
-					reqCtx.logger.Error("unexpected non string value", zap.Any("value", value))
+					h.logger.Error("unexpected non string value", zap.Any("value", value))
 				} else if stringVal != "" {
 					request.Header.Set(rule.Name, stringVal)
 				}
@@ -497,6 +510,7 @@ func (h *HeaderPropagation) applyRequestRule(ctx RequestContext, request *http.R
 
 	// Note that both of these values cannot be present together, but we handle this on startup
 	if regex == nil && rule.Expression == "" {
+		h.logger.Error("header rule is missing a matching regex, expression, named")
 		// Exit early if none of the values were found
 		return
 	}
@@ -552,12 +566,12 @@ func (h *HeaderPropagation) isApplyHeader(rule *config.RequestHeaderRule, reqCtx
 
 		addHeaderAny, err := h.getRequestRuleExpressionValue(rule, headerContext, rule.Operation)
 		if err != nil {
-			reqCtx.logger.Error("error occurred while evaluating expression", zap.String("expression", rule.Expression), zap.Error(err))
+			h.logger.Error("error occurred while evaluating expression", zap.String("expression", rule.Expression), zap.Error(err))
 			return false
 		} else {
 			addHeader, ok := addHeaderAny.(bool)
 			if !ok {
-				reqCtx.logger.Error("non bool value when evaluating expression", zap.String("expression", rule.Expression), zap.Any("value", addHeaderAny))
+				h.logger.Error("non bool value when evaluating expression", zap.String("expression", rule.Expression), zap.Any("value", addHeaderAny))
 				return false
 			}
 			return addHeader

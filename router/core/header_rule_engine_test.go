@@ -32,7 +32,7 @@ func TestPropagateHeaderRule(t *testing.T) {
 					},
 				},
 			},
-		})
+		}, nil)
 		assert.Nil(t, err)
 
 		rr := httptest.NewRecorder()
@@ -71,7 +71,7 @@ func TestPropagateHeaderRule(t *testing.T) {
 					},
 				},
 			},
-		})
+		}, nil)
 		assert.Nil(t, err)
 
 		rr := httptest.NewRecorder()
@@ -106,7 +106,7 @@ func TestPropagateHeaderRule(t *testing.T) {
 					},
 				},
 			},
-		})
+		}, nil)
 		assert.Nil(t, err)
 
 		rr := httptest.NewRecorder()
@@ -144,7 +144,7 @@ func TestPropagateHeaderRule(t *testing.T) {
 					},
 				},
 			},
-		})
+		}, nil)
 		assert.Nil(t, err)
 
 		rr := httptest.NewRecorder()
@@ -183,7 +183,7 @@ func TestPropagateHeaderRule(t *testing.T) {
 					},
 				},
 			},
-		})
+		}, nil)
 		assert.Nil(t, err)
 
 		rr := httptest.NewRecorder()
@@ -226,7 +226,7 @@ func TestPropagateHeaderRule(t *testing.T) {
 			All: &config.GlobalHeaderRule{
 				Request: rules,
 			},
-		})
+		}, nil)
 		assert.Nil(t, err)
 
 		rr := httptest.NewRecorder()
@@ -258,7 +258,7 @@ func TestPropagateHeaderRule(t *testing.T) {
 	t.Run("Should handle nil responses", func(t *testing.T) {
 		ht, err := NewHeaderPropagation(&config.HeaderRules{
 			All: &config.GlobalHeaderRule{},
-		})
+		}, nil)
 		assert.Nil(t, err)
 
 		rr := httptest.NewRecorder()
@@ -291,7 +291,7 @@ func TestRenamePropagateHeaderRule(t *testing.T) {
 					},
 				},
 			},
-		})
+		}, nil)
 		assert.Nil(t, err)
 
 		rr := httptest.NewRecorder()
@@ -343,7 +343,7 @@ func TestRenamePropagateHeaderRule(t *testing.T) {
 					},
 				},
 			},
-		})
+		}, nil)
 		assert.Nil(t, err)
 
 		rr := httptest.NewRecorder()
@@ -395,7 +395,7 @@ func TestRenamePropagateHeaderRule(t *testing.T) {
 			All: &config.GlobalHeaderRule{
 				Request: rules,
 			},
-		})
+		}, nil)
 		assert.Nil(t, err)
 
 		rr := httptest.NewRecorder()
@@ -435,7 +435,7 @@ func TestSkipAllIgnoredHeaders(t *testing.T) {
 				},
 			},
 		},
-	})
+	}, nil)
 	assert.Nil(t, err)
 
 	rr := httptest.NewRecorder()
@@ -486,7 +486,7 @@ func TestSubgraphPropagateHeaderRule(t *testing.T) {
 					},
 				},
 			},
-		})
+		}, nil)
 		assert.Nil(t, err)
 
 		rr := httptest.NewRecorder()
@@ -541,7 +541,7 @@ func TestSubgraphPropagateHeaderRule(t *testing.T) {
 					},
 				},
 			},
-		})
+		}, nil)
 		assert.Nil(t, err)
 
 		rr := httptest.NewRecorder()
@@ -600,7 +600,7 @@ func TestSubgraphPropagateHeaderRule(t *testing.T) {
 					Request: rules,
 				},
 			},
-		})
+		}, nil)
 		assert.Nil(t, err)
 
 		rr := httptest.NewRecorder()
@@ -664,7 +664,7 @@ func TestSubgraphPropagateHeaderRule(t *testing.T) {
 					Request: rules,
 				},
 			},
-		})
+		}, nil)
 		assert.Nil(t, err)
 
 		rr := httptest.NewRecorder()
@@ -722,7 +722,7 @@ func TestSubgraphRenamePropagateHeaderRule(t *testing.T) {
 					},
 				},
 			},
-		})
+		}, nil)
 		assert.Nil(t, err)
 
 		rr := httptest.NewRecorder()
@@ -772,7 +772,7 @@ func TestSubgraphRenamePropagateHeaderRule(t *testing.T) {
 					},
 				},
 			},
-		})
+		}, nil)
 		assert.Nil(t, err)
 
 		rr := httptest.NewRecorder()
@@ -822,7 +822,7 @@ func TestSubgraphRenamePropagateHeaderRule(t *testing.T) {
 					},
 				},
 			},
-		})
+		}, nil)
 		assert.Nil(t, err)
 
 		rr := httptest.NewRecorder()
@@ -871,7 +871,7 @@ func TestSubgraphRenamePropagateHeaderRule(t *testing.T) {
 					},
 				},
 			},
-		})
+		}, nil)
 		assert.Nil(t, err)
 
 		rr := httptest.NewRecorder()
@@ -921,7 +921,7 @@ func TestSubgraphRenamePropagateHeaderRule(t *testing.T) {
 					},
 				},
 			},
-		})
+		}, nil)
 		assert.Nil(t, err)
 
 		rr := httptest.NewRecorder()
@@ -969,7 +969,7 @@ func TestInvalidRegex(t *testing.T) {
 				},
 			},
 		},
-	})
+	}, nil)
 	assert.Error(t, err)
 }
 
@@ -984,7 +984,7 @@ func TestExpression(t *testing.T) {
 					},
 				},
 			},
-		})
+		}, nil)
 		assert.Nil(t, ht)
 		assert.Error(t, err)
 	})
@@ -1000,7 +1000,7 @@ func TestExpression(t *testing.T) {
 					},
 				},
 			},
-		})
+		}, nil)
 		assert.NotNil(t, ht)
 		assert.NoError(t, err)
 
@@ -1032,7 +1032,7 @@ func TestExpression(t *testing.T) {
 					},
 				},
 			},
-		})
+		}, nil)
 		require.NotNil(t, ht)
 		assert.NoError(t, err)
 

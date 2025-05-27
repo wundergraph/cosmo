@@ -44,6 +44,10 @@ type Context struct {
 	Subgraph Subgraph `expr:"subgraph"`
 }
 
+func NewDefaultContext() Context {
+	return Context{}
+}
+
 func (c Context) IsExpressionContext() bool {
 	return true
 }
@@ -155,6 +159,10 @@ type HeaderContext struct {
 	HeaderName string `expr:"headerName"`
 }
 
+func NewHeaderContext() HeaderContext {
+	return HeaderContext{}
+}
+
 func (copyCtx HeaderContext) Clone() *HeaderContext {
 	return &HeaderContext{
 		Context:    *copyCtx.Context.Clone(),
@@ -222,12 +230,4 @@ func handleExpressionError(err error) error {
 	}
 
 	return err
-}
-
-func UseDefaultContext() Context {
-	return Context{}
-}
-
-func UseHeaderContext() HeaderContext {
-	return HeaderContext{}
 }
