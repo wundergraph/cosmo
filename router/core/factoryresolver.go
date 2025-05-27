@@ -393,7 +393,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 				return nil, fmt.Errorf("error creating schema configuration for data source %s: %w", in.Id, err)
 			}
 
-			grpcConfig := toGRPCConfiguration(in.CustomGraphql.Grpc)
+			grpcConfig := toGRPCConfiguration(in.CustomGraphql.Grpc, pluginsEnabled)
 			if grpcConfig != nil {
 				grpcConfig.Compiler, err = grpcdatasource.NewProtoCompiler(in.CustomGraphql.Grpc.ProtoSchema, grpcConfig.Mapping)
 				if err != nil {
@@ -428,10 +428,6 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 			factory, err := l.resolver.ResolveGraphqlFactory(dataSourceName)
 			if err != nil {
 				return nil, err
-			}
-
-			if in.GetCustomGraphql().GetGrpc() != nil && !pluginsEnabled {
-				factory = &routerplugin.FallbackFactory{}
 			}
 
 			out, err = plan.NewDataSourceConfigurationWithName[graphql_datasource.Configuration](
@@ -643,7 +639,7 @@ func (l *Loader) fieldHasAuthorizationRule(fieldConfiguration *nodev1.FieldConfi
 	return false
 }
 
-func toGRPCConfiguration(config *nodev1.GRPCConfiguration) *grpcdatasource.GRPCConfiguration {
+func toGRPCConfiguration(config *nodev1.GRPCConfiguration, pluginsEnabled bool) *grpcdatasource.GRPCConfiguration {
 	if config == nil || config.Mapping == nil {
 		return nil
 	}
@@ -715,6 +711,7 @@ func toGRPCConfiguration(config *nodev1.GRPCConfiguration) *grpcdatasource.GRPCC
 	}
 
 	return &grpcdatasource.GRPCConfiguration{
-		Mapping: result,
+		Mapping:  result,
+		Disabled: !pluginsEnabled,
 	}
 }

@@ -102,11 +102,6 @@ func (p *GRPCPlugin) fork() error {
 		Plugins: map[string]plugin.Plugin{
 			p.pluginName: p,
 		},
-		Reattach: &plugin.ReattachConfig{
-			Protocol: "stdio",
-			Pid:      os.Getpid(),
-			Addr:     plugin.DefaultAddr,
-		},
 	})
 
 	clientProtocol, err := pluginClient.Client()

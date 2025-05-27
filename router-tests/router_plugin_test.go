@@ -36,7 +36,7 @@ func TestRouterPlugin(t *testing.T) {
 				Query: `query { project(id: 1) { id } }`,
 			})
 
-			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'projects'.","extensions":{"errors":[{"message":"Plugin is disabled"}]}}],"data":{"project":null}}`, response.Body)
+			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'projects'.","extensions":{"errors":[{"message":"gRPC datasource needs to be enabled to be used","extensions":{"code":"Internal"}}]}}],"data":{"project":null}}`, response.Body)
 		})
 	})
 
