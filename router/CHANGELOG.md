@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.215.2](https://github.com/wundergraph/cosmo/compare/router@0.215.1...router@0.215.2) (2025-05-27)
+
+### Bug Fixes
+
+* upgrade exprlang to 1.17.3 ([#1904](https://github.com/wundergraph/cosmo/issues/1904)) ([c1e895d](https://github.com/wundergraph/cosmo/commit/c1e895d6a37c398a27c2fd4204ae10fe9f966b43)) (@SkArchon)
+
 ## [0.215.1](https://github.com/wundergraph/cosmo/compare/router@0.215.0...router@0.215.1) (2025-05-26)
 
 ### Bug Fixes
