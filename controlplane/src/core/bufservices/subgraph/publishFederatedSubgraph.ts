@@ -193,7 +193,7 @@ export function publishFederatedSubgraph(
         };
       }
     } else {
-      if (!authContext.rbac.canCreateSubGraph(namespace)) {
+      if (!authContext.rbac.useLegacyFlow && !authContext.rbac.canCreateSubGraph(namespace)) {
         throw new UnauthorizedError();
       }
 

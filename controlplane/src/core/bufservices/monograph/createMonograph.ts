@@ -57,7 +57,7 @@ export function createMonograph(
         };
       }
 
-      if (!authContext.rbac.canCreateFederatedGraph(namespace)) {
+      if (!authContext.rbac.useLegacyFlow && !authContext.rbac.canCreateFederatedGraph(namespace)) {
         throw new UnauthorizedError();
       }
 

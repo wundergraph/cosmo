@@ -86,7 +86,7 @@ export function updateFeatureFlag(
       };
     }
 
-    if (!authContext.rbac.hasFeatureFlagWriteAccess(featureFlagDTO)) {
+    if (!authContext.rbac.useLegacyFlow && !authContext.rbac.hasFeatureFlagWriteAccess(featureFlagDTO)) {
       throw new UnauthorizedError();
     }
 

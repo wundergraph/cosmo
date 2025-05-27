@@ -22,7 +22,10 @@ export function createNamespace(
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
-    if (authContext.organizationDeactivated || !authContext.rbac.canCreateNamespace) {
+    if (
+      authContext.organizationDeactivated ||
+      (!authContext.rbac.useLegacyFlow && !authContext.rbac.canCreateNamespace)
+    ) {
       throw new UnauthorizedError();
     }
 
