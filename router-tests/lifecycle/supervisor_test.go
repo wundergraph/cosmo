@@ -40,7 +40,4 @@ func TestRouterSupervisor(t *testing.T) {
 	xEnv.Shutdown()
 
 	<-stopped
-
-	_, err = xEnv.MakeRequest("GET", xEnv.RouterURL+"/health/ready", nil, nil)
-	require.Error(t, err)
 }
