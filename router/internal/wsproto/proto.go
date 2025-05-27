@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+
+	"github.com/gobwas/ws"
 )
 
 var DownstreamErrorMessage = json.RawMessage(`[{"message":"downstream service error","extensions":{"code":"DOWNSTREAM_ERROR"}}]`)
@@ -26,8 +28,9 @@ type Proto interface {
 }
 
 type ProtoConn interface {
-	ReadJSON(v interface{}) error
-	WriteJSON(v interface{}) error
+	ReadJSON(v any) error
+	WriteJSON(v any) error
+	WriteCloser(code ws.StatusCode, reason string) error
 	Close() error
 }
 

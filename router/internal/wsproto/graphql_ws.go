@@ -3,6 +3,8 @@ package wsproto
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/gobwas/ws"
 )
 
 // See protocol at https://github.com/enisdenjo/graphql-ws/blob/master/PROTOCOL.md
@@ -121,6 +123,10 @@ func (p *graphQLWSProtocol) Close(id string, downstreamErrorMessage bool) error 
 		); err != nil {
 			return err
 		}
+	}
+
+	if err := p.conn.WriteCloser(ws.StatusGoingAway, "Downstream service error"); err != nil {
+		return err
 	}
 
 	if err := p.conn.Close(); err != nil {
