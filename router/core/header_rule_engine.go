@@ -262,10 +262,12 @@ func (hf *HeaderPropagation) compileExpressionRules(rules []*config.RequestHeade
 			continue
 		}
 		reflectType := reflect.String
+		var exprContext expr.ExpressionContext = expr.UseDefaultContext()
 		if key.opType == config.HeaderRuleOperationPropagate {
 			reflectType = reflect.Bool
+			exprContext = expr.UseHeaderContext()
 		}
-		program, err := manager.CompileExpression(rule.Expression, reflectType)
+		program, err := manager.CompileExpression(rule.Expression, reflectType, exprContext)
 		if err != nil {
 			return fmt.Errorf("error compiling expression %s for header rule %s: %w", rule.Expression, rule.Name, err)
 		}
@@ -545,10 +547,10 @@ func (h *HeaderPropagation) isApplyHeader(rule *config.RequestHeaderRule, reqCtx
 			return false
 		}
 
-		exprCtx := reqCtx.expressionContext
-		exprCtx.ScopedValues.CurrentHeader = headerName
+		headerContext := expr.HeaderContext{Context: reqCtx.expressionContext}
+		headerContext.HeaderName = headerName
 
-		addHeaderAny, err := h.getRequestRuleExpressionValue(rule, exprCtx, rule.Operation)
+		addHeaderAny, err := h.getRequestRuleExpressionValue(rule, headerContext, rule.Operation)
 		if err != nil {
 			reqCtx.logger.Error("error occurred while evaluating expression", zap.String("expression", rule.Expression), zap.Error(err))
 			return false
@@ -648,7 +650,7 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 	}
 }
 
-func (h *HeaderPropagation) getRequestRuleExpressionValue(rule *config.RequestHeaderRule, exprCtx expr.Context, operation config.HeaderRuleOperation) (any, error) {
+func (h *HeaderPropagation) getRequestRuleExpressionValue(rule *config.RequestHeaderRule, provider expr.ExpressionContext, operation config.HeaderRuleOperation) (any, error) {
 	key := HeaderPropagationKey{
 		opType:     operation,
 		expression: rule.Expression,
@@ -657,7 +659,7 @@ func (h *HeaderPropagation) getRequestRuleExpressionValue(rule *config.RequestHe
 	if !ok {
 		return "", fmt.Errorf("expression %s not found in compiled rules for header rule %s", rule.Expression, rule.Name)
 	}
-	value, err := expr.ResolveAnyExpression(program, exprCtx)
+	value, err := expr.ResolveAnyExpression(program, provider)
 	if err != nil {
 		return "", fmt.Errorf("unable to resolve expression %q for header rule %s: %s", rule.Expression, rule.Name, err.Error())
 	}

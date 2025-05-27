@@ -56,7 +56,7 @@ func newAttributeExpressions(attr []config.CustomAttribute, exprManager *expr.Ma
 		if a.ValueFrom != nil && a.ValueFrom.Expression != "" {
 			usesAuth := VisitorCheckForRequestAuthAccess{}
 			usesSubgraph := expr.UsesSubgraph{}
-			prog, err := exprManager.CompileExpression(a.ValueFrom.Expression, reflect.String, &usesAuth, &usesSubgraph)
+			prog, err := exprManager.CompileExpression(a.ValueFrom.Expression, reflect.String, expr.UseDefaultContext(), &usesAuth, &usesSubgraph)
 			if err != nil {
 				return nil, fmt.Errorf("custom attribute error, unable to compile '%s' with expression '%s': %s", a.Key, a.ValueFrom.Expression, err)
 			}

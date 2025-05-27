@@ -33,7 +33,7 @@ func TestExprManager(t *testing.T) {
 
 		exprManager := CreateNewExprManager()
 
-		expr, err := exprManager.CompileAnyExpression("request.error ?? 'somevalue'")
+		expr, err := exprManager.CompileAnyExpression("request.error ?? 'somevalue'", UseDefaultContext())
 		require.NoError(t, err)
 
 		context := Context{
@@ -55,7 +55,7 @@ func TestExprManager(t *testing.T) {
 
 		exprManager := CreateNewExprManager()
 
-		expr, err := exprManager.CompileExpression("request.error == nil", reflect.Bool)
+		expr, err := exprManager.CompileExpression("request.error == nil", reflect.Bool, UseDefaultContext())
 		require.NoError(t, err)
 
 		context := Context{
@@ -77,7 +77,7 @@ func TestExprManager(t *testing.T) {
 
 		exprManager := CreateNewExprManager()
 
-		expr, err := exprManager.CompileExpression("request.error == nil", reflect.Bool)
+		expr, err := exprManager.CompileExpression("request.error == nil", reflect.Bool, UseDefaultContext())
 		require.NoError(t, err)
 
 		context := Context{
@@ -99,7 +99,7 @@ func TestExprManager(t *testing.T) {
 
 		exprManager := CreateNewExprManager()
 
-		_, err := exprManager.CompileAnyExpression("request.error ?? 'somevalue'")
+		_, err := exprManager.CompileAnyExpression("request.error ?? 'somevalue'", UseDefaultContext())
 		require.NoError(t, err)
 	})
 
@@ -111,10 +111,10 @@ func TestExprManager(t *testing.T) {
 		visitorExample := VisitorExample{}
 		require.False(t, visitorExample.Uses)
 
-		expr, err := exprManager.CompileExpression("request.error == nil", reflect.Bool, &visitorExample)
+		expr, err := exprManager.CompileExpression("request.error == nil", reflect.Bool, UseDefaultContext(), &visitorExample)
 		require.NoError(t, err)
 
-		context := Context{}
+		context := UseDefaultContext()
 
 		_, err = ResolveBoolExpression(expr, context)
 		if err != nil {
@@ -129,12 +129,12 @@ func TestExprManager(t *testing.T) {
 
 		exprManager := CreateNewExprManager()
 
-		_, err := exprManager.CompileAnyExpression("request.error")
+		_, err := exprManager.CompileAnyExpression("request.error", UseDefaultContext())
 		if err != nil {
 			require.Fail(t, "unexpected error", err)
 		}
 
-		_, err = exprManager.CompileAnyExpression("request.body")
+		_, err = exprManager.CompileAnyExpression("request.body", UseDefaultContext())
 		if err != nil {
 			require.Fail(t, "unexpected error", err)
 		}
@@ -147,12 +147,12 @@ func TestExprManager(t *testing.T) {
 
 		exprManager := CreateNewExprManager()
 
-		_, err := exprManager.CompileAnyExpression("request.error")
+		_, err := exprManager.CompileAnyExpression("request.error", UseDefaultContext())
 		if err != nil {
 			require.Fail(t, "unexpected error", err)
 		}
 
-		_, err = exprManager.CompileAnyExpression("request.body.raw")
+		_, err = exprManager.CompileAnyExpression("request.body.raw", UseDefaultContext())
 		if err != nil {
 			require.Fail(t, "unexpected error", err)
 		}
@@ -165,7 +165,7 @@ func TestExprManager(t *testing.T) {
 
 		exprManager := CreateNewExprManager()
 
-		_, err := exprManager.CompileAnyExpression("request.error ?? request.body.raw")
+		_, err := exprManager.CompileAnyExpression("request.error ?? request.body.raw", UseDefaultContext())
 		if err != nil {
 			require.Fail(t, "unexpected error", err)
 		}

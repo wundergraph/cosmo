@@ -30,11 +30,22 @@ import (
 const ExprRequestKey = "request"
 const ExprRequestAuthKey = "auth"
 
+// ExpressionContext is a marker interface
+// Note: We could not use Clone here as its return type is specific to the context
+// which we could handle by using generics, however the ExprManager
+// is using methods and we cannot use generics with methods.
+type ExpressionContext interface {
+	IsExpressionContext() bool
+}
+
 // Context is the context for expressions parser when evaluating dynamic expressions
 type Context struct {
-	Request      Request      `expr:"request"` // if changing the expr tag, the ExprRequestKey should be updated
-	Subgraph     Subgraph     `expr:"subgraph"`
-	ScopedValues ScopedValues `expr:"-"`
+	Request  Request  `expr:"request"` // if changing the expr tag, the ExprRequestKey should be updated
+	Subgraph Subgraph `expr:"subgraph"`
+}
+
+func (c Context) IsExpressionContext() bool {
+	return true
 }
 
 // Clone creates a deep copy of the Context
@@ -134,13 +145,21 @@ type Subgraph struct {
 	Request SubgraphRequest `expr:"request"`
 }
 
-// ScopedValues This struct contains values which are scoped for a particular use case
-type ScopedValues struct {
-	CurrentHeader string
+/**
+ * Other Contexts
+ */
+
+// HeaderContext is a context used for the header name when propogating headers
+type HeaderContext struct {
+	Context
+	HeaderName string `expr:"headerName"`
 }
 
-func (ctx Context) GetCurrentHeader() string {
-	return ctx.ScopedValues.CurrentHeader
+func (copyCtx HeaderContext) Clone() *HeaderContext {
+	return &HeaderContext{
+		Context:    *copyCtx.Context.Clone(),
+		HeaderName: copyCtx.HeaderName,
+	}
 }
 
 // Get returns the value of the header with the given key. If the header is not present, an empty string is returned.
@@ -203,4 +222,12 @@ func handleExpressionError(err error) error {
 	}
 
 	return err
+}
+
+func UseDefaultContext() Context {
+	return Context{}
+}
+
+func UseHeaderContext() HeaderContext {
+	return HeaderContext{}
 }

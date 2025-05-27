@@ -24,16 +24,16 @@ func CreateNewExprManager() *Manager {
 
 // CompileExpression compiles an expression and returns the program for the specific type.
 // The exprContext is used to provide the context for the expression evaluation. Not safe for concurrent use.
-func (c *Manager) CompileExpression(exprString string, kind reflect.Kind, visitors ...ast.Visitor) (*vm.Program, error) {
-	options := mergeOptions(expr.AsKind(kind), visitors)
+func (c *Manager) CompileExpression(exprString string, kind reflect.Kind, context ExpressionContext, visitors ...ast.Visitor) (*vm.Program, error) {
+	options := mergeOptions(expr.AsKind(kind), context, visitors)
 	return c.compileExpressionWithExprOptions(options, exprString)
 }
 
 // CompileAnyExpression compiles an expression and returns the program for any type.
 // The exprContext is used to provide the context for the expression evaluation. Not safe for concurrent use.
-func (c *Manager) CompileAnyExpression(exprString string, visitors ...ast.Visitor) (*vm.Program, error) {
+func (c *Manager) CompileAnyExpression(exprString string, context ExpressionContext, visitors ...ast.Visitor) (*vm.Program, error) {
 	// We need a separate api for any expressions as it does not have an associated reflect.Kind
-	options := mergeOptions(expr.AsAny(), visitors)
+	options := mergeOptions(expr.AsAny(), context, visitors)
 	return c.compileExpressionWithExprOptions(options, exprString)
 }
 
@@ -48,9 +48,7 @@ func (c *Manager) compileExpressionWithExprOptions(options []expr.Option, exprSt
 }
 
 func (c *Manager) compileOptions(extra ...expr.Option) []expr.Option {
-	options := []expr.Option{
-		expr.Env(Context{}),
-	}
+	options := make([]expr.Option, 0)
 	options = append(options, extra...)
 
 	for _, visitor := range c.VisitorManager.globalVisitors {
@@ -59,9 +57,10 @@ func (c *Manager) compileOptions(extra ...expr.Option) []expr.Option {
 	return options
 }
 
-func mergeOptions(typeOption expr.Option, visitors []ast.Visitor) []expr.Option {
+func mergeOptions(typeOption expr.Option, context ExpressionContext, visitors []ast.Visitor) []expr.Option {
 	compilationOptions := []expr.Option{
 		typeOption,
+		expr.Env(context),
 	}
 
 	for _, visitor := range visitors {
@@ -74,7 +73,7 @@ func mergeOptions(typeOption expr.Option, visitors []ast.Visitor) []expr.Option 
 // ValidateAnyExpression compiles the expression to ensure that the expression itself is valid but more
 // importantly it checks if the return type is not nil and is an allowed return type
 // this allows us to ensure that nil and return types such as func or channels are not returned
-func (c *Manager) ValidateAnyExpression(s string) error {
+func (c *Manager) ValidateAnyExpression(s string, context Context) error {
 	tree, err := parser.Parse(s)
 	if err != nil {
 		return handleExpressionError(err)
@@ -86,7 +85,7 @@ func (c *Manager) ValidateAnyExpression(s string) error {
 	}
 
 	config := conf.CreateNew()
-	for _, op := range c.compileOptions() {
+	for _, op := range c.compileOptions(expr.Env(context)) {
 		op(config)
 	}
 

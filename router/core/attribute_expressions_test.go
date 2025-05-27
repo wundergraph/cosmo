@@ -75,7 +75,7 @@ func TestVisitorCheckForRequestAuthAccess_Visit(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			v := VisitorCheckForRequestAuthAccess{}
 			manager := expr.CreateNewExprManager()
-			out, err := manager.CompileExpression(tt.expr, reflect.String, &v)
+			out, err := manager.CompileExpression(tt.expr, reflect.String, expr.UseDefaultContext(), &v)
 			assert.NoError(t, err)
 			assert.NotNil(t, out)
 			assert.Equal(t, tt.expectedHasAuth, v.HasAuth)

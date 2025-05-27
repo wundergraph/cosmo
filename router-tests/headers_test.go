@@ -734,7 +734,7 @@ func TestForwardRenamedHeaders(t *testing.T) {
 							Operation:  config.HeaderRuleOperationPropagate,
 							Rename:     renameHeader,
 							Default:    defaultValue,
-							Expression: "GetCurrentHeader() == '" + http.CanonicalHeaderKey(header1) + "'",
+							Expression: "headerName in ['" + http.CanonicalHeaderKey(header1) + "']",
 						},
 					},
 				})
@@ -772,7 +772,7 @@ func TestForwardRenamedHeaders(t *testing.T) {
 						Request: []*config.RequestHeaderRule{
 							{
 								Operation:  config.HeaderRuleOperationPropagate,
-								Expression: `GetCurrentHeader() != '` + header2 + `'`,
+								Expression: `headerName != '` + header2 + `'`,
 							},
 						},
 					})
@@ -813,7 +813,7 @@ func TestForwardRenamedHeaders(t *testing.T) {
 						Request: []*config.RequestHeaderRule{
 							{
 								Operation:  config.HeaderRuleOperationPropagate,
-								Expression: `GetCurrentHeader() != '` + http.CanonicalHeaderKey(header2) + `'`,
+								Expression: `headerName not in ['` + http.CanonicalHeaderKey(header2) + `', '` + http.CanonicalHeaderKey(header3) + `']`,
 							},
 						},
 					})
@@ -838,7 +838,7 @@ func TestForwardRenamedHeaders(t *testing.T) {
 							val3: headerValue(name:"` + http.CanonicalHeaderKey(header3) + `")
 						}`,
 						})
-						require.Equal(t, `{"data":{"val1":"`+value1+`","val2":"","val3":"`+value3+`"}}`, res.Body)
+						require.Equal(t, `{"data":{"val1":"`+value1+`","val2":"","val3":""}}`, res.Body)
 					})
 				})
 			})
@@ -855,7 +855,7 @@ func TestForwardRenamedHeaders(t *testing.T) {
 					Request: []*config.RequestHeaderRule{
 						{
 							Operation:  config.HeaderRuleOperationPropagate,
-							Expression: `request.header.Get(GetCurrentHeader()) != '` + sharedVal + `'`,
+							Expression: `request.header.Get(headerName) != '` + sharedVal + `'`,
 						},
 					},
 				})
@@ -933,7 +933,7 @@ func TestForwardRenamedHeaders(t *testing.T) {
 					Request: []*config.RequestHeaderRule{
 						{
 							Operation:  config.HeaderRuleOperationPropagate,
-							Expression: "GetCurrentHeader() == '" + header1 + "'",
+							Expression: "headerName == '" + header1 + "'",
 						},
 					},
 				})

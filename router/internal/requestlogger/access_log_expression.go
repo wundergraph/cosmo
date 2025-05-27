@@ -20,12 +20,12 @@ func GetAccessLogConfigExpressions(attributes []config.CustomAttribute, exprMana
 			continue
 		}
 
-		err := exprManager.ValidateAnyExpression(sAttribute.ValueFrom.Expression)
+		err := exprManager.ValidateAnyExpression(sAttribute.ValueFrom.Expression, exprlocal.UseDefaultContext())
 		if err != nil {
 			return nil, fmt.Errorf("failed when validating log expressions: %w", err)
 		}
 
-		expression, err := exprManager.CompileAnyExpression(sAttribute.ValueFrom.Expression)
+		expression, err := exprManager.CompileAnyExpression(sAttribute.ValueFrom.Expression, exprlocal.UseDefaultContext())
 		if err != nil {
 			return nil, fmt.Errorf("failed when compiling log expressions: %w", err)
 		}

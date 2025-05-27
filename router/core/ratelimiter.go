@@ -43,7 +43,7 @@ func NewCosmoRateLimiter(opts *CosmoRateLimiterOptions) (rl *CosmoRateLimiter, e
 		rl.rejectStatusCode = 200
 	}
 	if opts.KeySuffixExpression != "" {
-		rl.keySuffixProgram, err = opts.ExprManager.CompileExpression(opts.KeySuffixExpression, reflect.String)
+		rl.keySuffixProgram, err = opts.ExprManager.CompileExpression(opts.KeySuffixExpression, reflect.String, expr.UseDefaultContext())
 		if err != nil {
 			return nil, err
 		}
