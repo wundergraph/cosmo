@@ -21,6 +21,7 @@ describe('RBAC Evaluator', () => {
     const rbac = createTestRBACEvaluator();
 
     expect(rbac.groups).toHaveLength(0);
+    expect(rbac.useLegacyFlow).toBe(true);
     expect(rbac.isOrganizationAdmin).toBe(false);
     expect(rbac.isOrganizationAdminOrDeveloper).toBe(false);
     expect(rbac.isOrganizationApiKeyManager).toBe(false);
@@ -45,6 +46,7 @@ describe('RBAC Evaluator', () => {
     const rbac = createTestRBACEvaluator(orgAdmin, createTestGroup({ role: 'graph-admin' }));
 
     expect(rbac.groups).toHaveLength(2);
+    expect(rbac.useLegacyFlow).toBe(false);
     expect(rbac.roles).toHaveLength(2);
     expect(rbac.roles.includes('organization-admin'));
     expect(rbac.roles.includes('graph-admin'));
@@ -60,6 +62,7 @@ describe('RBAC Evaluator', () => {
     );
 
     expect(rbac.groups).toHaveLength(4);
+    expect(rbac.useLegacyFlow).toBe(false);
     expect(rbac.roles).toHaveLength(3);
     expect(rbac.roles.includes('graph-admin'));
     expect(rbac.roles.includes('graph-viewer'));

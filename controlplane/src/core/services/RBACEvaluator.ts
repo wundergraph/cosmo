@@ -22,6 +22,7 @@ interface Target {
 }
 
 export class RBACEvaluator {
+  readonly useLegacyFlow: boolean;
   readonly roles: OrganizationRole[];
   private readonly rules: ReadonlyMap<OrganizationRole, RuleData>;
 
@@ -40,6 +41,8 @@ export class RBACEvaluator {
     private readonly userId?: string,
     readonly isApiKey?: boolean,
   ) {
+    this.useLegacyFlow = groups.length === 0;
+
     const flattenRules = groups.flatMap((group) => group.rules);
     const rulesGroupedByRole = Object.groupBy(flattenRules, (rule) => rule.role);
 

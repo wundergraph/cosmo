@@ -130,7 +130,7 @@ describe('Graph Pruning Tests', (ctx) => {
     });
 
     expect(response.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-    expect(response.response?.details).toBe('The user doesnt have the permissions to perform this operation');
+    expect(response.response?.details).toBe('The user does not have the permissions to perform this operation');
 
     await server.close();
   });
@@ -227,7 +227,7 @@ describe('Graph Pruning Tests', (ctx) => {
 
     expect(configureGraphPruningConfigResponse.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
     expect(configureGraphPruningConfigResponse.response?.details).toBe(
-      'The user doesnt have the permissions to perform this operation',
+      'The user does not have the permissions to perform this operation',
     );
 
     await server.close();
