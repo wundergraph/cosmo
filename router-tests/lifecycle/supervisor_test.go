@@ -3,7 +3,6 @@ package integration
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
@@ -19,8 +18,11 @@ func TestRouterSupervisor(t *testing.T) {
 	xEnv, err := testenv.CreateTestSupervisorEnv(t, &testenv.Config{})
 	require.NoError(t, err)
 
-	// Start in untracked goroutine, should get cleaned up automatically
-	go xEnv.RouterSupervisor.Start()
+	stopped := make(chan struct{})
+	go func() {
+		xEnv.RouterSupervisor.Start()
+		close(stopped)
+	}()
 
 	// Ready 1
 	err = xEnv.WaitForServer(context.Background(), xEnv.RouterURL+"/health/ready", 2000, 30)
@@ -37,15 +39,8 @@ func TestRouterSupervisor(t *testing.T) {
 	xEnv.RouterSupervisor.Stop()
 	xEnv.Shutdown()
 
-	for {
-		_, err := xEnv.MakeRequest("GET", xEnv.RouterURL+"/health/ready", nil, nil)
-		if err != nil {
-			break
-		}
+	<-stopped
 
-		time.Sleep(500 * time.Millisecond)
-	}
-
-	// Let everything settle
-	time.Sleep(5 * time.Second)
+	_, err = xEnv.MakeRequest("GET", xEnv.RouterURL+"/health/ready", nil, nil)
+	require.Error(t, err)
 }
