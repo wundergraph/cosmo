@@ -443,28 +443,24 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 		}
 	}
 
-	for _, providerBuilderFactory := range pubsub.ProviderBuilderFactories() {
-		providerBuilder := providerBuilderFactory(
-			l.ctx,
-			routerEngineConfig.Events,
-			l.logger,
-			l.resolver.InstanceData().HostName,
-			l.resolver.InstanceData().ListenAddress,
-		)
-		factoryProviders, factoryDataSources, err := pubsub_datasource.BuildProvidersAndDataSources(
-			l.ctx,
-			providerBuilder,
-			pubSubDS,
-		)
-		if err != nil {
-			return nil, providers, err
-		}
-		if len(factoryProviders) > 0 {
-			providers = append(providers, factoryProviders...)
-		}
-		if len(factoryDataSources) > 0 {
-			outConfig.DataSources = append(outConfig.DataSources, factoryDataSources...)
-		}
+	factoryProviders, factoryDataSources, err := pubsub.BuildProvidersAndDataSources(
+		l.ctx,
+		routerEngineConfig.Events,
+		l.logger,
+		pubSubDS,
+		l.resolver.InstanceData().HostName,
+		l.resolver.InstanceData().ListenAddress,
+	)
+	if err != nil {
+		return nil, providers, err
+	}
+
+	if len(factoryProviders) > 0 {
+		providers = append(providers, factoryProviders...)
+	}
+
+	if len(factoryDataSources) > 0 {
+		outConfig.DataSources = append(outConfig.DataSources, factoryDataSources...)
 	}
 
 	return &outConfig, providers, nil

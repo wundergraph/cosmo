@@ -158,60 +158,41 @@ func TestTransformEventConfig(t *testing.T) {
 }
 
 func TestPubSubProviderBuilderFactory(t *testing.T) {
-	t.Run("returns nil if no NATS configuration", func(t *testing.T) {
+	t.Run("errors if provider ID is empty", func(t *testing.T) {
 		ctx := context.Background()
-		cfg := config.EventsConfiguration{}
+		cfg := config.NatsEventSource{}
 		logger := zaptest.NewLogger(t)
 
-		builder := PubSubProviderBuilderFactory(ctx, cfg, logger, "host", "addr")
+		builder := NewPubSubProviderBuilder(ctx, logger, "host", "addr")
 		require.NotNil(t, builder)
-		providers, err := builder.Providers(nil)
-		require.NoError(t, err)
-		require.Empty(t, providers)
-	})
-
-	t.Run("errors if provider not found", func(t *testing.T) {
-		ctx := context.Background()
-		cfg := config.EventsConfiguration{}
-		logger := zaptest.NewLogger(t)
-
-		builder := PubSubProviderBuilderFactory(ctx, cfg, logger, "host", "addr")
-		require.NotNil(t, builder)
-		providers, err := builder.Providers([]string{"unknown"})
+		provider, err := builder.BuildProvider(cfg)
 		require.Error(t, err)
-		require.Empty(t, providers)
-		assert.Contains(t, err.Error(), "provider with ID unknown is not defined")
+		require.Nil(t, provider)
+		assert.Contains(t, err.Error(), "provider ID is empty")
 	})
 
 	t.Run("creates provider with configured adapters", func(t *testing.T) {
 		providerId := "test-provider"
 
-		cfg := config.EventsConfiguration{
-			Providers: config.EventProviders{
-				Nats: []config.NatsEventSource{
-					{
-						ID:  providerId,
-						URL: "nats://localhost:4222",
-					},
-				},
-			},
+		cfg := config.NatsEventSource{
+			ID:  providerId,
+			URL: "nats://localhost:4222",
 		}
 
 		logger := zaptest.NewLogger(t)
 
 		ctx := context.Background()
 
-		builder := PubSubProviderBuilderFactory(ctx, cfg, logger, "host", "addr")
+		builder := NewPubSubProviderBuilder(ctx, logger, "host", "addr")
 		require.NotNil(t, builder)
-		providers, err := builder.Providers([]string{providerId})
+		provider, err := builder.BuildProvider(cfg)
 		require.NoError(t, err)
-		require.Len(t, providers, 1)
 
 		// Check the returned provider
-		kafkaProvider, ok := providers[0].(*PubSubProvider)
+		natsProvider, ok := provider.(*PubSubProvider)
 		require.True(t, ok)
-		assert.NotNil(t, kafkaProvider.Logger)
-		assert.NotNil(t, kafkaProvider.Adapter)
+		assert.NotNil(t, natsProvider.Logger)
+		assert.NotNil(t, natsProvider.Adapter)
 	})
 }
 

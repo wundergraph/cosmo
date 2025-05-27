@@ -3,6 +3,7 @@ package nats
 import (
 	"context"
 
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"go.uber.org/zap"
 )
 
@@ -10,7 +11,7 @@ const providerTypeID = "nats"
 
 type PubSubProvider struct {
 	id      string
-	Adapter AdapterInterface
+	Adapter datasource.Lifecycle
 	Logger  *zap.Logger
 }
 
