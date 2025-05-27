@@ -196,6 +196,9 @@ jobs:
         run: make build-pnpm
       - name: Install plugin tools
         run: make install-plugin-tools
+
+      - name: Update PATH
+        run: echo "PATH=$PATH:$HOME/.local/bin" >> $GITHUB_ENV
       - name: Setup Redis Cluster (for Cluster tests)
         uses: vishnudxb/redis-cluster@1.0.9
         with:
