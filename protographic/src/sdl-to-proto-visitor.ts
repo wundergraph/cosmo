@@ -480,8 +480,8 @@ export class GraphQLToProtoTextVisitor {
             result.rpcMethods.push(this.createRpcMethod(methodName, requestName, responseName, description));
 
             // Create request and response messages
-            result.messageDefinitions.push(...this.createKeyRequestMessage(typeName, requestName, keyFields[0]));
-            result.messageDefinitions.push(...this.createKeyResponseMessage(typeName, responseName));
+            result.messageDefinitions.push(...this.createKeyRequestMessage(typeName, requestName, keyFields[0], responseName));
+            result.messageDefinitions.push(...this.createKeyResponseMessage(typeName, responseName, requestName));
           }
         }
       }
@@ -599,7 +599,7 @@ export class GraphQLToProtoTextVisitor {
   /**
    * Creates a request message for entity lookup without adding to protoText
    */
-  private createKeyRequestMessage(typeName: string, requestName: string, keyField: string): string[] {
+  private createKeyRequestMessage(typeName: string, requestName: string, keyField: string, responseName: string): string[] {
     const messageLines: string[] = [];
     const keyMessageName = `${requestName}Key`;
     const lockData = this.lockManager.getLockData();
@@ -630,7 +630,7 @@ export class GraphQLToProtoTextVisitor {
     const keyFieldNumber = this.getFieldNumber(keyMessageName, protoKeyField, 1);
 
     if (this.includeComments) {
-      const keyFieldComment = `Key field for ${typeName} entity lookup`;
+      const keyFieldComment = `Key field for ${typeName} entity lookup.`;
       messageLines.push(...this.formatComment(keyFieldComment, 1)); // Field comment, indent 1 level
     }
     messageLines.push(`  string ${protoKeyField} = ${keyFieldNumber};`);
@@ -649,7 +649,7 @@ export class GraphQLToProtoTextVisitor {
     }
 
     if (this.includeComments) {
-      const requestComment = `Request message for ${typeName} entity lookup`;
+      const requestComment = `Request message for ${typeName} entity lookup.`;
       messageLines.push(...this.formatComment(requestComment, 0)); // Top-level comment, no indent
     }
     messageLines.push(`message ${requestName} {`);
@@ -664,7 +664,8 @@ export class GraphQLToProtoTextVisitor {
     const repeatFieldNumber = this.getFieldNumber(requestName, 'keys', 1);
 
     if (this.includeComments) {
-      const keysComment = `List of keys to look up ${typeName} entities`;
+      const keysComment = `List of keys to look up ${typeName} entities.
+Order matters - each key maps to one entity in ${responseName}.`;
       messageLines.push(...this.formatComment(keysComment, 1)); // Field comment, indent 1 level
     }
     messageLines.push(`  repeated ${keyMessageName} keys = ${repeatFieldNumber};`);
@@ -680,7 +681,7 @@ export class GraphQLToProtoTextVisitor {
   /**
    * Creates a response message for entity lookup without adding to protoText
    */
-  private createKeyResponseMessage(typeName: string, responseName: string): string[] {
+  private createKeyResponseMessage(typeName: string, responseName: string, requestName: string): string[] {
     const messageLines: string[] = [];
     const lockData = this.lockManager.getLockData();
 
@@ -693,7 +694,7 @@ export class GraphQLToProtoTextVisitor {
 
     // Create the response message with repeated entity directly
     if (this.includeComments) {
-      const responseComment = `Response message for ${typeName} entity lookup`;
+      const responseComment = `Response message for ${typeName} entity lookup.`;
       messageLines.push(...this.formatComment(responseComment, 0)); // Top-level comment, no indent
     }
     messageLines.push(`message ${responseName} {`);
@@ -708,7 +709,19 @@ export class GraphQLToProtoTextVisitor {
     const responseFieldNumber = this.getFieldNumber(responseName, 'result', 1);
 
     if (this.includeComments) {
-      const resultComment = `List of ${typeName} entities matching the requested keys`;
+      const resultComment = `List of ${typeName} entities in the same order as the keys in ${requestName}.
+Always return the same number of entities as keys. Use null for entities that cannot be found.
+
+Example:
+  LookupUserByIdRequest:
+    keys:
+      - id: 1
+      - id: 2
+  LookupUserByIdResponse:
+    result:
+      - id: 1 # User with id 1 found
+      - null  # User with id 2 not found
+`;
       messageLines.push(...this.formatComment(resultComment, 1)); // Field comment, indent 1 level
     }
     messageLines.push(`  repeated ${typeName} result = ${responseFieldNumber};`);
@@ -739,8 +752,8 @@ export class GraphQLToProtoTextVisitor {
     // Add a description comment for the request message
     if (this.includeComments) {
       const description = field.description
-        ? `Request message for ${field.name} operation${field.description ? ': ' + field.description : ''}`
-        : `Request message for ${field.name} operation`;
+        ? `Request message for ${field.name} operation${field.description ? ': ' + field.description : ''}.`
+        : `Request message for ${field.name} operation.`;
       messageLines.push(...this.formatComment(description, 0)); // Top-level comment, no indent
     }
 
@@ -823,8 +836,8 @@ export class GraphQLToProtoTextVisitor {
     // Add a description comment for the response message
     if (this.includeComments) {
       const description = field.description
-        ? `Response message for ${fieldName} operation${field.description ? ': ' + field.description : ''}`
-        : `Response message for ${fieldName} operation`;
+        ? `Response message for ${fieldName} operation${field.description ? ': ' + field.description : ''}.`
+        : `Response message for ${fieldName} operation.`;
       messageLines.push(...this.formatComment(description, 0)); // Top-level comment, no indent
     }
 
@@ -1382,7 +1395,7 @@ export class GraphQLToProtoTextVisitor {
 
     // Add a description comment for the wrapper message
     if (this.includeComments) {
-      const wrapperComment = `Wrapper message for a list of ${baseType.name}`;
+      const wrapperComment = `Wrapper message for a list of ${baseType.name}.`;
       messageLines.push(...this.formatComment(wrapperComment, 0)); // Top-level comment, no indent
     }
 
