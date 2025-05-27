@@ -97,7 +97,6 @@ jobs:
             router/go.sum
             router-tests/go.sum
             demo/go.sum
-
       - uses: ./.github/actions/go-mod-tidy
         with:
           working-directory: ./router
@@ -187,6 +186,8 @@ jobs:
           - '9092:9092'
     steps:
       - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: ./.github/actions/node
       - uses: ./.github/actions/go
         with:
           cache-dependency-path: |
