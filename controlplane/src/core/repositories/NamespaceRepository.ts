@@ -139,12 +139,7 @@ export class NamespaceRepository {
       const targets = await this.db
         .selectDistinct({ namespaceId: schema.targets.namespaceId })
         .from(schema.targets)
-        .where(
-          and(
-            eq(schema.targets.organizationId, this.organizationId),
-            inArray(schema.targets.id, rbac.resources),
-          ),
-        );
+        .where(and(eq(schema.targets.organizationId, this.organizationId), inArray(schema.targets.id, rbac.resources)));
 
       namespacesBasedOnResources.push(...targets.map((ns) => ns.namespaceId));
     }
