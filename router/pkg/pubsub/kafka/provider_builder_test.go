@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
-	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
 )
 
@@ -104,32 +104,9 @@ func TestPubSubProviderBuilderFactory(t *testing.T) {
 		require.NoError(t, err)
 
 		// Check the returned provider
-		kafkaProvider, ok := provider.(*PubSubProvider)
+		kafkaProvider, ok := provider.(*datasource.PubSubProviderImpl)
 		require.True(t, ok)
 		assert.NotNil(t, kafkaProvider.Logger)
 		assert.NotNil(t, kafkaProvider.Adapter)
-	})
-}
-
-func TestPubSubProvider(t *testing.T) {
-	mocked := &mockAdapter{}
-
-	provider := &PubSubProvider{
-		Logger:  zap.NewNop(),
-		Adapter: mocked,
-	}
-
-	t.Run("calling Shutdown calls adapter Shutdown", func(t *testing.T) {
-		mocked.On("Shutdown", context.Background()).Return(nil)
-		err := provider.Shutdown(context.Background())
-		require.NoError(t, err)
-		mocked.AssertCalled(t, "Shutdown", context.Background())
-	})
-
-	t.Run("calling Startup calls adapter Startup", func(t *testing.T) {
-		mocked.On("Startup", context.Background()).Return(nil)
-		err := provider.Startup(context.Background())
-		require.NoError(t, err)
-		mocked.AssertCalled(t, "Startup", context.Background())
 	})
 }

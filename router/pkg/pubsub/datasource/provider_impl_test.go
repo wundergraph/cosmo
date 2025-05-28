@@ -1,4 +1,4 @@
-package kafka
+package datasource
 
 import (
 	"context"
@@ -7,7 +7,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
 // MockAdapter is a mock implementation of AdapterInterface.
@@ -25,21 +24,11 @@ func (m *MockAdapter) Shutdown(ctx context.Context) error {
 	return args.Error(0)
 }
 
-func (m *MockAdapter) Publish(ctx context.Context, event PublishEventConfiguration) error {
-	args := m.Called(ctx, event)
-	return args.Error(0)
-}
-
-func (m *MockAdapter) Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error {
-	args := m.Called(ctx, event, updater)
-	return args.Error(0)
-}
-
 func TestProvider_Startup_Success(t *testing.T) {
 	mockAdapter := new(MockAdapter)
 	mockAdapter.On("Startup", mock.Anything).Return(nil)
 
-	provider := PubSubProvider{
+	provider := PubSubProviderImpl{
 		Adapter: mockAdapter,
 	}
 	err := provider.Startup(context.Background())
@@ -52,7 +41,7 @@ func TestProvider_Startup_Error(t *testing.T) {
 	mockAdapter := new(MockAdapter)
 	mockAdapter.On("Startup", mock.Anything).Return(errors.New("connect error"))
 
-	provider := PubSubProvider{
+	provider := PubSubProviderImpl{
 		Adapter: mockAdapter,
 	}
 	err := provider.Startup(context.Background())
@@ -65,7 +54,7 @@ func TestProvider_Shutdown_Success(t *testing.T) {
 	mockAdapter := new(MockAdapter)
 	mockAdapter.On("Shutdown", mock.Anything).Return(nil)
 
-	provider := PubSubProvider{
+	provider := PubSubProviderImpl{
 		Adapter: mockAdapter,
 	}
 	err := provider.Shutdown(context.Background())
@@ -78,7 +67,7 @@ func TestProvider_Shutdown_Error(t *testing.T) {
 	mockAdapter := new(MockAdapter)
 	mockAdapter.On("Shutdown", mock.Anything).Return(errors.New("close error"))
 
-	provider := PubSubProvider{
+	provider := PubSubProviderImpl{
 		Adapter: mockAdapter,
 	}
 	err := provider.Shutdown(context.Background())
@@ -89,13 +78,16 @@ func TestProvider_Shutdown_Error(t *testing.T) {
 
 func TestProvider_ID(t *testing.T) {
 	const testID = "test-id"
-	provider := PubSubProvider{
+	provider := PubSubProviderImpl{
 		id: testID,
 	}
 	assert.Equal(t, testID, provider.ID())
 }
 
 func TestProvider_TypeID(t *testing.T) {
-	provider := PubSubProvider{}
+	const providerTypeID = "test-type-id"
+	provider := PubSubProviderImpl{
+		typeID: providerTypeID,
+	}
 	assert.Equal(t, providerTypeID, provider.TypeID())
 }

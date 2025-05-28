@@ -10,8 +10,8 @@ import (
 	"github.com/stretchr/testify/require"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
-	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
 )
 
@@ -176,32 +176,9 @@ func TestPubSubProviderBuilderFactory(t *testing.T) {
 		require.NoError(t, err)
 
 		// Check the returned provider
-		natsProvider, ok := provider.(*PubSubProvider)
+		natsProvider, ok := provider.(*datasource.PubSubProviderImpl)
 		require.True(t, ok)
 		assert.NotNil(t, natsProvider.Logger)
 		assert.NotNil(t, natsProvider.Adapter)
-	})
-}
-
-func TestPubSubProvider_FindPubSubDataSource(t *testing.T) {
-	mockNats := &mockAdapter{}
-
-	provider := &PubSubProvider{
-		Logger:  zap.NewNop(),
-		Adapter: mockNats,
-	}
-
-	t.Run("calling Startup", func(t *testing.T) {
-		mockNats.On("Startup", context.Background()).Return(nil)
-		err := provider.Startup(context.Background())
-		require.NoError(t, err)
-		mockNats.AssertCalled(t, "Startup", context.Background())
-	})
-
-	t.Run("calling Shutdown", func(t *testing.T) {
-		mockNats.On("Shutdown", context.Background()).Return(nil)
-		err := provider.Shutdown(context.Background())
-		require.NoError(t, err)
-		mockNats.AssertCalled(t, "Shutdown", context.Background())
 	})
 }

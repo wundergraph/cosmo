@@ -13,6 +13,8 @@ import (
 	"go.uber.org/zap"
 )
 
+const providerTypeID = "nats"
+
 type PubSubProviderBuilder struct {
 	ctx              context.Context
 	logger           *zap.Logger
@@ -101,11 +103,7 @@ func buildProvider(ctx context.Context, provider config.NatsEventSource, logger 
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create adapter for Nats provider with ID \"%s\": %w", provider.ID, err)
 	}
-	pubSubProvider := &PubSubProvider{
-		id:      provider.ID,
-		Adapter: adapter,
-		Logger:  logger,
-	}
+	pubSubProvider := datasource.NewPubSubProviderImpl(provider.ID, providerTypeID, adapter, logger)
 
 	return adapter, pubSubProvider, nil
 }

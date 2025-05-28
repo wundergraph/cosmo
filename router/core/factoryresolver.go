@@ -297,7 +297,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 	}
 
 	var providers []pubsub_datasource.PubSubProvider
-	var pubSubDS []pubsub_datasource.DataSourceConfigurationWithMetadata
+	var pubSubDS []pubsub.DataSourceConfigurationWithMetadata
 
 	for _, in := range engineConfig.DatasourceConfigurations {
 		var out plan.DataSource
@@ -452,7 +452,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 			}
 
 		case nodev1.DataSourceKind_PUBSUB:
-			pubSubDS = append(pubSubDS, pubsub_datasource.DataSourceConfigurationWithMetadata{
+			pubSubDS = append(pubSubDS, pubsub.DataSourceConfigurationWithMetadata{
 				Configuration: in,
 				Metadata:      l.dataSourceMetaData(in),
 			})

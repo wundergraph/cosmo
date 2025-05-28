@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
-	pubsub_datasource "github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"go.uber.org/zap"
 )
@@ -32,7 +31,7 @@ func TestBuildProvidersAndDataSources_OK(t *testing.T) {
 		FieldName:  "Field1",
 		Type:       nodev1.EventType_PUBLISH,
 	}
-	dsConf := pubsub_datasource.DataSourceConfigurationWithMetadata{
+	dsConf := DataSourceConfigurationWithMetadata{
 		Configuration: &nodev1.DataSourceConfiguration{
 			Id: "test-id",
 			CustomEvents: &nodev1.DataSourceCustomEvents{
@@ -45,7 +44,7 @@ func TestBuildProvidersAndDataSources_OK(t *testing.T) {
 		},
 		Metadata: dsMeta,
 	}
-	dsConfs := []pubsub_datasource.DataSourceConfigurationWithMetadata{dsConf}
+	dsConfs := []DataSourceConfigurationWithMetadata{dsConf}
 
 	// Execute the function
 	providers, dataSources, err := BuildProvidersAndDataSources(ctx, config.EventsConfiguration{

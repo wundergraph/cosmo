@@ -14,6 +14,8 @@ import (
 	"go.uber.org/zap"
 )
 
+const providerTypeID = "kafka"
+
 type PubSubProviderBuilder struct {
 	ctx              context.Context
 	logger           *zap.Logger
@@ -87,11 +89,7 @@ func buildProvider(ctx context.Context, provider config.KafkaEventSource, logger
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create adapter for Kafka provider with ID \"%s\": %w", provider.ID, err)
 	}
-	pubSubProvider := &PubSubProvider{
-		id:      provider.ID,
-		Adapter: adapter,
-		Logger:  logger,
-	}
+	pubSubProvider := datasource.NewPubSubProviderImpl(provider.ID, providerTypeID, adapter, logger)
 
 	return adapter, pubSubProvider, nil
 }
@@ -101,7 +99,7 @@ func NewPubSubProviderBuilder(
 	logger *zap.Logger,
 	hostName string,
 	routerListenAddr string,
-) datasource.PubSubProviderBuilder[config.KafkaEventSource, *nodev1.KafkaEventConfiguration] {
+) *PubSubProviderBuilder {
 	return &PubSubProviderBuilder{
 		ctx:              ctx,
 		logger:           logger,

@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strconv"
 
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	pubsub_datasource "github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
@@ -13,6 +14,11 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"go.uber.org/zap"
 )
+
+type DataSourceConfigurationWithMetadata struct {
+	Configuration *nodev1.DataSourceConfiguration
+	Metadata      *plan.DataSourceMetadata
+}
 
 type ProviderNotDefinedError struct {
 	ProviderID     string
@@ -29,7 +35,7 @@ func BuildProvidersAndDataSources(
 	ctx context.Context,
 	config config.EventsConfiguration,
 	logger *zap.Logger,
-	dsConfs []pubsub_datasource.DataSourceConfigurationWithMetadata,
+	dsConfs []DataSourceConfigurationWithMetadata,
 	hostName string,
 	routerListenAddr string,
 ) ([]pubsub_datasource.PubSubProvider, []plan.DataSource, error) {
