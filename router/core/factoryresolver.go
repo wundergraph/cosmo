@@ -11,7 +11,6 @@ import (
 
 	"github.com/buger/jsonparser"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	pubsub_datasource "github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/argument_templates"
 	"google.golang.org/grpc"
@@ -477,7 +476,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 
 			out, err = plan.NewDataSourceConfiguration(
 				in.Id,
-				datasource.NewFactory(l.ctx, routerEngineConfig.Events, providers),
+				pubsub_datasource.NewFactory(l.ctx, routerEngineConfig.Events, providers),
 				dsMeta,
 				providers,
 			)
