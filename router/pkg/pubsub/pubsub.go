@@ -20,6 +20,11 @@ type DataSourceConfigurationWithMetadata struct {
 	Metadata      *plan.DataSourceMetadata
 }
 
+type EngineEventConfiguration interface {
+	GetTypeName() string
+	GetFieldName() string
+}
+
 type ProviderNotDefinedError struct {
 	ProviderID     string
 	ProviderTypeID string
@@ -125,7 +130,7 @@ func BuildProvidersAndDataSources(
 	return pubSubProviders, outs, nil
 }
 
-func getFilteredDataSourceMetadata[E pubsub_datasource.EngineEventConfiguration](event E, dsMeta *plan.DataSourceMetadata) *plan.DataSourceMetadata {
+func getFilteredDataSourceMetadata[E EngineEventConfiguration](event E, dsMeta *plan.DataSourceMetadata) *plan.DataSourceMetadata {
 	// find used root types and fields
 	rootFields := make(map[string][]string)
 

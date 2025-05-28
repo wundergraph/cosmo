@@ -23,11 +23,6 @@ type PubSubProvider interface {
 	Shutdown(ctx context.Context) error
 }
 
-type EngineEventConfiguration interface {
-	GetTypeName() string
-	GetFieldName() string
-}
-
 // PubSubProviderBuilder is the interface that the provider builder must implement.
 type PubSubProviderBuilder[P any, E any] interface {
 	// TypeID Get the provider type id (e.g. "kafka", "nats")
