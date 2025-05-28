@@ -14,6 +14,15 @@ import (
 	"go.uber.org/zap"
 )
 
+type ProviderNotDefinedError struct {
+	ProviderID     string
+	ProviderTypeID string
+}
+
+func (e *ProviderNotDefinedError) Error() string {
+	return fmt.Sprintf("%s provider with ID %s is not defined", e.ProviderTypeID, e.ProviderID)
+}
+
 // BuildProvidersAndDataSources is a generic function that builds providers and data sources for the given provider
 // builder and event configurations.
 func BuildProvidersAndDataSources(
@@ -25,12 +34,11 @@ func BuildProvidersAndDataSources(
 	routerListenAddr string,
 ) ([]pubsub_datasource.PubSubProvider, []plan.DataSource, error) {
 	var pubSubProviders []pubsub_datasource.PubSubProvider
+	var outs []plan.DataSource
 
+	// Initialize Kafka providers and data sources
 	kafkaBuilder := kafka.NewPubSubProviderBuilder(ctx, logger, hostName, routerListenAddr)
 	kafkaProviderIds := []string{}
-	natsBuilder := nats.NewPubSubProviderBuilder(ctx, logger, hostName, routerListenAddr)
-	natsProviderIds := []string{}
-
 	for _, providerData := range config.Providers.Kafka {
 		provider, err := kafkaBuilder.BuildProvider(providerData)
 		if err != nil {
@@ -39,22 +47,18 @@ func BuildProvidersAndDataSources(
 		pubSubProviders = append(pubSubProviders, provider)
 		kafkaProviderIds = append(kafkaProviderIds, providerData.ID)
 	}
-	for _, providerData := range config.Providers.Nats {
-		provider, err := natsBuilder.BuildProvider(providerData)
-		if err != nil {
-			return nil, nil, err
+	for _, dsConf := range dsConfs {
+		for _, event := range dsConf.Configuration.GetCustomEvents().GetKafka() {
+			if !slices.Contains(kafkaProviderIds, event.GetEngineEventConfiguration().GetProviderId()) {
+				return pubSubProviders, nil, &ProviderNotDefinedError{
+					ProviderID:     event.GetEngineEventConfiguration().GetProviderId(),
+					ProviderTypeID: kafkaBuilder.TypeID(),
+				}
+			}
 		}
-		pubSubProviders = append(pubSubProviders, provider)
-		natsProviderIds = append(natsProviderIds, providerData.ID)
 	}
-
-	// Create data sources
-	var outs []plan.DataSource
 	for _, dsConf := range dsConfs {
 		for i, event := range dsConf.Configuration.GetCustomEvents().GetKafka() {
-			if !slices.Contains(kafkaProviderIds, event.GetEngineEventConfiguration().GetProviderId()) {
-				return pubSubProviders, outs, fmt.Errorf("kafka provider with ID %s is not defined", event.GetEngineEventConfiguration().GetProviderId())
-			}
 			pubSubDataSource, err := kafkaBuilder.BuildDataSource(event)
 			if err != nil {
 				return nil, nil, err
@@ -70,10 +74,31 @@ func BuildProvidersAndDataSources(
 			}
 			outs = append(outs, out)
 		}
-		for i, event := range dsConf.Configuration.GetCustomEvents().GetNats() {
+	}
+
+	// Initialize NATS providers and data sources
+	natsBuilder := nats.NewPubSubProviderBuilder(ctx, logger, hostName, routerListenAddr)
+	natsProviderIds := []string{}
+	for _, providerData := range config.Providers.Nats {
+		provider, err := natsBuilder.BuildProvider(providerData)
+		if err != nil {
+			return nil, nil, err
+		}
+		pubSubProviders = append(pubSubProviders, provider)
+		natsProviderIds = append(natsProviderIds, providerData.ID)
+	}
+	for _, dsConf := range dsConfs {
+		for _, event := range dsConf.Configuration.GetCustomEvents().GetNats() {
 			if !slices.Contains(natsProviderIds, event.GetEngineEventConfiguration().GetProviderId()) {
-				return pubSubProviders, outs, fmt.Errorf("nats provider with ID %s is not defined", event.GetEngineEventConfiguration().GetProviderId())
+				return pubSubProviders, nil, &ProviderNotDefinedError{
+					ProviderID:     event.GetEngineEventConfiguration().GetProviderId(),
+					ProviderTypeID: natsBuilder.TypeID(),
+				}
 			}
+		}
+	}
+	for _, dsConf := range dsConfs {
+		for i, event := range dsConf.Configuration.GetCustomEvents().GetNats() {
 			pubSubDataSource, err := natsBuilder.BuildDataSource(event)
 			if err != nil {
 				return nil, nil, err
