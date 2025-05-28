@@ -28,7 +28,7 @@ type GRPCPlugin struct {
 	logger *zap.Logger
 
 	done     chan struct{}
-	mu       sync.RWMutex
+	mu       sync.Mutex
 	disposed atomic.Bool
 
 	pluginPath    string
@@ -45,7 +45,7 @@ func NewGRPCPlugin(config GRPCPluginConfig) (*GRPCPlugin, error) {
 
 	return &GRPCPlugin{
 		done:     make(chan struct{}),
-		mu:       sync.RWMutex{},
+		mu:       sync.Mutex{},
 		disposed: atomic.Bool{},
 
 		logger: config.Logger,
@@ -74,13 +74,6 @@ func (p *GRPCPlugin) handlePluginExit() {
 }
 
 func (p *GRPCPlugin) fork() error {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	if p.client != nil {
-		p.client.Close()
-	}
-
 	filePath, err := p.validatePluginPath()
 	if err != nil {
 		return fmt.Errorf("failed to validate plugin path: %w", err)
@@ -128,9 +121,7 @@ func (p *GRPCPlugin) fork() error {
 		return nil
 	}
 
-	// if the plugin is already running, we need to update the client
-	p.client.pc = pluginClient
-	p.client.cc = grpcClient
+	p.client.setClients(pluginClient, grpcClient)
 
 	return nil
 

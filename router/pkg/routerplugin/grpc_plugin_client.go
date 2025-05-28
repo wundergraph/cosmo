@@ -3,6 +3,7 @@ package routerplugin
 import (
 	"context"
 	"errors"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -19,6 +20,8 @@ type GRPCPluginClient struct {
 	cc grpc.ClientConnInterface
 
 	config GRPCPluginClientConfig
+
+	mu sync.RWMutex
 }
 
 type GRPCPluginClientConfig struct {
@@ -67,24 +70,46 @@ func (g *GRPCPluginClient) waitForPluginToBeActive() error {
 		case <-timeout:
 			return errors.New("plugin was not active in time")
 		default:
-			if g.pc == nil {
-				time.Sleep(g.config.PingInterval)
-				continue
-			}
+			// we need to use a closure here to avoid race conditions
+			// as we cannot use defer in a for loop
+			shouldContinue, err := func() (bool, error) {
+				g.mu.RLock()
+				defer g.mu.RUnlock()
+				if g.pc == nil {
+					return true, nil
+				}
 
-			clientProtocol, err := g.pc.Client()
+				clientProtocol, err := g.pc.Client()
+				if err != nil {
+					return false, err
+				}
+
+				if err := clientProtocol.Ping(); err != nil {
+					time.Sleep(g.config.PingInterval)
+					return true, nil
+				}
+
+				return false, nil
+			}()
+
 			if err != nil {
 				return err
 			}
 
-			if err := clientProtocol.Ping(); err != nil {
-				time.Sleep(g.config.PingInterval)
-				continue
+			if !shouldContinue {
+				return nil
 			}
-
-			return nil
 		}
 	}
+}
+
+func (g *GRPCPluginClient) setClients(pc *plugin.Client, cc grpc.ClientConnInterface) {
+	// We need to lock here to avoid race conditions
+	// We potentially access the plugin clients during invokes
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.pc = pc
+	g.cc = cc
 }
 
 // Invoke implements grpc.ClientConnInterface.
@@ -99,6 +124,8 @@ func (g *GRPCPluginClient) Invoke(ctx context.Context, method string, args any, 
 		return status.Error(codes.Unavailable, "plugin is not active")
 	}
 
+	g.mu.RLock()
+	defer g.mu.RUnlock()
 	return g.cc.Invoke(ctx, method, args, reply, opts...)
 }
 
