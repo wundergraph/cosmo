@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 )
@@ -97,21 +98,19 @@ func TestRouterPlugin(t *testing.T) {
 			},
 		},
 			func(t *testing.T, xEnv *testenv.Environment) {
-				time.Sleep(10 * time.Second)
-
 				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { killService }`, // this will kill the plugin
 				})
 
-				time.Sleep(10 * time.Second)
+				require.EventuallyWithT(t, func(c *assert.CollectT) {
+					// the service should restart the plugin automatically and the request should succeed
+					response := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query { projects { id name } }`,
+					})
 
-				// the service should restart the plugin automatically and the request should succeed
-				response := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-					Query: `query { projects { id name } }`,
-				})
-
-				require.Equal(t, `{"data":{"projects":[{"id":"1","name":"Cloud Migration Overhaul"},{"id":"2","name":"Microservices Revolution"},{"id":"3","name":"AI-Powered Analytics"},{"id":"4","name":"DevOps Transformation"},{"id":"5","name":"Security Overhaul"},{"id":"6","name":"Mobile App Redesign"},{"id":"7","name":"Data Lake Implementation"}]}}`, response.Body)
-
-			})
+					require.Equal(c, `{"data":{"projects":[{"id":"1","name":"Cloud Migration Overhaul"},{"id":"2","name":"Microservices Revolution"},{"id":"3","name":"AI-Powered Analytics"},{"id":"4","name":"DevOps Transformation"},{"id":"5","name":"Security Overhaul"},{"id":"6","name":"Mobile App Redesign"},{"id":"7","name":"Data Lake Implementation"}]}}`, response.Body)
+				}, 20*time.Second, 10*time.Second)
+			},
+		)
 	})
 }
