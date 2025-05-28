@@ -16,7 +16,6 @@ import (
 
 type PubSubProviderBuilder struct {
 	ctx              context.Context
-	config           []config.KafkaEventSource
 	logger           *zap.Logger
 	hostName         string
 	routerListenAddr string
