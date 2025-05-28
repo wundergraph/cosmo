@@ -194,8 +194,6 @@ jobs:
         with:
           cache-dependency-path: |
             router-tests/go.sum
-      - name: Update PATH
-        run: echo "PATH=$PATH:$HOME/.local/bin" >> $GITHUB_ENV
       - name: Setup Redis Cluster (for Cluster tests)
         uses: vishnudxb/redis-cluster@1.0.9
         with:

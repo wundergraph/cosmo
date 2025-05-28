@@ -2,6 +2,7 @@ package integration
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
@@ -96,9 +97,13 @@ func TestRouterPlugin(t *testing.T) {
 			},
 		},
 			func(t *testing.T, xEnv *testenv.Environment) {
+				time.Sleep(10 * time.Second)
+
 				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { killService }`, // this will kill the plugin
 				})
+
+				time.Sleep(10 * time.Second)
 
 				// the service should restart the plugin automatically and the request should succeed
 				response := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
