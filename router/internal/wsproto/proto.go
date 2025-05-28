@@ -24,7 +24,7 @@ type Proto interface {
 	Done(id string) error
 
 	// Close uncerimoniously closes the connection, with an optional error message ahead of it
-	Close(id string, downstreamErrorMessage bool) error
+	Close(id string) error
 }
 
 type ProtoConn interface {

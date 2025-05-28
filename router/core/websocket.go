@@ -628,8 +628,7 @@ func (rw *websocketResponseWriter) Complete() {
 }
 
 func (rw *websocketResponseWriter) Close() {
-	// TODO: Configurable           vvvv
-	err := rw.protocol.Close(rw.id, true)
+	err := rw.protocol.Close(rw.id)
 	if err != nil {
 		rw.logger.Debug("Sending error message", zap.Error(err))
 	}
