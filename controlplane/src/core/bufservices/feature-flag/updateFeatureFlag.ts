@@ -86,7 +86,8 @@ export function updateFeatureFlag(
       };
     }
 
-    if (!authContext.rbac.useLegacyFlow && !authContext.rbac.hasFeatureFlagWriteAccess(featureFlagDTO)) {
+    // check whether the user is authorized to perform the action
+    if (!authContext.rbac.hasFeatureFlagWriteAccess(featureFlagDTO)) {
       throw new UnauthorizedError();
     }
 

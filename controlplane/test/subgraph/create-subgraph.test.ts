@@ -4,6 +4,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import {
   afterAllSetup,
   beforeAllSetup,
+  createAPIKeyTestRBACEvaluator,
   createTestGroup,
   createTestRBACEvaluator,
   genID,
@@ -58,6 +59,27 @@ describe('Create subgraph tests', () => {
     authenticator.changeUserWithSuppliedContext({
       ...users.adminAliceCompanyA,
       rbac: createTestRBACEvaluator(createTestGroup({ role })),
+    });
+
+    const createFederatedSubgraphResp = await client.createFederatedSubgraph({
+      name: subgraphName,
+      namespace: DEFAULT_NAMESPACE,
+      routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
+    });
+
+    expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+    await server.close();
+  });
+
+  test('Should create regular subgraph can be created using legacy API key', async (role) => {
+    const { client, server, authenticator, users } = await SetupTest({ dbname });
+
+    const subgraphName = genID('subgraph');
+
+    authenticator.changeUserWithSuppliedContext({
+      ...users.adminAliceCompanyA,
+      rbac: createAPIKeyTestRBACEvaluator(),
     });
 
     const createFederatedSubgraphResp = await client.createFederatedSubgraph({
