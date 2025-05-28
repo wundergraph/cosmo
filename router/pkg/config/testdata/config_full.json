@@ -171,6 +171,7 @@
         {
           "Operation": "propagate",
           "Matching": "",
+          "NegateMatch": false,
           "Named": "X-Test-Header",
           "Rename": "",
           "Default": "",
@@ -182,6 +183,7 @@
         {
           "Operation": "propagate",
           "Matching": "(?i)^X-Custom-.*",
+          "NegateMatch": false,
           "Named": "",
           "Rename": "",
           "Default": "",
@@ -193,6 +195,7 @@
         {
           "Operation": "propagate",
           "Matching": "",
+          "NegateMatch": false,
           "Named": "X-User-Id",
           "Rename": "",
           "Default": "123",
@@ -204,6 +207,7 @@
         {
           "Operation": "set",
           "Matching": "",
+          "NegateMatch": false,
           "Named": "",
           "Rename": "",
           "Default": "",
@@ -215,6 +219,7 @@
         {
           "Operation": "set",
           "Matching": "",
+          "NegateMatch": false,
           "Named": "",
           "Rename": "",
           "Default": "",
@@ -231,6 +236,7 @@
         {
           "Operation": "set",
           "Matching": "",
+          "NegateMatch": false,
           "Named": "",
           "Rename": "",
           "Default": "",
@@ -259,6 +265,7 @@
           {
             "Operation": "propagate",
             "Matching": "",
+            "NegateMatch": false,
             "Named": "Subgraph-Secret",
             "Rename": "",
             "Default": "some-secret",
