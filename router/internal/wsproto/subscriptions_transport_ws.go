@@ -121,20 +121,7 @@ func (p *subscriptionsTransportWSProtocol) WriteGraphQLErrors(id string, errors 
 	})
 }
 
-func (p *subscriptionsTransportWSProtocol) Close(id string, downstreamErrorMessage bool) error {
-	if downstreamErrorMessage {
-		// This protocol has errors inside an object, so we need to wrap it
-		data, err := sjson.SetBytes([]byte(`{}`), "errors", DownstreamErrorMessage)
-		if err != nil {
-			return fmt.Errorf("encoding JSON: %w", err)
-		}
-		return p.conn.WriteJSON(subscriptionsTransportWSMessage{
-			ID:      id,
-			Type:    subscriptionsTransportWSMessageTypeData,
-			Payload: data,
-		})
-	}
-
+func (p *subscriptionsTransportWSProtocol) Close(id string) error {
 	if err := p.conn.WriteCloser(ws.StatusGoingAway, "Downstream service error"); err != nil {
 		return err
 	}
