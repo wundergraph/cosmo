@@ -2,8 +2,6 @@ package datasource
 
 import (
 	"context"
-
-	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 )
 
 type ArgumentTemplateCallback func(tpl string) (string, error)
@@ -26,7 +24,8 @@ type PubSubProvider interface {
 }
 
 type EngineEventConfiguration interface {
-	GetEngineEventConfiguration() *nodev1.EngineEventConfiguration
+	GetTypeName() string
+	GetFieldName() string
 }
 
 // PubSubProviderBuilder is the interface that the provider builder must implement.

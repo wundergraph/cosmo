@@ -72,7 +72,7 @@ func BuildProvidersAndDataSources(
 			out, err := plan.NewDataSourceConfiguration(
 				dsConf.Configuration.Id+"-"+kafkaBuilder.TypeID()+"-"+strconv.Itoa(i),
 				pubsub_datasource.NewFactory(ctx, pubSubDataSource),
-				getFilteredDataSourceMetadata(event, dsConf.Metadata),
+				getFilteredDataSourceMetadata(event.GetEngineEventConfiguration(), dsConf.Metadata),
 				pubSubDataSource,
 			)
 			if err != nil {
@@ -112,7 +112,7 @@ func BuildProvidersAndDataSources(
 			out, err := plan.NewDataSourceConfiguration(
 				dsConf.Configuration.Id+"-"+natsBuilder.TypeID()+"-"+strconv.Itoa(i),
 				pubsub_datasource.NewFactory(ctx, pubSubDataSource),
-				getFilteredDataSourceMetadata(event, dsConf.Metadata),
+				getFilteredDataSourceMetadata(event.GetEngineEventConfiguration(), dsConf.Metadata),
 				pubSubDataSource,
 			)
 			if err != nil {
@@ -129,8 +129,8 @@ func getFilteredDataSourceMetadata[E pubsub_datasource.EngineEventConfiguration]
 	// find used root types and fields
 	rootFields := make(map[string][]string)
 
-	typeName := event.GetEngineEventConfiguration().GetTypeName()
-	fieldName := event.GetEngineEventConfiguration().GetFieldName()
+	typeName := event.GetTypeName()
+	fieldName := event.GetFieldName()
 	if _, ok := rootFields[typeName]; !ok {
 		rootFields[typeName] = []string{}
 	}

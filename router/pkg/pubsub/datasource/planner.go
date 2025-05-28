@@ -79,7 +79,7 @@ func (p *Planner) ConfigureFetch() resolve.FetchConfiguration {
 		Variables:  p.variables,
 		DataSource: dataSource,
 		PostProcessing: resolve.PostProcessingConfiguration{
-			MergePath: []string{p.pubSubDataSource.EngineEventConfiguration().GetFieldName()},
+			MergePath: []string{p.pubSubDataSource.GetFieldName()},
 		},
 	}
 }
@@ -107,7 +107,7 @@ func (p *Planner) ConfigureSubscription() plan.SubscriptionConfiguration {
 		Variables:  p.variables,
 		DataSource: dataSource,
 		PostProcessing: resolve.PostProcessingConfiguration{
-			MergePath: []string{p.pubSubDataSource.EngineEventConfiguration().GetFieldName()},
+			MergePath: []string{p.pubSubDataSource.GetFieldName()},
 		},
 	}
 }

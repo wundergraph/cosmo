@@ -14,8 +14,8 @@ type PubSubDataSource struct {
 	KafkaAdapter       AdapterInterface
 }
 
-func (c *PubSubDataSource) EngineEventConfiguration() *nodev1.EngineEventConfiguration {
-	return c.EventConfiguration.GetEngineEventConfiguration()
+func (c *PubSubDataSource) GetFieldName() string {
+	return c.EventConfiguration.GetEngineEventConfiguration().GetFieldName()
 }
 
 func (c *PubSubDataSource) ResolveDataSource() (resolve.DataSource, error) {
