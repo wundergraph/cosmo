@@ -23,7 +23,7 @@ export function getUserAccessiblePermissions(
     logger = enrichLogger(ctx, logger, authContext);
     const organizationRepository = new OrganizationRepository(logger, opts.db);
 
-    if (!authContext.isAdmin) {
+    if (!authContext.rbac.isOrganizationAdmin) {
       return {
         response: {
           code: EnumStatusCode.OK,

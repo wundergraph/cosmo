@@ -11,6 +11,7 @@ import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepos
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function getFeatureFlagsByFederatedGraph(
   opts: RouterOptions,
@@ -48,6 +49,10 @@ export function getFeatureFlagsByFederatedGraph(
         featureFlags: [],
         totalCount: 0,
       };
+    }
+
+    if (!authContext.rbac.hasFederatedGraphReadAccess(federatedGraph)) {
+      throw new UnauthorizedError();
     }
 
     const matchedFeatureFlags = await featureFlagRepo.getMatchedFeatureFlags({

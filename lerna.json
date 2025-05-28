@@ -29,7 +29,9 @@
     "cdn-server",
     "cdn-server/cdn",
     "aws-lambda-router",
-    "playground"
+    "playground",
+    "protographic",
+    "router-plugin"
   ],
   "npmClient": "pnpm",
   "loglevel": "verbose"

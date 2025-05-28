@@ -9,6 +9,7 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function restoreOrganization(
   opts: RouterOptions,
@@ -24,22 +25,17 @@ export function restoreOrganization(
     const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
     const auditLogRepo = new AuditLogRepository(opts.db);
 
+    // Ensure that the user is an admin of the organization
+    if (!authContext.rbac.isOrganizationAdmin) {
+      throw new UnauthorizedError();
+    }
+
     const org = await orgRepo.byId(authContext.organizationId);
     if (!org) {
       return {
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,
           details: `Organization not found`,
-        },
-      };
-    }
-
-    // Ensure that the user is an admin of the organization
-    if (!authContext.isAdmin) {
-      return {
-        response: {
-          code: EnumStatusCode.ERROR_NOT_AUTHORIZED,
-          details: "User doesn't have permissions to restore this organization.",
         },
       };
     }

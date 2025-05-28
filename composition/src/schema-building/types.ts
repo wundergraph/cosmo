@@ -137,12 +137,15 @@ export type InputValueData = {
   namedTypeName: string;
   node: MutableInputValueNode;
   originalCoords: string;
+  originalParentTypeName: string;
   persistedDirectivesData: PersistedDirectivesData;
+  renamedParentTypeName: string;
   requiredSubgraphNames: Set<string>;
   subgraphNames: Set<string>;
   type: MutableTypeNode;
   defaultValue?: ConstValueNode;
   description?: StringValueNode;
+  fieldName?: string;
 };
 
 export type InterfaceDefinitionData = {

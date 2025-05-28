@@ -9,6 +9,7 @@ import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function getFeatureSubgraphsByFeatureFlag(
   opts: RouterOptions,
@@ -47,6 +48,10 @@ export function getFeatureSubgraphsByFeatureFlag(
         },
         featureSubgraphs: [],
       };
+    }
+
+    if (!authContext.rbac.hasFeatureFlagReadAccess(featureFlag)) {
+      throw new UnauthorizedError();
     }
 
     const featureSubgraphs = await featureFlagRepo.getFeatureSubgraphsByFeatureFlagId({

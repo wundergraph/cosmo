@@ -11,6 +11,7 @@ import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function configureNamespaceProposalConfig(
   opts: RouterOptions,
@@ -23,13 +24,8 @@ export function configureNamespaceProposalConfig(
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
-    if (!authContext.hasWriteAccess) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `The user doesnt have the permissions to perform this operation`,
-        },
-      };
+    if (authContext.organizationDeactivated) {
+      throw new UnauthorizedError();
     }
 
     const proposalRepo = new ProposalRepository(opts.db);
@@ -45,6 +41,10 @@ export function configureNamespaceProposalConfig(
         },
         configs: [],
       };
+    }
+
+    if (!authContext.rbac.hasNamespaceWriteAccess(namespace)) {
+      throw new UnauthorizedError();
     }
 
     await proposalRepo.configureProposalConfig({
