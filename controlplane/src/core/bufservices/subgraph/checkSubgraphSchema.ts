@@ -131,11 +131,10 @@ export function checkSubgraphSchema(
       };
     }
 
-    if (subgraph && !authContext.rbac.useLegacyFlow && !authContext.rbac.hasSubGraphWriteAccess(subgraph)) {
-      // Only check for permission when we are not supposed to use the legacy flow
+    if (subgraph && !authContext.rbac.hasSubGraphWriteAccess(subgraph)) {
       throw new UnauthorizedError();
     } else if (!subgraph) {
-      if (!authContext.rbac.useLegacyFlow && !authContext.rbac.canCreateSubGraph(namespace)) {
+      if (!authContext.rbac.canCreateSubGraph(namespace)) {
         throw new UnauthorizedError();
       }
 

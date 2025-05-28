@@ -10,7 +10,9 @@ import {
 } from '@wundergraph/composition';
 import {
   afterAllSetup,
-  beforeAllSetup, createTestGroup,
+  beforeAllSetup,
+  createAPIKeyTestRBACEvaluator,
+  createTestGroup,
   createTestRBACEvaluator,
   genID,
   genUniqueLabel
@@ -130,7 +132,7 @@ describe('CheckSubgraphSchema', (ctx) => {
 
     authenticator.changeUserWithSuppliedContext({
       ...users.adminAliceCompanyA,
-      rbac: createTestRBACEvaluator()
+      rbac: createAPIKeyTestRBACEvaluator()
     });
 
     // test for no changes in schema

@@ -22,7 +22,13 @@ interface Target {
 }
 
 export class RBACEvaluator {
-  readonly useLegacyFlow: boolean;
+  readonly isApiKey: boolean;
+  /**
+   * A legacy API key is an API key which have not been migrated to use groups.
+   *
+   * The reason for this is that old API keys effectively had admin access.
+   */
+  private readonly isLegacyApiKey: boolean;
   readonly roles: OrganizationRole[];
   private readonly rules: ReadonlyMap<OrganizationRole, RuleData>;
 
@@ -39,9 +45,10 @@ export class RBACEvaluator {
   constructor(
     readonly groups: Omit<OrganizationGroupDTO, 'membersCount' | 'apiKeysCount'>[],
     private readonly userId?: string,
-    readonly isApiKey?: boolean,
+    isApiKey?: boolean,
   ) {
-    this.useLegacyFlow = groups.length === 0;
+    this.isApiKey = !!isApiKey;
+    this.isLegacyApiKey = this.isApiKey && groups.length === 0;
 
     const flattenRules = groups.flatMap((group) => group.rules);
     const rulesGroupedByRole = Object.groupBy(flattenRules, (rule) => rule.role);
@@ -59,7 +66,7 @@ export class RBACEvaluator {
     this.resources = [...new Set(Array.from(result.values(), (res) => res.resources).flat())];
     this.rules = result;
 
-    this.isOrganizationAdmin = this.roles.includes('organization-admin');
+    this.isOrganizationAdmin = this.roles.includes('organization-admin') || this.isLegacyApiKey;
     this.isOrganizationAdminOrDeveloper = this.isOrganizationAdmin || this.roles.includes('organization-developer');
     this.isOrganizationApiKeyManager = this.isOrganizationAdmin || !!this.ruleFor('organization-apikey-manager');
     this.isOrganizationViewer = this.isOrganizationAdminOrDeveloper || this.roles.includes('organization-viewer');
@@ -81,7 +88,7 @@ export class RBACEvaluator {
   }
 
   hasNamespaceReadAccess(namespace: Namespace) {
-    if (this.isApiKey && this.groups.length === 0) {
+    if (this.isLegacyApiKey) {
       // When using an API without a group, fallback to always allow (legacy implementation)
       return true;
     }
@@ -102,7 +109,7 @@ export class RBACEvaluator {
   }
 
   hasFeatureFlagReadAccess(featureFlag: FeatureFlag) {
-    if (this.isApiKey && this.groups.length === 0) {
+    if (this.isLegacyApiKey) {
       // When using an API without a group, fallback to always allow (legacy implementation)
       return true;
     }
@@ -151,7 +158,7 @@ export class RBACEvaluator {
   }
 
   hasFederatedGraphReadAccess(graph: Target) {
-    if (this.isApiKey && this.groups.length === 0) {
+    if (this.isLegacyApiKey) {
       // When using an API without a group, fallback to always allow (legacy implementation)
       return true;
     }
@@ -206,7 +213,7 @@ export class RBACEvaluator {
   }
 
   hasSubGraphReadAccess(graph: Target) {
-    if (this.isApiKey && this.groups.length === 0) {
+    if (this.isLegacyApiKey) {
       // When using an API without a group, fallback to always allow (legacy implementation)
       return true;
     }

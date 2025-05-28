@@ -59,7 +59,8 @@ export function createFeatureFlag(
       };
     }
 
-    if (!authContext.rbac.useLegacyFlow && !authContext.rbac.canCreateFeatureFlag(namespace)) {
+    // check whether the user is authorized to perform the action
+    if (!authContext.rbac.canCreateFeatureFlag(namespace)) {
       throw new UnauthorizedError();
     }
 

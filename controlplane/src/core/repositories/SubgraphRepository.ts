@@ -583,7 +583,7 @@ export class SubgraphRepository {
    * @private
    */
   private applyRbacConditionsToQuery(rbac: RBACEvaluator | undefined, conditions: (SQL<unknown> | undefined)[]) {
-    if (!rbac || rbac.isOrganizationViewer || (rbac.isApiKey && rbac.groups.length === 0)) {
+    if (!rbac || rbac.isOrganizationViewer) {
       return true;
     }
 
@@ -707,6 +707,10 @@ export class SubgraphRepository {
 
     if (opts.excludeFeatureSubgraphs) {
       conditions.push(eq(schema.subgraphs.isFeatureSubgraph, false));
+    }
+
+    if (!this.applyRbacConditionsToQuery(opts.rbac, conditions)) {
+      return 0;
     }
 
     const subgraphsCount = await this.db

@@ -178,6 +178,10 @@ export function createTestRBACEvaluator(...groups: OrganizationGroupDTO[]) {
   return new RBACEvaluator(groups);
 }
 
+export function createAPIKeyTestRBACEvaluator(...groups: OrganizationGroupDTO[]) {
+  return new RBACEvaluator(groups, undefined, true);
+}
+
 export function createTestGroup(
   ...rules: { role: OrganizationRole | string; namespaces?: string[]; resources?: string[] }[]
 ): OrganizationGroupDTO {

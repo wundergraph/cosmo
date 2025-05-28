@@ -62,7 +62,8 @@ export function createFederatedGraph(
       };
     }
 
-    if (!authContext.rbac.useLegacyFlow && !authContext.rbac.canCreateFederatedGraph(namespace)) {
+    // check whether the user is authorized to perform the action
+    if (!authContext.rbac.canCreateFederatedGraph(namespace)) {
       throw new UnauthorizedError();
     }
 
