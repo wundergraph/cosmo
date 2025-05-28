@@ -22,6 +22,8 @@ env:
   CI: true
   ROUTER_REGISTRATION: false
   DO_NOT_TRACK: '1'
+  GOOS: linux
+  GOARCH: amd64
 
 # Both jobs need to kept in sync. We need to distinguish between forks and people with write access to the repository.
 jobs:
@@ -97,7 +99,6 @@ jobs:
             router/go.sum
             router-tests/go.sum
             demo/go.sum
-
       - uses: ./.github/actions/go-mod-tidy
         with:
           working-directory: ./router
@@ -187,6 +188,8 @@ jobs:
           - '9092:9092'
     steps:
       - uses: actions/checkout@v4
+      # - name: Setup Node
+      #   uses: ./.github/actions/node
       - uses: ./.github/actions/go
         with:
           cache-dependency-path: |

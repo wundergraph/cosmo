@@ -43,6 +43,18 @@ func (h *Host) RegisterPlugin(subgraphName string, plugin Plugin) error {
 	return nil
 }
 
+func (h *Host) GetPlugin(subgraphName string) (Plugin, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	plugin, ok := h.pluginMap[subgraphName]
+	if !ok {
+		return nil, false
+	}
+
+	return plugin, true
+}
+
 func (h *Host) StopAllPlugins() error {
 	var resErr error
 
