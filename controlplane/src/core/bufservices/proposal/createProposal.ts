@@ -67,6 +67,7 @@ export function createProposal(
         lintingSkipped: false,
         graphPruningSkipped: false,
         checkUrl: '',
+        proposalUrl: '',
       };
     }
 
@@ -90,6 +91,7 @@ export function createProposal(
         lintingSkipped: false,
         graphPruningSkipped: false,
         checkUrl: '',
+        proposalUrl: '',
       };
     }
 
@@ -117,6 +119,7 @@ export function createProposal(
         lintingSkipped: false,
         graphPruningSkipped: false,
         checkUrl: '',
+        proposalUrl: '',
       };
     }
 
@@ -143,6 +146,7 @@ export function createProposal(
         lintingSkipped: false,
         graphPruningSkipped: false,
         checkUrl: '',
+        proposalUrl: '',
       };
     }
 
@@ -165,6 +169,7 @@ export function createProposal(
         lintingSkipped: false,
         graphPruningSkipped: false,
         checkUrl: '',
+        proposalUrl: '',
       };
     }
 
@@ -189,6 +194,7 @@ export function createProposal(
         lintingSkipped: false,
         graphPruningSkipped: false,
         checkUrl: '',
+        proposalUrl: '',
       };
     }
 
@@ -229,6 +235,7 @@ export function createProposal(
             lintingSkipped: false,
             graphPruningSkipped: false,
             checkUrl: '',
+            proposalUrl: '',
           };
         }
 
@@ -253,6 +260,7 @@ export function createProposal(
             lintingSkipped: false,
             graphPruningSkipped: false,
             checkUrl: '',
+            proposalUrl: '',
           };
         }
 
@@ -275,6 +283,7 @@ export function createProposal(
             lintingSkipped: false,
             graphPruningSkipped: false,
             checkUrl: '',
+            proposalUrl: '',
           };
         }
       }
@@ -391,6 +400,7 @@ export function createProposal(
       lintingSkipped: !namespace.enableLinting,
       graphPruningSkipped: !namespace.enableGraphPruning,
       checkUrl: `${process.env.WEB_BASE_URL}/${authContext.organizationSlug}/${namespace.name}/graph/${federatedGraph.name}/checks/${checkId}`,
+      proposalUrl: `${process.env.WEB_BASE_URL}/${authContext.organizationSlug}/${namespace.name}/graph/${federatedGraph.name}/proposals/${proposal.id}`,
     };
   });
 }

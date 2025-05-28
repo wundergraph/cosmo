@@ -2644,6 +2644,7 @@ message CreateProposalResponse {
   bool lintingSkipped = 13;
   bool graphPruningSkipped = 14;
   string checkUrl = 15;
+  string proposalUrl = 16;
 }
 
 message GetProposalRequest {
