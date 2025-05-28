@@ -2952,7 +2952,7 @@
         "negate_match": {
           "type": "boolean",
           "examples": ["true"],
-          "description": "If the match logic should be reversed."
+          "description": "If true, the result from the regex in the 'matching' field will be inverted."
         },
         "named": {
           "type": "string",
@@ -2991,7 +2991,7 @@
         "negate_match": {
           "type": "boolean",
           "examples": ["true"],
-          "description": "If the match logic should be reversed."
+          "description": "If true, the result from the regex in the 'matching' field will be inverted."
         },
         "named": {
           "type": "string",

@@ -2,7 +2,6 @@ package integration
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strings"
 	"testing"
@@ -878,7 +877,7 @@ func TestHeaderPropagation(t *testing.T) {
 		})
 	})
 
-	t.Run("matching with regex", func(t *testing.T) {
+	t.Run("test matching with regex for response headers", func(t *testing.T) {
 		t.Parallel()
 
 		header1, value1 := "header1", "value1"
@@ -898,31 +897,28 @@ func TestHeaderPropagation(t *testing.T) {
 			},
 		}
 
-		testCases := []string{"all", "employees"}
+		t.Run("for normal match", func(t *testing.T) {
+			t.Parallel()
 
-		for _, key := range testCases {
-			name := key
-			if key != "all" {
-				name = "subgraphs"
+			rule := &config.GlobalHeaderRule{
+				Response: []*config.ResponseHeaderRule{
+					{
+						Operation: config.HeaderRuleOperationPropagate,
+						Matching:  `^(` + header2 + `)$`,
+						Algorithm: config.ResponseHeaderRuleAlgorithmFirstWrite,
+					},
+				},
 			}
 
-			t.Run(fmt.Sprintf("match for %s", name), func(t *testing.T) {
+			t.Run("for all", func(t *testing.T) {
 				t.Parallel()
-
-				rules := &config.GlobalHeaderRule{
-					Response: []*config.ResponseHeaderRule{
-						{
-							Operation: config.HeaderRuleOperationPropagate,
-							Matching:  `^(` + header2 + `)$`,
-							Algorithm: config.ResponseHeaderRuleAlgorithmFirstWrite,
-						},
-					},
-				}
 
 				testenv.Run(t, &testenv.Config{
 					Subgraphs: subgraphWithHeaders,
 					RouterOptions: []core.Option{
-						core.WithHeaderRules(getHeaderRules(key, rules)),
+						core.WithHeaderRules(config.HeaderRules{
+							All: rule,
+						}),
 					},
 				}, func(t *testing.T, xEnv *testenv.Environment) {
 					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -940,23 +936,58 @@ func TestHeaderPropagation(t *testing.T) {
 				})
 			})
 
-			t.Run(fmt.Sprintf("negate match for %s", name), func(t *testing.T) {
+			t.Run("for subgraph", func(t *testing.T) {
 				t.Parallel()
 
-				rules := &config.GlobalHeaderRule{
-					Response: []*config.ResponseHeaderRule{
-						{
-							Operation:   config.HeaderRuleOperationPropagate,
-							Matching:    `^(` + header1 + `|` + header2 + `)$`,
-							NegateMatch: true,
-							Algorithm:   config.ResponseHeaderRuleAlgorithmFirstWrite,
-						},
-					},
-				}
 				testenv.Run(t, &testenv.Config{
 					Subgraphs: subgraphWithHeaders,
 					RouterOptions: []core.Option{
-						core.WithHeaderRules(getHeaderRules(key, rules)),
+						core.WithHeaderRules(config.HeaderRules{
+							Subgraphs: map[string]*config.GlobalHeaderRule{
+								"employees": rule,
+							},
+						}),
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: queryEmployeeWithNoHobby,
+					})
+
+					result1 := strings.Join(res.Response.Header.Values(header1), ",")
+					require.Equal(t, "", result1)
+
+					result2 := strings.Join(res.Response.Header.Values(header2), ",")
+					require.Equal(t, value2, result2)
+
+					result3 := strings.Join(res.Response.Header.Values(header3), ",")
+					require.Equal(t, "", result3)
+				})
+			})
+		})
+
+		t.Run("negate match", func(t *testing.T) {
+			t.Parallel()
+
+			rules := &config.GlobalHeaderRule{
+				Response: []*config.ResponseHeaderRule{
+					{
+						Operation:   config.HeaderRuleOperationPropagate,
+						Matching:    `^(` + header1 + `|` + header2 + `)$`,
+						NegateMatch: true,
+						Algorithm:   config.ResponseHeaderRuleAlgorithmFirstWrite,
+					},
+				},
+			}
+
+			t.Run("for all", func(t *testing.T) {
+				t.Parallel()
+
+				testenv.Run(t, &testenv.Config{
+					Subgraphs: subgraphWithHeaders,
+					RouterOptions: []core.Option{
+						core.WithHeaderRules(config.HeaderRules{
+							All: rules,
+						}),
 					},
 				}, func(t *testing.T, xEnv *testenv.Environment) {
 					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -973,6 +1004,34 @@ func TestHeaderPropagation(t *testing.T) {
 					require.Equal(t, value3, result3)
 				})
 			})
-		}
+
+			t.Run("for subgraph", func(t *testing.T) {
+				t.Parallel()
+
+				testenv.Run(t, &testenv.Config{
+					Subgraphs: subgraphWithHeaders,
+					RouterOptions: []core.Option{
+						core.WithHeaderRules(config.HeaderRules{
+							Subgraphs: map[string]*config.GlobalHeaderRule{
+								"employees": rules,
+							},
+						}),
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: queryEmployeeWithNoHobby,
+					})
+
+					result1 := strings.Join(res.Response.Header.Values(header1), ",")
+					require.Equal(t, "", result1)
+
+					result2 := strings.Join(res.Response.Header.Values(header2), ",")
+					require.Equal(t, "", result2)
+
+					result3 := strings.Join(res.Response.Header.Values(header3), ",")
+					require.Equal(t, value3, result3)
+				})
+			})
+		})
 	})
 }
