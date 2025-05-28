@@ -22,6 +22,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/hasura/go-graphql-client"
 	"github.com/hasura/go-graphql-client/pkg/jsonutil"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/wundergraph/cosmo/router-tests/jwks"
@@ -33,10 +34,16 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
-// Define the wsMessage type at the package level
-type wsMessage struct {
+// Define the wsJSONMessage type at the package level
+type wsJSONMessage struct {
 	data interface{}
 	done chan error
+}
+
+type wsCloseMessage struct {
+	closeCode int
+	reason    string
+	done      chan error
 }
 
 // GraphQLWSSubscriptionMessage represents the structure of GraphQL-Transport-WS protocol messages
@@ -2207,113 +2214,11 @@ func TestWebSocketPingIntervalForGraphQLTransportWS(t *testing.T) {
 	t.Parallel()
 
 	t.Run("epoll", func(t *testing.T) {
-
 		t.Parallel()
 
 		totalUpdates := 5
 
-		// Channel to collect pings from the router
-		pingReceived := make(chan bool, totalUpdates)
-
-		// Channel for handling websocket writes
-		wsWriteCh := make(chan wsMessage)
-
-		// Middleware to handle WebSocket connections
-		wsMiddleware := func(handler http.Handler) http.Handler {
-			// Configure the WebSocket upgrader
-			upgrader := websocket.Upgrader{
-				CheckOrigin:  func(r *http.Request) bool { return true },
-				Subprotocols: []string{"graphql-transport-ws"},
-			}
-
-			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				// Upgrade the connection
-				conn, err := upgrader.Upgrade(w, r, nil)
-				if err != nil {
-					t.Logf("WebSocket upgrade failed: %v", err)
-					return
-				}
-				defer conn.Close()
-
-				// Start a goroutine to handle all writes to the websocket
-				go func() {
-					for msg := range wsWriteCh {
-						err := conn.WriteJSON(msg.data)
-						msg.done <- err
-					}
-				}()
-
-				// Handle the GraphQL protocol
-				for {
-					// Read message
-					messageType, message, err := conn.ReadMessage()
-					if err != nil {
-						// Normal close is OK
-						if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
-							return
-						}
-						t.Logf("Failed to read message: %v", err)
-						return
-					}
-
-					// Only handle text messages
-					if messageType != websocket.TextMessage {
-						continue
-					}
-
-					// Parse the message
-					var subscriptionMsg GraphQLWSSubscriptionMessage
-					if err := json.Unmarshal(message, &subscriptionMsg); err != nil {
-						t.Logf("Failed to unmarshal message: %v", err)
-						continue
-					}
-
-					// Process based on message type
-					switch subscriptionMsg.Type {
-					case "connection_init":
-						// Acknowledge connection
-						done := make(chan error, 1)
-						wsWriteCh <- wsMessage{
-							data: GraphQLWSSimpleResponse{Type: "connection_ack"},
-							done: done,
-						}
-						if err := <-done; err != nil {
-							t.Logf("Failed to send connection_ack: %v", err)
-							return
-						}
-
-					case "ping":
-						// Record ping and send pong
-						select {
-						case pingReceived <- true:
-							t.Log("Received ping from router")
-						default:
-							// Don't block if channel is full
-						}
-
-						done := make(chan error, 1)
-						wsWriteCh <- wsMessage{
-							data: GraphQLWSSimpleResponse{Type: "pong"},
-							done: done,
-						}
-						if err := <-done; err != nil {
-							t.Logf("Failed to send pong: %v", err)
-							return
-						}
-
-					case "subscribe":
-						// Handle countEmp subscription
-						if subscriptionMsg.Payload != nil && strings.Contains(subscriptionMsg.Payload.Query, "countEmp") {
-							go handleCountEmpSubscription(t, wsWriteCh, subscriptionMsg.ID, 500*time.Millisecond, totalUpdates)
-						}
-
-					case "complete":
-						// Client completed subscription
-						return
-					}
-				}
-			})
-		}
+		wsMiddleware, pingsReceived := countEmpWsMiddleware(t, totalUpdates, true)
 
 		// Configure and run the test
 		testenv.Run(t, &testenv.Config{
@@ -2360,34 +2265,185 @@ func TestWebSocketPingIntervalForGraphQLTransportWS(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, "complete", complete.Type)
 
-			// Check that we received at least one ping
-			timeoutCh := time.After(5 * time.Second)
-			pingCount := 0
+			pingCount := int(pingsReceived.Load())
+			require.GreaterOrEqual(t, pingCount, 1, "Expected at least one ping from router")
+			require.LessOrEqual(t, pingCount, totalUpdates, "Expected no more than %d pings from router", totalUpdates)
+		})
+	})
+}
 
+func TestWebsocketDownstreamError(t *testing.T) {
+	t.Parallel()
+
+	totalUpdates := 5
+
+	wsMiddleware, _ := countEmpWsMiddleware(t, totalUpdates, false)
+
+	// Configure and run the test
+	testenv.Run(t, &testenv.Config{
+		Subgraphs: testenv.SubgraphsConfig{
+			GlobalMiddleware: wsMiddleware,
+		},
+		ModifyEngineExecutionConfiguration: func(config *config.EngineExecutionConfiguration) {
+			// Don't use too small ping intervals
+			config.WebSocketClientPingInterval = 500 * time.Millisecond
+		},
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		// Setup client connection
+		conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+
+		// Start the subscription
+		err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
+			ID:      "1",
+			Type:    "subscribe",
+			Payload: []byte(`{"query":"subscription { countEmp(max: 40, intervalMilliseconds: 500) }"}`),
+		})
+		require.NoError(t, err)
+
+		// Process subscription updates
+		var receivedUpdates int
+		for receivedUpdates < totalUpdates {
+			var res testenv.WebSocketMessage
+			err = testenv.WSReadJSON(t, conn, &res)
+			require.NoError(t, err)
+
+			if res.Type == "next" {
+				receivedUpdates++
+
+				response := CountEmpResponse{}
+
+				err := json.Unmarshal(res.Payload, &response)
+				require.NoError(t, err)
+				require.Equal(t, receivedUpdates, response.Data.CountEmp)
+			}
+		}
+
+		// Attempt to read again, should get close error
+		err = conn.ReadJSON(&testenv.WebSocketMessage{})
+		if assert.Error(t, err, "should have received an error") {
+			assert.ErrorContains(t, err, "Downstream service error", "should have message 'Downstream service error'")
+			assert.True(t, websocket.IsCloseError(err, websocket.CloseGoingAway), "should be a 'going away' closure")
+		}
+	})
+}
+
+func countEmpWsMiddleware(t *testing.T, totalUpdates int, complete bool) (func(http.Handler) http.Handler, *atomic.Uint32) {
+	// Atomic counter for pings received
+	pingsReceived := new(atomic.Uint32)
+
+	// Channel for handling websocket writes
+	wsWriteCh := make(chan wsJSONMessage)
+
+	// Channel for handling websocket close
+	// Bytes are a websocket.CloseMessage
+	wsCloseCh := make(chan wsCloseMessage)
+
+	// Configure the WebSocket upgrader
+	upgrader := websocket.Upgrader{
+		CheckOrigin:  func(r *http.Request) bool { return true },
+		Subprotocols: []string{"graphql-transport-ws"},
+	}
+
+	// Middleware to handle WebSocket connections
+	wsMiddleware := func(handler http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Upgrade the connection
+			conn, err := upgrader.Upgrade(w, r, nil)
+			if err != nil {
+				t.Logf("WebSocket upgrade failed: %v", err)
+				return
+			}
+			defer conn.Close()
+
+			// Start a goroutine to handle all writes to the websocket
+			go func() {
+				for {
+					select {
+					case msg := <-wsCloseCh:
+						err := conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(msg.closeCode, msg.reason))
+						msg.done <- err
+						return
+					case msg := <-wsWriteCh:
+						err := conn.WriteJSON(msg.data)
+						msg.done <- err
+					}
+				}
+			}()
+
+			// Handle the GraphQL protocol
 			for {
-				select {
-				case <-pingReceived:
-					pingCount++
-
-					if pingCount >= totalUpdates {
-						t.Logf("Received %d pings from router", pingCount)
+				// Read message
+				messageType, message, err := conn.ReadMessage()
+				if err != nil {
+					// Normal close is OK
+					if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
 						return
 					}
-				case <-timeoutCh:
-					require.GreaterOrEqual(t, pingCount, 1, "Expected at least one ping from router")
-					require.LessOrEqual(t, pingCount, totalUpdates, "Expected no more than %d pings from router", totalUpdates)
+					t.Logf("Failed to read message: %v", err)
+					return
+				}
+
+				// Only handle text messages
+				if messageType != websocket.TextMessage {
+					continue
+				}
+
+				// Parse the message
+				var subscriptionMsg GraphQLWSSubscriptionMessage
+				if err := json.Unmarshal(message, &subscriptionMsg); err != nil {
+					t.Logf("Failed to unmarshal message: %v", err)
+					continue
+				}
+
+				// Process based on message type
+				switch subscriptionMsg.Type {
+				case "connection_init":
+					// Acknowledge connection
+					done := make(chan error, 1)
+					wsWriteCh <- wsJSONMessage{
+						data: GraphQLWSSimpleResponse{Type: "connection_ack"},
+						done: done,
+					}
+					if err := <-done; err != nil {
+						t.Logf("Failed to send connection_ack: %v", err)
+						return
+					}
+
+				case "ping":
+					pingsReceived.Add(1)
+
+					done := make(chan error, 1)
+					wsWriteCh <- wsJSONMessage{
+						data: GraphQLWSSimpleResponse{Type: "pong"},
+						done: done,
+					}
+					if err := <-done; err != nil {
+						t.Logf("Failed to send pong: %v", err)
+						return
+					}
+
+				case "subscribe":
+					// Handle countEmp subscription
+					if subscriptionMsg.Payload != nil && strings.Contains(subscriptionMsg.Payload.Query, "countEmp") {
+						go handleCountEmpSubscription(t, wsWriteCh, wsCloseCh, subscriptionMsg.ID, 500*time.Millisecond, totalUpdates, complete)
+					}
+
+				case "complete":
+					// Client completed subscription
 					return
 				}
 			}
 		})
+	}
 
-	})
+	return wsMiddleware, pingsReceived
 }
 
 // Helper function to handle countEmp subscription
-func handleCountEmpSubscription(t *testing.T, wsWriteCh chan<- wsMessage, id string, updateInterval time.Duration, totalUpdates int) {
+func handleCountEmpSubscription(t *testing.T, wsWriteCh chan<- wsJSONMessage, wsCloseCh chan<- wsCloseMessage, id string, updateInterval time.Duration, totalUpdates int, complete bool) {
 	// Send updates with the specified interval
 	for i := 1; i <= totalUpdates; i++ {
+
 		// Create a properly structured GraphQL response payload
 		countEmpData := CountEmpResponse{}
 		countEmpData.Data.CountEmp = i
@@ -2399,7 +2455,7 @@ func handleCountEmpSubscription(t *testing.T, wsWriteCh chan<- wsMessage, id str
 		}
 
 		done := make(chan error, 1)
-		wsWriteCh <- wsMessage{
+		wsWriteCh <- wsJSONMessage{
 			data: response,
 			done: done,
 		}
@@ -2411,245 +2467,34 @@ func handleCountEmpSubscription(t *testing.T, wsWriteCh chan<- wsMessage, id str
 		time.Sleep(updateInterval)
 	}
 
-	// Send complete message
-	t.Log("Sending complete message for subscription")
-	done := make(chan error, 1)
-	wsWriteCh <- wsMessage{
-		data: GraphQLWSDataResponse{
-			Type: "complete",
-			ID:   id,
-		},
-		done: done,
-	}
-	if err := <-done; err != nil {
-		t.Logf("Failed to send complete message: %v", err)
-	} else {
-		t.Log("Sent complete message")
-	}
-}
-
-func TestSubscriptionDownstreamError(t *testing.T) {
-	t.Parallel()
-
-	// Common response structure for subscription data
-	type CountEmpData struct {
-		CountEmp int `json:"countEmp"`
-	}
-
-	type CountEmpResponse struct {
-		Data CountEmpData `json:"data"`
-	}
-
-	t.Run("does not send any error when subgraph remains available", func(t *testing.T) {
-		t.Parallel()
-
-		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
-			// Connect to WebSocket
-			conn, _, err := xEnv.GraphQLWebsocketDialWithRetry(nil, nil)
-			require.NoError(t, err)
-			defer conn.Close()
-
-			// Initialize connection
-			conn = xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
-
-			// Start countEmp subscription with a smaller max value to complete quickly
-			err = testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
-				ID:      "1",
-				Type:    "subscribe",
-				Payload: []byte(`{"query":"subscription { countEmp(max: 5, intervalMilliseconds: 200) }"}`),
-			})
-			require.NoError(t, err)
-
-			// Receive all messages (should be 6 messages: 0,1,2,3,4,5)
-			for i := 0; i <= 5; i++ {
-				var response testenv.WebSocketMessage
-				err = testenv.WSReadJSON(t, conn, &response)
-				require.NoError(t, err)
-				require.Equal(t, "next", response.Type)
-
-				var countResponse CountEmpResponse
-				err = json.Unmarshal(response.Payload, &countResponse)
-				require.NoError(t, err)
-				require.Equal(t, i, countResponse.Data.CountEmp)
-			}
-
-			// Verify completion message
-			var completeResponse testenv.WebSocketMessage
-			err = testenv.WSReadJSON(t, conn, &completeResponse)
-			require.NoError(t, err)
-			require.Equal(t, "complete", completeResponse.Type)
-			require.Equal(t, "1", completeResponse.ID)
-		})
-	})
-
-	// Test default behavior - close connection on downstream error
-	t.Run("just closes connection on downstream error", func(t *testing.T) {
-		t.Parallel()
-
-		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
-			// Connect to WebSocket
-			conn, _, err := xEnv.GraphQLWebsocketDialWithRetry(nil, nil)
-			require.NoError(t, err)
-			defer conn.Close()
-
-			// Initialize connection
-			conn = xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
-
-			// Start countEmp subscription with enough time to stop the subgraph
-			err = testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
-				ID:      "1",
-				Type:    "subscribe",
-				Payload: []byte(`{"query":"subscription { countEmp(max: 20, intervalMilliseconds: 1000) }"}`),
-			})
-			require.NoError(t, err)
-
-			// Read the first few messages
-			for i := 0; i < 5; i++ {
-				var response testenv.WebSocketMessage
-				err = testenv.WSReadJSON(t, conn, &response)
-				require.NoError(t, err)
-				require.Equal(t, "next", response.Type)
-
-				var countResponse CountEmpResponse
-				err = json.Unmarshal(response.Payload, &countResponse)
-				require.NoError(t, err)
-				require.Equal(t, i, countResponse.Data.CountEmp)
-
-				t.Logf("Received message %d", i)
-			}
-
-			t.Logf("Triggered closure")
-			for _, server := range xEnv.Servers {
-				server.Listener.Close()
-				server.Close()
-				server.CloseClientConnections()
-			}
-
-			// Set a read deadline to detect connection close
-			conn.SetReadDeadline(time.Now().Add(10 * time.Second))
-
-			// Read another few messages
-			for i := 5; i < 10; i++ {
-				var response testenv.WebSocketMessage
-				err = testenv.WSReadJSON(t, conn, &response)
-				require.NoError(t, err)
-				require.Equal(t, "next", response.Type)
-
-				var countResponse CountEmpResponse
-				err = json.Unmarshal(response.Payload, &countResponse)
-				require.NoError(t, err)
-				require.Equal(t, i, countResponse.Data.CountEmp)
-
-				t.Logf("Received message %d", i)
-			}
-
-			// Try to read - should get a close message with code 1001
-			_, _, err = conn.ReadMessage()
-			require.Error(t, err)
-
-			// Should have a websocket close error
-			var closeErr *websocket.CloseError
-			require.ErrorAs(t, err, &closeErr)
-			require.Equal(t, websocket.CloseGoingAway, closeErr.Code, "Expected close code 1001 (going away), got %d", closeErr.Code)
-		})
-	})
-
-	t.Run("returns error with DOWNSTREAM_ERROR code", func(t *testing.T) {
-		t.Skip()
-		t.Parallel()
-
-		// Create a middleware that simulates the employees subgraph going down after a few requests
-		var (
-			mutex            sync.Mutex
-			requestCount     int
-			simulateDowntime bool
-		)
-
-		employeesMiddleware := func(next http.Handler) http.Handler {
-			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				mutex.Lock()
-				if simulateDowntime {
-					mutex.Unlock()
-					// Simulate server down by not responding
-					time.Sleep(30 * time.Second)
-					return
-				}
-
-				requestCount++
-				// After 3 subscription messages, simulate the subgraph going down
-				if requestCount > 3 {
-					simulateDowntime = true
-				}
-				mutex.Unlock()
-
-				next.ServeHTTP(w, r)
-			})
+	if complete {
+		// Send complete message
+		t.Log("Sending complete message for subscription")
+		done := make(chan error, 1)
+		wsWriteCh <- wsJSONMessage{
+			data: GraphQLWSDataResponse{
+				Type: "complete",
+				ID:   id,
+			},
+			done: done,
 		}
-
-		testenv.Run(t, &testenv.Config{
-			Subgraphs: testenv.SubgraphsConfig{
-				Employees: testenv.SubgraphConfig{
-					Middleware: employeesMiddleware,
-				},
-			},
-			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				// Set config to use DOWNSTREAM_ERROR instead of closing connection
-				// engineExecutionConfiguration.SubscriptionCloseConnectionOnDownstreamError = false
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			// Connect to WebSocket
-			conn, _, err := xEnv.GraphQLWebsocketDialWithRetry(nil, nil)
-			require.NoError(t, err)
-			defer conn.Close()
-
-			// Initialize connection
-			conn = xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
-
-			// Start countEmp subscription
-			err = testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
-				ID:      "1",
-				Type:    "subscribe",
-				Payload: []byte(`{"query":"subscription { countEmp(max: 20, intervalMilliseconds: 200) }"}`),
-			})
-			require.NoError(t, err)
-
-			// Read the first few messages
-			for i := 0; i < 3; i++ {
-				var response testenv.WebSocketMessage
-				err = testenv.WSReadJSON(t, conn, &response)
-				require.NoError(t, err)
-				require.Equal(t, "next", response.Type)
-
-				var countResponse CountEmpResponse
-				err = json.Unmarshal(response.Payload, &countResponse)
-				require.NoError(t, err)
-				require.Equal(t, i, countResponse.Data.CountEmp)
-			}
-
-			// Set a read deadline
-			conn.SetReadDeadline(time.Now().Add(10 * time.Second))
-
-			// Should receive an error message with DOWNSTREAM_ERROR code
-			var errorResponse testenv.WebSocketMessage
-			err = testenv.WSReadJSON(t, conn, &errorResponse)
-			require.NoError(t, err)
-			require.Equal(t, "error", errorResponse.Type)
-
-			// Parse the error payload to verify it contains the DOWNSTREAM_ERROR code
-			var errorPayload struct {
-				Errors []struct {
-					Message    string `json:"message"`
-					Extensions struct {
-						Code string `json:"code"`
-					} `json:"extensions"`
-				} `json:"errors"`
-			}
-
-			err = json.Unmarshal(errorResponse.Payload, &errorPayload)
-			require.NoError(t, err)
-			require.NotEmpty(t, errorPayload.Errors, "Expected error message")
-			require.Equal(t, "DOWNSTREAM_ERROR", errorPayload.Errors[0].Extensions.Code,
-				"Expected error code DOWNSTREAM_ERROR, got %s", errorPayload.Errors[0].Extensions.Code)
-		})
-	})
+		if err := <-done; err != nil {
+			t.Logf("Failed to send complete message: %v", err)
+		} else {
+			t.Log("Sent complete message")
+		}
+	} else {
+		t.Log("Closing websocket connection abruptly")
+		done := make(chan error, 1)
+		wsCloseCh <- wsCloseMessage{
+			closeCode: websocket.CloseGoingAway,
+			reason:    "Going Away",
+			done:      done,
+		}
+		if err := <-done; err != nil {
+			t.Logf("Failed to close websocket connection: %v", err)
+		} else {
+			t.Log("Closed websocket connection")
+		}
+	}
 }
