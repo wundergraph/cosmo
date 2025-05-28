@@ -714,7 +714,6 @@ func TestForwardRenamedHeaders(t *testing.T) {
 						val3: headerValue(name:"` + header3 + `")
 					}`,
 				})
-				``
 				require.JSONEq(t, `{"data":{"val1":"","val2":"`+value2+`","val3":"`+value3+`"}}`, res.Body)
 
 				var headerPayloadEntry headerPayload
