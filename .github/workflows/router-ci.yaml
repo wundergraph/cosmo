@@ -201,6 +201,15 @@ jobs:
 
       - name: Update PATH
         run: echo "PATH=$PATH:$HOME/.local/bin" >> $GITHUB_ENV
+
+      - name: Build plugin
+        working-directory: ./router-tests
+        run: make test-deps
+
+      - name: List plugin contents
+        working-directory: ./router
+        run: ls -R ./plugins
+
       - name: Setup Redis Cluster (for Cluster tests)
         uses: vishnudxb/redis-cluster@1.0.9
         with:
