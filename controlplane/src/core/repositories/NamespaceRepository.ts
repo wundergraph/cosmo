@@ -117,7 +117,7 @@ export class NamespaceRepository {
     rbac: RBACEvaluator | undefined,
     conditions: (SQL<unknown> | undefined)[],
   ): Promise<void> {
-    if (!rbac || rbac.isOrganizationViewer || (rbac.isApiKey && rbac.groups.length === 0)) {
+    if (!rbac || rbac.isOrganizationViewer) {
       return;
     }
 
@@ -139,13 +139,7 @@ export class NamespaceRepository {
       const targets = await this.db
         .selectDistinct({ namespaceId: schema.targets.namespaceId })
         .from(schema.targets)
-        .where(
-          and(
-            eq(schema.targets.organizationId, this.organizationId),
-            eq(schema.targets.type, 'subgraph'),
-            inArray(schema.targets.id, rbac.resources),
-          ),
-        );
+        .where(and(eq(schema.targets.organizationId, this.organizationId), inArray(schema.targets.id, rbac.resources)));
 
       namespacesBasedOnResources.push(...targets.map((ns) => ns.namespaceId));
     }

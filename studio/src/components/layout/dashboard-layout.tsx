@@ -152,17 +152,25 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
         icon: <MdOutlineFeaturedPlayList className="size-4" />,
         matchExact: false,
       },
-      {
-        title: "Policies",
-        href: basePath + "/policies",
-        icon: <MdOutlinePolicy className="size-4" />,
-      },
-      {
-        title: "Cache Warmer",
-        href: basePath + "/cache-warmer",
-        icon: <FaGripfire className="size-4" />,
-        separator: true,
-      },
+    ];
+
+    if (isAdminOrDeveloper) {
+      navigation.push(
+        {
+          title: "Policies",
+          href: basePath + "/policies",
+          icon: <MdOutlinePolicy className="size-4" />,
+        },
+        {
+          title: "Cache Warmer",
+          href: basePath + "/cache-warmer",
+          icon: <FaGripfire className="size-4" />,
+          separator: true,
+        },
+      );
+    }
+
+    navigation.push(
       {
         title: "Members",
         href: basePath + "/members",
@@ -173,11 +181,10 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
         href: basePath + "/groups",
         icon: <UserGroupIcon className="size-4" />,
       },
-    ];
+    );
 
-    if (isAdmin || isApiKeyManager) {
-      navigation.push(
-      {
+    if (isAdminOrDeveloper || isApiKeyManager) {
+      navigation.push({
         title: "API Keys",
         href: basePath + "/apikeys",
         icon: <PiKey className="size-4" />,

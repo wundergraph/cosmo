@@ -95,8 +95,8 @@ export function createProposal(
       };
     }
 
-    // Only check for permission when we are not supposed to use the legacy flow
-    if (!authContext.rbac.useLegacyFlow && !authContext.rbac.hasFederatedGraphWriteAccess(federatedGraph)) {
+    // check whether the user is authorized to perform the action
+    if (!authContext.rbac.hasFederatedGraphWriteAccess(federatedGraph)) {
       throw new UnauthorizedError();
     }
 
