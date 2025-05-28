@@ -2946,7 +2946,7 @@
         },
         "matching": {
           "type": "string",
-          "examples": ["(?i)^X-Custom-.*"],
+          "examples": ["^X-Custom-.*"],
           "description": "The matching rule for the header. The matching rule is a regular expression that is used to match the header. Can't be used with 'named'."
         },
         "negate_match": {
@@ -2985,8 +2985,13 @@
         },
         "matching": {
           "type": "string",
-          "examples": ["(?i)^X-Custom-.*"],
+          "examples": ["^X-Custom-.*"],
           "description": "The matching rule for the header. The matching rule is a regular expression that is used to match the header. Can't be used with 'named'."
+        },
+        "negate_match": {
+          "type": "boolean",
+          "examples": ["true"],
+          "description": "If the match logic should be reversed."
         },
         "named": {
           "type": "string",

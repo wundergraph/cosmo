@@ -349,7 +349,11 @@ func (h *HeaderPropagation) applyResponseRule(propagation *responseHeaderPropaga
 	} else if rule.Matching != "" {
 		if regex, ok := h.regex[rule.Matching]; ok {
 			for name := range res.Header {
-				if regex.MatchString(name) {
+				result := regex.MatchString(name)
+				if rule.NegateMatch {
+					result = !result
+				}
+				if result {
 					if slices.Contains(ignoredHeaders, name) {
 						continue
 					}

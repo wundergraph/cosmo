@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"testing"
@@ -11,6 +12,17 @@ import (
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
+
+func getHeaderRules(key string, rules *config.GlobalHeaderRule) config.HeaderRules {
+	headerRules := config.HeaderRules{}
+	if key == "all" {
+		headerRules.All = rules
+	} else {
+		headerRules.Subgraphs = make(map[string]*config.GlobalHeaderRule)
+		headerRules.Subgraphs[key] = rules
+	}
+	return headerRules
+}
 
 func TestForwardHeaders(t *testing.T) {
 	t.Parallel()
@@ -638,9 +650,16 @@ func TestForwardRenamedHeaders(t *testing.T) {
 		header2, value2 := "header2", "value2"
 		header3, value3 := "header3", "value3"
 
-		t.Run("for all", func(t *testing.T) {
-			headerRules := config.HeaderRules{
-				All: &config.GlobalHeaderRule{
+		testCases := []string{"all", "test1"}
+
+		for _, key := range testCases {
+			name := key
+			if key != "all" {
+				name = "subgraphs"
+			}
+
+			t.Run(fmt.Sprintf("for %s", name), func(t *testing.T) {
+				headerRules := &config.GlobalHeaderRule{
 					Request: []*config.RequestHeaderRule{
 						{
 							Operation:   config.HeaderRuleOperationPropagate,
@@ -648,71 +667,32 @@ func TestForwardRenamedHeaders(t *testing.T) {
 							NegateMatch: true,
 						},
 					},
-				},
-			}
+				}
 
-			testenv.Run(t, &testenv.Config{
-				ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-					cfg.WebSocketClientReadTimeout = time.Millisecond * 10
-				},
-				RouterOptions: []core.Option{
-					core.WithHeaderRules(headerRules),
-				},
-			}, func(t *testing.T, xEnv *testenv.Environment) {
-				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-					Header: http.Header{
-						header1: []string{value1},
-						header2: []string{value2},
-						header3: []string{value3},
+				testenv.Run(t, &testenv.Config{
+					ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+						cfg.WebSocketClientReadTimeout = time.Millisecond * 10
 					},
-					Query: `query {
-						val1: headerValue(name:"` + header1 + `"),
-						val2: headerValue(name:"` + header2 + `"),
-						val3: headerValue(name:"` + header3 + `")
-					}`,
-				})
-				require.JSONEq(t, `{"data":{"val1":"","val2":"`+value2+`","val3":"`+value3+`"}}`, res.Body)
-			})
-		})
-
-		t.Run("for subgraphs", func(t *testing.T) {
-			headerRules := config.HeaderRules{
-				Subgraphs: map[string]*config.GlobalHeaderRule{
-					"test1": {
-						Request: []*config.RequestHeaderRule{
-							{
-								Operation:   config.HeaderRuleOperationPropagate,
-								Matching:    "^(HeaDeR1|Header7)$",
-								NegateMatch: true,
-							},
+					RouterOptions: []core.Option{
+						core.WithHeaderRules(getHeaderRules(key, headerRules)),
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Header: http.Header{
+							header1: []string{value1},
+							header2: []string{value2},
+							header3: []string{value3},
 						},
-					},
-				},
-			}
-
-			testenv.Run(t, &testenv.Config{
-				ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-					cfg.WebSocketClientReadTimeout = time.Millisecond * 10
-				},
-				RouterOptions: []core.Option{
-					core.WithHeaderRules(headerRules),
-				},
-			}, func(t *testing.T, xEnv *testenv.Environment) {
-				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-					Header: http.Header{
-						header1: []string{value1},
-						header2: []string{value2},
-						header3: []string{value3},
-					},
-					Query: `query {
-						val1: headerValue(name:"` + header1 + `"),
-						val2: headerValue(name:"` + header2 + `"),
-						val3: headerValue(name:"` + header3 + `")
-					}`,
+						Query: `query {
+							val1: headerValue(name:"` + header1 + `"),
+							val2: headerValue(name:"` + header2 + `"),
+							val3: headerValue(name:"` + header3 + `")
+						}`,
+					})
+					require.JSONEq(t, `{"data":{"val1":"","val2":"`+value2+`","val3":"`+value3+`"}}`, res.Body)
 				})
-				require.JSONEq(t, `{"data":{"val1":"","val2":"`+value2+`","val3":"`+value3+`"}}`, res.Body)
 			})
-		})
+		}
 
 	})
 }

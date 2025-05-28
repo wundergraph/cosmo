@@ -250,6 +250,7 @@
         {
           "Operation": "propagate",
           "Matching": "",
+          "NegateMatch": false,
           "Named": "X-Custom-Header",
           "Rename": "",
           "Default": "",
@@ -279,6 +280,7 @@
           {
             "Operation": "set",
             "Matching": "",
+            "NegateMatch": false,
             "Named": "",
             "Rename": "",
             "Default": "",
