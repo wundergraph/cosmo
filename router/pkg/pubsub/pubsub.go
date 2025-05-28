@@ -20,14 +20,28 @@ type DataSourceConfigurationWithMetadata struct {
 	Metadata      *plan.DataSourceMetadata
 }
 
+type GetID interface {
+	GetID() string
+}
+
+type GetEngineEventConfiguration interface {
+	GetEngineEventConfiguration() *nodev1.EngineEventConfiguration
+}
+
 type EngineEventConfiguration interface {
 	GetTypeName() string
 	GetFieldName() string
+	GetProviderId() string
 }
 
 type ProviderNotDefinedError struct {
 	ProviderID     string
 	ProviderTypeID string
+}
+
+type dsConfAndEvents[E GetEngineEventConfiguration] struct {
+	dsConf *DataSourceConfigurationWithMetadata
+	events []E
 }
 
 func (e *ProviderNotDefinedError) Error() string {
@@ -49,75 +63,88 @@ func BuildProvidersAndDataSources(
 
 	// Initialize Kafka providers and data sources
 	kafkaBuilder := kafka.NewPubSubProviderBuilder(ctx, logger, hostName, routerListenAddr)
-	kafkaProviderIds := []string{}
-	for _, providerData := range config.Providers.Kafka {
-		provider, err := kafkaBuilder.BuildProvider(providerData)
-		if err != nil {
-			return nil, nil, err
-		}
-		pubSubProviders = append(pubSubProviders, provider)
-		kafkaProviderIds = append(kafkaProviderIds, providerData.ID)
-	}
+	kafkaDsConfsWithEvents := []dsConfAndEvents[*nodev1.KafkaEventConfiguration]{}
 	for _, dsConf := range dsConfs {
-		for _, event := range dsConf.Configuration.GetCustomEvents().GetKafka() {
-			if !slices.Contains(kafkaProviderIds, event.GetEngineEventConfiguration().GetProviderId()) {
-				return pubSubProviders, nil, &ProviderNotDefinedError{
-					ProviderID:     event.GetEngineEventConfiguration().GetProviderId(),
-					ProviderTypeID: kafkaBuilder.TypeID(),
-				}
-			}
-		}
+		kafkaDsConfsWithEvents = append(kafkaDsConfsWithEvents, dsConfAndEvents[*nodev1.KafkaEventConfiguration]{
+			dsConf: &dsConf,
+			events: dsConf.Configuration.GetCustomEvents().GetKafka(),
+		})
 	}
+	kafkaPubSubProviders, kafkaOuts, err := buildProvidersAndDataSources(ctx, kafkaBuilder, config.Providers.Kafka, kafkaDsConfsWithEvents)
+	if err != nil {
+		return nil, nil, err
+	}
+	pubSubProviders = append(pubSubProviders, kafkaPubSubProviders...)
+	outs = append(outs, kafkaOuts...)
+
+	// initialize NATS providers and data sources
+	natsBuilder := nats.NewPubSubProviderBuilder(ctx, logger, hostName, routerListenAddr)
+	natsDsConfsWithEvents := []dsConfAndEvents[*nodev1.NatsEventConfiguration]{}
 	for _, dsConf := range dsConfs {
-		for i, event := range dsConf.Configuration.GetCustomEvents().GetKafka() {
-			pubSubDataSource, err := kafkaBuilder.BuildDataSource(event)
-			if err != nil {
-				return nil, nil, err
+		natsDsConfsWithEvents = append(natsDsConfsWithEvents, dsConfAndEvents[*nodev1.NatsEventConfiguration]{
+			dsConf: &dsConf,
+			events: dsConf.Configuration.GetCustomEvents().GetNats(),
+		})
+	}
+	natsPubSubProviders, natsOuts, err := buildProvidersAndDataSources(ctx, natsBuilder, config.Providers.Nats, natsDsConfsWithEvents)
+	if err != nil {
+		return nil, nil, err
+	}
+	pubSubProviders = append(pubSubProviders, natsPubSubProviders...)
+	outs = append(outs, natsOuts...)
+
+	return pubSubProviders, outs, nil
+}
+
+func buildProvidersAndDataSources[P GetID, E GetEngineEventConfiguration](ctx context.Context, builder pubsub_datasource.PubSubProviderBuilder[P, E], providersData []P, dsConfs []dsConfAndEvents[E]) ([]pubsub_datasource.PubSubProvider, []plan.DataSource, error) {
+	var pubSubProviders []pubsub_datasource.PubSubProvider
+	var outs []plan.DataSource
+
+	// check used providers
+	usedProviderIds := []string{}
+	for _, dsConf := range dsConfs {
+		for _, event := range dsConf.events {
+			if !slices.Contains(usedProviderIds, event.GetEngineEventConfiguration().GetProviderId()) {
+				usedProviderIds = append(usedProviderIds, event.GetEngineEventConfiguration().GetProviderId())
 			}
-			out, err := plan.NewDataSourceConfiguration(
-				dsConf.Configuration.Id+"-"+kafkaBuilder.TypeID()+"-"+strconv.Itoa(i),
-				pubsub_datasource.NewFactory(ctx, pubSubDataSource),
-				getFilteredDataSourceMetadata(event.GetEngineEventConfiguration(), dsConf.Metadata),
-				pubSubDataSource,
-			)
-			if err != nil {
-				return nil, nil, err
-			}
-			outs = append(outs, out)
 		}
 	}
 
-	// Initialize NATS providers and data sources
-	natsBuilder := nats.NewPubSubProviderBuilder(ctx, logger, hostName, routerListenAddr)
-	natsProviderIds := []string{}
-	for _, providerData := range config.Providers.Nats {
-		provider, err := natsBuilder.BuildProvider(providerData)
+	// initialize providers if used
+	providerIds := []string{}
+	for _, providerData := range providersData {
+		if !slices.Contains(usedProviderIds, providerData.GetID()) {
+			continue
+		}
+		provider, err := builder.BuildProvider(providerData)
 		if err != nil {
 			return nil, nil, err
 		}
 		pubSubProviders = append(pubSubProviders, provider)
-		natsProviderIds = append(natsProviderIds, providerData.ID)
+		providerIds = append(providerIds, provider.ID())
 	}
-	for _, dsConf := range dsConfs {
-		for _, event := range dsConf.Configuration.GetCustomEvents().GetNats() {
-			if !slices.Contains(natsProviderIds, event.GetEngineEventConfiguration().GetProviderId()) {
-				return pubSubProviders, nil, &ProviderNotDefinedError{
-					ProviderID:     event.GetEngineEventConfiguration().GetProviderId(),
-					ProviderTypeID: natsBuilder.TypeID(),
-				}
+
+	// check if all used providers are initialized
+	for _, providerId := range usedProviderIds {
+		if !slices.Contains(providerIds, providerId) {
+			return pubSubProviders, nil, &ProviderNotDefinedError{
+				ProviderID:     providerId,
+				ProviderTypeID: builder.TypeID(),
 			}
 		}
 	}
+
+	// build data sources for each event
 	for _, dsConf := range dsConfs {
-		for i, event := range dsConf.Configuration.GetCustomEvents().GetNats() {
-			pubSubDataSource, err := natsBuilder.BuildDataSource(event)
+		for i, event := range dsConf.events {
+			pubSubDataSource, err := builder.BuildDataSource(event)
 			if err != nil {
 				return nil, nil, err
 			}
 			out, err := plan.NewDataSourceConfiguration(
-				dsConf.Configuration.Id+"-"+natsBuilder.TypeID()+"-"+strconv.Itoa(i),
+				dsConf.dsConf.Configuration.Id+"-"+builder.TypeID()+"-"+strconv.Itoa(i),
 				pubsub_datasource.NewFactory(ctx, pubSubDataSource),
-				getFilteredDataSourceMetadata(event.GetEngineEventConfiguration(), dsConf.Metadata),
+				getFilteredDataSourceMetadata(event.GetEngineEventConfiguration(), dsConf.dsConf.Metadata),
 				pubSubDataSource,
 			)
 			if err != nil {
