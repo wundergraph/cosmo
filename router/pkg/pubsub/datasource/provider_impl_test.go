@@ -9,23 +9,8 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-// MockAdapter is a mock implementation of AdapterInterface.
-type MockAdapter struct {
-	mock.Mock
-}
-
-func (m *MockAdapter) Startup(ctx context.Context) error {
-	args := m.Called(ctx)
-	return args.Error(0)
-}
-
-func (m *MockAdapter) Shutdown(ctx context.Context) error {
-	args := m.Called(ctx)
-	return args.Error(0)
-}
-
 func TestProvider_Startup_Success(t *testing.T) {
-	mockAdapter := new(MockAdapter)
+	mockAdapter := NewMockLifecycle(t)
 	mockAdapter.On("Startup", mock.Anything).Return(nil)
 
 	provider := PubSubProviderImpl{
@@ -34,11 +19,10 @@ func TestProvider_Startup_Success(t *testing.T) {
 	err := provider.Startup(context.Background())
 
 	assert.NoError(t, err)
-	mockAdapter.AssertExpectations(t)
 }
 
 func TestProvider_Startup_Error(t *testing.T) {
-	mockAdapter := new(MockAdapter)
+	mockAdapter := NewMockLifecycle(t)
 	mockAdapter.On("Startup", mock.Anything).Return(errors.New("connect error"))
 
 	provider := PubSubProviderImpl{
@@ -47,11 +31,10 @@ func TestProvider_Startup_Error(t *testing.T) {
 	err := provider.Startup(context.Background())
 
 	assert.Error(t, err)
-	mockAdapter.AssertExpectations(t)
 }
 
 func TestProvider_Shutdown_Success(t *testing.T) {
-	mockAdapter := new(MockAdapter)
+	mockAdapter := NewMockLifecycle(t)
 	mockAdapter.On("Shutdown", mock.Anything).Return(nil)
 
 	provider := PubSubProviderImpl{
@@ -60,11 +43,10 @@ func TestProvider_Shutdown_Success(t *testing.T) {
 	err := provider.Shutdown(context.Background())
 
 	assert.NoError(t, err)
-	mockAdapter.AssertExpectations(t)
 }
 
 func TestProvider_Shutdown_Error(t *testing.T) {
-	mockAdapter := new(MockAdapter)
+	mockAdapter := NewMockLifecycle(t)
 	mockAdapter.On("Shutdown", mock.Anything).Return(errors.New("close error"))
 
 	provider := PubSubProviderImpl{
@@ -73,7 +55,6 @@ func TestProvider_Shutdown_Error(t *testing.T) {
 	err := provider.Shutdown(context.Background())
 
 	assert.Error(t, err)
-	mockAdapter.AssertExpectations(t)
 }
 
 func TestProvider_ID(t *testing.T) {

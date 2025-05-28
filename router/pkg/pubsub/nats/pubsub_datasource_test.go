@@ -53,7 +53,7 @@ func TestPubSubDataSourceWithMockAdapter(t *testing.T) {
 	}
 
 	// Create mock adapter
-	mockAdapter := new(mockAdapter)
+	mockAdapter := NewMockAdapterInterface(t)
 
 	// Configure mock expectations for Publish
 	mockAdapter.On("Publish", mock.Anything, mock.MatchedBy(func(event PublishAndRequestEventConfiguration) bool {
@@ -79,9 +79,6 @@ func TestPubSubDataSourceWithMockAdapter(t *testing.T) {
 	err = ds.Load(context.Background(), []byte(input), out)
 	require.NoError(t, err)
 	require.Equal(t, `{"success": true}`, out.String())
-
-	// Verify mock expectations
-	mockAdapter.AssertExpectations(t)
 }
 
 func TestPubSubDataSource_GetResolveDataSource_WrongType(t *testing.T) {
@@ -99,7 +96,7 @@ func TestPubSubDataSource_GetResolveDataSource_WrongType(t *testing.T) {
 	}
 
 	// Create mock adapter
-	mockAdapter := new(mockAdapter)
+	mockAdapter := NewMockAdapterInterface(t)
 
 	// Create the data source with mock adapter
 	pubsub := &PubSubDataSource{
@@ -250,7 +247,7 @@ func TestPubSubDataSource_RequestDataSource(t *testing.T) {
 	}
 
 	// Create mock adapter
-	mockAdapter := new(mockAdapter)
+	mockAdapter := NewMockAdapterInterface(t)
 
 	// Configure mock expectations for Request
 	mockAdapter.On("Request", mock.Anything, mock.MatchedBy(func(event PublishAndRequestEventConfiguration) bool {
@@ -280,7 +277,4 @@ func TestPubSubDataSource_RequestDataSource(t *testing.T) {
 	err = ds.Load(context.Background(), []byte(input), out)
 	require.NoError(t, err)
 	require.Equal(t, `{"response": "test"}`, out.String())
-
-	// Verify mock expectations
-	mockAdapter.AssertExpectations(t)
 }
