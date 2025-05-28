@@ -374,7 +374,6 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 
 	if cfg.EnableKafka {
 		cfg.KafkaSeeds = []string{"localhost:9092"}
-
 		client, err := kgo.NewClient(
 			kgo.SeedBrokers(cfg.KafkaSeeds...),
 		)
@@ -848,8 +847,8 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		testConfig.ModifySubgraphErrorPropagation(&cfg.SubgraphErrorPropagation)
 	}
 
-	natsEventSources := make([]config.NatsEventSource, len(DemoNatsProviders))
-	kafkaEventSources := make([]config.KafkaEventSource, len(DemoKafkaProviders))
+	var natsEventSources []config.NatsEventSource
+	var kafkaEventSources []config.KafkaEventSource
 
 	if natsData != nil {
 		for _, sourceName := range DemoNatsProviders {
@@ -859,11 +858,14 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			})
 		}
 	}
-	for _, sourceName := range DemoKafkaProviders {
-		kafkaEventSources = append(kafkaEventSources, config.KafkaEventSource{
-			ID:      sourceName,
-			Brokers: testConfig.KafkaSeeds,
-		})
+
+	if testConfig.KafkaSeeds != nil {
+		for _, sourceName := range DemoKafkaProviders {
+			kafkaEventSources = append(kafkaEventSources, config.KafkaEventSource{
+				ID:      sourceName,
+				Brokers: testConfig.KafkaSeeds,
+			})
+		}
 	}
 
 	eventsConfiguration := config.EventsConfiguration{

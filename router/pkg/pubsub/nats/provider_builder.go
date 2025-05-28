@@ -27,20 +27,18 @@ func (p *PubSubProviderBuilder) TypeID() string {
 
 func (p *PubSubProviderBuilder) BuildDataSource(data *nodev1.NatsEventConfiguration) (datasource.PubSubDataSource, error) {
 	providerId := data.GetEngineEventConfiguration().GetProviderId()
+	adapter, ok := p.adapters[providerId]
+	if !ok {
+		return nil, fmt.Errorf("failed to get adapter for provider %s with ID %s", p.TypeID(), providerId)
+	}
+
 	return &PubSubDataSource{
 		EventConfiguration: data,
-		NatsAdapter:        p.adapters[providerId],
+		NatsAdapter:        adapter,
 	}, nil
 }
 
 func (p *PubSubProviderBuilder) BuildProvider(provider config.NatsEventSource) (datasource.PubSubProvider, error) {
-	p.adapters = make(map[string]AdapterInterface)
-
-	if provider.ID == "" {
-		return nil, fmt.Errorf("provider ID is empty")
-	}
-
-	// create providers
 	adapter, pubSubProvider, err := buildProvider(p.ctx, provider, p.logger, p.hostName, p.routerListenAddr)
 	if err != nil {
 		return nil, err
@@ -123,5 +121,6 @@ func NewPubSubProviderBuilder(
 		logger:           logger,
 		hostName:         hostName,
 		routerListenAddr: routerListenAddr,
+		adapters:         make(map[string]AdapterInterface),
 	}
 }

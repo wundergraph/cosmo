@@ -40,15 +40,6 @@ func (p *PubSubProviderBuilder) BuildDataSource(data *nodev1.KafkaEventConfigura
 }
 
 func (p *PubSubProviderBuilder) BuildProvider(provider config.KafkaEventSource) (datasource.PubSubProvider, error) {
-	if p.adapters == nil {
-		p.adapters = make(map[string]AdapterInterface)
-	}
-
-	if provider.ID == "" {
-		return nil, fmt.Errorf("provider ID is empty")
-	}
-
-	// create providers
 	adapter, pubSubProvider, err := buildProvider(p.ctx, provider, p.logger)
 	if err != nil {
 		return nil, err
@@ -116,5 +107,6 @@ func NewPubSubProviderBuilder(
 		logger:           logger,
 		hostName:         hostName,
 		routerListenAddr: routerListenAddr,
+		adapters:         make(map[string]AdapterInterface),
 	}
 }

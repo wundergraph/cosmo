@@ -2,6 +2,7 @@ package pubsub
 
 import (
 	"context"
+	"fmt"
 	"slices"
 	"strconv"
 
@@ -30,21 +31,21 @@ func BuildProvidersAndDataSources(
 	natsBuilder := nats.NewPubSubProviderBuilder(ctx, logger, hostName, routerListenAddr)
 	natsProviderIds := []string{}
 
-	for _, event := range config.Providers.Kafka {
-		provider, err := kafkaBuilder.BuildProvider(event)
+	for _, providerData := range config.Providers.Kafka {
+		provider, err := kafkaBuilder.BuildProvider(providerData)
 		if err != nil {
 			return nil, nil, err
 		}
 		pubSubProviders = append(pubSubProviders, provider)
-		kafkaProviderIds = append(kafkaProviderIds, event.ID)
+		kafkaProviderIds = append(kafkaProviderIds, providerData.ID)
 	}
-	for _, event := range config.Providers.Nats {
-		provider, err := natsBuilder.BuildProvider(event)
+	for _, providerData := range config.Providers.Nats {
+		provider, err := natsBuilder.BuildProvider(providerData)
 		if err != nil {
 			return nil, nil, err
 		}
 		pubSubProviders = append(pubSubProviders, provider)
-		natsProviderIds = append(natsProviderIds, event.ID)
+		natsProviderIds = append(natsProviderIds, providerData.ID)
 	}
 
 	// Create data sources
@@ -52,7 +53,7 @@ func BuildProvidersAndDataSources(
 	for _, dsConf := range dsConfs {
 		for i, event := range dsConf.Configuration.GetCustomEvents().GetKafka() {
 			if !slices.Contains(kafkaProviderIds, event.GetEngineEventConfiguration().GetProviderId()) {
-				continue
+				return pubSubProviders, outs, fmt.Errorf("kafka provider with ID %s is not defined", event.GetEngineEventConfiguration().GetProviderId())
 			}
 			pubSubDataSource, err := kafkaBuilder.BuildDataSource(event)
 			if err != nil {
@@ -71,7 +72,7 @@ func BuildProvidersAndDataSources(
 		}
 		for i, event := range dsConf.Configuration.GetCustomEvents().GetNats() {
 			if !slices.Contains(natsProviderIds, event.GetEngineEventConfiguration().GetProviderId()) {
-				continue
+				return pubSubProviders, outs, fmt.Errorf("nats provider with ID %s is not defined", event.GetEngineEventConfiguration().GetProviderId())
 			}
 			pubSubDataSource, err := natsBuilder.BuildDataSource(event)
 			if err != nil {

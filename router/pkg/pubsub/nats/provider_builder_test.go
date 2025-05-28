@@ -158,19 +158,6 @@ func TestTransformEventConfig(t *testing.T) {
 }
 
 func TestPubSubProviderBuilderFactory(t *testing.T) {
-	t.Run("errors if provider ID is empty", func(t *testing.T) {
-		ctx := context.Background()
-		cfg := config.NatsEventSource{}
-		logger := zaptest.NewLogger(t)
-
-		builder := NewPubSubProviderBuilder(ctx, logger, "host", "addr")
-		require.NotNil(t, builder)
-		provider, err := builder.BuildProvider(cfg)
-		require.Error(t, err)
-		require.Nil(t, provider)
-		assert.Contains(t, err.Error(), "provider ID is empty")
-	})
-
 	t.Run("creates provider with configured adapters", func(t *testing.T) {
 		providerId := "test-provider"
 
