@@ -1,5 +1,5 @@
-//go:build windows
-// +build windows
+//go:build darwin
+// +build darwin
 
 package routerplugin
 
@@ -16,12 +16,5 @@ func newPluginCommand(filePath string) *exec.Cmd {
 	cmd := exec.Command(filePath)
 
 	return cmd
-
-	// TODO: create job object and set it as parent for the plugin process
-
-	// handle, err := windows.CreateJobObject(nil, nil)
-	// if err != nil {
-	// 	return
-	// }
 
 }

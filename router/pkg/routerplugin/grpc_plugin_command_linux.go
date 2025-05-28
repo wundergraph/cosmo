@@ -1,5 +1,5 @@
-//go:build darwin || linux
-// +build darwin linux
+//go:build linux
+// +build linux
 
 package routerplugin
 
@@ -11,7 +11,8 @@ import (
 func newPluginCommand(filePath string) *exec.Cmd {
 	cmd := exec.Command(filePath)
 	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Setpgid: true,
+		Setpgid:   true,
+		Pdeathsig: syscall.SIGTERM,
 	}
 	return cmd
 }
