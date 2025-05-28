@@ -12,6 +12,7 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { OrganizationGroupDTO } from '../../../types/index.js';
 
 export function updateOrgMemberGroup(
   opts: RouterOptions,
@@ -43,37 +44,7 @@ export function updateOrgMemberGroup(
       };
     }
 
-    // fetch the group the member will be added to
-    const orgGroup = await orgGroupRepo.byId({
-      organizationId: authContext.organizationId,
-      groupId: req.groupId,
-    });
-
-    if (!orgGroup) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR_NOT_FOUND,
-          details: `Group is not part of this organization`,
-        },
-      };
-    }
-
-    // fetching the user who is updating the other member's role.
-    const user = await orgRepo.getOrganizationMember({
-      organizationID: authContext.organizationId,
-      userID: authContext.userId || req.userID,
-    });
-
-    if (!user) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: 'User is not a part of this organization.',
-        },
-      };
-    }
-
-    // fetching the user whose group is being updated.
+    // Fetch the organization member from the database
     const orgMember = await orgRepo.getOrganizationMember({
       organizationID: authContext.organizationId,
       userID: req.orgMemberUserID,
@@ -88,34 +59,8 @@ export function updateOrgMemberGroup(
       };
     }
 
-    if (orgMember.rbac.groups.some((g) => g.groupId === orgGroup.groupId)) {
-      // The user is already a member of the provided group
-      return {
-        response: {
-          code: EnumStatusCode.OK,
-        },
-      };
-    }
-
-    await opts.keycloakClient.authenticateClient();
-
-    const users = await opts.keycloakClient.client.users.find({
-      realm: opts.keycloakRealm,
-      email: orgMember.email,
-      exact: true,
-    });
-
-    if (users.length === 0) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: 'User does not exist.',
-        },
-      };
-    }
-
+    // Ensure that the organization member has not signed in with SSO
     const provider = await oidcRepo.getOidcProvider({ organizationId: authContext.organizationId });
-
     if (provider) {
       // checking if the user has logged in using the sso
       const ssoUser = await opts.keycloakClient.client.users.find({
@@ -135,12 +80,51 @@ export function updateOrgMemberGroup(
       }
     }
 
-    const userGroups = await orgRepo.getOrganizationMemberGroups({
-      userID: orgMember.userID,
-      organizationID: authContext.organizationId,
+    // Retrieve the Keycloak user
+    await opts.keycloakClient.authenticateClient();
+
+    const users = await opts.keycloakClient.client.users.find({
+      realm: opts.keycloakRealm,
+      email: orgMember.email,
+      exact: true,
     });
 
-    if (userGroups.some((ug) => ug.groupId === orgGroup.groupId)) {
+    if (users.length === 0) {
+      // The user doesn't exist in Keycloak
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: 'User does not exist.',
+        },
+      };
+    }
+
+    // Load all the group the member should be part of from the database
+    const groups: OrganizationGroupDTO[] = [];
+    for (const groupId of new Set(req.groups)) {
+      const orgGroup = await orgGroupRepo.byId({ organizationId: authContext.organizationId, groupId });
+      if (!orgGroup) {
+        // The group doesn't exist for the organization
+        return {
+          response: {
+            code: EnumStatusCode.ERR_NOT_FOUND,
+            details: `One of the submitted groups is not part of this organization`,
+          },
+        };
+      }
+
+      groups.push(orgGroup);
+    }
+
+    // Figure out which groups we need to remove the user from and to add the user to
+    const newGroups = new Set(groups.map((group) => group.groupId));
+    const existingGroups = new Set(orgMember.rbac.groups.map((group) => group.groupId));
+
+    const groupsToAddTo = newGroups.difference(existingGroups);
+    const groupsToRemoveFrom = existingGroups.difference(newGroups);
+
+    if (groupsToAddTo.size === 0 && groupsToRemoveFrom.size === 0) {
+      // We don't need to remove or add the group from/to any group
       return {
         response: {
           code: EnumStatusCode.OK,
@@ -148,9 +132,29 @@ export function updateOrgMemberGroup(
       };
     }
 
-    // delete current groups
-    for (const group of userGroups) {
-      if (!group.kcGroupId) {
+    // Update the groups from the member
+    await orgRepo.updateMemberGroups({ orgMemberID: orgMember.orgMemberID, groups: [...newGroups] });
+
+    // Add the member to added groups
+    for (const groupId of groupsToAddTo) {
+      const group = groups.find((g) => g.groupId === groupId);
+      if (!group?.kcGroupId) {
+        // The group hasn't been linked to Keycloak, skip
+        continue;
+      }
+
+      await opts.keycloakClient.client.users.addToGroup({
+        id: users[0].id!,
+        realm: opts.keycloakRealm,
+        groupId: group.kcGroupId,
+      });
+    }
+
+    // Remove the member from removed groups
+    for (const groupId of groupsToRemoveFrom) {
+      const group = orgMember.rbac.groups.find((g) => g.groupId === groupId);
+      if (!group?.kcGroupId) {
+        // The group hasn't been linked to Keycloak, skip
         continue;
       }
 
@@ -161,34 +165,21 @@ export function updateOrgMemberGroup(
       });
     }
 
-    if (orgGroup.kcGroupId) {
-      await opts.keycloakClient.client.users.addToGroup({
-        id: users[0].id!,
-        realm: opts.keycloakRealm,
-        groupId: orgGroup.kcGroupId,
-      });
-    }
-
-    await orgRepo.updateUserGroup({
-      orgMemberID: orgMember.orgMemberID,
-      groupId: orgGroup.groupId,
-    });
-
-    await auditLogRepo.addAuditLog({
-      organizationId: authContext.organizationId,
-      organizationSlug: authContext.organizationSlug,
-      auditAction: 'member_group.updated',
-      action: 'updated',
-      actorId: authContext.userId,
-      auditableDisplayName: orgGroup.name,
-      auditableType: 'member_group',
-      actorDisplayName: authContext.userDisplayName,
-      apiKeyName: authContext.apiKeyName,
-      targetId: orgMember.userID,
-      targetType: 'user',
-      targetDisplayName: orgMember.email,
-      actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
-    });
+    // await auditLogRepo.addAuditLog({
+    //   organizationId: authContext.organizationId,
+    //   organizationSlug: authContext.organizationSlug,
+    //   auditAction: 'member_group.updated',
+    //   action: 'updated',
+    //   actorId: authContext.userId,
+    //   auditableDisplayName: orgGroup.name,
+    //   auditableType: 'member_group',
+    //   actorDisplayName: authContext.userDisplayName,
+    //   apiKeyName: authContext.apiKeyName,
+    //   targetId: orgMember.userID,
+    //   targetType: 'user',
+    //   targetDisplayName: orgMember.email,
+    //   actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+    // });
 
     return {
       response: {

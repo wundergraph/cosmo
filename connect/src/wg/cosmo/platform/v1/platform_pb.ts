@@ -10445,19 +10445,14 @@ export class UpdateOrganizationDetailsResponse extends Message<UpdateOrganizatio
  */
 export class UpdateOrgMemberGroupRequest extends Message<UpdateOrgMemberGroupRequest> {
   /**
-   * @generated from field: string userID = 1;
-   */
-  userID = "";
-
-  /**
-   * @generated from field: string orgMemberUserID = 2;
+   * @generated from field: string orgMemberUserID = 1;
    */
   orgMemberUserID = "";
 
   /**
-   * @generated from field: string groupId = 3;
+   * @generated from field: repeated string groups = 2;
    */
-  groupId = "";
+  groups: string[] = [];
 
   constructor(data?: PartialMessage<UpdateOrgMemberGroupRequest>) {
     super();
@@ -10467,9 +10462,8 @@ export class UpdateOrgMemberGroupRequest extends Message<UpdateOrgMemberGroupReq
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "wg.cosmo.platform.v1.UpdateOrgMemberGroupRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "userID", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "orgMemberUserID", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "groupId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "orgMemberUserID", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "groups", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateOrgMemberGroupRequest {

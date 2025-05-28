@@ -36,9 +36,8 @@ export function UpdateMemberGroupDialog({ open, member, onOpenChange, refresh }:
 
     mutate(
       {
-        userID: user?.id,
         orgMemberUserID: member.userID,
-        groupId: selectedGroup.groupId,
+        groups: [selectedGroup.groupId],
       },
       {
         async onSuccess(data) {

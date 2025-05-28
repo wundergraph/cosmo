@@ -72,25 +72,13 @@ export function leaveOrganization(
     }
 
     await opts.keycloakClient.authenticateClient();
-
-    const organizationGroup = await opts.keycloakClient.client.groups.find({
-      max: 1,
-      search: org.slug,
+    await opts.keycloakClient.removeUserFromOrganization({
       realm: opts.keycloakRealm,
+      userID: orgMember.userID,
+      groupName: org.slug,
     });
 
-    if (organizationGroup.length === 0) {
-      throw new Error(`Organization group '${org.slug}' not found`);
-    }
-
-    // removing the group from the keycloak user
-    await opts.keycloakClient.client.users.delFromGroup({
-      id: orgMember.userID,
-      groupId: organizationGroup[0].id!,
-      realm: opts.keycloakRealm,
-    });
-
-    // removing the user for the organization in the db
+    // Removing the user for the organization in the db
     await orgRepo.removeOrganizationMember({
       userID: authContext.userId || req.userID,
       organizationID: authContext.organizationId,

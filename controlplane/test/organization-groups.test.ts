@@ -1,8 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { uid } from 'uid';
-import { afterAllSetup, beforeAllSetup, TestUser } from '../src/core/test-util.js';
-import { SetupTest } from './test-util.js';
+import { afterAllSetup, beforeAllSetup, genID, TestUser } from '../src/core/test-util.js';
+import { createOrganizationGroup, SetupTest } from './test-util.js';
 
 let dbname = '';
 
@@ -19,7 +18,7 @@ describe('Organization Group tests', (ctx) => {
     const { client, server } = await SetupTest({ dbname });
 
     const createdGroupResponse = await client.createOrganizationGroup({
-      name: uid(),
+      name: genID('group'),
       description: '',
     });
 
@@ -37,7 +36,7 @@ describe('Organization Group tests', (ctx) => {
     const { client, server } = await SetupTest({ dbname, enabledFeatures: ['rbac'] });
 
     const createdGroupResponse = await client.createOrganizationGroup({
-      name: uid(),
+      name: genID('group'),
       description: '',
     });
 
@@ -55,7 +54,7 @@ describe('Organization Group tests', (ctx) => {
     const { client, server } = await SetupTest({ dbname, enabledFeatures: ['rbac'] });
 
     const orgGroups = await client.getOrganizationGroups({});
-    const adminGroup = orgGroups.groups.find((g) => g.name === 'admin')!;
+    const adminGroup = orgGroups.groups.find((g) => g.builtin)!;
 
     const updateResponse = await client.updateOrganizationGroup({
       groupId: adminGroup.groupId,
@@ -75,7 +74,7 @@ describe('Organization Group tests', (ctx) => {
     const { client, server } = await SetupTest({ dbname, enabledFeatures: ['rbac'] });
 
     const orgGroups = await client.getOrganizationGroups({});
-    const adminGroup = orgGroups.groups.find((g) => g.name === 'admin')!;
+    const adminGroup = orgGroups.groups.find((g) => g.builtin)!;
 
     const deleteResponse = await client.deleteOrganizationGroup({
       groupId: adminGroup.groupId,
@@ -89,29 +88,9 @@ describe('Organization Group tests', (ctx) => {
   test('Should be able to update existing group', async () => {
     const { client, server } = await SetupTest({ dbname, enabledFeatures: ['rbac'] });
 
-    const createdGroupResponse = await client.createOrganizationGroup({
-      name: uid(),
-      description: '',
-    });
-
-    expect(createdGroupResponse.response?.code).toBe(EnumStatusCode.OK);
-
-    const updateResponse = await client.updateOrganizationGroup({
-      groupId: createdGroupResponse.group?.groupId,
-      rules: [{
-        role: 'organization-admin',
-        namespaces: [],
-        resources: [],
-      }],
-    });
-
-    expect(updateResponse.response?.code).toBe(EnumStatusCode.OK);
-
-    const updatedGroupsResponse = await client.getOrganizationGroups({});
-    const updatedDeveloperGroup = updatedGroupsResponse.groups.find((g) => g.groupId === createdGroupResponse.group?.groupId)!;
-
-    expect(updatedDeveloperGroup.rules.length).toBe(1);
-    expect(updatedDeveloperGroup.rules[0].role).toBe('organization-admin');
+    const group = await createOrganizationGroup(client, genID('group'), { role: 'organization-admin' });
+    expect(group.rules.length).toBe(1);
+    expect(group.rules[0].role).toBe('organization-admin');
 
     await server.close();
   });
@@ -119,16 +98,8 @@ describe('Organization Group tests', (ctx) => {
   test('Should be able to delete group', async () => {
     const { client, server } = await SetupTest({ dbname, enabledFeatures: ['rbac'] });
 
-    const createdGroupResponse = await client.createOrganizationGroup({
-      name: uid(),
-      description: '',
-    });
-
-    expect(createdGroupResponse.response?.code).toBe(EnumStatusCode.OK);
-
-    const deleteGroupResponse = await client.deleteOrganizationGroup({
-      groupId: createdGroupResponse.group?.groupId,
-    });
+    const group = await createOrganizationGroup(client, genID('group'));
+    const deleteGroupResponse = await client.deleteOrganizationGroup({ groupId: group.groupId, });
 
     expect(deleteGroupResponse.response?.code).toBe(EnumStatusCode.OK);
 
@@ -140,26 +111,36 @@ describe('Organization Group tests', (ctx) => {
 
     authenticator.changeUserWithSuppliedContext(users.adminBobCompanyA!);
 
-    const createdGroupResponse = await client.createOrganizationGroup({
-      name: uid(),
-      description: '',
-    });
-
-    expect(createdGroupResponse.response?.code).toBe(EnumStatusCode.OK);
+    const group = await createOrganizationGroup(client, genID('group'));
 
     const updateGroupResponse = await client.updateOrgMemberGroup({
       orgMemberUserID: users.adminBobCompanyA?.userId,
-      groupId: createdGroupResponse.group?.groupId,
+      groups: [group.groupId],
     });
 
     expect(updateGroupResponse.response?.code).toBe(EnumStatusCode.OK);
 
-    const deleteGroupResponse = await client.deleteOrganizationGroup({
-      groupId: createdGroupResponse.group?.groupId,
-    });
+    const deleteGroupResponse = await client.deleteOrganizationGroup({ groupId: group.groupId });
 
     expect(deleteGroupResponse.response?.code).toBe(EnumStatusCode.ERR);
     expect(deleteGroupResponse.response?.details).toBe("No group to move existing members to was provided");
+
+    await server.close();
+  });
+
+  test('Deleting a group should delete it from Keycloak too', async () => {
+    const { client, server, keycloakClient, realm } = await SetupTest({ dbname, enabledFeatures: ['rbac'], enableMultiUsers: true });
+
+    const group = await createOrganizationGroup(client, genID('group'), { role: 'organization-admin' });
+
+    let kcGroup = await keycloakClient.client.groups.find({ realm, search: group.name, });
+    expect(kcGroup).toHaveLength(1);
+
+    const deleteGroupResponse = await client.deleteOrganizationGroup({ groupId: group.groupId });
+    expect(deleteGroupResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    kcGroup = await keycloakClient.client.groups.find({ realm, search: group.name, });
+    expect(kcGroup).toHaveLength(0);
 
     await server.close();
   });
@@ -172,22 +153,17 @@ describe('Organization Group tests', (ctx) => {
     const orgGroups = await client.getOrganizationGroups({});
     const developerGroup = orgGroups.groups.find((g) => g.name === 'developer')!;
 
-    const createdGroupResponse = await client.createOrganizationGroup({
-      name: uid(),
-      description: '',
-    });
-
-    expect(createdGroupResponse.response?.code).toBe(EnumStatusCode.OK);
+    const group = await createOrganizationGroup(client, genID('group'));
 
     const updateGroupResponse = await client.updateOrgMemberGroup({
       orgMemberUserID: users.adminBobCompanyA?.userId,
-      groupId: createdGroupResponse.group?.groupId,
+      groups: [group.groupId],
     });
 
     expect(updateGroupResponse.response?.code).toBe(EnumStatusCode.OK);
 
     const deleteGroupResponse = await client.deleteOrganizationGroup({
-      groupId: createdGroupResponse.group?.groupId,
+      groupId: group.groupId,
       toGroupId: developerGroup.groupId,
     });
 
@@ -206,16 +182,15 @@ describe('Group membership tests', () => {
     await afterAllSetup(dbname);
   });
 
-  test('Should be able to update member group', async (testContext) => {
+  test('Should be able to update member group', async () => {
     const { client, server, users } = await SetupTest({ dbname, enableMultiUsers: true });
 
     const orgGroups = await client.getOrganizationGroups({});
     const adminGroup = orgGroups.groups.find((g) => g.name === 'admin')!;
 
     const updateGroupResponse = await client.updateOrgMemberGroup({
-      userID: users.adminAliceCompanyA?.userId,
       orgMemberUserID: users.devJoeCompanyA?.userId,
-      groupId: adminGroup.groupId,
+      groups: [adminGroup.groupId],
     });
     expect(updateGroupResponse.response?.code).toBe(EnumStatusCode.OK);
 
@@ -230,7 +205,7 @@ describe('Group membership tests', () => {
     await server.close();
   });
 
-  test('Non admin should not be able update user groups', async (testContext) => {
+  test('Non admin should not be able update user groups', async () => {
     const { client, server, users, authenticator } = await SetupTest({ dbname, enableMultiUsers: true });
 
     const orgGroups = await client.getOrganizationGroups({});
@@ -239,9 +214,8 @@ describe('Group membership tests', () => {
     authenticator.changeUser(TestUser.devJoeCompanyA)
 
     const updateGroupResponse = await client.updateOrgMemberGroup({
-      userID: users.devJoeCompanyA?.userId,
       orgMemberUserID: users.viewerTimCompanyA?.userId,
-      groupId: developerGroup.groupId,
+      groups: [developerGroup.groupId],
     });
     expect(updateGroupResponse.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
     expect(updateGroupResponse.response?.details).toBe('The user does not have the permissions to perform this operation',);
