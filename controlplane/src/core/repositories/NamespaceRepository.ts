@@ -142,7 +142,6 @@ export class NamespaceRepository {
         .where(
           and(
             eq(schema.targets.organizationId, this.organizationId),
-            eq(schema.targets.type, 'subgraph'),
             inArray(schema.targets.id, rbac.resources),
           ),
         );
