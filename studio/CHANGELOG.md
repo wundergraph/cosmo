@@ -4,6 +4,44 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.118.3](https://github.com/wundergraph/cosmo/compare/studio@0.118.2...studio@0.118.3) (2025-05-26)
+
+**Note:** Version bump only for package studio
+
+## [0.118.2](https://github.com/wundergraph/cosmo/compare/studio@0.118.1...studio@0.118.2) (2025-05-26)
+
+### Bug Fixes
+
+* fix infinite loop caused by namespace selector ([#1898](https://github.com/wundergraph/cosmo/issues/1898)) ([2a65c48](https://github.com/wundergraph/cosmo/commit/2a65c483d7a6ca100c2a209304730657336ece7a)) (@wilsonrivera)
+
+## [0.118.1](https://github.com/wundergraph/cosmo/compare/studio@0.118.0...studio@0.118.1) (2025-05-26)
+
+### Bug Fixes
+
+* error caused by `useCheckUserAccess` ([#1896](https://github.com/wundergraph/cosmo/issues/1896)) ([40d1167](https://github.com/wundergraph/cosmo/commit/40d116784b917fae801a5d5743963e2fe430401b)) (@wilsonrivera)
+
+# [0.118.0](https://github.com/wundergraph/cosmo/compare/studio@0.117.0...studio@0.118.0) (2025-05-25)
+
+### Features
+
+* improve available namespaces ([#1895](https://github.com/wundergraph/cosmo/issues/1895)) ([135de0a](https://github.com/wundergraph/cosmo/commit/135de0a4c57ce815e1177be34e96c2a5900f031e)) (@wilsonrivera)
+
+# [0.117.0](https://github.com/wundergraph/cosmo/compare/studio@0.116.4...studio@0.117.0) (2025-05-24)
+
+### Features
+
+* introduce RBAC groups for fine-grained control over resource access ([#1830](https://github.com/wundergraph/cosmo/issues/1830)) ([9f984cd](https://github.com/wundergraph/cosmo/commit/9f984cdfedbb80e0e120178b9755d6f57e85479e)) (@wilsonrivera)
+
+## [0.116.4](https://github.com/wundergraph/cosmo/compare/studio@0.116.3...studio@0.116.4) (2025-05-19)
+
+**Note:** Version bump only for package studio
+
+## [0.116.3](https://github.com/wundergraph/cosmo/compare/studio@0.116.2...studio@0.116.3) (2025-05-19)
+
+### Bug Fixes
+
+* display proposal matches only if the organization has access to proposals ([#1868](https://github.com/wundergraph/cosmo/issues/1868)) ([2233d1b](https://github.com/wundergraph/cosmo/commit/2233d1b297b4774295649c41340fadcb879b8d77)) (@JivusAyrus)
+
 ## [0.116.2](https://github.com/wundergraph/cosmo/compare/studio@0.116.1...studio@0.116.2) (2025-05-16)
 
 **Note:** Version bump only for package studio

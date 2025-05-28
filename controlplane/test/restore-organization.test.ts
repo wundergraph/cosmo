@@ -4,7 +4,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi 
 import { OrganizationRepository } from '../src/core/repositories/OrganizationRepository.js';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel, TestUser } from '../src/core/test-util.js';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
-import { createDeleteOrganizationWorker } from "../src/core/workers/DeleteOrganizationWorker.js";
+import { createDeleteOrganizationWorker } from '../src/core/workers/DeleteOrganizationWorker.js';
 import { createFederatedGraph, createThenPublishSubgraph, DEFAULT_NAMESPACE, SetupTest } from './test-util.js';
 
 let dbname = '';

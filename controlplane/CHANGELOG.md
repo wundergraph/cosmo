@@ -4,6 +4,54 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.145.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.145.0...controlplane@0.145.1) (2025-05-27)
+
+### Bug Fixes
+
+* missed legacy checks ([#1910](https://github.com/wundergraph/cosmo/issues/1910)) ([34e9ba6](https://github.com/wundergraph/cosmo/commit/34e9ba6d03c91bc8ff1a7b6c383996d4f453a641)) (@wilsonrivera)
+
+# [0.145.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.144.0...controlplane@0.145.0) (2025-05-27)
+
+### Features
+
+* restore legacy support for check endpoints ([#1908](https://github.com/wundergraph/cosmo/issues/1908)) ([87c3b9d](https://github.com/wundergraph/cosmo/commit/87c3b9daa3caac6f4c51b871b9a0a2abc9e2fa8e)) (@wilsonrivera)
+
+# [0.144.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.143.0...controlplane@0.144.0) (2025-05-26)
+
+### Features
+
+* fetch operations based on clients ([#1894](https://github.com/wundergraph/cosmo/issues/1894)) ([a7597f5](https://github.com/wundergraph/cosmo/commit/a7597f51d4506f11f117937955da3be2626a55c5)) (@JivusAyrus)
+
+# [0.143.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.142.0...controlplane@0.143.0) (2025-05-26)
+
+### Features
+
+* fallback to legacy read access check for api keys ([#1899](https://github.com/wundergraph/cosmo/issues/1899)) ([371edb2](https://github.com/wundergraph/cosmo/commit/371edb2226f3c9a7b4b2ef277406b36cb29be5db)) (@wilsonrivera)
+
+# [0.142.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.141.0...controlplane@0.142.0) (2025-05-25)
+
+### Features
+
+* improve available namespaces ([#1895](https://github.com/wundergraph/cosmo/issues/1895)) ([135de0a](https://github.com/wundergraph/cosmo/commit/135de0a4c57ce815e1177be34e96c2a5900f031e)) (@wilsonrivera)
+
+# [0.141.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.140.0...controlplane@0.141.0) (2025-05-24)
+
+### Features
+
+* introduce RBAC groups for fine-grained control over resource access ([#1830](https://github.com/wundergraph/cosmo/issues/1830)) ([9f984cd](https://github.com/wundergraph/cosmo/commit/9f984cdfedbb80e0e120178b9755d6f57e85479e)) (@wilsonrivera)
+
+# [0.140.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.139.1...controlplane@0.140.0) (2025-05-19)
+
+### Features
+
+* **router:** grpc go plugin system ([#1866](https://github.com/wundergraph/cosmo/issues/1866)) ([280a61d](https://github.com/wundergraph/cosmo/commit/280a61de4bd1328549a023d1a3a0b702d78453b8)) (@Noroth)
+
+## [0.139.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.139.0...controlplane@0.139.1) (2025-05-19)
+
+### Bug Fixes
+
+* checkFederatedGraph by filtering out subgraphs without schemas for composition ([#1867](https://github.com/wundergraph/cosmo/issues/1867)) ([6a8c7f5](https://github.com/wundergraph/cosmo/commit/6a8c7f5b5bf9f6121a8a70eb38f7705997811746)) (@JivusAyrus)
+
 # [0.139.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.138.1...controlplane@0.139.0) (2025-05-16)
 
 ### Features

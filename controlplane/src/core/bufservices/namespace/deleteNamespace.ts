@@ -12,6 +12,7 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function deleteNamespace(
   opts: RouterOptions,
@@ -26,6 +27,10 @@ export function deleteNamespace(
 
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
     const orgRepo = new OrganizationRepository(logger, opts.db);
+
+    if (authContext.organizationDeactivated) {
+      throw new UnauthorizedError();
+    }
 
     if (req.name === DefaultNamespace) {
       return {
@@ -46,6 +51,10 @@ export function deleteNamespace(
       };
     }
 
+    if (!authContext.rbac.canDeleteNamespace(ns)) {
+      throw new UnauthorizedError();
+    }
+
     const orgMember = await orgRepo.getOrganizationMember({
       organizationID: authContext.organizationId,
       userID: authContext.userId,
@@ -60,14 +69,9 @@ export function deleteNamespace(
       };
     }
 
-    // Ensure that only creator and admin can delete a namespace because it will delete all underlying resources
-    if (ns.createdBy !== authContext.userId && !orgMember.roles.includes('admin')) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: 'User does not have the permissions to delete the namespace.',
-        },
-      };
+    // Ensure that only admin can delete a namespace because it will delete all underlying resources
+    if (!orgMember.rbac.isOrganizationAdmin) {
+      throw new UnauthorizedError();
     }
 
     await opts.db.transaction(async (tx) => {

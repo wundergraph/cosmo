@@ -12,6 +12,7 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function enableProposalsForNamespace(
   opts: RouterOptions,
@@ -29,13 +30,8 @@ export function enableProposalsForNamespace(
     const proposalRepo = new ProposalRepository(opts.db);
     const auditLogRepo = new AuditLogRepository(opts.db);
 
-    if (!authContext.hasWriteAccess) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `The user doesnt have the permissions to perform this operation`,
-        },
-      };
+    if (authContext.organizationDeactivated) {
+      throw new UnauthorizedError();
     }
 
     const proposalsFeature = await organizationRepo.getFeature({
@@ -59,6 +55,10 @@ export function enableProposalsForNamespace(
           details: `Namespace '${req.namespace}' not found`,
         },
       };
+    }
+
+    if (!authContext.rbac.hasNamespaceWriteAccess(namespace)) {
+      throw new UnauthorizedError();
     }
 
     await namespaceRepo.updateConfiguration({ id: namespace.id, enableProposals: req.enableProposals });

@@ -4,6 +4,70 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.215.2](https://github.com/wundergraph/cosmo/compare/router@0.215.1...router@0.215.2) (2025-05-27)
+
+### Bug Fixes
+
+* upgrade exprlang to 1.17.3 ([#1904](https://github.com/wundergraph/cosmo/issues/1904)) ([c1e895d](https://github.com/wundergraph/cosmo/commit/c1e895d6a37c398a27c2fd4204ae10fe9f966b43)) (@SkArchon)
+
+## [0.215.1](https://github.com/wundergraph/cosmo/compare/router@0.215.0...router@0.215.1) (2025-05-26)
+
+### Bug Fixes
+
+*  detach fetches from objects, serial mutations execution, remove fetch id from operation name ([#1877](https://github.com/wundergraph/cosmo/issues/1877)) ([7dd7caa](https://github.com/wundergraph/cosmo/commit/7dd7caa78b65859ef4dd0b3a94d019c0a8c572ae)) (@devsergiy)
+
+# [0.215.0](https://github.com/wundergraph/cosmo/compare/router@0.214.2...router@0.215.0) (2025-05-26)
+
+### Bug Fixes
+
+* **mcp:** rollback mcp library upgrade due to protocol support ([#1900](https://github.com/wundergraph/cosmo/issues/1900)) ([20c0959](https://github.com/wundergraph/cosmo/commit/20c09593f76b4586a919332a12adb83fbe6b9ab4)) (@StarpTech)
+
+### Features
+
+* add posthog to router ([#1882](https://github.com/wundergraph/cosmo/issues/1882)) ([27b4451](https://github.com/wundergraph/cosmo/commit/27b44514b2e13b815d0dd581fcd7edd65a0e8db0)) (@jensneuse)
+
+## [0.214.2](https://github.com/wundergraph/cosmo/compare/router@0.214.1...router@0.214.2) (2025-05-26)
+
+### Bug Fixes
+
+* **mcp:** enable PING events by default to prevent proxy timeouts ([#1897](https://github.com/wundergraph/cosmo/issues/1897)) ([5b1a1b2](https://github.com/wundergraph/cosmo/commit/5b1a1b27a31bbf03c4b34f3dd2bcb5c6846a26d2)) (@StarpTech)
+
+## [0.214.1](https://github.com/wundergraph/cosmo/compare/router@0.214.0...router@0.214.1) (2025-05-23)
+
+### Bug Fixes
+
+* use ms measurements instead of float seconds for conn_acquire_time ([#1889](https://github.com/wundergraph/cosmo/issues/1889)) ([fc8e440](https://github.com/wundergraph/cosmo/commit/fc8e440c26eb50218ef8dd97abedf6a2b9a15958)) (@SkArchon)
+
+# [0.214.0](https://github.com/wundergraph/cosmo/compare/router@0.213.0...router@0.214.0) (2025-05-23)
+
+### Features
+
+* add subgraph expressions and tracing attributes ([#1870](https://github.com/wundergraph/cosmo/issues/1870)) ([368fa20](https://github.com/wundergraph/cosmo/commit/368fa2066e2414a7132d8079dc1570f7e06499e2)) (@SkArchon)
+
+# [0.213.0](https://github.com/wundergraph/cosmo/compare/router@0.212.1...router@0.213.0) (2025-05-22)
+
+### Features
+
+* add new metric store with trace connection metrics ([#1862](https://github.com/wundergraph/cosmo/issues/1862)) ([772773d](https://github.com/wundergraph/cosmo/commit/772773d9b7b44485505cd90306f95f9504552a79)) (@SkArchon)
+* add proper enabled config for plugins ([#1881](https://github.com/wundergraph/cosmo/issues/1881)) ([3114d38](https://github.com/wundergraph/cosmo/commit/3114d38ee39bd68a56c847e59fab253e18f7fabe)) (@Noroth)
+* plugin init should bootstrap fully functional project ([#1878](https://github.com/wundergraph/cosmo/issues/1878)) ([69132da](https://github.com/wundergraph/cosmo/commit/69132da0f6a3560afcd6bdab348dec0bb37c3496)) (@StarpTech)
+
+## [0.212.1](https://github.com/wundergraph/cosmo/compare/router@0.212.0...router@0.212.1) (2025-05-22)
+
+**Note:** Version bump only for package router
+
+# [0.212.0](https://github.com/wundergraph/cosmo/compare/router@0.211.0...router@0.212.0) (2025-05-19)
+
+### Features
+
+* **router:** grpc go plugin system ([#1866](https://github.com/wundergraph/cosmo/issues/1866)) ([280a61d](https://github.com/wundergraph/cosmo/commit/280a61de4bd1328549a023d1a3a0b702d78453b8)) (@Noroth)
+
+# [0.211.0](https://github.com/wundergraph/cosmo/compare/router@0.210.2...router@0.211.0) (2025-05-19)
+
+### Features
+
+* **router:** hot config reloading ([#1746](https://github.com/wundergraph/cosmo/issues/1746)) ([e87d727](https://github.com/wundergraph/cosmo/commit/e87d727dd5c1bcd0f67b8f0f17294cc07ee372d8)) (@endigma)
+
 ## [0.210.2](https://github.com/wundergraph/cosmo/compare/router@0.210.1...router@0.210.2) (2025-05-16)
 
 ### Bug Fixes

@@ -9,6 +9,7 @@ import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, isValidOrganizationName, isValidOrganizationSlug } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function updateOrganizationDetails(
   opts: RouterOptions,
@@ -23,6 +24,10 @@ export function updateOrganizationDetails(
 
     const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
     const auditLogRepo = new AuditLogRepository(opts.db);
+
+    if (authContext.organizationDeactivated) {
+      throw new UnauthorizedError();
+    }
 
     const org = await orgRepo.byId(authContext.organizationId);
     if (!org) {
@@ -49,13 +54,8 @@ export function updateOrganizationDetails(
     }
 
     // non admins cannot update the organization name
-    if (!orgMember.roles.includes('admin')) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: 'User does not have the permissions to update the organization name.',
-        },
-      };
+    if (!orgMember.rbac.isOrganizationAdmin) {
+      throw new UnauthorizedError();
     }
 
     if (!isValidOrganizationSlug(req.organizationSlug)) {
@@ -108,6 +108,22 @@ export function updateOrganizationDetails(
         },
         { name: req.organizationSlug },
       );
+
+      // Rename all the organization roles
+      const kcOrganizationRoles = await opts.keycloakClient.client.roles.find({
+        realm: opts.keycloakRealm,
+        max: -1,
+        search: `${org.slug}:`,
+      });
+
+      for (const kcRole of kcOrganizationRoles) {
+        await opts.keycloakClient.client.roles.updateById(
+          { realm: opts.keycloakRealm, id: kcRole.id! },
+          {
+            name: kcRole.name!.replace(`${org.slug}:`, `${req.organizationSlug}:`),
+          },
+        );
+      }
     }
 
     await orgRepo.updateOrganization({
