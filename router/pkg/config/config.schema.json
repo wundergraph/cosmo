@@ -2970,6 +2970,9 @@
           "description": "The default value of the header in case it is not present in the request."
         }
       },
+      "dependentRequired": {
+        "negate_match": ["matching"]
+      },
       "required": ["op"]
     },
     "traffic_shaping_header_response_rule": {
@@ -3014,6 +3017,9 @@
           "examples": ["first_write"],
           "description": "The algorith, to use when multiple headers are present. The supported operations are '\"first_write\", \"last_write\", and \"append\". The 'first_write' retains the first value of a given header. The 'last_write' retains the last value of a given header. The 'append' appends all values of a given header."
         }
+      },
+      "dependentRequired": {
+        "negate_match": ["matching"]
       },
       "required": ["op", "algorithm"]
     },
