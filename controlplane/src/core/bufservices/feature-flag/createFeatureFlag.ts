@@ -59,7 +59,7 @@ export function createFeatureFlag(
       };
     }
 
-    if (!authContext.rbac.canCreateFeatureFlag(namespace)) {
+    if (!authContext.rbac.useLegacyFlow && !authContext.rbac.canCreateFeatureFlag(namespace)) {
       throw new UnauthorizedError();
     }
 

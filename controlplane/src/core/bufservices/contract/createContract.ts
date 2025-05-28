@@ -47,7 +47,7 @@ export function createContract(
         throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Could not find namespace ${req.namespace}`);
       }
 
-      if (!authContext.rbac.canCreateContract(namespace)) {
+      if (!authContext.rbac.useLegacyFlow && !authContext.rbac.canCreateContract(namespace)) {
         throw new UnauthorizedError();
       }
 

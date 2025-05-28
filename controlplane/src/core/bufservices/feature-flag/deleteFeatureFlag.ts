@@ -73,7 +73,7 @@ export function deleteFeatureFlag(
       };
     }
 
-    if (!authContext.rbac.hasFeatureFlagWriteAccess(featureFlag)) {
+    if (!authContext.rbac.useLegacyFlow && !authContext.rbac.hasFeatureFlagWriteAccess(featureFlag)) {
       throw new UnauthorizedError();
     }
 
