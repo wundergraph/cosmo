@@ -188,28 +188,14 @@ jobs:
           - '9092:9092'
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node
-        uses: ./.github/actions/node
+      # - name: Setup Node
+      #   uses: ./.github/actions/node
       - uses: ./.github/actions/go
         with:
           cache-dependency-path: |
             router-tests/go.sum
-      - name: Install dependencies
-        run: make build-pnpm
-      - name: Install plugin tools
-        run: make install-plugin-tools
-
       - name: Update PATH
         run: echo "PATH=$PATH:$HOME/.local/bin" >> $GITHUB_ENV
-
-      - name: Build plugin
-        working-directory: ./router-tests
-        run: make test-deps
-
-      - name: List plugin contents
-        working-directory: ./router
-        run: ls -R ./plugins
-
       - name: Setup Redis Cluster (for Cluster tests)
         uses: vishnudxb/redis-cluster@1.0.9
         with:
