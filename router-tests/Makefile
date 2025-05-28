@@ -1,7 +1,7 @@
 SHELL := bash
 
 test-deps:
-	$(MAKE) -C ../demo plugin-build-integration
+	$(MAKE) -C ../demo plugin-build-ci
 
 test: test-deps
 	go test -ldflags=-extldflags=-Wl,-ld_classic $(test_params) -race ./...
