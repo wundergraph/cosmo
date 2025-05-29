@@ -582,7 +582,11 @@ export class SubgraphRepository {
    * @param conditions
    * @private
    */
-  private applyRbacConditionsToQuery(rbac: RBACEvaluator | undefined, conditions: (SQL<unknown> | undefined)[], namespaceId: string | undefined) {
+  private applyRbacConditionsToQuery(
+    rbac: RBACEvaluator | undefined,
+    conditions: (SQL<unknown> | undefined)[],
+    namespaceId: string | undefined,
+  ) {
     if (!rbac || rbac.isOrganizationViewer) {
       if (namespaceId) {
         conditions.push(eq(schema.targets.namespaceId, namespaceId));
