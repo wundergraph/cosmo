@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.216.0](https://github.com/wundergraph/cosmo/compare/router@0.215.2...router@0.216.0) (2025-05-29)
+
+### Features
+
+* add new negate flag to regular expressions ([#1911](https://github.com/wundergraph/cosmo/issues/1911)) ([6744d9e](https://github.com/wundergraph/cosmo/commit/6744d9ecb3a7a391a7a88d4ec7d72bf85717ee63)) (@SkArchon)
+
 ## [0.215.2](https://github.com/wundergraph/cosmo/compare/router@0.215.1...router@0.215.2) (2025-05-27)
 
 ### Bug Fixes
