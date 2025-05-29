@@ -546,6 +546,10 @@ type RedisEventSource struct {
 	URLs []string `yaml:"urls,omitempty" env:"STORAGE_PROVIDER_REDIS_URLS"`
 }
 
+func (r RedisEventSource) GetID() string {
+	return r.ID
+}
+
 type EventProviders struct {
 	Nats  []NatsEventSource  `yaml:"nats,omitempty"`
 	Kafka []KafkaEventSource `yaml:"kafka,omitempty"`

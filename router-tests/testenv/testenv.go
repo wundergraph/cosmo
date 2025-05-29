@@ -755,6 +755,10 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		e.NatsConnectionMyNats = natsSetup.Connections[1]
 	}
 
+	if enableRedis {
+		e.RedisHosts = []string{redisHost}
+	}
+
 	if routerConfig.FeatureFlagConfigs != nil {
 		myFF, ok := routerConfig.FeatureFlagConfigs.ConfigByFeatureFlagName["myff"]
 		if ok {
@@ -810,6 +814,11 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 			t.Fatalf("could not setup nats clients: %s", err.Error())
 		}
 		natsSetup = s
+	}
+
+	var enableRedis bool
+	if cfg.EnableRedis {
+		enableRedis = true
 	}
 
 	if cfg.AssertCacheMetrics != nil {

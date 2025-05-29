@@ -15,6 +15,10 @@ type PubSubDataSource struct {
 	RedisAdapter       AdapterInterface
 }
 
+func (c *PubSubDataSource) GetFieldName() string {
+	return c.EventConfiguration.GetEngineEventConfiguration().GetFieldName()
+}
+
 // EngineEventConfiguration returns the engine event configuration
 func (c *PubSubDataSource) EngineEventConfiguration() *nodev1.EngineEventConfiguration {
 	return c.EventConfiguration.GetEngineEventConfiguration()

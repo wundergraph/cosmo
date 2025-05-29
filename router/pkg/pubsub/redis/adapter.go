@@ -2,7 +2,6 @@ package redis
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"sync"
 
@@ -11,23 +10,6 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
 )
-
-// SubscriptionEventConfiguration contains configuration for subscription events
-type SubscriptionEventConfiguration struct {
-	ProviderID string   `json:"providerId"`
-	Channels   []string `json:"channels"`
-}
-
-// PublishEventConfiguration contains configuration for publish events
-type PublishEventConfiguration struct {
-	ProviderID string          `json:"providerId"`
-	Channel    string          `json:"channel"`
-	Data       json.RawMessage `json:"data"`
-}
-
-func (s *PublishEventConfiguration) MarshalJSONTemplate() (string, error) {
-	return fmt.Sprintf(`{"channel":"%s", "data": %s, "providerId":"%s"}`, s.Channel, s.Data, s.ProviderID), nil
-}
 
 // AdapterInterface defines the methods that a Redis adapter should implement
 type AdapterInterface interface {

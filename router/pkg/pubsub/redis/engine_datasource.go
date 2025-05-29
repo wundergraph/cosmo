@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 
 	"github.com/buger/jsonparser"
@@ -11,6 +12,23 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
+
+// SubscriptionEventConfiguration contains configuration for subscription events
+type SubscriptionEventConfiguration struct {
+	ProviderID string   `json:"providerId"`
+	Channels   []string `json:"channels"`
+}
+
+// PublishEventConfiguration contains configuration for publish events
+type PublishEventConfiguration struct {
+	ProviderID string          `json:"providerId"`
+	Channel    string          `json:"channel"`
+	Data       json.RawMessage `json:"data"`
+}
+
+func (s *PublishEventConfiguration) MarshalJSONTemplate() (string, error) {
+	return fmt.Sprintf(`{"channel":"%s", "data": %s, "providerId":"%s"}`, s.Channel, s.Data, s.ProviderID), nil
+}
 
 // SubscriptionDataSource implements resolve.SubscriptionDataSource for Redis
 type SubscriptionDataSource struct {
