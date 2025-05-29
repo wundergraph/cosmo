@@ -60,8 +60,8 @@ export function publishMonograph(
       };
     }
 
-    // Only check for permission when we are not supposed to use the legacy flow
-    if (!authContext.rbac.useLegacyFlow && !authContext.rbac.hasFederatedGraphWriteAccess(graph)) {
+    // check whether the user is authorized to perform the action
+    if (!authContext.rbac.hasFederatedGraphWriteAccess(graph)) {
       throw new UnauthorizedError();
     }
 

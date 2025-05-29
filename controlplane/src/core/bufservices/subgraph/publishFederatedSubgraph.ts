@@ -171,6 +171,7 @@ export function publishFederatedSubgraph(
         headers: ctx.requestHeader,
         authContext,
       });
+
       /* The subgraph already exists, so the database flag and the normalization result should match.
        * If he flags do not match, the database is the source of truth, so return an appropriate error.
        * */
@@ -193,7 +194,7 @@ export function publishFederatedSubgraph(
         };
       }
     } else {
-      if (!authContext.rbac.useLegacyFlow && !authContext.rbac.canCreateSubGraph(namespace)) {
+      if (!authContext.rbac.canCreateSubGraph(namespace)) {
         throw new UnauthorizedError();
       }
 

@@ -650,3 +650,105 @@ version: "1"
 	require.True(t, c.Config.Telemetry.Metrics.Prometheus.EngineStats.Subscriptions)
 	require.True(t, c.Config.Telemetry.Metrics.OTLP.EngineStats.Subscriptions)
 }
+
+func TestMatchAndNegateMatch(t *testing.T) {
+	t.Parallel()
+
+	t.Run("for request", func(t *testing.T) {
+		t.Run("when only the matching attribute is defined", func(t *testing.T) {
+			f := createTempFileFromFixture(t, `
+version: "1"
+
+headers:
+  all:
+    request:
+      - op: propagate
+        matching: .*
+`)
+			_, err := LoadConfig(f)
+			require.NoError(t, err)
+		})
+
+		t.Run("when matching is not defined but negate_match is defined", func(t *testing.T) {
+			f := createTempFileFromFixture(t, `
+version: "1"
+
+headers:
+  all:
+    request:
+      - op: propagate
+        negate_match: true
+`)
+			_, err := LoadConfig(f)
+			var js *jsonschema.ValidationError
+			require.ErrorAs(t, err, &js)
+			require.ErrorContains(t, js.Causes[0], "at '/headers/all/request/0': properties 'matching' required, if 'negate_match' exists")
+		})
+
+		t.Run("when matching and negate_match is defined", func(t *testing.T) {
+			f := createTempFileFromFixture(t, `
+version: "1"
+
+headers:
+  all:
+    request:
+      - op: propagate
+        matching: .*
+        negate_match: true
+`)
+			_, err := LoadConfig(f)
+			require.NoError(t, err)
+		})
+	})
+
+	t.Run("for response", func(t *testing.T) {
+		t.Run("when only the matching attribute is defined", func(t *testing.T) {
+			f := createTempFileFromFixture(t, `
+version: "1"
+
+headers:
+  all:
+    response:
+      - op: propagate
+        algorithm: first_write
+        matching: .*
+`)
+			_, err := LoadConfig(f)
+			require.NoError(t, err)
+		})
+
+		t.Run("when matching is not defined but negate_match is defined", func(t *testing.T) {
+			f := createTempFileFromFixture(t, `
+version: "1"
+
+headers:
+  all:
+    response:
+      - op: propagate
+        algorithm: first_write
+        negate_match: true
+`)
+			_, err := LoadConfig(f)
+			var js *jsonschema.ValidationError
+			require.ErrorAs(t, err, &js)
+			require.ErrorContains(t, js.Causes[0], "at '/headers/all/response/0': properties 'matching' required, if 'negate_match' exists")
+		})
+
+		t.Run("when matching and negate_match is defined", func(t *testing.T) {
+			f := createTempFileFromFixture(t, `
+version: "1"
+
+headers:
+  all:
+    response:
+      - op: propagate
+        algorithm: first_write
+        matching: .*
+        negate_match: true
+`)
+			_, err := LoadConfig(f)
+			require.NoError(t, err)
+		})
+	})
+
+}

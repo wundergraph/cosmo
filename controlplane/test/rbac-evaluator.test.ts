@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { describe, expect, test } from 'vitest';
-import { createTestGroup, createTestRBACEvaluator } from '../src/core/test-util.js';
+import { createAPIKeyTestRBACEvaluator, createTestGroup, createTestRBACEvaluator } from '../src/core/test-util.js';
 
 describe('RBAC Evaluator', () => {
   const orgAdmin = createTestGroup({ role: 'organization-admin' });
@@ -21,7 +21,7 @@ describe('RBAC Evaluator', () => {
     const rbac = createTestRBACEvaluator();
 
     expect(rbac.groups).toHaveLength(0);
-    expect(rbac.useLegacyFlow).toBe(true);
+    expect(rbac.isApiKey).toBe(false);
     expect(rbac.isOrganizationAdmin).toBe(false);
     expect(rbac.isOrganizationAdminOrDeveloper).toBe(false);
     expect(rbac.isOrganizationApiKeyManager).toBe(false);
@@ -46,7 +46,7 @@ describe('RBAC Evaluator', () => {
     const rbac = createTestRBACEvaluator(orgAdmin, createTestGroup({ role: 'graph-admin' }));
 
     expect(rbac.groups).toHaveLength(2);
-    expect(rbac.useLegacyFlow).toBe(false);
+    expect(rbac.isApiKey).toBe(false);
     expect(rbac.roles).toHaveLength(2);
     expect(rbac.roles.includes('organization-admin'));
     expect(rbac.roles.includes('graph-admin'));
@@ -62,13 +62,20 @@ describe('RBAC Evaluator', () => {
     );
 
     expect(rbac.groups).toHaveLength(4);
-    expect(rbac.useLegacyFlow).toBe(false);
+    expect(rbac.isApiKey).toBe(false);
     expect(rbac.roles).toHaveLength(3);
     expect(rbac.roles.includes('graph-admin'));
     expect(rbac.roles.includes('graph-viewer'));
     expect(rbac.roles.includes('subgraph-publisher'));
     expect(rbac.resources).toHaveLength(4);
     expect(rbac.resources.includes(id1));
+  });
+
+  test('Should be admin when using legacy API key', () => {
+    const rbac = createAPIKeyTestRBACEvaluator();
+
+    expect(rbac.isApiKey).toBe(true);
+    expect(rbac.isOrganizationAdmin).toBe(true);
   });
 
   // Tests for every role
