@@ -61,7 +61,7 @@ func BuildProvidersAndDataSources(
 	var pubSubProviders []pubsub_datasource.PubSubProvider
 	var outs []plan.DataSource
 
-	// Initialize Kafka providers and data sources
+	// initialize Kafka providers and data sources
 	kafkaBuilder := kafka.NewPubSubProviderBuilder(ctx, logger, hostName, routerListenAddr)
 	kafkaDsConfsWithEvents := []dsConfAndEvents[*nodev1.KafkaEventConfiguration]{}
 	for _, dsConf := range dsConfs {
