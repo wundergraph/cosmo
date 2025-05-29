@@ -9,7 +9,7 @@ import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { OidcRepository } from '../../repositories/OidcRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { enrichLogger, getLogger, handleError, joinWithComma } from '../../util.js';
 import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { OrganizationGroupDTO } from '../../../types/index.js';
@@ -135,21 +135,6 @@ export function updateOrgMemberGroup(
     // Update the groups from the member
     await orgRepo.updateMemberGroups({ orgMemberID: orgMember.orgMemberID, groups: [...newGroups] });
 
-    // Add the member to added groups
-    for (const groupId of groupsToAddTo) {
-      const group = groups.find((g) => g.groupId === groupId);
-      if (!group?.kcGroupId) {
-        // The group hasn't been linked to Keycloak, skip
-        continue;
-      }
-
-      await opts.keycloakClient.client.users.addToGroup({
-        id: users[0].id!,
-        realm: opts.keycloakRealm,
-        groupId: group.kcGroupId,
-      });
-    }
-
     // Remove the member from removed groups
     for (const groupId of groupsToRemoveFrom) {
       const group = orgMember.rbac.groups.find((g) => g.groupId === groupId);
@@ -165,21 +150,59 @@ export function updateOrgMemberGroup(
       });
     }
 
-    // await auditLogRepo.addAuditLog({
-    //   organizationId: authContext.organizationId,
-    //   organizationSlug: authContext.organizationSlug,
-    //   auditAction: 'member_group.updated',
-    //   action: 'updated',
-    //   actorId: authContext.userId,
-    //   auditableDisplayName: orgGroup.name,
-    //   auditableType: 'member_group',
-    //   actorDisplayName: authContext.userDisplayName,
-    //   apiKeyName: authContext.apiKeyName,
-    //   targetId: orgMember.userID,
-    //   targetType: 'user',
-    //   targetDisplayName: orgMember.email,
-    //   actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
-    // });
+    // Add the member to added groups
+    for (const groupId of groupsToAddTo) {
+      const group = groups.find((g) => g.groupId === groupId);
+      if (!group?.kcGroupId) {
+        // The group hasn't been linked to Keycloak, skip
+        continue;
+      }
+
+      await opts.keycloakClient.client.users.addToGroup({
+        id: users[0].id!,
+        realm: opts.keycloakRealm,
+        groupId: group.kcGroupId,
+      });
+    }
+
+    // Add audit log entries
+    if (groupsToRemoveFrom.size > 0) {
+      await auditLogRepo.addAuditLog({
+        organizationId: authContext.organizationId,
+        organizationSlug: authContext.organizationSlug,
+        auditAction: 'member_group.removed',
+        action: 'updated',
+        actorId: authContext.userId,
+        auditableDisplayName: joinWithComma(
+          orgMember.rbac.groups.filter((g) => groupsToRemoveFrom.has(g.groupId)).map((g) => g.name),
+        ),
+        auditableType: 'member_group',
+        actorDisplayName: authContext.userDisplayName,
+        apiKeyName: authContext.apiKeyName,
+        targetId: orgMember.userID,
+        targetType: 'user',
+        targetDisplayName: orgMember.email,
+        actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+      });
+    }
+
+    if (groupsToAddTo.size > 0) {
+      await auditLogRepo.addAuditLog({
+        organizationId: authContext.organizationId,
+        organizationSlug: authContext.organizationSlug,
+        auditAction: 'member_group.added',
+        action: 'updated',
+        actorId: authContext.userId,
+        auditableDisplayName: joinWithComma(groups.filter((g) => groupsToAddTo.has(g.groupId)).map((g) => g.name)),
+        auditableType: 'member_group',
+        actorDisplayName: authContext.userDisplayName,
+        apiKeyName: authContext.apiKeyName,
+        targetId: orgMember.userID,
+        targetType: 'user',
+        targetDisplayName: orgMember.email,
+        actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+      });
+    }
 
     return {
       response: {

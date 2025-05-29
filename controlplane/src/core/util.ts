@@ -290,6 +290,18 @@ export const getHighestPriorityRole = ({ userRoles }: { userRoles: string[] }) =
   return 'viewer';
 };
 
+export const joinWithComma = (parts: string[]): string => {
+  if (!parts || parts.length === 0) {
+    return '';
+  }
+
+  if (parts.length === 1) {
+    return parts[0];
+  }
+
+  return `${parts.splice(0, parts.length - 1).join(', ')} and ${parts.at(-1)}`;
+};
+
 export const isValidNamespaceName = (name: string): boolean => {
   return namespaceRegex.test(name);
 };
