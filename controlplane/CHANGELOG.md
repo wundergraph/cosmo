@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.146.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.145.1...controlplane@0.146.0) (2025-05-28)
+
+### Features
+
+* additional tests and improvements for the rbac system ([#1913](https://github.com/wundergraph/cosmo/issues/1913)) ([4345fde](https://github.com/wundergraph/cosmo/commit/4345fde0d69c1e9c3569d83670ae24eac939a220)) (@wilsonrivera)
+* return proposalUrl on creation of proposal ([#1909](https://github.com/wundergraph/cosmo/issues/1909)) ([b21db02](https://github.com/wundergraph/cosmo/commit/b21db02185c37b47bd0c1db0fba872d1868017bd)) (@JivusAyrus)
+
 ## [0.145.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.145.0...controlplane@0.145.1) (2025-05-27)
 
 ### Bug Fixes
