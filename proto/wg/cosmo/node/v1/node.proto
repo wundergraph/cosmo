@@ -199,6 +199,117 @@ message DataSourceCustom_GraphQL {
   GraphQLFederationConfiguration federation = 3;
   InternedString upstream_schema = 4;
   repeated SingleTypeField custom_scalar_type_fields = 6;
+  GRPCConfiguration grpc = 7;
+}
+
+message GRPCConfiguration {
+  GRPCMapping mapping = 1;
+  string proto_schema = 2;
+  PluginConfiguration plugin = 3;
+}
+
+message PluginConfiguration {
+  // Plugin name
+  string name = 1;
+  // Plugin version
+  string version = 2;
+}
+
+message SSLConfiguration {
+  // Whether SSL is enabled
+  bool enabled = 1;
+}
+
+message GRPCMapping {
+  // Version of the mapping format
+  int32 version = 1;
+  // The main gRPC service name
+  string service = 2;
+  // Mappings for GraphQL operations to gRPC RPCs
+  repeated OperationMapping operation_mappings = 3;
+  // Mappings for GraphQL entities to gRPC service methods
+  repeated EntityMapping entity_mappings = 4;
+  // Mappings for GraphQL type fields to gRPC message fields
+  repeated TypeFieldMapping type_field_mappings = 5;
+  // Mappings for GraphQL enum values to gRPC enum values
+  repeated EnumMapping enum_mappings = 6;
+}
+
+// Defines the type of GraphQL operation
+enum OperationType {
+  OPERATION_TYPE_UNSPECIFIED = 0;
+  // Query operation
+  OPERATION_TYPE_QUERY = 1;
+  // Mutation operation
+  OPERATION_TYPE_MUTATION = 2;
+  // Subscription operation
+  OPERATION_TYPE_SUBSCRIPTION = 3;
+}
+
+// Defines mapping between a GraphQL operation and a gRPC method
+message OperationMapping {
+  // GraphQL operation type: Query, Mutation, or Subscription
+  OperationType type = 1;
+  // Original GraphQL field name
+  string original = 2;
+  // Mapped gRPC method name
+  string mapped = 3;
+  // gRPC request message type name
+  string request = 4;
+  // gRPC response message type name
+  string response = 5;
+}
+
+// Defines mapping for entity resolution
+message EntityMapping {
+  // GraphQL type name
+  string type_name = 1;
+  // Kind of entity mapping: "entity", "requires", or "with_arguments"
+  string kind = 2;
+  // Key field that uniquely identifies the entity
+  string key = 3;
+  // gRPC method name for entity resolution
+  string rpc = 4;
+  // gRPC request message type name
+  string request = 5;
+  // gRPC response message type name
+  string response = 6;
+}
+
+// Defines mapping between GraphQL type fields and gRPC message fields
+message TypeFieldMapping {
+  // GraphQL type name
+  string type = 1;
+  // Mappings for each field in the type
+  repeated FieldMapping field_mappings = 2;
+}
+
+// Defines mapping for a single field
+message FieldMapping {
+  // Original GraphQL field name
+  string original = 1;
+  // Mapped gRPC field name
+  string mapped = 2;
+  // Mappings for field arguments
+  repeated ArgumentMapping argument_mappings = 3;
+}
+
+// Defines mapping for a field argument
+message ArgumentMapping {
+  // Original GraphQL argument name
+  string original = 1;
+  // Mapped gRPC field name
+  string mapped = 2;
+}
+
+message EnumMapping {
+  string type = 1;
+  repeated EnumValueMapping values = 2;
+}
+
+message EnumValueMapping {
+  string original = 1;
+  string mapped = 2;
 }
 
 enum EventType {

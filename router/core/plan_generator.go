@@ -285,7 +285,7 @@ func (pg *PlanGenerator) loadConfiguration(routerConfig *nodev1.RouterConfig, lo
 	}, logger)
 
 	// this generates the plan configuration using the data source factories from the config package
-	planConfig, _, err := loader.Load(routerConfig.GetEngineConfig(), routerConfig.GetSubgraphs(), &routerEngineConfig)
+	planConfig, _, err := loader.Load(routerConfig.GetEngineConfig(), routerConfig.GetSubgraphs(), &routerEngineConfig, false) // TODO: configure plugins
 	if err != nil {
 		return fmt.Errorf("failed to load configuration: %w", err)
 	}

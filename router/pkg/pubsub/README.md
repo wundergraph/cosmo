@@ -1,29 +1,43 @@
 
-# How to add a PubSub Provider
+# Adding a PubSub Provider
 
-## Add the data to the router proto
+This guide outlines the steps required to integrate a new PubSub provider into the router.
 
-You need to change the [router proto](../../../proto/wg/cosmo/node/v1/node.proto) as follows.
+## Modify the Router Proto
 
-Add the provider configuration like the `KafkaEventConfiguration` and then add it as repeated inside the `DataSourceCustomEvents`.
+Update the [`router.proto`](../../../proto/wg/cosmo/node/v1/node.proto) file by adding your provider’s configuration. Follow these steps:
 
-The fields of `KafkaEventConfiguration` will depends on the provider. If the providers use as grouping mechanisms of the messages "channel," it will be called "channels," if it is "Topic," it will be "topics," and so on.
+- Define a new configuration message similar to `KafkaEventConfiguration`.
+- Add this configuration as a repeated field within the `DataSourceCustomEvents` message.
+- Field naming should reflect the provider's message grouping mechanism. For example, use `channels` if the provider groups messages by channel, or `topics` if it uses topics.
 
-After this you will have to compile the proto launching from the main folder the command `make generate-go`.
+After making these changes, compile the updated proto definitions by running the following command from the root directory:
+
+```bash
+make generate-go
+```
+
+This will generate the new proto files in the `gen` folder.
 
 
-## Build the PubSub Provider
+## Implement the PubSub Provider
 
-To build a PubSub provider, you need to implement five things:
-- `Adapter`
-- `PubSubDataSource`
-- `PubSubProvider`
-- `PubSubProviderBuilder`
-- `PubSubProviderBuilderFactory`
+To implement a new PubSub provider, the following components must be created:
+- `SubscriptionEventConfiguration` and `PublishEventConfiguration`: Define the data structures used for communication between the adapter and the engine.
+- `Adapter`: Implements the logic that interfaces with the provider’s client or SDK.
+- `SubscriptionDataSource` and `PublishDataSource`: Engine components that leverage the configurations to subscribe and publish data.
+- `PubSubDataSource`: Bridges the engine and the provider.
+- `PubSubProviderBuilder`: Used by the router to instantiate the provider.
 
-### Adapter
+### `SubscriptionEventConfiguration` and `PublishEventConfiguration`
 
-The Adapter contains the logic actually calling the provider. Usually it implements an interface as follows:
+These structures should be placed at the top of the `engine_datasource.go` file. Their design is specific to each provider.
+
+Refer to the [kafka implementation](./kafka/engine_datasource.go) for a working example.
+
+### `Adapter`
+
+This component encapsulates the provider-specific logic. Although not required, it’s best practice to implement the following interface to facilitate testing via mocks:
 
 ```go
 type AdapterInterface interface {
@@ -34,48 +48,96 @@ type AdapterInterface interface {
 }
 ```
 
-The content of `SubscriptionEventConfiguration` and `PublishEventConfiguration` depends on the provider, you can see an example of them in the [kafka implementation](./kafka/pubsub_datasource.go).
+Refer to the [kafka implementation](./kafka/adapter.go) for a working example.
+
+### `SubscriptionDataSource` and `PublishDataSource`
+
+These are the core engine interfaces:
+
+The engine expect two kind of structures:
+- `SubscriptionDataSource`: Implements `resolve.SubscriptionDataSource`
+- `PublishDataSource`: Implements `resolve.DataSource`
+
+The implementation of `SubscriptionDataSource` and `PublishDataSource` should be in the `engine_datasource.go` file.
+
+They are going to use the `SubscriptionEventConfiguration` and `PublishEventConfiguration` that you have implemented in the first step.
+
+Implement these in the `engine_datasource.go` file, referencing the [kafka implementation](./kafka/engine_datasource.go) for a working example.
+
+### `PubSubDataSource`
+
+This structure connects the engine (resolve.DataSource and resolve.SubscriptionDataSource) with the provider implementation. It must implement the `PubSubProvider` interface defined in [provider.go](./datasource/provider.go).
+
+Refer to the [kafka implementation](./kafka/pubsub_datasource.go) for a working example.
+
+### `PubSubProviderBuilder`
+
+The builder is responsible for instantiating the provider within the router. It must implement the [PubSubProviderBuilder](./datasource/provider.go) interface.
+
+The interface has two generic types:
+- `P`, the generic type of the options that the provider builder will need, as defined in the [config.go](../config/config.go) (NatsEventSource, KafkaEventSource, ...)
+- `E`, the generic type of the event configuration that the provider builder will receive, as defined in the [proto/wg/cosmo/node/v1/node.proto](../../../proto/wg/cosmo/node/v1/node.proto) (KafkaEventConfiguration, NatsEventConfiguration, ...)
+
+Key methods:
+- `BuildProvider`: Initializes the provider with its configuration and receive the provider options (defined by the `P` type)
+- `BuildDataSource`: Creates the data source and receive the event configuration (defined by the `E` type)
+
+Refer to the [kafka implementation](./kafka/provider_builder.go) for a working example.
+
+### Add tests
+
+You should also add tests to your provider.
+
+### Generate mocks
+As a first step, you can use the [mockery](https://github.com/vektra/mockery) tool to generate the mocks for the Adapter interface you have implemented. To do this, add the following to the `.mockery.yml` file:
+
+```yaml
+packages:
+  github.com/wundergraph/cosmo/router/pkg/pubsub/{your-provider-name}:
+    interfaces:
+      AdapterInterface:
+```
+
+Then run the following command from the router directory:
+
+```bash
+make generate-mocks
+```
+
+This will generate the mocks in the `{your-provider-name}/mocks.go` file.
+
+You can then use the mocks in your tests.
+
+#### Add engine_datasource_test.go
+
+You should also add tests of your engine_datasource.go file.
+
+You can use the [kafka implementation](./kafka/engine_datasource_test.go) as a reference.
+
+#### Add pubsub_datasource_test.go
+
+You should also add tests of your pubsub_datasource.go file.
+
+You can use the [kafka implementation](./kafka/pubsub_datasource_test.go) as a reference.
+
+#### Add provider_builder_test.go
+
+You should also add tests of your provider_builder.go file.
+
+You can use the [kafka implementation](./kafka/provider_builder_test.go) as a reference.
+
+#### Add pubsub_test.go
+
+You should also add tests of your changes to the [pubsub.go](./pubsub.go) file.
+
+You can use the [TestBuildProvidersAndDataSources_Kafka_OK](./pubsub_test.go) as a reference.
+
+## Add the provider to the router
+
+Update the `BuildProvidersAndDataSources` function in the [pubsub.go](./pubsub.go) file to include your new provider.
 
 
-### PubSubDataSource
-
-The `[PubSubDataSource](./datasource/datasource.go)` is the junction between the engine `resolve.DataSource` and the Provider that we are implementing.
-
-You can see an example in [kafka `PubSubDataSource`](./kafka/pubsub_datasource.go).
-
-To complete the `PubSubDataSource` implementation you should also add the engine data source.
-
-Then you have to implement a `SubscriptionDataSource`, a structure that must implement all the methods needed by the interface `resolve.SubscriptionDataSource`, like the [kafka implementation](./kafka/engine_datasource.go).
-
-And also, you have to implement a `DataSource`, a structure that must implement all the methods needed by the interface `resolve.DataSource`, like `PublishDataSource` in the [kafka implementation](./kafka/pubsub_datasource.go).
-
-
-### PubSubProvider
-
-The PubSubProvider expose the `Startup` and `Shutdown` methods of the adapter to the router.
-
-You can see as an example of the `PubSubProvider` in the [kafka implementation](./kafka/provider.go).
-
-### PubSubProviderBuilder
-
-The `PubSubProviderBuilder` is the structure that the router uses to create the provider.
-It must implement all the methods specified in [datasource.PubSubProviderBuilder interface](./datasource/provider.go).
-
-You can see as an example of the `PubSubProviderBuilder` in the [kafka implementation](./kafka/provider_builder.go).
-
-
-### PubSubProviderBuilderFactory
-
-The `PubSubProviderBuilderFactory` is the initial contact point where you receive:
-- `ctx context.Context`, usually passed down to the adapter
-- [`config.EventsConfiguration`](../config/config.go) that contains the config needed to set up the provider connection
-- `*zap.Logger`
-- `hostName string`, useful if you need to identify the connection based on the local host name
-- `routerListenAddr string`, useful if you need to identify the connection based on different router instances in the same host
-
-You can see as an example of the `PubSubProviderBuilderFactory` function in the [kafka implementation](./kafka/provider_builder.go).
-
-# How to use the new PubSub Provider
+## How to use the new PubSub Provider
 
 After you have implemented all the above, you can use your PubSub Provider by adding the following to your router config:
 
@@ -86,4 +148,4 @@ pubsub:
       type: new-provider
 ```
 
-But to use it in the schema, you will have to work in the [composition](../../../composition) folder.
+But to use it in the GraphQL schema, you will have to work in the [composition](../../../composition) package.

@@ -5,38 +5,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router/pkg/config"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
-	"go.uber.org/zap"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"go.uber.org/zap/zaptest"
 )
-
-// mockAdapter is a mock of AdapterInterface
-type mockAdapter struct {
-	mock.Mock
-}
-
-func (m *mockAdapter) Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error {
-	args := m.Called(ctx, event, updater)
-	return args.Error(0)
-}
-
-func (m *mockAdapter) Publish(ctx context.Context, event PublishEventConfiguration) error {
-	args := m.Called(ctx, event)
-	return args.Error(0)
-}
-
-func (m *mockAdapter) Startup(ctx context.Context) error {
-	args := m.Called(ctx)
-	return args.Error(0)
-}
-
-func (m *mockAdapter) Shutdown(ctx context.Context) error {
-	args := m.Called(ctx)
-	return args.Error(0)
-}
 
 func TestBuildKafkaOptions(t *testing.T) {
 	t.Run("basic configuration", func(t *testing.T) {
@@ -86,79 +59,27 @@ func TestBuildKafkaOptions(t *testing.T) {
 }
 
 func TestPubSubProviderBuilderFactory(t *testing.T) {
-	t.Run("returns nil if no Kafka configuration", func(t *testing.T) {
-		ctx := context.Background()
-		cfg := config.EventsConfiguration{}
-		logger := zaptest.NewLogger(t)
-
-		builder := PubSubProviderBuilderFactory(ctx, cfg, logger, "host", "addr")
-		require.NotNil(t, builder)
-		providers, err := builder.Providers(nil)
-		require.NoError(t, err)
-		require.Empty(t, providers)
-	})
-
-	t.Run("errors if provider not found", func(t *testing.T) {
-		ctx := context.Background()
-		cfg := config.EventsConfiguration{}
-		logger := zaptest.NewLogger(t)
-
-		builder := PubSubProviderBuilderFactory(ctx, cfg, logger, "host", "addr")
-		require.NotNil(t, builder)
-		providers, err := builder.Providers([]string{"unknown"})
-		require.Error(t, err)
-		require.Empty(t, providers)
-		assert.Contains(t, err.Error(), "provider with ID unknown is not defined")
-	})
-
 	t.Run("creates provider with configured adapters", func(t *testing.T) {
 		providerId := "test-provider"
 
-		cfg := config.EventsConfiguration{
-			Providers: config.EventProviders{
-				Kafka: []config.KafkaEventSource{
-					{ID: providerId, Brokers: []string{"localhost:9092"}},
-				},
-			},
+		cfg := config.KafkaEventSource{
+			ID:      providerId,
+			Brokers: []string{"localhost:9092"},
 		}
 
 		logger := zaptest.NewLogger(t)
 
 		ctx := context.Background()
 
-		builder := PubSubProviderBuilderFactory(ctx, cfg, logger, "host", "addr")
+		builder := NewPubSubProviderBuilder(ctx, logger, "host", "addr")
 		require.NotNil(t, builder)
-		providers, err := builder.Providers([]string{providerId})
+		provider, err := builder.BuildProvider(cfg)
 		require.NoError(t, err)
-		require.Len(t, providers, 1)
 
 		// Check the returned provider
-		kafkaProvider, ok := providers[0].(*PubSubProvider)
+		kafkaProvider, ok := provider.(*datasource.PubSubProviderImpl)
 		require.True(t, ok)
 		assert.NotNil(t, kafkaProvider.Logger)
 		assert.NotNil(t, kafkaProvider.Adapter)
-	})
-}
-
-func TestPubSubProvider(t *testing.T) {
-	mocked := &mockAdapter{}
-
-	provider := &PubSubProvider{
-		Logger:  zap.NewNop(),
-		Adapter: mocked,
-	}
-
-	t.Run("calling Shutdown calls adapter Shutdown", func(t *testing.T) {
-		mocked.On("Shutdown", context.Background()).Return(nil)
-		err := provider.Shutdown(context.Background())
-		require.NoError(t, err)
-		mocked.AssertCalled(t, "Shutdown", context.Background())
-	})
-
-	t.Run("calling Startup calls adapter Startup", func(t *testing.T) {
-		mocked.On("Startup", context.Background()).Return(nil)
-		err := provider.Startup(context.Background())
-		require.NoError(t, err)
-		mocked.AssertCalled(t, "Startup", context.Background())
 	})
 }

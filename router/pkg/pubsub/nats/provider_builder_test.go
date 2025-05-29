@@ -2,48 +2,15 @@ package nats
 
 import (
 	"context"
-	"io"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
-	"go.uber.org/zap"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"go.uber.org/zap/zaptest"
 )
-
-// mockAdapter is a mock of AdapterInterface
-type mockAdapter struct {
-	mock.Mock
-}
-
-func (m *mockAdapter) Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error {
-	args := m.Called(ctx, event, updater)
-	return args.Error(0)
-}
-
-func (m *mockAdapter) Publish(ctx context.Context, event PublishAndRequestEventConfiguration) error {
-	args := m.Called(ctx, event)
-	return args.Error(0)
-}
-
-func (m *mockAdapter) Request(ctx context.Context, event PublishAndRequestEventConfiguration, w io.Writer) error {
-	args := m.Called(ctx, event, w)
-	return args.Error(0)
-}
-
-func (m *mockAdapter) Startup(ctx context.Context) error {
-	args := m.Called(ctx)
-	return args.Error(0)
-}
-
-func (m *mockAdapter) Shutdown(ctx context.Context) error {
-	args := m.Called(ctx)
-	return args.Error(0)
-}
 
 func TestBuildNatsOptions(t *testing.T) {
 	t.Run("basic configuration", func(t *testing.T) {
@@ -158,82 +125,27 @@ func TestTransformEventConfig(t *testing.T) {
 }
 
 func TestPubSubProviderBuilderFactory(t *testing.T) {
-	t.Run("returns nil if no NATS configuration", func(t *testing.T) {
-		ctx := context.Background()
-		cfg := config.EventsConfiguration{}
-		logger := zaptest.NewLogger(t)
-
-		builder := PubSubProviderBuilderFactory(ctx, cfg, logger, "host", "addr")
-		require.NotNil(t, builder)
-		providers, err := builder.Providers(nil)
-		require.NoError(t, err)
-		require.Empty(t, providers)
-	})
-
-	t.Run("errors if provider not found", func(t *testing.T) {
-		ctx := context.Background()
-		cfg := config.EventsConfiguration{}
-		logger := zaptest.NewLogger(t)
-
-		builder := PubSubProviderBuilderFactory(ctx, cfg, logger, "host", "addr")
-		require.NotNil(t, builder)
-		providers, err := builder.Providers([]string{"unknown"})
-		require.Error(t, err)
-		require.Empty(t, providers)
-		assert.Contains(t, err.Error(), "provider with ID unknown is not defined")
-	})
-
 	t.Run("creates provider with configured adapters", func(t *testing.T) {
 		providerId := "test-provider"
 
-		cfg := config.EventsConfiguration{
-			Providers: config.EventProviders{
-				Nats: []config.NatsEventSource{
-					{
-						ID:  providerId,
-						URL: "nats://localhost:4222",
-					},
-				},
-			},
+		cfg := config.NatsEventSource{
+			ID:  providerId,
+			URL: "nats://localhost:4222",
 		}
 
 		logger := zaptest.NewLogger(t)
 
 		ctx := context.Background()
 
-		builder := PubSubProviderBuilderFactory(ctx, cfg, logger, "host", "addr")
+		builder := NewPubSubProviderBuilder(ctx, logger, "host", "addr")
 		require.NotNil(t, builder)
-		providers, err := builder.Providers([]string{providerId})
+		provider, err := builder.BuildProvider(cfg)
 		require.NoError(t, err)
-		require.Len(t, providers, 1)
 
 		// Check the returned provider
-		kafkaProvider, ok := providers[0].(*PubSubProvider)
+		natsProvider, ok := provider.(*datasource.PubSubProviderImpl)
 		require.True(t, ok)
-		assert.NotNil(t, kafkaProvider.Logger)
-		assert.NotNil(t, kafkaProvider.Adapter)
-	})
-}
-
-func TestPubSubProvider_FindPubSubDataSource(t *testing.T) {
-	mockNats := &mockAdapter{}
-
-	provider := &PubSubProvider{
-		Logger:  zap.NewNop(),
-		Adapter: mockNats,
-	}
-
-	t.Run("calling Startup", func(t *testing.T) {
-		mockNats.On("Startup", context.Background()).Return(nil)
-		err := provider.Startup(context.Background())
-		require.NoError(t, err)
-		mockNats.AssertCalled(t, "Startup", context.Background())
-	})
-
-	t.Run("calling Shutdown", func(t *testing.T) {
-		mockNats.On("Shutdown", context.Background()).Return(nil)
-		err := provider.Shutdown(context.Background())
-		require.NoError(t, err)
-		mockNats.AssertCalled(t, "Shutdown", context.Background())
+		assert.NotNil(t, natsProvider.Logger)
+		assert.NotNil(t, natsProvider.Adapter)
 	})
 }

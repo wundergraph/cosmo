@@ -4,6 +4,30 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.108.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.107.0...@wundergraph/cosmo-connect@0.108.0) (2025-05-26)
+
+### Features
+
+* fetch operations based on clients ([#1894](https://github.com/wundergraph/cosmo/issues/1894)) ([a7597f5](https://github.com/wundergraph/cosmo/commit/a7597f51d4506f11f117937955da3be2626a55c5)) (@JivusAyrus)
+
+# [0.107.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.106.0...@wundergraph/cosmo-connect@0.107.0) (2025-05-25)
+
+### Features
+
+* improve available namespaces ([#1895](https://github.com/wundergraph/cosmo/issues/1895)) ([135de0a](https://github.com/wundergraph/cosmo/commit/135de0a4c57ce815e1177be34e96c2a5900f031e)) (@wilsonrivera)
+
+# [0.106.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.105.0...@wundergraph/cosmo-connect@0.106.0) (2025-05-24)
+
+### Features
+
+* introduce RBAC groups for fine-grained control over resource access ([#1830](https://github.com/wundergraph/cosmo/issues/1830)) ([9f984cd](https://github.com/wundergraph/cosmo/commit/9f984cdfedbb80e0e120178b9755d6f57e85479e)) (@wilsonrivera)
+
+# [0.105.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.104.0...@wundergraph/cosmo-connect@0.105.0) (2025-05-19)
+
+### Features
+
+* **router:** grpc go plugin system ([#1866](https://github.com/wundergraph/cosmo/issues/1866)) ([280a61d](https://github.com/wundergraph/cosmo/commit/280a61de4bd1328549a023d1a3a0b702d78453b8)) (@Noroth)
+
 # [0.104.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.103.0...@wundergraph/cosmo-connect@0.104.0) (2025-05-16)
 
 ### Features

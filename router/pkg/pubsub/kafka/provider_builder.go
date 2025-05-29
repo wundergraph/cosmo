@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"slices"
 	"time"
 
 	"github.com/twmb/franz-go/pkg/kgo"
@@ -15,9 +14,10 @@ import (
 	"go.uber.org/zap"
 )
 
+const providerTypeID = "kafka"
+
 type PubSubProviderBuilder struct {
 	ctx              context.Context
-	config           []config.KafkaEventSource
 	logger           *zap.Logger
 	hostName         string
 	routerListenAddr string
@@ -28,56 +28,28 @@ func (p *PubSubProviderBuilder) TypeID() string {
 	return providerTypeID
 }
 
-func (p *PubSubProviderBuilder) DataSource(data datasource.EngineEventConfiguration) (datasource.PubSubDataSource, error) {
-	kafkaEvent, ok := data.(*nodev1.KafkaEventConfiguration)
-	if !ok {
-		return nil, fmt.Errorf("failed to cast data to KafkaEventConfiguration")
-	}
-	providerId := kafkaEvent.GetEngineEventConfiguration().GetProviderId()
+func (p *PubSubProviderBuilder) BuildDataSource(data *nodev1.KafkaEventConfiguration) (datasource.PubSubDataSource, error) {
+	providerId := data.GetEngineEventConfiguration().GetProviderId()
 	adapter, ok := p.adapters[providerId]
 	if !ok {
 		return nil, fmt.Errorf("failed to get adapter for provider %s with ID %s", p.TypeID(), providerId)
 	}
 
 	return &PubSubDataSource{
-		EventConfiguration: kafkaEvent,
+		EventConfiguration: data,
 		KafkaAdapter:       adapter,
 	}, nil
 }
 
-func (p *PubSubProviderBuilder) Providers(ids []string) ([]datasource.PubSubProvider, error) {
-	p.adapters = make(map[string]AdapterInterface)
-	pubSubProviders := []datasource.PubSubProvider{}
-
-	// create providers
-	for _, provider := range p.config {
-		if !slices.Contains(ids, provider.ID) {
-			continue
-		}
-		adapter, pubSubProvider, err := buildProvider(p.ctx, provider, p.logger)
-		if err != nil {
-			return nil, err
-		}
-		p.adapters[provider.ID] = adapter
-		pubSubProviders = append(pubSubProviders, pubSubProvider)
+func (p *PubSubProviderBuilder) BuildProvider(provider config.KafkaEventSource) (datasource.PubSubProvider, error) {
+	adapter, pubSubProvider, err := buildProvider(p.ctx, provider, p.logger)
+	if err != nil {
+		return nil, err
 	}
 
-	for _, id := range ids {
-		if _, ok := p.adapters[id]; !ok {
-			return nil, fmt.Errorf("%s provider with ID %s is not defined", p.TypeID(), id)
-		}
-	}
+	p.adapters[provider.ID] = adapter
 
-	return pubSubProviders, nil
-}
-
-func (p *PubSubProviderBuilder) EngineEventConfigurations(in *nodev1.DataSourceConfiguration) []datasource.EngineEventConfiguration {
-	kafkaData := make([]datasource.EngineEventConfiguration, 0, len(in.GetCustomEvents().GetKafka()))
-	for _, kafkaEvent := range in.GetCustomEvents().GetKafka() {
-		kafkaData = append(kafkaData, kafkaEvent)
-	}
-
-	return kafkaData
+	return pubSubProvider, nil
 }
 
 // buildKafkaOptions creates a list of kgo.Opt options for the given Kafka event source configuration.
@@ -117,27 +89,22 @@ func buildProvider(ctx context.Context, provider config.KafkaEventSource, logger
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create adapter for Kafka provider with ID \"%s\": %w", provider.ID, err)
 	}
-	pubSubProvider := &PubSubProvider{
-		id:      provider.ID,
-		Adapter: adapter,
-		Logger:  logger,
-	}
+	pubSubProvider := datasource.NewPubSubProviderImpl(provider.ID, providerTypeID, adapter, logger)
 
 	return adapter, pubSubProvider, nil
 }
 
-func PubSubProviderBuilderFactory(
+func NewPubSubProviderBuilder(
 	ctx context.Context,
-	config config.EventsConfiguration,
 	logger *zap.Logger,
 	hostName string,
 	routerListenAddr string,
-) datasource.PubSubProviderBuilder {
+) *PubSubProviderBuilder {
 	return &PubSubProviderBuilder{
 		ctx:              ctx,
-		config:           config.Providers.Kafka,
 		logger:           logger,
 		hostName:         hostName,
 		routerListenAddr: routerListenAddr,
+		adapters:         make(map[string]AdapterInterface),
 	}
 }
