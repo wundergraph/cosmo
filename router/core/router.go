@@ -525,7 +525,25 @@ func NewRouter(opts ...Option) (*Router, error) {
 		}
 	}
 
+	// Initialize the core module system
+	// It needs to be initialized before bootstrap() is called, because we want to make sure that
+	// it is available at the application start hooks.
+	r.logger.Debug("Initializing core module system")
+	if err := r.initCoreModuleSystem(context.Background()); err != nil {
+		r.logger.Error("Failed to init core module system", zap.Error(err))
+	}
+
 	return r, nil
+}
+
+// initCoreModuleSystem initializes the new module system
+func (r *Router) initCoreModuleSystem(ctx context.Context) error {
+	coreModuleHooks := newCoreModuleHooks(r.logger)
+	coreModuleHooks.initCoreModuleHooks(ctx, defaultModuleRegistry.getMyModules())
+
+	r.coreModuleHooks = coreModuleHooks
+
+	return nil
 }
 
 // newGraphServer creates a new server.
@@ -551,16 +569,6 @@ func (r *Router) listenAndServe() error {
 			r.logger.Error("Failed to start new server", zap.Error(err))
 		}
 	}()
-
-	return nil
-}
-
-// initCoreModuleSystem initializes the new module system
-func (r *Router) initCoreModuleSystem(ctx context.Context) error {
-	coreModuleHooks := newCoreModuleHooks(r.logger)
-	coreModuleHooks.initCoreModuleHooks(ctx, defaultModuleRegistry.getMyModules())
-
-	r.coreModuleHooks = coreModuleHooks
 
 	return nil
 }
@@ -927,10 +935,6 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		return fmt.Errorf("failed to init user modules: %w", err)
 	}
 
-	// Initialize the core module system
-	if err := r.initCoreModuleSystem(ctx); err != nil {
-		return fmt.Errorf("failed to init core module system: %w", err)
-	}
 
 	if r.traceConfig.Enabled && len(r.tracePropagators) > 0 {
 		r.compositePropagator = propagation.NewCompositeTextMapPropagator(r.tracePropagators...)
