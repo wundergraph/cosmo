@@ -14,6 +14,9 @@ packages:
   github.com/wundergraph/cosmo/router/pkg/pubsub/datasource:
     interfaces:
       Lifecycle:
+      PubSubProviderBuilder:
+      PubSubDataSource:
+      PubSubProvider:
   github.com/wundergraph/cosmo/router/pkg/pubsub/nats:
     interfaces:
       AdapterInterface:

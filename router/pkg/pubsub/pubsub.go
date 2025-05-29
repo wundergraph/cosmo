@@ -70,7 +70,7 @@ func BuildProvidersAndDataSources(
 			events: dsConf.Configuration.GetCustomEvents().GetKafka(),
 		})
 	}
-	kafkaPubSubProviders, kafkaOuts, err := buildProvidersAndDataSources(ctx, kafkaBuilder, config.Providers.Kafka, kafkaDsConfsWithEvents)
+	kafkaPubSubProviders, kafkaOuts, err := build(ctx, kafkaBuilder, config.Providers.Kafka, kafkaDsConfsWithEvents)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -86,7 +86,7 @@ func BuildProvidersAndDataSources(
 			events: dsConf.Configuration.GetCustomEvents().GetNats(),
 		})
 	}
-	natsPubSubProviders, natsOuts, err := buildProvidersAndDataSources(ctx, natsBuilder, config.Providers.Nats, natsDsConfsWithEvents)
+	natsPubSubProviders, natsOuts, err := build(ctx, natsBuilder, config.Providers.Nats, natsDsConfsWithEvents)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -96,7 +96,7 @@ func BuildProvidersAndDataSources(
 	return pubSubProviders, outs, nil
 }
 
-func buildProvidersAndDataSources[P GetID, E GetEngineEventConfiguration](ctx context.Context, builder pubsub_datasource.PubSubProviderBuilder[P, E], providersData []P, dsConfs []dsConfAndEvents[E]) ([]pubsub_datasource.PubSubProvider, []plan.DataSource, error) {
+func build[P GetID, E GetEngineEventConfiguration](ctx context.Context, builder pubsub_datasource.PubSubProviderBuilder[P, E], providersData []P, dsConfs []dsConfAndEvents[E]) ([]pubsub_datasource.PubSubProvider, []plan.DataSource, error) {
 	var pubSubProviders []pubsub_datasource.PubSubProvider
 	var outs []plan.DataSource
 
