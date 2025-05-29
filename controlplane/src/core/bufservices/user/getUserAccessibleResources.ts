@@ -28,7 +28,7 @@ export function getUserAccessibleResources(
 
     const namespaces = await namespaceRepo.list(authContext.rbac);
     const federatedGraphs = await fedRepo.list({ limit: 0, offset: 0, rbac: authContext.rbac });
-    const subgraphs = await subgraphRepo.list({
+    const subgraphs = await subgraphRepo.listAvailable({
       limit: 0,
       offset: 0,
       excludeFeatureSubgraphs: false,
