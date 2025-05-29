@@ -582,8 +582,12 @@ export class SubgraphRepository {
    * @param conditions
    * @private
    */
-  private applyRbacConditionsToQuery(rbac: RBACEvaluator | undefined, conditions: (SQL<unknown> | undefined)[]) {
+  private applyRbacConditionsToQuery(rbac: RBACEvaluator | undefined, conditions: (SQL<unknown> | undefined)[], namespaceId: string | undefined) {
     if (!rbac || rbac.isOrganizationViewer) {
+      if (namespaceId) {
+        conditions.push(eq(schema.targets.namespaceId, namespaceId));
+      }
+
       return true;
     }
 
@@ -604,6 +608,10 @@ export class SubgraphRepository {
     if (graphPublisher) {
       namespaces.push(...graphPublisher.namespaces);
       resources.push(...graphPublisher.resources);
+    }
+
+    if (namespaceId && !namespaces.includes(namespaceId)) {
+      namespaces.push(namespaceId);
     }
 
     if (namespaces.length > 0 && resources.length > 0) {
@@ -628,9 +636,63 @@ export class SubgraphRepository {
       eq(schema.targets.type, 'subgraph'),
     ];
 
-    if (opts.namespaceId) {
-      conditions.push(eq(schema.targets.namespaceId, opts.namespaceId));
+    if (opts.query) {
+      conditions.push(
+        or(
+          like(schema.targets.name, `%${opts.query}%`),
+          sql.raw(`${getTableName(schema.subgraphs)}.${schema.subgraphs.id.name}::text like '%${opts.query}%'`),
+        ),
+      );
     }
+
+    if (opts.excludeFeatureSubgraphs) {
+      conditions.push(eq(schema.subgraphs.isFeatureSubgraph, false));
+    }
+
+    if (!this.applyRbacConditionsToQuery(opts.rbac, conditions, opts.namespaceId)) {
+      return [];
+    }
+
+    const targetsQuery = this.db
+      .select({
+        id: schema.targets.id,
+        name: schema.targets.name,
+        lastUpdatedAt: schema.schemaVersion.createdAt,
+      })
+      .from(schema.targets)
+      .innerJoin(schema.subgraphs, eq(schema.subgraphs.targetId, schema.targets.id))
+      // Left join because version is optional
+      .leftJoin(schema.schemaVersion, eq(schema.subgraphs.schemaVersionId, schema.schemaVersion.id))
+      .orderBy(asc(schema.targets.createdAt), asc(schemaVersion.createdAt))
+      .where(and(...conditions));
+
+    if (opts.limit) {
+      targetsQuery.limit(opts.limit);
+    }
+    if (opts.offset) {
+      targetsQuery.offset(opts.offset);
+    }
+
+    const targets = await targetsQuery;
+
+    const subgraphs: SubgraphDTO[] = [];
+    for (const target of targets) {
+      const sg = await this.byTargetId(target.id);
+      if (sg === undefined) {
+        throw new Error(`Subgraph ${target.name} not found`);
+      }
+
+      subgraphs.push(sg);
+    }
+
+    return subgraphs;
+  }
+
+  public async listAvailable(opts: SubgraphListFilterOptions) {
+    const conditions: (SQL<unknown> | undefined)[] = [
+      eq(schema.targets.organizationId, this.organizationId),
+      eq(schema.targets.type, 'subgraph'),
+    ];
 
     if (opts.query) {
       conditions.push(
@@ -645,7 +707,7 @@ export class SubgraphRepository {
       conditions.push(eq(schema.subgraphs.isFeatureSubgraph, false));
     }
 
-    if (!this.applyRbacConditionsToQuery(opts.rbac, conditions)) {
+    if (!this.applyRbacConditionsToQuery(opts.rbac, conditions, opts.namespaceId)) {
       return [];
     }
 
@@ -653,8 +715,8 @@ export class SubgraphRepository {
       .select({
         id: schema.targets.id,
         name: schema.targets.name,
-        federatedGraphId: schema.federatedGraphs.targetId,
         lastUpdatedAt: schema.schemaVersion.createdAt,
+        federatedGraphId: schema.federatedGraphs.targetId,
       })
       .from(schema.targets)
       .innerJoin(schema.subgraphs, eq(schema.subgraphs.targetId, schema.targets.id))
@@ -678,7 +740,6 @@ export class SubgraphRepository {
     const targets = await targetsQuery;
 
     const subgraphs: (SubgraphDTO & { federatedGraphId: string })[] = [];
-
     for (const target of targets) {
       const sg = await this.byTargetId(target.id);
       if (sg === undefined) {
@@ -697,10 +758,6 @@ export class SubgraphRepository {
       eq(schema.targets.type, 'subgraph'),
     ];
 
-    if (opts.namespaceId) {
-      conditions.push(eq(schema.targets.namespaceId, opts.namespaceId));
-    }
-
     if (opts.query) {
       conditions.push(like(schema.targets.name, `%${opts.query}%`));
     }
@@ -709,7 +766,7 @@ export class SubgraphRepository {
       conditions.push(eq(schema.subgraphs.isFeatureSubgraph, false));
     }
 
-    if (!this.applyRbacConditionsToQuery(opts.rbac, conditions)) {
+    if (!this.applyRbacConditionsToQuery(opts.rbac, conditions, opts.namespaceId)) {
       return 0;
     }
 
@@ -766,7 +823,7 @@ export class SubgraphRepository {
       eq(schema.subgraphsToFederatedGraph.federatedGraphId, target.federatedGraph.id),
     ];
 
-    if (!this.applyRbacConditionsToQuery(data.rbac, conditions)) {
+    if (!this.applyRbacConditionsToQuery(data.rbac, conditions, undefined)) {
       return [];
     }
 
