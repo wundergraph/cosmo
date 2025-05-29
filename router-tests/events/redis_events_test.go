@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/url"
 	"sync/atomic"
@@ -654,130 +656,136 @@ func TestRedisEvents(t *testing.T) {
 	t.Run("subscribe async with filter", func(t *testing.T) {
 		t.Parallel()
 
-		// topics := []string{"employeeUpdatedMyRedis"}
+		topics := []string{"employeeUpdatedMyRedis"}
 
-		// testenv.Run(t, &testenv.Config{
-		// 	RouterConfigJSONTemplate: testenv.ConfigWithEdfsRedisJSONTemplate,
-		// 	EnableRedis:              true,
-		// }, func(t *testing.T, xEnv *testenv.Environment) {
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsRedisJSONTemplate,
+			EnableRedis:              true,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
 
-		// 	type subscriptionPayload struct {
-		// 		Data struct {
-		// 			FilteredEmployeeUpdatedMyRedis struct {
-		// 				ID      float64 `graphql:"id"`
-		// 				Details struct {
-		// 					Forename string `graphql:"forename"`
-		// 					Surname  string `graphql:"surname"`
-		// 				} `graphql:"details"`
-		// 			} `graphql:"filteredEmployeeUpdatedMyRedis(employeeID: 1)"`
-		// 		} `json:"data"`
-		// 	}
+			type subscriptionPayload struct {
+				Data struct {
+					FilteredEmployeeUpdatedMyRedis struct {
+						ID      float64 `graphql:"id"`
+						Details struct {
+							Forename string `graphql:"forename"`
+							Surname  string `graphql:"surname"`
+						} `graphql:"details"`
+					} `graphql:"filteredEmployeeUpdatedMyRedis(ids: [1, 3, 4, 7, 11])"`
+				} `json:"data"`
+			}
 
-		// 	// conn.Close() is called in a cleanup defined in the function
-		// 	conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
-		// 	err := conn.WriteJSON(&testenv.WebSocketMessage{
-		// 		ID:      "1",
-		// 		Type:    "subscribe",
-		// 		Payload: []byte(`{"query":"subscription { filteredEmployeeUpdatedMyRedis(employeeID: 1) { id details { forename, surname } } }"}`),
-		// 	})
+			// conn.Close() is called in a cleanup defined in the function
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+			err := conn.WriteJSON(&testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { filteredEmployeeUpdatedMyRedis(ids: [1, 3, 4, 7, 11]) { id details { forename, surname } } }"}`),
+			})
+			require.NoError(t, err)
 
-		// 	require.NoError(t, err)
-		// 	var msg testenv.WebSocketMessage
-		// 	var payload subscriptionPayload
+			// msg1 := testenv.WebSocketMessage{}
+			// conn.ReadJSON(&msg1)
+			// require.Equal(t, "1", msg1.ID)
+			// require.Equal(t, "next", msg1.Type)
+			// require.Equal(t, "{\"data\":{\"filteredEmployeeUpdatedMyRedis\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}", string(msg1.Payload))
 
-		// 	xEnv.WaitForSubscriptionCount(1, RedisWaitTimeout)
+			var msg testenv.WebSocketMessage
+			var payload subscriptionPayload
 
-		// 	var produced atomic.Uint32
-		// 	var consumed atomic.Uint32
-		// 	const MsgCount = uint32(12)
+			xEnv.WaitForSubscriptionCount(1, RedisWaitTimeout)
 
-		// 	go func() {
-		// 		consumed.Add(1) // the first message is ignored
+			var produced atomic.Uint32
+			var consumed atomic.Uint32
+			const MsgCount = uint32(12)
 
-		// 		require.Eventually(t, func() bool {
-		// 			return produced.Load() == MsgCount-11
-		// 		}, RedisWaitTimeout, time.Millisecond*100)
-		// 		gErr := conn.ReadJSON(&msg)
-		// 		require.NoError(t, gErr)
-		// 		require.Equal(t, "1", msg.ID)
-		// 		require.Equal(t, "next", msg.Type)
-		// 		gErr = json.Unmarshal(msg.Payload, &payload)
-		// 		require.NoError(t, gErr)
-		// 		require.Equal(t, float64(11), payload.Data.FilteredEmployeeUpdatedMyRedis.ID)
-		// 		require.Equal(t, "Alexandra", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Forename)
-		// 		require.Equal(t, "Neuse", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Surname)
-		// 		consumed.Add(4) // should arrive to 5th message, with id 7
+			go func() {
+				consumed.Add(1) // the first message is ignored
 
-		// 		require.Eventually(t, func() bool {
-		// 			return produced.Load() == MsgCount-7
-		// 		}, RedisWaitTimeout, time.Millisecond*100)
-		// 		gErr = conn.ReadJSON(&msg)
-		// 		require.NoError(t, gErr)
-		// 		require.Equal(t, "1", msg.ID)
-		// 		require.Equal(t, "next", msg.Type)
-		// 		gErr = json.Unmarshal(msg.Payload, &payload)
-		// 		require.NoError(t, gErr)
-		// 		require.Equal(t, float64(7), payload.Data.FilteredEmployeeUpdatedMyRedis.ID)
-		// 		require.Equal(t, "Suvij", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Forename)
-		// 		require.Equal(t, "Surya", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Surname)
-		// 		consumed.Add(3) // should arrive to 8th message, with id 4
+				require.Eventually(t, func() bool {
+					return produced.Load() == MsgCount-11
+				}, RedisWaitTimeout, time.Millisecond*100)
+				gErr := conn.ReadJSON(&msg)
+				require.NoError(t, gErr)
+				require.Equal(t, "1", msg.ID)
+				require.Equal(t, "next", msg.Type)
+				gErr = json.Unmarshal(msg.Payload, &payload)
+				require.NoError(t, gErr)
+				require.Equal(t, float64(11), payload.Data.FilteredEmployeeUpdatedMyRedis.ID)
+				require.Equal(t, "Alexandra", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Forename)
+				require.Equal(t, "Neuse", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Surname)
+				consumed.Add(4) // should arrive to 5th message, with id 7
 
-		// 		require.Eventually(t, func() bool {
-		// 			return produced.Load() == MsgCount-4
-		// 		}, RedisWaitTimeout, time.Millisecond*100)
-		// 		gErr = conn.ReadJSON(&msg)
-		// 		require.NoError(t, gErr)
-		// 		require.Equal(t, "1", msg.ID)
-		// 		require.Equal(t, "next", msg.Type)
-		// 		gErr = json.Unmarshal(msg.Payload, &payload)
-		// 		require.NoError(t, gErr)
-		// 		require.Equal(t, float64(4), payload.Data.FilteredEmployeeUpdatedMyRedis.ID)
-		// 		require.Equal(t, "Björn", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Forename)
-		// 		require.Equal(t, "Schwenzer", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Surname)
-		// 		consumed.Add(1)
+				require.Eventually(t, func() bool {
+					return produced.Load() == MsgCount-7
+				}, RedisWaitTimeout, time.Millisecond*100)
+				gErr = conn.ReadJSON(&msg)
+				require.NoError(t, gErr)
+				require.Equal(t, "1", msg.ID)
+				require.Equal(t, "next", msg.Type)
+				gErr = json.Unmarshal(msg.Payload, &payload)
+				require.NoError(t, gErr)
+				require.Equal(t, float64(7), payload.Data.FilteredEmployeeUpdatedMyRedis.ID)
+				require.Equal(t, "Suvij", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Forename)
+				require.Equal(t, "Surya", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Surname)
+				consumed.Add(3) // should arrive to 8th message, with id 4
 
-		// 		require.Eventually(t, func() bool {
-		// 			return produced.Load() == MsgCount-3
-		// 		}, RedisWaitTimeout, time.Millisecond*100)
-		// 		gErr = conn.ReadJSON(&msg)
-		// 		require.NoError(t, gErr)
-		// 		require.Equal(t, "1", msg.ID)
-		// 		require.Equal(t, "next", msg.Type)
-		// 		gErr = json.Unmarshal(msg.Payload, &payload)
-		// 		require.NoError(t, gErr)
-		// 		require.Equal(t, float64(3), payload.Data.FilteredEmployeeUpdatedMyRedis.ID)
-		// 		require.Equal(t, "Stefan", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Forename)
-		// 		require.Equal(t, "Avram", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Surname)
-		// 		consumed.Add(2) // should arrive to 10th message, with id 2
+				require.Eventually(t, func() bool {
+					return produced.Load() == MsgCount-4
+				}, RedisWaitTimeout, time.Millisecond*100)
+				gErr = conn.ReadJSON(&msg)
+				require.NoError(t, gErr)
+				require.Equal(t, "1", msg.ID)
+				require.Equal(t, "next", msg.Type)
+				gErr = json.Unmarshal(msg.Payload, &payload)
+				require.NoError(t, gErr)
+				require.Equal(t, float64(4), payload.Data.FilteredEmployeeUpdatedMyRedis.ID)
+				require.Equal(t, "Björn", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Forename)
+				require.Equal(t, "Schwenzer", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Surname)
+				consumed.Add(1)
 
-		// 		require.Eventually(t, func() bool {
-		// 			return produced.Load() == MsgCount-1
-		// 		}, RedisWaitTimeout, time.Millisecond*100)
-		// 		gErr = conn.ReadJSON(&msg)
-		// 		require.NoError(t, gErr)
-		// 		require.Equal(t, "1", msg.ID)
-		// 		require.Equal(t, "next", msg.Type)
-		// 		gErr = json.Unmarshal(msg.Payload, &payload)
-		// 		require.NoError(t, gErr)
-		// 		require.Equal(t, float64(1), payload.Data.FilteredEmployeeUpdatedMyRedis.ID)
-		// 		require.Equal(t, "Jens", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Forename)
-		// 		require.Equal(t, "Neuse", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Surname)
-		// 		consumed.Add(1)
-		// 	}()
+				require.Eventually(t, func() bool {
+					return produced.Load() == MsgCount-3
+				}, RedisWaitTimeout, time.Millisecond*100)
+				gErr = conn.ReadJSON(&msg)
+				require.NoError(t, gErr)
+				require.Equal(t, "1", msg.ID)
+				require.Equal(t, "next", msg.Type)
+				gErr = json.Unmarshal(msg.Payload, &payload)
+				require.NoError(t, gErr)
+				require.Equal(t, float64(3), payload.Data.FilteredEmployeeUpdatedMyRedis.ID)
+				require.Equal(t, "Stefan", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Forename)
+				require.Equal(t, "Avram", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Surname)
+				consumed.Add(2) // should arrive to 10th message, with id 2
 
-		// 	// Events 1, 3, 4, 7, and 11 should be included
-		// 	for i := MsgCount; i > 0; i-- {
-		// 		require.Eventually(t, func() bool {
-		// 			return consumed.Load() >= MsgCount-i
-		// 		}, RedisWaitTimeout, time.Millisecond*100)
-		// 		produceRedisMessage(t, xEnv, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d}`, i))
-		// 		produced.Add(1)
-		// 	}
+				require.Eventually(t, func() bool {
+					return produced.Load() == MsgCount-1
+				}, RedisWaitTimeout, time.Millisecond*100)
+				gErr = conn.ReadJSON(&msg)
+				require.NoError(t, gErr)
+				require.Equal(t, "1", msg.ID)
+				require.Equal(t, "next", msg.Type)
+				gErr = json.Unmarshal(msg.Payload, &payload)
+				require.NoError(t, gErr)
+				require.Equal(t, float64(1), payload.Data.FilteredEmployeeUpdatedMyRedis.ID)
+				require.Equal(t, "Jens", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Forename)
+				require.Equal(t, "Neuse", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Surname)
+				consumed.Add(1)
+			}()
 
-		// 	require.Eventually(t, func() bool {
-		// 		return consumed.Load() == MsgCount && produced.Load() == MsgCount
-		// 	}, RedisWaitTimeout, time.Millisecond*100)
-		// })
+			// Events 1, 3, 4, 7, and 11 should be included
+			for i := MsgCount; i > 0; i-- {
+				require.Eventually(t, func() bool {
+					return consumed.Load() >= MsgCount-i
+				}, RedisWaitTimeout, time.Millisecond*100)
+				produceRedisMessage(t, xEnv, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d}`, i))
+				produced.Add(1)
+			}
+
+			require.Eventually(t, func() bool {
+				return consumed.Load() == MsgCount && produced.Load() == MsgCount
+			}, RedisWaitTimeout, time.Millisecond*100)
+		})
 	})
 
 	t.Run("message with invalid JSON should give a specific error", func(t *testing.T) {
