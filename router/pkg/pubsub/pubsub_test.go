@@ -311,7 +311,7 @@ func TestBuild_ShouldNotInitializeProviderIfNotUsed(t *testing.T) {
 	assert.False(t, dataSources[0].HasRootNode("Type1", "Field2"))
 }
 
-func TestBuildProvidersAndDataSources_OK(t *testing.T) {
+func TestBuildProvidersAndDataSources_Nats_OK(t *testing.T) {
 	ctx := context.Background()
 
 	dsMeta := &plan.DataSourceMetadata{
@@ -359,6 +359,59 @@ func TestBuildProvidersAndDataSources_OK(t *testing.T) {
 	require.Len(t, providers, 1)
 	require.Equal(t, providers[0].ID(), "provider-1")
 	require.Equal(t, providers[0].TypeID(), "nats")
+	require.Len(t, dataSources, 1)
+	assert.True(t, dataSources[0].HasRootNode("Type1", "Field1"))
+	assert.False(t, dataSources[0].HasRootNode("Type1", "Field2"))
+}
+
+func TestBuildProvidersAndDataSources_Kafka_OK(t *testing.T) {
+	ctx := context.Background()
+
+	dsMeta := &plan.DataSourceMetadata{
+		RootNodes: []plan.TypeField{
+			{
+				TypeName:   "Type1",
+				FieldNames: []string{"Field1", "Field2"},
+			},
+		},
+	}
+
+	// Mock input data
+	event := &nodev1.EngineEventConfiguration{
+		ProviderId: "provider-1",
+		TypeName:   "Type1",
+		FieldName:  "Field1",
+		Type:       nodev1.EventType_PUBLISH,
+	}
+	dsConf := DataSourceConfigurationWithMetadata{
+		Configuration: &nodev1.DataSourceConfiguration{
+			Id: "test-id",
+			CustomEvents: &nodev1.DataSourceCustomEvents{
+				Kafka: []*nodev1.KafkaEventConfiguration{
+					{
+						EngineEventConfiguration: event,
+					},
+				},
+			},
+		},
+		Metadata: dsMeta,
+	}
+	dsConfs := []DataSourceConfigurationWithMetadata{dsConf}
+
+	// Execute the function
+	providers, dataSources, err := BuildProvidersAndDataSources(ctx, config.EventsConfiguration{
+		Providers: config.EventProviders{
+			Kafka: []config.KafkaEventSource{
+				{ID: "provider-1"},
+			},
+		},
+	}, zap.NewNop(), dsConfs, "host", "addr")
+
+	// Assertions
+	assert.NoError(t, err)
+	require.Len(t, providers, 1)
+	require.Equal(t, providers[0].ID(), "provider-1")
+	require.Equal(t, providers[0].TypeID(), "kafka")
 	require.Len(t, dataSources, 1)
 	assert.True(t, dataSources[0].HasRootNode("Type1", "Field1"))
 	assert.False(t, dataSources[0].HasRootNode("Type1", "Field2"))

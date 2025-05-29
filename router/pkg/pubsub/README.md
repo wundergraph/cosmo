@@ -84,6 +84,54 @@ Key methods:
 
 Refer to the [kafka implementation](./kafka/provider_builder.go) for a working example.
 
+### Add tests
+
+You should also add tests to your provider.
+
+### Generate mocks
+As a first step, you can use the [mockery](https://github.com/vektra/mockery) tool to generate the mocks for the Adapter interface you have implemented. To do this, add the following to the `.mockery.yml` file:
+
+```yaml
+packages:
+  github.com/wundergraph/cosmo/router/pkg/pubsub/{your-provider-name}:
+    interfaces:
+      AdapterInterface:
+```
+
+Then run the following command from the router directory:
+
+```bash
+make generate-mocks
+```
+
+This will generate the mocks in the `{your-provider-name}/mocks.go` file.
+
+You can then use the mocks in your tests.
+
+#### Add engine_datasource_test.go
+
+You should also add tests of your engine_datasource.go file.
+
+You can use the [kafka implementation](./kafka/engine_datasource_test.go) as a reference.
+
+#### Add pubsub_datasource_test.go
+
+You should also add tests of your pubsub_datasource.go file.
+
+You can use the [kafka implementation](./kafka/pubsub_datasource_test.go) as a reference.
+
+#### Add provider_builder_test.go
+
+You should also add tests of your provider_builder.go file.
+
+You can use the [kafka implementation](./kafka/provider_builder_test.go) as a reference.
+
+#### Add pubsub_test.go
+
+You should also add tests of your changes to the [pubsub.go](./pubsub.go) file.
+
+You can use the [TestBuildProvidersAndDataSources_Kafka_OK](./pubsub_test.go) as a reference.
+
 ## Add the provider to the router
 
 Update the `BuildProvidersAndDataSources` function in the [pubsub.go](./pubsub.go) file to include your new provider.

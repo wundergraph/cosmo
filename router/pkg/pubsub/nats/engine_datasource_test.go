@@ -16,19 +16,6 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
-// MockSubscriptionUpdater implements resolve.SubscriptionUpdater
-type MockSubscriptionUpdater struct {
-	mock.Mock
-}
-
-func (m *MockSubscriptionUpdater) Update(data []byte) {
-	m.Called(data)
-}
-
-func (m *MockSubscriptionUpdater) Done() {
-	m.Called()
-}
-
 func TestPublishEventConfiguration_MarshalJSONTemplate(t *testing.T) {
 	tests := []struct {
 		name        string
