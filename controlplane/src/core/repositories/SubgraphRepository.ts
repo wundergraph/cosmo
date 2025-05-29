@@ -582,16 +582,8 @@ export class SubgraphRepository {
    * @param conditions
    * @private
    */
-  private applyRbacConditionsToQuery(
-    rbac: RBACEvaluator | undefined,
-    conditions: (SQL<unknown> | undefined)[],
-    namespaceId: string | undefined,
-  ) {
+  private applyRbacConditionsToQuery(rbac: RBACEvaluator | undefined, conditions: (SQL<unknown> | undefined)[]) {
     if (!rbac || rbac.isOrganizationViewer) {
-      if (namespaceId) {
-        conditions.push(eq(schema.targets.namespaceId, namespaceId));
-      }
-
       return true;
     }
 
@@ -612,10 +604,6 @@ export class SubgraphRepository {
     if (graphPublisher) {
       namespaces.push(...graphPublisher.namespaces);
       resources.push(...graphPublisher.resources);
-    }
-
-    if (namespaceId && !namespaces.includes(namespaceId)) {
-      namespaces.push(namespaceId);
     }
 
     if (namespaces.length > 0 && resources.length > 0) {
@@ -640,6 +628,10 @@ export class SubgraphRepository {
       eq(schema.targets.type, 'subgraph'),
     ];
 
+    if (opts.namespaceId) {
+      conditions.push(eq(schema.targets.namespaceId, opts.namespaceId));
+    }
+
     if (opts.query) {
       conditions.push(
         or(
@@ -653,7 +645,7 @@ export class SubgraphRepository {
       conditions.push(eq(schema.subgraphs.isFeatureSubgraph, false));
     }
 
-    if (!this.applyRbacConditionsToQuery(opts.rbac, conditions, opts.namespaceId)) {
+    if (!this.applyRbacConditionsToQuery(opts.rbac, conditions)) {
       return [];
     }
 
@@ -698,6 +690,10 @@ export class SubgraphRepository {
       eq(schema.targets.type, 'subgraph'),
     ];
 
+    if (opts.namespaceId) {
+      conditions.push(eq(schema.targets.namespaceId, opts.namespaceId));
+    }
+
     if (opts.query) {
       conditions.push(
         or(
@@ -711,7 +707,7 @@ export class SubgraphRepository {
       conditions.push(eq(schema.subgraphs.isFeatureSubgraph, false));
     }
 
-    if (!this.applyRbacConditionsToQuery(opts.rbac, conditions, opts.namespaceId)) {
+    if (!this.applyRbacConditionsToQuery(opts.rbac, conditions)) {
       return [];
     }
 
@@ -762,6 +758,10 @@ export class SubgraphRepository {
       eq(schema.targets.type, 'subgraph'),
     ];
 
+    if (opts.namespaceId) {
+      conditions.push(eq(schema.targets.namespaceId, opts.namespaceId));
+    }
+
     if (opts.query) {
       conditions.push(like(schema.targets.name, `%${opts.query}%`));
     }
@@ -770,7 +770,7 @@ export class SubgraphRepository {
       conditions.push(eq(schema.subgraphs.isFeatureSubgraph, false));
     }
 
-    if (!this.applyRbacConditionsToQuery(opts.rbac, conditions, opts.namespaceId)) {
+    if (!this.applyRbacConditionsToQuery(opts.rbac, conditions)) {
       return 0;
     }
 
@@ -827,7 +827,7 @@ export class SubgraphRepository {
       eq(schema.subgraphsToFederatedGraph.federatedGraphId, target.federatedGraph.id),
     ];
 
-    if (!this.applyRbacConditionsToQuery(data.rbac, conditions, undefined)) {
+    if (!this.applyRbacConditionsToQuery(data.rbac, conditions)) {
       return [];
     }
 

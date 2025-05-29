@@ -9,7 +9,6 @@ import {
 } from '../../src/core/test-util.js';
 import { createFederatedGraph, createThenPublishSubgraph, DEFAULT_NAMESPACE, SetupTest } from '../test-util.js';
 import { joinLabel } from "../../../shared/src/index.js";
-import { federatedGraphs } from "../../src/db/schema.js";
 
 let dbname = '';
 
