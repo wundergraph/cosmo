@@ -2,7 +2,6 @@ package redis
 
 import (
 	"context"
-	"fmt"
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -45,10 +44,6 @@ func (b *PubSubProviderBuilder) TypeID() string {
 // Providers returns the Redis PubSub providers for the given provider IDs
 func (b *PubSubProviderBuilder) BuildProvider(provider config.RedisEventSource) (datasource.PubSubProvider, error) {
 	adapter := NewAdapter(b.logger, provider.URLs)
-	if err := adapter.Startup(b.ctx); err != nil {
-		return nil, fmt.Errorf("failed to start Redis adapter for provider with ID \"%s\": %w", provider.ID, err)
-	}
-
 	pubSubProvider := datasource.NewPubSubProviderImpl(provider.ID, providerTypeID, adapter, b.logger)
 	b.adapters[provider.ID] = adapter
 

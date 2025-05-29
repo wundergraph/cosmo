@@ -455,7 +455,7 @@ func TestBuildProvidersAndDataSources_Redis_OK(t *testing.T) {
 	providers, dataSources, err := BuildProvidersAndDataSources(ctx, config.EventsConfiguration{
 		Providers: config.EventProviders{
 			Redis: []config.RedisEventSource{
-				{ID: "provider-1", URLs: []string{"redis://localhost:6379"}},
+				{ID: "provider-1"},
 			},
 		},
 	}, zap.NewNop(), dsConfs, "host", "addr")
