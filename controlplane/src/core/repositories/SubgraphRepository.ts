@@ -653,8 +653,70 @@ export class SubgraphRepository {
       .select({
         id: schema.targets.id,
         name: schema.targets.name,
-        federatedGraphId: schema.federatedGraphs.targetId,
         lastUpdatedAt: schema.schemaVersion.createdAt,
+      })
+      .from(schema.targets)
+      .innerJoin(schema.subgraphs, eq(schema.subgraphs.targetId, schema.targets.id))
+      // Left join because version is optional
+      .leftJoin(schema.schemaVersion, eq(schema.subgraphs.schemaVersionId, schema.schemaVersion.id))
+      .orderBy(asc(schema.targets.createdAt), asc(schemaVersion.createdAt))
+      .where(and(...conditions));
+
+    if (opts.limit) {
+      targetsQuery.limit(opts.limit);
+    }
+    if (opts.offset) {
+      targetsQuery.offset(opts.offset);
+    }
+
+    const targets = await targetsQuery;
+
+    const subgraphs: SubgraphDTO[] = [];
+    for (const target of targets) {
+      const sg = await this.byTargetId(target.id);
+      if (sg === undefined) {
+        throw new Error(`Subgraph ${target.name} not found`);
+      }
+
+      subgraphs.push(sg);
+    }
+
+    return subgraphs;
+  }
+
+  public async listAvailable(opts: SubgraphListFilterOptions) {
+    const conditions: (SQL<unknown> | undefined)[] = [
+      eq(schema.targets.organizationId, this.organizationId),
+      eq(schema.targets.type, 'subgraph'),
+    ];
+
+    if (opts.namespaceId) {
+      conditions.push(eq(schema.targets.namespaceId, opts.namespaceId));
+    }
+
+    if (opts.query) {
+      conditions.push(
+        or(
+          like(schema.targets.name, `%${opts.query}%`),
+          sql.raw(`${getTableName(schema.subgraphs)}.${schema.subgraphs.id.name}::text like '%${opts.query}%'`),
+        ),
+      );
+    }
+
+    if (opts.excludeFeatureSubgraphs) {
+      conditions.push(eq(schema.subgraphs.isFeatureSubgraph, false));
+    }
+
+    if (!this.applyRbacConditionsToQuery(opts.rbac, conditions)) {
+      return [];
+    }
+
+    const targetsQuery = this.db
+      .select({
+        id: schema.targets.id,
+        name: schema.targets.name,
+        lastUpdatedAt: schema.schemaVersion.createdAt,
+        federatedGraphId: schema.federatedGraphs.targetId,
       })
       .from(schema.targets)
       .innerJoin(schema.subgraphs, eq(schema.subgraphs.targetId, schema.targets.id))
@@ -678,7 +740,6 @@ export class SubgraphRepository {
     const targets = await targetsQuery;
 
     const subgraphs: (SubgraphDTO & { federatedGraphId: string })[] = [];
-
     for (const target of targets) {
       const sg = await this.byTargetId(target.id);
       if (sg === undefined) {
