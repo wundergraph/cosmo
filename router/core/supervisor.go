@@ -134,19 +134,49 @@ var (
 
 // Start starts the router supervisor.
 func (rs *RouterSupervisor) Start() error {
+	var exitError ExitError
+	appCtx := context.Background()
+	started := false
+
+	defer func() {
+		// core module system: run application stop hooks once shutdown is received
+		rs.logger.Debug("Firing ApplicationStop hooks")
+		for _, h := range rs.router.coreModuleHooks.hookRegistry.applicationStopHooks.Values() {
+			h.OnApplicationStop(appCtx, &ApplicationParams{
+				Config: rs.resources.Config,
+				Logger: rs.logger,
+			}, &exitError)
+		}
+	}()
+
 	if err := rs.loadConfig(); err != nil {
-		return fmt.Errorf("%w: failed to load config: %w", ErrStartupFailed, err)
+		exitError.Err = fmt.Errorf("%w: failed to load config: %w", ErrStartupFailed, err)
+		return exitError.Err
 	}
 
 	for {
 		rs.logger.Debug("Creating Router")
 		if err := rs.createRouter(); err != nil {
-			return fmt.Errorf("%w: failed to create router: %w", ErrStartupFailed, err)
+			exitError.Err = fmt.Errorf("%w: failed to create router: %w", ErrStartupFailed, err)
+			return exitError.Err
+		}
+
+		// core module system: run application start hooks only once
+		if !started {
+			rs.logger.Debug("Firing ApplicationStart hooks")
+			for _, h := range rs.router.coreModuleHooks.hookRegistry.applicationStartHooks.Values() {
+				h.OnApplicationStart(appCtx, &ApplicationParams{
+					Config: rs.resources.Config,
+					Logger: rs.logger,
+				})
+			}
+			started = true
 		}
 
 		rs.logger.Debug("Starting Router")
 		if err := rs.startRouter(); err != nil {
-			return fmt.Errorf("%w: failed to start router: %w", ErrStartupFailed, err)
+			exitError.Err = fmt.Errorf("%w: failed to start router: %w", ErrStartupFailed, err)
+			return exitError.Err
 		}
 
 		rs.logger.Info("Router started")
@@ -159,7 +189,8 @@ func (rs *RouterSupervisor) Start() error {
 				rs.logger.Warn("Router shutdown deadline exceeded. Consider increasing the shutdown delay")
 			}
 
-			return fmt.Errorf("failed to stop router: %w", err)
+			exitError.Err = fmt.Errorf("failed to stop router: %w", err)
+			return exitError.Err
 		}
 
 		rs.logger.Info("Router shutdown successfully")
