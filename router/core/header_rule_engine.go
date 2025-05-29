@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"fmt"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
 	"io"
 	"net/http"
 	"reflect"
@@ -348,7 +349,11 @@ func (h *HeaderPropagation) applyResponseRule(propagation *responseHeaderPropaga
 	} else if rule.Matching != "" {
 		if regex, ok := h.regex[rule.Matching]; ok {
 			for name := range res.Header {
-				if regex.MatchString(name) {
+				result := regex.MatchString(name)
+				if rule.NegateMatch {
+					result = !result
+				}
+				if result {
 					if slices.Contains(ignoredHeaders, name) {
 						continue
 					}
@@ -464,11 +469,15 @@ func (h *HeaderPropagation) applyRequestRule(ctx RequestContext, request *http.R
 	 */
 
 	if regex, ok := h.regex[rule.Matching]; ok {
+		// Headers are case-insensitive, but Go canonicalize them
+		// Issue: https://github.com/golang/go/issues/37834
 		for name := range ctx.Request().Header {
-			// Headers are case-insensitive, but Go canonicalize them
-			// Issue: https://github.com/golang/go/issues/37834
-			if regex.MatchString(name) {
+			result := regex.MatchString(name)
+			if rule.NegateMatch {
+				result = !result
+			}
 
+			if result {
 				/**
 				 *	Rename the header before propagating and delete the original
 				 */
@@ -691,7 +700,7 @@ func FetchURLRules(rules *config.HeaderRules, subgraphs []*nodev1.Subgraph, rout
 
 // PropagatedHeaders returns the list of header names and regular expressions
 // that will be propagated when applying the given rules.
-func PropagatedHeaders(rules []*config.RequestHeaderRule) (headerNames []string, headerNameRegexps []*regexp.Regexp, err error) {
+func PropagatedHeaders(rules []*config.RequestHeaderRule) (headerNames []string, headerNameRegexps []graphql_datasource.RegularExpression, err error) {
 	for _, rule := range rules {
 		switch rule.Operation {
 		case config.HeaderRuleOperationSet:
@@ -706,7 +715,10 @@ func PropagatedHeaders(rules []*config.RequestHeaderRule) (headerNames []string,
 				if err != nil {
 					return nil, nil, fmt.Errorf("error compiling regular expression %q in header rule %+v: %w", rule.Matching, rule, err)
 				}
-				headerNameRegexps = append(headerNameRegexps, re)
+				headerNameRegexps = append(headerNameRegexps, graphql_datasource.RegularExpression{
+					Pattern:     re,
+					NegateMatch: rule.NegateMatch,
+				})
 			} else if rule.Named != "" {
 				headerNames = append(headerNames, rule.Named)
 			} else {
