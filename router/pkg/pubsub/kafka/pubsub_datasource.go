@@ -76,18 +76,3 @@ func (c *PubSubDataSource) ResolveDataSourceSubscriptionInput() (string, error) 
 func (c *PubSubDataSource) TransformEventData(extractFn datasource.ArgumentTemplateCallback) error {
 	return nil
 }
-
-type SubscriptionEventConfiguration struct {
-	ProviderID string   `json:"providerId"`
-	Topics     []string `json:"topics"`
-}
-
-type PublishEventConfiguration struct {
-	ProviderID string          `json:"providerId"`
-	Topic      string          `json:"topic"`
-	Data       json.RawMessage `json:"data"`
-}
-
-func (s *PublishEventConfiguration) MarshalJSONTemplate() string {
-	return fmt.Sprintf(`{"topic":"%s", "data": %s, "providerId":"%s"}`, s.Topic, s.Data, s.ProviderID)
-}

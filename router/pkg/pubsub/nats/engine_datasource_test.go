@@ -32,12 +32,12 @@ func (m *MockSubscriptionUpdater) Done() {
 func TestPublishEventConfiguration_MarshalJSONTemplate(t *testing.T) {
 	tests := []struct {
 		name        string
-		config      PublishEventConfiguration
+		config      PublishAndRequestEventConfiguration
 		wantPattern string
 	}{
 		{
 			name: "simple configuration",
-			config: PublishEventConfiguration{
+			config: PublishAndRequestEventConfiguration{
 				ProviderID: "test-provider",
 				Subject:    "test-subject",
 				Data:       json.RawMessage(`{"message":"hello"}`),
@@ -46,7 +46,7 @@ func TestPublishEventConfiguration_MarshalJSONTemplate(t *testing.T) {
 		},
 		{
 			name: "with special characters",
-			config: PublishEventConfiguration{
+			config: PublishAndRequestEventConfiguration{
 				ProviderID: "test-provider-id",
 				Subject:    "subject-with-hyphens",
 				Data:       json.RawMessage(`{"message":"special \"quotes\" here"}`),
