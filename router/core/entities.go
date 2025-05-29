@@ -1,0 +1,27 @@
+package core
+
+import (
+	"github.com/wundergraph/cosmo/router/pkg/config"
+	"go.uber.org/zap"
+)
+
+/* hook specific entities that are implemented by the open core module system */
+
+// ApplicationParams is passed to ApplicationStartHook/ApplicationStopHook
+type ApplicationParams struct {
+	// the global configuration
+	Config *config.Config
+	Logger *zap.Logger
+}
+
+
+/* common entities for the open core module system */
+
+// ExitError is a struct for holding the exit code and error of the router
+type ExitError struct {
+	Code int
+	Err  error
+}
+
+func (e *ExitError) Error() string { return e.Err.Error() }
+  

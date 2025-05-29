@@ -13,11 +13,11 @@ type ApplicationLifecycleHook interface {
 }
 
 type ApplicationStartHook interface {
-	OnApplicationStart(ctx context.Context)
+	OnApplicationStart(ctx context.Context, params *ApplicationParams) error
 }
 
 type ApplicationStopHook interface {
-	OnApplicationStop(ctx context.Context)
+	OnApplicationStop(ctx context.Context, params *ApplicationParams, exitError *ExitError) error
 }
 
 // GraphQL Server Lifecycle Hooks
@@ -27,11 +27,11 @@ type GraphQLServerLifecycleHook interface {
 }
 
 type GraphQLServerStartHook interface {
-	OnGraphQLServerStart(ctx context.Context)
+	OnGraphQLServerStart(ctx context.Context) error
 }
 
 type GraphQLServerStopHook interface {
-	OnGraphQLServerStop(ctx context.Context)
+	OnGraphQLServerStop(ctx context.Context) error	
 }
 
 // Router Lifecycle Hooks
