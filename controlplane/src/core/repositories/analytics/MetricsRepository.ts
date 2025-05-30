@@ -769,13 +769,14 @@ export class MetricsRepository {
     WITH
       toDateTime('${dateRange.start}') AS startDate,
       toDateTime('${dateRange.end}') AS endDate
-    SELECT
+    SELECT DISTINCT
       ClientName as name
     FROM ${this.client.database}.operation_latency_metrics_5_30
     WHERE Timestamp >= startDate AND Timestamp <= endDate
       AND OrganizationID = '${organizationId}'
       AND FederatedGraphID = '${graphId}'
-    GROUP BY ClientName
+    GROUP BY ClientName, Timestamp
+    ORDER BY Timestamp DESC
     LIMIT 100`;
 
     const res: {
