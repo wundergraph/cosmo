@@ -775,14 +775,15 @@ export class MetricsRepository {
     WHERE Timestamp >= startDate AND Timestamp <= endDate
       AND OrganizationID = '${organizationId}'
       AND FederatedGraphID = '${graphId}'
-    GROUP BY ClientName`;
+    GROUP BY ClientName
+    LIMIT 100`;
 
     const res: {
       name: string;
     }[] = await this.client.queryPromise(query);
 
     if (Array.isArray(res)) {
-      return res;
+      return res.filter((r) => r.name !== '');
     }
 
     return [];

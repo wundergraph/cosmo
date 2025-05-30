@@ -78,7 +78,7 @@ export function getClientsFromAnalytics(
       response: {
         code: EnumStatusCode.OK,
       },
-      clients: clients.filter((client) => client.name !== '' && client.name !== 'unknown'),
+      clients,
     };
   });
 }
