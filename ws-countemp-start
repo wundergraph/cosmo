@@ -1,0 +1,2 @@
+{"type":"connection_init","payload":{}}
+{"id":"UUIDGOESHERE","type":"subscribe","payload":{"query":"subscription { countEmp(max: 10, intervalMilliseconds: 1000) }"}}
