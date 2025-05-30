@@ -4,50 +4,54 @@ import (
 	"encoding/json"
 	"fmt"
 
-	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
+type EventType int
+
+const (
+	EventTypePublish EventType = iota
+	EventTypeSubscribe
+)
+
 type PubSubDataSource struct {
-	EventConfiguration *nodev1.KafkaEventConfiguration
-	KafkaAdapter       AdapterInterface
+	fieldName  string
+	typeName   string
+	eventType  EventType
+	topics     []string
+	providerId string
+
+	KafkaAdapter AdapterInterface
 }
 
 func (c *PubSubDataSource) GetFieldName() string {
-	return c.EventConfiguration.GetEngineEventConfiguration().GetFieldName()
+	return c.fieldName
 }
 
 func (c *PubSubDataSource) ResolveDataSource() (resolve.DataSource, error) {
 	var dataSource resolve.DataSource
 
-	eventType := c.EventConfiguration.GetEngineEventConfiguration().GetType()
-	switch eventType {
-	case nodev1.EventType_PUBLISH:
+	switch c.eventType {
+	case EventTypePublish:
 		dataSource = &PublishDataSource{
 			pubSub: c.KafkaAdapter,
 		}
 	default:
-		return nil, fmt.Errorf("failed to configure fetch: invalid event type \"%s\" for Kafka", eventType.String())
+		return nil, fmt.Errorf("failed to configure fetch: invalid event type \"%d\" for Kafka", c.eventType)
 	}
 
 	return dataSource, nil
 }
 
 func (c *PubSubDataSource) ResolveDataSourceInput(eventData []byte) (string, error) {
-	topics := c.EventConfiguration.GetTopics()
-
-	if len(topics) != 1 {
-		return "", fmt.Errorf("publish events should define one topic but received %d", len(topics))
+	if len(c.topics) != 1 {
+		return "", fmt.Errorf("publish events should define one topic but received %d", len(c.topics))
 	}
 
-	topic := topics[0]
-
-	providerId := c.EventConfiguration.GetEngineEventConfiguration().GetProviderId()
-
 	evtCfg := PublishEventConfiguration{
-		ProviderID: providerId,
-		Topic:      topic,
+		ProviderID: c.providerId,
+		Topic:      c.topics[0],
 		Data:       eventData,
 	}
 
@@ -61,10 +65,9 @@ func (c *PubSubDataSource) ResolveDataSourceSubscription() (resolve.Subscription
 }
 
 func (c *PubSubDataSource) ResolveDataSourceSubscriptionInput() (string, error) {
-	providerId := c.EventConfiguration.GetEngineEventConfiguration().GetProviderId()
 	evtCfg := SubscriptionEventConfiguration{
-		ProviderID: providerId,
-		Topics:     c.EventConfiguration.GetTopics(),
+		ProviderID: c.providerId,
+		Topics:     c.topics,
 	}
 	object, err := json.Marshal(evtCfg)
 	if err != nil {

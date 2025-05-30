@@ -24,11 +24,13 @@ type PubSubProvider interface {
 }
 
 // PubSubProviderBuilder is the interface that the provider builder must implement.
-type PubSubProviderBuilder[P any, E any] interface {
+type PubSubProviderBuilder[P, E any] interface {
 	// TypeID Get the provider type id (e.g. "kafka", "nats")
 	TypeID() string
 	// BuildProvider Build the provider and the adapter
 	BuildProvider(options P) (PubSubProvider, error)
 	// BuildDataSource Build the data source for the given provider and event configuration
 	BuildDataSource(data E) (PubSubDataSource, error)
+	// BuildDataSource Build the data source for the given provider and event configuration
+	BuildDataSourceFactory(data E) *PubSubDataSourceFactory[P, E]
 }

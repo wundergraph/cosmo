@@ -27,6 +27,10 @@ func (p *PubSubProviderBuilder) TypeID() string {
 	return providerTypeID
 }
 
+func (p *PubSubProviderBuilder) BuildDataSourceFactory(data *nodev1.NatsEventConfiguration) *datasource.PubSubDataSourceFactory[config.NatsEventSource, *nodev1.NatsEventConfiguration] {
+	return datasource.NewPubSubDataSourceFactory(p, data)
+}
+
 func (p *PubSubProviderBuilder) BuildDataSource(data *nodev1.NatsEventConfiguration) (datasource.PubSubDataSource, error) {
 	providerId := data.GetEngineEventConfiguration().GetProviderId()
 	adapter, ok := p.adapters[providerId]
@@ -34,10 +38,34 @@ func (p *PubSubProviderBuilder) BuildDataSource(data *nodev1.NatsEventConfigurat
 		return nil, fmt.Errorf("failed to get adapter for provider %s with ID %s", p.TypeID(), providerId)
 	}
 
-	return &PubSubDataSource{
-		EventConfiguration: data,
-		NatsAdapter:        adapter,
-	}, nil
+	var eventType EventType
+	switch data.GetEngineEventConfiguration().GetType() {
+	case nodev1.EventType_PUBLISH:
+		eventType = EventTypePublish
+	case nodev1.EventType_SUBSCRIBE:
+		eventType = EventTypeSubscribe
+	case nodev1.EventType_REQUEST:
+		eventType = EventTypeRequest
+	default:
+		return nil, fmt.Errorf("unsupported event type: %s", data.GetEngineEventConfiguration().GetType())
+	}
+	pubSubDataSource := &PubSubDataSource{
+		NatsAdapter:             adapter,
+		fieldName:               data.GetEngineEventConfiguration().GetFieldName(),
+		eventType:               eventType,
+		subjects:                data.GetSubjects(),
+		providerId:              providerId,
+		withStreamConfiguration: data.GetStreamConfiguration() != nil,
+	}
+
+	if data.GetStreamConfiguration() != nil {
+		pubSubDataSource.withStreamConfiguration = true
+		pubSubDataSource.consumerName = data.GetStreamConfiguration().GetConsumerName()
+		pubSubDataSource.streamName = data.GetStreamConfiguration().GetStreamName()
+		pubSubDataSource.consumerInactiveThreshold = data.GetStreamConfiguration().GetConsumerInactiveThreshold()
+	}
+
+	return pubSubDataSource, nil
 }
 
 func (p *PubSubProviderBuilder) BuildProvider(provider config.NatsEventSource) (datasource.PubSubProvider, error) {

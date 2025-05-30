@@ -28,6 +28,10 @@ func (p *PubSubProviderBuilder) TypeID() string {
 	return providerTypeID
 }
 
+func (p *PubSubProviderBuilder) BuildDataSourceFactory(data *nodev1.KafkaEventConfiguration) *datasource.PubSubDataSourceFactory[config.KafkaEventSource, *nodev1.KafkaEventConfiguration] {
+	return datasource.NewPubSubDataSourceFactory(p, data)
+}
+
 func (p *PubSubProviderBuilder) BuildDataSource(data *nodev1.KafkaEventConfiguration) (datasource.PubSubDataSource, error) {
 	providerId := data.GetEngineEventConfiguration().GetProviderId()
 	adapter, ok := p.adapters[providerId]
@@ -35,9 +39,23 @@ func (p *PubSubProviderBuilder) BuildDataSource(data *nodev1.KafkaEventConfigura
 		return nil, fmt.Errorf("failed to get adapter for provider %s with ID %s", p.TypeID(), providerId)
 	}
 
+	var eventType EventType
+	switch data.GetEngineEventConfiguration().GetType() {
+	case nodev1.EventType_PUBLISH:
+		eventType = EventTypePublish
+	case nodev1.EventType_SUBSCRIBE:
+		eventType = EventTypeSubscribe
+	default:
+		return nil, fmt.Errorf("unsupported event type: %s", data.GetEngineEventConfiguration().GetType())
+	}
+
 	return &PubSubDataSource{
-		EventConfiguration: data,
-		KafkaAdapter:       adapter,
+		fieldName:    data.GetEngineEventConfiguration().GetFieldName(),
+		typeName:     data.GetEngineEventConfiguration().GetTypeName(),
+		eventType:    eventType,
+		topics:       data.GetTopics(),
+		providerId:   providerId,
+		KafkaAdapter: adapter,
 	}, nil
 }
 

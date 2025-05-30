@@ -5,54 +5,66 @@ import (
 	"fmt"
 	"slices"
 
-	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
+type EventType int
+
+const (
+	EventTypePublish EventType = iota
+	EventTypeRequest
+	EventTypeSubscribe
+)
+
 type PubSubDataSource struct {
-	EventConfiguration *nodev1.NatsEventConfiguration
-	NatsAdapter        AdapterInterface
+	NatsAdapter AdapterInterface
+
+	fieldName  string
+	typeName   string
+	eventType  EventType
+	subjects   []string
+	providerId string
+
+	withStreamConfiguration   bool
+	consumerName              string
+	streamName                string
+	consumerInactiveThreshold int32
 }
 
 func (c *PubSubDataSource) GetFieldName() string {
-	return c.EventConfiguration.GetEngineEventConfiguration().GetFieldName()
+	return c.fieldName
 }
 
 func (c *PubSubDataSource) ResolveDataSource() (resolve.DataSource, error) {
 	var dataSource resolve.DataSource
-	eventType := c.EventConfiguration.GetEngineEventConfiguration().GetType()
 
-	switch eventType {
-	case nodev1.EventType_PUBLISH:
+	switch c.eventType {
+	case EventTypePublish:
 		dataSource = &NatsPublishDataSource{
 			pubSub: c.NatsAdapter,
 		}
-	case nodev1.EventType_REQUEST:
+	case EventTypeRequest:
 		dataSource = &NatsRequestDataSource{
 			pubSub: c.NatsAdapter,
 		}
 	default:
-		return nil, fmt.Errorf("failed to configure fetch: invalid event type \"%s\" for Nats", eventType.String())
+		return nil, fmt.Errorf("failed to configure fetch: invalid event type \"%d\" for Nats", c.eventType)
 	}
 
 	return dataSource, nil
 }
 
 func (c *PubSubDataSource) ResolveDataSourceInput(eventData []byte) (string, error) {
-	subjects := c.EventConfiguration.GetSubjects()
-
-	if len(subjects) != 1 {
-		return "", fmt.Errorf("publish and request events should define one subject but received %d", len(subjects))
+	if len(c.subjects) != 1 {
+		return "", fmt.Errorf("publish and request events should define one subject but received %d", len(c.subjects))
 	}
 
-	subject := subjects[0]
-
-	providerId := c.EventConfiguration.GetEngineEventConfiguration().GetProviderId()
+	subject := c.subjects[0]
 
 	evtCfg := PublishAndRequestEventConfiguration{
-		ProviderID: providerId,
+		ProviderID: c.providerId,
 		Subject:    subject,
 		Data:       eventData,
 	}
@@ -67,17 +79,15 @@ func (c *PubSubDataSource) ResolveDataSourceSubscription() (resolve.Subscription
 }
 
 func (c *PubSubDataSource) ResolveDataSourceSubscriptionInput() (string, error) {
-	providerId := c.EventConfiguration.GetEngineEventConfiguration().GetProviderId()
-
 	evtCfg := SubscriptionEventConfiguration{
-		ProviderID: providerId,
-		Subjects:   c.EventConfiguration.GetSubjects(),
+		ProviderID: c.providerId,
+		Subjects:   c.subjects,
 	}
-	if c.EventConfiguration.GetStreamConfiguration() != nil {
+	if c.withStreamConfiguration {
 		evtCfg.StreamConfiguration = &StreamConfiguration{
-			Consumer:                  c.EventConfiguration.GetStreamConfiguration().GetConsumerName(),
-			StreamName:                c.EventConfiguration.GetStreamConfiguration().GetStreamName(),
-			ConsumerInactiveThreshold: c.EventConfiguration.GetStreamConfiguration().GetConsumerInactiveThreshold(),
+			Consumer:                  c.consumerName,
+			StreamName:                c.streamName,
+			ConsumerInactiveThreshold: c.consumerInactiveThreshold,
 		}
 	}
 	object, err := json.Marshal(evtCfg)
@@ -88,39 +98,31 @@ func (c *PubSubDataSource) ResolveDataSourceSubscriptionInput() (string, error) 
 }
 
 func (c *PubSubDataSource) TransformEventData(extractFn datasource.ArgumentTemplateCallback) error {
-	transformedEventConfig, err := transformEventConfig(c.EventConfiguration, extractFn)
-	if err != nil {
-		return err
-	}
-	c.EventConfiguration = transformedEventConfig
-	return nil
-}
-
-func transformEventConfig(cfg *nodev1.NatsEventConfiguration, fn datasource.ArgumentTemplateCallback) (*nodev1.NatsEventConfiguration, error) {
-	switch v := cfg.GetEngineEventConfiguration().GetType(); v {
-	case nodev1.EventType_PUBLISH, nodev1.EventType_REQUEST:
-		extractedSubject, err := fn(cfg.GetSubjects()[0])
+	switch c.eventType {
+	case EventTypePublish, EventTypeRequest:
+		extractedSubject, err := extractFn(c.subjects[0])
 		if err != nil {
-			return cfg, fmt.Errorf("unable to parse subject with id %s", cfg.GetSubjects()[0])
+			return fmt.Errorf("unable to parse subject with id %s", c.subjects[0])
 		}
 		if !isValidNatsSubject(extractedSubject) {
-			return cfg, fmt.Errorf("invalid subject: %s", extractedSubject)
+			return fmt.Errorf("invalid subject: %s", extractedSubject)
 		}
-		cfg.Subjects = []string{extractedSubject}
-	case nodev1.EventType_SUBSCRIBE:
-		extractedSubjects := make([]string, 0, len(cfg.Subjects))
-		for _, rawSubject := range cfg.Subjects {
-			extractedSubject, err := fn(rawSubject)
+		c.subjects = []string{extractedSubject}
+	case EventTypeSubscribe:
+		extractedSubjects := make([]string, 0, len(c.subjects))
+		for _, rawSubject := range c.subjects {
+			extractedSubject, err := extractFn(rawSubject)
 			if err != nil {
-				return cfg, nil
+				return nil
 			}
 			if !isValidNatsSubject(extractedSubject) {
-				return cfg, fmt.Errorf("invalid subject: %s", extractedSubject)
+				return fmt.Errorf("invalid subject: %s", extractedSubject)
 			}
 			extractedSubjects = append(extractedSubjects, extractedSubject)
 		}
 		slices.Sort(extractedSubjects)
-		cfg.Subjects = extractedSubjects
+		c.subjects = extractedSubjects
 	}
-	return cfg, nil
+
+	return nil
 }
