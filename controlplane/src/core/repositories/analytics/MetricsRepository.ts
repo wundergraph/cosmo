@@ -761,4 +761,30 @@ export class MetricsRepository {
 
     return [];
   }
+
+  public async getClients(props: GetMetricsViewProps) {
+    const { dateRange, organizationId, graphId } = this.getMetricsProps(props);
+
+    const query = `
+    WITH
+      toDateTime('${dateRange.start}') AS startDate,
+      toDateTime('${dateRange.end}') AS endDate
+    SELECT
+      ClientName as name
+    FROM ${this.client.database}.operation_latency_metrics_5_30
+    WHERE Timestamp >= startDate AND Timestamp <= endDate
+      AND OrganizationID = '${organizationId}'
+      AND FederatedGraphID = '${graphId}'
+    GROUP BY ClientName`;
+
+    const res: {
+      name: string;
+    }[] = await this.client.queryPromise(query);
+
+    if (Array.isArray(res)) {
+      return res;
+    }
+
+    return [];
+  }
 }
