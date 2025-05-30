@@ -400,7 +400,7 @@ export default class Keycloak {
     userID: string;
   }) {
     // Delete from the root organization group
-    await this.client.users.delFromGroup({ id: userID, groupId, realm: realm || this.realm, });
+    await this.client.users.delFromGroup({ id: userID, groupId, realm: realm || this.realm });
 
     // And any subgroup
     const subGroups = await this.fetchAllSubGroups({ realm: realm || this.realm, kcGroupId: groupId });
