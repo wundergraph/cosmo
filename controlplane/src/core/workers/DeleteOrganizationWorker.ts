@@ -82,12 +82,12 @@ class DeleteOrganizationWorker implements IWorker {
       const oidcRepo = new OidcRepository(this.input.db);
       const oidcProvider = new OidcProvider();
 
-      await this.input.keycloakClient.authenticateClient();
-
       const org = await orgRepo.byId(job.data.organizationId);
       if (!org) {
         throw new Error('Organization not found');
       }
+
+      await this.input.keycloakClient.authenticateClient();
 
       const provider = await oidcRepo.getOidcProvider({ organizationId: job.data.organizationId });
       if (provider) {
@@ -105,10 +105,9 @@ class DeleteOrganizationWorker implements IWorker {
         this.input.deleteOrganizationAuditLogsQueue,
       );
 
-      await this.input.keycloakClient.deleteOrganizationGroup({
-        realm: this.input.keycloakRealm,
-        organizationSlug: org.slug,
-      });
+      if (org.kcGroupId) {
+        await this.input.keycloakClient.deleteGroupById({ realm: this.input.keycloakRealm, groupId: org.kcGroupId });
+      }
     } catch (err) {
       this.input.logger.error(
         { jobId: job.id, organizationId: job.data.organizationId, err },
