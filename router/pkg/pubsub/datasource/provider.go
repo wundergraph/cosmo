@@ -2,19 +2,35 @@ package datasource
 
 import (
 	"context"
-
-	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"github.com/wundergraph/cosmo/router/pkg/config"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
-	"go.uber.org/zap"
 )
-
-type ProviderFactory func(ctx context.Context, in *nodev1.DataSourceConfiguration, dsMeta *plan.DataSourceMetadata, config config.EventsConfiguration, logger *zap.Logger, hostName string, routerListenAddr string) (PubSubProvider, error)
 
 type ArgumentTemplateCallback func(tpl string) (string, error)
 
-type PubSubProvider interface {
+type Lifecycle interface {
 	Startup(ctx context.Context) error
 	Shutdown(ctx context.Context) error
-	FindPubSubDataSource(typeName string, fieldName string, extractFn ArgumentTemplateCallback) (PubSubDataSource, error)
+}
+
+// PubSubProvider is the interface that the PubSub provider must implement
+type PubSubProvider interface {
+	// ID Get the provider ID as specified in the configuration
+	ID() string
+	// TypeID Get the provider type id (e.g. "kafka", "nats")
+	TypeID() string
+	// Startup is the method called when the provider is started
+	Startup(ctx context.Context) error
+	// Shutdown is the method called when the provider is shut down
+	Shutdown(ctx context.Context) error
+}
+
+// PubSubProviderBuilder is the interface that the provider builder must implement.
+type PubSubProviderBuilder[P, E any] interface {
+	// TypeID Get the provider type id (e.g. "kafka", "nats")
+	TypeID() string
+	// BuildProvider Build the provider and the adapter
+	BuildProvider(options P) (PubSubProvider, error)
+	// BuildDataSource Build the data source for the given provider and event configuration
+	BuildDataSource(data E) (PubSubDataSource, error)
+	// BuildDataSource Build the data source for the given provider and event configuration
+	BuildDataSourceFactory(data E) *PubSubDataSourceFactory[P, E]
 }

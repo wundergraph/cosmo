@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 
 	"github.com/buger/jsonparser"
@@ -11,6 +12,21 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
+
+type SubscriptionEventConfiguration struct {
+	ProviderID string   `json:"providerId"`
+	Topics     []string `json:"topics"`
+}
+
+type PublishEventConfiguration struct {
+	ProviderID string          `json:"providerId"`
+	Topic      string          `json:"topic"`
+	Data       json.RawMessage `json:"data"`
+}
+
+func (s *PublishEventConfiguration) MarshalJSONTemplate() string {
+	return fmt.Sprintf(`{"topic":"%s", "data": %s, "providerId":"%s"}`, s.Topic, s.Data, s.ProviderID)
+}
 
 type SubscriptionDataSource struct {
 	pubSub AdapterInterface

@@ -12,31 +12,19 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
-
-// MockSubscriptionUpdater implements resolve.SubscriptionUpdater
-type MockSubscriptionUpdater struct {
-	mock.Mock
-}
-
-func (m *MockSubscriptionUpdater) Update(data []byte) {
-	m.Called(data)
-}
-
-func (m *MockSubscriptionUpdater) Done() {
-	m.Called()
-}
 
 func TestPublishEventConfiguration_MarshalJSONTemplate(t *testing.T) {
 	tests := []struct {
 		name        string
-		config      PublishEventConfiguration
+		config      PublishAndRequestEventConfiguration
 		wantPattern string
 	}{
 		{
 			name: "simple configuration",
-			config: PublishEventConfiguration{
+			config: PublishAndRequestEventConfiguration{
 				ProviderID: "test-provider",
 				Subject:    "test-subject",
 				Data:       json.RawMessage(`{"message":"hello"}`),
@@ -45,7 +33,7 @@ func TestPublishEventConfiguration_MarshalJSONTemplate(t *testing.T) {
 		},
 		{
 			name: "with special characters",
-			config: PublishEventConfiguration{
+			config: PublishAndRequestEventConfiguration{
 				ProviderID: "test-provider-id",
 				Subject:    "subject-with-hyphens",
 				Data:       json.RawMessage(`{"message":"special \"quotes\" here"}`),
@@ -125,7 +113,7 @@ func TestSubscriptionSource_UniqueRequestID(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			source := &SubscriptionSource{
-				pubSub: &mockAdapter{},
+				pubSub: NewMockAdapterInterface(t),
 			}
 			ctx := &resolve.Context{}
 			input := []byte(tt.input)
@@ -152,13 +140,13 @@ func TestSubscriptionSource_Start(t *testing.T) {
 	tests := []struct {
 		name        string
 		input       string
-		mockSetup   func(*mockAdapter)
+		mockSetup   func(*MockAdapterInterface, *datasource.MockSubscriptionUpdater)
 		expectError bool
 	}{
 		{
 			name:  "successful subscription",
 			input: `{"subjects":["subject1", "subject2"], "providerId":"test-provider"}`,
-			mockSetup: func(m *mockAdapter) {
+			mockSetup: func(m *MockAdapterInterface, updater *datasource.MockSubscriptionUpdater) {
 				m.On("Subscribe", mock.Anything, SubscriptionEventConfiguration{
 					ProviderID: "test-provider",
 					Subjects:   []string{"subject1", "subject2"},
@@ -169,7 +157,7 @@ func TestSubscriptionSource_Start(t *testing.T) {
 		{
 			name:  "adapter returns error",
 			input: `{"subjects":["subject1"], "providerId":"test-provider"}`,
-			mockSetup: func(m *mockAdapter) {
+			mockSetup: func(m *MockAdapterInterface, updater *datasource.MockSubscriptionUpdater) {
 				m.On("Subscribe", mock.Anything, SubscriptionEventConfiguration{
 					ProviderID: "test-provider",
 					Subjects:   []string{"subject1"},
@@ -180,15 +168,16 @@ func TestSubscriptionSource_Start(t *testing.T) {
 		{
 			name:        "invalid input json",
 			input:       `{"invalid json":`,
-			mockSetup:   func(m *mockAdapter) {},
+			mockSetup:   func(m *MockAdapterInterface, updater *datasource.MockSubscriptionUpdater) {},
 			expectError: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockAdapter := new(mockAdapter)
-			tt.mockSetup(mockAdapter)
+			mockAdapter := NewMockAdapterInterface(t)
+			updater := datasource.NewMockSubscriptionUpdater(t)
+			tt.mockSetup(mockAdapter, updater)
 
 			source := &SubscriptionSource{
 				pubSub: mockAdapter,
@@ -201,10 +190,6 @@ func TestSubscriptionSource_Start(t *testing.T) {
 			resolveCtx := &resolve.Context{}
 			resolveCtx = resolveCtx.WithContext(goCtx)
 
-			// Create a proper mock updater
-			updater := new(MockSubscriptionUpdater)
-			updater.On("Done").Return()
-
 			input := []byte(tt.input)
 			err := source.Start(resolveCtx, input, updater)
 
@@ -213,7 +198,6 @@ func TestSubscriptionSource_Start(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 			}
-			mockAdapter.AssertExpectations(t)
 		})
 	}
 }
@@ -222,7 +206,7 @@ func TestNatsPublishDataSource_Load(t *testing.T) {
 	tests := []struct {
 		name            string
 		input           string
-		mockSetup       func(*mockAdapter)
+		mockSetup       func(*MockAdapterInterface)
 		expectError     bool
 		expectedOutput  string
 		expectPublished bool
@@ -230,7 +214,7 @@ func TestNatsPublishDataSource_Load(t *testing.T) {
 		{
 			name:  "successful publish",
 			input: `{"subject":"test-subject", "data":{"message":"hello"}, "providerId":"test-provider"}`,
-			mockSetup: func(m *mockAdapter) {
+			mockSetup: func(m *MockAdapterInterface) {
 				m.On("Publish", mock.Anything, mock.MatchedBy(func(event PublishAndRequestEventConfiguration) bool {
 					return event.ProviderID == "test-provider" &&
 						event.Subject == "test-subject" &&
@@ -244,7 +228,7 @@ func TestNatsPublishDataSource_Load(t *testing.T) {
 		{
 			name:  "publish error",
 			input: `{"subject":"test-subject", "data":{"message":"hello"}, "providerId":"test-provider"}`,
-			mockSetup: func(m *mockAdapter) {
+			mockSetup: func(m *MockAdapterInterface) {
 				m.On("Publish", mock.Anything, mock.Anything).Return(errors.New("publish error"))
 			},
 			expectError:     false, // The Load method doesn't return the publish error directly
@@ -254,7 +238,7 @@ func TestNatsPublishDataSource_Load(t *testing.T) {
 		{
 			name:            "invalid input json",
 			input:           `{"invalid json":`,
-			mockSetup:       func(m *mockAdapter) {},
+			mockSetup:       func(m *MockAdapterInterface) {},
 			expectError:     true,
 			expectPublished: false,
 		},
@@ -262,7 +246,7 @@ func TestNatsPublishDataSource_Load(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockAdapter := new(mockAdapter)
+			mockAdapter := NewMockAdapterInterface(t)
 			tt.mockSetup(mockAdapter)
 
 			dataSource := &NatsPublishDataSource{
@@ -279,9 +263,6 @@ func TestNatsPublishDataSource_Load(t *testing.T) {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
-				if tt.expectPublished {
-					mockAdapter.AssertExpectations(t)
-				}
 				if tt.expectedOutput != "" {
 					assert.Equal(t, tt.expectedOutput, out.String())
 				}
@@ -301,14 +282,14 @@ func TestNatsRequestDataSource_Load(t *testing.T) {
 	tests := []struct {
 		name           string
 		input          string
-		mockSetup      func(*mockAdapter)
+		mockSetup      func(*MockAdapterInterface)
 		expectError    bool
 		expectedOutput string
 	}{
 		{
 			name:  "successful request",
 			input: `{"subject":"test-subject", "data":{"message":"hello"}, "providerId":"test-provider"}`,
-			mockSetup: func(m *mockAdapter) {
+			mockSetup: func(m *MockAdapterInterface) {
 				m.On("Request", mock.Anything, mock.MatchedBy(func(event PublishAndRequestEventConfiguration) bool {
 					return event.ProviderID == "test-provider" &&
 						event.Subject == "test-subject" &&
@@ -325,7 +306,7 @@ func TestNatsRequestDataSource_Load(t *testing.T) {
 		{
 			name:  "request error",
 			input: `{"subject":"test-subject", "data":{"message":"hello"}, "providerId":"test-provider"}`,
-			mockSetup: func(m *mockAdapter) {
+			mockSetup: func(m *MockAdapterInterface) {
 				m.On("Request", mock.Anything, mock.Anything, mock.Anything).Return(errors.New("request error"))
 			},
 			expectError:    true,
@@ -334,7 +315,7 @@ func TestNatsRequestDataSource_Load(t *testing.T) {
 		{
 			name:           "invalid input json",
 			input:          `{"invalid json":`,
-			mockSetup:      func(m *mockAdapter) {},
+			mockSetup:      func(m *MockAdapterInterface) {},
 			expectError:    true,
 			expectedOutput: "",
 		},
@@ -342,7 +323,7 @@ func TestNatsRequestDataSource_Load(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockAdapter := new(mockAdapter)
+			mockAdapter := NewMockAdapterInterface(t)
 			tt.mockSetup(mockAdapter)
 
 			dataSource := &NatsRequestDataSource{
@@ -359,7 +340,6 @@ func TestNatsRequestDataSource_Load(t *testing.T) {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
-				mockAdapter.AssertExpectations(t)
 				if tt.expectedOutput != "" {
 					assert.Equal(t, tt.expectedOutput, out.String())
 				}

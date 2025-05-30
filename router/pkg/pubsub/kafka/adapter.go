@@ -19,21 +19,6 @@ var (
 	errClientClosed = errors.New("client closed")
 )
 
-func NewAdapter(ctx context.Context, logger *zap.Logger, opts []kgo.Opt) (AdapterInterface, error) {
-	ctx, cancel := context.WithCancel(ctx)
-	if logger == nil {
-		logger = zap.NewNop()
-	}
-
-	return &Adapter{
-		ctx:     ctx,
-		logger:  logger.With(zap.String("pubsub", "kafka")),
-		opts:    opts,
-		closeWg: sync.WaitGroup{},
-		cancel:  cancel,
-	}, nil
-}
-
 // AdapterInterface defines the interface for Kafka adapter operations
 type AdapterInterface interface {
 	Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error
@@ -55,9 +40,6 @@ type Adapter struct {
 	closeWg     sync.WaitGroup
 	cancel      context.CancelFunc
 }
-
-// Ensure Adapter implements AdapterInterface
-var _ AdapterInterface = (*Adapter)(nil)
 
 // topicPoller polls the Kafka topic for new records and calls the updateTriggers function.
 func (p *Adapter) topicPoller(ctx context.Context, client *kgo.Client, updater resolve.SubscriptionUpdater) error {
@@ -238,4 +220,19 @@ func (p *Adapter) Shutdown(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func NewAdapter(ctx context.Context, logger *zap.Logger, opts []kgo.Opt) (*Adapter, error) {
+	ctx, cancel := context.WithCancel(ctx)
+	if logger == nil {
+		logger = zap.NewNop()
+	}
+
+	return &Adapter{
+		ctx:     ctx,
+		logger:  logger.With(zap.String("pubsub", "kafka")),
+		opts:    opts,
+		closeWg: sync.WaitGroup{},
+		cancel:  cancel,
+	}, nil
 }

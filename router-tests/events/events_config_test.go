@@ -1,10 +1,11 @@
 package events_test
 
 import (
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/pkg/config"
-	"testing"
 )
 
 func TestEventsConfig(t *testing.T) {
@@ -23,7 +24,7 @@ func TestEventsConfig(t *testing.T) {
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			assert.Fail(t, "should not be called")
 		})
-		assert.ErrorContains(t, err, "failed to find Kafka provider with ID")
+		assert.ErrorContains(t, err, "kafka provider with ID my-kafka is not defined")
 	})
 
 	t.Run("nats provider not specified in the router configuration", func(t *testing.T) {
@@ -37,6 +38,6 @@ func TestEventsConfig(t *testing.T) {
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			assert.Fail(t, "should not be called")
 		})
-		assert.ErrorContains(t, err, "failed to find Nats provider with ID")
+		assert.ErrorContains(t, err, "nats provider with ID default is not defined")
 	})
 }

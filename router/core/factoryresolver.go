@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-
 	"net/url"
 	"slices"
 
@@ -298,6 +297,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 	}
 
 	var providers []pubsub_datasource.PubSubProvider
+	var pubSubDS []pubsub.DataSourceConfigurationWithMetadata
 
 	for _, in := range engineConfig.DatasourceConfigurations {
 		var out plan.DataSource
@@ -452,43 +452,39 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 			}
 
 		case nodev1.DataSourceKind_PUBSUB:
-			var err error
-
-			dsMeta := l.dataSourceMetaData(in)
-			providersFactories := pubsub.GetProviderFactories()
-			for _, providerFactory := range providersFactories {
-				provider, err := providerFactory(
-					l.ctx,
-					in,
-					dsMeta,
-					routerEngineConfig.Events,
-					l.logger,
-					l.resolver.InstanceData().HostName,
-					l.resolver.InstanceData().ListenAddress,
-				)
-				if err != nil {
-					return nil, providers, err
-				}
-				if provider != nil {
-					providers = append(providers, provider)
-				}
-			}
-
-			out, err = plan.NewDataSourceConfiguration(
-				in.Id,
-				pubsub_datasource.NewFactory(l.ctx, routerEngineConfig.Events, providers),
-				dsMeta,
-				providers,
-			)
-			if err != nil {
-				return nil, providers, err
-			}
+			pubSubDS = append(pubSubDS, pubsub.DataSourceConfigurationWithMetadata{
+				Configuration: in,
+				Metadata:      l.dataSourceMetaData(in),
+			})
 		default:
 			return nil, providers, fmt.Errorf("unknown data source type %q", in.Kind)
 		}
 
-		outConfig.DataSources = append(outConfig.DataSources, out)
+		if out != nil {
+			outConfig.DataSources = append(outConfig.DataSources, out)
+		}
 	}
+
+	factoryProviders, factoryDataSources, err := pubsub.BuildProvidersAndDataSources(
+		l.ctx,
+		routerEngineConfig.Events,
+		l.logger,
+		pubSubDS,
+		l.resolver.InstanceData().HostName,
+		l.resolver.InstanceData().ListenAddress,
+	)
+	if err != nil {
+		return nil, providers, err
+	}
+
+	if len(factoryProviders) > 0 {
+		providers = append(providers, factoryProviders...)
+	}
+
+	if len(factoryDataSources) > 0 {
+		outConfig.DataSources = append(outConfig.DataSources, factoryDataSources...)
+	}
+
 	return &outConfig, providers, nil
 }
 

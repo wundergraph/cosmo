@@ -12,9 +12,9 @@ import (
 // VerifyPubSubDataSourceImplementation is a common test function to verify any PubSubDataSource implementation
 // This function can be used by other packages to test their PubSubDataSource implementations
 func VerifyPubSubDataSourceImplementation(t *testing.T, pubSub datasource.PubSubDataSource) {
-	// Test GetEngineEventConfiguration
-	engineEventConfig := pubSub.EngineEventConfiguration()
-	require.NotNil(t, engineEventConfig, "Expected non-nil EngineEventConfiguration")
+	// Test GetFieldName
+	fieldName := pubSub.GetFieldName()
+	require.NotEmpty(t, fieldName, "Expected non-empty field name")
 
 	// Test GetResolveDataSource
 	dataSource, err := pubSub.ResolveDataSource()

@@ -9,7 +9,7 @@ import (
 )
 
 func BuildEventDataBytes(ref int, operation *ast.Document, variables *resolve.Variables) ([]byte, error) {
-	// Collect the field arguments for fetch based operations
+	// Collect the field arguments for fetch-based operations
 	fieldArgs := operation.FieldArguments(ref)
 	var dataBuffer bytes.Buffer
 	dataBuffer.WriteByte('{')

@@ -515,6 +515,10 @@ type NatsEventSource struct {
 	Authentication *NatsAuthentication `yaml:"authentication,omitempty"`
 }
 
+func (n NatsEventSource) GetID() string {
+	return n.ID
+}
+
 type KafkaSASLPlainAuthentication struct {
 	Password *string `yaml:"password,omitempty"`
 	Username *string `yaml:"username,omitempty"`
@@ -533,6 +537,10 @@ type KafkaEventSource struct {
 	Brokers        []string               `yaml:"brokers,omitempty"`
 	Authentication *KafkaAuthentication   `yaml:"authentication,omitempty"`
 	TLS            *KafkaTLSConfiguration `yaml:"tls,omitempty"`
+}
+
+func (k KafkaEventSource) GetID() string {
+	return k.ID
 }
 
 type EventProviders struct {

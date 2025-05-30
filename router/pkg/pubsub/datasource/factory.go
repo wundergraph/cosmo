@@ -4,35 +4,32 @@ import (
 	"context"
 
 	"github.com/jensneuse/abstractlogger"
-	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 )
 
-func NewFactory(executionContext context.Context, config config.EventsConfiguration, providers []PubSubProvider) *Factory {
-	return &Factory{
-		providers:        providers,
-		executionContext: executionContext,
-		config:           config,
+func NewFactory[P, E any](executionContext context.Context, pubSubDataSourceFactory *PubSubDataSourceFactory[P, E]) *Factory[P, E] {
+	return &Factory[P, E]{
+		pubSubDataSourceFactory: pubSubDataSourceFactory,
+		executionContext:        executionContext,
 	}
 }
 
-type Factory struct {
-	providers        []PubSubProvider
-	executionContext context.Context
-	config           config.EventsConfiguration
+type Factory[P, E any] struct {
+	pubSubDataSourceFactory *PubSubDataSourceFactory[P, E]
+	executionContext        context.Context
 }
 
-func (f *Factory) Planner(_ abstractlogger.Logger) plan.DataSourcePlanner[[]PubSubProvider] {
-	return &Planner{
-		providers: f.providers,
+func (f *Factory[P, E]) Planner(_ abstractlogger.Logger) plan.DataSourcePlanner[*PubSubDataSourceFactory[P, E]] {
+	return &Planner[P, E]{
+		pubSubDataSourceFactory: f.pubSubDataSourceFactory,
 	}
 }
 
-func (f *Factory) Context() context.Context {
+func (f *Factory[P, E]) Context() context.Context {
 	return f.executionContext
 }
 
-func (f *Factory) UpstreamSchema(dataSourceConfig plan.DataSourceConfiguration[[]PubSubProvider]) (*ast.Document, bool) {
+func (f *Factory[P, E]) UpstreamSchema(dataSourceConfig plan.DataSourceConfiguration[*PubSubDataSourceFactory[P, E]]) (*ast.Document, bool) {
 	return nil, false
 }

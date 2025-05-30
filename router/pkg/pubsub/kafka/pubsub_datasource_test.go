@@ -8,29 +8,19 @@ import (
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/pubsubtest"
 )
 
 func TestKafkaPubSubDataSource(t *testing.T) {
-	// Create event configuration with required fields
-	engineEventConfig := &nodev1.EngineEventConfiguration{
-		ProviderId: "test-provider",
-		Type:       nodev1.EventType_PUBLISH,
-		TypeName:   "TestType",
-		FieldName:  "testField",
-	}
-
-	kafkaCfg := &nodev1.KafkaEventConfiguration{
-		EngineEventConfiguration: engineEventConfig,
-		Topics:                   []string{"test-topic"},
-	}
-
 	// Create the data source to test with a real adapter
 	adapter := &Adapter{}
 	pubsub := &PubSubDataSource{
-		EventConfiguration: kafkaCfg,
-		KafkaAdapter:       adapter,
+		KafkaAdapter: adapter,
+		fieldName:    "testField",
+		typeName:     "TestType",
+		eventType:    EventTypePublish,
+		topics:       []string{"test-topic"},
+		providerId:   "test-provider",
 	}
 
 	// Run the standard test suite
@@ -39,21 +29,8 @@ func TestKafkaPubSubDataSource(t *testing.T) {
 
 // TestPubSubDataSourceWithMockAdapter tests the PubSubDataSource with a mocked adapter
 func TestPubSubDataSourceWithMockAdapter(t *testing.T) {
-	// Create event configuration with required fields
-	engineEventConfig := &nodev1.EngineEventConfiguration{
-		ProviderId: "test-provider",
-		Type:       nodev1.EventType_PUBLISH,
-		TypeName:   "TestType",
-		FieldName:  "testField",
-	}
-
-	kafkaCfg := &nodev1.KafkaEventConfiguration{
-		EngineEventConfiguration: engineEventConfig,
-		Topics:                   []string{"test-topic"},
-	}
-
 	// Create mock adapter
-	mockAdapter := new(mockAdapter)
+	mockAdapter := NewMockAdapterInterface(t)
 
 	// Configure mock expectations for Publish
 	mockAdapter.On("Publish", mock.Anything, mock.MatchedBy(func(event PublishEventConfiguration) bool {
@@ -62,8 +39,12 @@ func TestPubSubDataSourceWithMockAdapter(t *testing.T) {
 
 	// Create the data source with mock adapter
 	pubsub := &PubSubDataSource{
-		EventConfiguration: kafkaCfg,
-		KafkaAdapter:       mockAdapter,
+		KafkaAdapter: mockAdapter,
+		fieldName:    "testField",
+		typeName:     "TestType",
+		eventType:    EventTypePublish,
+		topics:       []string{"test-topic"},
+		providerId:   "test-provider",
 	}
 
 	// Get the data source
@@ -79,33 +60,21 @@ func TestPubSubDataSourceWithMockAdapter(t *testing.T) {
 	err = ds.Load(context.Background(), []byte(input), out)
 	require.NoError(t, err)
 	require.Equal(t, `{"success": true}`, out.String())
-
-	// Verify mock expectations
-	mockAdapter.AssertExpectations(t)
 }
 
 // TestPubSubDataSource_GetResolveDataSource_WrongType tests the PubSubDataSource with a mocked adapter
 func TestPubSubDataSource_GetResolveDataSource_WrongType(t *testing.T) {
-	// Create event configuration with required fields
-	engineEventConfig := &nodev1.EngineEventConfiguration{
-		ProviderId: "test-provider",
-		Type:       nodev1.EventType_SUBSCRIBE,
-		TypeName:   "TestType",
-		FieldName:  "testField",
-	}
-
-	kafkaCfg := &nodev1.KafkaEventConfiguration{
-		EngineEventConfiguration: engineEventConfig,
-		Topics:                   []string{"test-topic"},
-	}
-
 	// Create mock adapter
-	mockAdapter := new(mockAdapter)
+	mockAdapter := NewMockAdapterInterface(t)
 
 	// Create the data source with mock adapter
 	pubsub := &PubSubDataSource{
-		EventConfiguration: kafkaCfg,
-		KafkaAdapter:       mockAdapter,
+		KafkaAdapter: mockAdapter,
+		fieldName:    "testField",
+		typeName:     "TestType",
+		eventType:    EventTypeSubscribe,
+		topics:       []string{"test-topic"},
+		providerId:   "test-provider",
 	}
 
 	// Get the data source
@@ -116,22 +85,13 @@ func TestPubSubDataSource_GetResolveDataSource_WrongType(t *testing.T) {
 
 // TestPubSubDataSource_GetResolveDataSourceInput_MultipleTopics tests the PubSubDataSource with a mocked adapter
 func TestPubSubDataSource_GetResolveDataSourceInput_MultipleTopics(t *testing.T) {
-	// Create event configuration with required fields
-	engineEventConfig := &nodev1.EngineEventConfiguration{
-		ProviderId: "test-provider",
-		Type:       nodev1.EventType_PUBLISH,
-		TypeName:   "TestType",
-		FieldName:  "testField",
-	}
-
-	kafkaCfg := &nodev1.KafkaEventConfiguration{
-		EngineEventConfiguration: engineEventConfig,
-		Topics:                   []string{"test-topic-1", "test-topic-2"},
-	}
-
 	// Create the data source with mock adapter
 	pubsub := &PubSubDataSource{
-		EventConfiguration: kafkaCfg,
+		fieldName:  "testField",
+		typeName:   "TestType",
+		eventType:  EventTypePublish,
+		topics:     []string{"test-topic-1", "test-topic-2"},
+		providerId: "test-provider",
 	}
 
 	// Get the input
@@ -142,22 +102,13 @@ func TestPubSubDataSource_GetResolveDataSourceInput_MultipleTopics(t *testing.T)
 
 // TestPubSubDataSource_GetResolveDataSourceInput_NoTopics tests the PubSubDataSource with a mocked adapter
 func TestPubSubDataSource_GetResolveDataSourceInput_NoTopics(t *testing.T) {
-	// Create event configuration with required fields
-	engineEventConfig := &nodev1.EngineEventConfiguration{
-		ProviderId: "test-provider",
-		Type:       nodev1.EventType_PUBLISH,
-		TypeName:   "TestType",
-		FieldName:  "testField",
-	}
-
-	kafkaCfg := &nodev1.KafkaEventConfiguration{
-		EngineEventConfiguration: engineEventConfig,
-		Topics:                   []string{},
-	}
-
 	// Create the data source with mock adapter
 	pubsub := &PubSubDataSource{
-		EventConfiguration: kafkaCfg,
+		fieldName:  "testField",
+		typeName:   "TestType",
+		eventType:  EventTypePublish,
+		topics:     []string{},
+		providerId: "test-provider",
 	}
 
 	// Get the input
@@ -170,22 +121,13 @@ func TestPubSubDataSource_GetResolveDataSourceInput_NoTopics(t *testing.T) {
 // for multiple topics. The publish and resolve datasource tests are skipped since they
 // do not support multiple topics.
 func TestKafkaPubSubDataSourceMultiTopicSubscription(t *testing.T) {
-	// Create event configuration with multiple topics
-	engineEventConfig := &nodev1.EngineEventConfiguration{
-		ProviderId: "test-provider",
-		Type:       nodev1.EventType_PUBLISH, // Must be PUBLISH as it's the only supported type
-		TypeName:   "TestType",
-		FieldName:  "testField",
-	}
-
-	kafkaCfg := &nodev1.KafkaEventConfiguration{
-		EngineEventConfiguration: engineEventConfig,
-		Topics:                   []string{"test-topic-1", "test-topic-2"},
-	}
-
 	// Create the data source to test with mock adapter
 	pubsub := &PubSubDataSource{
-		EventConfiguration: kafkaCfg,
+		fieldName:  "testField",
+		typeName:   "TestType",
+		eventType:  EventTypePublish,
+		topics:     []string{"test-topic-1", "test-topic-2"},
+		providerId: "test-provider",
 	}
 
 	// Test GetResolveDataSourceSubscriptionInput

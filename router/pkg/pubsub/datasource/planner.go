@@ -11,51 +11,62 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
-type Planner struct {
-	id               int
-	providers        []PubSubProvider
-	pubSubDataSource PubSubDataSource
-	rootFieldRef     int
-	variables        resolve.Variables
-	visitor          *plan.Visitor
+type Planner[P, E any] struct {
+	id                      int
+	pubSubDataSourceFactory *PubSubDataSourceFactory[P, E]
+	rootFieldRef            int
+	variables               resolve.Variables
+	visitor                 *plan.Visitor
+	extractFn               func(tpl string) (string, error)
 }
 
-func (p *Planner) SetID(id int) {
+func (p *Planner[P, E]) SetID(id int) {
 	p.id = id
 }
 
-func (p *Planner) ID() (id int) {
+func (p *Planner[P, E]) ID() (id int) {
 	return p.id
 }
 
-func (p *Planner) DownstreamResponseFieldAlias(downstreamFieldRef int) (alias string, exists bool) {
+func (p *Planner[P, E]) DownstreamResponseFieldAlias(downstreamFieldRef int) (alias string, exists bool) {
 	// skip, not required
 	return
 }
 
-func (p *Planner) DataSourcePlanningBehavior() plan.DataSourcePlanningBehavior {
+func (p *Planner[P, E]) DataSourcePlanningBehavior() plan.DataSourcePlanningBehavior {
 	return plan.DataSourcePlanningBehavior{
 		MergeAliasedRootNodes:      false,
 		OverrideFieldPathFromAlias: false,
 	}
 }
 
-func (p *Planner) Register(visitor *plan.Visitor, configuration plan.DataSourceConfiguration[[]PubSubProvider], _ plan.DataSourcePlannerConfiguration) error {
+func (p *Planner[P, E]) Register(visitor *plan.Visitor, configuration plan.DataSourceConfiguration[*PubSubDataSourceFactory[P, E]], _ plan.DataSourcePlannerConfiguration) error {
 	p.visitor = visitor
 	visitor.Walker.RegisterEnterFieldVisitor(p)
 	visitor.Walker.RegisterEnterDocumentVisitor(p)
-	p.providers = configuration.CustomConfiguration()
+	p.pubSubDataSourceFactory = configuration.CustomConfiguration()
+
 	return nil
 }
 
-func (p *Planner) ConfigureFetch() resolve.FetchConfiguration {
-	if p.pubSubDataSource == nil {
+func (p *Planner[P, E]) ConfigureFetch() resolve.FetchConfiguration {
+	if p.pubSubDataSourceFactory == nil {
+		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("data source not set"))
 		return resolve.FetchConfiguration{}
 	}
 
-	var dataSource resolve.DataSource
+	pubSubDataSource, err := p.pubSubDataSourceFactory.BuildDataSource()
+	if err != nil {
+		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to build data source: %w", err))
+		return resolve.FetchConfiguration{}
+	}
 
-	dataSource, err := p.pubSubDataSource.ResolveDataSource()
+	err = pubSubDataSource.TransformEventData(p.extractFn)
+	if err != nil {
+		p.visitor.Walker.StopWithInternalErr(err)
+	}
+
+	dataSource, err := pubSubDataSource.ResolveDataSource()
 	if err != nil {
 		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to get data source: %w", err))
 		return resolve.FetchConfiguration{}
@@ -67,7 +78,7 @@ func (p *Planner) ConfigureFetch() resolve.FetchConfiguration {
 		return resolve.FetchConfiguration{}
 	}
 
-	input, err := p.pubSubDataSource.ResolveDataSourceInput(event)
+	input, err := pubSubDataSource.ResolveDataSourceInput(event)
 	if err != nil {
 		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to get resolve data source input: %w", err))
 		return resolve.FetchConfiguration{}
@@ -78,24 +89,35 @@ func (p *Planner) ConfigureFetch() resolve.FetchConfiguration {
 		Variables:  p.variables,
 		DataSource: dataSource,
 		PostProcessing: resolve.PostProcessingConfiguration{
-			MergePath: []string{p.pubSubDataSource.EngineEventConfiguration().GetFieldName()},
+			MergePath: []string{pubSubDataSource.GetFieldName()},
 		},
 	}
 }
 
-func (p *Planner) ConfigureSubscription() plan.SubscriptionConfiguration {
-	if p.pubSubDataSource == nil {
-		// p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to configure subscription: event manager is nil"))
+func (p *Planner[P, E]) ConfigureSubscription() plan.SubscriptionConfiguration {
+	if p.pubSubDataSourceFactory == nil {
+		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("data source not set"))
 		return plan.SubscriptionConfiguration{}
 	}
 
-	dataSource, err := p.pubSubDataSource.ResolveDataSourceSubscription()
+	pubSubDataSource, err := p.pubSubDataSourceFactory.BuildDataSource()
 	if err != nil {
 		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to get resolve data source subscription: %w", err))
 		return plan.SubscriptionConfiguration{}
 	}
 
-	input, err := p.pubSubDataSource.ResolveDataSourceSubscriptionInput()
+	err = pubSubDataSource.TransformEventData(p.extractFn)
+	if err != nil {
+		p.visitor.Walker.StopWithInternalErr(err)
+	}
+
+	dataSource, err := pubSubDataSource.ResolveDataSourceSubscription()
+	if err != nil {
+		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to get resolve data source subscription: %w", err))
+		return plan.SubscriptionConfiguration{}
+	}
+
+	input, err := pubSubDataSource.ResolveDataSourceSubscriptionInput()
 	if err != nil {
 		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to get resolve data source subscription input: %w", err))
 		return plan.SubscriptionConfiguration{}
@@ -106,13 +128,13 @@ func (p *Planner) ConfigureSubscription() plan.SubscriptionConfiguration {
 		Variables:  p.variables,
 		DataSource: dataSource,
 		PostProcessing: resolve.PostProcessingConfiguration{
-			MergePath: []string{p.pubSubDataSource.EngineEventConfiguration().GetFieldName()},
+			MergePath: []string{pubSubDataSource.GetFieldName()},
 		},
 	}
 }
 
-func (p *Planner) addContextVariableByArgumentRef(argumentRef int, argumentPath []string) (string, error) {
-	variablePath, err := p.visitor.Operation.VariablePathByArgumentRefAndArgumentPath(argumentRef, argumentPath, p.visitor.Walker.Ancestors[0].Ref)
+func (p *Planner[P, E]) addContextVariableByArgumentRef(argumentRef int, operationTypeRef int, argumentPath []string) (string, error) {
+	variablePath, err := p.visitor.Operation.VariablePathByArgumentRefAndArgumentPath(argumentRef, argumentPath, operationTypeRef)
 	if err != nil {
 		return "", err
 	}
@@ -127,15 +149,7 @@ func (p *Planner) addContextVariableByArgumentRef(argumentRef int, argumentPath 
 	return variablePlaceHolder, nil
 }
 
-func StringParser(subject string) (string, error) {
-	matches := argument_templates.ArgumentTemplateRegex.FindAllStringSubmatch(subject, -1)
-	if len(matches) < 1 {
-		return subject, nil
-	}
-	return "", fmt.Errorf(`subject "%s" is not a valid NATS subject`, subject)
-}
-
-func (p *Planner) extractArgumentTemplate(fieldRef int, template string) (string, error) {
+func (p *Planner[P, E]) extractArgumentTemplate(fieldRef int, operationDefinitionRef int, typeDefinitionRef int, template string) (string, error) {
 	matches := argument_templates.ArgumentTemplateRegex.FindAllStringSubmatch(template, -1)
 	// If no argument templates are defined, there are only static values
 	if len(matches) < 1 {
@@ -143,13 +157,13 @@ func (p *Planner) extractArgumentTemplate(fieldRef int, template string) (string
 	}
 	fieldNameBytes := p.visitor.Operation.FieldNameBytes(fieldRef)
 	// TODO: handling for interfaces and unions
-	fieldDefinitionRef, ok := p.visitor.Definition.ObjectTypeDefinitionFieldWithName(p.visitor.Walker.EnclosingTypeDefinition.Ref, fieldNameBytes)
+	fieldDefinitionRef, ok := p.visitor.Definition.ObjectTypeDefinitionFieldWithName(typeDefinitionRef, fieldNameBytes)
 	if !ok {
 		return "", fmt.Errorf(`expected field definition to exist for field "%s"`, fieldNameBytes)
 	}
 	templateWithVariableTemplateReplacements := template
 	for templateNumber, groups := range matches {
-		// The first group is the whole template; the second is the period delimited argument path
+		// The first group is the whole template; the second is the period-delimited argument path
 		if len(groups) != 2 {
 			return "", fmt.Errorf(`argument template #%d defined on field "%s" is invalid: expected 2 matching groups but received %d`, templateNumber+1, fieldNameBytes, len(groups)-1)
 		}
@@ -163,7 +177,7 @@ func (p *Planner) extractArgumentTemplate(fieldRef int, template string) (string
 			return "", fmt.Errorf(`operation field "%s" does not define argument "%s"`, fieldNameBytes, argumentNameBytes)
 		}
 		// variablePlaceholder has the form $$0$$, $$1$$, etc.
-		variablePlaceholder, err := p.addContextVariableByArgumentRef(argumentRef, validationResult.ArgumentPath)
+		variablePlaceholder, err := p.addContextVariableByArgumentRef(argumentRef, operationDefinitionRef, validationResult.ArgumentPath)
 		if err != nil {
 			return "", fmt.Errorf(`failed to retrieve variable placeholder for argument ""%s" defined on operation field "%s": %w`, argumentNameBytes, fieldNameBytes, err)
 		}
@@ -174,41 +188,21 @@ func (p *Planner) extractArgumentTemplate(fieldRef int, template string) (string
 	return templateWithVariableTemplateReplacements, nil
 }
 
-func (p *Planner) EnterDocument(_, _ *ast.Document) {
+func (p *Planner[P, E]) EnterDocument(_, _ *ast.Document) {
 	p.rootFieldRef = -1
 }
 
-func (p *Planner) EnterField(ref int) {
+func (p *Planner[P, E]) EnterField(ref int) {
 	if p.rootFieldRef != -1 {
 		// This is a nested field; nothing needs to be done
 		return
 	}
 	p.rootFieldRef = ref
 
-	fieldName := p.visitor.Operation.FieldNameString(ref)
-	typeName := p.visitor.Walker.EnclosingTypeDefinition.NameString(p.visitor.Definition)
+	operationDefinitionRef := p.visitor.Walker.Ancestors[0].Ref
+	typeDefinitionRef := p.visitor.Walker.EnclosingTypeDefinition.Ref
 
-	extractFn := func(tpl string) (string, error) {
-		return p.extractArgumentTemplate(ref, tpl)
+	p.extractFn = func(tpl string) (string, error) {
+		return p.extractArgumentTemplate(ref, operationDefinitionRef, typeDefinitionRef, tpl)
 	}
-
-	var pubSubDataSource PubSubDataSource
-	var err error
-
-	for _, pubSub := range p.providers {
-		pubSubDataSource, err = pubSub.FindPubSubDataSource(typeName, fieldName, extractFn)
-		if err != nil {
-			p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to find event config for type name \"%s\" and field name \"%s\": %w", typeName, fieldName, err))
-			return
-		}
-		if pubSubDataSource != nil {
-			break
-		}
-	}
-
-	if pubSubDataSource == nil {
-		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to find event config for type name \"%s\" and field name \"%s\"", typeName, fieldName))
-	}
-
-	p.pubSubDataSource = pubSubDataSource
 }
