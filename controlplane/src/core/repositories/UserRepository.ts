@@ -116,8 +116,8 @@ export class UserRepository {
     id: string;
     oidcProviders: { alias: string; orgSlug: string }[];
     orgMemberships: {
-      memberships: { slug: string }[];
-      soloAdminSoloMemberOrgs: { slug: string }[];
+      memberships: { slug: string; kcGroupId: string | undefined }[];
+      soloAdminSoloMemberOrgs: { slug: string; kcGroupId: string | undefined }[];
     };
     keycloakClient: Keycloak;
     keycloakRealm: string;
@@ -137,19 +137,24 @@ export class UserRepository {
 
       // Remove keycloak user from all org groups
       for (const org of input.orgMemberships.memberships) {
+        if (!org.kcGroupId) {
+          continue;
+        }
+
         await input.keycloakClient.removeUserFromOrganization({
           realm: input.keycloakRealm,
+          groupId: org.kcGroupId,
           userID: input.id,
-          groupName: org.slug,
         });
       }
 
       // Delete keycloak organization groups
       for (const org of input.orgMemberships.soloAdminSoloMemberOrgs) {
-        await input.keycloakClient.deleteOrganizationGroup({
-          realm: input.keycloakRealm,
-          organizationSlug: org.slug,
-        });
+        if (!org.kcGroupId) {
+          continue;
+        }
+
+        await input.keycloakClient.deleteGroupById({ realm: input.keycloakRealm, groupId: org.kcGroupId });
       }
 
       // Delete user from keycloak

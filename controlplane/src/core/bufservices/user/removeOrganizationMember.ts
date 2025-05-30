@@ -91,12 +91,13 @@ export function removeOrganizationMember(
     }
 
     await opts.keycloakClient.authenticateClient();
-
-    await opts.keycloakClient.removeUserFromOrganization({
-      realm: opts.keycloakRealm,
-      userID: user.id,
-      groupName: org.slug,
-    });
+    if (org.kcGroupId) {
+      await opts.keycloakClient.removeUserFromOrganization({
+        realm: opts.keycloakRealm,
+        groupId: org.kcGroupId,
+        userID: user.id,
+      });
+    }
 
     await orgRepo.removeOrganizationMember({ organizationID: authContext.organizationId, userID: user.id });
 

@@ -102,7 +102,7 @@ try {
       organizationSlug: user.organization.slug,
       userId: keycloakUserID,
       organizationId,
-      groups: ['organization-admin'],
+      roles: ['organization-admin'],
     },
     undefined,
     kcRootGroupId,

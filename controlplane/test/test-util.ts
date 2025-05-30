@@ -51,22 +51,12 @@ export const DEFAULT_SUBGRAPH_URL_TWO = 'http://localhost:4002';
 export const DEFAULT_SUBGRAPH_URL_THREE = 'http://localhost:4003';
 export const DEFAULT_NAMESPACE = 'default';
 
-const getKeycloakGroups = async (realm: string, keycloak: Keycloak, organizationSlug: string) => {
-  const organizationGroup = await keycloak.client.groups.find({
-    max: 1,
-    search: organizationSlug,
-    realm,
-  });
-
-  if (organizationGroup.length === 0) {
+const getKeycloakGroups = async (realm: string, keycloak: Keycloak, groupId: string | undefined) => {
+  if (!groupId) {
     return [];
   }
 
-  const subgroups = await keycloak.fetchAllSubGroups({
-    realm,
-    kcGroupId: organizationGroup[0].id!,
-  });
-
+  const subgroups = await keycloak.fetchAllSubGroups({ realm, kcGroupId: groupId });
   return subgroups.map((group) => ({
     id: group.id!,
     name: group.name!,
@@ -214,7 +204,7 @@ export const SetupTest = async function ({
 
   const queryConnection = postgres(databaseConnectionUrl);
 
-  const id = await SetupKeycloak({
+  const [id, kcRootGroupId] = await SetupKeycloak({
     keycloakClient,
     realmName: realm,
     userTestData: {
@@ -224,7 +214,7 @@ export const SetupTest = async function ({
       organizationSlug: users.adminAliceCompanyA.organizationSlug,
       email: users.adminAliceCompanyA.email,
       apiKey: users.adminAliceCompanyA.apiKey,
-      groups: ['organization-admin'],
+      roles: ['organization-admin'],
     },
   });
 
@@ -233,8 +223,8 @@ export const SetupTest = async function ({
     queryConnection,
     users.adminAliceCompanyA,
     createScimKey,
-    undefined,
-    await getKeycloakGroups(realm, keycloakClient, users.adminAliceCompanyA.organizationSlug),
+    kcRootGroupId,
+    await getKeycloakGroups(realm, keycloakClient, kcRootGroupId),
   );
 
   if (enableMultiUsers) {
@@ -249,7 +239,7 @@ export const SetupTest = async function ({
           organizationSlug: users.adminBobCompanyA.organizationSlug,
           email: users.adminBobCompanyA.email,
           apiKey: users.adminBobCompanyA.apiKey,
-          groups: ['organization-admin'],
+          roles: ['organization-admin'],
         },
       });
       users.adminBobCompanyA.userId = id;
@@ -258,7 +248,7 @@ export const SetupTest = async function ({
         users.adminBobCompanyA,
         createScimKey,
         rootGroupId,
-        await getKeycloakGroups(realm, keycloakClient, users.adminBobCompanyA.organizationSlug),
+        await getKeycloakGroups(realm, keycloakClient, rootGroupId),
       );
     }
 
@@ -273,7 +263,7 @@ export const SetupTest = async function ({
           organizationSlug: users.devJoeCompanyA.organizationSlug,
           email: users.devJoeCompanyA.email,
           apiKey: users.devJoeCompanyA.apiKey,
-          groups: ['organization-developer'],
+          roles: ['organization-developer'],
         },
       });
       users.devJoeCompanyA.userId = id;
@@ -282,7 +272,7 @@ export const SetupTest = async function ({
         users.devJoeCompanyA,
         undefined,
         rootGroupId,
-        await getKeycloakGroups(realm, keycloakClient, users.devJoeCompanyA.organizationSlug),
+        await getKeycloakGroups(realm, keycloakClient, rootGroupId),
       );
     }
 
@@ -297,7 +287,7 @@ export const SetupTest = async function ({
           organizationSlug: users.viewerTimCompanyA.organizationSlug,
           email: users.viewerTimCompanyA.email,
           apiKey: users.viewerTimCompanyA.apiKey,
-          groups: ['organization-developer'],
+          roles: ['organization-developer'],
         },
       });
       users.viewerTimCompanyA.userId = id;
@@ -306,7 +296,7 @@ export const SetupTest = async function ({
         users.viewerTimCompanyA,
         undefined,
         rootGroupId,
-        await getKeycloakGroups(realm, keycloakClient, users.viewerTimCompanyA.organizationSlug),
+        await getKeycloakGroups(realm, keycloakClient, rootGroupId),
       );
     }
 
@@ -321,7 +311,7 @@ export const SetupTest = async function ({
           organizationSlug: users.adminJimCompanyB.organizationSlug,
           email: users.adminJimCompanyB.email,
           apiKey: users.adminJimCompanyB.apiKey,
-          groups: ['organization-admin'],
+          roles: ['organization-admin'],
         },
       });
       users.adminJimCompanyB.userId = id;
@@ -330,7 +320,7 @@ export const SetupTest = async function ({
         users.adminJimCompanyB,
         createScimKey,
         rootGroupId,
-        await getKeycloakGroups(realm, keycloakClient, users.adminJimCompanyB.organizationSlug),
+        await getKeycloakGroups(realm, keycloakClient, rootGroupId),
       );
     }
   }
@@ -420,17 +410,15 @@ export const SetupKeycloak = async ({
   } catch (e: any) {
     if (e.response?.status !== 409) {
       e.message = `Failed to create keycloak realm: ${realmName}.` + e.message;
-      throw e;
+      // throw e;
     }
   }
 
-  const [id] = await addKeycloakUser({
+  return addKeycloakUser({
     keycloakClient,
     userTestData,
     realmName,
   });
-
-  return id;
 };
 
 export const addKeycloakUser = async ({
@@ -468,13 +456,13 @@ export const addKeycloakUser = async ({
 
   let kcRootGroupId: string | undefined;
   try {
-    const seedGroupResult = await keycloakClient.seedGroup({
+    const [rootGroupId] = await keycloakClient.seedGroup({
       realm: realmName,
       userID: id,
       organizationSlug: userTestData.organizationSlug,
     });
 
-    kcRootGroupId = seedGroupResult[0];
+    kcRootGroupId = rootGroupId;
   } catch (e: any) {
     if (e.response?.status !== 409) {
       e.message = `Failed to seed group: ${userTestData.organizationSlug}.` + e.message;

@@ -28,8 +28,26 @@ export function createOrganizationGroup(
     const orgGroupRepo = new OrganizationGroupRepository(opts.db);
     const auditLogRepo = new AuditLogRepository(opts.db);
 
-    const rbac = await orgRepo.getFeature({ organizationId: authContext.organizationId, featureId: 'rbac' });
-    if (!rbac?.enabled) {
+    const org = await orgRepo.byId(authContext.organizationId);
+    if (!org) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_NOT_FOUND,
+          details: 'Organization not found.',
+        },
+      };
+    }
+
+    if (!org.kcGroupId) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_NOT_FOUND,
+          details: `Organization group "${org.slug}" not found.`,
+        },
+      };
+    }
+
+    if (!(await orgRepo.isFeatureEnabled(authContext.organizationId, 'rbac'))) {
       return {
         response: {
           code: EnumStatusCode.ERR_UPGRADE_PLAN,
@@ -54,7 +72,7 @@ export function createOrganizationGroup(
     await opts.keycloakClient.authenticateClient();
     const createdGroupId = await opts.keycloakClient.createSubGroup({
       realm: opts.keycloakRealm,
-      organizationSlug: authContext.organizationSlug,
+      parentId: org.kcGroupId,
       groupName: req.name,
     });
 
@@ -76,7 +94,13 @@ export function createOrganizationGroup(
         kcGroupId: createdGroupId,
       });
     } catch (e: unknown) {
-      await opts.keycloakClient.client.groups.del({ id: createdGroupId });
+      if (createdGroupId) {
+        await opts.keycloakClient.deleteGroupById({
+          realm: opts.keycloakRealm,
+          groupId: createdGroupId,
+        });
+      }
+
       throw e;
     }
 
