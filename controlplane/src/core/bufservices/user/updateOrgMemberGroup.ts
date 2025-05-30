@@ -9,7 +9,7 @@ import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { OidcRepository } from '../../repositories/OidcRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError, joinWithComma } from '../../util.js';
+import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { OrganizationGroupDTO } from '../../../types/index.js';
@@ -166,16 +166,19 @@ export function updateOrgMemberGroup(
     }
 
     // Add audit log entries
-    if (groupsToRemoveFrom.size > 0) {
+    for (const groupId of groupsToRemoveFrom) {
+      const group = orgMember.rbac.groups.find((g) => g.groupId === groupId);
+      if (!group) {
+        continue;
+      }
+
       await auditLogRepo.addAuditLog({
         organizationId: authContext.organizationId,
         organizationSlug: authContext.organizationSlug,
         auditAction: 'member_group.removed',
-        action: 'updated',
+        action: 'removed',
         actorId: authContext.userId,
-        auditableDisplayName: joinWithComma(
-          orgMember.rbac.groups.filter((g) => groupsToRemoveFrom.has(g.groupId)).map((g) => g.name),
-        ),
+        auditableDisplayName: group.name,
         auditableType: 'member_group',
         actorDisplayName: authContext.userDisplayName,
         apiKeyName: authContext.apiKeyName,
@@ -186,14 +189,19 @@ export function updateOrgMemberGroup(
       });
     }
 
-    if (groupsToAddTo.size > 0) {
+    for (const groupId of groupsToAddTo) {
+      const group = groups.find((g) => g.groupId === groupId);
+      if (!group) {
+        continue;
+      }
+
       await auditLogRepo.addAuditLog({
         organizationId: authContext.organizationId,
         organizationSlug: authContext.organizationSlug,
         auditAction: 'member_group.added',
-        action: 'updated',
+        action: 'added',
         actorId: authContext.userId,
-        auditableDisplayName: joinWithComma(groups.filter((g) => groupsToAddTo.has(g.groupId)).map((g) => g.name)),
+        auditableDisplayName: group.name,
         auditableType: 'member_group',
         actorDisplayName: authContext.userDisplayName,
         apiKeyName: authContext.apiKeyName,

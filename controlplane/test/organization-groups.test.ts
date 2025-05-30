@@ -223,3 +223,82 @@ describe('Group membership tests', () => {
     await server.close();
   });
 });
+
+describe('Group membership tests', () => {
+  beforeAll(async () => {
+    dbname = await beforeAllSetup();
+  });
+
+  afterAll(async () => {
+    await afterAllSetup(dbname);
+  });
+
+  test('Should be able to add and remove member from multiple groups', async () => {
+    const { client, server, users, keycloakClient, realm } = await SetupTest({ dbname, enableMultiUsers: true, enabledFeatures: ['rbac'] });
+
+    const group1 = await createOrganizationGroup(client, genID('group'), { role: 'organization-admin' });
+    const group2 = await createOrganizationGroup(client, genID('group'), { role: 'organization-admin' });
+    const group3 = await createOrganizationGroup(client, genID('group'), { role: 'organization-admin' });
+
+    let updateGroupResponse = await client.updateOrgMemberGroup({
+      orgMemberUserID: users.viewerTimCompanyA?.userId,
+      groups: [group1.groupId, group2.groupId, group3.groupId],
+    });
+
+    expect(updateGroupResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Ensure the member have the corresponding groups in our database
+    let getOrganizationMembersResponse = await client.getOrganizationMembers({});
+    expect(getOrganizationMembersResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    let orgMember = getOrganizationMembersResponse.members.find((m) => m.userID === users.viewerTimCompanyA?.userId);
+
+    expect(orgMember).toBeDefined();
+    expect(orgMember!.groups).toHaveLength(3);
+    expect(orgMember!.groups.find((group) => group.groupId === group1.groupId)).toBeDefined();
+    expect(orgMember!.groups.find((group) => group.groupId === group2.groupId)).toBeDefined();
+    expect(orgMember!.groups.find((group) => group.groupId === group3.groupId)).toBeDefined();
+
+    // Ensure the user have the corresponding groups on Keycloak
+    let orgRootGroup = `/${users.viewerTimCompanyA?.organizationSlug}`;
+    let kcUserGroups = await keycloakClient.getKeycloakUserGroups({
+      realm,
+      userID: users.viewerTimCompanyA!.userId,
+    });
+
+    expect(kcUserGroups).toHaveLength(3);
+    expect(kcUserGroups.find((group) => group.path === `${orgRootGroup}/${group1.name}`)).toBeDefined();
+    expect(kcUserGroups.find((group) => group.path === `${orgRootGroup}/${group2.name}`)).toBeDefined();
+    expect(kcUserGroups.find((group) => group.path === `${orgRootGroup}/${group3.name}`)).toBeDefined();
+
+    // Remove the member from multiple groups
+    updateGroupResponse = await client.updateOrgMemberGroup({
+      orgMemberUserID: users.viewerTimCompanyA?.userId,
+      groups: [group3.groupId],
+    });
+
+    expect(updateGroupResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Ensure the member have the corresponding groups in our database
+    getOrganizationMembersResponse = await client.getOrganizationMembers({});
+    expect(getOrganizationMembersResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    orgMember = getOrganizationMembersResponse.members.find((m) => m.userID === users.viewerTimCompanyA?.userId);
+
+    expect(orgMember).toBeDefined();
+    expect(orgMember!.groups).toHaveLength(1);
+    expect(orgMember!.groups.find((group) => group.groupId === group3.groupId)).toBeDefined();
+
+    // Ensure the user have the corresponding groups on Keycloak
+    orgRootGroup = `/${users.viewerTimCompanyA?.organizationSlug}`;
+    kcUserGroups = await keycloakClient.getKeycloakUserGroups({
+      realm,
+      userID: users.viewerTimCompanyA!.userId,
+    });
+
+    expect(kcUserGroups).toHaveLength(1);
+    expect(kcUserGroups.find((group) => group.path === `${orgRootGroup}/${group3.name}`)).toBeDefined();
+
+    await server.close();
+  });
+});
