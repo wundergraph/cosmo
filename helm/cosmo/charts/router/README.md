@@ -74,4 +74,5 @@ This is the official Helm Chart for the WunderGraph Cosmo Router.
 | serviceAnnotations | object | `{}` |  |
 | terminationGracePeriodSeconds | int | `30` | Sets the [termination grace period](https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#hook-handler-execution) for Deployment pods |
 | tolerations | list | `[]` |  |
+| topologySpreadConstraints | list | `[]` |  |
 

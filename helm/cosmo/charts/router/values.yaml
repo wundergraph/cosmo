@@ -142,6 +142,8 @@ nodeSelector: {}
 
 tolerations: []
 
+topologySpreadConstraints: []
+
 affinity: {}
 
 # -- Sets the [pod disruption budget](https://kubernetes.io/docs/tasks/run-application/configure-pdb/) for Deployment pods
