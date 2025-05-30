@@ -87,6 +87,7 @@ export class OrganizationInvitationRepository {
         creatorUserId: organizations.createdBy,
         createdAt: organizations.createdAt,
         invitedBy: users1.email,
+        kcGroupId: organizations.kcGroupId,
       })
       .from(organizationInvitations)
       .innerJoin(organizations, eq(organizations.id, organizationInvitations.organizationId))
@@ -103,6 +104,7 @@ export class OrganizationInvitationRepository {
       creatorUserId: org.creatorUserId || undefined,
       createdAt: org.createdAt.toISOString(),
       invitedBy: org.invitedBy || undefined,
+      kcGroupId: org.kcGroupId || undefined,
     }));
   }
 

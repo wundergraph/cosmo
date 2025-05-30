@@ -39,7 +39,7 @@ import { AIGraphReadmeQueue } from '../src/core/workers/AIGraphReadmeWorker.js';
 import { DeleteOrganizationQueue } from '../src/core/workers/DeleteOrganizationWorker.js';
 import * as schema from '../src/db/schema.js';
 import { FeatureIds, Label } from '../src/types/index.js';
-import { NewBillingPlan } from '../src/db/models.js';
+import { NewBillingPlan, OrganizationRole } from '../src/db/models.js';
 import { DeactivateOrganizationQueue } from '../src/core/workers/DeactivateOrganizationWorker.js';
 import { DeleteUserQueue } from '../src/core/workers/DeleteUserQueue.js';
 import { ReactivateOrganizationQueue } from '../src/core/workers/ReactivateOrganizationWorker.js';
@@ -432,6 +432,40 @@ export const SetupKeycloak = async ({
 
   return id;
 };
+
+export async function createOrganizationGroup(
+  client: PromiseClient<typeof PlatformService>,
+  name: string,
+  ...rules: { role: OrganizationRole; namespaces?: string[]; resources?: string[] }[]
+) {
+  const createGroupResponse = await client.createOrganizationGroup({
+    name,
+    description: '',
+  });
+
+  expect(createGroupResponse.response?.code).toBe(EnumStatusCode.OK);
+  expect(createGroupResponse.group).toBeDefined();
+
+  if (rules.length === 0) {
+    // We don't need to update the group
+    return createGroupResponse.group!;
+  }
+
+  // Update the group with all the provided roles
+  const updateGroupResponse = await client.updateOrganizationGroup({
+    groupId: createGroupResponse.group!.groupId,
+    description: createGroupResponse.group!.description,
+    rules,
+  });
+
+  expect(updateGroupResponse.response?.code).toBe(EnumStatusCode.OK);
+
+  // Retrieve the group with the updated roles
+  const getGroupsResponse = await client.getOrganizationGroups({});
+  expect(getGroupsResponse.response?.code).toBe(EnumStatusCode.OK);
+
+  return getGroupsResponse.groups.find((group) => group.name === name) ?? createGroupResponse.group!;
+}
 
 export const addKeycloakUser = async ({
   keycloakClient,

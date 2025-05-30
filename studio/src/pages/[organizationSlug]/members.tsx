@@ -134,7 +134,7 @@ const InviteForm = ({ onSuccess }: { onSuccess: () => void }) => {
         <span>What group should the member be added to?</span>
         <GroupSelect
           value={watch('groupId')}
-          onGroupChange={(group) => setValue(
+          onValueChange={(group) => setValue(
             'groupId',
             group.groupId,
             { shouldValidate: true, shouldDirty: true, shouldTouch: true },

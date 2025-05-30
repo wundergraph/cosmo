@@ -236,9 +236,8 @@ describe.sequential('Delete user tests', (ctx) => {
     const developerGroup = orgGroups.groups.find((g) => g.name === 'developer')!;
 
     await client.updateOrgMemberGroup({
-      userID: mainUserContext.userId,
       orgMemberUserID: tempUserContext.userId,
-      groupId: developerGroup.groupId,
+      groups: [developerGroup.groupId],
     });
 
     const res = await client.deleteUser({});
