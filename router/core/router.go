@@ -799,6 +799,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			URLs:           r.Config.rateLimit.Storage.URLs,
 			ClusterEnabled: r.Config.rateLimit.Storage.ClusterEnabled,
 			Logger:         r.logger,
+			FailOpen:       r.Config.rateLimit.FailOpen,
 		})
 		if err != nil {
 			return fmt.Errorf("failed to create redis client: %w", err)
@@ -1254,6 +1255,7 @@ func (r *Router) Start(ctx context.Context) error {
 			zap.Int("burst", r.rateLimit.SimpleStrategy.Burst),
 			zap.Duration("duration", r.Config.rateLimit.SimpleStrategy.Period),
 			zap.Bool("rejectExceeding", r.Config.rateLimit.SimpleStrategy.RejectExceedingRequests),
+			zap.Bool("failOpen", r.Config.rateLimit.FailOpen),
 		)
 	}
 
