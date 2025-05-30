@@ -81,7 +81,7 @@ export function UpdateMemberGroupDialog({ open, member, onOpenChange, refresh }:
     <Dialog open={open} onOpenChange={handleOnOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Update member group</DialogTitle>
+          <DialogTitle>Update member groups</DialogTitle>
           <DialogDescription>
             Update groups for {member?.email}
           </DialogDescription>
