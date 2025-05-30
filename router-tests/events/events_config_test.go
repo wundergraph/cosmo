@@ -18,6 +18,7 @@ func TestEventsConfig(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsJSONTemplate,
 			EnableNats:               true,
 			EnableKafka:              false,
+			EnableRedis:              true,
 			ModifyEventsConfiguration: func(eventsConfiguration *config.EventsConfiguration) {
 				eventsConfiguration.Providers.Kafka = nil
 			},
@@ -32,6 +33,7 @@ func TestEventsConfig(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsJSONTemplate,
 			EnableNats:               false,
 			EnableKafka:              true,
+			EnableRedis:              true,
 			ModifyEventsConfiguration: func(eventsConfiguration *config.EventsConfiguration) {
 				eventsConfiguration.Providers.Nats = nil
 			},
@@ -39,5 +41,20 @@ func TestEventsConfig(t *testing.T) {
 			assert.Fail(t, "should not be called")
 		})
 		assert.ErrorContains(t, err, "nats provider with ID default is not defined")
+	})
+
+	t.Run("redis provider not specified in the router configuration", func(t *testing.T) {
+		err := testenv.RunWithError(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsJSONTemplate,
+			EnableNats:               true,
+			EnableKafka:              true,
+			EnableRedis:              false,
+			ModifyEventsConfiguration: func(eventsConfiguration *config.EventsConfiguration) {
+				eventsConfiguration.Providers.Redis = nil
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			assert.Fail(t, "should not be called")
+		})
+		assert.ErrorContains(t, err, "redis provider with ID my-redis is not defined")
 	})
 }

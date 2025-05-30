@@ -543,9 +543,19 @@ func (k KafkaEventSource) GetID() string {
 	return k.ID
 }
 
+type RedisEventSource struct {
+	ID   string   `yaml:"id,omitempty" env:"STORAGE_PROVIDER_REDIS_ID"`
+	URLs []string `yaml:"urls,omitempty" env:"STORAGE_PROVIDER_REDIS_URLS"`
+}
+
+func (r RedisEventSource) GetID() string {
+	return r.ID
+}
+
 type EventProviders struct {
 	Nats  []NatsEventSource  `yaml:"nats,omitempty"`
 	Kafka []KafkaEventSource `yaml:"kafka,omitempty"`
+	Redis []RedisEventSource `yaml:"redis,omitempty"`
 }
 
 type EventsConfiguration struct {
