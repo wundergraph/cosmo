@@ -70,7 +70,7 @@ func TestPubSubDataSource_GetResolveDataSource_WrongType(t *testing.T) {
 	// Create the data source with mock adapter
 	pubsub := &PubSubDataSource{
 		providerId:  "test-provider",
-		eventType:   EventTypePublish,
+		eventType:   EventTypeSubscribe,
 		subjects:    []string{"test-subject"},
 		fieldName:   "testField",
 		typeName:    "TestType",

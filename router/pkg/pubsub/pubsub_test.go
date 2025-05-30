@@ -18,7 +18,6 @@ func TestBuild_OK(t *testing.T) {
 	ctx := context.Background()
 	mockBuilder := datasource.NewMockPubSubProviderBuilder[config.NatsEventSource, *nodev1.NatsEventConfiguration](t)
 	mockPubSubProvider := datasource.NewMockPubSubProvider(t)
-	mockPubSubDataSource := datasource.NewMockPubSubDataSource(t)
 
 	dsMeta := &plan.DataSourceMetadata{
 		RootNodes: []plan.TypeField{
@@ -63,7 +62,10 @@ func TestBuild_OK(t *testing.T) {
 
 	mockBuilder.On("TypeID").Return("nats")
 	mockBuilder.On("BuildProvider", natsEventSources[0]).Return(mockPubSubProvider, nil)
-	mockBuilder.On("BuildDataSource", dsConf.Configuration.GetCustomEvents().GetNats()[0]).Return(mockPubSubDataSource, nil)
+	mockBuilder.On("BuildDataSourceFactory", dsConf.Configuration.GetCustomEvents().GetNats()[0]).Return(
+		datasource.NewPubSubDataSourceFactory(mockBuilder, dsConf.Configuration.GetCustomEvents().GetNats()[0]),
+		nil,
+	)
 
 	// ctx, kafkaBuilder, config.Providers.Kafka, kafkaDsConfsWithEvents
 	// Execute the function
@@ -121,64 +123,6 @@ func TestBuild_ProviderError(t *testing.T) {
 	}
 
 	mockBuilder.On("BuildProvider", natsEventSources[0]).Return(nil, errors.New("provider error"))
-
-	// Execute the function
-	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs)
-
-	// Assertions
-	assert.Error(t, err)
-	require.Len(t, providers, 0)
-	require.Len(t, dataSources, 0)
-}
-
-func TestBuild_DataSourceError(t *testing.T) {
-	ctx := context.Background()
-	mockBuilder := datasource.NewMockPubSubProviderBuilder[config.NatsEventSource, *nodev1.NatsEventConfiguration](t)
-	mockPubSubProvider := datasource.NewMockPubSubProvider(t)
-
-	dsMeta := &plan.DataSourceMetadata{
-		RootNodes: []plan.TypeField{
-			{
-				TypeName:   "Type1",
-				FieldNames: []string{"Field1", "Field2"},
-			},
-		},
-	}
-
-	// Mock input data
-	event := &nodev1.EngineEventConfiguration{
-		ProviderId: "provider-1",
-		TypeName:   "Type1",
-		FieldName:  "Field1",
-		Type:       nodev1.EventType_PUBLISH,
-	}
-	dsConf := DataSourceConfigurationWithMetadata{
-		Configuration: &nodev1.DataSourceConfiguration{
-			Id: "test-id",
-			CustomEvents: &nodev1.DataSourceCustomEvents{
-				Nats: []*nodev1.NatsEventConfiguration{
-					{
-						EngineEventConfiguration: event,
-					},
-				},
-			},
-		},
-		Metadata: dsMeta,
-	}
-	dsConfs := []dsConfAndEvents[*nodev1.NatsEventConfiguration]{
-		{
-			dsConf: &dsConf,
-			events: dsConf.Configuration.GetCustomEvents().GetNats(),
-		},
-	}
-	natsEventSources := []config.NatsEventSource{
-		{ID: "provider-1"},
-	}
-
-	mockPubSubProvider.On("ID").Return("provider-1")
-
-	mockBuilder.On("BuildProvider", natsEventSources[0]).Return(mockPubSubProvider, nil)
-	mockBuilder.On("BuildDataSource", dsConf.Configuration.GetCustomEvents().GetNats()[0]).Return(nil, errors.New("data source error"))
 
 	// Execute the function
 	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs)
@@ -252,7 +196,6 @@ func TestBuild_ShouldNotInitializeProviderIfNotUsed(t *testing.T) {
 	ctx := context.Background()
 	mockBuilder := datasource.NewMockPubSubProviderBuilder[config.NatsEventSource, *nodev1.NatsEventConfiguration](t)
 	mockPubSubUsedProvider := datasource.NewMockPubSubProvider(t)
-	mockPubSubDataSource := datasource.NewMockPubSubDataSource(t)
 
 	dsMeta := &plan.DataSourceMetadata{
 		RootNodes: []plan.TypeField{
@@ -298,7 +241,10 @@ func TestBuild_ShouldNotInitializeProviderIfNotUsed(t *testing.T) {
 
 	mockBuilder.On("TypeID").Return("nats")
 	mockBuilder.On("BuildProvider", natsEventSources[1]).Return(mockPubSubUsedProvider, nil)
-	mockBuilder.On("BuildDataSource", dsConf.Configuration.GetCustomEvents().GetNats()[0]).Return(mockPubSubDataSource, nil)
+	mockBuilder.On("BuildDataSourceFactory", dsConf.Configuration.GetCustomEvents().GetNats()[0]).Return(
+		datasource.NewPubSubDataSourceFactory(mockBuilder, dsConf.Configuration.GetCustomEvents().GetNats()[0]),
+		nil,
+	)
 
 	// Execute the function
 	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs)
