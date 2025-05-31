@@ -1,11 +1,10 @@
 import { Kind, OperationTypeNode } from 'graphql';
+import { EntityInterfaceFederationData, InputValueData, ObjectDefinitionData, } from '../schema-building/types';
 import {
-  EntityInterfaceFederationData,
-  InputValueData,
-  ObjectDefinitionData,
-  ParentDefinitionData,
-} from '../schema-building/types';
-import { IncompatibleMergedTypesErrorParams, InvalidRootTypeFieldEventsDirectiveData } from './types';
+  IncompatibleMergedTypesErrorParams,
+  InvalidNamedTypeErrorParams,
+  InvalidRootTypeFieldEventsDirectiveData,
+} from './types';
 import { UnresolvableFieldData } from '../resolvability-graph/utils';
 import {
   AND_UPPER,
@@ -29,7 +28,7 @@ import {
 import { MAX_SUBSCRIPTION_FILTER_DEPTH, MAXIMUM_TYPE_NESTING } from '../utils/integer-constants';
 import { getEntriesNotInHashSet, getOrThrowError, kindToNodeType, numberToOrdinal } from '../utils/utils';
 import { ImplementationErrors, InvalidEntityInterface, InvalidRequiredInputValueData } from '../utils/types';
-import { isOutputNodeKind } from '../schema-building/utils';
+import { isFieldData } from '../schema-building/utils';
 import { printTypeNode } from '@graphql-tools/merge';
 
 export const minimumSubgraphRequirementError = new Error('At least one subgraph is required for federation.');
@@ -1603,27 +1602,14 @@ export function invalidInterfaceObjectImplementationDefinitionsError(
   );
 }
 
-export function invalidFieldNamedTypeError(
-  parentKind: Kind,
-  coords: string,
-  namedTypeData: ParentDefinitionData,
-): Error {
-  const isOutputField = isOutputNodeKind(parentKind);
+export function invalidNamedTypeError({ data, namedTypeData, nodeType }: InvalidNamedTypeErrorParams): Error {
+  const isOutputField = isFieldData(data);
+  const coords = isOutputField ? `${data.originalParentTypeName}.${data.name}` : data.originalCoords;
   return new Error(
-    `The ${kindToNodeType(parentKind)} field "${coords}" ` +
-      (isOutputField ? `returns` : `accepts`) +
-      ` ${kindToNodeType(namedTypeData.kind)} "${namedTypeData.name}",` +
-      ` which is not a valid ${isOutputField ? 'output' : 'input'} type.`,
-  );
-}
-
-export function invalidArgumentNamedTypeError(
-  argumentData: InputValueData,
-  namedTypeData: ParentDefinitionData,
-): Error {
-  return new Error(
-    `The argument "${argumentData.originalCoords}" is invalid because it defines type ` +
-      printTypeNode(argumentData.type) +
-      `; however, ${kindToNodeType(namedTypeData.kind)} "${namedTypeData.name}" is not a valid input type.`,
+    `The ${nodeType} "${coords}" is invalid because it defines type ` +
+      printTypeNode(data.type) +
+      `; however, ${kindToNodeType(namedTypeData.kind)} "${namedTypeData.name}" is not a valid ` +
+      (isOutputField ? 'output' : 'input') +
+      ' type.',
   );
 }

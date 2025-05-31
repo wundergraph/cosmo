@@ -5,7 +5,8 @@ import {
   FederationResultSuccess,
   incompatibleInputValueDefaultValueTypeError,
   INPUT_OBJECT,
-  invalidFieldNamedTypeError,
+  InputValueData,
+  invalidNamedTypeError,
   invalidRequiredInputValueError,
   noInputValueDefinitionsError,
   NormalizationResultFailure,
@@ -18,7 +19,7 @@ import {
   subgraphValidationError,
 } from '../../../src';
 import { describe, expect, test } from 'vitest';
-import { baseDirectiveDefinitions, versionOneRouterDefinitions } from '../utils/utils';
+import { baseDirectiveDefinitions, stringToTypeNode, versionOneRouterDefinitions } from '../utils/utils';
 import { normalizeString, normalizeSubgraphFailure, schemaToSortedNormalizedString } from '../../utils/utils';
 import { Kind } from 'graphql';
 
@@ -390,10 +391,15 @@ describe('Input tests', () => {
       const { errors } = normalizeSubgraphFailure(naa, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
       expect(errors[0]).toStrictEqual(
-        invalidFieldNamedTypeError(Kind.INPUT_OBJECT_TYPE_DEFINITION, 'Input.field', {
-          kind: Kind.OBJECT_TYPE_DEFINITION,
-          name: 'EntityInterface',
-        } as ObjectDefinitionData),
+        invalidNamedTypeError({
+          data: {
+            kind: Kind.INPUT_VALUE_DEFINITION,
+            originalCoords: 'Input.field',
+            type: stringToTypeNode('EntityInterface!'),
+          } as InputValueData,
+          namedTypeData: { kind: Kind.OBJECT_TYPE_DEFINITION, name: 'EntityInterface' } as ObjectDefinitionData,
+          nodeType: 'Input Object field',
+        }),
       );
     });
   });

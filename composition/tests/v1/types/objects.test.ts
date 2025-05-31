@@ -5,8 +5,9 @@ import {
   federateSubgraphs,
   FederationResultFailure,
   FederationResultSuccess,
+  FieldData,
   InputObjectDefinitionData,
-  invalidFieldNamedTypeError,
+  invalidNamedTypeError,
   noBaseDefinitionForExtensionError,
   noFieldDefinitionsError,
   NormalizationResultFailure,
@@ -20,6 +21,7 @@ import {
 } from '../../../src';
 import {
   baseDirectiveDefinitions,
+  stringToTypeNode,
   versionOneBaseSchema,
   versionOneRouterDefinitions,
   versionTwoRouterDefinitions,
@@ -442,10 +444,16 @@ describe('Object tests', () => {
     const { errors } = normalizeSubgraphFailure(naa, ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(errors).toHaveLength(1);
     expect(errors[0]).toStrictEqual(
-      invalidFieldNamedTypeError(Kind.OBJECT_TYPE_DEFINITION, 'Object.field', {
-        kind: Kind.INPUT_OBJECT_TYPE_DEFINITION,
-        name: 'Input',
-      } as InputObjectDefinitionData),
+      invalidNamedTypeError({
+        data: {
+          kind: Kind.FIELD_DEFINITION,
+          name: 'field',
+          originalParentTypeName: 'Object',
+          type: stringToTypeNode('Input!'),
+        } as FieldData,
+        namedTypeData: { kind: Kind.INPUT_OBJECT_TYPE_DEFINITION, name: 'Input' } as InputObjectDefinitionData,
+        nodeType: 'Object field',
+      }),
     );
   });
 

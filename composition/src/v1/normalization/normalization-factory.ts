@@ -104,7 +104,6 @@ import {
   incompatibleInputValueDefaultValueTypeError,
   incompatibleTypeWithProvidesErrorMessage,
   inlineFragmentWithoutTypeConditionErrorMessage,
-  invalidArgumentNamedTypeError,
   invalidArgumentValueErrorMessage,
   invalidDirectiveDefinitionError,
   invalidDirectiveDefinitionLocationErrorMessage,
@@ -120,13 +119,13 @@ import {
   invalidEventSubjectsErrorMessage,
   invalidEventSubjectsItemErrorMessage,
   invalidExternalDirectiveError,
-  invalidFieldNamedTypeError,
   invalidImplementedTypeError,
   invalidInlineFragmentTypeConditionErrorMessage,
   invalidInlineFragmentTypeConditionTypeErrorMessage,
   invalidInlineFragmentTypeErrorMessage,
   invalidInterfaceImplementationError,
   invalidKeyFieldSetsEventDrivenErrorMessage,
+  invalidNamedTypeError,
   invalidNatsStreamConfigurationDefinitionErrorMessage,
   invalidNatsStreamInputErrorMessage,
   invalidNatsStreamInputFieldsErrorMessage,
@@ -432,7 +431,7 @@ export class NormalizationFactory {
     };
   }
 
-  validateArguments(fieldData: FieldData) {
+  validateArguments(fieldData: FieldData, parentKind: Kind) {
     for (const argumentData of fieldData.argumentDataByName.values()) {
       const namedTypeName = getTypeNodeNamedTypeName(argumentData.type);
       if (BASE_SCALARS.has(namedTypeName)) {
@@ -448,7 +447,13 @@ export class NormalizationFactory {
         argumentData.namedTypeKind = namedTypeData.kind;
         continue;
       }
-      this.errors.push(invalidArgumentNamedTypeError(argumentData, namedTypeData));
+      this.errors.push(
+        invalidNamedTypeError({
+          data: argumentData,
+          namedTypeData,
+          nodeType: `${kindToNodeType(parentKind)} field argument`,
+        }),
+      );
     }
   }
 
@@ -3230,7 +3235,7 @@ export class NormalizationFactory {
             this.errors.push(noInputValueDefinitionsError(parentTypeName));
             break;
           }
-          for (const [valueName, valueData] of parentData.inputValueDataByName) {
+          for (const valueData of parentData.inputValueDataByName.values()) {
             // Base Scalars have already been set
             if (valueData.namedTypeKind !== Kind.NULL) {
               continue;
@@ -3242,7 +3247,11 @@ export class NormalizationFactory {
             }
             if (!isInputNodeKind(namedTypeData.kind)) {
               this.errors.push(
-                invalidFieldNamedTypeError(parentData.kind, `${parentData.name}.${valueName}`, namedTypeData),
+                invalidNamedTypeError({
+                  data: valueData,
+                  namedTypeData,
+                  nodeType: `${kindToNodeType(parentData.kind)} field`,
+                }),
               );
               continue;
             }
@@ -3271,7 +3280,7 @@ export class NormalizationFactory {
               externalInterfaceFieldNames.push(fieldName);
             }
             // Arguments can only be fully validated once all parents types are known
-            this.validateArguments(fieldData);
+            this.validateArguments(fieldData, parentData.kind);
             // Base Scalars have already been set
             if (fieldData.namedTypeKind !== Kind.NULL) {
               continue;
@@ -3283,11 +3292,11 @@ export class NormalizationFactory {
             }
             if (!isOutputNodeKind(namedTypeData.kind)) {
               this.errors.push(
-                invalidFieldNamedTypeError(
-                  parentData.kind,
-                  `${fieldData.originalParentTypeName}.${fieldName}`,
+                invalidNamedTypeError({
+                  data: fieldData,
                   namedTypeData,
-                ),
+                  nodeType: `${kindToNodeType(parentData.kind)} field`,
+                }),
               );
               continue;
             }

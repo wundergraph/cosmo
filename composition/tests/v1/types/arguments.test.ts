@@ -11,7 +11,7 @@ import {
   incompatibleMergedTypesError,
   InputValueData,
   InterfaceDefinitionData,
-  invalidArgumentNamedTypeError,
+  invalidNamedTypeError,
   InvalidRequiredInputValueData,
   invalidRequiredInputValueError,
   NormalizationResultFailure,
@@ -291,14 +291,16 @@ describe('Argument federation tests', () => {
     expect(result.errors).toHaveLength(2);
     expect(result.errors[0]).toStrictEqual(duplicateArgumentsError('Object.field', ['argThree', 'argOne']));
     expect(result.errors[1]).toStrictEqual(
-      invalidArgumentNamedTypeError(
-        {
+      invalidNamedTypeError({
+        data: {
+          kind: 'InputValueDefinition',
           name: 'argThree',
           originalCoords: 'Object.field(argThree: ...)',
           type: stringToTypeNode('[Interface!]!'),
         } as InputValueData,
-        { name: 'Interface', kind: Kind.INTERFACE_TYPE_DEFINITION } as InterfaceDefinitionData,
-      ),
+        namedTypeData: { name: 'Interface', kind: Kind.INTERFACE_TYPE_DEFINITION } as InterfaceDefinitionData,
+        nodeType: `Object field argument`,
+      }),
     );
   });
 
