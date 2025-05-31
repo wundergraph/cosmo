@@ -1,4 +1,5 @@
 import {
+  BREAK,
   ConstDirectiveNode,
   ConstValueNode,
   DefinitionNode,
@@ -22,6 +23,7 @@ import {
   TypeDefinitionNode,
   TypeExtensionNode,
   TypeNode,
+  visit,
 } from 'graphql';
 import {
   EnumTypeNode,
@@ -336,7 +338,6 @@ import {
   kindToNodeType,
   numberToOrdinal,
 } from '../../utils/utils';
-import { BREAK, visit } from 'graphql/index';
 import {
   AddInputValueDataByNodeParams,
   ConditionalFieldSetValidationResult,

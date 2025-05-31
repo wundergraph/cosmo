@@ -24,7 +24,7 @@ import {
   versionOneRouterDefinitions,
   versionTwoRouterDefinitions,
 } from './utils/utils';
-import { normalizeString, normalizeSubgraphFailure, schemaToSortedNormalizedString, } from '../utils/utils';
+import { normalizeString, normalizeSubgraphFailure, schemaToSortedNormalizedString } from '../utils/utils';
 import { Kind } from 'graphql';
 
 describe('Object tests', () => {

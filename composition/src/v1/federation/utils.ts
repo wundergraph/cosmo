@@ -1,4 +1,4 @@
-import { ConstDirectiveNode, StringValueNode } from 'graphql';
+import { BREAK, ConstDirectiveNode, Kind, StringValueNode, visit } from 'graphql';
 import { FieldSetConditionData, RequiredFieldConfiguration } from '../../router-configuration/types';
 import {
   AuthorizationData,
@@ -13,7 +13,6 @@ import {
 } from '../../schema-building/types';
 import { Graph } from '../../resolvability-graph/graph';
 import { getTypeNodeNamedTypeName, MutableFieldNode } from '../../schema-building/ast';
-import { BREAK, Kind, visit } from 'graphql/index';
 import { BASE_SCALARS } from '../utils/constants';
 import { isKindAbstract } from '../../ast/utils';
 import { GraphNode } from '../../resolvability-graph/graph-nodes';

@@ -1,11 +1,16 @@
 import {
   buildASTSchema,
+  ConstDirectiveNode,
+  ConstObjectValueNode,
   DirectiveDefinitionNode,
   DocumentNode,
   GraphQLSchema,
   Kind,
+  ListTypeNode,
   NamedTypeNode,
+  NonNullTypeNode,
   StringValueNode,
+  TypeNode,
 } from 'graphql';
 import {
   getMutableTypeNode,
@@ -168,7 +173,6 @@ import {
   FederateTypeResult,
   getMostRestrictiveMergedTypeNode,
 } from '../schema-building/type-merging';
-import { ConstDirectiveNode, ConstObjectValueNode, ListTypeNode, NonNullTypeNode, TypeNode } from 'graphql/index';
 import { Graph } from '../../resolvability-graph/graph';
 import { GraphNode } from '../../resolvability-graph/graph-nodes';
 import { InternalSubgraph, Subgraph, SubgraphConfig } from '../../subgraph/types';

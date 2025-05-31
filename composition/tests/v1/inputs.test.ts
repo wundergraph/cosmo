@@ -20,7 +20,7 @@ import {
 import { describe, expect, test } from 'vitest';
 import { baseDirectiveDefinitions, versionOneRouterDefinitions } from './utils/utils';
 import { normalizeString, normalizeSubgraphFailure, schemaToSortedNormalizedString } from '../utils/utils';
-import { Kind } from 'graphql/index';
+import { Kind } from 'graphql';
 
 describe('Input tests', () => {
   describe('Normalization tests', () => {
