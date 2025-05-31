@@ -23,11 +23,6 @@ export type FieldSetData = {
   requires: Map<string, string>;
 };
 
-export type InputValidationContainer = {
-  hasUnhandledError: boolean;
-  typeString: string;
-};
-
 export type ConditionalFieldSetValidationResult = {
   errorMessages: Array<string>;
   configuration?: RequiredFieldConfiguration;

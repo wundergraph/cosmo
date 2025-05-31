@@ -1,3 +1,5 @@
+import { Kind } from 'graphql';
+
 export const AS = 'as';
 export const AND_UPPER = 'AND';
 export const ANY_SCALAR = '_Any';
@@ -159,3 +161,17 @@ export const AUTHORIZATION_DIRECTIVES = new Set<string>([AUTHENTICATED, REQUIRES
 export const PERSISTED_CLIENT_DIRECTIVES = new Set<string>([DEPRECATED]);
 export const INHERITABLE_DIRECTIVE_NAMES = [EXTERNAL, SHAREABLE];
 export const IGNORED_FIELDS = new Set<string>([ENTITIES_FIELD, SERVICE_FIELD]);
+
+export const INPUT_NODE_KINDS = new Set<Kind>([
+  Kind.ENUM_TYPE_DEFINITION,
+  Kind.INPUT_OBJECT_TYPE_DEFINITION,
+  Kind.SCALAR_TYPE_DEFINITION,
+]);
+
+export const OUTPUT_NODE_KINDS = new Set<Kind>([
+  Kind.ENUM_TYPE_DEFINITION,
+  Kind.INTERFACE_TYPE_DEFINITION,
+  Kind.OBJECT_TYPE_DEFINITION,
+  Kind.SCALAR_TYPE_DEFINITION,
+  Kind.UNION_TYPE_DEFINITION,
+]);

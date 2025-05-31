@@ -577,7 +577,7 @@ describe('@override directive tests', () => {
       expect(result.errors[0]).toStrictEqual(
         invalidFieldShareabilityError(
           {
-            fieldDataByFieldName: new Map<string, FieldData>([
+            fieldDataByName: new Map<string, FieldData>([
               [
                 'name',
                 {
@@ -605,7 +605,7 @@ describe('@override directive tests', () => {
       expect(result.errors[0]).toStrictEqual(
         invalidFieldShareabilityError(
           {
-            fieldDataByFieldName: new Map<string, FieldData>([
+            fieldDataByName: new Map<string, FieldData>([
               [
                 'name',
                 {

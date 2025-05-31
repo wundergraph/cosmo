@@ -1,5 +1,5 @@
 import { ConstDirectiveNode, StringValueNode } from 'graphql';
-import { ConfigurationData, FieldSetConditionData, RequiredFieldConfiguration } from '../../router-configuration/types';
+import { FieldSetConditionData, RequiredFieldConfiguration } from '../../router-configuration/types';
 import {
   AuthorizationData,
   CompositeOutputData,
@@ -136,9 +136,9 @@ export function validateImplicitFieldSets({
             return BREAK;
           }
           const fieldName = node.name.value;
-          const fieldData = parentData.fieldDataByFieldName.get(fieldName);
+          const fieldData = parentData.fieldDataByName.get(fieldName);
           // undefined if the field does not exist on the parent
-          if (!fieldData || fieldData.argumentDataByArgumentName.size || definedFields[currentDepth].has(fieldName)) {
+          if (!fieldData || fieldData.argumentDataByName.size || definedFields[currentDepth].has(fieldName)) {
             shouldAddKeyFieldSet = false;
             return BREAK;
           }

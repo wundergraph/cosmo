@@ -93,7 +93,7 @@ export function addSets<T>(a: Set<T>, b: Set<T>): Set<T> {
   return output;
 }
 
-export function kindToTypeString(kind: Kind): string {
+export function kindToNodeType(kind: Kind): string {
   switch (kind) {
     case Kind.BOOLEAN: {
       return BOOLEAN_SCALAR;

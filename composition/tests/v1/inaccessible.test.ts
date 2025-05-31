@@ -84,7 +84,7 @@ describe('@inaccessible tests', () => {
       invalidFieldShareabilityError(
         {
           name: 'Entity',
-          fieldDataByFieldName: new Map<string, FieldData>([
+          fieldDataByName: new Map<string, FieldData>([
             [
               'name',
               {
