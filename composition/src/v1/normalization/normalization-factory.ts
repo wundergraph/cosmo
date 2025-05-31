@@ -3409,10 +3409,6 @@ export class NormalizationFactory {
         // Temporarily propagate as a warning until @inaccessible, entity interfaces and other such considerations are handled
         this.warnings.push(unimplementedInterfaceOutputTypeWarning(this.subgraphName, referencedTypeName));
       }
-      //TODO check whether safe
-      // if (!this.entityDataByTypeName.has(referencedTypeName)) {
-      //   this.errors.push(undefinedTypeError(referencedTypeName));
-      // }
     }
     const persistedDirectiveDefinitionDataByDirectiveName = new Map<string, PersistedDirectiveDefinitionData>();
     for (const directiveDefinitionNode of this.directiveDefinitionByDirectiveName.values()) {
