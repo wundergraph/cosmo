@@ -3,7 +3,7 @@ import {
   ConfigurationData,
   invalidInterfaceObjectImplementationDefinitionsError,
   ROUTER_COMPATIBILITY_VERSION_ONE,
-  Subgraph
+  Subgraph,
 } from '../../../src';
 import { parse } from 'graphql';
 import {

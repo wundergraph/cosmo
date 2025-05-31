@@ -141,9 +141,11 @@ describe('Composition error tests', (ctx) => {
     const result = composeSubgraphs([subgraph1, subgraph2], LATEST_ROUTER_COMPATIBILITY_VERSION) as FederationResultFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
-    expect(result.errors[0].message).toBe(
-      'Incompatible types when merging two instances of "A.a":\n Expected type "NamedType" but received "ListType"',
-    );
+    expect(result.errors[0]).toStrictEqual(incompatibleMergedTypesError({
+      actualType: 'ListType',
+      coords:'A.a',
+      expectedType: 'NamedType',
+    }));
   });
 
   test('Should cause composition errors on incompatible input field types', () => {
@@ -174,9 +176,11 @@ describe('Composition error tests', (ctx) => {
     const result = composeSubgraphs([subgraph1, subgraph2], LATEST_ROUTER_COMPATIBILITY_VERSION) as FederationResultFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
-    expect(result.errors[0].message).toBe(
-      'Incompatible types when merging two instances of "A.a":\n Expected type "String" but received "Int"',
-    );
+    expect(result.errors[0]).toStrictEqual(incompatibleMergedTypesError({
+      actualType: 'Int',
+      coords: 'A.a',
+      expectedType: 'String',
+    }));
   });
 
   test('Should cause composition errors on incompatible types of function arguments', () => {
