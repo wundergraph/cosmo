@@ -16,10 +16,10 @@ import {
   ROUTER_COMPATIBILITY_VERSION_ONE,
   Subgraph,
   subgraphValidationError,
-} from '../../src';
+} from '../../../src';
 import { describe, expect, test } from 'vitest';
-import { baseDirectiveDefinitions, versionOneRouterDefinitions } from './utils/utils';
-import { normalizeString, normalizeSubgraphFailure, schemaToSortedNormalizedString } from '../utils/utils';
+import { baseDirectiveDefinitions, versionOneRouterDefinitions } from '../utils/utils';
+import { normalizeString, normalizeSubgraphFailure, schemaToSortedNormalizedString } from '../../utils/utils';
 import { Kind } from 'graphql';
 
 describe('Input tests', () => {

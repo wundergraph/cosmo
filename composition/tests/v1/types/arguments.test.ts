@@ -21,10 +21,10 @@ import {
   STRING_SCALAR,
   Subgraph,
   subgraphValidationError,
-} from '../../src';
+} from '../../../src';
 import { describe, expect, test } from 'vitest';
-import { versionOneRouterDefinitions, versionTwoRouterDefinitions } from './utils/utils';
-import { normalizeString, schemaToSortedNormalizedString } from '../utils/utils';
+import { stringToTypeNode, versionOneRouterDefinitions, versionTwoRouterDefinitions } from '../utils/utils';
+import { normalizeString, schemaToSortedNormalizedString } from '../../utils/utils';
 import { Kind } from 'graphql';
 
 describe('Argument federation tests', () => {
@@ -295,7 +295,7 @@ describe('Argument federation tests', () => {
         {
           name: 'argThree',
           originalCoords: 'Object.field(argThree: ...)',
-          typeString: `[Interface!]!`,
+          type: stringToTypeNode('[Interface!]!'),
         } as InputValueData,
         { name: 'Interface', kind: Kind.INTERFACE_TYPE_DEFINITION } as InterfaceDefinitionData,
       ),

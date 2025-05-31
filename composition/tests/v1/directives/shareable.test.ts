@@ -11,14 +11,14 @@ import {
   parse,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   Subgraph,
-} from '../../src';
-import { versionTwoDirectiveDefinitions, versionTwoRouterDefinitions } from './utils/utils';
+} from '../../../src';
+import { versionTwoDirectiveDefinitions, versionTwoRouterDefinitions } from '../utils/utils';
 import {
   federateSubgraphsFailure,
   federateSubgraphsSuccess,
   normalizeString,
   schemaToSortedNormalizedString,
-} from '../utils/utils';
+} from '../../utils/utils';
 
 describe('@shareable directive tests', () => {
   describe('Normalization tests', () => {

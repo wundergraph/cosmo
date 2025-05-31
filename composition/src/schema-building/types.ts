@@ -146,7 +146,6 @@ export type InputValueData = {
   requiredSubgraphNames: Set<string>;
   subgraphNames: Set<string>;
   type: MutableTypeNode;
-  typeString: string;
   defaultValue?: ConstValueNode;
   description?: StringValueNode;
   fieldName?: string;

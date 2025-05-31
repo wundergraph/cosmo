@@ -30,6 +30,7 @@ import { MAX_SUBSCRIPTION_FILTER_DEPTH, MAXIMUM_TYPE_NESTING } from '../utils/in
 import { getEntriesNotInHashSet, getOrThrowError, kindToNodeType, numberToOrdinal } from '../utils/utils';
 import { ImplementationErrors, InvalidEntityInterface, InvalidRequiredInputValueData } from '../utils/types';
 import { isOutputNodeKind } from '../schema-building/utils';
+import { printTypeNode } from '@graphql-tools/merge';
 
 export const minimumSubgraphRequirementError = new Error('At least one subgraph is required for federation.');
 
@@ -1622,7 +1623,7 @@ export function invalidArgumentNamedTypeError(
 ): Error {
   return new Error(
     `The argument "${argumentData.originalCoords}" is invalid because it defines type ` +
-      argumentData.typeString +
+      printTypeNode(argumentData.type) +
       `; however, ${kindToNodeType(namedTypeData.kind)} "${namedTypeData.name}" is not a valid input type.`,
   );
 }

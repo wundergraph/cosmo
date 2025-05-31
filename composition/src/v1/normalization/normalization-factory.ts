@@ -440,8 +440,12 @@ export class NormalizationFactory {
         continue;
       }
       const namedTypeData = this.parentDefinitionDataByTypeName.get(namedTypeName);
-      if (!namedTypeData || isInputNodeKind(namedTypeData.kind)) {
+      if (!namedTypeData) {
         // undefined types are handled elsewhere
+        continue;
+      }
+      if (isInputNodeKind(namedTypeData.kind)) {
+        argumentData.namedTypeKind = namedTypeData.kind;
         continue;
       }
       this.errors.push(invalidArgumentNamedTypeError(argumentData, namedTypeData));
@@ -1144,7 +1148,6 @@ export class NormalizationFactory {
       requiredSubgraphNames: new Set<string>(isTypeRequired(node.type) ? [this.subgraphName] : []),
       subgraphNames: new Set<string>([this.subgraphName]),
       type: getMutableTypeNode(node.type, originalParentTypeName, this.errors),
-      typeString: printTypeNode(node.type),
       defaultValue: node.defaultValue, // TODO validate
       description: formatDescription(node.description),
     };

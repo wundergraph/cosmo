@@ -59,6 +59,7 @@ export const IN_UPPER = 'IN';
 export const INACCESSIBLE = 'inaccessible';
 export const INLINE_FRAGMENT = 'inlineFragment';
 export const INLINE_FRAGMENT_UPPER = 'INLINE_FRAGMENT';
+export const INPUT = 'Input';
 export const INPUT_FIELD = 'Input field';
 export const INPUT_FIELD_DEFINITION_UPPER = 'INPUT_FIELD_DEFINITION';
 export const INPUT_OBJECT = 'Input Object';

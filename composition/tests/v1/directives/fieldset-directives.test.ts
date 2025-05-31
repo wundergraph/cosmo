@@ -34,9 +34,9 @@ import {
   unexpectedArgumentErrorMessage,
   UNION,
   unparsableFieldSetErrorMessage,
-} from '../../src';
-import { schemaQueryDefinition, versionTwoDirectiveDefinitions } from './utils/utils';
-import { normalizeString, normalizeSubgraphSuccess, schemaToSortedNormalizedString } from '../utils/utils';
+} from '../../../src';
+import { schemaQueryDefinition, versionTwoDirectiveDefinitions } from '../utils/utils';
+import { normalizeString, normalizeSubgraphSuccess, schemaToSortedNormalizedString } from '../../utils/utils';
 
 describe('openfed_FieldSet tests', () => {
   describe('@key FieldSets', () => {

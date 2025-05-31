@@ -17,14 +17,14 @@ import {
   parse,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   Subgraph,
-} from '../../src';
+} from '../../../src';
 import {
   baseDirectiveDefinitions,
   versionOneBaseSchema,
   versionOneRouterDefinitions,
   versionTwoRouterDefinitions,
-} from './utils/utils';
-import { normalizeString, normalizeSubgraphFailure, schemaToSortedNormalizedString } from '../utils/utils';
+} from '../utils/utils';
+import { normalizeString, normalizeSubgraphFailure, schemaToSortedNormalizedString } from '../../utils/utils';
 import { Kind } from 'graphql';
 
 describe('Object tests', () => {

@@ -1,16 +1,14 @@
 import { describe, expect, test } from 'vitest';
 import {
   AuthorizationData,
-  federateSubgraphs,
-  FederationResultSuccess,
   FieldAuthorizationData,
   MAX_OR_SCOPES,
   orScopesLimitError,
   parse,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   Subgraph,
-} from '../../src';
-import { schemaQueryDefinition, versionTwoDirectiveDefinitions, versionTwoRouterDefinitions } from './utils/utils';
+} from '../../../src';
+import { schemaQueryDefinition, versionTwoDirectiveDefinitions, versionTwoRouterDefinitions } from '../utils/utils';
 import {
   federateSubgraphsFailure,
   federateSubgraphsSuccess,
@@ -18,7 +16,7 @@ import {
   normalizeSubgraphFailure,
   normalizeSubgraphSuccess,
   schemaToSortedNormalizedString,
-} from '../utils/utils';
+} from '../../utils/utils';
 
 describe('Authorization directives tests', () => {
   describe('Normalization Tests', () => {

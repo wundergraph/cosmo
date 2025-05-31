@@ -636,7 +636,6 @@ export class FederationFactory {
     );
     if (mergeResult.success) {
       targetData.type = mergeResult.typeNode;
-      targetData.typeString = printTypeNode(mergeResult.typeNode);
     } else {
       this.errors.push(
         incompatibleMergedTypesError({
@@ -957,7 +956,6 @@ export class FederationFactory {
       requiredSubgraphNames: new Set(sourceData.requiredSubgraphNames),
       subgraphNames: new Set(sourceData.subgraphNames),
       type: sourceData.type,
-      typeString: sourceData.typeString,
       defaultValue: sourceData.defaultValue,
       description: getInitialFederatedDescription(sourceData),
     };
