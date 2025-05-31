@@ -121,6 +121,7 @@ export function updateProposal(
       };
     }
 
+    // check whether the user is authorized to perform the action
     if (!authContext.rbac.hasFederatedGraphWriteAccess(federatedGraph)) {
       throw new UnauthorizedError();
     }
@@ -376,8 +377,6 @@ export function updateProposal(
               checkUrl: '',
             };
           }
-        } else if (!authContext.rbac.canCreateSubGraph(namespace)) {
-          throw new UnauthorizedError();
         }
 
         proposalSubgraphs.push({

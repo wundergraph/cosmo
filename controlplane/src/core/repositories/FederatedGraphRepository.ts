@@ -485,7 +485,7 @@ export class FederatedGraphRepository {
         or(inArray(schema.targets.id, [...new Set(namespaces)]), inArray(schema.targets.id, [...new Set(resources)])),
       );
     } else if (namespaces.length > 0) {
-      conditions.push(inArray(schema.targets.id, [...new Set(namespaces)]));
+      conditions.push(inArray(schema.targets.namespaceId, [...new Set(namespaces)]));
     } else if (resources.length > 0) {
       conditions.push(inArray(schema.targets.id, [...new Set(resources)]));
     }

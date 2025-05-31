@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.109.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.108.0...@wundergraph/cosmo-connect@0.109.0) (2025-05-28)
+
+### Features
+
+* return proposalUrl on creation of proposal ([#1909](https://github.com/wundergraph/cosmo/issues/1909)) ([b21db02](https://github.com/wundergraph/cosmo/commit/b21db02185c37b47bd0c1db0fba872d1868017bd)) (@JivusAyrus)
+
+# [0.108.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.107.0...@wundergraph/cosmo-connect@0.108.0) (2025-05-26)
+
+### Features
+
+* fetch operations based on clients ([#1894](https://github.com/wundergraph/cosmo/issues/1894)) ([a7597f5](https://github.com/wundergraph/cosmo/commit/a7597f51d4506f11f117937955da3be2626a55c5)) (@JivusAyrus)
+
 # [0.107.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.106.0...@wundergraph/cosmo-connect@0.107.0) (2025-05-25)
 
 ### Features

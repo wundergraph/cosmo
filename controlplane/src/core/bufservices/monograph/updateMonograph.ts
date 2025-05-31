@@ -92,6 +92,7 @@ export function updateMonograph(
         };
       }
 
+      // check whether the user is authorized to perform the action
       if (!authContext.rbac.hasFederatedGraphWriteAccess(graph)) {
         throw new UnauthorizedError();
       }

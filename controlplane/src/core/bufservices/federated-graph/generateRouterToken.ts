@@ -44,6 +44,7 @@ export function generateRouterToken(
       };
     }
 
+    // check whether the user is authorized to perform the action
     if (!authContext.rbac.hasFederatedGraphWriteAccess(federatedGraph)) {
       throw new UnauthorizedError();
     }

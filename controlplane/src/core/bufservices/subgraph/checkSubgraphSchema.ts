@@ -131,7 +131,9 @@ export function checkSubgraphSchema(
       };
     }
 
-    if (!subgraph) {
+    if (subgraph && !authContext.rbac.hasSubGraphWriteAccess(subgraph)) {
+      throw new UnauthorizedError();
+    } else if (!subgraph) {
       if (!authContext.rbac.canCreateSubGraph(namespace)) {
         throw new UnauthorizedError();
       }
@@ -171,8 +173,6 @@ export function checkSubgraphSchema(
           compositionWarnings: [],
         };
       }
-    } else if (!authContext.rbac.hasSubGraphWriteAccess(subgraph)) {
-      throw new UnauthorizedError();
     }
 
     const subgraphName = subgraph?.name || req.subgraphName;

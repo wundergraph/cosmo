@@ -10,7 +10,9 @@ import {
 } from '@wundergraph/composition';
 import {
   afterAllSetup,
-  beforeAllSetup, createTestGroup,
+  beforeAllSetup,
+  createAPIKeyTestRBACEvaluator,
+  createTestGroup,
   createTestRBACEvaluator,
   genID,
   genUniqueLabel
@@ -75,6 +77,11 @@ describe('CheckSubgraphSchema', (ctx) => {
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
+    authenticator.changeUserWithSuppliedContext({
+      ...users.adminAliceCompanyA,
+      rbac: createTestRBACEvaluator(createTestGroup({ role }))
+    });
+
     // test for no changes in schema
     let checkResp = await client.checkSubgraphSchema({
       subgraphName,
@@ -85,10 +92,58 @@ describe('CheckSubgraphSchema', (ctx) => {
     expect(checkResp.breakingChanges.length).toBe(0);
     expect(checkResp.nonBreakingChanges.length).toBe(0);
 
+    // test for breaking changes in schema
+    checkResp = await client.checkSubgraphSchema({
+      subgraphName,
+      namespace: 'default',
+      schema: Uint8Array.from(Buffer.from('type Query { name: String! }')),
+    });
+    expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+    expect(checkResp.breakingChanges.length).not.toBe(0);
+    expect(checkResp.breakingChanges[0].changeType).toBe(SchemaChangeType.FIELD_REMOVED);
+    expect(checkResp.nonBreakingChanges.length).not.toBe(0);
+    expect(checkResp.nonBreakingChanges[0].changeType).toBe(SchemaChangeType.FIELD_ADDED);
+
+    await server.close();
+  });
+
+  test('Should allow legacy fallback when checking graph', async (role) => {
+    const { client, server, authenticator, users } = await SetupTest({ dbname, chClient });
+
+    const subgraphName = genID('subgraph1');
+    const label = genUniqueLabel();
+
+    let resp = await client.createFederatedSubgraph({
+      name: subgraphName,
+      namespace: 'default',
+      labels: [label],
+      routingUrl: 'http://localhost:8080',
+    });
+
+    expect(resp.response?.code).toBe(EnumStatusCode.OK);
+
+    resp = await client.publishFederatedSubgraph({
+      name: subgraphName,
+      namespace: 'default',
+      schema: 'type Query { hello: String! }',
+    });
+
+    expect(resp.response?.code).toBe(EnumStatusCode.OK);
+
     authenticator.changeUserWithSuppliedContext({
       ...users.adminAliceCompanyA,
-      rbac: createTestRBACEvaluator(createTestGroup({ role }))
+      rbac: createAPIKeyTestRBACEvaluator()
     });
+
+    // test for no changes in schema
+    let checkResp = await client.checkSubgraphSchema({
+      subgraphName,
+      namespace: 'default',
+      schema: Uint8Array.from(Buffer.from('type Query { hello: String! }')),
+    });
+    expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+    expect(checkResp.breakingChanges.length).toBe(0);
+    expect(checkResp.nonBreakingChanges.length).toBe(0);
 
     // test for breaking changes in schema
     checkResp = await client.checkSubgraphSchema({

@@ -244,7 +244,7 @@ describe('Group membership tests', () => {
       groupId: developerGroup.groupId,
     });
     expect(updateGroupResponse.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-    expect(updateGroupResponse.response?.details).toBe('The user doesnt have the permissions to perform this operation',);
+    expect(updateGroupResponse.response?.details).toBe('The user does not have the permissions to perform this operation',);
 
     await server.close();
   });

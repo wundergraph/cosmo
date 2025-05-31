@@ -4,6 +4,37 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.147.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.146.0...controlplane@0.147.0) (2025-05-29)
+
+### Features
+
+* fix subgraphs being displayed multiple times when they have bee… ([#1917](https://github.com/wundergraph/cosmo/issues/1917)) ([0c244b3](https://github.com/wundergraph/cosmo/commit/0c244b36b1bc063131955c4d8e4045d1e7235274)) (@wilsonrivera)
+
+# [0.146.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.145.1...controlplane@0.146.0) (2025-05-28)
+
+### Features
+
+* additional tests and improvements for the rbac system ([#1913](https://github.com/wundergraph/cosmo/issues/1913)) ([4345fde](https://github.com/wundergraph/cosmo/commit/4345fde0d69c1e9c3569d83670ae24eac939a220)) (@wilsonrivera)
+* return proposalUrl on creation of proposal ([#1909](https://github.com/wundergraph/cosmo/issues/1909)) ([b21db02](https://github.com/wundergraph/cosmo/commit/b21db02185c37b47bd0c1db0fba872d1868017bd)) (@JivusAyrus)
+
+## [0.145.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.145.0...controlplane@0.145.1) (2025-05-27)
+
+### Bug Fixes
+
+* missed legacy checks ([#1910](https://github.com/wundergraph/cosmo/issues/1910)) ([34e9ba6](https://github.com/wundergraph/cosmo/commit/34e9ba6d03c91bc8ff1a7b6c383996d4f453a641)) (@wilsonrivera)
+
+# [0.145.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.144.0...controlplane@0.145.0) (2025-05-27)
+
+### Features
+
+* restore legacy support for check endpoints ([#1908](https://github.com/wundergraph/cosmo/issues/1908)) ([87c3b9d](https://github.com/wundergraph/cosmo/commit/87c3b9daa3caac6f4c51b871b9a0a2abc9e2fa8e)) (@wilsonrivera)
+
+# [0.144.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.143.0...controlplane@0.144.0) (2025-05-26)
+
+### Features
+
+* fetch operations based on clients ([#1894](https://github.com/wundergraph/cosmo/issues/1894)) ([a7597f5](https://github.com/wundergraph/cosmo/commit/a7597f51d4506f11f117937955da3be2626a55c5)) (@JivusAyrus)
+
 # [0.143.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.142.0...controlplane@0.143.0) (2025-05-26)
 
 ### Features

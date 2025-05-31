@@ -157,16 +157,6 @@ export function updateSubgraph(
     }
 
     // Check if the user is authorized to perform the action
-    await opts.authorizer.authorize({
-      db: opts.db,
-      graph: {
-        targetId: subgraph.targetId,
-        targetType: 'subgraph',
-      },
-      headers: ctx.requestHeader,
-      authContext,
-    });
-
     if (!authContext.rbac.canUpdateSubGraph(subgraph)) {
       throw new UnauthorizedError();
     }

@@ -74,6 +74,7 @@ export function enableFeatureFlag(
       };
     }
 
+    // check whether the user is authorized to perform the action
     if (!authContext.rbac.hasFeatureFlagWriteAccess(featureFlag)) {
       throw new UnauthorizedError();
     }
