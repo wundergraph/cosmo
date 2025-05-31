@@ -1,5 +1,5 @@
 import { Kind, OperationTypeNode } from 'graphql';
-import { EntityInterfaceFederationData, InputValueData, ObjectDefinitionData, } from '../schema-building/types';
+import { EntityInterfaceFederationData, InputValueData, ObjectDefinitionData } from '../schema-building/types';
 import {
   IncompatibleMergedTypesErrorParams,
   InvalidNamedTypeErrorParams,
