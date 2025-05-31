@@ -11,13 +11,12 @@ import {
   invalidExternalDirectiveError,
   invalidExternalFieldWarning,
   invalidRepeatedDirectiveErrorMessage,
-  NOT_APPLICABLE,
   parse,
   requiresDefinedOnNonEntityFieldWarning,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   Subgraph,
-} from '../../src';
-import { baseDirectiveDefinitions, versionOneRouterDefinitions, versionTwoRouterDefinitions } from './utils/utils';
+} from '../../../src';
+import { baseDirectiveDefinitions, versionOneRouterDefinitions, versionTwoRouterDefinitions } from '../utils/utils';
 import {
   federateSubgraphsFailure,
   federateSubgraphsSuccess,
@@ -25,7 +24,7 @@ import {
   normalizeSubgraphFailure,
   normalizeSubgraphSuccess,
   schemaToSortedNormalizedString,
-} from '../utils/utils';
+} from '../../utils/utils';
 
 describe('@external directive tests', () => {
   describe('Normalization tests', () => {

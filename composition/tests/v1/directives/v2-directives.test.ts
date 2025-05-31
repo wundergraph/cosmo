@@ -9,9 +9,9 @@ import {
   parse,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   Subgraph,
-} from '../../src';
-import { versionOnePersistedBaseSchema, versionTwoRouterDefinitions } from './utils/utils';
-import { documentNodeToNormalizedString, normalizeString, schemaToSortedNormalizedString } from '../utils/utils';
+} from '../../../src';
+import { versionOnePersistedBaseSchema, versionTwoRouterDefinitions } from '../utils/utils';
+import { documentNodeToNormalizedString, normalizeString, schemaToSortedNormalizedString } from '../../utils/utils';
 
 describe('V2 Directives Tests', () => {
   test('that external fields do not produce shareable errors', () => {
@@ -74,7 +74,7 @@ describe('V2 Directives Tests', () => {
       invalidFieldShareabilityError(
         {
           name: 'Entity',
-          fieldDataByFieldName: new Map<string, FieldData>([
+          fieldDataByName: new Map<string, FieldData>([
             [
               'age',
               {

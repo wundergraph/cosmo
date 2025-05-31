@@ -7,16 +7,19 @@ import { joinLabel } from '@wundergraph/cosmo-shared';
 import {
   FederationResultFailure,
   ImplementationErrors,
-  incompatibleArgumentTypesError,
+  incompatibleMergedTypesError,
   incompatibleParentKindMergeError,
   INPUT_OBJECT,
+  INT_SCALAR,
   INTERFACE,
   InvalidFieldImplementation,
   invalidInterfaceImplementationError,
-  invalidRequiredInputValueError, LATEST_ROUTER_COMPATIBILITY_VERSION,
+  invalidRequiredInputValueError,
+  LATEST_ROUTER_COMPATIBILITY_VERSION,
   noBaseDefinitionForExtensionError,
   noQueryRootTypeError,
   OBJECT,
+  STRING_SCALAR,
 } from '@wundergraph/composition';
 import { composeSubgraphs } from '../src/core/composition/composition.js';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
@@ -138,9 +141,11 @@ describe('Composition error tests', (ctx) => {
     const result = composeSubgraphs([subgraph1, subgraph2], LATEST_ROUTER_COMPATIBILITY_VERSION) as FederationResultFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
-    expect(result.errors[0].message).toBe(
-      'Incompatible types when merging two instances of "A.a":\n Expected type "NamedType" but received "ListType"',
-    );
+    expect(result.errors[0]).toStrictEqual(incompatibleMergedTypesError({
+      actualType: 'ListType',
+      coords:'A.a',
+      expectedType: 'NamedType',
+    }));
   });
 
   test('Should cause composition errors on incompatible input field types', () => {
@@ -171,9 +176,11 @@ describe('Composition error tests', (ctx) => {
     const result = composeSubgraphs([subgraph1, subgraph2], LATEST_ROUTER_COMPATIBILITY_VERSION) as FederationResultFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
-    expect(result.errors[0].message).toBe(
-      'Incompatible types when merging two instances of "A.a":\n Expected type "String" but received "Int"',
-    );
+    expect(result.errors[0]).toStrictEqual(incompatibleMergedTypesError({
+      actualType: 'Int',
+      coords: 'A.a',
+      expectedType: 'String',
+    }));
   });
 
   test('Should cause composition errors on incompatible types of function arguments', () => {
@@ -206,7 +213,12 @@ describe('Composition error tests', (ctx) => {
     const result = composeSubgraphs([subgraph1, subgraph2], LATEST_ROUTER_COMPATIBILITY_VERSION) as FederationResultFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(incompatibleArgumentTypesError('n', 'Function.g(n: ...)', 'Int', 'String'));
+    expect(result.errors[0]).toStrictEqual(incompatibleMergedTypesError({
+      actualType: STRING_SCALAR,
+      coords: 'Function.g(n: ...)',
+      expectedType: INT_SCALAR,
+      isArgument: true,
+    }));
   });
 
   test.skip('Should cause composition errors when the @tag definition is invalid', () => {

@@ -17,14 +17,14 @@ import {
   Subgraph,
   subgraphValidationError,
   UNION,
-} from '../../src';
+} from '../../../src';
 import { parse } from 'graphql';
 import {
   federateSubgraphsFailure,
   federateSubgraphsSuccess,
   normalizeSubgraphFailure,
   normalizeSubgraphSuccess,
-} from '../utils/utils';
+} from '../../utils/utils';
 
 describe('@provides directive tests', () => {
   describe('Normalization tests', () => {

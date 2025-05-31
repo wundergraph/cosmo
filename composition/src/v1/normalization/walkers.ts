@@ -13,17 +13,10 @@ import {
   BASE_SCALARS,
   CONFIGURE_CHILD_DESCRIPTIONS_DEFINITION,
   CONFIGURE_DESCRIPTION_DEFINITION,
-  MAX_OR_SCOPES,
   SUBSCRIPTION_FILTER_DEFINITION,
   V2_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME,
 } from '../utils/constants';
-import {
-  isObjectDefinitionData,
-  mergeRequiredScopesByAND,
-  newAuthorizationData,
-  newFieldAuthorizationData,
-  upsertEntityData,
-} from '../utils/utils';
+import { upsertEntityData } from '../utils/utils';
 import { formatDescription, isNodeInterfaceObject, isObjectLikeNodeEntity } from '../../ast/utils';
 import { extractFieldSetValue, newFieldSetData } from './utils';
 import { EVENT_DIRECTIVE_NAMES } from '../utils/string-constants';
@@ -52,7 +45,7 @@ import {
   SUBSCRIPTION_FILTER,
 } from '../../utils/string-constants';
 import { RootTypeName } from '../../utils/types';
-import { getOrThrowError, getValueOrDefault, kindToTypeString } from '../../utils/utils';
+import { getOrThrowError, getValueOrDefault, kindToNodeType } from '../../utils/utils';
 import { KeyFieldSetData } from './types';
 
 /* Walker to collect schema definition, directive definitions, and entities.
@@ -290,9 +283,9 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
             unexpectedParentKindForChildError(
               nf.originalParentTypeName,
               'Enum or Enum extension',
-              kindToTypeString(parentData.kind),
+              kindToNodeType(parentData.kind),
               name,
-              kindToTypeString(node.kind),
+              kindToNodeType(node.kind),
             ),
           );
           return;
@@ -354,15 +347,15 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
             unexpectedParentKindForChildError(
               nf.originalParentTypeName,
               '"Object" or "Interface"',
-              kindToTypeString(parentData.kind),
+              kindToNodeType(parentData.kind),
               fieldName,
-              kindToTypeString(node.kind),
+              kindToNodeType(node.kind),
             ),
           );
           return;
         }
-        if (parentData.fieldDataByFieldName.has(fieldName)) {
-          nf.errors.push(duplicateFieldDefinitionError(kindToTypeString(parentData.kind), parentData.name, fieldName));
+        if (parentData.fieldDataByName.has(fieldName)) {
+          nf.errors.push(duplicateFieldDefinitionError(kindToNodeType(parentData.kind), parentData.name, fieldName));
           return;
         }
         const argumentDataByArgumentName = nf.extractArguments(new Map<string, InputValueData>(), node);
@@ -375,7 +368,7 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
           }
         }
         const fieldData = nf.addFieldDataByNode(
-          parentData.fieldDataByFieldName,
+          parentData.fieldDataByName,
           node,
           argumentDataByArgumentName,
           directivesByDirectiveName,
@@ -456,19 +449,19 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
             unexpectedParentKindForChildError(
               nf.originalParentTypeName,
               'input object or input object extension',
-              kindToTypeString(parentData.kind),
+              kindToNodeType(parentData.kind),
               name,
-              kindToTypeString(node.kind),
+              kindToNodeType(node.kind),
             ),
           );
           return false;
         }
-        if (parentData.inputValueDataByValueName.has(name)) {
+        if (parentData.inputValueDataByName.has(name)) {
           nf.errors.push(duplicateInputFieldDefinitionError(nf.originalParentTypeName, name));
           return;
         }
         nf.addInputValueDataByNode({
-          inputValueDataByName: parentData.inputValueDataByValueName,
+          inputValueDataByName: parentData.inputValueDataByName,
           isArgument: false,
           node,
           originalParentTypeName: nf.originalParentTypeName,

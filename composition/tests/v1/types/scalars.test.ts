@@ -8,12 +8,12 @@ import {
   normalizeSubgraph,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   SCALAR,
-  Subgraph,
   ScalarDefinitionData,
-} from '../../src';
+  Subgraph,
+} from '../../../src';
 import { parse } from 'graphql';
-import { baseDirectiveDefinitions, versionOneRouterDefinitions } from './utils/utils';
-import { normalizeString, schemaToSortedNormalizedString } from '../utils/utils';
+import { baseDirectiveDefinitions, versionOneRouterDefinitions } from '../utils/utils';
+import { normalizeString, schemaToSortedNormalizedString } from '../../utils/utils';
 
 describe('Scalar tests', () => {
   describe('Normalization tests', () => {
