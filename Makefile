@@ -18,13 +18,6 @@ prerequisites: setup-dev-tools
 	docker -v
 	dbmate -v
 
-install-plugin-tools: setup-dev-tools
-	curl -LO https://github.com/protocolbuffers/protobuf/releases/download/v29.3/protoc-29.3-linux-x86_64.zip
-	unzip protoc-29.3-linux-x86_64.zip -d $(HOME)/.local
-	rm protoc-29.3-linux-x86_64.zip
-	go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.34.2
-	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.5.1
-
 infra-up: dc-dev
 
 edfs-infra-up:

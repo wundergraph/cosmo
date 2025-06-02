@@ -160,6 +160,8 @@ func NewDefaultFactoryResolver(
 
 func (d *DefaultFactoryResolver) ResolveGraphqlFactory(subgraphName string) (plan.PlannerFactory[graphql_datasource.Configuration], error) {
 	if d.pluginHost != nil {
+		// If the plugin host is not nil, we try to get the plugin for the subgraph.
+		// In case of a plugin, we use the gRPC client provider to create the factory.
 		plugin, exists := d.pluginHost.GetPlugin(subgraphName)
 		if exists {
 			return graphql_datasource.NewFactoryGRPCClientProvider(d.engineCtx, plugin.GetClient)
@@ -639,6 +641,9 @@ func (l *Loader) fieldHasAuthorizationRule(fieldConfiguration *nodev1.FieldConfi
 	return false
 }
 
+// toGRPCConfiguration converts a nodev1.GRPCConfiguration to a grpcdatasource.GRPCConfiguration.
+// It is used to configure the gRPC datasource for a subgraph.
+// The pluginsEnabled flag is used to disable the gRPC datasource if the plugins are not enabled.
 func toGRPCConfiguration(config *nodev1.GRPCConfiguration, pluginsEnabled bool) *grpcdatasource.GRPCConfiguration {
 	if config == nil || config.Mapping == nil {
 		return nil
