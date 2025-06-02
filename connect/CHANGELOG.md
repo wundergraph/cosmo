@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.110.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.109.0...@wundergraph/cosmo-connect@0.110.0) (2025-06-02)
+
+### Features
+
+* add GetClientsFromAnalytics RPC to fetch the clients using clickhouse metrics ([#1918](https://github.com/wundergraph/cosmo/issues/1918)) ([756edf3](https://github.com/wundergraph/cosmo/commit/756edf377314296adc50615f12c618b98e78810d)) (@JivusAyrus)
+
 # [0.109.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.108.0...@wundergraph/cosmo-connect@0.109.0) (2025-05-28)
 
 ### Features
