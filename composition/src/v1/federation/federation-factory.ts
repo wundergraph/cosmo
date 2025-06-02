@@ -1,11 +1,16 @@
 import {
   buildASTSchema,
+  ConstDirectiveNode,
+  ConstObjectValueNode,
   DirectiveDefinitionNode,
   DocumentNode,
   GraphQLSchema,
   Kind,
+  ListTypeNode,
   NamedTypeNode,
+  NonNullTypeNode,
   StringValueNode,
+  TypeNode,
 } from 'graphql';
 import {
   getMutableTypeNode,
@@ -22,13 +27,11 @@ import {
   allChildDefinitionsAreInaccessibleError,
   allExternalFieldInstancesError,
   configureDescriptionPropagationError,
-  fieldTypeMergeFatalError,
   inaccessibleQueryRootTypeError,
   inaccessibleRequiredInputValueError,
   inaccessibleSubscriptionFieldConditionFieldPathFieldErrorMessage,
-  incompatibleArgumentTypesError,
-  incompatibleChildTypesError,
   incompatibleFederatedFieldNamedTypeError,
+  incompatibleMergedTypesError,
   incompatibleParentKindFatalError,
   incompatibleParentKindMergeError,
   incompatibleSharedEnumError,
@@ -96,7 +99,6 @@ import {
 } from '../utils/utils';
 import { printTypeNode } from '@graphql-tools/merge';
 import {
-  ConfigurationData,
   FieldConfiguration,
   RequiredFieldConfiguration,
   SubscriptionCondition,
@@ -167,11 +169,10 @@ import { renameRootTypes } from './walkers';
 import { cloneDeep } from 'lodash';
 import {
   DivergentType,
-  FederateTypeOptions,
+  FederateTypeParams,
   FederateTypeResult,
   getMostRestrictiveMergedTypeNode,
 } from '../schema-building/type-merging';
-import { ConstDirectiveNode, ConstObjectValueNode, ListTypeNode, NonNullTypeNode, TypeNode } from 'graphql/index';
 import { Graph } from '../../resolvability-graph/graph';
 import { GraphNode } from '../../resolvability-graph/graph-nodes';
 import { InternalSubgraph, Subgraph, SubgraphConfig } from '../../subgraph/types';
@@ -220,7 +221,7 @@ import {
   getOrThrowError,
   getSingleSetEntry,
   getValueOrDefault,
-  kindToTypeString,
+  kindToNodeType,
 } from '../../utils/utils';
 import {
   GraphFieldData,
@@ -294,10 +295,7 @@ export class FederationFactory {
         PARENT_DEFINITION_DATA,
       );
       if (implementationData.kind !== Kind.INTERFACE_TYPE_DEFINITION) {
-        invalidImplementationTypeStringByTypeName.set(
-          implementationData.name,
-          kindToTypeString(implementationData.kind),
-        );
+        invalidImplementationTypeStringByTypeName.set(implementationData.name, kindToNodeType(implementationData.kind));
         continue;
       }
       const implementationErrors: ImplementationErrors = {
@@ -305,9 +303,9 @@ export class FederationFactory {
         unimplementedFields: [],
       };
       let hasErrors = false;
-      for (const [fieldName, interfaceField] of implementationData.fieldDataByFieldName) {
+      for (const [fieldName, interfaceField] of implementationData.fieldDataByName) {
         let hasNestedErrors = false;
-        const fieldData = data.fieldDataByFieldName.get(fieldName);
+        const fieldData = data.fieldDataByName.get(fieldName);
         if (!fieldData) {
           hasErrors = true;
           implementationErrors.unimplementedFields.push(fieldName);
@@ -333,10 +331,10 @@ export class FederationFactory {
           invalidFieldImplementation.implementedResponseType = printTypeNode(fieldData.node.type);
         }
         const handledArguments = new Set<string>();
-        for (const [argumentName, inputValueData] of interfaceField.argumentDataByArgumentName) {
+        for (const [argumentName, inputValueData] of interfaceField.argumentDataByName) {
           const interfaceArgument = inputValueData.node;
           handledArguments.add(argumentName);
-          const argumentNode = fieldData.argumentDataByArgumentName.get(argumentName)?.node;
+          const argumentNode = fieldData.argumentDataByName.get(argumentName)?.node;
           // The type implementing the interface must include all arguments with no variation for that argument
           if (!argumentNode) {
             hasErrors = true;
@@ -354,7 +352,7 @@ export class FederationFactory {
           }
         }
         // Additional arguments must be optional (nullable)
-        for (const [argumentName, inputValueContainer] of fieldData.argumentDataByArgumentName) {
+        for (const [argumentName, inputValueContainer] of fieldData.argumentDataByName) {
           const argumentNode = inputValueContainer.node;
           if (handledArguments.has(argumentName)) {
             continue;
@@ -386,7 +384,7 @@ export class FederationFactory {
       this.errors.push(
         invalidInterfaceImplementationError(
           data.node.name.value,
-          kindToTypeString(data.kind),
+          kindToNodeType(data.kind),
           implementationErrorsByInterfaceName,
         ),
       );
@@ -630,23 +628,23 @@ export class FederationFactory {
     addIterableValuesToSet(incomingData.subgraphNames, targetData.subgraphNames);
     this.handleInputValueInaccessibility(isParentInaccessible, targetData, parentCoords);
     // TODO refactor type merging
-    const { typeErrors, typeNode } = getMostRestrictiveMergedTypeNode(
+    const mergeResult = getMostRestrictiveMergedTypeNode(
       targetData.type,
       incomingData.type,
       targetData.originalCoords,
       this.errors,
     );
-    if (typeNode) {
-      targetData.type = typeNode;
+    if (mergeResult.success) {
+      targetData.type = mergeResult.typeNode;
     } else {
-      if (!typeErrors || typeErrors.length < 2) {
-        throw fieldTypeMergeFatalError(targetData.name);
-      }
-      existingData.isArgument
-        ? this.errors.push(
-            incompatibleArgumentTypesError(targetData.name, targetData.federatedCoords, typeErrors[0], typeErrors[1]),
-          )
-        : this.errors.push(incompatibleChildTypesError(targetData.federatedCoords, typeErrors[0], typeErrors[1]));
+      this.errors.push(
+        incompatibleMergedTypesError({
+          actualType: mergeResult.actualType,
+          isArgument: existingData.isArgument,
+          coords: existingData.federatedCoords,
+          expectedType: mergeResult.expectedType,
+        }),
+      );
     }
     compareAndValidateInputValueDefaultValues(targetData, incomingData, this.errors);
   }
@@ -693,10 +691,10 @@ export class FederationFactory {
     });
   }
 
-  federateOutputType({ current, other, coords, mostRestrictive }: FederateTypeOptions): FederateTypeResult {
+  federateOutputType({ current, other, coords, mostRestrictive }: FederateTypeParams): FederateTypeResult {
     other = getMutableTypeNode(other, coords, this.errors); // current is already a deep copy
     // The first type of the pair to diverge in restriction takes precedence in all future differences.
-    // If the other type of the pair also diverges, it's a src error.
+    // If the other type of the pair also diverges, it's an error.
     // To keep the output link intact, it is not possible to spread assign "lastTypeNode".
     const federatedTypeNode: MutableIntermediateTypeNode = { kind: current.kind };
     let divergentType = DivergentType.NONE;
@@ -726,7 +724,9 @@ export class FederationFactory {
       }
       if (current.kind === Kind.NON_NULL_TYPE) {
         if (divergentType === DivergentType.OTHER) {
-          this.errors.push(incompatibleChildTypesError(coords, current.kind, other.kind));
+          this.errors.push(
+            incompatibleMergedTypesError({ actualType: other.kind, coords, expectedType: current.kind }),
+          );
           return { success: false };
         } else {
           divergentType = DivergentType.CURRENT;
@@ -741,7 +741,9 @@ export class FederationFactory {
       }
       if (other.kind === Kind.NON_NULL_TYPE) {
         if (divergentType === DivergentType.CURRENT) {
-          this.errors.push(incompatibleChildTypesError(coords, current.kind, other.kind));
+          this.errors.push(
+            incompatibleMergedTypesError({ actualType: other.kind, coords, expectedType: current.kind }),
+          );
           return { success: false };
         } else {
           divergentType = DivergentType.OTHER;
@@ -755,7 +757,7 @@ export class FederationFactory {
         continue;
       }
       // At least one of the types must be a non-null wrapper, or the types are inconsistent
-      this.errors.push(incompatibleChildTypesError(coords, current.kind, other.kind));
+      this.errors.push(incompatibleMergedTypesError({ actualType: other.kind, coords, expectedType: current.kind }));
       return { success: false };
     }
     this.errors.push(maximumTypeNestingExceededError(coords));
@@ -843,9 +845,9 @@ export class FederationFactory {
         this.addSubgraphNameToExistingFieldNamedTypeDisparity(incomingData);
       }
     }
-    for (const inputValueData of incomingData.argumentDataByArgumentName.values()) {
+    for (const inputValueData of incomingData.argumentDataByName.values()) {
       this.upsertInputValueData(
-        targetData.argumentDataByArgumentName,
+        targetData.argumentDataByName,
         inputValueData,
         targetData.federatedCoords,
         isFieldInaccessible,
@@ -935,6 +937,7 @@ export class FederationFactory {
       isArgument: sourceData.isArgument,
       kind: sourceData.kind,
       name: sourceData.name,
+      namedTypeKind: sourceData.namedTypeKind,
       namedTypeName: sourceData.namedTypeName,
       node: {
         directives: [],
@@ -979,8 +982,8 @@ export class FederationFactory {
 
   copyFieldData(sourceData: FieldData, isInaccessible: boolean): FieldData {
     return {
-      argumentDataByArgumentName: this.copyInputValueDataByValueName(
-        sourceData.argumentDataByArgumentName,
+      argumentDataByName: this.copyInputValueDataByValueName(
+        sourceData.argumentDataByName,
         isInaccessible,
         sourceData.federatedCoords,
       ),
@@ -992,6 +995,7 @@ export class FederationFactory {
       isShareableBySubgraphName: new Map(sourceData.isShareableBySubgraphName),
       kind: sourceData.kind,
       name: sourceData.name,
+      namedTypeKind: sourceData.namedTypeKind,
       namedTypeName: sourceData.namedTypeName,
       node: {
         arguments: [],
@@ -1029,7 +1033,7 @@ export class FederationFactory {
     return output;
   }
 
-  copyFieldDataByFieldName(source: Map<string, FieldData>, isParentInaccessible: boolean): Map<string, FieldData> {
+  copyFieldDataByName(source: Map<string, FieldData>, isParentInaccessible: boolean): Map<string, FieldData> {
     const fieldDataByFieldName = new Map<string, FieldData>();
     for (const [fieldName, sourceData] of source) {
       const isFieldInaccessible = isParentInaccessible || isNodeDataInaccessible(sourceData);
@@ -1071,8 +1075,8 @@ export class FederationFactory {
       case Kind.INPUT_OBJECT_TYPE_DEFINITION: {
         return {
           ...data,
-          inputValueDataByValueName: this.copyInputValueDataByValueName(
-            sourceData.inputValueDataByValueName,
+          inputValueDataByName: this.copyInputValueDataByValueName(
+            sourceData.inputValueDataByName,
             sourceData.isInaccessible,
             sourceData.name,
           ),
@@ -1088,10 +1092,7 @@ export class FederationFactory {
       case Kind.INTERFACE_TYPE_DEFINITION: {
         return {
           ...data,
-          fieldDataByFieldName: this.copyFieldDataByFieldName(
-            sourceData.fieldDataByFieldName,
-            sourceData.isInaccessible,
-          ),
+          fieldDataByName: this.copyFieldDataByName(sourceData.fieldDataByName, sourceData.isInaccessible),
           implementedInterfaceTypeNames: new Set(sourceData.implementedInterfaceTypeNames),
           isEntity: sourceData.isEntity,
           isInaccessible: sourceData.isInaccessible,
@@ -1106,10 +1107,7 @@ export class FederationFactory {
       case Kind.OBJECT_TYPE_DEFINITION: {
         return {
           ...data,
-          fieldDataByFieldName: this.copyFieldDataByFieldName(
-            sourceData.fieldDataByFieldName,
-            sourceData.isInaccessible,
-          ),
+          fieldDataByName: this.copyFieldDataByName(sourceData.fieldDataByName, sourceData.isInaccessible),
           implementedInterfaceTypeNames: new Set(sourceData.implementedInterfaceTypeNames),
           isEntity: sourceData.isEntity,
           isInaccessible: sourceData.isInaccessible,
@@ -1198,8 +1196,8 @@ export class FederationFactory {
         this.errors.push(
           incompatibleParentKindMergeError(
             targetData.name,
-            kindToTypeString(targetData.kind),
-            kindToTypeString(incomingData.kind),
+            kindToNodeType(targetData.kind),
+            kindToNodeType(incomingData.kind),
           ),
         );
         return;
@@ -1233,9 +1231,9 @@ export class FederationFactory {
         }
         targetData.isInaccessible ||= isParentInaccessible;
         addIterableValuesToSet(incomingData.subgraphNames, targetData.subgraphNames);
-        for (const inputValueData of incomingData.inputValueDataByValueName.values()) {
+        for (const inputValueData of incomingData.inputValueDataByName.values()) {
           this.upsertInputValueData(
-            targetData.inputValueDataByValueName,
+            targetData.inputValueDataByName,
             inputValueData,
             targetData.name,
             targetData.isInaccessible,
@@ -1257,8 +1255,8 @@ export class FederationFactory {
           targetData.implementedInterfaceTypeNames,
         );
         addIterableValuesToSet(compositeOutputData.subgraphNames, targetData.subgraphNames);
-        for (const fieldData of compositeOutputData.fieldDataByFieldName.values()) {
-          this.upsertFieldData(targetData.fieldDataByFieldName, fieldData, targetData.isInaccessible);
+        for (const fieldData of compositeOutputData.fieldDataByName.values()) {
+          this.upsertFieldData(targetData.fieldDataByName, fieldData, targetData.isInaccessible);
         }
         return;
       case Kind.UNION_TYPE_DEFINITION:
@@ -1280,14 +1278,14 @@ export class FederationFactory {
   ) {
     switch (data.kind) {
       case Kind.INPUT_OBJECT_TYPE_DEFINITION:
-        for (const inputFieldData of data.inputValueDataByValueName.values()) {
+        for (const inputFieldData of data.inputValueDataByName.values()) {
           this.inaccessibleCoords.add(inputFieldData.federatedCoords);
         }
         break;
       default:
-        for (const fieldData of data.fieldDataByFieldName.values()) {
+        for (const fieldData of data.fieldDataByName.values()) {
           this.inaccessibleCoords.add(fieldData.federatedCoords);
-          for (const inputValueData of fieldData.argumentDataByArgumentName.values()) {
+          for (const inputValueData of fieldData.argumentDataByName.values()) {
             this.inaccessibleCoords.add(inputValueData.federatedCoords);
           }
         }
@@ -1386,11 +1384,11 @@ export class FederationFactory {
         compositeOutputData.kind !== Kind.OBJECT_TYPE_DEFINITION
       ) {
         this.errors.push(
-          unexpectedNonCompositeOutputTypeError(coordinates[0], kindToTypeString(compositeOutputData.kind)),
+          unexpectedNonCompositeOutputTypeError(coordinates[0], kindToNodeType(compositeOutputData.kind)),
         );
         continue;
       }
-      const fieldData = compositeOutputData.fieldDataByFieldName.get(coordinates[1]);
+      const fieldData = compositeOutputData.fieldDataByName.get(coordinates[1]);
       // This error should never happen
       if (!fieldData) {
         this.errors.push(unknownFieldDataError(fieldCoordinates));
@@ -1637,7 +1635,7 @@ export class FederationFactory {
           for (const fieldName of entityInterfaceData.interfaceObjectFieldNames) {
             const fieldCoords = `${concreteTypeName}.${fieldName}`;
             const interfaceFieldData = getOrThrowError(
-              entityInterface.fieldDataByFieldName,
+              entityInterface.fieldDataByName,
               fieldName,
               `${entityInterfaceTypeName}.fieldDataByFieldName`,
             );
@@ -1655,17 +1653,14 @@ export class FederationFactory {
                 this.invalidORScopesCoords.add(fieldCoords);
               }
             }
-            const existingFieldData = concreteTypeData.fieldDataByFieldName.get(fieldName);
+            const existingFieldData = concreteTypeData.fieldDataByName.get(fieldName);
             if (existingFieldData) {
               // TODO handle shareability
               continue;
             }
             const isInaccessible =
               entityInterface.isInaccessible || concreteTypeData.isInaccessible || interfaceFieldData.isInaccessible;
-            concreteTypeData.fieldDataByFieldName.set(
-              fieldName,
-              this.copyFieldData(interfaceFieldData, isInaccessible),
-            );
+            concreteTypeData.fieldDataByName.set(fieldName, this.copyFieldData(interfaceFieldData, isInaccessible));
           }
           this.handleInterfaceObjectForInternalGraph({
             internalSubgraph,
@@ -1772,7 +1767,7 @@ export class FederationFactory {
     const argumentNames: Array<string> = [];
     const invalidRequiredArguments: InvalidRequiredInputValueData[] = [];
     const fieldPath = `${fieldData.renamedParentTypeName}.${fieldData.name}`;
-    for (const [argumentName, inputValueData] of fieldData.argumentDataByArgumentName) {
+    for (const [argumentName, inputValueData] of fieldData.argumentDataByName) {
       if (fieldData.subgraphNames.size === inputValueData.subgraphNames.size) {
         argumentNames.push(argumentName);
         argumentNodes.push(this.getNodeWithPersistedDirectivesByInputValueData(inputValueData));
@@ -1812,9 +1807,7 @@ export class FederationFactory {
   pushParentDefinitionDataToDocumentDefinitions(interfaceImplementations: InterfaceImplementationData[]) {
     for (const [parentTypeName, parentDefinitionData] of this.parentDefinitionDataByTypeName) {
       if (parentDefinitionData.extensionType !== ExtensionType.NONE) {
-        this.errors.push(
-          noBaseDefinitionForExtensionError(kindToTypeString(parentDefinitionData.kind), parentTypeName),
-        );
+        this.errors.push(noBaseDefinitionForExtensionError(kindToNodeType(parentDefinitionData.kind), parentTypeName));
       }
       switch (parentDefinitionData.kind) {
         case Kind.ENUM_TYPE_DEFINITION:
@@ -1869,7 +1862,7 @@ export class FederationFactory {
           if (clientEnumValueNodes.length < 1) {
             this.errors.push(
               allChildDefinitionsAreInaccessibleError(
-                kindToTypeString(parentDefinitionData.kind),
+                kindToNodeType(parentDefinitionData.kind),
                 parentTypeName,
                 ENUM_VALUE,
               ),
@@ -1886,7 +1879,7 @@ export class FederationFactory {
           const invalidRequiredInputs: Array<InvalidRequiredInputValueData> = [];
           const inputValueNodes: Array<MutableInputValueNode> = [];
           const clientInputValueNodes: Array<MutableInputValueNode> = [];
-          for (const [inputValueName, inputValueData] of parentDefinitionData.inputValueDataByValueName) {
+          for (const [inputValueName, inputValueData] of parentDefinitionData.inputValueDataByName) {
             if (parentDefinitionData.subgraphNames.size === inputValueData.subgraphNames.size) {
               inputValueNodes.push(this.getNodeWithPersistedDirectivesByInputValueData(inputValueData));
               if (isNodeDataInaccessible(inputValueData)) {
@@ -1922,7 +1915,7 @@ export class FederationFactory {
           if (clientInputValueNodes.length < 1) {
             this.errors.push(
               allChildDefinitionsAreInaccessibleError(
-                kindToTypeString(parentDefinitionData.kind),
+                kindToNodeType(parentDefinitionData.kind),
                 parentTypeName,
                 'input field',
               ),
@@ -1945,7 +1938,7 @@ export class FederationFactory {
           const isObject = parentDefinitionData.kind === Kind.OBJECT_TYPE_DEFINITION;
           const authData = this.authorizationDataByParentTypeName.get(parentTypeName);
           propagateAuthDirectives(parentDefinitionData, authData);
-          for (const [fieldName, fieldData] of parentDefinitionData.fieldDataByFieldName) {
+          for (const [fieldName, fieldData] of parentDefinitionData.fieldDataByName) {
             propagateFieldAuthDirectives(fieldData, authData);
             const argumentNodes = this.getValidFieldArgumentNodes(fieldData);
             if (isObject) {
@@ -1990,7 +1983,7 @@ export class FederationFactory {
             const error = isQuery
               ? noQueryRootTypeError(false)
               : allChildDefinitionsAreInaccessibleError(
-                  kindToTypeString(parentDefinitionData.kind),
+                  kindToNodeType(parentDefinitionData.kind),
                   parentTypeName,
                   FIELD,
                 );
@@ -2176,17 +2169,17 @@ export class FederationFactory {
       }
     }
     if (invalidCoords.length > 0) {
-      this.errors.push(invalidReferencesOfInaccessibleTypeError(kindToTypeString(data.kind), data.name, invalidCoords));
+      this.errors.push(invalidReferencesOfInaccessibleTypeError(kindToNodeType(data.kind), data.name, invalidCoords));
     }
   }
 
   validateQueryRootType() {
     const query = this.parentDefinitionDataByTypeName.get(QUERY);
-    if (!query || query.kind !== Kind.OBJECT_TYPE_DEFINITION || query.fieldDataByFieldName.size < 1) {
+    if (!query || query.kind !== Kind.OBJECT_TYPE_DEFINITION || query.fieldDataByName.size < 1) {
       this.errors.push(noQueryRootTypeError());
       return;
     }
-    for (const fieldData of query.fieldDataByFieldName.values()) {
+    for (const fieldData of query.fieldDataByName.values()) {
       if (!isNodeDataInaccessible(fieldData)) {
         return;
       }
@@ -2234,7 +2227,7 @@ export class FederationFactory {
         );
         return [];
       }
-      const fieldData: FieldData | undefined = lastData.fieldDataByFieldName.get(fieldName);
+      const fieldData: FieldData | undefined = lastData.fieldDataByName.get(fieldName);
       if (!fieldData) {
         fieldErrorMessages.push(
           undefinedSubscriptionFieldConditionFieldPathFieldErrorMessage(
@@ -2283,7 +2276,7 @@ export class FederationFactory {
           inputFieldPath,
           conditionFieldPath,
           paths[paths.length - 1],
-          kindToTypeString(lastData.kind),
+          kindToNodeType(lastData.kind),
           lastData.name,
         ),
       );
@@ -2325,7 +2318,7 @@ export class FederationFactory {
           }
           if (objectFieldNode.value.kind !== Kind.STRING) {
             fieldErrorMessages.push(
-              invalidInputFieldTypeErrorMessage(inputFieldPath, STRING, kindToTypeString(objectFieldNode.value.kind)),
+              invalidInputFieldTypeErrorMessage(inputFieldPath, STRING, kindToNodeType(objectFieldNode.value.kind)),
             );
             hasErrors = true;
             break;
@@ -2355,7 +2348,7 @@ export class FederationFactory {
           const objectFieldValueKind = objectFieldNode.value.kind;
           if (objectFieldValueKind == Kind.NULL || objectFieldValueKind == Kind.OBJECT) {
             fieldErrorMessages.push(
-              invalidInputFieldTypeErrorMessage(inputFieldPath, LIST, kindToTypeString(objectFieldNode.value.kind)),
+              invalidInputFieldTypeErrorMessage(inputFieldPath, LIST, kindToNodeType(objectFieldNode.value.kind)),
             );
             hasErrors = true;
             break;
@@ -2536,7 +2529,7 @@ export class FederationFactory {
           subscriptionFilterConditionInvalidInputFieldTypeErrorMessage(
             inputFieldPath,
             expectedTypeString,
-            kindToTypeString(objectFieldNode.value.kind),
+            kindToNodeType(objectFieldNode.value.kind),
           ),
         );
         return false;
@@ -2563,7 +2556,7 @@ export class FederationFactory {
           subscriptionFilterConditionInvalidInputFieldTypeErrorMessage(
             CONDITION,
             OBJECT,
-            kindToTypeString(argumentNode.value.kind),
+            kindToNodeType(argumentNode.value.kind),
           ),
         ]),
       );
@@ -2820,16 +2813,16 @@ export class FederationFactory {
           case Kind.INPUT_OBJECT_TYPE_DEFINITION:
             this.handleChildTagExclusions(
               parentDefinitionData,
-              parentDefinitionData.inputValueDataByValueName,
+              parentDefinitionData.inputValueDataByName,
               parentTagData.childTagDataByChildName,
               contractTagOptions.tagNamesToExclude,
             );
             break;
           default:
-            let accessibleFields = parentDefinitionData.fieldDataByFieldName.size;
+            let accessibleFields = parentDefinitionData.fieldDataByName.size;
             for (const [fieldName, childTagData] of parentTagData.childTagDataByChildName) {
               const fieldData = getOrThrowError(
-                parentDefinitionData.fieldDataByFieldName,
+                parentDefinitionData.fieldDataByName,
                 fieldName,
                 `${parentTypeName}.fieldDataByFieldName`,
               );
@@ -2847,7 +2840,7 @@ export class FederationFactory {
               }
               for (const [argumentName, tagNames] of childTagData.tagNamesByArgumentName) {
                 const inputValueData = getOrThrowError(
-                  fieldData.argumentDataByArgumentName,
+                  fieldData.argumentDataByName,
                   argumentName,
                   `${fieldName}.argumentDataByArgumentName`,
                 );
@@ -2913,14 +2906,14 @@ export class FederationFactory {
           case Kind.INPUT_OBJECT_TYPE_DEFINITION:
             this.handleChildTagInclusions(
               parentDefinitionData,
-              parentDefinitionData.inputValueDataByValueName,
+              parentDefinitionData.inputValueDataByName,
               parentTagData.childTagDataByChildName,
               contractTagOptions.tagNamesToInclude,
             );
             break;
           default:
-            let accessibleFields = parentDefinitionData.fieldDataByFieldName.size;
-            for (const [fieldName, fieldData] of parentDefinitionData.fieldDataByFieldName) {
+            let accessibleFields = parentDefinitionData.fieldDataByName.size;
+            for (const [fieldName, fieldData] of parentDefinitionData.fieldDataByName) {
               if (isNodeDataInaccessible(fieldData)) {
                 accessibleFields -= 1;
                 continue;
