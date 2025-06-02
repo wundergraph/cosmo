@@ -108,6 +108,20 @@ class DeleteOrganizationWorker implements IWorker {
       if (org.kcGroupId) {
         await this.input.keycloakClient.deleteGroupById({ realm: this.input.keycloakRealm, groupId: org.kcGroupId });
       }
+
+      // Delete organization roles
+      const kcOrgRoles = await this.input.keycloakClient.client.roles.find({
+        realm: this.input.keycloakRealm,
+        max: -1,
+        search: `${org.slug}:`,
+      });
+
+      for (const kcRole of kcOrgRoles) {
+        await this.input.keycloakClient.client.roles.delById({
+          realm: this.input.keycloakRealm,
+          id: kcRole.id!,
+        });
+      }
     } catch (err) {
       this.input.logger.error(
         { jobId: job.id, organizationId: job.data.organizationId, err },

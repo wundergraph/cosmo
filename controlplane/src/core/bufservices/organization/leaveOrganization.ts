@@ -52,7 +52,7 @@ export function leaveOrganization(
     if (org.creatorUserId === (req.userID || authContext.userId)) {
       return {
         response: {
-          code: EnumStatusCode.ERR_NOT_FOUND,
+          code: EnumStatusCode.ERR,
           details: `Creator of a organization cannot leave the organization.`,
         },
       };
