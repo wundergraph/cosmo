@@ -17,7 +17,7 @@ describe('Leave organization', () => {
   });
 
   test('Should remove member from organization groups when leaving', async () => {
-    const { client, server, keycloakClient, realm, users } = await SetupTest({ dbname, enableMultiUsers: true });
+    const { client, server, keycloakClient, realm, users, authenticator } = await SetupTest({ dbname, enableMultiUsers: true });
 
     const orgRepo = new OrganizationRepository(server.log, server.db);
     const orgGroupRepo = new OrganizationGroupRepository(server.db);
@@ -53,7 +53,14 @@ describe('Leave organization', () => {
     expect(viewerGroup).toBeDefined();
 
     // Leave the organization
-    const leaveOrganizationResponse = await client.leaveOrganization({ userID: users.adminJimCompanyB!.userId });
+    authenticator.changeUserWithSuppliedContext({
+      ...users.adminJimCompanyB!,
+      organizationId: users.adminAliceCompanyA.organizationId,
+      organizationName: users.adminAliceCompanyA.organizationName,
+      organizationSlug: users.adminAliceCompanyA.organizationSlug,
+    })
+
+    const leaveOrganizationResponse = await client.leaveOrganization({});
     expect(leaveOrganizationResponse.response?.code).toBe(EnumStatusCode.OK);
 
     // Make sure that the user was removed from all Keycloak groups for the organization
