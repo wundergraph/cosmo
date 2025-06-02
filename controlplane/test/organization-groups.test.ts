@@ -224,7 +224,7 @@ describe('Group membership tests', () => {
   });
 });
 
-describe('Group membership tests', () => {
+describe('Multiple group membership tests', () => {
   beforeAll(async () => {
     dbname = await beforeAllSetup();
   });
@@ -298,6 +298,40 @@ describe('Group membership tests', () => {
 
     expect(kcUserGroups).toHaveLength(1);
     expect(kcUserGroups.find((group) => group.path === `${orgRootGroup}/${group3.name}`)).toBeDefined();
+
+    await server.close();
+  });
+
+  test('Should not fail when moving a group member to a group they already belong to', async () => {
+    const { client, server, users, keycloakClient, realm } = await SetupTest({ dbname, enableMultiUsers: true, enabledFeatures: ['rbac'] });
+
+    const group1 = await createOrganizationGroup(client, genID('group'), { role: 'organization-admin' });
+    const group2 = await createOrganizationGroup(client, genID('group'), { role: 'organization-admin' });
+
+    const updateGroupResponse = await client.updateOrgMemberGroup({
+      orgMemberUserID: users.viewerTimCompanyA?.userId,
+      groups: [group1.groupId, group2.groupId],
+    });
+
+    expect(updateGroupResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Delete one of the groups
+    const deleteGroupResponse = await client.deleteOrganizationGroup({
+      groupId: group2.groupId,
+      toGroupId: group1.groupId,
+    })
+
+    expect(deleteGroupResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Ensure the member only have one group
+    const getOrganizationGroupMembersResponse = await client.getOrganizationGroupMembers({
+      groupId: group1.groupId,
+    });
+
+    expect(getOrganizationGroupMembersResponse.response?.code);
+    expect(getOrganizationGroupMembersResponse.members.find(
+      (m) => m.id === users.viewerTimCompanyA?.userId)
+    ).toBeDefined();
 
     await server.close();
   });
