@@ -22,15 +22,15 @@ import {
   selfImplementationError,
   Subgraph,
   unimplementedInterfaceOutputTypeWarning,
-} from '../../src';
+} from '../../../src';
 import { describe, expect, test } from 'vitest';
 import {
   baseDirectiveDefinitions,
   schemaQueryDefinition,
   versionOneRouterDefinitions,
   versionTwoRouterDefinitions,
-} from './utils/utils';
-import { normalizeString, schemaToSortedNormalizedString } from '../utils/utils';
+} from '../utils/utils';
+import { normalizeString, schemaToSortedNormalizedString } from '../../utils/utils';
 
 describe('Interface tests', () => {
   describe('Normalization tests', () => {

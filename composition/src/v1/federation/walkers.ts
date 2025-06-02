@@ -21,12 +21,12 @@ export function renameRootTypes(ff: FederationFactory, subgraph: InternalSubgrap
       enter(node) {
         const fieldName = node.name.value;
         if (isParentRootType && (fieldName === SERVICE_FIELD || fieldName === ENTITIES_FIELD)) {
-          parentData!.fieldDataByFieldName.delete(fieldName);
+          parentData!.fieldDataByName.delete(fieldName);
           return false;
         }
         const parentTypeName = parentData!.name;
         const fieldData = getOrThrowError(
-          parentData!.fieldDataByFieldName,
+          parentData!.fieldDataByName,
           fieldName,
           `${parentTypeName}.fieldDataByFieldName`,
         );

@@ -15,11 +15,11 @@ import {
   subgraphValidationError,
   UNION,
   UnionDefinitionData,
-} from '../../src';
+} from '../../../src';
 import { parse } from 'graphql';
 import { describe, expect, test } from 'vitest';
-import { baseDirectiveDefinitions, versionOneRouterDefinitions, versionTwoRouterDefinitions } from './utils/utils';
-import { normalizeString, schemaToSortedNormalizedString } from '../utils/utils';
+import { baseDirectiveDefinitions, versionOneRouterDefinitions, versionTwoRouterDefinitions } from '../utils/utils';
+import { normalizeString, schemaToSortedNormalizedString } from '../../utils/utils';
 
 describe('Union tests', () => {
   describe('Normalization tests', () => {

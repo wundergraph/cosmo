@@ -7,9 +7,8 @@ import {
   NodeData,
   SchemaData,
 } from '../../schema-building/types';
-import { ConstDirectiveNode, DocumentNode, ValueNode } from 'graphql';
+import { ConstDirectiveNode, DocumentNode, InputValueDefinitionNode, ValueNode } from 'graphql';
 import { RequiredFieldConfiguration } from '../../router-configuration/types';
-import { InputValueDefinitionNode } from 'graphql/index';
 
 export type KeyFieldSetData = {
   documentNode: DocumentNode;
@@ -21,11 +20,6 @@ export type KeyFieldSetData = {
 export type FieldSetData = {
   provides: Map<string, string>;
   requires: Map<string, string>;
-};
-
-export type InputValidationContainer = {
-  hasUnhandledError: boolean;
-  typeString: string;
 };
 
 export type ConditionalFieldSetValidationResult = {

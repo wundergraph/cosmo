@@ -23,10 +23,10 @@ import {
   ROUTER_COMPATIBILITY_VERSION_ONE,
   Subgraph,
   subgraphValidationError,
-} from '../../src';
-import { versionTwoRouterDefinitions } from './utils/utils';
-import { batchNormalize } from '../../src/v1/normalization/normalization-factory';
-import { normalizeString, schemaToSortedNormalizedString } from '../utils/utils';
+} from '../../../src';
+import { versionTwoRouterDefinitions } from '../utils/utils';
+import { batchNormalize } from '../../../src/v1/normalization/normalization-factory';
+import { normalizeString, schemaToSortedNormalizedString } from '../../utils/utils';
 
 describe('@override directive tests', () => {
   describe('normalization tests', () => {
@@ -577,7 +577,7 @@ describe('@override directive tests', () => {
       expect(result.errors[0]).toStrictEqual(
         invalidFieldShareabilityError(
           {
-            fieldDataByFieldName: new Map<string, FieldData>([
+            fieldDataByName: new Map<string, FieldData>([
               [
                 'name',
                 {
@@ -605,7 +605,7 @@ describe('@override directive tests', () => {
       expect(result.errors[0]).toStrictEqual(
         invalidFieldShareabilityError(
           {
-            fieldDataByFieldName: new Map<string, FieldData>([
+            fieldDataByName: new Map<string, FieldData>([
               [
                 'name',
                 {

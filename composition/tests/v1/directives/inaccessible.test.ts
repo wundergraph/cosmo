@@ -21,14 +21,14 @@ import {
   ROUTER_COMPATIBILITY_VERSION_ONE,
   Subgraph,
   UNION,
-} from '../../src';
-import { schemaQueryDefinition, versionTwoRouterDefinitions } from './utils/utils';
+} from '../../../src';
+import { schemaQueryDefinition, versionTwoRouterDefinitions } from '../utils/utils';
 import {
   federateSubgraphsFailure,
   federateSubgraphsSuccess,
   normalizeString,
   schemaToSortedNormalizedString,
-} from '../utils/utils';
+} from '../../utils/utils';
 import { Kind } from 'graphql';
 
 describe('@inaccessible tests', () => {
@@ -84,7 +84,7 @@ describe('@inaccessible tests', () => {
       invalidFieldShareabilityError(
         {
           name: 'Entity',
-          fieldDataByFieldName: new Map<string, FieldData>([
+          fieldDataByName: new Map<string, FieldData>([
             [
               'name',
               {

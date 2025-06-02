@@ -5,28 +5,31 @@ import {
   FederationResultFailure,
   FederationResultSuccess,
   FIELD,
-  incompatibleArgumentTypesError,
+  FLOAT_SCALAR,
   incompatibleInputValueDefaultValuesError,
   incompatibleInputValueDefaultValueTypeError,
-  invalidArgumentsError,
+  incompatibleMergedTypesError,
+  InputValueData,
+  InterfaceDefinitionData,
+  invalidNamedTypeError,
   InvalidRequiredInputValueData,
   invalidRequiredInputValueError,
   NormalizationResultFailure,
   normalizeSubgraphFromString,
-  OBJECT,
   parse,
   ROUTER_COMPATIBILITY_VERSION_ONE,
+  STRING_SCALAR,
   Subgraph,
   subgraphValidationError,
-} from '../../src';
+} from '../../../src';
 import { describe, expect, test } from 'vitest';
-import { versionOneRouterDefinitions, versionTwoRouterDefinitions } from './utils/utils';
-import { normalizeString, schemaToSortedNormalizedString } from '../utils/utils';
+import { stringToTypeNode, versionOneRouterDefinitions, versionTwoRouterDefinitions } from '../utils/utils';
+import { normalizeString, schemaToSortedNormalizedString } from '../../utils/utils';
+import { Kind } from 'graphql';
 
 describe('Argument federation tests', () => {
-  const argumentName = 'input';
   const prefix = 'argument "input"';
-  const argumentPath = 'Object.field(input: ...)';
+  const argumentCoords = 'Object.field(input: ...)';
 
   test('that equal arguments merge', () => {
     const result = federateSubgraphs(
@@ -128,16 +131,21 @@ describe('Argument federation tests', () => {
 
   test('that if arguments of the same name are not the same type, an error is returned`', () => {
     const result = federateSubgraphs(
-      [subgraphWithArgument('subgraph-a', 'String'), subgraphWithArgument('subgraph-b', 'Float')],
+      [subgraphWithArgument('subgraph-a', STRING_SCALAR), subgraphWithArgument('subgraph-b', FLOAT_SCALAR)],
       ROUTER_COMPATIBILITY_VERSION_ONE,
     ) as FederationResultFailure;
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
-      incompatibleArgumentTypesError(argumentName, argumentPath, 'String', 'Float'),
+      incompatibleMergedTypesError({
+        actualType: FLOAT_SCALAR,
+        coords: argumentCoords,
+        expectedType: STRING_SCALAR,
+        isArgument: true,
+      }),
     );
   });
 
-  test('that if arguments have different string-converted default values, an error is returned`', () => {
+  test('that an error is returned if arguments have different string-converted default values', () => {
     const expectedType = '1';
     const actualType = '2';
     const result = federateSubgraphs(
@@ -149,7 +157,7 @@ describe('Argument federation tests', () => {
     ) as FederationResultFailure;
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
-      incompatibleInputValueDefaultValuesError(prefix, argumentPath, ['subgraph-b'], expectedType, actualType),
+      incompatibleInputValueDefaultValuesError(prefix, argumentCoords, ['subgraph-b'], expectedType, actualType),
     );
   });
 
@@ -163,7 +171,7 @@ describe('Argument federation tests', () => {
     ) as FederationResultFailure;
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
-      incompatibleInputValueDefaultValuesError(prefix, argumentPath, ['subgraph-b'], 'true', 'false'),
+      incompatibleInputValueDefaultValuesError(prefix, argumentCoords, ['subgraph-b'], 'true', 'false'),
     );
   });
 
@@ -179,7 +187,7 @@ describe('Argument federation tests', () => {
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
       subgraphValidationError('subgraph-a', [
-        incompatibleInputValueDefaultValueTypeError(prefix, argumentPath, BOOLEAN_SCALAR, '1'),
+        incompatibleInputValueDefaultValueTypeError(prefix, argumentCoords, BOOLEAN_SCALAR, '1'),
       ]),
     );
   });
@@ -262,14 +270,18 @@ describe('Argument federation tests', () => {
         c: Float!
       }
       
-      type AnotherObject {
+      interface Interface {
+        a: String!
+      }
+      
+      type AnotherObject implements Interface {
         a: String!
         b: Int!
         c: Float!
       }
       
       type Object {
-        field(argOne: Enum!, argTwo: Input!, argThree: AnotherObject! argThree: String!, argOne: Enum!): String!
+        field(argOne: Enum!, argTwo: Input!, argThree: [Interface!]! argThree: String!, argOne: Enum!): String!
       }
     `,
       true,
@@ -279,14 +291,16 @@ describe('Argument federation tests', () => {
     expect(result.errors).toHaveLength(2);
     expect(result.errors[0]).toStrictEqual(duplicateArgumentsError('Object.field', ['argThree', 'argOne']));
     expect(result.errors[1]).toStrictEqual(
-      invalidArgumentsError('Object.field', [
-        {
-          argumentName: 'argThree',
-          namedType: 'AnotherObject',
-          typeName: 'AnotherObject!',
-          typeString: OBJECT,
-        },
-      ]),
+      invalidNamedTypeError({
+        data: {
+          kind: 'InputValueDefinition',
+          name: 'argThree',
+          originalCoords: 'Object.field(argThree: ...)',
+          type: stringToTypeNode('[Interface!]!'),
+        } as InputValueData,
+        namedTypeData: { name: 'Interface', kind: Kind.INTERFACE_TYPE_DEFINITION } as InterfaceDefinitionData,
+        nodeType: `Object field argument`,
+      }),
     );
   });
 

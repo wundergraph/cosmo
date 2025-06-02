@@ -5,19 +5,23 @@ import {
   FederationResultSuccess,
   incompatibleInputValueDefaultValueTypeError,
   INPUT_OBJECT,
+  InputValueData,
+  invalidNamedTypeError,
   invalidRequiredInputValueError,
   noInputValueDefinitionsError,
   NormalizationResultFailure,
   NormalizationResultSuccess,
   normalizeSubgraph,
+  ObjectDefinitionData,
   parse,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   Subgraph,
   subgraphValidationError,
-} from '../../src';
+} from '../../../src';
 import { describe, expect, test } from 'vitest';
-import { baseDirectiveDefinitions, versionOneRouterDefinitions } from './utils/utils';
-import { normalizeString, schemaToSortedNormalizedString } from '../utils/utils';
+import { baseDirectiveDefinitions, stringToTypeNode, versionOneRouterDefinitions } from '../utils/utils';
+import { normalizeString, normalizeSubgraphFailure, schemaToSortedNormalizedString } from '../../utils/utils';
+import { Kind } from 'graphql';
 
 describe('Input tests', () => {
   describe('Normalization tests', () => {
@@ -381,6 +385,22 @@ describe('Input tests', () => {
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(duplicateInputFieldDefinitionError('Input', 'name'));
+    });
+
+    test('that an error is returned if an Input field returns an output node type', () => {
+      const { errors } = normalizeSubgraphFailure(naa, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
+        invalidNamedTypeError({
+          data: {
+            kind: Kind.INPUT_VALUE_DEFINITION,
+            originalCoords: 'Input.field',
+            type: stringToTypeNode('EntityInterface!'),
+          } as InputValueData,
+          namedTypeData: { kind: Kind.OBJECT_TYPE_DEFINITION, name: 'EntityInterface' } as ObjectDefinitionData,
+          nodeType: 'Input Object field',
+        }),
+      );
     });
   });
 
@@ -859,6 +879,20 @@ const subgraphX: Subgraph = {
     
     extend input Input {
       name: String!
+    }
+  `),
+};
+
+const naa: Subgraph = {
+  name: 'naa',
+  url: '',
+  definitions: parse(`
+    type EntityInterface @key(fields: "id") @interfaceObject {
+      id: ID!
+    }
+    
+    input Input {
+      field: EntityInterface!
     }
   `),
 };

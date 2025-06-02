@@ -24,6 +24,7 @@ import {
 } from './ast';
 import { FieldSetConditionData } from '../router-configuration/types';
 import { KeyFieldSetData } from '../v1/normalization/types';
+import { InputNodeKind, OutputNodeKind } from '../utils/types';
 
 export type ArgumentData = {
   name: string;
@@ -93,7 +94,7 @@ export type ExternalFieldData = {
 };
 
 export type FieldData = {
-  argumentDataByArgumentName: Map<string, InputValueData>;
+  argumentDataByName: Map<string, InputValueData>;
   configureDescriptionDataBySubgraphName: Map<string, ConfigureDescriptionData>;
   directivesByDirectiveName: Map<string, Array<ConstDirectiveNode>>;
   externalFieldDataBySubgraphName: Map<string, ExternalFieldData>;
@@ -102,6 +103,7 @@ export type FieldData = {
   isShareableBySubgraphName: Map<string, boolean>;
   kind: Kind.FIELD_DEFINITION;
   name: string;
+  namedTypeKind: OutputNodeKind | Kind.NULL;
   namedTypeName: string;
   node: MutableFieldNode;
   originalParentTypeName: string;
@@ -116,7 +118,7 @@ export type InputObjectDefinitionData = {
   configureDescriptionDataBySubgraphName: Map<string, ConfigureDescriptionData>;
   directivesByDirectiveName: Map<string, Array<ConstDirectiveNode>>;
   extensionType: ExtensionType;
-  inputValueDataByValueName: Map<string, InputValueData>;
+  inputValueDataByName: Map<string, InputValueData>;
   isInaccessible: boolean;
   kind: Kind.INPUT_OBJECT_TYPE_DEFINITION;
   name: string;
@@ -134,6 +136,7 @@ export type InputValueData = {
   isArgument: boolean;
   kind: Kind.ARGUMENT | Kind.INPUT_VALUE_DEFINITION;
   name: string;
+  namedTypeKind: InputNodeKind | Kind.NULL;
   namedTypeName: string;
   node: MutableInputValueNode;
   originalCoords: string;
@@ -152,7 +155,7 @@ export type InterfaceDefinitionData = {
   configureDescriptionDataBySubgraphName: Map<string, ConfigureDescriptionData>;
   directivesByDirectiveName: Map<string, Array<ConstDirectiveNode>>;
   extensionType: ExtensionType;
-  fieldDataByFieldName: Map<string, FieldData>;
+  fieldDataByName: Map<string, FieldData>;
   implementedInterfaceTypeNames: Set<string>;
   isEntity: boolean;
   isInaccessible: boolean;
@@ -168,7 +171,7 @@ export type ObjectDefinitionData = {
   configureDescriptionDataBySubgraphName: Map<string, ConfigureDescriptionData>;
   directivesByDirectiveName: Map<string, Array<ConstDirectiveNode>>;
   extensionType: ExtensionType;
-  fieldDataByFieldName: Map<string, FieldData>;
+  fieldDataByName: Map<string, FieldData>;
   implementedInterfaceTypeNames: Set<string>;
   isEntity: boolean;
   isInaccessible: boolean;

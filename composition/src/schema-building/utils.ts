@@ -55,8 +55,10 @@ import {
   INACCESSIBLE,
   INHERITABLE_DIRECTIVE_NAMES,
   INPUT_FIELD,
+  INPUT_NODE_KINDS,
   INT_SCALAR,
   MUTATION,
+  OUTPUT_NODE_KINDS,
   PERSISTED_CLIENT_DIRECTIVES,
   QUERY,
   REASON,
@@ -68,7 +70,7 @@ import {
   TAG,
 } from '../utils/string-constants';
 import { generateRequiresScopesDirective, generateSimpleDirective, getEntriesNotInHashSet } from '../utils/utils';
-import { InvalidRequiredInputValueData } from '../utils/types';
+import { InputNodeKind, InvalidRequiredInputValueData, OutputNodeKind } from '../utils/types';
 import { getDescriptionFromString } from '../v1/federation/utils';
 
 export function newPersistedDirectivesData(): PersistedDirectivesData {
@@ -207,7 +209,7 @@ export function getRenamedRootTypeName(typeName: string, operationByTypeName: Ma
 type ChildDefinitionNode = EnumValueDefinitionNode | FieldDefinitionNode | InputValueDefinitionNode;
 
 function propagateFieldDataArguments(fieldData: FieldData) {
-  for (const argumentData of fieldData.argumentDataByArgumentName.values()) {
+  for (const argumentData of fieldData.argumentDataByName.values()) {
     // First propagate the argument's directives
     for (const directiveNodes of argumentData.directivesByDirectiveName.values()) {
       argumentData.node.directives.push(...directiveNodes);
@@ -471,7 +473,7 @@ export function getNodeForRouterSchemaByData<T extends ParentDefinitionData | En
 export function getClientSchemaFieldNodeByFieldData(fieldData: FieldData): MutableFieldNode {
   const directives = getClientPersistedDirectiveNodes(fieldData);
   const argumentNodes: MutableInputValueNode[] = [];
-  for (const inputValueData of fieldData.argumentDataByArgumentName.values()) {
+  for (const inputValueData of fieldData.argumentDataByName.values()) {
     if (isNodeDataInaccessible(inputValueData)) {
       continue;
     }
@@ -770,4 +772,12 @@ export function areKindsEqual<T extends ParentDefinitionData>(a: T, b: ParentDef
 
 export function isFieldData(data: ChildData): data is FieldData {
   return data.kind === Kind.FIELD_DEFINITION;
+}
+
+export function isInputNodeKind(kind: Kind): kind is InputNodeKind {
+  return INPUT_NODE_KINDS.has(kind);
+}
+
+export function isOutputNodeKind(kind: Kind): kind is OutputNodeKind {
+  return OUTPUT_NODE_KINDS.has(kind);
 }
