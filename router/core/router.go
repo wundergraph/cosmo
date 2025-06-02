@@ -553,6 +553,20 @@ func (r *Router) initCoreModuleSystem(ctx context.Context) error {
 func (r *Router) newServer(ctx context.Context, cfg *nodev1.RouterConfig) error {
 	server, err := newGraphServer(ctx, r, cfg, r.proxy)
 	if err != nil {
+		// open core module system: run the graphql server stop hooks with errors when
+		// the server never got fully constructed
+		params := &GraphQLServerParams{
+				Handler:                    nil,
+				Config:                     r.staticExecutionConfig,
+				Logger:                     r.logger,
+			}
+			for _, h := range r.coreModuleHooks.hookRegistry.graphQLServerStopHooks.Values() {
+				hookErr := h.OnGraphQLServerStop(ctx, params, &ExitError{Code: 1, Err: err})
+				if hookErr != nil {
+					return fmt.Errorf("failed to run graphql server stop hook: %w", hookErr)
+				}
+			}
+
 		r.logger.Error("Failed to create graph server. Keeping the old server", zap.Error(err))
 		return err
 	}

@@ -104,6 +104,10 @@ type (
 		routerListenAddr        string
 		traceDialer             *TraceDialer
 		pluginHost              *routerplugin.Host
+
+		// core module system
+		hookRegistry *hookRegistry
+		graphQLServerParams *GraphQLServerParams
 	}
 )
 
@@ -155,6 +159,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 			kafka: map[string]pubsub_datasource.KafkaPubSub{},
 		},
 		storageProviders: &r.storageProviders,
+		hookRegistry: r.coreModuleHooks.hookRegistry,
 	}
 
 	baseOtelAttributes := []attribute.KeyValue{
@@ -220,6 +225,22 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	}
 
 	httpRouter := chi.NewRouter()
+
+	// open core module system: run the graphql server start hooks
+	// after the server is initialized, it allows modules to pre-warm caches,
+	// register additional directive handlers, adjust planner options, etc.
+	r.logger.Debug("Firing GraphQLServerStart hooks")
+	params := &GraphQLServerParams{
+		Handler:                    httpRouter,
+		Config:                     routerConfig,
+		Logger:                     r.logger,
+	}
+	for _, h := range s.hookRegistry.graphQLServerStartHooks.Values() {
+		if err := h.OnGraphQLServerStart(ctx, params); err != nil {
+			return nil, fmt.Errorf("failed to run graphql server start hook: %w", err)
+		}
+	}
+	s.graphQLServerParams = params
 
 	/**
 	* Middlewares
@@ -1495,6 +1516,16 @@ func (s *graphServer) wait(ctx context.Context) error {
 // After all requests are done, it will shut down the metric store and runtime metrics.
 // Shutdown does cancel the context after all non-hijacked requests such as WebSockets has been handled.
 func (s *graphServer) Shutdown(ctx context.Context) error {
+	// open core module system: run the graphql server stop hooks
+	// after the server stops accepting new requests, before begin waiting for in-flight requests,
+	// or tearing down metrics and other resources.
+	s.logger.Debug("Firing GraphQLServerStop hooks")
+	for _, h := range s.hookRegistry.graphQLServerStopHooks.Values() {
+		if err := h.OnGraphQLServerStop(ctx, s.graphQLServerParams, nil); err != nil {
+			return fmt.Errorf("failed to run graphql server stop hook: %w", err)
+		}
+	}
+	
 	// Cancel the context after the graceful shutdown is done
 	// to clean up resources like websocket connections, pools, etc.
 	defer s.cancelFunc()

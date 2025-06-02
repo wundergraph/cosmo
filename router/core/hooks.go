@@ -27,11 +27,11 @@ type GraphQLServerLifecycleHook interface {
 }
 
 type GraphQLServerStartHook interface {
-	OnGraphQLServerStart(ctx context.Context) error
+	OnGraphQLServerStart(ctx context.Context, params *GraphQLServerParams) error
 }
 
 type GraphQLServerStopHook interface {
-	OnGraphQLServerStop(ctx context.Context) error	
+	OnGraphQLServerStop(ctx context.Context, params *GraphQLServerParams, exitError *ExitError) error
 }
 
 // Router Lifecycle Hooks
@@ -231,7 +231,7 @@ func (hr *hookRegistry) AddSubgraphLifecycle(inst any) {
 
 // AddOperationLifecycle wires up all operation lifecycle hooks.
 func (hr *hookRegistry) AddOperationLifecycle(inst any) {
-	registerHook(inst, hr.operationPreParseHooks)	
+	registerHook(inst, hr.operationPreParseHooks)
 	registerHook(inst, hr.operationPostParseHooks)
 	registerHook(inst, hr.operationPreNormalizeHooks)
 	registerHook(inst, hr.operationPostNormalizeHooks)
@@ -242,4 +242,3 @@ func (hr *hookRegistry) AddOperationLifecycle(inst any) {
 	registerHook(inst, hr.operationPreExecuteHooks)
 	registerHook(inst, hr.operationPostExecuteHooks)
 }
-
