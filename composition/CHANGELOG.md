@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.40.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.39.2...@wundergraph/composition@0.40.0) (2025-06-02)
+
+### Features
+
+* add named type kind to data ([#1921](https://github.com/wundergraph/cosmo/issues/1921)) ([cfda0ae](https://github.com/wundergraph/cosmo/commit/cfda0aed8214a073ebd040a07290304095b9d26d)) (@Aenimus)
+
+## [0.39.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.39.1...@wundergraph/composition@0.39.2) (2025-05-24)
+
+### Bug Fixes
+
+* multiple interface object implementations ([#1892](https://github.com/wundergraph/cosmo/issues/1892)) ([1d0229c](https://github.com/wundergraph/cosmo/commit/1d0229c1b625c7ed275fac73a7a9e7fc32e7ee59)) (@Aenimus)
+
 ## [0.39.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.39.0...@wundergraph/composition@0.39.1) (2025-05-02)
 
 ### Bug Fixes

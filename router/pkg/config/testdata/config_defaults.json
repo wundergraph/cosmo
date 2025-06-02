@@ -25,6 +25,7 @@
         "Enabled": false,
         "HeaderName": "x-wg-trace-id"
       },
+      "Attributes": null,
       "ExportGraphQLVariables": false,
       "WithNewRoot": false
     },

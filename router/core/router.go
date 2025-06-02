@@ -17,12 +17,12 @@ import (
 	"connectrpc.com/connect"
 	"github.com/mitchellh/mapstructure"
 	"github.com/nats-io/nuid"
+	"github.com/wundergraph/cosmo/router/internal/track"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	"go.uber.org/atomic"
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
@@ -81,11 +81,20 @@ type (
 	// Router is the main application instance.
 	Router struct {
 		Config
-		httpServer        *server
-		modules           []Module
-		EngineStats       statistics.EngineStatistics
-		playgroundHandler func(http.Handler) http.Handler
-		proxy             ProxyFunc
+		httpServer           *server
+		modules              []Module
+		EngineStats          statistics.EngineStatistics
+		playgroundHandler    func(http.Handler) http.Handler
+		proxy                ProxyFunc
+		disableUsageTracking bool
+		usage                UsageTracker
+	}
+
+	UsageTracker interface {
+		Close()
+		TrackUptime(ctx context.Context)
+		TrackRouterConfigUsage(usage map[string]any)
+		TrackExecutionConfigUsage(usage map[string]any)
 	}
 
 	TransportRequestOptions struct {
@@ -158,98 +167,6 @@ type (
 	}
 
 	// Config defines the configuration options for the Router.
-	Config struct {
-		clusterName                     string
-		instanceID                      string
-		logger                          *zap.Logger
-		traceConfig                     *rtrace.Config
-		metricConfig                    *rmetric.Config
-		tracerProvider                  *sdktrace.TracerProvider
-		otlpMeterProvider               *sdkmetric.MeterProvider
-		promMeterProvider               *sdkmetric.MeterProvider
-		gqlMetricsExporter              *graphqlmetrics.Exporter
-		corsOptions                     *cors.Config
-		setConfigVersionHeader          bool
-		routerGracePeriod               time.Duration
-		staticExecutionConfig           *nodev1.RouterConfig
-		awsLambda                       bool
-		shutdown                        atomic.Bool
-		bootstrapped                    atomic.Bool
-		ipAnonymization                 *IPAnonymizationConfig
-		listenAddr                      string
-		baseURL                         string
-		graphqlWebURL                   string
-		playgroundPath                  string
-		graphqlPath                     string
-		playground                      bool
-		introspection                   bool
-		queryPlansEnabled               bool
-		graphApiToken                   string
-		healthCheckPath                 string
-		readinessCheckPath              string
-		livenessCheckPath               string
-		playgroundConfig                config.PlaygroundConfig
-		cacheControlPolicy              config.CacheControlPolicy
-		routerConfigPollerConfig        *RouterConfigPollerConfig
-		cdnConfig                       config.CDNConfiguration
-		persistedOperationClient        persistedoperation.SaveClient
-		persistedOperationsConfig       config.PersistedOperationsConfig
-		automaticPersistedQueriesConfig config.AutomaticPersistedQueriesConfig
-		apolloCompatibilityFlags        config.ApolloCompatibilityFlags
-		apolloRouterCompatibilityFlags  config.ApolloRouterCompatibilityFlags
-		storageProviders                config.StorageProviders
-		demoMode                        bool
-		eventsConfig                    config.EventsConfiguration
-		prometheusServer                *http.Server
-		modulesConfig                   map[string]interface{}
-		executionConfig                 *ExecutionConfig
-		routerOnRequestHandlers         []func(http.Handler) http.Handler
-		routerMiddlewares               []func(http.Handler) http.Handler
-		preOriginHandlers               []TransportPreHandler
-		postOriginHandlers              []TransportPostHandler
-		headerRules                     *config.HeaderRules
-		subgraphTransportOptions        *SubgraphTransportOptions
-		graphqlMetricsConfig            *GraphQLMetricsConfig
-		routerTrafficConfig             *config.RouterTrafficConfiguration
-		batchingConfig                  *BatchingConfig
-		fileUploadConfig                *config.FileUpload
-		accessController                *AccessController
-		retryOptions                    retrytransport.RetryOptions
-		redisClient                     rd.RDCloser
-		mcpServer                       *mcpserver.GraphQLSchemaServer
-		processStartTime                time.Time
-		developmentMode                 bool
-		healthcheck                     health.Checker
-		accessLogsConfig                *AccessLogsConfig
-		// If connecting to localhost inside Docker fails, fallback to the docker internal address for the host
-		localhostFallbackInsideDocker bool
-		tlsServerConfig               *tls.Config
-		tlsConfig                     *TlsConfig
-		telemetryAttributes           []config.CustomAttribute
-		tracePropagators              []propagation.TextMapPropagator
-		compositePropagator           propagation.TextMapPropagator
-		// Poller
-		configPoller                 configpoller.ConfigPoller
-		selfRegister                 selfregister.SelfRegister
-		registrationInfo             *nodev1.RegistrationInfo
-		securityConfiguration        config.SecurityConfiguration
-		customModules                []Module
-		engineExecutionConfiguration config.EngineExecutionConfiguration
-		// should be removed once the users have migrated to the new overrides config
-		overrideRoutingURLConfiguration config.OverrideRoutingURLConfiguration
-		// the new overrides config
-		overrides                  config.OverridesConfiguration
-		authorization              *config.AuthorizationConfiguration
-		rateLimit                  *config.RateLimitConfiguration
-		webSocketConfiguration     *config.WebSocketConfiguration
-		subgraphErrorPropagation   config.SubgraphErrorPropagationConfiguration
-		clientHeader               config.ClientHeader
-		cacheWarmup                *config.CacheWarmupConfiguration
-		multipartHeartbeatInterval time.Duration
-		hostName                   string
-		mcp                        config.MCPConfiguration
-		plugins                    config.PluginsConfiguration
-	}
 	// Option defines the method to customize server.
 	Option func(svr *Router)
 )
@@ -1187,6 +1104,12 @@ func (r *Router) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to bootstrap router: %w", err)
 	}
 
+	if err := r.configureUsageTracking(ctx); err != nil {
+		return err
+	}
+
+	r.trackRouterConfigUsage()
+
 	r.httpServer = newServer(&httpServerOptions{
 		addr:               r.listenAddr,
 		logger:             r.logger,
@@ -1202,6 +1125,9 @@ func (r *Router) Start(ctx context.Context) error {
 
 	// Start the server with the static config without polling
 	if r.staticExecutionConfig != nil {
+
+		r.trackExecutionConfigUsage(r.staticExecutionConfig, true)
+
 		if err := r.listenAndServe(); err != nil {
 			return err
 		}
@@ -1288,6 +1214,8 @@ func (r *Router) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to get initial execution config: %w", err)
 	}
 
+	r.trackExecutionConfigUsage(cfg.Config, false)
+
 	if err := r.listenAndServe(); err != nil {
 		r.logger.Error("Failed to start server with initial config", zap.Error(err))
 		return err
@@ -1335,6 +1263,8 @@ func (r *Router) Start(ctx context.Context) error {
 			return nil
 		}
 
+		r.trackExecutionConfigUsage(newConfig, false)
+
 		if err := r.newServer(ctx, newConfig); err != nil {
 			return err
 		}
@@ -1353,6 +1283,46 @@ func (r *Router) Start(ctx context.Context) error {
 	)
 
 	return nil
+}
+
+type UsageTrackerNoOp struct{}
+
+func (u *UsageTrackerNoOp) TrackExecutionConfigUsage(_ map[string]any) {}
+
+func (u *UsageTrackerNoOp) TrackRouterConfigUsage(_ map[string]any) {}
+
+func (u *UsageTrackerNoOp) Close() {}
+
+func (u *UsageTrackerNoOp) TrackUptime(_ context.Context) {}
+
+func (r *Router) configureUsageTracking(ctx context.Context) (err error) {
+	if r.disableUsageTracking {
+		r.usage = &UsageTrackerNoOp{}
+		return nil
+	}
+	if os.Getenv("COSMO_TELEMETRY_DISABLED") == "true" || os.Getenv("DO_NOT_TRACK") == "1" {
+		r.usage = &UsageTrackerNoOp{}
+		r.logger.Info("Usage tracking is disabled.")
+		return nil
+	}
+	cfg := track.UsageTrackerConfig{
+		GraphApiToken: r.graphApiToken,
+		Version:       Version,
+		Commit:        Commit,
+		Date:          Date,
+		InstanceID:    r.instanceID,
+		ClusterName:   r.clusterName,
+	}
+	r.usage, err = track.NewUsageTracker(r.logger, cfg)
+	if err != nil {
+		return fmt.Errorf("failed to create usage tracker: %w", err)
+	}
+	go r.usage.TrackUptime(ctx)
+	return nil
+}
+
+func (r *Router) trackRouterConfigUsage() {
+	r.usage.TrackRouterConfigUsage(r.Config.Usage())
 }
 
 type concSafeErrorJoiner struct {
@@ -1504,6 +1474,8 @@ func (r *Router) Shutdown(ctx context.Context) error {
 	if r.persistedOperationClient != nil {
 		r.persistedOperationClient.Close()
 	}
+
+	r.usage.Close()
 
 	wg.Wait()
 
@@ -1804,6 +1776,12 @@ func WithLocalhostFallbackInsideDocker(fallback bool) Option {
 	}
 }
 
+func WithDisableUsageTracking() Option {
+	return func(r *Router) {
+		r.disableUsageTracking = true
+	}
+}
+
 func DefaultRouterTrafficConfig() *config.RouterTrafficConfiguration {
 	return &config.RouterTrafficConfiguration{
 		MaxRequestBodyBytes: 1000 * 1000 * 5, // 5 MB
@@ -1949,6 +1927,12 @@ func WithTLSConfig(cfg *TlsConfig) Option {
 func WithTelemetryAttributes(attributes []config.CustomAttribute) Option {
 	return func(r *Router) {
 		r.telemetryAttributes = attributes
+	}
+}
+
+func WithTracingAttributes(attributes []config.CustomAttribute) Option {
+	return func(r *Router) {
+		r.tracingAttributes = attributes
 	}
 }
 

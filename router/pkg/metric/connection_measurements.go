@@ -18,7 +18,7 @@ var (
 	}
 
 	connectionAcquireDurationOptions = []otelmetric.Float64HistogramOption{
-		otelmetric.WithUnit("s"),
+		otelmetric.WithUnit("ms"),
 		otelmetric.WithDescription("Total connection acquire duration"),
 	}
 

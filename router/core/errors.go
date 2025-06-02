@@ -343,3 +343,10 @@ func (e *ExprWrapError) Error() string {
 	}
 	return e.Err.Error()
 }
+
+func WrapExprError(err error) error {
+	if err == nil {
+		return nil
+	}
+	return &ExprWrapError{Err: err}
+}

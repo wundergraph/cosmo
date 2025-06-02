@@ -15,6 +15,7 @@ import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import { OperationsRepository } from '../../repositories/OperationsRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, extractOperationNames, getLogger, handleError } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function publishPersistedOperations(
   opts: RouterOptions,
@@ -36,15 +37,10 @@ export function publishPersistedOperations(
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
-    if (!authContext.hasWriteAccess) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `The user doesnt have the permissions to perform this operation`,
-        },
-        operations: [],
-      };
+    if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdminOrDeveloper) {
+      throw new UnauthorizedError();
     }
+
     const userId = authContext.userId;
     if (!userId) {
       return {

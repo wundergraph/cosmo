@@ -98,7 +98,7 @@ export default (opts: BaseCommandOptions) => {
         await mkdir(resolve(tempDir, '.cursor', 'rules'), { recursive: true });
         await writeFile(
           resolve(tempDir, '.cursor', 'rules', 'plugin-development.mdc'),
-          pupa(PluginTemplates.cursorRules, { name, originalPluginName }),
+          pupa(PluginTemplates.cursorRules, { name, originalPluginName, pluginDir }),
         );
 
         // Create a project directory structure
@@ -129,7 +129,7 @@ export default (opts: BaseCommandOptions) => {
         await mkdir(resolve(tempDir, '.cursor', 'rules'), { recursive: true });
         await writeFile(
           resolve(tempDir, '.cursor', 'rules', 'plugin-development.mdc'),
-          pupa(PluginTemplates.cursorRules, { name, originalPluginName }),
+          pupa(PluginTemplates.cursorRules, { name, originalPluginName, pluginDir }),
         );
 
         const proto = compileGraphQLToProto(PluginTemplates.schema, {

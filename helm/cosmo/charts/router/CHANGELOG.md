@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.2](https://github.com/wundergraph/cosmo/compare/helm-cosmo-router@0.10.1...helm-cosmo-router@0.10.2) (2025-05-26)
+
+
+### Bug Fixes
+
+* extra volume mounts not rendered properly ([#1902](https://github.com/wundergraph/cosmo/issues/1902)) ([25828e7](https://github.com/wundergraph/cosmo/commit/25828e7feb7c5ec16ad229598824da519603a4dd))
+
 ## [0.10.1](https://github.com/wundergraph/cosmo/compare/helm-cosmo-router@0.10.0...helm-cosmo-router@0.10.1) (2025-04-14)
 
 

@@ -15,6 +15,7 @@ import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import { AnalyticsDashboardViewRepository } from '../../repositories/analytics/AnalyticsDashboardViewRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function getFederatedGraphByName(
   opts: RouterOptions,
@@ -49,6 +50,10 @@ export function getFederatedGraphByName(
       };
     }
 
+    if (!authContext.rbac.hasFederatedGraphReadAccess(federatedGraph)) {
+      throw new UnauthorizedError();
+    }
+
     let requestSeries: PlainMessage<RequestSeriesItem>[] = [];
     if (req.includeMetrics && opts.chClient) {
       const analyticsDashRepo = new AnalyticsDashboardViewRepository(opts.chClient);
@@ -58,11 +63,13 @@ export function getFederatedGraphByName(
     const list = await subgraphRepo.listByFederatedGraph({
       federatedGraphTargetId: federatedGraph.targetId,
       published: false,
+      rbac: authContext.rbac,
     });
 
     const featureFlags = await featureFlagRepo.getFeatureFlagsByFederatedGraph({
       federatedGraph,
       namespaceId: federatedGraph.namespaceId,
+      rbac: authContext.rbac,
     });
 
     const featureFlagsInLatestValidComposition: FeatureFlagDTO[] = [];

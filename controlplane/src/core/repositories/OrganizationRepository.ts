@@ -10,7 +10,7 @@ import { addDays } from 'date-fns';
 import { SQL, and, asc, count, desc, eq, gt, inArray, like, lt, not, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
-import { MemberRole, NewOrganizationFeature } from '../../db/models.js';
+import { NewOrganizationFeature } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import {
   billingSubscriptions,
@@ -18,7 +18,6 @@ import {
   organizationBilling,
   organizationFeatures,
   organizationIntegrations,
-  organizationMemberRoles,
   organizationWebhooks,
   organizations,
   organizationsMembers,
@@ -26,15 +25,24 @@ import {
   slackSchemaUpdateEventConfigs,
   users,
 } from '../../db/schema.js';
-import { Feature, FeatureIds, OrganizationDTO, OrganizationMemberDTO, WebhooksConfigDTO } from '../../types/index.js';
+import {
+  Feature,
+  FeatureIds,
+  OrganizationDTO,
+  OrganizationMemberDTO,
+  OrganizationGroupDTO,
+  WebhooksConfigDTO,
+} from '../../types/index.js';
 import Keycloak from '../services/Keycloak.js';
 import { DeleteOrganizationQueue } from '../workers/DeleteOrganizationWorker.js';
 import { BlobStorage } from '../blobstorage/index.js';
 import { delayForManualOrgDeletionInDays, delayForOrgAuditLogsDeletionInDays } from '../constants.js';
 import { DeleteOrganizationAuditLogsQueue } from '../workers/DeleteOrganizationAuditLogsWorker.js';
+import { RBACEvaluator } from '../services/RBACEvaluator.js';
 import { BillingRepository } from './BillingRepository.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { TargetRepository } from './TargetRepository.js';
+import { OrganizationGroupRepository } from './OrganizationGroupRepository.js';
 
 /**
  * Repository for organization related operations.
@@ -55,19 +63,21 @@ export class OrganizationRepository {
     organizationName: string;
     organizationSlug: string;
     ownerID: string;
-  }): Promise<OrganizationDTO> {
+    kcGroupId?: string;
+  }): Promise<Omit<OrganizationDTO, 'rbac'>> {
     const insertedOrg = await this.db
       .insert(organizations)
       .values({
         id: input.organizationID,
         name: input.organizationName,
         slug: input.organizationSlug,
+        kcGroupId: input.kcGroupId,
         createdBy: input.ownerID,
       })
       .returning()
       .execute();
 
-    const org: OrganizationDTO = {
+    const org: Omit<OrganizationDTO, 'rbac'> = {
       id: insertedOrg[0].id,
       name: insertedOrg[0].name,
       slug: insertedOrg[0].slug,
@@ -95,7 +105,7 @@ export class OrganizationRepository {
       .execute();
   }
 
-  public async bySlug(slug: string): Promise<OrganizationDTO | null> {
+  public async bySlug(slug: string): Promise<Omit<OrganizationDTO, 'rbac'> | null> {
     const org = await this.db
       .select({
         id: organizations.id,
@@ -159,7 +169,7 @@ export class OrganizationRepository {
     };
   }
 
-  public async byId(id: string): Promise<OrganizationDTO | null> {
+  public async byId(id: string): Promise<Omit<OrganizationDTO, 'rbac'> | null> {
     const org = await this.db
       .select({
         id: organizations.id,
@@ -240,7 +250,7 @@ export class OrganizationRepository {
     return userOrganizations.length > 0;
   }
 
-  public async memberships(input: { userId: string }): Promise<(OrganizationDTO & { roles: string[] })[]> {
+  public async memberships(input: { userId: string }): Promise<OrganizationDTO[]> {
     const userOrganizations = await this.db
       .selectDistinctOn([organizations.id], {
         id: organizations.id,
@@ -274,17 +284,21 @@ export class OrganizationRepository {
     return Promise.all(
       userOrganizations.map(async (org) => {
         const plan = org.billing?.plan || this.defaultBillingPlanId;
+        const groups = await this.getOrganizationMemberGroups({
+          userID: input.userId,
+          organizationID: org.id,
+        });
+
+        const features = await this.getFeatures({ organizationId: org.id, plan });
         return {
           id: org.id,
           name: org.name,
           slug: org.slug,
           creatorUserId: org.creatorUserId || undefined,
           createdAt: org.createdAt.toISOString(),
-          roles: await this.getOrganizationMemberRoles({
-            userID: input.userId,
-            organizationID: org.id,
-          }),
-          features: await this.getFeatures({ organizationId: org.id, plan }),
+          rbac: new RBACEvaluator(groups, input.userId),
+          groups,
+          features,
           billing: plan
             ? {
                 plan,
@@ -344,6 +358,7 @@ export class OrganizationRepository {
         email: users.email,
         memberID: organizationsMembers.id,
         active: users.active,
+        createdAt: organizationsMembers.createdAt,
       })
       .from(organizationsMembers)
       .innerJoin(users, eq(users.id, organizationsMembers.userId))
@@ -355,17 +370,19 @@ export class OrganizationRepository {
       return null;
     }
 
-    const userRoles = await this.getOrganizationMemberRoles({
-      organizationID: input.organizationID,
-      userID: input.userID,
-    });
-
     return {
       userID: orgMember[0].userID,
       orgMemberID: orgMember[0].memberID,
       email: orgMember[0].email,
-      roles: userRoles,
+      rbac: new RBACEvaluator(
+        await this.getOrganizationMemberGroups({
+          organizationID: input.organizationID,
+          userID: input.userID,
+        }),
+        orgMember[0].userID,
+      ),
       active: orgMember[0].active,
+      joinedAt: orgMember[0].createdAt.toISOString(),
     };
   }
 
@@ -379,6 +396,7 @@ export class OrganizationRepository {
         email: users.email,
         memberID: organizationsMembers.id,
         active: users.active,
+        createdAt: organizationsMembers.createdAt,
       })
       .from(organizationsMembers)
       .innerJoin(users, eq(users.id, organizationsMembers.userId))
@@ -395,17 +413,19 @@ export class OrganizationRepository {
       return null;
     }
 
-    const userRoles = await this.getOrganizationMemberRoles({
-      organizationID: input.organizationID,
-      userID: orgMember[0].userID,
-    });
-
     return {
       userID: orgMember[0].userID,
       orgMemberID: orgMember[0].memberID,
       email: orgMember[0].email,
-      roles: userRoles,
+      rbac: new RBACEvaluator(
+        await this.getOrganizationMemberGroups({
+          organizationID: input.organizationID,
+          userID: orgMember[0].userID,
+        }),
+        orgMember[0].userID,
+      ),
       active: orgMember[0].active,
+      joinedAt: orgMember[0].createdAt.toISOString(),
     };
   }
 
@@ -432,6 +452,7 @@ export class OrganizationRepository {
         email: users.email,
         memberID: organizationsMembers.id,
         active: users.active,
+        createdAt: organizationsMembers.createdAt,
       })
       .from(organizationsMembers)
       .innerJoin(users, eq(users.id, organizationsMembers.userId))
@@ -442,22 +463,21 @@ export class OrganizationRepository {
       .execute();
 
     const members: OrganizationMemberDTO[] = [];
-
     for (const member of orgMembers) {
-      const roles = await this.db
-        .select({
-          role: organizationMemberRoles.role,
-        })
-        .from(organizationMemberRoles)
-        .where(eq(organizationMemberRoles.organizationMemberId, member.memberID))
-        .execute();
       members.push({
         userID: member.userID,
         orgMemberID: member.memberID,
         email: member.email,
-        roles: roles.map((role) => role.role),
+        rbac: new RBACEvaluator(
+          await this.getOrganizationMemberGroups({
+            organizationID,
+            userID: member.userID,
+          }),
+          member.userID,
+        ),
         active: member.active,
-      } as OrganizationMemberDTO);
+        joinedAt: member.createdAt.toISOString(),
+      } satisfies OrganizationMemberDTO);
     }
     return members;
   }
@@ -474,22 +494,6 @@ export class OrganizationRepository {
     return insertedMember[0];
   }
 
-  public async addOrganizationMemberRoles(input: { memberID: string; roles: MemberRole[] }) {
-    const values: {
-      organizationMemberId: string;
-      role: MemberRole;
-    }[] = [];
-
-    for (const role of input.roles) {
-      values.push({
-        organizationMemberId: input.memberID,
-        role,
-      });
-    }
-
-    await this.db.insert(organizationMemberRoles).values(values).execute();
-  }
-
   public async removeOrganizationMember(input: { userID: string; organizationID: string }) {
     await this.db
       .delete(organizationsMembers)
@@ -500,24 +504,6 @@ export class OrganizationRepository {
         ),
       )
       .execute();
-  }
-
-  public async getOrganizationMemberRoles(input: { userID: string; organizationID: string }): Promise<MemberRole[]> {
-    const userRoles = await this.db
-      .select({
-        role: organizationMemberRoles.role,
-      })
-      .from(organizationMemberRoles)
-      .innerJoin(organizationsMembers, eq(organizationsMembers.id, organizationMemberRoles.organizationMemberId))
-      .where(
-        and(
-          eq(organizationsMembers.userId, input.userID),
-          eq(organizationsMembers.organizationId, input.organizationID),
-        ),
-      )
-      .execute();
-
-    return userRoles.map((role) => role.role);
   }
 
   /**
@@ -1015,17 +1001,17 @@ export class OrganizationRepository {
     });
   }
 
-  public updateUserRole(input: { orgMemberID: string; role: MemberRole }) {
+  public updateUserGroup(input: { orgMemberID: string; groupId: string }) {
     return this.db.transaction(async (tx) => {
       await tx
-        .delete(organizationMemberRoles)
-        .where(eq(organizationMemberRoles.organizationMemberId, input.orgMemberID));
+        .delete(schema.organizationGroupMembers)
+        .where(eq(schema.organizationGroupMembers.organizationMemberId, input.orgMemberID));
 
       await tx
-        .insert(organizationMemberRoles)
+        .insert(schema.organizationGroupMembers)
         .values({
           organizationMemberId: input.orgMemberID,
-          role: input.role,
+          groupId: input.groupId,
         })
         .execute();
     });
@@ -1036,7 +1022,7 @@ export class OrganizationRepository {
     const orgMembers = await this.getMembers({ organizationID: input.organizationID });
 
     for (const member of orgMembers) {
-      if (member.roles.includes('admin')) {
+      if (member.rbac.isOrganizationAdmin) {
         orgAdmins.push(member);
       }
     }
@@ -1395,7 +1381,7 @@ export class OrganizationRepository {
   public async adminMemberships({ userId }: { userId: string }) {
     const orgs = await this.memberships({ userId });
 
-    const orgsWhereUserIsAdmin = orgs.filter((o) => o.roles.includes('admin'));
+    const orgsWhereUserIsAdmin = orgs.filter((o) => o.rbac.isOrganizationAdmin);
 
     // We need to track these orgs to delete them since the user is the only member.
     const soloAdminSoloMemberOrgs: OrganizationDTO[] = [];
@@ -1414,7 +1400,8 @@ export class OrganizationRepository {
         continue;
       }
 
-      const admins = members.filter((m) => m.roles.includes('admin'));
+      const admins = members.filter((m) => m.rbac.isOrganizationAdmin);
+
       if (admins.length === 1) {
         soloAdminManyMembersOrgs.push(org);
       }
@@ -1576,5 +1563,84 @@ export class OrganizationRepository {
         },
       },
     });
+  }
+
+  public async getOrganizationMemberGroups(input: {
+    userID: string;
+    organizationID: string;
+  }): Promise<Omit<OrganizationGroupDTO, 'membersCount' | 'apiKeysCount'>[]> {
+    const groups = await this.db
+      .select({
+        groupId: schema.organizationGroups.id,
+        name: schema.organizationGroups.name,
+        description: schema.organizationGroups.description,
+        builtin: schema.organizationGroups.builtin,
+        kcGroupId: schema.organizationGroups.kcGroupId,
+      })
+      .from(schema.organizationGroupMembers)
+      .innerJoin(
+        organizationsMembers,
+        eq(organizationsMembers.id, schema.organizationGroupMembers.organizationMemberId),
+      )
+      .innerJoin(schema.organizationGroups, eq(schema.organizationGroups.id, schema.organizationGroupMembers.groupId))
+      .where(
+        and(
+          eq(organizationsMembers.userId, input.userID),
+          eq(organizationsMembers.organizationId, input.organizationID),
+        ),
+      )
+      .execute();
+
+    if (groups.length === 0) {
+      return [];
+    }
+
+    const orgGroupRepo = new OrganizationGroupRepository(this.db);
+    return Promise.all(
+      groups.map(async (group) => {
+        return {
+          ...group,
+          rules: await orgGroupRepo.getGroupRules({
+            organizationId: input.organizationID,
+            groupId: group.groupId,
+          }),
+        };
+      }),
+    );
+  }
+
+  public async getOrganizationGroup(input: {
+    organizationId: string;
+    groupId: string;
+  }): Promise<Omit<OrganizationGroupDTO, 'membersCount' | 'apiKeysCount'> | null> {
+    const groups = await this.db
+      .select({
+        groupId: schema.organizationGroups.id,
+        name: schema.organizationGroups.name,
+        description: schema.organizationGroups.description,
+        builtin: schema.organizationGroups.builtin,
+        kcGroupId: schema.organizationGroups.kcGroupId,
+      })
+      .from(schema.organizationGroups)
+      .where(
+        and(
+          eq(schema.organizationGroups.id, input.groupId),
+          eq(schema.organizationGroups.organizationId, input.organizationId),
+        ),
+      )
+      .execute();
+
+    if (groups.length !== 1) {
+      return null;
+    }
+
+    const orgGroupRepo = new OrganizationGroupRepository(this.db);
+    return {
+      ...groups[0],
+      rules: await orgGroupRepo.getGroupRules({
+        organizationId: input.organizationId,
+        groupId: groups[0].groupId,
+      }),
+    };
   }
 }

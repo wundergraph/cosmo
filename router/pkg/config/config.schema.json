@@ -720,6 +720,10 @@
                               "request_error",
                               "response_error_message"
                             ]
+                          },
+                          "expression": {
+                            "type": "string",
+                            "description": "The name of the request header from which to extract the value."
                           }
                         }
                       }
@@ -926,6 +930,42 @@
                   "type": "string",
                   "default": "x-wg-trace-id",
                   "description": "The name of the header which the holds the trace_id. The default value is x-wg-trace-id."
+                }
+              }
+            },
+            "attributes": {
+              "type": "array",
+              "description": "Custom span attributes for subgraphs",
+              "items": {
+                "type": "object",
+                "description": "The configuration for custom span attributes for subgraph tracing.",
+                "additionalProperties": false,
+                "required": [
+                  "key"
+                ],
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "description": "The key of the field."
+                  },
+                  "value_from": {
+                    "type": "object",
+                    "description": "Defines a source for the field value e.g. from a request header. If both default and value_from are set, value_from has precedence.",
+                    "additionalProperties": false,
+                    "properties": {
+                      "expression": {
+                        "type": "string",
+                        "description": "The name of the request header from which to extract the value. The value is only extracted when a request context is available otherwise the default value is used."
+                      }
+                    },
+                    "oneOf": [
+                      {
+                        "required": [
+                          "expression"
+                        ]
+                      }
+                    ]
+                  }
                 }
               }
             }
@@ -2909,6 +2949,11 @@
           "examples": ["(?i)^X-Custom-.*"],
           "description": "The matching rule for the header. The matching rule is a regular expression that is used to match the header. Can't be used with 'named'."
         },
+        "negate_match": {
+          "type": "boolean",
+          "examples": ["true"],
+          "description": "If set to true, the result of the 'matching' regex will be inverted. This is useful for simulating negative lookahead behavior, which is not natively supported."
+        },
         "named": {
           "type": "string",
           "examples": ["X-Test-Header"],
@@ -2924,6 +2969,9 @@
           "examples": ["default-value"],
           "description": "The default value of the header in case it is not present in the request."
         }
+      },
+      "dependentRequired": {
+        "negate_match": ["matching"]
       },
       "required": ["op"]
     },
@@ -2942,6 +2990,11 @@
           "type": "string",
           "examples": ["(?i)^X-Custom-.*"],
           "description": "The matching rule for the header. The matching rule is a regular expression that is used to match the header. Can't be used with 'named'."
+        },
+        "negate_match": {
+          "type": "boolean",
+          "examples": ["true"],
+          "description": "If set to true, the result of the 'matching' regex will be inverted. This is useful for simulating negative lookahead behavior, which is not natively supported."
         },
         "named": {
           "type": "string",
@@ -2964,6 +3017,9 @@
           "examples": ["first_write"],
           "description": "The algorith, to use when multiple headers are present. The supported operations are '\"first_write\", \"last_write\", and \"append\". The 'first_write' retains the first value of a given header. The 'last_write' retains the last value of a given header. The 'append' appends all values of a given header."
         }
+      },
+      "dependentRequired": {
+        "negate_match": ["matching"]
       },
       "required": ["op", "algorithm"]
     },

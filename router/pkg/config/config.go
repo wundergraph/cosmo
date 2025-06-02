@@ -73,6 +73,7 @@ type Tracing struct {
 	Exporters           []TracingExporter   `yaml:"exporters"`
 	Propagation         PropagationConfig   `yaml:"propagation"`
 	ResponseTraceHeader ResponseTraceHeader `yaml:"response_trace_id"`
+	Attributes          []CustomAttribute   `yaml:"attributes"`
 
 	TracingGlobalFeatures `yaml:",inline"`
 }
@@ -250,7 +251,8 @@ type RequestHeaderRule struct {
 	Operation HeaderRuleOperation `yaml:"op"`
 	// Propagate options
 	// Matching is the regex to match the header name against
-	Matching string `yaml:"matching"`
+	Matching    string `yaml:"matching"`
+	NegateMatch bool   `yaml:"negate_match,omitempty"`
 	// Named is the exact header name to match
 	Named string `yaml:"named"`
 	// Rename renames the header's key to the provided value
@@ -294,7 +296,8 @@ type ResponseHeaderRule struct {
 	// Operation describes the header operation to perform e.g. "propagate"
 	Operation HeaderRuleOperation `yaml:"op"`
 	// Matching is the regex to match the header name against
-	Matching string `yaml:"matching"`
+	Matching    string `yaml:"matching"`
+	NegateMatch bool   `yaml:"negate_match,omitempty"`
 	// Named is the exact header name to match
 	Named string `yaml:"named"`
 	// Rename renames the header's key to the provided value

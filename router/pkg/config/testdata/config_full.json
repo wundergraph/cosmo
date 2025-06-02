@@ -35,6 +35,18 @@
         "Enabled": false,
         "HeaderName": "x-wg-trace-id"
       },
+      "Attributes": [
+        {
+          "Key": "wg.tracing.custom.conn.subgraph.hostport",
+          "Default": "",
+          "ValueFrom": {
+            "RequestHeader": "",
+            "ContextField": "",
+            "ResponseHeader": "",
+            "Expression": "subgraph.name"
+          }
+        }
+      ],
       "ExportGraphQLVariables": true,
       "WithNewRoot": false
     },
@@ -159,6 +171,7 @@
         {
           "Operation": "propagate",
           "Matching": "",
+          "NegateMatch": false,
           "Named": "X-Test-Header",
           "Rename": "",
           "Default": "",
@@ -170,6 +183,7 @@
         {
           "Operation": "propagate",
           "Matching": "(?i)^X-Custom-.*",
+          "NegateMatch": false,
           "Named": "",
           "Rename": "",
           "Default": "",
@@ -181,6 +195,7 @@
         {
           "Operation": "propagate",
           "Matching": "",
+          "NegateMatch": false,
           "Named": "X-User-Id",
           "Rename": "",
           "Default": "123",
@@ -192,6 +207,7 @@
         {
           "Operation": "set",
           "Matching": "",
+          "NegateMatch": false,
           "Named": "",
           "Rename": "",
           "Default": "",
@@ -203,6 +219,7 @@
         {
           "Operation": "set",
           "Matching": "",
+          "NegateMatch": false,
           "Named": "",
           "Rename": "",
           "Default": "",
@@ -219,6 +236,7 @@
         {
           "Operation": "set",
           "Matching": "",
+          "NegateMatch": false,
           "Named": "",
           "Rename": "",
           "Default": "",
@@ -232,6 +250,7 @@
         {
           "Operation": "propagate",
           "Matching": "",
+          "NegateMatch": false,
           "Named": "X-Custom-Header",
           "Rename": "",
           "Default": "",
@@ -247,6 +266,7 @@
           {
             "Operation": "propagate",
             "Matching": "",
+            "NegateMatch": false,
             "Named": "Subgraph-Secret",
             "Rename": "",
             "Default": "some-secret",
@@ -260,6 +280,7 @@
           {
             "Operation": "set",
             "Matching": "",
+            "NegateMatch": false,
             "Named": "",
             "Rename": "",
             "Default": "",
