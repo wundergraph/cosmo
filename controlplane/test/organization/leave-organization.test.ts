@@ -67,11 +67,13 @@ describe('Leave organization', () => {
   });
 
   test('Owner should not be able to leave organization', async () => {
-    const { client } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname });
 
     const leaveOrganizationResponse = await client.leaveOrganization({});
 
     expect(leaveOrganizationResponse.response?.code).toBe(EnumStatusCode.ERR);
     expect(leaveOrganizationResponse.response?.details).toBe('Creator of a organization cannot leave the organization.');
+
+    await server.close();
   });
 });
