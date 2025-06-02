@@ -4,6 +4,10 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.37.6](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.37.5...@wundergraph/cosmo-shared@0.37.6) (2025-06-02)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
 ## [0.37.5](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.37.4...@wundergraph/cosmo-shared@0.37.5) (2025-06-02)
 
 **Note:** Version bump only for package @wundergraph/cosmo-shared

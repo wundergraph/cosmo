@@ -5,6 +5,9 @@ import {
   federateSubgraphs,
   FederationResultFailure,
   FederationResultSuccess,
+  FieldData,
+  InputObjectDefinitionData,
+  invalidNamedTypeError,
   noBaseDefinitionForExtensionError,
   noFieldDefinitionsError,
   NormalizationResultFailure,
@@ -15,14 +18,16 @@ import {
   parse,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   Subgraph,
-} from '../../src';
+} from '../../../src';
 import {
   baseDirectiveDefinitions,
+  stringToTypeNode,
   versionOneBaseSchema,
   versionOneRouterDefinitions,
   versionTwoRouterDefinitions,
-} from './utils/utils';
-import { normalizeString, schemaToSortedNormalizedString } from '../utils/utils';
+} from '../utils/utils';
+import { normalizeString, normalizeSubgraphFailure, schemaToSortedNormalizedString } from '../../utils/utils';
+import { Kind } from 'graphql';
 
 describe('Object tests', () => {
   describe('Normalization tests', () => {
@@ -433,6 +438,23 @@ describe('Object tests', () => {
         ),
       );
     });
+  });
+
+  test('that an error is returned if a field returns an input node type', () => {
+    const { errors } = normalizeSubgraphFailure(naa, ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
+      invalidNamedTypeError({
+        data: {
+          kind: Kind.FIELD_DEFINITION,
+          name: 'field',
+          originalParentTypeName: 'Object',
+          type: stringToTypeNode('Input!'),
+        } as FieldData,
+        namedTypeData: { kind: Kind.INPUT_OBJECT_TYPE_DEFINITION, name: 'Input' } as InputObjectDefinitionData,
+        nodeType: 'Object field',
+      }),
+    );
   });
 
   describe('Federation tests', () => {
@@ -995,6 +1017,20 @@ const subgraphX: Subgraph = {
     extend type Object @tag(name: "name")
     
     extend type Object {
+      name: String!
+    }
+  `),
+};
+
+const naa: Subgraph = {
+  name: 'naa',
+  url: '',
+  definitions: parse(`
+    type Object {
+      field: Input!
+    }
+    
+    input Input {
       name: String!
     }
   `),

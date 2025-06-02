@@ -22,28 +22,36 @@ export type FederateTypeFailure = {
 
 export type FederateTypeResult = FederateTypeSuccess | FederateTypeFailure;
 
-export type FederateTypeOptions = {
+export type FederateTypeParams = {
   current: TypeNode;
   other: TypeNode;
   coords: string;
   mostRestrictive: boolean;
 };
 
-export type MergedTypeResult = {
-  typeErrors?: string[];
-  typeNode?: TypeNode;
+export type GetMergedTypeFailure = {
+  actualType: string;
+  expectedType: string;
+  success: false;
 };
+
+export type GetMergedTypeSuccess = {
+  success: true;
+  typeNode: TypeNode;
+};
+
+export type GetMergedTypeResult = GetMergedTypeFailure | GetMergedTypeSuccess;
 
 function getMergedTypeNode(
   current: TypeNode,
   other: TypeNode,
   hostPath: string,
   mostRestrictive: boolean,
-  errors: Error[],
-): MergedTypeResult {
+  errors: Array<Error>,
+): GetMergedTypeResult {
   other = getMutableTypeNode(other, hostPath, errors); // current is already a deep copy
   // The first type of the pair to diverge in restriction takes precedence in all future differences.
-  // If the other type of the pair also diverges, it's a src error.
+  // If the other type of the pair also diverges, it's an error.
   // To keep the output link intact, it is not possible to spread assign "lastTypeNode".
   const mergedTypeNode: MutableIntermediateTypeNode = { kind: current.kind };
   let divergentType = DivergentType.NONE;
@@ -54,11 +62,11 @@ function getMergedTypeNode(
         case Kind.NAMED_TYPE:
           const otherName = (other as NamedTypeNode).name.value;
           if (current.name.value !== otherName) {
-            return { typeErrors: [current.name.value, otherName] };
+            return { actualType: otherName, expectedType: current.name.value, success: false };
           }
           lastTypeNode.kind = current.kind;
           lastTypeNode.name = current.name;
-          return { typeNode: mergedTypeNode as TypeNode };
+          return { success: true, typeNode: mergedTypeNode as TypeNode };
         case Kind.LIST_TYPE:
           lastTypeNode.kind = current.kind;
           lastTypeNode.type = { kind: current.type.kind };
@@ -77,7 +85,7 @@ function getMergedTypeNode(
     }
     if (current.kind === Kind.NON_NULL_TYPE) {
       if (divergentType === DivergentType.OTHER) {
-        return { typeErrors: [current.kind, other.kind] };
+        return { actualType: other.kind, expectedType: current.kind, success: false };
       } else {
         divergentType = DivergentType.CURRENT;
       }
@@ -91,9 +99,7 @@ function getMergedTypeNode(
     }
     if (other.kind === Kind.NON_NULL_TYPE) {
       if (divergentType === DivergentType.CURRENT) {
-        return {
-          typeErrors: [other.kind, current.kind],
-        };
+        return { actualType: other.kind, expectedType: current.kind, success: false };
       } else {
         divergentType = DivergentType.OTHER;
       }
@@ -106,10 +112,10 @@ function getMergedTypeNode(
       continue;
     }
     // At least one of the types must be a non-null wrapper, or the types are inconsistent
-    return { typeErrors: [current.kind, other.kind] };
+    return { actualType: other.kind, expectedType: current.kind, success: false };
   }
   errors.push(maximumTypeNestingExceededError(hostPath));
-  return { typeNode: current };
+  return { success: true, typeNode: current };
 }
 
 export function getLeastRestrictiveMergedTypeNode(
@@ -117,7 +123,7 @@ export function getLeastRestrictiveMergedTypeNode(
   other: TypeNode,
   hostPath: string,
   errors: Error[],
-): MergedTypeResult {
+): GetMergedTypeResult {
   return getMergedTypeNode(current, other, hostPath, false, errors);
 }
 
@@ -126,7 +132,7 @@ export function getMostRestrictiveMergedTypeNode(
   other: TypeNode,
   hostPath: string,
   errors: Error[],
-): MergedTypeResult {
+): GetMergedTypeResult {
   return getMergedTypeNode(current, other, hostPath, true, errors);
 }
 

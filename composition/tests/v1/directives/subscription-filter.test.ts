@@ -35,9 +35,9 @@ import {
   subscriptionFilterConditionDepthExceededErrorMessage,
   subscriptionFilterConditionInvalidInputFieldErrorMessage,
   subscriptionFilterConditionInvalidInputFieldTypeErrorMessage,
-} from '../../src';
-import { versionOnePersistedDirectiveDefinitions } from './utils/utils';
-import { normalizeString, schemaToSortedNormalizedString } from '../utils/utils';
+} from '../../../src';
+import { versionOnePersistedDirectiveDefinitions } from '../utils/utils';
+import { normalizeString, schemaToSortedNormalizedString } from '../../utils/utils';
 
 describe('@openfed__subscriptionFilter tests', () => {
   describe('Normalization tests', () => {

@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.149.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.148.0...controlplane@0.149.0) (2025-06-02)
+
+### Features
+
+* add named type kind to data ([#1921](https://github.com/wundergraph/cosmo/issues/1921)) ([cfda0ae](https://github.com/wundergraph/cosmo/commit/cfda0aed8214a073ebd040a07290304095b9d26d)) (@Aenimus)
+
 # [0.148.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.147.0...controlplane@0.148.0) (2025-06-02)
 
 ### Features
