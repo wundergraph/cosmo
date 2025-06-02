@@ -2272,8 +2272,8 @@ func TestWebSocketPingIntervalForGraphQLTransportWS(t *testing.T) {
 	})
 }
 
-// Tests how the router handles scenarios where the subgraph does not properly complete a subscription, e.g. an improper server
-// or becoming unavailable.
+// Tests how the router handles scenarios where the subgraph does not properly complete a subscription before the connection is closed,
+// e.g. if the subgraph goes down before completing the subscription
 func TestWebsocketClose(t *testing.T) {
 	t.Parallel()
 
@@ -2379,7 +2379,6 @@ func TestWebsocketClose(t *testing.T) {
 			require.Equal(t, "complete", complete.Type)
 		})
 	})
-
 }
 
 // countEmpWsMiddleware is an imitation of a subgraph capable of resolving the `countEmp` subscription. `complete` indicates whether the subscription will
