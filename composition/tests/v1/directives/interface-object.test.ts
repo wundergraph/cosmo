@@ -1,14 +1,18 @@
 import { describe, expect, test } from 'vitest';
-import { ConfigurationData, invalidInterfaceObjectImplementationDefinitionsError, Subgraph } from '../../src';
+import {
+  ConfigurationData,
+  invalidInterfaceObjectImplementationDefinitionsError,
+  ROUTER_COMPATIBILITY_VERSION_ONE,
+  Subgraph,
+} from '../../../src';
 import { parse } from 'graphql';
 import {
   federateSubgraphsFailure,
   federateSubgraphsSuccess,
   normalizeString,
   schemaToSortedNormalizedString,
-} from '../utils/utils';
-import { ROUTER_COMPATIBILITY_VERSION_ONE } from '../../src';
-import { versionTwoRouterDefinitions } from './utils/utils';
+} from '../../utils/utils';
+import { versionTwoRouterDefinitions } from '../utils/utils';
 
 describe('@interfaceObject tests', () => {
   test('that an error is returned if implementations are defined alongside an entity declared with @interfaceObject', () => {

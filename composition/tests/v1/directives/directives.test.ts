@@ -11,15 +11,15 @@ import {
   parse,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   Subgraph,
-} from '../../src';
+} from '../../../src';
 import { describe, expect, test } from 'vitest';
 import {
   baseDirectiveDefinitions,
   schemaQueryDefinition,
   versionOneRouterDefinitions,
   versionTwoDirectiveDefinitions,
-} from './utils/utils';
-import { normalizeString, schemaToSortedNormalizedString } from '../utils/utils';
+} from '../utils/utils';
+import { normalizeString, schemaToSortedNormalizedString } from '../../utils/utils';
 
 describe('Directive tests', () => {
   describe('Normalization tests', () => {
