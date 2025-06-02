@@ -4,35 +4,35 @@ import {
   CONFIGURE_DESCRIPTION,
   configureDescriptionNoDescriptionError,
   configureDescriptionPropagationError,
+  DESCRIPTION_OVERRIDE,
   duplicateDirectiveArgumentDefinitionsErrorMessage,
   ENUM,
   federateSubgraphs,
-  DESCRIPTION_OVERRIDE,
+  FederationResultFailure,
+  FederationResultSuccess,
   FIRST_ORDINAL,
   INTERFACE,
   invalidArgumentValueErrorMessage,
   invalidDirectiveError,
   invalidRepeatedDirectiveErrorMessage,
+  NormalizationResultFailure,
+  NormalizationResultSuccess,
   normalizeSubgraph,
   PROPAGATE,
   QUERY,
+  ROUTER_COMPATIBILITY_VERSION_ONE,
   SCALAR,
   STRING_SCALAR,
   Subgraph,
   UNION,
-  ROUTER_COMPATIBILITY_VERSION_ONE,
-  FederationResultFailure,
-  NormalizationResultFailure,
-  NormalizationResultSuccess,
-  FederationResultSuccess,
-} from '../../src';
+} from '../../../src';
 import {
   baseDirectiveDefinitionsWithConfigureDescription,
   schemaQueryDefinition,
   versionOneRouterDefinitions,
   versionTwoRouterDefinitions,
-} from './utils/utils';
-import { normalizeString, schemaToSortedNormalizedString } from '../utils/utils';
+} from '../utils/utils';
+import { normalizeString, schemaToSortedNormalizedString } from '../../utils/utils';
 
 describe('@openfed__configureDescription tests', () => {
   describe('Normalization tests', () => {
