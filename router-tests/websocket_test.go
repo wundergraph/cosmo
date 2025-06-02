@@ -2272,61 +2272,118 @@ func TestWebSocketPingIntervalForGraphQLTransportWS(t *testing.T) {
 	})
 }
 
-func TestWebsocketDownstreamError(t *testing.T) {
+// Tests how the router handles scenarios where the subgraph does not properly complete a subscription, e.g. an improper server
+// or becoming unavailable.
+func TestWebsocketClose(t *testing.T) {
 	t.Parallel()
 
 	totalUpdates := 5
 
-	wsMiddleware, _ := countEmpWsMiddleware(t, totalUpdates, false)
+	t.Run("should return 1001: Downstream service error when the subgraph becomes unavailable", func(t *testing.T) {
+		wsMiddleware, _ := countEmpWsMiddleware(t, totalUpdates, false)
 
-	// Configure and run the test
-	testenv.Run(t, &testenv.Config{
-		Subgraphs: testenv.SubgraphsConfig{
-			GlobalMiddleware: wsMiddleware,
-		},
-		ModifyEngineExecutionConfiguration: func(config *config.EngineExecutionConfiguration) {
-			// Don't use too small ping intervals
-			config.WebSocketClientPingInterval = 500 * time.Millisecond
-		},
-	}, func(t *testing.T, xEnv *testenv.Environment) {
-		// Setup client connection
-		conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+		// Configure and run the test
+		testenv.Run(t, &testenv.Config{
+			Subgraphs: testenv.SubgraphsConfig{
+				GlobalMiddleware: wsMiddleware,
+			},
+			ModifyEngineExecutionConfiguration: func(config *config.EngineExecutionConfiguration) {
+				// Don't use too small ping intervals
+				config.WebSocketClientPingInterval = 500 * time.Millisecond
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Setup client connection
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
 
-		// Start the subscription
-		err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
-			ID:      "1",
-			Type:    "subscribe",
-			Payload: []byte(`{"query":"subscription { countEmp(max: 40, intervalMilliseconds: 500) }"}`),
-		})
-		require.NoError(t, err)
-
-		// Process subscription updates
-		var receivedUpdates int
-		for receivedUpdates < totalUpdates {
-			var res testenv.WebSocketMessage
-			err = testenv.WSReadJSON(t, conn, &res)
+			// Start the subscription
+			err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { countEmp(max: 40, intervalMilliseconds: 500) }"}`),
+			})
 			require.NoError(t, err)
 
-			if res.Type == "next" {
-				receivedUpdates++
-
-				response := CountEmpResponse{}
-
-				err := json.Unmarshal(res.Payload, &response)
+			// Process subscription updates
+			var receivedUpdates int
+			for receivedUpdates < totalUpdates {
+				var res testenv.WebSocketMessage
+				err = testenv.WSReadJSON(t, conn, &res)
 				require.NoError(t, err)
-				require.Equal(t, receivedUpdates, response.Data.CountEmp)
-			}
-		}
 
-		// Attempt to read again, should get close error
-		err = conn.ReadJSON(&testenv.WebSocketMessage{})
-		if assert.Error(t, err, "should have received an error") {
-			assert.ErrorContains(t, err, "Downstream service error", "should have message 'Downstream service error'")
-			assert.True(t, websocket.IsCloseError(err, websocket.CloseGoingAway), "should be a 'going away' closure")
-		}
+				if res.Type == "next" {
+					receivedUpdates++
+
+					response := CountEmpResponse{}
+
+					err := json.Unmarshal(res.Payload, &response)
+					require.NoError(t, err)
+					require.Equal(t, receivedUpdates, response.Data.CountEmp)
+				}
+			}
+
+			// Attempt to read again, should get close error
+			err = conn.ReadJSON(&testenv.WebSocketMessage{})
+			if assert.Error(t, err, "should have received an error") {
+				assert.ErrorContains(t, err, "Downstream service error", "should have message 'Downstream service error'")
+				assert.True(t, websocket.IsCloseError(err, websocket.CloseGoingAway), "should be a 'going away' closure")
+			}
+		})
 	})
+
+	t.Run("should complete normally when the subgraph remains available", func(t *testing.T) {
+		wsMiddleware, _ := countEmpWsMiddleware(t, totalUpdates, true)
+
+		// Configure and run the test
+		testenv.Run(t, &testenv.Config{
+			Subgraphs: testenv.SubgraphsConfig{
+				GlobalMiddleware: wsMiddleware,
+			},
+			ModifyEngineExecutionConfiguration: func(config *config.EngineExecutionConfiguration) {
+				// Don't use too small ping intervals
+				config.WebSocketClientPingInterval = 500 * time.Millisecond
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Setup client connection
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+
+			// Start the subscription
+			err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { countEmp(max: 40, intervalMilliseconds: 500) }"}`),
+			})
+			require.NoError(t, err)
+
+			// Process subscription updates
+			var receivedUpdates int
+			for receivedUpdates < totalUpdates {
+				var res testenv.WebSocketMessage
+				err = testenv.WSReadJSON(t, conn, &res)
+				require.NoError(t, err)
+
+				if res.Type == "next" {
+					receivedUpdates++
+
+					response := CountEmpResponse{}
+
+					err := json.Unmarshal(res.Payload, &response)
+					require.NoError(t, err)
+					require.Equal(t, receivedUpdates, response.Data.CountEmp)
+				}
+			}
+
+			// Get the complete message
+			var complete testenv.WebSocketMessage
+			err = testenv.WSReadJSON(t, conn, &complete)
+			require.NoError(t, err)
+			require.Equal(t, "complete", complete.Type)
+		})
+	})
+
 }
 
+// countEmpWsMiddleware is an imitation of a subgraph capable of resolving the `countEmp` subscription. `complete` indicates whether the subscription will
+// complete normally or be prematurely closed (as though the subgraph had become unavailable)
 func countEmpWsMiddleware(t *testing.T, totalUpdates int, complete bool) (func(http.Handler) http.Handler, *atomic.Uint32) {
 	// Atomic counter for pings received
 	pingsReceived := new(atomic.Uint32)
@@ -2440,6 +2497,7 @@ func countEmpWsMiddleware(t *testing.T, totalUpdates int, complete bool) (func(h
 }
 
 // Helper function to handle countEmp subscription
+// `complete` indicates whether the subscription will complete normally or be prematurely closed (as though the subgraph had become unavailable)
 func handleCountEmpSubscription(t *testing.T, wsWriteCh chan<- wsJSONMessage, wsCloseCh chan<- wsCloseMessage, id string, updateInterval time.Duration, totalUpdates int, complete bool) {
 	// Send updates with the specified interval
 	for i := 1; i <= totalUpdates; i++ {
