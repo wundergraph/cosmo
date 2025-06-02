@@ -523,6 +523,9 @@ const (
 	// PlatformServiceGetOperationsProcedure is the fully-qualified name of the PlatformService's
 	// GetOperations RPC.
 	PlatformServiceGetOperationsProcedure = "/wg.cosmo.platform.v1.PlatformService/GetOperations"
+	// PlatformServiceGetClientsFromAnalyticsProcedure is the fully-qualified name of the
+	// PlatformService's GetClientsFromAnalytics RPC.
+	PlatformServiceGetClientsFromAnalyticsProcedure = "/wg.cosmo.platform.v1.PlatformService/GetClientsFromAnalytics"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
@@ -691,6 +694,7 @@ var (
 	platformServiceGetProposalsByFederatedGraphMethodDescriptor          = platformServiceServiceDescriptor.Methods().ByName("GetProposalsByFederatedGraph")
 	platformServiceGetProposalChecksMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("GetProposalChecks")
 	platformServiceGetOperationsMethodDescriptor                         = platformServiceServiceDescriptor.Methods().ByName("GetOperations")
+	platformServiceGetClientsFromAnalyticsMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("GetClientsFromAnalytics")
 )
 
 // PlatformServiceClient is a client for the wg.cosmo.platform.v1.PlatformService service.
@@ -1003,6 +1007,8 @@ type PlatformServiceClient interface {
 	GetProposalChecks(context.Context, *connect.Request[v1.GetProposalChecksRequest]) (*connect.Response[v1.GetProposalChecksResponse], error)
 	// GetOperations returns the operations of a federated graph.
 	GetOperations(context.Context, *connect.Request[v1.GetOperationsRequest]) (*connect.Response[v1.GetOperationsResponse], error)
+	// GetClientsFromAnalytics returns all the clients of the federated graph from the analytics
+	GetClientsFromAnalytics(context.Context, *connect.Request[v1.GetClientsFromAnalyticsRequest]) (*connect.Response[v1.GetClientsFromAnalyticsResponse], error)
 }
 
 // NewPlatformServiceClient constructs a client for the wg.cosmo.platform.v1.PlatformService
@@ -2000,6 +2006,12 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceGetOperationsMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		getClientsFromAnalytics: connect.NewClient[v1.GetClientsFromAnalyticsRequest, v1.GetClientsFromAnalyticsResponse](
+			httpClient,
+			baseURL+PlatformServiceGetClientsFromAnalyticsProcedure,
+			connect.WithSchema(platformServiceGetClientsFromAnalyticsMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -2168,6 +2180,7 @@ type platformServiceClient struct {
 	getProposalsByFederatedGraph          *connect.Client[v1.GetProposalsByFederatedGraphRequest, v1.GetProposalsByFederatedGraphResponse]
 	getProposalChecks                     *connect.Client[v1.GetProposalChecksRequest, v1.GetProposalChecksResponse]
 	getOperations                         *connect.Client[v1.GetOperationsRequest, v1.GetOperationsResponse]
+	getClientsFromAnalytics               *connect.Client[v1.GetClientsFromAnalyticsRequest, v1.GetClientsFromAnalyticsResponse]
 }
 
 // CreatePlaygroundScript calls wg.cosmo.platform.v1.PlatformService.CreatePlaygroundScript.
@@ -3018,6 +3031,11 @@ func (c *platformServiceClient) GetOperations(ctx context.Context, req *connect.
 	return c.getOperations.CallUnary(ctx, req)
 }
 
+// GetClientsFromAnalytics calls wg.cosmo.platform.v1.PlatformService.GetClientsFromAnalytics.
+func (c *platformServiceClient) GetClientsFromAnalytics(ctx context.Context, req *connect.Request[v1.GetClientsFromAnalyticsRequest]) (*connect.Response[v1.GetClientsFromAnalyticsResponse], error) {
+	return c.getClientsFromAnalytics.CallUnary(ctx, req)
+}
+
 // PlatformServiceHandler is an implementation of the wg.cosmo.platform.v1.PlatformService service.
 type PlatformServiceHandler interface {
 	// PlaygroundScripts
@@ -3328,6 +3346,8 @@ type PlatformServiceHandler interface {
 	GetProposalChecks(context.Context, *connect.Request[v1.GetProposalChecksRequest]) (*connect.Response[v1.GetProposalChecksResponse], error)
 	// GetOperations returns the operations of a federated graph.
 	GetOperations(context.Context, *connect.Request[v1.GetOperationsRequest]) (*connect.Response[v1.GetOperationsResponse], error)
+	// GetClientsFromAnalytics returns all the clients of the federated graph from the analytics
+	GetClientsFromAnalytics(context.Context, *connect.Request[v1.GetClientsFromAnalyticsRequest]) (*connect.Response[v1.GetClientsFromAnalyticsResponse], error)
 }
 
 // NewPlatformServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -4321,6 +4341,12 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceGetOperationsMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformServiceGetClientsFromAnalyticsHandler := connect.NewUnaryHandler(
+		PlatformServiceGetClientsFromAnalyticsProcedure,
+		svc.GetClientsFromAnalytics,
+		connect.WithSchema(platformServiceGetClientsFromAnalyticsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/wg.cosmo.platform.v1.PlatformService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case PlatformServiceCreatePlaygroundScriptProcedure:
@@ -4649,6 +4675,8 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceGetProposalChecksHandler.ServeHTTP(w, r)
 		case PlatformServiceGetOperationsProcedure:
 			platformServiceGetOperationsHandler.ServeHTTP(w, r)
+		case PlatformServiceGetClientsFromAnalyticsProcedure:
+			platformServiceGetClientsFromAnalyticsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -5308,4 +5336,8 @@ func (UnimplementedPlatformServiceHandler) GetProposalChecks(context.Context, *c
 
 func (UnimplementedPlatformServiceHandler) GetOperations(context.Context, *connect.Request[v1.GetOperationsRequest]) (*connect.Response[v1.GetOperationsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetOperations is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetClientsFromAnalytics(context.Context, *connect.Request[v1.GetClientsFromAnalyticsRequest]) (*connect.Response[v1.GetClientsFromAnalyticsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetClientsFromAnalytics is not implemented"))
 }

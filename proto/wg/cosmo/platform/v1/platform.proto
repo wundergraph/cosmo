@@ -2776,6 +2776,19 @@ message GetOperationsResponse {
   repeated Operation operations = 2;
 }
 
+message GetClientsFromAnalyticsRequest {
+  string federatedGraphName = 1;
+  string namespace = 2;
+}
+
+message GetClientsFromAnalyticsResponse {
+  message Client {
+    string name = 1;
+  }
+  Response response = 1;
+  repeated Client clients = 2;
+}
+
 service PlatformService {
   // PlaygroundScripts
   rpc CreatePlaygroundScript(CreatePlaygroundScriptRequest) returns (CreatePlaygroundScriptResponse) {}
@@ -3137,4 +3150,6 @@ service PlatformService {
   rpc GetProposalChecks(GetProposalChecksRequest) returns (GetProposalChecksResponse) {}
   // GetOperations returns the operations of a federated graph.
   rpc GetOperations(GetOperationsRequest) returns (GetOperationsResponse) {}
+  // GetClientsFromAnalytics returns all the clients of the federated graph from the analytics
+  rpc GetClientsFromAnalytics(GetClientsFromAnalyticsRequest) returns (GetClientsFromAnalyticsResponse) {}
 }
