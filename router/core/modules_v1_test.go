@@ -25,7 +25,7 @@ func (m *testModule1) MyModule() MyModuleInfo {
 func (m *testModule1) Provision(ctx context.Context) error { return nil }
 func (m *testModule1) Cleanup() error { return nil }
 
-func (m *testModule1) OnApplicationStart(ctx context.Context) {}
+func (m *testModule1) OnApplicationStart(ctx context.Context, params *ApplicationParams) error { return nil }
 
 type testModule2 struct {}
 
@@ -41,8 +41,8 @@ func (m *testModule2) MyModule() MyModuleInfo {
 func (m *testModule2) Provision(ctx context.Context) error { return nil }
 func (m *testModule2) Cleanup() error { return nil }
 
-func (m *testModule2) OnApplicationStart(ctx context.Context) {}
-func (m *testModule2) OnApplicationStop(ctx context.Context) {}
+func (m *testModule2) OnApplicationStart(ctx context.Context, params *ApplicationParams) error { return nil }
+func (m *testModule2) OnApplicationStop(ctx context.Context, params *ApplicationParams, exitError *ExitError) error { return nil }
 
 type testModule3 struct {}
 
@@ -57,8 +57,8 @@ func (m *testModule3) MyModule() MyModuleInfo {
 func (m *testModule3) Provision(ctx context.Context) error { return nil }
 func (m *testModule3) Cleanup() error { return nil }
 
-func (m *testModule3) OnApplicationStart(ctx context.Context) {}
-func (m *testModule3) OnApplicationStop(ctx context.Context) {}
+func (m *testModule3) OnApplicationStart(ctx context.Context, params *ApplicationParams) error { return nil }
+func (m *testModule3) OnApplicationStop(ctx context.Context, params *ApplicationParams, exitError *ExitError) error { return nil }
 
 
 type testModule4 struct {}

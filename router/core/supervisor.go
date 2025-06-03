@@ -26,6 +26,10 @@ type RouterSupervisor struct {
 	routerFactory func(ctx context.Context, res *RouterResources) (*Router, error)
 
 	resources *RouterResources
+
+	// open core module system
+	hookRegistry *hookRegistry
+	applicationParams *ApplicationParams
 }
 
 // RouterResources is a struct for holding resources used by the router.
@@ -89,6 +93,12 @@ func (rs *RouterSupervisor) createRouter() error {
 	rs.routerCtx = routerCtx
 	rs.routerCancel = routerCancel
 
+	rs.hookRegistry = router.coreModuleHooks.hookRegistry
+	rs.applicationParams = &ApplicationParams{
+		Config: rs.resources.Config,
+		Logger: rs.logger,
+	}
+
 	return nil
 }
 
@@ -133,7 +143,21 @@ var (
 )
 
 // Start starts the router supervisor.
-func (rs *RouterSupervisor) Start() error {
+func (rs *RouterSupervisor) Start() (err error) {
+	appCtx := context.Background()
+	started := false
+
+	defer func() {
+		// open core module system: run application stop hooks once shutdown is received
+		rs.logger.Debug("Firing ApplicationStop hooks")
+		for _, h := range rs.hookRegistry.applicationStopHooks.Values() {
+			hookErr := h.OnApplicationStop(appCtx, rs.applicationParams, &ExitError{Err: err})
+			if hookErr != nil {
+				err = errors.Join(err, fmt.Errorf("failed to run application stop hook: %w", hookErr))
+			}
+		}
+	}()
+
 	if err := rs.loadConfig(); err != nil {
 		return fmt.Errorf("%w: failed to load config: %w", ErrStartupFailed, err)
 	}
@@ -142,6 +166,18 @@ func (rs *RouterSupervisor) Start() error {
 		rs.logger.Debug("Creating Router")
 		if err := rs.createRouter(); err != nil {
 			return fmt.Errorf("%w: failed to create router: %w", ErrStartupFailed, err)
+		}
+
+		// open core module system: run application start hooks only once
+		if !started {
+			rs.logger.Debug("Firing ApplicationStart hooks")
+			for _, h := range rs.hookRegistry.applicationStartHooks.Values() {
+				hookErr := h.OnApplicationStart(appCtx, rs.applicationParams)
+				if hookErr != nil {
+					return fmt.Errorf("failed to run application start hook: %w", hookErr)
+				}
+			}
+			started = true
 		}
 
 		rs.logger.Debug("Starting Router")

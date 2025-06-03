@@ -88,6 +88,7 @@ type (
 		proxy                ProxyFunc
 		disableUsageTracking bool
 		usage                UsageTracker
+		coreModuleHooks      *coreModuleHooks
 	}
 
 	UsageTracker interface {
@@ -524,7 +525,28 @@ func NewRouter(opts ...Option) (*Router, error) {
 		}
 	}
 
+	// Initialize the core module system
+	// It needs to be initialized before bootstrap() is called, because we want to make sure that
+	// it is available at the application start hooks.
+	r.logger.Debug("Initializing core module system")
+	if err := r.initCoreModuleSystem(context.Background()); err != nil {
+		return nil, fmt.Errorf("failed to init core module system: %w", err)
+	}
+
 	return r, nil
+}
+
+// initCoreModuleSystem initializes the new module system
+func (r *Router) initCoreModuleSystem(ctx context.Context) error {
+	coreModuleHooks := newCoreModuleHooks(r.logger)
+	err := coreModuleHooks.initCoreModuleHooks(ctx, defaultModuleRegistry.getMyModules())
+	if err != nil {
+		return fmt.Errorf("failed to init core module hooks: %w", err)
+	}
+
+	r.coreModuleHooks = coreModuleHooks
+
+	return nil
 }
 
 // newGraphServer creates a new server.
@@ -1467,6 +1489,14 @@ func (r *Router) Shutdown(ctx context.Context) error {
 					err.Append(fmt.Errorf("failed to clean module %s: %w", module.Module().ID, subErr))
 				}
 			}
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if cmErr := r.coreModuleHooks.cleanupCoreModuleHooks(ctx); cmErr != nil {
+			err.Append(fmt.Errorf("failed to cleanup core module system: %w", cmErr))
 		}
 	}()
 
