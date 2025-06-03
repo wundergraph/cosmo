@@ -76,6 +76,7 @@ type Config struct {
 	postOriginHandlers              []TransportPostHandler
 	headerRules                     *config.HeaderRules
 	subgraphTransportOptions        *SubgraphTransportOptions
+	trafficShapingRules             *config.TrafficShapingRules
 	graphqlMetricsConfig            *GraphQLMetricsConfig
 	routerTrafficConfig             *config.RouterTrafficConfiguration
 	batchingConfig                  *BatchingConfig

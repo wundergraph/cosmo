@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/circuit"
 	"net/http"
 	"time"
 
@@ -38,6 +39,7 @@ type ExecutorConfigurationBuilder struct {
 	subgraphGRPCClients map[string]grpc.ClientConnInterface
 
 	subscriptionClientOptions *SubscriptionClientOptions
+	circuitBreaker            *circuit.Manager
 }
 
 type Executor struct {
