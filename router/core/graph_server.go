@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/circuit"
 	"net/http"
 	"net/url"
 	"path/filepath"
@@ -104,6 +105,7 @@ type (
 		routerListenAddr        string
 		traceDialer             *TraceDialer
 		pluginHost              *routerplugin.Host
+		circuitBreaker          *circuit.Manager
 	}
 )
 
@@ -125,6 +127,10 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		traceDialer = NewTraceDialer()
 	}
 
+	subgraphs := routerConfig.GetSubgraphs()
+
+	circuitBreakerManager := circuit.NewManager(r.trafficShapingRules, subgraphs)
+
 	// Base transport
 	baseTransport := newHTTPTransport(r.subgraphTransportOptions.TransportRequestOptions, proxy, traceDialer, "")
 
@@ -145,6 +151,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		subgraphTransports:      subgraphTransports,
 		playgroundHandler:       r.playgroundHandler,
 		traceDialer:             traceDialer,
+		circuitBreaker:          circuitBreakerManager,
 		baseRouterConfigVersion: routerConfig.GetVersion(),
 		inFlightRequests:        &atomic.Uint64{},
 		graphMuxList:            make([]*graphMux, 0, 1),
@@ -245,7 +252,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		httpRouter.Use(cors.New(*s.corsOptions))
 	}
 
-	gm, err := s.buildGraphMux(ctx, "", s.baseRouterConfigVersion, routerConfig.GetEngineConfig(), routerConfig.GetSubgraphs())
+	gm, err := s.buildGraphMux(ctx, "", s.baseRouterConfigVersion, routerConfig.GetEngineConfig(), subgraphs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build base mux: %w", err)
 	}
@@ -1052,6 +1059,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			LocalhostFallbackInsideDocker: s.localhostFallbackInsideDocker,
 			Logger:                        s.logger,
 			EnableTraceClient:             enableTraceClient,
+			CircuitBreaker:                s.circuitBreaker,
 		},
 	}
 

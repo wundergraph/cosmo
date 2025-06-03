@@ -1729,6 +1729,12 @@ func WithSubgraphTransportOptions(opts *SubgraphTransportOptions) Option {
 	}
 }
 
+func WithTrafficShapingRules(opts *config.TrafficShapingRules) Option {
+	return func(r *Router) {
+		r.trafficShapingRules = opts
+	}
+}
+
 func WithSubgraphRetryOptions(enabled bool, maxRetryCount int, retryMaxDuration, retryInterval time.Duration) Option {
 	return func(r *Router) {
 		r.retryOptions = retrytransport.RetryOptions{
