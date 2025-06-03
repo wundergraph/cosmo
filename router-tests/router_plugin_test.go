@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"go.uber.org/zap/zapcore"
 )
 
 func TestRouterPlugin(t *testing.T) {
@@ -92,6 +93,10 @@ func TestRouterPlugin(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: testenv.ConfigWithPluginsJSONTemplate,
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.ErrorLevel,
+			},
 			Plugins: testenv.PluginConfig{
 				Enabled: true,
 				Path:    "../router/plugins",
@@ -101,6 +106,10 @@ func TestRouterPlugin(t *testing.T) {
 				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { killService }`, // this will kill the plugin
 				})
+
+				logMessages := xEnv.Observer().All()
+				require.Len(t, logMessages, 1)
+				require.Equal(t, "plugin process exited", logMessages[0].Message)
 
 				require.EventuallyWithT(t, func(c *assert.CollectT) {
 					// the service should restart the plugin automatically and the request should succeed
