@@ -1,6 +1,6 @@
 # router
 
-![Version: 0.10.2](https://img.shields.io/badge/Version-0.10.2-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.197.1](https://img.shields.io/badge/AppVersion-0.197.1-informational?style=flat-square)
+![Version: 0.11.0](https://img.shields.io/badge/Version-0.11.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.197.1](https://img.shields.io/badge/AppVersion-0.197.1-informational?style=flat-square)
 
 This is the official Helm Chart for the WunderGraph Cosmo Router.
 
@@ -25,6 +25,8 @@ This is the official Helm Chart for the WunderGraph Cosmo Router.
 | configuration.httpProxy | string | `""` | The URL of the HTTP proxy server. Default is an empty string. |
 | configuration.httpsProxy | string | `""` | The URL of the HTTPS proxy server. Default is an empty string. |
 | configuration.logLevel | string | `"info"` | The log level of the router. Default to info if not set. |
+| configuration.mcp.enabled | bool | `false` | Enables MCP server support. Default is false. |
+| configuration.mcp.port | int | `5025` | The port where the MCP server is exposed. Default is port 5025. |
 | configuration.noProxy | string | `""` | NO_PROXY is a comma-separated list of hosts or domains for which the proxy should not be used. |
 | configuration.otelCollectorUrl | string | `""` | The URL of the Cosmo GraphQL OTEL Collector. Should be internal to the cluster. Default to cloud if not set. |
 | configuration.prometheus.enabled | bool | `true` | Enables prometheus metrics support. Default is true. |

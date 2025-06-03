@@ -238,3 +238,10 @@ configuration:
   httpProxy: ''
   # -- NO_PROXY is a comma-separated list of hosts or domains for which the proxy should not be used.
   noProxy: ''
+  
+  # Use this section to disable/enable and configure the MCP server.
+  mcp:
+    # -- Enables MCP server support. Default is false.
+    enabled: false
+    # -- The port where the MCP server is exposed. Default is port 5025.
+    port: 5025
