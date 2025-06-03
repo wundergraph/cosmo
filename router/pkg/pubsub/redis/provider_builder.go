@@ -41,13 +41,8 @@ func (b *PubSubProviderBuilder) TypeID() string {
 	return providerTypeID
 }
 
-// Providers returns the Redis PubSub providers for the given provider IDs
-func (b *PubSubProviderBuilder) BuildProvider(provider config.RedisEventSource) (datasource.PubSubProvider, error) {
-	adapter := NewAdapter(b.logger, provider.URLs)
-	pubSubProvider := datasource.NewPubSubProviderImpl(provider.ID, providerTypeID, adapter, b.logger)
-	b.adapters[provider.ID] = adapter
-
-	return pubSubProvider, nil
+func (p *PubSubProviderBuilder) BuildDataSourceFactory(data *nodev1.RedisEventConfiguration) *datasource.PubSubDataSourceFactory[config.RedisEventSource, *nodev1.RedisEventConfiguration] {
+	return datasource.NewPubSubDataSourceFactory(p, data)
 }
 
 // DataSource creates a Redis PubSub data source for the given event configuration
@@ -57,4 +52,13 @@ func (b *PubSubProviderBuilder) BuildDataSource(event *nodev1.RedisEventConfigur
 		EventConfiguration: event,
 		RedisAdapter:       b.adapters[providerId],
 	}, nil
+}
+
+// Providers returns the Redis PubSub providers for the given provider IDs
+func (b *PubSubProviderBuilder) BuildProvider(provider config.RedisEventSource) (datasource.PubSubProvider, error) {
+	adapter := NewAdapter(b.logger, provider.URLs)
+	pubSubProvider := datasource.NewPubSubProviderImpl(provider.ID, providerTypeID, adapter, b.logger)
+	b.adapters[provider.ID] = adapter
+
+	return pubSubProvider, nil
 }
