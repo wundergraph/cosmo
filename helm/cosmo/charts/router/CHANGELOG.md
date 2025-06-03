@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo-router@0.10.2...helm-cosmo-router@0.11.0) (2025-06-03)
+
+
+### Features
+
+* support mcp in router helm chart ([#1927](https://github.com/wundergraph/cosmo/issues/1927)) ([361e10a](https://github.com/wundergraph/cosmo/commit/361e10a2c6b4624c17898c9f9dc3b0befd1aefd2))
+
 ## [0.10.2](https://github.com/wundergraph/cosmo/compare/helm-cosmo-router@0.10.1...helm-cosmo-router@0.10.2) (2025-05-26)
 
 
