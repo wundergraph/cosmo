@@ -1,11 +1,10 @@
-package nats
+package redis
 
 import (
 	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
-	"io"
 	"testing"
 
 	"github.com/cespare/xxhash/v2"
@@ -16,35 +15,36 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
-func TestPublishAndRequestEventConfiguration_MarshalJSONTemplate(t *testing.T) {
+func TestPublishEventConfiguration_MarshalJSONTemplate(t *testing.T) {
 	tests := []struct {
 		name        string
-		config      PublishAndRequestEventConfiguration
+		config      PublishEventConfiguration
 		wantPattern string
 	}{
 		{
 			name: "simple configuration",
-			config: PublishAndRequestEventConfiguration{
+			config: PublishEventConfiguration{
 				ProviderID: "test-provider",
-				Subject:    "test-subject",
+				Channel:    "test-channel",
 				Data:       json.RawMessage(`{"message":"hello"}`),
 			},
-			wantPattern: `{"subject":"test-subject", "data": {"message":"hello"}, "providerId":"test-provider"}`,
+			wantPattern: `{"channel":"test-channel", "data": {"message":"hello"}, "providerId":"test-provider"}`,
 		},
 		{
 			name: "with special characters",
-			config: PublishAndRequestEventConfiguration{
+			config: PublishEventConfiguration{
 				ProviderID: "test-provider-id",
-				Subject:    "subject-with-hyphens",
+				Channel:    "channel-with-hyphens",
 				Data:       json.RawMessage(`{"message":"special \"quotes\" here"}`),
 			},
-			wantPattern: `{"subject":"subject-with-hyphens", "data": {"message":"special \"quotes\" here"}, "providerId":"test-provider-id"}`,
+			wantPattern: `{"channel":"channel-with-hyphens", "data": {"message":"special \"quotes\" here"}, "providerId":"test-provider-id"}`,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := tt.config.MarshalJSONTemplate()
+			result, err := tt.config.MarshalJSONTemplate()
+			require.NoError(t, err)
 			assert.Equal(t, tt.wantPattern, result)
 		})
 	}
@@ -59,18 +59,18 @@ func TestSubscriptionSource_UniqueRequestID(t *testing.T) {
 	}{
 		{
 			name:        "valid input",
-			input:       `{"subjects":["subject1", "subject2"], "providerId":"test-provider"}`,
+			input:       `{"channels":["channel1", "channel2"], "providerId":"test-provider"}`,
 			expectError: false,
 		},
 		{
-			name:          "missing subjects",
+			name:          "missing channels",
 			input:         `{"providerId":"test-provider"}`,
 			expectError:   true,
 			expectedError: errors.New("Key path not found"),
 		},
 		{
 			name:          "missing providerId",
-			input:         `{"subjects":["subject1", "subject2"]}`,
+			input:         `{"channels":["channel1", "channel2"]}`,
 			expectError:   true,
 			expectedError: errors.New("Key path not found"),
 		},
@@ -78,7 +78,7 @@ func TestSubscriptionSource_UniqueRequestID(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			source := &SubscriptionSource{
+			source := &SubscriptionDataSource{
 				pubSub: NewMockAdapterInterface(t),
 			}
 			ctx := &resolve.Context{}
@@ -111,22 +111,22 @@ func TestSubscriptionSource_Start(t *testing.T) {
 	}{
 		{
 			name:  "successful subscription",
-			input: `{"subjects":["subject1", "subject2"], "providerId":"test-provider"}`,
+			input: `{"channels":["channel1", "channel2"], "providerId":"test-provider"}`,
 			mockSetup: func(m *MockAdapterInterface, updater *datasource.MockSubscriptionUpdater) {
 				m.On("Subscribe", mock.Anything, SubscriptionEventConfiguration{
 					ProviderID: "test-provider",
-					Subjects:   []string{"subject1", "subject2"},
+					Channels:   []string{"channel1", "channel2"},
 				}, mock.Anything).Return(nil)
 			},
 			expectError: false,
 		},
 		{
 			name:  "adapter returns error",
-			input: `{"subjects":["subject1"], "providerId":"test-provider"}`,
+			input: `{"channels":["channel1"], "providerId":"test-provider"}`,
 			mockSetup: func(m *MockAdapterInterface, updater *datasource.MockSubscriptionUpdater) {
 				m.On("Subscribe", mock.Anything, SubscriptionEventConfiguration{
 					ProviderID: "test-provider",
-					Subjects:   []string{"subject1"},
+					Channels:   []string{"channel1"},
 				}, mock.Anything).Return(errors.New("subscription error"))
 			},
 			expectError: true,
@@ -145,7 +145,7 @@ func TestSubscriptionSource_Start(t *testing.T) {
 			updater := datasource.NewMockSubscriptionUpdater(t)
 			tt.mockSetup(mockAdapter, updater)
 
-			source := &SubscriptionSource{
+			source := &SubscriptionDataSource{
 				pubSub: mockAdapter,
 			}
 
@@ -168,7 +168,7 @@ func TestSubscriptionSource_Start(t *testing.T) {
 	}
 }
 
-func TestNatsPublishDataSource_Load(t *testing.T) {
+func TestRedisPublishDataSource_Load(t *testing.T) {
 	tests := []struct {
 		name            string
 		input           string
@@ -179,11 +179,11 @@ func TestNatsPublishDataSource_Load(t *testing.T) {
 	}{
 		{
 			name:  "successful publish",
-			input: `{"subject":"test-subject", "data":{"message":"hello"}, "providerId":"test-provider"}`,
+			input: `{"channel":"test-channel", "data":{"message":"hello"}, "providerId":"test-provider"}`,
 			mockSetup: func(m *MockAdapterInterface) {
-				m.On("Publish", mock.Anything, mock.MatchedBy(func(event PublishAndRequestEventConfiguration) bool {
+				m.On("Publish", mock.Anything, mock.MatchedBy(func(event PublishEventConfiguration) bool {
 					return event.ProviderID == "test-provider" &&
-						event.Subject == "test-subject" &&
+						event.Channel == "test-channel" &&
 						string(event.Data) == `{"message":"hello"}`
 				})).Return(nil)
 			},
@@ -193,7 +193,7 @@ func TestNatsPublishDataSource_Load(t *testing.T) {
 		},
 		{
 			name:  "publish error",
-			input: `{"subject":"test-subject", "data":{"message":"hello"}, "providerId":"test-provider"}`,
+			input: `{"channel":"test-channel", "data":{"message":"hello"}, "providerId":"test-provider"}`,
 			mockSetup: func(m *MockAdapterInterface) {
 				m.On("Publish", mock.Anything, mock.Anything).Return(errors.New("publish error"))
 			},
@@ -215,108 +215,33 @@ func TestNatsPublishDataSource_Load(t *testing.T) {
 			mockAdapter := NewMockAdapterInterface(t)
 			tt.mockSetup(mockAdapter)
 
-			dataSource := &NatsPublishDataSource{
+			dataSource := &PublishDataSource{
 				pubSub: mockAdapter,
 			}
-
 			ctx := context.Background()
 			input := []byte(tt.input)
-			var out bytes.Buffer
+			out := &bytes.Buffer{}
 
-			err := dataSource.Load(ctx, input, &out)
+			err := dataSource.Load(ctx, input, out)
 
 			if tt.expectError {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
-				if tt.expectedOutput != "" {
-					assert.Equal(t, tt.expectedOutput, out.String())
-				}
+				assert.Equal(t, tt.expectedOutput, out.String())
 			}
 		})
 	}
 }
 
-func TestNatsPublishDataSource_LoadWithFiles(t *testing.T) {
-	dataSource := &NatsPublishDataSource{}
-	assert.Panics(t, func() {
-		dataSource.LoadWithFiles(context.Background(), []byte{}, nil, &bytes.Buffer{})
-	}, "Expected LoadWithFiles to panic with 'not implemented'")
-}
+func TestRedisPublishDataSource_LoadWithFiles(t *testing.T) {
+	t.Run("panic on not implemented", func(t *testing.T) {
+		dataSource := &PublishDataSource{
+			pubSub: NewMockAdapterInterface(t),
+		}
 
-func TestNatsRequestDataSource_Load(t *testing.T) {
-	tests := []struct {
-		name           string
-		input          string
-		mockSetup      func(*MockAdapterInterface)
-		expectError    bool
-		expectedOutput string
-	}{
-		{
-			name:  "successful request",
-			input: `{"subject":"test-subject", "data":{"message":"hello"}, "providerId":"test-provider"}`,
-			mockSetup: func(m *MockAdapterInterface) {
-				m.On("Request", mock.Anything, mock.MatchedBy(func(event PublishAndRequestEventConfiguration) bool {
-					return event.ProviderID == "test-provider" &&
-						event.Subject == "test-subject" &&
-						string(event.Data) == `{"message":"hello"}`
-				}), mock.Anything).Run(func(args mock.Arguments) {
-					// Write response to the output buffer
-					w := args.Get(2).(io.Writer)
-					_, _ = w.Write([]byte(`{"response":"success"}`))
-				}).Return(nil)
-			},
-			expectError:    false,
-			expectedOutput: `{"response":"success"}`,
-		},
-		{
-			name:  "request error",
-			input: `{"subject":"test-subject", "data":{"message":"hello"}, "providerId":"test-provider"}`,
-			mockSetup: func(m *MockAdapterInterface) {
-				m.On("Request", mock.Anything, mock.Anything, mock.Anything).Return(errors.New("request error"))
-			},
-			expectError:    true,
-			expectedOutput: "",
-		},
-		{
-			name:           "invalid input json",
-			input:          `{"invalid json":`,
-			mockSetup:      func(m *MockAdapterInterface) {},
-			expectError:    true,
-			expectedOutput: "",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			mockAdapter := NewMockAdapterInterface(t)
-			tt.mockSetup(mockAdapter)
-
-			dataSource := &NatsRequestDataSource{
-				pubSub: mockAdapter,
-			}
-
-			ctx := context.Background()
-			input := []byte(tt.input)
-			var out bytes.Buffer
-
-			err := dataSource.Load(ctx, input, &out)
-
-			if tt.expectError {
-				require.Error(t, err)
-			} else {
-				require.NoError(t, err)
-				if tt.expectedOutput != "" {
-					assert.Equal(t, tt.expectedOutput, out.String())
-				}
-			}
+		assert.Panics(t, func() {
+			dataSource.LoadWithFiles(context.Background(), nil, nil, &bytes.Buffer{})
 		})
-	}
-}
-
-func TestNatsRequestDataSource_LoadWithFiles(t *testing.T) {
-	dataSource := &NatsRequestDataSource{}
-	assert.Panics(t, func() {
-		dataSource.LoadWithFiles(context.Background(), []byte{}, nil, &bytes.Buffer{})
-	}, "Expected LoadWithFiles to panic with 'not implemented'")
+	})
 }
