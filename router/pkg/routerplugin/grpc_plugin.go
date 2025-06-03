@@ -15,10 +15,9 @@ import (
 )
 
 type GRPCPluginConfig struct {
-	Logger        *zap.Logger
-	PluginPath    string
-	PluginName    string
-	PluginCommand []string
+	Logger     *zap.Logger
+	PluginPath string
+	PluginName string
 }
 
 type GRPCPlugin struct {
@@ -31,16 +30,23 @@ type GRPCPlugin struct {
 	mu       sync.Mutex
 	disposed atomic.Bool
 
-	pluginPath    string
-	pluginName    string
-	pluginCommand []string
+	pluginPath string
+	pluginName string
 
 	client *GRPCPluginClient
 }
 
 func NewGRPCPlugin(config GRPCPluginConfig) (*GRPCPlugin, error) {
 	if config.Logger == nil {
-		config.Logger = zap.NewNop()
+		return nil, fmt.Errorf("logger is required")
+	}
+
+	if config.PluginName == "" {
+		return nil, fmt.Errorf("plugin name is required")
+	}
+
+	if config.PluginPath == "" {
+		return nil, fmt.Errorf("plugin path is required")
 	}
 
 	return &GRPCPlugin{
@@ -50,9 +56,8 @@ func NewGRPCPlugin(config GRPCPluginConfig) (*GRPCPlugin, error) {
 
 		logger: config.Logger,
 
-		pluginPath:    config.PluginPath,
-		pluginName:    config.PluginName,
-		pluginCommand: config.PluginCommand,
+		pluginPath: config.PluginPath,
+		pluginName: config.PluginName,
 	}, nil
 }
 
@@ -65,7 +70,7 @@ func (p *GRPCPlugin) GetClient() grpc.ClientConnInterface {
 	return p.client
 }
 
-func (p *GRPCPlugin) handlePluginExit() {
+func (p *GRPCPlugin) ensureRunningPluginProcess() {
 	if p.client.IsPluginProcessExited() {
 		if err := p.fork(); err != nil {
 			p.logger.Error("failed to restart plugin", zap.Error(err))
@@ -133,17 +138,13 @@ func (p *GRPCPlugin) Name() string {
 }
 
 // Start implements Plugin.
-func (p *GRPCPlugin) Start(ctx context.Context, logger *zap.Logger) error {
-	if logger == nil {
-		logger = zap.NewNop()
-	}
-
+func (p *GRPCPlugin) Start(ctx context.Context) error {
 	go func() {
 		select {
 		case <-ctx.Done():
 			err := p.Stop()
 			if err != nil {
-				logger.Error("failed to stop plugin", zap.Error(err))
+				p.logger.Error("failed to stop plugin", zap.Error(err))
 			}
 		case <-p.done:
 			return
@@ -160,7 +161,8 @@ func (p *GRPCPlugin) Start(ctx context.Context, logger *zap.Logger) error {
 			case <-p.done:
 				return
 			default:
-				p.handlePluginExit()
+				p.ensureRunningPluginProcess()
+				// Sleep for 2 seconds to avoid busy-waiting
 				time.Sleep(time.Second * 2)
 			}
 		}

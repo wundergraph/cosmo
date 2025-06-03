@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"sync"
-
-	"go.uber.org/zap"
 )
 
 type PluginConfig struct {
@@ -86,12 +84,12 @@ func (h *Host) stopPlugin(pluginName string) error {
 	return nil
 }
 
-func (h *Host) RunPluginHost(ctx context.Context, logger *zap.Logger) error {
+func (h *Host) RunPluginHost(ctx context.Context) error {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
 	for _, plugin := range h.pluginMap {
-		err := plugin.Start(ctx, logger)
+		err := plugin.Start(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to start plugin %s: %w", plugin.Name(), err)
 		}

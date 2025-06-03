@@ -1358,9 +1358,9 @@ func (s *graphServer) setupPluginHost(ctx context.Context, config *nodev1.Engine
 				}
 
 				grpcPlugin, err := routerplugin.NewGRPCPlugin(routerplugin.GRPCPluginConfig{
-					PluginName:    pluginConfig.GetName(),
-					PluginPath:    pluginPath,
-					PluginCommand: []string{pluginPath},
+					Logger:     s.logger,
+					PluginName: pluginConfig.GetName(),
+					PluginPath: pluginPath,
 				})
 				if err != nil {
 					return fmt.Errorf("failed to create grpc plugin for subgraph %s: %w", dsConfig.Id, err)
@@ -1371,13 +1371,13 @@ func (s *graphServer) setupPluginHost(ctx context.Context, config *nodev1.Engine
 					return fmt.Errorf("failed to register grpc plugin: %w", err)
 				}
 
-				if err := grpcPlugin.Start(ctx, s.logger); err != nil {
-					return fmt.Errorf("failed to start grpc plugin: %w", err)
-				}
-
 				break
 			}
 		}
+	}
+
+	if err := s.pluginHost.RunPluginHost(ctx); err != nil {
+		return fmt.Errorf("failed to run plugin host: %w", err)
 	}
 
 	return nil
