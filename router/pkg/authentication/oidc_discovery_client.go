@@ -17,7 +17,7 @@ type oidcConfiguration struct {
 	JwksURI string `json:"jwks_uri"`
 }
 
-// oidcDiscoveryClient is a http.roundTripper that fetches the JWKS from the OIDC discovery endpoint.
+// oidcDiscoveryClient is a http.RoundTripper that fetches the JWKS from the OIDC discovery endpoint.
 // If the endpoint is not an OIDC discovery endpoint, it delegates the request to the underlying http.Client.
 type oidcDiscoveryClient struct {
 	httpClient *http.Client

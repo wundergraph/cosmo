@@ -115,7 +115,7 @@ type RouterOnRequestHandler interface {
 
 // EnginePreOriginHandler allows you to add a handler to the router engine origin requests.
 // The handler is called before the request is sent to the origin. All origin handlers are called sequentially.
-// It allows you to modify the request before it is sent or return a custom response. The same semantics of http.roundTripper apply here.
+// It allows you to modify the request before it is sent or return a custom response. The same semantics of http.RoundTripper apply here.
 // Don't manipulate / consume the body of the request unless you know what you are doing.
 // If you consume the body of the request it will not be available for the next handler.
 type EnginePreOriginHandler interface {
@@ -127,7 +127,7 @@ type EnginePreOriginHandler interface {
 // EnginePostOriginHandler allows you to add a handler to the router engine origin requests.
 // The handler is called after the response was received from the origin. All origin handlers are called sequentially.
 // It allows you to return a custom response to the client. If your return nil as response, the next handler is called.
-// The same semantics of http.roundTripper apply here. In order to modify the response, you have to return a new response.
+// The same semantics of http.RoundTripper apply here. In order to modify the response, you have to return a new response.
 type EnginePostOriginHandler interface {
 	// OnOriginResponse is called after the request is sent to the origin.
 	// Might be called multiple times if there are multiple origins

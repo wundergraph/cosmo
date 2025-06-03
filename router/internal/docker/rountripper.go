@@ -8,7 +8,7 @@ import (
 	"syscall"
 )
 
-// localhostFallbackRoundTripper is an http.roundTripper that will retry failed
+// localhostFallbackRoundTripper is an http.RoundTripper that will retry failed
 // requests to localhost by rewriting the request to use is targetHost. Only
 // requests that fail with ECONNREFUSED will be retried.
 type localhostFallbackRoundTripper struct {
@@ -62,7 +62,7 @@ func (t *localhostFallbackRoundTripper) RoundTrip(r *http.Request) (*http.Respon
 	return resp, err
 }
 
-// NewLocalhostFallbackRoundTripper returns an http.roundTripper that will retry requests to localhost that fail
+// NewLocalhostFallbackRoundTripper returns an http.RoundTripper that will retry requests to localhost that fail
 // with ECONNREFUSED by rewriting the request to use host.docker.internal.
 func NewLocalhostFallbackRoundTripper(transport http.RoundTripper) http.RoundTripper {
 	return &localhostFallbackRoundTripper{
