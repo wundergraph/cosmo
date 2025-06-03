@@ -31,7 +31,7 @@ func newOIDCDiscoveryClient(httpClient *http.Client) *http.Client {
 	return &http.Client{Transport: &oidcDiscoveryClient{httpClient}}
 }
 
-// RoundTrip implements http.roundTripper.
+// RoundTrip implements http.RoundTripper.
 // If the request is for the OIDC discovery endpoint, it fetches the JWKS from the JWKS URI.
 // Otherwise, it delegates the request to the underlying http.Client.
 func (c *oidcDiscoveryClient) RoundTrip(req *http.Request) (*http.Response, error) {

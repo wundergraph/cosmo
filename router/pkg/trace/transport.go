@@ -8,7 +8,7 @@ import (
 
 type TransportOption func(svr *transport)
 
-// NewTransport wraps the provided http.roundTripper. Internally it uses otelhttp.NewTransport to instrument the request.
+// NewTransport wraps the provided http.RoundTripper. Internally it uses otelhttp.NewTransport to instrument the request.
 func NewTransport(base http.RoundTripper, otelHttpOptions []otelhttp.Option, options ...TransportOption) http.RoundTripper {
 	transport := &transport{
 		rt: base,

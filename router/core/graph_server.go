@@ -1004,7 +1004,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		return nil, fmt.Errorf("failed to build pubsub configuration: %w", err)
 	}
 
-	// map[string]*http.Transport cannot be coerced into map[string]http.roundTripper, unfortunately
+	// map[string]*http.Transport cannot be coerced into map[string]http.RoundTripper, unfortunately
 	subgraphTippers := map[string]http.RoundTripper{}
 	for subgraph, subgraphTransport := range s.subgraphTransports {
 		subgraphTippers[subgraph] = subgraphTransport
