@@ -135,11 +135,7 @@ func (g *GRPCPluginClient) NewStream(ctx context.Context, desc *grpc.StreamDesc,
 }
 
 func (g *GRPCPluginClient) IsPluginProcessExited() bool {
-	if g.pc == nil {
-		return true
-	}
-
-	return g.pc.Exited()
+	return g.pc == nil || g.pc.Exited()
 }
 
 func (g *GRPCPluginClient) Close() error {
