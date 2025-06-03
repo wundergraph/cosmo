@@ -791,6 +791,59 @@ func (_c *MockPubSubProviderBuilder_BuildDataSource_Call[P, E]) RunAndReturn(run
 	return _c
 }
 
+// BuildDataSourceFactory provides a mock function for the type MockPubSubProviderBuilder
+func (_mock *MockPubSubProviderBuilder[P, E]) BuildDataSourceFactory(data E) *PubSubDataSourceFactory[P, E] {
+	ret := _mock.Called(data)
+
+	if len(ret) == 0 {
+		panic("no return value specified for BuildDataSourceFactory")
+	}
+
+	var r0 *PubSubDataSourceFactory[P, E]
+	if returnFunc, ok := ret.Get(0).(func(E) *PubSubDataSourceFactory[P, E]); ok {
+		r0 = returnFunc(data)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*PubSubDataSourceFactory[P, E])
+		}
+	}
+	return r0
+}
+
+// MockPubSubProviderBuilder_BuildDataSourceFactory_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BuildDataSourceFactory'
+type MockPubSubProviderBuilder_BuildDataSourceFactory_Call[P any, E any] struct {
+	*mock.Call
+}
+
+// BuildDataSourceFactory is a helper method to define mock.On call
+//   - data E
+func (_e *MockPubSubProviderBuilder_Expecter[P, E]) BuildDataSourceFactory(data interface{}) *MockPubSubProviderBuilder_BuildDataSourceFactory_Call[P, E] {
+	return &MockPubSubProviderBuilder_BuildDataSourceFactory_Call[P, E]{Call: _e.mock.On("BuildDataSourceFactory", data)}
+}
+
+func (_c *MockPubSubProviderBuilder_BuildDataSourceFactory_Call[P, E]) Run(run func(data E)) *MockPubSubProviderBuilder_BuildDataSourceFactory_Call[P, E] {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 E
+		if args[0] != nil {
+			arg0 = args[0].(E)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockPubSubProviderBuilder_BuildDataSourceFactory_Call[P, E]) Return(pubSubDataSourceFactory *PubSubDataSourceFactory[P, E]) *MockPubSubProviderBuilder_BuildDataSourceFactory_Call[P, E] {
+	_c.Call.Return(pubSubDataSourceFactory)
+	return _c
+}
+
+func (_c *MockPubSubProviderBuilder_BuildDataSourceFactory_Call[P, E]) RunAndReturn(run func(data E) *PubSubDataSourceFactory[P, E]) *MockPubSubProviderBuilder_BuildDataSourceFactory_Call[P, E] {
+	_c.Call.Return(run)
+	return _c
+}
+
 // BuildProvider provides a mock function for the type MockPubSubProviderBuilder
 func (_mock *MockPubSubProviderBuilder[P, E]) BuildProvider(options P) (PubSubProvider, error) {
 	ret := _mock.Called(options)

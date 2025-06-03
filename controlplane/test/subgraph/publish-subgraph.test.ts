@@ -1,9 +1,9 @@
-import { randomUUID } from 'node:crypto';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import {
   afterAllSetup,
   beforeAllSetup,
+  createAPIKeyTestRBACEvaluator,
   createTestGroup,
   createTestRBACEvaluator,
   genID
@@ -11,7 +11,6 @@ import {
 import {
   createEventDrivenGraph,
   createSubgraph,
-  DEFAULT_NAMESPACE,
   eventDrivenGraphSDL,
   SetupTest,
   subgraphSDL
@@ -59,6 +58,28 @@ describe('Publish subgraph tests', () => {
     authenticator.changeUserWithSuppliedContext({
       ...users.adminAliceCompanyA,
       rbac: createTestRBACEvaluator(createTestGroup({ role })),
+    });
+
+    const publishFederatedSubgraphResp = await client.publishFederatedSubgraph({
+      name: subgraphName,
+      namespace: 'default',
+      schema: subgraphSDL,
+    });
+
+    expect(publishFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+    await server.close();
+  });
+
+  test('Should be able to publish to existing regular subgraph using legacy API key', async (role) => {
+    const { client, server, authenticator, users } = await SetupTest({ dbname });
+
+    const subgraphName = genID('subgraph');
+
+    await createSubgraph(client, subgraphName, 'http://localhost:4001');
+    authenticator.changeUserWithSuppliedContext({
+      ...users.adminAliceCompanyA,
+      rbac: createAPIKeyTestRBACEvaluator(),
     });
 
     const publishFederatedSubgraphResp = await client.publishFederatedSubgraph({

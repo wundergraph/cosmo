@@ -8,28 +8,28 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 )
 
-func NewFactory(executionContext context.Context, pubSubDataSource PubSubDataSource) *Factory {
-	return &Factory{
-		pubSubDataSource: pubSubDataSource,
-		executionContext: executionContext,
+func NewFactory[P, E any](executionContext context.Context, pubSubDataSourceFactory *PubSubDataSourceFactory[P, E]) *Factory[P, E] {
+	return &Factory[P, E]{
+		pubSubDataSourceFactory: pubSubDataSourceFactory,
+		executionContext:        executionContext,
 	}
 }
 
-type Factory struct {
-	pubSubDataSource PubSubDataSource
-	executionContext context.Context
+type Factory[P, E any] struct {
+	pubSubDataSourceFactory *PubSubDataSourceFactory[P, E]
+	executionContext        context.Context
 }
 
-func (f *Factory) Planner(_ abstractlogger.Logger) plan.DataSourcePlanner[PubSubDataSource] {
-	return &Planner{
-		pubSubDataSource: f.pubSubDataSource,
+func (f *Factory[P, E]) Planner(_ abstractlogger.Logger) plan.DataSourcePlanner[*PubSubDataSourceFactory[P, E]] {
+	return &Planner[P, E]{
+		pubSubDataSourceFactory: f.pubSubDataSourceFactory,
 	}
 }
 
-func (f *Factory) Context() context.Context {
+func (f *Factory[P, E]) Context() context.Context {
 	return f.executionContext
 }
 
-func (f *Factory) UpstreamSchema(dataSourceConfig plan.DataSourceConfiguration[PubSubDataSource]) (*ast.Document, bool) {
+func (f *Factory[P, E]) UpstreamSchema(dataSourceConfig plan.DataSourceConfiguration[*PubSubDataSourceFactory[P, E]]) (*ast.Document, bool) {
 	return nil, false
 }

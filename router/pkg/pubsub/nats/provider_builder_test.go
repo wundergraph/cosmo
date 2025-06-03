@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"go.uber.org/zap/zaptest"
@@ -65,62 +64,6 @@ func TestBuildNatsOptions(t *testing.T) {
 		require.NotEmpty(t, opts)
 		// Can't directly check for auth options, but we can verify options are present
 		require.Greater(t, len(opts), 7) // Basic options (7) + user info option
-	})
-}
-
-func TestTransformEventConfig(t *testing.T) {
-	t.Run("publish event", func(t *testing.T) {
-		cfg := &nodev1.NatsEventConfiguration{
-			EngineEventConfiguration: &nodev1.EngineEventConfiguration{
-				Type: nodev1.EventType_PUBLISH,
-			},
-			Subjects: []string{"original.subject"},
-		}
-
-		// Simple transform function that adds "transformed." prefix
-		transformFn := func(s string) (string, error) {
-			return "transformed." + s, nil
-		}
-
-		transformedCfg, err := transformEventConfig(cfg, transformFn)
-		require.NoError(t, err)
-		require.Equal(t, []string{"transformed.original.subject"}, transformedCfg.Subjects)
-	})
-
-	t.Run("subscribe event", func(t *testing.T) {
-		cfg := &nodev1.NatsEventConfiguration{
-			EngineEventConfiguration: &nodev1.EngineEventConfiguration{
-				Type: nodev1.EventType_SUBSCRIBE,
-			},
-			Subjects: []string{"original.subject1", "original.subject2"},
-		}
-
-		// Simple transform function that adds "transformed." prefix
-		transformFn := func(s string) (string, error) {
-			return "transformed." + s, nil
-		}
-
-		transformedCfg, err := transformEventConfig(cfg, transformFn)
-		require.NoError(t, err)
-		// Since the function sorts the subjects
-		require.Equal(t, []string{"transformed.original.subject1", "transformed.original.subject2"}, transformedCfg.Subjects)
-	})
-
-	t.Run("invalid subject", func(t *testing.T) {
-		cfg := &nodev1.NatsEventConfiguration{
-			EngineEventConfiguration: &nodev1.EngineEventConfiguration{
-				Type: nodev1.EventType_PUBLISH,
-			},
-			Subjects: []string{"invalid subject with spaces"},
-		}
-
-		transformFn := func(s string) (string, error) {
-			return s, nil
-		}
-
-		_, err := transformEventConfig(cfg, transformFn)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "invalid subject")
 	})
 }
 

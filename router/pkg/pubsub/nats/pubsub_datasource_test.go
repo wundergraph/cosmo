@@ -7,31 +7,22 @@ import (
 	"io"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/pubsubtest"
 )
 
 func TestNatsPubSubDataSource(t *testing.T) {
-	// Create event configuration with required fields
-	engineEventConfig := &nodev1.EngineEventConfiguration{
-		ProviderId: "test-provider",
-		Type:       nodev1.EventType_PUBLISH,
-		TypeName:   "TestType",
-		FieldName:  "testField",
-	}
-
-	natsCfg := &nodev1.NatsEventConfiguration{
-		EngineEventConfiguration: engineEventConfig,
-		Subjects:                 []string{"test-subject"},
-	}
-
 	// Create the data source to test with a real adapter
 	adapter := &Adapter{}
 	pubsub := &PubSubDataSource{
-		EventConfiguration: natsCfg,
-		NatsAdapter:        adapter,
+		providerId:  "test-provider",
+		eventType:   EventTypePublish,
+		subjects:    []string{"test-subject"},
+		fieldName:   "testField",
+		typeName:    "TestType",
+		NatsAdapter: adapter,
 	}
 
 	// Run the standard test suite
@@ -39,19 +30,6 @@ func TestNatsPubSubDataSource(t *testing.T) {
 }
 
 func TestPubSubDataSourceWithMockAdapter(t *testing.T) {
-	// Create event configuration with required fields
-	engineEventConfig := &nodev1.EngineEventConfiguration{
-		ProviderId: "test-provider",
-		Type:       nodev1.EventType_PUBLISH,
-		TypeName:   "TestType",
-		FieldName:  "testField",
-	}
-
-	natsCfg := &nodev1.NatsEventConfiguration{
-		EngineEventConfiguration: engineEventConfig,
-		Subjects:                 []string{"test-subject"},
-	}
-
 	// Create mock adapter
 	mockAdapter := NewMockAdapterInterface(t)
 
@@ -62,8 +40,12 @@ func TestPubSubDataSourceWithMockAdapter(t *testing.T) {
 
 	// Create the data source with mock adapter
 	pubsub := &PubSubDataSource{
-		EventConfiguration: natsCfg,
-		NatsAdapter:        mockAdapter,
+		providerId:  "test-provider",
+		eventType:   EventTypePublish,
+		subjects:    []string{"test-subject"},
+		fieldName:   "testField",
+		typeName:    "TestType",
+		NatsAdapter: mockAdapter,
 	}
 
 	// Get the data source
@@ -82,26 +64,17 @@ func TestPubSubDataSourceWithMockAdapter(t *testing.T) {
 }
 
 func TestPubSubDataSource_GetResolveDataSource_WrongType(t *testing.T) {
-	// Create event configuration with required fields
-	engineEventConfig := &nodev1.EngineEventConfiguration{
-		ProviderId: "test-provider",
-		Type:       nodev1.EventType_SUBSCRIBE, // This is not supported
-		TypeName:   "TestType",
-		FieldName:  "testField",
-	}
-
-	natsCfg := &nodev1.NatsEventConfiguration{
-		EngineEventConfiguration: engineEventConfig,
-		Subjects:                 []string{"test-subject"},
-	}
-
 	// Create mock adapter
 	mockAdapter := NewMockAdapterInterface(t)
 
 	// Create the data source with mock adapter
 	pubsub := &PubSubDataSource{
-		EventConfiguration: natsCfg,
-		NatsAdapter:        mockAdapter,
+		providerId:  "test-provider",
+		eventType:   EventTypeSubscribe,
+		subjects:    []string{"test-subject"},
+		fieldName:   "testField",
+		typeName:    "TestType",
+		NatsAdapter: mockAdapter,
 	}
 
 	// Get the data source
@@ -111,22 +84,13 @@ func TestPubSubDataSource_GetResolveDataSource_WrongType(t *testing.T) {
 }
 
 func TestPubSubDataSource_GetResolveDataSourceInput_MultipleSubjects(t *testing.T) {
-	// Create event configuration with required fields
-	engineEventConfig := &nodev1.EngineEventConfiguration{
-		ProviderId: "test-provider",
-		Type:       nodev1.EventType_PUBLISH,
-		TypeName:   "TestType",
-		FieldName:  "testField",
-	}
-
-	natsCfg := &nodev1.NatsEventConfiguration{
-		EngineEventConfiguration: engineEventConfig,
-		Subjects:                 []string{"test-subject-1", "test-subject-2"},
-	}
-
 	// Create the data source with mock adapter
 	pubsub := &PubSubDataSource{
-		EventConfiguration: natsCfg,
+		providerId: "test-provider",
+		eventType:  EventTypePublish,
+		subjects:   []string{"test-subject-1", "test-subject-2"},
+		fieldName:  "testField",
+		typeName:   "TestType",
 	}
 
 	// Get the input
@@ -136,22 +100,13 @@ func TestPubSubDataSource_GetResolveDataSourceInput_MultipleSubjects(t *testing.
 }
 
 func TestPubSubDataSource_GetResolveDataSourceInput_NoSubjects(t *testing.T) {
-	// Create event configuration with required fields
-	engineEventConfig := &nodev1.EngineEventConfiguration{
-		ProviderId: "test-provider",
-		Type:       nodev1.EventType_PUBLISH,
-		TypeName:   "TestType",
-		FieldName:  "testField",
-	}
-
-	natsCfg := &nodev1.NatsEventConfiguration{
-		EngineEventConfiguration: engineEventConfig,
-		Subjects:                 []string{},
-	}
-
 	// Create the data source with mock adapter
 	pubsub := &PubSubDataSource{
-		EventConfiguration: natsCfg,
+		providerId: "test-provider",
+		eventType:  EventTypePublish,
+		subjects:   []string{},
+		fieldName:  "testField",
+		typeName:   "TestType",
 	}
 
 	// Get the input
@@ -161,22 +116,13 @@ func TestPubSubDataSource_GetResolveDataSourceInput_NoSubjects(t *testing.T) {
 }
 
 func TestNatsPubSubDataSourceMultiSubjectSubscription(t *testing.T) {
-	// Create event configuration with multiple subjects
-	engineEventConfig := &nodev1.EngineEventConfiguration{
-		ProviderId: "test-provider",
-		Type:       nodev1.EventType_PUBLISH, // Must be PUBLISH as it's the only supported type
-		TypeName:   "TestType",
-		FieldName:  "testField",
-	}
-
-	natsCfg := &nodev1.NatsEventConfiguration{
-		EngineEventConfiguration: engineEventConfig,
-		Subjects:                 []string{"test-subject-1", "test-subject-2"},
-	}
-
 	// Create the data source to test with mock adapter
 	pubsub := &PubSubDataSource{
-		EventConfiguration: natsCfg,
+		providerId: "test-provider",
+		eventType:  EventTypePublish,
+		subjects:   []string{"test-subject-1", "test-subject-2"},
+		fieldName:  "testField",
+		typeName:   "TestType",
 	}
 
 	// Test GetResolveDataSourceSubscriptionInput
@@ -194,27 +140,17 @@ func TestNatsPubSubDataSourceMultiSubjectSubscription(t *testing.T) {
 }
 
 func TestNatsPubSubDataSourceWithStreamConfiguration(t *testing.T) {
-	// Create event configuration with stream configuration
-	engineEventConfig := &nodev1.EngineEventConfiguration{
-		ProviderId: "test-provider",
-		Type:       nodev1.EventType_PUBLISH,
-		TypeName:   "TestType",
-		FieldName:  "testField",
-	}
-
-	natsCfg := &nodev1.NatsEventConfiguration{
-		EngineEventConfiguration: engineEventConfig,
-		Subjects:                 []string{"test-subject"},
-		StreamConfiguration: &nodev1.NatsStreamConfiguration{
-			StreamName:                "test-stream",
-			ConsumerName:              "test-consumer",
-			ConsumerInactiveThreshold: 30,
-		},
-	}
-
 	// Create the data source to test
 	pubsub := &PubSubDataSource{
-		EventConfiguration: natsCfg,
+		providerId:                "test-provider",
+		eventType:                 EventTypePublish,
+		subjects:                  []string{"test-subject"},
+		fieldName:                 "testField",
+		typeName:                  "TestType",
+		withStreamConfiguration:   true,
+		consumerName:              "test-consumer",
+		streamName:                "test-stream",
+		consumerInactiveThreshold: 30,
 	}
 
 	// Test GetResolveDataSourceSubscriptionInput with stream configuration
@@ -233,19 +169,6 @@ func TestNatsPubSubDataSourceWithStreamConfiguration(t *testing.T) {
 }
 
 func TestPubSubDataSource_RequestDataSource(t *testing.T) {
-	// Create event configuration with REQUEST type
-	engineEventConfig := &nodev1.EngineEventConfiguration{
-		ProviderId: "test-provider",
-		Type:       nodev1.EventType_REQUEST,
-		TypeName:   "TestType",
-		FieldName:  "testField",
-	}
-
-	natsCfg := &nodev1.NatsEventConfiguration{
-		EngineEventConfiguration: engineEventConfig,
-		Subjects:                 []string{"test-subject"},
-	}
-
 	// Create mock adapter
 	mockAdapter := NewMockAdapterInterface(t)
 
@@ -259,8 +182,12 @@ func TestPubSubDataSource_RequestDataSource(t *testing.T) {
 
 	// Create the data source with mock adapter
 	pubsub := &PubSubDataSource{
-		EventConfiguration: natsCfg,
-		NatsAdapter:        mockAdapter,
+		providerId:  "test-provider",
+		eventType:   EventTypeRequest,
+		subjects:    []string{"test-subject"},
+		fieldName:   "testField",
+		typeName:    "TestType",
+		NatsAdapter: mockAdapter,
 	}
 
 	// Get the data source
@@ -277,4 +204,63 @@ func TestPubSubDataSource_RequestDataSource(t *testing.T) {
 	err = ds.Load(context.Background(), []byte(input), out)
 	require.NoError(t, err)
 	require.Equal(t, `{"response": "test"}`, out.String())
+}
+
+func TestTransformEventConfig(t *testing.T) {
+	t.Run("publish event", func(t *testing.T) {
+		cfg := &PubSubDataSource{
+			providerId: "test-provider",
+			eventType:  EventTypePublish,
+			subjects:   []string{"original.subject"},
+			fieldName:  "testField",
+			typeName:   "TestType",
+		}
+
+		// Simple transform function that adds "transformed." prefix
+		transformFn := func(s string) (string, error) {
+			return "transformed." + s, nil
+		}
+
+		err := cfg.TransformEventData(transformFn)
+		require.NoError(t, err)
+		require.Equal(t, []string{"transformed.original.subject"}, cfg.subjects)
+	})
+
+	t.Run("subscribe event", func(t *testing.T) {
+		cfg := &PubSubDataSource{
+			providerId: "test-provider",
+			eventType:  EventTypeSubscribe,
+			subjects:   []string{"original.subject1", "original.subject2"},
+			fieldName:  "testField",
+			typeName:   "TestType",
+		}
+
+		// Simple transform function that adds "transformed." prefix
+		transformFn := func(s string) (string, error) {
+			return "transformed." + s, nil
+		}
+
+		err := cfg.TransformEventData(transformFn)
+		require.NoError(t, err)
+		// Since the function sorts the subjects
+		require.Equal(t, []string{"transformed.original.subject1", "transformed.original.subject2"}, cfg.subjects)
+	})
+
+	t.Run("invalid subject", func(t *testing.T) {
+		cfg := &PubSubDataSource{
+			providerId: "test-provider",
+			eventType:  EventTypePublish,
+			subjects:   []string{"invalid subject with spaces"},
+			fieldName:  "testField",
+			typeName:   "TestType",
+		}
+
+		transformFn := func(s string) (string, error) {
+			return s, nil
+		}
+
+		err := cfg.TransformEventData(transformFn)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid subject")
+	})
 }
