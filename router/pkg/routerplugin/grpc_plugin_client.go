@@ -135,7 +135,11 @@ func (g *GRPCPluginClient) NewStream(ctx context.Context, desc *grpc.StreamDesc,
 	return nil, status.Error(codes.Unavailable, "streaming is currently not supported")
 }
 
+// IsPluginProcessExited checks if the plugin process has exited.
 func (g *GRPCPluginClient) IsPluginProcessExited() bool {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+
 	return g.pc == nil || g.pc.Exited()
 }
 
