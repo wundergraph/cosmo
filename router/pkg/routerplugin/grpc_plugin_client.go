@@ -83,7 +83,7 @@ func (g *GRPCPluginClient) waitForPluginToBeActive() error {
 }
 
 // isPluginActive checks if the plugin is active by pinging it.
-// Returns true
+// Returns true if the plugin is active, false if it is not, and an error if there is an error.
 func (g *GRPCPluginClient) isPluginActive() (bool, error) {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
