@@ -79,7 +79,7 @@ export function leaveOrganization(
     // removing the group from the keycloak user
     await opts.keycloakClient.removeUserFromOrganization({
       userID: orgMember.userID,
-      groupId: org.kcGroupId!,
+      groupId: org.kcGroupId,
       realm: opts.keycloakRealm,
     });
 

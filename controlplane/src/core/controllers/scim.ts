@@ -287,6 +287,7 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
         );
       }
 
+      // Ensure that the organization has been linked to a Keycloak group
       if (!org.kcGroupId) {
         return res.code(500).send(
           ScimError({
@@ -296,10 +297,27 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
         );
       }
 
+      // Make sure that the group exists in Keycloak
+      const kcGroup = await opts.keycloakClient.client.groups.findOne({
+        realm: opts.keycloakRealm,
+        id: org.kcGroupId,
+      });
+
+      if (!kcGroup) {
+        return res.code(500).send(
+          ScimError({
+            detail: `Organization group "${org.slug}" not found`,
+            status: 500,
+          }),
+        );
+      }
+
+      // Check whether the organization member already exists
       const orgMember = await opts.organizationRepository.getOrganizationMemberByEmail({
         organizationID: authContext.organizationId,
         userEmail: email,
       });
+
       if (orgMember) {
         return res.code(409).send(
           ScimError({

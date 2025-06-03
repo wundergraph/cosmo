@@ -96,7 +96,7 @@ export function updateOrganizationDetails(
 
       await opts.keycloakClient.client.groups.update(
         {
-          id: org.kcGroupId!,
+          id: org.kcGroupId,
           realm: opts.keycloakRealm,
         },
         { name: req.organizationSlug },
