@@ -70,37 +70,38 @@ func (g *GRPCPluginClient) waitForPluginToBeActive() error {
 		case <-timeout:
 			return errors.New("plugin was not active in time")
 		default:
-			// we need to use a closure here to avoid race conditions
-			// as we cannot use defer in a for loop
-			shouldContinue, err := func() (bool, error) {
-				g.mu.RLock()
-				defer g.mu.RUnlock()
-				if g.pc == nil {
-					return true, nil
-				}
-
-				clientProtocol, err := g.pc.Client()
-				if err != nil {
-					return false, err
-				}
-
-				if err := clientProtocol.Ping(); err != nil {
-					time.Sleep(g.config.PingInterval)
-					return true, nil
-				}
-
-				return false, nil
-			}()
-
+			isActive, err := g.isPluginActive()
 			if err != nil {
 				return err
 			}
 
-			if !shouldContinue {
+			if isActive {
 				return nil
 			}
 		}
 	}
+}
+
+// isPluginActive checks if the plugin is active by pinging it.
+// Returns true
+func (g *GRPCPluginClient) isPluginActive() (bool, error) {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	if g.pc == nil {
+		return false, nil
+	}
+
+	clientProtocol, err := g.pc.Client()
+	if err != nil {
+		return false, err
+	}
+
+	if err := clientProtocol.Ping(); err != nil {
+		time.Sleep(g.config.PingInterval)
+		return false, nil
+	}
+
+	return true, nil
 }
 
 func (g *GRPCPluginClient) setClients(pc *plugin.Client, cc grpc.ClientConnInterface) {
