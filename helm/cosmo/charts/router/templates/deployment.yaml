@@ -59,6 +59,11 @@ spec:
               containerPort: {{ .Values.configuration.prometheus.port }}
               protocol: TCP
             {{- end }}
+            {{ if .Values.configuration.mcp.enabled }}
+            - name: mcp
+              containerPort: {{ .Values.configuration.mcp.port }}
+              protocol: TCP
+            {{- end }}
           env:
             {{- if .Values.extraEnvVars }}
             {{- toYaml .Values.extraEnvVars | nindent 12 }}
@@ -169,6 +174,18 @@ spec:
                 configMapKeyRef:
                   name: {{ include "router.fullname" . }}
                   key: prometheusPath
+            {{- end }}
+            {{ if .Values.configuration.mcp.enabled }}
+            - name: MCP_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "router.fullname" . }}
+                  key: mcpEnabled
+            - name: MCP_SERVER_LISTEN_ADDR
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "router.fullname" . }}
+                  key: mcpListenAddr
             {{- end }}
           envFrom:
             {{- if .Values.extraEnvVarsCM }}
