@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.217.0](https://github.com/wundergraph/cosmo/compare/router@0.216.0...router@0.217.0) (2025-06-04)
+
+### Features
+
+* add custom field renderer via custom module ([#1930](https://github.com/wundergraph/cosmo/issues/1930)) ([2199a42](https://github.com/wundergraph/cosmo/commit/2199a42b654edcecc7f965fc41777043cd9790d6)) (@jensneuse)
+* communicate downstream errors more effectively ([#1888](https://github.com/wundergraph/cosmo/issues/1888)) ([003187a](https://github.com/wundergraph/cosmo/commit/003187a95d20ee21fab4c15cb773cab7652b69ea)) (@endigma)
+
 # [0.216.0](https://github.com/wundergraph/cosmo/compare/router@0.215.2...router@0.216.0) (2025-05-29)
 
 ### Features
