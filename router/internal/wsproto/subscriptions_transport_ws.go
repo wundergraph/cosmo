@@ -3,6 +3,8 @@ package wsproto
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/gobwas/ws"
 	"github.com/tidwall/sjson"
 )
 
@@ -36,10 +38,10 @@ type subscriptionsTransportWSMessage struct {
 }
 
 type subscriptionsTransportWSProtocol struct {
-	conn JSONConn
+	conn ProtoConn
 }
 
-func newSubscriptionsTransportWSProtocol(conn JSONConn) *subscriptionsTransportWSProtocol {
+func newSubscriptionsTransportWSProtocol(conn ProtoConn) *subscriptionsTransportWSProtocol {
 	return &subscriptionsTransportWSProtocol{
 		conn: conn,
 	}
@@ -117,6 +119,18 @@ func (p *subscriptionsTransportWSProtocol) WriteGraphQLErrors(id string, errors 
 		Payload:    data,
 		Extensions: extensions,
 	})
+}
+
+func (p *subscriptionsTransportWSProtocol) Close() error {
+	if err := p.conn.WriteCloseFrame(ws.StatusGoingAway, "Downstream service error"); err != nil {
+		return err
+	}
+
+	if err := p.conn.Close(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (p *subscriptionsTransportWSProtocol) Done(id string) error {
