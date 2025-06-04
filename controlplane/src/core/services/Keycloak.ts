@@ -1,6 +1,7 @@
 import KeycloakAdminClient from '@keycloak/keycloak-admin-client';
 import { RequiredActionAlias } from '@keycloak/keycloak-admin-client/lib/defs/requiredActionProviderRepresentation.js';
 import { uid } from 'uid';
+import { FastifyBaseLogger } from 'fastify';
 import { MemberRole } from '../../db/models.js';
 import { organizationRoleEnum } from '../../db/schema.js';
 
@@ -11,7 +12,16 @@ export default class Keycloak {
   clientId = '';
   realm = '';
 
-  constructor(options: { apiUrl: string; realm: string; clientId: string; adminUser: string; adminPassword: string }) {
+  private logger: FastifyBaseLogger;
+
+  constructor(options: {
+    apiUrl: string;
+    realm: string;
+    clientId: string;
+    adminUser: string;
+    adminPassword: string;
+    logger: FastifyBaseLogger;
+  }) {
     this.client = new KeycloakAdminClient({
       baseUrl: options.apiUrl,
       realmName: options.realm,
@@ -21,6 +31,7 @@ export default class Keycloak {
     this.clientId = options.clientId;
     this.adminUser = options.adminUser;
     this.adminPassword = options.adminPassword;
+    this.logger = options.logger;
   }
 
   public async authenticateClient() {
@@ -269,11 +280,16 @@ export default class Keycloak {
     });
   }
 
-  public deleteGroupById({ realm, groupId }: { realm?: string; groupId: string }) {
-    return this.client.groups.del({
-      realm: realm || this.realm,
-      id: groupId,
-    });
+  public async deleteGroupById({ realm, groupId }: { realm?: string; groupId: string }) {
+    try {
+      await this.client.groups.del({
+        realm: realm || this.realm,
+        id: groupId,
+      });
+    } catch (e: unknown) {
+      this.logger?.error(e, `Failed to delete group id "${groupId}" from Keycloak`);
+      throw e;
+    }
   }
 
   public seedRoles({ realm, organizationSlug }: { realm?: string; organizationSlug: string }) {

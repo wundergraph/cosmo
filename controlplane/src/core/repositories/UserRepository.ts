@@ -154,14 +154,7 @@ export class UserRepository {
           continue;
         }
 
-        try {
-          await input.keycloakClient.deleteGroupById({
-            realm: input.keycloakRealm,
-            groupId: org.kcGroupId,
-          });
-        } catch (e: unknown) {
-          this.logger.error(e, `Failed to delete group id "${org.kcGroupId}" from Keycloak`);
-        }
+        await input.keycloakClient.deleteGroupById({ realm: input.keycloakRealm, groupId: org.kcGroupId });
       }
 
       // Delete user from keycloak

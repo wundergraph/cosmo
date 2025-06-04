@@ -100,8 +100,8 @@ export function createOrganizationGroup(
             realm: opts.keycloakRealm,
             groupId: createdGroupId,
           });
-        } catch (e: unknown) {
-          logger.error(e, `Failed to delete group id "${createdGroupId}" from Keycloak`);
+        } catch {
+          // ignored
         }
       }
 

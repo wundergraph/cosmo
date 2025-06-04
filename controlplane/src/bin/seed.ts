@@ -3,6 +3,7 @@
 import { randomUUID } from 'node:crypto';
 import * as process from 'node:process';
 import postgres from 'postgres';
+import { pino } from 'pino';
 import { buildDatabaseConnectionConfig } from '../core/plugins/database.js';
 import Keycloak from '../core/services/Keycloak.js';
 import { seedTest } from '../core/test-util.js';
@@ -34,6 +35,7 @@ const keycloakClient = new Keycloak({
   clientId,
   adminUser,
   adminPassword,
+  logger: pino(),
 });
 
 const user = {

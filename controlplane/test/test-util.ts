@@ -125,6 +125,7 @@ export const SetupTest = async function ({
     clientId,
     adminUser,
     adminPassword,
+    logger: log,
   });
 
   const platformWebhooks = new MockPlatformWebhookService();
