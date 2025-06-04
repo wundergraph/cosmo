@@ -30,7 +30,7 @@ type Proto interface {
 type ProtoConn interface {
 	ReadJSON(v any) error
 	WriteJSON(v any) error
-	WriteCloser(code ws.StatusCode, reason string) error
+	WriteCloseFrame(code ws.StatusCode, reason string) error
 	Close() error
 }
 

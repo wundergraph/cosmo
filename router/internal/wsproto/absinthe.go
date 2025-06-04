@@ -205,7 +205,7 @@ func (p *absintheWSProtocol) WriteGraphQLErrors(id string, errors json.RawMessag
 }
 
 func (p *absintheWSProtocol) Close(id string) error {
-	if err := p.conn.WriteCloser(ws.StatusGoingAway, "Downstream service error"); err != nil {
+	if err := p.conn.WriteCloseFrame(ws.StatusGoingAway, "Downstream service error"); err != nil {
 		return err
 	}
 

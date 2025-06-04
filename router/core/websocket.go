@@ -215,7 +215,7 @@ func (c *wsConnectionWrapper) WriteJSON(v any) error {
 	return wsutil.WriteServerText(c.conn, data)
 }
 
-func (c *wsConnectionWrapper) WriteCloser(code ws.StatusCode, reason string) error {
+func (c *wsConnectionWrapper) WriteCloseFrame(code ws.StatusCode, reason string) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
