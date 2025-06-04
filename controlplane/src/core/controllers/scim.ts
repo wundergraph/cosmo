@@ -275,12 +275,49 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
 
       const { userName, name, emails, password, displayName, groups, active, locale, externalId } = req.body;
 
-      const email = emails.find((e) => e.primary === true)?.value || userName;
+      const email = emails.find((e) => e.primary)?.value || userName;
 
+      const org = await opts.organizationRepository.byId(authContext.organizationId);
+      if (!org) {
+        return res.code(404).send(
+          ScimError({
+            detail: 'Organization not found.',
+            status: 404,
+          }),
+        );
+      }
+
+      // Ensure that the organization has been linked to a Keycloak group
+      if (!org.kcGroupId) {
+        return res.code(500).send(
+          ScimError({
+            detail: `Organization group "${org.slug}" not found`,
+            status: 500,
+          }),
+        );
+      }
+
+      // Make sure that the group exists in Keycloak
+      const kcGroup = await opts.keycloakClient.client.groups.findOne({
+        realm: opts.keycloakRealm,
+        id: org.kcGroupId,
+      });
+
+      if (!kcGroup) {
+        return res.code(500).send(
+          ScimError({
+            detail: `Organization group "${org.slug}" not found`,
+            status: 500,
+          }),
+        );
+      }
+
+      // Check whether the organization member already exists
       const orgMember = await opts.organizationRepository.getOrganizationMemberByEmail({
         organizationID: authContext.organizationId,
         userEmail: email,
       });
+
       if (orgMember) {
         return res.code(409).send(
           ScimError({
@@ -291,21 +328,6 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
       }
 
       // fetching the org from keycloak
-      const organizationGroups = await opts.keycloakClient.client.groups.find({
-        max: 1,
-        search: authContext.organizationSlug,
-        realm: opts.keycloakRealm,
-      });
-
-      if (organizationGroups.length === 0) {
-        return res.code(400).send(
-          ScimError({
-            detail: `Organization group '${authContext.organizationSlug}' not found`,
-            status: 400,
-          }),
-        );
-      }
-
       const user = await opts.userRepository.byEmail(email);
       const keycloakUsers = await opts.keycloakClient.client.users.find({
         realm: opts.keycloakRealm,
@@ -326,7 +348,7 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
           await opts.keycloakClient.client.users.addToGroup({
             id: user.id,
             realm: opts.keycloakRealm,
-            groupId: organizationGroups[0].id!,
+            groupId: org.kcGroupId!,
           });
 
           await opts.organizationRepository.addOrganizationMember({
@@ -378,7 +400,7 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
       await opts.keycloakClient.client.users.addToGroup({
         id: keycloakUserID,
         realm: opts.keycloakRealm,
-        groupId: organizationGroups[0].id!,
+        groupId: org.kcGroupId!,
       });
 
       await opts.userRepository.addUser({ id: keycloakUserID, email });
