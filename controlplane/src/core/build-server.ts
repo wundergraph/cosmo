@@ -256,6 +256,7 @@ export default async function build(opts: BuildConfig) {
     clientId: opts.keycloak.clientId,
     adminUser: opts.keycloak.adminUser,
     adminPassword: opts.keycloak.adminPassword,
+    logger,
   });
 
   let mailerClient: Mailer | undefined;

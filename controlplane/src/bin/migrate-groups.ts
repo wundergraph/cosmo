@@ -2,6 +2,7 @@ import * as process from 'node:process';
 import postgres from 'postgres';
 import { drizzle, PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { and, eq, isNull } from 'drizzle-orm';
+import { pino } from 'pino';
 import { buildDatabaseConnectionConfig } from '../core/plugins/database.js';
 import Keycloak from '../core/services/Keycloak.js';
 import * as schema from '../db/schema.js';
@@ -40,6 +41,7 @@ const keycloakClient = new Keycloak({
   clientId,
   adminUser,
   adminPassword,
+  logger: pino(),
 });
 
 try {

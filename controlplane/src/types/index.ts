@@ -243,6 +243,7 @@ export interface OrganizationDTO {
     queuedAt: string;
     queuedBy?: string;
   };
+  kcGroupId: string | undefined;
 }
 
 export interface UserDTO {

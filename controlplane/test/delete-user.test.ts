@@ -48,7 +48,7 @@ const createTempUser = async (
     const userPersonalOrgId = randomId;
     const userPersonalOrgSlug = randomId;
 
-    const keycloakUserID = await SetupKeycloak({
+    const [keycloakUserID] = await SetupKeycloak({
       keycloakClient,
       realmName: realm,
       userTestData: {
@@ -58,7 +58,7 @@ const createTempUser = async (
         organizationSlug: userPersonalOrgSlug,
         email: userEmail,
         apiKey: apiKeyPersonal,
-        groups: ['organization-admin'],
+        roles: ['organization-admin'],
       },
     });
 
@@ -159,7 +159,7 @@ const createTempUser = async (
       apiKey: apiKeyPersonal,
       organizationSlug: personalOrg.slug,
       userDisplayName: userEmail,
-      groups: ['organization-admin'],
+      roles: ['organization-admin'],
       rbac: new RBACEvaluator([updatedOrgAdminGroup!], keycloakUserID),
     };
   } catch (error) {

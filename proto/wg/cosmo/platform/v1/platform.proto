@@ -1343,7 +1343,6 @@ message RestoreOrganizationResponse {
 }
 
 message LeaveOrganizationRequest {
-  string userID = 1;
 }
 
 message LeaveOrganizationResponse {
