@@ -8,8 +8,6 @@ import (
 	"github.com/gobwas/ws"
 )
 
-var DownstreamErrorMessage = json.RawMessage(`[{"message":"downstream service error","extensions":{"code":"DOWNSTREAM_ERROR"}}]`)
-
 type Proto interface {
 	Subprotocol() string
 	// Initialize starts the protocol and returns the initial payload received from the client
