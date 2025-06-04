@@ -88,7 +88,6 @@ export class OrganizationInvitationRepository {
         createdAt: organizations.createdAt,
         kcGroupId: organizations.kcGroupId,
         invitedBy: users1.email,
-        kcGroupId: organizations.kcGroupId,
       })
       .from(organizationInvitations)
       .innerJoin(organizations, eq(organizations.id, organizationInvitations.organizationId))
