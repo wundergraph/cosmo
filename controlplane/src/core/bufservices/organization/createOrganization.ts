@@ -173,7 +173,7 @@ export function createOrganization(
       try {
         await opts.keycloakClient.deleteGroupById({
           realm: opts.keycloakRealm,
-          groupId: kcRootGroupId
+          groupId: kcRootGroupId,
         });
       } catch {
         // We can't do anything if this fails
