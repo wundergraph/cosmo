@@ -79,16 +79,13 @@ export class UserRepository {
     const orgMemberships = await orgRepo.adminMemberships({ userId: input.id });
 
     // get all providers
-    const oidcProviders = [];
+    const oidcProviders: { alias: string; orgSlug: string }[] = [];
     for (const org of orgMemberships.soloAdminSoloMemberOrgs) {
       const provider = await oidcRepo.getOidcProvider({ organizationId: org.id });
       if (provider) {
         oidcProviders.push({ ...provider, orgSlug: org.slug });
       }
     }
-
-    // Perform Keycloak deletions.
-    await this.deleteUserFromKeycloak({ ...input, oidcProviders, orgMemberships });
 
     // Perform DB deletions
     await this.db.transaction(async (tx) => {
@@ -109,6 +106,9 @@ export class UserRepository {
 
       // Delete from db
       await tx.delete(users).where(eq(users.id, input.id)).execute();
+
+      // Perform Keycloak deletions.
+      await this.deleteUserFromKeycloak({ ...input, oidcProviders, orgMemberships });
     });
   }
 

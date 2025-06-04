@@ -93,15 +93,24 @@ export function createOrganizationGroup(
         description: req.description,
         kcGroupId: createdGroupId,
       });
-    } catch (e: unknown) {
+    } catch {
       if (createdGroupId) {
-        await opts.keycloakClient.deleteGroupById({
-          realm: opts.keycloakRealm,
-          groupId: createdGroupId,
-        });
+        try {
+          await opts.keycloakClient.deleteGroupById({
+            realm: opts.keycloakRealm,
+            groupId: createdGroupId,
+          });
+        } catch {
+          // We can't do anything if this fail
+        }
       }
 
-      throw e;
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: 'Could not create the new group.',
+        },
+      };
     }
 
     await auditLogRepo.addAuditLog({

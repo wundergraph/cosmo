@@ -170,7 +170,14 @@ export function createOrganization(
       logger.error(err);
 
       // Delete the organization group in Keycloak + subgroups when the organization creation fails
-      await opts.keycloakClient.deleteGroupById({ realm: opts.keycloakRealm, groupId: kcRootGroupId });
+      try {
+        await opts.keycloakClient.deleteGroupById({
+          realm: opts.keycloakRealm,
+          groupId: kcRootGroupId
+        });
+      } catch {
+        // We can't do anything if this fails
+      }
 
       return {
         response: {
