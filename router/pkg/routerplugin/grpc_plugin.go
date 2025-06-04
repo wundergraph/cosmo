@@ -160,10 +160,8 @@ func (p *GRPCPlugin) Start(ctx context.Context) error {
 			select {
 			case <-p.done:
 				return
-			default:
+			case <-time.After(time.Second * 2):
 				p.ensureRunningPluginProcess()
-				// Sleep for 2 seconds to avoid busy-waiting
-				time.Sleep(time.Second * 2)
 			}
 		}
 	}()
