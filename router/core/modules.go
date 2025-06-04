@@ -3,11 +3,12 @@ package core
 import (
 	stdContext "context"
 	"fmt"
-	"go.opentelemetry.io/otel/propagation"
 	"math"
 	"net/http"
 	"sort"
 	"sync"
+
+	"go.opentelemetry.io/otel/propagation"
 
 	"github.com/pkg/errors"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
@@ -103,7 +104,7 @@ type RouterMiddlewareHandler interface {
 	Middleware(ctx RequestContext, next http.Handler)
 }
 
-// RouterOnRequestMiddlewareHandler allows youu to add middleware that runs before most internal router logic.
+// RouterOnRequestHandler allows you to add middleware that runs before most internal router logic.
 // This runs after the creation of the request context and the creatio of the recovery handler.
 // This hook is useful if you want to do some custom logic before tracing or authentication, for example
 // if you want to manipulate the bearer auth headers or add a header on a condition that can be logged by tracing.
