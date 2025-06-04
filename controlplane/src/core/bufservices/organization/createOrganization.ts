@@ -175,8 +175,8 @@ export function createOrganization(
           realm: opts.keycloakRealm,
           groupId: kcRootGroupId,
         });
-      } catch {
-        // We can't do anything if this fails
+      } catch (e: unknown) {
+        logger.error(e, `Failed to delete group id "${kcRootGroupId}" from Keycloak`);
       }
 
       return {
