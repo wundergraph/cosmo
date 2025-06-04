@@ -23,7 +23,7 @@ type Proto interface {
 	// Done is sent to indicate the requested operation is done and no more results will come in
 	Done(id string) error
 
-	// Close uncerimoniously closes the connection with a code indicating a downstream error
+	// Close closes the connection with a close frame indicating a downstream error
 	Close() error
 }
 
