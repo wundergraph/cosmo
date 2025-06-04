@@ -165,7 +165,7 @@ func newWSConnectionWrapper(conn net.Conn, readTimeout, writeTimeout time.Durati
 	}
 }
 
-func (c *wsConnectionWrapper) ReadJSON(v interface{}) error {
+func (c *wsConnectionWrapper) ReadJSON(v any) error {
 
 	if c.readTimeout > 0 {
 		err := c.conn.SetReadDeadline(time.Now().Add(c.readTimeout))
@@ -197,7 +197,7 @@ func (c *wsConnectionWrapper) WriteText(text string) error {
 	return wsutil.WriteServerText(c.conn, []byte(text))
 }
 
-func (c *wsConnectionWrapper) WriteJSON(v interface{}) error {
+func (c *wsConnectionWrapper) WriteJSON(v any) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	data, err := json.Marshal(v)
@@ -213,6 +213,20 @@ func (c *wsConnectionWrapper) WriteJSON(v interface{}) error {
 	}
 
 	return wsutil.WriteServerText(c.conn, data)
+}
+
+func (c *wsConnectionWrapper) WriteCloseFrame(code ws.StatusCode, reason string) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.writeTimeout > 0 {
+		err := c.conn.SetWriteDeadline(time.Now().Add(c.writeTimeout))
+		if err != nil {
+			return err
+		}
+	}
+
+	return ws.WriteFrame(c.conn, ws.NewCloseFrame(ws.NewCloseFrameBody(code, reason)))
 }
 
 func (c *wsConnectionWrapper) Close() error {
@@ -610,6 +624,13 @@ func (rw *websocketResponseWriter) Complete() {
 	err := rw.protocol.Done(rw.id)
 	if err != nil {
 		rw.logger.Debug("Sending complete message", zap.Error(err))
+	}
+}
+
+func (rw *websocketResponseWriter) Close() {
+	err := rw.protocol.Close()
+	if err != nil {
+		rw.logger.Debug("Sending error message", zap.Error(err))
 	}
 }
 
