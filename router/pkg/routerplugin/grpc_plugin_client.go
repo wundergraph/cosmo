@@ -69,7 +69,7 @@ func (g *GRPCPluginClient) waitForPluginToBeActive() error {
 		select {
 		case <-timeout:
 			return errors.New("plugin was not active in time")
-		default:
+		case <-time.After(g.config.PingInterval):
 			isActive, err := g.isPluginActive()
 			if err != nil {
 				return err
@@ -97,20 +97,19 @@ func (g *GRPCPluginClient) isPluginActive() (bool, error) {
 	}
 
 	if err := clientProtocol.Ping(); err != nil {
-		time.Sleep(g.config.PingInterval)
 		return false, nil
 	}
 
 	return true, nil
 }
 
-func (g *GRPCPluginClient) setClients(pc *plugin.Client, cc grpc.ClientConnInterface) {
+func (g *GRPCPluginClient) setClients(pluginClient *plugin.Client, clientConn grpc.ClientConnInterface) {
 	// We need to lock here to avoid race conditions
 	// We potentially access the plugin clients during invokes
 	g.mu.Lock()
 	defer g.mu.Unlock()
-	g.pc = pc
-	g.cc = cc
+	g.pc = pluginClient
+	g.cc = clientConn
 }
 
 // Invoke implements grpc.ClientConnInterface.

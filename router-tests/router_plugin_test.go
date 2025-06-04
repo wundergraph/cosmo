@@ -22,7 +22,7 @@ func TestRouterPlugin(t *testing.T) {
 				Path:    "./non-existing-path",
 			},
 		}, func(t *testing.T, err error) {
-			require.Error(t, err)
+			require.ErrorContains(t, err, "failed to start plugin process")
 		})
 	})
 

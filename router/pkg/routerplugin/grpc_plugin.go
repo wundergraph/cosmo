@@ -171,12 +171,12 @@ func (p *GRPCPlugin) Start(ctx context.Context) error {
 
 // Stop implements Plugin.
 func (p *GRPCPlugin) Stop() error {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
 	if p.disposed.Load() {
 		return nil
 	}
+
+	p.mu.Lock()
+	defer p.mu.Unlock()
 
 	var retErr error
 	if p.client != nil {
