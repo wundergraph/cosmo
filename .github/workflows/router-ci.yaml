@@ -133,7 +133,7 @@ jobs:
         run: make build
 
   integration_test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-xl
     timeout-minutes: 30
     strategy:
       matrix:
@@ -213,7 +213,7 @@ jobs:
       - name: Run Integration tests
         if: matrix.test_target == 'non_flaky'
         working-directory: ./router-tests
-        run: make test test_params="-run '^Test[^(Flaky)]' --timeout=10m --parallel 10"
+        run: make test test_params="-run '^Test[^(Flaky)]' --timeout=20m -p 1 --parallel 1"
       - name: Run Flaky Integration tests
         if: matrix.test_target == 'flaky'
         uses: nick-fields/retry@v3
