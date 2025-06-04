@@ -90,20 +90,13 @@ export function updateOrganizationDetails(
       }
 
       await opts.keycloakClient.authenticateClient();
-
-      const organizationGroup = await opts.keycloakClient.client.groups.find({
-        max: 1,
-        search: org.slug,
-        realm: opts.keycloakRealm,
-      });
-
-      if (organizationGroup.length === 0) {
+      if (!org.kcGroupId) {
         throw new Error(`Organization group '${org.slug}' not found`);
       }
 
       await opts.keycloakClient.client.groups.update(
         {
-          id: organizationGroup[0].id!,
+          id: org.kcGroupId,
           realm: opts.keycloakRealm,
         },
         { name: req.organizationSlug },

@@ -83,7 +83,7 @@ export class OrganizationRepository {
       slug: insertedOrg[0].slug,
       creatorUserId: insertedOrg[0].createdBy || undefined,
       createdAt: insertedOrg[0].createdAt.toISOString(),
-      kcGroupId: input.kcGroupId,
+      kcGroupId: insertedOrg[0].kcGroupId || undefined,
     };
 
     if (this.defaultBillingPlanId) {

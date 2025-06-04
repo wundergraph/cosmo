@@ -36,7 +36,7 @@ export function leaveOrganization(
 
     const orgMember = await orgRepo.getOrganizationMember({
       organizationID: authContext.organizationId,
-      userID: authContext.userId || req.userID,
+      userID: authContext.userId,
     });
 
     if (!orgMember) {
@@ -49,10 +49,10 @@ export function leaveOrganization(
     }
 
     // the creator of the personal org cannot leave the organization.
-    if (org.creatorUserId === (authContext.userId || req.userID)) {
+    if (org.creatorUserId === authContext.userId) {
       return {
         response: {
-          code: EnumStatusCode.ERR_NOT_FOUND,
+          code: EnumStatusCode.ERR,
           details: `Creator of a organization cannot leave the organization.`,
         },
       };
@@ -72,15 +72,20 @@ export function leaveOrganization(
     }
 
     await opts.keycloakClient.authenticateClient();
+    if (!org.kcGroupId) {
+      throw new Error(`Organization group '${org.slug}' not found`);
+    }
+
+    // removing the group from the keycloak user
     await opts.keycloakClient.removeUserFromOrganization({
-      realm: opts.keycloakRealm,
       userID: orgMember.userID,
-      groupName: org.slug,
+      groupId: org.kcGroupId,
+      realm: opts.keycloakRealm,
     });
 
-    // Removing the user for the organization in the db
+    // removing the user for the organization in the db
     await orgRepo.removeOrganizationMember({
-      userID: authContext.userId || req.userID,
+      userID: authContext.userId,
       organizationID: authContext.organizationId,
     });
 

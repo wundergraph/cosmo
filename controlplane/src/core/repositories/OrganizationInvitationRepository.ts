@@ -86,6 +86,7 @@ export class OrganizationInvitationRepository {
         slug: organizations.slug,
         creatorUserId: organizations.createdBy,
         createdAt: organizations.createdAt,
+        kcGroupId: organizations.kcGroupId,
         invitedBy: users1.email,
         kcGroupId: organizations.kcGroupId,
       })

@@ -90,12 +90,22 @@ export function removeOrganizationMember(
       };
     }
 
-    await opts.keycloakClient.authenticateClient();
+    if (!org.kcGroupId) {
+      // The organization hasn't been linked to a Keycloak group
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: `The organization group "${org.slug}" does not exist.`,
+        },
+      };
+    }
 
+    // Remove the user from the organization
+    await opts.keycloakClient.authenticateClient();
     await opts.keycloakClient.removeUserFromOrganization({
       realm: opts.keycloakRealm,
+      groupId: org.kcGroupId,
       userID: user.id,
-      groupName: org.slug,
     });
 
     await orgRepo.removeOrganizationMember({ organizationID: authContext.organizationId, userID: user.id });
