@@ -69,7 +69,7 @@ func (g *GRPCPluginClient) waitForPluginToBeActive() error {
 		select {
 		case <-timeout:
 			return errors.New("plugin was not active in time")
-		case <-time.After(g.config.PingInterval):
+		default:
 			isActive, err := g.isPluginActive()
 			if err != nil {
 				return err
@@ -97,6 +97,7 @@ func (g *GRPCPluginClient) isPluginActive() (bool, error) {
 	}
 
 	if err := clientProtocol.Ping(); err != nil {
+		time.Sleep(g.config.PingInterval)
 		return false, nil
 	}
 
