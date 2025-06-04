@@ -121,7 +121,7 @@ func (p *subscriptionsTransportWSProtocol) WriteGraphQLErrors(id string, errors 
 	})
 }
 
-func (p *subscriptionsTransportWSProtocol) Close(id string) error {
+func (p *subscriptionsTransportWSProtocol) Close() error {
 	if err := p.conn.WriteCloseFrame(ws.StatusGoingAway, "Downstream service error"); err != nil {
 		return err
 	}

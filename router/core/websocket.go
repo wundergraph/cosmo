@@ -628,7 +628,7 @@ func (rw *websocketResponseWriter) Complete() {
 }
 
 func (rw *websocketResponseWriter) Close() {
-	err := rw.protocol.Close(rw.id)
+	err := rw.protocol.Close()
 	if err != nil {
 		rw.logger.Debug("Sending error message", zap.Error(err))
 	}

@@ -116,7 +116,7 @@ func (p *graphQLWSProtocol) WriteGraphQLErrors(id string, errors json.RawMessage
 	})
 }
 
-func (p *graphQLWSProtocol) Close(id string) error {
+func (p *graphQLWSProtocol) Close() error {
 	if err := p.conn.WriteCloseFrame(ws.StatusGoingAway, "Downstream service error"); err != nil {
 		return err
 	}
