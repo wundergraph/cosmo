@@ -134,6 +134,9 @@ type RequestContext interface {
 	// SetAuthenticationScopes sets the scopes for the request on Authentication
 	// If Authentication is not set, it will be initialized with the scopes
 	SetAuthenticationScopes(scopes []string)
+	// SetCustomFieldValueRenderer overrides the default field value rendering behavior
+	// This can be used, e.g. to obfuscate sensitive data in the response
+	SetCustomFieldValueRenderer(renderer resolve.FieldValueRenderer)
 }
 
 var metricAttrsPool = sync.Pool{
@@ -261,6 +264,12 @@ type requestContext struct {
 	telemetry *requestTelemetryAttributes
 	// expressionContext is the context that will be provided to a compiled expression in order to retrieve data via dynamic expressions
 	expressionContext expr.Context
+	// customFieldValueRenderer is used to override the default field value rendering behavior
+	customFieldValueRenderer resolve.FieldValueRenderer
+}
+
+func (c *requestContext) SetCustomFieldValueRenderer(renderer resolve.FieldValueRenderer) {
+	c.customFieldValueRenderer = renderer
 }
 
 func (c *requestContext) SetError(err error) {
