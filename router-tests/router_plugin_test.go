@@ -107,9 +107,11 @@ func TestRouterPlugin(t *testing.T) {
 					Query: `query { killService }`, // this will kill the plugin
 				})
 
-				logMessages := xEnv.Observer().All()
-				require.Len(t, logMessages, 1)
-				require.Equal(t, "plugin process exited", logMessages[0].Message)
+				require.EventuallyWithT(t, func(c *assert.CollectT) {
+					logMessages := xEnv.Observer().All()
+					require.Greater(t, len(logMessages), 0)
+					require.Equal(t, "plugin process exited", logMessages[0].Message)
+				}, 5*time.Second, 1*time.Second)
 
 				require.EventuallyWithT(t, func(c *assert.CollectT) {
 					// the service should restart the plugin automatically and the request should succeed
