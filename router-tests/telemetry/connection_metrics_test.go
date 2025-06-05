@@ -17,8 +17,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 )
 
-// TODO(noroth): Remove test from flaky list once we can validate this won't cause any issues in the CI.
-func TestFlakyConnectionMetrics(t *testing.T) {
+func TestConnectionMetrics(t *testing.T) {
 	t.Parallel()
 
 	t.Run("validate router connection metrics are not present by default", func(t *testing.T) {
@@ -243,8 +242,8 @@ func TestFlakyConnectionMetrics(t *testing.T) {
 }
 
 // Checking for the port introduced flakiness in the tests, as we cannot really map the correct port to the datapoint.
-// Instead we should exclude the port from the assertions as the otel package also doesn't support checking only for the existence of an attribute,
-// in their assertions.
+// Instead we should exclude the port from the assertions as the otel package also
+// doesn't support checking only for the existence of an attribute in their assertions.
 func excludePortFromMetrics(t *testing.T, scopeMetrics []metricdata.ScopeMetrics) {
 	t.Helper()
 	for _, sm := range scopeMetrics {
