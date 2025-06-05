@@ -137,8 +137,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
+      fail-fast: false
       matrix:
-        test_target: [non_flaky, flaky]
+        test_target: ["./. ./fuzzquery ./lifecycle ./modules", "./telemetry", "./events/events_config_test.go", "./events/nats_events_test.go", "./events/kafka_events_test.go"]
     services:
       nats:
         image: ghcr.io/wundergraph/cosmo/nats:2.11.0-alpine
@@ -211,12 +212,10 @@ jobs:
             redis-cli -u "redis://cosmo:test@127.0.0.1:$port" ping
             echo "ACL user 'cosmo' created with full access on port $port"
           done
-      - name: Run Integration tests
-        if: matrix.test_target == 'non_flaky'
+      - name: Run Integration tests ${{ matrix.test_target }}
         working-directory: ./router-tests
-        run: make test test_params="-run '^Test[^(Flaky)]' --timeout=5m --parallel 10"
-      - name: Run Flaky Integration tests
-        if: matrix.test_target == 'flaky'
+        run: make test test_params="-run '^Test[^(Flaky)]' --timeout=5m -p 1 --parallel 10" test_target="${{ matrix.test_target }}"
+      - name: Run Flaky Integration tests ${{ matrix.test_target }}
         uses: nick-fields/retry@v3
         with:
           timeout_minutes: 30
@@ -225,7 +224,7 @@ jobs:
           retry_on: error
           command: |
             cd router-tests
-            make test test_params="-run '^TestFlaky' --timeout=5m -p 1 --parallel 1"
+            make test test_params="-run '^TestFlaky'  --timeout=5m --parallel 1" test_target="${{ matrix.test_target }}"
 
   image_scan:
     if: github.event.pull_request.head.repo.full_name == github.repository
