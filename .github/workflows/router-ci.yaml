@@ -137,6 +137,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
+      max-parallel: 1
       matrix:
         test_target: ["./. ./fuzzquery ./lifecycle ./modules ./telemetry", "./events/events_config_test.go", "./events/nats_events_test.go", "./events/kafka_events_test.go"]
     services:
