@@ -1242,7 +1242,7 @@ func TestNatsEvents(t *testing.T) {
 
 			require.Eventually(t, func() bool {
 				return counter.Load() == 1
-			}, NatsWaitTimeout, time.Second)
+			}, NatsWaitTimeout, time.Millisecond*100)
 		})
 	})
 
