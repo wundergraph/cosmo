@@ -137,7 +137,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
-      max-parallel: 1
       matrix:
         test_target: ["./. ./fuzzquery ./lifecycle ./modules ./telemetry", "./events/events_config_test.go", "./events/nats_events_test.go", "./events/kafka_events_test.go"]
     services:
@@ -214,7 +213,7 @@ jobs:
           done
       - name: Run Integration tests ${{ matrix.test_target }}
         working-directory: ./router-tests
-        run: make test test_params="--timeout=5m --parallel 10" test_target="${{ matrix.test_target }}"
+        run: make test test_params="--timeout=5m" test_target="${{ matrix.test_target }}"
 
   image_scan:
     if: github.event.pull_request.head.repo.full_name == github.repository
