@@ -223,6 +223,7 @@ jobs:
           retry_wait_seconds: 5
           retry_on: error
           command: |
+            cd router-tests
             make test test_params="-run '^TestFlaky'  --timeout=5m -p 1 --parallel 1" test_target="${{ matrix.test_target }}"
 
   image_scan:
