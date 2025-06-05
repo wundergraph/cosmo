@@ -245,7 +245,6 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	/**
 	* Middlewares
 	 */
-
 	// This recovery handler is used for everything before the graph mux to ensure that
 	// we can recover from panics and log them properly.
 	httpRouter.Use(recoveryhandler.New(recoveryhandler.WithLogHandler(func(w http.ResponseWriter, r *http.Request, err any) {
@@ -884,6 +883,9 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	// Setup any router on request middlewares so that they can be used to manipulate
 	// other downstream internal middlewares such as tracing or authentication
 	httpRouter.Use(s.routerOnRequestHandlers...)
+
+	// Per request, we apply the router request hook and the router response hook
+	httpRouter.Use(RouterHooksMiddleware(s.graphqlPath, s.hookRegistry, s.logger))
 
 	/**
 	* Initialize base attributes from headers and other sources

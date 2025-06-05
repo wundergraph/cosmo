@@ -539,7 +539,14 @@ func NewRouter(opts ...Option) (*Router, error) {
 // initCoreModuleSystem initializes the new module system
 func (r *Router) initCoreModuleSystem(ctx context.Context) error {
 	coreModuleHooks := newCoreModuleHooks(r.logger)
-	err := coreModuleHooks.initCoreModuleHooks(ctx, defaultModuleRegistry.getMyModules())
+
+	myModuleList := make([]MyModuleInfo, 0, len(defaultModuleRegistry.getMyModules())+len(r.myCustomModules))
+	myModuleList = append(myModuleList, defaultModuleRegistry.getMyModules()...)
+	for _, module := range r.myCustomModules {
+		myModuleList = append(myModuleList, module.MyModule())
+	}
+
+	err := coreModuleHooks.initCoreModuleHooks(ctx, myModuleList)
 	if err != nil {
 		return fmt.Errorf("failed to init core module hooks: %w", err)
 	}
@@ -1764,6 +1771,12 @@ func WithEngineExecutionConfig(cfg config.EngineExecutionConfiguration) Option {
 func WithCustomModules(modules ...Module) Option {
 	return func(r *Router) {
 		r.customModules = modules
+	}
+}
+
+func WithMyCustomModules(modules ...MyModule) Option {
+	return func(r *Router) {
+		r.myCustomModules = modules
 	}
 }
 

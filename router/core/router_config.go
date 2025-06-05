@@ -101,6 +101,7 @@ type Config struct {
 	registrationInfo             *nodev1.RegistrationInfo
 	securityConfiguration        config.SecurityConfiguration
 	customModules                []Module
+	myCustomModules              []MyModule
 	engineExecutionConfiguration config.EngineExecutionConfiguration
 	// should be removed once the users have migrated to the new overrides config
 	overrideRoutingURLConfiguration config.OverrideRoutingURLConfiguration
