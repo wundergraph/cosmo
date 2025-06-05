@@ -1,3 +1,5 @@
+import { Kind } from 'graphql';
+
 export type RootTypeName = 'Mutation' | 'Query' | 'Subscription';
 
 export type InvalidArgumentImplementation = {
@@ -34,14 +36,16 @@ export type InvalidRequiredInputValueData = {
   requiredSubgraphs: string[];
 };
 
-export type InvalidArgument = {
-  argumentName: string;
-  namedType: string;
-  typeName: string;
-  typeString: string;
-};
-
 export type InvalidEntityInterface = {
   subgraphName: string;
   concreteTypeNames: Set<string>;
 };
+
+export type InputNodeKind = Kind.ENUM_TYPE_DEFINITION | Kind.INPUT_OBJECT_TYPE_DEFINITION | Kind.SCALAR_TYPE_DEFINITION;
+
+export type OutputNodeKind =
+  | Kind.ENUM_TYPE_DEFINITION
+  | Kind.INTERFACE_TYPE_DEFINITION
+  | Kind.OBJECT_TYPE_DEFINITION
+  | Kind.SCALAR_TYPE_DEFINITION
+  | Kind.UNION_TYPE_DEFINITION;

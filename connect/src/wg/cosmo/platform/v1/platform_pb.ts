@@ -10284,11 +10284,6 @@ export class RestoreOrganizationResponse extends Message<RestoreOrganizationResp
  * @generated from message wg.cosmo.platform.v1.LeaveOrganizationRequest
  */
 export class LeaveOrganizationRequest extends Message<LeaveOrganizationRequest> {
-  /**
-   * @generated from field: string userID = 1;
-   */
-  userID = "";
-
   constructor(data?: PartialMessage<LeaveOrganizationRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -10297,7 +10292,6 @@ export class LeaveOrganizationRequest extends Message<LeaveOrganizationRequest> 
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "wg.cosmo.platform.v1.LeaveOrganizationRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "userID", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): LeaveOrganizationRequest {
@@ -21900,6 +21894,129 @@ export class GetOperationsResponse_Operation extends Message<GetOperationsRespon
 
   static equals(a: GetOperationsResponse_Operation | PlainMessage<GetOperationsResponse_Operation> | undefined, b: GetOperationsResponse_Operation | PlainMessage<GetOperationsResponse_Operation> | undefined): boolean {
     return proto3.util.equals(GetOperationsResponse_Operation, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetClientsFromAnalyticsRequest
+ */
+export class GetClientsFromAnalyticsRequest extends Message<GetClientsFromAnalyticsRequest> {
+  /**
+   * @generated from field: string federatedGraphName = 1;
+   */
+  federatedGraphName = "";
+
+  /**
+   * @generated from field: string namespace = 2;
+   */
+  namespace = "";
+
+  constructor(data?: PartialMessage<GetClientsFromAnalyticsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetClientsFromAnalyticsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "federatedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetClientsFromAnalyticsRequest {
+    return new GetClientsFromAnalyticsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetClientsFromAnalyticsRequest {
+    return new GetClientsFromAnalyticsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetClientsFromAnalyticsRequest {
+    return new GetClientsFromAnalyticsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetClientsFromAnalyticsRequest | PlainMessage<GetClientsFromAnalyticsRequest> | undefined, b: GetClientsFromAnalyticsRequest | PlainMessage<GetClientsFromAnalyticsRequest> | undefined): boolean {
+    return proto3.util.equals(GetClientsFromAnalyticsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetClientsFromAnalyticsResponse
+ */
+export class GetClientsFromAnalyticsResponse extends Message<GetClientsFromAnalyticsResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.GetClientsFromAnalyticsResponse.Client clients = 2;
+   */
+  clients: GetClientsFromAnalyticsResponse_Client[] = [];
+
+  constructor(data?: PartialMessage<GetClientsFromAnalyticsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetClientsFromAnalyticsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "clients", kind: "message", T: GetClientsFromAnalyticsResponse_Client, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetClientsFromAnalyticsResponse {
+    return new GetClientsFromAnalyticsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetClientsFromAnalyticsResponse {
+    return new GetClientsFromAnalyticsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetClientsFromAnalyticsResponse {
+    return new GetClientsFromAnalyticsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetClientsFromAnalyticsResponse | PlainMessage<GetClientsFromAnalyticsResponse> | undefined, b: GetClientsFromAnalyticsResponse | PlainMessage<GetClientsFromAnalyticsResponse> | undefined): boolean {
+    return proto3.util.equals(GetClientsFromAnalyticsResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetClientsFromAnalyticsResponse.Client
+ */
+export class GetClientsFromAnalyticsResponse_Client extends Message<GetClientsFromAnalyticsResponse_Client> {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name = "";
+
+  constructor(data?: PartialMessage<GetClientsFromAnalyticsResponse_Client>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetClientsFromAnalyticsResponse.Client";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetClientsFromAnalyticsResponse_Client {
+    return new GetClientsFromAnalyticsResponse_Client().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetClientsFromAnalyticsResponse_Client {
+    return new GetClientsFromAnalyticsResponse_Client().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetClientsFromAnalyticsResponse_Client {
+    return new GetClientsFromAnalyticsResponse_Client().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetClientsFromAnalyticsResponse_Client | PlainMessage<GetClientsFromAnalyticsResponse_Client> | undefined, b: GetClientsFromAnalyticsResponse_Client | PlainMessage<GetClientsFromAnalyticsResponse_Client> | undefined): boolean {
+    return proto3.util.equals(GetClientsFromAnalyticsResponse_Client, a, b);
   }
 }
 
