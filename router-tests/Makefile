@@ -1,7 +1,10 @@
 SHELL := bash
 test_target := ./...
 
-test:
+test-deps:
+	$(MAKE) -C ../demo plugin-build-ci
+
+test: test-deps
 	go test -ldflags=-extldflags=-Wl,-ld_classic $(test_params) -race $(test_target)
 
 update-snapshot:

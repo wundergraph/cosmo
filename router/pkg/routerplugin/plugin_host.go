@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"sync"
-
-	"go.uber.org/zap"
 )
 
 type PluginConfig struct {
@@ -43,6 +41,18 @@ func (h *Host) RegisterPlugin(subgraphName string, plugin Plugin) error {
 	return nil
 }
 
+func (h *Host) GetPlugin(subgraphName string) (Plugin, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	plugin, ok := h.pluginMap[subgraphName]
+	if !ok {
+		return nil, false
+	}
+
+	return plugin, true
+}
+
 func (h *Host) StopAllPlugins() error {
 	var resErr error
 
@@ -74,12 +84,12 @@ func (h *Host) stopPlugin(pluginName string) error {
 	return nil
 }
 
-func (h *Host) RunPluginHost(ctx context.Context, logger *zap.Logger) error {
+func (h *Host) RunPluginHost(ctx context.Context) error {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
 	for _, plugin := range h.pluginMap {
-		err := plugin.Start(ctx, logger)
+		err := plugin.Start(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to start plugin %s: %w", plugin.Name(), err)
 		}

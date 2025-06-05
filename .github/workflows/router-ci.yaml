@@ -97,7 +97,6 @@ jobs:
             router/go.sum
             router-tests/go.sum
             demo/go.sum
-
       - uses: ./.github/actions/go-mod-tidy
         with:
           working-directory: ./router
@@ -134,7 +133,7 @@ jobs:
         run: make build
 
   integration_test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-xl
     timeout-minutes: 30
     strategy:
       fail-fast: false
