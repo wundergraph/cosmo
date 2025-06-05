@@ -50,7 +50,7 @@ func assertKafkaMultipartValueEventually(t *testing.T, reader *bufio.Reader, exp
 		}
 		assert.Equal(t, expected, string(line))
 		return true
-	}, NatsWaitTimeout, time.Millisecond*100)
+	}, KafkaWaitTimeout, time.Millisecond*100)
 }
 
 func TestKafkaEvents(t *testing.T) {
