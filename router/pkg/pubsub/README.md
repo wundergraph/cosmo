@@ -108,34 +108,20 @@ This will generate the mocks in the `{your-provider-name}/mocks.go` file.
 
 You can then use the mocks in your tests.
 
-#### Add engine_datasource_test.go
+### Tests
 
-You should also add tests of your engine_datasource.go file.
+You should add tests as specified in the table below.
 
-You can use the [kafka implementation](./kafka/engine_datasource_test.go) as a reference.
-
-#### Add pubsub_datasource_test.go
-
-You should also add tests of your pubsub_datasource.go file.
-
-You can use the [kafka implementation](./kafka/pubsub_datasource_test.go) as a reference.
-
-#### Add provider_builder_test.go
-
-You should also add tests of your provider_builder.go file.
-
-You can use the [kafka implementation](./kafka/provider_builder_test.go) as a reference.
-
-#### Add pubsub_test.go
-
-You should also add tests of your changes to the [pubsub.go](./pubsub.go) file.
-
-You can use the [TestBuildProvidersAndDataSources_Kafka_OK](./pubsub_test.go) as a reference.
+| Implementation File | Test File | Reference File |
+|-------------------|-----------|-----------------|
+| engine_datasource.go | engine_datasource_test.go | [kafka implementation](./kafka/engine_datasource_test.go) |
+| pubsub_datasource.go | pubsub_datasource_test.go | [kafka implementation](./kafka/pubsub_datasource_test.go) |
+| provider_builder.go | provider_builder_test.go | [kafka implementation](./kafka/provider_builder_test.go) |
+| pubsub.go | pubsub_test.go | TestBuildProvidersAndDataSources_Kafka_OK |
 
 ## Add the provider to the router
 
 Update the `BuildProvidersAndDataSources` function in the [pubsub.go](./pubsub.go) file to include your new provider.
-
 
 ## How to use the new PubSub Provider
 
