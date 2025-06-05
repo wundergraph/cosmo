@@ -26,7 +26,7 @@ export type UserTestData = {
   defaultBillingPlanId?: string;
   email: string;
   apiKey: string;
-  groups: OrganizationRole[];
+  roles: OrganizationRole[];
 };
 
 export const defaultGroupDescription: Record<string, string> = {
@@ -77,13 +77,9 @@ export async function seedTest(
     return;
   }
 
-  await userRepo.addUser({
-    id: userTestData.userId,
-    email: userTestData.email,
-  });
+  await userRepo.addUser({ id: userTestData.userId, email: userTestData.email });
 
   let org = await orgRepo.byId(userTestData.organizationId);
-
   if (!org) {
     org = await orgRepo.createOrganization({
       organizationID: userTestData.organizationId,
@@ -124,7 +120,7 @@ export async function seedTest(
     userID: userTestData.userId,
   });
 
-  const userGroups = userTestData.groups.map((group) => group.split('-').splice(1).join('-'));
+  const userGroups = userTestData.roles.map((group) => group.split('-').splice(1).join('-'));
 
   for (const groupName of userGroups) {
     const orgGroup = await orgGroupRepo.byName({
@@ -219,7 +215,7 @@ export function createTestContext(
     organizationSlug: `slug-${organizationId}`,
     organizationDeactivated,
     userDisplayName: userId,
-    groups,
+    roles: groups,
     rbac: createTestRBACEvaluator(...groups.map((g) => createTestGroup({ role: g }))),
   };
 }
