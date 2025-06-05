@@ -1,0 +1,167 @@
+syntax = "proto3";
+package service;
+
+option go_package = "github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects";
+
+// Service definition for ProjectsService
+service ProjectsService {
+  // Lookup Employee entity by id
+  rpc LookupEmployeeById(LookupEmployeeByIdRequest) returns (LookupEmployeeByIdResponse) {}
+  // Lookup Product entity by upc
+  rpc LookupProductByUpc(LookupProductByUpcRequest) returns (LookupProductByUpcResponse) {}
+  // Lookup Project entity by id
+  rpc LookupProjectById(LookupProjectByIdRequest) returns (LookupProjectByIdResponse) {}
+  rpc MutationAddProject(MutationAddProjectRequest) returns (MutationAddProjectResponse) {}
+  rpc QueryKillService(QueryKillServiceRequest) returns (QueryKillServiceResponse) {}
+  rpc QueryPanic(QueryPanicRequest) returns (QueryPanicResponse) {}
+  rpc QueryProject(QueryProjectRequest) returns (QueryProjectResponse) {}
+  rpc QueryProjectStatuses(QueryProjectStatusesRequest) returns (QueryProjectStatusesResponse) {}
+  rpc QueryProjects(QueryProjectsRequest) returns (QueryProjectsResponse) {}
+  rpc QueryProjectsByStatus(QueryProjectsByStatusRequest) returns (QueryProjectsByStatusResponse) {}
+}
+
+// Key message for Project entity lookup
+message LookupProjectByIdRequestKey {
+  // Key field for Project entity lookup
+  string id = 1;
+}
+
+// Request message for Project entity lookup
+message LookupProjectByIdRequest {
+  // List of keys to look up Project entities
+  repeated LookupProjectByIdRequestKey keys = 1;
+}
+
+// Response message for Project entity lookup
+message LookupProjectByIdResponse {
+  // List of Project entities matching the requested keys
+  repeated Project result = 1;
+}
+
+// Key message for Employee entity lookup
+message LookupEmployeeByIdRequestKey {
+  // Key field for Employee entity lookup
+  string id = 1;
+}
+
+// Request message for Employee entity lookup
+message LookupEmployeeByIdRequest {
+  // List of keys to look up Employee entities
+  repeated LookupEmployeeByIdRequestKey keys = 1;
+}
+
+// Response message for Employee entity lookup
+message LookupEmployeeByIdResponse {
+  // List of Employee entities matching the requested keys
+  repeated Employee result = 1;
+}
+
+// Key message for Product entity lookup
+message LookupProductByUpcRequestKey {
+  // Key field for Product entity lookup
+  string upc = 1;
+}
+
+// Request message for Product entity lookup
+message LookupProductByUpcRequest {
+  // List of keys to look up Product entities
+  repeated LookupProductByUpcRequestKey keys = 1;
+}
+
+// Response message for Product entity lookup
+message LookupProductByUpcResponse {
+  // List of Product entities matching the requested keys
+  repeated Product result = 1;
+}
+
+// Request message for projects operation
+message QueryProjectsRequest {
+}
+// Response message for projects operation
+message QueryProjectsResponse {
+  repeated Project projects = 1;
+}
+// Request message for project operation
+message QueryProjectRequest {
+  string id = 1;
+}
+// Response message for project operation
+message QueryProjectResponse {
+  Project project = 1;
+}
+// Request message for projectStatuses operation
+message QueryProjectStatusesRequest {
+}
+// Response message for projectStatuses operation
+message QueryProjectStatusesResponse {
+  repeated ProjectStatus project_statuses = 1;
+}
+// Request message for projectsByStatus operation
+message QueryProjectsByStatusRequest {
+  ProjectStatus status = 1;
+}
+// Response message for projectsByStatus operation
+message QueryProjectsByStatusResponse {
+  repeated Project projects_by_status = 1;
+}
+// Request message for killService operation
+message QueryKillServiceRequest {
+}
+// Response message for killService operation
+message QueryKillServiceResponse {
+  bool kill_service = 1;
+}
+// Request message for panic operation
+message QueryPanicRequest {
+}
+// Response message for panic operation
+message QueryPanicResponse {
+  bool panic = 1;
+}
+// Request message for addProject operation
+message MutationAddProjectRequest {
+  ProjectInput project = 1;
+}
+// Response message for addProject operation
+message MutationAddProjectResponse {
+  Project add_project = 1;
+}
+
+message Project {
+  reserved 8;
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string start_date = 4;
+  string end_date = 5;
+  ProjectStatus status = 6;
+  repeated Employee team_members = 7;
+  repeated Product related_products = 9;
+  repeated string milestone_ids = 10;
+}
+
+message Employee {
+  int32 id = 1;
+  repeated Project projects = 2;
+}
+
+message Product {
+  string upc = 1;
+  repeated Project projects = 2;
+}
+
+enum ProjectStatus {
+  PROJECT_STATUS_UNSPECIFIED = 0;
+  PROJECT_STATUS_PLANNING = 1;
+  PROJECT_STATUS_ACTIVE = 2;
+  PROJECT_STATUS_COMPLETED = 3;
+  PROJECT_STATUS_ON_HOLD = 4;
+}
+
+message ProjectInput {
+  string name = 1;
+  string description = 2;
+  string start_date = 3;
+  string end_date = 4;
+  ProjectStatus status = 5;
+}

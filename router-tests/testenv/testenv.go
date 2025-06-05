@@ -83,8 +83,10 @@ var (
 	ConfigWithEdfsKafkaJSONTemplate string
 	//go:embed testdata/configWithEdfsNats.json
 	ConfigWithEdfsNatsJSONTemplate string
-	demoNatsProviders              = []string{natsDefaultSourceName, myNatsProviderID}
-	demoKafkaProviders             = []string{myKafkaProviderID}
+	//go:embed testdata/configWithPlugins.json
+	ConfigWithPluginsJSONTemplate string
+	demoNatsProviders             = []string{natsDefaultSourceName, myNatsProviderID}
+	demoKafkaProviders            = []string{myKafkaProviderID}
 )
 
 func init() {
@@ -318,6 +320,12 @@ type Config struct {
 	UseVersionedGraph                  bool
 	NoShutdownTestServer               bool
 	MCP                                config.MCPConfiguration
+	Plugins                            PluginConfig
+}
+
+type PluginConfig struct {
+	Path    string
+	Enabled bool
 }
 
 type CacheMetricsAssertions struct {
@@ -1348,6 +1356,11 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 
 		routerOpts = append(routerOpts, core.WithMCP(testConfig.MCP))
 	}
+
+	routerOpts = append(routerOpts, core.WithPlugins(config.PluginsConfiguration{
+		Path:    testConfig.Plugins.Path,
+		Enabled: testConfig.Plugins.Enabled,
+	}))
 
 	if testConfig.TraceExporter != nil {
 		testConfig.PropagationConfig.TraceContext = true

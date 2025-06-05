@@ -1,0 +1,198 @@
+{
+  "version": "1.0.0",
+  "messages": {
+    "LookupProjectByIdRequestKey": {
+      "fields": {
+        "id": 1
+      }
+    },
+    "LookupProjectByIdRequest": {
+      "fields": {
+        "keys": 1
+      }
+    },
+    "LookupProjectByIdResponse": {
+      "fields": {
+        "result": 1
+      }
+    },
+    "LookupEmployeeByIdRequestKey": {
+      "fields": {
+        "id": 1
+      }
+    },
+    "LookupEmployeeByIdRequest": {
+      "fields": {
+        "keys": 1
+      }
+    },
+    "LookupEmployeeByIdResponse": {
+      "fields": {
+        "result": 1
+      }
+    },
+    "LookupProductByUpcRequestKey": {
+      "fields": {
+        "upc": 1
+      }
+    },
+    "LookupProductByUpcRequest": {
+      "fields": {
+        "keys": 1
+      }
+    },
+    "LookupProductByUpcResponse": {
+      "fields": {
+        "result": 1
+      }
+    },
+    "LookupCountryByCodeRequestKey": {
+      "fields": {
+        "code": 1
+      }
+    },
+    "LookupCountryByCodeRequest": {
+      "fields": {
+        "keys": 1
+      }
+    },
+    "LookupCountryByCodeResponse": {
+      "fields": {
+        "result": 1
+      }
+    },
+    "Query": {
+      "fields": {
+        "projects": 1,
+        "project": 2,
+        "projectStatuses": 3,
+        "projectsByStatus": 4,
+        "killService": 5,
+        "panic": 6
+      }
+    },
+    "QueryProjectsResponse": {
+      "fields": {
+        "projects": 1
+      }
+    },
+    "QueryProject": {
+      "fields": {
+        "id": 1
+      }
+    },
+    "QueryProjectRequest": {
+      "fields": {
+        "id": 1
+      }
+    },
+    "QueryProjectResponse": {
+      "fields": {
+        "project": 1
+      }
+    },
+    "QueryProjectStatusesResponse": {
+      "fields": {
+        "project_statuses": 1
+      }
+    },
+    "QueryProjectsByStatus": {
+      "fields": {
+        "status": 1
+      }
+    },
+    "QueryProjectsByStatusRequest": {
+      "fields": {
+        "status": 1
+      }
+    },
+    "QueryProjectsByStatusResponse": {
+      "fields": {
+        "projects_by_status": 1
+      }
+    },
+    "Mutation": {
+      "fields": {
+        "addProject": 1
+      }
+    },
+    "MutationAddProject": {
+      "fields": {
+        "project": 1
+      }
+    },
+    "MutationAddProjectRequest": {
+      "fields": {
+        "project": 1
+      }
+    },
+    "MutationAddProjectResponse": {
+      "fields": {
+        "add_project": 1
+      }
+    },
+    "Project": {
+      "fields": {
+        "id": 1,
+        "name": 2,
+        "description": 3,
+        "startDate": 4,
+        "endDate": 5,
+        "status": 6,
+        "teamMembers": 7,
+        "relatedProducts": 9,
+        "milestoneIds": 10
+      },
+      "reservedNumbers": [
+        8
+      ]
+    },
+    "Employee": {
+      "fields": {
+        "id": 1,
+        "projects": 2
+      }
+    },
+    "Product": {
+      "fields": {
+        "upc": 1,
+        "projects": 2
+      }
+    },
+    "Country": {
+      "fields": {
+        "code": 1,
+        "projects": 2
+      }
+    },
+    "ProjectInput": {
+      "fields": {
+        "name": 1,
+        "description": 2,
+        "startDate": 3,
+        "endDate": 4,
+        "status": 5
+      }
+    },
+    "QueryKillServiceResponse": {
+      "fields": {
+        "kill_service": 1
+      }
+    },
+    "QueryPanicResponse": {
+      "fields": {
+        "panic": 1
+      }
+    }
+  },
+  "enums": {
+    "ProjectStatus": {
+      "fields": {
+        "PLANNING": 1,
+        "ACTIVE": 2,
+        "COMPLETED": 3,
+        "ON_HOLD": 4
+      }
+    }
+  }
+}
