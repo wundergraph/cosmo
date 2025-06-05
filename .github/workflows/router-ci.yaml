@@ -224,7 +224,7 @@ jobs:
           retry_on: error
           command: |
             cd router-tests
-            make test test_params="-run '^TestFlaky'  --timeout=5m -p 1 --parallel 1" test_target="${{ matrix.test_target }}"
+            make test test_params="-run '^TestFlaky'  --timeout=5m --parallel 1" test_target="${{ matrix.test_target }}"
 
   image_scan:
     if: github.event.pull_request.head.repo.full_name == github.repository
