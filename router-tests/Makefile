@@ -1,18 +1,19 @@
 SHELL := bash
+test_target := ./...
 
 test:
-	go test -ldflags=-extldflags=-Wl,-ld_classic $(test_params) -race ./...
+	go test -ldflags=-extldflags=-Wl,-ld_classic $(test_params) -race $(test_target)
 
 update-snapshot:
-	go test -update -race ./...
+	go test -update -race $(test_target)
 
 test-fresh: clean-testcache test
 
 test-no-race:
-	go test ./...
+	go test $(test_target)
 
 test-no-race-fresh: clean-testcache
-	go test ./...
+	go test $(test_target)
 
 lint:
 	go vet ./...
