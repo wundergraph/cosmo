@@ -1,0 +1,64 @@
+extend schema
+@link(url: "https://specs.apollo.dev/federation/v2.5", import: ["@authenticated", "@composeDirective", "@external", "@extends", "@inaccessible", "@interfaceObject", "@override", "@provides", "@key", "@requires", "@requiresScopes", "@shareable", "@tag"])
+
+schema {
+  query: Query
+  mutation: Mutation
+}
+
+type Query {
+  projects: [Project!]!
+  project(id: ID!): Project
+  projectStatuses: [ProjectStatus!]!
+  projectsByStatus(status: ProjectStatus!): [Project!]!
+
+  # query to simulate that the service goes down
+  killService: Boolean!
+  panic: Boolean!
+}
+
+type Mutation {
+  addProject(project: ProjectInput!): Project!
+}
+
+input ProjectInput {
+  name: String!
+  description: String
+  startDate: String   # ISO date
+  endDate: String     # ISO date
+  status: ProjectStatus!
+}
+
+type Project @key(fields: "id") {
+  id: ID!
+  name: String!
+  description: String
+  startDate: String   # ISO date
+  endDate: String     # ISO date
+  status: ProjectStatus!
+  # Federated references:
+  teamMembers: [Employee!]! 
+  relatedProducts: [Product!]!  # from products subgraph
+  # Project milestones or checkpoints
+  milestoneIds: [String!]  # Array of milestone identifiers
+}
+
+enum ProjectStatus {
+  PLANNING
+  ACTIVE
+  COMPLETED
+  ON_HOLD
+}
+
+type Employee @key(fields: "id") {
+  id: Int! 
+  # New field resolved by this subgraph:
+  projects: [Project!]
+}
+
+type Product @key(fields: "upc") {
+  upc: String! 
+  # Projects contributing to this product:
+  projects: [Project!]
+}
+
