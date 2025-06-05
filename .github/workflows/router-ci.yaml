@@ -214,7 +214,7 @@ jobs:
           done
       - name: Run Integration tests ${{ matrix.test_target }}
         working-directory: ./router-tests
-        run: make test test_params="--timeout=5m" test_target="${{ matrix.test_target }}"
+        run: make test test_params="--timeout=5m -p 1 --parallel 10" test_target="${{ matrix.test_target }}"
 
   image_scan:
     if: github.event.pull_request.head.repo.full_name == github.repository
