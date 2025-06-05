@@ -69,14 +69,28 @@ export function deleteOrganizationGroup(
         };
       }
 
-      const oidc = await oidcRepo.getOidcProvider({ organizationId: authContext.organizationId });
-
       await opts.keycloakClient.authenticateClient();
+
+      //
+      let oidcMappersForGroup: { id: string; claims: string; }[] = [];
+      const oidc = await oidcRepo.getOidcProvider({ organizationId: authContext.organizationId });
+      if (oidc) {
+        const oidcProvider = new OidcProvider();
+        const oidcMappers = await oidcProvider.fetchIDPMappers({
+          kcClient: opts.keycloakClient,
+          kcRealm: opts.keycloakRealm,
+          alias: oidc.alias,
+          organizationId: authContext.organizationId,
+          db: opts.db,
+        });
+
+        oidcMappersForGroup = oidcMappers.filter((mapper) => mapper.groupId === orgGroup.groupId);
+      }
 
       // If the group have one member or the organization OIDC is enabled, we need to move the members to the
       // destination group and update the OIDC mappers
       let moveToGroup: OrganizationGroupDTO | undefined;
-      if (orgGroup.membersCount > 0 || orgGroup.apiKeysCount > 0 || oidc) {
+      if (orgGroup.membersCount > 0 || orgGroup.apiKeysCount > 0 || oidcMappersForGroup.length > 0) {
         if (req.toGroupId) {
           moveToGroup = await orgGroupRepo.byId({ organizationId: authContext.organizationId, groupId: req.toGroupId });
         }
@@ -138,20 +152,8 @@ export function deleteOrganizationGroup(
 
       // When the organization have linked an OIDC provider, we need to update the mappers that were tied
       // to the group we are deleting
-      if (oidc && moveToGroup) {
-        // First, we need to retrieve all the OIDC mappers attached to the organization
-        const oidcProvider = new OidcProvider();
-        const oidcMappers = await oidcProvider.fetchIDPMappers({
-          kcClient: opts.keycloakClient,
-          kcRealm: opts.keycloakRealm,
-          organizationId: authContext.organizationId,
-          db: tx,
-          alias: oidc.alias,
-        });
-
-        // Then, we update the mappers linked to the group we are deleting to the target group
-        const mappersToUpdate = oidcMappers.filter((mapper) => mapper.groupId === orgGroup.groupId);
-        for (const mapper of mappersToUpdate) {
+      if (oidc && oidcMappersForGroup.length > 0 && moveToGroup) {
+        for (const mapper of oidcMappersForGroup) {
           // To update the mapper, we need to delete the existing mapper and create a new one with the same claims.
           //
           // NOTES:
