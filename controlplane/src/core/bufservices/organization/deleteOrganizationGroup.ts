@@ -71,9 +71,10 @@ export function deleteOrganizationGroup(
 
       await opts.keycloakClient.authenticateClient();
 
-      //
-      let oidcMappersForGroup: { id: string; claims: string; }[] = [];
+      // Retrieve the OIDC mappers that have been assigned to the group
       const oidc = await oidcRepo.getOidcProvider({ organizationId: authContext.organizationId });
+
+      let oidcMappersForGroup: { id: string; claims: string }[] = [];
       if (oidc) {
         const oidcProvider = new OidcProvider();
         const oidcMappers = await oidcProvider.fetchIDPMappers({
