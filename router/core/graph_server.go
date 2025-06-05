@@ -90,7 +90,7 @@ type (
 		prometheusEngineMetrics *rmetric.EngineMetrics
 		connectionMetrics       *rmetric.ConnectionMetrics
 		instanceData            InstanceData
-		pubSubProviders         []datasource.PubSubProvider
+		pubSubProviders         []datasource.Provider
 		traceDialer             *TraceDialer
 		pluginHost              *routerplugin.Host
 	}
@@ -1487,7 +1487,7 @@ func (s *graphServer) startupPubSubProviders(ctx context.Context) error {
 	// Default timeout for pubsub provider startup
 	const defaultStartupTimeout = 5 * time.Second
 
-	return s.providersActionWithTimeout(ctx, func(ctx context.Context, provider datasource.PubSubProvider) error {
+	return s.providersActionWithTimeout(ctx, func(ctx context.Context, provider datasource.Provider) error {
 		return provider.Startup(ctx)
 	}, defaultStartupTimeout, "pubsub provider startup timed out")
 }
@@ -1499,12 +1499,12 @@ func (s *graphServer) shutdownPubSubProviders(ctx context.Context) error {
 	// Default timeout for pubsub provider shutdown
 	const defaultShutdownTimeout = 5 * time.Second
 
-	return s.providersActionWithTimeout(ctx, func(ctx context.Context, provider datasource.PubSubProvider) error {
+	return s.providersActionWithTimeout(ctx, func(ctx context.Context, provider datasource.Provider) error {
 		return provider.Shutdown(ctx)
 	}, defaultShutdownTimeout, "pubsub provider shutdown timed out")
 }
 
-func (s *graphServer) providersActionWithTimeout(ctx context.Context, action func(ctx context.Context, provider datasource.PubSubProvider) error, timeout time.Duration, timeoutMessage string) error {
+func (s *graphServer) providersActionWithTimeout(ctx context.Context, action func(ctx context.Context, provider datasource.Provider) error, timeout time.Duration, timeoutMessage string) error {
 	cancellableCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 

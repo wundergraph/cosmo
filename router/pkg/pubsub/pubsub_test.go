@@ -16,8 +16,8 @@ import (
 
 func TestBuild_OK(t *testing.T) {
 	ctx := context.Background()
-	mockBuilder := datasource.NewMockPubSubProviderBuilder[config.NatsEventSource, *nodev1.NatsEventConfiguration](t)
-	mockPubSubProvider := datasource.NewMockPubSubProvider(t)
+	mockBuilder := datasource.NewMockProviderBuilder[config.NatsEventSource, *nodev1.NatsEventConfiguration](t)
+	mockPubSubProvider := datasource.NewMockProvider(t)
 
 	dsMeta := &plan.DataSourceMetadata{
 		RootNodes: []plan.TypeField{
@@ -81,7 +81,7 @@ func TestBuild_OK(t *testing.T) {
 
 func TestBuild_ProviderError(t *testing.T) {
 	ctx := context.Background()
-	mockBuilder := datasource.NewMockPubSubProviderBuilder[config.NatsEventSource, *nodev1.NatsEventConfiguration](t)
+	mockBuilder := datasource.NewMockProviderBuilder[config.NatsEventSource, *nodev1.NatsEventConfiguration](t)
 
 	dsMeta := &plan.DataSourceMetadata{
 		RootNodes: []plan.TypeField{
@@ -135,7 +135,7 @@ func TestBuild_ProviderError(t *testing.T) {
 
 func TestBuild_ShouldGetAnErrorIfProviderIsNotDefined(t *testing.T) {
 	ctx := context.Background()
-	mockBuilder := datasource.NewMockPubSubProviderBuilder[config.NatsEventSource, *nodev1.NatsEventConfiguration](t)
+	mockBuilder := datasource.NewMockProviderBuilder[config.NatsEventSource, *nodev1.NatsEventConfiguration](t)
 	//mockPubSubProvider := datasource.NewMockPubSubProvider(t)
 
 	dsMeta := &plan.DataSourceMetadata{
@@ -194,8 +194,8 @@ func TestBuild_ShouldGetAnErrorIfProviderIsNotDefined(t *testing.T) {
 
 func TestBuild_ShouldNotInitializeProviderIfNotUsed(t *testing.T) {
 	ctx := context.Background()
-	mockBuilder := datasource.NewMockPubSubProviderBuilder[config.NatsEventSource, *nodev1.NatsEventConfiguration](t)
-	mockPubSubUsedProvider := datasource.NewMockPubSubProvider(t)
+	mockBuilder := datasource.NewMockProviderBuilder[config.NatsEventSource, *nodev1.NatsEventConfiguration](t)
+	mockPubSubUsedProvider := datasource.NewMockProvider(t)
 
 	dsMeta := &plan.DataSourceMetadata{
 		RootNodes: []plan.TypeField{

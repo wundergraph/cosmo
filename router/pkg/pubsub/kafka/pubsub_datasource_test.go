@@ -17,7 +17,6 @@ func TestKafkaPubSubDataSource(t *testing.T) {
 	pubsub := &PubSubDataSource{
 		KafkaAdapter: adapter,
 		fieldName:    "testField",
-		typeName:     "TestType",
 		eventType:    EventTypePublish,
 		topics:       []string{"test-topic"},
 		providerId:   "test-provider",
@@ -41,7 +40,6 @@ func TestPubSubDataSourceWithMockAdapter(t *testing.T) {
 	pubsub := &PubSubDataSource{
 		KafkaAdapter: mockAdapter,
 		fieldName:    "testField",
-		typeName:     "TestType",
 		eventType:    EventTypePublish,
 		topics:       []string{"test-topic"},
 		providerId:   "test-provider",
@@ -71,7 +69,6 @@ func TestPubSubDataSource_GetResolveDataSource_WrongType(t *testing.T) {
 	pubsub := &PubSubDataSource{
 		KafkaAdapter: mockAdapter,
 		fieldName:    "testField",
-		typeName:     "TestType",
 		eventType:    EventTypeSubscribe,
 		topics:       []string{"test-topic"},
 		providerId:   "test-provider",
@@ -88,7 +85,6 @@ func TestPubSubDataSource_GetResolveDataSourceInput_MultipleTopics(t *testing.T)
 	// Create the data source with mock adapter
 	pubsub := &PubSubDataSource{
 		fieldName:  "testField",
-		typeName:   "TestType",
 		eventType:  EventTypePublish,
 		topics:     []string{"test-topic-1", "test-topic-2"},
 		providerId: "test-provider",
@@ -105,7 +101,6 @@ func TestPubSubDataSource_GetResolveDataSourceInput_NoTopics(t *testing.T) {
 	// Create the data source with mock adapter
 	pubsub := &PubSubDataSource{
 		fieldName:  "testField",
-		typeName:   "TestType",
 		eventType:  EventTypePublish,
 		topics:     []string{},
 		providerId: "test-provider",
@@ -124,7 +119,6 @@ func TestKafkaPubSubDataSourceMultiTopicSubscription(t *testing.T) {
 	// Create the data source to test with mock adapter
 	pubsub := &PubSubDataSource{
 		fieldName:  "testField",
-		typeName:   "TestType",
 		eventType:  EventTypePublish,
 		topics:     []string{"test-topic-1", "test-topic-2"},
 		providerId: "test-provider",

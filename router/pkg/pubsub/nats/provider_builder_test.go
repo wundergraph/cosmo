@@ -86,7 +86,7 @@ func TestPubSubProviderBuilderFactory(t *testing.T) {
 		require.NoError(t, err)
 
 		// Check the returned provider
-		natsProvider, ok := provider.(*datasource.PubSubProviderImpl)
+		natsProvider, ok := provider.(*datasource.PubSubProvider)
 		require.True(t, ok)
 		assert.NotNil(t, natsProvider.Logger)
 		assert.NotNil(t, natsProvider.Adapter)

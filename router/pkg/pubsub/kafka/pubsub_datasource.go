@@ -17,7 +17,6 @@ const (
 
 type PubSubDataSource struct {
 	fieldName  string
-	typeName   string
 	eventType  EventType
 	topics     []string
 	providerId string

@@ -21,7 +21,6 @@ func TestNatsPubSubDataSource(t *testing.T) {
 		eventType:   EventTypePublish,
 		subjects:    []string{"test-subject"},
 		fieldName:   "testField",
-		typeName:    "TestType",
 		NatsAdapter: adapter,
 	}
 
@@ -44,7 +43,6 @@ func TestPubSubDataSourceWithMockAdapter(t *testing.T) {
 		eventType:   EventTypePublish,
 		subjects:    []string{"test-subject"},
 		fieldName:   "testField",
-		typeName:    "TestType",
 		NatsAdapter: mockAdapter,
 	}
 
@@ -73,7 +71,6 @@ func TestPubSubDataSource_GetResolveDataSource_WrongType(t *testing.T) {
 		eventType:   EventTypeSubscribe,
 		subjects:    []string{"test-subject"},
 		fieldName:   "testField",
-		typeName:    "TestType",
 		NatsAdapter: mockAdapter,
 	}
 
@@ -90,7 +87,6 @@ func TestPubSubDataSource_GetResolveDataSourceInput_MultipleSubjects(t *testing.
 		eventType:  EventTypePublish,
 		subjects:   []string{"test-subject-1", "test-subject-2"},
 		fieldName:  "testField",
-		typeName:   "TestType",
 	}
 
 	// Get the input
@@ -106,7 +102,6 @@ func TestPubSubDataSource_GetResolveDataSourceInput_NoSubjects(t *testing.T) {
 		eventType:  EventTypePublish,
 		subjects:   []string{},
 		fieldName:  "testField",
-		typeName:   "TestType",
 	}
 
 	// Get the input
@@ -122,7 +117,6 @@ func TestNatsPubSubDataSourceMultiSubjectSubscription(t *testing.T) {
 		eventType:  EventTypePublish,
 		subjects:   []string{"test-subject-1", "test-subject-2"},
 		fieldName:  "testField",
-		typeName:   "TestType",
 	}
 
 	// Test GetResolveDataSourceSubscriptionInput
@@ -146,7 +140,6 @@ func TestNatsPubSubDataSourceWithStreamConfiguration(t *testing.T) {
 		eventType:                 EventTypePublish,
 		subjects:                  []string{"test-subject"},
 		fieldName:                 "testField",
-		typeName:                  "TestType",
 		withStreamConfiguration:   true,
 		consumerName:              "test-consumer",
 		streamName:                "test-stream",
@@ -186,7 +179,6 @@ func TestPubSubDataSource_RequestDataSource(t *testing.T) {
 		eventType:   EventTypeRequest,
 		subjects:    []string{"test-subject"},
 		fieldName:   "testField",
-		typeName:    "TestType",
 		NatsAdapter: mockAdapter,
 	}
 
@@ -213,7 +205,6 @@ func TestTransformEventConfig(t *testing.T) {
 			eventType:  EventTypePublish,
 			subjects:   []string{"original.subject"},
 			fieldName:  "testField",
-			typeName:   "TestType",
 		}
 
 		// Simple transform function that adds "transformed." prefix
@@ -232,7 +223,6 @@ func TestTransformEventConfig(t *testing.T) {
 			eventType:  EventTypeSubscribe,
 			subjects:   []string{"original.subject1", "original.subject2"},
 			fieldName:  "testField",
-			typeName:   "TestType",
 		}
 
 		// Simple transform function that adds "transformed." prefix
@@ -252,7 +242,6 @@ func TestTransformEventConfig(t *testing.T) {
 			eventType:  EventTypePublish,
 			subjects:   []string{"invalid subject with spaces"},
 			fieldName:  "testField",
-			typeName:   "TestType",
 		}
 
 		transformFn := func(s string) (string, error) {

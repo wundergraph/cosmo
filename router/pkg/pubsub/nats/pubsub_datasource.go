@@ -22,7 +22,6 @@ type PubSubDataSource struct {
 	NatsAdapter AdapterInterface
 
 	fieldName  string
-	typeName   string
 	eventType  EventType
 	subjects   []string
 	providerId string

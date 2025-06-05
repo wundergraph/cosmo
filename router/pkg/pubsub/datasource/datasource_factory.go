@@ -1,7 +1,7 @@
 package datasource
 
 type PubSubDataSourceFactory[P, E any] struct {
-	providerBuilder PubSubProviderBuilder[P, E]
+	providerBuilder ProviderBuilder[P, E]
 	event           E
 }
 
@@ -9,7 +9,7 @@ func (p *PubSubDataSourceFactory[P, E]) BuildDataSource() (PubSubDataSource, err
 	return p.providerBuilder.BuildDataSource(p.event)
 }
 
-func NewPubSubDataSourceFactory[P, E any](builder PubSubProviderBuilder[P, E], event E) *PubSubDataSourceFactory[P, E] {
+func NewPubSubDataSourceFactory[P, E any](builder ProviderBuilder[P, E], event E) *PubSubDataSourceFactory[P, E] {
 	return &PubSubDataSourceFactory[P, E]{
 		providerBuilder: builder,
 		event:           event,

@@ -57,8 +57,8 @@ func BuildProvidersAndDataSources(
 	dsConfs []DataSourceConfigurationWithMetadata,
 	hostName string,
 	routerListenAddr string,
-) ([]pubsub_datasource.PubSubProvider, []plan.DataSource, error) {
-	var pubSubProviders []pubsub_datasource.PubSubProvider
+) ([]pubsub_datasource.Provider, []plan.DataSource, error) {
+	var pubSubProviders []pubsub_datasource.Provider
 	var outs []plan.DataSource
 
 	// initialize Kafka providers and data sources
@@ -96,8 +96,8 @@ func BuildProvidersAndDataSources(
 	return pubSubProviders, outs, nil
 }
 
-func build[P GetID, E GetEngineEventConfiguration](ctx context.Context, builder pubsub_datasource.PubSubProviderBuilder[P, E], providersData []P, dsConfs []dsConfAndEvents[E]) ([]pubsub_datasource.PubSubProvider, []plan.DataSource, error) {
-	var pubSubProviders []pubsub_datasource.PubSubProvider
+func build[P GetID, E GetEngineEventConfiguration](ctx context.Context, builder pubsub_datasource.ProviderBuilder[P, E], providersData []P, dsConfs []dsConfAndEvents[E]) ([]pubsub_datasource.Provider, []plan.DataSource, error) {
+	var pubSubProviders []pubsub_datasource.Provider
 	var outs []plan.DataSource
 
 	// check used providers
@@ -140,7 +140,7 @@ func build[P GetID, E GetEngineEventConfiguration](ctx context.Context, builder 
 			dataSourceFactory := builder.BuildDataSourceFactory(event)
 			out, err := plan.NewDataSourceConfiguration(
 				dsConf.dsConf.Configuration.Id+"-"+builder.TypeID()+"-"+strconv.Itoa(i),
-				pubsub_datasource.NewFactory(ctx, dataSourceFactory),
+				pubsub_datasource.NewPlannerFactory(ctx, dataSourceFactory),
 				getFilteredDataSourceMetadata(event.GetEngineEventConfiguration(), dsConf.dsConf.Metadata),
 				dataSourceFactory,
 			)

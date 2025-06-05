@@ -68,7 +68,7 @@ func (p *PubSubProviderBuilder) BuildDataSource(data *nodev1.NatsEventConfigurat
 	return pubSubDataSource, nil
 }
 
-func (p *PubSubProviderBuilder) BuildProvider(provider config.NatsEventSource) (datasource.PubSubProvider, error) {
+func (p *PubSubProviderBuilder) BuildProvider(provider config.NatsEventSource) (datasource.Provider, error) {
 	adapter, pubSubProvider, err := buildProvider(p.ctx, provider, p.logger, p.hostName, p.routerListenAddr)
 	if err != nil {
 		return nil, err
@@ -122,7 +122,7 @@ func buildNatsOptions(eventSource config.NatsEventSource, logger *zap.Logger) ([
 	return opts, nil
 }
 
-func buildProvider(ctx context.Context, provider config.NatsEventSource, logger *zap.Logger, hostName string, routerListenAddr string) (AdapterInterface, datasource.PubSubProvider, error) {
+func buildProvider(ctx context.Context, provider config.NatsEventSource, logger *zap.Logger, hostName string, routerListenAddr string) (AdapterInterface, datasource.Provider, error) {
 	options, err := buildNatsOptions(provider, logger)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to build options for Nats provider with ID \"%s\": %w", provider.ID, err)
@@ -131,7 +131,7 @@ func buildProvider(ctx context.Context, provider config.NatsEventSource, logger 
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create adapter for Nats provider with ID \"%s\": %w", provider.ID, err)
 	}
-	pubSubProvider := datasource.NewPubSubProviderImpl(provider.ID, providerTypeID, adapter, logger)
+	pubSubProvider := datasource.NewPubSubProvider(provider.ID, providerTypeID, adapter, logger)
 
 	return adapter, pubSubProvider, nil
 }
@@ -141,7 +141,7 @@ func NewPubSubProviderBuilder(
 	logger *zap.Logger,
 	hostName string,
 	routerListenAddr string,
-) datasource.PubSubProviderBuilder[config.NatsEventSource, *nodev1.NatsEventConfiguration] {
+) datasource.ProviderBuilder[config.NatsEventSource, *nodev1.NatsEventConfiguration] {
 	return &PubSubProviderBuilder{
 		ctx:              ctx,
 		logger:           logger,

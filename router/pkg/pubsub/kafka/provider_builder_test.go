@@ -77,7 +77,7 @@ func TestPubSubProviderBuilderFactory(t *testing.T) {
 		require.NoError(t, err)
 
 		// Check the returned provider
-		kafkaProvider, ok := provider.(*datasource.PubSubProviderImpl)
+		kafkaProvider, ok := provider.(*datasource.PubSubProvider)
 		require.True(t, ok)
 		assert.NotNil(t, kafkaProvider.Logger)
 		assert.NotNil(t, kafkaProvider.Adapter)

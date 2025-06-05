@@ -10,10 +10,10 @@ import (
 )
 
 func TestProvider_Startup_Success(t *testing.T) {
-	mockAdapter := NewMockLifecycle(t)
+	mockAdapter := NewMockProviderLifecycle(t)
 	mockAdapter.On("Startup", mock.Anything).Return(nil)
 
-	provider := PubSubProviderImpl{
+	provider := PubSubProvider{
 		Adapter: mockAdapter,
 	}
 	err := provider.Startup(context.Background())
@@ -22,10 +22,10 @@ func TestProvider_Startup_Success(t *testing.T) {
 }
 
 func TestProvider_Startup_Error(t *testing.T) {
-	mockAdapter := NewMockLifecycle(t)
+	mockAdapter := NewMockProviderLifecycle(t)
 	mockAdapter.On("Startup", mock.Anything).Return(errors.New("connect error"))
 
-	provider := PubSubProviderImpl{
+	provider := PubSubProvider{
 		Adapter: mockAdapter,
 	}
 	err := provider.Startup(context.Background())
@@ -34,10 +34,10 @@ func TestProvider_Startup_Error(t *testing.T) {
 }
 
 func TestProvider_Shutdown_Success(t *testing.T) {
-	mockAdapter := NewMockLifecycle(t)
+	mockAdapter := NewMockProviderLifecycle(t)
 	mockAdapter.On("Shutdown", mock.Anything).Return(nil)
 
-	provider := PubSubProviderImpl{
+	provider := PubSubProvider{
 		Adapter: mockAdapter,
 	}
 	err := provider.Shutdown(context.Background())
@@ -46,10 +46,10 @@ func TestProvider_Shutdown_Success(t *testing.T) {
 }
 
 func TestProvider_Shutdown_Error(t *testing.T) {
-	mockAdapter := NewMockLifecycle(t)
+	mockAdapter := NewMockProviderLifecycle(t)
 	mockAdapter.On("Shutdown", mock.Anything).Return(errors.New("close error"))
 
-	provider := PubSubProviderImpl{
+	provider := PubSubProvider{
 		Adapter: mockAdapter,
 	}
 	err := provider.Shutdown(context.Background())
@@ -59,7 +59,7 @@ func TestProvider_Shutdown_Error(t *testing.T) {
 
 func TestProvider_ID(t *testing.T) {
 	const testID = "test-id"
-	provider := PubSubProviderImpl{
+	provider := PubSubProvider{
 		id: testID,
 	}
 	assert.Equal(t, testID, provider.ID())
@@ -67,7 +67,7 @@ func TestProvider_ID(t *testing.T) {
 
 func TestProvider_TypeID(t *testing.T) {
 	const providerTypeID = "test-type-id"
-	provider := PubSubProviderImpl{
+	provider := PubSubProvider{
 		typeID: providerTypeID,
 	}
 	assert.Equal(t, providerTypeID, provider.TypeID())

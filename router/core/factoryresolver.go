@@ -266,7 +266,7 @@ func mapProtoFilterToPlanFilter(input *nodev1.SubscriptionFilterCondition, outpu
 	return nil
 }
 
-func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nodev1.Subgraph, routerEngineConfig *RouterEngineConfiguration, pluginsEnabled bool) (*plan.Configuration, []pubsub_datasource.PubSubProvider, error) {
+func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nodev1.Subgraph, routerEngineConfig *RouterEngineConfiguration, pluginsEnabled bool) (*plan.Configuration, []pubsub_datasource.Provider, error) {
 	var outConfig plan.Configuration
 	// attach field usage information to the plan
 	outConfig.DefaultFlushIntervalMillis = engineConfig.DefaultFlushInterval
@@ -301,7 +301,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 		})
 	}
 
-	var providers []pubsub_datasource.PubSubProvider
+	var providers []pubsub_datasource.Provider
 	var pubSubDS []pubsub.DataSourceConfigurationWithMetadata
 
 	for _, in := range engineConfig.DatasourceConfigurations {
