@@ -36,11 +36,11 @@ type GraphQLServerStopHook interface {
 
 // Router Lifecycle Hooks
 type RouterRequestHook interface {
-	OnRouterRequest(ctx context.Context)
+	OnRouterRequest(ctx context.Context, params *RouterRequestParams) error
 }
 
 type RouterResponseHook interface {
-	OnRouterResponse(ctx context.Context)
+	OnRouterResponse(ctx context.Context, params *RouterResponseParams, exitError *ExitError) error
 }
 
 type RouterLifecycleHook interface {
