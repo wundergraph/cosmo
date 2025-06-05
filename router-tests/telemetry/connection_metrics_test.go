@@ -2,6 +2,9 @@ package telemetry
 
 import (
 	"context"
+	"testing"
+	"time"
+
 	"github.com/stretchr/testify/require"
 	integration "github.com/wundergraph/cosmo/router-tests"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
@@ -12,10 +15,9 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	"testing"
-	"time"
 )
 
+// TODO(noroth): Remove test from flaky list once we can validate this won't cause any issues in the CI.
 func TestFlakyConnectionMetrics(t *testing.T) {
 	t.Parallel()
 
@@ -62,6 +64,7 @@ func TestFlakyConnectionMetrics(t *testing.T) {
 			require.NoError(t, err)
 
 			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.connections")
+			excludePortFromMetrics(t, rm.ScopeMetrics)
 
 			require.Len(t, scopeMetric.Metrics, 3)
 
@@ -91,14 +94,12 @@ func TestFlakyConnectionMetrics(t *testing.T) {
 							{
 								Attributes: attribute.NewSet(
 									otel.ServerAddress.String("127.0.0.1"),
-									otel.ServerPort.String(getPort(t, metrics, 0, "gauge")),
 								),
 								Value: 1,
 							},
 							{
 								Attributes: attribute.NewSet(
 									otel.ServerAddress.String("127.0.0.1"),
-									otel.ServerPort.String(getPort(t, metrics, 1, "gauge")),
 								),
 								Value: 1,
 							},
@@ -126,7 +127,6 @@ func TestFlakyConnectionMetrics(t *testing.T) {
 							{
 								Attributes: attribute.NewSet(
 									otel.ServerAddress.String("127.0.0.1"),
-									otel.ServerPort.String(getPort(t, metrics, 0, "")),
 									otel.WgClientReusedConnection.Bool(false),
 									otel.WgSubgraphName.String("employees"),
 								),
@@ -134,7 +134,6 @@ func TestFlakyConnectionMetrics(t *testing.T) {
 							{
 								Attributes: attribute.NewSet(
 									otel.ServerAddress.String("127.0.0.1"),
-									otel.ServerPort.String(getPort(t, metrics, 1, "")),
 									otel.WgClientReusedConnection.Bool(true),
 									otel.WgSubgraphName.String("employees"),
 								),
@@ -142,7 +141,6 @@ func TestFlakyConnectionMetrics(t *testing.T) {
 							{
 								Attributes: attribute.NewSet(
 									otel.ServerAddress.String("127.0.0.1"),
-									otel.ServerPort.String(getPort(t, metrics, 2, "")),
 									otel.WgClientReusedConnection.Bool(false),
 									otel.WgSubgraphName.String("availability"),
 								),
@@ -190,8 +188,8 @@ func TestFlakyConnectionMetrics(t *testing.T) {
 			require.NoError(t, err)
 
 			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.connections")
-
 			require.Len(t, scopeMetric.Metrics, 3)
+			excludePortFromMetrics(t, rm.ScopeMetrics)
 
 			t.Run("verify max connections", func(t *testing.T) {
 				expected := metricdata.Metrics{
@@ -224,14 +222,12 @@ func TestFlakyConnectionMetrics(t *testing.T) {
 							{
 								Attributes: attribute.NewSet(
 									otel.ServerAddress.String("127.0.0.1"),
-									otel.ServerPort.String(getPort(t, metrics, 0, "gauge")),
 								),
 								Value: 1,
 							},
 							{
 								Attributes: attribute.NewSet(
 									otel.ServerAddress.String("127.0.0.1"),
-									otel.ServerPort.String(getPort(t, metrics, 1, "gauge")),
 									otel.WgSubgraphName.String("availability"),
 								),
 								Value: 1,
@@ -244,31 +240,35 @@ func TestFlakyConnectionMetrics(t *testing.T) {
 			})
 		})
 	})
-
 }
 
-// Since we cannot really predict the host and port we use this to get the host
-func getPort(t *testing.T, metric metricdata.Metrics, dataPointIndex int, typeName string) string {
+// Checking for the port introduced flakiness in the tests, as we cannot really map the correct port to the datapoint.
+// Instead we should exclude the port from the assertions as the otel package also doesn't support checking only for the existence of an attribute,
+// in their assertions.
+func excludePortFromMetrics(t *testing.T, scopeMetrics []metricdata.ScopeMetrics) {
 	t.Helper()
+	for _, sm := range scopeMetrics {
+		for _, metric := range sm.Metrics {
+			data := metric.Data
 
-	if typeName == "" {
-		typeName = "histogram"
+			switch d := data.(type) {
+			case metricdata.Histogram[float64]:
+				for i, dp := range d.DataPoints {
+					attrs, _ := dp.Attributes.Filter(func(attr attribute.KeyValue) bool {
+						return attr.Key != otel.ServerPort
+					})
+
+					d.DataPoints[i].Attributes = attrs
+				}
+			case metricdata.Gauge[int64]:
+				for i, dp := range d.DataPoints {
+					attrs, _ := dp.Attributes.Filter(func(attr attribute.KeyValue) bool {
+						return attr.Key != otel.ServerPort
+					})
+
+					d.DataPoints[i].Attributes = attrs
+				}
+			}
+		}
 	}
-
-	var hostAttribute attribute.KeyValue
-	var retrieved bool
-
-	switch typeName {
-	case "histogram":
-		histogramDp := metric.Data.(metricdata.Histogram[float64]).DataPoints[dataPointIndex]
-		hostAttribute, retrieved = histogramDp.Attributes.Get(1)
-	case "gauge":
-		actualDp := metric.Data.(metricdata.Gauge[int64]).DataPoints[dataPointIndex]
-		hostAttribute, retrieved = actualDp.Attributes.Get(1)
-	}
-
-	require.True(t, retrieved)
-	require.True(t, hostAttribute.Valid())
-
-	return hostAttribute.Value.AsString()
 }
