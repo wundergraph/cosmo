@@ -345,6 +345,7 @@ github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+
 github.com/stretchr/objx v0.1.1/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/objx v0.4.0/go.mod h1:YvHI0jy2hoMjB+UWwv71VJQ9isScKT/TqJzVSSt89Yw=
 github.com/stretchr/objx v0.5.0/go.mod h1:Yh+to48EsGEfYuaHDzXPcE3xhTkx73EhmCGUpEOglKo=
+github.com/stretchr/objx v0.5.2 h1:xuMeJ0Sdp5ZMRXx/aWO6RZxdr3beISkG5/G/aIRr3pY=
 github.com/stretchr/objx v0.5.2/go.mod h1:FRsXN1f5AsAjCGJKqEizvkpNtU+EGNCLh3NxZ/8L+MA=
 github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
@@ -388,8 +389,8 @@ github.com/wundergraph/astjson v0.0.0-20250106123708-be463c97e083 h1:8/D7f8gKxTB
 github.com/wundergraph/astjson v0.0.0-20250106123708-be463c97e083/go.mod h1:eOTL6acwctsN4F3b7YE+eE2t8zcJ/doLm9sZzsxxxrE=
 github.com/wundergraph/cosmo/composition-go v0.0.0-20240124120900-5effe48a4a1d h1:NEUrhuqOaTO1dpW8pz2tu6dKbQAqFvgiF/m4NXdzZm0=
 github.com/wundergraph/cosmo/composition-go v0.0.0-20240124120900-5effe48a4a1d/go.mod h1:9I3gPMAlAY+m1/cFL20iN7XHTyuZd3VT5ijccdU/FsI=
-github.com/wundergraph/cosmo/router v0.0.0-20250603094938-922424d50778 h1:YlRDsvPUA7FbroqFTBxVKpJ9wrqoemDVxjfx3XH3mjA=
-github.com/wundergraph/cosmo/router v0.0.0-20250603094938-922424d50778/go.mod h1:vsvrKMgvFBrLrFZgKizmIp9b2JW+ZgbVvJGhaN1fZg8=
+github.com/wundergraph/cosmo/router v0.0.0-20250606140107-7f7915f68ea2 h1:6NK4CZjqImWnry61nRv+ER3E371Ipi1GQrYDOL0PFBw=
+github.com/wundergraph/cosmo/router v0.0.0-20250606140107-7f7915f68ea2/go.mod h1:713Ta4nwkPjafHqyH8DYTvCKtxt4lDJ5Fcrp8PgAc3g=
 github.com/wundergraph/cosmo/router-tests v0.0.0-20250603094938-922424d50778 h1:lG3o2OL/vA4REz2qbf/tNtv92k2QQasQUcVE9o1rsO0=
 github.com/wundergraph/cosmo/router-tests v0.0.0-20250603094938-922424d50778/go.mod h1:drI7pUgQzLdqLJRSq+R5Gzqim3tIzYk2M+NRk5Zk4dc=
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.186 h1:q0lNSN6RRwINn7QLNvghMt0gqbeA5aOGiuOobaxz3ww=
