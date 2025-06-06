@@ -12,52 +12,48 @@ import (
 const providerTypeID = "redis"
 
 // ProviderBuilder builds Redis PubSub providers
-type PubSubProviderBuilder struct {
+type ProviderBuilder struct {
 	ctx              context.Context
 	logger           *zap.Logger
 	hostName         string
 	routerListenAddr string
-	adapters         map[string]AdapterInterface
+	adapters         map[string]Adapter
 }
 
 // NewProviderBuilder creates a new Redis PubSub provider builder
-func NewPubSubProviderBuilder(
+func NewProviderBuilder(
 	ctx context.Context,
 	logger *zap.Logger,
 	hostName string,
 	routerListenAddr string,
-) *PubSubProviderBuilder {
-	return &PubSubProviderBuilder{
+) *ProviderBuilder {
+	return &ProviderBuilder{
 		ctx:              ctx,
 		logger:           logger,
 		hostName:         hostName,
 		routerListenAddr: routerListenAddr,
-		adapters:         make(map[string]AdapterInterface),
+		adapters:         make(map[string]Adapter),
 	}
 }
 
 // TypeID returns the provider type ID
-func (b *PubSubProviderBuilder) TypeID() string {
+func (b *ProviderBuilder) TypeID() string {
 	return providerTypeID
 }
 
-func (p *PubSubProviderBuilder) BuildDataSourceFactory(data *nodev1.RedisEventConfiguration) *datasource.PubSubDataSourceFactory[config.RedisEventSource, *nodev1.RedisEventConfiguration] {
-	return datasource.NewPubSubDataSourceFactory(p, data)
-}
-
 // DataSource creates a Redis PubSub data source for the given event configuration
-func (b *PubSubProviderBuilder) BuildDataSource(event *nodev1.RedisEventConfiguration) (datasource.PubSubDataSource, error) {
+func (b *ProviderBuilder) BuildEngineDataSourceFactory(event *nodev1.RedisEventConfiguration) (datasource.EngineDataSourceFactory, error) {
 	providerId := event.GetEngineEventConfiguration().GetProviderId()
-	return &PubSubDataSource{
+	return &EngineDataSourceFactory{
 		EventConfiguration: event,
 		RedisAdapter:       b.adapters[providerId],
 	}, nil
 }
 
 // Providers returns the Redis PubSub providers for the given provider IDs
-func (b *PubSubProviderBuilder) BuildProvider(provider config.RedisEventSource) (datasource.PubSubProvider, error) {
-	adapter := NewAdapter(b.logger, provider.URLs)
-	pubSubProvider := datasource.NewPubSubProviderImpl(provider.ID, providerTypeID, adapter, b.logger)
+func (b *ProviderBuilder) BuildProvider(provider config.RedisEventSource) (datasource.Provider, error) {
+	adapter := NewProviderAdapter(b.logger, provider.URLs)
+	pubSubProvider := datasource.NewPubSubProvider(provider.ID, providerTypeID, adapter, b.logger)
 	b.adapters[provider.ID] = adapter
 
 	return pubSubProvider, nil

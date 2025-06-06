@@ -9,23 +9,23 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
-// PubSubDataSource implements the datasource.PubSubDataSource interface for Redis
-type PubSubDataSource struct {
+// EngineDataSourceFactory implements the datasource.EngineDataSourceFactory interface for Redis
+type EngineDataSourceFactory struct {
 	EventConfiguration *nodev1.RedisEventConfiguration
-	RedisAdapter       AdapterInterface
+	RedisAdapter       Adapter
 }
 
-func (c *PubSubDataSource) GetFieldName() string {
+func (c *EngineDataSourceFactory) GetFieldName() string {
 	return c.EventConfiguration.GetEngineEventConfiguration().GetFieldName()
 }
 
 // EngineEventConfiguration returns the engine event configuration
-func (c *PubSubDataSource) EngineEventConfiguration() *nodev1.EngineEventConfiguration {
+func (c *EngineDataSourceFactory) EngineEventConfiguration() *nodev1.EngineEventConfiguration {
 	return c.EventConfiguration.GetEngineEventConfiguration()
 }
 
 // ResolveDataSource returns the appropriate data source based on the event type
-func (c *PubSubDataSource) ResolveDataSource() (resolve.DataSource, error) {
+func (c *EngineDataSourceFactory) ResolveDataSource() (resolve.DataSource, error) {
 	var dataSource resolve.DataSource
 
 	eventType := c.EventConfiguration.GetEngineEventConfiguration().GetType()
@@ -42,7 +42,7 @@ func (c *PubSubDataSource) ResolveDataSource() (resolve.DataSource, error) {
 }
 
 // ResolveDataSourceInput builds the input for the data source
-func (c *PubSubDataSource) ResolveDataSourceInput(eventData []byte) (string, error) {
+func (c *EngineDataSourceFactory) ResolveDataSourceInput(eventData []byte) (string, error) {
 	channels := c.EventConfiguration.GetChannels()
 
 	if len(channels) != 1 {
@@ -62,14 +62,14 @@ func (c *PubSubDataSource) ResolveDataSourceInput(eventData []byte) (string, err
 }
 
 // ResolveDataSourceSubscription returns the subscription data source
-func (c *PubSubDataSource) ResolveDataSourceSubscription() (resolve.SubscriptionDataSource, error) {
+func (c *EngineDataSourceFactory) ResolveDataSourceSubscription() (resolve.SubscriptionDataSource, error) {
 	return &SubscriptionDataSource{
 		pubSub: c.RedisAdapter,
 	}, nil
 }
 
 // ResolveDataSourceSubscriptionInput builds the input for the subscription data source
-func (c *PubSubDataSource) ResolveDataSourceSubscriptionInput() (string, error) {
+func (c *EngineDataSourceFactory) ResolveDataSourceSubscriptionInput() (string, error) {
 	providerId := c.EventConfiguration.GetEngineEventConfiguration().GetProviderId()
 	evtCfg := SubscriptionEventConfiguration{
 		ProviderID: providerId,
@@ -83,7 +83,7 @@ func (c *PubSubDataSource) ResolveDataSourceSubscriptionInput() (string, error) 
 }
 
 // TransformEventData transforms the event data using the extract function
-func (c *PubSubDataSource) TransformEventData(extractFn datasource.ArgumentTemplateCallback) error {
+func (c *EngineDataSourceFactory) TransformEventData(extractFn datasource.ArgumentTemplateCallback) error {
 	// No operation needed until full proto support is added
 	return nil
 }

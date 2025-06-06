@@ -12,10 +12,10 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/pubsubtest"
 )
 
-func TestRedisPubSubDataSource(t *testing.T) {
+func TestRedisEngineDataSourceFactory(t *testing.T) {
 	// Create the data source to test with a real adapter
-	adapter := &Adapter{}
-	pubsub := &PubSubDataSource{
+	adapter := &ProviderAdapter{}
+	pubsub := &EngineDataSourceFactory{
 		EventConfiguration: &nodev1.RedisEventConfiguration{
 			EngineEventConfiguration: &nodev1.EngineEventConfiguration{
 				FieldName:  "testField",
@@ -29,13 +29,13 @@ func TestRedisPubSubDataSource(t *testing.T) {
 	}
 
 	// Run the standard test suite
-	pubsubtest.VerifyPubSubDataSourceImplementation(t, pubsub)
+	pubsubtest.VerifyEngineDataSourceFactoryImplementation(t, pubsub)
 }
 
-// TestPubSubDataSourceWithMockAdapter tests the PubSubDataSource with a mocked adapter
-func TestPubSubDataSourceWithMockAdapter(t *testing.T) {
+// TestEngineDataSourceFactoryWithMockAdapter tests the EngineDataSourceFactory with a mocked adapter
+func TestEngineDataSourceFactoryWithMockAdapter(t *testing.T) {
 	// Create mock adapter
-	mockAdapter := NewMockAdapterInterface(t)
+	mockAdapter := NewMockAdapter(t)
 
 	// Configure mock expectations for Publish
 	mockAdapter.On("Publish", mock.Anything, mock.MatchedBy(func(event PublishEventConfiguration) bool {
@@ -43,7 +43,7 @@ func TestPubSubDataSourceWithMockAdapter(t *testing.T) {
 	})).Return(nil)
 
 	// Create the data source with mock adapter
-	pubsub := &PubSubDataSource{
+	pubsub := &EngineDataSourceFactory{
 		EventConfiguration: &nodev1.RedisEventConfiguration{
 			EngineEventConfiguration: &nodev1.EngineEventConfiguration{
 				FieldName:  "testField",
@@ -71,13 +71,13 @@ func TestPubSubDataSourceWithMockAdapter(t *testing.T) {
 	require.Equal(t, `{"success": true}`, out.String())
 }
 
-// TestPubSubDataSource_GetResolveDataSource_WrongType tests the PubSubDataSource with a mocked adapter
-func TestPubSubDataSource_GetResolveDataSource_WrongType(t *testing.T) {
+// TestEngineDataSourceFactory_GetResolveDataSource_WrongType tests the EngineDataSourceFactory with a mocked adapter
+func TestEngineDataSourceFactory_GetResolveDataSource_WrongType(t *testing.T) {
 	// Create mock adapter
-	mockAdapter := NewMockAdapterInterface(t)
+	mockAdapter := NewMockAdapter(t)
 
 	// Create the data source with mock adapter
-	pubsub := &PubSubDataSource{
+	pubsub := &EngineDataSourceFactory{
 		EventConfiguration: &nodev1.RedisEventConfiguration{
 			EngineEventConfiguration: &nodev1.EngineEventConfiguration{
 				FieldName:  "testField",
@@ -96,10 +96,10 @@ func TestPubSubDataSource_GetResolveDataSource_WrongType(t *testing.T) {
 	require.Nil(t, ds)
 }
 
-// TestPubSubDataSource_GetResolveDataSourceInput_MultipleChannels tests the PubSubDataSource with a mocked adapter
-func TestPubSubDataSource_GetResolveDataSourceInput_MultipleChannels(t *testing.T) {
+// TestEngineDataSourceFactory_GetResolveDataSourceInput_MultipleChannels tests the EngineDataSourceFactory with a mocked adapter
+func TestEngineDataSourceFactory_GetResolveDataSourceInput_MultipleChannels(t *testing.T) {
 	// Create the data source with mock adapter
-	pubsub := &PubSubDataSource{
+	pubsub := &EngineDataSourceFactory{
 		EventConfiguration: &nodev1.RedisEventConfiguration{
 			EngineEventConfiguration: &nodev1.EngineEventConfiguration{
 				FieldName:  "testField",
@@ -117,10 +117,10 @@ func TestPubSubDataSource_GetResolveDataSourceInput_MultipleChannels(t *testing.
 	require.Empty(t, input)
 }
 
-// TestPubSubDataSource_GetResolveDataSourceInput_NoChannels tests the PubSubDataSource with a mocked adapter
-func TestPubSubDataSource_GetResolveDataSourceInput_NoChannels(t *testing.T) {
+// TestEngineDataSourceFactory_GetResolveDataSourceInput_NoChannels tests the EngineDataSourceFactory with a mocked adapter
+func TestEngineDataSourceFactory_GetResolveDataSourceInput_NoChannels(t *testing.T) {
 	// Create the data source with mock adapter
-	pubsub := &PubSubDataSource{
+	pubsub := &EngineDataSourceFactory{
 		EventConfiguration: &nodev1.RedisEventConfiguration{
 			EngineEventConfiguration: &nodev1.EngineEventConfiguration{
 				FieldName:  "testField",
@@ -138,12 +138,12 @@ func TestPubSubDataSource_GetResolveDataSourceInput_NoChannels(t *testing.T) {
 	require.Empty(t, input)
 }
 
-// TestRedisPubSubDataSourceMultiChannelSubscription tests only the subscription functionality
+// TestRedisEngineDataSourceFactoryMultiChannelSubscription tests only the subscription functionality
 // for multiple channels. The publish and resolve datasource tests are skipped since they
 // do not support multiple channels.
-func TestRedisPubSubDataSourceMultiChannelSubscription(t *testing.T) {
+func TestRedisEngineDataSourceFactoryMultiChannelSubscription(t *testing.T) {
 	// Create the data source to test with mock adapter
-	pubsub := &PubSubDataSource{
+	pubsub := &EngineDataSourceFactory{
 		EventConfiguration: &nodev1.RedisEventConfiguration{
 			EngineEventConfiguration: &nodev1.EngineEventConfiguration{
 				FieldName:  "testField",

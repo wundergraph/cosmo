@@ -11,8 +11,8 @@ import (
 	"go.uber.org/zap"
 )
 
-// AdapterInterface defines the methods that a Redis adapter should implement
-type AdapterInterface interface {
+// Adapter defines the methods that a Redis adapter should implement
+type Adapter interface {
 	// Subscribe subscribes to the given events and sends updates to the updater
 	Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error
 	// Publish publishes the given event to the specified channel
@@ -23,15 +23,15 @@ type AdapterInterface interface {
 	Shutdown(ctx context.Context) error
 }
 
-func NewAdapter(logger *zap.Logger, urls []string) AdapterInterface {
-	return &Adapter{
+func NewProviderAdapter(logger *zap.Logger, urls []string) Adapter {
+	return &ProviderAdapter{
 		logger:         logger,
 		urls:           urls,
 		clusterEnabled: false,
 	}
 }
 
-type Adapter struct {
+type ProviderAdapter struct {
 	conn           rd.RDCloser
 	logger         *zap.Logger
 	closeWg        sync.WaitGroup
@@ -39,7 +39,7 @@ type Adapter struct {
 	clusterEnabled bool
 }
 
-func (p *Adapter) Startup(ctx context.Context) error {
+func (p *ProviderAdapter) Startup(ctx context.Context) error {
 	rdCloser, err := rd.NewRedisCloser(&rd.RedisCloserOptions{
 		Logger:         p.logger,
 		URLs:           p.urls,
@@ -54,11 +54,11 @@ func (p *Adapter) Startup(ctx context.Context) error {
 	return nil
 }
 
-func (p *Adapter) Shutdown(ctx context.Context) error {
+func (p *ProviderAdapter) Shutdown(ctx context.Context) error {
 	return p.conn.Close()
 }
 
-func (p *Adapter) Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error {
+func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error {
 	log := p.logger.With(
 		zap.String("provider_id", event.ProviderID),
 		zap.String("method", "subscribe"),
@@ -92,7 +92,7 @@ func (p *Adapter) Subscribe(ctx context.Context, event SubscriptionEventConfigur
 	return err
 }
 
-func (p *Adapter) Publish(ctx context.Context, event PublishEventConfiguration) error {
+func (p *ProviderAdapter) Publish(ctx context.Context, event PublishEventConfiguration) error {
 	log := p.logger.With(
 		zap.String("provider_id", event.ProviderID),
 		zap.String("method", "publish"),

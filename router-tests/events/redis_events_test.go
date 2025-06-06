@@ -25,6 +25,35 @@ import (
 
 const RedisWaitTimeout = time.Second * 30
 
+func assertRedisLineEquals(t *testing.T, reader *bufio.Reader, expected string) {
+	t.Helper()
+	line, _, err := reader.ReadLine()
+	assert.NoError(t, err)
+	assert.Equal(t, expected, string(line))
+}
+
+func assertRedisMultipartPrefix(t *testing.T, reader *bufio.Reader) {
+	t.Helper()
+	assertRedisLineEquals(t, reader, "")
+	assertRedisLineEquals(t, reader, "--graphql")
+	assertRedisLineEquals(t, reader, "Content-Type: application/json")
+	assertRedisLineEquals(t, reader, "")
+}
+
+func assertRedisMultipartValueEventually(t *testing.T, reader *bufio.Reader, expected string) {
+	t.Helper()
+	assert.Eventually(t, func() bool {
+		assertRedisMultipartPrefix(t, reader)
+		line, _, err := reader.ReadLine()
+		assert.NoError(t, err)
+		if string(line) == "{}" {
+			return false
+		}
+		assert.Equal(t, expected, string(line))
+		return true
+	}, NatsWaitTimeout, time.Millisecond*100)
+}
+
 func TestRedisEvents(t *testing.T) {
 	t.Parallel()
 
@@ -430,13 +459,13 @@ func TestRedisEvents(t *testing.T) {
 					assert.Eventually(t, func() bool {
 						return produced.Load() == 1
 					}, RedisWaitTimeout, time.Millisecond*100)
-					assertMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"employeeUpdates\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
+					assertRedisMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"employeeUpdates\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
 					consumed.Add(1)
 
 					assert.Eventually(t, func() bool {
 						return produced.Load() == 2
 					}, RedisWaitTimeout, time.Millisecond*100)
-					assertMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"employeeUpdates\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
+					assertRedisMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"employeeUpdates\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
 					consumed.Add(1)
 				}()
 
@@ -485,7 +514,7 @@ func TestRedisEvents(t *testing.T) {
 				defer resp.Body.Close()
 				reader := bufio.NewReader(resp.Body)
 
-				assertMultipartValueEventually(t, reader, "{\"payload\":{\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}]}}")
+				assertRedisMultipartValueEventually(t, reader, "{\"payload\":{\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}]}}")
 
 				xEnv.WaitForSubscriptionCount(0, RedisWaitTimeout)
 				xEnv.WaitForConnectionCount(0, RedisWaitTimeout)

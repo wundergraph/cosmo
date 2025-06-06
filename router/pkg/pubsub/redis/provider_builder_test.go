@@ -20,7 +20,7 @@ func TestBuildRedisOptions(t *testing.T) {
 		// Test that the provider can be built
 		logger := zaptest.NewLogger(t)
 		ctx := context.Background()
-		builder := NewPubSubProviderBuilder(ctx, logger, "host", "addr")
+		builder := NewProviderBuilder(ctx, logger, "host", "addr")
 		provider, err := builder.BuildProvider(cfg)
 
 		require.NoError(t, err)
@@ -38,7 +38,7 @@ func TestBuildRedisOptions(t *testing.T) {
 		// Test that the provider can be built
 		logger := zaptest.NewLogger(t)
 		ctx := context.Background()
-		builder := NewPubSubProviderBuilder(ctx, logger, "host", "addr")
+		builder := NewProviderBuilder(ctx, logger, "host", "addr")
 		provider, err := builder.BuildProvider(cfg)
 
 		require.NoError(t, err)
@@ -61,13 +61,13 @@ func TestPubSubProviderBuilderFactory(t *testing.T) {
 
 		ctx := context.Background()
 
-		builder := NewPubSubProviderBuilder(ctx, logger, "host", "addr")
+		builder := NewProviderBuilder(ctx, logger, "host", "addr")
 		require.NotNil(t, builder)
 		provider, err := builder.BuildProvider(cfg)
 		require.NoError(t, err)
 
 		// Check the returned provider
-		redisProvider, ok := provider.(*datasource.PubSubProviderImpl)
+		redisProvider, ok := provider.(*datasource.PubSubProvider)
 		require.True(t, ok)
 		assert.NotNil(t, redisProvider.Logger)
 		assert.NotNil(t, redisProvider.Adapter)

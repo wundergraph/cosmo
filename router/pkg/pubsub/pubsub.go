@@ -95,7 +95,7 @@ func BuildProvidersAndDataSources(
 	outs = append(outs, natsOuts...)
 
 	// initialize Redis providers and data sources
-	redisBuilder := redis.NewPubSubProviderBuilder(ctx, logger, hostName, routerListenAddr)
+	redisBuilder := redis.NewProviderBuilder(ctx, logger, hostName, routerListenAddr)
 	redisDsConfsWithEvents := []dsConfAndEvents[*nodev1.RedisEventConfiguration]{}
 	for _, dsConf := range dsConfs {
 		redisDsConfsWithEvents = append(redisDsConfsWithEvents, dsConfAndEvents[*nodev1.RedisEventConfiguration]{

@@ -32,7 +32,7 @@ func (s *PublishEventConfiguration) MarshalJSONTemplate() (string, error) {
 
 // SubscriptionDataSource implements resolve.SubscriptionDataSource for Redis
 type SubscriptionDataSource struct {
-	pubSub AdapterInterface
+	pubSub Adapter
 }
 
 // UniqueRequestID computes a unique ID for the subscription request
@@ -74,7 +74,7 @@ func (s *SubscriptionDataSource) LoadInitialData(ctx context.Context) (initial [
 
 // PublishDataSource implements resolve.DataSource for Redis publishing
 type PublishDataSource struct {
-	pubSub AdapterInterface
+	pubSub Adapter
 }
 
 // Load processes a request to publish to Redis
