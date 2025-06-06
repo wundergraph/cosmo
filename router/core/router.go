@@ -1967,7 +1967,7 @@ func WithApolloCompatibilityFlagsConfig(cfg config.ApolloCompatibilityFlags) Opt
 
 		if cfg.ReplaceUndefinedOpFieldErrors.Enabled {
 			cfg.UseGraphQLValidationFailedStatus.Enabled = true
-			r.logger.Warn("option apollo_compatibility_flags/replace_undefined_op_field_errors is deprecated, and has automatically been converted to apollo_compatibility_flags/use_validation_failed_extension, please update your configuration")
+			r.logger.Warn("option apollo_compatibility_flags/replace_undefined_op_field_errors is deprecated, and has automatically been converted to apollo_compatibility_flags/use_graphql_validation_failed_status, please update your configuration")
 		}
 
 		r.apolloCompatibilityFlags = cfg
