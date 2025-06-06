@@ -26,8 +26,8 @@ To implement a new PubSub provider, the following components must be created:
 - `SubscriptionEventConfiguration` and `PublishEventConfiguration`: Define the data structures used for communication between the adapter and the engine.
 - `ProviderAdapter`: Implements the logic that interfaces with the provider’s client or SDK.
 - `SubscriptionDataSource` and `PublishDataSource`: Engine components that leverage the configurations to subscribe and publish data.
-- `PubSubDataSource`: Bridges the engine and the provider.
-- `PubSubProviderBuilder`: Used by the router to instantiate the provider.
+- `EngineDataSourceFactory`: Bridges the engine and the provider.
+- `ProviderBuilder`: Used by the router to instantiate the provider.
 
 ### `SubscriptionEventConfiguration` and `PublishEventConfiguration`
 
@@ -64,15 +64,15 @@ They are going to use the `SubscriptionEventConfiguration` and `PublishEventConf
 
 Implement these in the `engine_datasource.go` file, referencing the [kafka implementation](./kafka/engine_datasource.go) for a working example.
 
-### `PubSubDataSource`
+### `EngineDataSourceFactory`
 
-This structure connects the engine (resolve.DataSource and resolve.SubscriptionDataSource) with the provider implementation. It must implement the `PubSubProvider` interface defined in [provider.go](./datasource/provider.go).
+This structure connects the engine (resolve.DataSource and resolve.SubscriptionDataSource) with the provider implementation. It must implement the `EngineDataSourceFactory` interface defined in [datasource.go](./datasource/datasource.go).
 
 Refer to the [kafka implementation](./kafka/pubsub_datasource.go) for a working example.
 
-### `PubSubProviderBuilder`
+### `ProviderBuilder`
 
-The builder is responsible for instantiating the provider within the router. It must implement the [PubSubProviderBuilder](./datasource/provider.go) interface.
+The builder is responsible for instantiating the provider within the router. It must implement the [ProviderBuilder](./datasource/provider.go) interface.
 
 The interface has two generic types:
 - `P`, the generic type of the options that the provider builder will need, as defined in the [config.go](../config/config.go) (NatsEventSource, KafkaEventSource, ...)
@@ -80,7 +80,7 @@ The interface has two generic types:
 
 Key methods:
 - `BuildProvider`: Initializes the provider with its configuration and receive the provider options (defined by the `P` type)
-- `BuildDataSource`: Creates the data source and receive the event configuration (defined by the `E` type)
+- `BuildEngineDataSourceFactory`: Creates the data source and receive the event configuration (defined by the `E` type)
 
 Refer to the [kafka implementation](./kafka/provider_builder.go) for a working example.
 
@@ -115,7 +115,7 @@ You should add tests as specified in the table below.
 | Implementation File | Test File | Reference File |
 |-------------------|-----------|-----------------|
 | engine_datasource.go | engine_datasource_test.go | [kafka implementation](./kafka/engine_datasource_test.go) |
-| pubsub_datasource.go | pubsub_datasource_test.go | [kafka implementation](./kafka/pubsub_datasource_test.go) |
+| engine_datasource_factory.go | engine_datasource_factory_test.go | [kafka implementation](./kafka/engine_datasource_factory_test.go) |
 | provider_builder.go | provider_builder_test.go | [kafka implementation](./kafka/provider_builder_test.go) |
 | pubsub.go | pubsub_test.go | TestBuildProvidersAndDataSources_Kafka_OK |
 

@@ -13,10 +13,10 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/pubsubtest"
 )
 
-func TestNatsPubSubDataSource(t *testing.T) {
+func TestNatsEngineDataSourceFactory(t *testing.T) {
 	// Create the data source to test with a real adapter
 	adapter := &ProviderAdapter{}
-	pubsub := &PubSubDataSource{
+	pubsub := &EngineDataSourceFactory{
 		providerId:  "test-provider",
 		eventType:   EventTypePublish,
 		subjects:    []string{"test-subject"},
@@ -25,10 +25,10 @@ func TestNatsPubSubDataSource(t *testing.T) {
 	}
 
 	// Run the standard test suite
-	pubsubtest.VerifyPubSubDataSourceImplementation(t, pubsub)
+	pubsubtest.VerifyEngineDataSourceFactoryImplementation(t, pubsub)
 }
 
-func TestPubSubDataSourceWithMockAdapter(t *testing.T) {
+func TestEngineDataSourceFactoryWithMockAdapter(t *testing.T) {
 	// Create mock adapter
 	mockAdapter := NewMockAdapter(t)
 
@@ -38,7 +38,7 @@ func TestPubSubDataSourceWithMockAdapter(t *testing.T) {
 	})).Return(nil)
 
 	// Create the data source with mock adapter
-	pubsub := &PubSubDataSource{
+	pubsub := &EngineDataSourceFactory{
 		providerId:  "test-provider",
 		eventType:   EventTypePublish,
 		subjects:    []string{"test-subject"},
@@ -61,12 +61,12 @@ func TestPubSubDataSourceWithMockAdapter(t *testing.T) {
 	require.Equal(t, `{"success": true}`, out.String())
 }
 
-func TestPubSubDataSource_GetResolveDataSource_WrongType(t *testing.T) {
+func TestEngineDataSourceFactory_GetResolveDataSource_WrongType(t *testing.T) {
 	// Create mock adapter
 	mockAdapter := NewMockAdapter(t)
 
 	// Create the data source with mock adapter
-	pubsub := &PubSubDataSource{
+	pubsub := &EngineDataSourceFactory{
 		providerId:  "test-provider",
 		eventType:   EventTypeSubscribe,
 		subjects:    []string{"test-subject"},
@@ -80,9 +80,9 @@ func TestPubSubDataSource_GetResolveDataSource_WrongType(t *testing.T) {
 	require.Nil(t, ds)
 }
 
-func TestPubSubDataSource_GetResolveDataSourceInput_MultipleSubjects(t *testing.T) {
+func TestEngineDataSourceFactory_GetResolveDataSourceInput_MultipleSubjects(t *testing.T) {
 	// Create the data source with mock adapter
-	pubsub := &PubSubDataSource{
+	pubsub := &EngineDataSourceFactory{
 		providerId: "test-provider",
 		eventType:  EventTypePublish,
 		subjects:   []string{"test-subject-1", "test-subject-2"},
@@ -95,9 +95,9 @@ func TestPubSubDataSource_GetResolveDataSourceInput_MultipleSubjects(t *testing.
 	require.Empty(t, input)
 }
 
-func TestPubSubDataSource_GetResolveDataSourceInput_NoSubjects(t *testing.T) {
+func TestEngineDataSourceFactory_GetResolveDataSourceInput_NoSubjects(t *testing.T) {
 	// Create the data source with mock adapter
-	pubsub := &PubSubDataSource{
+	pubsub := &EngineDataSourceFactory{
 		providerId: "test-provider",
 		eventType:  EventTypePublish,
 		subjects:   []string{},
@@ -110,9 +110,9 @@ func TestPubSubDataSource_GetResolveDataSourceInput_NoSubjects(t *testing.T) {
 	require.Empty(t, input)
 }
 
-func TestNatsPubSubDataSourceMultiSubjectSubscription(t *testing.T) {
+func TestNatsEngineDataSourceFactoryMultiSubjectSubscription(t *testing.T) {
 	// Create the data source to test with mock adapter
-	pubsub := &PubSubDataSource{
+	pubsub := &EngineDataSourceFactory{
 		providerId: "test-provider",
 		eventType:  EventTypePublish,
 		subjects:   []string{"test-subject-1", "test-subject-2"},
@@ -133,9 +133,9 @@ func TestNatsPubSubDataSourceMultiSubjectSubscription(t *testing.T) {
 	require.Equal(t, "test-subject-2", subscriptionConfig.Subjects[1], "Expected second subject to be 'test-subject-2'")
 }
 
-func TestNatsPubSubDataSourceWithStreamConfiguration(t *testing.T) {
+func TestNatsEngineDataSourceFactoryWithStreamConfiguration(t *testing.T) {
 	// Create the data source to test
-	pubsub := &PubSubDataSource{
+	pubsub := &EngineDataSourceFactory{
 		providerId:                "test-provider",
 		eventType:                 EventTypePublish,
 		subjects:                  []string{"test-subject"},
@@ -161,7 +161,7 @@ func TestNatsPubSubDataSourceWithStreamConfiguration(t *testing.T) {
 	require.Equal(t, int32(30), subscriptionConfig.StreamConfiguration.ConsumerInactiveThreshold, "Expected consumer inactive threshold to be 30")
 }
 
-func TestPubSubDataSource_RequestDataSource(t *testing.T) {
+func TestEngineDataSourceFactory_RequestDataSource(t *testing.T) {
 	// Create mock adapter
 	mockAdapter := NewMockAdapter(t)
 
@@ -174,7 +174,7 @@ func TestPubSubDataSource_RequestDataSource(t *testing.T) {
 	})
 
 	// Create the data source with mock adapter
-	pubsub := &PubSubDataSource{
+	pubsub := &EngineDataSourceFactory{
 		providerId:  "test-provider",
 		eventType:   EventTypeRequest,
 		subjects:    []string{"test-subject"},
@@ -200,7 +200,7 @@ func TestPubSubDataSource_RequestDataSource(t *testing.T) {
 
 func TestTransformEventConfig(t *testing.T) {
 	t.Run("publish event", func(t *testing.T) {
-		cfg := &PubSubDataSource{
+		cfg := &EngineDataSourceFactory{
 			providerId: "test-provider",
 			eventType:  EventTypePublish,
 			subjects:   []string{"original.subject"},
@@ -218,7 +218,7 @@ func TestTransformEventConfig(t *testing.T) {
 	})
 
 	t.Run("subscribe event", func(t *testing.T) {
-		cfg := &PubSubDataSource{
+		cfg := &EngineDataSourceFactory{
 			providerId: "test-provider",
 			eventType:  EventTypeSubscribe,
 			subjects:   []string{"original.subject1", "original.subject2"},
@@ -237,7 +237,7 @@ func TestTransformEventConfig(t *testing.T) {
 	})
 
 	t.Run("invalid subject", func(t *testing.T) {
-		cfg := &PubSubDataSource{
+		cfg := &EngineDataSourceFactory{
 			providerId: "test-provider",
 			eventType:  EventTypePublish,
 			subjects:   []string{"invalid subject with spaces"},

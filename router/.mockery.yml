@@ -15,7 +15,7 @@ packages:
     interfaces:
       ProviderLifecycle:
       ProviderBuilder:
-      PubSubDataSource:
+      EngineDataSourceFactory:
       Provider:
   github.com/wundergraph/cosmo/router/pkg/pubsub/nats:
     interfaces:

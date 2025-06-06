@@ -16,7 +16,7 @@ import (
 
 const providerTypeID = "kafka"
 
-type PubSubProviderBuilder struct {
+type ProviderBuilder struct {
 	ctx              context.Context
 	logger           *zap.Logger
 	hostName         string
@@ -24,11 +24,11 @@ type PubSubProviderBuilder struct {
 	adapters         map[string]Adapter
 }
 
-func (p *PubSubProviderBuilder) TypeID() string {
+func (p *ProviderBuilder) TypeID() string {
 	return providerTypeID
 }
 
-func (p *PubSubProviderBuilder) BuildDataSource(data *nodev1.KafkaEventConfiguration) (datasource.PubSubDataSource, error) {
+func (p *ProviderBuilder) BuildEngineDataSourceFactory(data *nodev1.KafkaEventConfiguration) (datasource.EngineDataSourceFactory, error) {
 	providerId := data.GetEngineEventConfiguration().GetProviderId()
 	adapter, ok := p.adapters[providerId]
 	if !ok {
@@ -45,7 +45,7 @@ func (p *PubSubProviderBuilder) BuildDataSource(data *nodev1.KafkaEventConfigura
 		return nil, fmt.Errorf("unsupported event type: %s", data.GetEngineEventConfiguration().GetType())
 	}
 
-	return &PubSubDataSource{
+	return &EngineDataSourceFactory{
 		fieldName:    data.GetEngineEventConfiguration().GetFieldName(),
 		eventType:    eventType,
 		topics:       data.GetTopics(),
@@ -54,7 +54,7 @@ func (p *PubSubProviderBuilder) BuildDataSource(data *nodev1.KafkaEventConfigura
 	}, nil
 }
 
-func (p *PubSubProviderBuilder) BuildProvider(provider config.KafkaEventSource) (datasource.Provider, error) {
+func (p *ProviderBuilder) BuildProvider(provider config.KafkaEventSource) (datasource.Provider, error) {
 	adapter, pubSubProvider, err := buildProvider(p.ctx, provider, p.logger)
 	if err != nil {
 		return nil, err
@@ -107,13 +107,13 @@ func buildProvider(ctx context.Context, provider config.KafkaEventSource, logger
 	return adapter, pubSubProvider, nil
 }
 
-func NewPubSubProviderBuilder(
+func NewProviderBuilder(
 	ctx context.Context,
 	logger *zap.Logger,
 	hostName string,
 	routerListenAddr string,
-) *PubSubProviderBuilder {
-	return &PubSubProviderBuilder{
+) *ProviderBuilder {
+	return &ProviderBuilder{
 		ctx:              ctx,
 		logger:           logger,
 		hostName:         hostName,

@@ -15,7 +15,7 @@ import (
 
 const providerTypeID = "nats"
 
-type PubSubProviderBuilder struct {
+type ProviderBuilder struct {
 	ctx              context.Context
 	logger           *zap.Logger
 	hostName         string
@@ -23,11 +23,11 @@ type PubSubProviderBuilder struct {
 	adapters         map[string]Adapter
 }
 
-func (p *PubSubProviderBuilder) TypeID() string {
+func (p *ProviderBuilder) TypeID() string {
 	return providerTypeID
 }
 
-func (p *PubSubProviderBuilder) BuildDataSource(data *nodev1.NatsEventConfiguration) (datasource.PubSubDataSource, error) {
+func (p *ProviderBuilder) BuildEngineDataSourceFactory(data *nodev1.NatsEventConfiguration) (datasource.EngineDataSourceFactory, error) {
 	providerId := data.GetEngineEventConfiguration().GetProviderId()
 	adapter, ok := p.adapters[providerId]
 	if !ok {
@@ -45,7 +45,7 @@ func (p *PubSubProviderBuilder) BuildDataSource(data *nodev1.NatsEventConfigurat
 	default:
 		return nil, fmt.Errorf("unsupported event type: %s", data.GetEngineEventConfiguration().GetType())
 	}
-	pubSubDataSource := &PubSubDataSource{
+	dataSourceFactory := &EngineDataSourceFactory{
 		NatsAdapter:             adapter,
 		fieldName:               data.GetEngineEventConfiguration().GetFieldName(),
 		eventType:               eventType,
@@ -55,16 +55,16 @@ func (p *PubSubProviderBuilder) BuildDataSource(data *nodev1.NatsEventConfigurat
 	}
 
 	if data.GetStreamConfiguration() != nil {
-		pubSubDataSource.withStreamConfiguration = true
-		pubSubDataSource.consumerName = data.GetStreamConfiguration().GetConsumerName()
-		pubSubDataSource.streamName = data.GetStreamConfiguration().GetStreamName()
-		pubSubDataSource.consumerInactiveThreshold = data.GetStreamConfiguration().GetConsumerInactiveThreshold()
+		dataSourceFactory.withStreamConfiguration = true
+		dataSourceFactory.consumerName = data.GetStreamConfiguration().GetConsumerName()
+		dataSourceFactory.streamName = data.GetStreamConfiguration().GetStreamName()
+		dataSourceFactory.consumerInactiveThreshold = data.GetStreamConfiguration().GetConsumerInactiveThreshold()
 	}
 
-	return pubSubDataSource, nil
+	return dataSourceFactory, nil
 }
 
-func (p *PubSubProviderBuilder) BuildProvider(provider config.NatsEventSource) (datasource.Provider, error) {
+func (p *ProviderBuilder) BuildProvider(provider config.NatsEventSource) (datasource.Provider, error) {
 	adapter, pubSubProvider, err := buildProvider(p.ctx, provider, p.logger, p.hostName, p.routerListenAddr)
 	if err != nil {
 		return nil, err
@@ -132,13 +132,13 @@ func buildProvider(ctx context.Context, provider config.NatsEventSource, logger 
 	return adapter, pubSubProvider, nil
 }
 
-func NewPubSubProviderBuilder(
+func NewProviderBuilder(
 	ctx context.Context,
 	logger *zap.Logger,
 	hostName string,
 	routerListenAddr string,
 ) datasource.ProviderBuilder[config.NatsEventSource, *nodev1.NatsEventConfiguration] {
-	return &PubSubProviderBuilder{
+	return &ProviderBuilder{
 		ctx:              ctx,
 		logger:           logger,
 		hostName:         hostName,

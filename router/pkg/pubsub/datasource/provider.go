@@ -28,6 +28,6 @@ type ProviderBuilder[P, E any] interface {
 	TypeID() string
 	// BuildProvider Build the provider and the adapter
 	BuildProvider(options P) (Provider, error)
-	// BuildDataSource Build the data source for the given provider and event configuration
-	BuildDataSource(data E) (PubSubDataSource, error)
+	// BuildEngineDataSourceFactory Build the data source for the given provider and event configuration
+	BuildEngineDataSourceFactory(data E) (EngineDataSourceFactory, error)
 }

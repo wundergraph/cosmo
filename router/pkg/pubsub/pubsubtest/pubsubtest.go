@@ -9,9 +9,9 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 )
 
-// VerifyPubSubDataSourceImplementation is a common test function to verify any PubSubDataSource implementation
-// This function can be used by other packages to test their PubSubDataSource implementations
-func VerifyPubSubDataSourceImplementation(t *testing.T, pubSub datasource.PubSubDataSource) {
+// VerifyEngineDataSourceFactoryImplementation is a common test function to verify any EngineDataSourceFactory implementation
+// This function can be used by other packages to test their EngineDataSourceFactory implementations
+func VerifyEngineDataSourceFactoryImplementation(t *testing.T, pubSub datasource.EngineDataSourceFactory) {
 	// Test GetFieldName
 	fieldName := pubSub.GetFieldName()
 	require.NotEmpty(t, fieldName, "Expected non-empty field name")

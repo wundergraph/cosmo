@@ -15,7 +15,7 @@ const (
 	EventTypeSubscribe
 )
 
-type PubSubDataSource struct {
+type EngineDataSourceFactory struct {
 	fieldName  string
 	eventType  EventType
 	topics     []string
@@ -24,11 +24,11 @@ type PubSubDataSource struct {
 	KafkaAdapter Adapter
 }
 
-func (c *PubSubDataSource) GetFieldName() string {
+func (c *EngineDataSourceFactory) GetFieldName() string {
 	return c.fieldName
 }
 
-func (c *PubSubDataSource) ResolveDataSource() (resolve.DataSource, error) {
+func (c *EngineDataSourceFactory) ResolveDataSource() (resolve.DataSource, error) {
 	var dataSource resolve.DataSource
 
 	switch c.eventType {
@@ -43,7 +43,7 @@ func (c *PubSubDataSource) ResolveDataSource() (resolve.DataSource, error) {
 	return dataSource, nil
 }
 
-func (c *PubSubDataSource) ResolveDataSourceInput(eventData []byte) (string, error) {
+func (c *EngineDataSourceFactory) ResolveDataSourceInput(eventData []byte) (string, error) {
 	if len(c.topics) != 1 {
 		return "", fmt.Errorf("publish events should define one topic but received %d", len(c.topics))
 	}
@@ -57,13 +57,13 @@ func (c *PubSubDataSource) ResolveDataSourceInput(eventData []byte) (string, err
 	return evtCfg.MarshalJSONTemplate(), nil
 }
 
-func (c *PubSubDataSource) ResolveDataSourceSubscription() (resolve.SubscriptionDataSource, error) {
+func (c *EngineDataSourceFactory) ResolveDataSourceSubscription() (resolve.SubscriptionDataSource, error) {
 	return &SubscriptionDataSource{
 		pubSub: c.KafkaAdapter,
 	}, nil
 }
 
-func (c *PubSubDataSource) ResolveDataSourceSubscriptionInput() (string, error) {
+func (c *EngineDataSourceFactory) ResolveDataSourceSubscriptionInput() (string, error) {
 	evtCfg := SubscriptionEventConfiguration{
 		ProviderID: c.providerId,
 		Topics:     c.topics,
@@ -75,6 +75,6 @@ func (c *PubSubDataSource) ResolveDataSourceSubscriptionInput() (string, error) 
 	return string(object), nil
 }
 
-func (c *PubSubDataSource) TransformEventData(extractFn datasource.ArgumentTemplateCallback) error {
+func (c *EngineDataSourceFactory) TransformEventData(extractFn datasource.ArgumentTemplateCallback) error {
 	return nil
 }

@@ -11,10 +11,10 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/pubsubtest"
 )
 
-func TestKafkaPubSubDataSource(t *testing.T) {
+func TestKafkaEngineDataSourceFactory(t *testing.T) {
 	// Create the data source to test with a real adapter
 	adapter := &ProviderAdapter{}
-	pubsub := &PubSubDataSource{
+	pubsub := &EngineDataSourceFactory{
 		KafkaAdapter: adapter,
 		fieldName:    "testField",
 		eventType:    EventTypePublish,
@@ -23,11 +23,11 @@ func TestKafkaPubSubDataSource(t *testing.T) {
 	}
 
 	// Run the standard test suite
-	pubsubtest.VerifyPubSubDataSourceImplementation(t, pubsub)
+	pubsubtest.VerifyEngineDataSourceFactoryImplementation(t, pubsub)
 }
 
-// TestPubSubDataSourceWithMockAdapter tests the PubSubDataSource with a mocked adapter
-func TestPubSubDataSourceWithMockAdapter(t *testing.T) {
+// TestEngineDataSourceFactoryWithMockAdapter tests the EngineDataSourceFactory with a mocked adapter
+func TestEngineDataSourceFactoryWithMockAdapter(t *testing.T) {
 	// Create mock adapter
 	mockAdapter := NewMockAdapter(t)
 
@@ -37,7 +37,7 @@ func TestPubSubDataSourceWithMockAdapter(t *testing.T) {
 	})).Return(nil)
 
 	// Create the data source with mock adapter
-	pubsub := &PubSubDataSource{
+	pubsub := &EngineDataSourceFactory{
 		KafkaAdapter: mockAdapter,
 		fieldName:    "testField",
 		eventType:    EventTypePublish,
@@ -60,13 +60,13 @@ func TestPubSubDataSourceWithMockAdapter(t *testing.T) {
 	require.Equal(t, `{"success": true}`, out.String())
 }
 
-// TestPubSubDataSource_GetResolveDataSource_WrongType tests the PubSubDataSource with a mocked adapter
-func TestPubSubDataSource_GetResolveDataSource_WrongType(t *testing.T) {
+// TestEngineDataSourceFactory_GetResolveDataSource_WrongType tests the EngineDataSourceFactory with a mocked adapter
+func TestEngineDataSourceFactory_GetResolveDataSource_WrongType(t *testing.T) {
 	// Create mock adapter
 	mockAdapter := NewMockAdapter(t)
 
 	// Create the data source with mock adapter
-	pubsub := &PubSubDataSource{
+	pubsub := &EngineDataSourceFactory{
 		KafkaAdapter: mockAdapter,
 		fieldName:    "testField",
 		eventType:    EventTypeSubscribe,
@@ -80,10 +80,10 @@ func TestPubSubDataSource_GetResolveDataSource_WrongType(t *testing.T) {
 	require.Nil(t, ds)
 }
 
-// TestPubSubDataSource_GetResolveDataSourceInput_MultipleTopics tests the PubSubDataSource with a mocked adapter
-func TestPubSubDataSource_GetResolveDataSourceInput_MultipleTopics(t *testing.T) {
+// TestEngineDataSourceFactory_GetResolveDataSourceInput_MultipleTopics tests the EngineDataSourceFactory with a mocked adapter
+func TestEngineDataSourceFactory_GetResolveDataSourceInput_MultipleTopics(t *testing.T) {
 	// Create the data source with mock adapter
-	pubsub := &PubSubDataSource{
+	pubsub := &EngineDataSourceFactory{
 		fieldName:  "testField",
 		eventType:  EventTypePublish,
 		topics:     []string{"test-topic-1", "test-topic-2"},
@@ -96,10 +96,10 @@ func TestPubSubDataSource_GetResolveDataSourceInput_MultipleTopics(t *testing.T)
 	require.Empty(t, input)
 }
 
-// TestPubSubDataSource_GetResolveDataSourceInput_NoTopics tests the PubSubDataSource with a mocked adapter
-func TestPubSubDataSource_GetResolveDataSourceInput_NoTopics(t *testing.T) {
+// TestEngineDataSourceFactory_GetResolveDataSourceInput_NoTopics tests the EngineDataSourceFactory with a mocked adapter
+func TestEngineDataSourceFactory_GetResolveDataSourceInput_NoTopics(t *testing.T) {
 	// Create the data source with mock adapter
-	pubsub := &PubSubDataSource{
+	pubsub := &EngineDataSourceFactory{
 		fieldName:  "testField",
 		eventType:  EventTypePublish,
 		topics:     []string{},
@@ -112,12 +112,12 @@ func TestPubSubDataSource_GetResolveDataSourceInput_NoTopics(t *testing.T) {
 	require.Empty(t, input)
 }
 
-// TestKafkaPubSubDataSourceMultiTopicSubscription tests only the subscription functionality
+// TestKafkaEngineDataSourceFactoryMultiTopicSubscription tests only the subscription functionality
 // for multiple topics. The publish and resolve datasource tests are skipped since they
 // do not support multiple topics.
-func TestKafkaPubSubDataSourceMultiTopicSubscription(t *testing.T) {
+func TestKafkaEngineDataSourceFactoryMultiTopicSubscription(t *testing.T) {
 	// Create the data source to test with mock adapter
-	pubsub := &PubSubDataSource{
+	pubsub := &EngineDataSourceFactory{
 		fieldName:  "testField",
 		eventType:  EventTypePublish,
 		topics:     []string{"test-topic-1", "test-topic-2"},
