@@ -1,6 +1,6 @@
 {
   "name": "studio",
-  "version": "0.119.2",
+  "version": "0.119.3",
   "private": true,
   "license": "Apache-2.0",
   "description": "WunderGraph Cosmo Studio",
@@ -97,7 +97,7 @@
     "posthog-js": "^1.240.6",
     "pretty-bytes": "^6.1.1",
     "prism-react-renderer": "^2.0.6",
-    "prismjs": "^1.29.0",
+    "prismjs": "^1.30.0",
     "react": "^18.3.1",
     "react-date-range": "^1.4.0",
     "react-day-picker": "^8.8.0",
