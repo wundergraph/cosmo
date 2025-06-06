@@ -95,9 +95,6 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 	if opts.ApolloCompatibilityFlags.SuppressFetchErrors.Enabled {
 		options.ResolvableOptions.ApolloCompatibilitySuppressFetchErrors = true
 	}
-	// if opts.ApolloCompatibilityFlags.UseGraphQLValidationErrors.Enabled {
-	// 	options.ResolvableOptions.Apollo = true
-	// }
 	if opts.ApolloCompatibilityFlags.ReplaceInvalidVarErrors.Enabled {
 		options.ResolvableOptions.ApolloCompatibilityReplaceInvalidVarError = true
 	}
