@@ -46,6 +46,8 @@ type HttpFlushWriter struct {
 	apolloSubscriptionMultipartPrintBoundary bool
 }
 
+var _ resolve.SubscriptionResponseWriter = (*HttpFlushWriter)(nil)
+
 func (f *HttpFlushWriter) Complete() {
 	if f.ctx.Err() != nil {
 		return
@@ -64,7 +66,7 @@ func (f *HttpFlushWriter) Complete() {
 	// Flush before closing the writer to ensure all data is sent
 	f.flusher.Flush()
 
-	f.Close()
+	f.Close(resolve.SubscriptionCloseKindNormal)
 }
 
 func (f *HttpFlushWriter) Write(p []byte) (n int, err error) {
@@ -75,7 +77,7 @@ func (f *HttpFlushWriter) Write(p []byte) (n int, err error) {
 	return f.buf.Write(p)
 }
 
-func (f *HttpFlushWriter) Close() {
+func (f *HttpFlushWriter) Close(_ resolve.SubscriptionCloseKind) {
 	if f.ctx.Err() != nil {
 		return
 	}
@@ -124,7 +126,7 @@ func (f *HttpFlushWriter) Flush() (err error) {
 	f.flusher.Flush()
 
 	if f.subscribeOnce {
-		defer f.Close()
+		defer f.Close(resolve.SubscriptionCloseKindNormal)
 	}
 
 	return nil

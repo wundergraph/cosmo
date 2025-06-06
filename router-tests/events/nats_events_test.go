@@ -1193,61 +1193,6 @@ func TestNatsEvents(t *testing.T) {
 		})
 	})
 
-	t.Run("subscribing to a non-existent stream returns an error", func(t *testing.T) {
-		t.Skip("Skipping this test for now, while fixing it")
-		t.Parallel()
-
-		testenv.Run(t, &testenv.Config{
-			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
-			EnableNats:               true,
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			var subscription struct {
-				employeeUpdatedNatsStream struct {
-					ID float64 `graphql:"id"`
-				} `graphql:"employeeUpdatedNatsStream(id: 12)"`
-			}
-
-			js, err := jetstream.New(xEnv.NatsConnectionDefault)
-			require.NoError(t, err)
-
-			stream, err := js.Stream(xEnv.Context, xEnv.GetPubSubName("streamName"))
-			require.Error(t, err)
-			require.Equal(t, "nats: API error: code=404 err_code=10059 description=stream not found", err.Error())
-			require.Equal(t, nil, stream)
-
-			surl := xEnv.GraphQLWebSocketSubscriptionURL()
-			client := graphql.NewSubscriptionClient(surl)
-			t.Cleanup(func() {
-				_ = client.Close()
-			})
-
-			var counter atomic.Uint32
-
-			_, err = client.Subscribe(&subscription, nil, func(dataValue []byte, errValue error) error {
-				defer counter.Add(1)
-
-				require.Contains(t,
-					errValue.Error(),
-					fmt.Sprintf(
-						"EDFS error: failed to create or update consumer for stream \"%s\"",
-						xEnv.GetPubSubName("streamName"),
-					),
-				)
-				return nil
-			})
-			require.NoError(t, err)
-
-			go func() {
-				clientErr := client.Run()
-				require.NoError(t, clientErr)
-			}()
-
-			require.Eventually(t, func() bool {
-				return counter.Load() == 1
-			}, NatsWaitTimeout, time.Millisecond*100)
-		})
-	})
-
 	t.Run("subscribe ws with filter", func(t *testing.T) {
 		t.Parallel()
 
@@ -1988,6 +1933,62 @@ func TestFlakyNatsEvents(t *testing.T) {
 			err = json.Unmarshal(msg.Payload, &payload)
 			require.NoError(t, err)
 			require.Equal(t, float64(99), payload.Data.EmployeeUpdatedMyNats.ID)
+		})
+	})
+
+	t.Run("subscribing to a non-existent stream returns an error", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+			EnableNats:               true,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			var subscription struct {
+				employeeUpdatedNatsStream struct {
+					ID float64 `graphql:"id"`
+				} `graphql:"employeeUpdatedNatsStream(id: 12)"`
+			}
+
+			js, err := jetstream.New(xEnv.NatsConnectionDefault)
+			require.NoError(t, err)
+
+			stream, err := js.Stream(xEnv.Context, xEnv.GetPubSubName("streamName"))
+			require.Error(t, err)
+			require.Equal(t, "nats: API error: code=404 err_code=10059 description=stream not found", err.Error())
+			require.Equal(t, nil, stream)
+
+			surl := xEnv.GraphQLWebSocketSubscriptionURL()
+			client := graphql.NewSubscriptionClient(surl)
+			t.Cleanup(func() {
+				_ = client.Close()
+			})
+
+			var counter atomic.Uint32
+
+			_, err = client.Subscribe(&subscription, nil, func(dataValue []byte, errValue error) error {
+				defer counter.Add(1)
+
+				t.Logf("dataValue: %s, errValue: %s", string(dataValue), errValue.Error())
+
+				require.Contains(t,
+					errValue.Error(),
+					fmt.Sprintf(
+						"EDFS error: failed to create or update consumer for stream \"%s\"",
+						xEnv.GetPubSubName("streamName"),
+					),
+				)
+				return nil
+			})
+			require.NoError(t, err)
+
+			go func() {
+				clientErr := client.Run()
+				require.NoError(t, clientErr)
+			}()
+
+			require.Eventually(t, func() bool {
+				return counter.Load() == 1
+			}, NatsWaitTimeout, time.Second*1)
 		})
 	})
 }
