@@ -1,6 +1,9 @@
 package core
 
 import (
+	"strconv"
+	"bytes"
+	"io"
 	"context"
 	"crypto/ecdsa"
 	"errors"
@@ -245,6 +248,99 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	/**
 	* Middlewares
 	 */
+	 // Per request, we apply the router request hook and the router response hook
+	httpRouter.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path != s.graphqlPath { // only run the router lifecycle hooks for the graphql endpoint
+				next.ServeHTTP(w, r)
+				return
+			}
+			if strings.EqualFold(r.Header.Get("Connection"), "Upgrade") && strings.EqualFold(r.Header.Get("Upgrade"), "websocket") {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			requestLogger := s.logger.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
+			if batchedOperationId, ok := r.Context().Value(BatchedOperationId{}).(string); ok {
+				requestLogger = requestLogger.With(logging.WithBatchedRequestOperationID(batchedOperationId))
+			}
+			routerRequestParams := RouterRequestParams{
+				HttpRequest: r,
+				Logger: requestLogger,
+			}
+			// open core module system: run the router request hook
+			s.logger.Debug("Firing RouterRequest hooks")
+			for _, h := range s.hookRegistry.routerRequestHooks.Values() {
+				hookErr := h.OnRouterRequest(r.Context(), &routerRequestParams)
+				if hookErr != nil {
+					http.Error(w, hookErr.Error(), http.StatusInternalServerError)
+					return
+				}
+			}
+
+			ww :=  middleware.NewWrapResponseWriter(w, r.ProtoMajor)
+			ww.Discard()
+
+			var buf bytes.Buffer
+			ww.Tee(&buf)
+
+			var exitErr *ExitError
+
+			func() {
+				defer func() {
+					if rec := recover(); rec != nil {
+						err, ok := rec.(error)
+						if !ok {
+							err = fmt.Errorf("panic: %v", rec)
+						}
+						exitErr = &ExitError{
+							Code: http.StatusInternalServerError,
+							Err: err,
+						}
+					}
+				}()
+				next.ServeHTTP(ww, r)
+			}()
+
+			originalResponse := &http.Response{
+				Header: ww.Header().Clone(),
+				Body: io.NopCloser(bytes.NewReader(buf.Bytes())),
+				StatusCode: ww.Status(),
+			}
+
+			responseRecorder := responseRecorder{
+				HeaderMap: ww.Header(),
+				Body:buf.Bytes(),
+				Code: ww.Status(),
+			}
+
+			routerResponseParams := RouterResponseParams{
+				RouterRequestParams: routerRequestParams,
+				HttpResponse: originalResponse,
+				Controller: &routerResponseController{
+					recorder: responseRecorder,
+				},
+			}
+			s.logger.Debug("Firing RouterResponse hooks")
+			for _, h := range s.hookRegistry.routerResponseHooks.Values() {
+				hookErr := h.OnRouterResponse(r.Context(), &routerResponseParams, exitErr)
+				if hookErr != nil {
+					http.Error(w, hookErr.Error(), http.StatusInternalServerError)
+					return
+				}
+			}
+			s.logger.Debug("Setting response after router response hooks")
+			w.Header().Set("Content-Length", strconv.Itoa(len(routerResponseParams.Controller.GetBody())))
+			for key, values := range routerResponseParams.Controller.GetHeaderMap() {
+				for _, value := range values {
+					w.Header().Add(key, value)
+				}
+			}
+
+			w.WriteHeader(routerResponseParams.Controller.GetStatusCode())
+			w.Write(routerResponseParams.Controller.GetBody())
+		})
+	})
 
 	// This recovery handler is used for everything before the graph mux to ensure that
 	// we can recover from panics and log them properly.
