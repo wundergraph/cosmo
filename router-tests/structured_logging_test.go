@@ -10,12 +10,11 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-
-	"github.com/stretchr/testify/assert"
 
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
@@ -164,15 +163,13 @@ func TestRouterStartLogs(t *testing.T) {
 		},
 	}, func(t *testing.T, xEnv *testenv.Environment) {
 		logEntries := xEnv.Observer().All()
-		require.Len(t, logEntries, 12)
+		require.Len(t, logEntries, 13)
 		natsLogs := xEnv.Observer().FilterMessageSnippet("Nats Event source enabled").All()
-		require.Len(t, natsLogs, 2)
-		natsConnectedLogs := xEnv.Observer().FilterMessageSnippet("NATS connection established").All()
-		require.Len(t, natsConnectedLogs, 4)
+		require.Len(t, natsLogs, 4)
 		providerIDFields := xEnv.Observer().FilterField(zap.String("provider_id", "default")).All()
-		require.Len(t, providerIDFields, 3)
+		require.Len(t, providerIDFields, 2)
 		kafkaLogs := xEnv.Observer().FilterMessageSnippet("Kafka Event source enabled").All()
-		require.Len(t, kafkaLogs, 1)
+		require.Len(t, kafkaLogs, 2)
 		playgroundLog := xEnv.Observer().FilterMessage("Serving GraphQL playground")
 		require.Equal(t, playgroundLog.Len(), 1)
 		featureFlagLog := xEnv.Observer().FilterMessage("Feature flags enabled")
@@ -316,7 +313,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 			})
 			require.JSONEq(t, employeesIDData, res.Body)
 			logEntries := xEnv.Observer().All()
-			require.Len(t, logEntries, 6)
+			require.Len(t, logEntries, 10)
 			requestLog := xEnv.Observer().FilterMessage("/graphql")
 			require.Equal(t, requestLog.Len(), 1)
 			requestContext := requestLog.All()[0].ContextMap()
@@ -352,7 +349,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 			})
 			require.JSONEq(t, employeesIDData, res.Body)
 			logEntries := xEnv.Observer().All()
-			require.Len(t, logEntries, 6)
+			require.Len(t, logEntries, 10)
 			requestLog := xEnv.Observer().FilterMessage("/graphql")
 			require.Equal(t, requestLog.Len(), 1)
 			requestContext := requestLog.All()[0].ContextMap()
@@ -450,7 +447,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 			})
 			require.JSONEq(t, employeesIDData, res.Body)
 			logEntries := xEnv.Observer().All()
-			require.Len(t, logEntries, 6)
+			require.Len(t, logEntries, 10)
 			requestLog := xEnv.Observer().FilterMessage("/graphql")
 			require.Equal(t, requestLog.Len(), 1)
 			requestContext := requestLog.All()[0].ContextMap()
@@ -511,7 +508,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 			})
 			require.JSONEq(t, employeesIDData, res.Body)
 			logEntries := xEnv.Observer().All()
-			require.Len(t, logEntries, 6)
+			require.Len(t, logEntries, 10)
 			requestLog := xEnv.Observer().FilterMessage("/graphql")
 			require.Equal(t, requestLog.Len(), 1)
 			requestContext := requestLog.All()[0].ContextMap()
@@ -556,7 +553,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 			})
 			require.JSONEq(t, employeesIDData, res.Body)
 			logEntries := xEnv.Observer().All()
-			require.Len(t, logEntries, 6)
+			require.Len(t, logEntries, 10)
 			requestLog := xEnv.Observer().FilterMessage("/graphql")
 			require.Equal(t, requestLog.Len(), 1)
 			requestContext := requestLog.All()[0].ContextMap()
@@ -671,7 +668,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, `{"errors":[{"message":"unexpected token - got: EOF want one of: [RBRACE IDENT SPREAD]","locations":[{"line":0,"column":0}]}]}`, res.Body)
 			logEntries := xEnv.Observer().All()
-			require.Len(t, logEntries, 6)
+			require.Len(t, logEntries, 10)
 			requestLog := xEnv.Observer().FilterMessage("/graphql")
 			require.Equal(t, requestLog.Len(), 1)
 			requestContext := requestLog.All()[0].ContextMap()
@@ -788,9 +785,9 @@ func TestFlakyAccessLogs(t *testing.T) {
 				Query: `query employees { notExists { id } }`, // Missing closing bracket
 			})
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"field: notExists not defined on type: Query","path":["query"]}]}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"Cannot query field \"notExists\" on type \"Query\".","path":["query"]}]}`, res.Body)
 			logEntries := xEnv.Observer().All()
-			require.Len(t, logEntries, 6)
+			require.Len(t, logEntries, 10)
 			requestLog := xEnv.Observer().FilterMessage("/graphql")
 			require.Equal(t, requestLog.Len(), 1)
 			requestContext := requestLog.All()[0].ContextMap()
@@ -805,7 +802,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				"service_name":   "service-name", // From header
 				"operation_type": "query",        // From context
 				"operation_name": "employees",    // From context
-				"error_message":  "field: notExists not defined on type: Query",
+				"error_message":  "Cannot query field \"notExists\" on type \"Query\".",
 				"operation_hash": "3291586836053813139",
 				"request_error":  true,
 			}
@@ -923,7 +920,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, "", res.Body)
 			logEntries := xEnv.Observer().All()
-			require.Len(t, logEntries, 7)
+			require.Len(t, logEntries, 11)
 			requestLog := xEnv.Observer().FilterMessage("[Recovery from panic]")
 			require.Equal(t, requestLog.Len(), 1)
 			requestContext := requestLog.All()[0].ContextMap()
@@ -954,7 +951,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				"validation_time",
 			}
 
-			require.NotEmpty(t, logEntries[6].Stack)
+			require.NotEmpty(t, logEntries[10].Stack)
 
 			checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
 		})
@@ -1060,7 +1057,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, "", res.Body)
 			logEntries := xEnv.Observer().All()
-			require.Len(t, logEntries, 7)
+			require.Len(t, logEntries, 11)
 			requestLog := xEnv.Observer().FilterMessage("[Recovery from panic]")
 			require.Equal(t, requestLog.Len(), 1)
 			requestContext := requestLog.All()[0].ContextMap()
@@ -1091,7 +1088,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				"validation_time",
 			}
 
-			require.NotEmpty(t, logEntries[6].Stack)
+			require.NotEmpty(t, logEntries[10].Stack)
 
 			checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
 		})
@@ -1149,7 +1146,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 			})
 			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'products' at Path 'employees'.","extensions":{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}],"statusCode":403}}],"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"notes":null},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"notes":null},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"notes":null},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"notes":null},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"notes":null},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"notes":null},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"notes":null},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"notes":null},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"notes":null},{"id":12,"details":{"forename":"David","surname":"Stutt"},"notes":null}]}}`, res.Body)
 			logEntries := xEnv.Observer().All()
-			require.Len(t, logEntries, 6)
+			require.Len(t, logEntries, 10)
 			requestLog := xEnv.Observer().FilterMessage("/graphql")
 			require.Equal(t, requestLog.Len(), 1)
 			requestContext := requestLog.All()[0].ContextMap()
@@ -1194,7 +1191,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				})
 				require.JSONEq(t, employeesIDData, res.Body)
 				logEntries := xEnv.Observer().All()
-				require.Len(t, logEntries, 7)
+				require.Len(t, logEntries, 11)
 				requestLog := xEnv.Observer().FilterMessage("/graphql")
 				require.Equal(t, requestLog.Len(), 2)
 
@@ -1245,7 +1242,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				})
 				require.JSONEq(t, employeesIDData, res.Body)
 				logEntries := xEnv.Observer().All()
-				require.Len(t, logEntries, 7)
+				require.Len(t, logEntries, 11)
 				requestLog := xEnv.Observer().FilterMessage("/graphql")
 				require.Equal(t, requestLog.Len(), 2)
 				requestContext := requestLog.All()[0].ContextMap()
@@ -1350,7 +1347,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				})
 				require.JSONEq(t, employeesIDData, res.Body)
 				logEntries := xEnv.Observer().All()
-				require.Len(t, logEntries, 7)
+				require.Len(t, logEntries, 11)
 				requestLog := xEnv.Observer().FilterMessage("/graphql")
 				require.Equal(t, requestLog.Len(), 2)
 				requestContext := requestLog.All()[0].ContextMap()
@@ -1437,7 +1434,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				})
 				require.JSONEq(t, employeesIDData, res.Body)
 				logEntries := xEnv.Observer().All()
-				require.Len(t, logEntries, 7)
+				require.Len(t, logEntries, 11)
 				requestLog := xEnv.Observer().FilterMessage("/graphql")
 				require.Equal(t, requestLog.Len(), 2)
 				requestContext := requestLog.All()[0].ContextMap()
@@ -1532,7 +1529,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				})
 				require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'products' at Path 'employees'.","extensions":{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}],"statusCode":403}}],"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"notes":null},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"notes":null},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"notes":null},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"notes":null},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"notes":null},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"notes":null},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"notes":null},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"notes":null},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"notes":null},{"id":12,"details":{"forename":"David","surname":"Stutt"},"notes":null}]}}`, res.Body)
 				logEntries := xEnv.Observer().All()
-				require.Len(t, logEntries, 8)
+				require.Len(t, logEntries, 12)
 				requestLog := xEnv.Observer().FilterMessage("/graphql")
 				require.Equal(t, requestLog.Len(), 3)
 
@@ -1715,7 +1712,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
 				logEntries := xEnv.Observer().All()
-				require.Len(t, logEntries, 7)
+				require.Len(t, logEntries, 11)
 				requestLog := xEnv.Observer().FilterMessage("/graphql")
 				require.Equal(t, requestLog.Len(), 2)
 				requestContext := requestLog.All()[0].ContextMap()
@@ -1808,7 +1805,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				})
 				require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'products' at Path 'employees'."}],"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"notes":null},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"notes":null},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"notes":null},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"notes":null},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"notes":null},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"notes":null},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"notes":null},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"notes":null},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"notes":null},{"id":12,"details":{"forename":"David","surname":"Stutt"},"notes":null}]}}`, res.Body)
 				logEntries := xEnv.Observer().All()
-				require.Len(t, logEntries, 8)
+				require.Len(t, logEntries, 12)
 				requestLog := xEnv.Observer().FilterMessage("/graphql")
 				require.Equal(t, requestLog.Len(), 3)
 
@@ -2321,9 +2318,9 @@ func TestFlakyAccessLogs(t *testing.T) {
 						"path":            "/graphql",
 						"query":           "",
 						"ip":              "[REDACTED]",
-						"service_name":    "service-name",                             // From request header
-						"operation_hash":  "13143784263060310243",                     // From context
-						"expression_body": "field: id2 not defined on type: Employee", // From expression
+						"service_name":    "service-name",                                     // From request header
+						"operation_hash":  "13143784263060310243",                             // From context
+						"expression_body": "Cannot query field \"id2\" on type \"Employee\".", // From expression
 					}
 					additionalExpectedKeys := []string{
 						"user_agent",

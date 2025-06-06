@@ -733,7 +733,7 @@ func TestApolloGatewayCompatibility(t *testing.T) {
 			})
 			require.NoError(t, err)
 			assert.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
-			assert.Equal(t, `{"errors":[{"message":"Cannot query \"nonExistentField\" on type \"Employee\".","extensions":{"code":"GRAPHQL_VALIDATION_FAILED"}}]}`, res.Body)
+			assert.Equal(t, `{"errors":[{"message":"Cannot query field \"nonExistentField\" on type \"Employee\".","extensions":{"code":"GRAPHQL_VALIDATION_FAILED"}}]}`, res.Body)
 		})
 	})
 	t.Run("enable all: replace undefined operation field error", func(t *testing.T) {
@@ -750,7 +750,7 @@ func TestApolloGatewayCompatibility(t *testing.T) {
 			})
 			require.NoError(t, err)
 			assert.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
-			assert.Equal(t, `{"errors":[{"message":"Cannot query \"nonExistentField\" on type \"Employee\".","extensions":{"code":"GRAPHQL_VALIDATION_FAILED"}}]}`, res.Body)
+			assert.Equal(t, `{"errors":[{"message":"Cannot query field \"nonExistentField\" on type \"Employee\".","extensions":{"code":"GRAPHQL_VALIDATION_FAILED"}}]}`, res.Body)
 		})
 	})
 	t.Run("enable replace invalid variable error", func(t *testing.T) {

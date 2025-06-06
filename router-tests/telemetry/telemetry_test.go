@@ -7153,10 +7153,11 @@ func TestFlakyTelemetry(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			TraceExporter: exporter,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
+
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query foo { employeesTypeNotExist { id } }`,
 			})
-			require.Equal(t, `{"errors":[{"message":"field: employeesTypeNotExist not defined on type: Query","path":["query"]}]}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"Cannot query field \"employeesTypeNotExist\" on type \"Query\".","path":["query"]}]}`, res.Body)
 			sn := exporter.GetSpans().Snapshots()
 
 			require.Len(t, sn, 5, "expected 4 spans, got %d", len(sn))
@@ -7178,7 +7179,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Equal(t, "Operation - Validate", sn[3].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[3].SpanKind())
 			require.Equal(t, codes.Error, sn[3].Status().Code)
-			require.Equal(t, sn[3].Status().Description, "field: employeesTypeNotExist not defined on type: Query")
+			require.Equal(t, `Cannot query field "employeesTypeNotExist" on type "Query".`, sn[3].Status().Description)
 
 			events := sn[3].Events()
 			require.Len(t, events, 1, "expected 1 event because GraphQL validation failed")
@@ -7187,7 +7188,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Equal(t, "query foo", sn[4].Name())
 			require.Equal(t, trace.SpanKindServer, sn[4].SpanKind())
 			require.Equal(t, codes.Error, sn[4].Status().Code)
-			require.Contains(t, sn[4].Status().Description, "field: employeesTypeNotExist not defined on type: Query")
+			require.Equal(t, `Cannot query field "employeesTypeNotExist" on type "Query".`, sn[4].Status().Description)
 
 			events = sn[4].Events()
 			require.Len(t, events, 1, "expected 1 event because the GraphQL request failed")
