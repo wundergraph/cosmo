@@ -21,7 +21,7 @@ type PubSubDataSource struct {
 	topics     []string
 	providerId string
 
-	KafkaAdapter AdapterInterface
+	KafkaAdapter Adapter
 }
 
 func (c *PubSubDataSource) GetFieldName() string {

@@ -21,7 +21,7 @@ type PubSubProviderBuilder struct {
 	logger           *zap.Logger
 	hostName         string
 	routerListenAddr string
-	adapters         map[string]AdapterInterface
+	adapters         map[string]Adapter
 }
 
 func (p *PubSubProviderBuilder) TypeID() string {
@@ -97,12 +97,12 @@ func buildKafkaOptions(eventSource config.KafkaEventSource) ([]kgo.Opt, error) {
 	return opts, nil
 }
 
-func buildProvider(ctx context.Context, provider config.KafkaEventSource, logger *zap.Logger) (AdapterInterface, datasource.Provider, error) {
+func buildProvider(ctx context.Context, provider config.KafkaEventSource, logger *zap.Logger) (Adapter, datasource.Provider, error) {
 	options, err := buildKafkaOptions(provider)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to build options for Kafka provider with ID \"%s\": %w", provider.ID, err)
 	}
-	adapter, err := NewAdapter(ctx, logger, options)
+	adapter, err := NewProviderAdapter(ctx, logger, options)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create adapter for Kafka provider with ID \"%s\": %w", provider.ID, err)
 	}
@@ -122,6 +122,6 @@ func NewPubSubProviderBuilder(
 		logger:           logger,
 		hostName:         hostName,
 		routerListenAddr: routerListenAddr,
-		adapters:         make(map[string]AdapterInterface),
+		adapters:         make(map[string]Adapter),
 	}
 }

@@ -237,8 +237,8 @@ func (pg *PlanGenerator) buildRouterConfig(configFilePath string) (*nodev1.Route
 
 func (pg *PlanGenerator) loadConfiguration(routerConfig *nodev1.RouterConfig, logger *zap.Logger, maxDataSourceCollectorsConcurrency uint) error {
 	routerEngineConfig := RouterEngineConfiguration{}
-	natSources := map[string]*nats.Adapter{}
-	kafkaSources := map[string]*kafka.Adapter{}
+	natSources := map[string]*nats.ProviderAdapter{}
+	kafkaSources := map[string]*kafka.ProviderAdapter{}
 	for _, ds := range routerConfig.GetEngineConfig().GetDatasourceConfigurations() {
 		if ds.GetKind() != nodev1.DataSourceKind_PUBSUB || ds.GetCustomEvents() == nil {
 			continue

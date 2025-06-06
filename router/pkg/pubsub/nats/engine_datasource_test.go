@@ -113,7 +113,7 @@ func TestSubscriptionSource_UniqueRequestID(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			source := &SubscriptionSource{
-				pubSub: NewMockAdapterInterface(t),
+				pubSub: NewMockAdapter(t),
 			}
 			ctx := &resolve.Context{}
 			input := []byte(tt.input)
@@ -140,13 +140,13 @@ func TestSubscriptionSource_Start(t *testing.T) {
 	tests := []struct {
 		name        string
 		input       string
-		mockSetup   func(*MockAdapterInterface, *datasource.MockSubscriptionUpdater)
+		mockSetup   func(*MockAdapter, *datasource.MockSubscriptionUpdater)
 		expectError bool
 	}{
 		{
 			name:  "successful subscription",
 			input: `{"subjects":["subject1", "subject2"], "providerId":"test-provider"}`,
-			mockSetup: func(m *MockAdapterInterface, updater *datasource.MockSubscriptionUpdater) {
+			mockSetup: func(m *MockAdapter, updater *datasource.MockSubscriptionUpdater) {
 				m.On("Subscribe", mock.Anything, SubscriptionEventConfiguration{
 					ProviderID: "test-provider",
 					Subjects:   []string{"subject1", "subject2"},
@@ -157,7 +157,7 @@ func TestSubscriptionSource_Start(t *testing.T) {
 		{
 			name:  "adapter returns error",
 			input: `{"subjects":["subject1"], "providerId":"test-provider"}`,
-			mockSetup: func(m *MockAdapterInterface, updater *datasource.MockSubscriptionUpdater) {
+			mockSetup: func(m *MockAdapter, updater *datasource.MockSubscriptionUpdater) {
 				m.On("Subscribe", mock.Anything, SubscriptionEventConfiguration{
 					ProviderID: "test-provider",
 					Subjects:   []string{"subject1"},
@@ -168,14 +168,14 @@ func TestSubscriptionSource_Start(t *testing.T) {
 		{
 			name:        "invalid input json",
 			input:       `{"invalid json":`,
-			mockSetup:   func(m *MockAdapterInterface, updater *datasource.MockSubscriptionUpdater) {},
+			mockSetup:   func(m *MockAdapter, updater *datasource.MockSubscriptionUpdater) {},
 			expectError: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockAdapter := NewMockAdapterInterface(t)
+			mockAdapter := NewMockAdapter(t)
 			updater := datasource.NewMockSubscriptionUpdater(t)
 			tt.mockSetup(mockAdapter, updater)
 
@@ -206,7 +206,7 @@ func TestNatsPublishDataSource_Load(t *testing.T) {
 	tests := []struct {
 		name            string
 		input           string
-		mockSetup       func(*MockAdapterInterface)
+		mockSetup       func(*MockAdapter)
 		expectError     bool
 		expectedOutput  string
 		expectPublished bool
@@ -214,7 +214,7 @@ func TestNatsPublishDataSource_Load(t *testing.T) {
 		{
 			name:  "successful publish",
 			input: `{"subject":"test-subject", "data":{"message":"hello"}, "providerId":"test-provider"}`,
-			mockSetup: func(m *MockAdapterInterface) {
+			mockSetup: func(m *MockAdapter) {
 				m.On("Publish", mock.Anything, mock.MatchedBy(func(event PublishAndRequestEventConfiguration) bool {
 					return event.ProviderID == "test-provider" &&
 						event.Subject == "test-subject" &&
@@ -228,7 +228,7 @@ func TestNatsPublishDataSource_Load(t *testing.T) {
 		{
 			name:  "publish error",
 			input: `{"subject":"test-subject", "data":{"message":"hello"}, "providerId":"test-provider"}`,
-			mockSetup: func(m *MockAdapterInterface) {
+			mockSetup: func(m *MockAdapter) {
 				m.On("Publish", mock.Anything, mock.Anything).Return(errors.New("publish error"))
 			},
 			expectError:     false, // The Load method doesn't return the publish error directly
@@ -238,7 +238,7 @@ func TestNatsPublishDataSource_Load(t *testing.T) {
 		{
 			name:            "invalid input json",
 			input:           `{"invalid json":`,
-			mockSetup:       func(m *MockAdapterInterface) {},
+			mockSetup:       func(m *MockAdapter) {},
 			expectError:     true,
 			expectPublished: false,
 		},
@@ -246,7 +246,7 @@ func TestNatsPublishDataSource_Load(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockAdapter := NewMockAdapterInterface(t)
+			mockAdapter := NewMockAdapter(t)
 			tt.mockSetup(mockAdapter)
 
 			dataSource := &NatsPublishDataSource{
@@ -282,14 +282,14 @@ func TestNatsRequestDataSource_Load(t *testing.T) {
 	tests := []struct {
 		name           string
 		input          string
-		mockSetup      func(*MockAdapterInterface)
+		mockSetup      func(*MockAdapter)
 		expectError    bool
 		expectedOutput string
 	}{
 		{
 			name:  "successful request",
 			input: `{"subject":"test-subject", "data":{"message":"hello"}, "providerId":"test-provider"}`,
-			mockSetup: func(m *MockAdapterInterface) {
+			mockSetup: func(m *MockAdapter) {
 				m.On("Request", mock.Anything, mock.MatchedBy(func(event PublishAndRequestEventConfiguration) bool {
 					return event.ProviderID == "test-provider" &&
 						event.Subject == "test-subject" &&
@@ -306,7 +306,7 @@ func TestNatsRequestDataSource_Load(t *testing.T) {
 		{
 			name:  "request error",
 			input: `{"subject":"test-subject", "data":{"message":"hello"}, "providerId":"test-provider"}`,
-			mockSetup: func(m *MockAdapterInterface) {
+			mockSetup: func(m *MockAdapter) {
 				m.On("Request", mock.Anything, mock.Anything, mock.Anything).Return(errors.New("request error"))
 			},
 			expectError:    true,
@@ -315,7 +315,7 @@ func TestNatsRequestDataSource_Load(t *testing.T) {
 		{
 			name:           "invalid input json",
 			input:          `{"invalid json":`,
-			mockSetup:      func(m *MockAdapterInterface) {},
+			mockSetup:      func(m *MockAdapter) {},
 			expectError:    true,
 			expectedOutput: "",
 		},
@@ -323,7 +323,7 @@ func TestNatsRequestDataSource_Load(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockAdapter := NewMockAdapterInterface(t)
+			mockAdapter := NewMockAdapter(t)
 			tt.mockSetup(mockAdapter)
 
 			dataSource := &NatsRequestDataSource{

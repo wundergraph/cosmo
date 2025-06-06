@@ -13,7 +13,7 @@ import (
 
 func TestKafkaPubSubDataSource(t *testing.T) {
 	// Create the data source to test with a real adapter
-	adapter := &Adapter{}
+	adapter := &ProviderAdapter{}
 	pubsub := &PubSubDataSource{
 		KafkaAdapter: adapter,
 		fieldName:    "testField",
@@ -29,7 +29,7 @@ func TestKafkaPubSubDataSource(t *testing.T) {
 // TestPubSubDataSourceWithMockAdapter tests the PubSubDataSource with a mocked adapter
 func TestPubSubDataSourceWithMockAdapter(t *testing.T) {
 	// Create mock adapter
-	mockAdapter := NewMockAdapterInterface(t)
+	mockAdapter := NewMockAdapter(t)
 
 	// Configure mock expectations for Publish
 	mockAdapter.On("Publish", mock.Anything, mock.MatchedBy(func(event PublishEventConfiguration) bool {
@@ -63,7 +63,7 @@ func TestPubSubDataSourceWithMockAdapter(t *testing.T) {
 // TestPubSubDataSource_GetResolveDataSource_WrongType tests the PubSubDataSource with a mocked adapter
 func TestPubSubDataSource_GetResolveDataSource_WrongType(t *testing.T) {
 	// Create mock adapter
-	mockAdapter := NewMockAdapterInterface(t)
+	mockAdapter := NewMockAdapter(t)
 
 	// Create the data source with mock adapter
 	pubsub := &PubSubDataSource{

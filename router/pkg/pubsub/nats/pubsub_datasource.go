@@ -19,7 +19,7 @@ const (
 )
 
 type PubSubDataSource struct {
-	NatsAdapter AdapterInterface
+	NatsAdapter Adapter
 
 	fieldName  string
 	eventType  EventType

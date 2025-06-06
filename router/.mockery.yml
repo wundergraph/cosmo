@@ -19,10 +19,10 @@ packages:
       Provider:
   github.com/wundergraph/cosmo/router/pkg/pubsub/nats:
     interfaces:
-      AdapterInterface:
+      Adapter:
   github.com/wundergraph/cosmo/router/pkg/pubsub/kafka:
     interfaces:
-      AdapterInterface:
+      Adapter:
   github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve:
     config:
       dir: 'pkg/pubsub/datasource'

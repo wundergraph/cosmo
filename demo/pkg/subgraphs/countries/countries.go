@@ -8,7 +8,7 @@ import (
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/countries/subgraph/generated"
 )
 
-func NewSchema(pubSubBySourceName map[string]nats.AdapterInterface) graphql.ExecutableSchema {
+func NewSchema(pubSubBySourceName map[string]nats.Adapter) graphql.ExecutableSchema {
 	return generated.NewExecutableSchema(generated.Config{Resolvers: &subgraph.Resolver{
 		NatsPubSubByProviderID: pubSubBySourceName,
 	}})

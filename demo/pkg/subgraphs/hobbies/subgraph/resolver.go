@@ -12,7 +12,7 @@ import (
 // It serves as dependency injection for your app, add any dependencies you require here.
 
 type Resolver struct {
-	NatsPubSubByProviderID map[string]nats.AdapterInterface
+	NatsPubSubByProviderID map[string]nats.Adapter
 }
 
 func (r *Resolver) Employees(hobby model.Hobby) ([]*model.Employee, error) {

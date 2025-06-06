@@ -24,7 +24,7 @@ This will generate the new proto files in the `gen` folder.
 
 To implement a new PubSub provider, the following components must be created:
 - `SubscriptionEventConfiguration` and `PublishEventConfiguration`: Define the data structures used for communication between the adapter and the engine.
-- `Adapter`: Implements the logic that interfaces with the provider’s client or SDK.
+- `ProviderAdapter`: Implements the logic that interfaces with the provider’s client or SDK.
 - `SubscriptionDataSource` and `PublishDataSource`: Engine components that leverage the configurations to subscribe and publish data.
 - `PubSubDataSource`: Bridges the engine and the provider.
 - `PubSubProviderBuilder`: Used by the router to instantiate the provider.
@@ -35,12 +35,12 @@ These structures should be placed at the top of the `engine_datasource.go` file.
 
 Refer to the [kafka implementation](./kafka/engine_datasource.go) for a working example.
 
-### `Adapter`
+### `ProviderAdapter`
 
 This component encapsulates the provider-specific logic. Although not required, it’s best practice to implement the following interface to facilitate testing via mocks:
 
 ```go
-type AdapterInterface interface {
+type Adapter interface {
 	Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error
 	Publish(ctx context.Context, event PublishEventConfiguration) error
 	Startup(ctx context.Context) error
@@ -89,13 +89,13 @@ Refer to the [kafka implementation](./kafka/provider_builder.go) for a working e
 You should also add tests to your provider.
 
 ### Generate mocks
-As a first step, you can use the [mockery](https://github.com/vektra/mockery) tool to generate the mocks for the Adapter interface you have implemented. To do this, add the following to the `.mockery.yml` file:
+As a first step, you can use the [mockery](https://github.com/vektra/mockery) tool to generate the mocks for the ProviderAdapter interface you have implemented. To do this, add the following to the `.mockery.yml` file:
 
 ```yaml
 packages:
   github.com/wundergraph/cosmo/router/pkg/pubsub/{your-provider-name}:
     interfaces:
-      AdapterInterface:
+      Adapter:
 ```
 
 Then run the following command from the router directory:

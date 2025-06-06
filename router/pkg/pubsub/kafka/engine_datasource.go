@@ -29,7 +29,7 @@ func (s *PublishEventConfiguration) MarshalJSONTemplate() string {
 }
 
 type SubscriptionDataSource struct {
-	pubSub AdapterInterface
+	pubSub Adapter
 }
 
 func (s *SubscriptionDataSource) UniqueRequestID(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
@@ -63,7 +63,7 @@ func (s *SubscriptionDataSource) Start(ctx *resolve.Context, input []byte, updat
 }
 
 type PublishDataSource struct {
-	pubSub AdapterInterface
+	pubSub Adapter
 }
 
 func (s *PublishDataSource) Load(ctx context.Context, input []byte, out *bytes.Buffer) error {

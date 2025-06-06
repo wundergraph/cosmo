@@ -78,7 +78,7 @@ func TestSubscriptionSource_UniqueRequestID(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			source := &SubscriptionDataSource{
-				pubSub: NewMockAdapterInterface(t),
+				pubSub: NewMockAdapter(t),
 			}
 			ctx := &resolve.Context{}
 			input := []byte(tt.input)
@@ -105,13 +105,13 @@ func TestSubscriptionSource_Start(t *testing.T) {
 	tests := []struct {
 		name        string
 		input       string
-		mockSetup   func(*MockAdapterInterface, *datasource.MockSubscriptionUpdater)
+		mockSetup   func(*MockAdapter, *datasource.MockSubscriptionUpdater)
 		expectError bool
 	}{
 		{
 			name:  "successful subscription",
 			input: `{"topics":["topic1", "topic2"], "providerId":"test-provider"}`,
-			mockSetup: func(m *MockAdapterInterface, updater *datasource.MockSubscriptionUpdater) {
+			mockSetup: func(m *MockAdapter, updater *datasource.MockSubscriptionUpdater) {
 				m.On("Subscribe", mock.Anything, SubscriptionEventConfiguration{
 					ProviderID: "test-provider",
 					Topics:     []string{"topic1", "topic2"},
@@ -122,7 +122,7 @@ func TestSubscriptionSource_Start(t *testing.T) {
 		{
 			name:  "adapter returns error",
 			input: `{"topics":["topic1"], "providerId":"test-provider"}`,
-			mockSetup: func(m *MockAdapterInterface, updater *datasource.MockSubscriptionUpdater) {
+			mockSetup: func(m *MockAdapter, updater *datasource.MockSubscriptionUpdater) {
 				m.On("Subscribe", mock.Anything, SubscriptionEventConfiguration{
 					ProviderID: "test-provider",
 					Topics:     []string{"topic1"},
@@ -133,14 +133,14 @@ func TestSubscriptionSource_Start(t *testing.T) {
 		{
 			name:        "invalid input json",
 			input:       `{"invalid json":`,
-			mockSetup:   func(m *MockAdapterInterface, updater *datasource.MockSubscriptionUpdater) {},
+			mockSetup:   func(m *MockAdapter, updater *datasource.MockSubscriptionUpdater) {},
 			expectError: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockAdapter := NewMockAdapterInterface(t)
+			mockAdapter := NewMockAdapter(t)
 			updater := datasource.NewMockSubscriptionUpdater(t)
 			tt.mockSetup(mockAdapter, updater)
 
@@ -171,7 +171,7 @@ func TestKafkaPublishDataSource_Load(t *testing.T) {
 	tests := []struct {
 		name            string
 		input           string
-		mockSetup       func(*MockAdapterInterface)
+		mockSetup       func(*MockAdapter)
 		expectError     bool
 		expectedOutput  string
 		expectPublished bool
@@ -179,7 +179,7 @@ func TestKafkaPublishDataSource_Load(t *testing.T) {
 		{
 			name:  "successful publish",
 			input: `{"topic":"test-topic", "data":{"message":"hello"}, "providerId":"test-provider"}`,
-			mockSetup: func(m *MockAdapterInterface) {
+			mockSetup: func(m *MockAdapter) {
 				m.On("Publish", mock.Anything, mock.MatchedBy(func(event PublishEventConfiguration) bool {
 					return event.ProviderID == "test-provider" &&
 						event.Topic == "test-topic" &&
@@ -193,7 +193,7 @@ func TestKafkaPublishDataSource_Load(t *testing.T) {
 		{
 			name:  "publish error",
 			input: `{"topic":"test-topic", "data":{"message":"hello"}, "providerId":"test-provider"}`,
-			mockSetup: func(m *MockAdapterInterface) {
+			mockSetup: func(m *MockAdapter) {
 				m.On("Publish", mock.Anything, mock.Anything).Return(errors.New("publish error"))
 			},
 			expectError:     false, // The Load method doesn't return the publish error directly
@@ -203,7 +203,7 @@ func TestKafkaPublishDataSource_Load(t *testing.T) {
 		{
 			name:            "invalid input json",
 			input:           `{"invalid json":`,
-			mockSetup:       func(m *MockAdapterInterface) {},
+			mockSetup:       func(m *MockAdapter) {},
 			expectError:     true,
 			expectPublished: false,
 		},
@@ -211,7 +211,7 @@ func TestKafkaPublishDataSource_Load(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockAdapter := NewMockAdapterInterface(t)
+			mockAdapter := NewMockAdapter(t)
 			tt.mockSetup(mockAdapter)
 
 			dataSource := &PublishDataSource{
@@ -236,7 +236,7 @@ func TestKafkaPublishDataSource_Load(t *testing.T) {
 func TestKafkaPublishDataSource_LoadWithFiles(t *testing.T) {
 	t.Run("panic on not implemented", func(t *testing.T) {
 		dataSource := &PublishDataSource{
-			pubSub: NewMockAdapterInterface(t),
+			pubSub: NewMockAdapter(t),
 		}
 
 		assert.Panics(t, func() {

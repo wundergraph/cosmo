@@ -20,7 +20,7 @@ type PubSubProviderBuilder struct {
 	logger           *zap.Logger
 	hostName         string
 	routerListenAddr string
-	adapters         map[string]AdapterInterface
+	adapters         map[string]Adapter
 }
 
 func (p *PubSubProviderBuilder) TypeID() string {
@@ -122,7 +122,7 @@ func buildNatsOptions(eventSource config.NatsEventSource, logger *zap.Logger) ([
 	return opts, nil
 }
 
-func buildProvider(ctx context.Context, provider config.NatsEventSource, logger *zap.Logger, hostName string, routerListenAddr string) (AdapterInterface, datasource.Provider, error) {
+func buildProvider(ctx context.Context, provider config.NatsEventSource, logger *zap.Logger, hostName string, routerListenAddr string) (Adapter, datasource.Provider, error) {
 	options, err := buildNatsOptions(provider, logger)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to build options for Nats provider with ID \"%s\": %w", provider.ID, err)
@@ -147,6 +147,6 @@ func NewPubSubProviderBuilder(
 		logger:           logger,
 		hostName:         hostName,
 		routerListenAddr: routerListenAddr,
-		adapters:         make(map[string]AdapterInterface),
+		adapters:         make(map[string]Adapter),
 	}
 }
