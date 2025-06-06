@@ -808,6 +808,9 @@
     },
     "SubscriptionMultipartPrintBoundary": {
       "Enabled": false
+    },
+    "UseValidationFailedExtension": {
+      "Enabled": true
     }
   },
   "ApolloRouterCompatibilityFlags": {

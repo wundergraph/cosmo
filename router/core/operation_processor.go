@@ -1202,7 +1202,7 @@ func createParseKit(i int, options *parseKitOptions) *parseKit {
 		}),
 		operationValidator: astvalidation.DefaultOperationValidator(astvalidation.WithApolloCompatibilityFlags(
 			apollocompatibility.Flags{
-				ReplaceUndefinedOpFieldError: options.apolloCompatibilityFlags.ReplaceUndefinedOpFieldErrors.Enabled,
+				UseValidationFailedExtension: options.apolloCompatibilityFlags.UseValidationFailedExtension.Enabled,
 			},
 		)),
 	}

@@ -927,7 +927,7 @@ func TestIntegrationWithUndefinedField(t *testing.T) {
 		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 			Query: `{ employees { id notDefined } }`,
 		})
-		require.JSONEq(t, `{"errors":[{"message":"field: notDefined not defined on type: Employee","path":["query","employees"]}]}`, res.Body)
+		require.JSONEq(t, `{"errors":[{"message":"Cannot query field \"notDefined\" on type \"Employee\".","path":["query","employees"]}]}`, res.Body)
 	})
 }
 
