@@ -1,5 +1,5 @@
-//go:build darwin
-// +build darwin
+//go:build !linux
+// +build !linux
 
 package routerplugin
 
