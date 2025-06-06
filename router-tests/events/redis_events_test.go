@@ -51,7 +51,7 @@ func assertRedisMultipartValueEventually(t *testing.T, reader *bufio.Reader, exp
 		}
 		assert.Equal(t, expected, string(line))
 		return true
-	}, NatsWaitTimeout, time.Millisecond*100)
+	}, RedisWaitTimeout, time.Millisecond*100)
 }
 
 func TestRedisEvents(t *testing.T) {
