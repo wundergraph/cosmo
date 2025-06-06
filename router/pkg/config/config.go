@@ -823,65 +823,29 @@ type AccessLogsSubgraphsConfig struct {
 }
 
 type ApolloCompatibilityFlags struct {
-	EnableAll                          bool                                                  `yaml:"enable_all" envDefault:"false" env:"APOLLO_COMPATIBILITY_ENABLE_ALL"`
-	ValueCompletion                    ApolloCompatibilityValueCompletion                    `yaml:"value_completion" envPrefix:"APOLLO_COMPATIBILITY_VALUE_COMPLETION_"`
-	TruncateFloats                     ApolloCompatibilityTruncateFloats                     `yaml:"truncate_floats" envPrefix:"APOLLO_COMPATIBILITY_TRUNCATE_FLOATS_"`
-	SuppressFetchErrors                ApolloCompatibilitySuppressFetchErrors                `yaml:"suppress_fetch_errors" envPrefix:"APOLLO_COMPATIBILITY_SUPPRESS_FETCH_ERRORS_"`
-	ReplaceUndefinedOpFieldErrors      ApolloCompatibilityReplaceUndefinedOpFieldErrors      `yaml:"replace_undefined_op_field_errors" envPrefix:"APOLLO_COMPATIBILITY_REPLACE_UNDEFINED_OP_FIELD_ERRORS_"`
-	ReplaceInvalidVarErrors            ApolloCompatibilityReplaceInvalidVarErrors            `yaml:"replace_invalid_var_errors" envPrefix:"APOLLO_COMPATIBILITY_REPLACE_INVALID_VAR_ERRORS_"`
-	ReplaceValidationErrorStatus       ApolloCompatibilityReplaceValidationErrorStatus       `yaml:"replace_validation_error_status" envPrefix:"APOLLO_COMPATIBILITY_REPLACE_VALIDATION_ERROR_STATUS_"`
-	SubscriptionMultipartPrintBoundary ApolloCompatibilitySubscriptionMultipartPrintBoundary `yaml:"subscription_multipart_print_boundary" envPrefix:"APOLLO_COMPATIBILITY_SUBSCRIPTION_MULTIPART_PRINT_BOUNDARY_"`
-	UseValidationFailedExtension       ApolloCompatibilityUseValidationFailedExtension       `yaml:"use_validation_failed_extension" envPrefix:"APOLLO_COMPATIBILITY_USE_VALIDATION_FAILED_EXTENSION_"`
+	EnableAll                          bool                    `yaml:"enable_all" envDefault:"false" env:"APOLLO_COMPATIBILITY_ENABLE_ALL"`
+	ValueCompletion                    ApolloCompatibilityFlag `yaml:"value_completion" envPrefix:"APOLLO_COMPATIBILITY_VALUE_COMPLETION_"`
+	TruncateFloats                     ApolloCompatibilityFlag `yaml:"truncate_floats" envPrefix:"APOLLO_COMPATIBILITY_TRUNCATE_FLOATS_"`
+	SuppressFetchErrors                ApolloCompatibilityFlag `yaml:"suppress_fetch_errors" envPrefix:"APOLLO_COMPATIBILITY_SUPPRESS_FETCH_ERRORS_"`
+	ReplaceUndefinedOpFieldErrors      ApolloCompatibilityFlag `yaml:"replace_undefined_op_field_errors" envPrefix:"APOLLO_COMPATIBILITY_REPLACE_UNDEFINED_OP_FIELD_ERRORS_"`
+	ReplaceInvalidVarErrors            ApolloCompatibilityFlag `yaml:"replace_invalid_var_errors" envPrefix:"APOLLO_COMPATIBILITY_REPLACE_INVALID_VAR_ERRORS_"`
+	ReplaceValidationErrorStatus       ApolloCompatibilityFlag `yaml:"replace_validation_error_status" envPrefix:"APOLLO_COMPATIBILITY_REPLACE_VALIDATION_ERROR_STATUS_"`
+	SubscriptionMultipartPrintBoundary ApolloCompatibilityFlag `yaml:"subscription_multipart_print_boundary" envPrefix:"APOLLO_COMPATIBILITY_SUBSCRIPTION_MULTIPART_PRINT_BOUNDARY_"`
+	UseValidationFailedExtension       ApolloCompatibilityFlag `yaml:"use_validation_failed_extension" envPrefix:"APOLLO_COMPATIBILITY_USE_VALIDATION_FAILED_EXTENSION_"`
 }
 
-type ApolloCompatibilityUseValidationFailedExtension struct {
-	Enabled bool `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+type ApolloRouterCompatibilityFlags struct {
+	ReplaceInvalidVarErrors ApolloCompatibilityFlag `yaml:"replace_invalid_var_errors" envPrefix:"APOLLO_ROUTER_COMPATIBILITY_REPLACE_INVALID_VAR_ERRORS_"`
+	SubrequestHTTPError     ApolloCompatibilityFlag `yaml:"subrequest_http_error" envPrefix:"APOLLO_ROUTER_COMPATIBILITY_SUBREQUEST_HTTP_ERROR_"`
 }
 
-type ApolloCompatibilityValueCompletion struct {
+type ApolloCompatibilityFlag struct {
 	Enabled bool `yaml:"enabled" envDefault:"false" env:"ENABLED"`
 }
 
 type ClientHeader struct {
 	Name    string `yaml:"name,omitempty"`
 	Version string `yaml:"version,omitempty"`
-}
-
-type ApolloCompatibilityTruncateFloats struct {
-	Enabled bool `yaml:"enabled" envDefault:"false" env:"ENABLED"`
-}
-
-type ApolloCompatibilitySuppressFetchErrors struct {
-	Enabled bool `yaml:"enabled" envDefault:"false" env:"ENABLED"`
-}
-
-type ApolloCompatibilityReplaceUndefinedOpFieldErrors struct {
-	Enabled bool `yaml:"enabled" envDefault:"false" env:"ENABLED"`
-}
-
-type ApolloCompatibilityReplaceInvalidVarErrors struct {
-	Enabled bool `yaml:"enabled" envDefault:"false" env:"ENABLED"`
-}
-
-type ApolloCompatibilityReplaceValidationErrorStatus struct {
-	Enabled bool `yaml:"enabled" envDefault:"false" env:"ENABLED"`
-}
-
-type ApolloCompatibilitySubscriptionMultipartPrintBoundary struct {
-	Enabled bool `yaml:"enabled" envDefault:"false" env:"ENABLED"`
-}
-
-type ApolloRouterCompatibilityFlags struct {
-	ReplaceInvalidVarErrors ApolloRouterCompatibilityReplaceInvalidVarErrors `yaml:"replace_invalid_var_errors"`
-	SubrequestHTTPError     ApolloRouterCompatibilitySubrequestHTTPError     `yaml:"subrequest_http_error"`
-}
-
-type ApolloRouterCompatibilityReplaceInvalidVarErrors struct {
-	Enabled bool `yaml:"enabled" envDefault:"false" env:"ENABLED"`
-}
-
-type ApolloRouterCompatibilitySubrequestHTTPError struct {
-	Enabled bool `yaml:"enabled" envDefault:"false" env:"ENABLED"`
 }
 
 type CacheWarmupSource struct {
