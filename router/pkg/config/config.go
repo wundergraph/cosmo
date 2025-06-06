@@ -831,7 +831,7 @@ type ApolloCompatibilityFlags struct {
 	ReplaceInvalidVarErrors            ApolloCompatibilityFlag `yaml:"replace_invalid_var_errors" envPrefix:"APOLLO_COMPATIBILITY_REPLACE_INVALID_VAR_ERRORS_"`
 	ReplaceValidationErrorStatus       ApolloCompatibilityFlag `yaml:"replace_validation_error_status" envPrefix:"APOLLO_COMPATIBILITY_REPLACE_VALIDATION_ERROR_STATUS_"`
 	SubscriptionMultipartPrintBoundary ApolloCompatibilityFlag `yaml:"subscription_multipart_print_boundary" envPrefix:"APOLLO_COMPATIBILITY_SUBSCRIPTION_MULTIPART_PRINT_BOUNDARY_"`
-	UseValidationFailedExtension       ApolloCompatibilityFlag `yaml:"use_validation_failed_extension" envPrefix:"APOLLO_COMPATIBILITY_USE_VALIDATION_FAILED_EXTENSION_"`
+	UseGraphQLValidationFailedStatus   ApolloCompatibilityFlag `yaml:"use_graphql_validation_failed_status" envPrefix:"APOLLO_COMPATIBILITY_USE_GRAPHQL_VALIDATION_FAILED_STATUS_"`
 }
 
 type ApolloRouterCompatibilityFlags struct {

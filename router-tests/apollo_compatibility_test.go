@@ -722,7 +722,7 @@ func TestApolloGatewayCompatibility(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-					UseValidationFailedExtension: config.ApolloCompatibilityFlag{
+					UseGraphQLValidationFailedStatus: config.ApolloCompatibilityFlag{
 						Enabled: true,
 					},
 				}),

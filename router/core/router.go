@@ -1962,11 +1962,11 @@ func WithApolloCompatibilityFlagsConfig(cfg config.ApolloCompatibilityFlags) Opt
 			cfg.ReplaceInvalidVarErrors.Enabled = true
 			cfg.ReplaceValidationErrorStatus.Enabled = true
 			cfg.SubscriptionMultipartPrintBoundary.Enabled = true
-			cfg.UseValidationFailedExtension.Enabled = true
+			cfg.UseGraphQLValidationFailedStatus.Enabled = true
 		}
 
 		if cfg.ReplaceUndefinedOpFieldErrors.Enabled {
-			cfg.UseValidationFailedExtension.Enabled = true
+			cfg.UseGraphQLValidationFailedStatus.Enabled = true
 			r.logger.Warn("option apollo_compatibility_flags/replace_undefined_op_field_errors is deprecated, and has automatically been converted to apollo_compatibility_flags/use_validation_failed_extension, please update your configuration")
 		}
 

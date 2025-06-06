@@ -464,7 +464,7 @@
     "SubscriptionMultipartPrintBoundary": {
       "Enabled": false
     },
-    "UseValidationFailedExtension": {
+    "UseGraphQLValidationFailedStatus": {
       "Enabled": false
     }
   },
