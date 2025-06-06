@@ -452,5 +452,5 @@ client_header:
 
 apollo_compatibility_flags:
   enable_all: false
-  use_validation_failed_extension:
+  use_graphql_validation_failed_status:
     enabled: true
