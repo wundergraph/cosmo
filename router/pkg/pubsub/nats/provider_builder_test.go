@@ -80,13 +80,13 @@ func TestPubSubProviderBuilderFactory(t *testing.T) {
 
 		ctx := context.Background()
 
-		builder := NewPubSubProviderBuilder(ctx, logger, "host", "addr")
+		builder := NewProviderBuilder(ctx, logger, "host", "addr")
 		require.NotNil(t, builder)
 		provider, err := builder.BuildProvider(cfg)
 		require.NoError(t, err)
 
 		// Check the returned provider
-		natsProvider, ok := provider.(*datasource.PubSubProviderImpl)
+		natsProvider, ok := provider.(*datasource.PubSubProvider)
 		require.True(t, ok)
 		assert.NotNil(t, natsProvider.Logger)
 		assert.NotNil(t, natsProvider.Adapter)

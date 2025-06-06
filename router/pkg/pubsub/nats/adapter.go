@@ -16,8 +16,8 @@ import (
 	"go.uber.org/zap"
 )
 
-// AdapterInterface defines the methods that a NATS adapter should implement
-type AdapterInterface interface {
+// Adapter defines the methods that a NATS adapter should implement
+type Adapter interface {
 	// Subscribe subscribes to the given events and sends updates to the updater
 	Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error
 	// Publish publishes the given event to the specified subject
@@ -30,8 +30,8 @@ type AdapterInterface interface {
 	Shutdown(ctx context.Context) error
 }
 
-// Adapter implements the AdapterInterface for NATS pub/sub
-type Adapter struct {
+// ProviderAdapter implements the AdapterInterface for NATS pub/sub
+type ProviderAdapter struct {
 	ctx              context.Context
 	client           *nats.Conn
 	js               jetstream.JetStream
@@ -48,7 +48,7 @@ type Adapter struct {
 // We use the hostname and the address the router is listening on, which should provide a good representation
 // of what a unique instance is from the perspective of the client that has started a subscription to this instance
 // and want to restart the subscription after a failure on the client or router side.
-func (p *Adapter) getInstanceIdentifier() string {
+func (p *ProviderAdapter) getInstanceIdentifier() string {
 	return fmt.Sprintf("%s-%s", p.hostName, p.routerListenAddr)
 }
 
@@ -56,7 +56,7 @@ func (p *Adapter) getInstanceIdentifier() string {
 // we need to make sure that the durable consumer name is unique for each instance and subjects to prevent
 // multiple routers from changing the same consumer, which would lead to message loss and wrong messages delivered
 // to the subscribers
-func (p *Adapter) getDurableConsumerName(durableName string, subjects []string) (string, error) {
+func (p *ProviderAdapter) getDurableConsumerName(durableName string, subjects []string) (string, error) {
 	subjHash := xxhash.New()
 	_, err := subjHash.WriteString(p.getInstanceIdentifier())
 	if err != nil {
@@ -72,7 +72,7 @@ func (p *Adapter) getDurableConsumerName(durableName string, subjects []string) 
 	return fmt.Sprintf("%s-%x", durableName, subjHash.Sum64()), nil
 }
 
-func (p *Adapter) Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error {
+func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error {
 	log := p.logger.With(
 		zap.String("provider_id", event.ProviderID),
 		zap.String("method", "subscribe"),
@@ -197,7 +197,7 @@ func (p *Adapter) Subscribe(ctx context.Context, event SubscriptionEventConfigur
 	return nil
 }
 
-func (p *Adapter) Publish(_ context.Context, event PublishAndRequestEventConfiguration) error {
+func (p *ProviderAdapter) Publish(_ context.Context, event PublishAndRequestEventConfiguration) error {
 	log := p.logger.With(
 		zap.String("provider_id", event.ProviderID),
 		zap.String("method", "publish"),
@@ -219,7 +219,7 @@ func (p *Adapter) Publish(_ context.Context, event PublishAndRequestEventConfigu
 	return nil
 }
 
-func (p *Adapter) Request(ctx context.Context, event PublishAndRequestEventConfiguration, w io.Writer) error {
+func (p *ProviderAdapter) Request(ctx context.Context, event PublishAndRequestEventConfiguration, w io.Writer) error {
 	log := p.logger.With(
 		zap.String("provider_id", event.ProviderID),
 		zap.String("method", "request"),
@@ -247,7 +247,7 @@ func (p *Adapter) Request(ctx context.Context, event PublishAndRequestEventConfi
 	return err
 }
 
-func (p *Adapter) flush(ctx context.Context) error {
+func (p *ProviderAdapter) flush(ctx context.Context) error {
 	if p.client == nil {
 		return nil
 	}
@@ -260,7 +260,7 @@ func (p *Adapter) flush(ctx context.Context) error {
 	return p.client.FlushWithContext(ctx)
 }
 
-func (p *Adapter) Startup(ctx context.Context) (err error) {
+func (p *ProviderAdapter) Startup(ctx context.Context) (err error) {
 	p.client, err = nats.Connect(p.url, p.opts...)
 	if err != nil {
 		return err
@@ -272,7 +272,7 @@ func (p *Adapter) Startup(ctx context.Context) (err error) {
 	return nil
 }
 
-func (p *Adapter) Shutdown(ctx context.Context) error {
+func (p *ProviderAdapter) Shutdown(ctx context.Context) error {
 	if p.client == nil {
 		return nil
 	}
@@ -303,12 +303,12 @@ func (p *Adapter) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-func NewAdapter(ctx context.Context, logger *zap.Logger, url string, opts []nats.Option, hostName string, routerListenAddr string) (AdapterInterface, error) {
+func NewAdapter(ctx context.Context, logger *zap.Logger, url string, opts []nats.Option, hostName string, routerListenAddr string) (Adapter, error) {
 	if logger == nil {
 		logger = zap.NewNop()
 	}
 
-	return &Adapter{
+	return &ProviderAdapter{
 		ctx:              ctx,
 		logger:           logger.With(zap.String("pubsub", "nats")),
 		closeWg:          sync.WaitGroup{},

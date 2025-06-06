@@ -16,8 +16,8 @@ import (
 
 func TestBuild_OK(t *testing.T) {
 	ctx := context.Background()
-	mockBuilder := datasource.NewMockPubSubProviderBuilder[config.NatsEventSource, *nodev1.NatsEventConfiguration](t)
-	mockPubSubProvider := datasource.NewMockPubSubProvider(t)
+	mockBuilder := datasource.NewMockProviderBuilder[config.NatsEventSource, *nodev1.NatsEventConfiguration](t)
+	mockPubSubProvider := datasource.NewMockProvider(t)
 
 	dsMeta := &plan.DataSourceMetadata{
 		RootNodes: []plan.TypeField{
@@ -62,10 +62,6 @@ func TestBuild_OK(t *testing.T) {
 
 	mockBuilder.On("TypeID").Return("nats")
 	mockBuilder.On("BuildProvider", natsEventSources[0]).Return(mockPubSubProvider, nil)
-	mockBuilder.On("BuildDataSourceFactory", dsConf.Configuration.GetCustomEvents().GetNats()[0]).Return(
-		datasource.NewPubSubDataSourceFactory(mockBuilder, dsConf.Configuration.GetCustomEvents().GetNats()[0]),
-		nil,
-	)
 
 	// ctx, kafkaBuilder, config.Providers.Kafka, kafkaDsConfsWithEvents
 	// Execute the function
@@ -81,7 +77,7 @@ func TestBuild_OK(t *testing.T) {
 
 func TestBuild_ProviderError(t *testing.T) {
 	ctx := context.Background()
-	mockBuilder := datasource.NewMockPubSubProviderBuilder[config.NatsEventSource, *nodev1.NatsEventConfiguration](t)
+	mockBuilder := datasource.NewMockProviderBuilder[config.NatsEventSource, *nodev1.NatsEventConfiguration](t)
 
 	dsMeta := &plan.DataSourceMetadata{
 		RootNodes: []plan.TypeField{
@@ -135,7 +131,7 @@ func TestBuild_ProviderError(t *testing.T) {
 
 func TestBuild_ShouldGetAnErrorIfProviderIsNotDefined(t *testing.T) {
 	ctx := context.Background()
-	mockBuilder := datasource.NewMockPubSubProviderBuilder[config.NatsEventSource, *nodev1.NatsEventConfiguration](t)
+	mockBuilder := datasource.NewMockProviderBuilder[config.NatsEventSource, *nodev1.NatsEventConfiguration](t)
 	//mockPubSubProvider := datasource.NewMockPubSubProvider(t)
 
 	dsMeta := &plan.DataSourceMetadata{
@@ -194,8 +190,8 @@ func TestBuild_ShouldGetAnErrorIfProviderIsNotDefined(t *testing.T) {
 
 func TestBuild_ShouldNotInitializeProviderIfNotUsed(t *testing.T) {
 	ctx := context.Background()
-	mockBuilder := datasource.NewMockPubSubProviderBuilder[config.NatsEventSource, *nodev1.NatsEventConfiguration](t)
-	mockPubSubUsedProvider := datasource.NewMockPubSubProvider(t)
+	mockBuilder := datasource.NewMockProviderBuilder[config.NatsEventSource, *nodev1.NatsEventConfiguration](t)
+	mockPubSubUsedProvider := datasource.NewMockProvider(t)
 
 	dsMeta := &plan.DataSourceMetadata{
 		RootNodes: []plan.TypeField{
@@ -241,10 +237,6 @@ func TestBuild_ShouldNotInitializeProviderIfNotUsed(t *testing.T) {
 
 	mockBuilder.On("TypeID").Return("nats")
 	mockBuilder.On("BuildProvider", natsEventSources[1]).Return(mockPubSubUsedProvider, nil)
-	mockBuilder.On("BuildDataSourceFactory", dsConf.Configuration.GetCustomEvents().GetNats()[0]).Return(
-		datasource.NewPubSubDataSourceFactory(mockBuilder, dsConf.Configuration.GetCustomEvents().GetNats()[0]),
-		nil,
-	)
 
 	// Execute the function
 	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs)

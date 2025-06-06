@@ -19,20 +19,20 @@ var (
 	errClientClosed = errors.New("client closed")
 )
 
-// AdapterInterface defines the interface for Kafka adapter operations
-type AdapterInterface interface {
+// Adapter defines the interface for Kafka adapter operations
+type Adapter interface {
 	Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error
 	Publish(ctx context.Context, event PublishEventConfiguration) error
 	Startup(ctx context.Context) error
 	Shutdown(ctx context.Context) error
 }
 
-// Adapter is a Kafka pubsub implementation.
+// ProviderAdapter is a Kafka pubsub implementation.
 // It uses the franz-go Kafka client to consume and produce messages.
 // The pubsub is stateless and does not store any messages.
 // It uses a single write client to produce messages and a client per topic to consume messages.
 // Each client polls the Kafka topic for new records and updates the subscriptions with the new data.
-type Adapter struct {
+type ProviderAdapter struct {
 	ctx         context.Context
 	opts        []kgo.Opt
 	logger      *zap.Logger
@@ -42,7 +42,7 @@ type Adapter struct {
 }
 
 // topicPoller polls the Kafka topic for new records and calls the updateTriggers function.
-func (p *Adapter) topicPoller(ctx context.Context, client *kgo.Client, updater resolve.SubscriptionUpdater) error {
+func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, updater resolve.SubscriptionUpdater) error {
 	for {
 		select {
 		case <-p.ctx.Done(): // Close the poller if the application context was canceled
@@ -96,7 +96,7 @@ func (p *Adapter) topicPoller(ctx context.Context, client *kgo.Client, updater r
 
 // Subscribe subscribes to the given topics and updates the subscription updater.
 // The engine already deduplicates subscriptions with the same topics, stream configuration, extensions, headers, etc.
-func (p *Adapter) Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error {
+func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error {
 
 	log := p.logger.With(
 		zap.String("provider_id", event.ProviderID),
@@ -146,7 +146,7 @@ func (p *Adapter) Subscribe(ctx context.Context, event SubscriptionEventConfigur
 // Publish publishes the given event to the Kafka topic in a non-blocking way.
 // Publish errors are logged and returned as a pubsub error.
 // The event is written with a dedicated write client.
-func (p *Adapter) Publish(ctx context.Context, event PublishEventConfiguration) error {
+func (p *ProviderAdapter) Publish(ctx context.Context, event PublishEventConfiguration) error {
 	log := p.logger.With(
 		zap.String("provider_id", event.ProviderID),
 		zap.String("method", "publish"),
@@ -184,7 +184,7 @@ func (p *Adapter) Publish(ctx context.Context, event PublishEventConfiguration) 
 	return nil
 }
 
-func (p *Adapter) Startup(ctx context.Context) (err error) {
+func (p *ProviderAdapter) Startup(ctx context.Context) (err error) {
 	p.writeClient, err = kgo.NewClient(append(p.opts,
 		// For observability, we set the client ID to "router"
 		kgo.ClientID("cosmo.router.producer"))...,
@@ -196,7 +196,7 @@ func (p *Adapter) Startup(ctx context.Context) (err error) {
 	return
 }
 
-func (p *Adapter) Shutdown(ctx context.Context) error {
+func (p *ProviderAdapter) Shutdown(ctx context.Context) error {
 
 	if p.writeClient == nil {
 		return nil
@@ -222,13 +222,13 @@ func (p *Adapter) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-func NewAdapter(ctx context.Context, logger *zap.Logger, opts []kgo.Opt) (*Adapter, error) {
+func NewProviderAdapter(ctx context.Context, logger *zap.Logger, opts []kgo.Opt) (*ProviderAdapter, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	if logger == nil {
 		logger = zap.NewNop()
 	}
 
-	return &Adapter{
+	return &ProviderAdapter{
 		ctx:     ctx,
 		logger:  logger.With(zap.String("pubsub", "kafka")),
 		opts:    opts,

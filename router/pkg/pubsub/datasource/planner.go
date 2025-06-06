@@ -11,51 +11,51 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
-type Planner[P, E any] struct {
-	id                      int
-	pubSubDataSourceFactory *PubSubDataSourceFactory[P, E]
-	rootFieldRef            int
-	variables               resolve.Variables
-	visitor                 *plan.Visitor
-	extractFn               func(tpl string) (string, error)
+type Planner[PB ProviderBuilder[P, E], P any, E any] struct {
+	id           int
+	config       *PlannerConfig[PB, P, E]
+	rootFieldRef int
+	variables    resolve.Variables
+	visitor      *plan.Visitor
+	extractFn    func(tpl string) (string, error)
 }
 
-func (p *Planner[P, E]) SetID(id int) {
+func (p *Planner[PB, P, E]) SetID(id int) {
 	p.id = id
 }
 
-func (p *Planner[P, E]) ID() (id int) {
+func (p *Planner[PB, P, E]) ID() (id int) {
 	return p.id
 }
 
-func (p *Planner[P, E]) DownstreamResponseFieldAlias(downstreamFieldRef int) (alias string, exists bool) {
+func (p *Planner[PB, P, E]) DownstreamResponseFieldAlias(downstreamFieldRef int) (alias string, exists bool) {
 	// skip, not required
 	return
 }
 
-func (p *Planner[P, E]) DataSourcePlanningBehavior() plan.DataSourcePlanningBehavior {
+func (p *Planner[PB, P, E]) DataSourcePlanningBehavior() plan.DataSourcePlanningBehavior {
 	return plan.DataSourcePlanningBehavior{
 		MergeAliasedRootNodes:      false,
 		OverrideFieldPathFromAlias: false,
 	}
 }
 
-func (p *Planner[P, E]) Register(visitor *plan.Visitor, configuration plan.DataSourceConfiguration[*PubSubDataSourceFactory[P, E]], _ plan.DataSourcePlannerConfiguration) error {
+func (p *Planner[PB, P, E]) Register(visitor *plan.Visitor, configuration plan.DataSourceConfiguration[*PlannerConfig[PB, P, E]], _ plan.DataSourcePlannerConfiguration) error {
 	p.visitor = visitor
 	visitor.Walker.RegisterEnterFieldVisitor(p)
 	visitor.Walker.RegisterEnterDocumentVisitor(p)
-	p.pubSubDataSourceFactory = configuration.CustomConfiguration()
+	p.config = configuration.CustomConfiguration()
 
 	return nil
 }
 
-func (p *Planner[P, E]) ConfigureFetch() resolve.FetchConfiguration {
-	if p.pubSubDataSourceFactory == nil {
+func (p *Planner[PB, P, E]) ConfigureFetch() resolve.FetchConfiguration {
+	if p.config == nil {
 		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("data source not set"))
 		return resolve.FetchConfiguration{}
 	}
 
-	pubSubDataSource, err := p.pubSubDataSourceFactory.BuildDataSource()
+	pubSubDataSource, err := p.config.ProviderBuilder.BuildEngineDataSourceFactory(p.config.Event)
 	if err != nil {
 		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to build data source: %w", err))
 		return resolve.FetchConfiguration{}
@@ -94,13 +94,13 @@ func (p *Planner[P, E]) ConfigureFetch() resolve.FetchConfiguration {
 	}
 }
 
-func (p *Planner[P, E]) ConfigureSubscription() plan.SubscriptionConfiguration {
-	if p.pubSubDataSourceFactory == nil {
+func (p *Planner[PB, P, E]) ConfigureSubscription() plan.SubscriptionConfiguration {
+	if p.config == nil {
 		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("data source not set"))
 		return plan.SubscriptionConfiguration{}
 	}
 
-	pubSubDataSource, err := p.pubSubDataSourceFactory.BuildDataSource()
+	pubSubDataSource, err := p.config.ProviderBuilder.BuildEngineDataSourceFactory(p.config.Event)
 	if err != nil {
 		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to get resolve data source subscription: %w", err))
 		return plan.SubscriptionConfiguration{}
@@ -133,7 +133,7 @@ func (p *Planner[P, E]) ConfigureSubscription() plan.SubscriptionConfiguration {
 	}
 }
 
-func (p *Planner[P, E]) addContextVariableByArgumentRef(argumentRef int, operationTypeRef int, argumentPath []string) (string, error) {
+func (p *Planner[PB, P, E]) addContextVariableByArgumentRef(argumentRef int, operationTypeRef int, argumentPath []string) (string, error) {
 	variablePath, err := p.visitor.Operation.VariablePathByArgumentRefAndArgumentPath(argumentRef, argumentPath, operationTypeRef)
 	if err != nil {
 		return "", err
@@ -149,7 +149,7 @@ func (p *Planner[P, E]) addContextVariableByArgumentRef(argumentRef int, operati
 	return variablePlaceHolder, nil
 }
 
-func (p *Planner[P, E]) extractArgumentTemplate(fieldRef int, operationDefinitionRef int, typeDefinitionRef int, template string) (string, error) {
+func (p *Planner[PB, P, E]) extractArgumentTemplate(fieldRef int, operationDefinitionRef int, typeDefinitionRef int, template string) (string, error) {
 	matches := argument_templates.ArgumentTemplateRegex.FindAllStringSubmatch(template, -1)
 	// If no argument templates are defined, there are only static values
 	if len(matches) < 1 {
@@ -188,11 +188,11 @@ func (p *Planner[P, E]) extractArgumentTemplate(fieldRef int, operationDefinitio
 	return templateWithVariableTemplateReplacements, nil
 }
 
-func (p *Planner[P, E]) EnterDocument(_, _ *ast.Document) {
+func (p *Planner[PB, P, E]) EnterDocument(_, _ *ast.Document) {
 	p.rootFieldRef = -1
 }
 
-func (p *Planner[P, E]) EnterField(ref int) {
+func (p *Planner[PB, P, E]) EnterField(ref int) {
 	if p.rootFieldRef != -1 {
 		// This is a nested field; nothing needs to be done
 		return

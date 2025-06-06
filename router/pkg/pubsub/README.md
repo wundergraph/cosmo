@@ -24,10 +24,10 @@ This will generate the new proto files in the `gen` folder.
 
 To implement a new PubSub provider, the following components must be created:
 - `SubscriptionEventConfiguration` and `PublishEventConfiguration`: Define the data structures used for communication between the adapter and the engine.
-- `Adapter`: Implements the logic that interfaces with the provider’s client or SDK.
+- `ProviderAdapter`: Implements the logic that interfaces with the provider’s client or SDK.
 - `SubscriptionDataSource` and `PublishDataSource`: Engine components that leverage the configurations to subscribe and publish data.
-- `PubSubDataSource`: Bridges the engine and the provider.
-- `PubSubProviderBuilder`: Used by the router to instantiate the provider.
+- `EngineDataSourceFactory`: Bridges the engine and the provider.
+- `ProviderBuilder`: Used by the router to instantiate the provider.
 
 ### `SubscriptionEventConfiguration` and `PublishEventConfiguration`
 
@@ -35,12 +35,12 @@ These structures should be placed at the top of the `engine_datasource.go` file.
 
 Refer to the [kafka implementation](./kafka/engine_datasource.go) for a working example.
 
-### `Adapter`
+### `ProviderAdapter`
 
 This component encapsulates the provider-specific logic. Although not required, it’s best practice to implement the following interface to facilitate testing via mocks:
 
 ```go
-type AdapterInterface interface {
+type Adapter interface {
 	Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error
 	Publish(ctx context.Context, event PublishEventConfiguration) error
 	Startup(ctx context.Context) error
@@ -64,15 +64,15 @@ They are going to use the `SubscriptionEventConfiguration` and `PublishEventConf
 
 Implement these in the `engine_datasource.go` file, referencing the [kafka implementation](./kafka/engine_datasource.go) for a working example.
 
-### `PubSubDataSource`
+### `EngineDataSourceFactory`
 
-This structure connects the engine (resolve.DataSource and resolve.SubscriptionDataSource) with the provider implementation. It must implement the `PubSubProvider` interface defined in [provider.go](./datasource/provider.go).
+This structure connects the engine (resolve.DataSource and resolve.SubscriptionDataSource) with the provider implementation. It must implement the `EngineDataSourceFactory` interface defined in [datasource.go](./datasource/datasource.go).
 
 Refer to the [kafka implementation](./kafka/pubsub_datasource.go) for a working example.
 
-### `PubSubProviderBuilder`
+### `ProviderBuilder`
 
-The builder is responsible for instantiating the provider within the router. It must implement the [PubSubProviderBuilder](./datasource/provider.go) interface.
+The builder is responsible for instantiating the provider within the router. It must implement the [ProviderBuilder](./datasource/provider.go) interface.
 
 The interface has two generic types:
 - `P`, the generic type of the options that the provider builder will need, as defined in the [config.go](../config/config.go) (NatsEventSource, KafkaEventSource, ...)
@@ -80,7 +80,7 @@ The interface has two generic types:
 
 Key methods:
 - `BuildProvider`: Initializes the provider with its configuration and receive the provider options (defined by the `P` type)
-- `BuildDataSource`: Creates the data source and receive the event configuration (defined by the `E` type)
+- `BuildEngineDataSourceFactory`: Creates the data source and receive the event configuration (defined by the `E` type)
 
 Refer to the [kafka implementation](./kafka/provider_builder.go) for a working example.
 
@@ -89,13 +89,13 @@ Refer to the [kafka implementation](./kafka/provider_builder.go) for a working e
 You should also add tests to your provider.
 
 ### Generate mocks
-As a first step, you can use the [mockery](https://github.com/vektra/mockery) tool to generate the mocks for the Adapter interface you have implemented. To do this, add the following to the `.mockery.yml` file:
+As a first step, you can use the [mockery](https://github.com/vektra/mockery) tool to generate the mocks for the ProviderAdapter interface you have implemented. To do this, add the following to the `.mockery.yml` file:
 
 ```yaml
 packages:
   github.com/wundergraph/cosmo/router/pkg/pubsub/{your-provider-name}:
     interfaces:
-      AdapterInterface:
+      Adapter:
 ```
 
 Then run the following command from the router directory:
@@ -108,34 +108,20 @@ This will generate the mocks in the `{your-provider-name}/mocks.go` file.
 
 You can then use the mocks in your tests.
 
-#### Add engine_datasource_test.go
+### Tests
 
-You should also add tests of your engine_datasource.go file.
+You should add tests as specified in the table below.
 
-You can use the [kafka implementation](./kafka/engine_datasource_test.go) as a reference.
-
-#### Add pubsub_datasource_test.go
-
-You should also add tests of your pubsub_datasource.go file.
-
-You can use the [kafka implementation](./kafka/pubsub_datasource_test.go) as a reference.
-
-#### Add provider_builder_test.go
-
-You should also add tests of your provider_builder.go file.
-
-You can use the [kafka implementation](./kafka/provider_builder_test.go) as a reference.
-
-#### Add pubsub_test.go
-
-You should also add tests of your changes to the [pubsub.go](./pubsub.go) file.
-
-You can use the [TestBuildProvidersAndDataSources_Kafka_OK](./pubsub_test.go) as a reference.
+| Implementation File | Test File | Reference File |
+|-------------------|-----------|-----------------|
+| engine_datasource.go | engine_datasource_test.go | [kafka implementation](./kafka/engine_datasource_test.go) |
+| engine_datasource_factory.go | engine_datasource_factory_test.go | [kafka implementation](./kafka/engine_datasource_factory_test.go) |
+| provider_builder.go | provider_builder_test.go | [kafka implementation](./kafka/provider_builder_test.go) |
+| pubsub.go | pubsub_test.go | TestBuildProvidersAndDataSources_Kafka_OK |
 
 ## Add the provider to the router
 
 Update the `BuildProvidersAndDataSources` function in the [pubsub.go](./pubsub.go) file to include your new provider.
-
 
 ## How to use the new PubSub Provider
 

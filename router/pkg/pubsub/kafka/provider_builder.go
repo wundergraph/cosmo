@@ -16,23 +16,19 @@ import (
 
 const providerTypeID = "kafka"
 
-type PubSubProviderBuilder struct {
+type ProviderBuilder struct {
 	ctx              context.Context
 	logger           *zap.Logger
 	hostName         string
 	routerListenAddr string
-	adapters         map[string]AdapterInterface
+	adapters         map[string]Adapter
 }
 
-func (p *PubSubProviderBuilder) TypeID() string {
+func (p *ProviderBuilder) TypeID() string {
 	return providerTypeID
 }
 
-func (p *PubSubProviderBuilder) BuildDataSourceFactory(data *nodev1.KafkaEventConfiguration) *datasource.PubSubDataSourceFactory[config.KafkaEventSource, *nodev1.KafkaEventConfiguration] {
-	return datasource.NewPubSubDataSourceFactory(p, data)
-}
-
-func (p *PubSubProviderBuilder) BuildDataSource(data *nodev1.KafkaEventConfiguration) (datasource.PubSubDataSource, error) {
+func (p *ProviderBuilder) BuildEngineDataSourceFactory(data *nodev1.KafkaEventConfiguration) (datasource.EngineDataSourceFactory, error) {
 	providerId := data.GetEngineEventConfiguration().GetProviderId()
 	adapter, ok := p.adapters[providerId]
 	if !ok {
@@ -49,9 +45,8 @@ func (p *PubSubProviderBuilder) BuildDataSource(data *nodev1.KafkaEventConfigura
 		return nil, fmt.Errorf("unsupported event type: %s", data.GetEngineEventConfiguration().GetType())
 	}
 
-	return &PubSubDataSource{
+	return &EngineDataSourceFactory{
 		fieldName:    data.GetEngineEventConfiguration().GetFieldName(),
-		typeName:     data.GetEngineEventConfiguration().GetTypeName(),
 		eventType:    eventType,
 		topics:       data.GetTopics(),
 		providerId:   providerId,
@@ -59,7 +54,7 @@ func (p *PubSubProviderBuilder) BuildDataSource(data *nodev1.KafkaEventConfigura
 	}, nil
 }
 
-func (p *PubSubProviderBuilder) BuildProvider(provider config.KafkaEventSource) (datasource.PubSubProvider, error) {
+func (p *ProviderBuilder) BuildProvider(provider config.KafkaEventSource) (datasource.Provider, error) {
 	adapter, pubSubProvider, err := buildProvider(p.ctx, provider, p.logger)
 	if err != nil {
 		return nil, err
@@ -98,31 +93,31 @@ func buildKafkaOptions(eventSource config.KafkaEventSource) ([]kgo.Opt, error) {
 	return opts, nil
 }
 
-func buildProvider(ctx context.Context, provider config.KafkaEventSource, logger *zap.Logger) (AdapterInterface, datasource.PubSubProvider, error) {
+func buildProvider(ctx context.Context, provider config.KafkaEventSource, logger *zap.Logger) (Adapter, datasource.Provider, error) {
 	options, err := buildKafkaOptions(provider)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to build options for Kafka provider with ID \"%s\": %w", provider.ID, err)
 	}
-	adapter, err := NewAdapter(ctx, logger, options)
+	adapter, err := NewProviderAdapter(ctx, logger, options)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create adapter for Kafka provider with ID \"%s\": %w", provider.ID, err)
 	}
-	pubSubProvider := datasource.NewPubSubProviderImpl(provider.ID, providerTypeID, adapter, logger)
+	pubSubProvider := datasource.NewPubSubProvider(provider.ID, providerTypeID, adapter, logger)
 
 	return adapter, pubSubProvider, nil
 }
 
-func NewPubSubProviderBuilder(
+func NewProviderBuilder(
 	ctx context.Context,
 	logger *zap.Logger,
 	hostName string,
 	routerListenAddr string,
-) *PubSubProviderBuilder {
-	return &PubSubProviderBuilder{
+) *ProviderBuilder {
+	return &ProviderBuilder{
 		ctx:              ctx,
 		logger:           logger,
 		hostName:         hostName,
 		routerListenAddr: routerListenAddr,
-		adapters:         make(map[string]AdapterInterface),
+		adapters:         make(map[string]Adapter),
 	}
 }

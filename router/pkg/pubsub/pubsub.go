@@ -58,12 +58,12 @@ func BuildProvidersAndDataSources(
 	dsConfs []DataSourceConfigurationWithMetadata,
 	hostName string,
 	routerListenAddr string,
-) ([]pubsub_datasource.PubSubProvider, []plan.DataSource, error) {
-	var pubSubProviders []pubsub_datasource.PubSubProvider
+) ([]pubsub_datasource.Provider, []plan.DataSource, error) {
+	var pubSubProviders []pubsub_datasource.Provider
 	var outs []plan.DataSource
 
 	// initialize Kafka providers and data sources
-	kafkaBuilder := kafka.NewPubSubProviderBuilder(ctx, logger, hostName, routerListenAddr)
+	kafkaBuilder := kafka.NewProviderBuilder(ctx, logger, hostName, routerListenAddr)
 	kafkaDsConfsWithEvents := []dsConfAndEvents[*nodev1.KafkaEventConfiguration]{}
 	for _, dsConf := range dsConfs {
 		kafkaDsConfsWithEvents = append(kafkaDsConfsWithEvents, dsConfAndEvents[*nodev1.KafkaEventConfiguration]{
@@ -79,7 +79,7 @@ func BuildProvidersAndDataSources(
 	outs = append(outs, kafkaOuts...)
 
 	// initialize NATS providers and data sources
-	natsBuilder := nats.NewPubSubProviderBuilder(ctx, logger, hostName, routerListenAddr)
+	natsBuilder := nats.NewProviderBuilder(ctx, logger, hostName, routerListenAddr)
 	natsDsConfsWithEvents := []dsConfAndEvents[*nodev1.NatsEventConfiguration]{}
 	for _, dsConf := range dsConfs {
 		natsDsConfsWithEvents = append(natsDsConfsWithEvents, dsConfAndEvents[*nodev1.NatsEventConfiguration]{
@@ -113,8 +113,8 @@ func BuildProvidersAndDataSources(
 	return pubSubProviders, outs, nil
 }
 
-func build[P GetID, E GetEngineEventConfiguration](ctx context.Context, builder pubsub_datasource.PubSubProviderBuilder[P, E], providersData []P, dsConfs []dsConfAndEvents[E]) ([]pubsub_datasource.PubSubProvider, []plan.DataSource, error) {
-	var pubSubProviders []pubsub_datasource.PubSubProvider
+func build[P GetID, E GetEngineEventConfiguration](ctx context.Context, builder pubsub_datasource.ProviderBuilder[P, E], providersData []P, dsConfs []dsConfAndEvents[E]) ([]pubsub_datasource.Provider, []plan.DataSource, error) {
+	var pubSubProviders []pubsub_datasource.Provider
 	var outs []plan.DataSource
 
 	// check used providers
@@ -154,12 +154,12 @@ func build[P GetID, E GetEngineEventConfiguration](ctx context.Context, builder 
 	// build data sources for each event
 	for _, dsConf := range dsConfs {
 		for i, event := range dsConf.events {
-			dataSourceFactory := builder.BuildDataSourceFactory(event)
+			plannerConfig := pubsub_datasource.NewPlannerConfig(builder, event)
 			out, err := plan.NewDataSourceConfiguration(
 				dsConf.dsConf.Configuration.Id+"-"+builder.TypeID()+"-"+strconv.Itoa(i),
-				pubsub_datasource.NewFactory(ctx, dataSourceFactory),
+				pubsub_datasource.NewPlannerFactory(ctx, plannerConfig),
 				getFilteredDataSourceMetadata(event.GetEngineEventConfiguration(), dsConf.dsConf.Metadata),
-				dataSourceFactory,
+				plannerConfig,
 			)
 			if err != nil {
 				return nil, nil, err

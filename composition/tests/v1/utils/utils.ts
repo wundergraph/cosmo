@@ -1,5 +1,5 @@
-import { parse } from 'graphql';
-import { Subgraph } from '../../../src';
+import { MutableIntermediateTypeNode, MutableTypeNode } from '../../../src';
+import { Kind, TypeNode } from 'graphql/index';
 
 // The V1 definitions that are required during normalization
 export const versionOneBaseSchema = `
@@ -119,3 +119,44 @@ export const versionTwoRouterDirectiveDefinitions = `
 `;
 
 export const versionTwoRouterDefinitions = schemaQueryDefinition + versionTwoRouterDirectiveDefinitions;
+
+export function stringToTypeNode(input: string): TypeNode {
+  input = input.replaceAll('[', '');
+  let typeNode: MutableIntermediateTypeNode;
+  let lastNode: MutableIntermediateTypeNode | undefined;
+  const lastIndex = input.length - 1;
+  for (let i = lastIndex; i > -1; i--) {
+    const character = input[i];
+    switch (character) {
+      case '!':
+        if (lastNode) {
+          lastNode.type = { kind: Kind.NON_NULL_TYPE, type: {} as MutableTypeNode };
+          lastNode = lastNode.type;
+        } else {
+          typeNode = { kind: Kind.NON_NULL_TYPE, type: {} as MutableTypeNode };
+          lastNode = typeNode;
+        }
+        break;
+      case ']':
+        if (lastNode) {
+          lastNode.type = { kind: Kind.LIST_TYPE, type: {} as MutableTypeNode };
+          lastNode = lastNode.type;
+        } else {
+          typeNode = { kind: Kind.LIST_TYPE, type: {} as MutableTypeNode };
+          lastNode = typeNode;
+        }
+        break;
+      default:
+        const node: MutableTypeNode = {
+          kind: Kind.NAMED_TYPE,
+          name: { kind: Kind.NAME, value: input.slice(0, i + 1) },
+        };
+        if (lastNode) {
+          lastNode.type = node;
+          return typeNode! as TypeNode;
+        }
+        return node as TypeNode;
+    }
+  }
+  throw new Error('Could not parse string.');
+}

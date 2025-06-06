@@ -12,9 +12,9 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/pubsub"
 	pubsub_datasource "github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/argument_templates"
-	"google.golang.org/grpc"
 
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/routerplugin"
 
 	"github.com/jensneuse/abstractlogger"
 	"go.uber.org/zap"
@@ -63,7 +63,7 @@ type DefaultFactoryResolver struct {
 
 	httpClient          *http.Client
 	subgraphHTTPClients map[string]*http.Client
-	subgraphGRPCClients map[string]grpc.ClientConnInterface
+	pluginHost          *routerplugin.Host
 
 	factoryLogger abstractlogger.Logger
 	instanceData  InstanceData
@@ -75,7 +75,7 @@ func NewDefaultFactoryResolver(
 	subscriptionClientOptions *SubscriptionClientOptions,
 	baseTransport http.RoundTripper,
 	subgraphTransports map[string]http.RoundTripper,
-	subgraphGRPCClients map[string]grpc.ClientConnInterface,
+	pluginHost *routerplugin.Host,
 	log *zap.Logger,
 	enableSingleFlight bool,
 	enableNetPoll bool,
@@ -158,14 +158,19 @@ func NewDefaultFactoryResolver(
 
 		httpClient:          defaultHTTPClient,
 		subgraphHTTPClients: subgraphHTTPClients,
-		subgraphGRPCClients: subgraphGRPCClients,
+		pluginHost:          pluginHost,
 		instanceData:        instanceData,
 	}
 }
 
 func (d *DefaultFactoryResolver) ResolveGraphqlFactory(subgraphName string) (plan.PlannerFactory[graphql_datasource.Configuration], error) {
-	if grpcClient, ok := d.subgraphGRPCClients[subgraphName]; ok {
-		return graphql_datasource.NewFactoryGRPC(d.engineCtx, grpcClient)
+	if d.pluginHost != nil {
+		// If the plugin host is not nil, we try to get the plugin for the subgraph.
+		// In case of a plugin, we use the gRPC client provider to create the factory.
+		plugin, exists := d.pluginHost.GetPlugin(subgraphName)
+		if exists {
+			return graphql_datasource.NewFactoryGRPCClientProvider(d.engineCtx, plugin.GetClient)
+		}
 	}
 
 	if subgraphClient, ok := d.subgraphHTTPClients[subgraphName]; ok {
@@ -261,7 +266,7 @@ func mapProtoFilterToPlanFilter(input *nodev1.SubscriptionFilterCondition, outpu
 	return nil
 }
 
-func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nodev1.Subgraph, routerEngineConfig *RouterEngineConfiguration, pluginsEnabled bool) (*plan.Configuration, []pubsub_datasource.PubSubProvider, error) {
+func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nodev1.Subgraph, routerEngineConfig *RouterEngineConfiguration, pluginsEnabled bool) (*plan.Configuration, []pubsub_datasource.Provider, error) {
 	var outConfig plan.Configuration
 	// attach field usage information to the plan
 	outConfig.DefaultFlushIntervalMillis = engineConfig.DefaultFlushInterval
@@ -296,7 +301,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 		})
 	}
 
-	var providers []pubsub_datasource.PubSubProvider
+	var providers []pubsub_datasource.Provider
 	var pubSubDS []pubsub.DataSourceConfigurationWithMetadata
 
 	for _, in := range engineConfig.DatasourceConfigurations {
@@ -322,9 +327,6 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 			}
 
 		case nodev1.DataSourceKind_GRAPHQL:
-			if in.GetCustomGraphql().GetGrpc() != nil && !pluginsEnabled {
-				continue
-			}
 
 			header := http.Header{}
 			for s, httpHeader := range in.CustomGraphql.Fetch.Header {
@@ -403,7 +405,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 				return nil, providers, fmt.Errorf("error creating schema configuration for data source %s: %w", in.Id, err)
 			}
 
-			grpcConfig := toGRPCConfiguration(in.CustomGraphql.Grpc)
+			grpcConfig := toGRPCConfiguration(in.CustomGraphql.Grpc, pluginsEnabled)
 			if grpcConfig != nil {
 				grpcConfig.Compiler, err = grpcdatasource.NewProtoCompiler(in.CustomGraphql.Grpc.ProtoSchema, grpcConfig.Mapping)
 				if err != nil {
@@ -610,7 +612,10 @@ func (l *Loader) fieldHasAuthorizationRule(fieldConfiguration *nodev1.FieldConfi
 	return false
 }
 
-func toGRPCConfiguration(config *nodev1.GRPCConfiguration) *grpcdatasource.GRPCConfiguration {
+// toGRPCConfiguration converts a nodev1.GRPCConfiguration to a grpcdatasource.GRPCConfiguration.
+// It is used to configure the gRPC datasource for a subgraph.
+// The pluginsEnabled flag is used to disable the gRPC datasource if the plugins are not enabled.
+func toGRPCConfiguration(config *nodev1.GRPCConfiguration, pluginsEnabled bool) *grpcdatasource.GRPCConfiguration {
 	if config == nil || config.Mapping == nil {
 		return nil
 	}
@@ -682,6 +687,7 @@ func toGRPCConfiguration(config *nodev1.GRPCConfiguration) *grpcdatasource.GRPCC
 	}
 
 	return &grpcdatasource.GRPCConfiguration{
-		Mapping: result,
+		Mapping:  result,
+		Disabled: !pluginsEnabled,
 	}
 }

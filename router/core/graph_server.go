@@ -29,7 +29,6 @@ import (
 	"go.uber.org/zap/zapcore"
 	"golang.org/x/exp/maps"
 	"golang.org/x/sync/errgroup"
-	"google.golang.org/grpc"
 
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
@@ -91,7 +90,7 @@ type (
 		prometheusEngineMetrics *rmetric.EngineMetrics
 		connectionMetrics       *rmetric.ConnectionMetrics
 		instanceData            InstanceData
-		pubSubProviders         []datasource.PubSubProvider
+		pubSubProviders         []datasource.Provider
 		traceDialer             *TraceDialer
 		pluginHost              *routerplugin.Host
 	}
@@ -986,11 +985,9 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		subgraphTippers[subgraph] = subgraphTransport
 	}
 
-	subgraphGRPCClients := make(map[string]grpc.ClientConnInterface)
 	if s.plugins.Enabled {
-		subgraphGRPCClients, err = s.buildSubgraphGRPCClients(ctx, engineConfig, configSubgraphs)
-		if err != nil {
-			return nil, fmt.Errorf("failed to build subgraph grpc clients: %w", err)
+		if err := s.setupPluginHost(ctx, engineConfig, configSubgraphs); err != nil {
+			return nil, fmt.Errorf("failed to setup plugin host: %w", err)
 		}
 	}
 
@@ -1002,13 +999,13 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	}
 
 	ecb := &ExecutorConfigurationBuilder{
-		introspection:       s.introspection,
-		baseURL:             s.baseURL,
-		baseTripper:         s.baseTransport,
-		subgraphTrippers:    subgraphTippers,
-		subgraphGRPCClients: subgraphGRPCClients,
-		logger:              s.logger,
-		trackUsageInfo:      s.graphqlMetricsConfig.Enabled || s.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled,
+		introspection:    s.introspection,
+		baseURL:          s.baseURL,
+		baseTripper:      s.baseTransport,
+		subgraphTrippers: subgraphTippers,
+		pluginHost:       s.pluginHost,
+		logger:           s.logger,
+		trackUsageInfo:   s.graphqlMetricsConfig.Enabled || s.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled,
 		subscriptionClientOptions: &SubscriptionClientOptions{
 			PingInterval: s.engineExecutionConfiguration.WebSocketClientPingInterval,
 			PingTimeout:  s.engineExecutionConfiguration.WebSocketClientPingTimeout,
@@ -1320,8 +1317,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	return gm, nil
 }
 
-func (s *graphServer) buildSubgraphGRPCClients(ctx context.Context, config *nodev1.EngineConfiguration, configSubgraphs []*nodev1.Subgraph) (map[string]grpc.ClientConnInterface, error) {
-	subgraphGRPCClients := make(map[string]grpc.ClientConnInterface)
+func (s *graphServer) setupPluginHost(ctx context.Context, config *nodev1.EngineConfiguration, configSubgraphs []*nodev1.Subgraph) error {
 	for _, dsConfig := range config.DatasourceConfigurations {
 		grpcConfig := dsConfig.GetCustomGraphql().GetGrpc()
 		if grpcConfig == nil {
@@ -1346,35 +1342,33 @@ func (s *graphServer) buildSubgraphGRPCClients(ctx context.Context, config *node
 
 				pluginPath, err := filepath.Abs(filepath.Join(basePath, pluginConfig.GetName(), "bin", fmt.Sprintf("%s_%s", runtime.GOOS, runtime.GOARCH)))
 				if err != nil {
-					return nil, fmt.Errorf("failed to get plugin path: %w", err)
+					return fmt.Errorf("failed to get plugin path: %w", err)
 				}
 
 				grpcPlugin, err := routerplugin.NewGRPCPlugin(routerplugin.GRPCPluginConfig{
-					PluginName:    pluginConfig.GetName(),
-					PluginPath:    pluginPath,
-					PluginCommand: []string{pluginPath},
+					Logger:     s.logger,
+					PluginName: pluginConfig.GetName(),
+					PluginPath: pluginPath,
 				})
-
 				if err != nil {
-					return nil, fmt.Errorf("failed to create grpc plugin for subgraph %s: %w", dsConfig.Id, err)
+					return fmt.Errorf("failed to create grpc plugin for subgraph %s: %w", dsConfig.Id, err)
 				}
 
 				err = s.pluginHost.RegisterPlugin(subgraph.Name, grpcPlugin)
 				if err != nil {
-					return nil, fmt.Errorf("failed to register grpc plugin: %w", err)
+					return fmt.Errorf("failed to register grpc plugin: %w", err)
 				}
 
-				if err := grpcPlugin.Start(ctx, s.logger); err != nil {
-					return nil, fmt.Errorf("failed to start grpc plugin: %w", err)
-				}
-
-				subgraphGRPCClients[subgraph.Name] = grpcPlugin.GetClient()
 				break
 			}
 		}
 	}
 
-	return subgraphGRPCClients, nil
+	if err := s.pluginHost.RunPluginHost(ctx); err != nil {
+		return fmt.Errorf("failed to run plugin host: %w", err)
+	}
+
+	return nil
 }
 
 // wait waits for all in-flight requests to finish. Similar to http.Server.Shutdown we wait in intervals + jitter
@@ -1493,7 +1487,7 @@ func (s *graphServer) startupPubSubProviders(ctx context.Context) error {
 	// Default timeout for pubsub provider startup
 	const defaultStartupTimeout = 5 * time.Second
 
-	return s.providersActionWithTimeout(ctx, func(ctx context.Context, provider datasource.PubSubProvider) error {
+	return s.providersActionWithTimeout(ctx, func(ctx context.Context, provider datasource.Provider) error {
 		return provider.Startup(ctx)
 	}, defaultStartupTimeout, "pubsub provider startup timed out")
 }
@@ -1505,12 +1499,12 @@ func (s *graphServer) shutdownPubSubProviders(ctx context.Context) error {
 	// Default timeout for pubsub provider shutdown
 	const defaultShutdownTimeout = 5 * time.Second
 
-	return s.providersActionWithTimeout(ctx, func(ctx context.Context, provider datasource.PubSubProvider) error {
+	return s.providersActionWithTimeout(ctx, func(ctx context.Context, provider datasource.Provider) error {
 		return provider.Shutdown(ctx)
 	}, defaultShutdownTimeout, "pubsub provider shutdown timed out")
 }
 
-func (s *graphServer) providersActionWithTimeout(ctx context.Context, action func(ctx context.Context, provider datasource.PubSubProvider) error, timeout time.Duration, timeoutMessage string) error {
+func (s *graphServer) providersActionWithTimeout(ctx context.Context, action func(ctx context.Context, provider datasource.Provider) error, timeout time.Duration, timeoutMessage string) error {
 	cancellableCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 

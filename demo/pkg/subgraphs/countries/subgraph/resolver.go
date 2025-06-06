@@ -12,5 +12,5 @@ import (
 
 type Resolver struct {
 	mux                    sync.Mutex
-	NatsPubSubByProviderID map[string]nats.AdapterInterface
+	NatsPubSubByProviderID map[string]nats.Adapter
 }

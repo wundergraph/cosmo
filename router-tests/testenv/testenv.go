@@ -83,9 +83,12 @@ var (
 	ConfigWithEdfsNatsJSONTemplate string
 	//go:embed testdata/configWithEdfsRedis.json
 	ConfigWithEdfsRedisJSONTemplate string
-	DemoNatsProviders               = []string{natsDefaultSourceName, myNatsProviderID}
-	DemoKafkaProviders              = []string{myKafkaProviderID}
-	DemoRedisProviders              = []string{myRedisProviderID}
+	//go:embed testdata/configWithPlugins.json
+	ConfigWithPluginsJSONTemplate string
+
+	DemoNatsProviders  = []string{natsDefaultSourceName, myNatsProviderID}
+	DemoKafkaProviders = []string{myKafkaProviderID}
+	DemoRedisProviders = []string{myRedisProviderID}
 )
 
 func init() {
@@ -320,6 +323,12 @@ type Config struct {
 	NoShutdownTestServer               bool
 	MCP                                config.MCPConfiguration
 	EnableRedis                        bool
+	Plugins                            PluginConfig
+}
+
+type PluginConfig struct {
+	Path    string
+	Enabled bool
 }
 
 type CacheMetricsAssertions struct {
@@ -1383,6 +1392,11 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 
 		routerOpts = append(routerOpts, core.WithMCP(testConfig.MCP))
 	}
+
+	routerOpts = append(routerOpts, core.WithPlugins(config.PluginsConfiguration{
+		Path:    testConfig.Plugins.Path,
+		Enabled: testConfig.Plugins.Enabled,
+	}))
 
 	if testConfig.TraceExporter != nil {
 		testConfig.PropagationConfig.TraceContext = true
@@ -2703,11 +2717,11 @@ func WSWriteJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err error) 
 func subgraphOptions(ctx context.Context, t testing.TB, logger *zap.Logger, natsData *NatsData, pubSubName func(string) string) *subgraphs.SubgraphOptions {
 	if natsData == nil {
 		return &subgraphs.SubgraphOptions{
-			NatsPubSubByProviderID: map[string]pubsubNats.AdapterInterface{},
+			NatsPubSubByProviderID: map[string]pubsubNats.Adapter{},
 			GetPubSubName:          pubSubName,
 		}
 	}
-	natsPubSubByProviderID := make(map[string]pubsubNats.AdapterInterface, len(DemoNatsProviders))
+	natsPubSubByProviderID := make(map[string]pubsubNats.Adapter, len(DemoNatsProviders))
 	for _, sourceName := range DemoNatsProviders {
 		adapter, err := pubsubNats.NewAdapter(ctx, logger, natsData.Params[0].Url, natsData.Params[0].Opts, "hostname", "listenaddr")
 		require.NoError(t, err)

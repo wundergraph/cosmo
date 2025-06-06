@@ -83,6 +83,7 @@ export class OrganizationRepository {
       slug: insertedOrg[0].slug,
       creatorUserId: insertedOrg[0].createdBy || undefined,
       createdAt: insertedOrg[0].createdAt.toISOString(),
+      kcGroupId: insertedOrg[0].kcGroupId || undefined,
     };
 
     if (this.defaultBillingPlanId) {
@@ -124,6 +125,7 @@ export class OrganizationRepository {
         deactivatedAt: organizations.deactivatedAt,
         queuedForDeletionAt: organizations.queuedForDeletionAt,
         queuedForDeletionBy: organizations.queuedForDeletionBy,
+        kcGroupId: organizations.kcGroupId,
       })
       .from(organizations)
       .leftJoin(organizationBilling, eq(organizations.id, organizationBilling.organizationId))
@@ -166,6 +168,7 @@ export class OrganizationRepository {
             queuedBy: org[0].queuedForDeletionBy || undefined,
           }
         : undefined,
+      kcGroupId: org[0].kcGroupId || undefined,
     };
   }
 
@@ -188,6 +191,7 @@ export class OrganizationRepository {
         deactivatedAt: organizations.deactivatedAt,
         queuedForDeletionAt: organizations.queuedForDeletionAt,
         queuedForDeletionBy: organizations.queuedForDeletionBy,
+        kcGroupId: organizations.kcGroupId,
       })
       .from(organizations)
       .leftJoin(organizationBilling, eq(organizations.id, organizationBilling.organizationId))
@@ -230,6 +234,7 @@ export class OrganizationRepository {
             queuedBy: org[0].queuedForDeletionBy || undefined,
           }
         : undefined,
+      kcGroupId: org[0].kcGroupId || undefined,
     };
   }
 
@@ -272,6 +277,7 @@ export class OrganizationRepository {
         deactivatedAt: organizations.deactivatedAt,
         queuedForDeletionAt: organizations.queuedForDeletionAt,
         queuedForDeletionBy: organizations.queuedForDeletionBy,
+        kcGroupId: organizations.kcGroupId,
       })
       .from(organizationsMembers)
       .innerJoin(organizations, eq(organizations.id, organizationsMembers.organizationId))
@@ -324,6 +330,7 @@ export class OrganizationRepository {
                 queuedBy: org.queuedForDeletionBy || undefined,
               }
             : undefined,
+          kcGroupId: org.kcGroupId || undefined,
         };
       }),
     );
