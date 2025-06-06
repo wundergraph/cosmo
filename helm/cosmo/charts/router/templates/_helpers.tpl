@@ -46,7 +46,7 @@ Create chart name and version as used by the chart label.
 {{/*
 Additional Labels that are just rendered in metadata.labels
 */}}
-{{- define "router.additionalLabels" -}}
+{{- define "router.additionalLabels" }}
 {{- range $key, $value := .Values.additionalLabels -}}
 {{ $key }}: {{ quote $value }}
 {{- end }}
