@@ -138,7 +138,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        test_target: ["./. ./fuzzquery ./lifecycle ./modules", "./telemetry", "./events/events_config_test.go", "./events/nats_events_test.go", "./events/kafka_events_test.go"]
+        test_target: ["./. ./fuzzquery ./lifecycle ./modules", "./telemetry", "./events/events_config_test.go", "./events/nats_events_test.go", "./events/kafka_events_test.go", "./events/redis_events_test.go"]
     services:
       nats:
         image: ghcr.io/wundergraph/cosmo/nats:2.11.0-alpine
