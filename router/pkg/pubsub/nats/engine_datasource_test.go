@@ -16,6 +16,40 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
+func TestPublishEventConfiguration_MarshalJSONTemplate(t *testing.T) {
+	tests := []struct {
+		name        string
+		config      PublishAndRequestEventConfiguration
+		wantPattern string
+	}{
+		{
+			name: "simple configuration",
+			config: PublishAndRequestEventConfiguration{
+				ProviderID: "test-provider",
+				Subject:    "test-subject",
+				Data:       json.RawMessage(`{"message":"hello"}`),
+			},
+			wantPattern: `{"subject":"test-subject", "data": {"message":"hello"}, "providerId":"test-provider"}`,
+		},
+		{
+			name: "with special characters",
+			config: PublishAndRequestEventConfiguration{
+				ProviderID: "test-provider-id",
+				Subject:    "subject-with-hyphens",
+				Data:       json.RawMessage(`{"message":"special \"quotes\" here"}`),
+			},
+			wantPattern: `{"subject":"subject-with-hyphens", "data": {"message":"special \"quotes\" here"}, "providerId":"test-provider-id"}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.config.MarshalJSONTemplate()
+			assert.Equal(t, tt.wantPattern, result)
+		})
+	}
+}
+
 func TestPublishAndRequestEventConfiguration_MarshalJSONTemplate(t *testing.T) {
 	tests := []struct {
 		name        string

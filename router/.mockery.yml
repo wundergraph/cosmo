@@ -20,16 +20,16 @@ packages:
   github.com/wundergraph/cosmo/router/pkg/pubsub/nats:
     interfaces:
       Adapter:
-  github.com/wundergraph/cosmo/router/pkg/pubsub/kafka:
-    interfaces:
-      Adapter:
-  github.com/wundergraph/cosmo/router/pkg/pubsub/redis:
-    interfaces:
-      Adapter:
+    github.com/wundergraph/cosmo/router/pkg/pubsub/kafka:
+      interfaces:
+        Adapter:
+    github.com/wundergraph/cosmo/router/pkg/pubsub/redis:
+      interfaces:
+        Adapter:
   github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve:
     config:
       dir: 'pkg/pubsub/datasource'
       pkgname: 'datasource'
       filename: 'mocks_resolve.go'
     interfaces:
-      SubscriptionUpdater:
+      SubscriptionUpdater:all: false
