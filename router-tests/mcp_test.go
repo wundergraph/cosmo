@@ -209,6 +209,7 @@ func TestMCP(t *testing.T) {
 			t.Run("Execute Query", func(t *testing.T) {
 				t.Run("Execute operation of type query with valid input", func(t *testing.T) {
 					testenv.Run(t, &testenv.Config{
+						EnableNats: true,
 						MCP: config.MCPConfiguration{
 							Enabled: true,
 						},
@@ -265,6 +266,7 @@ func TestMCP(t *testing.T) {
 			t.Run("Execute Mutation", func(t *testing.T) {
 				t.Run("Execute operation of type mutation with valid input", func(t *testing.T) {
 					testenv.Run(t, &testenv.Config{
+						EnableNats: true,
 						MCP: config.MCPConfiguration{
 							Enabled: true,
 						},

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -1065,6 +1066,54 @@ func TestKafkaEvents(t *testing.T) {
 			xEnv.WaitForConnectionCount(0, KafkaWaitTimeout)
 		})
 	})
+
+	t.Run("mutate", func(t *testing.T) {
+		t.Parallel()
+
+		topics := []string{"employeeUpdated"}
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
+			EnableKafka:              true,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			ensureTopicExists(t, xEnv, topics...)
+
+			// Send a mutation to trigger the first subscription
+			resOne := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `mutation { updateEmployeeMyKafka(employeeID: 3, update: {name: "name test"}) { success } }`,
+			})
+			require.JSONEq(t, `{"data":{"updateEmployeeMyKafka":{"success":true}}}`, resOne.Body)
+
+			records, err := readKafkaMessages(xEnv, topics[0], 1)
+			require.NoError(t, err)
+			require.Equal(t, 1, len(records))
+			require.Equal(t, `{"employeeID":3,"update":{"name":"name test"}}`, string(records[0].Value))
+		})
+	})
+
+	t.Run("kafka startup and shutdown with wrong broker should not stop router from starting indefinitely", func(t *testing.T) {
+		t.Parallel()
+
+		listener := testenv.NewWaitingListener(t, time.Second*10)
+		listener.Start()
+		defer listener.Close()
+
+		// kafka client is lazy and will not connect to the broker until the first message is produced
+		// so the router will start even if the kafka connection fails
+		errRouter := testenv.RunWithError(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
+			EnableKafka:              true,
+			ModifyEventsConfiguration: func(config *config.EventsConfiguration) {
+				for i := range config.Providers.Kafka {
+					config.Providers.Kafka[i].Brokers = []string{"localhost:" + strconv.Itoa(listener.Port())}
+				}
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			t.Log("should be called")
+		})
+
+		assert.NoError(t, errRouter)
+	})
 }
 
 func TestFlakyKafkaEvents(t *testing.T) {
@@ -1244,4 +1293,21 @@ func produceKafkaMessage(t *testing.T, xEnv *testenv.Environment, topicName stri
 
 	fErr := xEnv.KafkaClient.Flush(ctx)
 	require.NoError(t, fErr)
+}
+
+func readKafkaMessages(xEnv *testenv.Environment, topicName string, msgs int) ([]*kgo.Record, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	client, err := kgo.NewClient(
+		kgo.SeedBrokers(xEnv.GetKafkaSeeds()...),
+		kgo.ConsumeTopics(xEnv.GetPubSubName(topicName)),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	fetchs := client.PollRecords(ctx, msgs)
+
+	return fetchs.Records(), nil
 }

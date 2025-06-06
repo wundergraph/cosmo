@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 )
 
 func getTestDataDir() string {
@@ -130,6 +131,7 @@ func TestPlanGenerator(t *testing.T) {
 			ExecutionConfig: path.Join(getTestDataDir(), "execution_config", "base.json"),
 			Timeout:         "30s",
 			OutputFiles:     true,
+			Logger:          zap.NewNop(),
 		}
 
 		err = PlanGenerator(context.Background(), cfg)

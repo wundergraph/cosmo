@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -137,9 +138,9 @@ func TestNatsEvents(t *testing.T) {
 			xEnv.WaitForConnectionCount(0, NatsWaitTimeout)
 
 			natsLogs := xEnv.Observer().FilterMessageSnippet("Nats").All()
-			require.Len(t, natsLogs, 4)
+			require.Len(t, natsLogs, 2)
 			providerIDFields := xEnv.Observer().FilterField(zap.String("provider_id", "my-nats")).All()
-			require.Len(t, providerIDFields, 2)
+			require.Len(t, providerIDFields, 3)
 		})
 	})
 
@@ -1806,6 +1807,118 @@ func TestNatsEvents(t *testing.T) {
 			}()
 
 			assert.Eventually(t, completed.Load, NatsWaitTimeout, time.Millisecond*100)
+		})
+	})
+
+	t.Run("NATS startup and shutdown with wrong URLs should not stop router from starting indefinitely", func(t *testing.T) {
+		t.Parallel()
+
+		listener := testenv.NewWaitingListener(t, time.Second*10)
+		listener.Start()
+		defer listener.Close()
+
+		errRouter := testenv.RunWithError(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+			EnableNats:               false,
+			ModifyEventsConfiguration: func(cfg *config.EventsConfiguration) {
+				url := "nats://127.0.0.1:" + strconv.Itoa(listener.Port())
+				natsEventSources := make([]config.NatsEventSource, len(testenv.DemoNatsProviders))
+				for _, sourceName := range testenv.DemoNatsProviders {
+					natsEventSources = append(natsEventSources, config.NatsEventSource{
+						ID:  sourceName,
+						URL: url,
+					})
+				}
+				cfg.Providers.Nats = natsEventSources
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			assert.Fail(t, "Should not be called")
+		})
+
+		assert.Error(t, errRouter)
+	})
+
+	t.Run("multiple subscribe async with variables", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+			EnableNats:               true,
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			},
+			NoRetryClient: true,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			var subscriptionOne struct {
+				employeeUpdated struct {
+					ID      float64 `graphql:"id"`
+					Details struct {
+						Surname string `graphql:"surname"`
+					} `graphql:"details"`
+				} `graphql:"employeeUpdatedMyNats(id: 1)"`
+			}
+
+			var subscriptionTwo struct {
+				employeeUpdated struct {
+					ID      float64 `graphql:"id"`
+					Details struct {
+						Forename string `graphql:"forename"`
+					} `graphql:"details"`
+				} `graphql:"employeeUpdatedMyNats(id: 1)"`
+			}
+
+			surl := xEnv.GraphQLWebSocketSubscriptionURL()
+			client1 := graphql.NewSubscriptionClient(surl)
+			t.Cleanup(func() {
+				_ = client1.Close()
+			})
+			client2 := graphql.NewSubscriptionClient(surl)
+			t.Cleanup(func() {
+				_ = client2.Close()
+			})
+
+			var subscriptionOneCalled atomic.Uint32
+			var subscriptionTwoCalled atomic.Uint32
+
+			subscriptionOneID, err := client1.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
+				subscriptionOneCalled.Add(1)
+				require.NoError(t, errValue)
+				require.JSONEq(t, `{"employeeUpdated":{"id":3,"details":{"surname":"Avram"}}}`, string(dataValue))
+				return nil
+			})
+			require.NoError(t, err)
+			require.NotEqual(t, "", subscriptionOneID)
+			go func() {
+				clientErr := client1.Run()
+				require.NoError(t, clientErr)
+			}()
+			xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
+			errUnsubscribeOne := client1.Unsubscribe(subscriptionOneID)
+			require.NoError(t, errUnsubscribeOne)
+			xEnv.WaitForSubscriptionCount(0, NatsWaitTimeout)
+
+			subscriptionTwoID, err := client2.Subscribe(&subscriptionTwo, nil, func(dataValue []byte, errValue error) error {
+				subscriptionTwoCalled.Add(1)
+				require.NoError(t, errValue)
+				require.JSONEq(t, `{"employeeUpdated":{"id":3,"details":{"forename":"Stefan"}}}`, string(dataValue))
+				return nil
+			})
+			require.NoError(t, err)
+			require.NotEqual(t, "", subscriptionTwoID)
+			go func() {
+				clientErr := client2.Run()
+				require.NoError(t, clientErr)
+			}()
+			xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
+			errUnsubscribeTwo := client2.Unsubscribe(subscriptionTwoID)
+			require.NoError(t, errUnsubscribeTwo)
+			xEnv.WaitForSubscriptionCount(0, NatsWaitTimeout)
+
+			errClose1 := client1.Close()
+			require.NoError(t, errClose1)
+			errClose2 := client2.Close()
+			require.NoError(t, errClose2)
 		})
 	})
 }
