@@ -28,20 +28,18 @@ export function getOrganizationGroups(
 
     const groups = await orgGroupRepo.forOrganization(authContext.organizationId);
 
-    const oidcMappers: { groupId: string }[] = [];
+    let oidcMappers: { groupId: string }[] = [];
     const oidc = await oidcRepo.getOidcProvider({ organizationId: authContext.organizationId });
     if (oidc) {
       // Retrieve all the OIDC mappers from Keycloak
       await opts.keycloakClient.authenticateClient();
-      oidcMappers.push(
-        ...(await oidcProvider.fetchIDPMappers({
-          kcClient: opts.keycloakClient,
-          kcRealm: opts.keycloakRealm,
-          alias: oidc.alias,
-          organizationId: authContext.organizationId,
-          db: opts.db,
-        })),
-      );
+      oidcMappers = await oidcProvider.fetchIDPMappers({
+        kcClient: opts.keycloakClient,
+        kcRealm: opts.keycloakRealm,
+        alias: oidc.alias,
+        organizationId: authContext.organizationId,
+        db: opts.db,
+      });
     }
 
     return {
