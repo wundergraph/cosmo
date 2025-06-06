@@ -137,7 +137,7 @@ func build[P GetID, E GetEngineEventConfiguration](ctx context.Context, builder 
 	// build data sources for each event
 	for _, dsConf := range dsConfs {
 		for i, event := range dsConf.events {
-			dataSourceFactory := builder.BuildDataSourceFactory(event)
+			dataSourceFactory := pubsub_datasource.NewPubSubDataSourceFactory(builder, event)
 			out, err := plan.NewDataSourceConfiguration(
 				dsConf.dsConf.Configuration.Id+"-"+builder.TypeID()+"-"+strconv.Itoa(i),
 				pubsub_datasource.NewPlannerFactory(ctx, dataSourceFactory),

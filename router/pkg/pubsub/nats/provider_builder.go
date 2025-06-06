@@ -27,10 +27,6 @@ func (p *PubSubProviderBuilder) TypeID() string {
 	return providerTypeID
 }
 
-func (p *PubSubProviderBuilder) BuildDataSourceFactory(data *nodev1.NatsEventConfiguration) *datasource.PubSubDataSourceFactory[config.NatsEventSource, *nodev1.NatsEventConfiguration] {
-	return datasource.NewPubSubDataSourceFactory(p, data)
-}
-
 func (p *PubSubProviderBuilder) BuildDataSource(data *nodev1.NatsEventConfiguration) (datasource.PubSubDataSource, error) {
 	providerId := data.GetEngineEventConfiguration().GetProviderId()
 	adapter, ok := p.adapters[providerId]

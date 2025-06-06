@@ -62,10 +62,6 @@ func TestBuild_OK(t *testing.T) {
 
 	mockBuilder.On("TypeID").Return("nats")
 	mockBuilder.On("BuildProvider", natsEventSources[0]).Return(mockPubSubProvider, nil)
-	mockBuilder.On("BuildDataSourceFactory", dsConf.Configuration.GetCustomEvents().GetNats()[0]).Return(
-		datasource.NewPubSubDataSourceFactory(mockBuilder, dsConf.Configuration.GetCustomEvents().GetNats()[0]),
-		nil,
-	)
 
 	// ctx, kafkaBuilder, config.Providers.Kafka, kafkaDsConfsWithEvents
 	// Execute the function
@@ -241,10 +237,6 @@ func TestBuild_ShouldNotInitializeProviderIfNotUsed(t *testing.T) {
 
 	mockBuilder.On("TypeID").Return("nats")
 	mockBuilder.On("BuildProvider", natsEventSources[1]).Return(mockPubSubUsedProvider, nil)
-	mockBuilder.On("BuildDataSourceFactory", dsConf.Configuration.GetCustomEvents().GetNats()[0]).Return(
-		datasource.NewPubSubDataSourceFactory(mockBuilder, dsConf.Configuration.GetCustomEvents().GetNats()[0]),
-		nil,
-	)
 
 	// Execute the function
 	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs)

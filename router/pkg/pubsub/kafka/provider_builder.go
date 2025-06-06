@@ -28,10 +28,6 @@ func (p *PubSubProviderBuilder) TypeID() string {
 	return providerTypeID
 }
 
-func (p *PubSubProviderBuilder) BuildDataSourceFactory(data *nodev1.KafkaEventConfiguration) *datasource.PubSubDataSourceFactory[config.KafkaEventSource, *nodev1.KafkaEventConfiguration] {
-	return datasource.NewPubSubDataSourceFactory(p, data)
-}
-
 func (p *PubSubProviderBuilder) BuildDataSource(data *nodev1.KafkaEventConfiguration) (datasource.PubSubDataSource, error) {
 	providerId := data.GetEngineEventConfiguration().GetProviderId()
 	adapter, ok := p.adapters[providerId]

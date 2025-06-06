@@ -791,59 +791,6 @@ func (_c *MockProviderBuilder_BuildDataSource_Call[P, E]) RunAndReturn(run func(
 	return _c
 }
 
-// BuildDataSourceFactory provides a mock function for the type MockProviderBuilder
-func (_mock *MockProviderBuilder[P, E]) BuildDataSourceFactory(data E) *PubSubDataSourceFactory[P, E] {
-	ret := _mock.Called(data)
-
-	if len(ret) == 0 {
-		panic("no return value specified for BuildDataSourceFactory")
-	}
-
-	var r0 *PubSubDataSourceFactory[P, E]
-	if returnFunc, ok := ret.Get(0).(func(E) *PubSubDataSourceFactory[P, E]); ok {
-		r0 = returnFunc(data)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*PubSubDataSourceFactory[P, E])
-		}
-	}
-	return r0
-}
-
-// MockProviderBuilder_BuildDataSourceFactory_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BuildDataSourceFactory'
-type MockProviderBuilder_BuildDataSourceFactory_Call[P any, E any] struct {
-	*mock.Call
-}
-
-// BuildDataSourceFactory is a helper method to define mock.On call
-//   - data E
-func (_e *MockProviderBuilder_Expecter[P, E]) BuildDataSourceFactory(data interface{}) *MockProviderBuilder_BuildDataSourceFactory_Call[P, E] {
-	return &MockProviderBuilder_BuildDataSourceFactory_Call[P, E]{Call: _e.mock.On("BuildDataSourceFactory", data)}
-}
-
-func (_c *MockProviderBuilder_BuildDataSourceFactory_Call[P, E]) Run(run func(data E)) *MockProviderBuilder_BuildDataSourceFactory_Call[P, E] {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 E
-		if args[0] != nil {
-			arg0 = args[0].(E)
-		}
-		run(
-			arg0,
-		)
-	})
-	return _c
-}
-
-func (_c *MockProviderBuilder_BuildDataSourceFactory_Call[P, E]) Return(pubSubDataSourceFactory *PubSubDataSourceFactory[P, E]) *MockProviderBuilder_BuildDataSourceFactory_Call[P, E] {
-	_c.Call.Return(pubSubDataSourceFactory)
-	return _c
-}
-
-func (_c *MockProviderBuilder_BuildDataSourceFactory_Call[P, E]) RunAndReturn(run func(data E) *PubSubDataSourceFactory[P, E]) *MockProviderBuilder_BuildDataSourceFactory_Call[P, E] {
-	_c.Call.Return(run)
-	return _c
-}
-
 // BuildProvider provides a mock function for the type MockProviderBuilder
 func (_mock *MockProviderBuilder[P, E]) BuildProvider(options P) (Provider, error) {
 	ret := _mock.Called(options)

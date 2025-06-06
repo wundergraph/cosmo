@@ -30,6 +30,4 @@ type ProviderBuilder[P, E any] interface {
 	BuildProvider(options P) (Provider, error)
 	// BuildDataSource Build the data source for the given provider and event configuration
 	BuildDataSource(data E) (PubSubDataSource, error)
-	// BuildDataSource Build the data source for the given provider and event configuration
-	BuildDataSourceFactory(data E) *PubSubDataSourceFactory[P, E]
 }
