@@ -24,6 +24,10 @@ func (m *MockSubscriptionUpdater) Update(data []byte) {
 	m.Called(data)
 }
 
+func (m *MockSubscriptionUpdater) Close() {
+	m.Called()
+}
+
 func (m *MockSubscriptionUpdater) Done() {
 	m.Called()
 }

@@ -3,6 +3,8 @@ package wsproto
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/gobwas/ws"
 )
 
 // See protocol at https://github.com/enisdenjo/graphql-ws/blob/master/PROTOCOL.md
@@ -33,10 +35,10 @@ type graphQLWSMessage struct {
 }
 
 type graphQLWSProtocol struct {
-	conn JSONConn
+	conn ProtoConn
 }
 
-func newGraphQLWSProtocol(conn JSONConn) *graphQLWSProtocol {
+func newGraphQLWSProtocol(conn ProtoConn) *graphQLWSProtocol {
 	return &graphQLWSProtocol{
 		conn: conn,
 	}
@@ -112,6 +114,18 @@ func (p *graphQLWSProtocol) WriteGraphQLErrors(id string, errors json.RawMessage
 		Payload:    errors,
 		Extensions: extensions,
 	})
+}
+
+func (p *graphQLWSProtocol) Close() error {
+	if err := p.conn.WriteCloseFrame(ws.StatusGoingAway, "Downstream service error"); err != nil {
+		return err
+	}
+
+	if err := p.conn.Close(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (p *graphQLWSProtocol) Done(id string) error {

@@ -169,12 +169,15 @@ export function createOrganization(
     } catch (err) {
       logger.error(err);
 
-      // Delete the organization group in Keycloak + subgroups
-      // when the organization creation fails
-      await opts.keycloakClient.deleteOrganizationGroup({
-        realm: opts.keycloakRealm,
-        organizationSlug: req.slug,
-      });
+      // Delete the organization group in Keycloak + subgroups when the organization creation fails
+      try {
+        await opts.keycloakClient.deleteGroupById({
+          realm: opts.keycloakRealm,
+          groupId: kcRootGroupId,
+        });
+      } catch {
+        // ignored
+      }
 
       return {
         response: {

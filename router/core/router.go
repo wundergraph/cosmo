@@ -166,7 +166,6 @@ type (
 		SubgraphAttributes []config.CustomAttribute
 	}
 
-	// Config defines the configuration options for the Router.
 	// Option defines the method to customize server.
 	Option func(svr *Router)
 )
@@ -1554,7 +1553,7 @@ func WithPlaygroundPath(p string) Option {
 	}
 }
 
-// WithPlaygroundPath sets the path where the GraphQL Playground is served.
+// WithPlaygroundConfig sets the path where the GraphQL Playground is served.
 func WithPlaygroundConfig(c config.PlaygroundConfig) Option {
 	return func(r *Router) {
 		r.playgroundConfig = c
