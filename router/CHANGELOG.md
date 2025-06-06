@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.219.0](https://github.com/wundergraph/cosmo/compare/router@0.218.0...router@0.219.0) (2025-06-06)
+
+### Features
+
+* edfs refactor pubsub providers ([#1848](https://github.com/wundergraph/cosmo/issues/1848)) ([edb0ded](https://github.com/wundergraph/cosmo/commit/edb0dedd0e5d2a7e8748bbbd101e11cc109a65ef)) (@alepane21)
+
 # [0.218.0](https://github.com/wundergraph/cosmo/compare/router@0.217.0...router@0.218.0) (2025-06-06)
 
 ### Bug Fixes
