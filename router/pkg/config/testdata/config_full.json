@@ -809,7 +809,7 @@
     "SubscriptionMultipartPrintBoundary": {
       "Enabled": false
     },
-    "UseValidationFailedExtension": {
+    "UseGraphQLValidationFailedStatus": {
       "Enabled": true
     }
   },

@@ -2834,7 +2834,7 @@
           "type": "object",
           "description": "Produces the same error (message, extension code, status code) as Apollo when an invalid operation field is included in an operation selection set.",
           "deprecated": true,
-          "deprecationMessage": "This property is deprecated. Please use 'use_validation_failed_extension' instead.",
+          "deprecationMessage": "This property is deprecated. Please use 'use_graphql_validation_failed_status' instead.",
           "additionalProperties": false,
           "properties": {
             "enabled": {
