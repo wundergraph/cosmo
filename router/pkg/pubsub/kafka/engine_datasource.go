@@ -25,6 +25,8 @@ type PublishEventConfiguration struct {
 }
 
 func (s *PublishEventConfiguration) MarshalJSONTemplate() string {
+	// The content of the data field could be not valid JSON, so we can't use json.Marshal
+	// e.g. {"id":$$0$$,"update":$$1$$}
 	return fmt.Sprintf(`{"topic":"%s", "data": %s, "providerId":"%s"}`, s.Topic, s.Data, s.ProviderID)
 }
 
