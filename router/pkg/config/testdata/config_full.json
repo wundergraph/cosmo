@@ -808,6 +808,9 @@
     },
     "SubscriptionMultipartPrintBoundary": {
       "Enabled": false
+    },
+    "UseGraphQLValidationFailedStatus": {
+      "Enabled": true
     }
   },
   "ApolloRouterCompatibilityFlags": {

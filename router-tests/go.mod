@@ -25,7 +25,7 @@ require (
 	github.com/twmb/franz-go/pkg/kadm v1.11.0
 	github.com/wundergraph/cosmo/demo v0.0.0-20250603143029-38616eabb73b
 	github.com/wundergraph/cosmo/router v0.0.0-20250606140107-7f7915f68ea2
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.186
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.186.0.20250606155124-f8830b23a213
 	go.opentelemetry.io/otel v1.28.0
 	go.opentelemetry.io/otel/sdk v1.28.0
 	go.opentelemetry.io/otel/sdk/metric v1.28.0
