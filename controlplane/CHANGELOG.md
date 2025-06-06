@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.150.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.149.0...controlplane@0.150.0) (2025-06-06)
+
+### Features
+
+* link organization to the root keycloak group ([#1920](https://github.com/wundergraph/cosmo/issues/1920)) ([2952533](https://github.com/wundergraph/cosmo/commit/2952533b7dbdf29dd71f97b21c92c834ba1f1c97)) (@wilsonrivera)
+
 # [0.149.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.148.0...controlplane@0.149.0) (2025-06-02)
 
 ### Features

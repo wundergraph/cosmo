@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.84.0](https://github.com/wundergraph/cosmo/compare/wgc@0.83.3...wgc@0.84.0) (2025-06-06)
+
+### Features
+
+* gRPC plugin enhancements ([#1905](https://github.com/wundergraph/cosmo/issues/1905)) ([7202ae9](https://github.com/wundergraph/cosmo/commit/7202ae9da4bd0d3ff85c4c632ff8fc44f8642471)) (@Noroth)
+
 ## [0.83.3](https://github.com/wundergraph/cosmo/compare/wgc@0.83.2...wgc@0.83.3) (2025-06-02)
 
 **Note:** Version bump only for package wgc
