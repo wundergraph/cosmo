@@ -48,8 +48,8 @@ func (e *ProviderNotDefinedError) Error() string {
 	return fmt.Sprintf("%s provider with ID %s is not defined", e.ProviderTypeID, e.ProviderID)
 }
 
-// BuildProvidersAndDataSources is a generic function that builds providers and data sources for the given provider
-// builder and event configurations.
+// BuildProvidersAndDataSources is a generic function that builds providers and data sources for the given
+// EventsConfiguration and DataSourceConfigurationWithMetadata
 func BuildProvidersAndDataSources(
 	ctx context.Context,
 	config config.EventsConfiguration,
