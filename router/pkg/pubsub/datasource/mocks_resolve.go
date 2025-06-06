@@ -6,6 +6,7 @@ package datasource
 
 import (
 	mock "github.com/stretchr/testify/mock"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
 // NewMockSubscriptionUpdater creates a new instance of MockSubscriptionUpdater. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
@@ -36,8 +37,8 @@ func (_m *MockSubscriptionUpdater) EXPECT() *MockSubscriptionUpdater_Expecter {
 }
 
 // Close provides a mock function for the type MockSubscriptionUpdater
-func (_mock *MockSubscriptionUpdater) Close() {
-	_mock.Called()
+func (_mock *MockSubscriptionUpdater) Close(kind resolve.SubscriptionCloseKind) {
+	_mock.Called(kind)
 	return
 }
 
@@ -47,13 +48,20 @@ type MockSubscriptionUpdater_Close_Call struct {
 }
 
 // Close is a helper method to define mock.On call
-func (_e *MockSubscriptionUpdater_Expecter) Close() *MockSubscriptionUpdater_Close_Call {
-	return &MockSubscriptionUpdater_Close_Call{Call: _e.mock.On("Close")}
+//   - kind resolve.SubscriptionCloseKind
+func (_e *MockSubscriptionUpdater_Expecter) Close(kind interface{}) *MockSubscriptionUpdater_Close_Call {
+	return &MockSubscriptionUpdater_Close_Call{Call: _e.mock.On("Close", kind)}
 }
 
-func (_c *MockSubscriptionUpdater_Close_Call) Run(run func()) *MockSubscriptionUpdater_Close_Call {
+func (_c *MockSubscriptionUpdater_Close_Call) Run(run func(kind resolve.SubscriptionCloseKind)) *MockSubscriptionUpdater_Close_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run()
+		var arg0 resolve.SubscriptionCloseKind
+		if args[0] != nil {
+			arg0 = args[0].(resolve.SubscriptionCloseKind)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -63,40 +71,40 @@ func (_c *MockSubscriptionUpdater_Close_Call) Return() *MockSubscriptionUpdater_
 	return _c
 }
 
-func (_c *MockSubscriptionUpdater_Close_Call) RunAndReturn(run func()) *MockSubscriptionUpdater_Close_Call {
+func (_c *MockSubscriptionUpdater_Close_Call) RunAndReturn(run func(kind resolve.SubscriptionCloseKind)) *MockSubscriptionUpdater_Close_Call {
 	_c.Run(run)
 	return _c
 }
 
-// Done provides a mock function for the type MockSubscriptionUpdater
-func (_mock *MockSubscriptionUpdater) Done() {
+// Complete provides a mock function for the type MockSubscriptionUpdater
+func (_mock *MockSubscriptionUpdater) Complete() {
 	_mock.Called()
 	return
 }
 
-// MockSubscriptionUpdater_Done_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Done'
-type MockSubscriptionUpdater_Done_Call struct {
+// MockSubscriptionUpdater_Complete_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Complete'
+type MockSubscriptionUpdater_Complete_Call struct {
 	*mock.Call
 }
 
-// Done is a helper method to define mock.On call
-func (_e *MockSubscriptionUpdater_Expecter) Done() *MockSubscriptionUpdater_Done_Call {
-	return &MockSubscriptionUpdater_Done_Call{Call: _e.mock.On("Done")}
+// Complete is a helper method to define mock.On call
+func (_e *MockSubscriptionUpdater_Expecter) Complete() *MockSubscriptionUpdater_Complete_Call {
+	return &MockSubscriptionUpdater_Complete_Call{Call: _e.mock.On("Complete")}
 }
 
-func (_c *MockSubscriptionUpdater_Done_Call) Run(run func()) *MockSubscriptionUpdater_Done_Call {
+func (_c *MockSubscriptionUpdater_Complete_Call) Run(run func()) *MockSubscriptionUpdater_Complete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run()
 	})
 	return _c
 }
 
-func (_c *MockSubscriptionUpdater_Done_Call) Return() *MockSubscriptionUpdater_Done_Call {
+func (_c *MockSubscriptionUpdater_Complete_Call) Return() *MockSubscriptionUpdater_Complete_Call {
 	_c.Call.Return()
 	return _c
 }
 
-func (_c *MockSubscriptionUpdater_Done_Call) RunAndReturn(run func()) *MockSubscriptionUpdater_Done_Call {
+func (_c *MockSubscriptionUpdater_Complete_Call) RunAndReturn(run func()) *MockSubscriptionUpdater_Complete_Call {
 	_c.Run(run)
 	return _c
 }
