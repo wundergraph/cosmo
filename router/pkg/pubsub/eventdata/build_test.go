@@ -14,9 +14,7 @@ func TestBuildEventDataBytes(t *testing.T) {
 	t.Run("check string serialization", func(t *testing.T) {
 		const operation = "mutation HelloMutation($id: ID!) { helloMutation(userKey:{id:$id,tenantId:3}) { success } }"
 		op, report := astparser.ParseGraphqlDocumentString(operation)
-		if report.HasErrors() {
-			panic(report.Error())
-		}
+		require.False(t, report.HasErrors())
 		var vars resolve.Variables
 		_, err := BuildEventDataBytes(1, &op, &vars)
 		require.NoError(t, err)
@@ -39,9 +37,7 @@ func TestBuildEventDataBytes(t *testing.T) {
 	t.Run("check int serialization", func(t *testing.T) {
 		const operation = "mutation HelloMutation($id: Int!) { helloMutation(userKey:{id:$id,tenantId:3}) { success } }"
 		op, report := astparser.ParseGraphqlDocumentString(operation)
-		if report.HasErrors() {
-			panic(report.Error())
-		}
+		require.False(t, report.HasErrors())
 		var vars resolve.Variables
 		_, err := BuildEventDataBytes(1, &op, &vars)
 		require.NoError(t, err)
