@@ -544,8 +544,9 @@ func (k KafkaEventSource) GetID() string {
 }
 
 type RedisEventSource struct {
-	ID   string   `yaml:"id,omitempty" env:"STORAGE_PROVIDER_REDIS_ID"`
-	URLs []string `yaml:"urls,omitempty" env:"STORAGE_PROVIDER_REDIS_URLS"`
+	ID             string   `yaml:"id,omitempty"`
+	URLs           []string `yaml:"urls,omitempty"`
+	ClusterEnabled bool     `yaml:"cluster_enabled"`
 }
 
 func (r RedisEventSource) GetID() string {

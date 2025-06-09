@@ -552,7 +552,8 @@
           "ID": "my-redis",
           "URLs": [
             "redis://localhost:6379/11"
-          ]
+          ],
+          "ClusterEnabled": true
         }
       ]
     }

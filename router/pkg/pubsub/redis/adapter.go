@@ -23,11 +23,11 @@ type Adapter interface {
 	Shutdown(ctx context.Context) error
 }
 
-func NewProviderAdapter(logger *zap.Logger, urls []string) Adapter {
+func NewProviderAdapter(logger *zap.Logger, urls []string, clusterEnabled bool) Adapter {
 	return &ProviderAdapter{
 		logger:         logger,
 		urls:           urls,
-		clusterEnabled: false,
+		clusterEnabled: clusterEnabled,
 	}
 }
 
@@ -79,7 +79,10 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEvent
 				log.Debug("subscription update", zap.String("message_channel", msg.Channel), zap.String("data", msg.Payload))
 				updater.Update([]byte(msg.Payload))
 			case <-ctx.Done():
-				// When the application context is done, we stop the subscriptions
+				// When the application context is done, we stop the subscriptions if it is not already done
+				if sub == nil {
+					return
+				}
 				err = sub.PUnsubscribe(ctx, event.Channels...)
 				if err != nil {
 					log.Error(fmt.Sprintf("error unsubscribing from redis for topics %v", event.Channels), zap.Error(err))

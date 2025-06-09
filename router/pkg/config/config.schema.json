@@ -2056,9 +2056,15 @@
                   "urls": {
                     "type": "array",
                     "description": "The list of Redis URLs. An example of URL is \"redis://username:password@localhost:6379/11\"",
+                    "minItems": 1,
                     "items": {
                       "type": "string"
                     }
+                  },
+                  "cluster_enabled": {
+                    "type": "boolean",
+                    "description": "Enable the Redis cluster. If enabled, the Redis cluster is used to connect to the Redis provider.",
+                    "default": false
                   }
                 }
               }
