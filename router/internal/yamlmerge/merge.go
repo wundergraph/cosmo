@@ -3,7 +3,6 @@ package yamlmerge
 import (
 	"fmt"
 	yaml "github.com/goccy/go-yaml"
-	//yaml "gopkg.in/yaml.v2"
 	"io"
 )
 
@@ -12,7 +11,6 @@ type (
 	// they're represented like this.
 	mapping  = map[string]interface{}
 	sequence = []interface{}
-	scalar   = interface{}
 )
 
 // YAML deep-merges any number of YAML sources, with later sources taking
@@ -34,7 +32,7 @@ type (
 // value with the new.
 //
 // Enabling strict mode returns errors in both of the above cases.
-func YAMLProcess(sources [][]byte, strict bool) ([]byte, error) {
+func YAMLMerge(sources [][]byte, strict bool) ([]byte, error) {
 	var merged interface{}
 	var hasContent bool
 	for _, r := range sources {

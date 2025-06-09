@@ -1109,7 +1109,7 @@ func LoadConfig(configFilePathString string) (*LoadResult, error) {
 		// Attempt to merge only if we have more than one file
 		if usesMultipleConfigs {
 			// Merge to create the final yaml config
-			processedBytes, err := yamlmerge.YAMLProcess(configListBytes, true)
+			processedBytes, err := yamlmerge.YAMLMerge(configListBytes, true)
 			if err != nil {
 				return nil, err
 			}
