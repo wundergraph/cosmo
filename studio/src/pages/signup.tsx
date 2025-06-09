@@ -42,7 +42,7 @@ const SignupPage: NextPageWithLayout = () => {
       <div className="relative z-10 m-4 flex w-full max-w-xl flex-col gap-y-4 rounded-lg border bg-gray-950/60 p-4 text-white shadow-xl backdrop-blur-xl md:p-10 lg:m-10 lg:mt-20 xl:mt-52 2xl:mt-60">
         <a href="https://wundergraph.com" className="flex items-center gap-2">
           <Logo width={40} height={40} />
-          <h1 className="text-lg font-bold">Wundergraph Cosmo</h1>
+          <h1 className="text-lg font-bold">WunderGraph Cosmo</h1>
         </a>
         <div className="flex flex-col items-start pt-8 md:pt-16">
           <h2 className="mb-1 text-2xl font-medium">Sign up</h2>

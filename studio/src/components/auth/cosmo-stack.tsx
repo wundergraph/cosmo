@@ -534,7 +534,7 @@ export const Arc = (props: SVGProps<SVGSVGElement>) => {
 
 export const ProductCosmoStack = () => {
   return (
-    <div className="relative flex h-screen w-full flex-col items-center overflow-hidden">
+    <div className="relative flex w-full flex-col items-center overflow-hidden">
       <div className="flex h-full w-full flex-col items-center">
         <div className="relative flex items-center px-4 text-center md:px-8 md:text-left">
           <div className="flex w-full flex-col justify-start md:mt-12">
