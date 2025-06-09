@@ -77,7 +77,6 @@ func TestIntegration(t *testing.T) {
 	merged, err := YAMLMerge([][]byte{base, prod}, true /* strict */)
 	require.NoError(t, err, "merge failed")
 
-	// M
 	if !assert.Equal(t, string(expect), string(merged), "unexpected contents") {
 		dump(t, string(merged), string(expect))
 	}

@@ -26,8 +26,10 @@ type (
 //	{"foo": [1, 2, 3]} + {"foo": [4, 5, 6]}
 //	== {"foo": [4, 5, 6]}
 //
-// In non-strict mode, Attempting to merge mismatched types (e.g., merging a sequence into a map)
-// replaces the old value with the new.
+// In non-strict mode,
+// Attempting to merge mismatched types, that incudes the following
+// either scalar to sequence, scalar to map or sequence to map
+// and vice versa, replaces the old value with the new.
 //
 // Enabling strict mode returns errors in the above case.
 func YAMLMerge(sources [][]byte, strict bool) ([]byte, error) {
