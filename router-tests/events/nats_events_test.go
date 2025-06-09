@@ -1193,6 +1193,68 @@ func TestNatsEvents(t *testing.T) {
 		})
 	})
 
+	t.Run("subscribing to a non-existent stream returns an error", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+			EnableNats:               true,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			js, err := jetstream.New(xEnv.NatsConnectionDefault)
+			require.NoError(t, err)
+
+			stream, err := js.Stream(xEnv.Context, xEnv.GetPubSubName("streamName"))
+			require.Error(t, err)
+			require.Equal(t, "nats: API error: code=404 err_code=10059 description=stream not found", err.Error())
+			require.Equal(t, nil, stream)
+
+			surl := xEnv.GraphQLWebSocketSubscriptionURL()
+			client := graphql.NewSubscriptionClient(surl)
+			t.Cleanup(func() {
+				_ = client.Close()
+			})
+
+			var subscription struct {
+				employeeUpdatedNatsStream struct {
+					ID float64 `graphql:"id"`
+				} `graphql:"employeeUpdatedNatsStream(id: 12)"`
+			}
+
+			gotError := make(chan error)
+
+			_, err = client.Subscribe(&subscription, nil, func(dataValue []byte, errValue error) error {
+				gotError <- errValue
+
+				return nil
+			})
+			require.NoError(t, err)
+
+			go func() {
+				clientErr := client.Run()
+				assert.NoError(t, clientErr, "unexpected client run error, this used to be flaky")
+			}()
+
+			select {
+			case err := <-gotError:
+				require.ErrorContains(t, err, fmt.Sprintf(
+					"EDFS error: failed to create or update consumer for stream \"%s\"",
+					xEnv.GetPubSubName("streamName"),
+				))
+			case <-time.After(5 * time.Second):
+				t.Fatal("timed out waiting for nats error")
+			}
+
+			// Any further errors should be treated as a failure
+			// as it likely indicates the server telling the client to retry
+			select {
+			case err := <-gotError:
+				t.Fatalf("recieved >1 error on channel: %v", err)
+			case <-time.After(5 * time.Second):
+				break
+			}
+		})
+	})
+
 	t.Run("subscribe ws with filter", func(t *testing.T) {
 		t.Parallel()
 
@@ -1867,67 +1929,6 @@ func TestNatsEvents(t *testing.T) {
 		})
 	})
 
-	t.Run("subscribing to a non-existent stream returns an error", func(t *testing.T) {
-		t.Parallel()
-
-		testenv.Run(t, &testenv.Config{
-			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
-			EnableNats:               true,
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			js, err := jetstream.New(xEnv.NatsConnectionDefault)
-			require.NoError(t, err)
-
-			stream, err := js.Stream(xEnv.Context, xEnv.GetPubSubName("streamName"))
-			require.Error(t, err)
-			require.Equal(t, "nats: API error: code=404 err_code=10059 description=stream not found", err.Error())
-			require.Equal(t, nil, stream)
-
-			surl := xEnv.GraphQLWebSocketSubscriptionURL()
-			client := graphql.NewSubscriptionClient(surl)
-			t.Cleanup(func() {
-				_ = client.Close()
-			})
-
-			var subscription struct {
-				employeeUpdatedNatsStream struct {
-					ID float64 `graphql:"id"`
-				} `graphql:"employeeUpdatedNatsStream(id: 12)"`
-			}
-
-			gotError := make(chan error)
-
-			_, err = client.Subscribe(&subscription, nil, func(dataValue []byte, errValue error) error {
-				gotError <- errValue
-
-				return nil
-			})
-			require.NoError(t, err)
-
-			go func() {
-				clientErr := client.Run()
-				assert.NoError(t, clientErr, "unexpected client run error, this used to be flaky")
-			}()
-
-			select {
-			case err := <-gotError:
-				require.ErrorContains(t, err, fmt.Sprintf(
-					"EDFS error: failed to create or update consumer for stream \"%s\"",
-					xEnv.GetPubSubName("streamName"),
-				))
-			case <-time.After(5 * time.Second):
-				t.Fatal("timed out waiting for nats error")
-			}
-
-			// Any further errors should be treated as a failure
-			// as it likely indicates the server telling the client to retry
-			select {
-			case err := <-gotError:
-				t.Fatalf("recieved >1 error on channel: %v", err)
-			case <-time.After(5 * time.Second):
-				break
-			}
-		})
-	})
 }
 
 func TestFlakyNatsEvents(t *testing.T) {
