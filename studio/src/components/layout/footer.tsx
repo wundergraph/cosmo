@@ -18,7 +18,7 @@ export const Footer = () => {
       label: "Website Terms of Use",
     },
     {
-      href: "https://wundergraph.com/cosmo-managed-service-termss",
+      href: "https://wundergraph.com/cosmo-managed-service-terms",
       label: "Cosmo Managed Service Terms",
     },
     {
