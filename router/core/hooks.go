@@ -2,8 +2,18 @@ package core
 
 import (
 	"context"
+	"fmt"
+	"net/http"
+	"strconv"
+	"strings"
+	"bytes"
+	"io"
 
+	"go.uber.org/zap"
+
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/wundergraph/cosmo/router/internal/utils"
+	"github.com/wundergraph/cosmo/router/pkg/logging"
 )
 
 // Application Lifecycle Hooks
@@ -35,12 +45,12 @@ type GraphQLServerStopHook interface {
 }
 
 // Router Lifecycle Hooks
-type RouterRequestHook interface {
-	OnRouterRequest(ctx context.Context)
+type RouterRequestHook interface {	
+	OnRouterRequest(reqContext RequestContext, params *RouterRequestParams) error
 }
 
 type RouterResponseHook interface {
-	OnRouterResponse(ctx context.Context)
+	OnRouterResponse(reqContext RequestContext, params *RouterResponseParams, exitError *ExitError) error
 }
 
 type RouterLifecycleHook interface {
@@ -241,4 +251,114 @@ func (hr *hookRegistry) AddOperationLifecycle(inst any) {
 	registerHook(inst, hr.operationPostPlanHooks)
 	registerHook(inst, hr.operationPreExecuteHooks)
 	registerHook(inst, hr.operationPostExecuteHooks)
+}
+
+// a helper middleware that runs RouterRequestHook/RouterResponseHook around only the /graphql endpoint.
+func RouterHooksMiddleware(
+    graphqlPath string,
+    hooks *hookRegistry,
+	logger *zap.Logger,
+) func(next http.Handler) http.Handler {
+    return func(next http.Handler) http.Handler {
+        return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+            if !isGraphQLRequest(r, graphqlPath) && !isWebsocketRequest(r) { // skip subscriptions for now
+                next.ServeHTTP(w, r)
+                return
+            }
+			requestLogger := logger.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
+			if batchedOperationId, ok := r.Context().Value(BatchedOperationId{}).(string); ok {
+				requestLogger = requestLogger.With(logging.WithBatchedRequestOperationID(batchedOperationId))
+			}
+			reqContext := getRequestContext(r.Context())
+			if reqContext != nil {
+				requestLogger = reqContext.logger
+			}
+
+			logger.Debug("Firing RouterRequest hooks")
+            for _, h := range hooks.routerRequestHooks.Values() {
+                if err := h.OnRouterRequest(reqContext, &RouterRequestParams{
+                    HttpRequest: r,
+                    Logger:      requestLogger,
+                }); err != nil {
+                    http.Error(w, err.Error(), http.StatusForbidden)
+                    return
+                }
+            }
+			// if there's no response hooks, we skip the rest of the middleware
+			if len(hooks.routerResponseHooks.Values()) == 0 {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+            wrapped := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
+            wrapped.Discard()
+            var buf bytes.Buffer
+            wrapped.Tee(&buf)
+
+            var exitErr *ExitError
+            func() {
+                defer func() {
+                    if rec := recover(); rec != nil {
+                        var err error
+                        if e, ok := rec.(error); ok {
+                            err = e
+                        } else {
+                            err = fmt.Errorf("%v", rec)
+                        }
+                        exitErr = &ExitError{Code: http.StatusInternalServerError, Err: err}
+                    }
+                }()
+                next.ServeHTTP(wrapped, r)
+            }()
+
+            originalResp := &http.Response{
+                StatusCode: wrapped.Status(),
+                Header:     wrapped.Header().Clone(),
+                Body:       io.NopCloser(bytes.NewReader(buf.Bytes())),
+            }
+            controller := &routerResponseController{
+                recorder: responseRecorder{
+                    HeaderMap: wrapped.Header().Clone(),
+                    Body:      buf.Bytes(),
+                    Code:      wrapped.Status(),
+                },
+            }
+            params := &RouterResponseParams{
+                RouterRequestParams: RouterRequestParams{
+                    HttpRequest: r,
+                    Logger:      requestLogger,
+                },
+                HttpResponse: originalResp,
+                Controller:   controller,
+            }
+
+			logger.Debug("Firing RouterResponse hooks")
+            for _, h := range hooks.routerResponseHooks.Values() {
+                if err := h.OnRouterResponse(reqContext, params, exitErr); err != nil {
+                    http.Error(w, err.Error(), http.StatusInternalServerError)
+                    return
+                }
+            }
+
+			logger.Debug("Setting response after RouterResponse hooks")
+            newBody := controller.GetBody()
+            w.Header().Set("Content-Length", strconv.Itoa(len(newBody)))
+            for key, vals := range controller.GetHeaderMap() {
+                for _, v := range vals {
+                    w.Header().Add(key, v)
+                }
+            }
+            w.WriteHeader(controller.GetStatusCode())
+            w.Write(newBody)
+        })
+    }
+}
+
+func isWebsocketRequest(r *http.Request) bool {
+	return strings.EqualFold(r.Header.Get("Connection"), "Upgrade") &&
+	strings.EqualFold(r.Header.Get("Upgrade"), "websocket")
+}
+
+func isGraphQLRequest(r *http.Request, graphqlPath string) bool {
+	return r.URL.Path == graphqlPath
 }
