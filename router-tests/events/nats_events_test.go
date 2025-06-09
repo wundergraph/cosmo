@@ -1928,7 +1928,6 @@ func TestNatsEvents(t *testing.T) {
 			require.NoError(t, errClose2)
 		})
 	})
-
 }
 
 func TestFlakyNatsEvents(t *testing.T) {
@@ -1998,5 +1997,4 @@ func TestFlakyNatsEvents(t *testing.T) {
 			require.Equal(t, float64(99), payload.Data.EmployeeUpdatedMyNats.ID)
 		})
 	})
-
 }
