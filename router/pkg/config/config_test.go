@@ -963,6 +963,7 @@ listen_addr: "localhost:3007"
 
 		// We check given parts of the error separately since the file path is not predictable
 		require.ErrorContains(t, err, "router config validation error for")
+		require.ErrorContains(t, err, "config_test_")
 		require.ErrorContains(t, err, "jsonschema validation failed with 'https://raw.githubusercontent.com/wundergraph/cosmo/main/router/pkg/config/config.schema.json#'\n- at '': ")
 
 		require.ErrorContains(t, err, "additional properties 'listen_ad_dr' not allowed")

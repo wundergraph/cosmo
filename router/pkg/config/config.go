@@ -330,7 +330,7 @@ type EngineDebugConfiguration struct {
 	PrintOperationEnableASTRefs                  bool `envDefault:"false" env:"ENGINE_DEBUG_PRINT_OPERATION_ENABLE_AST_REFS" yaml:"print_operation_enable_ast_refs"`
 	PrintPlanningPaths                           bool `envDefault:"false" env:"ENGINE_DEBUG_PRINT_PLANNING_PATHS" yaml:"print_planning_paths"`
 	PrintQueryPlans                              bool `envDefault:"false" env:"ENGINE_DEBUG_PRINT_QUERY_PLANS" yaml:"print_query_plans"`
-	PrintIntermediateQueryPlans                  bool `envDefault:"false" env:"ENGINE_DEBUG_PRINT_INTERMEDIATE_QUERY_PLANS" yaml:"-"`
+	PrintIntermediateQueryPlans                  bool `envDefault:"false" env:"ENGINE_DEBUG_PRINT_INTERMEDIATE_QUERY_PLANS" yaml:"print_intermediate_query_plans"`
 	PrintNodeSuggestions                         bool `envDefault:"false" env:"ENGINE_DEBUG_PRINT_NODE_SUGGESTIONS" yaml:"print_node_suggestions"`
 	ConfigurationVisitor                         bool `envDefault:"false" env:"ENGINE_DEBUG_CONFIGURATION_VISITOR" yaml:"configuration_visitor"`
 	PlanningVisitor                              bool `envDefault:"false" env:"ENGINE_DEBUG_PLANNING_VISITOR" yaml:"planning_visitor"`
@@ -1025,6 +1025,11 @@ type LoadResult struct {
 	DefaultLoaded bool
 }
 
+// LoadConfig takes in a configFilePathString which EITHER contains the name of one single configuration file
+// or a comma separated list of file names (e.g. "base.config.yaml,override.config.yaml")
+// This function loads the configuration files, apply environment variables and validates them with the json schema
+// In case of loading multiple configuration files, we will do the validation step for every configuration
+// and additionally post merging, since validations like oneOf can be bypassed
 func LoadConfig(configFilePathString string) (*LoadResult, error) {
 	cfg := &LoadResult{
 		Config:        Config{},
@@ -1103,7 +1108,8 @@ func LoadConfig(configFilePathString string) (*LoadResult, error) {
 		return nil, fmt.Errorf("errors while loading config files: %w", errs)
 	}
 
-	// If we are using the default config it means we didn't load any config files
+	// In case defaultLoaded is true, it means that the user did not provide a
+	// configuration file
 	if !cfg.DefaultLoaded {
 		yamlFinalBytes := configListBytes[0]
 		// Attempt to merge only if we have more than one file
