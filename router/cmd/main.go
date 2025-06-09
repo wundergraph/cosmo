@@ -25,7 +25,7 @@ import (
 
 var (
 	overrideEnvFlag = flag.String("override-env", os.Getenv("OVERRIDE_ENV"), "Path to .env file to override environment variables")
-	configPathFlag  = flag.String("config", os.Getenv("CONFIG_PATH"), "Path to the router config file e.g. config.yaml, in case the path is a comma separated file list e.g. \"config.yaml,override.yaml\", we will merge the configs")
+	configPathFlag  = flag.String("config", os.Getenv("CONFIG_PATH"), "Path to the router config file e.g. config.yaml, in case the path is a comma separated file list e.g. \"config.yaml,override.yaml\", the configs will be merged")
 	routerVersion   = flag.Bool("version", false, "Prints the version and dependency information")
 	pprofListenAddr = flag.String("pprof-addr", os.Getenv("PPROF_ADDR"), "Address to listen for pprof requests. e.g. :6060 for localhost:6060")
 	memProfilePath  = flag.String("memprofile", "", "Path to write memory profile. Memory is a snapshot taken at the time the program exits")
