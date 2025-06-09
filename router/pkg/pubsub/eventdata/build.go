@@ -21,7 +21,7 @@ func BuildEventDataBytes(ref int, operation *ast.Document, variables *resolve.Va
 		variableName := operation.VariableValueNameBytes(argValue.Ref)
 		contextVariable := &resolve.ContextVariable{
 			Path:     []string{string(variableName)},
-			Renderer: resolve.NewPlainVariableRenderer(),
+			Renderer: resolve.NewJSONVariableRenderer(),
 		}
 		variablePlaceHolder, _ := variables.AddVariable(contextVariable)
 		argumentName := operation.ArgumentNameString(arg)
