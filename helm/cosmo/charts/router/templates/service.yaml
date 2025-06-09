@@ -21,5 +21,11 @@ spec:
       protocol: TCP
       name: metrics
     {{- end }}
+    {{ if .Values.configuration.mcp.enabled }}
+    - port: {{ .Values.configuration.mcp.port }}
+      targetPort: mcp
+      protocol: TCP
+      name: mcp
+    {{- end }}
   selector:
     {{- include "router.selectorLabels" . | nindent 4 }}

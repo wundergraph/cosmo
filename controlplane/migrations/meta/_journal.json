@@ -862,6 +862,20 @@
       "when": 1746470953849,
       "tag": "0122_abandoned_molly_hayes",
       "breakpoints": true
+    },
+    {
+      "idx": 123,
+      "version": "7",
+      "when": 1747921605545,
+      "tag": "0123_unusual_omega_red",
+      "breakpoints": true
+    },
+    {
+      "idx": 124,
+      "version": "7",
+      "when": 1748164000450,
+      "tag": "0124_fancy_greymalkin",
+      "breakpoints": true
     }
   ]
 }

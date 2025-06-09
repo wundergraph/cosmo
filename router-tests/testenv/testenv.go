@@ -40,7 +40,6 @@ import (
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/nats-io/nats.go"
-	"github.com/nats-io/nats.go/jetstream"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
 	"github.com/twmb/franz-go/pkg/kadm"
@@ -53,8 +52,6 @@ import (
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
 	"google.golang.org/protobuf/encoding/protojson"
-
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs"
 	"github.com/wundergraph/cosmo/router/core"
@@ -83,8 +80,10 @@ var (
 	ConfigWithEdfsKafkaJSONTemplate string
 	//go:embed testdata/configWithEdfsNats.json
 	ConfigWithEdfsNatsJSONTemplate string
-	demoNatsProviders              = []string{natsDefaultSourceName, myNatsProviderID}
-	demoKafkaProviders             = []string{myKafkaProviderID}
+	//go:embed testdata/configWithPlugins.json
+	ConfigWithPluginsJSONTemplate string
+	DemoNatsProviders             = []string{natsDefaultSourceName, myNatsProviderID}
+	DemoKafkaProviders            = []string{myKafkaProviderID}
 )
 
 func init() {
@@ -251,13 +250,15 @@ type EngineStatOptions struct {
 }
 
 type MetricOptions struct {
-	MetricExclusions             MetricExclusions
-	EnableRuntimeMetrics         bool
-	EnableOTLPRouterCache        bool
-	EnablePrometheusRouterCache  bool
-	OTLPEngineStatsOptions       EngineStatOptions
-	PrometheusEngineStatsOptions EngineStatOptions
-	PrometheusSchemaFieldUsage   PrometheusSchemaFieldUsage
+	MetricExclusions                  MetricExclusions
+	EnableRuntimeMetrics              bool
+	EnableOTLPRouterCache             bool
+	EnablePrometheusRouterCache       bool
+	OTLPEngineStatsOptions            EngineStatOptions
+	PrometheusEngineStatsOptions      EngineStatOptions
+	PrometheusSchemaFieldUsage        PrometheusSchemaFieldUsage
+	EnableOTLPConnectionMetrics       bool
+	EnablePrometheusConnectionMetrics bool
 }
 
 type PrometheusSchemaFieldUsage struct {
@@ -286,6 +287,7 @@ type Config struct {
 	TraceExporter                      trace.SpanExporter
 	CustomMetricAttributes             []config.CustomAttribute
 	CustomTelemetryAttributes          []config.CustomAttribute
+	CustomTracingAttributes            []config.CustomAttribute
 	CustomResourceAttributes           []config.CustomStaticAttribute
 	MetricReader                       metric.Reader
 	PrometheusRegistry                 *prometheus.Registry
@@ -315,6 +317,12 @@ type Config struct {
 	UseVersionedGraph                  bool
 	NoShutdownTestServer               bool
 	MCP                                config.MCPConfiguration
+	Plugins                            PluginConfig
+}
+
+type PluginConfig struct {
+	Path    string
+	Enabled bool
 }
 
 type CacheMetricsAssertions struct {
@@ -781,7 +789,6 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 
 	if cfg.EnableKafka {
 		cfg.KafkaSeeds = []string{"localhost:9092"}
-
 		client, err := kgo.NewClient(
 			kgo.SeedBrokers(cfg.KafkaSeeds...),
 		)
@@ -1255,22 +1262,25 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		testConfig.ModifySubgraphErrorPropagation(&cfg.SubgraphErrorPropagation)
 	}
 
-	natsEventSources := make([]config.NatsEventSource, len(demoNatsProviders))
-	kafkaEventSources := make([]config.KafkaEventSource, len(demoKafkaProviders))
+	var natsEventSources []config.NatsEventSource
+	var kafkaEventSources []config.KafkaEventSource
 
 	if natsData != nil {
-		for _, sourceName := range demoNatsProviders {
+		for _, sourceName := range DemoNatsProviders {
 			natsEventSources = append(natsEventSources, config.NatsEventSource{
 				ID:  sourceName,
 				URL: nats.DefaultURL,
 			})
 		}
 	}
-	for _, sourceName := range demoKafkaProviders {
-		kafkaEventSources = append(kafkaEventSources, config.KafkaEventSource{
-			ID:      sourceName,
-			Brokers: testConfig.KafkaSeeds,
-		})
+
+	if testConfig.KafkaSeeds != nil {
+		for _, sourceName := range DemoKafkaProviders {
+			kafkaEventSources = append(kafkaEventSources, config.KafkaEventSource{
+				ID:      sourceName,
+				Brokers: testConfig.KafkaSeeds,
+			})
+		}
 	}
 
 	eventsConfiguration := config.EventsConfiguration{
@@ -1284,6 +1294,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	}
 
 	routerOpts := []core.Option{
+		core.WithDisableUsageTracking(),
 		core.WithLogger(testConfig.Logger),
 		core.WithAccessLogs(&core.AccessLogsConfig{
 			Logger:             testConfig.AccessLogger,
@@ -1345,6 +1356,11 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		routerOpts = append(routerOpts, core.WithMCP(testConfig.MCP))
 	}
 
+	routerOpts = append(routerOpts, core.WithPlugins(config.PluginsConfiguration{
+		Path:    testConfig.Plugins.Path,
+		Enabled: testConfig.Plugins.Enabled,
+	}))
+
 	if testConfig.TraceExporter != nil {
 		testConfig.PropagationConfig.TraceContext = true
 
@@ -1373,15 +1389,20 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		routerOpts = append(routerOpts, core.WithTelemetryAttributes(testConfig.CustomTelemetryAttributes))
 	}
 
+	if testConfig.CustomTracingAttributes != nil {
+		routerOpts = append(routerOpts, core.WithTracingAttributes(testConfig.CustomTracingAttributes))
+	}
+
 	var prometheusConfig rmetric.PrometheusConfig
 
 	if testConfig.PrometheusRegistry != nil {
 		prometheusConfig = rmetric.PrometheusConfig{
-			Enabled:      true,
-			ListenAddr:   fmt.Sprintf("localhost:%d", testConfig.PrometheusPort),
-			Path:         "/metrics",
-			TestRegistry: testConfig.PrometheusRegistry,
-			GraphqlCache: testConfig.MetricOptions.EnablePrometheusRouterCache,
+			Enabled:         true,
+			ListenAddr:      fmt.Sprintf("localhost:%d", testConfig.PrometheusPort),
+			Path:            "/metrics",
+			TestRegistry:    testConfig.PrometheusRegistry,
+			GraphqlCache:    testConfig.MetricOptions.EnablePrometheusRouterCache,
+			ConnectionStats: testConfig.MetricOptions.EnablePrometheusConnectionMetrics,
 			EngineStats: rmetric.EngineStatsConfig{
 				Subscription: testConfig.MetricOptions.PrometheusEngineStatsOptions.EnableSubscription,
 			},
@@ -1406,9 +1427,10 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 					Enabled: true,
 				},
 				OTLP: config.MetricsOTLP{
-					Enabled:       true,
-					RouterRuntime: testConfig.MetricOptions.EnableRuntimeMetrics,
-					GraphqlCache:  testConfig.MetricOptions.EnableOTLPRouterCache,
+					Enabled:         true,
+					RouterRuntime:   testConfig.MetricOptions.EnableRuntimeMetrics,
+					GraphqlCache:    testConfig.MetricOptions.EnableOTLPRouterCache,
+					ConnectionStats: testConfig.MetricOptions.EnableOTLPConnectionMetrics,
 					EngineStats: config.EngineStats{
 						Subscriptions: testConfig.MetricOptions.OTLPEngineStatsOptions.EnableSubscription,
 					},
@@ -1561,6 +1583,18 @@ func gqlURL(srv *httptest.Server) string {
 	return path
 }
 
+func ReadAndCheckJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err error) {
+	_, payload, err := conn.ReadMessage()
+	if err != nil {
+		return err
+	}
+	if err := json.Unmarshal(payload, &v); err != nil {
+		t.Logf("Failed to decode WebSocket message. Raw payload: %s", string(payload))
+		return err
+	}
+	return nil
+}
+
 type Environment struct {
 	t                     testing.TB
 	cfg                   *Config
@@ -1605,6 +1639,10 @@ func GetPubSubNameFn(prefix string) func(name string) string {
 // Using this method avoid conflicts between tests running in parallel.
 func (e *Environment) GetPubSubName(name string) string {
 	return e.getPubSubName(name)
+}
+
+func (e *Environment) GetKafkaSeeds() []string {
+	return e.cfg.KafkaSeeds
 }
 
 func (e *Environment) RouterConfigVersionMain() string {
@@ -2164,8 +2202,7 @@ func (e *Environment) InitGraphQLWebSocketConnection(header http.Header, query u
 	})
 	require.NoError(e.t, err)
 	var ack WebSocketMessage
-	err = conn.ReadJSON(&ack)
-	require.NoError(e.t, err)
+	require.NoError(e.t, ReadAndCheckJSON(e.t, conn, &ack))
 	require.Equal(e.t, "connection_ack", ack.Type)
 	return conn
 }
@@ -2526,7 +2563,7 @@ func WSReadJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err error) {
 			return err
 		}
 
-		err = conn.ReadJSON(v)
+		require.NoError(t, ReadAndCheckJSON(t, conn, v))
 
 		// Reset the deadline to prevent future operations from timing out
 		if resetErr := conn.SetReadDeadline(time.Time{}); resetErr != nil {
@@ -2642,16 +2679,19 @@ func WSWriteJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err error) 
 func subgraphOptions(ctx context.Context, t testing.TB, logger *zap.Logger, natsData *NatsData, pubSubName func(string) string) *subgraphs.SubgraphOptions {
 	if natsData == nil {
 		return &subgraphs.SubgraphOptions{
-			NatsPubSubByProviderID: map[string]pubsub_datasource.NatsPubSub{},
+			NatsPubSubByProviderID: map[string]pubsubNats.Adapter{},
 			GetPubSubName:          pubSubName,
 		}
 	}
-	natsPubSubByProviderID := make(map[string]pubsub_datasource.NatsPubSub, len(demoNatsProviders))
-	for _, sourceName := range demoNatsProviders {
-		js, err := jetstream.New(natsData.Connections[0])
+	natsPubSubByProviderID := make(map[string]pubsubNats.Adapter, len(DemoNatsProviders))
+	for _, sourceName := range DemoNatsProviders {
+		adapter, err := pubsubNats.NewAdapter(ctx, logger, natsData.Params[0].Url, natsData.Params[0].Opts, "hostname", "listenaddr")
 		require.NoError(t, err)
-
-		natsPubSubByProviderID[sourceName] = pubsubNats.NewConnector(logger, natsData.Connections[0], js, "hostname", "listenaddr").New(ctx)
+		require.NoError(t, adapter.Startup(ctx))
+		t.Cleanup(func() {
+			require.NoError(t, adapter.Shutdown(context.Background()))
+		})
+		natsPubSubByProviderID[sourceName] = adapter
 	}
 
 	return &subgraphs.SubgraphOptions{

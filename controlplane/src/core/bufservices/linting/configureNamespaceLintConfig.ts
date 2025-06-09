@@ -9,6 +9,7 @@ import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { SchemaLintRepository } from '../../repositories/SchemaLintRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function configureNamespaceLintConfig(
   opts: RouterOptions,
@@ -21,13 +22,8 @@ export function configureNamespaceLintConfig(
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
-    if (!authContext.hasWriteAccess) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `The user doesnt have the permissions to perform this operation`,
-        },
-      };
+    if (authContext.organizationDeactivated) {
+      throw new UnauthorizedError();
     }
 
     const schemaLintRepo = new SchemaLintRepository(opts.db);
@@ -42,6 +38,10 @@ export function configureNamespaceLintConfig(
         },
         configs: [],
       };
+    }
+
+    if (!authContext.rbac.hasNamespaceWriteAccess(namespace)) {
+      throw new UnauthorizedError();
     }
 
     await schemaLintRepo.configureNamespaceLintConfig({

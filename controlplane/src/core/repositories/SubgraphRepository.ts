@@ -25,7 +25,6 @@ import {
   users,
 } from '../../db/schema.js';
 import {
-  FeatureSubgraphDTO,
   FederatedGraphDTO,
   GetChecksResponse,
   Label,
@@ -40,6 +39,7 @@ import { BlobStorage } from '../blobstorage/index.js';
 import { getDiffBetweenGraphs } from '../composition/schemaCheck.js';
 import { getFederatedGraphRouterCompatibilityVersion, hasLabelsChanged, normalizeLabels } from '../util.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
+import { RBACEvaluator } from '../services/RBACEvaluator.js';
 import { FeatureFlagRepository } from './FeatureFlagRepository.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { TargetRepository } from './TargetRepository.js';
@@ -156,14 +156,7 @@ export class SubgraphRepository {
       }
 
       /**
-       * 4. Add the creator as a subgraph member
-       */
-
-      const subgraphRepo = new SubgraphRepository(this.logger, tx, this.organizationId);
-      await subgraphRepo.addSubgraphMember({ subgraphId: insertedSubgraph[0].id, userId: data.createdBy });
-
-      /**
-       * 5. Insert into featureFlagsToSubgraph to map the faeture flag to the base subgraph
+       * 4. Insert into featureFlagsToSubgraph to map the feature flag to the base subgraph
        */
 
       if (data.featureSubgraphOptions) {
@@ -581,7 +574,55 @@ export class SubgraphRepository {
     });
   }
 
-  public async list(opts: SubgraphListFilterOptions): Promise<SubgraphDTO[]> {
+  /**
+   * Applies conditions based on the provided RBAC. If the actor can't access any subgraph, the
+   * returned value is false; otherwise, true.
+   *
+   * @param rbac
+   * @param conditions
+   * @private
+   */
+  private applyRbacConditionsToQuery(rbac: RBACEvaluator | undefined, conditions: (SQL<unknown> | undefined)[]) {
+    if (!rbac || rbac.isOrganizationViewer) {
+      return true;
+    }
+
+    const graphAdmin = rbac.ruleFor('subgraph-admin');
+    const graphPublisher = rbac.ruleFor('subgraph-publisher');
+    if (!graphAdmin && !graphPublisher) {
+      return false;
+    }
+
+    const namespaces: string[] = [];
+    const resources: string[] = [];
+
+    if (graphAdmin) {
+      namespaces.push(...graphAdmin.namespaces);
+      resources.push(...graphAdmin.resources);
+    }
+
+    if (graphPublisher) {
+      namespaces.push(...graphPublisher.namespaces);
+      resources.push(...graphPublisher.resources);
+    }
+
+    if (namespaces.length > 0 && resources.length > 0) {
+      conditions.push(
+        or(
+          inArray(schema.targets.namespaceId, [...new Set(namespaces)]),
+          inArray(schema.targets.id, [...new Set(resources)]),
+        ),
+      );
+    } else if (namespaces.length > 0) {
+      conditions.push(inArray(schema.targets.namespaceId, [...new Set(namespaces)]));
+    } else if (resources.length > 0) {
+      conditions.push(inArray(schema.targets.id, [...new Set(resources)]));
+    }
+
+    return true;
+  }
+
+  public async list(opts: SubgraphListFilterOptions) {
     const conditions: (SQL<unknown> | undefined)[] = [
       eq(schema.targets.organizationId, this.organizationId),
       eq(schema.targets.type, 'subgraph'),
@@ -602,6 +643,10 @@ export class SubgraphRepository {
 
     if (opts.excludeFeatureSubgraphs) {
       conditions.push(eq(schema.subgraphs.isFeatureSubgraph, false));
+    }
+
+    if (!this.applyRbacConditionsToQuery(opts.rbac, conditions)) {
+      return [];
     }
 
     const targetsQuery = this.db
@@ -627,7 +672,6 @@ export class SubgraphRepository {
     const targets = await targetsQuery;
 
     const subgraphs: SubgraphDTO[] = [];
-
     for (const target of targets) {
       const sg = await this.byTargetId(target.id);
       if (sg === undefined) {
@@ -635,6 +679,74 @@ export class SubgraphRepository {
       }
 
       subgraphs.push(sg);
+    }
+
+    return subgraphs;
+  }
+
+  public async listAvailable(opts: SubgraphListFilterOptions) {
+    const conditions: (SQL<unknown> | undefined)[] = [
+      eq(schema.targets.organizationId, this.organizationId),
+      eq(schema.targets.type, 'subgraph'),
+    ];
+
+    if (opts.namespaceId) {
+      conditions.push(eq(schema.targets.namespaceId, opts.namespaceId));
+    }
+
+    if (opts.query) {
+      conditions.push(
+        or(
+          like(schema.targets.name, `%${opts.query}%`),
+          sql.raw(`${getTableName(schema.subgraphs)}.${schema.subgraphs.id.name}::text like '%${opts.query}%'`),
+        ),
+      );
+    }
+
+    if (opts.excludeFeatureSubgraphs) {
+      conditions.push(eq(schema.subgraphs.isFeatureSubgraph, false));
+    }
+
+    if (!this.applyRbacConditionsToQuery(opts.rbac, conditions)) {
+      return [];
+    }
+
+    const targetsQuery = this.db
+      .select({
+        id: schema.targets.id,
+        name: schema.targets.name,
+        lastUpdatedAt: schema.schemaVersion.createdAt,
+        federatedGraphId: schema.federatedGraphs.targetId,
+      })
+      .from(schema.targets)
+      .innerJoin(schema.subgraphs, eq(schema.subgraphs.targetId, schema.targets.id))
+      .innerJoin(schema.subgraphsToFederatedGraph, eq(schema.subgraphs.id, schema.subgraphsToFederatedGraph.subgraphId))
+      .innerJoin(
+        schema.federatedGraphs,
+        eq(schema.federatedGraphs.id, schema.subgraphsToFederatedGraph.federatedGraphId),
+      )
+      // Left join because version is optional
+      .leftJoin(schema.schemaVersion, eq(schema.subgraphs.schemaVersionId, schema.schemaVersion.id))
+      .orderBy(asc(schema.targets.createdAt), asc(schemaVersion.createdAt))
+      .where(and(...conditions));
+
+    if (opts.limit) {
+      targetsQuery.limit(opts.limit);
+    }
+    if (opts.offset) {
+      targetsQuery.offset(opts.offset);
+    }
+
+    const targets = await targetsQuery;
+
+    const subgraphs: (SubgraphDTO & { federatedGraphId: string })[] = [];
+    for (const target of targets) {
+      const sg = await this.byTargetId(target.id);
+      if (sg === undefined) {
+        throw new Error(`Subgraph ${target.name} not found`);
+      }
+
+      subgraphs.push({ ...sg, federatedGraphId: target.federatedGraphId });
     }
 
     return subgraphs;
@@ -656,6 +768,10 @@ export class SubgraphRepository {
 
     if (opts.excludeFeatureSubgraphs) {
       conditions.push(eq(schema.subgraphs.isFeatureSubgraph, false));
+    }
+
+    if (!this.applyRbacConditionsToQuery(opts.rbac, conditions)) {
+      return 0;
     }
 
     const subgraphsCount = await this.db
@@ -685,6 +801,7 @@ export class SubgraphRepository {
     federatedGraphTargetId: string;
     published?: boolean;
     includeSubgraphs?: string[];
+    rbac?: RBACEvaluator;
   }): Promise<SubgraphDTO[]> {
     const target = await this.db.query.targets.findFirst({
       where: and(
@@ -702,6 +819,15 @@ export class SubgraphRepository {
     });
 
     if (target === undefined) {
+      return [];
+    }
+
+    const conditions: (SQL<unknown> | undefined)[] = [
+      eq(schema.targets.organizationId, this.organizationId),
+      eq(schema.subgraphsToFederatedGraph.federatedGraphId, target.federatedGraph.id),
+    ];
+
+    if (!this.applyRbacConditionsToQuery(data.rbac, conditions)) {
       return [];
     }
 
@@ -724,12 +850,7 @@ export class SubgraphRepository {
       )
       .innerJoin(schema.subgraphsToFederatedGraph, eq(schema.subgraphsToFederatedGraph.subgraphId, schema.subgraphs.id))
       .orderBy(asc(schema.schemaVersion.createdAt))
-      .where(
-        and(
-          eq(schema.targets.organizationId, this.organizationId),
-          eq(schema.subgraphsToFederatedGraph.federatedGraphId, target.federatedGraph.id),
-        ),
-      );
+      .where(and(...conditions));
 
     const subgraphs: SubgraphDTO[] = [];
 
@@ -1258,40 +1379,6 @@ export class SubgraphRepository {
     return latestValidVersion[0].schemaSDL;
   }
 
-  public async getAccessibleSubgraphs(userId: string): Promise<SubgraphDTO[]> {
-    const graphs = await this.db
-      .selectDistinctOn([targets.id], { targetId: targets.id, name: targets.name })
-      .from(targets)
-      .innerJoin(subgraphs, eq(targets.id, subgraphs.targetId))
-      .innerJoin(subgraphMembers, eq(subgraphs.id, subgraphMembers.subgraphId))
-      .innerJoin(schema.subgraphsToFederatedGraph, eq(subgraphs.id, schema.subgraphsToFederatedGraph.subgraphId))
-      .innerJoin(
-        schema.federatedGraphs,
-        eq(schema.federatedGraphs.id, schema.subgraphsToFederatedGraph.federatedGraphId),
-      )
-      .where(
-        and(
-          eq(targets.type, 'subgraph'),
-          eq(targets.organizationId, this.organizationId),
-          or(eq(targets.createdBy, userId), eq(subgraphMembers.userId, userId)),
-          eq(schema.federatedGraphs.supportsFederation, true),
-        ),
-      );
-
-    const accessibleSubgraphs: SubgraphDTO[] = [];
-
-    for (const graph of graphs) {
-      const sg = await this.byTargetId(graph.targetId);
-      if (sg === undefined) {
-        throw new Error(`Subgraph ${graph.name} not found`);
-      }
-
-      accessibleSubgraphs.push(sg);
-    }
-
-    return accessibleSubgraphs;
-  }
-
   public updateReadme({ targetId, readme }: { targetId: string; readme: string }) {
     return this.db
       .update(targets)
@@ -1322,23 +1409,6 @@ export class SubgraphRepository {
       .innerJoin(users, eq(users.id, subgraphMembers.userId))
       .innerJoin(subgraphs, eq(subgraphs.id, subgraphMembers.subgraphId))
       .where(eq(subgraphs.targetId, targetId));
-  }
-
-  public async addSubgraphMember({ subgraphId, userId }: { subgraphId: string; userId: string }) {
-    await this.db.insert(subgraphMembers).values({ subgraphId, userId }).execute();
-  }
-
-  public async removeSubgraphMember({
-    subgraphId,
-    subgraphMemberId,
-  }: {
-    subgraphId: string;
-    subgraphMemberId: string;
-  }) {
-    await this.db
-      .delete(subgraphMembers)
-      .where(and(eq(subgraphMembers.subgraphId, subgraphId), eq(subgraphMembers.id, subgraphMemberId)))
-      .execute();
   }
 
   public async addFieldGracePeriod({

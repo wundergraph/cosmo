@@ -11,7 +11,7 @@ import { camelCase, upperFirst } from 'lodash-es';
 import { dataDir } from '../../../core/config.js';
 
 // Define platform-architecture combinations
-export const HOST_PLATFORM = `${os.platform()}-${os.arch()}`;
+export const HOST_PLATFORM = `${os.platform()}-${getOSArch()}`;
 const ALL_PLATFORMS = ['linux-amd64', 'linux-arm64', 'darwin-amd64', 'darwin-arm64', 'windows-amd64'];
 const installScriptUrl =
   'https://raw.githubusercontent.com/wundergraph/cosmo/refs/tags/wgc%400.80.0/scripts/install-proto-tools.sh';
@@ -41,6 +41,14 @@ const TOOL_VERSIONS: Record<string, ToolVersion> = {
  */
 function getToolPath(toolName: string): string {
   return existsSync(join(TOOLS_BIN_DIR, toolName)) ? join(TOOLS_BIN_DIR, toolName) : toolName;
+}
+
+function getOSArch(): string {
+  const arch = os.arch();
+  if (arch === 'x64') {
+    return 'amd64';
+  }
+  return arch;
 }
 
 /**
@@ -478,7 +486,7 @@ export async function buildBinaries(pluginDir: string, platforms: string[], debu
         flags.push('-gcflags', 'all=-N -l');
       }
 
-      flags.push('-o', join(binDir, binaryName), 'src/main.go');
+      flags.push('-o', join(binDir, binaryName), './src');
 
       await execa(goPath, flags, {
         cwd: pluginDir,

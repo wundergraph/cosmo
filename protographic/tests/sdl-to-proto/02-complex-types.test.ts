@@ -38,11 +38,11 @@ describe('SDL to Proto - Complex Types', () => {
         rpc QueryUsersByRole(QueryUsersByRoleRequest) returns (QueryUsersByRoleResponse) {}
       }
 
-      // Request message for usersByRole operation
+      // Request message for usersByRole operation.
       message QueryUsersByRoleRequest {
         UserRole role = 1;
       }
-      // Response message for usersByRole operation
+      // Response message for usersByRole operation.
       message QueryUsersByRoleResponse {
         repeated User users_by_role = 1;
       }
@@ -103,18 +103,18 @@ describe('SDL to Proto - Complex Types', () => {
         rpc QueryDummy(QueryDummyRequest) returns (QueryDummyResponse) {}
       }
 
-      // Request message for dummy operation
+      // Request message for dummy operation.
       message QueryDummyRequest {
       }
-      // Response message for dummy operation
+      // Response message for dummy operation.
       message QueryDummyResponse {
         string dummy = 1;
       }
-      // Request message for createUser operation
+      // Request message for createUser operation.
       message MutationCreateUserRequest {
         UserInput input = 1;
       }
-      // Response message for createUser operation
+      // Response message for createUser operation.
       message MutationCreateUserResponse {
         User create_user = 1;
       }
@@ -172,11 +172,11 @@ describe('SDL to Proto - Complex Types', () => {
         rpc QueryUser(QueryUserRequest) returns (QueryUserResponse) {}
       }
 
-      // Request message for user operation
+      // Request message for user operation.
       message QueryUserRequest {
         string id = 1;
       }
-      // Response message for user operation
+      // Response message for user operation.
       message QueryUserResponse {
         User user = 1;
       }
@@ -230,18 +230,18 @@ describe('SDL to Proto - Complex Types', () => {
         rpc QueryRootNode(QueryRootNodeRequest) returns (QueryRootNodeResponse) {}
       }
 
-      // Request message for rootNode operation
+      // Request message for rootNode operation.
       message QueryRootNodeRequest {
       }
-      // Response message for rootNode operation
+      // Response message for rootNode operation.
       message QueryRootNodeResponse {
         TreeNode root_node = 1;
       }
-      // Request message for node operation
+      // Request message for node operation.
       message QueryNodeRequest {
         string id = 1;
       }
-      // Response message for node operation
+      // Response message for node operation.
       message QueryNodeResponse {
         TreeNode node = 1;
       }
@@ -299,11 +299,11 @@ describe('SDL to Proto - Complex Types', () => {
         rpc QueryUsers(QueryUsersRequest) returns (QueryUsersResponse) {}
       }
 
-      // Request message for users operation
+      // Request message for users operation.
       message QueryUsersRequest {
         UserFilterInput filter = 1;
       }
-      // Response message for users operation
+      // Response message for users operation.
       message QueryUsersResponse {
         repeated User users = 1;
       }

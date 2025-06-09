@@ -7,6 +7,8 @@ import {
   GetOperationsResponse,
   GetOperationsResponse_Operation,
   GetOperationsResponse_OperationType,
+  AnalyticsViewFilterOperator,
+  AnalyticsFilter,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { MetricsRepository } from '../../repositories/analytics/MetricsRepository.js';
 import { CacheWarmerRepository } from '../../repositories/CacheWarmerRepository.js';
@@ -76,8 +78,27 @@ export function getOperations(
       range,
       organizationId: authContext.organizationId,
       graphId: graph.id,
-      filters: [],
+      filters: req.clientName
+        ? [
+            new AnalyticsFilter({
+              field: 'clientName',
+              operator: AnalyticsViewFilterOperator.EQUALS,
+              value: req.clientName,
+            }),
+          ]
+        : [],
     });
+
+    if (operations.length === 0) {
+      return {
+        response: {
+          code: EnumStatusCode.OK,
+        },
+        operations: [],
+      };
+    }
+
+    const computedOperations: GetOperationsResponse_Operation[] = [];
 
     const operationHashes = operations.map((op) => op.operationHash);
     const operationContentMap = await cacheWarmerRepo.getOperationContent({
@@ -86,8 +107,6 @@ export function getOperations(
       organizationID: authContext.organizationId,
       rangeInHours: range,
     });
-
-    const computedOperations: GetOperationsResponse_Operation[] = [];
 
     for (const operation of operations) {
       const operationContent = operationContentMap.get(operation.operationHash);
