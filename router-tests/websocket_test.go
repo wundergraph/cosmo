@@ -2389,7 +2389,7 @@ func TestWebsocketClose(t *testing.T) {
 		})
 	})
 
-	t.Run("should handle subgraph WebSocket upgrade rejection without complete event", func(t *testing.T) {
+	t.Run("should handle subgraph WebSocket upgrade rejection with 1000 normal closure", func(t *testing.T) {
 		// Configure and run the test
 		testenv.Run(t, &testenv.Config{
 			Subgraphs: testenv.SubgraphsConfig{
@@ -2411,45 +2411,36 @@ func TestWebsocketClose(t *testing.T) {
 				config.WebSocketClientPingInterval = 500 * time.Millisecond
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			surl := xEnv.GraphQLWebSocketSubscriptionURL()
-			client := graphql.NewSubscriptionClient(surl)
-			t.Cleanup(func() {
-				_ = client.Close()
-			})
+			// Setup client connection
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
 
-			var subscription struct {
-				countEmp float64 `graphql:"countEmp(max: 40, intervalMilliseconds: 500)"`
-			}
-
-			gotError := make(chan error)
-
-			_, err := client.Subscribe(&subscription, nil, func(dataValue []byte, errValue error) error {
-				gotError <- errValue
-
-				return nil
+			// Start the subscription
+			err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { countEmp(max: 40, intervalMilliseconds: 500) }"}`),
 			})
 			require.NoError(t, err)
 
-			go func() {
-				clientErr := client.Run()
-				assert.NoError(t, clientErr, "unexpected client run error, this used to be flaky")
-			}()
+			// Read the error response
+			var res testenv.WebSocketMessage
+			err = testenv.WSReadJSON(t, conn, &res)
+			require.NoError(t, err)
 
-			select {
-			case err := <-gotError:
-				require.ErrorContains(t, err, "Subscription Upgrade request failed for Subgraph 'employees'.")
-			case <-time.After(5 * time.Second):
-				t.Fatal("timed out waiting for error")
-			}
+			// Should get an error message
+			require.Equal(t, "error", res.Type)
 
-			// Any further errors should be treated as a failure
-			// as it likely indicates the server telling the client to retry
-			select {
-			case err := <-gotError:
-				t.Fatalf("recieved >1 error on channel: %v", err)
-			case <-time.After(5 * time.Second):
-				break
-			}
+			// Parse the error payload
+			var errorPayload []map[string]interface{}
+			err = json.Unmarshal(res.Payload, &errorPayload)
+			require.NoError(t, err)
+			require.Len(t, errorPayload, 1)
+			require.Contains(t, errorPayload[0]["message"], "Subscription Upgrade request failed for Subgraph 'employees'.")
+
+			// Connection should be closed after error
+			err = conn.ReadJSON(&testenv.WebSocketMessage{})
+			require.Error(t, err)
+			require.True(t, websocket.IsCloseError(err, websocket.CloseNormalClosure))
 		})
 	})
 }
