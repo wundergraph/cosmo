@@ -1888,19 +1888,16 @@ func TestNatsEvents(t *testing.T) {
 				_ = client.Close()
 			})
 
-			gotError := make(chan error)
-
 			var subscription struct {
 				employeeUpdatedNatsStream struct {
 					ID float64 `graphql:"id"`
 				} `graphql:"employeeUpdatedNatsStream(id: 12)"`
 			}
 
-			_, err = client.Subscribe(&subscription, nil, func(dataValue []byte, errValue error) error {
-				t.Logf("dataValue: %s, errValue: %s", string(dataValue), errValue.Error())
+			gotError := make(chan error)
 
+			_, err = client.Subscribe(&subscription, nil, func(dataValue []byte, errValue error) error {
 				gotError <- errValue
-				close(gotError) // Will cause panic if there is >1 event, this is desirable
 
 				return nil
 			})
@@ -1908,7 +1905,7 @@ func TestNatsEvents(t *testing.T) {
 
 			go func() {
 				clientErr := client.Run()
-				require.NoError(t, clientErr, "unexpected client run error, this used to be sometimes flaky")
+				assert.NoError(t, clientErr, "unexpected client run error, this used to be flaky")
 			}()
 
 			select {
@@ -1919,6 +1916,15 @@ func TestNatsEvents(t *testing.T) {
 				))
 			case <-time.After(5 * time.Second):
 				t.Fatal("timed out waiting for nats error")
+			}
+
+			// Any further errors should be treated as a failure
+			// as it likely indicates the server telling the client to retry
+			select {
+			case err := <-gotError:
+				t.Fatalf("recieved >1 error on channel: %v", err)
+			case <-time.After(5 * time.Second):
+				break
 			}
 		})
 	})

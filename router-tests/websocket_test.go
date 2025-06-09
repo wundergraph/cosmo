@@ -2424,10 +2424,7 @@ func TestWebsocketClose(t *testing.T) {
 			gotError := make(chan error)
 
 			_, err := client.Subscribe(&subscription, nil, func(dataValue []byte, errValue error) error {
-				t.Logf("dataValue: %s, errValue: %s", string(dataValue), errValue.Error())
-
 				gotError <- errValue
-				close(gotError) // Will cause panic if there is >1 event, this is desirable
 
 				return nil
 			})
@@ -2435,7 +2432,7 @@ func TestWebsocketClose(t *testing.T) {
 
 			go func() {
 				clientErr := client.Run()
-				require.NoError(t, clientErr, "unexpected client run error, this used to be sometimes flaky")
+				assert.NoError(t, clientErr, "unexpected client run error, this used to be flaky")
 			}()
 
 			select {
@@ -2443,6 +2440,15 @@ func TestWebsocketClose(t *testing.T) {
 				require.ErrorContains(t, err, "Subscription Upgrade request failed for Subgraph 'employees'.")
 			case <-time.After(5 * time.Second):
 				t.Fatal("timed out waiting for error")
+			}
+
+			// Any further errors should be treated as a failure
+			// as it likely indicates the server telling the client to retry
+			select {
+			case err := <-gotError:
+				t.Fatalf("recieved >1 error on channel: %v", err)
+			case <-time.After(5 * time.Second):
+				break
 			}
 		})
 	})
