@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/mitchellh/mapstructure"
 	"github.com/nats-io/nuid"
 	"github.com/wundergraph/cosmo/router/internal/track"
@@ -45,6 +46,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"github.com/wundergraph/cosmo/router/pkg/health"
+	"github.com/wundergraph/cosmo/router/pkg/mcpauth"
 	"github.com/wundergraph/cosmo/router/pkg/mcpserver"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
@@ -838,6 +840,73 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			zap.String("storage_provider_id", r.mcp.Storage.ProviderID),
 		}
 
+		// Configure OAuth for MCP server - construct OAuth components here in the router
+		var oauthProvider mcpauth.OAuthServerProvider
+		var authRouter *mcpauth.AuthRouter
+		resourceName := "MCP Cosmo Router"
+
+		// For demo/development purposes, use the demo provider
+		if r.developmentMode {
+			// Use demo provider
+			demoProvider := mcpauth.NewDemoInMemoryAuthProvider(r.logger.With(logFields...))
+			demoProvider.AddDefaultTestClients()
+
+			// Create auth router with demo provider
+			issuerURL, err := url.Parse("http://localhost:5025/oauth")
+			if err != nil {
+				return fmt.Errorf("failed to parse demo issuer URL: %w", err)
+			}
+
+			// Optional: OAuth endpoints can be served from a different domain than the MCP server
+			// Uncomment the line below to serve OAuth endpoints from a different base URL
+			// baseURL, _ := url.Parse("https://auth.example.com/oauth")
+			authRouter = mcpauth.NewAuthRouter(mcpauth.AuthRouterOptions{
+				Provider:               demoProvider,
+				IssuerURL:              issuerURL,
+				ScopesSupported:        []string{},
+				ResourceName:           &resourceName,
+				ClientSecretExpiryTime: 24 * time.Hour, // 1 day for demo/testing
+			})
+
+			oauthProvider = demoProvider
+
+			r.logger.Info("Demo OAuth provider configured for MCP server")
+		} else {
+			// Use production proxy provider
+
+			authConfig := &mcpauth.MCPAuthConfig{
+				Enabled:   true,
+				IssuerURL: "https://mcp.example.com",
+				// BaseURL:               stringPtr("https://auth.example.com/oauth"), // Optional: OAuth endpoints on different domain
+				UpstreamAuthURL:       "https://auth.example.com/authorize",
+				UpstreamTokenURL:      "https://auth.example.com/token",
+				IntrospectionEndpoint: "https://auth.example.com/introspect",
+				RequiredScopes:        []string{},
+				ResourceName:          &resourceName,
+			}
+
+			retryClient := retryablehttp.NewClient()
+			retryClient.Logger = nil
+			httpClient := retryClient.StandardClient()
+			httpClient.Timeout = 60 * time.Second
+
+			mcpOAuthProvider, err := mcpauth.NewMCPOAuthProvider(authConfig, httpClient, r.logger.With(logFields...))
+			if err != nil {
+				return fmt.Errorf("failed to initialize OAuth provider: %w", err)
+			}
+
+			// Create auth router
+			router, err := mcpOAuthProvider.CreateAuthRouter()
+			if err != nil {
+				return fmt.Errorf("failed to create auth router: %w", err)
+			}
+
+			oauthProvider = mcpOAuthProvider.GetProvider()
+			authRouter = router
+
+			r.logger.Info("Production OAuth provider configured for MCP server")
+		}
+
 		// Initialize the MCP server with the resolved operations directory
 		mcpOpts := []func(*mcpserver.Options){
 			mcpserver.WithGraphName(r.mcp.GraphName),
@@ -848,6 +917,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			mcpserver.WithExcludeMutations(r.mcp.ExcludeMutations),
 			mcpserver.WithEnableArbitraryOperations(r.mcp.EnableArbitraryOperations),
 			mcpserver.WithExposeSchema(r.mcp.ExposeSchema),
+			mcpserver.WithOAuth(oauthProvider, authRouter),
 		}
 
 		// Determine the router GraphQL endpoint

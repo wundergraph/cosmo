@@ -1,0 +1,6 @@
+mutation UpdateAvailability($employeeID: Int!, $isAvailable: Boolean!) {
+    updateAvailability(employeeID: $employeeID, isAvailable: $isAvailable) {
+        id
+        isAvailable
+    }
+}

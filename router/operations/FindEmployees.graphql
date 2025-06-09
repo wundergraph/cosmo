@@ -1,0 +1,16 @@
+query FindEmployees($criteria: SearchInput) {
+  findEmployees(criteria: $criteria) {
+    currentMood
+    details {
+      forename
+      hasChildren
+      maritalStatus
+      nationality
+      pets {
+        name
+        gender
+      }
+    }
+    products
+  }
+}

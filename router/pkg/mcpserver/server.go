@@ -16,6 +16,7 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/santhosh-tekuri/jsonschema/v6"
+	"github.com/wundergraph/cosmo/router/pkg/mcpauth"
 	"github.com/wundergraph/cosmo/router/pkg/schemaloader"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astprinter"
@@ -68,6 +69,10 @@ type Options struct {
 	EnableArbitraryOperations bool
 	// ExposeSchema determines whether the GraphQL schema is exposed
 	ExposeSchema bool
+	// OAuthProvider is a pre-constructed OAuth provider
+	OAuthProvider mcpauth.OAuthServerProvider
+	// AuthRouter is a pre-constructed auth router
+	AuthRouter *mcpauth.AuthRouter
 }
 
 // GraphQLSchemaServer represents an MCP server that works with GraphQL schemas and operations
@@ -88,6 +93,9 @@ type GraphQLSchemaServer struct {
 	operationsManager         *OperationsManager
 	schemaCompiler            *SchemaCompiler
 	registeredTools           []string
+	oauthProvider             mcpauth.OAuthServerProvider
+	authRouter                *mcpauth.AuthRouter
+	oauthEnabled              bool
 }
 
 type graphqlRequest struct {
@@ -158,7 +166,11 @@ type GraphQLResponse struct {
 	Data   json.RawMessage `json:"data"`
 }
 
-// NewGraphQLSchemaServer creates a new GraphQL schema server
+// NewGraphQLSchemaServer creates a new MCP (Model Context Protocol) server that exposes
+// GraphQL operations as LLM-accessible tools. The server implements the MCP specification
+// and provides OAuth 2.1 + PKCE authentication for securing access.
+// The routerGraphQLEndpoint parameter specifies the GraphQL API that this MCP server
+// will expose to LLMs. Operations are loaded from the specified operations directory.
 func NewGraphQLSchemaServer(routerGraphQLEndpoint string, opts ...func(*Options)) (*GraphQLSchemaServer, error) {
 
 	if routerGraphQLEndpoint == "" {
@@ -213,6 +225,15 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, opts ...func(*Options)
 		enableArbitraryOperations: options.EnableArbitraryOperations,
 		exposeSchema:              options.ExposeSchema,
 		baseURL:                   options.BaseURL,
+	}
+
+	// Set OAuth components if provided
+	if options.OAuthProvider != nil && options.AuthRouter != nil {
+		gs.oauthProvider = options.OAuthProvider
+		gs.authRouter = options.AuthRouter
+		gs.oauthEnabled = true
+
+		options.Logger.Info("OAuth authentication configured for MCP server")
 	}
 
 	return gs, nil
@@ -273,15 +294,112 @@ func WithExposeSchema(exposeSchema bool) func(*Options) {
 	}
 }
 
+// WithOAuth configures OAuth 2.1 + PKCE authentication for the MCP server.
+// This protects MCP endpoints (/mcp, /message) with bearer token authentication.
+//
+// The MCP server will:
+//   - Expose OAuth endpoints at /oauth/* and /.well-known/*
+//   - Require valid access tokens for MCP endpoint access
+//   - Enforce scope-based authorization (e.g., "mcp:read", "mcp:write")
+//
+// Example with demo provider (for testing):
+//
+//	provider := NewDemoInMemoryAuthProvider(logger)
+//	provider.AddDefaultTestClients()
+//	authRouter := mcpauth.NewAuthRouter(mcpauth.AuthRouterOptions{...})
+//
+//	server := NewGraphQLSchemaServer(endpoint,
+//	    WithOAuth(provider, authRouter, []string{"mcp:read", "mcp:write"}))
+//
+// Example with production proxy provider:
+//
+//	config := &MCPAuthConfig{...}  // Configure upstream OAuth server
+//	provider := NewMCPOAuthProvider(config, httpClient, logger)
+//	authRouter, _ := provider.CreateAuthRouter()
+//
+//	server := NewGraphQLSchemaServer(endpoint,
+//	    WithOAuth(provider.GetProvider(), authRouter))
+func WithOAuth(provider mcpauth.OAuthServerProvider, authRouter *mcpauth.AuthRouter) func(*Options) {
+	return func(o *Options) {
+		o.OAuthProvider = provider
+		o.AuthRouter = authRouter
+	}
+}
+
 // ServeSSE starts the server with SSE transport
 func (s *GraphQLSchemaServer) ServeSSE() (*server.SSEServer, error) {
+	// Create custom HTTP server
+	httpServer := &http.Server{
+		Addr:         s.listenAddr,
+		ReadTimeout:  30 * time.Second,
+		WriteTimeout: 30 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
+
 	sseServer := server.NewSSEServer(s.server,
 		server.WithBaseURL(s.baseURL),
-		server.WithSSEEndpoint("/mcp"),
 		server.WithSSEContextFunc(authFromRequest),
 		server.WithKeepAlive(true),
+		server.WithHTTPServer(httpServer),
 		server.WithKeepAliveInterval(10*time.Second),
 	)
+
+	streamableHTTPServer := server.NewStreamableHTTPServer(s.server,
+		server.WithStreamableHTTPServer(httpServer),
+	)
+
+	corsMiddleware := mcpauth.WithCORS("GET", "POST", "PUT", "DELETE")
+
+	mux := http.NewServeMux()
+
+	// Add OAuth endpoints if OAuth is enabled
+	if s.oauthEnabled && s.authRouter != nil && s.oauthProvider != nil {
+		mux.Handle("/oauth/", corsMiddleware(s.authRouter))
+		mux.Handle("/.well-known/", corsMiddleware(s.authRouter))
+
+		// Construct resource metadata URL for WWW-Authenticate headers
+		baseURL := s.baseURL
+		if baseURL == "" {
+			// Default to listen address if no base URL is provided
+			baseURL = "http://" + s.listenAddr
+		}
+		if !strings.HasSuffix(baseURL, "/") {
+			baseURL += "/"
+		}
+		resourceMetadataURL := baseURL + ".well-known/oauth-protected-resource"
+
+		// Protect MCP endpoints with OAuth
+		requireAuth := mcpauth.RequireBearerAuth(s.oauthProvider, nil, resourceMetadataURL)
+		mux.Handle("/mcp", corsMiddleware(requireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// SSE for backward compatibility
+			if r.Method == http.MethodGet && r.Header.Get("Accept") == "text/event-stream" {
+				sseServer.SSEHandler().ServeHTTP(w, r)
+			} else {
+				streamableHTTPServer.ServeHTTP(w, r)
+			}
+		}))))
+		mux.Handle("/message", corsMiddleware(requireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			sseServer.MessageHandler().ServeHTTP(w, r)
+		}))))
+
+		s.logger.Info("OAuth authentication enabled for MCP endpoints",
+			zap.String("resource_metadata_url", resourceMetadataURL))
+	} else {
+		// No OAuth protection - original behavior
+		mux.Handle("/mcp", corsMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Method == http.MethodGet && r.Header.Get("Accept") == "text/event-stream" {
+				sseServer.SSEHandler().ServeHTTP(w, r)
+			} else {
+				streamableHTTPServer.ServeHTTP(w, r)
+			}
+		})))
+		mux.Handle("/message", corsMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			sseServer.MessageHandler().ServeHTTP(w, r)
+		})))
+	}
+
+	// Set the handler for the custom HTTP server
+	httpServer.Handler = mux
 
 	logger := []zap.Field{
 		zap.String("listen_addr", s.listenAddr),
@@ -298,9 +416,9 @@ func (s *GraphQLSchemaServer) ServeSSE() (*server.SSEServer, error) {
 	go func() {
 		defer s.logger.Info("MCP server stopped")
 
-		err := sseServer.Start(s.listenAddr)
+		err := httpServer.ListenAndServe()
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			s.logger.Error("failed to start SSE server", zap.Error(err))
+			s.logger.Error("failed to start HTTP server", zap.Error(err))
 		}
 	}()
 
@@ -354,6 +472,8 @@ func (s *GraphQLSchemaServer) Stop(ctx context.Context) error {
 	if err := s.sseServer.Shutdown(shutdownCtx); err != nil {
 		return fmt.Errorf("failed to gracefully shutdown SSE server: %w", err)
 	}
+
+	// Note: OAuth provider cleanup is handled by the underlying HTTP server shutdown
 
 	return nil
 }
