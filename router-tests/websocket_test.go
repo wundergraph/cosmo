@@ -2288,7 +2288,7 @@ func TestWebsocketClose(t *testing.T) {
 
 	totalUpdates := 5
 
-	t.Run("should return 1001: Downstream service error when the subgraph becomes unavailable", func(t *testing.T) {
+	t.Run("should return 1001 Downstream service error when the subgraph becomes unavailable", func(t *testing.T) {
 		wsMiddleware, _ := countEmpWsMiddleware(t, totalUpdates, false)
 
 		// Configure and run the test
@@ -2386,6 +2386,64 @@ func TestWebsocketClose(t *testing.T) {
 			err = testenv.WSReadJSON(t, conn, &complete)
 			require.NoError(t, err)
 			require.Equal(t, "complete", complete.Type)
+		})
+	})
+
+	t.Run("should handle subgraph WebSocket upgrade rejection without complete event", func(t *testing.T) {
+		// Configure and run the test
+		testenv.Run(t, &testenv.Config{
+			Subgraphs: testenv.SubgraphsConfig{
+				GlobalMiddleware: func(handler http.Handler) http.Handler {
+					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						// Check if this is a WebSocket upgrade request
+						if websocket.IsWebSocketUpgrade(r) {
+							// Reject with 401 Unauthorized
+							http.Error(w, "Unauthorized", http.StatusUnauthorized)
+							return
+						}
+						// Pass through non-WebSocket requests
+						handler.ServeHTTP(w, r)
+					})
+				},
+			},
+			ModifyEngineExecutionConfiguration: func(config *config.EngineExecutionConfiguration) {
+				// Don't use too small ping intervals
+				config.WebSocketClientPingInterval = 500 * time.Millisecond
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			surl := xEnv.GraphQLWebSocketSubscriptionURL()
+			client := graphql.NewSubscriptionClient(surl)
+			t.Cleanup(func() {
+				_ = client.Close()
+			})
+
+			var subscription struct {
+				countEmp float64 `graphql:"countEmp(max: 40, intervalMilliseconds: 500)"`
+			}
+
+			gotError := make(chan error)
+
+			_, err := client.Subscribe(&subscription, nil, func(dataValue []byte, errValue error) error {
+				t.Logf("dataValue: %s, errValue: %s", string(dataValue), errValue.Error())
+
+				gotError <- errValue
+				close(gotError) // Will cause panic if there is >1 event, this is desirable
+
+				return nil
+			})
+			require.NoError(t, err)
+
+			go func() {
+				clientErr := client.Run()
+				require.NoError(t, clientErr, "unexpected client run error, this used to be sometimes flaky")
+			}()
+
+			select {
+			case err := <-gotError:
+				require.ErrorContains(t, err, "Subscription Upgrade request failed for Subgraph 'employees'.")
+			case <-time.After(5 * time.Second):
+				t.Fatal("timed out waiting for error")
+			}
 		})
 	})
 }
