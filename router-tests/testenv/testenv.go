@@ -415,11 +415,6 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		natsSetup = s
 	}
 
-	var enableRedis bool
-	if cfg.EnableRedis {
-		enableRedis = true
-	}
-
 	if cfg.AssertCacheMetrics != nil {
 		if cfg.MetricReader == nil {
 			cfg.MetricReader = metric.NewManualReader()
@@ -764,7 +759,7 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		e.NatsConnectionMyNats = natsSetup.Connections[1]
 	}
 
-	if enableRedis {
+	if cfg.EnableRedis {
 		e.RedisHosts = []string{redisHost}
 	}
 
@@ -823,11 +818,6 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 			t.Fatalf("could not setup nats clients: %s", err.Error())
 		}
 		natsSetup = s
-	}
-
-	var enableRedis bool
-	if cfg.EnableRedis {
-		enableRedis = true
 	}
 
 	if cfg.AssertCacheMetrics != nil {
@@ -1166,7 +1156,7 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		e.NatsConnectionMyNats = natsSetup.Connections[1]
 	}
 
-	if enableRedis {
+	if cfg.EnableRedis {
 		e.RedisHosts = []string{redisHost}
 	}
 
