@@ -2167,6 +2167,9 @@ func expectConnectAndReadCurrentTime(t *testing.T, xEnv *testenv.Environment) {
 	err = testenv.WSReadJSON(t, conn, &msg)
 	require.NoError(t, err)
 	require.Equal(t, "1", msg.ID)
+	if msg.Type == "error" {
+		t.Logf("unexpected error on read: %s", string(msg.Payload))
+	}
 	require.Equal(t, "next", msg.Type)
 	err = json.Unmarshal(msg.Payload, &payload)
 	require.NoError(t, err)
@@ -2176,6 +2179,9 @@ func expectConnectAndReadCurrentTime(t *testing.T, xEnv *testenv.Environment) {
 	err = testenv.WSReadJSON(t, conn, &msg)
 	require.NoError(t, err)
 	require.Equal(t, "1", msg.ID)
+	if msg.Type == "error" {
+		t.Logf("unexpected error on read: %s", string(msg.Payload))
+	}
 	require.Equal(t, "next", msg.Type)
 	err = json.Unmarshal(msg.Payload, &payload)
 	require.NoError(t, err)
@@ -2196,6 +2202,9 @@ func expectConnectAndReadCurrentTime(t *testing.T, xEnv *testenv.Environment) {
 	err = testenv.WSReadJSON(t, conn, &complete)
 	require.NoError(t, err)
 	require.Equal(t, "1", complete.ID)
+	if complete.Type == "error" {
+		t.Logf("unexpected error on read: %s", string(complete.Payload))
+	}
 	require.Equal(t, "complete", complete.Type)
 
 	err = conn.SetReadDeadline(time.Now().Add(1 * time.Second))

@@ -14,6 +14,9 @@ image:
 # -- Add labels to all deployed resources
 commonLabels: {}
 
+# -- Add labels to deployment metadata.labels
+additionalLabels: {}
+
 deploymentStrategy: {}
 
 imagePullSecrets: []
