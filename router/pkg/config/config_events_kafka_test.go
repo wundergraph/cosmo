@@ -113,7 +113,13 @@ events:
 func createTempFileFromFixture(t *testing.T, fixture string) string {
 	t.Helper()
 
-	f, err := os.CreateTemp(t.TempDir(), "config_test")
+	return createTempFileFromFixtureWithPattern(t, "config_test", fixture)
+}
+
+func createTempFileFromFixtureWithPattern(t *testing.T, pattern string, fixture string) string {
+	t.Helper()
+
+	f, err := os.CreateTemp(t.TempDir(), pattern)
 	require.NoError(t, err)
 
 	_, err = f.WriteString(fixture)

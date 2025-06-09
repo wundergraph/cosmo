@@ -1,7 +1,9 @@
 package config
 
 import (
+	"github.com/goccy/go-yaml"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -749,6 +751,319 @@ headers:
 			_, err := LoadConfig(f)
 			require.NoError(t, err)
 		})
+	})
+
+}
+
+func TestConfigMerging(t *testing.T) {
+	t.Parallel()
+
+	getBaseConfigWithDefaults := func() Config {
+		return Config{
+			WatchConfig: WatchConfig{
+				Interval: 6 * time.Second,
+				StartupDelay: WatchConfigStartupDelay{
+					Maximum: 6 * time.Second,
+				},
+			},
+			ListenAddr:      "localhost:3007",
+			ControlplaneURL: "http://localhost:3008",
+			ShutdownDelay:   20 * time.Second,
+			HealthCheckPath: "/health",
+			PersistedOperationsConfig: PersistedOperationsConfig{
+				Storage: PersistedOperationsStorageConfig{
+					ProviderID:   "s3",
+					ObjectPrefix: "ee",
+				},
+			},
+			AutomaticPersistedQueries: AutomaticPersistedQueriesConfig{
+				Storage: AutomaticPersistedQueriesStorageConfig{
+					ProviderID:   "s3",
+					ObjectPrefix: "ee",
+				},
+			},
+			LivenessCheckPath: "/liveness",
+			PollInterval:      6 * time.Second,
+			GraphQLPath:       "/graphql",
+			PlaygroundPath:    "/playground",
+			EngineExecutionConfiguration: EngineExecutionConfiguration{
+				Debug: EngineDebugConfiguration{
+					PrintIntermediateQueryPlans: false,
+				},
+			},
+			ReadinessCheckPath: "/readiness",
+			SubgraphErrorPropagation: SubgraphErrorPropagationConfiguration{
+				Mode: "wrapped",
+			},
+			ExecutionConfig: ExecutionConfig{
+				File: ExecutionConfigFile{
+					Path: "ee",
+				},
+			},
+		}
+	}
+
+	t.Run("without conflicts", func(t *testing.T) {
+		base := createTempFileFromFixtureWithPattern(t, "config_test_1", `
+version: "1"
+
+readiness_check_path: "http://someurl"
+
+headers:
+  all:
+    request:
+      - op: propagate
+        matching: .*
+`)
+
+		override1 := createTempFileFromFixtureWithPattern(t, "config_test_2", `
+version: "1"
+
+listen_addr: "localhost:3007"
+`)
+
+		override2 := createTempFileFromFixtureWithPattern(t, "config_test_3", `
+version: "1"
+
+health_check_path: "/health2"
+
+listen_addr: "localhost:3007"
+`)
+
+		combinedPaths := strings.Join([]string{base, override1, override2}, ",")
+		configWrapper, err := LoadConfig(combinedPaths)
+		require.NoError(t, err)
+
+		require.False(t, configWrapper.DefaultLoaded)
+
+		config := configWrapper.Config
+		require.Equal(t, "http://someurl", config.ReadinessCheckPath)
+		require.Equal(t, "localhost:3007", config.ListenAddr)
+		require.Equal(t, "/health2", config.HealthCheckPath)
+		require.Len(t, config.Headers.All.Request, 1)
+
+		require.Equal(t, RequestHeaderRule{
+			Operation: "propagate",
+			Matching:  ".*",
+		}, *config.Headers.All.Request[0])
+	})
+
+	t.Run("handle conflicts", func(t *testing.T) {
+		base := createTempFileFromFixtureWithPattern(t, "config_test_1", `
+version: "1"
+
+readiness_check_path: "http://someurl"
+
+headers:
+  all:
+    request:
+      - op: propagate
+        matching: baseList.*
+`)
+
+		override1 := createTempFileFromFixtureWithPattern(t, "config_test_2", `
+version: "1"
+
+readiness_check_path: "http://there.testing"
+
+headers:
+  all:
+    request:
+      - op: propagate
+        matching: updatedList.*
+
+      - op: propagate
+        matching: updatedList2.*
+
+    response:
+      - op: propagate
+        algorithm: first_write
+        matching: updatedList.*
+`)
+
+		override2 := createTempFileFromFixtureWithPattern(t, "config_test_3", `
+version: "1"
+
+headers:
+  all:
+    request:
+      - op: propagate
+        matching: thereList1.*
+
+
+    response:
+      - op: propagate
+        algorithm: first_write
+        matching: testing1.*
+
+      - op: propagate
+        algorithm: first_write
+        matching: testing2.*
+`)
+
+		combinedPaths := strings.Join([]string{base, override1, override2}, ",")
+		configWrapper, err := LoadConfig(combinedPaths)
+		require.NoError(t, err)
+
+		require.False(t, configWrapper.DefaultLoaded)
+
+		config := configWrapper.Config
+		require.Equal(t, "http://there.testing", config.ReadinessCheckPath)
+		require.Len(t, config.Headers.All.Request, 1)
+		require.Len(t, config.Headers.All.Response, 2)
+
+		require.Equal(t, RequestHeaderRule{
+			Operation: "propagate",
+			Matching:  "thereList1.*",
+		}, *config.Headers.All.Request[0])
+
+		require.Equal(t, ResponseHeaderRule{
+			Operation: "propagate",
+			Algorithm: "first_write",
+			Matching:  "testing1.*",
+		}, *config.Headers.All.Response[0])
+
+		require.Equal(t, ResponseHeaderRule{
+			Operation: "propagate",
+			Algorithm: "first_write",
+			Matching:  "testing2.*",
+		}, *config.Headers.All.Response[1])
+	})
+
+	t.Run("validation errors for each config", func(t *testing.T) {
+		base := createTempFileFromFixtureWithPattern(t, "config_test_1", `
+version: "1"
+
+readiness_check_path: "http://someurl"
+
+headers:
+  all:
+    request:
+      - op: propagate
+        matching: .*
+`)
+
+		override1 := createTempFileFromFixtureWithPattern(t, "config_test_2", `
+version: "1"
+
+listen_ad_dr: "localhost:3007"
+`)
+
+		override2 := createTempFileFromFixtureWithPattern(t, "config_test_3", `
+version: "1"
+
+health_chec_k_path: "/health2"
+
+listen_addr: "localhost:3007"
+`)
+
+		combinedPaths := strings.Join([]string{base, override1, override2}, ",")
+		_, err := LoadConfig(combinedPaths)
+		require.Error(t, err)
+
+		// We check given parts of the error separately since the file path is not predictable
+		require.ErrorContains(t, err, "router config validation error for")
+		require.ErrorContains(t, err, "jsonschema validation failed with 'https://raw.githubusercontent.com/wundergraph/cosmo/main/router/pkg/config/config.schema.json#'\n- at '': ")
+
+		require.ErrorContains(t, err, "additional properties 'listen_ad_dr' not allowed")
+		require.ErrorContains(t, err, "additional properties 'health_chec_k_path' not allowed")
+	})
+
+	t.Run("process entire base config successfully", func(t *testing.T) {
+		config1 := getBaseConfigWithDefaults()
+		config1Bytes, err := yaml.Marshal(&config1)
+		require.NoError(t, err)
+
+		config2 := getBaseConfigWithDefaults()
+		config2Bytes, err := yaml.Marshal(&config2)
+		require.NoError(t, err)
+
+		config3 := getBaseConfigWithDefaults()
+		config3Bytes, err := yaml.Marshal(&config3)
+		require.NoError(t, err)
+
+		base := createTempFileFromFixtureWithPattern(t, "testing_config_1", string(config1Bytes))
+		override1 := createTempFileFromFixtureWithPattern(t, "testing_config_2", string(config2Bytes))
+		override2 := createTempFileFromFixtureWithPattern(t, "testing_config_3", string(config3Bytes))
+
+		combinedPaths := strings.Join([]string{base, override1, override2}, ",")
+		_, err = LoadConfig(combinedPaths)
+		require.NoError(t, err)
+	})
+
+	t.Run("process entire base config successfully", func(t *testing.T) {
+		config1 := getBaseConfigWithDefaults()
+		config1Bytes, err := yaml.Marshal(&config1)
+		require.NoError(t, err)
+
+		config2 := getBaseConfigWithDefaults()
+		config2Bytes, err := yaml.Marshal(&config2)
+		require.NoError(t, err)
+
+		config3 := getBaseConfigWithDefaults()
+		config3Bytes, err := yaml.Marshal(&config3)
+		require.NoError(t, err)
+
+		base := createTempFileFromFixtureWithPattern(t, "testing_config_1", string(config1Bytes))
+		override1 := createTempFileFromFixtureWithPattern(t, "testing_config_2", string(config2Bytes))
+		override2 := createTempFileFromFixtureWithPattern(t, "testing_config_3", string(config3Bytes))
+
+		combinedPaths := strings.Join([]string{base, override1, override2}, ",")
+		_, err = LoadConfig(combinedPaths)
+		require.NoError(t, err)
+	})
+
+	t.Run("merge full.yaml with itself successfully", func(t *testing.T) {
+		combinedPaths := strings.Join([]string{"./fixtures/full.yaml", "./fixtures/full.yaml", "./fixtures/full.yaml", "./fixtures/full.yaml", "./fixtures/full.yaml"}, ",")
+		cfg, err := LoadConfig(combinedPaths)
+		require.NoError(t, err)
+
+		g := goldie.New(
+			t,
+			goldie.WithFixtureDir("testdata"),
+			goldie.WithNameSuffix(".json"),
+			goldie.WithDiffEngine(goldie.ClassicDiff),
+		)
+
+		g.AssertJson(t, "config_full", cfg.Config)
+	})
+
+	t.Run("attempt to bypass validations with merge", func(t *testing.T) {
+		base := createTempFileFromFixtureWithPattern(t, "config_test_1", `
+version: "1"
+
+execution_config: 
+  file: 
+    path: 'somePath'
+`)
+
+		override1 := createTempFileFromFixtureWithPattern(t, "config_test_2", `
+version: "1"
+
+execution_config: 
+  storage: 
+    provider_id: 'id'
+    object_path: 'there' 
+
+`)
+
+		override2 := createTempFileFromFixtureWithPattern(t, "config_test_2", `
+version: "1"
+
+listen_addr: "localhost:3007"
+`)
+
+		// Some validations like oneOf can be bypassed by a merge
+		combinedPaths := strings.Join([]string{base, override1, override2}, ",")
+		_, err := LoadConfig(combinedPaths)
+		require.Error(t, err)
+
+		require.ErrorContains(t, err, "router config validation error when combined")
+		require.ErrorContains(t, err, "jsonschema validation failed with")
+		require.ErrorContains(t, err, "- at '/execution_config': oneOf failed, none matched")
+		require.ErrorContains(t, err, "- at '/execution_config': additional properties 'storage' not allowed")
+		require.ErrorContains(t, err, "- at '/execution_config': additional properties 'file' not allowed")
+		require.ErrorContains(t, err, "- at '/execution_config': additional properties 'file', 'storage' not allowed")
 	})
 
 }
