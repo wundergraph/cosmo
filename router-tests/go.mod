@@ -12,7 +12,7 @@ require (
 	github.com/hashicorp/consul/sdk v0.16.1
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-retryablehttp v0.7.7
-	github.com/hasura/go-graphql-client v0.12.2
+	github.com/hasura/go-graphql-client v0.14.3
 	github.com/mark3labs/mcp-go v0.30.0
 	github.com/nats-io/nats.go v1.35.0
 	github.com/prometheus/client_golang v1.19.1
@@ -52,6 +52,7 @@ require (
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cilium/ebpf v0.16.0 // indirect
+	github.com/coder/websocket v1.8.13 // indirect
 	github.com/containerd/cgroups/v3 v3.0.2 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.5 // indirect
@@ -163,7 +164,6 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250115164207-1a7da9e5054f // indirect
 	google.golang.org/grpc v1.68.1 // indirect
 	gopkg.in/cenkalti/backoff.v1 v1.1.0 // indirect
-	nhooyr.io/websocket v1.8.11 // indirect
 )
 
 // Remember you can use Go workspaces to avoid using replace directives in multiple go.mod files
