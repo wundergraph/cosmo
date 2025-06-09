@@ -804,6 +804,8 @@ func TestConfigMerging(t *testing.T) {
 	}
 
 	t.Run("without conflicts", func(t *testing.T) {
+		t.Parallel()
+
 		base := createTempFileFromFixtureWithPattern(t, "config_test_1", `
 version: "1"
 
@@ -849,6 +851,8 @@ listen_addr: "localhost:3007"
 	})
 
 	t.Run("handle conflicts", func(t *testing.T) {
+		t.Parallel()
+
 		base := createTempFileFromFixtureWithPattern(t, "config_test_1", `
 version: "1"
 
@@ -931,6 +935,8 @@ headers:
 	})
 
 	t.Run("validation errors for each config", func(t *testing.T) {
+		t.Parallel()
+
 		base := createTempFileFromFixtureWithPattern(t, "config_test_1", `
 version: "1"
 
@@ -971,6 +977,8 @@ listen_addr: "localhost:3007"
 	})
 
 	t.Run("process entire base config successfully", func(t *testing.T) {
+		t.Parallel()
+
 		config1 := getBaseConfigWithDefaults()
 		config1Bytes, err := yaml.Marshal(&config1)
 		require.NoError(t, err)
@@ -993,6 +1001,8 @@ listen_addr: "localhost:3007"
 	})
 
 	t.Run("merge full.yaml with itself successfully", func(t *testing.T) {
+		t.Parallel()
+
 		combinedPaths := strings.Join([]string{"./fixtures/full.yaml", "./fixtures/full.yaml", "./fixtures/full.yaml", "./fixtures/full.yaml", "./fixtures/full.yaml"}, ",")
 		cfg, err := LoadConfig(combinedPaths)
 		require.NoError(t, err)
@@ -1008,6 +1018,8 @@ listen_addr: "localhost:3007"
 	})
 
 	t.Run("attempt to bypass validations with merge", func(t *testing.T) {
+		t.Parallel()
+
 		base := createTempFileFromFixtureWithPattern(t, "config_test_1", `
 version: "1"
 

@@ -11,17 +11,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func mustRead(t testing.TB, fname string) []byte {
+func mustRead(tb testing.TB, fname string) []byte {
 	contents, err := os.ReadFile(fname)
-	require.NoError(t, err, "failed to read file: %s", fname)
+	require.NoError(tb, err, "failed to read file: %s", fname)
 	return contents
 }
 
-func dump(t testing.TB, actual, expected string) {
+func dump(tb testing.TB, actual, expected string) {
 	// It's impossible to debug YAML if the actual and expected values are
 	// printed on a single line.
-	t.Logf("Actual:\n\n%s\n\n", actual)
-	t.Logf("Expected:\n\n%s\n\n", expected)
+	tb.Logf("Actual:\n\n%s\n\n", actual)
+	tb.Logf("Expected:\n\n%s\n\n", expected)
 }
 
 func strip(s string) string {
@@ -32,44 +32,46 @@ func strip(s string) string {
 	return s
 }
 
-func canonicalize(t testing.TB, s string) string {
+func canonicalize(tb testing.TB, s string) string {
 	// round-trip to canonicalize formatting
 	var i interface{}
-	require.NoError(t,
+	require.NoError(tb,
 		yaml.Unmarshal([]byte(strip(s)), &i),
 		"canonicalize: couldn't unmarshal YAML",
 	)
 	formatted, err := yaml.Marshal(i)
-	require.NoError(t, err, "canonicalize: couldn't marshal YAML")
+	require.NoError(tb, err, "canonicalize: couldn't marshal YAML")
 	return string(bytes.TrimSpace(formatted))
 }
 
-func unmarshal(t testing.TB, s string) interface{} {
+func unmarshal(tb testing.TB, s string) interface{} {
 	var i interface{}
-	require.NoError(t, yaml.Unmarshal([]byte(strip(s)), &i), "unmarshaling failed")
+	require.NoError(tb, yaml.Unmarshal([]byte(strip(s)), &i), "unmarshaling failed")
 	return i
 }
 
-func succeeds(t testing.TB, strict bool, left, right, expect string) {
-	l, r := unmarshal(t, left), unmarshal(t, right)
+func succeeds(tb testing.TB, strict bool, left, right, expect string) {
+	l, r := unmarshal(tb, left), unmarshal(tb, right)
 	m, err := merge(l, r, strict)
-	require.NoError(t, err, "merge failed")
+	require.NoError(tb, err, "merge failed")
 
 	actualBytes, err := yaml.Marshal(m)
-	require.NoError(t, err, "couldn't marshal merged structure")
-	actual := canonicalize(t, string(actualBytes))
-	expect = canonicalize(t, expect)
-	if !assert.Equal(t, expect, actual) {
-		dump(t, actual, expect)
+	require.NoError(tb, err, "couldn't marshal merged structure")
+	actual := canonicalize(tb, string(actualBytes))
+	expect = canonicalize(tb, expect)
+	if !assert.Equal(tb, expect, actual) {
+		dump(tb, actual, expect)
 	}
 }
 
-func fails(t testing.TB, strict bool, left, right string) {
-	_, err := merge(unmarshal(t, left), unmarshal(t, right), strict)
-	assert.Error(t, err, "merge succeeded")
+func fails(tb testing.TB, strict bool, left, right string) {
+	_, err := merge(unmarshal(tb, left), unmarshal(tb, right), strict)
+	require.Error(tb, err, "merge succeeded")
 }
 
 func TestIntegration(t *testing.T) {
+	t.Parallel()
+
 	base := mustRead(t, "testdata/base.yaml")
 	prod := mustRead(t, "testdata/production.yaml")
 	expect := mustRead(t, "testdata/expect.yaml")
@@ -83,6 +85,8 @@ func TestIntegration(t *testing.T) {
 }
 
 func TestEmpty(t *testing.T) {
+	t.Parallel()
+
 	full := []byte("foo: bar\n")
 	null := []byte("~")
 	_ = null
@@ -103,14 +107,18 @@ func TestEmpty(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
+			t.Parallel()
+
 			merged, err := YAMLMerge(tt.sources, true /* strict */)
 			require.NoError(t, err, "merge failed")
-			assert.Equal(t, tt.expect, string(merged), "wrong contents after merge")
+			require.Equal(t, tt.expect, string(merged), "wrong contents after merge")
 		})
 	}
 }
 
 func TestSuccess(t *testing.T) {
+	t.Parallel()
+
 	left := `
 fun: [maserati, porsche]
 practical: {toyota: camry, honda: accord}
@@ -134,32 +142,41 @@ occupants:
 }
 
 func TestErrors(t *testing.T) {
-	check := func(t testing.TB, strict bool, sources ...[]byte) error {
+	t.Parallel()
+
+	check := func(_ testing.TB, strict bool, sources ...[]byte) error {
 		_, err := YAMLMerge(sources, strict)
 		return err
 	}
 	t.Run("tabs in source", func(t *testing.T) {
+		t.Parallel()
+
 		src := []byte("foo:\n\tbar:baz")
-		assert.Error(t, check(t, false, src), "expected error in permissive mode")
-		assert.Error(t, check(t, true, src), "expected error in strict mode")
+		require.Error(t, check(t, false, src), "expected error in permissive mode")
+		require.Error(t, check(t, true, src), "expected error in strict mode")
 	})
 
 	t.Run("duplicated keys", func(t *testing.T) {
+		t.Parallel()
+
 		src := []byte("{foo: bar, foo: baz}")
-		// TODO: We might want to later properly enable non strict mode with our library
-		//assert.NoError(t, check(t, false, src), "expected success in permissive mode")
-		assert.Error(t, check(t, true, src), "expected error in permissive mode")
+		require.Error(t, check(t, false, src), "expected error in permissive mode")
+		require.Error(t, check(t, true, src), "expected error in strict mode")
 	})
 
 	t.Run("merge error", func(t *testing.T) {
+		t.Parallel()
+
 		left := []byte("foo: [1, 2]")
 		right := []byte("foo: {bar: baz}")
-		assert.NoError(t, check(t, false, left, right), "expected success in permissive mode")
-		assert.Error(t, check(t, true, left, right), "expected error in strict mode")
+		require.NoError(t, check(t, false, left, right), "expected success in permissive mode")
+		require.Error(t, check(t, true, left, right), "expected error in strict mode")
 	})
 }
 
 func TestMismatchedTypes(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		desc        string
 		left, right string
@@ -172,18 +189,23 @@ func TestMismatchedTypes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.desc+" strict", func(t *testing.T) {
+			t.Parallel()
+
 			fails(t, true, tt.left, tt.right)
 		})
 		t.Run(tt.desc+" permissive", func(t *testing.T) {
+			t.Parallel()
 			// prefer the higher-priority value
 			succeeds(t, false, tt.left, tt.right, tt.right)
 		})
 	}
 }
 
+// Note that this test is skipped as we do not interpret booleans this
+// even though the base library did
 func TestBooleans(t *testing.T) {
-	// This test is skip as we do not interpret booleans this way
 	t.Skip()
+	t.Parallel()
 
 	// YAML helpfully interprets many strings as Booleans.
 	tests := []struct {
@@ -201,6 +223,8 @@ func TestBooleans(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.in, func(t *testing.T) {
+			t.Parallel()
+
 			succeeds(t, true, "", tt.in, tt.out)
 			succeeds(t, false, "", tt.in, tt.out)
 		})
@@ -208,6 +232,8 @@ func TestBooleans(t *testing.T) {
 }
 
 func TestExplicitNil(t *testing.T) {
+	t.Parallel()
+
 	base := `foo: {one: two}`
 	override := `foo: ~`
 	expect := `foo: ~`
