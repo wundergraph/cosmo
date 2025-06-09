@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.219.2](https://github.com/wundergraph/cosmo/compare/router@0.219.1...router@0.219.2) (2025-06-09)
+
+### Bug Fixes
+
+* variables in the event body should have a JSON renderer ([#1951](https://github.com/wundergraph/cosmo/issues/1951)) ([386e9a9](https://github.com/wundergraph/cosmo/commit/386e9a9a19e11f9a71b4780f70b83d4941f61bee)) (@alepane21)
+
 ## [0.219.1](https://github.com/wundergraph/cosmo/compare/router@0.219.0...router@0.219.1) (2025-06-06)
 
 ### Bug Fixes
