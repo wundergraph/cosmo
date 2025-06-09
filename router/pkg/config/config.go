@@ -1109,7 +1109,7 @@ func LoadConfig(configFilePathString string) (*LoadResult, error) {
 	}
 
 	// In case defaultLoaded is true, it means that the user did not provide a
-	// configuration file
+	// config file that was loaded, thus we don't have anything to process
 	if !cfg.DefaultLoaded {
 		yamlFinalBytes := configListBytes[0]
 		// Attempt to merge only if we have more than one file
