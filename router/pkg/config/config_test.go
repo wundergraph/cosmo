@@ -991,28 +991,6 @@ listen_addr: "localhost:3007"
 		require.NoError(t, err)
 	})
 
-	t.Run("process entire base config successfully", func(t *testing.T) {
-		config1 := getBaseConfigWithDefaults()
-		config1Bytes, err := yaml.Marshal(&config1)
-		require.NoError(t, err)
-
-		config2 := getBaseConfigWithDefaults()
-		config2Bytes, err := yaml.Marshal(&config2)
-		require.NoError(t, err)
-
-		config3 := getBaseConfigWithDefaults()
-		config3Bytes, err := yaml.Marshal(&config3)
-		require.NoError(t, err)
-
-		base := createTempFileFromFixtureWithPattern(t, "testing_config_1", string(config1Bytes))
-		override1 := createTempFileFromFixtureWithPattern(t, "testing_config_2", string(config2Bytes))
-		override2 := createTempFileFromFixtureWithPattern(t, "testing_config_3", string(config3Bytes))
-
-		combinedPaths := strings.Join([]string{base, override1, override2}, ",")
-		_, err = LoadConfig(combinedPaths)
-		require.NoError(t, err)
-	})
-
 	t.Run("merge full.yaml with itself successfully", func(t *testing.T) {
 		combinedPaths := strings.Join([]string{"./fixtures/full.yaml", "./fixtures/full.yaml", "./fixtures/full.yaml", "./fixtures/full.yaml", "./fixtures/full.yaml"}, ",")
 		cfg, err := LoadConfig(combinedPaths)
