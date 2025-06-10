@@ -471,6 +471,7 @@ var sources = []*ast.Source{
 @link(url: "https://specs.apollo.dev/federation/v2.5", import: ["@authenticated", "@composeDirective", "@external", "@extends", "@inaccessible", "@interfaceObject", "@override", "@provides", "@key", "@requires", "@requiresScopes", "@shareable", "@tag"])
 
 type Query {
+  """ This is a GraphQL query that retrieves a list of employees."""
   findEmployees(criteria: SearchInput): [Employee!]!
 }
 
@@ -572,6 +573,7 @@ type Employee @key(fields: "id") {
   details: Details @shareable
 }
 
+""" Allows to filter employees by their details. """
 input SearchInput {
   hasPets: Boolean
   nationality: Nationality

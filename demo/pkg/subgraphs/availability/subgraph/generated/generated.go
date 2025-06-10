@@ -268,6 +268,7 @@ var sources = []*ast.Source{
 @link(url: "https://specs.apollo.dev/federation/v2.5", import: ["@authenticated", "@composeDirective", "@external", "@extends", "@inaccessible", "@interfaceObject", "@override", "@provides", "@key", "@requires", "@requiresScopes", "@shareable", "@tag"])
 
 type Mutation {
+    """ This mutation updates the availability status of an employee in the system."""
     updateAvailability(employeeID: Int!, isAvailable: Boolean!): Employee!
 }
 type Employee @key(fields: "id") {

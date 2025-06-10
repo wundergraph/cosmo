@@ -115,6 +115,7 @@ func (Pony) IsAnimal() {}
 type Query struct {
 }
 
+// Allows to filter employees by their details.
 type SearchInput struct {
 	HasPets     *bool              `json:"hasPets,omitempty"`
 	Nationality *Nationality       `json:"nationality,omitempty"`
