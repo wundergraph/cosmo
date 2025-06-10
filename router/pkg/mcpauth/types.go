@@ -6,6 +6,12 @@ import (
 	"net/http"
 )
 
+// OAuth 2.1 grant type constants
+const (
+	GrantTypeAuthorizationCode = "authorization_code"
+	GrantTypeRefreshToken      = "refresh_token"
+)
+
 // AuthInfo represents authentication information for a verified access token.
 // Used to pass authentication context to protected endpoints.
 type AuthInfo struct {
@@ -26,7 +32,7 @@ type OAuthTokens struct {
 
 // OAuthClientInformation represents OAuth client information
 type OAuthClientInformation struct {
-	ClientID              string  `json:"client_id"`
+	ClientID              *string `json:"client_id,omitempty"`
 	ClientSecret          *string `json:"client_secret,omitempty"`
 	ClientIDIssuedAt      *int64  `json:"client_id_issued_at,omitempty"`
 	ClientSecretExpiresAt *int64  `json:"client_secret_expires_at,omitempty"`
@@ -320,7 +326,7 @@ type TokenVerifier interface {
 // Supports both proxy-based (production) and in-memory (demo) implementations.
 type OAuthServerProvider interface {
 	// Authorize initiates the OAuth authorization flow (redirects user to consent)
-	Authorize(ctx context.Context, client *OAuthClientInformationFull, params *AuthorizationParams, w http.ResponseWriter) error
+	Authorize(ctx context.Context, client *OAuthClientInformationFull, params *AuthorizationParams, w http.ResponseWriter, r *http.Request) error
 
 	// ChallengeForAuthorizationCode retrieves the PKCE challenge for verification
 	ChallengeForAuthorizationCode(ctx context.Context, client *OAuthClientInformationFull, authorizationCode string) (string, error)

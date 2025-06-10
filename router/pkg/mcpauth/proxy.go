@@ -442,7 +442,7 @@ func NewProxyOAuthServerProvider(options ProxyOptions) *ProxyOAuthServerProvider
 //   - w: HTTP response writer for sending the redirect response
 //
 // Returns an error if the authorization URL is malformed or the redirect fails.
-func (p *ProxyOAuthServerProvider) Authorize(ctx context.Context, client *OAuthClientInformationFull, params *AuthorizationParams, w http.ResponseWriter) error {
+func (p *ProxyOAuthServerProvider) Authorize(ctx context.Context, client *OAuthClientInformationFull, params *AuthorizationParams, w http.ResponseWriter, r *http.Request) error {
 	targetURL, err := url.Parse(p.endpoints.AuthorizationURL)
 	if err != nil {
 		return fmt.Errorf("invalid authorization URL: %w", err)
@@ -450,7 +450,9 @@ func (p *ProxyOAuthServerProvider) Authorize(ctx context.Context, client *OAuthC
 
 	// Build query parameters for the upstream authorization endpoint
 	q := targetURL.Query()
-	q.Set("client_id", client.ClientID)
+	if client.ClientID != nil {
+		q.Set("client_id", *client.ClientID)
+	}
 	q.Set("response_type", "code")
 	q.Set("redirect_uri", params.RedirectURI)
 	q.Set("code_challenge", params.CodeChallenge)
@@ -467,7 +469,7 @@ func (p *ProxyOAuthServerProvider) Authorize(ctx context.Context, client *OAuthC
 	targetURL.RawQuery = q.Encode()
 
 	// Redirect user to upstream OAuth provider for consent
-	http.Redirect(w, &http.Request{}, targetURL.String(), http.StatusFound)
+	http.Redirect(w, r, targetURL.String(), http.StatusFound)
 	return nil
 }
 
@@ -518,7 +520,9 @@ func (p *ProxyOAuthServerProvider) ChallengeForAuthorizationCode(ctx context.Con
 func (p *ProxyOAuthServerProvider) ExchangeAuthorizationCode(ctx context.Context, client *OAuthClientInformationFull, authorizationCode string, codeVerifier *string, redirectURI *string) (*OAuthTokens, error) {
 	data := url.Values{}
 	data.Set("grant_type", "authorization_code")
-	data.Set("client_id", client.ClientID)
+	if client.ClientID != nil {
+		data.Set("client_id", *client.ClientID)
+	}
 	data.Set("code", authorizationCode)
 
 	// Include client secret for confidential clients
@@ -595,7 +599,9 @@ func (p *ProxyOAuthServerProvider) ExchangeAuthorizationCode(ctx context.Context
 func (p *ProxyOAuthServerProvider) ExchangeRefreshToken(ctx context.Context, client *OAuthClientInformationFull, refreshToken string, scopes []string) (*OAuthTokens, error) {
 	data := url.Values{}
 	data.Set("grant_type", "refresh_token")
-	data.Set("client_id", client.ClientID)
+	if client.ClientID != nil {
+		data.Set("client_id", *client.ClientID)
+	}
 	data.Set("refresh_token", refreshToken)
 
 	// Include client secret for confidential clients
@@ -701,7 +707,9 @@ func (p *ProxyOAuthServerProvider) RevokeToken(ctx context.Context, client *OAut
 
 	data := url.Values{}
 	data.Set("token", request.Token)
-	data.Set("client_id", client.ClientID)
+	if client.ClientID != nil {
+		data.Set("client_id", *client.ClientID)
+	}
 
 	// Include client secret for confidential clients
 	if client.ClientSecret != nil {

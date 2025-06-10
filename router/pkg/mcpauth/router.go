@@ -11,8 +11,6 @@ import (
 	"net/url"
 	"strings"
 	"time"
-
-	"github.com/google/uuid"
 )
 
 // contextKey is a custom type for context keys to avoid collisions
@@ -82,11 +80,11 @@ type AuthRouterOptions struct {
 //   - Using a dedicated OAuth subdomain (e.g., auth.example.com) while MCP runs on api.example.com
 //
 // Client secret expiry options:
-//   - Default: 30 days (matches TypeScript implementation)
+//   - Default: 30 days
 //   - Custom: Any time.Duration (e.g., 7*24*time.Hour for 7 days)
 //   - Never expire: Set to 0 (not recommended for production)
 func NewAuthRouter(options AuthRouterOptions) *AuthRouter {
-	// Set default client secret expiry time if not specified (30 days, matching TypeScript implementation)
+	// Set default client secret expiry time if not specified
 	clientSecretExpiryTime := options.ClientSecretExpiryTime
 	if clientSecretExpiryTime == 0 {
 		clientSecretExpiryTime = 30 * 24 * time.Hour // 30 days
@@ -163,7 +161,7 @@ func (r *AuthRouter) createOAuthMetadata() *OAuthMetadata {
 		AuthorizationEndpoint:             baseURLStr + "authorize",
 		TokenEndpoint:                     baseURLStr + "token",
 		ResponseTypesSupported:            []string{"code"},
-		GrantTypesSupported:               []string{"authorization_code", "refresh_token"},
+		GrantTypesSupported:               []string{GrantTypeAuthorizationCode, GrantTypeRefreshToken},
 		CodeChallengeMethodsSupported:     []string{"S256"},
 		TokenEndpointAuthMethodsSupported: []string{"client_secret_post"},
 		ScopesSupported:                   r.scopesSupported,
@@ -278,7 +276,7 @@ func (r *AuthRouter) handleAuthorize(w http.ResponseWriter, req *http.Request) {
 	// Parse and validate scopes
 	scopes, err := r.parseAndValidateScopes(scope)
 	if err != nil {
-		r.redirectWithError(w, redirectURI, err.(*OAuthError), stringPtr(state))
+		r.redirectWithError(w, req, redirectURI, err.(*OAuthError), stringPtr(state))
 		return
 	}
 
@@ -291,8 +289,8 @@ func (r *AuthRouter) handleAuthorize(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Delegate to provider
-	if err := r.provider.Authorize(req.Context(), client, authParams, w); err != nil {
-		r.redirectWithError(w, redirectURI, NewServerError("Authorization failed"), authParams.State)
+	if err := r.provider.Authorize(req.Context(), client, authParams, w, req); err != nil {
+		r.redirectWithError(w, req, redirectURI, NewServerError("Authorization failed"), authParams.State)
 	}
 }
 
@@ -319,13 +317,6 @@ func (r *AuthRouter) handleToken(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// Verify client secret if provided
-	clientSecret := req.Form.Get("client_secret")
-	if oauthErr := r.validateClientCredentials(client, clientSecret); oauthErr != nil {
-		r.writeError(w, oauthErr, http.StatusBadRequest)
-		return
-	}
-
 	// Validate that the client is authorized to use the requested grant type
 	if !r.isClientAuthorizedForGrantType(client, grantType) {
 		r.writeError(w, NewUnauthorizedClientError(fmt.Sprintf("Client not authorized to use grant type: %s", grantType)), http.StatusBadRequest)
@@ -333,9 +324,9 @@ func (r *AuthRouter) handleToken(w http.ResponseWriter, req *http.Request) {
 	}
 
 	switch grantType {
-	case "authorization_code":
+	case GrantTypeAuthorizationCode:
 		r.handleAuthorizationCodeGrant(w, req, client)
-	case "refresh_token":
+	case GrantTypeRefreshToken:
 		r.handleRefreshTokenGrant(w, req, client)
 	default: // e.g. "client_credentials"
 		r.writeError(w, NewUnsupportedGrantTypeError("Unsupported grant type"), http.StatusBadRequest)
@@ -436,8 +427,6 @@ func (r *AuthRouter) handleRegistration(w http.ResponseWriter, req *http.Request
 		return
 	}
 
-	// Generate client credentials according to RFC 7591
-	clientID := r.generateClientID()
 	isPublicClient := clientMetadata.TokenEndpointAuthMethod != nil &&
 		*clientMetadata.TokenEndpointAuthMethod == "none"
 
@@ -463,7 +452,6 @@ func (r *AuthRouter) handleRegistration(w http.ResponseWriter, req *http.Request
 	// Create full client information
 	client := &OAuthClientInformationFull{
 		OAuthClientInformation: OAuthClientInformation{
-			ClientID:              clientID,
 			ClientSecret:          clientSecret,
 			ClientIDIssuedAt:      &clientIDIssuedAt,
 			ClientSecretExpiresAt: clientSecretExpiresAt,
@@ -564,7 +552,7 @@ func (r *AuthRouter) writeJSON(w http.ResponseWriter, data interface{}, statusCo
 }
 
 // redirectWithError redirects with OAuth error parameters
-func (r *AuthRouter) redirectWithError(w http.ResponseWriter, redirectURI string, err *OAuthError, state *string) {
+func (r *AuthRouter) redirectWithError(w http.ResponseWriter, req *http.Request, redirectURI string, err *OAuthError, state *string) {
 	u, parseErr := url.Parse(redirectURI)
 	if parseErr != nil {
 		r.writeError(w, NewServerError("Invalid redirect URI"), http.StatusInternalServerError)
@@ -584,7 +572,7 @@ func (r *AuthRouter) redirectWithError(w http.ResponseWriter, redirectURI string
 	}
 
 	u.RawQuery = q.Encode()
-	http.Redirect(w, nil, u.String(), http.StatusFound)
+	http.Redirect(w, req, u.String(), http.StatusFound)
 }
 
 // RequireBearerAuth creates middleware that protects HTTP endpoints with OAuth bearer token authentication.
@@ -663,11 +651,6 @@ func GetAuthInfoFromContext(ctx context.Context) (*AuthInfo, bool) {
 	return authInfo, ok
 }
 
-// generateClientID generates a unique client identifier (RFC 7591)
-func (r *AuthRouter) generateClientID() string {
-	return uuid.New().String()
-}
-
 // generateClientSecret generates a secure client secret (RFC 7591)
 func (r *AuthRouter) generateClientSecret() string {
 	bytes := make([]byte, 32)
@@ -707,7 +690,7 @@ func (r *AuthRouter) validateClientMetadata(clientMetadata *OAuthClientMetadata)
 
 	// Validate grant_types if provided
 	if len(clientMetadata.GrantTypes) > 0 {
-		validGrantTypes := []string{"authorization_code", "refresh_token", "urn:ietf:params:oauth:grant-type:device_code"}
+		validGrantTypes := []string{GrantTypeAuthorizationCode, GrantTypeRefreshToken, "urn:ietf:params:oauth:grant-type:device_code"}
 		for _, grantType := range clientMetadata.GrantTypes {
 			isValid := false
 			for _, valid := range validGrantTypes {
@@ -785,7 +768,7 @@ func (r *AuthRouter) isClientAuthorizedForGrantType(client *OAuthClientInformati
 	// If client has no grant types specified, allow default grant types
 	if len(client.GrantTypes) == 0 {
 		// Default grant types for OAuth 2.1
-		return grantType == "authorization_code" || grantType == "refresh_token"
+		return grantType == GrantTypeAuthorizationCode || grantType == GrantTypeRefreshToken
 	}
 
 	// Check if the requested grant type is in the client's allowed grant types
@@ -879,7 +862,7 @@ func WithCORS(allowedMethods ...string) func(http.Handler) http.Handler {
 func setCORSHeaders(w http.ResponseWriter, allowedMethods []string) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", strings.Join(append(allowedMethods, "OPTIONS"), ", "))
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, mcp-protocol-version")
 	w.Header().Set("Access-Control-Max-Age", "86400") // 24 hours
 }
 
@@ -907,6 +890,17 @@ func buildWWWAuthenticateHeader(resourceMetadataURL string) string {
 	return strings.Join(parts, ", ")
 }
 
+// BuildResourceMetadataURL constructs the OAuth protected resource metadata URL from a base URL.
+// It handles normalization of the base URL and appends the standard well-known path.
+func BuildResourceMetadataURL(baseURL string) string {
+	// Ensure base URL ends with a slash for proper path construction
+	if baseURL != "" && !strings.HasSuffix(baseURL, "/") {
+		baseURL += "/"
+	}
+
+	return baseURL + ".well-known/oauth-protected-resource"
+}
+
 // stringPtr converts a string to a pointer if it's not empty
 func stringPtr(s string) *string {
 	if s == "" {
@@ -927,12 +921,4 @@ func (r *AuthRouter) validateClientID(ctx context.Context, clientID string) (*OA
 	}
 
 	return client, nil
-}
-
-// validateClientCredentials validates client secret if provided
-func (r *AuthRouter) validateClientCredentials(client *OAuthClientInformationFull, clientSecret string) *OAuthError {
-	if client.ClientSecret != nil && clientSecret != *client.ClientSecret {
-		return NewInvalidClientError("Invalid client credentials")
-	}
-	return nil
 }

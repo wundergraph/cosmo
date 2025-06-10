@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/hashicorp/go-retryablehttp"
 	"github.com/mitchellh/mapstructure"
 	"github.com/nats-io/nuid"
 	"github.com/wundergraph/cosmo/router/internal/track"
@@ -843,69 +842,74 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		// Configure OAuth for MCP server - construct OAuth components here in the router
 		var oauthProvider mcpauth.OAuthServerProvider
 		var authRouter *mcpauth.AuthRouter
-		resourceName := "MCP Cosmo Router"
 
-		// For demo/development purposes, use the demo provider
-		if r.developmentMode {
-			// Use demo provider
-			demoProvider := mcpauth.NewDemoInMemoryAuthProvider(r.logger.With(logFields...))
-			demoProvider.AddDefaultTestClients()
-
-			// Create auth router with demo provider
-			issuerURL, err := url.Parse("http://localhost:5025/oauth")
-			if err != nil {
-				return fmt.Errorf("failed to parse demo issuer URL: %w", err)
-			}
-
-			// Optional: OAuth endpoints can be served from a different domain than the MCP server
-			// Uncomment the line below to serve OAuth endpoints from a different base URL
-			// baseURL, _ := url.Parse("https://auth.example.com/oauth")
-			authRouter = mcpauth.NewAuthRouter(mcpauth.AuthRouterOptions{
-				Provider:               demoProvider,
-				IssuerURL:              issuerURL,
-				ScopesSupported:        []string{},
-				ResourceName:           &resourceName,
-				ClientSecretExpiryTime: 24 * time.Hour, // 1 day for demo/testing
-			})
-
-			oauthProvider = demoProvider
-
-			r.logger.Info("Demo OAuth provider configured for MCP server")
-		} else {
-			// Use production proxy provider
-
-			authConfig := &mcpauth.MCPAuthConfig{
-				Enabled:   true,
-				IssuerURL: "https://mcp.example.com",
-				// BaseURL:               stringPtr("https://auth.example.com/oauth"), // Optional: OAuth endpoints on different domain
-				UpstreamAuthURL:       "https://auth.example.com/authorize",
-				UpstreamTokenURL:      "https://auth.example.com/token",
-				IntrospectionEndpoint: "https://auth.example.com/introspect",
-				RequiredScopes:        []string{},
-				ResourceName:          &resourceName,
-			}
-
-			retryClient := retryablehttp.NewClient()
-			retryClient.Logger = nil
-			httpClient := retryClient.StandardClient()
-			httpClient.Timeout = 60 * time.Second
-
-			mcpOAuthProvider, err := mcpauth.NewMCPOAuthProvider(authConfig, httpClient, r.logger.With(logFields...))
-			if err != nil {
-				return fmt.Errorf("failed to initialize OAuth provider: %w", err)
-			}
-
-			// Create auth router
-			router, err := mcpOAuthProvider.CreateAuthRouter()
-			if err != nil {
-				return fmt.Errorf("failed to create auth router: %w", err)
-			}
-
-			oauthProvider = mcpOAuthProvider.GetProvider()
-			authRouter = router
-
-			r.logger.Info("Production OAuth provider configured for MCP server")
+		// 1. Define OAuth endpoints for proxy
+		revocationURL := "http://localhost:8080/realms/cosmo/protocol/openid-connect/revoke"
+		registrationURL := "http://localhost:8080/realms/cosmo/clients-registrations/openid-connect"
+		endpoints := mcpauth.ProxyEndpoints{
+			AuthorizationURL: "http://localhost:8080/realms/cosmo/protocol/openid-connect/auth",
+			TokenURL:         "http://localhost:8080/realms/cosmo/protocol/openid-connect/token",
+			RevocationURL:    &revocationURL,   // Optional
+			RegistrationURL:  &registrationURL, // Optional - for dynamic client registration
 		}
+
+		// 2. Implement token verification (integrate with your OAuth provider's token introspection)
+		verifyToken := func(ctx context.Context, token string) (*mcpauth.AuthInfo, error) {
+			// Call your OAuth provider's token introspection endpoint
+			// or validate JWT tokens locally with public keys
+			return &mcpauth.AuthInfo{
+				Token:     token,
+				ClientID:  "extracted-from-token",
+				Scopes:    []string{"mcp:read", "mcp:write"},
+				ExpiresAt: time.Now().Add(time.Hour).Unix(),
+			}, nil
+		}
+
+		// 3. Implement client lookup (integrate with your OAuth provider's client management)
+		getClient := func(ctx context.Context, clientID string) (*mcpauth.OAuthClientInformationFull, error) {
+			// Fetch client information from your OAuth provider or local database
+			clientSecret := "secret-from-provider"
+			client := clientID
+			scope := "mcp:read mcp:write"
+			return &mcpauth.OAuthClientInformationFull{
+				OAuthClientInformation: mcpauth.OAuthClientInformation{
+					ClientID:     &client,
+					ClientSecret: &clientSecret,
+				},
+				OAuthClientMetadata: mcpauth.OAuthClientMetadata{
+					Scope: &scope,
+					RedirectURIs: []string{
+						"http://127.0.0.1:6274/oauth/callback",
+						"http://127.0.0.1:6274/oauth/callback/debug",
+						"https://playground.ai.cloudflare.com/oauth/callback",
+						"http://localhost:57543/oauth/callback",
+						"http://localhost:59145/oauth/callback",
+					},
+					GrantTypes: []string{"authorization_code", "refresh_token"},
+				},
+			}, nil
+		}
+
+		// 4. Create proxy provider
+		provider := mcpauth.NewProxyOAuthServerProvider(mcpauth.ProxyOptions{
+			Endpoints:         endpoints,
+			VerifyAccessToken: verifyToken,
+			GetClient:         getClient,
+			HTTPClient:        &http.Client{Timeout: 30 * time.Second}, // Optional
+		})
+
+		// 5. Create OAuth router
+		issuerURL, _ := url.Parse("http://localhost:5025/oauth")
+		authRouter = mcpauth.NewAuthRouter(mcpauth.AuthRouterOptions{
+			// BaseURL: "",
+			Provider:        provider,
+			IssuerURL:       issuerURL,
+			ScopesSupported: []string{"mcp:read", "mcp:write"},
+		})
+
+		oauthProvider = provider
+
+		r.logger.Info("Proxy OAuth provider configured for MCP server")
 
 		// Initialize the MCP server with the resolved operations directory
 		mcpOpts := []func(*mcpserver.Options){

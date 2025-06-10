@@ -32,13 +32,13 @@ import (
 // 🚨 DEMO ONLY - NOT FOR PRODUCTION
 type DemoInMemoryClientsStore struct {
 	mu      sync.RWMutex
-	clients map[string]*OAuthClientInformationFull
+	clients map[*string]*OAuthClientInformationFull
 }
 
 // NewDemoInMemoryClientsStore creates a new in-memory client store
 func NewDemoInMemoryClientsStore() *DemoInMemoryClientsStore {
 	return &DemoInMemoryClientsStore{
-		clients: make(map[string]*OAuthClientInformationFull),
+		clients: make(map[*string]*OAuthClientInformationFull),
 	}
 }
 
@@ -47,7 +47,7 @@ func (s *DemoInMemoryClientsStore) GetClient(ctx context.Context, clientID strin
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	client, exists := s.clients[clientID]
+	client, exists := s.clients[stringPtr(clientID)]
 	if !exists {
 		return nil, fmt.Errorf("client not found")
 	}
@@ -71,11 +71,11 @@ func (s *DemoInMemoryClientsStore) AddTestClient(clientID string, redirectURIs [
 
 	client := &OAuthClientInformationFull{
 		OAuthClientInformation: OAuthClientInformation{
-			ClientID: clientID,
+			ClientID: stringPtr(clientID),
 		},
 		OAuthClientMetadata: OAuthClientMetadata{
 			RedirectURIs:  redirectURIs,
-			GrantTypes:    []string{"authorization_code", "refresh_token"},
+			GrantTypes:    []string{GrantTypeAuthorizationCode, GrantTypeRefreshToken},
 			ResponseTypes: []string{"code"},
 		},
 	}
@@ -91,7 +91,7 @@ func (s *DemoInMemoryClientsStore) AddTestClient(clientID string, redirectURIs [
 		client.Scope = &scopeStr
 	}
 
-	s.clients[clientID] = client
+	s.clients[stringPtr(clientID)] = client
 	return client
 }
 
@@ -177,7 +177,7 @@ func (p *DemoInMemoryAuthProvider) Authorize(ctx context.Context, client *OAuthC
 	}
 
 	p.logger.Debug("Authorization code issued",
-		zap.String("client_id", client.ClientID),
+		zap.Stringp("client_id", client.ClientID),
 		zap.String("code", code),
 		zap.String("redirect_uri", params.RedirectURI))
 
@@ -237,7 +237,7 @@ func (p *DemoInMemoryAuthProvider) ExchangeAuthorizationCode(ctx context.Context
 	// it means skipLocalPkceValidation is true, which shouldn't happen for demo provider.
 	if codeVerifier != nil {
 		p.logger.Warn("Demo provider received code_verifier but should perform local PKCE validation",
-			zap.String("client_id", client.ClientID))
+			zap.String("client_id", *client.ClientID))
 	}
 
 	// Clean up the code (one-time use)
@@ -249,7 +249,7 @@ func (p *DemoInMemoryAuthProvider) ExchangeAuthorizationCode(ctx context.Context
 
 	authInfo := &AuthInfo{
 		Token:     token,
-		ClientID:  client.ClientID,
+		ClientID:  *client.ClientID,
 		Scopes:    codeData.params.Scopes,
 		ExpiresAt: expiresAt,
 	}
@@ -267,7 +267,7 @@ func (p *DemoInMemoryAuthProvider) ExchangeAuthorizationCode(ctx context.Context
 	}
 
 	p.logger.Debug("Access token issued",
-		zap.String("client_id", client.ClientID),
+		zap.String("client_id", *client.ClientID),
 		zap.String("token", token),
 		zap.Strings("scopes", codeData.params.Scopes))
 
@@ -316,7 +316,7 @@ func (p *DemoInMemoryAuthProvider) RevokeToken(ctx context.Context, client *OAut
 	delete(p.tokens, request.Token)
 
 	p.logger.Debug("Token revoked",
-		zap.String("client_id", client.ClientID),
+		zap.String("client_id", *client.ClientID),
 		zap.String("token", request.Token))
 
 	return nil
@@ -329,7 +329,7 @@ func (p *DemoInMemoryAuthProvider) generateRandomToken() string {
 	return hex.EncodeToString(bytes)
 }
 
-// GetClientStore returns the demo client store for easy access
+// GetDemoClientStore returns the demo client store for easy access
 func (p *DemoInMemoryAuthProvider) GetDemoClientStore() *DemoInMemoryClientsStore {
 	return p.clientsStore
 }

@@ -357,16 +357,13 @@ func (s *GraphQLSchemaServer) ServeSSE() (*server.SSEServer, error) {
 		mux.Handle("/oauth/", corsMiddleware(s.authRouter))
 		mux.Handle("/.well-known/", corsMiddleware(s.authRouter))
 
-		// Construct resource metadata URL for WWW-Authenticate headers
+		// Build the public URL for the MCP server
 		baseURL := s.baseURL
 		if baseURL == "" {
 			// Default to listen address if no base URL is provided
 			baseURL = "http://" + s.listenAddr
 		}
-		if !strings.HasSuffix(baseURL, "/") {
-			baseURL += "/"
-		}
-		resourceMetadataURL := baseURL + ".well-known/oauth-protected-resource"
+		resourceMetadataURL := mcpauth.BuildResourceMetadataURL(baseURL)
 
 		// Protect MCP endpoints with OAuth
 		requireAuth := mcpauth.RequireBearerAuth(s.oauthProvider, nil, resourceMetadataURL)
