@@ -323,6 +323,7 @@ type Config struct {
 	NoShutdownTestServer               bool
 	MCP                                config.MCPConfiguration
 	EnableRedis                        bool
+	EnableRedisCluster                 bool
 	Plugins                            PluginConfig
 }
 
@@ -380,6 +381,7 @@ type MCPConfig struct {
 }
 
 var redisHost = "redis://localhost:6379"
+var redisClusterHost = "redis://localhost:7001"
 
 // CreateTestSupervisorEnv is currently tailored specifically for /lifecycle/supervisor_test.go, refer to that test
 // for usage example. CreateTestSupervisorEnv is not a drop-in replacement for CreateTestEnv!
@@ -761,6 +763,11 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 
 	if cfg.EnableRedis {
 		e.RedisHosts = []string{redisHost}
+	}
+
+	if cfg.EnableRedisCluster {
+		e.RedisHosts = []string{redisClusterHost}
+		e.RedisWithClusterMode = true
 	}
 
 	if routerConfig.FeatureFlagConfigs != nil {
@@ -1160,6 +1167,11 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		e.RedisHosts = []string{redisHost}
 	}
 
+	if cfg.EnableRedisCluster {
+		e.RedisHosts = []string{redisClusterHost}
+		e.RedisWithClusterMode = true
+	}
+
 	if routerConfig.FeatureFlagConfigs != nil {
 		myFF, ok := routerConfig.FeatureFlagConfigs.ConfigByFeatureFlagName["myff"]
 		if ok {
@@ -1305,6 +1317,15 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			redisEventSources = append(redisEventSources, config.RedisEventSource{
 				ID:   sourceName,
 				URLs: []string{redisHost},
+			})
+		}
+	}
+
+	if testConfig.EnableRedisCluster {
+		for _, sourceName := range DemoRedisProviders {
+			redisEventSources = append(redisEventSources, config.RedisEventSource{
+				ID:   sourceName,
+				URLs: []string{redisClusterHost},
 			})
 		}
 	}
@@ -1646,6 +1667,7 @@ type Environment struct {
 	getPubSubName         func(name string) string
 	MCPClient             *mcpclient.Client
 	RedisHosts            []string
+	RedisWithClusterMode  bool
 
 	shutdownDelay       time.Duration
 	extraURLQueryValues url.Values

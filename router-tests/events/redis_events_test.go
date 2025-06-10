@@ -928,6 +928,102 @@ func TestRedisEvents(t *testing.T) {
 	})
 }
 
+func TestRedisClusterEvents(t *testing.T) {
+	t.Parallel()
+
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
+	t.Run("subscribe async", func(t *testing.T) {
+		t.Parallel()
+
+		topics := []string{"employeeUpdatedMyRedis"}
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsRedisJSONTemplate,
+			EnableRedisCluster:       true,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			var subscriptionOne struct {
+				employeeUpdates struct {
+					ID      float64 `graphql:"id"`
+					Details struct {
+						Forename string `graphql:"forename"`
+						Surname  string `graphql:"surname"`
+					} `graphql:"details"`
+				} `graphql:"employeeUpdates"`
+			}
+
+			surl := xEnv.GraphQLWebSocketSubscriptionURL()
+			client := graphql.NewSubscriptionClient(surl)
+			t.Cleanup(func() {
+				_ = client.Close()
+			})
+
+			var counter atomic.Uint32
+
+			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
+				defer counter.Add(1)
+				require.NoError(t, errValue)
+				require.JSONEq(t, `{"employeeUpdates":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(dataValue))
+				return nil
+			})
+			require.NoError(t, err)
+			require.NotEmpty(t, subscriptionOneID)
+
+			go func() {
+				clientErr := client.Run()
+				require.NoError(t, clientErr)
+			}()
+
+			go func() {
+				require.Eventually(t, func() bool {
+					return counter.Load() == 1
+				}, RedisWaitTimeout, time.Millisecond*100)
+				_ = client.Close()
+			}()
+
+			xEnv.WaitForSubscriptionCount(1, RedisWaitTimeout)
+
+			produceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+
+			xEnv.WaitForMessagesSent(1, RedisWaitTimeout)
+			xEnv.WaitForSubscriptionCount(0, RedisWaitTimeout)
+			xEnv.WaitForConnectionCount(0, RedisWaitTimeout)
+		})
+	})
+
+	t.Run("mutate", func(t *testing.T) {
+		t.Parallel()
+
+		channels := []string{"employeeUpdatedMyRedis"}
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsRedisJSONTemplate,
+			EnableRedisCluster:       true,
+			NoRetryClient:            true,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			var msgCh <-chan *redis.Message
+			var started atomic.Bool
+			go func() {
+				var err error
+				msgCh, err = readRedisMessages(t, xEnv, channels[0])
+				started.Store(true)
+				require.NoError(t, err)
+			}()
+			require.Eventually(t, started.Load, RedisWaitTimeout, time.Millisecond*100)
+			// Send a mutation to trigger the first subscription
+			resOne := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `mutation { updateEmployeeMyRedis(id: 3, update: {name: "name test"}) { success } }`,
+			})
+			require.JSONEq(t, `{"data":{"updateEmployeeMyRedis":{"success":true}}}`, resOne.Body)
+			m := <-msgCh
+			require.Equal(t, `{"id":3,"update":{"name":"name test"}}`, m.Payload)
+		})
+	})
+
+}
+
 func produceRedisMessage(t *testing.T, xEnv *testenv.Environment, topicName string, message string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -936,9 +1032,17 @@ func produceRedisMessage(t *testing.T, xEnv *testenv.Environment, topicName stri
 	if err != nil {
 		t.Fatalf("Failed to parse Redis URL: %v", err)
 	}
-	redisConn := redis.NewClient(&redis.Options{
-		Addr: parsedURL.Host,
-	})
+	var redisConn redis.UniversalClient
+	if !xEnv.RedisWithClusterMode {
+		redisConn = redis.NewClient(&redis.Options{
+			Addr: parsedURL.Host,
+		})
+	} else {
+		redisConn = redis.NewClusterClient(&redis.ClusterOptions{
+			Addrs: []string{parsedURL.Host},
+		})
+	}
+
 	intCmd := redisConn.Publish(ctx, xEnv.GetPubSubName(topicName), message)
 	require.NoError(t, intCmd.Err())
 }
@@ -951,9 +1055,16 @@ func readRedisMessages(t *testing.T, xEnv *testenv.Environment, channelName stri
 	if err != nil {
 		return nil, err
 	}
-	redisConn := redis.NewClient(&redis.Options{
-		Addr: parsedURL.Host,
-	})
+	var redisConn redis.UniversalClient
+	if !xEnv.RedisWithClusterMode {
+		redisConn = redis.NewClient(&redis.Options{
+			Addr: parsedURL.Host,
+		})
+	} else {
+		redisConn = redis.NewClusterClient(&redis.ClusterOptions{
+			Addrs: []string{parsedURL.Host},
+		})
+	}
 	sub := redisConn.Subscribe(ctx, xEnv.GetPubSubName(channelName))
 	t.Cleanup(func() {
 		sub.Close()
