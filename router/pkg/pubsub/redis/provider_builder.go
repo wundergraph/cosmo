@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"fmt"
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -42,13 +43,24 @@ func (b *ProviderBuilder) TypeID() string {
 }
 
 // DataSource creates a Redis PubSub data source for the given event configuration
-func (b *ProviderBuilder) BuildEngineDataSourceFactory(event *nodev1.RedisEventConfiguration) (datasource.EngineDataSourceFactory, error) {
-	providerId := event.GetEngineEventConfiguration().GetProviderId()
+func (b *ProviderBuilder) BuildEngineDataSourceFactory(data *nodev1.RedisEventConfiguration) (datasource.EngineDataSourceFactory, error) {
+	providerId := data.GetEngineEventConfiguration().GetProviderId()
+
+	var eventType EventType
+	switch data.GetEngineEventConfiguration().GetType() {
+	case nodev1.EventType_PUBLISH:
+		eventType = EventTypePublish
+	case nodev1.EventType_SUBSCRIBE:
+		eventType = EventTypeSubscribe
+	default:
+		return nil, fmt.Errorf("unsupported event type: %s", data.GetEngineEventConfiguration().GetType())
+	}
+
 	return &EngineDataSourceFactory{
 		RedisAdapter: b.adapters[providerId],
-		fieldName:    event.GetEngineEventConfiguration().GetFieldName(),
-		eventType:    EventTypePublish,
-		channels:     event.GetChannels(),
+		fieldName:    data.GetEngineEventConfiguration().GetFieldName(),
+		eventType:    eventType,
+		channels:     data.GetChannels(),
 		providerId:   providerId,
 	}, nil
 }
