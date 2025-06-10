@@ -57,9 +57,10 @@ export type WebsocketSubprotocol = 'auto' | 'graphql-ws' | 'graphql-transport-ws
 export enum SubgraphKind {
   Plugin,
   Standard,
+  GRPC,
 }
 
-export type RouterSubgraph = ComposedSubgraph | ComposedSubgraphPlugin;
+export type RouterSubgraph = ComposedSubgraph | ComposedSubgraphPlugin | ComposedSubgraphGRPC;
 
 export interface ComposedSubgraph {
   kind: SubgraphKind.Standard;
@@ -81,6 +82,20 @@ export interface ComposedSubgraphPlugin {
   kind: SubgraphKind.Plugin;
   id: string;
   version: string;
+  name: string;
+  sdl: string;
+  url: string;
+  protoSchema: string;
+  mapping: GRPCMapping;
+  // The intermediate representation of the engine configuration for the subgraph
+  configurationDataByTypeName?: Map<string, ConfigurationData>;
+  // The normalized GraphQL schema for the subgraph
+  schema?: GraphQLSchema;
+}
+
+export interface ComposedSubgraphGRPC {
+  kind: SubgraphKind.GRPC;
+  id: string;
   name: string;
   sdl: string;
   url: string;
@@ -182,6 +197,11 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
           name: subgraph.name,
           version: subgraph.version,
         }),
+      });
+    } else if (subgraph.kind === SubgraphKind.GRPC) {
+      grcpConfig = new GRPCConfiguration({
+        mapping: subgraph.mapping,
+        protoSchema: subgraph.protoSchema,
       });
     }
 
