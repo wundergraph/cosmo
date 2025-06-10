@@ -8,7 +8,6 @@ import (
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/pubsubtest"
 )
 
@@ -16,15 +15,10 @@ func TestRedisEngineDataSourceFactory(t *testing.T) {
 	// Create the data source to test with a real adapter
 	adapter := &ProviderAdapter{}
 	pubsub := &EngineDataSourceFactory{
-		EventConfiguration: &nodev1.RedisEventConfiguration{
-			EngineEventConfiguration: &nodev1.EngineEventConfiguration{
-				FieldName:  "testField",
-				TypeName:   "TestType",
-				Type:       nodev1.EventType_PUBLISH,
-				ProviderId: "test-provider",
-			},
-			Channels: []string{"test-channel"},
-		},
+		fieldName:    "testField",
+		eventType:    EventTypePublish,
+		channels:     []string{"test-channel"},
+		providerId:   "test-provider",
 		RedisAdapter: adapter,
 	}
 
@@ -44,15 +38,10 @@ func TestEngineDataSourceFactoryWithMockAdapter(t *testing.T) {
 
 	// Create the data source with mock adapter
 	pubsub := &EngineDataSourceFactory{
-		EventConfiguration: &nodev1.RedisEventConfiguration{
-			EngineEventConfiguration: &nodev1.EngineEventConfiguration{
-				FieldName:  "testField",
-				TypeName:   "TestType",
-				Type:       nodev1.EventType_PUBLISH,
-				ProviderId: "test-provider",
-			},
-			Channels: []string{"test-channel"},
-		},
+		fieldName:    "testField",
+		eventType:    EventTypePublish,
+		channels:     []string{"test-channel"},
+		providerId:   "test-provider",
 		RedisAdapter: mockAdapter,
 	}
 
@@ -78,15 +67,10 @@ func TestEngineDataSourceFactory_GetResolveDataSource_WrongType(t *testing.T) {
 
 	// Create the data source with mock adapter
 	pubsub := &EngineDataSourceFactory{
-		EventConfiguration: &nodev1.RedisEventConfiguration{
-			EngineEventConfiguration: &nodev1.EngineEventConfiguration{
-				FieldName:  "testField",
-				TypeName:   "TestType",
-				Type:       nodev1.EventType_SUBSCRIBE,
-				ProviderId: "test-provider",
-			},
-			Channels: []string{"test-channel"},
-		},
+		fieldName:    "testField",
+		eventType:    EventTypeSubscribe,
+		channels:     []string{"test-channel"},
+		providerId:   "test-provider",
 		RedisAdapter: mockAdapter,
 	}
 
@@ -100,15 +84,10 @@ func TestEngineDataSourceFactory_GetResolveDataSource_WrongType(t *testing.T) {
 func TestEngineDataSourceFactory_GetResolveDataSourceInput_MultipleChannels(t *testing.T) {
 	// Create the data source with mock adapter
 	pubsub := &EngineDataSourceFactory{
-		EventConfiguration: &nodev1.RedisEventConfiguration{
-			EngineEventConfiguration: &nodev1.EngineEventConfiguration{
-				FieldName:  "testField",
-				TypeName:   "TestType",
-				Type:       nodev1.EventType_PUBLISH,
-				ProviderId: "test-provider",
-			},
-			Channels: []string{"test-channel-1", "test-channel-2"},
-		},
+		fieldName:  "testField",
+		eventType:  EventTypePublish,
+		channels:   []string{"test-channel-1", "test-channel-2"},
+		providerId: "test-provider",
 	}
 
 	// Get the input
@@ -121,15 +100,10 @@ func TestEngineDataSourceFactory_GetResolveDataSourceInput_MultipleChannels(t *t
 func TestEngineDataSourceFactory_GetResolveDataSourceInput_NoChannels(t *testing.T) {
 	// Create the data source with mock adapter
 	pubsub := &EngineDataSourceFactory{
-		EventConfiguration: &nodev1.RedisEventConfiguration{
-			EngineEventConfiguration: &nodev1.EngineEventConfiguration{
-				FieldName:  "testField",
-				TypeName:   "TestType",
-				Type:       nodev1.EventType_PUBLISH,
-				ProviderId: "test-provider",
-			},
-			Channels: []string{},
-		},
+		fieldName:  "testField",
+		eventType:  EventTypePublish,
+		channels:   []string{},
+		providerId: "test-provider",
 	}
 
 	// Get the input
@@ -144,15 +118,10 @@ func TestEngineDataSourceFactory_GetResolveDataSourceInput_NoChannels(t *testing
 func TestRedisEngineDataSourceFactoryMultiChannelSubscription(t *testing.T) {
 	// Create the data source to test with mock adapter
 	pubsub := &EngineDataSourceFactory{
-		EventConfiguration: &nodev1.RedisEventConfiguration{
-			EngineEventConfiguration: &nodev1.EngineEventConfiguration{
-				FieldName:  "testField",
-				TypeName:   "TestType",
-				Type:       nodev1.EventType_PUBLISH,
-				ProviderId: "test-provider",
-			},
-			Channels: []string{"test-channel-1", "test-channel-2"},
-		},
+		fieldName:  "testField",
+		eventType:  EventTypePublish,
+		channels:   []string{"test-channel-1", "test-channel-2"},
+		providerId: "test-provider",
 	}
 
 	// Test GetResolveDataSourceSubscriptionInput
@@ -167,4 +136,43 @@ func TestRedisEngineDataSourceFactoryMultiChannelSubscription(t *testing.T) {
 	require.Equal(t, 2, len(subscriptionConfig.Channels), "Expected 2 channels in subscription configuration")
 	require.Equal(t, "test-channel-1", subscriptionConfig.Channels[0], "Expected first channel to be 'test-channel-1'")
 	require.Equal(t, "test-channel-2", subscriptionConfig.Channels[1], "Expected second channel to be 'test-channel-2'")
+}
+
+func TestTransformEventConfig(t *testing.T) {
+	t.Run("publish event", func(t *testing.T) {
+		cfg := &EngineDataSourceFactory{
+			providerId: "test-provider",
+			eventType:  EventTypePublish,
+			channels:   []string{"original.subject"},
+			fieldName:  "testField",
+		}
+
+		// Simple transform function that adds "transformed." prefix
+		transformFn := func(s string) (string, error) {
+			return "transformed." + s, nil
+		}
+
+		err := cfg.TransformEventData(transformFn)
+		require.NoError(t, err)
+		require.Equal(t, []string{"transformed.original.subject"}, cfg.channels)
+	})
+
+	t.Run("subscribe event", func(t *testing.T) {
+		cfg := &EngineDataSourceFactory{
+			providerId: "test-provider",
+			eventType:  EventTypeSubscribe,
+			channels:   []string{"original.subject1", "original.subject2"},
+			fieldName:  "testField",
+		}
+
+		// Simple transform function that adds "transformed." prefix
+		transformFn := func(s string) (string, error) {
+			return "transformed." + s, nil
+		}
+
+		err := cfg.TransformEventData(transformFn)
+		require.NoError(t, err)
+		// Since the function sorts the subjects
+		require.Equal(t, []string{"transformed.original.subject1", "transformed.original.subject2"}, cfg.channels)
+	})
 }

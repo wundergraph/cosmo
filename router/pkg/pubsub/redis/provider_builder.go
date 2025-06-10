@@ -45,14 +45,17 @@ func (b *ProviderBuilder) TypeID() string {
 func (b *ProviderBuilder) BuildEngineDataSourceFactory(event *nodev1.RedisEventConfiguration) (datasource.EngineDataSourceFactory, error) {
 	providerId := event.GetEngineEventConfiguration().GetProviderId()
 	return &EngineDataSourceFactory{
-		EventConfiguration: event,
-		RedisAdapter:       b.adapters[providerId],
+		RedisAdapter: b.adapters[providerId],
+		fieldName:    event.GetEngineEventConfiguration().GetFieldName(),
+		eventType:    EventTypePublish,
+		channels:     event.GetChannels(),
+		providerId:   providerId,
 	}, nil
 }
 
 // Providers returns the Redis PubSub providers for the given provider IDs
 func (b *ProviderBuilder) BuildProvider(provider config.RedisEventSource) (datasource.Provider, error) {
-	adapter := NewProviderAdapter(b.logger, provider.URLs, provider.ClusterEnabled)
+	adapter := NewProviderAdapter(b.ctx, b.logger, provider.URLs, provider.ClusterEnabled)
 	pubSubProvider := datasource.NewPubSubProvider(provider.ID, providerTypeID, adapter, b.logger)
 	b.adapters[provider.ID] = adapter
 

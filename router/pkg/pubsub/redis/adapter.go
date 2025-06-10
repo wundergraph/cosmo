@@ -23,8 +23,11 @@ type Adapter interface {
 	Shutdown(ctx context.Context) error
 }
 
-func NewProviderAdapter(logger *zap.Logger, urls []string, clusterEnabled bool) Adapter {
+func NewProviderAdapter(ctx context.Context, logger *zap.Logger, urls []string, clusterEnabled bool) Adapter {
+	ctx, cancel := context.WithCancel(ctx)
 	return &ProviderAdapter{
+		ctx:            ctx,
+		cancel:         cancel,
 		logger:         logger,
 		urls:           urls,
 		clusterEnabled: clusterEnabled,
@@ -32,6 +35,8 @@ func NewProviderAdapter(logger *zap.Logger, urls []string, clusterEnabled bool) 
 }
 
 type ProviderAdapter struct {
+	ctx            context.Context
+	cancel         context.CancelFunc
 	conn           rd.RDCloser
 	logger         *zap.Logger
 	closeWg        sync.WaitGroup
@@ -55,6 +60,17 @@ func (p *ProviderAdapter) Startup(ctx context.Context) error {
 }
 
 func (p *ProviderAdapter) Shutdown(ctx context.Context) error {
+	if p.conn == nil {
+		return nil
+	}
+
+	// Cancel the context to stop the subscriptions
+	p.cancel()
+
+	// Wait for the subscriptions to be closed
+	p.closeWg.Wait()
+
+	// Close the connection
 	return p.conn.Close()
 }
 
@@ -67,32 +83,46 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEvent
 	sub := p.conn.PSubscribe(ctx, event.Channels...)
 	msgChan := sub.Channel()
 
+	cleanup := func() {
+		err := sub.PUnsubscribe(ctx, event.Channels...)
+		if err != nil {
+			log.Error(fmt.Sprintf("error unsubscribing from redis for topics %v", event.Channels), zap.Error(err))
+		}
+	}
+
 	p.closeWg.Add(1)
 
-	var err error
 	go func() {
 		defer p.closeWg.Done()
 
 		for {
 			select {
-			case msg := <-msgChan:
-				log.Debug("subscription update", zap.String("message_channel", msg.Channel), zap.String("data", msg.Payload))
-				updater.Update([]byte(msg.Payload))
-			case <-ctx.Done():
-				// When the application context is done, we stop the subscriptions if it is not already done
-				if sub == nil {
+			case msg, ok := <-msgChan:
+				if !ok {
+					log.Debug("subscription closed, stopping")
 					return
 				}
-				err = sub.PUnsubscribe(ctx, event.Channels...)
-				if err != nil {
-					log.Error(fmt.Sprintf("error unsubscribing from redis for topics %v", event.Channels), zap.Error(err))
+				if msg == nil {
+					log.Debug("empty message received on subscription update, skipping")
+					return
 				}
+				log.Debug("subscription update", zap.String("message_channel", msg.Channel), zap.String("data", msg.Payload))
+				updater.Update([]byte(msg.Payload))
+			case <-p.ctx.Done():
+				// When the application context is done, we stop the subscription if it is not already done
+				log.Debug("application context done, stopping subscription")
+				cleanup()
+				return
+			case <-ctx.Done():
+				// When the subscription context is done, we stop the subscription if it is not already done
+				log.Debug("subscription context done, stopping subscription")
+				cleanup()
 				return
 			}
 		}
 	}()
 
-	return err
+	return nil
 }
 
 func (p *ProviderAdapter) Publish(ctx context.Context, event PublishEventConfiguration) error {
@@ -108,6 +138,9 @@ func (p *ProviderAdapter) Publish(ctx context.Context, event PublishEventConfigu
 	if dataErr != nil {
 		log.Error("error marshalling data", zap.Error(dataErr))
 		return datasource.NewError("error marshalling data", dataErr)
+	}
+	if p.conn == nil {
+		return datasource.NewError("redis connection not initialized", nil)
 	}
 	intCmd := p.conn.Publish(ctx, event.Channel, data)
 	if intCmd.Err() != nil {
