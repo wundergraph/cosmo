@@ -268,6 +268,7 @@ var sources = []*ast.Source{
 @link(url: "https://specs.apollo.dev/federation/v2.5", import: ["@authenticated", "@composeDirective", "@external", "@extends", "@inaccessible", "@interfaceObject", "@override", "@provides", "@key", "@requires", "@requiresScopes", "@shareable", "@tag"])
 
 type Mutation {
+    """ This mutation update the mood of an employee. """
     updateMood(employeeID: Int!, mood: Mood!): Employee!
 }
 
