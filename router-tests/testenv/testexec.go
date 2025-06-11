@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -56,6 +57,22 @@ func (e *Environment) SignalRouterProcess(sig os.Signal) error {
 	return e.routerCmd.Process.Signal(sig)
 }
 
+func (e *Environment) IsLogReceivedFromOutput(ctx context.Context, outputChan <-chan string, contains string, timeout time.Duration) bool {
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	for {
+		select {
+		case line := <-outputChan:
+			if strings.Contains(line, contains) {
+				return true
+			}
+		case <-ctx.Done():
+			return false
+		}
+	}
+}
+
 // BuildRouter runs `make build` inside the router directory and fails the test on error.
 func buildRouterBin(t *testing.T, ctx context.Context) {
 	t.Helper()
@@ -66,7 +83,7 @@ func buildRouterBin(t *testing.T, ctx context.Context) {
 
 		cmd := exec.Command("make", "build-race")
 		cmd.Dir = routerDir
-		err := runCmdWithLogs(t, ctx, cmd, true) // Run the build command
+		err := runCmdWithLogs(t, ctx, cmd, true, nil) // Run the build command
 		if err != nil {
 			t.Fatalf("failed to execute runCmdWithLogs: %v", err)
 		}
@@ -89,6 +106,7 @@ func getRouterBinary(t *testing.T, ctx context.Context) string {
 type RunRouterBinConfigOptions struct {
 	ConfigOverridePath string
 	OverrideDirectory  string
+	OutputChannel      chan<- string // This should be a buffered channel or nil if not needed
 }
 
 // runRouterBin starts the router binary and returns an Environment.
@@ -139,7 +157,7 @@ func runRouterBin(t *testing.T, ctx context.Context, opts RunRouterBinConfigOpti
 	}
 
 	newCtx, cancel := context.WithCancelCause(ctx)
-	err = runCmdWithLogs(t, ctx, cmd, false)
+	err = runCmdWithLogs(t, ctx, cmd, false, opts.OutputChannel)
 	if err != nil {
 		return nil, err
 	}
@@ -168,6 +186,7 @@ func runRouterBin(t *testing.T, ctx context.Context, opts RunRouterBinConfigOpti
 		shutdown:      atomic.NewBool(false),
 		shutdownDelay: 30 * time.Second,
 		routerCmd:     cmd,
+		cmdLogChannel: opts.OutputChannel,
 	}
 
 	// Wait for server readiness
@@ -179,7 +198,7 @@ func runRouterBin(t *testing.T, ctx context.Context, opts RunRouterBinConfigOpti
 	return env, nil
 }
 
-func runCmdWithLogs(t *testing.T, ctx context.Context, cmd *exec.Cmd, waitToComplete bool) error {
+func runCmdWithLogs(t *testing.T, ctx context.Context, cmd *exec.Cmd, waitToComplete bool, outputChan chan<- string) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	r, w := io.Pipe()
@@ -190,11 +209,21 @@ func runCmdWithLogs(t *testing.T, ctx context.Context, cmd *exec.Cmd, waitToComp
 	go func() {
 		scanner := bufio.NewScanner(r)
 		for scanner.Scan() {
+			line := scanner.Text()
 			select {
 			case <-ctx.Done(): // Stop logging after test exits
 				return
 			default:
-				t.Log(scanner.Text()) // Log each line from command output
+				t.Log(line)
+
+				// If we want to listen to an output channel
+				if outputChan != nil {
+					select {
+					case outputChan <- line:
+					case <-ctx.Done():
+						return
+					}
+				}
 			}
 		}
 		if err := scanner.Err(); err != nil {
@@ -212,7 +241,7 @@ func runCmdWithLogs(t *testing.T, ctx context.Context, cmd *exec.Cmd, waitToComp
 		if err != nil {
 			return fmt.Errorf("failed to start router: %w", err)
 		}
-
 	}
+
 	return nil
 }

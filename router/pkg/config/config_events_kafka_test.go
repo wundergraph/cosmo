@@ -30,7 +30,7 @@ events:
 
 `)
 
-	_, err := LoadConfig(f)
+	_, err := LoadConfig([]string{f})
 	require.NoError(t, err)
 }
 
@@ -56,7 +56,7 @@ events:
 
 `)
 
-	_, err := LoadConfig(f)
+	_, err := LoadConfig([]string{f})
 	require.NoError(t, err)
 }
 
@@ -81,7 +81,7 @@ events:
 
 `)
 
-	_, err := LoadConfig(f)
+	_, err := LoadConfig([]string{f})
 	require.ErrorContains(t, err, "errors while loading config files: router config validation error for")
 	require.ErrorContains(t, err, ": jsonschema validation failed with 'https://raw.githubusercontent.com/wundergraph/cosmo/main/router/pkg/config/config.schema.json#'\n")
 	require.ErrorContains(t, err, "- at '/events/providers/kafka/0/authentication': oneOf failed, none matched\n  - at '/events/providers/kafka/0/authentication/sasl_plain': missing property 'password'")
@@ -108,7 +108,7 @@ events:
 
 `)
 
-	_, err := LoadConfig(f)
+	_, err := LoadConfig([]string{f})
 	require.ErrorContains(t, err, "errors while loading config files: router config validation error for")
 	require.ErrorContains(t, err, ": jsonschema validation failed with 'https://raw.githubusercontent.com/wundergraph/cosmo/main/router/pkg/config/config.schema.json#'\n")
 	require.ErrorContains(t, err, "- at '/events/providers/kafka/0/authentication': oneOf failed, none matched\n  - at '/events/providers/kafka/0/authentication/sasl_plain': missing property 'username'")

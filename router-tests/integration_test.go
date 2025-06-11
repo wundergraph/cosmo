@@ -54,6 +54,13 @@ func TestSimpleQuery(t *testing.T) {
 func TestConfigReload(t *testing.T) {
 	t.Parallel()
 
+	createConfigurationFile := func(t *testing.T, input string, fileName string, directoryPath string) {
+		f, err := os.Create(filepath.Join(directoryPath, fileName))
+		require.NoError(t, err)
+		_, err = f.WriteString(input)
+		require.NoError(t, f.Close())
+	}
+
 	t.Run("Successfully reloads to a valid new configuration file with SIGHUP", func(t *testing.T) {
 		// Can be very slow, compiles the router binary if needed
 		err := testenv.RunRouterBinary(t, &testenv.Config{
@@ -117,39 +124,85 @@ asdasdasdasdas: "NOT WORKING CONFIG!!!"
 	})
 
 	t.Run("Successfully reloads multiple configuration files with SIGHUP", func(t *testing.T) {
-		// Can be very slow, compiles the router binary if needed
+		outputChan := make(chan string, 100)
+		defer close(outputChan)
 
-		path := "demo2.config.yaml"
+		file1 := "demo1.config.yaml"
+		file2 := "demo2.config.yaml"
+		file3 := "demo2.config.yaml"
+		files := []string{file1, file2, file3}
+
 		opts := testenv.RunRouterBinConfigOptions{
-			ConfigOverridePath: path,
+			ConfigOverridePath: strings.Join(files, ","),
+			OutputChannel:      outputChan,
 			OverrideDirectory:  t.TempDir(),
 		}
 
-		f, err := os.Create(filepath.Join(opts.OverrideDirectory, path))
-		require.NoError(t, err)
+		for _, file := range files {
+			createConfigurationFile(t, `version: "1"`, file, opts.OverrideDirectory)
+		}
 
-		_, err = f.WriteString(`
-version: "1"
-`)
-		require.NoError(t, f.Close())
-
-		err = testenv.RunRouterBinary(t, &testenv.Config{
+		err := testenv.RunRouterBinary(t, &testenv.Config{
 			DemoMode: true,
 		}, opts, func(t *testing.T, xEnv *testenv.Environment) {
 			t.Logf("running router binary, cwd: %s", xEnv.GetRouterProcessCwd())
 
-			reF, err := os.Create(filepath.Join(opts.OverrideDirectory, path))
+			ctx := context.Background()
+
+			// Force a restart on the router using sighup
+			err := xEnv.SignalRouterProcess(syscall.SIGHUP)
 			require.NoError(t, err)
 
-			_, err = reF.WriteString(`
-version: "1"
+			require.True(t, xEnv.IsLogReceivedFromOutput(ctx, outputChan, `"msg":"Reloading Router"`, 10*time.Second))
+		})
 
-readiness_check_path: "/after"
-`)
-			require.NoError(t, reF.Close())
+		require.NoError(t, err)
+	})
+
+	t.Run("Successfully reload multiple configuration files with watch configuration", func(t *testing.T) {
+		outputChan := make(chan string, 100)
+		defer close(outputChan)
+
+		file1 := "demo1.config.yaml"
+		file2 := "demo2.config.yaml"
+		file3 := "demo2.config.yaml"
+		files := []string{file1, file2, file3}
+
+		opts := testenv.RunRouterBinConfigOptions{
+			ConfigOverridePath: strings.Join(files, ","),
+			OutputChannel:      outputChan,
+			OverrideDirectory:  t.TempDir(),
+		}
+
+		for _, file := range files {
+			input := fmt.Sprintf(`version: "1"`)
+
+			// Have the second file have the watch config
+			if file == file2 {
+				input = `version: "1"
+watch_config:
+  enabled: true
+  interval: "5s"
+`
+			}
+			createConfigurationFile(t, input, file, opts.OverrideDirectory)
+		}
+
+		err := testenv.RunRouterBinary(t, &testenv.Config{
+			DemoMode: true,
+		}, opts, func(t *testing.T, xEnv *testenv.Environment) {
+			t.Logf("running router binary, cwd: %s", xEnv.GetRouterProcessCwd())
 
 			ctx := context.Background()
-			require.NoError(t, xEnv.WaitForServer(ctx, xEnv.RouterURL+"/after", 600, 60), "healthcheck post-reload failed")
+
+			// Create will update the same file if it exists
+			createConfigurationFile(t, `version: "1"
+watch_config:
+  enabled: true
+  interval: "10s"
+			`, file2, opts.OverrideDirectory)
+
+			require.True(t, xEnv.IsLogReceivedFromOutput(ctx, outputChan, `"msg":"Reloading Router"`, 10*time.Second))
 		})
 
 		require.NoError(t, err)

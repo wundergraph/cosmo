@@ -35,7 +35,7 @@ The router supports merging multiple configuration files during startup. When mu
 - **Keyed objects** (e.g., maps) are merged by key, allowing overrides and partial updates.
 - **Lists** are **not merged**; that is, the entire list is replaced if overridden instead of having elements from both lists merged.
 
-To ensure predictable and reliable merging, it's recommended to model lists as **maps of structs** (e.g., `{ "serviceA": {...}, "serviceB": {...} }`) when possible. This allows fine-grained overrides and avoids unintentionally replacing the full list.
+It's recommended to model lists as **maps of structs** (e.g., `{ "serviceA": {...}, "serviceB": {...} }`) when possible. This allows fine-grained overrides and avoids unintentionally replacing the full list.
 
 ## Documentation
 

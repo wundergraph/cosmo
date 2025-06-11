@@ -25,7 +25,7 @@ events:
             password: "password"
 `)
 
-	_, err := LoadConfig(f)
+	_, err := LoadConfig([]string{f})
 	// Note: If none of the oneOf array matches, the first in the array is compared
 	require.ErrorContains(t, err, "errors while loading config files: router config validation error for")
 	require.ErrorContains(t, err, ": jsonschema validation failed with 'https://raw.githubusercontent.com/wundergraph/cosmo/main/router/pkg/config/config.schema.json#'\n")
@@ -50,7 +50,7 @@ events:
           user_info:
             username: "admin"
 `)
-	_, err := LoadConfig(f)
+	_, err := LoadConfig([]string{f})
 	// Note: If none of the oneOf array matches, the first in the array is compared
 	require.ErrorContains(t, err, "errors while loading config files: router config validation error for")
 	require.ErrorContains(t, err, ": jsonschema validation failed with 'https://raw.githubusercontent.com/wundergraph/cosmo/main/router/pkg/config/config.schema.json#'\n")
@@ -75,7 +75,7 @@ events:
           token: 'token'
 
 `)
-	_, err := LoadConfig(f)
+	_, err := LoadConfig([]string{f})
 	require.NoError(t, err)
 }
 
@@ -100,6 +100,6 @@ events:
 
 `)
 
-	_, err := LoadConfig(f)
+	_, err := LoadConfig([]string{f})
 	require.NoError(t, err)
 }
