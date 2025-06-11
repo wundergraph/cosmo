@@ -41,12 +41,12 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
+	"github.com/wundergraph/cosmo/router/pkg/grpcconnector"
 	"github.com/wundergraph/cosmo/router/pkg/health"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
-	"github.com/wundergraph/cosmo/router/pkg/routerplugin"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 )
@@ -92,7 +92,7 @@ type (
 		instanceData            InstanceData
 		pubSubProviders         []datasource.Provider
 		traceDialer             *TraceDialer
-		pluginHost              *routerplugin.Host
+		pluginHost              *grpcconnector.Connector
 	}
 )
 
@@ -986,7 +986,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	}
 
 	if s.plugins.Enabled {
-		if err := s.setupPluginHost(ctx, engineConfig, configSubgraphs); err != nil {
+		if err := s.setupConnector(ctx, engineConfig, configSubgraphs); err != nil {
 			return nil, fmt.Errorf("failed to setup plugin host: %w", err)
 		}
 	}
@@ -1317,10 +1317,47 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	return gm, nil
 }
 
-func (s *graphServer) setupPluginHost(ctx context.Context, config *nodev1.EngineConfiguration, configSubgraphs []*nodev1.Subgraph) error {
+func (s *graphServer) setupConnector(ctx context.Context, config *nodev1.EngineConfiguration, configSubgraphs []*nodev1.Subgraph) error {
 	for _, dsConfig := range config.DatasourceConfigurations {
 		grpcConfig := dsConfig.GetCustomGraphql().GetGrpc()
 		if grpcConfig == nil {
+			continue
+		}
+
+		if s.pluginHost == nil {
+			s.pluginHost = grpcconnector.NewConnector()
+		}
+
+		var sg *nodev1.Subgraph
+
+		for _, subgraph := range configSubgraphs {
+			if subgraph.Id == dsConfig.Id {
+				sg = subgraph
+				break
+			}
+		}
+
+		if sg == nil {
+			return fmt.Errorf("subgraph %s not found", dsConfig.Id)
+		}
+
+		pluginConfig := grpcConfig.GetPlugin()
+		if pluginConfig == nil {
+			remoteProvider, err := grpcconnector.NewRemoteGRPCProvider(grpcconnector.RemoteGRPCProviderConfig{
+				Logger:   s.logger,
+				Name:     sg.Name,
+				Endpoint: sg.RoutingUrl,
+			})
+
+			if err != nil {
+				return fmt.Errorf("failed to create standalone plugin for subgraph %s: %w", dsConfig.Id, err)
+			}
+
+			err = s.pluginHost.RegisterClientProvider(sg.Name, remoteProvider)
+			if err != nil {
+				return fmt.Errorf("failed to register standalone plugin: %w", err)
+			}
+
 			continue
 		}
 
@@ -1331,40 +1368,29 @@ func (s *graphServer) setupPluginHost(ctx context.Context, config *nodev1.Engine
 				basePath = s.plugins.Path
 			}
 
-			if s.pluginHost == nil {
-				s.pluginHost = routerplugin.NewHost()
+			pluginPath, err := filepath.Abs(filepath.Join(basePath, pluginConfig.GetName(), "bin", fmt.Sprintf("%s_%s", runtime.GOOS, runtime.GOARCH)))
+			if err != nil {
+				return fmt.Errorf("failed to get plugin path: %w", err)
 			}
 
-			for _, subgraph := range configSubgraphs {
-				if subgraph.Id != dsConfig.Id {
-					continue
-				}
-
-				pluginPath, err := filepath.Abs(filepath.Join(basePath, pluginConfig.GetName(), "bin", fmt.Sprintf("%s_%s", runtime.GOOS, runtime.GOARCH)))
-				if err != nil {
-					return fmt.Errorf("failed to get plugin path: %w", err)
-				}
-
-				grpcPlugin, err := routerplugin.NewGRPCPlugin(routerplugin.GRPCPluginConfig{
-					Logger:     s.logger,
-					PluginName: pluginConfig.GetName(),
-					PluginPath: pluginPath,
-				})
-				if err != nil {
-					return fmt.Errorf("failed to create grpc plugin for subgraph %s: %w", dsConfig.Id, err)
-				}
-
-				err = s.pluginHost.RegisterPlugin(subgraph.Name, grpcPlugin)
-				if err != nil {
-					return fmt.Errorf("failed to register grpc plugin: %w", err)
-				}
-
-				break
+			grpcPlugin, err := grpcconnector.NewGRPCPlugin(grpcconnector.GRPCPluginConfig{
+				Logger:     s.logger,
+				PluginName: pluginConfig.GetName(),
+				PluginPath: pluginPath,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to create grpc plugin for subgraph %s: %w", dsConfig.Id, err)
 			}
+
+			err = s.pluginHost.RegisterClientProvider(sg.Name, grpcPlugin)
+			if err != nil {
+				return fmt.Errorf("failed to register grpc plugin: %w", err)
+			}
+
 		}
 	}
 
-	if err := s.pluginHost.RunPluginHost(ctx); err != nil {
+	if err := s.pluginHost.Run(ctx); err != nil {
 		return fmt.Errorf("failed to run plugin host: %w", err)
 	}
 
@@ -1472,7 +1498,7 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 
 	if s.pluginHost != nil {
 		s.logger.Debug("Stopping old plugins")
-		if err := s.pluginHost.StopAllPlugins(); err != nil {
+		if err := s.pluginHost.StopAllProviders(); err != nil {
 			finalErr = errors.Join(finalErr, err)
 		}
 	}

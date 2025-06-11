@@ -9,12 +9,12 @@ import (
 	"slices"
 
 	"github.com/buger/jsonparser"
+	"github.com/wundergraph/cosmo/router/pkg/grpcconnector"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub"
 	pubsub_datasource "github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/argument_templates"
 
 	"github.com/wundergraph/cosmo/router/pkg/config"
-	"github.com/wundergraph/cosmo/router/pkg/routerplugin"
 
 	"github.com/jensneuse/abstractlogger"
 	"go.uber.org/zap"
@@ -63,7 +63,7 @@ type DefaultFactoryResolver struct {
 
 	httpClient          *http.Client
 	subgraphHTTPClients map[string]*http.Client
-	pluginHost          *routerplugin.Host
+	pluginHost          *grpcconnector.Connector
 
 	factoryLogger abstractlogger.Logger
 	instanceData  InstanceData
@@ -75,7 +75,7 @@ func NewDefaultFactoryResolver(
 	subscriptionClientOptions *SubscriptionClientOptions,
 	baseTransport http.RoundTripper,
 	subgraphTransports map[string]http.RoundTripper,
-	pluginHost *routerplugin.Host,
+	pluginHost *grpcconnector.Connector,
 	log *zap.Logger,
 	enableSingleFlight bool,
 	enableNetPoll bool,
@@ -167,7 +167,7 @@ func (d *DefaultFactoryResolver) ResolveGraphqlFactory(subgraphName string) (pla
 	if d.pluginHost != nil {
 		// If the plugin host is not nil, we try to get the plugin for the subgraph.
 		// In case of a plugin, we use the gRPC client provider to create the factory.
-		plugin, exists := d.pluginHost.GetPlugin(subgraphName)
+		plugin, exists := d.pluginHost.GetClientProvider(subgraphName)
 		if exists {
 			return graphql_datasource.NewFactoryGRPCClientProvider(d.engineCtx, plugin.GetClient)
 		}
