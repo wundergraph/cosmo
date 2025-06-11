@@ -2,6 +2,7 @@ name: Composition CI
 on:
   pull_request:
     paths:
+      - 'pnpm-lock.yaml'
       - "composition/**/*"
       - "composition-go/**/*"
       # composition-go uses code from shared/
