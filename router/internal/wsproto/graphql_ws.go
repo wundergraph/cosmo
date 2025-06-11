@@ -116,8 +116,8 @@ func (p *graphQLWSProtocol) WriteGraphQLErrors(id string, errors json.RawMessage
 	})
 }
 
-func (p *graphQLWSProtocol) Close() error {
-	if err := p.conn.WriteCloseFrame(ws.StatusGoingAway, "Downstream service error"); err != nil {
+func (p *graphQLWSProtocol) Close(code ws.StatusCode, reason string) error {
+	if err := p.conn.WriteCloseFrame(code, reason); err != nil {
 		return err
 	}
 
@@ -128,7 +128,7 @@ func (p *graphQLWSProtocol) Close() error {
 	return nil
 }
 
-func (p *graphQLWSProtocol) Done(id string) error {
+func (p *graphQLWSProtocol) Complete(id string) error {
 	return p.conn.WriteJSON(
 		graphQLWSMessage{ID: id, Type: graphQLWSMessageTypeComplete},
 	)

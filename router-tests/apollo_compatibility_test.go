@@ -22,7 +22,7 @@ func TestApolloRouterCompatibility(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloRouterCompatibilityFlags(config.ApolloRouterCompatibilityFlags{
-					ReplaceInvalidVarErrors: config.ApolloRouterCompatibilityReplaceInvalidVarErrors{
+					ReplaceInvalidVarErrors: config.ApolloCompatibilityFlag{
 						Enabled: true,
 					},
 				}),
@@ -52,12 +52,12 @@ func TestApolloRouterCompatibility(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-					ReplaceValidationErrorStatus: config.ApolloCompatibilityReplaceValidationErrorStatus{
+					ReplaceValidationErrorStatus: config.ApolloCompatibilityFlag{
 						Enabled: true,
 					},
 				}),
 				core.WithApolloRouterCompatibilityFlags(config.ApolloRouterCompatibilityFlags{
-					ReplaceInvalidVarErrors: config.ApolloRouterCompatibilityReplaceInvalidVarErrors{
+					ReplaceInvalidVarErrors: config.ApolloCompatibilityFlag{
 						Enabled: true,
 					},
 				}),
@@ -106,7 +106,7 @@ func TestApolloRouterCompatibility(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloRouterCompatibilityFlags(config.ApolloRouterCompatibilityFlags{
-					SubrequestHTTPError: config.ApolloRouterCompatibilitySubrequestHTTPError{
+					SubrequestHTTPError: config.ApolloCompatibilityFlag{
 						Enabled: true,
 					},
 				}),
@@ -156,7 +156,7 @@ func TestApolloRouterCompatibility(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloRouterCompatibilityFlags(config.ApolloRouterCompatibilityFlags{
-					SubrequestHTTPError: config.ApolloRouterCompatibilitySubrequestHTTPError{
+					SubrequestHTTPError: config.ApolloCompatibilityFlag{
 						Enabled: true,
 					},
 				}),
@@ -211,7 +211,7 @@ func TestApolloRouterCompatibility(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloRouterCompatibilityFlags(config.ApolloRouterCompatibilityFlags{
-					SubrequestHTTPError: config.ApolloRouterCompatibilitySubrequestHTTPError{
+					SubrequestHTTPError: config.ApolloCompatibilityFlag{
 						Enabled: false,
 					},
 				}),
@@ -257,7 +257,7 @@ func TestApolloRouterCompatibility(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloRouterCompatibilityFlags(config.ApolloRouterCompatibilityFlags{
-					SubrequestHTTPError: config.ApolloRouterCompatibilitySubrequestHTTPError{
+					SubrequestHTTPError: config.ApolloCompatibilityFlag{
 						Enabled: true,
 					},
 				}),
@@ -334,7 +334,7 @@ func TestApolloGatewayCompatibility(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-					ValueCompletion: config.ApolloCompatibilityValueCompletion{
+					ValueCompletion: config.ApolloCompatibilityFlag{
 						Enabled: true,
 					},
 				}),
@@ -363,7 +363,7 @@ func TestApolloGatewayCompatibility(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-					ValueCompletion: config.ApolloCompatibilityValueCompletion{
+					ValueCompletion: config.ApolloCompatibilityFlag{
 						Enabled: true,
 					},
 				}),
@@ -392,7 +392,7 @@ func TestApolloGatewayCompatibility(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-					ValueCompletion: config.ApolloCompatibilityValueCompletion{
+					ValueCompletion: config.ApolloCompatibilityFlag{
 						Enabled: true,
 					},
 				}),
@@ -465,7 +465,7 @@ func TestApolloGatewayCompatibility(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-					TruncateFloats: config.ApolloCompatibilityTruncateFloats{
+					TruncateFloats: config.ApolloCompatibilityFlag{
 						Enabled: true,
 					},
 				}),
@@ -494,7 +494,7 @@ func TestApolloGatewayCompatibility(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-					TruncateFloats: config.ApolloCompatibilityTruncateFloats{
+					TruncateFloats: config.ApolloCompatibilityFlag{
 						Enabled: true,
 					},
 				}),
@@ -550,7 +550,7 @@ func TestApolloGatewayCompatibility(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-					ValueCompletion: config.ApolloCompatibilityValueCompletion{
+					ValueCompletion: config.ApolloCompatibilityFlag{
 						Enabled: true,
 					},
 				}),
@@ -578,7 +578,7 @@ func TestApolloGatewayCompatibility(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-					ValueCompletion: config.ApolloCompatibilityValueCompletion{
+					ValueCompletion: config.ApolloCompatibilityFlag{
 						Enabled: true,
 					},
 				}),
@@ -606,7 +606,7 @@ func TestApolloGatewayCompatibility(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-					ValueCompletion: config.ApolloCompatibilityValueCompletion{
+					ValueCompletion: config.ApolloCompatibilityFlag{
 						Enabled: true,
 					},
 				}),
@@ -634,10 +634,10 @@ func TestApolloGatewayCompatibility(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-					ValueCompletion: config.ApolloCompatibilityValueCompletion{
+					ValueCompletion: config.ApolloCompatibilityFlag{
 						Enabled: true,
 					},
-					SuppressFetchErrors: config.ApolloCompatibilitySuppressFetchErrors{
+					SuppressFetchErrors: config.ApolloCompatibilityFlag{
 						Enabled: true,
 					},
 				}),
@@ -665,10 +665,10 @@ func TestApolloGatewayCompatibility(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-					ValueCompletion: config.ApolloCompatibilityValueCompletion{
+					ValueCompletion: config.ApolloCompatibilityFlag{
 						Enabled: true,
 					},
-					SuppressFetchErrors: config.ApolloCompatibilitySuppressFetchErrors{
+					SuppressFetchErrors: config.ApolloCompatibilityFlag{
 						Enabled: false,
 					},
 				}),
@@ -722,7 +722,7 @@ func TestApolloGatewayCompatibility(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-					ReplaceUndefinedOpFieldErrors: config.ApolloCompatibilityReplaceUndefinedOpFieldErrors{
+					UseGraphQLValidationFailedStatus: config.ApolloCompatibilityFlag{
 						Enabled: true,
 					},
 				}),
@@ -733,7 +733,7 @@ func TestApolloGatewayCompatibility(t *testing.T) {
 			})
 			require.NoError(t, err)
 			assert.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
-			assert.Equal(t, `{"errors":[{"message":"Cannot query \"nonExistentField\" on type \"Employee\".","extensions":{"code":"GRAPHQL_VALIDATION_FAILED"}}]}`, res.Body)
+			assert.Equal(t, `{"errors":[{"message":"Cannot query field \"nonExistentField\" on type \"Employee\".","extensions":{"code":"GRAPHQL_VALIDATION_FAILED"}}]}`, res.Body)
 		})
 	})
 	t.Run("enable all: replace undefined operation field error", func(t *testing.T) {
@@ -750,7 +750,7 @@ func TestApolloGatewayCompatibility(t *testing.T) {
 			})
 			require.NoError(t, err)
 			assert.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
-			assert.Equal(t, `{"errors":[{"message":"Cannot query \"nonExistentField\" on type \"Employee\".","extensions":{"code":"GRAPHQL_VALIDATION_FAILED"}}]}`, res.Body)
+			assert.Equal(t, `{"errors":[{"message":"Cannot query field \"nonExistentField\" on type \"Employee\".","extensions":{"code":"GRAPHQL_VALIDATION_FAILED"}}]}`, res.Body)
 		})
 	})
 	t.Run("enable replace invalid variable error", func(t *testing.T) {
@@ -758,7 +758,7 @@ func TestApolloGatewayCompatibility(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-					ReplaceInvalidVarErrors: config.ApolloCompatibilityReplaceInvalidVarErrors{
+					ReplaceInvalidVarErrors: config.ApolloCompatibilityFlag{
 						Enabled: true,
 					},
 				}),
@@ -778,7 +778,7 @@ func TestApolloGatewayCompatibility(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-					ReplaceValidationErrorStatus: config.ApolloCompatibilityReplaceValidationErrorStatus{
+					ReplaceValidationErrorStatus: config.ApolloCompatibilityFlag{
 						Enabled: true,
 					},
 				}),
@@ -798,10 +798,10 @@ func TestApolloGatewayCompatibility(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-					ReplaceInvalidVarErrors: config.ApolloCompatibilityReplaceInvalidVarErrors{
+					ReplaceInvalidVarErrors: config.ApolloCompatibilityFlag{
 						Enabled: true,
 					},
-					ReplaceValidationErrorStatus: config.ApolloCompatibilityReplaceValidationErrorStatus{
+					ReplaceValidationErrorStatus: config.ApolloCompatibilityFlag{
 						Enabled: true,
 					},
 				}),
