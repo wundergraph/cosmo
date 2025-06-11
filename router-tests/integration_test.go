@@ -56,7 +56,6 @@ func TestConfigReload(t *testing.T) {
 
 	t.Run("Successfully reloads to a valid new configuration file with SIGHUP", func(t *testing.T) {
 		// Can be very slow, compiles the router binary if needed
-
 		err := testenv.RunRouterBinary(t, &testenv.Config{
 			DemoMode: true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
