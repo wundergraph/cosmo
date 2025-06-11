@@ -57,8 +57,12 @@ func TestConfigReload(t *testing.T) {
 	createConfigurationFile := func(t *testing.T, input string, fileName string, directoryPath string) {
 		f, err := os.Create(filepath.Join(directoryPath, fileName))
 		require.NoError(t, err)
+
 		_, err = f.WriteString(input)
-		require.NoError(t, f.Close())
+		require.NoError(t, err)
+
+		err = f.Close()
+		require.NoError(t, err)
 	}
 
 	t.Run("Successfully reloads to a valid new configuration file with SIGHUP", func(t *testing.T) {
@@ -170,7 +174,7 @@ asdasdasdasdas: "NOT WORKING CONFIG!!!"
 		}
 
 		for _, file := range files {
-			input := fmt.Sprintf(`version: "1"`)
+			input := `version: "1"`
 
 			// Have the second file have the watch config
 			if file == file2 {
