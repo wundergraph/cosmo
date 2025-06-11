@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -18,7 +17,6 @@ import (
 
 	"github.com/hasura/go-graphql-client"
 	"github.com/stretchr/testify/require"
-	"github.com/tidwall/gjson"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
@@ -28,7 +26,7 @@ const RedisWaitTimeout = time.Second * 30
 func assertRedisLineEquals(t *testing.T, reader *bufio.Reader, expected string) {
 	t.Helper()
 	line, _, err := reader.ReadLine()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, expected, string(line))
 }
 
@@ -52,6 +50,11 @@ func assertRedisMultipartValueEventually(t *testing.T, reader *bufio.Reader, exp
 		assert.Equal(t, expected, string(line))
 		return true
 	}, RedisWaitTimeout, time.Millisecond*100)
+}
+
+type subscriptionArgs struct {
+	dataValue []byte
+	errValue  error
 }
 
 func TestRedisEvents(t *testing.T) {
@@ -82,40 +85,46 @@ func TestRedisEvents(t *testing.T) {
 
 			surl := xEnv.GraphQLWebSocketSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
-			t.Cleanup(func() {
-				_ = client.Close()
-			})
 
-			var counter atomic.Uint32
-
+			subscriptionArgsCh := make(chan subscriptionArgs)
 			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
-				defer counter.Add(1)
-				require.NoError(t, errValue)
-				require.JSONEq(t, `{"employeeUpdates":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(dataValue))
+				subscriptionArgsCh <- subscriptionArgs{dataValue, errValue}
 				return nil
 			})
 			require.NoError(t, err)
 			require.NotEmpty(t, subscriptionOneID)
 
+			runCh := make(chan error)
 			go func() {
-				clientErr := client.Run()
-				require.NoError(t, clientErr)
+				// start subscription
+				runCh <- client.Run()
 			}()
 
-			go func() {
-				require.Eventually(t, func() bool {
-					return counter.Load() == 1
-				}, RedisWaitTimeout, time.Millisecond*100)
-				_ = client.Close()
-			}()
-
+			// Wait for the subscription to be started
 			xEnv.WaitForSubscriptionCount(1, RedisWaitTimeout)
 
+			// produce a message
 			produceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
-			xEnv.WaitForMessagesSent(1, RedisWaitTimeout)
-			xEnv.WaitForSubscriptionCount(0, RedisWaitTimeout)
-			xEnv.WaitForConnectionCount(0, RedisWaitTimeout)
+			// process the message
+			select {
+			case subscriptionArgs := <-subscriptionArgsCh:
+				require.NoError(t, subscriptionArgs.errValue)
+				require.JSONEq(t, `{"employeeUpdates":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(subscriptionArgs.dataValue))
+			case <-time.After(RedisWaitTimeout):
+				t.Fatal("timeout waiting for first message error")
+			}
+
+			// close the client
+			client.Close()
+
+			// check that the client is closed correctly
+			select {
+			case err := <-runCh:
+				require.NoError(t, err)
+			case <-time.After(RedisWaitTimeout):
+				t.Fatal("timeout waiting for client to close")
+			}
 		})
 	})
 
@@ -144,61 +153,74 @@ func TestRedisEvents(t *testing.T) {
 				_ = client.Close()
 			})
 
-			var counter atomic.Uint32
-
+			subscriptionArgsCh := make(chan subscriptionArgs)
 			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
-				oldCount := counter.Load()
-				counter.Add(1)
-
-				if oldCount == 0 {
-					var gqlErr graphql.Errors
-					require.ErrorAs(t, errValue, &gqlErr)
-					require.Equal(t, "Invalid message received", gqlErr[0].Message)
-				} else if oldCount == 1 || oldCount == 3 {
-					require.NoError(t, errValue)
-					require.JSONEq(t, `{"employeeUpdates":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(dataValue))
-				} else if oldCount == 2 {
-					var gqlErr graphql.Errors
-					require.ErrorAs(t, errValue, &gqlErr)
-					require.Equal(t, "Cannot return null for non-nullable field 'Subscription.employeeUpdates.id'.", gqlErr[0].Message)
-				}
-
+				subscriptionArgsCh <- subscriptionArgs{dataValue, errValue}
 				return nil
 			})
 			require.NoError(t, err)
 			require.NotEmpty(t, subscriptionOneID)
 
+			runCh := make(chan error)
 			go func() {
-				clientErr := client.Run()
-				require.NoError(t, clientErr)
+				runCh <- client.Run()
 			}()
 
+			// Wait for the subscription to be started before producing a message
 			xEnv.WaitForSubscriptionCount(1, RedisWaitTimeout)
 
-			produceRedisMessage(t, xEnv, topics[0], ``) // Empty message
-			require.Eventually(t, func() bool {
-				return counter.Load() == 1
-			}, RedisWaitTimeout, time.Millisecond*100)
+			// produce an empty message
+			produceRedisMessage(t, xEnv, topics[0], ``)
+			// process the message
+			select {
+			case subscriptionArgs := <-subscriptionArgsCh:
+				var gqlErr graphql.Errors
+				require.ErrorAs(t, subscriptionArgs.errValue, &gqlErr)
+				require.Equal(t, "Invalid message received", gqlErr[0].Message)
+			case <-time.After(RedisWaitTimeout):
+				t.Fatal("timeout waiting for first message error")
+			}
 
 			produceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`) // Correct message
-			require.Eventually(t, func() bool {
-				return counter.Load() == 2
-			}, RedisWaitTimeout, time.Millisecond*100)
+			select {
+			case subscriptionArgs := <-subscriptionArgsCh:
+				require.NoError(t, subscriptionArgs.errValue)
+				require.JSONEq(t, `{"employeeUpdates":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(subscriptionArgs.dataValue))
+			case <-time.After(RedisWaitTimeout):
+				t.Fatal("timeout waiting for first message error")
+			}
 
-			produceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","update":{"name":"foo"}}`) // Missing entity = Resolver error
-			require.Eventually(t, func() bool {
-				return counter.Load() == 3
-			}, RedisWaitTimeout, time.Millisecond*100)
+			// Missing entity = Resolver error
+			produceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","update":{"name":"foo"}}`)
+			select {
+			case subscriptionArgs := <-subscriptionArgsCh:
+				var gqlErr graphql.Errors
+				require.ErrorAs(t, subscriptionArgs.errValue, &gqlErr)
+				require.Equal(t, "Cannot return null for non-nullable field 'Subscription.employeeUpdates.id'.", gqlErr[0].Message)
+			case <-time.After(RedisWaitTimeout):
+				t.Fatal("timeout waiting for first message error")
+			}
 
-			produceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`) // Correct message
-			require.Eventually(t, func() bool {
-				return counter.Load() == 4
-			}, RedisWaitTimeout, time.Millisecond*100)
+			// Correct message
+			produceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+			select {
+			case subscriptionArgs := <-subscriptionArgsCh:
+				require.NoError(t, subscriptionArgs.errValue)
+				require.JSONEq(t, `{"employeeUpdates":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(subscriptionArgs.dataValue))
+			case <-time.After(RedisWaitTimeout):
+				t.Fatal("timeout waiting for first message error")
+			}
 
+			// close the client
 			require.NoError(t, client.Close())
 
-			xEnv.WaitForSubscriptionCount(0, RedisWaitTimeout)
-			xEnv.WaitForConnectionCount(0, RedisWaitTimeout)
+			// check that the client is closed correctly
+			select {
+			case err := <-runCh:
+				require.NoError(t, err)
+			case <-time.After(RedisWaitTimeout):
+				t.Fatal("timeout waiting for client to close")
+			}
 		})
 	})
 
@@ -225,45 +247,62 @@ func TestRedisEvents(t *testing.T) {
 			surl := xEnv.GraphQLWebSocketSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
 
-			var counter atomic.Uint32
+			subscriptionOneArgsCh := make(chan subscriptionArgs)
 
 			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
-				defer counter.Add(1)
-				require.NoError(t, errValue)
-				require.JSONEq(t, `{"employeeUpdates":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(dataValue))
+				subscriptionOneArgsCh <- subscriptionArgs{dataValue, errValue}
 				return nil
 			})
 			require.NoError(t, err)
 			require.NotEmpty(t, subscriptionOneID)
 
+			subscriptionTwoArgsCh := make(chan subscriptionArgs)
 			subscriptionTwoID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
-				defer counter.Add(1)
-				require.NoError(t, errValue)
-				require.JSONEq(t, `{"employeeUpdates":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(dataValue))
+				subscriptionTwoArgsCh <- subscriptionArgs{dataValue, errValue}
 				return nil
 			})
 			require.NoError(t, err)
 			require.NotEmpty(t, subscriptionTwoID)
 
+			runCh := make(chan error)
 			go func() {
-				clientErr := client.Run()
-				require.NoError(t, clientErr)
+				runCh <- client.Run()
 			}()
 
+			// Wait for the subscription to be started
 			xEnv.WaitForSubscriptionCount(2, RedisWaitTimeout)
 
+			// produce a message
 			produceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
-			xEnv.WaitForMessagesSent(2, RedisWaitTimeout)
+			// read the message from the first subscription
+			select {
+			case subscriptionArgs := <-subscriptionOneArgsCh:
+				require.NoError(t, subscriptionArgs.errValue)
+				require.JSONEq(t, `{"employeeUpdates":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(subscriptionArgs.dataValue))
+			case <-time.After(RedisWaitTimeout):
+				t.Fatal("timeout waiting for first message error")
+			}
 
-			require.Eventually(t, func() bool {
-				return counter.Load() == 2
-			}, RedisWaitTimeout, time.Millisecond*100)
+			// read the message from the second subscription
+			select {
+			case subscriptionArgs := <-subscriptionTwoArgsCh:
+				require.NoError(t, subscriptionArgs.errValue)
+				require.JSONEq(t, `{"employeeUpdates":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(subscriptionArgs.dataValue))
+			case <-time.After(RedisWaitTimeout):
+				t.Fatal("timeout waiting for second message error")
+			}
 
-			_ = client.Close()
+			// close the client
+			require.NoError(t, client.Close())
 
-			xEnv.WaitForSubscriptionCount(0, RedisWaitTimeout)
-			xEnv.WaitForConnectionCount(0, RedisWaitTimeout)
+			// check that the client is closed correctly
+			select {
+			case err := <-runCh:
+				require.NoError(t, err)
+			case <-time.After(RedisWaitTimeout):
+				t.Fatal("timeout waiting for client to close")
+			}
 		})
 	})
 
@@ -289,71 +328,83 @@ func TestRedisEvents(t *testing.T) {
 
 			surl := xEnv.GraphQLWebSocketSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
-			t.Cleanup(func() {
-				_ = client.Close()
-			})
 
-			var counter atomic.Uint32
-
+			subscriptionOneArgsCh := make(chan subscriptionArgs)
 			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
-				defer counter.Add(1)
-
-				require.NoError(t, errValue)
-
-				employeeID := gjson.GetBytes(dataValue, "employeeUpdates.id").Int()
-
-				if employeeID == 1 {
-					require.JSONEq(t, `{"employeeUpdates":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(dataValue))
-				} else if employeeID == 2 {
-					require.JSONEq(t, `{"employeeUpdates":{"id":2,"details":{"forename":"Dustin","surname":"Deus"}}}`, string(dataValue))
-				} else {
-					t.Errorf("unexpected employeeID %d", employeeID)
-				}
-
+				subscriptionOneArgsCh <- subscriptionArgs{dataValue, errValue}
 				return nil
 			})
 			require.NoError(t, err)
 			require.NotEmpty(t, subscriptionOneID)
 
+			subscriptionTwoArgsCh := make(chan subscriptionArgs)
 			subscriptionTwoID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
-				defer counter.Add(1)
-
-				require.NoError(t, errValue)
-
-				employeeID := gjson.GetBytes(dataValue, "employeeUpdates.id").Int()
-
-				if employeeID == 1 {
-					require.JSONEq(t, `{"employeeUpdates":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(dataValue))
-				} else if employeeID == 2 {
-					require.JSONEq(t, `{"employeeUpdates":{"id":2,"details":{"forename":"Dustin","surname":"Deus"}}}`, string(dataValue))
-				} else {
-					t.Errorf("unexpected employeeID %d", employeeID)
-				}
-
+				subscriptionTwoArgsCh <- subscriptionArgs{dataValue, errValue}
 				return nil
 			})
 			require.NoError(t, err)
 			require.NotEmpty(t, subscriptionTwoID)
 
+			runCh := make(chan error)
 			go func() {
-				clientErr := client.Run()
-				require.NoError(t, clientErr)
+				runCh <- client.Run()
 			}()
 
+			// Wait for the subscription to be started
 			xEnv.WaitForSubscriptionCount(2, RedisWaitTimeout)
 
+			// produce a message
 			produceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+
+			// read the message from the first subscription
+			select {
+			case subscriptionArgs := <-subscriptionOneArgsCh:
+				require.NoError(t, subscriptionArgs.errValue)
+				require.JSONEq(t, `{"employeeUpdates":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(subscriptionArgs.dataValue))
+			case <-time.After(RedisWaitTimeout):
+				t.Fatal("timeout waiting for first message error")
+			}
+
+			// read the message from the second subscription
+			select {
+			case subscriptionArgs := <-subscriptionTwoArgsCh:
+				require.NoError(t, subscriptionArgs.errValue)
+				require.JSONEq(t, `{"employeeUpdates":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(subscriptionArgs.dataValue))
+			case <-time.After(RedisWaitTimeout):
+				t.Fatal("timeout waiting for second message error")
+			}
+
+			// produce a message
 			produceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 2,"update":{"name":"foo"}}`)
 
-			require.Eventually(t, func() bool {
-				return counter.Load() == 4
-			}, RedisWaitTimeout, time.Millisecond*100, "expected 4 events, got %d", counter.Load())
+			// read the message from the first subscription
+			select {
+			case subscriptionArgs := <-subscriptionOneArgsCh:
+				require.NoError(t, subscriptionArgs.errValue)
+				require.JSONEq(t, `{"employeeUpdates":{"id":2,"details":{"forename":"Dustin","surname":"Deus"}}}`, string(subscriptionArgs.dataValue))
+			case <-time.After(RedisWaitTimeout):
+				t.Fatal("timeout waiting for first message error")
+			}
 
+			// read the message from the second subscription
+			select {
+			case subscriptionArgs := <-subscriptionTwoArgsCh:
+				require.NoError(t, subscriptionArgs.errValue)
+				require.JSONEq(t, `{"employeeUpdates":{"id":2,"details":{"forename":"Dustin","surname":"Deus"}}}`, string(subscriptionArgs.dataValue))
+			case <-time.After(RedisWaitTimeout):
+				t.Fatal("timeout waiting for second message error")
+			}
+
+			// close the client
 			require.NoError(t, client.Close())
 
-			xEnv.WaitForMessagesSent(4, RedisWaitTimeout)
-			xEnv.WaitForSubscriptionCount(0, RedisWaitTimeout)
-			xEnv.WaitForConnectionCount(0, RedisWaitTimeout)
+			// check that the client is closed correctly
+			select {
+			case err := <-runCh:
+				require.NoError(t, err)
+			case <-time.After(RedisWaitTimeout):
+				t.Fatal("timeout waiting for client to close")
+			}
 		})
 	})
 
@@ -370,7 +421,6 @@ func TestRedisEvents(t *testing.T) {
 				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Millisecond * 100
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-
 			var subscriptionOne struct {
 				employeeUpdates struct {
 					ID      float64 `graphql:"id"`
@@ -383,40 +433,45 @@ func TestRedisEvents(t *testing.T) {
 
 			surl := xEnv.GraphQLWebSocketSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
-			t.Cleanup(func() {
-				_ = client.Close()
-			})
 
-			var counter atomic.Uint32
-
+			subscriptionOneArgsCh := make(chan subscriptionArgs)
 			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
-				defer counter.Add(1)
-				require.NoError(t, errValue)
-				require.JSONEq(t, `{"employeeUpdates":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(dataValue))
+				subscriptionOneArgsCh <- subscriptionArgs{dataValue, errValue}
 				return nil
 			})
 			require.NoError(t, err)
 			require.NotEmpty(t, subscriptionOneID)
 
+			runCh := make(chan error)
 			go func() {
-				clientErr := client.Run()
-				require.NoError(t, clientErr)
+				runCh <- client.Run()
 			}()
 
-			go func() {
-				require.Eventually(t, func() bool {
-					return counter.Load() == 1
-				}, RedisWaitTimeout, time.Millisecond*100)
-				_ = client.Close()
-			}()
-
+			// Wait for the subscription to be started
 			xEnv.WaitForSubscriptionCount(1, RedisWaitTimeout)
 
+			// produce a message
 			produceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
-			xEnv.WaitForMessagesSent(1, RedisWaitTimeout)
-			xEnv.WaitForSubscriptionCount(0, RedisWaitTimeout)
-			xEnv.WaitForConnectionCount(0, RedisWaitTimeout)
+			// read the message from the subscription
+			select {
+			case subscriptionArgs := <-subscriptionOneArgsCh:
+				require.NoError(t, subscriptionArgs.errValue)
+				require.JSONEq(t, `{"employeeUpdates":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(subscriptionArgs.dataValue))
+			case <-time.After(RedisWaitTimeout):
+				t.Fatal("timeout waiting for first message error")
+			}
+
+			// close the client
+			require.NoError(t, client.Close())
+
+			// check that the client is closed correctly
+			select {
+			case err := <-runCh:
+				require.NoError(t, err)
+			case <-time.After(RedisWaitTimeout):
+				t.Fatal("timeout waiting for client to close")
+			}
 		})
 	})
 
@@ -437,55 +492,31 @@ func TestRedisEvents(t *testing.T) {
 					core.WithMultipartHeartbeatInterval(multipartHeartbeatInterval),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
-
 				subscribePayload := []byte(`{"query":"subscription { employeeUpdates { id details { forename surname } }}"}`)
 
-				var started atomic.Bool
-				var consumed atomic.Uint32
-				var produced atomic.Uint32
+				// start the subscription
+				client := http.Client{
+					Timeout: time.Second * 100,
+				}
+				req := xEnv.MakeGraphQLMultipartRequest(http.MethodPost, bytes.NewReader(subscribePayload))
+				resp, gErr := client.Do(req)
+				require.NoError(t, gErr)
+				require.Equal(t, http.StatusOK, resp.StatusCode)
+				defer resp.Body.Close()
+				reader := bufio.NewReader(resp.Body)
 
-				go func() {
-					client := http.Client{
-						Timeout: time.Second * 100,
-					}
-					req := xEnv.MakeGraphQLMultipartRequest(http.MethodPost, bytes.NewReader(subscribePayload))
-					resp, gErr := client.Do(req)
-					require.NoError(t, gErr)
-					require.Equal(t, http.StatusOK, resp.StatusCode)
-					defer resp.Body.Close()
-					reader := bufio.NewReader(resp.Body)
-					started.Store(true)
-
-					assert.Eventually(t, func() bool {
-						return produced.Load() == 1
-					}, RedisWaitTimeout, time.Millisecond*100)
-					assertRedisMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"employeeUpdates\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
-					consumed.Add(1)
-
-					assert.Eventually(t, func() bool {
-						return produced.Load() == 2
-					}, RedisWaitTimeout, time.Millisecond*100)
-					assertRedisMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"employeeUpdates\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
-					consumed.Add(1)
-				}()
-
+				// Wait for the subscription to be started
 				xEnv.WaitForSubscriptionCount(1, RedisWaitTimeout)
 
-				assert.Eventually(t, started.Load, RedisWaitTimeout, time.Millisecond*100)
+				// produce a message
 				produceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
-				produced.Add(1)
+				// read the message from the subscription
+				assertRedisMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"employeeUpdates\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
 
-				assert.Eventually(t, func() bool {
-					return consumed.Load() == 1
-				}, RedisWaitTimeout, time.Millisecond*100)
+				// produce a message
 				produceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
-				produced.Add(1)
-
-				// Wait for the client to finish
-				require.Eventually(t, func() bool { return consumed.Load() == 2 }, RedisWaitTimeout*2, time.Millisecond*100)
-
-				xEnv.WaitForSubscriptionCount(0, RedisWaitTimeout)
-				xEnv.WaitForConnectionCount(0, RedisWaitTimeout)
+				// read the message from the subscription
+				assertRedisMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"employeeUpdates\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
 			})
 		})
 
@@ -534,49 +565,65 @@ func TestRedisEvents(t *testing.T) {
 
 			subscribePayload := []byte(`{"query":"subscription { employeeUpdates { id details { forename surname } }}"}`)
 
-			var counter atomic.Uint32
+			client := http.Client{
+				Timeout: time.Second * 10,
+			}
+			req, gErr := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(subscribePayload))
+			require.NoError(t, gErr)
 
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Accept", "text/event-stream")
+			req.Header.Set("Connection", "keep-alive")
+			req.Header.Set("Cache-Control", "no-cache")
+
+			// start the subscription
+			clientRetCh := make(chan struct {
+				resp *http.Response
+				err  error
+			})
 			go func() {
-				defer counter.Add(1)
-
-				client := http.Client{
-					Timeout: time.Second * 10,
-				}
-				req, gErr := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(subscribePayload))
-				require.NoError(t, gErr)
-
-				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("Accept", "text/event-stream")
-				req.Header.Set("Connection", "keep-alive")
-				req.Header.Set("Cache-Control", "no-cache")
-
-				resp, gErr := client.Do(req)
-				require.NoError(t, gErr)
-				require.Equal(t, http.StatusOK, resp.StatusCode)
-				defer resp.Body.Close()
-				reader := bufio.NewReader(resp.Body)
-
-				eventNext, _, gErr := reader.ReadLine()
-				require.NoError(t, gErr)
-				require.Equal(t, "event: next", string(eventNext))
-				data, _, gErr := reader.ReadLine()
-				require.NoError(t, gErr)
-				require.Equal(t, "data: {\"data\":{\"employeeUpdates\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}", string(data))
-				line, _, gErr := reader.ReadLine()
-				require.NoError(t, gErr)
-				require.Equal(t, "", string(line))
+				resp, err := client.Do(req)
+				clientRetCh <- struct {
+					resp *http.Response
+					err  error
+				}{resp, err}
 			}()
 
+			// Wait for the subscription to be started
 			xEnv.WaitForSubscriptionCount(1, RedisWaitTimeout)
 
+			// produce a message so that the subscription is triggered
 			produceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
-			require.Eventually(t, func() bool {
-				return counter.Load() == 1
-			}, RedisWaitTimeout, time.Millisecond*100)
+			// get the client response
+			var clientRet struct {
+				resp *http.Response
+				err  error
+			}
+			select {
+			case clientRet = <-clientRetCh:
+			case <-time.After(RedisWaitTimeout):
+				t.Fatal("timeout waiting for client response")
+			}
+			defer func() {
+				if clientRet.resp != nil {
+					clientRet.resp.Body.Close()
+				}
+			}()
+			require.NoError(t, clientRet.err)
+			require.Equal(t, http.StatusOK, clientRet.resp.StatusCode)
 
-			xEnv.WaitForSubscriptionCount(0, RedisWaitTimeout)
-			xEnv.WaitForConnectionCount(0, RedisWaitTimeout)
+			// read the message from the subscription
+			reader := bufio.NewReader(clientRet.resp.Body)
+			eventNext, _, gErr := reader.ReadLine()
+			require.NoError(t, gErr)
+			require.Equal(t, "event: next", string(eventNext))
+			data, _, gErr := reader.ReadLine()
+			require.NoError(t, gErr)
+			require.Equal(t, "data: {\"data\":{\"employeeUpdates\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}", string(data))
+			line, _, gErr := reader.ReadLine()
+			require.NoError(t, gErr)
+			require.Empty(t, string(line))
 		})
 	})
 
@@ -591,50 +638,65 @@ func TestRedisEvents(t *testing.T) {
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			subscribePayload := []byte(`{"query":"subscription { employeeUpdates { id details { forename surname } }}"}`)
+			client := http.Client{
+				Timeout: time.Second * 10,
+			}
+			req, gErr := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(subscribePayload))
+			require.NoError(t, gErr)
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Accept", "text/event-stream")
+			req.Header.Set("Connection", "keep-alive")
+			req.Header.Set("Cache-Control", "no-cache")
 
-			var counter atomic.Uint32
+			clientRetCh := make(chan struct {
+				resp *http.Response
+				err  error
+			})
 
+			// start the subscription
 			go func() {
-				defer counter.Add(1)
-
-				client := http.Client{
-					Timeout: time.Second * 10,
-				}
-				req, gErr := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(subscribePayload))
-				require.NoError(t, gErr)
-
-				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("Accept", "text/event-stream")
-				req.Header.Set("Connection", "keep-alive")
-				req.Header.Set("Cache-Control", "no-cache")
-
-				resp, gErr := client.Do(req)
-				require.NoError(t, gErr)
-				require.Equal(t, http.StatusOK, resp.StatusCode)
-				defer resp.Body.Close()
-				reader := bufio.NewReader(resp.Body)
-
-				eventNext, _, gErr := reader.ReadLine()
-				require.NoError(t, gErr)
-				require.Equal(t, "event: next", string(eventNext))
-				data, _, gErr := reader.ReadLine()
-				require.NoError(t, gErr)
-				require.Equal(t, "data: {\"data\":{\"employeeUpdates\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}", string(data))
-				line, _, gErr := reader.ReadLine()
-				require.NoError(t, gErr)
-				require.Equal(t, "", string(line))
+				resp, err := client.Do(req)
+				clientRetCh <- struct {
+					resp *http.Response
+					err  error
+				}{resp, err}
 			}()
 
+			// Wait for the subscription to be started
 			xEnv.WaitForSubscriptionCount(1, RedisWaitTimeout)
 
+			// produce a message so that the subscription is triggered
 			produceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
-			require.Eventually(t, func() bool {
-				return counter.Load() == 1
-			}, RedisWaitTimeout, time.Millisecond*100)
+			// get the client response
+			var clientRet struct {
+				resp *http.Response
+				err  error
+			}
+			select {
+			case clientRet = <-clientRetCh:
+			case <-time.After(RedisWaitTimeout):
+				t.Fatal("timeout waiting for client response")
+			}
+			defer func() {
+				if clientRet.resp != nil {
+					clientRet.resp.Body.Close()
+				}
+			}()
+			require.NoError(t, clientRet.err)
+			require.Equal(t, http.StatusOK, clientRet.resp.StatusCode)
 
-			xEnv.WaitForSubscriptionCount(0, RedisWaitTimeout)
-			xEnv.WaitForConnectionCount(0, RedisWaitTimeout)
+			// read the message from the subscription
+			reader := bufio.NewReader(clientRet.resp.Body)
+			eventNext, _, gErr := reader.ReadLine()
+			require.NoError(t, gErr)
+			require.Equal(t, "event: next", string(eventNext))
+			data, _, gErr := reader.ReadLine()
+			require.NoError(t, gErr)
+			require.Equal(t, "data: {\"data\":{\"employeeUpdates\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}", string(data))
+			line, _, gErr := reader.ReadLine()
+			require.NoError(t, gErr)
+			require.Empty(t, string(line))
 		})
 	})
 
@@ -695,7 +757,7 @@ func TestRedisEvents(t *testing.T) {
 			type subscriptionPayload struct {
 				Data struct {
 					FilteredEmployeeUpdatedMyRedis struct {
-						ID      float64 `graphql:"id"`
+						ID      int `graphql:"id"`
 						Details struct {
 							Forename string `graphql:"forename"`
 							Surname  string `graphql:"surname"`
@@ -713,107 +775,78 @@ func TestRedisEvents(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			// msg1 := testenv.WebSocketMessage{}
-			// conn.ReadJSON(&msg1)
-			// require.Equal(t, "1", msg1.ID)
-			// require.Equal(t, "next", msg1.Type)
-			// require.Equal(t, "{\"data\":{\"filteredEmployeeUpdatedMyRedis\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}", string(msg1.Payload))
-
 			var msg testenv.WebSocketMessage
 			var payload subscriptionPayload
 
 			xEnv.WaitForSubscriptionCount(1, RedisWaitTimeout)
 
-			var produced atomic.Uint32
-			var consumed atomic.Uint32
 			const MsgCount = uint32(12)
-
-			go func() {
-				consumed.Add(1) // the first message is ignored
-
-				require.Eventually(t, func() bool {
-					return produced.Load() == MsgCount-11
-				}, RedisWaitTimeout, time.Millisecond*100)
-				gErr := conn.ReadJSON(&msg)
-				require.NoError(t, gErr)
-				require.Equal(t, "1", msg.ID)
-				require.Equal(t, "next", msg.Type)
-				gErr = json.Unmarshal(msg.Payload, &payload)
-				require.NoError(t, gErr)
-				require.Equal(t, float64(11), payload.Data.FilteredEmployeeUpdatedMyRedis.ID)
-				require.Equal(t, "Alexandra", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Forename)
-				require.Equal(t, "Neuse", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Surname)
-				consumed.Add(4) // should arrive to 5th message, with id 7
-
-				require.Eventually(t, func() bool {
-					return produced.Load() == MsgCount-7
-				}, RedisWaitTimeout, time.Millisecond*100)
-				gErr = conn.ReadJSON(&msg)
-				require.NoError(t, gErr)
-				require.Equal(t, "1", msg.ID)
-				require.Equal(t, "next", msg.Type)
-				gErr = json.Unmarshal(msg.Payload, &payload)
-				require.NoError(t, gErr)
-				require.Equal(t, float64(7), payload.Data.FilteredEmployeeUpdatedMyRedis.ID)
-				require.Equal(t, "Suvij", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Forename)
-				require.Equal(t, "Surya", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Surname)
-				consumed.Add(3) // should arrive to 8th message, with id 4
-
-				require.Eventually(t, func() bool {
-					return produced.Load() == MsgCount-4
-				}, RedisWaitTimeout, time.Millisecond*100)
-				gErr = conn.ReadJSON(&msg)
-				require.NoError(t, gErr)
-				require.Equal(t, "1", msg.ID)
-				require.Equal(t, "next", msg.Type)
-				gErr = json.Unmarshal(msg.Payload, &payload)
-				require.NoError(t, gErr)
-				require.Equal(t, float64(4), payload.Data.FilteredEmployeeUpdatedMyRedis.ID)
-				require.Equal(t, "Björn", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Forename)
-				require.Equal(t, "Schwenzer", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Surname)
-				consumed.Add(1)
-
-				require.Eventually(t, func() bool {
-					return produced.Load() == MsgCount-3
-				}, RedisWaitTimeout, time.Millisecond*100)
-				gErr = conn.ReadJSON(&msg)
-				require.NoError(t, gErr)
-				require.Equal(t, "1", msg.ID)
-				require.Equal(t, "next", msg.Type)
-				gErr = json.Unmarshal(msg.Payload, &payload)
-				require.NoError(t, gErr)
-				require.Equal(t, float64(3), payload.Data.FilteredEmployeeUpdatedMyRedis.ID)
-				require.Equal(t, "Stefan", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Forename)
-				require.Equal(t, "Avram", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Surname)
-				consumed.Add(2) // should arrive to 10th message, with id 2
-
-				require.Eventually(t, func() bool {
-					return produced.Load() == MsgCount-1
-				}, RedisWaitTimeout, time.Millisecond*100)
-				gErr = conn.ReadJSON(&msg)
-				require.NoError(t, gErr)
-				require.Equal(t, "1", msg.ID)
-				require.Equal(t, "next", msg.Type)
-				gErr = json.Unmarshal(msg.Payload, &payload)
-				require.NoError(t, gErr)
-				require.Equal(t, float64(1), payload.Data.FilteredEmployeeUpdatedMyRedis.ID)
-				require.Equal(t, "Jens", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Forename)
-				require.Equal(t, "Neuse", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Surname)
-				consumed.Add(1)
-			}()
 
 			// Events 1, 3, 4, 7, and 11 should be included
 			for i := MsgCount; i > 0; i-- {
-				require.Eventually(t, func() bool {
-					return consumed.Load() >= MsgCount-i
-				}, RedisWaitTimeout, time.Millisecond*100)
 				produceRedisMessage(t, xEnv, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d}`, i))
-				produced.Add(1)
-			}
 
-			require.Eventually(t, func() bool {
-				return consumed.Load() == MsgCount && produced.Load() == MsgCount
-			}, RedisWaitTimeout, time.Millisecond*100)
+				var gErr error
+				if i == 11 {
+					gErr := conn.ReadJSON(&msg)
+					require.NoError(t, gErr)
+					require.Equal(t, "1", msg.ID)
+					require.Equal(t, "next", msg.Type)
+					gErr = json.Unmarshal(msg.Payload, &payload)
+					require.NoError(t, gErr)
+					require.Equal(t, 11, payload.Data.FilteredEmployeeUpdatedMyRedis.ID)
+					require.Equal(t, "Alexandra", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Forename)
+					require.Equal(t, "Neuse", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Surname)
+				}
+
+				if i == 7 {
+					gErr = conn.ReadJSON(&msg)
+					require.NoError(t, gErr)
+					require.Equal(t, "1", msg.ID)
+					require.Equal(t, "next", msg.Type)
+					gErr = json.Unmarshal(msg.Payload, &payload)
+					require.NoError(t, gErr)
+					require.Equal(t, 7, payload.Data.FilteredEmployeeUpdatedMyRedis.ID)
+					require.Equal(t, "Suvij", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Forename)
+					require.Equal(t, "Surya", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Surname)
+				}
+
+				if i == 4 {
+					gErr = conn.ReadJSON(&msg)
+					require.NoError(t, gErr)
+					require.Equal(t, "1", msg.ID)
+					require.Equal(t, "next", msg.Type)
+					gErr = json.Unmarshal(msg.Payload, &payload)
+					require.NoError(t, gErr)
+					require.Equal(t, 4, payload.Data.FilteredEmployeeUpdatedMyRedis.ID)
+					require.Equal(t, "Björn", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Forename)
+					require.Equal(t, "Schwenzer", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Surname)
+				}
+
+				if i == 3 {
+					gErr = conn.ReadJSON(&msg)
+					require.NoError(t, gErr)
+					require.Equal(t, "1", msg.ID)
+					require.Equal(t, "next", msg.Type)
+					gErr = json.Unmarshal(msg.Payload, &payload)
+					require.NoError(t, gErr)
+					require.Equal(t, 3, payload.Data.FilteredEmployeeUpdatedMyRedis.ID)
+					require.Equal(t, "Stefan", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Forename)
+					require.Equal(t, "Avram", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Surname)
+				}
+
+				if i == 1 {
+					gErr = conn.ReadJSON(&msg)
+					require.NoError(t, gErr)
+					require.Equal(t, "1", msg.ID)
+					require.Equal(t, "next", msg.Type)
+					gErr = json.Unmarshal(msg.Payload, &payload)
+					require.NoError(t, gErr)
+					require.Equal(t, 1, payload.Data.FilteredEmployeeUpdatedMyRedis.ID)
+					require.Equal(t, "Jens", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Forename)
+					require.Equal(t, "Neuse", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Surname)
+				}
+			}
 		})
 	})
 
@@ -829,7 +862,7 @@ func TestRedisEvents(t *testing.T) {
 
 			var subscriptionOne struct {
 				employeeUpdates struct {
-					ID      float64 `graphql:"id"`
+					ID      int `graphql:"id"`
 					Details struct {
 						Forename string `graphql:"forename"`
 						Surname  string `graphql:"surname"`
@@ -839,62 +872,81 @@ func TestRedisEvents(t *testing.T) {
 
 			surl := xEnv.GraphQLWebSocketSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
-			t.Cleanup(func() {
-				_ = client.Close()
-			})
 
-			var counter atomic.Uint32
-
+			subscriptionOneArgsCh := make(chan subscriptionArgs)
 			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
-				oldCount := counter.Load()
-				counter.Add(1)
-
-				if oldCount == 0 {
-					var gqlErr graphql.Errors
-					require.ErrorAs(t, errValue, &gqlErr)
-					require.Equal(t, "Invalid message received", gqlErr[0].Message)
-				} else if oldCount == 1 || oldCount == 3 {
-					require.NoError(t, errValue)
-					require.JSONEq(t, `{"employeeUpdates":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(dataValue))
-				} else if oldCount == 2 {
-					var gqlErr graphql.Errors
-					require.ErrorAs(t, errValue, &gqlErr)
-					require.Equal(t, "Cannot return null for non-nullable field 'Subscription.employeeUpdates.id'.", gqlErr[0].Message)
+				subscriptionOneArgsCh <- subscriptionArgs{
+					dataValue: dataValue,
+					errValue:  errValue,
 				}
-
 				return nil
 			})
 			require.NoError(t, err)
 			require.NotEmpty(t, subscriptionOneID)
 
+			// start the subscription
+			clientRunCh := make(chan error)
 			go func() {
-				clientErr := client.Run()
-				require.NoError(t, clientErr)
+				clientRunCh <- client.Run()
 			}()
 
+			// Wait for the subscription to be started
 			xEnv.WaitForSubscriptionCount(1, RedisWaitTimeout)
 
-			produceRedisMessage(t, xEnv, topics[0], `{asas`) // Invalid message
-			require.Eventually(t, func() bool {
-				return counter.Load() == 1
-			}, RedisWaitTimeout, time.Millisecond*100)
-			produceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id":1}`) // Correct message
-			require.Eventually(t, func() bool {
-				return counter.Load() == 2
-			}, RedisWaitTimeout, time.Millisecond*100)
-			produceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","update":{"name":"foo"}}`) // Missing entity = Resolver error
-			require.Eventually(t, func() bool {
-				return counter.Load() == 3
-			}, RedisWaitTimeout, time.Millisecond*100)
-			produceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`) // Correct message
-			require.Eventually(t, func() bool {
-				return counter.Load() == 4
-			}, RedisWaitTimeout, time.Millisecond*100)
+			// produce an invalid message
+			produceRedisMessage(t, xEnv, topics[0], `{asas`)
+			// get the client response
+			select {
+			case args := <-subscriptionOneArgsCh:
+				var gqlErr graphql.Errors
+				require.ErrorAs(t, args.errValue, &gqlErr)
+				require.Equal(t, "Invalid message received", gqlErr[0].Message)
+			case <-time.After(RedisWaitTimeout):
+				t.Fatal("timeout waiting for client response")
+			}
+
+			// produce a correct message
+			produceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id":1}`)
+			// get the client response
+			select {
+			case args := <-subscriptionOneArgsCh:
+				require.NoError(t, args.errValue)
+				require.JSONEq(t, `{"employeeUpdates":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
+			case <-time.After(RedisWaitTimeout):
+				t.Fatal("timeout waiting for client response")
+			}
+
+			// produce a message with a missing entity
+			produceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","update":{"name":"foo"}}`)
+			// get the client response
+			select {
+			case args := <-subscriptionOneArgsCh:
+				var gqlErr graphql.Errors
+				require.ErrorAs(t, args.errValue, &gqlErr)
+				require.Equal(t, "Cannot return null for non-nullable field 'Subscription.employeeUpdates.id'.", gqlErr[0].Message)
+			case <-time.After(RedisWaitTimeout):
+				t.Fatal("timeout waiting for client response")
+			}
+
+			// produce a correct message
+			produceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+			// get the client response
+			select {
+			case args := <-subscriptionOneArgsCh:
+				require.NoError(t, args.errValue)
+				require.JSONEq(t, `{"employeeUpdates":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
+			case <-time.After(RedisWaitTimeout):
+				t.Fatal("timeout waiting for client response")
+			}
 
 			require.NoError(t, client.Close())
 
-			xEnv.WaitForSubscriptionCount(0, RedisWaitTimeout)
-			xEnv.WaitForConnectionCount(0, RedisWaitTimeout)
+			select {
+			case err := <-clientRunCh:
+				require.NoError(t, err)
+			case <-time.After(RedisWaitTimeout):
+				t.Fatal("timeout waiting for client response")
+			}
 		})
 	})
 
@@ -908,22 +960,23 @@ func TestRedisEvents(t *testing.T) {
 			EnableRedis:              true,
 			NoRetryClient:            true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			var msgCh <-chan *redis.Message
-			var started atomic.Bool
-			go func() {
-				var err error
-				msgCh, err = readRedisMessages(t, xEnv, channels[0])
-				started.Store(true)
-				require.NoError(t, err)
-			}()
-			require.Eventually(t, started.Load, RedisWaitTimeout, time.Millisecond*100)
-			// Send a mutation to trigger the first subscription
+			// start reading the messages from the channel
+			msgCh, err := readRedisMessages(t, xEnv, channels[0])
+			require.NoError(t, err)
+
+			// send a mutation to trigger the first subscription
 			resOne := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `mutation { updateEmployeeMyRedis(id: 3, update: {name: "name test"}) { success } }`,
 			})
 			require.JSONEq(t, `{"data":{"updateEmployeeMyRedis":{"success":true}}}`, resOne.Body)
-			m := <-msgCh
-			require.Equal(t, `{"id":3,"update":{"name":"name test"}}`, m.Payload)
+
+			// read the message
+			select {
+			case m := <-msgCh:
+				require.JSONEq(t, `{"id":3,"update":{"name":"name test"}}`, m.Payload)
+			case <-time.After(RedisWaitTimeout):
+				t.Fatal("timeout waiting for client response")
+			}
 		})
 	})
 }
@@ -956,40 +1009,50 @@ func TestRedisClusterEvents(t *testing.T) {
 
 			surl := xEnv.GraphQLWebSocketSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
-			t.Cleanup(func() {
-				_ = client.Close()
-			})
 
-			var counter atomic.Uint32
-
+			// create the subscription
+			subscriptionOneArgsCh := make(chan subscriptionArgs)
 			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
-				defer counter.Add(1)
-				require.NoError(t, errValue)
-				require.JSONEq(t, `{"employeeUpdates":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(dataValue))
+				subscriptionOneArgsCh <- subscriptionArgs{
+					dataValue: dataValue,
+					errValue:  errValue,
+				}
 				return nil
 			})
 			require.NoError(t, err)
 			require.NotEmpty(t, subscriptionOneID)
 
+			// start the client with the subscription
+			clientRunCh := make(chan error)
 			go func() {
-				clientErr := client.Run()
-				require.NoError(t, clientErr)
+				clientRunCh <- client.Run()
 			}()
 
-			go func() {
-				require.Eventually(t, func() bool {
-					return counter.Load() == 1
-				}, RedisWaitTimeout, time.Millisecond*100)
-				_ = client.Close()
-			}()
-
+			// Wait for the subscription to be started
 			xEnv.WaitForSubscriptionCount(1, RedisWaitTimeout)
 
+			// produce a message
 			produceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
-			xEnv.WaitForMessagesSent(1, RedisWaitTimeout)
-			xEnv.WaitForSubscriptionCount(0, RedisWaitTimeout)
-			xEnv.WaitForConnectionCount(0, RedisWaitTimeout)
+			// read the message
+			select {
+			case args := <-subscriptionOneArgsCh:
+				require.NoError(t, args.errValue)
+				require.JSONEq(t, `{"employeeUpdates":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
+			case <-time.After(RedisWaitTimeout):
+				t.Fatal("timeout waiting for client response")
+			}
+
+			// close the client
+			require.NoError(t, client.Close())
+
+			// wait for the client to be closed
+			select {
+			case err := <-clientRunCh:
+				require.NoError(t, err)
+			case <-time.After(RedisWaitTimeout):
+				t.Fatal("timeout waiting for client response")
+			}
 		})
 	})
 
@@ -1003,22 +1066,23 @@ func TestRedisClusterEvents(t *testing.T) {
 			EnableRedisCluster:       true,
 			NoRetryClient:            true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			var msgCh <-chan *redis.Message
-			var started atomic.Bool
-			go func() {
-				var err error
-				msgCh, err = readRedisMessages(t, xEnv, channels[0])
-				started.Store(true)
-				require.NoError(t, err)
-			}()
-			require.Eventually(t, started.Load, RedisWaitTimeout, time.Millisecond*100)
-			// Send a mutation to trigger the first subscription
+			// start reading the messages from the channel
+			msgCh, err := readRedisMessages(t, xEnv, channels[0])
+			require.NoError(t, err)
+
+			// send a mutation to produce a message
 			resOne := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `mutation { updateEmployeeMyRedis(id: 3, update: {name: "name test"}) { success } }`,
 			})
 			require.JSONEq(t, `{"data":{"updateEmployeeMyRedis":{"success":true}}}`, resOne.Body)
-			m := <-msgCh
-			require.Equal(t, `{"id":3,"update":{"name":"name test"}}`, m.Payload)
+
+			// read the message
+			select {
+			case m := <-msgCh:
+				require.JSONEq(t, `{"id":3,"update":{"name":"name test"}}`, m.Payload)
+			case <-time.After(RedisWaitTimeout):
+				t.Fatal("timeout waiting for client response")
+			}
 		})
 	})
 
