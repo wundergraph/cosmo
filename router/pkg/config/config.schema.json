@@ -1923,7 +1923,7 @@
           "properties": {
             "nats": {
               "type": "array",
-              "description": "The NATS configuration. The NATS is used to configure the event-driven federated subscriptions.",
+              "description": "Configuration used by the EDFS provider to connect to the NATS server.",
               "items": {
                 "type": "object",
                 "required": ["id", "url"],
@@ -1982,7 +1982,7 @@
             },
             "kafka": {
               "type": "array",
-              "description": "The Kafka configuration. The Kafka is used to configure the event-driven federated subscriptions.",
+              "description": "Configuration used by the EDFS provider to connect to the Kafka server.",
               "items": {
                 "type": "object",
                 "additionalProperties": false,
@@ -2043,7 +2043,7 @@
             },
             "redis": {
               "type": "array",
-              "description": "The Redis configuration. The Redis is used to configure the event-driven federated subscriptions.",
+              "description": "Configuration used by the EDFS provider to connect to the Redis server.",
               "items": {
                 "type": "object",
                 "additionalProperties": false,
@@ -2063,7 +2063,7 @@
                   },
                   "cluster_enabled": {
                     "type": "boolean",
-                    "description": "Enable the Redis cluster. If enabled, the Redis cluster is used to connect to the Redis provider.",
+                    "description": "If enabled, the Redis cluster client is used to connect to the server.",
                     "default": false
                   }
                 }

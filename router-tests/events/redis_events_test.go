@@ -777,71 +777,33 @@ func TestRedisEvents(t *testing.T) {
 
 			xEnv.WaitForSubscriptionCount(1, RedisWaitTimeout)
 
-			const MsgCount = uint32(12)
+			const MsgCount = 12
+
+			employeesCheck := map[int]struct {
+				Forename string
+				Surname  string
+			}{
+				1:  {"Jens", "Neuse"},
+				3:  {"Stefan", "Avram"},
+				4:  {"Björn", "Schwenzer"},
+				7:  {"Suvij", "Surya"},
+				11: {"Alexandra", "Neuse"},
+			}
 
 			// Events 1, 3, 4, 7, and 11 should be included
 			for i := MsgCount; i > 0; i-- {
 				produceRedisMessage(t, xEnv, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d}`, i))
 
-				var gErr error
-				if i == 11 {
+				if i == 11 || i == 7 || i == 4 || i == 3 || i == 1 {
 					gErr := conn.ReadJSON(&msg)
 					require.NoError(t, gErr)
 					require.Equal(t, "1", msg.ID)
 					require.Equal(t, "next", msg.Type)
 					gErr = json.Unmarshal(msg.Payload, &payload)
 					require.NoError(t, gErr)
-					require.Equal(t, 11, payload.Data.FilteredEmployeeUpdatedMyRedis.ID)
-					require.Equal(t, "Alexandra", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Forename)
-					require.Equal(t, "Neuse", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Surname)
-				}
-
-				if i == 7 {
-					gErr = conn.ReadJSON(&msg)
-					require.NoError(t, gErr)
-					require.Equal(t, "1", msg.ID)
-					require.Equal(t, "next", msg.Type)
-					gErr = json.Unmarshal(msg.Payload, &payload)
-					require.NoError(t, gErr)
-					require.Equal(t, 7, payload.Data.FilteredEmployeeUpdatedMyRedis.ID)
-					require.Equal(t, "Suvij", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Forename)
-					require.Equal(t, "Surya", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Surname)
-				}
-
-				if i == 4 {
-					gErr = conn.ReadJSON(&msg)
-					require.NoError(t, gErr)
-					require.Equal(t, "1", msg.ID)
-					require.Equal(t, "next", msg.Type)
-					gErr = json.Unmarshal(msg.Payload, &payload)
-					require.NoError(t, gErr)
-					require.Equal(t, 4, payload.Data.FilteredEmployeeUpdatedMyRedis.ID)
-					require.Equal(t, "Björn", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Forename)
-					require.Equal(t, "Schwenzer", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Surname)
-				}
-
-				if i == 3 {
-					gErr = conn.ReadJSON(&msg)
-					require.NoError(t, gErr)
-					require.Equal(t, "1", msg.ID)
-					require.Equal(t, "next", msg.Type)
-					gErr = json.Unmarshal(msg.Payload, &payload)
-					require.NoError(t, gErr)
-					require.Equal(t, 3, payload.Data.FilteredEmployeeUpdatedMyRedis.ID)
-					require.Equal(t, "Stefan", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Forename)
-					require.Equal(t, "Avram", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Surname)
-				}
-
-				if i == 1 {
-					gErr = conn.ReadJSON(&msg)
-					require.NoError(t, gErr)
-					require.Equal(t, "1", msg.ID)
-					require.Equal(t, "next", msg.Type)
-					gErr = json.Unmarshal(msg.Payload, &payload)
-					require.NoError(t, gErr)
-					require.Equal(t, 1, payload.Data.FilteredEmployeeUpdatedMyRedis.ID)
-					require.Equal(t, "Jens", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Forename)
-					require.Equal(t, "Neuse", payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Surname)
+					require.Equal(t, int(i), payload.Data.FilteredEmployeeUpdatedMyRedis.ID)
+					require.Equal(t, employeesCheck[i].Forename, payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Forename)
+					require.Equal(t, employeesCheck[i].Surname, payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Surname)
 				}
 			}
 		})
