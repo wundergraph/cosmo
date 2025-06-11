@@ -149,6 +149,7 @@ func (c *Config) Usage() map[string]any {
 	usage["apollo_compatibility_flags_suppress_fetch_errors_enabled"] = c.apolloCompatibilityFlags.SuppressFetchErrors.Enabled
 	usage["apollo_compatibility_flags_truncate_floats_enabled"] = c.apolloCompatibilityFlags.TruncateFloats.Enabled
 	usage["apollo_compatibility_flags_value_completion_enabled"] = c.apolloCompatibilityFlags.ValueCompletion.Enabled
+	usage["apollo_compatibility_flags_use_graphql_validation_failed_status_enabled"] = c.apolloCompatibilityFlags.UseGraphQLValidationFailedStatus.Enabled
 
 	usage["apollo_router_compatibility_flags_replace_invalid_var_errors_enabled"] = c.apolloRouterCompatibilityFlags.ReplaceInvalidVarErrors.Enabled
 	usage["apollo_router_compatibility_flags_subrequest_http_error_enabled"] = c.apolloRouterCompatibilityFlags.SubrequestHTTPError.Enabled
