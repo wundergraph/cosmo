@@ -4,6 +4,17 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.220.0](https://github.com/wundergraph/cosmo/compare/router@0.219.3...router@0.220.0) (2025-06-11)
+
+### Bug Fixes
+
+* babel upgrade for vulnerability ([#1952](https://github.com/wundergraph/cosmo/issues/1952)) ([71dbb5d](https://github.com/wundergraph/cosmo/commit/71dbb5d386789216bee39f6fcdd606bd383c19c2)) (@SkArchon)
+* pnpm-lockfile to trigger ci and add back the specifier ([#1954](https://github.com/wundergraph/cosmo/issues/1954)) ([0149896](https://github.com/wundergraph/cosmo/commit/0149896ab2492757d0a88a6cbd1a26cee575d5cf)) (@SkArchon)
+
+### Features
+
+* improve apollo gateway compatible field selection validation ([#1941](https://github.com/wundergraph/cosmo/issues/1941)) ([64c0a6f](https://github.com/wundergraph/cosmo/commit/64c0a6f8da1360eaf031440da7816c53767ba060)) (@endigma)
+
 ## [0.219.3](https://github.com/wundergraph/cosmo/compare/router@0.219.2...router@0.219.3) (2025-06-10)
 
 ### Bug Fixes
