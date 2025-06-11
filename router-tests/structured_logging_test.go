@@ -788,7 +788,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				Query: `query employees { notExists { id } }`, // Missing closing bracket
 			})
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"field: notExists not defined on type: Query","path":["query"]}]}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"Cannot query field \"notExists\" on type \"Query\".","path":["query"]}]}`, res.Body)
 			logEntries := xEnv.Observer().All()
 			require.Len(t, logEntries, 6)
 			requestLog := xEnv.Observer().FilterMessage("/graphql")
@@ -805,7 +805,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				"service_name":   "service-name", // From header
 				"operation_type": "query",        // From context
 				"operation_name": "employees",    // From context
-				"error_message":  "field: notExists not defined on type: Query",
+				"error_message":  "Cannot query field \"notExists\" on type \"Query\".",
 				"operation_hash": "3291586836053813139",
 				"request_error":  true,
 			}
@@ -2321,9 +2321,9 @@ func TestFlakyAccessLogs(t *testing.T) {
 						"path":            "/graphql",
 						"query":           "",
 						"ip":              "[REDACTED]",
-						"service_name":    "service-name",                             // From request header
-						"operation_hash":  "13143784263060310243",                     // From context
-						"expression_body": "field: id2 not defined on type: Employee", // From expression
+						"service_name":    "service-name",                                     // From request header
+						"operation_hash":  "13143784263060310243",                             // From context
+						"expression_body": "Cannot query field \"id2\" on type \"Employee\".", // From expression
 					}
 					additionalExpectedKeys := []string{
 						"user_agent",
@@ -2487,7 +2487,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				&testenv.Config{
 					RouterOptions: []core.Option{
 						core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-							ReplaceUndefinedOpFieldErrors: config.ApolloCompatibilityReplaceUndefinedOpFieldErrors{
+							UseGraphQLValidationFailedStatus: config.ApolloCompatibilityFlag{
 								Enabled: true,
 							},
 						}),
@@ -2534,7 +2534,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				&testenv.Config{
 					RouterOptions: []core.Option{
 						core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-							ReplaceInvalidVarErrors: config.ApolloCompatibilityReplaceInvalidVarErrors{
+							ReplaceInvalidVarErrors: config.ApolloCompatibilityFlag{
 								Enabled: true,
 							},
 						}),
@@ -2579,7 +2579,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				&testenv.Config{
 					RouterOptions: []core.Option{
 						core.WithApolloRouterCompatibilityFlags(config.ApolloRouterCompatibilityFlags{
-							ReplaceInvalidVarErrors: config.ApolloRouterCompatibilityReplaceInvalidVarErrors{
+							ReplaceInvalidVarErrors: config.ApolloCompatibilityFlag{
 								Enabled: true,
 							},
 						}),

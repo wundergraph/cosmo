@@ -4,6 +4,11 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
+	"io"
+	"net/http"
+	"strings"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
@@ -17,10 +22,6 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.19.0"
 	"go.opentelemetry.io/otel/trace"
-	"io"
-	"net/http"
-	"strings"
-	"testing"
 )
 
 func TestBatch(t *testing.T) {
@@ -402,7 +403,7 @@ func TestBatch(t *testing.T) {
 				require.Equal(t, http.StatusOK, res.Response.StatusCode)
 
 				entries := getBatchedEntriesForLength(t, res.Body, 3)
-				expected1 := `{"errors":[{"message":"field: employees2 not defined on type: Query","path":["query"]}]}`
+				expected1 := `{"errors":[{"message":"Cannot query field \"employees2\" on type \"Query\".","path":["query"]}]}`
 				expected2 := `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
 				expected3 := `{"errors":[{"message":"Variable \"$a\" got invalid value \"4\"; Int cannot represent non-integer value: \"4\""}]}`
 				require.Equal(t, expected1, entries[0])
