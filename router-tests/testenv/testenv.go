@@ -1627,7 +1627,7 @@ type Environment struct {
 
 	metricReader  metric.Reader
 	routerCmd     *exec.Cmd
-	cmdLogChannel chan<- string
+	cmdLogChannel chan string
 }
 
 func GetPubSubNameFn(prefix string) func(name string) string {

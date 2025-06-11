@@ -124,8 +124,6 @@ asdasdasdasdas: "NOT WORKING CONFIG!!!"
 	})
 
 	t.Run("Successfully reloads multiple configuration files with SIGHUP", func(t *testing.T) {
-		outputChan := make(chan string, 100)
-		defer close(outputChan)
 
 		file1 := "demo1.config.yaml"
 		file2 := "demo2.config.yaml"
@@ -133,9 +131,9 @@ asdasdasdasdas: "NOT WORKING CONFIG!!!"
 		files := []string{file1, file2, file3}
 
 		opts := testenv.RunRouterBinConfigOptions{
-			ConfigOverridePath: strings.Join(files, ","),
-			OutputChannel:      outputChan,
-			OverrideDirectory:  t.TempDir(),
+			ConfigOverridePath:       strings.Join(files, ","),
+			AssertOnRouterBinaryLogs: true,
+			OverrideDirectory:        t.TempDir(),
 		}
 
 		for _, file := range files {
@@ -153,25 +151,22 @@ asdasdasdasdas: "NOT WORKING CONFIG!!!"
 			err := xEnv.SignalRouterProcess(syscall.SIGHUP)
 			require.NoError(t, err)
 
-			require.True(t, xEnv.IsLogReceivedFromOutput(ctx, outputChan, `"msg":"Reloading Router"`, 10*time.Second))
+			require.True(t, xEnv.IsLogReceivedFromOutput(ctx, `"msg":"Reloading Router"`, 10*time.Second))
 		})
 
 		require.NoError(t, err)
 	})
 
 	t.Run("Successfully reload multiple configuration files with watch configuration", func(t *testing.T) {
-		outputChan := make(chan string, 100)
-		defer close(outputChan)
-
 		file1 := "demo1.config.yaml"
 		file2 := "demo2.config.yaml"
 		file3 := "demo2.config.yaml"
 		files := []string{file1, file2, file3}
 
 		opts := testenv.RunRouterBinConfigOptions{
-			ConfigOverridePath: strings.Join(files, ","),
-			OutputChannel:      outputChan,
-			OverrideDirectory:  t.TempDir(),
+			ConfigOverridePath:       strings.Join(files, ","),
+			AssertOnRouterBinaryLogs: true,
+			OverrideDirectory:        t.TempDir(),
 		}
 
 		for _, file := range files {
@@ -202,7 +197,7 @@ watch_config:
   interval: "10s"
 			`, file2, opts.OverrideDirectory)
 
-			require.True(t, xEnv.IsLogReceivedFromOutput(ctx, outputChan, `"msg":"Reloading Router"`, 10*time.Second))
+			require.True(t, xEnv.IsLogReceivedFromOutput(ctx, `"msg":"Reloading Router"`, 10*time.Second))
 		})
 
 		require.NoError(t, err)

@@ -57,13 +57,13 @@ func (e *Environment) SignalRouterProcess(sig os.Signal) error {
 	return e.routerCmd.Process.Signal(sig)
 }
 
-func (e *Environment) IsLogReceivedFromOutput(ctx context.Context, outputChan <-chan string, contains string, timeout time.Duration) bool {
+func (e *Environment) IsLogReceivedFromOutput(ctx context.Context, contains string, timeout time.Duration) bool {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
 	for {
 		select {
-		case line := <-outputChan:
+		case line := <-e.cmdLogChannel:
 			if strings.Contains(line, contains) {
 				return true
 			}
@@ -104,9 +104,9 @@ func getRouterBinary(t *testing.T, ctx context.Context) string {
 }
 
 type RunRouterBinConfigOptions struct {
-	ConfigOverridePath string
-	OverrideDirectory  string
-	OutputChannel      chan<- string // This should be a buffered channel or nil if not needed
+	ConfigOverridePath       string
+	OverrideDirectory        string
+	AssertOnRouterBinaryLogs bool
 }
 
 // runRouterBin starts the router binary and returns an Environment.
@@ -156,8 +156,13 @@ func runRouterBin(t *testing.T, ctx context.Context, opts RunRouterBinConfigOpti
 		cmd.Dir = t.TempDir()
 	}
 
+	var cmdLogChannel chan string
+	if opts.AssertOnRouterBinaryLogs {
+		cmdLogChannel = make(chan string, 100)
+	}
+
 	newCtx, cancel := context.WithCancelCause(ctx)
-	err = runCmdWithLogs(t, ctx, cmd, false, opts.OutputChannel)
+	err = runCmdWithLogs(t, ctx, cmd, false, cmdLogChannel)
 	if err != nil {
 		return nil, err
 	}
@@ -186,7 +191,7 @@ func runRouterBin(t *testing.T, ctx context.Context, opts RunRouterBinConfigOpti
 		shutdown:      atomic.NewBool(false),
 		shutdownDelay: 30 * time.Second,
 		routerCmd:     cmd,
-		cmdLogChannel: opts.OutputChannel,
+		cmdLogChannel: cmdLogChannel,
 	}
 
 	// Wait for server readiness
@@ -212,6 +217,7 @@ func runCmdWithLogs(t *testing.T, ctx context.Context, cmd *exec.Cmd, waitToComp
 			line := scanner.Text()
 			select {
 			case <-ctx.Done(): // Stop logging after test exits
+				close(outputChan)
 				return
 			default:
 				t.Log(line)
