@@ -798,7 +798,7 @@
       "Enabled": false
     },
     "ReplaceUndefinedOpFieldErrors": {
-      "Enabled": false
+      "Enabled": true
     },
     "ReplaceInvalidVarErrors": {
       "Enabled": false

@@ -452,5 +452,7 @@ client_header:
 
 apollo_compatibility_flags:
   enable_all: false
+  replace_undefined_op_field_errors:
+    enabled: true
   use_graphql_validation_failed_status:
     enabled: true
