@@ -2,6 +2,7 @@ name: CDN CI
 on:
   pull_request:
     paths:
+      - 'pnpm-lock.yaml'
       - cdn-server/**/*
       - .github/workflows/cdn-ci.yaml
 
