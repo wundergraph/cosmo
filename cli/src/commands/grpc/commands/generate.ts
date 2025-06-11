@@ -11,7 +11,7 @@ import { BaseCommandOptions } from '../../../core/types/types.js';
 export default (opts: BaseCommandOptions) => {
   const command = new Command('generate');
   command.description('generate a protobuf schema for a standalone grpc subgraph');
-  command.argument('[name]', 'The name of the standalone grpc subgraph', 'helloworld');
+  command.argument('[name]', 'The name of the proto service');
 
   command.requiredOption('-i, --input <path-to-input>', 'The GraphQL schema file to generate a protobuf schema from.');
   command.option(
@@ -32,6 +32,10 @@ type GenerationResult = {
 };
 
 async function generateCommandAction(name: string, options: any) {
+  if (!name) {
+    program.error('A name is required for the proto service');
+  }
+
   const spinner = Spinner();
   spinner.start('Generating protobuf schema...');
 

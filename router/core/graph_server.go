@@ -1361,32 +1361,29 @@ func (s *graphServer) setupConnector(ctx context.Context, config *nodev1.EngineC
 			continue
 		}
 
-		if pluginConfig := grpcConfig.GetPlugin(); pluginConfig != nil {
-			basePath := ""
+		basePath := ""
 
-			if s.plugins.Path != "" {
-				basePath = s.plugins.Path
-			}
+		if s.plugins.Path != "" {
+			basePath = s.plugins.Path
+		}
 
-			pluginPath, err := filepath.Abs(filepath.Join(basePath, pluginConfig.GetName(), "bin", fmt.Sprintf("%s_%s", runtime.GOOS, runtime.GOARCH)))
-			if err != nil {
-				return fmt.Errorf("failed to get plugin path: %w", err)
-			}
+		pluginPath, err := filepath.Abs(filepath.Join(basePath, pluginConfig.GetName(), "bin", fmt.Sprintf("%s_%s", runtime.GOOS, runtime.GOARCH)))
+		if err != nil {
+			return fmt.Errorf("failed to get plugin path: %w", err)
+		}
 
-			grpcPlugin, err := grpcconnector.NewGRPCPlugin(grpcconnector.GRPCPluginConfig{
-				Logger:     s.logger,
-				PluginName: pluginConfig.GetName(),
-				PluginPath: pluginPath,
-			})
-			if err != nil {
-				return fmt.Errorf("failed to create grpc plugin for subgraph %s: %w", dsConfig.Id, err)
-			}
+		grpcPlugin, err := grpcconnector.NewGRPCPlugin(grpcconnector.GRPCPluginConfig{
+			Logger:     s.logger,
+			PluginName: pluginConfig.GetName(),
+			PluginPath: pluginPath,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create grpc plugin for subgraph %s: %w", dsConfig.Id, err)
+		}
 
-			err = s.pluginHost.RegisterClientProvider(sg.Name, grpcPlugin)
-			if err != nil {
-				return fmt.Errorf("failed to register grpc plugin: %w", err)
-			}
-
+		err = s.pluginHost.RegisterClientProvider(sg.Name, grpcPlugin)
+		if err != nil {
+			return fmt.Errorf("failed to register grpc plugin: %w", err)
 		}
 	}
 
