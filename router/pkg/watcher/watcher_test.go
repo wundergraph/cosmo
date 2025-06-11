@@ -60,7 +60,7 @@ func TestOptionsValidation(t *testing.T) {
 		_, err := watcher.New(watcher.Options{
 			Interval: watchInterval,
 			Logger:   zap.NewNop(),
-			Path:     "",
+			Paths:    []string{""},
 		})
 		if assert.Error(t, err) {
 			assert.ErrorContains(t, err, "path must be provided")
@@ -73,7 +73,7 @@ func TestOptionsValidation(t *testing.T) {
 		_, err := watcher.New(watcher.Options{
 			Interval: watchInterval,
 			Logger:   zap.NewNop(),
-			Path:     "valid_path.txt",
+			Paths:    []string{"valid_path.txt"},
 			Callback: nil,
 		})
 		if assert.Error(t, err) {
@@ -99,7 +99,7 @@ func TestWatch(t *testing.T) {
 		watchFunc, err := watcher.New(watcher.Options{
 			Interval: watchInterval,
 			Logger:   zap.NewNop(),
-			Path:     tempFile,
+			Paths:    []string{tempFile},
 			Callback: spy.Call,
 		})
 		require.NoError(t, err)
@@ -146,7 +146,7 @@ func TestWatch(t *testing.T) {
 		watchFunc, err := watcher.New(watcher.Options{
 			Interval: watchInterval,
 			Logger:   zap.NewNop(),
-			Path:     tempFile,
+			Paths:    []string{tempFile},
 			Callback: spy.Call,
 		})
 		require.NoError(t, err)
@@ -182,7 +182,7 @@ func TestWatch(t *testing.T) {
 		watchFunc, err := watcher.New(watcher.Options{
 			Interval: watchInterval,
 			Logger:   zap.NewNop(),
-			Path:     tempFile,
+			Paths:    []string{tempFile},
 			Callback: spy.Call,
 		})
 		require.NoError(t, err)
@@ -224,7 +224,7 @@ func TestWatch(t *testing.T) {
 		watchFunc, err := watcher.New(watcher.Options{
 			Interval: watchInterval,
 			Logger:   zap.NewNop(),
-			Path:     tempFile,
+			Paths:    []string{tempFile},
 			Callback: spy.Call,
 		})
 		require.NoError(t, err)
@@ -288,7 +288,7 @@ func TestWatch(t *testing.T) {
 		watchFunc, err := watcher.New(watcher.Options{
 			Interval: watchInterval,
 			Logger:   zap.NewNop(),
-			Path:     watchedFile,
+			Paths:    []string{watchedFile},
 			Callback: spy.Call,
 		})
 		require.NoError(t, err)
@@ -323,7 +323,7 @@ func TestCancel(t *testing.T) {
 	watchFunc, err := watcher.New(watcher.Options{
 		Interval: watchInterval,
 		Logger:   zap.NewNop(),
-		Path:     tempFile,
+		Paths:    []string{tempFile},
 		Callback: func() {},
 	})
 	require.NoError(t, err)

@@ -1030,7 +1030,7 @@ type LoadResult struct {
 // This function loads the configuration files, apply environment variables and validates them with the json schema
 // In case of loading multiple configuration files, we will do the validation step for every configuration
 // and additionally post merging, since validations like oneOf can be bypassed
-func LoadConfig(configFilePathString string) (*LoadResult, error) {
+func LoadConfig(configFilePaths []string) (*LoadResult, error) {
 	cfg := &LoadResult{
 		Config:        Config{},
 		DefaultLoaded: false,
@@ -1040,10 +1040,6 @@ func LoadConfig(configFilePathString string) (*LoadResult, error) {
 	if err := env.Parse(&cfg.Config); err != nil {
 		return nil, err
 	}
-
-	// Note: Potential breaking change if current file name contained comma
-	// If there is a comma in the file name we will assume it's a list of config files
-	configFilePaths := strings.Split(configFilePathString, ",")
 
 	// Contains the bytes of every config as bytes
 	configListBytes := make([][]byte, 0, len(configFilePaths))
