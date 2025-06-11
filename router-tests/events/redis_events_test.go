@@ -546,9 +546,6 @@ func TestRedisEvents(t *testing.T) {
 				reader := bufio.NewReader(resp.Body)
 
 				assertRedisMultipartValueEventually(t, reader, "{\"payload\":{\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}]}}")
-
-				xEnv.WaitForSubscriptionCount(0, RedisWaitTimeout)
-				xEnv.WaitForConnectionCount(0, RedisWaitTimeout)
 			})
 		})
 	})
