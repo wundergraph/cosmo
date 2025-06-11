@@ -26,7 +26,7 @@ var (
 )
 
 // RunRouterBinary starts the router binary, sets up the test environment, and runs the provided test function.
-func RunRouterBinary(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) error {
+func RunRouterBinary(t *testing.T, cfg *Config, runRouterBinConfigOptions RunRouterBinConfigOptions, f func(t *testing.T, xEnv *Environment)) error {
 	t.Helper()
 
 	if testing.Short() {
@@ -37,7 +37,7 @@ func RunRouterBinary(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Envir
 	defer cancel()
 
 	routerPath := getRouterBinary(t, ctx)
-	env, err := runRouterBin(t, ctx, cfg, routerPath)
+	env, err := runRouterBin(t, ctx, runRouterBinConfigOptions, cfg, routerPath)
 	if err != nil {
 		return err
 	}
@@ -86,8 +86,13 @@ func getRouterBinary(t *testing.T, ctx context.Context) string {
 	return routerBin       // Return cached binary path
 }
 
+type RunRouterBinConfigOptions struct {
+	ConfigOverridePath string
+	OverrideDirectory  string
+}
+
 // runRouterBin starts the router binary and returns an Environment.
-func runRouterBin(t *testing.T, ctx context.Context, cfg *Config, binaryPath string) (*Environment, error) {
+func runRouterBin(t *testing.T, ctx context.Context, opts RunRouterBinConfigOptions, cfg *Config, binaryPath string) (*Environment, error) {
 	t.Helper()
 
 	fullBinPath, err := filepath.Abs(binaryPath)
@@ -104,7 +109,7 @@ func runRouterBin(t *testing.T, ctx context.Context, cfg *Config, binaryPath str
 	testCdn := SetupCDNServer(t, freeport.GetOne(t))
 	var envs []string
 
-	for key, val := range map[string]string{
+	envVars := map[string]string{
 		"GRAPH_API_TOKEN":      token,
 		"LISTEN_ADDR":          listenerAddr,
 		"CDN_URL":              testCdn.URL,
@@ -113,13 +118,26 @@ func runRouterBin(t *testing.T, ctx context.Context, cfg *Config, binaryPath str
 		"SHUTDOWN_DELAY":       "30s",
 		"CDN_CACHE_SIZE":       fmt.Sprintf("%d", 1024*1024),
 		"DEMO_MODE":            fmt.Sprintf("%t", cfg.DemoMode),
-	} {
+	}
+
+	// If user has passed in a config override path
+	if opts.ConfigOverridePath != "" {
+		envVars["CONFIG_PATH"] = opts.ConfigOverridePath
+	}
+
+	for key, val := range envVars {
 		envs = append(envs, fmt.Sprintf("%s=%s", key, val))
 	}
 
 	cmd := exec.Command(fullBinPath)
 	cmd.Env = envs
-	cmd.Dir = t.TempDir()
+
+	if opts.OverrideDirectory != "" {
+		cmd.Dir = opts.OverrideDirectory
+	} else {
+		cmd.Dir = t.TempDir()
+	}
+
 	newCtx, cancel := context.WithCancelCause(ctx)
 	err = runCmdWithLogs(t, ctx, cmd, false)
 	if err != nil {

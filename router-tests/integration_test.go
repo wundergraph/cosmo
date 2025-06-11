@@ -58,7 +58,7 @@ func TestConfigReload(t *testing.T) {
 		// Can be very slow, compiles the router binary if needed
 		err := testenv.RunRouterBinary(t, &testenv.Config{
 			DemoMode: true,
-		}, func(t *testing.T, xEnv *testenv.Environment) {
+		}, testenv.RunRouterBinConfigOptions{}, func(t *testing.T, xEnv *testenv.Environment) {
 			t.Logf("running router binary, cwd: %s", xEnv.GetRouterProcessCwd())
 
 			ctx := context.Background()
@@ -90,7 +90,7 @@ readiness_check_path: "/after"
 		// Can be very slow, compiles the router binary if needed
 		err := testenv.RunRouterBinary(t, &testenv.Config{
 			DemoMode: true,
-		}, func(t *testing.T, xEnv *testenv.Environment) {
+		}, testenv.RunRouterBinConfigOptions{}, func(t *testing.T, xEnv *testenv.Environment) {
 			t.Logf("running router binary, cwd: %s", xEnv.GetRouterProcessCwd())
 
 			ctx := context.Background()
@@ -116,6 +116,45 @@ asdasdasdasdas: "NOT WORKING CONFIG!!!"
 		require.NoError(t, err)
 	})
 
+	t.Run("Successfully reloads multiple configuration files with SIGHUP", func(t *testing.T) {
+		// Can be very slow, compiles the router binary if needed
+
+		path := "demo2.config.yaml"
+		opts := testenv.RunRouterBinConfigOptions{
+			ConfigOverridePath: path,
+			OverrideDirectory:  t.TempDir(),
+		}
+
+		f, err := os.Create(filepath.Join(opts.OverrideDirectory, path))
+		require.NoError(t, err)
+
+		_, err = f.WriteString(`
+version: "1"
+`)
+		require.NoError(t, f.Close())
+
+		err = testenv.RunRouterBinary(t, &testenv.Config{
+			DemoMode: true,
+		}, opts, func(t *testing.T, xEnv *testenv.Environment) {
+			t.Logf("running router binary, cwd: %s", xEnv.GetRouterProcessCwd())
+
+			reF, err := os.Create(filepath.Join(opts.OverrideDirectory, path))
+			require.NoError(t, err)
+
+			_, err = reF.WriteString(`
+version: "1"
+
+readiness_check_path: "/after"
+`)
+			require.NoError(t, reF.Close())
+
+			ctx := context.Background()
+			require.NoError(t, xEnv.WaitForServer(ctx, xEnv.RouterURL+"/after", 600, 60), "healthcheck post-reload failed")
+		})
+
+		require.NoError(t, err)
+	})
+
 }
 
 func TestNoSubgraphConfigWithoutDemoMode(t *testing.T) {
@@ -124,7 +163,7 @@ func TestNoSubgraphConfigWithoutDemoMode(t *testing.T) {
 	err := testenv.RunRouterBinary(t, &testenv.Config{
 		DemoMode:      false,
 		NoRetryClient: true,
-	}, func(t *testing.T, xEnv *testenv.Environment) {
+	}, testenv.RunRouterBinConfigOptions{}, func(t *testing.T, xEnv *testenv.Environment) {
 		require.Fail(t, "Router should not start without execution config")
 	})
 	require.Error(t, err)
@@ -136,7 +175,7 @@ func TestNoSubgraphConfigWithDemoMode(t *testing.T) {
 	err := testenv.RunRouterBinary(t, &testenv.Config{
 		DemoMode:      true,
 		NoRetryClient: true,
-	}, func(t *testing.T, xEnv *testenv.Environment) {
+	}, testenv.RunRouterBinConfigOptions{}, func(t *testing.T, xEnv *testenv.Environment) {
 		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 			Query: `query { hello }`,
 		})

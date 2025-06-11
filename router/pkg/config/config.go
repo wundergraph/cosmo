@@ -1057,6 +1057,7 @@ func LoadConfig(configFilePaths []string) (*LoadResult, error) {
 		// Read the custom config file
 		var configFileBytes []byte
 		configFileBytes, err := os.ReadFile(configFilePath)
+
 		if err != nil {
 			if configFilePath == DefaultConfigPath {
 				// We want to keep this simple for not allow the default config since we don't have a yaml to merge
