@@ -3,6 +3,7 @@ package wsproto
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/gobwas/ws"
@@ -21,7 +22,7 @@ type Proto interface {
 	// Complete is sent to indicate the requested operation is done and no more results will come in
 	Complete(id string) error
 
-	// Close closes the connection with a close frame with the given code and reason
+	// Close sends a close frame with the given code and reason
 	Close(code ws.StatusCode, reason string) error
 }
 
@@ -29,7 +30,6 @@ type ProtoConn interface {
 	ReadJSON(v any) error
 	WriteJSON(v any) error
 	WriteCloseFrame(code ws.StatusCode, reason string) error
-	Close() error
 }
 
 // MessageType indicates the type of the message received from the client
@@ -58,12 +58,7 @@ func Subprotocols() []string {
 }
 
 func IsSupportedSubprotocol(subProtocol string) bool {
-	for _, s := range Subprotocols() {
-		if s == subProtocol {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(Subprotocols(), subProtocol)
 }
 
 func NewProtocol(subProtocol string, conn ProtoConn) (Proto, error) {
