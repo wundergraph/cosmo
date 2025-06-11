@@ -178,31 +178,42 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
 
     let grcpConfig: GRPCConfiguration | undefined;
 
-    if (subgraph.kind === SubgraphKind.Standard) {
-      subscriptionConfig.enabled = true;
-      subscriptionConfig.protocol = parseGraphQLSubscriptionProtocol(subgraph.subscriptionProtocol || 'ws');
-      subscriptionConfig.websocketSubprotocol = parseGraphQLWebsocketSubprotocol(
-        subgraph.websocketSubprotocol || 'auto',
-      );
-      // When changing this, please do it in the router subgraph override as well
-      subscriptionConfig.url = new ConfigurationVariable({
-        kind: ConfigurationVariableKind.STATIC_CONFIGURATION_VARIABLE,
-        staticVariableContent: subgraph.subscriptionUrl || subgraph.url,
-      });
-    } else if (subgraph.kind === SubgraphKind.Plugin) {
-      grcpConfig = new GRPCConfiguration({
-        mapping: subgraph.mapping,
-        protoSchema: subgraph.protoSchema,
-        plugin: new PluginConfiguration({
-          name: subgraph.name,
-          version: subgraph.version,
-        }),
-      });
-    } else if (subgraph.kind === SubgraphKind.GRPC) {
-      grcpConfig = new GRPCConfiguration({
-        mapping: subgraph.mapping,
-        protoSchema: subgraph.protoSchema,
-      });
+    switch (subgraph.kind) {
+      case SubgraphKind.Standard: {
+        subscriptionConfig.enabled = true;
+        subscriptionConfig.protocol = parseGraphQLSubscriptionProtocol(subgraph.subscriptionProtocol || 'ws');
+        subscriptionConfig.websocketSubprotocol = parseGraphQLWebsocketSubprotocol(
+          subgraph.websocketSubprotocol || 'auto',
+        );
+        // When changing this, please do it in the router subgraph override as well
+        subscriptionConfig.url = new ConfigurationVariable({
+          kind: ConfigurationVariableKind.STATIC_CONFIGURATION_VARIABLE,
+          staticVariableContent: subgraph.subscriptionUrl || subgraph.url,
+        });
+
+        break;
+      }
+      case SubgraphKind.Plugin: {
+        grcpConfig = new GRPCConfiguration({
+          mapping: subgraph.mapping,
+          protoSchema: subgraph.protoSchema,
+          plugin: new PluginConfiguration({
+            name: subgraph.name,
+            version: subgraph.version,
+          }),
+        });
+
+        break;
+      }
+      case SubgraphKind.GRPC: {
+        grcpConfig = new GRPCConfiguration({
+          mapping: subgraph.mapping,
+          protoSchema: subgraph.protoSchema,
+        });
+
+        break;
+      }
+      // No default
     }
 
     let kind: DataSourceKind;
