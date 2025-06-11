@@ -57,14 +57,27 @@ func TestOptionsValidation(t *testing.T) {
 	t.Run("path not provided", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := watcher.New(watcher.Options{
-			Interval: watchInterval,
-			Logger:   zap.NewNop(),
-			Paths:    []string{""},
+		t.Run("nil path slice", func(t *testing.T) {
+			_, err := watcher.New(watcher.Options{
+				Interval: watchInterval,
+				Logger:   zap.NewNop(),
+				Paths:    nil,
+			})
+			if assert.Error(t, err) {
+				assert.ErrorContains(t, err, "path must be provided")
+			}
 		})
-		if assert.Error(t, err) {
-			assert.ErrorContains(t, err, "path must be provided")
-		}
+
+		t.Run("empty path slice", func(t *testing.T) {
+			_, err := watcher.New(watcher.Options{
+				Interval: watchInterval,
+				Logger:   zap.NewNop(),
+				Paths:    []string{},
+			})
+			if assert.Error(t, err) {
+				assert.ErrorContains(t, err, "path must be provided")
+			}
+		})
 	})
 
 	t.Run("callback not provided", func(t *testing.T) {
@@ -130,6 +143,56 @@ func TestWatch(t *testing.T) {
 		}, assertTimeout, assertPollInterval)
 	})
 
+	t.Run("create and move for multiple files", func(t *testing.T) {
+		t.Parallel()
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		dir := t.TempDir()
+		tempFileA1 := filepath.Join(dir, "config_a_1.json")
+		require.NoError(t, os.WriteFile(tempFileA1, []byte("a"), 0o600))
+
+		tempFileB1 := filepath.Join(dir, "config_b_1.json")
+		require.NoError(t, os.WriteFile(tempFileB1, []byte("ee"), 0o600))
+
+		tempFileC1 := filepath.Join(dir, "config_c_1.json")
+		require.NoError(t, os.WriteFile(tempFileC1, []byte("ee"), 0o600))
+
+		spy := test.NewCallSpy()
+
+		watchFunc, err := watcher.New(watcher.Options{
+			Interval: watchInterval,
+			Logger:   zap.NewNop(),
+			Paths:    []string{tempFileA1, tempFileB1, tempFileC1},
+			Callback: spy.Call,
+		})
+		require.NoError(t, err)
+
+		eg, ctx := errgroup.WithContext(ctx)
+		eg.Go(func() error {
+			return watchFunc(ctx)
+		})
+
+		time.Sleep(2 * watchInterval)
+
+		tempFileA2 := filepath.Join(dir, "config_a_2.json")
+		tempFileB2 := filepath.Join(dir, "config_b_2.json")
+
+		require.NoError(t, os.WriteFile(tempFileA2, []byte("ab1"), 0o600))
+		require.NoError(t, os.WriteFile(tempFileB2, []byte("ab2"), 0o600))
+
+		require.NoError(t, os.Rename(tempFileA2, tempFileA1))
+
+		require.EventuallyWithT(t, func(t *assert.CollectT) {
+			spy.AssertCalled(t, 1)
+		}, assertTimeout, assertPollInterval)
+
+		require.NoError(t, os.Rename(tempFileB2, tempFileB1))
+		require.EventuallyWithT(t, func(t *assert.CollectT) {
+			spy.AssertCalled(t, 2)
+		}, assertTimeout, assertPollInterval)
+	})
+
 	t.Run("modify an existing file", func(t *testing.T) {
 		t.Parallel()
 
@@ -163,6 +226,51 @@ func TestWatch(t *testing.T) {
 
 		require.EventuallyWithT(t, func(t *assert.CollectT) {
 			spy.AssertCalled(t, 1)
+		}, assertTimeout, assertPollInterval)
+	})
+
+	t.Run("modify multiple existing files", func(t *testing.T) {
+		t.Parallel()
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		dir := t.TempDir()
+		tempFile1 := filepath.Join(dir, "config_1.json")
+		tempFile2 := filepath.Join(dir, "config_2.json")
+		tempFile3 := filepath.Join(dir, "config_3.json")
+
+		require.NoError(t, os.WriteFile(tempFile1, []byte("a1"), 0o600))
+		require.NoError(t, os.WriteFile(tempFile2, []byte("a2"), 0o600))
+		require.NoError(t, os.WriteFile(tempFile3, []byte("a3"), 0o600))
+
+		spy := test.NewCallSpy()
+
+		watchFunc, err := watcher.New(watcher.Options{
+			Interval: watchInterval,
+			Logger:   zap.NewNop(),
+			Paths:    []string{tempFile1, tempFile2, tempFile3},
+			Callback: spy.Call,
+		})
+		require.NoError(t, err)
+
+		eg, ctx := errgroup.WithContext(ctx)
+		eg.Go(func() error {
+			return watchFunc(ctx)
+		})
+
+		time.Sleep(2 * watchInterval)
+
+		require.NoError(t, os.WriteFile(tempFile1, []byte("b1"), 0o600))
+		require.EventuallyWithT(t, func(t *assert.CollectT) {
+			spy.AssertCalled(t, 1)
+		}, assertTimeout, assertPollInterval)
+
+		time.Sleep(2 * watchInterval)
+
+		require.NoError(t, os.WriteFile(tempFile3, []byte("b2"), 0o600))
+		require.EventuallyWithT(t, func(t *assert.CollectT) {
+			spy.AssertCalled(t, 2)
 		}, assertTimeout, assertPollInterval)
 	})
 
@@ -207,6 +315,57 @@ func TestWatch(t *testing.T) {
 		}, assertTimeout, assertPollInterval)
 	})
 
+	t.Run("delete and replace multiple files", func(t *testing.T) {
+		t.Parallel()
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		dir := t.TempDir()
+		tempFile1 := filepath.Join(dir, "config_1.json")
+		tempFile2 := filepath.Join(dir, "config_2.json")
+		tempFile3 := filepath.Join(dir, "config_3.json")
+
+		require.NoError(t, os.WriteFile(tempFile1, []byte("a"), 0o600))
+		require.NoError(t, os.WriteFile(tempFile2, []byte("a"), 0o600))
+		require.NoError(t, os.WriteFile(tempFile3, []byte("a"), 0o600))
+
+		spy := test.NewCallSpy()
+
+		watchFunc, err := watcher.New(watcher.Options{
+			Interval: watchInterval,
+			Logger:   zap.NewNop(),
+			Paths:    []string{tempFile1, tempFile2, tempFile3},
+			Callback: spy.Call,
+		})
+		require.NoError(t, err)
+
+		eg, ctx := errgroup.WithContext(ctx)
+		eg.Go(func() error {
+			return watchFunc(ctx)
+		})
+
+		time.Sleep(2 * watchInterval)
+
+		require.NoError(t, os.Remove(tempFile1))
+
+		time.Sleep(2 * watchInterval)
+
+		require.NoError(t, os.WriteFile(tempFile1, []byte("b"), 0o600))
+		require.EventuallyWithT(t, func(t *assert.CollectT) {
+			spy.AssertCalled(t, 1)
+		}, assertTimeout, assertPollInterval)
+
+		require.NoError(t, os.Remove(tempFile3))
+
+		time.Sleep(2 * watchInterval)
+
+		require.NoError(t, os.WriteFile(tempFile3, []byte("b"), 0o600))
+		require.EventuallyWithT(t, func(t *assert.CollectT) {
+			spy.AssertCalled(t, 2)
+		}, assertTimeout, assertPollInterval)
+	})
+
 	t.Run("move and replace a file", func(t *testing.T) {
 		t.Parallel()
 
@@ -246,6 +405,59 @@ func TestWatch(t *testing.T) {
 
 		require.EventuallyWithT(t, func(t *assert.CollectT) {
 			spy.AssertCalled(t, 1)
+		}, assertTimeout, assertPollInterval)
+	})
+
+	t.Run("move and replace multiple files", func(t *testing.T) {
+		t.Parallel()
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		dir := t.TempDir()
+		tempFileA1 := filepath.Join(dir, "config_a_1.json")
+		tempFileA2 := filepath.Join(dir, "config_a_2.json")
+
+		tempFileB1 := filepath.Join(dir, "config_b_1.json")
+		tempFileB2 := filepath.Join(dir, "config_b_2.json")
+
+		tempFileC1 := filepath.Join(dir, "config_c_1.json")
+
+		require.NoError(t, os.WriteFile(tempFileA1, []byte("a"), 0o600))
+		require.NoError(t, os.WriteFile(tempFileB1, []byte("a"), 0o600))
+		require.NoError(t, os.WriteFile(tempFileC1, []byte("a"), 0o600))
+
+		spy := test.NewCallSpy()
+
+		watchFunc, err := watcher.New(watcher.Options{
+			Interval: watchInterval,
+			Logger:   zap.NewNop(),
+			Paths:    []string{tempFileA1, tempFileB1, tempFileC1},
+			Callback: spy.Call,
+		})
+		require.NoError(t, err)
+
+		eg, ctx := errgroup.WithContext(ctx)
+		eg.Go(func() error {
+			return watchFunc(ctx)
+		})
+
+		time.Sleep(2 * watchInterval)
+
+		require.NoError(t, os.Rename(tempFileA1, tempFileA2))
+		time.Sleep(2 * watchInterval)
+		require.NoError(t, os.Rename(tempFileA2, tempFileA1))
+		require.EventuallyWithT(t, func(t *assert.CollectT) {
+			spy.AssertCalled(t, 1)
+		}, assertTimeout, assertPollInterval)
+
+		time.Sleep(2 * watchInterval)
+
+		require.NoError(t, os.Rename(tempFileB1, tempFileB2))
+		time.Sleep(2 * watchInterval)
+		require.NoError(t, os.Rename(tempFileB2, tempFileB1))
+		require.EventuallyWithT(t, func(t *assert.CollectT) {
+			spy.AssertCalled(t, 2)
 		}, assertTimeout, assertPollInterval)
 	})
 
@@ -305,6 +517,63 @@ func TestWatch(t *testing.T) {
 
 		require.EventuallyWithT(t, func(t *assert.CollectT) {
 			spy.AssertCalled(t, 1)
+		}, assertTimeout, assertPollInterval)
+	})
+
+	t.Run("kubernetes-like symlinks for multiple files", func(t *testing.T) {
+		t.Parallel()
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		createLinkedFile := func(t *testing.T, dir string, prefix string) (string, string) {
+			watchedFile := filepath.Join(dir, prefix+"_config.json")
+
+			linkedFolder := filepath.Join(dir, prefix+"linked_folder")
+			linkedFile := filepath.Join(linkedFolder, prefix+"config.json")
+
+			realFolder := filepath.Join(dir, prefix+"real_folder")
+			realFile := filepath.Join(realFolder, prefix+"config.json")
+
+			require.NoError(t, os.Mkdir(realFolder, 0o700))
+			require.NoError(t, os.WriteFile(realFile, []byte("a"), 0o600))
+
+			require.NoError(t, os.Symlink(realFolder, linkedFolder))
+			require.NoError(t, os.Symlink(linkedFile, watchedFile))
+			return watchedFile, realFile
+		}
+
+		watchedFile1, realFile1 := createLinkedFile(t, t.TempDir(), "file1")
+		watchedFile2, _ := createLinkedFile(t, t.TempDir(), "file2")
+		watchedFile3, realFile3 := createLinkedFile(t, t.TempDir(), "file3")
+
+		spy := test.NewCallSpy()
+
+		watchFunc, err := watcher.New(watcher.Options{
+			Interval: watchInterval,
+			Logger:   zap.NewNop(),
+			Paths:    []string{watchedFile1, watchedFile2, watchedFile3},
+			Callback: spy.Call,
+		})
+		require.NoError(t, err)
+
+		eg, ctx := errgroup.WithContext(ctx)
+		eg.Go(func() error {
+			return watchFunc(ctx)
+		})
+
+		time.Sleep(2 * watchInterval)
+
+		require.NoError(t, os.WriteFile(realFile1, []byte("b"), 0o600))
+		require.EventuallyWithT(t, func(t *assert.CollectT) {
+			spy.AssertCalled(t, 1)
+		}, assertTimeout, assertPollInterval)
+
+		time.Sleep(2 * watchInterval)
+
+		require.NoError(t, os.WriteFile(realFile3, []byte("b"), 0o600))
+		require.EventuallyWithT(t, func(t *assert.CollectT) {
+			spy.AssertCalled(t, 2)
 		}, assertTimeout, assertPollInterval)
 	})
 }
