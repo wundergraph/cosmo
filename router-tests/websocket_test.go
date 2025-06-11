@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/json"
 	"errors"
@@ -80,6 +81,18 @@ type CountEmpData struct {
 // CountEmpResponse represents the structure of the countEmp subscription data
 type CountEmpResponse struct {
 	Data CountEmpData `json:"data"`
+}
+
+type TestAuthenticator struct{}
+
+func (a TestAuthenticator) Name() string {
+	return "Test"
+}
+
+func (a TestAuthenticator) Authenticate(ctx context.Context, p authentication.Provider) (authentication.Claims, error) {
+	return authentication.Claims{
+		"favorite_animal": "bear",
+	}, nil
 }
 
 func TestWebSockets(t *testing.T) {
@@ -846,6 +859,63 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, conn.Close())
 			xEnv.WaitForSubscriptionCount(0, time.Second*5)
 		})
+	})
+	t.Run("can use auth context in header expressions for subgraph requests", func(t *testing.T) {
+		t.Parallel()
+
+		headerRules := config.HeaderRules{
+			All: &config.GlobalHeaderRule{
+				Request: []*config.RequestHeaderRule{
+					{
+						Operation:  config.HeaderRuleOperationSet,
+						Name:       "x-authenticated",
+						Expression: "request.auth.isAuthenticated ? '1' : '0'",
+					},
+					{
+						Operation:  config.HeaderRuleOperationSet,
+						Name:       "x-favorite-animal",
+						Expression: "request.auth.claims.favorite_animal",
+					},
+				},
+			},
+		}
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithHeaderRules(headerRules),
+				core.WithAccessController(core.NewAccessController([]authentication.Authenticator{
+					TestAuthenticator{},
+				}, false)),
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				GlobalMiddleware: func(next http.Handler) http.Handler {
+					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						authHeader := r.Header.Get("x-authenticated")
+						require.Equal(t, "1", authHeader)
+
+						favoriteAnimalHeader := r.Header.Get("x-favorite-animal")
+						require.Equal(t, "bear", favoriteAnimalHeader)
+						next.ServeHTTP(w, r)
+					})
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+			err := testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp } }"}`),
+			})
+			require.NoError(t, err)
+			var res testenv.WebSocketMessage
+			err = testenv.WSReadJSON(t, conn, &res)
+			require.NoError(t, err)
+			require.Equal(t, "next", res.Type)
+			require.Equal(t, "1", res.ID)
+			require.NoError(t, conn.Close())
+			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+		})
+
 	})
 	t.Run("subscription with header propagation sse subgraph post", func(t *testing.T) {
 		t.Parallel()
