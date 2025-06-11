@@ -510,7 +510,7 @@ func TestNatsEvents(t *testing.T) {
 				RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
 				RouterOptions: []core.Option{
 					core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-						SubscriptionMultipartPrintBoundary: config.ApolloCompatibilitySubscriptionMultipartPrintBoundary{
+						SubscriptionMultipartPrintBoundary: config.ApolloCompatibilityFlag{
 							Enabled: false,
 						},
 					}),
@@ -613,7 +613,7 @@ func TestNatsEvents(t *testing.T) {
 				RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
 				RouterOptions: []core.Option{
 					core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-						SubscriptionMultipartPrintBoundary: config.ApolloCompatibilitySubscriptionMultipartPrintBoundary{
+						SubscriptionMultipartPrintBoundary: config.ApolloCompatibilityFlag{
 							Enabled: true,
 						},
 					}),
@@ -658,7 +658,7 @@ func TestNatsEvents(t *testing.T) {
 				RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
 				RouterOptions: []core.Option{
 					core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-						SubscriptionMultipartPrintBoundary: config.ApolloCompatibilitySubscriptionMultipartPrintBoundary{
+						SubscriptionMultipartPrintBoundary: config.ApolloCompatibilityFlag{
 							Enabled: true,
 						},
 					}),
@@ -1194,19 +1194,12 @@ func TestNatsEvents(t *testing.T) {
 	})
 
 	t.Run("subscribing to a non-existent stream returns an error", func(t *testing.T) {
-		t.Skip("Skipping this test for now, while fixing it")
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
 			EnableNats:               true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			var subscription struct {
-				employeeUpdatedNatsStream struct {
-					ID float64 `graphql:"id"`
-				} `graphql:"employeeUpdatedNatsStream(id: 12)"`
-			}
-
 			js, err := jetstream.New(xEnv.NatsConnectionDefault)
 			require.NoError(t, err)
 
@@ -1221,30 +1214,44 @@ func TestNatsEvents(t *testing.T) {
 				_ = client.Close()
 			})
 
-			var counter atomic.Uint32
+			var subscription struct {
+				employeeUpdatedNatsStream struct {
+					ID float64 `graphql:"id"`
+				} `graphql:"employeeUpdatedNatsStream(id: 12)"`
+			}
+
+			gotError := make(chan error)
 
 			_, err = client.Subscribe(&subscription, nil, func(dataValue []byte, errValue error) error {
-				defer counter.Add(1)
+				gotError <- errValue
 
-				require.Contains(t,
-					errValue.Error(),
-					fmt.Sprintf(
-						"EDFS error: failed to create or update consumer for stream \"%s\"",
-						xEnv.GetPubSubName("streamName"),
-					),
-				)
 				return nil
 			})
 			require.NoError(t, err)
 
 			go func() {
 				clientErr := client.Run()
-				require.NoError(t, clientErr)
+				assert.NoError(t, clientErr, "unexpected client run error, this used to be flaky")
 			}()
 
-			require.Eventually(t, func() bool {
-				return counter.Load() == 1
-			}, NatsWaitTimeout, time.Millisecond*100)
+			select {
+			case err := <-gotError:
+				require.ErrorContains(t, err, fmt.Sprintf(
+					"EDFS error: failed to create or update consumer for stream \"%s\"",
+					xEnv.GetPubSubName("streamName"),
+				))
+			case <-time.After(5 * time.Second):
+				t.Fatal("timed out waiting for nats error")
+			}
+
+			// Any further errors should be treated as a failure
+			// as it likely indicates the server telling the client to retry
+			select {
+			case err := <-gotError:
+				t.Fatalf("recieved >1 error on channel: %v", err)
+			case <-time.After(5 * time.Second):
+				break
+			}
 		})
 	})
 
