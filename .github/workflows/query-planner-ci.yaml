@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       # This workflow should run every time router-ci and cli-ci runs
+      - 'pnpm-lock.yaml'
       - 'cli/**/*'
       - 'connect/**/*'
       - '.github/workflows/cli-ci.yaml'
