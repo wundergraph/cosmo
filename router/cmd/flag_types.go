@@ -34,6 +34,6 @@ func (s *multipleString) Set(value string) error {
 		*s = make(multipleString, 0)
 		return nil
 	}
-	*s = strings.Split(value, ",")
+	*s = append(*s, strings.Split(value, ",")...)
 	return nil
 }

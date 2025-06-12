@@ -217,7 +217,9 @@ func runCmdWithLogs(t *testing.T, ctx context.Context, cmd *exec.Cmd, waitToComp
 			line := scanner.Text()
 			select {
 			case <-ctx.Done(): // Stop logging after test exits
-				close(outputChan)
+				if outputChan != nil {
+					close(outputChan)
+				}
 				return
 			default:
 				t.Log(line)
