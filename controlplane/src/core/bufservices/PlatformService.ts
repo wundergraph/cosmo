@@ -12,6 +12,7 @@ import { getSubgraphMetrics } from './analytics/getSubgraphMetrics.js';
 import { getSubgraphMetricsErrorRate } from './analytics/getSubgraphMetricsErrorRate.js';
 import { getTrace } from './analytics/getTrace.js';
 import { createAPIKey } from './api-key/createAPIKey.js';
+import { updateAPIKey } from './api-key/updateAPIKey.js';
 import { deleteAPIKey } from './api-key/deleteAPIKey.js';
 import { getAPIKeys } from './api-key/getAPIKeys.js';
 import { createBillingPortalSession } from './billing/createBillingPortalSession.js';
@@ -38,14 +39,6 @@ import { removeOperationOverrides } from './check/removeOperationOverrides.js';
 import { toggleChangeOverridesForAllOperations } from './check/toggleChangeOverridesForAllOperations.js';
 import { createContract } from './contract/createContract.js';
 import { updateContract } from './contract/updateContract.js';
-import { createDiscussion } from './discussion/createDiscussion.js';
-import { deleteDiscussionComment } from './discussion/deleteDiscussionComment.js';
-import { getAllDiscussions } from './discussion/getAllDiscussions.js';
-import { getDiscussion } from './discussion/getDiscussion.js';
-import { getDiscussionSchemas } from './discussion/getDiscussionSchemas.js';
-import { replyToDiscussion } from './discussion/replyToDiscussion.js';
-import { setDiscussionResolution } from './discussion/setDiscussionResolution.js';
-import { updateDiscussionComment } from './discussion/updateDiscussionComment.js';
 import { createFeatureFlag } from './feature-flag/createFeatureFlag.js';
 import { deleteFeatureFlag } from './feature-flag/deleteFeatureFlag.js';
 import { enableFeatureFlag } from './feature-flag/enableFeatureFlag.js';
@@ -80,6 +73,8 @@ import { enableGraphPruning } from './linting/enableGraphPruning.js';
 import { enableLintingForTheNamespace } from './linting/enableLintingForTheNamespace.js';
 import { getNamespaceGraphPruningConfig } from './linting/getNamespaceGraphPruningConfig.js';
 import { getNamespaceLintConfig } from './linting/getNamespaceLintConfig.js';
+import { getNamespaceChecksConfig } from './check/getNamespaceChecksConfig.js';
+import { updateNamespaceChecksConfig } from './check/updateNamespaceChecksConfig.js';
 import { createMonograph } from './monograph/createMonograph.js';
 import { deleteMonograph } from './monograph/deleteMonograph.js';
 import { migrateMonograph } from './monograph/migrateMonograph.js';
@@ -105,8 +100,14 @@ import { updateIntegrationConfig } from './notification/updateIntegrationConfig.
 import { updateOrganizationWebhookConfig } from './notification/updateOrganizationWebhookConfig.js';
 import { createOrganization } from './organization/createOrganization.js';
 import { deleteOrganization } from './organization/deleteOrganization.js';
+import { restoreOrganization } from './organization/restoreOrganization.js';
 import { getAuditLogs } from './organization/getAuditLogs.js';
 import { getOrganizationMembers } from './organization/getOrganizationMembers.js';
+import { createOrganizationGroup } from './organization/createOrganizationGroup.js';
+import { getOrganizationGroups } from './organization/getOrganizationGroups.js';
+import { getOrganizationGroupMembers } from './organization/getOrganizationGroupMembers.js';
+import { updateOrganizationGroup } from './organization/updateOrganizationGroup.js';
+import { deleteOrganizationGroup } from './organization/deleteOrganizationGroup.js';
 import { getPendingOrganizationMembers } from './organization/getPendingOrganizationMembers.js';
 import { isMemberLimitReached } from './organization/isMemberLimitReached.js';
 import { leaveOrganization } from './organization/leaveOrganization.js';
@@ -128,7 +129,6 @@ import { deleteOIDCProvider } from './sso/deleteOIDCProvider.js';
 import { getOIDCProvider } from './sso/getOIDCProvider.js';
 import { updateIDPMappers } from './sso/updateIDPMappers.js';
 import { addReadme } from './subgraph/addReadme.js';
-import { addSubgraphMember } from './subgraph/addSubgraphMember.js';
 import { checkSubgraphSchema } from './subgraph/checkSubgraphSchema.js';
 import { createFederatedSubgraph } from './subgraph/createFederatedSubgraph.js';
 import { deleteFederatedSubgraph } from './subgraph/deleteFederatedSubgraph.js';
@@ -141,7 +141,6 @@ import { getSubgraphSDLFromLatestComposition } from './subgraph/getSubgraphSDLFr
 import { getSubgraphs } from './subgraph/getSubgraphs.js';
 import { moveSubgraph } from './subgraph/moveSubgraph.js';
 import { publishFederatedSubgraph } from './subgraph/publishFederatedSubgraph.js';
-import { removeSubgraphMember } from './subgraph/removeSubgraphMember.js';
 import { updateSubgraph } from './subgraph/updateSubgraph.js';
 import { acceptOrDeclineInvitation } from './user/acceptOrDeclineInvitation.js';
 import { deleteUser } from './user/deleteUser.js';
@@ -151,10 +150,21 @@ import { getUserAccessibleResources } from './user/getUserAccessibleResources.js
 import { inviteUser } from './user/inviteUser.js';
 import { removeInvitation } from './user/removeInvitation.js';
 import { removeOrganizationMember } from './user/removeOrganizationMember.js';
-import { updateOrgMemberRole } from './user/updateOrgMemberRole.js';
+import { updateOrgMemberGroup } from './user/updateOrgMemberGroup.js';
 import { deleteCacheWarmerOperation } from './cache-warmer/deleteCacheWarmerOperation.js';
 import { setGraphRouterCompatibilityVersion } from './graph/setGraphRouterCompatibilityVersion.js';
 import { getOrganizationBySlug } from './organization/getOrganizationBySlug.js';
+import { getProposedSchemaOfCheckedSubgraph } from './check/getProposedSchemaOfCheckedSubgraph.js';
+import { getProposalsByFederatedGraph } from './proposal/getProposalsByFederatedGraph.js';
+import { getProposalChecks } from './proposal/getProposalChecks.js';
+import { updateProposal } from './proposal/updateProposal.js';
+import { createProposal } from './proposal/createProposal.js';
+import { getProposal } from './proposal/getProposal.js';
+import { enableProposalsForNamespace } from './proposal/enableProposalsForNamespace.js';
+import { getNamespaceProposalConfig } from './proposal/getNamespaceProposalConfig.js';
+import { configureNamespaceProposalConfig } from './proposal/configureNamespaceProposalConfig.js';
+import { getOperations } from './analytics/getOperations.js';
+import { getClientsFromAnalytics } from './federated-graph/getClientsFromAnalytics.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -216,6 +226,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     checkSubgraphSchema: (req, ctx) => {
       return checkSubgraphSchema(opts, req, ctx);
+    },
+
+    getProposedSchemaOfCheckedSubgraph: (req, ctx) => {
+      return getProposedSchemaOfCheckedSubgraph(opts, req, ctx);
     },
 
     fixSubgraphSchema: (req, ctx) => {
@@ -322,6 +336,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return createAPIKey(opts, req, ctx);
     },
 
+    updateAPIKey: (req, ctx) => {
+      return updateAPIKey(opts, req, ctx);
+    },
+
     deleteAPIKey: (req, ctx) => {
       return deleteAPIKey(opts, req, ctx);
     },
@@ -354,6 +372,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return deleteOrganization(opts, req, ctx);
     },
 
+    restoreOrganization: (req, ctx) => {
+      return restoreOrganization(opts, req, ctx);
+    },
+
     leaveOrganization: (req, ctx) => {
       return leaveOrganization(opts, req, ctx);
     },
@@ -362,8 +384,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return updateOrganizationDetails(opts, req, ctx);
     },
 
-    updateOrgMemberRole: (req, ctx) => {
-      return updateOrgMemberRole(opts, req, ctx);
+    updateOrgMemberGroup: (req, ctx) => {
+      return updateOrgMemberGroup(opts, req, ctx);
     },
 
     deleteRouterToken: (req, ctx) => {
@@ -400,14 +422,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     updateFeatureSettings: (req, ctx) => {
       return updateFeatureSettings(opts, req, ctx);
-    },
-
-    addSubgraphMember: (req, ctx) => {
-      return addSubgraphMember(opts, req, ctx);
-    },
-
-    removeSubgraphMember: (req, ctx) => {
-      return removeSubgraphMember(opts, req, ctx);
     },
 
     addReadme: (req, ctx) => {
@@ -529,6 +543,26 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return getPendingOrganizationMembers(opts, req, ctx);
     },
 
+    createOrganizationGroup: (req, ctx) => {
+      return createOrganizationGroup(opts, req, ctx);
+    },
+
+    getOrganizationGroups: (req, ctx) => {
+      return getOrganizationGroups(opts, req, ctx);
+    },
+
+    getOrganizationGroupMembers: (req, ctx) => {
+      return getOrganizationGroupMembers(opts, req, ctx);
+    },
+
+    updateOrganizationGroup: (req, ctx) => {
+      return updateOrganizationGroup(opts, req, ctx);
+    },
+
+    deleteOrganizationGroup: (req, ctx) => {
+      return deleteOrganizationGroup(opts, req, ctx);
+    },
+
     getAPIKeys: (req, ctx) => {
       return getAPIKeys(opts, req, ctx);
     },
@@ -643,38 +677,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return createBillingPortalSession(opts, req, ctx);
     },
 
-    createDiscussion: (req, ctx) => {
-      return createDiscussion(opts, req, ctx);
-    },
-
-    replyToDiscussion: (req, ctx) => {
-      return replyToDiscussion(opts, req, ctx);
-    },
-
-    getAllDiscussions: (req, ctx) => {
-      return getAllDiscussions(opts, req, ctx);
-    },
-
-    updateDiscussionComment: (req, ctx) => {
-      return updateDiscussionComment(opts, req, ctx);
-    },
-
-    deleteDiscussionComment: (req, ctx) => {
-      return deleteDiscussionComment(opts, req, ctx);
-    },
-
-    getDiscussion: (req, ctx) => {
-      return getDiscussion(opts, req, ctx);
-    },
-
-    getDiscussionSchemas: (req, ctx) => {
-      return getDiscussionSchemas(opts, req, ctx);
-    },
-
-    setDiscussionResolution: (req, ctx) => {
-      return setDiscussionResolution(opts, req, ctx);
-    },
-
     getSubgraphMetrics: (req, ctx) => {
       return getSubgraphMetrics(opts, req, ctx);
     },
@@ -685,6 +687,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     getNamespaceLintConfig: (req, ctx) => {
       return getNamespaceLintConfig(opts, req, ctx);
+    },
+
+    getNamespaceChecksConfig: (req, ctx) => {
+      return getNamespaceChecksConfig(opts, req, ctx);
+    },
+
+    updateNamespaceChecksConfig: (req, ctx) => {
+      return updateNamespaceChecksConfig(opts, req, ctx);
     },
 
     getNamespaceGraphPruningConfig: (req, ctx) => {
@@ -783,6 +793,46 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     setGraphRouterCompatibilityVersion: (req, ctx) => {
       return setGraphRouterCompatibilityVersion(opts, req, ctx);
+    },
+
+    getProposalsByFederatedGraph: (req, ctx) => {
+      return getProposalsByFederatedGraph(opts, req, ctx);
+    },
+
+    getProposalChecks: (req, ctx) => {
+      return getProposalChecks(opts, req, ctx);
+    },
+
+    updateProposal: (req, ctx) => {
+      return updateProposal(opts, req, ctx);
+    },
+
+    createProposal: (req, ctx) => {
+      return createProposal(opts, req, ctx);
+    },
+
+    getProposal: (req, ctx) => {
+      return getProposal(opts, req, ctx);
+    },
+
+    enableProposalsForNamespace: (req, ctx) => {
+      return enableProposalsForNamespace(opts, req, ctx);
+    },
+
+    configureNamespaceProposalConfig: (req, ctx) => {
+      return configureNamespaceProposalConfig(opts, req, ctx);
+    },
+
+    getNamespaceProposalConfig: (req, ctx) => {
+      return getNamespaceProposalConfig(opts, req, ctx);
+    },
+
+    getOperations: (req, ctx) => {
+      return getOperations(opts, req, ctx);
+    },
+
+    getClientsFromAnalytics: (req, ctx) => {
+      return getClientsFromAnalytics(opts, req, ctx);
     },
   };
 }

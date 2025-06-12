@@ -16,6 +16,7 @@ import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function moveFederatedGraph(
   opts: RouterOptions,
@@ -27,6 +28,10 @@ export function moveFederatedGraph(
   return handleError<PlainMessage<MoveGraphResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
+
+    if (authContext.organizationDeactivated) {
+      throw new UnauthorizedError();
+    }
 
     return opts.db.transaction(async (tx) => {
       const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
@@ -103,6 +108,10 @@ export function moveFederatedGraph(
         };
       }
 
+      if (!authContext.rbac.isOrganizationAdminOrDeveloper) {
+        throw new UnauthorizedError();
+      }
+
       const { compositionErrors, deploymentErrors, compositionWarnings } = await fedGraphRepo.move(
         {
           targetId: graph.targetId,
@@ -166,6 +175,7 @@ export function moveFederatedGraph(
       for (const movedGraph of movedGraphs) {
         await auditLogRepo.addAuditLog({
           organizationId: authContext.organizationId,
+          organizationSlug: authContext.organizationSlug,
           auditAction: 'federated_graph.moved',
           action: 'moved',
           actorId: authContext.userId,

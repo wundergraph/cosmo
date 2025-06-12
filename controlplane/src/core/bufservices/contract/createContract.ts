@@ -9,7 +9,7 @@ import {
   DeploymentError,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { isValidUrl } from '@wundergraph/cosmo-shared';
-import { PublicError } from '../../errors/errors.js';
+import { UnauthorizedError, PublicError } from '../../errors/errors.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { ContractRepository } from '../../repositories/ContractRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
@@ -38,13 +38,18 @@ export function createContract(
       const namespaceRepo = new NamespaceRepository(tx, authContext.organizationId);
       const contractRepo = new ContractRepository(logger, tx, authContext.organizationId);
 
-      if (!authContext.hasWriteAccess) {
-        throw new PublicError(EnumStatusCode.ERR, `The user doesn't have the permissions to perform this operation`);
+      if (authContext.organizationDeactivated) {
+        throw new UnauthorizedError();
       }
 
       const namespace = await namespaceRepo.byName(req.namespace);
       if (!namespace) {
         throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Could not find namespace ${req.namespace}`);
+      }
+
+      // check whether the user is authorized to perform the action
+      if (!authContext.rbac.canCreateContract(namespace)) {
+        throw new UnauthorizedError();
       }
 
       if (await fedGraphRepo.exists(req.name, req.namespace)) {
@@ -167,6 +172,7 @@ export function createContract(
 
       await auditLogRepo.addAuditLog({
         organizationId: authContext.organizationId,
+        organizationSlug: authContext.organizationSlug,
         auditAction: 'federated_graph.created',
         action: 'created',
         actorId: authContext.userId,

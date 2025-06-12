@@ -10,20 +10,19 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"sync"
 	"time"
-
-	rd "github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/redis"
 
 	"connectrpc.com/connect"
 	"github.com/mitchellh/mapstructure"
 	"github.com/nats-io/nuid"
+	"github.com/wundergraph/cosmo/router/internal/track"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	"go.uber.org/atomic"
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
@@ -35,6 +34,8 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/apq"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/cdn"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/fs"
+	rd "github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/redis"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/s3"
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/internal/stringsx"
@@ -44,6 +45,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"github.com/wundergraph/cosmo/router/pkg/health"
+	"github.com/wundergraph/cosmo/router/pkg/mcpserver"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
@@ -79,11 +81,20 @@ type (
 	// Router is the main application instance.
 	Router struct {
 		Config
-		httpServer        *server
-		modules           []Module
-		EngineStats       statistics.EngineStatistics
-		playgroundHandler func(http.Handler) http.Handler
-		proxy             ProxyFunc
+		httpServer           *server
+		modules              []Module
+		EngineStats          statistics.EngineStatistics
+		playgroundHandler    func(http.Handler) http.Handler
+		proxy                ProxyFunc
+		disableUsageTracking bool
+		usage                UsageTracker
+	}
+
+	UsageTracker interface {
+		Close()
+		TrackUptime(ctx context.Context)
+		TrackRouterConfigUsage(usage map[string]any)
+		TrackExecutionConfigUsage(usage map[string]any)
 	}
 
 	TransportRequestOptions struct {
@@ -108,6 +119,13 @@ type (
 	GraphQLMetricsConfig struct {
 		Enabled           bool
 		CollectorEndpoint string
+	}
+
+	BatchingConfig struct {
+		Enabled               bool
+		MaxConcurrentRoutines int
+		MaxEntriesPerBatch    int
+		OmitExtensions        bool
 	}
 
 	IPAnonymizationConfig struct {
@@ -136,8 +154,9 @@ type (
 	}
 
 	ExecutionConfig struct {
-		Watch bool
-		Path  string
+		Watch         bool
+		WatchInterval time.Duration
+		Path          string
 	}
 
 	AccessLogsConfig struct {
@@ -147,94 +166,6 @@ type (
 		SubgraphAttributes []config.CustomAttribute
 	}
 
-	// Config defines the configuration options for the Router.
-	Config struct {
-		clusterName                     string
-		instanceID                      string
-		logger                          *zap.Logger
-		traceConfig                     *rtrace.Config
-		metricConfig                    *rmetric.Config
-		tracerProvider                  *sdktrace.TracerProvider
-		otlpMeterProvider               *sdkmetric.MeterProvider
-		promMeterProvider               *sdkmetric.MeterProvider
-		gqlMetricsExporter              *graphqlmetrics.Exporter
-		corsOptions                     *cors.Config
-		setConfigVersionHeader          bool
-		routerGracePeriod               time.Duration
-		staticExecutionConfig           *nodev1.RouterConfig
-		awsLambda                       bool
-		shutdown                        atomic.Bool
-		bootstrapped                    atomic.Bool
-		ipAnonymization                 *IPAnonymizationConfig
-		listenAddr                      string
-		baseURL                         string
-		graphqlWebURL                   string
-		playgroundPath                  string
-		graphqlPath                     string
-		playground                      bool
-		introspection                   bool
-		queryPlansEnabled               bool
-		graphApiToken                   string
-		healthCheckPath                 string
-		readinessCheckPath              string
-		livenessCheckPath               string
-		playgroundConfig                config.PlaygroundConfig
-		cacheControlPolicy              config.CacheControlPolicy
-		routerConfigPollerConfig        *RouterConfigPollerConfig
-		cdnConfig                       config.CDNConfiguration
-		persistedOperationClient        persistedoperation.SaveClient
-		persistedOperationsConfig       config.PersistedOperationsConfig
-		automaticPersistedQueriesConfig config.AutomaticPersistedQueriesConfig
-		apolloCompatibilityFlags        config.ApolloCompatibilityFlags
-		apolloRouterCompatibilityFlags  config.ApolloRouterCompatibilityFlags
-		storageProviders                config.StorageProviders
-		eventsConfig                    config.EventsConfiguration
-		prometheusServer                *http.Server
-		modulesConfig                   map[string]interface{}
-		executionConfig                 *ExecutionConfig
-		routerOnRequestHandlers         []func(http.Handler) http.Handler
-		routerMiddlewares               []func(http.Handler) http.Handler
-		preOriginHandlers               []TransportPreHandler
-		postOriginHandlers              []TransportPostHandler
-		headerRules                     *config.HeaderRules
-		subgraphTransportOptions        *SubgraphTransportOptions
-		graphqlMetricsConfig            *GraphQLMetricsConfig
-		routerTrafficConfig             *config.RouterTrafficConfiguration
-		fileUploadConfig                *config.FileUpload
-		accessController                *AccessController
-		retryOptions                    retrytransport.RetryOptions
-		redisClient                     rd.RDCloser
-		processStartTime                time.Time
-		developmentMode                 bool
-		healthcheck                     health.Checker
-		accessLogsConfig                *AccessLogsConfig
-		// If connecting to localhost inside Docker fails, fallback to the docker internal address for the host
-		localhostFallbackInsideDocker bool
-		tlsServerConfig               *tls.Config
-		tlsConfig                     *TlsConfig
-		telemetryAttributes           []config.CustomAttribute
-		tracePropagators              []propagation.TextMapPropagator
-		compositePropagator           propagation.TextMapPropagator
-		// Poller
-		configPoller                 configpoller.ConfigPoller
-		selfRegister                 selfregister.SelfRegister
-		registrationInfo             *nodev1.RegistrationInfo
-		securityConfiguration        config.SecurityConfiguration
-		customModules                []Module
-		engineExecutionConfiguration config.EngineExecutionConfiguration
-		// should be removed once the users have migrated to the new overrides config
-		overrideRoutingURLConfiguration config.OverrideRoutingURLConfiguration
-		// the new overrides config
-		overrides                  config.OverridesConfiguration
-		authorization              *config.AuthorizationConfiguration
-		rateLimit                  *config.RateLimitConfiguration
-		webSocketConfiguration     *config.WebSocketConfiguration
-		subgraphErrorPropagation   config.SubgraphErrorPropagationConfiguration
-		clientHeader               config.ClientHeader
-		cacheWarmup                *config.CacheWarmupConfiguration
-		multipartHeartbeatInterval time.Duration
-		hostName                   string
-	}
 	// Option defines the method to customize server.
 	Option func(svr *Router)
 )
@@ -871,7 +802,78 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("failed to create redis client: %w", err)
 		}
+	}
 
+	if r.mcp.Enabled {
+		var operationsDir string
+
+		// If storage provider ID is set, resolve it to a directory path
+		if r.mcp.Storage.ProviderID != "" {
+			r.logger.Debug("Resolving storage provider for MCP operations",
+				zap.String("provider_id", r.mcp.Storage.ProviderID))
+
+			// Find the provider in storage_providers
+			found := false
+
+			// Check for file_system providers
+			for _, provider := range r.storageProviders.FileSystem {
+				if provider.ID == r.mcp.Storage.ProviderID {
+					r.logger.Debug("Found file_system storage provider for MCP",
+						zap.String("id", provider.ID),
+						zap.String("path", provider.Path))
+
+					// Use the resolved file system path
+					operationsDir = provider.Path
+					found = true
+					break
+				}
+			}
+
+			if !found {
+				return fmt.Errorf("storage provider with id '%s' for mcp server not found", r.mcp.Storage.ProviderID)
+			}
+		}
+
+		logFields := []zap.Field{
+			zap.String("storage_provider_id", r.mcp.Storage.ProviderID),
+		}
+
+		// Initialize the MCP server with the resolved operations directory
+		mcpOpts := []func(*mcpserver.Options){
+			mcpserver.WithGraphName(r.mcp.GraphName),
+			mcpserver.WithOperationsDir(operationsDir),
+			mcpserver.WithListenAddr(r.mcp.Server.ListenAddr),
+			mcpserver.WithBaseURL(r.mcp.Server.BaseURL),
+			mcpserver.WithLogger(r.logger.With(logFields...)),
+			mcpserver.WithExcludeMutations(r.mcp.ExcludeMutations),
+			mcpserver.WithEnableArbitraryOperations(r.mcp.EnableArbitraryOperations),
+			mcpserver.WithExposeSchema(r.mcp.ExposeSchema),
+		}
+
+		// Determine the router GraphQL endpoint
+		var routerGraphQLEndpoint string
+
+		// Use the custom URL if provided
+		if r.mcp.RouterURL != "" {
+			routerGraphQLEndpoint = r.mcp.RouterURL
+		} else {
+			routerGraphQLEndpoint = path.Join(r.listenAddr, r.graphqlPath)
+		}
+
+		mcpss, err := mcpserver.NewGraphQLSchemaServer(
+			routerGraphQLEndpoint,
+			mcpOpts...,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to create mcp server: %w", err)
+		}
+
+		err = mcpss.Start()
+		if err != nil {
+			return fmt.Errorf("failed to start MCP server: %w", err)
+		}
+
+		r.mcpServer = mcpss
 	}
 
 	if r.metricConfig.OpenTelemetry.EngineStats.Enabled() || r.metricConfig.Prometheus.EngineStats.Enabled() || r.engineExecutionConfiguration.Debug.ReportWebSocketConnections {
@@ -929,8 +931,9 @@ func (r *Router) bootstrap(ctx context.Context) error {
 // buildClients initializes the storage clients for persisted operations and router config.
 func (r *Router) buildClients() error {
 	s3Providers := map[string]config.S3StorageProvider{}
-	cdnProviders := map[string]config.BaseStorageProvider{}
+	cdnProviders := map[string]config.CDNStorageProvider{}
 	redisProviders := map[string]config.RedisStorageProvider{}
+	fileSystemProviders := map[string]config.FileSystemStorageProvider{}
 
 	for _, provider := range r.storageProviders.S3 {
 		if _, ok := s3Providers[provider.ID]; ok {
@@ -951,6 +954,13 @@ func (r *Router) buildClients() error {
 			return fmt.Errorf("duplicate Redis storage provider with id '%s'", provider.ID)
 		}
 		redisProviders[provider.ID] = provider
+	}
+
+	for _, provider := range r.storageProviders.FileSystem {
+		if _, ok := fileSystemProviders[provider.ID]; ok {
+			return fmt.Errorf("duplicate file system storage provider with id '%s'", provider.ID)
+		}
+		fileSystemProviders[provider.ID] = provider
 	}
 
 	var pClient persistedoperation.Client
@@ -988,6 +998,18 @@ func (r *Router) buildClients() error {
 		pClient = c
 
 		r.logger.Info("Use S3 as storage provider for persisted operations",
+			zap.String("provider_id", provider.ID),
+		)
+	} else if provider, ok := fileSystemProviders[r.persistedOperationsConfig.Storage.ProviderID]; ok {
+		c, err := fs.NewClient(provider.Path, &fs.Options{
+			ObjectPathPrefix: r.persistedOperationsConfig.Storage.ObjectPrefix,
+		})
+		if err != nil {
+			return err
+		}
+		pClient = c
+
+		r.logger.Info("Use file system as storage provider for persisted operations",
 			zap.String("provider_id", provider.ID),
 		)
 	} else if r.graphApiToken != "" {
@@ -1081,6 +1103,12 @@ func (r *Router) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to bootstrap router: %w", err)
 	}
 
+	if err := r.configureUsageTracking(ctx); err != nil {
+		return err
+	}
+
+	r.trackRouterConfigUsage()
+
 	r.httpServer = newServer(&httpServerOptions{
 		addr:               r.listenAddr,
 		logger:             r.logger,
@@ -1096,6 +1124,9 @@ func (r *Router) Start(ctx context.Context) error {
 
 	// Start the server with the static config without polling
 	if r.staticExecutionConfig != nil {
+
+		r.trackExecutionConfigUsage(r.staticExecutionConfig, true)
+
 		if err := r.listenAndServe(); err != nil {
 			return err
 		}
@@ -1116,45 +1147,49 @@ func (r *Router) Start(ctx context.Context) error {
 		}()
 
 		if r.executionConfig != nil && r.executionConfig.Watch {
+			ll := r.logger.With(zap.String("watcher_label", "execution_config"))
 
-			w, err := watcher.NewWatcher(r.logger.With(zap.String("watcher", "execution_config")))
-			if err != nil {
-				return fmt.Errorf("failed to start watcher for execution config file: %w", err)
-			}
+			w, err := watcher.New(watcher.Options{
+				Logger:   ll,
+				Paths:    []string{r.executionConfig.Path},
+				Interval: r.executionConfig.WatchInterval,
+				Callback: func() {
+					if r.shutdown.Load() {
+						ll.Warn("Router is in shutdown state. Skipping config update")
+						return
+					}
 
-			// Watch the execution config file for changes. Returning an error will stop the watcher.
-			// We intentionally ignore the error here because the user can retry. The watcher is closed when context is done.
-			err = w.Watch(ctx, r.executionConfig.Path, func(events []watcher.Event) error {
-				if r.shutdown.Load() {
-					r.logger.Warn("Router is in shutdown state. Skipping config update")
-					return nil
-				}
+					data, err := os.ReadFile(r.executionConfig.Path)
+					if err != nil {
+						ll.Error("Failed to read config file", zap.Error(err))
+						return
+					}
 
-				data, err := os.ReadFile(r.executionConfig.Path)
-				if err != nil {
-					r.logger.Error("Failed to read config file", zap.Error(err))
-					return nil
-				}
+					ll.Info("Config file changed. Updating server with new config", zap.String("path", r.executionConfig.Path))
 
-				r.logger.Info("Config file changed. Updating server with new config", zap.String("path", r.executionConfig.Path))
+					cfg, err := execution_config.UnmarshalConfig(data)
+					if err != nil {
+						ll.Error("Failed to unmarshal config file", zap.Error(err))
+						return
+					}
 
-				cfg, err := execution_config.UnmarshalConfig(data)
-				if err != nil {
-					r.logger.Error("Failed to serialize config file", zap.Error(err))
-					return nil
-				}
-
-				if err := r.newServer(ctx, cfg); err != nil {
-					r.logger.Error("Failed to update server with new config", zap.Error(err))
-					return nil
-				}
-
-				return nil
+					if err := r.newServer(ctx, cfg); err != nil {
+						ll.Error("Failed to update server with new config", zap.Error(err))
+						return
+					}
+				},
 			})
+
 			if err != nil {
-				r.logger.Error("Failed to watch execution config file. Restart the router to apply changes", zap.Error(err))
-				return fmt.Errorf("failed to watch execution config file: %w", err)
+				return fmt.Errorf("failed to create watcher: %w", err)
 			}
+
+			go func() {
+				if err := w(ctx); err != nil {
+					r.logger.Error("Error watching execution config", zap.Error(err))
+					return
+				}
+			}()
 
 			r.logger.Info("Watching config file for changes. Router will hot-reload automatically without downtime",
 				zap.String("path", r.executionConfig.Path),
@@ -1177,6 +1212,8 @@ func (r *Router) Start(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to get initial execution config: %w", err)
 	}
+
+	r.trackExecutionConfigUsage(cfg.Config, false)
 
 	if err := r.listenAndServe(); err != nil {
 		r.logger.Error("Failed to start server with initial config", zap.Error(err))
@@ -1225,6 +1262,8 @@ func (r *Router) Start(ctx context.Context) error {
 			return nil
 		}
 
+		r.trackExecutionConfigUsage(newConfig, false)
+
 		if err := r.newServer(ctx, newConfig); err != nil {
 			return err
 		}
@@ -1245,9 +1284,66 @@ func (r *Router) Start(ctx context.Context) error {
 	return nil
 }
 
+type UsageTrackerNoOp struct{}
+
+func (u *UsageTrackerNoOp) TrackExecutionConfigUsage(_ map[string]any) {}
+
+func (u *UsageTrackerNoOp) TrackRouterConfigUsage(_ map[string]any) {}
+
+func (u *UsageTrackerNoOp) Close() {}
+
+func (u *UsageTrackerNoOp) TrackUptime(_ context.Context) {}
+
+func (r *Router) configureUsageTracking(ctx context.Context) (err error) {
+	if r.disableUsageTracking {
+		r.usage = &UsageTrackerNoOp{}
+		return nil
+	}
+	if os.Getenv("COSMO_TELEMETRY_DISABLED") == "true" || os.Getenv("DO_NOT_TRACK") == "1" {
+		r.usage = &UsageTrackerNoOp{}
+		r.logger.Info("Usage tracking is disabled.")
+		return nil
+	}
+	cfg := track.UsageTrackerConfig{
+		GraphApiToken: r.graphApiToken,
+		Version:       Version,
+		Commit:        Commit,
+		Date:          Date,
+		InstanceID:    r.instanceID,
+		ClusterName:   r.clusterName,
+	}
+	r.usage, err = track.NewUsageTracker(r.logger, cfg)
+	if err != nil {
+		return fmt.Errorf("failed to create usage tracker: %w", err)
+	}
+	go r.usage.TrackUptime(ctx)
+	return nil
+}
+
+func (r *Router) trackRouterConfigUsage() {
+	r.usage.TrackRouterConfigUsage(r.Config.Usage())
+}
+
+type concSafeErrorJoiner struct {
+	errs []error
+	mu   sync.Mutex
+}
+
+func (e *concSafeErrorJoiner) Append(err error) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.errs = append(e.errs, err)
+}
+
+func (e *concSafeErrorJoiner) ErrOrNil() error {
+	return errors.Join(e.errs...)
+}
+
 // Shutdown gracefully shuts down the router. It blocks until the server is shutdown.
 // If the router is already shutdown, the method returns immediately without error.
-func (r *Router) Shutdown(ctx context.Context) (err error) {
+func (r *Router) Shutdown(ctx context.Context) error {
+	var err concSafeErrorJoiner
+
 	if !r.shutdown.CompareAndSwap(false, true) {
 		return nil
 	}
@@ -1262,19 +1358,19 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 
 	if r.configPoller != nil {
 		if subErr := r.configPoller.Stop(ctx); subErr != nil {
-			err = errors.Join(err, fmt.Errorf("failed to stop config poller: %w", subErr))
+			err.Append(fmt.Errorf("failed to stop config poller: %w", subErr))
 		}
 	}
 
 	if r.httpServer != nil {
 		if subErr := r.httpServer.Shutdown(ctx); subErr != nil {
-			if errors.Is(err, context.DeadlineExceeded) {
+			if errors.Is(subErr, context.DeadlineExceeded) {
 				r.logger.Warn(
 					"Shutdown deadline exceeded. Router took too long to shutdown. Consider increasing the grace period",
 					zap.Duration("grace_period", r.routerGracePeriod),
 				)
 			}
-			err = errors.Join(err, fmt.Errorf("failed to shutdown router: %w", subErr))
+			err.Append(fmt.Errorf("failed to shutdown router: %w", subErr))
 		}
 	}
 
@@ -1285,7 +1381,17 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 		go func() {
 			defer wg.Done()
 			if subErr := r.prometheusServer.Close(); subErr != nil {
-				err = errors.Join(err, fmt.Errorf("failed to shutdown prometheus server: %w", subErr))
+				err.Append(fmt.Errorf("failed to shutdown prometheus server: %w", subErr))
+			}
+		}()
+	}
+
+	if r.mcpServer != nil {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if subErr := r.mcpServer.Stop(ctx); subErr != nil {
+				err.Append(fmt.Errorf("failed to shutdown mcp server: %w", subErr))
 			}
 		}()
 	}
@@ -1297,7 +1403,7 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 			defer wg.Done()
 
 			if subErr := r.tracerProvider.Shutdown(ctx); subErr != nil {
-				err = errors.Join(err, fmt.Errorf("failed to shutdown tracer: %w", subErr))
+				err.Append(fmt.Errorf("failed to shutdown tracer: %w", subErr))
 			}
 		}()
 	}
@@ -1309,7 +1415,7 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 			defer wg.Done()
 
 			if subErr := r.gqlMetricsExporter.Shutdown(ctx); subErr != nil {
-				err = errors.Join(err, fmt.Errorf("failed to shutdown graphql metrics exporter: %w", subErr))
+				err.Append(fmt.Errorf("failed to shutdown graphql metrics exporter: %w", subErr))
 			}
 		}()
 	}
@@ -1321,7 +1427,7 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 			defer wg.Done()
 
 			if subErr := r.promMeterProvider.Shutdown(ctx); subErr != nil {
-				err = errors.Join(err, fmt.Errorf("failed to shutdown prometheus meter provider: %w", subErr))
+				err.Append(fmt.Errorf("failed to shutdown prometheus meter provider: %w", subErr))
 			}
 		}()
 	}
@@ -1333,7 +1439,7 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 			defer wg.Done()
 
 			if subErr := r.otlpMeterProvider.Shutdown(ctx); subErr != nil {
-				err = errors.Join(err, fmt.Errorf("failed to shutdown OTLP meter provider: %w", subErr))
+				err.Append(fmt.Errorf("failed to shutdown OTLP meter provider: %w", subErr))
 			}
 		}()
 	}
@@ -1345,7 +1451,7 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 			defer wg.Done()
 
 			if closeErr := r.redisClient.Close(); closeErr != nil {
-				err = errors.Join(err, fmt.Errorf("failed to close redis client: %w", closeErr))
+				err.Append(fmt.Errorf("failed to close redis client: %w", closeErr))
 			}
 		}()
 	}
@@ -1357,7 +1463,7 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 		for _, module := range r.modules {
 			if cleaner, ok := module.(Cleaner); ok {
 				if subErr := cleaner.Cleanup(); subErr != nil {
-					err = errors.Join(err, fmt.Errorf("failed to clean module %s: %w", module.Module().ID, subErr))
+					err.Append(fmt.Errorf("failed to clean module %s: %w", module.Module().ID, subErr))
 				}
 			}
 		}
@@ -1368,9 +1474,11 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 		r.persistedOperationClient.Close()
 	}
 
+	r.usage.Close()
+
 	wg.Wait()
 
-	return err
+	return err.ErrOrNil()
 }
 
 func WithListenerAddr(addr string) Option {
@@ -1445,7 +1553,7 @@ func WithPlaygroundPath(p string) Option {
 	}
 }
 
-// WithPlaygroundPath sets the path where the GraphQL Playground is served.
+// WithPlaygroundConfig sets the path where the GraphQL Playground is served.
 func WithPlaygroundConfig(c config.PlaygroundConfig) Option {
 	return func(r *Router) {
 		r.playgroundConfig = c
@@ -1667,6 +1775,12 @@ func WithLocalhostFallbackInsideDocker(fallback bool) Option {
 	}
 }
 
+func WithDisableUsageTracking() Option {
+	return func(r *Router) {
+		r.disableUsageTracking = true
+	}
+}
+
 func DefaultRouterTrafficConfig() *config.RouterTrafficConfiguration {
 	return &config.RouterTrafficConfiguration{
 		MaxRequestBodyBytes: 1000 * 1000 * 5, // 5 MB
@@ -1705,7 +1819,7 @@ func DefaultTransportRequestOptions() *TransportRequestOptions {
 		ResponseHeaderTimeout:  0 * time.Second,
 		ExpectContinueTimeout:  0 * time.Second,
 		KeepAliveProbeInterval: 30 * time.Second,
-		KeepAliveIdleTimeout:   0 * time.Second,
+		KeepAliveIdleTimeout:   90 * time.Second,
 		DialTimeout:            30 * time.Second,
 
 		MaxConnsPerHost:     100,
@@ -1744,6 +1858,12 @@ func DefaultGraphQLMetricsConfig() *GraphQLMetricsConfig {
 func WithGraphQLMetrics(cfg *GraphQLMetricsConfig) Option {
 	return func(r *Router) {
 		r.graphqlMetricsConfig = cfg
+	}
+}
+
+func WithBatching(cfg *BatchingConfig) Option {
+	return func(r *Router) {
+		r.batchingConfig = cfg
 	}
 }
 
@@ -1809,6 +1929,12 @@ func WithTelemetryAttributes(attributes []config.CustomAttribute) Option {
 	}
 }
 
+func WithTracingAttributes(attributes []config.CustomAttribute) Option {
+	return func(r *Router) {
+		r.tracingAttributes = attributes
+	}
+}
+
 func WithConfigPollerConfig(cfg *RouterConfigPollerConfig) Option {
 	return func(r *Router) {
 		r.routerConfigPollerConfig = cfg
@@ -1833,11 +1959,17 @@ func WithApolloCompatibilityFlagsConfig(cfg config.ApolloCompatibilityFlags) Opt
 			cfg.ValueCompletion.Enabled = true
 			cfg.TruncateFloats.Enabled = true
 			cfg.SuppressFetchErrors.Enabled = true
-			cfg.ReplaceUndefinedOpFieldErrors.Enabled = true
 			cfg.ReplaceInvalidVarErrors.Enabled = true
 			cfg.ReplaceValidationErrorStatus.Enabled = true
 			cfg.SubscriptionMultipartPrintBoundary.Enabled = true
+			cfg.UseGraphQLValidationFailedStatus.Enabled = true
 		}
+
+		if cfg.ReplaceUndefinedOpFieldErrors.Enabled {
+			cfg.UseGraphQLValidationFailedStatus.Enabled = true
+			r.logger.Warn("option apollo_compatibility_flags/replace_undefined_op_field_errors is deprecated, and has automatically been converted to apollo_compatibility_flags/use_graphql_validation_failed_status, please update your configuration")
+		}
+
 		r.apolloCompatibilityFlags = cfg
 	}
 }
@@ -1866,16 +1998,34 @@ func WithCacheWarmupConfig(cfg *config.CacheWarmupConfiguration) Option {
 	}
 }
 
+func WithMCP(cfg config.MCPConfiguration) Option {
+	return func(r *Router) {
+		r.mcp = cfg
+	}
+}
+
+func WithPlugins(cfg config.PluginsConfiguration) Option {
+	return func(r *Router) {
+		r.plugins = cfg
+	}
+}
+
+func WithDemoMode(demoMode bool) Option {
+	return func(r *Router) {
+		r.demoMode = demoMode
+	}
+}
+
 type ProxyFunc func(req *http.Request) (*url.URL, error)
 
-func newHTTPTransport(opts *TransportRequestOptions, proxy ProxyFunc) *http.Transport {
+func newHTTPTransport(opts *TransportRequestOptions, proxy ProxyFunc, traceDialer *TraceDialer, subgraph string) *http.Transport {
 	dialer := &net.Dialer{
 		Timeout:   opts.DialTimeout,
 		KeepAlive: opts.KeepAliveProbeInterval,
 	}
 	// Great source of inspiration: https://gitlab.com/gitlab-org/gitlab-pages
 	// A pages proxy in go that handles tls to upstreams, rate limiting, and more
-	return &http.Transport{
+	transport := &http.Transport{
 		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
 			return dialer.DialContext(ctx, network, addr)
 		},
@@ -1898,6 +2048,13 @@ func newHTTPTransport(opts *TransportRequestOptions, proxy ProxyFunc) *http.Tran
 		// This will prevent the transport from handling the proxy when it is not needed.
 		Proxy: proxy,
 	}
+
+	if traceDialer != nil {
+		transport.DialContext = traceDialer.WrapDial(transport.DialContext, subgraph)
+		traceDialer.connectionPoolStats.AddSubgraphHostCount(subgraph, int64(opts.MaxConnsPerHost))
+	}
+
+	return transport
 }
 
 func TraceConfigFromTelemetry(cfg *config.Telemetry) *rtrace.Config {
@@ -2019,9 +2176,10 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 		Attributes:         cfg.Metrics.Attributes,
 		ResourceAttributes: buildResourceAttributes(cfg.ResourceAttributes),
 		OpenTelemetry: rmetric.OpenTelemetry{
-			Enabled:       cfg.Metrics.OTLP.Enabled,
-			RouterRuntime: cfg.Metrics.OTLP.RouterRuntime,
-			GraphqlCache:  cfg.Metrics.OTLP.GraphqlCache,
+			Enabled:         cfg.Metrics.OTLP.Enabled,
+			RouterRuntime:   cfg.Metrics.OTLP.RouterRuntime,
+			GraphqlCache:    cfg.Metrics.OTLP.GraphqlCache,
+			ConnectionStats: cfg.Metrics.OTLP.ConnectionStats,
 			EngineStats: rmetric.EngineStatsConfig{
 				Subscription: cfg.Metrics.OTLP.EngineStats.Subscriptions,
 			},
@@ -2030,16 +2188,21 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 			ExcludeMetricLabels: cfg.Metrics.OTLP.ExcludeMetricLabels,
 		},
 		Prometheus: rmetric.PrometheusConfig{
-			Enabled:      cfg.Metrics.Prometheus.Enabled,
-			ListenAddr:   cfg.Metrics.Prometheus.ListenAddr,
-			Path:         cfg.Metrics.Prometheus.Path,
-			GraphqlCache: cfg.Metrics.Prometheus.GraphqlCache,
+			Enabled:         cfg.Metrics.Prometheus.Enabled,
+			ListenAddr:      cfg.Metrics.Prometheus.ListenAddr,
+			Path:            cfg.Metrics.Prometheus.Path,
+			GraphqlCache:    cfg.Metrics.Prometheus.GraphqlCache,
+			ConnectionStats: cfg.Metrics.Prometheus.ConnectionStats,
 			EngineStats: rmetric.EngineStatsConfig{
 				Subscription: cfg.Metrics.Prometheus.EngineStats.Subscriptions,
 			},
 			ExcludeMetrics:      cfg.Metrics.Prometheus.ExcludeMetrics,
 			ExcludeMetricLabels: cfg.Metrics.Prometheus.ExcludeMetricLabels,
 			ExcludeScopeInfo:    cfg.Metrics.Prometheus.ExcludeScopeInfo,
+			PromSchemaFieldUsage: rmetric.PrometheusSchemaFieldUsage{
+				Enabled:             cfg.Metrics.Prometheus.SchemaFieldUsage.Enabled,
+				IncludeOperationSha: cfg.Metrics.Prometheus.SchemaFieldUsage.IncludeOperationSha,
+			},
 		},
 	}
 }

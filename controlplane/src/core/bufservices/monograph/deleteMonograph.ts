@@ -13,6 +13,7 @@ import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function deleteMonograph(
   opts: RouterOptions,
@@ -33,13 +34,8 @@ export function deleteMonograph(
       const contractRepo = new ContractRepository(logger, tx, authContext.organizationId);
       const auditLogRepo = new AuditLogRepository(tx);
 
-      if (!authContext.hasWriteAccess) {
-        return {
-          response: {
-            code: EnumStatusCode.ERR,
-            details: `The user does not have the permissions to perform this operation`,
-          },
-        };
+      if (authContext.organizationDeactivated) {
+        throw new UnauthorizedError();
       }
 
       const graph = await fedGraphRepo.byName(req.name, req.namespace, {
@@ -87,6 +83,7 @@ export function deleteMonograph(
       for (const deletedGraph of deletedGraphs) {
         await auditLogRepo.addAuditLog({
           organizationId: authContext.organizationId,
+          organizationSlug: authContext.organizationSlug,
           auditAction: 'monograph.deleted',
           action: 'deleted',
           actorId: authContext.userId,

@@ -16,6 +16,7 @@ import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, isValidLabelMatchers } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function updateFederatedGraph(
   opts: RouterOptions,
@@ -38,17 +39,8 @@ export function updateFederatedGraph(
     );
 
     req.namespace = req.namespace || DefaultNamespace;
-
-    if (!authContext.hasWriteAccess) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `The user doesnt have the permissions to perform this operation`,
-        },
-        compositionErrors: [],
-        deploymentErrors: [],
-        compositionWarnings: [],
-      };
+    if (authContext.organizationDeactivated) {
+      throw new UnauthorizedError();
     }
 
     const federatedGraph = await fedGraphRepo.byName(req.name, req.namespace, {
@@ -150,6 +142,7 @@ export function updateFederatedGraph(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'federated_graph.updated',
       action: 'updated',
       actorId: authContext.userId,

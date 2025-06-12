@@ -1,6 +1,7 @@
 package core
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -73,7 +74,8 @@ func TestVisitorCheckForRequestAuthAccess_Visit(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			v := VisitorCheckForRequestAuthAccess{}
-			out, err := expr.CompileStringExpressionWithPatch(tt.expr, &v)
+			manager := expr.CreateNewExprManager()
+			out, err := manager.CompileExpression(tt.expr, reflect.String, &v)
 			assert.NoError(t, err)
 			assert.NotNil(t, out)
 			assert.Equal(t, tt.expectedHasAuth, v.HasAuth)
@@ -98,7 +100,8 @@ func TestNewAttributeExpressions_SplitsExpressionsUsingAuth(t *testing.T) {
 		},
 	}
 
-	attrExpr, err := newAttributeExpressions(attrs)
+	manager := expr.CreateNewExprManager()
+	attrExpr, err := newAttributeExpressions(attrs, manager)
 	assert.NoError(t, err)
 	require.NotNil(t, attrExpr)
 	assert.Contains(t, attrExpr.expressions, "attr1")
@@ -117,12 +120,12 @@ func TestNewAttributeExpressions_SplitsExpressionsUsingAuth(t *testing.T) {
 		},
 	}
 
-	val, err := attrExpr.expressionsAttributes(&reqCtx)
+	val, err := attrExpr.expressionsAttributes(&reqCtx.expressionContext)
 	assert.NoError(t, err)
 	require.Len(t, val, 1)
 	assert.Equal(t, "/some/path", val[0].Value.AsString())
 
-	val2, err2 := attrExpr.expressionsAttributesWithAuth(&reqCtx)
+	val2, err2 := attrExpr.expressionsAttributesWithAuth(&reqCtx.expressionContext)
 	assert.NoError(t, err2)
 	require.Len(t, val2, 1)
 	assert.Equal(t, "yes", val2[0].Value.AsString())

@@ -6,7 +6,7 @@
 // @ts-nocheck
 
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
-import { AcceptOrDeclineInvitationRequest, AcceptOrDeclineInvitationResponse, AddReadmeRequest, AddReadmeResponse, AddSubgraphMemberRequest, AddSubgraphMemberResponse, CheckFederatedGraphRequest, CheckFederatedGraphResponse, CheckSubgraphSchemaRequest, CheckSubgraphSchemaResponse, ComputeCacheWarmerOperationsRequest, ComputeCacheWarmerOperationsResponse, ConfigureCacheWarmerRequest, ConfigureCacheWarmerResponse, ConfigureNamespaceGraphPruningConfigRequest, ConfigureNamespaceGraphPruningConfigResponse, ConfigureNamespaceLintConfigRequest, ConfigureNamespaceLintConfigResponse, CreateAPIKeyRequest, CreateAPIKeyResponse, CreateBillingPortalSessionRequest, CreateBillingPortalSessionResponse, CreateCheckoutSessionRequest, CreateCheckoutSessionResponse, CreateContractRequest, CreateContractResponse, CreateDiscussionRequest, CreateDiscussionResponse, CreateFeatureFlagRequest, CreateFeatureFlagResponse, CreateFederatedGraphRequest, CreateFederatedGraphResponse, CreateFederatedGraphTokenRequest, CreateFederatedGraphTokenResponse, CreateFederatedSubgraphRequest, CreateFederatedSubgraphResponse, CreateIgnoreOverridesForAllOperationsRequest, CreateIgnoreOverridesForAllOperationsResponse, CreateIntegrationRequest, CreateIntegrationResponse, CreateMonographRequest, CreateMonographResponse, CreateNamespaceRequest, CreateNamespaceResponse, CreateOIDCProviderRequest, CreateOIDCProviderResponse, CreateOperationIgnoreAllOverrideRequest, CreateOperationIgnoreAllOverrideResponse, CreateOperationOverridesRequest, CreateOperationOverridesResponse, CreateOrganizationRequest, CreateOrganizationResponse, CreateOrganizationWebhookConfigRequest, CreateOrganizationWebhookConfigResponse, CreatePlaygroundScriptRequest, CreatePlaygroundScriptResponse, DeleteAPIKeyRequest, DeleteAPIKeyResponse, DeleteCacheWarmerOperationRequest, DeleteCacheWarmerOperationResponse, DeleteDiscussionCommentRequest, DeleteDiscussionCommentResponse, DeleteFeatureFlagRequest, DeleteFeatureFlagResponse, DeleteFederatedGraphRequest, DeleteFederatedGraphResponse, DeleteFederatedSubgraphRequest, DeleteFederatedSubgraphResponse, DeleteIntegrationRequest, DeleteIntegrationResponse, DeleteMonographRequest, DeleteMonographResponse, DeleteNamespaceRequest, DeleteNamespaceResponse, DeleteOIDCProviderRequest, DeleteOIDCProviderResponse, DeleteOrganizationRequest, DeleteOrganizationResponse, DeleteOrganizationWebhookConfigRequest, DeleteOrganizationWebhookConfigResponse, DeletePlaygroundScriptRequest, DeletePlaygroundScriptResponse, DeleteRouterTokenRequest, DeleteRouterTokenResponse, DeleteUserRequest, DeleteUserResponse, EnableFeatureFlagRequest, EnableFeatureFlagResponse, EnableGraphPruningRequest, EnableGraphPruningResponse, EnableLintingForTheNamespaceRequest, EnableLintingForTheNamespaceResponse, FixSubgraphSchemaRequest, FixSubgraphSchemaResponse, ForceCheckSuccessRequest, ForceCheckSuccessResponse, GenerateRouterTokenRequest, GenerateRouterTokenResponse, GetAllDiscussionsRequest, GetAllDiscussionsResponse, GetAllOverridesRequest, GetAllOverridesResponse, GetAnalyticsViewRequest, GetAnalyticsViewResponse, GetAPIKeysRequest, GetAPIKeysResponse, GetAuditLogsRequest, GetAuditLogsResponse, GetBillingPlansRequest, GetBillingPlansResponse, GetCacheWarmerConfigRequest, GetCacheWarmerConfigResponse, GetCacheWarmerOperationsRequest, GetCacheWarmerOperationsResponse, GetChangelogBySchemaVersionRequest, GetChangelogBySchemaVersionResponse, GetCheckOperationsRequest, GetCheckOperationsResponse, GetChecksByFederatedGraphNameRequest, GetChecksByFederatedGraphNameResponse, GetCheckSummaryRequest, GetCheckSummaryResponse, GetClientsRequest, GetClientsResponse, GetCompositionDetailsRequest, GetCompositionDetailsResponse, GetCompositionsRequest, GetCompositionsResponse, GetDashboardAnalyticsViewRequest, GetDashboardAnalyticsViewResponse, GetDiscussionRequest, GetDiscussionResponse, GetDiscussionSchemasRequest, GetDiscussionSchemasResponse, GetFeatureFlagByNameRequest, GetFeatureFlagByNameResponse, GetFeatureFlagsByFederatedGraphRequest, GetFeatureFlagsByFederatedGraphResponse, GetFeatureFlagsRequest, GetFeatureFlagsResponse, GetFeatureSubgraphsByFeatureFlagRequest, GetFeatureSubgraphsByFeatureFlagResponse, GetFeatureSubgraphsRequest, GetFeatureSubgraphsResponse, GetFederatedGraphByIdRequest, GetFederatedGraphByIdResponse, GetFederatedGraphByNameRequest, GetFederatedGraphByNameResponse, GetFederatedGraphChangelogRequest, GetFederatedGraphChangelogResponse, GetFederatedGraphsBySubgraphLabelsRequest, GetFederatedGraphsBySubgraphLabelsResponse, GetFederatedGraphSDLByNameRequest, GetFederatedGraphSDLByNameResponse, GetFederatedGraphsRequest, GetFederatedGraphsResponse, GetFieldUsageRequest, GetFieldUsageResponse, GetGraphMetricsRequest, GetGraphMetricsResponse, GetInvitationsRequest, GetInvitationsResponse, GetLatestSubgraphSDLRequest, GetLatestSubgraphSDLResponse, GetMetricsErrorRateRequest, GetMetricsErrorRateResponse, GetNamespaceGraphPruningConfigRequest, GetNamespaceGraphPruningConfigResponse, GetNamespaceLintConfigRequest, GetNamespaceLintConfigResponse, GetNamespaceRequest, GetNamespaceResponse, GetNamespacesRequest, GetNamespacesResponse, GetOIDCProviderRequest, GetOIDCProviderResponse, GetOperationContentRequest, GetOperationContentResponse, GetOperationOverridesRequest, GetOperationOverridesResponse, GetOrganizationBySlugRequest, GetOrganizationBySlugResponse, GetOrganizationIntegrationsRequest, GetOrganizationIntegrationsResponse, GetOrganizationMembersRequest, GetOrganizationMembersResponse, GetOrganizationRequestsCountRequest, GetOrganizationRequestsCountResponse, GetOrganizationWebhookConfigsRequest, GetOrganizationWebhookConfigsResponse, GetOrganizationWebhookHistoryRequest, GetOrganizationWebhookHistoryResponse, GetOrganizationWebhookMetaRequest, GetOrganizationWebhookMetaResponse, GetPendingOrganizationMembersRequest, GetPendingOrganizationMembersResponse, GetPersistedOperationsRequest, GetPersistedOperationsResponse, GetPlaygroundScriptsRequest, GetPlaygroundScriptsResponse, GetRoutersRequest, GetRoutersResponse, GetRouterTokensRequest, GetRouterTokensResponse, GetSdlBySchemaVersionRequest, GetSdlBySchemaVersionResponse, GetSubgraphByIdRequest, GetSubgraphByIdResponse, GetSubgraphByNameRequest, GetSubgraphByNameResponse, GetSubgraphMembersRequest, GetSubgraphMembersResponse, GetSubgraphMetricsErrorRateRequest, GetSubgraphMetricsErrorRateResponse, GetSubgraphMetricsRequest, GetSubgraphMetricsResponse, GetSubgraphSDLFromLatestCompositionRequest, GetSubgraphSDLFromLatestCompositionResponse, GetSubgraphsRequest, GetSubgraphsResponse, GetTraceRequest, GetTraceResponse, GetUserAccessiblePermissionsRequest, GetUserAccessiblePermissionsResponse, GetUserAccessibleResourcesRequest, GetUserAccessibleResourcesResponse, GetWebhookDeliveryDetailsRequest, GetWebhookDeliveryDetailsResponse, InviteUserRequest, InviteUserResponse, IsGitHubAppInstalledRequest, IsGitHubAppInstalledResponse, IsMemberLimitReachedRequest, IsMemberLimitReachedResponse, LeaveOrganizationRequest, LeaveOrganizationResponse, ListRouterCompatibilityVersionsRequest, ListRouterCompatibilityVersionsResponse, MigrateFromApolloRequest, MigrateFromApolloResponse, MigrateMonographRequest, MigrateMonographResponse, MoveGraphRequest, MoveGraphResponse, PublishFederatedSubgraphRequest, PublishFederatedSubgraphResponse, PublishMonographRequest, PublishMonographResponse, PublishPersistedOperationsRequest, PublishPersistedOperationsResponse, PushCacheWarmerOperationRequest, PushCacheWarmerOperationResponse, RedeliverWebhookRequest, RedeliverWebhookResponse, RemoveInvitationRequest, RemoveInvitationResponse, RemoveOperationIgnoreAllOverrideRequest, RemoveOperationIgnoreAllOverrideResponse, RemoveOperationOverridesRequest, RemoveOperationOverridesResponse, RemoveOrganizationMemberRequest, RemoveOrganizationMemberResponse, RemoveSubgraphMemberRequest, RemoveSubgraphMemberResponse, RenameNamespaceRequest, RenameNamespaceResponse, ReplyToDiscussionRequest, ReplyToDiscussionResponse, SetDiscussionResolutionRequest, SetDiscussionResolutionResponse, SetGraphRouterCompatibilityVersionRequest, SetGraphRouterCompatibilityVersionResponse, ToggleChangeOverridesForAllOperationsRequest, ToggleChangeOverridesForAllOperationsResponse, UpdateContractRequest, UpdateContractResponse, UpdateDiscussionCommentRequest, UpdateDiscussionCommentResponse, UpdateFeatureFlagRequest, UpdateFeatureFlagResponse, UpdateFeatureSettingsRequest, UpdateFeatureSettingsResponse, UpdateFederatedGraphRequest, UpdateFederatedGraphResponse, UpdateIDPMappersRequest, UpdateIDPMappersResponse, UpdateIntegrationConfigRequest, UpdateIntegrationConfigResponse, UpdateMonographRequest, UpdateMonographResponse, UpdateOrganizationDetailsRequest, UpdateOrganizationDetailsResponse, UpdateOrganizationWebhookConfigRequest, UpdateOrganizationWebhookConfigResponse, UpdateOrgMemberRoleRequest, UpdateOrgMemberRoleResponse, UpdatePlaygroundScriptRequest, UpdatePlaygroundScriptResponse, UpdateSubgraphRequest, UpdateSubgraphResponse, UpgradePlanRequest, UpgradePlanResponse, WhoAmIRequest, WhoAmIResponse } from "./platform_pb.js";
+import { AcceptOrDeclineInvitationRequest, AcceptOrDeclineInvitationResponse, AddReadmeRequest, AddReadmeResponse, CheckFederatedGraphRequest, CheckFederatedGraphResponse, CheckSubgraphSchemaRequest, CheckSubgraphSchemaResponse, ComputeCacheWarmerOperationsRequest, ComputeCacheWarmerOperationsResponse, ConfigureCacheWarmerRequest, ConfigureCacheWarmerResponse, ConfigureNamespaceGraphPruningConfigRequest, ConfigureNamespaceGraphPruningConfigResponse, ConfigureNamespaceLintConfigRequest, ConfigureNamespaceLintConfigResponse, ConfigureNamespaceProposalConfigRequest, ConfigureNamespaceProposalConfigResponse, CreateAPIKeyRequest, CreateAPIKeyResponse, CreateBillingPortalSessionRequest, CreateBillingPortalSessionResponse, CreateCheckoutSessionRequest, CreateCheckoutSessionResponse, CreateContractRequest, CreateContractResponse, CreateFeatureFlagRequest, CreateFeatureFlagResponse, CreateFederatedGraphRequest, CreateFederatedGraphResponse, CreateFederatedGraphTokenRequest, CreateFederatedGraphTokenResponse, CreateFederatedSubgraphRequest, CreateFederatedSubgraphResponse, CreateIgnoreOverridesForAllOperationsRequest, CreateIgnoreOverridesForAllOperationsResponse, CreateIntegrationRequest, CreateIntegrationResponse, CreateMonographRequest, CreateMonographResponse, CreateNamespaceRequest, CreateNamespaceResponse, CreateOIDCProviderRequest, CreateOIDCProviderResponse, CreateOperationIgnoreAllOverrideRequest, CreateOperationIgnoreAllOverrideResponse, CreateOperationOverridesRequest, CreateOperationOverridesResponse, CreateOrganizationGroupRequest, CreateOrganizationGroupResponse, CreateOrganizationRequest, CreateOrganizationResponse, CreateOrganizationWebhookConfigRequest, CreateOrganizationWebhookConfigResponse, CreatePlaygroundScriptRequest, CreatePlaygroundScriptResponse, CreateProposalRequest, CreateProposalResponse, DeleteAPIKeyRequest, DeleteAPIKeyResponse, DeleteCacheWarmerOperationRequest, DeleteCacheWarmerOperationResponse, DeleteFeatureFlagRequest, DeleteFeatureFlagResponse, DeleteFederatedGraphRequest, DeleteFederatedGraphResponse, DeleteFederatedSubgraphRequest, DeleteFederatedSubgraphResponse, DeleteIntegrationRequest, DeleteIntegrationResponse, DeleteMonographRequest, DeleteMonographResponse, DeleteNamespaceRequest, DeleteNamespaceResponse, DeleteOIDCProviderRequest, DeleteOIDCProviderResponse, DeleteOrganizationGroupRequest, DeleteOrganizationGroupResponse, DeleteOrganizationRequest, DeleteOrganizationResponse, DeleteOrganizationWebhookConfigRequest, DeleteOrganizationWebhookConfigResponse, DeletePlaygroundScriptRequest, DeletePlaygroundScriptResponse, DeleteRouterTokenRequest, DeleteRouterTokenResponse, DeleteUserRequest, DeleteUserResponse, EnableFeatureFlagRequest, EnableFeatureFlagResponse, EnableGraphPruningRequest, EnableGraphPruningResponse, EnableLintingForTheNamespaceRequest, EnableLintingForTheNamespaceResponse, EnableProposalsForNamespaceRequest, EnableProposalsForNamespaceResponse, FixSubgraphSchemaRequest, FixSubgraphSchemaResponse, ForceCheckSuccessRequest, ForceCheckSuccessResponse, GenerateRouterTokenRequest, GenerateRouterTokenResponse, GetAllOverridesRequest, GetAllOverridesResponse, GetAnalyticsViewRequest, GetAnalyticsViewResponse, GetAPIKeysRequest, GetAPIKeysResponse, GetAuditLogsRequest, GetAuditLogsResponse, GetBillingPlansRequest, GetBillingPlansResponse, GetCacheWarmerConfigRequest, GetCacheWarmerConfigResponse, GetCacheWarmerOperationsRequest, GetCacheWarmerOperationsResponse, GetChangelogBySchemaVersionRequest, GetChangelogBySchemaVersionResponse, GetCheckOperationsRequest, GetCheckOperationsResponse, GetChecksByFederatedGraphNameRequest, GetChecksByFederatedGraphNameResponse, GetCheckSummaryRequest, GetCheckSummaryResponse, GetClientsFromAnalyticsRequest, GetClientsFromAnalyticsResponse, GetClientsRequest, GetClientsResponse, GetCompositionDetailsRequest, GetCompositionDetailsResponse, GetCompositionsRequest, GetCompositionsResponse, GetDashboardAnalyticsViewRequest, GetDashboardAnalyticsViewResponse, GetFeatureFlagByNameRequest, GetFeatureFlagByNameResponse, GetFeatureFlagsByFederatedGraphRequest, GetFeatureFlagsByFederatedGraphResponse, GetFeatureFlagsRequest, GetFeatureFlagsResponse, GetFeatureSubgraphsByFeatureFlagRequest, GetFeatureSubgraphsByFeatureFlagResponse, GetFeatureSubgraphsRequest, GetFeatureSubgraphsResponse, GetFederatedGraphByIdRequest, GetFederatedGraphByIdResponse, GetFederatedGraphByNameRequest, GetFederatedGraphByNameResponse, GetFederatedGraphChangelogRequest, GetFederatedGraphChangelogResponse, GetFederatedGraphsBySubgraphLabelsRequest, GetFederatedGraphsBySubgraphLabelsResponse, GetFederatedGraphSDLByNameRequest, GetFederatedGraphSDLByNameResponse, GetFederatedGraphsRequest, GetFederatedGraphsResponse, GetFieldUsageRequest, GetFieldUsageResponse, GetGraphMetricsRequest, GetGraphMetricsResponse, GetInvitationsRequest, GetInvitationsResponse, GetLatestSubgraphSDLRequest, GetLatestSubgraphSDLResponse, GetMetricsErrorRateRequest, GetMetricsErrorRateResponse, GetNamespaceChecksConfigurationRequest, GetNamespaceChecksConfigurationResponse, GetNamespaceGraphPruningConfigRequest, GetNamespaceGraphPruningConfigResponse, GetNamespaceLintConfigRequest, GetNamespaceLintConfigResponse, GetNamespaceProposalConfigRequest, GetNamespaceProposalConfigResponse, GetNamespaceRequest, GetNamespaceResponse, GetNamespacesRequest, GetNamespacesResponse, GetOIDCProviderRequest, GetOIDCProviderResponse, GetOperationContentRequest, GetOperationContentResponse, GetOperationOverridesRequest, GetOperationOverridesResponse, GetOperationsRequest, GetOperationsResponse, GetOrganizationBySlugRequest, GetOrganizationBySlugResponse, GetOrganizationGroupMembersRequest, GetOrganizationGroupMembersResponse, GetOrganizationGroupsRequest, GetOrganizationGroupsResponse, GetOrganizationIntegrationsRequest, GetOrganizationIntegrationsResponse, GetOrganizationMembersRequest, GetOrganizationMembersResponse, GetOrganizationRequestsCountRequest, GetOrganizationRequestsCountResponse, GetOrganizationWebhookConfigsRequest, GetOrganizationWebhookConfigsResponse, GetOrganizationWebhookHistoryRequest, GetOrganizationWebhookHistoryResponse, GetOrganizationWebhookMetaRequest, GetOrganizationWebhookMetaResponse, GetPendingOrganizationMembersRequest, GetPendingOrganizationMembersResponse, GetPersistedOperationsRequest, GetPersistedOperationsResponse, GetPlaygroundScriptsRequest, GetPlaygroundScriptsResponse, GetProposalChecksRequest, GetProposalChecksResponse, GetProposalRequest, GetProposalResponse, GetProposalsByFederatedGraphRequest, GetProposalsByFederatedGraphResponse, GetProposedSchemaOfCheckedSubgraphRequest, GetProposedSchemaOfCheckedSubgraphResponse, GetRoutersRequest, GetRoutersResponse, GetRouterTokensRequest, GetRouterTokensResponse, GetSdlBySchemaVersionRequest, GetSdlBySchemaVersionResponse, GetSubgraphByIdRequest, GetSubgraphByIdResponse, GetSubgraphByNameRequest, GetSubgraphByNameResponse, GetSubgraphMembersRequest, GetSubgraphMembersResponse, GetSubgraphMetricsErrorRateRequest, GetSubgraphMetricsErrorRateResponse, GetSubgraphMetricsRequest, GetSubgraphMetricsResponse, GetSubgraphSDLFromLatestCompositionRequest, GetSubgraphSDLFromLatestCompositionResponse, GetSubgraphsRequest, GetSubgraphsResponse, GetTraceRequest, GetTraceResponse, GetUserAccessiblePermissionsRequest, GetUserAccessiblePermissionsResponse, GetUserAccessibleResourcesRequest, GetUserAccessibleResourcesResponse, GetWebhookDeliveryDetailsRequest, GetWebhookDeliveryDetailsResponse, InviteUserRequest, InviteUserResponse, IsGitHubAppInstalledRequest, IsGitHubAppInstalledResponse, IsMemberLimitReachedRequest, IsMemberLimitReachedResponse, LeaveOrganizationRequest, LeaveOrganizationResponse, ListRouterCompatibilityVersionsRequest, ListRouterCompatibilityVersionsResponse, MigrateFromApolloRequest, MigrateFromApolloResponse, MigrateMonographRequest, MigrateMonographResponse, MoveGraphRequest, MoveGraphResponse, PublishFederatedSubgraphRequest, PublishFederatedSubgraphResponse, PublishMonographRequest, PublishMonographResponse, PublishPersistedOperationsRequest, PublishPersistedOperationsResponse, PushCacheWarmerOperationRequest, PushCacheWarmerOperationResponse, RedeliverWebhookRequest, RedeliverWebhookResponse, RemoveInvitationRequest, RemoveInvitationResponse, RemoveOperationIgnoreAllOverrideRequest, RemoveOperationIgnoreAllOverrideResponse, RemoveOperationOverridesRequest, RemoveOperationOverridesResponse, RemoveOrganizationMemberRequest, RemoveOrganizationMemberResponse, RenameNamespaceRequest, RenameNamespaceResponse, RestoreOrganizationRequest, RestoreOrganizationResponse, SetGraphRouterCompatibilityVersionRequest, SetGraphRouterCompatibilityVersionResponse, ToggleChangeOverridesForAllOperationsRequest, ToggleChangeOverridesForAllOperationsResponse, UpdateAPIKeyRequest, UpdateAPIKeyResponse, UpdateContractRequest, UpdateContractResponse, UpdateFeatureFlagRequest, UpdateFeatureFlagResponse, UpdateFeatureSettingsRequest, UpdateFeatureSettingsResponse, UpdateFederatedGraphRequest, UpdateFederatedGraphResponse, UpdateIDPMappersRequest, UpdateIDPMappersResponse, UpdateIntegrationConfigRequest, UpdateIntegrationConfigResponse, UpdateMonographRequest, UpdateMonographResponse, UpdateNamespaceChecksConfigurationRequest, UpdateNamespaceChecksConfigurationResponse, UpdateOrganizationDetailsRequest, UpdateOrganizationDetailsResponse, UpdateOrganizationGroupRequest, UpdateOrganizationGroupResponse, UpdateOrganizationWebhookConfigRequest, UpdateOrganizationWebhookConfigResponse, UpdateOrgMemberGroupRequest, UpdateOrgMemberGroupResponse, UpdatePlaygroundScriptRequest, UpdatePlaygroundScriptResponse, UpdateProposalRequest, UpdateProposalResponse, UpdateSubgraphRequest, UpdateSubgraphResponse, UpgradePlanRequest, UpgradePlanResponse, WhoAmIRequest, WhoAmIResponse } from "./platform_pb.js";
 
 /**
  * PlaygroundScripts
@@ -381,6 +381,20 @@ export const checkSubgraphSchema = {
   kind: MethodKind.Unary,
   I: CheckSubgraphSchemaRequest,
   O: CheckSubgraphSchemaResponse,
+  service: {
+    typeName: "wg.cosmo.platform.v1.PlatformService"
+  }
+} as const;
+
+/**
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetProposedSchemaOfCheckedSubgraph
+ */
+export const getProposedSchemaOfCheckedSubgraph = {
+  localName: "getProposedSchemaOfCheckedSubgraph",
+  name: "GetProposedSchemaOfCheckedSubgraph",
+  kind: MethodKind.Unary,
+  I: GetProposedSchemaOfCheckedSubgraphRequest,
+  O: GetProposedSchemaOfCheckedSubgraphResponse,
   service: {
     typeName: "wg.cosmo.platform.v1.PlatformService"
   }
@@ -1041,6 +1055,22 @@ export const createAPIKey = {
 } as const;
 
 /**
+ * UpdateAPIKey updates an API key for the organization
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateAPIKey
+ */
+export const updateAPIKey = {
+  localName: "updateAPIKey",
+  name: "UpdateAPIKey",
+  kind: MethodKind.Unary,
+  I: UpdateAPIKeyRequest,
+  O: UpdateAPIKeyResponse,
+  service: {
+    typeName: "wg.cosmo.platform.v1.PlatformService"
+  }
+} as const;
+
+/**
  * DeleteAPIKey deletes an API key for the organization
  *
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeleteAPIKey
@@ -1099,6 +1129,87 @@ export const migrateFromApollo = {
   kind: MethodKind.Unary,
   I: MigrateFromApolloRequest,
   O: MigrateFromApolloResponse,
+  service: {
+    typeName: "wg.cosmo.platform.v1.PlatformService"
+  }
+} as const;
+
+/**
+ * Organization Member Group management
+ * CreateOrganizationGroup creates a new organization group
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateOrganizationGroup
+ */
+export const createOrganizationGroup = {
+  localName: "createOrganizationGroup",
+  name: "CreateOrganizationGroup",
+  kind: MethodKind.Unary,
+  I: CreateOrganizationGroupRequest,
+  O: CreateOrganizationGroupResponse,
+  service: {
+    typeName: "wg.cosmo.platform.v1.PlatformService"
+  }
+} as const;
+
+/**
+ * GetOrganizationGroups returns the list of organization groups
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetOrganizationGroups
+ */
+export const getOrganizationGroups = {
+  localName: "getOrganizationGroups",
+  name: "GetOrganizationGroups",
+  kind: MethodKind.Unary,
+  I: GetOrganizationGroupsRequest,
+  O: GetOrganizationGroupsResponse,
+  service: {
+    typeName: "wg.cosmo.platform.v1.PlatformService"
+  }
+} as const;
+
+/**
+ * GetOrganizationGroupMembers returns the list of members belonging to the provided organization group
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetOrganizationGroupMembers
+ */
+export const getOrganizationGroupMembers = {
+  localName: "getOrganizationGroupMembers",
+  name: "GetOrganizationGroupMembers",
+  kind: MethodKind.Unary,
+  I: GetOrganizationGroupMembersRequest,
+  O: GetOrganizationGroupMembersResponse,
+  service: {
+    typeName: "wg.cosmo.platform.v1.PlatformService"
+  }
+} as const;
+
+/**
+ * UpdateOrganizationGroup updates the rule list for an organization group
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateOrganizationGroup
+ */
+export const updateOrganizationGroup = {
+  localName: "updateOrganizationGroup",
+  name: "UpdateOrganizationGroup",
+  kind: MethodKind.Unary,
+  I: UpdateOrganizationGroupRequest,
+  O: UpdateOrganizationGroupResponse,
+  service: {
+    typeName: "wg.cosmo.platform.v1.PlatformService"
+  }
+} as const;
+
+/**
+ * DeleteOrganizationGroup deletes an existing organization group
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeleteOrganizationGroup
+ */
+export const deleteOrganizationGroup = {
+  localName: "deleteOrganizationGroup",
+  name: "DeleteOrganizationGroup",
+  kind: MethodKind.Unary,
+  I: DeleteOrganizationGroupRequest,
+  O: DeleteOrganizationGroupResponse,
   service: {
     typeName: "wg.cosmo.platform.v1.PlatformService"
   }
@@ -1329,6 +1440,22 @@ export const deleteOrganization = {
 } as const;
 
 /**
+ * RestoreOrganization restore an organization pending deletion
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.RestoreOrganization
+ */
+export const restoreOrganization = {
+  localName: "restoreOrganization",
+  name: "RestoreOrganization",
+  kind: MethodKind.Unary,
+  I: RestoreOrganizationRequest,
+  O: RestoreOrganizationResponse,
+  service: {
+    typeName: "wg.cosmo.platform.v1.PlatformService"
+  }
+} as const;
+
+/**
  * LeaveOrganization removes a member from the organization
  *
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.LeaveOrganization
@@ -1361,16 +1488,16 @@ export const updateOrganizationDetails = {
 } as const;
 
 /**
- * UpdateOrgMemberRole updates the role of an org member
+ * UpdateOrgMemberGroup updates the group of an organization member
  *
- * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateOrgMemberRole
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateOrgMemberGroup
  */
-export const updateOrgMemberRole = {
-  localName: "updateOrgMemberRole",
-  name: "UpdateOrgMemberRole",
+export const updateOrgMemberGroup = {
+  localName: "updateOrgMemberGroup",
+  name: "UpdateOrgMemberGroup",
   kind: MethodKind.Unary,
-  I: UpdateOrgMemberRoleRequest,
-  O: UpdateOrgMemberRoleResponse,
+  I: UpdateOrgMemberGroupRequest,
+  O: UpdateOrgMemberGroupResponse,
   service: {
     typeName: "wg.cosmo.platform.v1.PlatformService"
   }
@@ -1617,38 +1744,6 @@ export const updateFeatureSettings = {
 } as const;
 
 /**
- * AddSubgraphMember adds a user to the subgraph
- *
- * @generated from rpc wg.cosmo.platform.v1.PlatformService.AddSubgraphMember
- */
-export const addSubgraphMember = {
-  localName: "addSubgraphMember",
-  name: "AddSubgraphMember",
-  kind: MethodKind.Unary,
-  I: AddSubgraphMemberRequest,
-  O: AddSubgraphMemberResponse,
-  service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
-} as const;
-
-/**
- * RemoveSubgraphMember removes a member from the subgraph
- *
- * @generated from rpc wg.cosmo.platform.v1.PlatformService.RemoveSubgraphMember
- */
-export const removeSubgraphMember = {
-  localName: "removeSubgraphMember",
-  name: "RemoveSubgraphMember",
-  kind: MethodKind.Unary,
-  I: RemoveSubgraphMemberRequest,
-  O: RemoveSubgraphMemberResponse,
-  service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
-} as const;
-
-/**
  * GetSubgraphMembers gets all the members of the subgraph
  *
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetSubgraphMembers
@@ -1659,134 +1754,6 @@ export const getSubgraphMembers = {
   kind: MethodKind.Unary,
   I: GetSubgraphMembersRequest,
   O: GetSubgraphMembersResponse,
-  service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
-} as const;
-
-/**
- * CreateDiscussion creates a new discussion with an opening comment
- *
- * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateDiscussion
- */
-export const createDiscussion = {
-  localName: "createDiscussion",
-  name: "CreateDiscussion",
-  kind: MethodKind.Unary,
-  I: CreateDiscussionRequest,
-  O: CreateDiscussionResponse,
-  service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
-} as const;
-
-/**
- * ReplyToDiscussion creates a new comment in the discussion
- *
- * @generated from rpc wg.cosmo.platform.v1.PlatformService.ReplyToDiscussion
- */
-export const replyToDiscussion = {
-  localName: "replyToDiscussion",
-  name: "ReplyToDiscussion",
-  kind: MethodKind.Unary,
-  I: ReplyToDiscussionRequest,
-  O: ReplyToDiscussionResponse,
-  service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
-} as const;
-
-/**
- * GetAllDiscussions fetches all discussions which may be scoped to a schema version if passed
- *
- * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetAllDiscussions
- */
-export const getAllDiscussions = {
-  localName: "getAllDiscussions",
-  name: "GetAllDiscussions",
-  kind: MethodKind.Unary,
-  I: GetAllDiscussionsRequest,
-  O: GetAllDiscussionsResponse,
-  service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
-} as const;
-
-/**
- * UpdateDiscussionComment edits the comment in the discussion
- *
- * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateDiscussionComment
- */
-export const updateDiscussionComment = {
-  localName: "updateDiscussionComment",
-  name: "UpdateDiscussionComment",
-  kind: MethodKind.Unary,
-  I: UpdateDiscussionCommentRequest,
-  O: UpdateDiscussionCommentResponse,
-  service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
-} as const;
-
-/**
- * DeleteDiscussionComment deletes the comment or the discussion if it is an opening comment
- *
- * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeleteDiscussionComment
- */
-export const deleteDiscussionComment = {
-  localName: "deleteDiscussionComment",
-  name: "DeleteDiscussionComment",
-  kind: MethodKind.Unary,
-  I: DeleteDiscussionCommentRequest,
-  O: DeleteDiscussionCommentResponse,
-  service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
-} as const;
-
-/**
- * GetDiscussion gets the entire discussion thread
- *
- * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetDiscussion
- */
-export const getDiscussion = {
-  localName: "getDiscussion",
-  name: "GetDiscussion",
-  kind: MethodKind.Unary,
-  I: GetDiscussionRequest,
-  O: GetDiscussionResponse,
-  service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
-} as const;
-
-/**
- * GetDiscussionSchemas gets the reference and latest schema of the target graph in which the discussion was created
- *
- * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetDiscussionSchemas
- */
-export const getDiscussionSchemas = {
-  localName: "getDiscussionSchemas",
-  name: "GetDiscussionSchemas",
-  kind: MethodKind.Unary,
-  I: GetDiscussionSchemasRequest,
-  O: GetDiscussionSchemasResponse,
-  service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
-} as const;
-
-/**
- * SetDiscussionResolutionRequest marks the discussion as resolved or not
- *
- * @generated from rpc wg.cosmo.platform.v1.PlatformService.SetDiscussionResolution
- */
-export const setDiscussionResolution = {
-  localName: "setDiscussionResolution",
-  name: "SetDiscussionResolution",
-  kind: MethodKind.Unary,
-  I: SetDiscussionResolutionRequest,
-  O: SetDiscussionResolutionResponse,
   service: {
     typeName: "wg.cosmo.platform.v1.PlatformService"
   }
@@ -2080,6 +2047,38 @@ export const getNamespaceLintConfig = {
   kind: MethodKind.Unary,
   I: GetNamespaceLintConfigRequest,
   O: GetNamespaceLintConfigResponse,
+  service: {
+    typeName: "wg.cosmo.platform.v1.PlatformService"
+  }
+} as const;
+
+/**
+ * GetNamespaceChecksConfig returns the checks config of the namespace.
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetNamespaceChecksConfig
+ */
+export const getNamespaceChecksConfig = {
+  localName: "getNamespaceChecksConfig",
+  name: "GetNamespaceChecksConfig",
+  kind: MethodKind.Unary,
+  I: GetNamespaceChecksConfigurationRequest,
+  O: GetNamespaceChecksConfigurationResponse,
+  service: {
+    typeName: "wg.cosmo.platform.v1.PlatformService"
+  }
+} as const;
+
+/**
+ * UpdateNamespaceChecksConfig updates the checks configuration for the namespace passed.
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateNamespaceChecksConfig
+ */
+export const updateNamespaceChecksConfig = {
+  localName: "updateNamespaceChecksConfig",
+  name: "UpdateNamespaceChecksConfig",
+  kind: MethodKind.Unary,
+  I: UpdateNamespaceChecksConfigurationRequest,
+  O: UpdateNamespaceChecksConfigurationResponse,
   service: {
     typeName: "wg.cosmo.platform.v1.PlatformService"
   }
@@ -2435,6 +2434,167 @@ export const setGraphRouterCompatibilityVersion = {
   kind: MethodKind.Unary,
   I: SetGraphRouterCompatibilityVersionRequest,
   O: SetGraphRouterCompatibilityVersionResponse,
+  service: {
+    typeName: "wg.cosmo.platform.v1.PlatformService"
+  }
+} as const;
+
+/**
+ * Proposal
+ * Create a proposal for a federated graph
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateProposal
+ */
+export const createProposal = {
+  localName: "createProposal",
+  name: "CreateProposal",
+  kind: MethodKind.Unary,
+  I: CreateProposalRequest,
+  O: CreateProposalResponse,
+  service: {
+    typeName: "wg.cosmo.platform.v1.PlatformService"
+  }
+} as const;
+
+/**
+ * Get a proposal by id
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetProposal
+ */
+export const getProposal = {
+  localName: "getProposal",
+  name: "GetProposal",
+  kind: MethodKind.Unary,
+  I: GetProposalRequest,
+  O: GetProposalResponse,
+  service: {
+    typeName: "wg.cosmo.platform.v1.PlatformService"
+  }
+} as const;
+
+/**
+ * Update a proposal
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateProposal
+ */
+export const updateProposal = {
+  localName: "updateProposal",
+  name: "UpdateProposal",
+  kind: MethodKind.Unary,
+  I: UpdateProposalRequest,
+  O: UpdateProposalResponse,
+  service: {
+    typeName: "wg.cosmo.platform.v1.PlatformService"
+  }
+} as const;
+
+/**
+ * EnableProposalsForNamespace enables the proposals for the namespace passed.
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.EnableProposalsForNamespace
+ */
+export const enableProposalsForNamespace = {
+  localName: "enableProposalsForNamespace",
+  name: "EnableProposalsForNamespace",
+  kind: MethodKind.Unary,
+  I: EnableProposalsForNamespaceRequest,
+  O: EnableProposalsForNamespaceResponse,
+  service: {
+    typeName: "wg.cosmo.platform.v1.PlatformService"
+  }
+} as const;
+
+/**
+ * ConfigureNamespaceProposalConfig configures the proposal config of the namespace passed.
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.ConfigureNamespaceProposalConfig
+ */
+export const configureNamespaceProposalConfig = {
+  localName: "configureNamespaceProposalConfig",
+  name: "ConfigureNamespaceProposalConfig",
+  kind: MethodKind.Unary,
+  I: ConfigureNamespaceProposalConfigRequest,
+  O: ConfigureNamespaceProposalConfigResponse,
+  service: {
+    typeName: "wg.cosmo.platform.v1.PlatformService"
+  }
+} as const;
+
+/**
+ * GetNamespaceProposalConfig returns the proposal config of the namespace passed.
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetNamespaceProposalConfig
+ */
+export const getNamespaceProposalConfig = {
+  localName: "getNamespaceProposalConfig",
+  name: "GetNamespaceProposalConfig",
+  kind: MethodKind.Unary,
+  I: GetNamespaceProposalConfigRequest,
+  O: GetNamespaceProposalConfigResponse,
+  service: {
+    typeName: "wg.cosmo.platform.v1.PlatformService"
+  }
+} as const;
+
+/**
+ * GetProposalsByFederatedGraph returns proposals for a federated graph.
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetProposalsByFederatedGraph
+ */
+export const getProposalsByFederatedGraph = {
+  localName: "getProposalsByFederatedGraph",
+  name: "GetProposalsByFederatedGraph",
+  kind: MethodKind.Unary,
+  I: GetProposalsByFederatedGraphRequest,
+  O: GetProposalsByFederatedGraphResponse,
+  service: {
+    typeName: "wg.cosmo.platform.v1.PlatformService"
+  }
+} as const;
+
+/**
+ * GetProposalChecks returns checks for a proposal.
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetProposalChecks
+ */
+export const getProposalChecks = {
+  localName: "getProposalChecks",
+  name: "GetProposalChecks",
+  kind: MethodKind.Unary,
+  I: GetProposalChecksRequest,
+  O: GetProposalChecksResponse,
+  service: {
+    typeName: "wg.cosmo.platform.v1.PlatformService"
+  }
+} as const;
+
+/**
+ * GetOperations returns the operations of a federated graph.
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetOperations
+ */
+export const getOperations = {
+  localName: "getOperations",
+  name: "GetOperations",
+  kind: MethodKind.Unary,
+  I: GetOperationsRequest,
+  O: GetOperationsResponse,
+  service: {
+    typeName: "wg.cosmo.platform.v1.PlatformService"
+  }
+} as const;
+
+/**
+ * GetClientsFromAnalytics returns all the clients of the federated graph from the analytics
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetClientsFromAnalytics
+ */
+export const getClientsFromAnalytics = {
+  localName: "getClientsFromAnalytics",
+  name: "GetClientsFromAnalytics",
+  kind: MethodKind.Unary,
+  I: GetClientsFromAnalyticsRequest,
+  O: GetClientsFromAnalyticsResponse,
   service: {
     typeName: "wg.cosmo.platform.v1.PlatformService"
   }

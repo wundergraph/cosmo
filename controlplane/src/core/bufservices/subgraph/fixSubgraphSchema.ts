@@ -6,7 +6,6 @@ import {
   FixSubgraphSchemaRequest,
   FixSubgraphSchemaResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { LATEST_ROUTER_COMPATIBILITY_VERSION } from '@wundergraph/composition';
 import { Composer } from '../../composition/composer.js';
 import { buildSchema } from '../../composition/composition.js';
 import { OpenAIGraphql } from '../../openai-graphql/index.js';
@@ -61,17 +60,27 @@ export function fixSubgraphSchema(
     }
 
     const subgraph = await subgraphRepo.byName(req.subgraphName, req.namespace);
-
-    if (!authContext.hasWriteAccess) {
+    if (!subgraph) {
       return {
         response: {
-          code: EnumStatusCode.ERR,
-          details: `The user doesnt have the permissions to perform this operation`,
+          code: EnumStatusCode.ERR_NOT_FOUND,
+          details: `Subgraph '${req.subgraphName}' not found`,
         },
         modified: false,
         schema: '',
       };
     }
+
+    // check whether the user is authorized to perform the action
+    await opts.authorizer.authorize({
+      db: opts.db,
+      graph: {
+        targetId: subgraph.targetId,
+        targetType: 'subgraph',
+      },
+      headers: ctx.requestHeader,
+      authContext,
+    });
 
     // Avoid calling OpenAI API if the schema is too big
     if (req.schema.length > 10_000) {
@@ -113,16 +122,6 @@ export function fixSubgraphSchema(
       };
     }
 
-    if (!subgraph) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR_NOT_FOUND,
-          details: `Subgraph '${req.subgraphName}' not found`,
-        },
-        modified: false,
-        schema: '',
-      };
-    }
     const newSchemaSDL = req.schema;
 
     try {

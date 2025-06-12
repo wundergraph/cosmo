@@ -7,6 +7,7 @@ import { UserDTO } from '../../types/index.js';
 import { BlobStorage } from '../blobstorage/index.js';
 import Keycloak from '../services/Keycloak.js';
 import OidcProvider from '../services/OidcProvider.js';
+import { DeleteOrganizationAuditLogsQueue } from '../workers/DeleteOrganizationAuditLogsWorker.js';
 import { BillingRepository } from './BillingRepository.js';
 import { OidcRepository } from './OidcRepository.js';
 import { OrganizationRepository } from './OrganizationRepository.js';
@@ -69,6 +70,7 @@ export class UserRepository {
   public async deleteUser(
     input: { id: string; keycloakClient: Keycloak; keycloakRealm: string },
     blobStorage: BlobStorage,
+    deleteOrganizationAuditLogsQueue: DeleteOrganizationAuditLogsQueue,
   ) {
     const orgRepo = new OrganizationRepository(this.logger, this.db);
     const oidcRepo = new OidcRepository(this.db);
@@ -77,16 +79,13 @@ export class UserRepository {
     const orgMemberships = await orgRepo.adminMemberships({ userId: input.id });
 
     // get all providers
-    const oidcProviders = [];
+    const oidcProviders: { alias: string; orgSlug: string }[] = [];
     for (const org of orgMemberships.soloAdminSoloMemberOrgs) {
       const provider = await oidcRepo.getOidcProvider({ organizationId: org.id });
       if (provider) {
         oidcProviders.push({ ...provider, orgSlug: org.slug });
       }
     }
-
-    // Perform Keycloak deletions.
-    await this.deleteUserFromKeycloak({ ...input, oidcProviders, orgMemberships });
 
     // Perform DB deletions
     await this.db.transaction(async (tx) => {
@@ -101,12 +100,15 @@ export class UserRepository {
       // Delete all solo organizations of the user
       const deleteOrgs: Promise<void>[] = [];
       for (const org of orgMemberships.soloAdminSoloMemberOrgs) {
-        deleteOrgs.push(orgRepo.deleteOrganization(org.id, blobStorage));
+        deleteOrgs.push(orgRepo.deleteOrganization(org.id, blobStorage, deleteOrganizationAuditLogsQueue));
       }
       await Promise.all(deleteOrgs);
 
       // Delete from db
       await tx.delete(users).where(eq(users.id, input.id)).execute();
+
+      // Perform Keycloak deletions.
+      await this.deleteUserFromKeycloak({ ...input, oidcProviders, orgMemberships });
     });
   }
 
@@ -114,8 +116,8 @@ export class UserRepository {
     id: string;
     oidcProviders: { alias: string; orgSlug: string }[];
     orgMemberships: {
-      memberships: { slug: string; roles: string[] }[];
-      soloAdminSoloMemberOrgs: { slug: string }[];
+      memberships: { slug: string; kcGroupId: string | undefined }[];
+      soloAdminSoloMemberOrgs: { slug: string; kcGroupId: string | undefined }[];
     };
     keycloakClient: Keycloak;
     keycloakRealm: string;
@@ -135,20 +137,24 @@ export class UserRepository {
 
       // Remove keycloak user from all org groups
       for (const org of input.orgMemberships.memberships) {
+        if (!org.kcGroupId) {
+          continue;
+        }
+
         await input.keycloakClient.removeUserFromOrganization({
           realm: input.keycloakRealm,
+          groupId: org.kcGroupId,
           userID: input.id,
-          groupName: org.slug,
-          roles: org.roles,
         });
       }
 
       // Delete keycloak organization groups
       for (const org of input.orgMemberships.soloAdminSoloMemberOrgs) {
-        await input.keycloakClient.deleteOrganizationGroup({
-          realm: input.keycloakRealm,
-          organizationSlug: org.slug,
-        });
+        if (!org.kcGroupId) {
+          continue;
+        }
+
+        await input.keycloakClient.deleteGroupById({ realm: input.keycloakRealm, groupId: org.kcGroupId });
       }
 
       // Delete user from keycloak

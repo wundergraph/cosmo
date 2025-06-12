@@ -1,16 +1,78 @@
 package integration
 
 import (
+	"encoding/json"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
+
+func TestCacheControl(t *testing.T) {
+	t.Run("Unreachable subgraph causes no-cache", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			CacheControlPolicy: config.CacheControlPolicy{
+				Enabled: true,
+				Value:   "max-age=300",
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Products: testenv.SubgraphConfig{
+					CloseOnStart: true,
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employees { id details { forename surname } notes } }`,
+			})
+
+			assert.Equal(t, "no-store, no-cache, must-revalidate", res.Response.Header.Get("Cache-Control"))
+			assert.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'products' at Path 'employees'."}],"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"notes":null},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"notes":null},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"notes":null},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"notes":null},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"notes":null},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"notes":null},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"notes":null},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"notes":null},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"notes":null},{"id":12,"details":{"forename":"David","surname":"Stutt"},"notes":null}]}}`, res.Body)
+		})
+	})
+
+	t.Run("PERSISTED_QUERY_NOT_FOUND causes no-cache", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			CacheControlPolicy: config.CacheControlPolicy{
+				Enabled: true,
+				Value:   "max-age=300",
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Make request that triggers PERSISTED_QUERY_NOT_FOUND error
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:      "", // Empty query
+				Variables:  json.RawMessage(`{}`),
+				Extensions: json.RawMessage(`{"persistedQuery": {"version": 1, "sha256Hash": "invalid-hash"}}`),
+			})
+
+			require.Contains(t, res.Body, "PERSISTED_QUERY_NOT_FOUND")
+			require.Equal(t, "no-store, no-cache, must-revalidate", res.Response.Header.Get("Cache-Control"))
+		})
+	})
+
+	t.Run("Erroring subgraph response causes no-cache", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			CacheControlPolicy: config.CacheControlPolicy{
+				Enabled: true,
+				Value:   "max-age=300",
+			},
+			Subgraphs: testenv.SubgraphsConfig{},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employee(id: 1) { id rootFieldThrowsError } }`,
+			})
+
+			assert.Equal(t, "no-store, no-cache, must-revalidate", res.Response.Header.Get("Cache-Control"))
+			assert.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'employees'.","extensions":{"errors":[{"message":"error resolving RootFieldThrowsError for Employee 1","path":["employee","rootFieldThrowsError"],"extensions":{"code":"ERROR_CODE"}}],"statusCode":200}}],"data":{"employee":{"id":1,"rootFieldThrowsError":null}}}`, res.Body)
+		})
+	})
+}
 
 func TestHeaderPropagation(t *testing.T) {
 	t.Parallel()
@@ -703,6 +765,7 @@ func TestHeaderPropagation(t *testing.T) {
 				require.Equal(t, `{"data":{"employee":{"id":1,"hobbies":[{},{"name":"Counter Strike"},{},{},{}]}}}`, res.Body)
 			})
 		})
+
 		t.Run("set operation can override cache control policies", func(t *testing.T) {
 			t.Parallel()
 			t.Run("global set operation", func(t *testing.T) {
@@ -765,6 +828,23 @@ func TestHeaderPropagation(t *testing.T) {
 				})
 			})
 		})
+
+		t.Run("Successful query gets appropriate cache header", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				// Configure a specific cache control policy
+				CacheControlPolicy: config.CacheControlPolicy{
+					Enabled: true,
+					Value:   "max-age=300",
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryEmployeeWithHobby,
+				})
+				require.Equal(t, "max-age=300", res.Response.Header.Get("Cache-Control")) // no-cache because of the error
+				require.Equal(t, `{"data":{"employee":{"id":1,"hobbies":[{},{"name":"Counter Strike"},{},{},{}]}}}`, res.Body)
+			})
+		})
 	})
 
 	t.Run("header name canonicalization", func(t *testing.T) {
@@ -794,6 +874,164 @@ func TestHeaderPropagation(t *testing.T) {
 			require.Equal(t, "", ncch)
 
 			require.Equal(t, `{"data":{"employee":{"id":1,"hobbies":[{},{"name":"Counter Strike"},{},{},{}]}}}`, res.Body)
+		})
+	})
+
+	t.Run("test matching with regex for response headers", func(t *testing.T) {
+		t.Parallel()
+
+		header1, value1 := "header1", "value1"
+		header2, value2 := "header2", "value2"
+		header3, value3 := "header3", "value3"
+
+		subgraphWithHeaders := testenv.SubgraphsConfig{
+			Employees: testenv.SubgraphConfig{
+				Middleware: func(handler http.Handler) http.Handler {
+					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						w.Header().Set(header1, value1)
+						w.Header().Set(header2, value2)
+						w.Header().Set(header3, value3)
+						handler.ServeHTTP(w, r)
+					})
+				},
+			},
+		}
+
+		t.Run("for normal match", func(t *testing.T) {
+			t.Parallel()
+
+			rule := &config.GlobalHeaderRule{
+				Response: []*config.ResponseHeaderRule{
+					{
+						Operation: config.HeaderRuleOperationPropagate,
+						Matching:  `^(` + header2 + `)$`,
+						Algorithm: config.ResponseHeaderRuleAlgorithmFirstWrite,
+					},
+				},
+			}
+
+			t.Run("for all", func(t *testing.T) {
+				t.Parallel()
+
+				testenv.Run(t, &testenv.Config{
+					Subgraphs: subgraphWithHeaders,
+					RouterOptions: []core.Option{
+						core.WithHeaderRules(config.HeaderRules{
+							All: rule,
+						}),
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: queryEmployeeWithNoHobby,
+					})
+
+					result1 := strings.Join(res.Response.Header.Values(header1), ",")
+					require.Equal(t, "", result1)
+
+					result2 := strings.Join(res.Response.Header.Values(header2), ",")
+					require.Equal(t, value2, result2)
+
+					result3 := strings.Join(res.Response.Header.Values(header3), ",")
+					require.Equal(t, "", result3)
+				})
+			})
+
+			t.Run("for subgraph", func(t *testing.T) {
+				t.Parallel()
+
+				testenv.Run(t, &testenv.Config{
+					Subgraphs: subgraphWithHeaders,
+					RouterOptions: []core.Option{
+						core.WithHeaderRules(config.HeaderRules{
+							Subgraphs: map[string]*config.GlobalHeaderRule{
+								"employees": rule,
+							},
+						}),
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: queryEmployeeWithNoHobby,
+					})
+
+					result1 := strings.Join(res.Response.Header.Values(header1), ",")
+					require.Equal(t, "", result1)
+
+					result2 := strings.Join(res.Response.Header.Values(header2), ",")
+					require.Equal(t, value2, result2)
+
+					result3 := strings.Join(res.Response.Header.Values(header3), ",")
+					require.Equal(t, "", result3)
+				})
+			})
+		})
+
+		t.Run("negate match", func(t *testing.T) {
+			t.Parallel()
+
+			rules := &config.GlobalHeaderRule{
+				Response: []*config.ResponseHeaderRule{
+					{
+						Operation:   config.HeaderRuleOperationPropagate,
+						Matching:    `^(` + header1 + `|` + header2 + `)$`,
+						NegateMatch: true,
+						Algorithm:   config.ResponseHeaderRuleAlgorithmFirstWrite,
+					},
+				},
+			}
+
+			t.Run("for all", func(t *testing.T) {
+				t.Parallel()
+
+				testenv.Run(t, &testenv.Config{
+					Subgraphs: subgraphWithHeaders,
+					RouterOptions: []core.Option{
+						core.WithHeaderRules(config.HeaderRules{
+							All: rules,
+						}),
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: queryEmployeeWithNoHobby,
+					})
+
+					result1 := strings.Join(res.Response.Header.Values(header1), ",")
+					require.Equal(t, "", result1)
+
+					result2 := strings.Join(res.Response.Header.Values(header2), ",")
+					require.Equal(t, "", result2)
+
+					result3 := strings.Join(res.Response.Header.Values(header3), ",")
+					require.Equal(t, value3, result3)
+				})
+			})
+
+			t.Run("for subgraph", func(t *testing.T) {
+				t.Parallel()
+
+				testenv.Run(t, &testenv.Config{
+					Subgraphs: subgraphWithHeaders,
+					RouterOptions: []core.Option{
+						core.WithHeaderRules(config.HeaderRules{
+							Subgraphs: map[string]*config.GlobalHeaderRule{
+								"employees": rules,
+							},
+						}),
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: queryEmployeeWithNoHobby,
+					})
+
+					result1 := strings.Join(res.Response.Header.Values(header1), ",")
+					require.Equal(t, "", result1)
+
+					result2 := strings.Join(res.Response.Header.Values(header2), ",")
+					require.Equal(t, "", result2)
+
+					result3 := strings.Join(res.Response.Header.Values(header3), ",")
+					require.Equal(t, value3, result3)
+				})
+			})
 		})
 	})
 }

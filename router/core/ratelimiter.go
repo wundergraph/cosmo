@@ -8,6 +8,7 @@ import (
 	"fmt"
 	rd "github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/redis"
 	"io"
+	"reflect"
 	"sync"
 
 	"github.com/expr-lang/expr/vm"
@@ -27,6 +28,7 @@ type CosmoRateLimiterOptions struct {
 	RejectStatusCode int
 
 	KeySuffixExpression string
+	ExprManager         *expr.Manager
 }
 
 func NewCosmoRateLimiter(opts *CosmoRateLimiterOptions) (rl *CosmoRateLimiter, err error) {
@@ -41,7 +43,7 @@ func NewCosmoRateLimiter(opts *CosmoRateLimiterOptions) (rl *CosmoRateLimiter, e
 		rl.rejectStatusCode = 200
 	}
 	if opts.KeySuffixExpression != "" {
-		rl.keySuffixProgram, err = expr.CompileStringExpression(opts.KeySuffixExpression)
+		rl.keySuffixProgram, err = opts.ExprManager.CompileExpression(opts.KeySuffixExpression, reflect.String)
 		if err != nil {
 			return nil, err
 		}
@@ -95,7 +97,7 @@ func (c *CosmoRateLimiter) generateKey(ctx *resolve.Context) (string, error) {
 	if rc == nil {
 		return "", errors.New("no request context")
 	}
-	str, err := rc.ResolveStringExpression(c.keySuffixProgram)
+	str, err := expr.ResolveStringExpression(c.keySuffixProgram, rc.expressionContext)
 	if err != nil {
 		return "", fmt.Errorf("failed to resolve key suffix expression: %w", err)
 	}

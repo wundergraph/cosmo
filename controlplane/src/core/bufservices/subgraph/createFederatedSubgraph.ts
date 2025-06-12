@@ -19,6 +19,7 @@ import {
   isValidGraphName,
   isValidLabels,
 } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function createFederatedSubgraph(
   opts: RouterOptions,
@@ -36,16 +37,8 @@ export function createFederatedSubgraph(
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
     req.namespace = req.namespace || DefaultNamespace;
-
-    if (!authContext.hasWriteAccess) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `The user does not have the permissions to perform this operation`,
-        },
-        compositionErrors: [],
-        admissionErrors: [],
-      };
+    if (authContext.organizationDeactivated) {
+      throw new UnauthorizedError();
     }
 
     if (!isValidLabels(req.labels)) {
@@ -148,6 +141,10 @@ export function createFederatedSubgraph(
       };
     }
 
+    if (!authContext.rbac.canCreateSubGraph(namespace)) {
+      throw new UnauthorizedError();
+    }
+
     const existingSubgraph = await subgraphRepo.byName(req.name, req.namespace);
     if (existingSubgraph) {
       return {
@@ -233,6 +230,7 @@ export function createFederatedSubgraph(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: req.isFeatureSubgraph ? 'feature_subgraph.created' : 'subgraph.created',
       action: 'created',
       actorId: authContext.userId,

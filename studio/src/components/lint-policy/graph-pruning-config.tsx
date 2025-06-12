@@ -2,7 +2,7 @@ import { useFeature } from "@/hooks/use-feature";
 import { useFeatureLimit } from "@/hooks/use-feature-limit";
 import { useUser } from "@/hooks/use-user";
 import { docsBaseURL, graphPruningRules } from "@/lib/constants";
-import { checkUserAccess, cn } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { useMutation } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
@@ -16,7 +16,7 @@ import {
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "../ui/button";
 import {
   Card,
@@ -38,6 +38,7 @@ import {
 import { Switch } from "../ui/switch";
 import { useToast } from "../ui/use-toast";
 import { SeverityDropdown } from "./linter-config";
+import { useCheckUserAccess } from "@/hooks/use-check-user-access";
 
 const fetchPeriodOptions = (
   limit: number,
@@ -139,6 +140,7 @@ export const GraphPruningLintConfig = ({
   refetch: () => void;
 }) => {
   const user = useUser();
+  const checkUserAccess = useCheckUserAccess();
   const router = useRouter();
   const namespace = router.query.namespace as string;
   const feature = useFeature("field-pruning-grace-period");
@@ -157,6 +159,11 @@ export const GraphPruningLintConfig = ({
     GraphPruningConfig[]
   >(data.configs);
 
+  useEffect(() => {
+    setGraphPruningEnabled(data.graphPrunerEnabled);
+    setSelectedPruneRules(data.configs);
+  }, [data]);
+
   return (
     <div className="space-y-6 rounded-lg border p-6">
       <div className="flex w-full items-center justify-between">
@@ -174,10 +181,7 @@ export const GraphPruningLintConfig = ({
           checked={graphPruningEnabled}
           disabled={
             !feature?.limit ||
-            !checkUserAccess({
-              rolesToBe: ["admin", "developer"],
-              userRoles: user?.currentOrganization.roles || [],
-            })
+            !checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] })
           }
           onCheckedChange={(checked) => {
             setGraphPruningEnabled(checked);
@@ -259,10 +263,7 @@ export const GraphPruningLintConfig = ({
                 isLoading={isConfiguring}
                 disabled={
                   !data.graphPrunerEnabled ||
-                  !checkUserAccess({
-                    rolesToBe: ["admin", "developer"],
-                    userRoles: user?.currentOrganization.roles || [],
-                  })
+                  !checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] })
                 }
                 onClick={() => {
                   configureGraphPruningRules(
@@ -320,10 +321,7 @@ export const GraphPruningLintConfig = ({
                         className="h-5 w-5"
                         disabled={
                           !data.graphPrunerEnabled ||
-                          !checkUserAccess({
-                            rolesToBe: ["admin", "developer"],
-                            userRoles: user?.currentOrganization.roles || [],
-                          })
+                          !checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] })
                         }
                         checked={selectedPruneRules.some(
                           (l) => l.ruleName === rule.name,

@@ -1,5 +1,5 @@
-import { parse } from 'graphql';
-import { Subgraph } from '../../../src';
+import { MutableIntermediateTypeNode, MutableTypeNode } from '../../../src';
+import { Kind, TypeNode } from 'graphql/index';
 
 // The V1 definitions that are required during normalization
 export const versionOneBaseSchema = `
@@ -24,7 +24,7 @@ export const baseDirectiveDefinitions = `
   directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
 `;
 
-export const baseDirectiveDefinitionWithConfigureDescription = `
+export const baseDirectiveDefinitionsWithConfigureDescription = `
   directive @extends on INTERFACE | OBJECT
   directive @external on FIELD_DEFINITION | OBJECT
   directive @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT
@@ -120,17 +120,43 @@ export const versionTwoRouterDirectiveDefinitions = `
 
 export const versionTwoRouterDefinitions = schemaQueryDefinition + versionTwoRouterDirectiveDefinitions;
 
-export const versionTwoClientDirectiveDefinitions = `
-    directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
-    directive @requiresScopes(scopes: [[openfed__Scope!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
-`;
-
-export const versionTwoClientDefinitions = schemaQueryDefinition + versionTwoClientDirectiveDefinitions;
-
-export function createSubgraph(name: string, schemaString: string): Subgraph {
-  return {
-    definitions: parse(schemaString),
-    name,
-    url: '',
-  };
+export function stringToTypeNode(input: string): TypeNode {
+  input = input.replaceAll('[', '');
+  let typeNode: MutableIntermediateTypeNode;
+  let lastNode: MutableIntermediateTypeNode | undefined;
+  const lastIndex = input.length - 1;
+  for (let i = lastIndex; i > -1; i--) {
+    const character = input[i];
+    switch (character) {
+      case '!':
+        if (lastNode) {
+          lastNode.type = { kind: Kind.NON_NULL_TYPE, type: {} as MutableTypeNode };
+          lastNode = lastNode.type;
+        } else {
+          typeNode = { kind: Kind.NON_NULL_TYPE, type: {} as MutableTypeNode };
+          lastNode = typeNode;
+        }
+        break;
+      case ']':
+        if (lastNode) {
+          lastNode.type = { kind: Kind.LIST_TYPE, type: {} as MutableTypeNode };
+          lastNode = lastNode.type;
+        } else {
+          typeNode = { kind: Kind.LIST_TYPE, type: {} as MutableTypeNode };
+          lastNode = typeNode;
+        }
+        break;
+      default:
+        const node: MutableTypeNode = {
+          kind: Kind.NAMED_TYPE,
+          name: { kind: Kind.NAME, value: input.slice(0, i + 1) },
+        };
+        if (lastNode) {
+          lastNode.type = node;
+          return typeNode! as TypeNode;
+        }
+        return node as TypeNode;
+    }
+  }
+  throw new Error('Could not parse string.');
 }

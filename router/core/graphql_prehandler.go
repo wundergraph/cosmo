@@ -10,7 +10,6 @@ import (
 	"maps"
 	"net/http"
 	"slices"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -68,6 +67,8 @@ type PreHandlerOptions struct {
 	ComputeOperationSha256      bool
 	ApolloCompatibilityFlags    *config.ApolloCompatibilityFlags
 	DisableVariablesRemapping   bool
+	ExprManager                 *expr.Manager
+	OmitBatchExtensions         bool
 }
 
 type PreHandler struct {
@@ -99,6 +100,8 @@ type PreHandler struct {
 	apolloCompatibilityFlags    *config.ApolloCompatibilityFlags
 	variableParsePool           astjson.ParserPool
 	disableVariablesRemapping   bool
+	exprManager                 *expr.Manager
+	omitBatchExtensions         bool
 }
 
 type httpOperation struct {
@@ -143,6 +146,8 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		computeOperationSha256:    opts.ComputeOperationSha256,
 		apolloCompatibilityFlags:  opts.ApolloCompatibilityFlags,
 		disableVariablesRemapping: opts.DisableVariablesRemapping,
+		exprManager:               opts.ExprManager,
+		omitBatchExtensions:       opts.OmitBatchExtensions,
 	}
 }
 
@@ -203,8 +208,8 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		routerSpan.SetAttributes(requestContext.telemetry.traceAttrs...)
 
-		if requestContext.telemetry.traceAttributeExpressions != nil {
-			traceMetrics, err := requestContext.telemetry.traceAttributeExpressions.expressionsAttributes(requestContext)
+		if requestContext.telemetry.telemetryAttributeExpressions != nil {
+			traceMetrics, err := requestContext.telemetry.telemetryAttributeExpressions.expressionsAttributes(&requestContext.expressionContext)
 			if err != nil {
 				requestLogger.Error("failed to resolve trace attribute", zap.Error(err))
 			}
@@ -215,13 +220,24 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		}
 
 		if requestContext.telemetry.metricAttributeExpressions != nil {
-			metricAttrs, err := requestContext.telemetry.metricAttributeExpressions.expressionsAttributes(requestContext)
+			metricAttrs, err := requestContext.telemetry.metricAttributeExpressions.expressionsAttributes(&requestContext.expressionContext)
 			if err != nil {
 				requestLogger.Error("failed to resolve metric attribute", zap.Error(err))
 			}
 			requestContext.telemetry.addMetricAttribute(
 				metricAttrs...,
 			)
+		}
+
+		if requestContext.telemetry.tracingAttributeExpressions != nil {
+			traceMetrics, err := requestContext.telemetry.tracingAttributeExpressions.expressionsAttributes(&requestContext.expressionContext)
+			if err != nil {
+				requestLogger.Error("failed to resolve trace attribute", zap.Error(err))
+			}
+			requestContext.telemetry.addCommonTraceAttribute(
+				traceMetrics...,
+			)
+			routerSpan.SetAttributes(traceMetrics...)
 		}
 
 		requestContext.operation = &operationContext{
@@ -283,6 +299,10 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 			var err error
 			body, files, err = multipartParser.Parse(r, h.getBodyReadBuffer(r.ContentLength))
+			// We set it before the error so that users could log the body if it exists in case of an error
+			if h.exprManager.VisitorManager.IsBodyUsedInExpressions() {
+				requestContext.expressionContext.Request.Body.Raw = string(body)
+			}
 			if err != nil {
 				requestContext.SetError(err)
 				writeOperationError(r, w, requestLogger, requestContext.error)
@@ -311,6 +331,10 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 			var err error
 			body, err = h.operationProcessor.ReadBody(r.Body, h.getBodyReadBuffer(r.ContentLength))
+			// We set it before the error so that users could log the body if it exists in case of an error
+			if h.exprManager.VisitorManager.IsBodyUsedInExpressions() {
+				requestContext.expressionContext.Request.Body.Raw = string(body)
+			}
 			if err != nil {
 				requestContext.SetError(err)
 
@@ -339,7 +363,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			validatedReq, err := h.accessController.Access(w, r)
 			if err != nil {
 				requestContext.SetError(err)
-				requestLogger.Error("Failed to authenticate request", zap.Error(err))
+				requestLogger.Debug("Failed to authenticate request", zap.Error(err))
 
 				// Mark the root span of the router as failed, so we can easily identify failed requests
 				rtrace.AttachErrToSpan(routerSpan, err)
@@ -361,8 +385,8 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			requestContext.expressionContext.Request.Auth = expr.LoadAuth(r.Context())
 		}
 
-		if requestContext.telemetry.traceAttributeExpressions != nil {
-			traceMetrics, err := requestContext.telemetry.traceAttributeExpressions.expressionsAttributesWithAuth(requestContext)
+		if requestContext.telemetry.telemetryAttributeExpressions != nil {
+			traceMetrics, err := requestContext.telemetry.telemetryAttributeExpressions.expressionsAttributesWithAuth(&requestContext.expressionContext)
 			if err != nil {
 				requestLogger.Error("failed to resolve trace attribute", zap.Error(err))
 			}
@@ -373,13 +397,24 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		}
 
 		if requestContext.telemetry.metricAttributeExpressions != nil {
-			metricAttrs, err := requestContext.telemetry.metricAttributeExpressions.expressionsAttributesWithAuth(requestContext)
+			metricAttrs, err := requestContext.telemetry.metricAttributeExpressions.expressionsAttributesWithAuth(&requestContext.expressionContext)
 			if err != nil {
 				requestLogger.Error("failed to resolve metric attribute", zap.Error(err))
 			}
 			requestContext.telemetry.addMetricAttribute(
 				metricAttrs...,
 			)
+		}
+
+		if requestContext.telemetry.tracingAttributeExpressions != nil {
+			traceMetrics, err := requestContext.telemetry.tracingAttributeExpressions.expressionsAttributesWithAuth(&requestContext.expressionContext)
+			if err != nil {
+				requestLogger.Error("failed to resolve trace attribute", zap.Error(err))
+			}
+			requestContext.telemetry.addCommonTraceAttribute(
+				traceMetrics...,
+			)
+			routerSpan.SetAttributes(traceMetrics...)
 		}
 
 		err = h.handleOperation(r, variablesParser, &httpOperation{
@@ -440,6 +475,7 @@ func (h *PreHandler) shouldComputeOperationSha256(operationKit *OperationKit) bo
 	if h.computeOperationSha256 {
 		return true
 	}
+
 	hasPersistedHash := operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery != nil && operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash != ""
 	// If it already has a persisted hash attached to the request, then there is no need for us to compute it anew
 	// Otherwise, we only want to compute the hash (an expensive operation) if we're safelisting or logging unknown persisted operations
@@ -592,11 +628,35 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	requestContext.operation.name = operationKit.parsedOperation.Request.OperationName
 	requestContext.operation.opType = operationKit.parsedOperation.Type
 
+	setExpressionContextOperation(requestContext)
+	setExpressionContextClient(requestContext)
+
 	attributesAfterParse := []attribute.KeyValue{
 		otel.WgOperationName.String(operationKit.parsedOperation.Request.OperationName),
 		otel.WgOperationType.String(operationKit.parsedOperation.Type),
 	}
+
+	// Add the batched operation index even if we error out later
+	var batchedOperationIndex string
+	if opIndex, ok := req.Context().Value(BatchedOperationId{}).(string); ok {
+		batchedOperationIndex = opIndex
+		attributesAfterParse = append(
+			attributesAfterParse, otel.WgBatchingOperationIndex.String(batchedOperationIndex),
+		)
+	}
+
 	requestContext.telemetry.addCommonAttribute(attributesAfterParse...)
+
+	if batchedOperationIndex != "" && operationKit.parsedOperation.Type == "subscription" {
+		unsupportedErr := &httpGraphqlError{
+			message:    "Subscriptions aren't supported in batch operations",
+			statusCode: http.StatusBadRequest,
+		}
+		if !h.omitBatchExtensions {
+			unsupportedErr.extensionCode = ExtensionCodeBatchSubscriptionsUnsupported
+		}
+		return unsupportedErr
+	}
 
 	// Set the router span name after we have the operation name
 	httpOperation.routerSpan.SetName(GetSpanName(operationKit.parsedOperation.Request.OperationName, operationKit.parsedOperation.Type))
@@ -734,6 +794,12 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	requestContext.operation.internalHash = operationKit.parsedOperation.InternalID
 	requestContext.operation.remapVariables = operationKit.parsedOperation.RemapVariables
 
+	operationHash := ""
+	if requestContext.operation.hash != 0 {
+		operationHash = requestContext.operation.HashString()
+	}
+	requestContext.expressionContext.Request.Operation.Hash = operationHash
+
 	if !h.disableVariablesRemapping && len(uploadsMapping) > 0 {
 		// after variables remapping we need to update the file uploads path because variables relative path has changed
 		// but files still references the old uploads locations
@@ -772,7 +838,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		}
 	}
 
-	operationHashString := strconv.FormatUint(operationKit.parsedOperation.ID, 10)
+	operationHashString := operationKit.parsedOperation.IDString()
 
 	operationHashAttribute := otel.WgOperationHash.String(operationHashString)
 	requestContext.telemetry.addCommonAttribute(operationHashAttribute)
@@ -828,6 +894,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	if err != nil {
 		rtrace.AttachErrToSpan(engineValidateSpan, err)
 
+		requestContext.graphQLErrorCodes = append(requestContext.graphQLErrorCodes, h.getErrorCodes(err)...)
 		requestContext.operation.validationTime = time.Since(startValidation)
 
 		if !requestContext.operation.traceOptions.ExcludeValidateStats {
@@ -900,8 +967,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 
 	err = h.planner.plan(requestContext.operation, planOptions)
 	if err != nil {
-
-		httpOperation.requestLogger.Error("failed to plan operation", zap.Error(err))
+		httpOperation.requestLogger.Debug("failed to plan operation", zap.Error(err))
 		rtrace.AttachErrToSpan(enginePlanSpan, err)
 
 		if !requestContext.operation.traceOptions.ExcludePlannerStats {
@@ -957,6 +1023,31 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	}
 
 	return nil
+}
+
+func (h *PreHandler) getErrorCodes(err error) []string {
+	errorCodes := make([]string, 0)
+
+	var reportErr *reportError
+	if errors.As(err, &reportErr) {
+		for _, extError := range reportErr.Report().ExternalErrors {
+			if extError.ExtensionCode != "" {
+				errorCodes = append(errorCodes, extError.ExtensionCode)
+			}
+		}
+	}
+
+	// If "skipLoader" was passed as false to the Validate function, an httpGraphqlError with
+	// an extension code could be returned
+	var httpGqlError *httpGraphqlError
+	if errors.As(err, &httpGqlError) {
+		extensionCode := httpGqlError.ExtensionCode()
+		if extensionCode != "" {
+			errorCodes = append(errorCodes, extensionCode)
+		}
+	}
+
+	return errorCodes
 }
 
 // flushMetrics flushes all metrics to the respective exporters
@@ -1018,7 +1109,7 @@ func (h *PreHandler) internalParseRequestOptions(r *http.Request, clientInfo *Cl
 				return h.routerPublicKey, nil
 			}, jwt.WithValidMethods([]string{jwt.SigningMethodES256.Name}))
 			if err != nil {
-				requestLogger.Error(fmt.Sprintf("failed to parse request token: %s", err.Error()))
+				requestLogger.Debug(fmt.Sprintf("failed to parse request token: %s", err.Error()))
 				return resolve.ExecutionOptions{}, resolve.TraceOptions{}, err
 			}
 			return h.parseRequestExecutionOptions(r), h.parseRequestTraceOptions(r), nil
@@ -1052,4 +1143,30 @@ func (h *PreHandler) parseRequestExecutionOptions(r *http.Request) resolve.Execu
 		options.IncludeQueryPlanInResponse = true
 	}
 	return options
+}
+
+func setExpressionContextOperation(requestContext *requestContext) {
+	requestContext.expressionContext.Request.Operation = expr.Operation{
+		Name: requestContext.operation.name,
+		Type: requestContext.operation.opType,
+	}
+}
+
+func setExpressionContextClient(requestContext *requestContext) {
+	clientName := requestContext.operation.clientInfo.Name
+	if clientName == "unknown" {
+		clientName = ""
+	}
+
+	clientVersion := requestContext.operation.clientInfo.Version
+	if clientVersion == "missing" {
+		clientVersion = ""
+	}
+
+	if clientName != "" || clientVersion != "" {
+		requestContext.expressionContext.Request.Client = expr.Client{
+			Name:    clientName,
+			Version: clientVersion,
+		}
+	}
 }

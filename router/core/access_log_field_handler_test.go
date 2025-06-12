@@ -32,6 +32,7 @@ func TestAccessLogsFieldHandler(t *testing.T) {
 			nil,
 			req,
 			nil,
+			nil,
 		)
 
 		require.Len(t, response, 1)
@@ -48,8 +49,9 @@ func TestAccessLogsFieldHandler(t *testing.T) {
 		rcc := buildRequestContext(requestContextOptions{r: req})
 		req = req.WithContext(withRequestContext(req.Context(), rcc))
 
+		manager := expr.CreateNewExprManager()
 		expressionResponseKey := "testkey"
-		expression, err := expr.CompileAnyExpression("request.error ?? request.url")
+		expression, err := manager.CompileAnyExpression("request.error ?? request.url")
 		require.NoError(t, err)
 
 		exprAttributes := []requestlogger.ExpressionAttribute{
@@ -66,6 +68,7 @@ func TestAccessLogsFieldHandler(t *testing.T) {
 			exprAttributes,
 			nil,
 			req,
+			nil,
 			nil,
 		)
 
@@ -95,7 +98,8 @@ func TestAccessLogsFieldHandler(t *testing.T) {
 
 		req = req.WithContext(withRequestContext(req.Context(), rcc))
 
-		expression, err := expr.CompileAnyExpression("request.error ?? request.url")
+		manager := expr.CreateNewExprManager()
+		expression, err := manager.CompileAnyExpression("request.error ?? request.url")
 		require.NoError(t, err)
 		expressionResponseKey := "testkey"
 
@@ -113,6 +117,7 @@ func TestAccessLogsFieldHandler(t *testing.T) {
 			exprAttributes,
 			nil,
 			req,
+			nil,
 			nil,
 		)
 

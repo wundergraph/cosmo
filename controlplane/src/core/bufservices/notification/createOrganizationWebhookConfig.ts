@@ -5,7 +5,7 @@ import {
   CreateOrganizationWebhookConfigRequest,
   CreateOrganizationWebhookConfigResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { AuthenticationError } from '../../errors/errors.js';
+import { AuthenticationError, UnauthorizedError } from '../../errors/errors.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
@@ -27,14 +27,8 @@ export function createOrganizationWebhookConfig(
     const fedRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
     const auditLogRepo = new AuditLogRepository(opts.db);
 
-    if (!authContext.hasWriteAccess) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `The user doesnt have the permissions to perform this operation`,
-        },
-        webhookConfigId: '',
-      };
+    if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdminOrDeveloper) {
+      throw new UnauthorizedError();
     }
 
     // Check if the user is authorized to subscribe to the events of the federated / mono graphs
@@ -69,6 +63,7 @@ export function createOrganizationWebhookConfig(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'webhook_config.created',
       action: 'created',
       actorId: authContext.userId,

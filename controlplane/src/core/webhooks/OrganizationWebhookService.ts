@@ -8,7 +8,7 @@ import pino from 'pino';
 import * as schema from '../../db/schema.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
-import { WebhookDeliveryInfo } from '../../db/models.js';
+import { ProposalState, WebhookDeliveryInfo } from '../../db/models.js';
 import { webhookAxiosRetryCond } from '../util.js';
 import { makeWebhookRequest } from './utils.js';
 
@@ -45,7 +45,29 @@ export interface MonographSchemaUpdate {
   };
 }
 
-type OrganizationEventData = FederatedGraphSchemaUpdate | MonographSchemaUpdate;
+export interface ProposalStateUpdated {
+  eventName: OrganizationEventName.PROPOSAL_STATE_UPDATED;
+  payload: {
+    federated_graph: {
+      id: string;
+      name: string;
+      namespace: string;
+    };
+    organization: {
+      id: string;
+      slug: string;
+    };
+    proposal: {
+      id: string;
+      name: string;
+      namespace: string;
+      state: string;
+    };
+    actor_id?: string;
+  };
+}
+
+type OrganizationEventData = FederatedGraphSchemaUpdate | MonographSchemaUpdate | ProposalStateUpdated;
 
 type Config = {
   url?: string;
@@ -97,6 +119,20 @@ export class OrganizationWebhookService {
             },
           },
         },
+        webhookProposalStateUpdate: {
+          with: {
+            federatedGraph: {
+              columns: { id: true },
+              with: {
+                target: {
+                  columns: {
+                    type: true,
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     });
 
@@ -118,6 +154,15 @@ export class OrganizationWebhookService {
             case: 'monographSchemaUpdated',
             value: {
               graphIds: config.webhookGraphSchemaUpdate.map((wu) => wu.federatedGraphId),
+            },
+          };
+          break;
+        }
+        case OrganizationEventName.PROPOSAL_STATE_UPDATED: {
+          meta = {
+            case: 'proposalStateUpdated',
+            value: {
+              graphIds: config.webhookProposalStateUpdate.map((wu) => wu.federatedGraphId),
             },
           };
           break;
@@ -182,6 +227,17 @@ export class OrganizationWebhookService {
         }
 
         return config.meta.value.graphIds?.includes(eventData.payload.monograph.id);
+      }
+      case OrganizationEventName.PROPOSAL_STATE_UPDATED: {
+        if (
+          config.meta.case !== 'proposalStateUpdated' ||
+          config.meta.value.graphIds?.length === 0 ||
+          config.type === 'slack'
+        ) {
+          return false;
+        }
+
+        return config.meta.value.graphIds?.includes(eventData.payload.federated_graph.id);
       }
       default: {
         return true;

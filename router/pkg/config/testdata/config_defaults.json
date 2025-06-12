@@ -25,6 +25,7 @@
         "Enabled": false,
         "HeaderName": "x-wg-trace-id"
       },
+      "Attributes": null,
       "ExportGraphQLVariables": false,
       "WithNewRoot": false
     },
@@ -34,6 +35,7 @@
         "Enabled": true,
         "RouterRuntime": true,
         "GraphqlCache": false,
+        "ConnectionStats": false,
         "EngineStats": {
           "Subscriptions": false
         },
@@ -46,12 +48,17 @@
         "Path": "/metrics",
         "ListenAddr": "127.0.0.1:8088",
         "GraphqlCache": false,
+        "ConnectionStats": false,
         "EngineStats": {
           "Subscriptions": false
         },
         "ExcludeMetrics": null,
         "ExcludeMetricLabels": null,
-        "ExcludeScopeInfo": false
+        "ExcludeScopeInfo": false,
+        "SchemaFieldUsage": {
+          "Enabled": false,
+          "IncludeOperationSha": false
+        }
       }
     }
   },
@@ -102,6 +109,22 @@
     "Value": "",
     "Subgraphs": null
   },
+  "MCP": {
+    "Enabled": false,
+    "Server": {
+      "ListenAddr": "localhost:5025",
+      "BaseURL": ""
+    },
+    "Storage": {
+      "ProviderID": ""
+    },
+    "GraphName": "mygraph",
+    "ExcludeMutations": false,
+    "EnableArbitraryOperations": false,
+    "ExposeSchema": false,
+    "RouterURL": ""
+  },
+  "DemoMode": false,
   "Modules": null,
   "Headers": {
     "All": null,
@@ -122,7 +145,7 @@
       "ResponseHeaderTimeout": 0,
       "ExpectContinueTimeout": 0,
       "TLSHandshakeTimeout": 10000000000,
-      "KeepAliveIdleTimeout": 0,
+      "KeepAliveIdleTimeout": 90000000000,
       "KeepAliveProbeInterval": 30000000000,
       "MaxConnsPerHost": 100,
       "MaxIdleConns": 1024,
@@ -163,6 +186,12 @@
       "Enabled": false,
       "Fields": null
     }
+  },
+  "Batching": {
+    "Enabled": false,
+    "MaxConcurrency": 10,
+    "MaxEntriesPerBatch": 100,
+    "OmitExtensions": false
   },
   "ListenAddr": "localhost:3002",
   "ControlplaneURL": "https://cosmo-cp.wundergraph.com",
@@ -293,6 +322,10 @@
     "WebSocketClientPollTimeout": 1000000000,
     "WebSocketClientConnBufferSize": 128,
     "WebSocketClientReadTimeout": 5000000000,
+    "WebSocketClientWriteTimeout": 10000000000,
+    "WebSocketClientPingInterval": 15000000000,
+    "WebSocketClientPingTimeout": 30000000000,
+    "WebSocketClientFrameTimeout": 100000000,
     "ExecutionPlanCacheSize": 1024,
     "MinifySubgraphOperations": true,
     "EnablePersistedOperationsCache": true,
@@ -302,6 +335,7 @@
     "ParseKitPoolSize": 16,
     "EnableValidationCache": true,
     "ValidationCacheSize": 1024,
+    "DisableExposingVariablesContentOnValidationError": false,
     "ResolverMaxRecyclableParserSize": 32768,
     "EnableSubgraphFetchOperationName": false,
     "DisableVariablesRemapping": false,
@@ -335,6 +369,16 @@
           "HeaderKey": "Authorization"
         }
       }
+    },
+    "ClientInfoFromInitialPayload": {
+      "Enabled": true,
+      "NameField": "graphql-client-name",
+      "VersionField": "graphql-client-version",
+      "ForwardToRequestHeaders": {
+        "Enabled": true,
+        "NameTargetHeader": "graphql-client-name",
+        "VersionTargetHeader": "graphql-client-version"
+      }
     }
   },
   "SubgraphErrorPropagation": {
@@ -354,12 +398,14 @@
   "StorageProviders": {
     "S3": null,
     "CDN": null,
-    "Redis": null
+    "Redis": null,
+    "FileSystem": null
   },
   "ExecutionConfig": {
     "File": {
       "Path": "",
-      "Watch": false
+      "Watch": false,
+      "WatchInterval": 1000000000
     },
     "Storage": {
       "ProviderID": "",
@@ -417,6 +463,9 @@
     },
     "SubscriptionMultipartPrintBoundary": {
       "Enabled": false
+    },
+    "UseGraphQLValidationFailedStatus": {
+      "Enabled": false
     }
   },
   "ApolloRouterCompatibilityFlags": {
@@ -430,5 +479,17 @@
   "ClientHeader": {
     "Name": "",
     "Version": ""
+  },
+  "Plugins": {
+    "Enabled": false,
+    "Path": "plugins"
+  },
+  "WatchConfig": {
+    "Enabled": false,
+    "Interval": 10000000000,
+    "StartupDelay": {
+      "Enabled": false,
+      "Maximum": 10000000000
+    }
   }
 }

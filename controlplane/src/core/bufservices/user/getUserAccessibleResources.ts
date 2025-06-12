@@ -9,6 +9,7 @@ import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepos
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 
 export function getUserAccessibleResources(
   opts: RouterOptions,
@@ -21,46 +22,24 @@ export function getUserAccessibleResources(
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
+    const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
     const fedRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
     const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
 
-    if (authContext.isAdmin) {
-      const federatedGraphs = await fedRepo.list({
-        limit: 0,
-        offset: 0,
-      });
-
-      const subgraphs = await subgraphRepo.list({
-        limit: 0,
-        offset: 0,
-        excludeFeatureSubgraphs: false,
-      });
-
-      return {
-        response: {
-          code: EnumStatusCode.OK,
-        },
-        federatedGraphs: federatedGraphs.map((g) => ({
-          targetId: g.targetId,
-          name: g.name,
-          namespace: g.namespace,
-        })),
-        subgraphs: subgraphs.map((g) => ({
-          targetId: g.targetId,
-          name: g.name,
-          namespace: g.namespace,
-        })),
-      };
-    }
-
-    const federatedGraphs = await fedRepo.getAccessibleFederatedGraphs(authContext.userId);
-
-    const subgraphs = await subgraphRepo.getAccessibleSubgraphs(authContext.userId);
+    const namespaces = await namespaceRepo.list(authContext.rbac);
+    const federatedGraphs = await fedRepo.list({ limit: 0, offset: 0, rbac: authContext.rbac });
+    const subgraphs = await subgraphRepo.listAvailable({
+      limit: 0,
+      offset: 0,
+      excludeFeatureSubgraphs: false,
+      rbac: authContext.rbac,
+    });
 
     return {
       response: {
         code: EnumStatusCode.OK,
       },
+      namespaces,
       federatedGraphs: federatedGraphs.map((g) => ({
         targetId: g.targetId,
         name: g.name,
@@ -70,6 +49,7 @@ export function getUserAccessibleResources(
         targetId: g.targetId,
         name: g.name,
         namespace: g.namespace,
+        federatedGraphId: g.federatedGraphId,
       })),
     };
   });

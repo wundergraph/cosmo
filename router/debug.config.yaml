@@ -3,9 +3,21 @@
 # See pkg/config/config.go for the full list of configuration options.
 # This file is used to debugging purposes only.
 
-version: "1"
+version: '1'
 
-router_config_path: "./__schemas/config.json"
+execution_config:
+  file:
+    path: './__schemas/config.json'
+
+log_level: debug
+
+watch_config:
+  enabled: true
+  interval: '10s'
+
+  startup_delay:
+    enabled: false
+    maximum: '10s'
 
 engine:
   max_concurrent_resolvers: 1024
@@ -17,10 +29,10 @@ events:
   providers:
     nats:
       - id: default
-        url: "nats://localhost:4222"
+        url: 'nats://localhost:4222'
       - id: my-nats
-        url: "nats://localhost:4222"
+        url: 'nats://localhost:4222'
     kafka:
       - id: my-kafka
         brokers:
-          - "localhost:9092"
+          - 'localhost:9092'

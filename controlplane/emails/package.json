@@ -1,0 +1,23 @@
+{
+  "name": "@wundergraph/controlplane-emails",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "email dev --dir src --port 3400",
+    "build": "email export --dir src --outDir ../src/templates/emails --pretty && pnpm run --filter ../ lint:fix"
+  },
+  "author": {
+    "name": "WunderGraph Maintainers",
+    "email": "info@wundergraph.com"
+  },
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@react-email/components": "0.0.36",
+    "@types/react": "18.3.3",
+    "@types/react-dom": "18.3.0",
+    "react": "18.3.1",
+    "react-email": "4.0.3"
+  }
+}

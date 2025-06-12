@@ -520,3 +520,45 @@ export function getFederatedGraphRouterCompatibilityVersion(federatedGraphDTOs: 
   }
   return federatedGraphDTOs[0].routerCompatibilityVersion;
 }
+
+export function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
+
+export const isCheckSuccessful = ({
+  isComposable,
+  isBreaking,
+  hasClientTraffic,
+  hasLintErrors,
+  hasGraphPruningErrors,
+  clientTrafficCheckSkipped,
+  hasProposalMatchError,
+}: {
+  isComposable: boolean;
+  isBreaking: boolean;
+  hasClientTraffic: boolean;
+  hasLintErrors: boolean;
+  hasGraphPruningErrors: boolean;
+  clientTrafficCheckSkipped: boolean;
+  hasProposalMatchError: boolean;
+}) => {
+  return (
+    isComposable &&
+    // If no breaking changes found
+    // OR Breaking changes are found, but no client traffic is found and traffic check is not skipped
+    (!isBreaking || (isBreaking && !hasClientTraffic && !clientTrafficCheckSkipped)) &&
+    !hasLintErrors &&
+    !hasGraphPruningErrors &&
+    !hasProposalMatchError
+  );
+};
+
+export const flipDateRangeValuesIfNeeded = (dateRange?: { start: number; end: number }) => {
+  if (!dateRange || dateRange.start <= dateRange.end) {
+    return;
+  }
+
+  const tmp = dateRange.start;
+  dateRange.start = dateRange.end;
+  dateRange.end = tmp;
+};

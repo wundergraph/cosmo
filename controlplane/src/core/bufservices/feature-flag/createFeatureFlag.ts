@@ -17,6 +17,7 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, isValidLabels } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function createFeatureFlag(
   opts: RouterOptions,
@@ -41,16 +42,26 @@ export function createFeatureFlag(
 
     req.namespace = req.namespace || DefaultNamespace;
 
-    if (!authContext.hasWriteAccess) {
+    if (authContext.organizationDeactivated) {
+      throw new UnauthorizedError();
+    }
+
+    const namespace = await namespaceRepo.byName(req.namespace);
+    if (!namespace) {
       return {
         response: {
-          code: EnumStatusCode.ERR,
-          details: `The user does not have the permissions to perform this operation`,
+          code: EnumStatusCode.ERR_NOT_FOUND,
+          details: `Could not find the namespace "${req.namespace}".`,
         },
         compositionErrors: [],
         deploymentErrors: [],
         compositionWarnings: [],
       };
+    }
+
+    // check whether the user is authorized to perform the action
+    if (!authContext.rbac.canCreateFeatureFlag(namespace)) {
+      throw new UnauthorizedError();
     }
 
     const feature = await orgRepo.getFeature({
@@ -83,19 +94,6 @@ export function createFeatureFlag(
         response: {
           code: EnumStatusCode.ERR,
           details: `At least one feature subgraph is required to create a feature flag.`,
-        },
-        compositionErrors: [],
-        deploymentErrors: [],
-        compositionWarnings: [],
-      };
-    }
-
-    const namespace = await namespaceRepo.byName(req.namespace);
-    if (!namespace) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR_NOT_FOUND,
-          details: `Could not find the namespace "${req.namespace}".`,
         },
         compositionErrors: [],
         deploymentErrors: [],
@@ -161,6 +159,7 @@ export function createFeatureFlag(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'feature_flag.created',
       action: 'created',
       actorId: authContext.userId,

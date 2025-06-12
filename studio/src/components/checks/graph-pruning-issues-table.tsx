@@ -1,12 +1,18 @@
+import { GraphContext } from "@/components/layout/graph-layout";
+import { useUser } from "@/hooks/use-user";
 import { cn } from "@/lib/utils";
-import { CheckCircleIcon, NoSymbolIcon } from "@heroicons/react/24/outline";
-import { Cross1Icon } from "@radix-ui/react-icons";
+import {
+  CheckCircleIcon,
+  NoSymbolIcon
+} from "@heroicons/react/24/outline";
+import { Cross1Icon, CrossCircledIcon } from "@radix-ui/react-icons";
 import {
   GraphPruningIssue,
   LintSeverity,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { useContext } from "react";
 import { CiWarning } from "react-icons/ci";
 import { EmptyState } from "../empty-state";
 import { Button } from "../ui/button";
@@ -26,12 +32,16 @@ export const GraphPruningIssuesTable = ({
   pruneIssues,
   caption,
   isGraphPruningEnabled,
+  hasGraphPruningErrors,
 }: {
   pruneIssues: GraphPruningIssue[];
   caption?: React.ReactNode;
   isGraphPruningEnabled: boolean;
+  hasGraphPruningErrors: boolean;
 }) => {
   const router = useRouter();
+  const user = useUser();
+  const graphContext = useContext(GraphContext);
 
   if (pruneIssues.length === 0 && !isGraphPruningEnabled) {
     return (
@@ -43,7 +53,9 @@ export const GraphPruningIssuesTable = ({
           <Button
             onClick={() => {
               router.push(
-                `/${router.query.organizationSlug}/lint-policy?namespace=${router.query.namespace}`,
+                `/${user!.currentOrganization.slug}/policies?namespace=${
+                  graphContext?.graph?.namespace ?? "default"
+                }`,
               );
             }}
           >
@@ -54,7 +66,15 @@ export const GraphPruningIssuesTable = ({
     );
   }
 
-  if (pruneIssues.length === 0) {
+  if (pruneIssues.length === 0 && hasGraphPruningErrors) {
+    return (
+      <EmptyState
+        icon={<CrossCircledIcon className="h-16 w-16 text-destructive" />}
+        title="Graph Prune Check Failed"
+        description='This check succeeded for the current federated graph, but it failed in one or more other affected federated graphs. Please check the "Affected Graphs" section to identify which graphs encountered graph pruning errors.'
+      />
+    );
+  } else if (pruneIssues.length === 0 && !hasGraphPruningErrors) {
     return (
       <EmptyState
         icon={<CheckCircleIcon className="text-success" />}
@@ -71,6 +91,7 @@ export const GraphPruningIssuesTable = ({
             <TableHead className="w-[300px]">Rule</TableHead>
             <TableHead>Field Path</TableHead>
             <TableHead>Message</TableHead>
+            {pruneIssues[0].subgraphName && <TableHead>Subgraph</TableHead>}
             <TableHead className="w-[5px]"></TableHead>
           </TableRow>
         </TableHeader>
@@ -97,6 +118,7 @@ export const GraphPruningIssuesTable = ({
               </TableCell>
               <TableCell>{l.fieldPath}</TableCell>
               <TableCell>{l.message}</TableCell>
+              {l.subgraphName && <TableCell>{l.subgraphName}</TableCell>}
               <TableCell>
                 <div className="flex items-center gap-x-2">
                   <Tooltip delayDuration={100}>
@@ -112,7 +134,9 @@ export const GraphPruningIssuesTable = ({
                             router.query.namespace
                           }/graph/${router.query.slug}/checks/${
                             router.query.checkId
-                          }?tab=schema${
+                          }?tab=schema&${
+                            l.subgraphName ? `subgraph=${l.subgraphName}` : ""
+                          }${
                             l.issueLocation?.line
                               ? `#L${l.issueLocation?.line}`
                               : ""

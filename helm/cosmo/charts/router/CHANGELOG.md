@@ -1,5 +1,33 @@
 # Changelog
 
+## [0.12.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo-router@0.11.0...helm-cosmo-router@0.12.0) (2025-06-09)
+
+
+### Features
+
+* **helm/router:** allow to insert additional labels in deployment ([#1937](https://github.com/wundergraph/cosmo/issues/1937)) ([6c650db](https://github.com/wundergraph/cosmo/commit/6c650db94116bafbd7ebcec3e21e2fb1c4962cea))
+
+## [0.11.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo-router@0.10.2...helm-cosmo-router@0.11.0) (2025-06-03)
+
+
+### Features
+
+* support mcp in router helm chart ([#1927](https://github.com/wundergraph/cosmo/issues/1927)) ([361e10a](https://github.com/wundergraph/cosmo/commit/361e10a2c6b4624c17898c9f9dc3b0befd1aefd2))
+
+## [0.10.2](https://github.com/wundergraph/cosmo/compare/helm-cosmo-router@0.10.1...helm-cosmo-router@0.10.2) (2025-05-26)
+
+
+### Bug Fixes
+
+* extra volume mounts not rendered properly ([#1902](https://github.com/wundergraph/cosmo/issues/1902)) ([25828e7](https://github.com/wundergraph/cosmo/commit/25828e7feb7c5ec16ad229598824da519603a4dd))
+
+## [0.10.1](https://github.com/wundergraph/cosmo/compare/helm-cosmo-router@0.10.0...helm-cosmo-router@0.10.1) (2025-04-14)
+
+
+### Bug Fixes
+
+* bump router chart version ([#1784](https://github.com/wundergraph/cosmo/issues/1784)) ([724aac3](https://github.com/wundergraph/cosmo/commit/724aac385956b0964f5132e0792a26923efbad99))
+
 ## [0.10.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo-router@0.9.0...helm-cosmo-router@0.10.0) (2025-03-11)
 
 

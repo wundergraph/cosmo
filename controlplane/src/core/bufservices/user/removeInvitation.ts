@@ -11,6 +11,7 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import { UserRepository } from '../../repositories/UserRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function removeInvitation(
   opts: RouterOptions,
@@ -28,13 +29,8 @@ export function removeInvitation(
     const userRepo = new UserRepository(logger, opts.db);
     const auditLogRepo = new AuditLogRepository(opts.db);
 
-    if (!authContext.hasWriteAccess) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `The user doesnt have the permissions to perform this operation`,
-        },
-      };
+    if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdminOrDeveloper) {
+      throw new UnauthorizedError();
     }
 
     await opts.keycloakClient.authenticateClient();
@@ -107,11 +103,13 @@ export function removeInvitation(
           keycloakRealm: opts.keycloakRealm,
         },
         opts.blobStorage,
+        opts.queues.deleteOrganizationAuditLogsQueue,
       );
     }
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'organization_invitation.deleted',
       action: 'deleted',
       actorId: authContext.userId,

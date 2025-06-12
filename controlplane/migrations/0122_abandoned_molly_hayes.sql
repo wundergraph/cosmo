@@ -1,0 +1,1 @@
+ALTER TABLE "schema_check_subgraphs" ADD COLUMN "labels" text[];

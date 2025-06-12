@@ -5,6 +5,7 @@ import { AuditableType, AuditActorType, AuditLogAction, AuditLogFullAction, Audi
 
 export type AddAuditLogInput = {
   organizationId: string;
+  organizationSlug: string;
   // Empty string means the actor is the system.
   actorId?: string;
   auditAction: AuditLogFullAction;
@@ -37,6 +38,7 @@ export class AuditLogRepository {
       .values(
         inputs.map((input) => ({
           organizationId: input.organizationId,
+          organizationSlug: input.organizationSlug,
           actorId: input.actorId,
           targetId: input.targetId,
           targetType: input.targetType,
@@ -127,5 +129,9 @@ export class AuditLogRepository {
       return 0;
     }
     return auditLogsCount[0].count;
+  }
+
+  public deleteOrganizationLogs(input: { organizationId: string }) {
+    return this.db.delete(schema.auditLogs).where(eq(schema.auditLogs.organizationId, input.organizationId)).execute();
   }
 }

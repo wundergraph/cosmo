@@ -10,6 +10,7 @@ import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepos
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function deleteRouterToken(
   opts: RouterOptions,
@@ -27,13 +28,8 @@ export function deleteRouterToken(
 
     req.namespace = req.namespace || DefaultNamespace;
 
-    if (!authContext.hasWriteAccess) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `The user doesnt have the permissions to perform this operation`,
-        },
-      };
+    if (authContext.organizationDeactivated) {
+      throw new UnauthorizedError();
     }
 
     const federatedGraph = await fedGraphRepo.byName(req.fedGraphName, req.namespace);
@@ -45,6 +41,17 @@ export function deleteRouterToken(
         },
       };
     }
+
+    // check if the user is authorized to perform the action
+    await opts.authorizer.authorize({
+      db: opts.db,
+      graph: {
+        targetId: federatedGraph.targetId,
+        targetType: 'federatedGraph',
+      },
+      headers: ctx.requestHeader,
+      authContext,
+    });
 
     const currToken = await fedGraphRepo.getRouterToken({
       federatedGraphId: federatedGraph.id,
@@ -70,6 +77,7 @@ export function deleteRouterToken(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'graph_token.deleted',
       action: 'deleted',
       actorId: authContext.userId,

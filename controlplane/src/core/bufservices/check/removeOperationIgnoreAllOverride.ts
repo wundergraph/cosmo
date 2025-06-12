@@ -10,6 +10,7 @@ import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepos
 import { OperationsRepository } from '../../repositories/OperationsRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function removeOperationIgnoreAllOverride(
   opts: RouterOptions,
@@ -25,13 +26,8 @@ export function removeOperationIgnoreAllOverride(
     const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
     const auditLogRepo = new AuditLogRepository(opts.db);
 
-    if (!authContext.hasWriteAccess) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `The user does not have permissions to perform this operation`,
-        },
-      };
+    if (authContext.organizationDeactivated) {
+      throw new UnauthorizedError();
     }
 
     const graph = await fedGraphRepo.byName(req.graphName, req.namespace);
@@ -43,6 +39,10 @@ export function removeOperationIgnoreAllOverride(
           details: 'Requested graph does not exist',
         },
       };
+    }
+
+    if (!authContext.rbac.hasFederatedGraphWriteAccess(graph)) {
+      throw new UnauthorizedError();
     }
 
     const operationsRepo = new OperationsRepository(opts.db, graph.id);
@@ -63,6 +63,7 @@ export function removeOperationIgnoreAllOverride(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'operation_ignore_override.deleted',
       action: 'updated',
       actorId: authContext.userId,

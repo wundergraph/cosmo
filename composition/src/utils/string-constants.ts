@@ -1,3 +1,5 @@
+import { Kind } from 'graphql';
+
 export const AS = 'as';
 export const AND_UPPER = 'AND';
 export const ANY_SCALAR = '_Any';
@@ -38,7 +40,7 @@ export const EXECUTION = 'EXECUTION';
 export const EXTERNAL = 'external';
 export const EXTENDS = 'extends';
 export const EXTENSIONS = 'extensions';
-export const FIELD = 'Field';
+export const FIELD = 'field';
 export const FIELD_PATH = 'fieldPath';
 export const FIELD_UPPER = 'FIELD';
 export const FIELD_SET_SCALAR = 'openfed__FieldSet';
@@ -57,6 +59,7 @@ export const IN_UPPER = 'IN';
 export const INACCESSIBLE = 'inaccessible';
 export const INLINE_FRAGMENT = 'inlineFragment';
 export const INLINE_FRAGMENT_UPPER = 'INLINE_FRAGMENT';
+export const INPUT = 'Input';
 export const INPUT_FIELD = 'Input field';
 export const INPUT_FIELD_DEFINITION_UPPER = 'INPUT_FIELD_DEFINITION';
 export const INPUT_OBJECT = 'Input Object';
@@ -155,6 +158,21 @@ export const EXECUTABLE_DIRECTIVE_LOCATIONS = new Set<string>([
 ]);
 
 export const ROOT_TYPE_NAMES = new Set<string>([MUTATION, QUERY, SUBSCRIPTION]);
-export const IGNORED_PARENT_DIRECTIVES = new Set<string>([AUTHENTICATED, REQUIRES_SCOPES]);
-export const PERSISTED_CLIENT_DIRECTIVES = new Set<string>([AUTHENTICATED, DEPRECATED, REQUIRES_SCOPES]);
+export const AUTHORIZATION_DIRECTIVES = new Set<string>([AUTHENTICATED, REQUIRES_SCOPES]);
+export const PERSISTED_CLIENT_DIRECTIVES = new Set<string>([DEPRECATED]);
 export const INHERITABLE_DIRECTIVE_NAMES = [EXTERNAL, SHAREABLE];
+export const IGNORED_FIELDS = new Set<string>([ENTITIES_FIELD, SERVICE_FIELD]);
+
+export const INPUT_NODE_KINDS = new Set<Kind>([
+  Kind.ENUM_TYPE_DEFINITION,
+  Kind.INPUT_OBJECT_TYPE_DEFINITION,
+  Kind.SCALAR_TYPE_DEFINITION,
+]);
+
+export const OUTPUT_NODE_KINDS = new Set<Kind>([
+  Kind.ENUM_TYPE_DEFINITION,
+  Kind.INTERFACE_TYPE_DEFINITION,
+  Kind.OBJECT_TYPE_DEFINITION,
+  Kind.SCALAR_TYPE_DEFINITION,
+  Kind.UNION_TYPE_DEFINITION,
+]);

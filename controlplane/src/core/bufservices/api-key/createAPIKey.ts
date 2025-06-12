@@ -4,10 +4,11 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { CreateAPIKeyRequest, CreateAPIKeyResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { ApiKeyRepository } from '../../repositories/ApiKeyRepository.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
-import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { ApiKeyGenerator } from '../../services/ApiGenerator.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function createAPIKey(
   opts: RouterOptions,
@@ -22,16 +23,10 @@ export function createAPIKey(
 
     const apiKeyRepo = new ApiKeyRepository(opts.db);
     const auditLogRepo = new AuditLogRepository(opts.db);
-    const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
+    const orgGroupRepo = new OrganizationGroupRepository(opts.db);
 
-    if (!authContext.hasWriteAccess) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `The user doesnt have the permissions to perform this operation`,
-        },
-        apiKey: '',
-      };
+    if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationApiKeyManager) {
+      throw new UnauthorizedError();
     }
 
     const keyName = req.name.trim();
@@ -60,59 +55,22 @@ export function createAPIKey(
       };
     }
 
-    const generatedAPIKey = ApiKeyGenerator.generate();
-
-    const rbac = await orgRepo.getFeature({
+    const orgGroup = await orgGroupRepo.byId({
       organizationId: authContext.organizationId,
-      featureId: 'rbac',
+      groupId: req.groupId,
     });
 
-    if (rbac?.enabled) {
-      if (req.allowAllResources && !authContext.isAdmin) {
-        return {
-          response: {
-            code: EnumStatusCode.ERROR_NOT_AUTHORIZED,
-            details: `You are not authorized to perform the current action. Only admins can create an API key that has access to all resources.`,
-          },
-          apiKey: '',
-        };
-      }
-
-      if (req.federatedGraphTargetIds.length === 0 && req.subgraphTargetIds.length === 0 && !req.allowAllResources) {
-        return {
-          response: {
-            code: EnumStatusCode.ERR,
-            details: `Can not create an api key without associating it with any resources.`,
-          },
-          apiKey: '',
-        };
-      }
-
-      // check if the user is authorized to perform the action
-      for (const targetId of req.federatedGraphTargetIds) {
-        await opts.authorizer.authorize({
-          db: opts.db,
-          graph: {
-            targetId,
-            targetType: 'federatedGraph',
-          },
-          headers: ctx.requestHeader,
-          authContext,
-        });
-      }
-
-      for (const targetId of req.subgraphTargetIds) {
-        await opts.authorizer.authorize({
-          db: opts.db,
-          graph: {
-            targetId,
-            targetType: 'subgraph',
-          },
-          headers: ctx.requestHeader,
-          authContext,
-        });
-      }
+    if (!orgGroup) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_NOT_FOUND,
+          details: 'Group not found',
+        },
+        apiKey: '',
+      };
     }
+
+    const generatedAPIKey = ApiKeyGenerator.generate();
 
     await apiKeyRepo.addAPIKey({
       name: keyName,
@@ -120,12 +78,13 @@ export function createAPIKey(
       userID: authContext.userId || req.userID,
       key: generatedAPIKey,
       expiresAt: req.expires,
-      targetIds: [...req.federatedGraphTargetIds, ...req.subgraphTargetIds],
+      groupId: orgGroup.groupId,
       permissions: req.permissions,
     });
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'api_key.created',
       action: 'created',
       actorId: authContext.userId,

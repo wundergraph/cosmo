@@ -75,7 +75,7 @@ import {
   SUBSCRIPTION_FILTER,
   TAG,
 } from '../../utils/string-constants';
-import { getValueOrDefault, kindToTypeString, numberToOrdinal } from '../../utils/utils';
+import { getValueOrDefault, kindToNodeType, numberToOrdinal } from '../../utils/utils';
 import { FieldSetData, KeyFieldSetData } from './types';
 
 export function newFieldSetData(): FieldSetData {
@@ -125,7 +125,6 @@ export function validateKeyFieldSets(
   nf: NormalizationFactory,
   entityParentData: CompositeOutputData,
   keyFieldSetDataByFieldSet: Map<string, KeyFieldSetData>,
-  fieldNames: Set<string>,
 ): RequiredFieldConfiguration[] | undefined {
   const entityInterfaceData = nf.entityInterfaceDataByTypeName.get(entityParentData.name);
   const entityTypeName = entityParentData.name;
@@ -170,7 +169,7 @@ export function validateKeyFieldSets(
           // If a composite type was just visited, a selection set should have been entered
           if (shouldDefineSelectionSet) {
             const lastFieldCoords = `${parentTypeName}.${lastFieldName}`;
-            const lastFieldData = parentData.fieldDataByFieldName.get(lastFieldName);
+            const lastFieldData = parentData.fieldDataByName.get(lastFieldName);
             if (!lastFieldData) {
               errorMessages.push(undefinedFieldInFieldSetErrorMessage(rawFieldSet, lastFieldCoords, lastFieldName));
               return BREAK;
@@ -184,7 +183,7 @@ export function validateKeyFieldSets(
                 rawFieldSet,
                 [lastFieldCoords],
                 lastFieldNamedTypeName,
-                kindToTypeString(namedTypeKind),
+                kindToNodeType(namedTypeKind),
               ),
             );
             return BREAK;
@@ -192,14 +191,14 @@ export function validateKeyFieldSets(
           const fieldName = node.name.value;
           const fieldCoords = `${parentTypeName}.${fieldName}`;
           lastFieldName = fieldName;
-          const fieldData = parentData.fieldDataByFieldName.get(fieldName);
+          const fieldData = parentData.fieldDataByName.get(fieldName);
           // undefined if the field does not exist on the parent
           if (!fieldData) {
             errorMessages.push(undefinedFieldInFieldSetErrorMessage(rawFieldSet, parentTypeName, fieldName));
             return BREAK;
           }
           // TODO navigate already provided keys
-          if (fieldData.argumentDataByArgumentName.size) {
+          if (fieldData.argumentDataByName.size) {
             errorMessages.push(argumentsInKeyFieldSetErrorMessage(rawFieldSet, fieldCoords));
             return BREAK;
           }
@@ -207,6 +206,16 @@ export function validateKeyFieldSets(
             errorMessages.push(duplicateFieldInFieldSetErrorMessage(rawFieldSet, fieldCoords));
             return BREAK;
           }
+          // Add the field set for which the field coordinates contribute a key field
+          getValueOrDefault(
+            getValueOrDefault(
+              nf.keyFieldSetsByEntityTypeNameByFieldCoords,
+              fieldCoords,
+              () => new Map<string, Set<string>>(),
+            ),
+            entityTypeName,
+            () => new Set<string>(),
+          ).add(fieldSet);
           currentPath.push(fieldName);
           // Fields that form part of an entity key are intrinsically shareable
           fieldData.isShareableBySubgraphName.set(nf.subgraphName, true);
@@ -238,7 +247,7 @@ export function validateKeyFieldSets(
                 rawFieldSet,
                 fieldCoords,
                 namedTypeName,
-                kindToTypeString(namedTypeData.kind),
+                kindToNodeType(namedTypeData.kind),
               ),
             );
             return BREAK;
@@ -260,7 +269,7 @@ export function validateKeyFieldSets(
             const parentTypeName = parentData.name;
             const fieldCoordinates = `${parentTypeName}.${lastFieldName}`;
             // If the last field is not an object-like
-            const fieldData = parentData.fieldDataByFieldName.get(lastFieldName);
+            const fieldData = parentData.fieldDataByName.get(lastFieldName);
             if (!fieldData) {
               errorMessages.push(undefinedFieldInFieldSetErrorMessage(rawFieldSet, fieldCoordinates, lastFieldName));
               return BREAK;
@@ -274,7 +283,7 @@ export function validateKeyFieldSets(
                 rawFieldSet,
                 [fieldCoordinates],
                 fieldNamedTypeName,
-                kindToTypeString(namedTypeKind),
+                kindToNodeType(namedTypeKind),
               ),
             );
             return BREAK;
@@ -298,7 +307,7 @@ export function validateKeyFieldSets(
                 rawFieldSet,
                 [fieldCoordinates],
                 parentData.name,
-                kindToTypeString(parentData.kind),
+                kindToNodeType(parentData.kind),
               ),
             );
             shouldDefineSelectionSet = false;

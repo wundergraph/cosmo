@@ -18,6 +18,7 @@ import type { RouterOptions } from '../../routes.js';
 import ApolloMigrator from '../../services/ApolloMigrator.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function migrateFromApollo(
   opts: RouterOptions,
@@ -44,15 +45,8 @@ export function migrateFromApollo(
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
     req.namespace = req.namespace || DefaultNamespace;
-
-    if (!authContext.hasWriteAccess) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `The user doesnt have the permissions to perform this operation`,
-        },
-        token: '',
-      };
+    if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdminOrDeveloper) {
+      throw new UnauthorizedError();
     }
 
     opts.platformWebhooks.send(PlatformEventName.APOLLO_MIGRATE_INIT, {
@@ -178,6 +172,7 @@ export function migrateFromApollo(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'federated_graph.created',
       action: 'created',
       actorId: authContext.userId,
@@ -197,6 +192,7 @@ export function migrateFromApollo(
     for (const subgraph of subgraphs) {
       await auditLogRepo.addAuditLog({
         organizationId: authContext.organizationId,
+        organizationSlug: authContext.organizationSlug,
         auditAction: 'subgraph.created',
         action: 'created',
         actorId: authContext.userId,
@@ -250,6 +246,7 @@ export function migrateFromApollo(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'graph_token.created',
       action: 'created',
       actorId: authContext.userId,

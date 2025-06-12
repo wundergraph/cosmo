@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { useQuery } from "@connectrpc/connect-query";
 import {
   ChartBarIcon,
+  ClipboardIcon,
   ExclamationTriangleIcon,
   ServerStackIcon,
 } from "@heroicons/react/24/outline";
@@ -56,6 +57,7 @@ import { Loader } from "../ui/loader";
 import { PageHeader } from "./head";
 import { LayoutProps } from "./layout";
 import { NavLink, SideNav } from "./sidenav";
+import { useFeature } from "@/hooks/use-feature";
 
 export interface GraphContextProps {
   graph: GetFederatedGraphByNameResponse["graph"];
@@ -75,6 +77,8 @@ export const GraphLayout = ({ children }: LayoutProps) => {
   const organizationSlug = router.query.organizationSlug as string;
   const namespace = router.query.namespace as string;
   const slug = router.query.slug as string;
+
+  const proposalsFeature = useFeature("proposals");
 
   const { data, isLoading, error, refetch } = useQuery(
     getFederatedGraphByName,
@@ -104,7 +108,7 @@ export const GraphLayout = ({ children }: LayoutProps) => {
   const links: NavLink[] = useMemo(() => {
     const basePath = `/${organizationSlug}/${namespace}/graph/${slug}`;
 
-    return [
+    const graphLinks = [
       {
         title: "Overview",
         href: basePath,
@@ -173,19 +177,24 @@ export const GraphLayout = ({ children }: LayoutProps) => {
         icon: <PiToggleRight className="h-4 w-4" />,
       },
       {
-        title: "Discussions",
-        href: basePath + "/discussions",
-        matchExact: false,
-        icon: <PiChat className="h-4 w-4" />,
-      },
-      {
         title: "Cache Operations",
         href: basePath + "/cache-operations",
         matchExact: false,
         icon: <PiBracketsCurlyBold className="h-4 w-4" />,
       },
     ];
-  }, [organizationSlug, namespace, slug]);
+
+    if (proposalsFeature?.enabled) {
+      graphLinks.push({
+        title: "Proposals",
+        href: basePath + "/proposals",
+        matchExact: false,
+        icon: <ClipboardIcon className="h-4 w-4" />,
+      });
+    }
+    
+    return graphLinks;
+  }, [organizationSlug, namespace, slug, proposalsFeature]);
 
   let render: React.ReactNode;
 
@@ -271,15 +280,15 @@ export const GraphSelect = () => {
 
   const groupedGraphs = sortedGraphs.reduce<Record<string, FederatedGraph[]>>(
     (result, graph) => {
-      const { namespace, name } = graph;
+    const { namespace, name } = graph;
 
-      if (!result[namespace]) {
-        result[namespace] = [];
-      }
+    if (!result[namespace]) {
+      result[namespace] = [];
+    }
 
-      result[namespace].push(graph);
+    result[namespace].push(graph);
 
-      return result;
+    return result;
     },
     {},
   );

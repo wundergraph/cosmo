@@ -302,6 +302,325 @@ exports[`Router Config Builder > Build Subgraph schema > router.config.json 1`] 
 }"
 `;
 
+exports[`Router Config Builder > Build config with plugin subgraph > router.config.json 1`] = `
+"{
+  "engineConfig": {
+    "defaultFlushInterval": "500",
+    "datasourceConfigurations": [
+      {
+        "kind": "GRAPHQL",
+        "rootNodes": [
+          {
+            "typeName": "Query",
+            "fieldNames": [
+              "me"
+            ]
+          },
+          {
+            "typeName": "User",
+            "fieldNames": [
+              "id",
+              "name",
+              "username"
+            ]
+          }
+        ],
+        "overrideFieldPathFromAlias": true,
+        "customGraphql": {
+          "fetch": {
+            "url": {
+              "staticVariableContent": "https://wg-federation-demo-accounts.fly.dev/graphql"
+            },
+            "method": "POST",
+            "body": {},
+            "baseUrl": {},
+            "path": {}
+          },
+          "subscription": {
+            "enabled": true,
+            "url": {
+              "staticVariableContent": "https://wg-federation-demo-accounts.fly.dev/graphql"
+            },
+            "protocol": "GRAPHQL_SUBSCRIPTION_PROTOCOL_WS",
+            "websocketSubprotocol": "GRAPHQL_WEBSOCKET_SUBPROTOCOL_AUTO"
+          },
+          "federation": {
+            "enabled": true,
+            "serviceSdl": "type Query @extends {\\n    me: User\\n}\\n\\ntype User @key(fields: \\"id\\") {\\n    id: ID!\\n    name: String\\n    username: String\\n}\\n"
+          },
+          "upstreamSchema": {
+            "key": "26368136088fa936dcb2f977a25a3c3bdc8f369b"
+          }
+        },
+        "requestTimeoutSeconds": "10",
+        "id": "0",
+        "keys": [
+          {
+            "typeName": "User",
+            "selectionSet": "id"
+          }
+        ]
+      },
+      {
+        "kind": "GRAPHQL",
+        "rootNodes": [
+          {
+            "typeName": "Query",
+            "fieldNames": [
+              "topProducts"
+            ]
+          },
+          {
+            "typeName": "Product",
+            "fieldNames": [
+              "upc",
+              "name",
+              "price",
+              "weight"
+            ]
+          },
+          {
+            "typeName": "Subscription",
+            "fieldNames": [
+              "updatedPrice"
+            ]
+          },
+          {
+            "typeName": "Mutation",
+            "fieldNames": [
+              "setPrice"
+            ]
+          }
+        ],
+        "overrideFieldPathFromAlias": true,
+        "customGraphql": {
+          "fetch": {
+            "url": {
+              "staticVariableContent": "https://wg-federation-demo-products.fly.dev/graphql"
+            },
+            "method": "POST",
+            "body": {},
+            "baseUrl": {},
+            "path": {}
+          },
+          "subscription": {
+            "enabled": true,
+            "url": {
+              "staticVariableContent": "https://wg-federation-demo-products.fly.dev/graphql"
+            },
+            "protocol": "GRAPHQL_SUBSCRIPTION_PROTOCOL_WS",
+            "websocketSubprotocol": "GRAPHQL_WEBSOCKET_SUBPROTOCOL_AUTO"
+          },
+          "federation": {
+            "enabled": true,
+            "serviceSdl": "type Query @extends {\\n    topProducts(first: Int = 5, random: Boolean): [Product]\\n}\\n\\ntype Product @key(fields: \\"upc\\") {\\n    upc: String!\\n    name: String\\n    price: Int\\n    weight: Int\\n}\\n\\ntype Subscription @extends {\\n    updatedPrice: Product!\\n}\\n\\ntype Mutation @extends {\\n    setPrice(upc: String!, price: Int!): Product\\n}\\n"
+          },
+          "upstreamSchema": {
+            "key": "04d227115e43995a8fd784c6643b595305dcd5dc"
+          }
+        },
+        "requestTimeoutSeconds": "10",
+        "id": "1",
+        "keys": [
+          {
+            "typeName": "Product",
+            "selectionSet": "upc"
+          }
+        ]
+      },
+      {
+        "kind": "GRAPHQL",
+        "rootNodes": [
+          {
+            "typeName": "Review",
+            "fieldNames": [
+              "id",
+              "body",
+              "author",
+              "product"
+            ]
+          },
+          {
+            "typeName": "User",
+            "fieldNames": [
+              "id",
+              "reviews"
+            ],
+            "externalFieldNames": [
+              "username"
+            ]
+          },
+          {
+            "typeName": "Product",
+            "fieldNames": [
+              "upc",
+              "reviews"
+            ]
+          }
+        ],
+        "overrideFieldPathFromAlias": true,
+        "customGraphql": {
+          "fetch": {
+            "url": {
+              "staticVariableContent": "https://wg-federation-demo-reviews.fly.dev/graphql"
+            },
+            "method": "POST",
+            "body": {},
+            "baseUrl": {},
+            "path": {}
+          },
+          "subscription": {
+            "enabled": true,
+            "url": {
+              "staticVariableContent": "https://wg-federation-demo-reviews.fly.dev/graphql"
+            },
+            "protocol": "GRAPHQL_SUBSCRIPTION_PROTOCOL_WS",
+            "websocketSubprotocol": "GRAPHQL_WEBSOCKET_SUBPROTOCOL_AUTO"
+          },
+          "federation": {
+            "enabled": true,
+            "serviceSdl": "type Review @key(fields: \\"id\\") {\\n    id: ID!\\n    body: String\\n    author: User @provides(fields: \\"username\\")\\n    product: Product\\n}\\n\\ntype User @extends @key(fields: \\"id\\") {\\n    id: ID! @external\\n    username: String @external\\n    reviews: [Review]\\n}\\n\\ntype Product @extends @key(fields: \\"upc\\") {\\n    upc: String! @external\\n    reviews: [Review]\\n}\\n"
+          },
+          "upstreamSchema": {
+            "key": "e11be76baf22108836f0f59b56828dc6754fbaa0"
+          }
+        },
+        "requestTimeoutSeconds": "10",
+        "id": "2",
+        "keys": [
+          {
+            "typeName": "Review",
+            "selectionSet": "id"
+          },
+          {
+            "typeName": "User",
+            "selectionSet": "id"
+          },
+          {
+            "typeName": "Product",
+            "selectionSet": "upc"
+          }
+        ],
+        "provides": [
+          {
+            "typeName": "Review",
+            "fieldName": "author",
+            "selectionSet": "username"
+          }
+        ]
+      },
+      {
+        "kind": "GRAPHQL",
+        "rootNodes": [
+          {
+            "typeName": "Product",
+            "fieldNames": [
+              "upc",
+              "inStock",
+              "shippingEstimate"
+            ],
+            "externalFieldNames": [
+              "weight",
+              "price"
+            ]
+          }
+        ],
+        "overrideFieldPathFromAlias": true,
+        "customGraphql": {
+          "fetch": {
+            "url": {
+              "staticVariableContent": "https://dummy.dev/graphql"
+            },
+            "method": "POST",
+            "body": {},
+            "baseUrl": {},
+            "path": {}
+          },
+          "subscription": {
+            "enabled": true
+          },
+          "federation": {
+            "enabled": true,
+            "serviceSdl": "type Product @extends @key(fields: \\"upc\\") {\\n    upc: String! @external\\n    weight: Int @external\\n    price: Int @external\\n    inStock: Boolean\\n    shippingEstimate: Int @requires(fields: \\"price weight\\")\\n}\\n"
+          },
+          "upstreamSchema": {
+            "key": "de5e83e9a0f6f72eef6748fadaa8c5af6ad3220e"
+          },
+          "grpc": {
+            "mapping": {
+              "version": 1,
+              "service": "inventory",
+              "operationMappings": [
+                {}
+              ],
+              "entityMappings": [
+                {}
+              ],
+              "typeFieldMappings": [
+                {}
+              ],
+              "enumMappings": [
+                {}
+              ]
+            },
+            "plugin": {
+              "name": "inventory",
+              "version": "0.0.1"
+            }
+          }
+        },
+        "requestTimeoutSeconds": "10",
+        "id": "3",
+        "keys": [
+          {
+            "typeName": "Product",
+            "selectionSet": "upc"
+          }
+        ],
+        "requires": [
+          {
+            "typeName": "Product",
+            "fieldName": "shippingEstimate",
+            "selectionSet": "price weight"
+          }
+        ]
+      }
+    ],
+    "graphqlSchema": "type Query {}",
+    "stringStorage": {
+      "26368136088fa936dcb2f977a25a3c3bdc8f369b": "schema {\\n  query: Query\\n}\\n\\ndirective @extends on INTERFACE | OBJECT\\n\\ndirective @external on FIELD_DEFINITION | OBJECT\\n\\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\\n\\ndirective @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION\\n\\ndirective @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION\\n\\ndirective @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\\n\\ntype Query @extends {\\n  me: User\\n}\\n\\ntype User @key(fields: \\"id\\") {\\n  id: ID!\\n  name: String\\n  username: String\\n}\\n\\nscalar openfed__FieldSet",
+      "04d227115e43995a8fd784c6643b595305dcd5dc": "schema {\\n  query: Query\\n  mutation: Mutation\\n  subscription: Subscription\\n}\\n\\ndirective @extends on INTERFACE | OBJECT\\n\\ndirective @external on FIELD_DEFINITION | OBJECT\\n\\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\\n\\ndirective @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION\\n\\ndirective @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION\\n\\ndirective @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\\n\\ntype Mutation @extends {\\n  setPrice(price: Int!, upc: String!): Product\\n}\\n\\ntype Product @key(fields: \\"upc\\") {\\n  name: String\\n  price: Int\\n  upc: String!\\n  weight: Int\\n}\\n\\ntype Query @extends {\\n  topProducts(first: Int = 5, random: Boolean): [Product]\\n}\\n\\ntype Subscription @extends {\\n  updatedPrice: Product!\\n}\\n\\nscalar openfed__FieldSet",
+      "e11be76baf22108836f0f59b56828dc6754fbaa0": "directive @extends on INTERFACE | OBJECT\\n\\ndirective @external on FIELD_DEFINITION | OBJECT\\n\\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\\n\\ndirective @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION\\n\\ndirective @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION\\n\\ndirective @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\\n\\ntype Product @extends @key(fields: \\"upc\\") {\\n  reviews: [Review]\\n  upc: String! @external\\n}\\n\\ntype Review @key(fields: \\"id\\") {\\n  author: User @provides(fields: \\"username\\")\\n  body: String\\n  id: ID!\\n  product: Product\\n}\\n\\ntype User @extends @key(fields: \\"id\\") {\\n  id: ID! @external\\n  reviews: [Review]\\n  username: String @external\\n}\\n\\nscalar openfed__FieldSet",
+      "de5e83e9a0f6f72eef6748fadaa8c5af6ad3220e": "directive @extends on INTERFACE | OBJECT\\n\\ndirective @external on FIELD_DEFINITION | OBJECT\\n\\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\\n\\ndirective @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION\\n\\ndirective @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION\\n\\ndirective @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\\n\\ntype Product @extends @key(fields: \\"upc\\") {\\n  inStock: Boolean\\n  price: Int @external\\n  shippingEstimate: Int @requires(fields: \\"price weight\\")\\n  upc: String! @external\\n  weight: Int @external\\n}\\n\\nscalar openfed__FieldSet"
+    },
+    "graphqlClientSchema": "type Query {}"
+  },
+  "subgraphs": [
+    {
+      "id": "0",
+      "name": "accounts",
+      "routingUrl": "https://wg-federation-demo-accounts.fly.dev/graphql"
+    },
+    {
+      "id": "1",
+      "name": "products",
+      "routingUrl": "https://wg-federation-demo-products.fly.dev/graphql"
+    },
+    {
+      "id": "2",
+      "name": "reviews",
+      "routingUrl": "https://wg-federation-demo-reviews.fly.dev/graphql"
+    },
+    {
+      "id": "3",
+      "name": "inventory",
+      "routingUrl": "https://dummy.dev/graphql"
+    }
+  ],
+  "compatibilityVersion": "1:{{$COMPOSITION__VERSION}}"
+}"
+`;
+
 exports[`Router Config Builder > that the federatedClientSDL property is not propagated if it is empty > router-no-client.config.json 1`] = `
 "{
   "engineConfig": {
@@ -555,7 +874,7 @@ exports[`Router Config Builder > that the federatedClientSDL property is propaga
       "71852430be20eb0aaee86a90ab19650150647219": "schema {\\n  query: Query\\n}\\n\\ndirective @extends on INTERFACE | OBJECT\\n\\ndirective @external on FIELD_DEFINITION | OBJECT\\n\\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\\n\\ndirective @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION\\n\\ndirective @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION\\n\\ndirective @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\\n\\ntype Account @key(fields: \\"id\\") {\\n  id: Int!\\n}\\n\\ntype Query {\\n  accounts: [Account!]!\\n}\\n\\nscalar openfed__FieldSet",
       "b1a402c7daf53ae64e71597643e3ceb455c4ff74": "directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR\\n\\ndirective @composeDirective(name: String!) repeatable on SCHEMA\\n\\ndirective @extends on INTERFACE | OBJECT\\n\\ndirective @external on FIELD_DEFINITION | OBJECT\\n\\ndirective @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\\n\\ndirective @interfaceObject on OBJECT\\n\\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\\n\\ndirective @override(from: String!) on FIELD_DEFINITION\\n\\ndirective @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION\\n\\ndirective @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION\\n\\ndirective @requiresScopes(scopes: [[openfed__Scope!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR\\n\\ndirective @shareable repeatable on FIELD_DEFINITION | OBJECT\\n\\ndirective @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\\n\\ntype Account @key(fields: \\"id\\") {\\n  id: Int!\\n  products: [Product]! @inaccessible\\n}\\n\\ntype Product {\\n  upc: Int!\\n}\\n\\nscalar openfed__FieldSet\\n\\nscalar openfed__Scope"
     },
-    "graphqlClientSchema": "directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR\\n\\ndirective @requiresScopes(scopes: [[openfed__Scope!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR\\n\\nscalar openfed__Scope\\n\\ntype Query {\\n  accounts: [Account!]!\\n}\\n\\ntype Account {\\n  id: Int!\\n}\\n\\ntype Product {\\n  upc: Int!\\n}"
+    "graphqlClientSchema": "type Query {\\n  accounts: [Account!]!\\n}\\n\\ntype Account {\\n  id: Int!\\n}\\n\\ntype Product {\\n  upc: Int!\\n}"
   },
   "subgraphs": [
     {

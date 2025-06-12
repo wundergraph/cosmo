@@ -98,6 +98,7 @@ var (
 	defaultCloudTemporalitySelector = func(kind sdkmetric.InstrumentKind) metricdata.Temporality {
 		switch kind {
 		case sdkmetric.InstrumentKindCounter,
+			sdkmetric.InstrumentKindGauge,
 			sdkmetric.InstrumentKindUpDownCounter,
 			sdkmetric.InstrumentKindHistogram:
 			return metricdata.DeltaTemporality
@@ -294,13 +295,18 @@ func NewOtlpMeterProvider(ctx context.Context, log *zap.Logger, c *Config, servi
 	return mp, nil
 }
 
-// IsDefaultCloudExporterConfigured checks if the default cloud exporter is configured in the provided exporters.
-func IsDefaultCloudExporterConfigured(c []*OpenTelemetryExporter) bool {
-	for _, exp := range c {
+// IsUsingDefaultCloudExporter checks if the provided metricConfig is using the default cloud exporter.
+func IsUsingDefaultCloudExporter(metricConfig *Config) bool {
+	if metricConfig == nil || metricConfig.IsUsingCloudExporter {
+		return true
+	}
+
+	for _, exp := range metricConfig.OpenTelemetry.Exporters {
 		if isCloudExporter(exp) {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -349,7 +355,7 @@ func defaultPrometheusMetricOptions(ctx context.Context, serviceInstanceID strin
 		if isKeyInSlice(value.Key, defaultExcludedOtelKeys) {
 			return false
 		}
-		name := sanitizeName(string(value.Key))
+		name := SanitizeName(string(value.Key))
 		for _, re := range c.Prometheus.ExcludeMetricLabels {
 			if re.MatchString(name) {
 				return false
@@ -371,7 +377,7 @@ func defaultPrometheusMetricOptions(ctx context.Context, serviceInstanceID strin
 
 		// Filter out metrics that match the excludeMetrics regexes
 		for _, re := range c.Prometheus.ExcludeMetrics {
-			promName := sanitizeName(i.Name)
+			promName := SanitizeName(i.Name)
 			if re.MatchString(promName) {
 				// Drop the metric
 				s.Aggregation = sdkmetric.AggregationDrop{}

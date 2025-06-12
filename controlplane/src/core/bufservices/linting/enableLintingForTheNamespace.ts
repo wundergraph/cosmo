@@ -8,6 +8,7 @@ import {
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function enableLintingForTheNamespace(
   opts: RouterOptions,
@@ -20,13 +21,8 @@ export function enableLintingForTheNamespace(
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
-    if (!authContext.hasWriteAccess) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `The user doesnt have the permissions to perform this operation`,
-        },
-      };
+    if (authContext.organizationDeactivated) {
+      throw new UnauthorizedError();
     }
 
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
@@ -40,7 +36,11 @@ export function enableLintingForTheNamespace(
       };
     }
 
-    await namespaceRepo.toggleEnableLinting({ name: req.namespace, enableLinting: req.enableLinting });
+    if (!authContext.rbac.hasNamespaceWriteAccess(namespace)) {
+      throw new UnauthorizedError();
+    }
+
+    await namespaceRepo.updateConfiguration({ id: namespace.id, enableLinting: req.enableLinting });
 
     return {
       response: {

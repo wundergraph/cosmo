@@ -10,7 +10,7 @@ import { Loader } from "@/components/ui/loader";
 import { useToast } from "@/components/ui/use-toast";
 import { useUser } from "@/hooks/use-user";
 import { NextPageWithLayout } from "@/lib/page";
-import { checkUserAccess, cn } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { useMutation, useQuery } from "@connectrpc/connect-query";
 import {
   ExclamationTriangleIcon,
@@ -28,12 +28,14 @@ import { useRouter } from "next/router";
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { docsBaseURL } from "@/lib/constants";
+import { useCheckUserAccess } from "@/hooks/use-check-user-access";
 
 const CacheOperationsPage: NextPageWithLayout = () => {
   const router = useRouter();
   const federatedGraphName = router.query.slug as string;
   const namespace = router.query.namespace as string;
   const user = useUser();
+  const checkUserAccess = useCheckUserAccess();
   const plan = user?.currentOrganization?.billing?.plan;
 
   const pageNumber = router.query.page
@@ -171,7 +173,7 @@ const CacheOperationsPage: NextPageWithLayout = () => {
             operation have priority over the top 100 operations computed by
             planning time.{" "}
             <Link
-              href={docsBaseURL + "/studio/cache-operations"}
+              href={docsBaseURL + "/concepts/cache-warmer"}
               className="text-primary"
               target="_blank"
               rel="noreferrer"
@@ -191,10 +193,7 @@ const CacheOperationsPage: NextPageWithLayout = () => {
               disabled={
                 isPending ||
                 recomputeDisabled ||
-                !checkUserAccess({
-                  rolesToBe: ["admin", "developer"],
-                  userRoles: user?.currentOrganization.roles || [],
-                })
+                !checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] })
               }
             >
               <UpdateIcon

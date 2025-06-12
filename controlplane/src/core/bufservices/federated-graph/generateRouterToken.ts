@@ -12,6 +12,7 @@ import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepos
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function generateRouterToken(
   opts: RouterOptions,
@@ -28,19 +29,11 @@ export function generateRouterToken(
     const auditLogRepo = new AuditLogRepository(opts.db);
 
     req.namespace = req.namespace || DefaultNamespace;
-
-    if (!authContext.hasWriteAccess) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `The user doesnt have the permissions to perform this operation`,
-        },
-        token: '',
-      };
+    if (authContext.organizationDeactivated) {
+      throw new UnauthorizedError();
     }
 
     const federatedGraph = await fedRepo.byName(req.fedGraphName, req.namespace);
-
     if (!federatedGraph) {
       return {
         response: {
@@ -49,6 +42,11 @@ export function generateRouterToken(
         },
         token: '',
       };
+    }
+
+    // check whether the user is authorized to perform the action
+    if (!authContext.rbac.hasFederatedGraphWriteAccess(federatedGraph)) {
+      throw new UnauthorizedError();
     }
 
     const token = await signJwtHS256<GraphApiKeyJwtPayload>({
@@ -64,6 +62,7 @@ export function generateRouterToken(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'router_config.fetched',
       action: 'fetched',
       actorId: authContext.userId,

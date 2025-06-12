@@ -5,12 +5,15 @@ import {
   GetChecksByFederatedGraphNameRequest,
   GetChecksByFederatedGraphNameResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { validate as isValidUuid } from 'uuid';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
+import { federatedGraphs } from '../../../db/schema.js';
 
 export function getChecksByFederatedGraphName(
   opts: RouterOptions,
@@ -37,8 +40,11 @@ export function getChecksByFederatedGraphName(
         },
         checks: [],
         checksCountBasedOnDateRange: 0,
-        totalChecksCount: 0,
       };
+    }
+
+    if (!authContext.rbac.hasFederatedGraphReadAccess(federatedGraph)) {
+      throw new UnauthorizedError();
     }
 
     const breakingChangeRetention = await orgRepo.getFeature({
@@ -62,7 +68,6 @@ export function getChecksByFederatedGraphName(
         },
         checks: [],
         checksCountBasedOnDateRange: 0,
-        totalChecksCount: 0,
       };
     }
 
@@ -75,18 +80,19 @@ export function getChecksByFederatedGraphName(
         },
         checks: [],
         checksCountBasedOnDateRange: 0,
-        totalChecksCount: 0,
       };
     }
 
+    const includeSubgraphs = req.filters?.subgraphs?.filter((id) => isValidUuid(id)) ?? [];
     const checksData = await subgraphRepo.checks({
       federatedGraphTargetId: federatedGraph.targetId,
+      federatedGraphId: federatedGraph.id,
       limit: req.limit,
       offset: req.offset,
       startDate: dateRange.start,
       endDate: dateRange.end,
+      includeSubgraphs,
     });
-    const totalChecksCount = await subgraphRepo.getChecksCount({ federatedGraphTargetId: federatedGraph.targetId });
 
     return {
       response: {
@@ -94,7 +100,6 @@ export function getChecksByFederatedGraphName(
       },
       checks: checksData.checks,
       checksCountBasedOnDateRange: checksData.checksCount,
-      totalChecksCount,
     };
   });
 }

@@ -9,6 +9,7 @@ import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, isValidNamespaceName } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function createNamespace(
   opts: RouterOptions,
@@ -20,6 +21,10 @@ export function createNamespace(
   return handleError<PlainMessage<CreateNamespaceResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
+
+    if (authContext.organizationDeactivated || !authContext.rbac.canCreateNamespace) {
+      throw new UnauthorizedError();
+    }
 
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
     const auditLogRepo = new AuditLogRepository(opts.db);
@@ -61,6 +66,7 @@ export function createNamespace(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'namespace.created',
       action: 'created',
       actorId: authContext.userId,

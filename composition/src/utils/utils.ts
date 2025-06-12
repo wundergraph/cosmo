@@ -1,4 +1,4 @@
-import { ConstDirectiveNode, ConstValueNode, Kind, StringValueNode } from 'graphql/index';
+import { ConstDirectiveNode, ConstValueNode, Kind, StringValueNode } from 'graphql';
 import {
   BOOLEAN_SCALAR,
   ENUM,
@@ -20,38 +20,12 @@ import {
 import { invalidKeyFatalError } from '../errors/errors';
 import { stringToNameNode } from '../ast/utils';
 
-export function areSetsEqual<T>(set: Set<T>, other: Set<T>): boolean {
-  if (set.size !== other.size) {
-    return false;
-  }
-  for (const entry of set) {
-    if (!other.has(entry)) {
-      return false;
-    }
-  }
-  return true;
-}
-
 export function getOrThrowError<K, V>(map: Map<K, V>, key: K, mapName: string): V {
   const value = map.get(key);
   if (value === undefined) {
     throw invalidKeyFatalError(key, mapName);
   }
   return value;
-}
-
-export function getAllSetDisparities<T>(set: Set<T>, other: Set<T>): T[] {
-  const otherCopy = new Set<T>(other);
-  const disparities: T[] = [];
-  for (const entry of set) {
-    if (!otherCopy.delete(entry)) {
-      disparities.push(entry);
-    }
-  }
-  for (const entry of otherCopy) {
-    disparities.push(entry);
-  }
-  return disparities;
 }
 
 export function getEntriesNotInHashSet<T>(iterable: Iterable<T>, comparison: Set<T> | Map<T, any>): T[] {
@@ -79,13 +53,21 @@ export function numberToOrdinal(num: number): string {
   }
 }
 
-export function addIterableValuesToSet<T>(source: T[] | Iterable<T>, target: Set<T>) {
+export function addIterableValuesToSet<T>(source: Array<T> | Iterable<T>, target: Set<T>) {
   for (const value of source) {
     target.add(value);
   }
 }
 
-export function kindToTypeString(kind: Kind): string {
+export function addSets<T>(a: Set<T>, b: Set<T>): Set<T> {
+  const output = new Set<T>(a);
+  for (const item of b) {
+    output.add(item);
+  }
+  return output;
+}
+
+export function kindToNodeType(kind: Kind): string {
   switch (kind) {
     case Kind.BOOLEAN: {
       return BOOLEAN_SCALAR;
@@ -207,4 +189,42 @@ export function generateRequiresScopesDirective(orScopes: Set<string>[]): ConstD
       },
     ],
   };
+}
+
+// shallow copy
+export function copyObjectValueMap<K, V>(source: Map<K, V>): Map<K, V> {
+  const output = new Map<K, V>();
+  for (const [key, value] of source) {
+    output.set(key, { ...value });
+  }
+  return output;
+}
+
+export function addNewObjectValueMapEntries<K, V>(source: Map<K, V>, target: Map<K, V>) {
+  for (const [key, value] of source) {
+    target.set(key, { ...value });
+  }
+}
+
+// shallow copy
+export function copyArrayValueMap<K, V>(source: Map<K, Array<V>>): Map<K, Array<V>> {
+  const output = new Map<K, Array<V>>();
+  for (const [key, value] of source) {
+    output.set(key, [...value]);
+  }
+  return output;
+}
+
+export function addMapEntries<K, V>(source: Map<K, V>, target: Map<K, V>) {
+  for (const [key, value] of source) {
+    target.set(key, value);
+  }
+}
+
+export function getSingleSetEntry<T>(set: Set<T>): T | undefined {
+  const { value, done } = set.values().next();
+  if (done) {
+    return;
+  }
+  return value;
 }

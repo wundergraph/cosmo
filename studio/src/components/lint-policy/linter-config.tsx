@@ -1,6 +1,6 @@
 import { useUser } from "@/hooks/use-user";
 import { docsBaseURL, lintCategories } from "@/lib/constants";
-import { checkUserAccess, cn, countLintConfigsByCategory } from "@/lib/utils";
+import { cn, countLintConfigsByCategory } from "@/lib/utils";
 import { useMutation } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
@@ -14,7 +14,7 @@ import {
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Accordion,
   AccordionContent,
@@ -42,6 +42,7 @@ import {
 } from "../ui/select";
 import { Switch } from "../ui/switch";
 import { useToast } from "../ui/use-toast";
+import { useCheckUserAccess } from "@/hooks/use-check-user-access";
 
 export const SeverityDropdown = ({
   onChange,
@@ -85,6 +86,7 @@ export const LinterConfig = ({
   refetch: () => void;
 }) => {
   const user = useUser();
+  const checkUserAccess = useCheckUserAccess();
   const router = useRouter();
   const namespace = router.query.namespace as string;
 
@@ -101,6 +103,11 @@ export const LinterConfig = ({
   );
   const countByCategory = countLintConfigsByCategory(data.configs);
 
+  useEffect(() => {
+    setLinterEnabled(data.linterEnabled);
+    setSelectedLintRules(data.configs);
+  }, [data]);
+
   return (
     <div className="space-y-6 rounded-lg border p-6">
       <div className="flex w-full items-center justify-between">
@@ -113,10 +120,7 @@ export const LinterConfig = ({
         <Switch
           checked={linterEnabled}
           disabled={
-            !checkUserAccess({
-              rolesToBe: ["admin", "developer"],
-              userRoles: user?.currentOrganization.roles || [],
-            })
+            !checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] })
           }
           onCheckedChange={(checked) => {
             setLinterEnabled(checked);
@@ -165,7 +169,7 @@ export const LinterConfig = ({
                   ? "Configure the linter rules and its severity levels for the lint check performed during each check operation of this namespace."
                   : "Enable the linter to configure the lint rules."}{" "}
                 <Link
-                  href={docsBaseURL + "/studio/lint-policy"}
+                  href={docsBaseURL + "/studio/policies"}
                   className="text-primary"
                   target="_blank"
                   rel="noreferrer"
@@ -181,10 +185,7 @@ export const LinterConfig = ({
               isLoading={isConfiguring}
               disabled={
                 !data.linterEnabled ||
-                !checkUserAccess({
-                  rolesToBe: ["admin", "developer"],
-                  userRoles: user?.currentOrganization.roles || [],
-                })
+                !checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] })
               }
               onClick={() => {
                 configureLintRules(
@@ -264,11 +265,7 @@ export const LinterConfig = ({
                                   (l) => l.ruleName === rule.name,
                                 )}
                                 disabled={
-                                  !checkUserAccess({
-                                    rolesToBe: ["admin", "developer"],
-                                    userRoles:
-                                      user?.currentOrganization.roles || [],
-                                  })
+                                  !checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] })
                                 }
                                 onCheckedChange={(checked) => {
                                   if (checked) {

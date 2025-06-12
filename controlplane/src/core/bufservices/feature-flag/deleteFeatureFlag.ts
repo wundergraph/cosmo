@@ -16,6 +16,7 @@ import { DefaultNamespace, NamespaceRepository } from '../../repositories/Namesp
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function deleteFeatureFlag(
   opts: RouterOptions,
@@ -39,16 +40,8 @@ export function deleteFeatureFlag(
 
     req.namespace = req.namespace || DefaultNamespace;
 
-    if (!authContext.hasWriteAccess) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `The user does not have the permissions to perform this operation.`,
-        },
-        compositionErrors: [],
-        deploymentErrors: [],
-        compositionWarnings: [],
-      };
+    if (authContext.organizationDeactivated) {
+      throw new UnauthorizedError();
     }
 
     const namespace = await namespaceRepo.byName(req.namespace);
@@ -78,6 +71,11 @@ export function deleteFeatureFlag(
         deploymentErrors: [],
         compositionWarnings: [],
       };
+    }
+
+    // check whether the user is authorized to perform the action
+    if (!authContext.rbac.hasFeatureFlagWriteAccess(featureFlag)) {
+      throw new UnauthorizedError();
     }
 
     // Collect the federated graph DTOs that have the feature flag enabled because they will be re-composed
@@ -116,6 +114,7 @@ export function deleteFeatureFlag(
 
       await auditLogRepo.addAuditLog({
         organizationId: authContext.organizationId,
+        organizationSlug: authContext.organizationSlug,
         auditAction: 'feature_flag.deleted',
         action: 'deleted',
         actorId: authContext.userId,

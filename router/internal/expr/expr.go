@@ -4,17 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/expr-lang/expr/checker"
-	"github.com/expr-lang/expr/conf"
-	"github.com/expr-lang/expr/parser"
 	"net/http"
 	"net/url"
-	"reflect"
 
-	"github.com/expr-lang/expr"
-	"github.com/expr-lang/expr/ast"
 	"github.com/expr-lang/expr/file"
-	"github.com/expr-lang/expr/vm"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 )
 
@@ -39,16 +32,64 @@ const ExprRequestAuthKey = "auth"
 
 // Context is the context for expressions parser when evaluating dynamic expressions
 type Context struct {
-	Request Request `expr:"request"` // if changing the expr tag, the ExprRequestKey should be updated
+	Request  Request  `expr:"request"` // if changing the expr tag, the ExprRequestKey should be updated
+	Subgraph Subgraph `expr:"subgraph"`
+}
+
+// Clone creates a deep copy of the Context
+func (copyCtx Context) Clone() *Context {
+	// the method receiver copyCtx is already a copy
+	// so we just need to make sure any pointer values are copied
+	scopes := make([]string, len(copyCtx.Request.Auth.Scopes))
+	copy(scopes, copyCtx.Request.Auth.Scopes)
+	copyCtx.Request.Auth.Scopes = scopes
+
+	claims := make(map[string]any, len(copyCtx.Request.Auth.Claims))
+	for k, v := range copyCtx.Request.Auth.Claims {
+		claims[k] = v
+	}
+	copyCtx.Request.Auth.Claims = claims
+
+	query := make(map[string]string, len(copyCtx.Request.URL.Query))
+	for k, v := range copyCtx.Request.URL.Query {
+		claims[k] = v
+	}
+	copyCtx.Request.URL.Query = query
+
+	return &copyCtx
 }
 
 // Request is the context for the request object in expressions. Be aware, that only value receiver methods
 // are exported in the expr environment. This is because the expressions are evaluated in a read-only context.
 type Request struct {
-	Auth   RequestAuth    `expr:"auth"` // if changing the expr tag, the ExprRequestAuthKey should be updated
-	URL    RequestURL     `expr:"url"`
-	Header RequestHeaders `expr:"header"`
-	Error  error          `expr:"error"`
+	Auth      RequestAuth    `expr:"auth"` // if changing the expr tag, the ExprRequestAuthKey should be updated
+	URL       RequestURL     `expr:"url"`
+	Header    RequestHeaders `expr:"header"`
+	Body      RequestBody    `expr:"body"`
+	Error     error          `expr:"error"`
+	Trace     Trace          `expr:"trace"`
+	Operation Operation      `expr:"operation"`
+	Client    Client         `expr:"client"`
+}
+
+type Operation struct {
+	Name string `expr:"name"`
+	Type string `expr:"type"`
+	Hash string `expr:"hash"`
+}
+
+type Client struct {
+	Name    string `expr:"name"`
+	Version string `expr:"version"`
+	IP      string `expr:"ip"`
+}
+
+type RequestBody struct {
+	Raw string `expr:"raw"`
+}
+
+type Trace struct {
+	Sampled bool `expr:"sampled"`
 }
 
 // RequestURL is the context for the URL object in expressions
@@ -67,6 +108,29 @@ type RequestURL struct {
 
 type RequestHeaders struct {
 	Header http.Header `expr:"-"` // Do not expose the full header
+}
+
+type RequestAuth struct {
+	IsAuthenticated bool           `expr:"isAuthenticated"`
+	Type            string         `expr:"type"`
+	Claims          map[string]any `expr:"claims"`
+	Scopes          []string       `expr:"scopes"`
+}
+
+type SubgraphRequest struct {
+	Error       error       `expr:"error"`
+	ClientTrace ClientTrace `expr:"clientTrace"`
+}
+
+type ClientTrace struct {
+	ConnectionAcquireDuration float64 `expr:"connAcquireDuration"`
+}
+
+// Subgraph Related
+type Subgraph struct {
+	Id      string          `expr:"id"`
+	Name    string          `expr:"name"`
+	Request SubgraphRequest `expr:"request"`
 }
 
 // Get returns the value of the header with the given key. If the header is not present, an empty string is returned.
@@ -102,13 +166,6 @@ func LoadRequest(req *http.Request) Request {
 	return r
 }
 
-type RequestAuth struct {
-	IsAuthenticated bool           `expr:"isAuthenticated"`
-	Type            string         `expr:"type"`
-	Claims          map[string]any `expr:"claims"`
-	Scopes          []string       `expr:"scopes"`
-}
-
 // LoadAuth loads the authentication context into the request object.
 // Must only be called when the authentication was successful.
 func LoadAuth(ctx context.Context) RequestAuth {
@@ -122,131 +179,6 @@ func LoadAuth(ctx context.Context) RequestAuth {
 		IsAuthenticated: true,
 		Claims:          authCtx.Claims(),
 		Scopes:          authCtx.Scopes(),
-	}
-}
-
-func compileOptions(extra ...expr.Option) []expr.Option {
-	options := []expr.Option{
-		expr.Env(Context{}),
-	}
-	options = append(options, extra...)
-	return options
-}
-
-// CompileBoolExpression compiles an expression and returns the program. It is used for expressions that return bool.
-// The exprContext is used to provide the context for the expression evaluation. Not safe for concurrent use.
-func CompileBoolExpression(s string) (*vm.Program, error) {
-	v, err := expr.Compile(s, compileOptions(expr.AsBool())...)
-	if err != nil {
-		return nil, handleExpressionError(err)
-	}
-	return v, nil
-}
-
-// CompileStringExpression compiles an expression and returns the program. It is used for expressions that return strings
-// The exprContext is used to provide the context for the expression evaluation. Not safe for concurrent use.
-func CompileStringExpression(s string) (*vm.Program, error) {
-	v, err := expr.Compile(s, compileOptions(expr.AsKind(reflect.String))...)
-	if err != nil {
-		return nil, handleExpressionError(err)
-	}
-	return v, nil
-}
-
-// CompileStringExpression compiles an expression and returns the program. It is used for expressions that return strings
-// The exprContext is used to provide the context for the expression evaluation. Not safe for concurrent use.
-func CompileStringExpressionWithPatch(s string, visitor ast.Visitor) (*vm.Program, error) {
-	v, err := expr.Compile(s, compileOptions(expr.AsKind(reflect.String), expr.Patch(visitor))...)
-	if err != nil {
-		return nil, handleExpressionError(err)
-	}
-	return v, nil
-}
-
-// ValidateAnyExpression compiles the expression to ensure that the expression itself is valid but more
-// importantly it checks if the return type is not nil and is an allowed return type
-// this allows us to ensure that nil and return types such as func or channels are not returned
-func ValidateAnyExpression(s string) error {
-	tree, err := parser.Parse(s)
-	if err != nil {
-		return handleExpressionError(err)
-	}
-
-	config := conf.CreateNew()
-	for _, op := range compileOptions() {
-		op(config)
-	}
-
-	expectedType, err := checker.Check(tree, config)
-	if err != nil {
-		return handleExpressionError(err)
-	}
-
-	if expectedType == nil {
-		return handleExpressionError(errors.New("disallowed nil"))
-	}
-
-	// Disallowed types
-	switch expectedType.Kind() {
-	case reflect.Invalid, reflect.Chan, reflect.Func:
-		return handleExpressionError(fmt.Errorf("disallowed type: %s", expectedType.String()))
-	}
-
-	return nil
-}
-
-func CompileAnyExpression(s string) (*vm.Program, error) {
-	v, err := expr.Compile(s, compileOptions()...)
-	if err != nil {
-		return nil, handleExpressionError(err)
-	}
-	return v, nil
-}
-
-// ResolveAnyExpression evaluates the expression and returns the result as a any. The exprContext is used to
-// provide the context for the expression evaluation. Not safe for concurrent use.
-func ResolveAnyExpression(vm *vm.Program, ctx Context) (any, error) {
-	r, err := expr.Run(vm, ctx)
-	if err != nil {
-		return "", handleExpressionError(err)
-	}
-
-	return r, nil
-}
-
-// ResolveStringExpression evaluates the expression and returns the result as a string. The exprContext is used to
-// provide the context for the expression evaluation. Not safe for concurrent use.
-func ResolveStringExpression(vm *vm.Program, ctx Context) (string, error) {
-	r, err := expr.Run(vm, ctx)
-	if err != nil {
-		return "", handleExpressionError(err)
-	}
-
-	switch v := r.(type) {
-	case string:
-		return v, nil
-	default:
-		return "", fmt.Errorf("expected string, got %T", r)
-	}
-}
-
-// ResolveBoolExpression evaluates the expression and returns the result as a bool. The exprContext is used to
-// provide the context for the expression evaluation. Not safe for concurrent use.
-func ResolveBoolExpression(vm *vm.Program, ctx Context) (bool, error) {
-	if vm == nil {
-		return false, nil
-	}
-
-	r, err := expr.Run(vm, ctx)
-	if err != nil {
-		return false, handleExpressionError(err)
-	}
-
-	switch v := r.(type) {
-	case bool:
-		return v, nil
-	default:
-		return false, fmt.Errorf("failed to run expression: expected bool, got %T", r)
 	}
 }
 

@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"reflect"
 
 	"github.com/expr-lang/expr/ast"
 	"github.com/expr-lang/expr/vm"
@@ -17,6 +18,8 @@ type attributeExpressions struct {
 	// expressionsWithAuth is a map of expressions that can be used to resolve dynamic attributes and acces the auth
 	// argument
 	expressionsWithAuth map[string]*vm.Program
+
+	expressionsWithSubgraph map[string]*vm.Program
 }
 
 type VisitorCheckForRequestAuthAccess struct {
@@ -44,18 +47,22 @@ func (v *VisitorCheckForRequestAuthAccess) Visit(node *ast.Node) {
 	}
 }
 
-func newAttributeExpressions(attr []config.CustomAttribute) (*attributeExpressions, error) {
+func newAttributeExpressions(attr []config.CustomAttribute, exprManager *expr.Manager) (*attributeExpressions, error) {
 	attrExprMap := make(map[string]*vm.Program)
 	attrExprMapWithAuth := make(map[string]*vm.Program)
+	attrExprMapSubgraph := make(map[string]*vm.Program)
 
 	for _, a := range attr {
 		if a.ValueFrom != nil && a.ValueFrom.Expression != "" {
 			usesAuth := VisitorCheckForRequestAuthAccess{}
-			prog, err := expr.CompileStringExpressionWithPatch(a.ValueFrom.Expression, &usesAuth)
+			usesSubgraph := expr.UsesSubgraph{}
+			prog, err := exprManager.CompileExpression(a.ValueFrom.Expression, reflect.String, &usesAuth, &usesSubgraph)
 			if err != nil {
 				return nil, fmt.Errorf("custom attribute error, unable to compile '%s' with expression '%s': %s", a.Key, a.ValueFrom.Expression, err)
 			}
-			if usesAuth.HasAuth {
+			if usesSubgraph.UsesSubgraph {
+				attrExprMapSubgraph[a.Key] = prog
+			} else if usesAuth.HasAuth {
 				attrExprMapWithAuth[a.Key] = prog
 			} else {
 				attrExprMap[a.Key] = prog
@@ -64,19 +71,20 @@ func newAttributeExpressions(attr []config.CustomAttribute) (*attributeExpressio
 	}
 
 	return &attributeExpressions{
-		expressions:         attrExprMap,
-		expressionsWithAuth: attrExprMapWithAuth,
+		expressions:             attrExprMap,
+		expressionsWithAuth:     attrExprMapWithAuth,
+		expressionsWithSubgraph: attrExprMapSubgraph,
 	}, nil
 }
 
-func expressionAttributes(expressions map[string]*vm.Program, reqCtx *requestContext) ([]attribute.KeyValue, error) {
-	if reqCtx == nil {
+func expressionAttributes(expressions map[string]*vm.Program, exprCtx *expr.Context) ([]attribute.KeyValue, error) {
+	if exprCtx == nil {
 		return nil, nil
 	}
 
 	var result []attribute.KeyValue
 	for exprKey, exprVal := range expressions {
-		val, err := reqCtx.ResolveStringExpression(exprVal)
+		val, err := expr.ResolveStringExpression(exprVal, *exprCtx)
 		if err != nil {
 			return nil, err
 		}
@@ -86,10 +94,14 @@ func expressionAttributes(expressions map[string]*vm.Program, reqCtx *requestCon
 	return result, nil
 }
 
-func (r *attributeExpressions) expressionsAttributes(reqCtx *requestContext) ([]attribute.KeyValue, error) {
-	return expressionAttributes(r.expressions, reqCtx)
+func (r *attributeExpressions) expressionsAttributes(exprCtx *expr.Context) ([]attribute.KeyValue, error) {
+	return expressionAttributes(r.expressions, exprCtx)
 }
 
-func (r *attributeExpressions) expressionsAttributesWithAuth(reqCtx *requestContext) ([]attribute.KeyValue, error) {
-	return expressionAttributes(r.expressionsWithAuth, reqCtx)
+func (r *attributeExpressions) expressionsAttributesWithAuth(exprCtx *expr.Context) ([]attribute.KeyValue, error) {
+	return expressionAttributes(r.expressionsWithAuth, exprCtx)
+}
+
+func (r *attributeExpressions) expressionsAttributesWithSubgraph(exprCtx *expr.Context) ([]attribute.KeyValue, error) {
+	return expressionAttributes(r.expressionsWithSubgraph, exprCtx)
 }

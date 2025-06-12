@@ -21,8 +21,13 @@ import "../styles/login.css";
 import "../styles/playground.css";
 import "../styles/utils.css";
 import { useEffect } from "react";
-const queryClient = new QueryClient();
+import { Router } from "next/router";
+import posthog from "posthog-js";
+import { PostHogProvider } from "posthog-js/react";
 import { withErrorBoundary } from "@sentry/nextjs";
+import { Footer } from "@/components/layout/footer";
+
+const queryClient = new QueryClient();
 
 function MyApp({ Component, pageProps }: AppPropsWithLayout) {
   useEffect(() => {
@@ -34,6 +39,23 @@ function MyApp({ Component, pageProps }: AppPropsWithLayout) {
         window.removeEventListener("focus", handleFocus);
       };
     });
+  }, []);
+
+  useEffect(() => {
+    posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
+      api_host: "/ingest",
+      loaded: (ph) => {
+        if (process.env.NODE_ENV === "development") ph.debug();
+      },
+      debug: process.env.NODE_ENV === "development",
+    });
+
+    const handleRouteChange = () => posthog.capture("$pageview");
+    Router.events.on("routeChangeComplete", handleRouteChange);
+
+    return () => {
+      Router.events.off("routeChangeComplete", handleRouteChange);
+    };
   }, []);
 
   if (pageProps.markdoc) {
@@ -48,16 +70,19 @@ function MyApp({ Component, pageProps }: AppPropsWithLayout) {
 
   return (
     <>
-      <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-        <QueryClientProvider client={queryClient}>
-          <AppProvider>
-            <TooltipProvider>
-              <Toaster />
-              {getLayout(<Component {...pageProps} />)}
-            </TooltipProvider>
-          </AppProvider>
-        </QueryClientProvider>
-      </ThemeProvider>
+      <PostHogProvider client={posthog}>
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+          <QueryClientProvider client={queryClient}>
+            <AppProvider>
+              <TooltipProvider>
+                <Toaster />
+                {getLayout(<Component {...pageProps} />)}
+              </TooltipProvider>
+            </AppProvider>
+          </QueryClientProvider>
+        </ThemeProvider>
+      </PostHogProvider>
+      <Footer />
     </>
   );
 }

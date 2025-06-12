@@ -4,6 +4,109 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.111.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.110.0...@wundergraph/cosmo-connect@0.111.0) (2025-06-06)
+
+### Features
+
+* link organization to the root keycloak group ([#1920](https://github.com/wundergraph/cosmo/issues/1920)) ([2952533](https://github.com/wundergraph/cosmo/commit/2952533b7dbdf29dd71f97b21c92c834ba1f1c97)) (@wilsonrivera)
+
+# [0.110.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.109.0...@wundergraph/cosmo-connect@0.110.0) (2025-06-02)
+
+### Features
+
+* add GetClientsFromAnalytics RPC to fetch the clients using clickhouse metrics ([#1918](https://github.com/wundergraph/cosmo/issues/1918)) ([756edf3](https://github.com/wundergraph/cosmo/commit/756edf377314296adc50615f12c618b98e78810d)) (@JivusAyrus)
+
+# [0.109.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.108.0...@wundergraph/cosmo-connect@0.109.0) (2025-05-28)
+
+### Features
+
+* return proposalUrl on creation of proposal ([#1909](https://github.com/wundergraph/cosmo/issues/1909)) ([b21db02](https://github.com/wundergraph/cosmo/commit/b21db02185c37b47bd0c1db0fba872d1868017bd)) (@JivusAyrus)
+
+# [0.108.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.107.0...@wundergraph/cosmo-connect@0.108.0) (2025-05-26)
+
+### Features
+
+* fetch operations based on clients ([#1894](https://github.com/wundergraph/cosmo/issues/1894)) ([a7597f5](https://github.com/wundergraph/cosmo/commit/a7597f51d4506f11f117937955da3be2626a55c5)) (@JivusAyrus)
+
+# [0.107.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.106.0...@wundergraph/cosmo-connect@0.107.0) (2025-05-25)
+
+### Features
+
+* improve available namespaces ([#1895](https://github.com/wundergraph/cosmo/issues/1895)) ([135de0a](https://github.com/wundergraph/cosmo/commit/135de0a4c57ce815e1177be34e96c2a5900f031e)) (@wilsonrivera)
+
+# [0.106.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.105.0...@wundergraph/cosmo-connect@0.106.0) (2025-05-24)
+
+### Features
+
+* introduce RBAC groups for fine-grained control over resource access ([#1830](https://github.com/wundergraph/cosmo/issues/1830)) ([9f984cd](https://github.com/wundergraph/cosmo/commit/9f984cdfedbb80e0e120178b9755d6f57e85479e)) (@wilsonrivera)
+
+# [0.105.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.104.0...@wundergraph/cosmo-connect@0.105.0) (2025-05-19)
+
+### Features
+
+* **router:** grpc go plugin system ([#1866](https://github.com/wundergraph/cosmo/issues/1866)) ([280a61d](https://github.com/wundergraph/cosmo/commit/280a61de4bd1328549a023d1a3a0b702d78453b8)) (@Noroth)
+
+# [0.104.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.103.0...@wundergraph/cosmo-connect@0.104.0) (2025-05-16)
+
+### Features
+
+* get all the operations of a federated graph ([#1856](https://github.com/wundergraph/cosmo/issues/1856)) ([246b514](https://github.com/wundergraph/cosmo/commit/246b5149921827d2e2c4954086e3e5f4dd5815b2)) (@JivusAyrus)
+
+# [0.103.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.102.1...@wundergraph/cosmo-connect@0.103.0) (2025-05-13)
+
+### Features
+
+* allow to check new subgraphs ([#1761](https://github.com/wundergraph/cosmo/issues/1761)) ([5b0bfbf](https://github.com/wundergraph/cosmo/commit/5b0bfbf38e77893453dc6bdfb4d524df1f59881b)) (@JivusAyrus)
+
+## [0.102.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.102.0...@wundergraph/cosmo-connect@0.102.1) (2025-04-29)
+
+### Bug Fixes
+
+* improve the queries of the check page ([#1811](https://github.com/wundergraph/cosmo/issues/1811)) ([ce4f377](https://github.com/wundergraph/cosmo/commit/ce4f377c53584299a86c0af1bc5b4bb87c825bfe)) (@JivusAyrus)
+
+# [0.102.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.101.0...@wundergraph/cosmo-connect@0.102.0) (2025-04-15)
+
+### Features
+
+* implement proposals in cosmo ([#1727](https://github.com/wundergraph/cosmo/issues/1727)) ([1d36747](https://github.com/wundergraph/cosmo/commit/1d36747dda3f2f3c491092f0f02cefa22fc9c131)) (@JivusAyrus)
+
+# [0.101.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.100.0...@wundergraph/cosmo-connect@0.101.0) (2025-04-07)
+
+### Features
+
+* check with multiple subgraph schemas ([#1712](https://github.com/wundergraph/cosmo/issues/1712)) ([77370a4](https://github.com/wundergraph/cosmo/commit/77370a4729034b9c037831f14dcfc30ab44d71ef)) (@JivusAyrus)
+
+# [0.100.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.99.0...@wundergraph/cosmo-connect@0.100.0) (2025-04-04)
+
+### Features
+
+* improve delete organization workflow ([#1741](https://github.com/wundergraph/cosmo/issues/1741)) ([643c179](https://github.com/wundergraph/cosmo/commit/643c179f71daf5a77a56c685b3924d10894c2d9c)) (@wilsonrivera)
+
+# [0.99.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.98.1...@wundergraph/cosmo-connect@0.99.0) (2025-04-01)
+
+### Features
+
+* remove discussions ([#1735](https://github.com/wundergraph/cosmo/issues/1735)) ([cbb6117](https://github.com/wundergraph/cosmo/commit/cbb61171505fd3fa67f501583d92002b0c807241)) (@thisisnithin)
+
+## [0.98.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.98.0...@wundergraph/cosmo-connect@0.98.1) (2025-03-28)
+
+### Bug Fixes
+
+* authorization directive cascading ([#1733](https://github.com/wundergraph/cosmo/issues/1733)) ([0199fb5](https://github.com/wundergraph/cosmo/commit/0199fb5f88104a585b74a79638f54f1a3b812436)) (@Aenimus)
+
+# [0.98.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.97.0...@wundergraph/cosmo-connect@0.98.0) (2025-03-25)
+
+### Features
+
+* allow to filter checks by subgraph name ([#1716](https://github.com/wundergraph/cosmo/issues/1716)) ([ae69dcd](https://github.com/wundergraph/cosmo/commit/ae69dcde94611196f7f8b47702e25cdcdfa41a19)) (@wilsonrivera)
+* introduce `p50`, `p90` and `p99` latency metrics for graphs and subgraphs ([#1710](https://github.com/wundergraph/cosmo/issues/1710)) ([1c55ed5](https://github.com/wundergraph/cosmo/commit/1c55ed51fe17be7371633a176c356e581ed44c62)) (@wilsonrivera)
+
+# [0.97.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.96.0...@wundergraph/cosmo-connect@0.97.0) (2025-03-20)
+
+### Features
+
+* implement checks configuration ([#1688](https://github.com/wundergraph/cosmo/issues/1688)) ([2cab283](https://github.com/wundergraph/cosmo/commit/2cab283b2cdeda7f943250d460150472eb464d22)) (@wilsonrivera)
+
 # [0.96.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.95.0...@wundergraph/cosmo-connect@0.96.0) (2025-03-12)
 
 ### Features

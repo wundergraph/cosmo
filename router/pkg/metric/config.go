@@ -15,11 +15,12 @@ import (
 const DefaultServerName = "cosmo-router"
 
 type PrometheusConfig struct {
-	Enabled      bool
-	ListenAddr   string
-	Path         string
-	GraphqlCache bool
-	EngineStats  EngineStatsConfig
+	Enabled         bool
+	ConnectionStats bool
+	ListenAddr      string
+	Path            string
+	GraphqlCache    bool
+	EngineStats     EngineStatsConfig
 	// Metrics to exclude from Prometheus exporter
 	ExcludeMetrics []*regexp.Regexp
 	// Metric labels to exclude from Prometheus exporter
@@ -28,6 +29,13 @@ type PrometheusConfig struct {
 	TestRegistry *prometheus.Registry
 	// Whether or not to exclude scope info
 	ExcludeScopeInfo bool
+	// Prometheus schema field usage configuration
+	PromSchemaFieldUsage PrometheusSchemaFieldUsage
+}
+
+type PrometheusSchemaFieldUsage struct {
+	Enabled             bool
+	IncludeOperationSha bool
 }
 
 type OpenTelemetryExporter struct {
@@ -54,11 +62,12 @@ func (e *EngineStatsConfig) Enabled() bool {
 }
 
 type OpenTelemetry struct {
-	Enabled       bool
-	RouterRuntime bool
-	GraphqlCache  bool
-	EngineStats   EngineStatsConfig
-	Exporters     []*OpenTelemetryExporter
+	Enabled         bool
+	ConnectionStats bool
+	RouterRuntime   bool
+	GraphqlCache    bool
+	EngineStats     EngineStatsConfig
+	Exporters       []*OpenTelemetryExporter
 	// Metrics to exclude from the OTLP exporter.
 	ExcludeMetrics []*regexp.Regexp
 	// Metric labels to exclude from the OTLP exporter.

@@ -1,6 +1,7 @@
 import { LintSeverity } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { JWTPayload } from 'jose';
-import { GraphPruningRuleEnum, LintRuleEnum } from '../db/models.js';
+import { GraphPruningRuleEnum, LintRuleEnum, OrganizationRole, ProposalMatch } from '../db/models.js';
+import { RBACEvaluator } from '../core/services/RBACEvaluator.js';
 
 export type FeatureIds =
   | 'users'
@@ -21,7 +22,8 @@ export type FeatureIds =
   | 'oidc'
   | 'scim'
   | 'field-pruning-grace-period'
-  | 'cache-warmer';
+  | 'cache-warmer'
+  | 'proposals';
 
 export type Features = {
   [key in FeatureIds]: Feature;
@@ -42,10 +44,12 @@ export interface ListFilterOptions {
 
 export interface FederatedGraphListFilterOptions extends ListFilterOptions {
   supportsFederation?: boolean;
+  rbac?: RBACEvaluator;
 }
 
 export interface SubgraphListFilterOptions extends ListFilterOptions {
   excludeFeatureSubgraphs: boolean;
+  rbac?: RBACEvaluator;
 }
 
 export interface Label {
@@ -145,10 +149,19 @@ export interface MigrationSubgraph {
   schema: string;
 }
 
+export interface CheckedSubgraphDTO {
+  id: string;
+  subgraphId?: string;
+  subgraphName: string;
+  isDeleted: boolean;
+  isNew: boolean;
+  labels: Label[];
+}
+
 export interface SchemaCheckDTO {
   id: string;
-  targetID: string;
-  subgraphName: string;
+  targetID?: string;
+  subgraphName?: string;
   timestamp: string;
   isComposable: boolean;
   isBreaking: boolean;
@@ -171,6 +184,11 @@ export interface SchemaCheckDTO {
     commitSha: string;
     branch: string;
   };
+  checkedSubgraphs: CheckedSubgraphDTO[];
+  proposalMatch?: ProposalMatch;
+  compositionSkipped: boolean;
+  breakingChangesSkipped: boolean;
+  errorMessage?: string;
 }
 
 export interface SchemaCheckSummaryDTO extends SchemaCheckDTO {
@@ -193,6 +211,7 @@ export interface SchemaCheckDetailsDTO {
     message: string;
     path?: string;
     isBreaking: boolean;
+    subgraphName?: string;
   }[];
   compositionErrors: string[];
   compositionWarnings: string[];
@@ -205,6 +224,7 @@ export interface OrganizationDTO {
   creatorUserId?: string;
   createdAt: string;
   features?: Feature[];
+  rbac: RBACEvaluator;
   billing?: {
     plan: string;
     email?: string;
@@ -219,6 +239,11 @@ export interface OrganizationDTO {
     reason?: string;
     initiatedAt: string;
   };
+  deletion?: {
+    queuedAt: string;
+    queuedBy?: string;
+  };
+  kcGroupId: string | undefined;
 }
 
 export interface UserDTO {
@@ -226,18 +251,35 @@ export interface UserDTO {
   email: string;
 }
 
+export interface OrganizationGroupDTO {
+  groupId: string;
+  name: string;
+  description: string;
+  builtin: boolean;
+  kcGroupId: string | null;
+  membersCount: number;
+  apiKeysCount: number;
+  rules: {
+    role: OrganizationRole;
+    namespaces: string[];
+    resources: string[];
+  }[];
+}
+
 export interface OrganizationMemberDTO {
   userID: string;
   orgMemberID: string;
   email: string;
-  roles: string[];
+  rbac: RBACEvaluator;
   active: boolean;
+  joinedAt: string;
 }
 
 export interface OrganizationInvitationDTO {
   userID: string;
   email: string;
   invitedBy?: string;
+  groupId?: string;
 }
 
 export interface APIKeyDTO {
@@ -247,6 +289,7 @@ export interface APIKeyDTO {
   lastUsedAt: string;
   expiresAt: string;
   createdBy: string;
+  group: { id: string; name: string } | undefined;
   creatorUserID: string;
 }
 
@@ -401,9 +444,9 @@ export type AuthContext = {
   auth: 'access_token' | 'api_key' | 'cookie';
   organizationId: string;
   organizationSlug: string;
-  hasWriteAccess: boolean;
-  isAdmin: boolean;
+  organizationDeactivated: boolean;
   userId: string;
+  rbac: RBACEvaluator;
   userDisplayName: string;
   apiKeyName?: string;
 };
@@ -521,26 +564,6 @@ export interface SubgraphMemberDTO {
   email: string;
 }
 
-export type DiscussionDTO = {
-  id: string;
-  createdAt: Date;
-  targetId: string;
-  schemaVersionId: string;
-  referenceLine: number;
-  isResolved: boolean;
-  thread: DiscussionThreadDTO;
-}[];
-
-export type DiscussionThreadDTO = {
-  id: string;
-  createdAt: Date;
-  discussionId: string;
-  contentMarkdown: string | null;
-  contentJson: unknown;
-  updatedAt: Date | null;
-  createdById: string | null;
-  isDeleted: boolean;
-}[];
 export interface SubgraphLatencyResult {
   subgraphID: string;
   latency: number;
@@ -661,6 +684,7 @@ export interface GraphPruningIssueResult {
   };
   federatedGraphId: string;
   federatedGraphName: string;
+  subgraphName?: string;
 }
 
 export interface SchemaGraphPruningIssues {
@@ -697,4 +721,27 @@ export interface NamespaceDTO {
   enableLinting: boolean;
   enableGraphPruning: boolean;
   enableCacheWarmer: boolean;
+  checksTimeframeInDays?: number;
+  enableProposals: boolean;
+}
+
+export interface ProposalDTO {
+  id: string;
+  name: string;
+  federatedGraphId: string;
+  createdAt: string;
+  createdById: string;
+  createdByEmail?: string;
+  state: string;
+}
+
+export interface ProposalSubgraphDTO {
+  id: string;
+  subgraphName: string;
+  subgraphId?: string;
+  schemaSDL: string;
+  isDeleted: boolean;
+  currentSchemaVersionId?: string;
+  isNew: boolean;
+  labels: Label[];
 }

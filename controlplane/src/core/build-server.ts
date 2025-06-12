@@ -41,6 +41,10 @@ import { fastifyLoggerId, createS3ClientConfig, extractS3BucketName } from './ut
 import { ApiKeyRepository } from './repositories/ApiKeyRepository.js';
 import { createDeleteOrganizationWorker, DeleteOrganizationQueue } from './workers/DeleteOrganizationWorker.js';
 import {
+  createDeleteOrganizationAuditLogsWorker,
+  DeleteOrganizationAuditLogsQueue,
+} from './workers/DeleteOrganizationAuditLogsWorker.js';
+import {
   createDeactivateOrganizationWorker,
   DeactivateOrganizationQueue,
 } from './workers/DeactivateOrganizationWorker.js';
@@ -243,6 +247,7 @@ export default async function build(opts: BuildConfig) {
   const graphKeyAuth = new GraphApiTokenAuthenticator(opts.auth.secret);
   const accessTokenAuth = new AccessTokenAuthenticator(organizationRepository, authUtils);
   const authenticator = new Authentication(webAuth, apiKeyAuth, accessTokenAuth, graphKeyAuth, organizationRepository);
+
   const authorizer = new Authorization(logger, opts.stripe?.defaultPlanId);
 
   const keycloakClient = new Keycloak({
@@ -251,6 +256,7 @@ export default async function build(opts: BuildConfig) {
     clientId: opts.keycloak.clientId,
     adminUser: opts.keycloak.adminUser,
     adminPassword: opts.keycloak.adminPassword,
+    logger,
   });
 
   let mailerClient: Mailer | undefined;
@@ -321,6 +327,15 @@ export default async function build(opts: BuildConfig) {
     );
   }
 
+  const deleteOrganizationAuditLogsQueue = new DeleteOrganizationAuditLogsQueue(logger, fastify.redisForQueue);
+  bullWorkers.push(
+    createDeleteOrganizationAuditLogsWorker({
+      redisConnection: fastify.redisForWorker,
+      db: fastify.db,
+      logger,
+    }),
+  );
+
   const deleteOrganizationQueue = new DeleteOrganizationQueue(logger, fastify.redisForQueue);
   bullWorkers.push(
     createDeleteOrganizationWorker({
@@ -330,6 +345,7 @@ export default async function build(opts: BuildConfig) {
       keycloakClient,
       keycloakRealm: opts.keycloak.realm,
       blobStorage,
+      deleteOrganizationAuditLogsQueue,
     }),
   );
 
@@ -365,6 +381,7 @@ export default async function build(opts: BuildConfig) {
       keycloakRealm: opts.keycloak.realm,
       blobStorage,
       platformWebhooks,
+      deleteOrganizationAuditLogsQueue,
     }),
   );
 
@@ -468,6 +485,7 @@ export default async function build(opts: BuildConfig) {
       queues: {
         readmeQueue,
         deleteOrganizationQueue,
+        deleteOrganizationAuditLogsQueue,
         deactivateOrganizationQueue,
         reactivateOrganizationQueue,
         deleteUserQueue,

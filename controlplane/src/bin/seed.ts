@@ -3,6 +3,7 @@
 import { randomUUID } from 'node:crypto';
 import * as process from 'node:process';
 import postgres from 'postgres';
+import { pino } from 'pino';
 import { buildDatabaseConnectionConfig } from '../core/plugins/database.js';
 import Keycloak from '../core/services/Keycloak.js';
 import { seedTest } from '../core/test-util.js';
@@ -34,6 +35,7 @@ const keycloakClient = new Keycloak({
   clientId,
   adminUser,
   adminPassword,
+  logger: pino(),
 });
 
 const user = {
@@ -71,6 +73,7 @@ try {
   const users = await keycloakClient.client.users.find({
     realm,
     email: user.email,
+    exact: true,
   });
 
   if (users.length > 0) {
@@ -79,44 +82,6 @@ try {
     process.exit(0);
   }
 
-  const organizationGroup = await keycloakClient.client.groups.create({
-    realm,
-    name: user.organization.slug,
-  });
-
-  const adminGroup = await keycloakClient.client.groups.createChildGroup(
-    {
-      realm,
-      id: organizationGroup.id,
-    },
-    {
-      name: 'admin',
-      realmRoles: ['admin'],
-    },
-  );
-
-  const devGroup = await keycloakClient.client.groups.createChildGroup(
-    {
-      realm,
-      id: organizationGroup.id,
-    },
-    {
-      name: 'developer',
-      realmRoles: ['developer'],
-    },
-  );
-
-  const viewerGroup = await keycloakClient.client.groups.createChildGroup(
-    {
-      realm,
-      id: organizationGroup.id,
-    },
-    {
-      name: 'viewer',
-      realmRoles: ['viewer'],
-    },
-  );
-
   const keycloakUserID = await keycloakClient.addKeycloakUser({
     realm,
     email: user.email,
@@ -124,21 +89,27 @@ try {
     isPasswordTemp: false,
   });
 
-  await keycloakClient.client.users.addToGroup({
-    id: keycloakUserID,
+  const [kcRootGroupId, kcCreatedGroups] = await keycloakClient.seedGroup({
     realm,
-    groupId: adminGroup.id,
+    userID: keycloakUserID,
+    organizationSlug: user.organization.slug,
   });
 
-  await seedTest(queryConnection, {
-    apiKey,
-    email: user.email,
-    organizationName: user.organization.name,
-    organizationSlug: user.organization.slug,
-    userId: keycloakUserID,
-    organizationId,
-    roles: ['admin'],
-  });
+  await seedTest(
+    queryConnection,
+    {
+      apiKey,
+      email: user.email,
+      organizationName: user.organization.name,
+      organizationSlug: user.organization.slug,
+      userId: keycloakUserID,
+      organizationId,
+      roles: ['organization-admin'],
+    },
+    undefined,
+    kcRootGroupId,
+    kcCreatedGroups,
+  );
 
   await queryConnection.end({
     timeout: 1,

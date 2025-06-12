@@ -1,5 +1,5 @@
-import { ConstDirectiveNode, StringValueNode } from 'graphql';
-import { ConfigurationData, FieldSetConditionData, RequiredFieldConfiguration } from '../../router-configuration/types';
+import { BREAK, ConstDirectiveNode, Kind, StringValueNode, visit } from 'graphql';
+import { FieldSetConditionData, RequiredFieldConfiguration } from '../../router-configuration/types';
 import {
   AuthorizationData,
   CompositeOutputData,
@@ -13,7 +13,6 @@ import {
 } from '../../schema-building/types';
 import { Graph } from '../../resolvability-graph/graph';
 import { getTypeNodeNamedTypeName, MutableFieldNode } from '../../schema-building/ast';
-import { BREAK, Kind, visit } from 'graphql/index';
 import { BASE_SCALARS } from '../utils/constants';
 import { isKindAbstract } from '../../ast/utils';
 import { GraphNode } from '../../resolvability-graph/graph-nodes';
@@ -29,6 +28,7 @@ export type FederationFactoryParams = {
   concreteTypeNamesByAbstractTypeName: Map<string, Set<string>>;
   entityDataByTypeName: Map<string, EntityData>;
   entityInterfaceFederationDataByTypeName: Map<string, EntityInterfaceFederationData>;
+  fieldCoordsByNamedTypeName: Map<string, Set<string>>;
   internalGraph: Graph;
   internalSubgraphBySubgraphName: Map<string, InternalSubgraph>;
   warnings: Warning[];
@@ -135,9 +135,9 @@ export function validateImplicitFieldSets({
             return BREAK;
           }
           const fieldName = node.name.value;
-          const fieldData = parentData.fieldDataByFieldName.get(fieldName);
+          const fieldData = parentData.fieldDataByName.get(fieldName);
           // undefined if the field does not exist on the parent
-          if (!fieldData || fieldData.argumentDataByArgumentName.size || definedFields[currentDepth].has(fieldName)) {
+          if (!fieldData || fieldData.argumentDataByName.size || definedFields[currentDepth].has(fieldName)) {
             shouldAddKeyFieldSet = false;
             return BREAK;
           }

@@ -98,12 +98,6 @@ export const SubgraphLayout = ({ children }: LayoutProps) => {
         matchExact: false,
         icon: <ChartBarIcon className="h-4 w-4" />,
       },
-      {
-        title: "Discussions",
-        href: basePath + "/discussions",
-        matchExact: false,
-        icon: <PiChat className="h-4 w-4" />,
-      },
     ];
   }, [organizationSlug, namespace, slug]);
 
@@ -157,15 +151,15 @@ export const SubgraphSelect = () => {
 
   const groupedGraphs = data?.graphs.reduce<Record<string, Subgraph[]>>(
     (result, graph) => {
-      const { namespace, name } = graph;
+    const { namespace, name } = graph;
 
-      if (!result[namespace]) {
-        result[namespace] = [];
-      }
+    if (!result[namespace]) {
+      result[namespace] = [];
+    }
 
-      result[namespace].push(graph);
+    result[namespace].push(graph);
 
-      return result;
+    return result;
     },
     {},
   );

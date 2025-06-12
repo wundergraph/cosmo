@@ -1,6 +1,4 @@
-import { UserContext } from "@/components/app-provider";
 import { useCurrentOrganization } from "@/hooks/use-current-organization";
-import { useLocalStorage } from "@/hooks/use-local-storage";
 import { formatDateTime } from "@/lib/format-date";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@connectrpc/connect-query";
@@ -13,14 +11,7 @@ import {
 import { getBillingPlans } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { addDays } from "date-fns";
 import { useRouter } from "next/router";
-import {
-  Dispatch,
-  SetStateAction,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { Dispatch, SetStateAction, useMemo } from "react";
 import { AiOutlineAudit } from "react-icons/ai";
 import { MdOutlineFeaturedPlayList, MdOutlinePolicy } from "react-icons/md";
 import {
@@ -39,6 +30,10 @@ import { LayoutProps } from "./layout";
 import { NavLink, SideNav } from "./sidenav";
 import { TitleLayout } from "./title-layout";
 import { FaGripfire } from "react-icons/fa";
+import { UserGroupIcon } from "@heroicons/react/24/outline";
+import { useCheckUserAccess } from "@/hooks/use-check-user-access";
+import { useUser } from "@/hooks/use-user";
+import { useStarBannerDisabled } from "@/hooks/use-star-banner-disabled";
 
 export const StarBanner = ({
   isDisabled,
@@ -84,19 +79,30 @@ export const StarBanner = ({
 export const OrganizationBanner = () => {
   const org = useCurrentOrganization();
 
-  if (!org?.deactivation) {
+  if (!org?.deactivation && !org?.deletion) {
     return null;
   }
 
   return (
-    <div className="flex w-full bg-gradient-to-r from-destructive to-pink-400 text-xs lg:justify-center xl:text-sm">
-      <p className="flex items-center gap-x-2 px-4 py-1.5">
+    <div className="flex w-full bg-destructive text-xs lg:justify-center xl:text-sm">
+      <p className="flex items-center gap-x-2 px-4 py-2">
         <ExclamationTriangleIcon className="flex-shrink-0" />
         <span className="flex gap-x-1 font-bold text-gray-950 dark:text-primary-foreground">
-          Your organization is deactivated and is in read-only mode.{" "}
-          {org.deactivation.reason ? `${org.deactivation.reason}.` : ""} It will
-          be permanently deleted on{" "}
-          {formatDateTime(addDays(new Date(org.deactivation.initiatedAt), 30))}
+          {org.deactivation
+            ? (
+              <>
+                Your organization is deactivated and is in read-only mode.{" "}
+                {org.deactivation.reason ? `${org.deactivation.reason}.` : ""} It will
+                be permanently deleted on{" "}
+                {formatDateTime(addDays(new Date(org.deactivation.initiatedAt), 30))}
+              </>
+            )
+            : (
+              <>
+                Your organization is queued for deletion. It will be permanently deleted on{" "}
+                {formatDateTime(addDays(new Date(org.deletion!.queuedAt), 3))}
+              </>
+            )}
         </span>
       </p>
     </div>
@@ -105,21 +111,18 @@ export const OrganizationBanner = () => {
 
 export const DashboardLayout = ({ children }: LayoutProps) => {
   const router = useRouter();
-  const user = useContext(UserContext);
+  const user = useUser();
   const organizationSlug = router.query.organizationSlug as string;
+  const checkUserAccess = useCheckUserAccess();
+  const [isStarBannerDisabled, setDisableStarBanner] = useStarBannerDisabled();
 
-  const [isStarBannerDisabled, setIsStarBannerDisabled] = useState(true);
-  const [isStarBannerDisabledOnClient, setDisableStarBanner] = useLocalStorage(
-    "disableStarBanner",
-    "false",
-  );
-  useEffect(() => {
-    setIsStarBannerDisabled(isStarBannerDisabledOnClient === "true");
-  }, [isStarBannerDisabledOnClient]);
-
+  const isAdmin = checkUserAccess({ rolesToBe: ["organization-admin" ]});
+  const isAdminOrDeveloper = checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] });
+  const isApiKeyManager = checkUserAccess({ rolesToBe: ["organization-apikey-manager"] });
   const isOrganizationDeactivated = !!user?.currentOrganization.deactivation;
+  const isOrganizationPendingDeletion = !!user?.currentOrganization?.deletion;
 
-  const isBannerDisplayed = isOrganizationDeactivated || !isStarBannerDisabled;
+  const isBannerDisplayed = isOrganizationDeactivated || isOrganizationPendingDeletion || !isStarBannerDisabled;
 
   const plans = useQuery(
     getBillingPlans,
@@ -136,93 +139,121 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
       {
         title: "Graphs",
         href: basePath + "/graphs",
-        icon: <PiGraphLight className="h-4 w-4" />,
+        icon: <PiGraphLight className="size-4" />,
       },
       {
         title: "Subgraphs",
         href: basePath + "/subgraphs",
-        icon: <Component2Icon className="h-4 w-4" />,
+        icon: <Component2Icon className="size-4" />,
       },
       {
         title: "Feature Flags",
         href: basePath + "/feature-flags",
-        icon: <MdOutlineFeaturedPlayList className="h-4 w-4" />,
+        icon: <MdOutlineFeaturedPlayList className="size-4" />,
         matchExact: false,
-      },
-      {
-        title: "Lint Policy",
-        href: basePath + "/lint-policy",
-        icon: <MdOutlinePolicy className="h-4 w-4" />,
-      },
-      {
-        title: "Cache Warmer",
-        href: basePath + "/cache-warmer",
-        icon: <FaGripfire className="h-4 w-4" />,
-        separator: true,
-      },
-      {
-        title: "Members",
-        href: basePath + "/members",
-        icon: <PiUsers className="h-4 w-4" />,
-      },
-      {
-        title: "API Keys",
-        href: basePath + "/apikeys",
-        icon: <PiKey className="h-4 w-4" />,
-      },
-      {
-        title: "Notifications",
-        href: basePath + "/webhooks",
-        icon: <PiBell className="h-4 w-4" />,
-      },
-      {
-        title: "Webhook History",
-        href: basePath + "/webhook-history",
-        icon: <PiWebhooksLogo className="h-4 w-4" />,
-      },
-      {
-        title: "Usage",
-        href: basePath + "/usages",
-        icon: <PiChartDonut className="h-4 w-4" />,
       },
     ];
 
+    if (isAdminOrDeveloper) {
+      navigation.push(
+        {
+          title: "Policies",
+          href: basePath + "/policies",
+          icon: <MdOutlinePolicy className="size-4" />,
+        },
+        {
+          title: "Cache Warmer",
+          href: basePath + "/cache-warmer",
+          icon: <FaGripfire className="size-4" />,
+          separator: true,
+        },
+      );
+    }
+
+    navigation.push(
+      {
+        title: "Members",
+        href: basePath + "/members",
+        icon: <PiUsers className="size-4" />,
+      },
+      {
+        title: "Groups",
+        href: basePath + "/groups",
+        icon: <UserGroupIcon className="size-4" />,
+      },
+    );
+
+    if (isAdminOrDeveloper || isApiKeyManager) {
+      navigation.push({
+        title: "API Keys",
+        href: basePath + "/apikeys",
+        icon: <PiKey className="size-4" />,
+      });
+    }
+
+    if (isAdminOrDeveloper) {
+      navigation.push(
+        {
+          title: "Notifications",
+          href: basePath + "/webhooks",
+          icon: <PiBell className="size-4" />,
+        },
+        {
+          title: "Webhook History",
+          href: basePath + "/webhook-history",
+          icon: <PiWebhooksLogo className="size-4" />,
+        },
+        {
+          title: "Usage",
+          href: basePath + "/usages",
+          icon: <PiChartDonut className="size-4" />,
+        },
+      );
+    }
+
     if (
       plans.data?.plans?.length &&
-      process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+      process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY &&
+      isAdmin
     ) {
       navigation.push({
         title: "Billing",
         href: basePath + "/billing",
-        icon: <PiReceipt className="h-4 w-4" />,
+        icon: <PiReceipt className="size-4" />,
       });
     }
 
-    navigation.push({
-      title: "Audit log",
-      href: basePath + "/audit-log",
-      icon: <AiOutlineAudit className="h-4 w-4" />,
-    });
+    if (isAdmin) {
+      navigation.push({
+        title: "Audit log",
+        href: basePath + "/audit-log",
+        icon: <AiOutlineAudit className="size-4"/>,
+        separator: !isAdminOrDeveloper,
+      });
+    }
 
-    navigation.push(
-      {
+    if (isAdminOrDeveloper) {
+      navigation.push({
         title: "Settings",
         href: basePath + "/settings",
-        icon: <PiGear className="h-4 w-4" />,
+        icon: <PiGear className="size-4" />,
         separator: true,
-      },
+      });
+    }
+
+    navigation.push(
       {
         title: "Account",
       },
       {
         title: "Invitations",
         href: "/account/invitations",
-        icon: <EnvelopeClosedIcon className="h-4 w-4" />,
+        icon: <EnvelopeClosedIcon className="size-4" />,
       },
       {
         title: "Manage",
         href: "/account/manage",
-        icon: <PiUserGear className="h-4 w-4" />,
+        icon: <PiUserGear className="size-4" />,
       },
     );
 
@@ -231,12 +262,14 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
     organizationSlug,
     plans.data?.plans?.length,
     user?.currentOrganization.slug,
+    isAdmin,
+    isAdminOrDeveloper,
   ]);
 
   return (
     <div className="2xl:flex 2xl:flex-1 2xl:flex-col 2xl:items-center">
       <StarBanner
-        isDisabled={isStarBannerDisabled && !isOrganizationDeactivated}
+        isDisabled={isStarBannerDisabled}
         setDisableStarBanner={setDisableStarBanner}
       />
       <OrganizationBanner />
@@ -244,7 +277,7 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
         className={cn(
           "flex w-full flex-1 flex-col bg-background font-sans antialiased lg:grid lg:grid-cols-[auto_minmax(10px,1fr)] lg:divide-x",
           {
-            "min-h-[calc(100vh-32px)]": isBannerDisplayed,
+            "min-h-[calc(100vh-36px)]": isBannerDisplayed,
             "min-h-screen": !isBannerDisplayed,
           },
         )}

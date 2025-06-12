@@ -9,6 +9,7 @@ import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function enableGraphPruning(
   opts: RouterOptions,
@@ -21,13 +22,8 @@ export function enableGraphPruning(
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
-    if (!authContext.hasWriteAccess) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `The user doesnt have the permissions to perform this operation`,
-        },
-      };
+    if (authContext.organizationDeactivated) {
+      throw new UnauthorizedError();
     }
 
     const organizationRepo = new OrganizationRepository(logger, opts.db);
@@ -40,6 +36,10 @@ export function enableGraphPruning(
           details: `Namespace '${req.namespace}' not found`,
         },
       };
+    }
+
+    if (!authContext.rbac.hasNamespaceWriteAccess(namespace)) {
+      throw new UnauthorizedError();
     }
 
     const fieldPruningGracePeriod = await organizationRepo.getFeature({
@@ -55,7 +55,7 @@ export function enableGraphPruning(
       };
     }
 
-    await namespaceRepo.toggleEnableGraphPruning({
+    await namespaceRepo.updateConfiguration({
       id: namespace.id,
       enableGraphPruning: req.enableGraphPruning,
     });

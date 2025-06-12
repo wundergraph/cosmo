@@ -21,6 +21,7 @@ import {
   handleError,
   isValidGraphName,
 } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function createMonograph(
   opts: RouterOptions,
@@ -36,19 +37,14 @@ export function createMonograph(
       const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
       logger = enrichLogger(ctx, logger, authContext);
 
-      const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
-      const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
-      const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
-      const auditLogRepo = new AuditLogRepository(opts.db);
-      const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
+      const orgRepo = new OrganizationRepository(logger, tx, opts.billingDefaultPlanId);
+      const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
+      const subgraphRepo = new SubgraphRepository(logger, tx, authContext.organizationId);
+      const auditLogRepo = new AuditLogRepository(tx);
+      const namespaceRepo = new NamespaceRepository(tx, authContext.organizationId);
 
-      if (!authContext.hasWriteAccess) {
-        return {
-          response: {
-            code: EnumStatusCode.ERR,
-            details: `The user doesn't have the permissions to perform this operation`,
-          },
-        };
+      if (authContext.organizationDeactivated) {
+        throw new UnauthorizedError();
       }
 
       const namespace = await namespaceRepo.byName(req.namespace);
@@ -59,6 +55,11 @@ export function createMonograph(
             details: `Could not find namespace ${req.namespace}`,
           },
         };
+      }
+
+      // check whether the user is authorized to perform the action
+      if (!authContext.rbac.canCreateFederatedGraph(namespace)) {
+        throw new UnauthorizedError();
       }
 
       if (await fedGraphRepo.exists(req.name, req.namespace)) {
@@ -185,6 +186,7 @@ export function createMonograph(
 
       await auditLogRepo.addAuditLog({
         organizationId: authContext.organizationId,
+        organizationSlug: authContext.organizationSlug,
         auditAction: 'monograph.created',
         action: 'created',
         actorId: authContext.userId,
