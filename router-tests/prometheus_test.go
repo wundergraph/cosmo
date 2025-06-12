@@ -1,7 +1,12 @@
 package integration
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
+	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
+	"github.com/wundergraph/cosmo/router/pkg/otel"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"net/http"
 	"regexp"
 	"strings"
@@ -4226,6 +4231,22 @@ func TestPrometheus(t *testing.T) {
 
 }
 
+func getPort(connectionTotal *io_prometheus_client.Metric) string {
+	serverPortKey := rmetric.SanitizeName(string(otel.ServerPort.String("").Key))
+
+	for _, label := range connectionTotal.Label {
+		if label.Name == nil || label.Value == nil {
+			continue
+		}
+
+		if *label.Name == serverPortKey {
+			return *label.Value
+		}
+	}
+
+	return ""
+}
+
 func TestPrometheusWithModule(t *testing.T) {
 	t.Parallel()
 
@@ -4376,6 +4397,1128 @@ func TestPrometheusWithModule(t *testing.T) {
 				Value: PointerOf("employees"),
 			},
 		}, requestDurationMetrics[1].Label)
+	})
+
+	t.Run("Verify router_info attributes", func(t *testing.T) {
+		t.Parallel()
+
+		exporter := tracetest.NewInMemoryExporter(t)
+		metricReader := metric.NewManualReader()
+		promRegistry := prometheus.NewRegistry()
+
+		testenv.Run(t, &testenv.Config{
+			TraceExporter:      exporter,
+			MetricReader:       metricReader,
+			PrometheusRegistry: promRegistry,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query myQuery { employees { id } }`,
+			})
+			require.JSONEq(t, employeesIDData, res.Body)
+
+			mf, err := promRegistry.Gather()
+			require.NoError(t, err)
+
+			routerConfigVersion := findMetricFamilyByName(mf, "router_info")
+			routerConfigVersionMetrics := routerConfigVersion.GetMetric()
+
+			expectedMainConfig := xEnv.RouterConfigVersionMain()
+			mainBase := routerConfigVersionMetrics[0]
+			require.Len(t, mainBase.Label, 4)
+			require.Equal(t, expectedMainConfig, *mainBase.Label[2].Value)
+			require.Equal(t, 1.0, *mainBase.Gauge.Value)
+			require.Equal(t, "dev", *mainBase.Label[3].Value)
+
+			expectedFeatureFlagConfig := xEnv.RouterConfigVersionMyFF()
+			featureFlag := routerConfigVersionMetrics[1]
+			require.Len(t, featureFlag.Label, 5)
+			require.Equal(t, "myff", *featureFlag.Label[2].Value)
+			require.Equal(t, expectedFeatureFlagConfig, *featureFlag.Label[3].Value)
+			require.Equal(t, 1.0, *featureFlag.Gauge.Value)
+			require.Equal(t, "dev", *featureFlag.Label[4].Value)
+		})
+	})
+
+}
+
+func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
+	t.Parallel()
+
+	t.Run("validate router connection metrics are not present by default", func(t *testing.T) {
+		t.Parallel()
+
+		promRegistry := prometheus.NewRegistry()
+		metricReader := metric.NewManualReader()
+
+		testenv.Run(t, &testenv.Config{
+			MetricReader:       metricReader,
+			PrometheusRegistry: promRegistry,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employees { id } }`,
+			})
+			rm := metricdata.ResourceMetrics{}
+			err := metricReader.Collect(context.Background(), &rm)
+			require.NoError(t, err)
+
+			mf, err := promRegistry.Gather()
+			require.NoError(t, err)
+
+			routerConnectionTotal := findMetricFamilyByName(mf, "router_connection_total")
+			require.Nil(t, routerConnectionTotal)
+		})
+	})
+
+	t.Run("validate router connection metrics are present when enabled", func(t *testing.T) {
+		t.Parallel()
+
+		promRegistry := prometheus.NewRegistry()
+		metricReader := metric.NewManualReader()
+
+		testenv.Run(t, &testenv.Config{
+			MetricReader:       metricReader,
+			PrometheusRegistry: promRegistry,
+			MetricOptions: testenv.MetricOptions{
+				EnablePrometheusConnectionMetrics: true,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employees { id isAvailable } }`,
+			})
+			rm := metricdata.ResourceMetrics{}
+			err := metricReader.Collect(context.Background(), &rm)
+			require.NoError(t, err)
+
+			mf, err := promRegistry.Gather()
+			require.NoError(t, err)
+
+			t.Run("verify max connections", func(t *testing.T) {
+				metricFamily := findMetricFamilyByName(mf, "router_http_client_max_connections")
+
+				metrics := metricFamily.GetMetric()
+				require.Len(t, metrics, 1)
+
+				connectionTotal := metrics[0]
+
+				require.Equal(t, 100.0, *connectionTotal.Gauge.Value)
+
+				expected := []*io_prometheus_client.LabelPair{
+					{
+						Name:  PointerOf("otel_scope_name"),
+						Value: PointerOf("cosmo.router.connections.prometheus"),
+					},
+					{
+						Name:  PointerOf("otel_scope_version"),
+						Value: PointerOf("0.0.1"),
+					},
+				}
+				require.Equal(t, expected, connectionTotal.Label)
+
+			})
+
+			t.Run("verify connections active", func(t *testing.T) {
+				metricFamily := findMetricFamilyByName(mf, "router_http_client_active_connections")
+				metrics := metricFamily.GetMetric()
+				require.Len(t, metrics, 2)
+
+				metricDataPoint1 := metrics[0]
+				require.Greater(t, *metricDataPoint1.Gauge.Value, 0.0)
+				expected1 := []*io_prometheus_client.LabelPair{
+					{
+						Name:  PointerOf("otel_scope_name"),
+						Value: PointerOf("cosmo.router.connections.prometheus"),
+					},
+					{
+						Name:  PointerOf("otel_scope_version"),
+						Value: PointerOf("0.0.1"),
+					},
+					{
+						Name:  PointerOf("server_address"),
+						Value: PointerOf("127.0.0.1"),
+					},
+					{
+						Name:  PointerOf("server_port"),
+						Value: PointerOf(getPort(metricDataPoint1)),
+					},
+				}
+				require.Equal(t, expected1, metricDataPoint1.Label)
+
+				metricDataPoint2 := metrics[1]
+				require.Greater(t, *metricDataPoint1.Gauge.Value, 0.0)
+				expected2 := []*io_prometheus_client.LabelPair{
+					{
+						Name:  PointerOf("otel_scope_name"),
+						Value: PointerOf("cosmo.router.connections.prometheus"),
+					},
+					{
+						Name:  PointerOf("otel_scope_version"),
+						Value: PointerOf("0.0.1"),
+					},
+					{
+						Name:  PointerOf("server_address"),
+						Value: PointerOf("127.0.0.1"),
+					},
+					{
+						Name:  PointerOf("server_port"),
+						Value: PointerOf(getPort(metricDataPoint2)),
+					},
+				}
+				require.Equal(t, expected2, metricDataPoint2.Label)
+			})
+
+			t.Run("verify connection total duration", func(t *testing.T) {
+				metricFamily := findMetricFamilyByName(mf, "router_http_client_connection_acquire_duration")
+				metrics := metricFamily.GetMetric()
+				require.Len(t, metrics, 2)
+
+				metricDataPoint1 := metrics[0]
+				require.Greater(t, *metricDataPoint1.Histogram.SampleSum, 0.0)
+				expected1 := []*io_prometheus_client.LabelPair{
+					{
+						Name:  PointerOf("otel_scope_name"),
+						Value: PointerOf("cosmo.router.connections.prometheus"),
+					},
+					{
+						Name:  PointerOf("otel_scope_version"),
+						Value: PointerOf("0.0.1"),
+					},
+					{
+						Name:  PointerOf("server_address"),
+						Value: PointerOf("127.0.0.1"),
+					},
+					{
+						Name:  PointerOf("server_port"),
+						Value: PointerOf(getPort(metricDataPoint1)),
+					},
+					{
+						Name:  PointerOf("wg_http_client_reused_connection"),
+						Value: PointerOf("false"),
+					},
+					{
+						Name:  PointerOf("wg_subgraph_name"),
+						Value: PointerOf("employees"),
+					},
+				}
+				require.Equal(t, expected1, metricDataPoint1.Label)
+
+				metricDataPoint2 := metrics[1]
+				require.Greater(t, *metricDataPoint2.Histogram.SampleSum, 0.0)
+				expected2 := []*io_prometheus_client.LabelPair{
+					{
+						Name:  PointerOf("otel_scope_name"),
+						Value: PointerOf("cosmo.router.connections.prometheus"),
+					},
+					{
+						Name:  PointerOf("otel_scope_version"),
+						Value: PointerOf("0.0.1"),
+					},
+					{
+						Name:  PointerOf("server_address"),
+						Value: PointerOf("127.0.0.1"),
+					},
+					{
+						Name:  PointerOf("server_port"),
+						Value: PointerOf(getPort(metricDataPoint2)),
+					},
+					{
+						Name:  PointerOf("wg_http_client_reused_connection"),
+						Value: PointerOf("false"),
+					},
+					{
+						Name:  PointerOf("wg_subgraph_name"),
+						Value: PointerOf("availability"),
+					},
+				}
+				require.Equal(t, expected2, metricDataPoint2.Label)
+			})
+
+		})
+	})
+
+	t.Run("verify with custom subgraph transport configs", func(t *testing.T) {
+		t.Parallel()
+
+		promRegistry := prometheus.NewRegistry()
+		metricReader := metric.NewManualReader()
+
+		trafficConfig := config.TrafficShapingRules{
+			All: config.GlobalSubgraphRequestRule{
+				RequestTimeout: PointerOf(200 * time.Millisecond),
+			},
+			Subgraphs: map[string]*config.GlobalSubgraphRequestRule{
+				"availability": {
+					RequestTimeout: PointerOf(300 * time.Millisecond),
+				},
+			},
+		}
+
+		testenv.Run(t, &testenv.Config{
+			MetricReader:       metricReader,
+			PrometheusRegistry: promRegistry,
+			MetricOptions: testenv.MetricOptions{
+				EnablePrometheusConnectionMetrics: true,
+			},
+			RouterOptions: []core.Option{
+				core.WithSubgraphTransportOptions(
+					core.NewSubgraphTransportOptions(trafficConfig)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employees { id isAvailable } }`,
+			})
+			rm := metricdata.ResourceMetrics{}
+			err := metricReader.Collect(context.Background(), &rm)
+			require.NoError(t, err)
+
+			mf, err := promRegistry.Gather()
+			require.NoError(t, err)
+
+			t.Run("verify max connections", func(t *testing.T) {
+				metricFamily := findMetricFamilyByName(mf, "router_http_client_max_connections")
+
+				metrics := metricFamily.GetMetric()
+				require.Len(t, metrics, 2)
+
+				metricDataPoint1 := metrics[0]
+				require.Equal(t, 100.0, *metricDataPoint1.Gauge.Value)
+				expected1 := []*io_prometheus_client.LabelPair{
+					{
+						Name:  PointerOf("otel_scope_name"),
+						Value: PointerOf("cosmo.router.connections.prometheus"),
+					},
+					{
+						Name:  PointerOf("otel_scope_version"),
+						Value: PointerOf("0.0.1"),
+					},
+				}
+				require.Equal(t, expected1, metricDataPoint1.Label)
+
+				metricDataPoint2 := metrics[1]
+				require.Equal(t, 100.0, *metricDataPoint2.Gauge.Value)
+				expected2 := []*io_prometheus_client.LabelPair{
+					{
+						Name:  PointerOf("otel_scope_name"),
+						Value: PointerOf("cosmo.router.connections.prometheus"),
+					},
+					{
+						Name:  PointerOf("otel_scope_version"),
+						Value: PointerOf("0.0.1"),
+					},
+					{
+						Name:  PointerOf("wg_subgraph_name"),
+						Value: PointerOf("availability"),
+					},
+				}
+				require.Equal(t, expected2, metricDataPoint2.Label)
+
+			})
+
+			t.Run("verify connections active", func(t *testing.T) {
+				metricFamily := findMetricFamilyByName(mf, "router_http_client_active_connections")
+				metrics := metricFamily.GetMetric()
+				require.Len(t, metrics, 2)
+
+				metricDataPoint1 := metrics[0]
+				require.Greater(t, *metricDataPoint1.Gauge.Value, 0.0)
+				expected1 := []*io_prometheus_client.LabelPair{
+					{
+						Name:  PointerOf("otel_scope_name"),
+						Value: PointerOf("cosmo.router.connections.prometheus"),
+					},
+					{
+						Name:  PointerOf("otel_scope_version"),
+						Value: PointerOf("0.0.1"),
+					},
+					{
+						Name:  PointerOf("server_address"),
+						Value: PointerOf("127.0.0.1"),
+					},
+					{
+						Name:  PointerOf("server_port"),
+						Value: PointerOf(getPort(metricDataPoint1)),
+					},
+				}
+				require.Equal(t, expected1, metricDataPoint1.Label)
+
+				metricDataPoint2 := metrics[1]
+				require.Greater(t, *metricDataPoint1.Gauge.Value, 0.0)
+				expected2 := []*io_prometheus_client.LabelPair{
+					{
+						Name:  PointerOf("otel_scope_name"),
+						Value: PointerOf("cosmo.router.connections.prometheus"),
+					},
+					{
+						Name:  PointerOf("otel_scope_version"),
+						Value: PointerOf("0.0.1"),
+					},
+					{
+						Name:  PointerOf("server_address"),
+						Value: PointerOf("127.0.0.1"),
+					},
+					{
+						Name:  PointerOf("server_port"),
+						Value: PointerOf(getPort(metricDataPoint2)),
+					},
+					{
+						Name:  PointerOf("wg_subgraph_name"),
+						Value: PointerOf("availability"),
+					},
+				}
+				require.Equal(t, expected2, metricDataPoint2.Label)
+			})
+		})
+	})
+
+	t.Run("subgraph custom attributes", func(t *testing.T) {
+		t.Run("with telemetry attributes", func(t *testing.T) {
+			promRegistry := prometheus.NewRegistry()
+			metricReader := metric.NewManualReader()
+
+			testenv.Run(t, &testenv.Config{
+				PrometheusRegistry: promRegistry,
+				MetricReader:       metricReader,
+				CustomTelemetryAttributes: []config.CustomAttribute{
+					{
+						Key: "custom.subgraph",
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "subgraph.name",
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { employees { id } }`,
+				})
+
+				rm := metricdata.ResourceMetrics{}
+				err := metricReader.Collect(context.Background(), &rm)
+				require.NoError(t, err)
+
+				metricFamily, err := promRegistry.Gather()
+				require.NoError(t, err)
+
+				expected := &io_prometheus_client.LabelPair{
+					Name:  PointerOf("custom_subgraph"),
+					Value: PointerOf("employees"),
+				}
+
+				requestsInFlight := findMetricFamilyByName(metricFamily, "router_http_requests_in_flight")
+				requestsInFlightMetrics := requestsInFlight.GetMetric()[1]
+				require.NotContains(t, requestsInFlightMetrics.Label, expected)
+
+				requestTotal := findMetricFamilyByName(metricFamily, "router_http_requests_total")
+				requestTotalMetrics := requestTotal.GetMetric()[1]
+				require.Contains(t, requestTotalMetrics.Label, expected)
+
+				requestDuration := findMetricFamilyByName(metricFamily, "router_http_request_duration_milliseconds")
+				requestDurationMetrics := requestDuration.GetMetric()[1]
+				require.Contains(t, requestDurationMetrics.Label, expected)
+			})
+		})
+
+		t.Run("with metric attributes", func(t *testing.T) {
+			promRegistry := prometheus.NewRegistry()
+			metricReader := metric.NewManualReader()
+
+			testenv.Run(t, &testenv.Config{
+				PrometheusRegistry: promRegistry,
+				MetricReader:       metricReader,
+				CustomMetricAttributes: []config.CustomAttribute{
+					{
+						Key: "custom.subgraph",
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "subgraph.name",
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { employees { id } }`,
+				})
+
+				rm := metricdata.ResourceMetrics{}
+				err := metricReader.Collect(context.Background(), &rm)
+				require.NoError(t, err)
+
+				metricFamily, err := promRegistry.Gather()
+				require.NoError(t, err)
+
+				expected := &io_prometheus_client.LabelPair{
+					Name:  PointerOf("custom_subgraph"),
+					Value: PointerOf("employees"),
+				}
+
+				requestsInFlight := findMetricFamilyByName(metricFamily, "router_http_requests_in_flight")
+				requestsInFlightMetrics := requestsInFlight.GetMetric()[1]
+				require.NotContains(t, requestsInFlightMetrics.Label, expected)
+
+				requestTotal := findMetricFamilyByName(metricFamily, "router_http_requests_total")
+				requestTotalMetrics := requestTotal.GetMetric()[1]
+				require.Contains(t, requestTotalMetrics.Label, expected)
+
+				requestDuration := findMetricFamilyByName(metricFamily, "router_http_request_duration_milliseconds")
+				requestDurationMetrics := requestDuration.GetMetric()[1]
+				require.Contains(t, requestDurationMetrics.Label, expected)
+			})
+		})
+	})
+
+}
+
+func TestExcludeAttributesWithCustomExporterPrometheus(t *testing.T) {
+	const (
+		UseCloudExporter                           = "use_cloud_exporter"
+		UseCustomExporterOnly                      = "use_custom_exporter_only"
+		UseCustomExporterWithRouterConfigAttribute = "use_custom_exporter_with_router_config_attribute"
+	)
+
+	t.Run("Verify metrics when there is a router config version metric attribute", func(t *testing.T) {
+		useDefaultCloudExporterStatuses := []string{
+			UseCloudExporter,
+			UseCustomExporterOnly,
+			UseCustomExporterWithRouterConfigAttribute,
+		}
+
+		for _, usingCustomExporter := range useDefaultCloudExporterStatuses {
+			t.Run(fmt.Sprintf("regular metrics without a feature flag for %s", usingCustomExporter), func(t *testing.T) {
+				t.Parallel()
+
+				exporter := tracetest.NewInMemoryExporter(t)
+				metricReader := metric.NewManualReader()
+				promRegistry := prometheus.NewRegistry()
+
+				cfg := &testenv.Config{
+					TraceExporter:                exporter,
+					MetricReader:                 metricReader,
+					PrometheusRegistry:           promRegistry,
+					DisableSimulateCloudExporter: usingCustomExporter != UseCloudExporter,
+				}
+
+				if usingCustomExporter == UseCustomExporterWithRouterConfigAttribute {
+					cfg.CustomMetricAttributes = []config.CustomAttribute{
+						{
+							Key: "wg.router.config.version",
+							ValueFrom: &config.CustomDynamicAttribute{
+								ContextField: "router_config_version",
+							},
+						},
+					}
+				}
+				testenv.Run(t, cfg, func(t *testing.T, xEnv *testenv.Environment) {
+					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query myQuery { employees { id } }`,
+					})
+
+					mf, err := promRegistry.Gather()
+					require.NoError(t, err)
+
+					requestTotal := findMetricFamilyByName(mf, "router_http_requests_total")
+					requestTotalMetrics := requestTotal.GetMetric()
+
+					require.Len(t, requestTotalMetrics, 2)
+
+					metricsLabels := []*io_prometheus_client.LabelPair{
+						{Name: PointerOf("http_status_code"), Value: PointerOf("200")},
+						{Name: PointerOf("otel_scope_name"), Value: PointerOf("cosmo.router.prometheus")},
+						{Name: PointerOf("otel_scope_version"), Value: PointerOf("0.0.1")},
+						{Name: PointerOf("wg_client_name"), Value: PointerOf("unknown")},
+						{Name: PointerOf("wg_client_version"), Value: PointerOf("missing")},
+						{Name: PointerOf("wg_federated_graph_id"), Value: PointerOf("graph")},
+					}
+
+					if usingCustomExporter == UseCloudExporter {
+						metricsLabels = append(metricsLabels, &io_prometheus_client.LabelPair{
+							Name:  PointerOf("wg_operation_name"),
+							Value: PointerOf("myQuery"),
+						})
+					}
+
+					metricsLabels = append(metricsLabels,
+						&io_prometheus_client.LabelPair{Name: PointerOf("wg_operation_protocol"), Value: PointerOf("http")},
+						&io_prometheus_client.LabelPair{Name: PointerOf("wg_operation_type"), Value: PointerOf("query")},
+						&io_prometheus_client.LabelPair{Name: PointerOf("wg_router_cluster_name"), Value: PointerOf("")},
+					)
+
+					if usingCustomExporter != UseCustomExporterOnly {
+						metricsLabels = append(metricsLabels,
+							&io_prometheus_client.LabelPair{
+								Name:  PointerOf("wg_router_config_version"),
+								Value: PointerOf(xEnv.RouterConfigVersionMain()),
+							},
+						)
+					}
+
+					metricsLabels = append(metricsLabels,
+						&io_prometheus_client.LabelPair{Name: PointerOf("wg_router_version"), Value: PointerOf("dev")},
+					)
+
+					require.Equal(t, metricsLabels, requestTotalMetrics[0].Label)
+				})
+			})
+
+			t.Run(fmt.Sprintf("with feature flags for %s", usingCustomExporter), func(t *testing.T) {
+				t.Parallel()
+
+				exporter := tracetest.NewInMemoryExporter(t)
+				metricReader := metric.NewManualReader()
+				promRegistry := prometheus.NewRegistry()
+
+				cfg := &testenv.Config{
+					TraceExporter:                exporter,
+					MetricReader:                 metricReader,
+					DisableSimulateCloudExporter: usingCustomExporter != UseCloudExporter,
+					PrometheusRegistry:           promRegistry,
+				}
+
+				if usingCustomExporter == UseCustomExporterWithRouterConfigAttribute {
+					cfg.CustomMetricAttributes = []config.CustomAttribute{
+						{
+							Key: "wg.router.config.version",
+							ValueFrom: &config.CustomDynamicAttribute{
+								ContextField: "router_config_version",
+							},
+						},
+					}
+				}
+
+				testenv.Run(t, cfg, func(t *testing.T, xEnv *testenv.Environment) {
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query myQuery { employees { id } }`,
+						Header: map[string][]string{
+							"X-Feature-Flag": {"myff"},
+						},
+					})
+					require.JSONEq(t, employeesIDData, res.Body)
+
+					mf, err := promRegistry.Gather()
+					require.NoError(t, err)
+
+					requestTotal := findMetricFamilyByName(mf, "router_http_requests_total")
+					requestTotalMetrics := requestTotal.GetMetric()
+
+					require.Len(t, requestTotalMetrics, 2)
+
+					attributes := []*io_prometheus_client.LabelPair{
+						{
+							Name:  PointerOf("http_status_code"),
+							Value: PointerOf("200"),
+						},
+						{
+							Name:  PointerOf("otel_scope_name"),
+							Value: PointerOf("cosmo.router.prometheus"),
+						},
+						{
+							Name:  PointerOf("otel_scope_version"),
+							Value: PointerOf("0.0.1"),
+						},
+						{
+							Name:  PointerOf("wg_client_name"),
+							Value: PointerOf("unknown"),
+						},
+						{
+							Name:  PointerOf("wg_client_version"),
+							Value: PointerOf("missing"),
+						},
+						{
+							Name:  PointerOf("wg_feature_flag"),
+							Value: PointerOf("myff"),
+						},
+						{
+							Name:  PointerOf("wg_federated_graph_id"),
+							Value: PointerOf("graph"),
+						},
+					}
+
+					if usingCustomExporter == UseCloudExporter {
+						attributes = append(attributes,
+							&io_prometheus_client.LabelPair{
+								Name:  PointerOf("wg_operation_name"),
+								Value: PointerOf("myQuery"),
+							},
+						)
+					}
+
+					attributes = append(attributes,
+						&io_prometheus_client.LabelPair{
+							Name:  PointerOf("wg_operation_protocol"),
+							Value: PointerOf("http"),
+						},
+						&io_prometheus_client.LabelPair{
+							Name:  PointerOf("wg_operation_type"),
+							Value: PointerOf("query"),
+						},
+						&io_prometheus_client.LabelPair{
+							Name:  PointerOf("wg_router_cluster_name"),
+							Value: PointerOf(""),
+						},
+					)
+
+					if usingCustomExporter != UseCustomExporterOnly {
+						attributes = append(attributes,
+							&io_prometheus_client.LabelPair{
+								Name:  PointerOf("wg_router_config_version"),
+								Value: PointerOf(xEnv.RouterConfigVersionMyFF()),
+							},
+						)
+					}
+
+					attributes = append(attributes,
+						&io_prometheus_client.LabelPair{
+							Name:  PointerOf("wg_router_version"),
+							Value: PointerOf("dev"),
+						},
+					)
+
+					require.Equal(t, attributes, requestTotalMetrics[0].Label)
+
+				})
+			})
+
+			t.Run(fmt.Sprintf("engine statistics for %s", usingCustomExporter), func(t *testing.T) {
+				t.Parallel()
+
+				promRegistry := prometheus.NewRegistry()
+				metricReader := metric.NewManualReader()
+
+				cfg := &testenv.Config{
+					MetricReader:       metricReader,
+					PrometheusRegistry: promRegistry,
+					MetricOptions: testenv.MetricOptions{
+						PrometheusEngineStatsOptions: testenv.EngineStatOptions{
+							EnableSubscription: true,
+						},
+					},
+					DisableSimulateCloudExporter: usingCustomExporter != UseCloudExporter,
+				}
+
+				if usingCustomExporter == UseCustomExporterWithRouterConfigAttribute {
+					cfg.CustomMetricAttributes = []config.CustomAttribute{
+						{
+							Key: "wg.router.config.version",
+							ValueFrom: &config.CustomDynamicAttribute{
+								ContextField: "router_config_version",
+							},
+						},
+					}
+				}
+
+				testenv.Run(t, cfg, func(t *testing.T, xEnv *testenv.Environment) {
+					baseAttributes := []*io_prometheus_client.LabelPair{
+						{
+							Name:  PointerOf("otel_scope_name"),
+							Value: PointerOf("cosmo.router.engine"),
+						},
+						{
+							Name:  PointerOf("otel_scope_version"),
+							Value: PointerOf("0.0.1"),
+						},
+						{
+							Name:  PointerOf("wg_federated_graph_id"),
+							Value: PointerOf("graph"),
+						},
+						{
+							Name:  PointerOf("wg_router_cluster_name"),
+							Value: PointerOf(""),
+						},
+					}
+
+					if usingCustomExporter != UseCustomExporterOnly {
+						baseAttributes = append(baseAttributes,
+							&io_prometheus_client.LabelPair{
+								Name:  PointerOf("wg_router_config_version"),
+								Value: PointerOf(xEnv.RouterConfigVersionMain()),
+							},
+						)
+					}
+
+					baseAttributes = append(baseAttributes,
+						&io_prometheus_client.LabelPair{
+							Name:  PointerOf("wg_router_version"),
+							Value: PointerOf("dev"),
+						},
+					)
+
+					promRegistry.Unregister(collectors.NewGoCollector())
+
+					conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+					err := conn.WriteJSON(&testenv.WebSocketMessage{
+						ID:      "1",
+						Type:    "subscribe",
+						Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp }}"}`),
+					})
+					require.NoError(t, err)
+
+					xEnv.WaitForSubscriptionCount(1, time.Second*5)
+					xEnv.WaitForMinMessagesSent(1, time.Second*5)
+					promMetrics, err := promRegistry.Gather()
+
+					require.NoError(t, err)
+					mf := findEngineMetrics(promMetrics)
+					require.Len(t, mf, 4)
+
+					// Connection stats
+					connectionMetrics := findMetricFamilyByName(mf, "router_engine_connections")
+					subscriptionMetrics := findMetricFamilyByName(mf, "router_engine_subscriptions")
+					triggerMetrics := findMetricFamilyByName(mf, "router_engine_triggers")
+					messagesSentCounter := findMetricFamilyByName(mf, "router_engine_messages_sent_total")
+
+					require.NotNil(t, connectionMetrics)
+					require.NotNil(t, subscriptionMetrics)
+					require.NotNil(t, triggerMetrics)
+					require.NotNil(t, messagesSentCounter)
+
+					// We only provide base attributes here. In the testing scenario we don't have any additional attributes
+					// that can increase the cardinality.
+					require.Len(t, connectionMetrics.Metric, 1)
+					require.ElementsMatch(t, baseAttributes, connectionMetrics.Metric[0].Label)
+
+					require.Len(t, subscriptionMetrics.Metric, 1)
+					require.ElementsMatch(t, baseAttributes, subscriptionMetrics.Metric[0].Label)
+
+					require.Len(t, triggerMetrics.Metric, 1)
+					require.ElementsMatch(t, baseAttributes, triggerMetrics.Metric[0].Label)
+
+					require.Len(t, messagesSentCounter.Metric, 1)
+					require.ElementsMatch(t, baseAttributes, messagesSentCounter.Metric[0].Label)
+
+					// close the connection
+					require.NoError(t, conn.Close())
+
+					xEnv.WaitForSubscriptionCount(0, time.Second*5)
+
+					promMetrics, err = promRegistry.Gather()
+					require.NoError(t, err)
+					mf = findEngineMetrics(promMetrics)
+					require.Len(t, mf, 4)
+
+					connectionMetrics = findMetricFamilyByName(mf, "router_engine_connections")
+					subscriptionMetrics = findMetricFamilyByName(mf, "router_engine_subscriptions")
+					triggerMetrics = findMetricFamilyByName(mf, "router_engine_triggers")
+
+					require.NotNil(t, connectionMetrics)
+					require.NotNil(t, subscriptionMetrics)
+					require.NotNil(t, triggerMetrics)
+					require.NotNil(t, messagesSentCounter)
+
+					require.Len(t, connectionMetrics.Metric, 1)
+					require.ElementsMatch(t, baseAttributes, connectionMetrics.Metric[0].Label)
+
+					require.Len(t, subscriptionMetrics.Metric, 1)
+					require.ElementsMatch(t, baseAttributes, subscriptionMetrics.Metric[0].Label)
+
+					require.Len(t, triggerMetrics.Metric, 1)
+					require.ElementsMatch(t, baseAttributes, triggerMetrics.Metric[0].Label)
+
+				})
+
+			})
+
+			t.Run(fmt.Sprintf("cache metrics for %s", usingCustomExporter), func(t *testing.T) {
+				t.Parallel()
+
+				metricReaderFiltered := metric.NewManualReader()
+				promRegistry := prometheus.NewRegistry()
+
+				cfg := &testenv.Config{
+					MetricReader:                 metricReaderFiltered,
+					PrometheusRegistry:           promRegistry,
+					DisableSimulateCloudExporter: usingCustomExporter != UseCloudExporter,
+					MetricOptions: testenv.MetricOptions{
+						EnablePrometheusRouterCache: true,
+					},
+				}
+
+				if usingCustomExporter == UseCustomExporterWithRouterConfigAttribute {
+					cfg.CustomMetricAttributes = []config.CustomAttribute{
+						{
+							Key: "wg.router.config.version",
+							ValueFrom: &config.CustomDynamicAttribute{
+								ContextField: "router_config_version",
+							},
+						},
+					}
+				}
+
+				testenv.Run(t, cfg, func(t *testing.T, xEnv *testenv.Environment) {
+					baseAttributes := func() []*io_prometheus_client.LabelPair {
+						attributes := []*io_prometheus_client.LabelPair{
+							{
+								Name:  PointerOf("otel_scope_name"),
+								Value: PointerOf("cosmo.router.cache"),
+							},
+							{
+								Name:  PointerOf("otel_scope_version"),
+								Value: PointerOf("0.0.1"),
+							},
+							{
+								Name:  PointerOf("wg_federated_graph_id"),
+								Value: PointerOf("graph"),
+							},
+							{
+								Name:  PointerOf("wg_router_cluster_name"),
+								Value: PointerOf(""),
+							},
+						}
+
+						if usingCustomExporter != UseCustomExporterOnly {
+							attributes = append(attributes,
+								&io_prometheus_client.LabelPair{
+									Name:  PointerOf("wg_router_config_version"),
+									Value: PointerOf(xEnv.RouterConfigVersionMain()),
+								},
+							)
+						}
+
+						attributes = append(attributes,
+							&io_prometheus_client.LabelPair{
+								Name:  PointerOf("wg_router_version"),
+								Value: PointerOf("dev"),
+							},
+						)
+
+						return attributes
+					}()
+
+					promRegistry.Unregister(collectors.NewGoCollector())
+
+					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query myQuery { employees { id } }`,
+					})
+
+					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query myQuery { employees { id } }`,
+					})
+
+					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query myQuery { employees { tag } }`,
+					})
+
+					metricFamilies, err := promRegistry.Gather()
+					require.NoError(t, err)
+
+					cacheMetrics := findCacheMetrics(metricFamilies)
+
+					// cache max cost metrics
+					cacheMaxCostMetricMf := findMetricFamilyByName(cacheMetrics, "router_graphql_cache_cost_max")
+					cacheMaxCostExecution := findMetricsByLabel(cacheMaxCostMetricMf, "cache_type", "plan")
+					cacheMaxCostNormalization := findMetricsByLabel(cacheMaxCostMetricMf, "cache_type", "query_normalization")
+					cacheMaxCostValidation := findMetricsByLabel(cacheMaxCostMetricMf, "cache_type", "validation")
+
+					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
+						Name:  PointerOf("cache_type"),
+						Value: PointerOf("plan"),
+					}), cacheMaxCostExecution[0].Label)
+
+					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
+						Name:  PointerOf("cache_type"),
+						Value: PointerOf("query_normalization"),
+					}), cacheMaxCostNormalization[0].Label)
+
+					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
+						Name:  PointerOf("cache_type"),
+						Value: PointerOf("validation"),
+					}), cacheMaxCostValidation[0].Label)
+
+					// Check the cache request stats
+
+					cacheRequestStatsMetricMf := findMetricFamilyByName(cacheMetrics, "router_graphql_cache_requests_stats_total")
+					cacheRequestExecutionStats := findMetricsByLabel(cacheRequestStatsMetricMf, "cache_type", "plan")
+					cacheRequestNormalizationStats := findMetricsByLabel(cacheRequestStatsMetricMf, "cache_type", "query_normalization")
+					cacheRequestValidationStats := findMetricsByLabel(cacheRequestStatsMetricMf, "cache_type", "validation")
+
+					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
+						Name:  PointerOf("cache_type"),
+						Value: PointerOf("plan"),
+					}, &io_prometheus_client.LabelPair{
+						Name:  PointerOf("type"),
+						Value: PointerOf("hits"),
+					}), cacheRequestExecutionStats[0].Label)
+
+					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
+						Name:  PointerOf("cache_type"),
+						Value: PointerOf("plan"),
+					}, &io_prometheus_client.LabelPair{
+						Name:  PointerOf("type"),
+						Value: PointerOf("misses"),
+					}), cacheRequestExecutionStats[1].Label)
+
+					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
+						Name:  PointerOf("cache_type"),
+						Value: PointerOf("query_normalization"),
+					}, &io_prometheus_client.LabelPair{
+						Name:  PointerOf("type"),
+						Value: PointerOf("hits"),
+					}), cacheRequestNormalizationStats[0].Label)
+
+					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
+						Name:  PointerOf("cache_type"),
+						Value: PointerOf("query_normalization"),
+					}, &io_prometheus_client.LabelPair{
+						Name:  PointerOf("type"),
+						Value: PointerOf("misses"),
+					}), cacheRequestNormalizationStats[1].Label)
+
+					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
+						Name:  PointerOf("cache_type"),
+						Value: PointerOf("validation"),
+					}, &io_prometheus_client.LabelPair{
+						Name:  PointerOf("type"),
+						Value: PointerOf("hits"),
+					}), cacheRequestValidationStats[0].Label)
+
+					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
+						Name:  PointerOf("cache_type"),
+						Value: PointerOf("validation"),
+					}, &io_prometheus_client.LabelPair{
+						Name:  PointerOf("type"),
+						Value: PointerOf("misses"),
+					}), cacheRequestValidationStats[1].Label)
+
+					// Cache cost stats
+					cacheCostStatsMf := findMetricFamilyByName(cacheMetrics, "router_graphql_cache_cost_stats_total")
+					cacheCostExecutionStats := findMetricsByLabel(cacheCostStatsMf, "cache_type", "plan")
+					cacheCostNormalizationStats := findMetricsByLabel(cacheCostStatsMf, "cache_type", "query_normalization")
+					cacheCostValidationStats := findMetricsByLabel(cacheCostStatsMf, "cache_type", "validation")
+
+					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
+						Name:  PointerOf("cache_type"),
+						Value: PointerOf("plan"),
+					}, &io_prometheus_client.LabelPair{
+						Name:  PointerOf("operation"),
+						Value: PointerOf("added"),
+					}), cacheCostExecutionStats[0].Label)
+
+					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
+						Name:  PointerOf("cache_type"),
+						Value: PointerOf("plan"),
+					}, &io_prometheus_client.LabelPair{
+						Name:  PointerOf("operation"),
+						Value: PointerOf("evicted"),
+					}), cacheCostExecutionStats[1].Label)
+
+					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
+						Name:  PointerOf("cache_type"),
+						Value: PointerOf("query_normalization"),
+					}, &io_prometheus_client.LabelPair{
+						Name:  PointerOf("operation"),
+						Value: PointerOf("added"),
+					}), cacheCostNormalizationStats[0].Label)
+
+					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
+						Name:  PointerOf("cache_type"),
+						Value: PointerOf("query_normalization"),
+					}, &io_prometheus_client.LabelPair{
+						Name:  PointerOf("operation"),
+						Value: PointerOf("evicted"),
+					}), cacheCostNormalizationStats[1].Label)
+
+					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
+						Name:  PointerOf("cache_type"),
+						Value: PointerOf("query_normalization"),
+					}, &io_prometheus_client.LabelPair{
+						Name:  PointerOf("operation"),
+						Value: PointerOf("evicted"),
+					}), cacheCostNormalizationStats[1].Label)
+
+					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
+						Name:  PointerOf("cache_type"),
+						Value: PointerOf("validation"),
+					}, &io_prometheus_client.LabelPair{
+						Name:  PointerOf("operation"),
+						Value: PointerOf("added"),
+					}), cacheCostValidationStats[0].Label)
+
+					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
+						Name:  PointerOf("cache_type"),
+						Value: PointerOf("validation"),
+					}, &io_prometheus_client.LabelPair{
+						Name:  PointerOf("operation"),
+						Value: PointerOf("evicted"),
+					}), cacheCostValidationStats[1].Label)
+
+					// cache Key stats
+					cacheKeyStatsMf := findMetricFamilyByName(cacheMetrics, "router_graphql_cache_keys_stats_total")
+					cacheKeyExecutionStats := findMetricsByLabel(cacheKeyStatsMf, "cache_type", "plan")
+					cacheKeyNormalizationStats := findMetricsByLabel(cacheKeyStatsMf, "cache_type", "query_normalization")
+					cacheKeyValidationStats := findMetricsByLabel(cacheKeyStatsMf, "cache_type", "validation")
+
+					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
+						Name:  PointerOf("cache_type"),
+						Value: PointerOf("plan"),
+					}, &io_prometheus_client.LabelPair{
+						Name:  PointerOf("operation"),
+						Value: PointerOf("added"),
+					}), cacheKeyExecutionStats[0].Label)
+
+					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
+						Name:  PointerOf("cache_type"),
+						Value: PointerOf("plan"),
+					}, &io_prometheus_client.LabelPair{
+						Name:  PointerOf("operation"),
+						Value: PointerOf("evicted"),
+					}), cacheKeyExecutionStats[1].Label)
+
+					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
+						Name:  PointerOf("cache_type"),
+						Value: PointerOf("plan"),
+					}, &io_prometheus_client.LabelPair{
+						Name:  PointerOf("operation"),
+						Value: PointerOf("updated"),
+					}), cacheKeyExecutionStats[2].Label)
+
+					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
+						Name:  PointerOf("cache_type"),
+						Value: PointerOf("query_normalization"),
+					}, &io_prometheus_client.LabelPair{
+						Name:  PointerOf("operation"),
+						Value: PointerOf("added"),
+					}), cacheKeyNormalizationStats[0].Label)
+
+					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
+						Name:  PointerOf("cache_type"),
+						Value: PointerOf("query_normalization"),
+					}, &io_prometheus_client.LabelPair{
+						Name:  PointerOf("operation"),
+						Value: PointerOf("evicted"),
+					}), cacheKeyNormalizationStats[1].Label)
+
+					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
+						Name:  PointerOf("cache_type"),
+						Value: PointerOf("query_normalization"),
+					}, &io_prometheus_client.LabelPair{
+						Name:  PointerOf("operation"),
+						Value: PointerOf("updated"),
+					}), cacheKeyNormalizationStats[2].Label)
+
+					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
+						Name:  PointerOf("cache_type"),
+						Value: PointerOf("validation"),
+					}, &io_prometheus_client.LabelPair{
+						Name:  PointerOf("operation"),
+						Value: PointerOf("added"),
+					}), cacheKeyValidationStats[0].Label)
+
+					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
+						Name:  PointerOf("cache_type"),
+						Value: PointerOf("validation"),
+					}, &io_prometheus_client.LabelPair{
+						Name:  PointerOf("operation"),
+						Value: PointerOf("evicted"),
+					}), cacheKeyValidationStats[1].Label)
+
+					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
+						Name:  PointerOf("cache_type"),
+						Value: PointerOf("validation"),
+					}, &io_prometheus_client.LabelPair{
+						Name:  PointerOf("operation"),
+						Value: PointerOf("updated"),
+					}), cacheKeyValidationStats[2].Label)
+
+				})
+			})
+
+		}
+
 	})
 }
 

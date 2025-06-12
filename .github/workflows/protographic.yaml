@@ -1,0 +1,42 @@
+name: Protographic CI
+on:
+  pull_request:
+    paths:
+      - 'pnpm-lock.yaml'
+      - "protographic/**/*"
+      - ".github/workflows/protographic-ci.yaml"
+
+concurrency:
+  group: ${{github.workflow}}-${{github.head_ref}}
+  cancel-in-progress: true
+
+env:
+  CI: true
+  DO_NOT_TRACK: '1'
+
+jobs:
+  build_test:
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/node
+
+      - name: Install dependencies
+        run: pnpm install --filter ./protographic
+
+      - name: Generate code
+        run: pnpm generate
+
+      - name: Check if git is not dirty after generating files
+        run: git diff --no-ext-diff --exit-code
+
+      - name: Build
+        run: pnpm run --filter ./connect --filter ./protographic build
+
+      - name: Test
+        run: pnpm run --filter ./protographic test
+
+      - name: Lint
+        run: pnpm run --filter ./protographic lint

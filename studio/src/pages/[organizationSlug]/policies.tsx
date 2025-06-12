@@ -14,14 +14,20 @@ import {
   getNamespaceGraphPruningConfig,
   getNamespaceLintConfig,
   getNamespaceChecksConfig,
+  getNamespaceProposalConfig,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { useRouter } from "next/router";
+import { ProposalConfig } from "@/components/proposal/proposal-config";
+import { useFeature } from "@/hooks/use-feature";
 
 const PoliciesPage: NextPageWithLayout = () => {
   const router = useRouter();
   const namespace = (router.query.namespace as string) || "default";
+  const proposalsFeature = useFeature("proposals");
 
-  const { data, isLoading, refetch, error } = useQuery(getNamespaceLintConfig, { namespace });
+  const { data, isLoading, refetch, error } = useQuery(getNamespaceLintConfig, {
+    namespace,
+  });
 
   const {
     data: graphPruningConfig,
@@ -34,8 +40,23 @@ const PoliciesPage: NextPageWithLayout = () => {
     data: checksConfig,
     isLoading: isLoadingChecksConfig,
     refetch: refetchChecksConfig,
-    error: checksConfigFetchError
+    error: checksConfigFetchError,
   } = useQuery(getNamespaceChecksConfig, { namespace });
+
+  const {
+    data: proposalConfig,
+    isLoading: isLoadingProposalConfig,
+    refetch: refetchProposalConfig,
+    error: proposalConfigFetchError,
+  } = useQuery(
+    getNamespaceProposalConfig,
+    {
+      namespace,
+    },
+    {
+      enabled: proposalsFeature?.enabled,
+    },
+  );
 
   const refetchAll = () => {
     if (error) {
@@ -49,12 +70,13 @@ const PoliciesPage: NextPageWithLayout = () => {
     if (refetchChecksConfig) {
       refetchChecksConfig();
     }
-  }
 
-  if (
-    isLoading ||
-    fetchingGraphPruningConfig ||
-    isLoadingChecksConfig) {
+    if (refetchProposalConfig) {
+      refetchProposalConfig();
+    }
+  };
+
+  if (isLoading || fetchingGraphPruningConfig || isLoadingChecksConfig) {
     return <Loader fullscreen />;
   }
 
@@ -67,14 +89,26 @@ const PoliciesPage: NextPageWithLayout = () => {
     !checksConfig ||
     data?.response?.code !== EnumStatusCode.OK ||
     graphPruningConfig?.response?.code !== EnumStatusCode.OK ||
-    checksConfig?.response?.code !== EnumStatusCode.OK
+    checksConfig?.response?.code !== EnumStatusCode.OK ||
+    (proposalsFeature?.enabled &&
+      (!proposalConfig ||
+        (proposalConfig?.response?.code !== EnumStatusCode.OK &&
+          proposalConfig?.response?.code !== EnumStatusCode.ERR_UPGRADE_PLAN)))
   ) {
     return (
       <EmptyState
-        icon={<ExclamationTriangleIcon/>}
+        icon={<ExclamationTriangleIcon />}
         title="Could not retrieve the policies for this namespace"
         description={
-          checksConfig?.response?.details || checksConfigFetchError?.message || "Please try again"
+          data?.response?.details ||
+          error?.message ||
+          checksConfig?.response?.details ||
+          checksConfigFetchError?.message ||
+          graphPruningConfig?.response?.details ||
+          graphPruningConfigFetchError?.message ||
+          proposalConfig?.response?.details ||
+          proposalConfigFetchError?.message ||
+          "Please try again"
         }
         actions={<Button onClick={refetchAll}>Retry</Button>}
       />
@@ -84,8 +118,18 @@ const PoliciesPage: NextPageWithLayout = () => {
   return (
     <div className="space-y-6">
       <LinterConfig data={data} refetch={refetch} />
-      <GraphPruningLintConfig data={graphPruningConfig} refetch={refetchGraphPruningConfig} />
+      <GraphPruningLintConfig
+        data={graphPruningConfig}
+        refetch={refetchGraphPruningConfig}
+      />
       <ChecksConfig namespace={namespace} data={checksConfig} />
+      {proposalsFeature?.enabled && proposalConfig && (
+        <ProposalConfig
+          key={proposalConfig.enabled ? "enabled" : "disabled"}
+          data={proposalConfig}
+          refetch={refetchProposalConfig}
+        />
+      )}
     </div>
   );
 };

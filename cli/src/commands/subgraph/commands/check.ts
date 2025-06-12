@@ -4,6 +4,7 @@ import { Command, program } from 'commander';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
 import { VCSContext } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { splitLabel } from '@wundergraph/cosmo-shared';
 import { config, getBaseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { verifyGitHubIntegration } from '../../../github.js';
@@ -19,6 +20,12 @@ export default (opts: BaseCommandOptions) => {
   command.option(
     '--skip-traffic-check',
     'This will skip checking for client traffic and any breaking change will fail the run.',
+  );
+  command.option(
+    '--label [labels...]',
+    'The labels to apply to the subgraph. The labels are passed in the format <key>=<value> <key>=<value>.' +
+      ' This parameter is always ignored if the subgraph already exists.',
+    [],
   );
 
   command.action(async (name, options) => {
@@ -57,11 +64,12 @@ export default (opts: BaseCommandOptions) => {
       {
         subgraphName: name,
         namespace: options.namespace,
-        schema,
+        schema: new Uint8Array(schema),
         gitInfo,
         delete: options.delete,
         skipTrafficCheck: options.skipTrafficCheck,
         vcsContext,
+        labels: options.label.map((label: string) => splitLabel(label)),
       },
       {
         headers: getBaseHeaders(),

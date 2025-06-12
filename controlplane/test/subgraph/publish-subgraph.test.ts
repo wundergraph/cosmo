@@ -1,7 +1,20 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import { afterAllSetup, beforeAllSetup, genID } from '../../src/core/test-util.js';
-import { createEventDrivenGraph, createSubgraph, eventDrivenGraphSDL, SetupTest, subgraphSDL } from '../test-util.js';
+import {
+  afterAllSetup,
+  beforeAllSetup,
+  createAPIKeyTestRBACEvaluator,
+  createTestGroup,
+  createTestRBACEvaluator,
+  genID
+} from '../../src/core/test-util.js';
+import {
+  createEventDrivenGraph,
+  createSubgraph,
+  eventDrivenGraphSDL,
+  SetupTest,
+  subgraphSDL
+} from '../test-util.js';
 
 let dbname = '';
 
@@ -31,12 +44,22 @@ describe('Publish subgraph tests', () => {
     await server.close();
   });
 
-  test('that a regular subgraph can be published after it has already been created', async () => {
-    const { client, server } = await SetupTest({ dbname });
+  test.each([
+    'organization-admin',
+    'organization-developer',
+    'subgraph-admin',
+    'subgraph-publisher',
+  ])('%s should be able to publish to existing regular subgraph', async (role) => {
+    const { client, server, authenticator, users } = await SetupTest({ dbname });
 
     const subgraphName = genID('subgraph');
 
     await createSubgraph(client, subgraphName, 'http://localhost:4001');
+    authenticator.changeUserWithSuppliedContext({
+      ...users.adminAliceCompanyA,
+      rbac: createTestRBACEvaluator(createTestGroup({ role })),
+    });
+
     const publishFederatedSubgraphResp = await client.publishFederatedSubgraph({
       name: subgraphName,
       namespace: 'default',
@@ -44,6 +67,57 @@ describe('Publish subgraph tests', () => {
     });
 
     expect(publishFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+    await server.close();
+  });
+
+  test('Should be able to publish to existing regular subgraph using legacy API key', async (role) => {
+    const { client, server, authenticator, users } = await SetupTest({ dbname });
+
+    const subgraphName = genID('subgraph');
+
+    await createSubgraph(client, subgraphName, 'http://localhost:4001');
+    authenticator.changeUserWithSuppliedContext({
+      ...users.adminAliceCompanyA,
+      rbac: createAPIKeyTestRBACEvaluator(),
+    });
+
+    const publishFederatedSubgraphResp = await client.publishFederatedSubgraph({
+      name: subgraphName,
+      namespace: 'default',
+      schema: subgraphSDL,
+    });
+
+    expect(publishFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+    await server.close();
+  });
+
+  test.each([
+    'organization-apikey-manager',
+    'organization-viewer',
+    'namespace-admin',
+    'namespace-viewer',
+    'graph-admin',
+    'graph-viewer',
+  ])('%s should not be able to publish to existing regular subgraph', async (role) => {
+    const { client, server, authenticator, users } = await SetupTest({ dbname });
+
+    const subgraphName = genID('subgraph');
+
+    await createSubgraph(client, subgraphName, 'http://localhost:4001');
+    authenticator.changeUserWithSuppliedContext({
+      ...users.adminAliceCompanyA,
+      rbac: createTestRBACEvaluator(createTestGroup({ role })),
+    });
+
+    const publishFederatedSubgraphResp = await client.publishFederatedSubgraph({
+      name: subgraphName,
+      namespace: 'default',
+      schema: subgraphSDL,
+    });
+
+    expect(publishFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
 
     await server.close();
   });
@@ -128,10 +202,19 @@ describe('Publish subgraph tests', () => {
     await server.close();
   });
 
-  test('that a regular subgraph can be published without already being created', async () => {
-    const { client, server } = await SetupTest({ dbname });
+  test.each([
+    'organization-admin',
+    'organization-developer',
+    'subgraph-admin',
+  ])('%s should be able to publish regular subgraph without already being created', async (role) => {
+    const { client, server, authenticator, users } = await SetupTest({ dbname });
 
     const subgraphName = genID('subgraph');
+
+    authenticator.changeUserWithSuppliedContext({
+      ...users.adminAliceCompanyA,
+      rbac: createTestRBACEvaluator(createTestGroup({ role })),
+    });
 
     const publishFederatedSubgraphResp = await client.publishFederatedSubgraph({
       name: subgraphName,
@@ -141,6 +224,36 @@ describe('Publish subgraph tests', () => {
     });
 
     expect(publishFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+    await server.close();
+  });
+
+  test.each([
+    'organization-apikey-manager',
+    'organization-viewer',
+    'namespace-admin',
+    'namespace-viewer',
+    'graph-admin',
+    'graph-viewer',
+    'subgraph-publisher',
+  ])('%s should not be able to publish regular subgraph without already being created', async (role) => {
+    const { client, server, authenticator, users } = await SetupTest({ dbname });
+
+    const subgraphName = genID('subgraph');
+
+    authenticator.changeUserWithSuppliedContext({
+      ...users.adminAliceCompanyA,
+      rbac: createTestRBACEvaluator(createTestGroup({ role })),
+    });
+
+    const publishFederatedSubgraphResp = await client.publishFederatedSubgraph({
+      name: subgraphName,
+      namespace: 'default',
+      schema: subgraphSDL,
+      routingUrl: 'http://localhost:4001',
+    });
+
+    expect(publishFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
 
     await server.close();
   });

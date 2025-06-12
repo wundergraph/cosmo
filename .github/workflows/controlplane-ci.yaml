@@ -2,6 +2,7 @@ name: Controlplane CI
 on:
   pull_request:
     paths:
+      - 'pnpm-lock.yaml'
       - "controlplane/**/*"
       - "connect/**/*"
       - "composition/**/*"
@@ -58,6 +59,12 @@ jobs:
 
       - name: Generate code
         run: pnpm buf generate --template buf.ts.gen.yaml
+
+      - name: Install react-email
+        run: pnpm add -g react-email
+
+      - name: Generate email templates
+        run: pnpm run --filter ./controlplane/emails build
 
       - name: Check if git is not dirty after generating files
         run: git diff --no-ext-diff --exit-code

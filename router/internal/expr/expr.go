@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/expr-lang/expr/file"
-	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"net/http"
 	"net/url"
+
+	"github.com/expr-lang/expr/file"
+	"github.com/wundergraph/cosmo/router/pkg/authentication"
 )
 
 /**
@@ -31,18 +32,56 @@ const ExprRequestAuthKey = "auth"
 
 // Context is the context for expressions parser when evaluating dynamic expressions
 type Context struct {
-	Request Request `expr:"request"` // if changing the expr tag, the ExprRequestKey should be updated
+	Request  Request  `expr:"request"` // if changing the expr tag, the ExprRequestKey should be updated
+	Subgraph Subgraph `expr:"subgraph"`
+}
+
+// Clone creates a deep copy of the Context
+func (copyCtx Context) Clone() *Context {
+	// the method receiver copyCtx is already a copy
+	// so we just need to make sure any pointer values are copied
+	scopes := make([]string, len(copyCtx.Request.Auth.Scopes))
+	copy(scopes, copyCtx.Request.Auth.Scopes)
+	copyCtx.Request.Auth.Scopes = scopes
+
+	claims := make(map[string]any, len(copyCtx.Request.Auth.Claims))
+	for k, v := range copyCtx.Request.Auth.Claims {
+		claims[k] = v
+	}
+	copyCtx.Request.Auth.Claims = claims
+
+	query := make(map[string]string, len(copyCtx.Request.URL.Query))
+	for k, v := range copyCtx.Request.URL.Query {
+		claims[k] = v
+	}
+	copyCtx.Request.URL.Query = query
+
+	return &copyCtx
 }
 
 // Request is the context for the request object in expressions. Be aware, that only value receiver methods
 // are exported in the expr environment. This is because the expressions are evaluated in a read-only context.
 type Request struct {
-	Auth   RequestAuth    `expr:"auth"` // if changing the expr tag, the ExprRequestAuthKey should be updated
-	URL    RequestURL     `expr:"url"`
-	Header RequestHeaders `expr:"header"`
-	Body   RequestBody    `expr:"body"`
-	Error  error          `expr:"error"`
-	Trace  Trace          `expr:"trace"`
+	Auth      RequestAuth    `expr:"auth"` // if changing the expr tag, the ExprRequestAuthKey should be updated
+	URL       RequestURL     `expr:"url"`
+	Header    RequestHeaders `expr:"header"`
+	Body      RequestBody    `expr:"body"`
+	Error     error          `expr:"error"`
+	Trace     Trace          `expr:"trace"`
+	Operation Operation      `expr:"operation"`
+	Client    Client         `expr:"client"`
+}
+
+type Operation struct {
+	Name string `expr:"name"`
+	Type string `expr:"type"`
+	Hash string `expr:"hash"`
+}
+
+type Client struct {
+	Name    string `expr:"name"`
+	Version string `expr:"version"`
+	IP      string `expr:"ip"`
 }
 
 type RequestBody struct {
@@ -76,6 +115,22 @@ type RequestAuth struct {
 	Type            string         `expr:"type"`
 	Claims          map[string]any `expr:"claims"`
 	Scopes          []string       `expr:"scopes"`
+}
+
+type SubgraphRequest struct {
+	Error       error       `expr:"error"`
+	ClientTrace ClientTrace `expr:"clientTrace"`
+}
+
+type ClientTrace struct {
+	ConnectionAcquireDuration float64 `expr:"connAcquireDuration"`
+}
+
+// Subgraph Related
+type Subgraph struct {
+	Id      string          `expr:"id"`
+	Name    string          `expr:"name"`
+	Request SubgraphRequest `expr:"request"`
 }
 
 // Get returns the value of the header with the given key. If the header is not present, an empty string is returned.

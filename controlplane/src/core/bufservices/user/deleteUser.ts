@@ -47,6 +47,7 @@ export function deleteUser(
         keycloakRealm: opts.keycloakRealm,
       },
       opts.blobStorage,
+      opts.queues.deleteOrganizationAuditLogsQueue,
     );
 
     opts.platformWebhooks.send(PlatformEventName.USER_DELETE_SUCCESS, {

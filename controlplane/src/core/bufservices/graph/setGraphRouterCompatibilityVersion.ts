@@ -12,6 +12,7 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function setGraphRouterCompatibilityVersion(
   opts: RouterOptions,
@@ -24,18 +25,8 @@ export function setGraphRouterCompatibilityVersion(
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
-    if (!authContext.hasWriteAccess) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `The user doesnt have the permissions to perform this operation.`,
-        },
-        previousVersion: '-',
-        newVersion: '-',
-        compositionErrors: [],
-        compositionWarnings: [],
-        deploymentErrors: [],
-      };
+    if (authContext.organizationDeactivated) {
+      throw new UnauthorizedError();
     }
 
     const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
@@ -56,6 +47,7 @@ export function setGraphRouterCompatibilityVersion(
         deploymentErrors: [],
       };
     }
+
     const version = req.version as SupportedRouterCompatibilityVersion;
     if (!ROUTER_COMPATIBILITY_VERSIONS.has(version)) {
       return {
@@ -127,6 +119,7 @@ export function setGraphRouterCompatibilityVersion(
 
       await auditLogRepo.addAuditLog({
         organizationId: authContext.organizationId,
+        organizationSlug: authContext.organizationSlug,
         auditAction: `${federatedGraph.supportsFederation ? 'federated_graph' : 'monograph'}.updated`,
         action: 'updated',
         actorId: authContext.userId,

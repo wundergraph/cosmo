@@ -1,7 +1,5 @@
-import { UserContext } from "@/components/app-provider";
 import { EmptyState } from "@/components/empty-state";
 import { getDashboardLayout } from "@/components/layout/dashboard-layout";
-import { getSettingsLayout } from "@/components/layout/settings-layout";
 import {
   EventsMeta,
   Meta,
@@ -45,7 +43,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { docsBaseURL } from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
-import { checkUserAccess, cn } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { Pencil1Icon, PlusIcon, TrashIcon } from "@radix-ui/react-icons";
 import { useQuery, useMutation } from "@connectrpc/connect-query";
@@ -58,10 +56,10 @@ import {
   updateOrganizationWebhookConfig,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import Link from "next/link";
-import { useRouter } from "next/router";
-import { useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { PiWebhooksLogo } from "react-icons/pi";
 import { z } from "zod";
+import { useCheckUserAccess } from "@/hooks/use-check-user-access";
 
 const DeleteWebhook = ({
   id,
@@ -166,7 +164,7 @@ const Webhook = ({
     events: string[];
   };
 }) => {
-  const user = useContext(UserContext);
+  const checkUserAccess = useCheckUserAccess();
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
 
@@ -289,10 +287,9 @@ const Webhook = ({
         <Button
           variant={mode === "create" ? "default" : "secondary"}
           size={mode === "create" ? "default" : "icon"}
-          disabled={!checkUserAccess({
-            rolesToBe: ["admin", "developer"],
-            userRoles: user?.currentOrganization.roles || [],
-          })}
+          disabled={
+            !checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] })
+          }
         >
           {mode === "create" ? (
             <>
@@ -474,11 +471,12 @@ const Webhook = ({
 };
 
 const WebhooksPage: NextPageWithLayout = () => {
-  const user = useContext(UserContext);
-  const router = useRouter();
+  const checkUserAccess = useCheckUserAccess();
   const { data, isLoading, error, refetch } = useQuery(
     getOrganizationWebhookConfigs,
   );
+
+  const isAdminOrDeveloper = checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] });
 
   if (isLoading) return <Loader fullscreen />;
 
@@ -531,10 +529,7 @@ const WebhooksPage: NextPageWithLayout = () => {
             Learn more
           </Link>
         </p>
-        {checkUserAccess({
-          rolesToBe: ["admin", "developer"],
-          userRoles: user?.currentOrganization.roles || [],
-        }) && <Webhook mode="create" refresh={() => refetch()} />}
+        {isAdminOrDeveloper && <Webhook mode="create" refresh={() => refetch()} />}
       </div>
       <TableWrapper>
         <Table>
@@ -542,10 +537,7 @@ const WebhooksPage: NextPageWithLayout = () => {
             <TableRow>
               <TableHead>Endpoint</TableHead>
               <TableHead>Events</TableHead>
-              {checkUserAccess({
-                rolesToBe: ["admin", "developer"],
-                userRoles: user?.currentOrganization.roles || [],
-              }) && <TableHead aria-label="Actions"></TableHead>}
+              {isAdminOrDeveloper && <TableHead aria-label="Actions"></TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -567,10 +559,7 @@ const WebhooksPage: NextPageWithLayout = () => {
                       )}
                     </div>
                   </TableCell>
-                  {checkUserAccess({
-                    rolesToBe: ["admin", "developer"],
-                    userRoles: user?.currentOrganization.roles || [],
-                  }) && (
+                  {isAdminOrDeveloper && (
                     <TableCell className="flex justify-end space-x-2">
                       <Webhook
                         mode="update"

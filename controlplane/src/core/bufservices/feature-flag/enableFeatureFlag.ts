@@ -16,6 +16,7 @@ import { DefaultNamespace, NamespaceRepository } from '../../repositories/Namesp
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function enableFeatureFlag(
   opts: RouterOptions,
@@ -40,16 +41,8 @@ export function enableFeatureFlag(
 
     req.namespace = req.namespace || DefaultNamespace;
 
-    if (!authContext.hasWriteAccess) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `The user does not have the permissions to perform this operation`,
-        },
-        compositionErrors: [],
-        deploymentErrors: [],
-        compositionWarnings: [],
-      };
+    if (authContext.organizationDeactivated) {
+      throw new UnauthorizedError();
     }
 
     const namespace = await namespaceRepo.byName(req.namespace);
@@ -79,6 +72,11 @@ export function enableFeatureFlag(
         deploymentErrors: [],
         compositionWarnings: [],
       };
+    }
+
+    // check whether the user is authorized to perform the action
+    if (!authContext.rbac.hasFeatureFlagWriteAccess(featureFlag)) {
+      throw new UnauthorizedError();
     }
 
     if (featureFlag.isEnabled === req.enabled) {
@@ -153,6 +151,7 @@ export function enableFeatureFlag(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: req.enabled ? 'feature_flag.enabled' : 'feature_flag.disabled',
       action: req.enabled ? 'enabled' : 'disabled',
       actorId: authContext.userId,

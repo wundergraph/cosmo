@@ -4,6 +4,34 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.9.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.9.1...@wundergraph/playground@0.9.2) (2025-06-11)
+
+### Bug Fixes
+
+* pnpm-lockfile to trigger ci and add back the specifier ([#1954](https://github.com/wundergraph/cosmo/issues/1954)) ([0149896](https://github.com/wundergraph/cosmo/commit/0149896ab2492757d0a88a6cbd1a26cee575d5cf)) (@SkArchon)
+
+## [0.9.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.9.0...@wundergraph/playground@0.9.1) (2025-06-06)
+
+### Bug Fixes
+
+* resolve security vulnerabilities ([#1938](https://github.com/wundergraph/cosmo/issues/1938)) ([35e6c73](https://github.com/wundergraph/cosmo/commit/35e6c7374cd40f3e89655e08ec0671f2b30bc00c)) (@SkArchon)
+
+# [0.9.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.8.7...@wundergraph/playground@0.9.0) (2025-05-09)
+
+### Features
+
+* **playground:** add support for state sharing via URL with user control over what to include ([#1833](https://github.com/wundergraph/cosmo/issues/1833)) ([c630c9f](https://github.com/wundergraph/cosmo/commit/c630c9f6833de3d071e12f825ed75f2630a9b7e9)) (@akshaygarg576)
+
+## [0.8.7](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.8.6...@wundergraph/playground@0.8.7) (2025-05-02)
+
+### Bug Fixes
+
+* vite vulnerability ([#1823](https://github.com/wundergraph/cosmo/issues/1823)) ([05d5300](https://github.com/wundergraph/cosmo/commit/05d53004612958fe1dab2c292ec89ac4ac686b61)) (@JivusAyrus)
+
+## [0.8.6](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.8.5...@wundergraph/playground@0.8.6) (2025-04-02)
+
+**Note:** Version bump only for package @wundergraph/playground
+
 ## [0.8.5](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.8.4...@wundergraph/playground@0.8.5) (2025-03-25)
 
 ### Bug Fixes

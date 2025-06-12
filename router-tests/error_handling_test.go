@@ -3,10 +3,11 @@ package integration
 import (
 	"cmp"
 	"encoding/json"
-	"github.com/wundergraph/cosmo/router/core"
 	"net/http"
 	"slices"
 	"testing"
+
+	"github.com/wundergraph/cosmo/router/core"
 
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
@@ -1129,7 +1130,7 @@ func TestErrorPropagation(t *testing.T) {
 			expected := "--graphql\r\n" +
 				"Content-Type: application/json\r\n" +
 				"\r\n" +
-				"{\"errors\":[{\"message\":\"field: ide not defined on type: Employee\",\"path\":[\"query\",\"employees\"]}]}\r\n" +
+				"{\"errors\":[{\"message\":\"Cannot query field \\\"ide\\\" on type \\\"Employee\\\".\",\"path\":[\"query\",\"employees\"]}]}\r\n" +
 				"--graphql--"
 			require.Equal(t, expected, resp.Body)
 			require.NoError(t, err)
@@ -1161,7 +1162,8 @@ func TestErrorPropagation(t *testing.T) {
 			expected := "--graphql\r\n" +
 				"Content-Type: application/json\r\n" +
 				"\r\n" +
-				"{\"payload\":{\"errors\":[{\"message\":\"field: employees not defined on type: Subscription\",\"path\":[\"subscription\"]}]}}"
+				"{\"payload\":{\"errors\":[{\"message\":\"Cannot query field \\\"employees\\\" on type \\\"Subscription\\\".\",\"path\":[\"subscription\"]}]}}\r\n" +
+				"--graphql--"
 			require.Equal(t, expected, resp.Body)
 			require.NoError(t, err)
 		})
@@ -1193,7 +1195,8 @@ func TestErrorPropagation(t *testing.T) {
 			expected := "--graphql\r\n" +
 				"Content-Type: application/json\r\n" +
 				"\r\n" +
-				"{\"payload\":{\"errors\":[{\"message\":\"field: employees not defined on type: Subscription\",\"path\":[\"subscription\"]}]}}"
+				"{\"payload\":{\"errors\":[{\"message\":\"Cannot query field \\\"employees\\\" on type \\\"Subscription\\\".\",\"path\":[\"subscription\"]}]}}\r\n" +
+				"--graphql--"
 			require.Equal(t, expected, resp.Body)
 		})
 	})
@@ -1221,7 +1224,7 @@ func TestErrorPropagation(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			expected := `{"errors":[{"message":"field: ide not defined on type: Employee","path":["query","employees"]}]}`
+			expected := `{"errors":[{"message":"Cannot query field \"ide\" on type \"Employee\".","path":["query","employees"]}]}`
 			require.Equal(t, expected, resp.Body)
 		})
 	})

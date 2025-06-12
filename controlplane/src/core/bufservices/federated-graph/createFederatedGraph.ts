@@ -18,6 +18,7 @@ import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, isValidGraphName, isValidLabelMatchers } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function createFederatedGraph(
   opts: RouterOptions,
@@ -44,16 +45,8 @@ export function createFederatedGraph(
     const auditLogRepo = new AuditLogRepository(opts.db);
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
-    if (!authContext.hasWriteAccess) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `The user doesn't have the permissions to perform this operation`,
-        },
-        compositionErrors: [],
-        deploymentErrors: [],
-        compositionWarnings: [],
-      };
+    if (authContext.organizationDeactivated) {
+      throw new UnauthorizedError();
     }
 
     const namespace = await namespaceRepo.byName(req.namespace);
@@ -67,6 +60,11 @@ export function createFederatedGraph(
         deploymentErrors: [],
         compositionWarnings: [],
       };
+    }
+
+    // check whether the user is authorized to perform the action
+    if (!authContext.rbac.canCreateFederatedGraph(namespace)) {
+      throw new UnauthorizedError();
     }
 
     if (await fedGraphRepo.exists(req.name, req.namespace)) {
@@ -181,6 +179,7 @@ export function createFederatedGraph(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'federated_graph.created',
       action: 'created',
       actorId: authContext.userId,

@@ -4,3 +4,6 @@ export const apiKeyPermissions = [
     value: 'scim',
   },
 ];
+
+export const delayForManualOrgDeletionInDays = 3;
+export const delayForOrgAuditLogsDeletionInDays = 90;

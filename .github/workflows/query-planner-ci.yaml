@@ -1,0 +1,208 @@
+name: Query Planner CI
+on:
+  pull_request:
+    paths:
+      # This workflow should run every time router-ci and cli-ci runs
+      - 'pnpm-lock.yaml'
+      - 'cli/**/*'
+      - 'connect/**/*'
+      - '.github/workflows/cli-ci.yaml'
+      - 'router/**/*'
+      - 'connect/**/*'
+      - '.github/workflows/router-ci.yaml'
+env:
+  CI: true
+  DO_NOT_TRACK: '1'
+permissions:
+  pull-requests: write
+  contents: read
+  packages: write
+concurrency:
+  group: ${{github.workflow}}-${{github.head_ref}}
+  cancel-in-progress: true
+jobs:
+  check-label:
+    runs-on: ubuntu-latest
+    outputs:
+      has_label: ${{ steps.check_label.outputs.has_label }}
+    steps:
+      - name: Check for query-planner label
+        id: check_label
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const labels = await github.rest.issues.listLabelsOnIssue({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number
+            });
+            const hasLabel = labels.data.some(label => label.name === 'query-planner');
+            core.setOutput('has_label', hasLabel ? 'true' : 'false');
+  filter-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      router_changed: ${{ steps.filter.outputs.router }}
+      cli_changed: ${{ steps.filter.outputs.cli }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Filter Changes
+        id: filter
+        uses: dorny/paths-filter@v2
+        with:
+          filters: |
+            router:
+              - 'demo/**/*'
+              - 'router/**/*'
+              - 'router-tests/**/*'
+              - 'connect/**/*'
+              - '.github/workflows/router-ci.yaml'
+            cli:
+              - 'cli/**/*'
+              - 'connect/**/*'
+              - '.github/workflows/cli-ci.yaml'
+  build-router:
+    needs: filter-changes
+    # This is a limitation of GitHub. Only organization members can push to GitHub Container Registry
+    # For now, we will disable the push to the GitHub Container Registry for external contributor
+    if: ${{ needs.filter-changes.outputs.router_changed == 'true' && github.event.pull_request.head.repo.full_name == github.repository}}
+    runs-on: ubuntu-latest
+    outputs:
+      image_ref: ${{ steps.build_push_image.outputs.image_ref }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/build-push-image
+        id: build_push_image
+        with:
+          docker_username: ${{secrets.DOCKER_USERNAME}}
+          docker_password: ${{secrets.DOCKER_PASSWORD}}
+          docker_context: router
+          dockerfile: router/Dockerfile
+          token: ${{secrets.GITHUB_TOKEN}}
+          image_name: router-qp
+          image_description: 'Cosmo Router Query Planner'
+          image_platforms: linux/amd64
+          with_tests: "false"
+  build-cli:
+    needs: filter-changes
+    if: ${{ needs.filter-changes.outputs.cli_changed == 'true' }}
+    runs-on: ubuntu-latest
+    outputs:
+      wgc: ${{ steps.cli-build.outputs.artifact-url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/cli-build
+        id: cli-build
+        with:
+          github-sha: ${{ github.sha }}
+          target: bun-linux-x64
+  cli-release-url:
+    runs-on: ubuntu-latest
+    if: ${{ needs.filter-changes.outputs.cli_changed != 'true' }}
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - id: release-url
+        run: |
+          url=`gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /repos/wundergraph/cosmo/releases --jq '.[] | select(.name | startswith("wgc@")) | .assets[] | select(.name | endswith("-bun-linux-x64.gz")) | .browser_download_url' | head -n 1`
+          echo "wgc=$url" >> $GITHUB_OUTPUT
+    outputs:
+      wgc: ${{ steps.release-url.outputs.wgc }}
+  build_test: # This job is use to lock the merge of the PR if anything fails in the query planner
+    runs-on: ubuntu-latest
+    if: ${{ always() }}
+    needs: [ build-router, build-cli, cli-release-url, check-label ]
+    outputs:
+      workflow_url: ${{ steps.trigger_workflow.outputs.workflow_url }}
+      workflow_id: ${{ steps.trigger_workflow.outputs.workflow_id }}
+    steps:
+      - uses: convictional/trigger-workflow-and-wait@v1.6.5
+        if: ${{ needs.check-label.outputs.has_label == 'true' }}
+        id: trigger_workflow
+        name: Trigger Query Planner CI
+        with:
+          owner: wundergraph
+          repo: cosmo-celestial
+          ref: master
+          github_token: ${{ secrets.GH_TOKEN_CELESTIAL_TRIGGER }}
+          propagate_failure: true
+          workflow_file_name: 'query-planner-tester.yaml'
+          client_payload: >-
+            {
+              "branch": "query-plan/pr-${{ github.event.pull_request.number }}",
+              "router": "${{ needs.build-router.outputs.image_ref || 'ghcr.io/wundergraph/router:latest' }}",
+              "wgc": "${{ needs.build-cli.outputs.wgc || needs.cli-release-url.outputs.wgc }}"
+            }
+  get_pr_url:
+    needs: [ build_test, check-label ]
+    runs-on: ubuntu-latest
+    if: ${{ always() && needs.check-label.outputs.has_label == 'true' }}
+    outputs:
+      pullrequest_url: ${{ steps.get_url.outputs.pr_url }}
+    steps:
+      - name: Download PR info artifact
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_TOKEN_CELESTIAL_TRIGGER }}
+          script: |
+            const fs = require('fs');
+            const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
+              owner: 'wundergraph',
+              repo: 'cosmo-celestial',
+              run_id: '${{ needs.build_test.outputs.workflow_id }}'
+            });
+            const artifact = artifacts.data.artifacts.find(a => a.name === 'pull-request-info');
+            if (!artifact) {
+              throw new Error('Could not find pull-request-info artifact');
+            }
+            const download = await github.rest.actions.downloadArtifact({
+              owner: 'wundergraph',
+              repo: 'cosmo-celestial',
+              artifact_id: artifact.id,
+              archive_format: 'zip'
+            });
+            fs.writeFileSync('artifact.zip', Buffer.from(download.data));
+
+      - name: Unzip artifact
+        run: unzip artifact.zip
+
+      - name: Get PR URL
+        id: get_url
+        run: |
+          pr_url=$(cat pr-url.txt)
+          echo "pr_url=$pr_url" >> $GITHUB_OUTPUT
+  comment-on-failure:
+    needs: [build_test, get_pr_url, check-label]
+    if: ${{ needs.check-label.outputs.has_label == 'true' && failure() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Comment PR on failure
+        if: ${{ needs.get_pr_url.outputs.pullrequest_url == '' }}
+        uses: mshick/add-pr-comment@v2
+        with:
+          message: |
+            ❌ Internal Query Planner CI failed to run.
+      - name: Comment PR on failure
+        if: ${{ needs.get_pr_url.outputs.pullrequest_url != '' }}
+        uses: mshick/add-pr-comment@v2
+        with:
+          message: |
+            # ❌ Internal Query Planner CI checks failed
+            The Internal Query Planner CI checks failed in the celestial repository, and this is going to stop the merge of this PR.
+            If you are part of the WunderGraph organization, you can [see the PR with more details](${{ needs.get_pr_url.outputs.pullrequest_url }}).
+  comment-on-success:
+    needs: [build_test, get_pr_url, check-label]
+    if: ${{ needs.check-label.outputs.has_label == 'true' && success() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Comment PR on failure
+        if: ${{ needs.get_pr_url.outputs.pullrequest_url != '' }}
+        uses: mshick/add-pr-comment@v2
+        with:
+          message: |
+            # ✅ Internal Query Planner CI checks passed
+            The Internal Query Planner CI checks passed in the celestial repository, and this is going to allow the merge of this PR.
+            If you are part of the WunderGraph organization, you can [see the PR with more details](${{ needs.get_pr_url.outputs.pullrequest_url }}).
+      

@@ -2,6 +2,7 @@ name: wgc CI
 on:
   pull_request:
     paths:
+      - 'pnpm-lock.yaml'
       - 'cli/**/*'
       - 'connect/**/*'
       - 'shared/**/*'
@@ -27,7 +28,7 @@ jobs:
       - uses: oven-sh/setup-bun@v2
 
       - name: Install dependencies
-        run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition install --frozen-lockfile
+        run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic install --frozen-lockfile
 
       - name: Generate code
         run: pnpm buf generate --template buf.ts.gen.yaml
@@ -36,7 +37,7 @@ jobs:
         run: git diff --no-ext-diff --exit-code
 
       - name: Build Node.js NPM Package
-        run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition run build
+        run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic run build
 
       - name: 'Build wgc binary'
         working-directory: cli
@@ -63,10 +64,10 @@ jobs:
       - uses: oven-sh/setup-bun@v2
 
       - name: Install dependencies
-        run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition install --frozen-lockfile
+        run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic install --frozen-lockfile
 
       - name: Build Node.js NPM Package
-        run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition run build
+        run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic run build
 
       - name: Unit Test
         run: pnpm run --filter wgc test
@@ -84,29 +85,12 @@ jobs:
         target: [bun-linux-x64, bun-linux-arm64, bun-darwin-x64, bun-darwin-arm64, bun-windows-x64]
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - uses: oven-sh/setup-bun@v2
-
-      - uses: ./.github/actions/node
-
-      - name: Install dependencies
-        run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition install --frozen-lockfile
-
-      - name: Build
-        run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition run build
-
-      - name: 'Build wgc binary'
-        working-directory: cli
-        run: bun build --compile --minify --sourcemap --target ${{ matrix.target }} src/index.ts --outfile out/wgc-experimental-${{ github.sha }}-${{ matrix.target }}
-
-      - name: 'Upload builds as artifacts'
-        uses: actions/upload-artifact@v4
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/cli-build
+        id: cli-build
         with:
-          name: wgc-experimental-${{ github.sha }}-${{ matrix.target }}
-          path: cli/out/wgc-experimental-${{ github.sha }}-${{ matrix.target }}*
-          if-no-files-found: error
+          target: ${{ matrix.target }}
+          github-sha: ${{ github.sha }}
 
   build_test:
     runs-on: ubuntu-latest

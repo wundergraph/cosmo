@@ -36,7 +36,7 @@ export function leaveOrganization(
 
     const orgMember = await orgRepo.getOrganizationMember({
       organizationID: authContext.organizationId,
-      userID: authContext.userId || req.userID,
+      userID: authContext.userId,
     });
 
     if (!orgMember) {
@@ -49,17 +49,17 @@ export function leaveOrganization(
     }
 
     // the creator of the personal org cannot leave the organization.
-    if (org.creatorUserId === (authContext.userId || req.userID)) {
+    if (org.creatorUserId === authContext.userId) {
       return {
         response: {
-          code: EnumStatusCode.ERR_NOT_FOUND,
+          code: EnumStatusCode.ERR,
           details: `Creator of a organization cannot leave the organization.`,
         },
       };
     }
 
     // checking if the user is a single admin
-    if (orgMember.roles.includes('admin')) {
+    if (orgMember.rbac.isOrganizationAdmin) {
       const orgAdmins = await orgRepo.getOrganizationAdmins({ organizationID: authContext.organizationId });
       if (orgAdmins.length === 1) {
         return {
@@ -72,32 +72,26 @@ export function leaveOrganization(
     }
 
     await opts.keycloakClient.authenticateClient();
-
-    const organizationGroup = await opts.keycloakClient.client.groups.find({
-      max: 1,
-      search: org.slug,
-      realm: opts.keycloakRealm,
-    });
-
-    if (organizationGroup.length === 0) {
+    if (!org.kcGroupId) {
       throw new Error(`Organization group '${org.slug}' not found`);
     }
 
     // removing the group from the keycloak user
-    await opts.keycloakClient.client.users.delFromGroup({
-      id: orgMember.userID,
-      groupId: organizationGroup[0].id!,
+    await opts.keycloakClient.removeUserFromOrganization({
+      userID: orgMember.userID,
+      groupId: org.kcGroupId,
       realm: opts.keycloakRealm,
     });
 
     // removing the user for the organization in the db
     await orgRepo.removeOrganizationMember({
-      userID: authContext.userId || req.userID,
+      userID: authContext.userId,
       organizationID: authContext.organizationId,
     });
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'organization.left',
       action: 'left',
       actorId: authContext.userId,

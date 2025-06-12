@@ -22,9 +22,14 @@ const (
 	jsonContent          = "application/json"
 	sseMimeType          = "text/event-stream"
 	heartbeat            = "{}"
-	multipartContent     = multipartMime + "; boundary=" + multipartBoundary
+	subscriptionSpec     = "subscriptionSpec=1.0"
+	multipartContent     = multipartMime + "; " + subscriptionSpec + "; boundary=" + multipartBoundary
 	multipartStart       = "\r\n--" + multipartBoundary
 )
+
+type withFlushWriter interface {
+	SubscriptionResponseWriter() resolve.SubscriptionResponseWriter
+}
 
 type HttpFlushWriter struct {
 	ctx           context.Context
@@ -41,6 +46,8 @@ type HttpFlushWriter struct {
 	apolloSubscriptionMultipartPrintBoundary bool
 }
 
+var _ resolve.SubscriptionResponseWriter = (*HttpFlushWriter)(nil)
+
 func (f *HttpFlushWriter) Complete() {
 	if f.ctx.Err() != nil {
 		return
@@ -55,7 +62,11 @@ func (f *HttpFlushWriter) Complete() {
 			_, _ = f.writer.Write([]byte("--" + multipartBoundary + "--\r\n"))
 		}
 	}
-	f.Close()
+
+	// Flush before closing the writer to ensure all data is sent
+	f.flusher.Flush()
+
+	f.Close(resolve.SubscriptionCloseKindNormal)
 }
 
 func (f *HttpFlushWriter) Write(p []byte) (n int, err error) {
@@ -66,7 +77,7 @@ func (f *HttpFlushWriter) Write(p []byte) (n int, err error) {
 	return f.buf.Write(p)
 }
 
-func (f *HttpFlushWriter) Close() {
+func (f *HttpFlushWriter) Close(_ resolve.SubscriptionCloseKind) {
 	if f.ctx.Err() != nil {
 		return
 	}
@@ -110,17 +121,18 @@ func (f *HttpFlushWriter) Flush() (err error) {
 	if err != nil {
 		return err
 	}
+
+	// Flush before closing the writer to ensure all data is sent
 	f.flusher.Flush()
+
 	if f.subscribeOnce {
-		defer f.Close()
+		defer f.Close(resolve.SubscriptionCloseKindNormal)
 	}
+
 	return nil
 }
 
 func GetSubscriptionResponseWriter(ctx *resolve.Context, r *http.Request, w http.ResponseWriter, apolloSubscriptionMultipartPrintBoundary bool) (*resolve.Context, resolve.SubscriptionResponseWriter, bool) {
-	type withFlushWriter interface {
-		SubscriptionResponseWriter() resolve.SubscriptionResponseWriter
-	}
 	if wfw, ok := w.(withFlushWriter); ok {
 		return ctx, wfw.SubscriptionResponseWriter(), true
 	}
@@ -132,8 +144,6 @@ func GetSubscriptionResponseWriter(ctx *resolve.Context, r *http.Request, w http
 	}
 
 	setSubscriptionHeaders(wgParams, r, w)
-
-	flusher.Flush()
 
 	flushWriter := &HttpFlushWriter{
 		writer:                                   w,

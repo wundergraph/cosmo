@@ -77,11 +77,17 @@ export const AuditLogTable = ({ logs }: { logs?: AuditLog[] }) => {
               let preParagraph = null;
               let postParagraph = null;
 
-              if (auditAction === "organization_invitation.created") {
+              if (auditAction === "organization_invitation.created" || action === "queued_deletion") {
                 postParagraph = "for";
               } else if (auditAction === "member_role.updated") {
                 preParagraph = "role for";
                 postParagraph = "to";
+              } else if (auditAction === "member_group.updated" || auditAction === "api_key.group_updated") {
+                preParagraph = "group for";
+                postParagraph = "to";
+              } else if (auditAction === "group.members_moved") {
+                preParagraph = "members from group";
+                postParagraph = "to ";
               } else if (action === "moved") {
                 postParagraph = `to ${targetNamespaceDisplayName} namespace,`;
               } else if (auditableDisplayName) {
@@ -117,7 +123,7 @@ export const AuditLogTable = ({ logs }: { logs?: AuditLog[] }) => {
               const actionView = (
                 <>
                   <span className="text-gray-500 dark:text-gray-400">
-                    {capitalize(action)}
+                    {capitalize(action.replaceAll('_', ' '))}
                   </span>
                   {label}
                   {auditableDisplayName && (

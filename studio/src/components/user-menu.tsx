@@ -6,7 +6,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useUser } from "@/hooks/use-user";
-import { resetKoala } from "@/lib/track";
+import { resetTracking } from "@/lib/track";
 import Link from "next/link";
 import { ThemeToggle } from "./theme-toggle";
 import { Avatar, AvatarFallback } from "./ui/avatar";
@@ -23,7 +23,7 @@ export const UserMenuMobile = () => {
       <Button>
         <Link
           onClick={() => {
-            resetKoala();
+            resetTracking();
           }}
           href={process.env.NEXT_PUBLIC_COSMO_CP_URL + "/v1/auth/logout"}
         >

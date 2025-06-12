@@ -3,6 +3,8 @@ package wsproto
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/gobwas/ws"
 )
 
 // See protocol at https://github.com/enisdenjo/graphql-ws/blob/master/PROTOCOL.md
@@ -33,10 +35,10 @@ type graphQLWSMessage struct {
 }
 
 type graphQLWSProtocol struct {
-	conn JSONConn
+	conn ProtoConn
 }
 
-func newGraphQLWSProtocol(conn JSONConn) *graphQLWSProtocol {
+func newGraphQLWSProtocol(conn ProtoConn) *graphQLWSProtocol {
 	return &graphQLWSProtocol{
 		conn: conn,
 	}
@@ -88,7 +90,12 @@ func (p *graphQLWSProtocol) ReadMessage() (*Message, error) {
 }
 
 func (p *graphQLWSProtocol) Pong(msg *Message) error {
-	return p.conn.WriteJSON(graphQLWSMessage{ID: msg.ID, Type: graphQLWSMessageTypePong, Payload: msg.Payload})
+	return p.conn.WriteJSON(
+		graphQLWSMessage{
+			ID:      msg.ID,
+			Type:    graphQLWSMessageTypePong,
+			Payload: msg.Payload,
+		})
 }
 
 func (p *graphQLWSProtocol) WriteGraphQLData(id string, data json.RawMessage, extensions json.RawMessage) error {
@@ -109,6 +116,20 @@ func (p *graphQLWSProtocol) WriteGraphQLErrors(id string, errors json.RawMessage
 	})
 }
 
-func (p *graphQLWSProtocol) Done(id string) error {
-	return p.conn.WriteJSON(graphQLWSMessage{ID: id, Type: graphQLWSMessageTypeComplete})
+func (p *graphQLWSProtocol) Close(code ws.StatusCode, reason string) error {
+	if err := p.conn.WriteCloseFrame(code, reason); err != nil {
+		return err
+	}
+
+	if err := p.conn.Close(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (p *graphQLWSProtocol) Complete(id string) error {
+	return p.conn.WriteJSON(
+		graphQLWSMessage{ID: id, Type: graphQLWSMessageTypeComplete},
+	)
 }

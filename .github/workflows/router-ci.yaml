@@ -2,6 +2,7 @@ name: Router CI
 on:
   pull_request:
     paths:
+      - 'pnpm-lock.yaml'
       - 'composition-go/**/*'
       - 'demo/**/*'
       - 'router/**/*'
@@ -21,6 +22,7 @@ permissions:
 env:
   CI: true
   ROUTER_REGISTRATION: false
+  DO_NOT_TRACK: '1'
 
 # Both jobs need to kept in sync. We need to distinguish between forks and people with write access to the repository.
 jobs:
@@ -96,7 +98,6 @@ jobs:
             router/go.sum
             router-tests/go.sum
             demo/go.sum
-
       - uses: ./.github/actions/go-mod-tidy
         with:
           working-directory: ./router
@@ -133,11 +134,25 @@ jobs:
         run: make build
 
   integration_test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-l
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        test_target: ["./. ./fuzzquery ./lifecycle ./modules", "./telemetry", "./events/events_config_test.go", "./events/nats_events_test.go", "./events/kafka_events_test.go"]
     services:
+      nats:
+        image: ghcr.io/wundergraph/cosmo/nats:2.11.0-alpine
+        options: >-
+          --health-cmd "curl -f http://localhost:8222/healthz"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 4222:4222
+          - 8222:8222
+          - 6222:6222
       redis:
-        # Docker Hub image
         image: redis:7
         # Set health checks to wait until redis has started
         options: >-
@@ -152,6 +167,11 @@ jobs:
           - 6379:6379
       kafka:
         image: bitnami/kafka:3.7.0
+        options: >-
+          --health-cmd "kafka-broker-api-versions.sh --version"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
         env:
           KAFKA_ENABLE_KRAFT: yes
           KAFKA_CFG_PROCESS_ROLES: controller,broker
@@ -192,10 +212,10 @@ jobs:
             redis-cli -u "redis://cosmo:test@127.0.0.1:$port" ping
             echo "ACL user 'cosmo' created with full access on port $port"
           done
-      - name: Run Integration tests
+      - name: Run Integration tests ${{ matrix.test_target }}
         working-directory: ./router-tests
-        run: make test test_params="-run '^Test[^(Flaky)]' --timeout=5m --parallel 10"
-      - name: Run Flaky Integration tests
+        run: make test test_params="-run '^Test[^(Flaky)]' --timeout=5m -p 1 --parallel 10" test_target="${{ matrix.test_target }}"
+      - name: Run Flaky Integration tests ${{ matrix.test_target }}
         uses: nick-fields/retry@v3
         with:
           timeout_minutes: 30
@@ -204,7 +224,7 @@ jobs:
           retry_on: error
           command: |
             cd router-tests
-            make test test_params="-run '^TestFlaky' --timeout=5m -p 1 --parallel 1"
+            make test test_params="-run '^TestFlaky'  --timeout=5m --parallel 1" test_target="${{ matrix.test_target }}"
 
   image_scan:
     if: github.event.pull_request.head.repo.full_name == github.repository
@@ -250,3 +270,4 @@ jobs:
           token: ${{secrets.GITHUB_TOKEN}}
           image_name: router
           image_description: 'Cosmo Router'
+

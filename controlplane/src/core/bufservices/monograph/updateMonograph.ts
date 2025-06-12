@@ -20,6 +20,7 @@ import {
   handleError,
 } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function updateMonograph(
   opts: RouterOptions,
@@ -33,6 +34,9 @@ export function updateMonograph(
     logger = enrichLogger(ctx, logger, authContext);
 
     req.namespace = req.namespace || DefaultNamespace;
+    if (authContext.organizationDeactivated) {
+      throw new UnauthorizedError();
+    }
 
     return opts.db.transaction(async (tx) => {
       const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
@@ -44,16 +48,6 @@ export function updateMonograph(
         opts.logger,
         opts.billingDefaultPlanId,
       );
-
-      if (!authContext.hasWriteAccess) {
-        return {
-          response: {
-            code: EnumStatusCode.ERR,
-            details: `The user doesnt have the permissions to perform this operation`,
-          },
-          compositionErrors: [],
-        };
-      }
 
       if (req.subscriptionUrl && !isValidUrl(req.subscriptionUrl)) {
         return {
@@ -96,6 +90,11 @@ export function updateMonograph(
           },
           compositionErrors: [],
         };
+      }
+
+      // check whether the user is authorized to perform the action
+      if (!authContext.rbac.hasFederatedGraphWriteAccess(graph)) {
+        throw new UnauthorizedError();
       }
 
       const subgraphs = await subgraphRepo.listByFederatedGraph({
@@ -178,6 +177,7 @@ export function updateMonograph(
 
       await auditLogRepo.addAuditLog({
         organizationId: authContext.organizationId,
+        organizationSlug: authContext.organizationSlug,
         auditAction: 'monograph.updated',
         action: 'updated',
         actorId: authContext.userId,

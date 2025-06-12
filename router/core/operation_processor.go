@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"hash"
@@ -11,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
+	"strconv"
 	"sync"
 	"time"
 
@@ -69,6 +71,10 @@ type ParsedOperation struct {
 	NormalizationCacheHit bool
 }
 
+func (o *ParsedOperation) IDString() string {
+	return strconv.FormatUint(o.ID, 10)
+}
+
 type invalidExtensionsTypeError jsonparser.ValueType
 
 func (e invalidExtensionsTypeError) Error() string {
@@ -97,16 +103,17 @@ type OperationProcessorOptions struct {
 	PersistedOperationClient            persistedoperation.SaveClient
 	AutomaticPersistedOperationCacheTtl int
 
-	EnablePersistedOperationsCache bool
-	PersistedOpsNormalizationCache *ristretto.Cache[uint64, NormalizationCacheEntry]
-	NormalizationCache             *ristretto.Cache[uint64, NormalizationCacheEntry]
-	QueryDepthCache                *ristretto.Cache[uint64, ComplexityCacheEntry]
-	ValidationCache                *ristretto.Cache[uint64, bool]
-	OperationHashCache             *ristretto.Cache[uint64, string]
-	ParseKitPoolSize               int
-	IntrospectionEnabled           bool
-	ApolloCompatibilityFlags       config.ApolloCompatibilityFlags
-	ApolloRouterCompatibilityFlags config.ApolloRouterCompatibilityFlags
+	EnablePersistedOperationsCache                   bool
+	PersistedOpsNormalizationCache                   *ristretto.Cache[uint64, NormalizationCacheEntry]
+	NormalizationCache                               *ristretto.Cache[uint64, NormalizationCacheEntry]
+	QueryDepthCache                                  *ristretto.Cache[uint64, ComplexityCacheEntry]
+	ValidationCache                                  *ristretto.Cache[uint64, bool]
+	OperationHashCache                               *ristretto.Cache[uint64, string]
+	ParseKitPoolSize                                 int
+	IntrospectionEnabled                             bool
+	ApolloCompatibilityFlags                         config.ApolloCompatibilityFlags
+	ApolloRouterCompatibilityFlags                   config.ApolloRouterCompatibilityFlags
+	DisableExposingVariablesContentOnValidationError bool
 }
 
 // OperationProcessor provides shared resources to the parseKit and OperationKit.
@@ -371,7 +378,7 @@ func (o *OperationKit) ComputeOperationSha256() error {
 	}
 
 	// we're using the hex representation of the sha256 hash
-	sha256Hash := fmt.Sprintf("%x", o.kit.sha256Hash.Sum(nil))
+	sha256Hash := hex.EncodeToString(o.kit.sha256Hash.Sum(nil))
 	o.cache.operationHashCache.Set(id, sha256Hash, 1)
 	o.parsedOperation.Sha256Hash = sha256Hash
 
@@ -380,7 +387,7 @@ func (o *OperationKit) ComputeOperationSha256() error {
 
 // FetchPersistedOperation fetches the persisted operation from the cache or the client. If the operation is fetched from the cache it returns true.
 // UnmarshalOperationFromBody or UnmarshalOperationFromURL must be called before calling this method.
-func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *ClientInfo) (bool, bool, error) {
+func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *ClientInfo) (skipParse bool, isAPQ bool, err error) {
 	if o.operationProcessor.persistedOperationClient == nil {
 		return false, false, &httpGraphqlError{
 			message:    "could not resolve persisted query, feature is not configured",
@@ -418,6 +425,10 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 	// we might modify it later, so we don't want to modify the cached data
 	if persistedOperationData != nil {
 		o.parsedOperation.Request.Query = string(persistedOperationData)
+		// when we have successfully loaded the operation content from the storage,
+		// but it was passed via body instead of hash, we need to mark operation as persisted
+		// to populate persisted operation cache
+		o.parsedOperation.IsPersistedOperation = true
 	}
 
 	// If the operation was fetched with APQ, save it again to renew the TTL
@@ -749,7 +760,11 @@ func (o *OperationKit) setAndParseOperationDoc() error {
 }
 
 func (o *OperationKit) NormalizeVariables() ([]uploads.UploadPathMapping, error) {
-	before := len(o.kit.doc.Input.Variables) + len(o.kit.doc.Input.RawBytes)
+	variablesBefore := make([]byte, len(o.kit.doc.Input.Variables))
+	copy(variablesBefore, o.kit.doc.Input.Variables)
+
+	operationRawBytesBefore := make([]byte, len(o.kit.doc.Input.RawBytes))
+	copy(operationRawBytesBefore, o.kit.doc.Input.RawBytes)
 
 	report := &operationreport.Report{}
 	uploadsMapping := o.kit.variablesNormalizer.NormalizeOperation(o.kit.doc, o.operationProcessor.executor.ClientSchema, report)
@@ -792,8 +807,7 @@ func (o *OperationKit) NormalizeVariables() ([]uploads.UploadPathMapping, error)
 	o.parsedOperation.ID = o.kit.keyGen.Sum64()
 
 	// If the normalized form of the operation didn't change, we don't need to print it again
-	after := len(o.kit.doc.Input.Variables) + len(o.kit.doc.Input.RawBytes)
-	if after == before {
+	if bytes.Equal(o.kit.doc.Input.Variables, variablesBefore) && bytes.Equal(o.kit.doc.Input.RawBytes, operationRawBytesBefore) {
 		return uploadsMapping, nil
 	}
 
@@ -895,6 +909,10 @@ func (o *OperationKit) loadPersistedOperationFromCache(clientName string) (ok bo
 
 func (o *OperationKit) handleFoundPersistedOperationEntry(entry NormalizationCacheEntry) error {
 	o.parsedOperation.PersistedOperationCacheHit = true
+	// we need to mark operation as persisted when it was called by query body
+	// otherwise in case it was already cached we will try to normalize an empty document
+	// as we skip parse for the cached persisted operations
+	o.parsedOperation.IsPersistedOperation = true
 	o.parsedOperation.NormalizationCacheHit = true
 	o.parsedOperation.InternalID = entry.operationID
 	o.parsedOperation.NormalizedRepresentation = entry.normalizedRepresentation
@@ -1151,8 +1169,9 @@ func (o *OperationKit) skipIncludeVariableNames() []string {
 }
 
 type parseKitOptions struct {
-	apolloCompatibilityFlags       config.ApolloCompatibilityFlags
-	apolloRouterCompatibilityFlags config.ApolloRouterCompatibilityFlags
+	apolloCompatibilityFlags                         config.ApolloCompatibilityFlags
+	apolloRouterCompatibilityFlags                   config.ApolloRouterCompatibilityFlags
+	disableExposingVariablesContentOnValidationError bool
 }
 
 func createParseKit(i int, options *parseKitOptions) *parseKit {
@@ -1179,10 +1198,11 @@ func createParseKit(i int, options *parseKitOptions) *parseKit {
 			ApolloRouterCompatibilityFlags: apollocompatibility.ApolloRouterFlags{
 				ReplaceInvalidVarError: options.apolloRouterCompatibilityFlags.ReplaceInvalidVarErrors.Enabled,
 			},
+			DisableExposingVariablesContent: options.disableExposingVariablesContentOnValidationError,
 		}),
 		operationValidator: astvalidation.DefaultOperationValidator(astvalidation.WithApolloCompatibilityFlags(
 			apollocompatibility.Flags{
-				ReplaceUndefinedOpFieldError: options.apolloCompatibilityFlags.ReplaceUndefinedOpFieldErrors.Enabled,
+				UseGraphQLValidationFailedStatus: options.apolloCompatibilityFlags.UseGraphQLValidationFailedStatus.Enabled,
 			},
 		)),
 	}
@@ -1200,8 +1220,9 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 		parseKitSemaphore:        make(chan int, opts.ParseKitPoolSize),
 		introspectionEnabled:     opts.IntrospectionEnabled,
 		parseKitOptions: &parseKitOptions{
-			apolloCompatibilityFlags:       opts.ApolloCompatibilityFlags,
-			apolloRouterCompatibilityFlags: opts.ApolloRouterCompatibilityFlags,
+			apolloCompatibilityFlags:                         opts.ApolloCompatibilityFlags,
+			apolloRouterCompatibilityFlags:                   opts.ApolloRouterCompatibilityFlags,
+			disableExposingVariablesContentOnValidationError: opts.DisableExposingVariablesContentOnValidationError,
 		},
 	}
 	for i := 0; i < opts.ParseKitPoolSize; i++ {

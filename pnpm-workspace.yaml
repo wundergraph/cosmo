@@ -3,6 +3,7 @@ packages:
   - composition
   - composition-go/shim
   - controlplane
+  - controlplane/emails
   - proto
   - shared
   - studio
@@ -10,4 +11,5 @@ packages:
   - cdn-server
   - cdn-server/cdn
   - admission-server
+  - protographic
   - playground

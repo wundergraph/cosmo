@@ -7,6 +7,7 @@ import { BillingRepository } from '../../repositories/BillingRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { BillingService } from '../../services/BillingService.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function upgradePlan(
   opts: RouterOptions,
@@ -22,6 +23,10 @@ export function upgradePlan(
     const billingRepo = new BillingRepository(opts.db);
     const billingService = new BillingService(opts.db, billingRepo);
     const auditLogRepository = new AuditLogRepository(opts.db);
+
+    if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdmin) {
+      throw new UnauthorizedError();
+    }
 
     if (!opts.stripeSecretKey) {
       return {
@@ -49,6 +54,7 @@ export function upgradePlan(
 
     await auditLogRepository.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'subscription.upgraded',
       action: 'upgraded',
       auditableType: 'subscription',

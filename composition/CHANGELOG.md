@@ -4,6 +4,36 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.40.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.39.2...@wundergraph/composition@0.40.0) (2025-06-02)
+
+### Features
+
+* add named type kind to data ([#1921](https://github.com/wundergraph/cosmo/issues/1921)) ([cfda0ae](https://github.com/wundergraph/cosmo/commit/cfda0aed8214a073ebd040a07290304095b9d26d)) (@Aenimus)
+
+## [0.39.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.39.1...@wundergraph/composition@0.39.2) (2025-05-24)
+
+### Bug Fixes
+
+* multiple interface object implementations ([#1892](https://github.com/wundergraph/cosmo/issues/1892)) ([1d0229c](https://github.com/wundergraph/cosmo/commit/1d0229c1b625c7ed275fac73a7a9e7fc32e7ee59)) (@Aenimus)
+
+## [0.39.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.39.0...@wundergraph/composition@0.39.1) (2025-05-02)
+
+### Bug Fixes
+
+* vite vulnerability ([#1823](https://github.com/wundergraph/cosmo/issues/1823)) ([05d5300](https://github.com/wundergraph/cosmo/commit/05d53004612958fe1dab2c292ec89ac4ac686b61)) (@JivusAyrus)
+
+# [0.39.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.38.1...@wundergraph/composition@0.39.0) (2025-04-15)
+
+### Features
+
+* track subgraph names for unions and scalars ([#1788](https://github.com/wundergraph/cosmo/issues/1788)) ([de8ae0c](https://github.com/wundergraph/cosmo/commit/de8ae0cfcbdfc296cbfc54448a540c4613fcb632)) (@thisisnithin)
+
+## [0.38.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.38.0...@wundergraph/composition@0.38.1) (2025-03-28)
+
+### Bug Fixes
+
+* authorization directive cascading ([#1733](https://github.com/wundergraph/cosmo/issues/1733)) ([0199fb5](https://github.com/wundergraph/cosmo/commit/0199fb5f88104a585b74a79638f54f1a3b812436)) (@Aenimus)
+
 # [0.38.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.37.3...@wundergraph/composition@0.38.0) (2025-03-25)
 
 ### Features

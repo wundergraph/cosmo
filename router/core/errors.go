@@ -12,7 +12,7 @@ import (
 	rErrors "github.com/wundergraph/cosmo/router/internal/errors"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/internal/unique"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
@@ -73,7 +73,7 @@ func getErrorType(err error) errorType {
 			return errorTypeContextTimeout
 		}
 	}
-	var edfsErr *pubsub.Error
+	var edfsErr *datasource.Error
 	if errors.As(err, &edfsErr) {
 		return errorTypeEDFS
 	}
@@ -190,6 +190,8 @@ func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, 
 		return
 	}
 
+	w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
+
 	// According to the tests requestContext can be nil (when called from module WriteResponseError)
 	// As such we have coded this condition defensively to be safe
 	requestContext := getRequestContext(r.Context())
@@ -228,7 +230,7 @@ func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, 
 		}
 	} else {
 		// Regular request
-		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		if statusCode != 0 {
 			w.WriteHeader(statusCode)
 		}
@@ -275,11 +277,7 @@ func writeMultipartError(
 	// The multipart spec requires us to use both CRLF (\r and \n) characters together. Since we didn't do this
 	// before, some clients that rely on both CR and LF strictly to parse blocks were broken and not parsing our
 	// multipart chunks correctly. With this fix here (and in a few other places) the clients are now working.
-	if isSubscription {
-		resp = append(resp, '\r', '\n')
-	} else {
-		resp = append(resp, []byte("\r\n--graphql--")...)
-	}
+	resp = append(resp, []byte("\r\n--graphql--")...)
 
 	if _, err := w.Write([]byte(resp)); err != nil {
 		return err
@@ -344,4 +342,11 @@ func (e *ExprWrapError) Error() string {
 		return ""
 	}
 	return e.Err.Error()
+}
+
+func WrapExprError(err error) error {
+	if err == nil {
+		return nil
+	}
+	return &ExprWrapError{Err: err}
 }

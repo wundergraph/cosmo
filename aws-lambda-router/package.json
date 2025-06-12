@@ -1,6 +1,6 @@
 {
   "name": "aws-lambda-router",
-  "version": "0.38.0",
+  "version": "0.38.3",
   "private": true,
   "description": "Placeholder package to simplify versioning and releasing with lerna.",
   "keywords": [

@@ -5,6 +5,7 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { DateRange } from '../../../types/index.js';
 import { ClickHouseClient } from '../../clickhouse/index.js';
+import { flipDateRangeValuesIfNeeded } from '../../util.js';
 import {
   BaseFilters,
   buildAnalyticsViewFilters,
@@ -70,6 +71,7 @@ export class MetricsRepository {
   }: GetMetricsProps) {
     // to minutes
     const multiplier = rangeInHours * 60;
+    flipDateRangeValuesIfNeeded(dateRange);
 
     // get request rate in last [range]h
     const queryRate = (start: number, end: number) => {
@@ -184,6 +186,8 @@ export class MetricsRepository {
     whereSql,
     queryParams,
   }: GetMetricsProps) {
+    flipDateRangeValuesIfNeeded(dateRange);
+
     const queryLatency = (quantile: string, start: number, end: number) => {
       return this.client.queryPromise<{ value: number }>(
         `
@@ -353,6 +357,8 @@ export class MetricsRepository {
     whereSql,
     queryParams,
   }: GetMetricsProps) {
+    flipDateRangeValuesIfNeeded(dateRange);
+
     // get request rate in last [range]h
     const queryPercentage = (start: number, end: number) => {
       return this.client.queryPromise<{ errorPercentage: number }>(
@@ -479,6 +485,8 @@ export class MetricsRepository {
     whereSql,
     queryParams,
   }: GetMetricsProps) {
+    flipDateRangeValuesIfNeeded(dateRange);
+
     // get requests in last [range] hours in series of [step]
     const series = await this.client.queryPromise<{ timestamp: string; requestRate: string; errorRate: string }>(
       `
@@ -549,6 +557,11 @@ export class MetricsRepository {
 
   protected getMetricsProps(props: GetMetricsViewProps): GetMetricsProps {
     const { range, dateRange, filters: selectedFilters, organizationId, graphId } = props;
+    if (dateRange && dateRange.start > dateRange.end) {
+      const tmp = dateRange.start;
+      dateRange.start = dateRange.end;
+      dateRange.end = tmp;
+    }
 
     const parsedDateRange = isoDateRangeToTimestamps(dateRange, range);
     const [start, end] = getDateRange(parsedDateRange);
@@ -625,6 +638,7 @@ export class MetricsRepository {
 
   public async getMetricFilters({ dateRange, organizationId, graphId }: GetMetricsProps) {
     const filters = { ...this.baseFilters };
+    flipDateRangeValuesIfNeeded(dateRange);
 
     const query = `
       WITH
@@ -703,5 +717,76 @@ export class MetricsRepository {
         p99: s.p99 === undefined ? undefined : String(s.p99),
       };
     });
+  }
+
+  public async getOperations(props: GetMetricsViewProps) {
+    const { dateRange, organizationId, graphId, whereSql, queryParams } = this.getMetricsProps(props);
+
+    const query = `
+    WITH
+      toDateTime('${dateRange.start}') AS startDate,
+      toDateTime('${dateRange.end}') AS endDate
+    SELECT
+      OperationHash as operationHash,
+      OperationName as operationName,
+      OperationType as operationType,
+      func_rank(0.95, BucketCounts) as rank,
+      func_rank_bucket_lower_index(rank, BucketCounts) as b,
+      round(func_histogram_v2(
+          rank,
+          b,
+          BucketCounts,
+          anyLast(ExplicitBounds)
+      ), 2) as latency,
+
+      -- Histogram aggregations
+      sumForEachMerge(BucketCounts) as BucketCounts
+    FROM ${this.client.database}.operation_latency_metrics_5_30
+    WHERE Timestamp >= startDate AND Timestamp <= endDate
+      AND OrganizationID = '${organizationId}'
+      AND FederatedGraphID = '${graphId}'
+      ${whereSql ? `AND ${whereSql}` : ''}
+    GROUP BY OperationName, OperationHash, OperationType ORDER BY latency DESC`;
+
+    const res: {
+      operationHash: string;
+      operationName: string;
+      operationType: string;
+      latency: number;
+    }[] = await this.client.queryPromise(query, queryParams);
+
+    if (Array.isArray(res)) {
+      return res;
+    }
+
+    return [];
+  }
+
+  public async getClients(props: GetMetricsViewProps) {
+    const { dateRange, organizationId, graphId } = this.getMetricsProps(props);
+
+    const query = `
+    WITH
+      toDateTime('${dateRange.start}') AS startDate,
+      toDateTime('${dateRange.end}') AS endDate
+    SELECT
+      ClientName as name
+    FROM ${this.client.database}.operation_latency_metrics_5_30
+    PREWHERE Timestamp >= startDate AND Timestamp <= endDate
+      AND OrganizationID = '${organizationId}'
+      AND FederatedGraphID = '${graphId}'
+    GROUP BY ClientName
+    ORDER BY max(Timestamp) DESC
+    LIMIT 100`;
+
+    const res: {
+      name: string;
+    }[] = await this.client.queryPromise(query);
+
+    if (Array.isArray(res)) {
+      return res.filter((r) => r.name !== '');
+    }
+
+    return [];
   }
 }

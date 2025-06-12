@@ -7,9 +7,11 @@ import (
 	"testing"
 
 	"github.com/buger/jsonparser"
-	"github.com/wundergraph/cosmo/router/core"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/wundergraph/cosmo/router/core"
+
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
@@ -21,6 +23,7 @@ func TestPersistedOperationNotFound(t *testing.T) {
 		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 			Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "does-not-exist"}}`),
 		})
+		require.Equal(t, res.Response.Header.Get("Content-Type"), "application/json; charset=utf-8")
 		require.Equal(t, `{"errors":[{"message":"PersistedQueryNotFound","extensions":{"code":"PERSISTED_QUERY_NOT_FOUND"}}]}`, res.Body)
 	})
 }
@@ -36,6 +39,7 @@ func TestPersistedOperation(t *testing.T) {
 			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
 			Header:        header,
 		})
+		require.Equal(t, res.Response.Header.Get("Content-Type"), "application/json; charset=utf-8")
 		require.NoError(t, err)
 		require.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
 	})
@@ -132,7 +136,6 @@ func TestPersistedNormalizationCacheWithMultiOperationDocument(t *testing.T) {
 			require.Equal(t, "HIT", res.Response.Header.Get(core.ExecutionPlanCacheHeader))
 		})
 	})
-
 }
 
 func TestPersistedOperationsCache(t *testing.T) {
@@ -224,6 +227,105 @@ func TestPersistedOperationsCache(t *testing.T) {
 			require.Equal(t, 3, numberOfCDNRequests)
 		})
 	})
+}
+
+func TestPersistedOperationsCacheMixedCallsWithSafeList(t *testing.T) {
+	t.Parallel()
+
+	expectedData := `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
+
+	sendViaBody := func(t *testing.T, xEnv *testenv.Environment, expectedCacheHeaderValue string) {
+		t.Helper()
+		header := make(http.Header)
+		header.Add("graphql-client-name", "my-client")
+		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"Employees"`),
+			Query:         "query Employees {\n  employees {\n    id\n    }\n}",
+			Header:        header,
+		})
+		require.NoError(t, err)
+		require.Equal(t, expectedData, res.Body)
+		require.Equal(t, expectedCacheHeaderValue, res.Response.Header.Get(core.PersistedOperationCacheHeader))
+		require.Equal(t, expectedCacheHeaderValue, res.Response.Header.Get(core.ExecutionPlanCacheHeader))
+	}
+
+	sendViaHash := func(t *testing.T, xEnv *testenv.Environment, expectedCacheHeaderValue string) {
+		t.Helper()
+		header := make(http.Header)
+		header.Add("graphql-client-name", "my-client")
+		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "9015ddfadd802bb378a14e48cea51e9bf9a07c7f8a71d85c56d7b104fea84937"}}`),
+			Header:     header,
+		})
+		require.NoError(t, err)
+		require.Equal(t, expectedData, res.Body)
+		require.Equal(t, expectedCacheHeaderValue, res.Response.Header.Get(core.PersistedOperationCacheHeader))
+		require.Equal(t, expectedCacheHeaderValue, res.Response.Header.Get(core.ExecutionPlanCacheHeader))
+	}
+
+	retrieveNumberOfCDNRequests := func(t *testing.T, cdnURL string) int {
+		requestLogResp, err := http.Get(cdnURL)
+		require.NoError(t, err)
+		defer requestLogResp.Body.Close()
+		var requestLog []string
+		if err := json.NewDecoder(requestLogResp.Body).Decode(&requestLog); err != nil {
+			t.Fatal(err)
+		}
+		return len(requestLog)
+	}
+
+	t.Run("first via body, second via hash", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
+					Safelist: config.SafelistConfiguration{
+						Enabled: true,
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			sendViaBody(t, xEnv, "MISS")
+			sendViaHash(t, xEnv, "HIT")
+			sendViaBody(t, xEnv, "HIT")
+			numberOfCDNRequests := retrieveNumberOfCDNRequests(t, xEnv.CDN.URL)
+			require.Equal(t, 1, numberOfCDNRequests)
+		})
+	})
+
+	t.Run("first via hash, following via body - with fs provider", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithStorageProviders(config.StorageProviders{
+					FileSystem: []config.FileSystemStorageProvider{
+						{
+							ID:   "fs-cdn",
+							Path: "./testenv/testdata/cdn/organization/graph/operations",
+						},
+					},
+				}),
+				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
+					Safelist: config.SafelistConfiguration{
+						Enabled: true,
+					},
+					Storage: config.PersistedOperationsStorageConfig{
+						ProviderID:   "fs-cdn",
+						ObjectPrefix: "my-client",
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			sendViaHash(t, xEnv, "MISS")
+			sendViaBody(t, xEnv, "HIT")
+			sendViaBody(t, xEnv, "HIT")
+			numberOfCDNRequests := retrieveNumberOfCDNRequests(t, xEnv.CDN.URL)
+			require.Equal(t, 0, numberOfCDNRequests)
+		})
+	})
+
 }
 
 func TestPersistedOperationCacheWithVariables(t *testing.T) {

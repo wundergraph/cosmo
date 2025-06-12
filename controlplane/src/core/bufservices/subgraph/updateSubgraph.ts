@@ -17,6 +17,7 @@ import {
   isValidLabels,
 } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function updateSubgraph(
   opts: RouterOptions,
@@ -39,17 +40,8 @@ export function updateSubgraph(
     );
 
     req.namespace = req.namespace || DefaultNamespace;
-
-    if (!authContext.hasWriteAccess) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `The user doesnt have the permissions to perform this operation`,
-        },
-        compositionErrors: [],
-        deploymentErrors: [],
-        compositionWarnings: [],
-      };
+    if (authContext.organizationDeactivated) {
+      throw new UnauthorizedError();
     }
 
     const subgraph = await subgraphRepo.byName(req.name, req.namespace);
@@ -165,15 +157,9 @@ export function updateSubgraph(
     }
 
     // Check if the user is authorized to perform the action
-    await opts.authorizer.authorize({
-      db: opts.db,
-      graph: {
-        targetId: subgraph.targetId,
-        targetType: 'subgraph',
-      },
-      headers: ctx.requestHeader,
-      authContext,
-    });
+    if (!authContext.rbac.canUpdateSubGraph(subgraph)) {
+      throw new UnauthorizedError();
+    }
 
     const { compositionErrors, updatedFederatedGraphs, deploymentErrors, compositionWarnings } =
       await subgraphRepo.update(
@@ -201,6 +187,7 @@ export function updateSubgraph(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: subgraph.isFeatureSubgraph ? 'feature_subgraph.updated' : 'subgraph.updated',
       action: 'updated',
       actorId: authContext.userId,

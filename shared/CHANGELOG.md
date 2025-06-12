@@ -4,6 +4,86 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.37.7](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.37.6...@wundergraph/cosmo-shared@0.37.7) (2025-06-06)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
+## [0.37.6](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.37.5...@wundergraph/cosmo-shared@0.37.6) (2025-06-02)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
+## [0.37.5](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.37.4...@wundergraph/cosmo-shared@0.37.5) (2025-06-02)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
+## [0.37.4](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.37.3...@wundergraph/cosmo-shared@0.37.4) (2025-05-28)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
+## [0.37.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.37.2...@wundergraph/cosmo-shared@0.37.3) (2025-05-26)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
+## [0.37.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.37.1...@wundergraph/cosmo-shared@0.37.2) (2025-05-25)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
+## [0.37.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.37.0...@wundergraph/cosmo-shared@0.37.1) (2025-05-24)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
+# [0.37.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.36.17...@wundergraph/cosmo-shared@0.37.0) (2025-05-19)
+
+### Features
+
+* **router:** grpc go plugin system ([#1866](https://github.com/wundergraph/cosmo/issues/1866)) ([280a61d](https://github.com/wundergraph/cosmo/commit/280a61de4bd1328549a023d1a3a0b702d78453b8)) (@Noroth)
+
+## [0.36.17](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.36.16...@wundergraph/cosmo-shared@0.36.17) (2025-05-16)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
+## [0.36.16](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.36.15...@wundergraph/cosmo-shared@0.36.16) (2025-05-13)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
+## [0.36.15](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.36.14...@wundergraph/cosmo-shared@0.36.15) (2025-05-02)
+
+### Bug Fixes
+
+* vite vulnerability ([#1823](https://github.com/wundergraph/cosmo/issues/1823)) ([05d5300](https://github.com/wundergraph/cosmo/commit/05d53004612958fe1dab2c292ec89ac4ac686b61)) (@JivusAyrus)
+
+## [0.36.14](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.36.13...@wundergraph/cosmo-shared@0.36.14) (2025-04-29)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
+## [0.36.13](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.36.12...@wundergraph/cosmo-shared@0.36.13) (2025-04-15)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
+## [0.36.12](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.36.11...@wundergraph/cosmo-shared@0.36.12) (2025-04-15)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
+## [0.36.11](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.36.10...@wundergraph/cosmo-shared@0.36.11) (2025-04-07)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
+## [0.36.10](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.36.9...@wundergraph/cosmo-shared@0.36.10) (2025-04-04)
+
+### Bug Fixes
+
+* improve url normalization ([#1722](https://github.com/wundergraph/cosmo/issues/1722)) ([f97e50a](https://github.com/wundergraph/cosmo/commit/f97e50ad854e7b2c9a14b54b178d0055bc9653b1)) (@wilsonrivera)
+
+## [0.36.9](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.36.8...@wundergraph/cosmo-shared@0.36.9) (2025-04-01)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
+## [0.36.8](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.36.7...@wundergraph/cosmo-shared@0.36.8) (2025-03-28)
+
+### Bug Fixes
+
+* authorization directive cascading ([#1733](https://github.com/wundergraph/cosmo/issues/1733)) ([0199fb5](https://github.com/wundergraph/cosmo/commit/0199fb5f88104a585b74a79638f54f1a3b812436)) (@Aenimus)
+
 ## [0.36.7](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.36.6...@wundergraph/cosmo-shared@0.36.7) (2025-03-25)
 
 **Note:** Version bump only for package @wundergraph/cosmo-shared

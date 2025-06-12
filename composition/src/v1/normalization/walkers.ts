@@ -16,13 +16,7 @@ import {
   SUBSCRIPTION_FILTER_DEFINITION,
   V2_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME,
 } from '../utils/constants';
-import {
-  mergeAuthorizationDataByAND,
-  newAuthorizationData,
-  newFieldAuthorizationData,
-  setAndGetValue,
-  upsertEntityData,
-} from '../utils/utils';
+import { upsertEntityData } from '../utils/utils';
 import { formatDescription, isNodeInterfaceObject, isObjectLikeNodeEntity } from '../../ast/utils';
 import { extractFieldSetValue, newFieldSetData } from './utils';
 import { EVENT_DIRECTIVE_NAMES } from '../utils/string-constants';
@@ -33,12 +27,7 @@ import {
   isTypeNameRootType,
   newPersistedDirectivesData,
 } from '../../schema-building/utils';
-import {
-  AuthorizationData,
-  ConfigureDescriptionData,
-  InputValueData,
-  ObjectDefinitionData,
-} from '../../schema-building/types';
+import { ConfigureDescriptionData, InputValueData } from '../../schema-building/types';
 import { getMutableEnumValueNode, getTypeNodeNamedTypeName } from '../../schema-building/ast';
 import { GraphNode, RootNode } from '../../resolvability-graph/graph-nodes';
 import { requiresDefinedOnNonEntityFieldWarning } from '../warnings/warnings';
@@ -56,7 +45,7 @@ import {
   SUBSCRIPTION_FILTER,
 } from '../../utils/string-constants';
 import { RootTypeName } from '../../utils/types';
-import { getOrThrowError, getValueOrDefault, kindToTypeString } from '../../utils/utils';
+import { getOrThrowError, getValueOrDefault, kindToNodeType } from '../../utils/utils';
 import { KeyFieldSetData } from './types';
 
 /* Walker to collect schema definition, directive definitions, and entities.
@@ -294,9 +283,9 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
             unexpectedParentKindForChildError(
               nf.originalParentTypeName,
               'Enum or Enum extension',
-              kindToTypeString(parentData.kind),
+              kindToNodeType(parentData.kind),
               name,
-              kindToTypeString(node.kind),
+              kindToNodeType(node.kind),
             ),
           );
           return;
@@ -338,6 +327,9 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
         }
         nf.lastChildNodeKind = node.kind;
         const fieldNamedTypeName = getTypeNodeNamedTypeName(node.type);
+        getValueOrDefault(nf.fieldCoordsByNamedTypeName, fieldNamedTypeName, () => new Set<string>()).add(
+          `${nf.renamedParentTypeName || nf.originalParentTypeName}.${fieldName}`,
+        );
         // The edges of interface nodes are their concrete types, so fields are not added
         if (currentParentNode && !currentParentNode.isAbstract) {
           nf.internalGraph.addEdge(currentParentNode, nf.internalGraph.addOrUpdateNode(fieldNamedTypeName), fieldName);
@@ -355,15 +347,15 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
             unexpectedParentKindForChildError(
               nf.originalParentTypeName,
               '"Object" or "Interface"',
-              kindToTypeString(parentData.kind),
+              kindToNodeType(parentData.kind),
               fieldName,
-              kindToTypeString(node.kind),
+              kindToNodeType(node.kind),
             ),
           );
           return;
         }
-        if (parentData.fieldDataByFieldName.has(fieldName)) {
-          nf.errors.push(duplicateFieldDefinitionError(kindToTypeString(parentData.kind), parentData.name, fieldName));
+        if (parentData.fieldDataByName.has(fieldName)) {
+          nf.errors.push(duplicateFieldDefinitionError(kindToNodeType(parentData.kind), parentData.name, fieldName));
           return;
         }
         const argumentDataByArgumentName = nf.extractArguments(new Map<string, InputValueData>(), node);
@@ -376,7 +368,7 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
           }
         }
         const fieldData = nf.addFieldDataByNode(
-          parentData.fieldDataByFieldName,
+          parentData.fieldDataByName,
           node,
           argumentDataByArgumentName,
           directivesByDirectiveName,
@@ -443,7 +435,6 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
           return;
         }
         nf.lastChildNodeKind = node.kind;
-        const valuePath = `${nf.originalParentTypeName}.${name}`;
         const namedInputValueTypeName = getTypeNodeNamedTypeName(node.type);
         if (!BASE_SCALARS.has(namedInputValueTypeName)) {
           nf.referencedTypeNames.add(namedInputValueTypeName);
@@ -458,18 +449,23 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
             unexpectedParentKindForChildError(
               nf.originalParentTypeName,
               'input object or input object extension',
-              kindToTypeString(parentData.kind),
+              kindToNodeType(parentData.kind),
               name,
-              kindToTypeString(node.kind),
+              kindToNodeType(node.kind),
             ),
           );
           return false;
         }
-        if (parentData.inputValueDataByValueName.has(name)) {
+        if (parentData.inputValueDataByName.has(name)) {
           nf.errors.push(duplicateInputFieldDefinitionError(nf.originalParentTypeName, name));
           return;
         }
-        nf.addInputValueDataByNode(parentData.inputValueDataByValueName, node, valuePath);
+        nf.addInputValueDataByNode({
+          inputValueDataByName: parentData.inputValueDataByName,
+          isArgument: false,
+          node,
+          originalParentTypeName: nf.originalParentTypeName,
+        });
       },
       leave() {
         nf.argumentName = '';
@@ -593,118 +589,6 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
           return false;
         }
         nf.upsertUnionByNode(node, true);
-      },
-    },
-  });
-}
-
-// Walker to handle the consolidation of the @authenticated and @requiresScopes directives
-export function consolidateAuthorizationDirectives(nf: NormalizationFactory, definitions: DocumentNode) {
-  let parentAuthorizationData: AuthorizationData | undefined;
-  let isInterfaceKind = false;
-  visit(definitions, {
-    FieldDefinition: {
-      enter(node) {
-        const fieldName = node.name.value;
-        const typeName = getTypeNodeNamedTypeName(node.type);
-        const inheritsAuthorization = nf.leafTypeNamesWithAuthorizationDirectives.has(typeName);
-        if (
-          (!parentAuthorizationData || !parentAuthorizationData.hasParentLevelAuthorization) &&
-          !inheritsAuthorization
-        ) {
-          return false;
-        }
-        const parentTypeName = nf.renamedParentTypeName || nf.originalParentTypeName;
-        if (!parentAuthorizationData) {
-          parentAuthorizationData = setAndGetValue(
-            nf.authorizationDataByParentTypeName,
-            parentTypeName,
-            newAuthorizationData(parentTypeName),
-          );
-        }
-        const fieldAuthorizationData = getValueOrDefault(
-          parentAuthorizationData.fieldAuthorizationDataByFieldName,
-          fieldName,
-          () => newFieldAuthorizationData(fieldName),
-        );
-        if (!mergeAuthorizationDataByAND(parentAuthorizationData, fieldAuthorizationData)) {
-          nf.invalidOrScopesHostPaths.add(`${nf.originalParentTypeName}.${fieldName}`);
-          return false;
-        }
-        if (!inheritsAuthorization) {
-          return false;
-        }
-        if (isInterfaceKind) {
-          /* Collect the inherited leaf authorization to apply later. This is to avoid duplication of inherited
-             authorization applied to interface and concrete types. */
-          getValueOrDefault(nf.heirFieldAuthorizationDataByTypeName, typeName, () => []).push(fieldAuthorizationData);
-          return false;
-        }
-        const definitionAuthorizationData = nf.authorizationDataByParentTypeName.get(typeName);
-        if (
-          definitionAuthorizationData &&
-          definitionAuthorizationData.hasParentLevelAuthorization &&
-          !mergeAuthorizationDataByAND(definitionAuthorizationData, fieldAuthorizationData)
-        ) {
-          nf.invalidOrScopesHostPaths.add(`${nf.originalParentTypeName}.${fieldName}`);
-        }
-        return false;
-      },
-    },
-    InterfaceTypeDefinition: {
-      enter(node) {
-        nf.originalParentTypeName = node.name.value;
-        parentAuthorizationData = nf.getAuthorizationData(node);
-        isInterfaceKind = true;
-      },
-      leave() {
-        nf.originalParentTypeName = '';
-        parentAuthorizationData = undefined;
-        isInterfaceKind = false;
-      },
-    },
-    InterfaceTypeExtension: {
-      enter(node) {
-        nf.originalParentTypeName = node.name.value;
-        parentAuthorizationData = nf.getAuthorizationData(node);
-        isInterfaceKind = true;
-      },
-      leave() {
-        nf.originalParentTypeName = '';
-        parentAuthorizationData = undefined;
-        isInterfaceKind = false;
-      },
-    },
-    ObjectTypeDefinition: {
-      enter(node) {
-        const parentData = nf.parentDefinitionDataByTypeName.get(node.name.value);
-        if (!parentData) {
-          return false;
-        }
-        nf.originalParentTypeName = parentData.name;
-        nf.renamedParentTypeName = (parentData as ObjectDefinitionData).renamedTypeName;
-        parentAuthorizationData = nf.getAuthorizationData(node);
-      },
-      leave() {
-        nf.originalParentTypeName = '';
-        nf.renamedParentTypeName = '';
-        parentAuthorizationData = undefined;
-      },
-    },
-    ObjectTypeExtension: {
-      enter(node) {
-        const parentData = nf.parentDefinitionDataByTypeName.get(node.name.value);
-        if (!parentData) {
-          return false;
-        }
-        nf.originalParentTypeName = parentData.name;
-        nf.renamedParentTypeName = (parentData as ObjectDefinitionData).renamedTypeName;
-        parentAuthorizationData = nf.getAuthorizationData(node);
-      },
-      leave() {
-        nf.originalParentTypeName = '';
-        nf.renamedParentTypeName = '';
-        parentAuthorizationData = undefined;
       },
     },
   });

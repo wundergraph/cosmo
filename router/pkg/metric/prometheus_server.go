@@ -45,7 +45,7 @@ func NewPrometheusServer(logger *zap.Logger, listenAddr string, path string, reg
 	return svr
 }
 
-func sanitizeName(name string) string {
+func SanitizeName(name string) string {
 	return strings.Map(sanitizeRune, name)
 }
 

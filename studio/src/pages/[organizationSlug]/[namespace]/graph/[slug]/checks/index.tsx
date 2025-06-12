@@ -35,7 +35,10 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { ChecksFilterMenu, parseSelectedSubgraphs } from "@/components/checks/checks-filter-menu";
+import {
+  ChecksFilterMenu,
+  parseSelectedSubgraphs,
+} from "@/components/checks/checks-filter-menu";
 import { SelectedChecksFilters } from "@/components/checks/selected-checks-filters";
 import { useFeatureLimit } from "@/hooks/use-feature-limit";
 import { useSessionStorage } from "@/hooks/use-session-storage";
@@ -57,6 +60,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useContext } from "react";
 import { cn } from "@/lib/utils";
+import { useFeature } from "@/hooks/use-feature";
 
 const ChecksPage: NextPageWithLayout = () => {
   const router = useRouter();
@@ -65,7 +69,7 @@ const ChecksPage: NextPageWithLayout = () => {
     : 1;
 
   const limit = Number.parseInt((router.query.pageSize as string) || "10");
-  const selectedSubgraphs =  parseSelectedSubgraphs(router.query.subgraphs);
+  const selectedSubgraphs = parseSelectedSubgraphs(router.query.subgraphs);
 
   const {
     dateRange: { start, end },
@@ -75,6 +79,7 @@ const ChecksPage: NextPageWithLayout = () => {
   const endDate = range ? createDateRange(range).end : end;
 
   const graphContext = useContext(GraphContext);
+  const proposalsFeature = useFeature("proposals");
 
   const [, setRouteCache] = useSessionStorage("checks.route", router.asPath);
 
@@ -114,7 +119,7 @@ const ChecksPage: NextPageWithLayout = () => {
 
   if (!data?.checks || !graphContext?.graph) return null;
 
-  if (data.totalChecksCount === 0)
+  if (data.checks.length === 0)
     return (
       <EmptyState
         icon={<CommandLineIcon />}
@@ -148,7 +153,6 @@ const ChecksPage: NextPageWithLayout = () => {
 
   return (
     <div className="flex h-full flex-col gap-y-3">
-      <SelectedChecksFilters selectedSubgraphs={selectedSubgraphs} />
       <TableWrapper>
         <Table>
           <TableHeader>
@@ -162,7 +166,7 @@ const ChecksPage: NextPageWithLayout = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.checks.length !== 0 ? (
+            {data.checks.length !== 0 &&
               data.checks.map(
                 ({
                   id,
@@ -178,6 +182,10 @@ const ChecksPage: NextPageWithLayout = () => {
                   clientTrafficCheckSkipped,
                   lintSkipped,
                   graphPruningSkipped,
+                  checkedSubgraphs,
+                  proposalMatch,
+                  compositionSkipped,
+                  breakingChangesSkipped,
                 }) => {
                   const isSuccessful = isCheckSuccessful(
                     isComposable,
@@ -186,6 +194,7 @@ const ChecksPage: NextPageWithLayout = () => {
                     hasLintErrors,
                     hasGraphPruningErrors,
                     clientTrafficCheckSkipped,
+                    proposalMatch === "error",
                   );
 
                   const path = `${router.asPath.split("?")[0]}/${id}`;
@@ -225,16 +234,43 @@ const ChecksPage: NextPageWithLayout = () => {
                         </div>
                       </TableCell>
                       {graphContext.graph?.supportsFederation && (
-                        <TableCell>{subgraphName}</TableCell>
+                        <TableCell>
+                          {subgraphName ||
+                            (checkedSubgraphs.length > 1
+                              ? "Multiple Subgraphs"
+                              : checkedSubgraphs.length > 0
+                              ? checkedSubgraphs[0].subgraphName
+                              : "Subgraph")}
+                        </TableCell>
                       )}
                       <TableCell>
                         <div className="flex flex-wrap items-start gap-2">
-                          <Badge variant="outline" className="gap-2 py-1.5">
-                            {getCheckIcon(isComposable)} <span>Composes</span>
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "gap-2 py-1.5",
+                              compositionSkipped && "text-muted-foreground",
+                            )}
+                          >
+                            {compositionSkipped ? (
+                              <NoSymbolIcon className="h-4 w-4" />
+                            ) : (
+                              getCheckIcon(isComposable)
+                            )}
+                            <span>Composes</span>
                           </Badge>
-
-                          <Badge variant="outline" className="gap-2 py-1.5">
-                            {getCheckIcon(!isBreaking)}
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "gap-2 py-1.5",
+                              breakingChangesSkipped && "text-muted-foreground",
+                            )}
+                          >
+                            {breakingChangesSkipped ? (
+                              <NoSymbolIcon className="h-4 w-4" />
+                            ) : (
+                              getCheckIcon(!isBreaking)
+                            )}
                             <span>Breaking changes</span>
                           </Badge>
                           <Badge
@@ -282,6 +318,24 @@ const ChecksPage: NextPageWithLayout = () => {
                               Pruning Errors
                             </span>
                           </Badge>
+                          {proposalsFeature?.enabled && (
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "gap-2 py-1.5",
+                                !proposalMatch && "text-muted-foreground",
+                              )}
+                            >
+                              {!proposalMatch ? (
+                                <NoSymbolIcon className="h-4 w-4" />
+                              ) : (
+                                getCheckIcon(proposalMatch !== "error")
+                              )}
+                              <span className="flex-1 truncate">
+                                Proposal Match
+                              </span>
+                            </Badge>
+                          )}
                         </div>
                       </TableCell>
 
@@ -330,14 +384,7 @@ const ChecksPage: NextPageWithLayout = () => {
                     </TableRow>
                   );
                 },
-              )
-            ) : (
-              <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center">
-                  No results.
-                </TableCell>
-              </TableRow>
-            )}
+              )}
           </TableBody>
         </Table>
       </TableWrapper>

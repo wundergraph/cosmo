@@ -2,15 +2,17 @@ package core
 
 import (
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/expr"
+	"net/http"
+	"strconv"
+	"time"
+
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"net/http"
-	"strconv"
-	"time"
 )
 
 // Context field names used to expose information about the operation being executed.
@@ -29,6 +31,7 @@ const (
 	ContextFieldOperationSha256            = "operation_sha256"
 	ContextFieldResponseErrorMessage       = "response_error_message"
 	ContextFieldRequestError               = "request_error"
+	ContextFieldRouterConfigVersion        = "router_config_version"
 )
 
 // Helper functions to create zap fields for custom attributes.
@@ -94,28 +97,36 @@ func RouterAccessLogsFieldHandler(
 	passedErr any,
 	request *http.Request,
 	responseHeader *http.Header,
+	_ *expr.Context,
 ) []zapcore.Field {
 	resFields := make([]zapcore.Field, 0, len(attributes))
 
 	reqContext, resFields := processRequestIDField(request, resFields)
 	resFields = processCustomAttributes(attributes, responseHeader, resFields, request, reqContext, passedErr)
-	resFields = processExpressionAttributes(logger, exprAttributes, reqContext, resFields)
+
+	if reqContext != nil {
+		copyContext := reqContext.expressionContext.Clone()
+		copyContext.Request.Error = WrapExprError(reqContext.expressionContext.Request.Error)
+		resFields = processExpressionAttributes(logger, exprAttributes, resFields, copyContext)
+	}
 
 	return resFields
 }
 
 func SubgraphAccessLogsFieldHandler(
-	_ *zap.Logger,
+	logger *zap.Logger,
 	attributes []config.CustomAttribute,
-	_ []requestlogger.ExpressionAttribute,
+	exprAttributes []requestlogger.ExpressionAttribute,
 	passedErr any,
 	request *http.Request,
 	responseHeader *http.Header,
+	overrideExprCtx *expr.Context,
 ) []zapcore.Field {
 	resFields := make([]zapcore.Field, 0, len(attributes))
 
 	reqContext, resFields := processRequestIDField(request, resFields)
 	resFields = processCustomAttributes(attributes, responseHeader, resFields, request, reqContext, passedErr)
+	resFields = processExpressionAttributes(logger, exprAttributes, resFields, overrideExprCtx)
 
 	return resFields
 }
@@ -128,18 +139,22 @@ func processRequestIDField(request *http.Request, resFields []zapcore.Field) (*r
 
 	reqContext = getRequestContext(request.Context())
 	resFields = append(resFields, logging.WithRequestID(middleware.GetReqID(request.Context())))
+
+	if batchedOperationId, ok := request.Context().Value(BatchedOperationId{}).(string); ok {
+		resFields = append(resFields, logging.WithBatchedRequestOperationID(batchedOperationId))
+	}
+
 	return reqContext, resFields
 }
 
-func processExpressionAttributes(logger *zap.Logger, exprAttributes []requestlogger.ExpressionAttribute, reqContext *requestContext, resFields []zapcore.Field) []zapcore.Field {
-	// If the request context was processed as nil (e.g. :- request was nil in the caller)
-	// do not proceed to process exprAttributes
-	if reqContext == nil {
-		return resFields
-	}
-
+func processExpressionAttributes(
+	logger *zap.Logger,
+	exprAttributes []requestlogger.ExpressionAttribute,
+	resFields []zapcore.Field,
+	overrideExprContext *expr.Context,
+) []zapcore.Field {
 	for _, exprField := range exprAttributes {
-		result, err := reqContext.ResolveAnyExpressionWithWrappedError(exprField.Expr)
+		result, err := expr.ResolveAnyExpression(exprField.Expr, *overrideExprContext)
 		if err != nil {
 			logger.Error("unable to process expression for access logs", zap.String("fieldKey", exprField.Key), zap.Error(err))
 			continue
@@ -212,25 +227,52 @@ func getCustomDynamicAttributeValue(
 	case ContextFieldRequestError:
 		return err != nil || reqContext.error != nil
 	case ContextFieldOperationName:
+		if reqContext.operation == nil {
+			return ""
+		}
 		return reqContext.operation.Name()
 	case ContextFieldOperationType:
+		if reqContext.operation == nil {
+			return ""
+		}
 		return reqContext.operation.Type()
 	case ContextFieldOperationPlanningTime:
+		if reqContext.operation == nil {
+			return ""
+		}
 		return reqContext.operation.planningTime
 	case ContextFieldOperationNormalizationTime:
+		if reqContext.operation == nil {
+			return ""
+		}
 		return reqContext.operation.normalizationTime
 	case ContextFieldOperationParsingTime:
+		if reqContext.operation == nil {
+			return ""
+		}
 		return reqContext.operation.parsingTime
 	case ContextFieldOperationValidationTime:
+		if reqContext.operation == nil {
+			return ""
+		}
 		return reqContext.operation.validationTime
 	case ContextFieldOperationSha256:
+		if reqContext.operation == nil {
+			return ""
+		}
 		return reqContext.operation.sha256Hash
 	case ContextFieldOperationHash:
+		if reqContext.operation == nil {
+			return ""
+		}
 		if reqContext.operation.hash != 0 {
-			return strconv.FormatUint(reqContext.operation.hash, 10)
+			return reqContext.operation.HashString()
 		}
 		return reqContext.operation.Hash()
 	case ContextFieldPersistedOperationSha256:
+		if reqContext.operation == nil {
+			return ""
+		}
 		return reqContext.operation.persistedID
 	case ContextFieldResponseErrorMessage:
 		if err != nil {
