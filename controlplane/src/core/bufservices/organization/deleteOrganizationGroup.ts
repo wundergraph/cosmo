@@ -100,7 +100,7 @@ export function deleteOrganizationGroup(
           return {
             response: {
               code: EnumStatusCode.ERR,
-              details: 'No group to move existing members to was provided',
+              details: 'No group to move existing members and mappers to was provided',
             },
           };
         }
