@@ -93,7 +93,7 @@ func (p *OperationPlanner) preparePlan(ctx *operationContext) (*planWithMetaData
 }
 
 type PlanOptions struct {
-	ClientInfo           *ClientInfo
+	ClientInfo           ClientInfo
 	TraceOptions         resolve.TraceOptions
 	ExecutionOptions     resolve.ExecutionOptions
 	TrackSchemaUsageInfo bool

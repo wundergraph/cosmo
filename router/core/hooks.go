@@ -81,6 +81,20 @@ type OperationLifecycleHook interface {
 	OperationExecuteLifecycleHook
 }
 
+// Operation Request Lifecycle Hooks
+type OperationRequestLifecycleHook interface {
+	OperationRequestHook
+	OperationResponseHook
+}
+
+type OperationRequestHook interface {
+	OnOperationRequest(reqContext RequestContext, params *OperationRequestParams) error
+}
+
+type OperationResponseHook interface {
+	OnOperationResponse(reqContext RequestContext, params *OperationResponseParams, exitError *ExitError) error
+}
+
 type OperationParseLifecycleHook interface {
 	OperationPreParseHook
 	OperationPostParseHook
@@ -126,11 +140,11 @@ type OperationPlanLifecycleHook interface {
 }
 
 type OperationPrePlanHook interface {
-	OnOperationPrePlan(ctx context.Context)
+	OnOperationPrePlan(ctx context.Context) error
 }
 
 type OperationPostPlanHook interface {
-	OnOperationPostPlan(ctx context.Context)
+	OnOperationPostPlan(ctx context.Context) error
 }
 
 type OperationExecuteLifecycleHook interface {
@@ -159,6 +173,9 @@ type hookRegistry struct {
 
 	subgraphRequestHooks  *utils.OrderedSet[SubgraphRequestHook]
 	subgraphResponseHooks *utils.OrderedSet[SubgraphResponseHook]
+
+	operationRequestHooks  *utils.OrderedSet[OperationRequestHook]
+	operationResponseHooks *utils.OrderedSet[OperationResponseHook]
 
 	operationPreParseHooks  *utils.OrderedSet[OperationPreParseHook]
 	operationPostParseHooks *utils.OrderedSet[OperationPostParseHook]
@@ -190,6 +207,9 @@ func newHookRegistry() *hookRegistry {
 
 		subgraphRequestHooks:        utils.NewOrderedSet[SubgraphRequestHook](),
 		subgraphResponseHooks:       utils.NewOrderedSet[SubgraphResponseHook](),
+
+		operationRequestHooks:    utils.NewOrderedSet[OperationRequestHook](),
+		operationResponseHooks:   utils.NewOrderedSet[OperationResponseHook](),
 
 		operationPreParseHooks:      utils.NewOrderedSet[OperationPreParseHook](),
 		operationPostParseHooks:     utils.NewOrderedSet[OperationPostParseHook](),
@@ -241,6 +261,8 @@ func (hr *hookRegistry) AddSubgraphLifecycle(inst any) {
 
 // AddOperationLifecycle wires up all operation lifecycle hooks.
 func (hr *hookRegistry) AddOperationLifecycle(inst any) {
+	registerHook(inst, hr.operationRequestHooks)
+	registerHook(inst, hr.operationResponseHooks)
 	registerHook(inst, hr.operationPreParseHooks)
 	registerHook(inst, hr.operationPostParseHooks)
 	registerHook(inst, hr.operationPreNormalizeHooks)

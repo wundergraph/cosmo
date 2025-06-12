@@ -42,7 +42,15 @@ type Subgraph struct {
 	UrlString string
 }
 
-type ClientInfo struct {
+type ClientInfo interface {
+	GetName() string
+	GetVersion() string
+	GetWGRequestToken() string
+	SetName(name string)
+	SetVersion(version string)
+}
+
+type DefaultClientInfo struct {
 	// Name contains the client name, derived from the request headers
 	Name string
 	// Version contains the client version, derived from the request headers
@@ -51,10 +59,30 @@ type ClientInfo struct {
 	WGRequestToken string
 }
 
-func NewClientInfoFromRequest(r *http.Request, clientHeader config.ClientHeader) *ClientInfo {
+func (c *DefaultClientInfo) GetName() string {
+	return c.Name
+}
+
+func (c *DefaultClientInfo) GetVersion() string {
+	return c.Version
+}
+
+func (c *DefaultClientInfo) GetWGRequestToken() string {
+	return c.WGRequestToken
+}
+
+func (c *DefaultClientInfo) SetName(name string) {
+	c.Name = name
+}
+
+func (c *DefaultClientInfo) SetVersion(version string) {
+	c.Version = version
+}
+
+func NewClientInfoFromRequest(r *http.Request, clientHeader config.ClientHeader) ClientInfo {
 	requestToken := r.Header.Get("X-WG-Token")
 	clientName, clientVersion := ctrace.GetClientDetails(r, clientHeader)
-	return &ClientInfo{
+	return &DefaultClientInfo{
 		Name:           clientName,
 		Version:        clientVersion,
 		WGRequestToken: requestToken,
@@ -498,7 +526,7 @@ type operationContext struct {
 	content    string
 	variables  *astjson.Value
 	files      []*httpclient.FileUpload
-	clientInfo *ClientInfo
+	clientInfo ClientInfo
 	// preparedPlan is the prepared plan of the operation
 	preparedPlan     *planWithMetaData
 	traceOptions     resolve.TraceOptions
@@ -561,7 +589,7 @@ func (o *operationContext) Protocol() OperationProtocol {
 }
 
 func (o *operationContext) ClientInfo() ClientInfo {
-	return *o.clientInfo
+	return o.clientInfo
 }
 
 // isMutationRequest returns true if the current request is a mutation request
