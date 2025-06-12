@@ -25,12 +25,14 @@ import (
 
 var (
 	overrideEnvFlag = flag.String("override-env", os.Getenv("OVERRIDE_ENV"), "Path to .env file to override environment variables")
-	configPathFlag  = flag.String("config", os.Getenv("CONFIG_PATH"), "Path to the router config file e.g. config.yaml")
 	routerVersion   = flag.Bool("version", false, "Prints the version and dependency information")
 	pprofListenAddr = flag.String("pprof-addr", os.Getenv("PPROF_ADDR"), "Address to listen for pprof requests. e.g. :6060 for localhost:6060")
 	memProfilePath  = flag.String("memprofile", "", "Path to write memory profile. Memory is a snapshot taken at the time the program exits")
 	cpuProfilePath  = flag.String("cpuprofile", "", "Path to write cpu profile. CPU is measured from when the program starts until the program exits")
 	help            = flag.Bool("help", false, "Prints the help message")
+
+	// Register the custom flag types
+	configPathFlag = newMultipleString("config", os.Getenv("CONFIG_PATH"), "Path to the router config file e.g. config.yaml, in case the path is a comma separated file list e.g. \"config.yaml,override.yaml\", the configs will be merged")
 )
 
 func Main() {
@@ -62,18 +64,22 @@ func Main() {
 		4. Default config file
 	*/
 
-	configPath := *configPathFlag
-
 	// If not set by flag or normal environment variable, check again for dotenv override loaded envar
-	if configPath == "" {
-		configPath = os.Getenv("CONFIG_PATH")
+	if len(*configPathFlag) == 0 {
+		configPathEnv := os.Getenv("CONFIG_PATH")
+		err := configPathFlag.Set(configPathEnv)
+		if err != nil {
+			// This should be unreachable unless someone returns an non nil err
+			log.Fatalf("Could not set config path from environment variable: %s", err)
+		}
 	}
 
-	if configPath == "" {
-		configPath = config.DefaultConfigPath
+	// If it is still not set, default to config paths
+	if len(*configPathFlag) == 0 {
+		*configPathFlag = multipleString{config.DefaultConfigPath}
 	}
 
-	result, err := config.LoadConfig(configPath)
+	result, err := config.LoadConfig(*configPathFlag)
 	if err != nil {
 		log.Fatalf("Could not load config: %s", err)
 	}
@@ -100,22 +106,16 @@ func Main() {
 	rs, err := core.NewRouterSupervisor(&core.RouterSupervisorOpts{
 		BaseLogger: baseLogger,
 		ConfigFactory: func() (*config.Config, error) {
-			result, err := config.LoadConfig(configPath)
+			result, err := config.LoadConfig(*configPathFlag)
 			if err != nil {
 				return nil, fmt.Errorf("could not load config: %w", err)
 			}
 
 			if !result.DefaultLoaded {
-				if configPath == config.DefaultConfigPath {
-					baseLogger.Info("Found default config file. Values in the config file have higher priority than environment variables",
-						zap.String("config_file", config.DefaultConfigPath),
-					)
-				} else {
-					baseLogger.Info(
-						"Config file path provided. Values in the config file have higher priority than environment variables",
-						zap.String("config_file", configPath),
-					)
-				}
+				baseLogger.Info(
+					"Config file provided. Values in the config file have higher priority than environment variables",
+					zap.Strings("config_file", *configPathFlag),
+				)
 			}
 
 			logLevelAtomic.SetLevel(result.Config.LogLevel)
@@ -186,7 +186,7 @@ func Main() {
 		watchFunc, err := watcher.New(watcher.Options{
 			Interval: result.Config.WatchConfig.Interval,
 			Logger:   ll,
-			Path:     configPath,
+			Paths:    *configPathFlag,
 			Callback: func() {
 				ll.Info("Configuration changed, triggering reload")
 
@@ -213,7 +213,7 @@ func Main() {
 		}()
 
 		ll.Info("Watching router config file",
-			zap.String("config_file", configPath),
+			zap.Strings("config_file", *configPathFlag),
 			zap.Duration("watch_interval", result.Config.WatchConfig.Interval),
 		)
 	} else {

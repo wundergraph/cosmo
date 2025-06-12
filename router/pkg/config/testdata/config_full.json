@@ -798,7 +798,7 @@
       "Enabled": false
     },
     "ReplaceUndefinedOpFieldErrors": {
-      "Enabled": false
+      "Enabled": true
     },
     "ReplaceInvalidVarErrors": {
       "Enabled": false
@@ -808,6 +808,9 @@
     },
     "SubscriptionMultipartPrintBoundary": {
       "Enabled": false
+    },
+    "UseGraphQLValidationFailedStatus": {
+      "Enabled": true
     }
   },
   "ApolloRouterCompatibilityFlags": {
