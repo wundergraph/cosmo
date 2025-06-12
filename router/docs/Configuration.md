@@ -28,6 +28,15 @@ This document outlines the conventions used in Cosmo's configuration schema.
     - It is usually best to try and make boolean properties default to `false`, this simplifies handling of the zero value, and generally means the least intrusive changes to the codebase
 - Take care that when you define a default value on a value in a slice or map, the `envDefault` will only be populated if the index/key comes from an environment variable, not from YAML configuration
 
+### Configuration Merge
+
+The router supports merging multiple configuration files during startup. When multiple files are provided, their contents are merged based on their keys:
+
+- **Keyed objects** (e.g., maps) are merged by key, allowing overrides and partial updates.
+- **Lists** are **not merged**; that is, the entire list is replaced if overridden instead of having elements from both lists merged.
+
+It's recommended to model lists as **maps of structs** (e.g., `{ "serviceA": {...}, "serviceB": {...} }`) when possible. This allows fine-grained overrides and avoids unintentionally replacing the full list.
+
 ## Documentation
 
 - Every property includes a `description` field explaining its purpose and usage

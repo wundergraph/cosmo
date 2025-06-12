@@ -1151,7 +1151,7 @@ func (r *Router) Start(ctx context.Context) error {
 
 			w, err := watcher.New(watcher.Options{
 				Logger:   ll,
-				Path:     r.executionConfig.Path,
+				Paths:    []string{r.executionConfig.Path},
 				Interval: r.executionConfig.WatchInterval,
 				Callback: func() {
 					if r.shutdown.Load() {
