@@ -161,7 +161,7 @@ describe('Organization Group tests', (ctx) => {
     });
 
     expect(deleteGroupResponse.response?.code).toBe(EnumStatusCode.ERR);
-    expect(deleteGroupResponse.response?.details).toBe("No group to move existing members to was provided");
+    expect(deleteGroupResponse.response?.details).toBe("No group to move existing members and mappers to was provided");
 
     await server.close();
   });
