@@ -576,6 +576,52 @@ func TestWatch(t *testing.T) {
 			spy.AssertCalled(t, 2)
 		}, assertTimeout, assertPollInterval)
 	})
+
+	t.Run("modify multiple existing files at once", func(t *testing.T) {
+		t.Parallel()
+
+		customWatchInterval := 100 * time.Millisecond
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		dir := t.TempDir()
+		tempFile1 := filepath.Join(dir, "config_1.json")
+		tempFile2 := filepath.Join(dir, "config_2.json")
+		tempFile3 := filepath.Join(dir, "config_3.json")
+
+		require.NoError(t, os.WriteFile(tempFile1, []byte("a1"), 0o600))
+		require.NoError(t, os.WriteFile(tempFile2, []byte("a2"), 0o600))
+		require.NoError(t, os.WriteFile(tempFile3, []byte("a3"), 0o600))
+
+		spy := test.NewCallSpy()
+
+		watchFunc, err := watcher.New(watcher.Options{
+			Interval: customWatchInterval,
+			Logger:   zap.NewNop(),
+			Paths:    []string{tempFile1, tempFile2, tempFile3},
+			Callback: spy.Call,
+		})
+		require.NoError(t, err)
+
+		eg, ctx := errgroup.WithContext(ctx)
+		eg.Go(func() error {
+			return watchFunc(ctx)
+		})
+
+		time.Sleep(2 * customWatchInterval)
+
+		require.NoError(t, os.WriteFile(tempFile1, []byte("b1"), 0o600))
+		require.NoError(t, os.WriteFile(tempFile3, []byte("b2"), 0o600))
+
+		time.Sleep(2 * customWatchInterval)
+
+		// Since we track if a modification happened, not how many modifications happened
+		// for N number of modified files there should only be one callback call
+		require.EventuallyWithT(t, func(t *assert.CollectT) {
+			spy.AssertCalled(t, 1)
+		}, assertTimeout, assertPollInterval)
+	})
 }
 
 func TestCancel(t *testing.T) {

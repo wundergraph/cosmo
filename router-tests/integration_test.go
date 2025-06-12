@@ -128,7 +128,6 @@ asdasdasdasdas: "NOT WORKING CONFIG!!!"
 	})
 
 	t.Run("Successfully reloads multiple configuration files with SIGHUP", func(t *testing.T) {
-
 		file1 := "demo1.config.yaml"
 		file2 := "demo2.config.yaml"
 		file3 := "demo2.config.yaml"

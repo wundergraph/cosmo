@@ -1029,7 +1029,7 @@ func LoadConfig(configFilePaths []string) (*LoadResult, error) {
 
 		if err != nil {
 			if configFilePath == DefaultConfigPath {
-				// We want to keep this simple for not allow the default config since we don't have a yaml to merge
+				// We want to keep this simple and not allow the default config since we don't have a yaml to merge
 				// for the default config
 				if usesMultipleConfigs {
 					errs = errors.Join(errs, errors.New("cannot use default config with multiple configurations"))

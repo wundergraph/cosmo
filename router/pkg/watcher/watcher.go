@@ -54,6 +54,7 @@ func New(options Options) (func(ctx context.Context) error, error) {
 		for {
 			select {
 			case <-ticker.C:
+				shouldRunCallback := false
 				for _, path := range options.Paths {
 					stat, err := os.Stat(path)
 					if err != nil {
@@ -73,8 +74,14 @@ func New(options Options) (func(ctx context.Context) error, error) {
 
 					if stat.ModTime().After(prevModTimes[path]) {
 						prevModTimes[path] = stat.ModTime()
-						options.Callback()
+						shouldRunCallback = true
 					}
+				}
+
+				// In case multiple paths were modified in one cycle
+				// we still only reload it once
+				if shouldRunCallback {
+					options.Callback()
 				}
 			case <-ctx.Done():
 				return ctx.Err()
