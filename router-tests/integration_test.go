@@ -54,11 +54,22 @@ func TestSimpleQuery(t *testing.T) {
 func TestConfigReload(t *testing.T) {
 	t.Parallel()
 
+	createConfigurationFile := func(t *testing.T, input string, fileName string, directoryPath string) {
+		f, err := os.Create(filepath.Join(directoryPath, fileName))
+		require.NoError(t, err)
+
+		_, err = f.WriteString(input)
+		require.NoError(t, err)
+
+		err = f.Close()
+		require.NoError(t, err)
+	}
+
 	t.Run("Successfully reloads to a valid new configuration file with SIGHUP", func(t *testing.T) {
 		// Can be very slow, compiles the router binary if needed
 		err := testenv.RunRouterBinary(t, &testenv.Config{
 			DemoMode: true,
-		}, func(t *testing.T, xEnv *testenv.Environment) {
+		}, testenv.RunRouterBinConfigOptions{}, func(t *testing.T, xEnv *testenv.Environment) {
 			t.Logf("running router binary, cwd: %s", xEnv.GetRouterProcessCwd())
 
 			ctx := context.Background()
@@ -90,7 +101,7 @@ readiness_check_path: "/after"
 		// Can be very slow, compiles the router binary if needed
 		err := testenv.RunRouterBinary(t, &testenv.Config{
 			DemoMode: true,
-		}, func(t *testing.T, xEnv *testenv.Environment) {
+		}, testenv.RunRouterBinConfigOptions{}, func(t *testing.T, xEnv *testenv.Environment) {
 			t.Logf("running router binary, cwd: %s", xEnv.GetRouterProcessCwd())
 
 			ctx := context.Background()
@@ -116,6 +127,85 @@ asdasdasdasdas: "NOT WORKING CONFIG!!!"
 		require.NoError(t, err)
 	})
 
+	t.Run("Successfully reloads multiple configuration files with SIGHUP", func(t *testing.T) {
+		file1 := "demo1.config.yaml"
+		file2 := "demo2.config.yaml"
+		file3 := "demo2.config.yaml"
+		files := []string{file1, file2, file3}
+
+		opts := testenv.RunRouterBinConfigOptions{
+			ConfigOverridePath:       strings.Join(files, ","),
+			AssertOnRouterBinaryLogs: true,
+			OverrideDirectory:        t.TempDir(),
+		}
+
+		for _, file := range files {
+			createConfigurationFile(t, `version: "1"`, file, opts.OverrideDirectory)
+		}
+
+		err := testenv.RunRouterBinary(t, &testenv.Config{
+			DemoMode: true,
+		}, opts, func(t *testing.T, xEnv *testenv.Environment) {
+			t.Logf("running router binary, cwd: %s", xEnv.GetRouterProcessCwd())
+
+			ctx := context.Background()
+
+			// Force a restart on the router using sighup
+			err := xEnv.SignalRouterProcess(syscall.SIGHUP)
+			require.NoError(t, err)
+
+			require.True(t, xEnv.IsLogReceivedFromOutput(ctx, `"msg":"Reloading Router"`, 10*time.Second))
+		})
+
+		require.NoError(t, err)
+	})
+
+	t.Run("Successfully reload multiple configuration files with watch configuration", func(t *testing.T) {
+		file1 := "demo1.config.yaml"
+		file2 := "demo2.config.yaml"
+		file3 := "demo2.config.yaml"
+		files := []string{file1, file2, file3}
+
+		opts := testenv.RunRouterBinConfigOptions{
+			ConfigOverridePath:       strings.Join(files, ","),
+			AssertOnRouterBinaryLogs: true,
+			OverrideDirectory:        t.TempDir(),
+		}
+
+		for _, file := range files {
+			input := `version: "1"`
+
+			// Have the second file have the watch config
+			if file == file2 {
+				input = `version: "1"
+watch_config:
+  enabled: true
+  interval: "5s"
+`
+			}
+			createConfigurationFile(t, input, file, opts.OverrideDirectory)
+		}
+
+		err := testenv.RunRouterBinary(t, &testenv.Config{
+			DemoMode: true,
+		}, opts, func(t *testing.T, xEnv *testenv.Environment) {
+			t.Logf("running router binary, cwd: %s", xEnv.GetRouterProcessCwd())
+
+			ctx := context.Background()
+
+			// Create will update the same file if it exists
+			createConfigurationFile(t, `version: "1"
+watch_config:
+  enabled: true
+  interval: "10s"
+			`, file2, opts.OverrideDirectory)
+
+			require.True(t, xEnv.IsLogReceivedFromOutput(ctx, `"msg":"Reloading Router"`, 10*time.Second))
+		})
+
+		require.NoError(t, err)
+	})
+
 }
 
 func TestNoSubgraphConfigWithoutDemoMode(t *testing.T) {
@@ -124,7 +214,7 @@ func TestNoSubgraphConfigWithoutDemoMode(t *testing.T) {
 	err := testenv.RunRouterBinary(t, &testenv.Config{
 		DemoMode:      false,
 		NoRetryClient: true,
-	}, func(t *testing.T, xEnv *testenv.Environment) {
+	}, testenv.RunRouterBinConfigOptions{}, func(t *testing.T, xEnv *testenv.Environment) {
 		require.Fail(t, "Router should not start without execution config")
 	})
 	require.Error(t, err)
@@ -136,7 +226,7 @@ func TestNoSubgraphConfigWithDemoMode(t *testing.T) {
 	err := testenv.RunRouterBinary(t, &testenv.Config{
 		DemoMode:      true,
 		NoRetryClient: true,
-	}, func(t *testing.T, xEnv *testenv.Environment) {
+	}, testenv.RunRouterBinConfigOptions{}, func(t *testing.T, xEnv *testenv.Environment) {
 		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 			Query: `query { hello }`,
 		})
