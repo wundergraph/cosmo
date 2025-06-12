@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	customvaluerenderer "github.com/wundergraph/cosmo/router-tests/modules/custom-value-renderer"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
@@ -48,6 +49,16 @@ func TestCustomValueRenderer(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, 200, res.Response.StatusCode)
 			assert.Equal(t, `{"data":{"employee":{"id":123,"details":{"forename":"xxx"}}}}`, res.Body)
+
+			res, err = xEnv.MakeGraphQLRequestWithHeaders(testenv.GraphQLRequest{
+				Query:         `query MyQuery { employee(id: 1) { id currentMood } }`,
+				OperationName: json.RawMessage(`"MyQuery"`),
+			}, map[string]string{
+				"X-Custom-Value-Renderer": "true",
+			})
+			require.NoError(t, err)
+			assert.Equal(t, 200, res.Response.StatusCode)
+			assert.Equal(t, `{"data":{"employee":{"id":123,"currentMood":"Mood-HAPPY"}}}`, res.Body)
 		})
 	})
 }

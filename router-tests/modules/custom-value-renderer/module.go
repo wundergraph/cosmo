@@ -1,6 +1,7 @@
 package custom_value_renderer
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 
@@ -32,6 +33,12 @@ func (c *CustomTestValueRenderer) RenderFieldValue(ctx *resolve.Context, value r
 	case "Int", "Float":
 		_, err = out.Write([]byte(`123`))
 	}
+
+	if value.IsEnum {
+		data := value.ParsedData.GetStringBytes()
+		_, err = out.Write([]byte(fmt.Sprintf(`"Mood-%s"`, data)))
+	}
+
 	return err
 }
 
