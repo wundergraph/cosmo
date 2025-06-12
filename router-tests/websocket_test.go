@@ -1251,7 +1251,7 @@ func TestWebSockets(t *testing.T) {
 			err = json.Unmarshal(msg.Payload, &errs)
 			require.NoError(t, err)
 			require.Len(t, errs, 1)
-			require.Equal(t, errs[0].Message, `field: does_not_exist not defined on type: Subscription`)
+			require.Equal(t, `Cannot query field "does_not_exist" on type "Subscription".`, errs[0].Message)
 		})
 	})
 	t.Run("subscription with library graphql-ws", func(t *testing.T) {
@@ -1521,7 +1521,7 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, "error", res.Type)
 			require.Equal(t, "1", res.ID)
-			require.JSONEq(t, `[{"message":"field: productCount not defined on type: Employee"}]`, string(res.Payload))
+			require.JSONEq(t, `[{"message":"Cannot query field \"productCount\" on type \"Employee\"."}]`, string(res.Payload))
 			xEnv.WaitForSubscriptionCount(0, time.Second*5)
 		})
 	})
