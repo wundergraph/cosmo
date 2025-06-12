@@ -30,10 +30,10 @@ func NewOperationsManager(schemaDoc *ast.Document, logger *zap.Logger, excludeMu
 }
 
 // LoadOperationsFromDirectory loads operations from a specified directory
-func (om *OperationsManager) LoadOperationsFromDirectory(operationsDir string) error {
+func (om *OperationsManager) LoadOperationsFromDirectory(ReloadOperationsChan chan bool, operationsDir string) error {
 	// Load operations
 	loader := schemaloader.NewOperationLoader(om.logger, om.schemaDoc)
-	operations, err := loader.LoadOperationsFromDirectory(operationsDir)
+	operations, err := loader.LoadOperationsFromDirectory(ReloadOperationsChan, operationsDir)
 	if err != nil {
 		return fmt.Errorf("failed to load operations: %w", err)
 	}
