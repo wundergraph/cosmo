@@ -126,10 +126,6 @@ func (p *subscriptionsTransportWSProtocol) Close(code ws.StatusCode, reason stri
 		return err
 	}
 
-	if err := p.conn.Close(); err != nil {
-		return err
-	}
-
 	return nil
 }
 
