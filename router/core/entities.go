@@ -106,6 +106,47 @@ func (c *routerResponseController) SetBody(body []byte) error {
 	return nil
 }
 
+// OperationRequestParams is passed to OperationRequestHook
+type OperationRequestParams struct {
+	OperationContextParams
+
+	Request *http.Request
+
+	Controller OperationRequestController
+
+	Logger *zap.Logger
+}
+
+// OperationRequestController defines the things the hook can do
+type OperationRequestController interface {
+	SetClientInfo(clientInfo ClientInfo) error
+	GetClientInfo() ClientInfo
+}
+
+type operationRequestController struct {
+	recorder operationRequestRecorder
+}
+
+type operationRequestRecorder struct {
+	ClientInfo ClientInfo
+}
+
+func (c *operationRequestController) SetClientInfo(clientInfo ClientInfo) error {
+	c.recorder.ClientInfo = clientInfo
+	return nil
+}
+
+func (c *operationRequestController) GetClientInfo() ClientInfo {
+	return c.recorder.ClientInfo
+}
+
+// OperationResponseParams is passed to OperationResponseHook
+type OperationResponseParams struct {
+	OperationContextParams
+
+	Logger *zap.Logger
+}
+
 /* common entities for the open core module system */
 
 // ExitError is a struct for holding the exit code and error of the router
@@ -115,3 +156,15 @@ type ExitError struct {
 }
 
 func (e *ExitError) Error() string { return e.Err.Error() }
+
+// OperationContextParams is passed to Operation Lifecycle Hooks
+type OperationContextParams struct {
+	PersistedID   string
+
+	Name string
+	OpType string
+
+	Content string
+
+	ClientInfo ClientInfo
+}

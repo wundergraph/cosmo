@@ -25,7 +25,7 @@ func TestOperationProcessorPersistentOperations(t *testing.T) {
 		MaxOperationSizeInBytes: 10 << 20,
 		ParseKitPoolSize:        4,
 	})
-	clientInfo := &ClientInfo{
+	clientInfo := &DefaultClientInfo{
 		Name:    "test",
 		Version: "1.0.0",
 	}

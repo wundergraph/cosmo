@@ -59,8 +59,8 @@ func (m MyCustomWebsocketModule) OnOriginRequest(req *http.Request, ctx core.Req
 
 	require.Equal(m.t, ctx.Operation().Name(), "currentTime")
 	require.Equal(m.t, ctx.Operation().Hash(), uint64(10840416806766942577))
-	require.Equal(m.t, ctx.Operation().ClientInfo().Name, "my-client")
-	require.Equal(m.t, ctx.Operation().ClientInfo().Version, "1.0.0")
+	require.Equal(m.t, ctx.Operation().ClientInfo().GetName(), "my-client")
+	require.Equal(m.t, ctx.Operation().ClientInfo().GetVersion(), "1.0.0")
 	require.Equal(m.t, ctx.Operation().Type(), core.OperationTypeSubscription)
 	require.Equal(m.t, ctx.Operation().Content(), "subscription currentTime {currentTime {unixTime timeStamp}}")
 

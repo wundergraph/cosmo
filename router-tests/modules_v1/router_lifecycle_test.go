@@ -122,3 +122,43 @@ func TestRouterLifecycleHooks(t *testing.T) {
 		})
 	})
 }
+
+func TestOperationLifecycleHooks(t *testing.T) {
+	t.Parallel()
+
+	t.Run("operation_lifecycle_hooks_detailed_client_info", func(t *testing.T) {
+		t.Parallel()
+
+		myDetailedClientModule := &my_custom_module.DetailedClientModule{}
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithMyCustomModules(myDetailedClientModule),
+			},
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:         `query MyQuery { employees { id } }`,
+				OperationName: json.RawMessage(`"MyQuery"`),
+			})
+			require.NoError(t, err)
+
+			operationRequestLog := xEnv.Observer().FilterMessage("OnOperationRequest")
+			operationResponseLog := xEnv.Observer().FilterMessage("OnOperationResponse")
+			assert.Len(t, operationRequestLog.All(), 1)
+			assert.Len(t, operationResponseLog.All(), 1)
+
+			clientInfo := operationResponseLog.All()[0].ContextMap()["clientInfo"].(*my_custom_module.DetailedClientInfo)
+			assert.Equal(t, "detailed-client", clientInfo.Name)
+			assert.Equal(t, "1.0.0", clientInfo.Version)
+			assert.Equal(t, "iOS", clientInfo.DeviceOS)
+			assert.Equal(t, "My App", clientInfo.AppName)
+
+			assert.Equal(t, 200, res.Response.StatusCode)
+			assert.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
+		})
+	})
+}

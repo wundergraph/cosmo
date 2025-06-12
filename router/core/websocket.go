@@ -679,7 +679,7 @@ type WebSocketConnectionHandlerOptions struct {
 	Stats                        statistics.EngineStatistics
 	PlanOptions                  PlanOptions
 	ConnectionID                 int64
-	ClientInfo                   *ClientInfo
+	ClientInfo                   ClientInfo
 	InitRequestID                string
 	ForwardUpgradeHeaders        forwardConfig
 	ForwardQueryParams           forwardConfig
@@ -702,7 +702,7 @@ type WebSocketConnectionHandler struct {
 	request    *http.Request
 	conn       *wsConnectionWrapper
 	protocol   wsproto.Proto
-	clientInfo *ClientInfo
+	clientInfo ClientInfo
 	logger     *zap.Logger
 
 	initialPayload            json.RawMessage
@@ -843,7 +843,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 
 	startNormalization := time.Now()
 
-	if _, err := operationKit.NormalizeOperation(h.clientInfo.Name, isApq); err != nil {
+	if _, err := operationKit.NormalizeOperation(h.clientInfo.GetName(), isApq); err != nil {
 		opContext.normalizationTime = time.Since(startNormalization)
 		return nil, nil, err
 	}
@@ -1093,7 +1093,7 @@ func (h *WebSocketConnectionHandler) Initialize() (err error) {
 
 		// Update client name if present
 		if clientName, ok := initialPayloadMap[h.clientInfoFromInitialPayload.NameField].(string); ok {
-			h.clientInfo.Name = clientName
+			h.clientInfo.SetName(clientName)
 			if h.clientInfoFromInitialPayload.ForwardToRequestHeaders.Enabled {
 				h.request.Header.Set(h.clientInfoFromInitialPayload.ForwardToRequestHeaders.NameTargetHeader, clientName)
 			}
@@ -1101,7 +1101,7 @@ func (h *WebSocketConnectionHandler) Initialize() (err error) {
 
 		// Update client version if present
 		if clientVersion, ok := initialPayloadMap[h.clientInfoFromInitialPayload.VersionField].(string); ok {
-			h.clientInfo.Version = clientVersion
+			h.clientInfo.SetVersion(clientVersion)
 			if h.clientInfoFromInitialPayload.ForwardToRequestHeaders.Enabled {
 				h.request.Header.Set(h.clientInfoFromInitialPayload.ForwardToRequestHeaders.VersionTargetHeader, clientVersion)
 			}

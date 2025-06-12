@@ -1283,6 +1283,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		DisableVariablesRemapping:   s.engineExecutionConfiguration.DisableVariablesRemapping,
 		ExprManager:                 exprManager,
 		OmitBatchExtensions:         s.batchingConfig.OmitExtensions,
+		HookRegistry:                s.hookRegistry,
 	})
 
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {

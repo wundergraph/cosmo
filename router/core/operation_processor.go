@@ -387,14 +387,14 @@ func (o *OperationKit) ComputeOperationSha256() error {
 
 // FetchPersistedOperation fetches the persisted operation from the cache or the client. If the operation is fetched from the cache it returns true.
 // UnmarshalOperationFromBody or UnmarshalOperationFromURL must be called before calling this method.
-func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *ClientInfo) (skipParse bool, isAPQ bool, err error) {
+func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo ClientInfo) (skipParse bool, isAPQ bool, err error) {
 	if o.operationProcessor.persistedOperationClient == nil {
 		return false, false, &httpGraphqlError{
 			message:    "could not resolve persisted query, feature is not configured",
 			statusCode: http.StatusOK,
 		}
 	}
-	fromCache, includeOperationName, err := o.loadPersistedOperationFromCache(clientInfo.Name)
+	fromCache, includeOperationName, err := o.loadPersistedOperationFromCache(clientInfo.GetName())
 	if err != nil {
 		return false, false, &httpGraphqlError{
 			statusCode: http.StatusInternalServerError,
@@ -402,22 +402,22 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 		}
 	}
 	if fromCache {
-		if isApq, _ := o.persistedOperationCacheKeyHasTtl(clientInfo.Name, includeOperationName); isApq {
+		if isApq, _ := o.persistedOperationCacheKeyHasTtl(clientInfo.GetName(), includeOperationName); isApq {
 			// if it is an APQ request, we need to save it again to renew the TTL expiration
-			if err = o.operationProcessor.persistedOperationClient.SaveOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, o.parsedOperation.NormalizedRepresentation); err != nil {
+			if err = o.operationProcessor.persistedOperationClient.SaveOperation(ctx, clientInfo.GetName(), o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, o.parsedOperation.NormalizedRepresentation); err != nil {
 				return false, false, err
 			}
 		}
 		return true, false, nil
 	}
 
-	persistedOperationData, isApq, err := o.operationProcessor.persistedOperationClient.PersistedOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)
+	persistedOperationData, isApq, err := o.operationProcessor.persistedOperationClient.PersistedOperation(ctx, clientInfo.GetName(), o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)
 	if err != nil {
 		return false, isApq, err
 	} else if isApq && persistedOperationData == nil && o.parsedOperation.Request.Query == "" {
 		// If the client has APQ enabled, throw an error if the operation wasn't attached to the request
 		return false, isApq, &persistedoperation.PersistentOperationNotFoundError{
-			ClientName: clientInfo.Name,
+			ClientName: clientInfo.GetName(),
 			Sha256Hash: o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash,
 		}
 	}
@@ -433,7 +433,7 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 
 	// If the operation was fetched with APQ, save it again to renew the TTL
 	if isApq {
-		if err = o.operationProcessor.persistedOperationClient.SaveOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, o.parsedOperation.Request.Query); err != nil {
+		if err = o.operationProcessor.persistedOperationClient.SaveOperation(ctx, clientInfo.GetName(), o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, o.parsedOperation.Request.Query); err != nil {
 			return false, isApq, err
 		}
 	}

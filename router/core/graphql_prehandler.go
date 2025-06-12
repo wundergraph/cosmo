@@ -69,6 +69,7 @@ type PreHandlerOptions struct {
 	DisableVariablesRemapping   bool
 	ExprManager                 *expr.Manager
 	OmitBatchExtensions         bool
+	HookRegistry                *hookRegistry
 }
 
 type PreHandler struct {
@@ -102,6 +103,7 @@ type PreHandler struct {
 	disableVariablesRemapping   bool
 	exprManager                 *expr.Manager
 	omitBatchExtensions         bool
+	hookRegistry                *hookRegistry
 }
 
 type httpOperation struct {
@@ -148,6 +150,7 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		disableVariablesRemapping: opts.DisableVariablesRemapping,
 		exprManager:               opts.ExprManager,
 		omitBatchExtensions:       opts.OmitBatchExtensions,
+		hookRegistry:              opts.HookRegistry,
 	}
 }
 
@@ -183,14 +186,74 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		requestContext := getRequestContext(r.Context())
 		requestLogger := requestContext.logger
+		defaultClientInfo := NewClientInfoFromRequest(r, h.clientHeader)
+		operationRequestParams := &OperationRequestParams{
+			Request: requestContext.Request(),
+			// get the operation context params from the request headers before it is parsed
+			OperationContextParams: OperationContextParams{
+				PersistedID: r.Header.Get("x-apollo-operation-id"),
+				Name: r.Header.Get("x-apollo-operation-name"),
+				OpType: r.Header.Get("x-apollo-operation-type"),
+				ClientInfo: defaultClientInfo,
+			},
+			Controller: &operationRequestController{
+				recorder: operationRequestRecorder{
+					ClientInfo: defaultClientInfo,
+				},
+			},
+			Logger: requestLogger,
+		}
+		// open core module system: run the operation request hooks
+		// this is the first hook that is fired for an operation before it is parsed, 
+		// it allows modules to plug in customized client info, telemetry attributes and etc.
+		h.log.Debug("Firing OperationRequest hooks")
+		for _, h := range h.hookRegistry.operationRequestHooks.Values() {
+			if err := h.OnOperationRequest(requestContext, operationRequestParams); err != nil {
+				requestContext.SetError(err)
+				writeRequestErrors(r, w, http.StatusBadRequest, graphqlerrors.RequestErrorsFromError(err), requestLogger)
+				return
+			}
+		}
 
+		// open core module system: run the operation response hooks
+		// this is the last hook that is fired for an operation after it is executed,
+		// it allows modules to plug log the response body, add custom headers, etc.
+		defer func() {
+
+			h.log.Debug("Firing OperationResponse hooks")
+			enrichedOperationContextParams := &OperationContextParams{
+				PersistedID: requestContext.operation.PersistedID(),
+				Name: requestContext.operation.Name(),
+				OpType: requestContext.operation.Type(),
+				Content: requestContext.operation.Content(),
+
+				ClientInfo: operationRequestParams.Controller.GetClientInfo(),
+			}
+			operationResponseParams := &OperationResponseParams{
+				OperationContextParams: *enrichedOperationContextParams,
+				Logger:                 requestLogger,
+			}
+			for _, h := range h.hookRegistry.operationResponseHooks.Values() {
+				var exitError *ExitError
+				if requestContext.error != nil {
+					exitError = &ExitError{
+						Err:        requestContext.error,
+					}
+				}
+				if err := h.OnOperationResponse(requestContext, operationResponseParams, exitError); err != nil {
+					requestContext.SetError(err)
+					writeRequestErrors(r, w, http.StatusBadRequest, graphqlerrors.RequestErrorsFromError(err), requestLogger)
+					return
+				}
+			}
+		}()
+
+		clientInfo := operationRequestParams.Controller.GetClientInfo()
 		routerSpan := trace.SpanFromContext(r.Context())
 
-		clientInfo := NewClientInfoFromRequest(r, h.clientHeader)
-
 		requestContext.telemetry.addCommonAttribute(
-			otel.WgClientName.String(clientInfo.Name),
-			otel.WgClientVersion.String(clientInfo.Version),
+			otel.WgClientName.String(clientInfo.GetName()),
+			otel.WgClientVersion.String(clientInfo.GetVersion()),
 			otel.WgOperationProtocol.String(OperationProtocolHTTP.String()),
 		)
 
@@ -704,7 +767,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		trace.WithAttributes(requestContext.telemetry.traceAttrs...),
 	)
 
-	cached, err := operationKit.NormalizeOperation(requestContext.operation.clientInfo.Name, isApq)
+	cached, err := operationKit.NormalizeOperation(requestContext.operation.clientInfo.GetName(), isApq)
 	if err != nil {
 		rtrace.AttachErrToSpan(engineNormalizeSpan, err)
 
@@ -1079,7 +1142,7 @@ func (h *PreHandler) flushMetrics(ctx context.Context, requestLogger *zap.Logger
 	requestLogger.Debug("Metrics flushed", zap.Duration("duration", time.Since(now)))
 }
 
-func (h *PreHandler) parseRequestOptions(r *http.Request, clientInfo *ClientInfo, requestLogger *zap.Logger) (resolve.ExecutionOptions, resolve.TraceOptions, error) {
+func (h *PreHandler) parseRequestOptions(r *http.Request, clientInfo ClientInfo, requestLogger *zap.Logger) (resolve.ExecutionOptions, resolve.TraceOptions, error) {
 	ex, tr, err := h.internalParseRequestOptions(r, clientInfo, requestLogger)
 	if err != nil {
 		return ex, tr, err
@@ -1096,7 +1159,7 @@ func (h *PreHandler) parseRequestOptions(r *http.Request, clientInfo *ClientInfo
 	return ex, tr, nil
 }
 
-func (h *PreHandler) internalParseRequestOptions(r *http.Request, clientInfo *ClientInfo, requestLogger *zap.Logger) (resolve.ExecutionOptions, resolve.TraceOptions, error) {
+func (h *PreHandler) internalParseRequestOptions(r *http.Request, clientInfo ClientInfo, requestLogger *zap.Logger) (resolve.ExecutionOptions, resolve.TraceOptions, error) {
 	// Determine if we should enable request tracing / query plans at all
 	if h.enableRequestTracing {
 		// In dev mode we always allow to enable tracing / query plans
@@ -1104,8 +1167,8 @@ func (h *PreHandler) internalParseRequestOptions(r *http.Request, clientInfo *Cl
 			return h.parseRequestExecutionOptions(r), h.parseRequestTraceOptions(r), nil
 		}
 		// If the client has a valid request token, and we have a public key from the controlplane
-		if clientInfo.WGRequestToken != "" && h.routerPublicKey != nil {
-			_, err := jwt.Parse(clientInfo.WGRequestToken, func(token *jwt.Token) (interface{}, error) {
+		if clientInfo.GetWGRequestToken() != "" && h.routerPublicKey != nil {
+			_, err := jwt.Parse(clientInfo.GetWGRequestToken(), func(token *jwt.Token) (interface{}, error) {
 				return h.routerPublicKey, nil
 			}, jwt.WithValidMethods([]string{jwt.SigningMethodES256.Name}))
 			if err != nil {
@@ -1153,12 +1216,12 @@ func setExpressionContextOperation(requestContext *requestContext) {
 }
 
 func setExpressionContextClient(requestContext *requestContext) {
-	clientName := requestContext.operation.clientInfo.Name
+	clientName := requestContext.operation.clientInfo.GetName()
 	if clientName == "unknown" {
 		clientName = ""
 	}
 
-	clientVersion := requestContext.operation.clientInfo.Version
+	clientVersion := requestContext.operation.clientInfo.GetVersion()
 	if clientVersion == "missing" {
 		clientVersion = ""
 	}

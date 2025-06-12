@@ -20,7 +20,7 @@ import (
 
 type CacheWarmupItem struct {
 	Request GraphQLRequest
-	Client  *ClientInfo
+	Client  ClientInfo
 }
 
 type CacheWarmupSource interface {
@@ -260,7 +260,7 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 			OperationName: operation.Request.GetOperationName(),
 			Extensions:    s,
 		},
-		Client: &ClientInfo{
+		Client: &DefaultClientInfo{
 			Name:    operation.GetClient().GetName(),
 			Version: operation.GetClient().GetVersion(),
 		},
@@ -290,7 +290,7 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 		return nil, err
 	}
 
-	_, err = k.NormalizeOperation(item.Client.Name, isAPQ)
+	_, err = k.NormalizeOperation(item.Client.GetName(), isAPQ)
 	if err != nil {
 		return nil, err
 	}
@@ -352,8 +352,8 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 		OperationHash: k.parsedOperation.IDString(),
 		OperationName: k.parsedOperation.Request.OperationName,
 		OperationType: k.parsedOperation.Type,
-		ClientName:    item.Client.Name,
-		ClientVersion: item.Client.Version,
+		ClientName:    item.Client.GetName(),
+		ClientVersion: item.Client.GetVersion(),
 		PlanningTime:  time.Since(planningStart),
 	}, nil
 }
