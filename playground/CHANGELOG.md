@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.9.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.9.1...@wundergraph/playground@0.9.2) (2025-06-11)
+
+### Bug Fixes
+
+* pnpm-lockfile to trigger ci and add back the specifier ([#1954](https://github.com/wundergraph/cosmo/issues/1954)) ([0149896](https://github.com/wundergraph/cosmo/commit/0149896ab2492757d0a88a6cbd1a26cee575d5cf)) (@SkArchon)
+
 ## [0.9.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.9.0...@wundergraph/playground@0.9.1) (2025-06-06)
 
 ### Bug Fixes
