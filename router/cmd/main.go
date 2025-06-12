@@ -162,7 +162,6 @@ func Main() {
 				case <-rootCtx.Done():
 					return
 				case <-reloadChan:
-					fmt.Println("RELOADING YEAH RELOADING")
 					rs.Reload()
 				}
 			}
