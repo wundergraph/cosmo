@@ -92,7 +92,7 @@ type (
 		instanceData            InstanceData
 		pubSubProviders         []datasource.Provider
 		traceDialer             *TraceDialer
-		pluginHost              *grpcconnector.Connector
+		connector               *grpcconnector.Connector
 	}
 )
 
@@ -1001,7 +1001,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		baseURL:          s.baseURL,
 		baseTripper:      s.baseTransport,
 		subgraphTrippers: subgraphTippers,
-		pluginHost:       s.pluginHost,
+		pluginHost:       s.connector,
 		logger:           s.logger,
 		trackUsageInfo:   s.graphqlMetricsConfig.Enabled || s.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled,
 		subscriptionClientOptions: &SubscriptionClientOptions{
@@ -1316,14 +1316,12 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 }
 
 func (s *graphServer) setupConnector(ctx context.Context, config *nodev1.EngineConfiguration, configSubgraphs []*nodev1.Subgraph) error {
+	s.connector = grpcconnector.NewConnector()
+
 	for _, dsConfig := range config.DatasourceConfigurations {
 		grpcConfig := dsConfig.GetCustomGraphql().GetGrpc()
 		if grpcConfig == nil {
 			continue
-		}
-
-		if s.pluginHost == nil {
-			s.pluginHost = grpcconnector.NewConnector()
 		}
 
 		var sg *nodev1.Subgraph
@@ -1351,7 +1349,7 @@ func (s *graphServer) setupConnector(ctx context.Context, config *nodev1.EngineC
 				return fmt.Errorf("failed to create standalone plugin for subgraph %s: %w", dsConfig.Id, err)
 			}
 
-			err = s.pluginHost.RegisterClientProvider(sg.Name, remoteProvider)
+			err = s.connector.RegisterClientProvider(sg.Name, remoteProvider)
 			if err != nil {
 				return fmt.Errorf("failed to register standalone plugin: %w", err)
 			}
@@ -1383,13 +1381,13 @@ func (s *graphServer) setupConnector(ctx context.Context, config *nodev1.EngineC
 			return fmt.Errorf("failed to create grpc plugin for subgraph %s: %w", dsConfig.Id, err)
 		}
 
-		err = s.pluginHost.RegisterClientProvider(sg.Name, grpcPlugin)
+		err = s.connector.RegisterClientProvider(sg.Name, grpcPlugin)
 		if err != nil {
 			return fmt.Errorf("failed to register grpc plugin: %w", err)
 		}
 	}
 
-	if err := s.pluginHost.Run(ctx); err != nil {
+	if err := s.connector.Run(ctx); err != nil {
 		return fmt.Errorf("failed to run plugin host: %w", err)
 	}
 
@@ -1495,9 +1493,9 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 		subgraphTransport.CloseIdleConnections()
 	}
 
-	if s.pluginHost != nil {
+	if s.connector != nil {
 		s.logger.Debug("Stopping old plugins")
-		if err := s.pluginHost.StopAllProviders(); err != nil {
+		if err := s.connector.StopAllProviders(); err != nil {
 			finalErr = errors.Join(finalErr, err)
 		}
 	}
