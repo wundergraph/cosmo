@@ -2570,6 +2570,10 @@
               "type": "boolean",
               "description": "Print the query plans."
             },
+            "print_intermediate_query_plans": {
+              "type": "boolean",
+              "description": "Print intermediate query plans."
+            },
             "print_node_suggestions": {
               "type": "boolean",
               "description": "Print the node suggestions."
