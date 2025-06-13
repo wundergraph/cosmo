@@ -63,6 +63,10 @@ export class OrganizationGroupRepository {
   }
 
   public async byId(input: { organizationId: string; groupId: string }): Promise<OrganizationGroupDTO | undefined> {
+    if (!input.groupId) {
+      return undefined;
+    }
+
     const orgGroups = await this.findMany(
       and(
         eq(schema.organizationGroups.organizationId, input.organizationId),
