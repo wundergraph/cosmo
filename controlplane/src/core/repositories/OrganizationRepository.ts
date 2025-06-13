@@ -1008,18 +1008,25 @@ export class OrganizationRepository {
     });
   }
 
-  public updateUserGroup(input: { orgMemberID: string; groupId: string }) {
+  public updateMemberGroups(input: { orgMemberID: string; groups: string[] }) {
     return this.db.transaction(async (tx) => {
       await tx
         .delete(schema.organizationGroupMembers)
         .where(eq(schema.organizationGroupMembers.organizationMemberId, input.orgMemberID));
 
+      if (input.groups.length === 0) {
+        return;
+      }
+
       await tx
         .insert(schema.organizationGroupMembers)
-        .values({
-          organizationMemberId: input.orgMemberID,
-          groupId: input.groupId,
-        })
+        .values(
+          input.groups.map((groupId) => ({
+            organizationMemberId: input.orgMemberID,
+            groupId,
+          })),
+        )
+        .onConflictDoNothing()
         .execute();
     });
   }

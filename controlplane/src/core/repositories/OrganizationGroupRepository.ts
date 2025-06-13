@@ -188,11 +188,27 @@ export class OrganizationGroupRepository {
 
   public changeMemberGroup({ fromGroupId, toGroupId }: { fromGroupId: string; toGroupId: string }) {
     return this.db.transaction(async (tx) => {
-      await tx
-        .update(schema.organizationGroupMembers)
-        .set({ groupId: toGroupId })
-        .where(eq(schema.organizationGroupMembers.groupId, fromGroupId));
+      // Update all members tied to the group by first deleting them and then linking them to the new group
+      const memberCondition = eq(schema.organizationGroupMembers.groupId, fromGroupId);
+      const members = await tx
+        .select({
+          organizationMemberId: schema.organizationGroupMembers.organizationMemberId,
+        })
+        .from(schema.organizationGroupMembers)
+        .where(memberCondition);
 
+      await tx.delete(schema.organizationGroupMembers).where(memberCondition);
+      await tx
+        .insert(schema.organizationGroupMembers)
+        .values(
+          members.map((m) => ({
+            organizationMemberId: m.organizationMemberId,
+            groupId: toGroupId,
+          })),
+        )
+        .onConflictDoNothing();
+
+      // Update all API keys tied to the group
       await tx.update(schema.apiKeys).set({ groupId: toGroupId }).where(eq(schema.apiKeys.groupId, fromGroupId));
     });
   }

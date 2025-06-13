@@ -85,7 +85,9 @@ export type AuditLogAction =
   | 'left'
   | 'fetched'
   | 'disabled'
-  | 'enabled';
+  | 'enabled'
+  | 'added'
+  | 'removed';
 
 export type AuditLogFullAction =
   | 'namespace.created'
@@ -143,8 +145,9 @@ export type AuditLogFullAction =
   | 'organization.left'
   | 'organization_invitation.declined'
   | 'organization_member.deleted'
-  | 'member_role.updated'
   | 'member_group.updated'
+  | 'member_group.added'
+  | 'member_group.removed'
   | 'router_config.fetched'
   | 'operation_change_override.created'
   | 'operation_change_override.deleted'

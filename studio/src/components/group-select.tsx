@@ -5,12 +5,12 @@ import { getOrganizationGroups } from "@wundergraph/cosmo-connect/dist/platform/
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { Button } from "@/components/ui/button";
 
-export function GroupSelect({ id, value, disabled = false, groups, onGroupChange }: {
+export function GroupSelect({ id, value, disabled = false, groups, onValueChange }: {
   id?: string;
   value?: string;
   disabled?: boolean;
   groups?: OrganizationGroup[];
-  onGroupChange(group: OrganizationGroup): void;
+  onValueChange(group: OrganizationGroup): void;
 }) {
   const { data, isPending, error, refetch } = useQuery(getOrganizationGroups, {}, { enabled: groups === undefined });
   if (isPending) {
@@ -48,7 +48,7 @@ export function GroupSelect({ id, value, disabled = false, groups, onGroupChange
           return;
         }
 
-        onGroupChange(selectedGroup);
+        onValueChange(selectedGroup);
       }}
       disabled={disabled}
     >
