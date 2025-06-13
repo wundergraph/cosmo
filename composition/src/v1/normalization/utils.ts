@@ -45,6 +45,8 @@ import {
   SPECIFIED_BY_DEFINITION_DATA,
   SUBSCRIPTION_FILTER_DEFINITION_DATA,
   TAG_DEFINITION_DATA,
+  SQS_PUBLISH_DEFINITION_DATA,
+  SQS_SUBSCRIBE_DEFINITION_DATA,
 } from './directive-definition-data';
 import {
   AUTHENTICATED,
@@ -74,6 +76,8 @@ import {
   SPECIFIED_BY,
   SUBSCRIPTION_FILTER,
   TAG,
+  EDFS_SQS_PUBLISH,
+  EDFS_SQS_SUBSCRIBE,
 } from '../../utils/string-constants';
 import { getValueOrDefault, kindToNodeType, numberToOrdinal } from '../../utils/utils';
 import { FieldSetData, KeyFieldSetData } from './types';
@@ -390,6 +394,8 @@ export function initializeDirectiveDefinitionDatas(): Map<string, DirectiveDefin
     [EDFS_NATS_PUBLISH, NATS_PUBLISH_DEFINITION_DATA],
     [EDFS_NATS_REQUEST, NATS_REQUEST_DEFINITION_DATA],
     [EDFS_NATS_SUBSCRIBE, NATS_SUBSCRIBE_DEFINITION_DATA],
+    [EDFS_SQS_PUBLISH, SQS_PUBLISH_DEFINITION_DATA],
+    [EDFS_SQS_SUBSCRIBE, SQS_SUBSCRIBE_DEFINITION_DATA],
     [EXTENDS, EXTENDS_DEFINITION_DATA],
     [EXTERNAL, EXTERNAL_DEFINITION_DATA],
     [INACCESSIBLE, INACCESSIBLE_DEFINITION_DATA],
