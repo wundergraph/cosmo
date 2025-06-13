@@ -246,9 +246,8 @@ const NewMapper = ({
   availableGroups: OrganizationGroup[];
 }) => {
   type CreateMapperFormInput = z.infer<typeof createMapperSchema>;
-  const [groupId, setGroupId] = useState(mapper.groupId);
 
-  const groupLabel = availableGroups.find((g) => g.groupId === groupId)?.name || "Select a group";
+  const groupLabel = availableGroups.find((g) => g.groupId === mapper.groupId)?.name || "Select a group";
 
   const {
     register,
@@ -258,22 +257,23 @@ const NewMapper = ({
     schema: createMapperSchema,
   });
 
+  const { ref, ...groupIdField } = register("groupId");
+
   return (
     <div className="flex items-center gap-x-3">
       <div className="grid flex-1 grid-cols-6 gap-x-2">
         <div className="col-span-3">
           <Select
-            value={groupId}
+            value={mapper.groupId}
             onValueChange={(value) => {
               onChange({
                 groupId: value,
                 ssoGroup: mapper.ssoGroup,
               });
-              setGroupId(value);
             }}
-            {...register("groupId")}
+            {...groupIdField}
           >
-            <SelectTrigger value={groupId} className="w-[200px] lg:w-full">
+            <SelectTrigger value={mapper.groupId} className="w-[200px] lg:w-full">
               <SelectValue aria-label={groupLabel}>{groupLabel}</SelectValue>
             </SelectTrigger>
             <SelectContent>
@@ -345,7 +345,7 @@ const AddNewMappers = ({
         </div>
       ) : mappers.map((mapper, index) => (
         <NewMapper
-          key={mapper.id}
+          key={`mapper-${mapper.id}-${index}`}
           mapper={mapper}
           availableGroups={availableGroups}
           remove={() => {
@@ -436,8 +436,11 @@ const UpdateIDPMappers = ({
   return (
     <Dialog
       open={open}
-      onOpenChange={() => {
-        setOpen(!open);
+      onOpenChange={(v) => {
+        setOpen(v);
+        if (v) {
+          updateMappers(currentMappers);
+        }
       }}
     >
       <DialogTrigger asChild>
@@ -448,9 +451,6 @@ const UpdateIDPMappers = ({
       <DialogContent
         onInteractOutside={(event) => {
           event.preventDefault();
-        }}
-        onCloseClick={() => {
-          updateMappers(currentMappers);
         }}
       >
         <DialogHeader>
