@@ -335,6 +335,25 @@ message KafkaEventConfiguration {
   repeated string topics = 2;
 }
 
+message SqsSubscribeConfiguration {
+  int32 max_number_of_messages = 1;
+  int32 visibility_timeout = 2;
+  bool generate_receive_request_attempt_id = 3;
+}
+
+message SqsPublishConfiguration {
+  int32 delay = 1;
+  bool generate_message_deduplication_id = 2;
+  string message_group_id = 3;
+}
+
+message SqsEventConfiguration {
+  EngineEventConfiguration engine_event_configuration = 1;
+  repeated string queue_urls = 2;
+  SqsSubscribeConfiguration subscribe = 3;
+  SqsPublishConfiguration publish = 4;
+}
+
 message EngineEventConfiguration {
   string provider_id = 1;
   EventType type = 2;
@@ -345,6 +364,7 @@ message EngineEventConfiguration {
 message DataSourceCustomEvents {
   repeated NatsEventConfiguration nats = 1;
   repeated KafkaEventConfiguration kafka = 2;
+  repeated SqsEventConfiguration sqs = 3;
 }
 
 message DataSourceCustom_Static {

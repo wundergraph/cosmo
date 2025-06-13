@@ -94,6 +94,10 @@ import {
   UNION_UPPER,
   URL_LOWER,
   VALUES,
+  QUEUE,
+  QUEUES,
+  EDFS_SQS_PUBLISH,
+  EDFS_SQS_SUBSCRIBE,
 } from '../../utils/string-constants';
 
 export const REQUIRED_STRING_TYPE_NODE: TypeNode = {
@@ -911,3 +915,57 @@ export const CONFIGURE_CHILD_DESCRIPTIONS_DEFINITION: MutableDirectiveDefinition
 export const EDFS_ARGS_REGEXP = /{{\s*args\.([a-zA-Z0-9_]+)\s*}}/g;
 
 export const MAX_OR_SCOPES = 16;
+
+// directive @edfs__sqsPublish(queue: String!, providerId: String! = "default") on FIELD_DEFINITION
+export const EDFS_SQS_PUBLISH_DEFINITION: DirectiveDefinitionNode = {
+  arguments: [
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(QUEUE),
+      type: REQUIRED_STRING_TYPE_NODE,
+    },
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(PROVIDER_ID),
+      type: REQUIRED_STRING_TYPE_NODE,
+      defaultValue: {
+        kind: Kind.STRING,
+        value: DEFAULT_EDFS_PROVIDER_ID,
+      },
+    },
+  ],
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: [stringToNameNode(FIELD_DEFINITION_UPPER)],
+  name: stringToNameNode(EDFS_SQS_PUBLISH),
+  repeatable: false,
+};
+
+// directive @edfs__sqsSubscribe(queues: [String!]!, providerId: String! = "default") on FIELD_DEFINITION
+export const EDFS_SQS_SUBSCRIBE_DEFINITION: DirectiveDefinitionNode = {
+  arguments: [
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(QUEUES),
+      type: {
+        kind: Kind.NON_NULL_TYPE,
+        type: {
+          kind: Kind.LIST_TYPE,
+          type: REQUIRED_STRING_TYPE_NODE,
+        },
+      },
+    },
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(PROVIDER_ID),
+      type: REQUIRED_STRING_TYPE_NODE,
+      defaultValue: {
+        kind: Kind.STRING,
+        value: DEFAULT_EDFS_PROVIDER_ID,
+      },
+    },
+  ],
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: [stringToNameNode(FIELD_DEFINITION_UPPER)],
+  name: stringToNameNode(EDFS_SQS_SUBSCRIBE),
+  repeatable: false,
+};

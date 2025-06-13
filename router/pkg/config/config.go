@@ -543,9 +543,27 @@ func (k KafkaEventSource) GetID() string {
 	return k.ID
 }
 
+type AWSAuthentication struct {
+	AccessKeyID     *string `yaml:"access_key_id,omitempty"`
+	SecretAccessKey *string `yaml:"secret_access_key,omitempty"`
+	SessionToken    *string `yaml:"session_token,omitempty"`
+}
+
+type SqsEventSource struct {
+	ID             string             `yaml:"id,omitempty"`
+	Endpoint       string             `yaml:"endpoint,omitempty"`
+	Region         string             `yaml:"region,omitempty"`
+	Authentication *AWSAuthentication `yaml:"authentication,omitempty"`
+}
+
+func (s SqsEventSource) GetID() string {
+	return s.ID
+}
+
 type EventProviders struct {
 	Nats  []NatsEventSource  `yaml:"nats,omitempty"`
 	Kafka []KafkaEventSource `yaml:"kafka,omitempty"`
+	Sqs   []SqsEventSource   `yaml:"sqs,omitempty"`
 }
 
 type EventsConfiguration struct {

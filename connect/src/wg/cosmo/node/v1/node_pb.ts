@@ -2286,6 +2286,159 @@ export class KafkaEventConfiguration extends Message<KafkaEventConfiguration> {
 }
 
 /**
+ * @generated from message wg.cosmo.node.v1.SqsSubscribeConfiguration
+ */
+export class SqsSubscribeConfiguration extends Message<SqsSubscribeConfiguration> {
+  /**
+   * @generated from field: int32 max_number_of_messages = 1;
+   */
+  maxNumberOfMessages = 0;
+
+  /**
+   * @generated from field: int32 visibility_timeout = 2;
+   */
+  visibilityTimeout = 0;
+
+  /**
+   * @generated from field: bool generate_receive_request_attempt_id = 3;
+   */
+  generateReceiveRequestAttemptId = false;
+
+  constructor(data?: PartialMessage<SqsSubscribeConfiguration>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.SqsSubscribeConfiguration";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "max_number_of_messages", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 2, name: "visibility_timeout", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 3, name: "generate_receive_request_attempt_id", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SqsSubscribeConfiguration {
+    return new SqsSubscribeConfiguration().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SqsSubscribeConfiguration {
+    return new SqsSubscribeConfiguration().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SqsSubscribeConfiguration {
+    return new SqsSubscribeConfiguration().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SqsSubscribeConfiguration | PlainMessage<SqsSubscribeConfiguration> | undefined, b: SqsSubscribeConfiguration | PlainMessage<SqsSubscribeConfiguration> | undefined): boolean {
+    return proto3.util.equals(SqsSubscribeConfiguration, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.node.v1.SqsPublishConfiguration
+ */
+export class SqsPublishConfiguration extends Message<SqsPublishConfiguration> {
+  /**
+   * @generated from field: int32 delay = 1;
+   */
+  delay = 0;
+
+  /**
+   * @generated from field: bool generate_message_deduplication_id = 2;
+   */
+  generateMessageDeduplicationId = false;
+
+  /**
+   * @generated from field: string message_group_id = 3;
+   */
+  messageGroupId = "";
+
+  constructor(data?: PartialMessage<SqsPublishConfiguration>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.SqsPublishConfiguration";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "delay", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 2, name: "generate_message_deduplication_id", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 3, name: "message_group_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SqsPublishConfiguration {
+    return new SqsPublishConfiguration().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SqsPublishConfiguration {
+    return new SqsPublishConfiguration().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SqsPublishConfiguration {
+    return new SqsPublishConfiguration().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SqsPublishConfiguration | PlainMessage<SqsPublishConfiguration> | undefined, b: SqsPublishConfiguration | PlainMessage<SqsPublishConfiguration> | undefined): boolean {
+    return proto3.util.equals(SqsPublishConfiguration, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.node.v1.SqsEventConfiguration
+ */
+export class SqsEventConfiguration extends Message<SqsEventConfiguration> {
+  /**
+   * @generated from field: wg.cosmo.node.v1.EngineEventConfiguration engine_event_configuration = 1;
+   */
+  engineEventConfiguration?: EngineEventConfiguration;
+
+  /**
+   * @generated from field: repeated string queue_urls = 2;
+   */
+  queueUrls: string[] = [];
+
+  /**
+   * @generated from field: wg.cosmo.node.v1.SqsSubscribeConfiguration subscribe = 3;
+   */
+  subscribe?: SqsSubscribeConfiguration;
+
+  /**
+   * @generated from field: wg.cosmo.node.v1.SqsPublishConfiguration publish = 4;
+   */
+  publish?: SqsPublishConfiguration;
+
+  constructor(data?: PartialMessage<SqsEventConfiguration>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.SqsEventConfiguration";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "engine_event_configuration", kind: "message", T: EngineEventConfiguration },
+    { no: 2, name: "queue_urls", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 3, name: "subscribe", kind: "message", T: SqsSubscribeConfiguration },
+    { no: 4, name: "publish", kind: "message", T: SqsPublishConfiguration },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SqsEventConfiguration {
+    return new SqsEventConfiguration().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SqsEventConfiguration {
+    return new SqsEventConfiguration().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SqsEventConfiguration {
+    return new SqsEventConfiguration().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SqsEventConfiguration | PlainMessage<SqsEventConfiguration> | undefined, b: SqsEventConfiguration | PlainMessage<SqsEventConfiguration> | undefined): boolean {
+    return proto3.util.equals(SqsEventConfiguration, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.node.v1.EngineEventConfiguration
  */
 export class EngineEventConfiguration extends Message<EngineEventConfiguration> {
@@ -2354,6 +2507,11 @@ export class DataSourceCustomEvents extends Message<DataSourceCustomEvents> {
    */
   kafka: KafkaEventConfiguration[] = [];
 
+  /**
+   * @generated from field: repeated wg.cosmo.node.v1.SqsEventConfiguration sqs = 3;
+   */
+  sqs: SqsEventConfiguration[] = [];
+
   constructor(data?: PartialMessage<DataSourceCustomEvents>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2364,6 +2522,7 @@ export class DataSourceCustomEvents extends Message<DataSourceCustomEvents> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "nats", kind: "message", T: NatsEventConfiguration, repeated: true },
     { no: 2, name: "kafka", kind: "message", T: KafkaEventConfiguration, repeated: true },
+    { no: 3, name: "sqs", kind: "message", T: SqsEventConfiguration, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DataSourceCustomEvents {

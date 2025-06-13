@@ -10,6 +10,8 @@ import {
   EDFS_NATS_PUBLISH_DEFINITION,
   EDFS_NATS_REQUEST_DEFINITION,
   EDFS_NATS_SUBSCRIBE_DEFINITION,
+  EDFS_SQS_PUBLISH_DEFINITION,
+  EDFS_SQS_SUBSCRIBE_DEFINITION,
   EXTENDS_DEFINITION,
   EXTERNAL_DEFINITION,
   INACCESSIBLE_DEFINITION,
@@ -92,6 +94,10 @@ import {
   TOPICS,
   UNION_UPPER,
   URL_LOWER,
+  QUEUE,
+  QUEUES,
+  EDFS_SQS_PUBLISH,
+  EDFS_SQS_SUBSCRIBE,
 } from '../../utils/string-constants';
 
 export const AUTHENTICATED_DEFINITION_DATA: DirectiveDefinitionData = {
@@ -667,4 +673,68 @@ export const TAG_DEFINITION_DATA: DirectiveDefinitionData = {
   node: TAG_DEFINITION,
   optionalArgumentNames: new Set<string>(),
   requiredArgumentNames: new Set<string>([NAME]),
+};
+
+export const SQS_PUBLISH_DEFINITION_DATA: DirectiveDefinitionData = {
+  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
+    [
+      QUEUE,
+      {
+        name: QUEUE,
+        typeNode: REQUIRED_STRING_TYPE_NODE,
+      },
+    ],
+    [
+      PROVIDER_ID,
+      {
+        name: PROVIDER_ID,
+        typeNode: REQUIRED_STRING_TYPE_NODE,
+        defaultValue: {
+          kind: Kind.STRING,
+          value: DEFAULT_EDFS_PROVIDER_ID,
+        },
+      },
+    ],
+  ]),
+  isRepeatable: false,
+  locations: new Set<string>([FIELD_DEFINITION_UPPER]),
+  name: EDFS_SQS_PUBLISH,
+  node: EDFS_SQS_PUBLISH_DEFINITION,
+  optionalArgumentNames: new Set<string>([PROVIDER_ID]),
+  requiredArgumentNames: new Set<string>([QUEUE]),
+};
+
+export const SQS_SUBSCRIBE_DEFINITION_DATA: DirectiveDefinitionData = {
+  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
+    [
+      QUEUES,
+      {
+        name: QUEUES,
+        typeNode: {
+          kind: Kind.NON_NULL_TYPE,
+          type: {
+            kind: Kind.LIST_TYPE,
+            type: REQUIRED_STRING_TYPE_NODE,
+          },
+        },
+      },
+    ],
+    [
+      PROVIDER_ID,
+      {
+        name: PROVIDER_ID,
+        typeNode: REQUIRED_STRING_TYPE_NODE,
+        defaultValue: {
+          kind: Kind.STRING,
+          value: DEFAULT_EDFS_PROVIDER_ID,
+        },
+      },
+    ],
+  ]),
+  isRepeatable: false,
+  locations: new Set<string>([FIELD_DEFINITION_UPPER]),
+  name: EDFS_SQS_SUBSCRIBE,
+  node: EDFS_SQS_SUBSCRIBE_DEFINITION,
+  optionalArgumentNames: new Set<string>([PROVIDER_ID]),
+  requiredArgumentNames: new Set<string>([QUEUES]),
 };

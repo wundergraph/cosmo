@@ -25,7 +25,17 @@ export type NatsEventConfiguration = {
   streamConfiguration?: StreamConfiguration;
 };
 
-export type EventConfiguration = KafkaEventConfiguration | NatsEventConfiguration;
+export type SqsEventType = 'subscribe' | 'publish';
+
+export type SqsEventConfiguration = {
+  fieldName: string;
+  providerId: string;
+  providerType: 'sqs';
+  queues: string[];
+  type: SqsEventType;
+};
+
+export type EventConfiguration = KafkaEventConfiguration | NatsEventConfiguration | SqsEventConfiguration;
 
 export type SubscriptionFilterValue = boolean | null | number | string;
 

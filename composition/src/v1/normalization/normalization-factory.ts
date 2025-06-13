@@ -301,6 +301,7 @@ import {
   PROVIDER_ID,
   PROVIDER_TYPE_KAFKA,
   PROVIDER_TYPE_NATS,
+  PROVIDER_TYPE_SQS,
   PUBLISH,
   QUERY,
   REQUEST,
@@ -326,6 +327,10 @@ import {
   SUCCESS,
   TOPIC,
   TOPICS,
+  QUEUE,
+  QUEUES,
+  EDFS_SQS_PUBLISH,
+  EDFS_SQS_SUBSCRIBE,
 } from '../../utils/string-constants';
 import { MAX_INT32 } from '../../utils/integer-constants';
 import {
@@ -2490,6 +2495,22 @@ export class NormalizationFactory {
           );
           break;
         }
+        case EDFS_SQS_PUBLISH:
+          eventConfiguration = this.getSqsPublishConfiguration(
+            directive,
+            argumentDataByArgumentName,
+            fieldName,
+            errorMessages,
+          );
+          break;
+        case EDFS_SQS_SUBSCRIBE:
+          eventConfiguration = this.getSqsSubscribeConfiguration(
+            directive,
+            argumentDataByArgumentName,
+            fieldName,
+            errorMessages,
+          );
+          break;
         default:
           continue;
       }
@@ -2515,11 +2536,11 @@ export class NormalizationFactory {
   getValidEventsDirectiveNamesForOperationTypeNode(operationTypeNode: OperationTypeNode): Set<string> {
     switch (operationTypeNode) {
       case OperationTypeNode.MUTATION:
-        return new Set<string>([EDFS_KAFKA_PUBLISH, EDFS_NATS_PUBLISH, EDFS_NATS_REQUEST]);
+        return new Set<string>([EDFS_KAFKA_PUBLISH, EDFS_NATS_PUBLISH, EDFS_NATS_REQUEST, EDFS_SQS_PUBLISH]);
       case OperationTypeNode.QUERY:
         return new Set<string>([EDFS_NATS_REQUEST]);
       case OperationTypeNode.SUBSCRIPTION:
-        return new Set<string>([EDFS_KAFKA_SUBSCRIBE, EDFS_NATS_SUBSCRIBE]);
+        return new Set<string>([EDFS_KAFKA_SUBSCRIBE, EDFS_NATS_SUBSCRIBE, EDFS_SQS_SUBSCRIBE]);
     }
   }
 
@@ -3157,8 +3178,8 @@ export class NormalizationFactory {
 
   normalize(document: DocumentNode): NormalizationResult {
     /* factory.allDirectiveDefinitions is initialized with v1 directive definitions, and v2 definitions are only added
-    after the visitor has visited the entire schema and the subgraph is known to be a V2 graph. Consequently,
-    allDirectiveDefinitions cannot be used to check for duplicate definitions, and another set (below) is required */
+      after the visitor has visited the entire schema and the subgraph is known to be a V2 graph. Consequently,
+      allDirectiveDefinitions cannot be used to check for duplicate definitions, and another set (below) is required */
 
     // Collect any renamed root types
     upsertDirectiveSchemaAndEntityDefinitions(this, document);
@@ -3469,6 +3490,85 @@ export class NormalizationFactory {
       success: true,
       warnings: this.warnings,
     };
+  }
+
+  // I will implement SQS publish configuration extraction, similar to Kafka but using queue argument.
+  getSqsPublishConfiguration(
+    directive: ConstDirectiveNode,
+    argumentDataByArgumentName: Map<string, InputValueData>,
+    fieldName: string,
+    errorMessages: string[],
+  ): EventConfiguration | undefined {
+    const queues: string[] = [];
+    let providerId = DEFAULT_EDFS_PROVIDER_ID;
+    for (const argumentNode of directive.arguments || []) {
+      switch (argumentNode.name.value) {
+        case QUEUE: {
+          if (argumentNode.value.kind !== Kind.STRING || argumentNode.value.value.length < 1) {
+            errorMessages.push(invalidEventSubjectErrorMessage(QUEUE));
+            continue;
+          }
+          validateArgumentTemplateReferences(argumentNode.value.value, argumentDataByArgumentName, errorMessages);
+          queues.push(argumentNode.value.value);
+          break;
+        }
+        case PROVIDER_ID: {
+          if (argumentNode.value.kind !== Kind.STRING || argumentNode.value.value.length < 1) {
+            errorMessages.push(invalidEventProviderIdErrorMessage);
+            continue;
+          }
+          providerId = argumentNode.value.value;
+          break;
+        }
+      }
+    }
+    if (errorMessages.length > 0) {
+      return;
+    }
+    return { fieldName, providerId, providerType: PROVIDER_TYPE_SQS, queues, type: PUBLISH };
+  }
+
+  // I will implement SQS subscribe configuration extraction, similar to Kafka subscribe but using queues argument list.
+  getSqsSubscribeConfiguration(
+    directive: ConstDirectiveNode,
+    argumentDataByArgumentName: Map<string, InputValueData>,
+    fieldName: string,
+    errorMessages: string[],
+  ): EventConfiguration | undefined {
+    const queues: string[] = [];
+    let providerId = DEFAULT_EDFS_PROVIDER_ID;
+    for (const argumentNode of directive.arguments || []) {
+      switch (argumentNode.name.value) {
+        case QUEUES: {
+          // list coercion not yet implemented
+          if (argumentNode.value.kind !== Kind.LIST) {
+            errorMessages.push(invalidEventSubjectsErrorMessage(QUEUES));
+            continue;
+          }
+          for (const value of argumentNode.value.values) {
+            if (value.kind !== Kind.STRING || value.value.length < 1) {
+              errorMessages.push(invalidEventSubjectsItemErrorMessage(QUEUES));
+              break;
+            }
+            validateArgumentTemplateReferences(value.value, argumentDataByArgumentName, errorMessages);
+            queues.push(value.value);
+          }
+          break;
+        }
+        case PROVIDER_ID: {
+          if (argumentNode.value.kind !== Kind.STRING || argumentNode.value.value.length < 1) {
+            errorMessages.push(invalidEventProviderIdErrorMessage);
+            continue;
+          }
+          providerId = argumentNode.value.value;
+          break;
+        }
+      }
+    }
+    if (errorMessages.length > 0) {
+      return;
+    }
+    return { fieldName, providerId, providerType: PROVIDER_TYPE_SQS, queues, type: SUBSCRIBE };
   }
 }
 
