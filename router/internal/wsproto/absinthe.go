@@ -209,10 +209,6 @@ func (p *absintheWSProtocol) Close(code ws.StatusCode, reason string) error {
 		return err
 	}
 
-	if err := p.conn.Close(); err != nil {
-		return err
-	}
-
 	return nil
 }
 
