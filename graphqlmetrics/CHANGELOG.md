@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.35.0](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.34.1...graphqlmetrics@0.35.0) (2025-06-13)
+
+### Features
+
+* add org and graph ID to gql_metrics_operations table ([#1582](https://github.com/wundergraph/cosmo/issues/1582)) ([94879de](https://github.com/wundergraph/cosmo/commit/94879de0713cb3e7d0b941c4bad1ed938acbaec8)) (@JivusAyrus)
+
 ## [0.34.1](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.34.0...graphqlmetrics@0.34.1) (2025-06-06)
 
 ### Bug Fixes
