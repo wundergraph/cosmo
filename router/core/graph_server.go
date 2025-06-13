@@ -985,10 +985,8 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		subgraphTippers[subgraph] = subgraphTransport
 	}
 
-	if s.plugins.Enabled {
-		if err := s.setupConnector(ctx, engineConfig, configSubgraphs); err != nil {
-			return nil, fmt.Errorf("failed to setup plugin host: %w", err)
-		}
+	if err := s.setupConnector(ctx, engineConfig, configSubgraphs); err != nil {
+		return nil, fmt.Errorf("failed to setup plugin host: %w", err)
 	}
 
 	enableTraceClient := s.connectionMetrics != nil || exprManager.VisitorManager.IsSubgraphTraceUsedInExpressions()
@@ -1358,6 +1356,10 @@ func (s *graphServer) setupConnector(ctx context.Context, config *nodev1.EngineC
 				return fmt.Errorf("failed to register standalone plugin: %w", err)
 			}
 
+			continue
+		}
+
+		if !s.plugins.Enabled {
 			continue
 		}
 

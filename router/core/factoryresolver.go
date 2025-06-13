@@ -686,8 +686,14 @@ func toGRPCConfiguration(config *nodev1.GRPCConfiguration, pluginsEnabled bool) 
 		}
 	}
 
+	// If not plugin config exists we enabled the datasource by default.
+	// If the config is a plugin:
+	//  * enable datasource when plugins are enabled.
+	//  * disable datasource when plugins are not enabled.
+	disabled := config.Plugin != nil && !pluginsEnabled
+
 	return &grpcdatasource.GRPCConfiguration{
 		Mapping:  result,
-		Disabled: !pluginsEnabled,
+		Disabled: disabled,
 	}
 }
