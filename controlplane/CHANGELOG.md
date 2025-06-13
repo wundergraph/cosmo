@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.150.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.150.1...controlplane@0.150.2) (2025-06-13)
+
+### Bug Fixes
+
+* issue that made it impossible to delete empty groups ([#1934](https://github.com/wundergraph/cosmo/issues/1934)) ([72d70d9](https://github.com/wundergraph/cosmo/commit/72d70d9d1b2184abeeb3c648ea7a86d02fc3facb)) (@wilsonrivera)
+
 ## [0.150.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.150.0...controlplane@0.150.1) (2025-06-06)
 
 ### Bug Fixes
