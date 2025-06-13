@@ -11,7 +11,9 @@ metadata:
 data:
   config.yaml: |-
     # User-supplied common configuration:
-    {{- if .Values.commonConfiguration }}
+    {{- if .Values.commonConfigurationPath }}
+    {{- tpl (.Files.Get .Values.commonConfigurationPath) . | nindent 4 }}
+    {{- else if .Values.commonConfiguration }}
     {{- tpl .Values.commonConfiguration . | nindent 4 }}
     {{- end }}
   logLevel: "{{ .Values.configuration.logLevel }}"
