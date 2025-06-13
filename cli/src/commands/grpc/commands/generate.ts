@@ -1,12 +1,12 @@
 import { readFile, writeFile } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
+import { existsSync, lstatSync } from 'node:fs';
 import { resolve, dirname } from 'pathe';
 import Spinner from 'ora';
 import { Command, program } from 'commander';
 import { compileGraphQLToMapping, compileGraphQLToProto, ProtoLock } from '@wundergraph/protographic';
 import { camelCase, upperFirst } from 'lodash-es';
-import pc from 'picocolors';
 import { BaseCommandOptions } from '../../../core/types/types.js';
+import { renderResultTree } from '../../router/plugin/helper.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('generate');
@@ -19,7 +19,6 @@ export default (opts: BaseCommandOptions) => {
     'The output directory for the protobuf schema. If not provided, the output directory will be the same as the input file.',
     '',
   );
-  command.option('--no-lock', 'Skip generating and using the lock file for deterministic field ordering');
   command.action(generateCommandAction);
 
   return command;
@@ -47,25 +46,36 @@ async function generateCommandAction(name: string, options: any) {
       outputDir = dirname(inputFile);
     }
 
+    if (!existsSync(outputDir)) {
+      program.error(`Output directory ${outputDir} does not exist`);
+    }
+
+    if (!lstatSync(outputDir).isDirectory()) {
+      program.error(`Output directory ${outputDir} is not a directory`);
+    }
+
     if (!existsSync(inputFile)) {
       program.error(`Input file ${options.input} does not exist`);
     }
 
-    const result = await generateProtoAndMapping(outputDir, inputFile, name, spinner, options.lock);
+    const result = await generateProtoAndMapping(outputDir, inputFile, name, spinner);
 
     // Write the generated files
     await writeFile(resolve(outputDir, 'mapping.json'), JSON.stringify(result.mapping, null, 2));
     await writeFile(resolve(outputDir, 'service.proto'), result.proto);
-    if (options.lock) {
-      await writeFile(resolve(outputDir, 'service.proto.lock.json'), JSON.stringify(result.lockData, null, 2));
-    }
-  } finally {
-    const symbol = pc.green('[●]');
+    await writeFile(resolve(outputDir, 'service.proto.lock.json'), JSON.stringify(result.lockData, null, 2));
 
-    spinner.stopAndPersist({
-      symbol,
-      text: pc.bold('Generated protobuf schema'),
+    renderResultTree(spinner, 'Generated protobuf schema', true, name, {
+      'input file': inputFile,
+      'output dir': outputDir,
+      'service name': upperFirst(camelCase(name)) + 'Service',
+      generated: 'mapping.json, service.proto, service.proto.lock.json',
     });
+  } catch (error) {
+    renderResultTree(spinner, 'Failed to generate protobuf schema', false, name, {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
   }
 }
 
@@ -77,7 +87,6 @@ async function generateProtoAndMapping(
   schemaFile: string,
   name: string,
   spinner: any,
-  useLock = true,
 ): Promise<GenerationResult> {
   spinner.text = 'Generating proto schema...';
   const lockFile = resolve(outdir, 'service.proto.lock.json');
@@ -88,7 +97,7 @@ async function generateProtoAndMapping(
 
   let lockData: ProtoLock | undefined;
 
-  if (useLock && existsSync(lockFile)) {
+  if (existsSync(lockFile)) {
     const existingLockData = JSON.parse(await readFile(lockFile, 'utf8'));
     if (existingLockData) {
       lockData = existingLockData;
@@ -99,12 +108,12 @@ async function generateProtoAndMapping(
   const proto = compileGraphQLToProto(schema, {
     serviceName,
     packageName: 'service',
-    lockData: useLock ? lockData : undefined,
+    lockData,
   });
 
   return {
     mapping: JSON.stringify(mapping, null, 2),
     proto: proto.proto,
-    lockData: useLock ? proto.lockData : null,
+    lockData: proto.lockData,
   };
 }

@@ -60,13 +60,11 @@ type SubgraphPluginConfig = {
 
 type GRPCSubgraphConfig = {
   name: string;
+  routing_url: string;
   grpc: {
-    routing_url: string;
-    schema: {
-      file: string;
-      proto_file: string;
-      mapping_file: string;
-    };
+    schema_file: string;
+    proto_file: string;
+    mapping_file: string;
   };
 };
 
@@ -286,17 +284,17 @@ function toSubgraphMetadata(
 async function toSubgraphMetadataGRPC(s: GRPCSubgraphConfig): Promise<GRPCSubgraphMetadata> {
   validateGRPCSubgraph(s);
 
-  const mappingFileContent = await readFile(s.grpc.schema.mapping_file, 'utf8');
+  const mappingFileContent = await readFile(s.grpc.mapping_file, 'utf8');
   const mapping = GRPCMapping.fromJsonString(mappingFileContent);
 
-  const protoSchemaFileContent = await readFile(s.grpc.schema.proto_file, 'utf8');
-  const sdl = await readFile(s.grpc.schema.file, 'utf8');
+  const protoSchemaFileContent = await readFile(s.grpc.proto_file, 'utf8');
+  const sdl = await readFile(s.grpc.schema_file, 'utf8');
 
   return {
     kind: SubgraphKind.GRPC,
     name: s.name,
     sdl,
-    routingUrl: s.grpc.routing_url,
+    routingUrl: s.routing_url,
     protoSchema: protoSchemaFileContent,
     mapping,
   };
@@ -408,55 +406,53 @@ function validateGRPCSubgraph(s: GRPCSubgraphConfig) {
     );
   }
 
-  if (!s.grpc.routing_url) {
+  if (!s.routing_url) {
     program.error(
       pc.red(pc.bold(`The routing URL is missing in the input file. Please check the routing URL and try again.`)),
     );
   }
 
-  if (!s.grpc.schema.file) {
+  if (!s.grpc.schema_file) {
     program.error(
       pc.red(pc.bold(`The schema file is missing in the input file. Please check the schema file and try again.`)),
     );
   }
 
-  if (!s.grpc.schema.proto_file) {
+  if (!s.grpc.proto_file) {
     program.error(
       pc.red(pc.bold(`The proto file is missing in the input file. Please check the proto file and try again.`)),
     );
   }
 
-  if (!s.grpc.schema.mapping_file) {
+  if (!s.grpc.mapping_file) {
     program.error(
       pc.red(pc.bold(`The mapping file is missing in the input file. Please check the mapping file and try again.`)),
     );
   }
 
-  if (!existsSync(s.grpc.schema.file)) {
+  if (!existsSync(s.grpc.schema_file)) {
     program.error(
       pc.red(
         pc.bold(
-          `The schema file '${pc.bold(s.grpc.schema.file)}' does not exist. Please check the path and try again.`,
+          `The schema file '${pc.bold(s.grpc.schema_file)}' does not exist. Please check the path and try again.`,
         ),
       ),
     );
   }
 
-  if (!existsSync(s.grpc.schema.proto_file)) {
+  if (!existsSync(s.grpc.proto_file)) {
     program.error(
       pc.red(
-        pc.bold(
-          `The proto file '${pc.bold(s.grpc.schema.proto_file)}' does not exist. Please check the path and try again.`,
-        ),
+        pc.bold(`The proto file '${pc.bold(s.grpc.proto_file)}' does not exist. Please check the path and try again.`),
       ),
     );
   }
 
-  if (!existsSync(s.grpc.schema.mapping_file)) {
+  if (!existsSync(s.grpc.mapping_file)) {
     program.error(
       pc.red(
         pc.bold(
-          `The mapping file '${pc.bold(s.grpc.schema.mapping_file)}' does not exist. Please check the path and try again.`,
+          `The mapping file '${pc.bold(s.grpc.mapping_file)}' does not exist. Please check the path and try again.`,
         ),
       ),
     );

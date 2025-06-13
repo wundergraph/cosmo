@@ -38,7 +38,10 @@ export function renderResultTree(
   // Generate dynamic formatters for each key
   for (const key of [...keys, 'name', 'state']) {
     // Calculate the number of dashes needed to align all values
-    const dashCount = 14 - key.length;
+    let dashCount = 14 - key.length;
+    if (dashCount < 0) {
+      dashCount = 0;
+    }
     keyFormatters[key] = '─'.repeat(dashCount) + ' ' + key;
   }
 

@@ -1,4 +1,4 @@
-import { rmSync, readFileSync, mkdirSync, existsSync } from 'node:fs';
+import { rmSync, mkdirSync, existsSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { Command } from 'commander';
@@ -113,7 +113,7 @@ describe('gRPC Generate Command', () => {
     }
   });
 
-  test('should not generate lock file when --no-lock is specified', async () => {
+  test('should fail when output path is a file', async () => {
     const client: Client = {
       platform: createPromiseClient(PlatformService, mockPlatformTransport()),
     };
@@ -123,29 +123,23 @@ describe('gRPC Generate Command', () => {
 
     const tmpDir = join(tmpdir(), `grpc-test-${Date.now()}`);
     mkdirSync(tmpDir, { recursive: true });
-    try {
-      const command = await program.parseAsync(
+
+    const outputFile = join(tmpDir, 'output.txt');
+    writeFileSync(outputFile, 'test');
+
+      await expect(
+      program.parseAsync(
         [
           'generate',
           'testservice',
           '-i',
           'test/fixtures/full-schema.graphql',
           '-o',
-          tmpDir,
-          '--no-lock',
+          outputFile,
         ],
         {
-          from: 'user',
+          from: 'user', 
         }
-      );
-
-      // Verify the output files exist
-      expect(existsSync(join(tmpDir, 'mapping.json'))).toBe(true);
-      expect(existsSync(join(tmpDir, 'service.proto'))).toBe(true);
-      // Verify lock file is not generated
-      expect(existsSync(join(tmpDir, 'service.proto.lock.json'))).toBe(false);
-    } finally {
-      rmSync(tmpDir, { recursive: true, force: true });
-    }
+      )).rejects.toThrow();
   });
 });

@@ -33,9 +33,8 @@ subgraphs:
     schema:
       file: ./pkg/subgraphs/countries/subgraph/schema.graphqls
   - name: projects
+    routing_url: http://localhost:50051
     grpc:
-      routing_url: http://localhost:50051
-      schema:
-        file: ./pkg/subgraphs/projects/src/schema.graphql
-        proto_file: ./pkg/subgraphs/projects/generated/service.proto
-        mapping_file: ./pkg/subgraphs/projects/generated/mapping.json
+      schema_file: ./pkg/subgraphs/projects/src/schema.graphql
+      proto_file: ./pkg/subgraphs/projects/generated/service.proto
+      mapping_file: ./pkg/subgraphs/projects/generated/mapping.json
