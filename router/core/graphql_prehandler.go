@@ -654,9 +654,43 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		requestContext.operation.persistedOperationCacheHit = operationKit.parsedOperation.PersistedOperationCacheHit
 	}
 
+	if operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery != nil &&
+		operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash != "" {
+
+		requestContext.operation.persistedID = operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash
+		persistedIDAttribute := otel.WgOperationPersistedID.String(operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)
+
+		requestContext.telemetry.addCommonAttribute(persistedIDAttribute)
+
+		httpOperation.routerSpan.SetAttributes(persistedIDAttribute)
+	}
+
+	// open core module system: run operation pre parse hooks
+	h.log.Debug("Firing OperationPreParse hooks")
+	operationContextParams := OperationContextParams{
+		PersistedID: requestContext.operation.persistedID,
+		ClientInfo: requestContext.operation.clientInfo,
+	}
+
+	operationParseParams := &OperationPreParseParams{
+		OperationContextParams: operationContextParams,
+		Controller: &operationParseController{
+			recorder: operationParseRecorder{
+				SkipParse: skipParse,
+			},
+		},
+		Logger: h.log, 
+	}
+	for _, hook := range h.hookRegistry.operationPreParseHooks.Values() {
+		if hookErr := hook.OnOperationPreParse(requestContext, operationParseParams); hookErr != nil {
+			return hookErr
+		}
+	}
+
 	// If the persistent operation is already in the cache, we skip the parse step
 	// because the operation was already parsed. This is a performance optimization, and we
 	// can do it because we know that the persisted operation is immutable (identified by the hash)
+	skipParse = operationParseParams.Controller.GetSkipParse()
 	if !skipParse {
 		_, engineParseSpan := h.tracer.Start(req.Context(), "Operation - Parse",
 			trace.WithSpanKind(trace.SpanKindInternal),
@@ -677,6 +711,18 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 
 			engineParseSpan.End()
 
+			// open core module system: run operation post parse hooks with the error
+			h.log.Debug("Firing OperationPostParse hooks with error")
+			operationPostParseParams := &OperationPostParseParams{
+				OperationContextParams: operationContextParams,
+				ParseLatency: time.Since(startParsing),
+				Logger: h.log,
+			}
+			for _, hook := range h.hookRegistry.operationPostParseHooks.Values() {
+				if hookErr := hook.OnOperationPostParse(requestContext, operationPostParseParams, &ExitError{Err: err}); hookErr != nil {
+					return hookErr
+				}
+			}
 			return err
 		}
 
@@ -686,6 +732,20 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		}
 
 		engineParseSpan.End()
+	}
+	// open core module system: run operation post parse hooks
+	h.log.Debug("Firing OperationPostParse hooks")
+	operationContextParams.Name = operationKit.parsedOperation.Request.OperationName
+	operationContextParams.OpType = operationKit.parsedOperation.Type
+	operationPostParseParams := &OperationPostParseParams{
+		OperationContextParams: operationContextParams,
+		ParseLatency: requestContext.operation.parsingTime,
+		Logger: h.log,
+	}
+	for _, hook := range h.hookRegistry.operationPostParseHooks.Values() {
+		if hookErr := hook.OnOperationPostParse(requestContext, operationPostParseParams, nil); hookErr != nil {
+			return hookErr
+		}
 	}
 
 	requestContext.operation.name = operationKit.parsedOperation.Request.OperationName
@@ -741,20 +801,21 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		}
 	}
 
-	if operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery != nil &&
-		operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash != "" {
-
-		requestContext.operation.persistedID = operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash
-		persistedIDAttribute := otel.WgOperationPersistedID.String(operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)
-
-		requestContext.telemetry.addCommonAttribute(persistedIDAttribute)
-
-		httpOperation.routerSpan.SetAttributes(persistedIDAttribute)
-	}
-
 	/**
 	* Normalize the operation
 	 */
+
+	// open core module system: run operation pre normalize hooks
+	h.log.Debug("Firing OperationPreNormalize hooks")
+	operationNormalizeParams := &OperationPreNormalizeParams{
+		OperationContextParams: operationContextParams,
+		Logger: h.log,
+	}
+	for _, hook := range h.hookRegistry.operationPreNormalizeHooks.Values() {
+		if hookErr := hook.OnOperationPreNormalize(requestContext, operationNormalizeParams); hookErr != nil {
+			return hookErr
+		}
+	}
 
 	if !requestContext.operation.traceOptions.ExcludeNormalizeStats {
 		httpOperation.traceTimings.StartNormalize()
@@ -777,6 +838,20 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		}
 
 		engineNormalizeSpan.End()
+
+		// open core module system: run operation post normalize hooks with the error
+		h.log.Debug("Firing OperationPostNormalize hooks with error")
+		operationPostNormalizeParams := &OperationPostNormalizeParams{
+			OperationContextParams: operationContextParams,
+			NormalizeCacheHit: cached,
+			NormalizeLatency: time.Since(startNormalization),
+			Logger: h.log,
+		}
+		for _, hook := range h.hookRegistry.operationPostNormalizeHooks.Values() {
+			if hookErr := hook.OnOperationPostNormalize(requestContext, operationPostNormalizeParams, &ExitError{Err: err}); hookErr != nil {
+				return hookErr
+			}
+		}
 
 		return err
 	}
@@ -807,6 +882,20 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		}
 
 		engineNormalizeSpan.End()
+
+		// open core module system: run operation post normalize hooks with the error
+		h.log.Debug("Firing OperationPostNormalize hooks with error")
+		operationPostNormalizeParams := &OperationPostNormalizeParams{
+			OperationContextParams: operationContextParams,
+			NormalizeCacheHit: cached,
+			NormalizeLatency: time.Since(startNormalization),
+			Logger: h.log,
+		}
+		for _, hook := range h.hookRegistry.operationPostNormalizeHooks.Values() {
+			if hookErr := hook.OnOperationPostNormalize(requestContext, operationPostNormalizeParams, &ExitError{Err: err}); hookErr != nil {
+				return hookErr
+			}
+		}
 
 		return err
 	}
@@ -849,6 +938,20 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		}
 
 		engineNormalizeSpan.End()
+
+		// open core module system: run operation post normalize hooks with the error
+		h.log.Debug("Firing OperationPostNormalize hooks with error")
+		operationPostNormalizeParams := &OperationPostNormalizeParams{
+			OperationContextParams: operationContextParams,
+			NormalizeCacheHit: cached,
+			NormalizeLatency: time.Since(startNormalization),
+			Logger: h.log,
+		}
+		for _, hook := range h.hookRegistry.operationPostNormalizeHooks.Values() {
+			if hookErr := hook.OnOperationPostNormalize(requestContext, operationPostNormalizeParams, &ExitError{Err: err}); hookErr != nil {
+				return hookErr
+			}
+		}
 
 		return err
 	}
@@ -916,6 +1019,20 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 			httpOperation.traceTimings.EndNormalize()
 		}
 		engineNormalizeSpan.End()
+
+		// open core module system: run operation post normalize hooks with the error
+		h.log.Debug("Firing OperationPostNormalize hooks with error")
+		operationPostNormalizeParams := &OperationPostNormalizeParams{
+			OperationContextParams: operationContextParams,
+			NormalizeCacheHit: cached,
+			NormalizeLatency: time.Since(startNormalization),
+			Logger: h.log,
+		}
+		for _, hook := range h.hookRegistry.operationPostNormalizeHooks.Values() {
+			if hookErr := hook.OnOperationPostNormalize(requestContext, operationPostNormalizeParams, &ExitError{Err: err}); hookErr != nil {
+				return hookErr
+			}
+		}
 		return err
 	}
 	requestContext.operation.normalizationTime = time.Since(startNormalization)
@@ -939,9 +1056,40 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	operationContentAttribute := otel.WgOperationContent.String(operationKit.parsedOperation.NormalizedRepresentation)
 	httpOperation.routerSpan.SetAttributes(operationContentAttribute)
 
+	// open core module system: run operation post normalize hooks
+	h.log.Debug("Firing OperationPostNormalize hooks")
+	operationPostNormalizeParams := &OperationPostNormalizeParams{
+		OperationContextParams: operationContextParams,
+		NormalizeCacheHit: cached,
+		NormalizeLatency: time.Since(startNormalization),
+		Logger: h.log,
+	}
+	for _, hook := range h.hookRegistry.operationPostNormalizeHooks.Values() {
+		if hookErr := hook.OnOperationPostNormalize(requestContext, operationPostNormalizeParams, nil); hookErr != nil {
+			return hookErr
+		}
+	}
+
 	/**
 	* Validate the operation
 	 */
+
+	// open core module system: run operation pre validate hooks
+	h.log.Debug("Firing OperationPreValidate hooks")
+	operationValidateParams := &OperationPreValidateParams{
+		OperationContextParams: operationContextParams,
+		Controller: &operationValidateController{
+			recorder: operationValidateRecorder{
+				ComplexityLimits: h.complexityLimits,
+			},
+		},
+		Logger: h.log,
+	}
+	for _, hook := range h.hookRegistry.operationPreValidateHooks.Values() {
+		if hookErr := hook.OnOperationPreValidate(requestContext, operationValidateParams); hookErr != nil {
+			return hookErr
+		}
+	}
 
 	if !requestContext.operation.traceOptions.ExcludeValidateStats {
 		httpOperation.traceTimings.StartValidate()
@@ -966,6 +1114,19 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 
 		engineValidateSpan.End()
 
+		// open core module system: run operation post validate hooks with the error
+		h.log.Debug("Firing OperationPostValidate hooks with error")
+		operationPostValidateParams := &OperationPostValidateParams{
+			OperationContextParams: operationContextParams,
+			ValidationLatency: time.Since(startValidation),
+			Logger: h.log,
+		}
+		for _, hook := range h.hookRegistry.operationPostValidateHooks.Values() {
+			if hookErr := hook.OnOperationPostValidate(requestContext, operationPostValidateParams, &ExitError{Err: err}); hookErr != nil {
+				return hookErr
+			}
+		}
+
 		return err
 	}
 
@@ -979,8 +1140,9 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 
 	// Validate that the planned query doesn't exceed the maximum query depth configured
 	// This check runs if they've configured a max query depth, and it can optionally be turned off for persisted operations
-	if h.complexityLimits != nil {
-		cacheHit, complexityCalcs, queryDepthErr := operationKit.ValidateQueryComplexity(h.complexityLimits, operationKit.kit.doc, h.executor.RouterSchema, operationKit.parsedOperation.IsPersistedOperation)
+	complexityLimits :=operationValidateParams.Controller.GetComplexityLimits()
+	if complexityLimits!= nil {
+		cacheHit, complexityCalcs, queryDepthErr := operationKit.ValidateQueryComplexity(complexityLimits, operationKit.kit.doc, h.executor.RouterSchema, operationKit.parsedOperation.IsPersistedOperation)
 		engineValidateSpan.SetAttributes(otel.WgQueryDepth.Int(complexityCalcs.Depth))
 		engineValidateSpan.SetAttributes(otel.WgQueryTotalFields.Int(complexityCalcs.TotalFields))
 		engineValidateSpan.SetAttributes(otel.WgQueryRootFields.Int(complexityCalcs.RootFields))
@@ -994,6 +1156,19 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 
 			engineValidateSpan.End()
 
+			// open core module system: run operation post validate hooks with the error
+			h.log.Debug("Firing OperationPostValidate hooks with error")
+			operationPostValidateParams := &OperationPostValidateParams{
+				OperationContextParams: operationContextParams,
+				ValidationLatency: time.Since(startValidation),
+				Logger: h.log,
+			}
+			for _, hook := range h.hookRegistry.operationPostValidateHooks.Values() {
+				if hookErr := hook.OnOperationPostValidate(requestContext, operationPostValidateParams, &ExitError{Err: queryDepthErr}); hookErr != nil {
+					return hookErr
+				}
+			}
+
 			return queryDepthErr
 		}
 	}
@@ -1003,6 +1178,20 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 
 	engineValidateSpan.End()
 
+	// open core module system: run operation post validate hooks
+	h.log.Debug("Firing OperationPostValidate hooks")
+	operationPostValidateParams := &OperationPostValidateParams{
+		OperationContextParams: operationContextParams,
+		ValidationLatency: time.Since(startValidation),
+		ValidationCacheHit: validationCached,
+		Logger: h.log,
+	}
+	for _, hook := range h.hookRegistry.operationPostValidateHooks.Values() {
+		if hookErr := hook.OnOperationPostValidate(requestContext, operationPostValidateParams, nil); hookErr != nil {
+			return hookErr
+		}
+	}
+
 	/**
 	* Plan the operation
 	 */
@@ -1010,6 +1199,19 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	// If the request has a query parameter wg_trace=true we skip the cache
 	// and always plan the operation
 	// this allows us to "write" to the plan
+
+	// open core module system: run operation pre plan hooks
+	h.log.Debug("Firing OperationPrePlan hooks")
+	operationPlanParams := &OperationPrePlanParams{
+		OperationContextParams: operationContextParams,
+		Logger: h.log,
+	}
+	for _, hook := range h.hookRegistry.operationPrePlanHooks.Values() {
+		if hookErr := hook.OnOperationPrePlan(requestContext, operationPlanParams); hookErr != nil {
+			return hookErr
+		}
+	}
+
 	if !requestContext.operation.traceOptions.ExcludePlannerStats {
 		httpOperation.traceTimings.StartPlanning()
 	}
@@ -1035,6 +1237,19 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 
 		if !requestContext.operation.traceOptions.ExcludePlannerStats {
 			httpOperation.traceTimings.EndPlanning()
+		}
+
+		// open core module system: run operation post plan hooks with the error
+		h.log.Debug("Firing OperationPostPlan hooks with error")
+		operationPostPlanParams := &OperationPostPlanParams{
+			OperationContextParams: operationContextParams,
+			PlanLatency: time.Since(startPlanning),
+			Logger: h.log,
+		}
+		for _, hook := range h.hookRegistry.operationPostPlanHooks.Values() {
+			if hookErr := hook.OnOperationPostPlan(requestContext, operationPostPlanParams, &ExitError{Err: err}); hookErr != nil {
+				return hookErr
+			}
 		}
 
 		enginePlanSpan.End()
@@ -1063,6 +1278,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	requestContext.telemetry.ReleaseAttributes(&planningAttrs)
 
 	// we could log the query plan only if query plans are calculated
+	var printedPlan string
 	if (h.queryPlansEnabled && requestContext.operation.executionOptions.IncludeQueryPlanInResponse) ||
 		h.alwaysIncludeQueryPlan {
 
@@ -1074,7 +1290,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		if h.queryPlansLoggingEnabled {
 			switch p := requestContext.operation.preparedPlan.preparedPlan.(type) {
 			case *plan.SynchronousResponsePlan:
-				printedPlan := p.Response.Fetches.QueryPlan().PrettyPrint()
+				printedPlan = p.Response.Fetches.QueryPlan().PrettyPrint()
 
 				if h.developmentMode {
 					h.log.Sugar().Debugf("Query Plan:\n%s", printedPlan)
@@ -1082,6 +1298,21 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 					h.log.Debug("Query Plan", zap.String("query_plan", printedPlan))
 				}
 			}
+		}
+	}
+
+	// open core module system: run operation post plan hooks
+	h.log.Debug("Firing OperationPostPlan hooks")
+	operationPostPlanParams := &OperationPostPlanParams{
+		OperationContextParams: operationContextParams,
+		PlanCacheHit: requestContext.operation.planCacheHit,
+		PrintedPlan: printedPlan,
+		PlanLatency: time.Since(startPlanning),
+		Logger: h.log,
+	}
+	for _, hook := range h.hookRegistry.operationPostPlanHooks.Values() {
+		if hookErr := hook.OnOperationPostPlan(requestContext, operationPostPlanParams, nil); hookErr != nil {
+			return hookErr
 		}
 	}
 

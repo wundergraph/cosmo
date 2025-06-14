@@ -2,7 +2,7 @@ package core
 
 import (
 	"net/http"
-
+	"time"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"go.uber.org/zap"
@@ -143,6 +143,122 @@ func (c *operationRequestController) GetClientInfo() ClientInfo {
 // OperationResponseParams is passed to OperationResponseHook
 type OperationResponseParams struct {
 	OperationContextParams
+
+	Logger *zap.Logger
+}
+
+// OperationPreParseParams is passed to OperationPreParseHook
+type OperationPreParseParams struct {
+	OperationContextParams
+	// The controller defines the things the hook can do
+	// - GetSkipParse: get the existing value of the skip parse flag
+	// - SetSkipParse: set the new value of the skip parse flag
+	Controller OperationParseController
+
+	Logger *zap.Logger
+}
+
+type OperationParseController interface {
+	GetSkipParse() bool
+	SetSkipParse(skipParse bool) error
+}
+
+type operationParseController struct {
+	recorder operationParseRecorder
+}
+
+type operationParseRecorder struct {
+	SkipParse bool
+}
+
+func (c *operationParseController) GetSkipParse() bool {
+	return c.recorder.SkipParse
+}
+
+func (c *operationParseController) SetSkipParse(skipParse bool) error {
+	c.recorder.SkipParse = skipParse
+	return nil
+}
+
+// OperationPostParseParams is passed to OperationPostParseHook
+type OperationPostParseParams struct {
+	OperationContextParams
+	ParseLatency time.Duration
+
+	Logger *zap.Logger
+}
+
+// OperationPreNormalizeParams is passed to OperationPreNormalizeHook
+type OperationPreNormalizeParams struct {
+	OperationContextParams
+
+	Logger *zap.Logger
+}
+
+// OperationPostNormalizeParams is passed to OperationPostNormalizeHook
+type OperationPostNormalizeParams struct {
+	OperationContextParams
+	NormalizeCacheHit bool
+	NormalizeLatency time.Duration
+
+	Logger *zap.Logger
+}
+
+// OperationPreValidateParams is passed to OperationPreValidateHook
+type OperationPreValidateParams struct {
+	OperationContextParams
+	// The controller defines the things the hook can do
+	// - GetComplexityLimits: get the default or previously set complexity limits
+	// - SetComplexityLimits: set the new complexity limits if needed
+	Controller OperationValidateController
+
+	Logger *zap.Logger
+}
+
+type OperationValidateController interface {
+	GetComplexityLimits() *config.ComplexityLimits
+	SetComplexityLimits(complexityLimits *config.ComplexityLimits) error
+}
+
+type operationValidateController struct {
+	recorder operationValidateRecorder
+}
+
+type operationValidateRecorder struct {
+	ComplexityLimits *config.ComplexityLimits
+}
+
+func (c *operationValidateController) GetComplexityLimits() *config.ComplexityLimits {
+	return c.recorder.ComplexityLimits
+}
+
+func (c *operationValidateController) SetComplexityLimits(complexityLimits *config.ComplexityLimits) error {
+	c.recorder.ComplexityLimits = complexityLimits
+	return nil
+}
+
+// OperationPostValidateParams is passed to OperationPostValidateHook
+type OperationPostValidateParams struct {
+	OperationContextParams
+	ValidationLatency time.Duration
+	ValidationCacheHit bool
+
+	Logger *zap.Logger
+}
+
+// OperationPrePlanParams is passed to OperationPrePlanHook
+type OperationPrePlanParams struct {
+	OperationContextParams
+
+	Logger *zap.Logger
+}
+
+// OperationPostPlanParams is passed to OperationPostPlanHook
+type OperationPostPlanParams struct {
+	OperationContextParams
+	PlanCacheHit bool
+	PrintedPlan string
+	PlanLatency time.Duration
 
 	Logger *zap.Logger
 }

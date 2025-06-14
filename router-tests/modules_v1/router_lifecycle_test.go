@@ -161,4 +161,53 @@ func TestOperationLifecycleHooks(t *testing.T) {
 			assert.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
 		})
 	})
+
+	t.Run("operation_lifecycle_hooks_metrics", func(t *testing.T) {
+		t.Parallel()
+
+		myMetricsModule := &my_custom_module.MetricsModule{}
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithMyCustomModules(myMetricsModule),
+			},
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:         `query MyQuery { employees { id } }`,
+				OperationName: json.RawMessage(`"MyQuery"`),
+			})
+			require.NoError(t, err)
+
+			operationPreParseLog := xEnv.Observer().FilterMessage("OnOperationPreParse")
+			operationPostParseLog := xEnv.Observer().FilterMessage("OnOperationPostParse")
+			assert.Len(t, operationPreParseLog.All(), 1)
+			assert.Len(t, operationPostParseLog.All(), 1)
+
+
+			operationPreNormalizeLog := xEnv.Observer().FilterMessage("OnOperationPreNormalize")
+			operationPostNormalizeLog := xEnv.Observer().FilterMessage("OnOperationPostNormalize")
+			assert.Len(t, operationPreNormalizeLog.All(), 1)
+			assert.Len(t, operationPostNormalizeLog.All(), 1)
+			assert.Equal(t, false, operationPostNormalizeLog.All()[0].ContextMap()["params"].(*core.OperationPostNormalizeParams).NormalizeCacheHit)
+
+			operationPreValidateLog := xEnv.Observer().FilterMessage("OnOperationPreValidate")
+			operationPostValidateLog := xEnv.Observer().FilterMessage("OnOperationPostValidate")
+			assert.Len(t, operationPreValidateLog.All(), 1)
+			assert.Len(t, operationPostValidateLog.All(), 1)
+
+			operationPrePlanLog := xEnv.Observer().FilterMessage("OnOperationPrePlan")
+			operationPostPlanLog := xEnv.Observer().FilterMessage("OnOperationPostPlan")
+			assert.Len(t, operationPrePlanLog.All(), 1)
+			assert.Len(t, operationPostPlanLog.All(), 1)
+			assert.Equal(t, false, operationPostPlanLog.All()[0].ContextMap()["params"].(*core.OperationPostPlanParams).PlanCacheHit)
+
+			assert.Equal(t, 200, res.Response.StatusCode)
+			assert.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
+		})
+	})
 }
+

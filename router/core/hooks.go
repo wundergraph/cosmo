@@ -101,11 +101,11 @@ type OperationParseLifecycleHook interface {
 }
 
 type OperationPreParseHook interface {
-	OnOperationPreParse(ctx context.Context)
+	OnOperationPreParse(reqContext RequestContext, params *OperationPreParseParams) error
 }
 
 type OperationPostParseHook interface {
-	OnOperationPostParse(ctx context.Context)
+	OnOperationPostParse(reqContext RequestContext, params *OperationPostParseParams, exitError *ExitError) error
 }
 
 type OperationNormalizeLifecycleHook interface {
@@ -114,11 +114,11 @@ type OperationNormalizeLifecycleHook interface {
 }
 
 type OperationPreNormalizeHook interface {
-	OnOperationPreNormalize(ctx context.Context)
+	OnOperationPreNormalize(reqContext RequestContext, params *OperationPreNormalizeParams) error
 }
 
 type OperationPostNormalizeHook interface {
-	OnOperationPostNormalize(ctx context.Context)
+	OnOperationPostNormalize(reqContext RequestContext, params *OperationPostNormalizeParams, exitError *ExitError) error
 }
 
 type OperationValidateLifecycleHook interface {
@@ -127,11 +127,11 @@ type OperationValidateLifecycleHook interface {
 }
 
 type OperationPreValidateHook interface {
-	OnOperationPreValidate(ctx context.Context)
+	OnOperationPreValidate(reqContext RequestContext, params *OperationPreValidateParams) error	
 }
 
 type OperationPostValidateHook interface {
-	OnOperationPostValidate(ctx context.Context)
+	OnOperationPostValidate(reqContext RequestContext, params *OperationPostValidateParams, exitError *ExitError) error
 }
 
 type OperationPlanLifecycleHook interface {
@@ -140,11 +140,11 @@ type OperationPlanLifecycleHook interface {
 }
 
 type OperationPrePlanHook interface {
-	OnOperationPrePlan(ctx context.Context) error
+	OnOperationPrePlan(reqContext RequestContext, params *OperationPrePlanParams) error
 }
 
 type OperationPostPlanHook interface {
-	OnOperationPostPlan(ctx context.Context) error
+	OnOperationPostPlan(reqContext RequestContext, params *OperationPostPlanParams, exitError *ExitError) error
 }
 
 type OperationExecuteLifecycleHook interface {
