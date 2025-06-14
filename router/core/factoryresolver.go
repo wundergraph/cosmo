@@ -5,21 +5,22 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-
 	"net/url"
 	"slices"
 
+	"github.com/buger/jsonparser"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub"
+	pubsub_datasource "github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/argument_templates"
 
-	"github.com/buger/jsonparser"
-
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/routerplugin"
 
 	"github.com/jensneuse/abstractlogger"
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
+	grpcdatasource "github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/grpc_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/staticdatasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 
@@ -28,15 +29,22 @@ import (
 )
 
 type Loader struct {
+	ctx      context.Context
 	resolver FactoryResolver
 	// includeInfo controls whether additional information like type usage and field usage is included in the plan de
 	includeInfo bool
+	logger      *zap.Logger
+}
+
+type InstanceData struct {
+	HostName      string
+	ListenAddress string
 }
 
 type FactoryResolver interface {
 	ResolveGraphqlFactory(subgraphName string) (plan.PlannerFactory[graphql_datasource.Configuration], error)
 	ResolveStaticFactory() (plan.PlannerFactory[staticdatasource.Configuration], error)
-	ResolvePubsubFactory() (plan.PlannerFactory[pubsub_datasource.Configuration], error)
+	InstanceData() InstanceData
 }
 
 type ApiTransportFactory interface {
@@ -46,7 +54,6 @@ type ApiTransportFactory interface {
 
 type DefaultFactoryResolver struct {
 	static *staticdatasource.Factory[staticdatasource.Configuration]
-	pubsub *pubsub_datasource.Factory[pubsub_datasource.Configuration]
 	log    *zap.Logger
 
 	engineCtx          context.Context
@@ -56,8 +63,10 @@ type DefaultFactoryResolver struct {
 
 	httpClient          *http.Client
 	subgraphHTTPClients map[string]*http.Client
+	pluginHost          *routerplugin.Host
 
 	factoryLogger abstractlogger.Logger
+	instanceData  InstanceData
 }
 
 func NewDefaultFactoryResolver(
@@ -66,11 +75,11 @@ func NewDefaultFactoryResolver(
 	subscriptionClientOptions *SubscriptionClientOptions,
 	baseTransport http.RoundTripper,
 	subgraphTransports map[string]http.RoundTripper,
+	pluginHost *routerplugin.Host,
 	log *zap.Logger,
 	enableSingleFlight bool,
 	enableNetPoll bool,
-	natsPubSubBySourceID map[string]pubsub_datasource.NatsPubSub,
-	kafkaPubSubBySourceID map[string]pubsub_datasource.KafkaPubSub,
+	instanceData InstanceData,
 ) *DefaultFactoryResolver {
 	transportFactory := NewTransport(transportOptions)
 
@@ -140,7 +149,6 @@ func NewDefaultFactoryResolver(
 
 	return &DefaultFactoryResolver{
 		static:             &staticdatasource.Factory[staticdatasource.Configuration]{},
-		pubsub:             pubsub_datasource.NewFactory(ctx, natsPubSubBySourceID, kafkaPubSubBySourceID),
 		log:                log,
 		factoryLogger:      factoryLogger,
 		engineCtx:          ctx,
@@ -150,10 +158,21 @@ func NewDefaultFactoryResolver(
 
 		httpClient:          defaultHTTPClient,
 		subgraphHTTPClients: subgraphHTTPClients,
+		pluginHost:          pluginHost,
+		instanceData:        instanceData,
 	}
 }
 
 func (d *DefaultFactoryResolver) ResolveGraphqlFactory(subgraphName string) (plan.PlannerFactory[graphql_datasource.Configuration], error) {
+	if d.pluginHost != nil {
+		// If the plugin host is not nil, we try to get the plugin for the subgraph.
+		// In case of a plugin, we use the gRPC client provider to create the factory.
+		plugin, exists := d.pluginHost.GetPlugin(subgraphName)
+		if exists {
+			return graphql_datasource.NewFactoryGRPCClientProvider(d.engineCtx, plugin.GetClient)
+		}
+	}
+
 	if subgraphClient, ok := d.subgraphHTTPClients[subgraphName]; ok {
 		return graphql_datasource.NewFactory(d.engineCtx, subgraphClient, d.subscriptionClient)
 	}
@@ -165,14 +184,16 @@ func (d *DefaultFactoryResolver) ResolveStaticFactory() (factory plan.PlannerFac
 	return d.static, nil
 }
 
-func (d *DefaultFactoryResolver) ResolvePubsubFactory() (factory plan.PlannerFactory[pubsub_datasource.Configuration], err error) {
-	return d.pubsub, nil
+func (d *DefaultFactoryResolver) InstanceData() InstanceData {
+	return d.instanceData
 }
 
-func NewLoader(includeInfo bool, resolver FactoryResolver) *Loader {
+func NewLoader(ctx context.Context, includeInfo bool, resolver FactoryResolver, logger *zap.Logger) *Loader {
 	return &Loader{
+		ctx:         ctx,
 		resolver:    resolver,
 		includeInfo: includeInfo,
+		logger:      logger,
 	}
 }
 
@@ -245,7 +266,7 @@ func mapProtoFilterToPlanFilter(input *nodev1.SubscriptionFilterCondition, outpu
 	return nil
 }
 
-func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nodev1.Subgraph, routerEngineConfig *RouterEngineConfiguration) (*plan.Configuration, error) {
+func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nodev1.Subgraph, routerEngineConfig *RouterEngineConfiguration, pluginsEnabled bool) (*plan.Configuration, []pubsub_datasource.Provider, error) {
 	var outConfig plan.Configuration
 	// attach field usage information to the plan
 	outConfig.DefaultFlushIntervalMillis = engineConfig.DefaultFlushInterval
@@ -280,6 +301,9 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 		})
 	}
 
+	var providers []pubsub_datasource.Provider
+	var pubSubDS []pubsub.DataSourceConfigurationWithMetadata
+
 	for _, in := range engineConfig.DatasourceConfigurations {
 		var out plan.DataSource
 
@@ -287,7 +311,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 		case nodev1.DataSourceKind_STATIC:
 			factory, err := l.resolver.ResolveStaticFactory()
 			if err != nil {
-				return nil, err
+				return nil, providers, err
 			}
 
 			out, err = plan.NewDataSourceConfiguration[staticdatasource.Configuration](
@@ -299,10 +323,11 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 				},
 			)
 			if err != nil {
-				return nil, fmt.Errorf("error creating data source configuration for data source %s: %w", in.Id, err)
+				return nil, providers, fmt.Errorf("error creating data source configuration for data source %s: %w", in.Id, err)
 			}
 
 		case nodev1.DataSourceKind_GRAPHQL:
+
 			header := http.Header{}
 			for s, httpHeader := range in.CustomGraphql.Fetch.Header {
 				for _, value := range httpHeader.Values {
@@ -327,7 +352,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 
 			graphqlSchema, err := l.LoadInternedString(engineConfig, in.CustomGraphql.GetUpstreamSchema())
 			if err != nil {
-				return nil, fmt.Errorf("could not load GraphQL schema for data source %s: %w", in.Id, err)
+				return nil, providers, fmt.Errorf("could not load GraphQL schema for data source %s: %w", in.Id, err)
 			}
 
 			var subscriptionUseSSE bool
@@ -366,7 +391,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 			dataSourceRules := FetchURLRules(routerEngineConfig.Headers, subgraphs, subscriptionUrl)
 			forwardedClientHeaders, forwardedClientRegexps, err := PropagatedHeaders(dataSourceRules)
 			if err != nil {
-				return nil, fmt.Errorf("error parsing header rules for data source %s: %w", in.Id, err)
+				return nil, providers, fmt.Errorf("error parsing header rules for data source %s: %w", in.Id, err)
 			}
 
 			schemaConfiguration, err := graphql_datasource.NewSchemaConfiguration(
@@ -377,7 +402,15 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 				},
 			)
 			if err != nil {
-				return nil, fmt.Errorf("error creating schema configuration for data source %s: %w", in.Id, err)
+				return nil, providers, fmt.Errorf("error creating schema configuration for data source %s: %w", in.Id, err)
+			}
+
+			grpcConfig := toGRPCConfiguration(in.CustomGraphql.Grpc, pluginsEnabled)
+			if grpcConfig != nil {
+				grpcConfig.Compiler, err = grpcdatasource.NewProtoCompiler(in.CustomGraphql.Grpc.ProtoSchema, grpcConfig.Mapping)
+				if err != nil {
+					return nil, providers, fmt.Errorf("error creating proto compiler for data source %s: %w", in.Id, err)
+				}
 			}
 
 			customConfiguration, err := graphql_datasource.NewConfiguration(graphql_datasource.ConfigurationInput{
@@ -396,16 +429,17 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 				},
 				SchemaConfiguration:    schemaConfiguration,
 				CustomScalarTypeFields: customScalarTypeFields,
+				GRPC:                   grpcConfig,
 			})
 			if err != nil {
-				return nil, fmt.Errorf("error creating custom configuration for data source %s: %w", in.Id, err)
+				return nil, providers, fmt.Errorf("error creating custom configuration for data source %s: %w", in.Id, err)
 			}
 
 			dataSourceName := l.subgraphName(subgraphs, in.Id)
 
 			factory, err := l.resolver.ResolveGraphqlFactory(dataSourceName)
 			if err != nil {
-				return nil, err
+				return nil, providers, err
 			}
 
 			out, err = plan.NewDataSourceConfigurationWithName[graphql_datasource.Configuration](
@@ -416,83 +450,44 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 				customConfiguration,
 			)
 			if err != nil {
-				return nil, fmt.Errorf("error creating data source configuration for data source %s: %w", in.Id, err)
+				return nil, providers, fmt.Errorf("error creating data source configuration for data source %s: %w", in.Id, err)
 			}
 
 		case nodev1.DataSourceKind_PUBSUB:
-			var eventConfigurations []pubsub_datasource.EventConfiguration
-
-			for _, eventConfiguration := range in.GetCustomEvents().GetNats() {
-				eventType, err := pubsub_datasource.EventTypeFromString(eventConfiguration.EngineEventConfiguration.Type.String())
-				if err != nil {
-					return nil, fmt.Errorf("invalid event type %q for data source %q: %w", eventConfiguration.EngineEventConfiguration.Type.String(), in.Id, err)
-				}
-
-				var streamConfiguration *pubsub_datasource.NatsStreamConfiguration
-				if eventConfiguration.StreamConfiguration != nil {
-					streamConfiguration = &pubsub_datasource.NatsStreamConfiguration{
-						Consumer:                  eventConfiguration.StreamConfiguration.GetConsumerName(),
-						StreamName:                eventConfiguration.StreamConfiguration.GetStreamName(),
-						ConsumerInactiveThreshold: eventConfiguration.StreamConfiguration.GetConsumerInactiveThreshold(),
-					}
-				}
-
-				eventConfigurations = append(eventConfigurations, pubsub_datasource.EventConfiguration{
-					Metadata: &pubsub_datasource.EventMetadata{
-						ProviderID: eventConfiguration.EngineEventConfiguration.GetProviderId(),
-						Type:       eventType,
-						TypeName:   eventConfiguration.EngineEventConfiguration.GetTypeName(),
-						FieldName:  eventConfiguration.EngineEventConfiguration.GetFieldName(),
-					},
-					Configuration: &pubsub_datasource.NatsEventConfiguration{
-						StreamConfiguration: streamConfiguration,
-						Subjects:            eventConfiguration.GetSubjects(),
-					},
-				})
-			}
-
-			for _, eventConfiguration := range in.GetCustomEvents().GetKafka() {
-				eventType, err := pubsub_datasource.EventTypeFromString(eventConfiguration.EngineEventConfiguration.Type.String())
-				if err != nil {
-					return nil, fmt.Errorf("invalid event type %q for data source %q: %w", eventConfiguration.EngineEventConfiguration.Type.String(), in.Id, err)
-				}
-
-				eventConfigurations = append(eventConfigurations, pubsub_datasource.EventConfiguration{
-					Metadata: &pubsub_datasource.EventMetadata{
-						ProviderID: eventConfiguration.EngineEventConfiguration.GetProviderId(),
-						Type:       eventType,
-						TypeName:   eventConfiguration.EngineEventConfiguration.GetTypeName(),
-						FieldName:  eventConfiguration.EngineEventConfiguration.GetFieldName(),
-					},
-					Configuration: &pubsub_datasource.KafkaEventConfiguration{
-						Topics: eventConfiguration.GetTopics(),
-					},
-				})
-			}
-
-			factory, err := l.resolver.ResolvePubsubFactory()
-			if err != nil {
-				return nil, err
-			}
-
-			out, err = plan.NewDataSourceConfiguration[pubsub_datasource.Configuration](
-				in.Id,
-				factory,
-				l.dataSourceMetaData(in),
-				pubsub_datasource.Configuration{
-					Events: eventConfigurations,
-				},
-			)
-			if err != nil {
-				return nil, fmt.Errorf("error creating data source configuration for data source %s: %w", in.Id, err)
-			}
+			pubSubDS = append(pubSubDS, pubsub.DataSourceConfigurationWithMetadata{
+				Configuration: in,
+				Metadata:      l.dataSourceMetaData(in),
+			})
 		default:
-			return nil, fmt.Errorf("unknown data source type %q", in.Kind)
+			return nil, providers, fmt.Errorf("unknown data source type %q", in.Kind)
 		}
 
-		outConfig.DataSources = append(outConfig.DataSources, out)
+		if out != nil {
+			outConfig.DataSources = append(outConfig.DataSources, out)
+		}
 	}
-	return &outConfig, nil
+
+	factoryProviders, factoryDataSources, err := pubsub.BuildProvidersAndDataSources(
+		l.ctx,
+		routerEngineConfig.Events,
+		l.logger,
+		pubSubDS,
+		l.resolver.InstanceData().HostName,
+		l.resolver.InstanceData().ListenAddress,
+	)
+	if err != nil {
+		return nil, providers, err
+	}
+
+	if len(factoryProviders) > 0 {
+		providers = append(providers, factoryProviders...)
+	}
+
+	if len(factoryDataSources) > 0 {
+		outConfig.DataSources = append(outConfig.DataSources, factoryDataSources...)
+	}
+
+	return &outConfig, providers, nil
 }
 
 func (l *Loader) subgraphName(subgraphs []*nodev1.Subgraph, dataSourceID string) string {
@@ -615,4 +610,84 @@ func (l *Loader) fieldHasAuthorizationRule(fieldConfiguration *nodev1.FieldConfi
 		return true
 	}
 	return false
+}
+
+// toGRPCConfiguration converts a nodev1.GRPCConfiguration to a grpcdatasource.GRPCConfiguration.
+// It is used to configure the gRPC datasource for a subgraph.
+// The pluginsEnabled flag is used to disable the gRPC datasource if the plugins are not enabled.
+func toGRPCConfiguration(config *nodev1.GRPCConfiguration, pluginsEnabled bool) *grpcdatasource.GRPCConfiguration {
+	if config == nil || config.Mapping == nil {
+		return nil
+	}
+
+	in := config.Mapping
+
+	result := &grpcdatasource.GRPCMapping{
+		Service:          in.Service,
+		QueryRPCs:        make(grpcdatasource.RPCConfigMap),
+		MutationRPCs:     make(grpcdatasource.RPCConfigMap),
+		SubscriptionRPCs: make(grpcdatasource.RPCConfigMap),
+		EntityRPCs:       make(map[string]grpcdatasource.EntityRPCConfig),
+		Fields:           make(map[string]grpcdatasource.FieldMap),
+		EnumValues:       make(map[string][]grpcdatasource.EnumValueMapping),
+	}
+
+	for _, operation := range in.OperationMappings {
+		rpcConfig := grpcdatasource.RPCConfig{
+			RPC:      operation.Mapped,
+			Request:  operation.Request,
+			Response: operation.Response,
+		}
+		switch operation.Type {
+		case nodev1.OperationType_OPERATION_TYPE_QUERY:
+			result.QueryRPCs[operation.Original] = rpcConfig
+		case nodev1.OperationType_OPERATION_TYPE_MUTATION:
+			result.MutationRPCs[operation.Original] = rpcConfig
+		case nodev1.OperationType_OPERATION_TYPE_SUBSCRIPTION:
+			result.SubscriptionRPCs[operation.Original] = rpcConfig
+		}
+	}
+
+	for _, entity := range in.EntityMappings {
+		result.EntityRPCs[entity.Key] = grpcdatasource.EntityRPCConfig{
+			Key: entity.Key,
+			RPCConfig: grpcdatasource.RPCConfig{
+				RPC:      entity.Rpc,
+				Request:  entity.Request,
+				Response: entity.Response,
+			},
+		}
+	}
+
+	for _, field := range in.TypeFieldMappings {
+		fieldMap := grpcdatasource.FieldMap{}
+
+		for _, fieldMapping := range field.FieldMappings {
+			fieldMap[fieldMapping.Original] = grpcdatasource.FieldMapData{
+				TargetName:       fieldMapping.Mapped,
+				ArgumentMappings: grpcdatasource.FieldArgumentMap{},
+			}
+
+			for _, argumentMapping := range fieldMapping.ArgumentMappings {
+				fieldMap[fieldMapping.Original].ArgumentMappings[argumentMapping.Original] = argumentMapping.Mapped
+			}
+		}
+
+		result.Fields[field.Type] = fieldMap
+	}
+
+	for _, enumMapping := range in.EnumMappings {
+		result.EnumValues[enumMapping.Type] = make([]grpcdatasource.EnumValueMapping, 0, len(enumMapping.Values))
+		for _, enumValueMapping := range enumMapping.Values {
+			result.EnumValues[enumMapping.Type] = append(result.EnumValues[enumMapping.Type], grpcdatasource.EnumValueMapping{
+				Value:       enumValueMapping.Original,
+				TargetValue: enumValueMapping.Mapped,
+			})
+		}
+	}
+
+	return &grpcdatasource.GRPCConfiguration{
+		Mapping:  result,
+		Disabled: !pluginsEnabled,
+	}
 }

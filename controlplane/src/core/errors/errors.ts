@@ -20,6 +20,12 @@ export class AuthenticationError extends ServiceError {}
 
 export class AuthorizationError extends ServiceError {}
 
+export class UnauthorizedError extends AuthorizationError {
+  constructor() {
+    super(EnumStatusCode.ERROR_NOT_AUTHORIZED, 'The user does not have the permissions to perform this operation');
+  }
+}
+
 export function isAuthenticationError(e: Error): e is AuthenticationError {
   return e instanceof AuthenticationError;
 }
@@ -29,7 +35,7 @@ export function isPublicError(e: Error): e is PublicError {
 }
 
 export function isAuthorizationError(e: Error): e is AuthorizationError {
-  return e instanceof AuthorizationError;
+  return e instanceof AuthorizationError || e instanceof UnauthorizedError;
 }
 
 export function unsuccessfulBaseCompositionError(federatedGraphName: string, namespace = 'default'): CompositionError {

@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/expr"
 	"net/http"
 	"strconv"
 	"time"
@@ -30,6 +31,7 @@ const (
 	ContextFieldOperationSha256            = "operation_sha256"
 	ContextFieldResponseErrorMessage       = "response_error_message"
 	ContextFieldRequestError               = "request_error"
+	ContextFieldRouterConfigVersion        = "router_config_version"
 )
 
 // Helper functions to create zap fields for custom attributes.
@@ -95,28 +97,36 @@ func RouterAccessLogsFieldHandler(
 	passedErr any,
 	request *http.Request,
 	responseHeader *http.Header,
+	_ *expr.Context,
 ) []zapcore.Field {
 	resFields := make([]zapcore.Field, 0, len(attributes))
 
 	reqContext, resFields := processRequestIDField(request, resFields)
 	resFields = processCustomAttributes(attributes, responseHeader, resFields, request, reqContext, passedErr)
-	resFields = processExpressionAttributes(logger, exprAttributes, reqContext, resFields)
+
+	if reqContext != nil {
+		copyContext := reqContext.expressionContext.Clone()
+		copyContext.Request.Error = WrapExprError(reqContext.expressionContext.Request.Error)
+		resFields = processExpressionAttributes(logger, exprAttributes, resFields, copyContext)
+	}
 
 	return resFields
 }
 
 func SubgraphAccessLogsFieldHandler(
-	_ *zap.Logger,
+	logger *zap.Logger,
 	attributes []config.CustomAttribute,
-	_ []requestlogger.ExpressionAttribute,
+	exprAttributes []requestlogger.ExpressionAttribute,
 	passedErr any,
 	request *http.Request,
 	responseHeader *http.Header,
+	overrideExprCtx *expr.Context,
 ) []zapcore.Field {
 	resFields := make([]zapcore.Field, 0, len(attributes))
 
 	reqContext, resFields := processRequestIDField(request, resFields)
 	resFields = processCustomAttributes(attributes, responseHeader, resFields, request, reqContext, passedErr)
+	resFields = processExpressionAttributes(logger, exprAttributes, resFields, overrideExprCtx)
 
 	return resFields
 }
@@ -137,15 +147,14 @@ func processRequestIDField(request *http.Request, resFields []zapcore.Field) (*r
 	return reqContext, resFields
 }
 
-func processExpressionAttributes(logger *zap.Logger, exprAttributes []requestlogger.ExpressionAttribute, reqContext *requestContext, resFields []zapcore.Field) []zapcore.Field {
-	// If the request context was processed as nil (e.g. :- request was nil in the caller)
-	// do not proceed to process exprAttributes
-	if reqContext == nil {
-		return resFields
-	}
-
+func processExpressionAttributes(
+	logger *zap.Logger,
+	exprAttributes []requestlogger.ExpressionAttribute,
+	resFields []zapcore.Field,
+	overrideExprContext *expr.Context,
+) []zapcore.Field {
 	for _, exprField := range exprAttributes {
-		result, err := reqContext.ResolveAnyExpressionWithWrappedError(exprField.Expr)
+		result, err := expr.ResolveAnyExpression(exprField.Expr, *overrideExprContext)
 		if err != nil {
 			logger.Error("unable to process expression for access logs", zap.String("fieldKey", exprField.Key), zap.Error(err))
 			continue

@@ -869,12 +869,99 @@ message CreateFederatedGraphTokenResponse {
   string token = 2;
 }
 
+message OrganizationGroupRule {
+  string role = 1;
+  repeated string namespaces = 2;
+  repeated string resources = 3;
+}
+
+message OrganizationGroup {
+  string groupId = 1;
+  string name = 2;
+  string description = 3;
+  bool builtin = 4;
+  int32 membersCount = 5;
+  repeated OrganizationGroupRule rules = 6;
+  bool hasOidcMappers = 7;
+  int32 apiKeysCount = 8;
+}
+
+message CreateOrganizationGroupRequest {
+  string name = 1;
+  string description = 2;
+}
+
+message CreateOrganizationGroupResponse {
+  Response response = 1;
+  OrganizationGroup group = 2;
+}
+
+message GetOrganizationGroupsRequest {}
+
+message GetOrganizationGroupsResponse {
+  Response response = 1;
+  repeated OrganizationGroup groups = 2;
+}
+
+message GetOrganizationGroupMembersRequest {
+  string groupId = 1;
+}
+
+message GetOrganizationGroupMembersResponse {
+  message GroupMember {
+    string id = 1;
+    string email = 2;
+    string createdAt = 3;
+  }
+
+  message GroupApiKey {
+    string id = 1;
+    string name = 2;
+    string createdAt = 3;
+  }
+
+  Response response = 1;
+  repeated GroupMember members = 2;
+  repeated GroupApiKey apiKeys = 3;
+}
+
+message UpdateOrganizationGroupRequest {
+  message GroupRule {
+    string role = 1;
+    repeated string namespaces = 2;
+    repeated string resources = 3;
+  }
+
+  string groupId = 1;
+  string description = 2;
+  repeated GroupRule rules = 3;
+}
+
+message UpdateOrganizationGroupResponse {
+  Response response = 1;
+}
+
+message DeleteOrganizationGroupRequest {
+  string groupId = 1;
+  optional string toGroupId = 2;
+}
+
+message DeleteOrganizationGroupResponse {
+  Response response = 1;
+}
+
 message OrgMember{
+  message Group {
+    string groupId = 1;
+    string name = 2;
+  }
+
   string userID = 1;
   string email = 2;
-  repeated string roles = 3;
-  string orgMemberID = 4;
-  bool active = 5;
+  string orgMemberID = 3;
+  bool active = 4;
+  string joinedAt = 5;
+  repeated Group groups = 6;
 }
 
 message PendingOrgInvitation{
@@ -906,6 +993,7 @@ message GetOrganizationMembersResponse {
 
 message InviteUserRequest {
   string email = 1;
+  string groupId = 2;
 }
 
 message InviteUserResponse {
@@ -913,12 +1001,18 @@ message InviteUserResponse {
 }
 
 message APIKey{
+  message Group {
+    string id = 1;
+    string name = 2;
+  }
+
   string id = 1;
   string name = 2;
   string createdBy = 3;
   string createdAt = 4;
   string lastUsedAt = 5;
   string expiresAt = 6;
+  optional Group group = 7;
 }
 
 message GetAPIKeysRequest {}
@@ -939,10 +1033,8 @@ message CreateAPIKeyRequest {
   string name = 1;
   string userID = 2;
   ExpiresAt expires = 3;
-  repeated string federatedGraphTargetIds = 4;
-  repeated string subgraphTargetIds = 5;
-  repeated string permissions = 6;
-  bool allowAllResources = 7;
+  string groupId = 4;
+  repeated string permissions = 5;
 }
 
 message CreateAPIKeyResponse {
@@ -955,6 +1047,15 @@ message DeleteAPIKeyRequest {
 }
 
 message DeleteAPIKeyResponse {
+  Response response = 1;
+}
+
+message UpdateAPIKeyRequest {
+  string name = 1;
+  string groupId = 2;
+}
+
+message UpdateAPIKeyResponse {
   Response response = 1;
 }
 
@@ -1242,7 +1343,6 @@ message RestoreOrganizationResponse {
 }
 
 message LeaveOrganizationRequest {
-  string userID = 1;
 }
 
 message LeaveOrganizationResponse {
@@ -1259,13 +1359,13 @@ message UpdateOrganizationDetailsResponse {
   Response response = 1;
 }
 
-message UpdateOrgMemberRoleRequest {
+message UpdateOrgMemberGroupRequest {
   string userID = 1;
   string orgMemberUserID = 2;
-  string role = 3;
+  string groupId = 3;
 }
 
-message UpdateOrgMemberRoleResponse {
+message UpdateOrgMemberGroupResponse {
   Response response = 1;
 }
 
@@ -1572,7 +1672,7 @@ message IsGitHubAppInstalledResponse {
 }
 
 message GroupMapper {
-  string role = 1;
+  string groupId = 1;
   string ssoGroup = 2;
 }
 
@@ -1769,14 +1869,28 @@ message GetChangelogBySchemaVersionResponse {
 message GetUserAccessibleResourcesRequest {}
 
 message GetUserAccessibleResourcesResponse {
-  message Graph {
+  message Namespace {
+    string id = 1;
+    string name = 2;
+  }
+
+  message FederatedGraph {
     string targetId = 1;
     string name = 2;
     string namespace = 3;
   }
+
+  message SubGraph {
+    string targetId = 1;
+    string name = 2;
+    string namespace = 3;
+    string federatedGraphId = 4;
+  }
+
   Response response = 1;
-  repeated Graph federatedGraphs = 2;
-  repeated Graph subgraphs = 3;
+  repeated Namespace namespaces = 2;
+  repeated FederatedGraph federatedGraphs = 3;
+  repeated SubGraph subgraphs = 4;
 }
 
 enum Feature {
@@ -1791,26 +1905,6 @@ message UpdateFeatureSettingsRequest {
 }
 
 message UpdateFeatureSettingsResponse {
-  Response response = 1;
-}
-
-message AddSubgraphMemberRequest {
-  string subgraphName = 1;
-  string userEmail = 2;
-  string namespace = 3;
-}
-
-message AddSubgraphMemberResponse {
-  Response response = 1;
-}
-
-message RemoveSubgraphMemberRequest {
-  string subgraphName = 1;
-  string subgraphMemberId = 2;
-  string namespace = 3;
-}
-
-message RemoveSubgraphMemberResponse {
   Response response = 1;
 }
 
@@ -2549,6 +2643,7 @@ message CreateProposalResponse {
   bool lintingSkipped = 13;
   bool graphPruningSkipped = 14;
   string checkUrl = 15;
+  string proposalUrl = 16;
 }
 
 message GetProposalRequest {
@@ -2653,6 +2748,44 @@ message GetNamespaceProposalConfigResponse {
   bool enabled = 2;
   LintSeverity checkSeverityLevel = 3;
   LintSeverity publishSeverityLevel = 4;
+}
+
+message GetOperationsRequest {
+  string federatedGraphName = 1;
+  string namespace = 2;
+  optional string clientName = 3;
+}
+
+message GetOperationsResponse {
+  enum OperationType {
+    QUERY = 0;
+    MUTATION = 1;
+    SUBSCRIPTION = 2;
+  }
+
+  message Operation {
+    string hash = 1;
+    string name = 2;
+    string content = 3;
+    float latency = 4;
+    OperationType type = 5;
+  }
+
+  Response response = 1;
+  repeated Operation operations = 2;
+}
+
+message GetClientsFromAnalyticsRequest {
+  string federatedGraphName = 1;
+  string namespace = 2;
+}
+
+message GetClientsFromAnalyticsResponse {
+  message Client {
+    string name = 1;
+  }
+  Response response = 1;
+  repeated Client clients = 2;
 }
 
 service PlatformService {
@@ -2790,6 +2923,8 @@ service PlatformService {
   rpc GetAPIKeys(GetAPIKeysRequest) returns (GetAPIKeysResponse){}
   // CreateAPIKey creates an API key for the organization
   rpc CreateAPIKey(CreateAPIKeyRequest) returns (CreateAPIKeyResponse){}
+  // UpdateAPIKey updates an API key for the organization
+  rpc UpdateAPIKey(UpdateAPIKeyRequest) returns (UpdateAPIKeyResponse) {}
   // DeleteAPIKey deletes an API key for the organization
   rpc DeleteAPIKey(DeleteAPIKeyRequest) returns (DeleteAPIKeyResponse){}
   // RemoveOrganizationMember removes the user from the organization
@@ -2798,6 +2933,18 @@ service PlatformService {
   rpc RemoveInvitation(RemoveInvitationRequest) returns (RemoveInvitationResponse){}
   // MigrateFromApollo migrates the graphs from apollo to cosmo
   rpc MigrateFromApollo(MigrateFromApolloRequest) returns (MigrateFromApolloResponse) {}
+
+  // Organization Member Group management
+  // CreateOrganizationGroup creates a new organization group
+  rpc CreateOrganizationGroup(CreateOrganizationGroupRequest) returns (CreateOrganizationGroupResponse) {}
+  // GetOrganizationGroups returns the list of organization groups
+  rpc GetOrganizationGroups(GetOrganizationGroupsRequest) returns (GetOrganizationGroupsResponse) {}
+  // GetOrganizationGroupMembers returns the list of members belonging to the provided organization group
+  rpc GetOrganizationGroupMembers(GetOrganizationGroupMembersRequest) returns (GetOrganizationGroupMembersResponse) {}
+  // UpdateOrganizationGroup updates the rule list for an organization group
+  rpc UpdateOrganizationGroup(UpdateOrganizationGroupRequest) returns (UpdateOrganizationGroupResponse) {}
+  // DeleteOrganizationGroup deletes an existing organization group
+  rpc DeleteOrganizationGroup(DeleteOrganizationGroupRequest) returns (DeleteOrganizationGroupResponse) {}
 
   // CreateOrganizationWebhookConfig create a new webhook config for the organization
   rpc CreateOrganizationWebhookConfig(CreateOrganizationWebhookConfigRequest) returns (CreateOrganizationWebhookConfigResponse) {}
@@ -2836,8 +2983,8 @@ service PlatformService {
   rpc LeaveOrganization(LeaveOrganizationRequest) returns (LeaveOrganizationResponse) {}
   // UpdateOrganizationDetails updates the name and slug of the organization
   rpc UpdateOrganizationDetails(UpdateOrganizationDetailsRequest) returns (UpdateOrganizationDetailsResponse) {}
-  // UpdateOrgMemberRole updates the role of an org member
-  rpc UpdateOrgMemberRole(UpdateOrgMemberRoleRequest) returns (UpdateOrgMemberRoleResponse) {}
+  // UpdateOrgMemberGroup updates the group of an organization member
+  rpc UpdateOrgMemberGroup(UpdateOrgMemberGroupRequest) returns (UpdateOrgMemberGroupResponse) {}
 
   // IsGitHubAppInstalled checks if the cosmo github app is installed to a repository
   rpc IsGitHubAppInstalled(IsGitHubAppInstalledRequest) returns (IsGitHubAppInstalledResponse) {}
@@ -2870,10 +3017,6 @@ service PlatformService {
   rpc GetUserAccessibleResources(GetUserAccessibleResourcesRequest) returns (GetUserAccessibleResourcesResponse) {}
   // UpdateFeatureSettings updates the setinngs of features(ai, rbac, scim) of the organization
   rpc UpdateFeatureSettings(UpdateFeatureSettingsRequest) returns (UpdateFeatureSettingsResponse) {}
-  // AddSubgraphMember adds a user to the subgraph
-  rpc AddSubgraphMember(AddSubgraphMemberRequest) returns (AddSubgraphMemberResponse) {}
-  // RemoveSubgraphMember removes a member from the subgraph
-  rpc RemoveSubgraphMember(RemoveSubgraphMemberRequest) returns (RemoveSubgraphMemberResponse) {}
   // GetSubgraphMembers gets all the members of the subgraph
   rpc GetSubgraphMembers(GetSubgraphMembersRequest) returns (GetSubgraphMembersResponse) {}
   // AddReadme adds a readme of a target, can be a subgraph or a federated graph
@@ -3004,4 +3147,8 @@ service PlatformService {
   rpc GetProposalsByFederatedGraph(GetProposalsByFederatedGraphRequest) returns (GetProposalsByFederatedGraphResponse) {}
   // GetProposalChecks returns checks for a proposal.
   rpc GetProposalChecks(GetProposalChecksRequest) returns (GetProposalChecksResponse) {}
+  // GetOperations returns the operations of a federated graph.
+  rpc GetOperations(GetOperationsRequest) returns (GetOperationsResponse) {}
+  // GetClientsFromAnalytics returns all the clients of the federated graph from the analytics
+  rpc GetClientsFromAnalytics(GetClientsFromAnalyticsRequest) returns (GetClientsFromAnalyticsResponse) {}
 }

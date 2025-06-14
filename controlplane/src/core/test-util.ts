@@ -4,9 +4,10 @@ import nuid from 'nuid';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { ExpiresAt } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { pino } from 'pino';
-import { AuthContext, Label } from '../types/index.js';
+import { AuthContext, Label, OrganizationGroupDTO } from '../types/index.js';
 import * as schema from '../db/schema.js';
-import { MemberRole } from '../db/models.js';
+import { OrganizationRole } from '../db/models.js';
+import { organizationRoleEnum } from '../db/schema.js';
 import { Authenticator } from './services/Authentication.js';
 import { UserRepository } from './repositories/UserRepository.js';
 import { OrganizationRepository } from './repositories/OrganizationRepository.js';
@@ -14,6 +15,8 @@ import { GraphApiJwtPayload, GraphKeyAuthContext } from './services/GraphApiToke
 import { ApiKeyRepository } from './repositories/ApiKeyRepository.js';
 import { DefaultNamespace, NamespaceRepository } from './repositories/NamespaceRepository.js';
 import { verifyJwt } from './crypto/jwt.js';
+import { OrganizationGroupRepository } from './repositories/OrganizationGroupRepository.js';
+import { RBACEvaluator } from './services/RBACEvaluator.js';
 
 export type UserTestData = {
   userId: string;
@@ -23,7 +26,13 @@ export type UserTestData = {
   defaultBillingPlanId?: string;
   email: string;
   apiKey: string;
-  roles: ('admin' | 'developer' | 'viewer')[];
+  roles: OrganizationRole[];
+};
+
+export const defaultGroupDescription: Record<string, string> = {
+  admin: 'Grants administrative access for the organization.',
+  developer: 'Grants developer access for the organization.',
+  viewer: 'Grants readonly access for the organization.',
 };
 
 export async function beforeAllSetup(): Promise<string> {
@@ -49,11 +58,18 @@ export function genUniqueLabel(prefix = 'prefix'): Label {
   return { key: prefix + '-' + genID(), value: genID() };
 }
 
-export async function seedTest(queryConnection: postgres.Sql, userTestData: UserTestData, createScimKey?: boolean) {
+export async function seedTest(
+  queryConnection: postgres.Sql,
+  userTestData: UserTestData,
+  createScimKey?: boolean,
+  kcRootGroupId?: string,
+  kcGroups?: { id: string; name: string }[],
+) {
   const db = drizzle(queryConnection, { schema: { ...schema } });
 
   const userRepo = new UserRepository(pino(), db);
   const orgRepo = new OrganizationRepository(pino(), db, userTestData.defaultBillingPlanId);
+  const orgGroupRepo = new OrganizationGroupRepository(db);
   const apiKeyRepo = new ApiKeyRepository(db);
 
   const user = await userRepo.byEmail(userTestData.email);
@@ -61,20 +77,42 @@ export async function seedTest(queryConnection: postgres.Sql, userTestData: User
     return;
   }
 
-  await userRepo.addUser({
-    id: userTestData.userId,
-    email: userTestData.email,
-  });
+  await userRepo.addUser({ id: userTestData.userId, email: userTestData.email });
 
   let org = await orgRepo.byId(userTestData.organizationId);
-
   if (!org) {
     org = await orgRepo.createOrganization({
       organizationID: userTestData.organizationId,
       organizationName: userTestData.organizationName,
       organizationSlug: userTestData.organizationSlug,
       ownerID: userTestData.userId,
+      kcGroupId: kcRootGroupId,
     });
+
+    for (const groupName of ['admin', 'developer', 'viewer']) {
+      const createdGroup = await orgGroupRepo.create({
+        organizationId: org.id,
+        name: groupName,
+        description: defaultGroupDescription[groupName] ?? '',
+        builtin: groupName === 'admin',
+        kcGroupId: kcGroups?.find((g) => g.name === groupName)?.id || null,
+      });
+
+      const roleName = `organization-${groupName}` as OrganizationRole;
+      if (organizationRoleEnum.enumValues.includes(roleName)) {
+        await orgGroupRepo.updateGroup({
+          organizationId: org.id,
+          groupId: createdGroup.groupId,
+          rules: [
+            {
+              role: roleName,
+              namespaces: [],
+              resources: [],
+            },
+          ],
+        });
+      }
+    }
   }
 
   const orgMember = await orgRepo.addOrganizationMember({
@@ -82,20 +120,42 @@ export async function seedTest(queryConnection: postgres.Sql, userTestData: User
     userID: userTestData.userId,
   });
 
-  await orgRepo.addOrganizationMemberRoles({
-    memberID: orgMember.id,
-    roles: userTestData.roles,
-  });
+  const userGroups = userTestData.roles.map((group) => group.split('-').splice(1).join('-'));
 
-  await apiKeyRepo.addAPIKey({
-    key: userTestData.apiKey,
-    name: userTestData.email,
-    organizationID: org.id,
-    userID: userTestData.userId,
-    expiresAt: ExpiresAt.NEVER,
-    targetIds: [],
-    permissions: createScimKey ? ['scim'] : [],
-  });
+  for (const groupName of userGroups) {
+    const orgGroup = await orgGroupRepo.byName({
+      organizationId: org.id,
+      name: groupName,
+    });
+
+    if (!orgGroup) {
+      continue;
+    }
+
+    await orgGroupRepo.addUserToGroup({
+      organizationMemberId: orgMember.id,
+      groupId: orgGroup.groupId,
+    });
+  }
+
+  if (userGroups.length > 0) {
+    const orgGroup = await orgGroupRepo.byName({
+      organizationId: org.id,
+      name: userGroups[0],
+    });
+
+    if (orgGroup) {
+      await apiKeyRepo.addAPIKey({
+        key: userTestData.apiKey,
+        name: userTestData.email,
+        organizationID: org.id,
+        userID: userTestData.userId,
+        expiresAt: ExpiresAt.NEVER,
+        groupId: orgGroup.groupId,
+        permissions: createScimKey ? ['scim'] : [],
+      });
+    }
+  }
 
   const namespaceRepo = new NamespaceRepository(db, org.id);
   const ns = await namespaceRepo.byName(DefaultNamespace);
@@ -110,12 +170,38 @@ export async function seedTest(queryConnection: postgres.Sql, userTestData: User
   }
 }
 
+export function createTestRBACEvaluator(...groups: OrganizationGroupDTO[]) {
+  return new RBACEvaluator(groups);
+}
+
+export function createAPIKeyTestRBACEvaluator(...groups: OrganizationGroupDTO[]) {
+  return new RBACEvaluator(groups, undefined, true);
+}
+
+export function createTestGroup(
+  ...rules: { role: OrganizationRole | string; namespaces?: string[]; resources?: string[] }[]
+): OrganizationGroupDTO {
+  return {
+    groupId: randomUUID(),
+    name: genID('group'),
+    description: '',
+    kcGroupId: randomUUID(),
+    membersCount: 0,
+    apiKeysCount: 0,
+    builtin: false,
+    rules: rules.map((r) => ({
+      role: r.role as OrganizationRole,
+      namespaces: r.namespaces ?? [],
+      resources: r.resources ?? [],
+    })),
+  } satisfies OrganizationGroupDTO;
+}
+
 export function createTestContext(
   organizationName = 'wundergraph',
   organizationId = randomUUID(),
-  isAdmin = true,
-  hasWriteAccess = true,
-  roles: MemberRole[] = ['admin'],
+  groups: OrganizationRole[] = ['organization-admin'],
+  organizationDeactivated = false,
 ): UserTestData & AuthContext {
   const userId = randomUUID();
 
@@ -127,10 +213,10 @@ export function createTestContext(
     email: userId + '@wg.com',
     apiKey: nuid.next(),
     organizationSlug: `slug-${organizationId}`,
-    hasWriteAccess,
-    isAdmin,
+    organizationDeactivated,
     userDisplayName: userId,
-    roles,
+    roles: groups,
+    rbac: createTestRBACEvaluator(...groups.map((g) => createTestGroup({ role: g }))),
   };
 }
 
@@ -143,6 +229,7 @@ export enum TestUser {
   adminAliceCompanyA = 'adminAliceCompanyA',
   adminBobCompanyA = 'adminBobCompanyA',
   devJoeCompanyA = 'devJoeCompanyA',
+  keyManagerSmithCompanyA = 'keyManagerSmithCompanyA',
   viewerTimCompanyA = 'viewerTimCompanyA',
   adminJimCompanyB = 'adminJimCompanyB',
 }

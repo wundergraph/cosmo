@@ -25,6 +25,7 @@ import { SchemaLintRepository } from '../../repositories/SchemaLintRepository.js
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { SchemaUsageTrafficInspector } from '../../services/SchemaUsageTrafficInspector.js';
 import { Composer } from '../../composition/composer.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function updateProposal(
   opts: RouterOptions,
@@ -51,25 +52,8 @@ export function updateProposal(
 
     req.namespace = req.namespace || DefaultNamespace;
 
-    if (!authContext.hasWriteAccess) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `The user does not have the permissions to perform this operation`,
-        },
-        breakingChanges: [],
-        nonBreakingChanges: [],
-        compositionErrors: [],
-        checkId: '',
-        lintWarnings: [],
-        lintErrors: [],
-        graphPruneWarnings: [],
-        graphPruneErrors: [],
-        compositionWarnings: [],
-        lintingSkipped: false,
-        graphPruningSkipped: false,
-        checkUrl: '',
-      };
+    if (authContext.organizationDeactivated) {
+      throw new UnauthorizedError();
     }
 
     const namespace = await namespaceRepo.byName(req.namespace);
@@ -135,6 +119,11 @@ export function updateProposal(
         graphPruningSkipped: false,
         checkUrl: '',
       };
+    }
+
+    // check whether the user is authorized to perform the action
+    if (!authContext.rbac.hasFederatedGraphWriteAccess(federatedGraph)) {
+      throw new UnauthorizedError();
     }
 
     const proposal = await proposalRepo.ByName({
@@ -321,8 +310,8 @@ export function updateProposal(
         const subgraph = await subgraphRepo.byName(proposalSubgraph.name, req.namespace);
 
         if (subgraph) {
-          const isSubgraphPartOfFedGraph = subgraphsOfFedGraph.some((s) => s.name === proposalSubgraph.name);
           // If the subgraph exists and is not part of the federated graph, return an error
+          const isSubgraphPartOfFedGraph = subgraphsOfFedGraph.some((s) => s.name === proposalSubgraph.name);
           if (!isSubgraphPartOfFedGraph) {
             return {
               response: {

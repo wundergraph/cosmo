@@ -6,6 +6,7 @@ type visitorKind uint
 
 const (
 	usesBodyKey visitorKind = iota
+	usesSubgraphTraceKey
 )
 
 // VisitorGroup is a struct that holds all the VisitorManager that are used to compile the expressions
@@ -19,7 +20,8 @@ type visitorGroup struct {
 func createVisitorMGroup() *visitorGroup {
 	return &visitorGroup{
 		globalVisitors: map[visitorKind]ast.Visitor{
-			usesBodyKey: &UsesBody{},
+			usesBodyKey:          &UsesBody{},
+			usesSubgraphTraceKey: &UsesSubgraphTrace{},
 		},
 	}
 }
@@ -27,4 +29,9 @@ func createVisitorMGroup() *visitorGroup {
 func (c *visitorGroup) IsBodyUsedInExpressions() bool {
 	body := c.globalVisitors[usesBodyKey].(*UsesBody)
 	return body.UsesBody
+}
+
+func (c *visitorGroup) IsSubgraphTraceUsedInExpressions() bool {
+	body := c.globalVisitors[usesSubgraphTraceKey].(*UsesSubgraphTrace)
+	return body.UsesSubgraphTrace
 }

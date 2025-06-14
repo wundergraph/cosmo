@@ -9,27 +9,36 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
+	"github.com/joho/godotenv"
 	"github.com/wundergraph/cosmo/router/core"
+	"github.com/wundergraph/cosmo/router/internal/timex"
 	"github.com/wundergraph/cosmo/router/internal/versioninfo"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"github.com/wundergraph/cosmo/router/pkg/profile"
+	"github.com/wundergraph/cosmo/router/pkg/watcher"
 
 	"go.uber.org/zap"
 )
 
 var (
 	overrideEnvFlag = flag.String("override-env", os.Getenv("OVERRIDE_ENV"), "Path to .env file to override environment variables")
-	configPathFlag  = flag.String("config", os.Getenv("CONFIG_PATH"), "Path to the router config file e.g. config.yaml")
 	routerVersion   = flag.Bool("version", false, "Prints the version and dependency information")
 	pprofListenAddr = flag.String("pprof-addr", os.Getenv("PPROF_ADDR"), "Address to listen for pprof requests. e.g. :6060 for localhost:6060")
 	memProfilePath  = flag.String("memprofile", "", "Path to write memory profile. Memory is a snapshot taken at the time the program exits")
 	cpuProfilePath  = flag.String("cpuprofile", "", "Path to write cpu profile. CPU is measured from when the program starts until the program exits")
 	help            = flag.Bool("help", false, "Prints the help message")
+
+	// Register the custom flag types
+	configPathFlag = newMultipleString("config", os.Getenv("CONFIG_PATH"), "Path to the router config file e.g. config.yaml, in case the path is a comma separated file list e.g. \"config.yaml,override.yaml\", the configs will be merged")
 )
 
 func Main() {
+	_ = godotenv.Load()
+	_ = godotenv.Load(".env.local")
+
 	// Parse flags before calling profile.Start(), since it may add flags
 	flag.Parse()
 
@@ -42,17 +51,42 @@ func Main() {
 		os.Exit(0)
 	}
 
-	result, err := config.LoadConfig(*configPathFlag, *overrideEnvFlag)
+	// We load this after flag parse so that "OVERRIDE_ENV" can be set by dotenv OR the flag
+	if *overrideEnvFlag != "" {
+		_ = godotenv.Overload(*overrideEnvFlag)
+	}
+
+	/*
+		Config path precedence:
+		1. Flag
+		2. Environment variable
+		3. Dotenv loaded environment variable
+		4. Default config file
+	*/
+
+	// If not set by flag or normal environment variable, check again for dotenv override loaded envar
+	if len(*configPathFlag) == 0 {
+		configPathEnv := os.Getenv("CONFIG_PATH")
+		err := configPathFlag.Set(configPathEnv)
+		if err != nil {
+			// This should be unreachable unless someone returns an non nil err
+			log.Fatalf("Could not set config path from environment variable: %s", err)
+		}
+	}
+
+	// If it is still not set, default to config paths
+	if len(*configPathFlag) == 0 {
+		*configPathFlag = multipleString{config.DefaultConfigPath}
+	}
+
+	result, err := config.LoadConfig(*configPathFlag)
 	if err != nil {
 		log.Fatalf("Could not load config: %s", err)
 	}
 
-	logLevel, err := logging.ZapLogLevelFromString(result.Config.LogLevel)
-	if err != nil {
-		log.Fatalf("Could not parse log level: %s", err)
-	}
+	logLevelAtomic := zap.NewAtomicLevelAt(result.Config.LogLevel)
 
-	logger := logging.New(!result.Config.JSONLog, result.Config.DevelopmentMode, logLevel).
+	baseLogger := logging.New(!result.Config.JSONLog, result.Config.DevelopmentMode, logLevelAtomic).
 		With(
 			zap.String("service", "@wundergraph/router"),
 			zap.String("service_version", core.Version),
@@ -60,70 +94,138 @@ func Main() {
 
 	// Start pprof server if address is provided
 	if *pprofListenAddr != "" {
-		pprofSvr := profile.NewServer(*pprofListenAddr, logger)
+		pprofSvr := profile.NewServer(*pprofListenAddr, baseLogger)
 		defer pprofSvr.Close()
 		go pprofSvr.Listen()
 	}
 
 	// Start profiling if flags are set
-	profiler := profile.Start(logger, *cpuProfilePath, *memProfilePath)
+	profiler := profile.Start(baseLogger, *cpuProfilePath, *memProfilePath)
 	defer profiler.Finish()
 
-	// Handling shutdown
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt,
-		syscall.SIGHUP,  // process is detached from terminal
-		syscall.SIGTERM, // default for kill
-		syscall.SIGKILL,
-		syscall.SIGQUIT, // ctrl + \
-		syscall.SIGINT,  // ctrl+c
-	)
-	defer stop()
+	rs, err := core.NewRouterSupervisor(&core.RouterSupervisorOpts{
+		BaseLogger: baseLogger,
+		ConfigFactory: func() (*config.Config, error) {
+			result, err := config.LoadConfig(*configPathFlag)
+			if err != nil {
+				return nil, fmt.Errorf("could not load config: %w", err)
+			}
 
-	if *configPathFlag != "" {
-		logger.Info(
-			"Config file path provided. Values in the config file have higher priority than environment variables",
-			zap.String("config_file", *configPathFlag),
-		)
-	} else if result.DefaultLoaded {
-		logger.Info("Found default config file. Values in the config file have higher priority than environment variables",
-			zap.String("config_file", config.DefaultConfigPath),
-		)
-	}
+			if !result.DefaultLoaded {
+				baseLogger.Info(
+					"Config file provided. Values in the config file have higher priority than environment variables",
+					zap.Strings("config_file", *configPathFlag),
+				)
+			}
 
-	// Provide a way to cancel all running components of the router after graceful shutdown
-	// Don't use the parent context that is canceled by the signal handler
-	routerCtx, routerCancel := context.WithCancel(context.Background())
-	defer routerCancel()
+			logLevelAtomic.SetLevel(result.Config.LogLevel)
 
-	router, err := NewRouter(routerCtx, Params{
-		Config: &result.Config,
-		Logger: logger,
+			return &result.Config, nil
+		},
 	})
 	if err != nil {
-		logger.Fatal("Could not create router", zap.Error(err))
+		log.Fatalf("Could not create router supervisor: %s", err)
 	}
 
-	if err = router.Start(routerCtx); err != nil {
-		logger.Fatal("Could not start router", zap.Error(err))
+	rootCtx, rootCancel := context.WithCancel(context.Background())
+	defer rootCancel()
+
+	// Handling shutdown signals
+	{
+		killChan := make(chan os.Signal, 1)
+
+		signal.Notify(killChan, os.Interrupt,
+			syscall.SIGTERM, // default for kill
+			syscall.SIGQUIT, // ctrl + \
+			syscall.SIGINT,  // ctrl+c
+		)
+
+		go func() {
+			select {
+			case <-rootCtx.Done():
+				return
+			case <-killChan:
+				rs.Stop()
+			}
+		}()
 	}
 
-	<-ctx.Done()
+	// Handling reload signal
+	{
+		reloadChan := make(chan os.Signal, 1)
 
-	logger.Info("Graceful shutdown of router initiated", zap.String("shutdown_delay", result.Config.ShutdownDelay.String()))
+		signal.Notify(reloadChan, syscall.SIGHUP)
 
-	// Enforce a maximum shutdown delay to avoid waiting forever
-	// Don't use the parent context that is canceled by the signal handler
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), result.Config.ShutdownDelay)
-	defer cancel()
+		go func() {
+			for {
+				select {
+				case <-rootCtx.Done():
+					return
+				case <-reloadChan:
+					rs.Reload()
+				}
+			}
+		}()
+	}
 
-	if err = router.Shutdown(shutdownCtx); err != nil {
-		if errors.Is(err, context.DeadlineExceeded) {
-			logger.Warn("Router shutdown deadline exceeded. Consider increasing the shutdown delay")
+	// Setup config file watcher if enabled
+	if result.Config.WatchConfig.Enabled {
+		ll := baseLogger.With(zap.String("watcher_label", "router_config"))
+
+		startupDelay := 0 * time.Second
+
+		// Apply startup delay if configured
+		if result.Config.WatchConfig.StartupDelay.Enabled {
+			startupDelay = timex.RandomDuration(result.Config.WatchConfig.StartupDelay.Maximum)
+
+			ll.Info("Using startup delay before initializing config watcher",
+				zap.Duration("delay", startupDelay),
+			)
 		}
-		logger.Fatal("Could not shutdown router gracefully", zap.Error(err))
+
+		watchFunc, err := watcher.New(watcher.Options{
+			Interval: result.Config.WatchConfig.Interval,
+			Logger:   ll,
+			Paths:    *configPathFlag,
+			Callback: func() {
+				ll.Info("Configuration changed, triggering reload")
+
+				rs.Reload()
+			},
+		})
+		if err != nil {
+			baseLogger.Error("Could not create watcher", zap.Error(err))
+			return
+		}
+
+		go func() {
+			// Sleep for startupDelay to prevent synchronized reloads across
+			// different instances of the router
+			time.Sleep(startupDelay)
+
+			if err := watchFunc(rootCtx); err != nil {
+				if !errors.Is(err, context.Canceled) {
+					ll.Error("Error watching execution config", zap.Error(err))
+				} else {
+					ll.Debug("Watcher context cancelled, shutting down")
+				}
+			}
+		}()
+
+		ll.Info("Watching router config file",
+			zap.Strings("config_file", *configPathFlag),
+			zap.Duration("watch_interval", result.Config.WatchConfig.Interval),
+		)
 	} else {
-		logger.Info("Router shutdown successfully")
+		baseLogger.Info("Config file watching is disabled, you can still trigger reloads by sending SIGHUP to the router process")
 	}
 
-	logger.Debug("Router exiting")
+	// Start the router supervisor (blocking)
+	if err := rs.Start(); err != nil {
+		if errors.Is(err, core.ErrStartupFailed) {
+			baseLogger.Error("Could not start router", zap.Error(err))
+		} else {
+			baseLogger.Error("Could not shutdown router gracefully", zap.Error(err))
+		}
+	}
 }

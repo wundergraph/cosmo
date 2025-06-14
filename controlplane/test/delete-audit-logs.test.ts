@@ -5,8 +5,8 @@ import { OrganizationRepository } from '../src/core/repositories/OrganizationRep
 import { AuditLogRepository } from '../src/core/repositories/AuditLogRepository.js';
 import { afterAllSetup, beforeAllSetup, genID, TestUser } from '../src/core/test-util.js';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
-import { createDeleteOrganizationWorker } from "../src/core/workers/DeleteOrganizationWorker.js";
-import { createDeleteOrganizationAuditLogsWorker } from "../src/core/workers/DeleteOrganizationAuditLogsWorker.js";
+import { createDeleteOrganizationWorker } from '../src/core/workers/DeleteOrganizationWorker.js';
+import { createDeleteOrganizationAuditLogsWorker } from '../src/core/workers/DeleteOrganizationAuditLogsWorker.js';
 import { SetupTest } from './test-util.js';
 
 let dbname = '';

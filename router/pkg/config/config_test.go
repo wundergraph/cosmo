@@ -1,6 +1,7 @@
 package config
 
 import (
+	"github.com/goccy/go-yaml"
 	"regexp"
 	"testing"
 	"time"
@@ -19,7 +20,7 @@ version: "1"
 
 router_config_path: "config.json"
 `)
-	_, err := LoadConfig(f, "")
+	_, err := LoadConfig([]string{f})
 
 	require.NoError(t, err)
 }
@@ -39,7 +40,7 @@ traffic_shaping:
   router:
     max_request_body_size: 1KB
 `)
-	_, err := LoadConfig(f, "")
+	_, err := LoadConfig([]string{f})
 
 	var js *jsonschema.ValidationError
 	require.ErrorAs(t, err, &js)
@@ -60,11 +61,31 @@ graph:
 poll_interval: "${TEST_POLL_INTERVAL}"
 `)
 
-	cfg, err := LoadConfig(f, "")
+	cfg, err := LoadConfig([]string{f})
 
 	require.NoError(t, err)
 
 	require.Equal(t, time.Second*20, cfg.Config.PollInterval)
+}
+
+func TestLoadWatchCfgFromEnvars(t *testing.T) {
+	t.Setenv("WATCH_CONFIG_ENABLED", "true")
+	t.Setenv("WATCH_CONFIG_INTERVAL", "30s")
+	t.Setenv("WATCH_CONFIG_STARTUP_DELAY_ENABLED", "true")
+	t.Setenv("WATCH_CONFIG_STARTUP_DELAY_MAXIMUM", "20s")
+
+	f := createTempFileFromFixture(t, `
+version: "1"
+`)
+
+	cfg, err := LoadConfig([]string{f})
+
+	require.NoError(t, err)
+
+	require.True(t, cfg.Config.WatchConfig.Enabled)
+	require.True(t, cfg.Config.WatchConfig.StartupDelay.Enabled)
+	require.Equal(t, time.Second*30, cfg.Config.WatchConfig.Interval)
+	require.Equal(t, time.Second*20, cfg.Config.WatchConfig.StartupDelay.Maximum)
 }
 
 func TestConfigHasPrecedence(t *testing.T) {
@@ -79,7 +100,7 @@ graph:
 poll_interval: 11s
 `)
 
-	cfg, err := LoadConfig(f, "")
+	cfg, err := LoadConfig([]string{f})
 
 	require.NoError(t, err)
 
@@ -117,10 +138,21 @@ func TestConfigSlicesHaveDefaults(t *testing.T) {
 func TestErrorWhenConfigNotExists(t *testing.T) {
 	t.Parallel()
 
-	_, err := LoadConfig("./fixtures/not_exists.yaml", "")
+	_, err := LoadConfig([]string{"./fixtures/not_exists.yaml"})
 
 	require.Error(t, err)
 	require.ErrorContains(t, err, "could not read custom config file ./fixtures/not_exists.yaml: open ./fixtures/not_exists.yaml: no such file or directory")
+}
+
+func TestConfigIsOptional(t *testing.T) {
+	t.Setenv("GRAPH_API_TOKEN", "XXX")
+
+	// DefaultConfigPath will not exist for this test, so we expect
+	// LoadConfig to load default values.
+	result, err := LoadConfig([]string{DefaultConfigPath})
+
+	require.NoError(t, err)
+	require.True(t, result.DefaultLoaded)
 }
 
 func TestRegexDecoding(t *testing.T) {
@@ -140,7 +172,7 @@ telemetry:
       exclude_metric_labels: []
 `)
 
-	cfg, err := LoadConfig(f, "")
+	cfg, err := LoadConfig([]string{f})
 
 	require.NoError(t, err)
 	require.Empty(t, cfg.Config.Telemetry.Metrics.Prometheus.ExcludeMetrics)
@@ -160,31 +192,13 @@ telemetry:
       exclude_metric_labels: ["^instance"]
 `)
 
-	cfg, err = LoadConfig(f, "")
+	cfg, err = LoadConfig([]string{f})
 
 	require.NoError(t, err)
 	require.Len(t, cfg.Config.Telemetry.Metrics.Prometheus.ExcludeMetrics, 2)
 	require.Len(t, cfg.Config.Telemetry.Metrics.Prometheus.ExcludeMetricLabels, 1)
 	require.Equal(t, RegExArray{regexp.MustCompile("^go_.*"), regexp.MustCompile("^process_.*")}, cfg.Config.Telemetry.Metrics.Prometheus.ExcludeMetrics)
 	require.Equal(t, RegExArray{regexp.MustCompile("^instance")}, cfg.Config.Telemetry.Metrics.Prometheus.ExcludeMetricLabels)
-}
-
-func TestErrorWhenEnvVariableConfigNotExists(t *testing.T) {
-	t.Setenv("CONFIG_PATH", "not_exists.yaml")
-
-	_, err := LoadConfig("", "")
-
-	require.Error(t, err)
-	require.ErrorContains(t, err, "could not read custom config file not_exists.yaml: open not_exists.yaml: no such file or directory")
-}
-
-func TestConfigIsOptional(t *testing.T) {
-	t.Setenv("GRAPH_API_TOKEN", "XXX")
-
-	result, err := LoadConfig("", "")
-
-	require.NoError(t, err)
-	require.False(t, result.DefaultLoaded)
 }
 
 func TestCustomGoDurationExtension(t *testing.T) {
@@ -203,7 +217,7 @@ telemetry:
         export_timeout: 1s
 `)
 
-	_, err := LoadConfig(f, "")
+	_, err := LoadConfig([]string{f})
 
 	var js *jsonschema.ValidationError
 	require.ErrorAs(t, err, &js)
@@ -224,7 +238,7 @@ telemetry:
         export_timeout: 5m
 `)
 
-	_, err = LoadConfig(f, "")
+	_, err = LoadConfig([]string{f})
 
 	require.ErrorAs(t, err, &js)
 
@@ -235,7 +249,7 @@ telemetry:
 func TestLoadFullConfig(t *testing.T) {
 	t.Parallel()
 
-	cfg, err := LoadConfig("./fixtures/full.yaml", "")
+	cfg, err := LoadConfig([]string{"./fixtures/full.yaml"})
 	require.NoError(t, err)
 
 	g := goldie.New(
@@ -259,7 +273,7 @@ graph:
   token: "token"
 `)
 
-	cfg, err := LoadConfig(f, "")
+	cfg, err := LoadConfig([]string{f})
 	require.NoError(t, err)
 
 	g := goldie.New(
@@ -289,7 +303,7 @@ overrides:
       subscription_protocol: ws
       subscription_websocket_subprotocol: graphql-ws
 `)
-	_, err := LoadConfig(f, "")
+	_, err := LoadConfig([]string{f})
 	require.NoError(t, err)
 }
 
@@ -310,7 +324,7 @@ overrides:
       subscription_protocol: ws
       subscription_websocket_subprotocol: graphql-ws
 `)
-	_, err := LoadConfig(f, "")
+	_, err := LoadConfig([]string{f})
 	var js *jsonschema.ValidationError
 	require.ErrorAs(t, err, &js)
 	require.Equal(t, "at '/overrides/subgraphs/some-subgraph/routing_url': 'a' is not valid http-url: invalid URL", js.Causes[0].Error())
@@ -338,7 +352,7 @@ persisted_operations:
     provider_id: s3
     object_prefix: "5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/operations/foo"
 `)
-	_, err := LoadConfig(f, "")
+	_, err := LoadConfig([]string{f})
 	var js *jsonschema.ValidationError
 	require.NoError(t, err, &js)
 
@@ -357,7 +371,7 @@ persisted_operations:
     provider_id: cdn
     object_prefix: "5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/operations/foo"
 `)
-	_, err = LoadConfig(f, "")
+	_, err = LoadConfig([]string{f})
 	js = &jsonschema.ValidationError{}
 	require.NoError(t, err, &js)
 }
@@ -384,7 +398,7 @@ persisted_operations:
     provider_id: s3
     # Missing object_prefix
 `)
-	_, err := LoadConfig(f, "")
+	_, err := LoadConfig([]string{f})
 	var js *jsonschema.ValidationError
 	require.ErrorAs(t, err, &js)
 	require.Equal(t, "at '/persisted_operations/storage': missing property 'object_prefix'", js.Causes[0].Error())
@@ -412,7 +426,7 @@ execution_config:
     provider_id: s3
     object_path: "5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/routerconfigs/latest.json"
 `)
-		_, err := LoadConfig(f, "")
+		_, err := LoadConfig([]string{f})
 		var js *jsonschema.ValidationError
 		require.NoError(t, err, &js)
 	})
@@ -432,7 +446,7 @@ execution_config:
     provider_id: cdn
     object_path: "5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/routerconfigs/latest.json"
 `)
-		_, err := LoadConfig(f, "")
+		_, err := LoadConfig([]string{f})
 		js := &jsonschema.ValidationError{}
 		require.NoError(t, err, &js)
 
@@ -449,7 +463,7 @@ execution_config:
     watch: true
     watch_interval: "1s"
 `)
-		_, err := LoadConfig(f, "")
+		_, err := LoadConfig([]string{f})
 		js := &jsonschema.ValidationError{}
 		require.NoError(t, err, &js)
 	})
@@ -477,7 +491,7 @@ execution_config:
     provider_id: s3
     # Missing object_path
 `)
-		_, err := LoadConfig(f, "")
+		_, err := LoadConfig([]string{f})
 		var js *jsonschema.ValidationError
 		require.ErrorAs(t, err, &js)
 		require.Equal(t, "at '/execution_config': oneOf failed, none matched\n- at '/execution_config': additional properties 'storage' not allowed\n- at '/execution_config/storage': missing property 'object_path'\n- at '/execution_config': additional properties 'storage' not allowed", js.Causes[0].Error())
@@ -492,13 +506,13 @@ execution_config:
   file:
     path: "latest.json"
     watch: true
-    watch_interval: "500ms"
+    watch_interval: "10ms"
 `)
 
-		_, err := LoadConfig(f, "")
+		_, err := LoadConfig([]string{f})
 		var js *jsonschema.ValidationError
 		require.ErrorAs(t, err, &js)
-		require.Equal(t, "at '/execution_config': oneOf failed, none matched\n- at '/execution_config/file/watch_interval': duration must be greater or equal than 1s\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'file' not allowed", js.Causes[0].Error())
+		require.Equal(t, "at '/execution_config': oneOf failed, none matched\n- at '/execution_config/file/watch_interval': duration must be greater or equal than 100ms\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'file' not allowed", js.Causes[0].Error())
 	})
 
 	t.Run("watch interval with watch disabled", func(t *testing.T) {
@@ -512,7 +526,7 @@ execution_config:
     watch: false
     watch_interval: "1s"
 `)
-		_, err := LoadConfig(f, "")
+		_, err := LoadConfig([]string{f})
 		var js *jsonschema.ValidationError
 		require.ErrorAs(t, err, &js)
 		require.Equal(t, "at '/execution_config': oneOf failed, none matched\n- at '/execution_config/file/watch': value must be true\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'file' not allowed", js.Causes[0].Error())
@@ -529,7 +543,7 @@ execution_config:
   file:
     path: "router.json"
 `)
-	_, err := LoadConfig(f, "")
+	_, err := LoadConfig([]string{f})
 	require.NoError(t, err)
 }
 
@@ -555,7 +569,7 @@ execution_config:
     provider_id: s3
     object_path: "5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/routerconfigs/latest.json"
 `)
-	_, err := LoadConfig(f, "")
+	_, err := LoadConfig([]string{f})
 	var js *jsonschema.ValidationError
 	require.ErrorAs(t, err, &js)
 	require.True(t,
@@ -573,7 +587,7 @@ client_header:
   name: "Client_Name"
   version: "Client_Version"
 `)
-	_, err := LoadConfig(f, "")
+	_, err := LoadConfig([]string{f})
 	require.NoError(t, err)
 }
 
@@ -589,7 +603,7 @@ telemetry:
         enabled: true
         include_operation_sha: true
 `)
-		c, err := LoadConfig(f, "")
+		c, err := LoadConfig([]string{f})
 		require.NoError(t, err)
 
 		require.True(t, c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.Enabled)
@@ -601,7 +615,7 @@ telemetry:
 version: "1"
 `)
 
-		c, err := LoadConfig(f, "")
+		c, err := LoadConfig([]string{f})
 		require.NoError(t, err)
 
 		require.False(t, c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.Enabled)
@@ -610,7 +624,7 @@ version: "1"
 		t.Setenv("PROMETHEUS_SCHEMA_FIELD_USAGE_ENABLED", "true")
 		t.Setenv("PROMETHEUS_SCHEMA_FIELD_USAGE_INCLUDE_OPERATION_SHA", "true")
 
-		c, err = LoadConfig(f, "")
+		c, err = LoadConfig([]string{f})
 		require.NoError(t, err)
 
 		require.True(t, c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.Enabled)
@@ -622,7 +636,7 @@ func TestPrefixedMetricEngineConfig(t *testing.T) {
 	f := createTempFileFromFixture(t, `
 version: "1"
 `)
-	c, err := LoadConfig(f, "")
+	c, err := LoadConfig([]string{f})
 	require.NoError(t, err)
 
 	require.False(t, c.Config.Telemetry.Metrics.Prometheus.EngineStats.Subscriptions)
@@ -631,9 +645,415 @@ version: "1"
 	t.Setenv("PROMETHEUS_ENGINE_STATS_SUBSCRIPTIONS", "true")
 	t.Setenv("METRICS_OTLP_ENGINE_STATS_SUBSCRIPTIONS", "true")
 
-	c, err = LoadConfig(f, "")
+	c, err = LoadConfig([]string{f})
 	require.NoError(t, err)
 
 	require.True(t, c.Config.Telemetry.Metrics.Prometheus.EngineStats.Subscriptions)
 	require.True(t, c.Config.Telemetry.Metrics.OTLP.EngineStats.Subscriptions)
+}
+
+func TestMatchAndNegateMatch(t *testing.T) {
+	t.Parallel()
+
+	t.Run("for request", func(t *testing.T) {
+		t.Run("when only the matching attribute is defined", func(t *testing.T) {
+			f := createTempFileFromFixture(t, `
+version: "1"
+
+headers:
+  all:
+    request:
+      - op: propagate
+        matching: .*
+`)
+			_, err := LoadConfig([]string{f})
+			require.NoError(t, err)
+		})
+
+		t.Run("when matching is not defined but negate_match is defined", func(t *testing.T) {
+			f := createTempFileFromFixture(t, `
+version: "1"
+
+headers:
+  all:
+    request:
+      - op: propagate
+        negate_match: true
+`)
+			_, err := LoadConfig([]string{f})
+			var js *jsonschema.ValidationError
+			require.ErrorAs(t, err, &js)
+			require.ErrorContains(t, js.Causes[0], "at '/headers/all/request/0': properties 'matching' required, if 'negate_match' exists")
+		})
+
+		t.Run("when matching and negate_match is defined", func(t *testing.T) {
+			f := createTempFileFromFixture(t, `
+version: "1"
+
+headers:
+  all:
+    request:
+      - op: propagate
+        matching: .*
+        negate_match: true
+`)
+			_, err := LoadConfig([]string{f})
+			require.NoError(t, err)
+		})
+	})
+
+	t.Run("for response", func(t *testing.T) {
+		t.Run("when only the matching attribute is defined", func(t *testing.T) {
+			f := createTempFileFromFixture(t, `
+version: "1"
+
+headers:
+  all:
+    response:
+      - op: propagate
+        algorithm: first_write
+        matching: .*
+`)
+			_, err := LoadConfig([]string{f})
+			require.NoError(t, err)
+		})
+
+		t.Run("when matching is not defined but negate_match is defined", func(t *testing.T) {
+			f := createTempFileFromFixture(t, `
+version: "1"
+
+headers:
+  all:
+    response:
+      - op: propagate
+        algorithm: first_write
+        negate_match: true
+`)
+			_, err := LoadConfig([]string{f})
+			var js *jsonschema.ValidationError
+			require.ErrorAs(t, err, &js)
+			require.ErrorContains(t, js.Causes[0], "at '/headers/all/response/0': properties 'matching' required, if 'negate_match' exists")
+		})
+
+		t.Run("when matching and negate_match is defined", func(t *testing.T) {
+			f := createTempFileFromFixture(t, `
+version: "1"
+
+headers:
+  all:
+    response:
+      - op: propagate
+        algorithm: first_write
+        matching: .*
+        negate_match: true
+`)
+			_, err := LoadConfig([]string{f})
+			require.NoError(t, err)
+		})
+	})
+
+}
+
+func TestConfigMerging(t *testing.T) {
+	t.Parallel()
+
+	getBaseConfigWithDefaults := func() Config {
+		return Config{
+			WatchConfig: WatchConfig{
+				Interval: 6 * time.Second,
+				StartupDelay: WatchConfigStartupDelay{
+					Maximum: 6 * time.Second,
+				},
+			},
+			ListenAddr:      "localhost:3007",
+			ControlplaneURL: "http://localhost:3008",
+			ShutdownDelay:   20 * time.Second,
+			HealthCheckPath: "/health",
+			PersistedOperationsConfig: PersistedOperationsConfig{
+				Storage: PersistedOperationsStorageConfig{
+					ProviderID:   "s3",
+					ObjectPrefix: "ee",
+				},
+			},
+			AutomaticPersistedQueries: AutomaticPersistedQueriesConfig{
+				Storage: AutomaticPersistedQueriesStorageConfig{
+					ProviderID:   "s3",
+					ObjectPrefix: "ee",
+				},
+			},
+			LivenessCheckPath: "/liveness",
+			PollInterval:      6 * time.Second,
+			GraphQLPath:       "/graphql",
+			PlaygroundPath:    "/playground",
+			EngineExecutionConfiguration: EngineExecutionConfiguration{
+				Debug: EngineDebugConfiguration{
+					PrintIntermediateQueryPlans: false,
+				},
+			},
+			ReadinessCheckPath: "/readiness",
+			SubgraphErrorPropagation: SubgraphErrorPropagationConfiguration{
+				Mode: "wrapped",
+			},
+			ExecutionConfig: ExecutionConfig{
+				File: ExecutionConfigFile{
+					Path: "ee",
+				},
+			},
+		}
+	}
+
+	t.Run("without conflicts", func(t *testing.T) {
+		t.Parallel()
+
+		base := createTempFileFromFixtureWithPattern(t, "config_test_1", `
+version: "1"
+
+readiness_check_path: "http://someurl"
+
+headers:
+  all:
+    request:
+      - op: propagate
+        matching: .*
+`)
+
+		override1 := createTempFileFromFixtureWithPattern(t, "config_test_2", `
+version: "1"
+
+listen_addr: "localhost:3007"
+`)
+
+		override2 := createTempFileFromFixtureWithPattern(t, "config_test_3", `
+version: "1"
+
+health_check_path: "/health2"
+
+listen_addr: "localhost:3007"
+`)
+
+		paths := []string{base, override1, override2}
+		configWrapper, err := LoadConfig(paths)
+		require.NoError(t, err)
+
+		require.False(t, configWrapper.DefaultLoaded)
+
+		config := configWrapper.Config
+		require.Equal(t, "http://someurl", config.ReadinessCheckPath)
+		require.Equal(t, "localhost:3007", config.ListenAddr)
+		require.Equal(t, "/health2", config.HealthCheckPath)
+		require.Len(t, config.Headers.All.Request, 1)
+
+		require.Equal(t, RequestHeaderRule{
+			Operation: "propagate",
+			Matching:  ".*",
+		}, *config.Headers.All.Request[0])
+	})
+
+	t.Run("handle conflicts", func(t *testing.T) {
+		t.Parallel()
+
+		base := createTempFileFromFixtureWithPattern(t, "config_test_1", `
+version: "1"
+
+readiness_check_path: "http://someurl"
+
+headers:
+  all:
+    request:
+      - op: propagate
+        matching: baseList.*
+`)
+
+		override1 := createTempFileFromFixtureWithPattern(t, "config_test_2", `
+version: "1"
+
+readiness_check_path: "http://there.testing"
+
+headers:
+  all:
+    request:
+      - op: propagate
+        matching: updatedList.*
+
+      - op: propagate
+        matching: updatedList2.*
+
+    response:
+      - op: propagate
+        algorithm: first_write
+        matching: updatedList.*
+`)
+
+		override2 := createTempFileFromFixtureWithPattern(t, "config_test_3", `
+version: "1"
+
+headers:
+  all:
+    request:
+      - op: propagate
+        matching: thereList1.*
+
+
+    response:
+      - op: propagate
+        algorithm: first_write
+        matching: testing1.*
+
+      - op: propagate
+        algorithm: first_write
+        matching: testing2.*
+`)
+
+		paths := []string{base, override1, override2}
+		configWrapper, err := LoadConfig(paths)
+		require.NoError(t, err)
+
+		require.False(t, configWrapper.DefaultLoaded)
+
+		config := configWrapper.Config
+		require.Equal(t, "http://there.testing", config.ReadinessCheckPath)
+		require.Len(t, config.Headers.All.Request, 1)
+		require.Len(t, config.Headers.All.Response, 2)
+
+		require.Equal(t, RequestHeaderRule{
+			Operation: "propagate",
+			Matching:  "thereList1.*",
+		}, *config.Headers.All.Request[0])
+
+		require.Equal(t, ResponseHeaderRule{
+			Operation: "propagate",
+			Algorithm: "first_write",
+			Matching:  "testing1.*",
+		}, *config.Headers.All.Response[0])
+
+		require.Equal(t, ResponseHeaderRule{
+			Operation: "propagate",
+			Algorithm: "first_write",
+			Matching:  "testing2.*",
+		}, *config.Headers.All.Response[1])
+	})
+
+	t.Run("validation errors for each config", func(t *testing.T) {
+		t.Parallel()
+
+		base := createTempFileFromFixtureWithPattern(t, "config_test_1", `
+version: "1"
+
+readiness_check_path: "http://someurl"
+
+headers:
+  all:
+    request:
+      - op: propagate
+        matching: .*
+`)
+
+		override1 := createTempFileFromFixtureWithPattern(t, "config_test_2", `
+version: "1"
+
+listen_ad_dr: "localhost:3007"
+`)
+
+		override2 := createTempFileFromFixtureWithPattern(t, "config_test_3", `
+version: "1"
+
+health_chec_k_path: "/health2"
+
+listen_addr: "localhost:3007"
+`)
+
+		paths := []string{base, override1, override2}
+		_, err := LoadConfig(paths)
+		require.Error(t, err)
+
+		// We check given parts of the error separately since the file path is not predictable
+		require.ErrorContains(t, err, "router config validation error for")
+		require.ErrorContains(t, err, "config_test_")
+		require.ErrorContains(t, err, "jsonschema validation failed with 'https://raw.githubusercontent.com/wundergraph/cosmo/main/router/pkg/config/config.schema.json#'\n- at '': ")
+
+		require.ErrorContains(t, err, "additional properties 'listen_ad_dr' not allowed")
+		require.ErrorContains(t, err, "additional properties 'health_chec_k_path' not allowed")
+	})
+
+	t.Run("process entire base config successfully", func(t *testing.T) {
+		t.Parallel()
+
+		config1 := getBaseConfigWithDefaults()
+		config1Bytes, err := yaml.Marshal(&config1)
+		require.NoError(t, err)
+
+		config2 := getBaseConfigWithDefaults()
+		config2Bytes, err := yaml.Marshal(&config2)
+		require.NoError(t, err)
+
+		config3 := getBaseConfigWithDefaults()
+		config3Bytes, err := yaml.Marshal(&config3)
+		require.NoError(t, err)
+
+		base := createTempFileFromFixtureWithPattern(t, "testing_config_1", string(config1Bytes))
+		override1 := createTempFileFromFixtureWithPattern(t, "testing_config_2", string(config2Bytes))
+		override2 := createTempFileFromFixtureWithPattern(t, "testing_config_3", string(config3Bytes))
+
+		paths := []string{base, override1, override2}
+		_, err = LoadConfig(paths)
+		require.NoError(t, err)
+	})
+
+	t.Run("merge full.yaml with itself successfully", func(t *testing.T) {
+		t.Parallel()
+
+		paths := []string{"./fixtures/full.yaml", "./fixtures/full.yaml", "./fixtures/full.yaml", "./fixtures/full.yaml", "./fixtures/full.yaml"}
+		cfg, err := LoadConfig(paths)
+		require.NoError(t, err)
+
+		g := goldie.New(
+			t,
+			goldie.WithFixtureDir("testdata"),
+			goldie.WithNameSuffix(".json"),
+			goldie.WithDiffEngine(goldie.ClassicDiff),
+		)
+
+		g.AssertJson(t, "config_full", cfg.Config)
+	})
+
+	t.Run("attempt to bypass validations with merge", func(t *testing.T) {
+		t.Parallel()
+
+		base := createTempFileFromFixtureWithPattern(t, "config_test_1", `
+version: "1"
+
+execution_config: 
+  file: 
+    path: 'somePath'
+`)
+
+		override1 := createTempFileFromFixtureWithPattern(t, "config_test_2", `
+version: "1"
+
+execution_config: 
+  storage: 
+    provider_id: 'id'
+    object_path: 'there' 
+
+`)
+
+		override2 := createTempFileFromFixtureWithPattern(t, "config_test_2", `
+version: "1"
+
+listen_addr: "localhost:3007"
+`)
+
+		// Some validations like oneOf can be bypassed by a merge
+		paths := []string{base, override1, override2}
+		_, err := LoadConfig(paths)
+		require.Error(t, err)
+
+		require.ErrorContains(t, err, "router config validation error when combined")
+		require.ErrorContains(t, err, "jsonschema validation failed with")
+		require.ErrorContains(t, err, "- at '/execution_config': oneOf failed, none matched")
+		require.ErrorContains(t, err, "- at '/execution_config': additional properties 'storage' not allowed")
+		require.ErrorContains(t, err, "- at '/execution_config': additional properties 'file' not allowed")
+		require.ErrorContains(t, err, "- at '/execution_config': additional properties 'file', 'storage' not allowed")
+	})
+
 }

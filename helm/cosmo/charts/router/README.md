@@ -1,6 +1,6 @@
 # router
 
-![Version: 0.10.1](https://img.shields.io/badge/Version-0.10.1-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.197.1](https://img.shields.io/badge/AppVersion-0.197.1-informational?style=flat-square)
+![Version: 0.13.0](https://img.shields.io/badge/Version-0.13.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.197.1](https://img.shields.io/badge/AppVersion-0.197.1-informational?style=flat-square)
 
 This is the official Helm Chart for the WunderGraph Cosmo Router.
 
@@ -8,12 +8,14 @@ This is the official Helm Chart for the WunderGraph Cosmo Router.
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
+| additionalLabels | object | `{}` | Add labels to deployment metadata.labels |
 | affinity | object | `{}` |  |
 | autoscaling.enabled | bool | `false` |  |
 | autoscaling.maxReplicas | int | `100` |  |
 | autoscaling.minReplicas | int | `1` |  |
 | autoscaling.targetCPUUtilizationPercentage | int | `80` |  |
 | commonConfiguration | string | `"version: \"1\"\nlog_level: \"info\""` | You can use this to provide the router configuration via yaml. Values here have precedence over the configurations section. For a full list of available configuration options, see https://cosmo-docs.wundergraph.com/router/configuration This value is processed with the helm `tpl` function allowing referencing of variables and inclusion of templates |
+| commonConfigurationPath | string | `""` | Path to a configuration file to embed. If set, this takes precedence over commonConfiguration. The file path is relative to the chart directory and will be processed with the helm `tpl` function. Example: "configs/router-config.yaml" |
 | commonLabels | object | `{}` | Add labels to all deployed resources |
 | configuration.cdnUrl | string | `""` |  |
 | configuration.configPath | string | `""` | The path to the router config file. This does not refer to the execution config. See: https://cosmo-docs.wundergraph.com/router/configuration#config-file |
@@ -25,6 +27,8 @@ This is the official Helm Chart for the WunderGraph Cosmo Router.
 | configuration.httpProxy | string | `""` | The URL of the HTTP proxy server. Default is an empty string. |
 | configuration.httpsProxy | string | `""` | The URL of the HTTPS proxy server. Default is an empty string. |
 | configuration.logLevel | string | `"info"` | The log level of the router. Default to info if not set. |
+| configuration.mcp.enabled | bool | `false` | Enables MCP server support. Default is false. |
+| configuration.mcp.port | int | `5025` | The port where the MCP server is exposed. Default is port 5025. |
 | configuration.noProxy | string | `""` | NO_PROXY is a comma-separated list of hosts or domains for which the proxy should not be used. |
 | configuration.otelCollectorUrl | string | `""` | The URL of the Cosmo GraphQL OTEL Collector. Should be internal to the cluster. Default to cloud if not set. |
 | configuration.prometheus.enabled | bool | `true` | Enables prometheus metrics support. Default is true. |

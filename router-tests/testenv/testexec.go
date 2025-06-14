@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -26,14 +27,18 @@ var (
 )
 
 // RunRouterBinary starts the router binary, sets up the test environment, and runs the provided test function.
-func RunRouterBinary(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) error {
+func RunRouterBinary(t *testing.T, cfg *Config, runRouterBinConfigOptions RunRouterBinConfigOptions, f func(t *testing.T, xEnv *Environment)) error {
 	t.Helper()
+
+	if testing.Short() {
+		t.Skip("router binary tests are slow due to compilation time")
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	routerPath := getRouterBinary(t, ctx)
-	env, err := runRouterBin(t, ctx, cfg, routerPath)
+	env, err := runRouterBin(t, ctx, runRouterBinConfigOptions, cfg, routerPath)
 	if err != nil {
 		return err
 	}
@@ -42,6 +47,30 @@ func RunRouterBinary(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Envir
 	// Execute the test case with the environment
 	f(t, env)
 	return nil
+}
+
+func (e *Environment) GetRouterProcessCwd() string {
+	return e.routerCmd.Dir
+}
+
+func (e *Environment) SignalRouterProcess(sig os.Signal) error {
+	return e.routerCmd.Process.Signal(sig)
+}
+
+func (e *Environment) IsLogReceivedFromOutput(ctx context.Context, contains string, timeout time.Duration) bool {
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	for {
+		select {
+		case line := <-e.cmdLogChannel:
+			if strings.Contains(line, contains) {
+				return true
+			}
+		case <-ctx.Done():
+			return false
+		}
+	}
 }
 
 // BuildRouter runs `make build` inside the router directory and fails the test on error.
@@ -54,7 +83,7 @@ func buildRouterBin(t *testing.T, ctx context.Context) {
 
 		cmd := exec.Command("make", "build-race")
 		cmd.Dir = routerDir
-		err := runCmdWithLogs(t, ctx, cmd, true) // Run the build command
+		err := runCmdWithLogs(t, ctx, cmd, true, nil) // Run the build command
 		if err != nil {
 			t.Fatalf("failed to execute runCmdWithLogs: %v", err)
 		}
@@ -74,8 +103,14 @@ func getRouterBinary(t *testing.T, ctx context.Context) string {
 	return routerBin       // Return cached binary path
 }
 
+type RunRouterBinConfigOptions struct {
+	ConfigOverridePath       string
+	OverrideDirectory        string
+	AssertOnRouterBinaryLogs bool
+}
+
 // runRouterBin starts the router binary and returns an Environment.
-func runRouterBin(t *testing.T, ctx context.Context, cfg *Config, binaryPath string) (*Environment, error) {
+func runRouterBin(t *testing.T, ctx context.Context, opts RunRouterBinConfigOptions, cfg *Config, binaryPath string) (*Environment, error) {
 	t.Helper()
 
 	fullBinPath, err := filepath.Abs(binaryPath)
@@ -92,7 +127,7 @@ func runRouterBin(t *testing.T, ctx context.Context, cfg *Config, binaryPath str
 	testCdn := SetupCDNServer(t, freeport.GetOne(t))
 	var envs []string
 
-	for key, val := range map[string]string{
+	envVars := map[string]string{
 		"GRAPH_API_TOKEN":      token,
 		"LISTEN_ADDR":          listenerAddr,
 		"CDN_URL":              testCdn.URL,
@@ -101,15 +136,33 @@ func runRouterBin(t *testing.T, ctx context.Context, cfg *Config, binaryPath str
 		"SHUTDOWN_DELAY":       "30s",
 		"CDN_CACHE_SIZE":       fmt.Sprintf("%d", 1024*1024),
 		"DEMO_MODE":            fmt.Sprintf("%t", cfg.DemoMode),
-	} {
+	}
+
+	// If user has passed in a config override path
+	if opts.ConfigOverridePath != "" {
+		envVars["CONFIG_PATH"] = opts.ConfigOverridePath
+	}
+
+	for key, val := range envVars {
 		envs = append(envs, fmt.Sprintf("%s=%s", key, val))
 	}
 
 	cmd := exec.Command(fullBinPath)
 	cmd.Env = envs
-	cmd.Dir = t.TempDir()
+
+	if opts.OverrideDirectory != "" {
+		cmd.Dir = opts.OverrideDirectory
+	} else {
+		cmd.Dir = t.TempDir()
+	}
+
+	var cmdLogChannel chan string
+	if opts.AssertOnRouterBinaryLogs {
+		cmdLogChannel = make(chan string, 100)
+	}
+
 	newCtx, cancel := context.WithCancelCause(ctx)
-	err = runCmdWithLogs(t, ctx, cmd, false)
+	err = runCmdWithLogs(t, ctx, cmd, false, cmdLogChannel)
 	if err != nil {
 		return nil, err
 	}
@@ -138,6 +191,7 @@ func runRouterBin(t *testing.T, ctx context.Context, cfg *Config, binaryPath str
 		shutdown:      atomic.NewBool(false),
 		shutdownDelay: 30 * time.Second,
 		routerCmd:     cmd,
+		cmdLogChannel: cmdLogChannel,
 	}
 
 	// Wait for server readiness
@@ -149,7 +203,7 @@ func runRouterBin(t *testing.T, ctx context.Context, cfg *Config, binaryPath str
 	return env, nil
 }
 
-func runCmdWithLogs(t *testing.T, ctx context.Context, cmd *exec.Cmd, waitToComplete bool) error {
+func runCmdWithLogs(t *testing.T, ctx context.Context, cmd *exec.Cmd, waitToComplete bool, outputChan chan<- string) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	r, w := io.Pipe()
@@ -160,11 +214,24 @@ func runCmdWithLogs(t *testing.T, ctx context.Context, cmd *exec.Cmd, waitToComp
 	go func() {
 		scanner := bufio.NewScanner(r)
 		for scanner.Scan() {
+			line := scanner.Text()
 			select {
 			case <-ctx.Done(): // Stop logging after test exits
+				if outputChan != nil {
+					close(outputChan)
+				}
 				return
 			default:
-				t.Log(scanner.Text()) // Log each line from command output
+				t.Log(line)
+
+				// If we want to listen to an output channel
+				if outputChan != nil {
+					select {
+					case outputChan <- line:
+					case <-ctx.Done():
+						return
+					}
+				}
 			}
 		}
 		if err := scanner.Err(); err != nil {
@@ -182,7 +249,7 @@ func runCmdWithLogs(t *testing.T, ctx context.Context, cmd *exec.Cmd, waitToComp
 		if err != nil {
 			return fmt.Errorf("failed to start router: %w", err)
 		}
-
 	}
+
 	return nil
 }

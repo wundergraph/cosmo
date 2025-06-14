@@ -14,6 +14,9 @@ image:
 # -- Add labels to all deployed resources
 commonLabels: {}
 
+# -- Add labels to deployment metadata.labels
+additionalLabels: {}
+
 deploymentStrategy: {}
 
 imagePullSecrets: []
@@ -195,6 +198,11 @@ commonConfiguration: |-
   version: "1"
   log_level: "info"
 
+# -- Path to a configuration file to embed. If set, this takes precedence over commonConfiguration.
+# The file path is relative to the chart directory and will be processed with the helm `tpl` function.
+# Example: "configs/router-config.yaml"
+commonConfigurationPath: ""
+
 # Use this section to pass the graphApiToken or to configure simple settings.
 configuration:
   # -- The router token is used to authenticate the router against the controlplane (required)
@@ -238,3 +246,10 @@ configuration:
   httpProxy: ''
   # -- NO_PROXY is a comma-separated list of hosts or domains for which the proxy should not be used.
   noProxy: ''
+  
+  # Use this section to disable/enable and configure the MCP server.
+  mcp:
+    # -- Enables MCP server support. Default is false.
+    enabled: false
+    # -- The port where the MCP server is exposed. Default is port 5025.
+    port: 5025

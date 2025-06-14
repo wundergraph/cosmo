@@ -10,6 +10,7 @@ setup-dev-tools: setup-build-tools
 	go install honnef.co/go/tools/cmd/staticcheck@2024.1.1
 	go install github.com/yannh/kubeconform/cmd/kubeconform@v0.6.3
 	go install github.com/norwoodj/helm-docs/cmd/helm-docs@v1.11.3
+	go install github.com/vektra/mockery/v3@v3.3.1
 
 prerequisites: setup-dev-tools
 	go version
@@ -17,6 +18,7 @@ prerequisites: setup-dev-tools
 	node -v
 	docker -v
 	dbmate -v
+	mockery version
 
 infra-up: dc-dev
 

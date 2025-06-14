@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -28,25 +29,25 @@ import (
 
 const NatsWaitTimeout = time.Second * 30
 
-func assertLineEquals(t *testing.T, reader *bufio.Reader, expected string) {
+func assertNatsLineEquals(t *testing.T, reader *bufio.Reader, expected string) {
 	t.Helper()
 	line, _, err := reader.ReadLine()
 	assert.NoError(t, err)
 	assert.Equal(t, expected, string(line))
 }
 
-func assertMultipartPrefix(t *testing.T, reader *bufio.Reader) {
+func assertNatsMultipartPrefix(t *testing.T, reader *bufio.Reader) {
 	t.Helper()
-	assertLineEquals(t, reader, "")
-	assertLineEquals(t, reader, "--graphql")
-	assertLineEquals(t, reader, "Content-Type: application/json")
-	assertLineEquals(t, reader, "")
+	assertNatsLineEquals(t, reader, "")
+	assertNatsLineEquals(t, reader, "--graphql")
+	assertNatsLineEquals(t, reader, "Content-Type: application/json")
+	assertNatsLineEquals(t, reader, "")
 }
 
-func assertMultipartValueEventually(t *testing.T, reader *bufio.Reader, expected string) {
+func assertNatsMultipartValueEventually(t *testing.T, reader *bufio.Reader, expected string) {
 	t.Helper()
 	assert.Eventually(t, func() bool {
-		assertMultipartPrefix(t, reader)
+		assertNatsMultipartPrefix(t, reader)
 		line, _, err := reader.ReadLine()
 		assert.NoError(t, err)
 		if string(line) == "{}" {
@@ -137,9 +138,9 @@ func TestNatsEvents(t *testing.T) {
 			xEnv.WaitForConnectionCount(0, NatsWaitTimeout)
 
 			natsLogs := xEnv.Observer().FilterMessageSnippet("Nats").All()
-			require.Len(t, natsLogs, 4)
+			require.Len(t, natsLogs, 2)
 			providerIDFields := xEnv.Observer().FilterField(zap.String("provider_id", "my-nats")).All()
-			require.Len(t, providerIDFields, 2)
+			require.Len(t, providerIDFields, 3)
 		})
 	})
 
@@ -355,10 +356,10 @@ func TestNatsEvents(t *testing.T) {
 
 					reader := bufio.NewReader(resp.Body)
 
-					assertMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"employeeUpdated\":{\"id\":3,\"details\":{\"forename\":\"Stefan\",\"surname\":\"Avram\"}}}}}")
+					assertNatsMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"employeeUpdated\":{\"id\":3,\"details\":{\"forename\":\"Stefan\",\"surname\":\"Avram\"}}}}}")
 					consumed.Add(1)
 
-					assertMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"employeeUpdated\":{\"id\":3,\"details\":{\"forename\":\"Stefan\",\"surname\":\"Avram\"}}}}}")
+					assertNatsMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"employeeUpdated\":{\"id\":3,\"details\":{\"forename\":\"Stefan\",\"surname\":\"Avram\"}}}}}")
 					consumed.Add(1)
 				}()
 
@@ -421,8 +422,8 @@ func TestNatsEvents(t *testing.T) {
 					reader := bufio.NewReader(resp.Body)
 
 					// Read the first part
-					assertMultipartPrefix(t, reader)
-					assertLineEquals(t, reader, "{}")
+					assertNatsMultipartPrefix(t, reader)
+					assertNatsLineEquals(t, reader, "{}")
 				}()
 
 				xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
@@ -457,11 +458,11 @@ func TestNatsEvents(t *testing.T) {
 					reader := bufio.NewReader(resp.Body)
 
 					// Read the first part
-					assertMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"countFor\":0}}}")
-					assertMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"countFor\":1}}}")
-					assertMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"countFor\":2}}}")
-					assertMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"countFor\":3}}}")
-					assertLineEquals(t, reader, "--graphql--")
+					assertNatsMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"countFor\":0}}}")
+					assertNatsMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"countFor\":1}}}")
+					assertNatsMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"countFor\":2}}}")
+					assertNatsMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"countFor\":3}}}")
+					assertNatsLineEquals(t, reader, "--graphql--")
 				}()
 
 				xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
@@ -498,7 +499,7 @@ func TestNatsEvents(t *testing.T) {
 					defer resp.Body.Close()
 					reader := bufio.NewReader(resp.Body)
 
-					assertMultipartValueEventually(t, reader, "{\"payload\":{\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}]}}")
+					assertNatsMultipartValueEventually(t, reader, "{\"payload\":{\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}]}}")
 				}
 			})
 		})
@@ -509,7 +510,7 @@ func TestNatsEvents(t *testing.T) {
 				RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
 				RouterOptions: []core.Option{
 					core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-						SubscriptionMultipartPrintBoundary: config.ApolloCompatibilitySubscriptionMultipartPrintBoundary{
+						SubscriptionMultipartPrintBoundary: config.ApolloCompatibilityFlag{
 							Enabled: false,
 						},
 					}),
@@ -612,7 +613,7 @@ func TestNatsEvents(t *testing.T) {
 				RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
 				RouterOptions: []core.Option{
 					core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-						SubscriptionMultipartPrintBoundary: config.ApolloCompatibilitySubscriptionMultipartPrintBoundary{
+						SubscriptionMultipartPrintBoundary: config.ApolloCompatibilityFlag{
 							Enabled: true,
 						},
 					}),
@@ -657,7 +658,7 @@ func TestNatsEvents(t *testing.T) {
 				RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
 				RouterOptions: []core.Option{
 					core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-						SubscriptionMultipartPrintBoundary: config.ApolloCompatibilitySubscriptionMultipartPrintBoundary{
+						SubscriptionMultipartPrintBoundary: config.ApolloCompatibilityFlag{
 							Enabled: true,
 						},
 					}),
@@ -682,12 +683,12 @@ func TestNatsEvents(t *testing.T) {
 					reader := bufio.NewReader(resp.Body)
 
 					// Read the first part
-					assertMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"countFor\":0}}}")
-					assertMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"countFor\":1}}}")
-					assertMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"countFor\":2}}}")
-					assertMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"countFor\":3}}}")
-					assertLineEquals(t, reader, "")
-					assertLineEquals(t, reader, "--graphql--")
+					assertNatsMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"countFor\":0}}}")
+					assertNatsMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"countFor\":1}}}")
+					assertNatsMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"countFor\":2}}}")
+					assertNatsMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"countFor\":3}}}")
+					assertNatsLineEquals(t, reader, "")
+					assertNatsLineEquals(t, reader, "--graphql--")
 				}()
 
 				xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
@@ -1199,12 +1200,6 @@ func TestNatsEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
 			EnableNats:               true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			var subscription struct {
-				employeeUpdatedNatsStream struct {
-					ID float64 `graphql:"id"`
-				} `graphql:"employeeUpdatedNatsStream(id: 12)"`
-			}
-
 			js, err := jetstream.New(xEnv.NatsConnectionDefault)
 			require.NoError(t, err)
 
@@ -1219,30 +1214,44 @@ func TestNatsEvents(t *testing.T) {
 				_ = client.Close()
 			})
 
-			var counter atomic.Uint32
+			var subscription struct {
+				employeeUpdatedNatsStream struct {
+					ID float64 `graphql:"id"`
+				} `graphql:"employeeUpdatedNatsStream(id: 12)"`
+			}
+
+			gotError := make(chan error)
 
 			_, err = client.Subscribe(&subscription, nil, func(dataValue []byte, errValue error) error {
-				defer counter.Add(1)
+				gotError <- errValue
 
-				require.Contains(t,
-					errValue.Error(),
-					fmt.Sprintf(
-						"EDFS error: failed to create or update consumer for stream \"%s\"",
-						xEnv.GetPubSubName("streamName"),
-					),
-				)
 				return nil
 			})
 			require.NoError(t, err)
 
 			go func() {
 				clientErr := client.Run()
-				require.NoError(t, clientErr)
+				assert.NoError(t, clientErr, "unexpected client run error, this used to be flaky")
 			}()
 
-			require.Eventually(t, func() bool {
-				return counter.Load() == 1
-			}, NatsWaitTimeout, time.Millisecond*100)
+			select {
+			case err := <-gotError:
+				require.ErrorContains(t, err, fmt.Sprintf(
+					"EDFS error: failed to create or update consumer for stream \"%s\"",
+					xEnv.GetPubSubName("streamName"),
+				))
+			case <-time.After(5 * time.Second):
+				t.Fatal("timed out waiting for nats error")
+			}
+
+			// Any further errors should be treated as a failure
+			// as it likely indicates the server telling the client to retry
+			select {
+			case err := <-gotError:
+				t.Fatalf("recieved >1 error on channel: %v", err)
+			case <-time.After(5 * time.Second):
+				break
+			}
 		})
 	})
 
@@ -1805,6 +1814,118 @@ func TestNatsEvents(t *testing.T) {
 			}()
 
 			assert.Eventually(t, completed.Load, NatsWaitTimeout, time.Millisecond*100)
+		})
+	})
+
+	t.Run("NATS startup and shutdown with wrong URLs should not stop router from starting indefinitely", func(t *testing.T) {
+		t.Parallel()
+
+		listener := testenv.NewWaitingListener(t, time.Second*10)
+		listener.Start()
+		defer listener.Close()
+
+		errRouter := testenv.RunWithError(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+			EnableNats:               false,
+			ModifyEventsConfiguration: func(cfg *config.EventsConfiguration) {
+				url := "nats://127.0.0.1:" + strconv.Itoa(listener.Port())
+				natsEventSources := make([]config.NatsEventSource, len(testenv.DemoNatsProviders))
+				for _, sourceName := range testenv.DemoNatsProviders {
+					natsEventSources = append(natsEventSources, config.NatsEventSource{
+						ID:  sourceName,
+						URL: url,
+					})
+				}
+				cfg.Providers.Nats = natsEventSources
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			assert.Fail(t, "Should not be called")
+		})
+
+		assert.Error(t, errRouter)
+	})
+
+	t.Run("multiple subscribe async with variables", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+			EnableNats:               true,
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			},
+			NoRetryClient: true,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			var subscriptionOne struct {
+				employeeUpdated struct {
+					ID      float64 `graphql:"id"`
+					Details struct {
+						Surname string `graphql:"surname"`
+					} `graphql:"details"`
+				} `graphql:"employeeUpdatedMyNats(id: 1)"`
+			}
+
+			var subscriptionTwo struct {
+				employeeUpdated struct {
+					ID      float64 `graphql:"id"`
+					Details struct {
+						Forename string `graphql:"forename"`
+					} `graphql:"details"`
+				} `graphql:"employeeUpdatedMyNats(id: 1)"`
+			}
+
+			surl := xEnv.GraphQLWebSocketSubscriptionURL()
+			client1 := graphql.NewSubscriptionClient(surl)
+			t.Cleanup(func() {
+				_ = client1.Close()
+			})
+			client2 := graphql.NewSubscriptionClient(surl)
+			t.Cleanup(func() {
+				_ = client2.Close()
+			})
+
+			var subscriptionOneCalled atomic.Uint32
+			var subscriptionTwoCalled atomic.Uint32
+
+			subscriptionOneID, err := client1.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
+				subscriptionOneCalled.Add(1)
+				require.NoError(t, errValue)
+				require.JSONEq(t, `{"employeeUpdated":{"id":3,"details":{"surname":"Avram"}}}`, string(dataValue))
+				return nil
+			})
+			require.NoError(t, err)
+			require.NotEqual(t, "", subscriptionOneID)
+			go func() {
+				clientErr := client1.Run()
+				require.NoError(t, clientErr)
+			}()
+			xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
+			errUnsubscribeOne := client1.Unsubscribe(subscriptionOneID)
+			require.NoError(t, errUnsubscribeOne)
+			xEnv.WaitForSubscriptionCount(0, NatsWaitTimeout)
+
+			subscriptionTwoID, err := client2.Subscribe(&subscriptionTwo, nil, func(dataValue []byte, errValue error) error {
+				subscriptionTwoCalled.Add(1)
+				require.NoError(t, errValue)
+				require.JSONEq(t, `{"employeeUpdated":{"id":3,"details":{"forename":"Stefan"}}}`, string(dataValue))
+				return nil
+			})
+			require.NoError(t, err)
+			require.NotEqual(t, "", subscriptionTwoID)
+			go func() {
+				clientErr := client2.Run()
+				require.NoError(t, clientErr)
+			}()
+			xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
+			errUnsubscribeTwo := client2.Unsubscribe(subscriptionTwoID)
+			require.NoError(t, errUnsubscribeTwo)
+			xEnv.WaitForSubscriptionCount(0, NatsWaitTimeout)
+
+			errClose1 := client1.Close()
+			require.NoError(t, errClose1)
+			errClose2 := client2.Close()
+			require.NoError(t, errClose2)
 		})
 	})
 }

@@ -4,16 +4,18 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/otel/sdk/metric"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 	"math"
 	"net/http"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
@@ -162,13 +164,15 @@ func TestRouterStartLogs(t *testing.T) {
 		},
 	}, func(t *testing.T, xEnv *testenv.Environment) {
 		logEntries := xEnv.Observer().All()
-		require.Len(t, logEntries, 13)
+		require.Len(t, logEntries, 12)
 		natsLogs := xEnv.Observer().FilterMessageSnippet("Nats Event source enabled").All()
-		require.Len(t, natsLogs, 4)
+		require.Len(t, natsLogs, 2)
+		natsConnectedLogs := xEnv.Observer().FilterMessageSnippet("NATS connection established").All()
+		require.Len(t, natsConnectedLogs, 4)
 		providerIDFields := xEnv.Observer().FilterField(zap.String("provider_id", "default")).All()
-		require.Len(t, providerIDFields, 2)
+		require.Len(t, providerIDFields, 3)
 		kafkaLogs := xEnv.Observer().FilterMessageSnippet("Kafka Event source enabled").All()
-		require.Len(t, kafkaLogs, 2)
+		require.Len(t, kafkaLogs, 1)
 		playgroundLog := xEnv.Observer().FilterMessage("Serving GraphQL playground")
 		require.Equal(t, playgroundLog.Len(), 1)
 		featureFlagLog := xEnv.Observer().FilterMessage("Feature flags enabled")
@@ -312,7 +316,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 			})
 			require.JSONEq(t, employeesIDData, res.Body)
 			logEntries := xEnv.Observer().All()
-			require.Len(t, logEntries, 10)
+			require.Len(t, logEntries, 6)
 			requestLog := xEnv.Observer().FilterMessage("/graphql")
 			require.Equal(t, requestLog.Len(), 1)
 			requestContext := requestLog.All()[0].ContextMap()
@@ -348,7 +352,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 			})
 			require.JSONEq(t, employeesIDData, res.Body)
 			logEntries := xEnv.Observer().All()
-			require.Len(t, logEntries, 10)
+			require.Len(t, logEntries, 6)
 			requestLog := xEnv.Observer().FilterMessage("/graphql")
 			require.Equal(t, requestLog.Len(), 1)
 			requestContext := requestLog.All()[0].ContextMap()
@@ -446,7 +450,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 			})
 			require.JSONEq(t, employeesIDData, res.Body)
 			logEntries := xEnv.Observer().All()
-			require.Len(t, logEntries, 10)
+			require.Len(t, logEntries, 6)
 			requestLog := xEnv.Observer().FilterMessage("/graphql")
 			require.Equal(t, requestLog.Len(), 1)
 			requestContext := requestLog.All()[0].ContextMap()
@@ -507,7 +511,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 			})
 			require.JSONEq(t, employeesIDData, res.Body)
 			logEntries := xEnv.Observer().All()
-			require.Len(t, logEntries, 10)
+			require.Len(t, logEntries, 6)
 			requestLog := xEnv.Observer().FilterMessage("/graphql")
 			require.Equal(t, requestLog.Len(), 1)
 			requestContext := requestLog.All()[0].ContextMap()
@@ -552,7 +556,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 			})
 			require.JSONEq(t, employeesIDData, res.Body)
 			logEntries := xEnv.Observer().All()
-			require.Len(t, logEntries, 10)
+			require.Len(t, logEntries, 6)
 			requestLog := xEnv.Observer().FilterMessage("/graphql")
 			require.Equal(t, requestLog.Len(), 1)
 			requestContext := requestLog.All()[0].ContextMap()
@@ -667,7 +671,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, `{"errors":[{"message":"unexpected token - got: EOF want one of: [RBRACE IDENT SPREAD]","locations":[{"line":0,"column":0}]}]}`, res.Body)
 			logEntries := xEnv.Observer().All()
-			require.Len(t, logEntries, 10)
+			require.Len(t, logEntries, 6)
 			requestLog := xEnv.Observer().FilterMessage("/graphql")
 			require.Equal(t, requestLog.Len(), 1)
 			requestContext := requestLog.All()[0].ContextMap()
@@ -784,9 +788,9 @@ func TestFlakyAccessLogs(t *testing.T) {
 				Query: `query employees { notExists { id } }`, // Missing closing bracket
 			})
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"field: notExists not defined on type: Query","path":["query"]}]}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"Cannot query field \"notExists\" on type \"Query\".","path":["query"]}]}`, res.Body)
 			logEntries := xEnv.Observer().All()
-			require.Len(t, logEntries, 10)
+			require.Len(t, logEntries, 6)
 			requestLog := xEnv.Observer().FilterMessage("/graphql")
 			require.Equal(t, requestLog.Len(), 1)
 			requestContext := requestLog.All()[0].ContextMap()
@@ -801,7 +805,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				"service_name":   "service-name", // From header
 				"operation_type": "query",        // From context
 				"operation_name": "employees",    // From context
-				"error_message":  "field: notExists not defined on type: Query",
+				"error_message":  "Cannot query field \"notExists\" on type \"Query\".",
 				"operation_hash": "3291586836053813139",
 				"request_error":  true,
 			}
@@ -919,7 +923,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, "", res.Body)
 			logEntries := xEnv.Observer().All()
-			require.Len(t, logEntries, 11)
+			require.Len(t, logEntries, 7)
 			requestLog := xEnv.Observer().FilterMessage("[Recovery from panic]")
 			require.Equal(t, requestLog.Len(), 1)
 			requestContext := requestLog.All()[0].ContextMap()
@@ -950,7 +954,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				"validation_time",
 			}
 
-			require.NotEmpty(t, logEntries[10].Stack)
+			require.NotEmpty(t, logEntries[6].Stack)
 
 			checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
 		})
@@ -1056,7 +1060,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, "", res.Body)
 			logEntries := xEnv.Observer().All()
-			require.Len(t, logEntries, 11)
+			require.Len(t, logEntries, 7)
 			requestLog := xEnv.Observer().FilterMessage("[Recovery from panic]")
 			require.Equal(t, requestLog.Len(), 1)
 			requestContext := requestLog.All()[0].ContextMap()
@@ -1087,7 +1091,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				"validation_time",
 			}
 
-			require.NotEmpty(t, logEntries[10].Stack)
+			require.NotEmpty(t, logEntries[6].Stack)
 
 			checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
 		})
@@ -1145,7 +1149,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 			})
 			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'products' at Path 'employees'.","extensions":{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}],"statusCode":403}}],"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"notes":null},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"notes":null},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"notes":null},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"notes":null},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"notes":null},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"notes":null},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"notes":null},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"notes":null},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"notes":null},{"id":12,"details":{"forename":"David","surname":"Stutt"},"notes":null}]}}`, res.Body)
 			logEntries := xEnv.Observer().All()
-			require.Len(t, logEntries, 10)
+			require.Len(t, logEntries, 6)
 			requestLog := xEnv.Observer().FilterMessage("/graphql")
 			require.Equal(t, requestLog.Len(), 1)
 			requestContext := requestLog.All()[0].ContextMap()
@@ -1190,7 +1194,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				})
 				require.JSONEq(t, employeesIDData, res.Body)
 				logEntries := xEnv.Observer().All()
-				require.Len(t, logEntries, 11)
+				require.Len(t, logEntries, 7)
 				requestLog := xEnv.Observer().FilterMessage("/graphql")
 				require.Equal(t, requestLog.Len(), 2)
 
@@ -1241,7 +1245,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				})
 				require.JSONEq(t, employeesIDData, res.Body)
 				logEntries := xEnv.Observer().All()
-				require.Len(t, logEntries, 11)
+				require.Len(t, logEntries, 7)
 				requestLog := xEnv.Observer().FilterMessage("/graphql")
 				require.Equal(t, requestLog.Len(), 2)
 				requestContext := requestLog.All()[0].ContextMap()
@@ -1346,7 +1350,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				})
 				require.JSONEq(t, employeesIDData, res.Body)
 				logEntries := xEnv.Observer().All()
-				require.Len(t, logEntries, 11)
+				require.Len(t, logEntries, 7)
 				requestLog := xEnv.Observer().FilterMessage("/graphql")
 				require.Equal(t, requestLog.Len(), 2)
 				requestContext := requestLog.All()[0].ContextMap()
@@ -1433,7 +1437,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				})
 				require.JSONEq(t, employeesIDData, res.Body)
 				logEntries := xEnv.Observer().All()
-				require.Len(t, logEntries, 11)
+				require.Len(t, logEntries, 7)
 				requestLog := xEnv.Observer().FilterMessage("/graphql")
 				require.Equal(t, requestLog.Len(), 2)
 				requestContext := requestLog.All()[0].ContextMap()
@@ -1528,7 +1532,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				})
 				require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'products' at Path 'employees'.","extensions":{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}],"statusCode":403}}],"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"notes":null},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"notes":null},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"notes":null},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"notes":null},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"notes":null},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"notes":null},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"notes":null},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"notes":null},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"notes":null},{"id":12,"details":{"forename":"David","surname":"Stutt"},"notes":null}]}}`, res.Body)
 				logEntries := xEnv.Observer().All()
-				require.Len(t, logEntries, 12)
+				require.Len(t, logEntries, 8)
 				requestLog := xEnv.Observer().FilterMessage("/graphql")
 				require.Equal(t, requestLog.Len(), 3)
 
@@ -1711,7 +1715,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
 				logEntries := xEnv.Observer().All()
-				require.Len(t, logEntries, 11)
+				require.Len(t, logEntries, 7)
 				requestLog := xEnv.Observer().FilterMessage("/graphql")
 				require.Equal(t, requestLog.Len(), 2)
 				requestContext := requestLog.All()[0].ContextMap()
@@ -1804,7 +1808,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				})
 				require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'products' at Path 'employees'."}],"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"notes":null},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"notes":null},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"notes":null},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"notes":null},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"notes":null},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"notes":null},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"notes":null},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"notes":null},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"notes":null},{"id":12,"details":{"forename":"David","surname":"Stutt"},"notes":null}]}}`, res.Body)
 				logEntries := xEnv.Observer().All()
-				require.Len(t, logEntries, 12)
+				require.Len(t, logEntries, 8)
 				requestLog := xEnv.Observer().FilterMessage("/graphql")
 				require.Equal(t, requestLog.Len(), 3)
 
@@ -2142,101 +2146,6 @@ func TestFlakyAccessLogs(t *testing.T) {
 			})
 		})
 
-		t.Run("validate that expressions dont get processed yet in the subgraph logger", func(t *testing.T) {
-			t.Parallel()
-
-			testenv.Run(t, &testenv.Config{
-				SubgraphAccessLogsEnabled: true,
-				AccessLogFields: []config.CustomAttribute{
-					{
-						Key: "request_error",
-						ValueFrom: &config.CustomDynamicAttribute{
-							ContextField: core.ContextFieldRequestError,
-						},
-					},
-				},
-				SubgraphAccessLogFields: []config.CustomAttribute{
-					{
-						Key: "service_name",
-						ValueFrom: &config.CustomDynamicAttribute{
-							RequestHeader: "service-name",
-						},
-					},
-					{
-						Key: "response_header",
-						ValueFrom: &config.CustomDynamicAttribute{
-							ResponseHeader: "response-header-name",
-						},
-					},
-					{
-						Key: "custom_error_message",
-						ValueFrom: &config.CustomDynamicAttribute{
-							Expression: "request.error ?? 'request-data'",
-						},
-					},
-				},
-				LogObservation: testenv.LogObservationConfig{
-					Enabled:  true,
-					LogLevel: zapcore.InfoLevel,
-				},
-				RouterOptions: []core.Option{
-					core.WithHeaderRules(config.HeaderRules{
-						All: &config.GlobalHeaderRule{
-							Request: []*config.RequestHeaderRule{
-								{
-									Operation: config.HeaderRuleOperationPropagate,
-									Named:     "service-name",
-								},
-							},
-						},
-					}),
-				},
-				Subgraphs: testenv.SubgraphsConfig{
-					Products: testenv.SubgraphConfig{
-						Middleware: func(_ http.Handler) http.Handler {
-							return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-								w.Header().Set("Content-Type", "application/json")
-								w.WriteHeader(http.StatusForbidden)
-								_, _ = w.Write([]byte(`{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}]}`))
-							})
-						},
-					},
-				},
-			}, func(t *testing.T, xEnv *testenv.Environment) {
-				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-					Query:  `query employees { employees { id details { forename surname } notes } }`,
-					Header: map[string][]string{"service-name": {"service-name"}},
-				})
-				requestLog := xEnv.Observer().FilterMessage("/graphql")
-				productContext := requestLog.All()[1].ContextMap()
-
-				additionalExpectedKeys := []string{
-					"user_agent",
-					"trace_id",
-					"hostname",
-					"latency",
-					"config_version",
-					"request_id",
-					"pid",
-					"url",
-				}
-
-				productSubgraphVals := map[string]interface{}{
-					"log_type":      "client/subgraph",
-					"subgraph_name": "products",
-					"subgraph_id":   "3",
-					"status":        int64(403),
-					"method":        "POST",
-					"path":          "/graphql",
-					"query":         "", // http query is empty
-					"ip":            "[REDACTED]",
-					"service_name":  "service-name", // From request header
-					// custom_error_message is removed
-				}
-				checkValues(t, productContext, productSubgraphVals, additionalExpectedKeys)
-			})
-		})
-
 		t.Run("validate the evaluation of the body.raw expression for a query", func(t *testing.T) {
 			t.Parallel()
 
@@ -2412,9 +2321,9 @@ func TestFlakyAccessLogs(t *testing.T) {
 						"path":            "/graphql",
 						"query":           "",
 						"ip":              "[REDACTED]",
-						"service_name":    "service-name",                             // From request header
-						"operation_hash":  "13143784263060310243",                     // From context
-						"expression_body": "field: id2 not defined on type: Employee", // From expression
+						"service_name":    "service-name",                                     // From request header
+						"operation_hash":  "13143784263060310243",                             // From context
+						"expression_body": "Cannot query field \"id2\" on type \"Employee\".", // From expression
 					}
 					additionalExpectedKeys := []string{
 						"user_agent",
@@ -2578,7 +2487,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				&testenv.Config{
 					RouterOptions: []core.Option{
 						core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-							ReplaceUndefinedOpFieldErrors: config.ApolloCompatibilityReplaceUndefinedOpFieldErrors{
+							UseGraphQLValidationFailedStatus: config.ApolloCompatibilityFlag{
 								Enabled: true,
 							},
 						}),
@@ -2625,7 +2534,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				&testenv.Config{
 					RouterOptions: []core.Option{
 						core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-							ReplaceInvalidVarErrors: config.ApolloCompatibilityReplaceInvalidVarErrors{
+							ReplaceInvalidVarErrors: config.ApolloCompatibilityFlag{
 								Enabled: true,
 							},
 						}),
@@ -2670,7 +2579,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				&testenv.Config{
 					RouterOptions: []core.Option{
 						core.WithApolloRouterCompatibilityFlags(config.ApolloRouterCompatibilityFlags{
-							ReplaceInvalidVarErrors: config.ApolloRouterCompatibilityReplaceInvalidVarErrors{
+							ReplaceInvalidVarErrors: config.ApolloCompatibilityFlag{
 								Enabled: true,
 							},
 						}),
@@ -2785,6 +2694,166 @@ func TestFlakyAccessLogs(t *testing.T) {
 				assert.Empty(t, batchOperationId)
 			},
 		)
+	})
+
+	t.Run("verify subgraph expressions", func(t *testing.T) {
+		t.Run("verify connAcquireDuration value is attached", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				SubgraphAccessLogsEnabled: true,
+				SubgraphAccessLogFields: []config.CustomAttribute{
+					{
+						Key: "conn_acquire_duration",
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "subgraph.request.clientTrace.connAcquireDuration",
+						},
+					},
+				},
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query myQuery { employees { id } }`,
+				})
+				requestLog := xEnv.Observer().FilterMessage("/graphql")
+				requestLogAll := requestLog.All()
+				requestContextMap := requestLogAll[0].ContextMap()
+
+				connAcquireDuration, ok := requestContextMap["conn_acquire_duration"].(float64)
+				require.True(t, ok)
+
+				require.Greater(t, connAcquireDuration, 0.0)
+			})
+		})
+
+		t.Run("verify connAcquireDuration value is attached for multiple subgraph calls", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				SubgraphAccessLogsEnabled: true,
+				SubgraphAccessLogFields: []config.CustomAttribute{
+					{
+						Key: "conn_acquire_duration",
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "subgraph.request.clientTrace.connAcquireDuration",
+						},
+					},
+				},
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query myQuery { employees { id isAvailable } }`,
+				})
+				requestLog := xEnv.Observer().FilterMessage("/graphql")
+				requestLogAll := requestLog.All()
+
+				employeeSubgraphLogs := requestLogAll[0]
+				connAcquireDuration1, ok := employeeSubgraphLogs.ContextMap()["conn_acquire_duration"].(float64)
+				require.True(t, ok)
+				require.Greater(t, connAcquireDuration1, 0.0)
+
+				availabilitySubgraphLogs := requestLogAll[1]
+				connAcquireDuration2, ok := availabilitySubgraphLogs.ContextMap()["conn_acquire_duration"].(float64)
+				require.True(t, ok)
+				require.Greater(t, connAcquireDuration2, 0.0)
+			})
+		})
+
+		t.Run("verify subgraph error in expressions", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				SubgraphAccessLogsEnabled: true,
+				SubgraphAccessLogFields: []config.CustomAttribute{
+					{
+						Key: "conn_acquire_duration",
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "subgraph.request.error != nil ? subgraph.request.clientTrace.connAcquireDuration : ''",
+						},
+					},
+				},
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				},
+				Subgraphs: testenv.SubgraphsConfig{
+					Availability: testenv.SubgraphConfig{
+						Middleware: func(_ http.Handler) http.Handler {
+							return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+								w.Header().Set("Content-Type", "application/json")
+								w.WriteHeader(http.StatusForbidden)
+								_, _ = w.Write([]byte(`{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}]}`))
+							})
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query myQuery { employees { id isAvailable } }`,
+				})
+				requestLog := xEnv.Observer().FilterMessage("/graphql")
+				requestLogAll := requestLog.All()
+
+				employeeSubgraphLogs := requestLogAll[0]
+				_, ok := employeeSubgraphLogs.ContextMap()["conn_acquire_duration"]
+				require.False(t, ok)
+
+				availabilitySubgraphLogs := requestLogAll[1]
+				connAcquireDuration2, ok := availabilitySubgraphLogs.ContextMap()["conn_acquire_duration"].(float64)
+				require.True(t, ok)
+				require.Greater(t, connAcquireDuration2, 0.0)
+			})
+		})
+
+		t.Run("verify cleanup of attributes which contains expression and other attributes", func(t *testing.T) {
+			t.Parallel()
+
+			key := "conn_acquire_duration"
+			testenv.Run(t, &testenv.Config{
+				SubgraphAccessLogsEnabled: true,
+				SubgraphAccessLogFields: []config.CustomAttribute{
+					{
+						Key: key,
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: "operation_hash",
+							Expression:   "subgraph.request.clientTrace.connAcquireDuration",
+						},
+					},
+				},
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query myQuery { employees { id } }`,
+				})
+				requestLog := xEnv.Observer().FilterMessage("/graphql")
+				requestLogAll := requestLog.All()
+				requestContextMap := requestLogAll[0].ContextMap()
+
+				keyCount := 0
+				for _, entry := range requestLogAll[0].Context {
+					if entry.Key == key {
+						keyCount++
+					}
+				}
+
+				// There should  only be one instance of the key
+				require.Equal(t, 1, keyCount)
+
+				connAcquireDuration, ok := requestContextMap["conn_acquire_duration"].(float64)
+				require.True(t, ok)
+				require.Greater(t, connAcquireDuration, 0.0)
+			})
+		})
+
 	})
 
 }

@@ -1,13 +1,16 @@
 package config
 
 import (
+	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/yamlmerge"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/caarlos0/env/v11"
 	"github.com/goccy/go-yaml"
-	"github.com/joho/godotenv"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/wundergraph/cosmo/router/internal/unique"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
@@ -73,6 +76,7 @@ type Tracing struct {
 	Exporters           []TracingExporter   `yaml:"exporters"`
 	Propagation         PropagationConfig   `yaml:"propagation"`
 	ResponseTraceHeader ResponseTraceHeader `yaml:"response_trace_id"`
+	Attributes          []CustomAttribute   `yaml:"attributes"`
 
 	TracingGlobalFeatures `yaml:",inline"`
 }
@@ -94,6 +98,7 @@ type Prometheus struct {
 	Path                string      `yaml:"path" envDefault:"/metrics" env:"PROMETHEUS_HTTP_PATH"`
 	ListenAddr          string      `yaml:"listen_addr" envDefault:"127.0.0.1:8088" env:"PROMETHEUS_LISTEN_ADDR"`
 	GraphqlCache        bool        `yaml:"graphql_cache" envDefault:"false" env:"PROMETHEUS_GRAPHQL_CACHE"`
+	ConnectionStats     bool        `yaml:"connection_stats" envDefault:"false" env:"PROMETHEUS_CONNECTION_STATS"`
 	EngineStats         EngineStats `yaml:"engine_stats" envPrefix:"PROMETHEUS_"`
 	ExcludeMetrics      RegExArray  `yaml:"exclude_metrics,omitempty" env:"PROMETHEUS_EXCLUDE_METRICS"`
 	ExcludeMetricLabels RegExArray  `yaml:"exclude_metric_labels,omitempty" env:"PROMETHEUS_EXCLUDE_METRIC_LABELS"`
@@ -126,6 +131,7 @@ type MetricsOTLP struct {
 	Enabled             bool                  `yaml:"enabled" envDefault:"true" env:"METRICS_OTLP_ENABLED"`
 	RouterRuntime       bool                  `yaml:"router_runtime" envDefault:"true" env:"METRICS_OTLP_ROUTER_RUNTIME"`
 	GraphqlCache        bool                  `yaml:"graphql_cache" envDefault:"false" env:"METRICS_OTLP_GRAPHQL_CACHE"`
+	ConnectionStats     bool                  `yaml:"connection_stats" envDefault:"false" env:"METRICS_OTLP_CONNECTION_STATS"`
 	EngineStats         EngineStats           `yaml:"engine_stats" envPrefix:"METRICS_OTLP_"`
 	ExcludeMetrics      RegExArray            `yaml:"exclude_metrics,omitempty" env:"METRICS_OTLP_EXCLUDE_METRICS"`
 	ExcludeMetricLabels RegExArray            `yaml:"exclude_metric_labels,omitempty" env:"METRICS_OTLP_EXCLUDE_METRIC_LABELS"`
@@ -248,7 +254,8 @@ type RequestHeaderRule struct {
 	Operation HeaderRuleOperation `yaml:"op"`
 	// Propagate options
 	// Matching is the regex to match the header name against
-	Matching string `yaml:"matching"`
+	Matching    string `yaml:"matching"`
+	NegateMatch bool   `yaml:"negate_match,omitempty"`
 	// Named is the exact header name to match
 	Named string `yaml:"named"`
 	// Rename renames the header's key to the provided value
@@ -292,7 +299,8 @@ type ResponseHeaderRule struct {
 	// Operation describes the header operation to perform e.g. "propagate"
 	Operation HeaderRuleOperation `yaml:"op"`
 	// Matching is the regex to match the header name against
-	Matching string `yaml:"matching"`
+	Matching    string `yaml:"matching"`
+	NegateMatch bool   `yaml:"negate_match,omitempty"`
 	// Named is the exact header name to match
 	Named string `yaml:"named"`
 	// Rename renames the header's key to the provided value
@@ -510,6 +518,10 @@ type NatsEventSource struct {
 	Authentication *NatsAuthentication `yaml:"authentication,omitempty"`
 }
 
+func (n NatsEventSource) GetID() string {
+	return n.ID
+}
+
 type KafkaSASLPlainAuthentication struct {
 	Password *string `yaml:"password,omitempty"`
 	Username *string `yaml:"username,omitempty"`
@@ -528,6 +540,10 @@ type KafkaEventSource struct {
 	Brokers        []string               `yaml:"brokers,omitempty"`
 	Authentication *KafkaAuthentication   `yaml:"authentication,omitempty"`
 	TLS            *KafkaTLSConfiguration `yaml:"tls,omitempty"`
+}
+
+func (k KafkaEventSource) GetID() string {
+	return k.ID
 }
 
 type EventProviders struct {
@@ -810,60 +826,29 @@ type AccessLogsSubgraphsConfig struct {
 }
 
 type ApolloCompatibilityFlags struct {
-	EnableAll                          bool                                                  `yaml:"enable_all" envDefault:"false" env:"APOLLO_COMPATIBILITY_ENABLE_ALL"`
-	ValueCompletion                    ApolloCompatibilityValueCompletion                    `yaml:"value_completion"`
-	TruncateFloats                     ApolloCompatibilityTruncateFloats                     `yaml:"truncate_floats"`
-	SuppressFetchErrors                ApolloCompatibilitySuppressFetchErrors                `yaml:"suppress_fetch_errors"`
-	ReplaceUndefinedOpFieldErrors      ApolloCompatibilityReplaceUndefinedOpFieldErrors      `yaml:"replace_undefined_op_field_errors"`
-	ReplaceInvalidVarErrors            ApolloCompatibilityReplaceInvalidVarErrors            `yaml:"replace_invalid_var_errors"`
-	ReplaceValidationErrorStatus       ApolloCompatibilityReplaceValidationErrorStatus       `yaml:"replace_validation_error_status"`
-	SubscriptionMultipartPrintBoundary ApolloCompatibilitySubscriptionMultipartPrintBoundary `yaml:"subscription_multipart_print_boundary"`
+	EnableAll                          bool                    `yaml:"enable_all" envDefault:"false" env:"APOLLO_COMPATIBILITY_ENABLE_ALL"`
+	ValueCompletion                    ApolloCompatibilityFlag `yaml:"value_completion" envPrefix:"APOLLO_COMPATIBILITY_VALUE_COMPLETION_"`
+	TruncateFloats                     ApolloCompatibilityFlag `yaml:"truncate_floats" envPrefix:"APOLLO_COMPATIBILITY_TRUNCATE_FLOATS_"`
+	SuppressFetchErrors                ApolloCompatibilityFlag `yaml:"suppress_fetch_errors" envPrefix:"APOLLO_COMPATIBILITY_SUPPRESS_FETCH_ERRORS_"`
+	ReplaceUndefinedOpFieldErrors      ApolloCompatibilityFlag `yaml:"replace_undefined_op_field_errors" envPrefix:"APOLLO_COMPATIBILITY_REPLACE_UNDEFINED_OP_FIELD_ERRORS_"`
+	ReplaceInvalidVarErrors            ApolloCompatibilityFlag `yaml:"replace_invalid_var_errors" envPrefix:"APOLLO_COMPATIBILITY_REPLACE_INVALID_VAR_ERRORS_"`
+	ReplaceValidationErrorStatus       ApolloCompatibilityFlag `yaml:"replace_validation_error_status" envPrefix:"APOLLO_COMPATIBILITY_REPLACE_VALIDATION_ERROR_STATUS_"`
+	SubscriptionMultipartPrintBoundary ApolloCompatibilityFlag `yaml:"subscription_multipart_print_boundary" envPrefix:"APOLLO_COMPATIBILITY_SUBSCRIPTION_MULTIPART_PRINT_BOUNDARY_"`
+	UseGraphQLValidationFailedStatus   ApolloCompatibilityFlag `yaml:"use_graphql_validation_failed_status" envPrefix:"APOLLO_COMPATIBILITY_USE_GRAPHQL_VALIDATION_FAILED_STATUS_"`
 }
 
-type ApolloCompatibilityValueCompletion struct {
-	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_COMPATIBILITY_VALUE_COMPLETION_ENABLED"`
+type ApolloRouterCompatibilityFlags struct {
+	ReplaceInvalidVarErrors ApolloCompatibilityFlag `yaml:"replace_invalid_var_errors" envPrefix:"APOLLO_ROUTER_COMPATIBILITY_REPLACE_INVALID_VAR_ERRORS_"`
+	SubrequestHTTPError     ApolloCompatibilityFlag `yaml:"subrequest_http_error" envPrefix:"APOLLO_ROUTER_COMPATIBILITY_SUBREQUEST_HTTP_ERROR_"`
+}
+
+type ApolloCompatibilityFlag struct {
+	Enabled bool `yaml:"enabled" envDefault:"false" env:"ENABLED"`
 }
 
 type ClientHeader struct {
 	Name    string `yaml:"name,omitempty"`
 	Version string `yaml:"version,omitempty"`
-}
-
-type ApolloCompatibilityTruncateFloats struct {
-	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_COMPATIBILITY_TRUNCATE_FLOATS_ENABLED"`
-}
-
-type ApolloCompatibilitySuppressFetchErrors struct {
-	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_COMPATIBILITY_SUPPRESS_FETCH_ERRORS_ENABLED"`
-}
-
-type ApolloCompatibilityReplaceUndefinedOpFieldErrors struct {
-	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_COMPATIBILITY_REPLACE_UNDEFINED_OP_FIELD_ERRORS_ENABLED"`
-}
-
-type ApolloCompatibilityReplaceInvalidVarErrors struct {
-	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_COMPATIBILITY_REPLACE_INVALID_VAR_ERRORS_ENABLED"`
-}
-
-type ApolloCompatibilityReplaceValidationErrorStatus struct {
-	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_COMPATIBILITY_REPLACE_VALIDATION_ERROR_STATUS_ENABLED"`
-}
-
-type ApolloCompatibilitySubscriptionMultipartPrintBoundary struct {
-	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_COMPATIBILITY_SUBSCRIPTION_MULTIPART_PRINT_BOUNDARY_ENABLED"`
-}
-
-type ApolloRouterCompatibilityFlags struct {
-	ReplaceInvalidVarErrors ApolloRouterCompatibilityReplaceInvalidVarErrors `yaml:"replace_invalid_var_errors"`
-	SubrequestHTTPError     ApolloRouterCompatibilitySubrequestHTTPError     `yaml:"subrequest_http_error"`
-}
-
-type ApolloRouterCompatibilityReplaceInvalidVarErrors struct {
-	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_ROUTER_COMPATIBILITY_REPLACE_INVALID_VAR_ERRORS_ENABLED"`
-}
-
-type ApolloRouterCompatibilitySubrequestHTTPError struct {
-	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_ROUTER_COMPATIBILITY_SUBREQUEST_HTTP_ERROR_ENABLED"`
 }
 
 type CacheWarmupSource struct {
@@ -904,6 +889,11 @@ type MCPServer struct {
 	BaseURL    string `yaml:"base_url,omitempty" env:"MCP_SERVER_BASE_URL"`
 }
 
+type PluginsConfiguration struct {
+	Enabled bool   `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	Path    string `yaml:"path" envDefault:"plugins" env:"PATH"`
+}
+
 type Config struct {
 	Version string `yaml:"version,omitempty" ignored:"true"`
 
@@ -932,7 +922,7 @@ type Config struct {
 	PlaygroundEnabled             bool                        `yaml:"playground_enabled" envDefault:"true" env:"PLAYGROUND_ENABLED"`
 	IntrospectionEnabled          bool                        `yaml:"introspection_enabled" envDefault:"true" env:"INTROSPECTION_ENABLED"`
 	QueryPlansEnabled             bool                        `yaml:"query_plans_enabled" envDefault:"true" env:"QUERY_PLANS_ENABLED"`
-	LogLevel                      string                      `yaml:"log_level" envDefault:"info" env:"LOG_LEVEL"`
+	LogLevel                      zapcore.Level               `yaml:"log_level" envDefault:"info" env:"LOG_LEVEL"`
 	JSONLog                       bool                        `yaml:"json_log" envDefault:"true" env:"JSON_LOG"`
 	ShutdownDelay                 time.Duration               `yaml:"shutdown_delay" envDefault:"60s" env:"SHUTDOWN_DELAY"`
 	GracePeriod                   time.Duration               `yaml:"grace_period" envDefault:"30s" env:"GRACE_PERIOD"`
@@ -974,6 +964,21 @@ type Config struct {
 	ApolloCompatibilityFlags       ApolloCompatibilityFlags        `yaml:"apollo_compatibility_flags"`
 	ApolloRouterCompatibilityFlags ApolloRouterCompatibilityFlags  `yaml:"apollo_router_compatibility_flags"`
 	ClientHeader                   ClientHeader                    `yaml:"client_header"`
+
+	Plugins PluginsConfiguration `yaml:"plugins" envPrefix:"PLUGINS_"`
+
+	WatchConfig WatchConfig `yaml:"watch_config" envPrefix:"WATCH_CONFIG_"`
+}
+
+type WatchConfig struct {
+	Enabled      bool                    `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	Interval     time.Duration           `yaml:"interval" envDefault:"10s" env:"INTERVAL"`
+	StartupDelay WatchConfigStartupDelay `yaml:"startup_delay" envPrefix:"STARTUP_DELAY_"`
+}
+
+type WatchConfigStartupDelay struct {
+	Enabled bool          `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	Maximum time.Duration `yaml:"maximum" envDefault:"10s" env:"MAXIMUM"`
 }
 
 type PlaygroundConfig struct {
@@ -983,78 +988,120 @@ type PlaygroundConfig struct {
 }
 
 type LoadResult struct {
-	Config        Config
+	Config Config
+
+	// DefaultLoaded is set to true when no config is found at the default path and the defaults are used.
 	DefaultLoaded bool
 }
 
-func LoadConfig(configFilePath string, envOverride string) (*LoadResult, error) {
-	_ = godotenv.Load(".env.local")
-	_ = godotenv.Load()
-
-	if envOverride != "" {
-		_ = godotenv.Overload(envOverride)
-	}
-
+// LoadConfig takes in a configFilePathString which EITHER contains the name of one single configuration file
+// or a comma separated list of file names (e.g. "base.config.yaml,override.config.yaml")
+// This function loads the configuration files, apply environment variables and validates them with the json schema
+// In case of loading multiple configuration files, we will do the validation step for every configuration
+// and additionally post merging, since validations like oneOf can be bypassed
+func LoadConfig(configFilePaths []string) (*LoadResult, error) {
 	cfg := &LoadResult{
 		Config:        Config{},
-		DefaultLoaded: true,
+		DefaultLoaded: false,
 	}
 
 	// Try to load the environment variables into the config
-
-	err := env.Parse(&cfg.Config)
-	if err != nil {
+	if err := env.Parse(&cfg.Config); err != nil {
 		return nil, err
 	}
 
-	// Read the custom config file
+	// Contains the bytes of every config as bytes
+	configListBytes := make([][]byte, 0, len(configFilePaths))
 
-	var configFileBytes []byte
+	usesMultipleConfigs := len(configFilePaths) > 1
 
-	if configFilePath == "" {
-		configFilePath = os.Getenv("CONFIG_PATH")
-		if configFilePath == "" {
-			configFilePath = DefaultConfigPath
-		}
-	}
+	// Join all errors in all configs and don't return early
+	// This is so that the user can fix all config issues in one go
+	var errs error
 
-	isDefaultConfigPath := configFilePath == DefaultConfigPath
-	configFileBytes, err = os.ReadFile(configFilePath)
-	if err != nil {
-		if isDefaultConfigPath {
-			cfg.DefaultLoaded = false
-		} else {
-			return nil, fmt.Errorf("could not read custom config file %s: %w", configFilePath, err)
-		}
-	}
+	for _, configFilePath := range configFilePaths {
+		// In case the user specified space around the comma, we trim the spaces
+		configFilePath = strings.TrimSpace(configFilePath)
 
-	if configFileBytes != nil {
-		// Expand environment variables in the config file
-		// and unmarshal it into the config struct
+		// Read the custom config file
+		var configFileBytes []byte
+		configFileBytes, err := os.ReadFile(configFilePath)
 
-		configYamlData := os.ExpandEnv(string(configFileBytes))
-		if err := yaml.Unmarshal([]byte(configYamlData), &cfg.Config); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal router config: %w", err)
-		}
-
-		// Validate the config against the JSON schema
-
-		configFileBytes = []byte(configYamlData)
-
-		err = ValidateConfig(configFileBytes, JSONSchema)
 		if err != nil {
-			return nil, fmt.Errorf("router config validation error: %w", err)
+			if configFilePath == DefaultConfigPath {
+				// We want to keep this simple and not allow the default config since we don't have a yaml to merge
+				// for the default config
+				if usesMultipleConfigs {
+					errs = errors.Join(errs, errors.New("cannot use default config with multiple configurations"))
+					continue
+				}
+				cfg.DefaultLoaded = true
+			} else {
+				errs = errors.Join(errs, fmt.Errorf("could not read custom config file %s: %w", configFilePath, err))
+				continue
+			}
 		}
 
-		// Unmarshal the final config
+		if configFileBytes != nil {
+			// Expand environment variables in the config file
+			// and unmarshal it into the config struct
+			configYamlData := os.ExpandEnv(string(configFileBytes))
 
-		if err := yaml.Unmarshal(configFileBytes, &cfg.Config); err != nil {
-			return nil, err
+			marshalValidationConfig := Config{}
+			if err = yaml.Unmarshal([]byte(configYamlData), &marshalValidationConfig); err != nil {
+				errs = errors.Join(errs, fmt.Errorf("failed to unmarshal router config for %s: %w", configFilePath, err))
+				continue
+			}
+
+			// Validate the config against the JSON schema
+			configFileBytes = []byte(configYamlData)
+
+			err = ValidateConfig(configFileBytes, JSONSchema)
+			if err != nil {
+				errs = errors.Join(errs, fmt.Errorf("router config validation error for %s: %w", configFilePath, err))
+				continue
+			}
+
+			// If there is at least a single existing join error
+			// we know we won't attempt to merge the yaml configuration
+			if errs == nil {
+				configListBytes = append(configListBytes, configFileBytes)
+			}
+		}
+	}
+
+	if errs != nil {
+		return nil, fmt.Errorf("errors while loading config files: %w", errs)
+	}
+
+	// In case defaultLoaded is true, it means that the user did not provide a
+	// config file that was loaded, thus we don't have anything to process
+	if !cfg.DefaultLoaded {
+		yamlFinalBytes := configListBytes[0]
+		// Attempt to merge only if we have more than one file
+		if usesMultipleConfigs {
+			// Merge to create the final yaml config
+			processedBytes, err := yamlmerge.YAMLMerge(configListBytes, true)
+			if err != nil {
+				return nil, err
+			}
+			yamlFinalBytes = processedBytes
+		}
+
+		// Files can be joined to bypass validations like oneOf
+		err := ValidateConfig(yamlFinalBytes, JSONSchema)
+		if err != nil {
+			return nil, fmt.Errorf("router config validation error when combined : %w", err)
+		}
+
+		// Unmarshal the final config version
+		err = yaml.Unmarshal(yamlFinalBytes, &cfg.Config)
+		if err != nil {
+			return nil, fmt.Errorf("failed to unmarshal router config: %w", err)
 		}
 	}
 
 	// Post-process the config
-
 	if cfg.Config.DevelopmentMode {
 		cfg.Config.JSONLog = false
 		cfg.Config.SubgraphErrorPropagation.Enabled = true

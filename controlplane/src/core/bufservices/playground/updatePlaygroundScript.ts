@@ -8,6 +8,7 @@ import {
 import { PlaygroundScriptsRepository } from '../../repositories/PlaygroundScriptsRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function updatePlaygroundScript(
   opts: RouterOptions,
@@ -21,16 +22,8 @@ export function updatePlaygroundScript(
     logger = enrichLogger(ctx, logger, authContext);
 
     const repo = new PlaygroundScriptsRepository(opts.db, authContext.organizationId);
-
-    if (!authContext.hasWriteAccess) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `The user doesn't have the permissions to perform this operation`,
-        },
-        compositionErrors: [],
-        deploymentErrors: [],
-      };
+    if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdminOrDeveloper) {
+      throw new UnauthorizedError();
     }
 
     await repo.update({

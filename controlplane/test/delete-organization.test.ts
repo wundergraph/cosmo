@@ -1,12 +1,12 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
-import { QueueEvents } from "bullmq";
+import { QueueEvents } from 'bullmq';
 import { OidcRepository } from '../src/core/repositories/OidcRepository.js';
 import { OrganizationRepository } from '../src/core/repositories/OrganizationRepository.js';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel, TestUser } from '../src/core/test-util.js';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
-import { createDeleteOrganizationWorker } from "../src/core/workers/DeleteOrganizationWorker.js";
+import { createDeleteOrganizationWorker } from '../src/core/workers/DeleteOrganizationWorker.js';
 import { createFederatedGraph, createThenPublishSubgraph, DEFAULT_NAMESPACE, SetupTest } from './test-util.js';
 
 let dbname = '';
@@ -189,6 +189,70 @@ describe('Delete Organization', (ctx) => {
 
     const orgAfterDeletion = await orgRepo.bySlug(orgName);
     expect(orgAfterDeletion).toBeNull();
+
+    await worker.close();
+
+    await server.close();
+  });
+
+  test('Should delete organization and Keycloak groups and roles', async (testContext) => {
+    const { client, server, keycloakClient, realm, users, authenticator, queues, blobStorage } = await SetupTest({
+      dbname,
+      chClient,
+    });
+    const mainUserContext = users[TestUser.adminAliceCompanyA];
+
+    const orgName = genID();
+    await client.createOrganization({
+      name: orgName,
+      slug: orgName,
+    });
+
+    const orgRepo = new OrganizationRepository(server.log, server.db);
+    const org = await orgRepo.bySlug(orgName);
+    expect(org).toBeDefined();
+
+    authenticator.changeUserWithSuppliedContext({
+      ...mainUserContext,
+      organizationId: org!.id,
+      organizationName: org!.name,
+      organizationSlug: org!.slug,
+    });
+
+    const worker = createDeleteOrganizationWorker({
+      redisConnection: server.redisForWorker,
+      db: server.db,
+      logger: server.log,
+      keycloakClient,
+      keycloakRealm: realm,
+      blobStorage,
+      deleteOrganizationAuditLogsQueue: queues.deleteOrganizationAuditLogsQueue,
+    });
+
+    const job = await orgRepo.queueOrganizationDeletion({
+      organizationId: org!.id,
+      queuedBy: mainUserContext.userDisplayName,
+      deleteOrganizationQueue: queues.deleteOrganizationQueue,
+    });
+
+    await job.changeDelay(0);
+    await job.waitUntilFinished(new QueueEvents(job.queueName));
+
+    // Ensure that all organization groups are deleted
+    const kcOrgGroup = await keycloakClient.client.groups.findOne({ realm, id: org!.kcGroupId! });
+    expect(kcOrgGroup).toBeNull();
+
+    const kcOrgSubgroups = await keycloakClient.fetchAllSubGroups({ realm, kcGroupId: org!.kcGroupId! });
+    expect(kcOrgSubgroups).toBeNull();
+
+    // Ensure that all organization roles are deleted
+    const kcOrgRoles = await keycloakClient.client.roles.find({
+      realm,
+      max: -1,
+      search: `${org!.slug}:`,
+    });
+
+    expect(kcOrgRoles).toHaveLength(0);
 
     await worker.close();
 

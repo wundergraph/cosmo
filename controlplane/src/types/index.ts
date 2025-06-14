@@ -1,6 +1,7 @@
 import { LintSeverity } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { JWTPayload } from 'jose';
-import { GraphPruningRuleEnum, LintRuleEnum, ProposalMatch } from '../db/models.js';
+import { GraphPruningRuleEnum, LintRuleEnum, OrganizationRole, ProposalMatch } from '../db/models.js';
+import { RBACEvaluator } from '../core/services/RBACEvaluator.js';
 
 export type FeatureIds =
   | 'users'
@@ -43,10 +44,12 @@ export interface ListFilterOptions {
 
 export interface FederatedGraphListFilterOptions extends ListFilterOptions {
   supportsFederation?: boolean;
+  rbac?: RBACEvaluator;
 }
 
 export interface SubgraphListFilterOptions extends ListFilterOptions {
   excludeFeatureSubgraphs: boolean;
+  rbac?: RBACEvaluator;
 }
 
 export interface Label {
@@ -221,6 +224,7 @@ export interface OrganizationDTO {
   creatorUserId?: string;
   createdAt: string;
   features?: Feature[];
+  rbac: RBACEvaluator;
   billing?: {
     plan: string;
     email?: string;
@@ -239,6 +243,7 @@ export interface OrganizationDTO {
     queuedAt: string;
     queuedBy?: string;
   };
+  kcGroupId: string | undefined;
 }
 
 export interface UserDTO {
@@ -246,18 +251,35 @@ export interface UserDTO {
   email: string;
 }
 
+export interface OrganizationGroupDTO {
+  groupId: string;
+  name: string;
+  description: string;
+  builtin: boolean;
+  kcGroupId: string | null;
+  membersCount: number;
+  apiKeysCount: number;
+  rules: {
+    role: OrganizationRole;
+    namespaces: string[];
+    resources: string[];
+  }[];
+}
+
 export interface OrganizationMemberDTO {
   userID: string;
   orgMemberID: string;
   email: string;
-  roles: string[];
+  rbac: RBACEvaluator;
   active: boolean;
+  joinedAt: string;
 }
 
 export interface OrganizationInvitationDTO {
   userID: string;
   email: string;
   invitedBy?: string;
+  groupId?: string;
 }
 
 export interface APIKeyDTO {
@@ -267,6 +289,7 @@ export interface APIKeyDTO {
   lastUsedAt: string;
   expiresAt: string;
   createdBy: string;
+  group: { id: string; name: string } | undefined;
   creatorUserID: string;
 }
 
@@ -421,9 +444,9 @@ export type AuthContext = {
   auth: 'access_token' | 'api_key' | 'cookie';
   organizationId: string;
   organizationSlug: string;
-  hasWriteAccess: boolean;
-  isAdmin: boolean;
+  organizationDeactivated: boolean;
   userId: string;
+  rbac: RBACEvaluator;
   userDisplayName: string;
   apiKeyName?: string;
 };

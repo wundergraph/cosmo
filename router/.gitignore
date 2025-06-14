@@ -5,3 +5,6 @@ access.log
 
 # debug vscode
 __debug_bin*
+
+# Router plugins
+/plugins

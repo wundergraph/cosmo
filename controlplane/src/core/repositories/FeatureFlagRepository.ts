@@ -27,6 +27,7 @@ import {
   SubgraphDTO,
 } from '../../types/index.js';
 import { normalizeLabels } from '../util.js';
+import { RBACEvaluator } from '../services/RBACEvaluator.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { SubgraphRepository } from './SubgraphRepository.js';
 import { UserRepository } from './UserRepository.js';
@@ -50,6 +51,7 @@ export interface FeatureFlagListFilterOptions {
   limit: number;
   offset: number;
   query?: string;
+  rbac?: RBACEvaluator;
 }
 
 export type CheckConstituentFeatureSubgraphsResult = {
@@ -235,11 +237,60 @@ export class FeatureFlagRepository {
     return featureFlagsCount[0].count;
   }
 
+  /**
+   * Applies conditions based on the provided RBAC. If the actor can't access any subgraph, the
+   * returned value is false; otherwise, true.
+   *
+   * @param rbac
+   * @param conditions
+   * @private
+   */
+  private applyRbacConditionsToQuery(rbac: RBACEvaluator | undefined, conditions: (SQL<unknown> | undefined)[]) {
+    if (!rbac || rbac.isOrganizationAdminOrDeveloper) {
+      return true;
+    }
+
+    const graphAdmin = rbac.ruleFor('subgraph-admin');
+    const graphPublisher = rbac.ruleFor('subgraph-publisher');
+    if (!graphAdmin && !graphPublisher) {
+      return false;
+    }
+
+    const namespaces: string[] = [];
+    const resources: string[] = [];
+
+    if (graphAdmin) {
+      namespaces.push(...graphAdmin.namespaces);
+      resources.push(...graphAdmin.resources);
+    }
+
+    if (graphPublisher) {
+      namespaces.push(...graphPublisher.namespaces);
+      resources.push(...graphPublisher.resources);
+    }
+
+    if (namespaces.length > 0 && resources.length > 0) {
+      conditions.push(
+        or(
+          inArray(schema.targets.namespaceId, [...new Set(namespaces)]),
+          inArray(schema.targets.id, [...new Set(resources)]),
+        ),
+      );
+    } else if (namespaces.length > 0) {
+      conditions.push(inArray(schema.targets.namespaceId, [...new Set(namespaces)]));
+    } else if (resources.length > 0) {
+      conditions.push(inArray(schema.targets.id, [...new Set(resources)]));
+    }
+
+    return true;
+  }
+
   public async getFeatureSubgraphs({
     namespaceId,
     limit,
     offset,
     query,
+    rbac,
   }: FeatureFlagListFilterOptions): Promise<FeatureSubgraphDTO[]> {
     const subgraphRepo = new SubgraphRepository(this.logger, this.db, this.organizationId);
     const conditions: (SQL<unknown> | undefined)[] = [
@@ -259,6 +310,10 @@ export class FeatureFlagRepository {
           sql.raw(`${getTableName(schema.subgraphs)}.${schema.subgraphs.id.name}::text like '%${query}%'`),
         ),
       );
+    }
+
+    if (!this.applyRbacConditionsToQuery(rbac, conditions)) {
+      return [];
     }
 
     const dbQuery = this.db
@@ -308,7 +363,7 @@ export class FeatureFlagRepository {
     return featureSubgraphs;
   }
 
-  public async getFeatureSubgraphsCount({ namespaceId, query }: FeatureFlagListFilterOptions) {
+  public async getFeatureSubgraphsCount({ namespaceId, query, rbac }: FeatureFlagListFilterOptions) {
     const conditions: SQL<unknown>[] = [
       eq(targets.organizationId, this.organizationId),
       eq(targets.type, 'subgraph'),
@@ -321,6 +376,10 @@ export class FeatureFlagRepository {
 
     if (query) {
       conditions.push(like(targets.name, `%${query}%`));
+    }
+
+    if (!this.applyRbacConditionsToQuery(rbac, conditions)) {
+      return 0;
     }
 
     const featureSubgraphTargets = await this.db
@@ -490,9 +549,11 @@ export class FeatureFlagRepository {
   public async getFeatureFlagsByFederatedGraph({
     namespaceId,
     federatedGraph,
+    rbac,
   }: {
     namespaceId: string;
     federatedGraph: FederatedGraphDTO;
+    rbac?: RBACEvaluator;
   }): Promise<FeatureFlagDTO[]> {
     const fetaureFlags: FeatureFlagDTO[] = [];
     const subgraphRepo = new SubgraphRepository(this.logger, this.db, this.organizationId);
@@ -500,6 +561,7 @@ export class FeatureFlagRepository {
     const subgraphs = await subgraphRepo.listByFederatedGraph({
       federatedGraphTargetId: federatedGraph.targetId,
       published: true,
+      rbac,
     });
 
     const baseSubgraphNames = subgraphs.map((s) => s.name);

@@ -15,6 +15,7 @@ import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, isValidLabelMatchers } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function checkFederatedGraph(
   opts: RouterOptions,
@@ -32,16 +33,8 @@ export function checkFederatedGraph(
 
     req.namespace = req.namespace || DefaultNamespace;
 
-    if (!authContext.hasWriteAccess) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `The user doesnt have the permissions to perform this operation`,
-        },
-        compositionErrors: [],
-        subgraphs: [],
-        compositionWarnings: [],
-      };
+    if (authContext.organizationDeactivated) {
+      throw new UnauthorizedError();
     }
 
     const federatedGraph = await fedGraphRepo.byName(req.name, req.namespace, {
@@ -57,6 +50,11 @@ export function checkFederatedGraph(
         subgraphs: [],
         compositionWarnings: [],
       };
+    }
+
+    // Only check for permission when we are not supposed to use the legacy flow
+    if (!authContext.rbac.hasFederatedGraphWriteAccess(federatedGraph)) {
+      throw new UnauthorizedError();
     }
 
     if (!isValidLabelMatchers(req.labelMatchers)) {
@@ -76,7 +74,9 @@ export function checkFederatedGraph(
       namespaceId: federatedGraph.namespaceId,
     });
 
-    const subgraphsDetails: PlainMessage<Subgraph>[] = subgraphs.map((s) => ({
+    const subgraphsUsedForComposition = subgraphs.filter((s) => !!s.schemaSDL);
+
+    const subgraphsDetails: PlainMessage<Subgraph>[] = subgraphsUsedForComposition.map((s) => ({
       id: s.id,
       name: s.name,
       routingURL: s.routingUrl,
@@ -92,7 +92,7 @@ export function checkFederatedGraph(
     }));
 
     const result = composeSubgraphs(
-      subgraphs.map((s) => ({
+      subgraphsUsedForComposition.map((s) => ({
         id: s.id,
         name: s.name,
         url: s.routingUrl,

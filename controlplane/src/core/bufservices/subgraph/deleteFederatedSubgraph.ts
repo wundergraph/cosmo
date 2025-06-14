@@ -15,6 +15,7 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getFederatedGraphRouterCompatibilityVersion, getLogger, handleError } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { ProposalRepository } from '../../repositories/ProposalRepository.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function deleteFederatedSubgraph(
   opts: RouterOptions,
@@ -39,17 +40,8 @@ export function deleteFederatedSubgraph(
     );
 
     req.namespace = req.namespace || DefaultNamespace;
-
-    if (!authContext.hasWriteAccess) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `The user doesnt have the permissions to perform this operation`,
-        },
-        compositionErrors: [],
-        deploymentErrors: [],
-        compositionWarnings: [],
-      };
+    if (authContext.organizationDeactivated) {
+      throw new UnauthorizedError();
     }
 
     const namespace = await namespaceRepo.byName(req.namespace);
@@ -87,6 +79,7 @@ export function deleteFederatedSubgraph(
       },
       headers: ctx.requestHeader,
       authContext,
+      isDeleteOperation: true,
     });
 
     let proposalMatchMessage: string | undefined;

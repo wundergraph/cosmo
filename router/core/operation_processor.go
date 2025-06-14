@@ -760,7 +760,11 @@ func (o *OperationKit) setAndParseOperationDoc() error {
 }
 
 func (o *OperationKit) NormalizeVariables() ([]uploads.UploadPathMapping, error) {
-	before := len(o.kit.doc.Input.Variables) + len(o.kit.doc.Input.RawBytes)
+	variablesBefore := make([]byte, len(o.kit.doc.Input.Variables))
+	copy(variablesBefore, o.kit.doc.Input.Variables)
+
+	operationRawBytesBefore := make([]byte, len(o.kit.doc.Input.RawBytes))
+	copy(operationRawBytesBefore, o.kit.doc.Input.RawBytes)
 
 	report := &operationreport.Report{}
 	uploadsMapping := o.kit.variablesNormalizer.NormalizeOperation(o.kit.doc, o.operationProcessor.executor.ClientSchema, report)
@@ -803,8 +807,7 @@ func (o *OperationKit) NormalizeVariables() ([]uploads.UploadPathMapping, error)
 	o.parsedOperation.ID = o.kit.keyGen.Sum64()
 
 	// If the normalized form of the operation didn't change, we don't need to print it again
-	after := len(o.kit.doc.Input.Variables) + len(o.kit.doc.Input.RawBytes)
-	if after == before {
+	if bytes.Equal(o.kit.doc.Input.Variables, variablesBefore) && bytes.Equal(o.kit.doc.Input.RawBytes, operationRawBytesBefore) {
 		return uploadsMapping, nil
 	}
 
@@ -1199,7 +1202,7 @@ func createParseKit(i int, options *parseKitOptions) *parseKit {
 		}),
 		operationValidator: astvalidation.DefaultOperationValidator(astvalidation.WithApolloCompatibilityFlags(
 			apollocompatibility.Flags{
-				ReplaceUndefinedOpFieldError: options.apolloCompatibilityFlags.ReplaceUndefinedOpFieldErrors.Enabled,
+				UseGraphQLValidationFailedStatus: options.apolloCompatibilityFlags.UseGraphQLValidationFailedStatus.Enabled,
 			},
 		)),
 	}

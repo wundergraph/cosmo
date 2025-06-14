@@ -40,7 +40,6 @@ import (
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/nats-io/nats.go"
-	"github.com/nats-io/nats.go/jetstream"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
 	"github.com/twmb/franz-go/pkg/kadm"
@@ -53,8 +52,6 @@ import (
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
 	"google.golang.org/protobuf/encoding/protojson"
-
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs"
 	"github.com/wundergraph/cosmo/router/core"
@@ -83,8 +80,10 @@ var (
 	ConfigWithEdfsKafkaJSONTemplate string
 	//go:embed testdata/configWithEdfsNats.json
 	ConfigWithEdfsNatsJSONTemplate string
-	demoNatsProviders              = []string{natsDefaultSourceName, myNatsProviderID}
-	demoKafkaProviders             = []string{myKafkaProviderID}
+	//go:embed testdata/configWithPlugins.json
+	ConfigWithPluginsJSONTemplate string
+	DemoNatsProviders             = []string{natsDefaultSourceName, myNatsProviderID}
+	DemoKafkaProviders            = []string{myKafkaProviderID}
 )
 
 func init() {
@@ -251,13 +250,15 @@ type EngineStatOptions struct {
 }
 
 type MetricOptions struct {
-	MetricExclusions             MetricExclusions
-	EnableRuntimeMetrics         bool
-	EnableOTLPRouterCache        bool
-	EnablePrometheusRouterCache  bool
-	OTLPEngineStatsOptions       EngineStatOptions
-	PrometheusEngineStatsOptions EngineStatOptions
-	PrometheusSchemaFieldUsage   PrometheusSchemaFieldUsage
+	MetricExclusions                  MetricExclusions
+	EnableRuntimeMetrics              bool
+	EnableOTLPRouterCache             bool
+	EnablePrometheusRouterCache       bool
+	OTLPEngineStatsOptions            EngineStatOptions
+	PrometheusEngineStatsOptions      EngineStatOptions
+	PrometheusSchemaFieldUsage        PrometheusSchemaFieldUsage
+	EnableOTLPConnectionMetrics       bool
+	EnablePrometheusConnectionMetrics bool
 }
 
 type PrometheusSchemaFieldUsage struct {
@@ -286,6 +287,7 @@ type Config struct {
 	TraceExporter                      trace.SpanExporter
 	CustomMetricAttributes             []config.CustomAttribute
 	CustomTelemetryAttributes          []config.CustomAttribute
+	CustomTracingAttributes            []config.CustomAttribute
 	CustomResourceAttributes           []config.CustomStaticAttribute
 	MetricReader                       metric.Reader
 	PrometheusRegistry                 *prometheus.Registry
@@ -315,6 +317,12 @@ type Config struct {
 	UseVersionedGraph                  bool
 	NoShutdownTestServer               bool
 	MCP                                config.MCPConfiguration
+	Plugins                            PluginConfig
+}
+
+type PluginConfig struct {
+	Path    string
+	Enabled bool
 }
 
 type CacheMetricsAssertions struct {
@@ -365,7 +373,9 @@ type MCPConfig struct {
 	Port    int
 }
 
-func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
+// CreateTestSupervisorEnv is currently tailored specifically for /lifecycle/supervisor_test.go, refer to that test
+// for usage example. CreateTestSupervisorEnv is not a drop-in replacement for CreateTestEnv!
+func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	t.Helper()
 
 	var (
@@ -378,6 +388,407 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	if cfg.EnableKafka {
 		cfg.KafkaSeeds = []string{"localhost:9092"}
 
+		client, err := kgo.NewClient(
+			kgo.SeedBrokers(cfg.KafkaSeeds...),
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		kafkaClient = client
+		kafkaAdminClient = kadm.NewClient(kafkaClient)
+	}
+
+	if cfg.EnableNats {
+		s, err := setupNatsClients(t)
+		if err != nil {
+			t.Fatalf("could not setup nats clients: %s", err.Error())
+		}
+		natsSetup = s
+	}
+
+	if cfg.AssertCacheMetrics != nil {
+		if cfg.MetricReader == nil {
+			cfg.MetricReader = metric.NewManualReader()
+		}
+		cfg.MetricOptions.EnableOTLPRouterCache = true
+	}
+
+	var logObserver *observer.ObservedLogs
+
+	if oc := cfg.LogObservation; oc.Enabled {
+		var zCore zapcore.Core
+		zCore, logObserver = observer.New(oc.LogLevel)
+		cfg.Logger = logging.NewZapLoggerWithCore(zCore, true)
+	} else {
+		ec := zap.NewProductionEncoderConfig()
+		ec.EncodeDuration = zapcore.SecondsDurationEncoder
+		ec.TimeKey = "time"
+
+		syncer := zapcore.AddSync(os.Stderr)
+		cfg.Logger = logging.NewZapLogger(syncer, false, true, zapcore.ErrorLevel)
+	}
+
+	if cfg.AccessLogger == nil {
+		cfg.AccessLogger = cfg.Logger
+	}
+
+	counters := &SubgraphRequestCount{
+		Global:       atomic.NewInt64(0),
+		Employees:    atomic.NewInt64(0),
+		Family:       atomic.NewInt64(0),
+		Hobbies:      atomic.NewInt64(0),
+		Products:     atomic.NewInt64(0),
+		ProductFg:    atomic.NewInt64(0),
+		Test1:        atomic.NewInt64(0),
+		Availability: atomic.NewInt64(0),
+		Mood:         atomic.NewInt64(0),
+		Countries:    atomic.NewInt64(0),
+	}
+
+	requiredPorts := 2
+
+	ports := freeport.GetN(t, requiredPorts)
+
+	getPubSubName := GetPubSubNameFn(pubSubPrefix)
+
+	ctx, cancel := context.WithCancelCause(context.Background())
+
+	employees := &Subgraph{
+		handler:          subgraphs.EmployeesHandler(subgraphOptions(ctx, t, cfg.Logger, natsSetup, getPubSubName)),
+		middleware:       cfg.Subgraphs.Employees.Middleware,
+		globalMiddleware: cfg.Subgraphs.GlobalMiddleware,
+		globalCounter:    counters.Global,
+		localCounter:     counters.Employees,
+		globalDelay:      cfg.Subgraphs.GlobalDelay,
+		localDelay:       cfg.Subgraphs.Employees.Delay,
+	}
+
+	family := &Subgraph{
+		handler:          subgraphs.FamilyHandler(subgraphOptions(ctx, t, cfg.Logger, natsSetup, getPubSubName)),
+		middleware:       cfg.Subgraphs.Family.Middleware,
+		globalMiddleware: cfg.Subgraphs.GlobalMiddleware,
+		globalCounter:    counters.Global,
+		localCounter:     counters.Family,
+		globalDelay:      cfg.Subgraphs.GlobalDelay,
+		localDelay:       cfg.Subgraphs.Family.Delay,
+	}
+
+	hobbies := &Subgraph{
+		handler:          subgraphs.HobbiesHandler(subgraphOptions(ctx, t, cfg.Logger, natsSetup, getPubSubName)),
+		middleware:       cfg.Subgraphs.Hobbies.Middleware,
+		globalMiddleware: cfg.Subgraphs.GlobalMiddleware,
+		globalCounter:    counters.Global,
+		localCounter:     counters.Hobbies,
+		globalDelay:      cfg.Subgraphs.GlobalDelay,
+		localDelay:       cfg.Subgraphs.Hobbies.Delay,
+	}
+
+	products := &Subgraph{
+		handler:          subgraphs.ProductsHandler(subgraphOptions(ctx, t, cfg.Logger, natsSetup, getPubSubName)),
+		middleware:       cfg.Subgraphs.Products.Middleware,
+		globalMiddleware: cfg.Subgraphs.GlobalMiddleware,
+		globalCounter:    counters.Global,
+		localCounter:     counters.Products,
+		globalDelay:      cfg.Subgraphs.GlobalDelay,
+		localDelay:       cfg.Subgraphs.Products.Delay,
+	}
+
+	productsFg := &Subgraph{
+		handler:          subgraphs.ProductsFGHandler(subgraphOptions(ctx, t, cfg.Logger, natsSetup, getPubSubName)),
+		middleware:       cfg.Subgraphs.ProductsFg.Middleware,
+		globalMiddleware: cfg.Subgraphs.GlobalMiddleware,
+		globalCounter:    counters.Global,
+		localCounter:     counters.ProductFg,
+		globalDelay:      cfg.Subgraphs.GlobalDelay,
+		localDelay:       cfg.Subgraphs.ProductsFg.Delay,
+	}
+
+	test1 := &Subgraph{
+		handler:          subgraphs.Test1Handler(subgraphOptions(ctx, t, cfg.Logger, natsSetup, getPubSubName)),
+		middleware:       cfg.Subgraphs.Test1.Middleware,
+		globalMiddleware: cfg.Subgraphs.GlobalMiddleware,
+		globalCounter:    counters.Global,
+		localCounter:     counters.Test1,
+		globalDelay:      cfg.Subgraphs.GlobalDelay,
+		localDelay:       cfg.Subgraphs.Test1.Delay,
+	}
+
+	availability := &Subgraph{
+		handler:          subgraphs.AvailabilityHandler(subgraphOptions(ctx, t, cfg.Logger, natsSetup, getPubSubName)),
+		middleware:       cfg.Subgraphs.Availability.Middleware,
+		globalMiddleware: cfg.Subgraphs.GlobalMiddleware,
+		globalCounter:    counters.Global,
+		localCounter:     counters.Availability,
+		globalDelay:      cfg.Subgraphs.GlobalDelay,
+		localDelay:       cfg.Subgraphs.Availability.Delay,
+	}
+
+	mood := &Subgraph{
+		handler:          subgraphs.MoodHandler(subgraphOptions(ctx, t, cfg.Logger, natsSetup, getPubSubName)),
+		middleware:       cfg.Subgraphs.Mood.Middleware,
+		globalMiddleware: cfg.Subgraphs.GlobalMiddleware,
+		globalCounter:    counters.Global,
+		localCounter:     counters.Mood,
+		globalDelay:      cfg.Subgraphs.GlobalDelay,
+		localDelay:       cfg.Subgraphs.Mood.Delay,
+	}
+
+	countries := &Subgraph{
+		handler:          subgraphs.CountriesHandler(subgraphOptions(ctx, t, cfg.Logger, natsSetup, getPubSubName)),
+		middleware:       cfg.Subgraphs.Countries.Middleware,
+		globalMiddleware: cfg.Subgraphs.GlobalMiddleware,
+		globalCounter:    counters.Global,
+		localCounter:     counters.Countries,
+		globalDelay:      cfg.Subgraphs.GlobalDelay,
+		localDelay:       cfg.Subgraphs.Countries.Delay,
+	}
+
+	employeesServer := makeSafeHttpTestServer(t, employees)
+	familyServer := makeSafeHttpTestServer(t, family)
+	hobbiesServer := makeSafeHttpTestServer(t, hobbies)
+	productsServer := makeSafeHttpTestServer(t, products)
+	test1Server := makeSafeHttpTestServer(t, test1)
+	availabilityServer := makeSafeHttpTestServer(t, availability)
+	moodServer := makeSafeHttpTestServer(t, mood)
+	countriesServer := makeSafeHttpTestServer(t, countries)
+	productFgServer := makeSafeHttpTestServer(t, productsFg)
+
+	replacements := map[string]string{
+		subgraphs.EmployeesDefaultDemoURL:    gqlURL(employeesServer),
+		subgraphs.FamilyDefaultDemoURL:       gqlURL(familyServer),
+		subgraphs.HobbiesDefaultDemoURL:      gqlURL(hobbiesServer),
+		subgraphs.ProductsDefaultDemoURL:     gqlURL(productsServer),
+		subgraphs.Test1DefaultDemoURL:        gqlURL(test1Server),
+		subgraphs.AvailabilityDefaultDemoURL: gqlURL(availabilityServer),
+		subgraphs.MoodDefaultDemoURL:         gqlURL(moodServer),
+		subgraphs.CountriesDefaultDemoURL:    gqlURL(countriesServer),
+		subgraphs.ProductsFgDefaultDemoURL:   gqlURL(productFgServer),
+	}
+
+	if cfg.RouterConfigJSONTemplate == "" {
+		cfg.RouterConfigJSONTemplate = ConfigJSONTemplate
+	}
+	replaced := cfg.RouterConfigJSONTemplate
+
+	for k, v := range replacements {
+		replaced = strings.ReplaceAll(replaced, k, v)
+	}
+
+	var routerConfig nodev1.RouterConfig
+	if err := protojson.Unmarshal([]byte(replaced), &routerConfig); err != nil {
+		cancel(err)
+		return nil, err
+	}
+
+	addPubSubPrefixToEngineConfiguration(routerConfig.EngineConfig, getPubSubName)
+	for _, ffConfig := range routerConfig.FeatureFlagConfigs.GetConfigByFeatureFlagName() {
+		addPubSubPrefixToEngineConfiguration(ffConfig.EngineConfig, getPubSubName)
+	}
+
+	if cfg.ModifyRouterConfig != nil {
+		cfg.ModifyRouterConfig(&routerConfig)
+	}
+
+	cdnServer := cfg.CdnSever
+	if cfg.CdnSever == nil {
+		cdnServer = SetupCDNServer(t, freeport.GetOne(t))
+	}
+
+	if cfg.PrometheusRegistry != nil {
+		cfg.PrometheusPort = ports[0]
+	}
+
+	listenerAddr := fmt.Sprintf("localhost:%d", ports[1])
+
+	client := &http.Client{}
+
+	if !cfg.NoRetryClient {
+		retryClient := retryablehttp.NewClient()
+		retryClient.Logger = nil
+		retryClient.RetryMax = 10
+		retryClient.RetryWaitMin = 100 * time.Millisecond
+
+		client = retryClient.StandardClient()
+	}
+
+	if cfg.MCP.Enabled {
+		cfg.MCP.Server.ListenAddr = fmt.Sprintf("localhost:%d", freeport.GetOne(t))
+	}
+
+	baseURL := fmt.Sprintf("http://%s", listenerAddr)
+
+	rs, err := core.NewRouterSupervisor(&core.RouterSupervisorOpts{
+		BaseLogger: cfg.Logger,
+		ConfigFactory: func() (*config.Config, error) {
+			return &config.Config{}, nil
+		},
+		RouterFactory: func(ctx context.Context, res *core.RouterResources) (*core.Router, error) {
+			rr, err := configureRouter(listenerAddr, cfg, &routerConfig, cdnServer, natsSetup)
+			if err != nil {
+				cancel(err)
+				return nil, err
+			}
+
+			return rr, nil
+		},
+	})
+
+	if cfg.TLSConfig != nil && cfg.TLSConfig.Enabled {
+
+		cert, err := tls.LoadX509KeyPair(cfg.TLSConfig.CertFile, cfg.TLSConfig.KeyFile)
+		require.NoError(t, err)
+
+		caCert, err := os.ReadFile(cfg.TLSConfig.CertFile)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		caCertPool := x509.NewCertPool()
+		if ok := caCertPool.AppendCertsFromPEM(caCert); !ok {
+			t.Fatalf("could not append ca cert to pool")
+		}
+
+		// Retain the default transport settings
+		httpClient := cleanhttp.DefaultPooledClient()
+		httpClient.Transport.(*http.Transport).TLSClientConfig = &tls.Config{
+			RootCAs:      caCertPool,
+			Certificates: []tls.Certificate{cert},
+		}
+
+		if cfg.NoRetryClient {
+			client = httpClient
+		} else {
+			retryClient := retryablehttp.NewClient()
+			retryClient.Logger = nil
+			retryClient.RetryMax = 10
+			retryClient.RetryWaitMin = 100 * time.Millisecond
+			retryClient.HTTPClient = httpClient
+
+			client = retryClient.StandardClient()
+		}
+	}
+
+	graphQLPath := "/graphql"
+	if cfg.OverrideGraphQLPath != "" {
+		graphQLPath = cfg.OverrideGraphQLPath
+	}
+
+	absinthePath := "/absinthe/socket"
+	if cfg.OverrideAbsinthePath != "" {
+		absinthePath = cfg.OverrideAbsinthePath
+	}
+
+	if cfg.Subgraphs.Employees.CloseOnStart {
+		employeesServer.Close()
+	}
+	if cfg.Subgraphs.Family.CloseOnStart {
+		familyServer.Close()
+	}
+	if cfg.Subgraphs.Hobbies.CloseOnStart {
+		hobbiesServer.Close()
+	}
+	if cfg.Subgraphs.Products.CloseOnStart {
+		productsServer.Close()
+	}
+	if cfg.Subgraphs.Test1.CloseOnStart {
+		test1Server.Close()
+	}
+	if cfg.Subgraphs.Availability.CloseOnStart {
+		availabilityServer.Close()
+	}
+	if cfg.Subgraphs.Mood.CloseOnStart {
+		moodServer.Close()
+	}
+	if cfg.Subgraphs.Countries.CloseOnStart {
+		countriesServer.Close()
+	}
+	if cfg.Subgraphs.ProductsFg.CloseOnStart {
+		productFgServer.Close()
+	}
+
+	if cfg.ShutdownDelay == 0 {
+		cfg.ShutdownDelay = 30 * time.Second
+	}
+
+	e := &Environment{
+		t:                       t,
+		cfg:                     cfg,
+		routerConfigVersionMain: routerConfig.Version,
+		graphQLPath:             graphQLPath,
+		absinthePath:            absinthePath,
+		Context:                 ctx,
+		cancel:                  cancel,
+		Router:                  nil,
+		RouterURL:               baseURL,
+		RouterSupervisor:        rs,
+		RouterClient:            client,
+		CDN:                     cdnServer,
+		NatsData:                natsSetup,
+		SubgraphRequestCount:    counters,
+		KafkaAdminClient:        kafkaAdminClient,
+		KafkaClient:             kafkaClient,
+		shutdownDelay:           cfg.ShutdownDelay,
+		shutdown:                atomic.NewBool(false),
+		logObserver:             logObserver,
+		getPubSubName:           getPubSubName,
+		metricReader:            cfg.MetricReader,
+		Servers: []*httptest.Server{
+			employeesServer,
+			familyServer,
+			hobbiesServer,
+			productsServer,
+			test1Server,
+			availabilityServer,
+			moodServer,
+			countriesServer,
+			productFgServer,
+		},
+	}
+
+	if natsSetup != nil {
+		e.NatsConnectionDefault = natsSetup.Connections[0]
+		e.NatsConnectionMyNats = natsSetup.Connections[1]
+	}
+
+	if routerConfig.FeatureFlagConfigs != nil {
+		myFF, ok := routerConfig.FeatureFlagConfigs.ConfigByFeatureFlagName["myff"]
+		if ok {
+			e.routerConfigVersionMyFF = myFF.Version
+		}
+	}
+
+	if cfg.MCP.Enabled {
+		// Create MCP client connecting to the MCP server
+		mcpAddr := fmt.Sprintf("http://%s/mcp", cfg.MCP.Server.ListenAddr)
+		client, err := mcpclient.NewSSEMCPClient(mcpAddr)
+		if err != nil {
+			t.Fatalf("Failed to create MCP client: %v", err)
+		}
+
+		e.MCPClient = client
+
+		err = e.WaitForMCPServer(e.Context, 250, 10)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return e, err
+}
+
+func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
+	t.Helper()
+
+	var (
+		kafkaAdminClient *kadm.Client
+		kafkaClient      *kgo.Client
+		natsSetup        *NatsData
+		pubSubPrefix     = strconv.FormatUint(rand.Uint64(), 16)
+	)
+
+	if cfg.EnableKafka {
+		cfg.KafkaSeeds = []string{"localhost:9092"}
 		client, err := kgo.NewClient(
 			kgo.SeedBrokers(cfg.KafkaSeeds...),
 		)
@@ -851,22 +1262,25 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		testConfig.ModifySubgraphErrorPropagation(&cfg.SubgraphErrorPropagation)
 	}
 
-	natsEventSources := make([]config.NatsEventSource, len(demoNatsProviders))
-	kafkaEventSources := make([]config.KafkaEventSource, len(demoKafkaProviders))
+	var natsEventSources []config.NatsEventSource
+	var kafkaEventSources []config.KafkaEventSource
 
 	if natsData != nil {
-		for _, sourceName := range demoNatsProviders {
+		for _, sourceName := range DemoNatsProviders {
 			natsEventSources = append(natsEventSources, config.NatsEventSource{
 				ID:  sourceName,
 				URL: nats.DefaultURL,
 			})
 		}
 	}
-	for _, sourceName := range demoKafkaProviders {
-		kafkaEventSources = append(kafkaEventSources, config.KafkaEventSource{
-			ID:      sourceName,
-			Brokers: testConfig.KafkaSeeds,
-		})
+
+	if testConfig.KafkaSeeds != nil {
+		for _, sourceName := range DemoKafkaProviders {
+			kafkaEventSources = append(kafkaEventSources, config.KafkaEventSource{
+				ID:      sourceName,
+				Brokers: testConfig.KafkaSeeds,
+			})
+		}
 	}
 
 	eventsConfiguration := config.EventsConfiguration{
@@ -880,6 +1294,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	}
 
 	routerOpts := []core.Option{
+		core.WithDisableUsageTracking(),
 		core.WithLogger(testConfig.Logger),
 		core.WithAccessLogs(&core.AccessLogsConfig{
 			Logger:             testConfig.AccessLogger,
@@ -941,6 +1356,11 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		routerOpts = append(routerOpts, core.WithMCP(testConfig.MCP))
 	}
 
+	routerOpts = append(routerOpts, core.WithPlugins(config.PluginsConfiguration{
+		Path:    testConfig.Plugins.Path,
+		Enabled: testConfig.Plugins.Enabled,
+	}))
+
 	if testConfig.TraceExporter != nil {
 		testConfig.PropagationConfig.TraceContext = true
 
@@ -969,15 +1389,20 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		routerOpts = append(routerOpts, core.WithTelemetryAttributes(testConfig.CustomTelemetryAttributes))
 	}
 
+	if testConfig.CustomTracingAttributes != nil {
+		routerOpts = append(routerOpts, core.WithTracingAttributes(testConfig.CustomTracingAttributes))
+	}
+
 	var prometheusConfig rmetric.PrometheusConfig
 
 	if testConfig.PrometheusRegistry != nil {
 		prometheusConfig = rmetric.PrometheusConfig{
-			Enabled:      true,
-			ListenAddr:   fmt.Sprintf("localhost:%d", testConfig.PrometheusPort),
-			Path:         "/metrics",
-			TestRegistry: testConfig.PrometheusRegistry,
-			GraphqlCache: testConfig.MetricOptions.EnablePrometheusRouterCache,
+			Enabled:         true,
+			ListenAddr:      fmt.Sprintf("localhost:%d", testConfig.PrometheusPort),
+			Path:            "/metrics",
+			TestRegistry:    testConfig.PrometheusRegistry,
+			GraphqlCache:    testConfig.MetricOptions.EnablePrometheusRouterCache,
+			ConnectionStats: testConfig.MetricOptions.EnablePrometheusConnectionMetrics,
 			EngineStats: rmetric.EngineStatsConfig{
 				Subscription: testConfig.MetricOptions.PrometheusEngineStatsOptions.EnableSubscription,
 			},
@@ -1002,9 +1427,10 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 					Enabled: true,
 				},
 				OTLP: config.MetricsOTLP{
-					Enabled:       true,
-					RouterRuntime: testConfig.MetricOptions.EnableRuntimeMetrics,
-					GraphqlCache:  testConfig.MetricOptions.EnableOTLPRouterCache,
+					Enabled:         true,
+					RouterRuntime:   testConfig.MetricOptions.EnableRuntimeMetrics,
+					GraphqlCache:    testConfig.MetricOptions.EnableOTLPRouterCache,
+					ConnectionStats: testConfig.MetricOptions.EnableOTLPConnectionMetrics,
 					EngineStats: config.EngineStats{
 						Subscriptions: testConfig.MetricOptions.OTLPEngineStatsOptions.EnableSubscription,
 					},
@@ -1157,6 +1583,18 @@ func gqlURL(srv *httptest.Server) string {
 	return path
 }
 
+func ReadAndCheckJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err error) {
+	_, payload, err := conn.ReadMessage()
+	if err != nil {
+		return err
+	}
+	if err := json.Unmarshal(payload, &v); err != nil {
+		t.Logf("Failed to decode WebSocket message. Raw payload: %s", string(payload))
+		return err
+	}
+	return nil
+}
+
 type Environment struct {
 	t                     testing.TB
 	cfg                   *Config
@@ -1166,6 +1604,7 @@ type Environment struct {
 	Context               context.Context
 	cancel                context.CancelCauseFunc
 	Router                *core.Router
+	RouterSupervisor      *core.RouterSupervisor
 	RouterURL             string
 	RouterClient          *http.Client
 	Servers               []*httptest.Server
@@ -1186,8 +1625,9 @@ type Environment struct {
 	routerConfigVersionMain string
 	routerConfigVersionMyFF string
 
-	metricReader metric.Reader
-	routerCmd    *exec.Cmd
+	metricReader  metric.Reader
+	routerCmd     *exec.Cmd
+	cmdLogChannel chan string
 }
 
 func GetPubSubNameFn(prefix string) func(name string) string {
@@ -1200,6 +1640,10 @@ func GetPubSubNameFn(prefix string) func(name string) string {
 // Using this method avoid conflicts between tests running in parallel.
 func (e *Environment) GetPubSubName(name string) string {
 	return e.getPubSubName(name)
+}
+
+func (e *Environment) GetKafkaSeeds() []string {
+	return e.cfg.KafkaSeeds
 }
 
 func (e *Environment) RouterConfigVersionMain() string {
@@ -1759,8 +2203,7 @@ func (e *Environment) InitGraphQLWebSocketConnection(header http.Header, query u
 	})
 	require.NoError(e.t, err)
 	var ack WebSocketMessage
-	err = conn.ReadJSON(&ack)
-	require.NoError(e.t, err)
+	require.NoError(e.t, ReadAndCheckJSON(e.t, conn, &ack))
 	require.Equal(e.t, "connection_ack", ack.Type)
 	return conn
 }
@@ -2121,7 +2564,7 @@ func WSReadJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err error) {
 			return err
 		}
 
-		err = conn.ReadJSON(v)
+		require.NoError(t, ReadAndCheckJSON(t, conn, v))
 
 		// Reset the deadline to prevent future operations from timing out
 		if resetErr := conn.SetReadDeadline(time.Time{}); resetErr != nil {
@@ -2237,16 +2680,19 @@ func WSWriteJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err error) 
 func subgraphOptions(ctx context.Context, t testing.TB, logger *zap.Logger, natsData *NatsData, pubSubName func(string) string) *subgraphs.SubgraphOptions {
 	if natsData == nil {
 		return &subgraphs.SubgraphOptions{
-			NatsPubSubByProviderID: map[string]pubsub_datasource.NatsPubSub{},
+			NatsPubSubByProviderID: map[string]pubsubNats.Adapter{},
 			GetPubSubName:          pubSubName,
 		}
 	}
-	natsPubSubByProviderID := make(map[string]pubsub_datasource.NatsPubSub, len(demoNatsProviders))
-	for _, sourceName := range demoNatsProviders {
-		js, err := jetstream.New(natsData.Connections[0])
+	natsPubSubByProviderID := make(map[string]pubsubNats.Adapter, len(DemoNatsProviders))
+	for _, sourceName := range DemoNatsProviders {
+		adapter, err := pubsubNats.NewAdapter(ctx, logger, natsData.Params[0].Url, natsData.Params[0].Opts, "hostname", "listenaddr")
 		require.NoError(t, err)
-
-		natsPubSubByProviderID[sourceName] = pubsubNats.NewConnector(logger, natsData.Connections[0], js, "hostname", "listenaddr").New(ctx)
+		require.NoError(t, adapter.Startup(ctx))
+		t.Cleanup(func() {
+			require.NoError(t, adapter.Shutdown(context.Background()))
+		})
+		natsPubSubByProviderID[sourceName] = adapter
 	}
 
 	return &subgraphs.SubgraphOptions{
