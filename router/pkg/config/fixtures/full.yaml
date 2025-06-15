@@ -310,6 +310,11 @@ events:
           sasl_plain:
             username: 'admin'
             password: 'admin'
+    redis:
+      - id: my-redis
+        urls:
+          - "redis://localhost:6379/11"
+        cluster_enabled: true
 
 engine:
   enable_single_flight: true

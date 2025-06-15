@@ -11,6 +11,7 @@ import (
 	pubsub_datasource "github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/redis"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"go.uber.org/zap"
 )
@@ -92,6 +93,22 @@ func BuildProvidersAndDataSources(
 	}
 	pubSubProviders = append(pubSubProviders, natsPubSubProviders...)
 	outs = append(outs, natsOuts...)
+
+	// initialize Redis providers and data sources
+	redisBuilder := redis.NewProviderBuilder(ctx, logger, hostName, routerListenAddr)
+	redisDsConfsWithEvents := []dsConfAndEvents[*nodev1.RedisEventConfiguration]{}
+	for _, dsConf := range dsConfs {
+		redisDsConfsWithEvents = append(redisDsConfsWithEvents, dsConfAndEvents[*nodev1.RedisEventConfiguration]{
+			dsConf: &dsConf,
+			events: dsConf.Configuration.GetCustomEvents().GetRedis(),
+		})
+	}
+	redisPubSubProviders, redisOuts, err := build(ctx, redisBuilder, config.Providers.Redis, redisDsConfsWithEvents)
+	if err != nil {
+		return nil, nil, err
+	}
+	pubSubProviders = append(pubSubProviders, redisPubSubProviders...)
+	outs = append(outs, redisOuts...)
 
 	return pubSubProviders, outs, nil
 }
