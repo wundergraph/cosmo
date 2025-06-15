@@ -1082,6 +1082,16 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		if mErr := s.mcpServer.Reload(executor.ClientSchema); mErr != nil {
 			return nil, fmt.Errorf("failed to reload MCP server: %w", mErr)
 		}
+		go func() {
+			for {
+				if reloadOperations := <-s.mcpServer.ReloadOperationsChan; reloadOperations {
+					s.logger.Log(zap.InfoLevel, "Reloading mcp server!")
+					if mErr := s.mcpServer.Reload(executor.ClientSchema); mErr != nil {
+						return
+					}
+				}
+			}
+		}()
 	}
 
 	if s.Config.cacheWarmup != nil && s.Config.cacheWarmup.Enabled {

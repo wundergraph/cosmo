@@ -88,6 +88,7 @@ type GraphQLSchemaServer struct {
 	operationsManager         *OperationsManager
 	schemaCompiler            *SchemaCompiler
 	registeredTools           []string
+	ReloadOperationsChan      chan bool
 }
 
 type graphqlRequest struct {
@@ -213,6 +214,7 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, opts ...func(*Options)
 		enableArbitraryOperations: options.EnableArbitraryOperations,
 		exposeSchema:              options.ExposeSchema,
 		baseURL:                   options.BaseURL,
+		ReloadOperationsChan:      make(chan bool),
 	}
 
 	return gs, nil
@@ -330,7 +332,7 @@ func (s *GraphQLSchemaServer) Reload(schema *ast.Document) error {
 	s.schemaCompiler = NewSchemaCompiler(s.logger)
 	s.operationsManager = NewOperationsManager(schema, s.logger, s.excludeMutations)
 
-	if err := s.operationsManager.LoadOperationsFromDirectory(s.operationsDir); err != nil {
+	if err := s.operationsManager.LoadOperationsFromDirectory(s.ReloadOperationsChan, s.operationsDir); err != nil {
 		return fmt.Errorf("failed to load operations: %w", err)
 	}
 
