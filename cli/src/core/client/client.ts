@@ -12,7 +12,7 @@ export interface ClientOptions {
 
 export interface Client {
   platform: PromiseClient<typeof PlatformService>;
-  node: PromiseClient<typeof NodeService>;
+  node?: PromiseClient<typeof NodeService>;
 }
 
 export const CreateClient = (opts: ClientOptions): Client => {
