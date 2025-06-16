@@ -12,13 +12,14 @@ export default (opts: BaseCommandOptions) => {
   const command = new Command('generate');
   command.description('generate a protobuf schema for a standalone grpc subgraph');
   command.argument('[name]', 'The name of the proto service');
-
   command.requiredOption('-i, --input <path-to-input>', 'The GraphQL schema file to generate a protobuf schema from.');
   command.option(
     '-o, --output <path-to-output>',
     'The output directory for the protobuf schema. If not provided, the output directory will be the same as the input file.',
     '',
   );
+  command.option('-p, --package-name <name>', 'The name of the proto package. If not provided, the package name will default to "service".', 'service');
+  command.option('-g, --go-package <name>', 'The name of the go package. If not provided, the go package name will default to "github.com/wundergraph/cosmo/demo/test".', 'github.com/wundergraph/cosmo/demo/test');
   command.action(generateCommandAction);
 
   return command;
@@ -58,10 +59,10 @@ async function generateCommandAction(name: string, options: any) {
       program.error(`Input file ${options.input} does not exist`);
     }
 
-    const result = await generateProtoAndMapping(outputDir, inputFile, name, spinner);
+    const result = await generateProtoAndMapping(outputDir, inputFile, name, options, spinner);
 
     // Write the generated files
-    await writeFile(resolve(outputDir, 'mapping.json'), JSON.stringify(result.mapping, null, 2));
+    await writeFile(resolve(outputDir, 'mapping.json'), result.mapping);
     await writeFile(resolve(outputDir, 'service.proto'), result.proto);
     await writeFile(resolve(outputDir, 'service.proto.lock.json'), JSON.stringify(result.lockData, null, 2));
 
@@ -86,6 +87,7 @@ async function generateProtoAndMapping(
   outdir: string,
   schemaFile: string,
   name: string,
+  options: any,
   spinner: any,
 ): Promise<GenerationResult> {
   spinner.text = 'Generating proto schema...';
@@ -107,7 +109,8 @@ async function generateProtoAndMapping(
   const mapping = compileGraphQLToMapping(schema, serviceName);
   const proto = compileGraphQLToProto(schema, {
     serviceName,
-    packageName: 'service',
+    packageName: options.packageName,
+    goPackage: options.goPackage,
     lockData,
   });
 
