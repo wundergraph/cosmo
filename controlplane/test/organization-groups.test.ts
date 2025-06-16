@@ -1,6 +1,9 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { uid } from 'uid';
 import { afterAllSetup, beforeAllSetup, genID, TestUser } from '../src/core/test-util.js';
+import { GroupMapper } from "../../connect/src/wg/cosmo/platform/v1/platform_pb.js";
+import OidcProvider from "../src/core/services/OidcProvider.js";
 import { createOrganizationGroup, SetupTest } from './test-util.js';
 
 let dbname = '';
@@ -123,7 +126,7 @@ describe('Organization Group tests', (ctx) => {
     const deleteGroupResponse = await client.deleteOrganizationGroup({ groupId: group.groupId });
 
     expect(deleteGroupResponse.response?.code).toBe(EnumStatusCode.ERR);
-    expect(deleteGroupResponse.response?.details).toBe("No group to move existing members to was provided");
+    expect(deleteGroupResponse.response?.details).toBe("No group to move existing members and mappers to was provided");
 
     await server.close();
   });
@@ -168,6 +171,127 @@ describe('Organization Group tests', (ctx) => {
     });
 
     expect(deleteGroupResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    await server.close();
+  });
+
+  test('Should be possible to delete a group when an OIDC have been linked to the organization', async () => {
+    const { client, server } = await SetupTest({ dbname, enabledFeatures: ['rbac'], enableMultiUsers: true });
+
+    // Create a new group
+    const createGroupResponse = await client.createOrganizationGroup({
+      name: uid(),
+      description: '',
+    });
+
+    expect(createGroupResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Create a new OIDC
+    const createOIDCProviderResponse = await client.createOIDCProvider({
+      discoveryEndpoint: 'http://localhost:8080/realms/test/.well-known/openid-configuration',
+      clientID: '0oab1c2',
+      clientSecrect: 'secret',
+      mappers: [],
+      name: 'okta',
+    });
+
+    expect(createOIDCProviderResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Deleting the group should not fail
+    const deleteGroupResponse = await client.deleteOrganizationGroup({
+      groupId: createGroupResponse.group!.groupId,
+    });
+
+    expect(deleteGroupResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    await server.close();
+  });
+
+  test('Should not be able to delete a group that has been linked to an OIDC mapper', async () => {
+    const { client, server } = await SetupTest({ dbname, enabledFeatures: ['rbac'], enableMultiUsers: true });
+
+    // Create a new group
+    const createGroupResponse = await client.createOrganizationGroup({
+      name: uid(),
+      description: '',
+    });
+
+    expect(createGroupResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Create a new OIDC
+    const createOIDCProviderResponse = await client.createOIDCProvider({
+      discoveryEndpoint: 'http://localhost:8080/realms/test/.well-known/openid-configuration',
+      clientID: '0oab1c2',
+      clientSecrect: 'secret',
+      mappers: [
+        new GroupMapper({
+          groupId: createGroupResponse.group!.groupId,
+          ssoGroup: createGroupResponse.group!.name,
+        }),
+      ],
+      name: 'okta',
+    });
+
+    expect(createOIDCProviderResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Deleting the group should fail because there is a mapper for it
+    const deleteGroupResponse = await client.deleteOrganizationGroup({
+      groupId: createGroupResponse.group!.groupId,
+    });
+
+    expect(deleteGroupResponse.response?.code).toBe(EnumStatusCode.ERR);
+    expect(deleteGroupResponse.response?.details).toBe('No group to move existing members and mappers to was provided');
+
+    await server.close();
+  });
+
+  test('Should be able to update mapper when OIDC is connected', async () => {
+    const { client, server, keycloakClient, realm } = await SetupTest({ dbname, enabledFeatures: ['rbac'], enableMultiUsers: true });
+
+    const orgGroups = await client.getOrganizationGroups({});
+    const adminGroup = orgGroups.groups.find((g) => g.name === 'admin')!;
+
+    // Create a new group
+    const createGroupResponse = await client.createOrganizationGroup({
+      name: uid(),
+      description: '',
+    });
+
+    expect(createGroupResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Create a new OIDC
+    const oidcName = uid();
+    const createOIDCProviderResponse = await client.createOIDCProvider({
+      discoveryEndpoint: 'http://localhost:8080/realms/test/.well-known/openid-configuration',
+      clientID: '0oab1c2',
+      clientSecrect: 'secret',
+      mappers: [
+        new GroupMapper({
+          groupId: createGroupResponse.group!.groupId,
+          ssoGroup: createGroupResponse.group!.name,
+        }),
+      ],
+      name: oidcName,
+    });
+
+    expect(createOIDCProviderResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Should delete the group and update the mapper
+    const deleteGroupResponse = await client.deleteOrganizationGroup({
+      groupId: createGroupResponse.group!.groupId,
+      toGroupId: adminGroup.groupId,
+    });
+
+    expect(deleteGroupResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Ensure that the mapper was updated
+    const getProviderResponse = await client.getOIDCProvider({});
+    expect(getProviderResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    const mapper = getProviderResponse.mappers?.find((m) => m.groupId === adminGroup.groupId);
+
+    expect(getProviderResponse.mappers).toHaveLength(1);
+    expect(mapper).toBeDefined();
 
     await server.close();
   });

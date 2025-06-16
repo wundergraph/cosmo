@@ -100,7 +100,9 @@ func TestPublishGraphQLMetrics(t *testing.T) {
     	WHERE OperationHash = 'hash123' AND
 		OperationName = 'Hello' AND
 		OperationType = 'query' AND
-    	OperationContent = 'query Hello { hello }'
+    	OperationContent = 'query Hello { hello }' AND
+    	OrganizationID = 'org123' AND
+    	FederatedGraphID = 'fed123'
     	GROUP BY OperationHash LIMIT 1
 	`).Scan(&opCount))
 
@@ -207,7 +209,9 @@ func TestPublishGraphQLMetricsSendEmptyAndFilledMetrics(t *testing.T) {
 		SELECT COUNT(*) FROM gql_metrics_operations
     	WHERE OperationName = 'Hello' AND
 		OperationType = 'query' AND
-    	OperationContent = 'query Hello { hello }'
+    	OperationContent = 'query Hello { hello }' AND
+    	OrganizationID = 'org123' AND
+    	FederatedGraphID = 'fed123'
 	`).Scan(&opCount))
 
 	assert.Equal(t, uint64(2), opCount)
@@ -332,7 +336,9 @@ func TestPublishGraphQLMetricsSmallBatches(t *testing.T) {
 		SELECT COUNT(*) FROM gql_metrics_operations
     	WHERE OperationName = 'Hello' AND
 		OperationType = 'query' AND
-    	OperationContent = 'query Hello { hello }'
+    	OperationContent = 'query Hello { hello }' AND
+    	OrganizationID = 'org123' AND
+    	FederatedGraphID = 'fed123'
 	`).Scan(&opCount))
 
 	assert.Equal(t, opCount, uint64(count))
@@ -449,7 +455,9 @@ func TestPublishAggregatedGraphQLMetrics(t *testing.T) {
     	WHERE OperationHash = 'hash123' AND
 		OperationName = 'Hello' AND
 		OperationType = 'query' AND
-    	OperationContent = 'query Hello { hello }'
+    	OperationContent = 'query Hello { hello }' AND
+    	OrganizationID = 'org123' AND
+    	FederatedGraphID = 'fed123'
     	GROUP BY OperationHash LIMIT 1
 	`).Scan(&opCount))
 
