@@ -1,7 +1,7 @@
 import { rmSync, mkdirSync, existsSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { Command } from 'commander';
+import { Command, program } from 'commander';
 import { describe, test, expect } from 'vitest';
 import { createPromiseClient, createRouterTransport } from '@connectrpc/connect';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
@@ -118,7 +118,7 @@ describe('gRPC Generate Command', () => {
       platform: createPromiseClient(PlatformService, mockPlatformTransport()),
     };
 
-    const program = new Command();
+
     program.addCommand(GenerateCommand({ client }));
 
     const tmpDir = join(tmpdir(), `grpc-test-${Date.now()}`);
@@ -126,6 +126,10 @@ describe('gRPC Generate Command', () => {
 
     const outputFile = join(tmpDir, 'output.txt');
     writeFileSync(outputFile, 'test');
+
+    program.exitOverride(err => {
+      expect(err.message).toContain(`Output directory ${outputFile} is not a directory`);
+    });
 
       await expect(
       program.parseAsync(
@@ -140,6 +144,6 @@ describe('gRPC Generate Command', () => {
         {
           from: 'user', 
         }
-      )).rejects.toThrow();
+      )).rejects.toThrow('process.exit unexpectedly called with "1"');
   });
 });
