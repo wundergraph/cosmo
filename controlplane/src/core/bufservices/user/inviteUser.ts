@@ -42,22 +42,7 @@ export function inviteUser(
       };
     }
 
-    const group = await orgGroupRepo.byId({
-      organizationId: authContext.organizationId,
-      groupId: req.groupId,
-    });
-
-    if (!group) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR_NOT_FOUND,
-          details: 'Group not found',
-        },
-      };
-    }
-
     const memberCount = await orgRepo.memberCount(authContext.organizationId);
-
     const usersFeature = await orgRepo.getFeature({
       organizationId: authContext.organizationId,
       featureId: 'users',
@@ -178,6 +163,21 @@ export function inviteUser(
         redirectURI: `${process.env.WEB_BASE_URL}/login?redirectURL=${process.env.WEB_BASE_URL}/account/invitations`,
         realm: opts.keycloakRealm,
       });
+    }
+
+    // We don't need the group when re-inviting a member
+    const group = await orgGroupRepo.byId({
+      organizationId: authContext.organizationId,
+      groupId: req.groupId,
+    });
+
+    if (!group) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_NOT_FOUND,
+          details: 'Group not found',
+        },
+      };
     }
 
     // TODO: rate limit this
