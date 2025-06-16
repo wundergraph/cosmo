@@ -181,6 +181,7 @@ type RouterTrafficConfiguration struct {
 
 type GlobalSubgraphRequestRule struct {
 	BackoffJitterRetry BackoffJitterRetry `yaml:"retry"`
+	CircuitBreaker     CircuitBreaker     `yaml:"circuit_breaker"`
 	// See https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/
 	RequestTimeout         *time.Duration `yaml:"request_timeout,omitempty" envDefault:"60s"`
 	DialTimeout            *time.Duration `yaml:"dial_timeout,omitempty" envDefault:"30s"`
@@ -198,6 +199,12 @@ type GlobalSubgraphRequestRule struct {
 
 type SubgraphTrafficRequestRule struct {
 	RequestTimeout time.Duration `yaml:"request_timeout,omitempty" envDefault:"60s"`
+}
+
+type CircuitBreaker struct {
+	Enabled                  bool  `yaml:"enabled" envDefault:"false"`
+	ErrorThresholdPercentage int64 `yaml:"error_threshold_percentage" envDefault:"50"`
+	RequestThreshold         int64 `yaml:"request_threshold" envDefault:"20"`
 }
 
 type GraphqlMetrics struct {

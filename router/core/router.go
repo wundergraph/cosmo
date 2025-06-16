@@ -116,6 +116,11 @@ type (
 		SubgraphMap map[string]*TransportRequestOptions
 	}
 
+	SubgraphCircuitBreakerOptions struct {
+		*config.CircuitBreaker
+		SubgraphMap map[string]*config.CircuitBreaker
+	}
+
 	GraphQLMetricsConfig struct {
 		Enabled           bool
 		CollectorEndpoint string
@@ -1728,6 +1733,12 @@ func WithSubgraphTransportOptions(opts *SubgraphTransportOptions) Option {
 	}
 }
 
+func WithSubgraphCircuitBreakerOptions(opts *SubgraphCircuitBreakerOptions) Option {
+	return func(r *Router) {
+		r.subgraphCircuitBreakerOptions = opts
+	}
+}
+
 func WithSubgraphRetryOptions(enabled bool, maxRetryCount int, retryMaxDuration, retryInterval time.Duration) Option {
 	return func(r *Router) {
 		r.retryOptions = retrytransport.RetryOptions{
@@ -1839,6 +1850,21 @@ func NewSubgraphTransportOptions(cfg config.TrafficShapingRules) *SubgraphTransp
 	}
 
 	return base
+}
+
+func NewSubgraphCircuitBreakerOptions(cfg config.TrafficShapingRules) *SubgraphCircuitBreakerOptions {
+	entry := &SubgraphCircuitBreakerOptions{
+		SubgraphMap: map[string]*config.CircuitBreaker{},
+	}
+	if cfg.All.CircuitBreaker.Enabled {
+		entry.CircuitBreaker = &cfg.All.CircuitBreaker
+	}
+	for k, v := range cfg.Subgraphs {
+		if v.CircuitBreaker.Enabled {
+			entry.SubgraphMap[k] = &v.CircuitBreaker
+		}
+	}
+	return entry
 }
 
 func DefaultSubgraphTransportOptions() *SubgraphTransportOptions {

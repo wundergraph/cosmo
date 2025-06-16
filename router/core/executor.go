@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/circuit"
 	"net/http"
 	"time"
 
@@ -35,6 +36,7 @@ type ExecutorConfigurationBuilder struct {
 
 	subscriptionClientOptions *SubscriptionClientOptions
 	instanceData              InstanceData
+	circuitBreaker            *circuit.Manager
 }
 
 type Executor struct {

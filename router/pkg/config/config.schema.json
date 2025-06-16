@@ -2911,6 +2911,19 @@
           "default": 20,
           "description": "MaxIdleConnsPerHost, if non-zero, controls the maximum idle (keep-alive) connections to keep per-host. Zero will default to 2"
         },
+        "circuit_breaker": {
+          "type": "object",
+          "description": "The retry configuration. The retry configuration is used to configure the retry behavior for the subgraphs requests. See https://cosmo-docs.wundergraph.com/router/traffic-shaping#automatic-retry for more information.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "threshold": {
+              "type": "integer"
+            }
+          }
+        },
         "retry": {
           "type": "object",
           "description": "The retry configuration. The retry configuration is used to configure the retry behavior for the subgraphs requests. See https://cosmo-docs.wundergraph.com/router/traffic-shaping#automatic-retry for more information.",
