@@ -3,17 +3,16 @@
     "products": [
       {},
       {
-        "upc": "cosmo",
         "name": "COSMO",
         "lead": {
           "details": {
             "forename": "Dustin"
           }
         },
-        "repositoryURL": "https://github.com/wundergraph/cosmo"
+        "repositoryURL": "https://github.com/wundergraph/cosmo",
+        "upc": "cosmo"
       },
       {
-        "upc": "sdk",
         "owner": {
           "details": {
             "forename": "Jens"
@@ -23,7 +22,8 @@
           "RUST",
           "TYPESCRIPT"
         ],
-        "unicode": "😀♥!\u0015\u0010🝥"
+        "unicode": "😀♥!\u0015\u0010🝥",
+        "upc": "sdk"
       }
     ],
     "productTypes": [
