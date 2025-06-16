@@ -993,7 +993,7 @@ message GetOrganizationMembersResponse {
 
 message InviteUserRequest {
   string email = 1;
-  string groupId = 2;
+  repeated string groups = 2;
 }
 
 message InviteUserResponse {

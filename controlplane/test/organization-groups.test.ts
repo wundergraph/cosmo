@@ -1,14 +1,12 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { uid } from 'uid';
 import { afterAllSetup, beforeAllSetup, genID, TestUser } from '../src/core/test-util.js';
 import { GroupMapper } from "../../connect/src/wg/cosmo/platform/v1/platform_pb.js";
-import OidcProvider from "../src/core/services/OidcProvider.js";
 import { createOrganizationGroup, SetupTest } from './test-util.js';
 
 let dbname = '';
 
-describe('Organization Group tests', (ctx) => {
+describe('Organization Group tests', () => {
   beforeAll(async () => {
     dbname = await beforeAllSetup();
   });
@@ -180,7 +178,7 @@ describe('Organization Group tests', (ctx) => {
 
     // Create a new group
     const createGroupResponse = await client.createOrganizationGroup({
-      name: uid(),
+      name: genID('group'),
       description: '',
     });
 
@@ -212,7 +210,7 @@ describe('Organization Group tests', (ctx) => {
 
     // Create a new group
     const createGroupResponse = await client.createOrganizationGroup({
-      name: uid(),
+      name: genID('group'),
       description: '',
     });
 
@@ -246,21 +244,21 @@ describe('Organization Group tests', (ctx) => {
   });
 
   test('Should be able to update mapper when OIDC is connected', async () => {
-    const { client, server, keycloakClient, realm } = await SetupTest({ dbname, enabledFeatures: ['rbac'], enableMultiUsers: true });
+    const { client, server } = await SetupTest({ dbname, enabledFeatures: ['rbac'], enableMultiUsers: true });
 
     const orgGroups = await client.getOrganizationGroups({});
     const adminGroup = orgGroups.groups.find((g) => g.name === 'admin')!;
 
     // Create a new group
     const createGroupResponse = await client.createOrganizationGroup({
-      name: uid(),
+      name: genID('group'),
       description: '',
     });
 
     expect(createGroupResponse.response?.code).toBe(EnumStatusCode.OK);
 
     // Create a new OIDC
-    const oidcName = uid();
+    const oidcName = genID('oidc');
     const createOIDCProviderResponse = await client.createOIDCProvider({
       discoveryEndpoint: 'http://localhost:8080/realms/test/.well-known/openid-configuration',
       clientID: '0oab1c2',
@@ -427,7 +425,7 @@ describe('Multiple group membership tests', () => {
   });
 
   test('Should not fail when moving a group member to a group they already belong to', async () => {
-    const { client, server, users, keycloakClient, realm } = await SetupTest({ dbname, enableMultiUsers: true, enabledFeatures: ['rbac'] });
+    const { client, server, users } = await SetupTest({ dbname, enableMultiUsers: true, enabledFeatures: ['rbac'] });
 
     const group1 = await createOrganizationGroup(client, genID('group'), { role: 'organization-admin' });
     const group2 = await createOrganizationGroup(client, genID('group'), { role: 'organization-admin' });

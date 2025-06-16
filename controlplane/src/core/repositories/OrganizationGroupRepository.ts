@@ -190,19 +190,19 @@ export class OrganizationGroupRepository {
     ]);
   }
 
-  public changeMemberGroup({ fromGroupId, toGroupId }: { fromGroupId: string; toGroupId: string }) {
-    return this.db.transaction(async (tx) => {
-      // Update all members tied to the group by first deleting them and then linking them to the new group
-      const memberCondition = eq(schema.organizationGroupMembers.groupId, fromGroupId);
-      const members = await tx
-        .select({
-          organizationMemberId: schema.organizationGroupMembers.organizationMemberId,
-        })
-        .from(schema.organizationGroupMembers)
-        .where(memberCondition);
+  public async changeMemberGroup({ fromGroupId, toGroupId }: { fromGroupId: string; toGroupId: string }) {
+    // Update all members tied to the group by first deleting them and then linking them to the new group
+    const memberCondition = eq(schema.organizationGroupMembers.groupId, fromGroupId);
+    const members = await this.db
+      .select({
+        organizationMemberId: schema.organizationGroupMembers.organizationMemberId,
+      })
+      .from(schema.organizationGroupMembers)
+      .where(memberCondition);
 
-      await tx.delete(schema.organizationGroupMembers).where(memberCondition);
-      await tx
+    await this.db.delete(schema.organizationGroupMembers).where(memberCondition);
+    if (members.length > 0) {
+      await this.db
         .insert(schema.organizationGroupMembers)
         .values(
           members.map((m) => ({
@@ -211,10 +211,16 @@ export class OrganizationGroupRepository {
           })),
         )
         .onConflictDoNothing();
+    }
 
-      // Update all API keys tied to the group
-      await tx.update(schema.apiKeys).set({ groupId: toGroupId }).where(eq(schema.apiKeys.groupId, fromGroupId));
-    });
+    // Update all API keys tied to the group
+    await this.db.update(schema.apiKeys).set({ groupId: toGroupId }).where(eq(schema.apiKeys.groupId, fromGroupId));
+
+    // Update all invited users
+    await this.db
+      .update(schema.organizationInvitationGroups)
+      .set({ groupId: toGroupId })
+      .where(eq(schema.organizationInvitationGroups.groupId, fromGroupId));
   }
 
   public addUserToGroup(input: { organizationMemberId: string; groupId: string }) {
