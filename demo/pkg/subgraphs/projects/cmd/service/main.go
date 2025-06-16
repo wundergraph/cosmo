@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	port = ":50051"
+	port = ":4011"
 )
 
 func recoveryInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {

@@ -45,6 +45,7 @@ const (
 	MoodDefaultDemoURL         = "http://localhost:4008/graphql"
 	CountriesDefaultDemoURL    = "http://localhost:4009/graphql"
 	ProductsFgDefaultDemoURL   = "http://localhost:4010/graphql"
+	ProjectsDefaultDemoURL     = "http://localhost:4011"
 )
 
 type Ports struct {
