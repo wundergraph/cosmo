@@ -51,9 +51,12 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
+	"google.golang.org/grpc"
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs"
+	projects "github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects/generated"
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects/src/service"
 	"github.com/wundergraph/cosmo/router/core"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -82,8 +85,11 @@ var (
 	ConfigWithEdfsNatsJSONTemplate string
 	//go:embed testdata/configWithPlugins.json
 	ConfigWithPluginsJSONTemplate string
-	DemoNatsProviders             = []string{natsDefaultSourceName, myNatsProviderID}
-	DemoKafkaProviders            = []string{myKafkaProviderID}
+	//go:embed testdata/configWithGRPC.json
+	ConfigWithGRPCJSONTemplate string
+
+	DemoNatsProviders  = []string{natsDefaultSourceName, myNatsProviderID}
+	DemoKafkaProviders = []string{myKafkaProviderID}
 )
 
 func init() {
@@ -318,6 +324,7 @@ type Config struct {
 	NoShutdownTestServer               bool
 	MCP                                config.MCPConfiguration
 	Plugins                            PluginConfig
+	EnableGRPC                         bool
 }
 
 type PluginConfig struct {
@@ -355,6 +362,7 @@ type SubgraphsConfig struct {
 	Availability     SubgraphConfig
 	Mood             SubgraphConfig
 	Countries        SubgraphConfig
+	Projects         SubgraphConfig
 }
 
 type SubgraphConfig struct {
@@ -554,6 +562,15 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	countriesServer := makeSafeHttpTestServer(t, countries)
 	productFgServer := makeSafeHttpTestServer(t, productsFg)
 
+	var (
+		projectServer *grpc.Server
+		endpoint      string
+	)
+
+	if cfg.EnableGRPC {
+		projectServer, endpoint = makeSafeGRPCServer(t, &projects.ProjectsService_ServiceDesc, &service.ProjectsService{})
+	}
+
 	replacements := map[string]string{
 		subgraphs.EmployeesDefaultDemoURL:    gqlURL(employeesServer),
 		subgraphs.FamilyDefaultDemoURL:       gqlURL(familyServer),
@@ -564,6 +581,7 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		subgraphs.MoodDefaultDemoURL:         gqlURL(moodServer),
 		subgraphs.CountriesDefaultDemoURL:    gqlURL(countriesServer),
 		subgraphs.ProductsFgDefaultDemoURL:   gqlURL(productFgServer),
+		subgraphs.ProjectsDefaultDemoURL:     grpcURL(endpoint),
 	}
 
 	if cfg.RouterConfigJSONTemplate == "" {
@@ -706,6 +724,9 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	if cfg.Subgraphs.ProductsFg.CloseOnStart {
 		productFgServer.Close()
 	}
+	if cfg.EnableGRPC && cfg.Subgraphs.Projects.CloseOnStart {
+		projectServer.Stop()
+	}
 
 	if cfg.ShutdownDelay == 0 {
 		cfg.ShutdownDelay = 30 * time.Second
@@ -743,6 +764,9 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 			moodServer,
 			countriesServer,
 			productFgServer,
+		},
+		GRPCServers: []*grpc.Server{
+			projectServer,
 		},
 	}
 
@@ -955,6 +979,15 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	countriesServer := makeSafeHttpTestServer(t, countries)
 	productFgServer := makeSafeHttpTestServer(t, productsFg)
 
+	var (
+		projectServer *grpc.Server
+		endpoint      string
+	)
+
+	if cfg.EnableGRPC {
+		projectServer, endpoint = makeSafeGRPCServer(t, &projects.ProjectsService_ServiceDesc, &service.ProjectsService{})
+	}
+
 	replacements := map[string]string{
 		subgraphs.EmployeesDefaultDemoURL:    gqlURL(employeesServer),
 		subgraphs.FamilyDefaultDemoURL:       gqlURL(familyServer),
@@ -965,6 +998,7 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		subgraphs.MoodDefaultDemoURL:         gqlURL(moodServer),
 		subgraphs.CountriesDefaultDemoURL:    gqlURL(countriesServer),
 		subgraphs.ProductsFgDefaultDemoURL:   gqlURL(productFgServer),
+		subgraphs.ProjectsDefaultDemoURL:     grpcURL(endpoint),
 	}
 
 	if cfg.RouterConfigJSONTemplate == "" {
@@ -1101,6 +1135,10 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		productFgServer.Close()
 	}
 
+	if cfg.EnableGRPC && cfg.Subgraphs.Projects.CloseOnStart {
+		projectServer.Stop()
+	}
+
 	if cfg.ShutdownDelay == 0 {
 		cfg.ShutdownDelay = 30 * time.Second
 	}
@@ -1136,6 +1174,9 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 			moodServer,
 			countriesServer,
 			productFgServer,
+		},
+		GRPCServers: []*grpc.Server{
+			projectServer,
 		},
 	}
 
@@ -1543,6 +1584,29 @@ func makeSafeHttpTestServer(t testing.TB, handler http.Handler) *httptest.Server
 	return s
 }
 
+func makeSafeGRPCServer(t testing.TB, sd *grpc.ServiceDesc, service any) (*grpc.Server, string) {
+	t.Helper()
+
+	port := freeport.GetOne(t)
+
+	endpoint := fmt.Sprintf("127.0.0.1:%d", port)
+
+	lis, err := net.Listen("tcp", endpoint)
+	require.NoError(t, err)
+
+	require.NotNil(t, service)
+
+	s := grpc.NewServer()
+	s.RegisterService(sd, service)
+
+	go func() {
+		err := s.Serve(lis)
+		require.NoError(t, err)
+	}()
+
+	return s, endpoint
+}
+
 func SetupCDNServer(t testing.TB, port int) *httptest.Server {
 	_, filePath, _, ok := runtime.Caller(0)
 	require.True(t, ok)
@@ -1583,6 +1647,10 @@ func gqlURL(srv *httptest.Server) string {
 	return path
 }
 
+func grpcURL(endpoint string) string {
+	return "http://" + endpoint
+}
+
 func ReadAndCheckJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err error) {
 	_, payload, err := conn.ReadMessage()
 	if err != nil {
@@ -1608,6 +1676,7 @@ type Environment struct {
 	RouterURL             string
 	RouterClient          *http.Client
 	Servers               []*httptest.Server
+	GRPCServers           []*grpc.Server
 	CDN                   *httptest.Server
 	NatsData              *NatsData
 	NatsConnectionDefault *nats.Conn
@@ -1699,6 +1768,12 @@ func (e *Environment) Shutdown() {
 		lErr := s.Listener.Close()
 		if lErr != nil {
 			e.t.Logf("could not close server listener: %s", lErr)
+		}
+	}
+
+	for _, s := range e.GRPCServers {
+		if s != nil {
+			s.Stop()
 		}
 	}
 
