@@ -1,4 +1,4 @@
-import { rmSync, mkdirSync, existsSync, writeFileSync } from 'node:fs';
+import { rmSync, mkdirSync, existsSync, writeFileSync, rmdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { Command, program } from 'commander';
@@ -14,7 +14,7 @@ export const mockPlatformTransport = () =>
   });
 
 describe('gRPC Generate Command', () => {
-  test('should generate proto and mapping files', async () => {
+  test('should generate proto and mapping files', async (testContext) => {
     const client: Client = {
       platform: createPromiseClient(PlatformService, mockPlatformTransport()),
     };
@@ -24,28 +24,29 @@ describe('gRPC Generate Command', () => {
 
     const tmpDir = join(tmpdir(), `grpc-test-${Date.now()}`);
     mkdirSync(tmpDir, { recursive: true });
-    try {
-      const command = await program.parseAsync(
-        [
-          'generate',
-          'testservice',
-          '-i',
-          'test/fixtures/full-schema.graphql',
-          '-o',
-          tmpDir,
-        ],
-        {
-          from: 'user',
-        }
-      );
 
-      // Verify the output files exist
-      expect(existsSync(join(tmpDir, 'mapping.json'))).toBe(true);
-      expect(existsSync(join(tmpDir, 'service.proto'))).toBe(true);
-      expect(existsSync(join(tmpDir, 'service.proto.lock.json'))).toBe(true);
-    } finally {
-      rmSync(tmpDir, { recursive: true, force: true });
-    }
+    testContext.onTestFinished(() => {
+      rmdirSync(tmpDir, { recursive: true });
+    });
+
+    await program.parseAsync(
+      [
+        'generate',
+        'testservice',
+        '-i',
+        'test/fixtures/full-schema.graphql',
+        '-o',
+        tmpDir,
+      ],
+      {
+        from: 'user',
+      }
+    );
+
+    // Verify the output files exist
+    expect(existsSync(join(tmpDir, 'mapping.json'))).toBe(true);
+    expect(existsSync(join(tmpDir, 'service.proto'))).toBe(true);
+    expect(existsSync(join(tmpDir, 'service.proto.lock.json'))).toBe(true);
   });
 
   test('should fail when output path does not exist', async () => {
@@ -57,7 +58,7 @@ describe('gRPC Generate Command', () => {
     program.addCommand(GenerateCommand({ client }));
 
     const nonExistentDir = join(tmpdir(), `grpc-test-non-existent-${Date.now()}`);
-    
+
     // Ensure the directory doesn't exist
     if (existsSync(nonExistentDir)) {
       rmSync(nonExistentDir, { recursive: true, force: true });
@@ -80,7 +81,7 @@ describe('gRPC Generate Command', () => {
     ).rejects.toThrow();
   });
 
-  test('should fail when input file does not exist', async () => {
+  test('should fail when input file does not exist', async (testContext) => {
     const client: Client = {
       platform: createPromiseClient(PlatformService, mockPlatformTransport()),
     };
@@ -90,30 +91,32 @@ describe('gRPC Generate Command', () => {
 
     const tmpDir = join(tmpdir(), `grpc-test-${Date.now()}`);
     mkdirSync(tmpDir, { recursive: true });
-    try {
-      const nonExistentFile = join(tmpdir(), 'non-existent-schema.graphql');
-      
-      await expect(
-        program.parseAsync(
-          [
-            'generate',
-            'testservice',
-            '-i',
-            nonExistentFile,
-            '-o',
-            tmpDir,
-          ],
-          {
-            from: 'user',
-          }
-        )
-      ).rejects.toThrow();
-    } finally {
-      rmSync(tmpDir, { recursive: true, force: true });
-    }
+
+    testContext.onTestFinished(() => {
+      rmdirSync(tmpDir, { recursive: true });
+    });
+
+
+    const nonExistentFile = join(tmpdir(), 'non-existent-schema.graphql');
+
+    await expect(
+      program.parseAsync(
+        [
+          'generate',
+          'testservice',
+          '-i',
+          nonExistentFile,
+          '-o',
+          tmpDir,
+        ],
+        {
+          from: 'user',
+        }
+      )
+    ).rejects.toThrow();
   });
 
-  test('should fail when output path is a file', async () => {
+  test('should fail when output path is a file', async (testContext) => {
     const client: Client = {
       platform: createPromiseClient(PlatformService, mockPlatformTransport()),
     };
@@ -124,6 +127,10 @@ describe('gRPC Generate Command', () => {
     const tmpDir = join(tmpdir(), `grpc-test-${Date.now()}`);
     mkdirSync(tmpDir, { recursive: true });
 
+    testContext.onTestFinished(() => {
+      rmdirSync(tmpDir, { recursive: true });
+    });
+
     const outputFile = join(tmpDir, 'output.txt');
     writeFileSync(outputFile, 'test');
 
@@ -131,7 +138,7 @@ describe('gRPC Generate Command', () => {
       expect(err.message).toContain(`Output directory ${outputFile} is not a directory`);
     });
 
-      await expect(
+    await expect(
       program.parseAsync(
         [
           'generate',
@@ -142,7 +149,7 @@ describe('gRPC Generate Command', () => {
           outputFile,
         ],
         {
-          from: 'user', 
+          from: 'user',
         }
       )).rejects.toThrow('process.exit unexpectedly called with "1"');
   });
