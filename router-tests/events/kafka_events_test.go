@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -17,7 +16,6 @@ import (
 
 	"github.com/hasura/go-graphql-client"
 	"github.com/stretchr/testify/require"
-	"github.com/tidwall/gjson"
 	"github.com/twmb/franz-go/pkg/kgo"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -54,6 +52,11 @@ func assertKafkaMultipartValueEventually(t *testing.T, reader *bufio.Reader, exp
 	}, KafkaWaitTimeout, time.Millisecond*100)
 }
 
+type kafkaSubscriptionArgs struct {
+	dataValue []byte
+	errValue  error
+}
+
 func TestKafkaEvents(t *testing.T) {
 	t.Parallel()
 	// All tests are running in sequence because they are using the same kafka topic
@@ -61,6 +64,7 @@ func TestKafkaEvents(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
+
 	t.Run("subscribe async", func(t *testing.T) {
 		t.Parallel()
 
@@ -84,40 +88,42 @@ func TestKafkaEvents(t *testing.T) {
 
 			surl := xEnv.GraphQLWebSocketSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
-			t.Cleanup(func() {
-				_ = client.Close()
-			})
 
-			var counter atomic.Uint32
-
+			subscriptionArgsCh := make(chan kafkaSubscriptionArgs)
 			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
-				defer counter.Add(1)
-				require.NoError(t, errValue)
-				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(dataValue))
+				subscriptionArgsCh <- kafkaSubscriptionArgs{
+					dataValue: dataValue,
+					errValue:  errValue,
+				}
 				return nil
 			})
 			require.NoError(t, err)
 			require.NotEmpty(t, subscriptionOneID)
 
+			clientRunCh := make(chan error)
 			go func() {
-				clientErr := client.Run()
-				require.NoError(t, clientErr)
-			}()
-
-			go func() {
-				require.Eventually(t, func() bool {
-					return counter.Load() == 1
-				}, KafkaWaitTimeout, time.Millisecond*100)
-				_ = client.Close()
+				clientRunCh <- client.Run()
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
-			xEnv.WaitForMessagesSent(1, KafkaWaitTimeout)
-			xEnv.WaitForSubscriptionCount(0, KafkaWaitTimeout)
-			xEnv.WaitForConnectionCount(0, KafkaWaitTimeout)
+			select {
+			case args := <-subscriptionArgsCh:
+				require.NoError(t, args.errValue)
+				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
+			case <-time.After(KafkaWaitTimeout):
+				require.Fail(t, "subscriptionArgsCh should not block")
+			}
+
+			require.NoError(t, client.Close())
+			select {
+			case err := <-clientRunCh:
+				require.NoError(t, err)
+			case <-time.After(KafkaWaitTimeout):
+				require.Fail(t, "client.Run should not block")
+			}
 		})
 	})
 
@@ -144,65 +150,73 @@ func TestKafkaEvents(t *testing.T) {
 
 			surl := xEnv.GraphQLWebSocketSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
-			t.Cleanup(func() {
-				_ = client.Close()
-			})
 
-			var counter atomic.Uint32
+			subscriptionArgsCh := make(chan kafkaSubscriptionArgs)
 
 			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
-				oldCount := counter.Load()
-				counter.Add(1)
-
-				if oldCount == 0 {
-					var gqlErr graphql.Errors
-					require.ErrorAs(t, errValue, &gqlErr)
-					require.Equal(t, "Invalid message received", gqlErr[0].Message)
-				} else if oldCount == 1 || oldCount == 3 {
-					require.NoError(t, errValue)
-					require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(dataValue))
-				} else if oldCount == 2 {
-					var gqlErr graphql.Errors
-					require.ErrorAs(t, errValue, &gqlErr)
-					require.Equal(t, "Cannot return null for non-nullable field 'Subscription.employeeUpdatedMyKafka.id'.", gqlErr[0].Message)
+				subscriptionArgsCh <- kafkaSubscriptionArgs{
+					dataValue: dataValue,
+					errValue:  errValue,
 				}
-
 				return nil
 			})
 			require.NoError(t, err)
 			require.NotEmpty(t, subscriptionOneID)
 
+			clientRunCh := make(chan error)
 			go func() {
-				clientErr := client.Run()
-				require.NoError(t, clientErr)
+				clientRunCh <- client.Run()
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
 
 			produceKafkaMessage(t, xEnv, topics[0], ``) // Empty message
-			require.Eventually(t, func() bool {
-				return counter.Load() == 1
-			}, KafkaWaitTimeout, time.Millisecond*100)
+			select {
+			case args := <-subscriptionArgsCh:
+				var gqlErr graphql.Errors
+				require.ErrorAs(t, args.errValue, &gqlErr)
+				require.Equal(t, "Invalid message received", gqlErr[0].Message)
+			case <-time.After(KafkaWaitTimeout):
+				require.Fail(t, "subscriptionArgsCh should not block")
+			}
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`) // Correct message
-			require.Eventually(t, func() bool {
-				return counter.Load() == 2
-			}, KafkaWaitTimeout, time.Millisecond*100)
+			select {
+			case args := <-subscriptionArgsCh:
+				require.NoError(t, args.errValue)
+				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
+			case <-time.After(KafkaWaitTimeout):
+				require.Fail(t, "subscriptionArgsCh should not block")
+			}
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","update":{"name":"foo"}}`) // Missing entity = Resolver error
-			require.Eventually(t, func() bool {
-				return counter.Load() == 3
-			}, KafkaWaitTimeout, time.Millisecond*100)
+			select {
+			case args := <-subscriptionArgsCh:
+				var gqlErr graphql.Errors
+				require.ErrorAs(t, args.errValue, &gqlErr)
+				require.Equal(t, "Cannot return null for non-nullable field 'Subscription.employeeUpdatedMyKafka.id'.", gqlErr[0].Message)
+			case <-time.After(KafkaWaitTimeout):
+				require.Fail(t, "subscriptionArgsCh should not block")
+			}
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`) // Correct message
-			require.Eventually(t, func() bool {
-				return counter.Load() == 4
-			}, KafkaWaitTimeout, time.Millisecond*100)
+			select {
+			case args := <-subscriptionArgsCh:
+				require.NoError(t, args.errValue)
+				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
+			case <-time.After(KafkaWaitTimeout):
+				require.Fail(t, "subscriptionArgsCh should not block")
+			}
 
 			require.NoError(t, client.Close())
 
-			xEnv.WaitForSubscriptionCount(0, KafkaWaitTimeout)
-			xEnv.WaitForConnectionCount(0, KafkaWaitTimeout)
+			select {
+			case err := <-clientRunCh:
+				require.NoError(t, err)
+			case <-time.After(KafkaWaitTimeout):
+				require.Fail(t, "client.Close() should not block")
+			}
+
 		})
 	})
 
@@ -230,45 +244,61 @@ func TestKafkaEvents(t *testing.T) {
 			surl := xEnv.GraphQLWebSocketSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
 
-			var counter atomic.Uint32
-
+			subscriptionOneArgsCh := make(chan kafkaSubscriptionArgs)
 			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
-				defer counter.Add(1)
-				require.NoError(t, errValue)
-				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(dataValue))
+				subscriptionOneArgsCh <- kafkaSubscriptionArgs{
+					dataValue: dataValue,
+					errValue:  errValue,
+				}
 				return nil
 			})
 			require.NoError(t, err)
 			require.NotEmpty(t, subscriptionOneID)
 
+			subscriptionTwoArgsCh := make(chan kafkaSubscriptionArgs)
 			subscriptionTwoID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
-				defer counter.Add(1)
-				require.NoError(t, errValue)
-				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(dataValue))
+				subscriptionTwoArgsCh <- kafkaSubscriptionArgs{
+					dataValue: dataValue,
+					errValue:  errValue,
+				}
 				return nil
 			})
 			require.NoError(t, err)
 			require.NotEmpty(t, subscriptionTwoID)
 
+			clientRunCh := make(chan error)
 			go func() {
-				clientErr := client.Run()
-				require.NoError(t, clientErr)
+				clientRunCh <- client.Run()
 			}()
 
 			xEnv.WaitForSubscriptionCount(2, KafkaWaitTimeout)
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
-			xEnv.WaitForMessagesSent(2, KafkaWaitTimeout)
+			select {
+			case args := <-subscriptionOneArgsCh:
+				require.NoError(t, args.errValue)
+				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
+			case <-time.After(KafkaWaitTimeout):
+				require.Fail(t, "subscriptionArgsCh should not block")
+			}
 
-			require.Eventually(t, func() bool {
-				return counter.Load() == 2
-			}, KafkaWaitTimeout, time.Millisecond*100)
+			select {
+			case args := <-subscriptionTwoArgsCh:
+				require.NoError(t, args.errValue)
+				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
+			case <-time.After(KafkaWaitTimeout):
+				require.Fail(t, "subscriptionArgsCh should not block")
+			}
 
-			_ = client.Close()
+			require.NoError(t, client.Close())
 
-			xEnv.WaitForSubscriptionCount(0, KafkaWaitTimeout)
-			xEnv.WaitForConnectionCount(0, KafkaWaitTimeout)
+			select {
+			case err := <-clientRunCh:
+				require.NoError(t, err)
+			case <-time.After(KafkaWaitTimeout):
+				require.Fail(t, "client.Run should not block")
+			}
 		})
 	})
 
@@ -295,71 +325,80 @@ func TestKafkaEvents(t *testing.T) {
 
 			surl := xEnv.GraphQLWebSocketSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
-			t.Cleanup(func() {
-				_ = client.Close()
-			})
 
-			var counter atomic.Uint32
-
+			subscriptionOneArgsCh := make(chan kafkaSubscriptionArgs)
 			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
-				defer counter.Add(1)
-
-				require.NoError(t, errValue)
-
-				employeeID := gjson.GetBytes(dataValue, "employeeUpdatedMyKafka.id").Int()
-
-				if employeeID == 1 {
-					require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(dataValue))
-				} else if employeeID == 2 {
-					require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":2,"details":{"forename":"Dustin","surname":"Deus"}}}`, string(dataValue))
-				} else {
-					t.Errorf("unexpected employeeID %d", employeeID)
+				subscriptionOneArgsCh <- kafkaSubscriptionArgs{
+					dataValue: dataValue,
+					errValue:  errValue,
 				}
-
 				return nil
 			})
 			require.NoError(t, err)
 			require.NotEmpty(t, subscriptionOneID)
 
+			subscriptionTwoArgsCh := make(chan kafkaSubscriptionArgs)
 			subscriptionTwoID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
-				defer counter.Add(1)
-
-				require.NoError(t, errValue)
-
-				employeeID := gjson.GetBytes(dataValue, "employeeUpdatedMyKafka.id").Int()
-
-				if employeeID == 1 {
-					require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(dataValue))
-				} else if employeeID == 2 {
-					require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":2,"details":{"forename":"Dustin","surname":"Deus"}}}`, string(dataValue))
-				} else {
-					t.Errorf("unexpected employeeID %d", employeeID)
+				subscriptionTwoArgsCh <- kafkaSubscriptionArgs{
+					dataValue: dataValue,
+					errValue:  errValue,
 				}
-
 				return nil
 			})
 			require.NoError(t, err)
 			require.NotEmpty(t, subscriptionTwoID)
 
+			clientRunCh := make(chan error)
 			go func() {
-				clientErr := client.Run()
-				require.NoError(t, clientErr)
+				clientRunCh <- client.Run()
 			}()
 
 			xEnv.WaitForSubscriptionCount(2, KafkaWaitTimeout)
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+
+			select {
+			case args := <-subscriptionOneArgsCh:
+				require.NoError(t, args.errValue)
+				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
+			case <-time.After(KafkaWaitTimeout):
+				require.Fail(t, "subscriptionArgsCh should not block")
+			}
+
+			select {
+			case args := <-subscriptionTwoArgsCh:
+				require.NoError(t, args.errValue)
+				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
+			case <-time.After(KafkaWaitTimeout):
+				require.Fail(t, "subscriptionArgsCh should not block")
+			}
+
 			produceKafkaMessage(t, xEnv, topics[1], `{"__typename":"Employee","id": 2,"update":{"name":"foo"}}`)
 
-			require.Eventually(t, func() bool {
-				return counter.Load() == 4
-			}, KafkaWaitTimeout, time.Millisecond*100, "expected 4 events, got %d", counter.Load())
+			select {
+			case args := <-subscriptionOneArgsCh:
+				require.NoError(t, args.errValue)
+				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":2,"details":{"forename":"Dustin","surname":"Deus"}}}`, string(args.dataValue))
+			case <-time.After(KafkaWaitTimeout):
+				require.Fail(t, "subscriptionArgsCh should not block")
+			}
+
+			select {
+			case args := <-subscriptionTwoArgsCh:
+				require.NoError(t, args.errValue)
+				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":2,"details":{"forename":"Dustin","surname":"Deus"}}}`, string(args.dataValue))
+			case <-time.After(KafkaWaitTimeout):
+				require.Fail(t, "subscriptionArgsCh should not block")
+			}
 
 			require.NoError(t, client.Close())
 
-			xEnv.WaitForMessagesSent(4, KafkaWaitTimeout)
-			xEnv.WaitForSubscriptionCount(0, KafkaWaitTimeout)
-			xEnv.WaitForConnectionCount(0, KafkaWaitTimeout)
+			select {
+			case err := <-clientRunCh:
+				require.NoError(t, err)
+			case <-time.After(KafkaWaitTimeout):
+				require.Fail(t, "client.Run should not block")
+			}
 		})
 	})
 
@@ -390,40 +429,43 @@ func TestKafkaEvents(t *testing.T) {
 
 			surl := xEnv.GraphQLWebSocketSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
-			t.Cleanup(func() {
-				_ = client.Close()
-			})
 
-			var counter atomic.Uint32
-
+			subscriptionOneArgsCh := make(chan kafkaSubscriptionArgs)
 			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
-				defer counter.Add(1)
-				require.NoError(t, errValue)
-				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(dataValue))
+				subscriptionOneArgsCh <- kafkaSubscriptionArgs{
+					dataValue: dataValue,
+					errValue:  errValue,
+				}
 				return nil
 			})
 			require.NoError(t, err)
 			require.NotEmpty(t, subscriptionOneID)
 
+			clientRunCh := make(chan error)
 			go func() {
-				clientErr := client.Run()
-				require.NoError(t, clientErr)
-			}()
-
-			go func() {
-				require.Eventually(t, func() bool {
-					return counter.Load() == 1
-				}, KafkaWaitTimeout, time.Millisecond*100)
-				_ = client.Close()
+				clientRunCh <- client.Run()
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
-			xEnv.WaitForMessagesSent(1, KafkaWaitTimeout)
-			xEnv.WaitForSubscriptionCount(0, KafkaWaitTimeout)
-			xEnv.WaitForConnectionCount(0, KafkaWaitTimeout)
+			select {
+			case args := <-subscriptionOneArgsCh:
+				require.NoError(t, args.errValue)
+				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
+			case <-time.After(KafkaWaitTimeout):
+				require.Fail(t, "subscriptionArgsCh should not block")
+			}
+
+			require.NoError(t, client.Close())
+
+			select {
+			case err := <-clientRunCh:
+				require.NoError(t, err)
+			case <-time.After(KafkaWaitTimeout):
+				require.Fail(t, "client.Run should not block")
+			}
 		})
 	})
 
@@ -448,52 +490,23 @@ func TestKafkaEvents(t *testing.T) {
 
 				subscribePayload := []byte(`{"query":"subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename surname } }}"}`)
 
-				var started atomic.Bool
-				var consumed atomic.Uint32
-				var produced atomic.Uint32
-
-				go func() {
-					client := http.Client{
-						Timeout: time.Second * 100,
-					}
-					req := xEnv.MakeGraphQLMultipartRequest(http.MethodPost, bytes.NewReader(subscribePayload))
-					resp, gErr := client.Do(req)
-					require.NoError(t, gErr)
-					require.Equal(t, http.StatusOK, resp.StatusCode)
-					defer resp.Body.Close()
-					reader := bufio.NewReader(resp.Body)
-					started.Store(true)
-
-					assert.Eventually(t, func() bool {
-						return produced.Load() == 1
-					}, KafkaWaitTimeout, time.Millisecond*100)
-					assertKafkaMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"employeeUpdatedMyKafka\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
-					consumed.Add(1)
-
-					assert.Eventually(t, func() bool {
-						return produced.Load() == 2
-					}, KafkaWaitTimeout, time.Millisecond*100)
-					assertKafkaMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"employeeUpdatedMyKafka\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
-					consumed.Add(1)
-				}()
+				client := http.Client{
+					Timeout: time.Second * 100,
+				}
+				req := xEnv.MakeGraphQLMultipartRequest(http.MethodPost, bytes.NewReader(subscribePayload))
+				resp, gErr := client.Do(req)
+				require.NoError(t, gErr)
+				require.Equal(t, http.StatusOK, resp.StatusCode)
+				defer resp.Body.Close()
+				reader := bufio.NewReader(resp.Body)
 
 				xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
 
-				assert.Eventually(t, started.Load, KafkaWaitTimeout, time.Millisecond*100)
 				produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
-				produced.Add(1)
+				assertKafkaMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"employeeUpdatedMyKafka\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
 
-				assert.Eventually(t, func() bool {
-					return consumed.Load() == 1
-				}, KafkaWaitTimeout, time.Millisecond*100)
 				produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
-				produced.Add(1)
-
-				// Wait for the client to finish
-				require.Eventually(t, func() bool { return consumed.Load() == 2 }, KafkaWaitTimeout*2, time.Millisecond*100)
-
-				xEnv.WaitForSubscriptionCount(0, KafkaWaitTimeout)
-				xEnv.WaitForConnectionCount(0, KafkaWaitTimeout)
+				assertKafkaMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"employeeUpdatedMyKafka\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
 			})
 		})
 
@@ -543,28 +556,43 @@ func TestKafkaEvents(t *testing.T) {
 
 			subscribePayload := []byte(`{"query":"subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename surname } }}"}`)
 
-			var counter atomic.Uint32
+			client := http.Client{
+				Timeout: time.Second * 10,
+			}
+			req, gErr := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(subscribePayload))
+			require.NoError(t, gErr)
+
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Accept", "text/event-stream")
+			req.Header.Set("Connection", "keep-alive")
+			req.Header.Set("Cache-Control", "no-cache")
+
+			responseCh := make(chan struct {
+				response *http.Response
+				err      error
+			})
 
 			go func() {
-				defer counter.Add(1)
-
-				client := http.Client{
-					Timeout: time.Second * 10,
-				}
-				req, gErr := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(subscribePayload))
-				require.NoError(t, gErr)
-
-				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("Accept", "text/event-stream")
-				req.Header.Set("Connection", "keep-alive")
-				req.Header.Set("Cache-Control", "no-cache")
-
 				resp, gErr := client.Do(req)
-				require.NoError(t, gErr)
-				require.Equal(t, http.StatusOK, resp.StatusCode)
-				defer resp.Body.Close()
-				reader := bufio.NewReader(resp.Body)
+				responseCh <- struct {
+					response *http.Response
+					err      error
+				}{
+					response: resp,
+					err:      gErr,
+				}
+			}()
 
+			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
+
+			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+
+			select {
+			case response := <-responseCh:
+				require.NoError(t, response.err)
+				require.Equal(t, http.StatusOK, response.response.StatusCode)
+				reader := bufio.NewReader(response.response.Body)
+				defer response.response.Body.Close()
 				eventNext, _, gErr := reader.ReadLine()
 				require.NoError(t, gErr)
 				require.Equal(t, "event: next", string(eventNext))
@@ -574,18 +602,9 @@ func TestKafkaEvents(t *testing.T) {
 				line, _, gErr := reader.ReadLine()
 				require.NoError(t, gErr)
 				require.Equal(t, "", string(line))
-			}()
-
-			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
-
-			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
-
-			require.Eventually(t, func() bool {
-				return counter.Load() == 1
-			}, KafkaWaitTimeout, time.Millisecond*100)
-
-			xEnv.WaitForSubscriptionCount(0, KafkaWaitTimeout)
-			xEnv.WaitForConnectionCount(0, KafkaWaitTimeout)
+			case <-time.After(KafkaWaitTimeout):
+				require.Fail(t, "responseCh should not block")
+			}
 		})
 	})
 
@@ -602,27 +621,43 @@ func TestKafkaEvents(t *testing.T) {
 
 			subscribePayload := []byte(`{"query":"subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename surname } }}"}`)
 
-			var counter atomic.Uint32
+			client := http.Client{
+				Timeout: time.Second * 10,
+			}
+			req, gErr := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(subscribePayload))
+			require.NoError(t, gErr)
+
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Accept", "text/event-stream")
+			req.Header.Set("Connection", "keep-alive")
+			req.Header.Set("Cache-Control", "no-cache")
+
+			responseCh := make(chan struct {
+				response *http.Response
+				err      error
+			})
 
 			go func() {
-				defer counter.Add(1)
-
-				client := http.Client{
-					Timeout: time.Second * 10,
-				}
-				req, gErr := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(subscribePayload))
-				require.NoError(t, gErr)
-
-				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("Accept", "text/event-stream")
-				req.Header.Set("Connection", "keep-alive")
-				req.Header.Set("Cache-Control", "no-cache")
-
 				resp, gErr := client.Do(req)
-				require.NoError(t, gErr)
-				require.Equal(t, http.StatusOK, resp.StatusCode)
-				defer resp.Body.Close()
-				reader := bufio.NewReader(resp.Body)
+				responseCh <- struct {
+					response *http.Response
+					err      error
+				}{
+					response: resp,
+					err:      gErr,
+				}
+			}()
+
+			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
+
+			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+
+			select {
+			case resp := <-responseCh:
+				require.NoError(t, resp.err)
+				require.Equal(t, http.StatusOK, resp.response.StatusCode)
+				defer resp.response.Body.Close()
+				reader := bufio.NewReader(resp.response.Body)
 
 				eventNext, _, gErr := reader.ReadLine()
 				require.NoError(t, gErr)
@@ -633,18 +668,9 @@ func TestKafkaEvents(t *testing.T) {
 				line, _, gErr := reader.ReadLine()
 				require.NoError(t, gErr)
 				require.Equal(t, "", string(line))
-			}()
-
-			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
-
-			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
-
-			require.Eventually(t, func() bool {
-				return counter.Load() == 1
-			}, KafkaWaitTimeout, time.Millisecond*100)
-
-			xEnv.WaitForSubscriptionCount(0, KafkaWaitTimeout)
-			xEnv.WaitForConnectionCount(0, KafkaWaitTimeout)
+			case <-time.After(KafkaWaitTimeout):
+				require.Fail(t, "responseCh should not block")
+			}
 		})
 	})
 
@@ -706,7 +732,7 @@ func TestKafkaEvents(t *testing.T) {
 			type subscriptionPayload struct {
 				Data struct {
 					FilteredEmployeeUpdatedMyKafkaWithListFieldArguments struct {
-						ID      float64 `graphql:"id"`
+						ID      int `graphql:"id"`
 						Details struct {
 							Forename string `graphql:"forename"`
 							Surname  string `graphql:"surname"`
@@ -729,79 +755,33 @@ func TestKafkaEvents(t *testing.T) {
 
 			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
 
-			var produced atomic.Uint32
-			var consumed atomic.Uint32
-
-			go func() {
-				require.Eventually(t, func() bool {
-					return produced.Load() == 1
-				}, KafkaWaitTimeout, time.Millisecond*100)
-				gErr := conn.ReadJSON(&msg)
-				require.NoError(t, gErr)
-				require.Equal(t, "1", msg.ID)
-				require.Equal(t, "next", msg.Type)
-				gErr = json.Unmarshal(msg.Payload, &payload)
-				require.NoError(t, gErr)
-				require.Equal(t, float64(1), payload.Data.FilteredEmployeeUpdatedMyKafkaWithListFieldArguments.ID)
-				require.Equal(t, "Jens", payload.Data.FilteredEmployeeUpdatedMyKafkaWithListFieldArguments.Details.Forename)
-				require.Equal(t, "Neuse", payload.Data.FilteredEmployeeUpdatedMyKafkaWithListFieldArguments.Details.Surname)
-				consumed.Add(1)
-
-				require.Eventually(t, func() bool {
-					return produced.Load() == 2
-				}, KafkaWaitTimeout, time.Millisecond*100)
-				gErr = conn.ReadJSON(&msg)
-				require.NoError(t, gErr)
-				require.Equal(t, "1", msg.ID)
-				require.Equal(t, "next", msg.Type)
-				gErr = json.Unmarshal(msg.Payload, &payload)
-				require.NoError(t, gErr)
-				require.Equal(t, float64(2), payload.Data.FilteredEmployeeUpdatedMyKafkaWithListFieldArguments.ID)
-				require.Equal(t, "Dustin", payload.Data.FilteredEmployeeUpdatedMyKafkaWithListFieldArguments.Details.Forename)
-				require.Equal(t, "Deus", payload.Data.FilteredEmployeeUpdatedMyKafkaWithListFieldArguments.Details.Surname)
-				consumed.Add(9) // should arrive to 10
-
-				require.Eventually(t, func() bool {
-					return produced.Load() == 11
-				}, KafkaWaitTimeout, time.Millisecond*100)
-				gErr = conn.ReadJSON(&msg)
-				require.NoError(t, gErr)
-				require.Equal(t, "1", msg.ID)
-				require.Equal(t, "next", msg.Type)
-				gErr = json.Unmarshal(msg.Payload, &payload)
-				require.NoError(t, gErr)
-				require.Equal(t, float64(11), payload.Data.FilteredEmployeeUpdatedMyKafkaWithListFieldArguments.ID)
-				require.Equal(t, "Alexandra", payload.Data.FilteredEmployeeUpdatedMyKafkaWithListFieldArguments.Details.Forename)
-				require.Equal(t, "Neuse", payload.Data.FilteredEmployeeUpdatedMyKafkaWithListFieldArguments.Details.Surname)
-				consumed.Add(1)
-
-				require.Eventually(t, func() bool {
-					return produced.Load() == 12
-				}, KafkaWaitTimeout, time.Millisecond*100)
-				gErr = conn.ReadJSON(&msg)
-				require.NoError(t, gErr)
-				require.Equal(t, "1", msg.ID)
-				require.Equal(t, "next", msg.Type)
-				gErr = json.Unmarshal(msg.Payload, &payload)
-				require.NoError(t, gErr)
-				require.Equal(t, float64(12), payload.Data.FilteredEmployeeUpdatedMyKafkaWithListFieldArguments.ID)
-				require.Equal(t, "David", payload.Data.FilteredEmployeeUpdatedMyKafkaWithListFieldArguments.Details.Forename)
-				require.Equal(t, "Stutt", payload.Data.FilteredEmployeeUpdatedMyKafkaWithListFieldArguments.Details.Surname)
-				consumed.Add(1)
-			}()
+			testData := map[uint32]struct {
+				ID       int
+				Forename string
+				Surname  string
+			}{
+				1:  {1, "Jens", "Neuse"},
+				2:  {2, "Dustin", "Deus"},
+				11: {11, "Alexandra", "Neuse"},
+				12: {12, "David", "Stutt"},
+			}
 
 			// Events 1, 2, 11, and 12 should be included
 			for i := uint32(1); i < 13; i++ {
-				require.Eventually(t, func() bool {
-					return consumed.Load() >= i-1
-				}, KafkaWaitTimeout, time.Millisecond*100)
 				produceKafkaMessage(t, xEnv, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d}`, i))
-				produced.Add(1)
+				if i == 1 || i == 2 || i == 11 || i == 12 {
+					conn.SetReadDeadline(time.Now().Add(KafkaWaitTimeout))
+					gErr := conn.ReadJSON(&msg)
+					require.NoError(t, gErr)
+					require.Equal(t, "1", msg.ID)
+					require.Equal(t, "next", msg.Type)
+					gErr = json.Unmarshal(msg.Payload, &payload)
+					require.NoError(t, gErr)
+					require.Equal(t, testData[i].ID, payload.Data.FilteredEmployeeUpdatedMyKafkaWithListFieldArguments.ID)
+					require.Equal(t, testData[i].Forename, payload.Data.FilteredEmployeeUpdatedMyKafkaWithListFieldArguments.Details.Forename)
+					require.Equal(t, testData[i].Surname, payload.Data.FilteredEmployeeUpdatedMyKafkaWithListFieldArguments.Details.Surname)
+				}
 			}
-
-			require.Eventually(t, func() bool {
-				return consumed.Load() == 12 && produced.Load() == 12
-			}, KafkaWaitTimeout, time.Millisecond*100)
 		})
 	})
 
@@ -819,7 +799,7 @@ func TestKafkaEvents(t *testing.T) {
 			type subscriptionPayload struct {
 				Data struct {
 					FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument struct {
-						ID      float64 `graphql:"id"`
+						ID      int `graphql:"id"`
 						Details struct {
 							Forename string `graphql:"forename"`
 							Surname  string `graphql:"surname"`
@@ -842,79 +822,33 @@ func TestKafkaEvents(t *testing.T) {
 
 			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
 
-			var produced atomic.Uint32
-			var consumed atomic.Uint32
-
-			go func() {
-				require.Eventually(t, func() bool {
-					return produced.Load() == 1
-				}, 10*time.Second, 100*time.Millisecond)
-				gErr := conn.ReadJSON(&msg)
-				require.NoError(t, gErr)
-				require.Equal(t, "1", msg.ID)
-				require.Equal(t, "next", msg.Type)
-				gErr = json.Unmarshal(msg.Payload, &payload)
-				require.NoError(t, gErr)
-				require.Equal(t, float64(1), payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.ID)
-				require.Equal(t, "Jens", payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.Details.Forename)
-				require.Equal(t, "Neuse", payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.Details.Surname)
-				consumed.Add(1)
-
-				require.Eventually(t, func() bool {
-					return produced.Load() == 2
-				}, 10*time.Second, 100*time.Millisecond)
-				gErr = conn.ReadJSON(&msg)
-				require.NoError(t, gErr)
-				require.Equal(t, "1", msg.ID)
-				require.Equal(t, "next", msg.Type)
-				gErr = json.Unmarshal(msg.Payload, &payload)
-				require.NoError(t, gErr)
-				require.Equal(t, float64(2), payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.ID)
-				require.Equal(t, "Dustin", payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.Details.Forename)
-				require.Equal(t, "Deus", payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.Details.Surname)
-				consumed.Add(9) // should arrive to 10
-
-				require.Eventually(t, func() bool {
-					return produced.Load() == 11
-				}, 10*time.Second, 100*time.Millisecond)
-				gErr = conn.ReadJSON(&msg)
-				require.NoError(t, gErr)
-				require.Equal(t, "1", msg.ID)
-				require.Equal(t, "next", msg.Type)
-				gErr = json.Unmarshal(msg.Payload, &payload)
-				require.NoError(t, gErr)
-				require.Equal(t, float64(11), payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.ID)
-				require.Equal(t, "Alexandra", payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.Details.Forename)
-				require.Equal(t, "Neuse", payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.Details.Surname)
-				consumed.Add(1)
-
-				require.Eventually(t, func() bool {
-					return produced.Load() == 12
-				}, 10*time.Second, 100*time.Millisecond)
-				gErr = conn.ReadJSON(&msg)
-				require.NoError(t, gErr)
-				require.Equal(t, "1", msg.ID)
-				require.Equal(t, "next", msg.Type)
-				gErr = json.Unmarshal(msg.Payload, &payload)
-				require.NoError(t, gErr)
-				require.Equal(t, float64(12), payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.ID)
-				require.Equal(t, "David", payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.Details.Forename)
-				require.Equal(t, "Stutt", payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.Details.Surname)
-				consumed.Add(1)
-			}()
+			testData := map[uint32]struct {
+				ID       int
+				Forename string
+				Surname  string
+			}{
+				1:  {1, "Jens", "Neuse"},
+				2:  {2, "Dustin", "Deus"},
+				11: {11, "Alexandra", "Neuse"},
+				12: {12, "David", "Stutt"},
+			}
 
 			// Events 1, 2, 11, and 12 should be included
 			for i := uint32(1); i < 13; i++ {
-				require.Eventually(t, func() bool {
-					return consumed.Load() >= i-1
-				}, KafkaWaitTimeout, time.Millisecond*100)
 				produceKafkaMessage(t, xEnv, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d}`, i))
-				produced.Add(1)
+				if i == 1 || i == 2 || i == 11 || i == 12 {
+					conn.SetReadDeadline(time.Now().Add(KafkaWaitTimeout))
+					gErr := conn.ReadJSON(&msg)
+					require.NoError(t, gErr)
+					require.Equal(t, "1", msg.ID)
+					require.Equal(t, "next", msg.Type)
+					gErr = json.Unmarshal(msg.Payload, &payload)
+					require.NoError(t, gErr)
+					require.Equal(t, testData[i].ID, payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.ID)
+					require.Equal(t, testData[i].Forename, payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.Details.Forename)
+					require.Equal(t, testData[i].Surname, payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.Details.Surname)
+				}
 			}
-
-			require.Eventually(t, func() bool {
-				return consumed.Load() == 12 && produced.Load() == 12
-			}, time.Second*20, time.Millisecond*100)
 		})
 	})
 
@@ -932,7 +866,7 @@ func TestKafkaEvents(t *testing.T) {
 			type subscriptionPayload struct {
 				Data struct {
 					FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument struct {
-						ID      float64 `graphql:"id"`
+						ID      int `graphql:"id"`
 						Details struct {
 							Forename string `graphql:"forename"`
 							Surname  string `graphql:"surname"`
@@ -955,33 +889,21 @@ func TestKafkaEvents(t *testing.T) {
 
 			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
 
-			var counter atomic.Uint32
-
-			go func() {
-				defer counter.Add(1)
-
-				gErr := conn.ReadJSON(&msg)
-				require.NoError(t, gErr)
-				require.Equal(t, "1", msg.ID)
-				require.Equal(t, "next", msg.Type)
-				gErr = json.Unmarshal(msg.Payload, &payload)
-				require.NoError(t, gErr)
-				require.Equal(t, float64(12), payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.ID)
-				require.Equal(t, "David", payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.Details.Forename)
-				require.Equal(t, "Stutt", payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.Details.Surname)
-			}()
-
 			// The message should be ignored because "1" does not equal 1
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id":1}`)
 
-			// Ensure the Kafka consumer can keep up with the provider
-			time.Sleep(time.Millisecond * 100)
-
+			// This message should be delivered because it matches the filter
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id":12}`)
-
-			require.Eventually(t, func() bool {
-				return counter.Load() == 1
-			}, KafkaWaitTimeout, time.Millisecond*100)
+			conn.SetReadDeadline(time.Now().Add(KafkaWaitTimeout))
+			readErr := conn.ReadJSON(&msg)
+			require.NoError(t, readErr)
+			require.Equal(t, "1", msg.ID)
+			require.Equal(t, "next", msg.Type)
+			unmarshalErr := json.Unmarshal(msg.Payload, &payload)
+			require.NoError(t, unmarshalErr)
+			require.Equal(t, int(12), payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.ID)
+			require.Equal(t, "David", payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.Details.Forename)
+			require.Equal(t, "Stutt", payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.Details.Surname)
 		})
 	})
 
@@ -1008,62 +930,71 @@ func TestKafkaEvents(t *testing.T) {
 
 			surl := xEnv.GraphQLWebSocketSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
-			t.Cleanup(func() {
-				_ = client.Close()
-			})
 
-			var counter atomic.Uint32
-
+			subscriptionOneArgsCh := make(chan kafkaSubscriptionArgs)
 			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
-				oldCount := counter.Load()
-				counter.Add(1)
-
-				if oldCount == 0 {
-					var gqlErr graphql.Errors
-					require.ErrorAs(t, errValue, &gqlErr)
-					require.Equal(t, "Invalid message received", gqlErr[0].Message)
-				} else if oldCount == 1 || oldCount == 3 {
-					require.NoError(t, errValue)
-					require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(dataValue))
-				} else if oldCount == 2 {
-					var gqlErr graphql.Errors
-					require.ErrorAs(t, errValue, &gqlErr)
-					require.Equal(t, "Cannot return null for non-nullable field 'Subscription.employeeUpdatedMyKafka.id'.", gqlErr[0].Message)
+				subscriptionOneArgsCh <- kafkaSubscriptionArgs{
+					dataValue: dataValue,
+					errValue:  errValue,
 				}
-
 				return nil
 			})
 			require.NoError(t, err)
 			require.NotEmpty(t, subscriptionOneID)
 
+			clientRunCh := make(chan error)
 			go func() {
-				clientErr := client.Run()
-				require.NoError(t, clientErr)
+				clientRunCh <- client.Run()
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
 
 			produceKafkaMessage(t, xEnv, topics[0], `{asas`) // Invalid message
-			require.Eventually(t, func() bool {
-				return counter.Load() == 1
-			}, KafkaWaitTimeout, time.Millisecond*100)
+			select {
+			case args := <-subscriptionOneArgsCh:
+				require.Error(t, args.errValue)
+				var gqlErr graphql.Errors
+				require.ErrorAs(t, args.errValue, &gqlErr)
+				require.Equal(t, "Invalid message received", gqlErr[0].Message)
+			case <-time.After(KafkaWaitTimeout):
+				require.Fail(t, "subscriptionOneErrCh should not block")
+			}
+
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id":1}`) // Correct message
-			require.Eventually(t, func() bool {
-				return counter.Load() == 2
-			}, KafkaWaitTimeout, time.Millisecond*100)
+			select {
+			case args := <-subscriptionOneArgsCh:
+				require.NoError(t, args.errValue)
+				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
+			case <-time.After(KafkaWaitTimeout):
+				require.Fail(t, "subscriptionOneErrCh should not block")
+			}
+
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","update":{"name":"foo"}}`) // Missing entity = Resolver error
-			require.Eventually(t, func() bool {
-				return counter.Load() == 3
-			}, KafkaWaitTimeout, time.Millisecond*100)
+			select {
+			case args := <-subscriptionOneArgsCh:
+				var gqlErr graphql.Errors
+				require.ErrorAs(t, args.errValue, &gqlErr)
+				require.Equal(t, "Cannot return null for non-nullable field 'Subscription.employeeUpdatedMyKafka.id'.", gqlErr[0].Message)
+			case <-time.After(KafkaWaitTimeout):
+				require.Fail(t, "subscriptionOneErrCh should not block")
+			}
+
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`) // Correct message
-			require.Eventually(t, func() bool {
-				return counter.Load() == 4
-			}, KafkaWaitTimeout, time.Millisecond*100)
+			select {
+			case args := <-subscriptionOneArgsCh:
+				require.NoError(t, args.errValue)
+				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
+			case <-time.After(KafkaWaitTimeout):
+				require.Fail(t, "subscriptionOneErrCh should not block")
+			}
 
 			require.NoError(t, client.Close())
-
-			xEnv.WaitForSubscriptionCount(0, KafkaWaitTimeout)
-			xEnv.WaitForConnectionCount(0, KafkaWaitTimeout)
+			select {
+			case err := <-clientRunCh:
+				require.NoError(t, err)
+			case <-time.After(KafkaWaitTimeout):
+				require.Fail(t, "clientRunCh should not block")
+			}
 		})
 	})
 
@@ -1117,6 +1048,8 @@ func TestKafkaEvents(t *testing.T) {
 }
 
 func TestFlakyKafkaEvents(t *testing.T) {
+	t.Parallel()
+
 	t.Run("subscribe async with filter", func(t *testing.T) {
 		t.Parallel()
 
@@ -1131,7 +1064,7 @@ func TestFlakyKafkaEvents(t *testing.T) {
 			type subscriptionPayload struct {
 				Data struct {
 					FilteredEmployeeUpdatedMyKafka struct {
-						ID      float64 `graphql:"id"`
+						ID      int `graphql:"id"`
 						Details struct {
 							Forename string `graphql:"forename"`
 							Surname  string `graphql:"surname"`
@@ -1154,96 +1087,36 @@ func TestFlakyKafkaEvents(t *testing.T) {
 
 			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
 
-			var produced atomic.Uint32
-			var consumed atomic.Uint32
 			const MsgCount = uint32(12)
 
-			go func() {
-				consumed.Add(1) // the first message is ignored
-
-				require.Eventually(t, func() bool {
-					return produced.Load() == MsgCount-11
-				}, KafkaWaitTimeout, time.Millisecond*100)
-				gErr := conn.ReadJSON(&msg)
-				require.NoError(t, gErr)
-				require.Equal(t, "1", msg.ID)
-				require.Equal(t, "next", msg.Type)
-				gErr = json.Unmarshal(msg.Payload, &payload)
-				require.NoError(t, gErr)
-				require.Equal(t, float64(11), payload.Data.FilteredEmployeeUpdatedMyKafka.ID)
-				require.Equal(t, "Alexandra", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Forename)
-				require.Equal(t, "Neuse", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Surname)
-				consumed.Add(4) // should arrive to 5th message, with id 7
-
-				require.Eventually(t, func() bool {
-					return produced.Load() == MsgCount-7
-				}, KafkaWaitTimeout, time.Millisecond*100)
-				gErr = conn.ReadJSON(&msg)
-				require.NoError(t, gErr)
-				require.Equal(t, "1", msg.ID)
-				require.Equal(t, "next", msg.Type)
-				gErr = json.Unmarshal(msg.Payload, &payload)
-				require.NoError(t, gErr)
-				require.Equal(t, float64(7), payload.Data.FilteredEmployeeUpdatedMyKafka.ID)
-				require.Equal(t, "Suvij", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Forename)
-				require.Equal(t, "Surya", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Surname)
-				consumed.Add(3) // should arrive to 8th message, with id 4
-
-				require.Eventually(t, func() bool {
-					return produced.Load() == MsgCount-4
-				}, KafkaWaitTimeout, time.Millisecond*100)
-				gErr = conn.ReadJSON(&msg)
-				require.NoError(t, gErr)
-				require.Equal(t, "1", msg.ID)
-				require.Equal(t, "next", msg.Type)
-				gErr = json.Unmarshal(msg.Payload, &payload)
-				require.NoError(t, gErr)
-				require.Equal(t, float64(4), payload.Data.FilteredEmployeeUpdatedMyKafka.ID)
-				require.Equal(t, "Björn", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Forename)
-				require.Equal(t, "Schwenzer", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Surname)
-				consumed.Add(1)
-
-				require.Eventually(t, func() bool {
-					return produced.Load() == MsgCount-3
-				}, KafkaWaitTimeout, time.Millisecond*100)
-				gErr = conn.ReadJSON(&msg)
-				require.NoError(t, gErr)
-				require.Equal(t, "1", msg.ID)
-				require.Equal(t, "next", msg.Type)
-				gErr = json.Unmarshal(msg.Payload, &payload)
-				require.NoError(t, gErr)
-				require.Equal(t, float64(3), payload.Data.FilteredEmployeeUpdatedMyKafka.ID)
-				require.Equal(t, "Stefan", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Forename)
-				require.Equal(t, "Avram", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Surname)
-				consumed.Add(2) // should arrive to 10th message, with id 2
-
-				require.Eventually(t, func() bool {
-					return produced.Load() == MsgCount-1
-				}, KafkaWaitTimeout, time.Millisecond*100)
-				gErr = conn.ReadJSON(&msg)
-				require.NoError(t, gErr)
-				require.Equal(t, "1", msg.ID)
-				require.Equal(t, "next", msg.Type)
-				gErr = json.Unmarshal(msg.Payload, &payload)
-				require.NoError(t, gErr)
-				require.Equal(t, float64(1), payload.Data.FilteredEmployeeUpdatedMyKafka.ID)
-				require.Equal(t, "Jens", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Forename)
-				require.Equal(t, "Neuse", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Surname)
-				consumed.Add(1)
-			}()
-
-			// Events 1, 3, 4, 7, and 11 should be included
-			for i := MsgCount; i > 0; i-- {
-				require.Eventually(t, func() bool {
-					return consumed.Load() >= MsgCount-i
-				}, KafkaWaitTimeout, time.Millisecond*100)
-				produceKafkaMessage(t, xEnv, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d}`, i))
-				produced.Add(1)
+			testData := map[int]struct {
+				ID       int
+				Forename string
+				Surname  string
+			}{
+				1:  {1, "Jens", "Neuse"},
+				3:  {3, "Stefan", "Avram"},
+				4:  {4, "Björn", "Schwenzer"},
+				7:  {7, "Suvij", "Surya"},
+				11: {11, "Alexandra", "Neuse"},
 			}
 
-			require.Eventually(t, func() bool {
-				return consumed.Load() == MsgCount && produced.Load() == MsgCount
-			}, KafkaWaitTimeout, time.Millisecond*100)
+			// Events 1, 3, 4, 7, and 11 should be included
+			for i := int(MsgCount); i > 0; i-- {
+				produceKafkaMessage(t, xEnv, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d}`, i))
+				if i == 1 || i == 3 || i == 4 || i == 7 || i == 11 {
+					conn.SetReadDeadline(time.Now().Add(KafkaWaitTimeout))
+					jsonErr := conn.ReadJSON(&msg)
+					require.NoError(t, jsonErr)
+					require.Equal(t, "1", msg.ID)
+					require.Equal(t, "next", msg.Type)
+					unmarshalErr := json.Unmarshal(msg.Payload, &payload)
+					require.NoError(t, unmarshalErr)
+					require.Equal(t, testData[i].ID, payload.Data.FilteredEmployeeUpdatedMyKafka.ID)
+					require.Equal(t, testData[i].Forename, payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Forename)
+					require.Equal(t, testData[i].Surname, payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Surname)
+				}
+			}
 		})
 	})
 }
@@ -1271,25 +1144,21 @@ func produceKafkaMessage(t *testing.T, xEnv *testenv.Environment, topicName stri
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	var done atomic.Bool
-
-	var pErr error
+	pErrCh := make(chan error)
 
 	xEnv.KafkaClient.Produce(ctx, &kgo.Record{
 		Topic: xEnv.GetPubSubName(topicName),
 		Value: []byte(message),
 	}, func(record *kgo.Record, err error) {
-		defer done.Store(true)
-		if err != nil {
-			pErr = err
-		}
+		pErrCh <- err
 	})
 
-	require.Eventually(t, func() bool {
-		return done.Load()
-	}, KafkaWaitTimeout, time.Millisecond*100)
-
-	require.NoError(t, pErr)
+	select {
+	case pErr := <-pErrCh:
+		require.NoError(t, pErr)
+	case <-time.After(KafkaWaitTimeout):
+		require.Fail(t, "produceKafkaMessage should not block")
+	}
 
 	fErr := xEnv.KafkaClient.Flush(ctx)
 	require.NoError(t, fErr)

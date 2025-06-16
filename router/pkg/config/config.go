@@ -3,10 +3,11 @@ package config
 import (
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/yamlmerge"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/internal/yamlmerge"
 
 	"github.com/caarlos0/env/v11"
 	"github.com/goccy/go-yaml"
@@ -540,6 +541,7 @@ type KafkaEventSource struct {
 	Brokers        []string               `yaml:"brokers,omitempty"`
 	Authentication *KafkaAuthentication   `yaml:"authentication,omitempty"`
 	TLS            *KafkaTLSConfiguration `yaml:"tls,omitempty"`
+	FetchMaxWait   time.Duration          // Currently not configurable
 }
 
 func (k KafkaEventSource) GetID() string {
