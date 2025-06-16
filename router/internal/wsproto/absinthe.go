@@ -4,8 +4,10 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	"github.com/tidwall/sjson"
 	"math/big"
+
+	"github.com/gobwas/ws"
+	"github.com/tidwall/sjson"
 )
 
 type absintheMessageEventType string
@@ -94,10 +96,10 @@ func (r *absintheMessage) UnmarshalJSON(data []byte) error {
 var _ Proto = (*absintheWSProtocol)(nil)
 
 type absintheWSProtocol struct {
-	conn JSONConn
+	conn ProtoConn
 }
 
-func newAbsintheWSProtocol(conn JSONConn) *absintheWSProtocol {
+func newAbsintheWSProtocol(conn ProtoConn) *absintheWSProtocol {
 	return &absintheWSProtocol{
 		conn: conn,
 	}
@@ -202,7 +204,19 @@ func (p *absintheWSProtocol) WriteGraphQLErrors(id string, errors json.RawMessag
 	})
 }
 
-func (p *absintheWSProtocol) Done(id string) error {
+func (p *absintheWSProtocol) Close(code ws.StatusCode, reason string) error {
+	if err := p.conn.WriteCloseFrame(code, reason); err != nil {
+		return err
+	}
+
+	if err := p.conn.Close(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (p *absintheWSProtocol) Complete(id string) error {
 	return p.conn.WriteJSON(absintheMessage{
 		ID:       &id,
 		Protocol: "__absinthe__:control",

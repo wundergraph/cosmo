@@ -1,6 +1,7 @@
 import KeycloakAdminClient from '@keycloak/keycloak-admin-client';
 import { RequiredActionAlias } from '@keycloak/keycloak-admin-client/lib/defs/requiredActionProviderRepresentation.js';
 import { uid } from 'uid';
+import { FastifyBaseLogger } from 'fastify';
 import { MemberRole } from '../../db/models.js';
 import { organizationRoleEnum } from '../../db/schema.js';
 
@@ -11,7 +12,16 @@ export default class Keycloak {
   clientId = '';
   realm = '';
 
-  constructor(options: { apiUrl: string; realm: string; clientId: string; adminUser: string; adminPassword: string }) {
+  private logger: FastifyBaseLogger;
+
+  constructor(options: {
+    apiUrl: string;
+    realm: string;
+    clientId: string;
+    adminUser: string;
+    adminPassword: string;
+    logger: FastifyBaseLogger;
+  }) {
     this.client = new KeycloakAdminClient({
       baseUrl: options.apiUrl,
       realmName: options.realm,
@@ -21,6 +31,7 @@ export default class Keycloak {
     this.clientId = options.clientId;
     this.adminUser = options.adminUser;
     this.adminPassword = options.adminPassword;
+    this.logger = options.logger;
   }
 
   public async authenticateClient() {
@@ -269,28 +280,16 @@ export default class Keycloak {
     });
   }
 
-  public async deleteOrganizationGroup({ realm, organizationSlug }: { realm?: string; organizationSlug: string }) {
-    const orgGroups = await this.client.groups.find({
-      search: organizationSlug,
-      realm: realm || this.realm,
-      briefRepresentation: true,
-      max: 1,
-    });
-
-    if (orgGroups.length === 0) {
-      return;
+  public async deleteGroupById({ realm, groupId }: { realm?: string; groupId: string }) {
+    try {
+      await this.client.groups.del({
+        realm: realm || this.realm,
+        id: groupId,
+      });
+    } catch (e: unknown) {
+      this.logger?.error(e, `Failed to delete group id "${groupId}" from Keycloak`);
+      throw e;
     }
-
-    const orgGroup = orgGroups.find((group) => group.name === organizationSlug);
-
-    if (!orgGroup) {
-      return;
-    }
-
-    await this.client.groups.del({
-      id: orgGroup.id!,
-      realm: realm || this.realm,
-    });
   }
 
   public seedRoles({ realm, organizationSlug }: { realm?: string; organizationSlug: string }) {
@@ -366,30 +365,9 @@ export default class Keycloak {
     return [organizationGroup.id, createdGroups];
   }
 
-  public async createSubGroup({
-    realm,
-    groupName,
-    organizationSlug,
-  }: {
-    realm?: string;
-    groupName: string;
-    organizationSlug: string;
-  }) {
-    const organizationGroup = await this.client.groups.find({
-      max: 1,
-      realm: realm || this.realm,
-      search: organizationSlug,
-    });
-
-    if (organizationGroup.length === 0) {
-      return undefined;
-    }
-
+  public async createSubGroup({ realm, parentId, groupName }: { realm?: string; parentId: string; groupName: string }) {
     const newGroup = await this.client.groups.createChildGroup(
-      {
-        realm: realm || this.realm,
-        id: organizationGroup[0].id!,
-      },
+      { realm: realm || this.realm, id: parentId },
       { name: groupName },
     );
 
@@ -430,28 +408,18 @@ export default class Keycloak {
 
   public async removeUserFromOrganization({
     realm,
+    groupId,
     userID,
-    groupName,
   }: {
     realm?: string;
+    groupId: string;
     userID: string;
-    groupName: string;
   }) {
-    const organizationGroup = await this.client.groups.find({
-      max: 1,
-      search: groupName,
-      realm: realm || this.realm,
-    });
+    // Delete from the root organization group
+    await this.client.users.delFromGroup({ id: userID, groupId, realm: realm || this.realm });
 
-    if (organizationGroup.length === 0) {
-      throw new Error(`Organization group '${groupName}' not found`);
-    }
-
-    const subGroups = await this.fetchAllSubGroups({
-      realm: realm || this.realm,
-      kcGroupId: organizationGroup[0].id!,
-    });
-
+    // And any subgroup
+    const subGroups = await this.fetchAllSubGroups({ realm: realm || this.realm, kcGroupId: groupId });
     for (const subGroup of subGroups) {
       await this.client.users.delFromGroup({
         id: userID,

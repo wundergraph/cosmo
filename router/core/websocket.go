@@ -165,7 +165,7 @@ func newWSConnectionWrapper(conn net.Conn, readTimeout, writeTimeout time.Durati
 	}
 }
 
-func (c *wsConnectionWrapper) ReadJSON(v interface{}) error {
+func (c *wsConnectionWrapper) ReadJSON(v any) error {
 
 	if c.readTimeout > 0 {
 		err := c.conn.SetReadDeadline(time.Now().Add(c.readTimeout))
@@ -197,7 +197,7 @@ func (c *wsConnectionWrapper) WriteText(text string) error {
 	return wsutil.WriteServerText(c.conn, []byte(text))
 }
 
-func (c *wsConnectionWrapper) WriteJSON(v interface{}) error {
+func (c *wsConnectionWrapper) WriteJSON(v any) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	data, err := json.Marshal(v)
@@ -213,6 +213,20 @@ func (c *wsConnectionWrapper) WriteJSON(v interface{}) error {
 	}
 
 	return wsutil.WriteServerText(c.conn, data)
+}
+
+func (c *wsConnectionWrapper) WriteCloseFrame(code ws.StatusCode, reason string) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.writeTimeout > 0 {
+		err := c.conn.SetWriteDeadline(time.Now().Add(c.writeTimeout))
+		if err != nil {
+			return err
+		}
+	}
+
+	return ws.WriteFrame(c.conn, ws.NewCloseFrame(ws.NewCloseFrameBody(code, reason)))
 }
 
 func (c *wsConnectionWrapper) Close() error {
@@ -607,9 +621,26 @@ func (rw *websocketResponseWriter) WriteHeader(statusCode int) {
 }
 
 func (rw *websocketResponseWriter) Complete() {
-	err := rw.protocol.Done(rw.id)
+	err := rw.protocol.Complete(rw.id)
 	if err != nil {
 		rw.logger.Debug("Sending complete message", zap.Error(err))
+	}
+}
+
+func (rw *websocketResponseWriter) Close(kind resolve.SubscriptionCloseKind) {
+	var err error
+
+	switch kind {
+	case resolve.SubscriptionCloseKindNormal:
+		err = rw.protocol.Close(ws.StatusNormalClosure, "Normal closure")
+	case resolve.SubscriptionCloseKindDownstreamServiceError:
+		err = rw.protocol.Close(ws.StatusGoingAway, "Downstream service error")
+	case resolve.SubscriptionCloseKindGoingAway:
+		err = rw.protocol.Close(ws.StatusGoingAway, "Going away")
+	}
+
+	if err != nil {
+		rw.logger.Debug("Sending error message", zap.Error(err))
 	}
 }
 
@@ -1044,7 +1075,7 @@ func (h *WebSocketConnectionHandler) handleComplete(msg *wsproto.Message) error 
 		ConnectionID:   h.connectionID,
 		SubscriptionID: subscriptionID,
 	}
-	return h.graphqlHandler.executor.Resolver.AsyncUnsubscribeSubscription(id)
+	return h.graphqlHandler.executor.Resolver.AsyncCompleteSubscription(id)
 }
 
 func (h *WebsocketHandler) HandleMessage(handler *WebSocketConnectionHandler, msg *wsproto.Message) (err error) {
@@ -1178,7 +1209,7 @@ func (h *WebSocketConnectionHandler) ignoreHeader(k string) bool {
 
 func (h *WebSocketConnectionHandler) Complete(rw *websocketResponseWriter) {
 	h.subscriptions.Delete(rw.id)
-	err := rw.protocol.Done(rw.id)
+	err := rw.protocol.Complete(rw.id)
 	if err != nil {
 		return
 	}

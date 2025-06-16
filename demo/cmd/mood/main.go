@@ -3,10 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/mood"
 	"log"
 	"net/http"
 	"os"
+
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/mood"
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/handler/debug"
@@ -31,7 +32,9 @@ func main() {
 		port = defaultPort
 	}
 
-	srv := subgraphs.NewDemoServer(mood.NewSchema(nil))
+	srv := subgraphs.NewDemoServer(mood.NewSchema(nil, func(name string) string {
+		return name
+	}))
 
 	srv.Use(&debug.Tracer{})
 	srv.Use(otelgqlgen.Middleware(otelgqlgen.WithCreateSpanFromFields(func(ctx *graphql.FieldContext) bool {

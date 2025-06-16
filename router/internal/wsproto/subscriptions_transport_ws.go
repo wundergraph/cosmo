@@ -3,6 +3,8 @@ package wsproto
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/gobwas/ws"
 	"github.com/tidwall/sjson"
 )
 
@@ -36,10 +38,10 @@ type subscriptionsTransportWSMessage struct {
 }
 
 type subscriptionsTransportWSProtocol struct {
-	conn JSONConn
+	conn ProtoConn
 }
 
-func newSubscriptionsTransportWSProtocol(conn JSONConn) *subscriptionsTransportWSProtocol {
+func newSubscriptionsTransportWSProtocol(conn ProtoConn) *subscriptionsTransportWSProtocol {
 	return &subscriptionsTransportWSProtocol{
 		conn: conn,
 	}
@@ -119,7 +121,19 @@ func (p *subscriptionsTransportWSProtocol) WriteGraphQLErrors(id string, errors 
 	})
 }
 
-func (p *subscriptionsTransportWSProtocol) Done(id string) error {
+func (p *subscriptionsTransportWSProtocol) Close(code ws.StatusCode, reason string) error {
+	if err := p.conn.WriteCloseFrame(code, reason); err != nil {
+		return err
+	}
+
+	if err := p.conn.Close(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (p *subscriptionsTransportWSProtocol) Complete(id string) error {
 	return p.conn.WriteJSON(subscriptionsTransportWSMessage{
 		ID:   id,
 		Type: subscriptionsTransportWSMessageTypeComplete,

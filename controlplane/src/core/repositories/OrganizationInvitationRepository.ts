@@ -86,6 +86,7 @@ export class OrganizationInvitationRepository {
         slug: organizations.slug,
         creatorUserId: organizations.createdBy,
         createdAt: organizations.createdAt,
+        kcGroupId: organizations.kcGroupId,
         invitedBy: users1.email,
       })
       .from(organizationInvitations)
@@ -103,6 +104,7 @@ export class OrganizationInvitationRepository {
       creatorUserId: org.creatorUserId || undefined,
       createdAt: org.createdAt.toISOString(),
       invitedBy: org.invitedBy || undefined,
+      kcGroupId: org.kcGroupId || undefined,
     }));
   }
 

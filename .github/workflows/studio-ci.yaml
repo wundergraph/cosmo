@@ -2,6 +2,7 @@ name: Studio CI
 on:
   pull_request:
     paths:
+      - 'pnpm-lock.yaml'
       - 'studio/**/*'
       - 'connect/**/*'
       - 'shared/**/*'

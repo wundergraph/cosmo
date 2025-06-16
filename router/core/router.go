@@ -166,7 +166,6 @@ type (
 		SubgraphAttributes []config.CustomAttribute
 	}
 
-	// Config defines the configuration options for the Router.
 	// Option defines the method to customize server.
 	Option func(svr *Router)
 )
@@ -1152,7 +1151,7 @@ func (r *Router) Start(ctx context.Context) error {
 
 			w, err := watcher.New(watcher.Options{
 				Logger:   ll,
-				Path:     r.executionConfig.Path,
+				Paths:    []string{r.executionConfig.Path},
 				Interval: r.executionConfig.WatchInterval,
 				Callback: func() {
 					if r.shutdown.Load() {
@@ -1554,7 +1553,7 @@ func WithPlaygroundPath(p string) Option {
 	}
 }
 
-// WithPlaygroundPath sets the path where the GraphQL Playground is served.
+// WithPlaygroundConfig sets the path where the GraphQL Playground is served.
 func WithPlaygroundConfig(c config.PlaygroundConfig) Option {
 	return func(r *Router) {
 		r.playgroundConfig = c
@@ -1960,11 +1959,17 @@ func WithApolloCompatibilityFlagsConfig(cfg config.ApolloCompatibilityFlags) Opt
 			cfg.ValueCompletion.Enabled = true
 			cfg.TruncateFloats.Enabled = true
 			cfg.SuppressFetchErrors.Enabled = true
-			cfg.ReplaceUndefinedOpFieldErrors.Enabled = true
 			cfg.ReplaceInvalidVarErrors.Enabled = true
 			cfg.ReplaceValidationErrorStatus.Enabled = true
 			cfg.SubscriptionMultipartPrintBoundary.Enabled = true
+			cfg.UseGraphQLValidationFailedStatus.Enabled = true
 		}
+
+		if cfg.ReplaceUndefinedOpFieldErrors.Enabled {
+			cfg.UseGraphQLValidationFailedStatus.Enabled = true
+			r.logger.Warn("option apollo_compatibility_flags/replace_undefined_op_field_errors is deprecated, and has automatically been converted to apollo_compatibility_flags/use_graphql_validation_failed_status, please update your configuration")
+		}
+
 		r.apolloCompatibilityFlags = cfg
 	}
 }
