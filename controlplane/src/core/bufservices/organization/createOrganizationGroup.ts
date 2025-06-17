@@ -47,7 +47,7 @@ export function createOrganizationGroup(
       };
     }
 
-    const rbac = await orgRepo.getFeature({ organizationId: authContext.organizationId, featureId: 'rbac', });
+    const rbac = await orgRepo.getFeature({ organizationId: authContext.organizationId, featureId: 'rbac' });
     if (!rbac?.enabled) {
       return {
         response: {
