@@ -68,6 +68,8 @@ func createConfiguration(opts *config.CircuitBreaker) hystrix.Factory {
 		ConfigureOpener: hystrix.ConfigureOpener{
 			ErrorThresholdPercentage: opts.ErrorThresholdPercentage,
 			RequestVolumeThreshold:   opts.RequestThreshold,
+			RollingDuration:          opts.RollingDuration,
+			NumBuckets:               opts.NumBuckets,
 		},
 		ConfigureCloser: hystrix.ConfigureCloser{
 			SleepWindow:                  opts.SleepWindow,

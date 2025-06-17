@@ -209,6 +209,8 @@ type CircuitBreaker struct {
 	SleepWindow                  time.Duration `yaml:"sleep_window" envDefault:"5s"`
 	HalfOpenAttempts             int64         `yaml:"half_open_attempts" envDefault:"1"`
 	RequiredConcurrentSuccessful int64         `yaml:"required_concurrent_successful" envDefault:"1"`
+	RollingDuration              time.Duration `yaml:"rolling_duration" envDefault:"10s"`
+	NumBuckets                   int           `yaml:"num_buckets" envDefault:"10"`
 }
 
 type GraphqlMetrics struct {

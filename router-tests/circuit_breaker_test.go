@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"sync/atomic"
 	"testing"
+
 	"time"
 )
 
@@ -223,6 +224,127 @@ func TestCircuitBreaker(t *testing.T) {
 
 			contextMap := message.All()[1].ContextMap()
 			require.False(t, contextMap["isOpen"].(bool))
+		})
+	})
+
+	t.Run("verify circuit breaker rolling window", func(t *testing.T) {
+		t.Parallel()
+
+		var errorThresholdPercentage int64 = 32
+
+		breaker := getCircuitBreakerConfigsWithDefaults()
+		breaker.NumBuckets = 5
+		breaker.RequestThreshold = 4
+		breaker.RollingDuration = 2500 * time.Millisecond
+		breaker.ErrorThresholdPercentage = errorThresholdPercentage
+
+		durationPerBucket := breaker.RollingDuration / time.Duration(breaker.NumBuckets)
+		_ = durationPerBucket
+
+		trafficConfig := getTrafficConfigWithTimeout(breaker, 10*time.Millisecond)
+
+		// We use this variable to communicate between the subgraph
+		// what it should do, this is possible since we run requests one by one serially
+		var isSuccessRequest atomic.Bool
+
+		middleware := func(handler http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if isSuccessRequest.Load() {
+					_, err := w.Write([]byte(successSubgraphJson))
+					require.NoError(t, err)
+				} else {
+					time.Sleep(5 * time.Second)
+				}
+			})
+		}
+
+		t.Run("without timeouts in one bucket", func(t *testing.T) {
+			testenv.Run(t, &testenv.Config{
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.DebugLevel,
+				},
+				RouterOptions: []core.Option{
+					core.WithSubgraphCircuitBreakerOptions(core.NewSubgraphCircuitBreakerOptions(trafficConfig)),
+					core.WithSubgraphTransportOptions(core.NewSubgraphTransportOptions(trafficConfig)),
+				},
+				Subgraphs: testenv.SubgraphsConfig{
+					Employees: testenv.SubgraphConfig{
+						Middleware: middleware,
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				//time.Sleep(durationPerBucket * time.Millisecond)
+				t.Log("Bucket 1")
+				sendRequest(t, xEnv, &isSuccessRequest, false)
+
+				t.Log("Bucket 2")
+				sendRequest(t, xEnv, &isSuccessRequest, true)
+
+				t.Log("Bucket 3")
+				sendRequest(t, xEnv, &isSuccessRequest, true)
+
+				t.Log("Bucket 4")
+				sendRequest(t, xEnv, &isSuccessRequest, true)
+
+				t.Log("Bucket 5")
+				sendRequest(t, xEnv, &isSuccessRequest, true)
+
+				t.Log("Bucket 6:1")
+				sendRequest(t, xEnv, &isSuccessRequest, false)
+
+				message := xEnv.Observer().FilterMessage("Circuit breaker status changed")
+				require.Equal(t, 1, message.Len())
+			})
+		})
+
+		t.Run("with timeouts in multiple buckets", func(t *testing.T) {
+			testenv.Run(t, &testenv.Config{
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.DebugLevel,
+				},
+				RouterOptions: []core.Option{
+					core.WithSubgraphCircuitBreakerOptions(core.NewSubgraphCircuitBreakerOptions(trafficConfig)),
+					core.WithSubgraphTransportOptions(core.NewSubgraphTransportOptions(trafficConfig)),
+				},
+				Subgraphs: testenv.SubgraphsConfig{
+					Employees: testenv.SubgraphConfig{
+						Middleware: middleware,
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				t.Log("Bucket 1")
+				time.Sleep(durationPerBucket)
+				sendRequest(t, xEnv, &isSuccessRequest, false)
+
+				t.Log("Bucket 2")
+				time.Sleep(durationPerBucket)
+				sendRequest(t, xEnv, &isSuccessRequest, false)
+
+				t.Log("Bucket 3")
+				time.Sleep(durationPerBucket)
+				sendRequest(t, xEnv, &isSuccessRequest, true)
+
+				t.Log("Bucket 4")
+				time.Sleep(durationPerBucket)
+				sendRequest(t, xEnv, &isSuccessRequest, true)
+
+				t.Log("Bucket 5")
+				time.Sleep(durationPerBucket)
+				sendRequest(t, xEnv, &isSuccessRequest, true)
+
+				t.Log("Bucket 6:1")
+				time.Sleep(durationPerBucket)
+				sendRequest(t, xEnv, &isSuccessRequest, false)
+
+				time.Sleep(durationPerBucket)
+				sendRequest(t, xEnv, &isSuccessRequest, false)
+
+				// Circuit breaker should not have triggered, because we use separate buckets
+				message := xEnv.Observer().FilterMessage("Circuit breaker status changed")
+				require.Zero(t, message.Len())
+			})
 		})
 	})
 }
