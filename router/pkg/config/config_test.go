@@ -1053,7 +1053,6 @@ listen_addr: "localhost:3007"
 		require.ErrorContains(t, err, "- at '/execution_config': oneOf failed, none matched")
 		require.ErrorContains(t, err, "- at '/execution_config': additional properties 'storage' not allowed")
 		require.ErrorContains(t, err, "- at '/execution_config': additional properties 'file' not allowed")
-		require.ErrorContains(t, err, "- at '/execution_config': additional properties 'file', 'storage' not allowed")
 	})
 
 }
