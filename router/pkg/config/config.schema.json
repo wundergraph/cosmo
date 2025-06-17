@@ -2917,10 +2917,38 @@
           "additionalProperties": false,
           "properties": {
             "enabled": {
-              "type": "boolean"
+              "type": "boolean",
+              "description": "Enable the circuit breaker"
             },
-            "threshold": {
-              "type": "integer"
+            "request_threshold": {
+              "type": "integer",
+              "description": "The min number of pre-requisite requests required to start checking if the circuit breaker's status should be changed"
+            },
+            "error_threshold_percentage": {
+              "type": "integer",
+              "description": "The error threshold percentage that needs to be met in the rolling window to trigger the circuit to an open state"
+            },
+            "sleep_window": {
+              "type": "string",
+              "format": "go-duration",
+              "description": "After the circuit brekaer is open, how long the circuit breaker will reject requests before allowing to send a half open request"
+            },
+            "half_open_attempts": {
+              "type": "integer",
+              "description": "How many failed attempts are allowed to check if an open circuit can now make successful requests"
+            },
+            "required_successful": {
+              "type": "integer",
+              "description": "How many successful requests are required for a half open circuit breaker to close it"
+            },
+            "rolling_duration": {
+              "type": "string",
+              "format": "go-duration",
+              "description": "The duration of which information on failed and successful requests are stored"
+            },
+            "num_buckets": {
+              "type": "integer",
+              "description": "The number of buckets which store circuit requests information within a given rolling duration"
             }
           }
         },

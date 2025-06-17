@@ -758,20 +758,19 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	}
 
 	// Feature flags can fail independently of the base subgraph, thus we should have circuit breakers per feature flag + subgraph
-	var circuitBreakerManager *circuit.Manager
-	if s.subgraphCircuitBreakerOptions == nil {
-		// No-op so we don't need nil checks
-		circuitBreakerManager = circuit.NewManager(nil, nil, nil, "", nil, false)
-	} else {
-		circuitBreakerManager = circuit.NewManager(
-			s.subgraphCircuitBreakerOptions.CircuitBreaker,
-			s.subgraphCircuitBreakerOptions.SubgraphMap,
-			configSubgraphs,
-			featureFlagName,
-			gm.metricStore,
-			metricsEnabled,
-		)
+	managerOpts := circuit.ManagerOpts{}
+	if s.subgraphCircuitBreakerOptions != nil {
+		managerOpts = circuit.ManagerOpts{
+			BaseConfig:              s.subgraphCircuitBreakerOptions.CircuitBreaker,
+			SubgraphCircuitBreakers: s.subgraphCircuitBreakerOptions.SubgraphMap,
+			Subgraphs:               configSubgraphs,
+			FeatureFlagName:         featureFlagName,
+			MetricStore:             gm.metricStore,
+			UseMetrics:              metricsEnabled,
+			BaseOtelAttributes:      baseMetricAttributes,
+		}
 	}
+	circuitBreakerManager := circuit.NewManager(managerOpts)
 
 	subgraphs, err := configureSubgraphOverwrites(
 		engineConfig,

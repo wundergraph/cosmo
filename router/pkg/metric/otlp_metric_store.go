@@ -83,13 +83,13 @@ func (h *OtlpMetricStore) MeasureRequestCount(ctx context.Context, opts ...otelm
 	}
 }
 
-func (h *OtlpMetricStore) MeasureCircuitBreakerShortCircuits(ctx context.Context, opts ...otelmetric.AddOption) {
+func (h *OtlpMetricStore) MeasureCircuitBreakerShortCircuit(ctx context.Context, opts ...otelmetric.AddOption) {
 	if c, ok := h.measurements.counters[CircuitBreakerShortCircuitsCounter]; ok {
 		c.Add(ctx, 1, opts...)
 	}
 }
 
-func (h *OtlpMetricStore) SetCircuitBreakerStatus(ctx context.Context, state bool, opts ...otelmetric.RecordOption) {
+func (h *OtlpMetricStore) SetCircuitBreakerState(ctx context.Context, state bool, opts ...otelmetric.RecordOption) {
 	if c, ok := h.measurements.gauges[CircuitBreakerStateGauge]; ok {
 		// 0 Means it's not open, 1 means it's open
 		var boolAsInt int64 = 0

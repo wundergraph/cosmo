@@ -97,8 +97,8 @@ var (
 	}
 
 	CircuitBreakerShortCircuitsDescription = "Circuit breaker short circuits."
-	CircuitBreakerShortCircuitOptions = []otelmetric.Int64CounterOption{
-		otelmetric.WithDescription(CircuitBreakerShortCircuitsDescription},
+	CircuitBreakerShortCircuitOptions      = []otelmetric.Int64CounterOption{
+		otelmetric.WithDescription(CircuitBreakerShortCircuitsDescription),
 	}
 )
 
@@ -137,8 +137,8 @@ type (
 		MeasureRequestError(ctx context.Context, opts ...otelmetric.AddOption)
 		MeasureOperationPlanningTime(ctx context.Context, planningTime float64, opts ...otelmetric.RecordOption)
 		MeasureSchemaFieldUsage(ctx context.Context, schemaUsage int64, opts ...otelmetric.AddOption)
-		SetCircuitBreakerStatus(ctx context.Context, status bool, opts ...otelmetric.RecordOption)
-		MeasureCircuitBreakerShortCircuits(ctx context.Context, opts ...otelmetric.AddOption)
+		SetCircuitBreakerState(ctx context.Context, status bool, opts ...otelmetric.RecordOption)
+		MeasureCircuitBreakerShortCircuit(ctx context.Context, opts ...otelmetric.AddOption)
 		Flush(ctx context.Context) error
 		Shutdown() error
 	}
@@ -154,8 +154,8 @@ type (
 		MeasureRequestError(ctx context.Context, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption)
 		MeasureOperationPlanningTime(ctx context.Context, planningTime time.Duration, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption)
 		MeasureSchemaFieldUsage(ctx context.Context, schemaUsage int64, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption)
-		MeasureCircuitBreakerShortCircuits(ctx context.Context, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption)
-		SetCircuitBreakerState(ctx context.Context, state bool, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption)
+		MeasureCircuitBreakerShortCircuit(ctx context.Context, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption)
+		SetCircuitBreakerState(ctx context.Context, state bool, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption)
 		Flush(ctx context.Context) error
 		Shutdown(ctx context.Context) error
 	}
@@ -260,32 +260,32 @@ func (h *Metrics) MeasureRequestCount(ctx context.Context, sliceAttr []attribute
 	h.otlpRequestMetrics.MeasureRequestCount(ctx, opts...)
 }
 
-func (h *Metrics) MeasureCircuitBreakerShortCircuits(ctx context.Context, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption) {
+func (h *Metrics) MeasureCircuitBreakerShortCircuit(ctx context.Context, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption) {
 	opts := []otelmetric.AddOption{h.baseAttributesOpt, opt}
 
 	// Explode for prometheus metrics
 	if len(sliceAttr) == 0 {
-		h.promRequestMetrics.MeasureCircuitBreakerShortCircuits(ctx, opts...)
+		h.promRequestMetrics.MeasureCircuitBreakerShortCircuit(ctx, opts...)
 	} else {
 		explodeAddInstrument(ctx, sliceAttr, func(ctx context.Context, newOpts ...otelmetric.AddOption) {
 			newOpts = append(newOpts, opts...)
-			h.promRequestMetrics.MeasureCircuitBreakerShortCircuits(ctx, newOpts...)
+			h.promRequestMetrics.MeasureCircuitBreakerShortCircuit(ctx, newOpts...)
 		})
 	}
 
 	// OTEL metrics
 	opts = append(opts, otelmetric.WithAttributes(sliceAttr...))
-	h.otlpRequestMetrics.MeasureCircuitBreakerShortCircuits(ctx, opts...)
+	h.otlpRequestMetrics.MeasureCircuitBreakerShortCircuit(ctx, opts...)
 }
 
-func (h *Metrics) SetCircuitBreakerState(ctx context.Context, state bool, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption) {
-	opts := []otelmetric.AddOption{h.baseAttributesOpt, opt}
+func (h *Metrics) SetCircuitBreakerState(ctx context.Context, state bool, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption) {
+	opts := []otelmetric.RecordOption{h.baseAttributesOpt, opt}
 
 	// Explode for prometheus metrics
 	if len(sliceAttr) == 0 {
 		h.promRequestMetrics.SetCircuitBreakerState(ctx, state, opts...)
 	} else {
-		explodeAddInstrument(ctx, sliceAttr, func(ctx context.Context, newOpts ...otelmetric.AddOption) {
+		explodeRecordInstrument(ctx, sliceAttr, func(ctx context.Context, newOpts ...otelmetric.RecordOption) {
 			newOpts = append(newOpts, opts...)
 			h.promRequestMetrics.SetCircuitBreakerState(ctx, state, newOpts...)
 		})
@@ -293,7 +293,7 @@ func (h *Metrics) SetCircuitBreakerState(ctx context.Context, state bool, sliceA
 
 	// OTEL metrics
 	opts = append(opts, otelmetric.WithAttributes(sliceAttr...))
-	h.otlpRequestMetrics.SetCircuitBreakerState(ctx, opts...)
+	h.otlpRequestMetrics.SetCircuitBreakerState(ctx, state, opts...)
 }
 
 func (h *Metrics) MeasureRequestSize(ctx context.Context, contentLength int64, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption) {

@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"github.com/cep21/circuit/v4"
 	"github.com/cep21/circuit/v4/closers/hystrix"
-	"github.com/cep21/circuitotel"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/metric"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 type Manager struct {
@@ -32,46 +32,54 @@ func (c *Manager) IsEnabled() bool {
 	return c != nil && len(c.circuits) > 0
 }
 
-func NewManager(
-	all *config.CircuitBreaker,
-	subgraphCircuitBreakers map[string]*config.CircuitBreaker,
-	subgraphs []*nodev1.Subgraph,
-	featureFlagName string,
-	store metric.Store,
-	metricStoreEnabled bool,
-) *Manager {
+type ManagerOpts struct {
+	BaseConfig              *config.CircuitBreaker
+	SubgraphCircuitBreakers map[string]*config.CircuitBreaker
+	Subgraphs               []*nodev1.Subgraph
+	FeatureFlagName         string
+	MetricStore             metric.Store
+	UseMetrics              bool
+	BaseOtelAttributes      []attribute.KeyValue
+}
+
+func NewManager(opts ManagerOpts) *Manager {
 	circuitManager := circuit.Manager{}
 
-	if subgraphCircuitBreakers == nil {
+	if opts.SubgraphCircuitBreakers == nil {
 		return &Manager{}
 	}
 
-	var f circuitotel.Factory
-
-	isBaseEnabled := all != nil && all.Enabled
+	isBaseEnabled := opts.BaseConfig != nil && opts.BaseConfig.Enabled
 	if isBaseEnabled {
-		configuration := createConfiguration(all)
+		configuration := createConfiguration(opts.BaseConfig)
 		circuitManager.DefaultCircuitProperties = []circuit.CommandPropertiesConstructor{
 			configuration.Configure,
-			f.CommandPropertiesConstructor,
 		}
 	}
 
-	circuits := make(map[string]*circuit.Circuit, len(subgraphs))
-	for _, sg := range subgraphs {
+	circuits := make(map[string]*circuit.Circuit, len(opts.Subgraphs))
+	for _, sg := range opts.Subgraphs {
 		// Base graph will start with "::"
-		sgCbName := fmt.Sprintf("%s::%s", featureFlagName, sg.Name)
+		sgCbName := fmt.Sprintf("%s::%s", opts.FeatureFlagName, sg.Name)
 
-		sgOptions, ok := subgraphCircuitBreakers[sg.Name]
-		if !ok && sgOptions == nil {
+		// Set metrics wrapper
+		configs := make([]circuit.Config, 0, 1)
+		if opts.UseMetrics {
+			configs = append(configs, metric.NewCircuitBreakerMetricsConfig(sg.Name, opts.MetricStore, opts.BaseOtelAttributes))
+		}
+
+		sgOptions, ok := opts.SubgraphCircuitBreakers[sg.Name]
+		if !ok {
 			// If we have an all option set we can create a circuit breaker for everyone
 			if isBaseEnabled {
-				circuits[sgCbName] = circuitManager.MustCreateCircuit(sgCbName)
+				circuits[sgCbName] = circuitManager.MustCreateCircuit(sgCbName, configs...)
 			}
 			continue
 		}
+
 		newConfig := createConfiguration(sgOptions)
-		circuits[sgCbName] = circuitManager.MustCreateCircuit(sgCbName, newConfig.Configure(sgCbName))
+		configs = append(configs, newConfig.Configure(sgCbName))
+		circuits[sgCbName] = circuitManager.MustCreateCircuit(sgCbName, configs...)
 	}
 
 	return &Manager{
@@ -90,7 +98,7 @@ func createConfiguration(opts *config.CircuitBreaker) hystrix.Factory {
 		ConfigureCloser: hystrix.ConfigureCloser{
 			SleepWindow:                  opts.SleepWindow,
 			HalfOpenAttempts:             opts.HalfOpenAttempts,
-			RequiredConcurrentSuccessful: opts.RequiredConcurrentSuccessful,
+			RequiredConcurrentSuccessful: opts.RequiredSuccessfulAttempts,
 		},
 	}
 	return configuration
