@@ -150,13 +150,13 @@
         "RollingDuration": 10000000000,
         "NumBuckets": 10
       },
-      "RequestTimeout": 2000000000,
-      "DialTimeout": 2000000000,
+      "RequestTimeout": 60000000000,
+      "DialTimeout": 30000000000,
       "ResponseHeaderTimeout": 0,
       "ExpectContinueTimeout": 0,
-      "TLSHandshakeTimeout": 2000000000,
-      "KeepAliveIdleTimeout": 2000000000,
-      "KeepAliveProbeInterval": 2000000000,
+      "TLSHandshakeTimeout": 10000000000,
+      "KeepAliveIdleTimeout": 90000000000,
+      "KeepAliveProbeInterval": 30000000000,
       "MaxConnsPerHost": 100,
       "MaxIdleConns": 1024,
       "MaxIdleConnsPerHost": 20

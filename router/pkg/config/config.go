@@ -184,13 +184,13 @@ type GlobalSubgraphRequestRule struct {
 	CircuitBreaker     CircuitBreaker     `yaml:"circuit_breaker"`
 	// See https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/
 
-	RequestTimeout         *time.Duration `yaml:"request_timeout,omitempty" envDefault:"2s"`
-	DialTimeout            *time.Duration `yaml:"dial_timeout,omitempty" envDefault:"2s"`
+	RequestTimeout         *time.Duration `yaml:"request_timeout,omitempty" envDefault:"60s"`
+	DialTimeout            *time.Duration `yaml:"dial_timeout,omitempty" envDefault:"30s"`
 	ResponseHeaderTimeout  *time.Duration `yaml:"response_header_timeout,omitempty" envDefault:"0s"`
 	ExpectContinueTimeout  *time.Duration `yaml:"expect_continue_timeout,omitempty" envDefault:"0s"`
-	TLSHandshakeTimeout    *time.Duration `yaml:"tls_handshake_timeout,omitempty" envDefault:"2s"`
-	KeepAliveIdleTimeout   *time.Duration `yaml:"keep_alive_idle_timeout,omitempty" envDefault:"2s"`
-	KeepAliveProbeInterval *time.Duration `yaml:"keep_alive_probe_interval,omitempty" envDefault:"2s"`
+	TLSHandshakeTimeout    *time.Duration `yaml:"tls_handshake_timeout,omitempty" envDefault:"10s"`
+	KeepAliveIdleTimeout   *time.Duration `yaml:"keep_alive_idle_timeout,omitempty" envDefault:"90s"`
+	KeepAliveProbeInterval *time.Duration `yaml:"keep_alive_probe_interval,omitempty" envDefault:"30s"`
 
 	// Connection configuration
 	MaxConnsPerHost     *int `yaml:"max_conns_per_host,omitempty" envDefault:"100"`
