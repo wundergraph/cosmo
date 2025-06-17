@@ -2,6 +2,10 @@ package integration
 
 import (
 	"context"
+	"net/http"
+	"sync/atomic"
+	"testing"
+
 	"github.com/caarlos0/env/v11"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
@@ -14,9 +18,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.uber.org/zap/zapcore"
-	"net/http"
-	"sync/atomic"
-	"testing"
 
 	"time"
 )
@@ -26,8 +27,15 @@ const subgraphErrorJson = `{"errors":[{"message":"Failed to fetch from Subgraph 
 
 const (
 	AttemptSuccessfulRequest = true
-	AttemptFailedRequest     = false
+	SendFailedRequest        = false
 )
+
+type SendRequestOptions struct {
+	t                *testing.T
+	xEnv             *testenv.Environment
+	isSuccessRequest *atomic.Bool
+	invertCheck      bool
+}
 
 func TestCircuitBreaker(t *testing.T) {
 
@@ -60,13 +68,15 @@ func TestCircuitBreaker(t *testing.T) {
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
+			opts := SendRequestOptions{t: t, xEnv: xEnv}
+
 			// The circuit is internally marked as tripped post-request
 			// thus even though N requests are executed we only care about when the status changed to tripped
 			requestsRequiredToTrip := breaker.RequestThreshold - 1
 
 			// PRE TRIP REQUESTS
 			for range requestsRequiredToTrip {
-				sendRequest(t, xEnv, nil, "", AttemptFailedRequest)
+				sendRequest(opts, "", SendFailedRequest)
 			}
 
 			// Verify that the circuit breaker status has not changed yet
@@ -74,14 +84,14 @@ func TestCircuitBreaker(t *testing.T) {
 			require.Zero(t, preCircuitBreak.Len())
 
 			// TRIP REQUEST: This is the request that will trip the circuit breaker
-			sendRequest(t, xEnv, nil, "", AttemptFailedRequest)
+			sendRequest(opts, "", SendFailedRequest)
 
 			// Verify that the circuit breaker status changed, but it was not already open
 			require.Equal(t, 1, xEnv.Observer().FilterMessage("Circuit breaker status changed").Len())
 			require.Zero(t, xEnv.Observer().FilterMessage("Circuit breaker open, request callback did not execute").Len())
 
 			// DENIED REQUEST: This is the request that will be denied due to the circuit breaker being already open
-			sendRequest(t, xEnv, nil, "", AttemptFailedRequest)
+			sendRequest(opts, "", SendFailedRequest)
 
 			// Verify that the callback did not run
 			postDeniedRequest := xEnv.Observer().FilterMessage("Circuit breaker open, request callback did not execute")
@@ -130,12 +140,14 @@ func TestCircuitBreaker(t *testing.T) {
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
+			opts := SendRequestOptions{t: t, xEnv: xEnv, isSuccessRequest: &isSuccessRequest}
+
 			// PRE TRIP requests
 			for range successRequests {
-				sendRequest(t, xEnv, &isSuccessRequest, "", AttemptSuccessfulRequest)
+				sendRequest(opts, "", AttemptSuccessfulRequest)
 			}
 			for range failureRequests - 1 {
-				sendRequest(t, xEnv, &isSuccessRequest, "", AttemptFailedRequest)
+				sendRequest(opts, "", SendFailedRequest)
 			}
 
 			// Verify that the circuit breaker status has not changed yet
@@ -143,14 +155,14 @@ func TestCircuitBreaker(t *testing.T) {
 			require.Zero(t, preCircuitBreak.Len())
 
 			// TRIP REQUEST: This is the request that will trip the circuit breaker
-			sendRequest(t, xEnv, &isSuccessRequest, "", AttemptFailedRequest)
+			sendRequest(opts, "", SendFailedRequest)
 
 			// Verify that the circuit breaker status changed, but it was not already open
 			require.Equal(t, 1, xEnv.Observer().FilterMessage("Circuit breaker status changed").Len())
 			require.Zero(t, xEnv.Observer().FilterMessage("Circuit breaker open, request callback did not execute").Len())
 
 			// DENIED REQUEST: This is the request that will be denied due to the circuit breaker being already open
-			sendRequest(t, xEnv, &isSuccessRequest, "", AttemptFailedRequest)
+			sendRequest(opts, "", SendFailedRequest)
 
 			// Verify that the callback did not run
 			postDeniedRequest := xEnv.Observer().FilterMessage("Circuit breaker open, request callback did not execute")
@@ -198,11 +210,13 @@ func TestCircuitBreaker(t *testing.T) {
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
+			opts := SendRequestOptions{t: t, xEnv: xEnv, isSuccessRequest: &isSuccessRequest}
+
 			for range requestsToSucceed {
-				sendRequest(t, xEnv, &isSuccessRequest, "", AttemptSuccessfulRequest)
+				sendRequest(opts, "", AttemptSuccessfulRequest)
 			}
 			for range requestsToFail {
-				sendRequest(t, xEnv, &isSuccessRequest, "", AttemptFailedRequest)
+				sendRequest(opts, "", SendFailedRequest)
 			}
 
 			// Baseline verification
@@ -212,17 +226,17 @@ func TestCircuitBreaker(t *testing.T) {
 			// Wait for the circuit breaker to become half open
 			time.Sleep(breaker.SleepWindow + 100*time.Millisecond)
 
-			// We try to send a call when its half open but it fails, making it fully open again
+			// We try to send a call when its half open, but it fails, making it fully open again
 			// Half Open Attempt 1 and 2: Failure
-			sendRequest(t, xEnv, &isSuccessRequest, "", AttemptFailedRequest)
-			sendRequest(t, xEnv, &isSuccessRequest, "", AttemptFailedRequest)
+			sendRequest(opts, "", SendFailedRequest)
+			sendRequest(opts, "", SendFailedRequest)
 			// Since the closing attempts failed we should still have the same length as before
 			require.Equal(t, 1, xEnv.Observer().FilterMessage("Circuit breaker status changed").Len())
 
 			// Wait for the circuit breaker to become half open for the second time
 			time.Sleep(breaker.SleepWindow + 100*time.Millisecond)
 
-			sendRequest(t, xEnv, &isSuccessRequest, "", AttemptSuccessfulRequest)
+			sendRequest(opts, "", AttemptSuccessfulRequest)
 
 			message := xEnv.Observer().FilterMessage("Circuit breaker status changed")
 			require.Equal(t, 2, message.Len())
@@ -273,11 +287,13 @@ func TestCircuitBreaker(t *testing.T) {
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
+			opts := SendRequestOptions{t: t, xEnv: xEnv, isSuccessRequest: &isSuccessRequest}
+
 			for range requestsToSucceed {
-				sendRequest(t, xEnv, &isSuccessRequest, "", AttemptSuccessfulRequest)
+				sendRequest(opts, "", AttemptSuccessfulRequest)
 			}
 			for range requestsToFail {
-				sendRequest(t, xEnv, &isSuccessRequest, "", AttemptFailedRequest)
+				sendRequest(opts, "", SendFailedRequest)
 			}
 
 			// Baseline verification
@@ -287,17 +303,26 @@ func TestCircuitBreaker(t *testing.T) {
 			// Wait for the circuit breaker to become half open
 			time.Sleep(breaker.SleepWindow + 100*time.Millisecond)
 
-			// Attempt 1 to open: Fail
-			//sendRequest(t, xEnv, &isSuccessRequest, "", false)
-
 			// We need three successful attempts to close the circuit breaker
-			// Attempt 2 to open: Success 1 to 3
-			sendRequest(t, xEnv, &isSuccessRequest, "", AttemptSuccessfulRequest)
-			sendRequest(t, xEnv, &isSuccessRequest, "", AttemptSuccessfulRequest)
-			//sendRequest(t, xEnv, &isSuccessRequest, "", true)
+			// Attempt 1 and 2 to open
+			sendRequest(opts, "", AttemptSuccessfulRequest)
+			sendRequest(opts, "", AttemptSuccessfulRequest)
+
+			// We are attempting a successful request, however since the state
+			// is still half-open, and the max attempts is 2 this will cause
+			// the request to fail
+			optsCopy := opts
+			optsCopy.invertCheck = true
+			sendRequest(optsCopy, "", AttemptSuccessfulRequest)
+
+			// Verify that nothing has changed despite two successful attempts
+			require.Equal(t, 1, xEnv.Observer().FilterMessage("Circuit breaker status changed").Len())
 
 			time.Sleep(breaker.SleepWindow + 100*time.Millisecond)
 
+			sendRequest(opts, "", AttemptSuccessfulRequest)
+
+			// Should be changed
 			message := xEnv.Observer().FilterMessage("Circuit breaker status changed")
 			require.Equal(t, 2, message.Len())
 
@@ -349,25 +374,26 @@ func TestCircuitBreaker(t *testing.T) {
 					},
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
+				opts := SendRequestOptions{t: t, xEnv: xEnv, isSuccessRequest: &isSuccessRequest}
 				t.Log("Bucket 1")
 				time.Sleep(durationPerBucket)
-				sendRequest(t, xEnv, &isSuccessRequest, "", AttemptFailedRequest)
+				sendRequest(opts, "", SendFailedRequest)
 
 				t.Log("Bucket 2")
 				time.Sleep(durationPerBucket)
-				sendRequest(t, xEnv, &isSuccessRequest, "", AttemptFailedRequest)
+				sendRequest(opts, "", SendFailedRequest)
 
 				t.Log("Bucket 3")
 				time.Sleep(durationPerBucket)
-				sendRequest(t, xEnv, &isSuccessRequest, "", AttemptSuccessfulRequest)
+				sendRequest(opts, "", AttemptSuccessfulRequest)
 
 				t.Log("Bucket 4")
 				time.Sleep(durationPerBucket)
-				sendRequest(t, xEnv, &isSuccessRequest, "", AttemptFailedRequest)
+				sendRequest(opts, "", SendFailedRequest)
 
 				t.Log("Bucket 5")
 				time.Sleep(durationPerBucket)
-				sendRequest(t, xEnv, &isSuccessRequest, "", AttemptFailedRequest)
+				sendRequest(opts, "", SendFailedRequest)
 
 				// Circuit breaker should not have triggered as bucket 3 has not been evicted to meet 90% err rate
 				message := xEnv.Observer().FilterMessage("Circuit breaker status changed")
@@ -375,11 +401,11 @@ func TestCircuitBreaker(t *testing.T) {
 
 				t.Log("Bucket 6: evict bucket 1")
 				time.Sleep(durationPerBucket)
-				sendRequest(t, xEnv, &isSuccessRequest, "", AttemptFailedRequest)
+				sendRequest(opts, "", SendFailedRequest)
 
 				t.Log("Bucket 7: evict bucket 2")
 				time.Sleep(durationPerBucket)
-				sendRequest(t, xEnv, &isSuccessRequest, "", AttemptFailedRequest)
+				sendRequest(opts, "", SendFailedRequest)
 
 				// Circuit breaker should not have triggered as bucket 3 has not been evicted to meet 90% err rate
 				message = xEnv.Observer().FilterMessage("Circuit breaker status changed")
@@ -387,7 +413,7 @@ func TestCircuitBreaker(t *testing.T) {
 
 				t.Log("Bucket 8: evict bucket 3")
 				time.Sleep(durationPerBucket)
-				sendRequest(t, xEnv, &isSuccessRequest, "", AttemptFailedRequest)
+				sendRequest(opts, "", SendFailedRequest)
 
 				// Evict bucket 3 with true causing a 100% error rate
 				message = xEnv.Observer().FilterMessage("Circuit breaker status changed")
@@ -411,30 +437,31 @@ func TestCircuitBreaker(t *testing.T) {
 					},
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
+				opts := SendRequestOptions{t: t, xEnv: xEnv, isSuccessRequest: &isSuccessRequest}
 				t.Log("Bucket 1")
 				time.Sleep(durationPerBucket)
-				sendRequest(t, xEnv, &isSuccessRequest, "", AttemptFailedRequest)
-				sendRequest(t, xEnv, &isSuccessRequest, "", AttemptFailedRequest)
+				sendRequest(opts, "", SendFailedRequest)
+				sendRequest(opts, "", SendFailedRequest)
 				require.Zero(t, 0, xEnv.Observer().FilterMessage("Circuit breaker status changed").Len())
 
 				t.Log("Bucket 2")
 				time.Sleep(durationPerBucket)
-				sendRequest(t, xEnv, &isSuccessRequest, "", AttemptFailedRequest)
-				sendRequest(t, xEnv, &isSuccessRequest, "", AttemptFailedRequest)
+				sendRequest(opts, "", SendFailedRequest)
+				sendRequest(opts, "", SendFailedRequest)
 				require.Zero(t, 0, xEnv.Observer().FilterMessage("Circuit breaker status changed").Len())
 
 				t.Log("Bucket 3")
 				time.Sleep(durationPerBucket)
-				sendRequest(t, xEnv, &isSuccessRequest, "", AttemptSuccessfulRequest)
-				sendRequest(t, xEnv, &isSuccessRequest, "", AttemptFailedRequest)
-				sendRequest(t, xEnv, &isSuccessRequest, "", AttemptFailedRequest)
-				sendRequest(t, xEnv, &isSuccessRequest, "", AttemptFailedRequest)
+				sendRequest(opts, "", AttemptSuccessfulRequest)
+				sendRequest(opts, "", SendFailedRequest)
+				sendRequest(opts, "", SendFailedRequest)
+				sendRequest(opts, "", SendFailedRequest)
 				require.Zero(t, 0, xEnv.Observer().FilterMessage("Circuit breaker status changed").Len())
 
 				// 1/9 successful requests
 				t.Log("Bucket 4")
 				time.Sleep(durationPerBucket)
-				sendRequest(t, xEnv, &isSuccessRequest, "", AttemptFailedRequest)
+				sendRequest(opts, "", SendFailedRequest)
 				require.Zero(t, 0, xEnv.Observer().FilterMessage("Circuit breaker status changed").Len())
 
 				t.Log("Bucket 5")
@@ -443,14 +470,14 @@ func TestCircuitBreaker(t *testing.T) {
 				// 1/8 successful requests
 				t.Log("Bucket 6: evict bucket 1")
 				time.Sleep(durationPerBucket)
-				sendRequest(t, xEnv, &isSuccessRequest, "", AttemptFailedRequest)
+				sendRequest(opts, "", SendFailedRequest)
 				require.Zero(t, 0, xEnv.Observer().FilterMessage("Circuit breaker status changed").Len())
 
 				// 1/8 successful requests
 				t.Log("Bucket 7: evict bucket 2")
 				time.Sleep(durationPerBucket)
-				sendRequest(t, xEnv, &isSuccessRequest, "", AttemptFailedRequest)
-				sendRequest(t, xEnv, &isSuccessRequest, "", AttemptFailedRequest)
+				sendRequest(opts, "", SendFailedRequest)
+				sendRequest(opts, "", SendFailedRequest)
 				require.Zero(t, 0, xEnv.Observer().FilterMessage("Circuit breaker status changed").Len())
 
 				t.Log("Bucket 8: evict bucket 3")
@@ -459,7 +486,7 @@ func TestCircuitBreaker(t *testing.T) {
 				// but we are under the threshold of 5 requests to trigger the circuit
 				require.Zero(t, 0, xEnv.Observer().FilterMessage("Circuit breaker status changed").Len())
 
-				sendRequest(t, xEnv, &isSuccessRequest, "", AttemptFailedRequest)
+				sendRequest(opts, "", SendFailedRequest)
 
 				// 0/5 successful requests, which means err percentage is over 90% (100%) and 5 requests
 				require.Equal(t, 1, xEnv.Observer().FilterMessage("Circuit breaker status changed").Len())
@@ -502,16 +529,17 @@ func TestCircuitBreaker(t *testing.T) {
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
+			opts := SendRequestOptions{t: t, xEnv: xEnv, isSuccessRequest: &isSuccessRequest}
 			// Trip the base
-			sendRequest(t, xEnv, &isSuccessRequest, "", AttemptFailedRequest)
+			sendRequest(opts, "", SendFailedRequest)
 			require.Zero(t, xEnv.Observer().FilterMessage("Circuit breaker status changed").Len())
-			sendRequest(t, xEnv, &isSuccessRequest, "", AttemptFailedRequest)
+			sendRequest(opts, "", SendFailedRequest)
 			require.Equal(t, 1, xEnv.Observer().FilterMessage("Circuit breaker status changed").Len())
 
 			// Trip the feature flag
-			sendRequest(t, xEnv, &isSuccessRequest, "myff", AttemptFailedRequest)
+			sendRequest(opts, "myff", SendFailedRequest)
 			require.Equal(t, 1, xEnv.Observer().FilterMessage("Circuit breaker status changed").Len())
-			sendRequest(t, xEnv, &isSuccessRequest, "myff", AttemptFailedRequest)
+			sendRequest(opts, "myff", SendFailedRequest)
 			require.Equal(t, 2, xEnv.Observer().FilterMessage("Circuit breaker status changed").Len())
 		})
 	})
@@ -548,9 +576,10 @@ func TestCircuitBreaker(t *testing.T) {
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
+			opts := SendRequestOptions{t: t, xEnv: xEnv}
 			var requestsToSend int64 = 5
 			for range requestsToSend {
-				sendRequest(t, xEnv, nil, "", AttemptFailedRequest)
+				sendRequest(opts, "", SendFailedRequest)
 			}
 
 			rm := metricdata.ResourceMetrics{}
@@ -630,8 +659,9 @@ func TestCircuitBreaker(t *testing.T) {
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
+			opts := SendRequestOptions{t: t, xEnv: xEnv, isSuccessRequest: &isSuccessRequest}
 			// Send initial request
-			sendRequest(t, xEnv, &isSuccessRequest, "", AttemptFailedRequest)
+			sendRequest(opts, "", SendFailedRequest)
 
 			// Ensure that the metric does not exist still, as it's only recorded when state is changed
 			rm := metricdata.ResourceMetrics{}
@@ -641,7 +671,7 @@ func TestCircuitBreaker(t *testing.T) {
 
 			// Send requests to trip circuit breaker
 			for range breaker.RequestThreshold - 1 {
-				sendRequest(t, xEnv, &isSuccessRequest, "", AttemptFailedRequest)
+				sendRequest(opts, "", SendFailedRequest)
 			}
 
 			rm = metricdata.ResourceMetrics{}
@@ -673,7 +703,7 @@ func TestCircuitBreaker(t *testing.T) {
 			time.Sleep(breaker.SleepWindow + 100*time.Millisecond)
 
 			// Send successful request to close circuit breaker
-			sendRequest(t, xEnv, &isSuccessRequest, "", AttemptSuccessfulRequest)
+			sendRequest(opts, "", AttemptSuccessfulRequest)
 
 			rm = metricdata.ResourceMetrics{}
 			require.NoError(t, metricReader.Collect(context.Background(), &rm))
@@ -703,9 +733,9 @@ func TestCircuitBreaker(t *testing.T) {
 	})
 }
 
-func sendRequest(t *testing.T, xEnv *testenv.Environment, isSuccessRequest *atomic.Bool, featureFlag string, isSuccess bool) {
-	if isSuccessRequest != nil {
-		isSuccessRequest.Store(isSuccess)
+func sendRequest(opts SendRequestOptions, featureFlag string, isSuccess bool) {
+	if opts.isSuccessRequest != nil {
+		opts.isSuccessRequest.Store(isSuccess)
 	}
 	time.Sleep(5 * time.Millisecond)
 	request := testenv.GraphQLRequest{Query: `query employees { employees { id } }`}
@@ -716,13 +746,19 @@ func sendRequest(t *testing.T, xEnv *testenv.Environment, isSuccessRequest *atom
 		}
 	}
 
-	res, err := xEnv.MakeGraphQLRequest(request)
-	require.NoError(t, err)
-	// Note that even if isSuccess is true, if the circuit is triggered this will be unsuccessful
-	if isSuccess {
-		require.JSONEq(t, successSubgraphJson, res.Body)
+	res, err := opts.xEnv.MakeGraphQLRequest(request)
+	require.NoError(opts.t, err)
+
+	check := isSuccess
+	if opts.invertCheck {
+		check = !check
+	}
+
+	// Note that even if check is true (when not inverted), if the circuit is triggered this will be unsuccessful
+	if check {
+		require.JSONEq(opts.t, successSubgraphJson, res.Body)
 	} else {
-		require.JSONEq(t, subgraphErrorJson, res.Body)
+		require.JSONEq(opts.t, subgraphErrorJson, res.Body)
 	}
 }
 
@@ -742,17 +778,12 @@ func getTrafficConfigWithTimeout(breaker config.CircuitBreaker, timeout time.Dur
 			BackoffJitterRetry: config.BackoffJitterRetry{
 				Enabled: false,
 			},
-			CircuitBreaker:         breaker,
-			RequestTimeout:         ToPtr(timeout),
-			DialTimeout:            ToPtr(timeout),
-			ResponseHeaderTimeout:  ToPtr(timeout),
-			ExpectContinueTimeout:  ToPtr(timeout),
-			TLSHandshakeTimeout:    ToPtr(timeout),
-			KeepAliveIdleTimeout:   ToPtr(timeout),
-			KeepAliveProbeInterval: ToPtr(timeout),
-			MaxConnsPerHost:        ToPtr(20),
-			MaxIdleConns:           ToPtr(20),
-			MaxIdleConnsPerHost:    ToPtr(20),
+			CircuitBreaker:      breaker,
+			RequestTimeout:      ToPtr(timeout),
+			DialTimeout:         ToPtr(timeout),
+			MaxConnsPerHost:     ToPtr(20),
+			MaxIdleConns:        ToPtr(20),
+			MaxIdleConnsPerHost: ToPtr(20),
 		},
 	}
 	return trafficConfig
