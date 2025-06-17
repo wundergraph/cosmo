@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.84.1](https://github.com/wundergraph/cosmo/compare/wgc@0.84.0...wgc@0.84.1) (2025-06-17)
+
+### Bug Fixes
+
+* skip auth check for plugin commands ([#1973](https://github.com/wundergraph/cosmo/issues/1973)) ([687e714](https://github.com/wundergraph/cosmo/commit/687e714fd6bccd86b7e8f83571a1181409f97e98)) (@StarpTech)
+
 # [0.84.0](https://github.com/wundergraph/cosmo/compare/wgc@0.83.3...wgc@0.84.0) (2025-06-06)
 
 ### Features
