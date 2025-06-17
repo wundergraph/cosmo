@@ -18,8 +18,16 @@ export default (opts: BaseCommandOptions) => {
     'The output directory for the protobuf schema. If not provided, the output directory will be the same as the input file.',
     '',
   );
-  command.option('-p, --package-name <name>', 'The name of the proto package. If not provided, the package name will default to "service".', 'service');
-  command.option('-g, --go-package <name>', 'The name of the go package. If not provided, the go package name will default to "github.com/wundergraph/cosmo/demo/test".', 'github.com/wundergraph/cosmo/demo/test');
+  command.option(
+    '-p, --package-name <name>',
+    'The name of the proto package. If not provided, the package name will default to "service".',
+    'service',
+  );
+  command.option(
+    '-g, --go-package <name>',
+    'The name of the go package. If not provided, the go package name will default to "github.com/wundergraph/cosmo/demo/test".',
+    'github.com/wundergraph/cosmo/demo/test',
+  );
   command.action(generateCommandAction);
 
   return command;
