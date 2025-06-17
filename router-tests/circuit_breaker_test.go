@@ -22,8 +22,8 @@ import (
 	"time"
 )
 
-const successSubgraphJson = `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
-const subgraphErrorJson = `{"errors":[{"message":"Failed to fetch from Subgraph 'employees'."}],"data":{"employees":null}}`
+const successSubgraphJSON = `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
+const subgraphErrorJSON = `{"errors":[{"message":"Failed to fetch from Subgraph 'employees'."}],"data":{"employees":null}}`
 
 const (
 	AttemptSuccessfulRequest = true
@@ -43,7 +43,7 @@ func TestCircuitBreaker(t *testing.T) {
 		t.Parallel()
 
 		// Use defaults, but override required
-		breaker := getCircuitBreakerConfigsWithDefaults()
+		breaker := getCircuitBreakerConfigsWithDefaults(t)
 		breaker.RequestThreshold = 2
 
 		trafficConfig := getTrafficConfigWithTimeout(breaker, 1*time.Second)
@@ -59,8 +59,8 @@ func TestCircuitBreaker(t *testing.T) {
 			},
 			Subgraphs: testenv.SubgraphsConfig{
 				Employees: testenv.SubgraphConfig{
-					Middleware: func(handler http.Handler) http.Handler {
-						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					Middleware: func(_ http.Handler) http.Handler {
+						return http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
 							// Timeout to simulate an error for the circuit breaker due to network timeout
 							time.Sleep(5 * time.Second)
 						})
@@ -107,7 +107,7 @@ func TestCircuitBreaker(t *testing.T) {
 		var failureRequests = 7
 
 		// Use defaults, but override required
-		breaker := getCircuitBreakerConfigsWithDefaults()
+		breaker := getCircuitBreakerConfigsWithDefaults(t)
 		breaker.ErrorThresholdPercentage = 70
 
 		trafficConfig := getTrafficConfigWithTimeout(breaker, 1*time.Second)
@@ -127,10 +127,10 @@ func TestCircuitBreaker(t *testing.T) {
 			},
 			Subgraphs: testenv.SubgraphsConfig{
 				Employees: testenv.SubgraphConfig{
-					Middleware: func(handler http.Handler) http.Handler {
-						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					Middleware: func(_ http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 							if isSuccessRequest.Load() {
-								_, err := w.Write([]byte(successSubgraphJson))
+								_, err := w.Write([]byte(successSubgraphJSON))
 								require.NoError(t, err)
 							} else {
 								time.Sleep(5 * time.Second)
@@ -177,7 +177,7 @@ func TestCircuitBreaker(t *testing.T) {
 		var requestsToFail = 9
 
 		// Use defaults, but override required
-		breaker := getCircuitBreakerConfigsWithDefaults()
+		breaker := getCircuitBreakerConfigsWithDefaults(t)
 		breaker.HalfOpenAttempts = 2
 		breaker.SleepWindow = 2 * time.Second
 		breaker.ErrorThresholdPercentage = 70
@@ -197,10 +197,10 @@ func TestCircuitBreaker(t *testing.T) {
 			},
 			Subgraphs: testenv.SubgraphsConfig{
 				Employees: testenv.SubgraphConfig{
-					Middleware: func(handler http.Handler) http.Handler {
-						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					Middleware: func(_ http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 							if isSuccessRequest.Load() {
-								_, err := w.Write([]byte(successSubgraphJson))
+								_, err := w.Write([]byte(successSubgraphJSON))
 								require.NoError(t, err)
 							} else {
 								time.Sleep(5 * time.Second)
@@ -253,7 +253,7 @@ func TestCircuitBreaker(t *testing.T) {
 		var requestsToFail = 9
 
 		// Use defaults, but override required
-		breaker := getCircuitBreakerConfigsWithDefaults()
+		breaker := getCircuitBreakerConfigsWithDefaults(t)
 		breaker.HalfOpenAttempts = 2
 		breaker.SleepWindow = 2 * time.Second
 		breaker.ErrorThresholdPercentage = 70
@@ -274,10 +274,10 @@ func TestCircuitBreaker(t *testing.T) {
 			},
 			Subgraphs: testenv.SubgraphsConfig{
 				Employees: testenv.SubgraphConfig{
-					Middleware: func(handler http.Handler) http.Handler {
-						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					Middleware: func(_ http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 							if isSuccessRequest.Load() {
-								_, err := w.Write([]byte(successSubgraphJson))
+								_, err := w.Write([]byte(successSubgraphJSON))
 								require.NoError(t, err)
 							} else {
 								time.Sleep(5 * time.Second)
@@ -334,7 +334,7 @@ func TestCircuitBreaker(t *testing.T) {
 	t.Run("verify circuit breaker rolling window", func(t *testing.T) {
 		t.Parallel()
 
-		breaker := getCircuitBreakerConfigsWithDefaults()
+		breaker := getCircuitBreakerConfigsWithDefaults(t)
 		breaker.NumBuckets = 5
 		breaker.RequestThreshold = 5
 		breaker.RollingDuration = 2500 * time.Millisecond
@@ -346,17 +346,6 @@ func TestCircuitBreaker(t *testing.T) {
 		trafficConfig := getTrafficConfigWithTimeout(breaker, 10*time.Millisecond)
 
 		var isSuccessRequest atomic.Bool
-
-		middleware := func(handler http.Handler) http.Handler {
-			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if isSuccessRequest.Load() {
-					_, err := w.Write([]byte(successSubgraphJson))
-					require.NoError(t, err)
-				} else {
-					time.Sleep(5 * time.Second)
-				}
-			})
-		}
 
 		t.Run("with one request per bucket", func(t *testing.T) {
 			testenv.Run(t, &testenv.Config{
@@ -370,7 +359,16 @@ func TestCircuitBreaker(t *testing.T) {
 				},
 				Subgraphs: testenv.SubgraphsConfig{
 					Employees: testenv.SubgraphConfig{
-						Middleware: middleware,
+						Middleware: func(_ http.Handler) http.Handler {
+							return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+								if isSuccessRequest.Load() {
+									_, err := w.Write([]byte(successSubgraphJSON))
+									require.NoError(t, err)
+								} else {
+									time.Sleep(5 * time.Second)
+								}
+							})
+						},
 					},
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -433,7 +431,16 @@ func TestCircuitBreaker(t *testing.T) {
 				},
 				Subgraphs: testenv.SubgraphsConfig{
 					Employees: testenv.SubgraphConfig{
-						Middleware: middleware,
+						Middleware: func(_ http.Handler) http.Handler {
+							return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+								if isSuccessRequest.Load() {
+									_, err := w.Write([]byte(successSubgraphJSON))
+									require.NoError(t, err)
+								} else {
+									time.Sleep(5 * time.Second)
+								}
+							})
+						},
 					},
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -442,13 +449,13 @@ func TestCircuitBreaker(t *testing.T) {
 				time.Sleep(durationPerBucket)
 				sendRequest(opts, "", SendFailedRequest)
 				sendRequest(opts, "", SendFailedRequest)
-				require.Zero(t, 0, xEnv.Observer().FilterMessage("Circuit breaker status changed").Len())
+				require.Zero(t, xEnv.Observer().FilterMessage("Circuit breaker status changed").Len())
 
 				t.Log("Bucket 2")
 				time.Sleep(durationPerBucket)
 				sendRequest(opts, "", SendFailedRequest)
 				sendRequest(opts, "", SendFailedRequest)
-				require.Zero(t, 0, xEnv.Observer().FilterMessage("Circuit breaker status changed").Len())
+				require.Zero(t, xEnv.Observer().FilterMessage("Circuit breaker status changed").Len())
 
 				t.Log("Bucket 3")
 				time.Sleep(durationPerBucket)
@@ -456,13 +463,13 @@ func TestCircuitBreaker(t *testing.T) {
 				sendRequest(opts, "", SendFailedRequest)
 				sendRequest(opts, "", SendFailedRequest)
 				sendRequest(opts, "", SendFailedRequest)
-				require.Zero(t, 0, xEnv.Observer().FilterMessage("Circuit breaker status changed").Len())
+				require.Zero(t, xEnv.Observer().FilterMessage("Circuit breaker status changed").Len())
 
 				// 1/9 successful requests
 				t.Log("Bucket 4")
 				time.Sleep(durationPerBucket)
 				sendRequest(opts, "", SendFailedRequest)
-				require.Zero(t, 0, xEnv.Observer().FilterMessage("Circuit breaker status changed").Len())
+				require.Zero(t, xEnv.Observer().FilterMessage("Circuit breaker status changed").Len())
 
 				t.Log("Bucket 5")
 				time.Sleep(durationPerBucket)
@@ -471,20 +478,20 @@ func TestCircuitBreaker(t *testing.T) {
 				t.Log("Bucket 6: evict bucket 1")
 				time.Sleep(durationPerBucket)
 				sendRequest(opts, "", SendFailedRequest)
-				require.Zero(t, 0, xEnv.Observer().FilterMessage("Circuit breaker status changed").Len())
+				require.Zero(t, xEnv.Observer().FilterMessage("Circuit breaker status changed").Len())
 
 				// 1/8 successful requests
 				t.Log("Bucket 7: evict bucket 2")
 				time.Sleep(durationPerBucket)
 				sendRequest(opts, "", SendFailedRequest)
 				sendRequest(opts, "", SendFailedRequest)
-				require.Zero(t, 0, xEnv.Observer().FilterMessage("Circuit breaker status changed").Len())
+				require.Zero(t, xEnv.Observer().FilterMessage("Circuit breaker status changed").Len())
 
 				t.Log("Bucket 8: evict bucket 3")
 				time.Sleep(durationPerBucket)
 				// We have 0/4 successful requests right now, this means 100% error rate
 				// but we are under the threshold of 5 requests to trigger the circuit
-				require.Zero(t, 0, xEnv.Observer().FilterMessage("Circuit breaker status changed").Len())
+				require.Zero(t, xEnv.Observer().FilterMessage("Circuit breaker status changed").Len())
 
 				sendRequest(opts, "", SendFailedRequest)
 
@@ -497,7 +504,7 @@ func TestCircuitBreaker(t *testing.T) {
 	t.Run("verify circuit breaker trips separately for feature flag", func(t *testing.T) {
 		t.Parallel()
 
-		breaker := getCircuitBreakerConfigsWithDefaults()
+		breaker := getCircuitBreakerConfigsWithDefaults(t)
 		breaker.RequestThreshold = 2
 		breaker.ErrorThresholdPercentage = 100
 
@@ -516,10 +523,10 @@ func TestCircuitBreaker(t *testing.T) {
 			},
 			Subgraphs: testenv.SubgraphsConfig{
 				Employees: testenv.SubgraphConfig{
-					Middleware: func(handler http.Handler) http.Handler {
-						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					Middleware: func(_ http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 							if isSuccessRequest.Load() {
-								_, err := w.Write([]byte(successSubgraphJson))
+								_, err := w.Write([]byte(successSubgraphJSON))
 								require.NoError(t, err)
 							} else {
 								time.Sleep(5 * time.Second)
@@ -547,7 +554,7 @@ func TestCircuitBreaker(t *testing.T) {
 	t.Run("verify short circuited request metric", func(t *testing.T) {
 		t.Parallel()
 
-		breaker := getCircuitBreakerConfigsWithDefaults()
+		breaker := getCircuitBreakerConfigsWithDefaults(t)
 		breaker.RequestThreshold = 2
 		breaker.ErrorThresholdPercentage = 100
 		trafficConfig := getTrafficConfigWithTimeout(breaker, 1*time.Second)
@@ -568,8 +575,8 @@ func TestCircuitBreaker(t *testing.T) {
 			},
 			Subgraphs: testenv.SubgraphsConfig{
 				Employees: testenv.SubgraphConfig{
-					Middleware: func(handler http.Handler) http.Handler {
-						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					Middleware: func(_ http.Handler) http.Handler {
+						return http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
 							time.Sleep(5 * time.Second)
 						})
 					},
@@ -622,7 +629,7 @@ func TestCircuitBreaker(t *testing.T) {
 			ShortCircuitOpened = 1
 		)
 
-		breaker := getCircuitBreakerConfigsWithDefaults()
+		breaker := getCircuitBreakerConfigsWithDefaults(t)
 		breaker.RequestThreshold = 2
 		breaker.ErrorThresholdPercentage = 100
 		breaker.SleepWindow = 2 * time.Second
@@ -646,10 +653,10 @@ func TestCircuitBreaker(t *testing.T) {
 			},
 			Subgraphs: testenv.SubgraphsConfig{
 				Employees: testenv.SubgraphConfig{
-					Middleware: func(handler http.Handler) http.Handler {
-						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					Middleware: func(_ http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 							if isSuccessRequest.Load() {
-								_, err := w.Write([]byte(successSubgraphJson))
+								_, err := w.Write([]byte(successSubgraphJSON))
 								require.NoError(t, err)
 							} else {
 								time.Sleep(5 * time.Second)
@@ -756,15 +763,16 @@ func sendRequest(opts SendRequestOptions, featureFlag string, isSuccess bool) {
 
 	// Note that even if check is true (when not inverted), if the circuit is triggered this will be unsuccessful
 	if check {
-		require.JSONEq(opts.t, successSubgraphJson, res.Body)
+		require.JSONEq(opts.t, successSubgraphJSON, res.Body)
 	} else {
-		require.JSONEq(opts.t, subgraphErrorJson, res.Body)
+		require.JSONEq(opts.t, subgraphErrorJSON, res.Body)
 	}
 }
 
-func getCircuitBreakerConfigsWithDefaults() config.CircuitBreaker {
+func getCircuitBreakerConfigsWithDefaults(t *testing.T) config.CircuitBreaker {
 	breaker := config.CircuitBreaker{}
-	env.Parse(&breaker)
+	err := env.Parse(&breaker)
+	require.NoError(t, err)
 	breaker.Enabled = true
 	// The default is 20, but for testing purposes we set it to 1 so that
 	// the test case can make it explicit

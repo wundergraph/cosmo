@@ -39,21 +39,21 @@ func (w *CircuitBreakerMetricsConfig) Opened(ctx context.Context, _ time.Time) {
 	w.metrics.SetCircuitBreakerState(ctx, true, nil, otelmetric.WithAttributes(w.attributes...))
 }
 
-func (w *CircuitBreakerMetricsConfig) ErrShortCircuit(ctx context.Context, now time.Time) {
+func (w *CircuitBreakerMetricsConfig) ErrShortCircuit(ctx context.Context, _ time.Time) {
 	w.metrics.MeasureCircuitBreakerShortCircuit(ctx, nil, otelmetric.WithAttributes(w.attributes...))
 }
 
 // No-op functions required to satisfy the interface
 // We can add them if these make sense later
-func (w *CircuitBreakerMetricsConfig) Success(ctx context.Context, now time.Time, duration time.Duration) {
+func (w *CircuitBreakerMetricsConfig) Success(_ context.Context, _ time.Time, _ time.Duration) {
 }
-func (w *CircuitBreakerMetricsConfig) ErrFailure(ctx context.Context, now time.Time, duration time.Duration) {
+func (w *CircuitBreakerMetricsConfig) ErrFailure(_ context.Context, _ time.Time, _ time.Duration) {
 }
-func (w *CircuitBreakerMetricsConfig) ErrTimeout(ctx context.Context, now time.Time, duration time.Duration) {
+func (w *CircuitBreakerMetricsConfig) ErrTimeout(_ context.Context, _ time.Time, _ time.Duration) {
 }
-func (w *CircuitBreakerMetricsConfig) ErrBadRequest(ctx context.Context, now time.Time, duration time.Duration) {
+func (w *CircuitBreakerMetricsConfig) ErrBadRequest(_ context.Context, _ time.Time, _ time.Duration) {
 }
-func (w *CircuitBreakerMetricsConfig) ErrInterrupt(ctx context.Context, now time.Time, duration time.Duration) {
+func (w *CircuitBreakerMetricsConfig) ErrInterrupt(_ context.Context, _ time.Time, _ time.Duration) {
 }
-func (w *CircuitBreakerMetricsConfig) ErrConcurrencyLimitReject(ctx context.Context, now time.Time) {
+func (w *CircuitBreakerMetricsConfig) ErrConcurrencyLimitReject(_ context.Context, _ time.Time) {
 }

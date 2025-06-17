@@ -47,7 +47,7 @@ func (rt *Breaker) RoundTrip(req *http.Request) (resp *http.Response, err error)
 
 	preRunStatus := circuit.IsOpen()
 
-	err = circuit.Run(context.Background(), func(ctx context.Context) error {
+	err = circuit.Run(context.Background(), func(_ context.Context) error {
 		resp, err = rt.roundTripper.RoundTrip(req)
 		return err
 	})
