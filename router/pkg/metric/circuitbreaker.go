@@ -27,9 +27,8 @@ func NewCircuitBreakerMetricsConfig(subgraphName string, metrics Store, baseAttr
 }
 
 type CircuitBreakerMetricsConfig struct {
-	subgraphName string
-	metrics      Store
-	attributes   []attribute.KeyValue
+	metrics    Store
+	attributes []attribute.KeyValue
 }
 
 func (w *CircuitBreakerMetricsConfig) Closed(ctx context.Context, _ time.Time) {
