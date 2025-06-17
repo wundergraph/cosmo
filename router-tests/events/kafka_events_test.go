@@ -109,21 +109,15 @@ func TestKafkaEvents(t *testing.T) {
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
-			select {
-			case args := <-subscriptionArgsCh:
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionArgsCh, func(args kafkaSubscriptionArgs) {
 				require.NoError(t, args.errValue)
 				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
-			case <-time.After(KafkaWaitTimeout):
-				require.Fail(t, "subscriptionArgsCh should not block")
-			}
+			})
 
 			require.NoError(t, client.Close())
-			select {
-			case err := <-clientRunCh:
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, clientRunCh, func(err error) {
 				require.NoError(t, err)
-			case <-time.After(KafkaWaitTimeout):
-				require.Fail(t, "client.Run should not block")
-			}
+			})
 		})
 	})
 
@@ -171,51 +165,36 @@ func TestKafkaEvents(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
 
 			produceKafkaMessage(t, xEnv, topics[0], ``) // Empty message
-			select {
-			case args := <-subscriptionArgsCh:
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionArgsCh, func(args kafkaSubscriptionArgs) {
 				var gqlErr graphql.Errors
 				require.ErrorAs(t, args.errValue, &gqlErr)
 				require.Equal(t, "Invalid message received", gqlErr[0].Message)
-			case <-time.After(KafkaWaitTimeout):
-				require.Fail(t, "subscriptionArgsCh should not block")
-			}
+			})
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`) // Correct message
-			select {
-			case args := <-subscriptionArgsCh:
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionArgsCh, func(args kafkaSubscriptionArgs) {
 				require.NoError(t, args.errValue)
 				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
-			case <-time.After(KafkaWaitTimeout):
-				require.Fail(t, "subscriptionArgsCh should not block")
-			}
+			})
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","update":{"name":"foo"}}`) // Missing entity = Resolver error
-			select {
-			case args := <-subscriptionArgsCh:
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionArgsCh, func(args kafkaSubscriptionArgs) {
 				var gqlErr graphql.Errors
 				require.ErrorAs(t, args.errValue, &gqlErr)
 				require.Equal(t, "Cannot return null for non-nullable field 'Subscription.employeeUpdatedMyKafka.id'.", gqlErr[0].Message)
-			case <-time.After(KafkaWaitTimeout):
-				require.Fail(t, "subscriptionArgsCh should not block")
-			}
+			})
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`) // Correct message
-			select {
-			case args := <-subscriptionArgsCh:
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionArgsCh, func(args kafkaSubscriptionArgs) {
 				require.NoError(t, args.errValue)
 				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
-			case <-time.After(KafkaWaitTimeout):
-				require.Fail(t, "subscriptionArgsCh should not block")
-			}
+			})
 
 			require.NoError(t, client.Close())
 
-			select {
-			case err := <-clientRunCh:
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, clientRunCh, func(err error) {
 				require.NoError(t, err)
-			case <-time.After(KafkaWaitTimeout):
-				require.Fail(t, "client.Close() should not block")
-			}
+			})
 
 		})
 	})
@@ -275,30 +254,21 @@ func TestKafkaEvents(t *testing.T) {
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
-			select {
-			case args := <-subscriptionOneArgsCh:
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionOneArgsCh, func(args kafkaSubscriptionArgs) {
 				require.NoError(t, args.errValue)
 				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
-			case <-time.After(KafkaWaitTimeout):
-				require.Fail(t, "subscriptionArgsCh should not block")
-			}
+			})
 
-			select {
-			case args := <-subscriptionTwoArgsCh:
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionTwoArgsCh, func(args kafkaSubscriptionArgs) {
 				require.NoError(t, args.errValue)
 				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
-			case <-time.After(KafkaWaitTimeout):
-				require.Fail(t, "subscriptionArgsCh should not block")
-			}
+			})
 
 			require.NoError(t, client.Close())
 
-			select {
-			case err := <-clientRunCh:
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, clientRunCh, func(err error) {
 				require.NoError(t, err)
-			case <-time.After(KafkaWaitTimeout):
-				require.Fail(t, "client.Run should not block")
-			}
+			})
 		})
 	})
 
@@ -357,48 +327,33 @@ func TestKafkaEvents(t *testing.T) {
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
-			select {
-			case args := <-subscriptionOneArgsCh:
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionOneArgsCh, func(args kafkaSubscriptionArgs) {
 				require.NoError(t, args.errValue)
 				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
-			case <-time.After(KafkaWaitTimeout):
-				require.Fail(t, "subscriptionArgsCh should not block")
-			}
+			})
 
-			select {
-			case args := <-subscriptionTwoArgsCh:
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionTwoArgsCh, func(args kafkaSubscriptionArgs) {
 				require.NoError(t, args.errValue)
 				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
-			case <-time.After(KafkaWaitTimeout):
-				require.Fail(t, "subscriptionArgsCh should not block")
-			}
+			})
 
 			produceKafkaMessage(t, xEnv, topics[1], `{"__typename":"Employee","id": 2,"update":{"name":"foo"}}`)
 
-			select {
-			case args := <-subscriptionOneArgsCh:
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionOneArgsCh, func(args kafkaSubscriptionArgs) {
 				require.NoError(t, args.errValue)
 				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":2,"details":{"forename":"Dustin","surname":"Deus"}}}`, string(args.dataValue))
-			case <-time.After(KafkaWaitTimeout):
-				require.Fail(t, "subscriptionArgsCh should not block")
-			}
+			})
 
-			select {
-			case args := <-subscriptionTwoArgsCh:
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionTwoArgsCh, func(args kafkaSubscriptionArgs) {
 				require.NoError(t, args.errValue)
 				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":2,"details":{"forename":"Dustin","surname":"Deus"}}}`, string(args.dataValue))
-			case <-time.After(KafkaWaitTimeout):
-				require.Fail(t, "subscriptionArgsCh should not block")
-			}
+			})
 
 			require.NoError(t, client.Close())
 
-			select {
-			case err := <-clientRunCh:
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, clientRunCh, func(err error) {
 				require.NoError(t, err)
-			case <-time.After(KafkaWaitTimeout):
-				require.Fail(t, "client.Run should not block")
-			}
+			})
 		})
 	})
 
@@ -450,22 +405,16 @@ func TestKafkaEvents(t *testing.T) {
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
-			select {
-			case args := <-subscriptionOneArgsCh:
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionOneArgsCh, func(args kafkaSubscriptionArgs) {
 				require.NoError(t, args.errValue)
 				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
-			case <-time.After(KafkaWaitTimeout):
-				require.Fail(t, "subscriptionArgsCh should not block")
-			}
+			})
 
 			require.NoError(t, client.Close())
 
-			select {
-			case err := <-clientRunCh:
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, clientRunCh, func(err error) {
 				require.NoError(t, err)
-			case <-time.After(KafkaWaitTimeout):
-				require.Fail(t, "client.Run should not block")
-			}
+			})
 		})
 	})
 
@@ -587,8 +536,10 @@ func TestKafkaEvents(t *testing.T) {
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
-			select {
-			case response := <-responseCh:
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, responseCh, func(response struct {
+				response *http.Response
+				err      error
+			}) {
 				require.NoError(t, response.err)
 				require.Equal(t, http.StatusOK, response.response.StatusCode)
 				reader := bufio.NewReader(response.response.Body)
@@ -602,9 +553,7 @@ func TestKafkaEvents(t *testing.T) {
 				line, _, gErr := reader.ReadLine()
 				require.NoError(t, gErr)
 				require.Equal(t, "", string(line))
-			case <-time.After(KafkaWaitTimeout):
-				require.Fail(t, "responseCh should not block")
-			}
+			})
 		})
 	})
 
@@ -652,8 +601,10 @@ func TestKafkaEvents(t *testing.T) {
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
-			select {
-			case resp := <-responseCh:
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, responseCh, func(resp struct {
+				response *http.Response
+				err      error
+			}) {
 				require.NoError(t, resp.err)
 				require.Equal(t, http.StatusOK, resp.response.StatusCode)
 				defer resp.response.Body.Close()
@@ -668,9 +619,7 @@ func TestKafkaEvents(t *testing.T) {
 				line, _, gErr := reader.ReadLine()
 				require.NoError(t, gErr)
 				require.Equal(t, "", string(line))
-			case <-time.After(KafkaWaitTimeout):
-				require.Fail(t, "responseCh should not block")
-			}
+			})
 		})
 	})
 
@@ -950,51 +899,36 @@ func TestKafkaEvents(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
 
 			produceKafkaMessage(t, xEnv, topics[0], `{asas`) // Invalid message
-			select {
-			case args := <-subscriptionOneArgsCh:
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionOneArgsCh, func(args kafkaSubscriptionArgs) {
 				require.Error(t, args.errValue)
 				var gqlErr graphql.Errors
 				require.ErrorAs(t, args.errValue, &gqlErr)
 				require.Equal(t, "Invalid message received", gqlErr[0].Message)
-			case <-time.After(KafkaWaitTimeout):
-				require.Fail(t, "subscriptionOneErrCh should not block")
-			}
+			})
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id":1}`) // Correct message
-			select {
-			case args := <-subscriptionOneArgsCh:
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionOneArgsCh, func(args kafkaSubscriptionArgs) {
 				require.NoError(t, args.errValue)
 				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
-			case <-time.After(KafkaWaitTimeout):
-				require.Fail(t, "subscriptionOneErrCh should not block")
-			}
+			})
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","update":{"name":"foo"}}`) // Missing entity = Resolver error
-			select {
-			case args := <-subscriptionOneArgsCh:
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionOneArgsCh, func(args kafkaSubscriptionArgs) {
 				var gqlErr graphql.Errors
 				require.ErrorAs(t, args.errValue, &gqlErr)
 				require.Equal(t, "Cannot return null for non-nullable field 'Subscription.employeeUpdatedMyKafka.id'.", gqlErr[0].Message)
-			case <-time.After(KafkaWaitTimeout):
-				require.Fail(t, "subscriptionOneErrCh should not block")
-			}
+			})
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`) // Correct message
-			select {
-			case args := <-subscriptionOneArgsCh:
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionOneArgsCh, func(args kafkaSubscriptionArgs) {
 				require.NoError(t, args.errValue)
 				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
-			case <-time.After(KafkaWaitTimeout):
-				require.Fail(t, "subscriptionOneErrCh should not block")
-			}
+			})
 
 			require.NoError(t, client.Close())
-			select {
-			case err := <-clientRunCh:
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, clientRunCh, func(err error) {
 				require.NoError(t, err)
-			case <-time.After(KafkaWaitTimeout):
-				require.Fail(t, "clientRunCh should not block")
-			}
+			})
 		})
 	})
 
@@ -1045,10 +979,6 @@ func TestKafkaEvents(t *testing.T) {
 
 		assert.NoError(t, errRouter)
 	})
-}
-
-func TestFlakyKafkaEvents(t *testing.T) {
-	t.Parallel()
 
 	t.Run("subscribe async with filter", func(t *testing.T) {
 		t.Parallel()
@@ -1153,12 +1083,9 @@ func produceKafkaMessage(t *testing.T, xEnv *testenv.Environment, topicName stri
 		pErrCh <- err
 	})
 
-	select {
-	case pErr := <-pErrCh:
+	testenv.AwaitChannelWithT(t, KafkaWaitTimeout, pErrCh, func(pErr error) {
 		require.NoError(t, pErr)
-	case <-time.After(KafkaWaitTimeout):
-		require.Fail(t, "produceKafkaMessage should not block")
-	}
+	})
 
 	fErr := xEnv.KafkaClient.Flush(ctx)
 	require.NoError(t, fErr)
