@@ -46,5 +46,5 @@ events:
 `)
 
 	_, err := LoadConfig([]string{f})
-	require.ErrorContains(t, err, "router config validation error: jsonschema validation failed with 'https://raw.githubusercontent.com/wundergraph/cosmo/main/router/pkg/config/config.schema.json#'\n- at '/events/providers/redis/0/urls': minItems: got 0, want 1")
+	require.ErrorContains(t, err, "at '/events/providers/redis/0/urls': minItems: got 0, want 1")
 }
