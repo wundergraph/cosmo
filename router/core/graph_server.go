@@ -118,7 +118,13 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 
 	subgraphs := routerConfig.GetSubgraphs()
 
-	circuitBreakerManager := circuit.NewManager(r.subgraphCircuitBreakerOptions.CircuitBreaker, r.subgraphCircuitBreakerOptions.SubgraphMap, subgraphs)
+	var circuitBreakerManager *circuit.Manager
+	// No-op CB
+	if r.subgraphCircuitBreakerOptions == nil {
+		circuitBreakerManager = circuit.NewManager(nil, nil, subgraphs)
+	} else {
+		circuitBreakerManager = circuit.NewManager(r.subgraphCircuitBreakerOptions.CircuitBreaker, r.subgraphCircuitBreakerOptions.SubgraphMap, subgraphs)
+	}
 
 	// Base transport
 	baseTransport := newHTTPTransport(r.subgraphTransportOptions.TransportRequestOptions, proxy, traceDialer, "")

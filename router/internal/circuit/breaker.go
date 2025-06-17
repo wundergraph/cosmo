@@ -2,7 +2,6 @@ package circuit
 
 import (
 	"context"
-	"fmt"
 	"github.com/wundergraph/cosmo/router/internal/traceclient"
 	"go.uber.org/zap"
 	"net/http"
@@ -32,16 +31,26 @@ func (rt *Breaker) RoundTrip(req *http.Request) (resp *http.Response, err error)
 	}
 
 	// If there is no circuit defined for this subgraph
-	circuit := rt.circuitBreaker.Circuit(subgraph)
+	circuit := rt.circuitBreaker.GetCircuitBreaker(subgraph)
 	if circuit == nil {
 		return rt.roundTripper.RoundTrip(req)
 	}
 
-	err = circuit.Execute(context.Background(), func(ctx context.Context) error {
+	preRunStatus := circuit.IsOpen()
+
+	err = circuit.Run(context.Background(), func(ctx context.Context) error {
 		resp, err = rt.roundTripper.RoundTrip(req)
 		return err
-	}, nil)
+	})
 
-	fmt.Println("Error", err)
+	postRunStatus := circuit.IsOpen()
+
+	logger := rt.loggerFunc(req)
+	if preRunStatus != postRunStatus {
+		logger.Debug("Circuit breaker status changed", zap.String("subgraph", subgraph), zap.Bool("isOpen", postRunStatus))
+	} else if preRunStatus {
+		logger.Debug("Circuit breaker open, request callback did not execute", zap.String("subgraph", subgraph))
+	}
+
 	return resp, err
 }

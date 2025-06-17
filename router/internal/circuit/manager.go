@@ -12,7 +12,7 @@ type Manager struct {
 	circuits map[string]*circuit.Circuit
 }
 
-func (c *Manager) Circuit(name string) *circuit.Circuit {
+func (c *Manager) GetCircuitBreaker(name string) *circuit.Circuit {
 	if c == nil {
 		return nil
 	}
@@ -32,6 +32,10 @@ func (c *Manager) IsEnabled() bool {
 func NewManager(all *config.CircuitBreaker, subgraphCircuitBreakers map[string]*config.CircuitBreaker, subgraphs []*nodev1.Subgraph) *Manager {
 	circuitManager := circuit.Manager{}
 
+	if subgraphCircuitBreakers == nil {
+		return &Manager{}
+	}
+
 	isBaseEnabled := all != nil && all.Enabled
 	if isBaseEnabled {
 		configuration := createConfiguration(all)
@@ -43,7 +47,7 @@ func NewManager(all *config.CircuitBreaker, subgraphCircuitBreakers map[string]*
 	circuits := make(map[string]*circuit.Circuit, len(subgraphs))
 	for _, sg := range subgraphs {
 		sgOptions, ok := subgraphCircuitBreakers[sg.Name]
-		if !ok && sgOptions != nil {
+		if !ok && sgOptions == nil {
 			// If we have an all option set we can create a circuit breaker for everyone
 			if isBaseEnabled {
 				circuits[sg.Name] = circuitManager.MustCreateCircuit(sg.Name)
@@ -65,7 +69,11 @@ func createConfiguration(opts *config.CircuitBreaker) hystrix.Factory {
 			ErrorThresholdPercentage: opts.ErrorThresholdPercentage,
 			RequestVolumeThreshold:   opts.RequestThreshold,
 		},
-		ConfigureCloser: hystrix.ConfigureCloser{},
+		ConfigureCloser: hystrix.ConfigureCloser{
+			SleepWindow:                  opts.SleepWindow,
+			HalfOpenAttempts:             opts.HalfOpenAttempts,
+			RequiredConcurrentSuccessful: opts.RequiredConcurrentSuccessful,
+		},
 	}
 	return configuration
 }
