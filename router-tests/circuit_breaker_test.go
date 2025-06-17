@@ -2,6 +2,8 @@ package integration
 
 import (
 	"context"
+	"github.com/prometheus/client_golang/prometheus"
+	io_prometheus_client "github.com/prometheus/client_model/go"
 	"net/http"
 	"sync/atomic"
 	"testing"
@@ -12,7 +14,6 @@ import (
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
-	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -38,6 +39,7 @@ type SendRequestOptions struct {
 }
 
 func TestCircuitBreaker(t *testing.T) {
+	t.Parallel()
 
 	t.Run("verify tripping based on request threshold", func(t *testing.T) {
 		t.Parallel()
@@ -420,6 +422,8 @@ func TestCircuitBreaker(t *testing.T) {
 		})
 
 		t.Run("with multiple requests per bucket", func(t *testing.T) {
+			t.Parallel()
+
 			testenv.Run(t, &testenv.Config{
 				LogObservation: testenv.LogObservationConfig{
 					Enabled:  true,
@@ -551,191 +555,411 @@ func TestCircuitBreaker(t *testing.T) {
 		})
 	})
 
-	t.Run("verify short circuited request metric", func(t *testing.T) {
+	t.Run("circuit breaker metrics", func(t *testing.T) {
 		t.Parallel()
 
-		breaker := getCircuitBreakerConfigsWithDefaults(t)
-		breaker.RequestThreshold = 2
-		breaker.ErrorThresholdPercentage = 100
-		trafficConfig := getTrafficConfigWithTimeout(breaker, 1*time.Second)
+		t.Run("verify short circuited request metric", func(t *testing.T) {
+			t.Parallel()
 
-		metricReader := metric.NewManualReader()
-		exporter := tracetest.NewInMemoryExporter(t)
+			breaker := getCircuitBreakerConfigsWithDefaults(t)
+			breaker.RequestThreshold = 2
+			breaker.ErrorThresholdPercentage = 100
+			trafficConfig := getTrafficConfigWithTimeout(breaker, 1*time.Second)
 
-		testenv.Run(t, &testenv.Config{
-			TraceExporter: exporter,
-			MetricReader:  metricReader,
-			LogObservation: testenv.LogObservationConfig{
-				Enabled:  true,
-				LogLevel: zapcore.DebugLevel,
-			},
-			RouterOptions: []core.Option{
-				core.WithSubgraphCircuitBreakerOptions(core.NewSubgraphCircuitBreakerOptions(trafficConfig)),
-				core.WithSubgraphTransportOptions(core.NewSubgraphTransportOptions(trafficConfig)),
-			},
-			Subgraphs: testenv.SubgraphsConfig{
-				Employees: testenv.SubgraphConfig{
-					Middleware: func(_ http.Handler) http.Handler {
-						return http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
-							time.Sleep(5 * time.Second)
-						})
+			t.Run("for otel", func(t *testing.T) {
+				metricReader := metric.NewManualReader()
+
+				testenv.Run(t, &testenv.Config{
+					MetricReader: metricReader,
+					LogObservation: testenv.LogObservationConfig{
+						Enabled:  true,
+						LogLevel: zapcore.DebugLevel,
 					},
-				},
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			opts := SendRequestOptions{t: t, xEnv: xEnv}
-			var requestsToSend int64 = 5
-			for range requestsToSend {
-				sendRequest(opts, "", SendFailedRequest)
-			}
-
-			rm := metricdata.ResourceMetrics{}
-			err := metricReader.Collect(context.Background(), &rm)
-			require.NoError(t, err)
-
-			shortCircuitRequestsMetric := metricdata.Metrics{
-				Name:        "router.circuit_breaker.short_circuits",
-				Description: "Circuit breaker short circuits.",
-				Unit:        "",
-				Data: metricdata.Sum[int64]{
-					Temporality: metricdata.CumulativeTemporality,
-					IsMonotonic: true,
-					DataPoints: []metricdata.DataPoint[int64]{
-						{
-							Attributes: attribute.NewSet(
-								otel.WgFederatedGraphID.String("graph"),
-								otel.WgRouterClusterName.String(""),
-								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
-								otel.WgRouterVersion.String("dev"),
-								otel.WgSubgraphName.String("employees"),
-							),
-							Value: 3,
+					RouterOptions: []core.Option{
+						core.WithSubgraphCircuitBreakerOptions(core.NewSubgraphCircuitBreakerOptions(trafficConfig)),
+						core.WithSubgraphTransportOptions(core.NewSubgraphTransportOptions(trafficConfig)),
+					},
+					Subgraphs: testenv.SubgraphsConfig{
+						Employees: testenv.SubgraphConfig{
+							Middleware: func(_ http.Handler) http.Handler {
+								return http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
+									time.Sleep(5 * time.Second)
+								})
+							},
 						},
 					},
-				},
-			}
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					opts := SendRequestOptions{t: t, xEnv: xEnv}
 
-			scopeMetric := GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
-			shortCircuitActual := GetMetricByName(scopeMetric, "router.circuit_breaker.short_circuits")
-			metricdatatest.AssertEqual(t, shortCircuitRequestsMetric, *shortCircuitActual, metricdatatest.IgnoreTimestamp())
+					var requestsToSend int64 = 5
+					for range requestsToSend {
+						sendRequest(opts, "", SendFailedRequest)
+					}
+
+					rm := metricdata.ResourceMetrics{}
+					err := metricReader.Collect(context.Background(), &rm)
+					require.NoError(t, err)
+
+					expectedValue := requestsToSend - breaker.RequestThreshold
+					shortCircuitRequestsMetric := metricdata.Metrics{
+						Name:        "router.circuit_breaker.short_circuits",
+						Description: "Circuit breaker short circuits.",
+						Unit:        "",
+						Data: metricdata.Sum[int64]{
+							Temporality: metricdata.CumulativeTemporality,
+							IsMonotonic: true,
+							DataPoints: []metricdata.DataPoint[int64]{
+								{
+									Attributes: attribute.NewSet(
+										otel.WgFederatedGraphID.String("graph"),
+										otel.WgRouterClusterName.String(""),
+										otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+										otel.WgRouterVersion.String("dev"),
+										otel.WgSubgraphName.String("employees"),
+									),
+									Value: expectedValue,
+								},
+							},
+						},
+					}
+
+					scopeMetric := GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+					shortCircuitActual := GetMetricByName(scopeMetric, "router.circuit_breaker.short_circuits")
+					metricdatatest.AssertEqual(t, shortCircuitRequestsMetric, *shortCircuitActual, metricdatatest.IgnoreTimestamp())
+				})
+			})
+
+			t.Run("for prometheus", func(t *testing.T) {
+				t.Parallel()
+
+				promRegistry := prometheus.NewRegistry()
+				metricReader := metric.NewManualReader()
+
+				testenv.Run(t, &testenv.Config{
+					MetricReader:       metricReader,
+					PrometheusRegistry: promRegistry,
+					MetricOptions: testenv.MetricOptions{
+						EnablePrometheusConnectionMetrics: true,
+					},
+					LogObservation: testenv.LogObservationConfig{
+						Enabled:  true,
+						LogLevel: zapcore.DebugLevel,
+					},
+					RouterOptions: []core.Option{
+						core.WithSubgraphCircuitBreakerOptions(core.NewSubgraphCircuitBreakerOptions(trafficConfig)),
+						core.WithSubgraphTransportOptions(core.NewSubgraphTransportOptions(trafficConfig)),
+					},
+					Subgraphs: testenv.SubgraphsConfig{
+						Employees: testenv.SubgraphConfig{
+							Middleware: func(_ http.Handler) http.Handler {
+								return http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
+									time.Sleep(5 * time.Second)
+								})
+							},
+						},
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					opts := SendRequestOptions{t: t, xEnv: xEnv}
+
+					var requestsToSend int64 = 5
+					for range requestsToSend {
+						sendRequest(opts, "", SendFailedRequest)
+					}
+
+					rm := metricdata.ResourceMetrics{}
+					require.NoError(t, metricReader.Collect(context.Background(), &rm))
+
+					mf, err := promRegistry.Gather()
+					require.NoError(t, err)
+
+					metricFamily := findMetricFamilyByName(mf, "router_circuit_breaker_short_circuits_total")
+					metrics := metricFamily.GetMetric()
+					require.Len(t, metrics, 1)
+
+					metricDataPoint := metrics[0]
+
+					expectedValue := float64(requestsToSend - breaker.RequestThreshold)
+					require.Equal(t, expectedValue, *metricDataPoint.Counter.Value)
+
+					expected := []*io_prometheus_client.LabelPair{
+						{
+							Name:  PointerOf("otel_scope_name"),
+							Value: PointerOf("cosmo.router.prometheus"),
+						},
+						{
+							Name:  PointerOf("otel_scope_version"),
+							Value: PointerOf("0.0.1"),
+						},
+						{
+							Name:  PointerOf("wg_federated_graph_id"),
+							Value: PointerOf("graph"),
+						},
+						{
+							Name:  PointerOf("wg_router_cluster_name"),
+							Value: PointerOf(""),
+						},
+						{
+							Name:  PointerOf("wg_router_config_version"),
+							Value: PointerOf(xEnv.RouterConfigVersionMain()),
+						},
+						{
+							Name:  PointerOf("wg_router_version"),
+							Value: PointerOf("dev"),
+						},
+						{
+							Name:  PointerOf("wg_subgraph_name"),
+							Value: PointerOf("employees"),
+						},
+					}
+					require.Equal(t, expected, metricDataPoint.Label)
+				})
+			})
+
 		})
-	})
 
-	t.Run("verify circuit breaker status metric", func(t *testing.T) {
-		t.Parallel()
+		t.Run("verify circuit breaker status metric", func(t *testing.T) {
+			t.Parallel()
 
-		const (
-			ShortCircuitClosed = 0
-			ShortCircuitOpened = 1
-		)
+			const (
+				ShortCircuitClosed = 0
+				ShortCircuitOpened = 1
+			)
 
-		breaker := getCircuitBreakerConfigsWithDefaults(t)
-		breaker.RequestThreshold = 2
-		breaker.ErrorThresholdPercentage = 100
-		breaker.SleepWindow = 2 * time.Second
-		trafficConfig := getTrafficConfigWithTimeout(breaker, 1*time.Second)
+			breaker := getCircuitBreakerConfigsWithDefaults(t)
+			breaker.RequestThreshold = 2
+			breaker.ErrorThresholdPercentage = 100
+			breaker.SleepWindow = 2 * time.Second
+			trafficConfig := getTrafficConfigWithTimeout(breaker, 1*time.Second)
 
-		metricReader := metric.NewManualReader()
-		exporter := tracetest.NewInMemoryExporter(t)
+			t.Run("for otel", func(t *testing.T) {
+				t.Parallel()
 
-		var isSuccessRequest atomic.Bool
+				metricReader := metric.NewManualReader()
 
-		testenv.Run(t, &testenv.Config{
-			TraceExporter: exporter,
-			MetricReader:  metricReader,
-			LogObservation: testenv.LogObservationConfig{
-				Enabled:  true,
-				LogLevel: zapcore.DebugLevel,
-			},
-			RouterOptions: []core.Option{
-				core.WithSubgraphCircuitBreakerOptions(core.NewSubgraphCircuitBreakerOptions(trafficConfig)),
-				core.WithSubgraphTransportOptions(core.NewSubgraphTransportOptions(trafficConfig)),
-			},
-			Subgraphs: testenv.SubgraphsConfig{
-				Employees: testenv.SubgraphConfig{
-					Middleware: func(_ http.Handler) http.Handler {
-						return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-							if isSuccessRequest.Load() {
-								_, err := w.Write([]byte(successSubgraphJSON))
-								require.NoError(t, err)
-							} else {
-								time.Sleep(5 * time.Second)
-							}
-						})
+				var isSuccessRequest atomic.Bool
+
+				testenv.Run(t, &testenv.Config{
+					MetricReader: metricReader,
+					LogObservation: testenv.LogObservationConfig{
+						Enabled:  true,
+						LogLevel: zapcore.DebugLevel,
 					},
-				},
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			opts := SendRequestOptions{t: t, xEnv: xEnv, isSuccessRequest: &isSuccessRequest}
-			// Send initial request
-			sendRequest(opts, "", SendFailedRequest)
-
-			// Ensure that the metric does not exist still, as it's only recorded when state is changed
-			rm := metricdata.ResourceMetrics{}
-			require.NoError(t, metricReader.Collect(context.Background(), &rm))
-			shortCircuitBeforeStatusChange := GetMetricByName(GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router"), "router.circuit_breaker.state")
-			require.Nil(t, shortCircuitBeforeStatusChange)
-
-			// Send requests to trip circuit breaker
-			for range breaker.RequestThreshold - 1 {
-				sendRequest(opts, "", SendFailedRequest)
-			}
-
-			rm = metricdata.ResourceMetrics{}
-			require.NoError(t, metricReader.Collect(context.Background(), &rm))
-			shortCircuitAfterStatusOpen := GetMetricByName(GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router"), "router.circuit_breaker.state")
-
-			shortCircuitRequestsMetric := metricdata.Metrics{
-				Name:        "router.circuit_breaker.state",
-				Description: "Circuit breaker state.",
-				Unit:        "",
-				Data: metricdata.Gauge[int64]{
-					DataPoints: []metricdata.DataPoint[int64]{
-						{
-							Attributes: attribute.NewSet(
-								otel.WgFederatedGraphID.String("graph"),
-								otel.WgRouterClusterName.String(""),
-								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
-								otel.WgRouterVersion.String("dev"),
-								otel.WgSubgraphName.String("employees"),
-							),
-							Value: ShortCircuitOpened,
+					RouterOptions: []core.Option{
+						core.WithSubgraphCircuitBreakerOptions(core.NewSubgraphCircuitBreakerOptions(trafficConfig)),
+						core.WithSubgraphTransportOptions(core.NewSubgraphTransportOptions(trafficConfig)),
+					},
+					Subgraphs: testenv.SubgraphsConfig{
+						Employees: testenv.SubgraphConfig{
+							Middleware: func(_ http.Handler) http.Handler {
+								return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+									if isSuccessRequest.Load() {
+										_, err := w.Write([]byte(successSubgraphJSON))
+										require.NoError(t, err)
+									} else {
+										time.Sleep(5 * time.Second)
+									}
+								})
+							},
 						},
 					},
-				},
-			}
-			metricdatatest.AssertEqual(t, shortCircuitRequestsMetric, *shortCircuitAfterStatusOpen, metricdatatest.IgnoreTimestamp())
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					opts := SendRequestOptions{t: t, xEnv: xEnv, isSuccessRequest: &isSuccessRequest}
 
-			// Wait for the circuit breaker to become half open
-			time.Sleep(breaker.SleepWindow + 100*time.Millisecond)
+					t.Run("no state exists before the first state change", func(t *testing.T) {
+						// Send initial request
+						sendRequest(opts, "", SendFailedRequest)
 
-			// Send successful request to close circuit breaker
-			sendRequest(opts, "", AttemptSuccessfulRequest)
+						// Ensure that the metric does not exist still, as it's only recorded when state is changed
+						rm := metricdata.ResourceMetrics{}
+						require.NoError(t, metricReader.Collect(context.Background(), &rm))
+						shortCircuitBeforeStatusChange := GetMetricByName(GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router"), "router.circuit_breaker.state")
+						require.Nil(t, shortCircuitBeforeStatusChange)
+					})
 
-			rm = metricdata.ResourceMetrics{}
-			require.NoError(t, metricReader.Collect(context.Background(), &rm))
-			shortCircuitStatusAfterClosedAgain := GetMetricByName(GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router"), "router.circuit_breaker.state")
+					t.Run("state is open after failures", func(t *testing.T) {
+						// Send requests to trip circuit breaker
+						for range breaker.RequestThreshold - 1 {
+							sendRequest(opts, "", SendFailedRequest)
+						}
 
-			shortCircuitRequestsMetric = metricdata.Metrics{
-				Name:        "router.circuit_breaker.state",
-				Description: "Circuit breaker state.",
-				Unit:        "",
-				Data: metricdata.Gauge[int64]{
-					DataPoints: []metricdata.DataPoint[int64]{
-						{
-							Attributes: attribute.NewSet(
-								otel.WgFederatedGraphID.String("graph"),
-								otel.WgRouterClusterName.String(""),
-								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
-								otel.WgRouterVersion.String("dev"),
-								otel.WgSubgraphName.String("employees"),
-							),
-							Value: ShortCircuitClosed,
+						rm := metricdata.ResourceMetrics{}
+						require.NoError(t, metricReader.Collect(context.Background(), &rm))
+						shortCircuitAfterStatusOpen := GetMetricByName(GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router"), "router.circuit_breaker.state")
+
+						shortCircuitRequestsMetric := metricdata.Metrics{
+							Name:        "router.circuit_breaker.state",
+							Description: "Circuit breaker state.",
+							Unit:        "",
+							Data: metricdata.Gauge[int64]{
+								DataPoints: []metricdata.DataPoint[int64]{
+									{
+										Attributes: attribute.NewSet(
+											otel.WgFederatedGraphID.String("graph"),
+											otel.WgRouterClusterName.String(""),
+											otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+											otel.WgRouterVersion.String("dev"),
+											otel.WgSubgraphName.String("employees"),
+										),
+										Value: ShortCircuitOpened,
+									},
+								},
+							},
+						}
+						metricdatatest.AssertEqual(t, shortCircuitRequestsMetric, *shortCircuitAfterStatusOpen, metricdatatest.IgnoreTimestamp())
+					})
+
+					t.Run("state is switched to closed after a successful request", func(t *testing.T) {
+						// Wait for the circuit breaker to become half open
+						time.Sleep(breaker.SleepWindow + 100*time.Millisecond)
+
+						// Send successful request to close circuit breaker
+						sendRequest(opts, "", AttemptSuccessfulRequest)
+
+						rm := metricdata.ResourceMetrics{}
+						require.NoError(t, metricReader.Collect(context.Background(), &rm))
+						shortCircuitStatusAfterClosedAgain := GetMetricByName(GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router"), "router.circuit_breaker.state")
+
+						shortCircuitRequestsMetric := metricdata.Metrics{
+							Name:        "router.circuit_breaker.state",
+							Description: "Circuit breaker state.",
+							Unit:        "",
+							Data: metricdata.Gauge[int64]{
+								DataPoints: []metricdata.DataPoint[int64]{
+									{
+										Attributes: attribute.NewSet(
+											otel.WgFederatedGraphID.String("graph"),
+											otel.WgRouterClusterName.String(""),
+											otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+											otel.WgRouterVersion.String("dev"),
+											otel.WgSubgraphName.String("employees"),
+										),
+										Value: ShortCircuitClosed,
+									},
+								},
+							},
+						}
+						metricdatatest.AssertEqual(t, shortCircuitRequestsMetric, *shortCircuitStatusAfterClosedAgain, metricdatatest.IgnoreTimestamp())
+					})
+				})
+			})
+
+			t.Run("for prometheus", func(t *testing.T) {
+				t.Parallel()
+
+				promRegistry := prometheus.NewRegistry()
+				metricReader := metric.NewManualReader()
+
+				var isSuccessRequest atomic.Bool
+
+				testenv.Run(t, &testenv.Config{
+					MetricReader:       metricReader,
+					PrometheusRegistry: promRegistry,
+					MetricOptions: testenv.MetricOptions{
+						EnablePrometheusConnectionMetrics: true,
+					},
+					LogObservation: testenv.LogObservationConfig{
+						Enabled:  true,
+						LogLevel: zapcore.DebugLevel,
+					},
+					RouterOptions: []core.Option{
+						core.WithSubgraphCircuitBreakerOptions(core.NewSubgraphCircuitBreakerOptions(trafficConfig)),
+						core.WithSubgraphTransportOptions(core.NewSubgraphTransportOptions(trafficConfig)),
+					},
+					Subgraphs: testenv.SubgraphsConfig{
+						Employees: testenv.SubgraphConfig{
+							Middleware: func(_ http.Handler) http.Handler {
+								return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+									if isSuccessRequest.Load() {
+										_, err := w.Write([]byte(successSubgraphJSON))
+										require.NoError(t, err)
+									} else {
+										time.Sleep(5 * time.Second)
+									}
+								})
+							},
 						},
 					},
-				},
-			}
-			metricdatatest.AssertEqual(t, shortCircuitRequestsMetric, *shortCircuitStatusAfterClosedAgain, metricdatatest.IgnoreTimestamp())
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					opts := SendRequestOptions{t: t, xEnv: xEnv, isSuccessRequest: &isSuccessRequest}
+
+					t.Run("no state exists before the first state change", func(t *testing.T) {
+						sendRequest(opts, "", SendFailedRequest)
+
+						// Ensure that the metric does not exist still, as it's only recorded when state is changed
+						rm := metricdata.ResourceMetrics{}
+						require.NoError(t, metricReader.Collect(context.Background(), &rm))
+						mf, err := promRegistry.Gather()
+						require.NoError(t, err)
+
+						// Verify that the state does not exist as no state changed
+						metricFamily := findMetricFamilyByName(mf, "router_circuit_breaker_state")
+						metrics := metricFamily.GetMetric()
+						require.Len(t, metrics, 0)
+					})
+
+					t.Run("no state exists before the first state change", func(t *testing.T) {
+						for range breaker.RequestThreshold - 1 {
+							sendRequest(opts, "", SendFailedRequest)
+						}
+
+						rm := metricdata.ResourceMetrics{}
+						require.NoError(t, metricReader.Collect(context.Background(), &rm))
+						mf, err := promRegistry.Gather()
+						require.NoError(t, err)
+
+						metricFamily := findMetricFamilyByName(mf, "router_circuit_breaker_state")
+						metrics := metricFamily.GetMetric()
+
+						require.Len(t, metrics, 1)
+						metricDataPoint := metrics[0]
+						require.Equal(t, float64(ShortCircuitOpened), *metricDataPoint.Gauge.Value)
+
+						expectedOpened := []*io_prometheus_client.LabelPair{
+							{Name: PointerOf("otel_scope_name"), Value: PointerOf("cosmo.router.prometheus")},
+							{Name: PointerOf("otel_scope_version"), Value: PointerOf("0.0.1")},
+							{Name: PointerOf("wg_federated_graph_id"), Value: PointerOf("graph")},
+							{Name: PointerOf("wg_router_cluster_name"), Value: PointerOf("")},
+							{Name: PointerOf("wg_router_config_version"), Value: PointerOf(xEnv.RouterConfigVersionMain())},
+							{Name: PointerOf("wg_router_version"), Value: PointerOf("dev")},
+							{Name: PointerOf("wg_subgraph_name"), Value: PointerOf("employees")},
+						}
+						require.Equal(t, expectedOpened, metricDataPoint.Label)
+					})
+
+					t.Run("state is switched to closed after a successful request", func(t *testing.T) {
+						// Wait for the circuit breaker to become half open
+						time.Sleep(breaker.SleepWindow + 100*time.Millisecond)
+
+						// Send successful request to close circuit breaker
+						sendRequest(opts, "", AttemptSuccessfulRequest)
+
+						rm := metricdata.ResourceMetrics{}
+						require.NoError(t, metricReader.Collect(context.Background(), &rm))
+
+						mf, err := promRegistry.Gather()
+						require.NoError(t, err)
+
+						metricFamily := findMetricFamilyByName(mf, "router_circuit_breaker_state")
+						metrics := metricFamily.GetMetric()
+						require.Len(t, metrics, 1)
+
+						// Verify the state and that the attributes are the same
+						closedDataPoint := metrics[0]
+						require.Equal(t, float64(ShortCircuitClosed), *closedDataPoint.Gauge.Value)
+						expectedClosed := []*io_prometheus_client.LabelPair{
+							{Name: PointerOf("otel_scope_name"), Value: PointerOf("cosmo.router.prometheus")},
+							{Name: PointerOf("otel_scope_version"), Value: PointerOf("0.0.1")},
+							{Name: PointerOf("wg_federated_graph_id"), Value: PointerOf("graph")},
+							{Name: PointerOf("wg_router_cluster_name"), Value: PointerOf("")},
+							{Name: PointerOf("wg_router_config_version"), Value: PointerOf(xEnv.RouterConfigVersionMain())},
+							{Name: PointerOf("wg_router_version"), Value: PointerOf("dev")},
+							{Name: PointerOf("wg_subgraph_name"), Value: PointerOf("employees")},
+						}
+						require.Equal(t, expectedClosed, closedDataPoint.Label)
+					})
+				})
+			})
+
 		})
 	})
 }
