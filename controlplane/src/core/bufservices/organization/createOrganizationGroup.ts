@@ -47,7 +47,8 @@ export function createOrganizationGroup(
       };
     }
 
-    if (!(await orgRepo.isFeatureEnabled(authContext.organizationId, 'rbac'))) {
+    const rbac = await orgRepo.getFeature({ organizationId: authContext.organizationId, featureId: 'rbac', });
+    if (!rbac?.enabled) {
       return {
         response: {
           code: EnumStatusCode.ERR_UPGRADE_PLAN,
