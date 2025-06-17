@@ -2312,6 +2312,8 @@ func TestWebsocketClose(t *testing.T) {
 			})
 			require.NoError(t, err)
 
+			xEnv.WaitForConnectionCount(1, 10*time.Second)
+
 			// Process subscription updates
 			var receivedUpdates int
 			for receivedUpdates < totalUpdates {
@@ -2336,6 +2338,8 @@ func TestWebsocketClose(t *testing.T) {
 				assert.ErrorContains(t, err, "Downstream service error", "should have message 'Downstream service error'")
 				assert.True(t, websocket.IsCloseError(err, websocket.CloseGoingAway), "should be a 'going away' closure")
 			}
+
+			xEnv.WaitForConnectionCount(0, 10*time.Second)
 		})
 	})
 
