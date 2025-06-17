@@ -63,7 +63,7 @@ type DefaultFactoryResolver struct {
 
 	httpClient          *http.Client
 	subgraphHTTPClients map[string]*http.Client
-	pluginHost          *grpcconnector.Connector
+	connector           *grpcconnector.Connector
 
 	factoryLogger abstractlogger.Logger
 	instanceData  InstanceData
@@ -75,7 +75,7 @@ func NewDefaultFactoryResolver(
 	subscriptionClientOptions *SubscriptionClientOptions,
 	baseTransport http.RoundTripper,
 	subgraphTransports map[string]http.RoundTripper,
-	pluginHost *grpcconnector.Connector,
+	connector *grpcconnector.Connector,
 	log *zap.Logger,
 	enableSingleFlight bool,
 	enableNetPoll bool,
@@ -158,18 +158,18 @@ func NewDefaultFactoryResolver(
 
 		httpClient:          defaultHTTPClient,
 		subgraphHTTPClients: subgraphHTTPClients,
-		pluginHost:          pluginHost,
+		connector:           connector,
 		instanceData:        instanceData,
 	}
 }
 
 func (d *DefaultFactoryResolver) ResolveGraphqlFactory(subgraphName string) (plan.PlannerFactory[graphql_datasource.Configuration], error) {
-	if d.pluginHost != nil {
-		// If the plugin host is not nil, we try to get the plugin for the subgraph.
-		// In case of a plugin, we use the gRPC client provider to create the factory.
-		plugin, exists := d.pluginHost.GetClientProvider(subgraphName)
+	if d.connector != nil {
+		// If the connector is not nil, we try to get the provider for the subgraph.
+		// In case of a provider, we use the gRPC client provider to create the factory.
+		provider, exists := d.connector.GetClientProvider(subgraphName)
 		if exists {
-			return graphql_datasource.NewFactoryGRPCClientProvider(d.engineCtx, plugin.GetClient)
+			return graphql_datasource.NewFactoryGRPCClientProvider(d.engineCtx, provider.GetClient)
 		}
 	}
 
