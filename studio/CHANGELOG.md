@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.119.6](https://github.com/wundergraph/cosmo/compare/studio@0.119.5...studio@0.119.6) (2025-06-13)
+
+### Bug Fixes
+
+* solves ui discrepancies when closing the OIDC mapping dialog ([#1936](https://github.com/wundergraph/cosmo/issues/1936)) ([504aa2b](https://github.com/wundergraph/cosmo/commit/504aa2bac1f2f679c169cd548cb500fa1b79d503)) (@wilsonrivera)
+
+## [0.119.5](https://github.com/wundergraph/cosmo/compare/studio@0.119.4...studio@0.119.5) (2025-06-11)
+
+### Bug Fixes
+
+* pnpm-lockfile to trigger ci and add back the specifier ([#1954](https://github.com/wundergraph/cosmo/issues/1954)) ([0149896](https://github.com/wundergraph/cosmo/commit/0149896ab2492757d0a88a6cbd1a26cee575d5cf)) (@SkArchon)
+
 ## [0.119.4](https://github.com/wundergraph/cosmo/compare/studio@0.119.3...studio@0.119.4) (2025-06-09)
 
 **Note:** Version bump only for package studio

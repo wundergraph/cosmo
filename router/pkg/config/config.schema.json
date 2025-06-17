@@ -940,9 +940,7 @@
                 "type": "object",
                 "description": "The configuration for custom span attributes for subgraph tracing.",
                 "additionalProperties": false,
-                "required": [
-                  "key"
-                ],
+                "required": ["key"],
                 "properties": {
                   "key": {
                     "type": "string",
@@ -960,9 +958,7 @@
                     },
                     "oneOf": [
                       {
-                        "required": [
-                          "expression"
-                        ]
+                        "required": ["expression"]
                       }
                     ]
                   }
@@ -2414,6 +2410,10 @@
               "type": "boolean",
               "description": "Print the query plans."
             },
+            "print_intermediate_query_plans": {
+              "type": "boolean",
+              "description": "Print intermediate query plans."
+            },
             "print_node_suggestions": {
               "type": "boolean",
               "description": "Print the node suggestions."
@@ -2721,6 +2721,8 @@
         "replace_undefined_op_field_errors": {
           "type": "object",
           "description": "Produces the same error (message, extension code, status code) as Apollo when an invalid operation field is included in an operation selection set.",
+          "deprecated": true,
+          "deprecationMessage": "This property is deprecated. Please use 'use_graphql_validation_failed_status' instead.",
           "additionalProperties": false,
           "properties": {
             "enabled": {
@@ -2754,6 +2756,17 @@
         "subscription_multipart_print_boundary": {
           "type": "object",
           "description": "Prints the multipart boundary right after the message in multipart subscriptions. Without this flag, the Apollo client wouldn't parse a message until the next one is pushed.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        },
+        "use_graphql_validation_failed_status": {
+          "type": "object",
+          "description": "Uses Apollo compliant validation errors, including 400 status and GRAPHQL_VALIDATION_FAILED extension.",
           "additionalProperties": false,
           "properties": {
             "enabled": {

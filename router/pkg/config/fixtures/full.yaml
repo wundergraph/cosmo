@@ -8,11 +8,11 @@ graph:
 
 plugins:
   enabled: true
-  path: "some/path/to/plugins"
+  path: 'some/path/to/plugins'
 
-log_level: "info"
-listen_addr: "localhost:3002"
-controlplane_url: "https://cosmo-cp.wundergraph.com"
+log_level: 'info'
+listen_addr: 'localhost:3002'
+controlplane_url: 'https://cosmo-cp.wundergraph.com'
 playground_enabled: true
 playground_path: '/'
 playground:
@@ -46,7 +46,7 @@ mcp:
   router_url: https://cosmo-router.wundergraph.com
   server:
     listen_addr: localhost:5025
-    base_url: "http://localhost:5025"
+    base_url: 'http://localhost:5025'
   storage:
     provider_id: mcp
 
@@ -131,9 +131,9 @@ telemetry:
         path: '/v1/traces'
         headers: {}
     attributes:
-      - key: "wg.tracing.custom.conn.subgraph.hostport"
+      - key: 'wg.tracing.custom.conn.subgraph.hostport'
         value_from:
-          expression: "subgraph.name"
+          expression: 'subgraph.name'
 
   # OpenTelemetry Metrics
   metrics:
@@ -454,3 +454,10 @@ router_config_path: 'latest.json'
 client_header:
   name: 'Client-Name'
   version: 'Client_Version'
+
+apollo_compatibility_flags:
+  enable_all: false
+  replace_undefined_op_field_errors:
+    enabled: true
+  use_graphql_validation_failed_status:
+    enabled: true

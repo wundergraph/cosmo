@@ -1675,8 +1675,9 @@ type Environment struct {
 	routerConfigVersionMain string
 	routerConfigVersionMyFF string
 
-	metricReader metric.Reader
-	routerCmd    *exec.Cmd
+	metricReader  metric.Reader
+	routerCmd     *exec.Cmd
+	cmdLogChannel chan string
 }
 
 func GetPubSubNameFn(prefix string) func(name string) string {

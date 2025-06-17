@@ -4,6 +4,35 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.222.1](https://github.com/wundergraph/cosmo/compare/router@0.222.0...router@0.222.1) (2025-06-16)
+
+### Bug Fixes
+
+* handling nested abstract fragments in abstract fragments ([#1964](https://github.com/wundergraph/cosmo/issues/1964)) ([8e86f54](https://github.com/wundergraph/cosmo/commit/8e86f544b202346b201928228b9b5e08321a0c4f)) (@devsergiy)
+
+# [0.222.0](https://github.com/wundergraph/cosmo/compare/router@0.221.0...router@0.222.0) (2025-06-12)
+
+### Features
+
+* update engine: prefer newest websocket protocol, extend custom value renderer field value ([#1958](https://github.com/wundergraph/cosmo/issues/1958)) ([7aaea34](https://github.com/wundergraph/cosmo/commit/7aaea347276053d0aa72d8a48ab6d78ddc971f7b)) (@devsergiy)
+
+# [0.221.0](https://github.com/wundergraph/cosmo/compare/router@0.220.0...router@0.221.0) (2025-06-12)
+
+### Features
+
+* allow for loading of multiple configurations ([#1950](https://github.com/wundergraph/cosmo/issues/1950)) ([54bfd62](https://github.com/wundergraph/cosmo/commit/54bfd62b6f4131277a24b3bdfb099f3a01c4553a)) (@SkArchon)
+
+# [0.220.0](https://github.com/wundergraph/cosmo/compare/router@0.219.3...router@0.220.0) (2025-06-11)
+
+### Bug Fixes
+
+* babel upgrade for vulnerability ([#1952](https://github.com/wundergraph/cosmo/issues/1952)) ([71dbb5d](https://github.com/wundergraph/cosmo/commit/71dbb5d386789216bee39f6fcdd606bd383c19c2)) (@SkArchon)
+* pnpm-lockfile to trigger ci and add back the specifier ([#1954](https://github.com/wundergraph/cosmo/issues/1954)) ([0149896](https://github.com/wundergraph/cosmo/commit/0149896ab2492757d0a88a6cbd1a26cee575d5cf)) (@SkArchon)
+
+### Features
+
+* improve apollo gateway compatible field selection validation ([#1941](https://github.com/wundergraph/cosmo/issues/1941)) ([64c0a6f](https://github.com/wundergraph/cosmo/commit/64c0a6f8da1360eaf031440da7816c53767ba060)) (@endigma)
+
 ## [0.219.3](https://github.com/wundergraph/cosmo/compare/router@0.219.2...router@0.219.3) (2025-06-10)
 
 ### Bug Fixes
