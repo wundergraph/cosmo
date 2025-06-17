@@ -157,12 +157,7 @@ export class GraphQLToProtoTextVisitor {
     }
 
     // Initialize the Proto definition with the standard header
-    this.protoText = [
-      'syntax = "proto3";',
-      `package ${packageName};`,
-      '',
-      ...protoOptions,
-    ];
+    this.protoText = ['syntax = "proto3";', `package ${packageName};`, '', ...protoOptions];
   }
 
   /**

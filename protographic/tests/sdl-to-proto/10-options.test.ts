@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { compileGraphQLToProto } from '../../src';
 import { expectValidProto } from '../util';
 
-
 describe('SDL to Proto Options', () => {
   it('should generate proto with go_package option', () => {
     const sdl = `
