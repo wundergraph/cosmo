@@ -358,7 +358,6 @@ type SubgraphsConfig struct {
 }
 
 type SubgraphConfig struct {
-	SkipStartup  bool
 	Middleware   func(http.Handler) http.Handler
 	Delay        time.Duration
 	CloseOnStart bool
@@ -463,7 +462,6 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		localCounter:     counters.Employees,
 		globalDelay:      cfg.Subgraphs.GlobalDelay,
 		localDelay:       cfg.Subgraphs.Employees.Delay,
-		skipStartup:      cfg.Subgraphs.Employees.SkipStartup,
 	}
 
 	family := &Subgraph{
@@ -474,7 +472,6 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		localCounter:     counters.Family,
 		globalDelay:      cfg.Subgraphs.GlobalDelay,
 		localDelay:       cfg.Subgraphs.Family.Delay,
-		skipStartup:      cfg.Subgraphs.Family.SkipStartup,
 	}
 
 	hobbies := &Subgraph{
@@ -485,7 +482,6 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		localCounter:     counters.Hobbies,
 		globalDelay:      cfg.Subgraphs.GlobalDelay,
 		localDelay:       cfg.Subgraphs.Hobbies.Delay,
-		skipStartup:      cfg.Subgraphs.Hobbies.SkipStartup,
 	}
 
 	products := &Subgraph{
@@ -496,7 +492,6 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		localCounter:     counters.Products,
 		globalDelay:      cfg.Subgraphs.GlobalDelay,
 		localDelay:       cfg.Subgraphs.Products.Delay,
-		skipStartup:      cfg.Subgraphs.Products.SkipStartup,
 	}
 
 	productsFg := &Subgraph{
@@ -507,7 +502,6 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		localCounter:     counters.ProductFg,
 		globalDelay:      cfg.Subgraphs.GlobalDelay,
 		localDelay:       cfg.Subgraphs.ProductsFg.Delay,
-		skipStartup:      cfg.Subgraphs.ProductsFg.SkipStartup,
 	}
 
 	test1 := &Subgraph{
@@ -518,7 +512,6 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		localCounter:     counters.Test1,
 		globalDelay:      cfg.Subgraphs.GlobalDelay,
 		localDelay:       cfg.Subgraphs.Test1.Delay,
-		skipStartup:      cfg.Subgraphs.Test1.SkipStartup,
 	}
 
 	availability := &Subgraph{
@@ -529,7 +522,6 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		localCounter:     counters.Availability,
 		globalDelay:      cfg.Subgraphs.GlobalDelay,
 		localDelay:       cfg.Subgraphs.Availability.Delay,
-		skipStartup:      cfg.Subgraphs.Availability.SkipStartup,
 	}
 
 	mood := &Subgraph{
@@ -540,7 +532,6 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		localCounter:     counters.Mood,
 		globalDelay:      cfg.Subgraphs.GlobalDelay,
 		localDelay:       cfg.Subgraphs.Mood.Delay,
-		skipStartup:      cfg.Subgraphs.Mood.SkipStartup,
 	}
 
 	countries := &Subgraph{
@@ -551,7 +542,6 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		localCounter:     counters.Countries,
 		globalDelay:      cfg.Subgraphs.GlobalDelay,
 		localDelay:       cfg.Subgraphs.Countries.Delay,
-		skipStartup:      cfg.Subgraphs.Countries.SkipStartup,
 	}
 
 	employeesServer := makeSafeHttpTestServer(t, employees)
@@ -565,15 +555,15 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	productFgServer := makeSafeHttpTestServer(t, productsFg)
 
 	replacements := map[string]string{
-		subgraphs.EmployeesDefaultDemoURL:    gqlURL(t, employeesServer, employees.skipStartup),
-		subgraphs.FamilyDefaultDemoURL:       gqlURL(t, familyServer, family.skipStartup),
-		subgraphs.HobbiesDefaultDemoURL:      gqlURL(t, hobbiesServer, hobbies.skipStartup),
-		subgraphs.ProductsDefaultDemoURL:     gqlURL(t, productsServer, products.skipStartup),
-		subgraphs.Test1DefaultDemoURL:        gqlURL(t, test1Server, test1.skipStartup),
-		subgraphs.AvailabilityDefaultDemoURL: gqlURL(t, availabilityServer, availability.skipStartup),
-		subgraphs.MoodDefaultDemoURL:         gqlURL(t, moodServer, mood.skipStartup),
-		subgraphs.CountriesDefaultDemoURL:    gqlURL(t, countriesServer, countries.skipStartup),
-		subgraphs.ProductsFgDefaultDemoURL:   gqlURL(t, productFgServer, products.skipStartup),
+		subgraphs.EmployeesDefaultDemoURL:    gqlURL(employeesServer),
+		subgraphs.FamilyDefaultDemoURL:       gqlURL(familyServer),
+		subgraphs.HobbiesDefaultDemoURL:      gqlURL(hobbiesServer),
+		subgraphs.ProductsDefaultDemoURL:     gqlURL(productsServer),
+		subgraphs.Test1DefaultDemoURL:        gqlURL(test1Server),
+		subgraphs.AvailabilityDefaultDemoURL: gqlURL(availabilityServer),
+		subgraphs.MoodDefaultDemoURL:         gqlURL(moodServer),
+		subgraphs.CountriesDefaultDemoURL:    gqlURL(countriesServer),
+		subgraphs.ProductsFgDefaultDemoURL:   gqlURL(productFgServer),
 	}
 
 	if cfg.RouterConfigJSONTemplate == "" {
@@ -873,7 +863,6 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		localCounter:     counters.Employees,
 		globalDelay:      cfg.Subgraphs.GlobalDelay,
 		localDelay:       cfg.Subgraphs.Employees.Delay,
-		skipStartup:      cfg.Subgraphs.Employees.SkipStartup,
 	}
 
 	family := &Subgraph{
@@ -884,7 +873,6 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		localCounter:     counters.Family,
 		globalDelay:      cfg.Subgraphs.GlobalDelay,
 		localDelay:       cfg.Subgraphs.Family.Delay,
-		skipStartup:      cfg.Subgraphs.Family.SkipStartup,
 	}
 
 	hobbies := &Subgraph{
@@ -895,7 +883,6 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		localCounter:     counters.Hobbies,
 		globalDelay:      cfg.Subgraphs.GlobalDelay,
 		localDelay:       cfg.Subgraphs.Hobbies.Delay,
-		skipStartup:      cfg.Subgraphs.Hobbies.SkipStartup,
 	}
 
 	products := &Subgraph{
@@ -906,7 +893,6 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		localCounter:     counters.Products,
 		globalDelay:      cfg.Subgraphs.GlobalDelay,
 		localDelay:       cfg.Subgraphs.Products.Delay,
-		skipStartup:      cfg.Subgraphs.Products.SkipStartup,
 	}
 
 	productsFg := &Subgraph{
@@ -927,7 +913,6 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		localCounter:     counters.Test1,
 		globalDelay:      cfg.Subgraphs.GlobalDelay,
 		localDelay:       cfg.Subgraphs.Test1.Delay,
-		skipStartup:      cfg.Subgraphs.Test1.SkipStartup,
 	}
 
 	availability := &Subgraph{
@@ -938,7 +923,6 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		localCounter:     counters.Availability,
 		globalDelay:      cfg.Subgraphs.GlobalDelay,
 		localDelay:       cfg.Subgraphs.Availability.Delay,
-		skipStartup:      cfg.Subgraphs.Availability.SkipStartup,
 	}
 
 	mood := &Subgraph{
@@ -949,7 +933,6 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		localCounter:     counters.Mood,
 		globalDelay:      cfg.Subgraphs.GlobalDelay,
 		localDelay:       cfg.Subgraphs.Mood.Delay,
-		skipStartup:      cfg.Subgraphs.Mood.SkipStartup,
 	}
 
 	countries := &Subgraph{
@@ -960,7 +943,6 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		localCounter:     counters.Countries,
 		globalDelay:      cfg.Subgraphs.GlobalDelay,
 		localDelay:       cfg.Subgraphs.Countries.Delay,
-		skipStartup:      cfg.Subgraphs.Countries.SkipStartup,
 	}
 
 	employeesServer := makeSafeHttpTestServer(t, employees)
@@ -974,15 +956,15 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	productFgServer := makeSafeHttpTestServer(t, productsFg)
 
 	replacements := map[string]string{
-		subgraphs.EmployeesDefaultDemoURL:    gqlURL(t, employeesServer, employees.skipStartup),
-		subgraphs.FamilyDefaultDemoURL:       gqlURL(t, familyServer, family.skipStartup),
-		subgraphs.HobbiesDefaultDemoURL:      gqlURL(t, hobbiesServer, hobbies.skipStartup),
-		subgraphs.ProductsDefaultDemoURL:     gqlURL(t, productsServer, products.skipStartup),
-		subgraphs.Test1DefaultDemoURL:        gqlURL(t, test1Server, test1.skipStartup),
-		subgraphs.AvailabilityDefaultDemoURL: gqlURL(t, availabilityServer, availability.skipStartup),
-		subgraphs.MoodDefaultDemoURL:         gqlURL(t, moodServer, mood.skipStartup),
-		subgraphs.CountriesDefaultDemoURL:    gqlURL(t, countriesServer, countries.skipStartup),
-		subgraphs.ProductsFgDefaultDemoURL:   gqlURL(t, productFgServer, products.skipStartup),
+		subgraphs.EmployeesDefaultDemoURL:    gqlURL(employeesServer),
+		subgraphs.FamilyDefaultDemoURL:       gqlURL(familyServer),
+		subgraphs.HobbiesDefaultDemoURL:      gqlURL(hobbiesServer),
+		subgraphs.ProductsDefaultDemoURL:     gqlURL(productsServer),
+		subgraphs.Test1DefaultDemoURL:        gqlURL(test1Server),
+		subgraphs.AvailabilityDefaultDemoURL: gqlURL(availabilityServer),
+		subgraphs.MoodDefaultDemoURL:         gqlURL(moodServer),
+		subgraphs.CountriesDefaultDemoURL:    gqlURL(countriesServer),
+		subgraphs.ProductsFgDefaultDemoURL:   gqlURL(productFgServer),
 	}
 
 	if cfg.RouterConfigJSONTemplate == "" {
@@ -1593,12 +1575,7 @@ func SetupCDNServer(t testing.TB, port int) *httptest.Server {
 	return cdnServer
 }
 
-func gqlURL(t testing.TB, srv *httptest.Server, skipStartup bool) string {
-	if skipStartup {
-		// Route to port that does not exist
-		port := freeport.GetOne(t)
-		return fmt.Sprintf("http://127.0.0.1:%d/graphql", port)
-	}
+func gqlURL(srv *httptest.Server) string {
 	path, err := url.JoinPath(srv.URL, "/graphql")
 	if err != nil {
 		panic(err)
@@ -2734,8 +2711,6 @@ type Subgraph struct {
 
 	globalCounter *atomic.Int64
 	localCounter  *atomic.Int64
-
-	skipStartup bool
 }
 
 func (s *Subgraph) ServeHTTP(w http.ResponseWriter, r *http.Request) {
