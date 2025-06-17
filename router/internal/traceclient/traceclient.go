@@ -30,6 +30,7 @@ type ClientTrace struct {
 
 type ClientTraceContextKey struct{}
 type CurrentSubgraphContextKey struct{}
+type CurrentFeatureFlagContextKey struct{}
 
 type TraceInjectingRoundTripper struct {
 	base                  http.RoundTripper

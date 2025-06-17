@@ -2,6 +2,7 @@ package circuit
 
 import (
 	"context"
+	"fmt"
 	"github.com/wundergraph/cosmo/router/internal/traceclient"
 	"go.uber.org/zap"
 	"net/http"
@@ -30,8 +31,16 @@ func (rt *Breaker) RoundTrip(req *http.Request) (resp *http.Response, err error)
 		subgraph = subgraphCtxVal.(string)
 	}
 
+	var prefix string
+	prefixCtxVal := ctx.Value(traceclient.CurrentFeatureFlagContextKey{})
+	if prefixCtxVal != nil {
+		prefix = prefixCtxVal.(string)
+	}
+
+	cbKey := fmt.Sprintf("%s::%s", prefix, subgraph)
+
 	// If there is no circuit defined for this subgraph
-	circuit := rt.circuitBreaker.GetCircuitBreaker(subgraph)
+	circuit := rt.circuitBreaker.GetCircuitBreaker(cbKey)
 	if circuit == nil {
 		return rt.roundTripper.RoundTrip(req)
 	}

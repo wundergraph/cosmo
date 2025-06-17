@@ -1,10 +1,13 @@
 package circuit
 
 import (
+	"fmt"
 	"github.com/cep21/circuit/v4"
 	"github.com/cep21/circuit/v4/closers/hystrix"
+	"github.com/cep21/circuitotel"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/metric"
 )
 
 type Manager struct {
@@ -19,8 +22,8 @@ func (c *Manager) GetCircuitBreaker(name string) *circuit.Circuit {
 
 	// Since we should not ever write into a map
 	// after the first setup we don't use any read locks
-	if circuit, ok := c.circuits[name]; ok {
-		return circuit
+	if circuitBreaker, ok := c.circuits[name]; ok {
+		return circuitBreaker
 	}
 	return nil
 }
@@ -29,33 +32,46 @@ func (c *Manager) IsEnabled() bool {
 	return c != nil && len(c.circuits) > 0
 }
 
-func NewManager(all *config.CircuitBreaker, subgraphCircuitBreakers map[string]*config.CircuitBreaker, subgraphs []*nodev1.Subgraph) *Manager {
+func NewManager(
+	all *config.CircuitBreaker,
+	subgraphCircuitBreakers map[string]*config.CircuitBreaker,
+	subgraphs []*nodev1.Subgraph,
+	featureFlagName string,
+	store metric.Store,
+	metricStoreEnabled bool,
+) *Manager {
 	circuitManager := circuit.Manager{}
 
 	if subgraphCircuitBreakers == nil {
 		return &Manager{}
 	}
 
+	var f circuitotel.Factory
+
 	isBaseEnabled := all != nil && all.Enabled
 	if isBaseEnabled {
 		configuration := createConfiguration(all)
 		circuitManager.DefaultCircuitProperties = []circuit.CommandPropertiesConstructor{
 			configuration.Configure,
+			f.CommandPropertiesConstructor,
 		}
 	}
 
 	circuits := make(map[string]*circuit.Circuit, len(subgraphs))
 	for _, sg := range subgraphs {
+		// Base graph will start with "::"
+		sgCbName := fmt.Sprintf("%s::%s", featureFlagName, sg.Name)
+
 		sgOptions, ok := subgraphCircuitBreakers[sg.Name]
 		if !ok && sgOptions == nil {
 			// If we have an all option set we can create a circuit breaker for everyone
 			if isBaseEnabled {
-				circuits[sg.Name] = circuitManager.MustCreateCircuit(sg.Name)
+				circuits[sgCbName] = circuitManager.MustCreateCircuit(sgCbName)
 			}
 			continue
 		}
-		config := createConfiguration(sgOptions)
-		circuits[sg.Name] = circuitManager.MustCreateCircuit(sg.Name, config.Configure(sg.Name))
+		newConfig := createConfiguration(sgOptions)
+		circuits[sgCbName] = circuitManager.MustCreateCircuit(sgCbName, newConfig.Configure(sgCbName))
 	}
 
 	return &Manager{
