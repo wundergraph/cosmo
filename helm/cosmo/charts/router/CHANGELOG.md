@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.13.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo-router@0.12.0...helm-cosmo-router@0.13.0) (2025-06-13)
+
+
+### Features
+
+* **helm:** allow using config of a router from a file ([#1961](https://github.com/wundergraph/cosmo/issues/1961)) ([dfea253](https://github.com/wundergraph/cosmo/commit/dfea253502461bb80c47c05b9d211b9c757fcd4c))
+
+## [0.12.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo-router@0.11.0...helm-cosmo-router@0.12.0) (2025-06-09)
+
+
+### Features
+
+* **helm/router:** allow to insert additional labels in deployment ([#1937](https://github.com/wundergraph/cosmo/issues/1937)) ([6c650db](https://github.com/wundergraph/cosmo/commit/6c650db94116bafbd7ebcec3e21e2fb1c4962cea))
+
 ## [0.11.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo-router@0.10.2...helm-cosmo-router@0.11.0) (2025-06-03)
 
 

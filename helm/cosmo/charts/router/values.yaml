@@ -14,6 +14,9 @@ image:
 # -- Add labels to all deployed resources
 commonLabels: {}
 
+# -- Add labels to deployment metadata.labels
+additionalLabels: {}
+
 deploymentStrategy: {}
 
 imagePullSecrets: []
@@ -194,6 +197,11 @@ existingSecret: ""
 commonConfiguration: |-
   version: "1"
   log_level: "info"
+
+# -- Path to a configuration file to embed. If set, this takes precedence over commonConfiguration.
+# The file path is relative to the chart directory and will be processed with the helm `tpl` function.
+# Example: "configs/router-config.yaml"
+commonConfigurationPath: ""
 
 # Use this section to pass the graphApiToken or to configure simple settings.
 configuration:

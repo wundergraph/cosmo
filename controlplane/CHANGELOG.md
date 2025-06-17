@@ -4,6 +4,34 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.150.4](https://github.com/wundergraph/cosmo/compare/controlplane@0.150.3...controlplane@0.150.4) (2025-06-17)
+
+### Bug Fixes
+
+* fixes an issue caused by using `isFeatureEnabled` instead of `ge… ([#1972](https://github.com/wundergraph/cosmo/issues/1972)) ([c0762e4](https://github.com/wundergraph/cosmo/commit/c0762e49fa9891bc6399ba0cc46851e9c358501f)) (@wilsonrivera)
+
+## [0.150.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.150.2...controlplane@0.150.3) (2025-06-16)
+
+**Note:** Version bump only for package controlplane
+
+## [0.150.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.150.1...controlplane@0.150.2) (2025-06-13)
+
+### Bug Fixes
+
+* issue that made it impossible to delete empty groups ([#1934](https://github.com/wundergraph/cosmo/issues/1934)) ([72d70d9](https://github.com/wundergraph/cosmo/commit/72d70d9d1b2184abeeb3c648ea7a86d02fc3facb)) (@wilsonrivera)
+
+## [0.150.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.150.0...controlplane@0.150.1) (2025-06-06)
+
+### Bug Fixes
+
+* resolve vite prism vulnerabilities ([#1940](https://github.com/wundergraph/cosmo/issues/1940)) ([9bd41c4](https://github.com/wundergraph/cosmo/commit/9bd41c404d5ab8b2a50c5db5b455ca1eb336bddb)) (@SkArchon)
+
+# [0.150.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.149.0...controlplane@0.150.0) (2025-06-06)
+
+### Features
+
+* link organization to the root keycloak group ([#1920](https://github.com/wundergraph/cosmo/issues/1920)) ([2952533](https://github.com/wundergraph/cosmo/commit/2952533b7dbdf29dd71f97b21c92c834ba1f1c97)) (@wilsonrivera)
+
 # [0.149.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.148.0...controlplane@0.149.0) (2025-06-02)
 
 ### Features
