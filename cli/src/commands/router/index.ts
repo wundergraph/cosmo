@@ -39,7 +39,7 @@ export default (opts: BaseCommandOptions) => {
   );
 
   cmd.hook('preAction', async (thisCmd) => {
-    if (['compose', 'download-binary', 'compatibility-version'].includes(thisCmd.args[0])) {
+    if (['compose', 'download-binary', 'compatibility-version', 'plugin'].includes(thisCmd.args[0])) {
       return;
     }
     await checkAuth();
