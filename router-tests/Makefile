@@ -1,11 +1,17 @@
 SHELL := bash
 test_target := ./...
 
+ifeq ($(CI),true)
+ FORMAT := github-actions
+else
+ FORMAT := pkgname
+endif
+
 test-deps:
 	$(MAKE) -C ../demo plugin-build-ci
 
 test: test-deps
-	go test -ldflags=-extldflags=-Wl,-ld_classic $(test_params) -race $(test_target)
+	gotestsum -f $(FORMAT) -- -ldflags=-extldflags=-Wl,-ld_classic $(test_params) -race $(test_target)
 
 update-snapshot:
 	go test -update -race $(test_target)
