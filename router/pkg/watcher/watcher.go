@@ -51,37 +51,53 @@ func New(options Options) (func(ctx context.Context) error, error) {
 			}
 		}
 
+		shouldDebounce := len(options.Paths) > 1
+		pendingCallback := false
+
 		for {
 			select {
 			case <-ticker.C:
-				shouldRunCallback := false
+				changesDetected := false
+
 				for _, path := range options.Paths {
 					stat, err := os.Stat(path)
 					if err != nil {
 						ll.Debug("Target file cannot be statted", zap.String("path", path), zap.Error(err))
-
-						// Reset the mod time so we catch any new file at the target path
 						prevModTimes[path] = time.Time{}
-
 						continue
 					}
-
 					ll.Debug("Checking file for changes",
 						zap.String("path", path),
 						zap.Time("prev_mod_time", prevModTimes[path]),
 						zap.Time("current_mod_time", stat.ModTime()),
 					)
-
 					if stat.ModTime().After(prevModTimes[path]) {
 						prevModTimes[path] = stat.ModTime()
-						shouldRunCallback = true
+						changesDetected = true
 					}
 				}
 
-				// In case multiple paths were modified in one cycle
-				// we still only reload it once
-				if shouldRunCallback {
+				// In case of single paths
+				if !shouldDebounce && changesDetected {
 					options.Callback()
+					continue
+				}
+
+				// We debounce multiple paths, in case a user is modifying multiple files
+				// which means each subsequent tick could cause a reload
+				// thus by debouncing we wait for a tick without any changes to reload
+				if shouldDebounce {
+					if changesDetected {
+						// If there are changes detected this tick
+						// We want to wait for the next tick (without changes)
+						// to run the callback
+						pendingCallback = true
+					} else if pendingCallback {
+						// When there are no changes detected for this tick
+						// but the previous tick had changes detected
+						pendingCallback = false
+						options.Callback()
+					}
 				}
 			case <-ctx.Done():
 				return ctx.Err()
