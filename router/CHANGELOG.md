@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.222.2](https://github.com/wundergraph/cosmo/compare/router@0.222.1...router@0.222.2) (2025-06-17)
+
+### Bug Fixes
+
+* let netpoll handle closing websockets ([#1955](https://github.com/wundergraph/cosmo/issues/1955)) ([e5c2f95](https://github.com/wundergraph/cosmo/commit/e5c2f95b8c30971e59e1c847b2a343bdc46bafbb)) (@endigma)
+
+## [0.222.1](https://github.com/wundergraph/cosmo/compare/router@0.222.0...router@0.222.1) (2025-06-16)
+
+### Bug Fixes
+
+* handling nested abstract fragments in abstract fragments ([#1964](https://github.com/wundergraph/cosmo/issues/1964)) ([8e86f54](https://github.com/wundergraph/cosmo/commit/8e86f544b202346b201928228b9b5e08321a0c4f)) (@devsergiy)
+
 # [0.222.0](https://github.com/wundergraph/cosmo/compare/router@0.221.0...router@0.222.0) (2025-06-12)
 
 ### Features

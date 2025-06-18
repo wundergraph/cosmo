@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
 )
@@ -54,7 +55,7 @@ func (m MyCustomWebsocketModule) OnOriginRequest(req *http.Request, ctx core.Req
 	require.Equal(m.t, req.Header.Get("Connection"), "Upgrade")
 	require.Equal(m.t, req.Header.Get("Upgrade"), "websocket")
 	require.Equal(m.t, req.Header.Get("Sec-WebSocket-Version"), "13")
-	require.Equal(m.t, req.Header.Get("Sec-WebSocket-Protocol"), "graphql-ws,graphql-transport-ws")
+	require.Equal(m.t, req.Header.Get("Sec-WebSocket-Protocol"), "graphql-transport-ws,graphql-ws")
 	require.NotEmpty(m.t, req.Header.Get("Sec-WebSocket-Key"))
 
 	require.Equal(m.t, ctx.Operation().Name(), "currentTime")
