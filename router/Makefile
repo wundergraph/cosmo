@@ -4,6 +4,8 @@ else
  FORMAT := pkgname
 endif
 
+junitfile := report.xml
+
 dev:
 	go run cmd/router/main.go
 
@@ -14,7 +16,7 @@ update-snapshot:
 	cd ./pkg/config && go test -update -race ./...
 
 test:
-	gotestsum -f $(FORMAT) -- -race ./...
+	gotestsum -f $(FORMAT) $(if $(filter true,$(CI)),--junitfile $(junitfile)) -- -race ./...
 
 test-fresh: clean-testcache test
 
