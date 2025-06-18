@@ -15,6 +15,3 @@ runs:
       with:
         go-version: ${{ inputs.go-version }}
         cache-dependency-path: ${{ inputs.cache-dependency-path }}
-    - name: 'Install gotestsum'
-      shell: bash
-      run: go install gotest.tools/gotestsum@latest

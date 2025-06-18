@@ -12,7 +12,7 @@ test-deps:
 	$(MAKE) -C ../demo plugin-build-ci
 
 test: test-deps
-	gotestsum -f $(FORMAT) $(if $(filter true,$(CI)),--junitfile $(junitfile)) -- -ldflags=-extldflags=-Wl,-ld_classic $(test_params) -race $(test_target)
+	gotestsum -f $(FORMAT) -- -ldflags=-extldflags=-Wl,-ld_classic $(test_params) -race $(test_target)
 
 update-snapshot:
 	go test -update -race $(test_target)
