@@ -7,7 +7,9 @@ import (
 	"time"
 
 	"github.com/twmb/franz-go/pkg/kgo"
+	"github.com/twmb/franz-go/pkg/sasl"
 	"github.com/twmb/franz-go/pkg/sasl/plain"
+	"github.com/twmb/franz-go/pkg/sasl/scram"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
@@ -65,15 +67,29 @@ func (p *ProviderBuilder) BuildProvider(provider config.KafkaEventSource) (datas
 	return pubSubProvider, nil
 }
 
+// kgoErrorLogger is a custom logger for kgo that mirrors errors to the zap logger.
+type kgoErrorLogger struct {
+	logger *zap.Logger
+}
+
+func (l *kgoErrorLogger) Level() kgo.LogLevel {
+	return kgo.LogLevelError
+}
+
+func (l *kgoErrorLogger) Log(level kgo.LogLevel, msg string, keyvals ...any) {
+	l.logger.Sugar().Errorw(msg, keyvals...)
+}
+
 // buildKafkaOptions creates a list of kgo.Opt options for the given Kafka event source configuration.
 // Only general options like TLS, SASL, etc. are configured here. Specific options like topics, etc. are
 // configured in the KafkaPubSub implementation.
-func buildKafkaOptions(eventSource config.KafkaEventSource) ([]kgo.Opt, error) {
+func buildKafkaOptions(eventSource config.KafkaEventSource, logger *zap.Logger) ([]kgo.Opt, error) {
 	opts := []kgo.Opt{
 		kgo.SeedBrokers(eventSource.Brokers...),
 		// Ensure proper timeouts are set
 		kgo.ProduceRequestTimeout(10 * time.Second),
 		kgo.ConnIdleTimeout(60 * time.Second),
+		kgo.WithLogger(&kgoErrorLogger{logger: logger}),
 	}
 
 	if eventSource.TLS != nil && eventSource.TLS.Enabled {
@@ -90,11 +106,28 @@ func buildKafkaOptions(eventSource config.KafkaEventSource) ([]kgo.Opt, error) {
 		}.AsMechanism()))
 	}
 
+	if eventSource.Authentication != nil && eventSource.Authentication.SASLSCRAM.Username != nil && eventSource.Authentication.SASLSCRAM.Password != nil && eventSource.Authentication.SASLSCRAM.Mechanism != nil {
+		scramAuth := scram.Auth{
+			User: *eventSource.Authentication.SASLSCRAM.Username,
+			Pass: *eventSource.Authentication.SASLSCRAM.Password,
+		}
+		var saslAuth sasl.Mechanism
+		switch *eventSource.Authentication.SASLSCRAM.Mechanism {
+		case config.KafkaSASLSCRAMMechanismSCRAM256:
+			saslAuth = scramAuth.AsSha256Mechanism()
+		case config.KafkaSASLSCRAMMechanismSCRAM512:
+			saslAuth = scramAuth.AsSha512Mechanism()
+		default:
+			return nil, fmt.Errorf("unsupported SASL SCRAM mechanism: %s", *eventSource.Authentication.SASLSCRAM.Mechanism)
+		}
+		opts = append(opts, kgo.SASL(saslAuth))
+	}
+
 	return opts, nil
 }
 
 func buildProvider(ctx context.Context, provider config.KafkaEventSource, logger *zap.Logger) (Adapter, datasource.Provider, error) {
-	options, err := buildKafkaOptions(provider)
+	options, err := buildKafkaOptions(provider, logger)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to build options for Kafka provider with ID \"%s\": %w", provider.ID, err)
 	}

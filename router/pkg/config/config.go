@@ -3,10 +3,11 @@ package config
 import (
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/yamlmerge"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/internal/yamlmerge"
 
 	"github.com/caarlos0/env/v11"
 	"github.com/goccy/go-yaml"
@@ -527,8 +528,22 @@ type KafkaSASLPlainAuthentication struct {
 	Username *string `yaml:"username,omitempty"`
 }
 
+type KafkaSASLSCRAMMechanism string
+
+const (
+	KafkaSASLSCRAMMechanismSCRAM256 KafkaSASLSCRAMMechanism = "SCRAM-SHA-256"
+	KafkaSASLSCRAMMechanismSCRAM512 KafkaSASLSCRAMMechanism = "SCRAM-SHA-512"
+)
+
+type KafkaSASLSCRAMAuthentication struct {
+	Password  *string                  `yaml:"password,omitempty"`
+	Username  *string                  `yaml:"username,omitempty"`
+	Mechanism *KafkaSASLSCRAMMechanism `yaml:"mechanism,omitempty"`
+}
+
 type KafkaAuthentication struct {
 	SASLPlain KafkaSASLPlainAuthentication `yaml:"sasl_plain,omitempty"`
+	SASLSCRAM KafkaSASLSCRAMAuthentication `yaml:"sasl_scram,omitempty"`
 }
 
 type KafkaTLSConfiguration struct {
