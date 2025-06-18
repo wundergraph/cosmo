@@ -2036,7 +2036,8 @@
                   },
                   "fetch_max_wait": {
                     "type": "string",
-                    "description": "The maximum wait time for fetching messages from the Kafka broker. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'. Setting this to a higher value can help reduce the number of requests to the Kafka broker."
+                    "description": "The maximum wait time for fetching messages from the Kafka broker. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'. Setting this to a higher value can help reduce the number of requests to the Kafka broker.",
+                    "format": "go-duration"
                   }
                 }
               }
