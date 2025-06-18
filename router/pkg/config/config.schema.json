@@ -2013,6 +2013,8 @@
                     "oneOf": [
                       {
                         "type": "object",
+                        "additionalProperties": false,
+                        "required": ["sasl_plain"],
                         "properties": {
                           "sasl_plain": {
                             "type": "object",
@@ -2029,7 +2031,14 @@
                                 "description": "The password for plain SASL authentication."
                               }
                             }
-                          },
+                          }
+                        }
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": ["sasl_scram"],
+                        "properties": {
                           "sasl_scram": {
                             "type": "object",
                             "description": "SCRAM SASL Authentication configuration for the Kafka provider.",

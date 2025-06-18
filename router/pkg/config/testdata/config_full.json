@@ -542,9 +542,9 @@
               "Username": "admin"
             },
             "SASLSCRAM": {
-              "Password": "admin",
-              "Username": "admin",
-              "Mechanism": "SCRAM-SHA-256"
+              "Password": null,
+              "Username": null,
+              "Mechanism": null
             }
           },
           "TLS": {

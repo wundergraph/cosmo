@@ -99,7 +99,11 @@ func buildKafkaOptions(eventSource config.KafkaEventSource, logger *zap.Logger) 
 		)
 	}
 
+	var authSpecified bool
+
 	if eventSource.Authentication != nil && eventSource.Authentication.SASLPlain.Username != nil && eventSource.Authentication.SASLPlain.Password != nil {
+		authSpecified = true
+
 		opts = append(opts, kgo.SASL(plain.Auth{
 			User: *eventSource.Authentication.SASLPlain.Username,
 			Pass: *eventSource.Authentication.SASLPlain.Password,
@@ -107,6 +111,11 @@ func buildKafkaOptions(eventSource config.KafkaEventSource, logger *zap.Logger) 
 	}
 
 	if eventSource.Authentication != nil && eventSource.Authentication.SASLSCRAM.Username != nil && eventSource.Authentication.SASLSCRAM.Password != nil && eventSource.Authentication.SASLSCRAM.Mechanism != nil {
+		if authSpecified {
+			return nil, fmt.Errorf("multiple authentication methods specified for Kafka provider with ID \"%s\"", eventSource.ID)
+		}
+		authSpecified = true
+
 		scramAuth := scram.Auth{
 			User: *eventSource.Authentication.SASLSCRAM.Username,
 			Pass: *eventSource.Authentication.SASLSCRAM.Password,

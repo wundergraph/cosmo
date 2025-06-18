@@ -310,10 +310,6 @@ events:
           sasl_plain:
             username: 'admin'
             password: 'admin'
-          sasl_scram:
-            username: 'admin'
-            password: 'admin'
-            mechanism: 'SCRAM-SHA-256'
 
 engine:
   enable_single_flight: true
