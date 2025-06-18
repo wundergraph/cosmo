@@ -10,24 +10,12 @@ import { renderResultTree } from '../../router/plugin/helper.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('generate');
-  command.description('generate a protobuf schema for a standalone grpc subgraph');
-  command.argument('[name]', 'The name of the proto service');
+  command.description('generate a protobuf schema for a standalone grpc subgraph.');
+  command.argument('[name]', 'The name of the proto service.');
   command.requiredOption('-i, --input <path-to-input>', 'The GraphQL schema file to generate a protobuf schema from.');
-  command.option(
-    '-o, --output <path-to-output>',
-    'The output directory for the protobuf schema. If not provided, the output directory will be the same as the input file.',
-    '',
-  );
-  command.option(
-    '-p, --package-name <name>',
-    'The name of the proto package. If not provided, the package name will default to "service".',
-    'service',
-  );
-  command.option(
-    '-g, --go-package <name>',
-    'The name of the go package. If not provided, the go package name will default to "github.com/wundergraph/cosmo/demo/test".',
-    'github.com/wundergraph/cosmo/demo/test',
-  );
+  command.option('-o, --output <path-to-output>', 'The output directory for the protobuf schema. (default ".").', '.');
+  command.option('-p, --package-name <name>', 'The name of the proto package. (default "service.v1")', 'service.v1');
+  command.option('-g, --go-package <name>', 'Adds an `option go_package` to the proto file.');
   command.action(generateCommandAction);
 
   return command;
@@ -50,33 +38,28 @@ async function generateCommandAction(name: string, options: any) {
   try {
     const inputFile = resolve(options.input);
 
-    let outputDir = options.output;
-    if (outputDir === '') {
-      outputDir = dirname(inputFile);
+    if (!existsSync(options.output)) {
+      program.error(`Output directory ${options.output} does not exist`);
     }
 
-    if (!existsSync(outputDir)) {
-      program.error(`Output directory ${outputDir} does not exist`);
-    }
-
-    if (!lstatSync(outputDir).isDirectory()) {
-      program.error(`Output directory ${outputDir} is not a directory`);
+    if (!lstatSync(options.output).isDirectory()) {
+      program.error(`Output directory ${options.output} is not a directory`);
     }
 
     if (!existsSync(inputFile)) {
       program.error(`Input file ${options.input} does not exist`);
     }
 
-    const result = await generateProtoAndMapping(outputDir, inputFile, name, options, spinner);
+    const result = await generateProtoAndMapping(options.output, inputFile, name, options, spinner);
 
     // Write the generated files
-    await writeFile(resolve(outputDir, 'mapping.json'), result.mapping);
-    await writeFile(resolve(outputDir, 'service.proto'), result.proto);
-    await writeFile(resolve(outputDir, 'service.proto.lock.json'), JSON.stringify(result.lockData, null, 2));
+    await writeFile(resolve(options.output, 'mapping.json'), result.mapping);
+    await writeFile(resolve(options.output, 'service.proto'), result.proto);
+    await writeFile(resolve(options.output, 'service.proto.lock.json'), JSON.stringify(result.lockData, null, 2));
 
     renderResultTree(spinner, 'Generated protobuf schema', true, name, {
       'input file': inputFile,
-      'output dir': outputDir,
+      'output dir': options.output,
       'service name': upperFirst(camelCase(name)) + 'Service',
       generated: 'mapping.json, service.proto, service.proto.lock.json',
     });

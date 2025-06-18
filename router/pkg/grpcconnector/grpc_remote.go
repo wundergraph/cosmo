@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net/url"
 	"sync"
 
 	"go.uber.org/zap"
@@ -77,13 +76,7 @@ func (g *RemoteGRPCProvider) Name() string {
 // It parses the endpoint URL and creates a new insecure gRPC connection.
 func (g *RemoteGRPCProvider) Start(ctx context.Context) error {
 	if g.cc == nil {
-		ep, err := url.Parse(g.endpoint)
-
-		if err != nil {
-			return fmt.Errorf("failed to parse endpoint: %w", err)
-		}
-
-		clientConn, err := grpc.NewClient(ep.Host, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		clientConn, err := grpc.NewClient(g.endpoint, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
 			return fmt.Errorf("failed to create client connection: %w", err)
 		}

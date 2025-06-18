@@ -1589,7 +1589,7 @@ func makeSafeGRPCServer(t testing.TB, sd *grpc.ServiceDesc, service any) (*grpc.
 
 	port := freeport.GetOne(t)
 
-	endpoint := fmt.Sprintf("127.0.0.1:%d", port)
+	endpoint := fmt.Sprintf("localhost:%d", port)
 
 	lis, err := net.Listen("tcp", endpoint)
 	require.NoError(t, err)
@@ -1648,7 +1648,7 @@ func gqlURL(srv *httptest.Server) string {
 }
 
 func grpcURL(endpoint string) string {
-	return "http://" + endpoint
+	return "dns:///" + endpoint
 }
 
 func ReadAndCheckJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err error) {
