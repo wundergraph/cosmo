@@ -77,9 +77,12 @@ func NewManager(opts ManagerOpts) *Manager {
 			continue
 		}
 
-		newConfig := createConfiguration(sgOptions)
-		configs = append(configs, newConfig.Configure(sgCbName))
-		circuits[sgCbName] = circuitManager.MustCreateCircuit(sgCbName, configs...)
+		// This will cover the case of if a subgraph is explicitly disabled
+		if sgOptions.Enabled {
+			newConfig := createConfiguration(sgOptions)
+			configs = append(configs, newConfig.Configure(sgCbName))
+			circuits[sgCbName] = circuitManager.MustCreateCircuit(sgCbName, configs...)
+		}
 	}
 
 	return &Manager{
