@@ -129,6 +129,12 @@ jobs:
         working-directory: ./router
         run: make test
 
+      - name: Test summary
+        uses: test-summary/action@v2
+        with:
+          paths: ./router/report.xml
+        if: always()
+
       - name: Build
         working-directory: ./router
         run: make build
@@ -236,8 +242,8 @@ jobs:
         uses: test-summary/action@v2
         with:
           paths: |
-            'router-tests/integration.xml'
-            'router-tests/flaky.xml'
+            ./router-tests/integration.xml
+            ./router-tests/flaky.xml
         if: always()
 
   image_scan:
