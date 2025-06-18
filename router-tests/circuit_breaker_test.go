@@ -336,15 +336,12 @@ func TestCircuitBreaker(t *testing.T) {
 	})
 
 	t.Run("verify circuit breaker rolling window", func(t *testing.T) {
-		//Temp skip for CI
-		t.Skip()
-		
 		t.Parallel()
 
 		breaker := getCircuitBreakerConfigsWithDefaults(t)
 		breaker.NumBuckets = 5
 		breaker.RequestThreshold = 5
-		breaker.RollingDuration = 2500 * time.Millisecond
+		breaker.RollingDuration = 10000 * time.Millisecond
 		breaker.ErrorThresholdPercentage = 90
 
 		durationPerBucket := breaker.RollingDuration / time.Duration(breaker.NumBuckets)
@@ -380,23 +377,23 @@ func TestCircuitBreaker(t *testing.T) {
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				opts := SendRequestOptions{t: t, xEnv: xEnv, isSuccessRequest: &isSuccessRequest}
-				t.Log("Bucket 1")
+				t.Log("Bucket 1", time.Now())
 				time.Sleep(durationPerBucket)
 				sendRequest(opts, "", SendFailedRequest)
 
-				t.Log("Bucket 2")
+				t.Log("Bucket 2", time.Now())
 				time.Sleep(durationPerBucket)
 				sendRequest(opts, "", SendFailedRequest)
 
-				t.Log("Bucket 3")
+				t.Log("Bucket 3", time.Now())
 				time.Sleep(durationPerBucket)
 				sendRequest(opts, "", AttemptSuccessfulRequest)
 
-				t.Log("Bucket 4")
+				t.Log("Bucket 4", time.Now())
 				time.Sleep(durationPerBucket)
 				sendRequest(opts, "", SendFailedRequest)
 
-				t.Log("Bucket 5")
+				t.Log("Bucket 5", time.Now())
 				time.Sleep(durationPerBucket)
 				sendRequest(opts, "", SendFailedRequest)
 
@@ -404,11 +401,11 @@ func TestCircuitBreaker(t *testing.T) {
 				message := xEnv.Observer().FilterMessage("Circuit breaker status changed")
 				require.Zero(t, message.Len())
 
-				t.Log("Bucket 6: evict bucket 1")
+				t.Log("Bucket 6: evict bucket 1", time.Now())
 				time.Sleep(durationPerBucket)
 				sendRequest(opts, "", SendFailedRequest)
 
-				t.Log("Bucket 7: evict bucket 2")
+				t.Log("Bucket 7: evict bucket 2", time.Now())
 				time.Sleep(durationPerBucket)
 				sendRequest(opts, "", SendFailedRequest)
 
@@ -416,7 +413,7 @@ func TestCircuitBreaker(t *testing.T) {
 				message = xEnv.Observer().FilterMessage("Circuit breaker status changed")
 				require.Zero(t, message.Len())
 
-				t.Log("Bucket 8: evict bucket 3")
+				t.Log("Bucket 8: evict bucket 3", time.Now())
 				time.Sleep(durationPerBucket)
 				sendRequest(opts, "", SendFailedRequest)
 
@@ -427,9 +424,7 @@ func TestCircuitBreaker(t *testing.T) {
 		})
 
 		t.Run("with multiple requests per bucket", func(t *testing.T) {
-			// Temporary skip to see if other tests fail in CI as well
 			t.Skip()
-
 			t.Parallel()
 
 			testenv.Run(t, &testenv.Config{
