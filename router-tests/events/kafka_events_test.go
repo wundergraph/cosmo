@@ -109,15 +109,15 @@ func TestKafkaEvents(t *testing.T) {
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
-			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionArgsCh, func(args kafkaSubscriptionArgs) {
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionArgsCh, func(t testing.TB, args kafkaSubscriptionArgs) {
 				require.NoError(t, args.errValue)
 				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
-			})
+			}, "unable to receive message before timeout")
 
 			require.NoError(t, client.Close())
-			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, clientRunCh, func(err error) {
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, clientRunCh, func(t testing.TB, err error) {
 				require.NoError(t, err)
-			})
+			}, "unable to close client before timeout")
 		})
 	})
 
@@ -165,36 +165,36 @@ func TestKafkaEvents(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
 
 			produceKafkaMessage(t, xEnv, topics[0], ``) // Empty message
-			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionArgsCh, func(args kafkaSubscriptionArgs) {
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionArgsCh, func(t testing.TB, args kafkaSubscriptionArgs) {
 				var gqlErr graphql.Errors
 				require.ErrorAs(t, args.errValue, &gqlErr)
 				require.Equal(t, "Invalid message received", gqlErr[0].Message)
-			})
+			}, "unable to receive message before timeout")
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`) // Correct message
-			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionArgsCh, func(args kafkaSubscriptionArgs) {
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionArgsCh, func(t testing.TB, args kafkaSubscriptionArgs) {
 				require.NoError(t, args.errValue)
 				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
-			})
+			}, "unable to receive message before timeout")
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","update":{"name":"foo"}}`) // Missing entity = Resolver error
-			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionArgsCh, func(args kafkaSubscriptionArgs) {
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionArgsCh, func(t testing.TB, args kafkaSubscriptionArgs) {
 				var gqlErr graphql.Errors
 				require.ErrorAs(t, args.errValue, &gqlErr)
 				require.Equal(t, "Cannot return null for non-nullable field 'Subscription.employeeUpdatedMyKafka.id'.", gqlErr[0].Message)
-			})
+			}, "unable to receive message before timeout")
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`) // Correct message
-			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionArgsCh, func(args kafkaSubscriptionArgs) {
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionArgsCh, func(t testing.TB, args kafkaSubscriptionArgs) {
 				require.NoError(t, args.errValue)
 				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
-			})
+			}, "unable to receive message before timeout")
 
 			require.NoError(t, client.Close())
 
-			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, clientRunCh, func(err error) {
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, clientRunCh, func(t testing.TB, err error) {
 				require.NoError(t, err)
-			})
+			}, "unable to close client before timeout")
 
 		})
 	})
@@ -254,21 +254,21 @@ func TestKafkaEvents(t *testing.T) {
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
-			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionOneArgsCh, func(args kafkaSubscriptionArgs) {
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionOneArgsCh, func(t testing.TB, args kafkaSubscriptionArgs) {
 				require.NoError(t, args.errValue)
 				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
-			})
+			}, "unable to receive message before timeout")
 
-			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionTwoArgsCh, func(args kafkaSubscriptionArgs) {
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionTwoArgsCh, func(t testing.TB, args kafkaSubscriptionArgs) {
 				require.NoError(t, args.errValue)
 				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
-			})
+			}, "unable to receive message before timeout")
 
 			require.NoError(t, client.Close())
 
-			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, clientRunCh, func(err error) {
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, clientRunCh, func(t testing.TB, err error) {
 				require.NoError(t, err)
-			})
+			}, "unable to close client before timeout")
 		})
 	})
 
@@ -327,33 +327,33 @@ func TestKafkaEvents(t *testing.T) {
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
-			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionOneArgsCh, func(args kafkaSubscriptionArgs) {
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionOneArgsCh, func(t testing.TB, args kafkaSubscriptionArgs) {
 				require.NoError(t, args.errValue)
 				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
-			})
+			}, "unable to receive message before timeout")
 
-			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionTwoArgsCh, func(args kafkaSubscriptionArgs) {
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionTwoArgsCh, func(t testing.TB, args kafkaSubscriptionArgs) {
 				require.NoError(t, args.errValue)
 				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
-			})
+			}, "unable to receive message before timeout")
 
 			produceKafkaMessage(t, xEnv, topics[1], `{"__typename":"Employee","id": 2,"update":{"name":"foo"}}`)
 
-			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionOneArgsCh, func(args kafkaSubscriptionArgs) {
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionOneArgsCh, func(t testing.TB, args kafkaSubscriptionArgs) {
 				require.NoError(t, args.errValue)
 				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":2,"details":{"forename":"Dustin","surname":"Deus"}}}`, string(args.dataValue))
-			})
+			}, "unable to receive message before timeout")
 
-			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionTwoArgsCh, func(args kafkaSubscriptionArgs) {
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionTwoArgsCh, func(t testing.TB, args kafkaSubscriptionArgs) {
 				require.NoError(t, args.errValue)
 				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":2,"details":{"forename":"Dustin","surname":"Deus"}}}`, string(args.dataValue))
-			})
+			}, "unable to receive message before timeout")
 
 			require.NoError(t, client.Close())
 
-			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, clientRunCh, func(err error) {
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, clientRunCh, func(t testing.TB, err error) {
 				require.NoError(t, err)
-			})
+			}, "unable to close client before timeout")
 		})
 	})
 
@@ -405,16 +405,16 @@ func TestKafkaEvents(t *testing.T) {
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
-			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionOneArgsCh, func(args kafkaSubscriptionArgs) {
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionOneArgsCh, func(t testing.TB, args kafkaSubscriptionArgs) {
 				require.NoError(t, args.errValue)
 				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
-			})
+			}, "unable to receive message before timeout")
 
 			require.NoError(t, client.Close())
 
-			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, clientRunCh, func(err error) {
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, clientRunCh, func(t testing.TB, err error) {
 				require.NoError(t, err)
-			})
+			}, "unable to close client before timeout")
 		})
 	})
 
@@ -536,7 +536,7 @@ func TestKafkaEvents(t *testing.T) {
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
-			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, responseCh, func(response struct {
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, responseCh, func(t testing.TB, response struct {
 				response *http.Response
 				err      error
 			}) {
@@ -553,7 +553,7 @@ func TestKafkaEvents(t *testing.T) {
 				line, _, gErr := reader.ReadLine()
 				require.NoError(t, gErr)
 				require.Equal(t, "", string(line))
-			})
+			}, "unable to receive message before timeout")
 		})
 	})
 
@@ -601,7 +601,7 @@ func TestKafkaEvents(t *testing.T) {
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
-			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, responseCh, func(resp struct {
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, responseCh, func(t testing.TB, resp struct {
 				response *http.Response
 				err      error
 			}) {
@@ -619,7 +619,7 @@ func TestKafkaEvents(t *testing.T) {
 				line, _, gErr := reader.ReadLine()
 				require.NoError(t, gErr)
 				require.Equal(t, "", string(line))
-			})
+			}, "unable to receive message before timeout")
 		})
 	})
 
@@ -899,36 +899,36 @@ func TestKafkaEvents(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
 
 			produceKafkaMessage(t, xEnv, topics[0], `{asas`) // Invalid message
-			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionOneArgsCh, func(args kafkaSubscriptionArgs) {
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionOneArgsCh, func(t testing.TB, args kafkaSubscriptionArgs) {
 				require.Error(t, args.errValue)
 				var gqlErr graphql.Errors
 				require.ErrorAs(t, args.errValue, &gqlErr)
 				require.Equal(t, "Invalid message received", gqlErr[0].Message)
-			})
+			}, "unable to receive message before timeout")
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id":1}`) // Correct message
-			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionOneArgsCh, func(args kafkaSubscriptionArgs) {
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionOneArgsCh, func(t testing.TB, args kafkaSubscriptionArgs) {
 				require.NoError(t, args.errValue)
 				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
-			})
+			}, "unable to receive message before timeout")
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","update":{"name":"foo"}}`) // Missing entity = Resolver error
-			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionOneArgsCh, func(args kafkaSubscriptionArgs) {
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionOneArgsCh, func(t testing.TB, args kafkaSubscriptionArgs) {
 				var gqlErr graphql.Errors
 				require.ErrorAs(t, args.errValue, &gqlErr)
 				require.Equal(t, "Cannot return null for non-nullable field 'Subscription.employeeUpdatedMyKafka.id'.", gqlErr[0].Message)
-			})
+			}, "unable to receive message before timeout")
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`) // Correct message
-			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionOneArgsCh, func(args kafkaSubscriptionArgs) {
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionOneArgsCh, func(t testing.TB, args kafkaSubscriptionArgs) {
 				require.NoError(t, args.errValue)
 				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
-			})
+			}, "unable to receive message before timeout")
 
-			require.NoError(t, client.Close())
-			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, clientRunCh, func(err error) {
+			//require.NoError(t, client.Close())
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, clientRunCh, func(t testing.TB, err error) {
 				require.NoError(t, err)
-			})
+			}, "unable to close client before timeout")
 		})
 	})
 
@@ -1083,9 +1083,9 @@ func produceKafkaMessage(t *testing.T, xEnv *testenv.Environment, topicName stri
 		pErrCh <- err
 	})
 
-	testenv.AwaitChannelWithT(t, KafkaWaitTimeout, pErrCh, func(pErr error) {
+	testenv.AwaitChannelWithT(t, KafkaWaitTimeout, pErrCh, func(t testing.TB, pErr error) {
 		require.NoError(t, pErr)
-	})
+	}, "unable to produce message before timeout")
 
 	fErr := xEnv.KafkaClient.Flush(ctx)
 	require.NoError(t, fErr)

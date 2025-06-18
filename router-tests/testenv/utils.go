@@ -7,13 +7,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func AwaitChannelWithT[A any, C chan A](t *testing.T, timeout time.Duration, ch C, f func(A)) {
+func AwaitChannelWithT[A any, C chan A](t *testing.T, timeout time.Duration, ch C, f func(testing.TB, A), msgAndArgs ...interface{}) {
 	t.Helper()
 
 	select {
 	case args := <-ch:
-		f(args)
+		f(t, args)
 	case <-time.After(timeout):
-		require.Fail(t, "clientRunCh should not block")
+		require.Fail(t, "timeout waiting for channel value", msgAndArgs...)
 	}
 }
