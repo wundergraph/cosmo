@@ -15,6 +15,7 @@ import (
 	"github.com/wundergraph/astjson"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 
 	graphqlmetrics "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
@@ -476,6 +477,8 @@ type OperationContext interface {
 	Content() string
 	// ClientInfo returns information about the client that initiated this operation
 	ClientInfo() ClientInfo
+	// QueryPlan returns the query plan for the operation
+	QueryPlan() *resolve.FetchTreeQueryPlanNode
 }
 
 var _ OperationContext = (*operationContext)(nil)
@@ -571,6 +574,14 @@ func (o *operationContext) Protocol() OperationProtocol {
 
 func (o *operationContext) ClientInfo() ClientInfo {
 	return *o.clientInfo
+}
+
+func (o *operationContext) QueryPlan() *resolve.FetchTreeQueryPlanNode {
+	if p, ok := o.preparedPlan.preparedPlan.(*plan.SynchronousResponsePlan); ok {
+		return p.Response.Fetches.QueryPlan()
+	}
+
+	return nil
 }
 
 // isMutationRequest returns true if the current request is a mutation request
