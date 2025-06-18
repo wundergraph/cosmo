@@ -477,8 +477,8 @@ type OperationContext interface {
 	Content() string
 	// ClientInfo returns information about the client that initiated this operation
 	ClientInfo() ClientInfo
-	// QueryPlan returns the query plan for the operation
-	QueryPlan() *resolve.FetchTreeNode
+	// QueryPlanStats returns some statistics about the query plan for the operation
+	QueryPlanStats() QueryPlanStats
 }
 
 var _ OperationContext = (*operationContext)(nil)
@@ -576,12 +576,49 @@ func (o *operationContext) ClientInfo() ClientInfo {
 	return *o.clientInfo
 }
 
-func (o *operationContext) QueryPlan() *resolve.FetchTreeNode {
-	if p, ok := o.preparedPlan.preparedPlan.(*plan.SynchronousResponsePlan); ok {
-		return p.Response.Fetches
+type QueryPlanStats struct {
+	TotalSubgraphFetches int
+	SubgraphFetches      map[string]int
+}
+
+func (p *QueryPlanStats) analyze(plan *resolve.FetchTreeNode) {
+	p.analyzePlanNode(plan)
+}
+
+func (p *QueryPlanStats) analyzePlanNode(plan *resolve.FetchTreeNode) {
+	switch plan.Kind {
+	case resolve.FetchTreeNodeKindSingle:
+		p.analyzeSingleFetch(plan)
+	case resolve.FetchTreeNodeKindSequence, resolve.FetchTreeNodeKindParallel:
+		for _, child := range plan.ChildNodes {
+			p.analyzePlanNode(child)
+		}
+	}
+}
+
+func (p *QueryPlanStats) analyzeSingleFetch(plan *resolve.FetchTreeNode) {
+	key := plan.Item.Fetch.DataSourceInfo().Name
+
+	p.TotalSubgraphFetches++
+
+	if entry, ok := p.SubgraphFetches[key]; ok {
+		p.SubgraphFetches[key] = entry + 1
+	} else {
+		p.SubgraphFetches[key] = 1
+	}
+}
+
+func (o *operationContext) QueryPlanStats() QueryPlanStats {
+	qps := QueryPlanStats{
+		TotalSubgraphFetches: 0,
+		SubgraphFetches:      make(map[string]int),
 	}
 
-	return nil
+	if p, ok := o.preparedPlan.preparedPlan.(*plan.SynchronousResponsePlan); ok {
+		qps.analyze(p.Response.Fetches)
+	}
+
+	return qps
 }
 
 // isMutationRequest returns true if the current request is a mutation request
