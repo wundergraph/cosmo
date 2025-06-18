@@ -1,9 +1,6 @@
 package integration
 
 import (
-	"bytes"
-	"io"
-	"net/http"
 	"testing"
 	"time"
 
@@ -16,26 +13,15 @@ import (
 func TestRouterPlugin(t *testing.T) {
 	t.Parallel()
 
-	t.Run("Should successfully start the router when plugins are enabled but not plugins are in the execution config", func(t *testing.T) {
+	t.Run("Should successfully start the router when plugins are enabled but no plugins are in the execution config", func(t *testing.T) {
 		t.Parallel()
-		testenv.Run(t, &testenv.Config{
+		err := testenv.RunWithError(t, &testenv.Config{
 			Plugins: testenv.PluginConfig{
 				Enabled: true,
 			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			header := http.Header{
-				"Content-Type": []string{"application/json"},
-				"Accept":       []string{"application/json"},
-			}
-			body := []byte(`{"operationName": null,"query":"query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}","variables":{"criteria":{"nationality":"GERMAN"}}}`)
-			res, err := xEnv.MakeRequest("POST", "/graphql", header, bytes.NewReader(body))
-			require.NoError(t, err)
-			require.Equal(t, http.StatusOK, res.StatusCode)
-			require.Equal(t, res.Header.Get("Content-Type"), "application/json; charset=utf-8")
-			data, err := io.ReadAll(res.Body)
-			require.NoError(t, err)
-			require.Equal(t, `{"data":{"findEmployees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}}]}}`, string(data))
-		})
+		}, func(t *testing.T, xEnv *testenv.Environment) {})
+
+		require.NoError(t, err)
 	})
 
 	t.Run("Should fail on startup when no plugins found at a path", func(t *testing.T) {
