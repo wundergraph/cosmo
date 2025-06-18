@@ -4,8 +4,6 @@ else
  FORMAT := pkgname
 endif
 
-junitfile := report.xml
-
 dev:
 	go run cmd/router/main.go
 

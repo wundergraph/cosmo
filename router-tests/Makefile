@@ -1,6 +1,5 @@
 SHELL := bash
 test_target := ./...
-junitfile := report.xml
 
 ifeq ($(CI),true)
  FORMAT := github-actions
