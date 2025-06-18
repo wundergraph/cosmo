@@ -8,7 +8,6 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/caarlos0/env/v11"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
@@ -46,8 +45,7 @@ func TestCircuitBreaker(t *testing.T) {
 	t.Run("verify tripping based on request threshold", func(t *testing.T) {
 		t.Parallel()
 
-		// Use defaults, but override required
-		breaker := getCircuitBreakerConfigsWithDefaults(t)
+		breaker := getCircuitBreakerWithDefaults()
 		breaker.RequestThreshold = 2
 
 		trafficConfig := getTrafficConfigWithTimeout(breaker, 1*time.Second)
@@ -111,7 +109,7 @@ func TestCircuitBreaker(t *testing.T) {
 		var failureRequests = 7
 
 		// Use defaults, but override required
-		breaker := getCircuitBreakerConfigsWithDefaults(t)
+		breaker := getCircuitBreakerWithDefaults()
 		breaker.ErrorThresholdPercentage = 70
 
 		trafficConfig := getTrafficConfigWithTimeout(breaker, 1*time.Second)
@@ -180,8 +178,7 @@ func TestCircuitBreaker(t *testing.T) {
 		var requestsToSucceed = 3
 		var requestsToFail = 9
 
-		// Use defaults, but override required
-		breaker := getCircuitBreakerConfigsWithDefaults(t)
+		breaker := getCircuitBreakerWithDefaults()
 		breaker.HalfOpenAttempts = 2
 		breaker.SleepWindow = 2 * time.Second
 		breaker.ErrorThresholdPercentage = 70
@@ -257,7 +254,7 @@ func TestCircuitBreaker(t *testing.T) {
 		var requestsToFail = 9
 
 		// Use defaults, but override required
-		breaker := getCircuitBreakerConfigsWithDefaults(t)
+		breaker := getCircuitBreakerWithDefaults()
 		breaker.HalfOpenAttempts = 2
 		breaker.SleepWindow = 2 * time.Second
 		breaker.ErrorThresholdPercentage = 70
@@ -338,7 +335,7 @@ func TestCircuitBreaker(t *testing.T) {
 	t.Run("verify circuit breaker rolling window", func(t *testing.T) {
 		t.Parallel()
 
-		breaker := getCircuitBreakerConfigsWithDefaults(t)
+		breaker := getCircuitBreakerWithDefaults()
 		breaker.NumBuckets = 5
 		breaker.RequestThreshold = 5
 		breaker.RollingDuration = 10000 * time.Millisecond
@@ -510,7 +507,7 @@ func TestCircuitBreaker(t *testing.T) {
 	t.Run("verify circuit breaker trips separately for feature flag", func(t *testing.T) {
 		t.Parallel()
 
-		breaker := getCircuitBreakerConfigsWithDefaults(t)
+		breaker := getCircuitBreakerWithDefaults()
 		breaker.RequestThreshold = 2
 		breaker.ErrorThresholdPercentage = 100
 
@@ -563,7 +560,7 @@ func TestCircuitBreaker(t *testing.T) {
 		t.Run("verify short circuited request metric", func(t *testing.T) {
 			t.Parallel()
 
-			breaker := getCircuitBreakerConfigsWithDefaults(t)
+			breaker := getCircuitBreakerWithDefaults()
 			breaker.RequestThreshold = 2
 			breaker.ErrorThresholdPercentage = 100
 			trafficConfig := getTrafficConfigWithTimeout(breaker, 1*time.Second)
@@ -727,7 +724,7 @@ func TestCircuitBreaker(t *testing.T) {
 				ShortCircuitOpened = 1
 			)
 
-			breaker := getCircuitBreakerConfigsWithDefaults(t)
+			breaker := getCircuitBreakerWithDefaults()
 			breaker.RequestThreshold = 2
 			breaker.ErrorThresholdPercentage = 100
 			breaker.SleepWindow = 2 * time.Second
@@ -899,7 +896,7 @@ func TestCircuitBreaker(t *testing.T) {
 						require.Len(t, metrics, 0)
 					})
 
-					t.Run("no state exists before the first state change", func(t *testing.T) {
+					t.Run("state is open after failures", func(t *testing.T) {
 						for range breaker.RequestThreshold - 1 {
 							sendRequest(opts, "", SendFailedRequest)
 						}
@@ -995,15 +992,19 @@ func sendRequest(opts SendRequestOptions, featureFlag string, isSuccess bool) {
 	}
 }
 
-func getCircuitBreakerConfigsWithDefaults(t *testing.T) config.CircuitBreaker {
-	breaker := config.CircuitBreaker{}
-	err := env.Parse(&breaker)
-	require.NoError(t, err)
-	breaker.Enabled = true
-	// The default is 20, but for testing purposes we set it to 1 so that
-	// the test case can make it explicit
-	breaker.RequestThreshold = 1
-	return breaker
+func getCircuitBreakerWithDefaults() config.CircuitBreaker {
+	return config.CircuitBreaker{
+		// The default is false, but for testing we use true
+		Enabled:                  true,
+		ErrorThresholdPercentage: 50,
+		// The default is 20, but for testing purposes we set it to 1 so that
+		RequestThreshold:           1,
+		SleepWindow:                5 * time.Second,
+		HalfOpenAttempts:           1,
+		RequiredSuccessfulAttempts: 1,
+		RollingDuration:            10 * time.Second,
+		NumBuckets:                 10,
+	}
 }
 
 func getTrafficConfigWithTimeout(breaker config.CircuitBreaker, timeout time.Duration) config.TrafficShapingRules {
