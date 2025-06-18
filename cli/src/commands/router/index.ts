@@ -7,7 +7,8 @@ import RouterTokenCommands from './commands/token/index.js';
 import DownloadRouterBinaryConfig from './commands/download-binary.js';
 import CompatibilityVersionCommands from './commands/compatibility-version/index.js';
 import RouterCacheCommands from './commands/cache/index.js';
-import PluginCommands from './plugin/index.js';
+import GRPCPluginCommands from './commands/grpc-plugin/index.js';
+import GRPCServiceCommands from './commands/grpc-service/index.js';
 
 export default (opts: BaseCommandOptions) => {
   const cmd = new Command('router');
@@ -33,7 +34,13 @@ export default (opts: BaseCommandOptions) => {
     }),
   );
   cmd.addCommand(
-    PluginCommands({
+    GRPCPluginCommands({
+      client: opts.client,
+    }),
+  );
+
+  cmd.addCommand(
+    GRPCServiceCommands({
       client: opts.client,
     }),
   );

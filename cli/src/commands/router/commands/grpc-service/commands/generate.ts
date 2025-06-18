@@ -5,8 +5,8 @@ import Spinner from 'ora';
 import { Command, program } from 'commander';
 import { compileGraphQLToMapping, compileGraphQLToProto, ProtoLock } from '@wundergraph/protographic';
 import { camelCase, upperFirst } from 'lodash-es';
-import { BaseCommandOptions } from '../../../core/types/types.js';
-import { renderResultTree } from '../../router/plugin/helper.js';
+import { BaseCommandOptions } from '../../../../../core/types/types.js';
+import { renderResultTree } from '../../grpc-plugin/helper.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('generate');
