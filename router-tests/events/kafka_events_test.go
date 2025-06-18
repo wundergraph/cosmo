@@ -925,7 +925,7 @@ func TestKafkaEvents(t *testing.T) {
 				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
 			}, "unable to receive message before timeout")
 
-			//require.NoError(t, client.Close())
+			require.NoError(t, client.Close())
 			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, clientRunCh, func(t testing.TB, err error) {
 				require.NoError(t, err)
 			}, "unable to close client before timeout")
