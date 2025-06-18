@@ -51,7 +51,6 @@ func New(options Options) (func(ctx context.Context) error, error) {
 			}
 		}
 
-		shouldDebounce := len(options.Paths) > 1
 		pendingCallback := false
 
 		for {
@@ -77,27 +76,16 @@ func New(options Options) (func(ctx context.Context) error, error) {
 					}
 				}
 
-				// In case of single paths
-				if !shouldDebounce && changesDetected {
+				if changesDetected {
+					// If there are changes detected this tick
+					// We want to wait for the next tick (without changes)
+					// to run the callback
+					pendingCallback = true
+				} else if pendingCallback {
+					// When there are no changes detected for this tick
+					// but the previous tick had changes detected
+					pendingCallback = false
 					options.Callback()
-					continue
-				}
-
-				// We debounce multiple paths, in case a user is modifying multiple files
-				// which means each subsequent tick could cause a reload
-				// thus by debouncing we wait for a tick without any changes to reload
-				if shouldDebounce {
-					if changesDetected {
-						// If there are changes detected this tick
-						// We want to wait for the next tick (without changes)
-						// to run the callback
-						pendingCallback = true
-					} else if pendingCallback {
-						// When there are no changes detected for this tick
-						// but the previous tick had changes detected
-						pendingCallback = false
-						options.Callback()
-					}
 				}
 			case <-ctx.Done():
 				return ctx.Err()
