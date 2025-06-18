@@ -424,7 +424,6 @@ func TestCircuitBreaker(t *testing.T) {
 		})
 
 		t.Run("with multiple requests per bucket", func(t *testing.T) {
-			t.Skip()
 			t.Parallel()
 
 			testenv.Run(t, &testenv.Config{
