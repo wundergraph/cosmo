@@ -64,8 +64,7 @@ func (p *OperationPlanner) preparePlan(ctx *operationContext) (*planWithMetaData
 
 	// create and postprocess the plan
 	// planning uses the router schema
-	// TODO(@endigma), run this when needed for custom module only?
-	if ctx.executionOptions.IncludeQueryPlanInResponse || true {
+	if ctx.executionOptions.IncludeQueryPlanInResponse {
 		preparedPlan = planner.Plan(&doc, p.executor.RouterSchema, ctx.name, &report, plan.IncludeQueryPlanInResponse())
 	} else {
 		preparedPlan = planner.Plan(&doc, p.executor.RouterSchema, ctx.name, &report)

@@ -478,7 +478,7 @@ type OperationContext interface {
 	// ClientInfo returns information about the client that initiated this operation
 	ClientInfo() ClientInfo
 	// QueryPlan returns the query plan for the operation
-	QueryPlan() *resolve.FetchTreeQueryPlanNode
+	QueryPlan() *resolve.FetchTreeNode
 }
 
 var _ OperationContext = (*operationContext)(nil)
@@ -576,9 +576,9 @@ func (o *operationContext) ClientInfo() ClientInfo {
 	return *o.clientInfo
 }
 
-func (o *operationContext) QueryPlan() *resolve.FetchTreeQueryPlanNode {
+func (o *operationContext) QueryPlan() *resolve.FetchTreeNode {
 	if p, ok := o.preparedPlan.preparedPlan.(*plan.SynchronousResponsePlan); ok {
-		return p.Response.Fetches.QueryPlan()
+		return p.Response.Fetches
 	}
 
 	return nil

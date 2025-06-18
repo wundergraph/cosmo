@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/sanity-io/litter"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
@@ -28,7 +27,7 @@ func NewPlanAnalyzer() *PlanAnalyzer {
 	}
 }
 
-func (p *PlanAnalyzer) Analyze(plan *resolve.FetchTreeQueryPlanNode) {
+func (p *PlanAnalyzer) Analyze(plan *resolve.FetchTreeNode) {
 	p.analyzePlanNode(plan)
 }
 
@@ -40,22 +39,24 @@ func (p *PlanAnalyzer) TotalSubgraphsContacted() int {
 	return total
 }
 
-func (p *PlanAnalyzer) analyzePlanNode(plan *resolve.FetchTreeQueryPlanNode) {
+func (p *PlanAnalyzer) analyzePlanNode(plan *resolve.FetchTreeNode) {
 	switch plan.Kind {
 	case resolve.FetchTreeNodeKindSingle:
 		p.analyzeSingleFetch(plan)
 	case resolve.FetchTreeNodeKindSequence, resolve.FetchTreeNodeKindParallel:
-		for _, child := range plan.Children {
+		for _, child := range plan.ChildNodes {
 			p.analyzePlanNode(child)
 		}
 	}
 }
 
-func (p *PlanAnalyzer) analyzeSingleFetch(plan *resolve.FetchTreeQueryPlanNode) {
-	if entry, ok := p.SubgraphsContacted[plan.Fetch.SubgraphName]; ok {
-		p.SubgraphsContacted[plan.Fetch.SubgraphName] = entry + 1
+func (p *PlanAnalyzer) analyzeSingleFetch(plan *resolve.FetchTreeNode) {
+	key := plan.Item.Fetch.DataSourceInfo().Name
+
+	if entry, ok := p.SubgraphsContacted[key]; ok {
+		p.SubgraphsContacted[key] = entry + 1
 	} else {
-		p.SubgraphsContacted[plan.Fetch.SubgraphName] = 1
+		p.SubgraphsContacted[key] = 1
 	}
 }
 
@@ -65,10 +66,8 @@ func (m *MyModule) Middleware(ctx core.RequestContext, next http.Handler) {
 	analyzer := NewPlanAnalyzer()
 	analyzer.Analyze(qp)
 
-	litter.Dump("subgraphs contacted", analyzer.SubgraphsContacted)
-	litter.Dump("total subgraphs contacted", analyzer.TotalSubgraphsContacted())
-
-	fmt.Println(qp.PrettyPrint())
+	fmt.Printf("subgraphs contacted: %v\n", analyzer.SubgraphsContacted)
+	fmt.Printf("total subgraphs contacted: %d\n", analyzer.TotalSubgraphsContacted())
 
 	// Call the next handler in the chain or return early by calling w.Write()
 	next.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
