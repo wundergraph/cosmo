@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.223.0](https://github.com/wundergraph/cosmo/compare/router@0.222.3...router@0.223.0) (2025-06-19)
+
+### Features
+
+* add SASL-SCRAM support and add logging of kafka client errors ([#1975](https://github.com/wundergraph/cosmo/issues/1975)) ([6b15a37](https://github.com/wundergraph/cosmo/commit/6b15a37183dfca7fe4c0b50f98956d20f599ae2f)) (@alepane21)
+
 ## [0.222.3](https://github.com/wundergraph/cosmo/compare/router@0.222.2...router@0.222.3) (2025-06-18)
 
 ### Bug Fixes
