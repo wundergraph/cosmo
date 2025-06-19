@@ -15,7 +15,7 @@ import (
 )
 
 func TestCustomModuleQueryStats(t *testing.T) {
-	t.Run("it gets the correct stats for a simple query", func(t *testing.T) {
+	t.Run("gets the correct stats for a simple query", func(t *testing.T) {
 		t.Parallel()
 
 		resultsChan := make(chan core.QueryPlanStats, 1)
@@ -52,7 +52,7 @@ func TestCustomModuleQueryStats(t *testing.T) {
 		})
 	})
 
-	t.Run("it gets the correct stats for a very complex query", func(t *testing.T) {
+	t.Run("gets the correct stats for a very complex query", func(t *testing.T) {
 		t.Parallel()
 
 		resultsChan := make(chan core.QueryPlanStats, 1)
