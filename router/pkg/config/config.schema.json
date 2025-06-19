@@ -2013,6 +2013,8 @@
                     "oneOf": [
                       {
                         "type": "object",
+                        "additionalProperties": false,
+                        "required": ["sasl_plain"],
                         "properties": {
                           "sasl_plain": {
                             "type": "object",
@@ -2027,6 +2029,34 @@
                               "password": {
                                 "type": "string",
                                 "description": "The password for plain SASL authentication."
+                              }
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": ["sasl_scram"],
+                        "properties": {
+                          "sasl_scram": {
+                            "type": "object",
+                            "description": "SCRAM SASL Authentication configuration for the Kafka provider.",
+                            "additionalProperties": false,
+                            "required": ["username", "password", "mechanism"],
+                            "properties": {
+                              "username": {
+                                "type": "string",
+                                "description": "The username for SCRAM SASL authentication."
+                              },
+                              "password": {
+                                "type": "string",
+                                "description": "The password for SCRAM SASL authentication."
+                              },
+                              "mechanism": {
+                                "type": "string",
+                                "description": "The mechanism for SCRAM SASL authentication.",
+                                "enum": ["SCRAM-SHA-256", "SCRAM-SHA-512"]
                               }
                             }
                           }
