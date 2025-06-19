@@ -540,6 +540,11 @@
             "SASLPlain": {
               "Password": "admin",
               "Username": "admin"
+            },
+            "SASLSCRAM": {
+              "Password": null,
+              "Username": null,
+              "Mechanism": null
             }
           },
           "TLS": {

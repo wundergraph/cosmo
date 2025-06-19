@@ -17,7 +17,7 @@ func TestBuildKafkaOptions(t *testing.T) {
 			Brokers: []string{"localhost:9092"},
 		}
 
-		opts, err := buildKafkaOptions(cfg)
+		opts, err := buildKafkaOptions(cfg, zaptest.NewLogger(t))
 		require.NoError(t, err)
 		require.NotEmpty(t, opts)
 	})
@@ -30,14 +30,14 @@ func TestBuildKafkaOptions(t *testing.T) {
 			},
 		}
 
-		opts, err := buildKafkaOptions(cfg)
+		opts, err := buildKafkaOptions(cfg, zaptest.NewLogger(t))
 		require.NoError(t, err)
 		require.NotEmpty(t, opts)
 		// Can't directly check for TLS options, but we can verify more options are present
-		require.Equal(t, len(opts), 4)
+		require.Equal(t, len(opts), 5)
 	})
 
-	t.Run("with auth", func(t *testing.T) {
+	t.Run("with sasl plain auth", func(t *testing.T) {
 		username := "user"
 		password := "pass"
 		cfg := config.KafkaEventSource{
@@ -50,7 +50,27 @@ func TestBuildKafkaOptions(t *testing.T) {
 			},
 		}
 
-		opts, err := buildKafkaOptions(cfg)
+		opts, err := buildKafkaOptions(cfg, zaptest.NewLogger(t))
+		require.NoError(t, err)
+		require.NotEmpty(t, opts)
+		// Can't directly check for SASL options, but we can verify more options are present
+		require.Greater(t, len(opts), 1)
+	})
+
+	t.Run("with sasl scram auth", func(t *testing.T) {
+		username := "user"
+		password := "pass"
+		cfg := config.KafkaEventSource{
+			Brokers: []string{"localhost:9092"},
+			Authentication: &config.KafkaAuthentication{
+				SASLSCRAM: config.KafkaSASLSCRAMAuthentication{
+					Username: &username,
+					Password: &password,
+				},
+			},
+		}
+
+		opts, err := buildKafkaOptions(cfg, zaptest.NewLogger(t))
 		require.NoError(t, err)
 		require.NotEmpty(t, opts)
 		// Can't directly check for SASL options, but we can verify more options are present
