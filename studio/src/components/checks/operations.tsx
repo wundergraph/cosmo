@@ -54,6 +54,7 @@ import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { OperationContentDialog } from "./operation-content";
 import { Pagination } from "../ui/pagination";
+import { useDebounce } from "use-debounce";
 
 export const CheckOperations = () => {
   const graphContext = useContext(GraphContext);
@@ -66,6 +67,9 @@ export const CheckOperations = () => {
 
   const id = router.query.checkId as string;
 
+  const [search, setSearch] = useState(router.query.search as string);
+  const [debouncedSearch] = useDebounce(search, 500);
+
   const { data, isLoading, error, refetch } = useQuery(
     getCheckOperations,
     {
@@ -74,6 +78,7 @@ export const CheckOperations = () => {
       namespace: graphContext?.graph?.namespace,
       limit: limit > 200 ? 200 : limit,
       offset: (pageNumber - 1) * limit,
+      search: debouncedSearch,
     },
     {
       enabled: !!graphContext?.graph?.name,
@@ -233,8 +238,6 @@ export const CheckOperations = () => {
     },
   });
 
-  const [search, setSearch] = useState(router.query.search as string);
-
   const applyParams = useApplyParams();
 
   const copyLink = (hash: string) => {
@@ -244,26 +247,10 @@ export const CheckOperations = () => {
     toast({ description: "Copied link to clipboard" });
   };
 
-  const filteredOperations = useMemo(() => {
-    const fuse = new Fuse(data?.operations ?? [], {
-      keys: ["hash", "name"],
-      minMatchCharLength: 1,
-    });
+  const operations = data?.operations || [];
 
-    return search
-      ? fuse.search(search).map(({ item }) => item)
-      : data?.operations || [];
-  }, [data?.operations, search]);
-
-  const doAllOperationsHaveIgnoreAllOverride = useMemo(() => {
-    return filteredOperations.every((op) => op.hasIgnoreAllOverride);
-  }, [filteredOperations]);
-
-  const doAllOperationsHaveAllTheirChangesMarkedSafe = useMemo(() => {
-    return filteredOperations.every((op) =>
-      op.impactingChanges.every((c) => !!c.hasOverride),
-    );
-  }, [filteredOperations]);
+  const doAllOperationsHaveIgnoreAllOverride = data?.doAllOperationsHaveIgnoreAllOverride;
+  const doAllOperationsHaveAllTheirChangesMarkedSafe = data?.doAllOperationsHaveAllTheirChangesMarkedSafe;
 
   if (isLoading) return <Loader fullscreen />;
 
@@ -393,7 +380,7 @@ export const CheckOperations = () => {
           collapsible
           className="scrollbar-custom mt-4 max-h-[calc(100%_-_96px)] w-full overflow-auto"
         >
-          {filteredOperations.map(
+          {operations.map(
             ({
               hash,
               name,

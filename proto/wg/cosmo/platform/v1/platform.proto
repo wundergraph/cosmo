@@ -549,6 +549,7 @@ message GetCheckOperationsRequest {
   string namespace = 3;
   int32 limit = 4;
   int32 offset = 5;
+  optional string search = 6;
 }
 
 message GetCheckOperationsResponse {
@@ -569,6 +570,8 @@ message GetCheckOperationsResponse {
   string created_at = 4;
   bool client_traffic_check_skipped = 5;
   int32 totalOperationsCount = 6;
+  bool doAllOperationsHaveIgnoreAllOverride = 7;
+  bool doAllOperationsHaveAllTheirChangesMarkedSafe = 8;
 }
 
 message GetOperationContentRequest {
