@@ -14,7 +14,10 @@ type QueryStatsModule struct {
 }
 
 func (m *QueryStatsModule) Middleware(ctx core.RequestContext, next http.Handler) {
-	qps := ctx.Operation().QueryPlanStats()
+	qps, err := ctx.Operation().QueryPlanStats()
+	if err != nil {
+		panic(err)
+	}
 
 	m.ResultsChan <- qps
 
