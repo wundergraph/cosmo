@@ -126,6 +126,10 @@ func buildKafkaOptions(eventSource config.KafkaEventSource, logger *zap.Logger) 
 		kgo.WithLogger(&kgoErrorLogger{logger: logger}),
 	}
 
+	if eventSource.FetchMaxWait > 0 {
+		opts = append(opts, kgo.FetchMaxWait(eventSource.FetchMaxWait))
+	}
+
 	if eventSource.TLS != nil && eventSource.TLS.Enabled {
 		opts = append(opts,
 			// Configure TLS. Uses SystemCertPool for RootCAs by default.

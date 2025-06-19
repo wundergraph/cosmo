@@ -549,7 +549,8 @@
           },
           "TLS": {
             "Enabled": true
-          }
+          },
+          "FetchMaxWait": 10000000
         }
       ]
     }
