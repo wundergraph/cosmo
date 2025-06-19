@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -15,6 +16,7 @@ import (
 	"github.com/wundergraph/astjson"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 
 	graphqlmetrics "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
@@ -476,6 +478,10 @@ type OperationContext interface {
 	Content() string
 	// ClientInfo returns information about the client that initiated this operation
 	ClientInfo() ClientInfo
+	// QueryPlanStats returns some statistics about the query plan for the operation
+	// if called too early in request chain, it may be inaccurate for modules, using
+	// in Middleware is recommended
+	QueryPlanStats() (QueryPlanStats, error)
 }
 
 var _ OperationContext = (*operationContext)(nil)
@@ -571,6 +577,65 @@ func (o *operationContext) Protocol() OperationProtocol {
 
 func (o *operationContext) ClientInfo() ClientInfo {
 	return *o.clientInfo
+}
+
+type QueryPlanStats struct {
+	TotalSubgraphFetches int
+	SubgraphFetches      map[string]int
+}
+
+func (p *QueryPlanStats) analyzePlanNode(plan *resolve.FetchTreeQueryPlanNode) {
+	switch plan.Kind {
+	case resolve.FetchTreeNodeKindSingle:
+		p.analyzeSingleFetch(plan)
+	case resolve.FetchTreeNodeKindSequence, resolve.FetchTreeNodeKindParallel:
+		for _, child := range plan.Children {
+			p.analyzePlanNode(child)
+		}
+	}
+}
+
+func (p *QueryPlanStats) analyzeSingleFetch(plan *resolve.FetchTreeQueryPlanNode) {
+	key := plan.Fetch.SubgraphName
+
+	p.TotalSubgraphFetches++
+
+	if entry, ok := p.SubgraphFetches[key]; ok {
+		p.SubgraphFetches[key] = entry + 1
+	} else {
+		p.SubgraphFetches[key] = 1
+	}
+}
+
+func (o *operationContext) QueryPlanStats() (QueryPlanStats, error) {
+	if o == nil || o.preparedPlan == nil || o.preparedPlan.preparedPlan == nil {
+		return QueryPlanStats{}, errors.New("operation context is nil")
+	}
+
+	if o.preparedPlan == nil || o.preparedPlan.preparedPlan == nil {
+		return QueryPlanStats{}, errors.New("prepared plan is nil")
+	}
+
+	qps := QueryPlanStats{
+		TotalSubgraphFetches: 0,
+		SubgraphFetches:      make(map[string]int),
+	}
+
+	if p, ok := o.preparedPlan.preparedPlan.(*plan.SynchronousResponsePlan); ok {
+		if p.Response == nil {
+			return QueryPlanStats{}, errors.New("synchronous response plan is nil")
+		}
+
+		if p.Response.Fetches == nil {
+			return QueryPlanStats{}, errors.New("synchronous response plan has no fetches")
+		}
+
+		qps.analyzePlanNode(p.Response.Fetches.QueryPlan())
+	} else {
+		return QueryPlanStats{}, errors.New("query plan stats currently only support synchronous response plans")
+	}
+
+	return qps, nil
 }
 
 // isMutationRequest returns true if the current request is a mutation request
