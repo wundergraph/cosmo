@@ -555,6 +555,7 @@ type KafkaEventSource struct {
 	Brokers        []string               `yaml:"brokers,omitempty"`
 	Authentication *KafkaAuthentication   `yaml:"authentication,omitempty"`
 	TLS            *KafkaTLSConfiguration `yaml:"tls,omitempty"`
+	FetchMaxWait   time.Duration          `yaml:"fetch_max_wait,omitempty"`
 }
 
 func (k KafkaEventSource) GetID() string {
