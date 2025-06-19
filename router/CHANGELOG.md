@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.222.3](https://github.com/wundergraph/cosmo/compare/router@0.222.2...router@0.222.3) (2025-06-18)
+
+### Bug Fixes
+
+* cleanup flaky line for router build test ([#1974](https://github.com/wundergraph/cosmo/issues/1974)) ([616a5b5](https://github.com/wundergraph/cosmo/commit/616a5b59bd57301357c85dc48ca81d8cf0b778d5)) (@SkArchon)
+* don't send complete when router shuts down ([#1956](https://github.com/wundergraph/cosmo/issues/1956)) ([882ac82](https://github.com/wundergraph/cosmo/commit/882ac82a9db0656c68ad4121970e95f949a8c182)) (@endigma)
+
 ## [0.222.2](https://github.com/wundergraph/cosmo/compare/router@0.222.1...router@0.222.2) (2025-06-17)
 
 ### Bug Fixes
