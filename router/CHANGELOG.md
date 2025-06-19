@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.224.0](https://github.com/wundergraph/cosmo/compare/router@0.223.0...router@0.224.0) (2025-06-19)
+
+### Features
+
+* expose query plan information to custom modules + bump engine ([#1979](https://github.com/wundergraph/cosmo/issues/1979)) ([027a504](https://github.com/wundergraph/cosmo/commit/027a5040882322d50562a697d56561916c95a52d)) (@endigma)
+
 # [0.223.0](https://github.com/wundergraph/cosmo/compare/router@0.222.3...router@0.223.0) (2025-06-19)
 
 ### Features
