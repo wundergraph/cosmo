@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.84.2](https://github.com/wundergraph/cosmo/compare/wgc@0.84.1...wgc@0.84.2) (2025-06-19)
+
+### Bug Fixes
+
+* incorrect import of program ([#1977](https://github.com/wundergraph/cosmo/issues/1977)) ([a6d7bfd](https://github.com/wundergraph/cosmo/commit/a6d7bfd828c4b5d54048b2a3b7eeadf8a807fc0c)) (@thisisnithin)
+
 ## [0.84.1](https://github.com/wundergraph/cosmo/compare/wgc@0.84.0...wgc@0.84.1) (2025-06-17)
 
 ### Bug Fixes
