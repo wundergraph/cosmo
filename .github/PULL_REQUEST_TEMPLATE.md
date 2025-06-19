@@ -32,7 +32,7 @@ Please describe in detail the impact of this change. Attach screenshots if appli
 - [ ] Tests or benchmarks have been added or updated.
 - [ ] Documentation has been updated on [https://github.com/wundergraph/cosmo-docs](https://github.com/wundergraph/cosmo-docs).
 - [ ] I have read the [Contributors Guide](https://github.com/wundergraph/cosmo/blob/main/CONTRIBUTING.md).
-
+1
 <!--
 Please add any additional information or context regarding your changes here.
 -->
