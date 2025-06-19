@@ -478,6 +478,8 @@ type OperationContext interface {
 	// ClientInfo returns information about the client that initiated this operation
 	ClientInfo() ClientInfo
 	// QueryPlanStats returns some statistics about the query plan for the operation
+	// if called too early in request chain, it may be inaccurate for modules, using
+	// in Middleware is recommended
 	QueryPlanStats() QueryPlanStats
 }
 
@@ -581,23 +583,19 @@ type QueryPlanStats struct {
 	SubgraphFetches      map[string]int
 }
 
-func (p *QueryPlanStats) analyze(plan *resolve.FetchTreeNode) {
-	p.analyzePlanNode(plan)
-}
-
-func (p *QueryPlanStats) analyzePlanNode(plan *resolve.FetchTreeNode) {
+func (p *QueryPlanStats) analyzePlanNode(plan *resolve.FetchTreeQueryPlanNode) {
 	switch plan.Kind {
 	case resolve.FetchTreeNodeKindSingle:
 		p.analyzeSingleFetch(plan)
 	case resolve.FetchTreeNodeKindSequence, resolve.FetchTreeNodeKindParallel:
-		for _, child := range plan.ChildNodes {
+		for _, child := range plan.Children {
 			p.analyzePlanNode(child)
 		}
 	}
 }
 
-func (p *QueryPlanStats) analyzeSingleFetch(plan *resolve.FetchTreeNode) {
-	key := plan.Item.Fetch.DataSourceInfo().Name
+func (p *QueryPlanStats) analyzeSingleFetch(plan *resolve.FetchTreeQueryPlanNode) {
+	key := plan.Fetch.SubgraphName
 
 	p.TotalSubgraphFetches++
 
@@ -615,7 +613,7 @@ func (o *operationContext) QueryPlanStats() QueryPlanStats {
 	}
 
 	if p, ok := o.preparedPlan.preparedPlan.(*plan.SynchronousResponsePlan); ok {
-		qps.analyze(p.Response.Fetches)
+		qps.analyzePlanNode(p.Response.Fetches.QueryPlan())
 	}
 
 	return qps
