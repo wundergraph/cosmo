@@ -80,6 +80,40 @@ func (l *kgoErrorLogger) Log(level kgo.LogLevel, msg string, keyvals ...any) {
 	l.logger.Sugar().Errorw(msg, keyvals...)
 }
 
+func buildKafkaAuthenticationOptions(eventSource config.KafkaEventSource) ([]kgo.Opt, error) {
+	opts := []kgo.Opt{}
+
+	if eventSource.Authentication == nil {
+		return opts, nil
+	}
+
+	if eventSource.Authentication.SASLPlain.IsSet() {
+		opts = append(opts, kgo.SASL(plain.Auth{
+			User: *eventSource.Authentication.SASLPlain.Username,
+			Pass: *eventSource.Authentication.SASLPlain.Password,
+		}.AsMechanism()))
+	}
+
+	if eventSource.Authentication.SASLSCRAM.IsSet() {
+		var saslAuth sasl.Mechanism
+		scramAuth := scram.Auth{
+			User: *eventSource.Authentication.SASLSCRAM.Username,
+			Pass: *eventSource.Authentication.SASLSCRAM.Password,
+		}
+		switch *eventSource.Authentication.SASLSCRAM.Mechanism {
+		case config.KafkaSASLSCRAMMechanismSCRAM256:
+			saslAuth = scramAuth.AsSha256Mechanism()
+		case config.KafkaSASLSCRAMMechanismSCRAM512:
+			saslAuth = scramAuth.AsSha512Mechanism()
+		default:
+			return nil, fmt.Errorf("unsupported SASL SCRAM mechanism: %s", *eventSource.Authentication.SASLSCRAM.Mechanism)
+		}
+		opts = append(opts, kgo.SASL(saslAuth))
+	}
+
+	return opts, nil
+}
+
 // buildKafkaOptions creates a list of kgo.Opt options for the given Kafka event source configuration.
 // Only general options like TLS, SASL, etc. are configured here. Specific options like topics, etc. are
 // configured in the KafkaPubSub implementation.
@@ -99,38 +133,15 @@ func buildKafkaOptions(eventSource config.KafkaEventSource, logger *zap.Logger) 
 		)
 	}
 
-	var authSpecified bool
-
-	if eventSource.Authentication != nil && eventSource.Authentication.SASLPlain.Username != nil && eventSource.Authentication.SASLPlain.Password != nil {
-		authSpecified = true
-
-		opts = append(opts, kgo.SASL(plain.Auth{
-			User: *eventSource.Authentication.SASLPlain.Username,
-			Pass: *eventSource.Authentication.SASLPlain.Password,
-		}.AsMechanism()))
+	authOpts, err := buildKafkaAuthenticationOptions(eventSource)
+	if err != nil {
+		return opts, fmt.Errorf("failed to build authentication options for Kafka provider with ID \"%s\": %w", eventSource.ID, err)
+	}
+	if len(authOpts) > 1 {
+		return opts, fmt.Errorf("multiple authentication methods specified for Kafka provider with ID \"%s\"", eventSource.ID)
 	}
 
-	if eventSource.Authentication != nil && eventSource.Authentication.SASLSCRAM.Username != nil && eventSource.Authentication.SASLSCRAM.Password != nil && eventSource.Authentication.SASLSCRAM.Mechanism != nil {
-		if authSpecified {
-			return nil, fmt.Errorf("multiple authentication methods specified for Kafka provider with ID \"%s\"", eventSource.ID)
-		}
-		authSpecified = true
-
-		scramAuth := scram.Auth{
-			User: *eventSource.Authentication.SASLSCRAM.Username,
-			Pass: *eventSource.Authentication.SASLSCRAM.Password,
-		}
-		var saslAuth sasl.Mechanism
-		switch *eventSource.Authentication.SASLSCRAM.Mechanism {
-		case config.KafkaSASLSCRAMMechanismSCRAM256:
-			saslAuth = scramAuth.AsSha256Mechanism()
-		case config.KafkaSASLSCRAMMechanismSCRAM512:
-			saslAuth = scramAuth.AsSha512Mechanism()
-		default:
-			return nil, fmt.Errorf("unsupported SASL SCRAM mechanism: %s", *eventSource.Authentication.SASLSCRAM.Mechanism)
-		}
-		opts = append(opts, kgo.SASL(saslAuth))
-	}
+	opts = append(opts, authOpts...)
 
 	return opts, nil
 }

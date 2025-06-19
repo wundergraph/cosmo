@@ -528,6 +528,10 @@ type KafkaSASLPlainAuthentication struct {
 	Username *string `yaml:"username,omitempty"`
 }
 
+func (k KafkaSASLPlainAuthentication) IsSet() bool {
+	return k.Username != nil && k.Password != nil
+}
+
 type KafkaSASLSCRAMMechanism string
 
 const (
@@ -539,6 +543,10 @@ type KafkaSASLSCRAMAuthentication struct {
 	Password  *string                  `yaml:"password,omitempty"`
 	Username  *string                  `yaml:"username,omitempty"`
 	Mechanism *KafkaSASLSCRAMMechanism `yaml:"mechanism,omitempty"`
+}
+
+func (k KafkaSASLSCRAMAuthentication) IsSet() bool {
+	return k.Username != nil && k.Password != nil && k.Mechanism != nil
 }
 
 type KafkaAuthentication struct {
