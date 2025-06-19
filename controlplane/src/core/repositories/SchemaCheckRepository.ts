@@ -11,7 +11,7 @@ import {
   VCSContext,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, like, or, SQL, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { GraphQLSchema, parse } from 'graphql';
@@ -317,10 +317,12 @@ export class SchemaCheckRepository {
     checkId,
     limit,
     offset,
+    search,
   }: {
     checkId: string;
     limit?: number;
     offset?: number;
+    search?: string;
   }) {
     const changeActionIds = (
       await this.db.query.schemaCheckChangeAction.findMany({
@@ -335,6 +337,17 @@ export class SchemaCheckRepository {
     ).map((r) => r.id);
 
     if (changeActionIds.length > 0) {
+      const conditions: (SQL<unknown> | undefined)[] = [];
+
+      if (search) {
+        conditions.push(
+          or(
+            like(schema.schemaCheckChangeActionOperationUsage.name, `%${search}%`),
+            like(schema.schemaCheckChangeActionOperationUsage.hash, `%${search}%`),
+          ),
+        );
+      }
+
       const dbQuery = this.db
         .selectDistinctOn([schema.schemaCheckChangeActionOperationUsage.hash], {
           hash: schema.schemaCheckChangeActionOperationUsage.hash,
@@ -352,7 +365,12 @@ export class SchemaCheckRepository {
           isSafe: sql<boolean>`true = all(array_agg(${schema.schemaCheckChangeActionOperationUsage.isSafeOverride}))`,
         })
         .from(schema.schemaCheckChangeActionOperationUsage)
-        .where(inArray(schema.schemaCheckChangeActionOperationUsage.schemaCheckChangeActionId, changeActionIds))
+        .where(
+          and(
+            inArray(schema.schemaCheckChangeActionOperationUsage.schemaCheckChangeActionId, changeActionIds),
+            ...conditions,
+          ),
+        )
         .groupBy(({ hash, name, type }) => [hash, name, type]);
 
       if (limit) {
@@ -369,7 +387,7 @@ export class SchemaCheckRepository {
     return [];
   }
 
-  public async getAffectedOperationsCountByCheckId({ checkId }: { checkId: string }) {
+  public async getAffectedOperationsCountByCheckId({ checkId, search }: { checkId: string; search?: string }) {
     const changeActionIds = (
       await this.db.query.schemaCheckChangeAction.findMany({
         where: and(
@@ -383,6 +401,17 @@ export class SchemaCheckRepository {
     ).map((r) => r.id);
 
     if (changeActionIds.length > 0) {
+      const conditions: (SQL<unknown> | undefined)[] = [];
+
+      if (search) {
+        conditions.push(
+          or(
+            like(schema.schemaCheckChangeActionOperationUsage.name, `%${search}%`),
+            like(schema.schemaCheckChangeActionOperationUsage.hash, `%${search}%`),
+          ),
+        );
+      }
+
       const result = await this.db
         .selectDistinctOn([schema.schemaCheckChangeActionOperationUsage.hash], {
           hash: schema.schemaCheckChangeActionOperationUsage.hash,
@@ -390,7 +419,12 @@ export class SchemaCheckRepository {
           type: schema.schemaCheckChangeActionOperationUsage.type,
         })
         .from(schema.schemaCheckChangeActionOperationUsage)
-        .where(inArray(schema.schemaCheckChangeActionOperationUsage.schemaCheckChangeActionId, changeActionIds))
+        .where(
+          and(
+            inArray(schema.schemaCheckChangeActionOperationUsage.schemaCheckChangeActionId, changeActionIds),
+            ...conditions,
+          ),
+        )
         .groupBy(({ hash, name, type }) => [hash, name, type])
         .execute();
 
