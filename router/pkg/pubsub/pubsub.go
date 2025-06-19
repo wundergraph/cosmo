@@ -11,6 +11,7 @@ import (
 	pubsub_datasource "github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/sqs"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"go.uber.org/zap"
 )
@@ -92,6 +93,22 @@ func BuildProvidersAndDataSources(
 	}
 	pubSubProviders = append(pubSubProviders, natsPubSubProviders...)
 	outs = append(outs, natsOuts...)
+
+	// initialize SQS providers and data sources
+	sqsBuilder := sqs.NewProviderBuilder(ctx, logger, hostName, routerListenAddr)
+	sqsDsConfsWithEvents := []dsConfAndEvents[*nodev1.SqsEventConfiguration]{}
+	for _, dsConf := range dsConfs {
+		sqsDsConfsWithEvents = append(sqsDsConfsWithEvents, dsConfAndEvents[*nodev1.SqsEventConfiguration]{
+			dsConf: &dsConf,
+			events: dsConf.Configuration.GetCustomEvents().GetSqs(),
+		})
+	}
+	sqsPubSubProviders, sqsOuts, err := build(ctx, sqsBuilder, config.Providers.Sqs, sqsDsConfsWithEvents)
+	if err != nil {
+		return nil, nil, err
+	}
+	pubSubProviders = append(pubSubProviders, sqsPubSubProviders...)
+	outs = append(outs, sqsOuts...)
 
 	return pubSubProviders, outs, nil
 }
