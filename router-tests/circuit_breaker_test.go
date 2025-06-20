@@ -247,7 +247,7 @@ func TestCircuitBreaker(t *testing.T) {
 		})
 	})
 
-	t.Run("verify circuit breaker becoming half open after sleep window", func(t *testing.T) {
+	t.Run("verify number of required successful attempts to close circuit breakear", func(t *testing.T) {
 		t.Parallel()
 
 		var requestsToSucceed = 3
