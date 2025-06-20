@@ -815,6 +815,7 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		cfg.KafkaSeeds = []string{"localhost:9092"}
 		client, err := kgo.NewClient(
 			kgo.SeedBrokers(cfg.KafkaSeeds...),
+			kgo.FetchMaxWait(time.Millisecond*100),
 		)
 		if err != nil {
 			return nil, err
@@ -1318,8 +1319,9 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	if testConfig.KafkaSeeds != nil {
 		for _, sourceName := range DemoKafkaProviders {
 			kafkaEventSources = append(kafkaEventSources, config.KafkaEventSource{
-				ID:      sourceName,
-				Brokers: testConfig.KafkaSeeds,
+				ID:           sourceName,
+				Brokers:      testConfig.KafkaSeeds,
+				FetchMaxWait: 100 * time.Millisecond,
 			})
 		}
 	}

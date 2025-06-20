@@ -114,6 +114,36 @@ events:
 	require.ErrorContains(t, err, "- at '/events/providers/kafka/0/authentication': oneOf failed, none matched\n  - at '/events/providers/kafka/0/authentication/sasl_plain': missing property 'username'")
 }
 
+func TestInvalidDoubleKafkaAuthentication(t *testing.T) {
+	t.Parallel()
+
+	f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+events:
+  providers:
+    kafka:
+      - id: my-kafka
+        brokers:
+          - "localhost:9092"
+        authentication:
+          sasl_plain:
+            username: "admin"
+            password: "admin"
+          sasl_scram:
+            username: "admin"
+            password: "admin"
+            mechanism: "SCRAM-SHA-512"
+
+`)
+
+	_, err := LoadConfig([]string{f})
+	require.ErrorContains(t, err, " at '/events/providers/kafka/0/authentication': oneOf failed, none matched")
+}
+
 func createTempFileFromFixture(t *testing.T, fixture string) string {
 	t.Helper()
 
