@@ -1,10 +1,10 @@
 module github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects
 
-go 1.24.1
+go 1.23.0
 
 require (
 	github.com/stretchr/testify v1.10.0
-	github.com/wundergraph/cosmo/router-plugin v0.0.0-20250519204649-84818397f974 // v0.1.0
+	github.com/wundergraph/cosmo/router-plugin v0.0.0-20250616075713-f2b99c96cec4 // v0.1.0
 	google.golang.org/grpc v1.68.1
 	google.golang.org/protobuf v1.36.5
 )

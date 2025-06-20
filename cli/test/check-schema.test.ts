@@ -31,8 +31,6 @@ describe('Schema Command', () => {
   test('Check subgraph schema', () => {
     const client: Client = {
       platform: createPromiseClient(PlatformService, mockPlatformTransport()),
-      // @ts-ignore
-      node: null,
     };
 
     const program = new Command();

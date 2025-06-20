@@ -616,10 +616,12 @@ func TestWatch(t *testing.T) {
 
 		time.Sleep(2 * customWatchInterval)
 
-		// Since we track if a modification happened, not how many modifications happened
-		// for N number of modified files there should only be one callback call
+		// The modification should only be triggered once. However, since this is a timing dependent test
+		// there is a chance that the interval happens between the two modifications, and we get two calls.
+		// Which is still correct.
+		// TODO(endigma): Check if we can debounce the calls so we only get one.
 		require.EventuallyWithT(t, func(t *assert.CollectT) {
-			spy.AssertCalled(t, 1)
+			spy.AssertCalledInBetween(t, 1, 2)
 		}, assertTimeout, assertPollInterval)
 	})
 }

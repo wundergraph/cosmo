@@ -24,8 +24,6 @@ describe('SDL to Proto - Basic Types', () => {
       "syntax = "proto3";
       package service.v1;
 
-      option go_package = "cosmo/pkg/proto/service.v1;servicev1";
-
       // Service definition for DefaultService
       service DefaultService {
         rpc QueryBooleanField(QueryBooleanFieldRequest) returns (QueryBooleanFieldResponse) {}
@@ -91,8 +89,6 @@ describe('SDL to Proto - Basic Types', () => {
       "syntax = "proto3";
       package service.v1;
 
-      option go_package = "cosmo/pkg/proto/service.v1;servicev1";
-
       // Service definition for DefaultService
       service DefaultService {
         rpc QueryRequiredInt(QueryRequiredIntRequest) returns (QueryRequiredIntResponse) {}
@@ -134,8 +130,6 @@ describe('SDL to Proto - Basic Types', () => {
     expect(protoText).toMatchInlineSnapshot(`
       "syntax = "proto3";
       package service.v1;
-
-      option go_package = "cosmo/pkg/proto/service.v1;servicev1";
 
       // Service definition for DefaultService
       service DefaultService {
@@ -191,8 +185,6 @@ describe('SDL to Proto - Basic Types', () => {
       "syntax = "proto3";
       package service.v1;
 
-      option go_package = "cosmo/pkg/proto/service.v1;servicev1";
-
       // Service definition for DefaultService
       service DefaultService {
         rpc QueryUser(QueryUserRequest) returns (QueryUserResponse) {}
@@ -235,8 +227,6 @@ describe('SDL to Proto - Basic Types', () => {
     expect(protoText).toMatchInlineSnapshot(`
       "syntax = "proto3";
       package service.v1;
-
-      option go_package = "cosmo/pkg/proto/service.v1;servicev1";
 
       // Service definition for DefaultService
       service DefaultService {
@@ -293,7 +283,6 @@ describe('SDL to Proto - Basic Types', () => {
       package custom.v1;
 
       option go_package = "github.com/example/mypackage;mypackage";
-
       // Service definition for CustomService
       service CustomService {
         rpc QueryHello(QueryHelloRequest) returns (QueryHelloResponse) {}
@@ -329,8 +318,6 @@ describe('SDL to Proto - Basic Types', () => {
     expect(protoText).toMatchInlineSnapshot(`
       "syntax = "proto3";
       package service.v1;
-
-      option go_package = "cosmo/pkg/proto/service.v1;servicev1";
 
       // Service definition for DefaultService
       service DefaultService {
@@ -391,8 +378,6 @@ describe('SDL to Proto - Basic Types', () => {
     expect(protoText).toMatchInlineSnapshot(`
       "syntax = "proto3";
       package service.v1;
-
-      option go_package = "cosmo/pkg/proto/service.v1;servicev1";
 
       // Service definition for DefaultService
       service DefaultService {
@@ -462,8 +447,6 @@ describe('SDL to Proto - Basic Types', () => {
     expect(protoText).toMatchInlineSnapshot(`
       "syntax = "proto3";
       package service.v1;
-
-      option go_package = "cosmo/pkg/proto/service.v1;servicev1";
 
       // Service definition for DefaultService
       service DefaultService {
