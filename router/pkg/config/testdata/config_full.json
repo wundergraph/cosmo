@@ -157,7 +157,11 @@
     "ExcludeMutations": false,
     "EnableArbitraryOperations": false,
     "ExposeSchema": false,
-    "RouterURL": "https://cosmo-router.wundergraph.com"
+    "RouterURL": "https://cosmo-router.wundergraph.com",
+    "HotReloadConfig": {
+      "Enabled": false,
+      "Interval": 10000000000
+    }
   },
   "DemoMode": true,
   "Modules": {

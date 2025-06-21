@@ -898,14 +898,15 @@ type CacheWarmupConfiguration struct {
 }
 
 type MCPConfiguration struct {
-	Enabled                   bool             `yaml:"enabled" envDefault:"false" env:"MCP_ENABLED"`
-	Server                    MCPServer        `yaml:"server,omitempty"`
-	Storage                   MCPStorageConfig `yaml:"storage,omitempty"`
-	GraphName                 string           `yaml:"graph_name" envDefault:"mygraph" env:"MCP_GRAPH_NAME"`
-	ExcludeMutations          bool             `yaml:"exclude_mutations" envDefault:"false" env:"MCP_EXCLUDE_MUTATIONS"`
-	EnableArbitraryOperations bool             `yaml:"enable_arbitrary_operations" envDefault:"false" env:"MCP_ENABLE_ARBITRARY_OPERATIONS"`
-	ExposeSchema              bool             `yaml:"expose_schema" envDefault:"false" env:"MCP_EXPOSE_SCHEMA"`
-	RouterURL                 string           `yaml:"router_url,omitempty" env:"MCP_ROUTER_URL"`
+	Enabled                   bool                         `yaml:"enabled" envDefault:"false" env:"MCP_ENABLED"`
+	Server                    MCPServer                    `yaml:"server,omitempty"`
+	Storage                   MCPStorageConfig             `yaml:"storage,omitempty"`
+	GraphName                 string                       `yaml:"graph_name" envDefault:"mygraph" env:"MCP_GRAPH_NAME"`
+	ExcludeMutations          bool                         `yaml:"exclude_mutations" envDefault:"false" env:"MCP_EXCLUDE_MUTATIONS"`
+	EnableArbitraryOperations bool                         `yaml:"enable_arbitrary_operations" envDefault:"false" env:"MCP_ENABLE_ARBITRARY_OPERATIONS"`
+	ExposeSchema              bool                         `yaml:"expose_schema" envDefault:"false" env:"MCP_EXPOSE_SCHEMA"`
+	RouterURL                 string                       `yaml:"router_url,omitempty" env:"MCP_ROUTER_URL"`
+	HotReloadConfig           MCPOperationsHotReloadConfig `yaml:"hot_reload_config,omitempty" envPrefix:"MCP_OPERATIONS_HOT_RELOAD_"`
 }
 
 type MCPStorageConfig struct {
@@ -915,6 +916,11 @@ type MCPStorageConfig struct {
 type MCPServer struct {
 	ListenAddr string `yaml:"listen_addr" envDefault:"localhost:5025" env:"MCP_SERVER_LISTEN_ADDR"`
 	BaseURL    string `yaml:"base_url,omitempty" env:"MCP_SERVER_BASE_URL"`
+}
+
+type MCPOperationsHotReloadConfig struct {
+	Enabled  bool          `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	Interval time.Duration `yaml:"interval" envDefault:"10s" env:"INTERVAL"`
 }
 
 type PluginsConfiguration struct {

@@ -122,7 +122,11 @@
     "ExcludeMutations": false,
     "EnableArbitraryOperations": false,
     "ExposeSchema": false,
-    "RouterURL": ""
+    "RouterURL": "",
+    "HotReloadConfig": {
+      "Enabled": false,
+      "Interval": 10000000000
+    }
   },
   "DemoMode": false,
   "Modules": null,

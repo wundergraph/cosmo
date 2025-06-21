@@ -1084,7 +1084,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		}
 		go func() {
 			for {
-				if reloadOperations := <-s.mcpServer.ReloadOperationsChan; reloadOperations {
+				if reloadOperations := <-s.mcpServer.ReloadOperationsChannel(); reloadOperations {
 					s.logger.Log(zap.InfoLevel, "Reloading mcp server!")
 					if mErr := s.mcpServer.Reload(executor.ClientSchema); mErr != nil {
 						return

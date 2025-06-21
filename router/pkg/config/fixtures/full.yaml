@@ -49,6 +49,9 @@ mcp:
     base_url: "http://localhost:5025"
   storage:
     provider_id: mcp
+  hot_reload_config:
+    enabled: false
+    interval: '10s'
 
 watch_config:
   enabled: true

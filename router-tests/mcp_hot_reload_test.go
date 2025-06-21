@@ -16,9 +16,9 @@ import (
 
 func TestMCPOperationHotReload(t *testing.T) {
 	// create a temp graphql file into mcp_operations
-	dir := "./testdata/mcp_operations"
+	mcpOperationsDirectory := "./testdata/mcp_operations"
 	fileName := "getEmployeeNotes.graphql"
-	filePath := path.Join(dir, fileName)
+	filePath := path.Join(mcpOperationsDirectory, fileName)
 
 	t.Parallel()
 
@@ -26,6 +26,10 @@ func TestMCPOperationHotReload(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			MCP: config.MCPConfiguration{
 				Enabled: true,
+				HotReloadConfig: config.MCPOperationsHotReloadConfig{
+					Enabled:  true,
+					Interval: 5 * time.Second,
+				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
@@ -36,8 +40,8 @@ func TestMCPOperationHotReload(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, resp)
 
-			// verify initial tools count
-			assert.Len(t, resp.Tools, 3)
+			// initial tools count
+			initialToolsCount := len(resp.Tools)
 
 			// create new mcp operation file
 			file, err := os.Create(filePath)
@@ -65,7 +69,7 @@ func TestMCPOperationHotReload(t *testing.T) {
 				assert.NoError(t, err)
 
 				// verify updated tools count
-				assert.Len(t, resp.Tools, 4)
+				assert.Len(t, resp.Tools, initialToolsCount+1)
 
 				// verity getEmployeeNotes operation
 				require.Contains(t, resp.Tools, mcp.Tool{
@@ -84,7 +88,7 @@ func TestMCPOperationHotReload(t *testing.T) {
 						OpenWorldHint:  mcp.ToBoolPtr(true),
 					},
 				})
-			}, 10*time.Second, 250*time.Millisecond)
+			}, 15*time.Second, 250*time.Millisecond)
 
 		})
 	})
@@ -93,6 +97,10 @@ func TestMCPOperationHotReload(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			MCP: config.MCPConfiguration{
 				Enabled: true,
+				HotReloadConfig: config.MCPOperationsHotReloadConfig{
+					Enabled:  true,
+					Interval: 5 * time.Second,
+				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
@@ -116,8 +124,6 @@ func TestMCPOperationHotReload(t *testing.T) {
 			}
 			`)
 			assert.NoError(t, err)
-
-			time.Sleep(5 * time.Second)
 
 			require.EventuallyWithT(t, func(t *assert.CollectT) {
 				// List updated Tools
@@ -155,8 +161,6 @@ func TestMCPOperationHotReload(t *testing.T) {
 			`), 0644)
 			assert.NoError(t, err)
 
-			time.Sleep(5 * time.Second)
-
 			require.EventuallyWithT(t, func(t *assert.CollectT) {
 				// fetch updated mcp tools list
 				toolsRequest := mcp.ListToolsRequest{}
@@ -183,4 +187,5 @@ func TestMCPOperationHotReload(t *testing.T) {
 			}, 15*time.Second, 250*time.Millisecond)
 		})
 	})
+
 }

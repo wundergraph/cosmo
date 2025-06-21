@@ -1903,6 +1903,27 @@
           "type": "boolean",
           "default": false,
           "description": "Expose the full GraphQL schema through MCP. When enabled, AI models can request the complete schema of your API."
+        },
+        "hot_reload_config": {
+          "type": "object",
+          "default": false,
+          "description": "Hot reloading configuration for MCP operations.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable hot reloading for MCP Operations.",
+              "default": false
+            },
+            "interval": {
+              "type": "string",
+              "description": "The interval at which the MCP Operations directory is checked for changes. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+              "default": "10s",
+              "duration": {
+                "minimum": "5s"
+              }
+            }
+          }
         }
       }
     },
