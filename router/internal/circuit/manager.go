@@ -1,24 +1,44 @@
 package circuit
 
 import (
+	"errors"
 	"fmt"
+	"sync"
+	"time"
+
 	"github.com/cep21/circuit/v4"
 	"github.com/cep21/circuit/v4/closers/hystrix"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/metric"
 	"go.opentelemetry.io/otel/attribute"
 )
 
+// CircuitBreakerConfig defines the configuration for circuit breaker
+// This decouples the circuit package from the config package
+type CircuitBreakerConfig struct {
+	Enabled                    bool
+	ErrorThresholdPercentage   int64
+	RequestThreshold           int64
+	SleepWindow                time.Duration
+	HalfOpenAttempts           int64
+	RequiredSuccessfulAttempts int64
+	RollingDuration            time.Duration
+	NumBuckets                 int
+}
+
 type Manager struct {
 	// We maintain separate circuit breakers for each subgraph
 	circuits map[string]*circuit.Circuit
+	lock     sync.RWMutex
 }
 
 func (c *Manager) GetCircuitBreaker(name string) *circuit.Circuit {
 	if c == nil {
 		return nil
 	}
+
+	c.lock.RLock()
+	defer c.lock.RUnlock()
 
 	// Since we should not ever write into a map
 	// after the first setup we don't use any read locks
@@ -33,29 +53,31 @@ func (c *Manager) IsEnabled() bool {
 }
 
 type ManagerOpts struct {
-	BaseConfig              *config.CircuitBreaker
-	SubgraphCircuitBreakers map[string]*config.CircuitBreaker
+	BaseConfig              CircuitBreakerConfig
+	SubgraphCircuitBreakers map[string]CircuitBreakerConfig
 	Subgraphs               []*nodev1.Subgraph
 	FeatureFlagName         string
-	MetricStore             metric.Store
+	MetricStore             metric.CircuitMetricStore
 	UseMetrics              bool
 	BaseOtelAttributes      []attribute.KeyValue
 }
 
-func NewManager(opts ManagerOpts) *Manager {
+func NewManager(opts ManagerOpts) (*Manager, error) {
 	circuitManager := circuit.Manager{}
 
 	if opts.SubgraphCircuitBreakers == nil {
-		return &Manager{}
+		return &Manager{}, nil
 	}
 
-	isBaseEnabled := opts.BaseConfig != nil && opts.BaseConfig.Enabled
+	isBaseEnabled := opts.BaseConfig.Enabled
 	if isBaseEnabled {
 		configuration := createConfiguration(opts.BaseConfig)
 		circuitManager.DefaultCircuitProperties = []circuit.CommandPropertiesConstructor{
 			configuration.Configure,
 		}
 	}
+
+	var joinErr error
 
 	circuits := make(map[string]*circuit.Circuit, len(opts.Subgraphs))
 	for _, sg := range opts.Subgraphs {
@@ -72,7 +94,12 @@ func NewManager(opts ManagerOpts) *Manager {
 		if !ok {
 			// If we have an all option set we can create a circuit breaker for everyone
 			if isBaseEnabled {
-				circuits[sgCbName] = circuitManager.MustCreateCircuit(sgCbName, configs...)
+				createCircuit, err := circuitManager.CreateCircuit(sgCbName, configs...)
+				if err != nil {
+					joinErr = errors.Join(joinErr, err)
+					continue
+				}
+				circuits[sgCbName] = createCircuit
 			}
 			continue
 		}
@@ -81,16 +108,27 @@ func NewManager(opts ManagerOpts) *Manager {
 		if sgOptions.Enabled {
 			newConfig := createConfiguration(sgOptions)
 			configs = append(configs, newConfig.Configure(sgCbName))
-			circuits[sgCbName] = circuitManager.MustCreateCircuit(sgCbName, configs...)
+			createCircuit, err := circuitManager.CreateCircuit(sgCbName, configs...)
+			if err != nil {
+				joinErr = errors.Join(joinErr, err)
+				continue
+			}
+			circuits[sgCbName] = createCircuit
 		}
 	}
 
-	return &Manager{
+	if joinErr != nil {
+		return nil, joinErr
+	}
+
+	v := &Manager{
 		circuits: circuits,
 	}
+
+	return v, nil
 }
 
-func createConfiguration(opts *config.CircuitBreaker) hystrix.Factory {
+func createConfiguration(opts CircuitBreakerConfig) hystrix.Factory {
 	var configuration = hystrix.Factory{
 		ConfigureOpener: hystrix.ConfigureOpener{
 			ErrorThresholdPercentage: opts.ErrorThresholdPercentage,

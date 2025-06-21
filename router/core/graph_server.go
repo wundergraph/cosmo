@@ -770,7 +770,10 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			BaseOtelAttributes:      baseMetricAttributes,
 		}
 	}
-	circuitBreakerManager := circuit.NewManager(managerOpts)
+	circuitBreakerManager, err := circuit.NewManager(managerOpts)
+	if err != nil {
+		return nil, err
+	}
 
 	subgraphs, err := configureSubgraphOverwrites(
 		engineConfig,

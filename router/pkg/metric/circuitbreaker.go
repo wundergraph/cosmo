@@ -9,7 +9,12 @@ import (
 	"time"
 )
 
-func NewCircuitBreakerMetricsConfig(subgraphName string, metrics Store, baseAttributes []attribute.KeyValue) circuit.Config {
+type CircuitMetricStore interface {
+	MeasureCircuitBreakerShortCircuit(ctx context.Context, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption)
+	SetCircuitBreakerState(ctx context.Context, state bool, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption)
+}
+
+func NewCircuitBreakerMetricsConfig(subgraphName string, metrics CircuitMetricStore, baseAttributes []attribute.KeyValue) circuit.Config {
 	attributes := append([]attribute.KeyValue{
 		otel.WgSubgraphName.String(subgraphName),
 	}, baseAttributes...)
@@ -27,7 +32,7 @@ func NewCircuitBreakerMetricsConfig(subgraphName string, metrics Store, baseAttr
 }
 
 type CircuitBreakerMetricsConfig struct {
-	metrics    Store
+	metrics    CircuitMetricStore
 	attributes []attribute.KeyValue
 }
 
