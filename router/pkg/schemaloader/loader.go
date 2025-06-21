@@ -1,13 +1,17 @@
 package schemaloader
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
+	"github.com/wundergraph/cosmo/router/pkg/watcher"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvalidation"
@@ -43,11 +47,15 @@ func NewOperationLoader(logger *zap.Logger, schemaDoc *ast.Document) *OperationL
 }
 
 // LoadOperationsFromDirectory loads all GraphQL operations from files in the specified directory
-func (l *OperationLoader) LoadOperationsFromDirectory(dirPath string) ([]Operation, error) {
+func (l *OperationLoader) LoadOperationsFromDirectory(dirPath string, reloadOperationsChan chan bool, hotReload bool, hotReloadInterval time.Duration) ([]Operation, error) {
 	var operations []Operation
 
 	// Create an operation validator
 	validator := astvalidation.DefaultOperationValidator()
+
+	pathCtx, pathCtxCancel := context.WithCancel(context.Background())
+
+	filesSeen := make(map[string]struct{})
 
 	// Walk through the directory and process GraphQL files
 	err := filepath.WalkDir(dirPath, func(path string, d fs.DirEntry, err error) error {
@@ -69,6 +77,35 @@ func (l *OperationLoader) LoadOperationsFromDirectory(dirPath string) ([]Operati
 		content, err := os.ReadFile(path)
 		if err != nil {
 			return fmt.Errorf("failed to read file %s: %w", path, err)
+		}
+
+		if hotReload {
+			filesSeen[path] = struct{}{}
+
+			watchFunc, err := watcher.New(watcher.Options{
+				Interval: hotReloadInterval,
+				Logger:   l.Logger,
+				Path:     path,
+				Callback: func() {
+					reloadOperationsChan <- true
+					pathCtxCancel()
+				},
+			})
+
+			if err != nil {
+				l.Logger.Error("Could not create watcher", zap.Error(err))
+				return err
+			}
+
+			go func() {
+				if err := watchFunc(pathCtx); err != nil {
+					if !errors.Is(err, context.Canceled) {
+						l.Logger.Error("Error watching operations path", zap.Error(err))
+					} else {
+						l.Logger.Debug("Watcher context cancelled, shutting down")
+					}
+				}
+			}()
 		}
 
 		// Parse the operation
@@ -130,6 +167,57 @@ func (l *OperationLoader) LoadOperationsFromDirectory(dirPath string) ([]Operati
 
 	if err != nil {
 		return nil, fmt.Errorf("error walking mcp operations directory %s: %w", dirPath, err)
+	}
+
+	if hotReload {
+		go func() {
+			ticker := time.NewTicker(hotReloadInterval)
+			for {
+				select {
+				case <-ticker.C:
+					operationsCount := 0
+
+					err := filepath.WalkDir(dirPath, func(path string, d fs.DirEntry, err error) error {
+						if err != nil {
+							return err
+						}
+
+						// Skip directories
+						if d.IsDir() {
+							return nil
+						}
+
+						// Only process GraphQL files
+						if !isGraphQLFile(path) {
+							return nil
+						}
+
+						_, ok := filesSeen[path]
+
+						// new operation added
+						if !ok {
+							reloadOperationsChan <- true
+							pathCtxCancel()
+							return filepath.SkipAll
+						}
+
+						operationsCount = operationsCount + 1
+
+						return nil
+					})
+
+					if err != nil || operationsCount != len(filesSeen) {
+						reloadOperationsChan <- true
+						pathCtxCancel()
+						return
+					}
+
+				case <-pathCtx.Done():
+					return
+				}
+
+			}
+		}()
 	}
 
 	return operations, nil
