@@ -1008,27 +1008,25 @@ export class OrganizationRepository {
     });
   }
 
-  public updateMemberGroups(input: { orgMemberID: string; groups: string[] }) {
-    return this.db.transaction(async (tx) => {
-      await tx
-        .delete(schema.organizationGroupMembers)
-        .where(eq(schema.organizationGroupMembers.organizationMemberId, input.orgMemberID));
+  public async updateMemberGroups(input: { orgMemberID: string; groups: string[] }) {
+    await this.db
+      .delete(schema.organizationGroupMembers)
+      .where(eq(schema.organizationGroupMembers.organizationMemberId, input.orgMemberID));
 
-      if (input.groups.length === 0) {
-        return;
-      }
+    if (input.groups.length === 0) {
+      return;
+    }
 
-      await tx
-        .insert(schema.organizationGroupMembers)
-        .values(
-          input.groups.map((groupId) => ({
-            organizationMemberId: input.orgMemberID,
-            groupId,
-          })),
-        )
-        .onConflictDoNothing()
-        .execute();
-    });
+    await this.db
+      .insert(schema.organizationGroupMembers)
+      .values(
+        input.groups.map((groupId) => ({
+          organizationMemberId: input.orgMemberID,
+          groupId,
+        })),
+      )
+      .onConflictDoNothing()
+      .execute();
   }
 
   public async getOrganizationAdmins(input: { organizationID: string }): Promise<OrganizationMemberDTO[]> {
