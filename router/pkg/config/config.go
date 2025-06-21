@@ -182,7 +182,9 @@ type RouterTrafficConfiguration struct {
 
 type GlobalSubgraphRequestRule struct {
 	BackoffJitterRetry BackoffJitterRetry `yaml:"retry"`
+	CircuitBreaker     CircuitBreaker     `yaml:"circuit_breaker"`
 	// See https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/
+
 	RequestTimeout         *time.Duration `yaml:"request_timeout,omitempty" envDefault:"60s"`
 	DialTimeout            *time.Duration `yaml:"dial_timeout,omitempty" envDefault:"30s"`
 	ResponseHeaderTimeout  *time.Duration `yaml:"response_header_timeout,omitempty" envDefault:"0s"`
@@ -199,6 +201,17 @@ type GlobalSubgraphRequestRule struct {
 
 type SubgraphTrafficRequestRule struct {
 	RequestTimeout time.Duration `yaml:"request_timeout,omitempty" envDefault:"60s"`
+}
+
+type CircuitBreaker struct {
+	Enabled                    bool          `yaml:"enabled" envDefault:"false"`
+	ErrorThresholdPercentage   int64         `yaml:"error_threshold_percentage" envDefault:"50"`
+	RequestThreshold           int64         `yaml:"request_threshold" envDefault:"20"`
+	SleepWindow                time.Duration `yaml:"sleep_window" envDefault:"5s"`
+	HalfOpenAttempts           int64         `yaml:"half_open_attempts" envDefault:"1"`
+	RequiredSuccessfulAttempts int64         `yaml:"required_successful" envDefault:"1"`
+	RollingDuration            time.Duration `yaml:"rolling_duration" envDefault:"10s"`
+	NumBuckets                 int           `yaml:"num_buckets" envDefault:"10"`
 }
 
 type GraphqlMetrics struct {

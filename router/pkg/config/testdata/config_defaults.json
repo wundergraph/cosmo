@@ -140,6 +140,16 @@
         "MaxDuration": 10000000000,
         "Interval": 3000000000
       },
+      "CircuitBreaker": {
+        "Enabled": false,
+        "ErrorThresholdPercentage": 50,
+        "RequestThreshold": 20,
+        "SleepWindow": 5000000000,
+        "HalfOpenAttempts": 1,
+        "RequiredSuccessfulAttempts": 1,
+        "RollingDuration": 10000000000,
+        "NumBuckets": 10
+      },
       "RequestTimeout": 60000000000,
       "DialTimeout": 30000000000,
       "ResponseHeaderTimeout": 0,

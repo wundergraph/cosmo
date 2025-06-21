@@ -27,6 +27,7 @@ import (
 
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/internal/circuit"
 	"github.com/wundergraph/cosmo/router/internal/debug"
 	"github.com/wundergraph/cosmo/router/internal/docker"
 	"github.com/wundergraph/cosmo/router/internal/graphiql"
@@ -114,6 +115,11 @@ type (
 	SubgraphTransportOptions struct {
 		*TransportRequestOptions
 		SubgraphMap map[string]*TransportRequestOptions
+	}
+
+	SubgraphCircuitBreakerOptions struct {
+		CircuitBreaker circuit.CircuitBreakerConfig
+		SubgraphMap    map[string]circuit.CircuitBreakerConfig
 	}
 
 	GraphQLMetricsConfig struct {
@@ -1728,6 +1734,12 @@ func WithSubgraphTransportOptions(opts *SubgraphTransportOptions) Option {
 	}
 }
 
+func WithSubgraphCircuitBreakerOptions(opts *SubgraphCircuitBreakerOptions) Option {
+	return func(r *Router) {
+		r.subgraphCircuitBreakerOptions = opts
+	}
+}
+
 func WithSubgraphRetryOptions(enabled bool, maxRetryCount int, retryMaxDuration, retryInterval time.Duration) Option {
 	return func(r *Router) {
 		r.retryOptions = retrytransport.RetryOptions{
@@ -1839,6 +1851,34 @@ func NewSubgraphTransportOptions(cfg config.TrafficShapingRules) *SubgraphTransp
 	}
 
 	return base
+}
+
+func NewSubgraphCircuitBreakerOptions(cfg config.TrafficShapingRules) *SubgraphCircuitBreakerOptions {
+	entry := &SubgraphCircuitBreakerOptions{
+		SubgraphMap: map[string]circuit.CircuitBreakerConfig{},
+	}
+	if cfg.All.CircuitBreaker.Enabled {
+		entry.CircuitBreaker = newCircuitBreakerConfig(cfg.All.CircuitBreaker)
+	}
+	for k, v := range cfg.Subgraphs {
+		if v != nil && v.CircuitBreaker.Enabled {
+			entry.SubgraphMap[k] = newCircuitBreakerConfig(v.CircuitBreaker)
+		}
+	}
+	return entry
+}
+
+func newCircuitBreakerConfig(cb config.CircuitBreaker) circuit.CircuitBreakerConfig {
+	return circuit.CircuitBreakerConfig{
+		Enabled:                    cb.Enabled,
+		ErrorThresholdPercentage:   cb.ErrorThresholdPercentage,
+		RequestThreshold:           cb.RequestThreshold,
+		SleepWindow:                cb.SleepWindow,
+		HalfOpenAttempts:           cb.HalfOpenAttempts,
+		RequiredSuccessfulAttempts: cb.RequiredSuccessfulAttempts,
+		RollingDuration:            cb.RollingDuration,
+		NumBuckets:                 cb.NumBuckets,
+	}
 }
 
 func DefaultSubgraphTransportOptions() *SubgraphTransportOptions {
