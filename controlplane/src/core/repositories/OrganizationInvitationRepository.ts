@@ -189,7 +189,7 @@ export class OrganizationInvitationRepository {
         .returning()
         .execute();
 
-      if (input.groups.length === 0 || inserted.length === 0) {
+      if (inserted.length === 0) {
         return;
       }
 
