@@ -12,11 +12,10 @@ import {
   updateOrgMemberGroup,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { useMutation } from "@connectrpc/connect-query";
-import { useState } from "react";
-import { useUser } from "@/hooks/use-user";
+import { useEffect, useState } from "react";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { useToast } from "@/components/ui/use-toast";
-import { GroupSelect } from "@/components/group-select";
+import { MultiGroupSelect } from "@/components/multi-group-select";
 
 export function UpdateMemberGroupDialog({ open, member, onOpenChange, refresh }: {
   open: boolean;
@@ -24,27 +23,30 @@ export function UpdateMemberGroupDialog({ open, member, onOpenChange, refresh }:
   onOpenChange(open: boolean): void;
   refresh(): Promise<unknown>;
 }) {
-  const user = useUser();
-  const [selectedGroup, setSelectedGroup] = useState<{ groupId: string; name: string; } | undefined>();
+  const [selectedGroups, setSelectedGroups] = useState<{ groupId: string; name: string; }[]>([]);
+  useEffect(() => {
+    if (member?.groups) {
+      setSelectedGroups(member.groups);
+    }
+  }, [member]);
 
   const { toast } = useToast();
   const { mutate, isPending } = useMutation(updateOrgMemberGroup);
   const onSubmit = () => {
-    if (!selectedGroup?.groupId || !member) {
+    if (selectedGroups.length === 0 || !member) {
       return;
     }
 
     mutate(
       {
-        userID: user?.id,
         orgMemberUserID: member.userID,
-        groupId: selectedGroup.groupId,
+        groups: selectedGroups.map((group) => group.groupId),
       },
       {
         async onSuccess(data) {
           if (data?.response?.code === EnumStatusCode.OK) {
             toast({
-              description: `Member group updated to ${selectedGroup.name} successfully.`,
+              description: 'Member groups updated successfully.',
               duration: 3000,
             });
 
@@ -52,14 +54,14 @@ export function UpdateMemberGroupDialog({ open, member, onOpenChange, refresh }:
             onOpenChange(false);
           } else {
             toast({
-              description: data?.response?.details || `Could not update member group to ${selectedGroup.name}. Please try again`,
+              description: data?.response?.details || 'Could not update the member groups. Please try again',
               duration: 3000,
             });
           }
         },
         onError() {
           toast({
-            description: `Could not update member group to ${selectedGroup.name}. Please try again`,
+            description: 'Could not update the member groups. Please try again',
             duration: 3000,
           });
         },
@@ -79,22 +81,23 @@ export function UpdateMemberGroupDialog({ open, member, onOpenChange, refresh }:
     <Dialog open={open} onOpenChange={handleOnOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Update member group</DialogTitle>
+          <DialogTitle>Update member groups</DialogTitle>
           <DialogDescription>
-            Update the group for {member?.email}
+            Update groups for {member?.email}
           </DialogDescription>
         </DialogHeader>
 
         <div>
-          <GroupSelect
-            value={selectedGroup?.groupId}
-            onGroupChange={setSelectedGroup}
+          <MultiGroupSelect
+            disabled={isPending}
+            value={selectedGroups.map((group) => group.groupId)}
+            onValueChange={setSelectedGroups}
           />
         </div>
 
         <DialogFooter>
           <Button
-            disabled={!selectedGroup}
+            disabled={selectedGroups.length === 0}
             isLoading={isPending}
             onClick={onSubmit}
           >
