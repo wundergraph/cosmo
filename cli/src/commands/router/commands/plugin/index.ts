@@ -5,8 +5,7 @@ import BuildPluginCommand from './commands/build.js';
 import TestPluginCommand from './commands/test.js';
 
 export default (opts: BaseCommandOptions) => {
-  const command = new Command('grpc-plugin');
-  command.alias('plugin');
+  const command = new Command('plugin');
   command.description('Provides commands for creating and maintaining router plugins');
   command.addCommand(InitPluginCommand(opts));
   command.addCommand(BuildPluginCommand(opts));

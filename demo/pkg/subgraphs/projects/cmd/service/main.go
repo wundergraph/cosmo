@@ -1,5 +1,5 @@
-// This file is used to spawn the projects service as a standalone gRPC subgraph,
-// in contrast to the main.go in src which is used for gRPC plugins in the router.
+// This file is used to spawn the projects service as a standalone gRPC service.
+// In contrast to the main.go in src which is used for gRPC plugins in the router.
 // This allows the service to be deployed independently and communicate via gRPC
 // with other services in the federation.
 

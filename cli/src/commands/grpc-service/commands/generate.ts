@@ -5,12 +5,12 @@ import Spinner from 'ora';
 import { Command, program } from 'commander';
 import { compileGraphQLToMapping, compileGraphQLToProto, ProtoLock } from '@wundergraph/protographic';
 import { camelCase, upperFirst } from 'lodash-es';
-import { BaseCommandOptions } from '../../../../../core/types/types.js';
-import { renderResultTree } from '../../grpc-plugin/helper.js';
+import { BaseCommandOptions } from '../../../core/types/types.js';
+import { renderResultTree } from '../../router/commands/plugin/helper.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('generate');
-  command.description('generate a protobuf schema for a standalone grpc subgraph.');
+  command.description('generate a protobuf schema for a remote gRPC service.');
   command.argument('[name]', 'The name of the proto service.');
   command.requiredOption('-i, --input <path-to-input>', 'The GraphQL schema file to generate a protobuf schema from.');
   command.option('-o, --output <path-to-output>', 'The output directory for the protobuf schema. (default ".").', '.');

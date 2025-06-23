@@ -5,8 +5,8 @@ import { Command } from 'commander';
 import { describe, test, expect } from 'vitest';
 import { createPromiseClient, createRouterTransport } from '@connectrpc/connect';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
-import GenerateCommand from '../src/commands/router/commands/grpc-service/commands/generate.js';
-import GRPCCommands from '../src/commands/router/commands/grpc-service/index.js';
+import GenerateCommand from '../src/commands/grpc-service/commands/generate.js';
+import GRPCCommands from '../src/commands/grpc-service/index.js';
 import { Client } from '../src/core/client/client.js';
 
 export const mockPlatformTransport = () =>
@@ -50,44 +50,6 @@ describe('gRPC Generate Command', () => {
     expect(existsSync(join(tmpDir, 'service.proto.lock.json'))).toBe(true);
   });
 
-  test('should generate proto and mapping files using the alias', async (testContext) => {
-    const client: Client = {
-      platform: createPromiseClient(PlatformService, mockPlatformTransport()),
-    };
-
-    const program = new Command();
-
-    const tmpDir = join(tmpdir(), `grpc-test-${Date.now()}`);
-    mkdirSync(tmpDir, { recursive: true });
-
-    testContext.onTestFinished(() => {
-      rmdirSync(tmpDir, { recursive: true });
-    });
-
-
-    program.addCommand(GRPCCommands({ client }));
-    await program.parseAsync(
-      [
-        'service',
-        'generate',
-        'testservice',
-        '-i',
-        'test/fixtures/full-schema.graphql',
-        '-o',
-        tmpDir,
-      ],
-      {
-        from: 'user',
-      }
-    );
-
-
-    // Verify the output files exist
-    expect(existsSync(join(tmpDir, 'mapping.json'))).toBe(true);
-    expect(existsSync(join(tmpDir, 'service.proto'))).toBe(true);
-    expect(existsSync(join(tmpDir, 'service.proto.lock.json'))).toBe(true);
-  });
-  
   test('should fail when output path does not exist', async () => {
     const client: Client = {
       platform: createPromiseClient(PlatformService, mockPlatformTransport()),
