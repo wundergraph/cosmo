@@ -393,10 +393,10 @@ export async function generateProtoAndMapping(pluginDir: string, goModulePath: s
 }
 
 /**
- * Generate gRPC code using protoc
+ * Generate gRPC Go code using protoc
  */
-export async function generateGRPCCode(pluginDir: string, spinner: any) {
-  spinner.text = 'Generating gRPC code...\n';
+export async function generateGRPCGoCode(pluginDir: string, spinner: any) {
+  spinner.text = 'Generating gRPC Go code...\n';
 
   const env = getToolsEnv();
   const protocPath = getToolPath('protoc');

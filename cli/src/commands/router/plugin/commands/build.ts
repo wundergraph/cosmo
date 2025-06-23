@@ -8,7 +8,7 @@ import { renderResultTree } from '../helper.js';
 import {
   buildBinaries,
   checkAndInstallTools,
-  generateGRPCCode,
+  generateGRPCGoCode,
   generateProtoAndMapping,
   HOST_PLATFORM,
   installGoDependencies,
@@ -19,7 +19,11 @@ export default (opts: BaseCommandOptions) => {
   const command = new Command('build');
   command.description('Build a gRPC router plugin');
   command.argument('[directory]', 'Directory of the plugin', '.');
-  command.option('--generate-only', 'Generate only the proto and mapping files, do not compile the plugin');
+  command.option(
+    '--generate-only-proto',
+    'Generate only the proto and mapping files. Do not generate Go code or compile the plugin',
+  );
+  command.option('--generate-only', 'Generate only proto, mapping files, and Go code. Do not compile the plugin');
   command.option('--debug', 'Build the binary with debug information', false);
   command.option('--platform [platforms...]', 'Platform-architecture combinations (e.g., darwin-arm64 linux-amd64)', [
     HOST_PLATFORM,
@@ -60,15 +64,17 @@ export default (opts: BaseCommandOptions) => {
       // Generate proto and mapping files
       await generateProtoAndMapping(pluginDir, goModulePath, spinner);
 
-      // Generate gRPC code
-      await generateGRPCCode(pluginDir, spinner);
+      if (!options.generateOnlyProto) {
+        // Generate gRPC Go code
+        await generateGRPCGoCode(pluginDir, spinner);
 
-      if (!options.generateOnly) {
-        // Install Go dependencies
-        await installGoDependencies(pluginDir, spinner);
+        if (!options.generateOnly) {
+          // Install Go dependencies
+          await installGoDependencies(pluginDir, spinner);
 
-        // Build binaries for all platforms
-        await buildBinaries(pluginDir, platforms, options.debug, spinner);
+          // Build binaries for all platforms
+          await buildBinaries(pluginDir, platforms, options.debug, spinner);
+        }
       }
 
       // Calculate and format elapsed time
