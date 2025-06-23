@@ -29,6 +29,8 @@ export const EDFS_NATS_REQUEST = 'edfs__natsRequest';
 export const EDFS_NATS_SUBSCRIBE = 'edfs__natsSubscribe';
 export const EDFS_PUBLISH_RESULT = 'edfs__PublishResult';
 export const EDFS_NATS_STREAM_CONFIGURATION = 'edfs__NatsStreamConfiguration';
+export const EDFS_SQS_PUBLISH = 'edfs__sqsPublish';
+export const EDFS_SQS_SUBSCRIBE = 'edfs__sqsSubscribe';
 export const ENTITIES = 'entities';
 export const ENTITIES_FIELD = '_entities';
 export const ENTITY_UNION = '_Entity';
@@ -83,6 +85,7 @@ export const MUTATION_UPPER = 'MUTATION';
 export const PROPAGATE = 'propagate';
 export const PROVIDER_TYPE_KAFKA = 'kafka';
 export const PROVIDER_TYPE_NATS = 'nats';
+export const PROVIDER_TYPE_SQS = 'sqs';
 export const NOT_APPLICABLE = 'N/A';
 export const NAME = 'name';
 export const NON_NULLABLE_EDFS_PUBLISH_EVENT_RESULT = 'edfs__PublishResult!';
@@ -146,6 +149,8 @@ export const UNION_UPPER = 'UNION';
 export const URL_LOWER = 'url';
 export const VALUES = 'values';
 export const VARIABLE_DEFINITION_UPPER = 'VARIABLE_DEFINITION';
+export const QUEUE = 'queue';
+export const QUEUES = 'queues';
 
 export const EXECUTABLE_DIRECTIVE_LOCATIONS = new Set<string>([
   FIELD_UPPER,
