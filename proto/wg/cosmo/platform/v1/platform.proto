@@ -1570,6 +1570,7 @@ message ToggleChangeOverridesForAllOperationsRequest {
   bool is_safe = 2;
   string graph_name = 3;
   string namespace = 4;
+  optional string search = 5;
 }
 
 message ToggleChangeOverridesForAllOperationsResponse {
@@ -1580,6 +1581,7 @@ message CreateIgnoreOverridesForAllOperationsRequest {
   string check_id = 1;
   string graph_name = 2;
   string namespace = 3;
+  optional string search = 4;
 }
 
 message CreateIgnoreOverridesForAllOperationsResponse {

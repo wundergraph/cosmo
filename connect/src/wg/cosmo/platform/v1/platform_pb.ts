@@ -12074,6 +12074,11 @@ export class ToggleChangeOverridesForAllOperationsRequest extends Message<Toggle
    */
   namespace = "";
 
+  /**
+   * @generated from field: optional string search = 5;
+   */
+  search?: string;
+
   constructor(data?: PartialMessage<ToggleChangeOverridesForAllOperationsRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -12086,6 +12091,7 @@ export class ToggleChangeOverridesForAllOperationsRequest extends Message<Toggle
     { no: 2, name: "is_safe", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 3, name: "graph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "search", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ToggleChangeOverridesForAllOperationsRequest {
@@ -12161,6 +12167,11 @@ export class CreateIgnoreOverridesForAllOperationsRequest extends Message<Create
    */
   namespace = "";
 
+  /**
+   * @generated from field: optional string search = 4;
+   */
+  search?: string;
+
   constructor(data?: PartialMessage<CreateIgnoreOverridesForAllOperationsRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -12172,6 +12183,7 @@ export class CreateIgnoreOverridesForAllOperationsRequest extends Message<Create
     { no: 1, name: "check_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "graph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "search", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateIgnoreOverridesForAllOperationsRequest {

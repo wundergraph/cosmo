@@ -55,6 +55,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { OperationContentDialog } from "./operation-content";
 import { Pagination } from "../ui/pagination";
 import { useDebounce } from "use-debounce";
+import { Switch } from "../ui/switch";
+import { Label } from "../ui/label";
 
 export const CheckOperations = () => {
   const graphContext = useContext(GraphContext);
@@ -69,6 +71,7 @@ export const CheckOperations = () => {
 
   const [search, setSearch] = useState(router.query.search as string);
   const [debouncedSearch] = useDebounce(search, 500);
+  const [applyOnlyFiltered, setApplyOnlyFiltered] = useState(false);
 
   const { data, isLoading, error, refetch } = useQuery(
     getCheckOperations,
@@ -249,8 +252,10 @@ export const CheckOperations = () => {
 
   const operations = data?.operations || [];
 
-  const doAllOperationsHaveIgnoreAllOverride = data?.doAllOperationsHaveIgnoreAllOverride;
-  const doAllOperationsHaveAllTheirChangesMarkedSafe = data?.doAllOperationsHaveAllTheirChangesMarkedSafe;
+  const doAllOperationsHaveIgnoreAllOverride =
+    data?.doAllOperationsHaveIgnoreAllOverride;
+  const doAllOperationsHaveAllTheirChangesMarkedSafe =
+    data?.doAllOperationsHaveAllTheirChangesMarkedSafe;
 
   if (isLoading) return <Loader fullscreen />;
 
@@ -331,6 +336,7 @@ export const CheckOperations = () => {
                   isSafe: !doAllOperationsHaveAllTheirChangesMarkedSafe,
                   graphName: graphContext?.graph?.name,
                   namespace: graphContext?.graph?.namespace,
+                  search: applyOnlyFiltered ? search : undefined,
                 });
               }}
               className="cursor-pointer flex-col items-start gap-1"
@@ -355,6 +361,7 @@ export const CheckOperations = () => {
                   checkId: id,
                   graphName: graphContext?.graph?.name,
                   namespace: graphContext?.graph?.namespace,
+                  search: applyOnlyFiltered ? search : undefined,
                 });
               }}
               className="cursor-pointer flex-col items-start gap-1"
@@ -371,6 +378,16 @@ export const CheckOperations = () => {
                 </p>
               )}
             </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <div className="flex items-center justify-between px-2 py-2">
+              <Label className="text-sm">
+                Apply only for filtered operations
+              </Label>
+              <Switch
+                checked={applyOnlyFiltered}
+                onCheckedChange={setApplyOnlyFiltered}
+              />
+            </div>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
