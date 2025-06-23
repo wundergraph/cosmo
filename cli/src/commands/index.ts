@@ -112,7 +112,7 @@ program.addCommand(
 program.addCommand(
   GRPCServiceCommands({
     client,
-  })
+  }),
 );
 
 program.hook('preAction', async () => {
