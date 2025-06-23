@@ -368,6 +368,8 @@ export class OperationsRepository {
     }));
   }
 
+  // This function is used to determine if all operations have an ignore all override or if all their changes have an override
+  // This is used to determine what options to show in the UI as the ui wont have the data of all the operations
   public async getOperationOverrideStatusOfCheck({
     checkId,
     checkDetails,
