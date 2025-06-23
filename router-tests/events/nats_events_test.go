@@ -1244,10 +1244,6 @@ func TestNatsEvents(t *testing.T) {
 
 			xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
 
-			// Trigger the subscription via NATS
-			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.1"), []byte(`{"id":1,"__typename":"Employee"}`))
-			require.NoError(t, err)
-
 			testData := map[uint32]struct{ forename, surname string }{
 				1:  {forename: "Jens", surname: "Neuse"},
 				3:  {forename: "Stefan", surname: "Avram"},
