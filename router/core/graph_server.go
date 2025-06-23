@@ -5,6 +5,8 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/circuit"
+	"github.com/wundergraph/cosmo/router/internal/traceclient"
 	"net/http"
 	"net/url"
 	"path/filepath"
@@ -82,17 +84,18 @@ type (
 		mux                     *chi.Mux
 		// inFlightRequests is used to track the number of requests currently being processed
 		// does not include websocket (hijacked) connections
-		inFlightRequests        *atomic.Uint64
-		graphMuxList            []*graphMux
-		graphMuxListLock        sync.Mutex
-		runtimeMetrics          *rmetric.RuntimeMetrics
-		otlpEngineMetrics       *rmetric.EngineMetrics
-		prometheusEngineMetrics *rmetric.EngineMetrics
-		connectionMetrics       *rmetric.ConnectionMetrics
-		instanceData            InstanceData
-		pubSubProviders         []datasource.Provider
-		traceDialer             *TraceDialer
-		pluginHost              *routerplugin.Host
+		inFlightRequests              *atomic.Uint64
+		graphMuxList                  []*graphMux
+		graphMuxListLock              sync.Mutex
+		runtimeMetrics                *rmetric.RuntimeMetrics
+		otlpEngineMetrics             *rmetric.EngineMetrics
+		prometheusEngineMetrics       *rmetric.EngineMetrics
+		connectionMetrics             *rmetric.ConnectionMetrics
+		instanceData                  InstanceData
+		pubSubProviders               []datasource.Provider
+		traceDialer                   *TraceDialer
+		pluginHost                    *routerplugin.Host
+		subgraphCircuitBreakerOptions *SubgraphCircuitBreakerOptions
 	}
 )
 
@@ -141,7 +144,8 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 			HostName:      r.hostName,
 			ListenAddress: r.listenAddr,
 		},
-		storageProviders: &r.storageProviders,
+		storageProviders:              &r.storageProviders,
+		subgraphCircuitBreakerOptions: r.subgraphCircuitBreakerOptions,
 	}
 
 	baseOtelAttributes := []attribute.KeyValue{
@@ -753,6 +757,24 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		gm.metricStore = m
 	}
 
+	// Feature flags can fail independently of the base subgraph, thus we should have circuit breakers per feature flag + subgraph
+	managerOpts := circuit.ManagerOpts{}
+	if s.subgraphCircuitBreakerOptions != nil {
+		managerOpts = circuit.ManagerOpts{
+			BaseConfig:              s.subgraphCircuitBreakerOptions.CircuitBreaker,
+			SubgraphCircuitBreakers: s.subgraphCircuitBreakerOptions.SubgraphMap,
+			Subgraphs:               configSubgraphs,
+			FeatureFlagName:         featureFlagName,
+			MetricStore:             gm.metricStore,
+			UseMetrics:              metricsEnabled,
+			BaseOtelAttributes:      baseMetricAttributes,
+		}
+	}
+	circuitBreakerManager, err := circuit.NewManager(managerOpts)
+	if err != nil {
+		return nil, err
+	}
+
 	subgraphs, err := configureSubgraphOverwrites(
 		engineConfig,
 		configSubgraphs,
@@ -798,7 +820,12 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	subgraphResolver := NewSubgraphResolver(subgraphs)
 	httpRouter.Use(func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if featureFlagName != "" {
+				r = r.WithContext(context.WithValue(r.Context(), traceclient.CurrentFeatureFlagContextKey{}, featureFlagName))
+			}
+
 			r = r.WithContext(withSubgraphResolver(r.Context(), subgraphResolver))
+
 			requestLogger := s.logger.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
 			// If this is a batched request attach id to the logger
 			if batchedOperationId, ok := r.Context().Value(BatchedOperationId{}).(string); ok {
@@ -1032,6 +1059,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			LocalhostFallbackInsideDocker: s.localhostFallbackInsideDocker,
 			Logger:                        s.logger,
 			EnableTraceClient:             enableTraceClient,
+			CircuitBreaker:                circuitBreakerManager,
 		},
 	}
 
