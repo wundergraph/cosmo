@@ -9,18 +9,20 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
-	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
-	"go.opentelemetry.io/otel/attribute"
-	otelprom "go.opentelemetry.io/otel/exporters/prometheus"
-
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
+	otelprom "go.opentelemetry.io/otel/exporters/prometheus"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.uber.org/zap"
+
+	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
+
 	_ "google.golang.org/grpc/encoding/gzip" // Required for gzip support over grpc
 )
 
@@ -393,6 +395,16 @@ func defaultPrometheusMetricOptions(ctx context.Context, serviceInstanceID strin
 			s.Aggregation = bytesBucketHistogram
 		} else if i.Unit == unitMilliseconds && i.Kind == sdkmetric.InstrumentKindHistogram {
 			s.Aggregation = msBucketHistogram
+		}
+
+		s.ExemplarReservoirProviderSelector = func(a sdkmetric.Aggregation) exemplar.ReservoirProvider {
+			switch i.Kind {
+			case sdkmetric.InstrumentKindObservableGauge, sdkmetric.InstrumentKindGauge,
+				sdkmetric.InstrumentKindUpDownCounter, sdkmetric.InstrumentKindObservableUpDownCounter:
+				return func(attr attribute.Set) exemplar.Reservoir { return exemplar.NewFixedSizeReservoir(0) }
+			default:
+				return sdkmetric.DefaultExemplarReservoirProviderSelector(a)
+			}
 		}
 
 		return s, true
