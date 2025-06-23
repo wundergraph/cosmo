@@ -1256,14 +1256,19 @@ func TestNatsEvents(t *testing.T) {
 
 			var msg testenv.WebSocketMessage
 			var payload subscriptionPayload
-			// Events 1, 3, 4, 5, 7, 8, and 11 should be included
+			// This loop is used to test the filter
+			// It will emit 12 events, and only 7 of them should be included:
+			// 1, 3, 4, 5, 7, 8, and 11
 			for i := uint32(1); i < 13; i++ {
 				err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.1"), []byte(fmt.Sprintf(`{"id":%d,"__typename":"Employee"}`, i)))
 				require.NoError(t, err)
 				err = xEnv.NatsConnectionDefault.Flush()
 				require.NoError(t, err)
 
-				if i == 1 || i == 3 || i == 4 || i == 5 || i == 7 || i == 8 || i == 11 {
+				// Should get the message only for the events that should be included
+				// if some message is not filtered out, the test will fail
+				switch i {
+				case 1, 3, 4, 5, 7, 8, 11:
 					gErr := conn.ReadJSON(&msg)
 					require.NoError(t, gErr)
 					require.Equal(t, "1", msg.ID)
@@ -1358,7 +1363,9 @@ func TestNatsEvents(t *testing.T) {
 			require.NoError(t, gErr)
 			require.Equal(t, "", string(line))
 
-			// Events 1, 3, 4, 5, 7, 8, and 11 should be included
+			// This loop is used to test the filter
+			// It will emit 12 events, and only 7 of them should be included:
+			// 1, 3, 4, 5, 7, 8, and 11
 			for i := 1; i < 13; i++ {
 				err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.1"), []byte(fmt.Sprintf(`{"id":%d,"__typename": "Employee"}`, i)))
 				require.NoError(t, err)
@@ -1366,7 +1373,10 @@ func TestNatsEvents(t *testing.T) {
 				err = xEnv.NatsConnectionDefault.Flush()
 				require.NoError(t, err)
 
-				if i == 1 || i == 3 || i == 4 || i == 5 || i == 7 || i == 8 || i == 11 {
+				// Should get the message only for the events that should be included
+				// if some message is not filtered out, the test will fail
+				switch i {
+				case 1, 3, 4, 5, 7, 8, 11:
 					eventNext, _, gErr = reader.ReadLine()
 					require.NoError(t, gErr)
 					require.Equal(t, "event: next", string(eventNext))
@@ -1426,8 +1436,9 @@ func TestNatsEvents(t *testing.T) {
 			require.NoError(t, err)
 			testenv.AwaitChannelWithT(t, NatsWaitTimeout, subscriptionArgsCh, func(t *testing.T, subscriptionArgs natsSubscriptionArgs) {
 				var gqlErr graphql.Errors
-				require.ErrorAs(t, subscriptionArgs.errValue, &gqlErr)
-				assert.Equal(t, "Invalid message received", gqlErr[0].Message)
+				if assert.ErrorAs(t, subscriptionArgs.errValue, &gqlErr) {
+					assert.Equal(t, "Invalid message received", gqlErr[0].Message)
+				}
 			})
 
 			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`)) // Correct message
@@ -1445,8 +1456,9 @@ func TestNatsEvents(t *testing.T) {
 			require.NoError(t, err)
 			testenv.AwaitChannelWithT(t, NatsWaitTimeout, subscriptionArgsCh, func(t *testing.T, subscriptionArgs natsSubscriptionArgs) {
 				var gqlErr graphql.Errors
-				require.ErrorAs(t, subscriptionArgs.errValue, &gqlErr)
-				assert.Equal(t, "Cannot return null for non-nullable field 'Subscription.employeeUpdated.id'.", gqlErr[0].Message)
+				if assert.ErrorAs(t, subscriptionArgs.errValue, &gqlErr) {
+					assert.Equal(t, "Cannot return null for non-nullable field 'Subscription.employeeUpdated.id'.", gqlErr[0].Message)
+				}
 			})
 
 			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`)) // Correct message
