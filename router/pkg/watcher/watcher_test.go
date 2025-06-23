@@ -626,10 +626,6 @@ func TestWatch(t *testing.T) {
 	t.Run("modify existing single file in multiple subsequent ticks", func(t *testing.T) {
 		t.Parallel()
 
-		customWatchInterval := 600 * time.Millisecond
-		intervalBuffer := 50 * time.Millisecond
-		testWaitInterval := customWatchInterval + intervalBuffer
-
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
@@ -640,11 +636,13 @@ func TestWatch(t *testing.T) {
 
 		spy := test.NewCallSpy()
 
+		ticker := watcher.NewManualTicker()
 		watchFunc, err := watcher.New(watcher.Options{
-			Interval: customWatchInterval,
-			Logger:   zap.NewNop(),
-			Paths:    []string{tempFile1},
-			Callback: spy.Call,
+			Interval:   100 * time.Millisecond,
+			Logger:     zap.NewNop(),
+			Paths:      []string{tempFile1},
+			Callback:   spy.Call,
+			TickSource: ticker,
 		})
 		require.NoError(t, err)
 
@@ -653,47 +651,40 @@ func TestWatch(t *testing.T) {
 			return watchFunc(ctx)
 		})
 
+		ticker.Tick(time.Now())
+
 		t.Log("Modifying file at tick 1")
 		require.NoError(t, os.WriteFile(tempFile1, []byte("b1"), 0o600))
-		time.Sleep(testWaitInterval)
+		ticker.Tick(time.Now())
 
 		t.Log("Modifying file at tick 2")
 		require.NoError(t, os.WriteFile(tempFile1, []byte("b2"), 0o600))
-		time.Sleep(testWaitInterval)
+		ticker.Tick(time.Now())
 
 		t.Log("Modifying file at tick 3")
 		require.NoError(t, os.WriteFile(tempFile1, []byte("b2"), 0o600))
-		time.Sleep(testWaitInterval)
+		ticker.Tick(time.Now())
 
 		t.Log("Modifying file at tick 4")
 		require.NoError(t, os.WriteFile(tempFile1, []byte("b1"), 0o600))
-		time.Sleep(testWaitInterval)
+		ticker.Tick(time.Now())
 
 		t.Log("Modifying file at tick 5")
 		require.NoError(t, os.WriteFile(tempFile1, []byte("b1"), 0o600))
-		time.Sleep(testWaitInterval)
+		ticker.Tick(time.Now())
 
 		// No Modifications should have happened because we still haven't
 		// gotten a subsequent tick with no modifications
-		require.EventuallyWithT(t, func(t *assert.CollectT) {
-			spy.AssertCalled(t, 0)
-		}, assertTimeout, assertPollInterval)
+		spy.AssertCalled(t, 0)
 
 		t.Log("Run callback at tick 6")
-		time.Sleep(testWaitInterval)
+		ticker.Tick(time.Now())
 
-		require.EventuallyWithT(t, func(t *assert.CollectT) {
-			spy.AssertCalled(t, 1)
-		}, assertTimeout, assertPollInterval)
+		spy.AssertCalled(t, 1)
 	})
 
 	t.Run("modify multiple existing files in multiple subsequent ticks", func(t *testing.T) {
 		t.Parallel()
-
-		customWatchInterval := 500 * time.Millisecond
-		intervalBuffer := 100 * time.Millisecond
-
-		testWaitInterval := customWatchInterval + intervalBuffer
 
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
@@ -709,11 +700,13 @@ func TestWatch(t *testing.T) {
 
 		spy := test.NewCallSpy()
 
+		ticker := watcher.NewManualTicker()
 		watchFunc, err := watcher.New(watcher.Options{
-			Interval: customWatchInterval,
-			Logger:   zap.NewNop(),
-			Paths:    []string{tempFile1, tempFile2, tempFile3},
-			Callback: spy.Call,
+			Interval:   500 * time.Millisecond,
+			Logger:     zap.NewNop(),
+			Paths:      []string{tempFile1, tempFile2, tempFile3},
+			Callback:   spy.Call,
+			TickSource: ticker,
 		})
 		require.NoError(t, err)
 
@@ -722,29 +715,24 @@ func TestWatch(t *testing.T) {
 			return watchFunc(ctx)
 		})
 
-		time.Sleep(testWaitInterval)
+		ticker.Tick(time.Now())
 
 		t.Log("Modifying file 1 at tick 1")
 		require.NoError(t, os.WriteFile(tempFile1, []byte("b1"), 0o600))
-
-		time.Sleep(testWaitInterval)
+		ticker.Tick(time.Now())
 
 		t.Log("Modifying file 2 at tick 2")
 		require.NoError(t, os.WriteFile(tempFile3, []byte("b2"), 0o600))
-
-		// No Modifications should have happened because we still haven't
-		// gotten a subsequent tick where no modifications happened
-		// after the first two modifications
-		require.EventuallyWithT(t, func(t *assert.CollectT) {
-			spy.AssertCalled(t, 0)
-		}, assertTimeout, assertPollInterval)
+		ticker.Tick(time.Now())
+		spy.AssertCalled(t, 0)
 
 		t.Log("Run callback at tick 3")
-		time.Sleep(testWaitInterval)
+		ticker.Tick(time.Now())
+		spy.AssertCalled(t, 1)
 
-		require.EventuallyWithT(t, func(t *assert.CollectT) {
-			spy.AssertCalled(t, 1)
-		}, assertTimeout, assertPollInterval)
+		t.Log("Tick 4, nothing should happen")
+		ticker.Tick(time.Now())
+		spy.AssertCalled(t, 1)
 	})
 }
 

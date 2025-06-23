@@ -3,6 +3,7 @@ package watcher
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"time"
 
@@ -14,6 +15,9 @@ type Options struct {
 	Logger   *zap.Logger
 	Paths    []string
 	Callback func()
+	// Since this is an interface, ensure not to pass in a nil interface
+	// as this will make the TickSource check fail unexpectedly
+	TickSource TickSource
 }
 
 func New(options Options) (func(ctx context.Context) error, error) {
@@ -36,7 +40,11 @@ func New(options Options) (func(ctx context.Context) error, error) {
 	ll := options.Logger.With(zap.String("component", "file_watcher"), zap.Strings("path", options.Paths))
 
 	return func(ctx context.Context) error {
-		ticker := time.NewTicker(options.Interval)
+		var ticker TickSource = NewRealTicker(options.Interval)
+		// For tests when we want to control the tick source
+		if options.TickSource != nil {
+			ticker = options.TickSource
+		}
 		defer ticker.Stop()
 
 		prevModTimes := make(map[string]time.Time)
@@ -52,16 +60,20 @@ func New(options Options) (func(ctx context.Context) error, error) {
 		}
 
 		pendingCallback := false
+		i := 0
 
 		for {
 			select {
-			case <-ticker.C:
+			case <-ticker.C():
 				changesDetected := false
+				i++
+				fmt.Println(changesDetected, pendingCallback, i)
 
 				for _, path := range options.Paths {
 					stat, err := os.Stat(path)
 					if err != nil {
 						ll.Debug("Target file cannot be statted", zap.String("path", path), zap.Error(err))
+						// Reset the mod time so we catch any new file at the target path
 						prevModTimes[path] = time.Time{}
 						continue
 					}
