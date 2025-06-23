@@ -11,7 +11,7 @@ import {
   VCSContext,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
-import { and, eq, inArray, like, or, SQL, sql } from 'drizzle-orm';
+import { and, eq, ilike, inArray, or, SQL, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { GraphQLSchema, parse } from 'graphql';
@@ -342,8 +342,8 @@ export class SchemaCheckRepository {
       if (search) {
         conditions.push(
           or(
-            like(schema.schemaCheckChangeActionOperationUsage.name, `%${search}%`),
-            like(schema.schemaCheckChangeActionOperationUsage.hash, `%${search}%`),
+            ilike(schema.schemaCheckChangeActionOperationUsage.name, `%${search}%`),
+            ilike(schema.schemaCheckChangeActionOperationUsage.hash, `%${search}%`),
           ),
         );
       }
@@ -406,8 +406,8 @@ export class SchemaCheckRepository {
       if (search) {
         conditions.push(
           or(
-            like(schema.schemaCheckChangeActionOperationUsage.name, `%${search}%`),
-            like(schema.schemaCheckChangeActionOperationUsage.hash, `%${search}%`),
+            ilike(schema.schemaCheckChangeActionOperationUsage.name, `%${search}%`),
+            ilike(schema.schemaCheckChangeActionOperationUsage.hash, `%${search}%`),
           ),
         );
       }
