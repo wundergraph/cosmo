@@ -56,7 +56,7 @@ Additional Labels that are just rendered in metadata.labels
 Common labels
 */}}
 {{- define "router.labels" -}}
-{{ $version := .Values.image.version | default .Chart.AppVersion -}}
+{{ $version := .Values.image.version | default .Chart.AppVersion | replace ":" "_" | trunc 63 -}}
 helm.sh/chart: {{ include "router.chart" . }}
 {{ include "router.selectorLabels" . }}
 app.kubernetes.io/version: {{ $version | quote }}
