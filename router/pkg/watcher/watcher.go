@@ -3,7 +3,6 @@ package watcher
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"time"
 
@@ -11,13 +10,11 @@ import (
 )
 
 type Options struct {
-	Interval time.Duration
-	Logger   *zap.Logger
-	Paths    []string
-	Callback func()
-	// Since this is an interface, ensure not to pass in a nil interface
-	// as this will make the TickSource check fail unexpectedly
-	TickSource TickSource
+	Interval       time.Duration
+	Logger         *zap.Logger
+	Paths          []string
+	Callback       func()
+	TickerOverride <-chan time.Time
 }
 
 func New(options Options) (func(ctx context.Context) error, error) {
@@ -40,12 +37,12 @@ func New(options Options) (func(ctx context.Context) error, error) {
 	ll := options.Logger.With(zap.String("component", "file_watcher"), zap.Strings("path", options.Paths))
 
 	return func(ctx context.Context) error {
-		var ticker TickSource = NewRealTicker(options.Interval)
-		// For tests when we want to control the tick source
-		if options.TickSource != nil {
-			ticker = options.TickSource
+		ticker := time.Tick(options.Interval)
+		// If a ticker override is provided, use that instead of the default ticker
+		// This is used only for tests
+		if options.TickerOverride != nil {
+			ticker = options.TickerOverride
 		}
-		defer ticker.Stop()
 
 		prevModTimes := make(map[string]time.Time)
 
@@ -60,14 +57,11 @@ func New(options Options) (func(ctx context.Context) error, error) {
 		}
 
 		pendingCallback := false
-		i := 0
 
 		for {
 			select {
-			case <-ticker.C():
+			case <-ticker:
 				changesDetected := false
-				i++
-				fmt.Println(changesDetected, pendingCallback, i)
 
 				for _, path := range options.Paths {
 					stat, err := os.Stat(path)
