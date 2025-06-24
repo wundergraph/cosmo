@@ -2,59 +2,15 @@ package integration
 
 import (
 	"testing"
-	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
-	"go.uber.org/zap/zapcore"
 )
 
-func TestRouterPlugin(t *testing.T) {
+func TestGRPCSubgraph(t *testing.T) {
 	t.Parallel()
 
-	t.Run("Should successfully start the router when plugins are enabled but no plugins are in the execution config", func(t *testing.T) {
-		t.Parallel()
-		err := testenv.RunWithError(t, &testenv.Config{
-			Plugins: testenv.PluginConfig{
-				Enabled: true,
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {})
-
-		require.NoError(t, err)
-	})
-
-	t.Run("Should fail on startup when no plugins found at a path", func(t *testing.T) {
-		t.Parallel()
-		testenv.FailsOnStartup(t, &testenv.Config{
-			RouterConfigJSONTemplate: testenv.ConfigWithPluginsJSONTemplate,
-			Plugins: testenv.PluginConfig{
-				Enabled: true,
-				Path:    "./non-existing-path",
-			},
-		}, func(t *testing.T, err error) {
-			require.ErrorContains(t, err, "failed to start plugin process")
-		})
-	})
-
-	t.Run("Should not be able to call plugin if it is not enabled", func(t *testing.T) {
-		t.Parallel()
-		testenv.Run(t, &testenv.Config{
-			RouterConfigJSONTemplate: testenv.ConfigWithPluginsJSONTemplate,
-			Plugins: testenv.PluginConfig{
-				Enabled: false,
-				Path:    "../router/plugins",
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			response := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `query { project(id: 1) { id } }`,
-			})
-
-			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'projects'.","extensions":{"errors":[{"message":"gRPC datasource needs to be enabled to be used","extensions":{"code":"Internal"}}]}}],"data":{"project":null}}`, response.Body)
-		})
-	})
-
-	t.Run("Should successfully start plugin and make requests", func(t *testing.T) {
+	t.Run("Should successfully start the subgraph and make requests", func(t *testing.T) {
 		t.Parallel()
 		tests := []struct {
 			query    string
@@ -82,14 +38,10 @@ func TestRouterPlugin(t *testing.T) {
 			},
 		}
 		testenv.Run(t, &testenv.Config{
-			RouterConfigJSONTemplate: testenv.ConfigWithPluginsJSONTemplate,
-			Plugins: testenv.PluginConfig{
-				Enabled: true,
-				Path:    "../router/plugins",
-			},
+			RouterConfigJSONTemplate: testenv.ConfigWithGRPCJSONTemplate,
+			EnableGRPC:               true,
 		},
 			func(t *testing.T, xEnv *testenv.Environment) {
-
 				for _, test := range tests {
 					response := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 						Query: test.query,
@@ -100,39 +52,4 @@ func TestRouterPlugin(t *testing.T) {
 			})
 	})
 
-	t.Run("Should restart plugin if it exits", func(t *testing.T) {
-		t.Parallel()
-		testenv.Run(t, &testenv.Config{
-			RouterConfigJSONTemplate: testenv.ConfigWithPluginsJSONTemplate,
-			LogObservation: testenv.LogObservationConfig{
-				Enabled:  true,
-				LogLevel: zapcore.ErrorLevel,
-			},
-			Plugins: testenv.PluginConfig{
-				Enabled: true,
-				Path:    "../router/plugins",
-			},
-		},
-			func(t *testing.T, xEnv *testenv.Environment) {
-				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-					Query: `query { killService }`, // this will kill the plugin
-				})
-
-				require.EventuallyWithT(t, func(c *assert.CollectT) {
-					logMessages := xEnv.Observer().All()
-					require.Greater(t, len(logMessages), 0)
-					require.Equal(t, "plugin process exited", logMessages[0].Message)
-				}, 5*time.Second, 1*time.Second)
-
-				require.EventuallyWithT(t, func(c *assert.CollectT) {
-					// the service should restart the plugin automatically and the request should succeed
-					response := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-						Query: `query { projects { id name } }`,
-					})
-
-					require.Equal(c, `{"data":{"projects":[{"id":"1","name":"Cloud Migration Overhaul"},{"id":"2","name":"Microservices Revolution"},{"id":"3","name":"AI-Powered Analytics"},{"id":"4","name":"DevOps Transformation"},{"id":"5","name":"Security Overhaul"},{"id":"6","name":"Mobile App Redesign"},{"id":"7","name":"Data Lake Implementation"}]}}`, response.Body)
-				}, 20*time.Second, 10*time.Second)
-			},
-		)
-	})
 }

@@ -8,7 +8,7 @@ import { compileGraphQLToMapping, compileGraphQLToProto, ProtoLock } from '@wund
 import prompts from 'prompts';
 import semver from 'semver';
 import { camelCase, upperFirst } from 'lodash-es';
-import { dataDir } from '../../../core/config.js';
+import { dataDir } from '../../../../core/config.js';
 
 // Define platform-architecture combinations
 export const HOST_PLATFORM = `${os.platform()}-${getOSArch()}`;
