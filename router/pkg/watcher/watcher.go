@@ -10,11 +10,11 @@ import (
 )
 
 type Options struct {
-	Interval       time.Duration
-	Logger         *zap.Logger
-	Paths          []string
-	Callback       func()
-	TickerOverride <-chan time.Time
+	Interval   time.Duration
+	Logger     *zap.Logger
+	Paths      []string
+	Callback   func()
+	TickSource <-chan time.Time
 }
 
 func New(options Options) (func(ctx context.Context) error, error) {
@@ -37,11 +37,11 @@ func New(options Options) (func(ctx context.Context) error, error) {
 	ll := options.Logger.With(zap.String("component", "file_watcher"), zap.Strings("path", options.Paths))
 
 	return func(ctx context.Context) error {
-		ticker := time.Tick(options.Interval)
-		// If a ticker override is provided, use that instead of the default ticker
-		// This is used only for tests
-		if options.TickerOverride != nil {
-			ticker = options.TickerOverride
+		// If a ticker source is provided, use that instead of the default ticker
+		// The ticker source is right now used for testing
+		ticker := options.TickSource
+		if ticker == nil {
+			ticker = time.Tick(options.Interval)
 		}
 
 		prevModTimes := make(map[string]time.Time)

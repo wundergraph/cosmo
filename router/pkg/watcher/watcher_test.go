@@ -109,18 +109,17 @@ func TestWatch(t *testing.T) {
 
 		tickerChan := make(chan time.Time)
 		watchFunc, err := watcher.New(watcher.Options{
-			Interval:       watchInterval,
-			Logger:         zap.NewNop(),
-			Paths:          []string{tempFile},
-			Callback:       spy.Call,
-			TickerOverride: tickerChan,
+			Interval:   watchInterval,
+			Logger:     zap.NewNop(),
+			Paths:      []string{tempFile},
+			Callback:   spy.Call,
+			TickSource: tickerChan,
 		})
 		require.NoError(t, err)
 
-		eg, ctx := errgroup.WithContext(ctx)
-		eg.Go(func() error {
-			return watchFunc(ctx)
-		})
+		go func() {
+			_ = watchFunc(ctx)
+		}()
 
 		// Wait for the first two cycles to complete to set baseline
 		sendTick(tickerChan)
@@ -161,18 +160,17 @@ func TestWatch(t *testing.T) {
 
 		tickerChan := make(chan time.Time)
 		watchFunc, err := watcher.New(watcher.Options{
-			Interval:       watchInterval,
-			Logger:         zap.NewNop(),
-			Paths:          []string{tempFileA1, tempFileB1, tempFileC1},
-			Callback:       spy.Call,
-			TickerOverride: tickerChan,
+			Interval:   watchInterval,
+			Logger:     zap.NewNop(),
+			Paths:      []string{tempFileA1, tempFileB1, tempFileC1},
+			Callback:   spy.Call,
+			TickSource: tickerChan,
 		})
 		require.NoError(t, err)
 
-		eg, ctx := errgroup.WithContext(ctx)
-		eg.Go(func() error {
-			return watchFunc(ctx)
-		})
+		go func() {
+			_ = watchFunc(ctx)
+		}()
 
 		sendTick(tickerChan)
 		sendTick(tickerChan)
@@ -211,18 +209,17 @@ func TestWatch(t *testing.T) {
 
 		tickerChan := make(chan time.Time)
 		watchFunc, err := watcher.New(watcher.Options{
-			Interval:       watchInterval,
-			Logger:         zap.NewNop(),
-			Paths:          []string{tempFile},
-			Callback:       spy.Call,
-			TickerOverride: tickerChan,
+			Interval:   watchInterval,
+			Logger:     zap.NewNop(),
+			Paths:      []string{tempFile},
+			Callback:   spy.Call,
+			TickSource: tickerChan,
 		})
 		require.NoError(t, err)
 
-		eg, ctx := errgroup.WithContext(ctx)
-		eg.Go(func() error {
-			return watchFunc(ctx)
-		})
+		go func() {
+			_ = watchFunc(ctx)
+		}()
 
 		// Wait for the first two cycles to complete to set baseline
 		sendTick(tickerChan)
@@ -255,18 +252,17 @@ func TestWatch(t *testing.T) {
 
 		tickerChan := make(chan time.Time)
 		watchFunc, err := watcher.New(watcher.Options{
-			Interval:       watchInterval,
-			Logger:         zap.NewNop(),
-			Paths:          []string{tempFile1, tempFile2, tempFile3},
-			Callback:       spy.Call,
-			TickerOverride: tickerChan,
+			Interval:   watchInterval,
+			Logger:     zap.NewNop(),
+			Paths:      []string{tempFile1, tempFile2, tempFile3},
+			Callback:   spy.Call,
+			TickSource: tickerChan,
 		})
 		require.NoError(t, err)
 
-		eg, ctx := errgroup.WithContext(ctx)
-		eg.Go(func() error {
-			return watchFunc(ctx)
-		})
+		go func() {
+			_ = watchFunc(ctx)
+		}()
 
 		sendTick(tickerChan)
 		sendTick(tickerChan)
@@ -297,18 +293,17 @@ func TestWatch(t *testing.T) {
 
 		tickerChan := make(chan time.Time)
 		watchFunc, err := watcher.New(watcher.Options{
-			Interval:       watchInterval,
-			Logger:         zap.NewNop(),
-			Paths:          []string{tempFile},
-			Callback:       spy.Call,
-			TickerOverride: tickerChan,
+			Interval:   watchInterval,
+			Logger:     zap.NewNop(),
+			Paths:      []string{tempFile},
+			Callback:   spy.Call,
+			TickSource: tickerChan,
 		})
 		require.NoError(t, err)
 
-		eg, ctx := errgroup.WithContext(ctx)
-		eg.Go(func() error {
-			return watchFunc(ctx)
-		})
+		go func() {
+			_ = watchFunc(ctx)
+		}()
 
 		// Wait for the first two cycles to complete to set baseline
 		sendTick(tickerChan)
@@ -348,18 +343,17 @@ func TestWatch(t *testing.T) {
 
 		tickerChan := make(chan time.Time)
 		watchFunc, err := watcher.New(watcher.Options{
-			Interval:       watchInterval,
-			Logger:         zap.NewNop(),
-			Paths:          []string{tempFile1, tempFile2, tempFile3},
-			Callback:       spy.Call,
-			TickerOverride: tickerChan,
+			Interval:   watchInterval,
+			Logger:     zap.NewNop(),
+			Paths:      []string{tempFile1, tempFile2, tempFile3},
+			Callback:   spy.Call,
+			TickSource: tickerChan,
 		})
 		require.NoError(t, err)
 
-		eg, ctx := errgroup.WithContext(ctx)
-		eg.Go(func() error {
-			return watchFunc(ctx)
-		})
+		go func() {
+			_ = watchFunc(ctx)
+		}()
 
 		sendTick(tickerChan)
 
@@ -400,18 +394,17 @@ func TestWatch(t *testing.T) {
 
 		tickerChan := make(chan time.Time)
 		watchFunc, err := watcher.New(watcher.Options{
-			Interval:       watchInterval,
-			Logger:         zap.NewNop(),
-			Paths:          []string{tempFile},
-			Callback:       spy.Call,
-			TickerOverride: tickerChan,
+			Interval:   watchInterval,
+			Logger:     zap.NewNop(),
+			Paths:      []string{tempFile},
+			Callback:   spy.Call,
+			TickSource: tickerChan,
 		})
 		require.NoError(t, err)
 
-		eg, ctx := errgroup.WithContext(ctx)
-		eg.Go(func() error {
-			return watchFunc(ctx)
-		})
+		go func() {
+			_ = watchFunc(ctx)
+		}()
 
 		sendTick(tickerChan)
 
@@ -451,18 +444,17 @@ func TestWatch(t *testing.T) {
 
 		tickerChan := make(chan time.Time)
 		watchFunc, err := watcher.New(watcher.Options{
-			Interval:       watchInterval,
-			Logger:         zap.NewNop(),
-			Paths:          []string{tempFileA1, tempFileB1, tempFileC1},
-			Callback:       spy.Call,
-			TickerOverride: tickerChan,
+			Interval:   watchInterval,
+			Logger:     zap.NewNop(),
+			Paths:      []string{tempFileA1, tempFileB1, tempFileC1},
+			Callback:   spy.Call,
+			TickSource: tickerChan,
 		})
 		require.NoError(t, err)
 
-		eg, ctx := errgroup.WithContext(ctx)
-		eg.Go(func() error {
-			return watchFunc(ctx)
-		})
+		go func() {
+			_ = watchFunc(ctx)
+		}()
 
 		sendTick(tickerChan)
 
@@ -532,18 +524,17 @@ func TestWatch(t *testing.T) {
 		tickerChan := make(chan time.Time)
 
 		watchFunc, err := watcher.New(watcher.Options{
-			Interval:       watchInterval,
-			Logger:         zap.NewNop(),
-			Paths:          []string{watchedFile},
-			Callback:       spy.Call,
-			TickerOverride: tickerChan,
+			Interval:   watchInterval,
+			Logger:     zap.NewNop(),
+			Paths:      []string{watchedFile},
+			Callback:   spy.Call,
+			TickSource: tickerChan,
 		})
 		require.NoError(t, err)
 
-		eg, ctx := errgroup.WithContext(ctx)
-		eg.Go(func() error {
-			return watchFunc(ctx)
-		})
+		go func() {
+			_ = watchFunc(ctx)
+		}()
 
 		// Wait for the first two cycles to complete to set baseline
 		sendTick(tickerChan)
@@ -593,18 +584,17 @@ func TestWatch(t *testing.T) {
 
 		tickerChan := make(chan time.Time)
 		watchFunc, err := watcher.New(watcher.Options{
-			Interval:       watchInterval,
-			Logger:         zap.NewNop(),
-			Paths:          []string{watchedFile1, watchedFile2, watchedFile3},
-			Callback:       spy.Call,
-			TickerOverride: tickerChan,
+			Interval:   watchInterval,
+			Logger:     zap.NewNop(),
+			Paths:      []string{watchedFile1, watchedFile2, watchedFile3},
+			Callback:   spy.Call,
+			TickSource: tickerChan,
 		})
 		require.NoError(t, err)
 
-		eg, ctx := errgroup.WithContext(ctx)
-		eg.Go(func() error {
-			return watchFunc(ctx)
-		})
+		go func() {
+			_ = watchFunc(ctx)
+		}()
 
 		sendTick(tickerChan)
 
@@ -651,18 +641,17 @@ func TestWatch(t *testing.T) {
 		tickerChan := make(chan time.Time)
 
 		watchFunc, err := watcher.New(watcher.Options{
-			Interval:       customWatchInterval,
-			Logger:         zap.NewNop(),
-			Paths:          []string{tempFile1, tempFile2, tempFile3},
-			Callback:       spy.Call,
-			TickerOverride: tickerChan,
+			Interval:   customWatchInterval,
+			Logger:     zap.NewNop(),
+			Paths:      []string{tempFile1, tempFile2, tempFile3},
+			Callback:   spy.Call,
+			TickSource: tickerChan,
 		})
 		require.NoError(t, err)
 
-		eg, ctx := errgroup.WithContext(ctx)
-		eg.Go(func() error {
-			return watchFunc(ctx)
-		})
+		go func() {
+			_ = watchFunc(ctx)
+		}()
 
 		sendTick(tickerChan)
 
@@ -692,18 +681,17 @@ func TestWatch(t *testing.T) {
 		tickerChan := make(chan time.Time)
 
 		watchFunc, err := watcher.New(watcher.Options{
-			Interval:       watchInterval,
-			Logger:         zap.NewNop(),
-			Paths:          []string{tempFile1},
-			Callback:       spy.Call,
-			TickerOverride: tickerChan,
+			Interval:   watchInterval,
+			Logger:     zap.NewNop(),
+			Paths:      []string{tempFile1},
+			Callback:   spy.Call,
+			TickSource: tickerChan,
 		})
 		require.NoError(t, err)
 
-		eg, ctx := errgroup.WithContext(ctx)
-		eg.Go(func() error {
-			return watchFunc(ctx)
-		})
+		go func() {
+			_ = watchFunc(ctx)
+		}()
 
 		tickerChan <- time.Now()
 
@@ -756,18 +744,17 @@ func TestWatch(t *testing.T) {
 
 		ticker := make(chan time.Time)
 		watchFunc, err := watcher.New(watcher.Options{
-			Interval:       watchInterval,
-			Logger:         zap.NewNop(),
-			Paths:          []string{tempFile1, tempFile2, tempFile3},
-			Callback:       spy.Call,
-			TickerOverride: ticker,
+			Interval:   watchInterval,
+			Logger:     zap.NewNop(),
+			Paths:      []string{tempFile1, tempFile2, tempFile3},
+			Callback:   spy.Call,
+			TickSource: ticker,
 		})
 		require.NoError(t, err)
 
-		eg, ctx := errgroup.WithContext(ctx)
-		eg.Go(func() error {
-			return watchFunc(ctx)
-		})
+		go func() {
+			_ = watchFunc(ctx)
+		}()
 
 		sendTick(ticker)
 
@@ -819,8 +806,8 @@ func TestCancel(t *testing.T) {
 	require.ErrorIs(t, eg.Wait(), context.Canceled)
 }
 
-// sendTick helper function which also adds jitter
-// so users don't need to manually add jitter to every test
+// sendTick helper function which adds a sleep timeout
+// so users don't need to manually add sleep to every test
 func sendTick(channel chan time.Time) {
 	channel <- time.Now()
 	time.Sleep(10 * time.Millisecond)
