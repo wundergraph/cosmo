@@ -147,23 +147,23 @@ For more information about Cosmo and building router plugins:
 <p align="center">Made with ❤️ by <a href="https://wundergraph.com">WunderGraph</a></p>
 `;
 
-const pluginReadme = `# {name} Plugin - Cosmo gRPC Service Example
+const pluginReadme = `# {name} Plugin - Cosmo Router Example
 
-This repository contains a simple Cosmo gRPC service plugin that showcases how to design APIs with GraphQL Federation but implement them using gRPC methods instead of traditional resolvers.
+This repository contains a simple Cosmo Router plugin that showcases how to design APIs with GraphQL Federation but implement them using gRPC methods instead of traditional resolvers.
 
 ## What is this demo about?
 
-This demo illustrates a key pattern in Cosmo gRPC service development:
+This demo illustrates a key pattern in Cosmo Router plugin development:
 - **Design with GraphQL**: Define your API using GraphQL schema
 - **Implement with gRPC**: Instead of writing GraphQL resolvers, implement gRPC service methods
 - **Bridge the gap**: The Cosmo router connects GraphQL operations to your gRPC implementations
 - **Test-Driven Development**: Test your gRPC service implementation with gRPC client and server without external dependencies
 
 The plugin demonstrates:
-- How GraphQL types and operations map to gRPC service methods
+- How GraphQL types and operations map to gRPC RPC methods
 - Simple "Hello World" implementation
 - Proper structure for a Cosmo Router plugin
-- How to test your gRPC service implementation with gRPC client and server without external dependencies
+- How to test your gRPC implementation with gRPC client and server without external dependencies
 
 ## Getting Started
 
