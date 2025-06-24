@@ -20,12 +20,11 @@ require (
 	github.com/redis/go-redis/v9 v9.4.0
 	github.com/sebdah/goldie/v2 v2.5.3
 	github.com/stretchr/testify v1.10.0
-	github.com/tidwall/gjson v1.18.0
 	github.com/twmb/franz-go v1.16.1
 	github.com/twmb/franz-go/pkg/kadm v1.11.0
-	github.com/wundergraph/cosmo/demo v0.0.0-20250613101513-66a551612639
-	github.com/wundergraph/cosmo/router v0.0.0-20250613101513-66a551612639
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.190
+	github.com/wundergraph/cosmo/demo v0.0.0-20250618213123-fa5f71059920
+	github.com/wundergraph/cosmo/router v0.0.0-20250618213123-fa5f71059920
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.192
 	go.opentelemetry.io/otel v1.28.0
 	go.opentelemetry.io/otel/sdk v1.28.0
 	go.opentelemetry.io/otel/sdk/metric v1.28.0
@@ -124,6 +123,7 @@ require (
 	github.com/sosodev/duration v1.3.1 // indirect
 	github.com/spf13/cast v1.7.1 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
+	github.com/tidwall/gjson v1.18.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tidwall/sjson v1.2.5 // indirect
