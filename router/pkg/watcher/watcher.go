@@ -10,10 +10,11 @@ import (
 )
 
 type Options struct {
-	Interval time.Duration
-	Logger   *zap.Logger
-	Paths    []string
-	Callback func()
+	Interval   time.Duration
+	Logger     *zap.Logger
+	Paths      []string
+	Callback   func()
+	TickSource <-chan time.Time
 }
 
 func New(options Options) (func(ctx context.Context) error, error) {
@@ -36,8 +37,12 @@ func New(options Options) (func(ctx context.Context) error, error) {
 	ll := options.Logger.With(zap.String("component", "file_watcher"), zap.Strings("path", options.Paths))
 
 	return func(ctx context.Context) error {
-		ticker := time.NewTicker(options.Interval)
-		defer ticker.Stop()
+		// If a ticker source is provided, use that instead of the default ticker
+		// The ticker source is right now used for testing
+		ticker := options.TickSource
+		if ticker == nil {
+			ticker = time.Tick(options.Interval)
+		}
 
 		prevModTimes := make(map[string]time.Time)
 
@@ -51,36 +56,41 @@ func New(options Options) (func(ctx context.Context) error, error) {
 			}
 		}
 
+		pendingCallback := false
+
 		for {
 			select {
-			case <-ticker.C:
-				shouldRunCallback := false
+			case <-ticker:
+				changesDetected := false
+
 				for _, path := range options.Paths {
 					stat, err := os.Stat(path)
 					if err != nil {
 						ll.Debug("Target file cannot be statted", zap.String("path", path), zap.Error(err))
-
 						// Reset the mod time so we catch any new file at the target path
 						prevModTimes[path] = time.Time{}
-
 						continue
 					}
-
 					ll.Debug("Checking file for changes",
 						zap.String("path", path),
 						zap.Time("prev_mod_time", prevModTimes[path]),
 						zap.Time("current_mod_time", stat.ModTime()),
 					)
-
 					if stat.ModTime().After(prevModTimes[path]) {
 						prevModTimes[path] = stat.ModTime()
-						shouldRunCallback = true
+						changesDetected = true
 					}
 				}
 
-				// In case multiple paths were modified in one cycle
-				// we still only reload it once
-				if shouldRunCallback {
+				if changesDetected {
+					// If there are changes detected this tick
+					// We want to wait for the next tick (without changes)
+					// to run the callback
+					pendingCallback = true
+				} else if pendingCallback {
+					// When there are no changes detected for this tick
+					// but the previous tick had changes detected
+					pendingCallback = false
 					options.Callback()
 				}
 			case <-ctx.Done():
