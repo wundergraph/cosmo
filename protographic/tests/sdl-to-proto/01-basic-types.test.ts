@@ -283,6 +283,7 @@ describe('SDL to Proto - Basic Types', () => {
       package custom.v1;
 
       option go_package = "github.com/example/mypackage;mypackage";
+
       // Service definition for CustomService
       service CustomService {
         rpc QueryHello(QueryHelloRequest) returns (QueryHelloResponse) {}

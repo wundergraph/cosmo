@@ -25,6 +25,7 @@ describe('SDL to Proto Options', () => {
       package service.v1;
 
       option go_package = "github.com/wundergraph/cosmo/protographic";
+
       // Service definition for DefaultService
       service DefaultService {
         rpc QueryBooleanField(QueryBooleanFieldRequest) returns (QueryBooleanFieldResponse) {}
