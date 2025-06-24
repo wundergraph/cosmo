@@ -10,7 +10,7 @@ import { renderResultTree } from '../../router/commands/plugin/helper.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('generate');
-  command.description('generate a protobuf schema for a remote gRPC service.');
+  command.description('Generate a protobuf schema for a remote gRPC service.');
   command.argument('[name]', 'The name of the proto service.');
   command.requiredOption('-i, --input <path-to-input>', 'The GraphQL schema file to generate a protobuf schema from.');
   command.option('-o, --output <path-to-output>', 'The output directory for the protobuf schema. (default ".").', '.');
