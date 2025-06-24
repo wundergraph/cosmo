@@ -34,6 +34,13 @@ func (c *CallSpy) AssertCalled(t assert.TestingT, expectedCalls int) {
 	assert.Equal(t, expectedCalls, actualCalls, "Expected %d calls but got %d", expectedCalls, actualCalls)
 }
 
+// AssertCalledInBetween asserts that the spy was called between the expected number of times.
+func (c *CallSpy) AssertCalledInBetween(t assert.TestingT, minCalls, maxCalls int) {
+	actualCalls := c.GetCount()
+	assert.GreaterOrEqual(t, actualCalls, minCalls, "Expected at least %d calls but got %d", minCalls, actualCalls)
+	assert.LessOrEqual(t, actualCalls, maxCalls, "Expected at most %d calls but got %d", maxCalls, actualCalls)
+}
+
 // Reset resets the call count to zero.
 func (c *CallSpy) Reset() {
 	atomic.StoreInt32(&c.count, 0)

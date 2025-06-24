@@ -28,3 +28,5 @@ plugin-build-ci: plugin-build-binary
 	mkdir -p ../router/plugins/projects/bin
 	cp -a pkg/subgraphs/projects/bin/* ../router/plugins/projects/bin/
 
+standalone-compose:
+	pnpx tsx --env-file ../cli/.env ../cli/src/index.ts router compose -i ./graph-with-standalone.yaml -o ./configWithStandalone.json

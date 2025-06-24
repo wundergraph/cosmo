@@ -18,8 +18,8 @@ import (
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/grpcconnector"
 	pubsub_datasource "github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
-	"github.com/wundergraph/cosmo/router/pkg/routerplugin"
 )
 
 type ExecutorConfigurationBuilder struct {
@@ -31,7 +31,7 @@ type ExecutorConfigurationBuilder struct {
 	transportOptions *TransportOptions
 	baseTripper      http.RoundTripper
 	subgraphTrippers map[string]http.RoundTripper
-	pluginHost       *routerplugin.Host
+	pluginHost       *grpcconnector.Connector
 
 	subscriptionClientOptions *SubscriptionClientOptions
 	instanceData              InstanceData

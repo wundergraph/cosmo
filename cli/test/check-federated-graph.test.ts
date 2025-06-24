@@ -23,7 +23,6 @@ describe('Schema Command', () => {
   test('Check federated graph', () => {
     const client: Client = {
       platform: createPromiseClient(PlatformService, mockPlatformTransport()),
-      node: null,
     };
 
     const program = new Command();

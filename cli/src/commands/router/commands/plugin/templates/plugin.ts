@@ -230,13 +230,13 @@ func TestSequentialIDs(t *testing.T) {
 }
 `;
 
-const readme = `# {name} Plugin - Cosmo gRPC Subgraph Example
+const readme = `# {name} Plugin - Cosmo gRPC Service Example
 
-This repository contains a simple Cosmo gRPC subgraph plugin that showcases how to design APIs with GraphQL Federation but implement them using gRPC methods instead of traditional resolvers.
+This repository contains a simple Cosmo gRPC service plugin that showcases how to design APIs with GraphQL Federation but implement them using gRPC methods instead of traditional resolvers.
 
 ## What is this demo about?
 
-This demo illustrates a key pattern in Cosmo subgraph development:
+This demo illustrates a key pattern in Cosmo gRPC service development:
 - **Design with GraphQL**: Define your API using GraphQL schema
 - **Implement with gRPC**: Instead of writing GraphQL resolvers, implement gRPC service methods
 - **Bridge the gap**: The Cosmo router connects GraphQL operations to your gRPC implementations
@@ -245,7 +245,7 @@ This demo illustrates a key pattern in Cosmo subgraph development:
 The plugin demonstrates:
 - How GraphQL types and operations map to gRPC service methods
 - Simple "Hello World" implementation
-- Proper structure for a Cosmo gRPC subgraph plugin
+- Proper structure for a Cosmo gRPC service plugin
 - How to test your gRPC service implementation with gRPC client and server without external dependencies
 
 ## Getting Started

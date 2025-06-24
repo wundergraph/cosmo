@@ -62,8 +62,6 @@ describe('Fetch schema', () => {
   test('should return client schema', async () => {
     const client: Client = {
       platform: createPromiseClient(PlatformService, mockPlatformTransport()),
-      // @ts-ignore
-      node: null,
     };
 
     const program = new Command();

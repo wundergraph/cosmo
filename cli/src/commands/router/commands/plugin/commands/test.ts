@@ -3,7 +3,7 @@ import os from 'node:os';
 import { Command } from 'commander';
 import { resolve } from 'pathe';
 import Spinner from 'ora';
-import { BaseCommandOptions } from '../../../../core/types/types.js';
+import { BaseCommandOptions } from '../../../../../core/types/types.js';
 import { checkAndInstallTools, installGoDependencies, runGoTests } from '../toolchain.js';
 import { renderResultTree } from '../helper.js';
 

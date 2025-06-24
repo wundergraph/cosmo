@@ -147,18 +147,17 @@ export class GraphQLToProtoTextVisitor {
       this.initializeFieldNumbersMap(lockData);
     }
 
-    // Generate default go_package if not provided
-    const defaultGoPackage = `cosmo/pkg/proto/${packageName};${packageName.replace('.', '')}`;
-    const goPackageOption = goPackage || defaultGoPackage;
+    const protoOptions = [];
+
+    if (goPackage && goPackage !== '') {
+      // Generate default go_package if not provided
+      const defaultGoPackage = `cosmo/pkg/proto/${packageName};${packageName.replace('.', '')}`;
+      const goPackageOption = goPackage || defaultGoPackage;
+      protoOptions.push(`option go_package = "${goPackageOption}";\n`);
+    }
 
     // Initialize the Proto definition with the standard header
-    this.protoText = [
-      'syntax = "proto3";',
-      `package ${packageName};`,
-      '',
-      `option go_package = "${goPackageOption}";`,
-      '',
-    ];
+    this.protoText = ['syntax = "proto3";', `package ${packageName};`, '', ...protoOptions];
   }
 
   /**
