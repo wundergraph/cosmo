@@ -11,7 +11,7 @@ test-deps:
 	$(MAKE) -C ../demo plugin-build-ci
 
 test: test-deps
-	gotestsum -f $(FORMAT) -- -ldflags=-extldflags=-Wl,-ld_classic $(test_params) -race $(test_target)
+	gotestsum $(gotestsum_params) --packages=$(test_target) -f $(FORMAT) -- -ldflags=-extldflags=-Wl,-ld_classic $(test_params) -race $(test_target)
 
 update-snapshot:
 	go test -update -race $(test_target)
