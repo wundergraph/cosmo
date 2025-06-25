@@ -60,10 +60,7 @@ import {
 describe('events Configuration tests', () => {
   describe('Normalization tests', () => {
     test('that events configuration is correctly generated', () => {
-      const result = normalizeSubgraphSuccess(
-        subgraphA,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
+      const result = normalizeSubgraphSuccess(subgraphA, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
@@ -309,10 +306,7 @@ describe('events Configuration tests', () => {
     });
 
     test('that errors are returned if an event directive is invalid #1', () => {
-      const result = normalizeSubgraphFailure(
-        subgraphN,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
+      const result = normalizeSubgraphFailure(subgraphN, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.errors).toHaveLength(2);
       const rootFieldPath = 'Subscription.entitySubscription';
       expect(result.errors[0]).toStrictEqual(
@@ -332,10 +326,7 @@ describe('events Configuration tests', () => {
     });
 
     test('that errors are returned if an event directive is invalid #2', () => {
-      const result = normalizeSubgraphFailure(
-        subgraphR,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
+      const result = normalizeSubgraphFailure(subgraphR, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.errors).toHaveLength(1);
       const directiveName = 'edfs__natsSubscribe';
       const rootFieldPath = 'Subscription.entitySubscription';
@@ -347,10 +338,7 @@ describe('events Configuration tests', () => {
     });
 
     test('that an error is returned if edfs__NatsStreamConfiguration is improperly defined', () => {
-      const result = normalizeSubgraphFailure(
-        subgraphP,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
+      const result = normalizeSubgraphFailure(subgraphP, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         invalidEventDrivenGraphError([invalidNatsStreamConfigurationDefinitionErrorMessage]),
@@ -358,10 +346,7 @@ describe('events Configuration tests', () => {
     });
 
     test('that an error is returned if streamConfiguration input is invalid #1', () => {
-      const result = normalizeSubgraphFailure(
-        subgraphQ,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
+      const result = normalizeSubgraphFailure(subgraphQ, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         invalidEventDirectiveError('edfs__natsSubscribe', 'Subscription.entitySubscription', [
@@ -371,10 +356,7 @@ describe('events Configuration tests', () => {
     });
 
     test('that an error is returned if streamConfiguration input is invalid #2', () => {
-      const result = normalizeSubgraphFailure(
-        subgraphS,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
+      const result = normalizeSubgraphFailure(subgraphS, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         invalidEventDirectiveError('edfs__natsSubscribe', 'Subscription.entitySubscription', [
@@ -384,10 +366,7 @@ describe('events Configuration tests', () => {
     });
 
     test('that an error is returned if streamConfiguration input is invalid #3', () => {
-      const result = normalizeSubgraphFailure(
-        subgraphT,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
+      const result = normalizeSubgraphFailure(subgraphT, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         invalidEventDirectiveError('edfs__natsSubscribe', 'Subscription.entitySubscription', [
@@ -402,10 +381,7 @@ describe('events Configuration tests', () => {
     });
 
     test('that edfs__NatsStreamConfiguration does not need to be defined if @edfs__natsSubscribe is not defined', () => {
-      const result = normalizeSubgraphSuccess(
-        subgraphU,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
+      const result = normalizeSubgraphSuccess(subgraphU, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
@@ -489,10 +465,7 @@ describe('events Configuration tests', () => {
     });
 
     test('that an error is returned if a NATS subscribe subject references an invalid argument', () => {
-      const result = normalizeSubgraphFailure(
-        subgraphW,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
+      const result = normalizeSubgraphFailure(subgraphW, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -503,10 +476,7 @@ describe('events Configuration tests', () => {
     });
 
     test('that an error is returned if a NATS request subject references an invalid argument', () => {
-      const result = normalizeSubgraphFailure(
-        subgraphX,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
+      const result = normalizeSubgraphFailure(subgraphX, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -517,10 +487,7 @@ describe('events Configuration tests', () => {
     });
 
     test('that an error is returned if a NATS publish subject references an invalid argument', () => {
-      const result = normalizeSubgraphFailure(
-        subgraphY,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
+      const result = normalizeSubgraphFailure(subgraphY, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         invalidEventDirectiveError('edfs__natsPublish', 'Mutation.entityPublish', [
@@ -530,10 +497,7 @@ describe('events Configuration tests', () => {
     });
 
     test('that an error is returned if a Kafka subscribe subject references an invalid argument', () => {
-      const result = normalizeSubgraphFailure(
-        subgraphZ,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
+      const result = normalizeSubgraphFailure(subgraphZ, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         invalidEventDirectiveError('edfs__kafkaSubscribe', 'Subscription.entitySubscription', [
@@ -543,10 +507,7 @@ describe('events Configuration tests', () => {
     });
 
     test('that an error is returned if a Kafka publish subject references an invalid argument', () => {
-      const result = normalizeSubgraphFailure(
-        subgraphAA,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
+      const result = normalizeSubgraphFailure(subgraphAA, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         invalidEventDirectiveError('edfs__kafkaPublish', 'Mutation.entityPublish', [
@@ -556,10 +517,7 @@ describe('events Configuration tests', () => {
     });
 
     test('that an error is returned if a NATS subscribe subject references two invalid arguments', () => {
-      const result = normalizeSubgraphFailure(
-        subgraphAB,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
+      const result = normalizeSubgraphFailure(subgraphAB, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         invalidEventDirectiveError('edfs__natsSubscribe', 'Subscription.entitySubscription', [
@@ -570,10 +528,7 @@ describe('events Configuration tests', () => {
     });
 
     test('that an error is returned if a NATS request subject references two invalid arguments', () => {
-      const result = normalizeSubgraphFailure(
-        subgraphAC,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
+      const result = normalizeSubgraphFailure(subgraphAC, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         invalidEventDirectiveError('edfs__natsRequest', 'Query.entityRequest', [
@@ -584,10 +539,7 @@ describe('events Configuration tests', () => {
     });
 
     test('that an error is returned if a NATS publish subject references two invalid arguments', () => {
-      const result = normalizeSubgraphFailure(
-        subgraphAD,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
+      const result = normalizeSubgraphFailure(subgraphAD, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         invalidEventDirectiveError('edfs__natsPublish', 'Mutation.entityPublish', [
@@ -598,10 +550,7 @@ describe('events Configuration tests', () => {
     });
 
     test('that an error is returned if a Kafka subscribe subject references two invalid arguments', () => {
-      const result = normalizeSubgraphFailure(
-        subgraphAE,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
+      const result = normalizeSubgraphFailure(subgraphAE, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         invalidEventDirectiveError('edfs__kafkaSubscribe', 'Subscription.entitySubscription', [
@@ -612,10 +561,7 @@ describe('events Configuration tests', () => {
     });
 
     test('that an error is returned if a Kafka publish subject references two invalid arguments', () => {
-      const result = normalizeSubgraphFailure(
-        subgraphAF,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
+      const result = normalizeSubgraphFailure(subgraphAF, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         invalidEventDirectiveError('edfs__kafkaPublish', 'Mutation.entityPublish', [
@@ -627,10 +573,7 @@ describe('events Configuration tests', () => {
   });
 
   test('that an error is returned if a NATS subscribe subject references a valid argument and an invalid one', () => {
-    const result = normalizeSubgraphFailure(
-      subgraphAG,
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    );
+    const result = normalizeSubgraphFailure(subgraphAG, ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
       invalidEventDirectiveError('edfs__natsSubscribe', 'Subscription.entitySubscription', [
@@ -640,10 +583,7 @@ describe('events Configuration tests', () => {
   });
 
   test('that an error is returned if a NATS request subject references a valid argument and an invalid one', () => {
-    const result = normalizeSubgraphFailure(
-      subgraphAH,
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    );
+    const result = normalizeSubgraphFailure(subgraphAH, ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
       invalidEventDirectiveError('edfs__natsRequest', 'Query.entityRequest', [
@@ -653,10 +593,7 @@ describe('events Configuration tests', () => {
   });
 
   test('that an error is returned if a NATS request subject uses streamConfiguration and there is a wrong definition of edfs__NatsStreamConfiguration', () => {
-    const result = normalizeSubgraphFailure(
-      subgraphAN,
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    );
+    const result = normalizeSubgraphFailure(subgraphAN, ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
       invalidEventDrivenGraphError([invalidNatsStreamConfigurationDefinitionErrorMessage]),
@@ -664,10 +601,7 @@ describe('events Configuration tests', () => {
   });
 
   test('that no error is returned if a NATS request subject is without streamConfiguration and there is a wrong definition of edfs__NatsStreamConfiguration', () => {
-    const result = normalizeSubgraphSuccess(
-      subgraphAO,
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    );
+    const result = normalizeSubgraphSuccess(subgraphAO, ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(schemaToSortedNormalizedString(result.schema)).toBe(
       normalizeString(
         versionOneSubscriptionEventDefinitions +
@@ -695,10 +629,7 @@ describe('events Configuration tests', () => {
   });
 
   test('that no error is returned if a NATS request subject is with a streamConfiguration and there is a correct definition of edfs__NatsStreamConfiguration', () => {
-    const result = normalizeSubgraphSuccess(
-      subgraphAP,
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    );
+    const result = normalizeSubgraphSuccess(subgraphAP, ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(schemaToSortedNormalizedString(result.schema)).toBe(
       normalizeString(
         versionOneSubscriptionEventDefinitions +
@@ -727,10 +658,7 @@ describe('events Configuration tests', () => {
   });
 
   test('that an error is returned if a NATS request subject is with a streamConfiguration and there is a definition of edfs__NatsStreamConfiguration without default consumerInactiveThreshold', () => {
-    const result = normalizeSubgraphFailure(
-      subgraphAQ,
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    );
+    const result = normalizeSubgraphFailure(subgraphAQ, ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
       invalidEventDrivenGraphError([invalidNatsStreamConfigurationDefinitionErrorMessage]),
@@ -738,10 +666,7 @@ describe('events Configuration tests', () => {
   });
 
   test('that an error is returned if a NATS request subject is with a streamConfiguration and there is a definition of edfs__NatsStreamConfiguration with an incorrect consumerInactiveThreshold default value', () => {
-    const result = normalizeSubgraphFailure(
-      subgraphAR,
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    );
+    const result = normalizeSubgraphFailure(subgraphAR, ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
       invalidEventDrivenGraphError([invalidNatsStreamConfigurationDefinitionErrorMessage]),
@@ -749,10 +674,7 @@ describe('events Configuration tests', () => {
   });
 
   test('that an error is returned if a NATS publish subject references a valid argument and an invalid one', () => {
-    const result = normalizeSubgraphFailure(
-      subgraphAI,
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    );
+    const result = normalizeSubgraphFailure(subgraphAI, ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
       invalidEventDirectiveError('edfs__natsPublish', 'Mutation.entityPublish', [
@@ -762,10 +684,7 @@ describe('events Configuration tests', () => {
   });
 
   test('that an error is returned if a Kafka subscribe subject references a valid argument and an invalid one', () => {
-    const result = normalizeSubgraphFailure(
-      subgraphAL,
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    );
+    const result = normalizeSubgraphFailure(subgraphAL, ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
       invalidEventDirectiveError('edfs__kafkaSubscribe', 'Subscription.entitySubscription', [
@@ -775,10 +694,7 @@ describe('events Configuration tests', () => {
   });
 
   test('that an error is returned if a Kafka publish subject references a valid argument and an invalid one', () => {
-    const result = normalizeSubgraphFailure(
-      subgraphAM,
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    );
+    const result = normalizeSubgraphFailure(subgraphAM, ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
       invalidEventDirectiveError('edfs__kafkaPublish', 'Mutation.entityPublish', [
@@ -788,10 +704,7 @@ describe('events Configuration tests', () => {
   });
 
   test('that an error is returned if a Redis subscribe subject references a valid argument and an invalid one', () => {
-    const result = normalizeSubgraphFailure(
-      subgraphAS,
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    );
+    const result = normalizeSubgraphFailure(subgraphAS, ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
       invalidEventDirectiveError('edfs__redisSubscribe', 'Subscription.entitySubscription', [
@@ -801,10 +714,7 @@ describe('events Configuration tests', () => {
   });
 
   test('that an error is returned if a Redis publish subject references a valid argument and an invalid one', () => {
-    const result = normalizeSubgraphFailure(
-      subgraphAT,
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    );
+    const result = normalizeSubgraphFailure(subgraphAT, ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
       invalidEventDirectiveError('edfs__redisPublish', 'Mutation.entityPublish', [
@@ -814,10 +724,7 @@ describe('events Configuration tests', () => {
   });
 
   test('that an error is returned if a Redis subscribe subject references two invalid arguments', () => {
-    const result = normalizeSubgraphFailure(
-      subgraphAU,
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    );
+    const result = normalizeSubgraphFailure(subgraphAU, ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
       invalidEventDirectiveError('edfs__redisSubscribe', 'Subscription.entitySubscription', [
@@ -828,10 +735,7 @@ describe('events Configuration tests', () => {
   });
 
   test('that an error is returned if a Redis publish subject references two invalid arguments', () => {
-    const result = normalizeSubgraphFailure(
-      subgraphAV,
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    );
+    const result = normalizeSubgraphFailure(subgraphAV, ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
       invalidEventDirectiveError('edfs__redisPublish', 'Mutation.entityPublish', [
@@ -842,10 +746,7 @@ describe('events Configuration tests', () => {
   });
 
   test('that Redis configuration is correctly generated', () => {
-    const result = normalizeSubgraphSuccess(
-      subgraphAW,
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    );
+    const result = normalizeSubgraphSuccess(subgraphAW, ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.configurationDataByTypeName).toStrictEqual(
       new Map<string, ConfigurationData>([
         [
