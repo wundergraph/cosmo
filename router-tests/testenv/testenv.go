@@ -1341,17 +1341,19 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	}
 
 	if testConfig.MCP.Enabled {
-		// Add Storage provider
-		routerOpts = append(routerOpts, core.WithStorageProviders(config.StorageProviders{
-			FileSystem: []config.FileSystemStorageProvider{
-				{
-					ID:   "test",
-					Path: "testdata/mcp_operations",
+		if testConfig.MCP.Storage.ProviderID == "" {
+			// Add Storage provider
+			routerOpts = append(routerOpts, core.WithStorageProviders(config.StorageProviders{
+				FileSystem: []config.FileSystemStorageProvider{
+					{
+						ID:   "test",
+						Path: "testdata/mcp_operations",
+					},
 				},
-			},
-		}))
+			}))
 
-		testConfig.MCP.Storage.ProviderID = "test"
+			testConfig.MCP.Storage.ProviderID = "test"
+		}
 
 		routerOpts = append(routerOpts, core.WithMCP(testConfig.MCP))
 	}
