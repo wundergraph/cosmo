@@ -7,8 +7,6 @@ import {
   EDFS_NATS_PUBLISH,
   EDFS_NATS_REQUEST,
   EDFS_NATS_SUBSCRIBE,
-  EDFS_REDIS_PUBLISH,
-  EDFS_REDIS_SUBSCRIBE,
   federateSubgraphs,
   FederationResultFailure,
   FederationResultSuccess,
@@ -52,18 +50,20 @@ import {
   versionOnePersistedDirectiveDefinitions,
   versionOneSubscriptionEventDefinitions,
 } from './utils/utils';
-import { normalizeString, schemaToSortedNormalizedString } from '../utils/utils';
+import {
+  normalizeString,
+  normalizeSubgraphFailure,
+  normalizeSubgraphSuccess,
+  schemaToSortedNormalizedString,
+} from '../utils/utils';
 
 describe('events Configuration tests', () => {
   describe('Normalization tests', () => {
     test('that events configuration is correctly generated', () => {
-      const result = normalizeSubgraph(
-        subgraphA.definitions,
-        subgraphA.name,
-        undefined,
+      const result = normalizeSubgraphSuccess(
+        subgraphA,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
-      expect(result.success).toBe(true);
+      );
       expect(result.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
@@ -156,30 +156,30 @@ describe('events Configuration tests', () => {
         type Entity @key(fields: "id", resolvable: false) {
           id: ID! @external
         }
-        
+
         type Mutation {
           updateEntity(id: ID!, name: String!): edfs__PublishResult! @edfs__natsPublish(subject: "updateEntity.{{ args.id }}")
         }
-        
+
         type Query {
           findEntity(id: ID!): Entity! @edfs__natsRequest(subject: "findEntity.{{ args.id }}")
         }
-      
+
         type Subscription {
           entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(subjects: ["entities.{{ args.id }}"], providerId: "my-provider")
           entitySubscriptionTwo(firstID: ID!, secondID: ID!): Entity! @edfs__natsSubscribe(subjects: ["firstSub.{{ args.firstID }}", "secondSub.{{ args.secondID }}"], providerId: "double", streamConfiguration: {consumerName: "consumer", streamName: "streamName", consumerInactiveThreshold: 300})
         }
-        
+
         input edfs__NatsStreamConfiguration {
           consumerInactiveThreshold: Int! = 30
           consumerName: String!
           streamName: String!
         }
-      
+
         type edfs__PublishResult {
          success: Boolean!
         }
-        
+
         scalar openfed__FieldSet
       `,
         ),
@@ -309,13 +309,10 @@ describe('events Configuration tests', () => {
     });
 
     test('that errors are returned if an event directive is invalid #1', () => {
-      const result = normalizeSubgraph(
-        subgraphN.definitions,
-        subgraphN.name,
-        undefined,
+      const result = normalizeSubgraphFailure(
+        subgraphN,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
-      expect(result.success).toBe(false);
+      );
       expect(result.errors).toHaveLength(2);
       const rootFieldPath = 'Subscription.entitySubscription';
       expect(result.errors[0]).toStrictEqual(
@@ -335,13 +332,10 @@ describe('events Configuration tests', () => {
     });
 
     test('that errors are returned if an event directive is invalid #2', () => {
-      const result = normalizeSubgraph(
-        subgraphR.definitions,
-        subgraphR.name,
-        undefined,
+      const result = normalizeSubgraphFailure(
+        subgraphR,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
-      expect(result.success).toBe(false);
+      );
       expect(result.errors).toHaveLength(1);
       const directiveName = 'edfs__natsSubscribe';
       const rootFieldPath = 'Subscription.entitySubscription';
@@ -353,13 +347,10 @@ describe('events Configuration tests', () => {
     });
 
     test('that an error is returned if edfs__NatsStreamConfiguration is improperly defined', () => {
-      const result = normalizeSubgraph(
-        subgraphP.definitions,
-        subgraphP.name,
-        undefined,
+      const result = normalizeSubgraphFailure(
+        subgraphP,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
-      expect(result.success).toBe(false);
+      );
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         invalidEventDrivenGraphError([invalidNatsStreamConfigurationDefinitionErrorMessage]),
@@ -367,13 +358,10 @@ describe('events Configuration tests', () => {
     });
 
     test('that an error is returned if streamConfiguration input is invalid #1', () => {
-      const result = normalizeSubgraph(
-        subgraphQ.definitions,
-        subgraphQ.name,
-        undefined,
+      const result = normalizeSubgraphFailure(
+        subgraphQ,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
-      expect(result.success).toBe(false);
+      );
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         invalidEventDirectiveError('edfs__natsSubscribe', 'Subscription.entitySubscription', [
@@ -383,13 +371,10 @@ describe('events Configuration tests', () => {
     });
 
     test('that an error is returned if streamConfiguration input is invalid #2', () => {
-      const result = normalizeSubgraph(
-        subgraphS.definitions,
-        subgraphS.name,
-        undefined,
+      const result = normalizeSubgraphFailure(
+        subgraphS,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
-      expect(result.success).toBe(false);
+      );
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         invalidEventDirectiveError('edfs__natsSubscribe', 'Subscription.entitySubscription', [
@@ -399,13 +384,10 @@ describe('events Configuration tests', () => {
     });
 
     test('that an error is returned if streamConfiguration input is invalid #3', () => {
-      const result = normalizeSubgraph(
-        subgraphT.definitions,
-        subgraphT.name,
-        undefined,
+      const result = normalizeSubgraphFailure(
+        subgraphT,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
-      expect(result.success).toBe(false);
+      );
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         invalidEventDirectiveError('edfs__natsSubscribe', 'Subscription.entitySubscription', [
@@ -420,13 +402,10 @@ describe('events Configuration tests', () => {
     });
 
     test('that edfs__NatsStreamConfiguration does not need to be defined if @edfs__natsSubscribe is not defined', () => {
-      const result = normalizeSubgraph(
-        subgraphU.definitions,
-        subgraphU.name,
-        undefined,
+      const result = normalizeSubgraphSuccess(
+        subgraphU,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
-      expect(result.success).toBe(true);
+      );
       expect(result.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
@@ -510,12 +489,10 @@ describe('events Configuration tests', () => {
     });
 
     test('that an error is returned if a NATS subscribe subject references an invalid argument', () => {
-      const result = normalizeSubgraph(
-        subgraphW.definitions,
-        subgraphW.name,
-        undefined,
+      const result = normalizeSubgraphFailure(
+        subgraphW,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      );
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -526,12 +503,10 @@ describe('events Configuration tests', () => {
     });
 
     test('that an error is returned if a NATS request subject references an invalid argument', () => {
-      const result = normalizeSubgraph(
-        subgraphX.definitions,
-        subgraphX.name,
-        undefined,
+      const result = normalizeSubgraphFailure(
+        subgraphX,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      );
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -542,13 +517,10 @@ describe('events Configuration tests', () => {
     });
 
     test('that an error is returned if a NATS publish subject references an invalid argument', () => {
-      const result = normalizeSubgraph(
-        subgraphY.definitions,
-        subgraphY.name,
-        undefined,
+      const result = normalizeSubgraphFailure(
+        subgraphY,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
-      expect(result.success).toBe(false);
+      );
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         invalidEventDirectiveError('edfs__natsPublish', 'Mutation.entityPublish', [
@@ -558,13 +530,10 @@ describe('events Configuration tests', () => {
     });
 
     test('that an error is returned if a Kafka subscribe subject references an invalid argument', () => {
-      const result = normalizeSubgraph(
-        subgraphZ.definitions,
-        subgraphZ.name,
-        undefined,
+      const result = normalizeSubgraphFailure(
+        subgraphZ,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
-      expect(result.success).toBe(false);
+      );
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         invalidEventDirectiveError('edfs__kafkaSubscribe', 'Subscription.entitySubscription', [
@@ -574,13 +543,10 @@ describe('events Configuration tests', () => {
     });
 
     test('that an error is returned if a Kafka publish subject references an invalid argument', () => {
-      const result = normalizeSubgraph(
-        subgraphAA.definitions,
-        subgraphAA.name,
-        undefined,
+      const result = normalizeSubgraphFailure(
+        subgraphAA,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
-      expect(result.success).toBe(false);
+      );
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         invalidEventDirectiveError('edfs__kafkaPublish', 'Mutation.entityPublish', [
@@ -590,13 +556,10 @@ describe('events Configuration tests', () => {
     });
 
     test('that an error is returned if a NATS subscribe subject references two invalid arguments', () => {
-      const result = normalizeSubgraph(
-        subgraphAB.definitions,
-        subgraphAB.name,
-        undefined,
+      const result = normalizeSubgraphFailure(
+        subgraphAB,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
-      expect(result.success).toBe(false);
+      );
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         invalidEventDirectiveError('edfs__natsSubscribe', 'Subscription.entitySubscription', [
@@ -607,13 +570,10 @@ describe('events Configuration tests', () => {
     });
 
     test('that an error is returned if a NATS request subject references two invalid arguments', () => {
-      const result = normalizeSubgraph(
-        subgraphAC.definitions,
-        subgraphAC.name,
-        undefined,
+      const result = normalizeSubgraphFailure(
+        subgraphAC,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
-      expect(result.success).toBe(false);
+      );
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         invalidEventDirectiveError('edfs__natsRequest', 'Query.entityRequest', [
@@ -624,13 +584,10 @@ describe('events Configuration tests', () => {
     });
 
     test('that an error is returned if a NATS publish subject references two invalid arguments', () => {
-      const result = normalizeSubgraph(
-        subgraphAD.definitions,
-        subgraphAD.name,
-        undefined,
+      const result = normalizeSubgraphFailure(
+        subgraphAD,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
-      expect(result.success).toBe(false);
+      );
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         invalidEventDirectiveError('edfs__natsPublish', 'Mutation.entityPublish', [
@@ -641,13 +598,10 @@ describe('events Configuration tests', () => {
     });
 
     test('that an error is returned if a Kafka subscribe subject references two invalid arguments', () => {
-      const result = normalizeSubgraph(
-        subgraphAE.definitions,
-        subgraphAE.name,
-        undefined,
+      const result = normalizeSubgraphFailure(
+        subgraphAE,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
-      expect(result.success).toBe(false);
+      );
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         invalidEventDirectiveError('edfs__kafkaSubscribe', 'Subscription.entitySubscription', [
@@ -658,13 +612,10 @@ describe('events Configuration tests', () => {
     });
 
     test('that an error is returned if a Kafka publish subject references two invalid arguments', () => {
-      const result = normalizeSubgraph(
-        subgraphAF.definitions,
-        subgraphAF.name,
-        undefined,
+      const result = normalizeSubgraphFailure(
+        subgraphAF,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
-      expect(result.success).toBe(false);
+      );
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         invalidEventDirectiveError('edfs__kafkaPublish', 'Mutation.entityPublish', [
@@ -676,13 +627,10 @@ describe('events Configuration tests', () => {
   });
 
   test('that an error is returned if a NATS subscribe subject references a valid argument and an invalid one', () => {
-    const result = normalizeSubgraph(
-      subgraphAG.definitions,
-      subgraphAG.name,
-      undefined,
+    const result = normalizeSubgraphFailure(
+      subgraphAG,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
+    );
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
       invalidEventDirectiveError('edfs__natsSubscribe', 'Subscription.entitySubscription', [
@@ -692,13 +640,10 @@ describe('events Configuration tests', () => {
   });
 
   test('that an error is returned if a NATS request subject references a valid argument and an invalid one', () => {
-    const result = normalizeSubgraph(
-      subgraphAH.definitions,
-      subgraphAH.name,
-      undefined,
+    const result = normalizeSubgraphFailure(
+      subgraphAH,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
+    );
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
       invalidEventDirectiveError('edfs__natsRequest', 'Query.entityRequest', [
@@ -708,13 +653,10 @@ describe('events Configuration tests', () => {
   });
 
   test('that an error is returned if a NATS request subject uses streamConfiguration and there is a wrong definition of edfs__NatsStreamConfiguration', () => {
-    const result = normalizeSubgraph(
-      subgraphAN.definitions,
-      subgraphAN.name,
-      undefined,
+    const result = normalizeSubgraphFailure(
+      subgraphAN,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
+    );
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
       invalidEventDrivenGraphError([invalidNatsStreamConfigurationDefinitionErrorMessage]),
@@ -722,13 +664,10 @@ describe('events Configuration tests', () => {
   });
 
   test('that no error is returned if a NATS request subject is without streamConfiguration and there is a wrong definition of edfs__NatsStreamConfiguration', () => {
-    const result = normalizeSubgraph(
-      subgraphAO.definitions,
-      subgraphAO.name,
-      undefined,
+    const result = normalizeSubgraphSuccess(
+      subgraphAO,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultSuccess;
-    expect(result.success).toBe(true);
+    );
     expect(schemaToSortedNormalizedString(result.schema)).toBe(
       normalizeString(
         versionOneSubscriptionEventDefinitions +
@@ -736,19 +675,19 @@ describe('events Configuration tests', () => {
     type Entity @key(fields: "id", resolvable: false) {
       id: ID! @external
     }
-    
+
     type Subscription {
       entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(
         subjects: ["entities.{{ args.id }}"]
       )
     }
-    
+
     input edfs__NatsStreamConfiguration {
       consumerInactiveThreshold: Int! = 30
       consumerName: String!
       streamName: String!
     }
-    
+
     scalar openfed__FieldSet
       `,
       ),
@@ -756,13 +695,10 @@ describe('events Configuration tests', () => {
   });
 
   test('that no error is returned if a NATS request subject is with a streamConfiguration and there is a correct definition of edfs__NatsStreamConfiguration', () => {
-    const result = normalizeSubgraph(
-      subgraphAP.definitions,
-      subgraphAP.name,
-      undefined,
+    const result = normalizeSubgraphSuccess(
+      subgraphAP,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultSuccess;
-    expect(result.success).toBe(true);
+    );
     expect(schemaToSortedNormalizedString(result.schema)).toBe(
       normalizeString(
         versionOneSubscriptionEventDefinitions +
@@ -770,20 +706,20 @@ describe('events Configuration tests', () => {
     type Entity @key(fields: "id", resolvable: false) {
       id: ID! @external
     }
-    
+
     type Subscription {
       entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(
         subjects: ["entities.{{ args.id }}"], 
         streamConfiguration: {consumerInactiveThreshold: 300, consumerName: "consumer", streamName: "streamName"}
       )
     }
-    
+
     input edfs__NatsStreamConfiguration {
       consumerInactiveThreshold: Int! = 30
       consumerName: String!
       streamName: String!
     }
-    
+
     scalar openfed__FieldSet
       `,
       ),
@@ -791,13 +727,10 @@ describe('events Configuration tests', () => {
   });
 
   test('that an error is returned if a NATS request subject is with a streamConfiguration and there is a definition of edfs__NatsStreamConfiguration without default consumerInactiveThreshold', () => {
-    const result = normalizeSubgraph(
-      subgraphAQ.definitions,
-      subgraphAQ.name,
-      undefined,
+    const result = normalizeSubgraphFailure(
+      subgraphAQ,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
+    );
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
       invalidEventDrivenGraphError([invalidNatsStreamConfigurationDefinitionErrorMessage]),
@@ -805,13 +738,10 @@ describe('events Configuration tests', () => {
   });
 
   test('that an error is returned if a NATS request subject is with a streamConfiguration and there is a definition of edfs__NatsStreamConfiguration with an incorrect consumerInactiveThreshold default value', () => {
-    const result = normalizeSubgraph(
-      subgraphAR.definitions,
-      subgraphAR.name,
-      undefined,
+    const result = normalizeSubgraphFailure(
+      subgraphAR,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
+    );
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
       invalidEventDrivenGraphError([invalidNatsStreamConfigurationDefinitionErrorMessage]),
@@ -819,13 +749,10 @@ describe('events Configuration tests', () => {
   });
 
   test('that an error is returned if a NATS publish subject references a valid argument and an invalid one', () => {
-    const result = normalizeSubgraph(
-      subgraphAI.definitions,
-      subgraphAI.name,
-      undefined,
+    const result = normalizeSubgraphFailure(
+      subgraphAI,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
+    );
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
       invalidEventDirectiveError('edfs__natsPublish', 'Mutation.entityPublish', [
@@ -835,13 +762,10 @@ describe('events Configuration tests', () => {
   });
 
   test('that an error is returned if a Kafka subscribe subject references a valid argument and an invalid one', () => {
-    const result = normalizeSubgraph(
-      subgraphAL.definitions,
-      subgraphAL.name,
-      undefined,
+    const result = normalizeSubgraphFailure(
+      subgraphAL,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
+    );
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
       invalidEventDirectiveError('edfs__kafkaSubscribe', 'Subscription.entitySubscription', [
@@ -851,13 +775,10 @@ describe('events Configuration tests', () => {
   });
 
   test('that an error is returned if a Kafka publish subject references a valid argument and an invalid one', () => {
-    const result = normalizeSubgraph(
-      subgraphAM.definitions,
-      subgraphAM.name,
-      undefined,
+    const result = normalizeSubgraphFailure(
+      subgraphAM,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
+    );
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
       invalidEventDirectiveError('edfs__kafkaPublish', 'Mutation.entityPublish', [
@@ -867,13 +788,10 @@ describe('events Configuration tests', () => {
   });
 
   test('that an error is returned if a Redis subscribe subject references a valid argument and an invalid one', () => {
-    const result = normalizeSubgraph(
-      subgraphAS.definitions,
-      subgraphAS.name,
-      undefined,
+    const result = normalizeSubgraphFailure(
+      subgraphAS,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
+    );
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
       invalidEventDirectiveError('edfs__redisSubscribe', 'Subscription.entitySubscription', [
@@ -883,13 +801,10 @@ describe('events Configuration tests', () => {
   });
 
   test('that an error is returned if a Redis publish subject references a valid argument and an invalid one', () => {
-    const result = normalizeSubgraph(
-      subgraphAT.definitions,
-      subgraphAT.name,
-      undefined,
+    const result = normalizeSubgraphFailure(
+      subgraphAT,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
+    );
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
       invalidEventDirectiveError('edfs__redisPublish', 'Mutation.entityPublish', [
@@ -899,13 +814,10 @@ describe('events Configuration tests', () => {
   });
 
   test('that an error is returned if a Redis subscribe subject references two invalid arguments', () => {
-    const result = normalizeSubgraph(
-      subgraphAU.definitions,
-      subgraphAU.name,
-      undefined,
+    const result = normalizeSubgraphFailure(
+      subgraphAU,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
+    );
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
       invalidEventDirectiveError('edfs__redisSubscribe', 'Subscription.entitySubscription', [
@@ -916,13 +828,10 @@ describe('events Configuration tests', () => {
   });
 
   test('that an error is returned if a Redis publish subject references two invalid arguments', () => {
-    const result = normalizeSubgraph(
-      subgraphAV.definitions,
-      subgraphAV.name,
-      undefined,
+    const result = normalizeSubgraphFailure(
+      subgraphAV,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
+    );
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
       invalidEventDirectiveError('edfs__redisPublish', 'Mutation.entityPublish', [
@@ -933,13 +842,10 @@ describe('events Configuration tests', () => {
   });
 
   test('that Redis configuration is correctly generated', () => {
-    const result = normalizeSubgraph(
-      subgraphAW.definitions,
-      subgraphAW.name,
-      undefined,
+    const result = normalizeSubgraphSuccess(
+      subgraphAW,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultSuccess;
-    expect(result.success).toBe(true);
+    );
     expect(result.configurationDataByTypeName).toStrictEqual(
       new Map<string, ConfigurationData>([
         [
@@ -1127,19 +1033,19 @@ describe('events Configuration tests', () => {
           id: ID!
           object: Object
         }
-        
+
         interface Interface {
           id: ID!
         }
-        
+
         type Object {
           id: ID!
         }
-        
+
         type Query {
           findEntity(fieldSet: String!): Interface!
         }
-        
+
         type Subscription {
           entitySubscription(fieldSet: String!): Interface!
         }
@@ -1166,19 +1072,19 @@ describe('events Configuration tests', () => {
           id: ID!
           object: Object
         }
-        
+
         type Object {
           id: ID!
         }
-        
+
         type Query {
           findEntity(fieldSet: String!): Union!
         }
-        
+
         type Subscription {
           entitySubscription(fieldSet: String!): Union!
         }
-        
+
         union Union = Entity
      `,
         ),
@@ -1231,24 +1137,24 @@ const subgraphA: Subgraph = {
     type Query {
       findEntity(id: ID!): Entity! @edfs__natsRequest(subject: "findEntity.{{ args.id }}")
     }
-  
+
     type edfs__PublishResult {
      success: Boolean!
     }
-    
+
     type Mutation {
       updateEntity(id: ID!, name: String!): edfs__PublishResult! @edfs__natsPublish(subject: "updateEntity.{{ args.id }}")
     }
-  
+
     type Subscription {
       entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(subjects: ["entities.{{ args.id }}"], providerId: "my-provider")
       entitySubscriptionTwo(firstID: ID!, secondID: ID!): Entity! @edfs__natsSubscribe(subjects: ["firstSub.{{ args.firstID }}", "secondSub.{{ args.secondID }}"], providerId: "double", streamConfiguration: {consumerName: "consumer", streamName: "streamName", consumerInactiveThreshold: 300})
     }
-    
+
     type Entity @key(fields: "id", resolvable: false) {
       id: ID! @external
     }
-    
+
     input edfs__NatsStreamConfiguration {
       consumerInactiveThreshold: Int! = 30
       consumerName: String!
@@ -1261,11 +1167,11 @@ const subgraphStringB = `
   schema {
     subscription: Subscriptions
   }
-  
+
   type Subscriptions {
     entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(subjects: ["entities.{{ args.id }}"])
   }
-  
+
   type Entity @key(fields: "id", resolvable: false) {
     id: ID! @external
   }
@@ -1279,15 +1185,15 @@ const subgraphStringC = `
   type edfs__PublishResult {
    success: Boolean!
   }
-  
+
   type Mutation {
     updateEntity(id: ID!, name: String!): edfs__PublishResult! @edfs__natsPublish(subject: "updateEntity.{{ args.id }}", providerId: "myMutationSourceName")
   }
-  
+
   type Subscription {
     entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(subjects: ["entities.{{ args.id }}"], providerId: "mySubscriptionSourceName")
   }
-  
+
   type Entity @key(fields: "id", resolvable: false) {
     id: ID! @external
   }
@@ -1300,11 +1206,11 @@ const subgraphC: Subgraph = {
     type Query {
       findEntity(id: ID!): Entity! @edfs__natsRequest(subject: "findEntity.{{ args.id }}")
     }
-    
+
     type Subscription {
       entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(subjects: ["entities.{{ args.id }}"])
     }
-    
+
     type Entity @key(fields: "id", resolvable: false) {
       id: ID! @external
       name: String!
@@ -1319,11 +1225,11 @@ const subgraphD: Subgraph = {
     type Query {
       findEntity(id: ID!): Entity! @edfs__natsRequest(subject: "findEntity.{{ args.id }}")
     }
-    
+
     type Subscription {
       entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(subjects: ["entities.{{ args.id }}"])
     }
-    
+
     type Entity @key(fields: "id", resolvable: false) {
       id: ID!
     }
@@ -1337,21 +1243,21 @@ const subgraphE: Subgraph = {
     type Query {
       requestEntity(id: ID!): Entity!
     }
-    
-    
+
+
     type edfs__PublishResult {
      success: Boolean!
     }
-    
+
     type Mutation {
       publishEntity(id: ID!): edfs__PublishResult!
     }
-    
+
     type Subscription {
       subscribeEntity(id: ID!): Entity!
       entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(subjects: ["entities.{{ args.id }}"])
     }
-    
+
     type Entity @key(fields: "id", resolvable: false) {
       id: ID! @external
     }
@@ -1365,11 +1271,11 @@ const subgraphF: Subgraph = {
     type Query {
       requestEntity(id: ID!): String! @edfs__natsRequest(subject: "findEntity.{{ args.id }}")
     }
-    
+
     type Subscription {
       entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(subjects: ["entities.{{ args.id }}"])
     }
-    
+
     type Entity @key(fields: "id", resolvable: false) {
       id: ID! @external
     }
@@ -1383,11 +1289,11 @@ const subgraphG: Subgraph = {
     type Query {
       findEntity(id: ID!): Entity! @edfs__natsRequest(subject: "findEntity.{{ args.id }}")
     }
-    
+
     type Subscription {
       entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(subjects: ["entities.{{ args.id }}"])
     }
-    
+
     type Entity @key(fields: "id") {
       id: ID! @external
     }
@@ -1401,16 +1307,16 @@ const subgraphH: Subgraph = {
     type Query {
       findEntity(fieldSet: String!): Entity! @edfs__natsRequest(subject: "findEntity.{{ args.fieldSet }}")
     }
-    
+
     type Subscription {
       entitySubscription(fieldSet: String!): Entity! @edfs__natsSubscribe(subjects: ["entities.{{ args.fieldSet }}"])
     }
-    
+
     type Entity @key(fields: "id object { id }", resolvable: false) {
       id: ID! @external
       object: Object @external
     }
-    
+
     extend type Object {
       id: ID! @external
     }
@@ -1424,20 +1330,20 @@ const subgraphI: Subgraph = {
     type Query {
       findEntity(fieldSet: String!): Interface! @edfs__natsRequest(subject: "findEntity.{{ args.fieldSet }}")
     }
-    
+
     type Subscription {
       entitySubscription(fieldSet: String!): Interface! @edfs__natsSubscribe(subjects: ["entities.{{ args.fieldSet }}"])
     }
-    
+
     interface Interface {
       id: ID!
     }
-    
+
     type Entity implements Interface @key(fields: "id object { id }", resolvable: false) {
       id: ID! @external
       object: Object @external
     }
-    
+
     type Object {
       id: ID! @external
     }
@@ -1451,18 +1357,18 @@ const subgraphJ: Subgraph = {
     type Query {
       findEntity(fieldSet: String!): Union! @edfs__natsRequest(subject: "findEntity.{{ args.fieldSet }}")
     }
-    
+
     type Subscription {
       entitySubscription(fieldSet: String!): Union! @edfs__natsSubscribe(subjects: ["entities.{{ args.fieldSet }}"])
     }
-    
+
     union Union = Entity
-    
+
     type Entity @key(fields: "id object { id }", resolvable: false) {
       id: ID! @external
       object: Object @external
     }
-    
+
     type Object {
       id: ID! @external
     }
@@ -1476,23 +1382,23 @@ const subgraphK: Subgraph = {
     type Query {
       findEntity(id: ID!): Entity! @edfs__natsPublish(subject: "findEntity.{{ args.id }}")
     }
-    
+
     type edfs__PublishResult {
      success: Boolean!
     }
-    
+
     type Mutation {
       publishEntity(id: ID!): edfs__PublishResult! @edfs__natsSubscribe(subjects: ["publishEntity.{{ args.id }}"])
     }
-    
+
     type Subscription {
       entitySubscription(id: ID!): Entity! @edfs__natsRequest(subject: "entities.{{ args.id }}")
     }
-    
+
     type Entity @key(fields: "id", resolvable: false) {
       id: ID! @external
     }
-    
+
     input edfs__NatsStreamConfiguration {
       consumerName: String!
       streamName: String!
@@ -1507,15 +1413,15 @@ const subgraphL: Subgraph = {
     type Mutation {
       publishEntity(id: ID!): Entity! @edfs__natsPublish(subject: "publishEntity.{{ args.id }}")
     }
-    
+
     type Subscription {
       entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(subjects: ["entities.{{ args.id }}"])
     }
-    
+
     type Entity @key(fields: "id", resolvable: false) {
       id: ID! @external
     }
-    
+
     input edfs__NatsStreamConfiguration {
       consumerName: String!
       streamName: String!
@@ -1530,15 +1436,15 @@ const subgraphM: Subgraph = {
     type Query {
       findEntity(id: ID!): Entity @edfs__natsRequest(subject: "findEntity.{{ args.id }}")
     }
-    
+
     type Subscription {
       entitySubscription(id: ID!): [Entity!]! @edfs__natsSubscribe(subjects: ["entities.{{ args.id }}"])
     }
-    
+
     type Entity @key(fields: "id", resolvable: false) {
       id: ID! @external
     }
-    
+
     input edfs__NatsStreamConfiguration {
       consumerName: String!
       streamName: String!
@@ -1553,11 +1459,11 @@ const subgraphN: Subgraph = {
     type Subscription {
       entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(subjects: [1], subjects: ["topic"], providerId: false, providerId: "providerId", unknownArgument: null)
     }
-    
+
     type Entity @key(fields: "id", resolvable: false) {
       id: ID! @external
     }
-    
+
     input edfs__NatsStreamConfiguration {
       consumerName: String!
       streamName: String!
@@ -1572,7 +1478,7 @@ const subgraphO: Subgraph = {
     type Subscription {
       entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(subjects: ["entities.{{ args.id }}"])
     }
-    
+
     type Entity @key(fields: "id", resolvable: false) {
       id: ID! @external
     }
@@ -1586,11 +1492,11 @@ const subgraphP: Subgraph = {
     type Subscription {
       entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(subjects: ["entities.{{ args.id }}"], streamConfiguration: { consumerName: "consumerName", streamName: "streamName" })
     }
-    
+
     type Entity @key(fields: "id", resolvable: false) {
       id: ID! @external
     }
-    
+
     scalar edfs__NatsStreamConfiguration
   `),
 };
@@ -1605,11 +1511,11 @@ const subgraphQ: Subgraph = {
         streamConfiguration: { consumerName: "consumerName", consumerName: "hello", invalidField: 1 }
       )
     }
-    
+
     type Entity @key(fields: "id", resolvable: false) {
       id: ID! @external
     }
-    
+
     input edfs__NatsStreamConfiguration {
       consumerInactiveThreshold: Int! = 30
       consumerName: String!
@@ -1625,7 +1531,7 @@ const subgraphR: Subgraph = {
     type Subscription {
       entitySubscription(id: ID!): Entity! @edfs__natsSubscribe
     }
-    
+
     type Entity @key(fields: "id", resolvable: false) {
       id: ID! @external
     }
@@ -1642,11 +1548,11 @@ const subgraphS: Subgraph = {
         streamConfiguration: { consumerName: 1, streamName: "", }
       )
     }
-    
+
     type Entity @key(fields: "id", resolvable: false) {
       id: ID! @external
     }
-    
+
     input edfs__NatsStreamConfiguration {
       consumerInactiveThreshold: Int! = 30
       consumerName: String!
@@ -1665,11 +1571,11 @@ const subgraphT: Subgraph = {
         streamConfiguration: { invalidFieldOne: 1, invalidFieldTwo: "test", }
       )
     }
-    
+
     type Entity @key(fields: "id", resolvable: false) {
       id: ID! @external
     }
-    
+
     input edfs__NatsStreamConfiguration {
       consumerInactiveThreshold: Int! = 30
       consumerName: String!
@@ -1685,20 +1591,20 @@ const subgraphU: Subgraph = {
     type Entity @key(fields: "id", resolvable: false) {
       id: ID! @external
     }
-    
+
     type Mutation {
       kafkaMutation: edfs__PublishResult! @edfs__kafkaPublish(topic: "entityAdded", providerId: "myKafka")
       natsMutation(id: ID!): edfs__PublishResult! @edfs__natsPublish(subject: "updateEntity.{{ args.id }}", providerId: "myNats")
     }
-    
+
     type Query {
       natsQuery(id: ID!): Entity! @edfs__natsRequest(subject: "updateEntity.{{ args.id }}", providerId: "myNats")
     }
-    
+
     type Subscription {
       kafkaSubscription: Entity! @edfs__kafkaSubscribe(topics: ["entityAdded", "entityUpdated"], providerId: "myKafka")
     }
-    
+
     type edfs__PublishResult {
       success: Boolean!
     }
@@ -2157,15 +2063,59 @@ const subgraphAW: Subgraph = {
     type Entity @key(fields: "id", resolvable: false) {
       id: ID! @external
     }
-    
+
     type Mutation {
       redisMutation: edfs__PublishResult! @edfs__redisPublish(channel: "entityAdded", providerId: "myRedis")
     }
-    
+
     type Subscription {
       redisSubscription: Entity! @edfs__redisSubscribe(channels: ["entityAdded", "entityUpdated"], providerId: "myRedis")
     }
-    
+
+    type edfs__PublishResult {
+      success: Boolean!
+    }
+  `),
+};
+
+const subgraphAX: Subgraph = {
+  name: 'subgraph-ax',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id", resolvable: false) {
+      id: ID! @external
+    }
+
+    type Mutation {
+      redisMutation: edfs__PublishResult! @edfs__redisPublish(channel: "entityAdded", providerId: "myRedis", providerId: "myRedis2")
+    }
+
+    type Subscription {
+      redisSubscription: Entity! @edfs__redisSubscribe(channels: ["entityAdded", "entityUpdated"], providerId: "myRedis", channels: ["entityAdded1", "entityUpdated1"])
+    }
+
+    type edfs__PublishResult {
+      success: Boolean!
+    }
+  `),
+};
+
+const subgraphAY: Subgraph = {
+  name: 'subgraph-ay',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id", resolvable: false) {
+      id: ID! @external
+    }
+
+    type Mutation {
+      redisMutation: edfs__PublishResult! @edfs__redisPublish(channel: "entityAdded", providerId: "myRedis", wrongArgument: "test")
+    }
+
+    type Subscription {
+      redisSubscription: Entity! @edfs__redisSubscribe(channels: ["entityAdded", "entityUpdated"], providerId: "myRedis", anotherWrongArgument: "test2")
+    }
+
     type edfs__PublishResult {
       success: Boolean!
     }
