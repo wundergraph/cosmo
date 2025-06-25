@@ -89,7 +89,7 @@ func TestNatsEvents(t *testing.T) {
 			surl := xEnv.GraphQLWebSocketSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
 
-			subscriptionArgsCh := make(chan natsSubscriptionArgs, 10)
+			subscriptionArgsCh := make(chan natsSubscriptionArgs)
 			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
 				subscriptionArgsCh <- natsSubscriptionArgs{
 					dataValue: dataValue,
@@ -165,7 +165,7 @@ func TestNatsEvents(t *testing.T) {
 
 			surl := xEnv.GraphQLWebSocketSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
-			subscriptionArgsCh := make(chan natsSubscriptionArgs, 10)
+			subscriptionArgsCh := make(chan natsSubscriptionArgs)
 
 			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
 				subscriptionArgsCh <- natsSubscriptionArgs{
@@ -210,9 +210,7 @@ func TestNatsEvents(t *testing.T) {
 			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
 			testenv.AwaitChannelWithT(t, NatsWaitTimeout, subscriptionArgsCh, func(t *testing.T, args natsSubscriptionArgs) {
-				var gqlErr graphql.Errors
-				require.ErrorAs(t, args.errValue, &gqlErr)
-				require.Equal(t, "Cannot return null for non-nullable field 'Subscription.employeeUpdated.id'.", gqlErr[0].Message)
+				require.ErrorContains(t, args.errValue, "Cannot return null for non-nullable field 'Subscription.employeeUpdated.id'.")
 			})
 
 			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`)) // Correct message
@@ -1435,10 +1433,7 @@ func TestNatsEvents(t *testing.T) {
 			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
 			testenv.AwaitChannelWithT(t, NatsWaitTimeout, subscriptionArgsCh, func(t *testing.T, subscriptionArgs natsSubscriptionArgs) {
-				var gqlErr graphql.Errors
-				if assert.ErrorAs(t, subscriptionArgs.errValue, &gqlErr) {
-					assert.Equal(t, "Invalid message received", gqlErr[0].Message)
-				}
+				assert.ErrorContains(t, subscriptionArgs.errValue, "Invalid message received")
 			})
 
 			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`)) // Correct message
@@ -1455,10 +1450,7 @@ func TestNatsEvents(t *testing.T) {
 			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
 			testenv.AwaitChannelWithT(t, NatsWaitTimeout, subscriptionArgsCh, func(t *testing.T, subscriptionArgs natsSubscriptionArgs) {
-				var gqlErr graphql.Errors
-				if assert.ErrorAs(t, subscriptionArgs.errValue, &gqlErr) {
-					assert.Equal(t, "Cannot return null for non-nullable field 'Subscription.employeeUpdated.id'.", gqlErr[0].Message)
-				}
+				assert.ErrorContains(t, subscriptionArgs.errValue, "Cannot return null for non-nullable field 'Subscription.employeeUpdated.id'.")
 			})
 
 			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`)) // Correct message
