@@ -1,4 +1,4 @@
-package routerplugin
+package grpcconnector
 
 import (
 	"context"
@@ -6,8 +6,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-// TODO define plugin handling
-type Plugin interface {
+type ClientProvider interface {
 	Name() string
 	Start(ctx context.Context) error
 	GetClient() grpc.ClientConnInterface
