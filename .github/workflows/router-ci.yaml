@@ -140,7 +140,7 @@ jobs:
       fail-fast: false
       matrix:
         make_params: 
-          - test_params="-run '^Test[^(Flaky)]' --timeout=10m -p 1 --parallel 10"
+          - test_params="-run '^Test[^(Flaky)]' --timeout=10m"
           - gotestsum_params="--rerun-fails=5" test_params="-run '^TestFlaky' --timeout=10m -p 1 --parallel 10"
     services:
       nats:
