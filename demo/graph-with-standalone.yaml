@@ -1,0 +1,40 @@
+version: 1
+subgraphs:
+  - name: employees
+    routing_url: http://localhost:4001/graphql
+    schema:
+      file: ./pkg/subgraphs/employees/subgraph/schema.graphqls
+  - name: family
+    routing_url: http://localhost:4002/graphql
+    schema:
+      file: ./pkg/subgraphs/family/subgraph/schema.graphqls
+  - name: hobbies
+    routing_url: http://localhost:4003/graphql
+    schema:
+      file: ./pkg/subgraphs/hobbies/subgraph/schema.graphqls
+  - name: products
+    routing_url: http://localhost:4004/graphql
+    schema:
+      file: ./pkg/subgraphs/products/subgraph/schema.graphqls
+  - name: test1
+    routing_url: http://localhost:4006/graphql
+    schema:
+      file: ./pkg/subgraphs/test1/subgraph/schema.graphqls
+  - name: availability
+    routing_url: http://localhost:4007/graphql
+    schema:
+      file: ./pkg/subgraphs/availability/subgraph/schema.graphqls
+  - name: mood
+    routing_url: http://localhost:4008/graphql
+    schema:
+      file: ./pkg/subgraphs/mood/subgraph/schema.graphqls
+  - name: countries
+    routing_url: http://localhost:4009/graphql
+    schema:
+      file: ./pkg/subgraphs/countries/subgraph/schema.graphqls
+  - name: projects
+    routing_url: dns:///localhost:4011
+    grpc:
+      schema_file: ./pkg/subgraphs/projects/src/schema.graphql
+      proto_file: ./pkg/subgraphs/projects/generated/service.proto
+      mapping_file: ./pkg/subgraphs/projects/generated/mapping.json

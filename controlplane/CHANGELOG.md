@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.150.5](https://github.com/wundergraph/cosmo/compare/controlplane@0.150.4...controlplane@0.150.5) (2025-06-25)
+
+**Note:** Version bump only for package controlplane
+
+## [0.150.4](https://github.com/wundergraph/cosmo/compare/controlplane@0.150.3...controlplane@0.150.4) (2025-06-17)
+
+### Bug Fixes
+
+* fixes an issue caused by using `isFeatureEnabled` instead of `ge… ([#1972](https://github.com/wundergraph/cosmo/issues/1972)) ([c0762e4](https://github.com/wundergraph/cosmo/commit/c0762e49fa9891bc6399ba0cc46851e9c358501f)) (@wilsonrivera)
+
 ## [0.150.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.150.2...controlplane@0.150.3) (2025-06-16)
 
 **Note:** Version bump only for package controlplane

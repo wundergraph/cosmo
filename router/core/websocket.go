@@ -409,7 +409,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 
 		// Export the token from the initial payload to the request header
 		if fromInitialPayloadConfig.ExportToken.Enabled {
-			var initialPayloadMap map[string]interface{}
+			var initialPayloadMap map[string]any
 			err := json.Unmarshal(handler.initialPayload, &initialPayloadMap)
 			if err != nil {
 				requestLogger.Error("Error parsing initial payload: %v", zap.Error(err))
@@ -546,7 +546,7 @@ func (h *WebsocketHandler) runPoller() {
 				h.logger.Warn("Net Poller wait", zap.Error(err))
 				continue
 			}
-			for i := 0; i < len(connections); i++ {
+			for i := range len(connections) {
 				if connections[i] == nil {
 					continue
 				}
@@ -628,17 +628,7 @@ func (rw *websocketResponseWriter) Complete() {
 }
 
 func (rw *websocketResponseWriter) Close(kind resolve.SubscriptionCloseKind) {
-	var err error
-
-	switch kind {
-	case resolve.SubscriptionCloseKindNormal:
-		err = rw.protocol.Close(ws.StatusNormalClosure, "Normal closure")
-	case resolve.SubscriptionCloseKindDownstreamServiceError:
-		err = rw.protocol.Close(ws.StatusGoingAway, "Downstream service error")
-	case resolve.SubscriptionCloseKindGoingAway:
-		err = rw.protocol.Close(ws.StatusGoingAway, "Going away")
-	}
-
+	err := rw.protocol.Close(kind.WSCode, kind.Reason)
 	if err != nil {
 		rw.logger.Debug("Sending error message", zap.Error(err))
 	}
@@ -1115,7 +1105,7 @@ func (h *WebSocketConnectionHandler) Initialize() (err error) {
 
 	// Update client info from initial payload if enabled
 	if h.clientInfoFromInitialPayload.Enabled && h.initialPayload != nil {
-		var initialPayloadMap map[string]interface{}
+		var initialPayloadMap map[string]any
 		err := json.Unmarshal(h.initialPayload, &initialPayloadMap)
 		if err != nil {
 			h.logger.Warn("Error parsing initial payload for client info", zap.Error(err))

@@ -310,6 +310,7 @@ events:
           sasl_plain:
             username: 'admin'
             password: 'admin'
+        fetch_max_wait: 10ms
     redis:
       - id: my-redis
         urls:

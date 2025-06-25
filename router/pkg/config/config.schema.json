@@ -2013,6 +2013,8 @@
                     "oneOf": [
                       {
                         "type": "object",
+                        "additionalProperties": false,
+                        "required": ["sasl_plain"],
                         "properties": {
                           "sasl_plain": {
                             "type": "object",
@@ -2031,8 +2033,41 @@
                             }
                           }
                         }
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": ["sasl_scram"],
+                        "properties": {
+                          "sasl_scram": {
+                            "type": "object",
+                            "description": "SCRAM SASL Authentication configuration for the Kafka provider.",
+                            "additionalProperties": false,
+                            "required": ["username", "password", "mechanism"],
+                            "properties": {
+                              "username": {
+                                "type": "string",
+                                "description": "The username for SCRAM SASL authentication."
+                              },
+                              "password": {
+                                "type": "string",
+                                "description": "The password for SCRAM SASL authentication."
+                              },
+                              "mechanism": {
+                                "type": "string",
+                                "description": "The mechanism for SCRAM SASL authentication.",
+                                "enum": ["SCRAM-SHA-256", "SCRAM-SHA-512"]
+                              }
+                            }
+                          }
+                        }
                       }
                     ]
+                  },
+                  "fetch_max_wait": {
+                    "type": "string",
+                    "description": "The maximum wait time for fetching messages from the Kafka broker. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'. Setting this to a higher value can help reduce the number of requests to the Kafka broker.",
+                    "format": "go-duration"
                   }
                 }
               }

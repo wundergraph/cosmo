@@ -540,11 +540,17 @@
             "SASLPlain": {
               "Password": "admin",
               "Username": "admin"
+            },
+            "SASLSCRAM": {
+              "Password": null,
+              "Username": null,
+              "Mechanism": null
             }
           },
           "TLS": {
             "Enabled": true
-          }
+          },
+          "FetchMaxWait": 10000000
         }
       ],
       "Redis": [

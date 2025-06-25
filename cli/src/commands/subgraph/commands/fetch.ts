@@ -1,12 +1,11 @@
 import { writeFile } from 'node:fs/promises';
 import { Response } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { Command } from 'commander';
+import { Command, program } from 'commander';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { getBaseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
-import program from '../../index.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('fetch');

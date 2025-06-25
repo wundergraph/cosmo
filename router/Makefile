@@ -1,3 +1,9 @@
+ifeq ($(CI),true)
+ FORMAT := github-actions
+else
+ FORMAT := pkgname
+endif
+
 dev:
 	go run cmd/router/main.go
 
@@ -8,7 +14,7 @@ update-snapshot:
 	cd ./pkg/config && go test -update -race ./...
 
 test:
-	go test -race ./...
+	gotestsum -f $(FORMAT) -- -race ./...
 
 test-fresh: clean-testcache test
 
