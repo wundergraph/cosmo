@@ -283,16 +283,10 @@ func WithExposeSchema(exposeSchema bool) func(*Options) {
 	}
 }
 
-// WithHotReload sets the hot reload option
-func WithHotReload(hotReload bool) func(*Options) {
+// WithHotReload sets the hot reload options
+func WithHotReload(hotReload bool, hotReloadInterval time.Duration) func(*Options) {
 	return func(o *Options) {
 		o.HotReload = hotReload
-	}
-}
-
-// WithHotReloadInterval sets the hot reload interval
-func WithHotReloadInterval(hotReloadInterval time.Duration) func(*Options) {
-	return func(o *Options) {
 		o.HotReloadInterval = hotReloadInterval
 	}
 }
@@ -345,7 +339,7 @@ func (s *GraphQLSchemaServer) Start() error {
 }
 
 // Reload reloads the operations and schema
-func (s *GraphQLSchemaServer) Reload(schema *ast.Document) error {
+func (s *GraphQLSchemaServer) Reload(ctx context.Context, schema *ast.Document) error {
 
 	if s.server == nil {
 		return fmt.Errorf("server is not started")
@@ -354,7 +348,7 @@ func (s *GraphQLSchemaServer) Reload(schema *ast.Document) error {
 	s.schemaCompiler = NewSchemaCompiler(s.logger)
 	s.operationsManager = NewOperationsManager(schema, s.logger, s.excludeMutations)
 
-	if err := s.operationsManager.LoadOperationsFromDirectory(s.operationsDir, s.reloadOperationsChan, s.hotReload, s.hotReloadInterval); err != nil {
+	if err := s.operationsManager.LoadOperationsFromDirectory(ctx, s.operationsDir, s.reloadOperationsChan, s.hotReload, s.hotReloadInterval); err != nil {
 		return fmt.Errorf("failed to load operations: %w", err)
 	}
 

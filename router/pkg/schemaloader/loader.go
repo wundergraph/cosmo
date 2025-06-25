@@ -47,13 +47,13 @@ func NewOperationLoader(logger *zap.Logger, schemaDoc *ast.Document) *OperationL
 }
 
 // LoadOperationsFromDirectory loads all GraphQL operations from files in the specified directory
-func (l *OperationLoader) LoadOperationsFromDirectory(dirPath string, reloadOperationsChan chan bool, hotReload bool, hotReloadInterval time.Duration) ([]Operation, error) {
+func (l *OperationLoader) LoadOperationsFromDirectory(ctx context.Context, dirPath string, reloadOperationsChan chan bool, hotReload bool, hotReloadInterval time.Duration) ([]Operation, error) {
 	var operations []Operation
 
 	// Create an operation validator
 	validator := astvalidation.DefaultOperationValidator()
 
-	pathCtx, pathCtxCancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
 
 	filesSeen := make(map[string]struct{})
 
@@ -88,7 +88,7 @@ func (l *OperationLoader) LoadOperationsFromDirectory(dirPath string, reloadOper
 				Path:     path,
 				Callback: func() {
 					reloadOperationsChan <- true
-					pathCtxCancel()
+					cancel()
 				},
 			})
 
@@ -98,7 +98,7 @@ func (l *OperationLoader) LoadOperationsFromDirectory(dirPath string, reloadOper
 			}
 
 			go func() {
-				if err := watchFunc(pathCtx); err != nil {
+				if err := watchFunc(ctx); err != nil {
 					if !errors.Is(err, context.Canceled) {
 						l.Logger.Error("Error watching operations path", zap.Error(err))
 					} else {
@@ -197,7 +197,7 @@ func (l *OperationLoader) LoadOperationsFromDirectory(dirPath string, reloadOper
 						// new operation added
 						if !ok {
 							reloadOperationsChan <- true
-							pathCtxCancel()
+							cancel()
 							return filepath.SkipAll
 						}
 
@@ -208,11 +208,11 @@ func (l *OperationLoader) LoadOperationsFromDirectory(dirPath string, reloadOper
 
 					if err != nil || operationsCount != len(filesSeen) {
 						reloadOperationsChan <- true
-						pathCtxCancel()
+						cancel()
 						return
 					}
 
-				case <-pathCtx.Done():
+				case <-ctx.Done():
 					return
 				}
 

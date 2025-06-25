@@ -1079,16 +1079,19 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	// We support the MCP only on the base graph. Feature flags are not supported yet.
 	if featureFlagName == "" && s.mcpServer != nil {
-		if mErr := s.mcpServer.Reload(executor.ClientSchema); mErr != nil {
+		if mErr := s.mcpServer.Reload(ctx, executor.ClientSchema); mErr != nil {
 			return nil, fmt.Errorf("failed to reload MCP server: %w", mErr)
 		}
 		go func() {
 			for {
-				if reloadOperations := <-s.mcpServer.ReloadOperationsChannel(); reloadOperations {
+				select {
+				case <-s.mcpServer.ReloadOperationsChannel():
 					s.logger.Log(zap.InfoLevel, "Reloading mcp server!")
-					if mErr := s.mcpServer.Reload(executor.ClientSchema); mErr != nil {
+					if mErr := s.mcpServer.Reload(ctx, executor.ClientSchema); mErr != nil {
 						return
 					}
+				case <-ctx.Done():
+					return
 				}
 			}
 		}()
