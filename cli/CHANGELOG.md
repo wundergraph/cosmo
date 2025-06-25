@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.85.0](https://github.com/wundergraph/cosmo/compare/wgc@0.84.2...wgc@0.85.0) (2025-06-25)
+
+### Features
+
+* add support for remote grpc services ([#1953](https://github.com/wundergraph/cosmo/issues/1953)) ([5074af9](https://github.com/wundergraph/cosmo/commit/5074af9ab4ce14c418fa8fee69e785fb6237f785)) (@Noroth)
+
 ## [0.84.2](https://github.com/wundergraph/cosmo/compare/wgc@0.84.1...wgc@0.84.2) (2025-06-19)
 
 ### Bug Fixes
