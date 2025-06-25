@@ -138,13 +138,6 @@ jobs:
     timeout-minutes: 30
     strategy:
       fail-fast: false
-      matrix:
-        test_target:
-          [
-            './. ./fuzzquery ./lifecycle ./modules',
-            './telemetry',
-            './events',
-          ]
     services:
       nats:
         image: ghcr.io/wundergraph/cosmo/nats:2.11.0-alpine
@@ -222,9 +215,12 @@ jobs:
             redis-cli -u "redis://cosmo:test@127.0.0.1:$port" ping
             echo "ACL user 'cosmo' created with full access on port $port"
           done
-      - name: Run Integration tests ${{ matrix.test_target }}
+      - name: Run Integration Tests
         working-directory: ./router-tests
-        run: make test gotestsum_params="--rerun-fails=5" test_params="--timeout=5m -p 1 --parallel 10" test_target="${{ matrix.test_target }}"
+        run: make test test_params="--timeout=10m -p 1 --parallel 10" test_target="./..."
+      - name: Run Flaky Integration Tests
+        working-directory: ./router-tests
+        run: make test gotestsum_params="--rerun-fails=5" test_params="--timeout=10m -p 1 --parallel 1" test_target="./..." 
 
   image_scan:
     if: github.event.pull_request.head.repo.full_name == github.repository
