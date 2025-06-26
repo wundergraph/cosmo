@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"crypto/ecdsa"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -1345,10 +1346,27 @@ func (s *graphServer) setupPluginHost(ctx context.Context, config *nodev1.Engine
 					return fmt.Errorf("failed to get plugin path: %w", err)
 				}
 
+				paramsMap := make(map[string]string)
+
+				if s.traceConfig.Enabled && len(s.traceConfig.Exporters) > 0 {
+					enabledExporters := make([]*rtrace.ExporterConfig, 0)
+					for _, exporter := range s.traceConfig.Exporters {
+						if !exporter.Disabled {
+							enabledExporters = append(enabledExporters, exporter)
+						}
+					}
+					exporterJson, err := json.Marshal(enabledExporters)
+					if err != nil {
+						return fmt.Errorf("failed to marshal exporters")
+					}
+					paramsMap["router_exporter_config"] = string(exporterJson)
+				}
+
 				grpcPlugin, err := routerplugin.NewGRPCPlugin(routerplugin.GRPCPluginConfig{
 					Logger:     s.logger,
 					PluginName: pluginConfig.GetName(),
 					PluginPath: pluginPath,
+					Params:     paramsMap,
 				})
 				if err != nil {
 					return fmt.Errorf("failed to create grpc plugin for subgraph %s: %w", dsConfig.Id, err)

@@ -81,7 +81,7 @@ type LookupProjectByIdRequestKey struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// Key field for Project entity lookup
+	// Key field for Project entity lookup.
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 }
 
@@ -124,13 +124,14 @@ func (x *LookupProjectByIdRequestKey) GetId() string {
 	return ""
 }
 
-// Request message for Project entity lookup
+// Request message for Project entity lookup.
 type LookupProjectByIdRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// List of keys to look up Project entities
+	// List of keys to look up Project entities.
+	// Order matters - each key maps to one entity in LookupProjectByIdResponse.
 	Keys []*LookupProjectByIdRequestKey `protobuf:"bytes,1,rep,name=keys,proto3" json:"keys,omitempty"`
 }
 
@@ -173,13 +174,25 @@ func (x *LookupProjectByIdRequest) GetKeys() []*LookupProjectByIdRequestKey {
 	return nil
 }
 
-// Response message for Project entity lookup
+// Response message for Project entity lookup.
 type LookupProjectByIdResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// List of Project entities matching the requested keys
+	// List of Project entities in the same order as the keys in LookupProjectByIdRequest.
+	// Always return the same number of entities as keys. Use null for entities that cannot be found.
+	//
+	// Example:
+	//
+	//	LookupUserByIdRequest:
+	//	  keys:
+	//	    - id: 1
+	//	    - id: 2
+	//	LookupUserByIdResponse:
+	//	  result:
+	//	    - id: 1 # User with id 1 found
+	//	    - null  # User with id 2 not found
 	Result []*Project `protobuf:"bytes,1,rep,name=result,proto3" json:"result,omitempty"`
 }
 
@@ -228,7 +241,7 @@ type LookupEmployeeByIdRequestKey struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// Key field for Employee entity lookup
+	// Key field for Employee entity lookup.
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 }
 
@@ -271,13 +284,14 @@ func (x *LookupEmployeeByIdRequestKey) GetId() string {
 	return ""
 }
 
-// Request message for Employee entity lookup
+// Request message for Employee entity lookup.
 type LookupEmployeeByIdRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// List of keys to look up Employee entities
+	// List of keys to look up Employee entities.
+	// Order matters - each key maps to one entity in LookupEmployeeByIdResponse.
 	Keys []*LookupEmployeeByIdRequestKey `protobuf:"bytes,1,rep,name=keys,proto3" json:"keys,omitempty"`
 }
 
@@ -320,13 +334,25 @@ func (x *LookupEmployeeByIdRequest) GetKeys() []*LookupEmployeeByIdRequestKey {
 	return nil
 }
 
-// Response message for Employee entity lookup
+// Response message for Employee entity lookup.
 type LookupEmployeeByIdResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// List of Employee entities matching the requested keys
+	// List of Employee entities in the same order as the keys in LookupEmployeeByIdRequest.
+	// Always return the same number of entities as keys. Use null for entities that cannot be found.
+	//
+	// Example:
+	//
+	//	LookupUserByIdRequest:
+	//	  keys:
+	//	    - id: 1
+	//	    - id: 2
+	//	LookupUserByIdResponse:
+	//	  result:
+	//	    - id: 1 # User with id 1 found
+	//	    - null  # User with id 2 not found
 	Result []*Employee `protobuf:"bytes,1,rep,name=result,proto3" json:"result,omitempty"`
 }
 
@@ -375,7 +401,7 @@ type LookupProductByUpcRequestKey struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// Key field for Product entity lookup
+	// Key field for Product entity lookup.
 	Upc string `protobuf:"bytes,1,opt,name=upc,proto3" json:"upc,omitempty"`
 }
 
@@ -418,13 +444,14 @@ func (x *LookupProductByUpcRequestKey) GetUpc() string {
 	return ""
 }
 
-// Request message for Product entity lookup
+// Request message for Product entity lookup.
 type LookupProductByUpcRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// List of keys to look up Product entities
+	// List of keys to look up Product entities.
+	// Order matters - each key maps to one entity in LookupProductByUpcResponse.
 	Keys []*LookupProductByUpcRequestKey `protobuf:"bytes,1,rep,name=keys,proto3" json:"keys,omitempty"`
 }
 
@@ -467,13 +494,25 @@ func (x *LookupProductByUpcRequest) GetKeys() []*LookupProductByUpcRequestKey {
 	return nil
 }
 
-// Response message for Product entity lookup
+// Response message for Product entity lookup.
 type LookupProductByUpcResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// List of Product entities matching the requested keys
+	// List of Product entities in the same order as the keys in LookupProductByUpcRequest.
+	// Always return the same number of entities as keys. Use null for entities that cannot be found.
+	//
+	// Example:
+	//
+	//	LookupUserByIdRequest:
+	//	  keys:
+	//	    - id: 1
+	//	    - id: 2
+	//	LookupUserByIdResponse:
+	//	  result:
+	//	    - id: 1 # User with id 1 found
+	//	    - null  # User with id 2 not found
 	Result []*Product `protobuf:"bytes,1,rep,name=result,proto3" json:"result,omitempty"`
 }
 
@@ -516,7 +555,7 @@ func (x *LookupProductByUpcResponse) GetResult() []*Product {
 	return nil
 }
 
-// Request message for projects operation
+// Request message for projects operation.
 type QueryProjectsRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -555,7 +594,7 @@ func (*QueryProjectsRequest) Descriptor() ([]byte, []int) {
 	return file_generated_service_proto_rawDescGZIP(), []int{9}
 }
 
-// Response message for projects operation
+// Response message for projects operation.
 type QueryProjectsResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -603,7 +642,7 @@ func (x *QueryProjectsResponse) GetProjects() []*Project {
 	return nil
 }
 
-// Request message for project operation
+// Request message for project operation.
 type QueryProjectRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -651,7 +690,7 @@ func (x *QueryProjectRequest) GetId() string {
 	return ""
 }
 
-// Response message for project operation
+// Response message for project operation.
 type QueryProjectResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -699,7 +738,7 @@ func (x *QueryProjectResponse) GetProject() *Project {
 	return nil
 }
 
-// Request message for projectStatuses operation
+// Request message for projectStatuses operation.
 type QueryProjectStatusesRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -738,7 +777,7 @@ func (*QueryProjectStatusesRequest) Descriptor() ([]byte, []int) {
 	return file_generated_service_proto_rawDescGZIP(), []int{13}
 }
 
-// Response message for projectStatuses operation
+// Response message for projectStatuses operation.
 type QueryProjectStatusesResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -786,7 +825,7 @@ func (x *QueryProjectStatusesResponse) GetProjectStatuses() []ProjectStatus {
 	return nil
 }
 
-// Request message for projectsByStatus operation
+// Request message for projectsByStatus operation.
 type QueryProjectsByStatusRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -834,7 +873,7 @@ func (x *QueryProjectsByStatusRequest) GetStatus() ProjectStatus {
 	return ProjectStatus_PROJECT_STATUS_UNSPECIFIED
 }
 
-// Response message for projectsByStatus operation
+// Response message for projectsByStatus operation.
 type QueryProjectsByStatusResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -882,7 +921,7 @@ func (x *QueryProjectsByStatusResponse) GetProjectsByStatus() []*Project {
 	return nil
 }
 
-// Request message for killService operation
+// Request message for killService operation.
 type QueryKillServiceRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -921,7 +960,7 @@ func (*QueryKillServiceRequest) Descriptor() ([]byte, []int) {
 	return file_generated_service_proto_rawDescGZIP(), []int{17}
 }
 
-// Response message for killService operation
+// Response message for killService operation.
 type QueryKillServiceResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -969,7 +1008,7 @@ func (x *QueryKillServiceResponse) GetKillService() bool {
 	return false
 }
 
-// Request message for panic operation
+// Request message for panic operation.
 type QueryPanicRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -1008,7 +1047,7 @@ func (*QueryPanicRequest) Descriptor() ([]byte, []int) {
 	return file_generated_service_proto_rawDescGZIP(), []int{19}
 }
 
-// Response message for panic operation
+// Response message for panic operation.
 type QueryPanicResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -1056,7 +1095,7 @@ func (x *QueryPanicResponse) GetPanic() bool {
 	return false
 }
 
-// Request message for addProject operation
+// Request message for addProject operation.
 type MutationAddProjectRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -1104,7 +1143,7 @@ func (x *MutationAddProjectRequest) GetProject() *ProjectInput {
 	return nil
 }
 
-// Response message for addProject operation
+// Response message for addProject operation.
 type MutationAddProjectResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache

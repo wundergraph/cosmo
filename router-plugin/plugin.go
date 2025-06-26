@@ -3,7 +3,6 @@ package routerplugin
 import (
 	"context"
 	"errors"
-
 	"github.com/hashicorp/go-plugin"
 	"google.golang.org/grpc"
 )
@@ -34,6 +33,7 @@ func (p *RouterPlugin) GRPCClient(_ context.Context, _ *plugin.GRPCBroker, cc *g
 type RouterPlugin struct {
 	plugin.Plugin
 	registrationFunc func(*grpc.Server)
+	grpcServerOpts   []grpc.ServerOption
 
 	serveConfig *plugin.ServeConfig
 }
@@ -43,6 +43,19 @@ type PluginOption func(*plugin.ServeConfig)
 func WithTestConfig(testConfig *plugin.ServeTestConfig) PluginOption {
 	return func(c *plugin.ServeConfig) {
 		c.Test = testConfig
+	}
+}
+
+// WithGRPCServerOptions allows you to pass gRPC server options including interceptors
+func WithGRPCServerOptions(opts ...grpc.ServerOption) PluginOption {
+	return func(c *plugin.ServeConfig) {
+		// Store the options and create a custom GRPCServer function
+		c.GRPCServer = func(serverOpts []grpc.ServerOption) *grpc.Server {
+			// Combine the default options with our custom options
+			allOpts := append([]grpc.ServerOption{}, serverOpts...)
+			allOpts = append(allOpts, opts...)
+			return grpc.NewServer(allOpts...)
+		}
 	}
 }
 

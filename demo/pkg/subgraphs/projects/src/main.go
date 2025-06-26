@@ -6,10 +6,13 @@ import (
 	"strconv"
 	"sync"
 	"syscall"
+	"time"
+
+	"github.com/wundergraph/cosmo/router-plugin/httpclient"
+	"github.com/wundergraph/cosmo/router-plugin/tracing"
 
 	service "github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects/generated"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects/src/data"
-
 	routerplugin "github.com/wundergraph/cosmo/router-plugin"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -17,11 +20,21 @@ import (
 )
 
 func main() {
-	pl, err := routerplugin.NewRouterPlugin(func(s *grpc.Server) {
-		s.RegisterService(&service.ProjectsService_ServiceDesc, &ProjectsService{
-			nextID: 1,
-		})
-	})
+	tracingInterceptor, err := tracing.CreateTracingInterceptor()
+	if err != nil {
+		log.Fatal("failed to create tracing interceptor:", err)
+	}
+
+	pl, err := routerplugin.NewRouterPlugin(
+		func(s *grpc.Server) {
+			s.RegisterService(&service.ProjectsService_ServiceDesc, &ProjectsService{
+				nextID: 1,
+			})
+		},
+		routerplugin.WithGRPCServerOptions(
+			grpc.ChainUnaryInterceptor(tracingInterceptor),
+		),
+	)
 
 	if err != nil {
 		log.Fatalf("failed to create router plugin: %v", err)
@@ -138,8 +151,24 @@ func (p *ProjectsService) QueryProject(ctx context.Context, req *service.QueryPr
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
+	client := httpclient.New(
+		httpclient.WithBaseURL("http://localhost:8091/"),
+		httpclient.WithTimeout(10*time.Second),
+		httpclient.WithHeader("Accept", "application/json"),
+		httpclient.WithTracing(),
+	)
+
 	for _, project := range data.ServiceProjects {
 		if project.Id == req.Id {
+			for l := range 3 {
+				resp, err := client.Get(ctx, "fact/"+strconv.Itoa(l))
+				if err != nil {
+					return nil, status.Errorf(codes.NotFound, "project not found for nature")
+				}
+				if !resp.IsSuccess() {
+					return nil, status.Errorf(codes.NotFound, "project not successful for nature")
+				}
+			}
 			return &service.QueryProjectResponse{Project: project}, nil
 		}
 	}

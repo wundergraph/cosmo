@@ -22,107 +22,155 @@ service ProjectsService {
 
 // Key message for Project entity lookup
 message LookupProjectByIdRequestKey {
-  // Key field for Project entity lookup
+  // Key field for Project entity lookup.
   string id = 1;
 }
 
-// Request message for Project entity lookup
+// Request message for Project entity lookup.
 message LookupProjectByIdRequest {
-  // List of keys to look up Project entities
+  /*
+   * List of keys to look up Project entities.
+   * Order matters - each key maps to one entity in LookupProjectByIdResponse.
+   */
   repeated LookupProjectByIdRequestKey keys = 1;
 }
 
-// Response message for Project entity lookup
+// Response message for Project entity lookup.
 message LookupProjectByIdResponse {
-  // List of Project entities matching the requested keys
+  /*
+   * List of Project entities in the same order as the keys in LookupProjectByIdRequest.
+   * Always return the same number of entities as keys. Use null for entities that cannot be found.
+   * 
+   * Example:
+   *   LookupUserByIdRequest:
+   *     keys:
+   *       - id: 1
+   *       - id: 2
+   *   LookupUserByIdResponse:
+   *     result:
+   *       - id: 1 # User with id 1 found
+   *       - null  # User with id 2 not found
+   */
   repeated Project result = 1;
 }
 
 // Key message for Employee entity lookup
 message LookupEmployeeByIdRequestKey {
-  // Key field for Employee entity lookup
+  // Key field for Employee entity lookup.
   string id = 1;
 }
 
-// Request message for Employee entity lookup
+// Request message for Employee entity lookup.
 message LookupEmployeeByIdRequest {
-  // List of keys to look up Employee entities
+  /*
+   * List of keys to look up Employee entities.
+   * Order matters - each key maps to one entity in LookupEmployeeByIdResponse.
+   */
   repeated LookupEmployeeByIdRequestKey keys = 1;
 }
 
-// Response message for Employee entity lookup
+// Response message for Employee entity lookup.
 message LookupEmployeeByIdResponse {
-  // List of Employee entities matching the requested keys
+  /*
+   * List of Employee entities in the same order as the keys in LookupEmployeeByIdRequest.
+   * Always return the same number of entities as keys. Use null for entities that cannot be found.
+   * 
+   * Example:
+   *   LookupUserByIdRequest:
+   *     keys:
+   *       - id: 1
+   *       - id: 2
+   *   LookupUserByIdResponse:
+   *     result:
+   *       - id: 1 # User with id 1 found
+   *       - null  # User with id 2 not found
+   */
   repeated Employee result = 1;
 }
 
 // Key message for Product entity lookup
 message LookupProductByUpcRequestKey {
-  // Key field for Product entity lookup
+  // Key field for Product entity lookup.
   string upc = 1;
 }
 
-// Request message for Product entity lookup
+// Request message for Product entity lookup.
 message LookupProductByUpcRequest {
-  // List of keys to look up Product entities
+  /*
+   * List of keys to look up Product entities.
+   * Order matters - each key maps to one entity in LookupProductByUpcResponse.
+   */
   repeated LookupProductByUpcRequestKey keys = 1;
 }
 
-// Response message for Product entity lookup
+// Response message for Product entity lookup.
 message LookupProductByUpcResponse {
-  // List of Product entities matching the requested keys
+  /*
+   * List of Product entities in the same order as the keys in LookupProductByUpcRequest.
+   * Always return the same number of entities as keys. Use null for entities that cannot be found.
+   * 
+   * Example:
+   *   LookupUserByIdRequest:
+   *     keys:
+   *       - id: 1
+   *       - id: 2
+   *   LookupUserByIdResponse:
+   *     result:
+   *       - id: 1 # User with id 1 found
+   *       - null  # User with id 2 not found
+   */
   repeated Product result = 1;
 }
 
-// Request message for projects operation
+// Request message for projects operation.
 message QueryProjectsRequest {
 }
-// Response message for projects operation
+// Response message for projects operation.
 message QueryProjectsResponse {
   repeated Project projects = 1;
 }
-// Request message for project operation
+// Request message for project operation.
 message QueryProjectRequest {
   string id = 1;
 }
-// Response message for project operation
+// Response message for project operation.
 message QueryProjectResponse {
   Project project = 1;
 }
-// Request message for projectStatuses operation
+// Request message for projectStatuses operation.
 message QueryProjectStatusesRequest {
 }
-// Response message for projectStatuses operation
+// Response message for projectStatuses operation.
 message QueryProjectStatusesResponse {
   repeated ProjectStatus project_statuses = 1;
 }
-// Request message for projectsByStatus operation
+// Request message for projectsByStatus operation.
 message QueryProjectsByStatusRequest {
   ProjectStatus status = 1;
 }
-// Response message for projectsByStatus operation
+// Response message for projectsByStatus operation.
 message QueryProjectsByStatusResponse {
   repeated Project projects_by_status = 1;
 }
-// Request message for killService operation
+// Request message for killService operation.
 message QueryKillServiceRequest {
 }
-// Response message for killService operation
+// Response message for killService operation.
 message QueryKillServiceResponse {
   bool kill_service = 1;
 }
-// Request message for panic operation
+// Request message for panic operation.
 message QueryPanicRequest {
 }
-// Response message for panic operation
+// Response message for panic operation.
 message QueryPanicResponse {
   bool panic = 1;
 }
-// Request message for addProject operation
+// Request message for addProject operation.
 message MutationAddProjectRequest {
   ProjectInput project = 1;
 }
-// Response message for addProject operation
+// Response message for addProject operation.
 message MutationAddProjectResponse {
   Project add_project = 1;
 }
