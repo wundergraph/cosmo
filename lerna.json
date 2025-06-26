@@ -7,7 +7,6 @@
     },
     "version": {
       "conventionalCommits": true,
-      "skipBumpOnlyReleases": true,
       "createRelease": "github",
       "syncWorkspaceLock": true,
       "changelogIncludeCommitsClientLogin": " (@%l)",
