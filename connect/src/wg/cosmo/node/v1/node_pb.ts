@@ -2294,6 +2294,49 @@ export class KafkaEventConfiguration extends Message<KafkaEventConfiguration> {
 }
 
 /**
+ * @generated from message wg.cosmo.node.v1.RedisEventConfiguration
+ */
+export class RedisEventConfiguration extends Message<RedisEventConfiguration> {
+  /**
+   * @generated from field: wg.cosmo.node.v1.EngineEventConfiguration engine_event_configuration = 1;
+   */
+  engineEventConfiguration?: EngineEventConfiguration;
+
+  /**
+   * @generated from field: repeated string channels = 2;
+   */
+  channels: string[] = [];
+
+  constructor(data?: PartialMessage<RedisEventConfiguration>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.RedisEventConfiguration";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "engine_event_configuration", kind: "message", T: EngineEventConfiguration },
+    { no: 2, name: "channels", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RedisEventConfiguration {
+    return new RedisEventConfiguration().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RedisEventConfiguration {
+    return new RedisEventConfiguration().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RedisEventConfiguration {
+    return new RedisEventConfiguration().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RedisEventConfiguration | PlainMessage<RedisEventConfiguration> | undefined, b: RedisEventConfiguration | PlainMessage<RedisEventConfiguration> | undefined): boolean {
+    return proto3.util.equals(RedisEventConfiguration, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.node.v1.EngineEventConfiguration
  */
 export class EngineEventConfiguration extends Message<EngineEventConfiguration> {
@@ -2362,6 +2405,11 @@ export class DataSourceCustomEvents extends Message<DataSourceCustomEvents> {
    */
   kafka: KafkaEventConfiguration[] = [];
 
+  /**
+   * @generated from field: repeated wg.cosmo.node.v1.RedisEventConfiguration redis = 3;
+   */
+  redis: RedisEventConfiguration[] = [];
+
   constructor(data?: PartialMessage<DataSourceCustomEvents>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2372,6 +2420,7 @@ export class DataSourceCustomEvents extends Message<DataSourceCustomEvents> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "nats", kind: "message", T: NatsEventConfiguration, repeated: true },
     { no: 2, name: "kafka", kind: "message", T: KafkaEventConfiguration, repeated: true },
+    { no: 3, name: "redis", kind: "message", T: RedisEventConfiguration, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DataSourceCustomEvents {
