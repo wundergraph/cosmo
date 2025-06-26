@@ -16,3 +16,7 @@ events:
       - id: my-kafka
         brokers:
           - "kafka:9092"
+    redis:
+      - id: my-redis
+        urls:
+        - "redis://localhost:6379/2"
