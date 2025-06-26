@@ -4,6 +4,8 @@ directive @edfs__natsSubscribe(subjects: [String!]!, providerId: String! = "defa
 directive @openfed__subscriptionFilter(condition: openfed__SubscriptionFilterCondition!) on FIELD_DEFINITION
 directive @edfs__kafkaPublish(topic: String!, providerId: String! = "default") on FIELD_DEFINITION
 directive @edfs__kafkaSubscribe(topics: [String!]!, providerId: String! = "default") on FIELD_DEFINITION
+directive @edfs__redisPublish(channel: String!, providerId: String! = "default") on FIELD_DEFINITION
+directive @edfs__redisSubscribe(channels: [String!]!, providerId: String! = "default") on FIELD_DEFINITION
 
 scalar openfed__SubscriptionFilterValue
 
@@ -32,6 +34,8 @@ input UpdateEmployeeInput {
 type Mutation {
     updateEmployeeMyKafka(employeeID: Int!, update: UpdateEmployeeInput!): edfs__PublishResult! @edfs__kafkaPublish(topic: "employeeUpdated", providerId: "my-kafka")
     updateEmployeeMyNats(id: Int!, update: UpdateEmployeeInput!): edfs__PublishResult! @edfs__natsPublish(subject: "employeeUpdatedMyNats.{{ args.id }}", providerId: "my-nats")
+    updateEmployeeMyRedis(id: Int!, update: UpdateEmployeeInput!): edfs__PublishResult! @edfs__redisPublish(channel: "employeeUpdatedMyRedis", providerId: "my-redis")
+    updateEmployeeMyRedisOnCustomChannel(id: Int!, update: UpdateEmployeeInput!): edfs__PublishResult! @edfs__redisPublish(channel: "employeeUpdatedMyRedis.{{ args.id }}", providerId: "my-redis")
 }
 
 type Subscription {
@@ -39,6 +43,8 @@ type Subscription {
     employeeUpdatedMyKafka(employeeID: Int!): Employee! @edfs__kafkaSubscribe(topics: ["employeeUpdated", "employeeUpdatedTwo"], providerId: "my-kafka")
     employeeUpdatedMyNats(id: Int!): Employee! @edfs__natsSubscribe(subjects: ["employeeUpdatedMyNats.{{ args.id }}", "employeeUpdatedMyNatsTwo.{{ args.id }}"], providerId: "my-nats")
     employeeUpdatedNatsStream(id: Int!): Employee! @edfs__natsSubscribe(subjects: ["employeeUpdated.{{ args.id }}"], streamConfiguration: { consumerName: "consumerName", streamName: "streamName"})
+    employeeUpdatedMyRedis(id: Int!): Employee! @edfs__redisSubscribe(channels: ["employeeUpdatedMyRedis.{{ args.id }}"], providerId: "my-redis")
+    employeeUpdates: Employee! @edfs__redisSubscribe(channels: ["employeeUpdatedMyRedis"], providerId: "my-redis")
     filteredEmployeeUpdated(id: Int!): Employee!
         @edfs__natsSubscribe(subjects: ["employeeUpdated.{{ args.id }}"])
         @openfed__subscriptionFilter(condition: { NOT: { IN: { fieldPath: "id", values: [2, 6, 9, 10, 12] } } })
@@ -56,6 +62,9 @@ type Subscription {
                 { IN: { fieldPath: "id", values: ["1"] } },
             ],
         })
+    filteredEmployeeUpdatedMyRedis(ids: [ID!]!): Employee!
+        @edfs__redisSubscribe(channels: ["employeeUpdatedMyRedis"], providerId: "my-redis")
+        @openfed__subscriptionFilter(condition: { IN: { fieldPath: "id", values: ["{{ args.ids }}"] } })
 }
 
 input KafkaInput {

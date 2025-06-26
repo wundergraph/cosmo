@@ -72,6 +72,7 @@ const (
 	natsDefaultSourceName = "default"
 	myNatsProviderID      = "my-nats"
 	myKafkaProviderID     = "my-kafka"
+	myRedisProviderID     = "my-redis"
 )
 
 var (
@@ -83,6 +84,8 @@ var (
 	ConfigWithEdfsKafkaJSONTemplate string
 	//go:embed testdata/configWithEdfsNats.json
 	ConfigWithEdfsNatsJSONTemplate string
+	//go:embed testdata/configWithEdfsRedis.json
+	ConfigWithEdfsRedisJSONTemplate string
 	//go:embed testdata/configWithPlugins.json
 	ConfigWithPluginsJSONTemplate string
 	//go:embed testdata/configWithGRPC.json
@@ -90,6 +93,7 @@ var (
 
 	DemoNatsProviders  = []string{natsDefaultSourceName, myNatsProviderID}
 	DemoKafkaProviders = []string{myKafkaProviderID}
+	DemoRedisProviders = []string{myRedisProviderID}
 )
 
 func init() {
@@ -323,6 +327,8 @@ type Config struct {
 	UseVersionedGraph                  bool
 	NoShutdownTestServer               bool
 	MCP                                config.MCPConfiguration
+	EnableRedis                        bool
+	EnableRedisCluster                 bool
 	Plugins                            PluginConfig
 	EnableGRPC                         bool
 }
@@ -380,6 +386,9 @@ type MCPConfig struct {
 	Enabled bool
 	Port    int
 }
+
+var redisHost = "redis://localhost:6379"
+var redisClusterHost = "redis://localhost:7001"
 
 // CreateTestSupervisorEnv is currently tailored specifically for /lifecycle/supervisor_test.go, refer to that test
 // for usage example. CreateTestSupervisorEnv is not a drop-in replacement for CreateTestEnv!
@@ -773,6 +782,15 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	if natsSetup != nil {
 		e.NatsConnectionDefault = natsSetup.Connections[0]
 		e.NatsConnectionMyNats = natsSetup.Connections[1]
+	}
+
+	if cfg.EnableRedis {
+		e.RedisHosts = []string{redisHost}
+	}
+
+	if cfg.EnableRedisCluster {
+		e.RedisHosts = []string{redisClusterHost}
+		e.RedisWithClusterMode = true
 	}
 
 	if routerConfig.FeatureFlagConfigs != nil {
@@ -1186,6 +1204,15 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		e.NatsConnectionMyNats = natsSetup.Connections[1]
 	}
 
+	if cfg.EnableRedis {
+		e.RedisHosts = []string{redisHost}
+	}
+
+	if cfg.EnableRedisCluster {
+		e.RedisHosts = []string{redisClusterHost}
+		e.RedisWithClusterMode = true
+	}
+
 	if routerConfig.FeatureFlagConfigs != nil {
 		myFF, ok := routerConfig.FeatureFlagConfigs.ConfigByFeatureFlagName["myff"]
 		if ok {
@@ -1306,6 +1333,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 
 	var natsEventSources []config.NatsEventSource
 	var kafkaEventSources []config.KafkaEventSource
+	var redisEventSources []config.RedisEventSource
 
 	if natsData != nil {
 		for _, sourceName := range DemoNatsProviders {
@@ -1326,10 +1354,29 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		}
 	}
 
+	if testConfig.EnableRedis {
+		for _, sourceName := range DemoRedisProviders {
+			redisEventSources = append(redisEventSources, config.RedisEventSource{
+				ID:   sourceName,
+				URLs: []string{redisHost},
+			})
+		}
+	}
+
+	if testConfig.EnableRedisCluster {
+		for _, sourceName := range DemoRedisProviders {
+			redisEventSources = append(redisEventSources, config.RedisEventSource{
+				ID:   sourceName,
+				URLs: []string{redisClusterHost},
+			})
+		}
+	}
+
 	eventsConfiguration := config.EventsConfiguration{
 		Providers: config.EventProviders{
 			Nats:  natsEventSources,
 			Kafka: kafkaEventSources,
+			Redis: redisEventSources,
 		},
 	}
 	if testConfig.ModifyEventsConfiguration != nil {
@@ -1689,6 +1736,8 @@ type Environment struct {
 	logObserver           *observer.ObservedLogs
 	getPubSubName         func(name string) string
 	MCPClient             *mcpclient.Client
+	RedisHosts            []string
+	RedisWithClusterMode  bool
 
 	shutdownDelay       time.Duration
 	extraURLQueryValues url.Values
