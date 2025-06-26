@@ -2,10 +2,12 @@ package connectrpc
 
 import (
 	"bytes"
+	"context"
 	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 func TestReadMapping_Invalid(t *testing.T) {
@@ -69,25 +71,11 @@ func TestReadMapping_Valid(t *testing.T) {
 	mapping, err := readMapping(buf)
 	require.NoError(t, err)
 	require.Equal(t, "UserService", mapping.Service)
-	require.Equal(t, 1, mapping.Version)
+	require.Equal(t, int32(1), mapping.Version)
 	require.Equal(t, 1, len(mapping.EntityMappings))
 	require.Equal(t, 1, len(mapping.OperationMappings))
-	require.Equal(t, 1, len(mapping.TypeFieldMappings))
-	require.Equal(t, 1, len(mapping.EnumMappings))
-}
-
-func TestConnectrpcToGraphqlQuery(t *testing.T) {
-	mapperData, err := os.ReadFile("testdata/base.mapper.json")
-	require.NoError(t, err)
-	mapping, err := readMapping(bytes.NewBuffer(mapperData))
-
-	protoData, err := os.ReadFile("testdata/base.proto")
-	require.NoError(t, err)
-	protoFile, err := protoutil.ParseFile(protoData)
-	require.NoError(t, err)
-
-	protoFile.Services().Get(0).Methods().Get(0).InputType()
-
+	require.Equal(t, 2, len(mapping.TypeFieldMappings))
+	require.Equal(t, 0, len(mapping.EnumMappings))
 }
 
 func TestGraphQLResponseToConnectrpc(t *testing.T) {
@@ -105,13 +93,25 @@ func TestGraphQLResponseToConnectrpc(t *testing.T) {
 	}
 	`
 
-	mapperData, err := os.ReadFile("testdata/base.mapper.json")
-	protoMapping, err := readMapping(bytes.NewBuffer(mapperData))
+	protoFile, err := os.ReadFile("testdata/base.proto")
 	require.NoError(t, err)
-	require.Equal(t, "UserService", protoMapping.Service)
-	require.Equal(t, 1, len(protoMapping.OperationMappings))
-	require.Equal(t, "QueryTestQueryUser", protoMapping.OperationMappings[0].Mapped)
-	require.Equal(t, "QueryTestQueryUserRequest", protoMapping.OperationMappings[0].Request)
-	require.Equal(t, "QueryTestQueryUserResponse", protoMapping.OperationMappings[0].Response)
+
+	fd, err := fileDescriptorProto(string(protoFile), context.Background())
+	require.NoError(t, err)
+	require.NotNil(t, fd)
+
+	mapperData, err := os.Open("testdata/base.mapper.json")
+	require.NoError(t, err)
+
+	mapping, err := readMapping(mapperData)
+	require.NoError(t, err)
+	require.NotNil(t, mapping)
+
+	connectrpc, err := graphqlToRPC(fd, mapping, graphqlResponse)
+	require.NoError(t, err)
+	require.NotNil(t, connectrpc)
+	json, err := protojson.Marshal(connectrpc)
+	require.NoError(t, err)
+	require.Equal(t, `{"id":"1","name":"John Doe","details":{"age":30}}`, string(json))
 
 }

@@ -4,13 +4,14 @@
             "key": "id",
             "kind": "entity",
             "request": "LookupUserByIdRequest",
-            "response": "LookupUserByIdResponse",
+            "response": "QueryTestQueryUserResponse",
             "rpc": "LookupUserById",
             "typeName": "User"
         }
     ],
     "operationMappings": [
         {
+            "original": "TestQueryUser",
             "mapped": "QueryTestQueryUser",
             "request": "QueryTestQueryUserRequest",
             "response": "QueryTestQueryUserResponse",

@@ -96,7 +96,7 @@ type ConnectRPC struct {
 // Start starts the ConnectRPC server
 func (c *ConnectRPC) Bootstrap() error {
 	c.ops = make(map[OperationPath]*ConnectRPCOperation)
-	fd, err := c.fileDescriptorProto(context.TODO())
+	fd, err := fileDescriptorProto(c.schema, context.TODO())
 	if err != nil {
 		return err
 	}
@@ -126,10 +126,10 @@ func (c *ConnectRPC) Stop(_ context.Context) error {
 	return nil
 }
 
-func (c *ConnectRPC) fileDescriptorProto(ctx context.Context) (*descriptorpb.FileDescriptorProto, error) {
+func fileDescriptorProto(proto string, ctx context.Context) (*descriptorpb.FileDescriptorProto, error) {
 	const fileName = "base.proto"
 	fileContent := map[string]string{
-		fileName: c.schema,
+		fileName: proto,
 	}
 	res := &protocompile.SourceResolver{
 		Accessor: protocompile.SourceAccessorFromMap(fileContent),

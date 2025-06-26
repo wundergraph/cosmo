@@ -42,7 +42,7 @@ describe('GraphQL Custom Queries to Proto Mapping', () => {
             "key": "id",
             "kind": "entity",
             "request": "LookupUserByIdRequest",
-            "response": "LookupUserByIdResponse",
+            "response": "QueryTestQueryUserResponse",
             "rpc": "LookupUserById",
             "typeName": "User",
           },
