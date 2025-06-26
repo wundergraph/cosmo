@@ -19,8 +19,16 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+const (
+	serviceName    = "projects-plugin"
+	serviceVersion = "v0.1.0"
+)
+
 func main() {
-	tracingInterceptor, err := tracing.CreateTracingInterceptor()
+	tracingInterceptor, err := tracing.CreateTracingInterceptor(tracing.TracingOptions{
+		ServiceName:    serviceName,
+		ServiceVersion: serviceVersion,
+	})
 	if err != nil {
 		log.Fatal("failed to create tracing interceptor:", err)
 	}
@@ -160,8 +168,8 @@ func (p *ProjectsService) QueryProject(ctx context.Context, req *service.QueryPr
 
 	for _, project := range data.ServiceProjects {
 		if project.Id == req.Id {
-			for l := range 3 {
-				resp, err := client.Get(ctx, "fact/"+strconv.Itoa(l))
+			for range 2 {
+				resp, err := client.Get(ctx, "fact/1")
 				if err != nil {
 					return nil, status.Errorf(codes.NotFound, "project not found for nature")
 				}
