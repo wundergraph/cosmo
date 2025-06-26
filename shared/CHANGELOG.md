@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.39.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.38.0...@wundergraph/cosmo-shared@0.39.0) (2025-06-26)
+
+### Features
+
+* add redis pubsub support to EDFS ([#1810](https://github.com/wundergraph/cosmo/issues/1810)) ([8f294b6](https://github.com/wundergraph/cosmo/commit/8f294b62c14e9cae7e1ad85e65b0ca3ada0bcfbb)) (@alepane21)
+
 # [0.38.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.37.7...@wundergraph/cosmo-shared@0.38.0) (2025-06-25)
 
 ### Features
