@@ -139,9 +139,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        make_params: 
-          - test_params="-run '^Test[^(Flaky)]' --timeout=10m"
-          - gotestsum_params="--rerun-fails=5" test_params="-run '^TestFlaky' --timeout=10m -p 1 --parallel 10"
+        make_target: 
+          - integration-tests
+          - integration-tests-flaky
     services:
       nats:
         image: ghcr.io/wundergraph/cosmo/nats:2.11.0-alpine
@@ -221,7 +221,7 @@ jobs:
           done
       - name: Run Integration Tests
         working-directory: ./router-tests
-        run: make test ${{ matrix.make_params }} test_target="./..."
+        run: make ${{ matrix.make_target }}
 
   image_scan:
     if: github.event.pull_request.head.repo.full_name == github.repository
