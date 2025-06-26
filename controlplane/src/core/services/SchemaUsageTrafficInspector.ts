@@ -309,14 +309,25 @@ export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): In
         isInput: true,
       };
     }
+
     // 1. When an argument has changed, we know the exact path to the argument e.g. 'Query.engineer.id'
     // and the type name e.g. 'Query'
-    case ChangeType.FieldArgumentRemoved:
-    case ChangeType.FieldArgumentAdded: // Only when a required argument is added
-    case ChangeType.FieldArgumentTypeChanged: {
+    case ChangeType.FieldArgumentRemoved: {
       return {
         schemaChangeId: schemaCheckId,
         path: path.slice(1), // The path to the updated argument e.g. 'engineer.name' of the type names
+        typeName: path[0], // Enclosing type e.g. 'Query' or 'Engineer' when the argument is on a field of type Engineer
+        isArgument: true,
+      };
+    }
+    // Only when a required argument is added or type of an argument has changed to a required type
+    case ChangeType.FieldArgumentAdded:
+    case ChangeType.FieldArgumentTypeChanged: {
+      return {
+        schemaChangeId: schemaCheckId,
+        // The path should be just the query/mutation/subscription name
+        // e.g. if 'Query.employee.a', the path should be ['employee'] as its new, we check the usage of the operation.
+        path: path.slice(1, 2),
         typeName: path[0], // Enclosing type e.g. 'Query' or 'Engineer' when the argument is on a field of type Engineer
         isArgument: true,
       };

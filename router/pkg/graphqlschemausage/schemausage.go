@@ -94,12 +94,13 @@ func (p *typeFieldUsageInfoVisitor) visitNode(node resolve.Node, path []string) 
 	}
 }
 
-func GetArgumentUsageInfo(operation, definition *ast.Document) ([]*graphqlmetrics.ArgumentUsageInfo, error) {
+func GetArgumentUsageInfo(operation, definition *ast.Document, planConfig *plan.Configuration) ([]*graphqlmetrics.ArgumentUsageInfo, error) {
 	walker := astvisitor.NewWalker(48)
 	visitor := &argumentUsageInfoVisitor{
 		definition: definition,
 		operation:  operation,
 		walker:     &walker,
+		planConfig: planConfig,
 	}
 	walker.RegisterEnterArgumentVisitor(visitor)
 	walker.RegisterEnterFieldVisitor(visitor)
@@ -116,6 +117,7 @@ type argumentUsageInfoVisitor struct {
 	definition, operation *ast.Document
 	fieldEnclosingNode    ast.Node
 	usage                 []*graphqlmetrics.ArgumentUsageInfo
+	planConfig            *plan.Configuration
 }
 
 func (a *argumentUsageInfoVisitor) EnterField(_ int) {
@@ -136,22 +138,59 @@ func (a *argumentUsageInfoVisitor) EnterArgument(ref int) {
 	}
 	argType := a.definition.InputValueDefinitionType(argDef)
 	typeName := a.definition.ResolveTypeNameBytes(argType)
-	a.usage = append(a.usage, &graphqlmetrics.ArgumentUsageInfo{
+
+	argumentUsageInfo := &graphqlmetrics.ArgumentUsageInfo{
 		Path:      []string{string(fieldName), string(argName)},
 		TypeName:  string(enclosingTypeName),
 		NamedType: string(typeName),
-	})
+	}
+
+	if a.planConfig != nil {
+		if subgraphIDs := a.getSubgraphIDsForField(string(enclosingTypeName), string(fieldName)); len(subgraphIDs) > 0 {
+			argumentUsageInfo.SubgraphIDs = subgraphIDs
+		}
+	}
+
+	a.usage = append(a.usage, argumentUsageInfo)
 }
 
-func GetInputUsageInfo(operation, definition *ast.Document, variables *astjson.Value) ([]*graphqlmetrics.InputUsageInfo, error) {
+// getSubgraphIDsForField finds the datasource IDs that handle a specific type field
+// This method is ready to be used once ArgumentUsageInfo protobuf includes SubgraphIDs field
+func (a *argumentUsageInfoVisitor) getSubgraphIDsForField(typeName, fieldName string) []string {
+	var subgraphIDs []string
+
+	// Check all datasources in the plan configuration
+	for _, dataSource := range a.planConfig.DataSources {
+		// Check if this datasource handles the field as a root node
+		if dataSource.HasRootNode(typeName, fieldName) {
+			subgraphIDs = append(subgraphIDs, dataSource.Id())
+		}
+		// Check if this datasource handles the field as a child node
+		if dataSource.HasChildNode(typeName, fieldName) {
+			subgraphIDs = append(subgraphIDs, dataSource.Id())
+		}
+	}
+
+	return subgraphIDs
+}
+
+func GetInputUsageInfo(operation, definition *ast.Document, variables *astjson.Value, planConfig *plan.Configuration) ([]*graphqlmetrics.InputUsageInfo, error) {
+	walker := astvisitor.NewWalker(48)
 	visitor := &inputUsageInfoVisitor{
 		operation:  operation,
 		definition: definition,
 		variables:  variables,
+		planConfig: planConfig,
+		walker:     &walker,
 	}
-	for i := range operation.VariableDefinitions {
-		visitor.EnterVariableDefinition(i)
+
+	walker.RegisterEnterArgumentVisitor(visitor)
+	rep := &operationreport.Report{}
+	walker.Walk(operation, definition, rep)
+	if rep.HasErrors() {
+		return nil, rep
 	}
+
 	return visitor.usage, nil
 }
 
@@ -159,6 +198,8 @@ type inputUsageInfoVisitor struct {
 	definition, operation *ast.Document
 	variables             *astjson.Value
 	usage                 []*graphqlmetrics.InputUsageInfo
+	planConfig            *plan.Configuration
+	walker                *astvisitor.Walker
 }
 
 func (v *inputUsageInfoVisitor) EnterVariableDefinition(ref int) {
@@ -172,6 +213,47 @@ func (v *inputUsageInfoVisitor) EnterVariableDefinition(ref int) {
 	v.traverseVariable(jsonField, varName, varTypeName, "")
 }
 
+func (v *inputUsageInfoVisitor) EnterArgument(ref int) {
+	argName := v.operation.ArgumentNameBytes(ref)
+	anc := v.walker.Ancestors[len(v.walker.Ancestors)-1]
+	if anc.Kind != ast.NodeKindField {
+		return
+	}
+	fieldName := v.operation.FieldNameBytes(anc.Ref)
+	enclosingTypeName := v.definition.NodeNameBytes(v.walker.EnclosingTypeDefinition)
+	argDef := v.definition.NodeFieldDefinitionArgumentDefinitionByName(v.walker.EnclosingTypeDefinition, fieldName, argName)
+	if argDef == -1 {
+		return
+	}
+	argType := v.definition.InputValueDefinitionType(argDef)
+	typeName := v.definition.ResolveTypeNameBytes(argType)
+	argValue := v.operation.ArgumentValue(ref)
+
+	if argValue.Kind != ast.ValueKindVariable {
+		return
+	}
+
+	varValueName := v.operation.VariableValueNameString(argValue.Ref)
+	varDefRef := ast.InvalidRef
+
+	for varDefinitionRef, _ := range v.operation.VariableDefinitions {
+		if v.operation.VariableDefinitionNameString(varDefinitionRef) == varValueName {
+			varDefRef = varDefinitionRef
+			break
+		}
+	}
+
+	varTypeRef := v.operation.VariableDefinitions[varDefRef].Type
+
+	varTypeName := v.operation.ResolveTypeNameString(varTypeRef)
+	jsonField := v.variables.Get(varValueName)
+	if jsonField == nil {
+		return
+	}
+
+	v.traverseVariable(jsonField, varValueName, varTypeName, "")
+}
+
 func (v *inputUsageInfoVisitor) traverseVariable(jsonValue *astjson.Value, fieldName, typeName, parentTypeName string) {
 	defNode, ok := v.definition.NodeByNameStr(typeName)
 	if !ok {
@@ -183,6 +265,13 @@ func (v *inputUsageInfoVisitor) traverseVariable(jsonValue *astjson.Value, field
 	if parentTypeName != "" {
 		usageInfo.TypeName = parentTypeName
 		usageInfo.Path = []string{parentTypeName, fieldName}
+	}
+
+	// Add subgraph IDs if planConfig is available
+	if v.planConfig != nil {
+		if subgraphIDs := v.getSubgraphIDsForInputType(typeName, parentTypeName, fieldName); len(subgraphIDs) > 0 {
+			usageInfo.SubgraphIDs = subgraphIDs
+		}
 	}
 
 	switch defNode.Kind {
@@ -224,6 +313,19 @@ func (v *inputUsageInfoVisitor) traverseVariable(jsonValue *astjson.Value, field
 	}
 
 	v.appendUniqueUsage(usageInfo)
+}
+
+// getSubgraphIDsForInputType finds the datasource IDs that define or use a specific input type
+func (v *inputUsageInfoVisitor) getSubgraphIDsForInputType(typeName, parentTypeName, fieldName string) []string {
+	var subgraphIDs []string
+
+	// Check all datasources in the plan configuration
+	for _, dataSource := range v.planConfig.DataSources {
+		// Get the datasource ID
+		subgraphIDs = append(subgraphIDs, dataSource.Id())
+	}
+
+	return subgraphIDs
 }
 
 func (v *inputUsageInfoVisitor) appendUniqueUsage(info *graphqlmetrics.InputUsageInfo) {

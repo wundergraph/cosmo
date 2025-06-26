@@ -187,12 +187,14 @@ func TestGetSchemaUsageInfo(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	p, err := plan.NewPlanner(plan.Configuration{
+	planConfig := plan.Configuration{
 		DisableResolveFieldPositions: true,
 		DataSources: []plan.DataSource{
 			dsCfg,
 		},
-	})
+	}
+
+	p, err := plan.NewPlanner(planConfig)
 	require.NoError(t, err)
 
 	generatedPlan := p.Plan(&op, &def, "Search", report)
@@ -210,9 +212,9 @@ func TestGetSchemaUsageInfo(t *testing.T) {
 	assert.NoError(t, err)
 
 	fieldUsageInfo := GetTypeFieldUsageInfo(generatedPlan)
-	argumentUsageInfo, err := GetArgumentUsageInfo(&op, &def)
+	argumentUsageInfo, err := GetArgumentUsageInfo(&op, &def, &planConfig)
 	assert.NoError(t, err)
-	inputUsageInfo, err := GetInputUsageInfo(&op, &def, merged)
+	inputUsageInfo, err := GetInputUsageInfo(&op, &def, merged, &planConfig)
 	assert.NoError(t, err)
 
 	subscription := &plan.SubscriptionResponsePlan{
@@ -222,9 +224,9 @@ func TestGetSchemaUsageInfo(t *testing.T) {
 	}
 
 	subscriptionFieldUsageInfo := GetTypeFieldUsageInfo(subscription)
-	subscriptionArgumentUsageInfo, err := GetArgumentUsageInfo(&op, &def)
+	subscriptionArgumentUsageInfo, err := GetArgumentUsageInfo(&op, &def, &planConfig)
 	assert.NoError(t, err)
-	subscriptionInputUsageInfo, err := GetInputUsageInfo(&op, &def, merged)
+	subscriptionInputUsageInfo, err := GetInputUsageInfo(&op, &def, merged, &planConfig)
 	assert.NoError(t, err)
 
 	assert.Equal(t, fieldUsageInfo, subscriptionFieldUsageInfo)
@@ -284,44 +286,52 @@ func TestGetSchemaUsageInfo(t *testing.T) {
 
 	expectedArgumentUsageInfo := []*graphqlmetricsv1.ArgumentUsageInfo{
 		{
-			TypeName:  "Query",
-			NamedType: "String",
-			Path:      []string{"searchResults", "name"},
+			TypeName:    "Query",
+			NamedType:   "String",
+			Path:        []string{"searchResults", "name"},
+			SubgraphIDs: []string{"https://swapi.dev/api"},
 		},
 		{
-			TypeName:  "Query",
-			NamedType: "SearchFilter",
-			Path:      []string{"searchResults", "filter"},
+			TypeName:    "Query",
+			NamedType:   "SearchFilter",
+			Path:        []string{"searchResults", "filter"},
+			SubgraphIDs: []string{"https://swapi.dev/api"},
 		},
 		{
-			TypeName:  "Query",
-			NamedType: "SearchFilter",
-			Path:      []string{"searchResults", "filter2"},
+			TypeName:    "Query",
+			NamedType:   "SearchFilter",
+			Path:        []string{"searchResults", "filter2"},
+			SubgraphIDs: []string{"https://swapi.dev/api"},
 		},
 		{
-			TypeName:  "Query",
-			NamedType: "Episode",
-			Path:      []string{"searchResults", "enumValue"},
+			TypeName:    "Query",
+			NamedType:   "Episode",
+			Path:        []string{"searchResults", "enumValue"},
+			SubgraphIDs: []string{"https://swapi.dev/api"},
 		},
 		{
-			TypeName:  "Query",
-			NamedType: "Episode",
-			Path:      []string{"searchResults", "enumList"},
+			TypeName:    "Query",
+			NamedType:   "Episode",
+			Path:        []string{"searchResults", "enumList"},
+			SubgraphIDs: []string{"https://swapi.dev/api"},
 		},
 		{
-			TypeName:  "Query",
-			NamedType: "Episode",
-			Path:      []string{"searchResults", "enumList2"},
+			TypeName:    "Query",
+			NamedType:   "Episode",
+			Path:        []string{"searchResults", "enumList2"},
+			SubgraphIDs: []string{"https://swapi.dev/api"},
 		},
 		{
-			TypeName:  "Query",
-			NamedType: "SearchFilter",
-			Path:      []string{"searchResults", "filterList"},
+			TypeName:    "Query",
+			NamedType:   "SearchFilter",
+			Path:        []string{"searchResults", "filterList"},
+			SubgraphIDs: []string{"https://swapi.dev/api"},
 		},
 		{
-			TypeName:  "Human",
-			NamedType: "String",
-			Path:      []string{"inlineName", "name"},
+			TypeName:    "Human",
+			NamedType:   "String",
+			Path:        []string{"inlineName", "name"},
+			SubgraphIDs: []string{"https://swapi.dev/api"},
 		},
 	}
 
@@ -442,12 +452,14 @@ func TestGetSchemaUsageInfoInterfaces(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	p, err := plan.NewPlanner(plan.Configuration{
+	planConfig := plan.Configuration{
 		DisableResolveFieldPositions: true,
 		DataSources: []plan.DataSource{
 			dsCfg,
 		},
-	})
+	}
+
+	p, err := plan.NewPlanner(planConfig)
 	require.NoError(t, err)
 
 	generatedPlan := p.Plan(&op, &def, "Search", report)
@@ -456,9 +468,9 @@ func TestGetSchemaUsageInfoInterfaces(t *testing.T) {
 	}
 
 	fieldUsageInfo := GetTypeFieldUsageInfo(generatedPlan)
-	argumentUsageInfo, err := GetArgumentUsageInfo(&op, &def)
+	argumentUsageInfo, err := GetArgumentUsageInfo(&op, &def, &planConfig)
 	assert.NoError(t, err)
-	inputUsageInfo, err := GetInputUsageInfo(&op, &def, astjson.MustParse(`{}`))
+	inputUsageInfo, err := GetInputUsageInfo(&op, &def, astjson.MustParse(`{}`), &planConfig)
 	assert.NoError(t, err)
 
 	subscription := &plan.SubscriptionResponsePlan{
@@ -468,9 +480,9 @@ func TestGetSchemaUsageInfoInterfaces(t *testing.T) {
 	}
 
 	subscriptionFieldUsageInfo := GetTypeFieldUsageInfo(subscription)
-	subscriptionArgumentUsageInfo, err := GetArgumentUsageInfo(&op, &def)
+	subscriptionArgumentUsageInfo, err := GetArgumentUsageInfo(&op, &def, &planConfig)
 	assert.NoError(t, err)
-	subscriptionInputUsageInfo, err := GetInputUsageInfo(&op, &def, astjson.MustParse(`{}`))
+	subscriptionInputUsageInfo, err := GetInputUsageInfo(&op, &def, astjson.MustParse(`{}`), &planConfig)
 	assert.NoError(t, err)
 
 	assert.Equal(t, fieldUsageInfo, subscriptionFieldUsageInfo)
