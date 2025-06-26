@@ -258,6 +258,8 @@ message OperationMapping {
   string request = 4;
   // gRPC response message type name
   string response = 5;
+  // GraphQL original query
+  string original_query = 6;
 }
 
 // Defines mapping for entity resolution

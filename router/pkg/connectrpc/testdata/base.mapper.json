@@ -1,0 +1,51 @@
+{
+    "entityMappings": [
+        {
+            "key": "id",
+            "kind": "entity",
+            "request": "LookupUserByIdRequest",
+            "response": "LookupUserByIdResponse",
+            "rpc": "LookupUserById",
+            "typeName": "User"
+        }
+    ],
+    "operationMappings": [
+        {
+            "mapped": "QueryTestQueryUser",
+            "request": "QueryTestQueryUserRequest",
+            "response": "QueryTestQueryUserResponse",
+            "type": "OPERATION_TYPE_QUERY",
+            "originalQuery": "user(id: \"1\") { id name details { age } }"
+        }
+    ],
+    "service": "UserService",
+    "typeFieldMappings": [
+        {
+            "fieldMappings": [
+                {
+                    "mapped": "id",
+                    "original": "id"
+                },
+                {
+                    "mapped": "name",
+                    "original": "name"
+                },
+                {
+                    "mapped": "details",
+                    "original": "details"
+                }
+            ],
+            "type": "User"
+        },
+        {
+            "fieldMappings": [
+                {
+                    "mapped": "age",
+                    "original": "age"
+                }
+            ],
+            "type": "UserDetails"
+        }
+    ],
+    "version": 1
+}

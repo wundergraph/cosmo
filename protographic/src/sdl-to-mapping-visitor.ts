@@ -10,6 +10,7 @@ import {
   isInputObjectType,
   isObjectType,
   Kind,
+  parse,
 } from 'graphql';
 import {
   createEntityLookupMethodName,
@@ -51,15 +52,18 @@ import { Maybe } from 'graphql/jsutils/Maybe.js';
 export class GraphQLToProtoVisitor {
   private readonly mapping: GRPCMapping;
   private readonly schema: GraphQLSchema;
+  private readonly queries?: string[];
 
   /**
    * Creates a new visitor for generating gRPC mappings from a GraphQL schema
    *
    * @param schema - The GraphQL schema to process
    * @param serviceName - Name for the generated service (defaults to "DefaultService")
+   * @param queries - Optional array of GraphQL query strings to generate specific operation mappings
    */
-  constructor(schema: GraphQLSchema, serviceName: string = 'DefaultService') {
+  constructor(schema: GraphQLSchema, serviceName: string = 'DefaultService', queries?: string[]) {
     this.schema = schema;
+    this.queries = queries;
     this.mapping = new GRPCMapping({
       version: 1,
       service: serviceName,
@@ -84,14 +88,19 @@ export class GraphQLToProtoVisitor {
     // Process entity types first (types with @key directive)
     this.processEntityTypes();
 
-    // Process query type
-    this.processQueryType();
+    if (this.queries && this.queries.length > 0) {
+      // Process custom queries if provided
+      this.processCustomQueries();
+    } else {
+      // Process query type
+      this.processQueryType();
 
-    // Process mutation type
-    this.processMutationType();
+      // Process mutation type
+      this.processMutationType();
 
-    // Process subscription type
-    this.processSubscriptionType();
+      // Process subscription type
+      this.processSubscriptionType();
+    }
 
     // Process all other types for field mappings
     this.processAllTypes();
@@ -206,6 +215,148 @@ export class GraphQLToProtoVisitor {
    */
   private processSubscriptionType(): void {
     this.processType('Subscription', OperationType.SUBSCRIPTION, this.schema.getSubscriptionType());
+  }
+
+  /**
+   * Process custom GraphQL queries to generate operation mappings
+   *
+   * This method parses the provided query strings and generates mappings
+   * where the original field contains the full query string.
+   */
+  private processCustomQueries(): void {
+    if (!this.queries) return;
+
+    for (const queryString of this.queries) {
+      try {
+        const document = parse(queryString);
+        
+        for (const definition of document.definitions) {
+          if (definition.kind === Kind.OPERATION_DEFINITION) {
+            const operationName = definition.name?.value;
+            if (!operationName) continue;
+
+            // Extract the selection set as string (simplified version)
+            const selectionString = this.extractSelectionString(queryString, definition);
+            
+            let operationType: OperationType;
+            switch (definition.operation) {
+              case 'query':
+                operationType = OperationType.QUERY;
+                break;
+              case 'mutation':
+                operationType = OperationType.MUTATION;
+                break;
+              case 'subscription':
+                operationType = OperationType.SUBSCRIPTION;
+                break;
+              default:
+                operationType = OperationType.QUERY;
+            }
+
+            // Create operation mapping with the operation name as the mapped name
+            const mappedName = `${definition.operation === 'query' ? 'Query' : 
+                               definition.operation === 'mutation' ? 'Mutation' : 
+                               'Subscription'}${operationName}`;
+
+            const operationMapping = new OperationMapping({
+              type: operationType,
+              original: selectionString,
+              mapped: mappedName,
+              request: createRequestMessageName(mappedName),
+              response: createResponseMessageName(mappedName),
+            });
+
+            this.mapping.operationMappings.push(operationMapping);
+          }
+        }
+      } catch (error) {
+        // Skip invalid queries
+        console.warn(`Failed to parse query: ${queryString}`, error);
+      }
+    }
+  }
+
+  /**
+   * Extract the selection string from a GraphQL query
+   * This is a simplified extraction that gets the main field selection
+   */
+  private extractSelectionString(queryString: string, definition: any): string {
+    // For now, we'll extract the first selection as a simplified approach
+    // This could be enhanced for more complex queries
+    if (definition.selectionSet && definition.selectionSet.selections.length > 0) {
+      const firstSelection = definition.selectionSet.selections[0];
+      if (firstSelection.kind === Kind.FIELD) {
+        // Extract the field and its arguments/selections from the original query string
+        const lines = queryString.split('\n');
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i].trim();
+          if (line.includes(firstSelection.name.value + '(') || line.includes(firstSelection.name.value + ' {')) {
+            // Found the line with our field, now extract the full selection
+            return this.extractFieldSelection(queryString, firstSelection);
+          }
+        }
+      }
+    }
+    return '';
+  }
+
+  /**
+   * Extract a field selection with its arguments and sub-selections
+   */
+  private extractFieldSelection(queryString: string, fieldSelection: any): string {
+    const fieldName = fieldSelection.name.value;
+    
+    // Try to extract the complete field selection including nested braces
+    // This handles cases like: user(id: "1") { id name details { age } }
+    const startIndex = queryString.indexOf(fieldName);
+    if (startIndex === -1) return fieldName;
+    
+    // Find the opening brace after the field name (and potential arguments)
+    let currentIndex = startIndex;
+    let braceCount = 0;
+    let inString = false;
+    let stringChar = '';
+    let foundFirstBrace = false;
+    let selectionStart = -1;
+    
+    while (currentIndex < queryString.length) {
+      const char = queryString[currentIndex];
+      
+      if (!inString && (char === '"' || char === "'")) {
+        inString = true;
+        stringChar = char;
+      } else if (inString && char === stringChar) {
+        inString = false;
+        stringChar = '';
+      } else if (!inString) {
+        if (char === '{') {
+          if (!foundFirstBrace) {
+            foundFirstBrace = true;
+            selectionStart = startIndex;
+          }
+          braceCount++;
+        } else if (char === '}') {
+          braceCount--;
+          if (braceCount === 0 && foundFirstBrace) {
+            // Found the complete selection
+            const selection = queryString.substring(selectionStart, currentIndex + 1);
+            return selection.replace(/\s+/g, ' ').trim();
+          }
+        }
+      }
+      currentIndex++;
+    }
+    
+    // Fallback - just return the field name with arguments if we can't extract the full selection 
+    if (fieldSelection.arguments && fieldSelection.arguments.length > 0) {
+      const args = fieldSelection.arguments.map((arg: any) => {
+        const value = arg.value.kind === Kind.STRING ? `"${arg.value.value}"` : arg.value.value;
+        return `${arg.name.value}: ${value}`;
+      }).join(', ');
+      return `${fieldName}(${args})`;
+    }
+    
+    return fieldName;
   }
 
   /**

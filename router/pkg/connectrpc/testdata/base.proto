@@ -1,0 +1,22 @@
+syntax = "proto3";
+package service.v1;
+
+option go_package = "cosmo/pkg/proto/service.v1;servicev1";
+
+service DefaultService {
+    rpc QueryTestQueryUser(QueryTestQueryUserRequest) returns (QueryTestQueryUserResponse) {}
+}
+
+message QueryTestQueryUserRequest {
+    string id = 1;
+}
+
+message QueryTestQueryUserResponse {
+    string id = 1;
+    string name = 2;
+    QueryTestQueryUserUserDetails details = 3;
+}
+
+message QueryTestQueryUserUserDetails {
+    int32 age = 1;
+}

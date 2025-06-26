@@ -1790,6 +1790,13 @@ export class OperationMapping extends Message<OperationMapping> {
    */
   response = "";
 
+  /**
+   * GraphQL original query
+   *
+   * @generated from field: string original_query = 6;
+   */
+  originalQuery = "";
+
   constructor(data?: PartialMessage<OperationMapping>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1803,6 +1810,7 @@ export class OperationMapping extends Message<OperationMapping> {
     { no: 3, name: "mapped", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "request", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "response", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "original_query", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): OperationMapping {

@@ -1,0 +1,9 @@
+query TestQueryUser {
+  user(id: "1") {
+    id
+    name
+    details {
+      age
+    }
+  }
+}

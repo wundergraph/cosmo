@@ -10,11 +10,13 @@ import type { ProtoLock } from './proto-lock.js';
  *
  * @param schemaOrSDL GraphQL Schema object or SDL string
  * @param serviceName Name of the Proto service to generate
+ * @param queries Optional array of GraphQL query strings to generate specific operation mappings
  * @returns Mapping structure
  */
 export function compileGraphQLToMapping(
   schemaOrSDL: GraphQLSchema | string,
   serviceName: string = 'DefaultService',
+  queries?: string[],
 ): GRPCMapping {
   // If a string was provided, build the schema
   const schema =
@@ -26,7 +28,7 @@ export function compileGraphQLToMapping(
       : schemaOrSDL;
 
   // Create and run the visitor
-  const visitor = new GraphQLToProtoVisitor(schema, serviceName);
+  const visitor = new GraphQLToProtoVisitor(schema, serviceName, queries);
   return visitor.visit();
 }
 

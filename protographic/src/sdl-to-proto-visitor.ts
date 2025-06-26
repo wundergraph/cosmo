@@ -20,6 +20,12 @@ import {
   isScalarType,
   isUnionType,
   StringValueNode,
+  parse,
+  Kind,
+  OperationDefinitionNode,
+  DefinitionNode,
+  VariableDefinitionNode,
+  typeFromAST,
 } from 'graphql';
 import {
   createEntityLookupMethodName,
@@ -68,6 +74,8 @@ export interface GraphQLToProtoTextVisitorOptions {
   lockData?: ProtoLock;
   /** Whether to include descriptions/comments from GraphQL schema */
   includeComments?: boolean;
+  excludeRootQuery?: boolean;
+  customQueries?: string[];
 }
 
 /**
@@ -107,6 +115,12 @@ export class GraphQLToProtoTextVisitor {
   /** Whether to include descriptions/comments from GraphQL schema */
   private includeComments: boolean;
 
+  /** Whether to exclude basic queries from the generated proto */
+  private excludeRootQuery: boolean;
+
+  /** Custom queries to include in the generated proto */
+  private customQueries: string[] = [];
+
   /** Tracks types that have already been processed to avoid duplication */
   private processedTypes = new Set<string>();
 
@@ -135,12 +149,16 @@ export class GraphQLToProtoTextVisitor {
       goPackage,
       lockData,
       includeComments = true,
+      excludeRootQuery = false,
+      customQueries = [],
     } = options;
 
     this.schema = schema;
     this.serviceName = serviceName;
     this.lockManager = new ProtoLockManager(lockData);
     this.includeComments = includeComments;
+    this.excludeRootQuery = excludeRootQuery;
+    this.customQueries = customQueries;
 
     // If we have lock data, initialize the field numbers map
     if (lockData) {
@@ -356,19 +374,24 @@ export class GraphQLToProtoTextVisitor {
     const entityResult = this.collectEntityRpcMethods();
     const queryResult = this.collectQueryRpcMethods();
     const mutationResult = this.collectMutationRpcMethods();
+    const customQueryResult = this.collectQueryRpcMethodsFromCustomQueries();
 
     // Combine all RPC methods and message definitions
-    const allRpcMethods = [...entityResult.rpcMethods, ...queryResult.rpcMethods, ...mutationResult.rpcMethods];
-    const allMethodNames = [...entityResult.methodNames, ...queryResult.methodNames, ...mutationResult.methodNames];
+    const allRpcMethods = [...entityResult.rpcMethods, ...queryResult.rpcMethods, ...mutationResult.rpcMethods, ...customQueryResult.rpcMethods];
+    const allMethodNames = [...entityResult.methodNames, ...queryResult.methodNames, ...mutationResult.methodNames, ...customQueryResult.methodNames];
 
     const allMessageDefinitions = [
       ...entityResult.messageDefinitions,
       ...queryResult.messageDefinitions,
       ...mutationResult.messageDefinitions,
+      ...customQueryResult.messageDefinitions,
     ];
 
     // Add all types from the schema to the queue that weren't already queued
-    this.queueAllSchemaTypes();
+    if (this.customQueries.length === 0) {
+      // Only queue all schema types if we're not using custom queries exclusively
+      this.queueAllSchemaTypes();
+    }
 
     // Start with the header
     this.protoText = headerText;
@@ -493,11 +516,68 @@ export class GraphQLToProtoTextVisitor {
   }
 
   /**
+   * Collects RPC methods from the queries array
+   *
+   * This method processes each query string from the queries array and creates
+   * RPC methods with all required data from each query.
+   *
+   * @returns Object containing RPC methods and message definitions
+   */
+  private collectQueryRpcMethodsFromCustomQueries(): CollectionResult {
+    const result: CollectionResult = { rpcMethods: [], methodNames: [], messageDefinitions: [] };
+    
+    if (!this.customQueries || this.customQueries.length === 0) {
+      return result;
+    }
+
+    for (let i = 0; i < this.customQueries.length; i++) {
+      const queryString = this.customQueries[i];
+      
+      try {
+        // Parse the query string
+        const document = parse(queryString);
+        
+        // Extract operation information
+        const operation = document.definitions.find((def: DefinitionNode) => def.kind === Kind.OPERATION_DEFINITION) as OperationDefinitionNode;
+        if (!operation) continue;
+        
+        const operationName = operation.name?.value || `Query${i + 1}`;
+        const methodName = createOperationMethodName('Query', operationName);
+        const requestName = createRequestMessageName(methodName);
+        const responseName = createResponseMessageName(methodName);
+        
+        // Add method name and RPC method
+        result.methodNames.push(methodName);
+        const description = `Execute ${operationName} query operation`;
+        result.rpcMethods.push(this.createRpcMethod(methodName, requestName, responseName, description));
+        
+        // Create request message from variables
+        result.messageDefinitions.push(...this.createQueryRequestMessage(requestName, operation));
+        
+        // Create response message from selection set
+        result.messageDefinitions.push(...this.createQueryResponseMessage(responseName, operationName, operation));
+        
+        // Queue referenced types for processing when using custom queries
+        this.queueQueryTypesForProcessing(operation);
+        
+      } catch (error) {
+        console.warn(`Failed to parse query ${i + 1}:`, error);
+        continue;
+      }
+    }
+
+    return result;
+  }
+
+  /**
    * Collects RPC methods for query operations
    *
    * @returns Object containing RPC methods and message definitions
    */
   private collectQueryRpcMethods(): CollectionResult {
+    if (this.excludeRootQuery) {
+      return { rpcMethods: [], methodNames: [], messageDefinitions: [] };
+    }
     return this.collectOperationRpcMethods('Query');
   }
 
@@ -759,7 +839,7 @@ Example:
     // Add a description comment for the request message
     if (this.includeComments) {
       const description = field.description
-        ? `Request message for ${field.name} operation${field.description ? ': ' + field.description : ''}.`
+        ? `Request message for ${field.name} operation: ${field.description}.`
         : `Request message for ${field.name} operation.`;
       messageLines.push(...this.formatComment(description, 0)); // Top-level comment, no indent
     }
@@ -843,7 +923,7 @@ Example:
     // Add a description comment for the response message
     if (this.includeComments) {
       const description = field.description
-        ? `Response message for ${fieldName} operation${field.description ? ': ' + field.description : ''}.`
+        ? `Response message for ${fieldName} operation: ${field.description}.`
         : `Response message for ${fieldName} operation.`;
       messageLines.push(...this.formatComment(description, 0)); // Top-level comment, no indent
     }
@@ -880,6 +960,490 @@ Example:
     this.lockManager.reconcileMessageFieldOrder(responseName, [protoFieldName]);
 
     return messageLines;
+  }
+
+  /**
+   * Creates a request message for a query operation from variables
+   */
+  private createQueryRequestMessage(requestName: string, operation: OperationDefinitionNode): string[] {
+    const messageLines: string[] = [];
+
+    // Get variable names and check for removals
+    const lockData = this.lockManager.getLockData();
+    const variableNames = operation.variableDefinitions?.map((varDef) => graphqlFieldToProtoField(varDef.variable.name.value)) || [];
+
+    if (lockData.messages[requestName]) {
+      const originalFieldNames = Object.keys(lockData.messages[requestName].fields);
+      this.trackRemovedFields(requestName, originalFieldNames, variableNames);
+    }
+
+    // Add a description comment for the request message
+    if (this.includeComments) {
+      const operationName = operation.name?.value || 'Query';
+      const description = `Request message for ${operationName} query operation.`;
+      messageLines.push(...this.formatComment(description, 0)); // Top-level comment, no indent
+    }
+
+    messageLines.push(`message ${requestName} {`);
+
+    // Add reserved field numbers if any exist
+    const messageLock = lockData.messages[requestName];
+    if (messageLock?.reservedNumbers && messageLock.reservedNumbers.length > 0) {
+      messageLines.push(`  reserved ${this.formatReservedNumbers(messageLock.reservedNumbers)};`);
+    }
+
+    if (operation.variableDefinitions && operation.variableDefinitions.length > 0) {
+      // Process variables in the order specified by the lock manager
+      const orderedVariableNames = this.lockManager.reconcileMessageFieldOrder(requestName, variableNames);
+
+      for (const varName of orderedVariableNames) {
+        const varDef = operation.variableDefinitions.find((v) => graphqlFieldToProtoField(v.variable.name.value) === varName);
+        if (!varDef) continue;
+
+        // Convert AST type to schema type for processing
+        const schemaVarType = this.getSchemaTypeFromAST(varDef.type);
+        if (!schemaVarType) continue;
+
+        const varType = this.getProtoTypeFromGraphQL(schemaVarType);
+        const varProtoName = graphqlFieldToProtoField(varDef.variable.name.value);
+
+        // Get the appropriate field number, respecting the lock
+        const fieldNumber = this.getFieldNumber(requestName, varProtoName, this.getNextAvailableFieldNumber(requestName));
+
+        // Check if the variable is a list type and add the repeated keyword if needed
+        const isRepeated = isListType(schemaVarType) || (isNonNullType(schemaVarType) && isListType(schemaVarType.ofType));
+        if (isRepeated) {
+          messageLines.push(`  repeated ${varType} ${varProtoName} = ${fieldNumber};`);
+        } else {
+          messageLines.push(`  ${varType} ${varProtoName} = ${fieldNumber};`);
+        }
+
+        // Add complex input types to the queue for processing
+        const namedType = getNamedType(schemaVarType);
+        if (isInputObjectType(namedType) && !this.processedTypes.has(namedType.name)) {
+          this.messageQueue.push(namedType);
+        }
+      }
+    } else {
+      // Even if no variables are defined, check if the query has literal arguments
+      // Extract arguments from the query operation
+      const queryArguments = this.extractArgumentsFromQuery(operation);
+      if (queryArguments.length > 0) {
+        const argNames = queryArguments.map(arg => arg.name);
+        const orderedArgNames = this.lockManager.reconcileMessageFieldOrder(requestName, argNames);
+
+        for (const argName of orderedArgNames) {
+          const arg = queryArguments.find(a => a.name === argName);
+          if (!arg) continue;
+
+          const fieldNumber = this.getFieldNumber(requestName, arg.name, this.getNextAvailableFieldNumber(requestName));
+          messageLines.push(`  ${arg.type} ${arg.name} = ${fieldNumber};`);
+        }
+      }
+    }
+
+    messageLines.push('}');
+    messageLines.push('');
+
+    // Ensure this message is registered in the lock manager data
+    if (variableNames.length > 0) {
+      this.lockManager.reconcileMessageFieldOrder(requestName, variableNames);
+    }
+
+    return messageLines;
+  }
+
+  /**
+   * Extract arguments from a query operation
+   */
+  private extractArgumentsFromQuery(operation: OperationDefinitionNode): Array<{name: string, type: string}> {
+    const args: Array<{name: string, type: string}> = [];
+    const queryType = this.schema.getQueryType();
+    
+    if (!queryType || !operation.selectionSet) {
+      return args;
+    }
+
+    for (const selection of operation.selectionSet.selections) {
+      if (selection.kind === Kind.FIELD) {
+        const fieldName = selection.name.value;
+        const field = queryType.getFields()[fieldName];
+        
+        if (field && selection.arguments) {
+          for (const arg of selection.arguments) {
+            if (arg.name && arg.name.value) {
+              const fieldArg = field.args.find(fa => fa.name === arg.name.value);
+              if (fieldArg) {
+                const protoType = this.getProtoTypeFromGraphQL(fieldArg.type);
+                const protoName = graphqlFieldToProtoField(arg.name.value);
+                args.push({
+                  name: protoName,
+                  type: protoType
+                });
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return args;
+  }
+
+  /**
+   * Creates a response message for a query operation from selection set
+   */
+  private createQueryResponseMessage(responseName: string, operationName: string, operation: OperationDefinitionNode): string[] {
+    const messageLines: string[] = [];
+    const nestedMessages: string[] = [];
+
+    // Extract fields from the top-level query field selection, not the operation itself
+    const allFields = this.extractFieldsFromQueryOperation(operation, operationName, nestedMessages);
+    const fieldNames = allFields.map(field => field.name);
+
+    // Check for field removals
+    const lockData = this.lockManager.getLockData();
+
+    if (lockData.messages[responseName]) {
+      const originalFieldNames = Object.keys(lockData.messages[responseName].fields);
+      this.trackRemovedFields(responseName, originalFieldNames, fieldNames);
+    }
+
+    // Add a description comment for the response message
+    if (this.includeComments) {
+      const description = `Response message for ${operationName} query operation.`;
+      messageLines.push(...this.formatComment(description, 0)); // Top-level comment, no indent
+    }
+
+    messageLines.push(`message ${responseName} {`);
+
+    // Add reserved field numbers if any exist
+    const messageLock = lockData.messages[responseName];
+    if (messageLock?.reservedNumbers && messageLock.reservedNumbers.length > 0) {
+      messageLines.push(`  reserved ${this.formatReservedNumbers(messageLock.reservedNumbers)};`);
+    }
+
+    // Process all fields in order
+    const orderedFieldNames = this.lockManager.reconcileMessageFieldOrder(responseName, fieldNames);
+
+    for (const fieldName of orderedFieldNames) {
+      const field = allFields.find(f => f.name === fieldName);
+      if (!field) continue;
+
+      // Get the appropriate field number, respecting the lock
+      const fieldNumber = this.getFieldNumber(responseName, fieldName, this.getNextAvailableFieldNumber(responseName));
+
+      if (this.includeComments && field.description) {
+        messageLines.push(...this.formatComment(field.description, 1));
+      }
+
+      if (field.isRepeated) {
+        messageLines.push(`  repeated ${field.typeName} ${fieldName} = ${fieldNumber};`);
+      } else {
+        messageLines.push(`  ${field.typeName} ${fieldName} = ${fieldNumber};`);
+      }
+    }
+
+    messageLines.push('}');
+
+    // Ensure this message is registered in the lock manager data
+    if (fieldNames.length > 0) {
+      this.lockManager.reconcileMessageFieldOrder(responseName, fieldNames);
+    }
+
+    // Add nested messages after the main response message
+    return [...messageLines, ...nestedMessages];
+  }
+
+  /**
+   * Extract fields from the top-level query field in the operation
+   */
+  private extractFieldsFromQueryOperation(operation: OperationDefinitionNode, operationName: string, nestedMessages: string[]): Array<{name: string, typeName: string, isRepeated: boolean, description?: string}> {
+    const allFields: Array<{name: string, typeName: string, isRepeated: boolean, description?: string}> = [];
+    const queryType = this.schema.getQueryType();
+    
+    if (!queryType || !operation.selectionSet) {
+      return allFields;
+    }
+
+    // Find the top-level query field and extract its selections
+    for (const selection of operation.selectionSet.selections) {
+      if (selection.kind === Kind.FIELD) {
+        const fieldName = selection.name.value;
+        const field = queryType.getFields()[fieldName];
+        
+        if (!field || !selection.selectionSet) continue;
+
+        const fieldType = getNamedType(field.type);
+        
+        if (isObjectType(fieldType) || isInterfaceType(fieldType)) {
+          // Extract the fields from this query field's selection set
+          // Pass the query field name as prefix for nested message naming
+          return this.extractFieldsFromSelectionSet(selection.selectionSet, fieldType, operationName, nestedMessages, this.capitalize(fieldName));
+        }
+      }
+    }
+
+    return allFields;
+  }
+
+  /**
+   * Extract fields from a selection set
+   */
+  private extractFieldsFromSelectionSet(selectionSet: any, parentType: any, operationName: string, nestedMessages: string[], queryFieldPrefix: string = ''): Array<{name: string, typeName: string, isRepeated: boolean, description?: string}> {
+    const allFields: Array<{name: string, typeName: string, isRepeated: boolean, description?: string}> = [];
+    
+    if (!selectionSet || !selectionSet.selections) {
+      return allFields;
+    }
+
+    const parentFields = parentType.getFields ? parentType.getFields() : {};
+
+    for (const selection of selectionSet.selections) {
+      if (selection.kind === Kind.FIELD) {
+        const fieldName = selection.name.value;
+        const field = parentFields[fieldName];
+        
+        if (!field) continue;
+
+        const fieldType = getNamedType(field.type);
+        const isRepeated = isListType(field.type) || (isNonNullType(field.type) && isListType(field.type.ofType));
+
+        if (selection.selectionSet && (isObjectType(fieldType) || isInterfaceType(fieldType))) {
+          // This field has nested selections, create a special message type for it
+          const nestedMessageName = `Query${operationName}${queryFieldPrefix}${this.capitalize(fieldName)}`;
+          
+          // Add this field to the response using the nested message type name
+          allFields.push({
+            name: fieldName,
+            typeName: nestedMessageName,
+            isRepeated,
+            description: field.description || undefined
+          });
+
+          // Generate the nested message type
+          const nestedMessageDef = this.generateQueryNestedMessageType(nestedMessageName, fieldType, selection.selectionSet, operationName, `${queryFieldPrefix}${this.capitalize(fieldName)}`);
+          if (nestedMessageDef.length > 0) {
+            nestedMessages.push(...nestedMessageDef);
+          }
+        } else {
+          // This is a scalar field or field without nested selections
+          const protoType = this.getProtoTypeFromGraphQL(field.type);
+          allFields.push({
+            name: fieldName,
+            typeName: protoType,
+            isRepeated,
+            description: field.description || undefined
+          });
+        }
+      }
+    }
+
+    return allFields;
+  }
+
+  /**
+   * Collect all selected field names recursively
+   */
+  private collectAllSelectedFields(selectionSet: any, parentType: any, allFields: Set<string>): void {
+    if (!selectionSet || !selectionSet.selections) {
+      return;
+    }
+
+    const parentFields = parentType.getFields ? parentType.getFields() : {};
+
+    for (const selection of selectionSet.selections) {
+      if (selection.kind === Kind.FIELD) {
+        const fieldName = selection.name.value;
+        allFields.add(fieldName);
+
+        const field = parentFields[fieldName];
+        if (field && selection.selectionSet) {
+          const fieldType = getNamedType(field.type);
+          if (isObjectType(fieldType) || isInterfaceType(fieldType)) {
+            this.collectAllSelectedFields(selection.selectionSet, fieldType, allFields);
+          }
+        }
+      }
+    }
+  }
+
+
+
+  /**
+   * Generate a nested message type for a query field with selections
+   */
+  private generateQueryNestedMessageType(
+    messageName: string,
+    fieldType: any,
+    selectionSet: any,
+    operationName: string,
+    prefix: string
+  ): string[] {
+    // Skip if already processed
+    if (this.processedTypes.has(messageName)) {
+      return [];
+    }
+
+    this.processedTypes.add(messageName);
+
+    const messageLines: string[] = [];
+    const fieldDefinitions: Array<{name: string, typeName: string, isRepeated: boolean, fieldNumber: number}> = [];
+
+    // Process the selection set to get field definitions
+    this.processSelectionSetForQueryMessage(selectionSet, fieldType, operationName, prefix, fieldDefinitions);
+
+    // Check for field removals if lock data exists for this message
+    const lockData = this.lockManager.getLockData();
+    const fieldNames = fieldDefinitions.map(f => f.name);
+    
+    if (lockData.messages[messageName]) {
+      const originalFieldNames = Object.keys(lockData.messages[messageName].fields);
+      this.trackRemovedFields(messageName, originalFieldNames, fieldNames);
+    }
+
+    messageLines.push('');
+    messageLines.push(`message ${messageName} {`);
+
+    // Add reserved field numbers if any exist
+    const messageLock = lockData.messages[messageName];
+    if (messageLock?.reservedNumbers && messageLock.reservedNumbers.length > 0) {
+      messageLines.push(`  reserved ${this.formatReservedNumbers(messageLock.reservedNumbers)};`);
+    }
+
+    // Add field definitions
+    for (const fieldDef of fieldDefinitions) {
+      if (fieldDef.isRepeated) {
+        messageLines.push(`  repeated ${fieldDef.typeName} ${fieldDef.name} = ${fieldDef.fieldNumber};`);
+      } else {
+        messageLines.push(`  ${fieldDef.typeName} ${fieldDef.name} = ${fieldDef.fieldNumber};`);
+      }
+    }
+
+    messageLines.push('}');
+
+    // Ensure this message is registered in the lock manager data
+    if (fieldNames.length > 0) {
+      this.lockManager.reconcileMessageFieldOrder(messageName, fieldNames);
+    }
+
+    return messageLines;
+  }
+
+  /**
+   * Process a selection set to generate field definitions for query nested message
+   */
+  private processSelectionSetForQueryMessage(
+    selectionSet: any,
+    parentType: any,
+    operationName: string,
+    prefix: string,
+    fieldDefinitions: Array<{name: string, typeName: string, isRepeated: boolean, fieldNumber: number}>
+  ): void {
+    if (!selectionSet || !selectionSet.selections) {
+      return;
+    }
+
+    const parentFields = parentType.getFields ? parentType.getFields() : {};
+
+    for (const selection of selectionSet.selections) {
+      if (selection.kind === Kind.FIELD) {
+        const fieldName = selection.name.value;
+        const field = parentFields[fieldName];
+        
+        if (!field) continue;
+
+        const fieldType = getNamedType(field.type);
+        const isRepeated = isListType(field.type) || (isNonNullType(field.type) && isListType(field.type.ofType));
+
+        let typeName: string;
+
+        if (selection.selectionSet && (isObjectType(fieldType) || isInterfaceType(fieldType))) {
+          // This field has nested selections, create a special message type for it
+          typeName = `${operationName}${prefix}${this.capitalize(fieldName)}`;
+          
+          // Generate the nested message type recursively
+          this.generateQueryNestedMessageType(typeName, fieldType, selection.selectionSet, operationName, `${prefix}${this.capitalize(fieldName)}`);
+        } else {
+          // This is a scalar field or field without nested selections
+          typeName = this.getProtoTypeFromGraphQL(field.type);
+        }
+
+        const fieldNumber = this.getFieldNumber(`${operationName}${prefix}`, fieldName, fieldDefinitions.length + 1);
+
+        fieldDefinitions.push({
+          name: fieldName,
+          typeName,
+          isRepeated,
+          fieldNumber
+        });
+      }
+    }
+  }
+
+  /**
+   * Queue types referenced in a query operation for processing
+   */
+  private queueQueryTypesForProcessing(operation: OperationDefinitionNode): void {
+    // For custom queries, we don't want to queue the general schema types
+    // since we create specific message types based on the query selections
+    
+    // If there are variables, queue their types for processing
+    if (operation.variableDefinitions) {
+      for (const varDef of operation.variableDefinitions) {
+        const schemaType = this.getSchemaTypeFromAST(varDef.type);
+        if (schemaType) {
+          const namedType = getNamedType(schemaType);
+          if (!isScalarType(namedType) && !this.processedTypes.has(namedType.name)) {
+            this.messageQueue.push(namedType);
+          }
+        }
+      }
+    }
+
+    // Don't queue types from the selection set for custom queries
+    // since we handle them specifically in the response message generation
+  }
+
+  /**
+   * Recursively queue types referenced in a selection set
+   */
+  private queueTypesFromSelectionSet(selectionSet: any, parentType: any): void {
+    if (!selectionSet || !selectionSet.selections) {
+      return;
+    }
+
+    const parentFields = parentType.getFields ? parentType.getFields() : {};
+
+    for (const selection of selectionSet.selections) {
+      if (selection.kind === Kind.FIELD) {
+        const fieldName = selection.name.value;
+        const field = parentFields[fieldName];
+        
+        if (!field) continue;
+
+        // Queue the field's return type for processing  
+        this.queueFieldTypeForProcessing(field);
+
+        // If this field has nested selections, recursively queue types from them
+        const fieldType = getNamedType(field.type);
+        if (selection.selectionSet && (isObjectType(fieldType) || isInterfaceType(fieldType))) {
+          this.queueTypesFromSelectionSet(selection.selectionSet, fieldType);
+        }
+      }
+    }
+  }
+
+  /**
+   * Convert an AST TypeNode to a GraphQL schema type
+   */
+  private getSchemaTypeFromAST(astType: any): GraphQLType | null {
+    try {
+      return typeFromAST(this.schema, astType) || null;
+    } catch (error) {
+      console.warn('Failed to convert AST type to schema type:', error);
+      return null;
+    }
   }
 
   /**
@@ -1501,6 +2065,13 @@ Example:
         }
       })
       .join(', ');
+  }
+
+  /**
+   * Capitalize the first letter of a string
+   */
+  private capitalize(str: string): string {
+    return str.charAt(0).toUpperCase() + str.slice(1);
   }
 
   /**
