@@ -5,14 +5,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/codes"
-	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
-	"go.opentelemetry.io/otel/trace"
-	"go.opentelemetry.io/otel/trace/noop"
 	"io"
 	"net/http"
 	"time"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/propagation"
+	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
+	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace/noop"
 
 	"github.com/hashicorp/go-retryablehttp"
 )
@@ -184,6 +186,8 @@ func (c *Client) doRequest(ctx context.Context, method, url string, body io.Read
 		return nil, fmt.Errorf("error creating request: %w", err)
 	}
 
+	otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(req.Header))
+
 	// Add default headers
 	for key, value := range c.headers {
 		req.Header.Set(key, value)
@@ -263,6 +267,8 @@ func (c *Client) doRequestWithRetry(ctx context.Context, method, url string, bod
 
 	// Set context
 	retryReq = retryReq.WithContext(ctx)
+
+	otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(retryReq.Header))
 
 	// Add default headers
 	for key, value := range c.headers {
