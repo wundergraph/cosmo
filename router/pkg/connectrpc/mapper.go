@@ -5,11 +5,10 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/bufbuild/protocompile/linker"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	grpcdatasource "github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/grpc_datasource"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/reflect/protoreflect"
-	"google.golang.org/protobuf/types/descriptorpb"
 	"google.golang.org/protobuf/types/dynamicpb"
 )
 
@@ -26,8 +25,28 @@ func readMapping(buf io.Reader) (*nodev1.GRPCMapping, error) {
 	return mapping, nil
 }
 
-func graphqlToRPC(protoFd *descriptorpb.FileDescriptorProto, mapping *nodev1.GRPCMapping, graphqlResponse string) (*dynamicpb.Message, error) {
-	compiler, err := grpcdatasource.NewProtoCompiler(protoFd.String(), mapping)
+func getFieldsMapping(mapping *nodev1.GRPCMapping, typeName string) []*nodev1.FieldMapping {
+	// map to base entity
+	var entityMapping *nodev1.EntityMapping
+	for _, entity := range mapping.EntityMappings {
+		if entity.Response == typeName {
+			entityMapping = entity
+			break
+		}
+	}
+
+	var responseTypeMapping []*nodev1.FieldMapping
+	for _, typeMapping := range mapping.TypeFieldMappings {
+		if typeMapping.Type == entityMapping.TypeName {
+			responseTypeMapping = typeMapping.FieldMappings
+			break
+		}
+	}
+
+	return responseTypeMapping
+}
+
+func graphqlToRPC(protoFd linker.File, mapping *nodev1.GRPCMapping, graphqlResponse string) (*dynamicpb.Message, error) {
 
 	// Parse GraphQL response JSON
 	var gqlResp map[string]interface{}
@@ -69,40 +88,42 @@ func graphqlToRPC(protoFd *descriptorpb.FileDescriptorProto, mapping *nodev1.GRP
 
 	// Find the response message type
 	responseTypes := make(map[string]protoreflect.MessageDescriptor)
-	for _, mt := range protoFd.GetMessageType() {
-		if mt.GetName() == responseTypeName {
-			responseTypes[mt.GetName()] = mt
-		}
+	for i := 0; i < protoFd.Messages().Len(); i++ {
+		mt := protoFd.Messages().Get(i)
+		responseTypes[string(mt.Name())] = mt
 	}
 	responseType := responseTypes[responseTypeName]
 
 	// Create dynamic message
 	dynamicMsg := dynamicpb.NewMessage(responseType)
 
-	// map to base entity
-	var entityMapping *nodev1.EntityMapping
-	for _, entity := range mapping.EntityMappings {
-		if entity.Response == responseTypeName {
-			entityMapping = entity
-			break
-		}
-	}
-
-	// Get the GraphQL data for the operation (assuming "TestQueryUser" key)
-
-	var responseTypeMapping []*nodev1.FieldMapping
-	for _, typeMapping := range mapping.TypeFieldMappings {
-		if typeMapping.Type == entityMapping.TypeName {
-			responseTypeMapping = typeMapping.FieldMappings
-			break
-		}
-	}
+	responseTypeMapping := getFieldsMapping(mapping, responseTypeName)
 
 	protoFields := responseType.Fields()
 	for _, fieldMapping := range responseTypeMapping {
 		field := protoFields.ByName(protoreflect.Name(fieldMapping.Mapped))
-		if field != nil {
+		switch field.Kind() {
+		case protoreflect.StringKind:
 			dynamicMsg.Set(field, protoreflect.ValueOfString(resOperationData[fieldMapping.Original].(string)))
+		case protoreflect.MessageKind:
+			subMsg := dynamicpb.NewMessage(field.Message())
+			subResponseName := string(field.Message().Name())
+			subResponseType := responseTypes[subResponseName]
+			subTypeMapping := getFieldsMapping(mapping, subResponseName)
+			subOperationData := resOperationData[fieldMapping.Original].(map[string]any)
+			for _, subFieldMapping := range subTypeMapping {
+				subfield := subResponseType.Fields().ByName(protoreflect.Name(subFieldMapping.Mapped))
+				switch subfield.Kind() {
+				case protoreflect.StringKind:
+					subMsg.Set(subfield, protoreflect.ValueOfString(subOperationData[subFieldMapping.Original].(string)))
+				case protoreflect.Int32Kind:
+					asInt32 := int32(subOperationData[subFieldMapping.Original].(float64))
+					subMsg.Set(subfield, protoreflect.ValueOfInt32(asInt32))
+				}
+			}
+			dynamicMsg.Set(field, protoreflect.ValueOfMessage(subMsg))
+		default:
+			return nil, fmt.Errorf("field %s of type %s is not supported", fieldMapping.Mapped, responseTypeName)
 		}
 	}
 

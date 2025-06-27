@@ -7,6 +7,14 @@
             "response": "QueryTestQueryUserResponse",
             "rpc": "LookupUserById",
             "typeName": "User"
+        },
+        {
+            "key": "id",
+            "kind": "entity",
+            "request": "LookupUserByIdRequest",
+            "response": "QueryTestQueryUserUserDetails",
+            "rpc": "LookupUserById",
+            "typeName": "UserDetails"
         }
     ],
     "operationMappings": [

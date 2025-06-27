@@ -1,8 +1,10 @@
 package connectrpc
 
 import (
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
@@ -29,8 +31,20 @@ message HelloReply {
 `
 
 func TestConnect(t *testing.T) {
-	c := NewConnectRPC(TestSchema)
-	err := c.Bootstrap()
+	mapperData, err := os.Open("testdata/base.mapper.json")
+	require.NoError(t, err)
+
+	mapping, err := readMapping(mapperData)
+	require.NoError(t, err)
+	require.NotNil(t, mapping)
+
+	schemaFh, err := os.Open("testdata/base.proto")
+	require.NoError(t, err)
+	schema, err := io.ReadAll(schemaFh)
+	require.NoError(t, err)
+
+	c := NewConnectRPC(string(schema), mapping)
+	err = c.Bootstrap()
 	require.NoError(t, err)
 
 	// Test the HTTP handler
@@ -38,8 +52,8 @@ func TestConnect(t *testing.T) {
 	require.NotNil(t, handler)
 
 	// Create a test request
-	body := strings.NewReader(`{"name": "John"}`)
-	req := httptest.NewRequest(http.MethodPost, "/SayHello", body)
+	body := strings.NewReader(`{"id": "12"}`)
+	req := httptest.NewRequest(http.MethodPost, "/QueryTestQueryUser", body)
 	req.Header.Add("Content-Type", "application/json")
 
 	w := httptest.NewRecorder()
@@ -49,5 +63,5 @@ func TestConnect(t *testing.T) {
 
 	// The handler should respond (even if it's just a basic response)
 	require.NotEqual(t, 0, w.Code)
-	require.Equal(t, `{"message":"Hello, World!"}`, w.Body.String())
+	require.JSONEq(t, `{"id":"1", "name":"John Doe", "details":{"age":30}}`, w.Body.String())
 }
