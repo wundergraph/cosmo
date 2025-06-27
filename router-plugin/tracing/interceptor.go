@@ -3,6 +3,7 @@ package tracing
 import (
 	"context"
 	"fmt"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc"
@@ -36,6 +37,13 @@ func CreateTracingInterceptor(tracingOpts TracingOptions) (func(ctx context.Cont
 				var span trace.Span
 				ctx, span = tracer.Start(ctx, "Router Plugin - "+info.FullMethod)
 				defer span.End()
+
+				result, err := handler(ctx, req)
+				if err != nil {
+					span.SetStatus(codes.Error, err.Error())
+					span.RecordError(err)
+				}
+				return result, err
 			}
 		}
 

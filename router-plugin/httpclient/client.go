@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/noop"
@@ -159,11 +160,21 @@ func (c *Client) Request(ctx context.Context, method, path string, body interfac
 
 	// Use the retryable client if enabled
 	if c.retryOptions.Enabled {
-		return c.doRequestWithRetry(ctx, method, url, reqBody, body != nil, options...)
+		retry, err := c.doRequestWithRetry(ctx, method, url, reqBody, body != nil, options...)
+		if err != nil {
+			span.SetStatus(codes.Error, err.Error())
+			span.RecordError(err)
+		}
+		return retry, err
 	}
 
 	// Otherwise use the standard client
-	return c.doRequest(ctx, method, url, reqBody, body != nil, options...)
+	request, err := c.doRequest(ctx, method, url, reqBody, body != nil, options...)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+	}
+	return request, err
 }
 
 // doRequest performs the HTTP request without retries

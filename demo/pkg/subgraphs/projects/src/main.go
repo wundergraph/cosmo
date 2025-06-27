@@ -8,12 +8,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/wundergraph/cosmo/router-plugin/httpclient"
-	"github.com/wundergraph/cosmo/router-plugin/tracing"
-
 	service "github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects/generated"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects/src/data"
 	routerplugin "github.com/wundergraph/cosmo/router-plugin"
+	"github.com/wundergraph/cosmo/router-plugin/httpclient"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -25,23 +23,15 @@ const (
 )
 
 func main() {
-	tracingInterceptor, err := tracing.CreateTracingInterceptor(tracing.TracingOptions{
-		ServiceName:    serviceName,
-		ServiceVersion: serviceVersion,
-	})
-	if err != nil {
-		log.Fatal("failed to create tracing interceptor:", err)
-	}
-
 	pl, err := routerplugin.NewRouterPlugin(
 		func(s *grpc.Server) {
 			s.RegisterService(&service.ProjectsService_ServiceDesc, &ProjectsService{
 				nextID: 1,
 			})
 		},
-		routerplugin.WithGRPCServerOptions(
-			grpc.ChainUnaryInterceptor(tracingInterceptor),
-		),
+		routerplugin.WithServiceName(serviceName),
+		routerplugin.WithServiceVersion(serviceVersion),
+		routerplugin.WithTracing(),
 	)
 
 	if err != nil {
