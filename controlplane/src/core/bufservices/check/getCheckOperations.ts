@@ -41,6 +41,8 @@ export function getCheckOperations(
         createdAt: '',
         clientTrafficCheckSkipped: false,
         totalOperationsCount: 0,
+        doAllOperationsHaveIgnoreAllOverride: false,
+        doAllOperationsHaveAllTheirChangesMarkedSafe: false,
       };
     }
 
@@ -66,6 +68,8 @@ export function getCheckOperations(
         createdAt: '',
         clientTrafficCheckSkipped: false,
         totalOperationsCount: 0,
+        doAllOperationsHaveIgnoreAllOverride: false,
+        doAllOperationsHaveAllTheirChangesMarkedSafe: false,
       };
     }
 
@@ -81,6 +85,8 @@ export function getCheckOperations(
         createdAt: '',
         clientTrafficCheckSkipped: false,
         totalOperationsCount: 0,
+        doAllOperationsHaveIgnoreAllOverride: false,
+        doAllOperationsHaveAllTheirChangesMarkedSafe: false,
       };
     }
 
@@ -88,6 +94,7 @@ export function getCheckOperations(
       checkId: req.checkId,
       limit: req.limit,
       offset: req.offset,
+      search: req.search,
     });
 
     const { trafficCheckDays } = await schemaCheckRepo.getFederatedGraphConfigForCheckId(req.checkId, graph.id);
@@ -104,7 +111,16 @@ export function getCheckOperations(
 
     const affectedOperationsCount = await schemaCheckRepo.getAffectedOperationsCountByCheckId({
       checkId: req.checkId,
+      search: req.search,
     });
+
+    const { doAllOperationsHaveIgnoreAllOverride, doAllOperationsHaveAllTheirChangesMarkedSafe } =
+      await operationsRepo.getOperationOverrideStatusOfCheck({
+        checkId: req.checkId,
+        checkDetails,
+        overrides,
+        ignoreAllOverrides,
+      });
 
     return {
       response: {
@@ -126,6 +142,8 @@ export function getCheckOperations(
       createdAt: check.timestamp,
       clientTrafficCheckSkipped: check.clientTrafficCheckSkipped || false,
       totalOperationsCount: affectedOperationsCount,
+      doAllOperationsHaveIgnoreAllOverride,
+      doAllOperationsHaveAllTheirChangesMarkedSafe,
     };
   });
 }

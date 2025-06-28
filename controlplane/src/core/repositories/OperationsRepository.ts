@@ -2,6 +2,7 @@ import { OverrideChange } from '@wundergraph/cosmo-connect/dist/platform/v1/plat
 import { aliasedTable, and, asc, desc, eq, isNull, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { PlainMessage } from '@bufbuild/protobuf';
+import { DBSchemaChangeType } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import { federatedGraphClients, federatedGraphPersistedOperations, users } from '../../db/schema.js';
 import {
@@ -9,8 +10,24 @@ import {
   PersistedOperationDTO,
   PersistedOperationWithClientDTO,
   SchemaChangeType,
+  SchemaCheckDetailsDTO,
   UpdatedPersistedOperation,
 } from '../../types/index.js';
+import { SchemaCheckRepository } from './SchemaCheckRepository.js';
+
+type ChangeOverride = IgnoreAllOverride & {
+  changeType: DBSchemaChangeType;
+  path: string | null;
+};
+
+type IgnoreAllOverride = {
+  createdAt: string;
+  id: string;
+  name: string;
+  createdBy: string | null;
+  namespaceId: string;
+  hash: string;
+};
 
 export class OperationsRepository {
   constructor(
@@ -328,7 +345,7 @@ export class OperationsRepository {
     }));
   }
 
-  public async getChangeOverrides(data: { namespaceId: string }) {
+  public async getChangeOverrides(data: { namespaceId: string }): Promise<ChangeOverride[]> {
     const res = await this.db.query.operationChangeOverrides.findMany({
       where: eq(schema.operationChangeOverrides.namespaceId, data.namespaceId),
       orderBy: desc(schema.operationChangeOverrides.createdAt),
@@ -340,7 +357,7 @@ export class OperationsRepository {
     }));
   }
 
-  public async getIgnoreAllOverrides(data: { namespaceId: string }) {
+  public async getIgnoreAllOverrides(data: { namespaceId: string }): Promise<IgnoreAllOverride[]> {
     const res = await this.db.query.operationIgnoreAllOverrides.findMany({
       where: eq(schema.operationIgnoreAllOverrides.namespaceId, data.namespaceId),
     });
@@ -349,6 +366,45 @@ export class OperationsRepository {
       ...r,
       createdAt: r.createdAt.toISOString(),
     }));
+  }
+
+  // This function is used to determine if all operations have an ignore all override or if all their changes have an override
+  // This is used to determine what options to show in the UI as the ui wont have the data of all the operations
+  public async getOperationOverrideStatusOfCheck({
+    checkId,
+    checkDetails,
+    overrides,
+    ignoreAllOverrides,
+  }: {
+    checkId: string;
+    checkDetails: SchemaCheckDetailsDTO;
+    overrides: ChangeOverride[];
+    ignoreAllOverrides: IgnoreAllOverride[];
+  }) {
+    const schemaCheckRepo = new SchemaCheckRepository(this.db);
+    const affectedOperations = await schemaCheckRepo.getAffectedOperationsByCheckId({
+      checkId,
+    });
+
+    const allOperations = affectedOperations.map((operation) => ({
+      ...operation,
+      impactingChanges: checkDetails.changes
+        .filter(({ id }) => operation.schemaChangeIds.includes(id))
+        .map((c) => ({
+          ...c,
+          hasOverride: overrides.some(
+            (o) => o.hash === operation.hash && o.changeType === c.changeType && o.path === c.path,
+          ),
+        })),
+      hasIgnoreAllOverride: ignoreAllOverrides.some((io) => io.hash === operation.hash),
+    }));
+
+    return {
+      doAllOperationsHaveIgnoreAllOverride: allOperations.every((op) => op.hasIgnoreAllOverride),
+      doAllOperationsHaveAllTheirChangesMarkedSafe: allOperations.every((op) =>
+        op.impactingChanges.every((c) => !!c.hasOverride),
+      ),
+    };
   }
 
   public getConsolidatedOverridesView(data: { namespaceId: string }) {
