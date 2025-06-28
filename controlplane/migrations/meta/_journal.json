@@ -876,6 +876,13 @@
       "when": 1748164000450,
       "tag": "0124_fancy_greymalkin",
       "breakpoints": true
+    },
+    {
+      "idx": 125,
+      "version": "7",
+      "when": 1750093037984,
+      "tag": "0125_acoustic_jackpot",
+      "breakpoints": true
     }
   ]
 }
