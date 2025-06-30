@@ -2683,6 +2683,7 @@ export class FederationFactory {
     for (const subgraph of this.internalSubgraphBySubgraphName.values()) {
       subgraphConfigBySubgraphName.set(subgraph.name, {
         configurationDataByTypeName: subgraph.configurationDataByTypeName,
+        isVersionTwo: subgraph.isVersionTwo,
         parentDefinitionDataByTypeName: subgraph.parentDefinitionDataByTypeName,
         schema: subgraph.schema,
       });
@@ -2969,6 +2970,7 @@ export class FederationFactory {
     for (const subgraph of this.internalSubgraphBySubgraphName.values()) {
       subgraphConfigBySubgraphName.set(subgraph.name, {
         configurationDataByTypeName: subgraph.configurationDataByTypeName,
+        isVersionTwo: subgraph.isVersionTwo,
         parentDefinitionDataByTypeName: subgraph.parentDefinitionDataByTypeName,
         schema: subgraph.schema,
       });
