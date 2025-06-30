@@ -595,6 +595,24 @@ describe('FederationFactory tests', () => {
     );
   });
 
+  test('that version one subgraph is assigned correctly', () => {
+    const result = federateSubgraphs([subgraphE], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+    expect(result.success).toBe(true);
+
+    const subgraphConfig = result.subgraphConfigBySubgraphName.get(subgraphE.name);
+    expect(subgraphConfig).toBeDefined();
+    expect(subgraphConfig?.isVersionTwo).toBe(false);
+  });
+
+  test('that version two subgraph is assigned correctly', () => {
+    const result = federateSubgraphs([subgraphJ], ROUTER_COMPATIBILITY_VERSION_ONE,) as FederationResultSuccess;
+    expect(result.success).toBe(true);
+
+    const subgraphConfig = result.subgraphConfigBySubgraphName.get(subgraphJ.name);
+    expect(subgraphConfig).toBeDefined();
+    expect(subgraphConfig?.isVersionTwo).toBe(true);
+  });
+
   test('that custom root types are renamed', () => {
     const result = federateSubgraphs([subgraphF], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
     expect(result.success).toBe(true);
