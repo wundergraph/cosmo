@@ -1931,6 +1931,13 @@ export class TypeFieldMapping extends Message<TypeFieldMapping> {
    */
   fieldMappings: FieldMapping[] = [];
 
+  /**
+   * mapped gRPC type name
+   *
+   * @generated from field: string mapped = 3;
+   */
+  mapped = "";
+
   constructor(data?: PartialMessage<TypeFieldMapping>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1941,6 +1948,7 @@ export class TypeFieldMapping extends Message<TypeFieldMapping> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "field_mappings", kind: "message", T: FieldMapping, repeated: true },
+    { no: 3, name: "mapped", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TypeFieldMapping {

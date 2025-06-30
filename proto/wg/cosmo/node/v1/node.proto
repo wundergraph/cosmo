@@ -284,6 +284,8 @@ message TypeFieldMapping {
   string type = 1;
   // Mappings for each field in the type
   repeated FieldMapping field_mappings = 2;
+  // mapped gRPC type name
+  string mapped = 3;
 }
 
 // Defines mapping for a single field

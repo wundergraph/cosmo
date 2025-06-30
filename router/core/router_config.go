@@ -117,6 +117,7 @@ type Config struct {
 	mcp                        config.MCPConfiguration
 	plugins                    config.PluginsConfiguration
 	tracingAttributes          []config.CustomAttribute
+	connectRPC                 *ConnectRPCHandler
 }
 
 // Usage returns an anonymized version of the config for usage tracking

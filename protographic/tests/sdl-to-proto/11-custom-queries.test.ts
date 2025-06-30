@@ -24,11 +24,20 @@ describe('SDL to Proto Custom Queries', () => {
 
     const query = `
       query TestQueryUser {
-        user(id: "1") {
+        user(id: 1) {
           id
           name
           details {
             age
+          }
+        }
+      }
+      query TestQueryUser2 {
+        user(id: $id2) {
+          id
+          name
+          timelogs {
+            when
           }
         }
       }
@@ -68,10 +77,9 @@ describe('SDL to Proto Custom Queries', () => {
       "syntax = "proto3";
       package service.v1;
 
-      option go_package = "cosmo/pkg/proto/service.v1;servicev1";
-
       service DefaultService {
         rpc QueryTestQueryUser(QueryTestQueryUserRequest) returns (QueryTestQueryUserResponse) {}
+        rpc QueryTestQueryUser2(QueryTestQueryUser2Request) returns (QueryTestQueryUser2Response) {}
       }
 
       message QueryTestQueryUserRequest {
@@ -79,13 +87,34 @@ describe('SDL to Proto Custom Queries', () => {
       }
 
       message QueryTestQueryUserResponse {
-        string id = 1;
-        string name = 2;
-        QueryTestQueryUserUserDetails details = 3;
+        User user = 1;
       }
+
+      // message QueryTestQueryUserResponse {
+      //   string id = 1;
+      //   string name = 2;
+      //   QueryTestQueryUserUserDetails details = 3;
+      // }
 
       message QueryTestQueryUserUserDetails {
         int32 age = 1;
+      }
+
+      message QueryTestQueryUser2Request {
+        string id = 1;
+      }
+
+      message QueryTestQueryUser2Response {
+        User user = 1;
+      }
+      message User {
+        string id = 1;
+        string name = 2;
+        QueryTestQueryUser2UserTimelogs timelogs = 3;
+      }
+
+      message QueryTestQueryUser2UserTimelogs {
+        string when = 1;
       }"
     `);
   });

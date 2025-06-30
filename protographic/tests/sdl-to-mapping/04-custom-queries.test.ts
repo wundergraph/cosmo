@@ -45,6 +45,7 @@ describe('GraphQL Custom Queries to Proto Mapping', () => {
             "response": "QueryTestQueryUserResponse",
             "rpc": "LookupUserById",
             "typeName": "User",
+            "alias": ["QueryTestQueryUserResponse"],
           },
         ],
         "operationMappings": [
@@ -73,6 +74,7 @@ describe('GraphQL Custom Queries to Proto Mapping', () => {
                 "original": "details",
               },
             ],
+            "mapped": "QueryTestQueryUserResponse",
             "type": "User",
           },
           {

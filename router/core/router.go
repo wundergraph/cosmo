@@ -40,6 +40,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/internal/stringsx"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/connectrpc"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/selfregister"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
@@ -2013,6 +2014,12 @@ func WithPlugins(cfg config.PluginsConfiguration) Option {
 func WithDemoMode(demoMode bool) Option {
 	return func(r *Router) {
 		r.demoMode = demoMode
+	}
+}
+
+func WithConnectRPC(prefix string, data []connectrpc.ConnectRPCData) Option {
+	return func(r *Router) {
+		r.connectRPC = NewConnectRPCHandler(prefix, data)
 	}
 }
 

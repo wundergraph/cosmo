@@ -43,23 +43,20 @@ func TestConnect(t *testing.T) {
 	schema, err := io.ReadAll(schemaFh)
 	require.NoError(t, err)
 
-	c := NewConnectRPC(string(schema), mapping)
+	c := NewConnectRPC("", string(schema), mapping)
 	err = c.Bootstrap()
 	require.NoError(t, err)
 
-	// Test the HTTP handler
-	handler := c.Handler()
-	require.NotNil(t, handler)
-
 	// Create a test request
-	body := strings.NewReader(`{"id": "12"}`)
-	req := httptest.NewRequest(http.MethodPost, "/QueryTestQueryUser", body)
+	body := strings.NewReader(`{"id": "1"}`)
+	req := httptest.NewRequest(http.MethodPost, "/service.v1.DefaultService/QueryTestQueryUser", body)
 	req.Header.Add("Content-Type", "application/json")
 
 	w := httptest.NewRecorder()
 
 	// Call the handler
-	handler.ServeHTTP(w, req)
+	found := c.HandlerFunc(w, req)
+	require.True(t, found)
 
 	// The handler should respond (even if it's just a basic response)
 	require.NotEqual(t, 0, w.Code)

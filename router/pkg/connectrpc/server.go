@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"connectrpc.com/connect"
 	"github.com/bufbuild/protocompile"
@@ -13,6 +14,27 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/dynamicpb"
 )
+
+func sendGraphqlRequest(request string) string {
+	return `
+	{
+		"data": {
+			"TestQueryUser": {
+				"id": "1",
+				"name": "John Doe",
+				"details": {
+					"age": 30
+				}
+			}
+		}
+	}
+	`
+}
+
+type ConnectRPCData struct {
+	Schema  string
+	Mapping *nodev1.GRPCMapping
+}
 
 type UniversalMessage struct {
 	msg *dynamicpb.Message
@@ -33,6 +55,7 @@ func (m *UniversalMessage) Get() *dynamicpb.Message {
 type OperationPath string
 
 type ConnectRPCOperation struct {
+	PackageName  string
 	ServiceName  string
 	MethodName   string
 	Schema       protoreflect.MessageDescriptor
@@ -44,28 +67,22 @@ type ConnectRPCOperation struct {
 	mapping      *nodev1.GRPCMapping
 }
 
+func (o *ConnectRPCOperation) Input() protoreflect.MessageDescriptor {
+	return o.input
+}
+
+func (o *ConnectRPCOperation) Output() protoreflect.MessageDescriptor {
+	return o.output
+}
+
 func (o *ConnectRPCOperation) Procedure() string {
-	return o.MethodName
+	return fmt.Sprintf("/%s.%s/%s", o.PackageName, o.ServiceName, o.MethodName)
 }
 
-func sendGraphqlRequest(request string) string {
-	return `
-	{
-		"data": {
-			"TestQueryUser": {
-				"id": "1",
-				"name": "John Doe",
-				"details": {
-					"age": 30
-				}
-			}
-		}
-	}
-	`
-}
+type FuncUnaryFn func(ctx context.Context, r *connect.Request[UniversalMessage]) (*connect.Response[UniversalMessage], error)
 
-func (o *ConnectRPCOperation) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	makeResponse := func(ctx context.Context, r *connect.Request[UniversalMessage]) (*connect.Response[UniversalMessage], error) {
+func (o *ConnectRPCOperation) GetUnaryFunc() FuncUnaryFn {
+	return func(ctx context.Context, r *connect.Request[UniversalMessage]) (*connect.Response[UniversalMessage], error) {
 		// Build request
 		rMsg := r.Msg.Get()
 		params := make(map[string]any)
@@ -94,66 +111,51 @@ func (o *ConnectRPCOperation) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		response := connect.NewResponse(&UniversalMessage{msg: msg})
 		return response, nil
 	}
-
-	pingServicePingHandler := connect.NewUnaryHandler[UniversalMessage, UniversalMessage](
-		o.Procedure(),
-		makeResponse,
-		connect.WithSchema(o.Schema),
-		connect.WithIdempotency(connect.IdempotencyNoSideEffects),
-		connect.WithRequestInitializer(func(spec connect.Spec, message any) error {
-			var desc protoreflect.MessageDescriptor
-			for i := 0; i < o.fd.Messages().Len(); i++ {
-				mt := o.fd.Messages().Get(i)
-				if mt.FullName() == o.input.FullName() {
-					desc = mt
-					break
-				}
-			}
-			if desc == nil {
-				return connect.NewError(connect.CodeInternal, fmt.Errorf("message type not found"))
-			}
-			msg := dynamicpb.NewMessage(desc)
-			message.(*UniversalMessage).Set(msg)
-			return nil
-		}),
-	)
-	pingServicePingHandler.ServeHTTP(w, r)
 }
 
 type ConnectRPC struct {
-	ops     map[OperationPath]*ConnectRPCOperation
-	schema  string
-	mapping *nodev1.GRPCMapping
+	prefix string
+	ops    map[OperationPath]*ConnectRPCOperation
+	data   []ConnectRPCData
+	fd     linker.File
+}
+
+func (c *ConnectRPC) GetOperation(path OperationPath) *ConnectRPCOperation {
+	return c.ops[path]
 }
 
 // Start starts the ConnectRPC server
 func (c *ConnectRPC) Bootstrap() error {
 	c.ops = make(map[OperationPath]*ConnectRPCOperation)
-	fd, err := fileDescriptorProto(c.schema, context.TODO())
-	if err != nil {
-		return err
-	}
+	for _, d := range c.data {
+		fd, err := fileDescriptorProto(d.Schema, context.TODO())
+		if err != nil {
+			return err
+		}
 
-	opToQueries := make(map[string]string)
-	for _, op := range c.mapping.GetOperationMappings() {
-		opToQueries[op.GetMapped()] = op.GetOriginalQuery()
-	}
+		opToQueries := make(map[string]string)
+		for _, op := range d.Mapping.GetOperationMappings() {
+			opToQueries[op.GetMapped()] = op.GetOriginalQuery()
+		}
 
-	services := fd.Services()
-	for i := 0; i < services.Len(); i++ {
-		svc := services.Get(i)
-		for j := 0; j < svc.Methods().Len(); j++ {
-			method := svc.Methods().Get(j)
-			c.ops[OperationPath("/"+string(method.Name()))] = &ConnectRPCOperation{
-				ServiceName:  string(svc.Name()),
-				MethodName:   string(method.Name()),
-				Schema:       method.Input(),
-				input:        method.Input(),
-				output:       method.Output(),
-				fd:           fd,
-				graphqlQuery: opToQueries[string(method.Name())],
-				schema:       c.schema,
-				mapping:      c.mapping,
+		services := fd.Services()
+		for i := 0; i < services.Len(); i++ {
+			svc := services.Get(i)
+			for j := 0; j < svc.Methods().Len(); j++ {
+				method := svc.Methods().Get(j)
+				op := &ConnectRPCOperation{
+					PackageName:  string(svc.ParentFile().Package()),
+					ServiceName:  string(svc.Name()),
+					MethodName:   string(method.Name()),
+					Schema:       method.Input(),
+					input:        method.Input(),
+					output:       method.Output(),
+					fd:           fd,
+					graphqlQuery: opToQueries[string(method.Name())],
+					schema:       d.Schema,
+					mapping:      d.Mapping,
+				}
+				c.ops[OperationPath(op.Procedure())] = op
 			}
 		}
 	}
@@ -193,21 +195,38 @@ func fileDescriptorProto(proto string, ctx context.Context) (linker.File, error)
 	return mainFile, nil
 }
 
-func (c *ConnectRPC) Handler() http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		op, found := c.ops[OperationPath(r.URL.Path)]
-		if !found {
-			http.NotFound(w, r)
-			return
-		}
+func (c *ConnectRPC) HandlerFunc(w http.ResponseWriter, r *http.Request) bool {
+	path := strings.TrimPrefix(r.URL.Path, c.prefix)
+	op, found := c.ops[OperationPath(path)]
+	if !found {
+		return false
+	}
 
-		op.ServeHTTP(w, r)
-	})
+	connect.NewUnaryHandler(
+		op.Procedure(),
+		op.GetUnaryFunc(),
+		connect.WithSchema(op.Schema),
+		connect.WithIdempotency(connect.IdempotencyNoSideEffects),
+		connect.WithRequestInitializer(func(spec connect.Spec, message any) error {
+			desc := c.fd.Messages().ByName(op.input.Name())
+			if desc == nil {
+				return connect.NewError(connect.CodeInternal, fmt.Errorf("message type not found"))
+			}
+			msg := dynamicpb.NewMessage(desc)
+			message.(*UniversalMessage).Set(msg)
+			return nil
+		}),
+	).ServeHTTP(w, r)
+
+	return true
 }
 
-func NewConnectRPC(schema string, mapping *nodev1.GRPCMapping) *ConnectRPC {
-	return &ConnectRPC{
-		schema:  schema,
-		mapping: mapping,
+func NewConnectRPC(prefix string, data []ConnectRPCData) *ConnectRPC {
+	connectRPC := &ConnectRPC{
+		prefix: prefix,
 	}
+
+	connectRPC.data = append(connectRPC.data, data...)
+
+	return connectRPC
 }

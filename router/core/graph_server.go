@@ -269,6 +269,8 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		httpRouter.Use(handler)
 	}
 
+	httpRouter.Use(r.connectRPC.HandlerFunc)
+
 	if s.batchingConfig.Enabled {
 		if s.batchingConfig.MaxConcurrentRoutines <= 0 {
 			return nil, errors.New("maxConcurrent must be greater than 0")
