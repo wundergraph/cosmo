@@ -7,7 +7,6 @@ import (
 
 	"github.com/cep21/circuit/v4"
 	"github.com/cep21/circuit/v4/closers/hystrix"
-	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/metric"
 	"go.opentelemetry.io/otel/attribute"
 )
@@ -81,44 +80,32 @@ func (c *Manager) IsEnabled() bool {
 
 type ManagerOpts struct {
 	SubgraphCircuitBreakers map[string]CircuitBreakerConfig
-	Subgraphs               []*nodev1.Subgraph
-	FeatureFlagName         string
 	MetricStore             metric.CircuitMetricStore
 	UseMetrics              bool
 	BaseOtelAttributes      []attribute.KeyValue
-	BreakerOverrides        map[string]bool
+	AllSubgraphs            map[string]bool
 }
 
-func (c *Manager) AddBreakersForSubgraph(opts ManagerOpts) error {
-	// No overrides are present
-	if opts.FeatureFlagName != "" && len(opts.BreakerOverrides) == 0 {
-		return nil
-	}
-
+func (c *Manager) Initialize(opts ManagerOpts) error {
 	var joinErr error
 
-	for _, sg := range opts.Subgraphs {
-		// If we have a feature flag name, we only want to add any overrides
-		if opts.FeatureFlagName != "" && !opts.BreakerOverrides[sg.Name] {
-			continue
-		}
-
+	for sgName, _ := range opts.AllSubgraphs {
 		// Set metrics wrapper
 		configs := make([]circuit.Config, 0, 1)
 		if opts.UseMetrics {
-			configs = append(configs, metric.NewCircuitBreakerMetricsConfig(sg.Name, opts.MetricStore, opts.BaseOtelAttributes))
+			configs = append(configs, metric.NewCircuitBreakerMetricsConfig(sgName, opts.MetricStore, opts.BaseOtelAttributes))
 		}
 
-		sgOptions, ok := opts.SubgraphCircuitBreakers[sg.Name]
+		sgOptions, ok := opts.SubgraphCircuitBreakers[sgName]
 		if !ok {
 			// If we have an all option set we can create a circuit breaker for everyone
 			if c.isBaseConfigEnabled {
-				createCircuit, err := c.internalManager.CreateCircuit(sg.Name, configs...)
+				createCircuit, err := c.internalManager.CreateCircuit(sgName, configs...)
 				if err != nil {
 					joinErr = errors.Join(joinErr, err)
 					continue
 				}
-				c.AddCircuitBreaker(sg.Name, createCircuit)
+				c.AddCircuitBreaker(sgName, createCircuit)
 			}
 			continue
 		}
@@ -126,13 +113,13 @@ func (c *Manager) AddBreakersForSubgraph(opts ManagerOpts) error {
 		// This will cover the case of if a subgraph is explicitly disabled
 		if sgOptions.Enabled {
 			newConfig := createConfiguration(sgOptions)
-			configs = append(configs, newConfig.Configure(sg.Name))
-			createCircuit, err := c.internalManager.CreateCircuit(sg.Name, configs...)
+			configs = append(configs, newConfig.Configure(sgName))
+			createCircuit, err := c.internalManager.CreateCircuit(sgName, configs...)
 			if err != nil {
 				joinErr = errors.Join(joinErr, err)
 				continue
 			}
-			c.AddCircuitBreaker(sg.Name, createCircuit)
+			c.AddCircuitBreaker(sgName, createCircuit)
 		}
 	}
 

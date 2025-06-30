@@ -239,7 +239,37 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	s.circuitBreakerManager = circuit.NewManager(s.subgraphCircuitBreakerOptions.CircuitBreaker)
 
 	baseSubgraphs := routerConfig.GetSubgraphs()
-	gm, err := s.buildGraphMux(ctx, "", s.baseRouterConfigVersion, routerConfig.GetEngineConfig(), baseSubgraphs, nil)
+
+	allSubgraphs := make(map[string]bool)
+	for _, subgraph := range baseSubgraphs {
+		allSubgraphs[subgraph.Name] = true
+	}
+	for _, ffConfig := range routerConfig.FeatureFlagConfigs.ConfigByFeatureFlagName {
+		for _, subgraph := range ffConfig.Subgraphs {
+			allSubgraphs[subgraph.Name] = true
+		}
+	}
+
+	attrKeyValues := []attribute.KeyValue{
+		otel.WgRouterConfigVersion.String(routerConfigVersion),
+		otel.WgRouterVersion.String(Version),
+	}
+	routerInfoBaseAttrs := otelmetric.WithAttributeSet(attribute.NewSet(attrKeyValues...))
+
+	m, err := rmetric.NewStore(
+		rmetric.WithPromMeterProvider(s.promMeterProvider),
+		rmetric.WithOtlpMeterProvider(s.otlpMeterProvider),
+		rmetric.WithBaseAttributes(baseMetricAttributes),
+		rmetric.WithLogger(s.logger),
+		rmetric.WithProcessStartTime(s.processStartTime),
+		rmetric.WithCardinalityLimit(rmetric.DefaultCardinalityLimit),
+		rmetric.WithRouterInfoAttributes(routerInfoBaseAttrs),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create metric handler: %w", err)
+	}
+
+	gm, err := s.buildGraphMux(ctx, "", s.baseRouterConfigVersion, routerConfig.GetEngineConfig(), baseSubgraphs, allSubgraphs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build base mux: %w", err)
 	}
@@ -249,12 +279,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		s.logger.Info("Feature flags enabled", zap.Strings("flags", maps.Keys(featureFlagConfigMap)))
 	}
 
-	baseSubgraphNames := make(map[string]bool, len(baseSubgraphs))
-	for _, baseSubgraph := range baseSubgraphs {
-		baseSubgraphNames[baseSubgraph.Name] = true
-	}
-
-	multiGraphHandler, err := s.buildMultiGraphHandler(ctx, gm.mux, featureFlagConfigMap, baseSubgraphNames)
+	multiGraphHandler, err := s.buildMultiGraphHandler(ctx, gm.mux, featureFlagConfigMap)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build feature flag handler: %w", err)
 	}
@@ -356,7 +381,6 @@ func (s *graphServer) buildMultiGraphHandler(
 	ctx context.Context,
 	baseMux *chi.Mux,
 	featureFlagConfigs map[string]*nodev1.FeatureFlagRouterExecutionConfig,
-	baseSubgraphNames map[string]bool,
 ) (http.HandlerFunc, error) {
 	if len(featureFlagConfigs) == 0 {
 		return baseMux.ServeHTTP, nil
@@ -366,25 +390,12 @@ func (s *graphServer) buildMultiGraphHandler(
 
 	// Build all the muxes for the feature flags in serial to avoid any race conditions
 	for featureFlagName, executionConfig := range featureFlagConfigs {
-		ffSpecificCircuitBreakers := make(map[string]bool)
-
-		for _, subgraph := range executionConfig.Subgraphs {
-			// A feature flag can have 0 or more feature subgraphs
-			// A feature subgraphs will point to a base subgraph, but as the names have to be unique
-			// we won't be able to map the feature subgraph name to the base subgraph name
-			// as that information is not available, instead we check for the existence of the base subgraph
-			// to identify if this is an actual feature subgraph or not
-			if !baseSubgraphNames[subgraph.Name] {
-				ffSpecificCircuitBreakers[subgraph.Name] = true
-			}
-		}
-
 		gm, err := s.buildGraphMux(ctx,
 			featureFlagName,
 			executionConfig.GetVersion(),
 			executionConfig.GetEngineConfig(),
 			executionConfig.Subgraphs,
-			ffSpecificCircuitBreakers,
+			nil,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to build mux for feature flag '%s': %w", featureFlagName, err)
@@ -714,7 +725,7 @@ func (s *graphServer) buildGraphMux(
 	routerConfigVersion string,
 	engineConfig *nodev1.EngineConfiguration,
 	configSubgraphs []*nodev1.Subgraph,
-	ffBreakerOverrides map[string]bool,
+	allSubgraphs map[string]bool,
 ) (*graphMux, error) {
 	gm := &graphMux{
 		metricStore: rmetric.NewNoopMetrics(),
@@ -786,18 +797,17 @@ func (s *graphServer) buildGraphMux(
 		gm.metricStore = m
 	}
 
-	// We initialize the breakers here since we then have access to the metric store
-	if s.subgraphCircuitBreakerOptions.IsEnabled() {
-		managerOpts := circuit.ManagerOpts{
+	// We initialize circuit breakers for all subgraphs in the base configuration (non-ff)
+	// so we don't duplicate circuit breakers for subgraphs and they can be used in the feature flags even
+	// We initialize it in the buildGraphMux because we want to use the base metric configuration
+	if featureFlagName == "" && s.subgraphCircuitBreakerOptions.IsEnabled() {
+		err := s.circuitBreakerManager.Initialize(circuit.ManagerOpts{
 			SubgraphCircuitBreakers: s.subgraphCircuitBreakerOptions.SubgraphMap,
-			Subgraphs:               configSubgraphs,
-			FeatureFlagName:         featureFlagName,
 			MetricStore:             gm.metricStore,
 			UseMetrics:              metricsEnabled,
 			BaseOtelAttributes:      baseMetricAttributes,
-			BreakerOverrides:        ffBreakerOverrides,
-		}
-		err := s.circuitBreakerManager.AddBreakersForSubgraph(managerOpts)
+			AllSubgraphs:            allSubgraphs,
+		})
 		if err != nil {
 			return nil, err
 		}
