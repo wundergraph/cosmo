@@ -37,7 +37,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/cosmo/router/internal/docker"
-	retrytransport "github.com/wundergraph/cosmo/router/internal/retrytransport"
+	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 )
 
 type (

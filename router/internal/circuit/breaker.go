@@ -27,7 +27,9 @@ func (rt *Breaker) RoundTrip(req *http.Request) (resp *http.Response, err error)
 	var subgraph string
 	subgraphCtxVal := ctx.Value(traceclient.CurrentSubgraphContextKey{})
 	if subgraphCtxVal != nil {
-		subgraph = subgraphCtxVal.(string)
+		if sg, ok := subgraphCtxVal.(string); ok {
+			subgraph = sg
+		}
 	}
 
 	// If there is no circuit defined for this subgraph
@@ -38,7 +40,7 @@ func (rt *Breaker) RoundTrip(req *http.Request) (resp *http.Response, err error)
 
 	preRunStatus := circuit.IsOpen()
 
-	err = circuit.Run(context.Background(), func(_ context.Context) error {
+	err = circuit.Run(req.Context(), func(_ context.Context) error {
 		resp, err = rt.roundTripper.RoundTrip(req)
 		return err
 	})

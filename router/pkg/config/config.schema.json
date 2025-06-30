@@ -2913,7 +2913,7 @@
         },
         "circuit_breaker": {
           "type": "object",
-          "description": "The retry configuration. The retry configuration is used to configure the retry behavior for the subgraphs requests. See https://cosmo-docs.wundergraph.com/router/traffic-shaping#automatic-retry for more information.",
+          "description": "The Circuit Breaker configuration, it allows you to enable and configure circuit breakers for subgraphs.",
           "additionalProperties": false,
           "properties": {
             "enabled": {

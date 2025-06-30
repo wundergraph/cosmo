@@ -89,7 +89,7 @@ type ManagerOpts struct {
 func (c *Manager) Initialize(opts ManagerOpts) error {
 	var joinErr error
 
-	for sgName, _ := range opts.AllSubgraphs {
+	for sgName := range opts.AllSubgraphs {
 		// Set metrics wrapper
 		configs := make([]circuit.Config, 0, 1)
 		if opts.UseMetrics {

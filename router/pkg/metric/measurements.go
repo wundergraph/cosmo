@@ -130,7 +130,7 @@ func createMeasures(meter otelmetric.Meter) (*Measurements, error) {
 		CircuitBreakerShortCircuitOptions...,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create cirtuit breaker short circuits: %w", err)
+		return nil, fmt.Errorf("failed to create circuit breaker short circuits: %w", err)
 	}
 	h.counters[CircuitBreakerShortCircuitsCounter] = circuitBreakerShortCircuits
 
