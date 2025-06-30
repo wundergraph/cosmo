@@ -1,0 +1,30 @@
+# Give everyone ownership for everything expections listed below
+* @wundergraph/Cosmo @wundergraph/Router
+
+# Protect the CODEOWNERS file
+/.github/CODEOWNERS @StarpTech
+
+admission-server @JivusAyrus @StarpTech  
+cdn-server @JivusAyrus @StarpTech
+cli @endigma @JivusAyrus @StarpTech
+composition @Aenimus @JivusAyrus @StarpTech
+composition-go @Aenimus @JivusAyrus @StarpTech
+connect @Aenimus @JivusAyrus @StarpTech 
+connect-go @Aenimus @JivusAyrus @StarpTech
+controlplane @JivusAyrus @wilsonrivera @StarpTech
+data_migrations @JivusAyrus @wilsonrivera @StarpTech
+graphqlmetrics @Noroth @StarpTech
+helm @Noroth @StarpTech
+infrastructure @Noroth @StarpTech
+keycloak @JivusAyrus @wilsonrivera @StarpTech
+otelcollector @Noroth @StarpTech
+playground @wundergraph/Router @thisisnithin @StarpTech
+proto @JivusAyrus @wilsonrivera @StarpTech
+protographic @Noroth @StarpTech
+router @Noroth @devsergiy @StarpTech
+router-plugin @Noroth @StarpTech
+router-tests @wundergraph/Router
+shared @Aenimus @JivusAyrus @StarpTech
+studio @JivusAyrus @wilsonrivera @StarpTech
+# Cosmo Streams / EDFS
+router/pkg/pubsub @alepane21 @StarpTech
