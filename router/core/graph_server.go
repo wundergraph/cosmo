@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/wundergraph/cosmo/router/internal/circuit"
-	"github.com/wundergraph/cosmo/router/internal/traceclient"
 	"net/http"
 	"net/url"
 	"path/filepath"
@@ -95,6 +94,7 @@ type (
 		pubSubProviders               []datasource.Provider
 		traceDialer                   *TraceDialer
 		pluginHost                    *routerplugin.Host
+		circuitBreakerManager         *circuit.Manager
 		subgraphCircuitBreakerOptions *SubgraphCircuitBreakerOptions
 	}
 )
@@ -236,7 +236,10 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		httpRouter.Use(cors.New(*s.corsOptions))
 	}
 
-	gm, err := s.buildGraphMux(ctx, "", s.baseRouterConfigVersion, routerConfig.GetEngineConfig(), routerConfig.GetSubgraphs())
+	s.circuitBreakerManager = circuit.NewManager(s.subgraphCircuitBreakerOptions.CircuitBreaker)
+
+	baseSubgraphs := routerConfig.GetSubgraphs()
+	gm, err := s.buildGraphMux(ctx, "", s.baseRouterConfigVersion, routerConfig.GetEngineConfig(), baseSubgraphs, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build base mux: %w", err)
 	}
@@ -246,7 +249,12 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		s.logger.Info("Feature flags enabled", zap.Strings("flags", maps.Keys(featureFlagConfigMap)))
 	}
 
-	multiGraphHandler, err := s.buildMultiGraphHandler(ctx, gm.mux, featureFlagConfigMap)
+	baseSubgraphNames := make(map[string]bool, len(baseSubgraphs))
+	for _, baseSubgraph := range baseSubgraphs {
+		baseSubgraphNames[baseSubgraph.Name] = true
+	}
+
+	multiGraphHandler, err := s.buildMultiGraphHandler(ctx, gm.mux, featureFlagConfigMap, baseSubgraphNames)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build feature flag handler: %w", err)
 	}
@@ -344,7 +352,12 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	return s, nil
 }
 
-func (s *graphServer) buildMultiGraphHandler(ctx context.Context, baseMux *chi.Mux, featureFlagConfigs map[string]*nodev1.FeatureFlagRouterExecutionConfig) (http.HandlerFunc, error) {
+func (s *graphServer) buildMultiGraphHandler(
+	ctx context.Context,
+	baseMux *chi.Mux,
+	featureFlagConfigs map[string]*nodev1.FeatureFlagRouterExecutionConfig,
+	baseSubgraphNames map[string]bool,
+) (http.HandlerFunc, error) {
 	if len(featureFlagConfigs) == 0 {
 		return baseMux.ServeHTTP, nil
 	}
@@ -353,11 +366,25 @@ func (s *graphServer) buildMultiGraphHandler(ctx context.Context, baseMux *chi.M
 
 	// Build all the muxes for the feature flags in serial to avoid any race conditions
 	for featureFlagName, executionConfig := range featureFlagConfigs {
+		ffSpecificCircuitBreakers := make(map[string]bool)
+
+		for _, subgraph := range executionConfig.Subgraphs {
+			// A feature flag can have 0 or more feature subgraphs
+			// A feature subgraphs will point to a base subgraph, but as the names have to be unique
+			// we won't be able to map the feature subgraph name to the base subgraph name
+			// as that information is not available, instead we check for the existence of the base subgraph
+			// to identify if this is an actual feature subgraph or not
+			if !baseSubgraphNames[subgraph.Name] {
+				ffSpecificCircuitBreakers[subgraph.Name] = true
+			}
+		}
+
 		gm, err := s.buildGraphMux(ctx,
 			featureFlagName,
 			executionConfig.GetVersion(),
 			executionConfig.GetEngineConfig(),
 			executionConfig.Subgraphs,
+			ffSpecificCircuitBreakers,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to build mux for feature flag '%s': %w", featureFlagName, err)
@@ -681,11 +708,13 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 // buildGraphMux creates a new graph mux with the given feature flags and engine configuration.
 // It also creates a new execution plan cache for the mux. The mux is not mounted on the server.
 // The mux is appended internally to the graph server's list of muxes to clean up later when the server is swapped.
-func (s *graphServer) buildGraphMux(ctx context.Context,
+func (s *graphServer) buildGraphMux(
+	ctx context.Context,
 	featureFlagName string,
 	routerConfigVersion string,
 	engineConfig *nodev1.EngineConfiguration,
 	configSubgraphs []*nodev1.Subgraph,
+	ffBreakerOverrides map[string]bool,
 ) (*graphMux, error) {
 	gm := &graphMux{
 		metricStore: rmetric.NewNoopMetrics(),
@@ -757,22 +786,21 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		gm.metricStore = m
 	}
 
-	// Feature flags can fail independently of the base subgraph, thus we should have circuit breakers per feature flag + subgraph
-	managerOpts := circuit.ManagerOpts{}
-	if s.subgraphCircuitBreakerOptions != nil {
-		managerOpts = circuit.ManagerOpts{
-			BaseConfig:              s.subgraphCircuitBreakerOptions.CircuitBreaker,
+	// We initialize the breakers here since we then have access to the metric store
+	if s.subgraphCircuitBreakerOptions.IsEnabled() {
+		managerOpts := circuit.ManagerOpts{
 			SubgraphCircuitBreakers: s.subgraphCircuitBreakerOptions.SubgraphMap,
 			Subgraphs:               configSubgraphs,
 			FeatureFlagName:         featureFlagName,
 			MetricStore:             gm.metricStore,
 			UseMetrics:              metricsEnabled,
 			BaseOtelAttributes:      baseMetricAttributes,
+			BreakerOverrides:        ffBreakerOverrides,
 		}
-	}
-	circuitBreakerManager, err := circuit.NewManager(managerOpts)
-	if err != nil {
-		return nil, err
+		err := s.circuitBreakerManager.AddBreakersForSubgraph(managerOpts)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	subgraphs, err := configureSubgraphOverwrites(
@@ -820,10 +848,6 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	subgraphResolver := NewSubgraphResolver(subgraphs)
 	httpRouter.Use(func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if featureFlagName != "" {
-				r = r.WithContext(context.WithValue(r.Context(), traceclient.CurrentFeatureFlagContextKey{}, featureFlagName))
-			}
-
 			r = r.WithContext(withSubgraphResolver(r.Context(), subgraphResolver))
 
 			requestLogger := s.logger.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
@@ -1059,7 +1083,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			LocalhostFallbackInsideDocker: s.localhostFallbackInsideDocker,
 			Logger:                        s.logger,
 			EnableTraceClient:             enableTraceClient,
-			CircuitBreaker:                circuitBreakerManager,
+			CircuitBreaker:                s.circuitBreakerManager,
 		},
 	}
 

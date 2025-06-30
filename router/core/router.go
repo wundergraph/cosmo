@@ -117,11 +117,6 @@ type (
 		SubgraphMap map[string]*TransportRequestOptions
 	}
 
-	SubgraphCircuitBreakerOptions struct {
-		CircuitBreaker circuit.CircuitBreakerConfig
-		SubgraphMap    map[string]circuit.CircuitBreakerConfig
-	}
-
 	GraphQLMetricsConfig struct {
 		Enabled           bool
 		CollectorEndpoint string
@@ -175,6 +170,18 @@ type (
 	// Option defines the method to customize server.
 	Option func(svr *Router)
 )
+
+type SubgraphCircuitBreakerOptions struct {
+	CircuitBreaker circuit.CircuitBreakerConfig
+	SubgraphMap    map[string]circuit.CircuitBreakerConfig
+}
+
+func (r *SubgraphCircuitBreakerOptions) IsEnabled() bool {
+	if r == nil {
+		return false
+	}
+	return r.CircuitBreaker.Enabled || len(r.SubgraphMap) > 0
+}
 
 // NewRouter creates a new Router instance. Router.Start() must be called to start the server.
 // Alternatively, use Router.NewServer() to create a new server instance without starting it.
@@ -1857,14 +1864,17 @@ func NewSubgraphCircuitBreakerOptions(cfg config.TrafficShapingRules) *SubgraphC
 	entry := &SubgraphCircuitBreakerOptions{
 		SubgraphMap: map[string]circuit.CircuitBreakerConfig{},
 	}
+	// If we have a global default
 	if cfg.All.CircuitBreaker.Enabled {
 		entry.CircuitBreaker = newCircuitBreakerConfig(cfg.All.CircuitBreaker)
 	}
+	// Subgraph specific circuit breakers
 	for k, v := range cfg.Subgraphs {
-		if v != nil && v.CircuitBreaker.Enabled {
+		if v != nil {
 			entry.SubgraphMap[k] = newCircuitBreakerConfig(v.CircuitBreaker)
 		}
 	}
+
 	return entry
 }
 

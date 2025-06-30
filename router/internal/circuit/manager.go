@@ -2,7 +2,6 @@ package circuit
 
 import (
 	"errors"
-	"fmt"
 	"sync"
 	"time"
 
@@ -28,8 +27,27 @@ type CircuitBreakerConfig struct {
 
 type Manager struct {
 	// We maintain separate circuit breakers for each subgraph
-	circuits map[string]*circuit.Circuit
-	lock     sync.RWMutex
+	circuits            map[string]*circuit.Circuit
+	internalManager     *circuit.Manager
+	isBaseConfigEnabled bool
+	lock                sync.RWMutex
+}
+
+func NewManager(baseConfig CircuitBreakerConfig) *Manager {
+	circuitManager := &circuit.Manager{}
+
+	if baseConfig.Enabled {
+		configuration := createConfiguration(baseConfig)
+		circuitManager.DefaultCircuitProperties = []circuit.CommandPropertiesConstructor{
+			configuration.Configure,
+		}
+	}
+
+	return &Manager{
+		circuits:            make(map[string]*circuit.Circuit),
+		internalManager:     circuitManager,
+		isBaseConfigEnabled: baseConfig.Enabled,
+	}
 }
 
 func (c *Manager) GetCircuitBreaker(name string) *circuit.Circuit {
@@ -40,12 +58,21 @@ func (c *Manager) GetCircuitBreaker(name string) *circuit.Circuit {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
-	// Since we should not ever write into a map
-	// after the first setup we don't use any read locks
 	if circuitBreaker, ok := c.circuits[name]; ok {
 		return circuitBreaker
 	}
 	return nil
+}
+
+func (c *Manager) AddCircuitBreaker(name string, createCircuit *circuit.Circuit) {
+	if c == nil {
+		return
+	}
+
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	c.circuits[name] = createCircuit
 }
 
 func (c *Manager) IsEnabled() bool {
@@ -53,36 +80,28 @@ func (c *Manager) IsEnabled() bool {
 }
 
 type ManagerOpts struct {
-	BaseConfig              CircuitBreakerConfig
 	SubgraphCircuitBreakers map[string]CircuitBreakerConfig
 	Subgraphs               []*nodev1.Subgraph
 	FeatureFlagName         string
 	MetricStore             metric.CircuitMetricStore
 	UseMetrics              bool
 	BaseOtelAttributes      []attribute.KeyValue
+	BreakerOverrides        map[string]bool
 }
 
-func NewManager(opts ManagerOpts) (*Manager, error) {
-	circuitManager := circuit.Manager{}
-
-	if opts.SubgraphCircuitBreakers == nil {
-		return &Manager{}, nil
-	}
-
-	isBaseEnabled := opts.BaseConfig.Enabled
-	if isBaseEnabled {
-		configuration := createConfiguration(opts.BaseConfig)
-		circuitManager.DefaultCircuitProperties = []circuit.CommandPropertiesConstructor{
-			configuration.Configure,
-		}
+func (c *Manager) AddBreakersForSubgraph(opts ManagerOpts) error {
+	// No overrides are present
+	if opts.FeatureFlagName != "" && len(opts.BreakerOverrides) == 0 {
+		return nil
 	}
 
 	var joinErr error
 
-	circuits := make(map[string]*circuit.Circuit, len(opts.Subgraphs))
 	for _, sg := range opts.Subgraphs {
-		// Base graph will start with "::"
-		sgCbName := fmt.Sprintf("%s::%s", opts.FeatureFlagName, sg.Name)
+		// If we have a feature flag name, we only want to add any overrides
+		if opts.FeatureFlagName != "" && !opts.BreakerOverrides[sg.Name] {
+			continue
+		}
 
 		// Set metrics wrapper
 		configs := make([]circuit.Config, 0, 1)
@@ -93,13 +112,13 @@ func NewManager(opts ManagerOpts) (*Manager, error) {
 		sgOptions, ok := opts.SubgraphCircuitBreakers[sg.Name]
 		if !ok {
 			// If we have an all option set we can create a circuit breaker for everyone
-			if isBaseEnabled {
-				createCircuit, err := circuitManager.CreateCircuit(sgCbName, configs...)
+			if c.isBaseConfigEnabled {
+				createCircuit, err := c.internalManager.CreateCircuit(sg.Name, configs...)
 				if err != nil {
 					joinErr = errors.Join(joinErr, err)
 					continue
 				}
-				circuits[sgCbName] = createCircuit
+				c.AddCircuitBreaker(sg.Name, createCircuit)
 			}
 			continue
 		}
@@ -107,25 +126,17 @@ func NewManager(opts ManagerOpts) (*Manager, error) {
 		// This will cover the case of if a subgraph is explicitly disabled
 		if sgOptions.Enabled {
 			newConfig := createConfiguration(sgOptions)
-			configs = append(configs, newConfig.Configure(sgCbName))
-			createCircuit, err := circuitManager.CreateCircuit(sgCbName, configs...)
+			configs = append(configs, newConfig.Configure(sg.Name))
+			createCircuit, err := c.internalManager.CreateCircuit(sg.Name, configs...)
 			if err != nil {
 				joinErr = errors.Join(joinErr, err)
 				continue
 			}
-			circuits[sgCbName] = createCircuit
+			c.AddCircuitBreaker(sg.Name, createCircuit)
 		}
 	}
 
-	if joinErr != nil {
-		return nil, joinErr
-	}
-
-	v := &Manager{
-		circuits: circuits,
-	}
-
-	return v, nil
+	return joinErr
 }
 
 func createConfiguration(opts CircuitBreakerConfig) hystrix.Factory {
