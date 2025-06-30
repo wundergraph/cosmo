@@ -25,6 +25,8 @@ Why is this change required? What problem does it solve? Which issues are linked
 Please describe in detail the impact of this change. Attach screenshots if applicable.
 -->
 
+@coderabbitai summary
+
 ## Checklist
 
 - [ ] I have discussed my proposed changes in an issue and have received approval to proceed.
