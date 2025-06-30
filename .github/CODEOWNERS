@@ -1,5 +1,5 @@
 # Give everyone ownership for everything expections listed below
-* @Engineering
+* @wundergraph/Engineering
 
 # Protect the CODEOWNERS file
 /.github/CODEOWNERS @StarpTech
@@ -18,12 +18,12 @@ helm @Noroth @StarpTech
 infrastructure @Noroth @StarpTech
 keycloak @JivusAyrus @wilsonrivera @StarpTech
 otelcollector @Noroth @StarpTech
-playground @Router @thisisnithin @StarpTech
+playground @wundergraph/Router @thisisnithin @StarpTech
 proto @JivusAyrus @wilsonrivera @StarpTech
 protographic @Noroth @StarpTech
 router @Noroth @devsergiy @StarpTech
 router-plugin @Noroth @StarpTech
-router-tests @Router
+router-tests @wundergraph/Router
 shared @Aenimus @JivusAyrus @StarpTech
 studio @JivusAyrus @wilsonrivera @StarpTech
 router/pkg/pubsub @alepane21 @StarpTech
