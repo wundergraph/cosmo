@@ -4,6 +4,44 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.226.1](https://github.com/wundergraph/cosmo/compare/router@0.226.0...router@0.226.1) (2025-06-28)
+
+### Bug Fixes
+
+* fix rewriting object selections with nested abstract fragments ([#1994](https://github.com/wundergraph/cosmo/issues/1994)) ([1ee141e](https://github.com/wundergraph/cosmo/commit/1ee141e74ec20f453c30b5a49ddd446ab2cf3652)) (@devsergiy)
+
+# [0.226.0](https://github.com/wundergraph/cosmo/compare/router@0.225.0...router@0.226.0) (2025-06-26)
+
+### Features
+
+* add redis pubsub support to EDFS ([#1810](https://github.com/wundergraph/cosmo/issues/1810)) ([8f294b6](https://github.com/wundergraph/cosmo/commit/8f294b62c14e9cae7e1ad85e65b0ca3ada0bcfbb)) (@alepane21)
+
+# [0.225.0](https://github.com/wundergraph/cosmo/compare/router@0.224.0...router@0.225.0) (2025-06-25)
+
+### Features
+
+* add debounce to watcher ([#1976](https://github.com/wundergraph/cosmo/issues/1976)) ([5fd7f13](https://github.com/wundergraph/cosmo/commit/5fd7f13405c1b6135d93098d11cd21ae64c8c7c8)) (@SkArchon)
+* add support for remote grpc services ([#1953](https://github.com/wundergraph/cosmo/issues/1953)) ([5074af9](https://github.com/wundergraph/cosmo/commit/5074af9ab4ce14c418fa8fee69e785fb6237f785)) (@Noroth)
+
+# [0.224.0](https://github.com/wundergraph/cosmo/compare/router@0.223.0...router@0.224.0) (2025-06-19)
+
+### Features
+
+* expose query plan information to custom modules + bump engine ([#1979](https://github.com/wundergraph/cosmo/issues/1979)) ([027a504](https://github.com/wundergraph/cosmo/commit/027a5040882322d50562a697d56561916c95a52d)) (@endigma)
+
+# [0.223.0](https://github.com/wundergraph/cosmo/compare/router@0.222.3...router@0.223.0) (2025-06-19)
+
+### Features
+
+* add SASL-SCRAM support and add logging of kafka client errors ([#1975](https://github.com/wundergraph/cosmo/issues/1975)) ([6b15a37](https://github.com/wundergraph/cosmo/commit/6b15a37183dfca7fe4c0b50f98956d20f599ae2f)) (@alepane21)
+
+## [0.222.3](https://github.com/wundergraph/cosmo/compare/router@0.222.2...router@0.222.3) (2025-06-18)
+
+### Bug Fixes
+
+* cleanup flaky line for router build test ([#1974](https://github.com/wundergraph/cosmo/issues/1974)) ([616a5b5](https://github.com/wundergraph/cosmo/commit/616a5b59bd57301357c85dc48ca81d8cf0b778d5)) (@SkArchon)
+* don't send complete when router shuts down ([#1956](https://github.com/wundergraph/cosmo/issues/1956)) ([882ac82](https://github.com/wundergraph/cosmo/commit/882ac82a9db0656c68ad4121970e95f949a8c182)) (@endigma)
+
 ## [0.222.2](https://github.com/wundergraph/cosmo/compare/router@0.222.1...router@0.222.2) (2025-06-17)
 
 ### Bug Fixes

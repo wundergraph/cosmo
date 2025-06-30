@@ -3,10 +3,11 @@ package config
 import (
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/yamlmerge"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/internal/yamlmerge"
 
 	"github.com/caarlos0/env/v11"
 	"github.com/goccy/go-yaml"
@@ -540,8 +541,30 @@ type KafkaSASLPlainAuthentication struct {
 	Username *string `yaml:"username,omitempty"`
 }
 
+func (k KafkaSASLPlainAuthentication) IsSet() bool {
+	return k.Username != nil && k.Password != nil
+}
+
+type KafkaSASLSCRAMMechanism string
+
+const (
+	KafkaSASLSCRAMMechanismSCRAM256 KafkaSASLSCRAMMechanism = "SCRAM-SHA-256"
+	KafkaSASLSCRAMMechanismSCRAM512 KafkaSASLSCRAMMechanism = "SCRAM-SHA-512"
+)
+
+type KafkaSASLSCRAMAuthentication struct {
+	Password  *string                  `yaml:"password,omitempty"`
+	Username  *string                  `yaml:"username,omitempty"`
+	Mechanism *KafkaSASLSCRAMMechanism `yaml:"mechanism,omitempty"`
+}
+
+func (k KafkaSASLSCRAMAuthentication) IsSet() bool {
+	return k.Username != nil && k.Password != nil && k.Mechanism != nil
+}
+
 type KafkaAuthentication struct {
 	SASLPlain KafkaSASLPlainAuthentication `yaml:"sasl_plain,omitempty"`
+	SASLSCRAM KafkaSASLSCRAMAuthentication `yaml:"sasl_scram,omitempty"`
 }
 
 type KafkaTLSConfiguration struct {
@@ -553,15 +576,27 @@ type KafkaEventSource struct {
 	Brokers        []string               `yaml:"brokers,omitempty"`
 	Authentication *KafkaAuthentication   `yaml:"authentication,omitempty"`
 	TLS            *KafkaTLSConfiguration `yaml:"tls,omitempty"`
+	FetchMaxWait   time.Duration          `yaml:"fetch_max_wait,omitempty"`
 }
 
 func (k KafkaEventSource) GetID() string {
 	return k.ID
 }
 
+type RedisEventSource struct {
+	ID             string   `yaml:"id,omitempty"`
+	URLs           []string `yaml:"urls,omitempty"`
+	ClusterEnabled bool     `yaml:"cluster_enabled"`
+}
+
+func (r RedisEventSource) GetID() string {
+	return r.ID
+}
+
 type EventProviders struct {
 	Nats  []NatsEventSource  `yaml:"nats,omitempty"`
 	Kafka []KafkaEventSource `yaml:"kafka,omitempty"`
+	Redis []RedisEventSource `yaml:"redis,omitempty"`
 }
 
 type EventsConfiguration struct {

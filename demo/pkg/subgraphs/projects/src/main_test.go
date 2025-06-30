@@ -8,7 +8,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	service "github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects/generated"
+	projects "github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects/generated"
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects/src/service"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
@@ -21,7 +22,7 @@ const bufSize = 1024 * 1024
 // testService is a wrapper that holds the gRPC test components
 type testService struct {
 	grpcConn *grpc.ClientConn
-	client   service.ProjectsServiceClient
+	client   projects.ProjectsServiceClient
 	cleanup  func()
 }
 
@@ -34,8 +35,8 @@ func setupTestService(t *testing.T) *testService {
 	grpcServer := grpc.NewServer()
 
 	// Register our service
-	service.RegisterProjectsServiceServer(grpcServer, &ProjectsService{
-		nextID: 1,
+	projects.RegisterProjectsServiceServer(grpcServer, &service.ProjectsService{
+		NextID: 1,
 	})
 
 	// Start the server
@@ -57,7 +58,7 @@ func setupTestService(t *testing.T) *testService {
 	require.NoError(t, err)
 
 	// Create the service client
-	client := service.NewProjectsServiceClient(conn)
+	client := projects.NewProjectsServiceClient(conn)
 
 	// Return cleanup function
 	cleanup := func() {
@@ -76,7 +77,7 @@ func TestQueryProjects(t *testing.T) {
 	svc := setupTestService(t)
 	defer svc.cleanup()
 
-	resp, err := svc.client.QueryProjects(context.Background(), &service.QueryProjectsRequest{})
+	resp, err := svc.client.QueryProjects(context.Background(), &projects.QueryProjectsRequest{})
 	require.NoError(t, err)
 	assert.NotNil(t, resp.Projects)
 	assert.Len(t, resp.Projects, 7) // Based on the data in projects.go
@@ -105,7 +106,7 @@ func TestQueryProject(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resp, err := svc.client.QueryProject(context.Background(), &service.QueryProjectRequest{Id: tt.id})
+			resp, err := svc.client.QueryProject(context.Background(), &projects.QueryProjectRequest{Id: tt.id})
 			if tt.wantErr {
 				assert.Error(t, err)
 				assert.Equal(t, codes.NotFound, status.Code(err))
@@ -123,7 +124,7 @@ func TestQueryProjectStatuses(t *testing.T) {
 	svc := setupTestService(t)
 	defer svc.cleanup()
 
-	resp, err := svc.client.QueryProjectStatuses(context.Background(), &service.QueryProjectStatusesRequest{})
+	resp, err := svc.client.QueryProjectStatuses(context.Background(), &projects.QueryProjectStatusesRequest{})
 	require.NoError(t, err)
 	assert.NotNil(t, resp.ProjectStatuses)
 	assert.Len(t, resp.ProjectStatuses, 4) // ACTIVE, PLANNING, ON_HOLD, COMPLETED
@@ -135,34 +136,34 @@ func TestQueryProjectsByStatus(t *testing.T) {
 
 	tests := []struct {
 		name   string
-		status service.ProjectStatus
+		status projects.ProjectStatus
 		count  int
 	}{
 		{
 			name:   "active projects",
-			status: service.ProjectStatus_PROJECT_STATUS_ACTIVE,
+			status: projects.ProjectStatus_PROJECT_STATUS_ACTIVE,
 			count:  4, // Based on the data
 		},
 		{
 			name:   "planning projects",
-			status: service.ProjectStatus_PROJECT_STATUS_PLANNING,
+			status: projects.ProjectStatus_PROJECT_STATUS_PLANNING,
 			count:  1,
 		},
 		{
 			name:   "on hold projects",
-			status: service.ProjectStatus_PROJECT_STATUS_ON_HOLD,
+			status: projects.ProjectStatus_PROJECT_STATUS_ON_HOLD,
 			count:  1,
 		},
 		{
 			name:   "completed projects",
-			status: service.ProjectStatus_PROJECT_STATUS_COMPLETED,
+			status: projects.ProjectStatus_PROJECT_STATUS_COMPLETED,
 			count:  1,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resp, err := svc.client.QueryProjectsByStatus(context.Background(), &service.QueryProjectsByStatusRequest{
+			resp, err := svc.client.QueryProjectsByStatus(context.Background(), &projects.QueryProjectsByStatusRequest{
 				Status: tt.status,
 			})
 			require.NoError(t, err)
@@ -195,12 +196,12 @@ func TestLookupProjectById(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			keys := make([]*service.LookupProjectByIdRequestKey, len(tt.ids))
+			keys := make([]*projects.LookupProjectByIdRequestKey, len(tt.ids))
 			for i, id := range tt.ids {
-				keys[i] = &service.LookupProjectByIdRequestKey{Id: id}
+				keys[i] = &projects.LookupProjectByIdRequestKey{Id: id}
 			}
 
-			resp, err := svc.client.LookupProjectById(context.Background(), &service.LookupProjectByIdRequest{
+			resp, err := svc.client.LookupProjectById(context.Background(), &projects.LookupProjectByIdRequest{
 				Keys: keys,
 			})
 			if tt.wantErr {
@@ -240,12 +241,12 @@ func TestLookupEmployeeById(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			keys := make([]*service.LookupEmployeeByIdRequestKey, len(tt.ids))
+			keys := make([]*projects.LookupEmployeeByIdRequestKey, len(tt.ids))
 			for i, id := range tt.ids {
-				keys[i] = &service.LookupEmployeeByIdRequestKey{Id: strconv.Itoa(int(id))}
+				keys[i] = &projects.LookupEmployeeByIdRequestKey{Id: strconv.Itoa(int(id))}
 			}
 
-			resp, err := svc.client.LookupEmployeeById(context.Background(), &service.LookupEmployeeByIdRequest{
+			resp, err := svc.client.LookupEmployeeById(context.Background(), &projects.LookupEmployeeByIdRequest{
 				Keys: keys,
 			})
 			if tt.wantErr {
@@ -266,15 +267,15 @@ func TestMutationAddProject(t *testing.T) {
 	svc := setupTestService(t)
 	defer svc.cleanup()
 
-	newProject := &service.ProjectInput{
+	newProject := &projects.ProjectInput{
 		Name:        "Test Project",
 		Description: "Test Description",
-		Status:      service.ProjectStatus_PROJECT_STATUS_ACTIVE,
+		Status:      projects.ProjectStatus_PROJECT_STATUS_ACTIVE,
 		StartDate:   "2024-01-01",
 		EndDate:     "2024-12-31",
 	}
 
-	resp, err := svc.client.MutationAddProject(context.Background(), &service.MutationAddProjectRequest{
+	resp, err := svc.client.MutationAddProject(context.Background(), &projects.MutationAddProjectRequest{
 		Project: newProject,
 	})
 	require.NoError(t, err)

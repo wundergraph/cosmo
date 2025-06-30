@@ -13,6 +13,7 @@ import {
   KafkaEventConfiguration,
   NatsEventConfiguration,
   NatsStreamConfiguration,
+  RedisEventConfiguration,
   RequiredField,
   Scopes,
   SubscriptionFieldCondition,
@@ -27,6 +28,7 @@ import {
   PROVIDER_TYPE_NATS,
   RequiredFieldConfiguration,
   SubscriptionCondition,
+  PROVIDER_TYPE_REDIS,
 } from '@wundergraph/composition';
 
 export type DataSourceConfiguration = {
@@ -115,7 +117,7 @@ export function configurationDatasToDataSourceConfiguration(
     childNodes: [],
     keys: [],
     provides: [],
-    events: new DataSourceCustomEvents({ nats: [], kafka: [] }),
+    events: new DataSourceCustomEvents({ nats: [], kafka: [], redis: [] }),
     requires: [],
     entityInterfaces: [],
     interfaceObjects: [],
@@ -146,6 +148,7 @@ export function configurationDatasToDataSourceConfiguration(
     addRequiredFields(data.requires, output.requires, typeName);
     const natsEventConfigurations: NatsEventConfiguration[] = [];
     const kafkaEventConfigurations: KafkaEventConfiguration[] = [];
+    const redisEventConfigurations: RedisEventConfiguration[] = [];
     for (const event of data.events ?? []) {
       switch (event.providerType) {
         case PROVIDER_TYPE_KAFKA: {
@@ -185,6 +188,20 @@ export function configurationDatasToDataSourceConfiguration(
           );
           break;
         }
+        case PROVIDER_TYPE_REDIS: {
+          redisEventConfigurations.push(
+            new RedisEventConfiguration({
+              engineEventConfiguration: new EngineEventConfiguration({
+                fieldName: event.fieldName,
+                providerId: event.providerId,
+                type: eventType(event.type),
+                typeName,
+              }),
+              channels: event.channels,
+            }),
+          );
+          break;
+        }
         default: {
           throw new Error(`Fatal: Unknown event provider.`);
         }
@@ -192,6 +209,7 @@ export function configurationDatasToDataSourceConfiguration(
     }
     output.events.nats.push(...natsEventConfigurations);
     output.events.kafka.push(...kafkaEventConfigurations);
+    output.events.redis.push(...redisEventConfigurations);
   }
   return output;
 }

@@ -139,7 +139,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        test_target: ["./. ./fuzzquery ./lifecycle ./modules", "./telemetry", "./events/events_config_test.go", "./events/nats_events_test.go", "./events/kafka_events_test.go"]
+        test_target:
+          [
+            './. ./fuzzquery ./lifecycle ./modules',
+            './telemetry',
+            './events',
+          ]
     services:
       nats:
         image: ghcr.io/wundergraph/cosmo/nats:2.11.0-alpine
@@ -192,6 +197,11 @@ jobs:
         with:
           cache-dependency-path: |
             router-tests/go.sum
+      - name: Install tools
+        run: make setup-build-tools
+      - name: Install dependencies
+        working-directory: ./router-tests
+        run: go mod download
       - name: Setup Redis Cluster (for Cluster tests)
         uses: vishnudxb/redis-cluster@1.0.9
         with:
@@ -224,7 +234,7 @@ jobs:
           retry_on: error
           command: |
             cd router-tests
-            make test test_params="-run '^TestFlaky'  --timeout=5m --parallel 1" test_target="${{ matrix.test_target }}"
+            make test test_params="-run '^TestFlaky' --timeout=5m --parallel 1" test_target="${{ matrix.test_target }}"
 
   image_scan:
     if: github.event.pull_request.head.repo.full_name == github.repository
@@ -270,4 +280,3 @@ jobs:
           token: ${{secrets.GITHUB_TOKEN}}
           image_name: router
           image_description: 'Cosmo Router'
-

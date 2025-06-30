@@ -628,17 +628,7 @@ func (rw *websocketResponseWriter) Complete() {
 }
 
 func (rw *websocketResponseWriter) Close(kind resolve.SubscriptionCloseKind) {
-	var err error
-
-	switch kind {
-	case resolve.SubscriptionCloseKindNormal:
-		err = rw.protocol.Close(ws.StatusNormalClosure, "Normal closure")
-	case resolve.SubscriptionCloseKindDownstreamServiceError:
-		err = rw.protocol.Close(ws.StatusGoingAway, "Downstream service error")
-	case resolve.SubscriptionCloseKindGoingAway:
-		err = rw.protocol.Close(ws.StatusGoingAway, "Going away")
-	}
-
+	err := rw.protocol.Close(kind.WSCode, kind.Reason)
 	if err != nil {
 		rw.logger.Debug("Sending error message", zap.Error(err))
 	}
