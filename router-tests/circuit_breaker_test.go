@@ -37,6 +37,7 @@ type SendRequestOptions struct {
 	xEnv             *testenv.Environment
 	isSuccessRequest *atomic.Bool
 	invertCheck      bool
+	customQuery      string
 }
 
 func TestCircuitBreaker(t *testing.T) {
@@ -342,7 +343,6 @@ func TestCircuitBreaker(t *testing.T) {
 		breaker.ErrorThresholdPercentage = 90
 
 		durationPerBucket := breaker.RollingDuration / time.Duration(breaker.NumBuckets)
-		_ = durationPerBucket
 
 		trafficConfig := getTrafficConfigWithTimeout(breaker, 10*time.Millisecond)
 
@@ -504,7 +504,7 @@ func TestCircuitBreaker(t *testing.T) {
 		})
 	})
 
-	t.Run("verify circuit breaker trips separately for feature flag", func(t *testing.T) {
+	t.Run("verify circuit breaker does not trip separately for feature flag", func(t *testing.T) {
 		t.Parallel()
 
 		breaker := getCircuitBreakerWithDefaults()
@@ -546,11 +546,73 @@ func TestCircuitBreaker(t *testing.T) {
 			sendRequest(opts, "", SendFailedRequest)
 			require.Equal(t, 1, xEnv.Observer().FilterMessage("Circuit breaker status changed").Len())
 
-			// Trip the feature flag
+			// Should not trip separately for the feature flag, the count should be the same
 			sendRequest(opts, "myff", SendFailedRequest)
 			require.Equal(t, 1, xEnv.Observer().FilterMessage("Circuit breaker status changed").Len())
 			sendRequest(opts, "myff", SendFailedRequest)
+			require.Equal(t, 1, xEnv.Observer().FilterMessage("Circuit breaker status changed").Len())
+		})
+	})
+
+	t.Run("verify circuit breaker trip separately for feature flag subgraph", func(t *testing.T) {
+		t.Parallel()
+
+		breaker := getCircuitBreakerWithDefaults()
+		breaker.RequestThreshold = 2
+		breaker.ErrorThresholdPercentage = 100
+
+		trafficConfig := getTrafficConfigWithTimeout(breaker, 1*time.Second)
+
+		var isSuccessRequest atomic.Bool
+
+		testenv.Run(t, &testenv.Config{
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.DebugLevel,
+			},
+			RouterOptions: []core.Option{
+				core.WithSubgraphCircuitBreakerOptions(core.NewSubgraphCircuitBreakerOptions(trafficConfig)),
+				core.WithSubgraphTransportOptions(core.NewSubgraphTransportOptions(trafficConfig)),
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Products: testenv.SubgraphConfig{
+					Middleware: func(_ http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+							time.Sleep(5 * time.Second)
+						})
+					},
+				},
+				ProductsFg: testenv.SubgraphConfig{
+					Middleware: func(_ http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+							time.Sleep(5 * time.Second)
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			ffOpts := SendRequestOptions{t: t, xEnv: xEnv, isSuccessRequest: &isSuccessRequest,
+				customQuery: `{ employees { id products } }`,
+			}
+			var response string
+
+			// Should trip the base products subgraph
+			response = sendRequest(ffOpts, "", SendFailedRequest)
+			require.Zero(t, xEnv.Observer().FilterMessage("Circuit breaker status changed").Len())
+			require.Contains(t, response, "Failed to fetch from Subgraph 'products' at Path 'employees'")
+
+			response = sendRequest(ffOpts, "", SendFailedRequest)
+			require.Equal(t, 1, xEnv.Observer().FilterMessage("Circuit breaker status changed").Len())
+			require.Contains(t, response, "Failed to fetch from Subgraph 'products' at Path 'employees'")
+
+			// Should trip separately for the feature flag, because its a different subgraph
+			response = sendRequest(ffOpts, "myff", SendFailedRequest)
+			require.Equal(t, 1, xEnv.Observer().FilterMessage("Circuit breaker status changed").Len())
+			require.Contains(t, response, "Failed to fetch from Subgraph 'products_fg' at Path 'employees'")
+
+			response = sendRequest(ffOpts, "myff", SendFailedRequest)
 			require.Equal(t, 2, xEnv.Observer().FilterMessage("Circuit breaker status changed").Len())
+			require.Contains(t, response, "Failed to fetch from Subgraph 'products_fg' at Path 'employees'")
 		})
 	})
 
@@ -963,12 +1025,18 @@ func TestCircuitBreaker(t *testing.T) {
 	})
 }
 
-func sendRequest(opts SendRequestOptions, featureFlag string, isSuccess bool) {
+func sendRequest(opts SendRequestOptions, featureFlag string, isSuccess bool) string {
 	if opts.isSuccessRequest != nil {
 		opts.isSuccessRequest.Store(isSuccess)
 	}
 	time.Sleep(5 * time.Millisecond)
-	request := testenv.GraphQLRequest{Query: `query employees { employees { id } }`}
+
+	baseQuery := opts.customQuery
+	if baseQuery == "" {
+		baseQuery = `query employees { employees { id } }`
+	}
+
+	request := testenv.GraphQLRequest{Query: baseQuery}
 
 	if featureFlag != "" {
 		request.Header = map[string][]string{
@@ -978,6 +1046,10 @@ func sendRequest(opts SendRequestOptions, featureFlag string, isSuccess bool) {
 
 	res, err := opts.xEnv.MakeGraphQLRequest(request)
 	require.NoError(opts.t, err)
+
+	if opts.customQuery != "" {
+		return res.Body
+	}
 
 	check := isSuccess
 	if opts.invertCheck {
@@ -990,6 +1062,8 @@ func sendRequest(opts SendRequestOptions, featureFlag string, isSuccess bool) {
 	} else {
 		require.JSONEq(opts.t, subgraphErrorJSON, res.Body)
 	}
+
+	return ""
 }
 
 func getCircuitBreakerWithDefaults() config.CircuitBreaker {

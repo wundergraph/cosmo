@@ -84,18 +84,18 @@ type (
 		mux                     *chi.Mux
 		// inFlightRequests is used to track the number of requests currently being processed
 		// does not include websocket (hijacked) connections
-		inFlightRequests              *atomic.Uint64
-		graphMuxList                  []*graphMux
-		graphMuxListLock              sync.Mutex
-		runtimeMetrics                *rmetric.RuntimeMetrics
-		otlpEngineMetrics             *rmetric.EngineMetrics
-		prometheusEngineMetrics       *rmetric.EngineMetrics
-		connectionMetrics             *rmetric.ConnectionMetrics
-		instanceData                  InstanceData
-		pubSubProviders               []datasource.Provider
-		traceDialer                   *TraceDialer
-		connector                     *grpcconnector.Connector
-		subgraphCircuitBreakerOptions *SubgraphCircuitBreakerOptions
+		inFlightRequests        *atomic.Uint64
+		graphMuxList            []*graphMux
+		graphMuxListLock        sync.Mutex
+		runtimeMetrics          *rmetric.RuntimeMetrics
+		otlpEngineMetrics       *rmetric.EngineMetrics
+		prometheusEngineMetrics *rmetric.EngineMetrics
+		connectionMetrics       *rmetric.ConnectionMetrics
+		instanceData            InstanceData
+		pubSubProviders         []datasource.Provider
+		traceDialer             *TraceDialer
+		connector               *grpcconnector.Connector
+		circuitBreakerManager   *circuit.Manager
 	}
 )
 
@@ -144,8 +144,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 			HostName:      r.hostName,
 			ListenAddress: r.listenAddr,
 		},
-		storageProviders:              &r.storageProviders,
-		subgraphCircuitBreakerOptions: r.subgraphCircuitBreakerOptions,
+		storageProviders: &r.storageProviders,
 	}
 
 	baseOtelAttributes := []attribute.KeyValue{
@@ -236,7 +235,9 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		httpRouter.Use(cors.New(*s.corsOptions))
 	}
 
-	s.circuitBreakerManager = circuit.NewManager(s.subgraphCircuitBreakerOptions.CircuitBreaker)
+	if s.subgraphCircuitBreakerOptions.IsEnabled() {
+		s.circuitBreakerManager = circuit.NewManager(s.subgraphCircuitBreakerOptions.CircuitBreaker)
+	}
 
 	allSubgraphs := make(map[string]bool)
 	for _, subgraph := range routerConfig.GetSubgraphs() {

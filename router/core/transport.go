@@ -97,7 +97,7 @@ func NewCustomTransport(
 		baseRoundTripper = traceclient.NewTraceInjectingRoundTripper(baseRoundTripper, connectionMetricStore, getExprContext)
 	}
 
-	if breaker.IsEnabled() {
+	if breaker.HasCircuits() {
 		baseRoundTripper = circuit.NewCircuitTripper(baseRoundTripper, breaker, getRequestContextLogger)
 	}
 

@@ -74,7 +74,7 @@ func (c *Manager) AddCircuitBreaker(name string, createCircuit *circuit.Circuit)
 	c.circuits[name] = createCircuit
 }
 
-func (c *Manager) IsEnabled() bool {
+func (c *Manager) HasCircuits() bool {
 	return c != nil && len(c.circuits) > 0
 }
 
