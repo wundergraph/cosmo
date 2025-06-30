@@ -326,6 +326,11 @@ import {
   SUCCESS,
   TOPIC,
   TOPICS,
+  CHANNEL,
+  CHANNELS,
+  EDFS_REDIS_PUBLISH,
+  EDFS_REDIS_SUBSCRIBE,
+  PROVIDER_TYPE_REDIS,
 } from '../../utils/string-constants';
 import { MAX_INT32 } from '../../utils/integer-constants';
 import {
@@ -2413,6 +2418,89 @@ export class NormalizationFactory {
     };
   }
 
+  getRedisPublishConfiguration(
+    directive: ConstDirectiveNode,
+    argumentDataByArgumentName: Map<string, InputValueData>,
+    fieldName: string,
+    errorMessages: string[],
+  ): EventConfiguration | undefined {
+    const channels: string[] = [];
+    let providerId = DEFAULT_EDFS_PROVIDER_ID;
+    for (const argumentNode of directive.arguments || []) {
+      switch (argumentNode.name.value) {
+        case CHANNEL: {
+          if (argumentNode.value.kind !== Kind.STRING || argumentNode.value.value.length < 1) {
+            errorMessages.push(invalidEventSubjectErrorMessage(CHANNEL));
+            continue;
+          }
+          validateArgumentTemplateReferences(argumentNode.value.value, argumentDataByArgumentName, errorMessages);
+          channels.push(argumentNode.value.value);
+          break;
+        }
+        case PROVIDER_ID: {
+          if (argumentNode.value.kind !== Kind.STRING || argumentNode.value.value.length < 1) {
+            errorMessages.push(invalidEventProviderIdErrorMessage);
+            continue;
+          }
+          providerId = argumentNode.value.value;
+          break;
+        }
+      }
+    }
+    if (errorMessages.length > 0) {
+      return;
+    }
+    return { fieldName, providerId, providerType: PROVIDER_TYPE_REDIS, channels, type: PUBLISH };
+  }
+
+  getRedisSubscribeConfiguration(
+    directive: ConstDirectiveNode,
+    argumentDataByArgumentName: Map<string, InputValueData>,
+    fieldName: string,
+    errorMessages: string[],
+  ): EventConfiguration | undefined {
+    const channels: string[] = [];
+    let providerId = DEFAULT_EDFS_PROVIDER_ID;
+    for (const argumentNode of directive.arguments || []) {
+      switch (argumentNode.name.value) {
+        case CHANNELS: {
+          //@TODO list coercion
+          if (argumentNode.value.kind !== Kind.LIST) {
+            errorMessages.push(invalidEventSubjectsErrorMessage(CHANNELS));
+            continue;
+          }
+          for (const value of argumentNode.value.values) {
+            if (value.kind !== Kind.STRING || value.value.length < 1) {
+              errorMessages.push(invalidEventSubjectsItemErrorMessage(CHANNELS));
+              break;
+            }
+            validateArgumentTemplateReferences(value.value, argumentDataByArgumentName, errorMessages);
+            channels.push(value.value);
+          }
+          break;
+        }
+        case PROVIDER_ID: {
+          if (argumentNode.value.kind !== Kind.STRING || argumentNode.value.value.length < 1) {
+            errorMessages.push(invalidEventProviderIdErrorMessage);
+            continue;
+          }
+          providerId = argumentNode.value.value;
+          break;
+        }
+      }
+    }
+    if (errorMessages.length > 0) {
+      return;
+    }
+    return {
+      fieldName,
+      providerId,
+      providerType: PROVIDER_TYPE_REDIS,
+      channels,
+      type: SUBSCRIBE,
+    };
+  }
+
   validateSubscriptionFilterDirectiveLocation(node: FieldDefinitionNode) {
     if (!node.directives) {
       return;
@@ -2490,6 +2578,24 @@ export class NormalizationFactory {
           );
           break;
         }
+        case EDFS_REDIS_PUBLISH: {
+          eventConfiguration = this.getRedisPublishConfiguration(
+            directive,
+            argumentDataByArgumentName,
+            fieldName,
+            errorMessages,
+          );
+          break;
+        }
+        case EDFS_REDIS_SUBSCRIBE: {
+          eventConfiguration = this.getRedisSubscribeConfiguration(
+            directive,
+            argumentDataByArgumentName,
+            fieldName,
+            errorMessages,
+          );
+          break;
+        }
         default:
           continue;
       }
@@ -2515,11 +2621,11 @@ export class NormalizationFactory {
   getValidEventsDirectiveNamesForOperationTypeNode(operationTypeNode: OperationTypeNode): Set<string> {
     switch (operationTypeNode) {
       case OperationTypeNode.MUTATION:
-        return new Set<string>([EDFS_KAFKA_PUBLISH, EDFS_NATS_PUBLISH, EDFS_NATS_REQUEST]);
+        return new Set<string>([EDFS_KAFKA_PUBLISH, EDFS_NATS_PUBLISH, EDFS_NATS_REQUEST, EDFS_REDIS_PUBLISH]);
       case OperationTypeNode.QUERY:
         return new Set<string>([EDFS_NATS_REQUEST]);
       case OperationTypeNode.SUBSCRIPTION:
-        return new Set<string>([EDFS_KAFKA_SUBSCRIBE, EDFS_NATS_SUBSCRIBE]);
+        return new Set<string>([EDFS_KAFKA_SUBSCRIBE, EDFS_NATS_SUBSCRIBE, EDFS_REDIS_SUBSCRIBE]);
     }
   }
 

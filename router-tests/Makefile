@@ -31,6 +31,9 @@ lint:
 test-stability:
 	@while $(MAKE) test-fresh; do :; done
 
+test-stability-no-race:
+	@while $(MAKE) test-no-race-fresh; do :; done
+
 clean-testcache:
 	go clean -testcache
 

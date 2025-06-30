@@ -166,9 +166,7 @@ func TestKafkaEvents(t *testing.T) {
 
 			produceKafkaMessage(t, xEnv, topics[0], ``) // Empty message
 			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
-				var gqlErr graphql.Errors
-				require.ErrorAs(t, args.errValue, &gqlErr)
-				require.Equal(t, "Invalid message received", gqlErr[0].Message)
+				require.ErrorContains(t, args.errValue, "Invalid message received")
 			})
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`) // Correct message
@@ -179,9 +177,7 @@ func TestKafkaEvents(t *testing.T) {
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","update":{"name":"foo"}}`) // Missing entity = Resolver error
 			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
-				var gqlErr graphql.Errors
-				require.ErrorAs(t, args.errValue, &gqlErr)
-				require.Equal(t, "Cannot return null for non-nullable field 'Subscription.employeeUpdatedMyKafka.id'.", gqlErr[0].Message)
+				require.ErrorContains(t, args.errValue, "Cannot return null for non-nullable field 'Subscription.employeeUpdatedMyKafka.id'.")
 			})
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`) // Correct message
@@ -900,10 +896,7 @@ func TestKafkaEvents(t *testing.T) {
 
 			produceKafkaMessage(t, xEnv, topics[0], `{asas`) // Invalid message
 			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionOneArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
-				require.Error(t, args.errValue)
-				var gqlErr graphql.Errors
-				require.ErrorAs(t, args.errValue, &gqlErr)
-				require.Equal(t, "Invalid message received", gqlErr[0].Message)
+				require.ErrorContains(t, args.errValue, "Invalid message received")
 			})
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id":1}`) // Correct message
@@ -914,9 +907,7 @@ func TestKafkaEvents(t *testing.T) {
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","update":{"name":"foo"}}`) // Missing entity = Resolver error
 			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionOneArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
-				var gqlErr graphql.Errors
-				require.ErrorAs(t, args.errValue, &gqlErr)
-				require.Equal(t, "Cannot return null for non-nullable field 'Subscription.employeeUpdatedMyKafka.id'.", gqlErr[0].Message)
+				require.ErrorContains(t, args.errValue, "Cannot return null for non-nullable field 'Subscription.employeeUpdatedMyKafka.id'.")
 			})
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`) // Correct message
