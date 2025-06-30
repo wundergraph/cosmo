@@ -605,7 +605,7 @@ describe('FederationFactory tests', () => {
   });
 
   test('that version two subgraph is assigned correctly', () => {
-    const result = federateSubgraphs([subgraphJ], ROUTER_COMPATIBILITY_VERSION_ONE,) as FederationResultSuccess;
+    const result = federateSubgraphs([subgraphJ], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
     expect(result.success).toBe(true);
 
     const subgraphConfig = result.subgraphConfigBySubgraphName.get(subgraphJ.name);
