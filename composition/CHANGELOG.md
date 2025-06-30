@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.42.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.41.1...@wundergraph/composition@0.42.0) (2025-06-30)
+
+### Features
+
+* add isVersionTwo to SubgraphConfig ([#1997](https://github.com/wundergraph/cosmo/issues/1997)) ([09baaa8](https://github.com/wundergraph/cosmo/commit/09baaa8a3d4c963f1278fe672b3d55bce1346294)) (@wilsonrivera)
+
 ## [0.41.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.41.0...@wundergraph/composition@0.41.1) (2025-06-26)
 
 ### Bug Fixes
