@@ -238,10 +238,8 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 
 	s.circuitBreakerManager = circuit.NewManager(s.subgraphCircuitBreakerOptions.CircuitBreaker)
 
-	baseSubgraphs := routerConfig.GetSubgraphs()
-
 	allSubgraphs := make(map[string]bool)
-	for _, subgraph := range baseSubgraphs {
+	for _, subgraph := range routerConfig.GetSubgraphs() {
 		allSubgraphs[subgraph.Name] = true
 	}
 	for _, ffConfig := range routerConfig.FeatureFlagConfigs.ConfigByFeatureFlagName {
@@ -250,26 +248,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		}
 	}
 
-	attrKeyValues := []attribute.KeyValue{
-		otel.WgRouterConfigVersion.String(routerConfigVersion),
-		otel.WgRouterVersion.String(Version),
-	}
-	routerInfoBaseAttrs := otelmetric.WithAttributeSet(attribute.NewSet(attrKeyValues...))
-
-	m, err := rmetric.NewStore(
-		rmetric.WithPromMeterProvider(s.promMeterProvider),
-		rmetric.WithOtlpMeterProvider(s.otlpMeterProvider),
-		rmetric.WithBaseAttributes(baseMetricAttributes),
-		rmetric.WithLogger(s.logger),
-		rmetric.WithProcessStartTime(s.processStartTime),
-		rmetric.WithCardinalityLimit(rmetric.DefaultCardinalityLimit),
-		rmetric.WithRouterInfoAttributes(routerInfoBaseAttrs),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create metric handler: %w", err)
-	}
-
-	gm, err := s.buildGraphMux(ctx, "", s.baseRouterConfigVersion, routerConfig.GetEngineConfig(), baseSubgraphs, allSubgraphs)
+	gm, err := s.buildGraphMux(ctx, "", s.baseRouterConfigVersion, routerConfig.GetEngineConfig(), routerConfig.GetSubgraphs(), allSubgraphs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build base mux: %w", err)
 	}
