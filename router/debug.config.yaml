@@ -7,9 +7,12 @@ version: '1'
 
 execution_config:
   file:
-    path: './__schemas/config.json'
+    path: './__schemas/configWithPlugins.json'
 
 log_level: debug
+
+access_logs:
+  enabled: false
 
 watch_config:
   enabled: true
@@ -22,8 +25,11 @@ watch_config:
 engine:
   max_concurrent_resolvers: 1024
   debug:
-    report_websocket_connections: true
-    report_memory_usage: true
+    report_websocket_connections: false
+    report_memory_usage: false
+
+plugins:
+  enabled: true
 
 events:
   providers:

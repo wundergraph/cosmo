@@ -5,7 +5,7 @@ import projects "github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects/genera
 var ServiceProjects = []*projects.Project{
 	{
 		Id:          "1",
-		Name:        "Cloud Migration Overhaul",
+		Name:        "Federation X rename to Cosmo connect",
 		Description: "Migrate legacy systems to cloud-native architecture",
 		Status:      projects.ProjectStatus_PROJECT_STATUS_ACTIVE,
 		StartDate:   "2021-01-01",

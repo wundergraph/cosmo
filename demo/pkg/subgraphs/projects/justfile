@@ -1,0 +1,7 @@
+build:
+    docker build -f Dockerfile -t localhost:8787/projects-plugin:latest .
+
+push:
+    docker push localhost:8787/projects-plugin:latest
+
+build-push: build push

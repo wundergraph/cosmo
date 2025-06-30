@@ -1,15 +1,18 @@
-package grpcconnector
+package grpcplugin
 
 import (
 	"context"
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/hashicorp/go-plugin"
+	"github.com/wundergraph/cosmo/router/pkg/grpcconnector"
+	"github.com/wundergraph/cosmo/router/pkg/grpcconnector/grpccommon"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 )
@@ -21,9 +24,6 @@ type GRPCPluginConfig struct {
 }
 
 type GRPCPlugin struct {
-	plugin.Plugin
-	plugin.GRPCPlugin
-
 	logger *zap.Logger
 
 	done     chan struct{}
@@ -33,8 +33,10 @@ type GRPCPlugin struct {
 	pluginPath string
 	pluginName string
 
-	client *GRPCPluginClient
+	client *grpccommon.GRPCPluginClient
 }
+
+var _ grpcconnector.ClientProvider = (*GRPCPlugin)(nil)
 
 func NewGRPCPlugin(config GRPCPluginConfig) (*GRPCPlugin, error) {
 	if config.Logger == nil {
@@ -90,15 +92,16 @@ func (p *GRPCPlugin) fork() error {
 		MagicCookieValue: "GRPC_DATASOURCE_PLUGIN",
 	}
 
-	pluginCmd := newPluginCommand(filePath)
+	pluginCmd := exec.Command(filePath)
+	grpccommon.PrepareCommand(pluginCmd)
 
 	pluginClient := plugin.NewClient(&plugin.ClientConfig{
 		Cmd:              pluginCmd,
 		AllowedProtocols: []plugin.Protocol{plugin.ProtocolGRPC},
 		HandshakeConfig:  handshakeConfig,
-		Logger:           NewPluginLogger(p.logger),
+		Logger:           grpccommon.NewPluginLogger(p.logger),
 		Plugins: map[string]plugin.Plugin{
-			p.pluginName: p,
+			p.pluginName: &grpccommon.ThinPlugin{},
 		},
 	})
 
@@ -119,22 +122,17 @@ func (p *GRPCPlugin) fork() error {
 
 	if p.client == nil {
 		// first time we start the plugin, we need to create a new client
-		p.client, err = newGRPCPluginClient(pluginClient, grpcClient)
+		p.client, err = grpccommon.NewGRPCPluginClient(pluginClient, grpcClient)
 		if err != nil {
 			return fmt.Errorf("failed to create grpc plugin client: %w", err)
 		}
 		return nil
 	}
 
-	p.client.setClients(pluginClient, grpcClient)
+	p.client.SetClients(pluginClient, grpcClient)
 
 	return nil
 
-}
-
-// Name implements Plugin.
-func (p *GRPCPlugin) Name() string {
-	return p.pluginName
 }
 
 // Start implements Plugin.
@@ -189,11 +187,6 @@ func (p *GRPCPlugin) Stop() error {
 
 	close(p.done)
 	return retErr
-}
-
-// GRPCClient implements plugin.GRPCPlugin.
-func (p *GRPCPlugin) GRPCClient(ctx context.Context, broker *plugin.GRPCBroker, conn *grpc.ClientConn) (interface{}, error) {
-	return conn, nil
 }
 
 func (p *GRPCPlugin) validatePluginPath() (string, error) {

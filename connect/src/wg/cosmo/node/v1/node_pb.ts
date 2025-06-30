@@ -1602,6 +1602,13 @@ export class PluginConfiguration extends Message<PluginConfiguration> {
    */
   version = "";
 
+  /**
+   * Plugin image
+   *
+   * @generated from field: string image = 3;
+   */
+  image = "";
+
   constructor(data?: PartialMessage<PluginConfiguration>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1612,6 +1619,7 @@ export class PluginConfiguration extends Message<PluginConfiguration> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "version", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "image", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PluginConfiguration {

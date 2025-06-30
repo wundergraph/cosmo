@@ -45,6 +45,9 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"github.com/wundergraph/cosmo/router/pkg/grpcconnector"
+	"github.com/wundergraph/cosmo/router/pkg/grpcconnector/grpcplugin"
+	"github.com/wundergraph/cosmo/router/pkg/grpcconnector/grpcpluginoci"
+	"github.com/wundergraph/cosmo/router/pkg/grpcconnector/grpcremote"
 	"github.com/wundergraph/cosmo/router/pkg/health"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
@@ -1474,9 +1477,8 @@ func (s *graphServer) setupConnector(ctx context.Context, config *nodev1.EngineC
 
 		pluginConfig := grpcConfig.GetPlugin()
 		if pluginConfig == nil {
-			remoteProvider, err := grpcconnector.NewRemoteGRPCProvider(grpcconnector.RemoteGRPCProviderConfig{
+			remoteProvider, err := grpcremote.NewRemoteGRPCProvider(grpcremote.RemoteGRPCProviderConfig{
 				Logger:   s.logger,
-				Name:     sg.Name,
 				Endpoint: sg.RoutingUrl,
 			})
 
@@ -1502,24 +1504,45 @@ func (s *graphServer) setupConnector(ctx context.Context, config *nodev1.EngineC
 			basePath = s.plugins.Path
 		}
 
-		pluginPath, err := filepath.Abs(filepath.Join(basePath, pluginConfig.GetName(), "bin", fmt.Sprintf("%s_%s", runtime.GOOS, runtime.GOARCH)))
-		if err != nil {
-			return fmt.Errorf("failed to get plugin path: %w", err)
+		if image := pluginConfig.GetImage(); image != "" {
+			pluginImageSource, err := grpcpluginoci.NewRemoteImageSource(image, 5*time.Second)
+			if err != nil {
+				return fmt.Errorf("failed to create remote image source: %w", err)
+			}
+
+			grpcPlugin, err := grpcpluginoci.NewGRPCPlugin(grpcpluginoci.GRPCPluginConfig{
+				Logger:      s.logger,
+				ImageSource: pluginImageSource,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to create grpc oci plugin for subgraph %s: %w", dsConfig.Id, err)
+			}
+
+			err = s.connector.RegisterClientProvider(sg.Name, grpcPlugin)
+			if err != nil {
+				return fmt.Errorf("failed to register grpc plugin: %w", err)
+			}
+		} else {
+			pluginPath, err := filepath.Abs(filepath.Join(basePath, pluginConfig.GetName(), "bin", fmt.Sprintf("%s_%s", runtime.GOOS, runtime.GOARCH)))
+			if err != nil {
+				return fmt.Errorf("failed to get plugin path: %w", err)
+			}
+
+			grpcPlugin, err := grpcplugin.NewGRPCPlugin(grpcplugin.GRPCPluginConfig{
+				Logger:     s.logger,
+				PluginName: pluginConfig.GetName(),
+				PluginPath: pluginPath,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to create grpc plugin for subgraph %s: %w", dsConfig.Id, err)
+			}
+
+			err = s.connector.RegisterClientProvider(sg.Name, grpcPlugin)
+			if err != nil {
+				return fmt.Errorf("failed to register grpc plugin: %w", err)
+			}
 		}
 
-		grpcPlugin, err := grpcconnector.NewGRPCPlugin(grpcconnector.GRPCPluginConfig{
-			Logger:     s.logger,
-			PluginName: pluginConfig.GetName(),
-			PluginPath: pluginPath,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to create grpc plugin for subgraph %s: %w", dsConfig.Id, err)
-		}
-
-		err = s.connector.RegisterClientProvider(sg.Name, grpcPlugin)
-		if err != nil {
-			return fmt.Errorf("failed to register grpc plugin: %w", err)
-		}
 	}
 
 	if err := s.connector.Run(ctx); err != nil {
