@@ -12,6 +12,8 @@ ENV COMMIT=$COMMIT
 
 ENV DATE=$DATE
 
+# this is a test
+
 WORKDIR /app/
 
 # Copy only the files required for go mod download
