@@ -26,4 +26,5 @@ router-plugin @Noroth @StarpTech
 router-tests @wundergraph/Router
 shared @Aenimus @JivusAyrus @StarpTech
 studio @JivusAyrus @wilsonrivera @StarpTech
+# Cosmo Streams / EDFS
 router/pkg/pubsub @alepane21 @StarpTech
