@@ -58,7 +58,7 @@ For local development, the user can point to the local plugin directory. All req
 ```yaml
 version: 1
 subgraphs:
-  # GRPC Subgraph
+  # Router Plugin
   - name: grpcdointhings
     plugin:
       version: 1.0.0 # Allows the router to distinguish between a new version of the plugin

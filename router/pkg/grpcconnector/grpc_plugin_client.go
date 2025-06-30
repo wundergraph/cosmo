@@ -1,4 +1,4 @@
-package routerplugin
+package grpcconnector
 
 import (
 	"context"

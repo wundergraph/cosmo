@@ -311,6 +311,11 @@ events:
             username: 'admin'
             password: 'admin'
         fetch_max_wait: 10ms
+    redis:
+      - id: my-redis
+        urls:
+          - "redis://localhost:6379/11"
+        cluster_enabled: true
 
 engine:
   enable_single_flight: true
