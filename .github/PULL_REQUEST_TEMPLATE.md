@@ -18,8 +18,6 @@ Examples of good PR titles:
 - 🧹chore(deps): bump dependencies to latest versions
 -->
 
-## Motivation and Context
-
 @coderabbitai summary
 
 ## Checklist
