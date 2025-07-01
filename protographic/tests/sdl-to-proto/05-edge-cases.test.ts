@@ -20,8 +20,6 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
       "syntax = "proto3";
       package service.v1;
 
-      option go_package = "cosmo/pkg/proto/service.v1;servicev1";
-
       // Service definition for DefaultService
       service DefaultService {
         rpc QueryDummy(QueryDummyRequest) returns (QueryDummyResponse) {}
@@ -57,8 +55,6 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
     expect(protoText).toMatchInlineSnapshot(`
       "syntax = "proto3";
       package service.v1;
-
-      option go_package = "cosmo/pkg/proto/service.v1;servicev1";
 
       // Service definition for DefaultService
       service DefaultService {
@@ -141,8 +137,6 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
       "syntax = "proto3";
       package service.v1;
 
-      option go_package = "cosmo/pkg/proto/service.v1;servicev1";
-
       // Service definition for DefaultService
       service DefaultService {
         rpc QueryEnumValue(QueryEnumValueRequest) returns (QueryEnumValueResponse) {}
@@ -221,8 +215,6 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
     expect(protoText).toMatchInlineSnapshot(`
       "syntax = "proto3";
       package service.v1;
-
-      option go_package = "cosmo/pkg/proto/service.v1;servicev1";
 
       // Service definition for DefaultService
       service DefaultService {
@@ -374,8 +366,6 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
     expect(protoText).toMatchInlineSnapshot(`
       "syntax = "proto3";
       package service.v1;
-
-      option go_package = "cosmo/pkg/proto/service.v1;servicev1";
 
       // Service definition for DefaultService
       service DefaultService {

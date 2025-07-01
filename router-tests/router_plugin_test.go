@@ -13,6 +13,17 @@ import (
 func TestRouterPlugin(t *testing.T) {
 	t.Parallel()
 
+	t.Run("Should successfully start the router when plugins are enabled but no plugins are in the execution config", func(t *testing.T) {
+		t.Parallel()
+		err := testenv.RunWithError(t, &testenv.Config{
+			Plugins: testenv.PluginConfig{
+				Enabled: true,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {})
+
+		require.NoError(t, err)
+	})
+
 	t.Run("Should fail on startup when no plugins found at a path", func(t *testing.T) {
 		t.Parallel()
 		testenv.FailsOnStartup(t, &testenv.Config{

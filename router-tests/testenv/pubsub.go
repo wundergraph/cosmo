@@ -77,6 +77,13 @@ func addPubSubPrefixToEngineConfiguration(engineConfig *nodev1.EngineConfigurati
 				}
 				customEvents.Kafka[kafkaConfig].Topics = prefixedTopics
 			}
+			for redisConfig := range customEvents.Redis {
+				var prefixedChannels []string
+				for _, channel := range customEvents.Redis[redisConfig].Channels {
+					prefixedChannels = append(prefixedChannels, getPubSubName(channel))
+				}
+				customEvents.Redis[redisConfig].Channels = prefixedChannels
+			}
 		}
 	}
 }

@@ -35,8 +35,8 @@ github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+
 github.com/stretchr/testify v1.7.2/go.mod h1:R6va5+xMeoiuVRoj+gSkQ7d3FALtqAAGI1FQKckRals=
 github.com/stretchr/testify v1.10.0 h1:Xv5erBjTwe/5IxqUQTdXv5kgmIvbHo3QQyRwhJsOfJA=
 github.com/stretchr/testify v1.10.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
-github.com/wundergraph/cosmo/router-plugin v0.0.0-20250519204649-84818397f974 h1:saDyc0zYvWNZK7hDdy3FAd0qwDaggFrcgE2Ih8JJbLU=
-github.com/wundergraph/cosmo/router-plugin v0.0.0-20250519204649-84818397f974/go.mod h1:so0pFCtmgI+ggCAXnBc+XOVT7Pdii7CdFvHW2Svtig4=
+github.com/wundergraph/cosmo/router-plugin v0.0.0-20250616075713-f2b99c96cec4 h1:vJpU4oYzu8tjoHfVPNE3kmwemjhFT5vkNU17+zJGyE8=
+github.com/wundergraph/cosmo/router-plugin v0.0.0-20250616075713-f2b99c96cec4/go.mod h1:McnhVVFedqB0JqkwQcbBUEO6tExEi9HVPpKc/33oFqk=
 golang.org/x/net v0.38.0 h1:vRMAPTMaeGqVhG5QyLJHqNDwecKTomGeqbnfZyKlBI8=
 golang.org/x/net v0.38.0/go.mod h1:ivrbrMbzFq5J41QOQh0siUuly180yBYtLp+CKbEaFx8=
 golang.org/x/sys v0.0.0-20200116001909-b77594299b42/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
