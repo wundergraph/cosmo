@@ -244,7 +244,7 @@ func TestCircuitBreaker(t *testing.T) {
 			require.Equal(t, 2, message.Len())
 
 			contextMap := message.All()[1].ContextMap()
-			require.False(t, contextMap["isOpen"].(bool))
+			require.False(t, contextMap["is_open"].(bool))
 		})
 	})
 
@@ -329,7 +329,7 @@ func TestCircuitBreaker(t *testing.T) {
 			require.Equal(t, 2, message.Len())
 
 			contextMap := message.All()[1].ContextMap()
-			require.False(t, contextMap["isOpen"].(bool))
+			require.False(t, contextMap["is_open"].(bool))
 		})
 	})
 
@@ -1087,12 +1087,17 @@ func getTrafficConfigWithTimeout(breaker config.CircuitBreaker, timeout time.Dur
 			BackoffJitterRetry: config.BackoffJitterRetry{
 				Enabled: false,
 			},
-			CircuitBreaker:      breaker,
-			RequestTimeout:      ToPtr(timeout),
-			DialTimeout:         ToPtr(timeout),
-			MaxConnsPerHost:     ToPtr(20),
-			MaxIdleConns:        ToPtr(20),
-			MaxIdleConnsPerHost: ToPtr(20),
+			CircuitBreaker:         breaker,
+			RequestTimeout:         ToPtr(timeout),
+			DialTimeout:            ToPtr(timeout),
+			ResponseHeaderTimeout:  ToPtr(timeout),
+			ExpectContinueTimeout:  ToPtr(timeout),
+			TLSHandshakeTimeout:    ToPtr(timeout),
+			KeepAliveIdleTimeout:   ToPtr(timeout),
+			KeepAliveProbeInterval: ToPtr(10 * time.Second),
+			MaxConnsPerHost:        ToPtr(20),
+			MaxIdleConns:           ToPtr(20),
+			MaxIdleConnsPerHost:    ToPtr(20),
 		},
 	}
 	return trafficConfig
