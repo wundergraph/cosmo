@@ -76,7 +76,14 @@ func (c *Manager) AddCircuitBreaker(name string, createCircuit *circuit.Circuit)
 }
 
 func (c *Manager) HasCircuits() bool {
-	return c != nil && len(c.circuits) > 0
+	if c == nil {
+		return false
+	}
+	
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+
+	return len(c.circuits) > 0
 }
 
 type ManagerOpts struct {
