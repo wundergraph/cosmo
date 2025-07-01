@@ -105,7 +105,7 @@ type BuildGraphMuxOptions struct {
 	RouterConfigVersion string
 	EngineConfig        *nodev1.EngineConfiguration
 	ConfigSubgraphs     []*nodev1.Subgraph
-	RoutingUrlGroupings map[string][]string
+	RoutingUrlGroupings map[string]map[string]bool
 }
 
 func (b BuildGraphMuxOptions) IsBaseGraph() bool {
@@ -370,15 +370,19 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	return s, nil
 }
 
-func (s *graphServer) getRoutingUrlGroupingForCircuitBreakers(routerConfig *nodev1.RouterConfig) (map[string][]string, error) {
-	routingUrlGroupings := make(map[string][]string)
+func (s *graphServer) getRoutingUrlGroupingForCircuitBreakers(routerConfig *nodev1.RouterConfig) (map[string]map[string]bool, error) {
+	routingUrlGroupings := make(map[string]map[string]bool)
 
 	overwrites, err := configureSubgraphOverwrites(routerConfig.GetEngineConfig(), routerConfig.GetSubgraphs(), s.overrideRoutingURLConfiguration, s.overrides, true)
 	if err != nil {
 		return nil, err
 	}
 	for _, subgraph := range overwrites {
-		routingUrlGroupings[subgraph.UrlString] = append(routingUrlGroupings[subgraph.UrlString], subgraph.Name)
+		if _, ok := routingUrlGroupings[subgraph.UrlString]; !ok {
+			// Make the set
+			routingUrlGroupings[subgraph.UrlString] = make(map[string]bool)
+		}
+		routingUrlGroupings[subgraph.UrlString][subgraph.Name] = true
 	}
 
 	if routerConfig.FeatureFlagConfigs != nil {
@@ -388,7 +392,11 @@ func (s *graphServer) getRoutingUrlGroupingForCircuitBreakers(routerConfig *node
 				return nil, err
 			}
 			for _, subgraph := range ffOverwrites {
-				routingUrlGroupings[subgraph.UrlString] = append(routingUrlGroupings[subgraph.UrlString], subgraph.Name)
+				if _, ok := routingUrlGroupings[subgraph.UrlString]; !ok {
+					// Make the set
+					routingUrlGroupings[subgraph.UrlString] = make(map[string]bool)
+				}
+				routingUrlGroupings[subgraph.UrlString][subgraph.Name] = true
 			}
 		}
 	}

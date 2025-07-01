@@ -83,7 +83,7 @@ type ManagerOpts struct {
 	MetricStore             metric.CircuitMetricStore
 	UseMetrics              bool
 	BaseOtelAttributes      []attribute.KeyValue
-	AllGroupings            map[string][]string
+	AllGroupings            map[string]map[string]bool
 }
 
 func (c *Manager) Initialize(opts ManagerOpts) error {
@@ -93,15 +93,17 @@ func (c *Manager) Initialize(opts ManagerOpts) error {
 		defaultSgNames := make([]string, 0, len(sgNames))
 		customSgNames := make([]string, 0, len(sgNames))
 
-		for _, sgName := range sgNames {
-			if _, ok := opts.SubgraphCircuitBreakers[sgName]; ok {
-				customSgNames = append(customSgNames, sgName)
-			} else {
+		for sgName := range sgNames {
+			entry, ok := opts.SubgraphCircuitBreakers[sgName]
+			if !ok {
 				defaultSgNames = append(defaultSgNames, sgName)
+			} else if entry.Enabled {
+				// This will cover the case of if a subgraph is explicitly disabled
+				customSgNames = append(customSgNames, sgName)
 			}
 		}
 
-		if len(defaultSgNames) == 0 && c.isBaseConfigEnabled {
+		if len(defaultSgNames) > 0 && c.isBaseConfigEnabled {
 			configs := make([]circuit.Config, 0, 1)
 			if opts.UseMetrics {
 				configs = append(configs, metric.NewCircuitBreakerMetricsConfig(defaultSgNames, opts.MetricStore, opts.BaseOtelAttributes))
@@ -119,20 +121,14 @@ func (c *Manager) Initialize(opts ManagerOpts) error {
 			}
 		}
 
-		if len(customSgNames) == 0 && c.isBaseConfigEnabled {
+		if len(customSgNames) > 0 {
 			for _, sgName := range customSgNames {
-				sgOptions := opts.SubgraphCircuitBreakers[sgName]
-
-				// This will cover the case of if a subgraph is explicitly disabled
-				if !sgOptions.Enabled {
-					continue
-				}
-
 				configs := make([]circuit.Config, 0, 1)
 				if opts.UseMetrics {
 					configs = append(configs, metric.NewCircuitBreakerMetricsConfig([]string{sgName}, opts.MetricStore, opts.BaseOtelAttributes))
 				}
-				newConfig := createConfiguration(sgOptions)
+
+				newConfig := createConfiguration(opts.SubgraphCircuitBreakers[sgName])
 				configs = append(configs, newConfig.Configure(sgName))
 
 				createCircuit, err := c.internalManager.CreateCircuit(sgName, configs...)
