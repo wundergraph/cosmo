@@ -1,6 +1,5 @@
 import { useApplyParams } from "@/components/analytics/use-apply-params";
 import { UserContext } from "@/components/app-provider";
-import { NamespaceSelector } from "@/components/dashboard/NamespaceSelector";
 import { EmptyState } from "@/components/empty-state";
 import { FederatedGraphsCards } from "@/components/federatedgraphs-cards";
 import { getDashboardLayout } from "@/components/layout/dashboard-layout";
@@ -26,6 +25,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useContext } from "react";
 import { useCheckUserAccess } from "@/hooks/use-check-user-access";
+import { WorkspaceSelector } from "@/components/dashboard/workspace-selector";
 
 const GraphToolbar = () => {
   const checkUserAccess = useCheckUserAccess();
@@ -114,7 +114,7 @@ GraphsDashboardPage.getLayout = (page) => {
     "An overview of all your federated graphs and monographs",
     undefined,
     <GraphToolbar />,
-    [<NamespaceSelector key="0" />],
+    [<WorkspaceSelector key="0" />],
   );
 };
 

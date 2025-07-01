@@ -32,16 +32,16 @@ import {
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { useRouter } from "next/router";
 import { Fragment, createContext, useMemo, useState } from "react";
-import { PiChat, PiGraphLight } from "react-icons/pi";
+import { PiGraphLight } from "react-icons/pi";
 import { EmptyState } from "../empty-state";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
-import { Link } from "../ui/link";
 import { Loader } from "../ui/loader";
 import { TitleLayoutProps } from "./graph-layout";
 import { PageHeader } from "./head";
 import { LayoutProps } from "./layout";
 import { NavLink, SideNav } from "./sidenav";
+import { WorkspaceSelector } from "@/components/dashboard/workspace-selector";
 
 export interface SubgraphContextProps {
   subgraph: GetSubgraphByNameResponse["graph"];
@@ -251,18 +251,9 @@ export const SubgraphPageLayout = ({
   children,
   scrollRef,
 }: TitleLayoutProps) => {
-  const router = useRouter();
-
   const breadcrumb = (
-    <div className="flex flex-row items-center space-x-2 text-sm">
-      <Link
-        className="text-muted-foreground hover:text-current"
-        href={`/${router.query.organizationSlug}`}
-      >
-        Home
-      </Link>
-      <span className="text-muted-foreground">/</span>
-      <SubgraphSelect /> <span className="text-muted-foreground">/</span>
+    <div className="flex flex-row items-center space-x-2 text-sm gap-x-2">
+      <span className="text-muted-foreground ml-2">/</span>
       {breadcrumbs?.map((b, i) => (
         <Fragment key={i}>
           <span className="text-muted-foreground hover:text-current">{b}</span>
@@ -281,7 +272,9 @@ export const SubgraphPageLayout = ({
             "flex w-full flex-col justify-between gap-y-4 px-4 md:w-auto lg:flex-row lg:items-center lg:px-6 xl:px-8",
           )}
         >
-          {breadcrumb}
+          <WorkspaceSelector truncateNamespace={false}>
+            {breadcrumb}
+          </WorkspaceSelector>
           {items}
         </div>
         {toolbar}

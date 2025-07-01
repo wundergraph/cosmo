@@ -43,7 +43,6 @@ import { Fragment, createContext, useContext, useMemo, useState } from "react";
 import { MdOutlineFeaturedPlayList } from "react-icons/md";
 import {
   PiBracketsCurlyBold,
-  PiChat,
   PiCubeFocus,
   PiDevices,
   PiGitBranch,
@@ -52,12 +51,12 @@ import {
 import { EmptyState } from "../empty-state";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
-import { Link } from "../ui/link";
 import { Loader } from "../ui/loader";
 import { PageHeader } from "./head";
 import { LayoutProps } from "./layout";
 import { NavLink, SideNav } from "./sidenav";
 import { useFeature } from "@/hooks/use-feature";
+import { WorkspaceSelector } from "@/components/dashboard/workspace-selector";
 
 export interface GraphContextProps {
   graph: GetFederatedGraphByNameResponse["graph"];
@@ -192,7 +191,7 @@ export const GraphLayout = ({ children }: LayoutProps) => {
         icon: <ClipboardIcon className="h-4 w-4" />,
       });
     }
-    
+
     return graphLinks;
   }, [organizationSlug, namespace, slug, proposalsFeature]);
 
@@ -395,18 +394,9 @@ export const GraphPageLayout = ({
   children,
   scrollRef,
 }: TitleLayoutProps) => {
-  const router = useRouter();
-
   const breadcrumb = (
-    <div className="flex flex-row items-center space-x-2 text-sm">
-      <Link
-        className="text-muted-foreground hover:text-current"
-        href={`/${router.query.organizationSlug}`}
-      >
-        Home
-      </Link>
+    <>
       <span className="text-muted-foreground">/</span>
-      <GraphSelect /> <span className="text-muted-foreground">/</span>
       {breadcrumbs?.map((b, i) => (
         <Fragment key={i}>
           <span className="text-muted-foreground hover:text-current">{b}</span>
@@ -414,7 +404,7 @@ export const GraphPageLayout = ({
         </Fragment>
       ))}
       <h1 className="truncate whitespace-nowrap font-medium">{title}</h1>
-    </div>
+    </>
   );
 
   return (
@@ -425,7 +415,9 @@ export const GraphPageLayout = ({
             "flex w-full flex-col justify-between gap-y-4 px-4 md:w-auto lg:flex-row lg:items-center lg:px-6 xl:px-8",
           )}
         >
-          {breadcrumb}
+          <WorkspaceSelector truncateNamespace={false}>
+            {breadcrumb}
+          </WorkspaceSelector>
           {items}
         </div>
         {toolbar}

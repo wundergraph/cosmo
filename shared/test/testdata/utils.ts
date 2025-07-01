@@ -1,6 +1,6 @@
 import * as fs from 'node:fs';
 import {
-  federateSubgraphs,
+  federateSubgraphSuccess,
   FederationResult,
   LATEST_ROUTER_COMPATIBILITY_VERSION,
   Subgraph,
@@ -33,7 +33,7 @@ export function federateTestSubgraphs(): FederationResult {
     url: 'https://wg-federation-demo-reviews.fly.dev/graphql',
   };
 
-  return federateSubgraphs([accounts, inventory, products, reviews], LATEST_ROUTER_COMPATIBILITY_VERSION);
+  return federateSubgraphSuccess([accounts, inventory, products, reviews], LATEST_ROUTER_COMPATIBILITY_VERSION);
 }
 
 export const simpleAccounts: Subgraph = {

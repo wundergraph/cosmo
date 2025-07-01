@@ -1,5 +1,4 @@
 import { CacheWarmerConfig } from "@/components/cache/cache-warmer-config";
-import { NamespaceSelector } from "@/components/dashboard/NamespaceSelector";
 import { EmptyState } from "@/components/empty-state";
 import { getDashboardLayout } from "@/components/layout/dashboard-layout";
 import { Button } from "@/components/ui/button";
@@ -24,6 +23,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import { useCheckUserAccess } from "@/hooks/use-check-user-access";
+import { WorkspaceSelector } from "@/components/dashboard/workspace-selector";
 
 const CacheWarmerPage: NextPageWithLayout = () => {
   const router = useRouter();
@@ -169,7 +169,7 @@ CacheWarmerPage.getLayout = (page) => {
     "Configure cache warming to warm your router with top operations..",
     undefined,
     undefined,
-    [<NamespaceSelector key="0" />],
+    [<WorkspaceSelector key="0" />],
   );
 };
 

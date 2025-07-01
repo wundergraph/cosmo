@@ -4,7 +4,7 @@ import * as url from 'node:url';
 import { describe, expect, test } from 'vitest';
 import { printSchema } from 'graphql';
 import {
-  federateSubgraphs,
+  federateSubgraphSuccess,
   FederationResultSuccess,
   LATEST_ROUTER_COMPATIBILITY_VERSION,
 } from '@wundergraph/composition';
@@ -199,7 +199,7 @@ describe('Router Config Builder', () => {
   });
 
   test('that the federatedClientSDL property is not propagated if it is empty', () => {
-    const result = federateSubgraphs(
+    const result = federateSubgraphSuccess(
       [simpleAccounts, simpleProducts],
       LATEST_ROUTER_COMPATIBILITY_VERSION,
     ) as FederationResultSuccess;
@@ -253,7 +253,7 @@ describe('Router Config Builder', () => {
   });
 
   test('that the federatedClientSDL property is propagated if a schema uses the @tag directive', () => {
-    const result = federateSubgraphs(
+    const result = federateSubgraphSuccess(
       [simpleAccounts, simpleProductsWithTags],
       LATEST_ROUTER_COMPATIBILITY_VERSION,
     ) as FederationResultSuccess;
@@ -307,7 +307,7 @@ describe('Router Config Builder', () => {
   });
 
   test('that the federatedClientSDL property is propagated if a schema uses the @inaccessible directive', () => {
-    const result = federateSubgraphs(
+    const result = federateSubgraphSuccess(
       [simpleAccounts, simpleProductsWithInaccessible],
       LATEST_ROUTER_COMPATIBILITY_VERSION,
     ) as FederationResultSuccess;

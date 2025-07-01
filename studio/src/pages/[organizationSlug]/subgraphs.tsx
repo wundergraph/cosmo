@@ -1,5 +1,4 @@
 import { useApplyParams } from "@/components/analytics/use-apply-params";
-import { NamespaceSelector } from "@/components/dashboard/NamespaceSelector";
 import { EmptyState } from "@/components/empty-state";
 import { getDashboardLayout } from "@/components/layout/dashboard-layout";
 import { SubgraphPageTabs, SubgraphsTable } from "@/components/subgraphs-table";
@@ -18,6 +17,7 @@ import {
 import { useRouter } from "next/router";
 import { useState } from "react";
 import { useDebounce } from "use-debounce";
+import { WorkspaceSelector } from "@/components/dashboard/workspace-selector";
 
 const SubgraphsDashboardPage: NextPageWithLayout = () => {
   const router = useRouter();
@@ -158,7 +158,7 @@ SubgraphsDashboardPage.getLayout = (page) => {
     "An overview of all subgraphs",
     undefined,
     undefined,
-    [<NamespaceSelector key="0" />],
+    [<WorkspaceSelector key="0" />],
   );
 };
 

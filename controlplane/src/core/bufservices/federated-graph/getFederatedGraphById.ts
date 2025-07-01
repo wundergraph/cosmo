@@ -60,6 +60,7 @@ export function getFederatedGraphById(
     const list = await subgraphRepo.listByFederatedGraph({
       federatedGraphTargetId: federatedGraph.targetId,
       published: false,
+      rbac: authContext.rbac,
     });
 
     const featureFlags = await featureFlagRepo.getFeatureFlagsByFederatedGraph({

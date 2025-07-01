@@ -299,6 +299,7 @@ message GetFederatedGraphsRequest {
   bool includeMetrics = 3;
   string namespace = 4;
   optional bool supports_federation = 5;
+  bool includeSubgraphs = 6;
 }
 
 message Contract {
@@ -328,9 +329,17 @@ message FederatedGraph {
   string router_compatibility_version = 17;
 }
 
+message SubgraphMinimal {
+  string id = 1;
+  string name = 2;
+  string namespace = 3;
+  string fedGraphId = 4;
+}
+
 message GetFederatedGraphsResponse {
   Response response = 1;
   repeated FederatedGraph graphs = 2;
+  repeated SubgraphMinimal subgraphs = 3;
 }
 
 message GetFederatedGraphsBySubgraphLabelsRequest {

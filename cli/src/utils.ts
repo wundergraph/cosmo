@@ -2,7 +2,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import {
   Subgraph,
-  federateSubgraphs,
+  federateSubgraphSuccess,
   FederationResult,
   ROUTER_COMPATIBILITY_VERSION_ONE,
 } from '@wundergraph/composition';
@@ -181,7 +181,7 @@ export const introspectSubgraph = async ({
  */
 export function composeSubgraphs(subgraphs: Subgraph[]): FederationResult {
   // @TODO get router compatibility version programmatically
-  return federateSubgraphs(subgraphs, ROUTER_COMPATIBILITY_VERSION_ONE);
+  return federateSubgraphSuccess(subgraphs, ROUTER_COMPATIBILITY_VERSION_ONE);
 }
 
 export type ConfigData = Partial<KeycloakToken & { organizationSlug: string; lastUpdateCheck: number }>;
