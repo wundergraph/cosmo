@@ -1,0 +1,2 @@
+ALTER TABLE "federated_graph_collection_operations" ALTER COLUMN "operation_name" SET NOT NULL;--> statement-breakpoint
+ALTER TABLE "federated_graph_collection_operations" ALTER COLUMN "operation_content" SET NOT NULL;

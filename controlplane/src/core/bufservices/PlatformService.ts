@@ -165,6 +165,11 @@ import { getNamespaceProposalConfig } from './proposal/getNamespaceProposalConfi
 import { configureNamespaceProposalConfig } from './proposal/configureNamespaceProposalConfig.js';
 import { getOperations } from './analytics/getOperations.js';
 import { getClientsFromAnalytics } from './federated-graph/getClientsFromAnalytics.js';
+import { createCollectionAndOperations } from './collections/createCollectionAndOperations.js';
+import { updateCollection } from './collections/updateCollection.js';
+import { deleteCollection } from './collections/deleteCollection.js';
+import { updateCollectionOperation } from './collections/updateCollectionOperation.js';
+import { deleteCollectionOperation } from './collections/deleteCollectionOperation.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -833,6 +838,26 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     getClientsFromAnalytics: (req, ctx) => {
       return getClientsFromAnalytics(opts, req, ctx);
+    },
+
+    createCollectionAndOperations: (req, ctx) => {
+      return createCollectionAndOperations(opts, req, ctx);
+    },
+
+    updateCollection: (req, ctx) => {
+      return updateCollection(opts, req, ctx);
+    },
+
+    deleteCollection: (req, ctx) => {
+      return deleteCollection(opts, req, ctx);
+    },
+
+    updateCollectionOperation: (req, ctx) => {
+      return updateCollectionOperation(opts, req, ctx);
+    },
+
+    deleteCollectionOperation: (req, ctx) => {
+      return deleteCollectionOperation(opts, req, ctx);
     },
   };
 }

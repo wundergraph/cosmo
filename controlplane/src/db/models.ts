@@ -16,6 +16,7 @@ import {
   cacheWarmerOperations,
   proposalStateEnum,
   proposalMatchEnum,
+  collectionProtocolsEnum,
 } from './schema.js';
 
 export type FederatedGraph = typeof federatedGraphs.$inferSelect;
@@ -35,6 +36,7 @@ export type CacheWarmupOperation = typeof cacheWarmerOperations.$inferInsert;
 export type ProposalState = (typeof proposalStateEnum.enumValues)[number];
 export type ProposalMatch = (typeof proposalMatchEnum.enumValues)[number];
 export type WebhookDeliveryInfo = typeof webhookDeliveries.$inferInsert;
+export type DBCollectionProtocol = (typeof collectionProtocolsEnum.enumValues)[number];
 
 export type AuditableType =
   | 'organization'

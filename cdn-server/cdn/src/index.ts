@@ -258,6 +258,39 @@ const cacheOperations = (storage: BlobStorage) => {
   };
 };
 
+const collections = (storage: BlobStorage) => {
+  return async (c: Context) => {
+    const organizationId = c.get('authenticatedOrganizationId');
+    const federatedGraphId = c.get('authenticatedFederatedGraphId');
+
+    if (organizationId !== c.req.param('organization_id') || federatedGraphId !== c.req.param('federated_graph_id')) {
+      return c.text('Bad Request', 400);
+    }
+
+    const collectionId = c.req.param('collection_id');
+    const protocol = c.req.param('protocol');
+
+    const key = `${organizationId}/${federatedGraphId}/collections/${collectionId}/${protocol}.json`;
+    let blobObject: BlobObject;
+
+    try {
+      blobObject = await storage.getObject({ context: c, key, cacheControl: 'no-cache' });
+    } catch (e: any) {
+      if (e instanceof BlobNotFoundError) {
+        return c.notFound();
+      }
+      throw e;
+    }
+
+    c.header('Content-Type', 'application/json; charset=UTF-8');
+    c.header('Cache-Control', 'no-cache, no-store, must-revalidate');
+
+    return stream(c, async (stream) => {
+      await stream.pipe(blobObject.stream);
+    });
+  };
+};
+
 // eslint-disable-next-line @typescript-eslint/ban-types
 export const cdn = <E extends Env, S extends Schema = {}, BasePath extends string = '/'>(
   hono: Hono<E, S, BasePath>,
@@ -286,4 +319,7 @@ export const cdn = <E extends Env, S extends Schema = {}, BasePath extends strin
   hono
     .use(cacheOperationsPath, jwtMiddleware(opts.authJwtSecret))
     .get(cacheOperationsPath, cacheOperations(opts.blobStorage));
+
+  const collectionsPath = '/:organization_id/:federated_graph_id/collections/:collection_id/:protocol.json';
+  hono.use(collectionsPath, jwtMiddleware(opts.authJwtSecret)).get(collectionsPath, collections(opts.blobStorage));
 };

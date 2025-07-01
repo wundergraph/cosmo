@@ -2788,6 +2788,78 @@ message GetClientsFromAnalyticsResponse {
   repeated Client clients = 2;
 }
 
+enum CollectionProtocol {
+  GRPC = 0;
+  MCP = 1;
+}
+
+message CollectionOperation{
+  string id = 1;
+  string name = 2;
+  string content = 3;
+}
+
+message CreateCollectionAndOperationsRequest {
+  string federatedGraphName = 1;
+  string namespace = 2;
+  string name = 3;
+  repeated CollectionProtocol protocols = 4;
+  repeated CollectionOperation operations = 5;
+  optional string grpcManifest = 6;
+}
+
+message CreateCollectionAndOperationsResponse {
+  Response response = 1;
+  string collectionId = 2;
+}
+
+message UpdateCollectionRequest {
+  string collectionId = 1;
+  string federatedGraphName = 2;
+  string namespace = 3;
+  string name = 4;
+  repeated CollectionProtocol protocols = 5;
+  optional string grpcManifest = 6;
+}
+
+message UpdateCollectionResponse {
+  Response response = 1;
+}
+
+message DeleteCollectionRequest {
+  string collectionId = 1;
+  string federatedGraphName = 2;
+  string namespace = 3;
+}
+
+message DeleteCollectionResponse {
+  Response response = 1;
+}
+
+message UpdateCollectionOperationRequest {
+  string collectionId = 1;
+  string federatedGraphName = 2;
+  string namespace = 3;
+  CollectionOperation operation = 4;
+  optional string grpcManifest = 5;
+}
+
+message UpdateCollectionOperationResponse {
+  Response response = 1;
+}
+
+message DeleteCollectionOperationRequest {
+  string collectionId = 1;
+  string id = 2;
+  string federatedGraphName = 3;
+  string namespace = 4;
+  optional string grpcManifest = 5;
+}
+
+message DeleteCollectionOperationResponse {
+  Response response = 1;
+}
+
 service PlatformService {
   // PlaygroundScripts
   rpc CreatePlaygroundScript(CreatePlaygroundScriptRequest) returns (CreatePlaygroundScriptResponse) {}
@@ -3151,4 +3223,15 @@ service PlatformService {
   rpc GetOperations(GetOperationsRequest) returns (GetOperationsResponse) {}
   // GetClientsFromAnalytics returns all the clients of the federated graph from the analytics
   rpc GetClientsFromAnalytics(GetClientsFromAnalyticsRequest) returns (GetClientsFromAnalyticsResponse) {}
+  // CreateCollectionAndOperations creates a new collection for the federated graph and operations for the collection.
+  rpc CreateCollectionAndOperations(CreateCollectionAndOperationsRequest) returns (CreateCollectionAndOperationsResponse) {}
+  // UpdateCollection updates a collection of the federated graph.
+  rpc UpdateCollection(UpdateCollectionRequest) returns (UpdateCollectionResponse) {}
+  // DeleteCollection deletes a collection of the federated graph.
+  rpc DeleteCollection(DeleteCollectionRequest) returns (DeleteCollectionResponse) {}
+  // UpdateCollectionOperation updates an operation of a collection.
+  rpc UpdateCollectionOperation(UpdateCollectionOperationRequest) returns (UpdateCollectionOperationResponse) {}
+  // DeleteCollectionOperation deletes an operation of a collection.
+  rpc DeleteCollectionOperation(DeleteCollectionOperationRequest) returns (DeleteCollectionOperationResponse) {}
+  
 }

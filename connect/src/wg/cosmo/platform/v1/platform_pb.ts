@@ -335,6 +335,26 @@ proto3.util.setEnumType(Feature, "wg.cosmo.platform.v1.Feature", [
 ]);
 
 /**
+ * @generated from enum wg.cosmo.platform.v1.CollectionProtocol
+ */
+export enum CollectionProtocol {
+  /**
+   * @generated from enum value: GRPC = 0;
+   */
+  GRPC = 0,
+
+  /**
+   * @generated from enum value: MCP = 1;
+   */
+  MCP = 1,
+}
+// Retrieve enum metadata with: proto3.getEnumType(CollectionProtocol)
+proto3.util.setEnumType(CollectionProtocol, "wg.cosmo.platform.v1.CollectionProtocol", [
+  { no: 0, name: "GRPC" },
+  { no: 1, name: "MCP" },
+]);
+
+/**
  * @generated from message wg.cosmo.platform.v1.Label
  */
 export class Label extends Message<Label> {
@@ -22017,6 +22037,551 @@ export class GetClientsFromAnalyticsResponse_Client extends Message<GetClientsFr
 
   static equals(a: GetClientsFromAnalyticsResponse_Client | PlainMessage<GetClientsFromAnalyticsResponse_Client> | undefined, b: GetClientsFromAnalyticsResponse_Client | PlainMessage<GetClientsFromAnalyticsResponse_Client> | undefined): boolean {
     return proto3.util.equals(GetClientsFromAnalyticsResponse_Client, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.CollectionOperation
+ */
+export class CollectionOperation extends Message<CollectionOperation> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  /**
+   * @generated from field: string content = 3;
+   */
+  content = "";
+
+  constructor(data?: PartialMessage<CollectionOperation>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.CollectionOperation";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "content", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CollectionOperation {
+    return new CollectionOperation().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CollectionOperation {
+    return new CollectionOperation().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CollectionOperation {
+    return new CollectionOperation().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CollectionOperation | PlainMessage<CollectionOperation> | undefined, b: CollectionOperation | PlainMessage<CollectionOperation> | undefined): boolean {
+    return proto3.util.equals(CollectionOperation, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.CreateCollectionAndOperationsRequest
+ */
+export class CreateCollectionAndOperationsRequest extends Message<CreateCollectionAndOperationsRequest> {
+  /**
+   * @generated from field: string federatedGraphName = 1;
+   */
+  federatedGraphName = "";
+
+  /**
+   * @generated from field: string namespace = 2;
+   */
+  namespace = "";
+
+  /**
+   * @generated from field: string name = 3;
+   */
+  name = "";
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.CollectionProtocol protocols = 4;
+   */
+  protocols: CollectionProtocol[] = [];
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.CollectionOperation operations = 5;
+   */
+  operations: CollectionOperation[] = [];
+
+  /**
+   * @generated from field: optional string grpcManifest = 6;
+   */
+  grpcManifest?: string;
+
+  constructor(data?: PartialMessage<CreateCollectionAndOperationsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.CreateCollectionAndOperationsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "federatedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "protocols", kind: "enum", T: proto3.getEnumType(CollectionProtocol), repeated: true },
+    { no: 5, name: "operations", kind: "message", T: CollectionOperation, repeated: true },
+    { no: 6, name: "grpcManifest", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateCollectionAndOperationsRequest {
+    return new CreateCollectionAndOperationsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateCollectionAndOperationsRequest {
+    return new CreateCollectionAndOperationsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateCollectionAndOperationsRequest {
+    return new CreateCollectionAndOperationsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CreateCollectionAndOperationsRequest | PlainMessage<CreateCollectionAndOperationsRequest> | undefined, b: CreateCollectionAndOperationsRequest | PlainMessage<CreateCollectionAndOperationsRequest> | undefined): boolean {
+    return proto3.util.equals(CreateCollectionAndOperationsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.CreateCollectionAndOperationsResponse
+ */
+export class CreateCollectionAndOperationsResponse extends Message<CreateCollectionAndOperationsResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: string collectionId = 2;
+   */
+  collectionId = "";
+
+  constructor(data?: PartialMessage<CreateCollectionAndOperationsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.CreateCollectionAndOperationsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "collectionId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateCollectionAndOperationsResponse {
+    return new CreateCollectionAndOperationsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateCollectionAndOperationsResponse {
+    return new CreateCollectionAndOperationsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateCollectionAndOperationsResponse {
+    return new CreateCollectionAndOperationsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CreateCollectionAndOperationsResponse | PlainMessage<CreateCollectionAndOperationsResponse> | undefined, b: CreateCollectionAndOperationsResponse | PlainMessage<CreateCollectionAndOperationsResponse> | undefined): boolean {
+    return proto3.util.equals(CreateCollectionAndOperationsResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.UpdateCollectionRequest
+ */
+export class UpdateCollectionRequest extends Message<UpdateCollectionRequest> {
+  /**
+   * @generated from field: string collectionId = 1;
+   */
+  collectionId = "";
+
+  /**
+   * @generated from field: string federatedGraphName = 2;
+   */
+  federatedGraphName = "";
+
+  /**
+   * @generated from field: string namespace = 3;
+   */
+  namespace = "";
+
+  /**
+   * @generated from field: string name = 4;
+   */
+  name = "";
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.CollectionProtocol protocols = 5;
+   */
+  protocols: CollectionProtocol[] = [];
+
+  /**
+   * @generated from field: optional string grpcManifest = 6;
+   */
+  grpcManifest?: string;
+
+  constructor(data?: PartialMessage<UpdateCollectionRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.UpdateCollectionRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "collectionId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "federatedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "protocols", kind: "enum", T: proto3.getEnumType(CollectionProtocol), repeated: true },
+    { no: 6, name: "grpcManifest", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateCollectionRequest {
+    return new UpdateCollectionRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateCollectionRequest {
+    return new UpdateCollectionRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateCollectionRequest {
+    return new UpdateCollectionRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateCollectionRequest | PlainMessage<UpdateCollectionRequest> | undefined, b: UpdateCollectionRequest | PlainMessage<UpdateCollectionRequest> | undefined): boolean {
+    return proto3.util.equals(UpdateCollectionRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.UpdateCollectionResponse
+ */
+export class UpdateCollectionResponse extends Message<UpdateCollectionResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<UpdateCollectionResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.UpdateCollectionResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateCollectionResponse {
+    return new UpdateCollectionResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateCollectionResponse {
+    return new UpdateCollectionResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateCollectionResponse {
+    return new UpdateCollectionResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateCollectionResponse | PlainMessage<UpdateCollectionResponse> | undefined, b: UpdateCollectionResponse | PlainMessage<UpdateCollectionResponse> | undefined): boolean {
+    return proto3.util.equals(UpdateCollectionResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.DeleteCollectionRequest
+ */
+export class DeleteCollectionRequest extends Message<DeleteCollectionRequest> {
+  /**
+   * @generated from field: string collectionId = 1;
+   */
+  collectionId = "";
+
+  /**
+   * @generated from field: string federatedGraphName = 2;
+   */
+  federatedGraphName = "";
+
+  /**
+   * @generated from field: string namespace = 3;
+   */
+  namespace = "";
+
+  constructor(data?: PartialMessage<DeleteCollectionRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.DeleteCollectionRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "collectionId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "federatedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteCollectionRequest {
+    return new DeleteCollectionRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteCollectionRequest {
+    return new DeleteCollectionRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteCollectionRequest {
+    return new DeleteCollectionRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteCollectionRequest | PlainMessage<DeleteCollectionRequest> | undefined, b: DeleteCollectionRequest | PlainMessage<DeleteCollectionRequest> | undefined): boolean {
+    return proto3.util.equals(DeleteCollectionRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.DeleteCollectionResponse
+ */
+export class DeleteCollectionResponse extends Message<DeleteCollectionResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<DeleteCollectionResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.DeleteCollectionResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteCollectionResponse {
+    return new DeleteCollectionResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteCollectionResponse {
+    return new DeleteCollectionResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteCollectionResponse {
+    return new DeleteCollectionResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteCollectionResponse | PlainMessage<DeleteCollectionResponse> | undefined, b: DeleteCollectionResponse | PlainMessage<DeleteCollectionResponse> | undefined): boolean {
+    return proto3.util.equals(DeleteCollectionResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.UpdateCollectionOperationRequest
+ */
+export class UpdateCollectionOperationRequest extends Message<UpdateCollectionOperationRequest> {
+  /**
+   * @generated from field: string collectionId = 1;
+   */
+  collectionId = "";
+
+  /**
+   * @generated from field: string federatedGraphName = 2;
+   */
+  federatedGraphName = "";
+
+  /**
+   * @generated from field: string namespace = 3;
+   */
+  namespace = "";
+
+  /**
+   * @generated from field: wg.cosmo.platform.v1.CollectionOperation operation = 4;
+   */
+  operation?: CollectionOperation;
+
+  /**
+   * @generated from field: optional string grpcManifest = 5;
+   */
+  grpcManifest?: string;
+
+  constructor(data?: PartialMessage<UpdateCollectionOperationRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.UpdateCollectionOperationRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "collectionId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "federatedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "operation", kind: "message", T: CollectionOperation },
+    { no: 5, name: "grpcManifest", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateCollectionOperationRequest {
+    return new UpdateCollectionOperationRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateCollectionOperationRequest {
+    return new UpdateCollectionOperationRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateCollectionOperationRequest {
+    return new UpdateCollectionOperationRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateCollectionOperationRequest | PlainMessage<UpdateCollectionOperationRequest> | undefined, b: UpdateCollectionOperationRequest | PlainMessage<UpdateCollectionOperationRequest> | undefined): boolean {
+    return proto3.util.equals(UpdateCollectionOperationRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.UpdateCollectionOperationResponse
+ */
+export class UpdateCollectionOperationResponse extends Message<UpdateCollectionOperationResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<UpdateCollectionOperationResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.UpdateCollectionOperationResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateCollectionOperationResponse {
+    return new UpdateCollectionOperationResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateCollectionOperationResponse {
+    return new UpdateCollectionOperationResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateCollectionOperationResponse {
+    return new UpdateCollectionOperationResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateCollectionOperationResponse | PlainMessage<UpdateCollectionOperationResponse> | undefined, b: UpdateCollectionOperationResponse | PlainMessage<UpdateCollectionOperationResponse> | undefined): boolean {
+    return proto3.util.equals(UpdateCollectionOperationResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.DeleteCollectionOperationRequest
+ */
+export class DeleteCollectionOperationRequest extends Message<DeleteCollectionOperationRequest> {
+  /**
+   * @generated from field: string collectionId = 1;
+   */
+  collectionId = "";
+
+  /**
+   * @generated from field: string id = 2;
+   */
+  id = "";
+
+  /**
+   * @generated from field: string federatedGraphName = 3;
+   */
+  federatedGraphName = "";
+
+  /**
+   * @generated from field: string namespace = 4;
+   */
+  namespace = "";
+
+  /**
+   * @generated from field: optional string grpcManifest = 5;
+   */
+  grpcManifest?: string;
+
+  constructor(data?: PartialMessage<DeleteCollectionOperationRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.DeleteCollectionOperationRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "collectionId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "federatedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "grpcManifest", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteCollectionOperationRequest {
+    return new DeleteCollectionOperationRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteCollectionOperationRequest {
+    return new DeleteCollectionOperationRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteCollectionOperationRequest {
+    return new DeleteCollectionOperationRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteCollectionOperationRequest | PlainMessage<DeleteCollectionOperationRequest> | undefined, b: DeleteCollectionOperationRequest | PlainMessage<DeleteCollectionOperationRequest> | undefined): boolean {
+    return proto3.util.equals(DeleteCollectionOperationRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.DeleteCollectionOperationResponse
+ */
+export class DeleteCollectionOperationResponse extends Message<DeleteCollectionOperationResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<DeleteCollectionOperationResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.DeleteCollectionOperationResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteCollectionOperationResponse {
+    return new DeleteCollectionOperationResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteCollectionOperationResponse {
+    return new DeleteCollectionOperationResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteCollectionOperationResponse {
+    return new DeleteCollectionOperationResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteCollectionOperationResponse | PlainMessage<DeleteCollectionOperationResponse> | undefined, b: DeleteCollectionOperationResponse | PlainMessage<DeleteCollectionOperationResponse> | undefined): boolean {
+    return proto3.util.equals(DeleteCollectionOperationResponse, a, b);
   }
 }
 

@@ -2447,3 +2447,110 @@ export const schemaCheckProposalMatchRelations = relations(schemaCheckProposalMa
     references: [proposals.id],
   }),
 }));
+
+export const federatedGraphCollections = pgTable(
+  'federated_graph_collections', // fgco
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    federatedGraphId: uuid('federated_graph_id')
+      .notNull()
+      .references(() => federatedGraphs.id, {
+        onDelete: 'cascade',
+      }),
+    name: text('name').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }),
+    createdById: uuid('created_by_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    updatedById: uuid('updated_by_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+  },
+  (t) => ({
+    uniqueFederatedGraphCollectionName: unique('federated_graph_collection_name').on(t.federatedGraphId, t.name),
+    createdByIdIndex: index('fgco_created_by_id_idx').on(t.createdById),
+    updatedByIdIndex: index('fgco_updated_by_id_idx').on(t.updatedById),
+  }),
+);
+
+export const federatedGraphCollectionsRelations = relations(federatedGraphCollections, ({ one }) => ({
+  createdBy: one(users, {
+    fields: [federatedGraphCollections.createdById],
+    references: [users.id],
+  }),
+  updatedBy: one(users, {
+    fields: [federatedGraphCollections.updatedById],
+    references: [users.id],
+  }),
+  federatedGraph: one(federatedGraphs, {
+    fields: [federatedGraphCollections.federatedGraphId],
+    references: [federatedGraphs.id],
+  }),
+}));
+
+export const federatedGraphCollectionOperations = pgTable(
+  'federated_graph_collection_operations', // fgcoo
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    collectionId: uuid('collection_id')
+      .notNull()
+      .references(() => federatedGraphCollections.id, {
+        onDelete: 'cascade',
+      }),
+    name: text('name').notNull(),
+    content: text('content').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }),
+    createdById: uuid('created_by_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    updatedById: uuid('updated_by_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+  },
+  (t) => ({
+    uniqueFederatedGraphCollectionOperationName: unique('federated_graph_collection_operation_name').on(
+      t.collectionId,
+      t.name,
+    ),
+    createdByIdIndex: index('fgcoo_created_by_id_idx').on(t.createdById),
+    updatedByIdIndex: index('fgcoo_updated_by_id_idx').on(t.updatedById),
+    collectionIdIndex: index('fgcoo_collection_id_idx').on(t.collectionId),
+  }),
+);
+
+export const federatedGraphCollectionOperationsRelations = relations(federatedGraphCollectionOperations, ({ one }) => ({
+  createdBy: one(users, {
+    fields: [federatedGraphCollectionOperations.createdById],
+    references: [users.id],
+  }),
+  updatedBy: one(users, {
+    fields: [federatedGraphCollectionOperations.updatedById],
+    references: [users.id],
+  }),
+  collection: one(federatedGraphCollections, {
+    fields: [federatedGraphCollectionOperations.collectionId],
+    references: [federatedGraphCollections.id],
+  }),
+}));
+
+export const collectionProtocolsEnum = pgEnum('collection_protocols', ['grpc', 'mcp'] as const);
+
+export const federatedGraphCollectionProtocols = pgTable(
+  'federated_graph_collection_protocols', // fgcp
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    collectionId: uuid('collection_id')
+      .notNull()
+      .references(() => federatedGraphCollections.id, {
+        onDelete: 'cascade',
+      }),
+    protocol: collectionProtocolsEnum('protocol').notNull(),
+    // path in the blob storage where the manifest for the protocol is stored
+    filePath: text('file_path').notNull().unique(),
+  },
+  (t) => ({
+    index: index('fgcp_collection_id_idx').on(t.collectionId),
+  }),
+);

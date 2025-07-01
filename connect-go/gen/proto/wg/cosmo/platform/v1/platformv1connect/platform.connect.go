@@ -526,6 +526,21 @@ const (
 	// PlatformServiceGetClientsFromAnalyticsProcedure is the fully-qualified name of the
 	// PlatformService's GetClientsFromAnalytics RPC.
 	PlatformServiceGetClientsFromAnalyticsProcedure = "/wg.cosmo.platform.v1.PlatformService/GetClientsFromAnalytics"
+	// PlatformServiceCreateCollectionAndOperationsProcedure is the fully-qualified name of the
+	// PlatformService's CreateCollectionAndOperations RPC.
+	PlatformServiceCreateCollectionAndOperationsProcedure = "/wg.cosmo.platform.v1.PlatformService/CreateCollectionAndOperations"
+	// PlatformServiceUpdateCollectionProcedure is the fully-qualified name of the PlatformService's
+	// UpdateCollection RPC.
+	PlatformServiceUpdateCollectionProcedure = "/wg.cosmo.platform.v1.PlatformService/UpdateCollection"
+	// PlatformServiceDeleteCollectionProcedure is the fully-qualified name of the PlatformService's
+	// DeleteCollection RPC.
+	PlatformServiceDeleteCollectionProcedure = "/wg.cosmo.platform.v1.PlatformService/DeleteCollection"
+	// PlatformServiceUpdateCollectionOperationProcedure is the fully-qualified name of the
+	// PlatformService's UpdateCollectionOperation RPC.
+	PlatformServiceUpdateCollectionOperationProcedure = "/wg.cosmo.platform.v1.PlatformService/UpdateCollectionOperation"
+	// PlatformServiceDeleteCollectionOperationProcedure is the fully-qualified name of the
+	// PlatformService's DeleteCollectionOperation RPC.
+	PlatformServiceDeleteCollectionOperationProcedure = "/wg.cosmo.platform.v1.PlatformService/DeleteCollectionOperation"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
@@ -695,6 +710,11 @@ var (
 	platformServiceGetProposalChecksMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("GetProposalChecks")
 	platformServiceGetOperationsMethodDescriptor                         = platformServiceServiceDescriptor.Methods().ByName("GetOperations")
 	platformServiceGetClientsFromAnalyticsMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("GetClientsFromAnalytics")
+	platformServiceCreateCollectionAndOperationsMethodDescriptor         = platformServiceServiceDescriptor.Methods().ByName("CreateCollectionAndOperations")
+	platformServiceUpdateCollectionMethodDescriptor                      = platformServiceServiceDescriptor.Methods().ByName("UpdateCollection")
+	platformServiceDeleteCollectionMethodDescriptor                      = platformServiceServiceDescriptor.Methods().ByName("DeleteCollection")
+	platformServiceUpdateCollectionOperationMethodDescriptor             = platformServiceServiceDescriptor.Methods().ByName("UpdateCollectionOperation")
+	platformServiceDeleteCollectionOperationMethodDescriptor             = platformServiceServiceDescriptor.Methods().ByName("DeleteCollectionOperation")
 )
 
 // PlatformServiceClient is a client for the wg.cosmo.platform.v1.PlatformService service.
@@ -1009,6 +1029,16 @@ type PlatformServiceClient interface {
 	GetOperations(context.Context, *connect.Request[v1.GetOperationsRequest]) (*connect.Response[v1.GetOperationsResponse], error)
 	// GetClientsFromAnalytics returns all the clients of the federated graph from the analytics
 	GetClientsFromAnalytics(context.Context, *connect.Request[v1.GetClientsFromAnalyticsRequest]) (*connect.Response[v1.GetClientsFromAnalyticsResponse], error)
+	// CreateCollectionAndOperations creates a new collection for the federated graph and operations for the collection.
+	CreateCollectionAndOperations(context.Context, *connect.Request[v1.CreateCollectionAndOperationsRequest]) (*connect.Response[v1.CreateCollectionAndOperationsResponse], error)
+	// UpdateCollection updates a collection of the federated graph.
+	UpdateCollection(context.Context, *connect.Request[v1.UpdateCollectionRequest]) (*connect.Response[v1.UpdateCollectionResponse], error)
+	// DeleteCollection deletes a collection of the federated graph.
+	DeleteCollection(context.Context, *connect.Request[v1.DeleteCollectionRequest]) (*connect.Response[v1.DeleteCollectionResponse], error)
+	// UpdateCollectionOperation updates an operation of a collection.
+	UpdateCollectionOperation(context.Context, *connect.Request[v1.UpdateCollectionOperationRequest]) (*connect.Response[v1.UpdateCollectionOperationResponse], error)
+	// DeleteCollectionOperation deletes an operation of a collection.
+	DeleteCollectionOperation(context.Context, *connect.Request[v1.DeleteCollectionOperationRequest]) (*connect.Response[v1.DeleteCollectionOperationResponse], error)
 }
 
 // NewPlatformServiceClient constructs a client for the wg.cosmo.platform.v1.PlatformService
@@ -2012,6 +2042,36 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceGetClientsFromAnalyticsMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		createCollectionAndOperations: connect.NewClient[v1.CreateCollectionAndOperationsRequest, v1.CreateCollectionAndOperationsResponse](
+			httpClient,
+			baseURL+PlatformServiceCreateCollectionAndOperationsProcedure,
+			connect.WithSchema(platformServiceCreateCollectionAndOperationsMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		updateCollection: connect.NewClient[v1.UpdateCollectionRequest, v1.UpdateCollectionResponse](
+			httpClient,
+			baseURL+PlatformServiceUpdateCollectionProcedure,
+			connect.WithSchema(platformServiceUpdateCollectionMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		deleteCollection: connect.NewClient[v1.DeleteCollectionRequest, v1.DeleteCollectionResponse](
+			httpClient,
+			baseURL+PlatformServiceDeleteCollectionProcedure,
+			connect.WithSchema(platformServiceDeleteCollectionMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		updateCollectionOperation: connect.NewClient[v1.UpdateCollectionOperationRequest, v1.UpdateCollectionOperationResponse](
+			httpClient,
+			baseURL+PlatformServiceUpdateCollectionOperationProcedure,
+			connect.WithSchema(platformServiceUpdateCollectionOperationMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		deleteCollectionOperation: connect.NewClient[v1.DeleteCollectionOperationRequest, v1.DeleteCollectionOperationResponse](
+			httpClient,
+			baseURL+PlatformServiceDeleteCollectionOperationProcedure,
+			connect.WithSchema(platformServiceDeleteCollectionOperationMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -2181,6 +2241,11 @@ type platformServiceClient struct {
 	getProposalChecks                     *connect.Client[v1.GetProposalChecksRequest, v1.GetProposalChecksResponse]
 	getOperations                         *connect.Client[v1.GetOperationsRequest, v1.GetOperationsResponse]
 	getClientsFromAnalytics               *connect.Client[v1.GetClientsFromAnalyticsRequest, v1.GetClientsFromAnalyticsResponse]
+	createCollectionAndOperations         *connect.Client[v1.CreateCollectionAndOperationsRequest, v1.CreateCollectionAndOperationsResponse]
+	updateCollection                      *connect.Client[v1.UpdateCollectionRequest, v1.UpdateCollectionResponse]
+	deleteCollection                      *connect.Client[v1.DeleteCollectionRequest, v1.DeleteCollectionResponse]
+	updateCollectionOperation             *connect.Client[v1.UpdateCollectionOperationRequest, v1.UpdateCollectionOperationResponse]
+	deleteCollectionOperation             *connect.Client[v1.DeleteCollectionOperationRequest, v1.DeleteCollectionOperationResponse]
 }
 
 // CreatePlaygroundScript calls wg.cosmo.platform.v1.PlatformService.CreatePlaygroundScript.
@@ -3036,6 +3101,32 @@ func (c *platformServiceClient) GetClientsFromAnalytics(ctx context.Context, req
 	return c.getClientsFromAnalytics.CallUnary(ctx, req)
 }
 
+// CreateCollectionAndOperations calls
+// wg.cosmo.platform.v1.PlatformService.CreateCollectionAndOperations.
+func (c *platformServiceClient) CreateCollectionAndOperations(ctx context.Context, req *connect.Request[v1.CreateCollectionAndOperationsRequest]) (*connect.Response[v1.CreateCollectionAndOperationsResponse], error) {
+	return c.createCollectionAndOperations.CallUnary(ctx, req)
+}
+
+// UpdateCollection calls wg.cosmo.platform.v1.PlatformService.UpdateCollection.
+func (c *platformServiceClient) UpdateCollection(ctx context.Context, req *connect.Request[v1.UpdateCollectionRequest]) (*connect.Response[v1.UpdateCollectionResponse], error) {
+	return c.updateCollection.CallUnary(ctx, req)
+}
+
+// DeleteCollection calls wg.cosmo.platform.v1.PlatformService.DeleteCollection.
+func (c *platformServiceClient) DeleteCollection(ctx context.Context, req *connect.Request[v1.DeleteCollectionRequest]) (*connect.Response[v1.DeleteCollectionResponse], error) {
+	return c.deleteCollection.CallUnary(ctx, req)
+}
+
+// UpdateCollectionOperation calls wg.cosmo.platform.v1.PlatformService.UpdateCollectionOperation.
+func (c *platformServiceClient) UpdateCollectionOperation(ctx context.Context, req *connect.Request[v1.UpdateCollectionOperationRequest]) (*connect.Response[v1.UpdateCollectionOperationResponse], error) {
+	return c.updateCollectionOperation.CallUnary(ctx, req)
+}
+
+// DeleteCollectionOperation calls wg.cosmo.platform.v1.PlatformService.DeleteCollectionOperation.
+func (c *platformServiceClient) DeleteCollectionOperation(ctx context.Context, req *connect.Request[v1.DeleteCollectionOperationRequest]) (*connect.Response[v1.DeleteCollectionOperationResponse], error) {
+	return c.deleteCollectionOperation.CallUnary(ctx, req)
+}
+
 // PlatformServiceHandler is an implementation of the wg.cosmo.platform.v1.PlatformService service.
 type PlatformServiceHandler interface {
 	// PlaygroundScripts
@@ -3348,6 +3439,16 @@ type PlatformServiceHandler interface {
 	GetOperations(context.Context, *connect.Request[v1.GetOperationsRequest]) (*connect.Response[v1.GetOperationsResponse], error)
 	// GetClientsFromAnalytics returns all the clients of the federated graph from the analytics
 	GetClientsFromAnalytics(context.Context, *connect.Request[v1.GetClientsFromAnalyticsRequest]) (*connect.Response[v1.GetClientsFromAnalyticsResponse], error)
+	// CreateCollectionAndOperations creates a new collection for the federated graph and operations for the collection.
+	CreateCollectionAndOperations(context.Context, *connect.Request[v1.CreateCollectionAndOperationsRequest]) (*connect.Response[v1.CreateCollectionAndOperationsResponse], error)
+	// UpdateCollection updates a collection of the federated graph.
+	UpdateCollection(context.Context, *connect.Request[v1.UpdateCollectionRequest]) (*connect.Response[v1.UpdateCollectionResponse], error)
+	// DeleteCollection deletes a collection of the federated graph.
+	DeleteCollection(context.Context, *connect.Request[v1.DeleteCollectionRequest]) (*connect.Response[v1.DeleteCollectionResponse], error)
+	// UpdateCollectionOperation updates an operation of a collection.
+	UpdateCollectionOperation(context.Context, *connect.Request[v1.UpdateCollectionOperationRequest]) (*connect.Response[v1.UpdateCollectionOperationResponse], error)
+	// DeleteCollectionOperation deletes an operation of a collection.
+	DeleteCollectionOperation(context.Context, *connect.Request[v1.DeleteCollectionOperationRequest]) (*connect.Response[v1.DeleteCollectionOperationResponse], error)
 }
 
 // NewPlatformServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -4347,6 +4448,36 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceGetClientsFromAnalyticsMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformServiceCreateCollectionAndOperationsHandler := connect.NewUnaryHandler(
+		PlatformServiceCreateCollectionAndOperationsProcedure,
+		svc.CreateCollectionAndOperations,
+		connect.WithSchema(platformServiceCreateCollectionAndOperationsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceUpdateCollectionHandler := connect.NewUnaryHandler(
+		PlatformServiceUpdateCollectionProcedure,
+		svc.UpdateCollection,
+		connect.WithSchema(platformServiceUpdateCollectionMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceDeleteCollectionHandler := connect.NewUnaryHandler(
+		PlatformServiceDeleteCollectionProcedure,
+		svc.DeleteCollection,
+		connect.WithSchema(platformServiceDeleteCollectionMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceUpdateCollectionOperationHandler := connect.NewUnaryHandler(
+		PlatformServiceUpdateCollectionOperationProcedure,
+		svc.UpdateCollectionOperation,
+		connect.WithSchema(platformServiceUpdateCollectionOperationMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceDeleteCollectionOperationHandler := connect.NewUnaryHandler(
+		PlatformServiceDeleteCollectionOperationProcedure,
+		svc.DeleteCollectionOperation,
+		connect.WithSchema(platformServiceDeleteCollectionOperationMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/wg.cosmo.platform.v1.PlatformService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case PlatformServiceCreatePlaygroundScriptProcedure:
@@ -4677,6 +4808,16 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceGetOperationsHandler.ServeHTTP(w, r)
 		case PlatformServiceGetClientsFromAnalyticsProcedure:
 			platformServiceGetClientsFromAnalyticsHandler.ServeHTTP(w, r)
+		case PlatformServiceCreateCollectionAndOperationsProcedure:
+			platformServiceCreateCollectionAndOperationsHandler.ServeHTTP(w, r)
+		case PlatformServiceUpdateCollectionProcedure:
+			platformServiceUpdateCollectionHandler.ServeHTTP(w, r)
+		case PlatformServiceDeleteCollectionProcedure:
+			platformServiceDeleteCollectionHandler.ServeHTTP(w, r)
+		case PlatformServiceUpdateCollectionOperationProcedure:
+			platformServiceUpdateCollectionOperationHandler.ServeHTTP(w, r)
+		case PlatformServiceDeleteCollectionOperationProcedure:
+			platformServiceDeleteCollectionOperationHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -5340,4 +5481,24 @@ func (UnimplementedPlatformServiceHandler) GetOperations(context.Context, *conne
 
 func (UnimplementedPlatformServiceHandler) GetClientsFromAnalytics(context.Context, *connect.Request[v1.GetClientsFromAnalyticsRequest]) (*connect.Response[v1.GetClientsFromAnalyticsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetClientsFromAnalytics is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) CreateCollectionAndOperations(context.Context, *connect.Request[v1.CreateCollectionAndOperationsRequest]) (*connect.Response[v1.CreateCollectionAndOperationsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.CreateCollectionAndOperations is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) UpdateCollection(context.Context, *connect.Request[v1.UpdateCollectionRequest]) (*connect.Response[v1.UpdateCollectionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.UpdateCollection is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) DeleteCollection(context.Context, *connect.Request[v1.DeleteCollectionRequest]) (*connect.Response[v1.DeleteCollectionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.DeleteCollection is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) UpdateCollectionOperation(context.Context, *connect.Request[v1.UpdateCollectionOperationRequest]) (*connect.Response[v1.UpdateCollectionOperationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.UpdateCollectionOperation is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) DeleteCollectionOperation(context.Context, *connect.Request[v1.DeleteCollectionOperationRequest]) (*connect.Response[v1.DeleteCollectionOperationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.DeleteCollectionOperation is not implemented"))
 }
