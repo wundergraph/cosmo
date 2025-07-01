@@ -2,9 +2,10 @@ package circuit
 
 import (
 	"context"
+	"net/http"
+
 	rcontext "github.com/wundergraph/cosmo/router/internal/context"
 	"go.uber.org/zap"
-	"net/http"
 )
 
 type Breaker struct {
@@ -49,9 +50,9 @@ func (rt *Breaker) RoundTrip(req *http.Request) (resp *http.Response, err error)
 
 	logger := rt.loggerFunc(req)
 	if preRunStatus != postRunStatus {
-		logger.Debug("Circuit breaker status changed", zap.String("subgraph", subgraph), zap.Bool("isOpen", postRunStatus))
+		logger.Debug("Circuit breaker status changed", zap.String("subgraph_name", subgraph), zap.Bool("is_open", postRunStatus))
 	} else if preRunStatus {
-		logger.Debug("Circuit breaker open, request callback did not execute", zap.String("subgraph", subgraph))
+		logger.Debug("Circuit breaker open, request callback did not execute", zap.String("subgraph_name", subgraph))
 	}
 
 	return resp, err
