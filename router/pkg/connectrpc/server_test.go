@@ -43,7 +43,12 @@ func TestConnect(t *testing.T) {
 	schema, err := io.ReadAll(schemaFh)
 	require.NoError(t, err)
 
-	c := NewConnectRPC("", string(schema), mapping)
+	c := NewConnectRPC("", []ConnectRPCData{
+		{
+			Schema:  string(schema),
+			Mapping: mapping,
+		},
+	})
 	err = c.Bootstrap()
 	require.NoError(t, err)
 

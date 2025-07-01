@@ -117,7 +117,6 @@ type ConnectRPC struct {
 	prefix string
 	ops    map[OperationPath]*ConnectRPCOperation
 	data   []ConnectRPCData
-	fd     linker.File
 }
 
 func (c *ConnectRPC) GetOperation(path OperationPath) *ConnectRPCOperation {
@@ -208,7 +207,7 @@ func (c *ConnectRPC) HandlerFunc(w http.ResponseWriter, r *http.Request) bool {
 		connect.WithSchema(op.Schema),
 		connect.WithIdempotency(connect.IdempotencyNoSideEffects),
 		connect.WithRequestInitializer(func(spec connect.Spec, message any) error {
-			desc := c.fd.Messages().ByName(op.input.Name())
+			desc := op.fd.Messages().ByName(op.input.Name())
 			if desc == nil {
 				return connect.NewError(connect.CodeInternal, fmt.Errorf("message type not found"))
 			}
