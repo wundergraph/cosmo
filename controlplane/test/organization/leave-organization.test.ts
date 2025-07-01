@@ -1,7 +1,7 @@
-import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { addKeycloakUser, SetupTest } from '../test-util.js';
-import { afterAllSetup, beforeAllSetup, genID, TestUser } from '../../src/core/test-util.js';
+import { SetupTest } from '../test-util.js';
+import { afterAllSetup, beforeAllSetup } from '../../src/core/test-util.js';
 import { OrganizationRepository } from '../../src/core/repositories/OrganizationRepository.js';
 import { OrganizationGroupRepository } from "../../src/core/repositories/OrganizationGroupRepository.js";
 
@@ -40,7 +40,7 @@ describe('Leave organization', () => {
     // Update the group, in tests we might not link the group with the user in Keycloak
     const updateOrgMemberGroupResponse = await client.updateOrgMemberGroup({
       orgMemberUserID: users.adminJimCompanyB!.userId,
-      groupId: orgGroup!.groupId,
+      groups: [orgGroup!.groupId],
     });
 
     expect(updateOrgMemberGroupResponse.response?.code).toBe(EnumStatusCode.OK);
