@@ -239,19 +239,19 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		s.circuitBreakerManager = circuit.NewManager(s.subgraphCircuitBreakerOptions.CircuitBreaker)
 	}
 
-	allSubgraphs := make(map[string]bool)
+	routingUrlGroupings := make(map[string][]string)
 	for _, subgraph := range routerConfig.GetSubgraphs() {
-		allSubgraphs[subgraph.Name] = true
+		routingUrlGroupings[subgraph.RoutingUrl] = append(routingUrlGroupings[subgraph.RoutingUrl], subgraph.Name)
 	}
 	if routerConfig.FeatureFlagConfigs != nil {
 		for _, ffConfig := range routerConfig.FeatureFlagConfigs.ConfigByFeatureFlagName {
 			for _, subgraph := range ffConfig.Subgraphs {
-				allSubgraphs[subgraph.Name] = true
+				routingUrlGroupings[subgraph.RoutingUrl] = append(routingUrlGroupings[subgraph.RoutingUrl], subgraph.Name)
 			}
 		}
 	}
 
-	gm, err := s.buildGraphMux(ctx, "", s.baseRouterConfigVersion, routerConfig.GetEngineConfig(), routerConfig.GetSubgraphs(), allSubgraphs)
+	gm, err := s.buildGraphMux(ctx, "", s.baseRouterConfigVersion, routerConfig.GetEngineConfig(), routerConfig.GetSubgraphs(), routingUrlGroupings)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build base mux: %w", err)
 	}
@@ -707,7 +707,7 @@ func (s *graphServer) buildGraphMux(
 	routerConfigVersion string,
 	engineConfig *nodev1.EngineConfiguration,
 	configSubgraphs []*nodev1.Subgraph,
-	allSubgraphs map[string]bool,
+	routingUrlGroupings map[string][]string,
 ) (*graphMux, error) {
 	gm := &graphMux{
 		metricStore: rmetric.NewNoopMetrics(),
@@ -788,7 +788,7 @@ func (s *graphServer) buildGraphMux(
 			MetricStore:             gm.metricStore,
 			UseMetrics:              metricsEnabled,
 			BaseOtelAttributes:      baseMetricAttributes,
-			AllSubgraphs:            allSubgraphs,
+			AllGroupings:            routingUrlGroupings,
 		})
 		if err != nil {
 			return nil, err

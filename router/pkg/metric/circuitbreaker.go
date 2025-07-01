@@ -14,10 +14,11 @@ type CircuitMetricStore interface {
 	SetCircuitBreakerState(ctx context.Context, state bool, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption)
 }
 
-func NewCircuitBreakerMetricsConfig(subgraphName string, metrics CircuitMetricStore, baseAttributes []attribute.KeyValue) circuit.Config {
-	attributes := append([]attribute.KeyValue{
-		otel.WgSubgraphName.String(subgraphName),
-	}, baseAttributes...)
+func NewCircuitBreakerMetricsConfig(subgraphNames []string, metrics CircuitMetricStore, baseAttributes []attribute.KeyValue) circuit.Config {
+	values := []attribute.KeyValue{
+		otel.WgSubgraphName.StringSlice(subgraphNames),
+	}
+	attributes := append(values, baseAttributes...)
 
 	metricsWrapper := &CircuitBreakerMetricsConfig{
 		metrics:    metrics,

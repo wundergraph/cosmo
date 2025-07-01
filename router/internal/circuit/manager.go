@@ -83,23 +83,58 @@ type ManagerOpts struct {
 	MetricStore             metric.CircuitMetricStore
 	UseMetrics              bool
 	BaseOtelAttributes      []attribute.KeyValue
-	AllSubgraphs            map[string]bool
+	AllGroupings            map[string][]string
 }
 
 func (c *Manager) Initialize(opts ManagerOpts) error {
 	var joinErr error
 
-	for sgName := range opts.AllSubgraphs {
-		// Set metrics wrapper
-		configs := make([]circuit.Config, 0, 1)
-		if opts.UseMetrics {
-			configs = append(configs, metric.NewCircuitBreakerMetricsConfig(sgName, opts.MetricStore, opts.BaseOtelAttributes))
+	for routingUrl, sgNames := range opts.AllGroupings {
+		defaultSgNames := make([]string, 0, len(sgNames))
+		customSgNames := make([]string, 0, len(sgNames))
+
+		for _, sgName := range sgNames {
+			if _, ok := opts.SubgraphCircuitBreakers[sgName]; ok {
+				customSgNames = append(customSgNames, sgName)
+			} else {
+				defaultSgNames = append(defaultSgNames, sgName)
+			}
 		}
 
-		sgOptions, ok := opts.SubgraphCircuitBreakers[sgName]
-		if !ok {
-			// If we have an all option set we can create a circuit breaker for everyone
-			if c.isBaseConfigEnabled {
+		if len(defaultSgNames) == 0 && c.isBaseConfigEnabled {
+			configs := make([]circuit.Config, 0, 1)
+			if opts.UseMetrics {
+				configs = append(configs, metric.NewCircuitBreakerMetricsConfig(defaultSgNames, opts.MetricStore, opts.BaseOtelAttributes))
+			}
+
+			createCircuit, err := c.internalManager.CreateCircuit(routingUrl, configs...)
+			if err != nil {
+				joinErr = errors.Join(joinErr, err)
+				continue
+			}
+
+			for _, sgName := range defaultSgNames {
+				// Set the same circuit breaker instance grouped by subgraph name
+				c.AddCircuitBreaker(sgName, createCircuit)
+			}
+		}
+
+		if len(customSgNames) == 0 && c.isBaseConfigEnabled {
+			for _, sgName := range customSgNames {
+				sgOptions := opts.SubgraphCircuitBreakers[sgName]
+
+				// This will cover the case of if a subgraph is explicitly disabled
+				if !sgOptions.Enabled {
+					continue
+				}
+
+				configs := make([]circuit.Config, 0, 1)
+				if opts.UseMetrics {
+					configs = append(configs, metric.NewCircuitBreakerMetricsConfig([]string{sgName}, opts.MetricStore, opts.BaseOtelAttributes))
+				}
+				newConfig := createConfiguration(sgOptions)
+				configs = append(configs, newConfig.Configure(sgName))
+
 				createCircuit, err := c.internalManager.CreateCircuit(sgName, configs...)
 				if err != nil {
 					joinErr = errors.Join(joinErr, err)
@@ -107,19 +142,6 @@ func (c *Manager) Initialize(opts ManagerOpts) error {
 				}
 				c.AddCircuitBreaker(sgName, createCircuit)
 			}
-			continue
-		}
-
-		// This will cover the case of if a subgraph is explicitly disabled
-		if sgOptions.Enabled {
-			newConfig := createConfiguration(sgOptions)
-			configs = append(configs, newConfig.Configure(sgName))
-			createCircuit, err := c.internalManager.CreateCircuit(sgName, configs...)
-			if err != nil {
-				joinErr = errors.Join(joinErr, err)
-				continue
-			}
-			c.AddCircuitBreaker(sgName, createCircuit)
 		}
 	}
 
