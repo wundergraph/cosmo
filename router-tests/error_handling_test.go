@@ -104,7 +104,7 @@ func TestFallbackErrors(t *testing.T) {
 						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 							w.Header().Set("Content-Type", "application/json")
 							w.WriteHeader(418)
-							w.Write([]byte(`{"error":"invalid appliance"}`))
+							_, _ = w.Write([]byte(`{"error":"invalid appliance"}`))
 						})
 					},
 				},
@@ -140,7 +140,7 @@ func TestFallbackErrors(t *testing.T) {
 						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 							w.Header().Set("Content-Type", "application/json")
 							w.WriteHeader(418)
-							w.Write([]byte(`{"error":"invalid appliance"}`))
+							_, _ = w.Write([]byte(`{"error":"invalid appliance"}`))
 						})
 					},
 				},
@@ -169,7 +169,7 @@ func TestFallbackErrors(t *testing.T) {
 						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 							w.Header().Set("Content-Type", "application/json")
 							w.WriteHeader(200)
-							w.Write([]byte(`{"state":"nothing is wrong but I am not valid GraphQL response"}`))
+							_, _ = w.Write([]byte(`{"state":"nothing is wrong but I am not valid GraphQL response"}`))
 						})
 					},
 				},
@@ -201,7 +201,7 @@ func TestFallbackErrors(t *testing.T) {
 
 							// the semantic correctness of this is irrelevant, it just matters that it's not valid JSON
 							// HTML-ish text response is just used as a representative example of a non-JSON response
-							w.Write([]byte(`<html><body>418: I'm a teapot</body></html>`))
+							_, _ = w.Write([]byte(`<html><body>418: I'm a teapot</body></html>`))
 						})
 					},
 				},
@@ -233,7 +233,7 @@ func TestFallbackErrors(t *testing.T) {
 
 							// the semantic correctness of this is irrelevant, it just matters that it's not valid JSON
 							// HTML-ish text response is just used as a representative example of a non-JSON response
-							w.Write([]byte(`<html><body>Everything is fine!</body></html>`))
+							_, _ = w.Write([]byte(`<html><body>Everything is fine!</body></html>`))
 						})
 					},
 				},
