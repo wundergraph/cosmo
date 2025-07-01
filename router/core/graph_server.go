@@ -239,16 +239,9 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		s.circuitBreakerManager = circuit.NewManager(s.subgraphCircuitBreakerOptions.CircuitBreaker)
 	}
 
-	routingUrlGroupings := make(map[string][]string)
-	for _, subgraph := range routerConfig.GetSubgraphs() {
-		routingUrlGroupings[subgraph.RoutingUrl] = append(routingUrlGroupings[subgraph.RoutingUrl], subgraph.Name)
-	}
-	if routerConfig.FeatureFlagConfigs != nil {
-		for _, ffConfig := range routerConfig.FeatureFlagConfigs.ConfigByFeatureFlagName {
-			for _, subgraph := range ffConfig.Subgraphs {
-				routingUrlGroupings[subgraph.RoutingUrl] = append(routingUrlGroupings[subgraph.RoutingUrl], subgraph.Name)
-			}
-		}
+	routingUrlGroupings, err := s.getRoutingUrlGroupingForCircuitBreakers(routerConfig)
+	if err != nil {
+		return nil, err
 	}
 
 	gm, err := s.buildGraphMux(ctx, "", s.baseRouterConfigVersion, routerConfig.GetEngineConfig(), routerConfig.GetSubgraphs(), routingUrlGroupings)
@@ -357,6 +350,32 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	s.mux = httpRouter
 
 	return s, nil
+}
+
+func (s *graphServer) getRoutingUrlGroupingForCircuitBreakers(routerConfig *nodev1.RouterConfig) (map[string][]string, error) {
+	routingUrlGroupings := make(map[string][]string)
+
+	overwrites, err := configureSubgraphOverwrites(routerConfig.GetEngineConfig(), routerConfig.GetSubgraphs(), s.overrideRoutingURLConfiguration, s.overrides)
+	if err != nil {
+		return nil, err
+	}
+	for _, subgraph := range overwrites {
+		routingUrlGroupings[subgraph.UrlString] = append(routingUrlGroupings[subgraph.UrlString], subgraph.Name)
+	}
+
+	if routerConfig.FeatureFlagConfigs != nil {
+		for _, ffConfig := range routerConfig.FeatureFlagConfigs.ConfigByFeatureFlagName {
+			ffOverwrites, err := configureSubgraphOverwrites(ffConfig.GetEngineConfig(), ffConfig.GetSubgraphs(), s.overrideRoutingURLConfiguration, s.overrides)
+			if err != nil {
+				return nil, err
+			}
+			for _, subgraph := range ffOverwrites {
+				routingUrlGroupings[subgraph.UrlString] = append(routingUrlGroupings[subgraph.UrlString], subgraph.Name)
+			}
+		}
+	}
+
+	return routingUrlGroupings, nil
 }
 
 func (s *graphServer) buildMultiGraphHandler(
@@ -718,7 +737,9 @@ func (s *graphServer) buildGraphMux(
 	// we only enable the attribute mapper if we are not using the default cloud exporter
 	baseMuxAttributes := append([]attribute.KeyValue{otel.WgRouterConfigVersion.String(routerConfigVersion)}, s.baseOtelAttributes...)
 
-	if featureFlagName != "" {
+	isBaseGraph := featureFlagName == ""
+
+	if !isBaseGraph {
 		baseMuxAttributes = append(baseMuxAttributes, otel.WgFeatureFlag.String(featureFlagName))
 	}
 
@@ -758,7 +779,7 @@ func (s *graphServer) buildGraphMux(
 			otel.WgRouterConfigVersion.String(routerConfigVersion),
 			otel.WgRouterVersion.String(Version),
 		}
-		if featureFlagName != "" {
+		if !isBaseGraph {
 			attrKeyValues = append(attrKeyValues, otel.WgFeatureFlag.String(featureFlagName))
 		}
 		routerInfoBaseAttrs := otelmetric.WithAttributeSet(attribute.NewSet(attrKeyValues...))
@@ -782,7 +803,7 @@ func (s *graphServer) buildGraphMux(
 	// We initialize circuit breakers for all subgraphs in the base configuration (non-ff)
 	// so we don't duplicate circuit breakers for subgraphs and they can be used in the feature flags even
 	// We initialize it in the buildGraphMux because we want to use the base metric configuration
-	if featureFlagName == "" && s.subgraphCircuitBreakerOptions.IsEnabled() {
+	if isBaseGraph && s.subgraphCircuitBreakerOptions.IsEnabled() {
 		err := s.circuitBreakerManager.Initialize(circuit.ManagerOpts{
 			SubgraphCircuitBreakers: s.subgraphCircuitBreakerOptions.SubgraphMap,
 			MetricStore:             gm.metricStore,
@@ -829,7 +850,7 @@ func (s *graphServer) buildGraphMux(
 		zap.String("config_version", routerConfigVersion),
 	}
 
-	if featureFlagName != "" {
+	if !isBaseGraph {
 		baseLogFields = append(baseLogFields, zap.String("feature_flag", featureFlagName))
 	}
 
@@ -1120,7 +1141,7 @@ func (s *graphServer) buildGraphMux(
 	operationPlanner := NewOperationPlanner(executor, gm.planCache)
 
 	// We support the MCP only on the base graph. Feature flags are not supported yet.
-	if featureFlagName == "" && s.mcpServer != nil {
+	if isBaseGraph && s.mcpServer != nil {
 		if mErr := s.mcpServer.Reload(executor.ClientSchema); mErr != nil {
 			return nil, fmt.Errorf("failed to reload MCP server: %w", mErr)
 		}
