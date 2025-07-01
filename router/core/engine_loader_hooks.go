@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	rcontext "github.com/wundergraph/cosmo/router/internal/context"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
-	"github.com/wundergraph/cosmo/router/internal/traceclient"
 	"github.com/wundergraph/cosmo/router/internal/unique"
 	"github.com/wundergraph/cosmo/router/pkg/metric"
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
@@ -86,7 +86,7 @@ func (f *engineLoaderHooks) OnLoad(ctx context.Context, ds resolve.DataSourceInf
 
 	start := time.Now()
 
-	ctx = context.WithValue(ctx, traceclient.CurrentSubgraphContextKey{}, ds.Name)
+	ctx = context.WithValue(ctx, rcontext.CurrentSubgraphContextKey{}, ds.Name)
 
 	reqContext := getRequestContext(ctx)
 	if reqContext == nil {

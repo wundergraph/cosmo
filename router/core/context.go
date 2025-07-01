@@ -664,6 +664,7 @@ func NewSubgraphResolver(subgraphs []Subgraph) *SubgraphResolver {
 			Url:       subgraphs[i].Url,
 			UrlString: subgraphs[i].UrlString,
 		}
+		// TODO: What happens here if the URL is duplicated? CLI allows the same URL to be used
 		if sg.UrlString != "" {
 			resolver.subgraphsByURL[sg.UrlString] = &sg
 		}

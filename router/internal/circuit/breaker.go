@@ -2,7 +2,7 @@ package circuit
 
 import (
 	"context"
-	"github.com/wundergraph/cosmo/router/internal/traceclient"
+	rcontext "github.com/wundergraph/cosmo/router/internal/context"
 	"go.uber.org/zap"
 	"net/http"
 )
@@ -25,7 +25,7 @@ func (rt *Breaker) RoundTrip(req *http.Request) (resp *http.Response, err error)
 	ctx := req.Context()
 
 	var subgraph string
-	subgraphCtxVal := ctx.Value(traceclient.CurrentSubgraphContextKey{})
+	subgraphCtxVal := ctx.Value(rcontext.CurrentSubgraphContextKey{})
 	if subgraphCtxVal != nil {
 		if sg, ok := subgraphCtxVal.(string); ok {
 			subgraph = sg
