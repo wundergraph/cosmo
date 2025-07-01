@@ -123,7 +123,7 @@ export function updateOrgMemberGroup(
         return {
           response: {
             code: EnumStatusCode.ERR,
-            details: 'The organization member must have at least one group.',
+            details: 'The organization member must have at least one group',
           },
         };
       }

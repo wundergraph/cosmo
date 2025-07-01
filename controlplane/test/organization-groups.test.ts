@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { afterAllSetup, beforeAllSetup, genID, TestUser } from '../src/core/test-util.js';
 import { GroupMapper } from "../../connect/src/wg/cosmo/platform/v1/platform_pb.js";
+import { OrganizationGroupRepository } from "../src/core/repositories/OrganizationGroupRepository.js";
 import { createOrganizationGroup, SetupTest } from './test-util.js';
 
 let dbname = '';
@@ -125,6 +126,58 @@ describe('Organization Group tests', () => {
 
     expect(deleteGroupResponse.response?.code).toBe(EnumStatusCode.ERR);
     expect(deleteGroupResponse.response?.details).toBe("No group to move existing members and mappers to was provided");
+
+    await server.close();
+  });
+
+  test('that a failure is returned when updating a member to a group owned by a different organization', async () => {
+    const { client, server, users, authenticator } = await SetupTest({ dbname, enabledFeatures: ['rbac'], enableMultiUsers: true });
+
+    const orgGroupRepo = new OrganizationGroupRepository(server.db);
+    const companyBId = users.adminJimCompanyB!.organizationId;
+    const admin = await orgGroupRepo.byName({ organizationId: companyBId, name: 'admin', });
+
+    expect(admin).toBeDefined();
+
+    authenticator.changeUserWithSuppliedContext(users.adminBobCompanyA!);
+
+    const updateGroupResponse = await client.updateOrgMemberGroup({
+      orgMemberUserID: users.adminBobCompanyA?.userId,
+      groups: [admin!.groupId],
+    });
+
+    expect(updateGroupResponse.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
+    expect(updateGroupResponse.response?.details).toBe("One of the submitted groups is not part of this organization");
+
+    await server.close();
+  });
+
+  test('that a failure is returned when updating a member to non-existent group', async () => {
+    const { client, server, users, authenticator } = await SetupTest({ dbname, enabledFeatures: ['rbac'], enableMultiUsers: true });
+
+    authenticator.changeUserWithSuppliedContext(users.adminBobCompanyA!);
+    const updateGroupResponse = await client.updateOrgMemberGroup({
+      orgMemberUserID: users.adminBobCompanyA?.userId,
+      groups: ['eca6ae62-3ed2-4115-aa20-513b49031eb8'],
+    });
+
+    expect(updateGroupResponse.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
+    expect(updateGroupResponse.response?.details).toBe("One of the submitted groups is not part of this organization");
+
+    await server.close();
+  });
+
+  test('that a failure is returned when updating a member without providing any group', async () => {
+    const { client, server, users, authenticator } = await SetupTest({ dbname, enabledFeatures: ['rbac'], enableMultiUsers: true });
+
+    authenticator.changeUserWithSuppliedContext(users.adminBobCompanyA!);
+    const updateGroupResponse = await client.updateOrgMemberGroup({
+      orgMemberUserID: users.adminBobCompanyA?.userId,
+      groups: [],
+    });
+
+    expect(updateGroupResponse.response?.code).toBe(EnumStatusCode.ERR);
+    expect(updateGroupResponse.response?.details).toBe("The organization member must have at least one group");
 
     await server.close();
   });
