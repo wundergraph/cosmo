@@ -102,6 +102,24 @@ export function updateOrgMemberGroup(
 
       // Load all the group the member should be part of from the database
       const groups: OrganizationGroupDTO[] = [];
+      const uniqueGroupIds = [...new Set(req.groups)];
+      groups.push(
+        ...(await orgGroupRepo.byIds({
+          organizationId: authContext.organizationId,
+          groupIds: uniqueGroupIds,
+        })),
+      );
+
+      if (groups.length !== uniqueGroupIds.length) {
+        // One or more of the submitted groups
+        return {
+          response: {
+            code: EnumStatusCode.ERR_NOT_FOUND,
+            details: `One of the submitted groups is not part of this organization`,
+          },
+        };
+      }
+
       for (const groupId of new Set(req.groups)) {
         const orgGroup = await orgGroupRepo.byId({ organizationId: authContext.organizationId, groupId });
         if (!orgGroup) {
@@ -118,7 +136,8 @@ export function updateOrgMemberGroup(
       }
 
       // Figure out which groups we need to remove the user from and to add the user to
-      const newGroups = new Set(groups.map((group) => group.groupId));
+      const newGroups = new Set(groups.filter(Boolean).map((group) => group.groupId));
+
       if (newGroups.size === 0) {
         return {
           response: {

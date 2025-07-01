@@ -142,6 +142,11 @@ const InviteForm = ({ onSuccess }: { onSuccess: () => void }) => {
             { shouldValidate: true, shouldDirty: true, shouldTouch: true },
           )}
         />
+        {errors.groups && (
+          <span className="text-sm text-destructive">
+            {errors.groups.message || "Please select at least one group."}
+          </span>
+        )}
       </div>
 
       <div className="text-right">

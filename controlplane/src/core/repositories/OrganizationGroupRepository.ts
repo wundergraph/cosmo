@@ -81,6 +81,19 @@ export class OrganizationGroupRepository {
     return orgGroups[0];
   }
 
+  public byIds(input: { organizationId: string; groupIds: string[] }): Promise<OrganizationGroupDTO[]> {
+    if (input.groupIds.length === 0) {
+      return Promise.resolve([]);
+    }
+
+    return this.findMany(
+      and(
+        eq(schema.organizationGroups.organizationId, input.organizationId),
+        inArray(schema.organizationGroups.id, input.groupIds),
+      ),
+    );
+  }
+
   public async byName(input: { organizationId: string; name: string }): Promise<OrganizationGroupDTO | undefined> {
     const orgGroups = await this.findMany(
       and(

@@ -64,17 +64,17 @@ export function acceptOrDeclineInvitation(
 
     if (req.accept) {
       await opts.keycloakClient.authenticateClient();
+      const keycloakUser = await opts.keycloakClient.client.users.find({
+        max: 1,
+        email: user.email,
+        realm: opts.keycloakRealm,
+        exact: true,
+      });
+
       for (const group of invitation.groups) {
         if (!group.kcGroupId) {
           continue;
         }
-
-        const keycloakUser = await opts.keycloakClient.client.users.find({
-          max: 1,
-          email: user.email,
-          realm: opts.keycloakRealm,
-          exact: true,
-        });
 
         await opts.keycloakClient.client.users.addToGroup({
           id: keycloakUser[0].id!,

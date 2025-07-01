@@ -503,7 +503,7 @@ describe('Multiple group membership tests', () => {
       groupId: group1.groupId,
     });
 
-    expect(getOrganizationGroupMembersResponse.response?.code);
+    expect(getOrganizationGroupMembersResponse.response?.code).toBe(EnumStatusCode.OK);
     expect(getOrganizationGroupMembersResponse.members.find(
       (m) => m.id === users.viewerTimCompanyA?.userId)
     ).toBeDefined();
