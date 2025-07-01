@@ -2,6 +2,7 @@ package integration
 
 import (
 	"context"
+	"fmt"
 	"github.com/prometheus/client_golang/prometheus"
 	io_prometheus_client "github.com/prometheus/client_model/go"
 	"net/http"
@@ -63,9 +64,8 @@ func TestCircuitBreaker(t *testing.T) {
 			Subgraphs: testenv.SubgraphsConfig{
 				Employees: testenv.SubgraphConfig{
 					Middleware: func(_ http.Handler) http.Handler {
-						return http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
-							// Timeout to simulate an error for the circuit breaker due to network timeout
-							time.Sleep(5 * time.Second)
+						return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+							simulateConnectionFailureOnClose(w)
 						})
 					},
 				},
@@ -136,7 +136,7 @@ func TestCircuitBreaker(t *testing.T) {
 								_, err := w.Write([]byte(successSubgraphJSON))
 								require.NoError(t, err)
 							} else {
-								time.Sleep(5 * time.Second)
+								simulateConnectionFailureOnClose(w)
 							}
 						})
 					},
@@ -205,7 +205,7 @@ func TestCircuitBreaker(t *testing.T) {
 								_, err := w.Write([]byte(successSubgraphJSON))
 								require.NoError(t, err)
 							} else {
-								time.Sleep(5 * time.Second)
+								simulateConnectionFailureOnClose(w)
 							}
 						})
 					},
@@ -282,7 +282,7 @@ func TestCircuitBreaker(t *testing.T) {
 								_, err := w.Write([]byte(successSubgraphJSON))
 								require.NoError(t, err)
 							} else {
-								time.Sleep(5 * time.Second)
+								simulateConnectionFailureOnClose(w)
 							}
 						})
 					},
@@ -363,10 +363,11 @@ func TestCircuitBreaker(t *testing.T) {
 						Middleware: func(_ http.Handler) http.Handler {
 							return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 								if isSuccessRequest.Load() {
+									fmt.Println("Success")
 									_, err := w.Write([]byte(successSubgraphJSON))
 									require.NoError(t, err)
 								} else {
-									time.Sleep(5 * time.Second)
+									simulateConnectionFailureOnClose(w)
 								}
 							})
 						},
@@ -440,7 +441,7 @@ func TestCircuitBreaker(t *testing.T) {
 									_, err := w.Write([]byte(successSubgraphJSON))
 									require.NoError(t, err)
 								} else {
-									time.Sleep(5 * time.Second)
+									simulateConnectionFailureOnClose(w)
 								}
 							})
 						},
@@ -532,7 +533,7 @@ func TestCircuitBreaker(t *testing.T) {
 								_, err := w.Write([]byte(successSubgraphJSON))
 								require.NoError(t, err)
 							} else {
-								time.Sleep(5 * time.Second)
+								simulateConnectionFailureOnClose(w)
 							}
 						})
 					},
@@ -578,14 +579,14 @@ func TestCircuitBreaker(t *testing.T) {
 				Products: testenv.SubgraphConfig{
 					Middleware: func(_ http.Handler) http.Handler {
 						return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-							time.Sleep(5 * time.Second)
+							simulateConnectionFailureOnClose(w)
 						})
 					},
 				},
 				ProductsFg: testenv.SubgraphConfig{
 					Middleware: func(_ http.Handler) http.Handler {
 						return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-							time.Sleep(5 * time.Second)
+							simulateConnectionFailureOnClose(w)
 						})
 					},
 				},
@@ -619,6 +620,168 @@ func TestCircuitBreaker(t *testing.T) {
 	t.Run("circuit breaker metrics", func(t *testing.T) {
 		t.Parallel()
 
+		t.Run("verify grouped circuit breakers for multiple subgraphs", func(t *testing.T) {
+			t.Parallel()
+
+			breaker := getCircuitBreakerWithDefaults()
+			breaker.RequestThreshold = 2
+			breaker.ErrorThresholdPercentage = 100
+			trafficConfig := getTrafficConfigWithTimeout(breaker, 1*time.Second)
+
+			sharedUrl := "http://fakeurl:8089"
+
+			t.Run("for otel", func(t *testing.T) {
+				metricReader := metric.NewManualReader()
+
+				testenv.Run(t, &testenv.Config{
+					MetricReader: metricReader,
+					LogObservation: testenv.LogObservationConfig{
+						Enabled:  true,
+						LogLevel: zapcore.DebugLevel,
+					},
+					RouterOptions: []core.Option{
+						core.WithSubgraphCircuitBreakerOptions(core.NewSubgraphCircuitBreakerOptions(trafficConfig)),
+						core.WithSubgraphTransportOptions(core.NewSubgraphTransportOptions(trafficConfig)),
+						core.WithOverrides(config.OverridesConfiguration{
+							Subgraphs: map[string]config.SubgraphOverridesConfiguration{
+								"availability": {
+									RoutingURL: sharedUrl,
+								},
+								"products": {
+									RoutingURL: sharedUrl,
+								},
+							},
+						}),
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					ffOpts := SendRequestOptions{t: t, xEnv: xEnv,
+						customQuery: `{ employees { id products isAvailable } }`,
+					}
+
+					sendRequest(ffOpts, "", SendFailedRequest)
+					sendRequest(ffOpts, "", SendFailedRequest)
+
+					rm := metricdata.ResourceMetrics{}
+					err := metricReader.Collect(context.Background(), &rm)
+					require.NoError(t, err)
+
+					expectedSubgraphs := []string{"products", "availability"}
+
+					shortCircuitRequestsMetric := metricdata.Metrics{
+						Name:        "router.circuit_breaker.short_circuits",
+						Description: "Circuit breaker short circuits.",
+						Unit:        "",
+						Data: metricdata.Sum[int64]{
+							Temporality: metricdata.CumulativeTemporality,
+							IsMonotonic: true,
+							DataPoints: []metricdata.DataPoint[int64]{
+								{
+									Attributes: attribute.NewSet(
+										otel.WgFederatedGraphID.String("graph"),
+										otel.WgRouterClusterName.String(""),
+										otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+										otel.WgRouterVersion.String("dev"),
+										otel.WgSubgraphName.StringSlice(expectedSubgraphs),
+									),
+									Value: int64(2),
+								},
+							},
+						},
+					}
+
+					scopeMetric := GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+					shortCircuitActual := GetMetricByName(scopeMetric, "router.circuit_breaker.short_circuits")
+					metricdatatest.AssertEqual(t, shortCircuitRequestsMetric, *shortCircuitActual, metricdatatest.IgnoreTimestamp())
+				})
+			})
+
+			t.Run("for prometheus", func(t *testing.T) {
+				t.Parallel()
+
+				promRegistry := prometheus.NewRegistry()
+				metricReader := metric.NewManualReader()
+
+				testenv.Run(t, &testenv.Config{
+					MetricReader:       metricReader,
+					PrometheusRegistry: promRegistry,
+					MetricOptions: testenv.MetricOptions{
+						EnablePrometheusConnectionMetrics: true,
+					},
+					LogObservation: testenv.LogObservationConfig{
+						Enabled:  true,
+						LogLevel: zapcore.DebugLevel,
+					},
+					RouterOptions: []core.Option{
+						core.WithSubgraphCircuitBreakerOptions(core.NewSubgraphCircuitBreakerOptions(trafficConfig)),
+						core.WithSubgraphTransportOptions(core.NewSubgraphTransportOptions(trafficConfig)),
+						core.WithOverrides(config.OverridesConfiguration{
+							Subgraphs: map[string]config.SubgraphOverridesConfiguration{
+								"availability": {
+									RoutingURL: sharedUrl,
+								},
+								"products": {
+									RoutingURL: sharedUrl,
+								},
+							},
+						}),
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					ffOpts := SendRequestOptions{t: t, xEnv: xEnv,
+						customQuery: `{ employees { id products isAvailable } }`,
+					}
+
+					sendRequest(ffOpts, "", SendFailedRequest)
+					sendRequest(ffOpts, "", SendFailedRequest)
+
+					rm := metricdata.ResourceMetrics{}
+					require.NoError(t, metricReader.Collect(context.Background(), &rm))
+
+					mf, err := promRegistry.Gather()
+					require.NoError(t, err)
+
+					metricFamily := findMetricFamilyByName(mf, "router_circuit_breaker_short_circuits_total")
+					metrics := metricFamily.GetMetric()
+					require.Len(t, metrics, 1)
+
+					metricDataPoint := metrics[0]
+
+					require.Equal(t, float64(2), *metricDataPoint.Counter.Value)
+
+					expected := []*io_prometheus_client.LabelPair{
+						{
+							Name:  PointerOf("otel_scope_name"),
+							Value: PointerOf("cosmo.router.prometheus"),
+						},
+						{
+							Name:  PointerOf("otel_scope_version"),
+							Value: PointerOf("0.0.1"),
+						},
+						{
+							Name:  PointerOf("wg_federated_graph_id"),
+							Value: PointerOf("graph"),
+						},
+						{
+							Name:  PointerOf("wg_router_cluster_name"),
+							Value: PointerOf(""),
+						},
+						{
+							Name:  PointerOf("wg_router_config_version"),
+							Value: PointerOf(xEnv.RouterConfigVersionMain()),
+						},
+						{
+							Name:  PointerOf("wg_router_version"),
+							Value: PointerOf("dev"),
+						},
+						{
+							Name:  PointerOf("wg_subgraph_name"),
+							Value: PointerOf(`["products","availability"]`),
+						},
+					}
+					require.Equal(t, expected, metricDataPoint.Label)
+				})
+			})
+		})
+
 		t.Run("verify short circuited request metric", func(t *testing.T) {
 			t.Parallel()
 
@@ -643,8 +806,8 @@ func TestCircuitBreaker(t *testing.T) {
 					Subgraphs: testenv.SubgraphsConfig{
 						Employees: testenv.SubgraphConfig{
 							Middleware: func(_ http.Handler) http.Handler {
-								return http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
-									time.Sleep(5 * time.Second)
+								return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+									simulateConnectionFailureOnClose(w)
 								})
 							},
 						},
@@ -676,7 +839,7 @@ func TestCircuitBreaker(t *testing.T) {
 										otel.WgRouterClusterName.String(""),
 										otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
 										otel.WgRouterVersion.String("dev"),
-										otel.WgSubgraphName.String("employees"),
+										otel.WgSubgraphName.StringSlice([]string{"employees"}),
 									),
 									Value: expectedValue,
 								},
@@ -713,8 +876,8 @@ func TestCircuitBreaker(t *testing.T) {
 					Subgraphs: testenv.SubgraphsConfig{
 						Employees: testenv.SubgraphConfig{
 							Middleware: func(_ http.Handler) http.Handler {
-								return http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
-									time.Sleep(5 * time.Second)
+								return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+									simulateConnectionFailureOnClose(w)
 								})
 							},
 						},
@@ -769,7 +932,7 @@ func TestCircuitBreaker(t *testing.T) {
 						},
 						{
 							Name:  PointerOf("wg_subgraph_name"),
-							Value: PointerOf("employees"),
+							Value: PointerOf(`["employees"]`),
 						},
 					}
 					require.Equal(t, expected, metricDataPoint.Label)
@@ -817,7 +980,7 @@ func TestCircuitBreaker(t *testing.T) {
 										_, err := w.Write([]byte(successSubgraphJSON))
 										require.NoError(t, err)
 									} else {
-										time.Sleep(5 * time.Second)
+										simulateConnectionFailureOnClose(w)
 									}
 								})
 							},
@@ -859,7 +1022,7 @@ func TestCircuitBreaker(t *testing.T) {
 											otel.WgRouterClusterName.String(""),
 											otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
 											otel.WgRouterVersion.String("dev"),
-											otel.WgSubgraphName.String("employees"),
+											otel.WgSubgraphName.StringSlice([]string{"employees"}),
 										),
 										Value: ShortCircuitOpened,
 									},
@@ -892,7 +1055,7 @@ func TestCircuitBreaker(t *testing.T) {
 											otel.WgRouterClusterName.String(""),
 											otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
 											otel.WgRouterVersion.String("dev"),
-											otel.WgSubgraphName.String("employees"),
+											otel.WgSubgraphName.StringSlice([]string{"employees"}),
 										),
 										Value: ShortCircuitClosed,
 									},
@@ -934,7 +1097,7 @@ func TestCircuitBreaker(t *testing.T) {
 										_, err := w.Write([]byte(successSubgraphJSON))
 										require.NoError(t, err)
 									} else {
-										time.Sleep(5 * time.Second)
+										simulateConnectionFailureOnClose(w)
 									}
 								})
 							},
@@ -982,7 +1145,7 @@ func TestCircuitBreaker(t *testing.T) {
 							{Name: PointerOf("wg_router_cluster_name"), Value: PointerOf("")},
 							{Name: PointerOf("wg_router_config_version"), Value: PointerOf(xEnv.RouterConfigVersionMain())},
 							{Name: PointerOf("wg_router_version"), Value: PointerOf("dev")},
-							{Name: PointerOf("wg_subgraph_name"), Value: PointerOf("employees")},
+							{Name: PointerOf("wg_subgraph_name"), Value: PointerOf(`["employees"]`)},
 						}
 						require.Equal(t, expectedOpened, metricDataPoint.Label)
 					})
@@ -1014,7 +1177,7 @@ func TestCircuitBreaker(t *testing.T) {
 							{Name: PointerOf("wg_router_cluster_name"), Value: PointerOf("")},
 							{Name: PointerOf("wg_router_config_version"), Value: PointerOf(xEnv.RouterConfigVersionMain())},
 							{Name: PointerOf("wg_router_version"), Value: PointerOf("dev")},
-							{Name: PointerOf("wg_subgraph_name"), Value: PointerOf("employees")},
+							{Name: PointerOf("wg_subgraph_name"), Value: PointerOf(`["employees"]`)},
 						}
 						require.Equal(t, expectedClosed, closedDataPoint.Label)
 					})
@@ -1023,6 +1186,24 @@ func TestCircuitBreaker(t *testing.T) {
 
 		})
 	})
+}
+
+// simulateConnectionFailureOnClose is used to simulate a failure
+// in case the connection cannot be hijacked default to panic
+func simulateConnectionFailureOnClose(w http.ResponseWriter) {
+	hj, ok := w.(http.Hijacker)
+	if !ok {
+		// If the hijacker is not available, we switch to panic
+		// to simulate a failure
+		panic("service failure")
+	}
+	conn, _, err := hj.Hijack()
+	if err != nil {
+		// Hijacking failed, switch to panic
+		// to simulate a failure
+		panic(err)
+	}
+	_ = conn.Close()
 }
 
 func sendRequest(opts SendRequestOptions, featureFlag string, isSuccess bool) string {
@@ -1078,6 +1259,8 @@ func getCircuitBreakerWithDefaults() config.CircuitBreaker {
 		RequiredSuccessfulAttempts: 1,
 		RollingDuration:            10 * time.Second,
 		NumBuckets:                 10,
+		ExecutionTimeout:           1 * time.Second,
+		MaxConcurrentRequests:      10,
 	}
 }
 
