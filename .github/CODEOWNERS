@@ -21,9 +21,10 @@ otelcollector @Noroth @StarpTech
 playground @wundergraph/Router @thisisnithin @StarpTech
 proto @JivusAyrus @wilsonrivera @StarpTech
 protographic @Noroth @StarpTech
+# Same owner for router and tests to avoid requesting too many reviewers
 router @Noroth @devsergiy @StarpTech
+router-tests @Noroth @devsergiy @StarpTech
 router-plugin @Noroth @StarpTech
-router-tests @wundergraph/Router
 shared @Aenimus @JivusAyrus @StarpTech
 studio @JivusAyrus @wilsonrivera @StarpTech
 # Cosmo Streams / EDFS
