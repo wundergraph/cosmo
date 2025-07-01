@@ -243,9 +243,11 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	for _, subgraph := range routerConfig.GetSubgraphs() {
 		allSubgraphs[subgraph.Name] = true
 	}
-	for _, ffConfig := range routerConfig.FeatureFlagConfigs.ConfigByFeatureFlagName {
-		for _, subgraph := range ffConfig.Subgraphs {
-			allSubgraphs[subgraph.Name] = true
+	if routerConfig.FeatureFlagConfigs != nil {
+		for _, ffConfig := range routerConfig.FeatureFlagConfigs.ConfigByFeatureFlagName {
+			for _, subgraph := range ffConfig.Subgraphs {
+				allSubgraphs[subgraph.Name] = true
+			}
 		}
 	}
 
