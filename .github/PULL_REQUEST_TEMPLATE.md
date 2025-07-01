@@ -18,12 +18,7 @@ Examples of good PR titles:
 - 🧹chore(deps): bump dependencies to latest versions
 -->
 
-## Motivation and Context
-
-<!--
-Why is this change required? What problem does it solve? Which issues are linked?
-Please describe in detail the impact of this change. Attach screenshots if applicable.
--->
+@coderabbitai summary
 
 ## Checklist
 

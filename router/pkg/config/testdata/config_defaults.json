@@ -262,7 +262,8 @@
   "Events": {
     "Providers": {
       "Nats": null,
-      "Kafka": null
+      "Kafka": null,
+      "Redis": null
     }
   },
   "CacheWarmup": {
@@ -466,6 +467,9 @@
       "Enabled": false
     },
     "SubscriptionMultipartPrintBoundary": {
+      "Enabled": false
+    },
+    "UseGraphQLValidationFailedStatus": {
       "Enabled": false
     }
   },

@@ -10,10 +10,11 @@ import (
 )
 
 type Options struct {
-	Interval time.Duration
-	Logger   *zap.Logger
-	Path     string
-	Callback func()
+	Interval   time.Duration
+	Logger     *zap.Logger
+	Paths      []string
+	Callback   func()
+	TickSource <-chan time.Time
 }
 
 func New(options Options) (func(ctx context.Context) error, error) {
@@ -25,7 +26,7 @@ func New(options Options) (func(ctx context.Context) error, error) {
 		return nil, errors.New("logger must be provided")
 	}
 
-	if options.Path == "" {
+	if len(options.Paths) == 0 {
 		return nil, errors.New("path must be provided")
 	}
 
@@ -33,40 +34,63 @@ func New(options Options) (func(ctx context.Context) error, error) {
 		return nil, errors.New("callback must be provided")
 	}
 
-	ll := options.Logger.With(zap.String("component", "file_watcher"), zap.String("path", options.Path))
+	ll := options.Logger.With(zap.String("component", "file_watcher"), zap.Strings("path", options.Paths))
 
 	return func(ctx context.Context) error {
-		ticker := time.NewTicker(options.Interval)
-		defer ticker.Stop()
-
-		var prevModTime time.Time
-
-		stat, err := os.Stat(options.Path)
-		if err != nil {
-			ll.Debug("Target file cannot be statted", zap.Error(err))
-		} else {
-			prevModTime = stat.ModTime()
+		// If a ticker source is provided, use that instead of the default ticker
+		// The ticker source is right now used for testing
+		ticker := options.TickSource
+		if ticker == nil {
+			ticker = time.Tick(options.Interval)
 		}
 
-		ll.Debug("Watching file for changes", zap.Time("initial_mod_time", prevModTime))
+		prevModTimes := make(map[string]time.Time)
+
+		for _, path := range options.Paths {
+			stat, err := os.Stat(path)
+			if err != nil {
+				ll.Debug("Target file cannot be statted", zap.Error(err))
+			} else {
+				prevModTimes[path] = stat.ModTime()
+				ll.Debug("Watching file for changes", zap.String("path", path), zap.Time("initial_mod_time", prevModTimes[path]))
+			}
+		}
+
+		pendingCallback := false
 
 		for {
 			select {
-			case <-ticker.C:
-				stat, err := os.Stat(options.Path)
-				if err != nil {
-					ll.Debug("Target file cannot be statted", zap.Error(err))
+			case <-ticker:
+				changesDetected := false
 
-					// Reset the mod time so we catch any new file at the target path
-					prevModTime = time.Time{}
-
-					continue
+				for _, path := range options.Paths {
+					stat, err := os.Stat(path)
+					if err != nil {
+						ll.Debug("Target file cannot be statted", zap.String("path", path), zap.Error(err))
+						// Reset the mod time so we catch any new file at the target path
+						prevModTimes[path] = time.Time{}
+						continue
+					}
+					ll.Debug("Checking file for changes",
+						zap.String("path", path),
+						zap.Time("prev_mod_time", prevModTimes[path]),
+						zap.Time("current_mod_time", stat.ModTime()),
+					)
+					if stat.ModTime().After(prevModTimes[path]) {
+						prevModTimes[path] = stat.ModTime()
+						changesDetected = true
+					}
 				}
 
-				ll.Debug("Checking file for changes", zap.Time("prev_mod_time", prevModTime), zap.Time("current_mod_time", stat.ModTime()))
-
-				if stat.ModTime().After(prevModTime) {
-					prevModTime = stat.ModTime()
+				if changesDetected {
+					// If there are changes detected this tick
+					// We want to wait for the next tick (without changes)
+					// to run the callback
+					pendingCallback = true
+				} else if pendingCallback {
+					// When there are no changes detected for this tick
+					// but the previous tick had changes detected
+					pendingCallback = false
 					options.Callback()
 				}
 			case <-ctx.Done():

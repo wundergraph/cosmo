@@ -2,6 +2,7 @@ name: Controlplane CI
 on:
   pull_request:
     paths:
+      - 'pnpm-lock.yaml'
       - "controlplane/**/*"
       - "connect/**/*"
       - "composition/**/*"

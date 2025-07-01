@@ -37,8 +37,6 @@ describe('SDL to Proto - Interfaces and Unions', () => {
       "syntax = "proto3";
       package service.v1;
 
-      option go_package = "cosmo/pkg/proto/service.v1;servicev1";
-
       // Service definition for DefaultService
       service DefaultService {
         rpc QueryNode(QueryNodeRequest) returns (QueryNodeResponse) {}
@@ -116,8 +114,6 @@ describe('SDL to Proto - Interfaces and Unions', () => {
     expect(protoText).toMatchInlineSnapshot(`
       "syntax = "proto3";
       package service.v1;
-
-      option go_package = "cosmo/pkg/proto/service.v1;servicev1";
 
       // Service definition for DefaultService
       service DefaultService {
@@ -199,8 +195,6 @@ describe('SDL to Proto - Interfaces and Unions', () => {
       "syntax = "proto3";
       package service.v1;
 
-      option go_package = "cosmo/pkg/proto/service.v1;servicev1";
-
       // Service definition for DefaultService
       service DefaultService {
         rpc QuerySearch(QuerySearchRequest) returns (QuerySearchResponse) {}
@@ -267,8 +261,6 @@ describe('SDL to Proto - Interfaces and Unions', () => {
     expect(protoText).toMatchInlineSnapshot(`
       "syntax = "proto3";
       package service.v1;
-
-      option go_package = "cosmo/pkg/proto/service.v1;servicev1";
 
       // Service definition for DefaultService
       service DefaultService {

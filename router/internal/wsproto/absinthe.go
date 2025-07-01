@@ -204,19 +204,15 @@ func (p *absintheWSProtocol) WriteGraphQLErrors(id string, errors json.RawMessag
 	})
 }
 
-func (p *absintheWSProtocol) Close() error {
-	if err := p.conn.WriteCloseFrame(ws.StatusGoingAway, "Downstream service error"); err != nil {
-		return err
-	}
-
-	if err := p.conn.Close(); err != nil {
+func (p *absintheWSProtocol) Close(code ws.StatusCode, reason string) error {
+	if err := p.conn.WriteCloseFrame(code, reason); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (p *absintheWSProtocol) Done(id string) error {
+func (p *absintheWSProtocol) Complete(id string) error {
 	return p.conn.WriteJSON(absintheMessage{
 		ID:       &id,
 		Protocol: "__absinthe__:control",

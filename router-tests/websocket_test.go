@@ -1251,7 +1251,7 @@ func TestWebSockets(t *testing.T) {
 			err = json.Unmarshal(msg.Payload, &errs)
 			require.NoError(t, err)
 			require.Len(t, errs, 1)
-			require.Equal(t, errs[0].Message, `field: does_not_exist not defined on type: Subscription`)
+			require.Equal(t, `Cannot query field "does_not_exist" on type "Subscription".`, errs[0].Message)
 		})
 	})
 	t.Run("subscription with library graphql-ws", func(t *testing.T) {
@@ -1521,7 +1521,7 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, "error", res.Type)
 			require.Equal(t, "1", res.ID)
-			require.JSONEq(t, `[{"message":"field: productCount not defined on type: Employee"}]`, string(res.Payload))
+			require.JSONEq(t, `[{"message":"Cannot query field \"productCount\" on type \"Employee\"."}]`, string(res.Payload))
 			xEnv.WaitForSubscriptionCount(0, time.Second*5)
 		})
 	})
@@ -1551,9 +1551,11 @@ func TestWebSockets(t *testing.T) {
 			xEnv.Shutdown()
 			_, _, err = conn.NextReader()
 			// Check that the WS client error indicates the connection was unexpectedly closed
-			closeError, ok := err.(*websocket.CloseError)
-			require.True(t, ok)
-			require.Equal(t, websocket.CloseAbnormalClosure, closeError.Code)
+			var closeError *websocket.CloseError
+			if assert.ErrorAs(t, err, &closeError) {
+				assert.Equal(t, websocket.CloseAbnormalClosure, closeError.Code)
+				assert.Equal(t, "unexpected EOF", closeError.Text)
+			}
 		})
 	})
 
@@ -1581,9 +1583,10 @@ func TestWebSockets(t *testing.T) {
 			_, _, err = conn.NextReader()
 			// Check that the WS client error indicates the connection was unexpectedly closed
 			var closeError *websocket.CloseError
-			ok := errors.As(err, &closeError)
-			require.True(t, ok)
-			require.Equal(t, websocket.CloseAbnormalClosure, closeError.Code)
+			if assert.ErrorAs(t, err, &closeError) {
+				assert.Equal(t, websocket.CloseAbnormalClosure, closeError.Code)
+				assert.Equal(t, "unexpected EOF", closeError.Text)
+			}
 		})
 	})
 	t.Run("single connection with initial payload", func(t *testing.T) {
@@ -2288,7 +2291,7 @@ func TestWebsocketClose(t *testing.T) {
 
 	totalUpdates := 5
 
-	t.Run("should return 1001: Downstream service error when the subgraph becomes unavailable", func(t *testing.T) {
+	t.Run("should return 1001 Downstream service error when the subgraph becomes unavailable", func(t *testing.T) {
 		wsMiddleware, _ := countEmpWsMiddleware(t, totalUpdates, false)
 
 		// Configure and run the test
@@ -2312,6 +2315,8 @@ func TestWebsocketClose(t *testing.T) {
 			})
 			require.NoError(t, err)
 
+			xEnv.WaitForConnectionCount(1, 10*time.Second)
+
 			// Process subscription updates
 			var receivedUpdates int
 			for receivedUpdates < totalUpdates {
@@ -2331,11 +2336,16 @@ func TestWebsocketClose(t *testing.T) {
 			}
 
 			// Attempt to read again, should get close error
-			err = conn.ReadJSON(&testenv.WebSocketMessage{})
-			if assert.Error(t, err, "should have received an error") {
-				assert.ErrorContains(t, err, "Downstream service error", "should have message 'Downstream service error'")
-				assert.True(t, websocket.IsCloseError(err, websocket.CloseGoingAway), "should be a 'going away' closure")
+			_, _, err = conn.NextReader()
+			require.Error(t, err)
+
+			var closeError *websocket.CloseError
+			if assert.ErrorAs(t, err, &closeError) {
+				assert.Equal(t, websocket.CloseGoingAway, closeError.Code)
+				assert.Equal(t, "Downstream service error", closeError.Text)
 			}
+
+			xEnv.WaitForConnectionCount(0, 10*time.Second)
 		})
 	})
 
@@ -2386,6 +2396,102 @@ func TestWebsocketClose(t *testing.T) {
 			err = testenv.WSReadJSON(t, conn, &complete)
 			require.NoError(t, err)
 			require.Equal(t, "complete", complete.Type)
+		})
+	})
+
+	t.Run("should return 1000 normal closure when upgrade is rejected", func(t *testing.T) {
+		// Configure and run the test
+		testenv.Run(t, &testenv.Config{
+			Subgraphs: testenv.SubgraphsConfig{
+				GlobalMiddleware: func(handler http.Handler) http.Handler {
+					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						// Check if this is a WebSocket upgrade request
+						if websocket.IsWebSocketUpgrade(r) {
+							// Reject with 401 Unauthorized
+							http.Error(w, "Unauthorized", http.StatusUnauthorized)
+							return
+						}
+						// Pass through non-WebSocket requests
+						handler.ServeHTTP(w, r)
+					})
+				},
+			},
+			ModifyEngineExecutionConfiguration: func(config *config.EngineExecutionConfiguration) {
+				// Don't use too small ping intervals
+				config.WebSocketClientPingInterval = 500 * time.Millisecond
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Setup client connection
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+
+			// Start the subscription
+			err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { countEmp(max: 40, intervalMilliseconds: 500) }"}`),
+			})
+			require.NoError(t, err)
+
+			// Read the error response
+			var res testenv.WebSocketMessage
+			err = testenv.WSReadJSON(t, conn, &res)
+			require.NoError(t, err)
+
+			// Should get an error message
+			require.Equal(t, "error", res.Type)
+
+			// Check the error payload
+			require.JSONEq(t, `[{"message":"Subscription Upgrade request failed for Subgraph 'employees'.","extensions":{"statusCode":401}}]`, string(res.Payload))
+
+			// Connection should be closed after error
+			_, _, err = conn.NextReader()
+			require.Error(t, err)
+
+			var closeError *websocket.CloseError
+			if assert.ErrorAs(t, err, &closeError) {
+				assert.Equal(t, websocket.CloseNormalClosure, closeError.Code)
+				assert.Equal(t, "Normal closure", closeError.Text)
+			}
+		})
+	})
+
+	t.Run("should return 1001 Going Away when router shuts down", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(config *config.EngineExecutionConfiguration) {
+				// Use longer ping intervals to avoid interference
+				config.WebSocketClientPingInterval = 500 * time.Millisecond
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Setup client connection
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+
+			// Start a subscription to keep the connection active
+			err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { countEmp(max: 10, intervalMilliseconds: 100) }"}`),
+			})
+			require.NoError(t, err)
+
+			// Read the first response to ensure subscription is active
+			var res testenv.WebSocketMessage
+			require.NoError(t, testenv.WSReadJSON(t, conn, &res))
+			require.Equal(t, "next", res.Type)
+
+			// Shutdown the router while subscription is active
+			xEnv.Shutdown()
+
+			// Try to read from the connection to detect the close
+			_, _, err = conn.NextReader()
+			require.Error(t, err, "should have received an error when router shuts down")
+
+			var closeError *websocket.CloseError
+			if assert.ErrorAs(t, err, &closeError) {
+				assert.Equal(t, websocket.CloseGoingAway, closeError.Code)
+				assert.Equal(t, "Going away", closeError.Text)
+			}
 		})
 	})
 }
