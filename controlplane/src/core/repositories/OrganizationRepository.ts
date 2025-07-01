@@ -1009,13 +1009,14 @@ export class OrganizationRepository {
   }
 
   public async updateMemberGroups(input: { orgMemberID: string; groups: string[] }) {
+    if (input.groups.length === 0) {
+      // Prevent updating the groups if no new groups were provided
+      return;
+    }
+
     await this.db
       .delete(schema.organizationGroupMembers)
       .where(eq(schema.organizationGroupMembers.organizationMemberId, input.orgMemberID));
-
-    if (input.groups.length === 0) {
-      return;
-    }
 
     await this.db
       .insert(schema.organizationGroupMembers)

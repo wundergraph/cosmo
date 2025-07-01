@@ -119,6 +119,15 @@ export function updateOrgMemberGroup(
 
       // Figure out which groups we need to remove the user from and to add the user to
       const newGroups = new Set(groups.map((group) => group.groupId));
+      if (newGroups.size === 0) {
+        return {
+          response: {
+            code: EnumStatusCode.ERR,
+            details: 'The organization member must have at least one group.',
+          },
+        };
+      }
+
       const existingGroups = new Set(orgMember.rbac.groups.map((group) => group.groupId));
 
       const groupsToAddTo = newGroups.difference(existingGroups);
