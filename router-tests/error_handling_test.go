@@ -490,7 +490,8 @@ func TestErrorPropagation(t *testing.T) {
 				Products: testenv.SubgraphConfig{
 					Middleware: func(handler http.Handler) http.Handler {
 						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-							w.WriteHeader(http.StatusUnauthorized)
+							// if this writes a non-2XX code it will get picked up by the fallback error handler
+							w.WriteHeader(http.StatusOK)
 							_, _ = w.Write([]byte(`unauthorized`))
 						})
 					},
