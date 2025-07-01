@@ -3030,6 +3030,21 @@
               "description": "The number of buckets which store circuit requests information within a given rolling duration",
               "minimum": 1,
               "maximum": 120
+            },
+            "execution_timeout": {
+              "type": "string",
+              "format": "go-duration",
+              "description": "The maximum time to wait for a circuit execution to complete before timing out",
+              "duration": {
+                "minimum": "1ms",
+                "maximum": "300s"
+              }
+            },
+            "max_concurrent_requests": {
+              "type": "integer",
+              "description": "The maximum number of concurrent requests allowed through the circuit breaker",
+              "minimum": 1,
+              "maximum": 10000
             }
           }
         },

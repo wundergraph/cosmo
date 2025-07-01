@@ -1888,6 +1888,8 @@ func newCircuitBreakerConfig(cb config.CircuitBreaker) circuit.CircuitBreakerCon
 		RequiredSuccessfulAttempts: cb.RequiredSuccessfulAttempts,
 		RollingDuration:            cb.RollingDuration,
 		NumBuckets:                 cb.NumBuckets,
+		ExecutionTimeout:           cb.ExecutionTimeout,
+		MaxConcurrentRequests:      cb.MaxConcurrentRequests,
 	}
 }
 

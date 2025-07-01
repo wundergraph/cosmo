@@ -148,7 +148,9 @@
         "HalfOpenAttempts": 1,
         "RequiredSuccessfulAttempts": 1,
         "RollingDuration": 10000000000,
-        "NumBuckets": 10
+        "NumBuckets": 10,
+        "ExecutionTimeout": 60000000000,
+        "MaxConcurrentRequests": 10
       },
       "RequestTimeout": 60000000000,
       "DialTimeout": 30000000000,

@@ -22,6 +22,8 @@ type CircuitBreakerConfig struct {
 	RequiredSuccessfulAttempts int64
 	RollingDuration            time.Duration
 	NumBuckets                 int
+	ExecutionTimeout           time.Duration
+	MaxConcurrentRequests      int64
 }
 
 type Manager struct {
@@ -36,9 +38,8 @@ func NewManager(baseConfig CircuitBreakerConfig) *Manager {
 	circuitManager := &circuit.Manager{}
 
 	if baseConfig.Enabled {
-		configuration := createConfiguration(baseConfig)
 		circuitManager.DefaultCircuitProperties = []circuit.CommandPropertiesConstructor{
-			configuration.Configure,
+			createConfiguration(baseConfig),
 		}
 	}
 
@@ -129,7 +130,7 @@ func (c *Manager) Initialize(opts ManagerOpts) error {
 				}
 
 				newConfig := createConfiguration(opts.SubgraphCircuitBreakers[sgName])
-				configs = append(configs, newConfig.Configure(sgName))
+				configs = append(configs, newConfig(sgName))
 
 				createCircuit, err := c.internalManager.CreateCircuit(sgName, configs...)
 				if err != nil {
@@ -144,19 +145,26 @@ func (c *Manager) Initialize(opts ManagerOpts) error {
 	return joinErr
 }
 
-func createConfiguration(opts CircuitBreakerConfig) hystrix.Factory {
-	var configuration = hystrix.Factory{
-		ConfigureOpener: hystrix.ConfigureOpener{
-			ErrorThresholdPercentage: opts.ErrorThresholdPercentage,
-			RequestVolumeThreshold:   opts.RequestThreshold,
-			RollingDuration:          opts.RollingDuration,
-			NumBuckets:               opts.NumBuckets,
-		},
-		ConfigureCloser: hystrix.ConfigureCloser{
-			SleepWindow:                  opts.SleepWindow,
-			HalfOpenAttempts:             opts.HalfOpenAttempts,
-			RequiredConcurrentSuccessful: opts.RequiredSuccessfulAttempts,
-		},
+func createConfiguration(opts CircuitBreakerConfig) circuit.CommandPropertiesConstructor {
+	return func(name string) circuit.Config {
+		return circuit.Config{
+			General: circuit.GeneralConfig{
+				OpenToClosedFactory: hystrix.CloserFactory(hystrix.ConfigureCloser{
+					SleepWindow:                  opts.SleepWindow,
+					HalfOpenAttempts:             opts.HalfOpenAttempts,
+					RequiredConcurrentSuccessful: opts.RequiredSuccessfulAttempts,
+				}),
+				ClosedToOpenFactory: hystrix.OpenerFactory(hystrix.ConfigureOpener{
+					ErrorThresholdPercentage: opts.ErrorThresholdPercentage,
+					RequestVolumeThreshold:   opts.RequestThreshold,
+					RollingDuration:          opts.RollingDuration,
+					NumBuckets:               opts.NumBuckets,
+				}),
+			},
+			Execution: circuit.ExecutionConfig{
+				Timeout:               opts.ExecutionTimeout,
+				MaxConcurrentRequests: opts.MaxConcurrentRequests,
+			},
+		}
 	}
-	return configuration
 }
