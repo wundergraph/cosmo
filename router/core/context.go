@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"errors"
+	rcontext "github.com/wundergraph/cosmo/router/internal/context"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -25,14 +26,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/graphqlschemausage"
 	ctrace "github.com/wundergraph/cosmo/router/pkg/trace"
-)
-
-type contextKey int
-
-const (
-	requestContextKey contextKey = iota
-	subgraphResolverContextKey
-	engineLoaderHooksContextKey
 )
 
 var _ RequestContext = (*requestContext)(nil)
@@ -288,14 +281,14 @@ func (c *requestContext) Request() *http.Request {
 }
 
 func withRequestContext(ctx context.Context, operation *requestContext) context.Context {
-	return context.WithValue(ctx, requestContextKey, operation)
+	return context.WithValue(ctx, rcontext.RequestContextKey, operation)
 }
 
 func getRequestContext(ctx context.Context) *requestContext {
 	if ctx == nil {
 		return nil
 	}
-	op := ctx.Value(requestContextKey)
+	op := ctx.Value(rcontext.RequestContextKey)
 	if op == nil {
 		return nil
 	}
@@ -692,11 +685,11 @@ func (s *SubgraphResolver) BySubgraphURL(u string) *Subgraph {
 }
 
 func withSubgraphResolver(ctx context.Context, resolver *SubgraphResolver) context.Context {
-	return context.WithValue(ctx, subgraphResolverContextKey, resolver)
+	return context.WithValue(ctx, rcontext.SubgraphResolverContextKey, resolver)
 }
 
 func subgraphResolverFromContext(ctx context.Context) *SubgraphResolver {
-	resolver, _ := ctx.Value(subgraphResolverContextKey).(*SubgraphResolver)
+	resolver, _ := ctx.Value(rcontext.SubgraphResolverContextKey).(*SubgraphResolver)
 	return resolver
 }
 

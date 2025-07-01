@@ -100,7 +100,7 @@ func (f *engineLoaderHooks) OnLoad(ctx context.Context, ds resolve.DataSourceInf
 		}...),
 	)
 
-	return context.WithValue(ctx, engineLoaderHooksContextKey, &engineLoaderHooksRequestContext{
+	return context.WithValue(ctx, rcontext.EngineLoaderHooksContextKey, &engineLoaderHooksRequestContext{
 		startTime: start,
 	})
 }
@@ -117,7 +117,7 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 		return
 	}
 
-	hookCtx, ok := ctx.Value(engineLoaderHooksContextKey).(*engineLoaderHooksRequestContext)
+	hookCtx, ok := ctx.Value(rcontext.EngineLoaderHooksContextKey).(*engineLoaderHooksRequestContext)
 	if !ok {
 		return
 	}
