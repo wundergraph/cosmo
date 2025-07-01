@@ -151,6 +151,7 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
         href: basePath + "/feature-flags",
         icon: <MdOutlineFeaturedPlayList className="size-4" />,
         matchExact: false,
+        separator: !isAdminOrDeveloper,
       },
     ];
 

@@ -5,7 +5,7 @@ import {
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { roles } from "@/lib/constants";
 import { useMemo, useState } from "react";
-import { PopoverContentWithScrollableContent } from "./popover-content-with-scrollable-content";
+import { PopoverContentWithScrollableContent } from "../popover-content-with-scrollable-content";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ChevronRightIcon, CheckIcon, MinusIcon } from "@heroicons/react/24/outline";

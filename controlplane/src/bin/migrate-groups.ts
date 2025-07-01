@@ -423,15 +423,31 @@ async function assignOrganizationMembersToCorrespondingGroups({
     return;
   }
 
-  await db
-    .update(schema.organizationInvitations)
-    .set({ groupId: devGroup.id })
+  // Retrieve all pending invitations
+  const pendingInvitations = await db
+    .select({ id: schema.organizationInvitations.id })
+    .from(schema.organizationInvitations)
     .where(
       and(
         eq(schema.organizationInvitations.organizationId, organizationId),
-        isNull(schema.organizationInvitations.groupId),
+        eq(schema.organizationInvitations.accepted, false),
       ),
-    );
+    )
+    .execute();
+
+  if (pendingInvitations.length === 0) {
+    return;
+  }
+
+  await db
+    .insert(schema.organizationInvitationGroups)
+    .values(
+      pendingInvitations.map((inv) => ({
+        invitationId: inv.id,
+        groupId: devGroup.id,
+      })),
+    )
+    .execute();
 }
 
 async function remapFallbackOidcGroupMapper({

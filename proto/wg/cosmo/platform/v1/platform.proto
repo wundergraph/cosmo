@@ -996,7 +996,7 @@ message GetOrganizationMembersResponse {
 
 message InviteUserRequest {
   string email = 1;
-  string groupId = 2;
+  repeated string groups = 2;
 }
 
 message InviteUserResponse {
@@ -1363,9 +1363,8 @@ message UpdateOrganizationDetailsResponse {
 }
 
 message UpdateOrgMemberGroupRequest {
-  string userID = 1;
-  string orgMemberUserID = 2;
-  string groupId = 3;
+  string orgMemberUserID = 1;
+  repeated string groups = 2;
 }
 
 message UpdateOrgMemberGroupResponse {

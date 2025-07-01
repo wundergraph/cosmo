@@ -1526,7 +1526,6 @@ export const organizationInvitations = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     invitedBy: uuid('invited_by').references(() => users.id, { onDelete: 'cascade' }),
-    groupId: uuid('group_id').references(() => organizationGroups.id, { onDelete: 'set null' }),
     accepted: boolean('accepted').default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -1535,6 +1534,25 @@ export const organizationInvitations = pgTable(
       organizationIdIndex: index('orginv_organization_id_idx').on(t.organizationId),
       userIdIndex: index('orginv_user_id_idx').on(t.userId),
       invitedByIndex: index('orginv_invited_by_idx').on(t.invitedBy),
+    };
+  },
+);
+
+export const organizationInvitationGroups = pgTable(
+  'organization_invitation_groups',
+  {
+    id: uuid('id').notNull().primaryKey().defaultRandom(),
+    invitationId: uuid('invitation_id')
+      .notNull()
+      .references(() => organizationInvitations.id, { onDelete: 'cascade' }),
+    groupId: uuid('group_id')
+      .notNull()
+      .references(() => organizationGroups.id, { onDelete: 'cascade' }),
+  },
+  (t) => {
+    return {
+      invitationIdIndex: index('org_inv_invitation_idx').on(t.invitationId),
+      groupIdIndex: index('org_inv_group_id').on(t.groupId),
     };
   },
 );

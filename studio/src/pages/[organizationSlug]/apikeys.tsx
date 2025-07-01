@@ -250,7 +250,7 @@ const CreateAPIKeyDialog = ({
             <GroupSelect
               id={groupInputLabel}
               value={watch('groupId')}
-              onGroupChange={(group) => setValue(
+              onValueChange={(group) => setValue(
                 'groupId',
                 group.groupId,
                 { shouldValidate: true, shouldDirty: true, shouldTouch: true },
@@ -625,7 +625,7 @@ const UpdateAPIKey = ({ selectedApiKeyName, open, selectedGroupId, refresh, onOp
         </DialogHeader>
         <GroupSelect
           value={groupId}
-          onGroupChange={(group) => setGroupId(group.groupId)}
+          onValueChange={(group) => setGroupId(group.groupId)}
         />
 
         <DialogFooter>
