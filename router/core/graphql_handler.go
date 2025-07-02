@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/expr"
 	"io"
 	"net/http"
 	"strings"
@@ -78,6 +79,7 @@ type HandlerOptions struct {
 	SubgraphErrorPropagation                    config.SubgraphErrorPropagationConfiguration
 	EngineLoaderHooks                           resolve.LoaderHooks
 	ApolloSubscriptionMultipartPrintBoundary    bool
+	ExprVisitorManager                          *expr.VisitorGroup
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
@@ -99,6 +101,7 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		subgraphErrorPropagation:                 opts.SubgraphErrorPropagation,
 		engineLoaderHooks:                        opts.EngineLoaderHooks,
 		apolloSubscriptionMultipartPrintBoundary: opts.ApolloSubscriptionMultipartPrintBoundary,
+		exprVisitorManager:                       opts.ExprVisitorManager,
 	}
 	return graphQLHandler
 }
@@ -131,6 +134,7 @@ type GraphQLHandler struct {
 	enableResponseHeaderPropagation             bool
 
 	apolloSubscriptionMultipartPrintBoundary bool
+	exprVisitorManager                       *expr.VisitorGroup
 }
 
 func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -195,10 +199,12 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
 		}
 
-		// String returns the unread portion of the buffer
-		// However at this point the offset is 0, which means
-		// we will get the entire string
-		reqCtx.expressionContext.Response.Body.Raw = respBuf.String()
+		if h.exprVisitorManager.IsResponseBodyUsedInExpression() {
+			// String returns the unread portion of the buffer
+			// However at this point the offset is 0, which means
+			// we will get the entire string
+			reqCtx.expressionContext.Response.Body.Raw = respBuf.String()
+		}
 
 		// Write contents of buf to the header propagation writer
 		hpw := HeaderPropagationWriter(w, resolveCtx.Context())

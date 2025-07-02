@@ -1169,7 +1169,9 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			tracingAttExpressions,
 			telemetryAttExpressions,
 			metricAttExpressions,
+			exprManager.VisitorManager,
 		),
+		ExprVisitorManager: exprManager.VisitorManager,
 	}
 
 	if s.redisClient != nil {
