@@ -2949,7 +2949,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 					{
 						Key: "response_body",
 						ValueFrom: &config.CustomDynamicAttribute{
-							Expression: "subgraph.responseBody.raw",
+							Expression: "subgraph.response.body.raw",
 						},
 					},
 				},
