@@ -24,7 +24,7 @@ type OperationBlocker struct {
 	subscriptionExpr   *vm.Program
 	nonPersistedExpr   *vm.Program
 
-	persistedOperationsEnabled  bool
+	persistedOperationsDisabled bool
 	safelistEnabled             bool
 	logUnknownOperationsEnabled bool
 }
@@ -53,7 +53,7 @@ type OperationBlockerOptions struct {
 	BlockSubscriptions          BlockSubscriptionOptions
 	BlockNonPersisted           BlockNonPersistedOptions
 	SafelistEnabled             bool
-	PersistedOperationsEnabled  bool
+	PersistedOperationsDisabled bool
 	LogUnknownOperationsEnabled bool
 	exprManager                 *expr.Manager
 }
@@ -64,7 +64,7 @@ func NewOperationBlocker(opts *OperationBlockerOptions) (*OperationBlocker, erro
 		blockSubscriptions: opts.BlockSubscriptions,
 		blockNonPersisted:  opts.BlockNonPersisted,
 
-		persistedOperationsEnabled:  opts.PersistedOperationsEnabled,
+		persistedOperationsDisabled: opts.PersistedOperationsDisabled,
 		safelistEnabled:             opts.SafelistEnabled,
 		logUnknownOperationsEnabled: opts.LogUnknownOperationsEnabled,
 	}

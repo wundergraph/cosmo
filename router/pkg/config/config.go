@@ -799,7 +799,7 @@ type AutomaticPersistedQueriesCacheConfig struct {
 }
 
 type PersistedOperationsConfig struct {
-	Enabled    bool                             `yaml:"enabled" env:"ENABLED" envDefault:"true"`
+	Disabled   bool                             `yaml:"disabled" env:"DISABLED" envDefault:"false"`
 	LogUnknown bool                             `yaml:"log_unknown" env:"LOG_UNKNOWN" envDefault:"false"`
 	Safelist   SafelistConfiguration            `yaml:"safelist" envPrefix:"SAFELIST_"`
 	Cache      PersistedOperationsCacheConfig   `yaml:"cache"`
