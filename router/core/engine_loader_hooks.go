@@ -4,7 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
+	"time"
+
 	rcontext "github.com/wundergraph/cosmo/router/internal/context"
+	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
 	"github.com/wundergraph/cosmo/router/internal/unique"
 	"github.com/wundergraph/cosmo/router/pkg/metric"
@@ -18,8 +22,6 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
-	"slices"
-	"time"
 )
 
 var (
@@ -41,6 +43,7 @@ type engineLoaderHooks struct {
 	tracingAttributeExpressions   *attributeExpressions
 	telemetryAttributeExpressions *attributeExpressions
 	metricAttributeExpressions    *attributeExpressions
+	exprVisitorManager            *expr.VisitorGroup
 }
 
 type engineLoaderHooksRequestContext struct {
@@ -54,6 +57,7 @@ func NewEngineRequestHooks(
 	tracingAttributes *attributeExpressions,
 	telemetryAttributes *attributeExpressions,
 	metricAttributes *attributeExpressions,
+	exprVisitorManager *expr.VisitorGroup,
 ) resolve.LoaderHooks {
 	var tracer trace.Tracer
 	if tracerProvider != nil {
@@ -75,6 +79,7 @@ func NewEngineRequestHooks(
 		tracingAttributeExpressions:   tracingAttributes,
 		metricAttributeExpressions:    metricAttributes,
 		accessLogger:                  logger,
+		exprVisitorManager:            exprVisitorManager,
 	}
 }
 
@@ -147,7 +152,10 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 	exprCtx.Subgraph.Id = ds.ID
 	exprCtx.Subgraph.Name = ds.Name
 	exprCtx.Subgraph.Request.Error = WrapExprError(responseInfo.Err)
-	exprCtx.Subgraph.ResponseBody.Raw = responseInfo.ResponseBody
+
+	if f.exprVisitorManager.IsSubgraphResponseBodyUsedInExpression() {
+		exprCtx.Subgraph.Response.Body.Raw = responseInfo.ResponseBody
+	}
 
 	metricAttrs := *reqContext.telemetry.AcquireAttributes()
 	defer reqContext.telemetry.ReleaseAttributes(&metricAttrs)

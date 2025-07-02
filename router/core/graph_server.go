@@ -1285,7 +1285,9 @@ func (s *graphServer) buildGraphMux(
 			tracingAttExpressions,
 			telemetryAttExpressions,
 			metricAttExpressions,
+			exprManager.VisitorManager,
 		),
+		ExprVisitorManager: exprManager.VisitorManager,
 	}
 
 	if s.redisClient != nil {

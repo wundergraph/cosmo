@@ -127,16 +127,20 @@ type SubgraphRequest struct {
 	ClientTrace ClientTrace `expr:"clientTrace"`
 }
 
+type SubgraphResponse struct {
+	Body Body `expr:"body"`
+}
+
 type ClientTrace struct {
 	ConnectionAcquireDuration float64 `expr:"connAcquireDuration"`
 }
 
 // Subgraph Related
 type Subgraph struct {
-	Id           string          `expr:"id"`
-	Name         string          `expr:"name"`
-	Request      SubgraphRequest `expr:"request"`
-	ResponseBody Body            `expr:"responseBody"`
+	Id       string           `expr:"id"`
+	Name     string           `expr:"name"`
+	Request  SubgraphRequest  `expr:"request"`
+	Response SubgraphResponse `expr:"response"`
 }
 
 // Get returns the value of the header with the given key. If the header is not present, an empty string is returned.
