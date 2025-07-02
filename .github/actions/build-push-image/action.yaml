@@ -54,7 +54,7 @@ runs:
         images: |
           ghcr.io/${{ github.repository }}/${{ inputs.image_name }}
         flavor: |
-          suffix=${{ inputs.docker_build_target == '' && '' || format('-{0}', inputs.docker_build_target) }}
+          suffix=${{ inputs.docker_build_target == '' && '' || format('-{0}', inputs.docker_build_target) }},onlatest=true
         tags: |
           type=ref,event=branch
           type=ref,event=pr
