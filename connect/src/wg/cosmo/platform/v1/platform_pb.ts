@@ -4256,6 +4256,11 @@ export class GetCheckOperationsRequest extends Message<GetCheckOperationsRequest
    */
   offset = 0;
 
+  /**
+   * @generated from field: optional string search = 6;
+   */
+  search?: string;
+
   constructor(data?: PartialMessage<GetCheckOperationsRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -4269,6 +4274,7 @@ export class GetCheckOperationsRequest extends Message<GetCheckOperationsRequest
     { no: 3, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "limit", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 5, name: "offset", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 6, name: "search", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCheckOperationsRequest {
@@ -4322,6 +4328,16 @@ export class GetCheckOperationsResponse extends Message<GetCheckOperationsRespon
    */
   totalOperationsCount = 0;
 
+  /**
+   * @generated from field: bool doAllOperationsHaveIgnoreAllOverride = 7;
+   */
+  doAllOperationsHaveIgnoreAllOverride = false;
+
+  /**
+   * @generated from field: bool doAllOperationsHaveAllTheirChangesMarkedSafe = 8;
+   */
+  doAllOperationsHaveAllTheirChangesMarkedSafe = false;
+
   constructor(data?: PartialMessage<GetCheckOperationsResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -4336,6 +4352,8 @@ export class GetCheckOperationsResponse extends Message<GetCheckOperationsRespon
     { no: 4, name: "created_at", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "client_traffic_check_skipped", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 6, name: "totalOperationsCount", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 7, name: "doAllOperationsHaveIgnoreAllOverride", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 8, name: "doAllOperationsHaveAllTheirChangesMarkedSafe", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCheckOperationsResponse {
@@ -7424,9 +7442,9 @@ export class InviteUserRequest extends Message<InviteUserRequest> {
   email = "";
 
   /**
-   * @generated from field: string groupId = 2;
+   * @generated from field: repeated string groups = 2;
    */
-  groupId = "";
+  groups: string[] = [];
 
   constructor(data?: PartialMessage<InviteUserRequest>) {
     super();
@@ -7437,7 +7455,7 @@ export class InviteUserRequest extends Message<InviteUserRequest> {
   static readonly typeName = "wg.cosmo.platform.v1.InviteUserRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "email", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "groupId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "groups", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): InviteUserRequest {
@@ -10439,19 +10457,14 @@ export class UpdateOrganizationDetailsResponse extends Message<UpdateOrganizatio
  */
 export class UpdateOrgMemberGroupRequest extends Message<UpdateOrgMemberGroupRequest> {
   /**
-   * @generated from field: string userID = 1;
-   */
-  userID = "";
-
-  /**
-   * @generated from field: string orgMemberUserID = 2;
+   * @generated from field: string orgMemberUserID = 1;
    */
   orgMemberUserID = "";
 
   /**
-   * @generated from field: string groupId = 3;
+   * @generated from field: repeated string groups = 2;
    */
-  groupId = "";
+  groups: string[] = [];
 
   constructor(data?: PartialMessage<UpdateOrgMemberGroupRequest>) {
     super();
@@ -10461,9 +10474,8 @@ export class UpdateOrgMemberGroupRequest extends Message<UpdateOrgMemberGroupReq
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "wg.cosmo.platform.v1.UpdateOrgMemberGroupRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "userID", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "orgMemberUserID", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "groupId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "orgMemberUserID", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "groups", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateOrgMemberGroupRequest {
@@ -12056,6 +12068,11 @@ export class ToggleChangeOverridesForAllOperationsRequest extends Message<Toggle
    */
   namespace = "";
 
+  /**
+   * @generated from field: optional string search = 5;
+   */
+  search?: string;
+
   constructor(data?: PartialMessage<ToggleChangeOverridesForAllOperationsRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -12068,6 +12085,7 @@ export class ToggleChangeOverridesForAllOperationsRequest extends Message<Toggle
     { no: 2, name: "is_safe", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 3, name: "graph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "search", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ToggleChangeOverridesForAllOperationsRequest {
@@ -12143,6 +12161,11 @@ export class CreateIgnoreOverridesForAllOperationsRequest extends Message<Create
    */
   namespace = "";
 
+  /**
+   * @generated from field: optional string search = 4;
+   */
+  search?: string;
+
   constructor(data?: PartialMessage<CreateIgnoreOverridesForAllOperationsRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -12154,6 +12177,7 @@ export class CreateIgnoreOverridesForAllOperationsRequest extends Message<Create
     { no: 1, name: "check_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "graph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "search", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateIgnoreOverridesForAllOperationsRequest {

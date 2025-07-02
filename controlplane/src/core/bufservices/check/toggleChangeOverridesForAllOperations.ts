@@ -54,6 +54,7 @@ export function toggleChangeOverridesForAllOperations(
 
       const affectedOperations = await schemaCheckRepo.getAffectedOperationsByCheckId({
         checkId: req.checkId,
+        search: req.search,
       });
       const checkDetails = await subgraphRepo.checkDetails(req.checkId, graph.targetId);
 

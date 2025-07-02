@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.85.4](https://github.com/wundergraph/cosmo/compare/wgc@0.85.3...wgc@0.85.4) (2025-07-01)
+
+**Note:** Version bump only for package wgc
+
+## [0.85.3](https://github.com/wundergraph/cosmo/compare/wgc@0.85.2...wgc@0.85.3) (2025-06-30)
+
+### Bug Fixes
+
+* **cli:** make .env loading silent to prevent invalid json output ([#1993](https://github.com/wundergraph/cosmo/issues/1993)) ([cdfbc9a](https://github.com/wundergraph/cosmo/commit/cdfbc9ab8729953491233f8ca071bc1fd467d20d)) (@rawkode)
+
 ## [0.85.2](https://github.com/wundergraph/cosmo/compare/wgc@0.85.1...wgc@0.85.2) (2025-06-26)
 
 **Note:** Version bump only for package wgc
