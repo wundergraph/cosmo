@@ -35,6 +35,9 @@ outputs:
   image_ref:
     description: "The reference of the image that was built"
     value: "ghcr.io/${{ github.repository }}/${{ inputs.image_name }}:sha-${{ github.sha }}"
+  image_ref_digest:
+    description: "The reference of the image digest that was built"
+    value: "ghcr.io/${{ github.repository }}/${{ inputs.image_name }}@${{ steps.docker_build.outputs.digest }}"
 
 runs:
   using: "composite"
@@ -87,6 +90,7 @@ runs:
         password: ${{ inputs.token }}
 
     - name: Build & Push Docker Image
+      id: docker_build
       uses: docker/build-push-action@v6
       with:
         # This is a limitation of GitHub. Only organization members can push to GitHub Container Registry
