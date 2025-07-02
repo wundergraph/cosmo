@@ -123,6 +123,68 @@ export class ProposalRepository {
     };
   }
 
+  public async ByName({
+    name,
+    federatedGraphId,
+  }: {
+    name: string;
+    federatedGraphId: string;
+  }): Promise<{ proposal: ProposalDTO; proposalSubgraphs: ProposalSubgraphDTO[] } | undefined> {
+    const proposal = await this.db
+      .select({
+        id: schema.proposals.id,
+        name: schema.proposals.name,
+        createdAt: schema.proposals.createdAt,
+        createdById: schema.proposals.createdById,
+        createdByEmail: schema.users.email,
+        state: schema.proposals.state,
+        federatedGraphId: schema.proposals.federatedGraphId,
+      })
+      .from(schema.proposals)
+      .leftJoin(schema.users, eq(schema.proposals.createdById, schema.users.id))
+      .where(and(eq(schema.proposals.name, name), eq(schema.proposals.federatedGraphId, federatedGraphId)));
+
+    if (proposal.length === 0) {
+      return undefined;
+    }
+
+    const proposalSubgraphs = await this.db
+      .select({
+        id: schema.proposalSubgraphs.id,
+        subgraphId: schema.proposalSubgraphs.subgraphId,
+        subgraphName: schema.proposalSubgraphs.subgraphName,
+        schemaSDL: schema.proposalSubgraphs.schemaSDL,
+        isDeleted: schema.proposalSubgraphs.isDeleted,
+        currentSchemaVersionId: schema.proposalSubgraphs.currentSchemaVersionId,
+        isNew: schema.proposalSubgraphs.isNew,
+        labels: schema.proposalSubgraphs.labels,
+      })
+      .from(schema.proposalSubgraphs)
+      .where(eq(schema.proposalSubgraphs.proposalId, proposal[0].id));
+
+    return {
+      proposal: {
+        id: proposal[0].id,
+        name: proposal[0].name,
+        createdAt: proposal[0].createdAt.toISOString(),
+        createdById: proposal[0].createdById || '',
+        createdByEmail: proposal[0].createdByEmail || '',
+        state: proposal[0].state,
+        federatedGraphId: proposal[0].federatedGraphId,
+      },
+      proposalSubgraphs: proposalSubgraphs.map((subgraph) => ({
+        id: subgraph.id,
+        subgraphId: subgraph.subgraphId || undefined,
+        subgraphName: subgraph.subgraphName,
+        schemaSDL: subgraph.schemaSDL || '',
+        isDeleted: subgraph.isDeleted,
+        currentSchemaVersionId: subgraph.currentSchemaVersionId || undefined,
+        isNew: subgraph.isNew,
+        labels: subgraph.labels ? subgraph.labels.map((l) => splitLabel(l)) : [],
+      })),
+    };
+  }
+
   public async ByFederatedGraphId({
     federatedGraphId,
     startDate,

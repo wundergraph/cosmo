@@ -126,12 +126,15 @@ export function updateProposal(
       throw new UnauthorizedError();
     }
 
-    const proposal = await proposalRepo.ById(req.proposalId);
+    const proposal = await proposalRepo.ByName({
+      name: req.proposalName,
+      federatedGraphId: federatedGraph.id,
+    });
     if (!proposal) {
       return {
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,
-          details: `Proposal ${req.proposalId} not found`,
+          details: `Proposal ${req.proposalName} not found`,
         },
         breakingChanges: [],
         nonBreakingChanges: [],

@@ -2698,7 +2698,7 @@ message UpdateProposalRequest {
   message UpdateProposalSubgraphs {
     repeated ProposalSubgraph subgraphs = 1;
   }
-  string proposalId = 1;
+  string proposalName = 1;
   string federatedGraphName = 2;
   oneof update_action {
     string state = 3;

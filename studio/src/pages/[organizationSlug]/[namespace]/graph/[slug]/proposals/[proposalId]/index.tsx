@@ -177,7 +177,7 @@ export const ProposalDetails = ({
 
   const handleApproveProposal = () => {
     approveProposal({
-      proposalId: proposal.id,
+      proposalName: proposal.name,
       federatedGraphName: slug,
       namespace,
       updateAction: {
@@ -189,7 +189,7 @@ export const ProposalDetails = ({
 
   const handleCloseProposal = () => {
     closeProposal({
-      proposalId: proposal.id,
+      proposalName: proposal.name,
       federatedGraphName: slug,
       namespace,
       updateAction: {
