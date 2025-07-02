@@ -153,7 +153,7 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 	exprCtx.Subgraph.Name = ds.Name
 	exprCtx.Subgraph.Request.Error = WrapExprError(responseInfo.Err)
 
-	if f.exprVisitorManager.IsSubgraphResponseBodyUsedInExpression() {
+	if f.exprVisitorManager.IsSubgraphResponseBodyUsedInExpressions() {
 		exprCtx.Subgraph.Response.Body.Raw = responseInfo.ResponseBody
 	}
 
