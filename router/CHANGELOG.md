@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.226.2](https://github.com/wundergraph/cosmo/compare/router@0.226.1...router@0.226.2) (2025-07-02)
+
+### Bug Fixes
+
+* fix checking presence of type fragment mapped to interface object ([#2001](https://github.com/wundergraph/cosmo/issues/2001)) ([79bdd2f](https://github.com/wundergraph/cosmo/commit/79bdd2f449fcbaeb2068a3aedb0a5cc81c222deb)) (@devsergiy)
+* **router:** preserve HTTP status in WriteResponseError ([#1988](https://github.com/wundergraph/cosmo/issues/1988)) ([2647f84](https://github.com/wundergraph/cosmo/commit/2647f8498a8d41ace57410c69636e3c7975f60fb)) (@kaialang)
+
 ## [0.226.1](https://github.com/wundergraph/cosmo/compare/router@0.226.0...router@0.226.1) (2025-06-28)
 
 ### Bug Fixes
