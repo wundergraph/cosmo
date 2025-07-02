@@ -6,19 +6,18 @@ require (
 	github.com/99designs/gqlgen v0.17.63
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.1
-	github.com/nats-io/nats.go v1.35.0
 	github.com/ravilushqa/otelgqlgen v0.13.1
 	github.com/rs/cors v1.11.0
 	github.com/vektah/gqlparser/v2 v2.5.21
 	github.com/wundergraph/cosmo/composition-go v0.0.0-20240124120900-5effe48a4a1d
 	github.com/wundergraph/cosmo/router v0.0.0-20250606140107-7f7915f68ea2
 	github.com/wundergraph/cosmo/router-tests v0.0.0-20250603094938-922424d50778
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.186
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1
 	go.opentelemetry.io/otel v1.28.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.23.1
 	go.opentelemetry.io/otel/sdk v1.28.0
 	go.uber.org/atomic v1.11.0
-	go.uber.org/zap v1.27.0
 	golang.org/x/sync v0.15.0
 )
 
@@ -106,6 +105,7 @@ require (
 	github.com/moby/sys/user v0.3.0 // indirect
 	github.com/moby/term v0.5.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
+	github.com/nats-io/nats.go v1.35.0 // indirect
 	github.com/nats-io/nkeys v0.4.7 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/oklog/run v1.0.0 // indirect
@@ -150,7 +150,6 @@ require (
 	github.com/twmb/franz-go/pkg/kmsg v1.7.0 // indirect
 	github.com/urfave/cli/v2 v2.27.5 // indirect
 	github.com/wundergraph/astjson v0.0.0-20250106123708-be463c97e083 // indirect
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.186 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	github.com/xeipuuv/gojsonschema v1.2.0 // indirect
@@ -172,6 +171,7 @@ require (
 	go.uber.org/automaxprocs v1.5.3 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/ratelimit v0.3.1 // indirect
+	go.uber.org/zap v1.27.0 // indirect
 	go.withmatt.com/connect-brotli v0.4.0 // indirect
 	golang.org/x/crypto v0.39.0 // indirect
 	golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8 // indirect

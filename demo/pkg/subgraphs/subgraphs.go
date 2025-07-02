@@ -9,19 +9,15 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"os"
 	"strconv"
 
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/products_fg"
 	"github.com/wundergraph/cosmo/router/core"
-	"go.uber.org/zap"
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/handler/debug"
 	"github.com/99designs/gqlgen/graphql/playground"
-	"github.com/nats-io/nats.go"
-	"github.com/nats-io/nats.go/jetstream"
-	natsPubsub "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/wundergraph/cosmo/demo/pkg/injector"
@@ -162,7 +158,7 @@ func subgraphHandler(schema graphql.ExecutableSchema) http.Handler {
 }
 
 type SubgraphOptions struct {
-	NatsPubSubByProviderID map[string]natsPubsub.Adapter
+	NatsPubSubByProviderID map[string]pubsub_datasource.NatsPubSub
 	GetPubSubName          func(string) string
 }
 
@@ -203,68 +199,32 @@ func CountriesHandler(opts *SubgraphOptions) http.Handler {
 }
 
 func New(ctx context.Context, config *Config) (*Subgraphs, error) {
-	url := nats.DefaultURL
-	if defaultSourceNameURL := os.Getenv("NATS_URL"); defaultSourceNameURL != "" {
-		url = defaultSourceNameURL
-	}
-
-	natsPubSubByProviderID := map[string]natsPubsub.Adapter{}
-
-	defaultAdapter, err := natsPubsub.NewAdapter(ctx, zap.NewNop(), url, []nats.Option{}, "hostname", "test")
-	if err != nil {
-		return nil, fmt.Errorf("failed to create default nats adapter: %w", err)
-	}
-	natsPubSubByProviderID["default"] = defaultAdapter
-
-	myNatsAdapter, err := natsPubsub.NewAdapter(ctx, zap.NewNop(), url, []nats.Option{}, "hostname", "test")
-	if err != nil {
-		return nil, fmt.Errorf("failed to create my-nats adapter: %w", err)
-	}
-	natsPubSubByProviderID["my-nats"] = myNatsAdapter
-
-	defaultConnection, err := nats.Connect(url)
-	if err != nil {
-		log.Printf("failed to connect to nats source \"nats\": %v", err)
-	}
-	defaultJetStream, err := jetstream.New(defaultConnection)
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = defaultJetStream.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
-		Name:     "streamName",
-		Subjects: []string{"employeeUpdated.>"},
-	})
-	if err != nil {
-		return nil, err
-	}
-
 	var servers []*http.Server
-	if srv := newServer("employees", config.EnableDebug, config.Ports.Employees, employees.NewSchema(natsPubSubByProviderID)); srv != nil {
+	if srv := newServer("employees", config.EnableDebug, config.Ports.Employees, employees.NewSchema(map[string]pubsub_datasource.NatsPubSub{})); srv != nil {
 		servers = append(servers, srv)
 	}
-	if srv := newServer("family", config.EnableDebug, config.Ports.Family, family.NewSchema(natsPubSubByProviderID)); srv != nil {
+	if srv := newServer("family", config.EnableDebug, config.Ports.Family, family.NewSchema(map[string]pubsub_datasource.NatsPubSub{})); srv != nil {
 		servers = append(servers, srv)
 	}
-	if srv := newServer("hobbies", config.EnableDebug, config.Ports.Hobbies, hobbies.NewSchema(natsPubSubByProviderID)); srv != nil {
+	if srv := newServer("hobbies", config.EnableDebug, config.Ports.Hobbies, hobbies.NewSchema(map[string]pubsub_datasource.NatsPubSub{})); srv != nil {
 		servers = append(servers, srv)
 	}
-	if srv := newServer("products", config.EnableDebug, config.Ports.Products, products.NewSchema(natsPubSubByProviderID)); srv != nil {
+	if srv := newServer("products", config.EnableDebug, config.Ports.Products, products.NewSchema(map[string]pubsub_datasource.NatsPubSub{})); srv != nil {
 		servers = append(servers, srv)
 	}
-	if srv := newServer("products_fg", config.EnableDebug, config.Ports.ProductsFG, products.NewSchema(natsPubSubByProviderID)); srv != nil {
+	if srv := newServer("products_fg", config.EnableDebug, config.Ports.ProductsFG, products.NewSchema(map[string]pubsub_datasource.NatsPubSub{})); srv != nil {
 		servers = append(servers, srv)
 	}
-	if srv := newServer("test1", config.EnableDebug, config.Ports.Test1, test1.NewSchema(natsPubSubByProviderID)); srv != nil {
+	if srv := newServer("test1", config.EnableDebug, config.Ports.Test1, test1.NewSchema(map[string]pubsub_datasource.NatsPubSub{})); srv != nil {
 		servers = append(servers, srv)
 	}
-	if srv := newServer("availability", config.EnableDebug, config.Ports.Availability, availability.NewSchema(natsPubSubByProviderID, config.GetPubSubName)); srv != nil {
+	if srv := newServer("availability", config.EnableDebug, config.Ports.Availability, availability.NewSchema(map[string]pubsub_datasource.NatsPubSub{}, config.GetPubSubName)); srv != nil {
 		servers = append(servers, srv)
 	}
-	if srv := newServer("mood", config.EnableDebug, config.Ports.Mood, mood.NewSchema(natsPubSubByProviderID, config.GetPubSubName)); srv != nil {
+	if srv := newServer("mood", config.EnableDebug, config.Ports.Mood, mood.NewSchema(map[string]pubsub_datasource.NatsPubSub{}, config.GetPubSubName)); srv != nil {
 		servers = append(servers, srv)
 	}
-	if srv := newServer("countries", config.EnableDebug, config.Ports.Countries, countries.NewSchema(natsPubSubByProviderID)); srv != nil {
+	if srv := newServer("countries", config.EnableDebug, config.Ports.Countries, countries.NewSchema(map[string]pubsub_datasource.NatsPubSub{})); srv != nil {
 		servers = append(servers, srv)
 	}
 	return &Subgraphs{

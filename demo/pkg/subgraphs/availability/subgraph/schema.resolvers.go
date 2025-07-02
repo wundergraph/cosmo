@@ -10,13 +10,13 @@ import (
 
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/availability/subgraph/generated"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/availability/subgraph/model"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 )
 
 // UpdateAvailability is the resolver for the updateAvailability field.
 func (r *mutationResolver) UpdateAvailability(ctx context.Context, employeeID int, isAvailable bool) (*model.Employee, error) {
 	storage.Set(employeeID, isAvailable)
-	err := r.NatsPubSubByProviderID["default"].Publish(ctx, nats.PublishAndRequestEventConfiguration{
+	err := r.NatsPubSubByProviderID["default"].Publish(ctx, pubsub_datasource.NatsPublishAndRequestEventConfiguration{
 		Subject: r.GetPubSubName(fmt.Sprintf("employeeUpdated.%d", employeeID)),
 		Data:    []byte(fmt.Sprintf(`{"id":%d,"__typename": "Employee"}`, employeeID)),
 	})
@@ -24,7 +24,7 @@ func (r *mutationResolver) UpdateAvailability(ctx context.Context, employeeID in
 	if err != nil {
 		return nil, err
 	}
-	err = r.NatsPubSubByProviderID["my-nats"].Publish(ctx, nats.PublishAndRequestEventConfiguration{
+	err = r.NatsPubSubByProviderID["my-nats"].Publish(ctx, pubsub_datasource.NatsPublishAndRequestEventConfiguration{
 		Subject: r.GetPubSubName(fmt.Sprintf("employeeUpdatedMyNats.%d", employeeID)),
 		Data:    []byte(fmt.Sprintf(`{"id":%d,"__typename": "Employee"}`, employeeID)),
 	})

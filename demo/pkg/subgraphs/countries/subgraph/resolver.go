@@ -3,7 +3,7 @@ package subgraph
 import (
 	"sync"
 
-	"github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 )
 
 // This file will not be regenerated automatically.
@@ -12,5 +12,5 @@ import (
 
 type Resolver struct {
 	mux                    sync.Mutex
-	NatsPubSubByProviderID map[string]nats.Adapter
+	NatsPubSubByProviderID map[string]pubsub_datasource.NatsPubSub
 }

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs"
@@ -43,5 +44,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	fmt.Println("Starting subgraphs")
+
 	log.Fatal(subgraphs.ListenAndServe(ctx))
 }
