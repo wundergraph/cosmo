@@ -1,2 +1,1 @@
-ALTER TABLE "proposals" DROP CONSTRAINT "federated_graph_proposal_name";--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "pr_federated_graph_id_idx" ON "proposals" USING btree ("federated_graph_id");

@@ -1,5 +1,5 @@
 {
-  "id": "9a901e7a-f60c-4321-af6d-1359970cf437",
+  "id": "55b1d2df-08b7-46dd-875d-48039935743b",
   "prevId": "c676a44a-0822-4868-9929-0da5f1004d45",
   "version": "7",
   "dialect": "postgresql",
@@ -5223,7 +5223,16 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "federated_graph_proposal_name": {
+          "name": "federated_graph_proposal_name",
+          "nullsNotDistinct": false,
+          "columns": [
+            "federated_graph_id",
+            "name"
+          ]
+        }
+      },
       "checkConstraints": {}
     },
     "public.schema_check_change_action": {

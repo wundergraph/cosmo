@@ -2385,6 +2385,7 @@ export const proposals = pgTable(
     state: proposalStateEnum('state').notNull(),
   },
   (t) => ({
+    uniqueFederatedGraphClientName: unique('federated_graph_proposal_name').on(t.federatedGraphId, t.name),
     createdByIdIndex: index('pr_created_by_id_idx').on(t.createdById),
     federatedGraphIdIndex: index('pr_federated_graph_id_idx').on(t.federatedGraphId),
   }),
