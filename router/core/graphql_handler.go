@@ -195,6 +195,11 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
 		}
 
+		// String returns the unread portion of the buffer
+		// However at this point the offset is 0, which means
+		// we will get the entire string
+		reqCtx.expressionContext.Response.Body.Raw = respBuf.String()
+
 		// Write contents of buf to the header propagation writer
 		hpw := HeaderPropagationWriter(w, resolveCtx.Context())
 		_, err = respBuf.WriteTo(hpw)

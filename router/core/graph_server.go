@@ -1041,13 +1041,13 @@ func (s *graphServer) buildGraphMux(
 			return nil, fmt.Errorf("failed building router access log expressions: %w", err)
 		}
 
-		s.accessLogsConfig.Attributes = requestlogger.CleanupExpressionAttributes(s.accessLogsConfig.Attributes)
+		accessLogAttributes := requestlogger.CleanupExpressionAttributes(s.accessLogsConfig.Attributes)
 
 		requestLoggerOpts := []requestlogger.Option{
 			requestlogger.WithDefaultOptions(),
 			requestlogger.WithNoTimeField(),
 			requestlogger.WithFields(baseLogFields...),
-			requestlogger.WithAttributes(s.accessLogsConfig.Attributes),
+			requestlogger.WithAttributes(accessLogAttributes),
 			requestlogger.WithExprAttributes(exprAttributes),
 			requestlogger.WithFieldsHandler(RouterAccessLogsFieldHandler),
 		}
@@ -1073,7 +1073,7 @@ func (s *graphServer) buildGraphMux(
 				return nil, fmt.Errorf("failed building router access log expressions: %w", err)
 			}
 
-			s.accessLogsConfig.SubgraphAttributes = requestlogger.CleanupExpressionAttributes(s.accessLogsConfig.SubgraphAttributes)
+			subgraphAttributes := requestlogger.CleanupExpressionAttributes(s.accessLogsConfig.SubgraphAttributes)
 
 			subgraphAccessLogger = requestlogger.NewSubgraphAccessLogger(
 				s.accessLogsConfig.Logger,
@@ -1081,7 +1081,7 @@ func (s *graphServer) buildGraphMux(
 					IPAnonymizationConfig: ipAnonConfig,
 					FieldsHandler:         SubgraphAccessLogsFieldHandler,
 					Fields:                baseLogFields,
-					Attributes:            s.accessLogsConfig.SubgraphAttributes,
+					Attributes:            subgraphAttributes,
 					ExprAttributes:        subgraphExprAttributes,
 				})
 		}
