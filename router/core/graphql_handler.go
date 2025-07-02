@@ -199,7 +199,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
 		}
 
-		if h.exprVisitorManager.IsResponseBodyUsedInExpression() {
+		if h.exprVisitorManager.IsResponseBodyUsedInExpressions() {
 			// String returns the unread portion of the buffer
 			// However at this point the offset is 0, which means
 			// we will get the entire string

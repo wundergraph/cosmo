@@ -9,7 +9,7 @@ import (
 func TestVisitorManager(t *testing.T) {
 	t.Parallel()
 
-	t.Run("verify IsResponseBodyUsedInExpression", func(t *testing.T) {
+	t.Run("verify IsResponseBodyUsedInExpressions", func(t *testing.T) {
 		t.Parallel()
 
 		testCases := []struct {
@@ -59,12 +59,12 @@ func TestVisitorManager(t *testing.T) {
 				_, err := exprManager.CompileAnyExpression(tc.expression)
 				require.NoError(t, err)
 
-				require.Equal(t, tc.expectedResult, visitorManager.IsResponseBodyUsedInExpression())
+				require.Equal(t, tc.expectedResult, visitorManager.IsResponseBodyUsedInExpressions())
 			})
 		}
 	})
 
-	t.Run("verify IsSubgraphResponseBodyUsedInExpression", func(t *testing.T) {
+	t.Run("verify IsSubgraphResponseBodyUsedInExpressions", func(t *testing.T) {
 		t.Parallel()
 
 		testCases := []struct {
@@ -119,7 +119,7 @@ func TestVisitorManager(t *testing.T) {
 				_, err := exprManager.CompileAnyExpression(tc.expression)
 				require.NoError(t, err)
 
-				require.Equal(t, tc.expectedResult, visitorManager.IsSubgraphResponseBodyUsedInExpression())
+				require.Equal(t, tc.expectedResult, visitorManager.IsSubgraphResponseBodyUsedInExpressions())
 			})
 		}
 	})

@@ -31,21 +31,33 @@ func createVisitorGroup() *VisitorGroup {
 }
 
 func (c *VisitorGroup) IsRequestBodyUsedInExpressions() bool {
+	if c == nil {
+		return true
+	}
 	body := c.globalVisitors[usesRequestBodyKey].(*UsesBody)
 	return body.UsesBody
 }
 
 func (c *VisitorGroup) IsSubgraphTraceUsedInExpressions() bool {
+	if c == nil {
+		return true
+	}
 	body := c.globalVisitors[usesSubgraphTraceKey].(*UsesSubgraphTrace)
 	return body.UsesSubgraphTrace
 }
 
-func (c *VisitorGroup) IsResponseBodyUsedInExpression() bool {
+func (c *VisitorGroup) IsResponseBodyUsedInExpressions() bool {
+	if c == nil {
+		return true
+	}
 	body := c.globalVisitors[usesResponseBodyKey].(*UsesResponseBody)
 	return body.UsesResponseBody
 }
 
-func (c *VisitorGroup) IsSubgraphResponseBodyUsedInExpression() bool {
+func (c *VisitorGroup) IsSubgraphResponseBodyUsedInExpressions() bool {
+	if c == nil {
+		return true
+	}
 	body := c.globalVisitors[usesSubgraphResponseBodyKey].(*UsesSubgraphResponseBody)
 	return body.UsesSubgraphResponseBody
 }
