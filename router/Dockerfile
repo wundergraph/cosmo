@@ -45,7 +45,7 @@ CMD ["/router"]
 
 EXPOSE 3002
 
-FROM --platform=${BUILDPLATFORM} gcr.io/distroless/base-debian12 AS default
+FROM --platform=${BUILDPLATFORM} gcr.io/distroless/base-debian12
 
 COPY --from=builder /app/router /router
 

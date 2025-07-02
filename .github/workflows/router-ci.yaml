@@ -263,6 +263,9 @@ jobs:
           image_ref: 'ghcr.io/wundergraph/cosmo/router:sha-${{ github.sha }}'
 
   build_push_image:
+    strategy:
+      matrix:
+        docker_build_target: [ "", "nonroot" ]
     # This is a limitation of GitHub. Only organization members can push to GitHub Container Registry
     # For now, we will disable the push to the GitHub Container Registry for external contributors
     if: github.event.pull_request.head.repo.full_name == github.repository
@@ -277,6 +280,7 @@ jobs:
           docker_password: ${{secrets.DOCKER_PASSWORD}}
           docker_context: router
           dockerfile: router/Dockerfile
+          docker_build_target: ${{ matrix.docker_build_target }}
           token: ${{secrets.GITHUB_TOKEN}}
           image_name: router
           image_description: 'Cosmo Router'
