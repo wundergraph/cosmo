@@ -21269,9 +21269,9 @@ export class GetProposalChecksResponse extends Message<GetProposalChecksResponse
  */
 export class UpdateProposalRequest extends Message<UpdateProposalRequest> {
   /**
-   * @generated from field: string proposalName = 1;
+   * @generated from field: string proposalId = 1;
    */
-  proposalName = "";
+  proposalId = "";
 
   /**
    * @generated from field: string federatedGraphName = 2;
@@ -21308,7 +21308,7 @@ export class UpdateProposalRequest extends Message<UpdateProposalRequest> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "wg.cosmo.platform.v1.UpdateProposalRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "proposalName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "proposalId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "federatedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "state", kind: "scalar", T: 9 /* ScalarType.STRING */, oneof: "update_action" },
     { no: 4, name: "updatedSubgraphs", kind: "message", T: UpdateProposalRequest_UpdateProposalSubgraphs, oneof: "update_action" },

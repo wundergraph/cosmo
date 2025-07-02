@@ -883,6 +883,13 @@
       "when": 1750093037984,
       "tag": "0125_acoustic_jackpot",
       "breakpoints": true
+    },
+    {
+      "idx": 126,
+      "version": "7",
+      "when": 1751452194492,
+      "tag": "0126_narrow_puff_adder",
+      "breakpoints": true
     }
   ]
 }
