@@ -242,7 +242,7 @@ jobs:
     timeout-minutes: 15
     strategy:
       matrix:
-        docker_build_target: [ "", "nonroot" ]
+        docker_build_target: [ '', 'nonroot' ]
     steps:
       - uses: actions/checkout@v4
 
@@ -275,7 +275,7 @@ jobs:
     timeout-minutes: 15
     strategy:
       matrix:
-        docker_build_target: [ "", "nonroot" ]
+        docker_build_target: [ '', 'nonroot' ]
     steps:
       - uses: actions/checkout@v4
 
