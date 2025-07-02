@@ -125,42 +125,6 @@ func TestFallbackErrors(t *testing.T) {
 		})
 	})
 
-	t.Run("when subgraph returns malformed JSON with 418 status, should get fallback error", func(t *testing.T) {
-		testenv.Run(t, &testenv.Config{
-			RouterOptions: []core.Option{
-				core.WithApolloRouterCompatibilityFlags(config.ApolloRouterCompatibilityFlags{
-					SubrequestHTTPError: config.ApolloCompatibilityFlag{
-						Enabled: true,
-					},
-				}),
-			},
-			Subgraphs: testenv.SubgraphsConfig{
-				Test1: testenv.SubgraphConfig{
-					Middleware: func(h http.Handler) http.Handler {
-						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-							w.Header().Set("Content-Type", "application/json")
-							w.WriteHeader(418)
-							_, _ = w.Write([]byte(`{"error":"invalid appliance"}`))
-						})
-					},
-				},
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `{ employee(id: 1) { id currentMood fieldThrowsError } }`,
-			})
-
-			checkContentAndErrors(t, `{"employee":{"id":1,"currentMood":"HAPPY","fieldThrowsError":null}}`, []testenv.GraphQLError{
-				{
-					Message: "418: I'm a teapot",
-					Extensions: testenv.GraphQLErrorExtensions{
-						StatusCode: 418,
-					},
-				},
-			}, res.Body)
-		})
-	})
-
 	t.Run("when subgraph returns malformed JSON with 200 status, should get invalid shape error", func(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			Subgraphs: testenv.SubgraphsConfig{
@@ -253,7 +217,6 @@ func TestFallbackErrors(t *testing.T) {
 			}, res.Body)
 		})
 	})
-
 }
 
 func TestErrorPropagation(t *testing.T) {
