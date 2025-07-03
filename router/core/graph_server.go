@@ -1,6 +1,7 @@
 package core
 
 import (
+	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"errors"
@@ -970,6 +971,25 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 					ExprAttributes:        subgraphExprAttributes,
 				})
 		}
+
+		// We use a separate handler as the handler is in a separate package that does not
+		// have access to the requestContext types
+		if exprManager.VisitorManager.IsResponseBodyUsedInExpressions() {
+			httpRouter.Use(func(h http.Handler) http.Handler {
+				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					buf := bytes.Buffer{}
+					ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
+
+					// TODO: A performance test before merging
+					ww.Tee(&buf)
+
+					h.ServeHTTP(ww, r)
+
+					reqContext := getRequestContext(r.Context())
+					reqContext.expressionContext.Response.Body.Raw = buf.String()
+				})
+			})
+		}
 	}
 
 	routerEngineConfig := &RouterEngineConfiguration{
@@ -1169,7 +1189,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			tracingAttExpressions,
 			telemetryAttExpressions,
 			metricAttExpressions,
-			exprManager.VisitorManager,
+			exprManager.VisitorManager.IsSubgraphResponseBodyUsedInExpressions(),
 		),
 		ExprVisitorManager: exprManager.VisitorManager,
 	}
