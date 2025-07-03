@@ -99,6 +99,7 @@ export type FieldData = {
   directivesByDirectiveName: Map<string, Array<ConstDirectiveNode>>;
   externalFieldDataBySubgraphName: Map<string, ExternalFieldData>;
   federatedCoords: string;
+  inheritedDirectiveNames: Set<string>;
   isInaccessible: boolean;
   isShareableBySubgraphName: Map<string, boolean>;
   kind: Kind.FIELD_DEFINITION;
