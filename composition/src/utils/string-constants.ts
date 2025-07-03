@@ -165,7 +165,7 @@ export const EXECUTABLE_DIRECTIVE_LOCATIONS = new Set<string>([
 export const ROOT_TYPE_NAMES = new Set<string>([MUTATION, QUERY, SUBSCRIPTION]);
 export const AUTHORIZATION_DIRECTIVES = new Set<string>([AUTHENTICATED, REQUIRES_SCOPES]);
 export const PERSISTED_CLIENT_DIRECTIVES = new Set<string>([DEPRECATED]);
-export const INHERITABLE_DIRECTIVE_NAMES = [EXTERNAL, SHAREABLE];
+export const INHERITABLE_DIRECTIVE_NAMES = new Set<string>([EXTERNAL, SHAREABLE]);
 export const IGNORED_FIELDS = new Set<string>([ENTITIES_FIELD, SERVICE_FIELD]);
 
 export const INPUT_NODE_KINDS = new Set<Kind>([
