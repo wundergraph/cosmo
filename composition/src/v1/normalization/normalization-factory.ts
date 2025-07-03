@@ -550,12 +550,17 @@ export class NormalizationFactory {
     }
   }
 
-  addInheritedDirectivesToFieldData(fieldDirectivesByDirectiveName: Map<string, Array<ConstDirectiveNode>>) {
-    if (this.isParentObjectShareable) {
-      getValueOrDefault(fieldDirectivesByDirectiveName, SHAREABLE, () => [generateSimpleDirective(SHAREABLE)]);
+  addInheritedDirectivesToFieldData(
+    fieldDirectivesByDirectiveName: Map<string, Array<ConstDirectiveNode>>,
+    inheritedDirectiveNames: Set<string>,
+  ) {
+    if (this.isParentObjectShareable && !fieldDirectivesByDirectiveName.has(SHAREABLE)) {
+      fieldDirectivesByDirectiveName.set(SHAREABLE, [generateSimpleDirective(SHAREABLE)]);
+      inheritedDirectiveNames.add(SHAREABLE);
     }
-    if (this.isParentObjectExternal) {
-      getValueOrDefault(fieldDirectivesByDirectiveName, EXTERNAL, () => [generateSimpleDirective(EXTERNAL)]);
+    if (this.isParentObjectExternal && !fieldDirectivesByDirectiveName.has(EXTERNAL)) {
+      fieldDirectivesByDirectiveName.set(EXTERNAL, [generateSimpleDirective(EXTERNAL)]);
+      inheritedDirectiveNames.add(EXTERNAL);
     }
     return fieldDirectivesByDirectiveName;
   }
@@ -1029,17 +1034,6 @@ export class NormalizationFactory {
     return output;
   }
 
-  getInheritedDirectiveNames(): Set<string> {
-    const set = new Set<string>();
-    if (this.isParentObjectExternal) {
-      set.add(EXTERNAL);
-    }
-    if (this.isParentObjectShareable) {
-      set.add(SHAREABLE);
-    }
-    return set;
-  }
-
   // returns true if the directive is custom; otherwise, false
   addDirectiveDefinitionDataByNode(node: DirectiveDefinitionNode): boolean {
     const name = node.name.value;
@@ -1082,6 +1076,7 @@ export class NormalizationFactory {
     node: FieldDefinitionNode,
     argumentDataByArgumentName: Map<string, InputValueData>,
     directivesByDirectiveName: Map<string, ConstDirectiveNode[]>,
+    inheritedDirectiveNames: Set<string> = new Set<string>(),
   ): FieldData {
     const name = node.name.value;
     const parentTypeName = this.renamedParentTypeName || this.originalParentTypeName;
@@ -1099,7 +1094,7 @@ export class NormalizationFactory {
         [this.subgraphName, newExternalFieldData(isExternal)],
       ]),
       federatedCoords: `${parentTypeName}.${name}`,
-      inheritedDirectiveNames: this.getInheritedDirectiveNames(),
+      inheritedDirectiveNames,
       isInaccessible: directivesByDirectiveName.has(INACCESSIBLE),
       isShareableBySubgraphName: new Map<string, boolean>([[this.subgraphName, isShareable]]),
       kind: Kind.FIELD_DEFINITION,
