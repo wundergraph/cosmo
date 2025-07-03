@@ -991,6 +991,7 @@ export class FederationFactory {
       directivesByDirectiveName: copyArrayValueMap(sourceData.directivesByDirectiveName),
       externalFieldDataBySubgraphName: copyObjectValueMap(sourceData.externalFieldDataBySubgraphName),
       federatedCoords: sourceData.federatedCoords,
+      inheritedDirectiveNames: new Set<string>(),
       isInaccessible: sourceData.isInaccessible,
       isShareableBySubgraphName: new Map(sourceData.isShareableBySubgraphName),
       kind: sourceData.kind,
