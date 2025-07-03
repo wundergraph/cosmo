@@ -15,9 +15,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 )
 
-// DefaultCardinalityLimit is the hard limit on the number of metric streams that can be collected for a single instrument.
-const DefaultCardinalityLimit = 2000
-
 // Server HTTP metrics.
 const (
 	RequestCounter                = "router.http.requests"                      // Incoming request count total

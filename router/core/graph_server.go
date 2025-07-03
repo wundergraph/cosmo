@@ -743,7 +743,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			rmetric.WithBaseAttributes(baseMetricAttributes),
 			rmetric.WithLogger(s.logger),
 			rmetric.WithProcessStartTime(s.processStartTime),
-			rmetric.WithCardinalityLimit(rmetric.DefaultCardinalityLimit),
+			rmetric.WithCardinalityLimit(s.metricConfig.CardinalityLimit),
 			rmetric.WithRouterInfoAttributes(routerInfoBaseAttrs),
 		)
 		if err != nil {

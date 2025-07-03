@@ -89,7 +89,8 @@
           "Enabled": true,
           "IncludeOperationSha": false
         }
-      }
+      },
+      "CardinalityLimit": 2000
     }
   },
   "GraphqlMetrics": {

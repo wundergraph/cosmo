@@ -123,9 +123,10 @@ type MetricsOTLPExporter struct {
 }
 
 type Metrics struct {
-	Attributes []CustomAttribute `yaml:"attributes"`
-	OTLP       MetricsOTLP       `yaml:"otlp"`
-	Prometheus Prometheus        `yaml:"prometheus"`
+	Attributes       []CustomAttribute `yaml:"attributes"`
+	OTLP             MetricsOTLP       `yaml:"otlp"`
+	Prometheus       Prometheus        `yaml:"prometheus"`
+	CardinalityLimit int               `yaml:"experiment_cardinality_limit" envDefault:"2000" env:"METRICS_EXPERIMENT_CARDINALITY_LIMIT"`
 }
 
 type MetricsOTLP struct {
