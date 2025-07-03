@@ -20866,6 +20866,11 @@ export class CreateProposalResponse extends Message<CreateProposalResponse> {
    */
   proposalUrl = "";
 
+  /**
+   * @generated from field: string proposalName = 17;
+   */
+  proposalName = "";
+
   constructor(data?: PartialMessage<CreateProposalResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -20890,6 +20895,7 @@ export class CreateProposalResponse extends Message<CreateProposalResponse> {
     { no: 14, name: "graphPruningSkipped", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 15, name: "checkUrl", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 16, name: "proposalUrl", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 17, name: "proposalName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateProposalResponse {
