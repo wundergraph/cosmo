@@ -991,6 +991,8 @@ export class FederationFactory {
       directivesByDirectiveName: copyArrayValueMap(sourceData.directivesByDirectiveName),
       externalFieldDataBySubgraphName: copyObjectValueMap(sourceData.externalFieldDataBySubgraphName),
       federatedCoords: sourceData.federatedCoords,
+      // Intentionally reset; only the subgraph fields involve directive inheritance
+      inheritedDirectiveNames: new Set<string>(),
       isInaccessible: sourceData.isInaccessible,
       isShareableBySubgraphName: new Map(sourceData.isShareableBySubgraphName),
       kind: sourceData.kind,
@@ -2683,6 +2685,7 @@ export class FederationFactory {
     for (const subgraph of this.internalSubgraphBySubgraphName.values()) {
       subgraphConfigBySubgraphName.set(subgraph.name, {
         configurationDataByTypeName: subgraph.configurationDataByTypeName,
+        isVersionTwo: subgraph.isVersionTwo,
         parentDefinitionDataByTypeName: subgraph.parentDefinitionDataByTypeName,
         schema: subgraph.schema,
       });
@@ -2969,6 +2972,7 @@ export class FederationFactory {
     for (const subgraph of this.internalSubgraphBySubgraphName.values()) {
       subgraphConfigBySubgraphName.set(subgraph.name, {
         configurationDataByTypeName: subgraph.configurationDataByTypeName,
+        isVersionTwo: subgraph.isVersionTwo,
         parentDefinitionDataByTypeName: subgraph.parentDefinitionDataByTypeName,
         schema: subgraph.schema,
       });

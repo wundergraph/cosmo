@@ -28,11 +28,19 @@ func (a *httpHeaderAuthenticator) Authenticate(ctx context.Context, p Provider) 
 
 	for header, prefixes := range a.headerSourceMap {
 		authorization := headers.Get(header)
+		// Skip work if no value for this header was found
+		if len(authorization) == 0 {
+			continue
+		}
 
 		if len(prefixes) == 0 {
 			prefixes = []string{""}
 		}
 
+		// If Provider has only non-empty value prefixes specified,
+		// then at least one prefix should match the authorization value.
+		// If prefixes contain an empty prefix, then matching always succeeds.
+		prefixMatchFound := false
 		for _, prefix := range prefixes {
 			tokenString := authorization
 			if prefix != "" {
@@ -40,7 +48,10 @@ func (a *httpHeaderAuthenticator) Authenticate(ctx context.Context, p Provider) 
 					continue
 				}
 
+				prefixMatchFound = true
 				tokenString = strings.TrimSpace(authorization[len(prefix):])
+			} else {
+				prefixMatchFound = true
 			}
 
 			claims, err := a.tokenDecoder.Decode(tokenString)
@@ -48,12 +59,18 @@ func (a *httpHeaderAuthenticator) Authenticate(ctx context.Context, p Provider) 
 				errs = errors.Join(errs, fmt.Errorf("could not validate token: %w", err))
 				continue
 			}
-			// If claims is nil, we should return an empty Claims map to signal that the
+			// If claims are nil, we should return an empty Claims map to signal that the
 			// authentication was successful, but no claims were found.
 			if claims == nil {
 				claims = make(Claims)
 			}
 			return claims, nil
+		}
+		if !prefixMatchFound {
+			errs = errors.Join(errs, fmt.Errorf(
+				"header %q value does not start with any of the expected prefixes %v",
+				header, prefixes,
+			))
 		}
 	}
 

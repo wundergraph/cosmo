@@ -63,7 +63,7 @@ services:
 
   # Only to test prometheus integration
   prometheus:
-    image: prom/prometheus:v3.0.0-beta.1
+    image: prom/prometheus:v3.4.2
     command:
       - --web.enable-remote-write-receiver
       - --enable-feature=native-histograms
@@ -85,13 +85,12 @@ services:
       - debug
 
   grafana:
-    image: grafana/grafana:11.3.1
+    image: grafana/grafana:12.0.2
     ports:
       - '9300:3000'
     volumes:
       - grafana-storage:/var/lib/grafana
       - ./docker/grafana/provisioning:/etc/grafana/provisioning
-    container_name: grafana
     restart: unless-stopped
     networks:
       - primary
@@ -100,6 +99,8 @@ services:
       - GF_INSTALL_PLUGINS=grafana-clickhouse-datasource
       - CLICKHOUSE_USER=${CLICKHOUSE_USER:-default}
       - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD:-changeme}
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
     profiles:
       - debug
 
@@ -260,6 +261,11 @@ services:
       - '16371:16379'
     volumes:
       - ./docker/redis/redis-cluster.conf:/usr/local/etc/redis/redis.conf
+    healthcheck:
+      test: ['CMD', 'redis-cli', '-p', '6379', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 3
     profiles:
       - dev
 
@@ -273,6 +279,11 @@ services:
       - '16372:16379'
     volumes:
       - ./docker/redis/redis-cluster.conf:/usr/local/etc/redis/redis.conf
+    healthcheck:
+      test: ['CMD', 'redis-cli', '-p', '6379', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 3
     profiles:
       - dev
 
@@ -286,6 +297,11 @@ services:
       - '16373:16379'
     volumes:
       - ./docker/redis/redis-cluster.conf:/usr/local/etc/redis/redis.conf
+    healthcheck:
+      test: ['CMD', 'redis-cli', '-p', '6379', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 3
     profiles:
       - dev
 
@@ -295,11 +311,15 @@ services:
     networks:
       - primary
     depends_on:
-      - redis-cluster-node-1
-      - redis-cluster-node-2
-      - redis-cluster-node-3
+      redis-cluster-node-1:
+        condition: service_healthy
+      redis-cluster-node-2:
+        condition: service_healthy
+      redis-cluster-node-3:
+        condition: service_healthy
     volumes:
       - ./docker/redis/:/usr/local/etc/redis/
+    restart: on-failure:1
     profiles:
       - dev
 

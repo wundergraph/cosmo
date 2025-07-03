@@ -11,7 +11,6 @@ import (
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/vektah/gqlparser/v2/gqlerror"
-
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees/subgraph/generated"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees/subgraph/model"
 )

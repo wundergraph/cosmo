@@ -1,9 +1,13 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/internal/yamlmerge"
 
 	"github.com/caarlos0/env/v11"
 	"github.com/goccy/go-yaml"
@@ -119,9 +123,10 @@ type MetricsOTLPExporter struct {
 }
 
 type Metrics struct {
-	Attributes []CustomAttribute `yaml:"attributes"`
-	OTLP       MetricsOTLP       `yaml:"otlp"`
-	Prometheus Prometheus        `yaml:"prometheus"`
+	Attributes       []CustomAttribute `yaml:"attributes"`
+	OTLP             MetricsOTLP       `yaml:"otlp"`
+	Prometheus       Prometheus        `yaml:"prometheus"`
+	CardinalityLimit int               `yaml:"experiment_cardinality_limit" envDefault:"2000" env:"METRICS_EXPERIMENT_CARDINALITY_LIMIT"`
 }
 
 type MetricsOTLP struct {
@@ -525,8 +530,30 @@ type KafkaSASLPlainAuthentication struct {
 	Username *string `yaml:"username,omitempty"`
 }
 
+func (k KafkaSASLPlainAuthentication) IsSet() bool {
+	return k.Username != nil && k.Password != nil
+}
+
+type KafkaSASLSCRAMMechanism string
+
+const (
+	KafkaSASLSCRAMMechanismSCRAM256 KafkaSASLSCRAMMechanism = "SCRAM-SHA-256"
+	KafkaSASLSCRAMMechanismSCRAM512 KafkaSASLSCRAMMechanism = "SCRAM-SHA-512"
+)
+
+type KafkaSASLSCRAMAuthentication struct {
+	Password  *string                  `yaml:"password,omitempty"`
+	Username  *string                  `yaml:"username,omitempty"`
+	Mechanism *KafkaSASLSCRAMMechanism `yaml:"mechanism,omitempty"`
+}
+
+func (k KafkaSASLSCRAMAuthentication) IsSet() bool {
+	return k.Username != nil && k.Password != nil && k.Mechanism != nil
+}
+
 type KafkaAuthentication struct {
 	SASLPlain KafkaSASLPlainAuthentication `yaml:"sasl_plain,omitempty"`
+	SASLSCRAM KafkaSASLSCRAMAuthentication `yaml:"sasl_scram,omitempty"`
 }
 
 type KafkaTLSConfiguration struct {
@@ -538,15 +565,27 @@ type KafkaEventSource struct {
 	Brokers        []string               `yaml:"brokers,omitempty"`
 	Authentication *KafkaAuthentication   `yaml:"authentication,omitempty"`
 	TLS            *KafkaTLSConfiguration `yaml:"tls,omitempty"`
+	FetchMaxWait   time.Duration          `yaml:"fetch_max_wait,omitempty"`
 }
 
 func (k KafkaEventSource) GetID() string {
 	return k.ID
 }
 
+type RedisEventSource struct {
+	ID             string   `yaml:"id,omitempty"`
+	URLs           []string `yaml:"urls,omitempty"`
+	ClusterEnabled bool     `yaml:"cluster_enabled"`
+}
+
+func (r RedisEventSource) GetID() string {
+	return r.ID
+}
+
 type EventProviders struct {
 	Nats  []NatsEventSource  `yaml:"nats,omitempty"`
 	Kafka []KafkaEventSource `yaml:"kafka,omitempty"`
+	Redis []RedisEventSource `yaml:"redis,omitempty"`
 }
 
 type EventsConfiguration struct {
@@ -824,60 +863,29 @@ type AccessLogsSubgraphsConfig struct {
 }
 
 type ApolloCompatibilityFlags struct {
-	EnableAll                          bool                                                  `yaml:"enable_all" envDefault:"false" env:"APOLLO_COMPATIBILITY_ENABLE_ALL"`
-	ValueCompletion                    ApolloCompatibilityValueCompletion                    `yaml:"value_completion"`
-	TruncateFloats                     ApolloCompatibilityTruncateFloats                     `yaml:"truncate_floats"`
-	SuppressFetchErrors                ApolloCompatibilitySuppressFetchErrors                `yaml:"suppress_fetch_errors"`
-	ReplaceUndefinedOpFieldErrors      ApolloCompatibilityReplaceUndefinedOpFieldErrors      `yaml:"replace_undefined_op_field_errors"`
-	ReplaceInvalidVarErrors            ApolloCompatibilityReplaceInvalidVarErrors            `yaml:"replace_invalid_var_errors"`
-	ReplaceValidationErrorStatus       ApolloCompatibilityReplaceValidationErrorStatus       `yaml:"replace_validation_error_status"`
-	SubscriptionMultipartPrintBoundary ApolloCompatibilitySubscriptionMultipartPrintBoundary `yaml:"subscription_multipart_print_boundary"`
+	EnableAll                          bool                    `yaml:"enable_all" envDefault:"false" env:"APOLLO_COMPATIBILITY_ENABLE_ALL"`
+	ValueCompletion                    ApolloCompatibilityFlag `yaml:"value_completion" envPrefix:"APOLLO_COMPATIBILITY_VALUE_COMPLETION_"`
+	TruncateFloats                     ApolloCompatibilityFlag `yaml:"truncate_floats" envPrefix:"APOLLO_COMPATIBILITY_TRUNCATE_FLOATS_"`
+	SuppressFetchErrors                ApolloCompatibilityFlag `yaml:"suppress_fetch_errors" envPrefix:"APOLLO_COMPATIBILITY_SUPPRESS_FETCH_ERRORS_"`
+	ReplaceUndefinedOpFieldErrors      ApolloCompatibilityFlag `yaml:"replace_undefined_op_field_errors" envPrefix:"APOLLO_COMPATIBILITY_REPLACE_UNDEFINED_OP_FIELD_ERRORS_"`
+	ReplaceInvalidVarErrors            ApolloCompatibilityFlag `yaml:"replace_invalid_var_errors" envPrefix:"APOLLO_COMPATIBILITY_REPLACE_INVALID_VAR_ERRORS_"`
+	ReplaceValidationErrorStatus       ApolloCompatibilityFlag `yaml:"replace_validation_error_status" envPrefix:"APOLLO_COMPATIBILITY_REPLACE_VALIDATION_ERROR_STATUS_"`
+	SubscriptionMultipartPrintBoundary ApolloCompatibilityFlag `yaml:"subscription_multipart_print_boundary" envPrefix:"APOLLO_COMPATIBILITY_SUBSCRIPTION_MULTIPART_PRINT_BOUNDARY_"`
+	UseGraphQLValidationFailedStatus   ApolloCompatibilityFlag `yaml:"use_graphql_validation_failed_status" envPrefix:"APOLLO_COMPATIBILITY_USE_GRAPHQL_VALIDATION_FAILED_STATUS_"`
 }
 
-type ApolloCompatibilityValueCompletion struct {
-	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_COMPATIBILITY_VALUE_COMPLETION_ENABLED"`
+type ApolloRouterCompatibilityFlags struct {
+	ReplaceInvalidVarErrors ApolloCompatibilityFlag `yaml:"replace_invalid_var_errors" envPrefix:"APOLLO_ROUTER_COMPATIBILITY_REPLACE_INVALID_VAR_ERRORS_"`
+	SubrequestHTTPError     ApolloCompatibilityFlag `yaml:"subrequest_http_error" envPrefix:"APOLLO_ROUTER_COMPATIBILITY_SUBREQUEST_HTTP_ERROR_"`
+}
+
+type ApolloCompatibilityFlag struct {
+	Enabled bool `yaml:"enabled" envDefault:"false" env:"ENABLED"`
 }
 
 type ClientHeader struct {
 	Name    string `yaml:"name,omitempty"`
 	Version string `yaml:"version,omitempty"`
-}
-
-type ApolloCompatibilityTruncateFloats struct {
-	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_COMPATIBILITY_TRUNCATE_FLOATS_ENABLED"`
-}
-
-type ApolloCompatibilitySuppressFetchErrors struct {
-	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_COMPATIBILITY_SUPPRESS_FETCH_ERRORS_ENABLED"`
-}
-
-type ApolloCompatibilityReplaceUndefinedOpFieldErrors struct {
-	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_COMPATIBILITY_REPLACE_UNDEFINED_OP_FIELD_ERRORS_ENABLED"`
-}
-
-type ApolloCompatibilityReplaceInvalidVarErrors struct {
-	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_COMPATIBILITY_REPLACE_INVALID_VAR_ERRORS_ENABLED"`
-}
-
-type ApolloCompatibilityReplaceValidationErrorStatus struct {
-	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_COMPATIBILITY_REPLACE_VALIDATION_ERROR_STATUS_ENABLED"`
-}
-
-type ApolloCompatibilitySubscriptionMultipartPrintBoundary struct {
-	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_COMPATIBILITY_SUBSCRIPTION_MULTIPART_PRINT_BOUNDARY_ENABLED"`
-}
-
-type ApolloRouterCompatibilityFlags struct {
-	ReplaceInvalidVarErrors ApolloRouterCompatibilityReplaceInvalidVarErrors `yaml:"replace_invalid_var_errors"`
-	SubrequestHTTPError     ApolloRouterCompatibilitySubrequestHTTPError     `yaml:"subrequest_http_error"`
-}
-
-type ApolloRouterCompatibilityReplaceInvalidVarErrors struct {
-	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_ROUTER_COMPATIBILITY_REPLACE_INVALID_VAR_ERRORS_ENABLED"`
-}
-
-type ApolloRouterCompatibilitySubrequestHTTPError struct {
-	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_ROUTER_COMPATIBILITY_SUBREQUEST_HTTP_ERROR_ENABLED"`
 }
 
 type CacheWarmupSource struct {
@@ -1023,57 +1031,114 @@ type LoadResult struct {
 	DefaultLoaded bool
 }
 
-func LoadConfig(configFilePath string) (*LoadResult, error) {
+// LoadConfig takes in a configFilePathString which EITHER contains the name of one single configuration file
+// or a comma separated list of file names (e.g. "base.config.yaml,override.config.yaml")
+// This function loads the configuration files, apply environment variables and validates them with the json schema
+// In case of loading multiple configuration files, we will do the validation step for every configuration
+// and additionally post merging, since validations like oneOf can be bypassed
+func LoadConfig(configFilePaths []string) (*LoadResult, error) {
 	cfg := &LoadResult{
 		Config:        Config{},
 		DefaultLoaded: false,
 	}
 
 	// Try to load the environment variables into the config
-
-	err := env.Parse(&cfg.Config)
-	if err != nil {
+	if err := env.Parse(&cfg.Config); err != nil {
 		return nil, err
 	}
 
-	// Read the custom config file
-	var configFileBytes []byte
-	configFileBytes, err = os.ReadFile(configFilePath)
-	if err != nil {
-		if configFilePath == DefaultConfigPath {
-			cfg.DefaultLoaded = true
-		} else {
-			return nil, fmt.Errorf("could not read custom config file %s: %w", configFilePath, err)
+	// Contains the bytes of every config as bytes
+	configListBytes := make([][]byte, 0, len(configFilePaths))
+
+	usesMultipleConfigs := len(configFilePaths) > 1
+
+	// Join all errors in all configs and don't return early
+	// This is so that the user can fix all config issues in one go
+	var errs error
+
+	for _, configFilePath := range configFilePaths {
+		// In case the user specified space around the comma, we trim the spaces
+		configFilePath = strings.TrimSpace(configFilePath)
+
+		// Read the custom config file
+		var configFileBytes []byte
+		configFileBytes, err := os.ReadFile(configFilePath)
+
+		if err != nil {
+			if configFilePath == DefaultConfigPath {
+				// We want to keep this simple and not allow the default config since we don't have a yaml to merge
+				// for the default config
+				if usesMultipleConfigs {
+					errs = errors.Join(errs, errors.New("cannot use default config with multiple configurations"))
+					continue
+				}
+				cfg.DefaultLoaded = true
+			} else {
+				errs = errors.Join(errs, fmt.Errorf("could not read custom config file %s: %w", configFilePath, err))
+				continue
+			}
+		}
+
+		if configFileBytes != nil {
+			// Expand environment variables in the config file
+			// and unmarshal it into the config struct
+			configYamlData := os.ExpandEnv(string(configFileBytes))
+
+			marshalValidationConfig := Config{}
+			if err = yaml.Unmarshal([]byte(configYamlData), &marshalValidationConfig); err != nil {
+				errs = errors.Join(errs, fmt.Errorf("failed to unmarshal router config for %s: %w", configFilePath, err))
+				continue
+			}
+
+			// Validate the config against the JSON schema
+			configFileBytes = []byte(configYamlData)
+
+			err = ValidateConfig(configFileBytes, JSONSchema)
+			if err != nil {
+				errs = errors.Join(errs, fmt.Errorf("router config validation error for %s: %w", configFilePath, err))
+				continue
+			}
+
+			// If there is at least a single existing join error
+			// we know we won't attempt to merge the yaml configuration
+			if errs == nil {
+				configListBytes = append(configListBytes, configFileBytes)
+			}
 		}
 	}
 
-	if configFileBytes != nil {
-		// Expand environment variables in the config file
-		// and unmarshal it into the config struct
+	if errs != nil {
+		return nil, fmt.Errorf("errors while loading config files: %w", errs)
+	}
 
-		configYamlData := os.ExpandEnv(string(configFileBytes))
-		if err := yaml.Unmarshal([]byte(configYamlData), &cfg.Config); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal router config: %w", err)
+	// In case defaultLoaded is true, it means that the user did not provide a
+	// config file that was loaded, thus we don't have anything to process
+	if !cfg.DefaultLoaded {
+		yamlFinalBytes := configListBytes[0]
+		// Attempt to merge only if we have more than one file
+		if usesMultipleConfigs {
+			// Merge to create the final yaml config
+			processedBytes, err := yamlmerge.YAMLMerge(configListBytes, true)
+			if err != nil {
+				return nil, err
+			}
+			yamlFinalBytes = processedBytes
 		}
 
-		// Validate the config against the JSON schema
-
-		configFileBytes = []byte(configYamlData)
-
-		err = ValidateConfig(configFileBytes, JSONSchema)
+		// Files can be joined to bypass validations like oneOf
+		err := ValidateConfig(yamlFinalBytes, JSONSchema)
 		if err != nil {
-			return nil, fmt.Errorf("router config validation error: %w", err)
+			return nil, fmt.Errorf("router config validation error when combined : %w", err)
 		}
 
-		// Unmarshal the final config
-
-		if err := yaml.Unmarshal(configFileBytes, &cfg.Config); err != nil {
-			return nil, err
+		// Unmarshal the final config version
+		err = yaml.Unmarshal(yamlFinalBytes, &cfg.Config)
+		if err != nil {
+			return nil, fmt.Errorf("failed to unmarshal router config: %w", err)
 		}
 	}
 
 	// Post-process the config
-
 	if cfg.Config.DevelopmentMode {
 		cfg.Config.JSONLog = false
 		cfg.Config.SubgraphErrorPropagation.Enabled = true

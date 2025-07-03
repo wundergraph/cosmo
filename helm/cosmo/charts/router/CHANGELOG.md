@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.13.1](https://github.com/wundergraph/cosmo/compare/helm-cosmo-router@0.13.0...helm-cosmo-router@0.13.1) (2025-06-23)
+
+
+### Bug Fixes
+
+* **helm:** make sure version label handles longer image versions ([#1983](https://github.com/wundergraph/cosmo/issues/1983)) ([9f77f2f](https://github.com/wundergraph/cosmo/commit/9f77f2f0d0c8c5005c17b3fe00888bbee25f04c8))
+
+## [0.13.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo-router@0.12.0...helm-cosmo-router@0.13.0) (2025-06-13)
+
+
+### Features
+
+* **helm:** allow using config of a router from a file ([#1961](https://github.com/wundergraph/cosmo/issues/1961)) ([dfea253](https://github.com/wundergraph/cosmo/commit/dfea253502461bb80c47c05b9d211b9c757fcd4c))
+
 ## [0.12.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo-router@0.11.0...helm-cosmo-router@0.12.0) (2025-06-09)
 
 

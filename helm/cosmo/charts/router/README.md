@@ -1,6 +1,6 @@
 # router
 
-![Version: 0.12.0](https://img.shields.io/badge/Version-0.12.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.197.1](https://img.shields.io/badge/AppVersion-0.197.1-informational?style=flat-square)
+![Version: 0.13.1](https://img.shields.io/badge/Version-0.13.1-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.197.1](https://img.shields.io/badge/AppVersion-0.197.1-informational?style=flat-square)
 
 This is the official Helm Chart for the WunderGraph Cosmo Router.
 
@@ -15,6 +15,7 @@ This is the official Helm Chart for the WunderGraph Cosmo Router.
 | autoscaling.minReplicas | int | `1` |  |
 | autoscaling.targetCPUUtilizationPercentage | int | `80` |  |
 | commonConfiguration | string | `"version: \"1\"\nlog_level: \"info\""` | You can use this to provide the router configuration via yaml. Values here have precedence over the configurations section. For a full list of available configuration options, see https://cosmo-docs.wundergraph.com/router/configuration This value is processed with the helm `tpl` function allowing referencing of variables and inclusion of templates |
+| commonConfigurationPath | string | `""` | Path to a configuration file to embed. If set, this takes precedence over commonConfiguration. The file path is relative to the chart directory and will be processed with the helm `tpl` function. Example: "configs/router-config.yaml" |
 | commonLabels | object | `{}` | Add labels to all deployed resources |
 | configuration.cdnUrl | string | `""` |  |
 | configuration.configPath | string | `""` | The path to the router config file. This does not refer to the execution config. See: https://cosmo-docs.wundergraph.com/router/configuration#config-file |

@@ -4,6 +4,48 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.120.2](https://github.com/wundergraph/cosmo/compare/studio@0.120.1...studio@0.120.2) (2025-07-03)
+
+**Note:** Version bump only for package studio
+
+## [0.120.1](https://github.com/wundergraph/cosmo/compare/studio@0.120.0...studio@0.120.1) (2025-07-03)
+
+**Note:** Version bump only for package studio
+
+# [0.120.0](https://github.com/wundergraph/cosmo/compare/studio@0.119.9...studio@0.120.0) (2025-07-01)
+
+### Bug Fixes
+
+* toggle ui logic and search to consider all operations ([#1982](https://github.com/wundergraph/cosmo/issues/1982)) ([e6264bd](https://github.com/wundergraph/cosmo/commit/e6264bd5fc98962b2b36f21a3a20c802333192f1)) (@JivusAyrus)
+
+### Features
+
+* allow organization members to be assigned multiple groups ([#1919](https://github.com/wundergraph/cosmo/issues/1919)) ([1e67757](https://github.com/wundergraph/cosmo/commit/1e677576a32efb89673cdfc3900a4c863eec8b7e)) (@wilsonrivera)
+
+## [0.119.9](https://github.com/wundergraph/cosmo/compare/studio@0.119.8...studio@0.119.9) (2025-06-30)
+
+**Note:** Version bump only for package studio
+
+## [0.119.8](https://github.com/wundergraph/cosmo/compare/studio@0.119.7...studio@0.119.8) (2025-06-26)
+
+**Note:** Version bump only for package studio
+
+## [0.119.7](https://github.com/wundergraph/cosmo/compare/studio@0.119.6...studio@0.119.7) (2025-06-26)
+
+**Note:** Version bump only for package studio
+
+## [0.119.6](https://github.com/wundergraph/cosmo/compare/studio@0.119.5...studio@0.119.6) (2025-06-13)
+
+### Bug Fixes
+
+* solves ui discrepancies when closing the OIDC mapping dialog ([#1936](https://github.com/wundergraph/cosmo/issues/1936)) ([504aa2b](https://github.com/wundergraph/cosmo/commit/504aa2bac1f2f679c169cd548cb500fa1b79d503)) (@wilsonrivera)
+
+## [0.119.5](https://github.com/wundergraph/cosmo/compare/studio@0.119.4...studio@0.119.5) (2025-06-11)
+
+### Bug Fixes
+
+* pnpm-lockfile to trigger ci and add back the specifier ([#1954](https://github.com/wundergraph/cosmo/issues/1954)) ([0149896](https://github.com/wundergraph/cosmo/commit/0149896ab2492757d0a88a6cbd1a26cee575d5cf)) (@SkArchon)
+
 ## [0.119.4](https://github.com/wundergraph/cosmo/compare/studio@0.119.3...studio@0.119.4) (2025-06-09)
 
 **Note:** Version bump only for package studio

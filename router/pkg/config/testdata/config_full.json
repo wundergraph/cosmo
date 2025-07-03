@@ -89,7 +89,8 @@
           "Enabled": true,
           "IncludeOperationSha": false
         }
-      }
+      },
+      "CardinalityLimit": 2000
     }
   },
   "GraphqlMetrics": {
@@ -541,11 +542,26 @@
             "SASLPlain": {
               "Password": "admin",
               "Username": "admin"
+            },
+            "SASLSCRAM": {
+              "Password": null,
+              "Username": null,
+              "Mechanism": null
             }
           },
           "TLS": {
             "Enabled": true
-          }
+          },
+          "FetchMaxWait": 10000000
+        }
+      ],
+      "Redis": [
+        {
+          "ID": "my-redis",
+          "URLs": [
+            "redis://localhost:6379/11"
+          ],
+          "ClusterEnabled": true
         }
       ]
     }
@@ -799,7 +815,7 @@
       "Enabled": false
     },
     "ReplaceUndefinedOpFieldErrors": {
-      "Enabled": false
+      "Enabled": true
     },
     "ReplaceInvalidVarErrors": {
       "Enabled": false
@@ -809,6 +825,9 @@
     },
     "SubscriptionMultipartPrintBoundary": {
       "Enabled": false
+    },
+    "UseGraphQLValidationFailedStatus": {
+      "Enabled": true
     }
   },
   "ApolloRouterCompatibilityFlags": {

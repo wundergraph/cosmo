@@ -121,19 +121,15 @@ func (p *subscriptionsTransportWSProtocol) WriteGraphQLErrors(id string, errors 
 	})
 }
 
-func (p *subscriptionsTransportWSProtocol) Close() error {
-	if err := p.conn.WriteCloseFrame(ws.StatusGoingAway, "Downstream service error"); err != nil {
-		return err
-	}
-
-	if err := p.conn.Close(); err != nil {
+func (p *subscriptionsTransportWSProtocol) Close(code ws.StatusCode, reason string) error {
+	if err := p.conn.WriteCloseFrame(code, reason); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (p *subscriptionsTransportWSProtocol) Done(id string) error {
+func (p *subscriptionsTransportWSProtocol) Complete(id string) error {
 	return p.conn.WriteJSON(subscriptionsTransportWSMessage{
 		ID:   id,
 		Type: subscriptionsTransportWSMessageTypeComplete,
