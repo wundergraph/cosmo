@@ -63,7 +63,7 @@ services:
 
   # Only to test prometheus integration
   prometheus:
-    image: prom/prometheus:v3.0.0-beta.1
+    image: prom/prometheus:v3.4.2
     command:
       - --web.enable-remote-write-receiver
       - --enable-feature=native-histograms
@@ -85,13 +85,12 @@ services:
       - debug
 
   grafana:
-    image: grafana/grafana:11.3.1
+    image: grafana/grafana:12.0.2
     ports:
       - '9300:3000'
     volumes:
       - grafana-storage:/var/lib/grafana
       - ./docker/grafana/provisioning:/etc/grafana/provisioning
-    container_name: grafana
     restart: unless-stopped
     networks:
       - primary
@@ -261,7 +260,7 @@ services:
     volumes:
       - ./docker/redis/redis-cluster.conf:/usr/local/etc/redis/redis.conf
     healthcheck:
-      test: ["CMD", "redis-cli", "-p", "6379", "ping"]
+      test: ['CMD', 'redis-cli', '-p', '6379', 'ping']
       interval: 10s
       timeout: 5s
       retries: 3
@@ -279,7 +278,7 @@ services:
     volumes:
       - ./docker/redis/redis-cluster.conf:/usr/local/etc/redis/redis.conf
     healthcheck:
-      test: ["CMD", "redis-cli", "-p", "6379", "ping"]
+      test: ['CMD', 'redis-cli', '-p', '6379', 'ping']
       interval: 10s
       timeout: 5s
       retries: 3
@@ -297,7 +296,7 @@ services:
     volumes:
       - ./docker/redis/redis-cluster.conf:/usr/local/etc/redis/redis.conf
     healthcheck:
-      test: ["CMD", "redis-cli", "-p", "6379", "ping"]
+      test: ['CMD', 'redis-cli', '-p', '6379', 'ping']
       interval: 10s
       timeout: 5s
       retries: 3
