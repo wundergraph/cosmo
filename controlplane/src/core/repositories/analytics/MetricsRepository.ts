@@ -720,7 +720,7 @@ export class MetricsRepository {
   }
 
   public async getOperations(props: GetMetricsViewProps) {
-    const { dateRange, organizationId, graphId } = this.getMetricsProps(props);
+    const { dateRange, organizationId, graphId, whereSql, queryParams } = this.getMetricsProps(props);
 
     const query = `
     WITH
@@ -745,6 +745,7 @@ export class MetricsRepository {
     WHERE Timestamp >= startDate AND Timestamp <= endDate
       AND OrganizationID = '${organizationId}'
       AND FederatedGraphID = '${graphId}'
+      ${whereSql ? `AND ${whereSql}` : ''}
     GROUP BY OperationName, OperationHash, OperationType ORDER BY latency DESC`;
 
     const res: {
@@ -752,10 +753,38 @@ export class MetricsRepository {
       operationName: string;
       operationType: string;
       latency: number;
-    }[] = await this.client.queryPromise(query);
+    }[] = await this.client.queryPromise(query, queryParams);
 
     if (Array.isArray(res)) {
       return res;
+    }
+
+    return [];
+  }
+
+  public async getClients(props: GetMetricsViewProps) {
+    const { dateRange, organizationId, graphId } = this.getMetricsProps(props);
+
+    const query = `
+    WITH
+      toDateTime('${dateRange.start}') AS startDate,
+      toDateTime('${dateRange.end}') AS endDate
+    SELECT
+      ClientName as name
+    FROM ${this.client.database}.operation_latency_metrics_5_30
+    PREWHERE Timestamp >= startDate AND Timestamp <= endDate
+      AND OrganizationID = '${organizationId}'
+      AND FederatedGraphID = '${graphId}'
+    GROUP BY ClientName
+    ORDER BY max(Timestamp) DESC
+    LIMIT 100`;
+
+    const res: {
+      name: string;
+    }[] = await this.client.queryPromise(query);
+
+    if (Array.isArray(res)) {
+      return res.filter((r) => r.name !== '');
     }
 
     return [];

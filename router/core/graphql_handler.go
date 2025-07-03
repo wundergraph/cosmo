@@ -134,71 +134,74 @@ type GraphQLHandler struct {
 }
 
 func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	requestContext := getRequestContext(r.Context())
+	reqCtx := getRequestContext(r.Context())
 
 	executionContext, graphqlExecutionSpan := h.tracer.Start(r.Context(), "Operation - Execute",
 		trace.WithSpanKind(trace.SpanKindInternal),
-		trace.WithAttributes(requestContext.telemetry.traceAttrs...),
+		trace.WithAttributes(reqCtx.telemetry.traceAttrs...),
 	)
 	defer graphqlExecutionSpan.End()
 
-	ctx := &resolve.Context{
-		Variables:      requestContext.operation.variables,
-		RemapVariables: requestContext.operation.remapVariables,
-		Files:          requestContext.operation.files,
+	resolveCtx := &resolve.Context{
+		Variables:      reqCtx.operation.variables,
+		RemapVariables: reqCtx.operation.remapVariables,
+		Files:          reqCtx.operation.files,
 		Request: resolve.Request{
 			Header: r.Header,
 		},
 		RenameTypeNames:  h.executor.RenameTypeNames,
-		TracingOptions:   requestContext.operation.traceOptions,
-		InitialPayload:   requestContext.operation.initialPayload,
-		Extensions:       requestContext.operation.extensions,
-		ExecutionOptions: requestContext.operation.executionOptions,
+		TracingOptions:   reqCtx.operation.traceOptions,
+		InitialPayload:   reqCtx.operation.initialPayload,
+		Extensions:       reqCtx.operation.extensions,
+		ExecutionOptions: reqCtx.operation.executionOptions,
 	}
 
-	ctx = ctx.WithContext(executionContext)
+	resolveCtx = resolveCtx.WithContext(executionContext)
 	if h.authorizer != nil {
-		ctx = WithAuthorizationExtension(ctx)
-		ctx.SetAuthorizer(h.authorizer)
+		resolveCtx = WithAuthorizationExtension(resolveCtx)
+		resolveCtx.SetAuthorizer(h.authorizer)
 	}
 	if h.engineLoaderHooks != nil {
-		ctx.SetEngineLoaderHooks(h.engineLoaderHooks)
+		resolveCtx.SetEngineLoaderHooks(h.engineLoaderHooks)
 	}
-	ctx = h.configureRateLimiting(ctx)
+	resolveCtx = h.configureRateLimiting(resolveCtx)
+	if reqCtx.customFieldValueRenderer != nil {
+		resolveCtx.SetFieldValueRenderer(reqCtx.customFieldValueRenderer)
+	}
 
-	switch p := requestContext.operation.preparedPlan.preparedPlan.(type) {
+	switch p := reqCtx.operation.preparedPlan.preparedPlan.(type) {
 	case *plan.SynchronousResponsePlan:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		h.setDebugCacheHeaders(w, requestContext.operation)
+		h.setDebugCacheHeaders(w, reqCtx.operation)
 
 		if h.enableResponseHeaderPropagation {
-			ctx = WithResponseHeaderPropagation(ctx)
+			resolveCtx = WithResponseHeaderPropagation(resolveCtx)
 		}
 
-		defer propagateSubgraphErrors(ctx)
+		defer propagateSubgraphErrors(resolveCtx)
 
 		respBuf := bytes.Buffer{}
 
-		resp, err := h.executor.Resolver.ResolveGraphQLResponse(ctx, p.Response, nil, &respBuf)
-		requestContext.dataSourceNames = getSubgraphNames(p.Response.DataSources)
+		resp, err := h.executor.Resolver.ResolveGraphQLResponse(resolveCtx, p.Response, nil, &respBuf)
+		reqCtx.dataSourceNames = getSubgraphNames(p.Response.DataSources)
 
 		if err != nil {
-			trackFinalResponseError(ctx.Context(), err)
-			h.WriteError(ctx, err, p.Response, w)
+			trackFinalResponseError(resolveCtx.Context(), err)
+			h.WriteError(resolveCtx, err, p.Response, w)
 			return
 		}
 
-		if errs := ctx.SubgraphErrors(); errs != nil {
+		if errs := resolveCtx.SubgraphErrors(); errs != nil {
 			w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
 		}
 
 		// Write contents of buf to the header propagation writer
-		hpw := HeaderPropagationWriter(w, ctx.Context())
+		hpw := HeaderPropagationWriter(w, resolveCtx.Context())
 		_, err = respBuf.WriteTo(hpw)
 
 		if err != nil {
-			trackFinalResponseError(ctx.Context(), err)
-			h.WriteError(ctx, err, p.Response, w)
+			trackFinalResponseError(resolveCtx.Context(), err)
+			h.WriteError(resolveCtx, err, p.Response, w)
 			return
 		}
 
@@ -208,45 +211,45 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			writer resolve.SubscriptionResponseWriter
 			ok     bool
 		)
-		h.setDebugCacheHeaders(w, requestContext.operation)
+		h.setDebugCacheHeaders(w, reqCtx.operation)
 
-		defer propagateSubgraphErrors(ctx)
-		ctx, writer, ok = GetSubscriptionResponseWriter(ctx, r, w, h.apolloSubscriptionMultipartPrintBoundary)
+		defer propagateSubgraphErrors(resolveCtx)
+		resolveCtx, writer, ok = GetSubscriptionResponseWriter(resolveCtx, r, w, h.apolloSubscriptionMultipartPrintBoundary)
 		if !ok {
-			requestContext.logger.Error("unable to get subscription response writer", zap.Error(errCouldNotFlushResponse))
+			reqCtx.logger.Error("unable to get subscription response writer", zap.Error(errCouldNotFlushResponse))
 			trackFinalResponseError(r.Context(), errCouldNotFlushResponse)
-			writeRequestErrors(r, w, http.StatusInternalServerError, graphqlerrors.RequestErrorsFromError(errCouldNotFlushResponse), requestContext.logger)
+			writeRequestErrors(r, w, http.StatusInternalServerError, graphqlerrors.RequestErrorsFromError(errCouldNotFlushResponse), reqCtx.logger)
 			return
 		}
 
-		if !ctx.ExecutionOptions.SkipLoader {
+		if !resolveCtx.ExecutionOptions.SkipLoader {
 			h.engineStats.ConnectionsInc()
 			defer h.engineStats.ConnectionsDec()
 		}
 
-		err := h.executor.Resolver.ResolveGraphQLSubscription(ctx, p.Response, writer)
-		requestContext.dataSourceNames = getSubgraphNames(p.Response.Response.DataSources)
+		err := h.executor.Resolver.ResolveGraphQLSubscription(resolveCtx, p.Response, writer)
+		reqCtx.dataSourceNames = getSubgraphNames(p.Response.Response.DataSources)
 
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
-				requestContext.logger.Debug("context canceled: unable to resolve subscription response", zap.Error(err))
+				reqCtx.logger.Debug("context canceled: unable to resolve subscription response", zap.Error(err))
 				trackFinalResponseError(r.Context(), err)
 				return
 			} else if errors.Is(err, ErrUnauthorized) {
-				trackFinalResponseError(ctx.Context(), err)
-				writeRequestErrors(r, w, http.StatusUnauthorized, graphqlerrors.RequestErrorsFromError(err), requestContext.logger)
+				trackFinalResponseError(resolveCtx.Context(), err)
+				writeRequestErrors(r, w, http.StatusUnauthorized, graphqlerrors.RequestErrorsFromError(err), reqCtx.logger)
 				return
 			}
 
-			requestContext.logger.Error("unable to resolve subscription response", zap.Error(err))
-			trackFinalResponseError(ctx.Context(), err)
-			writeRequestErrors(r, w, http.StatusInternalServerError, graphqlerrors.RequestErrorsFromError(errCouldNotResolveResponse), requestContext.logger)
+			reqCtx.logger.Error("unable to resolve subscription response", zap.Error(err))
+			trackFinalResponseError(resolveCtx.Context(), err)
+			writeRequestErrors(r, w, http.StatusInternalServerError, graphqlerrors.RequestErrorsFromError(errCouldNotResolveResponse), reqCtx.logger)
 			return
 		}
 	default:
-		requestContext.logger.Error("unsupported plan kind")
-		trackFinalResponseError(ctx.Context(), errOperationPlanUnsupported)
-		writeRequestErrors(r, w, http.StatusInternalServerError, graphqlerrors.RequestErrorsFromError(errOperationPlanUnsupported), requestContext.logger)
+		reqCtx.logger.Error("unsupported plan kind")
+		trackFinalResponseError(resolveCtx.Context(), errOperationPlanUnsupported)
+		writeRequestErrors(r, w, http.StatusInternalServerError, graphqlerrors.RequestErrorsFromError(errOperationPlanUnsupported), reqCtx.logger)
 	}
 }
 

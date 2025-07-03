@@ -1,11 +1,10 @@
 import { writeFile } from 'node:fs/promises';
 import { splitLabel } from '@wundergraph/cosmo-shared';
-import { Command } from 'commander';
+import { Command, program } from 'commander';
 import pc from 'picocolors';
 import { join, resolve } from 'pathe';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { introspectSubgraph } from '../../../utils.js';
-import program from '../../index.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('introspect');

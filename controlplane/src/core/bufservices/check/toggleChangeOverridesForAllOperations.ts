@@ -5,7 +5,7 @@ import {
   ToggleChangeOverridesForAllOperationsRequest,
   ToggleChangeOverridesForAllOperationsResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { PublicError } from '../../errors/errors.js';
+import { UnauthorizedError, PublicError } from '../../errors/errors.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { OperationsRepository } from '../../repositories/OperationsRepository.js';
@@ -27,13 +27,8 @@ export function toggleChangeOverridesForAllOperations(
 
     const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
 
-    if (!authContext.hasWriteAccess) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `The user does not have permissions to perform this operation`,
-        },
-      };
+    if (authContext.organizationDeactivated) {
+      throw new UnauthorizedError();
     }
 
     const graph = await fedGraphRepo.byName(req.graphName, req.namespace);
@@ -47,6 +42,10 @@ export function toggleChangeOverridesForAllOperations(
       };
     }
 
+    if (!authContext.rbac.hasFederatedGraphWriteAccess(graph)) {
+      throw new UnauthorizedError();
+    }
+
     return opts.db.transaction(async (tx) => {
       const subgraphRepo = new SubgraphRepository(logger, tx, authContext.organizationId);
       const schemaCheckRepo = new SchemaCheckRepository(tx);
@@ -55,6 +54,7 @@ export function toggleChangeOverridesForAllOperations(
 
       const affectedOperations = await schemaCheckRepo.getAffectedOperationsByCheckId({
         checkId: req.checkId,
+        search: req.search,
       });
       const checkDetails = await subgraphRepo.checkDetails(req.checkId, graph.targetId);
 

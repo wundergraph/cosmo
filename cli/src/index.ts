@@ -6,7 +6,9 @@ import boxen from 'boxen';
 import program from './commands/index.js';
 import { initTelemetry, shutdownTelemetry, captureCommandFailure } from './core/telemetry.js';
 
-dotenv.config();
+dotenv.config({
+  quiet: true,
+});
 
 initTelemetry();
 

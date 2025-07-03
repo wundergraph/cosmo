@@ -2,7 +2,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import AuthUtils from '../auth-utils.js';
 import { AuthenticationError } from '../errors/errors.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
-import { checkUserAccess } from '../util.js';
+import { RBACEvaluator } from './RBACEvaluator.js';
 
 export type AccessTokenAuthContext = {
   auth: 'access_token';
@@ -10,8 +10,8 @@ export type AccessTokenAuthContext = {
   userDisplayName: string;
   organizationId: string;
   organizationSlug: string;
-  hasWriteAccess: boolean;
-  isAdmin: boolean;
+  organizationDeactivated: boolean;
+  rbac: RBACEvaluator;
 };
 
 export default class AccessTokenAuthenticator {
@@ -43,12 +43,14 @@ export default class AccessTokenAuthenticator {
       throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'User is not a member of the organization');
     }
 
-    const userRoles = await this.orgRepo.getOrganizationMemberRoles({
-      userID: userInfoData.sub,
-      organizationID: organization.id,
-    });
-
-    const isOrganizationDeactivated = !!organization.deactivation;
+    const organizationDeactivated = !!organization.deactivation;
+    const rbac = new RBACEvaluator(
+      await this.orgRepo.getOrganizationMemberGroups({
+        userID: userInfoData.sub,
+        organizationID: organization.id,
+      }),
+      userInfoData.sub,
+    );
 
     return {
       auth: 'access_token',
@@ -56,8 +58,8 @@ export default class AccessTokenAuthenticator {
       organizationSlug: organization.slug,
       userId: userInfoData.sub,
       userDisplayName: userInfoData.email,
-      hasWriteAccess: checkUserAccess({ rolesToBe: ['admin', 'developer'], userRoles }) && !isOrganizationDeactivated,
-      isAdmin: userRoles.includes('admin'),
+      organizationDeactivated,
+      rbac,
     };
   }
 }

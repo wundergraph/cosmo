@@ -2,6 +2,7 @@ name: Shared CI
 on:
   pull_request:
     paths:
+      - 'pnpm-lock.yaml'
       - ".github/workflows/shared-ci.yaml"
       - "composition/**/*"
       - "connect/**/*"

@@ -4,6 +4,96 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.85.4](https://github.com/wundergraph/cosmo/compare/wgc@0.85.3...wgc@0.85.4) (2025-07-01)
+
+**Note:** Version bump only for package wgc
+
+## [0.85.3](https://github.com/wundergraph/cosmo/compare/wgc@0.85.2...wgc@0.85.3) (2025-06-30)
+
+### Bug Fixes
+
+* **cli:** make .env loading silent to prevent invalid json output ([#1993](https://github.com/wundergraph/cosmo/issues/1993)) ([cdfbc9a](https://github.com/wundergraph/cosmo/commit/cdfbc9ab8729953491233f8ca071bc1fd467d20d)) (@rawkode)
+
+## [0.85.2](https://github.com/wundergraph/cosmo/compare/wgc@0.85.1...wgc@0.85.2) (2025-06-26)
+
+**Note:** Version bump only for package wgc
+
+## [0.85.1](https://github.com/wundergraph/cosmo/compare/wgc@0.85.0...wgc@0.85.1) (2025-06-26)
+
+**Note:** Version bump only for package wgc
+
+# [0.85.0](https://github.com/wundergraph/cosmo/compare/wgc@0.84.2...wgc@0.85.0) (2025-06-25)
+
+### Features
+
+* add support for remote grpc services ([#1953](https://github.com/wundergraph/cosmo/issues/1953)) ([5074af9](https://github.com/wundergraph/cosmo/commit/5074af9ab4ce14c418fa8fee69e785fb6237f785)) (@Noroth)
+
+## [0.84.2](https://github.com/wundergraph/cosmo/compare/wgc@0.84.1...wgc@0.84.2) (2025-06-19)
+
+### Bug Fixes
+
+* incorrect import of program ([#1977](https://github.com/wundergraph/cosmo/issues/1977)) ([a6d7bfd](https://github.com/wundergraph/cosmo/commit/a6d7bfd828c4b5d54048b2a3b7eeadf8a807fc0c)) (@thisisnithin)
+
+## [0.84.1](https://github.com/wundergraph/cosmo/compare/wgc@0.84.0...wgc@0.84.1) (2025-06-17)
+
+### Bug Fixes
+
+* skip auth check for plugin commands ([#1973](https://github.com/wundergraph/cosmo/issues/1973)) ([687e714](https://github.com/wundergraph/cosmo/commit/687e714fd6bccd86b7e8f83571a1181409f97e98)) (@StarpTech)
+
+# [0.84.0](https://github.com/wundergraph/cosmo/compare/wgc@0.83.3...wgc@0.84.0) (2025-06-06)
+
+### Features
+
+* gRPC plugin enhancements ([#1905](https://github.com/wundergraph/cosmo/issues/1905)) ([7202ae9](https://github.com/wundergraph/cosmo/commit/7202ae9da4bd0d3ff85c4c632ff8fc44f8642471)) (@Noroth)
+
+## [0.83.3](https://github.com/wundergraph/cosmo/compare/wgc@0.83.2...wgc@0.83.3) (2025-06-02)
+
+**Note:** Version bump only for package wgc
+
+## [0.83.2](https://github.com/wundergraph/cosmo/compare/wgc@0.83.1...wgc@0.83.2) (2025-06-02)
+
+**Note:** Version bump only for package wgc
+
+## [0.83.1](https://github.com/wundergraph/cosmo/compare/wgc@0.83.0...wgc@0.83.1) (2025-05-28)
+
+**Note:** Version bump only for package wgc
+
+# [0.83.0](https://github.com/wundergraph/cosmo/compare/wgc@0.82.3...wgc@0.83.0) (2025-05-27)
+
+### Features
+
+* add comment about entity lookup and response relationship ([#1907](https://github.com/wundergraph/cosmo/issues/1907)) ([ad14ab0](https://github.com/wundergraph/cosmo/commit/ad14ab0f2a3e0470d132b5f48b2c370207fe05f8)) (@StarpTech)
+
+## [0.82.3](https://github.com/wundergraph/cosmo/compare/wgc@0.82.2...wgc@0.82.3) (2025-05-26)
+
+**Note:** Version bump only for package wgc
+
+## [0.82.2](https://github.com/wundergraph/cosmo/compare/wgc@0.82.1...wgc@0.82.2) (2025-05-25)
+
+**Note:** Version bump only for package wgc
+
+## [0.82.1](https://github.com/wundergraph/cosmo/compare/wgc@0.82.0...wgc@0.82.1) (2025-05-24)
+
+**Note:** Version bump only for package wgc
+
+# [0.82.0](https://github.com/wundergraph/cosmo/compare/wgc@0.81.1...wgc@0.82.0) (2025-05-23)
+
+### Features
+
+* **cli:** improve cursor rules ([#1887](https://github.com/wundergraph/cosmo/issues/1887)) ([d052fb7](https://github.com/wundergraph/cosmo/commit/d052fb746b060cec1b61c157b8d465d87e5c2000)) (@StarpTech)
+
+## [0.81.1](https://github.com/wundergraph/cosmo/compare/wgc@0.81.0...wgc@0.81.1) (2025-05-22)
+
+### Bug Fixes
+
+* **wgc:** cursor instructions for plugin http client usage ([#1884](https://github.com/wundergraph/cosmo/issues/1884)) ([849ae02](https://github.com/wundergraph/cosmo/commit/849ae02c35e61c47232fb4dff943f0197a002a72)) (@StarpTech)
+
+# [0.81.0](https://github.com/wundergraph/cosmo/compare/wgc@0.80.1...wgc@0.81.0) (2025-05-22)
+
+### Features
+
+* plugin init should bootstrap fully functional project ([#1878](https://github.com/wundergraph/cosmo/issues/1878)) ([69132da](https://github.com/wundergraph/cosmo/commit/69132da0f6a3560afcd6bdab348dec0bb37c3496)) (@StarpTech)
+
 ## [0.80.1](https://github.com/wundergraph/cosmo/compare/wgc@0.80.0...wgc@0.80.1) (2025-05-20)
 
 **Note:** Version bump only for package wgc

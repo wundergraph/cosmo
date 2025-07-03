@@ -720,6 +720,10 @@
                               "request_error",
                               "response_error_message"
                             ]
+                          },
+                          "expression": {
+                            "type": "string",
+                            "description": "The name of the request header from which to extract the value."
                           }
                         }
                       }
@@ -928,6 +932,38 @@
                   "description": "The name of the header which the holds the trace_id. The default value is x-wg-trace-id."
                 }
               }
+            },
+            "attributes": {
+              "type": "array",
+              "description": "Custom span attributes for subgraphs",
+              "items": {
+                "type": "object",
+                "description": "The configuration for custom span attributes for subgraph tracing.",
+                "additionalProperties": false,
+                "required": ["key"],
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "description": "The key of the field."
+                  },
+                  "value_from": {
+                    "type": "object",
+                    "description": "Defines a source for the field value e.g. from a request header. If both default and value_from are set, value_from has precedence.",
+                    "additionalProperties": false,
+                    "properties": {
+                      "expression": {
+                        "type": "string",
+                        "description": "The name of the request header from which to extract the value. The value is only extracted when a request context is available otherwise the default value is used."
+                      }
+                    },
+                    "oneOf": [
+                      {
+                        "required": ["expression"]
+                      }
+                    ]
+                  }
+                }
+              }
             }
           }
         },
@@ -999,6 +1035,11 @@
                   "type": "boolean",
                   "default": false,
                   "description": "Enable the collection of metrics for the GraphQL operation router caches. The default value is false."
+                },
+                "connection_stats": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable the collection of connection stats. The default value is false."
                 },
                 "engine_stats": {
                   "type": "object",
@@ -1094,6 +1135,11 @@
                   "type": "boolean",
                   "default": false,
                   "description": "Enable the collection of metrics for the GraphQL operation router caches. The default value is false."
+                },
+                "connection_stats": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable the collection of connection stats. The default value is false."
                 },
                 "engine_stats": {
                   "type": "object",
@@ -1873,7 +1919,7 @@
           "properties": {
             "nats": {
               "type": "array",
-              "description": "The NATS configuration. The NATS is used to configure the event-driven federated subscriptions.",
+              "description": "Configuration used by the EDFS provider to connect to the NATS server.",
               "items": {
                 "type": "object",
                 "required": ["id", "url"],
@@ -1932,7 +1978,7 @@
             },
             "kafka": {
               "type": "array",
-              "description": "The Kafka configuration. The Kafka is used to configure the event-driven federated subscriptions.",
+              "description": "Configuration used by the EDFS provider to connect to the Kafka server.",
               "items": {
                 "type": "object",
                 "additionalProperties": false,
@@ -1967,6 +2013,8 @@
                     "oneOf": [
                       {
                         "type": "object",
+                        "additionalProperties": false,
+                        "required": ["sasl_plain"],
                         "properties": {
                           "sasl_plain": {
                             "type": "object",
@@ -1985,8 +2033,69 @@
                             }
                           }
                         }
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": ["sasl_scram"],
+                        "properties": {
+                          "sasl_scram": {
+                            "type": "object",
+                            "description": "SCRAM SASL Authentication configuration for the Kafka provider.",
+                            "additionalProperties": false,
+                            "required": ["username", "password", "mechanism"],
+                            "properties": {
+                              "username": {
+                                "type": "string",
+                                "description": "The username for SCRAM SASL authentication."
+                              },
+                              "password": {
+                                "type": "string",
+                                "description": "The password for SCRAM SASL authentication."
+                              },
+                              "mechanism": {
+                                "type": "string",
+                                "description": "The mechanism for SCRAM SASL authentication.",
+                                "enum": ["SCRAM-SHA-256", "SCRAM-SHA-512"]
+                              }
+                            }
+                          }
+                        }
                       }
                     ]
+                  },
+                  "fetch_max_wait": {
+                    "type": "string",
+                    "description": "The maximum wait time for fetching messages from the Kafka broker. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'. Setting this to a higher value can help reduce the number of requests to the Kafka broker.",
+                    "format": "go-duration"
+                  }
+                }
+              }
+            },
+            "redis": {
+              "type": "array",
+              "description": "Configuration used by the EDFS provider to connect to the Redis server.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["id", "urls"],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "description": "The provider ID. The provider ID is used to identify the provider in the configuration."
+                  },
+                  "urls": {
+                    "type": "array",
+                    "description": "The list of Redis URLs. An example of URL is \"redis://username:password@localhost:6379/11\"",
+                    "minItems": 1,
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "cluster_enabled": {
+                    "type": "boolean",
+                    "description": "If enabled, the Redis cluster client is used to connect to the server.",
+                    "default": false
                   }
                 }
               }
@@ -2336,6 +2445,10 @@
               "type": "boolean",
               "description": "Print the query plans."
             },
+            "print_intermediate_query_plans": {
+              "type": "boolean",
+              "description": "Print intermediate query plans."
+            },
             "print_node_suggestions": {
               "type": "boolean",
               "description": "Print the node suggestions."
@@ -2643,6 +2756,8 @@
         "replace_undefined_op_field_errors": {
           "type": "object",
           "description": "Produces the same error (message, extension code, status code) as Apollo when an invalid operation field is included in an operation selection set.",
+          "deprecated": true,
+          "deprecationMessage": "This property is deprecated. Please use 'use_graphql_validation_failed_status' instead.",
           "additionalProperties": false,
           "properties": {
             "enabled": {
@@ -2683,6 +2798,17 @@
               "default": false
             }
           }
+        },
+        "use_graphql_validation_failed_status": {
+          "type": "object",
+          "description": "Uses Apollo compliant validation errors, including 400 status and GRAPHQL_VALIDATION_FAILED extension.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            }
+          }
         }
       }
     },
@@ -2691,6 +2817,11 @@
       "description": "The configuration for the router gRPC plugins.",
       "additionalProperties": false,
       "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable the router gRPC plugins."
+        },
         "path": {
           "type": "string",
           "description": "The path to the plugins directory. The plugins directory is used to load the plugins.",
@@ -2894,6 +3025,11 @@
           "examples": ["(?i)^X-Custom-.*"],
           "description": "The matching rule for the header. The matching rule is a regular expression that is used to match the header. Can't be used with 'named'."
         },
+        "negate_match": {
+          "type": "boolean",
+          "examples": ["true"],
+          "description": "If set to true, the result of the 'matching' regex will be inverted. This is useful for simulating negative lookahead behavior, which is not natively supported."
+        },
         "named": {
           "type": "string",
           "examples": ["X-Test-Header"],
@@ -2909,6 +3045,9 @@
           "examples": ["default-value"],
           "description": "The default value of the header in case it is not present in the request."
         }
+      },
+      "dependentRequired": {
+        "negate_match": ["matching"]
       },
       "required": ["op"]
     },
@@ -2927,6 +3066,11 @@
           "type": "string",
           "examples": ["(?i)^X-Custom-.*"],
           "description": "The matching rule for the header. The matching rule is a regular expression that is used to match the header. Can't be used with 'named'."
+        },
+        "negate_match": {
+          "type": "boolean",
+          "examples": ["true"],
+          "description": "If set to true, the result of the 'matching' regex will be inverted. This is useful for simulating negative lookahead behavior, which is not natively supported."
         },
         "named": {
           "type": "string",
@@ -2949,6 +3093,9 @@
           "examples": ["first_write"],
           "description": "The algorith, to use when multiple headers are present. The supported operations are '\"first_write\", \"last_write\", and \"append\". The 'first_write' retains the first value of a given header. The 'last_write' retains the last value of a given header. The 'append' appends all values of a given header."
         }
+      },
+      "dependentRequired": {
+        "negate_match": ["matching"]
       },
       "required": ["op", "algorithm"]
     },

@@ -2,6 +2,7 @@ name: Playground CI
 on:
   pull_request:
     paths:
+      - 'pnpm-lock.yaml'
       - 'playground/**/*'
       - '.github/workflows/playground-ci.yaml'
 

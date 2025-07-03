@@ -10,6 +10,7 @@ import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import { SubgraphMetricsRepository } from '../../repositories/analytics/SubgraphMetricsRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function getSubgraphMetricsErrorRate(
   opts: RouterOptions,
@@ -43,6 +44,10 @@ export function getSubgraphMetricsErrorRate(
         },
         series: [],
       };
+    }
+
+    if (!authContext.rbac.hasSubGraphReadAccess(subgraph)) {
+      throw new UnauthorizedError();
     }
 
     const analyticsRetention = await orgRepo.getFeature({

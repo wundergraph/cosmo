@@ -1,5 +1,4 @@
 import { useApplyParams } from "@/components/analytics/use-apply-params";
-import { UserContext } from "@/components/app-provider";
 import { EmptyState } from "@/components/empty-state";
 import { getDashboardLayout } from "@/components/layout/dashboard-layout";
 import { Badge } from "@/components/ui/badge";
@@ -37,7 +36,6 @@ import { useFeature } from "@/hooks/use-feature";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { useUser } from "@/hooks/use-user";
 import { NextPageWithLayout } from "@/lib/page";
-import { cn, getHighestPriorityRole } from "@/lib/utils";
 import {
   createConnectQueryKey,
   useMutation,
@@ -51,6 +49,7 @@ import {
 import { Cross1Icon, MagnifyingGlassIcon } from "@radix-ui/react-icons";
 import { useQueryClient } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
+import { OrgMember } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import {
   getOrganizationMembers,
   getPendingOrganizationMembers,
@@ -58,36 +57,21 @@ import {
   isMemberLimitReached,
   removeInvitation,
   removeOrganizationMember,
-  updateOrgMemberRole,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { sentenceCase } from "change-case";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useContext, useState } from "react";
+import { useState } from "react";
 import { useDebounce } from "use-debounce";
 import { z } from "zod";
-
-const usePaginationParams = () => {
-  const router = useRouter();
-  const pageNumber = router.query.page
-    ? parseInt(router.query.page as string)
-    : 1;
-  const pageSize = Number.parseInt((router.query.pageSize as string) || "10");
-  const limit = pageSize > 50 ? 50 : pageSize;
-  const offset = (pageNumber - 1) * limit;
-  const search = (router.query.search as string) || "";
-
-  return {
-    pageNumber,
-    pageSize,
-    limit,
-    offset,
-    search,
-  };
-};
+import { usePaginationParams } from "@/hooks/use-pagination-params";
+import { UpdateMemberGroupDialog } from "@/components/members/update-member-group-dialog";
+import { useIsAdmin } from "@/hooks/use-is-admin";
+import { formatDateTime } from "@/lib/format-date";
+import { MultiGroupSelect } from "@/components/multi-group-select";
 
 const emailInputSchema = z.object({
   email: z.string().email(),
+  groups: z.array(z.string().uuid()).min(1),
 });
 
 type EmailInput = z.infer<typeof emailInputSchema>;
@@ -96,12 +80,16 @@ const InviteForm = ({ onSuccess }: { onSuccess: () => void }) => {
   const {
     register,
     formState: { isValid, errors },
+    setValue,
+    watch,
     reset,
     handleSubmit,
   } = useZodForm<EmailInput>({
     mode: "onChange",
     schema: emailInputSchema,
   });
+
+  const selectedGroups = watch('groups') ?? [];
 
   const { mutate, isPending } = useMutation(inviteUser);
 
@@ -113,7 +101,7 @@ const InviteForm = ({ onSuccess }: { onSuccess: () => void }) => {
 
   const onSubmit: SubmitHandler<EmailInput> = (data) => {
     mutate(
-      { email: data.email },
+      { email: data.email, groups: data.groups },
       {
         onSuccess: (d) => {
           sendToast(d.response?.details || "Invited member successfully.");
@@ -128,8 +116,8 @@ const InviteForm = ({ onSuccess }: { onSuccess: () => void }) => {
   };
 
   return (
-    <form className="flex gap-x-4" onSubmit={handleSubmit(onSubmit)}>
-      <div className="flex-1">
+    <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
+      <div className="space-y-2">
         <Input
           placeholder="janedoe@example.com"
           className="w-full"
@@ -137,83 +125,66 @@ const InviteForm = ({ onSuccess }: { onSuccess: () => void }) => {
           {...register("email")}
         />
         {errors.email && (
-          <span className="mt-2 text-sm text-destructive">
+          <span className="text-sm text-destructive">
             {errors.email.message}
           </span>
         )}
       </div>
-      <Button
-        type="submit"
-        disabled={!isValid}
-        variant="default"
-        isLoading={isPending}
-      >
-        Invite
-      </Button>
+
+      <div className="space-y-2">
+        <span>What group should the member be added to?</span>
+        <MultiGroupSelect
+          disabled={isPending}
+          value={selectedGroups}
+          onValueChange={(groups) => setValue(
+            'groups',
+            groups.map((g) => g.groupId),
+            { shouldValidate: true, shouldDirty: true, shouldTouch: true },
+          )}
+        />
+        {errors.groups && (
+          <span className="text-sm text-destructive">
+            {errors.groups.message || "Please select at least one group."}
+          </span>
+        )}
+      </div>
+
+      <div className="text-right">
+        <Button
+          type="submit"
+          disabled={!isValid}
+          variant="default"
+          isLoading={isPending}
+        >
+          Invite
+        </Button>
+      </div>
     </form>
   );
 };
 
-const roleOptions: {
-  [key: string]: { label: string; newRole: string }[];
-} = {
-  admin: [
-    {
-      label: "Demote to developer",
-      newRole: "developer",
-    },
-    {
-      label: "Demote to viewer",
-      newRole: "viewer",
-    },
-  ],
-  developer: [
-    {
-      label: "Promote to admin",
-      newRole: "admin",
-    },
-    {
-      label: "Demote to viewer",
-      newRole: "viewer",
-    },
-  ],
-  viewer: [
-    {
-      label: "Promote to admin",
-      newRole: "admin",
-    },
-    {
-      label: "Promote to developer",
-      newRole: "developer",
-    },
-  ],
-};
-
 const MemberCard = ({
   email,
-  role,
-  memberUserID,
   acceptedInvite,
+  joinedAt,
   isAdmin,
   isCurrentUser,
   active,
   refresh,
+  onSelect,
 }: {
   email: string;
-  role?: string;
-  memberUserID: string;
   acceptedInvite: boolean;
+  joinedAt?: string;
   isAdmin: boolean;
   isCurrentUser: boolean;
   active?: boolean;
   refresh: () => void;
+  onSelect?(): void;
 }) => {
-  const user = useContext(UserContext);
-
   const { mutate: resendInvitation } = useMutation(inviteUser);
   const { mutate: revokeInvitation } = useMutation(removeInvitation);
   const { mutate: removeMember } = useMutation(removeOrganizationMember);
-  const { mutate: updateUserRole } = useMutation(updateOrgMemberRole);
 
   const { toast, update } = useToast();
 
@@ -221,22 +192,21 @@ const MemberCard = ({
     <TableRow>
       <TableCell>{email}</TableCell>
       {acceptedInvite && (
+        <TableCell className="w-1 whitespace-nowrap">
+          {formatDateTime(new Date(joinedAt!))}
+        </TableCell>
+      )}
+      {acceptedInvite ? (
         <TableCell>
-          {active === false && <Badge variant="destructive">Disabled</Badge>}
+          {active ? (<Badge variant="success">Active</Badge>) : (<Badge variant="destructive">Disabled</Badge>)}
+        </TableCell>
+      ) : (
+        <TableCell className="text-sm text-gray-800 dark:text-gray-400">
+          Pending
         </TableCell>
       )}
       <TableCell>
-        <div className="flex h-6 items-center justify-between gap-x-4 text-muted-foreground">
-          <div className={cn({ "pr-[14px]": isAdmin && isCurrentUser })}>
-            {acceptedInvite && role ? (
-              <span className="text-sm">{sentenceCase(role)}</span>
-            ) : (
-              <span className="text-sm text-gray-800 dark:text-gray-400">
-                Pending
-              </span>
-            )}
-          </div>
-
+        <div className="flex min-h-6 items-center justify-between gap-x-4 text-muted-foreground">
           <div>
             {isAdmin && !isCurrentUser && (
               <DropdownMenu>
@@ -277,6 +247,11 @@ const MemberCard = ({
                       }}
                     >
                       Resend invitation
+                    </DropdownMenuItem>
+                  )}
+                  {acceptedInvite && onSelect && (
+                    <DropdownMenuItem onClick={onSelect}>
+                      Update member group
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuItem
@@ -330,40 +305,6 @@ const MemberCard = ({
                   >
                     {acceptedInvite ? "Remove member" : "Remove invitation"}
                   </DropdownMenuItem>
-                  {role &&
-                    roleOptions[role].map(({ label, newRole }) => (
-                      <DropdownMenuItem
-                        key={newRole}
-                        onClick={() => {
-                          updateUserRole(
-                            {
-                              userID: user?.id,
-                              orgMemberUserID: memberUserID,
-                              role: newRole,
-                            },
-                            {
-                              onSuccess: (d) => {
-                                toast({
-                                  description:
-                                    d.response?.details ||
-                                    `Updated the role to ${newRole} successfully.`,
-                                  duration: 3000,
-                                });
-                                refresh();
-                              },
-                              onError: (error) => {
-                                toast({
-                                  description: `Could not update role to ${newRole}. Please try again.`,
-                                  duration: 3000,
-                                });
-                              },
-                            },
-                          );
-                        }}
-                      >
-                        {label}
-                      </DropdownMenuItem>
-                    ))}
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
@@ -376,9 +317,9 @@ const MemberCard = ({
 
 const PendingInvitations = () => {
   const user = useUser();
-  const isAdmin = user?.currentOrganization.roles.includes("admin") ?? false;
+  const isAdmin = useIsAdmin();
 
-  const { limit, offset, pageNumber, search } = usePaginationParams();
+  const { pageSize, offset, pageNumber, search } = usePaginationParams();
 
   const [debouncedSearch] = useDebounce(search, 500);
 
@@ -386,14 +327,14 @@ const PendingInvitations = () => {
     getPendingOrganizationMembers,
     {
       pagination: {
-        limit,
+        limit: pageSize,
         offset,
       },
       search: debouncedSearch,
     },
   );
 
-  const noOfPages = Math.ceil((data?.totalCount ?? 0) / limit);
+  const noOfPages = Math.ceil((data?.totalCount ?? 0) / pageSize);
 
   if (isLoading) return <Loader fullscreen />;
 
@@ -427,7 +368,6 @@ const PendingInvitations = () => {
                 <MemberCard
                   key={member.userID}
                   email={member.email}
-                  memberUserID={member.userID}
                   acceptedInvite={false}
                   isAdmin={isAdmin || false}
                   isCurrentUser={member.email === user.email}
@@ -443,28 +383,29 @@ const PendingInvitations = () => {
           </TableBody>
         </Table>
       </TableWrapper>
-      <Pagination limit={limit} noOfPages={noOfPages} pageNumber={pageNumber} />
+      <Pagination limit={pageSize} noOfPages={noOfPages} pageNumber={pageNumber} />
     </>
   );
 };
 
 const AcceptedMembers = () => {
   const user = useUser();
-  const isAdmin = user?.currentOrganization.roles.includes("admin") ?? false;
+  const isAdmin = useIsAdmin();
+  const [selectedMember, setSelectedMember] = useState<OrgMember | undefined>();
 
-  const { limit, offset, pageNumber, search } = usePaginationParams();
+  const { pageSize, offset, pageNumber, search } = usePaginationParams();
 
   const [debouncedSearch] = useDebounce(search, 500);
 
   const { data, isLoading, error, refetch } = useQuery(getOrganizationMembers, {
     pagination: {
-      limit,
+      limit: pageSize,
       offset,
     },
     search: debouncedSearch,
   });
 
-  const noOfPages = Math.ceil((data?.totalCount ?? 0) / limit);
+  const noOfPages = Math.ceil((data?.totalCount ?? 0) / pageSize);
 
   if (isLoading) return <Loader fullscreen />;
 
@@ -484,13 +425,24 @@ const AcceptedMembers = () => {
 
   return (
     <>
+      <UpdateMemberGroupDialog
+        open={!!selectedMember}
+        member={selectedMember}
+        onOpenChange={(o) => {
+          if (!o) {
+            setSelectedMember(undefined);
+          }
+        }}
+        refresh={refetch}
+      />
+
       <TableWrapper className="max-h-full">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead className="w-full">Email</TableHead>
-              <TableHead className=""></TableHead>
-              <TableHead className="">Role</TableHead>
+              <TableHead>Joined At</TableHead>
+              <TableHead>Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -499,13 +451,13 @@ const AcceptedMembers = () => {
                 <MemberCard
                   key={member.userID}
                   email={member.email}
-                  role={getHighestPriorityRole({ userRoles: member.roles })}
-                  memberUserID={member.userID}
                   acceptedInvite={true}
+                  joinedAt={member.joinedAt}
                   isAdmin={isAdmin || false}
                   isCurrentUser={member.email === user.email}
                   active={member.active}
                   refresh={() => refetch()}
+                  onSelect={() => setSelectedMember(member)}
                 />
               );
             })}
@@ -517,7 +469,7 @@ const AcceptedMembers = () => {
           )}
         </Table>
       </TableWrapper>
-      <Pagination limit={limit} noOfPages={noOfPages} pageNumber={pageNumber} />
+      <Pagination limit={pageSize} noOfPages={noOfPages} pageNumber={pageNumber} />
     </>
   );
 };
@@ -526,10 +478,10 @@ const MembersToolbar = () => {
   const usersFeature = useFeature("users");
   const user = useUser();
   const organizationSlug = user?.currentOrganization.slug;
-  const isAdmin = user?.currentOrganization.roles.includes("admin") ?? false;
+  const isAdmin = useIsAdmin();
   const client = useQueryClient();
 
-  const { limit, offset, search } = usePaginationParams();
+  const { pageSize, offset, search } = usePaginationParams();
 
   const { data } = useQuery(isMemberLimitReached);
 
@@ -565,7 +517,7 @@ const MembersToolbar = () => {
                   getPendingOrganizationMembers,
                   {
                     pagination: {
-                      limit,
+                      limit: pageSize,
                       offset,
                     },
                     search,
@@ -596,11 +548,11 @@ const MembersPage: NextPageWithLayout = () => {
   const [search, setSearch] = useState("");
   const [debouncedSearch] = useDebounce(search, 500);
 
-  const { limit, offset } = usePaginationParams();
+  const { pageSize, offset } = usePaginationParams();
 
   const { data } = useQuery(getPendingOrganizationMembers, {
     pagination: {
-      limit,
+      limit: pageSize,
       offset,
     },
     search: debouncedSearch,

@@ -4,12 +4,15 @@ setup-build-tools:
 	go install github.com/bufbuild/buf/cmd/buf@v1.32.2
 	go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.34.2
 	go install connectrpc.com/connect/cmd/protoc-gen-connect-go@v1.16.2
+	go install gotest.tools/gotestsum@v1.12.2
 
 setup-dev-tools: setup-build-tools
 	go install github.com/amacneil/dbmate/v2@v2.6.0
 	go install honnef.co/go/tools/cmd/staticcheck@2024.1.1
 	go install github.com/yannh/kubeconform/cmd/kubeconform@v0.6.3
 	go install github.com/norwoodj/helm-docs/cmd/helm-docs@v1.11.3
+	go install github.com/vektra/mockery/v3@v3.3.1
+	go install github.com/Antonboom/testifylint@v1.6.1
 
 prerequisites: setup-dev-tools
 	go version
@@ -17,6 +20,8 @@ prerequisites: setup-dev-tools
 	node -v
 	docker -v
 	dbmate -v
+	mockery version
+	testifylint -V=full
 
 infra-up: dc-dev
 

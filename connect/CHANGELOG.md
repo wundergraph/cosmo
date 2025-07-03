@@ -4,6 +4,58 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.113.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.112.0...@wundergraph/cosmo-connect@0.113.0) (2025-07-01)
+
+### Bug Fixes
+
+* toggle ui logic and search to consider all operations ([#1982](https://github.com/wundergraph/cosmo/issues/1982)) ([e6264bd](https://github.com/wundergraph/cosmo/commit/e6264bd5fc98962b2b36f21a3a20c802333192f1)) (@JivusAyrus)
+
+### Features
+
+* allow organization members to be assigned multiple groups ([#1919](https://github.com/wundergraph/cosmo/issues/1919)) ([1e67757](https://github.com/wundergraph/cosmo/commit/1e677576a32efb89673cdfc3900a4c863eec8b7e)) (@wilsonrivera)
+
+# [0.112.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.111.0...@wundergraph/cosmo-connect@0.112.0) (2025-06-26)
+
+### Features
+
+* add redis pubsub support to EDFS ([#1810](https://github.com/wundergraph/cosmo/issues/1810)) ([8f294b6](https://github.com/wundergraph/cosmo/commit/8f294b62c14e9cae7e1ad85e65b0ca3ada0bcfbb)) (@alepane21)
+
+# [0.111.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.110.0...@wundergraph/cosmo-connect@0.111.0) (2025-06-06)
+
+### Features
+
+* link organization to the root keycloak group ([#1920](https://github.com/wundergraph/cosmo/issues/1920)) ([2952533](https://github.com/wundergraph/cosmo/commit/2952533b7dbdf29dd71f97b21c92c834ba1f1c97)) (@wilsonrivera)
+
+# [0.110.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.109.0...@wundergraph/cosmo-connect@0.110.0) (2025-06-02)
+
+### Features
+
+* add GetClientsFromAnalytics RPC to fetch the clients using clickhouse metrics ([#1918](https://github.com/wundergraph/cosmo/issues/1918)) ([756edf3](https://github.com/wundergraph/cosmo/commit/756edf377314296adc50615f12c618b98e78810d)) (@JivusAyrus)
+
+# [0.109.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.108.0...@wundergraph/cosmo-connect@0.109.0) (2025-05-28)
+
+### Features
+
+* return proposalUrl on creation of proposal ([#1909](https://github.com/wundergraph/cosmo/issues/1909)) ([b21db02](https://github.com/wundergraph/cosmo/commit/b21db02185c37b47bd0c1db0fba872d1868017bd)) (@JivusAyrus)
+
+# [0.108.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.107.0...@wundergraph/cosmo-connect@0.108.0) (2025-05-26)
+
+### Features
+
+* fetch operations based on clients ([#1894](https://github.com/wundergraph/cosmo/issues/1894)) ([a7597f5](https://github.com/wundergraph/cosmo/commit/a7597f51d4506f11f117937955da3be2626a55c5)) (@JivusAyrus)
+
+# [0.107.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.106.0...@wundergraph/cosmo-connect@0.107.0) (2025-05-25)
+
+### Features
+
+* improve available namespaces ([#1895](https://github.com/wundergraph/cosmo/issues/1895)) ([135de0a](https://github.com/wundergraph/cosmo/commit/135de0a4c57ce815e1177be34e96c2a5900f031e)) (@wilsonrivera)
+
+# [0.106.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.105.0...@wundergraph/cosmo-connect@0.106.0) (2025-05-24)
+
+### Features
+
+* introduce RBAC groups for fine-grained control over resource access ([#1830](https://github.com/wundergraph/cosmo/issues/1830)) ([9f984cd](https://github.com/wundergraph/cosmo/commit/9f984cdfedbb80e0e120178b9755d6f57e85479e)) (@wilsonrivera)
+
 # [0.105.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.104.0...@wundergraph/cosmo-connect@0.105.0) (2025-05-19)
 
 ### Features

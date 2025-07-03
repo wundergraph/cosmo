@@ -2,6 +2,7 @@ name: wgc CI
 on:
   pull_request:
     paths:
+      - 'pnpm-lock.yaml'
       - 'cli/**/*'
       - 'connect/**/*'
       - 'shared/**/*'

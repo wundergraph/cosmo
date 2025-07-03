@@ -1,0 +1,35 @@
+all: false
+dir: '{{.InterfaceDir}}'
+filename: mocks.go
+force-file-write: true
+formatter: goimports
+log-level: info
+structname: '{{.Mock}}{{.InterfaceName}}'
+pkgname: '{{.SrcPackageName}}'
+recursive: false
+require-template-schema-exists: true
+template: testify
+template-schema: '{{.Template}}.schema.json'
+packages:
+  github.com/wundergraph/cosmo/router/pkg/pubsub/datasource:
+    interfaces:
+      ProviderLifecycle:
+      ProviderBuilder:
+      EngineDataSourceFactory:
+      Provider:
+  github.com/wundergraph/cosmo/router/pkg/pubsub/nats:
+    interfaces:
+      Adapter:
+  github.com/wundergraph/cosmo/router/pkg/pubsub/kafka:
+    interfaces:
+      Adapter:
+  github.com/wundergraph/cosmo/router/pkg/pubsub/redis:
+    interfaces:
+      Adapter:
+  github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve:
+    config:
+      dir: 'pkg/pubsub/datasource'
+      pkgname: 'datasource'
+      filename: 'mocks_resolve.go'
+    interfaces:
+      SubscriptionUpdater:

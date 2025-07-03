@@ -82,6 +82,16 @@ export const AuditLogTable = ({ logs }: { logs?: AuditLog[] }) => {
               } else if (auditAction === "member_role.updated") {
                 preParagraph = "role for";
                 postParagraph = "to";
+              } else if (auditAction === "member_group.updated" || auditAction === "api_key.group_updated") {
+                preParagraph = "group for";
+                postParagraph = "to";
+              } else if (auditAction === "member_group.added" ) {
+                postParagraph = "to group";
+              } else if (auditAction === "member_group.removed") {
+                postParagraph = "from group";
+              } else if (auditAction === "group.members_moved") {
+                preParagraph = "members from group";
+                postParagraph = "to ";
               } else if (action === "moved") {
                 postParagraph = `to ${targetNamespaceDisplayName} namespace,`;
               } else if (auditableDisplayName) {

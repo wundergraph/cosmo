@@ -1,3 +1,9 @@
+ifeq ($(CI),true)
+ FORMAT := github-actions
+else
+ FORMAT := pkgname
+endif
+
 dev:
 	go run cmd/router/main.go
 
@@ -8,7 +14,7 @@ update-snapshot:
 	cd ./pkg/config && go test -update -race ./...
 
 test:
-	go test -race ./...
+	gotestsum -f $(FORMAT) -- -race ./...
 
 test-fresh: clean-testcache test
 
@@ -37,6 +43,7 @@ build-race:
 build-custom:
 	CGO_ENABLED=0 go build -trimpath -ldflags "-extldflags -static -X github.com/wundergraph/cosmo/router/core.Version=$(VERSION) -X github.com/wundergraph/cosmo/router/core.Date=$(DATE) -X github.com/wundergraph/cosmo/router/core.Commit=$(COMMIT)" -a -o router cmd/custom/main.go
 
+generate-mocks:
+	mockery
+
 .PHONY: dev test build lint bump-engine update-snapshot
-
-

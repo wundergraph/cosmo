@@ -8,6 +8,7 @@ import {
 import { MonthlyRequestViewRepository } from '../../repositories/analytics/MonthlyRequestViewRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function getOrganizationRequestsCount(
   opts: RouterOptions,
@@ -19,6 +20,10 @@ export function getOrganizationRequestsCount(
   return handleError<PlainMessage<GetOrganizationRequestsCountResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
+
+    if (!authContext.rbac.isOrganizationAdmin) {
+      throw new UnauthorizedError();
+    }
 
     if (!opts.chClient) {
       return {

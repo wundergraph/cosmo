@@ -2,7 +2,14 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { CreateAPIKeyResponse, ExpiresAt } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { uid } from 'uid';
-import { TestUser, afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
+import {
+  afterAllSetup,
+  beforeAllSetup,
+  createTestGroup,
+  createTestRBACEvaluator,
+  TestUser
+} from '../src/core/test-util.js';
+import { OrganizationRole } from '../src/db/models.js';
 import { SetupTest } from './test-util.js';
 
 let dbname = '';
@@ -19,33 +26,36 @@ describe('API Keys', (ctx) => {
   test('Should be able to create and delete a api key', async (testContext) => {
     const { client, users, server } = await SetupTest({ dbname });
 
+    const orgGroups = await client.getOrganizationGroups({});
+    const adminGroup = orgGroups.groups.find((g) => g.name === 'admin')!;
+
     let response: CreateAPIKeyResponse;
     response = await client.createAPIKey({
       name: uid(8),
       expires: ExpiresAt.NEVER,
       userID: users.adminAliceCompanyA.userId,
-      allowAllResources: false,
+      groupId: adminGroup.groupId,
     });
     expect(response.response?.code).toBe(EnumStatusCode.OK);
     response = await client.createAPIKey({
       name: uid(8),
       expires: ExpiresAt.THIRTY_DAYS,
       userID: users.adminAliceCompanyA.userId,
-      allowAllResources: false,
+      groupId: adminGroup.groupId,
     });
     expect(response.response?.code).toBe(EnumStatusCode.OK);
     response = await client.createAPIKey({
       name: uid(8),
       expires: ExpiresAt.SIX_MONTHS,
       userID: users.adminAliceCompanyA.userId,
-      allowAllResources: false,
+      groupId: adminGroup.groupId,
     });
     expect(response.response?.code).toBe(EnumStatusCode.OK);
     response = await client.createAPIKey({
       name: uid(8),
       expires: ExpiresAt.ONE_YEAR,
       userID: users.adminAliceCompanyA.userId,
-      allowAllResources: false,
+      groupId: adminGroup.groupId,
     });
     expect(response.response?.code).toBe(EnumStatusCode.OK);
 
@@ -54,14 +64,14 @@ describe('API Keys', (ctx) => {
       name: 'test',
       expires: ExpiresAt.ONE_YEAR,
       userID: users.adminAliceCompanyA.userId,
-      allowAllResources: false,
+      groupId: adminGroup.groupId,
     });
     expect(response.response?.code).toBe(EnumStatusCode.OK);
     response = await client.createAPIKey({
       name: 'test',
       expires: ExpiresAt.ONE_YEAR,
       userID: users.adminAliceCompanyA.userId,
-      allowAllResources: false,
+      groupId: adminGroup.groupId,
     });
     expect(response.response?.code).toBe(EnumStatusCode.ERR_ALREADY_EXISTS);
 
@@ -70,7 +80,7 @@ describe('API Keys', (ctx) => {
       name: 'a'.repeat(100),
       expires: ExpiresAt.NEVER,
       userID: users.adminAliceCompanyA.userId,
-      allowAllResources: false,
+      groupId: adminGroup.groupId,
     });
     expect(response.response?.code).toBe(EnumStatusCode.ERR);
 
@@ -78,7 +88,7 @@ describe('API Keys', (ctx) => {
       name: '',
       expires: ExpiresAt.NEVER,
       userID: users.adminAliceCompanyA.userId,
-      allowAllResources: false,
+      groupId: adminGroup.groupId,
     });
     expect(response.response?.code).toBe(EnumStatusCode.ERR);
 
@@ -90,192 +100,184 @@ describe('API Keys', (ctx) => {
 
     await server.close();
   });
-});
 
-describe('Create API Keys as admins with RBAC enabled', (ctx) => {
-  beforeAll(async () => {
-    dbname = await beforeAllSetup();
-  });
+  test.each([
+    'organization-admin',
+    'organization-apikey-manager',
+  ])('%s should be able to create, update and delete API keys', async (role) => {
+    const { client, server, users, authenticator } = await SetupTest({ dbname, enableMultiUsers: true });
 
-  afterAll(async () => {
-    await afterAllSetup(dbname);
-  });
+    const orgGroupsResponse = await client.getOrganizationGroups({});
+    expect(orgGroupsResponse.response?.code).toBe(EnumStatusCode.OK);
 
-  test('Should be able to create an api key with selected resources', async (testContext) => {
-    const { client, users, server } = await SetupTest({ dbname, enabledFeatures: ['rbac'] });
+    const adminGroup = orgGroupsResponse.groups.find((g) => g.name === 'admin')!;
+    const developerGroup = orgGroupsResponse.groups.find((g) => g.name === 'developer')!;
 
-    const subgraphName = genID('subgraph1');
-    const label = genUniqueLabel();
-
-    const createSubgraphResp = await client.createFederatedSubgraph({
-      name: subgraphName,
-      namespace: 'default',
-      labels: [label],
-      routingUrl: 'http://localhost:8080',
+    authenticator.changeUserWithSuppliedContext({
+      ...users[TestUser.adminAliceCompanyA],
+      rbac: createTestRBACEvaluator(createTestGroup({ role: role as OrganizationRole })),
     });
 
-    expect(createSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
-
-    const getSubgraphResp = await client.getSubgraphByName({
-      name: subgraphName,
-      namespace: 'default',
-    });
-
-    expect(getSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
-    expect(getSubgraphResp.graph).toBeDefined();
-    expect(getSubgraphResp.graph?.targetId).toBeDefined();
-
-    const ids: string[] = [];
-    if (getSubgraphResp.graph) {
-      ids.push(getSubgraphResp.graph.targetId);
-    }
-
-    const response = await client.createAPIKey({
-      name: uid(8),
+    // Create the API key with the `admin` group
+    const apiKeyName = uid();
+    const createApiKeyResponse = await client.createAPIKey({
+      name: apiKeyName,
       expires: ExpiresAt.NEVER,
-      userID: users.adminAliceCompanyA.userId,
-      subgraphTargetIds: ids,
-      federatedGraphTargetIds: [],
-      allowAllResources: false,
+      groupId: adminGroup.groupId,
     });
 
-    console.log(response);
-    expect(response.response?.code).toBe(EnumStatusCode.OK);
+    expect(createApiKeyResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Update the API key to the `developer` group
+    const updateApiKeyResponse = await client.updateAPIKey({
+      name: apiKeyName,
+      groupId: developerGroup.groupId,
+    });
+
+    expect(updateApiKeyResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Ensure that the API key have the correct group
+    let getApiKeysResponse = await client.getAPIKeys({});
+    let apiKey = getApiKeysResponse.apiKeys?.find((k) => k.name === apiKeyName);
+
+    expect(getApiKeysResponse.response?.code).toBe(EnumStatusCode.OK);
+    expect(apiKey).toBeDefined();
+    expect(apiKey?.group).toBeDefined();
+    expect(apiKey?.group?.name).toBe('developer');
+
+    // Finally, delete the API key
+    const deleteApiKeyResponse = await client.deleteAPIKey({ name: apiKeyName });
+
+    expect(deleteApiKeyResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Ensure the API key have been deleted
+    getApiKeysResponse = await client.getAPIKeys({});
+    apiKey = getApiKeysResponse.apiKeys?.find((k) => k.name === apiKeyName);
+
+    expect(getApiKeysResponse.response?.code).toBe(EnumStatusCode.OK);
+    expect(apiKey).toBeUndefined();
 
     await server.close();
   });
 
-  test('Should be able to create an api key with selected all resources', async (testContext) => {
-    const { client, users, server } = await SetupTest({ dbname, enabledFeatures: ['rbac'] });
+  test.each([
+    'organization-developer',
+    'organization-viewer',
+    'namespace-admin',
+    'namespace-viewer',
+    'graph-admin',
+    'graph-viewer',
+    'subgraph-admin',
+    'subgraph-publisher'
+  ])('%s should not be able to create API keys', async (role) => {
+    const { client, server, users, authenticator } = await SetupTest({ dbname, enableMultiUsers: true });
 
-    const response = await client.createAPIKey({
-      name: uid(8),
-      expires: ExpiresAt.NEVER,
-      userID: users.adminAliceCompanyA.userId,
-      subgraphTargetIds: [],
-      federatedGraphTargetIds: [],
-      allowAllResources: true,
+    const orgGroupsResponse = await client.getOrganizationGroups({});
+    expect(orgGroupsResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    const adminGroup = orgGroupsResponse.groups.find((g) => g.name === 'admin')!;
+
+    authenticator.changeUserWithSuppliedContext({
+      ...users[TestUser.adminAliceCompanyA],
+      rbac: createTestRBACEvaluator(createTestGroup({ role: role as OrganizationRole })),
     });
-    expect(response.response?.code).toBe(EnumStatusCode.OK);
+
+    // Create the API key with the `admin` group
+    const apiKeyName = uid();
+    const createApiKeyResponse = await client.createAPIKey({
+      name: apiKeyName,
+      expires: ExpiresAt.NEVER,
+      groupId: adminGroup.groupId,
+    });
+
+    expect(createApiKeyResponse.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
 
     await server.close();
   });
 
-  test('Should not be able to create an api key when no resources are selected and all resources is not selected', async (testContext) => {
-    const { client, users, server } = await SetupTest({ dbname, enabledFeatures: ['rbac'] });
+  test.each([
+    'organization-developer',
+    'organization-viewer',
+    'namespace-admin',
+    'namespace-viewer',
+    'graph-admin',
+    'graph-viewer',
+    'subgraph-admin',
+    'subgraph-publisher'
+  ])('%s should not be able to update API keys', async (role) => {
+    const { client, server, users, authenticator } = await SetupTest({ dbname, enableMultiUsers: true });
 
-    const response = await client.createAPIKey({
-      name: uid(8),
+    const orgGroupsResponse = await client.getOrganizationGroups({});
+    expect(orgGroupsResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    const adminGroup = orgGroupsResponse.groups.find((g) => g.name === 'admin')!;
+    const developerGroup = orgGroupsResponse.groups.find((g) => g.name === 'developer')!;
+
+    // Create the API key with the `admin` group
+    const apiKeyName = uid();
+    const createApiKeyResponse = await client.createAPIKey({
+      name: apiKeyName,
       expires: ExpiresAt.NEVER,
-      userID: users.adminAliceCompanyA.userId,
-      subgraphTargetIds: [],
-      federatedGraphTargetIds: [],
-      allowAllResources: false,
-    });
-    expect(response.response?.code).toBe(EnumStatusCode.ERR);
-    expect(response.response?.details).toBe('Can not create an api key without associating it with any resources.');
-
-    await server.close();
-  });
-});
-
-describe('Create API Keys as developers with RBAC enabled', (ctx) => {
-  beforeAll(async () => {
-    dbname = await beforeAllSetup();
-  });
-
-  afterAll(async () => {
-    await afterAllSetup(dbname);
-  });
-
-  test('Should not be able to create an api key with resources the user doesnt have access', async (testContext) => {
-    const { client, users, server, authenticator } = await SetupTest({
-      dbname,
-      enabledFeatures: ['rbac'],
-      enableMultiUsers: true,
+      groupId: adminGroup.groupId,
     });
 
-    const subgraphName = genID('subgraph1');
-    const label = genUniqueLabel();
+    expect(createApiKeyResponse.response?.code).toBe(EnumStatusCode.OK);
 
-    const createSubgraphResp = await client.createFederatedSubgraph({
-      name: subgraphName,
-      namespace: 'default',
-      labels: [label],
-      routingUrl: 'http://localhost:8080',
+    // Ensure the role cannot update the API key
+    authenticator.changeUserWithSuppliedContext({
+      ...users[TestUser.adminAliceCompanyA],
+      rbac: createTestRBACEvaluator(createTestGroup({ role: role as OrganizationRole })),
     });
 
-    expect(createSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
-
-    const getSubgraphResp = await client.getSubgraphByName({
-      name: subgraphName,
-      namespace: 'default',
+    const updateApiKeyResponse = await client.updateAPIKey({
+      name: apiKeyName,
+      groupId: developerGroup.groupId,
     });
 
-    expect(getSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
-    expect(getSubgraphResp.graph).toBeDefined();
-    expect(getSubgraphResp.graph?.targetId).toBeDefined();
-
-    const ids: string[] = [];
-    if (getSubgraphResp.graph) {
-      ids.push(getSubgraphResp.graph.targetId);
-    }
-
-    authenticator.changeUser(TestUser.devJoeCompanyA);
-
-    const response = await client.createAPIKey({
-      name: uid(8),
-      expires: ExpiresAt.NEVER,
-      userID: users.devJoeCompanyA?.userId,
-      subgraphTargetIds: ids,
-      federatedGraphTargetIds: [],
-      allowAllResources: false,
-    });
-
-    expect(response.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-    expect(response.response?.details).toBe(
-      'You are not authorized to perform the current action as RBAC is enabled. Please communicate with the organization admin to gain access.',
-    );
+    expect(updateApiKeyResponse.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
 
     await server.close();
   });
 
-  test('Should not be able to create an api key as a developer with all resources option selected', async (testContext) => {
-    const { client, users, server, authenticator } = await SetupTest({ dbname, enabledFeatures: ['rbac'], enableMultiUsers: true });
+  test.each([
+    'organization-developer',
+    'organization-viewer',
+    'namespace-admin',
+    'namespace-viewer',
+    'graph-admin',
+    'graph-viewer',
+    'subgraph-admin',
+    'subgraph-publisher'
+  ])('%s should not be able to delete API keys', async (role) => {
+    const { client, server, users, authenticator } = await SetupTest({ dbname, enableMultiUsers: true });
 
-    authenticator.changeUser(TestUser.devJoeCompanyA);
+    const orgGroupsResponse = await client.getOrganizationGroups({});
+    expect(orgGroupsResponse.response?.code).toBe(EnumStatusCode.OK);
 
-    const response = await client.createAPIKey({
-      name: uid(8),
+    const adminGroup = orgGroupsResponse.groups.find((g) => g.name === 'admin')!;
+    const developerGroup = orgGroupsResponse.groups.find((g) => g.name === 'developer')!;
+
+    // Create the API key with the `admin` group
+    const apiKeyName = uid();
+    const createApiKeyResponse = await client.createAPIKey({
+      name: apiKeyName,
       expires: ExpiresAt.NEVER,
-      userID: users.devJoeCompanyA?.userId,
-      subgraphTargetIds: [],
-      federatedGraphTargetIds: [],
-      allowAllResources: true,
+      groupId: adminGroup.groupId,
     });
-    expect(response.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-    expect(response.response?.details).toBe(
-      'You are not authorized to perform the current action. Only admins can create an API key that has access to all resources.',
-    );
 
-    await server.close();
-  });
+    expect(createApiKeyResponse.response?.code).toBe(EnumStatusCode.OK);
 
-  test('Should not be able to create an api key when no resources are selected and all resources is not selected', async (testContext) => {
-    const { client, users, server, authenticator } = await SetupTest({ dbname, enabledFeatures: ['rbac'], enableMultiUsers: true });
-
-    authenticator.changeUser(TestUser.devJoeCompanyA);
-
-    const response = await client.createAPIKey({
-      name: uid(8),
-      expires: ExpiresAt.NEVER,
-      userID: users.devJoeCompanyA?.userId,
-      subgraphTargetIds: [],
-      federatedGraphTargetIds: [],
-      allowAllResources: false,
+    // Ensure the role cannot delete the API key
+    authenticator.changeUserWithSuppliedContext({
+      ...users[TestUser.adminAliceCompanyA],
+      rbac: createTestRBACEvaluator(createTestGroup({ role: role as OrganizationRole })),
     });
-    expect(response.response?.code).toBe(EnumStatusCode.ERR);
-    expect(response.response?.details).toBe('Can not create an api key without associating it with any resources.');
+
+    const updateApiKeyResponse = await client.deleteAPIKey({
+      name: apiKeyName,
+    });
+
+    expect(updateApiKeyResponse.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
 
     await server.close();
   });

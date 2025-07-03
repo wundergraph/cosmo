@@ -2,6 +2,7 @@ name: Protographic CI
 on:
   pull_request:
     paths:
+      - 'pnpm-lock.yaml'
       - "protographic/**/*"
       - ".github/workflows/protographic-ci.yaml"
 

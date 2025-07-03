@@ -11,7 +11,9 @@ metadata:
 data:
   config.yaml: |-
     # User-supplied common configuration:
-    {{- if .Values.commonConfiguration }}
+    {{- if .Values.commonConfigurationPath }}
+    {{- tpl (.Files.Get .Values.commonConfigurationPath) . | nindent 4 }}
+    {{- else if .Values.commonConfiguration }}
     {{- tpl .Values.commonConfiguration . | nindent 4 }}
     {{- end }}
   logLevel: "{{ .Values.configuration.logLevel }}"
@@ -23,7 +25,11 @@ data:
   cdnUrl: "{{ .Values.configuration.cdnUrl }}"
   routerConfigPath: "{{ .Values.configuration.routerConfigPath }}"
   prometheusEnabled: "{{ .Values.configuration.prometheus.enabled }}"
-  {{ if .Values.configuration.prometheus.enabled }}
+  {{- if .Values.configuration.prometheus.enabled }}
   prometheusListenAddr: "0.0.0.0:{{ .Values.configuration.prometheus.port }}"
   prometheusPath: "{{ .Values.configuration.prometheus.path }}"
+  {{- end }}
+  {{- if .Values.configuration.mcp.enabled }}
+  mcpEnabled: "{{ .Values.configuration.mcp.enabled }}"
+  mcpListenAddr: "0.0.0.0:{{ .Values.configuration.mcp.port }}"
   {{- end }}

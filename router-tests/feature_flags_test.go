@@ -19,7 +19,7 @@ func TestFeatureFlags(t *testing.T) {
 				Query: `{ employees { id productCount } }`,
 			})
 			require.Empty(t, res.Response.Header.Get("X-Feature-Flag"))
-			require.JSONEq(t, `{"errors":[{"message":"field: productCount not defined on type: Employee","path":["query","employees"]}]}`, res.Body)
+			require.JSONEq(t, `{"errors":[{"message":"Cannot query field \"productCount\" on type \"Employee\".","path":["query","employees"]}]}`, res.Body)
 		})
 	})
 
@@ -34,7 +34,7 @@ func TestFeatureFlags(t *testing.T) {
 				},
 			})
 			require.Empty(t, res.Response.Header.Get("X-Feature-Flag"))
-			require.JSONEq(t, `{"errors":[{"message":"field: productCount not defined on type: Employee","path":["query","employees"]}]}`, res.Body)
+			require.JSONEq(t, `{"errors":[{"message":"Cannot query field \"productCount\" on type \"Employee\".","path":["query","employees"]}]}`, res.Body)
 		})
 	})
 
@@ -53,7 +53,7 @@ func TestFeatureFlags(t *testing.T) {
 				},
 			})
 			require.Empty(t, res.Response.Header.Get("X-Feature-Flag"))
-			require.JSONEq(t, `{"errors":[{"message":"field: productCount not defined on type: Employee","path":["query","employees"]}]}`, res.Body)
+			require.JSONEq(t, `{"errors":[{"message":"Cannot query field \"productCount\" on type \"Employee\".","path":["query","employees"]}]}`, res.Body)
 		})
 	})
 
@@ -68,7 +68,7 @@ func TestFeatureFlags(t *testing.T) {
 				},
 			})
 			require.Empty(t, res.Response.Header.Get("X-Feature-Flag"))
-			require.JSONEq(t, `{"errors":[{"message":"field: productCount not defined on type: Employee","path":["query","employees"]}]}`, res.Body)
+			require.JSONEq(t, `{"errors":[{"message":"Cannot query field \"productCount\" on type \"Employee\".","path":["query","employees"]}]}`, res.Body)
 		})
 	})
 

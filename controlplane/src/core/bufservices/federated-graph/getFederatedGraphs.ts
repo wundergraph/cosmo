@@ -50,6 +50,7 @@ export function getFederatedGraphs(
       offset: req.offset,
       namespaceId,
       supportsFederation: req.supportsFederation,
+      rbac: authContext.rbac,
     });
 
     const requestSeriesList: Record<string, PlainMessage<RequestSeriesItem>[]> = {};

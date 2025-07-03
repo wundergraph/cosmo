@@ -1,0 +1,276 @@
+{
+  "version": 1,
+  "service": "ProjectsService",
+  "operationMappings": [
+    {
+      "type": "OPERATION_TYPE_QUERY",
+      "original": "projects",
+      "mapped": "QueryProjects",
+      "request": "QueryProjectsRequest",
+      "response": "QueryProjectsResponse"
+    },
+    {
+      "type": "OPERATION_TYPE_QUERY",
+      "original": "project",
+      "mapped": "QueryProject",
+      "request": "QueryProjectRequest",
+      "response": "QueryProjectResponse"
+    },
+    {
+      "type": "OPERATION_TYPE_QUERY",
+      "original": "projectStatuses",
+      "mapped": "QueryProjectStatuses",
+      "request": "QueryProjectStatusesRequest",
+      "response": "QueryProjectStatusesResponse"
+    },
+    {
+      "type": "OPERATION_TYPE_QUERY",
+      "original": "projectsByStatus",
+      "mapped": "QueryProjectsByStatus",
+      "request": "QueryProjectsByStatusRequest",
+      "response": "QueryProjectsByStatusResponse"
+    },
+    {
+      "type": "OPERATION_TYPE_QUERY",
+      "original": "killService",
+      "mapped": "QueryKillService",
+      "request": "QueryKillServiceRequest",
+      "response": "QueryKillServiceResponse"
+    },
+    {
+      "type": "OPERATION_TYPE_QUERY",
+      "original": "panic",
+      "mapped": "QueryPanic",
+      "request": "QueryPanicRequest",
+      "response": "QueryPanicResponse"
+    },
+    {
+      "type": "OPERATION_TYPE_MUTATION",
+      "original": "addProject",
+      "mapped": "MutationAddProject",
+      "request": "MutationAddProjectRequest",
+      "response": "MutationAddProjectResponse"
+    }
+  ],
+  "entityMappings": [
+    {
+      "typeName": "Project",
+      "kind": "entity",
+      "key": "id",
+      "rpc": "LookupProjectById",
+      "request": "LookupProjectByIdRequest",
+      "response": "LookupProjectByIdResponse"
+    },
+    {
+      "typeName": "Employee",
+      "kind": "entity",
+      "key": "id",
+      "rpc": "LookupEmployeeById",
+      "request": "LookupEmployeeByIdRequest",
+      "response": "LookupEmployeeByIdResponse"
+    },
+    {
+      "typeName": "Product",
+      "kind": "entity",
+      "key": "upc",
+      "rpc": "LookupProductByUpc",
+      "request": "LookupProductByUpcRequest",
+      "response": "LookupProductByUpcResponse"
+    }
+  ],
+  "typeFieldMappings": [
+    {
+      "type": "Query",
+      "fieldMappings": [
+        {
+          "original": "projects",
+          "mapped": "projects",
+          "argumentMappings": []
+        },
+        {
+          "original": "project",
+          "mapped": "project",
+          "argumentMappings": [
+            {
+              "original": "id",
+              "mapped": "id"
+            }
+          ]
+        },
+        {
+          "original": "projectStatuses",
+          "mapped": "project_statuses",
+          "argumentMappings": []
+        },
+        {
+          "original": "projectsByStatus",
+          "mapped": "projects_by_status",
+          "argumentMappings": [
+            {
+              "original": "status",
+              "mapped": "status"
+            }
+          ]
+        },
+        {
+          "original": "killService",
+          "mapped": "kill_service",
+          "argumentMappings": []
+        },
+        {
+          "original": "panic",
+          "mapped": "panic",
+          "argumentMappings": []
+        }
+      ]
+    },
+    {
+      "type": "Mutation",
+      "fieldMappings": [
+        {
+          "original": "addProject",
+          "mapped": "add_project",
+          "argumentMappings": [
+            {
+              "original": "project",
+              "mapped": "project"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "ProjectInput",
+      "fieldMappings": [
+        {
+          "original": "name",
+          "mapped": "name",
+          "argumentMappings": []
+        },
+        {
+          "original": "description",
+          "mapped": "description",
+          "argumentMappings": []
+        },
+        {
+          "original": "startDate",
+          "mapped": "start_date",
+          "argumentMappings": []
+        },
+        {
+          "original": "endDate",
+          "mapped": "end_date",
+          "argumentMappings": []
+        },
+        {
+          "original": "status",
+          "mapped": "status",
+          "argumentMappings": []
+        }
+      ]
+    },
+    {
+      "type": "Project",
+      "fieldMappings": [
+        {
+          "original": "id",
+          "mapped": "id",
+          "argumentMappings": []
+        },
+        {
+          "original": "name",
+          "mapped": "name",
+          "argumentMappings": []
+        },
+        {
+          "original": "description",
+          "mapped": "description",
+          "argumentMappings": []
+        },
+        {
+          "original": "startDate",
+          "mapped": "start_date",
+          "argumentMappings": []
+        },
+        {
+          "original": "endDate",
+          "mapped": "end_date",
+          "argumentMappings": []
+        },
+        {
+          "original": "status",
+          "mapped": "status",
+          "argumentMappings": []
+        },
+        {
+          "original": "teamMembers",
+          "mapped": "team_members",
+          "argumentMappings": []
+        },
+        {
+          "original": "relatedProducts",
+          "mapped": "related_products",
+          "argumentMappings": []
+        },
+        {
+          "original": "milestoneIds",
+          "mapped": "milestone_ids",
+          "argumentMappings": []
+        }
+      ]
+    },
+    {
+      "type": "Employee",
+      "fieldMappings": [
+        {
+          "original": "id",
+          "mapped": "id",
+          "argumentMappings": []
+        },
+        {
+          "original": "projects",
+          "mapped": "projects",
+          "argumentMappings": []
+        }
+      ]
+    },
+    {
+      "type": "Product",
+      "fieldMappings": [
+        {
+          "original": "upc",
+          "mapped": "upc",
+          "argumentMappings": []
+        },
+        {
+          "original": "projects",
+          "mapped": "projects",
+          "argumentMappings": []
+        }
+      ]
+    }
+  ],
+  "enumMappings": [
+    {
+      "type": "ProjectStatus",
+      "values": [
+        {
+          "original": "PLANNING",
+          "mapped": "PROJECT_STATUS_PLANNING"
+        },
+        {
+          "original": "ACTIVE",
+          "mapped": "PROJECT_STATUS_ACTIVE"
+        },
+        {
+          "original": "COMPLETED",
+          "mapped": "PROJECT_STATUS_COMPLETED"
+        },
+        {
+          "original": "ON_HOLD",
+          "mapped": "PROJECT_STATUS_ON_HOLD"
+        }
+      ]
+    }
+  ]
+}

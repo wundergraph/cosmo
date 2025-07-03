@@ -157,5 +157,6 @@ func (p *OperationPlanner) plan(opContext *operationContext, options PlanOptions
 			return err
 		}
 	}
+
 	return nil
 }

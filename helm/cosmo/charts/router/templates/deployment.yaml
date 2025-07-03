@@ -7,6 +7,7 @@ metadata:
     kapp.k14s.io/change-group: "cosmo.apps.router.wundergraph.com/deployment"
   labels:
     {{- include "router.labels" . | nindent 4 }}
+    {{- include "router.additionalLabels" . | nindent 4 }}
 spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
@@ -59,15 +60,20 @@ spec:
               containerPort: {{ .Values.configuration.prometheus.port }}
               protocol: TCP
             {{- end }}
+            {{ if .Values.configuration.mcp.enabled }}
+            - name: mcp
+              containerPort: {{ .Values.configuration.mcp.port }}
+              protocol: TCP
+            {{- end }}
           env:
             {{- if .Values.extraEnvVars }}
             {{- toYaml .Values.extraEnvVars | nindent 12 }}
             {{- end }}
-            {{ if .Values.configuration.executionConfig }}
+            {{- if .Values.configuration.executionConfig }}
             - name: ROUTER_CONFIG_PATH
               value: /execution-config.json
             {{- end }}
-            {{ if .Values.configuration.configPath }}
+            {{- if .Values.configuration.configPath }}
             - name: CONFIG_PATH
               value: {{ .Values.configuration.configPath }}
             {{- end }}
@@ -76,56 +82,56 @@ spec:
                 configMapKeyRef:
                   name: {{ include "router.fullname" . }}
                   key: listenAddress
-            {{ if .Values.configuration.devMode }}
+            {{- if .Values.configuration.devMode }}
             - name: DEV_MODE
               valueFrom:
                 configMapKeyRef:
                   name: {{ include "router.fullname" . }}
                   key: devMode
             {{- end }}
-            {{ if .Values.configuration.logLevel }}
+            {{- if .Values.configuration.logLevel }}
             - name: LOG_LEVEL
               valueFrom:
                 configMapKeyRef:
                   name: {{ include "router.fullname" . }}
                   key: logLevel
             {{- end }}
-            {{ if .Values.configuration.controlplaneUrl }}
+            {{- if .Values.configuration.controlplaneUrl }}
             - name: CONTROLPLANE_URL
               valueFrom:
                 configMapKeyRef:
                   name: {{ include "router.fullname" . }}
                   key: controlplaneUrl
             {{- end }}
-            {{ if .Values.configuration.graphqlMetricsCollectorUrl }}
+            {{- if .Values.configuration.graphqlMetricsCollectorUrl }}
             - name: GRAPHQL_METRICS_COLLECTOR_ENDPOINT
               valueFrom:
                 configMapKeyRef:
                   name: {{ include "router.fullname" . }}
                   key: graphqlMetricsCollectorUrl
             {{- end }}
-            {{ if .Values.configuration.otelCollectorUrl }}
+            {{- if .Values.configuration.otelCollectorUrl }}
             - name: DEFAULT_TELEMETRY_ENDPOINT
               valueFrom:
                 configMapKeyRef:
                   name: {{ include "router.fullname" . }}
                   key: otelCollectorUrl
             {{- end }}
-            {{ if .Values.configuration.cdnUrl }}
+            {{- if .Values.configuration.cdnUrl }}
             - name: CDN_URL
               valueFrom:
                 configMapKeyRef:
                   name: {{ include "router.fullname" . }}
                   key: cdnUrl
             {{- end }}
-            {{ if .Values.configuration.routerConfigPath }}
+            {{- if .Values.configuration.routerConfigPath }}
             - name: ROUTER_CONFIG_PATH
               valueFrom:
                 configMapKeyRef:
                   name: {{ include "router.fullname" . }}
                   key: routerConfigPath
             {{- end }}
-            {{ if .Values.configuration.graphApiToken }}
+            {{- if .Values.configuration.graphApiToken }}
             - name: GRAPH_API_TOKEN
               valueFrom:
                 secretKeyRef:
@@ -158,7 +164,7 @@ spec:
                 configMapKeyRef:
                   name: {{ include "router.fullname" . }}
                   key: prometheusEnabled
-            {{ if .Values.configuration.prometheus.enabled }}
+            {{- if .Values.configuration.prometheus.enabled }}
             - name: PROMETHEUS_LISTEN_ADDR
               valueFrom:
                 configMapKeyRef:
@@ -170,6 +176,19 @@ spec:
                   name: {{ include "router.fullname" . }}
                   key: prometheusPath
             {{- end }}
+            {{- if .Values.configuration.mcp.enabled }}
+            - name: MCP_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "router.fullname" . }}
+                  key: mcpEnabled
+            - name: MCP_SERVER_LISTEN_ADDR
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "router.fullname" . }}
+                  key: mcpListenAddr
+            {{- end }}
+          {{- if or .Values.extraEnvVarsCM .Values.extraEnvVarsSecret }}
           envFrom:
             {{- if .Values.extraEnvVarsCM }}
             - configMapRef:
@@ -179,11 +198,12 @@ spec:
             - secretRef:
                 name: {{ .Values.extraEnvVarsSecret }}
             {{- end }}
-          {{ with .Values.probes.liveness }}
+          {{- end }}
+          {{- with .Values.probes.liveness }}
           livenessProbe:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{ with .Values.probes.readiness }}
+          {{- with .Values.probes.readiness }}
           readinessProbe:
             {{- toYaml . | nindent 12 }}
           {{- end }}
@@ -203,7 +223,7 @@ spec:
               subPath: execution-config.json
             {{- end }}
             {{- if .Values.extraVolumeMounts }}
-            {{- .Values.extraVolumeMounts | nindent 12 }}
+            {{- toYaml .Values.extraVolumeMounts | nindent 12 }}
             {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
@@ -223,7 +243,7 @@ spec:
             name: {{ include "router.fullname" . }}
         {{- end }}
         {{- if .Values.extraVolumes }}
-        {{- .Values.extraVolumes | nindent 8 }}
+        {{- toYaml .Values.extraVolumes | nindent 8 }}
         {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:

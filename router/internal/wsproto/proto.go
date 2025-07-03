@@ -3,7 +3,10 @@ package wsproto
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
+
+	"github.com/gobwas/ws"
 )
 
 type Proto interface {
@@ -15,13 +18,18 @@ type Proto interface {
 	Pong(*Message) error
 	WriteGraphQLData(id string, data json.RawMessage, extensions json.RawMessage) error
 	WriteGraphQLErrors(id string, errors json.RawMessage, extensions json.RawMessage) error
-	// Done is sent to indicate the requested operation is done and no more results will come in
-	Done(id string) error
+
+	// Complete is sent to indicate the requested operation is done and no more results will come in
+	Complete(id string) error
+
+	// Close sends a close frame with the given code and reason
+	Close(code ws.StatusCode, reason string) error
 }
 
-type JSONConn interface {
-	ReadJSON(v interface{}) error
-	WriteJSON(v interface{}) error
+type ProtoConn interface {
+	ReadJSON(v any) error
+	WriteJSON(v any) error
+	WriteCloseFrame(code ws.StatusCode, reason string) error
 }
 
 // MessageType indicates the type of the message received from the client
@@ -50,15 +58,10 @@ func Subprotocols() []string {
 }
 
 func IsSupportedSubprotocol(subProtocol string) bool {
-	for _, s := range Subprotocols() {
-		if s == subProtocol {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(Subprotocols(), subProtocol)
 }
 
-func NewProtocol(subProtocol string, conn JSONConn) (Proto, error) {
+func NewProtocol(subProtocol string, conn ProtoConn) (Proto, error) {
 	switch subProtocol {
 	case GraphQLWSSubprotocol:
 		return newGraphQLWSProtocol(conn), nil

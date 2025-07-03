@@ -15,6 +15,7 @@ export type Subgraph = {
 
 export type SubgraphConfig = {
   configurationDataByTypeName: Map<string, ConfigurationData>;
+  isVersionTwo: boolean;
   parentDefinitionDataByTypeName: Map<string, ParentDefinitionData>;
   schema: GraphQLSchema;
 };

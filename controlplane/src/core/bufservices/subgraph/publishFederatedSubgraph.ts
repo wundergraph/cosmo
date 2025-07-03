@@ -27,6 +27,7 @@ import {
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { ProposalRepository } from '../../repositories/ProposalRepository.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function publishFederatedSubgraph(
   opts: RouterOptions,
@@ -53,17 +54,8 @@ export function publishFederatedSubgraph(
     const proposalRepo = new ProposalRepository(opts.db);
 
     req.namespace = req.namespace || DefaultNamespace;
-
-    if (!authContext.hasWriteAccess) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `The user doesnt have the permissions to perform this operation`,
-        },
-        compositionErrors: [],
-        deploymentErrors: [],
-        compositionWarnings: [],
-      };
+    if (authContext.organizationDeactivated) {
+      throw new UnauthorizedError();
     }
 
     const subgraphSchemaSDL = req.schema;
@@ -179,6 +171,7 @@ export function publishFederatedSubgraph(
         headers: ctx.requestHeader,
         authContext,
       });
+
       /* The subgraph already exists, so the database flag and the normalization result should match.
        * If he flags do not match, the database is the source of truth, so return an appropriate error.
        * */
@@ -201,6 +194,10 @@ export function publishFederatedSubgraph(
         };
       }
     } else {
+      if (!authContext.rbac.canCreateSubGraph(namespace)) {
+        throw new UnauthorizedError();
+      }
+
       if (req.isFeatureSubgraph) {
         if (req.baseSubgraphName) {
           const baseSubgraph = await subgraphRepo.byName(req.baseSubgraphName, req.namespace);
@@ -229,6 +226,17 @@ export function publishFederatedSubgraph(
             proposalMatchMessage,
           };
         }
+
+        // check whether the user is authorized to perform the action
+        await opts.authorizer.authorize({
+          db: opts.db,
+          graph: {
+            targetId: baseSubgraphID,
+            targetType: 'subgraph',
+          },
+          headers: ctx.requestHeader,
+          authContext,
+        });
       }
 
       // Labels are not required but should be valid if included.

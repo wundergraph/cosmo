@@ -9,6 +9,7 @@ import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function getNamespaceChecksConfig(
   opts: RouterOptions,
@@ -34,6 +35,10 @@ export function getNamespaceChecksConfig(
         timeframeInDays: 0,
         timeframeLimitInDays: 0,
       };
+    }
+
+    if (!authContext.rbac.hasNamespaceReadAccess(namespace)) {
+      throw new UnauthorizedError();
     }
 
     const changeRetention = await orgRepo.getFeature({

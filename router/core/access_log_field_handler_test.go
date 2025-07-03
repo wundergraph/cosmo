@@ -32,6 +32,7 @@ func TestAccessLogsFieldHandler(t *testing.T) {
 			nil,
 			req,
 			nil,
+			nil,
 		)
 
 		require.Len(t, response, 1)
@@ -67,6 +68,7 @@ func TestAccessLogsFieldHandler(t *testing.T) {
 			exprAttributes,
 			nil,
 			req,
+			nil,
 			nil,
 		)
 
@@ -115,6 +117,7 @@ func TestAccessLogsFieldHandler(t *testing.T) {
 			exprAttributes,
 			nil,
 			req,
+			nil,
 			nil,
 		)
 

@@ -1,8 +1,10 @@
 package integration
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -629,5 +631,101 @@ func TestForwardRenamedHeaders(t *testing.T) {
 				})
 			}
 		})
+	})
+
+	t.Run("forward all headers that dont match the exclude list", func(t *testing.T) {
+		t.Parallel()
+
+		header1, value1 := "header1", "value1"
+		header2, value2 := "header2", "value2"
+		header3, value3 := "header3", "value3"
+
+		type headerPayload struct {
+			Data map[string]string `json:"data"`
+		}
+
+		headerRules := &config.GlobalHeaderRule{
+			Request: []*config.RequestHeaderRule{
+				{
+					Operation:   config.HeaderRuleOperationPropagate,
+					Matching:    `^(` + strings.ToUpper(header1) + `|Header7)$`,
+					NegateMatch: true,
+				},
+			},
+		}
+
+		t.Run("for all", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithHeaderRules(config.HeaderRules{
+						All: headerRules,
+					}),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Header: http.Header{
+						header1: []string{value1},
+						header2: []string{value2},
+						header3: []string{value3},
+					},
+					Query: `query {
+						val1: headerValue(name:"` + header1 + `"),
+						val2: headerValue(name:"` + header2 + `"),
+						val3: headerValue(name:"` + header3 + `")
+					}`,
+				})
+
+				require.JSONEq(t, `{"data":{"val1":"","val2":"`+value2+`","val3":"`+value3+`"}}`, res.Body)
+
+				var headerPayloadEntry headerPayload
+				err := json.Unmarshal([]byte(res.Body), &headerPayloadEntry)
+				require.NoError(t, err)
+
+				// Header1 should be excluded because we are looking for everything but header1
+				require.Equal(t, headerPayloadEntry.Data["val1"], "")
+				require.Equal(t, headerPayloadEntry.Data["val2"], value2)
+				require.Equal(t, headerPayloadEntry.Data["val3"], value3)
+			})
+		})
+
+		t.Run("for subgraph", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithHeaderRules(config.HeaderRules{
+						Subgraphs: map[string]*config.GlobalHeaderRule{
+							"test1": headerRules,
+						},
+					}),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Header: http.Header{
+						header1: []string{value1},
+						header2: []string{value2},
+						header3: []string{value3},
+					},
+					Query: `query {
+						val1: headerValue(name:"` + header1 + `"),
+						val2: headerValue(name:"` + header2 + `"),
+						val3: headerValue(name:"` + header3 + `")
+					}`,
+				})
+				require.JSONEq(t, `{"data":{"val1":"","val2":"`+value2+`","val3":"`+value3+`"}}`, res.Body)
+
+				var headerPayloadEntry headerPayload
+				err := json.Unmarshal([]byte(res.Body), &headerPayloadEntry)
+				require.NoError(t, err)
+
+				// Header1 should be excluded because we are looking for everything but header1
+				require.Equal(t, headerPayloadEntry.Data["val1"], "")
+				require.Equal(t, headerPayloadEntry.Data["val2"], value2)
+				require.Equal(t, headerPayloadEntry.Data["val3"], value3)
+			})
+		})
+
 	})
 }

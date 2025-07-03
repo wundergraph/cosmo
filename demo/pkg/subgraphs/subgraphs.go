@@ -22,7 +22,6 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	natsPubsub "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/wundergraph/cosmo/demo/pkg/injector"
@@ -46,6 +45,7 @@ const (
 	MoodDefaultDemoURL         = "http://localhost:4008/graphql"
 	CountriesDefaultDemoURL    = "http://localhost:4009/graphql"
 	ProductsFgDefaultDemoURL   = "http://localhost:4010/graphql"
+	ProjectsDefaultDemoURL     = "dns:///localhost:4011"
 )
 
 type Ports struct {
@@ -162,7 +162,7 @@ func subgraphHandler(schema graphql.ExecutableSchema) http.Handler {
 }
 
 type SubgraphOptions struct {
-	NatsPubSubByProviderID map[string]pubsub_datasource.NatsPubSub
+	NatsPubSubByProviderID map[string]natsPubsub.Adapter
 	GetPubSubName          func(string) string
 }
 
@@ -195,7 +195,7 @@ func AvailabilityHandler(opts *SubgraphOptions) http.Handler {
 }
 
 func MoodHandler(opts *SubgraphOptions) http.Handler {
-	return subgraphHandler(mood.NewSchema(opts.NatsPubSubByProviderID))
+	return subgraphHandler(mood.NewSchema(opts.NatsPubSubByProviderID, opts.GetPubSubName))
 }
 
 func CountriesHandler(opts *SubgraphOptions) http.Handler {
@@ -207,29 +207,28 @@ func New(ctx context.Context, config *Config) (*Subgraphs, error) {
 	if defaultSourceNameURL := os.Getenv("NATS_URL"); defaultSourceNameURL != "" {
 		url = defaultSourceNameURL
 	}
+
+	natsPubSubByProviderID := map[string]natsPubsub.Adapter{}
+
+	defaultAdapter, err := natsPubsub.NewAdapter(ctx, zap.NewNop(), url, []nats.Option{}, "hostname", "test")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create default nats adapter: %w", err)
+	}
+	natsPubSubByProviderID["default"] = defaultAdapter
+
+	myNatsAdapter, err := natsPubsub.NewAdapter(ctx, zap.NewNop(), url, []nats.Option{}, "hostname", "test")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create my-nats adapter: %w", err)
+	}
+	natsPubSubByProviderID["my-nats"] = myNatsAdapter
+
 	defaultConnection, err := nats.Connect(url)
 	if err != nil {
 		log.Printf("failed to connect to nats source \"nats\": %v", err)
 	}
-
-	myNatsConnection, err := nats.Connect(url)
-	if err != nil {
-		log.Printf("failed to connect to nats source \"my-nats\": %v", err)
-	}
-
 	defaultJetStream, err := jetstream.New(defaultConnection)
 	if err != nil {
 		return nil, err
-	}
-
-	myNatsJetStream, err := jetstream.New(myNatsConnection)
-	if err != nil {
-		return nil, err
-	}
-
-	natsPubSubByProviderID := map[string]pubsub_datasource.NatsPubSub{
-		"default": natsPubsub.NewConnector(zap.NewNop(), defaultConnection, defaultJetStream, "hostname", "test").New(ctx),
-		"my-nats": natsPubsub.NewConnector(zap.NewNop(), myNatsConnection, myNatsJetStream, "hostname", "test").New(ctx),
 	}
 
 	_, err = defaultJetStream.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
@@ -262,7 +261,7 @@ func New(ctx context.Context, config *Config) (*Subgraphs, error) {
 	if srv := newServer("availability", config.EnableDebug, config.Ports.Availability, availability.NewSchema(natsPubSubByProviderID, config.GetPubSubName)); srv != nil {
 		servers = append(servers, srv)
 	}
-	if srv := newServer("mood", config.EnableDebug, config.Ports.Mood, mood.NewSchema(natsPubSubByProviderID)); srv != nil {
+	if srv := newServer("mood", config.EnableDebug, config.Ports.Mood, mood.NewSchema(natsPubSubByProviderID, config.GetPubSubName)); srv != nil {
 		servers = append(servers, srv)
 	}
 	if srv := newServer("countries", config.EnableDebug, config.Ports.Countries, countries.NewSchema(natsPubSubByProviderID)); srv != nil {

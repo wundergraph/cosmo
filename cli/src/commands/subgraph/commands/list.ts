@@ -2,12 +2,11 @@ import { writeFile } from 'node:fs/promises';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import Table from 'cli-table3';
-import { Command } from 'commander';
+import { Command, program } from 'commander';
 import pc from 'picocolors';
 import { join, resolve } from 'pathe';
 import { getBaseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
-import program from '../../index.js';
 
 type OutputFile = {
   name: string;

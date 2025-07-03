@@ -1,3 +1,5 @@
+import { Kind } from 'graphql';
+
 export const AS = 'as';
 export const AND_UPPER = 'AND';
 export const ANY_SCALAR = '_Any';
@@ -27,6 +29,8 @@ export const EDFS_NATS_REQUEST = 'edfs__natsRequest';
 export const EDFS_NATS_SUBSCRIBE = 'edfs__natsSubscribe';
 export const EDFS_PUBLISH_RESULT = 'edfs__PublishResult';
 export const EDFS_NATS_STREAM_CONFIGURATION = 'edfs__NatsStreamConfiguration';
+export const EDFS_REDIS_PUBLISH = 'edfs__redisPublish';
+export const EDFS_REDIS_SUBSCRIBE = 'edfs__redisSubscribe';
 export const ENTITIES = 'entities';
 export const ENTITIES_FIELD = '_entities';
 export const ENTITY_UNION = '_Entity';
@@ -38,7 +42,7 @@ export const EXECUTION = 'EXECUTION';
 export const EXTERNAL = 'external';
 export const EXTENDS = 'extends';
 export const EXTENSIONS = 'extensions';
-export const FIELD = 'Field';
+export const FIELD = 'field';
 export const FIELD_PATH = 'fieldPath';
 export const FIELD_UPPER = 'FIELD';
 export const FIELD_SET_SCALAR = 'openfed__FieldSet';
@@ -57,6 +61,7 @@ export const IN_UPPER = 'IN';
 export const INACCESSIBLE = 'inaccessible';
 export const INLINE_FRAGMENT = 'inlineFragment';
 export const INLINE_FRAGMENT_UPPER = 'INLINE_FRAGMENT';
+export const INPUT = 'Input';
 export const INPUT_FIELD = 'Input field';
 export const INPUT_FIELD_DEFINITION_UPPER = 'INPUT_FIELD_DEFINITION';
 export const INPUT_OBJECT = 'Input Object';
@@ -80,6 +85,7 @@ export const MUTATION_UPPER = 'MUTATION';
 export const PROPAGATE = 'propagate';
 export const PROVIDER_TYPE_KAFKA = 'kafka';
 export const PROVIDER_TYPE_NATS = 'nats';
+export const PROVIDER_TYPE_REDIS = 'redis';
 export const NOT_APPLICABLE = 'N/A';
 export const NAME = 'name';
 export const NON_NULLABLE_EDFS_PUBLISH_EVENT_RESULT = 'edfs__PublishResult!';
@@ -143,6 +149,8 @@ export const UNION_UPPER = 'UNION';
 export const URL_LOWER = 'url';
 export const VALUES = 'values';
 export const VARIABLE_DEFINITION_UPPER = 'VARIABLE_DEFINITION';
+export const CHANNEL = 'channel';
+export const CHANNELS = 'channels';
 
 export const EXECUTABLE_DIRECTIVE_LOCATIONS = new Set<string>([
   FIELD_UPPER,
@@ -159,3 +167,17 @@ export const AUTHORIZATION_DIRECTIVES = new Set<string>([AUTHENTICATED, REQUIRES
 export const PERSISTED_CLIENT_DIRECTIVES = new Set<string>([DEPRECATED]);
 export const INHERITABLE_DIRECTIVE_NAMES = [EXTERNAL, SHAREABLE];
 export const IGNORED_FIELDS = new Set<string>([ENTITIES_FIELD, SERVICE_FIELD]);
+
+export const INPUT_NODE_KINDS = new Set<Kind>([
+  Kind.ENUM_TYPE_DEFINITION,
+  Kind.INPUT_OBJECT_TYPE_DEFINITION,
+  Kind.SCALAR_TYPE_DEFINITION,
+]);
+
+export const OUTPUT_NODE_KINDS = new Set<Kind>([
+  Kind.ENUM_TYPE_DEFINITION,
+  Kind.INTERFACE_TYPE_DEFINITION,
+  Kind.OBJECT_TYPE_DEFINITION,
+  Kind.SCALAR_TYPE_DEFINITION,
+  Kind.UNION_TYPE_DEFINITION,
+]);

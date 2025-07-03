@@ -1,10 +1,15 @@
 import { Kind, OperationTypeNode } from 'graphql';
 import { EntityInterfaceFederationData, InputValueData, ObjectDefinitionData } from '../schema-building/types';
-import { InvalidRootTypeFieldEventsDirectiveData } from './utils';
+import {
+  IncompatibleMergedTypesErrorParams,
+  InvalidNamedTypeErrorParams,
+  InvalidRootTypeFieldEventsDirectiveData,
+} from './types';
 import { UnresolvableFieldData } from '../resolvability-graph/utils';
 import {
   AND_UPPER,
   ARGUMENT,
+  FIELD,
   FIELD_PATH,
   IN_UPPER,
   INPUT_FIELD,
@@ -21,13 +26,10 @@ import {
   VALUES,
 } from '../utils/string-constants';
 import { MAX_SUBSCRIPTION_FILTER_DEPTH, MAXIMUM_TYPE_NESTING } from '../utils/integer-constants';
-import { getEntriesNotInHashSet, getOrThrowError, kindToTypeString, numberToOrdinal } from '../utils/utils';
-import {
-  ImplementationErrors,
-  InvalidArgument,
-  InvalidEntityInterface,
-  InvalidRequiredInputValueData,
-} from '../utils/types';
+import { getEntriesNotInHashSet, getOrThrowError, kindToNodeType, numberToOrdinal } from '../utils/utils';
+import { ImplementationErrors, InvalidEntityInterface, InvalidRequiredInputValueData } from '../utils/types';
+import { isFieldData } from '../schema-building/utils';
+import { printTypeNode } from '@graphql-tools/merge';
 
 export const minimumSubgraphRequirementError = new Error('At least one subgraph is required for federation.');
 
@@ -39,18 +41,6 @@ export function multipleNamedTypeDefinitionError(
   return new Error(
     `The named type "${typeName}" is defined as both types "${firstTypeString}" and "${secondTypeString}".` +
       `\nHowever, there must be only one type named "${typeName}".`,
-  );
-}
-
-export function incompatibleArgumentTypesError(
-  argName: string,
-  hostPath: string,
-  expectedType: string,
-  actualType: string,
-): Error {
-  return new Error(
-    `Incompatible types when merging two instances of argument "${argName}" on path "${hostPath}":\n` +
-      ` Expected type "${expectedType}" but received "${actualType}"`,
   );
 }
 
@@ -66,10 +56,15 @@ export function incompatibleInputValueDefaultValueTypeError(
   );
 }
 
-export function incompatibleChildTypesError(childPath: string, expectedType: string, actualType: string): Error {
+export function incompatibleMergedTypesError({
+  actualType,
+  coords,
+  expectedType,
+  isArgument,
+}: IncompatibleMergedTypesErrorParams): Error {
   return new Error(
-    `Incompatible types when merging two instances of "${childPath}":\n` +
-      ` Expected type "${expectedType}" but received "${actualType}"`,
+    `Incompatible types when merging two instances of ${isArgument ? 'field argument' : FIELD} "${coords}":\n` +
+      ` Expected type "${expectedType}" but received "${actualType}".`,
   );
 }
 
@@ -180,7 +175,7 @@ export function operationDefinitionError(typeName: string, operationType: Operat
 export function invalidFieldShareabilityError(objectData: ObjectDefinitionData, invalidFieldNames: Set<string>): Error {
   const parentTypeName = objectData.name;
   const errorMessages: string[] = [];
-  for (const [fieldName, fieldData] of objectData.fieldDataByFieldName) {
+  for (const [fieldName, fieldData] of objectData.fieldDataByName) {
     if (!invalidFieldNames.has(fieldName)) {
       continue;
     }
@@ -307,15 +302,6 @@ export function invalidArgumentValueErrorMessage(
   return ` The value "${value}" provided to argument "${hostName}(${argumentName}: ...)" is not a valid "${expectedTypeString}" type.`;
 }
 
-export function invalidKeyDirectivesError(parentTypeName: string, errorMessages: string[]): Error {
-  return new Error(
-    `The entity "${parentTypeName}" defines the following invalid "key" directive` +
-      (errorMessages.length > 1 ? 's' : '') +
-      `:\n` +
-      errorMessages.join('\n'),
-  );
-}
-
 export function maximumTypeNestingExceededError(path: string): Error {
   return new Error(
     ` The type defined at path "${path}" has more than ${MAXIMUM_TYPE_NESTING} layers of nesting,` +
@@ -329,8 +315,8 @@ export function unexpectedKindFatalError(typeName: string) {
 
 export function incompatibleParentKindFatalError(parentTypeName: string, expectedKind: Kind, actualKind: Kind): Error {
   return new Error(
-    `Fatal: Expected "${parentTypeName}" to be type ${kindToTypeString(expectedKind)}` +
-      ` but received "${kindToTypeString(actualKind)}".`,
+    `Fatal: Expected "${parentTypeName}" to be type ${kindToNodeType(expectedKind)}` +
+      ` but received "${kindToNodeType(actualKind)}".`,
   );
 }
 
@@ -540,21 +526,6 @@ export function duplicateArgumentsError(fieldPath: string, duplicatedArguments: 
       duplicatedArguments.join(QUOTATION_JOIN) +
       `"\n`,
   );
-}
-
-export function invalidArgumentsError(fieldPath: string, invalidArguments: InvalidArgument[]): Error {
-  let message =
-    `The field "${fieldPath}" is invalid because:\n` +
-    ` The named type (root type) of an input must be on of Enum, Input Object, or Scalar type.` +
-    ` For example: "Float", "[[String!]]!", or "[SomeInputObjectName]"\n`;
-  for (const invalidArgument of invalidArguments) {
-    message +=
-      `  The argument "${invalidArgument.argumentName}" defines type "${invalidArgument.typeName}"` +
-      ` but the named type "${invalidArgument.namedType}" is type "` +
-      invalidArgument.typeString +
-      `", which is not a valid input type.\n`;
-  }
-  return new Error(message);
 }
 
 export function noQueryRootTypeError(isRouterSchema = true): Error {
@@ -1628,5 +1599,17 @@ export function invalidInterfaceObjectImplementationDefinitionsError(
       ` of "${typeName}":\n "` +
       implementationTypeNames.join(QUOTATION_JOIN) +
       `"`,
+  );
+}
+
+export function invalidNamedTypeError({ data, namedTypeData, nodeType }: InvalidNamedTypeErrorParams): Error {
+  const isOutputField = isFieldData(data);
+  const coords = isOutputField ? `${data.originalParentTypeName}.${data.name}` : data.originalCoords;
+  return new Error(
+    `The ${nodeType} "${coords}" is invalid because it defines type ` +
+      printTypeNode(data.type) +
+      `; however, ${kindToNodeType(namedTypeData.kind)} "${namedTypeData.name}" is not a valid ` +
+      (isOutputField ? 'output' : 'input') +
+      ' type.',
   );
 }

@@ -1,15 +1,15 @@
-name: "Setup Go"
-description: "This action install go and cache modules and build dependencies"
+name: 'Setup Go'
+description: 'This action install go and cache modules and build dependencies'
 inputs:
   go-version:
-    description: "The go version to install"
-    default: "1.23"
+    description: 'The go version to install'
+    default: '1.23'
     required: false
   cache-dependency-path:
-    description: "The path to the dependency to cache"
+    description: 'The path to the dependency to cache'
 
 runs:
-  using: "composite"
+  using: 'composite'
   steps:
     - uses: actions/setup-go@v5
       with:

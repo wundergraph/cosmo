@@ -94,6 +94,10 @@ import {
   UNION_UPPER,
   URL_LOWER,
   VALUES,
+  EDFS_REDIS_PUBLISH,
+  EDFS_REDIS_SUBSCRIBE,
+  CHANNEL,
+  CHANNELS,
 } from '../../utils/string-constants';
 
 export const REQUIRED_STRING_TYPE_NODE: TypeNode = {
@@ -415,6 +419,60 @@ export const TAG_DEFINITION: MutableDirectiveDefinitionNode = {
   repeatable: true,
 };
 
+// directive @edfs__redisPublish(channel: String!, providerId: String! = "default") on FIELD_DEFINITION
+export const EDFS_REDIS_PUBLISH_DEFINITION: DirectiveDefinitionNode = {
+  arguments: [
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(CHANNEL),
+      type: REQUIRED_STRING_TYPE_NODE,
+    },
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(PROVIDER_ID),
+      type: REQUIRED_STRING_TYPE_NODE,
+      defaultValue: {
+        kind: Kind.STRING,
+        value: DEFAULT_EDFS_PROVIDER_ID,
+      },
+    },
+  ],
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: [stringToNameNode(FIELD_DEFINITION_UPPER)],
+  name: stringToNameNode(EDFS_REDIS_PUBLISH),
+  repeatable: false,
+};
+
+// directive @edfs__redisSubscribe(channels: [String!]!, providerId: String! = "default") on FIELD_DEFINITION
+export const EDFS_REDIS_SUBSCRIBE_DEFINITION: DirectiveDefinitionNode = {
+  arguments: [
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(CHANNELS),
+      type: {
+        kind: Kind.NON_NULL_TYPE,
+        type: {
+          kind: Kind.LIST_TYPE,
+          type: REQUIRED_STRING_TYPE_NODE,
+        },
+      },
+    },
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(PROVIDER_ID),
+      type: REQUIRED_STRING_TYPE_NODE,
+      defaultValue: {
+        kind: Kind.STRING,
+        value: DEFAULT_EDFS_PROVIDER_ID,
+      },
+    },
+  ],
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: [stringToNameNode(FIELD_DEFINITION_UPPER)],
+  name: stringToNameNode(EDFS_REDIS_SUBSCRIBE),
+  repeatable: false,
+};
+
 export const BASE_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME = new Map<string, DirectiveDefinitionNode>([
   [DEPRECATED, DEPRECATED_DEFINITION],
   [EXTENDS, EXTENDS_DEFINITION],
@@ -424,6 +482,8 @@ export const BASE_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME = new Map<string, Direc
   [EDFS_NATS_PUBLISH, EDFS_NATS_PUBLISH_DEFINITION],
   [EDFS_NATS_REQUEST, EDFS_NATS_REQUEST_DEFINITION],
   [EDFS_NATS_SUBSCRIBE, EDFS_NATS_SUBSCRIBE_DEFINITION],
+  [EDFS_REDIS_PUBLISH, EDFS_REDIS_PUBLISH_DEFINITION],
+  [EDFS_REDIS_SUBSCRIBE, EDFS_REDIS_SUBSCRIBE_DEFINITION],
   [KEY, KEY_DEFINITION],
   [PROVIDES, PROVIDES_DEFINITION],
   [REQUIRES, REQUIRES_DEFINITION],
@@ -442,6 +502,8 @@ export const ALL_IN_BUILT_DIRECTIVE_NAMES = new Set<string>([
   EDFS_NATS_SUBSCRIBE,
   EDFS_KAFKA_PUBLISH,
   EDFS_KAFKA_SUBSCRIBE,
+  EDFS_REDIS_PUBLISH,
+  EDFS_REDIS_SUBSCRIBE,
   EXTENDS,
   EXTERNAL,
   INACCESSIBLE,
@@ -769,6 +831,8 @@ export const EVENT_DRIVEN_DIRECTIVE_DEFINITIONS_BY_DIRECTIVE_NAME = new Map<stri
   [EDFS_NATS_PUBLISH, EDFS_NATS_PUBLISH_DEFINITION],
   [EDFS_NATS_REQUEST, EDFS_NATS_REQUEST_DEFINITION],
   [EDFS_NATS_SUBSCRIBE, EDFS_NATS_SUBSCRIBE_DEFINITION],
+  [EDFS_REDIS_PUBLISH, EDFS_REDIS_PUBLISH_DEFINITION],
+  [EDFS_REDIS_SUBSCRIBE, EDFS_REDIS_SUBSCRIBE_DEFINITION],
 ]);
 
 export const VERSION_TWO_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [

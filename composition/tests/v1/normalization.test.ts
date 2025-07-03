@@ -5,10 +5,15 @@ import {
   ENUM,
   ENUM_UPPER,
   EXTERNAL,
+  FieldData,
   FIELDS,
   FIRST_ORDINAL,
   INACCESSIBLE,
+  INPUT,
   INPUT_OBJECT_UPPER,
+  InputObjectDefinitionData,
+  InputValueData,
+  INTERFACE,
   INTERFACE_UPPER,
   invalidDirectiveError,
   invalidDirectiveLocationErrorMessage,
@@ -22,9 +27,12 @@ import {
   numberToOrdinal,
   OBJECT,
   OBJECT_UPPER,
+  ObjectDefinitionData,
   PROVIDES,
+  QUERY,
   REQUIRES,
   ROUTER_COMPATIBILITY_VERSION_ONE,
+  SCALAR,
   SHAREABLE,
   Subgraph,
   TAG,
@@ -33,6 +41,7 @@ import {
   undefinedRequiredArgumentsErrorMessage,
   undefinedTypeError,
   unexpectedDirectiveArgumentErrorMessage,
+  UNION,
   unparsableFieldSetErrorMessage,
 } from '../../src';
 import { readFileSync } from 'fs';
@@ -45,7 +54,8 @@ import {
   versionTwoBaseSchema,
 } from './utils/utils';
 import { normalizeString, normalizeSubgraphSuccess, schemaToSortedNormalizedString } from '../utils/utils';
-import { parse } from 'graphql';
+import { Kind, parse } from 'graphql';
+import { printTypeNode } from '@graphql-tools/merge';
 
 describe('Normalization tests', () => {
   test('that an unparsable graph returns an error', () => {
@@ -1830,7 +1840,7 @@ describe('Normalization tests', () => {
   });
 
   test('that a subgraph is normalized correctly', () => {
-    const result = normalizeSubgraphSuccess(nb, ROUTER_COMPATIBILITY_VERSION_ONE);
+    const result = normalizeSubgraphSuccess(nab, ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(schemaToSortedNormalizedString(result.schema)).toBe(
       normalizeString(`
       directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
@@ -1881,7 +1891,7 @@ describe('Normalization tests', () => {
   });
 
   test('that the correct keyFieldSetsByEntityTypeNameByFieldCoords is generated', () => {
-    const result = normalizeSubgraphSuccess(na, ROUTER_COMPATIBILITY_VERSION_ONE);
+    const result = normalizeSubgraphSuccess(naa, ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.keyFieldSetsByEntityTypeNameByKeyFieldCoords).toStrictEqual(
       new Map<string, Map<string, Set<string>>>([
         [
@@ -1910,10 +1920,72 @@ describe('Normalization tests', () => {
       ]),
     );
   });
+
+  test('that named type data is generated correctly', () => {
+    const { parentDefinitionDataByTypeName } = normalizeSubgraphSuccess(nac, ROUTER_COMPATIBILITY_VERSION_ONE);
+    const query = parentDefinitionDataByTypeName.get(QUERY) as ObjectDefinitionData;
+    expect(query).toBeDefined();
+    const queryEnumField = query.fieldDataByName.get('enum') as FieldData;
+    expect(queryEnumField.namedTypeKind).toBe(Kind.ENUM_TYPE_DEFINITION);
+    expect(queryEnumField.namedTypeName).toBe(ENUM);
+    expect(printTypeNode(queryEnumField.type)).toBe('Enum!');
+    const queryEntityInterfaceField = query.fieldDataByName.get('entityInterfaces') as FieldData;
+    expect(queryEntityInterfaceField.namedTypeKind).toBe(Kind.INTERFACE_TYPE_DEFINITION);
+    expect(queryEntityInterfaceField.namedTypeName).toBe('EntityInterface');
+    expect(printTypeNode(queryEntityInterfaceField.type)).toBe('[EntityInterface]');
+    const queryInterfaceField = query.fieldDataByName.get('interface') as FieldData;
+    expect(queryInterfaceField.namedTypeKind).toBe(Kind.INTERFACE_TYPE_DEFINITION);
+    expect(queryInterfaceField.namedTypeName).toBe(INTERFACE);
+    expect(printTypeNode(queryInterfaceField.type)).toBe('Interface!');
+    const queryScalarField = query.fieldDataByName.get('scalar') as FieldData;
+    expect(queryScalarField.namedTypeKind).toBe(Kind.SCALAR_TYPE_DEFINITION);
+    expect(queryScalarField.namedTypeName).toBe(SCALAR);
+    expect(printTypeNode(queryScalarField.type)).toBe('Scalar!');
+    const queryUnionField = query.fieldDataByName.get('union') as FieldData;
+    expect(queryUnionField.namedTypeKind).toBe(Kind.UNION_TYPE_DEFINITION);
+    expect(queryUnionField.namedTypeName).toBe(UNION);
+    expect(printTypeNode(queryUnionField.type)).toBe('Union!');
+
+    const queryObjectField = query.fieldDataByName.get('object') as FieldData;
+    expect(queryObjectField.namedTypeKind).toBe(Kind.OBJECT_TYPE_DEFINITION);
+    expect(queryObjectField.namedTypeName).toBe(OBJECT);
+    expect(printTypeNode(queryObjectField.type)).toBe('Object!');
+
+    const objectEnumArg = queryObjectField.argumentDataByName.get('enum') as InputValueData;
+    expect(objectEnumArg).toBeDefined();
+    expect(objectEnumArg.namedTypeKind).toBe(Kind.ENUM_TYPE_DEFINITION);
+    expect(objectEnumArg.namedTypeName).toBe(ENUM);
+    expect(printTypeNode(objectEnumArg.type)).toBe(ENUM);
+    const objectInputsArg = queryObjectField.argumentDataByName.get('inputs') as InputValueData;
+    expect(objectInputsArg).toBeDefined();
+    expect(objectInputsArg.namedTypeKind).toBe(Kind.INPUT_OBJECT_TYPE_DEFINITION);
+    expect(objectInputsArg.namedTypeName).toBe('Input');
+    expect(printTypeNode(objectInputsArg.type)).toBe('[Input!]!');
+    const objectScalarArg = queryObjectField.argumentDataByName.get('scalar') as InputValueData;
+    expect(objectScalarArg).toBeDefined();
+    expect(objectScalarArg.namedTypeKind).toBe(Kind.SCALAR_TYPE_DEFINITION);
+    expect(objectScalarArg.namedTypeName).toBe(SCALAR);
+    expect(printTypeNode(objectScalarArg.type)).toBe('Scalar!');
+
+    const input = parentDefinitionDataByTypeName.get(INPUT) as InputObjectDefinitionData;
+    expect(input).toBeDefined();
+    const inputEnumField = input.inputValueDataByName.get('enum') as InputValueData;
+    expect(inputEnumField.namedTypeKind).toBe(Kind.ENUM_TYPE_DEFINITION);
+    expect(inputEnumField.namedTypeName).toBe(ENUM);
+    expect(printTypeNode(inputEnumField.type)).toBe('Enum!');
+    const inputNestedInputField = input.inputValueDataByName.get('nestedInput') as InputValueData;
+    expect(inputNestedInputField.namedTypeKind).toBe(Kind.INPUT_OBJECT_TYPE_DEFINITION);
+    expect(inputNestedInputField.namedTypeName).toBe('NestedInput');
+    expect(printTypeNode(inputNestedInputField.type)).toBe('NestedInput');
+    const inputScalarField = input.inputValueDataByName.get('scalar') as InputValueData;
+    expect(inputScalarField.namedTypeKind).toBe(Kind.SCALAR_TYPE_DEFINITION);
+    expect(inputScalarField.namedTypeName).toBe(SCALAR);
+    expect(printTypeNode(inputScalarField.type)).toBe('Scalar!');
+  });
 });
 
-const na: Subgraph = {
-  name: 'na',
+const naa: Subgraph = {
+  name: 'naa',
   url: '',
   definitions: parse(`
     type EntityOne @key(fields: "uuid object { id }") @key(fields: "object { nested { id } }") {
@@ -1938,8 +2010,8 @@ const na: Subgraph = {
   `),
 };
 
-const nb: Subgraph = {
-  name: 'nb',
+const nab: Subgraph = {
+  name: 'nab',
   url: '',
   definitions: parse(`
       enum Enum @requiresScopes(scopes: [["read:enum"]]) {
@@ -1967,5 +2039,51 @@ const nb: Subgraph = {
           argumentOne: String!
         ): Enum!
       }
+  `),
+};
+
+const nac: Subgraph = {
+  name: 'nac',
+  url: '',
+  definitions: parse(`
+    enum Enum {
+      A
+    }
+    
+    interface Interface {
+      id: ID!
+    }
+    
+    type EntityInterface @key(fields: "id") @interfaceObject {
+      id: ID!
+    }
+    
+    type Object implements Interface {
+      id: ID!
+    }
+    
+    input Input {
+      enum: Enum!
+      nestedInput: NestedInput
+      scalar: Scalar!
+    }
+    
+    input NestedInput {
+      enums: [Enum]
+      scalar: [Scalar]
+    }
+    
+    type Query {
+      enum: Enum!
+      entityInterfaces: [EntityInterface]
+      interface: Interface!
+      object(enum: Enum, inputs: [Input!]!, scalar: Scalar!): Object!
+      scalar: Scalar!
+      union: Union!
+    }
+    
+    union Union = Object
+    
+    scalar Scalar
   `),
 };

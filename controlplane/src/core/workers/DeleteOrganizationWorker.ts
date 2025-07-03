@@ -82,12 +82,12 @@ class DeleteOrganizationWorker implements IWorker {
       const oidcRepo = new OidcRepository(this.input.db);
       const oidcProvider = new OidcProvider();
 
-      await this.input.keycloakClient.authenticateClient();
-
       const org = await orgRepo.byId(job.data.organizationId);
       if (!org) {
         throw new Error('Organization not found');
       }
+
+      await this.input.keycloakClient.authenticateClient();
 
       const provider = await oidcRepo.getOidcProvider({ organizationId: job.data.organizationId });
       if (provider) {
@@ -105,10 +105,23 @@ class DeleteOrganizationWorker implements IWorker {
         this.input.deleteOrganizationAuditLogsQueue,
       );
 
-      await this.input.keycloakClient.deleteOrganizationGroup({
+      if (org.kcGroupId) {
+        await this.input.keycloakClient.deleteGroupById({ realm: this.input.keycloakRealm, groupId: org.kcGroupId });
+      }
+
+      // Delete organization roles
+      const kcOrgRoles = await this.input.keycloakClient.client.roles.find({
         realm: this.input.keycloakRealm,
-        organizationSlug: org.slug,
+        max: -1,
+        search: `${org.slug}:`,
       });
+
+      for (const kcRole of kcOrgRoles) {
+        await this.input.keycloakClient.client.roles.delById({
+          realm: this.input.keycloakRealm,
+          id: kcRole.id!,
+        });
+      }
     } catch (err) {
       this.input.logger.error(
         { jobId: job.id, organizationId: job.data.organizationId, err },

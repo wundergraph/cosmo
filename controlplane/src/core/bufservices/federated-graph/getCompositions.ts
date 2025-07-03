@@ -11,6 +11,7 @@ import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function getCompositions(
   opts: RouterOptions,
@@ -40,6 +41,10 @@ export function getCompositions(
         compositions: [],
         count: 0,
       };
+    }
+
+    if (!authContext.rbac.hasFederatedGraphReadAccess(federatedGraph)) {
+      throw new UnauthorizedError();
     }
 
     const analyticsRetention = await orgRepo.getFeature({

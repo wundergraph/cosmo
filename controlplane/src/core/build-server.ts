@@ -247,6 +247,7 @@ export default async function build(opts: BuildConfig) {
   const graphKeyAuth = new GraphApiTokenAuthenticator(opts.auth.secret);
   const accessTokenAuth = new AccessTokenAuthenticator(organizationRepository, authUtils);
   const authenticator = new Authentication(webAuth, apiKeyAuth, accessTokenAuth, graphKeyAuth, organizationRepository);
+
   const authorizer = new Authorization(logger, opts.stripe?.defaultPlanId);
 
   const keycloakClient = new Keycloak({
@@ -255,6 +256,7 @@ export default async function build(opts: BuildConfig) {
     clientId: opts.keycloak.clientId,
     adminUser: opts.keycloak.adminUser,
     adminPassword: opts.keycloak.adminPassword,
+    logger,
   });
 
   let mailerClient: Mailer | undefined;

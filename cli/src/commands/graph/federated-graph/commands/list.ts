@@ -1,5 +1,5 @@
 import { writeFile } from 'node:fs/promises';
-import { Command } from 'commander';
+import { Command, program } from 'commander';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import Table from 'cli-table3';
@@ -7,7 +7,6 @@ import logSymbols from 'log-symbols';
 import { resolve } from 'pathe';
 import { BaseCommandOptions } from '../../../../core/types/types.js';
 import { getBaseHeaders } from '../../../../core/config.js';
-import program from '../../../index.js';
 
 type OutputFile = {
   name: string;

@@ -166,7 +166,7 @@ func newWSConnectionWrapper(conn net.Conn, readTimeout, writeTimeout time.Durati
 	}
 }
 
-func (c *wsConnectionWrapper) ReadJSON(v interface{}) error {
+func (c *wsConnectionWrapper) ReadJSON(v any) error {
 
 	if c.readTimeout > 0 {
 		err := c.conn.SetReadDeadline(time.Now().Add(c.readTimeout))
@@ -198,7 +198,7 @@ func (c *wsConnectionWrapper) WriteText(text string) error {
 	return wsutil.WriteServerText(c.conn, []byte(text))
 }
 
-func (c *wsConnectionWrapper) WriteJSON(v interface{}) error {
+func (c *wsConnectionWrapper) WriteJSON(v any) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	data, err := json.Marshal(v)
@@ -214,6 +214,20 @@ func (c *wsConnectionWrapper) WriteJSON(v interface{}) error {
 	}
 
 	return wsutil.WriteServerText(c.conn, data)
+}
+
+func (c *wsConnectionWrapper) WriteCloseFrame(code ws.StatusCode, reason string) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.writeTimeout > 0 {
+		err := c.conn.SetWriteDeadline(time.Now().Add(c.writeTimeout))
+		if err != nil {
+			return err
+		}
+	}
+
+	return ws.WriteFrame(c.conn, ws.NewCloseFrame(ws.NewCloseFrameBody(code, reason)))
 }
 
 func (c *wsConnectionWrapper) Close() error {
@@ -396,7 +410,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 
 		// Export the token from the initial payload to the request header
 		if fromInitialPayloadConfig.ExportToken.Enabled {
-			var initialPayloadMap map[string]interface{}
+			var initialPayloadMap map[string]any
 			err := json.Unmarshal(handler.initialPayload, &initialPayloadMap)
 			if err != nil {
 				requestLogger.Error("Error parsing initial payload: %v", zap.Error(err))
@@ -548,7 +562,7 @@ func (h *WebsocketHandler) runPoller() {
 				h.logger.Warn("Net Poller wait", zap.Error(err))
 				continue
 			}
-			for i := 0; i < len(connections); i++ {
+			for i := range len(connections) {
 				if connections[i] == nil {
 					continue
 				}
@@ -623,9 +637,16 @@ func (rw *websocketResponseWriter) WriteHeader(statusCode int) {
 }
 
 func (rw *websocketResponseWriter) Complete() {
-	err := rw.protocol.Done(rw.id)
+	err := rw.protocol.Complete(rw.id)
 	if err != nil {
 		rw.logger.Debug("Sending complete message", zap.Error(err))
+	}
+}
+
+func (rw *websocketResponseWriter) Close(kind resolve.SubscriptionCloseKind) {
+	err := rw.protocol.Close(kind.WSCode, kind.Reason)
+	if err != nil {
+		rw.logger.Debug("Sending error message", zap.Error(err))
 	}
 }
 
@@ -1060,7 +1081,7 @@ func (h *WebSocketConnectionHandler) handleComplete(msg *wsproto.Message) error 
 		ConnectionID:   h.connectionID,
 		SubscriptionID: subscriptionID,
 	}
-	return h.graphqlHandler.executor.Resolver.AsyncUnsubscribeSubscription(id)
+	return h.graphqlHandler.executor.Resolver.AsyncCompleteSubscription(id)
 }
 
 func (h *WebsocketHandler) HandleMessage(handler *WebSocketConnectionHandler, msg *wsproto.Message) (err error) {
@@ -1100,7 +1121,7 @@ func (h *WebSocketConnectionHandler) Initialize() (err error) {
 
 	// Update client info from initial payload if enabled
 	if h.clientInfoFromInitialPayload.Enabled && h.initialPayload != nil {
-		var initialPayloadMap map[string]interface{}
+		var initialPayloadMap map[string]any
 		err := json.Unmarshal(h.initialPayload, &initialPayloadMap)
 		if err != nil {
 			h.logger.Warn("Error parsing initial payload for client info", zap.Error(err))
@@ -1194,7 +1215,7 @@ func (h *WebSocketConnectionHandler) ignoreHeader(k string) bool {
 
 func (h *WebSocketConnectionHandler) Complete(rw *websocketResponseWriter) {
 	h.subscriptions.Delete(rw.id)
-	err := rw.protocol.Done(rw.id)
+	err := rw.protocol.Complete(rw.id)
 	if err != nil {
 		return
 	}

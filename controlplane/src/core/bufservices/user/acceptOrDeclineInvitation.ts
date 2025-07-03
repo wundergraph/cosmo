@@ -48,28 +48,22 @@ export function acceptOrDeclineInvitation(
       };
     }
 
+    const invitation = await orgInvitationRepo.getPendingOrganizationInvitation({
+      userID: user.id,
+      organizationID: req.organizationId,
+    });
+
+    if (!invitation) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_NOT_FOUND,
+          details: 'Invitation not found',
+        },
+      };
+    }
+
     if (req.accept) {
-      const groupName = organization.slug;
-
       await opts.keycloakClient.authenticateClient();
-
-      const organizationGroups = await opts.keycloakClient.client.groups.find({
-        max: 1,
-        search: groupName,
-        realm: opts.keycloakRealm,
-      });
-
-      if (organizationGroups.length === 0) {
-        throw new Error(`Organization group '${groupName}' not found`);
-      }
-
-      const devGroup = await opts.keycloakClient.fetchChildGroup({
-        realm: opts.keycloakRealm,
-        kcGroupId: organizationGroups[0].id!,
-        orgSlug: groupName,
-        childGroupType: 'developer',
-      });
-
       const keycloakUser = await opts.keycloakClient.client.users.find({
         max: 1,
         email: user.email,
@@ -77,18 +71,19 @@ export function acceptOrDeclineInvitation(
         exact: true,
       });
 
-      if (keycloakUser.length === 0) {
-        throw new Error(`Keycloak user with email '${user.email}' not found`);
+      for (const group of invitation.groups) {
+        if (!group.kcGroupId) {
+          continue;
+        }
+
+        await opts.keycloakClient.client.users.addToGroup({
+          id: keycloakUser[0].id!,
+          groupId: group.kcGroupId,
+          realm: opts.keycloakRealm,
+        });
       }
 
-      await opts.keycloakClient.client.users.addToGroup({
-        id: keycloakUser[0].id!,
-        groupId: devGroup.id!,
-        realm: opts.keycloakRealm,
-      });
-
       await orgInvitationRepo.acceptInvite({ userId: user.id, organizationId: req.organizationId });
-
       await auditLogRepo.addAuditLog({
         organizationId: req.organizationId,
         organizationSlug: organization.slug,

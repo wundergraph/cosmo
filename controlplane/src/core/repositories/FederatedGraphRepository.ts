@@ -80,6 +80,7 @@ import {
 } from '../util.js';
 import { unsuccessfulBaseCompositionError } from '../errors/errors.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
+import { RBACEvaluator } from '../services/RBACEvaluator.js';
 import { ContractRepository } from './ContractRepository.js';
 import { FeatureFlagRepository, SubgraphsToCompose } from './FeatureFlagRepository.js';
 import { GraphCompositionRepository } from './GraphCompositionRepository.js';
@@ -451,6 +452,47 @@ export class FederatedGraphRepository {
     });
   }
 
+  private applyRbacConditionsToQuery(
+    rbac: RBACEvaluator | undefined,
+    conditions: (SQL<unknown> | undefined)[],
+  ): boolean {
+    if (!rbac || rbac.isOrganizationViewer) {
+      return true;
+    }
+
+    const graphAdmin = rbac.ruleFor('graph-admin');
+    const graphViewer = rbac.ruleFor('graph-viewer');
+    if (!graphAdmin && !graphViewer) {
+      // The actor doesn't have admin or viewer access to any federated graph
+      return false;
+    }
+
+    const resources: string[] = [];
+    const namespaces: string[] = [];
+
+    if (graphAdmin) {
+      resources.push(...graphAdmin.resources);
+      namespaces.push(...graphAdmin.namespaces);
+    }
+
+    if (graphViewer) {
+      resources.push(...graphViewer.resources);
+      namespaces.push(...graphViewer.namespaces);
+    }
+
+    if (namespaces.length > 0 && resources.length > 0) {
+      conditions.push(
+        or(inArray(schema.targets.id, [...new Set(namespaces)]), inArray(schema.targets.id, [...new Set(resources)])),
+      );
+    } else if (namespaces.length > 0) {
+      conditions.push(inArray(schema.targets.namespaceId, [...new Set(namespaces)]));
+    } else if (resources.length > 0) {
+      conditions.push(inArray(schema.targets.id, [...new Set(resources)]));
+    }
+
+    return true;
+  }
+
   public async list(opts: FederatedGraphListFilterOptions): Promise<FederatedGraphDTO[]> {
     const conditions: (SQL<unknown> | undefined)[] = [
       eq(schema.targets.type, 'federated'),
@@ -463,6 +505,10 @@ export class FederatedGraphRepository {
 
     if (opts.supportsFederation !== undefined) {
       conditions.push(eq(schema.federatedGraphs.supportsFederation, opts.supportsFederation));
+    }
+
+    if (!this.applyRbacConditionsToQuery(opts.rbac, conditions)) {
+      return [];
     }
 
     const targetsQuery = this.db
@@ -1373,28 +1419,6 @@ export class FederatedGraphRepository {
       .setAudience(input.federatedGraphId)
       .setExpirationTime('1d')
       .sign(ecPrivateKey);
-  }
-
-  public async getAccessibleFederatedGraphs(userId: string): Promise<FederatedGraphDTO[]> {
-    const graphTargets = await this.db.query.targets.findMany({
-      where: and(
-        eq(targets.type, 'federated'),
-        eq(targets.organizationId, this.organizationId),
-        eq(targets.createdBy, userId),
-      ),
-    });
-
-    const federatedGraphs: FederatedGraphDTO[] = [];
-
-    for (const target of graphTargets) {
-      const fg = await this.byTargetId(target.id);
-      if (fg === undefined) {
-        throw new Error(`FederatedGraph ${target.name} not found`);
-      }
-      federatedGraphs.push(fg);
-    }
-
-    return federatedGraphs;
   }
 
   public enableFederationSupport({ targetId }: { targetId: string }) {

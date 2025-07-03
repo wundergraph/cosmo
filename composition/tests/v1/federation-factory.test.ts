@@ -1,7 +1,4 @@
 import {
-  federateSubgraphs,
-  FederationResultFailure,
-  FederationResultSuccess,
   incompatibleParentKindMergeError,
   INPUT_OBJECT,
   invalidSubgraphNamesError,
@@ -26,6 +23,7 @@ import path, { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   documentNodeToNormalizedString,
+  federateSubgraphsFailure,
   federateSubgraphsSuccess,
   normalizeString,
   schemaToSortedNormalizedString,
@@ -37,21 +35,13 @@ const __dirname = path.dirname(__filename);
 
 describe('FederationFactory tests', () => {
   test('that trying to federate with non-unique subgraph names returns an error', () => {
-    const result = federateSubgraphs(
-      [pandas, pandas, users, users],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultFailure;
-    expect(result.success).toBe(false);
+    const result = federateSubgraphsFailure([pandas, pandas, users, users], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(invalidSubgraphNamesError([pandas.name, users.name], []));
   });
 
   test('that trying to federate with empty subgraph names returns an error', () => {
-    const result = federateSubgraphs(
-      [emptySubgraph, emptySubgraph],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultFailure;
-    expect(result.success).toBe(false);
+    const result = federateSubgraphsFailure([emptySubgraph, emptySubgraph], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.errors).toHaveLength(1);
     const errorMessage = result.errors![0].message;
     expect(errorMessage).contains(
@@ -65,11 +55,10 @@ describe('FederationFactory tests', () => {
   });
 
   test('that trying to federate with both non-unique and empty subgraph names returns an error', () => {
-    const result = federateSubgraphs(
+    const result = federateSubgraphsFailure(
       [users, users, pandas, pandas, emptySubgraph, emptySubgraph, emptySubgraph],
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultFailure;
-    expect(result.success).toBe(false);
+    );
     expect(result.errors).toHaveLength(1);
     const errorMessage = result.errors![0].message;
     expect(errorMessage).contains(
@@ -444,11 +433,7 @@ describe('FederationFactory tests', () => {
   });
 
   test('that subgraphs are federated #1', () => {
-    const result = federateSubgraphs(
-      [pandas, products, reviews, users],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
-    expect(result.success).toBe(true);
+    const result = federateSubgraphsSuccess([pandas, products, reviews, users], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
       normalizeString(
         versionTwoRouterDefinitions +
@@ -532,11 +517,7 @@ describe('FederationFactory tests', () => {
   });
 
   test('that subgraphs are federated #2', () => {
-    const result = federateSubgraphs(
-      [subgraphA, subgraphB],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
-    expect(result.success).toBe(true);
+    const result = federateSubgraphsSuccess([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
       normalizeString(
         versionTwoRouterDefinitions +
@@ -571,18 +552,13 @@ describe('FederationFactory tests', () => {
   });
 
   test('that extension orphans return an error', () => {
-    const result = federateSubgraphs(
-      [subgraphC, subgraphD],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultFailure;
-    expect(result.success).toBe(false);
+    const result = federateSubgraphsFailure([subgraphC, subgraphD], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(noBaseDefinitionForExtensionError(OBJECT, 'Entity'));
   });
 
   test('that root types are promoted', () => {
-    const result = federateSubgraphs([subgraphE], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
-    expect(result.success).toBe(true);
+    const result = federateSubgraphsSuccess([subgraphE], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(documentNodeToNormalizedString(result.federatedGraphAST)).toBe(
       normalizeString(
         versionOnePersistedBaseSchema +
@@ -595,9 +571,24 @@ describe('FederationFactory tests', () => {
     );
   });
 
+  test('that version one subgraph is assigned correctly', () => {
+    const result = federateSubgraphsSuccess([subgraphE], ROUTER_COMPATIBILITY_VERSION_ONE);
+
+    const subgraphConfig = result.subgraphConfigBySubgraphName.get(subgraphE.name);
+    expect(subgraphConfig).toBeDefined();
+    expect(subgraphConfig?.isVersionTwo).toBe(false);
+  });
+
+  test('that version two subgraph is assigned correctly', () => {
+    const result = federateSubgraphsSuccess([subgraphJ], ROUTER_COMPATIBILITY_VERSION_ONE);
+
+    const subgraphConfig = result.subgraphConfigBySubgraphName.get(subgraphJ.name);
+    expect(subgraphConfig).toBeDefined();
+    expect(subgraphConfig?.isVersionTwo).toBe(true);
+  });
+
   test('that custom root types are renamed', () => {
-    const result = federateSubgraphs([subgraphF], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
-    expect(result.success).toBe(true);
+    const result = federateSubgraphsSuccess([subgraphF], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(documentNodeToNormalizedString(result.federatedGraphAST)).toBe(
       normalizeString(
         versionOnePersistedBaseSchema +
@@ -611,11 +602,7 @@ describe('FederationFactory tests', () => {
   });
 
   test('that _Any, _Entity, _Service, _service, _entities, are not included in the federated graph', () => {
-    const result = federateSubgraphs(
-      [subgraphG, subgraphH],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
-    expect(result.success).toBe(true);
+    const result = federateSubgraphsSuccess([subgraphG, subgraphH], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(documentNodeToNormalizedString(result.federatedGraphAST)).toBe(
       normalizeString(
         versionOnePersistedBaseSchema +
@@ -633,11 +620,7 @@ describe('FederationFactory tests', () => {
   });
 
   test('that @tag and @inaccessible persist correctly #1.1', () => {
-    const result = federateSubgraphs(
-      [subgraphI, subgraphJ],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
-    expect(result.success).toBe(true);
+    const result = federateSubgraphsSuccess([subgraphI, subgraphJ], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
       normalizeString(
         versionTwoRouterDefinitions +
@@ -723,11 +706,7 @@ describe('FederationFactory tests', () => {
   });
 
   test('that @tag and @inaccessible persist correctly #1.2', () => {
-    const result = federateSubgraphs(
-      [subgraphJ, subgraphI],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
-    expect(result.success).toBe(true);
+    const result = federateSubgraphsSuccess([subgraphJ, subgraphI], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
       normalizeString(
         versionTwoRouterDefinitions +
@@ -813,11 +792,7 @@ describe('FederationFactory tests', () => {
   });
 
   test('that valid executable directives are merged and persisted in the federated graph', () => {
-    const result = federateSubgraphs(
-      [subgraphK, subgraphL],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
-    expect(result.success).toBe(true);
+    const result = federateSubgraphsSuccess([subgraphK, subgraphL], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
       normalizeString(
         schemaQueryDefinition +
@@ -834,11 +809,7 @@ describe('FederationFactory tests', () => {
   });
 
   test('that all nested entity keys are considered to be shareable', () => {
-    const result = federateSubgraphs(
-      [subgraphM, subgraphN],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
-    expect(result.success).toBe(true);
+    const result = federateSubgraphsSuccess([subgraphM, subgraphN], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
       normalizeString(
         versionTwoRouterDefinitions +
@@ -874,11 +845,7 @@ describe('FederationFactory tests', () => {
   });
 
   test('that _entities and _service are removed even if a root type is renamed', () => {
-    const result = federateSubgraphs(
-      [subgraphF, subgraphO],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
-    expect(result.success).toBe(true);
+    const result = federateSubgraphsSuccess([subgraphF, subgraphO], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(documentNodeToNormalizedString(result.federatedGraphAST)).toBe(
       normalizeString(
         versionOnePersistedBaseSchema +
@@ -898,70 +865,45 @@ describe('FederationFactory tests', () => {
   });
 
   test('that an error is returned if the federated graph has no query object', () => {
-    const result = federateSubgraphs([subgraphP], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultFailure;
-    expect(result.success).toBe(false);
+    const result = federateSubgraphsFailure([subgraphP], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(noQueryRootTypeError());
   });
 
   test('that an error is returned if the federated graph has no populated query object', () => {
-    const result = federateSubgraphs(
-      [subgraphP, subgraphQ],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultFailure;
-    expect(result.success).toBe(false);
+    const result = federateSubgraphsFailure([subgraphP, subgraphQ], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.errors).toHaveLength(2);
     expect(result.errors[0]).toStrictEqual(noQueryRootTypeError(false));
     expect(result.errors[1]).toStrictEqual(noQueryRootTypeError());
   });
 
   test('that an error is returned when merging incompatible types #1.1', () => {
-    const result = federateSubgraphs(
-      [subgraphR, subgraphS],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultFailure;
-    expect(result.success).toBe(false);
+    const result = federateSubgraphsFailure([subgraphR, subgraphS], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(incompatibleParentKindMergeError(OBJECT, SCALAR, OBJECT));
   });
 
   test('that an error is returned when merging incompatible types #1.2', () => {
-    const result = federateSubgraphs(
-      [subgraphS, subgraphR],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultFailure;
-    expect(result.success).toBe(false);
+    const result = federateSubgraphsFailure([subgraphS, subgraphR], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(incompatibleParentKindMergeError(OBJECT, OBJECT, SCALAR));
   });
 
   test('that an error is returned when merging an object extension orphan with an incompatible base type #1.1', () => {
-    const result = federateSubgraphs(
-      [subgraphT, subgraphU],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultFailure;
-    expect(result.success).toBe(false);
+    const result = federateSubgraphsFailure([subgraphT, subgraphU], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.errors).toHaveLength(2);
     expect(result.errors[0]).toStrictEqual(incompatibleParentKindMergeError(OBJECT, OBJECT, INPUT_OBJECT));
     expect(result.errors[1]).toStrictEqual(noBaseDefinitionForExtensionError(OBJECT, OBJECT));
   });
 
   test('that an error is returned when merging an object extension orphan with an incompatible base type #1.2', () => {
-    const result = federateSubgraphs(
-      [subgraphU, subgraphT],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultFailure;
-    expect(result.success).toBe(false);
+    const result = federateSubgraphsFailure([subgraphU, subgraphT], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(incompatibleParentKindMergeError(OBJECT, INPUT_OBJECT, OBJECT));
   });
 
   test('that renaming a root type also renames field return types of the same type #1.1', () => {
-    const result = federateSubgraphs(
-      [subgraphV, subgraphW],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
-    expect(result.success).toBe(true);
+    const result = federateSubgraphsSuccess([subgraphV, subgraphW], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toStrictEqual(
       normalizeString(
         versionOneRouterDefinitions +
@@ -987,11 +929,7 @@ describe('FederationFactory tests', () => {
   });
 
   test('that renaming a root type also renames field return types of the same type #1.2', () => {
-    const result = federateSubgraphs(
-      [subgraphW, subgraphV],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
-    expect(result.success).toBe(true);
+    const result = federateSubgraphsSuccess([subgraphW, subgraphV], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toStrictEqual(
       normalizeString(
         versionOneRouterDefinitions +
@@ -1017,11 +955,7 @@ describe('FederationFactory tests', () => {
   });
 
   test('that renaming a root type also renames field return types of the same type #2.1', () => {
-    const result = federateSubgraphs(
-      [subgraphV, subgraphX],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
-    expect(result.success).toBe(true);
+    const result = federateSubgraphsSuccess([subgraphV, subgraphX], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toStrictEqual(
       normalizeString(
         versionOneRouterDefinitions +
@@ -1048,11 +982,7 @@ describe('FederationFactory tests', () => {
   });
 
   test('that renaming a root type also renames field return types of the same type #2.2', () => {
-    const result = federateSubgraphs(
-      [subgraphX, subgraphV],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
-    expect(result.success).toBe(true);
+    const result = federateSubgraphsSuccess([subgraphX, subgraphV], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toStrictEqual(
       normalizeString(
         versionOneRouterDefinitions +

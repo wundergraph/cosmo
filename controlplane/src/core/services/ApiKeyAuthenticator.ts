@@ -4,16 +4,17 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
 import { AuthenticationError } from '../errors/errors.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
+import { RBACEvaluator } from './RBACEvaluator.js';
 
 export type ApiKeyAuthContext = {
   auth: 'api_key';
   organizationId: string;
   organizationSlug: string;
-  hasWriteAccess: boolean;
-  isAdmin: boolean;
+  organizationDeactivated: boolean;
   userId: string;
   userDisplayName: string;
   apiKeyName: string;
+  rbac: RBACEvaluator;
 };
 
 export default class ApiKeyAuthenticator {
@@ -59,7 +60,18 @@ export default class ApiKeyAuthenticator {
       })
       .where(eq(schema.apiKeys.id, apiKeyModel.id));
 
-    const isOrganizationDeactivated = !!organization.deactivation;
+    const organizationDeactivated = !!organization.deactivation;
+    let rbac: RBACEvaluator;
+    if (apiKeyModel.groupId) {
+      const keyGroup = await this.orgRepo.getOrganizationGroup({
+        organizationId: organization.id,
+        groupId: apiKeyModel.groupId,
+      });
+
+      rbac = new RBACEvaluator(keyGroup ? [keyGroup] : [], apiKeyModel.userId, true);
+    } else {
+      rbac = new RBACEvaluator([], apiKeyModel.userId, true);
+    }
 
     return {
       auth: 'api_key',
@@ -68,9 +80,8 @@ export default class ApiKeyAuthenticator {
       apiKeyName: apiKeyModel.name,
       organizationId: apiKeyModel.organizationId,
       organizationSlug: organization.slug,
-      // sending true as the api key has admin permissions
-      isAdmin: true,
-      hasWriteAccess: !isOrganizationDeactivated,
+      organizationDeactivated,
+      rbac,
     };
   }
 }

@@ -1,7 +1,14 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../../src/core/test-util.js';
+import {
+  afterAllSetup,
+  beforeAllSetup,
+  createTestGroup,
+  createTestRBACEvaluator,
+  genID,
+  genUniqueLabel,
+} from '../../src/core/test-util.js';
 import {
   createNamespace,
   createSubgraph,
@@ -11,6 +18,7 @@ import {
   createThenPublishSubgraph,
   createFederatedGraph,
   DEFAULT_ROUTER_URL,
+  DEFAULT_NAMESPACE,
 } from '../test-util.js';
 
 let dbname = '';
@@ -32,35 +40,6 @@ describe('Create feature subgraph tests', () => {
 
   afterAll(async () => {
     await afterAllSetup(dbname);
-  });
-
-  test('that a feature subgraph can be created', async () => {
-    const { client, server } = await SetupTest({ dbname });
-
-    const subgraphName = genID('subgraph');
-    const featureSubgraphName = genID('featureSubgraph');
-
-    await createSubgraph(client, subgraphName, DEFAULT_SUBGRAPH_URL_ONE);
-
-    const featureSubgraphResponse = await client.createFederatedSubgraph({
-      name: featureSubgraphName,
-      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
-      isFeatureSubgraph: true,
-      baseSubgraphName: subgraphName,
-    });
-
-    expect(featureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
-
-    const getFeatureSubgraphResponse = await client.getSubgraphByName({
-      name: featureSubgraphName,
-    });
-
-    expect(getFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
-    expect(getFeatureSubgraphResponse.graph?.name).toBe(featureSubgraphName);
-    expect(getFeatureSubgraphResponse.graph?.routingURL).toBe(DEFAULT_SUBGRAPH_URL_TWO);
-    expect(getFeatureSubgraphResponse.graph?.isFeatureSubgraph).toBe(true);
-
-    await server.close();
   });
 
   test('that an error is returned if a feature subgraph is created without a base graph', async () => {
@@ -344,6 +323,133 @@ describe('Create feature subgraph tests', () => {
       schema: featureSubgraphSDL,
     });
     expect(publishFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    await server.close();
+  });
+
+  test.each([
+    'organization-admin',
+    'organization-developer',
+    'subgraph-admin',
+  ])('%s should be able to create feature subgraph', async (role) => {
+    const { client, server, authenticator, users } = await SetupTest({ dbname });
+
+    const subgraphName = genID('subgraph');
+    const featureSubgraphName = genID('featureSubgraph');
+
+    await createSubgraph(client, subgraphName, DEFAULT_SUBGRAPH_URL_ONE);
+
+    authenticator.changeUserWithSuppliedContext({
+      ...users.adminAliceCompanyA,
+      rbac: createTestRBACEvaluator(createTestGroup({ role })),
+    });
+
+    const featureSubgraphResponse = await client.createFederatedSubgraph({
+      name: featureSubgraphName,
+      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
+      isFeatureSubgraph: true,
+      baseSubgraphName: subgraphName,
+    });
+
+    expect(featureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    const getFeatureSubgraphResponse = await client.getSubgraphByName({
+      name: featureSubgraphName,
+    });
+
+    expect(getFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
+    expect(getFeatureSubgraphResponse.graph?.name).toBe(featureSubgraphName);
+    expect(getFeatureSubgraphResponse.graph?.routingURL).toBe(DEFAULT_SUBGRAPH_URL_TWO);
+    expect(getFeatureSubgraphResponse.graph?.isFeatureSubgraph).toBe(true);
+
+    await server.close();
+  });
+
+  test('subgraph-admin should be able to crete feature subgraph only on the allowed namespace', async (role) => {
+    const { client, server, authenticator, users } = await SetupTest({ dbname });
+
+    const namespace = 'prod2';
+    const subgraphName = genID('subgraph');
+    const subgraphName2 = genID('subgraph');
+    const featureSubgraphName = genID('featureSubgraph');
+    const featureSubgraphName2 = genID('featureSubgraph');
+
+    await createNamespace(client, namespace);
+    await createSubgraph(client, subgraphName, DEFAULT_SUBGRAPH_URL_ONE);
+    await createSubgraph(client, subgraphName2, DEFAULT_SUBGRAPH_URL_ONE, namespace);
+
+    const getNamespaceResponse = await client.getNamespace({ name: DEFAULT_NAMESPACE });
+    expect(getNamespaceResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    authenticator.changeUserWithSuppliedContext({
+      ...users.adminAliceCompanyA,
+      rbac: createTestRBACEvaluator(createTestGroup({
+        role: 'subgraph-admin',
+        namespaces: [getNamespaceResponse.namespace!.id],
+      })),
+    });
+
+    let featureSubgraphResponse = await client.createFederatedSubgraph({
+      name: featureSubgraphName,
+      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
+      isFeatureSubgraph: true,
+      baseSubgraphName: subgraphName,
+    });
+
+    expect(featureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    const getFeatureSubgraphResponse = await client.getSubgraphByName({
+      name: featureSubgraphName,
+    });
+
+    expect(getFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
+    expect(getFeatureSubgraphResponse.graph?.name).toBe(featureSubgraphName);
+    expect(getFeatureSubgraphResponse.graph?.routingURL).toBe(DEFAULT_SUBGRAPH_URL_TWO);
+    expect(getFeatureSubgraphResponse.graph?.isFeatureSubgraph).toBe(true);
+
+    // Make sure we can't create a feature subgraph on an unauthorized namespace
+    featureSubgraphResponse = await client.createFederatedSubgraph({
+      name: featureSubgraphName2,
+      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
+      isFeatureSubgraph: true,
+      baseSubgraphName: subgraphName2,
+      namespace,
+    });
+
+    expect(featureSubgraphResponse.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
+
+    await server.close();
+  });
+
+  test.each([
+    'organization-apikey-manager',
+    'organization-viewer',
+    'namespace-admin',
+    'namespace-viewer',
+    'graph-admin',
+    'graph-viewer',
+    'subgraph-publisher',
+  ])('%s should not be able to create feature flag', async (role) => {
+    const { client, server, authenticator, users } = await SetupTest({ dbname });
+
+    const subgraphName = genID('subgraph');
+    const featureSubgraphName = genID('featureSubgraph');
+
+    await createSubgraph(client, subgraphName, DEFAULT_SUBGRAPH_URL_ONE);
+
+    authenticator.changeUserWithSuppliedContext({
+      ...users.adminAliceCompanyA,
+      rbac: createTestRBACEvaluator(createTestGroup({ role })),
+    });
+
+    const featureSubgraphResponse = await client.createFederatedSubgraph({
+      name: featureSubgraphName,
+      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
+      isFeatureSubgraph: true,
+      baseSubgraphName: subgraphName,
+    });
+
+    expect(featureSubgraphResponse.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
 
     await server.close();
   });

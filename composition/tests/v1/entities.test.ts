@@ -266,7 +266,7 @@ describe('Entity tests', () => {
         invalidFieldShareabilityError(
           {
             name: 'Entity',
-            fieldDataByFieldName: new Map<string, FieldData>([
+            fieldDataByName: new Map<string, FieldData>([
               [
                 'id',
                 {
@@ -303,7 +303,7 @@ describe('Entity tests', () => {
         invalidFieldShareabilityError(
           {
             name: 'Object',
-            fieldDataByFieldName: new Map<string, FieldData>([
+            fieldDataByName: new Map<string, FieldData>([
               [
                 'id',
                 {

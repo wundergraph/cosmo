@@ -44,6 +44,8 @@ export function getOIDCProvider(
       alias: provider.alias,
       kcRealm: opts.keycloakRealm,
       kcClient: opts.keycloakClient,
+      organizationId: authContext.organizationId,
+      db: opts.db,
     });
 
     return {

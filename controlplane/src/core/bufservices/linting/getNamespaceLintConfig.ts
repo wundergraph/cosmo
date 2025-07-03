@@ -11,6 +11,7 @@ import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { SchemaLintRepository } from '../../repositories/SchemaLintRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 
 export function getNamespaceLintConfig(
   opts: RouterOptions,
@@ -36,6 +37,10 @@ export function getNamespaceLintConfig(
         configs: [],
         linterEnabled: false,
       };
+    }
+
+    if (!authContext.rbac.hasNamespaceReadAccess(namespace)) {
+      throw new UnauthorizedError();
     }
 
     const orgLintConfigs = await schemaLintRepo.getNamespaceLintConfig(namespace.id);

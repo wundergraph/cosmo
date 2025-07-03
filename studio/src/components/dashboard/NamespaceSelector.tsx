@@ -22,7 +22,6 @@ export const NamespaceSelector = ({
 }: {
   shouldRedirect?: boolean;
 }) => {
-  const user = useContext(UserContext);
   const router = useRouter();
   const organizationSlug = router.query.organizationSlug as string;
   const namespaceParam = router.query.namespace as string;
@@ -38,10 +37,16 @@ export const NamespaceSelector = ({
     if (!data || data.namespaces.length === 0) return;
 
     if (!data.namespaces.some((ns) => ns.name === namespace)) {
-      setNamespace("default");
-      applyParams({
-        namespace: "default",
-      });
+      // The authenticated user doesn't have access to the namespace, pick between the `default` or the
+      // first available namespace if the user doesn't have access to the `default` namespace
+      const ns = data.namespaces.find((n) => n.name === "default")?.name || data.namespaces[0]?.name;
+      if (ns) {
+        // Only apply the namespace parameter when we found a valid namespace
+        setNamespace(ns);
+        applyParams({
+          namespace: ns,
+        });
+      }
     }
 
     setNamespaces(data.namespaces.map((ns) => ns.name));
