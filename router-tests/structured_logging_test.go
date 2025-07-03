@@ -1943,7 +1943,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 			)
 		})
 
-		t.Run("validate expression evaluation for feature flag", func(t *testing.T) {
+		t.Run("should be able to use an expression for access logging in feature flags", func(t *testing.T) {
 			t.Parallel()
 
 			testenv.Run(t,
@@ -2535,32 +2535,65 @@ func TestFlakyAccessLogs(t *testing.T) {
 		t.Run("verify response body in expression", func(t *testing.T) {
 			t.Parallel()
 
-			testenv.Run(t, &testenv.Config{
-				AccessLogFields: []config.CustomAttribute{
-					{
-						Key: "response_body",
-						ValueFrom: &config.CustomDynamicAttribute{
-							Expression: "response.body.raw",
+			t.Run("for successful request", func(t *testing.T) {
+				testenv.Run(t, &testenv.Config{
+					AccessLogFields: []config.CustomAttribute{
+						{
+							Key: "response_body",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "response.body.raw",
+							},
 						},
 					},
-				},
-				LogObservation: testenv.LogObservationConfig{
-					Enabled:  true,
-					LogLevel: zapcore.InfoLevel,
-				},
-			}, func(t *testing.T, xEnv *testenv.Environment) {
-				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-					Query: `query myQuery { employees { id } }`,
+					LogObservation: testenv.LogObservationConfig{
+						Enabled:  true,
+						LogLevel: zapcore.InfoLevel,
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query myQuery { employees { id } }`,
+					})
+
+					requestLog := xEnv.Observer().FilterMessage("/graphql")
+					requestLogAll := requestLog.All()
+					requestContextMap := requestLogAll[0].ContextMap()
+
+					responseBody := requestContextMap["response_body"].(string)
+					require.Equal(t,
+						`{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`,
+						responseBody)
 				})
+			})
 
-				requestLog := xEnv.Observer().FilterMessage("/graphql")
-				requestLogAll := requestLog.All()
-				requestContextMap := requestLogAll[0].ContextMap()
+			t.Run("for unsuccessful request", func(t *testing.T) {
+				testenv.Run(t, &testenv.Config{
+					AccessLogFields: []config.CustomAttribute{
+						{
+							Key: "response_body",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "response.body.raw",
+							},
+						},
+					},
+					LogObservation: testenv.LogObservationConfig{
+						Enabled:  true,
+						LogLevel: zapcore.InfoLevel,
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query myQuery { employees { id2 } }`,
+					})
 
-				responseBody := requestContextMap["response_body"].(string)
-				require.Equal(t,
-					`{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`,
-					responseBody)
+					requestLog := xEnv.Observer().FilterMessage("/graphql")
+					requestLogAll := requestLog.All()
+					requestContextMap := requestLogAll[0].ContextMap()
+
+					responseBody := requestContextMap["response_body"].(string)
+					fmt.Println(responseBody)
+					require.Equal(t,
+						`{"errors":[{"message":"Cannot query field \"id2\" on type \"Employee\".","path":["query","employees"]}]}`,
+						responseBody)
+				})
 			})
 		})
 	})

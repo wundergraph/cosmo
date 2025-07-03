@@ -8,7 +8,6 @@ import (
 	"time"
 
 	rcontext "github.com/wundergraph/cosmo/router/internal/context"
-	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
 	"github.com/wundergraph/cosmo/router/internal/unique"
 	"github.com/wundergraph/cosmo/router/pkg/metric"
@@ -43,7 +42,8 @@ type engineLoaderHooks struct {
 	tracingAttributeExpressions   *attributeExpressions
 	telemetryAttributeExpressions *attributeExpressions
 	metricAttributeExpressions    *attributeExpressions
-	exprVisitorManager            *expr.VisitorGroup
+
+	storeSubgraphResponseBody bool
 }
 
 type engineLoaderHooksRequestContext struct {
@@ -57,7 +57,7 @@ func NewEngineRequestHooks(
 	tracingAttributes *attributeExpressions,
 	telemetryAttributes *attributeExpressions,
 	metricAttributes *attributeExpressions,
-	exprVisitorManager *expr.VisitorGroup,
+	storeSubgraphResponseBody bool,
 ) resolve.LoaderHooks {
 	var tracer trace.Tracer
 	if tracerProvider != nil {
@@ -79,7 +79,7 @@ func NewEngineRequestHooks(
 		tracingAttributeExpressions:   tracingAttributes,
 		metricAttributeExpressions:    metricAttributes,
 		accessLogger:                  logger,
-		exprVisitorManager:            exprVisitorManager,
+		storeSubgraphResponseBody:     storeSubgraphResponseBody,
 	}
 }
 
@@ -153,7 +153,7 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 	exprCtx.Subgraph.Name = ds.Name
 	exprCtx.Subgraph.Request.Error = WrapExprError(responseInfo.Err)
 
-	if f.exprVisitorManager.IsSubgraphResponseBodyUsedInExpressions() {
+	if f.storeSubgraphResponseBody {
 		exprCtx.Subgraph.Response.Body.Raw = responseInfo.ResponseBody
 	}
 
