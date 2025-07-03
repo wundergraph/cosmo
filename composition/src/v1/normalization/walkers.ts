@@ -360,9 +360,10 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
         }
         const argumentDataByArgumentName = nf.extractArguments(new Map<string, InputValueData>(), node);
         const directivesByDirectiveName = nf.extractDirectives(node, new Map<string, ConstDirectiveNode[]>());
+        const inheritedDirectiveNames = new Set<string>();
         // Add parent-level shareable and external to the field extraction and repeatable validation
         if (!isParentDataInterfaceType(parentData)) {
-          nf.addInheritedDirectivesToFieldData(directivesByDirectiveName);
+          nf.addInheritedDirectivesToFieldData(directivesByDirectiveName, inheritedDirectiveNames);
           if (directivesByDirectiveName.has(EXTERNAL)) {
             nf.unvalidatedExternalFieldCoords.add(`${nf.originalParentTypeName}.${fieldName}`);
           }
@@ -372,6 +373,7 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
           node,
           argumentDataByArgumentName,
           directivesByDirectiveName,
+          inheritedDirectiveNames,
         );
         if (isParentRootType) {
           nf.extractEventDirectivesToConfiguration(node, argumentDataByArgumentName);
