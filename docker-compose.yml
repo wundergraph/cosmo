@@ -99,6 +99,8 @@ services:
       - GF_INSTALL_PLUGINS=grafana-clickhouse-datasource
       - CLICKHOUSE_USER=${CLICKHOUSE_USER:-default}
       - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD:-changeme}
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
     profiles:
       - debug
 
