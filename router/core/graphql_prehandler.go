@@ -565,7 +565,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		if h.operationBlocker.persistedOperationsDisabled {
 			return &httpGraphqlError{
 				message:    "persisted operations are disabled",
-				statusCode: http.StatusOK,
+				statusCode: http.StatusBadRequest,
 			}
 		}
 
