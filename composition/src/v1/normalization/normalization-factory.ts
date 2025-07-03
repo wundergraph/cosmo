@@ -233,7 +233,6 @@ import {
   newConditionalFieldData,
   newExternalFieldData,
   newPersistedDirectivesData,
-  removeInheritableDirectivesFromObjectParent,
 } from '../../schema-building/utils';
 import {
   CompositeOutputNode,
@@ -259,6 +258,8 @@ import {
   ARGUMENT,
   AUTHENTICATED,
   BOOLEAN_SCALAR,
+  CHANNEL,
+  CHANNELS,
   CONFIGURE_CHILD_DESCRIPTIONS,
   CONFIGURE_DESCRIPTION,
   CONSUMER_INACTIVE_THRESHOLD,
@@ -272,6 +273,8 @@ import {
   EDFS_NATS_STREAM_CONFIGURATION,
   EDFS_NATS_SUBSCRIBE,
   EDFS_PUBLISH_RESULT,
+  EDFS_REDIS_PUBLISH,
+  EDFS_REDIS_SUBSCRIBE,
   ENTITIES_FIELD,
   EXECUTABLE_DIRECTIVE_LOCATIONS,
   EXECUTION,
@@ -283,6 +286,7 @@ import {
   HYPHEN_JOIN,
   ID_SCALAR,
   INACCESSIBLE,
+  INHERITABLE_DIRECTIVE_NAMES,
   INPUT_FIELD,
   INT_SCALAR,
   KEY,
@@ -301,6 +305,7 @@ import {
   PROVIDER_ID,
   PROVIDER_TYPE_KAFKA,
   PROVIDER_TYPE_NATS,
+  PROVIDER_TYPE_REDIS,
   PUBLISH,
   QUERY,
   REQUEST,
@@ -326,11 +331,6 @@ import {
   SUCCESS,
   TOPIC,
   TOPICS,
-  CHANNEL,
-  CHANNELS,
-  EDFS_REDIS_PUBLISH,
-  EDFS_REDIS_SUBSCRIBE,
-  PROVIDER_TYPE_REDIS,
 } from '../../utils/string-constants';
 import { MAX_INT32 } from '../../utils/integer-constants';
 import {
@@ -2957,9 +2957,13 @@ export class NormalizationFactory {
   getValidFlattenedDirectiveArray(
     directivesByDirectiveName: Map<string, ConstDirectiveNode[]>,
     directiveCoords: string,
+    removeInheritedDirectives = false,
   ): ConstDirectiveNode[] {
     const flattenedArray: ConstDirectiveNode[] = [];
     for (const [directiveName, directiveNodes] of directivesByDirectiveName) {
+      if (removeInheritedDirectives && INHERITABLE_DIRECTIVE_NAMES.has(directiveName)) {
+        continue;
+      }
       const directiveDefinition = this.directiveDefinitionDataByDirectiveName.get(directiveName);
       if (!directiveDefinition) {
         continue;
@@ -3030,6 +3034,7 @@ export class NormalizationFactory {
     compositeOutputData.node.directives = this.getValidFlattenedDirectiveArray(
       compositeOutputData.directivesByDirectiveName,
       compositeOutputData.name,
+      true,
     );
     compositeOutputData.node.fields = childMapToValueArray(compositeOutputData.fieldDataByName);
     compositeOutputData.node.interfaces = setToNamedTypeNodeArray(compositeOutputData.implementedInterfaceTypeNames);
@@ -3379,7 +3384,6 @@ export class NormalizationFactory {
             parentData.fieldDataByName.delete(SERVICE_FIELD);
             parentData.fieldDataByName.delete(ENTITIES_FIELD);
           }
-          removeInheritableDirectivesFromObjectParent(parentData);
           const externalInterfaceFieldNames: Array<string> = [];
           for (const [fieldName, fieldData] of parentData.fieldDataByName) {
             if (!isObject && fieldData.externalFieldDataBySubgraphName.get(this.subgraphName)?.isDefinedExternal) {
