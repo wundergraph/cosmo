@@ -16,13 +16,21 @@ export const options = {
   ],
 };
 
+// in the simple case from a clean state it's around (operationName)*5 series per metric
+// mostly due to wg_subgraph_id and wg_subgraph_name array exploding
+
+// 300 should be under the default cardinality limit (1500 < 2000)
+// 500 should be slightly over the default cardinality limit (2500 > 2000)
+const distinctNames = 300;
+
 export function setup() {
   let randomNames = [];
 
-  // should be under the default cardinality limit
-  for (let i = 0; i < 1500; i++) {
+  for (let i = 0; i < distinctNames; i++) {
     randomNames.push(randomString(10, 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'));
   }
+
+  console.log('Generated ' + distinctNames + ' random names');
 
   return { randomNames };
 }
