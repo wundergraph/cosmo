@@ -972,9 +972,9 @@
           "description": "The configuration for the collection and export of metrics. The metrics are collected and exported using the OpenTelemetry protocol (OTLP) and Prometheus.",
           "additionalProperties": false,
           "properties": {
-            "cardinality_limit": {
+            "experimental_cardinality_limit": {
               "type": "integer",
-              "description": "Sets a hard limit on the number of Metric Points that can be collected during a collection cycle",
+              "description": "Sets a hard limit on the number of Metric Points that can be collected during a collection cycle. NOTE: This option is experimental and may change in future versions.",
               "minimum": 1,
               "default": 2000
             },
