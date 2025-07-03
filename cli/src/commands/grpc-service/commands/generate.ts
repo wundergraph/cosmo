@@ -1,4 +1,5 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { existsSync, lstatSync } from 'node:fs';
 import { resolve } from 'pathe';
 import Spinner from 'ora';
 import { Command, program } from 'commander';
@@ -87,7 +88,6 @@ async function generateProtoAndMapping(
   protoLockFile?: string,
 ): Promise<GenerationResult> {
   spinner.text = 'Generating proto schema...';
-  const lockFile = resolve(outdir, 'service.proto.lock.json');
 
   const schema = await readFile(schemaFile, 'utf8');
   const serviceName = upperFirst(camelCase(name)) + 'Service';
@@ -117,13 +117,15 @@ async function fetchLockData(outdir: string, existingLockFile?: string): Promise
       return existingLockData;
     }
 
-    return undefined
+    return undefined;
   }
 
-  const lockFile = resolve(outdir, 'service.proto.lock.json');
-  const existingLockData = JSON.parse(await readFile(lockFile, 'utf8'));
-  if (existingLockData) {
-    return existingLockData;
+  const defaultLockFile = resolve(outdir, 'service.proto.lock.json');
+  if (existsSync(defaultLockFile)) {
+    const existingLockData = JSON.parse(await readFile(defaultLockFile, 'utf8'));
+    if (existingLockData) {
+      return existingLockData;
+    }
   }
 
   return undefined;
