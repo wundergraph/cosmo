@@ -284,7 +284,7 @@ jobs:
 
       - uses: ./.github/actions/image-scan
         with:
-          name: ${{ matrix.docker_build_target == '' && 'Router' || format('Router-{0}', matrix.docker_build_target) }}
+          name: ${{ matrix.docker_build_target != '' && format('Router-{0}', matrix.docker_build_target) || 'Router' }}
           github_token: ${{secrets.GITHUB_TOKEN}}
           image_ref: ${{ steps.docker_build.outputs.image_ref_digest }}
 
