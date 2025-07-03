@@ -755,6 +755,79 @@ func TestAuthorization(t *testing.T) {
 	})
 }
 
+func TestAuthenticationValuePrefixes(t *testing.T) {
+	t.Parallel()
+
+	authServer, err := jwks.NewServer(t)
+	require.NoError(t, err)
+	t.Cleanup(authServer.Close)
+
+	tokenDecoder, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)})
+	authenticatorHeaderValuePrefixes := []string{"Bearer", "Custom1", "Custom2"}
+	authenticator1, err := authentication.NewHttpHeaderAuthenticator(authentication.HttpHeaderAuthenticatorOptions{
+		Name: JwksName,
+		HeaderSourcePrefixes: map[string][]string{
+			"Authorization": authenticatorHeaderValuePrefixes,
+		},
+		TokenDecoder: tokenDecoder,
+	})
+	require.NoError(t, err)
+
+	authenticators := []authentication.Authenticator{authenticator1}
+	accessController := core.NewAccessController(authenticators, false)
+
+	t.Run("no prefix", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(accessController),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			token, err := authServer.Token(nil)
+			require.NoError(t, err)
+			header := http.Header{
+				"Authorization": []string{token},
+			}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+			require.Equal(t, "", res.Header.Get(xAuthenticatedByHeader))
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.JSONEq(t, unauthorizedExpectedData, string(data))
+		})
+	})
+	t.Run("matching prefix", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(accessController),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			for _, prefix := range authenticatorHeaderValuePrefixes {
+				prefix := prefix
+				t.Run("prefix "+prefix, func(t *testing.T) {
+					token, err := authServer.Token(nil)
+					require.NoError(t, err)
+					header := http.Header{
+						"Authorization": []string{prefix + token},
+					}
+					res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+					require.NoError(t, err)
+					defer res.Body.Close()
+					require.Equal(t, http.StatusOK, res.StatusCode)
+					require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
+					data, err := io.ReadAll(res.Body)
+					require.NoError(t, err)
+					require.Equal(t, employeesExpectedData, string(data))
+				})
+			}
+		})
+	})
+
+}
+
 func TestAuthenticationMultipleProviders(t *testing.T) {
 	t.Parallel()
 
