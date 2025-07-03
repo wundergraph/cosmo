@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.228.0](https://github.com/wundergraph/cosmo/compare/router@0.227.1...router@0.228.0) (2025-07-03)
+
+### Features
+
+* configurable cardinality limit for otel ([#2009](https://github.com/wundergraph/cosmo/issues/2009)) ([71dfdcf](https://github.com/wundergraph/cosmo/commit/71dfdcf685cfd5b97f3bcd2fe7a34e4f8ecf0228)) (@endigma)
+
 ## [0.227.1](https://github.com/wundergraph/cosmo/compare/router@0.227.0...router@0.227.1) (2025-07-03)
 
 ### Bug Fixes
