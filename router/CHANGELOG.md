@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.227.1](https://github.com/wundergraph/cosmo/compare/router@0.227.0...router@0.227.1) (2025-07-03)
+
+### Bug Fixes
+
+* **router:** require presence of prefix value for auth header ([#2011](https://github.com/wundergraph/cosmo/issues/2011)) ([bd25547](https://github.com/wundergraph/cosmo/commit/bd25547b96dc47af26061e6de9c9170e359f4fbc)) (@ysmolski)
+
 # [0.227.0](https://github.com/wundergraph/cosmo/compare/router@0.226.2...router@0.227.0) (2025-07-03)
 
 ### Features
