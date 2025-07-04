@@ -55,8 +55,6 @@ func (l *OperationLoader) LoadOperationsFromDirectory(ctx context.Context, dirPa
 
 	ctx, cancel := context.WithCancel(ctx)
 
-	filesSeen := make(map[string]struct{})
-
 	// Walk through the directory and process GraphQL files
 	err := filepath.WalkDir(dirPath, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -77,35 +75,6 @@ func (l *OperationLoader) LoadOperationsFromDirectory(ctx context.Context, dirPa
 		content, err := os.ReadFile(path)
 		if err != nil {
 			return fmt.Errorf("failed to read file %s: %w", path, err)
-		}
-
-		if hotReload {
-			filesSeen[path] = struct{}{}
-
-			watchFunc, err := watcher.New(watcher.Options{
-				Interval: hotReloadInterval,
-				Logger:   l.Logger,
-				Path:     path,
-				Callback: func() {
-					reloadOperationsChan <- true
-					cancel()
-				},
-			})
-
-			if err != nil {
-				l.Logger.Error("Could not create watcher", zap.Error(err))
-				return err
-			}
-
-			go func() {
-				if err := watchFunc(ctx); err != nil {
-					if !errors.Is(err, context.Canceled) {
-						l.Logger.Error("Error watching operations path", zap.Error(err))
-					} else {
-						l.Logger.Debug("Watcher context cancelled, shutting down")
-					}
-				}
-			}()
 		}
 
 		// Parse the operation
@@ -166,58 +135,42 @@ func (l *OperationLoader) LoadOperationsFromDirectory(ctx context.Context, dirPa
 	})
 
 	if err != nil {
+		cancel()
 		return nil, fmt.Errorf("error walking mcp operations directory %s: %w", dirPath, err)
 	}
 
 	if hotReload {
+		watchFunc, err := watcher.New(watcher.Options{
+			Interval: hotReloadInterval,
+			Logger:   l.Logger,
+			Callback: func() {
+				reloadOperationsChan <- true
+				cancel()
+			},
+			Directory: watcher.DirOptions{
+				DirPath: dirPath,
+				Filter: func(path string) bool {
+					return !isGraphQLFile(path)
+				},
+			},
+		})
+
+		if err != nil {
+			cancel()
+			l.Logger.Error("Could not create watcher", zap.Error(err))
+		}
+
 		go func() {
-			ticker := time.NewTicker(hotReloadInterval)
-			for {
-				select {
-				case <-ticker.C:
-					operationsCount := 0
-
-					err := filepath.WalkDir(dirPath, func(path string, d fs.DirEntry, err error) error {
-						if err != nil {
-							return err
-						}
-
-						// Skip directories
-						if d.IsDir() {
-							return nil
-						}
-
-						// Only process GraphQL files
-						if !isGraphQLFile(path) {
-							return nil
-						}
-
-						_, ok := filesSeen[path]
-
-						// new operation added
-						if !ok {
-							reloadOperationsChan <- true
-							cancel()
-							return filepath.SkipAll
-						}
-
-						operationsCount = operationsCount + 1
-
-						return nil
-					})
-
-					if err != nil || operationsCount != len(filesSeen) {
-						reloadOperationsChan <- true
-						cancel()
-						return
-					}
-
-				case <-ctx.Done():
-					return
+			if err := watchFunc(ctx); err != nil {
+				if !errors.Is(err, context.Canceled) {
+					l.Logger.Error("Error watching operations path", zap.Error(err))
+				} else {
+					l.Logger.Debug("Watcher context cancelled, shutting down")
 				}
-
 			}
 		}()
+	} else {
+		cancel()
 	}
 
 	return operations, nil
