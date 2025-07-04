@@ -39,6 +39,22 @@ feature_enabled: true
 enable_feature: true
 ```
 
+### Experimental options
+
+When introducing an option that is not stable, use a prefix like this:
+
+```yaml
+feature:
+  experiment_some_option: 3000
+  
+# or
+  
+experiment_feature:
+  some_option: 3000
+```
+
+When it has become stable, remove the prefix.
+
 ## Guidelines for types and names
 
 - Property names use nouns or configurations, **not** verb-prefixed names (use `storage` not `get_storage` or `use_storage`)
