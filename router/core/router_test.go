@@ -59,6 +59,7 @@ func TestOverrideURLConfig(t *testing.T) {
 		routerConfig.Subgraphs,
 		router.overrideRoutingURLConfiguration,
 		router.overrides,
+		false,
 	)
 	assert.Nil(t, err)
 
@@ -140,6 +141,7 @@ func TestOverridesConfig(t *testing.T) {
 		routerConfig.Subgraphs,
 		router.overrideRoutingURLConfiguration,
 		router.overrides,
+		false,
 	)
 	assert.Nil(t, err)
 
@@ -212,6 +214,7 @@ func TestOverridesPriority(t *testing.T) {
 		routerConfig.Subgraphs,
 		router.overrideRoutingURLConfiguration,
 		router.overrides,
+		false,
 	)
 	assert.Nil(t, err)
 

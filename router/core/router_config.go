@@ -76,6 +76,7 @@ type Config struct {
 	postOriginHandlers              []TransportPostHandler
 	headerRules                     *config.HeaderRules
 	subgraphTransportOptions        *SubgraphTransportOptions
+	subgraphCircuitBreakerOptions   *SubgraphCircuitBreakerOptions
 	graphqlMetricsConfig            *GraphQLMetricsConfig
 	routerTrafficConfig             *config.RouterTrafficConfiguration
 	batchingConfig                  *BatchingConfig
@@ -204,6 +205,7 @@ func (c *Config) Usage() map[string]any {
 	usage["custom_modules"] = len(c.customModules) > 0
 	usage["header_rules"] = c.headerRules != nil && (c.headerRules.All != nil || len(c.headerRules.Subgraphs) > 0)
 	usage["subgraph_transport_options"] = c.subgraphTransportOptions != nil
+	usage["subgraph_circuit_breaker_options"] = c.subgraphCircuitBreakerOptions.IsEnabled()
 	usage["graphql_metrics"] = c.graphqlMetricsConfig != nil && c.graphqlMetricsConfig.Enabled
 	usage["batching"] = c.batchingConfig != nil && c.batchingConfig.Enabled
 	if c.batchingConfig != nil && c.batchingConfig.Enabled {
