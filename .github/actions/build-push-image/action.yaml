@@ -15,6 +15,9 @@ inputs:
   docker_context:
     description: "The Docker context to use"
     default: "."
+  docker_build_target:
+    description: "The docker target stage to build"
+    default: ""
   docker_username:
     description: "The username to use for the Docker container registry"
   docker_password:
@@ -32,6 +35,9 @@ outputs:
   image_ref:
     description: "The reference of the image that was built"
     value: "ghcr.io/${{ github.repository }}/${{ inputs.image_name }}:sha-${{ github.sha }}"
+  image_ref_digest:
+    description: "The reference of the image digest that was built"
+    value: "ghcr.io/${{ github.repository }}/${{ inputs.image_name }}@${{ steps.docker_build.outputs.digest }}"
 
 runs:
   using: "composite"
@@ -50,6 +56,8 @@ runs:
       with:
         images: |
           ghcr.io/${{ github.repository }}/${{ inputs.image_name }}
+        flavor: |
+          suffix=${{ inputs.docker_build_target != '' && format('-{0}', inputs.docker_build_target) || '' }},onlatest=true
         tags: |
           type=ref,event=branch
           type=ref,event=pr
@@ -82,6 +90,7 @@ runs:
         password: ${{ inputs.token }}
 
     - name: Build & Push Docker Image
+      id: docker_build
       uses: docker/build-push-action@v6
       with:
         # This is a limitation of GitHub. Only organization members can push to GitHub Container Registry
@@ -93,6 +102,7 @@ runs:
         labels: ${{ steps.meta.outputs.labels }}
         platforms: ${{ inputs.image_platforms }}
         load: ${{ inputs.load_Image == 'true' }}
+        target: ${{ inputs.docker_build_target }}
         outputs:
           type=image,name=target,annotation-index.org.opencontainers.image.description=${{ inputs.image_description }}
           type=image,name=target,annotation-index.org.opencontainers.image.source=https://github.com/wundergraph/cosmo
