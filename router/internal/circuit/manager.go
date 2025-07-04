@@ -79,7 +79,7 @@ func (c *Manager) HasCircuits() bool {
 	if c == nil {
 		return false
 	}
-	
+
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
@@ -97,6 +97,9 @@ type ManagerOpts struct {
 func (c *Manager) Initialize(opts ManagerOpts) error {
 	var joinErr error
 
+	// We iterate over every grouping and create ONE instance of  circuit breaker for each subgraph
+	// and assign the same circuit breaker instance to all subgraphs that are grouped together
+	// when using defaults, and initialize per config when not using defaults
 	for routingUrl, sgNames := range opts.AllGroupings {
 		defaultSgNames := make([]string, 0, len(sgNames))
 		customSgNames := make([]string, 0, len(sgNames))
@@ -111,6 +114,7 @@ func (c *Manager) Initialize(opts ManagerOpts) error {
 			}
 		}
 
+		// These are the default configs, if enabled will be applied to all subgraphs
 		if len(defaultSgNames) > 0 && c.isBaseConfigEnabled {
 			configs := make([]circuit.Config, 0, 1)
 			if opts.UseMetrics {
@@ -129,6 +133,7 @@ func (c *Manager) Initialize(opts ManagerOpts) error {
 			}
 		}
 
+		// If there are any custom override configs per subgraph
 		if len(customSgNames) > 0 {
 			for _, sgName := range customSgNames {
 				configs := make([]circuit.Config, 0, 1)

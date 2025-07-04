@@ -16,7 +16,7 @@ type Measurements struct {
 }
 
 // createMeasures creates the measures. Used to create measures for both Prometheus and OTLP metric stores.
-func createMeasures(meter otelmetric.Meter) (*Measurements, error) {
+func createMeasures(meter otelmetric.Meter, opts MetricOpts) (*Measurements, error) {
 
 	h := &Measurements{
 		counters:         map[string]otelmetric.Int64Counter{},
@@ -115,24 +115,26 @@ func createMeasures(meter otelmetric.Meter) (*Measurements, error) {
 	}
 	h.observableGauges[RouterInfo] = routerInfo
 
-	// We use 1 and 0 to represent a boolean state
-	circuitBreakerState, err := meter.Int64Gauge(
-		CircuitBreakerStateGauge,
-		CircuitBreakerStateInfoOptions...,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create circuit breaker state: %w", err)
-	}
-	h.gauges[CircuitBreakerStateGauge] = circuitBreakerState
+	if opts.EnableCircuitBreaker {
+		// We use 1 and 0 to represent a boolean state
+		circuitBreakerState, err := meter.Int64Gauge(
+			CircuitBreakerStateGauge,
+			CircuitBreakerStateInfoOptions...,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create circuit breaker state: %w", err)
+		}
+		h.gauges[CircuitBreakerStateGauge] = circuitBreakerState
 
-	circuitBreakerShortCircuits, err := meter.Int64Counter(
-		CircuitBreakerShortCircuitsCounter,
-		CircuitBreakerShortCircuitOptions...,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create circuit breaker short circuits: %w", err)
+		circuitBreakerShortCircuits, err := meter.Int64Counter(
+			CircuitBreakerShortCircuitsCounter,
+			CircuitBreakerShortCircuitOptions...,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create circuit breaker short circuits: %w", err)
+		}
+		h.counters[CircuitBreakerShortCircuitsCounter] = circuitBreakerShortCircuits
 	}
-	h.counters[CircuitBreakerShortCircuitsCounter] = circuitBreakerShortCircuits
 
 	return h, nil
 }

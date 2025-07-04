@@ -39,6 +39,7 @@
         "EngineStats": {
           "Subscriptions": false
         },
+        "CircuitBreaker": false,
         "ExcludeMetrics": null,
         "ExcludeMetricLabels": null,
         "Exporters": null
@@ -52,6 +53,7 @@
         "EngineStats": {
           "Subscriptions": false
         },
+        "CircuitBreaker": false,
         "ExcludeMetrics": null,
         "ExcludeMetricLabels": null,
         "ExcludeScopeInfo": false,

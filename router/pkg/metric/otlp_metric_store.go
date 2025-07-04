@@ -19,9 +19,10 @@ type OtlpMetricStore struct {
 	logger                  *zap.Logger
 	measurements            *Measurements
 	instrumentRegistrations []otelmetric.Registration
+	circuitBreakerEnabled   bool
 }
 
-func NewOtlpMetricStore(logger *zap.Logger, meterProvider *metric.MeterProvider, routerInfoAttributes otelmetric.ObserveOption) (Provider, error) {
+func NewOtlpMetricStore(logger *zap.Logger, meterProvider *metric.MeterProvider, routerInfoAttributes otelmetric.ObserveOption, opts MetricOpts) (Provider, error) {
 
 	meter := meterProvider.Meter(cosmoRouterMeterName,
 		otelmetric.WithInstrumentationVersion(cosmoRouterMeterVersion),
@@ -32,9 +33,10 @@ func NewOtlpMetricStore(logger *zap.Logger, meterProvider *metric.MeterProvider,
 		logger:                  logger,
 		meterProvider:           meterProvider,
 		instrumentRegistrations: make([]otelmetric.Registration, 0, 1),
+		circuitBreakerEnabled:   opts.EnableCircuitBreaker,
 	}
 
-	measures, err := createMeasures(meter)
+	measures, err := createMeasures(meter, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +67,6 @@ func (h *OtlpMetricStore) startInitMetrics(initAttributes otelmetric.ObserveOpti
 }
 
 func (h *OtlpMetricStore) MeasureInFlight(ctx context.Context, opts ...otelmetric.AddOption) func() {
-
 	if c, ok := h.measurements.upDownCounters[InFlightRequestsUpDownCounter]; ok {
 		c.Add(ctx, 1, opts...)
 	}
@@ -84,6 +85,10 @@ func (h *OtlpMetricStore) MeasureRequestCount(ctx context.Context, opts ...otelm
 }
 
 func (h *OtlpMetricStore) MeasureCircuitBreakerShortCircuit(ctx context.Context, opts ...otelmetric.AddOption) {
+	if !h.circuitBreakerEnabled {
+		return
+	}
+
 	if c, ok := h.measurements.counters[CircuitBreakerShortCircuitsCounter]; ok {
 		c.Add(ctx, 1, opts...)
 	}

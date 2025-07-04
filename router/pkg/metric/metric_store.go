@@ -126,6 +126,10 @@ type (
 		routerBaseAttributes otelmetric.ObserveOption
 	}
 
+	MetricOpts struct {
+		EnableCircuitBreaker bool
+	}
+
 	// Provider is the interface that wraps the basic metric methods.
 	// We maintain two providers, one for OTEL and one for Prometheus.
 	Provider interface {
@@ -163,7 +167,7 @@ type (
 
 // NewStore creates a new metrics store instance.
 // The store abstract OTEL and Prometheus metrics with a single interface.
-func NewStore(opts ...Option) (Store, error) {
+func NewStore(otlpOpts MetricOpts, promOpts MetricOpts, opts ...Option) (Store, error) {
 	h := &Metrics{
 		logger: zap.NewNop(),
 	}
@@ -179,7 +183,7 @@ func NewStore(opts ...Option) (Store, error) {
 	h.baseAttributesOpt = otelmetric.WithAttributes(h.baseAttributes...)
 
 	// Create OTLP metrics exported to OTEL
-	oltpMetrics, err := NewOtlpMetricStore(h.logger, h.otelMeterProvider, h.routerBaseAttributes)
+	oltpMetrics, err := NewOtlpMetricStore(h.logger, h.otelMeterProvider, h.routerBaseAttributes, otlpOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +191,7 @@ func NewStore(opts ...Option) (Store, error) {
 	h.otlpRequestMetrics = oltpMetrics
 
 	// Create prometheus metrics exported to Prometheus scrape endpoint
-	promMetrics, err := NewPromMetricStore(h.logger, h.promMeterProvider, h.routerBaseAttributes)
+	promMetrics, err := NewPromMetricStore(h.logger, h.promMeterProvider, h.routerBaseAttributes, promOpts)
 	if err != nil {
 		return nil, err
 	}

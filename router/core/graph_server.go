@@ -252,7 +252,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		s.circuitBreakerManager = circuit.NewManager(s.subgraphCircuitBreakerOptions.CircuitBreaker)
 	}
 
-	routingUrlGroupings, err := s.getRoutingUrlGroupingForCircuitBreakers(routerConfig)
+	routingUrlGroupings, err := getRoutingUrlGroupingForCircuitBreakers(routerConfig, s.overrideRoutingURLConfiguration, s.overrides)
 	if err != nil {
 		return nil, err
 	}
@@ -370,16 +370,25 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	return s, nil
 }
 
-func (s *graphServer) getRoutingUrlGroupingForCircuitBreakers(routerConfig *nodev1.RouterConfig) (map[string]map[string]bool, error) {
+func getRoutingUrlGroupingForCircuitBreakers(
+	routerConfig *nodev1.RouterConfig,
+	overrideRoutingURLConfiguration config.OverrideRoutingURLConfiguration,
+	overridesConfiguration config.OverridesConfiguration,
+) (map[string]map[string]bool, error) {
 	routingUrlGroupings := make(map[string]map[string]bool)
 
-	overwrites, err := configureSubgraphOverwrites(routerConfig.GetEngineConfig(), routerConfig.GetSubgraphs(), s.overrideRoutingURLConfiguration, s.overrides, true)
+	overwrites, err := configureSubgraphOverwrites(
+		routerConfig.GetEngineConfig(),
+		routerConfig.GetSubgraphs(),
+		overrideRoutingURLConfiguration,
+		overridesConfiguration,
+		true,
+	)
 	if err != nil {
 		return nil, err
 	}
 	for _, subgraph := range overwrites {
 		if _, ok := routingUrlGroupings[subgraph.UrlString]; !ok {
-			// Make the set
 			routingUrlGroupings[subgraph.UrlString] = make(map[string]bool)
 		}
 		routingUrlGroupings[subgraph.UrlString][subgraph.Name] = true
@@ -387,13 +396,18 @@ func (s *graphServer) getRoutingUrlGroupingForCircuitBreakers(routerConfig *node
 
 	if routerConfig.FeatureFlagConfigs != nil {
 		for _, ffConfig := range routerConfig.FeatureFlagConfigs.ConfigByFeatureFlagName {
-			ffOverwrites, err := configureSubgraphOverwrites(ffConfig.GetEngineConfig(), ffConfig.GetSubgraphs(), s.overrideRoutingURLConfiguration, s.overrides, true)
+			ffOverwrites, err := configureSubgraphOverwrites(
+				ffConfig.GetEngineConfig(),
+				ffConfig.GetSubgraphs(),
+				overrideRoutingURLConfiguration,
+				overridesConfiguration,
+				true,
+			)
 			if err != nil {
 				return nil, err
 			}
 			for _, subgraph := range ffOverwrites {
 				if _, ok := routingUrlGroupings[subgraph.UrlString]; !ok {
-					// Make the set
 					routingUrlGroupings[subgraph.UrlString] = make(map[string]bool)
 				}
 				routingUrlGroupings[subgraph.UrlString][subgraph.Name] = true
@@ -803,7 +817,16 @@ func (s *graphServer) buildGraphMux(
 		}
 		routerInfoBaseAttrs := otelmetric.WithAttributeSet(attribute.NewSet(attrKeyValues...))
 
-		m, err := rmetric.NewStore(
+		// From a users perspective this is similar to engine metrics, etc
+		// but in this case we use the same metric store
+		otlpOpts := rmetric.MetricOpts{
+			EnableCircuitBreaker: s.metricConfig.OpenTelemetry.Enabled,
+		}
+		promOpts := rmetric.MetricOpts{
+			EnableCircuitBreaker: s.metricConfig.Prometheus.Enabled,
+		}
+
+		m, err := rmetric.NewStore(otlpOpts, promOpts,
 			rmetric.WithPromMeterProvider(s.promMeterProvider),
 			rmetric.WithOtlpMeterProvider(s.otlpMeterProvider),
 			rmetric.WithBaseAttributes(baseMetricAttributes),
@@ -823,10 +846,14 @@ func (s *graphServer) buildGraphMux(
 	// so we don't duplicate circuit breakers for subgraphs and they can be used in the feature flags even
 	// We initialize it in the buildGraphMux because we want to use the base metric configuration
 	if opts.IsBaseGraph() && s.subgraphCircuitBreakerOptions.IsEnabled() {
+		// If either otel or prom metrics are enabled for circuit breakers
+		// we will enable circuit breaker metric collections
+		isCircuitBreakerMetricsEnabled := s.metricConfig.OpenTelemetry.Enabled || s.metricConfig.Prometheus.Enabled
+
 		err := s.circuitBreakerManager.Initialize(circuit.ManagerOpts{
 			SubgraphCircuitBreakers: s.subgraphCircuitBreakerOptions.SubgraphMap,
 			MetricStore:             gm.metricStore,
-			UseMetrics:              metricsEnabled,
+			UseMetrics:              metricsEnabled && isCircuitBreakerMetricsEnabled,
 			BaseOtelAttributes:      baseMetricAttributes,
 			AllGroupings:            opts.RoutingUrlGroupings,
 		})
@@ -1642,7 +1669,7 @@ func configureSubgraphOverwrites(
 	engineConfig *nodev1.EngineConfiguration,
 	configSubgraphs []*nodev1.Subgraph,
 	overrideRoutingURLConfig config.OverrideRoutingURLConfiguration,
-	overrides config.OverridesConfiguration,
+	overridesConfig config.OverridesConfiguration,
 	skipOverrides bool,
 ) ([]Subgraph, error) {
 	var err error
@@ -1662,7 +1689,7 @@ func configureSubgraphOverwrites(
 		subgraph.UrlString = subgraph.Url.String()
 
 		overrideURL, ok := overrideRoutingURLConfig.Subgraphs[sg.Name]
-		overrideSubgraph, overrideSubgraphOk := overrides.Subgraphs[sg.Name]
+		overrideSubgraph, overrideSubgraphOk := overridesConfig.Subgraphs[sg.Name]
 
 		var overrideSubscriptionURL string
 		var overrideSubscriptionProtocol *common.GraphQLSubscriptionProtocol
