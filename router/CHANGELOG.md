@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.229.1](https://github.com/wundergraph/cosmo/compare/router@0.229.0...router@0.229.1) (2025-07-04)
+
+### Bug Fixes
+
+* fix collecting representation for fetches scoped to concrete types ([#2017](https://github.com/wundergraph/cosmo/issues/2017)) ([bc9bb36](https://github.com/wundergraph/cosmo/commit/bc9bb364cdf414ac6d884ca97b473494c332db6b)) (@devsergiy)
+
 # [0.229.0](https://github.com/wundergraph/cosmo/compare/router@0.228.0...router@0.229.0) (2025-07-04)
 
 ### Features
