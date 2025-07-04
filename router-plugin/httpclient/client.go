@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"time"
 
@@ -78,9 +79,7 @@ func WithHeader(key, value string) ClientOption {
 // WithHeaders adds multiple headers to all requests
 func WithHeaders(headers map[string]string) ClientOption {
 	return func(c *Client) {
-		for key, value := range headers {
-			c.headers[key] = value
-		}
+		maps.Copy(c.headers, headers)
 	}
 }
 

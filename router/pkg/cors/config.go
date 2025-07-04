@@ -1,6 +1,7 @@
 package cors
 
 import (
+	"maps"
 	"net/http"
 	"strings"
 )
@@ -169,15 +170,9 @@ func matchOriginWithRule(origin string, rule []string, depth int, memo map[strin
 }
 
 func (cors *cors) handlePreflight(w http.ResponseWriter) {
-	header := w.Header()
-	for key, value := range cors.preflightHeaders {
-		header[key] = value
-	}
+	maps.Copy(w.Header(), cors.preflightHeaders)
 }
 
 func (cors *cors) handleNormal(w http.ResponseWriter) {
-	header := w.Header()
-	for key, value := range cors.normalHeaders {
-		header[key] = value
-	}
+	maps.Copy(w.Header(), cors.normalHeaders)
 }
