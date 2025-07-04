@@ -64,7 +64,7 @@ func New(options Options) (func(ctx context.Context) error, error) {
 				return nil
 			})
 			if err != nil {
-				return nil, fmt.Errorf("error walking directory %s: %w", options.Directory.DirPath, err)
+				return []string{}, fmt.Errorf("error walking directory %s: %w", options.Directory.DirPath, err)
 			}
 		}
 		return files, nil
@@ -84,7 +84,6 @@ func New(options Options) (func(ctx context.Context) error, error) {
 		dirFilePaths, err := listDirFilePaths()
 		if err != nil {
 			ll.Error("failed to list directory files", zap.Error(err))
-			return err
 		}
 
 		for _, path := range dirFilePaths {
@@ -118,7 +117,6 @@ func New(options Options) (func(ctx context.Context) error, error) {
 				dirFilePaths, err := listDirFilePaths()
 				if err != nil {
 					ll.Error("failed to list directory files", zap.Error(err))
-					return err
 				}
 
 				visitedDirFilePaths := make(map[string]struct{})

@@ -1902,7 +1902,6 @@
         },
         "hot_reload_config": {
           "type": "object",
-          "default": false,
           "description": "Hot reloading configuration for MCP operations.",
           "additionalProperties": false,
           "properties": {
