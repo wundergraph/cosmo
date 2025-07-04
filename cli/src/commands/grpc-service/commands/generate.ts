@@ -1,6 +1,6 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { existsSync, lstatSync } from 'node:fs';
-import { resolve, dirname } from 'pathe';
+import { resolve } from 'pathe';
 import Spinner from 'ora';
 import { Command, program } from 'commander';
 import { compileGraphQLToMapping, compileGraphQLToProto, ProtoLock } from '@wundergraph/protographic';
@@ -16,6 +16,10 @@ export default (opts: BaseCommandOptions) => {
   command.option('-o, --output <path-to-output>', 'The output directory for the protobuf schema. (default ".").', '.');
   command.option('-p, --package-name <name>', 'The name of the proto package. (default "service.v1")', 'service.v1');
   command.option('-g, --go-package <name>', 'Adds an `option go_package` to the proto file.');
+  command.option(
+    '-l, --proto-lock <path-to-existing-proto-lock>',
+    'The path to the existing proto lock file to use as the starting point for the updated proto lock file.',
+  );
   command.action(generateCommandAction);
 
   return command;
@@ -50,7 +54,7 @@ async function generateCommandAction(name: string, options: any) {
       program.error(`Input file ${options.input} does not exist`);
     }
 
-    const result = await generateProtoAndMapping(options.output, inputFile, name, options, spinner);
+    const result = await generateProtoAndMapping(options.output, inputFile, name, options, spinner, options.protoLock);
 
     // Write the generated files
     await writeFile(resolve(options.output, 'mapping.json'), result.mapping);
@@ -80,22 +84,15 @@ async function generateProtoAndMapping(
   name: string,
   options: any,
   spinner: any,
+  protoLockFile?: string,
 ): Promise<GenerationResult> {
   spinner.text = 'Generating proto schema...';
-  const lockFile = resolve(outdir, 'service.proto.lock.json');
 
   const schema = await readFile(schemaFile, 'utf8');
   const serviceName = upperFirst(camelCase(name)) + 'Service';
   spinner.text = 'Generating mapping and proto files...';
 
-  let lockData: ProtoLock | undefined;
-
-  if (existsSync(lockFile)) {
-    const existingLockData = JSON.parse(await readFile(lockFile, 'utf8'));
-    if (existingLockData) {
-      lockData = existingLockData;
-    }
-  }
+  const lockData = await fetchLockData(outdir, protoLockFile);
 
   const mapping = compileGraphQLToMapping(schema, serviceName);
   const proto = compileGraphQLToProto(schema, {
@@ -110,4 +107,25 @@ async function generateProtoAndMapping(
     proto: proto.proto,
     lockData: proto.lockData,
   };
+}
+
+async function fetchLockData(outdir: string, existingLockFile?: string): Promise<ProtoLock | undefined> {
+  if (existingLockFile != null && existsSync(existingLockFile)) {
+    const existingLockData = JSON.parse(await readFile(existingLockFile, 'utf8'));
+    if (existingLockData) {
+      return existingLockData;
+    }
+
+    return undefined;
+  }
+
+  const defaultLockFile = resolve(outdir, 'service.proto.lock.json');
+  if (existsSync(defaultLockFile)) {
+    const existingLockData = JSON.parse(await readFile(defaultLockFile, 'utf8'));
+    if (existingLockData) {
+      return existingLockData;
+    }
+  }
+
+  return undefined;
 }
