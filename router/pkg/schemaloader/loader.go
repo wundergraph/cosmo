@@ -1,13 +1,17 @@
 package schemaloader
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
+	"github.com/wundergraph/cosmo/router/pkg/watcher"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvalidation"
@@ -43,11 +47,13 @@ func NewOperationLoader(logger *zap.Logger, schemaDoc *ast.Document) *OperationL
 }
 
 // LoadOperationsFromDirectory loads all GraphQL operations from files in the specified directory
-func (l *OperationLoader) LoadOperationsFromDirectory(dirPath string) ([]Operation, error) {
+func (l *OperationLoader) LoadOperationsFromDirectory(ctx context.Context, dirPath string, reloadOperationsChan chan bool, hotReload bool, hotReloadInterval time.Duration) ([]Operation, error) {
 	var operations []Operation
 
 	// Create an operation validator
 	validator := astvalidation.DefaultOperationValidator()
+
+	ctx, cancel := context.WithCancel(ctx)
 
 	// Walk through the directory and process GraphQL files
 	err := filepath.WalkDir(dirPath, func(path string, d fs.DirEntry, err error) error {
@@ -129,7 +135,42 @@ func (l *OperationLoader) LoadOperationsFromDirectory(dirPath string) ([]Operati
 	})
 
 	if err != nil {
+		cancel()
 		return nil, fmt.Errorf("error walking mcp operations directory %s: %w", dirPath, err)
+	}
+
+	if hotReload {
+		watchFunc, err := watcher.New(watcher.Options{
+			Interval: hotReloadInterval,
+			Logger:   l.Logger,
+			Callback: func() {
+				reloadOperationsChan <- true
+				cancel()
+			},
+			Directory: watcher.DirOptions{
+				DirPath: dirPath,
+				Filter: func(path string) bool {
+					return !isGraphQLFile(path)
+				},
+			},
+		})
+
+		if err != nil {
+			cancel()
+			l.Logger.Error("Could not create watcher", zap.Error(err))
+		}
+
+		go func() {
+			if err := watchFunc(ctx); err != nil {
+				if !errors.Is(err, context.Canceled) {
+					l.Logger.Error("Error watching operations path", zap.Error(err))
+				} else {
+					l.Logger.Debug("Watcher context cancelled, shutting down")
+				}
+			}
+		}()
+	} else {
+		cancel()
 	}
 
 	return operations, nil

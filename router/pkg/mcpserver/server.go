@@ -68,6 +68,10 @@ type Options struct {
 	EnableArbitraryOperations bool
 	// ExposeSchema determines whether the GraphQL schema is exposed
 	ExposeSchema bool
+	// Enables hot reloading for MCP operations
+	HotReload bool
+	// The interval at which the MCP Operations directory is checked for changes
+	HotReloadInterval time.Duration
 }
 
 // GraphQLSchemaServer represents an MCP server that works with GraphQL schemas and operations
@@ -88,6 +92,9 @@ type GraphQLSchemaServer struct {
 	operationsManager         *OperationsManager
 	schemaCompiler            *SchemaCompiler
 	registeredTools           []string
+	hotReload                 bool
+	hotReloadInterval         time.Duration
+	reloadOperationsChan      chan bool
 }
 
 type graphqlRequest struct {
@@ -213,6 +220,9 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, opts ...func(*Options)
 		enableArbitraryOperations: options.EnableArbitraryOperations,
 		exposeSchema:              options.ExposeSchema,
 		baseURL:                   options.BaseURL,
+		hotReload:                 options.HotReload,
+		hotReloadInterval:         options.HotReloadInterval,
+		reloadOperationsChan:      make(chan bool),
 	}
 
 	return gs, nil
@@ -273,6 +283,14 @@ func WithExposeSchema(exposeSchema bool) func(*Options) {
 	}
 }
 
+// WithHotReload sets the hot reload options
+func WithHotReload(hotReload bool, hotReloadInterval time.Duration) func(*Options) {
+	return func(o *Options) {
+		o.HotReload = hotReload
+		o.HotReloadInterval = hotReloadInterval
+	}
+}
+
 // ServeSSE starts the server with SSE transport
 func (s *GraphQLSchemaServer) ServeSSE() (*server.SSEServer, error) {
 	sseServer := server.NewSSEServer(s.server,
@@ -321,7 +339,7 @@ func (s *GraphQLSchemaServer) Start() error {
 }
 
 // Reload reloads the operations and schema
-func (s *GraphQLSchemaServer) Reload(schema *ast.Document) error {
+func (s *GraphQLSchemaServer) Reload(ctx context.Context, schema *ast.Document) error {
 
 	if s.server == nil {
 		return fmt.Errorf("server is not started")
@@ -330,7 +348,7 @@ func (s *GraphQLSchemaServer) Reload(schema *ast.Document) error {
 	s.schemaCompiler = NewSchemaCompiler(s.logger)
 	s.operationsManager = NewOperationsManager(schema, s.logger, s.excludeMutations)
 
-	if err := s.operationsManager.LoadOperationsFromDirectory(s.operationsDir); err != nil {
+	if err := s.operationsManager.LoadOperationsFromDirectory(ctx, s.operationsDir, s.reloadOperationsChan, s.hotReload, s.hotReloadInterval); err != nil {
 		return fmt.Errorf("failed to load operations: %w", err)
 	}
 
@@ -722,4 +740,8 @@ func (s *GraphQLSchemaServer) handleGetGraphQLSchema() func(ctx context.Context,
 
 		return mcp.NewToolResultText(schemaStr), nil
 	}
+}
+
+func (s *GraphQLSchemaServer) ReloadOperationsChannel() chan bool {
+	return s.reloadOperationsChan
 }
