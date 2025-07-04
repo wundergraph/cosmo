@@ -972,6 +972,12 @@
           "description": "The configuration for the collection and export of metrics. The metrics are collected and exported using the OpenTelemetry protocol (OTLP) and Prometheus.",
           "additionalProperties": false,
           "properties": {
+            "experiment_cardinality_limit": {
+              "type": "integer",
+              "description": "Sets a hard limit on the number of Metric Points that can be collected during a collection cycle. NOTE: This option is experimental and may change in future versions.",
+              "minimum": 1,
+              "default": 2000
+            },
             "attributes": {
               "type": "array",
               "description": "The attributes to add to OTLP Metrics and Prometheus.",
@@ -1919,7 +1925,7 @@
           "properties": {
             "nats": {
               "type": "array",
-              "description": "The NATS configuration. The NATS is used to configure the event-driven federated subscriptions.",
+              "description": "Configuration used by the EDFS provider to connect to the NATS server.",
               "items": {
                 "type": "object",
                 "required": ["id", "url"],
@@ -1978,7 +1984,7 @@
             },
             "kafka": {
               "type": "array",
-              "description": "The Kafka configuration. The Kafka is used to configure the event-driven federated subscriptions.",
+              "description": "Configuration used by the EDFS provider to connect to the Kafka server.",
               "items": {
                 "type": "object",
                 "additionalProperties": false,
@@ -2068,6 +2074,34 @@
                     "type": "string",
                     "description": "The maximum wait time for fetching messages from the Kafka broker. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'. Setting this to a higher value can help reduce the number of requests to the Kafka broker.",
                     "format": "go-duration"
+                  }
+                }
+              }
+            },
+            "redis": {
+              "type": "array",
+              "description": "Configuration used by the EDFS provider to connect to the Redis server.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["id", "urls"],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "description": "The provider ID. The provider ID is used to identify the provider in the configuration."
+                  },
+                  "urls": {
+                    "type": "array",
+                    "description": "The list of Redis URLs. An example of URL is \"redis://username:password@localhost:6379/11\"",
+                    "minItems": 1,
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "cluster_enabled": {
+                    "type": "boolean",
+                    "description": "If enabled, the Redis cluster client is used to connect to the server.",
+                    "default": false
                   }
                 }
               }

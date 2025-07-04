@@ -123,9 +123,10 @@ type MetricsOTLPExporter struct {
 }
 
 type Metrics struct {
-	Attributes []CustomAttribute `yaml:"attributes"`
-	OTLP       MetricsOTLP       `yaml:"otlp"`
-	Prometheus Prometheus        `yaml:"prometheus"`
+	Attributes       []CustomAttribute `yaml:"attributes"`
+	OTLP             MetricsOTLP       `yaml:"otlp"`
+	Prometheus       Prometheus        `yaml:"prometheus"`
+	CardinalityLimit int               `yaml:"experiment_cardinality_limit" envDefault:"2000" env:"METRICS_EXPERIMENT_CARDINALITY_LIMIT"`
 }
 
 type MetricsOTLP struct {
@@ -570,9 +571,20 @@ func (k KafkaEventSource) GetID() string {
 	return k.ID
 }
 
+type RedisEventSource struct {
+	ID             string   `yaml:"id,omitempty"`
+	URLs           []string `yaml:"urls,omitempty"`
+	ClusterEnabled bool     `yaml:"cluster_enabled"`
+}
+
+func (r RedisEventSource) GetID() string {
+	return r.ID
+}
+
 type EventProviders struct {
 	Nats  []NatsEventSource  `yaml:"nats,omitempty"`
 	Kafka []KafkaEventSource `yaml:"kafka,omitempty"`
+	Redis []RedisEventSource `yaml:"redis,omitempty"`
 }
 
 type EventsConfiguration struct {

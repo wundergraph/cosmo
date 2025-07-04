@@ -59,7 +59,8 @@
           "Enabled": false,
           "IncludeOperationSha": false
         }
-      }
+      },
+      "CardinalityLimit": 2000
     }
   },
   "GraphqlMetrics": {
@@ -258,7 +259,8 @@
   "Events": {
     "Providers": {
       "Nats": null,
-      "Kafka": null
+      "Kafka": null,
+      "Redis": null
     }
   },
   "CacheWarmup": {

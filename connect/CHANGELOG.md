@@ -4,6 +4,22 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.113.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.112.0...@wundergraph/cosmo-connect@0.113.0) (2025-07-01)
+
+### Bug Fixes
+
+* toggle ui logic and search to consider all operations ([#1982](https://github.com/wundergraph/cosmo/issues/1982)) ([e6264bd](https://github.com/wundergraph/cosmo/commit/e6264bd5fc98962b2b36f21a3a20c802333192f1)) (@JivusAyrus)
+
+### Features
+
+* allow organization members to be assigned multiple groups ([#1919](https://github.com/wundergraph/cosmo/issues/1919)) ([1e67757](https://github.com/wundergraph/cosmo/commit/1e677576a32efb89673cdfc3900a4c863eec8b7e)) (@wilsonrivera)
+
+# [0.112.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.111.0...@wundergraph/cosmo-connect@0.112.0) (2025-06-26)
+
+### Features
+
+* add redis pubsub support to EDFS ([#1810](https://github.com/wundergraph/cosmo/issues/1810)) ([8f294b6](https://github.com/wundergraph/cosmo/commit/8f294b62c14e9cae7e1ad85e65b0ca3ada0bcfbb)) (@alepane21)
+
 # [0.111.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.110.0...@wundergraph/cosmo-connect@0.111.0) (2025-06-06)
 
 ### Features

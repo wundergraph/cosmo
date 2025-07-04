@@ -4,6 +4,50 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.228.0](https://github.com/wundergraph/cosmo/compare/router@0.227.1...router@0.228.0) (2025-07-03)
+
+### Features
+
+* configurable cardinality limit for otel ([#2009](https://github.com/wundergraph/cosmo/issues/2009)) ([71dfdcf](https://github.com/wundergraph/cosmo/commit/71dfdcf685cfd5b97f3bcd2fe7a34e4f8ecf0228)) (@endigma)
+
+## [0.227.1](https://github.com/wundergraph/cosmo/compare/router@0.227.0...router@0.227.1) (2025-07-03)
+
+### Bug Fixes
+
+* **router:** require presence of prefix value for auth header ([#2011](https://github.com/wundergraph/cosmo/issues/2011)) ([bd25547](https://github.com/wundergraph/cosmo/commit/bd25547b96dc47af26061e6de9c9170e359f4fbc)) (@ysmolski)
+
+# [0.227.0](https://github.com/wundergraph/cosmo/compare/router@0.226.2...router@0.227.0) (2025-07-03)
+
+### Features
+
+* status code derived fallback errors ([#2000](https://github.com/wundergraph/cosmo/issues/2000)) ([ea2fd12](https://github.com/wundergraph/cosmo/commit/ea2fd12ae65b7c4e4041bee366598ffd3e139a92)) (@endigma)
+
+## [0.226.2](https://github.com/wundergraph/cosmo/compare/router@0.226.1...router@0.226.2) (2025-07-02)
+
+### Bug Fixes
+
+* fix checking presence of type fragment mapped to interface object ([#2001](https://github.com/wundergraph/cosmo/issues/2001)) ([79bdd2f](https://github.com/wundergraph/cosmo/commit/79bdd2f449fcbaeb2068a3aedb0a5cc81c222deb)) (@devsergiy)
+* **router:** preserve HTTP status in WriteResponseError ([#1988](https://github.com/wundergraph/cosmo/issues/1988)) ([2647f84](https://github.com/wundergraph/cosmo/commit/2647f8498a8d41ace57410c69636e3c7975f60fb)) (@kaialang)
+
+## [0.226.1](https://github.com/wundergraph/cosmo/compare/router@0.226.0...router@0.226.1) (2025-06-28)
+
+### Bug Fixes
+
+* fix rewriting object selections with nested abstract fragments ([#1994](https://github.com/wundergraph/cosmo/issues/1994)) ([1ee141e](https://github.com/wundergraph/cosmo/commit/1ee141e74ec20f453c30b5a49ddd446ab2cf3652)) (@devsergiy)
+
+# [0.226.0](https://github.com/wundergraph/cosmo/compare/router@0.225.0...router@0.226.0) (2025-06-26)
+
+### Features
+
+* add redis pubsub support to EDFS ([#1810](https://github.com/wundergraph/cosmo/issues/1810)) ([8f294b6](https://github.com/wundergraph/cosmo/commit/8f294b62c14e9cae7e1ad85e65b0ca3ada0bcfbb)) (@alepane21)
+
+# [0.225.0](https://github.com/wundergraph/cosmo/compare/router@0.224.0...router@0.225.0) (2025-06-25)
+
+### Features
+
+* add debounce to watcher ([#1976](https://github.com/wundergraph/cosmo/issues/1976)) ([5fd7f13](https://github.com/wundergraph/cosmo/commit/5fd7f13405c1b6135d93098d11cd21ae64c8c7c8)) (@SkArchon)
+* add support for remote grpc services ([#1953](https://github.com/wundergraph/cosmo/issues/1953)) ([5074af9](https://github.com/wundergraph/cosmo/commit/5074af9ab4ce14c418fa8fee69e785fb6237f785)) (@Noroth)
+
 # [0.224.0](https://github.com/wundergraph/cosmo/compare/router@0.223.0...router@0.224.0) (2025-06-19)
 
 ### Features
