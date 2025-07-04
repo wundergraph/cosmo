@@ -22,16 +22,14 @@ This document outlines the conventions used in Cosmo's configuration schema.
 
 When creating a new feature or configuration section, instead of directly making an option like `option_enabled` or `option_disabled`, use an `enabled` or `disabled` sub-option. This leaves room for future sub-options pertaining to the same feature.
 
-e.g.:
-
-**Good**
+#### Good
 
 ```yaml
 feature:
   enabled: true
 ```
 
-**Bad**
+#### Bad
 
 ```yaml
 feature_enabled: true
@@ -48,8 +46,8 @@ enable_feature: true
   - Select either `enabled` or `disabled` based on the feature's default state, if it is opt-out, use `disabled`, and if opt-in, use `enabled`.
   - This helps both semantic readability with an implied default and allows the Go zero value for booleans to be used as the default.
 - Default values are specified in `pkg/config/config.go` via struct tags.
-    - It is usually best to try and make boolean properties default to `false`, this simplifies handling of the zero value, and generally means the least intrusive changes to the codebase
-    - As with `enabled`/`disabled`, you can use antonyms like `include`/`exclude`, `allow`/`deny`, etc. to indicate the default behavior.
+  - It is usually best to try and make boolean properties default to `false`, this simplifies handling of the zero value, and generally means the least intrusive changes to the codebase
+  - As with `enabled`/`disabled`, you can use antonyms like `include`/`exclude`, `allow`/`deny`, etc. to indicate the default behavior.
 - URLs follow the format `scheme://host:port`
 - File paths use the `format: file-path` validator
 - Sizes are specified using string format with units (e.g., "100MB")
@@ -91,6 +89,7 @@ type Config struct {
 ```
 
 The struct field tags define:
+
 - `yaml:_`: The field name in YAML configuration
 - `yaml:omitempty`: Omits the field from Marshalling if it is the type's zero value
 - `env`: Environment variable name for this option
