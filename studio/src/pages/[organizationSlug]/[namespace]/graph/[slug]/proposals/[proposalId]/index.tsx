@@ -13,6 +13,12 @@ import { SDLViewerActions } from "@/components/schema/sdl-viewer";
 import { SDLViewerMonaco } from "@/components/schema/sdl-viewer-monaco";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
+import { Label } from "@/components/ui/label";
 import { Loader } from "@/components/ui/loader";
 import { Pagination } from "@/components/ui/pagination";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio";
@@ -41,6 +47,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
+import { useUser } from "@/hooks/use-user";
 import { formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
 import { cn } from "@/lib/utils";
@@ -51,15 +58,15 @@ import {
 } from "@heroicons/react/24/outline";
 import {
   CheckCircledIcon,
+  ChevronDownIcon,
   Component2Icon,
   GitHubLogoIcon,
   ReaderIcon,
-  ChevronDownIcon,
 } from "@radix-ui/react-icons";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
-  getProposalChecks,
   getProposal,
+  getProposalChecks,
   updateProposal,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import {
@@ -70,14 +77,6 @@ import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useContext, useState } from "react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Label } from "@/components/ui/label";
-import { useUser } from "@/hooks/use-user";
 
 export const ProposalDetails = ({
   proposal,
