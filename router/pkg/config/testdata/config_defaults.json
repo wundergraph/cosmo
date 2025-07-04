@@ -420,6 +420,7 @@
     }
   },
   "PersistedOperationsConfig": {
+    "Disabled": false,
     "LogUnknown": false,
     "Safelist": {
       "Enabled": false
