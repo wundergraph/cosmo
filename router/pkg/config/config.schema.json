@@ -143,6 +143,11 @@
       "additionalProperties": false,
       "description": "The configuration for the persisted operations.",
       "properties": {
+        "disabled": {
+          "type": "boolean",
+          "description": "Disables persisted operations. If disabled, all operations sent with a persisted operation in the body are blocked.",
+          "default": false
+        },
         "safelist": {
           "type": "object",
           "description": "The configuration for safelisting persisted operations.",
