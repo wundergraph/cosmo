@@ -1,8 +1,6 @@
 import { Command } from 'commander';
-import { BaseCommandOptions } from '../../../core/types/types.js';
 import GetFederatedGraphChangelog from '../common/changelog.js';
 import GetFederatedGraphVersion from '../common/version/index.js';
-import { checkAuth } from '../../auth/utils.js';
 import FetchFederatedGraphSchemaCommand from '../common/fetch-schema.js';
 import ListFederatedGraphs from './commands/list.js';
 import CheckFederatedGraphCommand from './commands/check.js';
@@ -11,6 +9,8 @@ import DeleteFederatedGraphCommand from './commands/delete.js';
 import UpdateFederatedGraphCommand from './commands/update.js';
 import MoveFederatedGraphCommand from './commands/move.js';
 import FetchFederatedGraphCommand from './commands/fetch.js';
+import { checkAuth } from '@/commands/auth/utils.js';
+import type { BaseCommandOptions } from '@/core/types';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('federated-graph');

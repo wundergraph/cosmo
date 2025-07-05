@@ -1,10 +1,10 @@
 import { Command } from 'commander';
-import { BaseCommandOptions } from '../../core/types/types.js';
 import { checkAuth } from '../auth/utils.js';
 import Create from './commands/create.js';
 import Delete from './commands/delete.js';
 import List from './commands/list.js';
 import Rename from './commands/rename.js';
+import type { BaseCommandOptions } from '@/core/types';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('namespace');

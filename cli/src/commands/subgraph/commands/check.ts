@@ -5,10 +5,10 @@ import { resolve } from 'pathe';
 import pc from 'picocolors';
 import { VCSContext } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { splitLabel } from '@wundergraph/cosmo-shared';
-import { config, getBaseHeaders } from '../../../core/config.js';
-import { BaseCommandOptions } from '../../../core/types/types.js';
-import { verifyGitHubIntegration } from '../../../github.js';
-import { handleCheckResult } from '../../../handle-check-result.js';
+import { config, getBaseHeaders } from '@/core/config.js';
+import type { BaseCommandOptions } from '@/core/types';
+import { verifyGitHubIntegration } from '@/github.js';
+import { handleCheckResult } from '@/handle-check-result.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('check');

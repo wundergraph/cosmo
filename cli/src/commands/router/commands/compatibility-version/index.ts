@@ -1,6 +1,6 @@
 import { Command } from 'commander';
-import { BaseCommandOptions } from '../../../../core/types/types.js';
 import ListCompatibilityVersions from './commands/list.js';
+import type { BaseCommandOptions } from '@/core/types';
 
 export default (opts: BaseCommandOptions) => {
   const schema = new Command('compatibility-version');

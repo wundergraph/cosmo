@@ -1,8 +1,8 @@
 import { rmSync } from 'node:fs';
 import { Command } from 'commander';
 import pc from 'picocolors';
-import { configDir } from '../../../core/config.js';
-import { BaseCommandOptions } from '../../../core/types/types.js';
+import { configDir } from '@/core/config.js';
+import type { BaseCommandOptions } from '@/core/types';
 
 export default (opts: BaseCommandOptions) => {
   const logoutCommand = new Command('logout');

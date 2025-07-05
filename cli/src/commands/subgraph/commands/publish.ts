@@ -11,10 +11,10 @@ import {
   parseGraphQLWebsocketSubprotocol,
   splitLabel,
 } from '@wundergraph/cosmo-shared';
-import { BaseCommandOptions } from '../../../core/types/types.js';
-import { getBaseHeaders } from '../../../core/config.js';
-import { validateSubscriptionProtocols } from '../../../utils.js';
-import { websocketSubprotocolDescription } from '../../../constants.js';
+import { getBaseHeaders } from '@/core/config.js';
+import { validateSubscriptionProtocols } from '@/utils.js';
+import { websocketSubprotocolDescription } from '@/constants.js';
+import type { BaseCommandOptions } from '@/core/types';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('publish');

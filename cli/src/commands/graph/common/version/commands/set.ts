@@ -4,9 +4,9 @@ import Table from 'cli-table3';
 import { Command, program } from 'commander';
 import ora from 'ora';
 import pc from 'picocolors';
-import { getBaseHeaders } from '../../../../../core/config.js';
-import { CommonGraphCommandOptions } from '../../../../../core/types/types.js';
-import { handleCompositionResult } from '../../../../../handle-composition-result.js';
+import { getBaseHeaders } from '@/core/config.js';
+import { handleCompositionResult } from '@/handle-composition-result.js';
+import type { CommonGraphCommandOptions } from '@/core/types';
 
 export default (opts: CommonGraphCommandOptions) => {
   const graphType = opts.isMonograph ? 'monograph' : 'federated graph';

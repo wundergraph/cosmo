@@ -1,6 +1,6 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { getBaseHeaders } from '../../../core/config.js';
 import { ToolContext } from './types.js';
+import { getBaseHeaders } from '@/core/config.js';
 
 export const registerListSubgraphsTool = ({ server, opts }: ToolContext) => {
   server.tool('list_subgraphs', 'List all subgraphs', async () => {

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import type { BaseCommandOptions } from '../../../core/types/types.js';
+import type { BaseCommandOptions } from '@/core/types';
 
 /**
  * Registers the dream-query-workflow tool with the MCP server.
@@ -19,25 +19,25 @@ export const registerDreamQueryWorkflowTool = ({ server, opts }: { server: McpSe
         {
           type: 'text',
           text: `
-                        You are an expert GraphQL developer.
-                        You are given a GraphQL query and a Supergraph.
-                        Your task is to generate a list of instructions to make the necessary changes to the Supergraph to support the query.
+            You are an expert GraphQL developer.
+            You are given a GraphQL query and a Supergraph.
+            Your task is to generate a list of instructions to make the necessary changes to the Supergraph to support the query.
 
-                        Scope:
-                        Supergraph: ${supergraph}, namespace: ${namespace ?? 'default'}
+            Scope:
+            Supergraph: ${supergraph}, namespace: ${namespace ?? 'default'}
 
-                        Given the following Query:
+            Given the following Query:
 
-                        \`\`\`graphql
-                        ${query}
-                        \`\`\`
+            \`\`\`graphql
+            ${query}
+             \`\`\`
 
-                        Validate the Query against the Supergraph.
-                        If it's invalid because fields are missing,
-                        make changes to the schema until it's valid.
-                        Once you know the changes for the Supergraph,
-                        use the "schema_change_proposal" flow to propose the necessary changes.
-                    `,
+            Validate the Query against the Supergraph.
+            If it's invalid because fields are missing,
+            make changes to the schema until it's valid.
+            Once you know the changes for the Supergraph,
+            use the "schema_change_proposal" flow to propose the necessary changes.
+        `,
         },
       ],
     }),

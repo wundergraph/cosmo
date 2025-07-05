@@ -2,7 +2,7 @@ import Ajv2020, { ErrorObject, ValidateFunction } from 'ajv/dist/2020.js';
 import { z } from 'zod';
 import yaml from 'js-yaml';
 import axios from 'axios';
-import { ToolContext } from './types.js';
+import type { ToolContext } from './types.js';
 
 export interface ValidationResult {
   isValid: boolean;

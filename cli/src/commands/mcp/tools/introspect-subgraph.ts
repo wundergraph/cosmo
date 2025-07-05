@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { BaseCommandOptions } from '../../../core/types/types.js';
-import { introspectSubgraph } from '../../../utils.js';
+import type { BaseCommandOptions } from '@/core/types';
+import { introspectSubgraph } from '@/utils.js';
 
 /**
  * Zod schema for the introspect subgraph tool input.

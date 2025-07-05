@@ -4,10 +4,10 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { Command, program } from 'commander';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
-import { getBaseHeaders } from '../../../../core/config.js';
-import { BaseCommandOptions } from '../../../../core/types/types.js';
-import { verifyGitHubIntegration } from '../../../../github.js';
-import { handleCheckResult } from '../../../../handle-check-result.js';
+import { getBaseHeaders } from '@/core/config.js';
+import type { BaseCommandOptions } from '@/core/types';
+import { verifyGitHubIntegration } from '@/github.js';
+import { handleCheckResult } from '@/handle-check-result.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('check');

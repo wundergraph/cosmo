@@ -8,7 +8,7 @@ import {
   CompositionWarning,
   DeploymentError,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { SubgraphCommandJsonOutput } from './core/types/types.js';
+import { SubgraphCommandJsonOutput } from './core/types/index.js';
 
 export const handleCompositionResult = ({
   responseCode,

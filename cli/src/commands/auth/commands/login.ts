@@ -5,10 +5,10 @@ import jwtDecode from 'jwt-decode';
 import inquirer from 'inquirer';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import ora from 'ora';
-import { BaseCommandOptions } from '../../../core/types/types.js';
 import { DecodedAccessToken, performDeviceAuth, startPollingForAccessToken } from '../utils.js';
-import { updateConfigFile } from '../../../utils.js';
-import { getBaseHeaders } from '../../../core/config.js';
+import { updateConfigFile } from '@/utils.js';
+import { getBaseHeaders } from '@/core/config.js';
+import type { BaseCommandOptions } from '@/core/types';
 
 export default (opts: BaseCommandOptions) => {
   const loginCommand = new Command('login');

@@ -10,10 +10,10 @@ import pupa from 'pupa';
 import Spinner from 'ora';
 import { compileGraphQLToMapping, compileGraphQLToProto } from '@wundergraph/protographic';
 import { camelCase, upperFirst } from 'lodash-es';
-import { BaseCommandOptions } from '../../../../../core/types/types.js';
 import PluginTemplates from '../templates/plugin.js';
 import ProjectTemplates from '../templates/project.js';
 import { renderResultTree } from '../helper.js';
+import type { BaseCommandOptions } from '@/core/types';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('init');

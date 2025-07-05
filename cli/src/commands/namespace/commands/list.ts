@@ -3,8 +3,8 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { Command, program } from 'commander';
 import pc from 'picocolors';
 import Table from 'cli-table3';
-import { getBaseHeaders } from '../../../core/config.js';
-import { BaseCommandOptions } from '../../../core/types/types.js';
+import { getBaseHeaders } from '@/core/config.js';
+import type { BaseCommandOptions } from '@/core/types';
 
 type OutputFile = {
   id: string;

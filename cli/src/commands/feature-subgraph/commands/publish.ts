@@ -1,17 +1,15 @@
 import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import Table from 'cli-table3';
 import { Command, program } from 'commander';
 import ora from 'ora';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { parseGraphQLSubscriptionProtocol, parseGraphQLWebsocketSubprotocol } from '@wundergraph/cosmo-shared';
-import { BaseCommandOptions, SubgraphCommandJsonOutput } from '../../../core/types/types.js';
-import { getBaseHeaders } from '../../../core/config.js';
-import { validateSubscriptionProtocols } from '../../../utils.js';
-import { websocketSubprotocolDescription } from '../../../constants.js';
-import { handleCompositionResult } from '../../../handle-composition-result.js';
+import { getBaseHeaders } from '@/core/config.js';
+import { validateSubscriptionProtocols } from '@/utils.js';
+import { websocketSubprotocolDescription } from '@/constants.js';
+import { handleCompositionResult } from '@/handle-composition-result.js';
+import type { BaseCommandOptions } from '@/core/types';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('publish');

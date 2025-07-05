@@ -1,10 +1,10 @@
 import { Command, program } from 'commander';
 import ora from 'ora';
 import pc from 'picocolors';
-import { getBaseHeaders } from '../../../core/config.js';
-import { BaseCommandOptions } from '../../../core/types/types.js';
-import { handleProposalResult } from '../../../handle-proposal-result.js';
 import { processProposalSubgraphs } from '../utils.js';
+import { getBaseHeaders } from '@/core/config.js';
+import { handleProposalResult } from '@/handle-proposal-result.js';
+import type { BaseCommandOptions } from '@/core/types';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('update');

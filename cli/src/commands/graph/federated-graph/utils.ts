@@ -3,9 +3,9 @@ import { Subgraph as ProtoSubgraph } from '@wundergraph/cosmo-connect/dist/platf
 import { program } from 'commander';
 import jwtDecode from 'jwt-decode';
 import pc from 'picocolors';
-import { Client } from '../../../core/client/client.js';
-import { config, getBaseHeaders } from '../../../core/config.js';
-import { GraphToken } from '../../auth/utils.js';
+import { Client } from '@/core/client/client.js';
+import { config, getBaseHeaders } from '@/core/config.js';
+import { GraphToken } from '@/commands/auth/utils.js';
 
 export const fetchRouterConfig = async ({
   client,

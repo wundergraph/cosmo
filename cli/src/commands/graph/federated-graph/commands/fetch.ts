@@ -3,8 +3,8 @@ import { Command } from 'commander';
 import yaml from 'js-yaml';
 import { join, resolve } from 'pathe';
 import pc from 'picocolors';
-import { BaseCommandOptions } from '../../../../core/types/types.js';
 import { fetchRouterConfig, getFederatedGraphSchemas, getSubgraphSDL, getSubgraphsOfFedGraph } from '../utils.js';
+import type { BaseCommandOptions } from '@/core/types';
 
 export default (opts: BaseCommandOptions) => {
   const cmd = new Command('fetch');

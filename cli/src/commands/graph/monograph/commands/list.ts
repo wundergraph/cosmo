@@ -5,8 +5,8 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import Table from 'cli-table3';
 import { resolve } from 'pathe';
 import logSymbols from 'log-symbols';
-import { BaseCommandOptions } from '../../../../core/types/types.js';
-import { getBaseHeaders } from '../../../../core/config.js';
+import type { BaseCommandOptions } from '@/core/types';
+import { getBaseHeaders } from '@/core/config.js';
 
 type OutputFile = {
   name: string;

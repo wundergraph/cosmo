@@ -7,8 +7,8 @@ import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { PublishedOperationStatus, PersistedOperation } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 
-import { BaseCommandOptions } from '../../../core/types/types.js';
-import { getBaseHeaders } from '../../../core/config.js';
+import type { BaseCommandOptions } from '@/core/types';
+import { getBaseHeaders } from '@/core/config.js';
 
 type OperationOutputStatus = 'created' | 'up_to_date' | 'conflict';
 

@@ -3,8 +3,8 @@ import Table from 'cli-table3';
 import { Command, program } from 'commander';
 import pc from 'picocolors';
 import ora from 'ora';
-import { getBaseHeaders } from '../../../../core/config.js';
-import { BaseCommandOptions } from '../../../../core/types/types.js';
+import { getBaseHeaders } from '@/core/config.js';
+import type { BaseCommandOptions } from '@/core/types';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('move');

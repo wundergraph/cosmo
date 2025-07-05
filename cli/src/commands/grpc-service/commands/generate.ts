@@ -1,12 +1,12 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { existsSync, lstatSync } from 'node:fs';
-import { resolve, dirname } from 'pathe';
+import { resolve } from 'pathe';
 import Spinner from 'ora';
 import { Command, program } from 'commander';
 import { compileGraphQLToMapping, compileGraphQLToProto, ProtoLock } from '@wundergraph/protographic';
 import { camelCase, upperFirst } from 'lodash-es';
-import { BaseCommandOptions } from '../../../core/types/types.js';
-import { renderResultTree } from '../../router/commands/plugin/helper.js';
+import type { BaseCommandOptions } from '@/core/types';
+import { renderResultTree } from '@/commands/router/commands/plugin/helper.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('generate');

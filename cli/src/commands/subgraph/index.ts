@@ -1,5 +1,4 @@
 import { Command } from 'commander';
-import { BaseCommandOptions } from '../../core/types/types.js';
 import { checkAuth } from '../auth/utils.js';
 import CheckSubgraph from './commands/check.js';
 import CreateSubgraphCommand from './commands/create.js';
@@ -11,6 +10,7 @@ import ListSubgraphs from './commands/list.js';
 import IntrospectSubgraph from './commands/introspect.js';
 import MoveSubgraph from './commands/move.js';
 import FetchSubgraph from './commands/fetch.js';
+import type { BaseCommandOptions } from '@/core/types';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('subgraph');

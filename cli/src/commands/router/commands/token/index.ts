@@ -1,8 +1,8 @@
 import { Command } from 'commander';
-import { BaseCommandOptions } from '../../../../core/types/types.js';
 import CreateRouterToken from './commands/create.js';
 import ListRouterTokens from './commands/list.js';
 import DeleteRouterTokens from './commands/delete.js';
+import type { BaseCommandOptions } from '@/core/types';
 
 export default (opts: BaseCommandOptions) => {
   const schema = new Command('token');
