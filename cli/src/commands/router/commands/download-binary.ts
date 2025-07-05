@@ -5,7 +5,7 @@ import pc from 'picocolors';
 import cliProgress from 'cli-progress';
 import decompress from 'decompress';
 import { resolve, join } from 'pathe';
-import { BaseCommandOptions } from '../../../core/types/types.js';
+import type { BaseCommandOptions } from '@/core/types';
 
 export default function (_: BaseCommandOptions) {
   const command = new Command('download-binary');

@@ -1,7 +1,7 @@
 import { Command } from 'commander';
-import { CommonGraphCommandOptions } from '../../../../core/types/types.js';
 import GetRouterCompatibilityVersion from './commands/get.js';
 import SetRouterCompatibilityVersion from './commands/set.js';
+import type { CommonGraphCommandOptions } from '@/core/types';
 
 export default (opts: CommonGraphCommandOptions) => {
   const graphType = opts.isMonograph ? 'monograph' : 'federated graph';

@@ -4,9 +4,9 @@ import { joinLabel } from '@wundergraph/cosmo-shared';
 import Table from 'cli-table3';
 import { Command, program } from 'commander';
 import pc from 'picocolors';
-import { join, resolve } from 'pathe';
-import { getBaseHeaders } from '../../../core/config.js';
-import { BaseCommandOptions } from '../../../core/types/types.js';
+import { resolve } from 'pathe';
+import { getBaseHeaders } from '@/core/config.js';
+import type { BaseCommandOptions } from '@/core/types';
 
 type OutputFile = {
   name: string;

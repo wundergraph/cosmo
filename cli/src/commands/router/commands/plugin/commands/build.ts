@@ -3,7 +3,6 @@ import os from 'node:os';
 import { Command, program } from 'commander';
 import { resolve } from 'pathe';
 import Spinner from 'ora';
-import { BaseCommandOptions } from '../../../../../core/types/types.js';
 import { renderResultTree } from '../helper.js';
 import {
   buildBinaries,
@@ -14,6 +13,7 @@ import {
   installGoDependencies,
   normalizePlatforms,
 } from '../toolchain.js';
+import type { BaseCommandOptions } from '@/core/types';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('build');

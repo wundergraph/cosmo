@@ -4,8 +4,8 @@ import { Command, program } from 'commander';
 import { endOfDay, formatISO, startOfDay, subDays } from 'date-fns';
 import pc from 'picocolors';
 import { resolve } from 'pathe';
-import { getBaseHeaders } from '../../../core/config.js';
-import { CommonGraphCommandOptions } from '../../../core/types/types.js';
+import { getBaseHeaders } from '@/core/config.js';
+import type { CommonGraphCommandOptions } from '@/core/types';
 
 type OutputFile = {
   createdAt: string;

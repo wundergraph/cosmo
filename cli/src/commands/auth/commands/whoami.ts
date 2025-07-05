@@ -1,8 +1,8 @@
 import { Command, program } from 'commander';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { BaseCommandOptions, WhoAmICommandJsonOutput } from '../../../core/types/types.js';
-import { getBaseHeaders, config } from '../../../core/config.js';
+import { getBaseHeaders, config } from '@/core/config.js';
+import type { BaseCommandOptions, WhoAmICommandJsonOutput } from '@/core/types';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('whoami');

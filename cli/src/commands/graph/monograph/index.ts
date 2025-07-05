@@ -1,9 +1,7 @@
 import { Command } from 'commander';
-import { BaseCommandOptions } from '../../../core/types/types.js';
 import FetchMonographCommand from '../common/fetch-schema.js';
 import GetMonographChangelog from '../common/changelog.js';
 import GetMonographVersion from '../common/version/index.js';
-import { checkAuth } from '../../auth/utils.js';
 import CreateMonographCommand from './commands/create.js';
 import PublishMonographCommand from './commands/publish.js';
 import UpdateMonographCommand from './commands/update.js';
@@ -12,6 +10,8 @@ import DeleteMonographCommand from './commands/delete.js';
 import ListMonographs from './commands/list.js';
 import MoveMonograph from './commands/move.js';
 import MigrateMonograph from './commands/migrate.js';
+import { checkAuth } from '@/commands/auth/utils.js';
+import type { BaseCommandOptions } from '@/core/types';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('monograph');

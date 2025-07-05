@@ -1,7 +1,6 @@
 import { Command } from 'commander';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { BaseCommandOptions } from '../../core/types/types.js';
 import {
   registerListSubgraphsTool,
   registerSubgraphVerifySchemaChangesTool,
@@ -16,6 +15,7 @@ import {
   registerSearchDocsTool,
   registerVerifyRouterConfigTool,
 } from './tools/index.js';
+import type { BaseCommandOptions } from '@/core/types';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('mcp');

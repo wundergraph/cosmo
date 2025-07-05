@@ -4,10 +4,10 @@ import { Command, program } from 'commander';
 import jwtDecode from 'jwt-decode';
 import pc from 'picocolors';
 import { resolve } from 'pathe';
-import { getBaseHeaders, config } from '../../../core/config.js';
-import { BaseCommandOptions } from '../../../core/types/types.js';
-import { GraphToken } from '../../auth/utils.js';
-import { makeSignature, safeCompare } from '../../../core/signature.js';
+import { getBaseHeaders, config } from '@/core/config.js';
+import { GraphToken } from '@/commands/auth/utils.js';
+import { makeSignature, safeCompare } from '@/core/signature.js';
+import type { BaseCommandOptions } from '@/core/types';
 
 export const handleOutput = async (out: string | undefined, config: string) => {
   if (out) {
