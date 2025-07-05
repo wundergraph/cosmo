@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"net/url"
 
@@ -45,15 +46,11 @@ func (copyCtx Context) Clone() *Context {
 	copyCtx.Request.Auth.Scopes = scopes
 
 	claims := make(map[string]any, len(copyCtx.Request.Auth.Claims))
-	for k, v := range copyCtx.Request.Auth.Claims {
-		claims[k] = v
-	}
+	maps.Copy(claims, copyCtx.Request.Auth.Claims)
 	copyCtx.Request.Auth.Claims = claims
 
 	query := make(map[string]string, len(copyCtx.Request.URL.Query))
-	for k, v := range copyCtx.Request.URL.Query {
-		claims[k] = v
-	}
+	maps.Copy(query, copyCtx.Request.URL.Query)
 	copyCtx.Request.URL.Query = query
 
 	return &copyCtx
