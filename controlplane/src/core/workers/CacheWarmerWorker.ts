@@ -1,4 +1,4 @@
-import { ConnectionOptions, Job, JobsOptions, Queue, Worker } from 'bullmq';
+import { ConnectionOptions, Job, JobsOptions } from 'bullmq';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import pino from 'pino';
 import * as schema from '../../db/schema.js';
@@ -6,7 +6,7 @@ import { BlobStorage } from '../blobstorage/index.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
 import { S3RouterConfigMetadata } from '../composition/composer.js';
 import { CacheWarmerRepository } from '../repositories/CacheWarmerRepository.js';
-import { IQueue, IWorker } from './Worker.js';
+import { BaseQueue, BaseWorker } from './base/index.js';
 
 const QueueName = 'cache.warmer';
 const WorkerName = 'CacheWarmerWorker';
@@ -17,31 +17,12 @@ export interface CacheWarmerInput {
   rangeInHours: number;
 }
 
-export class CacheWarmerQueue implements IQueue<CacheWarmerInput> {
-  private readonly queue: Queue<CacheWarmerInput>;
-  private readonly logger: pino.Logger;
-
+export class CacheWarmerQueue extends BaseQueue<CacheWarmerInput> {
   constructor(log: pino.Logger, conn: ConnectionOptions) {
-    this.logger = log.child({ queue: QueueName });
-    this.queue = new Queue<CacheWarmerInput>(QueueName, {
-      connection: conn,
-      defaultJobOptions: {
-        removeOnComplete: {
-          age: 90 * 86_400,
-        },
-        removeOnFail: {
-          age: 90 * 86_400,
-        },
-        attempts: 6,
-        backoff: {
-          type: 'exponential',
-          delay: 112_000,
-        },
-      },
-    });
-
-    this.queue.on('error', (err) => {
-      this.logger.error(err, 'Queue error');
+    super({
+      name: QueueName,
+      conn,
+      log,
     });
   }
 
@@ -65,17 +46,21 @@ export class CacheWarmerQueue implements IQueue<CacheWarmerInput> {
   }
 }
 
-class CacheWarmerWorker implements IWorker {
+export class CacheWarmerWorker extends BaseWorker<CacheWarmerInput> {
   constructor(
     private input: {
+      redisConnection: ConnectionOptions;
       db: PostgresJsDatabase<typeof schema>;
+      logger: pino.Logger;
       chClient: ClickHouseClient | undefined;
       blobStorage: BlobStorage;
-      logger: pino.Logger;
       cacheWarmerQueue: CacheWarmerQueue;
     },
   ) {
-    this.input.logger = input.logger.child({ worker: WorkerName });
+    super(WorkerName, QueueName, input.logger, {
+      connection: input.redisConnection,
+      concurrency: 10,
+    });
   }
 
   public async handler(job: Job<CacheWarmerInput>) {
@@ -116,25 +101,3 @@ class CacheWarmerWorker implements IWorker {
     }
   }
 }
-
-export const createCacheWarmerWorker = (input: {
-  redisConnection: ConnectionOptions;
-  db: PostgresJsDatabase<typeof schema>;
-  logger: pino.Logger;
-  chClient: ClickHouseClient | undefined;
-  blobStorage: BlobStorage;
-  cacheWarmerQueue: CacheWarmerQueue;
-}) => {
-  const log = input.logger.child({ worker: WorkerName });
-  const worker = new Worker<CacheWarmerInput>(QueueName, (job) => new CacheWarmerWorker(input).handler(job), {
-    connection: input.redisConnection,
-    concurrency: 10,
-  });
-  worker.on('stalled', (job) => {
-    log.warn({ joinId: job }, `Job stalled`);
-  });
-  worker.on('error', (err) => {
-    log.error(err, 'Worker error');
-  });
-  return worker;
-};

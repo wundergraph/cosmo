@@ -1,11 +1,11 @@
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { ConnectionOptions, Job, Worker, Queue } from 'bullmq';
+import { ConnectionOptions, Job } from 'bullmq';
 import pino from 'pino';
 import * as schema from '../../db/schema.js';
 import { OpenAIGraphql } from '../openai-graphql/index.js';
 import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
-import { IQueue, IWorker } from './Worker.js';
+import { BaseQueue, BaseWorker } from './base/index.js';
 
 const QueueName = 'ai.graph-readme-generator';
 const WorkerName = 'AIGraphReadmeWorker';
@@ -16,15 +16,13 @@ export interface CreateReadmeInputEvent {
   type: 'subgraph' | 'federated_graph';
 }
 
-export class AIGraphReadmeQueue implements IQueue<CreateReadmeInputEvent> {
-  private readonly queue: Queue<CreateReadmeInputEvent>;
-  private readonly logger: pino.Logger;
-
+export class AIGraphReadmeQueue extends BaseQueue<CreateReadmeInputEvent> {
   constructor(log: pino.Logger, conn: ConnectionOptions) {
-    this.logger = log.child({ queue: QueueName });
-    this.queue = new Queue<CreateReadmeInputEvent>(QueueName, {
-      connection: conn,
-      defaultJobOptions: {
+    super({
+      name: QueueName,
+      conn,
+      log,
+      jobsOptions: {
         removeOnComplete: true,
         removeOnFail: true,
         attempts: 3,
@@ -33,10 +31,6 @@ export class AIGraphReadmeQueue implements IQueue<CreateReadmeInputEvent> {
           delay: 10_000,
         },
       },
-    });
-
-    this.queue.on('error', (err) => {
-      this.logger.error(err, 'Queue error');
     });
   }
 
@@ -61,7 +55,7 @@ export class AIGraphReadmeQueue implements IQueue<CreateReadmeInputEvent> {
   }
 }
 
-class AIGraphReadmeWorker implements IWorker {
+export class AIGraphReadmeWorker extends BaseWorker<CreateReadmeInputEvent> {
   private readonly openaiGraphql: OpenAIGraphql;
 
   constructor(
@@ -72,10 +66,14 @@ class AIGraphReadmeWorker implements IWorker {
       openAiApiKey: string;
     },
   ) {
+    super(WorkerName, QueueName, input.logger, {
+      connection: input.redisConnection,
+      concurrency: 10,
+    });
+
     this.openaiGraphql = new OpenAIGraphql({
       openAiApiKey: input.openAiApiKey,
     });
-    this.input.logger = input.logger.child({ worker: WorkerName });
   }
 
   private async generateSubgraphReadme(job: Job<CreateReadmeInputEvent>) {
@@ -140,23 +138,3 @@ class AIGraphReadmeWorker implements IWorker {
     }
   }
 }
-
-export const createAIGraphReadmeWorker = (input: {
-  redisConnection: ConnectionOptions;
-  db: PostgresJsDatabase<typeof schema>;
-  logger: pino.Logger;
-  openAiApiKey: string;
-}) => {
-  const log = input.logger.child({ worker: WorkerName });
-  const worker = new Worker<CreateReadmeInputEvent>(QueueName, (job) => new AIGraphReadmeWorker(input).handler(job), {
-    connection: input.redisConnection,
-    concurrency: 10,
-  });
-  worker.on('stalled', (job) => {
-    log.warn(`Job ${job} stalled`);
-  });
-  worker.on('error', (err) => {
-    log.error(err, 'Worker error');
-  });
-  return worker;
-};

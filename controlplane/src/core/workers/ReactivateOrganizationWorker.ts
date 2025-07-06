@@ -1,11 +1,10 @@
-import { ConnectionOptions, Job, JobsOptions, Queue, Worker } from 'bullmq';
+import { ConnectionOptions, Job, JobsOptions } from 'bullmq';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import pino from 'pino';
 import * as schema from '../../db/schema.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
-import Keycloak from '../services/Keycloak.js';
 import { DeleteOrganizationQueue } from './DeleteOrganizationWorker.js';
-import { IQueue, IWorker } from './Worker.js';
+import { BaseQueue, BaseWorker } from './base/index.js';
 
 const QueueName = 'organization.reactivate';
 const WorkerName = 'ReactivateOrganizationWorker';
@@ -15,32 +14,9 @@ export interface ReactivateOrganizationInput {
   organizationSlug: string;
 }
 
-export class ReactivateOrganizationQueue implements IQueue<ReactivateOrganizationInput> {
-  private readonly queue: Queue<ReactivateOrganizationInput>;
-  private readonly logger: pino.Logger;
-
+export class ReactivateOrganizationQueue extends BaseQueue<ReactivateOrganizationInput> {
   constructor(log: pino.Logger, conn: ConnectionOptions) {
-    this.logger = log.child({ queue: QueueName });
-    this.queue = new Queue<ReactivateOrganizationInput>(QueueName, {
-      connection: conn,
-      defaultJobOptions: {
-        removeOnComplete: {
-          age: 90 * 86_400,
-        },
-        removeOnFail: {
-          age: 90 * 86_400,
-        },
-        attempts: 6,
-        backoff: {
-          type: 'exponential',
-          delay: 112_000,
-        },
-      },
-    });
-
-    this.queue.on('error', (err) => {
-      this.logger.error(err, 'Queue error');
-    });
+    super({ name: QueueName, log, conn });
   }
 
   public addJob(job: ReactivateOrganizationInput, opts?: Omit<JobsOptions, 'jobId'>) {
@@ -59,15 +35,19 @@ export class ReactivateOrganizationQueue implements IQueue<ReactivateOrganizatio
   }
 }
 
-class ReactivateOrganizationWorker implements IWorker {
+export class ReactivateOrganizationWorker extends BaseWorker<ReactivateOrganizationInput> {
   constructor(
     private input: {
+      redisConnection: ConnectionOptions;
       db: PostgresJsDatabase<typeof schema>;
       logger: pino.Logger;
       deleteOrganizationQueue: DeleteOrganizationQueue;
     },
   ) {
-    this.input.logger = input.logger.child({ worker: WorkerName });
+    super(WorkerName, QueueName, input.logger, {
+      connection: input.redisConnection,
+      concurrency: 10,
+    });
   }
 
   public async handler(job: Job<ReactivateOrganizationInput>) {
@@ -96,27 +76,3 @@ class ReactivateOrganizationWorker implements IWorker {
     }
   }
 }
-
-export const createReactivateOrganizationWorker = (input: {
-  redisConnection: ConnectionOptions;
-  db: PostgresJsDatabase<typeof schema>;
-  logger: pino.Logger;
-  deleteOrganizationQueue: DeleteOrganizationQueue;
-}) => {
-  const log = input.logger.child({ worker: WorkerName });
-  const worker = new Worker<ReactivateOrganizationInput>(
-    QueueName,
-    (job) => new ReactivateOrganizationWorker(input).handler(job),
-    {
-      connection: input.redisConnection,
-      concurrency: 10,
-    },
-  );
-  worker.on('stalled', (job) => {
-    log.warn({ joinId: job }, `Job stalled`);
-  });
-  worker.on('error', (err) => {
-    log.error(err, 'Worker error');
-  });
-  return worker;
-};
