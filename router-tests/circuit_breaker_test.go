@@ -1303,31 +1303,3 @@ func getTrafficConfigWithTimeout(breaker config.CircuitBreaker, timeout time.Dur
 	}
 	return trafficConfig
 }
-
-func excludeSubgraphNameFromMetrics(t *testing.T, scopeMetrics []metricdata.ScopeMetrics) {
-	t.Helper()
-
-	for _, sm := range scopeMetrics {
-		if sm.Scope.Name != "cosmo.router" {
-			continue
-		}
-
-		for _, metricEntry := range sm.Metrics {
-			if metricEntry.Name != "router.circuit_breaker.short_circuits" {
-				continue
-			}
-
-			data := metricEntry.Data
-
-			switch d := data.(type) {
-			case metricdata.Sum[int64]:
-				for i, dp := range d.DataPoints {
-					attrs, _ := dp.Attributes.Filter(func(attr attribute.KeyValue) bool {
-						return attr.Key != otel.WgSubgraphName
-					})
-					d.DataPoints[i].Attributes = attrs
-				}
-			}
-		}
-	}
-}
