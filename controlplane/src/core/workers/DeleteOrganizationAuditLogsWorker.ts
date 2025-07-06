@@ -41,10 +41,7 @@ export class DeleteOrganizationAuditLogsWorker extends BaseWorker<DeleteOrganiza
       logger: pino.Logger;
     },
   ) {
-    super(WorkerName, QueueName, input.logger, {
-      connection: input.redisConnection,
-      concurrency: 10,
-    });
+    super(WorkerName, QueueName, { connection: input.redisConnection, concurrency: 10 }, input.logger);
   }
 
   public async handler(job: Job<DeleteOrganizationAuditLogsInput>) {

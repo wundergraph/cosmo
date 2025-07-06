@@ -66,10 +66,7 @@ export class AIGraphReadmeWorker extends BaseWorker<CreateReadmeInputEvent> {
       openAiApiKey: string;
     },
   ) {
-    super(WorkerName, QueueName, input.logger, {
-      connection: input.redisConnection,
-      concurrency: 10,
-    });
+    super(WorkerName, QueueName, { connection: input.redisConnection, concurrency: 10 }, input.logger);
 
     this.openaiGraphql = new OpenAIGraphql({
       openAiApiKey: input.openAiApiKey,

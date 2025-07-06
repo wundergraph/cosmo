@@ -2,11 +2,13 @@ import { WorkerOptions, Job, Worker } from 'bullmq';
 import pino from 'pino';
 
 export abstract class BaseWorker<T> {
+  protected readonly logger: pino.Logger;
+
   constructor(
     protected readonly name: string,
     protected readonly queueName: string,
-    protected logger: pino.Logger,
     protected options: WorkerOptions,
+    logger: pino.Logger,
   ) {
     this.logger = logger.child({ worker: name });
   }
