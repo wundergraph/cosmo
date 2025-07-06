@@ -31,7 +31,7 @@ func TestGetRoutingUrlGroupingForCircuitBreakers(t *testing.T) {
 		result, err := getRoutingUrlGroupingForCircuitBreakers(routerConfig, config.OverrideRoutingURLConfiguration{}, config.OverridesConfiguration{})
 		require.NoError(t, err)
 
-		require.Equal(t, toKeys(result), []string{url1})
+		require.Equal(t, []string{url1}, toKeys(result))
 		require.Equal(t, result[url1], toSet("subgraph1"))
 	})
 
@@ -64,7 +64,7 @@ func TestGetRoutingUrlGroupingForCircuitBreakers(t *testing.T) {
 		result, err := getRoutingUrlGroupingForCircuitBreakers(routerConfig, config.OverrideRoutingURLConfiguration{}, config.OverridesConfiguration{})
 		require.NoError(t, err)
 
-		require.Equal(t, toKeys(result), []string{url2, url1})
+		require.Equal(t, []string{url2, url1}, toKeys(result))
 
 		require.Equal(t, result[url1], toSet("subgraph1", "subgraph2"))
 		require.Equal(t, result[url2], toSet("subgraph3"))
@@ -171,7 +171,7 @@ func TestGetRoutingUrlGroupingForCircuitBreakers(t *testing.T) {
 			result, err := getRoutingUrlGroupingForCircuitBreakers(routerConfig, configuration, config.OverridesConfiguration{})
 			require.NoError(t, err)
 
-			require.Equal(t, toKeys(result), []string{url2, url1, url3Primary})
+			require.Equal(t, []string{url2, url1, url3Primary}, toKeys(result))
 
 			require.Equal(t, result[url1], toSet("subgraph1"))
 			require.Equal(t, result[url2], toSet("subgraph3"))
@@ -194,7 +194,7 @@ func TestGetRoutingUrlGroupingForCircuitBreakers(t *testing.T) {
 			result, err := getRoutingUrlGroupingForCircuitBreakers(routerConfig, config.OverrideRoutingURLConfiguration{}, configuration)
 			require.NoError(t, err)
 
-			require.Equal(t, toKeys(result), []string{url2, url1, url3Primary})
+			require.Equal(t, []string{url2, url1, url3Primary}, toKeys(result))
 
 			require.Equal(t, result[url1], toSet("subgraph1"))
 			require.Equal(t, result[url2], toSet("subgraph3"))
@@ -227,7 +227,7 @@ func TestGetRoutingUrlGroupingForCircuitBreakers(t *testing.T) {
 			result, err := getRoutingUrlGroupingForCircuitBreakers(routerConfig, legacyConfig, newConfig)
 			require.NoError(t, err)
 
-			require.Equal(t, toKeys(result), []string{url2, url1, url3Alternate})
+			require.Equal(t, []string{url2, url1, url3Alternate}, toKeys(result))
 
 			require.Equal(t, result[url1], toSet("subgraph1"))
 			require.Equal(t, result[url2], toSet("subgraph3"))
@@ -312,7 +312,7 @@ func TestGetRoutingUrlGroupingForCircuitBreakers(t *testing.T) {
 		result, err := getRoutingUrlGroupingForCircuitBreakers(routerConfig, config.OverrideRoutingURLConfiguration{}, config.OverridesConfiguration{})
 		require.NoError(t, err)
 
-		require.Equal(t, toKeys(result), []string{url1, url2, url3})
+		require.Equal(t, []string{url1, url2, url3}, toKeys(result))
 
 		require.Equal(t, result[url1], toSet("shared-subgraph", "base-only-subgraph", "base-subgraph2"))
 		require.Equal(t, result[url2], toSet("shared-subgraph", "ff-only-subgraph", "base-only-subgraph", "base-subgraph2"))
@@ -380,7 +380,7 @@ func TestGetRoutingUrlGroupingForCircuitBreakers(t *testing.T) {
 		result, err := getRoutingUrlGroupingForCircuitBreakers(routerConfig, config.OverrideRoutingURLConfiguration{}, config.OverridesConfiguration{})
 		require.NoError(t, err)
 
-		require.Equal(t, toKeys(result), []string{url1, url2})
+		require.Equal(t, []string{url1, url2}, toKeys(result))
 
 		require.Equal(t, result[url1], toSet("common-subgraph", "another-subgraph"))
 		require.Equal(t, result[url2], toSet("common-subgraph", "feature-specific-subgraph", "another-subgraph"))
@@ -465,7 +465,7 @@ func TestGetRoutingUrlGroupingForCircuitBreakers(t *testing.T) {
 			result, err := getRoutingUrlGroupingForCircuitBreakers(routerConfig, configuration, config.OverridesConfiguration{})
 			require.NoError(t, err)
 
-			require.Equal(t, toKeys(result), []string{url1, url2, url3, url4Primary})
+			require.Equal(t, []string{url1, url2, url3, url4Primary}, toKeys(result))
 
 			require.Equal(t, result[url1], toSet("base-subgraph1", "base-subgraph2"))
 			require.Equal(t, result[url2], toSet("ff-subgraph2", "base-subgraph2"))
@@ -489,7 +489,7 @@ func TestGetRoutingUrlGroupingForCircuitBreakers(t *testing.T) {
 			result, err := getRoutingUrlGroupingForCircuitBreakers(routerConfig, config.OverrideRoutingURLConfiguration{}, configuration)
 			require.NoError(t, err)
 
-			require.Equal(t, toKeys(result), []string{url1, url2, url3, url4Primary})
+			require.Equal(t, []string{url1, url2, url3, url4Primary}, toKeys(result))
 
 			require.Equal(t, result[url1], toSet("base-subgraph1", "base-subgraph2"))
 			require.Equal(t, result[url2], toSet("ff-subgraph1", "base-subgraph2"))
@@ -520,7 +520,7 @@ func TestGetRoutingUrlGroupingForCircuitBreakers(t *testing.T) {
 			result, err := getRoutingUrlGroupingForCircuitBreakers(routerConfig, legacyConfig, newConfig)
 			require.NoError(t, err)
 
-			require.Equal(t, toKeys(result), []string{url1, url2, url3, url4Alternate})
+			require.Equal(t, []string{url1, url2, url3, url4Alternate}, toKeys(result))
 
 			require.Equal(t, result[url1], toSet("base-subgraph1", "base-subgraph2"))
 			require.Equal(t, result[url2], toSet("ff-subgraph2", "base-subgraph2"))
@@ -664,7 +664,7 @@ func TestGetRoutingUrlGroupingForCircuitBreakers(t *testing.T) {
 		result, err := getRoutingUrlGroupingForCircuitBreakers(routerConfig, config.OverrideRoutingURLConfiguration{}, config.OverridesConfiguration{})
 		require.NoError(t, err)
 
-		require.Equal(t, toKeys(result), []string{url1})
+		require.Equal(t, []string{url1}, toKeys(result))
 		require.Equal(t, result[url1], toSet("base-subgraph1"))
 	})
 

@@ -24,7 +24,7 @@ func TestNewManager(t *testing.T) {
 		require.NotNil(t, manager.circuits)
 		require.NotNil(t, manager.internalManager)
 		require.Equal(t, baseConfig.Enabled, manager.isBaseConfigEnabled)
-		require.Equal(t, 0, len(manager.circuits))
+		require.Empty(t, manager.circuits)
 	})
 
 	t.Run("disabled base config", func(t *testing.T) {
@@ -40,7 +40,7 @@ func TestNewManager(t *testing.T) {
 		require.NotNil(t, manager.circuits)
 		require.NotNil(t, manager.internalManager)
 		require.Equal(t, baseConfig.Enabled, manager.isBaseConfigEnabled)
-		require.Equal(t, 0, len(manager.circuits))
+		require.Empty(t, manager.circuits)
 	})
 }
 
@@ -50,7 +50,7 @@ func TestManager_GetCircuitBreaker(t *testing.T) {
 	t.Run("nil manager", func(t *testing.T) {
 		t.Parallel()
 
-		var manager *Manager = nil
+		var manager *Manager
 		result := manager.GetCircuitBreaker("test-circuit")
 
 		require.Nil(t, result)
@@ -88,7 +88,7 @@ func TestManager_AddCircuitBreaker(t *testing.T) {
 	t.Run("nil manager", func(t *testing.T) {
 		t.Parallel()
 
-		var manager *Manager = nil
+		var manager *Manager
 		testCircuit := &circuit.Circuit{}
 
 		require.NotPanics(t, func() {
@@ -104,7 +104,7 @@ func TestManager_AddCircuitBreaker(t *testing.T) {
 
 		manager.AddCircuitBreaker("test-testCircuit", testCircuit)
 
-		require.Equal(t, 1, len(manager.circuits))
+		require.Len(t, manager.circuits, 1)
 		require.Equal(t, testCircuit, manager.circuits["test-testCircuit"])
 	})
 }
@@ -115,7 +115,7 @@ func TestManager_HasCircuits(t *testing.T) {
 	t.Run("nil manager", func(t *testing.T) {
 		t.Parallel()
 
-		var manager *Manager = nil
+		var manager *Manager
 		result := manager.HasCircuits()
 
 		require.False(t, result)
@@ -157,7 +157,7 @@ func TestManager_Initialize(t *testing.T) {
 		err := manager.Initialize(opts)
 
 		require.NoError(t, err)
-		require.Equal(t, 0, len(manager.circuits))
+		require.Empty(t, manager.circuits)
 	})
 
 	t.Run("create circuit for base configuration", func(t *testing.T) {
@@ -180,7 +180,7 @@ func TestManager_Initialize(t *testing.T) {
 		err := manager.Initialize(opts)
 
 		require.NoError(t, err)
-		require.Equal(t, 3, len(manager.circuits))
+		require.Len(t, manager.circuits, 3)
 
 		s1Cb := manager.GetCircuitBreaker("subgraph1")
 		s2Cb := manager.GetCircuitBreaker("subgraph2")
@@ -207,7 +207,7 @@ func TestManager_Initialize(t *testing.T) {
 		err := manager.Initialize(opts)
 
 		require.NoError(t, err)
-		require.Equal(t, 0, len(manager.circuits))
+		require.Empty(t, manager.circuits)
 	})
 
 	t.Run("custom subgraph circuit breakers", func(t *testing.T) {
@@ -237,7 +237,7 @@ func TestManager_Initialize(t *testing.T) {
 		err := manager.Initialize(opts)
 
 		require.NoError(t, err)
-		require.Equal(t, 2, len(manager.circuits))
+		require.Len(t, manager.circuits, 2)
 
 		// When using subgraph specific configs we initialize circuit breaker per config
 		// even when the url is the same
@@ -270,7 +270,7 @@ func TestManager_Initialize(t *testing.T) {
 		err := manager.Initialize(opts)
 
 		require.NoError(t, err)
-		require.Equal(t, 3, len(manager.circuits))
+		require.Len(t, manager.circuits, 3)
 
 		s2Cb := manager.GetCircuitBreaker("subgraph2")
 		s3Cb := manager.GetCircuitBreaker("subgraph3")
@@ -300,7 +300,7 @@ func TestManager_Initialize(t *testing.T) {
 		err := manager.Initialize(opts)
 
 		require.NoError(t, err)
-		require.Equal(t, 1, len(manager.circuits)) // Only subgraph1 should be added
+		require.Len(t, manager.circuits, 1) // Only subgraph1 should be added
 
 		s2Cb := manager.GetCircuitBreaker("subgraph2")
 		require.Nil(t, s2Cb)
@@ -327,7 +327,7 @@ func TestManager_Initialize(t *testing.T) {
 		err := manager.Initialize(opts)
 
 		require.NoError(t, err)
-		require.Equal(t, 2, len(manager.circuits))
+		require.Len(t, manager.circuits, 2)
 	})
 
 }

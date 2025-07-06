@@ -1061,6 +1061,8 @@ func TestCircuitBreakerConfig(t *testing.T) {
 	t.Parallel()
 
 	t.Run("verify max exceeding", func(t *testing.T) {
+		t.Parallel()
+
 		f := createTempFileFromFixture(t, `
 version: "1"
 
@@ -1088,6 +1090,8 @@ traffic_shaping:
 	})
 
 	t.Run("verify min not exceeding", func(t *testing.T) {
+		t.Parallel()
+
 		f := createTempFileFromFixture(t, `
 version: "1"
 
@@ -1115,6 +1119,8 @@ traffic_shaping:
 	})
 
 	t.Run("verify valid configuration", func(t *testing.T) {
+		t.Parallel()
+
 		f := createTempFileFromFixture(t, `
 version: "1"
 

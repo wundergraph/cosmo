@@ -18,11 +18,11 @@ func NewCircuitBreakerMetricsConfig(subgraphNames []string, metrics CircuitMetri
 	values := []attribute.KeyValue{
 		otel.WgSubgraphName.StringSlice(subgraphNames),
 	}
-	attributes := append(values, baseAttributes...)
+	values = append(values, baseAttributes...)
 
 	metricsWrapper := &CircuitBreakerMetricsConfig{
 		metrics:    metrics,
-		attributes: attributes,
+		attributes: values,
 	}
 	return circuit.Config{
 		Metrics: circuit.MetricsCollectors{
