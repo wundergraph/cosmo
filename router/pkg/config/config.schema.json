@@ -3043,7 +3043,7 @@
             "max_concurrent_requests": {
               "type": "integer",
               "description": "The maximum number of concurrent requests allowed through the circuit breaker",
-              "minimum": 1,
+              "minimum": -1,
               "maximum": 10000
             }
           }
