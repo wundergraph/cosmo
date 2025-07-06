@@ -41,138 +41,7 @@ type SendRequestOptions struct {
 	customQuery      string
 }
 
-func TestCircuitBreaker(t *testing.T) {
-	t.Parallel()
-
-	t.Run("verify tripping based on request threshold", func(t *testing.T) {
-		t.Parallel()
-
-		breaker := getCircuitBreakerWithDefaults()
-		breaker.RequestThreshold = 2
-
-		trafficConfig := getTrafficConfigWithTimeout(breaker, 1*time.Second)
-
-		testenv.Run(t, &testenv.Config{
-			LogObservation: testenv.LogObservationConfig{
-				Enabled:  true,
-				LogLevel: zapcore.DebugLevel,
-			},
-			RouterOptions: []core.Option{
-				core.WithSubgraphCircuitBreakerOptions(core.NewSubgraphCircuitBreakerOptions(trafficConfig)),
-				core.WithSubgraphTransportOptions(core.NewSubgraphTransportOptions(trafficConfig)),
-			},
-			Subgraphs: testenv.SubgraphsConfig{
-				Employees: testenv.SubgraphConfig{
-					Middleware: func(_ http.Handler) http.Handler {
-						return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-							simulateConnectionFailureOnClose(w)
-						})
-					},
-				},
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			opts := SendRequestOptions{t: t, xEnv: xEnv}
-
-			// The circuit is internally marked as tripped post-request
-			// thus even though N requests are executed we only care about when the status changed to tripped
-			requestsRequiredToTrip := breaker.RequestThreshold - 1
-
-			// PRE TRIP REQUESTS
-			for range requestsRequiredToTrip {
-				sendRequest(opts, "", SendFailedRequest)
-			}
-
-			// Verify that the circuit breaker status has not changed yet
-			preCircuitBreak := xEnv.Observer().FilterMessage("Circuit breaker status changed")
-			require.Zero(t, preCircuitBreak.Len())
-
-			// TRIP REQUEST: This is the request that will trip the circuit breaker
-			sendRequest(opts, "", SendFailedRequest)
-
-			// Verify that the circuit breaker status changed, but it was not already open
-			require.Equal(t, 1, xEnv.Observer().FilterMessage("Circuit breaker status changed").Len())
-			require.Zero(t, xEnv.Observer().FilterMessage("Circuit breaker open, request callback did not execute").Len())
-
-			// DENIED REQUEST: This is the request that will be denied due to the circuit breaker being already open
-			sendRequest(opts, "", SendFailedRequest)
-
-			// Verify that the callback did not run
-			postDeniedRequest := xEnv.Observer().FilterMessage("Circuit breaker open, request callback did not execute")
-			require.Equal(t, 1, postDeniedRequest.Len())
-		})
-	})
-
-	t.Run("verify circuit breaker tripping on error threshold", func(t *testing.T) {
-		t.Parallel()
-
-		// Should add up to 10, 70% Error rate
-		var successRequests = 3
-		var failureRequests = 7
-
-		// Use defaults, but override required
-		breaker := getCircuitBreakerWithDefaults()
-		breaker.ErrorThresholdPercentage = 70
-
-		trafficConfig := getTrafficConfigWithTimeout(breaker, 1*time.Second)
-
-		// We use this variable to communicate between the subgraph
-		// what it should do, this is possible since we run requests one by one serially
-		var isSuccessRequest atomic.Bool
-
-		testenv.Run(t, &testenv.Config{
-			LogObservation: testenv.LogObservationConfig{
-				Enabled:  true,
-				LogLevel: zapcore.DebugLevel,
-			},
-			RouterOptions: []core.Option{
-				core.WithSubgraphCircuitBreakerOptions(core.NewSubgraphCircuitBreakerOptions(trafficConfig)),
-				core.WithSubgraphTransportOptions(core.NewSubgraphTransportOptions(trafficConfig)),
-			},
-			Subgraphs: testenv.SubgraphsConfig{
-				Employees: testenv.SubgraphConfig{
-					Middleware: func(_ http.Handler) http.Handler {
-						return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-							if isSuccessRequest.Load() {
-								_, err := w.Write([]byte(successSubgraphJSON))
-								require.NoError(t, err)
-							} else {
-								simulateConnectionFailureOnClose(w)
-							}
-						})
-					},
-				},
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			opts := SendRequestOptions{t: t, xEnv: xEnv, isSuccessRequest: &isSuccessRequest}
-
-			// PRE TRIP requests
-			for range successRequests {
-				sendRequest(opts, "", AttemptSuccessfulRequest)
-			}
-			for range failureRequests - 1 {
-				sendRequest(opts, "", SendFailedRequest)
-			}
-
-			// Verify that the circuit breaker status has not changed yet
-			preCircuitBreak := xEnv.Observer().FilterMessage("Circuit breaker status changed")
-			require.Zero(t, preCircuitBreak.Len())
-
-			// TRIP REQUEST: This is the request that will trip the circuit breaker
-			sendRequest(opts, "", SendFailedRequest)
-
-			// Verify that the circuit breaker status changed, but it was not already open
-			require.Equal(t, 1, xEnv.Observer().FilterMessage("Circuit breaker status changed").Len())
-			require.Zero(t, xEnv.Observer().FilterMessage("Circuit breaker open, request callback did not execute").Len())
-
-			// DENIED REQUEST: This is the request that will be denied due to the circuit breaker being already open
-			sendRequest(opts, "", SendFailedRequest)
-
-			// Verify that the callback did not run
-			postDeniedRequest := xEnv.Observer().FilterMessage("Circuit breaker open, request callback did not execute")
-			require.Equal(t, 1, postDeniedRequest.Len())
-		})
-	})
-
+func TestFlakyCircuitBreaker(t *testing.T) {
 	t.Run("verify circuit breaker becoming half open after sleep window", func(t *testing.T) {
 		t.Parallel()
 
@@ -502,6 +371,139 @@ func TestCircuitBreaker(t *testing.T) {
 				// 0/5 successful requests, which means err percentage is over 90% (100%) and 5 requests
 				require.Equal(t, 1, xEnv.Observer().FilterMessage("Circuit breaker status changed").Len())
 			})
+		})
+	})
+}
+
+func TestCircuitBreaker(t *testing.T) {
+	t.Parallel()
+
+	t.Run("verify tripping based on request threshold", func(t *testing.T) {
+		t.Parallel()
+
+		breaker := getCircuitBreakerWithDefaults()
+		breaker.RequestThreshold = 2
+
+		trafficConfig := getTrafficConfigWithTimeout(breaker, 1*time.Second)
+
+		testenv.Run(t, &testenv.Config{
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.DebugLevel,
+			},
+			RouterOptions: []core.Option{
+				core.WithSubgraphCircuitBreakerOptions(core.NewSubgraphCircuitBreakerOptions(trafficConfig)),
+				core.WithSubgraphTransportOptions(core.NewSubgraphTransportOptions(trafficConfig)),
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(_ http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+							simulateConnectionFailureOnClose(w)
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			opts := SendRequestOptions{t: t, xEnv: xEnv}
+
+			// The circuit is internally marked as tripped post-request
+			// thus even though N requests are executed we only care about when the status changed to tripped
+			requestsRequiredToTrip := breaker.RequestThreshold - 1
+
+			// PRE TRIP REQUESTS
+			for range requestsRequiredToTrip {
+				sendRequest(opts, "", SendFailedRequest)
+			}
+
+			// Verify that the circuit breaker status has not changed yet
+			preCircuitBreak := xEnv.Observer().FilterMessage("Circuit breaker status changed")
+			require.Zero(t, preCircuitBreak.Len())
+
+			// TRIP REQUEST: This is the request that will trip the circuit breaker
+			sendRequest(opts, "", SendFailedRequest)
+
+			// Verify that the circuit breaker status changed, but it was not already open
+			require.Equal(t, 1, xEnv.Observer().FilterMessage("Circuit breaker status changed").Len())
+			require.Zero(t, xEnv.Observer().FilterMessage("Circuit breaker open, request callback did not execute").Len())
+
+			// DENIED REQUEST: This is the request that will be denied due to the circuit breaker being already open
+			sendRequest(opts, "", SendFailedRequest)
+
+			// Verify that the callback did not run
+			postDeniedRequest := xEnv.Observer().FilterMessage("Circuit breaker open, request callback did not execute")
+			require.Equal(t, 1, postDeniedRequest.Len())
+		})
+	})
+
+	t.Run("verify circuit breaker tripping on error threshold", func(t *testing.T) {
+		t.Parallel()
+
+		// Should add up to 10, 70% Error rate
+		var successRequests = 3
+		var failureRequests = 7
+
+		// Use defaults, but override required
+		breaker := getCircuitBreakerWithDefaults()
+		breaker.ErrorThresholdPercentage = 70
+
+		trafficConfig := getTrafficConfigWithTimeout(breaker, 1*time.Second)
+
+		// We use this variable to communicate between the subgraph
+		// what it should do, this is possible since we run requests one by one serially
+		var isSuccessRequest atomic.Bool
+
+		testenv.Run(t, &testenv.Config{
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.DebugLevel,
+			},
+			RouterOptions: []core.Option{
+				core.WithSubgraphCircuitBreakerOptions(core.NewSubgraphCircuitBreakerOptions(trafficConfig)),
+				core.WithSubgraphTransportOptions(core.NewSubgraphTransportOptions(trafficConfig)),
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(_ http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+							if isSuccessRequest.Load() {
+								_, err := w.Write([]byte(successSubgraphJSON))
+								require.NoError(t, err)
+							} else {
+								simulateConnectionFailureOnClose(w)
+							}
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			opts := SendRequestOptions{t: t, xEnv: xEnv, isSuccessRequest: &isSuccessRequest}
+
+			// PRE TRIP requests
+			for range successRequests {
+				sendRequest(opts, "", AttemptSuccessfulRequest)
+			}
+			for range failureRequests - 1 {
+				sendRequest(opts, "", SendFailedRequest)
+			}
+
+			// Verify that the circuit breaker status has not changed yet
+			preCircuitBreak := xEnv.Observer().FilterMessage("Circuit breaker status changed")
+			require.Zero(t, preCircuitBreak.Len())
+
+			// TRIP REQUEST: This is the request that will trip the circuit breaker
+			sendRequest(opts, "", SendFailedRequest)
+
+			// Verify that the circuit breaker status changed, but it was not already open
+			require.Equal(t, 1, xEnv.Observer().FilterMessage("Circuit breaker status changed").Len())
+			require.Zero(t, xEnv.Observer().FilterMessage("Circuit breaker open, request callback did not execute").Len())
+
+			// DENIED REQUEST: This is the request that will be denied due to the circuit breaker being already open
+			sendRequest(opts, "", SendFailedRequest)
+
+			// Verify that the callback did not run
+			postDeniedRequest := xEnv.Observer().FilterMessage("Circuit breaker open, request callback did not execute")
+			require.Equal(t, 1, postDeniedRequest.Len())
 		})
 	})
 
