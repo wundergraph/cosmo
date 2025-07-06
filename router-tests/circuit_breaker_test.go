@@ -6,6 +6,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	io_prometheus_client "github.com/prometheus/client_model/go"
 	"net/http"
+	"sort"
 	"sync/atomic"
 	"testing"
 
@@ -667,8 +668,6 @@ func TestCircuitBreaker(t *testing.T) {
 					err := metricReader.Collect(context.Background(), &rm)
 					require.NoError(t, err)
 
-					expectedSubgraphs := []string{"products", "availability"}
-
 					shortCircuitRequestsMetric := metricdata.Metrics{
 						Name:        "router.circuit_breaker.short_circuits",
 						Description: "Circuit breaker short circuits.",
@@ -683,7 +682,6 @@ func TestCircuitBreaker(t *testing.T) {
 										otel.WgRouterClusterName.String(""),
 										otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
 										otel.WgRouterVersion.String("dev"),
-										otel.WgSubgraphName.StringSlice(expectedSubgraphs),
 									),
 									Value: int64(2),
 								},
@@ -693,6 +691,22 @@ func TestCircuitBreaker(t *testing.T) {
 
 					scopeMetric := GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 					shortCircuitActual := GetMetricByName(scopeMetric, "router.circuit_breaker.short_circuits")
+
+					switch d := shortCircuitActual.Data.(type) {
+					case metricdata.Sum[int64]:
+						for i, dp := range d.DataPoints {
+							attrs, _ := dp.Attributes.Filter(func(attr attribute.KeyValue) bool {
+								if attr.Key == otel.WgSubgraphName {
+									subgraphs := attr.Value.AsStringSlice()
+									sort.Strings(subgraphs)
+									require.Equal(t, []string{"availability", "products"}, subgraphs)
+								}
+								return attr.Key != otel.WgSubgraphName
+							})
+							d.DataPoints[i].Attributes = attrs
+						}
+					}
+
 					metricdatatest.AssertEqual(t, shortCircuitRequestsMetric, *shortCircuitActual, metricdatatest.IgnoreTimestamp())
 				})
 			})
@@ -774,12 +788,14 @@ func TestCircuitBreaker(t *testing.T) {
 							Name:  PointerOf("wg_router_version"),
 							Value: PointerOf("dev"),
 						},
-						{
-							Name:  PointerOf("wg_subgraph_name"),
-							Value: PointerOf(`["products","availability"]`),
-						},
 					}
-					require.Equal(t, expected, metricDataPoint.Label)
+
+					label := metricDataPoint.Label[:len(metricDataPoint.Label)-1]
+					require.Equal(t, expected, label)
+
+					subgraphLabel := metricDataPoint.Label[len(metricDataPoint.Label)-1]
+					require.True(t, *subgraphLabel.Name == "wg_subgraph_name")
+					require.True(t, *subgraphLabel.Value == `["products","availability"]` || *subgraphLabel.Value == `["availability","products"]`)
 				})
 			})
 		})
@@ -1286,4 +1302,32 @@ func getTrafficConfigWithTimeout(breaker config.CircuitBreaker, timeout time.Dur
 		},
 	}
 	return trafficConfig
+}
+
+func excludeSubgraphNameFromMetrics(t *testing.T, scopeMetrics []metricdata.ScopeMetrics) {
+	t.Helper()
+
+	for _, sm := range scopeMetrics {
+		if sm.Scope.Name != "cosmo.router" {
+			continue
+		}
+
+		for _, metricEntry := range sm.Metrics {
+			if metricEntry.Name != "router.circuit_breaker.short_circuits" {
+				continue
+			}
+
+			data := metricEntry.Data
+
+			switch d := data.(type) {
+			case metricdata.Sum[int64]:
+				for i, dp := range d.DataPoints {
+					attrs, _ := dp.Attributes.Filter(func(attr attribute.KeyValue) bool {
+						return attr.Key != otel.WgSubgraphName
+					})
+					d.DataPoints[i].Attributes = attrs
+				}
+			}
+		}
+	}
 }
