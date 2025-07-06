@@ -3,10 +3,10 @@ import pino from 'pino';
 
 export abstract class BaseWorker<T> {
   constructor(
-      protected readonly name: string,
-      protected readonly queueName: string,
-      protected logger: pino.Logger,
-      protected options: WorkerOptions
+    protected readonly name: string,
+    protected readonly queueName: string,
+    protected logger: pino.Logger,
+    protected options: WorkerOptions,
   ) {
     this.logger = logger.child({ worker: name });
   }

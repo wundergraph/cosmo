@@ -19,7 +19,7 @@ export interface DeleteOrganizationInput {
 
 export class DeleteOrganizationQueue extends BaseQueue<DeleteOrganizationInput> {
   constructor(log: pino.Logger, conn: ConnectionOptions) {
-    super({ name: QueueName, log, conn })
+    super({ name: QueueName, log, conn });
   }
 
   public addJob(job: DeleteOrganizationInput, opts?: Omit<JobsOptions, 'jobId'>) {

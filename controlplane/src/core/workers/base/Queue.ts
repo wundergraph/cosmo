@@ -1,4 +1,3 @@
-
 import { ConnectionOptions, Job, JobsOptions, Queue } from 'bullmq';
 import pino from 'pino';
 
@@ -15,15 +14,15 @@ const defaultJobOptions: JobsOptions = {
     delay: 112_000,
   },
 };
-  
+
 export type BaseQueueParams = {
   name: string;
   conn: ConnectionOptions;
   log: pino.Logger;
   jobsOptions?: JobsOptions;
-}
+};
 
-export abstract class BaseQueue<T>  {
+export abstract class BaseQueue<T> {
   protected readonly queue: Queue<T>;
   protected readonly logger: pino.Logger;
 
