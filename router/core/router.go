@@ -2227,6 +2227,7 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 		Version:            Version,
 		Attributes:         cfg.Metrics.Attributes,
 		ResourceAttributes: buildResourceAttributes(cfg.ResourceAttributes),
+		CardinalityLimit:   cfg.Metrics.CardinalityLimit,
 		OpenTelemetry: rmetric.OpenTelemetry{
 			Enabled:         cfg.Metrics.OTLP.Enabled,
 			RouterRuntime:   cfg.Metrics.OTLP.RouterRuntime,

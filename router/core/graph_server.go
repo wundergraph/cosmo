@@ -832,7 +832,7 @@ func (s *graphServer) buildGraphMux(
 			rmetric.WithBaseAttributes(baseMetricAttributes),
 			rmetric.WithLogger(s.logger),
 			rmetric.WithProcessStartTime(s.processStartTime),
-			rmetric.WithCardinalityLimit(rmetric.DefaultCardinalityLimit),
+			rmetric.WithCardinalityLimit(s.metricConfig.CardinalityLimit),
 			rmetric.WithRouterInfoAttributes(routerInfoBaseAttrs),
 		)
 		if err != nil {
@@ -1318,6 +1318,7 @@ func (s *graphServer) buildGraphMux(
 			Enabled:   s.securityConfiguration.BlockNonPersistedOperations.Enabled,
 			Condition: s.securityConfiguration.BlockNonPersistedOperations.Condition,
 		},
+		PersistedOperationsDisabled: s.persistedOperationsConfig.Disabled,
 		SafelistEnabled:             s.persistedOperationsConfig.Safelist.Enabled,
 		LogUnknownOperationsEnabled: s.persistedOperationsConfig.LogUnknown,
 		exprManager:                 exprManager,

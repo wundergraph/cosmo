@@ -124,9 +124,10 @@ type MetricsOTLPExporter struct {
 }
 
 type Metrics struct {
-	Attributes []CustomAttribute `yaml:"attributes"`
-	OTLP       MetricsOTLP       `yaml:"otlp"`
-	Prometheus Prometheus        `yaml:"prometheus"`
+	Attributes       []CustomAttribute `yaml:"attributes"`
+	OTLP             MetricsOTLP       `yaml:"otlp"`
+	Prometheus       Prometheus        `yaml:"prometheus"`
+	CardinalityLimit int               `yaml:"experiment_cardinality_limit" envDefault:"2000" env:"METRICS_EXPERIMENT_CARDINALITY_LIMIT"`
 }
 
 type MetricsOTLP struct {
@@ -815,8 +816,9 @@ type AutomaticPersistedQueriesCacheConfig struct {
 }
 
 type PersistedOperationsConfig struct {
-	LogUnknown bool                             `yaml:"log_unknown" env:"PERSISTED_OPERATIONS_LOG_UNKNOWN" envDefault:"false"`
-	Safelist   SafelistConfiguration            `yaml:"safelist" envPrefix:"PERSISTED_OPERATIONS_SAFELIST_"`
+	Disabled   bool                             `yaml:"disabled" env:"DISABLED" envDefault:"false"`
+	LogUnknown bool                             `yaml:"log_unknown" env:"LOG_UNKNOWN" envDefault:"false"`
+	Safelist   SafelistConfiguration            `yaml:"safelist" envPrefix:"SAFELIST_"`
 	Cache      PersistedOperationsCacheConfig   `yaml:"cache"`
 	Storage    PersistedOperationsStorageConfig `yaml:"storage"`
 }
@@ -1011,7 +1013,7 @@ type Config struct {
 
 	StorageProviders               StorageProviders                `yaml:"storage_providers"`
 	ExecutionConfig                ExecutionConfig                 `yaml:"execution_config"`
-	PersistedOperationsConfig      PersistedOperationsConfig       `yaml:"persisted_operations"`
+	PersistedOperationsConfig      PersistedOperationsConfig       `yaml:"persisted_operations" envPrefix:"PERSISTED_OPERATIONS_"`
 	AutomaticPersistedQueries      AutomaticPersistedQueriesConfig `yaml:"automatic_persisted_queries"`
 	ApolloCompatibilityFlags       ApolloCompatibilityFlags        `yaml:"apollo_compatibility_flags"`
 	ApolloRouterCompatibilityFlags ApolloRouterCompatibilityFlags  `yaml:"apollo_router_compatibility_flags"`
