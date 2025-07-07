@@ -56,6 +56,7 @@ export class DeleteOrganizationAuditLogsWorker extends BaseWorker<DeleteOrganiza
         { jobId: job.id, organizationId: job.data.organizationId, err },
         'Failed to delete audit logs for organization',
       );
+      throw err;
     }
   }
 }
