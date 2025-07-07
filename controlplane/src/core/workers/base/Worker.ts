@@ -14,7 +14,7 @@ export abstract class BaseWorker<T> {
   }
 
   public create(): Worker<T, any, string> {
-    const worker = new Worker<T>(this.queueName, async (job) => await this.handler(job), this.options);
+    const worker = new Worker<T>(this.queueName, (job) => this.handler(job), this.options);
 
     worker.on('stalled', (jobId) => {
       this.logger.warn({ jobId }, `Job stalled [Worker: ${this.name}]`);
