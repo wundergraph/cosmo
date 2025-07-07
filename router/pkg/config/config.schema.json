@@ -1052,6 +1052,11 @@
                   "default": false,
                   "description": "Enable the collection of connection stats. The default value is false."
                 },
+                "circuit_breaker": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable the collection of circuit breaker stats. The default value is false."
+                },
                 "engine_stats": {
                   "type": "object",
                   "additionalProperties": false,
@@ -1151,6 +1156,11 @@
                   "type": "boolean",
                   "default": false,
                   "description": "Enable the collection of connection stats. The default value is false."
+                },
+                "circuit_breaker": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable the collection of circuit breaker stats. The default value is false."
                 },
                 "engine_stats": {
                   "type": "object",
@@ -2984,6 +2994,80 @@
           "type": "integer",
           "default": 20,
           "description": "MaxIdleConnsPerHost, if non-zero, controls the maximum idle (keep-alive) connections to keep per-host. Zero will default to 2"
+        },
+        "circuit_breaker": {
+          "type": "object",
+          "description": "The Circuit Breaker configuration, it allows you to enable and configure circuit breakers for subgraphs.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable the circuit breaker"
+            },
+            "request_threshold": {
+              "type": "integer",
+              "description": "The min number of pre-requisite requests required to start checking if the circuit breaker's status should be changed",
+              "minimum": 1,
+              "maximum": 10000
+            },
+            "error_threshold_percentage": {
+              "type": "integer",
+              "description": "The error threshold percentage that needs to be met in the rolling window to trigger the circuit to an open state",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "sleep_window": {
+              "type": "string",
+              "format": "go-duration",
+              "description": "After the circuit breaker is open, how long the circuit breaker will reject requests before allowing to send a half open request",
+              "duration": {
+                "minimum": "250ms",
+                "maximum": "2m"
+              }
+            },
+            "half_open_attempts": {
+              "type": "integer",
+              "description": "How many failed attempts are allowed to check if an open circuit can now make successful requests",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "required_successful": {
+              "type": "integer",
+              "description": "How many successful requests are required for a half open circuit breaker to close it",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "rolling_duration": {
+              "type": "string",
+              "format": "go-duration",
+              "description": "The duration of which information on failed and successful requests are stored",
+              "duration": {
+                "minimum": "5s",
+                "maximum": "120s"
+              }
+            },
+            "num_buckets": {
+              "type": "integer",
+              "description": "The number of buckets which store circuit requests information within a given rolling duration",
+              "minimum": 1,
+              "maximum": 120
+            },
+            "execution_timeout": {
+              "type": "string",
+              "format": "go-duration",
+              "description": "The maximum time to wait for a circuit execution to complete before timing out",
+              "duration": {
+                "minimum": "1ms",
+                "maximum": "300s"
+              }
+            },
+            "max_concurrent_requests": {
+              "type": "integer",
+              "description": "The maximum number of concurrent requests allowed through the circuit breaker",
+              "minimum": -1,
+              "maximum": 10000
+            }
+          }
         },
         "retry": {
           "type": "object",

@@ -1056,3 +1056,87 @@ listen_addr: "localhost:3007"
 	})
 
 }
+
+func TestCircuitBreakerConfig(t *testing.T) {
+	t.Parallel()
+
+	t.Run("verify max exceeding", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+traffic_shaping:
+  all:
+    circuit_breaker:
+      enabled: true
+      request_threshold: 900000
+      error_threshold_percentage: 50000
+      sleep_window: 3m
+      half_open_attempts: 9000
+      required_successful: 700
+      rolling_duration: 6m
+      num_buckets: 170
+`)
+		_, err := LoadConfig([]string{f})
+		require.Error(t, err)
+		require.ErrorContains(t, err, "'/traffic_shaping/all/circuit_breaker/request_threshold': maximum: got 900,000, want 10,000")
+		require.ErrorContains(t, err, "'/traffic_shaping/all/circuit_breaker/error_threshold_percentage': maximum: got 50,000, want 100")
+		require.ErrorContains(t, err, "'/traffic_shaping/all/circuit_breaker/sleep_window': duration must be less or equal than 2m0s")
+		require.ErrorContains(t, err, "'/traffic_shaping/all/circuit_breaker/half_open_attempts': maximum: got 9,000, want 100")
+		require.ErrorContains(t, err, "'/traffic_shaping/all/circuit_breaker/required_successful': maximum: got 700, want 100")
+		require.ErrorContains(t, err, "'/traffic_shaping/all/circuit_breaker/rolling_duration': duration must be less or equal than 2m0s")
+		require.ErrorContains(t, err, "'/traffic_shaping/all/circuit_breaker/num_buckets': maximum: got 170, want 120")
+	})
+
+	t.Run("verify min not exceeding", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+traffic_shaping:
+  all:
+    circuit_breaker:
+      enabled: true
+      request_threshold: 0
+      error_threshold_percentage: 0
+      sleep_window: 100ms
+      half_open_attempts: 0
+      required_successful: 0
+      rolling_duration: 2s
+      num_buckets: 0
+`)
+		_, err := LoadConfig([]string{f})
+		require.Error(t, err)
+		require.ErrorContains(t, err, "'/traffic_shaping/all/circuit_breaker/request_threshold': minimum: got 0, want 1")
+		require.ErrorContains(t, err, "'/traffic_shaping/all/circuit_breaker/error_threshold_percentage': minimum: got 0, want 1")
+		require.ErrorContains(t, err, "'/traffic_shaping/all/circuit_breaker/sleep_window': duration must be greater or equal than 250ms")
+		require.ErrorContains(t, err, "'/traffic_shaping/all/circuit_breaker/half_open_attempts': minimum: got 0, want 1")
+		require.ErrorContains(t, err, "'/traffic_shaping/all/circuit_breaker/required_successful': minimum: got 0, want 1")
+		require.ErrorContains(t, err, "'/traffic_shaping/all/circuit_breaker/rolling_duration': duration must be greater or equal than 5s")
+		require.ErrorContains(t, err, "'/traffic_shaping/all/circuit_breaker/num_buckets': minimum: got 0, want 1")
+	})
+
+	t.Run("verify valid configuration", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+traffic_shaping:
+  all:
+    circuit_breaker:
+      enabled: true
+      request_threshold: 5
+      error_threshold_percentage: 5
+      sleep_window: 500ms
+      half_open_attempts: 5
+      required_successful: 5
+      rolling_duration: 7s
+      num_buckets: 5
+`)
+		_, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+	})
+}

@@ -62,6 +62,7 @@ require (
 	github.com/MicahParks/keyfunc/v3 v3.3.5
 	github.com/alicebob/miniredis/v2 v2.34.0
 	github.com/caarlos0/env/v11 v11.3.1
+	github.com/cep21/circuit/v4 v4.0.0
 	github.com/dgraph-io/ristretto/v2 v2.1.0
 	github.com/expr-lang/expr v1.17.3
 	github.com/goccy/go-json v0.10.3

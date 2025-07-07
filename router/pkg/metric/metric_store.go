@@ -25,6 +25,9 @@ const (
 	RequestError                  = "router.http.requests.error"                // Total request error count
 	RouterInfo                    = "router.info"
 
+	CircuitBreakerStateGauge           = "router.circuit_breaker.state"
+	CircuitBreakerShortCircuitsCounter = "router.circuit_breaker.short_circuits"
+
 	SchemaFieldUsageCounter = "router.graphql.schema_field_usage" // Total field usage
 
 	OperationPlanningTime = "router.graphql.operation.planning_time" // Time taken to plan the operation
@@ -84,6 +87,16 @@ var (
 	RouterInfoOptions     = []otelmetric.Int64ObservableGaugeOption{
 		otelmetric.WithDescription(RouterInfoDescription),
 	}
+
+	CircuitBreakerStateDescription = "Circuit breaker state."
+	CircuitBreakerStateInfoOptions = []otelmetric.Int64GaugeOption{
+		otelmetric.WithDescription(CircuitBreakerStateDescription),
+	}
+
+	CircuitBreakerShortCircuitsDescription = "Circuit breaker short circuits."
+	CircuitBreakerShortCircuitOptions      = []otelmetric.Int64CounterOption{
+		otelmetric.WithDescription(CircuitBreakerShortCircuitsDescription),
+	}
 )
 
 type (
@@ -110,6 +123,10 @@ type (
 		routerBaseAttributes otelmetric.ObserveOption
 	}
 
+	MetricOpts struct {
+		EnableCircuitBreaker bool
+	}
+
 	// Provider is the interface that wraps the basic metric methods.
 	// We maintain two providers, one for OTEL and one for Prometheus.
 	Provider interface {
@@ -121,6 +138,8 @@ type (
 		MeasureRequestError(ctx context.Context, opts ...otelmetric.AddOption)
 		MeasureOperationPlanningTime(ctx context.Context, planningTime float64, opts ...otelmetric.RecordOption)
 		MeasureSchemaFieldUsage(ctx context.Context, schemaUsage int64, opts ...otelmetric.AddOption)
+		SetCircuitBreakerState(ctx context.Context, status bool, opts ...otelmetric.RecordOption)
+		MeasureCircuitBreakerShortCircuit(ctx context.Context, opts ...otelmetric.AddOption)
 		Flush(ctx context.Context) error
 		Shutdown() error
 	}
@@ -136,6 +155,8 @@ type (
 		MeasureRequestError(ctx context.Context, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption)
 		MeasureOperationPlanningTime(ctx context.Context, planningTime time.Duration, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption)
 		MeasureSchemaFieldUsage(ctx context.Context, schemaUsage int64, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption)
+		MeasureCircuitBreakerShortCircuit(ctx context.Context, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption)
+		SetCircuitBreakerState(ctx context.Context, state bool, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption)
 		Flush(ctx context.Context) error
 		Shutdown(ctx context.Context) error
 	}
@@ -143,7 +164,7 @@ type (
 
 // NewStore creates a new metrics store instance.
 // The store abstract OTEL and Prometheus metrics with a single interface.
-func NewStore(opts ...Option) (Store, error) {
+func NewStore(otlpOpts MetricOpts, promOpts MetricOpts, opts ...Option) (Store, error) {
 	h := &Metrics{
 		logger: zap.NewNop(),
 	}
@@ -159,7 +180,7 @@ func NewStore(opts ...Option) (Store, error) {
 	h.baseAttributesOpt = otelmetric.WithAttributes(h.baseAttributes...)
 
 	// Create OTLP metrics exported to OTEL
-	oltpMetrics, err := NewOtlpMetricStore(h.logger, h.otelMeterProvider, h.routerBaseAttributes)
+	oltpMetrics, err := NewOtlpMetricStore(h.logger, h.otelMeterProvider, h.routerBaseAttributes, otlpOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +188,7 @@ func NewStore(opts ...Option) (Store, error) {
 	h.otlpRequestMetrics = oltpMetrics
 
 	// Create prometheus metrics exported to Prometheus scrape endpoint
-	promMetrics, err := NewPromMetricStore(h.logger, h.promMeterProvider, h.routerBaseAttributes)
+	promMetrics, err := NewPromMetricStore(h.logger, h.promMeterProvider, h.routerBaseAttributes, promOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -238,6 +259,42 @@ func (h *Metrics) MeasureRequestCount(ctx context.Context, sliceAttr []attribute
 	opts = append(opts, otelmetric.WithAttributes(sliceAttr...))
 
 	h.otlpRequestMetrics.MeasureRequestCount(ctx, opts...)
+}
+
+func (h *Metrics) MeasureCircuitBreakerShortCircuit(ctx context.Context, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption) {
+	opts := []otelmetric.AddOption{h.baseAttributesOpt, opt}
+
+	// Explode for prometheus metrics
+	if len(sliceAttr) == 0 {
+		h.promRequestMetrics.MeasureCircuitBreakerShortCircuit(ctx, opts...)
+	} else {
+		explodeAddInstrument(ctx, sliceAttr, func(ctx context.Context, newOpts ...otelmetric.AddOption) {
+			newOpts = append(newOpts, opts...)
+			h.promRequestMetrics.MeasureCircuitBreakerShortCircuit(ctx, newOpts...)
+		})
+	}
+
+	// OTEL metrics
+	opts = append(opts, otelmetric.WithAttributes(sliceAttr...))
+	h.otlpRequestMetrics.MeasureCircuitBreakerShortCircuit(ctx, opts...)
+}
+
+func (h *Metrics) SetCircuitBreakerState(ctx context.Context, state bool, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption) {
+	opts := []otelmetric.RecordOption{h.baseAttributesOpt, opt}
+
+	// Explode for prometheus metrics
+	if len(sliceAttr) == 0 {
+		h.promRequestMetrics.SetCircuitBreakerState(ctx, state, opts...)
+	} else {
+		explodeRecordInstrument(ctx, sliceAttr, func(ctx context.Context, newOpts ...otelmetric.RecordOption) {
+			newOpts = append(newOpts, opts...)
+			h.promRequestMetrics.SetCircuitBreakerState(ctx, state, newOpts...)
+		})
+	}
+
+	// OTEL metrics
+	opts = append(opts, otelmetric.WithAttributes(sliceAttr...))
+	h.otlpRequestMetrics.SetCircuitBreakerState(ctx, state, opts...)
 }
 
 func (h *Metrics) MeasureRequestSize(ctx context.Context, contentLength int64, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption) {

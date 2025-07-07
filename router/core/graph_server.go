@@ -13,6 +13,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/wundergraph/cosmo/router/internal/circuit"
+
 	"github.com/cespare/xxhash/v2"
 	"github.com/cloudflare/backoff"
 	"github.com/dgraph-io/ristretto/v2"
@@ -93,8 +95,22 @@ type (
 		pubSubProviders         []datasource.Provider
 		traceDialer             *TraceDialer
 		connector               *grpcconnector.Connector
+		circuitBreakerManager   *circuit.Manager
 	}
 )
+
+// BuildGraphMuxOptions contains the configuration options for building a graph mux.
+type BuildGraphMuxOptions struct {
+	FeatureFlagName     string
+	RouterConfigVersion string
+	EngineConfig        *nodev1.EngineConfiguration
+	ConfigSubgraphs     []*nodev1.Subgraph
+	RoutingUrlGroupings map[string]map[string]bool
+}
+
+func (b BuildGraphMuxOptions) IsBaseGraph() bool {
+	return b.FeatureFlagName == ""
+}
 
 // newGraphServer creates a new server instance.
 func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterConfig, proxy ProxyFunc) (*graphServer, error) {
@@ -232,7 +248,25 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		httpRouter.Use(cors.New(*s.corsOptions))
 	}
 
-	gm, err := s.buildGraphMux(ctx, "", s.baseRouterConfigVersion, routerConfig.GetEngineConfig(), routerConfig.GetSubgraphs())
+	if s.subgraphCircuitBreakerOptions.IsEnabled() {
+		manager, err := circuit.NewManager(s.subgraphCircuitBreakerOptions.CircuitBreaker)
+		if err != nil {
+			return nil, err
+		}
+		s.circuitBreakerManager = manager
+	}
+
+	routingUrlGroupings, err := getRoutingUrlGroupingForCircuitBreakers(routerConfig, s.overrideRoutingURLConfiguration, s.overrides)
+	if err != nil {
+		return nil, err
+	}
+
+	gm, err := s.buildGraphMux(ctx, BuildGraphMuxOptions{
+		RouterConfigVersion: s.baseRouterConfigVersion,
+		EngineConfig:        routerConfig.GetEngineConfig(),
+		ConfigSubgraphs:     routerConfig.GetSubgraphs(),
+		RoutingUrlGroupings: routingUrlGroupings,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to build base mux: %w", err)
 	}
@@ -340,7 +374,59 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	return s, nil
 }
 
-func (s *graphServer) buildMultiGraphHandler(ctx context.Context, baseMux *chi.Mux, featureFlagConfigs map[string]*nodev1.FeatureFlagRouterExecutionConfig) (http.HandlerFunc, error) {
+func getRoutingUrlGroupingForCircuitBreakers(
+	routerConfig *nodev1.RouterConfig,
+	overrideRoutingURLConfiguration config.OverrideRoutingURLConfiguration,
+	overridesConfiguration config.OverridesConfiguration,
+) (map[string]map[string]bool, error) {
+	routingUrlGroupings := make(map[string]map[string]bool)
+
+	overwrites, err := configureSubgraphOverwrites(
+		routerConfig.GetEngineConfig(),
+		routerConfig.GetSubgraphs(),
+		overrideRoutingURLConfiguration,
+		overridesConfiguration,
+		true,
+	)
+	if err != nil {
+		return nil, err
+	}
+	for _, subgraph := range overwrites {
+		if _, ok := routingUrlGroupings[subgraph.UrlString]; !ok {
+			routingUrlGroupings[subgraph.UrlString] = make(map[string]bool)
+		}
+		routingUrlGroupings[subgraph.UrlString][subgraph.Name] = true
+	}
+
+	if routerConfig.FeatureFlagConfigs != nil {
+		for _, ffConfig := range routerConfig.FeatureFlagConfigs.ConfigByFeatureFlagName {
+			ffOverwrites, err := configureSubgraphOverwrites(
+				ffConfig.GetEngineConfig(),
+				ffConfig.GetSubgraphs(),
+				overrideRoutingURLConfiguration,
+				overridesConfiguration,
+				true,
+			)
+			if err != nil {
+				return nil, err
+			}
+			for _, subgraph := range ffOverwrites {
+				if _, ok := routingUrlGroupings[subgraph.UrlString]; !ok {
+					routingUrlGroupings[subgraph.UrlString] = make(map[string]bool)
+				}
+				routingUrlGroupings[subgraph.UrlString][subgraph.Name] = true
+			}
+		}
+	}
+
+	return routingUrlGroupings, nil
+}
+
+func (s *graphServer) buildMultiGraphHandler(
+	ctx context.Context,
+	baseMux *chi.Mux,
+	featureFlagConfigs map[string]*nodev1.FeatureFlagRouterExecutionConfig,
+) (http.HandlerFunc, error) {
 	if len(featureFlagConfigs) == 0 {
 		return baseMux.ServeHTTP, nil
 	}
@@ -349,12 +435,12 @@ func (s *graphServer) buildMultiGraphHandler(ctx context.Context, baseMux *chi.M
 
 	// Build all the muxes for the feature flags in serial to avoid any race conditions
 	for featureFlagName, executionConfig := range featureFlagConfigs {
-		gm, err := s.buildGraphMux(ctx,
-			featureFlagName,
-			executionConfig.GetVersion(),
-			executionConfig.GetEngineConfig(),
-			executionConfig.Subgraphs,
-		)
+		gm, err := s.buildGraphMux(ctx, BuildGraphMuxOptions{
+			FeatureFlagName:     featureFlagName,
+			RouterConfigVersion: executionConfig.GetVersion(),
+			EngineConfig:        executionConfig.GetEngineConfig(),
+			ConfigSubgraphs:     executionConfig.Subgraphs,
+		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to build mux for feature flag '%s': %w", featureFlagName, err)
 		}
@@ -677,11 +763,9 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 // buildGraphMux creates a new graph mux with the given feature flags and engine configuration.
 // It also creates a new execution plan cache for the mux. The mux is not mounted on the server.
 // The mux is appended internally to the graph server's list of muxes to clean up later when the server is swapped.
-func (s *graphServer) buildGraphMux(ctx context.Context,
-	featureFlagName string,
-	routerConfigVersion string,
-	engineConfig *nodev1.EngineConfiguration,
-	configSubgraphs []*nodev1.Subgraph,
+func (s *graphServer) buildGraphMux(
+	ctx context.Context,
+	opts BuildGraphMuxOptions,
 ) (*graphMux, error) {
 	gm := &graphMux{
 		metricStore: rmetric.NewNoopMetrics(),
@@ -690,10 +774,10 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	httpRouter := chi.NewRouter()
 
 	// we only enable the attribute mapper if we are not using the default cloud exporter
-	baseMuxAttributes := append([]attribute.KeyValue{otel.WgRouterConfigVersion.String(routerConfigVersion)}, s.baseOtelAttributes...)
+	baseMuxAttributes := append([]attribute.KeyValue{otel.WgRouterConfigVersion.String(opts.RouterConfigVersion)}, s.baseOtelAttributes...)
 
-	if featureFlagName != "" {
-		baseMuxAttributes = append(baseMuxAttributes, otel.WgFeatureFlag.String(featureFlagName))
+	if !opts.IsBaseGraph() {
+		baseMuxAttributes = append(baseMuxAttributes, otel.WgFeatureFlag.String(opts.FeatureFlagName))
 	}
 
 	metricsEnabled := s.metricConfig.IsEnabled()
@@ -729,15 +813,24 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	// Prometheus metricStore rely on OTLP metricStore
 	if metricsEnabled {
 		attrKeyValues := []attribute.KeyValue{
-			otel.WgRouterConfigVersion.String(routerConfigVersion),
+			otel.WgRouterConfigVersion.String(opts.RouterConfigVersion),
 			otel.WgRouterVersion.String(Version),
 		}
-		if featureFlagName != "" {
-			attrKeyValues = append(attrKeyValues, otel.WgFeatureFlag.String(featureFlagName))
+		if !opts.IsBaseGraph() {
+			attrKeyValues = append(attrKeyValues, otel.WgFeatureFlag.String(opts.FeatureFlagName))
 		}
 		routerInfoBaseAttrs := otelmetric.WithAttributeSet(attribute.NewSet(attrKeyValues...))
 
-		m, err := rmetric.NewStore(
+		// From a users perspective this is similar to engine metrics, etc
+		// but in this case we use the same metric store
+		otlpOpts := rmetric.MetricOpts{
+			EnableCircuitBreaker: s.metricConfig.OpenTelemetry.Enabled,
+		}
+		promOpts := rmetric.MetricOpts{
+			EnableCircuitBreaker: s.metricConfig.Prometheus.Enabled,
+		}
+
+		m, err := rmetric.NewStore(otlpOpts, promOpts,
 			rmetric.WithPromMeterProvider(s.promMeterProvider),
 			rmetric.WithOtlpMeterProvider(s.otlpMeterProvider),
 			rmetric.WithBaseAttributes(baseMetricAttributes),
@@ -753,11 +846,32 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		gm.metricStore = m
 	}
 
+	// We initialize circuit breakers for all subgraphs in the base configuration (non-ff)
+	// so we don't duplicate circuit breakers for subgraphs and they can be used in the feature flags even
+	// We initialize it in the buildGraphMux because we want to use the base metric configuration
+	if opts.IsBaseGraph() && s.subgraphCircuitBreakerOptions.IsEnabled() {
+		// If either otel or prom metrics are enabled for circuit breakers
+		// we will enable circuit breaker metric collections
+		isCircuitBreakerMetricsEnabled := s.metricConfig.OpenTelemetry.CircuitBreaker || s.metricConfig.Prometheus.CircuitBreaker
+
+		err := s.circuitBreakerManager.Initialize(circuit.ManagerOpts{
+			SubgraphCircuitBreakers: s.subgraphCircuitBreakerOptions.SubgraphMap,
+			MetricStore:             gm.metricStore,
+			UseMetrics:              metricsEnabled && isCircuitBreakerMetricsEnabled,
+			BaseOtelAttributes:      baseMetricAttributes,
+			AllGroupings:            opts.RoutingUrlGroupings,
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	subgraphs, err := configureSubgraphOverwrites(
-		engineConfig,
-		configSubgraphs,
+		opts.EngineConfig,
+		opts.ConfigSubgraphs,
 		s.overrideRoutingURLConfiguration,
 		s.overrides,
+		false,
 	)
 	if err != nil {
 		return nil, err
@@ -776,7 +890,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		metrics:             gm.metricStore,
 		gqlMetricsExporter:  s.gqlMetricsExporter,
 		exportEnabled:       s.graphqlMetricsConfig.Enabled,
-		routerConfigVersion: routerConfigVersion,
+		routerConfigVersion: opts.RouterConfigVersion,
 		logger:              s.logger,
 
 		promSchemaUsageEnabled:             s.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled,
@@ -784,11 +898,11 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	})
 
 	baseLogFields := []zapcore.Field{
-		zap.String("config_version", routerConfigVersion),
+		zap.String("config_version", opts.RouterConfigVersion),
 	}
 
-	if featureFlagName != "" {
-		baseLogFields = append(baseLogFields, zap.String("feature_flag", featureFlagName))
+	if !opts.IsBaseGraph() {
+		baseLogFields = append(baseLogFields, zap.String("feature_flag", opts.FeatureFlagName))
 	}
 
 	// Currently, we only support custom attributes from the context for OTLP metrics
@@ -799,6 +913,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	httpRouter.Use(func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			r = r.WithContext(withSubgraphResolver(r.Context(), subgraphResolver))
+
 			requestLogger := s.logger.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
 			// If this is a batched request attach id to the logger
 			if batchedOperationId, ok := r.Context().Value(BatchedOperationId{}).(string); ok {
@@ -822,7 +937,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 			// For debugging purposes, we can validate from what version of the config the request is coming from
 			if s.setConfigVersionHeader {
-				w.Header().Set("X-Router-Config-Version", routerConfigVersion)
+				w.Header().Set("X-Router-Config-Version", opts.RouterConfigVersion)
 			}
 
 			h.ServeHTTP(w, r)
@@ -985,7 +1100,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		subgraphTippers[subgraph] = subgraphTransport
 	}
 
-	if err := s.setupConnector(ctx, engineConfig, configSubgraphs); err != nil {
+	if err := s.setupConnector(ctx, opts.EngineConfig, opts.ConfigSubgraphs); err != nil {
 		return nil, fmt.Errorf("failed to setup plugin host: %w", err)
 	}
 
@@ -1030,14 +1145,15 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			LocalhostFallbackInsideDocker: s.localhostFallbackInsideDocker,
 			Logger:                        s.logger,
 			EnableTraceClient:             enableTraceClient,
+			CircuitBreaker:                s.circuitBreakerManager,
 		},
 	}
 
 	executor, providers, err := ecb.Build(
 		ctx,
 		&ExecutorBuildOptions{
-			EngineConfig:                   engineConfig,
-			Subgraphs:                      configSubgraphs,
+			EngineConfig:                   opts.EngineConfig,
+			Subgraphs:                      opts.ConfigSubgraphs,
 			RouterEngineConfig:             routerEngineConfig,
 			Reporter:                       s.engineStats,
 			ApolloCompatibilityFlags:       s.apolloCompatibilityFlags,
@@ -1076,7 +1192,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	operationPlanner := NewOperationPlanner(executor, gm.planCache)
 
 	// We support the MCP only on the base graph. Feature flags are not supported yet.
-	if featureFlagName == "" && s.mcpServer != nil {
+	if opts.IsBaseGraph() && s.mcpServer != nil {
 		if mErr := s.mcpServer.Reload(executor.ClientSchema); mErr != nil {
 			return nil, fmt.Errorf("failed to reload MCP server: %w", mErr)
 		}
@@ -1114,7 +1230,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 						otel.WgOperationName.String(item.OperationName),
 						otel.WgClientName.String(item.ClientName),
 						otel.WgClientVersion.String(item.ClientVersion),
-						otel.WgFeatureFlag.String(featureFlagName),
+						otel.WgFeatureFlag.String(opts.FeatureFlagName),
 						otel.WgOperationHash.String(item.OperationHash),
 						otel.WgOperationType.String(item.OperationType),
 						otel.WgEnginePlanCacheHit.Bool(false),
@@ -1143,7 +1259,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	}
 
 	authorizerOptions := &CosmoAuthorizerOptions{
-		FieldConfigurations:           engineConfig.FieldConfigurations,
+		FieldConfigurations:           opts.EngineConfig.FieldConfigurations,
 		RejectOperationIfUnauthorized: false,
 	}
 
@@ -1558,7 +1674,8 @@ func configureSubgraphOverwrites(
 	engineConfig *nodev1.EngineConfiguration,
 	configSubgraphs []*nodev1.Subgraph,
 	overrideRoutingURLConfig config.OverrideRoutingURLConfiguration,
-	overrides config.OverridesConfiguration,
+	overridesConfig config.OverridesConfiguration,
+	skipOverrides bool,
 ) ([]Subgraph, error) {
 	var err error
 	subgraphs := make([]Subgraph, 0, len(configSubgraphs))
@@ -1577,7 +1694,7 @@ func configureSubgraphOverwrites(
 		subgraph.UrlString = subgraph.Url.String()
 
 		overrideURL, ok := overrideRoutingURLConfig.Subgraphs[sg.Name]
-		overrideSubgraph, overrideSubgraphOk := overrides.Subgraphs[sg.Name]
+		overrideSubgraph, overrideSubgraphOk := overridesConfig.Subgraphs[sg.Name]
 
 		var overrideSubscriptionURL string
 		var overrideSubscriptionProtocol *common.GraphQLSubscriptionProtocol
@@ -1630,24 +1747,28 @@ func configureSubgraphOverwrites(
 				subgraph.UrlString = subgraph.Url.String()
 			}
 
-			// Override datasource urls
-			for _, conf := range engineConfig.DatasourceConfigurations {
-				if conf.Id == sg.Id {
-					if overrideURL != "" {
-						conf.CustomGraphql.Fetch.Url.StaticVariableContent = overrideURL
-						sg.RoutingUrl = overrideURL
-					}
-					if overrideSubscriptionURL != "" {
-						conf.CustomGraphql.Subscription.Url.StaticVariableContent = overrideSubscriptionURL
-					}
-					if overrideSubscriptionProtocol != nil {
-						conf.CustomGraphql.Subscription.Protocol = overrideSubscriptionProtocol
-					}
-					if overrideSubscriptionWebsocketSubprotocol != nil {
-						conf.CustomGraphql.Subscription.WebsocketSubprotocol = overrideSubscriptionWebsocketSubprotocol
-					}
+			// If skipOverrides is true we do not want to update the references and only care about
+			// getting a subgraph result with the overridden url
+			if !skipOverrides {
+				// Override datasource urls
+				for _, conf := range engineConfig.DatasourceConfigurations {
+					if conf.Id == sg.Id {
+						if overrideURL != "" {
+							conf.CustomGraphql.Fetch.Url.StaticVariableContent = overrideURL
+							sg.RoutingUrl = overrideURL
+						}
+						if overrideSubscriptionURL != "" {
+							conf.CustomGraphql.Subscription.Url.StaticVariableContent = overrideSubscriptionURL
+						}
+						if overrideSubscriptionProtocol != nil {
+							conf.CustomGraphql.Subscription.Protocol = overrideSubscriptionProtocol
+						}
+						if overrideSubscriptionWebsocketSubprotocol != nil {
+							conf.CustomGraphql.Subscription.WebsocketSubprotocol = overrideSubscriptionWebsocketSubprotocol
+						}
 
-					break
+						break
+					}
 				}
 			}
 		}

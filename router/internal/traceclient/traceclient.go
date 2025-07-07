@@ -2,6 +2,7 @@ package traceclient
 
 import (
 	"context"
+	rcontext "github.com/wundergraph/cosmo/router/internal/context"
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	"net/http"
 	"net/http/httptrace"
@@ -29,7 +30,6 @@ type ClientTrace struct {
 }
 
 type ClientTraceContextKey struct{}
-type CurrentSubgraphContextKey struct{}
 
 type TraceInjectingRoundTripper struct {
 	base                  http.RoundTripper
@@ -104,7 +104,7 @@ func (t *TraceInjectingRoundTripper) processConnectionMetrics(ctx context.Contex
 	trace := GetClientTraceFromContext(ctx)
 
 	var subgraph string
-	subgraphCtxVal := ctx.Value(CurrentSubgraphContextKey{})
+	subgraphCtxVal := ctx.Value(rcontext.CurrentSubgraphContextKey{})
 	if subgraphCtxVal != nil {
 		subgraph = subgraphCtxVal.(string)
 	}
