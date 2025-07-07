@@ -34,12 +34,16 @@ type Manager struct {
 	lock                sync.RWMutex
 }
 
-func NewManager(baseConfig CircuitBreakerConfig) *Manager {
+func NewManager(baseConfig CircuitBreakerConfig) (*Manager, error) {
 	circuitManager := &circuit.Manager{}
 
 	if baseConfig.Enabled {
+		configFunc, err := createConfiguration(baseConfig)
+		if err != nil {
+			return nil, err
+		}
 		circuitManager.DefaultCircuitProperties = []circuit.CommandPropertiesConstructor{
-			createConfiguration(baseConfig),
+			configFunc,
 		}
 	}
 
@@ -47,7 +51,7 @@ func NewManager(baseConfig CircuitBreakerConfig) *Manager {
 		circuits:            make(map[string]*circuit.Circuit),
 		internalManager:     circuitManager,
 		isBaseConfigEnabled: baseConfig.Enabled,
-	}
+	}, nil
 }
 
 func (c *Manager) GetCircuitBreaker(name string) *circuit.Circuit {
@@ -141,8 +145,11 @@ func (c *Manager) Initialize(opts ManagerOpts) error {
 					configs = append(configs, metric.NewCircuitBreakerMetricsConfig([]string{sgName}, opts.MetricStore, opts.BaseOtelAttributes))
 				}
 
-				newConfig := createConfiguration(opts.SubgraphCircuitBreakers[sgName])
-				configs = append(configs, newConfig(sgName))
+				configFunc, err := createConfiguration(opts.SubgraphCircuitBreakers[sgName])
+				if err != nil {
+					return err
+				}
+				configs = append(configs, configFunc(sgName))
 
 				createCircuit, err := c.internalManager.CreateCircuit(sgName, configs...)
 				if err != nil {
@@ -157,7 +164,15 @@ func (c *Manager) Initialize(opts ManagerOpts) error {
 	return joinErr
 }
 
-func createConfiguration(opts CircuitBreakerConfig) circuit.CommandPropertiesConstructor {
+func createConfiguration(opts CircuitBreakerConfig) (circuit.CommandPropertiesConstructor, error) {
+	// This is only applicable for tests and is blocked by the config schema
+	if opts.NumBuckets > 0 {
+		modVal := int64(opts.RollingDuration) % int64(opts.NumBuckets)
+		if modVal != 0 {
+			return nil, errors.New("rolling duration must be divisible by num buckets")
+		}
+	}
+
 	return func(name string) circuit.Config {
 		return circuit.Config{
 			General: circuit.GeneralConfig{
@@ -178,5 +193,5 @@ func createConfiguration(opts CircuitBreakerConfig) circuit.CommandPropertiesCon
 				MaxConcurrentRequests: opts.MaxConcurrentRequests,
 			},
 		}
-	}
+	}, nil
 }

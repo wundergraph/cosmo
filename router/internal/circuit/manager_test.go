@@ -2,6 +2,7 @@ package circuit
 
 import (
 	"testing"
+	"time"
 
 	"github.com/cep21/circuit/v4"
 	"github.com/stretchr/testify/require"
@@ -18,7 +19,8 @@ func TestNewManager(t *testing.T) {
 			Enabled: true,
 		}
 
-		manager := NewManager(baseConfig)
+		manager, err := NewManager(baseConfig)
+		require.NoError(t, err)
 
 		require.NotNil(t, manager)
 		require.NotNil(t, manager.circuits)
@@ -34,13 +36,27 @@ func TestNewManager(t *testing.T) {
 			Enabled: false,
 		}
 
-		manager := NewManager(baseConfig)
+		manager, err := NewManager(baseConfig)
+		require.NoError(t, err)
 
 		require.NotNil(t, manager)
 		require.NotNil(t, manager.circuits)
 		require.NotNil(t, manager.internalManager)
 		require.Equal(t, baseConfig.Enabled, manager.isBaseConfigEnabled)
 		require.Empty(t, manager.circuits)
+	})
+
+	t.Run("with invalid values", func(t *testing.T) {
+		t.Parallel()
+
+		baseConfig := CircuitBreakerConfig{
+			Enabled:         true,
+			RollingDuration: 10 * time.Second,
+			NumBuckets:      7,
+		}
+
+		_, err := NewManager(baseConfig)
+		require.ErrorContains(t, err, "rolling duration must be divisible by num buckets")
 	})
 }
 
@@ -59,7 +75,8 @@ func TestManager_GetCircuitBreaker(t *testing.T) {
 	t.Run("existing circuit", func(t *testing.T) {
 		t.Parallel()
 
-		manager := NewManager(CircuitBreakerConfig{})
+		manager, err := NewManager(CircuitBreakerConfig{})
+		require.NoError(t, err)
 		testCircuit := &circuit.Circuit{}
 		manager.AddCircuitBreaker("test-circuit", testCircuit)
 
@@ -72,7 +89,8 @@ func TestManager_GetCircuitBreaker(t *testing.T) {
 	t.Run("non-existing circuit", func(t *testing.T) {
 		t.Parallel()
 
-		manager := NewManager(CircuitBreakerConfig{})
+		manager, err := NewManager(CircuitBreakerConfig{})
+		require.NoError(t, err)
 		testCircuit := &circuit.Circuit{}
 		manager.AddCircuitBreaker("test-circuit", testCircuit)
 
@@ -99,7 +117,8 @@ func TestManager_AddCircuitBreaker(t *testing.T) {
 	t.Run("add circuit", func(t *testing.T) {
 		t.Parallel()
 
-		manager := NewManager(CircuitBreakerConfig{})
+		manager, err := NewManager(CircuitBreakerConfig{})
+		require.NoError(t, err)
 		testCircuit := &circuit.Circuit{}
 
 		manager.AddCircuitBreaker("test-testCircuit", testCircuit)
@@ -124,7 +143,9 @@ func TestManager_HasCircuits(t *testing.T) {
 	t.Run("empty circuits", func(t *testing.T) {
 		t.Parallel()
 
-		manager := NewManager(CircuitBreakerConfig{})
+		manager, err := NewManager(CircuitBreakerConfig{})
+		require.NoError(t, err)
+
 		result := manager.HasCircuits()
 
 		require.False(t, result)
@@ -133,7 +154,9 @@ func TestManager_HasCircuits(t *testing.T) {
 	t.Run("manager with multiple circuits", func(t *testing.T) {
 		t.Parallel()
 
-		manager := NewManager(CircuitBreakerConfig{})
+		manager, err := NewManager(CircuitBreakerConfig{})
+		require.NoError(t, err)
+
 		circuit1 := &circuit.Circuit{}
 		circuit2 := &circuit.Circuit{}
 		manager.AddCircuitBreaker("test-circuit-1", circuit1)
@@ -151,10 +174,12 @@ func TestManager_Initialize(t *testing.T) {
 	t.Run("empty options", func(t *testing.T) {
 		t.Parallel()
 
-		manager := NewManager(CircuitBreakerConfig{Enabled: true})
+		manager, err := NewManager(CircuitBreakerConfig{Enabled: true})
+		require.NoError(t, err)
+
 		opts := ManagerOpts{}
 
-		err := manager.Initialize(opts)
+		err = manager.Initialize(opts)
 
 		require.NoError(t, err)
 		require.Empty(t, manager.circuits)
@@ -163,7 +188,8 @@ func TestManager_Initialize(t *testing.T) {
 	t.Run("create circuit for base configuration", func(t *testing.T) {
 		t.Parallel()
 
-		manager := NewManager(CircuitBreakerConfig{Enabled: true})
+		manager, err := NewManager(CircuitBreakerConfig{Enabled: true})
+		require.NoError(t, err)
 
 		opts := ManagerOpts{
 			SubgraphCircuitBreakers: map[string]CircuitBreakerConfig{},
@@ -177,7 +203,7 @@ func TestManager_Initialize(t *testing.T) {
 				},
 			},
 		}
-		err := manager.Initialize(opts)
+		err = manager.Initialize(opts)
 
 		require.NoError(t, err)
 		require.Len(t, manager.circuits, 3)
@@ -193,7 +219,9 @@ func TestManager_Initialize(t *testing.T) {
 	t.Run("base config disabled when creating circuits", func(t *testing.T) {
 		t.Parallel()
 
-		manager := NewManager(CircuitBreakerConfig{Enabled: false})
+		manager, err := NewManager(CircuitBreakerConfig{Enabled: false})
+		require.NoError(t, err)
+
 		opts := ManagerOpts{
 			SubgraphCircuitBreakers: map[string]CircuitBreakerConfig{},
 			AllGroupings: map[string]map[string]bool{
@@ -204,7 +232,7 @@ func TestManager_Initialize(t *testing.T) {
 			},
 		}
 
-		err := manager.Initialize(opts)
+		err = manager.Initialize(opts)
 
 		require.NoError(t, err)
 		require.Empty(t, manager.circuits)
@@ -213,7 +241,9 @@ func TestManager_Initialize(t *testing.T) {
 	t.Run("custom subgraph circuit breakers", func(t *testing.T) {
 		t.Parallel()
 
-		manager := NewManager(CircuitBreakerConfig{Enabled: false})
+		manager, err := NewManager(CircuitBreakerConfig{Enabled: false})
+		require.NoError(t, err)
+
 		opts := ManagerOpts{
 			SubgraphCircuitBreakers: map[string]CircuitBreakerConfig{
 				"subgraph1": {
@@ -234,7 +264,7 @@ func TestManager_Initialize(t *testing.T) {
 			},
 		}
 
-		err := manager.Initialize(opts)
+		err = manager.Initialize(opts)
 
 		require.NoError(t, err)
 		require.Len(t, manager.circuits, 2)
@@ -249,7 +279,9 @@ func TestManager_Initialize(t *testing.T) {
 	t.Run("mixed default and custom subgraphs", func(t *testing.T) {
 		t.Parallel()
 
-		manager := NewManager(CircuitBreakerConfig{Enabled: true})
+		manager, err := NewManager(CircuitBreakerConfig{Enabled: true})
+		require.NoError(t, err)
+
 		opts := ManagerOpts{
 			SubgraphCircuitBreakers: map[string]CircuitBreakerConfig{
 				"subgraph1": {
@@ -267,7 +299,7 @@ func TestManager_Initialize(t *testing.T) {
 			},
 		}
 
-		err := manager.Initialize(opts)
+		err = manager.Initialize(opts)
 
 		require.NoError(t, err)
 		require.Len(t, manager.circuits, 3)
@@ -280,7 +312,9 @@ func TestManager_Initialize(t *testing.T) {
 	t.Run("disabled custom subgraph", func(t *testing.T) {
 		t.Parallel()
 
-		manager := NewManager(CircuitBreakerConfig{Enabled: true})
+		manager, err := NewManager(CircuitBreakerConfig{Enabled: true})
+		require.NoError(t, err)
+
 		opts := ManagerOpts{
 			SubgraphCircuitBreakers: map[string]CircuitBreakerConfig{
 				"subgraph2": {
@@ -297,7 +331,7 @@ func TestManager_Initialize(t *testing.T) {
 			},
 		}
 
-		err := manager.Initialize(opts)
+		err = manager.Initialize(opts)
 
 		require.NoError(t, err)
 		require.Len(t, manager.circuits, 1) // Only subgraph1 should be added
@@ -306,10 +340,41 @@ func TestManager_Initialize(t *testing.T) {
 		require.Nil(t, s2Cb)
 	})
 
+	t.Run("with invalid values", func(t *testing.T) {
+		t.Parallel()
+
+		manager, err := NewManager(CircuitBreakerConfig{Enabled: false})
+		require.NoError(t, err)
+
+		opts := ManagerOpts{
+			SubgraphCircuitBreakers: map[string]CircuitBreakerConfig{
+				"subgraph1": {
+					Enabled:         true,
+					RollingDuration: 10 * time.Second,
+					NumBuckets:      7,
+				},
+			},
+			UseMetrics:         false,
+			BaseOtelAttributes: []attribute.KeyValue{},
+			AllGroupings: map[string]map[string]bool{
+				"http://test-url": {
+					"subgraph1": true,
+					"subgraph2": true,
+					"subgraph3": true,
+				},
+			},
+		}
+
+		err = manager.Initialize(opts)
+		require.ErrorContains(t, err, "rolling duration must be divisible by num buckets")
+	})
+
 	t.Run("multiple routing URLs", func(t *testing.T) {
 		t.Parallel()
 
-		manager := NewManager(CircuitBreakerConfig{Enabled: true})
+		manager, err := NewManager(CircuitBreakerConfig{Enabled: true})
+		require.NoError(t, err)
+
 		opts := ManagerOpts{
 			SubgraphCircuitBreakers: map[string]CircuitBreakerConfig{},
 			UseMetrics:              false,
@@ -324,7 +389,7 @@ func TestManager_Initialize(t *testing.T) {
 			},
 		}
 
-		err := manager.Initialize(opts)
+		err = manager.Initialize(opts)
 
 		require.NoError(t, err)
 		require.Len(t, manager.circuits, 2)

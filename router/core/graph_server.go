@@ -249,7 +249,11 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	}
 
 	if s.subgraphCircuitBreakerOptions.IsEnabled() {
-		s.circuitBreakerManager = circuit.NewManager(s.subgraphCircuitBreakerOptions.CircuitBreaker)
+		manager, err := circuit.NewManager(s.subgraphCircuitBreakerOptions.CircuitBreaker)
+		if err != nil {
+			return nil, err
+		}
+		s.circuitBreakerManager = manager
 	}
 
 	routingUrlGroupings, err := getRoutingUrlGroupingForCircuitBreakers(routerConfig, s.overrideRoutingURLConfiguration, s.overrides)
