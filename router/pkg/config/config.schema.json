@@ -1052,6 +1052,11 @@
                   "default": false,
                   "description": "Enable the collection of connection stats. The default value is false."
                 },
+                "circuit_breaker": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable the collection of circuit breaker stats. The default value is false."
+                },
                 "engine_stats": {
                   "type": "object",
                   "additionalProperties": false,
@@ -1151,6 +1156,11 @@
                   "type": "boolean",
                   "default": false,
                   "description": "Enable the collection of connection stats. The default value is false."
+                },
+                "circuit_breaker": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable the collection of circuit breaker stats. The default value is false."
                 },
                 "engine_stats": {
                   "type": "object",
