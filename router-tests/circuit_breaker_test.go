@@ -646,6 +646,9 @@ func TestCircuitBreaker(t *testing.T) {
 						Enabled:  true,
 						LogLevel: zapcore.DebugLevel,
 					},
+					MetricOptions: testenv.MetricOptions{
+						EnableOTLPCircuitBreakerMetrics: true,
+					},
 					RouterOptions: []core.Option{
 						core.WithSubgraphCircuitBreakerOptions(core.NewSubgraphCircuitBreakerOptions(trafficConfig)),
 						core.WithSubgraphTransportOptions(core.NewSubgraphTransportOptions(trafficConfig)),
@@ -725,7 +728,7 @@ func TestCircuitBreaker(t *testing.T) {
 					MetricReader:       metricReader,
 					PrometheusRegistry: promRegistry,
 					MetricOptions: testenv.MetricOptions{
-						EnablePrometheusConnectionMetrics: true,
+						EnablePrometheusCircuitBreakerMetrics: true,
 					},
 					LogObservation: testenv.LogObservationConfig{
 						Enabled:  true,
@@ -821,6 +824,9 @@ func TestCircuitBreaker(t *testing.T) {
 						Enabled:  true,
 						LogLevel: zapcore.DebugLevel,
 					},
+					MetricOptions: testenv.MetricOptions{
+						EnableOTLPCircuitBreakerMetrics: true,
+					},
 					RouterOptions: []core.Option{
 						core.WithSubgraphCircuitBreakerOptions(core.NewSubgraphCircuitBreakerOptions(trafficConfig)),
 						core.WithSubgraphTransportOptions(core.NewSubgraphTransportOptions(trafficConfig)),
@@ -885,7 +891,7 @@ func TestCircuitBreaker(t *testing.T) {
 					MetricReader:       metricReader,
 					PrometheusRegistry: promRegistry,
 					MetricOptions: testenv.MetricOptions{
-						EnablePrometheusConnectionMetrics: true,
+						EnablePrometheusCircuitBreakerMetrics: true,
 					},
 					LogObservation: testenv.LogObservationConfig{
 						Enabled:  true,
@@ -989,6 +995,9 @@ func TestCircuitBreaker(t *testing.T) {
 					LogObservation: testenv.LogObservationConfig{
 						Enabled:  true,
 						LogLevel: zapcore.DebugLevel,
+					},
+					MetricOptions: testenv.MetricOptions{
+						EnableOTLPCircuitBreakerMetrics: true,
 					},
 					RouterOptions: []core.Option{
 						core.WithSubgraphCircuitBreakerOptions(core.NewSubgraphCircuitBreakerOptions(trafficConfig)),
@@ -1101,7 +1110,7 @@ func TestCircuitBreaker(t *testing.T) {
 					MetricReader:       metricReader,
 					PrometheusRegistry: promRegistry,
 					MetricOptions: testenv.MetricOptions{
-						EnablePrometheusConnectionMetrics: true,
+						EnablePrometheusCircuitBreakerMetrics: true,
 					},
 					LogObservation: testenv.LogObservationConfig{
 						Enabled:  true,
