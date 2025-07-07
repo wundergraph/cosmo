@@ -60,6 +60,7 @@
         "EngineStats": {
           "Subscriptions": true
         },
+        "CircuitBreaker": false,
         "ExcludeMetrics": null,
         "ExcludeMetricLabels": null,
         "Exporters": [
@@ -82,6 +83,7 @@
         "EngineStats": {
           "Subscriptions": true
         },
+        "CircuitBreaker": false,
         "ExcludeMetrics": null,
         "ExcludeMetricLabels": null,
         "ExcludeScopeInfo": true,
@@ -306,6 +308,18 @@
         "MaxDuration": 10000000000,
         "Interval": 3000000000
       },
+      "CircuitBreaker": {
+        "Enabled": false,
+        "ErrorThresholdPercentage": 50,
+        "RequestThreshold": 20,
+        "SleepWindow": 5000000000,
+        "HalfOpenAttempts": 1,
+        "RequiredSuccessfulAttempts": 1,
+        "RollingDuration": 10000000000,
+        "NumBuckets": 10,
+        "ExecutionTimeout": 60000000000,
+        "MaxConcurrentRequests": -1
+      },
       "RequestTimeout": 60000000000,
       "DialTimeout": 30000000000,
       "ResponseHeaderTimeout": 0,
@@ -330,6 +344,18 @@
           "MaxAttempts": 0,
           "MaxDuration": 0,
           "Interval": 0
+        },
+        "CircuitBreaker": {
+          "Enabled": false,
+          "ErrorThresholdPercentage": 0,
+          "RequestThreshold": 0,
+          "SleepWindow": 0,
+          "HalfOpenAttempts": 0,
+          "RequiredSuccessfulAttempts": 0,
+          "RollingDuration": 0,
+          "NumBuckets": 0,
+          "ExecutionTimeout": 0,
+          "MaxConcurrentRequests": 0
         },
         "RequestTimeout": 120000000000,
         "DialTimeout": null,

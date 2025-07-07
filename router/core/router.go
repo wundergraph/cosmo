@@ -27,6 +27,7 @@ import (
 
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/internal/circuit"
 	"github.com/wundergraph/cosmo/router/internal/debug"
 	"github.com/wundergraph/cosmo/router/internal/docker"
 	"github.com/wundergraph/cosmo/router/internal/graphiql"
@@ -169,6 +170,18 @@ type (
 	// Option defines the method to customize server.
 	Option func(svr *Router)
 )
+
+type SubgraphCircuitBreakerOptions struct {
+	CircuitBreaker circuit.CircuitBreakerConfig
+	SubgraphMap    map[string]circuit.CircuitBreakerConfig
+}
+
+func (r *SubgraphCircuitBreakerOptions) IsEnabled() bool {
+	if r == nil {
+		return false
+	}
+	return r.CircuitBreaker.Enabled || len(r.SubgraphMap) > 0
+}
 
 // NewRouter creates a new Router instance. Router.Start() must be called to start the server.
 // Alternatively, use Router.NewServer() to create a new server instance without starting it.
@@ -1728,6 +1741,12 @@ func WithSubgraphTransportOptions(opts *SubgraphTransportOptions) Option {
 	}
 }
 
+func WithSubgraphCircuitBreakerOptions(opts *SubgraphCircuitBreakerOptions) Option {
+	return func(r *Router) {
+		r.subgraphCircuitBreakerOptions = opts
+	}
+}
+
 func WithSubgraphRetryOptions(enabled bool, maxRetryCount int, retryMaxDuration, retryInterval time.Duration) Option {
 	return func(r *Router) {
 		r.retryOptions = retrytransport.RetryOptions{
@@ -1839,6 +1858,39 @@ func NewSubgraphTransportOptions(cfg config.TrafficShapingRules) *SubgraphTransp
 	}
 
 	return base
+}
+
+func NewSubgraphCircuitBreakerOptions(cfg config.TrafficShapingRules) *SubgraphCircuitBreakerOptions {
+	entry := &SubgraphCircuitBreakerOptions{
+		SubgraphMap: map[string]circuit.CircuitBreakerConfig{},
+	}
+	// If we have a global default
+	if cfg.All.CircuitBreaker.Enabled {
+		entry.CircuitBreaker = newCircuitBreakerConfig(cfg.All.CircuitBreaker)
+	}
+	// Subgraph specific circuit breakers
+	for k, v := range cfg.Subgraphs {
+		if v != nil {
+			entry.SubgraphMap[k] = newCircuitBreakerConfig(v.CircuitBreaker)
+		}
+	}
+
+	return entry
+}
+
+func newCircuitBreakerConfig(cb config.CircuitBreaker) circuit.CircuitBreakerConfig {
+	return circuit.CircuitBreakerConfig{
+		Enabled:                    cb.Enabled,
+		ErrorThresholdPercentage:   cb.ErrorThresholdPercentage,
+		RequestThreshold:           cb.RequestThreshold,
+		SleepWindow:                cb.SleepWindow,
+		HalfOpenAttempts:           cb.HalfOpenAttempts,
+		RequiredSuccessfulAttempts: cb.RequiredSuccessfulAttempts,
+		RollingDuration:            cb.RollingDuration,
+		NumBuckets:                 cb.NumBuckets,
+		ExecutionTimeout:           cb.ExecutionTimeout,
+		MaxConcurrentRequests:      cb.MaxConcurrentRequests,
+	}
 }
 
 func DefaultSubgraphTransportOptions() *SubgraphTransportOptions {
@@ -2185,6 +2237,7 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 				Subscription: cfg.Metrics.OTLP.EngineStats.Subscriptions,
 			},
 			Exporters:           openTelemetryExporters,
+			CircuitBreaker:      cfg.Metrics.OTLP.CircuitBreaker,
 			ExcludeMetrics:      cfg.Metrics.OTLP.ExcludeMetrics,
 			ExcludeMetricLabels: cfg.Metrics.OTLP.ExcludeMetricLabels,
 		},
@@ -2197,6 +2250,7 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 			EngineStats: rmetric.EngineStatsConfig{
 				Subscription: cfg.Metrics.Prometheus.EngineStats.Subscriptions,
 			},
+			CircuitBreaker:      cfg.Metrics.Prometheus.CircuitBreaker,
 			ExcludeMetrics:      cfg.Metrics.Prometheus.ExcludeMetrics,
 			ExcludeMetricLabels: cfg.Metrics.Prometheus.ExcludeMetricLabels,
 			ExcludeScopeInfo:    cfg.Metrics.Prometheus.ExcludeScopeInfo,
