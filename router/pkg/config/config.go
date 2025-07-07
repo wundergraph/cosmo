@@ -216,7 +216,7 @@ type CircuitBreaker struct {
 	RollingDuration            time.Duration `yaml:"rolling_duration" envDefault:"10s"`
 	NumBuckets                 int           `yaml:"num_buckets" envDefault:"10"`
 	ExecutionTimeout           time.Duration `yaml:"execution_timeout" envDefault:"60s"`
-	MaxConcurrentRequests      int64         `yaml:"max_concurrent_requests" envDefault:"10"`
+	MaxConcurrentRequests      int64         `yaml:"max_concurrent_requests" envDefault:"-1"`
 }
 
 type GraphqlMetrics struct {
