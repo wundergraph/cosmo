@@ -43,6 +43,8 @@ type SendRequestOptions struct {
 }
 
 func TestFlakyCircuitBreaker(t *testing.T) {
+	t.Parallel()
+
 	t.Run("verify circuit breaker becoming half open after sleep window", func(t *testing.T) {
 		t.Parallel()
 
@@ -219,6 +221,8 @@ func TestFlakyCircuitBreaker(t *testing.T) {
 		var isSuccessRequest atomic.Bool
 
 		t.Run("with one request per bucket", func(t *testing.T) {
+			t.Parallel()
+
 			testenv.Run(t, &testenv.Config{
 				LogObservation: testenv.LogObservationConfig{
 					Enabled:  true,
@@ -1278,7 +1282,7 @@ func getCircuitBreakerWithDefaults() config.CircuitBreaker {
 		RollingDuration:            10 * time.Second,
 		NumBuckets:                 10,
 		ExecutionTimeout:           1 * time.Second,
-		MaxConcurrentRequests:      10,
+		MaxConcurrentRequests:      -1,
 	}
 }
 
