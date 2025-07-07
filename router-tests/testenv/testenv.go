@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/caarlos0/env/v11"
 	"io"
 	"log"
 	"math/rand"
@@ -1416,6 +1417,18 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		core.WithQueryPlans(true),
 		core.WithEvents(eventsConfiguration),
 	}
+
+	// TODO: Will be removed before merge, to verify if tests are working with cbs enabled
+	trafficConfig := config.TrafficShapingRules{}
+	err = env.Parse(&trafficConfig)
+	if err != nil {
+		return nil, err
+	}
+	trafficConfig.All.CircuitBreaker.Enabled = true
+
+	//core.WithSubgraphTransportOptions(core.NewSubgraphTransportOptions(trafficConfig))
+	routerOpts = append(routerOpts, core.WithSubgraphCircuitBreakerOptions(core.NewSubgraphCircuitBreakerOptions(trafficConfig)))
+
 	routerOpts = append(routerOpts, testConfig.RouterOptions...)
 
 	if testConfig.RouterConfig != nil {
