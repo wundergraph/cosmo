@@ -3,6 +3,7 @@ package metric
 import (
 	"context"
 	"errors"
+	"fmt"
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -105,11 +106,12 @@ func (h *PromMetricStore) SetCircuitBreakerState(ctx context.Context, state bool
 	}
 
 	if c, ok := h.measurements.gauges[CircuitBreakerStateGauge]; ok {
-		// The value 0 Means it's not open, 1 means it's open
+		// The value 0 here means it's not open, 1 means it's open
 		var boolAsInt int64 = 0
 		if state {
 			boolAsInt = 1
 		}
+		fmt.Println("Setting circuit breaker state to", boolAsInt)
 		c.Record(ctx, boolAsInt, opts...)
 	}
 }
