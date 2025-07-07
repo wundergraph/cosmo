@@ -89,7 +89,8 @@
           "Enabled": true,
           "IncludeOperationSha": false
         }
-      }
+      },
+      "CardinalityLimit": 2000
     }
   },
   "GraphqlMetrics": {
@@ -778,6 +779,7 @@
     }
   },
   "PersistedOperationsConfig": {
+    "Disabled": false,
     "LogUnknown": true,
     "Safelist": {
       "Enabled": true
