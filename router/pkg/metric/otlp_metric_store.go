@@ -98,9 +98,9 @@ func (h *OtlpMetricStore) SetCircuitBreakerState(ctx context.Context, state bool
 	if !h.circuitBreakerEnabled {
 		return
 	}
-	
+
 	if c, ok := h.measurements.gauges[CircuitBreakerStateGauge]; ok {
-		// 0 Means it's not open, 1 means it's open
+		// The value 0 Means it's not open, 1 means it's open
 		var boolAsInt int64 = 0
 		if state {
 			boolAsInt = 1
