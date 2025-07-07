@@ -53,7 +53,7 @@ export class DeleteOrganizationWorker extends BaseWorker<DeleteOrganizationInput
     super(WorkerName, QueueName, { connection: input.redisConnection, concurrency: 10 }, input.logger);
   }
 
-  public async handler(job: Job<DeleteOrganizationInput>) {
+  protected async handler(job: Job<DeleteOrganizationInput>) {
     try {
       const orgRepo = new OrganizationRepository(this.input.logger, this.input.db);
       const oidcRepo = new OidcRepository(this.input.db);

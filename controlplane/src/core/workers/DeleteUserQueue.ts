@@ -53,13 +53,10 @@ export class DeleteUserWorker extends BaseWorker<DeleteUserInput> {
       deleteOrganizationAuditLogsQueue: DeleteOrganizationAuditLogsQueue;
     },
   ) {
-    super(WorkerName, QueueName, input.logger, {
-      connection: input.redisConnection,
-      concurrency: 10,
-    });
+      super(WorkerName, QueueName, { connection: input.redisConnection, concurrency: 10 }, input.logger);
   }
 
-  public async handler(job: Job<DeleteUserInput>) {
+  protected async handler(job: Job<DeleteUserInput>) {
     try {
       const userRepo = new UserRepository(this.input.logger, this.input.db);
       const orgRepo = new OrganizationRepository(this.input.logger, this.input.db);

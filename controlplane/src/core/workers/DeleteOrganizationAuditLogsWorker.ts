@@ -44,7 +44,7 @@ export class DeleteOrganizationAuditLogsWorker extends BaseWorker<DeleteOrganiza
     super(WorkerName, QueueName, { connection: input.redisConnection, concurrency: 10 }, input.logger);
   }
 
-  public async handler(job: Job<DeleteOrganizationAuditLogsInput>) {
+  protected async handler(job: Job<DeleteOrganizationAuditLogsInput>) {
     try {
       const auditLogRepo = new AuditLogRepository(this.input.db);
 

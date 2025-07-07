@@ -117,7 +117,7 @@ export class AIGraphReadmeWorker extends BaseWorker<CreateReadmeInputEvent> {
     });
   }
 
-  public async handler(job: Job<CreateReadmeInputEvent>) {
+  protected async handler(job: Job<CreateReadmeInputEvent>) {
     try {
       if (job.data.type === 'subgraph') {
         await this.generateSubgraphReadme(job);

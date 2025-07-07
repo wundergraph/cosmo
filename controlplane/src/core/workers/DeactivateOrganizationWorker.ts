@@ -49,13 +49,10 @@ export class DeactivateOrganizationWorker extends BaseWorker<DeactivateOrganizat
       deleteOrganizationQueue: DeleteOrganizationQueue;
     },
   ) {
-    super(WorkerName, QueueName, input.logger, {
-      connection: input.redisConnection,
-      concurrency: 10,
-    });
+        super(WorkerName, QueueName, { connection: input.redisConnection, concurrency: 10 }, input.logger);
   }
 
-  public async handler(job: Job<DeactivateOrganizationInput>) {
+  protected async handler(job: Job<DeactivateOrganizationInput>) {
     try {
       this.input.logger.info('Processing deactivate job');
       const orgRepo = new OrganizationRepository(this.input.logger, this.input.db);

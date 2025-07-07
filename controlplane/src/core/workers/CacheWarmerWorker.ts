@@ -60,7 +60,7 @@ export class CacheWarmerWorker extends BaseWorker<CacheWarmerInput> {
     super(WorkerName, QueueName, { connection: input.redisConnection, concurrency: 10 }, input.logger);
   }
 
-  public async handler(job: Job<CacheWarmerInput>) {
+  protected async handler(job: Job<CacheWarmerInput>) {
     const organizationId = job.data.organizationId;
     const federatedGraphId = job.data.federatedGraphId;
     const rangeInHours = job.data.rangeInHours;
