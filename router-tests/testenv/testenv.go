@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/caarlos0/env/v11"
 	"io"
 	"log"
 	"math/rand"
