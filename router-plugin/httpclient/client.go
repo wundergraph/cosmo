@@ -9,6 +9,13 @@ import (
 	"net/http"
 	"time"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/propagation"
+	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
+	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace/noop"
+
 	"github.com/hashicorp/go-retryablehttp"
 )
 
@@ -20,6 +27,7 @@ type Client struct {
 	timeout      time.Duration
 	middlewares  []Middleware
 	retryOptions RetryOptions
+	tracer       trace.Tracer
 }
 
 // ClientOption is a function that configures a Client
@@ -43,6 +51,8 @@ func New(options ...ClientOption) *Client {
 		timeout:      30 * time.Second,
 		middlewares:  []Middleware{},
 		retryOptions: DefaultRetryOptions(),
+		// Assign a no-op tracer so we don't need to do nil checks anywhere
+		tracer: noop.NewTracerProvider().Tracer("noop-tracer"),
 	}
 
 	for _, option := range options {
@@ -91,6 +101,13 @@ func WithMiddleware(middleware Middleware) ClientOption {
 	}
 }
 
+// WithTracing enables tracing using a RoundTripper approach
+func WithTracing() ClientOption {
+	return func(c *Client) {
+		c.tracer = otel.Tracer("router-plugin-httpclient")
+	}
+}
+
 // Get sends a GET request and returns the response
 func (c *Client) Get(ctx context.Context, path string, options ...RequestOption) (*Response, error) {
 	return c.Request(ctx, http.MethodGet, path, nil, options...)
@@ -132,13 +149,34 @@ func (c *Client) Request(ctx context.Context, method, path string, body interfac
 		url = c.baseURL + path
 	}
 
+	// Create a span for the HTTP request
+	var span trace.Span
+	ctx, span = c.tracer.Start(ctx, fmt.Sprintf("http.request - %s %s", method, url),
+		trace.WithSpanKind(trace.SpanKindClient),
+		trace.WithAttributes(
+			semconv.HTTPMethod(method),
+			semconv.HTTPURL(url),
+		),
+	)
+	defer span.End()
+
 	// Use the retryable client if enabled
 	if c.retryOptions.Enabled {
-		return c.doRequestWithRetry(ctx, method, url, reqBody, body != nil, options...)
+		retry, err := c.doRequestWithRetry(ctx, method, url, reqBody, body != nil, options...)
+		if err != nil {
+			span.SetStatus(codes.Error, err.Error())
+			span.RecordError(err)
+		}
+		return retry, err
 	}
 
 	// Otherwise use the standard client
-	return c.doRequest(ctx, method, url, reqBody, body != nil, options...)
+	request, err := c.doRequest(ctx, method, url, reqBody, body != nil, options...)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+	}
+	return request, err
 }
 
 // doRequest performs the HTTP request without retries
@@ -147,6 +185,8 @@ func (c *Client) doRequest(ctx context.Context, method, url string, body io.Read
 	if err != nil {
 		return nil, fmt.Errorf("error creating request: %w", err)
 	}
+
+	otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(req.Header))
 
 	// Add default headers
 	for key, value := range c.headers {
@@ -227,6 +267,8 @@ func (c *Client) doRequestWithRetry(ctx context.Context, method, url string, bod
 
 	// Set context
 	retryReq = retryReq.WithContext(ctx)
+
+	otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(retryReq.Header))
 
 	// Add default headers
 	for key, value := range c.headers {

@@ -18,6 +18,7 @@ type GRPCPluginConfig struct {
 	Logger     *zap.Logger
 	PluginPath string
 	PluginName string
+	Params     map[string]string
 }
 
 type GRPCPlugin struct {
@@ -34,6 +35,8 @@ type GRPCPlugin struct {
 	pluginName string
 
 	client *GRPCPluginClient
+
+	params map[string]string
 }
 
 func NewGRPCPlugin(config GRPCPluginConfig) (*GRPCPlugin, error) {
@@ -58,6 +61,7 @@ func NewGRPCPlugin(config GRPCPluginConfig) (*GRPCPlugin, error) {
 
 		pluginPath: config.PluginPath,
 		pluginName: config.PluginName,
+		params:     config.Params,
 	}, nil
 }
 
@@ -92,10 +96,18 @@ func (p *GRPCPlugin) fork() error {
 
 	pluginCmd := newPluginCommand(filePath)
 
+	// This is the same as SkipHostEnv false
+	// except that we do that first so that any params are not overriden
+	pluginCmd.Env = append(pluginCmd.Env, os.Environ()...)
+	for key, value := range p.params {
+		pluginCmd.Env = append(pluginCmd.Env, fmt.Sprintf("%s=%s", key, value))
+	}
+
 	pluginClient := plugin.NewClient(&plugin.ClientConfig{
 		Cmd:              pluginCmd,
 		AllowedProtocols: []plugin.Protocol{plugin.ProtocolGRPC},
 		HandshakeConfig:  handshakeConfig,
+		SkipHostEnv:      true,
 		Logger:           NewPluginLogger(p.logger),
 		Plugins: map[string]plugin.Plugin{
 			p.pluginName: p,
