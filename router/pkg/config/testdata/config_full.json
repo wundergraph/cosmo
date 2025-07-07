@@ -318,7 +318,7 @@
         "RollingDuration": 10000000000,
         "NumBuckets": 10,
         "ExecutionTimeout": 60000000000,
-        "MaxConcurrentRequests": 10
+        "MaxConcurrentRequests": -1
       },
       "RequestTimeout": 60000000000,
       "DialTimeout": 30000000000,
