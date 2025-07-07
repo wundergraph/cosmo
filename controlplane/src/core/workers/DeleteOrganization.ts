@@ -7,7 +7,7 @@ import Keycloak from '../services/Keycloak.js';
 import { OidcRepository } from '../repositories/OidcRepository.js';
 import OidcProvider from '../services/OidcProvider.js';
 import { BlobStorage } from '../blobstorage/index.js';
-import { DeleteOrganizationAuditLogsQueue } from './DeleteOrganizationAuditLogsWorker.js';
+import { DeleteOrganizationAuditLogsQueue } from './DeleteOrganizationAuditLogs.js';
 import { BaseQueue, BaseWorker } from './base/index.js';
 
 const QueueName = 'organization.delete';

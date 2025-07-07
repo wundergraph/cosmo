@@ -3,7 +3,7 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import pino from 'pino';
 import * as schema from '../../db/schema.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
-import { DeleteOrganizationQueue } from './DeleteOrganizationWorker.js';
+import { DeleteOrganizationQueue } from './DeleteOrganization.js';
 import { BaseQueue, BaseWorker } from './base/index.js';
 
 const QueueName = 'organization.reactivate';

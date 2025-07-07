@@ -4,7 +4,7 @@ import pino from 'pino';
 import * as schema from '../../db/schema.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import Keycloak from '../services/Keycloak.js';
-import { DeleteOrganizationQueue } from './DeleteOrganizationWorker.js';
+import { DeleteOrganizationQueue } from './DeleteOrganization.js';
 import { BaseQueue, BaseWorker } from './base/index.js';
 
 const QueueName = 'organization.deactivate';

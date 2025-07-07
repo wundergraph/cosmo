@@ -36,17 +36,17 @@ import { Authorization } from './services/Authorization.js';
 import { BillingRepository } from './repositories/BillingRepository.js';
 import { BillingService } from './services/BillingService.js';
 import { UserRepository } from './repositories/UserRepository.js';
-import { AIGraphReadmeQueue, AIGraphReadmeWorker } from './workers/AIGraphReadmeWorker.js';
+import { AIGraphReadmeQueue, AIGraphReadmeWorker } from './workers/AIGraphReadme.js';
 import { fastifyLoggerId, createS3ClientConfig, extractS3BucketName } from './util.js';
 import { ApiKeyRepository } from './repositories/ApiKeyRepository.js';
-import { DeleteOrganizationWorker, DeleteOrganizationQueue } from './workers/DeleteOrganizationWorker.js';
+import { DeleteOrganizationWorker, DeleteOrganizationQueue } from './workers/DeleteOrganization.js';
 import {
   DeleteOrganizationAuditLogsWorker,
   DeleteOrganizationAuditLogsQueue,
-} from './workers/DeleteOrganizationAuditLogsWorker.js';
-import { DeactivateOrganizationWorker, DeactivateOrganizationQueue } from './workers/DeactivateOrganizationWorker.js';
-import { DeleteUserWorker, DeleteUserQueue } from './workers/DeleteUserQueue.js';
-import { ReactivateOrganizationWorker, ReactivateOrganizationQueue } from './workers/ReactivateOrganizationWorker.js';
+} from './workers/DeleteOrganizationAuditLogs.js';
+import { DeactivateOrganizationWorker, DeactivateOrganizationQueue } from './workers/DeactivateOrganization.js';
+import { DeleteUserWorker, DeleteUserQueue } from './workers/DeleteUser.js';
+import { ReactivateOrganizationWorker, ReactivateOrganizationQueue } from './workers/ReactivateOrganization.js';
 
 export interface BuildConfig {
   logger: LoggerOptions;

@@ -9,7 +9,7 @@ import { UserRepository } from '../repositories/UserRepository.js';
 import Keycloak from '../services/Keycloak.js';
 import { PlatformWebhookService } from '../webhooks/PlatformWebhookService.js';
 import { BaseQueue, BaseWorker } from './base/index.js';
-import { DeleteOrganizationAuditLogsQueue } from './DeleteOrganizationAuditLogsWorker.js';
+import { DeleteOrganizationAuditLogsQueue } from './DeleteOrganizationAuditLogs.js';
 
 const QueueName = 'user.delete';
 const WorkerName = 'DeleteUserWorker';

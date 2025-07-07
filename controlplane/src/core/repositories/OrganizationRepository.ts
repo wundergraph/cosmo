@@ -34,10 +34,10 @@ import {
   WebhooksConfigDTO,
 } from '../../types/index.js';
 import Keycloak from '../services/Keycloak.js';
-import { DeleteOrganizationQueue } from '../workers/DeleteOrganizationWorker.js';
+import { DeleteOrganizationQueue } from '../workers/DeleteOrganization.js';
 import { BlobStorage } from '../blobstorage/index.js';
 import { delayForManualOrgDeletionInDays, delayForOrgAuditLogsDeletionInDays } from '../constants.js';
-import { DeleteOrganizationAuditLogsQueue } from '../workers/DeleteOrganizationAuditLogsWorker.js';
+import { DeleteOrganizationAuditLogsQueue } from '../workers/DeleteOrganizationAuditLogs.js';
 import { RBACEvaluator } from '../services/RBACEvaluator.js';
 import { BillingRepository } from './BillingRepository.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
