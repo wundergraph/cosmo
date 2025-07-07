@@ -49,7 +49,7 @@ export class DeactivateOrganizationWorker extends BaseWorker<DeactivateOrganizat
       deleteOrganizationQueue: DeleteOrganizationQueue;
     },
   ) {
-        super(WorkerName, QueueName, { connection: input.redisConnection, concurrency: 10 }, input.logger);
+    super(WorkerName, QueueName, { connection: input.redisConnection, concurrency: 10 }, input.logger);
   }
 
   protected async handler(job: Job<DeactivateOrganizationInput>) {
