@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.230.1](https://github.com/wundergraph/cosmo/compare/router@0.230.0...router@0.230.1) (2025-07-07)
+
+### Bug Fixes
+
+* astparser/lexer fixes ([#2020](https://github.com/wundergraph/cosmo/issues/2020)) ([08a7037](https://github.com/wundergraph/cosmo/commit/08a703762c395719e052cfb7a78b804c6f404ab6)) (@devsergiy)
+
 # [0.230.0](https://github.com/wundergraph/cosmo/compare/router@0.229.1...router@0.230.0) (2025-07-07)
 
 ### Features
