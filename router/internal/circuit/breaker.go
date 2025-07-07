@@ -2,6 +2,7 @@ package circuit
 
 import (
 	"context"
+	"errors"
 	"net/http"
 
 	rcontext "github.com/wundergraph/cosmo/router/internal/context"
@@ -43,7 +44,8 @@ func (rt *Breaker) RoundTrip(req *http.Request) (resp *http.Response, err error)
 
 	err = circuit.Run(req.Context(), func(_ context.Context) error {
 		resp, err = rt.roundTripper.RoundTrip(req)
-		return err
+		// TODO: Revert before merge this is for test verification that it uses the cb round tripper
+		return errors.New("there")
 	})
 
 	postRunStatus := circuit.IsOpen()
