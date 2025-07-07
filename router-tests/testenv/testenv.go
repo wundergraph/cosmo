@@ -261,15 +261,17 @@ type EngineStatOptions struct {
 }
 
 type MetricOptions struct {
-	MetricExclusions                  MetricExclusions
-	EnableRuntimeMetrics              bool
-	EnableOTLPRouterCache             bool
-	EnablePrometheusRouterCache       bool
-	OTLPEngineStatsOptions            EngineStatOptions
-	PrometheusEngineStatsOptions      EngineStatOptions
-	PrometheusSchemaFieldUsage        PrometheusSchemaFieldUsage
-	EnableOTLPConnectionMetrics       bool
-	EnablePrometheusConnectionMetrics bool
+	MetricExclusions                      MetricExclusions
+	EnableRuntimeMetrics                  bool
+	EnableOTLPRouterCache                 bool
+	EnablePrometheusRouterCache           bool
+	OTLPEngineStatsOptions                EngineStatOptions
+	PrometheusEngineStatsOptions          EngineStatOptions
+	PrometheusSchemaFieldUsage            PrometheusSchemaFieldUsage
+	EnableOTLPConnectionMetrics           bool
+	EnableOTLPCircuitBreakerMetrics       bool
+	EnablePrometheusConnectionMetrics     bool
+	EnablePrometheusCircuitBreakerMetrics bool
 }
 
 type PrometheusSchemaFieldUsage struct {
@@ -1509,6 +1511,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			EngineStats: rmetric.EngineStatsConfig{
 				Subscription: testConfig.MetricOptions.PrometheusEngineStatsOptions.EnableSubscription,
 			},
+			CircuitBreaker:      testConfig.MetricOptions.EnablePrometheusCircuitBreakerMetrics,
 			ExcludeMetrics:      testConfig.MetricOptions.MetricExclusions.ExcludedPrometheusMetrics,
 			ExcludeMetricLabels: testConfig.MetricOptions.MetricExclusions.ExcludedPrometheusMetricLabels,
 			ExcludeScopeInfo:    testConfig.MetricOptions.MetricExclusions.ExcludeScopeInfo,
@@ -1537,6 +1540,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 					EngineStats: config.EngineStats{
 						Subscriptions: testConfig.MetricOptions.OTLPEngineStatsOptions.EnableSubscription,
 					},
+					CircuitBreaker:      testConfig.MetricOptions.EnableOTLPCircuitBreakerMetrics,
 					ExcludeMetrics:      testConfig.MetricOptions.MetricExclusions.ExcludedOTLPMetrics,
 					ExcludeMetricLabels: testConfig.MetricOptions.MetricExclusions.ExcludedOTLPMetricLabels,
 				},

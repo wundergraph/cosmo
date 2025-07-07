@@ -2237,6 +2237,7 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 				Subscription: cfg.Metrics.OTLP.EngineStats.Subscriptions,
 			},
 			Exporters:           openTelemetryExporters,
+			CircuitBreaker:      cfg.Metrics.OTLP.CircuitBreaker,
 			ExcludeMetrics:      cfg.Metrics.OTLP.ExcludeMetrics,
 			ExcludeMetricLabels: cfg.Metrics.OTLP.ExcludeMetricLabels,
 		},
@@ -2249,6 +2250,7 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 			EngineStats: rmetric.EngineStatsConfig{
 				Subscription: cfg.Metrics.Prometheus.EngineStats.Subscriptions,
 			},
+			CircuitBreaker:      cfg.Metrics.Prometheus.CircuitBreaker,
 			ExcludeMetrics:      cfg.Metrics.Prometheus.ExcludeMetrics,
 			ExcludeMetricLabels: cfg.Metrics.Prometheus.ExcludeMetricLabels,
 			ExcludeScopeInfo:    cfg.Metrics.Prometheus.ExcludeScopeInfo,

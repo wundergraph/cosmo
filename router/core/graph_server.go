@@ -848,7 +848,7 @@ func (s *graphServer) buildGraphMux(
 	if opts.IsBaseGraph() && s.subgraphCircuitBreakerOptions.IsEnabled() {
 		// If either otel or prom metrics are enabled for circuit breakers
 		// we will enable circuit breaker metric collections
-		isCircuitBreakerMetricsEnabled := s.metricConfig.OpenTelemetry.Enabled || s.metricConfig.Prometheus.Enabled
+		isCircuitBreakerMetricsEnabled := s.metricConfig.OpenTelemetry.CircuitBreaker || s.metricConfig.Prometheus.CircuitBreaker
 
 		err := s.circuitBreakerManager.Initialize(circuit.ManagerOpts{
 			SubgraphCircuitBreakers: s.subgraphCircuitBreakerOptions.SubgraphMap,
