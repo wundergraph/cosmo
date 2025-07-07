@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.230.0](https://github.com/wundergraph/cosmo/compare/router@0.229.1...router@0.230.0) (2025-07-07)
+
+### Features
+
+* circuit breaker implementation ([#1929](https://github.com/wundergraph/cosmo/issues/1929)) ([c63f83b](https://github.com/wundergraph/cosmo/commit/c63f83b6ad5cfbba8444d4dc34de46d9bf7f187f)) (@SkArchon)
+
 ## [0.229.1](https://github.com/wundergraph/cosmo/compare/router@0.229.0...router@0.229.1) (2025-07-04)
 
 ### Bug Fixes
