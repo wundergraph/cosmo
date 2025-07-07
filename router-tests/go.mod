@@ -22,10 +22,10 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/twmb/franz-go v1.16.1
 	github.com/twmb/franz-go/pkg/kadm v1.11.0
-	github.com/wundergraph/cosmo/demo v0.0.0-20250702183235-da99c45468ef
+	github.com/wundergraph/cosmo/demo v0.0.0-20250707145555-35d60cac85d9
 	github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects v0.0.0-20250616075713-f2b99c96cec4
-	github.com/wundergraph/cosmo/router v0.0.0-20250702183235-da99c45468ef
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.197
+	github.com/wundergraph/cosmo/router v0.0.0-20250707145555-35d60cac85d9
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.199
 	go.opentelemetry.io/otel v1.28.0
 	go.opentelemetry.io/otel/sdk v1.28.0
 	go.opentelemetry.io/otel/sdk/metric v1.28.0
@@ -51,6 +51,7 @@ require (
 	github.com/bufbuild/protocompile v0.14.1 // indirect
 	github.com/caarlos0/env/v11 v11.3.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
+	github.com/cep21/circuit/v4 v4.0.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cilium/ebpf v0.16.0 // indirect
 	github.com/coder/websocket v1.8.13 // indirect

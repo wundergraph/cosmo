@@ -24,6 +24,7 @@ type PrometheusConfig struct {
 	Path            string
 	GraphqlCache    bool
 	EngineStats     EngineStatsConfig
+	CircuitBreaker  bool
 	// Metrics to exclude from Prometheus exporter
 	ExcludeMetrics []*regexp.Regexp
 	// Metric labels to exclude from Prometheus exporter
@@ -69,6 +70,7 @@ type OpenTelemetry struct {
 	ConnectionStats bool
 	RouterRuntime   bool
 	GraphqlCache    bool
+	CircuitBreaker  bool
 	EngineStats     EngineStatsConfig
 	Exporters       []*OpenTelemetryExporter
 	// Metrics to exclude from the OTLP exporter.

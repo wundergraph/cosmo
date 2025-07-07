@@ -4,6 +4,30 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.230.1](https://github.com/wundergraph/cosmo/compare/router@0.230.0...router@0.230.1) (2025-07-07)
+
+### Bug Fixes
+
+* astparser/lexer fixes ([#2020](https://github.com/wundergraph/cosmo/issues/2020)) ([08a7037](https://github.com/wundergraph/cosmo/commit/08a703762c395719e052cfb7a78b804c6f404ab6)) (@devsergiy)
+
+# [0.230.0](https://github.com/wundergraph/cosmo/compare/router@0.229.1...router@0.230.0) (2025-07-07)
+
+### Features
+
+* circuit breaker implementation ([#1929](https://github.com/wundergraph/cosmo/issues/1929)) ([c63f83b](https://github.com/wundergraph/cosmo/commit/c63f83b6ad5cfbba8444d4dc34de46d9bf7f187f)) (@SkArchon)
+
+## [0.229.1](https://github.com/wundergraph/cosmo/compare/router@0.229.0...router@0.229.1) (2025-07-04)
+
+### Bug Fixes
+
+* fix collecting representation for fetches scoped to concrete types ([#2017](https://github.com/wundergraph/cosmo/issues/2017)) ([bc9bb36](https://github.com/wundergraph/cosmo/commit/bc9bb364cdf414ac6d884ca97b473494c332db6b)) (@devsergiy)
+
+# [0.229.0](https://github.com/wundergraph/cosmo/compare/router@0.228.0...router@0.229.0) (2025-07-04)
+
+### Features
+
+* option to force disable persisted operations ([#2007](https://github.com/wundergraph/cosmo/issues/2007)) ([68db6bb](https://github.com/wundergraph/cosmo/commit/68db6bbb277156d583483683c16d62e9435103c0)) (@endigma)
+
 # [0.228.0](https://github.com/wundergraph/cosmo/compare/router@0.227.1...router@0.228.0) (2025-07-03)
 
 ### Features
