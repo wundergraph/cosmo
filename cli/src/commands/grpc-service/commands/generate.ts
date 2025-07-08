@@ -1,8 +1,8 @@
+import { access, constants, lstat, readFile, writeFile } from 'node:fs/promises';
 import { compileGraphQLToMapping, compileGraphQLToProto, ProtoLock } from '@wundergraph/protographic';
 import { Command, program } from 'commander';
 import { camelCase, upperFirst } from 'lodash-es';
-import { access, constants, lstat, readFile, writeFile } from 'node:fs/promises';
-import Spinner, { Ora } from 'ora';
+import Spinner, { type Ora } from 'ora';
 import { resolve } from 'pathe';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { renderResultTree } from '../../router/commands/plugin/helper.js';
@@ -142,17 +142,15 @@ async function generateProtoAndMapping({
 }
 
 async function fetchLockData(lockFile: string): Promise<ProtoLock | undefined> {
-  if (await exists(lockFile)) {
-    const existingLockData = JSON.parse(await readFile(lockFile, 'utf8'));
-    if (existingLockData) {
-      return existingLockData;
-    }
+  if (!(await exists(lockFile))) {
+    return undefined;
   }
 
-  return undefined;
+  const existingLockData = JSON.parse(await readFile(lockFile, 'utf8'));
+  return existingLockData == null ? undefined : existingLockData;
 }
 
-// Usage of existsSync from node:fs is not recommended. Use access instead.
+// Usage of exists from node:fs is not recommended. Use access instead.
 async function exists(path: string): Promise<boolean> {
   try {
     await access(path, constants.R_OK);
