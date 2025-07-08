@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { ProposalNamingConvention } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { ClickHouseClient } from '../../src/core/clickhouse/index.js';
@@ -113,6 +114,7 @@ describe('Create proposal tests', () => {
         federatedGraphName: fedGraphName,
         namespace: DEFAULT_NAMESPACE,
         name: proposalName,
+        namingConvention: ProposalNamingConvention.INCREMENTAL,
         subgraphs: [
           {
             name: subgraphName,
@@ -206,6 +208,7 @@ describe('Create proposal tests', () => {
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
+      namingConvention: ProposalNamingConvention.INCREMENTAL,
       subgraphs: [
         {
           name: subgraphName,
@@ -249,6 +252,7 @@ describe('Create proposal tests', () => {
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
+      namingConvention: ProposalNamingConvention.INCREMENTAL,
       subgraphs: [
         {
           name: subgraphName,
@@ -325,6 +329,7 @@ describe('Create proposal tests', () => {
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
+      namingConvention: ProposalNamingConvention.INCREMENTAL,
       subgraphs: [
         {
           name: subgraphName,
@@ -433,6 +438,7 @@ describe('Create proposal tests', () => {
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
+      namingConvention: ProposalNamingConvention.INCREMENTAL,
       subgraphs: [
         {
           name: subgraph1Name,
@@ -533,6 +539,7 @@ describe('Create proposal tests', () => {
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
+      namingConvention: ProposalNamingConvention.INCREMENTAL,
       subgraphs: [
         {
           name: newSubgraphName,
@@ -635,6 +642,7 @@ describe('Create proposal tests', () => {
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
+      namingConvention: ProposalNamingConvention.INCREMENTAL,
       subgraphs: [
         {
           name: subgraph2Name,
@@ -680,6 +688,7 @@ describe('Create proposal tests', () => {
       federatedGraphName: nonExistentFedGraphName,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
+      namingConvention: ProposalNamingConvention.INCREMENTAL,
       subgraphs: [
         {
           name: 'testSubgraph',
@@ -793,6 +802,7 @@ describe('Create proposal tests', () => {
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
+      namingConvention: ProposalNamingConvention.INCREMENTAL,
       subgraphs: [
         {
           name: subgraph1Name,
@@ -916,6 +926,7 @@ describe('Create proposal tests', () => {
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
+      namingConvention: ProposalNamingConvention.INCREMENTAL,
       subgraphs: [
         {
           name: subgraphName,
@@ -985,6 +996,7 @@ describe('Create proposal tests', () => {
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
+      namingConvention: ProposalNamingConvention.INCREMENTAL,
       subgraphs: [
         {
           name: subgraphName,
@@ -1005,6 +1017,7 @@ describe('Create proposal tests', () => {
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName, // Same proposal name
+      namingConvention: ProposalNamingConvention.INCREMENTAL,
       subgraphs: [
         {
           name: subgraphName,
@@ -1090,6 +1103,7 @@ describe('Create proposal tests', () => {
       federatedGraphName: fedGraph1Name,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
+      namingConvention: ProposalNamingConvention.INCREMENTAL,
       subgraphs: [
         {
           name: subgraphName + '1',
@@ -1116,6 +1130,7 @@ describe('Create proposal tests', () => {
       federatedGraphName: fedGraph2Name,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName, // Same proposal name
+      namingConvention: ProposalNamingConvention.INCREMENTAL,
       subgraphs: [
         {
           name: subgraphName + '2',
@@ -1192,6 +1207,7 @@ describe('Create proposal tests', () => {
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
+      namingConvention: ProposalNamingConvention.INCREMENTAL,
       subgraphs: [], // empty array
     });
 
@@ -1258,6 +1274,7 @@ describe('Create proposal tests', () => {
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
+      namingConvention: ProposalNamingConvention.INCREMENTAL,
       subgraphs: [
         {
           name: subgraphName, // Same subgraph name used twice
@@ -1339,6 +1356,7 @@ describe('Create proposal tests', () => {
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
+      namingConvention: ProposalNamingConvention.INCREMENTAL,
       subgraphs: [
         {
           name: newSubgraphName,
@@ -1367,7 +1385,7 @@ describe('Create proposal tests', () => {
   });
 });
 
-describe('Create proposal tests with cosmo-cli user-agent', () => {
+describe('Create proposal tests with normal naming convention', () => {
   let chClient: ClickHouseClient;
 
   beforeEach(() => {
@@ -1387,7 +1405,7 @@ describe('Create proposal tests with cosmo-cli user-agent', () => {
   });
 
   test.each(['organization-admin', 'organization-developer', 'graph-admin'])(
-    '%s should successfully create a new proposal for a federated graph (with cosmo-cli user-agent)',
+    '%s should successfully create a new proposal for a federated graph (with normal naming convention)',
     async (role) => {
       const { client, server, authenticator, users } = await SetupTest({
         dbname,
@@ -1436,27 +1454,21 @@ describe('Create proposal tests with cosmo-cli user-agent', () => {
         rbac: createTestRBACEvaluator(createTestGroup({ role })),
       });
 
-      const createProposalResponse = await client.createProposal(
-        {
-          federatedGraphName: fedGraphName,
-          namespace: DEFAULT_NAMESPACE,
-          name: proposalName,
-          subgraphs: [
-            {
-              name: subgraphName,
-              schemaSDL: updatedSubgraphSDL,
-              isDeleted: false,
-              isNew: false,
-              labels: [],
-            },
-          ],
-        },
-        {
-          headers: {
-            'x-cosmo-client': 'cosmo-cli',
+      const createProposalResponse = await client.createProposal({
+        federatedGraphName: fedGraphName,
+        namespace: DEFAULT_NAMESPACE,
+        name: proposalName,
+        namingConvention: ProposalNamingConvention.NORMAL,
+        subgraphs: [
+          {
+            name: subgraphName,
+            schemaSDL: updatedSubgraphSDL,
+            isDeleted: false,
+            isNew: false,
+            labels: [],
           },
-        },
-      );
+        ],
+      });
 
       expect(createProposalResponse.response?.code).toBe(EnumStatusCode.OK);
       expect(createProposalResponse.proposalId).toBeDefined();
@@ -1480,7 +1492,7 @@ describe('Create proposal tests with cosmo-cli user-agent', () => {
     },
   );
 
-  test('graph-admin should successfully create a new proposal for a federated graph on allowed namespace (with cosmo-cli user-agent)', async (role) => {
+  test('graph-admin should successfully create a new proposal for a federated graph on allowed namespace (with normal naming convention)', async (role) => {
     const { client, server, authenticator, users } = await SetupTest({
       dbname,
       chClient,
@@ -1536,27 +1548,21 @@ describe('Create proposal tests with cosmo-cli user-agent', () => {
       ),
     });
 
-    let createProposalResponse = await client.createProposal(
-      {
-        federatedGraphName: fedGraphName,
-        namespace: DEFAULT_NAMESPACE,
-        name: proposalName,
-        subgraphs: [
-          {
-            name: subgraphName,
-            schemaSDL: updatedSubgraphSDL,
-            isDeleted: false,
-            isNew: false,
-            labels: [],
-          },
-        ],
-      },
-      {
-        headers: {
-          'x-cosmo-client': 'cosmo-cli',
+    let createProposalResponse = await client.createProposal({
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      name: proposalName,
+      namingConvention: ProposalNamingConvention.NORMAL,
+      subgraphs: [
+        {
+          name: subgraphName,
+          schemaSDL: updatedSubgraphSDL,
+          isDeleted: false,
+          isNew: false,
+          labels: [],
         },
-      },
-    );
+      ],
+    });
 
     expect(createProposalResponse.response?.code).toBe(EnumStatusCode.OK);
     expect(createProposalResponse.proposalId).toBeDefined();
@@ -1586,34 +1592,28 @@ describe('Create proposal tests with cosmo-cli user-agent', () => {
       ),
     });
 
-    createProposalResponse = await client.createProposal(
-      {
-        federatedGraphName: fedGraphName,
-        namespace: DEFAULT_NAMESPACE,
-        name: proposalName,
-        subgraphs: [
-          {
-            name: subgraphName,
-            schemaSDL: updatedSubgraphSDL,
-            isDeleted: false,
-            isNew: false,
-            labels: [],
-          },
-        ],
-      },
-      {
-        headers: {
-          'x-cosmo-client': 'cosmo-cli',
+    createProposalResponse = await client.createProposal({
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      name: proposalName,
+      namingConvention: ProposalNamingConvention.NORMAL,
+      subgraphs: [
+        {
+          name: subgraphName,
+          schemaSDL: updatedSubgraphSDL,
+          isDeleted: false,
+          isNew: false,
+          labels: [],
         },
-      },
-    );
+      ],
+    });
 
     expect(createProposalResponse.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
 
     await server.close();
   });
 
-  test('should fail to create proposal with name starting with `/^p-\\d+$/` when using cosmo-cli user-agent', async () => {
+  test('should fail to create proposal with name starting with `/^p-\\d+$/` when using normal naming convention', async () => {
     const { client, server } = await SetupTest({
       dbname,
       chClient,
@@ -1656,27 +1656,21 @@ describe('Create proposal tests with cosmo-cli user-agent', () => {
       }
     `;
 
-    const createProposalResponse = await client.createProposal(
-      {
-        federatedGraphName: fedGraphName,
-        namespace: DEFAULT_NAMESPACE,
-        name: proposalName,
-        subgraphs: [
-          {
-            name: subgraphName,
-            schemaSDL: updatedSubgraphSDL,
-            isDeleted: false,
-            isNew: false,
-            labels: [],
-          },
-        ],
-      },
-      {
-        headers: {
-          'x-cosmo-client': 'cosmo-cli',
+    const createProposalResponse = await client.createProposal({
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      name: proposalName,
+      namingConvention: ProposalNamingConvention.NORMAL,
+      subgraphs: [
+        {
+          name: subgraphName,
+          schemaSDL: updatedSubgraphSDL,
+          isDeleted: false,
+          isNew: false,
+          labels: [],
         },
-      },
-    );
+      ],
+    });
 
     expect(createProposalResponse.response?.code).toBe(EnumStatusCode.ERR);
     expect(createProposalResponse.response?.details).toContain('Proposal name cannot start with p-');
@@ -1684,7 +1678,7 @@ describe('Create proposal tests with cosmo-cli user-agent', () => {
     await server.close();
   });
 
-  test('should fail to create a proposal with the same name for the same federated graph (with cosmo-cli user-agent)', async () => {
+  test('should fail to create a proposal with the same name for the same federated graph (with normal naming convention)', async () => {
     const { client, server } = await SetupTest({
       dbname,
       chClient,
@@ -1727,58 +1721,46 @@ describe('Create proposal tests with cosmo-cli user-agent', () => {
       }
     `;
 
-    const createProposalResponse = await client.createProposal(
-      {
-        federatedGraphName: fedGraphName,
-        namespace: DEFAULT_NAMESPACE,
-        name: proposalName,
-        subgraphs: [
-          {
-            name: subgraphName,
-            schemaSDL: updatedSubgraphSDL,
-            isDeleted: false,
-            isNew: false,
-            labels: [],
-          },
-        ],
-      },
-      {
-        headers: {
-          'x-cosmo-client': 'cosmo-cli',
+    const createProposalResponse = await client.createProposal({
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      name: proposalName,
+      namingConvention: ProposalNamingConvention.NORMAL,
+      subgraphs: [
+        {
+          name: subgraphName,
+          schemaSDL: updatedSubgraphSDL,
+          isDeleted: false,
+          isNew: false,
+          labels: [],
         },
-      },
-    );
+      ],
+    });
 
     expect(createProposalResponse.response?.code).toBe(EnumStatusCode.OK);
     expect(createProposalResponse.proposalId).toBeDefined();
 
     // Try to create a second proposal with the same name for the same federated graph
-    const secondProposalResponse = await client.createProposal(
-      {
-        federatedGraphName: fedGraphName,
-        namespace: DEFAULT_NAMESPACE,
-        name: proposalName, // Same proposal name
-        subgraphs: [
-          {
-            name: subgraphName,
-            schemaSDL: `
+    const secondProposalResponse = await client.createProposal({
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      name: proposalName, // Same proposal name
+      namingConvention: ProposalNamingConvention.NORMAL,
+      subgraphs: [
+        {
+          name: subgraphName,
+          schemaSDL: `
             type Query {
               hello: String!
               anotherField: String!
             }
           `,
-            isDeleted: false,
-            isNew: false,
-            labels: [],
-          },
-        ],
-      },
-      {
-        headers: {
-          'x-cosmo-client': 'cosmo-cli',
+          isDeleted: false,
+          isNew: false,
+          labels: [],
         },
-      },
-    );
+      ],
+    });
 
     // Expect an error response
     expect(secondProposalResponse.response?.code).toBe(EnumStatusCode.ERR_ALREADY_EXISTS);
@@ -1787,7 +1769,7 @@ describe('Create proposal tests with cosmo-cli user-agent', () => {
     await server.close();
   });
 
-  test('should allow creating proposals with the same name for different federated graphs (with cosmo-cli user-agent)', async () => {
+  test('should allow creating proposals with the same name for different federated graphs (with normal naming convention)', async () => {
     const { client, server } = await SetupTest({
       dbname,
       chClient,
@@ -1845,27 +1827,21 @@ describe('Create proposal tests with cosmo-cli user-agent', () => {
       }
     `;
 
-    const createProposalResponse1 = await client.createProposal(
-      {
-        federatedGraphName: fedGraph1Name,
-        namespace: DEFAULT_NAMESPACE,
-        name: proposalName,
-        subgraphs: [
-          {
-            name: subgraphName + '1',
-            schemaSDL: updatedSubgraphSDL1,
-            isDeleted: false,
-            isNew: false,
-            labels: [],
-          },
-        ],
-      },
-      {
-        headers: {
-          'x-cosmo-client': 'cosmo-cli',
+    const createProposalResponse1 = await client.createProposal({
+      federatedGraphName: fedGraph1Name,
+      namespace: DEFAULT_NAMESPACE,
+      name: proposalName,
+      namingConvention: ProposalNamingConvention.NORMAL,
+      subgraphs: [
+        {
+          name: subgraphName + '1',
+          schemaSDL: updatedSubgraphSDL1,
+          isDeleted: false,
+          isNew: false,
+          labels: [],
         },
-      },
-    );
+      ],
+    });
 
     expect(createProposalResponse1.response?.code).toBe(EnumStatusCode.OK);
     expect(createProposalResponse1.proposalId).toBeDefined();
@@ -1878,27 +1854,21 @@ describe('Create proposal tests with cosmo-cli user-agent', () => {
       }
     `;
 
-    const createProposalResponse2 = await client.createProposal(
-      {
-        federatedGraphName: fedGraph2Name,
-        namespace: DEFAULT_NAMESPACE,
-        name: proposalName, // Same proposal name
-        subgraphs: [
-          {
-            name: subgraphName + '2',
-            schemaSDL: updatedSubgraphSDL2,
-            isDeleted: false,
-            isNew: false,
-            labels: [],
-          },
-        ],
-      },
-      {
-        headers: {
-          'x-cosmo-client': 'cosmo-cli',
+    const createProposalResponse2 = await client.createProposal({
+      federatedGraphName: fedGraph2Name,
+      namespace: DEFAULT_NAMESPACE,
+      name: proposalName, // Same proposal name
+      namingConvention: ProposalNamingConvention.NORMAL,
+      subgraphs: [
+        {
+          name: subgraphName + '2',
+          schemaSDL: updatedSubgraphSDL2,
+          isDeleted: false,
+          isNew: false,
+          labels: [],
         },
-      },
-    );
+      ],
+    });
 
     // Expect success for the second proposal as well
     expect(createProposalResponse2.response?.code).toBe(EnumStatusCode.OK);

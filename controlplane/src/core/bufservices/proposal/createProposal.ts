@@ -5,6 +5,7 @@ import {
   CreateProposalRequest,
   CreateProposalResponse,
   Label,
+  ProposalNamingConvention,
   ProposalSubgraph,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { Composer } from '../../composition/composer.js';
@@ -128,8 +129,7 @@ export function createProposal(
 
     let proposalName = req.name;
 
-    const userAgentHeader = ctx.requestHeader.get('user-agent');
-    if (userAgentHeader && userAgentHeader.startsWith('cosmo-cli')) {
+    if (req.namingConvention === ProposalNamingConvention.NORMAL) {
       // checking if the name starts with p- and followed by any integer
       const proposalNameRegex = /^p-\d+$/;
       if (proposalNameRegex.test(req.name)) {
