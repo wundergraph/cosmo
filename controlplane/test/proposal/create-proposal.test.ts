@@ -269,6 +269,7 @@ describe('Create proposal tests', () => {
     'graph-viewer',
     'subgraph-admin',
     'subgraph-publisher',
+    'subgraph-viewer',
   ])('%s should not successfully create a new proposal for a federated graph', async (role) => {
     const { client, server, authenticator, users } = await SetupTest({
       dbname,

@@ -429,6 +429,7 @@ describe('Create feature subgraph tests', () => {
     'graph-admin',
     'graph-viewer',
     'subgraph-publisher',
+    'subgraph-viewer',
   ])('%s should not be able to create feature flag', async (role) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname });
 
