@@ -1095,7 +1095,6 @@ func (s *graphServer) buildGraphMux(
 					buf := bytes.Buffer{}
 					ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
 
-					// TODO: A performance test before merging
 					ww.Tee(&buf)
 
 					h.ServeHTTP(ww, r)
