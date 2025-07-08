@@ -1,11 +1,10 @@
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { ConnectionOptions, Job } from 'bullmq';
 import pino from 'pino';
-import * as schema from '../../db/schema.js';
 import { OpenAIGraphql } from '../openai-graphql/index.js';
 import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { BaseQueue, BaseWorker } from './base/index.js';
+import { DB } from 'src/db/index.js';
 
 const QueueName = 'ai.graph-readme-generator';
 const WorkerName = 'AIGraphReadmeWorker';
@@ -61,7 +60,7 @@ export class AIGraphReadmeWorker extends BaseWorker<CreateReadmeInputEvent> {
   constructor(
     private input: {
       redisConnection: ConnectionOptions;
-      db: PostgresJsDatabase<typeof schema>;
+      db: DB;
       logger: pino.Logger;
       openAiApiKey: string;
     },

@@ -1,8 +1,6 @@
 import { PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import { ConnectionOptions, Job, JobsOptions } from 'bullmq';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import pino from 'pino';
-import * as schema from '../../db/schema.js';
 import { BlobStorage } from '../blobstorage/index.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import { UserRepository } from '../repositories/UserRepository.js';
@@ -10,6 +8,7 @@ import Keycloak from '../services/Keycloak.js';
 import { PlatformWebhookService } from '../webhooks/PlatformWebhookService.js';
 import { BaseQueue, BaseWorker } from './base/index.js';
 import { DeleteOrganizationAuditLogsQueue } from './DeleteOrganizationAuditLogs.js';
+import { DB } from 'src/db/index.js';
 
 const QueueName = 'user.delete';
 const WorkerName = 'DeleteUserWorker';
@@ -43,7 +42,7 @@ export class DeleteUserQueue extends BaseQueue<DeleteUserInput> {
 export class DeleteUserWorker extends BaseWorker<DeleteUserInput> {
   constructor(
     private input: {
-      db: PostgresJsDatabase<typeof schema>;
+      db: DB;
       redisConnection: ConnectionOptions;
       logger: pino.Logger;
       keycloakClient: Keycloak;

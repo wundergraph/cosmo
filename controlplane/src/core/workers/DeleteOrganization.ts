@@ -1,7 +1,5 @@
 import { ConnectionOptions, Job, JobsOptions } from 'bullmq';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import pino from 'pino';
-import * as schema from '../../db/schema.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import Keycloak from '../services/Keycloak.js';
 import { OidcRepository } from '../repositories/OidcRepository.js';
@@ -9,6 +7,7 @@ import OidcProvider from '../services/OidcProvider.js';
 import { BlobStorage } from '../blobstorage/index.js';
 import { DeleteOrganizationAuditLogsQueue } from './DeleteOrganizationAuditLogs.js';
 import { BaseQueue, BaseWorker } from './base/index.js';
+import { DB } from 'src/db/index.js';
 
 const QueueName = 'organization.delete';
 const WorkerName = 'DeleteOrganizationWorker';
@@ -42,7 +41,7 @@ export class DeleteOrganizationWorker extends BaseWorker<DeleteOrganizationInput
   constructor(
     private input: {
       redisConnection: ConnectionOptions;
-      db: PostgresJsDatabase<typeof schema>;
+      db: DB;
       logger: pino.Logger;
       keycloakClient: Keycloak;
       keycloakRealm: string;

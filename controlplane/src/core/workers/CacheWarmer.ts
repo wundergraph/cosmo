@@ -1,12 +1,11 @@
 import { ConnectionOptions, Job, JobsOptions } from 'bullmq';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import pino from 'pino';
-import * as schema from '../../db/schema.js';
 import { BlobStorage } from '../blobstorage/index.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
 import { S3RouterConfigMetadata } from '../composition/composer.js';
 import { CacheWarmerRepository } from '../repositories/CacheWarmerRepository.js';
 import { BaseQueue, BaseWorker } from './base/index.js';
+import { DB } from 'src/db/index.js';
 
 const QueueName = 'cache.warmer';
 const WorkerName = 'CacheWarmerWorker';
@@ -50,7 +49,7 @@ export class CacheWarmerWorker extends BaseWorker<CacheWarmerInput> {
   constructor(
     private input: {
       redisConnection: ConnectionOptions;
-      db: PostgresJsDatabase<typeof schema>;
+      db: DB;
       logger: pino.Logger;
       chClient: ClickHouseClient | undefined;
       blobStorage: BlobStorage;
