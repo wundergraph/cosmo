@@ -1393,7 +1393,7 @@ export class SubgraphRepository {
   }
 
   /**
-   * @deprecated
+   * @deprecated Subgraph members was deprecated in favor of group resources.
    */
   public getSubgraphMembers(subgraphId: string): Promise<SubgraphMemberDTO[]> {
     return this.db
