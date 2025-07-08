@@ -1,6 +1,6 @@
 module github.com/wundergraph/cosmo/router-tests
 
-go 1.24.1
+go 1.23.0
 
 require (
 	github.com/MicahParks/jwkset v0.9.0
@@ -22,9 +22,9 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/twmb/franz-go v1.16.1
 	github.com/twmb/franz-go/pkg/kadm v1.11.0
-	github.com/wundergraph/cosmo/demo v0.0.0-20250707160215-e753dcec07db
+	github.com/wundergraph/cosmo/demo v0.0.0-20250707145555-35d60cac85d9
 	github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects v0.0.0-20250616075713-f2b99c96cec4
-	github.com/wundergraph/cosmo/router v0.0.0-20250707160215-e753dcec07db
+	github.com/wundergraph/cosmo/router v0.0.0-20250707145555-35d60cac85d9
 	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.200
 	go.opentelemetry.io/otel v1.28.0
 	go.opentelemetry.io/otel/sdk v1.28.0
