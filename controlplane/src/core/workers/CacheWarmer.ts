@@ -4,8 +4,8 @@ import { BlobStorage } from '../blobstorage/index.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
 import { S3RouterConfigMetadata } from '../composition/composer.js';
 import { CacheWarmerRepository } from '../repositories/CacheWarmerRepository.js';
+import { DB } from '../../db/index.js';
 import { BaseQueue, BaseWorker } from './base/index.js';
-import { DB } from 'src/db/index.js';
 
 const QueueName = 'cache.warmer';
 const WorkerName = 'CacheWarmerWorker';

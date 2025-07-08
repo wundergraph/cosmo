@@ -6,9 +6,9 @@ import { OrganizationRepository } from '../repositories/OrganizationRepository.j
 import { UserRepository } from '../repositories/UserRepository.js';
 import Keycloak from '../services/Keycloak.js';
 import { PlatformWebhookService } from '../webhooks/PlatformWebhookService.js';
+import { DB } from '../../db/index.js';
 import { BaseQueue, BaseWorker } from './base/index.js';
 import { DeleteOrganizationAuditLogsQueue } from './DeleteOrganizationAuditLogs.js';
-import { DB } from 'src/db/index.js';
 
 const QueueName = 'user.delete';
 const WorkerName = 'DeleteUserWorker';

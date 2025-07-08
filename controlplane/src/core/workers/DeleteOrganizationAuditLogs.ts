@@ -1,8 +1,8 @@
 import { ConnectionOptions, Job, JobsOptions } from 'bullmq';
 import pino from 'pino';
 import { AuditLogRepository } from '../repositories/AuditLogRepository.js';
+import { DB } from '../../db/index.js';
 import { BaseQueue, BaseWorker } from './base/index.js';
-import { DB } from 'src/db/index.js';
 
 const QueueName = 'organization.delete_audit_logs';
 const WorkerName = 'DeleteOrganizationAuditLogsWorker';

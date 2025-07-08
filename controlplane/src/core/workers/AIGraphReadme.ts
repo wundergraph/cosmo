@@ -3,8 +3,8 @@ import pino from 'pino';
 import { OpenAIGraphql } from '../openai-graphql/index.js';
 import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
+import { DB } from '../../db/index.js';
 import { BaseQueue, BaseWorker } from './base/index.js';
-import { DB } from 'src/db/index.js';
 
 const QueueName = 'ai.graph-readme-generator';
 const WorkerName = 'AIGraphReadmeWorker';

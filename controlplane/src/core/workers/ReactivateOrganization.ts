@@ -1,9 +1,9 @@
 import { ConnectionOptions, Job, JobsOptions } from 'bullmq';
 import pino from 'pino';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
+import { DB } from '../../db/index.js';
 import { DeleteOrganizationQueue } from './DeleteOrganization.js';
 import { BaseQueue, BaseWorker } from './base/index.js';
-import { DB } from 'src/db/index.js';
 
 const QueueName = 'organization.reactivate';
 const WorkerName = 'ReactivateOrganizationWorker';
