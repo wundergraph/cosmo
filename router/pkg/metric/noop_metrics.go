@@ -55,6 +55,11 @@ func (n NoopMetrics) Shutdown(ctx context.Context) error {
 	return nil
 }
 
+func (n NoopMetrics) MeasureCircuitBreakerShortCircuit(ctx context.Context, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption) {
+}
+func (n NoopMetrics) SetCircuitBreakerState(ctx context.Context, state bool, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption) {
+}
+
 func NewNoopMetrics() Store {
 	return &NoopMetrics{}
 }

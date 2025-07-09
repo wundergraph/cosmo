@@ -101,6 +101,7 @@ type Prometheus struct {
 	GraphqlCache        bool        `yaml:"graphql_cache" envDefault:"false" env:"PROMETHEUS_GRAPHQL_CACHE"`
 	ConnectionStats     bool        `yaml:"connection_stats" envDefault:"false" env:"PROMETHEUS_CONNECTION_STATS"`
 	EngineStats         EngineStats `yaml:"engine_stats" envPrefix:"PROMETHEUS_"`
+	CircuitBreaker      bool        `yaml:"circuit_breaker" envDefault:"false" env:"PROMETHEUS_CIRCUIT_BREAKER"`
 	ExcludeMetrics      RegExArray  `yaml:"exclude_metrics,omitempty" env:"PROMETHEUS_EXCLUDE_METRICS"`
 	ExcludeMetricLabels RegExArray  `yaml:"exclude_metric_labels,omitempty" env:"PROMETHEUS_EXCLUDE_METRIC_LABELS"`
 	ExcludeScopeInfo    bool        `yaml:"exclude_scope_info" envDefault:"false" env:"PROMETHEUS_EXCLUDE_SCOPE_INFO"`
@@ -135,6 +136,7 @@ type MetricsOTLP struct {
 	GraphqlCache        bool                  `yaml:"graphql_cache" envDefault:"false" env:"METRICS_OTLP_GRAPHQL_CACHE"`
 	ConnectionStats     bool                  `yaml:"connection_stats" envDefault:"false" env:"METRICS_OTLP_CONNECTION_STATS"`
 	EngineStats         EngineStats           `yaml:"engine_stats" envPrefix:"METRICS_OTLP_"`
+	CircuitBreaker      bool                  `yaml:"circuit_breaker" envDefault:"false" env:"METRICS_OTLP_CIRCUIT_BREAKER"`
 	ExcludeMetrics      RegExArray            `yaml:"exclude_metrics,omitempty" env:"METRICS_OTLP_EXCLUDE_METRICS"`
 	ExcludeMetricLabels RegExArray            `yaml:"exclude_metric_labels,omitempty" env:"METRICS_OTLP_EXCLUDE_METRIC_LABELS"`
 	Exporters           []MetricsOTLPExporter `yaml:"exporters"`
@@ -183,7 +185,9 @@ type RouterTrafficConfiguration struct {
 
 type GlobalSubgraphRequestRule struct {
 	BackoffJitterRetry BackoffJitterRetry `yaml:"retry"`
+	CircuitBreaker     CircuitBreaker     `yaml:"circuit_breaker"`
 	// See https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/
+
 	RequestTimeout         *time.Duration `yaml:"request_timeout,omitempty" envDefault:"60s"`
 	DialTimeout            *time.Duration `yaml:"dial_timeout,omitempty" envDefault:"30s"`
 	ResponseHeaderTimeout  *time.Duration `yaml:"response_header_timeout,omitempty" envDefault:"0s"`
@@ -200,6 +204,19 @@ type GlobalSubgraphRequestRule struct {
 
 type SubgraphTrafficRequestRule struct {
 	RequestTimeout time.Duration `yaml:"request_timeout,omitempty" envDefault:"60s"`
+}
+
+type CircuitBreaker struct {
+	Enabled                    bool          `yaml:"enabled" envDefault:"false"`
+	ErrorThresholdPercentage   int64         `yaml:"error_threshold_percentage" envDefault:"50"`
+	RequestThreshold           int64         `yaml:"request_threshold" envDefault:"20"`
+	SleepWindow                time.Duration `yaml:"sleep_window" envDefault:"5s"`
+	HalfOpenAttempts           int64         `yaml:"half_open_attempts" envDefault:"1"`
+	RequiredSuccessfulAttempts int64         `yaml:"required_successful" envDefault:"1"`
+	RollingDuration            time.Duration `yaml:"rolling_duration" envDefault:"10s"`
+	NumBuckets                 int           `yaml:"num_buckets" envDefault:"10"`
+	ExecutionTimeout           time.Duration `yaml:"execution_timeout" envDefault:"60s"`
+	MaxConcurrentRequests      int64         `yaml:"max_concurrent_requests" envDefault:"-1"`
 }
 
 type GraphqlMetrics struct {
