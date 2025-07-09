@@ -1,7 +1,7 @@
 import { program } from 'commander';
 import pc from 'picocolors';
-import { config } from '../../core/config.js';
-import { readConfigFile, updateConfigFile } from '../../utils.js';
+import { config } from '@/core/config.js';
+import { readConfigFile, updateConfigFile } from '@/utils.js';
 
 interface DeviceAuthResponse {
   deviceCode: string;

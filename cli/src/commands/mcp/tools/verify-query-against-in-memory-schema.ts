@@ -1,8 +1,8 @@
 import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { parse, validate, GraphQLError } from 'graphql';
-import type { BaseCommandOptions } from '../../../core/types/types.js';
 import { buildSchemaWithoutDirectives } from './utils/schema.js';
+import type { BaseCommandOptions } from '@/core/types';
 
 /**
  * Registers the verify-query-against-in-memory-schema tool with the MCP server.

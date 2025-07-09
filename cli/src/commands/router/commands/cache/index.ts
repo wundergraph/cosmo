@@ -1,6 +1,6 @@
 import { Command } from 'commander';
-import { BaseCommandOptions } from '../../../../core/types/types.js';
 import PushCacheOperation from './commands/push.js';
+import type { BaseCommandOptions } from '@/core/types';
 
 export default (opts: BaseCommandOptions) => {
   const schema = new Command('cache');

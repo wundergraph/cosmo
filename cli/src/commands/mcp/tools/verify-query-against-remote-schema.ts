@@ -1,8 +1,8 @@
 import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { buildSchema, parse, validate, GraphQLError } from 'graphql';
-import type { BaseCommandOptions } from '../../../core/types/types.js';
-import { getFederatedGraphSchemas } from '../../graph/federated-graph/utils.js'; // Adjusted path
+import { getFederatedGraphSchemas } from '@/commands/graph/federated-graph/utils.js'; // Adjusted path
+import type { BaseCommandOptions } from '@/core/types';
 
 /**
  * Registers the verify-query-against-remote-schema tool with the MCP server.

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import type { BaseCommandOptions } from '../../../core/types/types.js';
+import type { BaseCommandOptions } from '@/core/types';
 
 /**
  * Registers the schema-change-proposal-workflow tool with the MCP server.

@@ -1,9 +1,9 @@
 import { Command } from 'commander';
-import { BaseCommandOptions } from '../../core/types/types.js';
 import Whoami from './commands/whoami.js';
 import Login from './commands/login.js';
 import Logout from './commands/logout.js';
 import { checkAuth } from './utils.js';
+import type { BaseCommandOptions } from '@/core/types';
 
 export default (opts: BaseCommandOptions) => {
   const schema = new Command('auth');

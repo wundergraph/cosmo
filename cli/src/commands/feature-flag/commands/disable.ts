@@ -1,11 +1,9 @@
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { Command } from 'commander';
 import ora from 'ora';
 import pc from 'picocolors';
-import Table from 'cli-table3';
-import { getBaseHeaders } from '../../../core/config.js';
-import { BaseCommandOptions } from '../../../core/types/types.js';
-import { handleCompositionResult } from '../../../handle-composition-result.js';
+import { getBaseHeaders } from '@/core/config.js';
+import { handleCompositionResult } from '@/handle-composition-result.js';
+import type { BaseCommandOptions } from '@/core/types';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('disable');

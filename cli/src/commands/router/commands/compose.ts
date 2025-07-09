@@ -26,8 +26,8 @@ import {
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import Table from 'cli-table3';
 import { FederationResultSuccess, ROUTER_COMPATIBILITY_VERSION_ONE } from '@wundergraph/composition';
-import { BaseCommandOptions } from '../../../core/types/types.js';
-import { composeSubgraphs, introspectSubgraph } from '../../../utils.js';
+import { composeSubgraphs, introspectSubgraph } from '@/utils.js';
+import type { BaseCommandOptions } from '@/core/types';
 
 type ConfigSubgraph = StandardSubgraphConfig | SubgraphPluginConfig | GRPCSubgraphConfig;
 

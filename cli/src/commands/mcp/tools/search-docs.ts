@@ -1,4 +1,3 @@
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { z } from 'zod';
 import axios from 'axios';
 import { TrieveSDK } from 'trieve-ts-sdk';

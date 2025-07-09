@@ -1,8 +1,8 @@
 import { Command } from 'commander';
-import { BaseCommandOptions } from '../../core/types/types.js';
 import { checkAuth } from '../auth/utils.js';
 import CreateContract from './commands/create.js';
 import UpdateContract from './commands/update.js';
+import type { BaseCommandOptions } from '@/core/types';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('contract');
