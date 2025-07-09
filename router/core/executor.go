@@ -101,7 +101,7 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 	}
 
 	if opts.ApolloRouterCompatibilityFlags.SubrequestHTTPError.Enabled {
-		options.ResolvableOptions.ApolloRouterCompatibilitySubrequestHTTPError = true
+		options.ApolloRouterCompatibilitySubrequestHTTPError = true
 	}
 
 	switch opts.RouterEngineConfig.SubgraphErrorPropagation.Mode {
