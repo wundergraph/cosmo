@@ -300,7 +300,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			var err error
 			body, files, err = multipartParser.Parse(r, h.getBodyReadBuffer(r.ContentLength))
 			// We set it before the error so that users could log the body if it exists in case of an error
-			if h.exprManager.VisitorManager.IsBodyUsedInExpressions() {
+			if h.exprManager.VisitorManager.IsRequestBodyUsedInExpressions() {
 				requestContext.expressionContext.Request.Body.Raw = string(body)
 			}
 			if err != nil {
@@ -332,7 +332,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			var err error
 			body, err = h.operationProcessor.ReadBody(r.Body, h.getBodyReadBuffer(r.ContentLength))
 			// We set it before the error so that users could log the body if it exists in case of an error
-			if h.exprManager.VisitorManager.IsBodyUsedInExpressions() {
+			if h.exprManager.VisitorManager.IsRequestBodyUsedInExpressions() {
 				requestContext.expressionContext.Request.Body.Raw = string(body)
 			}
 			if err != nil {

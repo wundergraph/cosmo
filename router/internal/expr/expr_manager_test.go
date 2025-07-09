@@ -139,7 +139,7 @@ func TestExprManager(t *testing.T) {
 			require.Fail(t, "unexpected error", err)
 		}
 
-		require.False(t, exprManager.VisitorManager.IsBodyUsedInExpressions())
+		require.False(t, exprManager.VisitorManager.IsRequestBodyUsedInExpressions())
 	})
 
 	t.Run("verify when body.raw is accessed", func(t *testing.T) {
@@ -157,7 +157,7 @@ func TestExprManager(t *testing.T) {
 			require.Fail(t, "unexpected error", err)
 		}
 
-		require.True(t, exprManager.VisitorManager.IsBodyUsedInExpressions())
+		require.True(t, exprManager.VisitorManager.IsRequestBodyUsedInExpressions())
 	})
 
 	t.Run("verify when body.raw is called conditionally", func(t *testing.T) {
@@ -170,7 +170,7 @@ func TestExprManager(t *testing.T) {
 			require.Fail(t, "unexpected error", err)
 		}
 
-		require.True(t, exprManager.VisitorManager.IsBodyUsedInExpressions())
+		require.True(t, exprManager.VisitorManager.IsRequestBodyUsedInExpressions())
 	})
 
 }

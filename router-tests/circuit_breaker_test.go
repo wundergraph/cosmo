@@ -2,7 +2,6 @@ package integration
 
 import (
 	"context"
-	"fmt"
 	"github.com/prometheus/client_golang/prometheus"
 	io_prometheus_client "github.com/prometheus/client_model/go"
 	"net/http"
@@ -237,7 +236,6 @@ func TestFlakyCircuitBreaker(t *testing.T) {
 						Middleware: func(_ http.Handler) http.Handler {
 							return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 								if isSuccessRequest.Load() {
-									fmt.Println("Success")
 									_, err := w.Write([]byte(successSubgraphJSON))
 									require.NoError(t, err)
 								} else {
