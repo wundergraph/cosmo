@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.232.0](https://github.com/wundergraph/cosmo/compare/router@0.231.1...router@0.232.0) (2025-07-09)
+
+### Bug Fixes
+
+* return parser error on empty selectionSet ([#2031](https://github.com/wundergraph/cosmo/issues/2031)) ([35d5211](https://github.com/wundergraph/cosmo/commit/35d5211d2c5e1eb226b47f2fc3e542904040d53f)) (@jensneuse)
+
+### Features
+
+* allow to log response payload and fix feature flag expression bug ([#2004](https://github.com/wundergraph/cosmo/issues/2004)) ([7000599](https://github.com/wundergraph/cosmo/commit/70005997db17607283e2db6d4612599ca35b72ac)) (@SkArchon)
+
 ## [0.231.1](https://github.com/wundergraph/cosmo/compare/router@0.231.0...router@0.231.1) (2025-07-09)
 
 ### Bug Fixes
