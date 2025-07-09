@@ -1347,7 +1347,7 @@
     },
     "log_level": {
       "type": "string",
-      "enum": ["debug", "info", "warning", "error", "fatal", "panic"],
+      "enum": ["debug", "info", "warn", "error", "panic", "fatal"],
       "description": "The log level. The log level is used to control the verbosity of the logs. The default value is 'info'.",
       "default": "info"
     },

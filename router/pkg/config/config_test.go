@@ -1,10 +1,13 @@
 package config
 
 import (
-	"github.com/goccy/go-yaml"
+	"fmt"
 	"regexp"
 	"testing"
 	"time"
+
+	"github.com/goccy/go-yaml"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/caarlos0/env/v11"
 	"github.com/santhosh-tekuri/jsonschema/v6"
@@ -199,6 +202,61 @@ telemetry:
 	require.Len(t, cfg.Config.Telemetry.Metrics.Prometheus.ExcludeMetricLabels, 1)
 	require.Equal(t, RegExArray{regexp.MustCompile("^go_.*"), regexp.MustCompile("^process_.*")}, cfg.Config.Telemetry.Metrics.Prometheus.ExcludeMetrics)
 	require.Equal(t, RegExArray{regexp.MustCompile("^instance")}, cfg.Config.Telemetry.Metrics.Prometheus.ExcludeMetricLabels)
+}
+
+func TestLogLevels(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		logLevel string
+		expected zapcore.Level
+	}{
+		{
+			name:     "debug level",
+			logLevel: "debug",
+			expected: zapcore.DebugLevel,
+		},
+		{
+			name:     "info level",
+			logLevel: "info",
+			expected: zapcore.InfoLevel,
+		},
+		{
+			name:     "warn level",
+			logLevel: "warn",
+			expected: zapcore.WarnLevel,
+		},
+		{
+			name:     "error level",
+			logLevel: "error",
+			expected: zapcore.ErrorLevel,
+		},
+		{
+			name:     "panic level",
+			logLevel: "panic",
+			expected: zapcore.PanicLevel,
+		},
+		{
+			name:     "fatal level",
+			logLevel: "fatal",
+			expected: zapcore.FatalLevel,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run("parses "+tt.name, func(t *testing.T) {
+			f := createTempFileFromFixture(t, fmt.Sprintf(`
+version: "1"
+log_level: %s
+`, tt.logLevel))
+
+			cfg, err := LoadConfig([]string{f})
+
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, cfg.Config.LogLevel)
+		})
+	}
 }
 
 func TestCustomGoDurationExtension(t *testing.T) {
