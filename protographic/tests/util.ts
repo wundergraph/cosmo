@@ -8,11 +8,18 @@ import { expect } from 'vitest';
  * @throws Error if the protocol buffer definition is invalid
  */
 export function validateProtoDefinition(protoText: string): void {
+
+  // Create a root instance
+  const root = new protobufjs.Root();
+
+  // Load the common wrappers into the root
+  root.loadSync("google/protobuf/wrappers.proto");
+
   // Use protobufjs to parse the text without writing to a file
-  const root = protobufjs.parse(protoText).root;
+  const parsedRoot = protobufjs.parse(protoText, root).root;
 
   // Verify the root is loaded by forcing resolution
-  root.resolveAll();
+  parsedRoot.resolveAll();
 }
 
 /**

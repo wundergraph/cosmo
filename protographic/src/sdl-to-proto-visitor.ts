@@ -50,6 +50,20 @@ const SCALAR_TYPE_MAP: Record<string, string> = {
 };
 
 /**
+ * Maps GraphQL scalar types to Protocol Buffer wrapper types for nullable fields
+ *
+ * These wrapper types allow distinguishing between unset fields and zero values
+ * in Protocol Buffers, which is important for GraphQL nullable semantics.
+ */
+const SCALAR_WRAPPER_TYPE_MAP: Record<string, string> = {
+  ID: 'google.protobuf.StringValue',
+  String: 'google.protobuf.StringValue',
+  Int: 'google.protobuf.Int32Value',
+  Float: 'google.protobuf.DoubleValue',
+  Boolean: 'google.protobuf.BoolValue',
+};
+
+/**
  * Generic structure for returning RPC and message definitions
  */
 interface CollectionResult {
@@ -115,6 +129,9 @@ export class GraphQLToProtoTextVisitor {
 
   /** Track generated nested list wrapper messages */
   private nestedListWrappers = new Map<string, string>();
+
+  /** Track whether wrapper types are used (for conditional import) */
+  private usesWrapperTypes = false;
 
   /**
    * Map of message names to their field numbers for tracking deleted fields
@@ -423,6 +440,25 @@ export class GraphQLToProtoTextVisitor {
 
     // Third: Process all complex types from the message queue in a single pass
     this.processMessageQueue();
+
+    // Add wrapper import if needed, at the correct position
+    if (this.usesWrapperTypes) {
+      // Find the position after the package declaration
+      const packageIndex = this.protoText.findIndex(line => line.startsWith('package '));
+      if (packageIndex !== -1) {
+        // Insert after package line and any existing options, but before service
+        let insertIndex = packageIndex + 1;
+        
+        // Skip over any existing options and empty lines
+        while (insertIndex < this.protoText.length && 
+               (this.protoText[insertIndex].startsWith('option ') || 
+                this.protoText[insertIndex].trim() === '')) {
+          insertIndex++;
+        }
+        
+        this.protoText.splice(insertIndex, 0, 'import "google/protobuf/wrappers.proto";', '');
+      }
+    }
 
     // Store the generated lock data for retrieval
     this.generatedLockData = this.lockManager.getLockData();
@@ -1322,14 +1358,22 @@ Example:
    * Map GraphQL type to Protocol Buffer type
    *
    * Determines the appropriate Protocol Buffer type for a given GraphQL type,
-   * handling all GraphQL type wrappers (NonNull, List) correctly.
+   * including the use of wrapper types for nullable scalar fields to distinguish
+   * between unset fields and zero values.
    *
    * @param graphqlType - The GraphQL type to convert
+   * @param ignoreWrapperTypes - If true, do not use wrapper types for nullable scalar fields
    * @returns The corresponding Protocol Buffer type name
    */
-  private getProtoTypeFromGraphQL(graphqlType: GraphQLType): string {
+  private getProtoTypeFromGraphQL(graphqlType: GraphQLType, ignoreWrapperTypes: boolean = false): string {
+
+    // For nullable scalar types, use wrapper types
     if (isScalarType(graphqlType)) {
-      return SCALAR_TYPE_MAP[graphqlType.name] || 'string';
+      if(ignoreWrapperTypes){
+        return SCALAR_TYPE_MAP[graphqlType.name] || 'string';
+      }
+      this.usesWrapperTypes = true; // Track that we're using wrapper types
+      return SCALAR_WRAPPER_TYPE_MAP[graphqlType.name] || 'google.protobuf.StringValue';
     }
 
     if (isEnumType(graphqlType)) {
@@ -1337,6 +1381,11 @@ Example:
     }
 
     if (isNonNullType(graphqlType)) {
+      // For non-null scalar types, use the base type
+      if (isScalarType(graphqlType.ofType)) {
+        return SCALAR_TYPE_MAP[graphqlType.ofType.name] || 'string';
+      }
+
       return this.getProtoTypeFromGraphQL(graphqlType.ofType);
     }
 
@@ -1348,7 +1397,16 @@ Example:
       if (isListType(innerType) || (isNonNullType(innerType) && isListType(innerType.ofType))) {
         // Find the most inner type by unwrapping all lists and non-nulls
         let currentType: GraphQLType = innerType;
+
+        // The inner most type should still keep null vs non-null attribute of the original type.
+        // This is important for the wrapper message to be generated correctly.
+        let innerMostType: GraphQLType = currentType;
         while (isListType(currentType) || isNonNullType(currentType)) {
+
+          // Check if the inner type of this non-null type
+          if(isNonNullType(currentType) && !isListType(currentType.ofType)){
+            innerMostType = currentType
+          }
           currentType = isListType(currentType) ? currentType.ofType : (currentType as any).ofType;
         }
 
@@ -1358,13 +1416,13 @@ Example:
 
         // Generate the wrapper message if not already created
         if (!this.processedTypes.has(wrapperName) && !this.nestedListWrappers.has(wrapperName)) {
-          this.createNestedListWrapper(wrapperName, namedInnerType);
+          this.createNestedListWrapper(wrapperName, namedInnerType, innerMostType);
         }
 
         return wrapperName;
       }
 
-      return this.getProtoTypeFromGraphQL(innerType);
+      return this.getProtoTypeFromGraphQL(innerType, true);
     }
 
     // Named types (object, interface, union, input)
@@ -1379,7 +1437,7 @@ Example:
   /**
    * Create a nested list wrapper message for the given base type
    */
-  private createNestedListWrapper(wrapperName: string, baseType: GraphQLNamedType): void {
+  private createNestedListWrapper(wrapperName: string, baseType: GraphQLNamedType, innerMostType: GraphQLType): void {
     // Skip if already processed
     if (this.processedTypes.has(wrapperName) || this.nestedListWrappers.has(wrapperName)) {
       return;
@@ -1417,7 +1475,7 @@ Example:
     const fieldNumber = this.getFieldNumber(wrapperName, 'result', 1);
 
     // For the inner type, we need to get the proto type for the base type
-    const protoType = this.getProtoTypeFromGraphQL(baseType);
+    const protoType = this.getProtoTypeFromGraphQL(baseType, true);
     messageLines.push(`  repeated ${protoType} result = ${fieldNumber};`);
 
     messageLines.push('}');
