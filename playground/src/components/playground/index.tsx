@@ -590,7 +590,9 @@ export const Playground = (input: {
     const res = await fetchFunc(url, {
       body: JSON.stringify({
         operationName: 'IntrospectionQuery',
-        query: getIntrospectionQuery(),
+        query: getIntrospectionQuery({
+          inputValueDeprecation: true,
+        }),
       }),
       method: 'POST',
       headers: JSON.parse(headers),
