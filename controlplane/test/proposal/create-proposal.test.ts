@@ -1,14 +1,16 @@
 import { randomUUID } from 'node:crypto';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { ProposalNamingConvention } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { ClickHouseClient } from '../../src/core/clickhouse/index.js';
 import {
   afterAllSetup,
-  beforeAllSetup, createTestGroup,
+  beforeAllSetup,
+  createTestGroup,
   createTestRBACEvaluator,
   genID,
-  genUniqueLabel
+  genUniqueLabel,
 } from '../../src/core/test-util.js';
 import {
   createFederatedGraph,
@@ -58,93 +60,93 @@ describe('Create proposal tests', () => {
     await afterAllSetup(dbname);
   });
 
-  test.each([
-    'organization-admin',
-    'organization-developer',
-    'graph-admin',
-  ])('%s should successfully create a new proposal for a federated graph', async (role) => {
-    const { client, server, authenticator, users } = await SetupTest({
-      dbname,
-      chClient,
-      setupBilling: { plan: 'enterprise' },
-      enabledFeatures: ['proposals'],
-    });
+  test.each(['organization-admin', 'organization-developer', 'graph-admin'])(
+    '%s should successfully create a new proposal for a federated graph',
+    async (role) => {
+      const { client, server, authenticator, users } = await SetupTest({
+        dbname,
+        chClient,
+        setupBilling: { plan: 'enterprise' },
+        enabledFeatures: ['proposals'],
+      });
 
-    // Setup a federated graph with a single subgraph
-    const subgraphName = genID('subgraph1');
-    const fedGraphName = genID('fedGraph');
-    const label = genUniqueLabel('label');
-    const proposalName = genID('proposal');
+      // Setup a federated graph with a single subgraph
+      const subgraphName = genID('subgraph1');
+      const fedGraphName = genID('fedGraph');
+      const label = genUniqueLabel('label');
+      const proposalName = genID('proposal');
 
-    const subgraphSchemaSDL = `
+      const subgraphSchemaSDL = `
       type Query {
         hello: String!
       }
     `;
 
-    await createThenPublishSubgraph(
-      client,
-      subgraphName,
-      DEFAULT_NAMESPACE,
-      subgraphSchemaSDL,
-      [label],
-      DEFAULT_SUBGRAPH_URL_ONE,
-    );
+      await createThenPublishSubgraph(
+        client,
+        subgraphName,
+        DEFAULT_NAMESPACE,
+        subgraphSchemaSDL,
+        [label],
+        DEFAULT_SUBGRAPH_URL_ONE,
+      );
 
-    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], DEFAULT_ROUTER_URL);
+      await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], DEFAULT_ROUTER_URL);
 
-    // Enable proposals for the namespace
-    const enableResponse = await enableProposalsForNamespace(client);
-    expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
+      // Enable proposals for the namespace
+      const enableResponse = await enableProposalsForNamespace(client);
+      expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
 
-    // Create a proposal with a schema change to the subgraph
-    const updatedSubgraphSDL = `
+      // Create a proposal with a schema change to the subgraph
+      const updatedSubgraphSDL = `
       type Query {
         hello: String!
         newField: Int!
       }
     `;
 
-    authenticator.changeUserWithSuppliedContext({
-      ...users.adminAliceCompanyA,
-      rbac: createTestRBACEvaluator(createTestGroup({ role })),
-    });
+      authenticator.changeUserWithSuppliedContext({
+        ...users.adminAliceCompanyA,
+        rbac: createTestRBACEvaluator(createTestGroup({ role })),
+      });
 
-    const createProposalResponse = await client.createProposal({
-      federatedGraphName: fedGraphName,
-      namespace: DEFAULT_NAMESPACE,
-      name: proposalName,
-      subgraphs: [
-        {
-          name: subgraphName,
-          schemaSDL: updatedSubgraphSDL,
-          isDeleted: false,
-          isNew: false,
-          labels: [],
-        },
-      ],
-    });
+      const createProposalResponse = await client.createProposal({
+        federatedGraphName: fedGraphName,
+        namespace: DEFAULT_NAMESPACE,
+        name: proposalName,
+        namingConvention: ProposalNamingConvention.INCREMENTAL,
+        subgraphs: [
+          {
+            name: subgraphName,
+            schemaSDL: updatedSubgraphSDL,
+            isDeleted: false,
+            isNew: false,
+            labels: [],
+          },
+        ],
+      });
 
-    expect(createProposalResponse.response?.code).toBe(EnumStatusCode.OK);
-    expect(createProposalResponse.proposalId).toBeDefined();
-    expect(createProposalResponse.checkId).toBeDefined();
+      expect(createProposalResponse.response?.code).toBe(EnumStatusCode.OK);
+      expect(createProposalResponse.proposalId).toBeDefined();
+      expect(createProposalResponse.checkId).toBeDefined();
 
-    // Verify proposal was created
-    const proposalResponse = await client.getProposal({
-      proposalId: createProposalResponse.proposalId,
-    });
+      // Verify proposal was created
+      const proposalResponse = await client.getProposal({
+        proposalId: createProposalResponse.proposalId,
+      });
 
-    expect(proposalResponse.response?.code).toBe(EnumStatusCode.OK);
-    expect(proposalResponse.proposal?.name).toBe(proposalName);
-    expect(proposalResponse.proposal?.federatedGraphName).toBe(fedGraphName);
-    expect(proposalResponse.proposal?.state).toBe('DRAFT');
-    expect(proposalResponse.proposal?.subgraphs.length).toBe(1);
-    expect(proposalResponse.proposal?.subgraphs[0].name).toBe(subgraphName);
-    expect(proposalResponse.proposal?.subgraphs[0].schemaSDL).toBe(updatedSubgraphSDL);
-    expect(proposalResponse.proposal?.subgraphs[0].isDeleted).toBe(false);
+      expect(proposalResponse.response?.code).toBe(EnumStatusCode.OK);
+      expect(proposalResponse.proposal?.name).toBe(`p-1/${proposalName}`);
+      expect(proposalResponse.proposal?.federatedGraphName).toBe(fedGraphName);
+      expect(proposalResponse.proposal?.state).toBe('DRAFT');
+      expect(proposalResponse.proposal?.subgraphs.length).toBe(1);
+      expect(proposalResponse.proposal?.subgraphs[0].name).toBe(subgraphName);
+      expect(proposalResponse.proposal?.subgraphs[0].schemaSDL).toBe(updatedSubgraphSDL);
+      expect(proposalResponse.proposal?.subgraphs[0].isDeleted).toBe(false);
 
-    await server.close();
-  });
+      await server.close();
+    },
+  );
 
   test('graph-admin should successfully create a new proposal for a federated graph on allowed namespace', async (role) => {
     const { client, server, authenticator, users } = await SetupTest({
@@ -194,16 +196,19 @@ describe('Create proposal tests', () => {
 
     authenticator.changeUserWithSuppliedContext({
       ...users.adminAliceCompanyA,
-      rbac: createTestRBACEvaluator(createTestGroup({
-        role: 'graph-admin',
-        namespaces: [getNamespaceResponse.namespace!.id],
-      })),
+      rbac: createTestRBACEvaluator(
+        createTestGroup({
+          role: 'graph-admin',
+          namespaces: [getNamespaceResponse.namespace!.id],
+        }),
+      ),
     });
 
     let createProposalResponse = await client.createProposal({
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
+      namingConvention: ProposalNamingConvention.INCREMENTAL,
       subgraphs: [
         {
           name: subgraphName,
@@ -225,7 +230,7 @@ describe('Create proposal tests', () => {
     });
 
     expect(proposalResponse.response?.code).toBe(EnumStatusCode.OK);
-    expect(proposalResponse.proposal?.name).toBe(proposalName);
+    expect(proposalResponse.proposal?.name).toBe(`p-1/${proposalName}`);
     expect(proposalResponse.proposal?.federatedGraphName).toBe(fedGraphName);
     expect(proposalResponse.proposal?.state).toBe('DRAFT');
     expect(proposalResponse.proposal?.subgraphs.length).toBe(1);
@@ -235,16 +240,19 @@ describe('Create proposal tests', () => {
 
     authenticator.changeUserWithSuppliedContext({
       ...users.adminAliceCompanyA,
-      rbac: createTestRBACEvaluator(createTestGroup({
-        role: 'graph-admin',
-        namespaces: [randomUUID()],
-      })),
+      rbac: createTestRBACEvaluator(
+        createTestGroup({
+          role: 'graph-admin',
+          namespaces: [randomUUID()],
+        }),
+      ),
     });
 
     createProposalResponse = await client.createProposal({
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
+      namingConvention: ProposalNamingConvention.INCREMENTAL,
       subgraphs: [
         {
           name: subgraphName,
@@ -321,6 +329,7 @@ describe('Create proposal tests', () => {
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
+      namingConvention: ProposalNamingConvention.INCREMENTAL,
       subgraphs: [
         {
           name: subgraphName,
@@ -429,6 +438,7 @@ describe('Create proposal tests', () => {
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
+      namingConvention: ProposalNamingConvention.INCREMENTAL,
       subgraphs: [
         {
           name: subgraph1Name,
@@ -529,6 +539,7 @@ describe('Create proposal tests', () => {
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
+      namingConvention: ProposalNamingConvention.INCREMENTAL,
       subgraphs: [
         {
           name: newSubgraphName,
@@ -631,6 +642,7 @@ describe('Create proposal tests', () => {
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
+      namingConvention: ProposalNamingConvention.INCREMENTAL,
       subgraphs: [
         {
           name: subgraph2Name,
@@ -676,6 +688,7 @@ describe('Create proposal tests', () => {
       federatedGraphName: nonExistentFedGraphName,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
+      namingConvention: ProposalNamingConvention.INCREMENTAL,
       subgraphs: [
         {
           name: 'testSubgraph',
@@ -789,6 +802,7 @@ describe('Create proposal tests', () => {
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
+      namingConvention: ProposalNamingConvention.INCREMENTAL,
       subgraphs: [
         {
           name: subgraph1Name,
@@ -912,6 +926,7 @@ describe('Create proposal tests', () => {
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
+      namingConvention: ProposalNamingConvention.INCREMENTAL,
       subgraphs: [
         {
           name: subgraphName,
@@ -934,7 +949,7 @@ describe('Create proposal tests', () => {
     await server.close();
   });
 
-  test('should fail to create a proposal with the same name for the same federated graph', async () => {
+  test('should not fail to create a proposal with the same name for the same federated graph if the client is not cli', async () => {
     const { client, server } = await SetupTest({
       dbname,
       chClient,
@@ -981,6 +996,7 @@ describe('Create proposal tests', () => {
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
+      namingConvention: ProposalNamingConvention.INCREMENTAL,
       subgraphs: [
         {
           name: subgraphName,
@@ -994,12 +1010,14 @@ describe('Create proposal tests', () => {
 
     expect(createProposalResponse.response?.code).toBe(EnumStatusCode.OK);
     expect(createProposalResponse.proposalId).toBeDefined();
+    expect(createProposalResponse.proposalName).toBe(`p-1/${proposalName}`);
 
     // Try to create a second proposal with the same name for the same federated graph
     const secondProposalResponse = await client.createProposal({
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName, // Same proposal name
+      namingConvention: ProposalNamingConvention.INCREMENTAL,
       subgraphs: [
         {
           name: subgraphName,
@@ -1016,9 +1034,9 @@ describe('Create proposal tests', () => {
       ],
     });
 
-    // Expect an error response
-    expect(secondProposalResponse.response?.code).toBe(EnumStatusCode.ERR_ALREADY_EXISTS);
-    expect(secondProposalResponse.response?.details).toContain(`Proposal ${proposalName} already exists.`);
+    expect(secondProposalResponse.response?.code).toBe(EnumStatusCode.OK);
+    expect(secondProposalResponse.proposalId).toBeDefined();
+    expect(secondProposalResponse.proposalName).toBe(`p-2/${proposalName}`);
 
     await server.close();
   });
@@ -1085,6 +1103,7 @@ describe('Create proposal tests', () => {
       federatedGraphName: fedGraph1Name,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
+      namingConvention: ProposalNamingConvention.INCREMENTAL,
       subgraphs: [
         {
           name: subgraphName + '1',
@@ -1111,6 +1130,7 @@ describe('Create proposal tests', () => {
       federatedGraphName: fedGraph2Name,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName, // Same proposal name
+      namingConvention: ProposalNamingConvention.INCREMENTAL,
       subgraphs: [
         {
           name: subgraphName + '2',
@@ -1139,8 +1159,8 @@ describe('Create proposal tests', () => {
     expect(proposal2Response.response?.code).toBe(EnumStatusCode.OK);
 
     // Verify they have the same name but different federated graphs
-    expect(proposal1Response.proposal?.name).toBe(proposalName);
-    expect(proposal2Response.proposal?.name).toBe(proposalName);
+    expect(proposal1Response.proposal?.name).toBe(`p-1/${proposalName}`);
+    expect(proposal2Response.proposal?.name).toBe(`p-1/${proposalName}`);
     expect(proposal1Response.proposal?.federatedGraphName).toBe(fedGraph1Name);
     expect(proposal2Response.proposal?.federatedGraphName).toBe(fedGraph2Name);
 
@@ -1187,6 +1207,7 @@ describe('Create proposal tests', () => {
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
+      namingConvention: ProposalNamingConvention.INCREMENTAL,
       subgraphs: [], // empty array
     });
 
@@ -1253,6 +1274,7 @@ describe('Create proposal tests', () => {
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
+      namingConvention: ProposalNamingConvention.INCREMENTAL,
       subgraphs: [
         {
           name: subgraphName, // Same subgraph name used twice
@@ -1334,6 +1356,7 @@ describe('Create proposal tests', () => {
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
+      namingConvention: ProposalNamingConvention.INCREMENTAL,
       subgraphs: [
         {
           name: newSubgraphName,
@@ -1357,6 +1380,517 @@ describe('Create proposal tests', () => {
     expect(createProposalResponse.response?.details).toContain(
       `The subgraphs provided in the proposal have to be unique. Please check the names of the subgraphs and try again.`,
     );
+
+    await server.close();
+  });
+});
+
+describe('Create proposal tests with normal naming convention', () => {
+  let chClient: ClickHouseClient;
+
+  beforeEach(() => {
+    chClient = new ClickHouseClient();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  beforeAll(async () => {
+    dbname = await beforeAllSetup();
+  });
+
+  afterAll(async () => {
+    await afterAllSetup(dbname);
+  });
+
+  test.each(['organization-admin', 'organization-developer', 'graph-admin'])(
+    '%s should successfully create a new proposal for a federated graph (with normal naming convention)',
+    async (role) => {
+      const { client, server, authenticator, users } = await SetupTest({
+        dbname,
+        chClient,
+        setupBilling: { plan: 'enterprise' },
+        enabledFeatures: ['proposals'],
+      });
+
+      // Setup a federated graph with a single subgraph
+      const subgraphName = genID('subgraph1');
+      const fedGraphName = genID('fedGraph');
+      const label = genUniqueLabel('label');
+      const proposalName = genID('proposal');
+
+      const subgraphSchemaSDL = `
+      type Query {
+        hello: String!
+      }
+    `;
+
+      await createThenPublishSubgraph(
+        client,
+        subgraphName,
+        DEFAULT_NAMESPACE,
+        subgraphSchemaSDL,
+        [label],
+        DEFAULT_SUBGRAPH_URL_ONE,
+      );
+
+      await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], DEFAULT_ROUTER_URL);
+
+      // Enable proposals for the namespace
+      const enableResponse = await enableProposalsForNamespace(client);
+      expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
+
+      // Create a proposal with a schema change to the subgraph
+      const updatedSubgraphSDL = `
+      type Query {
+        hello: String!
+        newField: Int!
+      }
+    `;
+
+      authenticator.changeUserWithSuppliedContext({
+        ...users.adminAliceCompanyA,
+        rbac: createTestRBACEvaluator(createTestGroup({ role })),
+      });
+
+      const createProposalResponse = await client.createProposal({
+        federatedGraphName: fedGraphName,
+        namespace: DEFAULT_NAMESPACE,
+        name: proposalName,
+        namingConvention: ProposalNamingConvention.NORMAL,
+        subgraphs: [
+          {
+            name: subgraphName,
+            schemaSDL: updatedSubgraphSDL,
+            isDeleted: false,
+            isNew: false,
+            labels: [],
+          },
+        ],
+      });
+
+      expect(createProposalResponse.response?.code).toBe(EnumStatusCode.OK);
+      expect(createProposalResponse.proposalId).toBeDefined();
+      expect(createProposalResponse.checkId).toBeDefined();
+
+      // Verify proposal was created
+      const proposalResponse = await client.getProposal({
+        proposalId: createProposalResponse.proposalId,
+      });
+
+      expect(proposalResponse.response?.code).toBe(EnumStatusCode.OK);
+      expect(proposalResponse.proposal?.name).toBe(proposalName);
+      expect(proposalResponse.proposal?.federatedGraphName).toBe(fedGraphName);
+      expect(proposalResponse.proposal?.state).toBe('DRAFT');
+      expect(proposalResponse.proposal?.subgraphs.length).toBe(1);
+      expect(proposalResponse.proposal?.subgraphs[0].name).toBe(subgraphName);
+      expect(proposalResponse.proposal?.subgraphs[0].schemaSDL).toBe(updatedSubgraphSDL);
+      expect(proposalResponse.proposal?.subgraphs[0].isDeleted).toBe(false);
+
+      await server.close();
+    },
+  );
+
+  test('graph-admin should successfully create a new proposal for a federated graph on allowed namespace (with normal naming convention)', async (role) => {
+    const { client, server, authenticator, users } = await SetupTest({
+      dbname,
+      chClient,
+      setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
+    });
+
+    // Setup a federated graph with a single subgraph
+    const subgraphName = genID('subgraph1');
+    const fedGraphName = genID('fedGraph');
+    const label = genUniqueLabel('label');
+    const proposalName = genID('proposal');
+
+    const subgraphSchemaSDL = `
+      type Query {
+        hello: String!
+      }
+    `;
+
+    const getNamespaceResponse = await client.getNamespace({ name: DEFAULT_NAMESPACE });
+    expect(getNamespaceResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    await createThenPublishSubgraph(
+      client,
+      subgraphName,
+      DEFAULT_NAMESPACE,
+      subgraphSchemaSDL,
+      [label],
+      DEFAULT_SUBGRAPH_URL_ONE,
+    );
+
+    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], DEFAULT_ROUTER_URL);
+
+    // Enable proposals for the namespace
+    const enableResponse = await enableProposalsForNamespace(client);
+    expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Create a proposal with a schema change to the subgraph
+    const updatedSubgraphSDL = `
+      type Query {
+        hello: String!
+        newField: Int!
+      }
+    `;
+
+    authenticator.changeUserWithSuppliedContext({
+      ...users.adminAliceCompanyA,
+      rbac: createTestRBACEvaluator(
+        createTestGroup({
+          role: 'graph-admin',
+          namespaces: [getNamespaceResponse.namespace!.id],
+        }),
+      ),
+    });
+
+    let createProposalResponse = await client.createProposal({
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      name: proposalName,
+      namingConvention: ProposalNamingConvention.NORMAL,
+      subgraphs: [
+        {
+          name: subgraphName,
+          schemaSDL: updatedSubgraphSDL,
+          isDeleted: false,
+          isNew: false,
+          labels: [],
+        },
+      ],
+    });
+
+    expect(createProposalResponse.response?.code).toBe(EnumStatusCode.OK);
+    expect(createProposalResponse.proposalId).toBeDefined();
+    expect(createProposalResponse.checkId).toBeDefined();
+
+    // Verify proposal was created
+    const proposalResponse = await client.getProposal({
+      proposalId: createProposalResponse.proposalId,
+    });
+
+    expect(proposalResponse.response?.code).toBe(EnumStatusCode.OK);
+    expect(proposalResponse.proposal?.name).toBe(proposalName);
+    expect(proposalResponse.proposal?.federatedGraphName).toBe(fedGraphName);
+    expect(proposalResponse.proposal?.state).toBe('DRAFT');
+    expect(proposalResponse.proposal?.subgraphs.length).toBe(1);
+    expect(proposalResponse.proposal?.subgraphs[0].name).toBe(subgraphName);
+    expect(proposalResponse.proposal?.subgraphs[0].schemaSDL).toBe(updatedSubgraphSDL);
+    expect(proposalResponse.proposal?.subgraphs[0].isDeleted).toBe(false);
+
+    authenticator.changeUserWithSuppliedContext({
+      ...users.adminAliceCompanyA,
+      rbac: createTestRBACEvaluator(
+        createTestGroup({
+          role: 'graph-admin',
+          namespaces: [randomUUID()],
+        }),
+      ),
+    });
+
+    createProposalResponse = await client.createProposal({
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      name: proposalName,
+      namingConvention: ProposalNamingConvention.NORMAL,
+      subgraphs: [
+        {
+          name: subgraphName,
+          schemaSDL: updatedSubgraphSDL,
+          isDeleted: false,
+          isNew: false,
+          labels: [],
+        },
+      ],
+    });
+
+    expect(createProposalResponse.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
+
+    await server.close();
+  });
+
+  test('should fail to create proposal with name starting with `/^p-\\d+$/` when using normal naming convention', async () => {
+    const { client, server } = await SetupTest({
+      dbname,
+      chClient,
+      setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
+    });
+
+    // Setup a federated graph with a single subgraph
+    const subgraphName = genID('subgraph1');
+    const fedGraphName = genID('fedGraph');
+    const label = genUniqueLabel('label');
+    const proposalName = 'p-123'; // This should be rejected with cosmo-cli user-agent
+
+    const subgraphSchemaSDL = `
+      type Query {
+        hello: String!
+      }
+    `;
+
+    await createThenPublishSubgraph(
+      client,
+      subgraphName,
+      DEFAULT_NAMESPACE,
+      subgraphSchemaSDL,
+      [label],
+      DEFAULT_SUBGRAPH_URL_ONE,
+    );
+
+    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], DEFAULT_ROUTER_URL);
+
+    // Enable proposals for the namespace
+    const enableResponse = await enableProposalsForNamespace(client);
+    expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Create a proposal with a schema change to the subgraph
+    const updatedSubgraphSDL = `
+      type Query {
+        hello: String!
+        newField: Int!
+      }
+    `;
+
+    const createProposalResponse = await client.createProposal({
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      name: proposalName,
+      namingConvention: ProposalNamingConvention.NORMAL,
+      subgraphs: [
+        {
+          name: subgraphName,
+          schemaSDL: updatedSubgraphSDL,
+          isDeleted: false,
+          isNew: false,
+          labels: [],
+        },
+      ],
+    });
+
+    expect(createProposalResponse.response?.code).toBe(EnumStatusCode.ERR);
+    expect(createProposalResponse.response?.details).toContain('Proposal name cannot start with p-');
+
+    await server.close();
+  });
+
+  test('should fail to create a proposal with the same name for the same federated graph (with normal naming convention)', async () => {
+    const { client, server } = await SetupTest({
+      dbname,
+      chClient,
+      setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
+    });
+
+    // Setup a federated graph with a single subgraph
+    const subgraphName = genID('subgraph1');
+    const fedGraphName = genID('fedGraph');
+    const label = genUniqueLabel('label');
+    const proposalName = genID('proposal');
+
+    const subgraphSchemaSDL = `
+      type Query {
+        hello: String!
+      }
+    `;
+
+    await createThenPublishSubgraph(
+      client,
+      subgraphName,
+      DEFAULT_NAMESPACE,
+      subgraphSchemaSDL,
+      [label],
+      DEFAULT_SUBGRAPH_URL_ONE,
+    );
+
+    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], DEFAULT_ROUTER_URL);
+
+    // Enable proposals for the namespace
+    const enableResponse = await enableProposalsForNamespace(client);
+    expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Create first proposal
+    const updatedSubgraphSDL = `
+      type Query {
+        hello: String!
+        newField: Int!
+      }
+    `;
+
+    const createProposalResponse = await client.createProposal({
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      name: proposalName,
+      namingConvention: ProposalNamingConvention.NORMAL,
+      subgraphs: [
+        {
+          name: subgraphName,
+          schemaSDL: updatedSubgraphSDL,
+          isDeleted: false,
+          isNew: false,
+          labels: [],
+        },
+      ],
+    });
+
+    expect(createProposalResponse.response?.code).toBe(EnumStatusCode.OK);
+    expect(createProposalResponse.proposalId).toBeDefined();
+
+    // Try to create a second proposal with the same name for the same federated graph
+    const secondProposalResponse = await client.createProposal({
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      name: proposalName, // Same proposal name
+      namingConvention: ProposalNamingConvention.NORMAL,
+      subgraphs: [
+        {
+          name: subgraphName,
+          schemaSDL: `
+            type Query {
+              hello: String!
+              anotherField: String!
+            }
+          `,
+          isDeleted: false,
+          isNew: false,
+          labels: [],
+        },
+      ],
+    });
+
+    // Expect an error response
+    expect(secondProposalResponse.response?.code).toBe(EnumStatusCode.ERR_ALREADY_EXISTS);
+    expect(secondProposalResponse.response?.details).toContain(`Proposal ${proposalName} already exists.`);
+
+    await server.close();
+  });
+
+  test('should allow creating proposals with the same name for different federated graphs (with normal naming convention)', async () => {
+    const { client, server } = await SetupTest({
+      dbname,
+      chClient,
+      setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
+    });
+
+    // Setup common test data
+    const subgraphName = genID('subgraph');
+    const fedGraph1Name = genID('fedGraph1');
+    const fedGraph2Name = genID('fedGraph2');
+    const label1 = genUniqueLabel('label1');
+    const label2 = genUniqueLabel('label2');
+    const proposalName = genID('proposal'); // Same proposal name to be used for both graphs
+
+    const subgraphSchemaSDL = `
+      type Query {
+        hello: String!
+      }
+    `;
+
+    // Create subgraph1 with label1 and fedGraph1
+    await createThenPublishSubgraph(
+      client,
+      subgraphName + '1',
+      DEFAULT_NAMESPACE,
+      subgraphSchemaSDL,
+      [label1],
+      DEFAULT_SUBGRAPH_URL_ONE,
+    );
+
+    await createFederatedGraph(client, fedGraph1Name, DEFAULT_NAMESPACE, [joinLabel(label1)], DEFAULT_ROUTER_URL);
+
+    // Create subgraph2 with label2 and fedGraph2
+    await createThenPublishSubgraph(
+      client,
+      subgraphName + '2',
+      DEFAULT_NAMESPACE,
+      subgraphSchemaSDL,
+      [label2],
+      DEFAULT_SUBGRAPH_URL_TWO,
+    );
+
+    await createFederatedGraph(client, fedGraph2Name, DEFAULT_NAMESPACE, [joinLabel(label2)], DEFAULT_ROUTER_URL);
+
+    // Enable proposals for the namespace
+    const enableResponse = await enableProposalsForNamespace(client);
+    expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Create first proposal for fedGraph1
+    const updatedSubgraphSDL1 = `
+      type Query {
+        hello: String!
+        newField1: Int!
+      }
+    `;
+
+    const createProposalResponse1 = await client.createProposal({
+      federatedGraphName: fedGraph1Name,
+      namespace: DEFAULT_NAMESPACE,
+      name: proposalName,
+      namingConvention: ProposalNamingConvention.NORMAL,
+      subgraphs: [
+        {
+          name: subgraphName + '1',
+          schemaSDL: updatedSubgraphSDL1,
+          isDeleted: false,
+          isNew: false,
+          labels: [],
+        },
+      ],
+    });
+
+    expect(createProposalResponse1.response?.code).toBe(EnumStatusCode.OK);
+    expect(createProposalResponse1.proposalId).toBeDefined();
+
+    // Create second proposal with the same name but for fedGraph2
+    const updatedSubgraphSDL2 = `
+      type Query {
+        hello: String!
+        newField2: String!
+      }
+    `;
+
+    const createProposalResponse2 = await client.createProposal({
+      federatedGraphName: fedGraph2Name,
+      namespace: DEFAULT_NAMESPACE,
+      name: proposalName, // Same proposal name
+      namingConvention: ProposalNamingConvention.NORMAL,
+      subgraphs: [
+        {
+          name: subgraphName + '2',
+          schemaSDL: updatedSubgraphSDL2,
+          isDeleted: false,
+          isNew: false,
+          labels: [],
+        },
+      ],
+    });
+
+    // Expect success for the second proposal as well
+    expect(createProposalResponse2.response?.code).toBe(EnumStatusCode.OK);
+    expect(createProposalResponse2.proposalId).toBeDefined();
+
+    // Verify both proposals were created successfully
+    const proposal1Response = await client.getProposal({
+      proposalId: createProposalResponse1.proposalId,
+    });
+
+    const proposal2Response = await client.getProposal({
+      proposalId: createProposalResponse2.proposalId,
+    });
+
+    expect(proposal1Response.response?.code).toBe(EnumStatusCode.OK);
+    expect(proposal2Response.response?.code).toBe(EnumStatusCode.OK);
+
+    // Verify they have the same name but different federated graphs
+    expect(proposal1Response.proposal?.name).toBe(proposalName);
+    expect(proposal2Response.proposal?.name).toBe(proposalName);
+    expect(proposal1Response.proposal?.federatedGraphName).toBe(fedGraph1Name);
+    expect(proposal2Response.proposal?.federatedGraphName).toBe(fedGraph2Name);
 
     await server.close();
   });
