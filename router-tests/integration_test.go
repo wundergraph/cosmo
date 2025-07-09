@@ -1296,6 +1296,18 @@ func TestSubgraphOperationMinifier(t *testing.T) {
 	})
 }
 
+func TestEmptyFragment(t *testing.T) {
+	t.Parallel()
+
+	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			Query: `fragment A on Query {} query { ...A }`,
+		})
+		require.Equal(t, res.Response.Header.Get("Content-Type"), "application/json; charset=utf-8")
+		require.Equal(t, `{"errors":[{"message":"unexpected token - got: RBRACE want one of: [IDENT SPREAD]","locations":[{"line":1,"column":22}]}]}`, res.Body)
+	})
+}
+
 func TestPlannerErrorMessage(t *testing.T) {
 	t.Parallel()
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
