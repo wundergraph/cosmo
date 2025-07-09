@@ -1087,8 +1087,6 @@ func (s *graphServer) buildGraphMux(
 				})
 		}
 
-		// We use a separate handler as the handler is in a separate package that does not
-		// have access to the requestContext types
 		if exprManager.VisitorManager.IsResponseBodyUsedInExpressions() {
 			httpRouter.Use(func(h http.Handler) http.Handler {
 				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
