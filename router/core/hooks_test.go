@@ -68,3 +68,32 @@ func TestExecuteHooks(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestHookRegistration(t *testing.T) {
+	t.Parallel()
+
+	t.Run("module implements both ApplicationStartHook and ApplicationLifecycleHook should only register ApplicationStartHook once", func(t *testing.T) {
+		hookRegistry := newHookRegistry()
+		module := &testModule2{}
+
+		hookRegistry.AddApplicationLifecycle(module, "testModule2")
+
+		registerHook(module, hookRegistry.applicationStartHooks, "testModule2")
+
+		require.Equal(t, 1, len(hookRegistry.applicationStartHooks.Values()))
+
+		hooks := hookRegistry.applicationStartHooks.Values()
+		require.Equal(t, "testModule2", hooks[0].ID)
+	})
+
+	t.Run("different modules with same hook type should both be registered", func(t *testing.T) {
+		hookRegistry := newHookRegistry()
+		module1 := &testModule1{}
+		module2 := &testModule2{}
+
+		registerHook(module1, hookRegistry.applicationStartHooks, "testModule1")
+		registerHook(module2, hookRegistry.applicationStartHooks, "testModule2")
+
+		require.Equal(t, 2, len(hookRegistry.applicationStartHooks.Values()))
+	})
+}
