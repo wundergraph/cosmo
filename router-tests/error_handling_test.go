@@ -249,12 +249,68 @@ func TestAllowedExtensions(t *testing.T) {
 		})
 	})
 
-	t.Run("in passthrough mode, all extensions should be included in the propagated error", func(t *testing.T) {
+	t.Run("in wrapped mode, with AllowAllExtensionFields set, all extensions should be included in the propagated error", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
+				cfg.Enabled = true
+				cfg.Mode = config.SubgraphErrorPropagationModeWrapped
+				cfg.AllowedExtensionFields = []string{"allowed"}
+				cfg.AllowAllExtensionFields = true
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							w.Header().Set("Content-Type", "application/json")
+							w.WriteHeader(http.StatusForbidden)
+							_, wErr := w.Write([]byte(`{"errors":[{"message":"Unauthorized","extensions":{"allowed":"allowed","notAllowed":"notAllowed"}}]}`))
+							require.NoError(t, wErr)
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employees { id } }`,
+			})
+			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'employees'.","extensions":{"errors":[{"message":"Unauthorized","extensions":{"allowed":"allowed","notAllowed":"notAllowed"}}],"statusCode":403}}],"data":{"employees":null}}`, res.Body)
+		})
+	})
+
+	t.Run("in passthrough mode, only allowed extensions should be included in the propagated error", func(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
 				cfg.Enabled = true
 				cfg.Mode = config.SubgraphErrorPropagationModePassthrough
 				cfg.AllowedExtensionFields = []string{"allowed"}
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							w.Header().Set("Content-Type", "application/json")
+							w.WriteHeader(http.StatusForbidden)
+							_, wErr := w.Write([]byte(`{"errors":[{"message":"Unauthorized","extensions":{"allowed":"allowed","notAllowed":"notAllowed"}}]}`))
+							require.NoError(t, wErr)
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employees { id } }`,
+			})
+			require.Equal(t, `{"errors":[{"message":"Unauthorized","extensions":{"allowed":"allowed","statusCode":403}}],"data":{"employees":null}}`, res.Body)
+		})
+	})
+
+	t.Run("in passthrough mode, with AllowAllExtensionFields set, all extensions should be included in the propagated error", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
+				cfg.Enabled = true
+				cfg.Mode = config.SubgraphErrorPropagationModePassthrough
+				cfg.AllowedExtensionFields = []string{"allowed"}
+				cfg.AllowAllExtensionFields = true
 			},
 			Subgraphs: testenv.SubgraphsConfig{
 				Employees: testenv.SubgraphConfig{
