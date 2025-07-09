@@ -278,8 +278,6 @@ describe('SDL to Proto - Complex Types', () => {
 
     const { proto: protoText } = compileGraphQLToProto(sdl);
 
-    console.log(protoText)
-
     // Validate Proto definition
     expectValidProto(protoText);
 
