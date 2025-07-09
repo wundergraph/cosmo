@@ -2589,7 +2589,6 @@ func TestFlakyAccessLogs(t *testing.T) {
 					requestContextMap := requestLogAll[0].ContextMap()
 
 					responseBody := requestContextMap["response_body"].(string)
-					fmt.Println(responseBody)
 					require.Equal(t,
 						`{"errors":[{"message":"Cannot query field \"id2\" on type \"Employee\".","path":["query","employees"]}]}`,
 						responseBody)

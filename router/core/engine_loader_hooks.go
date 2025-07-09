@@ -154,7 +154,7 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 	exprCtx.Subgraph.Request.Error = WrapExprError(responseInfo.Err)
 
 	if f.storeSubgraphResponseBody {
-		exprCtx.Subgraph.Response.Body.Raw = responseInfo.ResponseBody
+		exprCtx.Subgraph.Response.Body.Raw = responseInfo.GetResponseBody()
 	}
 
 	metricAttrs := *reqContext.telemetry.AcquireAttributes()
