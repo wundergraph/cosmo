@@ -985,7 +985,10 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 		w:                   nil,
 		r:                   registration.clientRequest,
 	})
-	reqContext.expressionContext = getRequestContext(h.request.Context()).expressionContext
+
+	if origCtx := getRequestContext(h.request.Context()); origCtx != nil {
+		reqContext.expressionContext = origCtx.expressionContext
+	}
 	resolveCtx = resolveCtx.WithContext(withRequestContext(h.ctx, reqContext))
 	if h.graphqlHandler.authorizer != nil {
 		resolveCtx = WithAuthorizationExtension(resolveCtx)
