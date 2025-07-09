@@ -1,6 +1,6 @@
 {
   "name": "@wundergraph/protographic",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "module": "src/index.ts",
   "type": "module",
   "main": "dist/src/index.js",
