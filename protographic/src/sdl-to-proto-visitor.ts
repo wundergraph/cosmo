@@ -1397,16 +1397,7 @@ Example:
       if (isListType(innerType) || (isNonNullType(innerType) && isListType(innerType.ofType))) {
         // Find the most inner type by unwrapping all lists and non-nulls
         let currentType: GraphQLType = innerType;
-
-        // The inner most type should still keep null vs non-null attribute of the original type.
-        // This is important for the wrapper message to be generated correctly.
-        let innerMostType: GraphQLType = currentType;
         while (isListType(currentType) || isNonNullType(currentType)) {
-
-          // Check if the inner type of this non-null type
-          if(isNonNullType(currentType) && !isListType(currentType.ofType)){
-            innerMostType = currentType
-          }
           currentType = isListType(currentType) ? currentType.ofType : (currentType as any).ofType;
         }
 
@@ -1416,7 +1407,7 @@ Example:
 
         // Generate the wrapper message if not already created
         if (!this.processedTypes.has(wrapperName) && !this.nestedListWrappers.has(wrapperName)) {
-          this.createNestedListWrapper(wrapperName, namedInnerType, innerMostType);
+          this.createNestedListWrapper(wrapperName, namedInnerType);
         }
 
         return wrapperName;
@@ -1437,7 +1428,7 @@ Example:
   /**
    * Create a nested list wrapper message for the given base type
    */
-  private createNestedListWrapper(wrapperName: string, baseType: GraphQLNamedType, innerMostType: GraphQLType): void {
+  private createNestedListWrapper(wrapperName: string, baseType: GraphQLNamedType): void {
     // Skip if already processed
     if (this.processedTypes.has(wrapperName) || this.nestedListWrappers.has(wrapperName)) {
       return;
