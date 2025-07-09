@@ -79,7 +79,6 @@ type HandlerOptions struct {
 	SubgraphErrorPropagation                    config.SubgraphErrorPropagationConfiguration
 	EngineLoaderHooks                           resolve.LoaderHooks
 	ApolloSubscriptionMultipartPrintBoundary    bool
-	ExprVisitorManager                          *expr.VisitorGroup
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
@@ -101,7 +100,6 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		subgraphErrorPropagation:                 opts.SubgraphErrorPropagation,
 		engineLoaderHooks:                        opts.EngineLoaderHooks,
 		apolloSubscriptionMultipartPrintBoundary: opts.ApolloSubscriptionMultipartPrintBoundary,
-		exprVisitorManager:                       opts.ExprVisitorManager,
 	}
 	return graphQLHandler
 }

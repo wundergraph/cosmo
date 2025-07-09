@@ -1306,7 +1306,6 @@ func (s *graphServer) buildGraphMux(
 			metricAttExpressions,
 			exprManager.VisitorManager.IsSubgraphResponseBodyUsedInExpressions(),
 		),
-		ExprVisitorManager: exprManager.VisitorManager,
 	}
 
 	if s.redisClient != nil {
