@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/expr"
 	"io"
 	"net/http"
 	"strings"
@@ -132,7 +131,6 @@ type GraphQLHandler struct {
 	enableResponseHeaderPropagation             bool
 
 	apolloSubscriptionMultipartPrintBoundary bool
-	exprVisitorManager                       *expr.VisitorGroup
 }
 
 func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
