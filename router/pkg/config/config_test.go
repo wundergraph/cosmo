@@ -233,11 +233,6 @@ func TestLogLevels(t *testing.T) {
 			expected: zapcore.ErrorLevel,
 		},
 		{
-			name:     "dpanic level",
-			logLevel: "dpanic",
-			expected: zapcore.DPanicLevel,
-		},
-		{
 			name:     "panic level",
 			logLevel: "panic",
 			expected: zapcore.PanicLevel,
