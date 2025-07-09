@@ -6,28 +6,10 @@ import (
 	"fmt"
 	"math"
 	"sort"
-	"sync"
 	"time"
 
 	"go.uber.org/zap"
 )
-
-type moduleRegistry struct {
-	mu      sync.RWMutex
-	modules map[string]ModuleV1Info
-}
-
-// NewModuleRegistry returns an empty, thread-safe module registry.
-// Call this in tests (and anywhere you need isolation) instead of using the global.
-func newModuleRegistry() *moduleRegistry {
-	return &moduleRegistry{
-		modules: make(map[string]ModuleV1Info),
-	}
-}
-
-// defaultModuleRegistry is the package-level registry used by RegisterModuleV1.
-// For unit tests you should use newModuleRegistry() to get a fresh instance and avoid shared state.
-var defaultModuleRegistry = newModuleRegistry()
 
 type ModuleV1Info struct {
 	// ID is the unique identifier for a module, it must be unique across all modules.
@@ -50,6 +32,33 @@ type ModuleV1Context struct {
 	Logger *zap.Logger
 }
 
+// ModuleV1 interface defines the contract for V1 modules.
+//
+// IMPORTANT: Concurrency Safety
+// If your module stores state (fields, maps, slices, etc.), you MUST handle concurrency properly.
+// The router is multi-threaded and your module methods may be called concurrently from different goroutines.
+//
+// Use synchronization primitives like sync.RWMutex for thread-safe access:
+//
+//	type MyModule struct {
+//		mu    sync.RWMutex
+//		data  map[string]int
+//	}
+//
+//	func (m *MyModule) SafeRead() int {
+//		m.mu.RLock()
+//		defer m.mu.RUnlock()
+//		return m.data["key"]
+//	}
+//
+//	func (m *MyModule) SafeWrite(key string, value int) {
+//		m.mu.Lock()
+//		defer m.mu.Unlock()
+//		m.data[key] = value
+//	}
+//
+// Hook methods (if implemented) will be called concurrently during request processing.
+// Provision() and Cleanup() are called once during router startup/shutdown and are inherently safe.
 type ModuleV1 interface {
 	Module() ModuleV1Info
 	// Provisioner is called before the server starts
@@ -58,33 +67,6 @@ type ModuleV1 interface {
 	// Cleanup is called after the server stops
 	// It allows you to clean up your module e.g. close a database connection
 	Cleanup(ctx *ModuleV1Context) error
-}
-
-// RegisterModuleV1 registers a new ModuleV1 instance.
-// The registration order matters. Modules with the same priority
-// are executed in the order they are registered.
-// It panics if the module is already registered.
-func RegisterModuleV1(instance ModuleV1) {
-	defaultModuleRegistry.registerModuleV1(instance)
-}
-
-func (r *moduleRegistry) registerModuleV1(instance ModuleV1) {
-	m := instance.Module()
-
-	if m.ID == "" {
-		panic("ModuleV1.ID is required")
-	}
-	if val := m.New(); val == nil {
-		panic(fmt.Sprintf("ModuleV1Info.New must return a non-nil module instance: %s", m.ID))
-	}
-
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	if _, ok := r.modules[m.ID]; ok {
-		panic(fmt.Sprintf("ModuleV1 already registered: %s", m.ID))
-	}
-	r.modules[m.ID] = m
 }
 
 // sortModulesV1 sorts the modules by priority, 0 is the highest priority, is the first to be executed.
@@ -103,18 +85,6 @@ func sortModulesV1(modules []ModuleV1Info) []ModuleV1Info {
 		return priorityI < priorityJ
 	})
 	return modules
-}
-
-// getModulesV1 returns all registered modules sorted by priority
-func (r *moduleRegistry) getModulesV1() []ModuleV1Info {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
-	modules := make([]ModuleV1Info, 0, len(r.modules))
-	for _, m := range r.modules {
-		modules = append(modules, m)
-	}
-	return sortModulesV1(modules)
 }
 
 // coreModuleHooks manages module initialization and hook registration.

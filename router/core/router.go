@@ -642,20 +642,16 @@ func (r *Router) initModules(ctx context.Context) error {
 }
 
 func (r *Router) initModulesV1(ctx context.Context) error {
-	moduleList := make([]ModuleV1Info, 0, len(r.customModulesV1))
+	if len(r.customModulesV1) == 0 {
+		return nil
+	}
 
+	moduleList := make([]ModuleV1Info, 0, len(r.customModulesV1))
 	for _, module := range r.customModulesV1 {
 		moduleList = append(moduleList, module.Module())
 	}
 
-	// Add globally registered modules from defaultModuleRegistry
-	globalModules := defaultModuleRegistry.getModulesV1()
-	moduleList = append(moduleList, globalModules...)
-
-	if len(moduleList) == 0 {
-		return nil
-	}
-
+	moduleList = sortModulesV1(moduleList)
 	r.moduleHooks = newCoreModuleHooks(r.logger)
 
 	return r.moduleHooks.initCoreModuleHooks(ctx, moduleList)
