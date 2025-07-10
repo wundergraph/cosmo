@@ -50,7 +50,7 @@ describe('gRPC Generate Command', () => {
     expect(existsSync(join(tmpDir, 'service.proto.lock.json'))).toBe(true);
   });
 
-  test('should fail when output path does not exist', async () => {
+  test('should create output directory if it does not exist', async () => {
     const client: Client = {
       platform: createPromiseClient(PlatformService, mockPlatformTransport()),
     };
@@ -65,21 +65,28 @@ describe('gRPC Generate Command', () => {
       rmSync(nonExistentDir, { recursive: true, force: true });
     }
 
-    await expect(
-      program.parseAsync(
-        [
-          'generate',
-          'testservice',
-          '-i',
-          'test/fixtures/full-schema.graphql',
-          '-o',
-          nonExistentDir,
-        ],
-        {
-          from: 'user',
-        }
-      )
-    ).rejects.toThrow();
+    await program.parseAsync(
+      [
+        'generate',
+        'testservice',
+        '-i',
+        'test/fixtures/full-schema.graphql',
+        '-o',
+        nonExistentDir,
+      ],
+      {
+        from: 'user',
+      }
+    );
+
+    // Verify the output directory and files exist
+    expect(existsSync(nonExistentDir)).toBe(true);
+    expect(existsSync(join(nonExistentDir, 'mapping.json'))).toBe(true);
+    expect(existsSync(join(nonExistentDir, 'service.proto'))).toBe(true);
+    expect(existsSync(join(nonExistentDir, 'service.proto.lock.json'))).toBe(true);
+
+    // Cleanup
+    rmSync(nonExistentDir, { recursive: true, force: true });
   });
 
   test('should fail when input file does not exist', async (testContext) => {
