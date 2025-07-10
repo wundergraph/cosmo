@@ -82,9 +82,9 @@ func TestModuleV1ProvisionAndCleanupLifecycle(t *testing.T) {
 			updatedMetrics := dbModule.GetMetrics()
 			assert.Equal(t, int64(2), updatedMetrics.TotalQueries, "should have recorded 2 queries")
 
-			time.Sleep(20 * time.Millisecond)
-			finalMetrics := dbModule.GetMetrics()
-			assert.Equal(t, 0, finalMetrics.ActiveQueries, "all queries should be completed")
+			require.Eventually(t, func() bool {
+				return dbModule.GetMetrics().ActiveQueries == 0
+			}, 1*time.Second, 1*time.Millisecond, "all queries should be completed")
 
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 				Query:         `query MyQuery { employees { id } }`,

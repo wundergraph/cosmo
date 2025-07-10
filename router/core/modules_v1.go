@@ -104,7 +104,6 @@ func newCoreModuleHooks(logger *zap.Logger) *coreModuleHooks {
 // initCoreModuleHooks instantiates each module, provisions it,
 // registers any implemented hooks, and saves the hook registry.
 func (c *coreModuleHooks) initCoreModuleHooks(ctx context.Context, modules []ModuleV1Info) error {
-	hookRegistry := newHookRegistry()
 	var instances []ModuleV1
 
 	for _, info := range modules {
@@ -121,11 +120,11 @@ func (c *coreModuleHooks) initCoreModuleHooks(ctx context.Context, modules []Mod
 			return newModuleV1Error(info.ID, PhaseProvision, err)
 		}
 
-		hookRegistry.AddApplicationLifecycle(moduleInstance, info.ID)
-		hookRegistry.AddGraphQLServerLifecycle(moduleInstance, info.ID)
-		hookRegistry.AddRouterLifecycle(moduleInstance, info.ID)
-		hookRegistry.AddSubgraphLifecycle(moduleInstance, info.ID)
-		hookRegistry.AddOperationLifecycle(moduleInstance, info.ID)
+		c.hookRegistry.AddApplicationLifecycle(moduleInstance, info.ID)
+		c.hookRegistry.AddGraphQLServerLifecycle(moduleInstance, info.ID)
+		c.hookRegistry.AddRouterLifecycle(moduleInstance, info.ID)
+		c.hookRegistry.AddSubgraphLifecycle(moduleInstance, info.ID)
+		c.hookRegistry.AddOperationLifecycle(moduleInstance, info.ID)
 
 		c.logger.Info("Core Module System: Module registered",
 			zap.String("id", string(info.ID)),
@@ -135,7 +134,6 @@ func (c *coreModuleHooks) initCoreModuleHooks(ctx context.Context, modules []Mod
 		instances = append(instances, moduleInstance)
 	}
 
-	c.hookRegistry = hookRegistry
 	c.moduleInstances = instances
 
 	return nil

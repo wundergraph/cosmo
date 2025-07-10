@@ -14,6 +14,7 @@ type DatabaseModule struct {
 	connections map[string]*DatabaseConnection
 	metrics     *DatabaseMetrics
 	isReady     bool
+	wg          sync.WaitGroup
 }
 
 type DatabaseConnection struct {
@@ -35,6 +36,8 @@ func (m *DatabaseModule) Module() core.ModuleV1Info {
 		ID:       "database_module",
 		Priority: &priority,
 		New: func() core.ModuleV1 {
+			// For testing purposes, return the same instance so tests can inspect state.
+			// In production modules, you'd typically return &DatabaseModule{} for isolation.
 			return m
 		},
 	}
@@ -74,6 +77,8 @@ func (m *DatabaseModule) Provision(ctx *core.ModuleV1Context) error {
 
 func (m *DatabaseModule) Cleanup(ctx *core.ModuleV1Context) error {
 	ctx.Logger.Info("Shutting down database module...")
+
+	m.wg.Wait()
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -125,7 +130,9 @@ func (m *DatabaseModule) SimulateQuery(queryID string) error {
 	m.metrics.ActiveQueries++
 	m.metrics.TotalQueries++
 
+	m.wg.Add(1)
 	go func() {
+		defer m.wg.Done()
 		time.Sleep(10 * time.Millisecond)
 		m.mu.Lock()
 		m.metrics.ActiveQueries--
