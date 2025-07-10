@@ -24,6 +24,8 @@ describe('SDL to Proto - Basic Types', () => {
       "syntax = "proto3";
       package service.v1;
 
+      import "google/protobuf/wrappers.proto";
+
       // Service definition for DefaultService
       service DefaultService {
         rpc QueryBooleanField(QueryBooleanFieldRequest) returns (QueryBooleanFieldResponse) {}
@@ -38,35 +40,35 @@ describe('SDL to Proto - Basic Types', () => {
       }
       // Response message for stringField operation.
       message QueryStringFieldResponse {
-        string string_field = 1;
+        google.protobuf.StringValue string_field = 1;
       }
       // Request message for intField operation.
       message QueryIntFieldRequest {
       }
       // Response message for intField operation.
       message QueryIntFieldResponse {
-        int32 int_field = 1;
+        google.protobuf.Int32Value int_field = 1;
       }
       // Request message for floatField operation.
       message QueryFloatFieldRequest {
       }
       // Response message for floatField operation.
       message QueryFloatFieldResponse {
-        double float_field = 1;
+        google.protobuf.DoubleValue float_field = 1;
       }
       // Request message for booleanField operation.
       message QueryBooleanFieldRequest {
       }
       // Response message for booleanField operation.
       message QueryBooleanFieldResponse {
-        bool boolean_field = 1;
+        google.protobuf.BoolValue boolean_field = 1;
       }
       // Request message for idField operation.
       message QueryIdFieldRequest {
       }
       // Response message for idField operation.
       message QueryIdFieldResponse {
-        string id_field = 1;
+        google.protobuf.StringValue id_field = 1;
       }"
     `);
   });
@@ -185,6 +187,8 @@ describe('SDL to Proto - Basic Types', () => {
       "syntax = "proto3";
       package service.v1;
 
+      import "google/protobuf/wrappers.proto";
+
       // Service definition for DefaultService
       service DefaultService {
         rpc QueryUser(QueryUserRequest) returns (QueryUserResponse) {}
@@ -201,7 +205,7 @@ describe('SDL to Proto - Basic Types', () => {
       message User {
         string id = 1;
         string name = 2;
-        int32 age = 3;
+        google.protobuf.Int32Value age = 3;
       }"
     `);
   });
@@ -228,6 +232,8 @@ describe('SDL to Proto - Basic Types', () => {
       "syntax = "proto3";
       package service.v1;
 
+      import "google/protobuf/wrappers.proto";
+
       // Service definition for DefaultService
       service DefaultService {
         rpc QueryFilteredUsers(QueryFilteredUsersRequest) returns (QueryFilteredUsersResponse) {}
@@ -245,8 +251,8 @@ describe('SDL to Proto - Basic Types', () => {
       // Request message for filteredUsers operation.
       message QueryFilteredUsersRequest {
         int32 limit = 1;
-        int32 offset = 2;
-        string name_filter = 3;
+        google.protobuf.Int32Value offset = 2;
+        google.protobuf.StringValue name_filter = 3;
       }
       // Response message for filteredUsers operation.
       message QueryFilteredUsersResponse {
@@ -284,6 +290,8 @@ describe('SDL to Proto - Basic Types', () => {
 
       option go_package = "github.com/example/mypackage;mypackage";
 
+      import "google/protobuf/wrappers.proto";
+
       // Service definition for CustomService
       service CustomService {
         rpc QueryHello(QueryHelloRequest) returns (QueryHelloResponse) {}
@@ -294,7 +302,7 @@ describe('SDL to Proto - Basic Types', () => {
       }
       // Response message for hello operation.
       message QueryHelloResponse {
-        string hello = 1;
+        google.protobuf.StringValue hello = 1;
       }"
     `);
   });
@@ -320,6 +328,8 @@ describe('SDL to Proto - Basic Types', () => {
       "syntax = "proto3";
       package service.v1;
 
+      import "google/protobuf/wrappers.proto";
+
       // Service definition for DefaultService
       service DefaultService {
         rpc MutationField2(MutationField2Request) returns (MutationField2Response) {}
@@ -331,15 +341,15 @@ describe('SDL to Proto - Basic Types', () => {
       }
       // Response message for field1 operation.
       message QueryField1Response {
-        string field_1 = 1;
+        google.protobuf.StringValue field_1 = 1;
       }
       // Request message for field2 operation.
       message MutationField2Request {
-        string input = 1;
+        google.protobuf.StringValue input = 1;
       }
       // Response message for field2 operation.
       message MutationField2Response {
-        int32 field_2 = 1;
+        google.protobuf.Int32Value field_2 = 1;
       }"
     `);
   });
@@ -503,6 +513,76 @@ describe('SDL to Proto - Basic Types', () => {
       message Point {
         double x = 1;
         double y = 2;
+      }"
+    `);
+  });
+
+  test('should convert nullable scalar types to wrapper types', () => {
+    const sdl = `
+      type Query {
+        nullableString: String
+        nullableInt: Int
+        nullableFloat: Float
+        nullableBoolean: Boolean
+        nullableId: ID
+      }
+    `;
+
+    const { proto: protoText } = compileGraphQLToProto(sdl);
+
+    // Validate Proto definition
+    expectValidProto(protoText);
+
+    // Full snapshot to ensure overall structure is correct
+    expect(protoText).toMatchInlineSnapshot(`
+      "syntax = "proto3";
+      package service.v1;
+
+      import "google/protobuf/wrappers.proto";
+
+      // Service definition for DefaultService
+      service DefaultService {
+        rpc QueryNullableBoolean(QueryNullableBooleanRequest) returns (QueryNullableBooleanResponse) {}
+        rpc QueryNullableFloat(QueryNullableFloatRequest) returns (QueryNullableFloatResponse) {}
+        rpc QueryNullableId(QueryNullableIdRequest) returns (QueryNullableIdResponse) {}
+        rpc QueryNullableInt(QueryNullableIntRequest) returns (QueryNullableIntResponse) {}
+        rpc QueryNullableString(QueryNullableStringRequest) returns (QueryNullableStringResponse) {}
+      }
+
+      // Request message for nullableString operation.
+      message QueryNullableStringRequest {
+      }
+      // Response message for nullableString operation.
+      message QueryNullableStringResponse {
+        google.protobuf.StringValue nullable_string = 1;
+      }
+      // Request message for nullableInt operation.
+      message QueryNullableIntRequest {
+      }
+      // Response message for nullableInt operation.
+      message QueryNullableIntResponse {
+        google.protobuf.Int32Value nullable_int = 1;
+      }
+      // Request message for nullableFloat operation.
+      message QueryNullableFloatRequest {
+      }
+      // Response message for nullableFloat operation.
+      message QueryNullableFloatResponse {
+        google.protobuf.DoubleValue nullable_float = 1;
+      }
+      // Request message for nullableBoolean operation.
+      message QueryNullableBooleanRequest {
+      }
+      // Response message for nullableBoolean operation.
+      message QueryNullableBooleanResponse {
+        google.protobuf.BoolValue nullable_boolean = 1;
+      }
+      // Request message for nullableId operation.
+      message QueryNullableIdRequest {
+      }
+      // Response message for nullableId operation.
+      message QueryNullableIdResponse {
+        google.protobuf.StringValue nullable_id = 1;
       }"
     `);
   });

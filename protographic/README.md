@@ -18,6 +18,7 @@ Protographic bridges GraphQL and Protocol Buffers (protobuf) ecosystems through 
 - Robust handling of complex GraphQL features (unions, interfaces, directives)
 - First-class support for Federation entity mapping
 - Deterministic field ordering with proto.lock.json for backward compatibility
+- Use of Protocol Buffer wrappers for nullable fields to distinguish between semantic nulls and zero values
 
 ## Installation
 
