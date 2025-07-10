@@ -3,8 +3,6 @@ import { compileGraphQLToProto } from '../../src';
 import { expectValidProto } from '../util';
 
 describe('SDL to Proto - Edge Cases and Error Handling', () => {
-  
-
   test('should handle schema with only scalar fields correctly', () => {
     const sdl = `
       type Query {

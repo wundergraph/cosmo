@@ -444,18 +444,19 @@ export class GraphQLToProtoTextVisitor {
     // Add wrapper import if needed, at the correct position
     if (this.usesWrapperTypes) {
       // Find the position after the package declaration
-      const packageIndex = this.protoText.findIndex(line => line.startsWith('package '));
+      const packageIndex = this.protoText.findIndex((line) => line.startsWith('package '));
       if (packageIndex !== -1) {
         // Insert after package line and any existing options, but before service
         let insertIndex = packageIndex + 1;
-        
+
         // Skip over any existing options and empty lines
-        while (insertIndex < this.protoText.length && 
-               (this.protoText[insertIndex].startsWith('option ') || 
-                this.protoText[insertIndex].trim() === '')) {
+        while (
+          insertIndex < this.protoText.length &&
+          (this.protoText[insertIndex].startsWith('option ') || this.protoText[insertIndex].trim() === '')
+        ) {
           insertIndex++;
         }
-        
+
         this.protoText.splice(insertIndex, 0, 'import "google/protobuf/wrappers.proto";', '');
       }
     }
@@ -1366,10 +1367,9 @@ Example:
    * @returns The corresponding Protocol Buffer type name
    */
   private getProtoTypeFromGraphQL(graphqlType: GraphQLType, ignoreWrapperTypes: boolean = false): string {
-
     // For nullable scalar types, use wrapper types
     if (isScalarType(graphqlType)) {
-      if(ignoreWrapperTypes){
+      if (ignoreWrapperTypes) {
         return SCALAR_TYPE_MAP[graphqlType.name] || 'string';
       }
       this.usesWrapperTypes = true; // Track that we're using wrapper types
