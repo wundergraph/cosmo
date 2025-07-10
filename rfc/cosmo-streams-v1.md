@@ -1,33 +1,44 @@
 # RFC Cosmo Streams V1
-All should use the custom modules
 
-## Authorization
+We received feedback from customers that they need a way to customize the Streams behaviour. The most important things to customize are:
+- authorization checks when starting subscriptions
+- send a first message to the client when a subscription is started
+- map data to align with internal specifications
+- filter events with custom logic
 
-### Prerequisites
+All these customization pieces should use the custom modules system.
+
+## Requirements
+
+### Authorization
+
+#### Prerequisites
 * In the authorization hook, we need to make the decision if the client/user is authorized at all to subscribe
 * second, we have to decide which topics the user is allowed to subscribe to.
 
-### Additional prerequisites
+#### Additional prerequisites
 We can use a similar hook also for non-stream subscriptions, to satisfy the following requirements:
 * Should also allow for customers to add additional logic on JWT, like verify expiration, sign/secrets
 * Should allow to return a Unauthenticated/Unauthorized message and close the subscriptions
 (requested by united talent)
 
-## Init Func
-### Prerequisites
+### Init Func
+#### Prerequisites
 * From the client request, derive an initial payload to resolve the first event. Can be optional. Can be implemented but might not return an initial payload.
 
-## Map from broker to entity
-### Prerequisites
+### Map from broker to entity
+#### Prerequisites
 * Some customers, like Procore, have existing Kafka infra that doesn't align with their GraphQL Schema. They might use headers or other Kafka specific features. This function will take events from any broker and allow us to map them to valid entity objects.
 
-## Filter entity events
-### Prerequisites
+### Filter entity events
+#### Prerequisites
 * Based on client request, client args, authentication, etc. the function can filter the stream for each subscriber.
 
-# Proposal
+## Proposal
 
-## Core Types
+The best way to satisfy all the requirements is to add some hook in the stream lifecycle. We will also need some more data structure to allow the new hooks to read and write in the streams.
+
+### Core Types to add
 
 core.OperationContext
 - add `Variables() *astjson.Value`
@@ -102,7 +113,7 @@ core.StreamContext
 - `WriteEvent(event core.StreamEvent)`, write an event to the stream
 - `Close()`, close the stream
 
-## Hooks
+### Hooks to add
 
 core.RouterOnSubscriptionStartHandler
 - `RouterOnSubscriptionStart(ctx core.SubscriptionContext)`, called once at subscription start
