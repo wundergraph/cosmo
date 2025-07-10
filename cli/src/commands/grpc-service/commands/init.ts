@@ -104,12 +104,8 @@ async function downloadAndExtractTemplate(template: string, outputDir: string, s
     throw error;
   } finally {
     // Cleanup
-    try {
-      await fs.remove(tempTarPath);
-    } catch {}
-    try {
-      await fs.remove(tempExtractDir);
-    } catch {}
+    await fs.remove(tempTarPath).catch();
+    await fs.remove(tempExtractDir).catch();
   }
 }
 
