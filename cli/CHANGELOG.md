@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.87.0](https://github.com/wundergraph/cosmo/compare/wgc@0.86.0...wgc@0.87.0) (2025-07-10)
+
+### Features
+
+* **cli:** add wgc grpc-service list-templates & init ([#2033](https://github.com/wundergraph/cosmo/issues/2033)) ([c053643](https://github.com/wundergraph/cosmo/commit/c05364343b37384d123fca68d2822e64dc5fff68)) (@jensneuse)
+
+# [0.86.0](https://github.com/wundergraph/cosmo/compare/wgc@0.85.6...wgc@0.86.0) (2025-07-09)
+
+### Features
+
+* return the proposal name on the creation of proposal ([#2003](https://github.com/wundergraph/cosmo/issues/2003)) ([ff1b237](https://github.com/wundergraph/cosmo/commit/ff1b2376921db2db7ac2a9d1619824eb1ae1e76d)) (@JivusAyrus)
+
 ## [0.85.6](https://github.com/wundergraph/cosmo/compare/wgc@0.85.5...wgc@0.85.6) (2025-07-03)
 
 **Note:** Version bump only for package wgc

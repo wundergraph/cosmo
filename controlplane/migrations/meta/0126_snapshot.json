@@ -1,5 +1,5 @@
 {
-  "id": "208dacd5-7ccf-4606-9e27-d3fac5ee4e75",
+  "id": "55b1d2df-08b7-46dd-875d-48039935743b",
   "prevId": "c676a44a-0822-4868-9929-0da5f1004d45",
   "version": "7",
   "dialect": "postgresql",
@@ -5177,6 +5177,21 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "pr_federated_graph_id_idx": {
+          "name": "pr_federated_graph_id_idx",
+          "columns": [
+            {
+              "expression": "federated_graph_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -8048,8 +8063,7 @@
         "graph-admin",
         "graph-viewer",
         "subgraph-admin",
-        "subgraph-publisher",
-        "subgraph-viewer"
+        "subgraph-publisher"
       ]
     },
     "public.playground_script_type": {
