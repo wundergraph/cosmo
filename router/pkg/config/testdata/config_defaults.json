@@ -406,6 +406,7 @@
     "OmitExtensions": false,
     "AttachServiceName": true,
     "DefaultExtensionCode": "DOWNSTREAM_SERVICE_ERROR",
+    "AllowAllExtensionFields": false,
     "AllowedExtensionFields": [
       "code"
     ],

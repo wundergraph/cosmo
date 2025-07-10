@@ -184,6 +184,7 @@ describe('Update proposal tests', () => {
     'graph-viewer',
     'subgraph-admin',
     'subgraph-publisher',
+    'subgraph-viewer',
   ])('%s should not update proposal state from DRAFT to APPROVED', async (role) => {
     const { client, server, authenticator, users } = await SetupTest({
       dbname,
