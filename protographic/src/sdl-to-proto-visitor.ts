@@ -390,7 +390,7 @@ export class GraphQLToProtoTextVisitor {
 
     // Add syntax declaration
     header.push('syntax = "proto3";');
-    
+
     // Add package declaration
     header.push(`package ${this.packageName};`);
     header.push('');
