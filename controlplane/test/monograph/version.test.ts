@@ -152,6 +152,7 @@ describe('monograph version tests', () => {
       'namespace-viewer',
       'subgraph-admin',
       'subgraph-publisher',
+      'subgraph-viewer',
     ])('%s should not be able to read the version of a monograph', async (role) => {
       const { client, server, authenticator, users } = await SetupTest({ dbname, chClient });
       const namespace = genID('namespace').toLowerCase();
@@ -435,6 +436,7 @@ describe('monograph version tests', () => {
       'namespace-viewer',
       'graph-viewer',
       'subgraph-admin',
+      'subgraph-publisher',
       'subgraph-viewer',
     ])('%s should not be able to update the router compatibility version', async (role) => {
       const { client, blobStorage, server, authenticator, users } = await SetupTest({ dbname, chClient });

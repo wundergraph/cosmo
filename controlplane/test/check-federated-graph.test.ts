@@ -369,6 +369,7 @@ describe('CheckFederatedGraph', (ctx) => {
     'namespace-viewer',
     'graph-viewer',
     'subgraph-admin',
+    'subgraph-publisher',
     'subgraph-viewer',
   ])('%s should not be able to check graphs for composition errors', async (role) => {
     const { client, server, users, authenticator } = await SetupTest({ dbname, chClient });

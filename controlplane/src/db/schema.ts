@@ -1346,6 +1346,7 @@ export const organizationRoleEnum = pgEnum('organization_role', [
   'graph-viewer',
   'subgraph-admin',
   'subgraph-publisher',
+  'subgraph-viewer',
 ] as const);
 
 export const organizationGroups = pgTable('organization_groups', {

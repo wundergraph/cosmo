@@ -125,6 +125,7 @@ describe('Delete feature flag tests', () => {
     'graph-viewer',
     'subgraph-admin',
     'subgraph-publisher',
+    'subgraph-viewer',
   ])('%s should not be able to create feature flag', async (role) => {
     const { client, server, users, authenticator } = await SetupTest({ dbname });
 

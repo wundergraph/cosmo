@@ -245,6 +245,7 @@ describe('CheckSubgraphSchema', (ctx) => {
     'namespace-viewer',
     'graph-admin',
     'graph-viewer',
+    'subgraph-viewer',
   ])('%s should not be able to create a subgraph, publish the schema and then check with new schema', async (role) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname, chClient });
 
