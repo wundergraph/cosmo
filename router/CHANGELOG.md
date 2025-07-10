@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.233.0](https://github.com/wundergraph/cosmo/compare/router@0.232.1...router@0.233.0) (2025-07-10)
+
+### Features
+
+* **router:** option to allow all error extensions ([#2026](https://github.com/wundergraph/cosmo/issues/2026)) ([8fa9c45](https://github.com/wundergraph/cosmo/commit/8fa9c4529d5e541ce4b7cf29cfa778227120eff4)) (@endigma)
+
 ## [0.232.1](https://github.com/wundergraph/cosmo/compare/router@0.232.0...router@0.232.1) (2025-07-10)
 
 ### Bug Fixes
