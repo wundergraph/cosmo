@@ -1,6 +1,6 @@
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { existsSync, lstatSync } from 'node:fs';
-import { resolve, dirname } from 'pathe';
+import { resolve } from 'pathe';
 import Spinner from 'ora';
 import { Command, program } from 'commander';
 import { compileGraphQLToMapping, compileGraphQLToProto, ProtoLock } from '@wundergraph/protographic';
@@ -38,8 +38,9 @@ async function generateCommandAction(name: string, options: any) {
   try {
     const inputFile = resolve(options.input);
 
+    // Ensure output directory exists
     if (!existsSync(options.output)) {
-      program.error(`Output directory ${options.output} does not exist`);
+      await mkdir(options.output, { recursive: true });
     }
 
     if (!lstatSync(options.output).isDirectory()) {

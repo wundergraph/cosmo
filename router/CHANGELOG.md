@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.232.1](https://github.com/wundergraph/cosmo/compare/router@0.232.0...router@0.232.1) (2025-07-10)
+
+### Bug Fixes
+
+* enable input value deprecation in introspection query ([#2030](https://github.com/wundergraph/cosmo/issues/2030)) ([d53e9d6](https://github.com/wundergraph/cosmo/commit/d53e9d678b655cc178ee3c14888ff1ea45df23ec)) (@JivusAyrus)
+
 # [0.232.0](https://github.com/wundergraph/cosmo/compare/router@0.231.1...router@0.232.0) (2025-07-09)
 
 ### Bug Fixes
