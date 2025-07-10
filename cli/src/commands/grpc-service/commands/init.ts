@@ -12,13 +12,20 @@ import { BaseCommandOptions } from '../../../core/types/types.js';
 import { fetchAvailableTemplates } from './list-templates.js';
 
 async function checkTemplateExists(template: string): Promise<boolean> {
-  const url = `https://api.github.com/repos/wundergraph/cosmo-templates/contents/grpc-service/${template}`;
-  const res = await fetch(url, { headers: { Accept: 'application/vnd.github.v3+json' } });
-  if (res.status === 200) {
-    const data: any = await res.json();
-    return Array.isArray(data); // Should be an array if it's a directory
+  const octokit = new Octokit();
+  const owner = 'wundergraph';
+  const repo = 'cosmo-templates';
+  const path = `grpc-service/${template}`;
+  try {
+    const res = await octokit.repos.getContent({ owner, repo, path });
+    // If it's a directory, res.data will be an array
+    return Array.isArray(res.data);
+  } catch (error: any) {
+    if (error.status === 404) {
+      return false;
+    }
+    throw error;
   }
-  return false;
 }
 
 async function downloadAndExtractTemplate(template: string, outputDir: string, spinner: any) {
