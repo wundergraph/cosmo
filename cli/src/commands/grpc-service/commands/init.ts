@@ -94,11 +94,9 @@ async function downloadAndExtractTemplate(template: string, outputDir: string, s
     }
 
     // Copy extracted files to outputDir
-    try {
-      await fs.copy(tempExtractDir, outputDir, { overwrite: true });
-    } catch (err: any) {
-      throw new Error(`Failed to copy extracted files to output directory: ${err.message || err}`);
-    }
+   await fs.copy(tempExtractDir, outputDir, { overwrite: true }).catch(err => {
+       throw new Error(`Failed to copy extracted files to output directory: ${err.message || err}`);
+   }
   } catch (error: any) {
     spinner.fail(pc.red('Error during template extraction.'));
     throw error;
