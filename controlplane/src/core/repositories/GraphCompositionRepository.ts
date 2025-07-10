@@ -80,31 +80,31 @@ export class GraphCompositionRepository {
         .execute();
 
       if (subgraphSchemaVersionIds.length > 0) {
-        const prevCompositionSubgraphs: {
+        let prevCompositionSubgraphs: {
           id: string;
           name: string;
           schemaVersionId: string;
           targetId: string;
           isFeatureSubgraph: boolean;
         }[] = [];
+
         if (previousComposition) {
-          const prevSubgraphs = await tx
-            .select({
-              id: graphCompositionSubgraphs.subgraphId,
-              name: graphCompositionSubgraphs.subgraphName,
-              schemaVersionId: graphCompositionSubgraphs.schemaVersionId,
-              targetId: graphCompositionSubgraphs.subgraphTargetId,
-              isFeatureSubgraph: graphCompositionSubgraphs.isFeatureSubgraph,
-            })
-            .from(graphCompositionSubgraphs)
-            .where(
-              and(
-                eq(graphCompositionSubgraphs.graphCompositionId, previousComposition.id),
-                not(eq(graphCompositionSubgraphs.changeType, 'removed')),
-              ),
-            )
-            .execute();
-          prevCompositionSubgraphs.push(...prevSubgraphs);
+         prevCompositionSubgraphs = await tx
+           .select({
+             id: graphCompositionSubgraphs.subgraphId,
+             name: graphCompositionSubgraphs.subgraphName,
+             schemaVersionId: graphCompositionSubgraphs.schemaVersionId,
+             targetId: graphCompositionSubgraphs.subgraphTargetId,
+             isFeatureSubgraph: graphCompositionSubgraphs.isFeatureSubgraph,
+           })
+           .from(graphCompositionSubgraphs)
+           .where(
+             and(
+               eq(graphCompositionSubgraphs.graphCompositionId, previousComposition.id),
+               not(eq(graphCompositionSubgraphs.changeType, 'removed')),
+             ),
+           )
+           .execute();
         }
 
         const addedSubgraphs = composedSubgraphs.filter(
