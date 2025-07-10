@@ -123,6 +123,12 @@ export default (opts: BaseCommandOptions) => {
     .action(async (options: { template: string; directory: string }) => {
       const spinner = Spinner();
       const template = options.template || 'typescript-connect-rpc-fastify';
+      // Validate template name to prevent path traversal
+      if (!/^[\w-]+$/.test(template)) {
+        program.error(
+          `Invalid template name '${template}'. Template names can only contain letters, numbers, hyphens, and underscores.`,
+        );
+      }
       const outputDir = resolve(process.cwd(), options.directory || '.');
 
       spinner.start(`Checking if template '${template}' exists...`);
