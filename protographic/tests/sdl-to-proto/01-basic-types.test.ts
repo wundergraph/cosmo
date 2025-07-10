@@ -586,4 +586,158 @@ describe('SDL to Proto - Basic Types', () => {
       }"
     `);
   });
+
+  test('should use wrapper types in nested and recursive scenarios', () => {
+    const sdl = `
+      type User {
+        id: ID!
+        name: String!
+        email: String
+        profile: UserProfile
+        friends: [User]
+      }
+
+      type UserProfile {
+        bio: String
+        age: Int
+        isVerified: Boolean
+        socialLinks: SocialLinks
+      }
+
+      type SocialLinks {
+        twitter: String
+        linkedin: String
+        website: String
+      }
+
+      type TreeNode {
+        id: ID!
+        value: String
+        weight: Float
+        isLeaf: Boolean!
+        children: [TreeNode]
+        parent: TreeNode
+      }
+
+      type Query {
+        user(id: ID!): User
+        tree(id: ID!): TreeNode
+      }
+
+      input UserInput {
+        name: String!
+        email: String
+        profile: UserProfileInput
+      }
+
+      input UserProfileInput {
+        bio: String
+        age: Int
+        isVerified: Boolean
+      }
+
+      type Mutation {
+        createUser(input: UserInput!): User
+        updateTreeNode(id: ID!, value: String, weight: Float): TreeNode
+      }
+    `;
+
+    const { proto: protoText } = compileGraphQLToProto(sdl);
+
+    // Validate Proto definition
+    expectValidProto(protoText);
+
+    // Full snapshot to ensure wrapper types are used correctly in nested and recursive scenarios
+    expect(protoText).toMatchInlineSnapshot(`
+      "syntax = "proto3";
+      package service.v1;
+
+      import "google/protobuf/wrappers.proto";
+
+      // Service definition for DefaultService
+      service DefaultService {
+        rpc MutationCreateUser(MutationCreateUserRequest) returns (MutationCreateUserResponse) {}
+        rpc MutationUpdateTreeNode(MutationUpdateTreeNodeRequest) returns (MutationUpdateTreeNodeResponse) {}
+        rpc QueryTree(QueryTreeRequest) returns (QueryTreeResponse) {}
+        rpc QueryUser(QueryUserRequest) returns (QueryUserResponse) {}
+      }
+
+      // Request message for user operation.
+      message QueryUserRequest {
+        string id = 1;
+      }
+      // Response message for user operation.
+      message QueryUserResponse {
+        User user = 1;
+      }
+      // Request message for tree operation.
+      message QueryTreeRequest {
+        string id = 1;
+      }
+      // Response message for tree operation.
+      message QueryTreeResponse {
+        TreeNode tree = 1;
+      }
+      // Request message for createUser operation.
+      message MutationCreateUserRequest {
+        UserInput input = 1;
+      }
+      // Response message for createUser operation.
+      message MutationCreateUserResponse {
+        User create_user = 1;
+      }
+      // Request message for updateTreeNode operation.
+      message MutationUpdateTreeNodeRequest {
+        string id = 1;
+        google.protobuf.StringValue value = 2;
+        google.protobuf.DoubleValue weight = 3;
+      }
+      // Response message for updateTreeNode operation.
+      message MutationUpdateTreeNodeResponse {
+        TreeNode update_tree_node = 1;
+      }
+
+      message User {
+        string id = 1;
+        string name = 2;
+        google.protobuf.StringValue email = 3;
+        UserProfile profile = 4;
+        repeated User friends = 5;
+      }
+
+      message TreeNode {
+        string id = 1;
+        google.protobuf.StringValue value = 2;
+        google.protobuf.DoubleValue weight = 3;
+        bool is_leaf = 4;
+        repeated TreeNode children = 5;
+        TreeNode parent = 6;
+      }
+
+      message UserInput {
+        string name = 1;
+        google.protobuf.StringValue email = 2;
+        UserProfileInput profile = 3;
+      }
+
+      message UserProfile {
+        google.protobuf.StringValue bio = 1;
+        google.protobuf.Int32Value age = 2;
+        google.protobuf.BoolValue is_verified = 3;
+        SocialLinks social_links = 4;
+      }
+
+      message SocialLinks {
+        google.protobuf.StringValue twitter = 1;
+        google.protobuf.StringValue linkedin = 2;
+        google.protobuf.StringValue website = 3;
+      }
+
+      message UserProfileInput {
+        google.protobuf.StringValue bio = 1;
+        google.protobuf.Int32Value age = 2;
+        google.protobuf.BoolValue is_verified = 3;
+      }"
+    `);
+  });
 });
