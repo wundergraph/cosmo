@@ -106,11 +106,20 @@ export class GraphQLToProtoTextVisitor {
   /** The name of the Protocol Buffer service */
   private readonly serviceName: string;
 
+  /** The package name for the proto file */
+  private readonly packageName: string;
+
   /** The lock manager for deterministic ordering */
   private readonly lockManager: ProtoLockManager;
 
   /** Generated proto lock data */
   private generatedLockData: ProtoLock | null = null;
+
+  /** List of import statements */
+  private imports: string[] = [];
+
+  /** List of option statements */
+  private options: string[] = [];
 
   /** Accumulates the Protocol Buffer definition text */
   private protoText: string[] = [];
@@ -156,6 +165,7 @@ export class GraphQLToProtoTextVisitor {
 
     this.schema = schema;
     this.serviceName = serviceName;
+    this.packageName = packageName;
     this.lockManager = new ProtoLockManager(lockData);
     this.includeComments = includeComments;
 
@@ -164,17 +174,13 @@ export class GraphQLToProtoTextVisitor {
       this.initializeFieldNumbersMap(lockData);
     }
 
-    const protoOptions = [];
-
+    // Initialize options
     if (goPackage && goPackage !== '') {
       // Generate default go_package if not provided
       const defaultGoPackage = `cosmo/pkg/proto/${packageName};${packageName.replace('.', '')}`;
       const goPackageOption = goPackage || defaultGoPackage;
-      protoOptions.push(`option go_package = "${goPackageOption}";\n`);
+      this.options.push(`option go_package = "${goPackageOption}";`);
     }
-
-    // Initialize the Proto definition with the standard header
-    this.protoText = ['syntax = "proto3";', `package ${packageName};`, '', ...protoOptions];
   }
 
   /**
@@ -359,15 +365,65 @@ export class GraphQLToProtoTextVisitor {
   }
 
   /**
+   * Add an import statement to the proto file
+   */
+  private addImport(importPath: string): void {
+    if (!this.imports.includes(importPath)) {
+      this.imports.push(importPath);
+    }
+  }
+
+  /**
+   * Add an option statement to the proto file
+   */
+  private addOption(optionStatement: string): void {
+    if (!this.options.includes(optionStatement)) {
+      this.options.push(optionStatement);
+    }
+  }
+
+  /**
+   * Build the proto file header with syntax, package, imports, and options
+   */
+  private buildProtoHeader(): string[] {
+    const header: string[] = [];
+
+    // Add syntax declaration
+    header.push('syntax = "proto3";');
+
+    // Add package declaration
+    header.push(`package ${this.packageName};`);
+    header.push('');
+
+    // Add options if any (options come before imports)
+    if (this.options.length > 0) {
+      // Sort options for consistent output
+      const sortedOptions = [...this.options].sort();
+      for (const option of sortedOptions) {
+        header.push(option);
+      }
+      header.push('');
+    }
+
+    // Add imports if any
+    if (this.imports.length > 0) {
+      // Sort imports for consistent output
+      const sortedImports = [...this.imports].sort();
+      for (const importPath of sortedImports) {
+        header.push(`import "${importPath}";`);
+      }
+      header.push('');
+    }
+
+    return header;
+  }
+
+  /**
    * Visit the GraphQL schema to generate Proto buffer definition
    *
    * @returns The complete Protocol Buffer definition as a string
    */
   public visit(): string {
-    // Clear the protoText array to just contain the header
-    const headerText = this.protoText.slice();
-    this.protoText = [];
-
     // Collect RPC methods and message definitions from all sources
     const entityResult = this.collectEntityRpcMethods();
     const queryResult = this.collectQueryRpcMethods();
@@ -386,17 +442,28 @@ export class GraphQLToProtoTextVisitor {
     // Add all types from the schema to the queue that weren't already queued
     this.queueAllSchemaTypes();
 
-    // Start with the header
-    this.protoText = headerText;
+    // Process all complex types from the message queue to determine if wrapper types are needed
+    this.processMessageQueue();
+
+    // Add wrapper import if needed
+    if (this.usesWrapperTypes) {
+      this.addImport('google/protobuf/wrappers.proto');
+    }
+
+    // Build the complete proto file
+    const protoContent: string[] = [];
+
+    // Add the header (syntax, package, imports, options)
+    protoContent.push(...this.buildProtoHeader());
 
     // Add a service description comment
     if (this.includeComments) {
       const serviceComment = `Service definition for ${this.serviceName}`;
-      this.protoText.push(...this.formatComment(serviceComment, 0)); // Top-level comment, no indent
+      protoContent.push(...this.formatComment(serviceComment, 0)); // Top-level comment, no indent
     }
 
-    // First: Create service block containing only RPC methods
-    this.protoText.push(`service ${this.serviceName} {`);
+    // Add service block containing RPC methods
+    protoContent.push(`service ${this.serviceName} {`);
     this.indent++;
 
     // Sort method names deterministically by alphabetical order
@@ -411,60 +478,40 @@ export class GraphQLToProtoTextVisitor {
         if (rpcMethodText.includes('\n')) {
           // For multi-line RPC method definitions (with comments), add each line separately
           const lines = rpcMethodText.split('\n');
-          this.protoText.push(...lines);
+          protoContent.push(...lines);
         } else {
           // For simple one-line RPC method definitions (ensure 2-space indentation)
-          this.protoText.push(`  ${rpcMethodText}`);
+          protoContent.push(`  ${rpcMethodText}`);
         }
       }
     }
 
     // Close service definition
     this.indent--;
-    this.protoText.push('}');
-    this.protoText.push('');
+    protoContent.push('}');
+    protoContent.push('');
 
     // Add all wrapper messages first since they might be referenced by other messages
     if (this.nestedListWrappers.size > 0) {
       // Sort the wrappers by name for deterministic output
       const sortedWrapperNames = Array.from(this.nestedListWrappers.keys()).sort();
       for (const wrapperName of sortedWrapperNames) {
-        this.protoText.push(this.nestedListWrappers.get(wrapperName)!);
+        protoContent.push(this.nestedListWrappers.get(wrapperName)!);
       }
     }
 
-    // Second: Add all message definitions
+    // Add all message definitions
     for (const messageDef of allMessageDefinitions) {
-      this.protoText.push(messageDef);
+      protoContent.push(messageDef);
     }
 
-    // Third: Process all complex types from the message queue in a single pass
-    this.processMessageQueue();
-
-    // Add wrapper import if needed, at the correct position
-    if (this.usesWrapperTypes) {
-      // Find the position after the package declaration
-      const packageIndex = this.protoText.findIndex((line) => line.startsWith('package '));
-      if (packageIndex !== -1) {
-        // Insert after package line and any existing options, but before service
-        let insertIndex = packageIndex + 1;
-
-        // Skip over any existing options and empty lines
-        while (
-          insertIndex < this.protoText.length &&
-          (this.protoText[insertIndex].startsWith('option ') || this.protoText[insertIndex].trim() === '')
-        ) {
-          insertIndex++;
-        }
-
-        this.protoText.splice(insertIndex, 0, 'import "google/protobuf/wrappers.proto";', '');
-      }
-    }
+    // Add all processed types from protoText (populated by processMessageQueue)
+    protoContent.push(...this.protoText);
 
     // Store the generated lock data for retrieval
     this.generatedLockData = this.lockManager.getLockData();
 
-    return this.protoText.join('\n');
+    return protoContent.join('\n');
   }
 
   /**
