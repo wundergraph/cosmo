@@ -1,16 +1,22 @@
 import { Command } from 'commander';
 import pc from 'picocolors';
-import fetch from 'node-fetch';
 import Spinner from 'ora';
+import { Octokit } from '@octokit/rest';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 
 export async function fetchAvailableTemplates(): Promise<string[]> {
-  const url = 'https://api.github.com/repos/wundergraph/cosmo-grpc-templates/contents';
-  const res = await fetch(url, { headers: { Accept: 'application/vnd.github.v3+json' } });
-  if (res.status === 200) {
-    const data = (await res.json()) as any[];
-    // Only return directories
-    return data.filter((item: any) => item.type === 'dir').map((item: any) => item.name);
+  const octokit = new Octokit();
+  const owner = 'wundergraph';
+  const repo = 'cosmo-templates';
+  const path = 'grpc-service';
+
+  try {
+    const res = await octokit.repos.getContent({ owner, repo, path });
+    if (Array.isArray(res.data)) {
+      return res.data.filter((item: any) => item.type === 'dir').map((item: any) => item.name);
+    }
+  } catch {
+    console.error('Error listing templates from https://github.com/wundergraph/cosmo-templates/');
   }
   return [];
 }
@@ -32,7 +38,7 @@ export default (_opts: BaseCommandOptions) => {
       console.log(`  wgc grpc-service init --template ${templates[0]} --directory ./output`);
       console.log('');
     } else {
-      console.log(pc.red('No templates found in wundergraph/cosmo-grpc-templates.'));
+      console.log(pc.red('No templates found in wundergraph/cosmo-templates under grpc-service.'));
     }
   });
   return command;

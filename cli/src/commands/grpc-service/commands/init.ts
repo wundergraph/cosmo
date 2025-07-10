@@ -1,22 +1,69 @@
 import { existsSync, readdirSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
+import os from 'node:os';
 import { Command, program } from 'commander';
-import { resolve } from 'pathe';
+import { resolve, join } from 'pathe';
 import Spinner from 'ora';
-import degit from 'degit';
+import { Octokit } from '@octokit/rest';
+import { extract, t } from 'tar';
+import fs from 'fs-extra';
 import pc from 'picocolors';
-import fetch from 'node-fetch';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { fetchAvailableTemplates } from './list-templates.js';
 
 async function checkTemplateExists(template: string): Promise<boolean> {
-  const url = `https://api.github.com/repos/wundergraph/cosmo-grpc-templates/contents/${template}`;
+  const url = `https://api.github.com/repos/wundergraph/cosmo-templates/contents/grpc-service/${template}`;
   const res = await fetch(url, { headers: { Accept: 'application/vnd.github.v3+json' } });
   if (res.status === 200) {
     const data: any = await res.json();
     return Array.isArray(data); // Should be an array if it's a directory
   }
   return false;
+}
+
+async function downloadAndExtractTemplate(template: string, outputDir: string, spinner: any) {
+  const octokit = new Octokit();
+  const owner = 'wundergraph';
+  const repo = 'cosmo-templates';
+  const ref = 'main'; // You may want to make this configurable
+  const tempTarPath = join(os.tmpdir(), `cosmo-templates-${Date.now()}.tar.gz`);
+  const tempExtractDir = join(os.tmpdir(), `cosmo-templates-extract-${Date.now()}`);
+  await fs.ensureDir(tempExtractDir);
+
+  spinner.text = 'Downloading template from GitHub...';
+  const response = await octokit.repos.downloadTarballArchive({ owner, repo, ref });
+  if (response.data instanceof ArrayBuffer) {
+    await fs.writeFile(tempTarPath, new Uint8Array(Buffer.from(response.data)));
+  } else {
+    throw new TypeError('Unexpected tarball response type');
+  }
+
+  spinner.text = 'Extracting template files...';
+  // The tarball will have a top-level directory like cosmo-templates-<sha>/grpc-service/<template>/
+  // We want to extract only grpc-service/<template> and copy its contents to outputDir
+  let topLevelDir = '';
+  await t({
+    file: tempTarPath,
+    onentry: (entry: { path: string }) => {
+      if (!topLevelDir && entry.path.includes('/')) {
+        topLevelDir = entry.path.split('/')[0];
+      }
+    },
+  });
+  const templatePathInTar = `${topLevelDir}/grpc-service/${template}`;
+  await extract({
+    file: tempTarPath,
+    cwd: tempExtractDir,
+    filter: (p: string) => p.startsWith(templatePathInTar + '/'),
+    strip: templatePathInTar.split('/').length,
+  });
+
+  // Copy extracted files to outputDir
+  await fs.copy(tempExtractDir, outputDir, { overwrite: true });
+
+  // Cleanup
+  await fs.remove(tempTarPath);
+  await fs.remove(tempExtractDir);
 }
 
 export default (opts: BaseCommandOptions) => {
@@ -28,7 +75,6 @@ export default (opts: BaseCommandOptions) => {
     const spinner = Spinner();
     const template = options.template || 'typescript-connect-rpc-fastify';
     const outputDir = resolve(process.cwd(), options.directory || '.');
-    const repo = `wundergraph/cosmo-grpc-templates/${template}`;
 
     spinner.start(`Checking if template '${template}' exists...`);
     const exists = await checkTemplateExists(template);
@@ -46,10 +92,10 @@ export default (opts: BaseCommandOptions) => {
         console.log(`  wgc grpc-service init --template ${templates[0]} --directory ./output`);
         console.log('');
       } else {
-        console.log(pc.red('No templates found in wundergraph/cosmo-grpc-templates.'));
+        console.log(pc.red('No templates found in wundergraph/cosmo-templates under grpc-service.'));
       }
       program.error(
-        `Template '${template}' does not exist in wundergraph/cosmo-grpc-templates. Please check the template name and try again.`,
+        `Template '${template}' does not exist in wundergraph/cosmo-templates under grpc-service. Please check the template name and try again.`,
       );
     }
 
@@ -67,11 +113,7 @@ export default (opts: BaseCommandOptions) => {
       } else {
         await mkdir(outputDir, { recursive: true });
       }
-      const emitter = degit(repo, { force: true, verbose: false });
-      emitter.on('info', (info: any) => {
-        spinner.text = info.message;
-      });
-      await emitter.clone(outputDir);
+      await downloadAndExtractTemplate(template, outputDir, spinner);
       spinner.succeed(pc.green(`gRPC service scaffolded in ${outputDir}`));
       console.log('');
       console.log(
