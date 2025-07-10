@@ -724,16 +724,17 @@ const (
 )
 
 type SubgraphErrorPropagationConfiguration struct {
-	Enabled                bool                         `yaml:"enabled" envDefault:"true" env:"SUBGRAPH_ERROR_PROPAGATION_ENABLED"`
-	PropagateStatusCodes   bool                         `yaml:"propagate_status_codes" envDefault:"false" env:"SUBGRAPH_ERROR_PROPAGATION_STATUS_CODES"`
-	Mode                   SubgraphErrorPropagationMode `yaml:"mode" envDefault:"wrapped" env:"SUBGRAPH_ERROR_PROPAGATION_MODE"`
-	RewritePaths           bool                         `yaml:"rewrite_paths" envDefault:"true" env:"SUBGRAPH_ERROR_PROPAGATION_REWRITE_PATHS"`
-	OmitLocations          bool                         `yaml:"omit_locations" envDefault:"true" env:"SUBGRAPH_ERROR_PROPAGATION_OMIT_LOCATIONS"`
-	OmitExtensions         bool                         `yaml:"omit_extensions" envDefault:"false" env:"SUBGRAPH_ERROR_PROPAGATION_OMIT_EXTENSIONS"`
-	AttachServiceName      bool                         `yaml:"attach_service_name" envDefault:"true" env:"SUBGRAPH_ERROR_PROPAGATION_ATTACH_SERVICE_NAME"`
-	DefaultExtensionCode   string                       `yaml:"default_extension_code" envDefault:"DOWNSTREAM_SERVICE_ERROR" env:"SUBGRAPH_ERROR_PROPAGATION_DEFAULT_EXTENSION_CODE"`
-	AllowedExtensionFields []string                     `yaml:"allowed_extension_fields" envDefault:"code" env:"SUBGRAPH_ERROR_PROPAGATION_ALLOWED_EXTENSION_FIELDS"`
-	AllowedFields          []string                     `yaml:"allowed_fields" env:"SUBGRAPH_ERROR_PROPAGATION_ALLOWED_FIELDS"`
+	Enabled                 bool                         `yaml:"enabled" envDefault:"true" env:"ENABLED"`
+	PropagateStatusCodes    bool                         `yaml:"propagate_status_codes" envDefault:"false" env:"STATUS_CODES"`
+	Mode                    SubgraphErrorPropagationMode `yaml:"mode" envDefault:"wrapped" env:"MODE"`
+	RewritePaths            bool                         `yaml:"rewrite_paths" envDefault:"true" env:"REWRITE_PATHS"`
+	OmitLocations           bool                         `yaml:"omit_locations" envDefault:"true" env:"OMIT_LOCATIONS"`
+	OmitExtensions          bool                         `yaml:"omit_extensions" envDefault:"false" env:"OMIT_EXTENSIONS"`
+	AttachServiceName       bool                         `yaml:"attach_service_name" envDefault:"true" env:"ATTACH_SERVICE_NAME"`
+	DefaultExtensionCode    string                       `yaml:"default_extension_code" envDefault:"DOWNSTREAM_SERVICE_ERROR" env:"DEFAULT_EXTENSION_CODE"`
+	AllowAllExtensionFields bool                         `yaml:"allow_all_extension_fields" envDefault:"false" env:"ALLOW_ALL_EXTENSION_FIELDS"`
+	AllowedExtensionFields  []string                     `yaml:"allowed_extension_fields" envDefault:"code" env:"ALLOWED_EXTENSION_FIELDS"`
+	AllowedFields           []string                     `yaml:"allowed_fields" env:"ALLOWED_FIELDS"`
 }
 
 type StorageProviders struct {
@@ -1009,7 +1010,7 @@ type Config struct {
 
 	WebSocket WebSocketConfiguration `yaml:"websocket,omitempty"`
 
-	SubgraphErrorPropagation SubgraphErrorPropagationConfiguration `yaml:"subgraph_error_propagation"`
+	SubgraphErrorPropagation SubgraphErrorPropagationConfiguration `yaml:"subgraph_error_propagation" envPrefix:"SUBGRAPH_ERROR_PROPAGATION_"`
 
 	StorageProviders               StorageProviders                `yaml:"storage_providers"`
 	ExecutionConfig                ExecutionConfig                 `yaml:"execution_config"`

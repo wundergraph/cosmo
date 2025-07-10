@@ -747,14 +747,16 @@
   "SubgraphErrorPropagation": {
     "Enabled": true,
     "PropagateStatusCodes": false,
-    "Mode": "wrapped",
+    "Mode": "pass-through",
     "RewritePaths": true,
     "OmitLocations": true,
-    "OmitExtensions": false,
+    "OmitExtensions": true,
     "AttachServiceName": true,
     "DefaultExtensionCode": "DOWNSTREAM_SERVICE_ERROR",
+    "AllowAllExtensionFields": true,
     "AllowedExtensionFields": [
-      "code"
+      "field1",
+      "field2"
     ],
     "AllowedFields": null
   },
