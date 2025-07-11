@@ -41,14 +41,14 @@ type SubscriptionContext interface {
 
 // This is the new hook that will be called once at stream start
 type SubscriptionOnStartHandler interface {
-	SubscriptionOnStart(ctx SubscriptionContext) error
+    SubscriptionOnStart(ctx SubscriptionContext) error
 }
 
 // already defined in the provider package
 type SubscriptionEventConfiguration struct {
-	ProviderID          string               `json:"providerId"`
-	Subjects            []string             `json:"subjects"`
-	StreamConfiguration *StreamConfiguration `json:"streamConfiguration,omitempty"`
+    ProviderID          string               `json:"providerId"`
+    Subjects            []string             `json:"subjects"`
+    StreamConfiguration *StreamConfiguration `json:"streamConfiguration,omitempty"`
 }
 
 type MyModule struct {}
@@ -83,20 +83,20 @@ func customCheckIfClientIsAllowedToSubscribe(ctx SubscriptionContext) bool {
 }
 
 func (m *MyModule) SubscriptionOnStart(ctx SubscriptionContext) error {
-	if !customCheckIfClientIsAllowedToSubscribe(ctx) {
-		return fmt.Errorf("you should be an admin to subscribe to this or only subscribe to public subscriptions!")
-	}
-	return nil
+    if !customCheckIfClientIsAllowedToSubscribe(ctx) {
+        return fmt.Errorf("you should be an admin to subscribe to this or only subscribe to public subscriptions!")
+    }
+    return nil
 }
 
 func (m *MyModule) Module() core.ModuleInfo {
-	return core.ModuleInfo{
-		ID: myModuleID,
-		Priority: 1,
-		New: func() core.Module {
-			return &MyModule{}
-		},
-	}
+    return core.ModuleInfo{
+        ID: myModuleID,
+        Priority: 1,
+        New: func() core.Module {
+            return &MyModule{}
+        },
+    }
 }
 ```
 
@@ -158,14 +158,14 @@ type SubscriptionContext struct {
 
 // This is the new hook that will be called once at stream start
 type SubscriptionOnStartHandler interface {
-	SubscriptionOnStart(ctx SubscriptionContext) error
+    SubscriptionOnStart(ctx SubscriptionContext) error
 }
 
 // already defined in the provider package, but we need to add the metadata field
 type PublishAndRequestEventConfiguration struct {
-	ProviderID string          `json:"providerId"`
-	Subject    string          `json:"subject"`
-	Data       json.RawMessage `json:"data"`
+    ProviderID string          `json:"providerId"`
+    Subject    string          `json:"subject"`
+    Data       json.RawMessage `json:"data"`
     Metadata   map[string]string `json:"metadata"`
 }
 
@@ -196,13 +196,13 @@ func (m *MyModule) SubscriptionOnStart(ctx SubscriptionContext) error {
 }
 
 func (m *MyModule) Module() core.ModuleInfo {
-	return core.ModuleInfo{
-		ID: myModuleID,
-		Priority: 1,
-		New: func() core.Module {
-			return &MyModule{}
-		},
-	}
+    return core.ModuleInfo{
+        ID: myModuleID,
+        Priority: 1,
+        New: func() core.Module {
+            return &MyModule{}
+        },
+    }
 }
 ```
 
@@ -233,22 +233,22 @@ type StreamEvent interface {
 
 // This is the new hook that will be called once for each event received from the provider
 type StreamOnEventReceivedHandler interface {
-	StreamOnEventReceived(ctx StreamContext, event core.StreamEvent) error
+    StreamOnEventReceived(ctx StreamContext, event core.StreamEvent) error
 }
 
 // already defined in the provider package, but we need to add the metadata field
 type PublishAndRequestEventConfiguration struct {
-	ProviderID string          `json:"providerId"`
-	Subject    string          `json:"subject"`
-	Data       json.RawMessage `json:"data"`
+    ProviderID string          `json:"providerId"`
+    Subject    string          `json:"subject"`
+    Data       json.RawMessage `json:"data"`
     Metadata   map[string]string `json:"metadata"`
 }
 
 // to be defined in the provider package
 type ReceivedEventConfiguration struct {
-	ProviderID string          `json:"providerId"`
-	Subject    string          `json:"subject"`
-	Data       json.RawMessage `json:"data"`
+    ProviderID string          `json:"providerId"`
+    Subject    string          `json:"subject"`
+    Data       json.RawMessage `json:"data"`
     Metadata   map[string]string `json:"metadata"`
 }
 
@@ -295,13 +295,13 @@ func (m *MyModule) StreamOnEventReceived(ctx StreamContext, event core.StreamEve
 }
 
 func (m *MyModule) Module() core.ModuleInfo {
-	return core.ModuleInfo{
-		ID: myModuleID,
-		Priority: 1,
-		New: func() core.Module {
-			return &MyModule{}
-		},
-	}
+    return core.ModuleInfo{
+        ID: myModuleID,
+        Priority: 1,
+        New: func() core.Module {
+            return &MyModule{}
+        },
+    }
 }
 ```
 
@@ -319,21 +319,21 @@ type StreamContext interface {
 
 // This is the new hook that will be called once for each event that is going to be sent to the provider
 type StreamOnEventToSendHandler interface {
-	StreamOnEventToSend(ctx StreamContext, event core.StreamEvent) error
+    StreamOnEventToSend(ctx StreamContext, event core.StreamEvent) error
 }
 
 // already defined in the provider package
 type SubscriptionEventConfiguration struct {
-	ProviderID          string               `json:"providerId"`
-	Subjects            []string             `json:"subjects"`
-	StreamConfiguration *StreamConfiguration `json:"streamConfiguration,omitempty"`
+    ProviderID          string               `json:"providerId"`
+    Subjects            []string             `json:"subjects"`
+    StreamConfiguration *StreamConfiguration `json:"streamConfiguration,omitempty"`
 }
 
 // already defined in the provider package, but we need to add the metadata field
 type PublishAndRequestEventConfiguration struct {
-	ProviderID string          `json:"providerId"`
-	Subject    string          `json:"subject"`
-	Data       json.RawMessage `json:"data"`
+    ProviderID string          `json:"providerId"`
+    Subject    string          `json:"subject"`
+    Data       json.RawMessage `json:"data"`
     Metadata   map[string]string `json:"metadata"`
 }
 
@@ -395,13 +395,13 @@ func (m *MyModule) StreamOnEventToSend(ctx StreamContext, event core.StreamEvent
 }
 
 func (m *MyModule) Module() core.ModuleInfo {
-	return core.ModuleInfo{
-		ID: myModuleID,
-		Priority: 1,
-		New: func() core.Module {
-			return &MyModule{}
-		},
-	}
+    return core.ModuleInfo{
+        ID: myModuleID,
+        Priority: 1,
+        New: func() core.Module {
+            return &MyModule{}
+        },
+    }
 }
 ```
 
@@ -469,21 +469,21 @@ type SubscriptionContext struct {
 // This is the new hook that will be called before delivering an event to the client
 type StreamOnEventFilterHandler interface {
     // return true to skip the event, false to deliver it
-	StreamOnEventFilter(ctx core.SubscriptionContext, event core.StreamEvent) bool
+    StreamOnEventFilter(ctx core.SubscriptionContext, event core.StreamEvent) bool
 }
 
 // already defined in the provider package
 type SubscriptionEventConfiguration struct {
-	ProviderID          string               `json:"providerId"`
-	Subjects            []string             `json:"subjects"`
-	StreamConfiguration *StreamConfiguration `json:"streamConfiguration,omitempty"`
+    ProviderID          string               `json:"providerId"`
+    Subjects            []string             `json:"subjects"`
+    StreamConfiguration *StreamConfiguration `json:"streamConfiguration,omitempty"`
 }
 
 // to be defined in the provider package
 type ReceivedEventConfiguration struct {
-	ProviderID string          `json:"providerId"`
-	Subject    string          `json:"subject"`
-	Data       json.RawMessage `json:"data"`
+    ProviderID string          `json:"providerId"`
+    Subject    string          `json:"subject"`
+    Data       json.RawMessage `json:"data"`
     Metadata   map[string]string `json:"metadata"`
 }
 
@@ -521,14 +521,15 @@ func (m *MyModule) StreamOnEventFilter(ctx core.SubscriptionContext, event core.
 }
 
 func (m *MyModule) Module() core.ModuleInfo {
-	return core.ModuleInfo{
-		ID: myModuleID,
-		Priority: 1,
-		New: func() core.Module {
-			return &MyModule{}
-		},
-	}
+    return core.ModuleInfo{
+        ID: myModuleID,
+        Priority: 1,
+        New: func() core.Module {
+            return &MyModule{}
+        },
+    }
 }
+```
 
 ### Proposal
 
