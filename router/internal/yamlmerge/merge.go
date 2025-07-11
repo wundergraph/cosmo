@@ -23,8 +23,10 @@ package yamlmerge
 
 import (
 	"fmt"
-	yaml "github.com/goccy/go-yaml"
 	"io"
+	"maps"
+
+	yaml "github.com/goccy/go-yaml"
 )
 
 type (
@@ -121,9 +123,7 @@ func merge(into, from interface{}, strict bool) (interface{}, error) {
 
 func mergeMapping(into, from mapping, strict bool) (mapping, error) {
 	merged := make(mapping, len(into))
-	for k, v := range into {
-		merged[k] = v
-	}
+	maps.Copy(merged, into)
 	for k := range from {
 		m, err := merge(merged[k], from[k], strict)
 		if err != nil {
