@@ -337,12 +337,12 @@ type MyModule struct {}
 func (m *MyModule) StreamOnEventToSend(ctx StreamContext, event core.StreamEvent) error {
     // unmarshal the subscription data, specific for each provider
     var subscriptionConfiguration nats.SubscriptionEventConfiguration
-    err := json.Unmarshal(ctx.StreamContext().SubscriptionConfiguration(), &subscriptionConfiguration)
+    err := json.Unmarshal(ctx.SubscriptionConfiguration(), &subscriptionConfiguration)
     if err != nil {
-        return false
+        return err
     }
     
-    if subscriptionConfiguration.Subjects == []string{"topic-with-internal-data-format"} {
+    if slices.Contains(subscriptionConfiguration.Subjects, "topic-with-internal-data-format") {
         // unmarshal the event data that we received from the provider
         var oldEventConfiguration nats.PublishAndRequestEventConfiguration
         err := json.Unmarshal(event.Data(), &oldEventConfiguration)
