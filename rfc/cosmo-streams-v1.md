@@ -68,14 +68,14 @@ func customCheckIfClientIsAllowedToSubscribe(ctx SubscriptionContext) bool {
 
     // unmarshal the subscription data, specific for each provider
     var subscriptionConfiguration nats.SubscriptionEventConfiguration
-    err := json.Unmarshal(streamCtx.SubscriptionConfiguration(), &subscriptionConfiguration)
+    err := json.Unmarshal(ctx.StreamContext().SubscriptionConfiguration(), &subscriptionConfiguration)
     if err != nil {
         return false
     }
     
-    if providerId == "almost-sharable-data"
-     && providerType == "nats"
-     && subscriptionConfiguration.Subjects == []string{"public"} {
+    if providerId == "almost-sharable-data" &&
+       providerType == "nats" &&
+       slices.Equal(subscriptionConfiguration.Subjects, []string{"public"}) {
         return true
     }
 
@@ -342,7 +342,7 @@ type MyModule struct {}
 func (m *MyModule) StreamOnEventToSend(ctx StreamContext, event core.StreamEvent) error {
     // unmarshal the subscription data, specific for each provider
     var subscriptionConfiguration nats.SubscriptionEventConfiguration
-    err := json.Unmarshal(streamCtx.SubscriptionConfiguration(), &subscriptionConfiguration)
+    err := json.Unmarshal(ctx.StreamContext().SubscriptionConfiguration(), &subscriptionConfiguration)
     if err != nil {
         return false
     }
@@ -498,14 +498,14 @@ func (m *MyModule) StreamOnEventFilter(ctx core.SubscriptionContext, event core.
     var subscriptionConfiguration nats.SubscriptionEventConfiguration
     err := json.Unmarshal(ctx.StreamContext().SubscriptionConfiguration(), &subscriptionConfiguration)
     if err != nil {
-        return fmt.Errorf("error unmarshalling data: %w", err)
+        return true
     }
 
     if subscriptionConfiguration.Subjects == []string{"topic-with-internal-data-format"} {
         var receivedEventConfiguration nats.ReceivedEventConfiguration
         err := json.Unmarshal(event.Data(), &receivedEventConfiguration)
         if err != nil {
-            return fmt.Errorf("error unmarshalling data: %w", err)
+            return true
         }
 
         idHeader, ok := receivedEventConfiguration.Metadata["entity-id"]
