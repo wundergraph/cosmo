@@ -462,7 +462,7 @@ type SubscriptionContext struct {
 
 // This is the new hook that will be called before delivering an event to the client
 type StreamOnEventFilterHandler interface {
-    // return true to skip the event, false to deliver it
+    // return false to skip the event, true to deliver it
     StreamOnEventFilter(ctx core.SubscriptionContext, event core.StreamEvent) bool
 }
 
@@ -486,32 +486,32 @@ type MyModule struct {}
 func (m *MyModule) StreamOnEventFilter(ctx core.SubscriptionContext, event core.StreamEvent) bool {
     clientAllowedEntitiesIds, found := ctx.RequestContext().Authentication().Claims()["allowedEntitiesIds"]
     if !found {
-        return true
+        return false
     }
 
     var subscriptionConfiguration nats.SubscriptionEventConfiguration
     err := json.Unmarshal(ctx.StreamContext().SubscriptionConfiguration(), &subscriptionConfiguration)
     if err != nil {
-        return true
+        return false
     }
 
     if subscriptionConfiguration.Subjects == []string{"topic-with-internal-data-format"} {
         var receivedEventConfiguration nats.ReceivedEventConfiguration
         err := json.Unmarshal(event.Data(), &receivedEventConfiguration)
         if err != nil {
-            return true
+            return false
         }
 
         idHeader, ok := receivedEventConfiguration.Metadata["entity-id"]
         if !ok {
-            return true
+            return false
         }
         if slices.Contains(clientAllowedEntitiesIds, idHeader) {
             // the event is delivered to the client only if the id is in the allowed entities ids
-            return false
+            return true
         }
     }
-    return true
+    return false
 }
 
 func (m *MyModule) Module() core.ModuleInfo {
@@ -533,7 +533,7 @@ The hook arguments are:
 * `ctx core.SubscriptionContext`: The subscription context, which contains the request context and, optionally, the stream context
 * `event core.StreamEvent`: The event received from the provider or the event that is going to be sent to the provider
 
-The hook should return `true` to skip the event, `false` to deliver it.
+The hook should return `false` to skip the event, `true` to deliver it.
 
 Ideally, we could use the `StreamOnEventReceivedHandler` to filter events, but this would require adding the subscription context to the stream context, which is not a good idea. It would be easy to misuse by adding subscription-specific data to an event that should not be sent only to that client. Also, the `StreamOnEventReceivedHandler` is called for each event received from the provider, while this new hook should be called for each combination of event and subscription that is going to be delivered to the client.
 
