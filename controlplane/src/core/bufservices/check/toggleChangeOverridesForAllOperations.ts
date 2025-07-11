@@ -63,27 +63,25 @@ export function toggleChangeOverridesForAllOperations(
       }
 
       for (const affectedOperation of affectedOperations) {
-        const impactingChanges = checkDetails.changes.filter(({ id }) =>
-          affectedOperation.schemaChangeIds.includes(id),
-        );
+        const schemaChangeIds = new Set(affectedOperation.schemaChangeIds);
+        const impactingChanges = checkDetails.changes.filter(({ id }) => schemaChangeIds.has(id));
 
-        const affectedRows = [];
+        let affectedRows = [];
+
         if (req.isSafe) {
-          const res = await operationsRepo.createOperationOverrides({
+          affectedRows = await operationsRepo.createOperationOverrides({
             namespaceId: graph.namespaceId,
             operationHash: affectedOperation.hash,
             operationName: affectedOperation.name,
             changes: impactingChanges,
             actorId: authContext.userId,
           });
-          affectedRows.push(...res);
         } else {
-          const res = await operationsRepo.removeOperationOverrides({
+          affectedRows = await operationsRepo.removeOperationOverrides({
             operationHash: affectedOperation.hash,
             namespaceId: graph.namespaceId,
             changes: impactingChanges,
           });
-          affectedRows.push(...res);
         }
 
         if (affectedRows.length === 0) {
