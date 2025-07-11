@@ -59,6 +59,7 @@ export function createOrganizationWebhookConfig(
       key: req.key,
       events: req.events,
       endpoint: req.endpoint,
+      headers: req.headers.map(h => ({ key: h.key, value: h.value })),
     });
 
     await auditLogRepo.addAuditLog({

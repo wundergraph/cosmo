@@ -1570,6 +1570,7 @@ export const organizationWebhooks = pgTable(
     endpoint: text('endpoint'),
     key: text('key'),
     events: text('events').array(),
+    headers: json('headers').$type<Array<{ key: string; value: string }>>(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => {

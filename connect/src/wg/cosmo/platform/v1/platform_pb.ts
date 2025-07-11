@@ -9207,6 +9207,49 @@ export class Header extends Message<Header> {
 }
 
 /**
+ * @generated from message wg.cosmo.platform.v1.WebhookHeader
+ */
+export class WebhookHeader extends Message<WebhookHeader> {
+  /**
+   * @generated from field: string key = 1;
+   */
+  key = "";
+
+  /**
+   * @generated from field: string value = 2;
+   */
+  value = "";
+
+  constructor(data?: PartialMessage<WebhookHeader>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.WebhookHeader";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "value", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): WebhookHeader {
+    return new WebhookHeader().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): WebhookHeader {
+    return new WebhookHeader().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): WebhookHeader {
+    return new WebhookHeader().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: WebhookHeader | PlainMessage<WebhookHeader> | undefined, b: WebhookHeader | PlainMessage<WebhookHeader> | undefined): boolean {
+    return proto3.util.equals(WebhookHeader, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.platform.v1.CreateOrganizationWebhookConfigRequest
  */
 export class CreateOrganizationWebhookConfigRequest extends Message<CreateOrganizationWebhookConfigRequest> {
@@ -9230,6 +9273,11 @@ export class CreateOrganizationWebhookConfigRequest extends Message<CreateOrgani
    */
   eventsMeta: EventMeta[] = [];
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.WebhookHeader headers = 5;
+   */
+  headers: WebhookHeader[] = [];
+
   constructor(data?: PartialMessage<CreateOrganizationWebhookConfigRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -9242,6 +9290,7 @@ export class CreateOrganizationWebhookConfigRequest extends Message<CreateOrgani
     { no: 2, name: "key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "events", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 4, name: "events_meta", kind: "message", T: EventMeta, repeated: true },
+    { no: 5, name: "headers", kind: "message", T: WebhookHeader, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateOrganizationWebhookConfigRequest {
@@ -9397,6 +9446,11 @@ export class GetOrganizationWebhookConfigsResponse_Config extends Message<GetOrg
    */
   events: string[] = [];
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.WebhookHeader headers = 4;
+   */
+  headers: WebhookHeader[] = [];
+
   constructor(data?: PartialMessage<GetOrganizationWebhookConfigsResponse_Config>) {
     super();
     proto3.util.initPartial(data, this);
@@ -9408,6 +9462,7 @@ export class GetOrganizationWebhookConfigsResponse_Config extends Message<GetOrg
     { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "events", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 4, name: "headers", kind: "message", T: WebhookHeader, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOrganizationWebhookConfigsResponse_Config {
@@ -9541,6 +9596,11 @@ export class UpdateOrganizationWebhookConfigRequest extends Message<UpdateOrgani
    */
   shouldUpdateKey = false;
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.WebhookHeader headers = 7;
+   */
+  headers: WebhookHeader[] = [];
+
   constructor(data?: PartialMessage<UpdateOrganizationWebhookConfigRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -9555,6 +9615,7 @@ export class UpdateOrganizationWebhookConfigRequest extends Message<UpdateOrgani
     { no: 4, name: "events", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 5, name: "events_meta", kind: "message", T: EventMeta, repeated: true },
     { no: 6, name: "should_update_key", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 7, name: "headers", kind: "message", T: WebhookHeader, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateOrganizationWebhookConfigRequest {

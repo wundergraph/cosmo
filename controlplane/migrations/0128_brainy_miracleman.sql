@@ -1,0 +1,1 @@
+ALTER TABLE "organization_webhook_configs" ADD COLUMN "headers" json;

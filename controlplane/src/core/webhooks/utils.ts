@@ -7,6 +7,7 @@ export const makeWebhookRequest = <Data = any>(
   data: Data,
   url: string,
   signatureKey?: string,
+  customHeaders?: Array<{ key: string; value: string }>,
 ) => {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -15,6 +16,13 @@ export const makeWebhookRequest = <Data = any>(
   if (signatureKey) {
     const dataString = JSON.stringify(data);
     headers['X-Cosmo-Signature-256'] = createHmac('sha256', signatureKey).update(dataString).digest('hex');
+  }
+
+  // Add custom headers
+  if (customHeaders) {
+    for (const header of customHeaders) {
+      headers[header.key] = header.value;
+    }
   }
 
   return axiosInstance.post(url, data, {
