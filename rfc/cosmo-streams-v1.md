@@ -449,7 +449,7 @@ type StreamEvent interface {
 }
 
 type StreamContext interface {
-    WriteEvent(event core.StreamEvent)
+    SubscriptionConfiguration() []byte
 }
 
 type OperationContext interface {
@@ -459,7 +459,6 @@ type OperationContext interface {
 
 type RequestContext interface {
     Authentication() *core.Authentication
-    Operation() core.OperationContext
 }
 
 type SubscriptionContext struct {
