@@ -1,14 +1,13 @@
-import { ConnectionOptions, Job, JobsOptions, Queue, Worker } from 'bullmq';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { ConnectionOptions, Job, JobsOptions } from 'bullmq';
 import pino from 'pino';
-import * as schema from '../../db/schema.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import Keycloak from '../services/Keycloak.js';
 import { OidcRepository } from '../repositories/OidcRepository.js';
 import OidcProvider from '../services/OidcProvider.js';
 import { BlobStorage } from '../blobstorage/index.js';
-import { IQueue, IWorker } from './Worker.js';
-import { DeleteOrganizationAuditLogsQueue } from './DeleteOrganizationAuditLogsWorker.js';
+import { DB } from '../../db/index.js';
+import { DeleteOrganizationAuditLogsQueue } from './DeleteOrganizationAuditLogs.js';
+import { BaseQueue, BaseWorker } from './base/index.js';
 
 const QueueName = 'organization.delete';
 const WorkerName = 'DeleteOrganizationWorker';
@@ -17,32 +16,9 @@ export interface DeleteOrganizationInput {
   organizationId: string;
 }
 
-export class DeleteOrganizationQueue implements IQueue<DeleteOrganizationInput> {
-  private readonly queue: Queue<DeleteOrganizationInput>;
-  private readonly logger: pino.Logger;
-
+export class DeleteOrganizationQueue extends BaseQueue<DeleteOrganizationInput> {
   constructor(log: pino.Logger, conn: ConnectionOptions) {
-    this.logger = log.child({ queue: QueueName });
-    this.queue = new Queue<DeleteOrganizationInput>(QueueName, {
-      connection: conn,
-      defaultJobOptions: {
-        removeOnComplete: {
-          age: 90 * 86_400,
-        },
-        removeOnFail: {
-          age: 90 * 86_400,
-        },
-        attempts: 6,
-        backoff: {
-          type: 'exponential',
-          delay: 112_000,
-        },
-      },
-    });
-
-    this.queue.on('error', (err) => {
-      this.logger.error(err, 'Queue error');
-    });
+    super({ name: QueueName, log, conn });
   }
 
   public addJob(job: DeleteOrganizationInput, opts?: Omit<JobsOptions, 'jobId'>) {
@@ -61,11 +37,11 @@ export class DeleteOrganizationQueue implements IQueue<DeleteOrganizationInput> 
   }
 }
 
-class DeleteOrganizationWorker implements IWorker {
+export class DeleteOrganizationWorker extends BaseWorker<DeleteOrganizationInput> {
   constructor(
     private input: {
       redisConnection: ConnectionOptions;
-      db: PostgresJsDatabase<typeof schema>;
+      db: DB;
       logger: pino.Logger;
       keycloakClient: Keycloak;
       keycloakRealm: string;
@@ -73,10 +49,10 @@ class DeleteOrganizationWorker implements IWorker {
       deleteOrganizationAuditLogsQueue: DeleteOrganizationAuditLogsQueue;
     },
   ) {
-    this.input.logger = input.logger.child({ worker: WorkerName });
+    super(WorkerName, QueueName, { connection: input.redisConnection, concurrency: 10 }, input.logger);
   }
 
-  public async handler(job: Job<DeleteOrganizationInput>) {
+  protected async handler(job: Job<DeleteOrganizationInput>) {
     try {
       const orgRepo = new OrganizationRepository(this.input.logger, this.input.db);
       const oidcRepo = new OidcRepository(this.input.db);
@@ -131,30 +107,3 @@ class DeleteOrganizationWorker implements IWorker {
     }
   }
 }
-
-export const createDeleteOrganizationWorker = (input: {
-  redisConnection: ConnectionOptions;
-  db: PostgresJsDatabase<typeof schema>;
-  logger: pino.Logger;
-  keycloakClient: Keycloak;
-  keycloakRealm: string;
-  blobStorage: BlobStorage;
-  deleteOrganizationAuditLogsQueue: DeleteOrganizationAuditLogsQueue;
-}) => {
-  const log = input.logger.child({ worker: WorkerName });
-  const worker = new Worker<DeleteOrganizationInput>(
-    QueueName,
-    (job) => new DeleteOrganizationWorker(input).handler(job),
-    {
-      connection: input.redisConnection,
-      concurrency: 10,
-    },
-  );
-  worker.on('stalled', (job) => {
-    log.warn({ joinId: job }, `Job stalled`);
-  });
-  worker.on('error', (err) => {
-    log.error(err, 'Worker error');
-  });
-  return worker;
-};
