@@ -24,6 +24,37 @@ describe('@interfaceObject tests', () => {
     );
   });
 
+  test('that implementation can be defined alongside @interfaceObject as long as all its @keys are unresolvable', () => {
+    const result = federateSubgraphsSuccess([fab, fac], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+      normalizeString(
+        versionTwoRouterDefinitions +
+          `
+        type EntityOne implements Interface {
+          id: ID!
+          name: String!
+        }
+        
+        type EntityTwo implements Interface {
+          id: ID!
+          name: String!
+        }
+        
+        interface Interface {
+          id: ID!
+          name: String!
+        }
+        
+        type Query {
+          entities: [Interface!]!
+        }
+      
+        scalar openfed__Scope
+      `,
+      ),
+    );
+  });
+
   test('that an Object can inherit fields from an Interface Object #1.1', () => {
     const { federatedGraphSchema, subgraphConfigBySubgraphName } = federateSubgraphsSuccess(
       [fbb, fbc],
@@ -559,6 +590,29 @@ const fab: Subgraph = {
     }
     
     type EntityTwo implements Interface @key(fields: "id") {
+      id: ID!
+    }
+  `),
+};
+
+const fac: Subgraph = {
+  name: 'fac',
+  url: '',
+  definitions: parse(`
+    type Query {
+      entities: [Interface!]!
+    }
+    
+    type Interface @key(fields: "id") @interfaceObject {
+      id: ID!
+      name: String!
+    }
+    
+    type EntityOne @key(fields: "id", resolvable: false) {
+      id: ID!
+    }
+    
+    type EntityTwo @key(fields: "id", resolvable: false) {
       id: ID!
     }
   `),

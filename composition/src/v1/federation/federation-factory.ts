@@ -3049,15 +3049,25 @@ function initializeFederationFactory(subgraphs: Subgraph[]): FederationFactoryRe
         }
         continue;
       }
-      const parentDefinitionDataByTypeName = getOrThrowError(
+      const { configurationDataByTypeName, parentDefinitionDataByTypeName } = getOrThrowError(
         result.internalSubgraphBySubgraphName,
         subgraphName,
         'internalSubgraphBySubgraphName',
-      ).parentDefinitionDataByTypeName;
+      );
       const invalidTypeNames: Array<string> = [];
       for (const concreteTypeName of entityInterfaceData.concreteTypeNames) {
-        if (parentDefinitionDataByTypeName.has(concreteTypeName)) {
-          invalidTypeNames.push(concreteTypeName);
+        if (!parentDefinitionDataByTypeName.has(concreteTypeName)) {
+          continue;
+        }
+        const configurationData = configurationDataByTypeName.get(concreteTypeName);
+        if (!configurationData?.keys) {
+          continue;
+        }
+        for (const { disableEntityResolver } of configurationData.keys) {
+          if (!disableEntityResolver) {
+            invalidTypeNames.push(concreteTypeName);
+            break;
+          }
         }
       }
       if (invalidTypeNames.length > 0) {
