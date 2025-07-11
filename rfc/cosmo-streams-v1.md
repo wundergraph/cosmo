@@ -127,7 +127,7 @@ To solve this, we can emit an initial message on subscription start.
 
 To emit an initial message on subscription start, we need access to the stream context (to get the provider type and id) and also the query that the client sent.
 The variables are really important to know to allow the module to use them to emit the initial message.
-E.g. if someone start a subscription with employee id 100, the custom module can emit the initial message with that id inside.
+E.g. if someone start a subscription with variable employee id 100, the custom module can emit the initial message with that id inside.
 
 ### Example
 ```go
@@ -144,6 +144,7 @@ type StreamContext interface {
 
 type OperationContext interface {
     Name() string
+    // the variables are currently not available, so we need to add them here
     Variables() *astjson.Value
 }
 
@@ -208,7 +209,7 @@ func (m *MyModule) Module() core.ModuleInfo {
 
 ### Proposal
 
-Using the new `SubscriptionOnStart`hook, that we already introduced to solve the previous requirement, we can emit the initial message on subscription start.
+Using the new `SubscriptionOnStart` hook, that we already introduced to solve the previous requirement, we can emit the initial message on subscription start.
 We will also need access to operation variables, that right now are not available in the request context.
 
 To emit the message I propose to add a new method to the stream context, `WriteEvent`, that will emit the event to the stream at the lowest level.
@@ -570,14 +571,18 @@ A mutation is sent from the client
     │
     └─▶ "Send event to provider"
 
+### Data flow
+
+We will have to change the format of the event data that is sent inside the router: today we are using directly the data that will be sent to the provider, but we will need to add a structure where we can add additional fields (metadata, etc.) to the event.
+
 # Implementation details
 
 The implementation of this solution will only require changes in the cosmo repo, without any changes to the engine.
-This implementation will require additional changes to the hooks structures each time a new provider is added.
+This implementation will not require additional changes to the hooks structures each time a new provider is added.
 
 # Here be dragons
 
 - all the hooks could be called in parallel, so we need to be careful with that
 - all the hooks implementations could raise a panic, so we need to be careful with that also
-- in the hook `StreamOnEventFilter` a user could change the event data without considering that the changes could be sent to other clients also.
+- in the hook `StreamOnEventFilter` a user could change the event data without considering that the changes could be sent to other clients also, so we need to advise the users to be careful with this hook
 - probably we should also add metrics to track how much time is spent in each hook, to help customers pinpoint slow hooks
