@@ -1,25 +1,26 @@
 # RFC Cosmo Streams V1
 
 Based on customer feedback, we've identified the need for more customizable stream behavior. The key areas for customization include:
-- Authorization: implementing authorization checks at the start of subscriptions
-- Initial message: sending an initial message to clients upon subscription start
-- Data mapping: mapping data to align with internal specifications
-- Event filtering: filtering events using custom logic
+- **Authorization**: Implementing authorization checks at the start of subscriptions
+- **Initial message**: Sending an initial message to clients upon subscription start
+- **Data mapping**: Transforming data to align with internal specifications
+- **Event filtering**: Filtering events using custom logic
 
 Let's explore how we can address each of these requirements.
 
 ## Authorization
+
 To support authorization, we need a hook that enables two key decisions:
-- Whether the client or user is authorized to initiate the subscription at all
+- Whether the client or user is authorized to initiate the subscription
 - Which topics the client is permitted to subscribe to
 
 Additionally, a similar mechanism is required for non-stream subscriptions, allowing:
 - Custom JWT validation logic (e.g., expiration checks, signature verification, secret handling)
 - The ability to reject unauthenticated or unauthorized requests and close the subscription accordingly
 
-We already allow some customization using RouterOnRequestHandler, but it has no access to the stream data. To get them, we need to add a new hook that will be called right before the subscription is started.
+We already allow some customization using `RouterOnRequestHandler`, but it has no access to the stream data. To access this data, we need to add a new hook that will be called immediately before the subscription starts.
 
-### Example: check if the client is allowed to subscribe to the stream
+### Example: Check if the client is allowed to subscribe to the stream
 
 ```go
 // the structs are reported only with the fields that are used in the example
@@ -104,32 +105,26 @@ func (m *MyModule) Module() core.ModuleInfo {
 
 Add a new hook to the subscription lifecycle, `SubscriptionOnStart`, that will be called once at subscription start.
 
-The arguments of the hook are:
-* `ctx SubscriptionContext`: the subscription context, that contains the request context and, optionally, the stream context
+The hook arguments are:
+* `ctx SubscriptionContext`: The subscription context, which contains the request context and, optionally, the stream context
 
-RequestContext already exists and need no changes, but SubscriptionContext is new.
+`RequestContext` already exists and requires no changes, but `SubscriptionContext` is new.
 
-The hook should return an error if the client is not allowed to subscribe to the stream, and the subscription will not be started.
-The hook should return nil if the client is allowed to subscribe to the stream, and the subscription will be started.
+The hook should return an error if the client is not allowed to subscribe to the stream, preventing the subscription from starting.
+The hook should return `nil` if the client is allowed to subscribe to the stream, allowing the subscription to proceed.
 
-I evaluated the possibility to just add the SubscriptionContext to the request context and use it inside one of the existing hooks,
-but it would be hard to build the subscription context without executing the pubsub code.
+I evaluated the possibility of adding the `SubscriptionContext` to the request context and using it within one of the existing hooks, but it would be difficult to build the subscription context without executing the pubsub code.
 
-The `StreamContext.SubscriptionConfiguration()` contains the subscription configuration as is used by the provider. This will allow the hooks system to be agnostic of the provider type, so that adding a new provider will not require any changes to the hooks system.
+The `StreamContext.SubscriptionConfiguration()` contains the subscription configuration as used by the provider. This allows the hooks system to be provider-agnostic, so adding a new provider will not require changes to the hooks system.
 
-## Initial message
+## Initial Message
 
-When starting a subscription, the client will send a query to the server.
-The query contains the operation name and the variables.
-And then the client will have to wait for the server to send the initial message.
-This waiting could lead to a bad user experience, because the client can't see anything until the initial message is received.
-To solve this, we can emit an initial message on subscription start.
+When starting a subscription, the client sends a query to the server containing the operation name and variables. The client must then wait for the broker to send the initial message. This waiting period can lead to a poor user experience, as the client cannot display anything until the initial message is received. To address this, we can emit an initial message on subscription start.
 
-To emit an initial message on subscription start, we need access to the stream context (to get the provider type and id) and also the query that the client sent.
-The variables are really important to know to allow the module to use them to emit the initial message.
-E.g. if someone start a subscription with variable employee id 100, the custom module can emit the initial message with that id inside.
+To emit an initial message on subscription start, we need access to the stream context (to get the provider type and ID) and the query that the client sent. The variables are particularly important, as they allow the module to use them in the initial message. For example, if someone starts a subscription with employee ID 100 as a variable, the custom module can include that ID in the initial message.
 
 ### Example
+
 ```go
 // the structs are reported only with the fields that are used in the example
 type StreamEvent interface {
@@ -209,22 +204,20 @@ func (m *MyModule) Module() core.ModuleInfo {
 
 ### Proposal
 
-Using the new `SubscriptionOnStart` hook, that we already introduced to solve the previous requirement, we can emit the initial message on subscription start.
-We will also need access to operation variables, that right now are not available in the request context.
+Using the new `SubscriptionOnStart` hook that we introduced for the previous requirement, we can emit the initial message on subscription start. We will also need access to operation variables, which are currently not available in the request context.
 
-To emit the message I propose to add a new method to the stream context, `WriteEvent`, that will emit the event to the stream at the lowest level.
-The message will go through all the hooks, so that it will be just like any other event received from the provider.
+To emit the message, I propose adding a new method to the stream context, `WriteEvent`, which will emit the event to the stream at the lowest level. The message will pass through all hooks, making it behave like any other event received from the provider.
 
-The `StreamEvent` contains the data as is used by the provider. This will allow the hooks system to be agnostic of the provider type, so that adding a new provider will not require any changes to the hooks system.
+The `StreamEvent` contains the data as used by the provider. This allows the hooks system to be provider-agnostic, so adding a new provider will not require changes to the hooks system.
 
-Emitting the initial message with this hook will guarantee that the client will receive the message and it will receive it before the first event from the provider is received.
+Emitting the initial message with this hook ensures that the client will receive the message before the first event from the provider is received.
 
-## Data mapping
+## Data Mapping
 
-The current way we have to emit and read the data from the stream is not flexible enough.
-We need to be able to map the data from an external format to the internal format, and also to map the data from the internal format to an external format.
+The current approach for emitting and reading data from the stream is not flexible enough. We need to be able to map data from an external format to the internal format, and vice versa.
 
-### Example 1, rewrite the event received from the provider to a format that is usable from cosmo streams
+### Example 1: Rewrite the event received from the provider to a format that is usable by Cosmo streams
+
 ```go
 // the structs are reported only with the fields that are used in the example
 type StreamEvent interface {
@@ -306,7 +299,8 @@ func (m *MyModule) Module() core.ModuleInfo {
 }
 ```
 
-### Example 2, rewrite the event before emitting it to the provider to a format that is usable from external systems
+### Example 2: Rewrite the event before emitting it to the provider to a format that is usable by external systems
+
 ```go
 // the structs are reported only with the fields that are used in the example
 type StreamEvent interface {
@@ -408,40 +402,39 @@ func (m *MyModule) Module() core.ModuleInfo {
 
 ### Proposal
 
-Add two new hooks to the stream lifecycle, `StreamOnEventReceived` and `StreamOnEventToSend`, that will be called once for each event received from the provider and once for each event that is going to be sent to the provider.
+Add two new hooks to the stream lifecycle: `StreamOnEventReceived` and `StreamOnEventToSend`, which will be called once for each event received from the provider and once for each event that is going to be sent to the provider.
 
-The `StreamOnEventReceived` hook will be called once for each event received from the provider, so that it will be possible to rewrite the event data to a format usable inside cosmo streams.
-The `StreamOnEventToSend` hook will be called once for each event that is going to be sent to the provider, so that it will be possible to rewrite the event data to a format usable from external systems.
+The `StreamOnEventReceived` hook will be called for each event received from the provider, making it possible to rewrite the event data to a format usable within Cosmo streams.
+The `StreamOnEventToSend` hook will be called for each event that is going to be sent to the provider, making it possible to rewrite the event data to a format usable by external systems.
 
-The arguments of the hooks are:
-* `ctx StreamContext`: the stream context, that contains the id and type of the stream
-* `event core.StreamEvent`: the event received from the provider or the event that is going to be sent to the provider
+The hook arguments are:
+* `ctx StreamContext`: The stream context, which contains the ID and type of the stream
+* `event core.StreamEvent`: The event received from the provider or the event that is going to be sent to the provider
 
-The hook should return an error if the event cannot be processed, and the event will not be processed.
-The hook should return nil if the event can be processed, and the event will be processed.
+The hook should return an error if the event cannot be processed, preventing the event from being processed.
+The hook should return `nil` if the event can be processed, allowing the event to proceed.
 
-I also thought about exposing the subscription context to the hooks, but it would be too easy to misuse it and use some data specific to the subscription and add it to an event that will not be sent only to that provider. To make it safe I should copy the whole event data for each pair of event and subscription that needs to receive it.
+I also considered exposing the subscription context to the hooks, but this would be too easy to misuse. Users might add subscription-specific data to an event that will be sent to multiple providers. To make it safe, I would need to copy the entire event data for each pair of event and subscription that needs to receive it.
 
-This proposal requires the introduction of a new format of events that the pubsub system uses.
-As an example, for NATS we are currently using the `PublishAndRequestEventConfiguration` struct, when writing events, but when we are reading events, we only pass down the data of the event. We have to build an intermediate struct that will allow us to access metadata, data and other fields of the event. In the example 1 we are using the `ReceivedEventConfiguration` struct for this purpose.
+This proposal requires introducing a new format for events that the pubsub system uses. For example, with NATS we currently use the `PublishAndRequestEventConfiguration` struct when writing events, but when reading events, we only pass down the event data. We need to build an intermediate struct that allows us to access metadata, data, and other event fields. In Example 1, we use the `ReceivedEventConfiguration` struct for this purpose.
 
-This change is sensible but it would be needed anyway to support metadata in the events.
+This change is significant but would be needed anyway to support metadata in events.
 
 #### Do we need two new hooks?
 
-Another possibile solution for mapping the outward data would be to use the already existing middleware hooks `RouterOnRequestHandler` or the `RouterMiddlewareHandler` to "eat" the mutation and access to the stream context and emit the event to the stream. But this would require exposing a stream context on the request lifecycle, that is difficult. Also this will require some coordination to be sure that an event emitted on the stream is sent only after the subscription is started.
-Also, this solution is not usable on the subscription side of the streams:
-- the middleware hooks are linked to the request lifecycle, so it would be hard to use them to rewrite the event data;
-- when we are going to use the streams feature internally, we will still need to provide a way to rewrite the event data, so we will need to add a new hook to the subscription lifecycle;
+Another possible solution for mapping outward data would be to use the existing middleware hooks `RouterOnRequestHandler` or `RouterMiddlewareHandler` to intercept the mutation, access the stream context, and emit the event to the stream. However, this would require exposing a stream context in the request lifecycle, which is difficult. It would also require coordination to ensure that an event emitted on the stream is sent only after the subscription starts.
 
-So I think that the best solution is to add two new hooks to the stream lifecycle.
+Additionally, this solution is not usable on the subscription side of streams:
+- The middleware hooks are linked to the request lifecycle, making it difficult to use them to rewrite event data
+- When we use the streams feature internally, we will still need to provide a way to rewrite event data, requiring a new hook in the subscription lifecycle
 
+Therefore, I believe the best solution is to add two new hooks to the stream lifecycle.
 
-## Event filtering
+## Event Filtering
 
-We need to allow customers to filter events base on custom logic. We actually only provide declarative filters, and they are really limited.
+We need to allow customers to filter events based on custom logic. We currently only provide declarative filters, which are quite limited.
 
-### Example, filter events based on streams configuration and client's scopes
+### Example: Filter events based on stream configuration and client's scopes
 
 ```go
 // the structs are reported only with the fields that are used in the example
@@ -536,27 +529,30 @@ func (m *MyModule) Module() core.ModuleInfo {
 
 Add a new hook to the stream lifecycle, `StreamOnEventFilter`, that will be called before delivering an event to the client.
 
-The arguments of the hook are:
-* `ctx core.SubscriptionContext`: the subscription context, that contains the request context and, optionally, the stream context
-* `event core.StreamEvent`: the event received from the provider or the event that is going to be sent to the provider
+The hook arguments are:
+* `ctx core.SubscriptionContext`: The subscription context, which contains the request context and, optionally, the stream context
+* `event core.StreamEvent`: The event received from the provider or the event that is going to be sent to the provider
 
-The hook should return true to skip the event, false to deliver it.
+The hook should return `true` to skip the event, `false` to deliver it.
 
-Ideally we could use the StreamOnEventReceivedHandler to filter the events, but it would require to add the subscription context to the stream context, that is not a good idea: it would be easy to misuse it and use some data specific to the subscription and add it to an event that will not be sent only to that client. Also, the StreamOnEventReceivedHandler is called for each event received from the provider, and this new hook should be called for each combination of event and subscription that is going to be delivered to the client.
+Ideally, we could use the `StreamOnEventReceivedHandler` to filter events, but this would require adding the subscription context to the stream context, which is not a good idea. It would be easy to misuse by adding subscription-specific data to an event that should not be sent only to that client. Also, the `StreamOnEventReceivedHandler` is called for each event received from the provider, while this new hook should be called for each combination of event and subscription that is going to be delivered to the client.
 
 ## Architecture
 
-With this proposal, we are going to add some hooks to the subscription lifecycle, and some hooks to the stream lifecycle.
+With this proposal, we will add hooks to both the subscription lifecycle and the stream lifecycle.
 
-### Subscription lifecycle
+### Subscription Lifecycle
+```
 Start subscription
     │
     └─▶ core.SubscriptionOnStartHandler (Early return, Custom Authentication Logic)
     │
     └─▶ "Subscription started"
+```
 
-### Stream lifecycle
+### Stream Lifecycle
 
+```
 An event is received from the provider
     │
     └─▶ core.StreamOnEventReceivedHandler (Data mapping)
@@ -570,19 +566,19 @@ A mutation is sent from the client
     └─▶ core.StreamOnEventToSendHandler (Data mapping)
     │
     └─▶ "Send event to provider"
+```
 
-### Data flow
+### Data Flow
 
-We will have to change the format of the event data that is sent inside the router: today we are using directly the data that will be sent to the provider, but we will need to add a structure where we can add additional fields (metadata, etc.) to the event.
+We will need to change the format of the event data sent within the router. Today we use the data that will be sent to the provider directly, but we will need to add a structure where we can include additional fields (metadata, etc.) in the event.
 
-# Implementation details
+## Implementation Details
 
-The implementation of this solution will only require changes in the cosmo repo, without any changes to the engine.
-This implementation will not require additional changes to the hooks structures each time a new provider is added.
+The implementation of this solution will only require changes in the Cosmo repository, without any changes to the engine. This implementation will not require additional changes to the hooks structures each time a new provider is added.
 
-# Here be dragons
+## Considerations and Risks
 
-- all the hooks could be called in parallel, so we need to be careful with that
-- all the hooks implementations could raise a panic, so we need to be careful with that also
-- in the hook `StreamOnEventFilter` a user could change the event data without considering that the changes could be sent to other clients also, so we need to advise the users to be careful with this hook
-- probably we should also add metrics to track how much time is spent in each hook, to help customers pinpoint slow hooks
+- All hooks could be called in parallel, so we need to handle concurrency carefully
+- All hook implementations could raise a panic, so we need to implement proper error handling
+- In the `StreamOnEventFilter` hook, a user could change the event data without considering that the changes could be sent to other clients as well, so we need to advise users to be careful with this hook
+- We should add metrics to track how much time is spent in each hook, to help customers identify slow hooks
