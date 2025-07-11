@@ -1313,6 +1313,7 @@ func (s *graphServer) buildGraphMux(
 			Debug:               s.rateLimit.Debug,
 			RejectStatusCode:    s.rateLimit.SimpleStrategy.RejectStatusCode,
 			KeySuffixExpression: s.rateLimit.KeySuffixExpression,
+			FailOpen:            s.rateLimit.FailOpen,
 			ExprManager:         exprManager,
 		})
 		if err != nil {
