@@ -3,6 +3,7 @@ package core
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -485,6 +486,10 @@ func (h *WebsocketHandler) addConnection(conn net.Conn, handler *WebSocketConnec
 		return fmt.Errorf("unable to get socket fd for conn: %d", handler.connectionID)
 	}
 	h.connections[fd] = handler
+	if con, ok := conn.(*tls.Conn); ok {
+		netConn := con.NetConn()
+		return h.netPoll.Add(netConn)
+	}
 	return h.netPoll.Add(conn)
 }
 
@@ -493,7 +498,14 @@ func (h *WebsocketHandler) removeConnection(conn net.Conn, handler *WebSocketCon
 	h.connectionsMu.Lock()
 	delete(h.connections, fd)
 	h.connectionsMu.Unlock()
-	err := h.netPoll.Remove(conn)
+
+	var err error
+	if con, ok := conn.(*tls.Conn); ok {
+		netConn := con.NetConn()
+		err = h.netPoll.Remove(netConn)
+	} else {
+		err = h.netPoll.Remove(conn)
+	}
 	if err != nil {
 		h.logger.Warn("Removing connection from net poller", zap.Error(err))
 	}
@@ -514,6 +526,10 @@ func socketFd(conn net.Conn) int {
 	}
 	if con, ok := conn.(netpoll.ConnImpl); ok {
 		return con.GetFD()
+	}
+	if con, ok := conn.(*tls.Conn); ok {
+		netConn := con.NetConn()
+		return socketFd(netConn)
 	}
 	return 0
 }
