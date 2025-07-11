@@ -262,7 +262,7 @@ func (m *MyModule) StreamOnEventReceived(ctx StreamContext, event core.StreamEve
         var dataReceived struct {
             EmployeeId string `json:"EmployeeId"`
         }
-        err := json.Unmarshal(event.Data(), &dataReceived)
+        err := json.Unmarshal(receivedEventConfiguration.Data, &dataReceived)
         if err != nil {
             return fmt.Errorf("error unmarshalling data: %w", err)
         }
