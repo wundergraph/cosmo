@@ -1,4 +1,4 @@
-import { access, constants, lstat, readFile, writeFile } from 'node:fs/promises';
+import { access, constants, lstat, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { compileGraphQLToMapping, compileGraphQLToProto, ProtoLock } from '@wundergraph/protographic';
 import { Command, program } from 'commander';
 import { camelCase, upperFirst } from 'lodash-es';
@@ -50,14 +50,9 @@ async function generateCommandAction(name: string, options: CLIOptions) {
   try {
     const inputFile = resolve(options.input);
 
-<<<<<<< HEAD
     // Ensure output directory exists
-    if (!existsSync(options.output)) {
-      await mkdir(options.output, { recursive: true });
-=======
     if (!(await exists(options.output))) {
-      program.error(`Output directory ${options.output} does not exist`);
->>>>>>> 2ef87dc0 (Refactor the code)
+      await mkdir(options.output, { recursive: true });
     }
 
     if (!(await lstat(options.output)).isDirectory()) {
