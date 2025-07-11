@@ -27,6 +27,7 @@ import (
 
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/internal/circuit"
 	"github.com/wundergraph/cosmo/router/internal/debug"
 	"github.com/wundergraph/cosmo/router/internal/docker"
 	"github.com/wundergraph/cosmo/router/internal/graphiql"
@@ -83,6 +84,7 @@ type (
 		Config
 		httpServer           *server
 		modules              []Module
+		moduleHooks          *coreModuleHooks
 		EngineStats          statistics.EngineStatistics
 		playgroundHandler    func(http.Handler) http.Handler
 		proxy                ProxyFunc
@@ -169,6 +171,18 @@ type (
 	// Option defines the method to customize server.
 	Option func(svr *Router)
 )
+
+type SubgraphCircuitBreakerOptions struct {
+	CircuitBreaker circuit.CircuitBreakerConfig
+	SubgraphMap    map[string]circuit.CircuitBreakerConfig
+}
+
+func (r *SubgraphCircuitBreakerOptions) IsEnabled() bool {
+	if r == nil {
+		return false
+	}
+	return r.CircuitBreaker.Enabled || len(r.SubgraphMap) > 0
+}
 
 // NewRouter creates a new Router instance. Router.Start() must be called to start the server.
 // Alternatively, use Router.NewServer() to create a new server instance without starting it.
@@ -640,6 +654,22 @@ func (r *Router) initModules(ctx context.Context) error {
 	return nil
 }
 
+func (r *Router) initModulesV1(ctx context.Context) error {
+	if len(r.customModulesV1) == 0 {
+		return nil
+	}
+
+	moduleList := make([]ModuleV1Info, 0, len(r.customModulesV1))
+	for _, module := range r.customModulesV1 {
+		moduleList = append(moduleList, module.Module())
+	}
+
+	moduleList = sortModulesV1(moduleList)
+	r.moduleHooks = newCoreModuleHooks(r.logger)
+
+	return r.moduleHooks.initCoreModuleHooks(ctx, moduleList)
+}
+
 func (r *Router) BaseURL() string {
 	return r.baseURL
 }
@@ -913,6 +943,11 @@ func (r *Router) bootstrap(ctx context.Context) error {
 	// Modules are only initialized once and not on every config change
 	if err := r.initModules(ctx); err != nil {
 		return fmt.Errorf("failed to init user modules: %w", err)
+	}
+
+	// Initialize ModulesV1 system
+	if err := r.initModulesV1(ctx); err != nil {
+		return fmt.Errorf("failed to init modulesV1: %w", err)
 	}
 
 	if r.traceConfig.Enabled && len(r.tracePropagators) > 0 {
@@ -1469,6 +1504,18 @@ func (r *Router) Shutdown(ctx context.Context) error {
 		}
 	}()
 
+	// Cleanup ModulesV1
+	if r.moduleHooks != nil {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			if subErr := r.moduleHooks.cleanupCoreModuleHooks(ctx); subErr != nil {
+				err.Append(fmt.Errorf("failed to cleanup ModulesV1: %w", subErr))
+			}
+		}()
+	}
+
 	// Shutdown the CDN operation client and free up resources
 	if r.persistedOperationClient != nil {
 		r.persistedOperationClient.Close()
@@ -1722,9 +1769,21 @@ func WithCustomModules(modules ...Module) Option {
 	}
 }
 
+func WithCustomModulesV1(modules ...ModuleV1) Option {
+	return func(r *Router) {
+		r.customModulesV1 = modules
+	}
+}
+
 func WithSubgraphTransportOptions(opts *SubgraphTransportOptions) Option {
 	return func(r *Router) {
 		r.subgraphTransportOptions = opts
+	}
+}
+
+func WithSubgraphCircuitBreakerOptions(opts *SubgraphCircuitBreakerOptions) Option {
+	return func(r *Router) {
+		r.subgraphCircuitBreakerOptions = opts
 	}
 }
 
@@ -1839,6 +1898,39 @@ func NewSubgraphTransportOptions(cfg config.TrafficShapingRules) *SubgraphTransp
 	}
 
 	return base
+}
+
+func NewSubgraphCircuitBreakerOptions(cfg config.TrafficShapingRules) *SubgraphCircuitBreakerOptions {
+	entry := &SubgraphCircuitBreakerOptions{
+		SubgraphMap: map[string]circuit.CircuitBreakerConfig{},
+	}
+	// If we have a global default
+	if cfg.All.CircuitBreaker.Enabled {
+		entry.CircuitBreaker = newCircuitBreakerConfig(cfg.All.CircuitBreaker)
+	}
+	// Subgraph specific circuit breakers
+	for k, v := range cfg.Subgraphs {
+		if v != nil {
+			entry.SubgraphMap[k] = newCircuitBreakerConfig(v.CircuitBreaker)
+		}
+	}
+
+	return entry
+}
+
+func newCircuitBreakerConfig(cb config.CircuitBreaker) circuit.CircuitBreakerConfig {
+	return circuit.CircuitBreakerConfig{
+		Enabled:                    cb.Enabled,
+		ErrorThresholdPercentage:   cb.ErrorThresholdPercentage,
+		RequestThreshold:           cb.RequestThreshold,
+		SleepWindow:                cb.SleepWindow,
+		HalfOpenAttempts:           cb.HalfOpenAttempts,
+		RequiredSuccessfulAttempts: cb.RequiredSuccessfulAttempts,
+		RollingDuration:            cb.RollingDuration,
+		NumBuckets:                 cb.NumBuckets,
+		ExecutionTimeout:           cb.ExecutionTimeout,
+		MaxConcurrentRequests:      cb.MaxConcurrentRequests,
+	}
 }
 
 func DefaultSubgraphTransportOptions() *SubgraphTransportOptions {
@@ -2175,6 +2267,7 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 		Version:            Version,
 		Attributes:         cfg.Metrics.Attributes,
 		ResourceAttributes: buildResourceAttributes(cfg.ResourceAttributes),
+		CardinalityLimit:   cfg.Metrics.CardinalityLimit,
 		OpenTelemetry: rmetric.OpenTelemetry{
 			Enabled:         cfg.Metrics.OTLP.Enabled,
 			RouterRuntime:   cfg.Metrics.OTLP.RouterRuntime,
@@ -2184,6 +2277,7 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 				Subscription: cfg.Metrics.OTLP.EngineStats.Subscriptions,
 			},
 			Exporters:           openTelemetryExporters,
+			CircuitBreaker:      cfg.Metrics.OTLP.CircuitBreaker,
 			ExcludeMetrics:      cfg.Metrics.OTLP.ExcludeMetrics,
 			ExcludeMetricLabels: cfg.Metrics.OTLP.ExcludeMetricLabels,
 		},
@@ -2196,6 +2290,7 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 			EngineStats: rmetric.EngineStatsConfig{
 				Subscription: cfg.Metrics.Prometheus.EngineStats.Subscriptions,
 			},
+			CircuitBreaker:      cfg.Metrics.Prometheus.CircuitBreaker,
 			ExcludeMetrics:      cfg.Metrics.Prometheus.ExcludeMetrics,
 			ExcludeMetricLabels: cfg.Metrics.Prometheus.ExcludeMetricLabels,
 			ExcludeScopeInfo:    cfg.Metrics.Prometheus.ExcludeScopeInfo,

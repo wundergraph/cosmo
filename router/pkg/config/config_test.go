@@ -1,10 +1,13 @@
 package config
 
 import (
-	"github.com/goccy/go-yaml"
+	"fmt"
 	"regexp"
 	"testing"
 	"time"
+
+	"github.com/goccy/go-yaml"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/caarlos0/env/v11"
 	"github.com/santhosh-tekuri/jsonschema/v6"
@@ -199,6 +202,61 @@ telemetry:
 	require.Len(t, cfg.Config.Telemetry.Metrics.Prometheus.ExcludeMetricLabels, 1)
 	require.Equal(t, RegExArray{regexp.MustCompile("^go_.*"), regexp.MustCompile("^process_.*")}, cfg.Config.Telemetry.Metrics.Prometheus.ExcludeMetrics)
 	require.Equal(t, RegExArray{regexp.MustCompile("^instance")}, cfg.Config.Telemetry.Metrics.Prometheus.ExcludeMetricLabels)
+}
+
+func TestLogLevels(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		logLevel string
+		expected zapcore.Level
+	}{
+		{
+			name:     "debug level",
+			logLevel: "debug",
+			expected: zapcore.DebugLevel,
+		},
+		{
+			name:     "info level",
+			logLevel: "info",
+			expected: zapcore.InfoLevel,
+		},
+		{
+			name:     "warn level",
+			logLevel: "warn",
+			expected: zapcore.WarnLevel,
+		},
+		{
+			name:     "error level",
+			logLevel: "error",
+			expected: zapcore.ErrorLevel,
+		},
+		{
+			name:     "panic level",
+			logLevel: "panic",
+			expected: zapcore.PanicLevel,
+		},
+		{
+			name:     "fatal level",
+			logLevel: "fatal",
+			expected: zapcore.FatalLevel,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run("parses "+tt.name, func(t *testing.T) {
+			f := createTempFileFromFixture(t, fmt.Sprintf(`
+version: "1"
+log_level: %s
+`, tt.logLevel))
+
+			cfg, err := LoadConfig([]string{f})
+
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, cfg.Config.LogLevel)
+		})
+	}
 }
 
 func TestCustomGoDurationExtension(t *testing.T) {
@@ -1055,4 +1113,88 @@ listen_addr: "localhost:3007"
 		require.ErrorContains(t, err, "- at '/execution_config': additional properties 'file' not allowed")
 	})
 
+}
+
+func TestCircuitBreakerConfig(t *testing.T) {
+	t.Parallel()
+
+	t.Run("verify max exceeding", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+traffic_shaping:
+  all:
+    circuit_breaker:
+      enabled: true
+      request_threshold: 900000
+      error_threshold_percentage: 50000
+      sleep_window: 3m
+      half_open_attempts: 9000
+      required_successful: 700
+      rolling_duration: 6m
+      num_buckets: 170
+`)
+		_, err := LoadConfig([]string{f})
+		require.Error(t, err)
+		require.ErrorContains(t, err, "'/traffic_shaping/all/circuit_breaker/request_threshold': maximum: got 900,000, want 10,000")
+		require.ErrorContains(t, err, "'/traffic_shaping/all/circuit_breaker/error_threshold_percentage': maximum: got 50,000, want 100")
+		require.ErrorContains(t, err, "'/traffic_shaping/all/circuit_breaker/sleep_window': duration must be less or equal than 2m0s")
+		require.ErrorContains(t, err, "'/traffic_shaping/all/circuit_breaker/half_open_attempts': maximum: got 9,000, want 100")
+		require.ErrorContains(t, err, "'/traffic_shaping/all/circuit_breaker/required_successful': maximum: got 700, want 100")
+		require.ErrorContains(t, err, "'/traffic_shaping/all/circuit_breaker/rolling_duration': duration must be less or equal than 2m0s")
+		require.ErrorContains(t, err, "'/traffic_shaping/all/circuit_breaker/num_buckets': maximum: got 170, want 120")
+	})
+
+	t.Run("verify min not exceeding", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+traffic_shaping:
+  all:
+    circuit_breaker:
+      enabled: true
+      request_threshold: 0
+      error_threshold_percentage: 0
+      sleep_window: 100ms
+      half_open_attempts: 0
+      required_successful: 0
+      rolling_duration: 2s
+      num_buckets: 0
+`)
+		_, err := LoadConfig([]string{f})
+		require.Error(t, err)
+		require.ErrorContains(t, err, "'/traffic_shaping/all/circuit_breaker/request_threshold': minimum: got 0, want 1")
+		require.ErrorContains(t, err, "'/traffic_shaping/all/circuit_breaker/error_threshold_percentage': minimum: got 0, want 1")
+		require.ErrorContains(t, err, "'/traffic_shaping/all/circuit_breaker/sleep_window': duration must be greater or equal than 250ms")
+		require.ErrorContains(t, err, "'/traffic_shaping/all/circuit_breaker/half_open_attempts': minimum: got 0, want 1")
+		require.ErrorContains(t, err, "'/traffic_shaping/all/circuit_breaker/required_successful': minimum: got 0, want 1")
+		require.ErrorContains(t, err, "'/traffic_shaping/all/circuit_breaker/rolling_duration': duration must be greater or equal than 5s")
+		require.ErrorContains(t, err, "'/traffic_shaping/all/circuit_breaker/num_buckets': minimum: got 0, want 1")
+	})
+
+	t.Run("verify valid configuration", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+traffic_shaping:
+  all:
+    circuit_breaker:
+      enabled: true
+      request_threshold: 5
+      error_threshold_percentage: 5
+      sleep_window: 500ms
+      half_open_attempts: 5
+      required_successful: 5
+      rolling_duration: 7s
+      num_buckets: 5
+`)
+		_, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+	})
 }

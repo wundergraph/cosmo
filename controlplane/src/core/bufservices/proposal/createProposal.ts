@@ -5,6 +5,7 @@ import {
   CreateProposalRequest,
   CreateProposalResponse,
   Label,
+  ProposalNamingConvention,
   ProposalSubgraph,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { Composer } from '../../composition/composer.js';
@@ -68,6 +69,7 @@ export function createProposal(
         graphPruningSkipped: false,
         checkUrl: '',
         proposalUrl: '',
+        proposalName: '',
       };
     }
 
@@ -92,6 +94,7 @@ export function createProposal(
         graphPruningSkipped: false,
         checkUrl: '',
         proposalUrl: '',
+        proposalName: '',
       };
     }
 
@@ -120,18 +123,54 @@ export function createProposal(
         graphPruningSkipped: false,
         checkUrl: '',
         proposalUrl: '',
+        proposalName: '',
       };
     }
 
+    let proposalName = req.name;
+
+    if (req.namingConvention === ProposalNamingConvention.NORMAL) {
+      // checking if the name starts with p- and followed by any integer
+      const proposalNameRegex = /^p-\d+$/;
+      if (proposalNameRegex.test(req.name)) {
+        return {
+          response: {
+            code: EnumStatusCode.ERR,
+            details: `Proposal name cannot start with p-`,
+          },
+          proposalId: '',
+          breakingChanges: [],
+          nonBreakingChanges: [],
+          compositionErrors: [],
+          checkId: '',
+          lintWarnings: [],
+          lintErrors: [],
+          graphPruneWarnings: [],
+          graphPruneErrors: [],
+          compositionWarnings: [],
+          lintingSkipped: false,
+          graphPruningSkipped: false,
+          checkUrl: '',
+          proposalUrl: '',
+          proposalName: '',
+        };
+      }
+    } else {
+      const count = await proposalRepo.countByFederatedGraphId({
+        federatedGraphId: federatedGraph.id,
+      });
+      proposalName = `p-${count + 1}/${req.name}`;
+    }
+
     const existingProposal = await proposalRepo.ByName({
-      name: req.name,
+      name: proposalName,
       federatedGraphId: federatedGraph.id,
     });
     if (existingProposal) {
       return {
         response: {
           code: EnumStatusCode.ERR_ALREADY_EXISTS,
-          details: `Proposal ${req.name} already exists.`,
+          details: `Proposal ${proposalName} already exists.`,
         },
         proposalId: '',
         breakingChanges: [],
@@ -147,6 +186,7 @@ export function createProposal(
         graphPruningSkipped: false,
         checkUrl: '',
         proposalUrl: '',
+        proposalName: '',
       };
     }
 
@@ -170,6 +210,7 @@ export function createProposal(
         graphPruningSkipped: false,
         checkUrl: '',
         proposalUrl: '',
+        proposalName: '',
       };
     }
 
@@ -195,6 +236,7 @@ export function createProposal(
         graphPruningSkipped: false,
         checkUrl: '',
         proposalUrl: '',
+        proposalName: '',
       };
     }
 
@@ -236,6 +278,7 @@ export function createProposal(
             graphPruningSkipped: false,
             checkUrl: '',
             proposalUrl: '',
+            proposalName: '',
           };
         }
 
@@ -261,6 +304,7 @@ export function createProposal(
             graphPruningSkipped: false,
             checkUrl: '',
             proposalUrl: '',
+            proposalName: '',
           };
         }
 
@@ -284,6 +328,7 @@ export function createProposal(
             graphPruningSkipped: false,
             checkUrl: '',
             proposalUrl: '',
+            proposalName: '',
           };
         }
       }
@@ -301,7 +346,7 @@ export function createProposal(
 
     const proposal = await proposalRepo.createProposal({
       federatedGraphId: federatedGraph.id,
-      name: req.name,
+      name: proposalName,
       userId: authContext.userId,
       proposalSubgraphs,
     });
@@ -401,6 +446,7 @@ export function createProposal(
       graphPruningSkipped: !namespace.enableGraphPruning,
       checkUrl: `${process.env.WEB_BASE_URL}/${authContext.organizationSlug}/${namespace.name}/graph/${federatedGraph.name}/checks/${checkId}`,
       proposalUrl: `${process.env.WEB_BASE_URL}/${authContext.organizationSlug}/${namespace.name}/graph/${federatedGraph.name}/proposals/${proposal.id}`,
+      proposalName: proposal.name,
     };
   });
 }

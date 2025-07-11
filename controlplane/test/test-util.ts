@@ -61,7 +61,7 @@ const getKeycloakGroups = async (realm: string, keycloak: Keycloak, groupId: str
     id: group.id!,
     name: group.name!,
   }));
-}
+};
 
 export const SetupTest = async function ({
   dbname,
@@ -104,7 +104,9 @@ export const SetupTest = async function ({
   if (enableMultiUsers) {
     users.adminBobCompanyA = createTestContext('company-a', companyAOrganizationId);
     users.devJoeCompanyA = createTestContext('company-a', companyAOrganizationId, ['organization-developer']);
-    users.keyManagerSmithCompanyA = createTestContext('company-a', companyAOrganizationId, ['organization-apikey-manager']);
+    users.keyManagerSmithCompanyA = createTestContext('company-a', companyAOrganizationId, [
+      'organization-apikey-manager',
+    ]);
     users.viewerTimCompanyA = createTestContext('company-a', companyAOrganizationId, ['organization-viewer']);
     users.adminJimCompanyB = createTestContext('company-b', randomUUID());
   }
@@ -364,6 +366,30 @@ export const SetupTest = async function ({
   const transport = createConnectTransport({
     httpVersion: '1.1',
     baseUrl: addr,
+    interceptors: [
+      // Interceptor to handle cosmo-cli user-agent
+      (next) => (req) => {
+        // Check if x-cosmo-client header is set to cosmo-cli
+        const cosmoClient = req.header.get('x-cosmo-client');
+
+        if (cosmoClient === 'cosmo-cli') {
+          const modifiedHeaders = new Headers(req.header);
+          modifiedHeaders.set('user-agent', 'cosmo-cli');
+          // Remove the temporary header
+          modifiedHeaders.delete('x-cosmo-client');
+
+          const modifiedReq = {
+            ...req,
+            header: modifiedHeaders,
+          };
+
+          return next(modifiedReq);
+        }
+
+        // Otherwise, proceed normally
+        return next(req);
+      },
+    ],
   });
 
   const platformClient = createPromiseClient(PlatformService, transport);

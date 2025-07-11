@@ -53,7 +53,6 @@ import {
   EXTERNAL,
   FLOAT_SCALAR,
   INACCESSIBLE,
-  INHERITABLE_DIRECTIVE_NAMES,
   INPUT_FIELD,
   INPUT_NODE_KINDS,
   INT_SCALAR,
@@ -232,15 +231,6 @@ export function childMapToValueArray<T extends ChildData, U extends ChildDefinit
     valueArray.push(childData.node);
   }
   return valueArray as Array<U>;
-}
-
-export function removeInheritableDirectivesFromObjectParent(parentData: ParentDefinitionData) {
-  if (parentData.kind !== Kind.OBJECT_TYPE_DEFINITION) {
-    return;
-  }
-  for (const directiveName of INHERITABLE_DIRECTIVE_NAMES) {
-    parentData.directivesByDirectiveName.delete(directiveName);
-  }
 }
 
 export function setLongestDescription(existingData: DefinitionData, incomingData: DefinitionData) {

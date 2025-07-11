@@ -18,14 +18,56 @@ This document outlines the conventions used in Cosmo's configuration schema.
 
 ## Common Patterns
 
+### `enabled`/`disabled` sub-options
+
+When creating a new feature or configuration section, instead of directly making an option like `option_enabled` or `option_disabled`, use an `enabled` or `disabled` sub-option. This leaves room for future sub-options pertaining to the same feature.
+
+#### Good
+
+```yaml
+feature:
+  enabled: true
+```
+
+#### Bad
+
+```yaml
+feature_enabled: true
+```
+
+```yaml
+enable_feature: true
+```
+
+### Experimental options
+
+When introducing an option that is not stable, use a prefix like this:
+
+```yaml
+feature:
+  experiment_some_option: 3000
+  
+# or
+  
+experiment_feature:
+  some_option: 3000
+```
+
+When it has become stable, remove the prefix.
+
+## Guidelines for types and names
+
 - Property names use nouns or configurations, **not** verb-prefixed names (use `storage` not `get_storage` or `use_storage`)
-- Every configurable component uses an `enabled` boolean property to toggle features without removing them from the configuration
+- Every configurable component uses an `enabled` or `disabled` boolean property to toggle features without removing them from the configuration
+  - Select either `enabled` or `disabled` based on the feature's default state, if it is opt-out, use `disabled`, and if opt-in, use `enabled`.
+  - This helps both semantic readability with an implied default and allows the Go zero value for booleans to be used as the default.
+- Default values are specified in `pkg/config/config.go` via struct tags.
+  - It is usually best to try and make boolean properties default to `false`, this simplifies handling of the zero value, and generally means the least intrusive changes to the codebase
+  - As with `enabled`/`disabled`, you can use antonyms like `include`/`exclude`, `allow`/`deny`, etc. to indicate the default behavior.
 - URLs follow the format `scheme://host:port`
 - File paths use the `format: file-path` validator
 - Sizes are specified using string format with units (e.g., "100MB")
 - Time durations use string format with units (e.g., "1s", "1m", "1h")
-- Default values are specified in `pkg/config/config.go` via struct tags.
-    - It is usually best to try and make boolean properties default to `false`, this simplifies handling of the zero value, and generally means the least intrusive changes to the codebase
 - Take care that when you define a default value on a value in a slice or map, the `envDefault` will only be populated if the index/key comes from an environment variable, not from YAML configuration
 
 ### Configuration Merge
@@ -63,6 +105,7 @@ type Config struct {
 ```
 
 The struct field tags define:
+
 - `yaml:_`: The field name in YAML configuration
 - `yaml:omitempty`: Omits the field from Marshalling if it is the type's zero value
 - `env`: Environment variable name for this option

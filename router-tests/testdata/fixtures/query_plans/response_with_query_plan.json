@@ -54,7 +54,28 @@
                     "fragment": "fragment Key on Employee {\n    __typename\n    id\n}"
                   }
                 ],
-                "query": "query($representations: [_Any!]!){\n    _entities(representations: $representations){\n        ... on Employee {\n            __typename\n            currentMood\n        }\n    }\n}"
+                "query": "query($representations: [_Any!]!){\n    _entities(representations: $representations){\n        ... on Employee {\n            __typename\n            currentMood\n        }\n    }\n}",
+                "dependencies": [
+                  {
+                    "coordinate": {
+                      "typeName": "Employee",
+                      "fieldName": "currentMood"
+                    },
+                    "isUserRequested": false,
+                    "dependsOn": [
+                      {
+                        "fetchId": 0,
+                        "subgraph": "employees",
+                        "coordinate": {
+                          "typeName": "Employee",
+                          "fieldName": "id"
+                        },
+                        "isKey": true,
+                        "isRequires": false
+                      }
+                    ]
+                  }
+                ]
               }
             },
             {
@@ -75,7 +96,28 @@
                     "fragment": "fragment Key on Employee {\n    __typename\n    id\n}"
                   }
                 ],
-                "query": "query($representations: [_Any!]!){\n    _entities(representations: $representations){\n        ... on Employee {\n            __typename\n            isAvailable\n        }\n    }\n}"
+                "query": "query($representations: [_Any!]!){\n    _entities(representations: $representations){\n        ... on Employee {\n            __typename\n            isAvailable\n        }\n    }\n}",
+                "dependencies": [
+                  {
+                    "coordinate": {
+                      "typeName": "Employee",
+                      "fieldName": "isAvailable"
+                    },
+                    "isUserRequested": false,
+                    "dependsOn": [
+                      {
+                        "fetchId": 0,
+                        "subgraph": "employees",
+                        "coordinate": {
+                          "typeName": "Employee",
+                          "fieldName": "id"
+                        },
+                        "isKey": true,
+                        "isRequires": false
+                      }
+                    ]
+                  }
+                ]
               }
             }
           ]
@@ -108,7 +150,38 @@
                     "fragment": "fragment Key on Employee {\n    __typename\n    id\n}"
                   }
                 ],
-                "query": "query($representations: [_Any!]!){\n    _entities(representations: $representations){\n        ... on Employee {\n            __typename\n            derivedMood\n        }\n    }\n}"
+                "query": "query($representations: [_Any!]!){\n    _entities(representations: $representations){\n        ... on Employee {\n            __typename\n            derivedMood\n        }\n    }\n}",
+                "dependencies": [
+                  {
+                    "coordinate": {
+                      "typeName": "Employee",
+                      "fieldName": "derivedMood"
+                    },
+                    "isUserRequested": true,
+                    "dependsOn": [
+                      {
+                        "fetchId": 1,
+                        "subgraph": "mood",
+                        "coordinate": {
+                          "typeName": "Employee",
+                          "fieldName": "currentMood"
+                        },
+                        "isKey": false,
+                        "isRequires": true
+                      },
+                      {
+                        "fetchId": 0,
+                        "subgraph": "employees",
+                        "coordinate": {
+                          "typeName": "Employee",
+                          "fieldName": "id"
+                        },
+                        "isKey": true,
+                        "isRequires": false
+                      }
+                    ]
+                  }
+                ]
               }
             },
             {
@@ -136,7 +209,78 @@
                     "fragment": "fragment Key on Consultancy {\n    __typename\n    upc\n}"
                   }
                 ],
-                "query": "query($representations: [_Any!]!){\n    _entities(representations: $representations){\n        ... on Consultancy {\n            __typename\n            isLeadAvailable\n        }\n    }\n}"
+                "query": "query($representations: [_Any!]!){\n    _entities(representations: $representations){\n        ... on Consultancy {\n            __typename\n            isLeadAvailable\n        }\n    }\n}",
+                "dependencies": [
+                  {
+                    "coordinate": {
+                      "typeName": "Consultancy",
+                      "fieldName": "isLeadAvailable"
+                    },
+                    "isUserRequested": true,
+                    "dependsOn": [
+                      {
+                        "fetchId": 3,
+                        "subgraph": "employees",
+                        "coordinate": {
+                          "typeName": "Consultancy",
+                          "fieldName": "lead"
+                        },
+                        "isKey": false,
+                        "isRequires": true
+                      },
+                      {
+                        "fetchId": 2,
+                        "subgraph": "availability",
+                        "coordinate": {
+                          "typeName": "Consultancy",
+                          "fieldName": "lead"
+                        },
+                        "isKey": false,
+                        "isRequires": true
+                      },
+                      {
+                        "fetchId": 1,
+                        "subgraph": "mood",
+                        "coordinate": {
+                          "typeName": "Consultancy",
+                          "fieldName": "lead"
+                        },
+                        "isKey": false,
+                        "isRequires": true
+                      },
+                      {
+                        "fetchId": 0,
+                        "subgraph": "employees",
+                        "coordinate": {
+                          "typeName": "Consultancy",
+                          "fieldName": "lead"
+                        },
+                        "isKey": false,
+                        "isRequires": true
+                      },
+                      {
+                        "fetchId": 2,
+                        "subgraph": "availability",
+                        "coordinate": {
+                          "typeName": "Employee",
+                          "fieldName": "isAvailable"
+                        },
+                        "isKey": false,
+                        "isRequires": true
+                      },
+                      {
+                        "fetchId": 0,
+                        "subgraph": "employees",
+                        "coordinate": {
+                          "typeName": "Consultancy",
+                          "fieldName": "upc"
+                        },
+                        "isKey": true,
+                        "isRequires": false
+                      }
+                    ]
+                  }
+                ]
               }
             }
           ]
