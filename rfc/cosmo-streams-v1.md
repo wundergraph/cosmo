@@ -24,29 +24,31 @@ We already allow some customization using `RouterOnRequestHandler`, but it has n
 
 ```go
 // the structs are reported only with the fields that are used in the example
+type SubscriptionEventConfiguration interface {
+    ProviderID() string
+}
+
 type StreamContext interface {
     ProviderType() string
-    ProviderId() string
-    // the subscription configuration is specific for each provider
-    SubscriptionConfiguration() []byte
+    SubscriptionConfiguration() SubscriptionEventConfiguration
 }
 
 type RequestContext interface {
     Authentication() *core.Authentication
 }
 
-type SubscriptionContext interface {
+type SubscriptionOnStartHookContext interface {
     RequestContext() RequestContext
     StreamContext() StreamContext
 }
 
-// This is the new hook that will be called once at stream start
+// This is the new hook that will be called once at subscription start
 type SubscriptionOnStartHandler interface {
-    SubscriptionOnStart(ctx SubscriptionContext) error
+    SubscriptionOnStart(ctx SubscriptionOnStartHookContext) error
 }
 
 // already defined in the provider package
-type SubscriptionEventConfiguration struct {
+type NatsSubscriptionEventConfiguration struct {
     ProviderID          string               `json:"providerId"`
     Subjects            []string             `json:"subjects"`
     StreamConfiguration *StreamConfiguration `json:"streamConfiguration,omitempty"`
@@ -54,36 +56,32 @@ type SubscriptionEventConfiguration struct {
 
 type MyModule struct {}
 
-func customCheckIfClientIsAllowedToSubscribe(ctx SubscriptionContext) bool {
-    providerType := ctx.StreamContext().ProviderType()
-    providerId := ctx.StreamContext().ProviderId()
+func customCheckIfClientIsAllowedToSubscribe(ctx SubscriptionOnStartHookContext) bool {
+    cfg, ok := ctx.StreamContext().SubscriptionConfiguration().(*NatsSubscriptionEventConfiguration)
+    if !ok {
+        return true
+    }
+
+    providerId := cfg.ProviderID
     clientScopes := ctx.RequestContext().Authentication().Scopes()
     
     if slices.Contains(clientScopes, "admin") {
         return true
     }
     
-    if providerId == "sharable-data" && providerType == "nats" {
+    if providerId == "sharable-data" {
         return true
-    }
-
-    // unmarshal the subscription data, specific for each provider
-    var subscriptionConfiguration nats.SubscriptionEventConfiguration
-    err := json.Unmarshal(ctx.StreamContext().SubscriptionConfiguration(), &subscriptionConfiguration)
-    if err != nil {
-        return false
     }
     
     if providerId == "almost-sharable-data" &&
-       providerType == "nats" &&
-       slices.Equal(subscriptionConfiguration.Subjects, []string{"public"}) {
+       slices.Equal(cfg.Subjects, []string{"public"}) {
         return true
     }
 
     return false
 }
 
-func (m *MyModule) SubscriptionOnStart(ctx SubscriptionContext) error {
+func (m *MyModule) SubscriptionOnStart(ctx SubscriptionOnStartHookContext) error {
     if !customCheckIfClientIsAllowedToSubscribe(ctx) {
         return fmt.Errorf("you should be an admin to subscribe to this or only subscribe to public subscriptions!")
     }
@@ -103,7 +101,7 @@ func (m *MyModule) Module() core.ModuleInfo {
 
 ### Proposal
 
-Add a new hook to the subscription lifecycle, `SubscriptionOnStart`, that will be called once at subscription start.
+Add a new hook to the subscription lifecycle, `SubscriptionOnStartHandler`, that will be called once at subscription start.
 
 The hook arguments are:
 * `ctx SubscriptionContext`: The subscription context, which contains the request context and, optionally, the stream context
@@ -115,7 +113,7 @@ The hook should return `nil` if the client is allowed to subscribe to the stream
 
 I evaluated the possibility of adding the `SubscriptionContext` to the request context and using it within one of the existing hooks, but it would be difficult to build the subscription context without executing the pubsub code.
 
-The `StreamContext.SubscriptionConfiguration()` contains the subscription configuration as used by the provider. This allows the hooks system to be provider-agnostic, so adding a new provider will not require changes to the hooks system.
+The `StreamContext.SubscriptionConfiguration()` contains the subscription configuration as used by the provider. This allows the hooks system to be provider-agnostic, so adding a new provider will not require changes to the hooks system. To use specific fields, the hook can cast the configuration to the specific type for the provider.
 
 ## Initial Message
 
@@ -147,31 +145,31 @@ type RequestContext interface {
     Operation() core.OperationContext
 }
 
-type SubscriptionContext struct {
+type SubscriptionOnStartHookContext struct {
     RequestContext() RequestContext
     StreamContext() StreamContext
 }
 
 // This is the new hook that will be called once at stream start
 type SubscriptionOnStartHandler interface {
-    SubscriptionOnStart(ctx SubscriptionContext) error
+    SubscriptionOnStart(ctx SubscriptionOnStartHookContext) error
 }
 
-// already defined in the provider package, but we need to add the metadata field
-type PublishAndRequestEventConfiguration struct {
-    ProviderID string          `json:"providerId"`
-    Subject    string          `json:"subject"`
-    Data       json.RawMessage `json:"data"`
-    Metadata   map[string]string `json:"metadata"`
+// each provider will have its own event type that implements the StreamEvent interface
+type NatsEvent struct {
+    ProviderID string
+    Subject string
+    Data json.RawMessage
+    Metadata map[string]string
 }
 
 type MyModule struct {}
 
-func (m *MyModule) SubscriptionOnStart(ctx SubscriptionContext) error {
+func (m *MyModule) SubscriptionOnStart(ctx SubscriptionOnStartHookContext) error {
     opName := ctx.RequestContext().Operation().Name()
     opVarId := ctx.RequestContext().Operation().Variables().GetInt("id")
     if opName == "employeeSub" {
-        publishAndRequestEventConfiguration := nats.PublishAndRequestEventConfiguration{
+        evt := &NatsEvent{
             ProviderID: "employee-stream",
             Subject: "employee-stream",
             Data: []byte(fmt.Sprintf("{\"id\": \"%d\", \"__typename\": \"Employee\"}", opVarId)),
@@ -179,13 +177,6 @@ func (m *MyModule) SubscriptionOnStart(ctx SubscriptionContext) error {
                 "entity-id": fmt.Sprintf("%d", opVarId),
             },
         }
-        data, err := json.Marshal(publishAndRequestEventConfiguration)
-        if err != nil {
-            return fmt.Errorf("error marshalling data: %w", err)
-        }
-
-        // create the event with the data and the provider type
-        evt := core.NewStreamEvent(ctx.StreamContext().ProviderType(), data)
         ctx.StreamContext().WriteEvent(evt)
     }
     return nil
@@ -208,7 +199,9 @@ Using the new `SubscriptionOnStart` hook that we introduced for the previous req
 
 To emit the message, I propose adding a new method to the stream context, `WriteEvent`, which will emit the event to the stream at the lowest level. The message will pass through all hooks, making it behave like any other event received from the provider.
 
-The `StreamEvent` contains the data as used by the provider. This allows the hooks system to be provider-agnostic, so adding a new provider will not require changes to the hooks system.
+The `StreamEvent` contains the data as used by the provider. This allows the hooks system to be provider-agnostic, so adding a new provider will not require changes to the hooks system. To use specific fields, the hook can cast the event to the specific type for the provider. If the custom modules only need to read the data, they can use the `Data()`/`SetData()` methods without casting the event.
+
+This change will require adding a new type in each provider package to represent the event with additional fields (metadata, etc.). This is a significant change, but it is necessary to support additional data in events, anyway, even if we don't expose them to the custom modules.
 
 Emitting the initial message with this hook ensures that the client will receive the message before the first event from the provider is received.
 
@@ -225,67 +218,86 @@ type StreamEvent interface {
     SetData(data []byte)
 }
 
-// This is the new hook that will be called once for each event received from the provider
-type StreamOnEventReceivedHandler interface {
-    StreamOnEventReceived(ctx StreamContext, event core.StreamEvent) error
+type SubscriptionEventConfiguration interface {
+    ProviderID() string
 }
 
-// already defined in the provider package, but we need to add the metadata field
-type PublishAndRequestEventConfiguration struct {
-    ProviderID string          `json:"providerId"`
-    Subject    string          `json:"subject"`
-    Data       json.RawMessage `json:"data"`
-    Metadata   map[string]string `json:"metadata"`
+type StreamBatchDirection string
+
+const (
+    StreamBatchDirectionInbound StreamBatchDirection = "inbound"
+    StreamBatchDirectionOutbound StreamBatchDirection = "outbound"
+)
+
+type StreamBatchEventHookContext interface {
+    Direction() StreamBatchDirection
 }
 
-// to be defined in the provider package
-type ReceivedEventConfiguration struct {
-    ProviderID string          `json:"providerId"`
-    Subject    string          `json:"subject"`
-    Data       json.RawMessage `json:"data"`
-    Metadata   map[string]string `json:"metadata"`
+// each provider will have its own event type that implements the StreamEvent interface
+type NatsEvent struct {
+    ProviderID string
+    Subject string
+    Data json.RawMessage
+    Metadata map[string]string
 }
 
-type MyModule struct {}
+// StreamBatchEventHook processes a batch of stream events (inbound or outbound).  
+//  
+// Return:  
+//   - empty slice: drop all events.  
+//   - non-empty slice: emit those events (can grow, shrink, or reorder the batch).  
+// err != nil: abort the subscription with an error.  
+type StreamBatchEventHook interface {
+    OnStreamEvents(ctx StreamBatchEventHookContext, events []StreamEvent) ([]StreamEvent, error)
+}
 
-func (m *MyModule) StreamOnEventReceived(ctx StreamContext, event core.StreamEvent) error {
-    var receivedEventConfiguration nats.ReceivedEventConfiguration
-
-    // unmarshal the event data that we received from the provider
-    err := json.Unmarshal(event.Data(), &receivedEventConfiguration)
-    if err != nil {
-        return fmt.Errorf("error unmarshalling data: %w", err)
+func (m *MyModule) OnStreamEvents(
+    ctx StreamBatchEventHookContext,
+    events []StreamEvent,
+) ([]StreamEvent, error) {
+    // we only rewrite the data for inbound events
+    if ctx.Direction() == StreamBatchDirectionOutbound {
+        return events, nil
     }
 
-    // prepare the event to send with all the changes that we want to do to the data
-    if receivedEventConfiguration.Subject == "topic-with-internal-data-format" {
-        var dataReceived struct {
-            EmployeeId string `json:"EmployeeId"`
-        }
-        err := json.Unmarshal(receivedEventConfiguration.Data, &dataReceived)
-        if err != nil {
-            return fmt.Errorf("error unmarshalling data: %w", err)
-        }
-        var dataForStream struct {
-            Id string `json:"id"`
-            Name string `json:"__typename"`
-        }
-        dataForStream.Id = dataReceived.EmployeeId
-        dataForStream.Name = "Employee"
+    newEvents := make([]StreamEvent, 0, len(events))
+    for _, evt := range events {
+        if natsEvent, ok := evt.(*NatsEvent); ok {
+            if natsEvent.Subject == "topic-with-internal-data-format" {
+                // rewrite the event data to a format that is usable by Cosmo streams
+                var dataReceived struct {
+                    EmployeeId string `json:"EmployeeId"`
+                }
+                err := json.Unmarshal(natsEvent.Data(), &dataReceived)
+                if err != nil {
+                    return events, fmt.Errorf("error unmarshalling data: %w", err)
+                }
+                var dataForStream struct {
+                    Id string `json:"id"`
+                    Name string `json:"__typename"`
+                }
+                dataForStream.Id = dataReceived.EmployeeId
+                dataForStream.Name = "Employee"
 
-        publishAndRequestEventConfiguration := nats.PublishAndRequestEventConfiguration{
-            ProviderID: receivedEventConfiguration.ProviderID,
-            Subject: receivedEventConfiguration.Subject,
-            Data: dataForStream,
-            Metadata: receivedEventConfiguration.Metadata,
+                dataForStreamMarshalled, err := json.Marshal(dataForStream)
+                if err != nil {
+                    return events, fmt.Errorf("error marshalling data: %w", err)
+                }
+
+                newEvent := &NatsEvent{
+                    ProviderID: natsEvent.ProviderID,
+                    Subject: natsEvent.Subject,
+                    Data: dataForStreamMarshalled,
+                    Metadata: natsEvent.Metadata,
+                }
+                newEvents = append(newEvents, newEvent)
+                continue
+            }
         }
-        data, err := json.Marshal(publishAndRequestEventConfiguration)
-        if err != nil {
-            return fmt.Errorf("error marshalling data: %w", err)
-        }
-        event.SetData(data)
+        newEvents = append(newEvents, evt)
     }
-    return nil
+
+    return events, nil  
 }
 
 func (m *MyModule) Module() core.ModuleInfo {
@@ -308,85 +320,88 @@ type StreamEvent interface {
     SetData(data []byte)
 }
 
-type StreamContext interface {
-    WriteEvent(event core.StreamEvent)
+type SubscriptionEventConfiguration interface {
+    ProviderID() string
 }
 
-// This is the new hook that will be called once for each event that is going to be sent to the provider
-type StreamOnEventToSendHandler interface {
-    StreamOnEventToSend(ctx StreamContext, event core.StreamEvent) error
+type StreamBatchDirection string
+
+const (
+    StreamBatchDirectionInbound StreamBatchDirection = "inbound"
+    StreamBatchDirectionOutbound StreamBatchDirection = "outbound"
+)
+
+type StreamBatchEventHookContext interface {
+    Direction() StreamBatchDirection
 }
 
-// already defined in the provider package
-type SubscriptionEventConfiguration struct {
-    ProviderID          string               `json:"providerId"`
-    Subjects            []string             `json:"subjects"`
-    StreamConfiguration *StreamConfiguration `json:"streamConfiguration,omitempty"`
+// each provider will have its own event type that implements the StreamEvent interface
+type NatsEvent struct {
+    ProviderID string
+    Subject string
+    Data json.RawMessage
+    Metadata map[string]string
+}
+// StreamBatchEventHook processes a batch of stream events (inbound or outbound).  
+//  
+// Return:  
+//   - empty slice: drop all events.  
+//   - non-empty slice: emit those events (can grow, shrink, or reorder the batch).  
+// err != nil: abort the subscription with an error.  
+type StreamBatchEventHook interface {
+    OnStreamEvents(ctx StreamBatchEventHookContext, events []StreamEvent) ([]StreamEvent, error)
 }
 
-// already defined in the provider package, but we need to add the metadata field
-type PublishAndRequestEventConfiguration struct {
-    ProviderID string          `json:"providerId"`
-    Subject    string          `json:"subject"`
-    Data       json.RawMessage `json:"data"`
-    Metadata   map[string]string `json:"metadata"`
-}
-
-type MyModule struct {}
-
-func (m *MyModule) StreamOnEventToSend(ctx StreamContext, event core.StreamEvent) error {
-    // unmarshal the subscription data, specific for each provider
-    var subscriptionConfiguration nats.SubscriptionEventConfiguration
-    err := json.Unmarshal(ctx.SubscriptionConfiguration(), &subscriptionConfiguration)
-    if err != nil {
-        return err
+func (m *MyModule) OnStreamEvents(
+    ctx StreamBatchEventHookContext,
+    events []StreamEvent,
+) ([]StreamEvent, error) {
+    // we only rewrite the data for outbound events
+    if ctx.Direction() == StreamBatchDirectionInbound {
+        return events, nil
     }
-    
-    if slices.Contains(subscriptionConfiguration.Subjects, "topic-with-internal-data-format") {
-        // unmarshal the event data that we received from the provider
-        var oldEventConfiguration nats.PublishAndRequestEventConfiguration
-        err := json.Unmarshal(event.Data(), &oldEventConfiguration)
-        if err != nil {
-            return fmt.Errorf("error unmarshalling data: %w", err)
-        }
 
-        // unmarshal the data of the message the we are expecting
-        var data struct {
-            Id string `json:"id"`
-            Name string `json:"__typename"`
-        }
-        err := json.Unmarshal(oldEventConfiguration.Data, &data)
-        if err != nil {
-            return fmt.Errorf("error unmarshalling data: %w", err)
-        }
+    newEvents := make([]StreamEvent, 0, len(events))
+    for _, evt := range events {
+        if natsEvent, ok := evt.(*NatsEvent); ok {
+            if natsEvent.Subject == "topic-with-internal-data-format" {
+                // unmarshal the event data that we received from the provider
+                var dataReceived struct {
+                    Id string `json:"id"`
+                    TypeName string `json:"__typename"`
+                }
+                err := json.Unmarshal(natsEvent.Data(), &dataReceived)
+                if err != nil {
+                    return events, fmt.Errorf("error unmarshalling data: %w", err)
+                }
 
-        // prepare the data to send to the provider to be usable from external systems
-        var dataToSend struct {
-            EmployeeId string `json:"EmployeeId"`
-            OtherField string `json:"OtherField"`
+                // prepare the data to send to the provider to be usable from external systems
+                var dataToSend struct {
+                    EmployeeId string `json:"EmployeeId"`
+                    OtherField string `json:"OtherField"`
+                }
+                dataToSend.EmployeeId = dataReceived.Id
+                dataToSend.OtherField = "Custom value"
+                dataToSendMarshalled, err := json.Marshal(dataToSend)
+                if err != nil {
+                    return events, fmt.Errorf("error marshalling data: %w", err)
+                }
+                newEvent := &NatsEvent{
+                    ProviderID: natsEvent.ProviderID,
+                    Subject: natsEvent.Subject,
+                    Data: dataToSendMarshalled,
+                    Metadata: map[string]string{
+                        "entity-id": dataReceived.Id,
+                        "entity-domain": "employee",
+                    },
+                }
+                newEvents = append(newEvents, newEvent)
+                continue
+            }
         }
-        dataToSend.EmployeeId = data.Id
-        dataToSend.OtherField = "Custom value"
-        dataToSendMarshalled, err := json.Marshal(dataToSend)
-        if err != nil {
-            return fmt.Errorf("error marshalling data: %w", err)
-        }
-        publishAndRequestEventConfiguration := nats.PublishAndRequestEventConfiguration{
-            ProviderID: oldEventConfiguration.ProviderID,
-            Subject: oldEventConfiguration.Subject,
-            Data: dataToSendMarshalled,
-            Metadata: map[string]string{
-                "entity-id": data.Id,
-                "entity-domain": "employee",
-            },
-        }
-        eventData, err := json.Marshal(publishAndRequestEventConfiguration)
-        if err != nil {
-            return fmt.Errorf("error marshalling data: %w", err)
-        }
-        event.SetData(eventData)
+        newEvents = append(newEvents, evt)
     }
-    return nil
+    return newEvents, nil
 }
 
 func (m *MyModule) Module() core.ModuleInfo {
@@ -402,33 +417,28 @@ func (m *MyModule) Module() core.ModuleInfo {
 
 ### Proposal
 
-Add two new hooks to the stream lifecycle: `StreamOnEventReceived` and `StreamOnEventToSend`, which will be called once for each event received from the provider and once for each event that is going to be sent to the provider.
+Add a new hooks to the stream lifecycle `StreamBatchEventHook` which will be called once for each event received from the provider and once for each event that is going to be sent to the provider.
 
-The `StreamOnEventReceived` hook will be called for each event received from the provider, making it possible to rewrite the event data to a format usable within Cosmo streams.
-The `StreamOnEventToSend` hook will be called for each event that is going to be sent to the provider, making it possible to rewrite the event data to a format usable by external systems.
+The `StreamBatchEventHook` will be called for each event received from the provider and each event that is going to be sent to the provider, making it possible to rewrite the event data to a format usable within Cosmo streams or by external systems.
 
 The hook arguments are:
-* `ctx StreamContext`: The stream context, which contains the ID and type of the stream
-* `event core.StreamEvent`: The event received from the provider or the event that is going to be sent to the provider
+* `ctx StreamBatchEventHookContext`: The stream context, which contains the ID and type of the stream (inbound or outbound)
+* `events []StreamEvent`: The events received from the provider or the events that are going to be sent to the provider
 
-The hook should return an error if the event cannot be processed, preventing the event from being processed.
-The hook should return `nil` if the event can be processed, allowing the event to proceed.
+The hook will return a new slice of events that will be used to emit the events to the client or to the provider.
+The hook will also return an error if one of the events cannot be processed, preventing the event from being processed.
 
-I also considered exposing the subscription context to the hooks, but this would be too easy to misuse. Users might add subscription-specific data to an event that will be sent to multiple providers. To make it safe, I would need to copy the entire event data for each pair of event and subscription that needs to receive it.
+I also considered exposing the subscription context to the hook, but this would be too easy to misuse. Users might add subscription-specific data to an event that will be sent to multiple providers. To make it safe, I would need to copy the entire event data for each pair of event and subscription that needs to receive it.  
 
-This proposal requires introducing a new format for events that the pubsub system uses. For example, with NATS we currently use the `PublishAndRequestEventConfiguration` struct when writing events, but when reading events, we only pass down the event data. We need to build an intermediate struct that allows us to access metadata, data, and other event fields. In Example 1, we use the `ReceivedEventConfiguration` struct for this purpose.
-
-This change is significant but would be needed anyway to support metadata in events.
-
-#### Do we need two new hooks?
+#### Do we need a new hook?
 
 Another possible solution for mapping outward data would be to use the existing middleware hooks `RouterOnRequestHandler` or `RouterMiddlewareHandler` to intercept the mutation, access the stream context, and emit the event to the stream. However, this would require exposing a stream context in the request lifecycle, which is difficult. It would also require coordination to ensure that an event emitted on the stream is sent only after the subscription starts.
 
 Additionally, this solution is not usable on the subscription side of streams:
-- The middleware hooks are linked to the request lifecycle, making it difficult to use them to rewrite event data
+- The middleware hook is linked to the request lifecycle, making it difficult to use them to rewrite event data
 - When we use the streams feature internally, we will still need to provide a way to rewrite event data, requiring a new hook in the subscription lifecycle
 
-Therefore, I believe the best solution is to add two new hooks to the stream lifecycle.
+Therefore, I believe the best solution is to add a new hooks to the stream lifecycle.
 
 ## Event Filtering
 
@@ -440,78 +450,65 @@ We need to allow customers to filter events based on custom logic. We currently 
 // the structs are reported only with the fields that are used in the example
 type StreamEvent interface {
     Data() []byte
+    SetData(data []byte)
 }
 
-type StreamContext interface {
-    SubscriptionConfiguration() []byte
+type SubscriptionEventConfiguration interface {
+    ProviderID() string
 }
 
-type OperationContext interface {
-    Name() string
-    Variables() *astjson.Value
-}
+type StreamBatchDirection string
 
-type RequestContext interface {
-    Authentication() *core.Authentication
-}
+const (
+    StreamBatchDirectionInbound StreamBatchDirection = "inbound"
+    StreamBatchDirectionOutbound StreamBatchDirection = "outbound"
+)
 
-type SubscriptionContext struct {
+type StreamBatchEventHookContext interface {
+    Direction() StreamBatchDirection
     RequestContext() RequestContext
-    StreamContext() StreamContext
 }
 
-// This is the new hook that will be called before delivering an event to the client
-type StreamOnEventFilterHandler interface {
-    // return false to skip the event, true to deliver it
-    StreamOnEventFilter(ctx core.SubscriptionContext, event core.StreamEvent) bool
+// each provider will have its own event type that implements the StreamEvent interface
+type NatsEvent struct {
+    ProviderID string
+    Subject string
+    Data json.RawMessage
+    Metadata map[string]string
 }
-
-// already defined in the provider package
-type SubscriptionEventConfiguration struct {
-    ProviderID          string               `json:"providerId"`
-    Subjects            []string             `json:"subjects"`
-    StreamConfiguration *StreamConfiguration `json:"streamConfiguration,omitempty"`
-}
-
-// to be defined in the provider package
-type ReceivedEventConfiguration struct {
-    ProviderID string          `json:"providerId"`
-    Subject    string          `json:"subject"`
-    Data       json.RawMessage `json:"data"`
-    Metadata   map[string]string `json:"metadata"`
+// StreamBatchEventHook processes a batch of stream events (inbound or outbound).  
+//  
+// Return:  
+//   - empty slice: drop all events.  
+//   - non-empty slice: emit those events (can grow, shrink, or reorder the batch).  
+// err != nil: abort the subscription with an error.  
+type StreamBatchEventHook interface {
+    OnStreamEvents(ctx StreamBatchEventHookContext, events []StreamEvent) ([]StreamEvent, error)
 }
 
 type MyModule struct {}
 
-func (m *MyModule) StreamOnEventFilter(ctx core.SubscriptionContext, event core.StreamEvent) bool {
+func (m *MyModule) OnStreamEvents(ctx StreamBatchEventHookContext, events []StreamEvent) ([]StreamEvent, error) {
+    newEvents := make([]StreamEvent, 0, len(events))
     clientAllowedEntitiesIds, found := ctx.RequestContext().Authentication().Claims()["allowedEntitiesIds"]
     if !found {
-        return false
+        return newEvents, nil
     }
 
-    var subscriptionConfiguration nats.SubscriptionEventConfiguration
-    err := json.Unmarshal(ctx.StreamContext().SubscriptionConfiguration(), &subscriptionConfiguration)
-    if err != nil {
-        return false
-    }
-
-    if subscriptionConfiguration.Subjects == []string{"topic-with-internal-data-format"} {
-        var receivedEventConfiguration nats.ReceivedEventConfiguration
-        err := json.Unmarshal(event.Data(), &receivedEventConfiguration)
-        if err != nil {
-            return false
-        }
-
-        idHeader, ok := receivedEventConfiguration.Metadata["entity-id"]
-        if !ok {
-            return false
-        }
-        if slices.Contains(clientAllowedEntitiesIds, idHeader) {
-            // the event is delivered to the client only if the id is in the allowed entities ids
-            return true
+    for _, evt := range events {
+        if natsEvent, ok := evt.(*NatsEvent); ok {
+            if natsEvent.Subject == "topic-with-internal-data-format" {
+                idHeader, ok := natsEvent.Metadata["entity-id"]
+                if !ok {
+                    continue
+                }
+                if slices.Contains(clientAllowedEntitiesIds, idHeader) {
+                    newEvents = append(newEvents, evt)
+                }
+            }
         }
     }
-    return false
+    return newEvents, nil
 }
 
 func (m *MyModule) Module() core.ModuleInfo {
@@ -527,19 +524,18 @@ func (m *MyModule) Module() core.ModuleInfo {
 
 ### Proposal
 
-Add a new hook to the stream lifecycle, `StreamOnEventFilter`, that will be called before delivering an event to the client.
+We can use the new `StreamBatchEventHook` to filter events based on the stream configuration and the client's scopes.
 
 The hook arguments are:
-* `ctx core.SubscriptionContext`: The subscription context, which contains the request context and, optionally, the stream context
-* `event core.StreamEvent`: The event received from the provider or the event that is going to be sent to the provider
+* `ctx StreamBatchEventHookContext`: The stream context, which contains the ID and type of the stream (inbound or outbound) and the request context
+* `events []StreamEvent`: The events received from the provider or the events that are going to be sent to the provider
 
-The hook should return `false` to skip the event, `true` to deliver it.
-
-Ideally, we could use the `StreamOnEventReceivedHandler` to filter events, but this would require adding the subscription context to the stream context, which is not a good idea. It would be easy to misuse by adding subscription-specific data to an event that should not be sent only to that client. Also, the `StreamOnEventReceivedHandler` is called for each event received from the provider, while this new hook should be called for each combination of event and subscription that is going to be delivered to the client.
+The hook will return a new slice of events that will be used to emit the events to the client or to the provider.
+The hook will also return an error if one of the events cannot be processed, preventing the event from being processed.
 
 ## Architecture
 
-With this proposal, we will add hooks to both the subscription lifecycle and the stream lifecycle.
+With this proposal, we will add a new hook to the subscription and stream lifecycles.
 
 ### Subscription Lifecycle
 ```
@@ -553,17 +549,15 @@ Start subscription
 ### Stream Lifecycle
 
 ```
-An event is received from the provider
+One or more batched events are received from the provider
     │
-    └─▶ core.StreamOnEventReceivedHandler (Data mapping)
+    └─▶ core.StreamBatchEventHook (Data mapping, Filtering)
     │
-    └─▶ core.StreamOnEventFilterHandler (Filtering)
-    │
-    └─▶ "Deliver event to client"
+    └─▶ "Deliver events to client"
 
-A mutation is sent from the client
+One or more batched events are sent to the provider
     │
-    └─▶ core.StreamOnEventToSendHandler (Data mapping)
+    └─▶ core.StreamBatchEventHook (Data mapping, Filtering)
     │
     └─▶ "Send event to provider"
 ```
@@ -580,5 +574,5 @@ The implementation of this solution will only require changes in the Cosmo repos
 
 - All hooks could be called in parallel, so we need to handle concurrency carefully
 - All hook implementations could raise a panic, so we need to implement proper error handling
-- In the `StreamOnEventFilter` hook, a user could change the event data without considering that the changes could be sent to other clients as well, so we need to advise users to be careful with this hook
+- Especially the casting of the event to the specific type for the provider could raise a panic if the event is not of the expected type and the developer is not using the type check
 - We should add metrics to track how much time is spent in each hook, to help customers identify slow hooks
