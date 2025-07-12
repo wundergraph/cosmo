@@ -489,6 +489,11 @@ type StreamBatchEventHook interface {
 type MyModule struct {}
 
 func (m *MyModule) OnStreamEvents(ctx StreamBatchEventHookContext, events []StreamEvent) ([]StreamEvent, error) {
+    // we only filter the events for inbound events
+    if ctx.Direction() == StreamBatchDirectionOutbound {
+        return events, nil
+    }
+
     newEvents := make([]StreamEvent, 0, len(events))
     clientAllowedEntitiesIds, found := ctx.RequestContext().Authentication().Claims()["allowedEntitiesIds"]
     if !found {
