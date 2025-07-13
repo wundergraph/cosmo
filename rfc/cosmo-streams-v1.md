@@ -499,7 +499,7 @@ One or more batched events are received from the provider
     │
     └─▶ "Deliver events to client"
 
-One or more batched events are sent to the provider
+One or more batched events are published to the provider
     │
     └─▶ core.StreamPublishEventHook (Data mapping, Filtering)
     │
