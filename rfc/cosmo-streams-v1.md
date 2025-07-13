@@ -875,3 +875,261 @@ type OperationContext interface {
     Variables() *astjson.Value
 }
 ```
+
+## Appendix 2, Using AsyncAPI for Event Data Structure
+
+As a side note, it is important to find ways to document the data that is arriving and going out of the cosmo streams engine. This could allow some automatic code generation starting from the schema and the events data.
+As an example, we are going to explore how AsyncAPI could be used to generate the data structures for the custom modules and assure the messages format.
+
+### Example: AsyncAPI Integration for Custom Module Development
+
+We propose integrating AsyncAPI specifications with Cosmo streams to generate type-safe Go structs that can be used in custom modules. This would significantly improve the developer experience by providing:
+
+1. **Type Safety**: Generated structs prevent runtime errors from incorrect field access
+2. **Documentation**: AsyncAPI specs serve as living documentation for event schemas
+3. **Code Generation**: Automatic generation of Go structs from AsyncAPI specifications
+4. **IDE Support**: Better autocomplete and error detection in development environments
+
+### AsyncAPI Specification Example
+
+So if we have as an example the following AsyncAPI specification:
+
+```yaml
+# employee-events.asyncapi.yaml
+asyncapi: 3.0.0
+info:
+  title: Employee Events API
+  version: 1.0.0
+  description: Events related to employee updates in the system
+
+channels:
+  externalSystemEmployeeUpdates:
+    messages:
+      EmployeeUpdated:
+        $ref: '#/components/messages/EmployeeUpdated'
+
+components:
+  messages:
+    ExternalSystemEmployeeUpdated:
+      name: ExternalSystemEmployeeUpdated
+      title: External System Employee Updated Event
+      summary: Sent when an employee is updated in the external system
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ExternalSystemEmployeeFormat'
+
+  schemas:
+    ExternalSystemEmployeeFormat:
+      type: object
+      description: Employee data as received from external systems
+      properties:
+        EmployeeId:
+          type: string
+          description: Unique identifier for the employee
+        EmployeeName:
+          type: string
+          description: Full name of the employee
+        EmployeeEmail:
+          type: string
+          format: email
+          description: Email address of the employee
+        OtherField:
+          type: string
+          description: Additional field from external system
+      required:
+        - EmployeeId
+        - EmployeeName
+        - EmployeeEmail
+```
+
+### Code Generation Workflow
+
+We could provide a CLI command to WGC to generate the Go structs from AsyncAPI specifications:
+
+```bash
+# Generate Go structs from AsyncAPI spec
+wgc streams generate -i employee-events.asyncapi.yaml -o ./generated/events.go -p events
+```
+
+Before generating the code, we could add to the data that cosmo streams is expecting to receive and send.
+```yaml
+# employee-events.asyncapi.yaml
+asyncapi: 3.0.0
+info:
+  title: Cosmo Streams Employee Events API
+  version: 1.0.0
+
+channels:
+  cosmoStreamsEmployeeUpdates:
+    messages:
+      CosmoStreamsEmployeeUpdated:
+        $ref: '#/components/messages/CosmoStreamsEmployeeUpdated'
+
+components:
+  messages:
+    CosmoStreamsEmployeeUpdated:
+      name: CosmoStreamsEmployeeUpdated
+      title: Cosmo Streams Employee Updated Event
+      summary: Event published when updating an employee in the cosmo streams
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/EmployeeInternalFormat'
+
+  schemas:
+    CosmoStreamsEmployeeUpdated:
+      type: object
+      description: Employee data as used internally by Cosmo streams
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the employee
+        name:
+          type: string
+          description: Full name of the employee
+        email:
+          type: string
+          format: email
+          description: Email address of the employee
+      required:
+        - id
+        - __typename
+```
+
+
+This command would be a wrapper around asyncapi modelina, and with some additional logic to extract the internal events format from the schema SDL.
+
+This would generate Go code like:
+
+```go
+// generated/events.go
+package events
+
+import (
+    "encoding/json"
+    "time"
+)
+
+// ExternalSystemEmployeeUpdated represents employee data as received from external systems
+type ExternalSystemEmployeeUpdated struct {
+    EmployeeId    string `json:"EmployeeId"`
+    EmployeeName  string `json:"EmployeeName"`
+    EmployeeEmail string `json:"EmployeeEmail"`
+    OtherField    string `json:"OtherField"`
+}
+
+// EmployeeInternalFormat represents employee data as used internally by Cosmo streams
+type CosmoStreamsEmployeeUpdated struct {
+    Id       string `json:"id"`
+    Name     string `json:"name"`
+    Email    string `json:"email"`
+}
+```
+
+We could than encourage the developers to add conversions in a file in the same package of the generated file, like so:
+
+```go
+// generated/events.go
+package events
+
+import (
+    "encoding/json"
+    "time"
+)
+
+func ExternalSystemEmployeeUpdatedToCosmoStreamsEmployeeUpdated(e *ExternalSystemEmployeeUpdated) *CosmoStreamsEmployeeUpdated {
+    return &CosmoStreamsEmployeeUpdated{
+        Id: e.EmployeeId,
+        Name: e.EmployeeName, 
+        Email: e.EmployeeEmail,
+    }
+}
+
+```
+
+
+### Enhanced Custom Module Development
+
+With generated structs, the custom module code becomes more maintainable and type-safe:
+
+```go
+package mymodule
+
+import (
+    "encoding/json"
+    "fmt"
+    "slices"
+    
+    "github.com/wundergraph/cosmo/router/core"
+    "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
+    "your-project/generated/genevents"
+)
+
+type MyModule struct {}
+
+func (m *MyModule) OnStreamEvents(ctx StreamBatchEventHookContext, events []core.StreamEvent) ([]core.StreamEvent, error) {
+    if ctx.StreamContext().ProviderType() != "nats" {
+        return events, nil
+    }
+
+    if ctx.StreamContext().ProviderID() != "my-nats" {
+        return events, nil
+    }
+
+    natsConfig := ctx.SubscriptionEventConfiguration().(*nats.SubscriptionEventConfiguration)
+    if natsConfig.Subjects[0] != "employeeUpdates" {
+        return events, nil
+    }
+
+    clientAllowedEntitiesIds, found := ctx.RequestContext().Authentication().Claims()["allowedEntitiesIds"]
+    if !found {
+        return events, fmt.Errorf("client is not allowed to subscribe to the stream")
+    }
+
+    for _, evt := range events {
+        natsEvent, ok := evt.(*nats.NatsEvent);
+        if !ok {
+            newEvents = append(newEvents, evt)
+            continue
+        }
+
+        // Use generated struct for type-safe deserialization
+        var dataReceived genevents.ExternalSystemEmployeeUpdated
+        err := json.Unmarshal(natsEvent.Data(), &dataReceived)
+        if err != nil {
+            return events, fmt.Errorf("error unmarshalling data: %w", err)
+        }
+
+        // Convert to internal format using generated method
+        dataToSend := genevents.ExternalSystemEmployeeUpdatedToCosmoStreamsEmployeeUpdated(&dataReceived)
+
+        // Marshal using the generated struct
+        dataToSendMarshalled, err := json.Marshal(dataToSend)
+        if err != nil {
+            return events, fmt.Errorf("error marshalling data: %w", err)
+        }
+
+        // Create new event
+        newEvent := &nats.NatsEvent{
+            Data:       dataToSendMarshalled,
+        }
+        newEvents = append(newEvents, newEvent)
+    }
+    return newEvents, nil
+}
+
+func (m *MyModule) Module() core.ModuleInfo {
+    return core.ModuleInfo{
+        ID: myModuleID,
+        Priority: 1,
+        New: func() core.Module {
+            return &MyModule{}
+        },
+    }
+}
+
+var _ core.StreamBatchEventHook = (*MyModule)(nil)
+```
+
+### Considerations
+
+The developers would need to regenerate the code each time the AsyncAPI specification changes or the schema SDL changes.
