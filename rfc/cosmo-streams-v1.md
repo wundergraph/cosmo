@@ -816,7 +816,7 @@ wgc streams generate -i employee-events.asyncapi.yaml -o ./generated/events.go -
 
 Before generating the code, we could add to the data that cosmo streams is expecting to receive and send.
 ```yaml
-# employee-events.asyncapi.yaml
+# cosmo-streams-events.asyncapi.yaml
 asyncapi: 3.0.0
 info:
   title: Cosmo Streams Employee Events API
@@ -858,10 +858,9 @@ components:
         - __typename
 ```
 
-
 This command would be a wrapper around asyncapi modelina, and with some additional logic to extract the internal events format from the schema SDL.
 
-This would generate Go code like:
+This would generate a second async api specification and Go code like:
 
 ```go
 // generated/events.go
@@ -909,6 +908,7 @@ func ExternalSystemEmployeeUpdatedToCosmoStreamsEmployeeUpdated(e *ExternalSyste
 
 ```
 
+Also, external systems could use the generated async api specification to generate the code for the events that they are sending/receiving to/from cosmo streams.
 
 ### Enhanced Custom Module Development
 
