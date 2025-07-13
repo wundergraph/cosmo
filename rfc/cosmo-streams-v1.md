@@ -171,7 +171,7 @@ Using the new `SubscriptionOnStart` hook that we introduced for the previous req
 
 To emit the message, I propose adding a new method to the stream context, `WriteEvent`, which will emit the event to the stream at the lowest level. The message will pass through all hooks, making it behave like any other event received from the provider.
 
-The `StreamEvent` contains the data as used by the provider. This allows the hooks system to be provider-agnostic, so adding a new provider will not require changes to the hooks system. To use specific fields, the hook can cast the event to the specific type for the provider. If the custom modules only need to read the data, they can use the `Data()`/`SetData()` methods without casting the event.
+The `StreamEvent` contains the data as used by the provider. This allows the hooks system to be provider-agnostic, so adding a new provider will not require changes to the hooks system. To use events, the hook has to cast the event to the specific type for the provider.
 
 This change will require adding a new type in each provider package to represent the event with additional fields (metadata, etc.). This is a significant change, but it is necessary to support additional data in events, anyway, even if we don't expose them to the custom modules.
 
@@ -236,7 +236,7 @@ func (m *MyModule) OnStreamEvents(
             // var dataReceived struct {
             //     EmployeeId string `json:"EmployeeId"`
             // }
-            // err := json.Unmarshal(natsEvent.Data(), &dataReceived)
+            // err := json.Unmarshal(natsEvent.Data, &dataReceived)
 
             // create the new event
             newEvent := &NatsEvent{
@@ -320,7 +320,7 @@ func (m *MyModule) OnPublishEvents(
             // var dataReceived struct {
             //     EmployeeId string `json:"EmployeeId"`
             // }
-            // err := json.Unmarshal(natsEvent.Data(), &dataReceived)
+            // err := json.Unmarshal(natsEvent.Data, &dataReceived)
 
             // create the new event
             newEvent := &NatsEvent{
@@ -599,7 +599,7 @@ func (m *MyModule) OnStreamEvents(ctx StreamBatchEventHookContext, events []core
             EmployeeId string `json:"EmployeeId"`
             OtherField string `json:"OtherField"`
         }
-        err := json.Unmarshal(natsEvent.Data(), &dataReceived)
+        err := json.Unmarshal(natsEvent.Data, &dataReceived)
         if err != nil {
             return events, fmt.Errorf("error unmarshalling data: %w", err)
         }
@@ -709,10 +709,7 @@ type PublishEventConfiguration interface {
     FieldName() string // the field name of the mutation in the schema
 }
 
-type StreamEvent interface {
-    Data() []byte
-    SetData(data []byte)
-}
+type StreamEvent interface {}
 
 type StreamBatchEventHookContext interface {
     RequestContext() RequestContext
@@ -966,7 +963,7 @@ func (m *MyModule) OnStreamEvents(ctx StreamBatchEventHookContext, events []core
 
         // Use generated struct for type-safe deserialization
         var dataReceived genevents.ExternalSystemEmployeeUpdated
-        err := json.Unmarshal(natsEvent.Data(), &dataReceived)
+        err := json.Unmarshal(natsEvent.Data, &dataReceived)
         if err != nil {
             return events, fmt.Errorf("error unmarshalling data: %w", err)
         }
