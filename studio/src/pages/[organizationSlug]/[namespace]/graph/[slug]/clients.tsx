@@ -173,8 +173,8 @@ const ClientOperations = () => {
   const organizationSlug = router.query.organizationSlug as string;
   const { toast } = useToast();
   const searchParams = useSearchParams();
-  const clientId = searchParams.get("clientId");
-  const clientName = searchParams.get("clientName");
+  const clientId = searchParams?.get("clientId");
+  const clientName = searchParams?.get("clientName");
   const graphContext = useContext(GraphContext);
 
   const { data: sdlData } = useQuery(

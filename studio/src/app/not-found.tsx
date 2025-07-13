@@ -2,27 +2,21 @@ import { EmptyState } from "@/components/empty-state";
 import { FullscreenLayout } from "@/components/layout/fullscreen-layout";
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
-import { NextPageWithLayout } from "@/lib/page";
 import Link from "next/link";
-import { useRouter } from "next/router";
-import { useEffect } from "react";
+import { NotFoundClient } from "./not-found-client";
+import { Metadata } from "next";
 
-const FourOhFour: NextPageWithLayout = () => {
-  const router = useRouter();
+export const metadata: Metadata = {
+  title: "Page Not Found - WunderGraph Cosmo Studio",
+  description: "The page you're looking for doesn't exist.",
+};
 
-  useEffect(() => {
-    let t: NodeJS.Timeout;
-    t = setTimeout(() => {
-      router.replace("/");
-    }, 3000);
-
-    return () => {
-      clearTimeout(t);
-    };
-  });
-
+// Static server component
+export default function NotFound() {
   return (
-    <div className="flex h-screen items-center justify-center">
+    <FullscreenLayout>
+      <div className="flex h-screen items-center justify-center">
+      {/* Static SVG - same as 404 page */}
       <svg
         width="855"
         height="323"
@@ -59,6 +53,8 @@ const FourOhFour: NextPageWithLayout = () => {
           </clipPath>
         </defs>
       </svg>
+
+      {/* Static empty state with client component for countdown */}
       <EmptyState
         icon={
           <div className="md:hidden">
@@ -66,7 +62,9 @@ const FourOhFour: NextPageWithLayout = () => {
           </div>
         }
         title="Page not found"
-        description="Redirecting you back to home in 3 seconds..."
+        description={
+          <NotFoundClient />
+        }
         className="z-50 md:-mt-8"
         actions={
           <Button asChild>
@@ -75,11 +73,6 @@ const FourOhFour: NextPageWithLayout = () => {
         }
       />
     </div>
+    </FullscreenLayout>
   );
-};
-
-FourOhFour.getLayout = (page) => {
-  return <FullscreenLayout>{page}</FullscreenLayout>;
-};
-
-export default FourOhFour;
+} 

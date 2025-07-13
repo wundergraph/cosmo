@@ -346,8 +346,8 @@ export const FieldUsageSheet = () => {
   const searchParams = useSearchParams();
 
   const { range, dateRange } = useAnalyticsQueryState();
-  const isNamedType = searchParams.get("isNamedType") === "true";
-  const showUsage = searchParams.get("showUsage");
+  const isNamedType = searchParams?.get("isNamedType") === "true";
+  const showUsage = searchParams?.get("showUsage");
 
   const [type, field] = showUsage?.split(".") ?? [];
 
