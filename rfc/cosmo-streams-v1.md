@@ -135,7 +135,7 @@ func (m *MyModule) SubscriptionOnStart(ctx SubscriptionOnStartHookContext) error
     }
 
     //check if the provider type is the one expected by the module
-    if ctx.SubscriptionEventConfiguration().ProviderType() != "nats" {
+    if ctx.SubscriptionEventConfiguration().ProviderType() != pubsub.ProviderTypeNats {
         return nil
     }
     
@@ -216,7 +216,7 @@ func (m *MyModule) OnStreamEvents(
     }
 
     // check if the provider type is the one expected by the module
-    if ctx.SubscriptionEventConfiguration().ProviderType() != "nats" {
+    if ctx.SubscriptionEventConfiguration().ProviderType() != pubsub.ProviderTypeNats {
         return events, nil
     }
 
@@ -300,7 +300,7 @@ func (m *MyModule) OnPublishEvents(
     }
 
     // check if the provider type is the one expected by the module
-    if ctx.PublishEventConfiguration().ProviderType() != "nats" {
+    if ctx.PublishEventConfiguration().ProviderType() != pubsub.ProviderTypeNats {
         return events, nil
     }
 
@@ -417,7 +417,7 @@ func (m *MyModule) OnStreamEvents(ctx StreamBatchEventHookContext, events []Stre
     }
 
     // check if the provider type is the one expected by the module
-    if ctx.SubscriptionEventConfiguration().ProviderType() != "nats" {
+    if ctx.SubscriptionEventConfiguration().ProviderType() != pubsub.ProviderTypeNats {
         return events, nil
     }
 
@@ -564,7 +564,7 @@ type MyModule struct {}
 
 func (m *MyModule) OnStreamEvents(ctx StreamBatchEventHookContext, events []core.StreamEvent) ([]core.StreamEvent, error) {
     // check if the provider is nats
-    if ctx.StreamContext().ProviderType() != "nats" {
+    if ctx.StreamContext().ProviderType() != pubsub.ProviderTypeNats {
         return events, nil
     }
 
@@ -737,6 +737,15 @@ type OperationContext interface {
     // the variables are currently not available, so we need to add them here
     Variables() *astjson.Value
 }
+
+// STRUCTURES TO BE ADDED TO PUBSUB PACKAGE
+type ProviderType string
+const (
+    ProviderTypeNats ProviderType = "nats"
+    ProviderTypeKafka ProviderType = "kafka"
+    ProviderTypeRedis ProviderType = "redis"
+}
+
 ```
 
 ## Appendix 2, Using AsyncAPI for Event Data Structure
