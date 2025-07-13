@@ -50,18 +50,7 @@ func customCheckIfClientIsAllowedToSubscribe(ctx SubscriptionOnStartHookContext)
     providerId := cfg.ProviderID
     clientScopes := ctx.RequestContext().Authentication().Scopes()
     
-    if slices.Contains(clientScopes, "admin") {
-        return true
-    }
-    
-    if providerId == "sharable-data" {
-        return true
-    }
-    
-    if providerId == "almost-sharable-data" &&
-       slices.Equal(cfg.Subjects, []string{"public"}) {
-        return true
-    }
+    // add checks here on client scopes, provider ID, etc.
 
     return false
 }
@@ -236,34 +225,16 @@ func (m *MyModule) OnStreamEvents(
     for _, evt := range events {
         // check if the event is the one expected by the module
         if natsEvent, ok := evt.(*NatsEvent); ok {
-            // unmarshal the event data that we received from the provider
-            var dataReceived struct {
-                EmployeeId string `json:"EmployeeId"`
-            }
-            err := json.Unmarshal(natsEvent.Data(), &dataReceived)
-            if err != nil {
-                return events, fmt.Errorf("error unmarshalling data: %w", err)
-            }
-
-            // prepare the data to send to the client
-            var dataForStream struct {
-                Id string `json:"id"`
-                Name string `json:"__typename"`
-            }
-            dataForStream.Id = dataReceived.EmployeeId
-            dataForStream.Name = "Employee"
-
-            // marshal the data to send to the client
-            dataForStreamMarshalled, err := json.Marshal(dataForStream)
-            if err != nil {
-                return events, fmt.Errorf("error marshalling data: %w", err)
-            }
+            // here you can umarshal the old data and map it to the new format
+            // for example:
+            // var dataReceived struct {
+            //     EmployeeId string `json:"EmployeeId"`
+            // }
+            // err := json.Unmarshal(natsEvent.Data(), &dataReceived)
 
             // create the new event
             newEvent := &NatsEvent{
-                ProviderID: natsEvent.ProviderID,
-                Subject: natsEvent.Subject,
-                Data: dataForStreamMarshalled,
+                Data: newDataFormat,
                 Metadata: natsEvent.Metadata,
             }
             // add the new event to the slice of events to return
@@ -338,32 +309,15 @@ func (m *MyModule) OnPublishEvents(
     for _, evt := range events {
         // check if the event is the one expected by the module
         if natsEvent, ok := evt.(*NatsEvent); ok {
-            // unmarshal the event data that we received from cosmo streams
-            var dataReceived struct {
-                Id string `json:"id"`
-                TypeName string `json:"__typename"`
-            }
-            err := json.Unmarshal(natsEvent.Data(), &dataReceived)
-            if err != nil {
-                return events, fmt.Errorf("error unmarshalling data: %w", err)
-            }
-
-            // prepare the data to send to the provider to be usable from external systems
-            var dataToSend struct {
-                EmployeeId string `json:"EmployeeId"`
-                OtherField string `json:"OtherField"`
-            }
-            dataToSend.EmployeeId = dataReceived.Id
-            dataToSend.OtherField = "Custom value"
-            dataToSendMarshalled, err := json.Marshal(dataToSend)
-            if err != nil {
-                return events, fmt.Errorf("error marshalling data: %w", err)
-            }
+            // here you can umarshal the old data and map it to the new format
+            // for example:
+            // var dataReceived struct {
+            //     EmployeeId string `json:"EmployeeId"`
+            // }
+            // err := json.Unmarshal(natsEvent.Data(), &dataReceived)
 
             // create the new event
             newEvent := &NatsEvent{
-                ProviderID: natsEvent.ProviderID,
-                Subject: natsEvent.Subject,
                 Data: dataToSendMarshalled,
                 Metadata: map[string]string{
                     "entity-id": dataReceived.Id,
@@ -606,6 +560,17 @@ func (m *MyModule) OnStreamEvents(ctx StreamBatchEventHookContext, events []core
         return events, nil
     }
 
+    // check if the provider id is the one expected by the module
+    if ctx.StreamContext().ProviderID() != "my-nats" {
+        return events, nil
+    }
+
+    // check if the subject is the one expected by the module
+    natsConfig := ctx.SubscriptionEventConfiguration().(*nats.SubscriptionEventConfiguration)
+    if natsConfig.Subjects[0] != "employeeUpdates" {
+        return events, nil
+    }
+
     // check if the client is allowed to subscribe to the stream
     clientAllowedEntitiesIds, found := ctx.RequestContext().Authentication().Claims()["allowedEntitiesIds"]
     if !found {
@@ -615,57 +580,47 @@ func (m *MyModule) OnStreamEvents(ctx StreamBatchEventHookContext, events []core
     newEvents := make([]core.StreamEvent, 0, len(events))
 
     for _, evt := range events {
-        if natsEvent, ok := evt.(*nats.NatsEvent); ok {
-            // check if the subject is the one expected by the module
-            if natsEvent.Subject != "employeeUpdates" {
-                newEvents = append(newEvents, evt)
-                continue
-            }
-            
-            // check if the provider id is the one expected by the module
-            if natsEvent.ProviderID != "my-nats" {
-                newEvents = append(newEvents, evt)
-                continue
-            }
-
-            // decode the event data coming from the provider
-            var dataReceived struct {
-                EmployeeId string `json:"EmployeeId"`
-                OtherField string `json:"OtherField"`
-            }
-            err := json.Unmarshal(natsEvent.Data(), &dataReceived)
-            if err != nil {
-                return events, fmt.Errorf("error unmarshalling data: %w", err)
-            }
-
-            // filter the events based on the client's scopes
-            if !slices.Contains(clientAllowedEntitiesIds, dataReceived.EmployeeId) {
-                continue
-            }
-
-            // prepare the data to send to the client
-            var dataToSend struct {
-                Id string `json:"id"`
-                TypeName string `json:"__typename"`
-            }
-            dataToSend.Id = dataReceived.EmployeeId
-            dataToSend.TypeName = "Employee"
-
-            // marshal the data to send to the client
-            dataToSendMarshalled, err := json.Marshal(dataToSend)
-            if err != nil {
-                return events, fmt.Errorf("error marshalling data: %w", err)
-            }
-
-            // create the new event
-            newEvent := &nats.NatsEvent{
-                ProviderID: natsEvent.ProviderID,
-                Subject: natsEvent.Subject,
-                Data: dataToSendMarshalled,
-                Metadata: natsEvent.Metadata,
-            }
-            newEvents = append(newEvents, newEvent)
+        natsEvent, ok := evt.(*nats.NatsEvent);
+        if !ok {
+            newEvents = append(newEvents, evt)
+            continue
         }
+
+        // decode the event data coming from the provider
+        var dataReceived struct {
+            EmployeeId string `json:"EmployeeId"`
+            OtherField string `json:"OtherField"`
+        }
+        err := json.Unmarshal(natsEvent.Data(), &dataReceived)
+        if err != nil {
+            return events, fmt.Errorf("error unmarshalling data: %w", err)
+        }
+
+        // filter the events based on the client's scopes
+        if !slices.Contains(clientAllowedEntitiesIds, dataReceived.EmployeeId) {
+            continue
+        }
+
+        // prepare the data to send to the client
+        var dataToSend struct {
+            Id string `json:"id"`
+            TypeName string `json:"__typename"`
+        }
+        dataToSend.Id = dataReceived.EmployeeId
+        dataToSend.TypeName = "Employee"
+
+        // marshal the data to send to the client
+        dataToSendMarshalled, err := json.Marshal(dataToSend)
+        if err != nil {
+            return events, fmt.Errorf("error marshalling data: %w", err)
+        }
+
+        // create the new event
+        newEvent := &nats.NatsEvent{
+            Data: dataToSendMarshalled,
+            Metadata: natsEvent.Metadata,
+        }
+        newEvents = append(newEvents, newEvent)
     }
     return newEvents, nil
 }
@@ -749,6 +704,17 @@ func (m *MyModule) OnStreamPublish(ctx StreamPublishEventHookContext, events []c
         return events, nil
     }
 
+    // check if the provider id is the one expected by the module
+    if ctx.StreamContext().ProviderID() != "my-nats" {
+        return events, nil
+    }
+
+    // check if the subject is the one expected by the module
+    natsConfig := ctx.PublishEventConfiguration().(*nats.PublishEventConfiguration)
+    if natsConfig.Subject != "employeeUpdated" {
+        return events, nil
+    }
+
     // check if the client is allowed to publish the event
     clientAllowedEntitiesIds, found := ctx.RequestContext().Authentication().Claims()["allowedEntitiesIds"]
     if !found {
@@ -758,60 +724,50 @@ func (m *MyModule) OnStreamPublish(ctx StreamPublishEventHookContext, events []c
     newEvents := make([]core.StreamEvent, 0, len(events))
 
     for _, evt := range events {
-        if natsEvent, ok := evt.(*nats.NatsEvent); ok {
-            // check if the subject is the one expected by the module
-            if natsEvent.Subject != "employeeUpdated" {
-                newEvents = append(newEvents, evt)
-                continue
-            }
-
-            // check if the provider id is the one expected by the module
-            if natsEvent.ProviderID != "my-nats" {
-                newEvents = append(newEvents, evt)
-                continue
-            }
-
-            // decode the event data coming from cosmo streams
-            var dataReceived struct {
-                Id string `json:"id"`
-                Name string `json:"name"`
-                Email string `json:"email"`
-            }
-            err := json.Unmarshal(natsEvent.Data(), &dataReceived)
-            if err != nil {
-                return events, fmt.Errorf("error unmarshalling data: %w", err)
-            }
-
-            // skip the event if the client is not allowed to publish the event
-            if !slices.Contains(clientAllowedEntitiesIds, dataReceived.Id) {
-                continue
-            }
-
-            // prepare the data to send to the client
-            var dataToSend struct {
-                EmployeeId string `json:"employeeId"`
-                EmployeeName string `json:"employeeName"`
-                EmployeeEmail string `json:"employeeEmail"`
-            }
-            dataToSend.EmployeeId = dataReceived.Id
-            dataToSend.EmployeeName = dataReceived.Name
-            dataToSend.EmployeeEmail = dataReceived.Email
-
-            // marshal the data to send to the client
-            dataToSendMarshalled, err := json.Marshal(dataToSend)
-            if err != nil {
-                return events, fmt.Errorf("error marshalling data: %w", err)
-            }
-
-            // create the new event
-            newEvent := &nats.NatsEvent{
-                ProviderID: natsEvent.ProviderID,
-                Subject: natsEvent.Subject,
-                Data: dataToSendMarshalled,
-                Metadata: natsEvent.Metadata,
-            }
-            newEvents = append(newEvents, newEvent)
+        natsEvent, ok := evt.(*nats.NatsEvent);
+        if !ok {
+            newEvents = append(newEvents, evt)
+            continue
         }
+
+        // decode the event data coming from cosmo streams
+        var dataReceived struct {
+            Id string `json:"id"`
+            Name string `json:"name"`
+            Email string `json:"email"`
+        }
+        err := json.Unmarshal(natsEvent.Data(), &dataReceived)
+        if err != nil {
+            return events, fmt.Errorf("error unmarshalling data: %w", err)
+        }
+
+        // skip the event if the client is not allowed to publish the event
+        if !slices.Contains(clientAllowedEntitiesIds, dataReceived.Id) {
+            continue
+        }
+
+        // prepare the data to send to the client
+        var dataToSend struct {
+            EmployeeId string `json:"employeeId"`
+            EmployeeName string `json:"employeeName"`
+            EmployeeEmail string `json:"employeeEmail"`
+        }
+        dataToSend.EmployeeId = dataReceived.Id
+        dataToSend.EmployeeName = dataReceived.Name
+        dataToSend.EmployeeEmail = dataReceived.Email
+
+        // marshal the data to send to the client
+        dataToSendMarshalled, err := json.Marshal(dataToSend)
+        if err != nil {
+            return events, fmt.Errorf("error marshalling data: %w", err)
+        }
+
+        // create the new event
+        newEvent := &nats.NatsEvent{
+            Data: dataToSendMarshalled,
+            Metadata: natsEvent.Metadata,
+        }
+        newEvents = append(newEvents, newEvent)
     }
     return newEvents, nil
 }
