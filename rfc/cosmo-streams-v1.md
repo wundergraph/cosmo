@@ -23,24 +23,8 @@ We already allow some customization using `RouterOnRequestHandler`, but it has n
 ### Example: Check if the client is allowed to subscribe to the stream
 
 ```go
-// the structs are reported only with the fields that are used in the example
-type SubscriptionEventConfiguration interface {
-    ProviderID() string
-}
-
-type StreamContext interface {
-    ProviderType() string
-    SubscriptionConfiguration() SubscriptionEventConfiguration
-}
-
-type RequestContext interface {
-    Authentication() *core.Authentication
-}
-
-type SubscriptionOnStartHookContext interface {
-    RequestContext() RequestContext
-    StreamContext() StreamContext
-}
+// the interfaces/structs are reported partially to make the example more readable
+// the full new interfaces/structs are available in the appendix 1
 
 // This is the new hook that will be called once at subscription start
 type SubscriptionOnStartHandler interface {
@@ -128,31 +112,8 @@ To emit an initial message on subscription start, we need access to the stream c
 ### Example
 
 ```go
-// the structs are reported only with the fields that are used in the example
-type StreamEvent interface {
-    Data() []byte
-    SetData(data []byte)
-}
-
-type StreamContext interface {
-    ProviderType() string
-    WriteEvent(event core.StreamEvent)
-}
-
-type OperationContext interface {
-    Name() string
-    // the variables are currently not available, so we need to add them here
-    Variables() *astjson.Value
-}
-
-type RequestContext interface {
-    Operation() core.OperationContext
-}
-
-type SubscriptionOnStartHookContext struct {
-    RequestContext() RequestContext
-    StreamContext() StreamContext
-}
+// the interfaces/structs are reported partially to make the example more readable
+// the full new interfaces/structs are available in the appendix 1
 
 // This is the new hook that will be called once at stream start
 type SubscriptionOnStartHandler interface {
@@ -222,18 +183,8 @@ The current approach for emitting and reading data from the stream is not flexib
 ### Example 1: Rewrite the event received from the provider to a format that is usable by Cosmo streams
 
 ```go
-// the structs are reported only with the fields that are used in the example
-type StreamEvent interface {
-    Data() []byte
-    SetData(data []byte)
-}
-
-type SubscriptionEventConfiguration interface {
-    ProviderID() string
-}
-
-type StreamBatchEventHookContext interface {
-}
+// the interfaces/structs are reported partially to make the example more readable
+// the full new interfaces/structs are available in the appendix 1
 
 // each provider will have its own event type that implements the StreamEvent interface
 type NatsEvent struct {
@@ -323,17 +274,8 @@ func (m *MyModule) Module() core.ModuleInfo {
 ### Example 2: Rewrite the event before emitting it to the provider to a format that is usable by external systems
 
 ```go
-// the structs are reported only with the fields that are used in the example
-type StreamEvent interface {
-    Data() []byte
-    SetData(data []byte)
-}
-
-type SubscriptionEventConfiguration interface {
-    ProviderID() string
-}
-
-type StreamPublishEventHookContext interface {}
+// the interfaces/structs are reported partially to make the example more readable
+// the full new interfaces/structs are available in the appendix 1
 
 // StreamPublishEventHook processes a batch of outbound stream events  
 //  
@@ -342,7 +284,7 @@ type StreamPublishEventHookContext interface {}
 //   - non-empty slice: emit those events (can grow, shrink, or reorder the batch).  
 // err != nil: abort the subscription with an error.  
 type StreamPublishEventHook interface {
-    OnPublishEvents(ctx StreamBatchEventHookContext, events []StreamEvent) ([]StreamEvent, error)
+    OnPublishEvents(ctx StreamPublishEventHookContext, events []StreamEvent) ([]StreamEvent, error)
 }
 
 // each provider will have its own event type that implements the StreamEvent interface
@@ -453,19 +395,8 @@ We need to allow customers to filter events based on custom logic. We currently 
 ### Example: Filter events based on stream configuration and client's scopes
 
 ```go
-// the structs are reported only with the fields that are used in the example
-type StreamEvent interface {
-    Data() []byte
-    SetData(data []byte)
-}
-
-type SubscriptionEventConfiguration interface {
-    ProviderID() string
-}
-
-type StreamBatchEventHookContext interface {
-    RequestContext() RequestContext
-}
+// the interfaces/structs are reported partially to make the example more readable
+// the full new interfaces/structs are available in the appendix 1
 
 // StreamBatchEventHook processes a batch of inbound stream events.  
 //  
@@ -871,3 +802,81 @@ events:
 ### 4. Build the cosmo router with the custom module
 
 Build and run the router with the custom module added.
+
+## Appendix 1, new data structures
+
+```go
+// NEW HOOKS
+
+// SubscriptionOnStartHandler is a hook that is called once at subscription start
+// it is used to validate if the client is allowed to subscribe to the stream
+// if returns an error, the subscription will not start
+type SubscriptionOnStartHandler interface {
+    SubscriptionOnStart(ctx SubscriptionOnStartHookContext) error
+}
+
+// StreamBatchEventHook processes a batch of inbound stream events  
+//  
+// Return:  
+//   - empty slice: drop all events.  
+//   - non-empty slice: emit those events (can grow, shrink, or reorder the batch).  
+// err != nil: abort the subscription with an error.  
+type StreamBatchEventHook interface {
+    OnStreamEvents(ctx StreamBatchEventHookContext, events []StreamEvent) ([]StreamEvent, error)
+}
+
+// StreamPublishEventHook processes a batch of outbound stream events  
+//  
+// Return:  
+//   - empty slice: drop all events.  
+//   - non-empty slice: emit those events (can grow, shrink, or reorder the batch).  
+// err != nil: abort the subscription with an error.  
+type StreamPublishEventHook interface {
+    OnPublishEvents(ctx StreamPublishEventHookContext, events []StreamEvent) ([]StreamEvent, error)
+}
+
+// NEW INTERFACES
+type SubscriptionEventConfiguration interface {
+    ProviderID() string
+}
+
+type StreamEvent interface {
+    Data() []byte
+    SetData(data []byte)
+}
+
+type StreamBatchEventHookContext interface {
+    ProviderType() string
+    ProviderID() string
+    RequestContext() RequestContext
+    SubscriptionConfiguration() SubscriptionEventConfiguration
+}
+
+type StreamPublishEventHookContext interface {
+    ProviderType() string
+    ProviderID() string
+    RequestContext() RequestContext
+}
+
+type SubscriptionOnStartHookContext interface {
+    ProviderType() string
+    SubscriptionConfiguration() SubscriptionEventConfiguration
+    WriteEvent(event core.StreamEvent)
+}
+
+type RequestContext interface {
+    Authentication() *core.Authentication
+}
+
+type SubscriptionOnStartHookContext interface {
+    RequestContext() RequestContext
+    StreamContext() StreamContext
+}
+
+// ALREADY EXISTING INTERFACES THAT WILL BE UPDATED
+type OperationContext interface {
+    Name() string
+    // the variables are currently not available, so we need to add them here
+    Variables() *astjson.Value
+}
+```
