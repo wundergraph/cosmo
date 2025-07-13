@@ -135,12 +135,22 @@ func (m *MyModule) SubscriptionOnStart(ctx SubscriptionOnStartHookContext) error
     // get the operation name and variables that we need
     opName := ctx.RequestContext().Operation().Name()
     opVarId := ctx.RequestContext().Operation().Variables().GetInt("id")
+
+    // check if the provider ID is the one expected by the module
+    if ctx.StreamContext().ProviderID() != "my-provider-id" {
+        return fmt.Errorf("provider ID is not the one expected by the module")
+    }
+
+    //check if the provider type is the one expected by the module
+    if ctx.StreamContext().ProviderType() != "nats" {
+        return fmt.Errorf("provider type is not the one expected by the module")
+    }
     
     // check if the operation name is the one expected by the module
     if opName == "employeeSub" {
         // create the event to emit using the operation variables
         evt := &NatsEvent{
-            ProviderID: "employee-stream",
+            ProviderID: ctx.StreamContext().ProviderID(),
             Subject: "employee-stream",
             Data: []byte(fmt.Sprintf("{\"id\": \"%d\", \"__typename\": \"Employee\"}", opVarId)),
             Metadata: map[string]string{
@@ -860,17 +870,11 @@ type StreamPublishEventHookContext interface {
 
 type SubscriptionOnStartHookContext interface {
     ProviderType() string
-    SubscriptionConfiguration() SubscriptionEventConfiguration
-    WriteEvent(event core.StreamEvent)
-}
-
-type RequestContext interface {
-    Authentication() *core.Authentication
-}
-
-type SubscriptionOnStartHookContext interface {
+    ProviderID() string
     RequestContext() RequestContext
     StreamContext() StreamContext
+    SubscriptionConfiguration() SubscriptionEventConfiguration
+    WriteEvent(event core.StreamEvent)
 }
 
 // ALREADY EXISTING INTERFACES THAT WILL BE UPDATED
