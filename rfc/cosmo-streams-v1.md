@@ -525,7 +525,9 @@ The implementation of this solution will only require changes in the Cosmo repos
 
 Lets build an example of how the development workflow would look like for a developer that want to add a custom module to the cosmo streams engine. The idea is to build a module that will be used to subscribe to the `employeeUpdates` subject and filter the events based on the client's scopes and remapping the messages as they are expected from the `Employee` type.
 
-### 1. Add a subscription to the cosmo streams graphql schema
+I'll show the workflow for a developer that wants to customize the subscription, but the same workflow can be applied to the mutation.
+
+### Add a subscription to the cosmo streams graphql schema
 
 The developer will start by adding a subscription to the cosmo streams graphql schema.
 ```graphql
@@ -644,153 +646,6 @@ func (m *MyModule) Module() core.ModuleInfo {
 // Interface guards
 var (
 	_ core.StreamBatchEventHook = (*MyModule)(nil)
-)
-```
-
-### 3. Add the provider configuration to the cosmo router
-```yaml
-version: "1"
-
-events:
-  providers:
-    nats:
-      - id: my-nats
-        url: "nats://localhost:4222"
-```
-
-### 4. Build the cosmo router with the custom module
-
-Build and run the router with the custom module added.
-
-
-
-## Development workflow of cosmo streams mutation with custom modules
-
-Lets build an example of how the development workflow would look like for a developer that want to add a custom module to the cosmo streams engine. The idea is to build a module that will be used to subscribe to the `employeeUpdates` subject and filter the events based on the client's scopes and remapping the messages as they are expected from the `Employee` type.
-
-### 1. Add a mutation to the cosmo streams graphql schema
-
-The developer will start by adding a mutation to the cosmo streams graphql schema.
-```graphql
-type Mutation {
-    updateEmployee(id: Int!, update: UpdateEmployeeInput!): edfs__PublishResult! @edfs__natsPublish(subject: "employeeUpdated", providerId: "my-nats")
-}
-
-input UpdateEmployeeInput {
-    name: String
-    email: String
-}
-```
-After publishing the schema, the developer will need to add the module to the cosmo streams engine.
-
-### 2. Write the custom module
-
-The developer will need to write the custom module that will be used to publish the event to the `employeeUpdated` subject. It will also be used to validate if the client is allowed to publish the event and to remap the data to the expected format.
-
-```go
-package mymodule
-
-import (
-    "encoding/json"
-    "slices"
-    "github.com/wundergraph/cosmo/router/core"
-    "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
-)
-
-func init() {
-	// Register your module here and it will be loaded at router start
-	core.RegisterModule(&MyModule{})
-}
-
-type MyModule struct {}
-
-func (m *MyModule) OnStreamPublish(ctx StreamPublishEventHookContext, events []core.StreamEvent) ([]core.StreamEvent, error) {
-    // check if the provider is nats
-    if ctx.StreamContext().ProviderType() != "nats" {
-        return events, nil
-    }
-
-    // check if the provider id is the one expected by the module
-    if ctx.StreamContext().ProviderID() != "my-nats" {
-        return events, nil
-    }
-
-    // check if the subject is the one expected by the module
-    natsConfig := ctx.PublishEventConfiguration().(*nats.PublishEventConfiguration)
-    if natsConfig.Subject != "employeeUpdated" {
-        return events, nil
-    }
-
-    // check if the client is allowed to publish the event
-    clientAllowedEntitiesIds, found := ctx.RequestContext().Authentication().Claims()["allowedEntitiesIds"]
-    if !found {
-        return events, fmt.Errorf("client is not allowed to publish the event")
-    }
-
-    newEvents := make([]core.StreamEvent, 0, len(events))
-
-    for _, evt := range events {
-        natsEvent, ok := evt.(*nats.NatsEvent);
-        if !ok {
-            newEvents = append(newEvents, evt)
-            continue
-        }
-
-        // decode the event data coming from cosmo streams
-        var dataReceived struct {
-            Id string `json:"id"`
-            Name string `json:"name"`
-            Email string `json:"email"`
-        }
-        err := json.Unmarshal(natsEvent.Data(), &dataReceived)
-        if err != nil {
-            return events, fmt.Errorf("error unmarshalling data: %w", err)
-        }
-
-        // skip the event if the client is not allowed to publish the event
-        if !slices.Contains(clientAllowedEntitiesIds, dataReceived.Id) {
-            continue
-        }
-
-        // prepare the data to send to the client
-        var dataToSend struct {
-            EmployeeId string `json:"employeeId"`
-            EmployeeName string `json:"employeeName"`
-            EmployeeEmail string `json:"employeeEmail"`
-        }
-        dataToSend.EmployeeId = dataReceived.Id
-        dataToSend.EmployeeName = dataReceived.Name
-        dataToSend.EmployeeEmail = dataReceived.Email
-
-        // marshal the data to send to the client
-        dataToSendMarshalled, err := json.Marshal(dataToSend)
-        if err != nil {
-            return events, fmt.Errorf("error marshalling data: %w", err)
-        }
-
-        // create the new event
-        newEvent := &nats.NatsEvent{
-            Data: dataToSendMarshalled,
-            Metadata: natsEvent.Metadata,
-        }
-        newEvents = append(newEvents, newEvent)
-    }
-    return newEvents, nil
-}
-
-func (m *MyModule) Module() core.ModuleInfo {
-    return core.ModuleInfo{
-        ID: myModuleID,
-        Priority: 1,
-        New: func() core.Module {
-            return &MyModule{}
-        },
-    }
-}
-
-// Interface guards
-var (
-	_ core.StreamPublishEventHook = (*MyModule)(nil)
 )
 ```
 
