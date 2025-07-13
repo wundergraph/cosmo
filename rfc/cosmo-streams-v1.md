@@ -222,15 +222,7 @@ type SubscriptionEventConfiguration interface {
     ProviderID() string
 }
 
-type StreamBatchDirection string
-
-const (
-    StreamBatchDirectionInbound StreamBatchDirection = "inbound"
-    StreamBatchDirectionOutbound StreamBatchDirection = "outbound"
-)
-
 type StreamBatchEventHookContext interface {
-    Direction() StreamBatchDirection
 }
 
 // each provider will have its own event type that implements the StreamEvent interface
@@ -241,7 +233,7 @@ type NatsEvent struct {
     Metadata map[string]string
 }
 
-// StreamBatchEventHook processes a batch of stream events (inbound or outbound).  
+// StreamBatchEventHook processes a batch of inbound stream events  
 //  
 // Return:  
 //   - empty slice: drop all events.  
@@ -251,15 +243,12 @@ type StreamBatchEventHook interface {
     OnStreamEvents(ctx StreamBatchEventHookContext, events []StreamEvent) ([]StreamEvent, error)
 }
 
+type MyModule struct {}
+
 func (m *MyModule) OnStreamEvents(
     ctx StreamBatchEventHookContext,
     events []StreamEvent,
 ) ([]StreamEvent, error) {
-    // we only rewrite the data for inbound events
-    if ctx.Direction() == StreamBatchDirectionOutbound {
-        return events, nil
-    }
-
     newEvents := make([]StreamEvent, 0, len(events))
     for _, evt := range events {
         if natsEvent, ok := evt.(*NatsEvent); ok {
@@ -324,15 +313,16 @@ type SubscriptionEventConfiguration interface {
     ProviderID() string
 }
 
-type StreamBatchDirection string
+type StreamPublishEventHookContext interface {}
 
-const (
-    StreamBatchDirectionInbound StreamBatchDirection = "inbound"
-    StreamBatchDirectionOutbound StreamBatchDirection = "outbound"
-)
-
-type StreamBatchEventHookContext interface {
-    Direction() StreamBatchDirection
+// StreamPublishEventHook processes a batch of outbound stream events  
+//  
+// Return:  
+//   - empty slice: drop all events.  
+//   - non-empty slice: emit those events (can grow, shrink, or reorder the batch).  
+// err != nil: abort the subscription with an error.  
+type StreamPublishEventHook interface {
+    OnPublishEvents(ctx StreamBatchEventHookContext, events []StreamEvent) ([]StreamEvent, error)
 }
 
 // each provider will have its own event type that implements the StreamEvent interface
@@ -342,25 +332,13 @@ type NatsEvent struct {
     Data json.RawMessage
     Metadata map[string]string
 }
-// StreamBatchEventHook processes a batch of stream events (inbound or outbound).  
-//  
-// Return:  
-//   - empty slice: drop all events.  
-//   - non-empty slice: emit those events (can grow, shrink, or reorder the batch).  
-// err != nil: abort the subscription with an error.  
-type StreamBatchEventHook interface {
-    OnStreamEvents(ctx StreamBatchEventHookContext, events []StreamEvent) ([]StreamEvent, error)
-}
 
-func (m *MyModule) OnStreamEvents(
-    ctx StreamBatchEventHookContext,
+type MyModule struct {}
+
+func (m *MyModule) OnPublishEvents(
+    ctx StreamPublishEventHookContext,
     events []StreamEvent,
 ) ([]StreamEvent, error) {
-    // we only rewrite the data for outbound events
-    if ctx.Direction() == StreamBatchDirectionInbound {
-        return events, nil
-    }
-
     newEvents := make([]StreamEvent, 0, len(events))
     for _, evt := range events {
         if natsEvent, ok := evt.(*NatsEvent); ok {
@@ -417,9 +395,9 @@ func (m *MyModule) Module() core.ModuleInfo {
 
 ### Proposal
 
-Add a new hooks to the stream lifecycle `StreamBatchEventHook` which will be called once for each event received from the provider and once for each event that is going to be sent to the provider.
-
-The `StreamBatchEventHook` will be called for each event received from the provider and each event that is going to be sent to the provider, making it possible to rewrite the event data to a format usable within Cosmo streams or by external systems.
+Add two new hooks to the stream lifecycle: `StreamBatchEventHook` and `StreamPublishEventHook`.
+The `StreamBatchEventHook` will be called each time a batch of events is received from the provider, making it possible to rewrite, filter or split the event data to a format usable within Cosmo streams.
+The `StreamPublishEventHook` will be called each time a batch of events is going to be sent to the provider, making it possible to rewrite, filter or split the event data to a format usable by external systems.
 
 The hook arguments are:
 * `ctx StreamBatchEventHookContext`: The stream context, which contains the ID and type of the stream (inbound or outbound)
@@ -430,7 +408,7 @@ The hook will also return an error if one of the events cannot be processed, pre
 
 I also considered exposing the subscription context to the hook, but this would be too easy to misuse. Users might add subscription-specific data to an event that will be sent to multiple providers. To make it safe, I would need to copy the entire event data for each pair of event and subscription that needs to receive it.  
 
-#### Do we need a new hook?
+#### Do we need two new hooks?
 
 Another possible solution for mapping outward data would be to use the existing middleware hooks `RouterOnRequestHandler` or `RouterMiddlewareHandler` to intercept the mutation, access the stream context, and emit the event to the stream. However, this would require exposing a stream context in the request lifecycle, which is difficult. It would also require coordination to ensure that an event emitted on the stream is sent only after the subscription starts.
 
@@ -457,26 +435,11 @@ type SubscriptionEventConfiguration interface {
     ProviderID() string
 }
 
-type StreamBatchDirection string
-
-const (
-    StreamBatchDirectionInbound StreamBatchDirection = "inbound"
-    StreamBatchDirectionOutbound StreamBatchDirection = "outbound"
-)
-
 type StreamBatchEventHookContext interface {
-    Direction() StreamBatchDirection
     RequestContext() RequestContext
 }
 
-// each provider will have its own event type that implements the StreamEvent interface
-type NatsEvent struct {
-    ProviderID string
-    Subject string
-    Data json.RawMessage
-    Metadata map[string]string
-}
-// StreamBatchEventHook processes a batch of stream events (inbound or outbound).  
+// StreamBatchEventHook processes a batch of inbound stream events.  
 //  
 // Return:  
 //   - empty slice: drop all events.  
@@ -486,14 +449,17 @@ type StreamBatchEventHook interface {
     OnStreamEvents(ctx StreamBatchEventHookContext, events []StreamEvent) ([]StreamEvent, error)
 }
 
+// each provider will have its own event type that implements the StreamEvent interface
+type NatsEvent struct {
+    ProviderID string
+    Subject string
+    Data json.RawMessage
+    Metadata map[string]string
+}
+
 type MyModule struct {}
 
 func (m *MyModule) OnStreamEvents(ctx StreamBatchEventHookContext, events []StreamEvent) ([]StreamEvent, error) {
-    // we only filter the events for inbound events
-    if ctx.Direction() == StreamBatchDirectionOutbound {
-        return events, nil
-    }
-
     newEvents := make([]StreamEvent, 0, len(events))
     clientAllowedEntitiesIds, found := ctx.RequestContext().Authentication().Claims()["allowedEntitiesIds"]
     if !found {
@@ -532,7 +498,7 @@ func (m *MyModule) Module() core.ModuleInfo {
 We can use the new `StreamBatchEventHook` to filter events based on the stream configuration and the client's scopes.
 
 The hook arguments are:
-* `ctx StreamBatchEventHookContext`: The stream context, which contains the ID and type of the stream (inbound or outbound) and the request context
+* `ctx StreamBatchEventHookContext`: The stream context, which contains the ID of the stream and the request context
 * `events []StreamEvent`: The events received from the provider or the events that are going to be sent to the provider
 
 The hook will return a new slice of events that will be used to emit the events to the client or to the provider.
@@ -562,7 +528,7 @@ One or more batched events are received from the provider
 
 One or more batched events are sent to the provider
     │
-    └─▶ core.StreamBatchEventHook (Data mapping, Filtering)
+    └─▶ core.StreamPublishEventHook (Data mapping, Filtering)
     │
     └─▶ "Send event to provider"
 ```
@@ -581,3 +547,289 @@ The implementation of this solution will only require changes in the Cosmo repos
 - All hook implementations could raise a panic, so we need to implement proper error handling
 - Especially the casting of the event to the specific type for the provider could raise a panic if the event is not of the expected type and the developer is not using the type check
 - We should add metrics to track how much time is spent in each hook, to help customers identify slow hooks
+
+## Development workflow of subscription with custom modules
+
+Lets build an example of how the development workflow would look like for a developer that want to add a custom module to the cosmo streams engine. The idea is to build a module that will be used to subscribe to the `employeeUpdates` subject and filter the events based on the client's scopes and remapping the messages as they are expected from the `Employee` type.
+
+### 1. Add a subscription to the cosmo streams graphql schema
+
+The developer will start by adding a subscription to the cosmo streams graphql schema.
+```graphql
+type Subscription {
+    employeeUpdates(): Employee! @edfs__natsSubscribe(subjects: ["employeeUpdates"], providerId: "my-nats")
+}
+
+type Employee @key(fields: "id", resolvable: false) {
+  id: Int! @external
+}
+```
+After publishing the schema, the developer will need to add the module to the cosmo streams engine.
+
+### 2. Write the custom module
+
+The developer will need to write the custom module that will be used to subscribe to the `employeeUpdates` subject and filter the events based on the client's scopes and remapping the messages as they are expected from the `Employee` type.
+
+```go
+package mymodule
+
+import (
+    "encoding/json"
+    "slices"
+    "github.com/wundergraph/cosmo/router/core"
+    "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
+)
+
+func init() {
+	// Register your module here and it will be loaded at router start
+	core.RegisterModule(&MyModule{})
+}
+
+type MyModule struct {}
+
+func (m *MyModule) OnStreamEvents(ctx StreamBatchEventHookContext, events []core.StreamEvent) ([]core.StreamEvent, error) {
+    // check if the provider is nats
+    if ctx.StreamContext().ProviderType() != "nats" {
+        return events, nil
+    }
+
+    // check if the client is allowed to subscribe to the stream
+    clientAllowedEntitiesIds, found := ctx.RequestContext().Authentication().Claims()["allowedEntitiesIds"]
+    if !found {
+        return events, fmt.Errorf("client is not allowed to subscribe to the stream")
+    }
+
+    newEvents := make([]core.StreamEvent, 0, len(events))
+
+    for _, evt := range events {
+        if natsEvent, ok := evt.(*nats.NatsEvent); ok {
+            // check if the subject is the one expected by the module
+            if natsEvent.Subject != "employeeUpdates" {
+                newEvents = append(newEvents, evt)
+                continue
+            }
+            
+            // check if the provider id is the one expected by the module
+            if natsEvent.ProviderID != "my-nats" {
+                newEvents = append(newEvents, evt)
+                continue
+            }
+
+            // decode the event data coming from the provider
+            var dataReceived struct {
+                EmployeeId string `json:"EmployeeId"`
+                OtherField string `json:"OtherField"`
+            }
+            err := json.Unmarshal(natsEvent.Data(), &dataReceived)
+            if err != nil {
+                return events, fmt.Errorf("error unmarshalling data: %w", err)
+            }
+
+            // filter the events based on the client's scopes
+            if !slices.Contains(clientAllowedEntitiesIds, dataReceived.EmployeeId) {
+                continue
+            }
+
+            // prepare the data to send to the client
+            var dataToSend struct {
+                Id string `json:"id"`
+                TypeName string `json:"__typename"`
+            }
+            dataToSend.Id = dataReceived.EmployeeId
+            dataToSend.TypeName = "Employee"
+
+            // marshal the data to send to the client
+            dataToSendMarshalled, err := json.Marshal(dataToSend)
+            if err != nil {
+                return events, fmt.Errorf("error marshalling data: %w", err)
+            }
+
+            // create the new event
+            newEvent := &nats.NatsEvent{
+                ProviderID: natsEvent.ProviderID,
+                Subject: natsEvent.Subject,
+                Data: dataToSendMarshalled,
+                Metadata: natsEvent.Metadata,
+            }
+            newEvents = append(newEvents, newEvent)
+        }
+    }
+    return newEvents, nil
+}
+
+func (m *MyModule) Module() core.ModuleInfo {
+    return core.ModuleInfo{
+        ID: myModuleID,
+        Priority: 1,
+        New: func() core.Module {
+            return &MyModule{}
+        },
+    }
+}
+
+// Interface guards
+var (
+	_ core.StreamBatchEventHook = (*MyModule)(nil)
+)
+```
+
+### 3. Add the provider configuration to the cosmo router
+```yaml
+version: "1"
+
+events:
+  providers:
+    nats:
+      - id: my-nats
+        url: "nats://localhost:4222"
+```
+
+### 4. Build the cosmo router with the custom module
+
+Build and run the router with the custom module added.
+
+
+
+## Development workflow of cosmo streams mutation with custom modules
+
+Lets build an example of how the development workflow would look like for a developer that want to add a custom module to the cosmo streams engine. The idea is to build a module that will be used to subscribe to the `employeeUpdates` subject and filter the events based on the client's scopes and remapping the messages as they are expected from the `Employee` type.
+
+### 1. Add a mutation to the cosmo streams graphql schema
+
+The developer will start by adding a mutation to the cosmo streams graphql schema.
+```graphql
+type Mutation {
+    updateEmployee(id: Int!, update: UpdateEmployeeInput!): edfs__PublishResult! @edfs__natsPublish(subject: "employeeUpdated", providerId: "my-nats")
+}
+
+input UpdateEmployeeInput {
+    name: String
+    email: String
+}
+```
+After publishing the schema, the developer will need to add the module to the cosmo streams engine.
+
+### 2. Write the custom module
+
+The developer will need to write the custom module that will be used to publish the event to the `employeeUpdated` subject. It will also be used to validate if the client is allowed to publish the event and to remap the data to the expected format.
+
+```go
+package mymodule
+
+import (
+    "encoding/json"
+    "slices"
+    "github.com/wundergraph/cosmo/router/core"
+    "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
+)
+
+func init() {
+	// Register your module here and it will be loaded at router start
+	core.RegisterModule(&MyModule{})
+}
+
+type MyModule struct {}
+
+func (m *MyModule) OnStreamPublish(ctx StreamPublishEventHookContext, events []core.StreamEvent) ([]core.StreamEvent, error) {
+    // check if the provider is nats
+    if ctx.StreamContext().ProviderType() != "nats" {
+        return events, nil
+    }
+
+    // check if the client is allowed to publish the event
+    clientAllowedEntitiesIds, found := ctx.RequestContext().Authentication().Claims()["allowedEntitiesIds"]
+    if !found {
+        return events, fmt.Errorf("client is not allowed to publish the event")
+    }
+
+    newEvents := make([]core.StreamEvent, 0, len(events))
+
+    for _, evt := range events {
+        if natsEvent, ok := evt.(*nats.NatsEvent); ok {
+            // check if the subject is the one expected by the module
+            if natsEvent.Subject != "employeeUpdated" {
+                newEvents = append(newEvents, evt)
+                continue
+            }
+
+            // check if the provider id is the one expected by the module
+            if natsEvent.ProviderID != "my-nats" {
+                newEvents = append(newEvents, evt)
+                continue
+            }
+
+            // decode the event data coming from cosmo streams
+            var dataReceived struct {
+                Id string `json:"id"`
+                Name string `json:"name"`
+                Email string `json:"email"`
+            }
+            err := json.Unmarshal(natsEvent.Data(), &dataReceived)
+            if err != nil {
+                return events, fmt.Errorf("error unmarshalling data: %w", err)
+            }
+
+            // skip the event if the client is not allowed to publish the event
+            if !slices.Contains(clientAllowedEntitiesIds, dataReceived.Id) {
+                continue
+            }
+
+            // prepare the data to send to the client
+            var dataToSend struct {
+                EmployeeId string `json:"employeeId"`
+                EmployeeName string `json:"employeeName"`
+                EmployeeEmail string `json:"employeeEmail"`
+            }
+            dataToSend.EmployeeId = dataReceived.Id
+            dataToSend.EmployeeName = dataReceived.Name
+            dataToSend.EmployeeEmail = dataReceived.Email
+
+            // marshal the data to send to the client
+            dataToSendMarshalled, err := json.Marshal(dataToSend)
+            if err != nil {
+                return events, fmt.Errorf("error marshalling data: %w", err)
+            }
+
+            // create the new event
+            newEvent := &nats.NatsEvent{
+                ProviderID: natsEvent.ProviderID,
+                Subject: natsEvent.Subject,
+                Data: dataToSendMarshalled,
+                Metadata: natsEvent.Metadata,
+            }
+            newEvents = append(newEvents, newEvent)
+        }
+    }
+    return newEvents, nil
+}
+
+func (m *MyModule) Module() core.ModuleInfo {
+    return core.ModuleInfo{
+        ID: myModuleID,
+        Priority: 1,
+        New: func() core.Module {
+            return &MyModule{}
+        },
+    }
+}
+
+// Interface guards
+var (
+	_ core.StreamPublishEventHook = (*MyModule)(nil)
+)
+```
+
+### 3. Add the provider configuration to the cosmo router
+```yaml
+version: "1"
+
+events:
+  providers:
+    nats:
+      - id: my-nats
+        url: "nats://localhost:4222"
+```
+
+### 4. Build the cosmo router with the custom module
+
+Build and run the router with the custom module added.
