@@ -385,6 +385,7 @@ Therefore, I believe the best solution is to add a new hooks to the stream lifec
 ## Event Filtering
 
 We need to allow customers to filter events based on custom logic. We currently only provide declarative filters, which are quite limited.
+The event filtering hook will also be useful to implement the authorization logic at the events level.
 
 ### Example: Filter events based on stream configuration and client's scopes
 
