@@ -169,7 +169,7 @@ func (m *MyModule) Module() core.ModuleInfo {
 
 Using the new `SubscriptionOnStart` hook that we introduced for the previous requirement, we can emit the initial message on subscription start. We will also need access to operation variables, which are currently not available in the request context.
 
-To emit the message, I propose adding a new method to the stream context, `WriteEvent`, which will emit the event to the stream at the lowest level. The message will pass through all hooks, making it behave like any other event received from the provider.
+To emit the message, I propose adding a new method to the stream context, `WriteEvent`, which will emit the event to the stream at the lowest level. The message will pass through all hooks, making it behave like any other event received from the provider. The message will be received only by the client that subscribed to the stream, and not by the other clients that subscribed to the same stream.
 
 The `StreamEvent` contains the data as used by the provider. This allows the hooks system to be provider-agnostic, so adding a new provider will not require changes to the hooks system. To use events, the hook has to cast the event to the specific type for the provider.
 
