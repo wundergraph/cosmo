@@ -148,7 +148,7 @@ func (m *MyModule) SubscriptionOnStart(ctx SubscriptionOnStartHookContext) error
                 "entity-id": fmt.Sprintf("%d", opVarId),
             },
         }
-        // emit the event to the stream, that will be received by the client
+        // emit the event to the stream, that will be received only by the client that subscribed to the stream
         ctx.StreamContext().WriteEvent(evt)
     }
     return nil
