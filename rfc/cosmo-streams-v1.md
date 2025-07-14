@@ -39,6 +39,11 @@ type NatsSubscriptionEventConfiguration struct {
     StreamConfiguration *StreamConfiguration `json:"streamConfiguration,omitempty"`
 }
 
+type StreamHookError struct {
+    HttpError core.HttpError
+    CloseSubscription bool
+}
+
 type MyModule struct {}
 
 // This is a custom function that will be used to check if the client is allowed to subscribe to the stream
@@ -55,9 +60,9 @@ func customCheckIfClientIsAllowedToSubscribe(ctx SubscriptionOnStartHookContext)
     }
 
     providerId := cfg.ProviderID
-    clientScopes := ctx.RequestContext().Authentication().Scopes()
+    auth := ctx.RequestContext().Authentication()
     
-    // add checks here on client scopes, provider ID, etc.
+    // add checks here on client authentication scopes, provider ID, etc.
 
     return false
 }
@@ -67,7 +72,13 @@ func (m *MyModule) SubscriptionOnStart(ctx SubscriptionOnStartHookContext) error
     // check if the client is allowed to subscribe to the stream
     if !customCheckIfClientIsAllowedToSubscribe(ctx) {
         // if not, return an error to prevent the subscription from starting
-        return fmt.Errorf("you should be an admin to subscribe to this or only subscribe to public subscriptions!")
+        return StreamHookError{
+            HttpError: core.NewHttpGraphqlError(
+                "you should be an admin to subscribe to this or only subscribe to public subscriptions!",
+                 "UNAUTHORIZED", 
+                 http.StatusUnauthorized,
+            ), CloseSubscription: true,
+        }
     }
     return nil
 }
@@ -94,6 +105,8 @@ The hook arguments are:
 
 The hook should return an error if the client is not allowed to subscribe to the stream, preventing the subscription from starting.
 The hook should return `nil` if the client is allowed to subscribe to the stream, allowing the subscription to proceed.
+
+The hook can return a `SubscriptionHookError` to customize the error messages and the behavior on the subscription.
 
 I evaluated the possibility of adding the `SubscriptionContext` to the request context and using it within one of the existing hooks, but it would be difficult to build the subscription context without executing the pubsub code.
 
@@ -747,6 +760,13 @@ type OperationContext interface {
     Name() string
     // the variables are currently not available, so we need to add them here
     Variables() *astjson.Value
+}
+
+// NEW STRUCTURES
+// StreamHookError is used to customize the error messages and the behavior
+type StreamHookError struct {
+    HttpError core.HttpError
+    CloseSubscription bool
 }
 
 // STRUCTURES TO BE ADDED TO PUBSUB PACKAGE
