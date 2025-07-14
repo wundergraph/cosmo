@@ -53,6 +53,11 @@ func TestGRPCSubgraph(t *testing.T) {
 				query:    `query { projectResources(projectId: "1") {  ... on Milestone { __typename id name } ... on Task { __typename projectId name description }} }`,
 				expected: `{"data":{"projectResources":[{"__typename":"Milestone","id":"1","name":"Infrastructure Assessment"},{"__typename":"Milestone","id":"2","name":"Cloud Environment Setup"},{"__typename":"Milestone","id":"3","name":"Application Migration"},{"__typename":"Task","projectId":"1","name":"Current Infrastructure Audit","description":"Document existing servers, databases, and applications"},{"__typename":"Task","projectId":"1","name":"Cloud Provider Selection","description":"Evaluate AWS, Azure, and GCP options"},{"__typename":"Task","projectId":"1","name":"Network Setup","description":"Configure VPCs, subnets, and security groups"},{"__typename":"Task","projectId":"1","name":"Database Migration","description":"Migrate databases to cloud-managed services"}]}}`,
 			},
+			{
+				name:     "query project resources with inline fragment and aliases",
+				query:    `query { projectResources(projectId: 3){ ... on Task {  name oldID: projectId newID: projectId }}}`,
+				expected: `{"data":{"projectResources":[{"name":"Machine Learning Model Research","oldID":"3","newID":"3"},{"name":"Data Pipeline Design","oldID":"3","newID":"3"}]}}`,
+			},
 		}
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: testenv.ConfigWithGRPCJSONTemplate,
