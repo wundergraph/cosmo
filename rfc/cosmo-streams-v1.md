@@ -43,7 +43,7 @@ type MyModule struct {}
 // This is a custom function that will be used to check if the client is allowed to subscribe to the stream
 func customCheckIfClientIsAllowedToSubscribe(ctx SubscriptionOnStartHookContext) bool {
     // check if the field name is the one expected by the module
-    if ctx.SubscriptionEventConfiguration().FieldName() != "employeeUpdates" {
+    if ctx.SubscriptionEventConfiguration().RootFieldName() != "employeeUpdates" {
         return true
     }
 
@@ -700,13 +700,13 @@ type StreamPublishEventHook interface {
 type SubscriptionEventConfiguration interface {
     ProviderID() string
     ProviderType() string
-    FieldName() string // the field name of the subscription in the schema
+    RootFieldName() string // the root field name of the subscription in the schema
 }
 
 type PublishEventConfiguration interface {
     ProviderID() string
     ProviderType() string
-    FieldName() string // the field name of the mutation in the schema
+    RootFieldName() string // the root field name of the mutation in the schema
 }
 
 type StreamEvent interface {}
