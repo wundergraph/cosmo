@@ -195,6 +195,14 @@ Emitting the initial message with this hook ensures that the client will receive
 
 The current approach for emitting and reading data from the stream is not flexible enough. We need to be able to map data from an external format to the internal format, and vice versa.
 
+Also, different providers can have different additional fields other than the message body.
+
+As an example:
+- NATS provider can have a `Metadata` field
+- Kafka provider can have a `Headers` and `Key` fields
+
+And this additional fields could be an important part of integrating with external systems.
+
 ### Example 1: Rewrite the event received from the provider to a format that is usable by Cosmo streams
 
 ```go
@@ -205,6 +213,11 @@ The current approach for emitting and reading data from the stream is not flexib
 type NatsEvent struct {
     Data json.RawMessage
     Metadata map[string]string
+}
+type KafkaEvent struct {
+    Key []byte
+    Data json.RawMessage
+    Headers map[[]byte]][]byte
 }
 
 // StreamBatchEventHook processes a batch of inbound stream events  
@@ -257,6 +270,14 @@ func (m *MyModule) OnStreamEvents(
                 Data: newDataFormat,
                 Metadata: natsEvent.Metadata,
             }
+
+            // or for Kafka we would have something like:
+            // newEvent := &KafkaEvent{
+            //     Key: kafkaEvent.Key,
+            //     Data: newDataFormat,
+            //     Headers: kafkaEvent.Headers,
+            // }
+            
             // add the new event to the slice of events to return
             newEvents = append(newEvents, newEvent)
             continue
