@@ -3,7 +3,7 @@
 Based on customer feedback, we've identified the need for more customizable stream behavior. The key areas for customization include:
 - **Authorization**: Implementing authorization checks at the start of subscriptions
 - **Initial message**: Sending an initial message to clients upon subscription start
-- **Data mapping**: Transforming data to align with internal specifications
+- **Data mapping**: Transforming events data from the format that could be used by the external system to/from Federation compatible Router events
 - **Event filtering**: Filtering events using custom logic
 
 Let's explore how we can address each of these requirements.
