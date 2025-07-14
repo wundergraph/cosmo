@@ -50,6 +50,20 @@ const SCALAR_TYPE_MAP: Record<string, string> = {
 };
 
 /**
+ * Maps GraphQL scalar types to Protocol Buffer wrapper types for nullable fields
+ *
+ * These wrapper types allow distinguishing between unset fields and zero values
+ * in Protocol Buffers, which is important for GraphQL nullable semantics.
+ */
+const SCALAR_WRAPPER_TYPE_MAP: Record<string, string> = {
+  ID: 'google.protobuf.StringValue',
+  String: 'google.protobuf.StringValue',
+  Int: 'google.protobuf.Int32Value',
+  Float: 'google.protobuf.DoubleValue',
+  Boolean: 'google.protobuf.BoolValue',
+};
+
+/**
  * Generic structure for returning RPC and message definitions
  */
 interface CollectionResult {
@@ -92,11 +106,20 @@ export class GraphQLToProtoTextVisitor {
   /** The name of the Protocol Buffer service */
   private readonly serviceName: string;
 
+  /** The package name for the proto file */
+  private readonly packageName: string;
+
   /** The lock manager for deterministic ordering */
   private readonly lockManager: ProtoLockManager;
 
   /** Generated proto lock data */
   private generatedLockData: ProtoLock | null = null;
+
+  /** List of import statements */
+  private imports: string[] = [];
+
+  /** List of option statements */
+  private options: string[] = [];
 
   /** Accumulates the Protocol Buffer definition text */
   private protoText: string[] = [];
@@ -115,6 +138,9 @@ export class GraphQLToProtoTextVisitor {
 
   /** Track generated nested list wrapper messages */
   private nestedListWrappers = new Map<string, string>();
+
+  /** Track whether wrapper types are used (for conditional import) */
+  private usesWrapperTypes = false;
 
   /**
    * Map of message names to their field numbers for tracking deleted fields
@@ -139,6 +165,7 @@ export class GraphQLToProtoTextVisitor {
 
     this.schema = schema;
     this.serviceName = serviceName;
+    this.packageName = packageName;
     this.lockManager = new ProtoLockManager(lockData);
     this.includeComments = includeComments;
 
@@ -147,17 +174,13 @@ export class GraphQLToProtoTextVisitor {
       this.initializeFieldNumbersMap(lockData);
     }
 
-    const protoOptions = [];
-
+    // Initialize options
     if (goPackage && goPackage !== '') {
       // Generate default go_package if not provided
       const defaultGoPackage = `cosmo/pkg/proto/${packageName};${packageName.replace('.', '')}`;
       const goPackageOption = goPackage || defaultGoPackage;
-      protoOptions.push(`option go_package = "${goPackageOption}";\n`);
+      this.options.push(`option go_package = "${goPackageOption}";`);
     }
-
-    // Initialize the Proto definition with the standard header
-    this.protoText = ['syntax = "proto3";', `package ${packageName};`, '', ...protoOptions];
   }
 
   /**
@@ -342,15 +365,65 @@ export class GraphQLToProtoTextVisitor {
   }
 
   /**
+   * Add an import statement to the proto file
+   */
+  private addImport(importPath: string): void {
+    if (!this.imports.includes(importPath)) {
+      this.imports.push(importPath);
+    }
+  }
+
+  /**
+   * Add an option statement to the proto file
+   */
+  private addOption(optionStatement: string): void {
+    if (!this.options.includes(optionStatement)) {
+      this.options.push(optionStatement);
+    }
+  }
+
+  /**
+   * Build the proto file header with syntax, package, imports, and options
+   */
+  private buildProtoHeader(): string[] {
+    const header: string[] = [];
+
+    // Add syntax declaration
+    header.push('syntax = "proto3";');
+
+    // Add package declaration
+    header.push(`package ${this.packageName};`);
+    header.push('');
+
+    // Add options if any (options come before imports)
+    if (this.options.length > 0) {
+      // Sort options for consistent output
+      const sortedOptions = [...this.options].sort();
+      for (const option of sortedOptions) {
+        header.push(option);
+      }
+      header.push('');
+    }
+
+    // Add imports if any
+    if (this.imports.length > 0) {
+      // Sort imports for consistent output
+      const sortedImports = [...this.imports].sort();
+      for (const importPath of sortedImports) {
+        header.push(`import "${importPath}";`);
+      }
+      header.push('');
+    }
+
+    return header;
+  }
+
+  /**
    * Visit the GraphQL schema to generate Proto buffer definition
    *
    * @returns The complete Protocol Buffer definition as a string
    */
   public visit(): string {
-    // Clear the protoText array to just contain the header
-    const headerText = this.protoText.slice();
-    this.protoText = [];
-
     // Collect RPC methods and message definitions from all sources
     const entityResult = this.collectEntityRpcMethods();
     const queryResult = this.collectQueryRpcMethods();
@@ -369,17 +442,28 @@ export class GraphQLToProtoTextVisitor {
     // Add all types from the schema to the queue that weren't already queued
     this.queueAllSchemaTypes();
 
-    // Start with the header
-    this.protoText = headerText;
+    // Process all complex types from the message queue to determine if wrapper types are needed
+    this.processMessageQueue();
+
+    // Add wrapper import if needed
+    if (this.usesWrapperTypes) {
+      this.addImport('google/protobuf/wrappers.proto');
+    }
+
+    // Build the complete proto file
+    const protoContent: string[] = [];
+
+    // Add the header (syntax, package, imports, options)
+    protoContent.push(...this.buildProtoHeader());
 
     // Add a service description comment
     if (this.includeComments) {
       const serviceComment = `Service definition for ${this.serviceName}`;
-      this.protoText.push(...this.formatComment(serviceComment, 0)); // Top-level comment, no indent
+      protoContent.push(...this.formatComment(serviceComment, 0)); // Top-level comment, no indent
     }
 
-    // First: Create service block containing only RPC methods
-    this.protoText.push(`service ${this.serviceName} {`);
+    // Add service block containing RPC methods
+    protoContent.push(`service ${this.serviceName} {`);
     this.indent++;
 
     // Sort method names deterministically by alphabetical order
@@ -394,40 +478,40 @@ export class GraphQLToProtoTextVisitor {
         if (rpcMethodText.includes('\n')) {
           // For multi-line RPC method definitions (with comments), add each line separately
           const lines = rpcMethodText.split('\n');
-          this.protoText.push(...lines);
+          protoContent.push(...lines);
         } else {
           // For simple one-line RPC method definitions (ensure 2-space indentation)
-          this.protoText.push(`  ${rpcMethodText}`);
+          protoContent.push(`  ${rpcMethodText}`);
         }
       }
     }
 
     // Close service definition
     this.indent--;
-    this.protoText.push('}');
-    this.protoText.push('');
+    protoContent.push('}');
+    protoContent.push('');
 
     // Add all wrapper messages first since they might be referenced by other messages
     if (this.nestedListWrappers.size > 0) {
       // Sort the wrappers by name for deterministic output
       const sortedWrapperNames = Array.from(this.nestedListWrappers.keys()).sort();
       for (const wrapperName of sortedWrapperNames) {
-        this.protoText.push(this.nestedListWrappers.get(wrapperName)!);
+        protoContent.push(this.nestedListWrappers.get(wrapperName)!);
       }
     }
 
-    // Second: Add all message definitions
+    // Add all message definitions
     for (const messageDef of allMessageDefinitions) {
-      this.protoText.push(messageDef);
+      protoContent.push(messageDef);
     }
 
-    // Third: Process all complex types from the message queue in a single pass
-    this.processMessageQueue();
+    // Add all processed types from protoText (populated by processMessageQueue)
+    protoContent.push(...this.protoText);
 
     // Store the generated lock data for retrieval
     this.generatedLockData = this.lockManager.getLockData();
 
-    return this.protoText.join('\n');
+    return protoContent.join('\n');
   }
 
   /**
@@ -1322,14 +1406,21 @@ Example:
    * Map GraphQL type to Protocol Buffer type
    *
    * Determines the appropriate Protocol Buffer type for a given GraphQL type,
-   * handling all GraphQL type wrappers (NonNull, List) correctly.
+   * including the use of wrapper types for nullable scalar fields to distinguish
+   * between unset fields and zero values.
    *
    * @param graphqlType - The GraphQL type to convert
+   * @param ignoreWrapperTypes - If true, do not use wrapper types for nullable scalar fields
    * @returns The corresponding Protocol Buffer type name
    */
-  private getProtoTypeFromGraphQL(graphqlType: GraphQLType): string {
+  private getProtoTypeFromGraphQL(graphqlType: GraphQLType, ignoreWrapperTypes: boolean = false): string {
+    // For nullable scalar types, use wrapper types
     if (isScalarType(graphqlType)) {
-      return SCALAR_TYPE_MAP[graphqlType.name] || 'string';
+      if (ignoreWrapperTypes) {
+        return SCALAR_TYPE_MAP[graphqlType.name] || 'string';
+      }
+      this.usesWrapperTypes = true; // Track that we're using wrapper types
+      return SCALAR_WRAPPER_TYPE_MAP[graphqlType.name] || 'google.protobuf.StringValue';
     }
 
     if (isEnumType(graphqlType)) {
@@ -1337,6 +1428,11 @@ Example:
     }
 
     if (isNonNullType(graphqlType)) {
+      // For non-null scalar types, use the base type
+      if (isScalarType(graphqlType.ofType)) {
+        return SCALAR_TYPE_MAP[graphqlType.ofType.name] || 'string';
+      }
+
       return this.getProtoTypeFromGraphQL(graphqlType.ofType);
     }
 
@@ -1364,7 +1460,7 @@ Example:
         return wrapperName;
       }
 
-      return this.getProtoTypeFromGraphQL(innerType);
+      return this.getProtoTypeFromGraphQL(innerType, true);
     }
 
     // Named types (object, interface, union, input)
@@ -1417,7 +1513,7 @@ Example:
     const fieldNumber = this.getFieldNumber(wrapperName, 'result', 1);
 
     // For the inner type, we need to get the proto type for the base type
-    const protoType = this.getProtoTypeFromGraphQL(baseType);
+    const protoType = this.getProtoTypeFromGraphQL(baseType, true);
     messageLines.push(`  repeated ${protoType} result = ${fieldNumber};`);
 
     messageLines.push('}');

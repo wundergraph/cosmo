@@ -1347,7 +1347,7 @@
     },
     "log_level": {
       "type": "string",
-      "enum": ["debug", "info", "warning", "error", "fatal", "panic"],
+      "enum": ["debug", "info", "warn", "error", "panic", "fatal"],
       "description": "The log level. The log level is used to control the verbosity of the logs. The default value is 'info'.",
       "default": "info"
     },
@@ -2705,6 +2705,11 @@
           },
           "default": ["code"],
           "description": "The allowed extension fields. The allowed extension fields are used to specify which fields of the Subgraph errors are allowed to be propagated to the client."
+        },
+        "allow_all_extension_fields": {
+          "type": "boolean",
+          "default": false,
+          "description": "Allow all extension fields from Subgraph errors to be propagated to the client. If the value is true (default: false), all extension fields from Subgraph errors will be propagated, overriding the allowed_extension_fields configuration."
         },
         "omit_locations": {
           "type": "boolean",

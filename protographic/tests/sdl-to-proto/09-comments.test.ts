@@ -82,6 +82,8 @@ describe('SDL to Proto Comments', () => {
       "syntax = "proto3";
       package service.v1;
 
+      import "google/protobuf/wrappers.proto";
+
       // Service definition for DefaultService
       service DefaultService {
         // Get a user by ID
@@ -112,9 +114,9 @@ describe('SDL to Proto Comments', () => {
          * Number of items to skip.
          * Use for pagination.
          */
-        int32 offset = 1;
+        google.protobuf.Int32Value offset = 1;
         // Maximum number of items to return
-        int32 limit = 2;
+        google.protobuf.Int32Value limit = 2;
       }
       /*
        * Response message for users operation: List all users with pagination.
@@ -139,8 +141,8 @@ describe('SDL to Proto Comments', () => {
          * Multi-line description for the name field.
          * Second line of the description.
          */
-        string name = 2;
-        int32 age = 3;
+        google.protobuf.StringValue name = 2;
+        google.protobuf.Int32Value age = 3;
       }
 
       // Single line description for the Role enum
@@ -231,6 +233,8 @@ describe('SDL to Proto Comments', () => {
       "syntax = "proto3";
       package service.v1;
 
+      import "google/protobuf/wrappers.proto";
+
       // Service definition for DefaultService
       service DefaultService {
         // Get node by ID
@@ -307,7 +311,7 @@ describe('SDL to Proto Comments', () => {
         // Organization name
         string name = 2;
         // Organization description
-        string description = 3;
+        google.protobuf.StringValue description = 3;
       }"
     `);
   });
@@ -371,6 +375,8 @@ describe('SDL to Proto Comments', () => {
     expect(protoText).toMatchInlineSnapshot(`
       "syntax = "proto3";
       package service.v1;
+
+      import "google/protobuf/wrappers.proto";
 
       // Service definition for DefaultService
       service DefaultService {
@@ -502,7 +508,7 @@ describe('SDL to Proto Comments', () => {
         // Product price in cents
         int32 price = 3;
         // Optional product description
-        string description = 4;
+        google.protobuf.StringValue description = 4;
       }"
     `);
   });

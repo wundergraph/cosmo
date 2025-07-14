@@ -399,6 +399,8 @@ describe('SDL to Proto - Federation and Special Types', () => {
       "syntax = "proto3";
       package service.v1;
 
+      import "google/protobuf/wrappers.proto";
+
       // Service definition for DefaultService
       service DefaultService {
         rpc QueryEvent(QueryEventRequest) returns (QueryEventResponse) {}
@@ -425,9 +427,9 @@ describe('SDL to Proto - Federation and Special Types', () => {
         string id = 1;
         string name = 2;
         string start_time = 3;
-        string end_time = 4;
-        string metadata = 5;
-        string attachment = 6;
+        google.protobuf.StringValue end_time = 4;
+        google.protobuf.StringValue metadata = 5;
+        google.protobuf.StringValue attachment = 6;
       }"
     `);
   });
