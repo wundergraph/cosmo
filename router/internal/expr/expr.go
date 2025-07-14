@@ -34,6 +34,7 @@ const ExprRequestAuthKey = "auth"
 // Context is the context for expressions parser when evaluating dynamic expressions
 type Context struct {
 	Request  Request  `expr:"request"` // if changing the expr tag, the ExprRequestKey should be updated
+	Response Response `expr:"response"`
 	Subgraph Subgraph `expr:"subgraph"`
 }
 
@@ -62,11 +63,15 @@ type Request struct {
 	Auth      RequestAuth    `expr:"auth"` // if changing the expr tag, the ExprRequestAuthKey should be updated
 	URL       RequestURL     `expr:"url"`
 	Header    RequestHeaders `expr:"header"`
-	Body      RequestBody    `expr:"body"`
-	Error     error          `expr:"error"`
+	Body      Body           `expr:"body"`
 	Trace     Trace          `expr:"trace"`
 	Operation Operation      `expr:"operation"`
 	Client    Client         `expr:"client"`
+	Error     error          `expr:"error"`
+}
+
+type Response struct {
+	Body Body `expr:"body"`
 }
 
 type Operation struct {
@@ -81,7 +86,7 @@ type Client struct {
 	IP      string `expr:"ip"`
 }
 
-type RequestBody struct {
+type Body struct {
 	Raw string `expr:"raw"`
 }
 
@@ -119,15 +124,20 @@ type SubgraphRequest struct {
 	ClientTrace ClientTrace `expr:"clientTrace"`
 }
 
+type SubgraphResponse struct {
+	Body Body `expr:"body"`
+}
+
 type ClientTrace struct {
 	ConnectionAcquireDuration float64 `expr:"connAcquireDuration"`
 }
 
 // Subgraph Related
 type Subgraph struct {
-	Id      string          `expr:"id"`
-	Name    string          `expr:"name"`
-	Request SubgraphRequest `expr:"request"`
+	Id       string           `expr:"id"`
+	Name     string           `expr:"name"`
+	Request  SubgraphRequest  `expr:"request"`
+	Response SubgraphResponse `expr:"response"`
 }
 
 // Get returns the value of the header with the given key. If the header is not present, an empty string is returned.

@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, lt } from 'drizzle-orm';
+import { and, count, desc, eq, gt, lt } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
 import { ProposalState } from '../../db/models.js';
@@ -279,6 +279,35 @@ export class ProposalRepository {
     return {
       proposals: proposalsWithSubgraphs,
     };
+  }
+
+  public async countByFederatedGraphId({
+    federatedGraphId,
+    startDate,
+    endDate,
+  }: {
+    federatedGraphId: string;
+    startDate?: string;
+    endDate?: string;
+  }): Promise<number> {
+    let whereCondition: any = eq(schema.proposals.federatedGraphId, federatedGraphId);
+
+    if (startDate && endDate) {
+      whereCondition = and(
+        whereCondition,
+        gt(schema.proposals.createdAt, new Date(startDate)),
+        lt(schema.proposals.createdAt, new Date(endDate)),
+      );
+    }
+
+    const result = await this.db
+      .select({
+        count: count(),
+      })
+      .from(schema.proposals)
+      .where(whereCondition);
+
+    return result[0]?.count || 0;
   }
 
   public async updateProposal({

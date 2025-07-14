@@ -335,6 +335,26 @@ proto3.util.setEnumType(Feature, "wg.cosmo.platform.v1.Feature", [
 ]);
 
 /**
+ * @generated from enum wg.cosmo.platform.v1.ProposalNamingConvention
+ */
+export enum ProposalNamingConvention {
+  /**
+   * @generated from enum value: NORMAL = 0;
+   */
+  NORMAL = 0,
+
+  /**
+   * @generated from enum value: INCREMENTAL = 1;
+   */
+  INCREMENTAL = 1,
+}
+// Retrieve enum metadata with: proto3.getEnumType(ProposalNamingConvention)
+proto3.util.setEnumType(ProposalNamingConvention, "wg.cosmo.platform.v1.ProposalNamingConvention", [
+  { no: 0, name: "NORMAL" },
+  { no: 1, name: "INCREMENTAL" },
+]);
+
+/**
  * @generated from message wg.cosmo.platform.v1.Label
  */
 export class Label extends Message<Label> {
@@ -20751,6 +20771,11 @@ export class CreateProposalRequest extends Message<CreateProposalRequest> {
    */
   subgraphs: ProposalSubgraph[] = [];
 
+  /**
+   * @generated from field: wg.cosmo.platform.v1.ProposalNamingConvention namingConvention = 5;
+   */
+  namingConvention = ProposalNamingConvention.NORMAL;
+
   constructor(data?: PartialMessage<CreateProposalRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -20763,6 +20788,7 @@ export class CreateProposalRequest extends Message<CreateProposalRequest> {
     { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "subgraphs", kind: "message", T: ProposalSubgraph, repeated: true },
+    { no: 5, name: "namingConvention", kind: "enum", T: proto3.getEnumType(ProposalNamingConvention) },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateProposalRequest {
@@ -20866,6 +20892,11 @@ export class CreateProposalResponse extends Message<CreateProposalResponse> {
    */
   proposalUrl = "";
 
+  /**
+   * @generated from field: string proposalName = 17;
+   */
+  proposalName = "";
+
   constructor(data?: PartialMessage<CreateProposalResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -20890,6 +20921,7 @@ export class CreateProposalResponse extends Message<CreateProposalResponse> {
     { no: 14, name: "graphPruningSkipped", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 15, name: "checkUrl", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 16, name: "proposalUrl", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 17, name: "proposalName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateProposalResponse {

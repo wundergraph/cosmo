@@ -1346,6 +1346,7 @@ export const organizationRoleEnum = pgEnum('organization_role', [
   'graph-viewer',
   'subgraph-admin',
   'subgraph-publisher',
+  'subgraph-viewer',
 ] as const);
 
 export const organizationGroups = pgTable('organization_groups', {
@@ -2387,6 +2388,7 @@ export const proposals = pgTable(
   (t) => ({
     uniqueFederatedGraphClientName: unique('federated_graph_proposal_name').on(t.federatedGraphId, t.name),
     createdByIdIndex: index('pr_created_by_id_idx').on(t.createdById),
+    federatedGraphIdIndex: index('pr_federated_graph_id_idx').on(t.federatedGraphId),
   }),
 );
 
