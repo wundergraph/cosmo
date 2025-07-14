@@ -2624,11 +2624,17 @@ message ProposalSubgraph {
   repeated Label labels = 5;
 }
 
+enum ProposalNamingConvention {
+  NORMAL = 0;
+  INCREMENTAL = 1;
+}
+
 message CreateProposalRequest {
   string federatedGraphName = 1;
   string namespace = 2;
   string name = 3;
   repeated ProposalSubgraph subgraphs = 4;
+  ProposalNamingConvention namingConvention = 5;
 }
 
 message CreateProposalResponse {
@@ -2648,6 +2654,7 @@ message CreateProposalResponse {
   bool graphPruningSkipped = 14;
   string checkUrl = 15;
   string proposalUrl = 16;
+  string proposalName = 17;
 }
 
 message GetProposalRequest {

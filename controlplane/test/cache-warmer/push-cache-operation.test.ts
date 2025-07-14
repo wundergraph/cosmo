@@ -652,6 +652,7 @@ describe('PushCacheOperation', (ctx) => {
     'graph-viewer',
     'subgraph-admin',
     'subgraph-publisher',
+    'subgraph-viewer',
   ])('%s should not be able to configure cache warmer', async (role) => {
     const { client, server, authenticator, users } = await SetupTest({
       dbname,
