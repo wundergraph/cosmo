@@ -25,7 +25,8 @@ export function NotFoundClient() {
 
   return (
     <span>
-      Redirecting you back to last page in {countdown} second{countdown !== 1 ? 's' : ''}...
+      Redirecting you back to last page in {countdown} second
+      {countdown !== 1 ? "s" : ""}...
     </span>
   );
-} 
+}

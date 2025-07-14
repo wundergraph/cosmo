@@ -38,7 +38,7 @@ export default function LoginClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [cosmoIdpHintCookieValue] = useCookie("cosmo_idp_hint");
-  
+
   // Parse search params directly
   const params = searchParams ? Object.fromEntries(searchParams.entries()) : {};
   const { redirectURL, sso } = querySchema.parse(params);
@@ -108,4 +108,4 @@ export default function LoginClient() {
       </Button>
     </div>
   );
-} 
+}

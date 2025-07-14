@@ -19,9 +19,7 @@ const constructSignupURL = ({
   redirectURL?: string;
   provider?: string;
 }) => {
-  const url = new URL(
-    `${process.env.NEXT_PUBLIC_COSMO_CP_URL}/v1/auth/signup`,
-  );
+  const url = new URL(`${process.env.NEXT_PUBLIC_COSMO_CP_URL}/v1/auth/signup`);
 
   if (redirectURL) url.searchParams.set("redirectURL", redirectURL);
   if (provider) url.searchParams.set("provider", provider);

@@ -10,15 +10,15 @@ interface AccountLinkProps {
 export default function AccountLink({ title, subtitle, href, linkText }: AccountLinkProps) {
   return (
     <>
-      <h2 className="mb-1 text-2xl font-medium">{ title }</h2>
+      <h2 className="mb-1 text-2xl font-medium">{title}</h2>
       <div className="w-full">
         <p className="text-muted-foreground">
-          { subtitle }{" "}
+          {subtitle}{" "}
           <Link
-            href={ href }
+            href={href}
             className="underline hover:text-foreground"
           >
-            { linkText }
+            {linkText}
           </Link>
         </p> 
       </div>
