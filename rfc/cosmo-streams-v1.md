@@ -10,9 +10,10 @@ Let's explore how we can address each of these requirements.
 
 ## Authorization
 
-To support authorization, we need a hook that enables two key decisions:
+To support authorization, we need a hook that enables the following key decisions:
 - Whether the client or user is authorized to initiate the subscription
 - Which topics the client is permitted to subscribe to
+- Whether the client is allowed to consume an event from the stream (covered by the Event Filtering hook)
 
 Additionally, a similar mechanism is required for non-stream subscriptions, allowing:
 - Custom JWT validation logic (e.g., expiration checks, signature verification, secret handling)
