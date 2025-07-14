@@ -261,9 +261,19 @@ func (m *MyModule) OnStreamEvents(
             // here you can umarshal the old data and map it to the new format
             // for example:
             // var dataReceived struct {
-            //     EmployeeId string `json:"EmployeeId"`
+            //     EmployeeName string `json:"EmployeeName"`
             // }
             // err := json.Unmarshal(natsEvent.Data, &dataReceived)
+
+            // if we have to extract the data from the metadata fields, we can do it like this:
+            entityId := natsEvent.Metadata["entity-id"]
+            entityType := natsEvent.Metadata["entity-type"]
+            // and prepare the new event with the data inside
+            newDataFormat := json.Marshal(map[string]string{
+                "id": entityId,
+                "name": dataReceived.EmployeeName,
+                "__typename": entityType,
+            })
 
             // create the new event
             newEvent := &NatsEvent{
@@ -277,7 +287,7 @@ func (m *MyModule) OnStreamEvents(
             //     Data: newDataFormat,
             //     Headers: kafkaEvent.Headers,
             // }
-            
+
             // add the new event to the slice of events to return
             newEvents = append(newEvents, newEvent)
             continue
