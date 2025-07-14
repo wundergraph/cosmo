@@ -430,6 +430,12 @@ func (m *MyModule) OnStreamEvents(ctx StreamBatchEventHookContext, events []Stre
     // create a new slice of events that we will return with the events that are allowed to be received by the client
     newEvents := make([]StreamEvent, 0, len(events))
 
+    
+    if ctx.RequestContext().Authentication() == nil {
+        // if the client is not authenticated, return no events
+        return newEvents, nil
+    }
+
     // get the client's allowed entities IDs
     clientAllowedEntitiesIds, found := ctx.RequestContext().Authentication().Claims()["allowedEntitiesIds"]
     if !found {
@@ -576,6 +582,12 @@ func (m *MyModule) OnStreamEvents(ctx StreamBatchEventHookContext, events []core
     // check if the subject is the one expected by the module
     natsConfig := ctx.SubscriptionEventConfiguration().(*nats.SubscriptionEventConfiguration)
     if natsConfig.Subjects[0] != "employeeUpdates" {
+        return events, nil
+    }
+
+    // check if the client is authenticated
+    if ctx.RequestContext().Authentication() == nil {
+        // if the client is not authenticated, return no events
         return events, nil
     }
 
