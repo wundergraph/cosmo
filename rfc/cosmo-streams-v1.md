@@ -1002,3 +1002,9 @@ var _ core.StreamBatchEventHook = (*MyModule)(nil)
 ### Considerations
 
 The developers would need to regenerate the code each time the AsyncAPI specification changes or the schema SDL changes.
+
+### Outlook
+
+In a second step, we could:
+- allow the user to define their streams using AsyncAPI
+- generate fully typesafe hooks with all events structures generated from the AsyncAPI specification
