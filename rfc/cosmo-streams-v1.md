@@ -269,7 +269,7 @@ func (m *MyModule) OnStreamEvents(
             entityId := natsEvent.Metadata["entity-id"]
             entityType := natsEvent.Metadata["entity-type"]
             // and prepare the new event with the data inside
-            newDataFormat := json.Marshal(map[string]string{
+            newDataFormat, _ := json.Marshal(map[string]string{
                 "id": entityId,
                 "name": dataReceived.EmployeeName,
                 "__typename": entityType,
