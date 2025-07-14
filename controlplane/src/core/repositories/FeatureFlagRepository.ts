@@ -252,7 +252,8 @@ export class FeatureFlagRepository {
 
     const graphAdmin = rbac.ruleFor('subgraph-admin');
     const graphPublisher = rbac.ruleFor('subgraph-publisher');
-    if (!graphAdmin && !graphPublisher) {
+    const graphViewer = rbac.ruleFor('subgraph-viewer');
+    if (!graphAdmin && !graphPublisher && !graphViewer) {
       return false;
     }
 
@@ -267,6 +268,11 @@ export class FeatureFlagRepository {
     if (graphPublisher) {
       namespaces.push(...graphPublisher.namespaces);
       resources.push(...graphPublisher.resources);
+    }
+
+    if (graphViewer) {
+      namespaces.push(...graphViewer.namespaces);
+      resources.push(...graphViewer.resources);
     }
 
     if (namespaces.length > 0 && resources.length > 0) {
