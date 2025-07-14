@@ -9,17 +9,29 @@ import "google/protobuf/wrappers.proto";
 service ProjectsService {
   // Lookup Employee entity by id
   rpc LookupEmployeeById(LookupEmployeeByIdRequest) returns (LookupEmployeeByIdResponse) {}
+  // Lookup Milestone entity by id
+  rpc LookupMilestoneById(LookupMilestoneByIdRequest) returns (LookupMilestoneByIdResponse) {}
   // Lookup Product entity by upc
   rpc LookupProductByUpc(LookupProductByUpcRequest) returns (LookupProductByUpcResponse) {}
   // Lookup Project entity by id
   rpc LookupProjectById(LookupProjectByIdRequest) returns (LookupProjectByIdResponse) {}
+  // Lookup Task entity by id
+  rpc LookupTaskById(LookupTaskByIdRequest) returns (LookupTaskByIdResponse) {}
+  rpc MutationAddMilestone(MutationAddMilestoneRequest) returns (MutationAddMilestoneResponse) {}
   rpc MutationAddProject(MutationAddProjectRequest) returns (MutationAddProjectResponse) {}
+  rpc MutationAddTask(MutationAddTaskRequest) returns (MutationAddTaskResponse) {}
+  rpc MutationUpdateProjectStatus(MutationUpdateProjectStatusRequest) returns (MutationUpdateProjectStatusResponse) {}
   rpc QueryKillService(QueryKillServiceRequest) returns (QueryKillServiceResponse) {}
+  rpc QueryMilestones(QueryMilestonesRequest) returns (QueryMilestonesResponse) {}
   rpc QueryPanic(QueryPanicRequest) returns (QueryPanicResponse) {}
   rpc QueryProject(QueryProjectRequest) returns (QueryProjectResponse) {}
+  rpc QueryProjectActivities(QueryProjectActivitiesRequest) returns (QueryProjectActivitiesResponse) {}
+  rpc QueryProjectResources(QueryProjectResourcesRequest) returns (QueryProjectResourcesResponse) {}
   rpc QueryProjectStatuses(QueryProjectStatusesRequest) returns (QueryProjectStatusesResponse) {}
   rpc QueryProjects(QueryProjectsRequest) returns (QueryProjectsResponse) {}
   rpc QueryProjectsByStatus(QueryProjectsByStatusRequest) returns (QueryProjectsByStatusResponse) {}
+  rpc QuerySearchProjects(QuerySearchProjectsRequest) returns (QuerySearchProjectsResponse) {}
+  rpc QueryTasks(QueryTasksRequest) returns (QueryTasksResponse) {}
 }
 
 // Key message for Project entity lookup
@@ -54,6 +66,74 @@ message LookupProjectByIdResponse {
    *       - null  # User with id 2 not found
    */
   repeated Project result = 1;
+}
+
+// Key message for Milestone entity lookup
+message LookupMilestoneByIdRequestKey {
+  // Key field for Milestone entity lookup.
+  string id = 1;
+}
+
+// Request message for Milestone entity lookup.
+message LookupMilestoneByIdRequest {
+  /*
+   * List of keys to look up Milestone entities.
+   * Order matters - each key maps to one entity in LookupMilestoneByIdResponse.
+   */
+  repeated LookupMilestoneByIdRequestKey keys = 1;
+}
+
+// Response message for Milestone entity lookup.
+message LookupMilestoneByIdResponse {
+  /*
+   * List of Milestone entities in the same order as the keys in LookupMilestoneByIdRequest.
+   * Always return the same number of entities as keys. Use null for entities that cannot be found.
+   * 
+   * Example:
+   *   LookupUserByIdRequest:
+   *     keys:
+   *       - id: 1
+   *       - id: 2
+   *   LookupUserByIdResponse:
+   *     result:
+   *       - id: 1 # User with id 1 found
+   *       - null  # User with id 2 not found
+   */
+  repeated Milestone result = 1;
+}
+
+// Key message for Task entity lookup
+message LookupTaskByIdRequestKey {
+  // Key field for Task entity lookup.
+  string id = 1;
+}
+
+// Request message for Task entity lookup.
+message LookupTaskByIdRequest {
+  /*
+   * List of keys to look up Task entities.
+   * Order matters - each key maps to one entity in LookupTaskByIdResponse.
+   */
+  repeated LookupTaskByIdRequestKey keys = 1;
+}
+
+// Response message for Task entity lookup.
+message LookupTaskByIdResponse {
+  /*
+   * List of Task entities in the same order as the keys in LookupTaskByIdRequest.
+   * Always return the same number of entities as keys. Use null for entities that cannot be found.
+   * 
+   * Example:
+   *   LookupUserByIdRequest:
+   *     keys:
+   *       - id: 1
+   *       - id: 2
+   *   LookupUserByIdResponse:
+   *     result:
+   *       - id: 1 # User with id 1 found
+   *       - null  # User with id 2 not found
+   */
+  repeated Task result = 1;
 }
 
 // Key message for Employee entity lookup
@@ -168,6 +248,46 @@ message QueryPanicRequest {
 message QueryPanicResponse {
   bool panic = 1;
 }
+// Request message for projectResources operation.
+message QueryProjectResourcesRequest {
+  string project_id = 1;
+}
+// Response message for projectResources operation.
+message QueryProjectResourcesResponse {
+  repeated ProjectResource project_resources = 1;
+}
+// Request message for searchProjects operation.
+message QuerySearchProjectsRequest {
+  string query = 1;
+}
+// Response message for searchProjects operation.
+message QuerySearchProjectsResponse {
+  repeated ProjectSearchResult search_projects = 1;
+}
+// Request message for milestones operation.
+message QueryMilestonesRequest {
+  string project_id = 1;
+}
+// Response message for milestones operation.
+message QueryMilestonesResponse {
+  repeated Milestone milestones = 1;
+}
+// Request message for tasks operation.
+message QueryTasksRequest {
+  string project_id = 1;
+}
+// Response message for tasks operation.
+message QueryTasksResponse {
+  repeated Task tasks = 1;
+}
+// Request message for projectActivities operation.
+message QueryProjectActivitiesRequest {
+  string project_id = 1;
+}
+// Response message for projectActivities operation.
+message QueryProjectActivitiesResponse {
+  repeated ProjectActivity project_activities = 1;
+}
 // Request message for addProject operation.
 message MutationAddProjectRequest {
   ProjectInput project = 1;
@@ -175,6 +295,31 @@ message MutationAddProjectRequest {
 // Response message for addProject operation.
 message MutationAddProjectResponse {
   Project add_project = 1;
+}
+// Request message for addMilestone operation.
+message MutationAddMilestoneRequest {
+  MilestoneInput milestone = 1;
+}
+// Response message for addMilestone operation.
+message MutationAddMilestoneResponse {
+  Milestone add_milestone = 1;
+}
+// Request message for addTask operation.
+message MutationAddTaskRequest {
+  TaskInput task = 1;
+}
+// Response message for addTask operation.
+message MutationAddTaskResponse {
+  Task add_task = 1;
+}
+// Request message for updateProjectStatus operation.
+message MutationUpdateProjectStatusRequest {
+  string project_id = 1;
+  ProjectStatus status = 2;
+}
+// Response message for updateProjectStatus operation.
+message MutationUpdateProjectStatusResponse {
+  ProjectUpdate update_project_status = 1;
 }
 
 message Project {
@@ -188,11 +333,44 @@ message Project {
   repeated Employee team_members = 7;
   repeated Product related_products = 9;
   repeated string milestone_ids = 10;
+  repeated Milestone milestones = 11;
+  repeated Task tasks = 12;
+  google.protobuf.DoubleValue progress = 13;
+}
+
+message Milestone {
+  reserved 3, 9;
+  string id = 1;
+  string project_id = 2;
+  string name = 4;
+  google.protobuf.StringValue description = 5;
+  google.protobuf.StringValue start_date = 6;
+  google.protobuf.StringValue end_date = 7;
+  MilestoneStatus status = 8;
+  google.protobuf.DoubleValue completion_percentage = 10;
+}
+
+message Task {
+  reserved 3, 5, 7;
+  string id = 1;
+  string project_id = 2;
+  google.protobuf.StringValue milestone_id = 4;
+  google.protobuf.Int32Value assignee_id = 6;
+  string name = 8;
+  google.protobuf.StringValue description = 9;
+  TaskPriority priority = 10;
+  TaskStatus status = 11;
+  google.protobuf.DoubleValue estimated_hours = 12;
+  google.protobuf.DoubleValue actual_hours = 13;
+  google.protobuf.StringValue created_at = 14;
+  google.protobuf.StringValue completed_at = 15;
 }
 
 message Employee {
   int32 id = 1;
   repeated Project projects = 2;
+  repeated Task assigned_tasks = 3;
+  repeated Task completed_tasks = 4;
 }
 
 message Product {
@@ -208,10 +386,120 @@ enum ProjectStatus {
   PROJECT_STATUS_ON_HOLD = 4;
 }
 
+message ProjectResource {
+  oneof value {
+  Employee employee = 1;
+  Product product = 2;
+  Milestone milestone = 3;
+  Task task = 4;
+  }
+}
+
+message ProjectSearchResult {
+  oneof value {
+  Project project = 1;
+  Milestone milestone = 2;
+  Task task = 3;
+  }
+}
+
+message ProjectActivity {
+  oneof value {
+  ProjectUpdate project_update = 1;
+  Milestone milestone = 2;
+  Task task = 3;
+  }
+}
+
 message ProjectInput {
   string name = 1;
   google.protobuf.StringValue description = 2;
   google.protobuf.StringValue start_date = 3;
   google.protobuf.StringValue end_date = 4;
   ProjectStatus status = 5;
+}
+
+message MilestoneInput {
+  string project_id = 1;
+  string name = 2;
+  google.protobuf.StringValue description = 3;
+  google.protobuf.StringValue due_date = 4;
+  MilestoneStatus status = 5;
+}
+
+message TaskInput {
+  string project_id = 1;
+  google.protobuf.Int32Value assignee_id = 2;
+  string name = 3;
+  google.protobuf.StringValue description = 4;
+  TaskPriority priority = 5;
+  TaskStatus status = 6;
+  google.protobuf.DoubleValue estimated_hours = 7;
+}
+
+message ProjectUpdate {
+  reserved 3 to 4;
+  string id = 1;
+  string project_id = 2;
+  ProjectUpdateType update_type = 5;
+  string description = 6;
+  string timestamp = 7;
+  google.protobuf.StringValue metadata = 8;
+  int32 updated_by_id = 9;
+}
+
+message Node {
+  oneof instance {
+  Project project = 1;
+  Milestone milestone = 2;
+  Task task = 3;
+  ProjectUpdate project_update = 4;
+  }
+}
+
+message Timestamped {
+  oneof instance {
+  Project project = 1;
+  Milestone milestone = 2;
+  }
+}
+
+message Assignable {
+  oneof instance {
+  Task task = 1;
+  }
+}
+
+enum MilestoneStatus {
+  MILESTONE_STATUS_UNSPECIFIED = 0;
+  MILESTONE_STATUS_PENDING = 1;
+  MILESTONE_STATUS_IN_PROGRESS = 2;
+  MILESTONE_STATUS_COMPLETED = 3;
+  MILESTONE_STATUS_DELAYED = 4;
+}
+
+enum TaskStatus {
+  TASK_STATUS_UNSPECIFIED = 0;
+  TASK_STATUS_TODO = 1;
+  TASK_STATUS_IN_PROGRESS = 2;
+  TASK_STATUS_REVIEW = 3;
+  TASK_STATUS_COMPLETED = 4;
+  TASK_STATUS_BLOCKED = 5;
+}
+
+enum TaskPriority {
+  TASK_PRIORITY_UNSPECIFIED = 0;
+  TASK_PRIORITY_LOW = 1;
+  TASK_PRIORITY_MEDIUM = 2;
+  TASK_PRIORITY_HIGH = 3;
+  TASK_PRIORITY_URGENT = 4;
+}
+
+enum ProjectUpdateType {
+  PROJECT_UPDATE_TYPE_UNSPECIFIED = 0;
+  PROJECT_UPDATE_TYPE_STATUS_CHANGE = 1;
+  PROJECT_UPDATE_TYPE_MILESTONE_ADDED = 2;
+  PROJECT_UPDATE_TYPE_TASK_ASSIGNED = 3;
+  PROJECT_UPDATE_TYPE_PROGRESS_UPDATE = 4;
+  PROJECT_UPDATE_TYPE_TEAM_CHANGE = 5;
 }

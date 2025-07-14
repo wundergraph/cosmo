@@ -25,7 +25,7 @@ require (
 	github.com/wundergraph/cosmo/demo v0.0.0-20250707145555-35d60cac85d9
 	github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects v0.0.0-20250616075713-f2b99c96cec4
 	github.com/wundergraph/cosmo/router v0.0.0-20250707145555-35d60cac85d9
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.204
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.205
 	go.opentelemetry.io/otel v1.28.0
 	go.opentelemetry.io/otel/sdk v1.28.0
 	go.opentelemetry.io/otel/sdk/metric v1.28.0
@@ -175,7 +175,7 @@ replace (
 	github.com/wundergraph/cosmo/demo => ../demo
 	github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects => ../demo/pkg/subgraphs/projects
 	github.com/wundergraph/cosmo/router => ../router
-// github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2
+	github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2
 )
 
 replace github.com/hashicorp/consul/sdk => github.com/wundergraph/consul/sdk v0.0.0-20250204115147-ed842a8fd301
