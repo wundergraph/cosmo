@@ -1,25 +1,8 @@
-import { Command } from 'commander';
+import { Command, program } from 'commander';
 import pc from 'picocolors';
-import Spinner from 'ora';
-import { Octokit } from '@octokit/rest';
+import Spinner, { type Ora } from 'ora';
 import { BaseCommandOptions } from '../../../core/types/types.js';
-
-export async function fetchAvailableTemplates(): Promise<string[]> {
-  const octokit = new Octokit();
-  const owner = 'wundergraph';
-  const repo = 'cosmo-templates';
-  const path = 'grpc-service';
-
-  try {
-    const res = await octokit.repos.getContent({ owner, repo, path });
-    if (Array.isArray(res.data)) {
-      return res.data.filter((item: any) => item.type === 'dir').map((item: any) => item.name);
-    }
-  } catch {
-    console.error('Error listing templates from https://github.com/wundergraph/cosmo-templates/');
-  }
-  return [];
-}
+import { fetchAvailableTemplates } from '../utils/github-client.js';
 
 export default (_opts: BaseCommandOptions) => {
   const command = new Command();
@@ -27,7 +10,7 @@ export default (_opts: BaseCommandOptions) => {
     .name('list-templates')
     .description('List all available gRPC service templates')
     .action(async () => {
-      const spinner = Spinner('Fetching available templates...').start();
+      const spinner: Ora = Spinner('Fetching available templates...').start();
       try {
         const templates = await fetchAvailableTemplates();
         spinner.stop();
@@ -45,8 +28,11 @@ export default (_opts: BaseCommandOptions) => {
         }
       } catch (error) {
         spinner.fail('Failed to fetch templates');
-        console.error(error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        program.error(`Failed to fetch templates: ${errorMessage}`);
       }
     });
   return command;
 };
+
+export { fetchAvailableTemplates } from '../utils/github-client.js';

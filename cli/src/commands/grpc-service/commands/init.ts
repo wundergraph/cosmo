@@ -2,40 +2,16 @@ import { existsSync, readdirSync, mkdirSync } from 'node:fs';
 import os from 'node:os';
 import { Command, program } from 'commander';
 import { resolve, join } from 'pathe';
-import Spinner from 'ora';
-import { Octokit } from '@octokit/rest';
+import Spinner, { type Ora } from 'ora';
 import { extract, t } from 'tar';
 import fs from 'fs-extra';
 import pc from 'picocolors';
 import { BaseCommandOptions } from '../../../core/types/types.js';
-import { fetchAvailableTemplates } from './list-templates.js';
+import { fetchAvailableTemplates, createGitHubClient, GITHUB_CONFIG } from '../utils/github-client.js';
 
-async function checkTemplateExists(template: string): Promise<boolean> {
-  const octokit = new Octokit({
-    log: {
-      debug: () => {},
-      info: () => {},
-      warn: () => {},
-      error: () => {},
-    },
-  });
-  const owner = 'wundergraph';
-  const repo = 'cosmo-templates';
-  const path = `grpc-service/${template}`;
-  try {
-    const res = await octokit.repos.getContent({ owner, repo, path });
-    // If it's a directory, res.data will be an array
-    return Array.isArray(res.data);
-  } catch {
-    return false;
-  }
-}
-
-async function downloadAndExtractTemplate(template: string, outputDir: string, spinner: any) {
-  const octokit = new Octokit();
-  const owner = 'wundergraph';
-  const repo = 'cosmo-templates';
-  const ref = 'main'; // You may want to make this configurable
+async function downloadAndExtractTemplate(template: string, outputDir: string, spinner: Ora) {
+  const octokit = createGitHubClient();
+  const { owner, repo, ref, grpcServicePath } = GITHUB_CONFIG;
   const tempTarPath = join(os.tmpdir(), `cosmo-templates-${Date.now()}.tar.gz`);
   const tempExtractDir = join(os.tmpdir(), `cosmo-templates-extract-${Date.now()}`);
 
@@ -47,14 +23,16 @@ async function downloadAndExtractTemplate(template: string, outputDir: string, s
     let response;
     try {
       response = await octokit.repos.downloadTarballArchive({ owner, repo, ref });
-    } catch (err: any) {
-      throw new Error(`Failed to download template tarball from GitHub: ${err.message || err}`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to download template tarball from GitHub: ${errorMessage}`);
     }
     if (response.data instanceof ArrayBuffer) {
       try {
         await fs.writeFile(tempTarPath, new Uint8Array(Buffer.from(response.data)));
-      } catch (err: any) {
-        throw new Error(`Failed to write tarball to disk: ${err.message || err}`);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        throw new Error(`Failed to write tarball to disk: ${errorMessage}`);
       }
     } else {
       throw new TypeError('Unexpected tarball response type');
@@ -70,11 +48,11 @@ async function downloadAndExtractTemplate(template: string, outputDir: string, s
           }
         },
       });
-    } catch (err: any) {
-      throw new Error(`Failed to inspect tarball for top-level directory: ${err.message || err}`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to inspect tarball for top-level directory: ${errorMessage}`);
     }
-    const templatePathInTar = `${topLevelDir}/grpc-service/${template}`;
-    let extracted = false;
+    const templatePathInTar = `${topLevelDir}/${grpcServicePath}/${template}`;
     try {
       await extract({
         file: tempTarPath,
@@ -88,16 +66,17 @@ async function downloadAndExtractTemplate(template: string, outputDir: string, s
       if (!files || files.length === 0) {
         throw new Error('Extracted template directory is empty. The template may not exist or is misconfigured.');
       }
-      extracted = true;
-    } catch (err: any) {
-      throw new Error(`Failed to extract template files: ${err.message || err}`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to extract template files: ${errorMessage}`);
     }
 
     // Copy extracted files to outputDir
-    await fs.copy(tempExtractDir, outputDir, { overwrite: true }).catch((err: any) => {
-      throw new Error(`Failed to copy extracted files to output directory: ${err.message || err}`);
+    await fs.copy(tempExtractDir, outputDir, { overwrite: true }).catch((error) => {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to copy extracted files to output directory: ${errorMessage}`);
     });
-  } catch (error: any) {
+  } catch (error) {
     spinner.fail(pc.red('Error during template extraction.'));
     throw error;
   } finally {
@@ -115,7 +94,7 @@ export default (opts: BaseCommandOptions) => {
     .option('-t, --template <template>', 'Template to use', 'typescript-connect-rpc-fastify')
     .option('-d, --directory <directory>', 'Output directory', '.')
     .action(async (options: { template: string; directory: string }) => {
-      const spinner = Spinner();
+      const spinner: Ora = Spinner();
       const template = options.template || 'typescript-connect-rpc-fastify';
       // Validate template name to prevent path traversal
       if (!/^[\w-]+$/.test(template)) {
@@ -124,29 +103,6 @@ export default (opts: BaseCommandOptions) => {
         );
       }
       const outputDir = resolve(process.cwd(), options.directory || '.');
-
-      spinner.start(`Checking if template '${template}' exists...`);
-      const templateExists = await checkTemplateExists(template);
-      if (!templateExists) {
-        spinner.start('Fetching available templates...');
-        const templates = await fetchAvailableTemplates();
-        spinner.stop();
-        if (templates.length > 0) {
-          console.log(pc.yellow('Available templates:'));
-          for (const t of templates) {
-            console.log(`  - ${t}`);
-          }
-          console.log('');
-          console.log(
-            `\n${pc.yellow('To use a template, run:')}\n  wgc grpc-service init --template ${templates[0]} --directory ./output\n`,
-          );
-        } else {
-          console.log(pc.red('No templates found in wundergraph/cosmo-templates under grpc-service.'));
-        }
-        program.error(
-          `Template '${template}' does not exist in wundergraph/cosmo-templates under grpc-service. Please check the template name and try again.`,
-        );
-      }
 
       spinner.text = `Scaffolding gRPC service using template '${template}'...`;
 
@@ -162,16 +118,41 @@ export default (opts: BaseCommandOptions) => {
         } else {
           mkdirSync(outputDir, { recursive: true });
         }
-        await downloadAndExtractTemplate(template, outputDir, spinner);
+        try {
+          await downloadAndExtractTemplate(template, outputDir, spinner);
+        } catch (error) {
+          if (error instanceof Error && error.message.includes('Extracted template directory is empty')) {
+            spinner.start('Fetching available templates...');
+            const templates = await fetchAvailableTemplates();
+            spinner.stop();
+            if (templates.length > 0) {
+              console.log(pc.yellow('Available templates:'));
+              for (const t of templates) {
+                console.log(`  - ${t}`);
+              }
+              console.log('');
+              console.log(
+                `\n${pc.yellow('To use a template, run:')}\n  wgc grpc-service init --template ${templates[0]} --directory ./output\n`,
+              );
+            } else {
+              console.log(pc.red('No templates found in wundergraph/cosmo-templates under grpc-service.'));
+            }
+            program.error(
+              `Template '${template}' does not exist in wundergraph/cosmo-templates under grpc-service. Please check the template name and try again.`,
+            );
+          }
+          throw error;
+        }
         spinner.succeed(pc.green(`gRPC service scaffolded in ${outputDir}`));
         console.log('');
         console.log(
           `  Checkout the ${pc.bold(pc.italic('README.md'))} file for instructions on how to use your service.`,
         );
         console.log('');
-      } catch (error: any) {
+      } catch (error) {
         spinner.fail(pc.red('Failed to scaffold gRPC service'));
-        program.error(error.message || String(error));
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        program.error(`Failed to scaffold gRPC service: ${errorMessage}`);
       }
     });
   return command;
