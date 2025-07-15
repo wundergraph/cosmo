@@ -6,12 +6,27 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	service "github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects/generated"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects/src/data"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/wrapperspb"
+)
+
+// Relationship mappings - easily configurable and maintainable
+var (
+	// projectToProductMap maps project IDs to product UPCs
+	projectToProductMap = map[string][]string{
+		"1": {"cosmo"},
+		"2": {"cosmo"},
+		"3": {"sdk"},
+		"4": {"cosmo"},
+		"5": {"consultancy"},
+		"6": {"consultancy"},
+		"7": {"sdk"},
+	}
 )
 
 var _ service.ProjectsServiceServer = &ProjectsService{}
@@ -50,58 +65,17 @@ func (p *ProjectsService) populateProjectUpdateRelationships(update *service.Pro
 
 func (p *ProjectsService) getRelatedProductsByProjectId(projectId string) []*service.Product {
 	var products []*service.Product
-	// This is a simplified mapping - in a real system, you'd have a proper many-to-many relationship
-	switch projectId {
-	case "1", "2", "4":
-		products = []*service.Product{data.GetProductByUpc("cosmo")}
-	case "3", "7":
-		products = []*service.Product{data.GetProductByUpc("sdk")}
-	case "5", "6":
-		products = []*service.Product{data.GetProductByUpc("consultancy")}
+
+	// Use the configurable mapping instead of hardcoded switch-case
+	if productUpcs, exists := projectToProductMap[projectId]; exists {
+		for _, upc := range productUpcs {
+			if product := data.GetProductByUpc(upc); product != nil {
+				products = append(products, product)
+			}
+		}
 	}
+
 	return products
-}
-
-func (p *ProjectsService) getProjectsByEmployeeId(employeeId int32) []*service.Project {
-	var projects []*service.Project
-	// This is a simplified mapping - in a real system, you'd have a proper many-to-many relationship
-	switch employeeId {
-	case 1:
-		projects = []*service.Project{data.GetProjectByID("1"), data.GetProjectByID("4")}
-	case 2:
-		projects = []*service.Project{data.GetProjectByID("1"), data.GetProjectByID("5")}
-	case 3:
-		projects = []*service.Project{data.GetProjectByID("1"), data.GetProjectByID("6")}
-	case 4:
-		projects = []*service.Project{data.GetProjectByID("4")}
-	case 5:
-		projects = []*service.Project{data.GetProjectByID("3"), data.GetProjectByID("7")}
-	case 7:
-		projects = []*service.Project{data.GetProjectByID("2"), data.GetProjectByID("3")}
-	case 8:
-		projects = []*service.Project{data.GetProjectByID("2")}
-	case 10:
-		projects = []*service.Project{data.GetProjectByID("5")}
-	case 11:
-		projects = []*service.Project{data.GetProjectByID("6")}
-	case 12:
-		projects = []*service.Project{data.GetProjectByID("7")}
-	}
-	return projects
-}
-
-func (p *ProjectsService) getProjectsByProductUpc(upc string) []*service.Project {
-	var projects []*service.Project
-	// This is a simplified mapping - in a real system, you'd have a proper many-to-many relationship
-	switch upc {
-	case "cosmo":
-		projects = []*service.Project{data.GetProjectByID("1"), data.GetProjectByID("2"), data.GetProjectByID("4")}
-	case "sdk":
-		projects = []*service.Project{data.GetProjectByID("3"), data.GetProjectByID("7")}
-	case "consultancy":
-		projects = []*service.Project{data.GetProjectByID("5"), data.GetProjectByID("6")}
-	}
-	return projects
 }
 
 // LookupMilestoneById implements projects.ProjectsServiceServer.
@@ -184,13 +158,18 @@ func (p *ProjectsService) MutationAddMilestone(ctx context.Context, req *service
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
-	// Generate next ID
-	lastID := data.ServiceMilestones[len(data.ServiceMilestones)-1].Id
-	nextID, err := strconv.Atoi(lastID)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to convert lastID to int: %v", err)
+	var nextID int
+	if len(data.ServiceMilestones) == 0 {
+		nextID = 1
+	} else {
+		// Generate next ID
+		lastID := data.ServiceMilestones[len(data.ServiceMilestones)-1].Id
+		next, err := strconv.Atoi(lastID)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "failed to convert lastID to int: %v", err)
+		}
+		nextID = next + 1
 	}
-	nextID++
 
 	milestone := &service.Milestone{
 		Id:                   strconv.Itoa(nextID),
@@ -231,7 +210,7 @@ func (p *ProjectsService) MutationAddTask(ctx context.Context, req *service.Muta
 		Status:         req.Task.Status,
 		EstimatedHours: req.Task.EstimatedHours,
 		ActualHours:    &wrapperspb.DoubleValue{Value: 0.0},
-		CreatedAt:      &wrapperspb.StringValue{Value: "2024-01-01T00:00:00Z"}, // Should use current time
+		CreatedAt:      &wrapperspb.StringValue{Value: time.Now().Format(time.RFC3339)},
 		CompletedAt:    nil,
 	}
 
@@ -270,10 +249,10 @@ func (p *ProjectsService) MutationUpdateProjectStatus(ctx context.Context, req *
 	projectUpdate := &service.ProjectUpdate{
 		Id:          strconv.Itoa(nextID),
 		ProjectId:   req.ProjectId,
-		UpdatedById: 1, // Should be passed from context - using employee 1 as default
+		UpdatedById: 1,
 		UpdateType:  service.ProjectUpdateType_PROJECT_UPDATE_TYPE_STATUS_CHANGE,
 		Description: "Project status updated via API",
-		Timestamp:   "2024-01-01T00:00:00Z", // Should use current time
+		Timestamp:   time.Now().Format(time.RFC3339),
 		Metadata:    &wrapperspb.StringValue{Value: `{"new_status": "` + req.Status.String() + `"}`},
 	}
 
@@ -290,9 +269,8 @@ func (p *ProjectsService) QueryMilestones(ctx context.Context, req *service.Quer
 	milestones := data.GetMilestonesByProjectID(req.ProjectId)
 	// Populate relationships for all milestones
 	var populatedMilestones []*service.Milestone
-	for _, milestone := range milestones {
-		populatedMilestones = append(populatedMilestones, milestone)
-	}
+	populatedMilestones = append(populatedMilestones, milestones...)
+
 	return &service.QueryMilestonesResponse{Milestones: populatedMilestones}, nil
 }
 
@@ -304,9 +282,8 @@ func (p *ProjectsService) QueryTasks(ctx context.Context, req *service.QueryTask
 	tasks := data.GetTasksByProjectID(req.ProjectId)
 	// Populate relationships for all tasks
 	var populatedTasks []*service.Task
-	for _, task := range tasks {
-		populatedTasks = append(populatedTasks, task)
-	}
+	populatedTasks = append(populatedTasks, tasks...)
+
 	return &service.QueryTasksResponse{Tasks: populatedTasks}, nil
 }
 
@@ -365,6 +342,7 @@ func (p *ProjectsService) QueryProjectResources(ctx context.Context, req *servic
 	}
 
 	// Get populated project to access relationships
+	project = p.populateProjectRelationships(project)
 
 	// Add employees (team members)
 	for _, employee := range project.TeamMembers {
