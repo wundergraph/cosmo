@@ -1,5 +1,4 @@
 import { Octokit } from '@octokit/rest';
-import type { RestEndpointMethodTypes } from '@octokit/rest';
 
 export const GITHUB_CONFIG = {
   owner: 'wundergraph',
@@ -32,10 +31,7 @@ export async function fetchAvailableTemplates(): Promise<string[]> {
 
     if (Array.isArray(res.data)) {
       return res.data
-        .filter(
-          (item): item is RestEndpointMethodTypes['repos']['getContent']['response']['data'][0] & { type: 'dir' } =>
-            item.type === 'dir',
-        )
+        .filter((item): item is typeof item & { type: 'dir' } => item.type === 'dir')
         .map((item) => item.name);
     }
   } catch (error) {
