@@ -1,6 +1,6 @@
 import { Command, program } from 'commander';
 import pc from 'picocolors';
-import Spinner, { type Ora } from 'ora';
+import Spinner from 'ora';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { fetchAvailableTemplates } from '../utils/github-client.js';
 
@@ -10,7 +10,7 @@ export default (_opts: BaseCommandOptions) => {
     .name('list-templates')
     .description('List all available gRPC service templates')
     .action(async () => {
-      const spinner: Ora = Spinner('Fetching available templates...').start();
+      const spinner = Spinner('Fetching available templates...').start();
       try {
         const templates = await fetchAvailableTemplates();
         spinner.stop();
@@ -28,8 +28,7 @@ export default (_opts: BaseCommandOptions) => {
         }
       } catch (error) {
         spinner.fail('Failed to fetch templates');
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        program.error(`Failed to fetch templates: ${errorMessage}`);
+        program.error(`Failed to fetch templates: ${error instanceof Error ? error.message : String(error)}`);
       }
     });
   return command;
