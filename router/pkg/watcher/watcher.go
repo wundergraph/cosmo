@@ -45,7 +45,7 @@ func ListDirFilePaths(diropts DirOptions) ([]string, error) {
 			return nil
 		})
 		if err != nil {
-			return []string{}, fmt.Errorf("error walking directory %s: %w", diropts.DirPath, err)
+			return files, fmt.Errorf("error walking directory %s: %w", diropts.DirPath, err)
 		}
 	}
 	return files, nil
