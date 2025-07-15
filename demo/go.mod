@@ -11,7 +11,7 @@ require (
 	github.com/rs/cors v1.11.0
 	github.com/vektah/gqlparser/v2 v2.5.30
 	github.com/wundergraph/cosmo/composition-go v0.0.0-20240124120900-5effe48a4a1d
-	github.com/wundergraph/cosmo/router v0.0.0-20250606140107-7f7915f68ea2
+	github.com/wundergraph/cosmo/router v0.0.0-20250715110703-10f2e5f9c79e
 	github.com/wundergraph/cosmo/router-tests v0.0.0-20250603094938-922424d50778
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1
 	go.opentelemetry.io/otel v1.28.0
@@ -39,6 +39,7 @@ require (
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/caarlos0/env/v11 v11.3.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
+	github.com/cep21/circuit/v4 v4.0.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cilium/ebpf v0.16.0 // indirect
 	github.com/cloudflare/backoff v0.0.0-20240920015135-e46b80a3a7d0 // indirect
@@ -59,7 +60,7 @@ require (
 	github.com/expr-lang/expr v1.17.3 // indirect
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
-	github.com/go-chi/chi/v5 v5.2.1 // indirect
+	github.com/go-chi/chi/v5 v5.2.2 // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
@@ -150,7 +151,7 @@ require (
 	github.com/twmb/franz-go/pkg/kmsg v1.7.0 // indirect
 	github.com/urfave/cli/v2 v2.27.7 // indirect
 	github.com/wundergraph/astjson v0.0.0-20250106123708-be463c97e083 // indirect
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.186 // indirect
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.203 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	github.com/xeipuuv/gojsonschema v1.2.0 // indirect
