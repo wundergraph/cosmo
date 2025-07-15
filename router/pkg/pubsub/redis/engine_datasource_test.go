@@ -28,7 +28,7 @@ func TestPublishEventConfiguration_MarshalJSONTemplate(t *testing.T) {
 				Channel:     "test-channel",
 				Event:       Event{Data: json.RawMessage(`{"message":"hello"}`)},
 			},
-			wantPattern: `{"channel":"test-channel", "data": {"message":"hello"}, "providerId":"test-provider"}`,
+			wantPattern: `{"channel":"test-channel", "event": {"data": {"message":"hello"}}, "providerId":"test-provider"}`,
 		},
 		{
 			name: "with special characters",
@@ -37,7 +37,7 @@ func TestPublishEventConfiguration_MarshalJSONTemplate(t *testing.T) {
 				Channel:     "channel-with-hyphens",
 				Event:       Event{Data: json.RawMessage(`{"message":"special \"quotes\" here"}`)},
 			},
-			wantPattern: `{"channel":"channel-with-hyphens", "data": {"message":"special \"quotes\" here"}, "providerId":"test-provider-id"}`,
+			wantPattern: `{"channel":"channel-with-hyphens", "event": {"data": {"message":"special \"quotes\" here"}}, "providerId":"test-provider-id"}`,
 		},
 	}
 

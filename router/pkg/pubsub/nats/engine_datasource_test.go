@@ -29,7 +29,7 @@ func TestPublishEventConfiguration_MarshalJSONTemplate(t *testing.T) {
 				Subject:     "test-subject",
 				Event:       Event{Data: json.RawMessage(`{"message":"hello"}`)},
 			},
-			wantPattern: `{"subject":"test-subject", "data": {"message":"hello"}, "providerId":"test-provider"}`,
+			wantPattern: `{"subject":"test-subject", "event": {"data": {"message":"hello"}}, "providerId":"test-provider"}`,
 		},
 		{
 			name: "with special characters",
@@ -38,7 +38,7 @@ func TestPublishEventConfiguration_MarshalJSONTemplate(t *testing.T) {
 				Subject:     "subject-with-hyphens",
 				Event:       Event{Data: json.RawMessage(`{"message":"special \"quotes\" here"}`)},
 			},
-			wantPattern: `{"subject":"subject-with-hyphens", "data": {"message":"special \"quotes\" here"}, "providerId":"test-provider-id"}`,
+			wantPattern: `{"subject":"subject-with-hyphens", "event": {"data": {"message":"special \"quotes\" here"}}, "providerId":"test-provider-id"}`,
 		},
 	}
 
@@ -63,7 +63,7 @@ func TestPublishAndRequestEventConfiguration_MarshalJSONTemplate(t *testing.T) {
 				Subject:     "test-subject",
 				Event:       Event{Data: json.RawMessage(`{"message":"hello"}`)},
 			},
-			wantPattern: `{"subject":"test-subject", "data": {"message":"hello"}, "providerId":"test-provider"}`,
+			wantPattern: `{"subject":"test-subject", "event": {"data": {"message":"hello"}}, "providerId":"test-provider"}`,
 		},
 		{
 			name: "with special characters",
@@ -72,7 +72,7 @@ func TestPublishAndRequestEventConfiguration_MarshalJSONTemplate(t *testing.T) {
 				Subject:     "subject-with-hyphens",
 				Event:       Event{Data: json.RawMessage(`{"message":"special \"quotes\" here"}`)},
 			},
-			wantPattern: `{"subject":"subject-with-hyphens", "data": {"message":"special \"quotes\" here"}, "providerId":"test-provider-id"}`,
+			wantPattern: `{"subject":"subject-with-hyphens", "event": {"data": {"message":"special \"quotes\" here"}}, "providerId":"test-provider-id"}`,
 		},
 	}
 
