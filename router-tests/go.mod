@@ -22,9 +22,10 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/twmb/franz-go v1.16.1
 	github.com/twmb/franz-go/pkg/kadm v1.11.0
-	github.com/wundergraph/cosmo/demo v0.0.0-20250707145555-35d60cac85d9
-	github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects v0.0.0-20250616075713-f2b99c96cec4
-	github.com/wundergraph/cosmo/router v0.0.0-20250707145555-35d60cac85d9
+	github.com/wundergraph/astjson v0.0.0-20250106123708-be463c97e083
+	github.com/wundergraph/cosmo/demo v0.0.0-20250715110703-10f2e5f9c79e
+	github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects v0.0.0-20250715110703-10f2e5f9c79e
+	github.com/wundergraph/cosmo/router v0.0.0-20250715110703-10f2e5f9c79e
 	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.206
 	go.opentelemetry.io/otel v1.28.0
 	go.opentelemetry.io/otel/sdk v1.28.0
@@ -136,7 +137,6 @@ require (
 	github.com/twmb/franz-go/pkg/kmsg v1.7.0 // indirect
 	github.com/urfave/cli/v2 v2.27.7 // indirect
 	github.com/vektah/gqlparser/v2 v2.5.30 // indirect
-	github.com/wundergraph/astjson v0.0.0-20250106123708-be463c97e083 // indirect
 	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
