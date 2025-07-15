@@ -15,6 +15,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/test/bufconn"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 const bufSize = 1024 * 1024
@@ -269,10 +270,10 @@ func TestMutationAddProject(t *testing.T) {
 
 	newProject := &projects.ProjectInput{
 		Name:        "Test Project",
-		Description: "Test Description",
+		Description: &wrapperspb.StringValue{Value: "Test Description"},
 		Status:      projects.ProjectStatus_PROJECT_STATUS_ACTIVE,
-		StartDate:   "2024-01-01",
-		EndDate:     "2024-12-31",
+		StartDate:   &wrapperspb.StringValue{Value: "2024-01-01"},
+		EndDate:     &wrapperspb.StringValue{Value: "2024-12-31"},
 	}
 
 	resp, err := svc.client.MutationAddProject(context.Background(), &projects.MutationAddProjectRequest{
