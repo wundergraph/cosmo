@@ -25,18 +25,18 @@ func TestPublishEventConfiguration_MarshalJSONTemplate(t *testing.T) {
 		{
 			name: "simple configuration",
 			config: PublishAndRequestEventConfiguration{
-				ProviderID: "test-provider",
-				Subject:    "test-subject",
-				Data:       json.RawMessage(`{"message":"hello"}`),
+				ProviderID_: "test-provider",
+				Subject:     "test-subject",
+				Event:       Event{Data: json.RawMessage(`{"message":"hello"}`)},
 			},
 			wantPattern: `{"subject":"test-subject", "data": {"message":"hello"}, "providerId":"test-provider"}`,
 		},
 		{
 			name: "with special characters",
 			config: PublishAndRequestEventConfiguration{
-				ProviderID: "test-provider-id",
-				Subject:    "subject-with-hyphens",
-				Data:       json.RawMessage(`{"message":"special \"quotes\" here"}`),
+				ProviderID_: "test-provider-id",
+				Subject:     "subject-with-hyphens",
+				Event:       Event{Data: json.RawMessage(`{"message":"special \"quotes\" here"}`)},
 			},
 			wantPattern: `{"subject":"subject-with-hyphens", "data": {"message":"special \"quotes\" here"}, "providerId":"test-provider-id"}`,
 		},
@@ -59,18 +59,18 @@ func TestPublishAndRequestEventConfiguration_MarshalJSONTemplate(t *testing.T) {
 		{
 			name: "simple configuration",
 			config: PublishAndRequestEventConfiguration{
-				ProviderID: "test-provider",
-				Subject:    "test-subject",
-				Data:       json.RawMessage(`{"message":"hello"}`),
+				ProviderID_: "test-provider",
+				Subject:     "test-subject",
+				Event:       Event{Data: json.RawMessage(`{"message":"hello"}`)},
 			},
 			wantPattern: `{"subject":"test-subject", "data": {"message":"hello"}, "providerId":"test-provider"}`,
 		},
 		{
 			name: "with special characters",
 			config: PublishAndRequestEventConfiguration{
-				ProviderID: "test-provider-id",
-				Subject:    "subject-with-hyphens",
-				Data:       json.RawMessage(`{"message":"special \"quotes\" here"}`),
+				ProviderID_: "test-provider-id",
+				Subject:     "subject-with-hyphens",
+				Event:       Event{Data: json.RawMessage(`{"message":"special \"quotes\" here"}`)},
 			},
 			wantPattern: `{"subject":"subject-with-hyphens", "data": {"message":"special \"quotes\" here"}, "providerId":"test-provider-id"}`,
 		},
@@ -148,8 +148,8 @@ func TestSubscriptionSource_Start(t *testing.T) {
 			input: `{"subjects":["subject1", "subject2"], "providerId":"test-provider"}`,
 			mockSetup: func(m *MockAdapter, updater *datasource.MockSubscriptionUpdater) {
 				m.On("Subscribe", mock.Anything, SubscriptionEventConfiguration{
-					ProviderID: "test-provider",
-					Subjects:   []string{"subject1", "subject2"},
+					ProviderID_: "test-provider",
+					Subjects:    []string{"subject1", "subject2"},
 				}, mock.Anything).Return(nil)
 			},
 			expectError: false,
@@ -159,8 +159,8 @@ func TestSubscriptionSource_Start(t *testing.T) {
 			input: `{"subjects":["subject1"], "providerId":"test-provider"}`,
 			mockSetup: func(m *MockAdapter, updater *datasource.MockSubscriptionUpdater) {
 				m.On("Subscribe", mock.Anything, SubscriptionEventConfiguration{
-					ProviderID: "test-provider",
-					Subjects:   []string{"subject1"},
+					ProviderID_: "test-provider",
+					Subjects:    []string{"subject1"},
 				}, mock.Anything).Return(errors.New("subscription error"))
 			},
 			expectError: true,
@@ -213,12 +213,12 @@ func TestNatsPublishDataSource_Load(t *testing.T) {
 	}{
 		{
 			name:  "successful publish",
-			input: `{"subject":"test-subject", "data":{"message":"hello"}, "providerId":"test-provider"}`,
+			input: `{"subject":"test-subject", "event": {"data":{"message":"hello"}}, "providerId":"test-provider"}`,
 			mockSetup: func(m *MockAdapter) {
 				m.On("Publish", mock.Anything, mock.MatchedBy(func(event PublishAndRequestEventConfiguration) bool {
-					return event.ProviderID == "test-provider" &&
+					return event.ProviderID() == "test-provider" &&
 						event.Subject == "test-subject" &&
-						string(event.Data) == `{"message":"hello"}`
+						string(event.Event.Data) == `{"message":"hello"}`
 				})).Return(nil)
 			},
 			expectError:     false,
@@ -227,7 +227,7 @@ func TestNatsPublishDataSource_Load(t *testing.T) {
 		},
 		{
 			name:  "publish error",
-			input: `{"subject":"test-subject", "data":{"message":"hello"}, "providerId":"test-provider"}`,
+			input: `{"subject":"test-subject", "event": {"data":{"message":"hello"}}, "providerId":"test-provider"}`,
 			mockSetup: func(m *MockAdapter) {
 				m.On("Publish", mock.Anything, mock.Anything).Return(errors.New("publish error"))
 			},
@@ -288,12 +288,12 @@ func TestNatsRequestDataSource_Load(t *testing.T) {
 	}{
 		{
 			name:  "successful request",
-			input: `{"subject":"test-subject", "data":{"message":"hello"}, "providerId":"test-provider"}`,
+			input: `{"subject":"test-subject", "event": {"data":{"message":"hello"}}, "providerId":"test-provider"}`,
 			mockSetup: func(m *MockAdapter) {
 				m.On("Request", mock.Anything, mock.MatchedBy(func(event PublishAndRequestEventConfiguration) bool {
-					return event.ProviderID == "test-provider" &&
+					return event.ProviderID() == "test-provider" &&
 						event.Subject == "test-subject" &&
-						string(event.Data) == `{"message":"hello"}`
+						string(event.Event.Data) == `{"message":"hello"}`
 				}), mock.Anything).Run(func(args mock.Arguments) {
 					// Write response to the output buffer
 					w := args.Get(2).(io.Writer)
@@ -305,7 +305,7 @@ func TestNatsRequestDataSource_Load(t *testing.T) {
 		},
 		{
 			name:  "request error",
-			input: `{"subject":"test-subject", "data":{"message":"hello"}, "providerId":"test-provider"}`,
+			input: `{"subject":"test-subject", "event": {"data":{"message":"hello"}}, "providerId":"test-provider"}`,
 			mockSetup: func(m *MockAdapter) {
 				m.On("Request", mock.Anything, mock.Anything, mock.Anything).Return(errors.New("request error"))
 			},

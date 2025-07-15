@@ -76,7 +76,7 @@ func (p *ProviderAdapter) Shutdown(ctx context.Context) error {
 
 func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error {
 	log := p.logger.With(
-		zap.String("provider_id", event.ProviderID),
+		zap.String("provider_id", event.ProviderID()),
 		zap.String("method", "subscribe"),
 		zap.Strings("channels", event.Channels),
 	)
@@ -127,14 +127,14 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEvent
 
 func (p *ProviderAdapter) Publish(ctx context.Context, event PublishEventConfiguration) error {
 	log := p.logger.With(
-		zap.String("provider_id", event.ProviderID),
+		zap.String("provider_id", event.ProviderID()),
 		zap.String("method", "publish"),
 		zap.String("channel", event.Channel),
 	)
 
-	log.Debug("publish", zap.ByteString("data", event.Data))
+	log.Debug("publish", zap.ByteString("data", event.Event.Data))
 
-	data, dataErr := event.Data.MarshalJSON()
+	data, dataErr := event.Event.Data.MarshalJSON()
 	if dataErr != nil {
 		log.Error("error marshalling data", zap.Error(dataErr))
 		return datasource.NewError("error marshalling data", dataErr)

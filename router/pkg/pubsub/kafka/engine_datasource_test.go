@@ -24,18 +24,18 @@ func TestPublishEventConfiguration_MarshalJSONTemplate(t *testing.T) {
 		{
 			name: "simple configuration",
 			config: PublishEventConfiguration{
-				ProviderID: "test-provider",
-				Topic:      "test-topic",
-				Data:       json.RawMessage(`{"message":"hello"}`),
+				ProviderID_: "test-provider",
+				Topic:       "test-topic",
+				Event:       Event{Data: json.RawMessage(`{"message":"hello"}`)},
 			},
 			wantPattern: `{"topic":"test-topic", "data": {"message":"hello"}, "providerId":"test-provider"}`,
 		},
 		{
 			name: "with special characters",
 			config: PublishEventConfiguration{
-				ProviderID: "test-provider-id",
-				Topic:      "topic-with-hyphens",
-				Data:       json.RawMessage(`{"message":"special \"quotes\" here"}`),
+				ProviderID_: "test-provider-id",
+				Topic:       "topic-with-hyphens",
+				Event:       Event{Data: json.RawMessage(`{"message":"special \"quotes\" here"}`)},
 			},
 			wantPattern: `{"topic":"topic-with-hyphens", "data": {"message":"special \"quotes\" here"}, "providerId":"test-provider-id"}`,
 		},
@@ -113,8 +113,8 @@ func TestSubscriptionSource_Start(t *testing.T) {
 			input: `{"topics":["topic1", "topic2"], "providerId":"test-provider"}`,
 			mockSetup: func(m *MockAdapter, updater *datasource.MockSubscriptionUpdater) {
 				m.On("Subscribe", mock.Anything, SubscriptionEventConfiguration{
-					ProviderID: "test-provider",
-					Topics:     []string{"topic1", "topic2"},
+					ProviderID_: "test-provider",
+					Topics:      []string{"topic1", "topic2"},
 				}, mock.Anything).Return(nil)
 			},
 			expectError: false,
@@ -124,8 +124,8 @@ func TestSubscriptionSource_Start(t *testing.T) {
 			input: `{"topics":["topic1"], "providerId":"test-provider"}`,
 			mockSetup: func(m *MockAdapter, updater *datasource.MockSubscriptionUpdater) {
 				m.On("Subscribe", mock.Anything, SubscriptionEventConfiguration{
-					ProviderID: "test-provider",
-					Topics:     []string{"topic1"},
+					ProviderID_: "test-provider",
+					Topics:      []string{"topic1"},
 				}, mock.Anything).Return(errors.New("subscription error"))
 			},
 			expectError: true,
@@ -178,12 +178,12 @@ func TestKafkaPublishDataSource_Load(t *testing.T) {
 	}{
 		{
 			name:  "successful publish",
-			input: `{"topic":"test-topic", "data":{"message":"hello"}, "providerId":"test-provider"}`,
+			input: `{"topic":"test-topic", "event": {"data":{"message":"hello"}}, "providerId":"test-provider"}`,
 			mockSetup: func(m *MockAdapter) {
 				m.On("Publish", mock.Anything, mock.MatchedBy(func(event PublishEventConfiguration) bool {
-					return event.ProviderID == "test-provider" &&
+					return event.ProviderID() == "test-provider" &&
 						event.Topic == "test-topic" &&
-						string(event.Data) == `{"message":"hello"}`
+						string(event.Event.Data) == `{"message":"hello"}`
 				})).Return(nil)
 			},
 			expectError:     false,
@@ -192,7 +192,7 @@ func TestKafkaPublishDataSource_Load(t *testing.T) {
 		},
 		{
 			name:  "publish error",
-			input: `{"topic":"test-topic", "data":{"message":"hello"}, "providerId":"test-provider"}`,
+			input: `{"topic":"test-topic", "event": {"data":{"message":"hello"}}, "providerId":"test-provider"}`,
 			mockSetup: func(m *MockAdapter) {
 				m.On("Publish", mock.Anything, mock.Anything).Return(errors.New("publish error"))
 			},

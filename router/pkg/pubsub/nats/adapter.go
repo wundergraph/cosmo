@@ -74,7 +74,7 @@ func (p *ProviderAdapter) getDurableConsumerName(durableName string, subjects []
 
 func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error {
 	log := p.logger.With(
-		zap.String("provider_id", event.ProviderID),
+		zap.String("provider_id", event.ProviderID()),
 		zap.String("method", "subscribe"),
 		zap.Strings("subjects", event.Subjects),
 	)
@@ -199,7 +199,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEvent
 
 func (p *ProviderAdapter) Publish(_ context.Context, event PublishAndRequestEventConfiguration) error {
 	log := p.logger.With(
-		zap.String("provider_id", event.ProviderID),
+		zap.String("provider_id", event.ProviderID()),
 		zap.String("method", "publish"),
 		zap.String("subject", event.Subject),
 	)
@@ -208,9 +208,9 @@ func (p *ProviderAdapter) Publish(_ context.Context, event PublishAndRequestEven
 		return datasource.NewError("nats client not initialized", nil)
 	}
 
-	log.Debug("publish", zap.ByteString("data", event.Data))
+	log.Debug("publish", zap.ByteString("data", event.Event.Data))
 
-	err := p.client.Publish(event.Subject, event.Data)
+	err := p.client.Publish(event.Subject, event.Event.Data)
 	if err != nil {
 		log.Error("publish error", zap.Error(err))
 		return datasource.NewError(fmt.Sprintf("error publishing to NATS subject %s", event.Subject), err)
@@ -221,7 +221,7 @@ func (p *ProviderAdapter) Publish(_ context.Context, event PublishAndRequestEven
 
 func (p *ProviderAdapter) Request(ctx context.Context, event PublishAndRequestEventConfiguration, w io.Writer) error {
 	log := p.logger.With(
-		zap.String("provider_id", event.ProviderID),
+		zap.String("provider_id", event.ProviderID()),
 		zap.String("method", "request"),
 		zap.String("subject", event.Subject),
 	)
@@ -230,9 +230,9 @@ func (p *ProviderAdapter) Request(ctx context.Context, event PublishAndRequestEv
 		return datasource.NewError("nats client not initialized", nil)
 	}
 
-	log.Debug("request", zap.ByteString("data", event.Data))
+	log.Debug("request", zap.ByteString("data", event.Event.Data))
 
-	msg, err := p.client.RequestWithContext(ctx, event.Subject, event.Data)
+	msg, err := p.client.RequestWithContext(ctx, event.Subject, event.Event.Data)
 	if err != nil {
 		log.Error("request error", zap.Error(err))
 		return datasource.NewError(fmt.Sprintf("error requesting from NATS subject %s", event.Subject), err)

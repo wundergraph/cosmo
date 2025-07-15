@@ -31,3 +31,30 @@ type ProviderBuilder[P, E any] interface {
 	// BuildEngineDataSourceFactory Build the data source for the given provider and event configuration
 	BuildEngineDataSourceFactory(data E) (EngineDataSourceFactory, error)
 }
+
+// ProviderType represents the type of pubsub provider
+type ProviderType string
+
+const (
+	ProviderTypeNats  ProviderType = "nats"
+	ProviderTypeKafka ProviderType = "kafka"
+	ProviderTypeRedis ProviderType = "redis"
+)
+
+// StreamEvent is a generic interface for all stream events
+// Each provider will have its own event type that implements this interface
+type StreamEvent interface{}
+
+// SubscriptionEventConfiguration is the interface that all subscription event configurations must implement
+type SubscriptionEventConfiguration interface {
+	ProviderID() string
+	ProviderType() ProviderType
+	RootFieldName() string // the root field name of the subscription in the schema
+}
+
+// PublishEventConfiguration is the interface that all publish event configurations must implement
+type PublishEventConfiguration interface {
+	ProviderID() string
+	ProviderType() ProviderType
+	RootFieldName() string // the root field name of the mutation in the schema
+}

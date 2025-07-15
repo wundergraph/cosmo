@@ -9,25 +9,63 @@ import (
 
 	"github.com/buger/jsonparser"
 	"github.com/cespare/xxhash/v2"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
+// Event represents an event from Redis
+type Event struct {
+	Data json.RawMessage `json:"data"`
+}
+
 // SubscriptionEventConfiguration contains configuration for subscription events
 type SubscriptionEventConfiguration struct {
-	ProviderID string   `json:"providerId"`
-	Channels   []string `json:"channels"`
+	ProviderID_    string   `json:"providerId"`
+	Channels       []string `json:"channels"`
+	RootFieldName_ string   `json:"rootFieldName"`
+}
+
+// ProviderID returns the provider ID
+func (s *SubscriptionEventConfiguration) ProviderID() string {
+	return s.ProviderID_
+}
+
+// ProviderType returns the provider type
+func (s *SubscriptionEventConfiguration) ProviderType() datasource.ProviderType {
+	return datasource.ProviderTypeRedis
+}
+
+// RootFieldName returns the root field name
+func (s *SubscriptionEventConfiguration) RootFieldName() string {
+	return s.RootFieldName_
 }
 
 // PublishEventConfiguration contains configuration for publish events
 type PublishEventConfiguration struct {
-	ProviderID string          `json:"providerId"`
-	Channel    string          `json:"channel"`
-	Data       json.RawMessage `json:"data"`
+	ProviderID_    string `json:"providerId"`
+	Channel        string `json:"channel"`
+	Event          Event  `json:"event"`
+	RootFieldName_ string `json:"rootFieldName"`
+}
+
+// ProviderID returns the provider ID
+func (p *PublishEventConfiguration) ProviderID() string {
+	return p.ProviderID_
+}
+
+// ProviderType returns the provider type
+func (p *PublishEventConfiguration) ProviderType() datasource.ProviderType {
+	return datasource.ProviderTypeRedis
+}
+
+// RootFieldName returns the root field name
+func (p *PublishEventConfiguration) RootFieldName() string {
+	return p.RootFieldName_
 }
 
 func (s *PublishEventConfiguration) MarshalJSONTemplate() (string, error) {
-	return fmt.Sprintf(`{"channel":"%s", "data": %s, "providerId":"%s"}`, s.Channel, s.Data, s.ProviderID), nil
+	return fmt.Sprintf(`{"channel":"%s", "data": %s, "providerId":"%s"}`, s.Channel, s.Event.Data, s.ProviderID_), nil
 }
 
 // SubscriptionDataSource implements resolve.SubscriptionDataSource for Redis
@@ -97,3 +135,8 @@ func (s *PublishDataSource) Load(ctx context.Context, input []byte, out *bytes.B
 func (s *PublishDataSource) LoadWithFiles(ctx context.Context, input []byte, files []*httpclient.FileUpload, out *bytes.Buffer) (err error) {
 	panic("not implemented")
 }
+
+// Interface compliance checks
+var _ datasource.SubscriptionEventConfiguration = (*SubscriptionEventConfiguration)(nil)
+var _ datasource.PublishEventConfiguration = (*PublishEventConfiguration)(nil)
+var _ datasource.StreamEvent = (*Event)(nil)

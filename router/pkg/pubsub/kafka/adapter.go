@@ -99,7 +99,7 @@ func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, u
 func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error {
 
 	log := p.logger.With(
-		zap.String("provider_id", event.ProviderID),
+		zap.String("provider_id", event.ProviderID()),
 		zap.String("method", "subscribe"),
 		zap.Strings("topics", event.Topics),
 	)
@@ -148,7 +148,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEvent
 // The event is written with a dedicated write client.
 func (p *ProviderAdapter) Publish(ctx context.Context, event PublishEventConfiguration) error {
 	log := p.logger.With(
-		zap.String("provider_id", event.ProviderID),
+		zap.String("provider_id", event.ProviderID()),
 		zap.String("method", "publish"),
 		zap.String("topic", event.Topic),
 	)
@@ -157,7 +157,7 @@ func (p *ProviderAdapter) Publish(ctx context.Context, event PublishEventConfigu
 		return datasource.NewError("kafka write client not initialized", nil)
 	}
 
-	log.Debug("publish", zap.ByteString("data", event.Data))
+	log.Debug("publish", zap.ByteString("data", event.Event.Data))
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -166,7 +166,7 @@ func (p *ProviderAdapter) Publish(ctx context.Context, event PublishEventConfigu
 
 	p.writeClient.Produce(ctx, &kgo.Record{
 		Topic: event.Topic,
-		Value: event.Data,
+		Value: event.Event.Data,
 	}, func(record *kgo.Record, err error) {
 		defer wg.Done()
 		if err != nil {
