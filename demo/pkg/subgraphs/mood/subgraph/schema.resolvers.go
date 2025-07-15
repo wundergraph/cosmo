@@ -21,7 +21,7 @@ func (r *mutationResolver) UpdateMood(ctx context.Context, employeeID int, mood 
 	if r.NatsPubSubByProviderID["default"] != nil {
 		err := r.NatsPubSubByProviderID["default"].Publish(ctx, nats.PublishAndRequestEventConfiguration{
 			Subject: myNatsTopic,
-			Data:    []byte(payload),
+			Event:   nats.Event{Data: []byte(payload)},
 		})
 		if err != nil {
 			return nil, err
@@ -34,7 +34,7 @@ func (r *mutationResolver) UpdateMood(ctx context.Context, employeeID int, mood 
 	if r.NatsPubSubByProviderID["my-nats"] != nil {
 		err := r.NatsPubSubByProviderID["my-nats"].Publish(ctx, nats.PublishAndRequestEventConfiguration{
 			Subject: defaultTopic,
-			Data:    []byte(payload),
+			Event:   nats.Event{Data: []byte(payload)},
 		})
 		if err != nil {
 			return nil, err
