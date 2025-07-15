@@ -25,18 +25,18 @@ func TestPublishAndRequestEventConfiguration_MarshalJSONTemplate(t *testing.T) {
 		{
 			name: "simple configuration",
 			config: PublishAndRequestEventConfiguration{
-				ProviderID_: "test-provider",
-				Subject:     "test-subject",
-				Event:       Event{Data: json.RawMessage(`{"message":"hello"}`)},
+				Provider: "test-provider",
+				Subject:  "test-subject",
+				Event:    Event{Data: json.RawMessage(`{"message":"hello"}`)},
 			},
 			wantPattern: `{"subject":"test-subject", "event": {"data": {"message":"hello"}}, "providerId":"test-provider"}`,
 		},
 		{
 			name: "with special characters",
 			config: PublishAndRequestEventConfiguration{
-				ProviderID_: "test-provider-id",
-				Subject:     "subject-with-hyphens",
-				Event:       Event{Data: json.RawMessage(`{"message":"special \"quotes\" here"}`)},
+				Provider: "test-provider-id",
+				Subject:  "subject-with-hyphens",
+				Event:    Event{Data: json.RawMessage(`{"message":"special \"quotes\" here"}`)},
 			},
 			wantPattern: `{"subject":"subject-with-hyphens", "event": {"data": {"message":"special \"quotes\" here"}}, "providerId":"test-provider-id"}`,
 		},
@@ -114,8 +114,8 @@ func TestSubscriptionSource_Start(t *testing.T) {
 			input: `{"subjects":["subject1", "subject2"], "providerId":"test-provider"}`,
 			mockSetup: func(m *MockAdapter, updater *datasource.MockSubscriptionUpdater) {
 				m.On("Subscribe", mock.Anything, SubscriptionEventConfiguration{
-					ProviderID_: "test-provider",
-					Subjects:    []string{"subject1", "subject2"},
+					Provider: "test-provider",
+					Subjects: []string{"subject1", "subject2"},
 				}, mock.Anything).Return(nil)
 			},
 			expectError: false,
@@ -125,8 +125,8 @@ func TestSubscriptionSource_Start(t *testing.T) {
 			input: `{"subjects":["subject1"], "providerId":"test-provider"}`,
 			mockSetup: func(m *MockAdapter, updater *datasource.MockSubscriptionUpdater) {
 				m.On("Subscribe", mock.Anything, SubscriptionEventConfiguration{
-					ProviderID_: "test-provider",
-					Subjects:    []string{"subject1"},
+					Provider: "test-provider",
+					Subjects: []string{"subject1"},
 				}, mock.Anything).Return(errors.New("subscription error"))
 			},
 			expectError: true,

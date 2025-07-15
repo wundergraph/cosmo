@@ -22,14 +22,14 @@ type Event struct {
 }
 
 type SubscriptionEventConfiguration struct {
-	ProviderID_    string   `json:"providerId"`
-	Topics         []string `json:"topics"`
-	RootFieldName_ string   `json:"rootFieldName"`
+	Provider  string   `json:"providerId"`
+	Topics    []string `json:"topics"`
+	FieldName string   `json:"rootFieldName"`
 }
 
 // ProviderID returns the provider ID
 func (s *SubscriptionEventConfiguration) ProviderID() string {
-	return s.ProviderID_
+	return s.Provider
 }
 
 // ProviderType returns the provider type
@@ -39,19 +39,19 @@ func (s *SubscriptionEventConfiguration) ProviderType() datasource.ProviderType 
 
 // RootFieldName returns the root field name
 func (s *SubscriptionEventConfiguration) RootFieldName() string {
-	return s.RootFieldName_
+	return s.FieldName
 }
 
 type PublishEventConfiguration struct {
-	ProviderID_    string `json:"providerId"`
-	Topic          string `json:"topic"`
-	Event          Event  `json:"event"`
-	RootFieldName_ string `json:"rootFieldName"`
+	Provider  string `json:"providerId"`
+	Topic     string `json:"topic"`
+	Event     Event  `json:"event"`
+	FieldName string `json:"rootFieldName"`
 }
 
 // ProviderID returns the provider ID
 func (p *PublishEventConfiguration) ProviderID() string {
-	return p.ProviderID_
+	return p.Provider
 }
 
 // ProviderType returns the provider type
@@ -61,7 +61,7 @@ func (p *PublishEventConfiguration) ProviderType() datasource.ProviderType {
 
 // RootFieldName returns the root field name
 func (p *PublishEventConfiguration) RootFieldName() string {
-	return p.RootFieldName_
+	return p.FieldName
 }
 
 func (s *PublishEventConfiguration) MarshalJSONTemplate() string {

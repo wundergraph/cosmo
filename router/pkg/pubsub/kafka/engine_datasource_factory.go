@@ -49,10 +49,10 @@ func (c *EngineDataSourceFactory) ResolveDataSourceInput(eventData []byte) (stri
 	}
 
 	evtCfg := PublishEventConfiguration{
-		ProviderID_:    c.providerId,
-		Topic:          c.topics[0],
-		Event:          Event{Data: eventData},
-		RootFieldName_: c.fieldName,
+		Provider:  c.providerId,
+		Topic:     c.topics[0],
+		Event:     Event{Data: eventData},
+		FieldName: c.fieldName,
 	}
 
 	return evtCfg.MarshalJSONTemplate(), nil
@@ -66,9 +66,9 @@ func (c *EngineDataSourceFactory) ResolveDataSourceSubscription() (resolve.Subsc
 
 func (c *EngineDataSourceFactory) ResolveDataSourceSubscriptionInput() (string, error) {
 	evtCfg := SubscriptionEventConfiguration{
-		ProviderID_:    c.providerId,
-		Topics:         c.topics,
-		RootFieldName_: c.fieldName,
+		Provider:  c.providerId,
+		Topics:    c.topics,
+		FieldName: c.fieldName,
 	}
 	object, err := json.Marshal(evtCfg)
 	if err != nil {

@@ -24,18 +24,18 @@ func TestPublishEventConfiguration_MarshalJSONTemplate(t *testing.T) {
 		{
 			name: "simple configuration",
 			config: PublishEventConfiguration{
-				ProviderID_: "test-provider",
-				Topic:       "test-topic",
-				Event:       Event{Data: json.RawMessage(`{"message":"hello"}`)},
+				Provider: "test-provider",
+				Topic:    "test-topic",
+				Event:    Event{Data: json.RawMessage(`{"message":"hello"}`)},
 			},
 			wantPattern: `{"topic":"test-topic", "event": {"data": {"message":"hello"}}, "providerId":"test-provider"}`,
 		},
 		{
 			name: "with special characters",
 			config: PublishEventConfiguration{
-				ProviderID_: "test-provider-id",
-				Topic:       "topic-with-hyphens",
-				Event:       Event{Data: json.RawMessage(`{"message":"special \"quotes\" here"}`)},
+				Provider: "test-provider-id",
+				Topic:    "topic-with-hyphens",
+				Event:    Event{Data: json.RawMessage(`{"message":"special \"quotes\" here"}`)},
 			},
 			wantPattern: `{"topic":"topic-with-hyphens", "event": {"data": {"message":"special \"quotes\" here"}}, "providerId":"test-provider-id"}`,
 		},
@@ -113,8 +113,8 @@ func TestSubscriptionSource_Start(t *testing.T) {
 			input: `{"topics":["topic1", "topic2"], "providerId":"test-provider"}`,
 			mockSetup: func(m *MockAdapter, updater *datasource.MockSubscriptionUpdater) {
 				m.On("Subscribe", mock.Anything, SubscriptionEventConfiguration{
-					ProviderID_: "test-provider",
-					Topics:      []string{"topic1", "topic2"},
+					Provider: "test-provider",
+					Topics:   []string{"topic1", "topic2"},
 				}, mock.Anything).Return(nil)
 			},
 			expectError: false,
@@ -124,8 +124,8 @@ func TestSubscriptionSource_Start(t *testing.T) {
 			input: `{"topics":["topic1"], "providerId":"test-provider"}`,
 			mockSetup: func(m *MockAdapter, updater *datasource.MockSubscriptionUpdater) {
 				m.On("Subscribe", mock.Anything, SubscriptionEventConfiguration{
-					ProviderID_: "test-provider",
-					Topics:      []string{"topic1"},
+					Provider: "test-provider",
+					Topics:   []string{"topic1"},
 				}, mock.Anything).Return(errors.New("subscription error"))
 			},
 			expectError: true,

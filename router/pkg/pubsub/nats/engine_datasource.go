@@ -14,7 +14,7 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
-// NatsEvent represents an event from NATS
+// Event represents an event from NATS
 type Event struct {
 	Data     json.RawMessage   `json:"data"`
 	Metadata map[string]string `json:"metadata"`
@@ -27,15 +27,15 @@ type StreamConfiguration struct {
 }
 
 type SubscriptionEventConfiguration struct {
-	ProviderID_         string               `json:"providerId"`
+	Provider            string               `json:"providerId"`
 	Subjects            []string             `json:"subjects"`
 	StreamConfiguration *StreamConfiguration `json:"streamConfiguration,omitempty"`
-	RootFieldName_      string               `json:"rootFieldName"`
+	FieldName           string               `json:"rootFieldName"`
 }
 
 // ProviderID returns the provider ID
 func (s *SubscriptionEventConfiguration) ProviderID() string {
-	return s.ProviderID_
+	return s.Provider
 }
 
 // ProviderType returns the provider type
@@ -45,19 +45,19 @@ func (s *SubscriptionEventConfiguration) ProviderType() datasource.ProviderType 
 
 // RootFieldName returns the root field name
 func (s *SubscriptionEventConfiguration) RootFieldName() string {
-	return s.RootFieldName_
+	return s.FieldName
 }
 
 type PublishAndRequestEventConfiguration struct {
-	ProviderID_    string `json:"providerId"`
-	Subject        string `json:"subject"`
-	Event          Event  `json:"event"`
-	RootFieldName_ string `json:"rootFieldName"`
+	Provider  string `json:"providerId"`
+	Subject   string `json:"subject"`
+	Event     Event  `json:"event"`
+	FieldName string `json:"rootFieldName"`
 }
 
 // ProviderID returns the provider ID
 func (p *PublishAndRequestEventConfiguration) ProviderID() string {
-	return p.ProviderID_
+	return p.Provider
 }
 
 // ProviderType returns the provider type
@@ -67,7 +67,7 @@ func (p *PublishAndRequestEventConfiguration) ProviderType() datasource.Provider
 
 // RootFieldName returns the root field name
 func (p *PublishAndRequestEventConfiguration) RootFieldName() string {
-	return p.RootFieldName_
+	return p.FieldName
 }
 
 func (s *PublishAndRequestEventConfiguration) MarshalJSONTemplate() string {
