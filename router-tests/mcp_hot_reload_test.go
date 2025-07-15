@@ -3,6 +3,7 @@ package integration
 import (
 	"encoding/json"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -17,28 +18,27 @@ import (
 
 func TestMCPOperationHotReload(t *testing.T) {
 	t.Parallel()
+	operationsDir := t.TempDir()
+	storageProviderID := "mcp_hot_reload_test_id"
 
 	t.Run("List Updated User Operations On Addition and Removal", func(t *testing.T) {
-
-		operationsDir := t.TempDir()
-		storageProviderId := "mcp_hot_reload_test_id"
 
 		testenv.Run(t, &testenv.Config{
 			MCP: config.MCPConfiguration{
 				Enabled: true,
 				Storage: config.MCPStorageConfig{
-					ProviderID: storageProviderId,
+					ProviderID: storageProviderID,
 				},
 				HotReloadConfig: config.MCPOperationsHotReloadConfig{
 					Enabled:  true,
-					Interval: 5 * time.Second,
+					Interval: 1 * time.Second,
 				},
 			},
 			RouterOptions: []core.Option{
 				core.WithStorageProviders(config.StorageProviders{
 					FileSystem: []config.FileSystemStorageProvider{
 						{
-							ID:   storageProviderId,
+							ID:   storageProviderID,
 							Path: operationsDir,
 						},
 					},
@@ -52,10 +52,10 @@ func TestMCPOperationHotReload(t *testing.T) {
 
 			initialToolsCount := len(resp.Tools)
 
-			filePath := operationsDir + "/main.graphql"
+			mcpOperationFile := filepath.Join(operationsDir, "main.graphql")
 
 			// write mcp operation content
-			err = os.WriteFile(filePath, []byte("query getEmployeeNotes($id: Int!) {\nemployee(id: $id) {\nid\nnotes\n}\n}"), 0644)
+			err = os.WriteFile(mcpOperationFile, []byte("query getEmployeeNotes($id: Int!) {\nemployee(id: $id) {\nid\nnotes\n}\n}"), 0644)
 			assert.NoError(t, err)
 
 			require.EventuallyWithT(t, func(t *assert.CollectT) {
@@ -81,9 +81,9 @@ func TestMCPOperationHotReload(t *testing.T) {
 						OpenWorldHint:  mcp.ToBoolPtr(true),
 					},
 				})
-			}, 15*time.Second, 250*time.Millisecond)
+			}, 10*time.Second, 100*time.Millisecond)
 
-			err = os.Remove(filePath)
+			err = os.Remove(mcpOperationFile)
 			assert.NoError(t, err)
 
 			assert.EventuallyWithT(t, func(t *assert.CollectT) {
@@ -110,31 +110,29 @@ func TestMCPOperationHotReload(t *testing.T) {
 					},
 				})
 
-			}, 15*time.Second, 250*time.Millisecond)
+			}, 10*time.Second, 100*time.Millisecond)
 
 		})
 	})
 
 	t.Run("List Updated User Operations On Content Update", func(t *testing.T) {
-		operationsDir := t.TempDir()
-		storageProviderId := "mcp_hot_reload_test_id"
 
 		testenv.Run(t, &testenv.Config{
 			MCP: config.MCPConfiguration{
 				Enabled: true,
 				Storage: config.MCPStorageConfig{
-					ProviderID: storageProviderId,
+					ProviderID: storageProviderID,
 				},
 				HotReloadConfig: config.MCPOperationsHotReloadConfig{
 					Enabled:  true,
-					Interval: 5 * time.Second,
+					Interval: 1 * time.Second,
 				},
 			},
 			RouterOptions: []core.Option{
 				core.WithStorageProviders(config.StorageProviders{
 					FileSystem: []config.FileSystemStorageProvider{
 						{
-							ID:   storageProviderId,
+							ID:   storageProviderID,
 							Path: operationsDir,
 						},
 					},
@@ -142,11 +140,10 @@ func TestMCPOperationHotReload(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
-			filePath := operationsDir + "/main.graphql"
+			mcpOperationFile := filepath.Join(operationsDir, "main.graphql")
 
 			// write mcp operation content
-			err := os.WriteFile(filePath, []byte("query getEmployeeNotes($id: Int!) {\nemployee(id: $id) {\nid\nnotes\n}\n}"), 0644)
-			assert.NoError(t, err)
+			require.NoError(t, os.WriteFile(mcpOperationFile, []byte("query getEmployeeNotes($id: Int!) {\nemployee(id: $id) {\nid\nnotes\n}\n}"), 0o600))
 
 			require.EventuallyWithT(t, func(t *assert.CollectT) {
 
@@ -171,11 +168,10 @@ func TestMCPOperationHotReload(t *testing.T) {
 						OpenWorldHint:  mcp.ToBoolPtr(true),
 					},
 				})
-			}, 15*time.Second, 250*time.Millisecond)
+			}, 10*time.Second, 100*time.Millisecond)
 
 			// update mcp operation content
-			err = os.WriteFile(filePath, []byte("\nquery getEmployeeNotesUpdatedTitle($id: Int!) {\nemployee(id: $id) {\nid\nnotes\n}\n}"), 0644)
-			assert.NoError(t, err)
+			require.NoError(t, os.WriteFile(mcpOperationFile, []byte("\nquery getEmployeeNotesUpdatedTitle($id: Int!) {\nemployee(id: $id) {\nid\nnotes\n}\n}"), 0o600))
 
 			require.EventuallyWithT(t, func(t *assert.CollectT) {
 
@@ -200,7 +196,7 @@ func TestMCPOperationHotReload(t *testing.T) {
 						OpenWorldHint:  mcp.ToBoolPtr(true),
 					},
 				})
-			}, 15*time.Second, 250*time.Millisecond)
+			}, 10*time.Second, 100*time.Millisecond)
 		})
 	})
 }
@@ -213,24 +209,24 @@ func TestShutDownMCPGoRoutineLeaks(t *testing.T) {
 	)
 
 	operationsDir := t.TempDir()
-	storageProviderId := "mcp_hot_reload_test_id"
+	storageProviderID := "mcp_hot_reload_test_id"
 
 	xEnv, err := testenv.CreateTestEnv(t, &testenv.Config{
 		MCP: config.MCPConfiguration{
 			Enabled: true,
 			Storage: config.MCPStorageConfig{
-				ProviderID: storageProviderId,
+				ProviderID: storageProviderID,
 			},
 			HotReloadConfig: config.MCPOperationsHotReloadConfig{
 				Enabled:  true,
-				Interval: 5 * time.Second,
+				Interval: 1 * time.Second,
 			},
 		},
 		RouterOptions: []core.Option{
 			core.WithStorageProviders(config.StorageProviders{
 				FileSystem: []config.FileSystemStorageProvider{
 					{
-						ID:   storageProviderId,
+						ID:   storageProviderID,
 						Path: operationsDir,
 					},
 				},
@@ -240,10 +236,9 @@ func TestShutDownMCPGoRoutineLeaks(t *testing.T) {
 
 	require.NoError(t, err)
 
-	filePath := operationsDir + "/main.graphql"
+	mcpOperationFile := filepath.Join(operationsDir, "main.graphql")
 	// write mcp operation content
-	err = os.WriteFile(filePath, []byte("query getEmployeeNotes($id: Int!) {\nemployee(id: $id) {\nid\nnotes\n}\n}"), 0644)
-	assert.NoError(t, err)
+	require.NoError(t, os.WriteFile(mcpOperationFile, []byte("query getEmployeeNotes($id: Int!) {\nemployee(id: $id) {\nid\nnotes\n}\n}"), 0o600))
 
 	// Verify GoRoutines are properly setup for Hot Reloading
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
@@ -268,7 +263,7 @@ func TestShutDownMCPGoRoutineLeaks(t *testing.T) {
 				OpenWorldHint:  mcp.ToBoolPtr(true),
 			},
 		})
-	}, 15*time.Second, 250*time.Millisecond)
+	}, 10*time.Second, 100*time.Millisecond)
 
 	xEnv.Shutdown()
 

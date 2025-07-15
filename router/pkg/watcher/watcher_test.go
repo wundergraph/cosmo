@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -52,30 +53,22 @@ func TestOptionsValidation(t *testing.T) {
 		}
 	})
 
-	t.Run("path not provided", func(t *testing.T) {
+	t.Run("can't watch both paths and directory", func(t *testing.T) {
 		t.Parallel()
+		dir := t.TempDir()
+		tempFile := filepath.Join(dir, "temp_1.json")
 
-		t.Run("nil path slice", func(t *testing.T) {
-			_, err := watcher.New(watcher.Options{
-				Interval: watchInterval,
-				Logger:   zap.NewNop(),
-				Paths:    nil,
-			})
-			if assert.Error(t, err) {
-				assert.ErrorContains(t, err, "path must be provided")
-			}
+		_, err := watcher.New(watcher.Options{
+			Interval: watchInterval,
+			Logger:   zap.NewNop(),
+			Paths:    []string{tempFile},
+			Directory: watcher.DirOptions{
+				DirPath: dir,
+			},
 		})
-
-		t.Run("empty path slice", func(t *testing.T) {
-			_, err := watcher.New(watcher.Options{
-				Interval: watchInterval,
-				Logger:   zap.NewNop(),
-				Paths:    []string{},
-			})
-			if assert.Error(t, err) {
-				assert.ErrorContains(t, err, "path must be provided")
-			}
-		})
+		if assert.Error(t, err) {
+			assert.ErrorContains(t, err, "can't watch both paths and directory")
+		}
 	})
 
 	t.Run("callback not provided", func(t *testing.T) {
@@ -775,6 +768,169 @@ func TestWatch(t *testing.T) {
 		sendTick(ticker)
 		spy.AssertCalled(t, 1)
 	})
+
+	t.Run("create a file in watcher directory", func(t *testing.T) {
+		t.Parallel()
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		dir := t.TempDir()
+
+		spy := test.NewCallSpy()
+
+		tickerChan := make(chan time.Time)
+		watchFunc, err := watcher.New(watcher.Options{
+			Interval: watchInterval,
+			Logger:   zap.NewNop(),
+			Directory: watcher.DirOptions{
+				DirPath: dir,
+			},
+			Callback:   spy.Call,
+			TickSource: tickerChan,
+		})
+		require.NoError(t, err)
+
+		go func() {
+			_ = watchFunc(ctx)
+		}()
+
+		sendTick(tickerChan)
+		sendTick(tickerChan)
+
+		tempFile := filepath.Join(dir, "config.json")
+		require.NoError(t, os.WriteFile(tempFile, []byte("a"), 0o600))
+
+		sendTick(tickerChan)
+		sendTick(tickerChan)
+		spy.AssertCalled(t, 0)
+		sendTick(tickerChan)
+		spy.AssertCalled(t, 1)
+	})
+
+	t.Run("modify a file in watcher directory", func(t *testing.T) {
+		t.Parallel()
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		dir := t.TempDir()
+		tempFile := filepath.Join(dir, "config.json")
+		require.NoError(t, os.WriteFile(tempFile, []byte("a"), 0o600))
+
+		spy := test.NewCallSpy()
+
+		tickerChan := make(chan time.Time)
+		watchFunc, err := watcher.New(watcher.Options{
+			Interval: watchInterval,
+			Logger:   zap.NewNop(),
+			Directory: watcher.DirOptions{
+				DirPath: dir,
+			},
+			Callback:   spy.Call,
+			TickSource: tickerChan,
+		})
+		require.NoError(t, err)
+
+		go func() {
+			_ = watchFunc(ctx)
+		}()
+
+		sendTick(tickerChan)
+		sendTick(tickerChan)
+
+		require.NoError(t, os.WriteFile(tempFile, []byte("b"), 0o600))
+
+		sendTick(tickerChan)
+		sendTick(tickerChan)
+		spy.AssertCalled(t, 1)
+	})
+
+	t.Run("delete a file in watcher directory", func(t *testing.T) {
+		t.Parallel()
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		dir := t.TempDir()
+		tempFile := filepath.Join(dir, "config.json")
+		require.NoError(t, os.WriteFile(tempFile, []byte("a"), 0o600))
+
+		spy := test.NewCallSpy()
+
+		tickerChan := make(chan time.Time)
+		watchFunc, err := watcher.New(watcher.Options{
+			Interval: watchInterval,
+			Logger:   zap.NewNop(),
+			Directory: watcher.DirOptions{
+				DirPath: dir,
+			},
+			Callback:   spy.Call,
+			TickSource: tickerChan,
+		})
+		require.NoError(t, err)
+
+		go func() {
+			_ = watchFunc(ctx)
+		}()
+
+		sendTick(tickerChan)
+		sendTick(tickerChan)
+
+		require.NoError(t, os.Remove(tempFile))
+
+		sendTick(tickerChan)
+		sendTick(tickerChan)
+		spy.AssertCalled(t, 1)
+	})
+
+	t.Run("rename multiple files in watcher directory", func(t *testing.T) {
+		t.Parallel()
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		dir := t.TempDir()
+		tempFile1 := filepath.Join(dir, "file_1.json")
+		tempFile2 := filepath.Join(dir, "file_2.json")
+		tempFile3 := filepath.Join(dir, "file_3.json")
+
+		require.NoError(t, os.WriteFile(tempFile1, []byte("file_1"), 0o600))
+		require.NoError(t, os.WriteFile(tempFile2, []byte("file_2"), 0o600))
+		require.NoError(t, os.WriteFile(tempFile3, []byte("file_3"), 0o600))
+
+		spy := test.NewCallSpy()
+
+		tickerChan := make(chan time.Time)
+		watchFunc, err := watcher.New(watcher.Options{
+			Interval: watchInterval,
+			Logger:   zap.NewNop(),
+			Directory: watcher.DirOptions{
+				DirPath: dir,
+			},
+			Callback:   spy.Call,
+			TickSource: tickerChan,
+		})
+		require.NoError(t, err)
+
+		go func() {
+			_ = watchFunc(ctx)
+		}()
+
+		sendTick(tickerChan)
+		sendTick(tickerChan)
+
+		newTempFile1 := filepath.Join(dir, "new_file_1.json")
+		newTempFile2 := filepath.Join(dir, "new_file_2.json")
+		newTempFile3 := filepath.Join(dir, "new_file_3.json")
+
+		require.NoError(t, os.Rename(tempFile1, newTempFile1))
+		require.NoError(t, os.Rename(tempFile2, newTempFile2))
+		require.NoError(t, os.Rename(tempFile3, newTempFile3))
+
+		sendTick(tickerChan)
+		sendTick(tickerChan)
+		spy.AssertCalled(t, 0)
+		sendTick(tickerChan)
+		spy.AssertCalled(t, 1)
+	})
 }
 
 func TestCancel(t *testing.T) {
@@ -804,6 +960,35 @@ func TestCancel(t *testing.T) {
 	cancel()
 
 	require.ErrorIs(t, eg.Wait(), context.Canceled)
+}
+
+func TestListDirFilePaths(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	tempFile1 := filepath.Join(dir, "file_1.json")
+	tempFile2 := filepath.Join(dir, "file_2.json")
+	tempFile3 := filepath.Join(dir, "file_3.txt")
+
+	require.NoError(t, os.WriteFile(tempFile1, []byte("a1"), 0o600))
+	require.NoError(t, os.WriteFile(tempFile2, []byte("a2"), 0o600))
+	require.NoError(t, os.WriteFile(tempFile3, []byte("a3"), 0o600))
+
+	diropts := watcher.DirOptions{
+		DirPath: dir,
+		Filter: func(path string) bool {
+			return strings.ToLower(filepath.Ext(path)) == ".json"
+		},
+	}
+
+	filteredFilePaths, err := watcher.ListDirFilePaths(diropts)
+
+	require.NoError(t, err)
+	require.Len(t, filteredFilePaths, 2)
+
+	require.Contains(t, filteredFilePaths, tempFile1)
+	require.Contains(t, filteredFilePaths, tempFile2)
+	require.NotContains(t, filteredFilePaths, tempFile3)
 }
 
 // sendTick helper function which adds a sleep timeout
