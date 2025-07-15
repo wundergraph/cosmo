@@ -26,6 +26,31 @@ type Options struct {
 	TickSource <-chan time.Time
 }
 
+func ListDirFilePaths(diropts DirOptions) ([]string, error) {
+	var files []string
+	if diropts.DirPath != "" {
+		err := filepath.WalkDir(diropts.DirPath, func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			// Skip directories
+			if d.IsDir() {
+				return nil
+			}
+			//  Accept if filter passes the file
+			if diropts.Filter != nil && !diropts.Filter(path) {
+				return nil
+			}
+			files = append(files, path)
+			return nil
+		})
+		if err != nil {
+			return []string{}, fmt.Errorf("error walking directory %s: %w", diropts.DirPath, err)
+		}
+	}
+	return files, nil
+}
+
 func New(options Options) (func(ctx context.Context) error, error) {
 	if options.Interval <= 0 {
 		return nil, errors.New("interval must be greater than zero")
@@ -35,8 +60,8 @@ func New(options Options) (func(ctx context.Context) error, error) {
 		return nil, errors.New("logger must be provided")
 	}
 
-	if len(options.Paths) == 0 && options.Directory.DirPath == "" {
-		return nil, errors.New("paths or directory must be provided")
+	if len(options.Paths) != 0 && options.Directory.DirPath != "" {
+		return nil, errors.New("can't watch both paths and directory")
 	}
 
 	if options.Callback == nil {
@@ -44,31 +69,6 @@ func New(options Options) (func(ctx context.Context) error, error) {
 	}
 
 	ll := options.Logger.With(zap.String("component", "file_watcher"), zap.Strings("path", options.Paths))
-
-	listDirFilePaths := func() ([]string, error) {
-		var files []string
-		if options.Directory.DirPath != "" {
-			err := filepath.WalkDir(options.Directory.DirPath, func(path string, d fs.DirEntry, err error) error {
-				if err != nil {
-					return err
-				}
-				// Skip directories
-				if d.IsDir() {
-					return nil
-				}
-				// Skip if filter rejects the file
-				if options.Directory.Filter != nil && options.Directory.Filter(path) {
-					return nil
-				}
-				files = append(files, path)
-				return nil
-			})
-			if err != nil {
-				return []string{}, fmt.Errorf("error walking directory %s: %w", options.Directory.DirPath, err)
-			}
-		}
-		return files, nil
-	}
 
 	return func(ctx context.Context) error {
 		// If a ticker source is provided, use that instead of the default ticker
@@ -79,22 +79,13 @@ func New(options Options) (func(ctx context.Context) error, error) {
 		}
 
 		prevModTimes := make(map[string]time.Time)
-		seenDirFilePaths := make(map[string]struct{})
 
-		dirFilePaths, err := listDirFilePaths()
-		if err != nil {
-			ll.Error("failed to list directory files", zap.Error(err))
-		}
-
-		for _, path := range dirFilePaths {
-			stat, err := os.Stat(path)
+		var err error
+		if options.Directory.DirPath != "" {
+			options.Paths, err = ListDirFilePaths(options.Directory)
 			if err != nil {
-				ll.Debug("Target file cannot be statted", zap.Error(err))
-			} else {
-				prevModTimes[path] = stat.ModTime()
-				ll.Debug("Watching file for changes", zap.String("path", path), zap.Time("initial_mod_time", prevModTimes[path]))
+				ll.Error("failed to list directory files", zap.Error(err))
 			}
-			seenDirFilePaths[path] = struct{}{}
 		}
 
 		for _, path := range options.Paths {
@@ -114,53 +105,17 @@ func New(options Options) (func(ctx context.Context) error, error) {
 			case <-ticker:
 				changesDetected := false
 
-				dirFilePaths, err := listDirFilePaths()
-				if err != nil {
-					ll.Error("failed to list directory files", zap.Error(err))
-				}
-
-				visitedDirFilePaths := make(map[string]struct{})
-
-				for _, path := range dirFilePaths {
-					stat, err := os.Stat(path)
-					if err != nil {
-						ll.Debug("Target file cannot be statted", zap.String("path", path), zap.Error(err))
-						// Reset the mod time so we catch any new file at the target path
-						prevModTimes[path] = time.Time{}
-						continue
-					}
-					ll.Debug("Checking file for changes",
-						zap.String("path", path),
-						zap.Time("prev_mod_time", prevModTimes[path]),
-						zap.Time("current_mod_time", stat.ModTime()),
-					)
-					_, seen := seenDirFilePaths[path]
-					// Detects new files & existing file updates in `options.Directory.DirPath`
-					if !seen || stat.ModTime().After(prevModTimes[path]) {
-						seenDirFilePaths[path] = struct{}{}
-						prevModTimes[path] = stat.ModTime()
-						changesDetected = true
-					}
-					visitedDirFilePaths[path] = struct{}{}
-				}
-
-				// Detects deleted files
-				if len(seenDirFilePaths) > len(dirFilePaths) {
-					changesDetected = true
-				}
-
-				for path := range seenDirFilePaths {
-					if _, ok := visitedDirFilePaths[path]; !ok {
-						delete(seenDirFilePaths, path)
-					}
-				}
-
 				for _, path := range options.Paths {
 					stat, err := os.Stat(path)
 					if err != nil {
 						ll.Debug("Target file cannot be statted", zap.String("path", path), zap.Error(err))
-						// Reset the mod time so we catch any new file at the target path
-						prevModTimes[path] = time.Time{}
+						if os.IsNotExist(err) {
+							delete(prevModTimes, path)
+							changesDetected = true
+						} else {
+							// Reset the mod time so we catch any new file at the target path
+							prevModTimes[path] = time.Time{}
+						}
 						continue
 					}
 					ll.Debug("Checking file for changes",
@@ -168,9 +123,19 @@ func New(options Options) (func(ctx context.Context) error, error) {
 						zap.Time("prev_mod_time", prevModTimes[path]),
 						zap.Time("current_mod_time", stat.ModTime()),
 					)
-					if stat.ModTime().After(prevModTimes[path]) {
+					_, seen := prevModTimes[path]
+
+					// Detects new files & existing file updates
+					if !seen || stat.ModTime().After(prevModTimes[path]) {
 						prevModTimes[path] = stat.ModTime()
 						changesDetected = true
+					}
+				}
+
+				if options.Directory.DirPath != "" {
+					options.Paths, err = ListDirFilePaths(options.Directory)
+					if err != nil {
+						ll.Error("failed to list directory files", zap.Error(err))
 					}
 				}
 
@@ -184,6 +149,7 @@ func New(options Options) (func(ctx context.Context) error, error) {
 					// but the previous tick had changes detected
 					pendingCallback = false
 					options.Callback()
+					ll.Info("Running callback!")
 				}
 			case <-ctx.Done():
 				return ctx.Err()

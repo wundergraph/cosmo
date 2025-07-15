@@ -150,7 +150,7 @@ func (l *OperationLoader) LoadOperationsFromDirectory(ctx context.Context, dirPa
 			Directory: watcher.DirOptions{
 				DirPath: dirPath,
 				Filter: func(path string) bool {
-					return !isGraphQLFile(path)
+					return isGraphQLFile(path)
 				},
 			},
 		})
