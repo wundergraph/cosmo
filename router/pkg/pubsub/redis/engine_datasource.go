@@ -65,7 +65,7 @@ func (p *PublishEventConfiguration) RootFieldName() string {
 }
 
 func (s *PublishEventConfiguration) MarshalJSONTemplate() (string, error) {
-	return fmt.Sprintf(`{"channel":"%s", "data": %s, "providerId":"%s"}`, s.Channel, s.Event.Data, s.ProviderID_), nil
+	return fmt.Sprintf(`{"channel":"%s", "data": %s, "providerId":"%s"}`, s.Channel, s.Event.Data, s.ProviderID()), nil
 }
 
 // SubscriptionDataSource implements resolve.SubscriptionDataSource for Redis
