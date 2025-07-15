@@ -8,6 +8,7 @@ import (
 	"syscall"
 )
 
+// PrepareCommand adds Linux-specific options to the command.
 func PrepareCommand(cmd *exec.Cmd) {
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Setpgid:   true,

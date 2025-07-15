@@ -7,7 +7,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/daemon"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 )
@@ -33,62 +32,6 @@ func (t *TarballImageSource) Images(ctx context.Context) <-chan v1.Image {
 			ch <- img
 		}
 		close(ch)
-	}()
-	return ch
-}
-
-// DaemonImageSource loads an image from the local Docker daemon, with optional hot reload
-type DaemonImageSource struct {
-	ref            name.Reference
-	reloadInterval time.Duration
-	lastDigest     string
-}
-
-func NewDaemonImageSource(refStr string, reloadInterval time.Duration) (*DaemonImageSource, error) {
-	ref, err := name.ParseReference(refStr)
-	if err != nil {
-		return nil, err
-	}
-	return &DaemonImageSource{ref: ref, reloadInterval: reloadInterval}, nil
-}
-
-func (d *DaemonImageSource) Images(ctx context.Context) <-chan v1.Image {
-	ch := make(chan v1.Image)
-	go func() {
-		defer close(ch)
-		img, err := daemon.Image(d.ref)
-		if err == nil {
-			digest, derr := img.Digest()
-			if derr == nil {
-				d.lastDigest = digest.String()
-			}
-			ch <- img
-		}
-		if d.reloadInterval <= 0 {
-			return
-		}
-
-		ticker := time.NewTicker(d.reloadInterval)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				img, err := daemon.Image(d.ref)
-				if err != nil {
-					continue
-				}
-				digest, err := img.Digest()
-				if err != nil {
-					continue
-				}
-				if d.lastDigest != digest.String() {
-					ch <- img
-					d.lastDigest = digest.String()
-				}
-			}
-		}
 	}()
 	return ch
 }
