@@ -53,13 +53,13 @@ Rules should follow [Proto Best Practices](https://protobuf.dev/best-practices/d
 
 ### Scalar Types
 
-| GraphQL Type | Protocol Buffer Type |
-| ------------ | -------------------- |
-| ID           | string               |
-| String       | string               |
-| Int          | int32                |
-| Float        | double               |
-| Boolean      | bool                 |
+| GraphQL Type | Protocol Buffer Type (Non-Null) | Protocol Buffer Type (Nullable) |
+| ------------ | ------------------------------- | ------------------------------- |
+| ID           | string                          | google.protobuf.StringValue     |
+| String       | string                          | google.protobuf.StringValue     |
+| Int          | int32                           | google.protobuf.Int32Value      |
+| Float        | double                          | google.protobuf.DoubleValue     |
+| Boolean      | bool                            | google.protobuf.BoolValue       |
 
 ### Complex Types
 
@@ -286,13 +286,15 @@ type User {
 Generates:
 
 ```protobuf
+import "google/protobuf/wrappers.proto";
+
 message User {
   string id = 1;
   string name = 2;
   string email = 3;
-  int32 age = 4;
-  string bio = 5;
-  bool is_active = 6;
+  google.protobuf.Int32Value age = 4;
+  google.protobuf.StringValue bio = 5;
+  google.protobuf.BoolValue is_active = 6;
 }
 ```
 
@@ -312,11 +314,13 @@ type User {
 Generates (with range notation for reserved fields):
 
 ```protobuf
+import "google/protobuf/wrappers.proto";
+
 message User {
   reserved 3 to 5;  // Efficiently reserves fields 3, 4, and 5
   string id = 1;
   string name = 2;
-  bool is_active = 6;
+  google.protobuf.BoolValue is_active = 6;
 }
 ```
 
@@ -335,13 +339,15 @@ type User {
 Generates:
 
 ```protobuf
+import "google/protobuf/wrappers.proto";
+
 message User {
   reserved 3 to 4;  // Fields 3 and 4 remain reserved
   string id = 1;
   string name = 2;
-  string bio = 5;   // Restored field keeps its original number
-  bool is_active = 6;
-  string created_at = 7; // New field gets next available number
+  google.protobuf.StringValue bio = 5;   // Restored field keeps its original number
+  google.protobuf.BoolValue is_active = 6;
+  google.protobuf.StringValue created_at = 7; // New field gets next available number
 }
 ```
 

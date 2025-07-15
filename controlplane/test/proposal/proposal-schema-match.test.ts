@@ -1,6 +1,7 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
+import { ProposalNamingConvention } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { ClickHouseClient } from '../../src/core/clickhouse/index.js';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../../src/core/test-util.js';
 import {
@@ -76,6 +77,7 @@ async function createTestProposal(
         labels: [],
       },
     ],
+    namingConvention: ProposalNamingConvention.INCREMENTAL,
   });
 
   return createProposalResponse;
@@ -188,7 +190,7 @@ describe('Proposal schema matching tests', () => {
 
     // Approve the proposal
     const updateProposalResponse = await client.updateProposal({
-      proposalName,
+      proposalName: createProposalResponse.proposalName,
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       updateAction: {
@@ -290,7 +292,7 @@ describe('Proposal schema matching tests', () => {
 
     // Approve the proposal
     const updateProposalResponse = await client.updateProposal({
-      proposalName,
+      proposalName: createProposalResponse.proposalName,
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       updateAction: {
@@ -391,7 +393,7 @@ describe('Proposal schema matching tests', () => {
 
     // Approve the proposal
     const updateProposalResponse = await client.updateProposal({
-      proposalName,
+      proposalName: createProposalResponse.proposalName,
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       updateAction: {
@@ -491,7 +493,7 @@ describe('Proposal schema matching tests', () => {
 
     // Approve the proposal
     const updateProposalResponse = await client.updateProposal({
-      proposalName,
+      proposalName: createProposalResponse.proposalName,
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       updateAction: {
@@ -592,7 +594,7 @@ describe('Proposal schema matching tests', () => {
     expect(createProposalResponse1.response?.code).toBe(EnumStatusCode.OK);
 
     await client.updateProposal({
-      proposalName: proposalName1,
+      proposalName: createProposalResponse1.proposalName,
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       updateAction: {
@@ -619,7 +621,7 @@ describe('Proposal schema matching tests', () => {
     expect(createProposalResponse2.response?.code).toBe(EnumStatusCode.OK);
 
     await client.updateProposal({
-      proposalName: proposalName2,
+      proposalName: createProposalResponse2.proposalName,
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       updateAction: {
@@ -719,7 +721,7 @@ describe('Proposal schema matching tests', () => {
 
     // Approve the proposal
     const updateProposalResponse = await client.updateProposal({
-      proposalName,
+      proposalName: createProposalResponse.proposalName,
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       updateAction: {
@@ -913,7 +915,7 @@ describe('Proposal schema matching tests', () => {
     expect(createProposalResponse1.response?.code).toBe(EnumStatusCode.OK);
 
     await client.updateProposal({
-      proposalName: proposal1Name,
+      proposalName: createProposalResponse1.proposalName,
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       updateAction: {
@@ -932,7 +934,7 @@ describe('Proposal schema matching tests', () => {
     expect(createProposalResponse2.response?.code).toBe(EnumStatusCode.OK);
 
     await client.updateProposal({
-      proposalName: proposal2Name,
+      proposalName: createProposalResponse2.proposalName,
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       updateAction: {
@@ -1012,7 +1014,7 @@ describe('Proposal schema matching tests', () => {
 
     // Approve the proposal
     const updateProposalResponse = await client.updateProposal({
-      proposalName,
+      proposalName: createProposalResponse.proposalName,
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       updateAction: {
@@ -1148,7 +1150,7 @@ describe('Proposal schema matching tests', () => {
 
     // Approve the proposal
     const updateProposalResponse = await client.updateProposal({
-      proposalName,
+      proposalName: createProposalResponse.proposalName,
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       updateAction: {
@@ -1262,7 +1264,7 @@ describe('Proposal schema matching tests', () => {
     expect(createProposalResponse1.response?.code).toBe(EnumStatusCode.OK);
 
     const approveProposalResponse1 = await client.updateProposal({
-      proposalName: proposalName1,
+      proposalName: createProposalResponse1.proposalName,
       federatedGraphName: fedGraphName,
       namespace: namespace1,
       updateAction: {
@@ -1283,7 +1285,7 @@ describe('Proposal schema matching tests', () => {
     expect(createProposalResponse2.response?.code).toBe(EnumStatusCode.OK);
 
     const approveProposalResponse2 = await client.updateProposal({
-      proposalName: proposalName2,
+      proposalName: createProposalResponse2.proposalName,
       federatedGraphName: fedGraphName,
       namespace: namespace2,
       updateAction: {
@@ -1444,7 +1446,7 @@ describe('Proposal schema matching tests', () => {
 
     // Approve the proposal
     const updateProposalResponse = await client.updateProposal({
-      proposalName,
+      proposalName: createProposalResponse.proposalName,
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       updateAction: {

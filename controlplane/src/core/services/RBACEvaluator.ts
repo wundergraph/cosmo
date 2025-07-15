@@ -218,7 +218,10 @@ export class RBACEvaluator {
       return true;
     }
 
-    return this.isOrganizationViewer || this.hasSubGraphWriteAccess(graph);
+    return (
+      this.isOrganizationViewer ||
+      this.checkTargetAccess(graph, ['subgraph-admin', 'subgraph-publisher', 'subgraph-viewer'])
+    );
   }
 
   private checkNamespaceAccess(ns: Namespace, requiredRoles: OrganizationRole[]) {
