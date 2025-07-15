@@ -73,7 +73,7 @@ func (p *PublishAndRequestEventConfiguration) RootFieldName() string {
 func (s *PublishAndRequestEventConfiguration) MarshalJSONTemplate() string {
 	// The content of the data field could be not valid JSON, so we can't use json.Marshal
 	// e.g. {"id":$$0$$,"update":$$1$$}
-	return fmt.Sprintf(`{"subject":"%s", "data": %s, "providerId":"%s"}`, s.Subject, s.Event.Data, s.ProviderID())
+	return fmt.Sprintf(`{"subject":"%s", "event": {"data": %s}, "providerId":"%s"}`, s.Subject, s.Event.Data, s.ProviderID())
 }
 
 type SubscriptionSource struct {
