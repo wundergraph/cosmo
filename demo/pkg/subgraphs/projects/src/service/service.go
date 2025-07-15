@@ -239,12 +239,17 @@ func (p *ProjectsService) MutationUpdateProjectStatus(ctx context.Context, req *
 	}
 
 	// Create project update record
-	lastUpdateID := data.ServiceProjectUpdates[len(data.ServiceProjectUpdates)-1].Id
-	nextID, err := strconv.Atoi(lastUpdateID)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to convert lastID to int: %v", err)
+	var nextID int
+	if len(data.ServiceProjectUpdates) == 0 {
+		nextID = 1
+	} else {
+		lastUpdateID := data.ServiceProjectUpdates[len(data.ServiceProjectUpdates)-1].Id
+		next, err := strconv.Atoi(lastUpdateID)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "failed to convert lastID to int: %v", err)
+		}
+		nextID = next + 1
 	}
-	nextID++
 
 	projectUpdate := &service.ProjectUpdate{
 		Id:          strconv.Itoa(nextID),
