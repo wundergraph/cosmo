@@ -1,4 +1,4 @@
-package grpcconnector
+package grpcpluginoci
 
 import (
 	"testing"
@@ -18,18 +18,16 @@ func TestNewGRPCPlugin(t *testing.T) {
 		{
 			name: "successful creation with valid config",
 			config: GRPCPluginConfig{
-				Logger:     zap.NewNop(),
-				PluginPath: "/path/to/plugin",
-				PluginName: "test-plugin",
+				Logger:      zap.NewNop(),
+				ImageSource: nil,
 			},
 			wantErr: false,
 		},
 		{
 			name: "fails with nil logger",
 			config: GRPCPluginConfig{
-				Logger:     nil,
-				PluginPath: "/path/to/plugin",
-				PluginName: "test-plugin",
+				Logger:      nil,
+				ImageSource: nil,
 			},
 			wantErr:     true,
 			errContains: "logger is required",
@@ -37,9 +35,8 @@ func TestNewGRPCPlugin(t *testing.T) {
 		{
 			name: "fails with empty plugin name",
 			config: GRPCPluginConfig{
-				Logger:     zap.NewNop(),
-				PluginPath: "/path/to/plugin",
-				PluginName: "",
+				Logger:      zap.NewNop(),
+				ImageSource: nil,
 			},
 			wantErr:     true,
 			errContains: "plugin name is required",
@@ -47,9 +44,8 @@ func TestNewGRPCPlugin(t *testing.T) {
 		{
 			name: "fails with empty plugin path",
 			config: GRPCPluginConfig{
-				Logger:     zap.NewNop(),
-				PluginPath: "",
-				PluginName: "test-plugin",
+				Logger:      zap.NewNop(),
+				ImageSource: nil,
 			},
 			wantErr:     true,
 			errContains: "plugin path is required",
@@ -72,8 +68,7 @@ func TestNewGRPCPlugin(t *testing.T) {
 
 			// Verify the plugin was initialized with correct values
 			assert.Equal(t, tt.config.Logger, plugin.logger)
-			assert.Equal(t, tt.config.PluginPath, plugin.pluginPath)
-			assert.Equal(t, tt.config.PluginName, plugin.pluginName)
+			assert.Equal(t, tt.config.ImageSource, plugin.imageSource)
 			assert.NotNil(t, plugin.done)
 			assert.False(t, plugin.disposed.Load())
 		})
