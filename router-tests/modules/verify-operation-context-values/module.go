@@ -50,12 +50,11 @@ func (m *VerifyOperationContextValuesModule) Middleware(ctx core.RequestContext,
 	}
 
 	// Convert variables to JSON string for easier testing
+        captured.VariablesJSON = "{}"
 	if captured.Variables != nil {
 		variablesBytes := captured.Variables.MarshalTo(nil)
 		captured.VariablesJSON = string(variablesBytes)
-	} else {
-		captured.VariablesJSON = "{}"
-	}
+	} 
 	// Send the captured values to the test
 	select {
 	case m.ResultsChan <- captured:
