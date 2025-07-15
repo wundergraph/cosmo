@@ -213,8 +213,6 @@ message PluginConfiguration {
   string name = 1;
   // Plugin version
   string version = 2;
-  // Plugin image
-  string image = 3;
 }
 
 message SSLConfiguration {
