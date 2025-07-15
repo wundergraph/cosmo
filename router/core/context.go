@@ -3,13 +3,14 @@ package core
 import (
 	"context"
 	"errors"
-	rcontext "github.com/wundergraph/cosmo/router/internal/context"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	rcontext "github.com/wundergraph/cosmo/router/internal/context"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
@@ -469,6 +470,8 @@ type OperationContext interface {
 	Hash() uint64
 	// Content is the content of the operation
 	Content() string
+	// Variables is the variables of the operation
+	Variables() *astjson.Value
 	// ClientInfo returns information about the client that initiated this operation
 	ClientInfo() ClientInfo
 	// QueryPlanStats returns some statistics about the query plan for the operation
