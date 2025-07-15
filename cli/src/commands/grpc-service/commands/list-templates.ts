@@ -34,5 +34,3 @@ export default (_opts: BaseCommandOptions) => {
     });
   return command;
 };
-
-export { fetchAvailableTemplates } from '../utils/github-client.js';

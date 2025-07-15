@@ -1,4 +1,5 @@
 import { Octokit } from '@octokit/rest';
+import type { RestEndpointMethodTypes } from '@octokit/rest';
 
 export const GITHUB_CONFIG = {
   owner: 'wundergraph',
@@ -30,24 +31,16 @@ export async function fetchAvailableTemplates(): Promise<string[]> {
     });
 
     if (Array.isArray(res.data)) {
-      return res.data.filter((item: any) => item.type === 'dir').map((item: any) => item.name);
+      return res.data
+        .filter(
+          (item): item is RestEndpointMethodTypes['repos']['getContent']['response']['data'][0] & { type: 'dir' } =>
+            item.type === 'dir',
+        )
+        .map((item) => item.name);
     }
   } catch (error) {
     throw new Error(`Failed to fetch templates from GitHub: ${error instanceof Error ? error.message : String(error)}`);
   }
 
   return [];
-}
-
-export async function checkTemplateExists(template: string): Promise<boolean> {
-  const octokit = createGitHubClient();
-  const { owner, repo, grpcServicePath } = GITHUB_CONFIG;
-  const path = `${grpcServicePath}/${template}`;
-
-  try {
-    const res = await octokit.repos.getContent({ owner, repo, path });
-    return Array.isArray(res.data);
-  } catch {
-    return false;
-  }
 }
