@@ -270,6 +270,117 @@ events:
         url: "nats://localhost:4222"
 ```
 
+## Check authorization at subscription start
+
+This example will show how to check the authorization at subscription start.
+
+### 1. Add a subscription to the cosmo streams graphql schema
+
+The developer will start by adding a subscription to the cosmo streams graphql schema.
+
+```graphql
+type Subscription {
+    employeeUpdates(): Employee! @edfs__natsSubscribe(subjects: ["employeeUpdates"], providerId: "my-nats")
+}
+
+type Employee @key(fields: "id", resolvable: false) {
+  id: Int! @external
+}
+```
+After publishing the schema, the developer will need to add the module to the cosmo streams engine.
+
+### 2. Write the custom module
+
+The developer will need to write the custom module that will be used to check the authorization at subscription start.
+
+```go
+package mymodule
+
+import (
+    "encoding/json"
+    "slices"
+    "github.com/wundergraph/cosmo/router/core"
+    "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
+)
+
+func init() {
+	// Register your module here and it will be loaded at router start
+	core.RegisterModule(&MyModule{})
+}
+
+type MyModule struct {}
+
+func (m *MyModule) SubscriptionOnStart(ctx SubscriptionOnStartHookContext) error {
+    // check if the provider is nats
+    if ctx.StreamContext().ProviderType() != pubsub.ProviderTypeNats {
+        return nil
+    }
+
+    // check if the provider id is the one expected by the module
+    if ctx.StreamContext().ProviderID() != "my-nats" {
+        return nil
+    }
+
+    // check if the subject is the one expected by the module
+    natsConfig := ctx.SubscriptionEventConfiguration().(*nats.SubscriptionEventConfiguration)
+    if natsConfig.Subjects[0] != "employeeUpdates" {
+        return nil
+    }
+
+    // check if the client is authenticated
+    if ctx.RequestContext().Authentication() == nil {
+        // if the client is not authenticated, return an error
+        return &StreamHookError{
+            HttpError: core.HttpError{
+                Code: http.StatusUnauthorized,
+                Message: "client is not authenticated",
+            },
+            CloseSubscription: true,
+        }
+    }
+
+    // check if the client is allowed to subscribe to the stream
+    clientAllowedEntitiesIds, found := ctx.RequestContext().Authentication().Claims()["readEmployee"]
+    if !found {
+        return &StreamHookError{
+            HttpError: core.HttpError{
+                Code: http.StatusForbidden,
+                Message: "client is not allowed to read employees",
+            },
+            CloseSubscription: true,
+        }
+    }
+
+    return nil
+}
+
+func (m *MyModule) Module() core.ModuleInfo {
+    return core.ModuleInfo{
+        ID: myModuleID,
+        Priority: 1,
+        New: func() core.Module {
+            return &MyModule{}
+        },
+    }
+}
+
+// Interface guards
+var (
+	_ core.StreamBatchEventHook = (*MyModule)(nil)
+)
+```
+
+### 3. Add the provider configuration to the cosmo router
+```yaml
+version: "1"
+
+events:
+  providers:
+    nats:
+      - id: my-nats
+        url: "nats://localhost:4222"
+```
+
 ### 4. Build the cosmo router with the custom module
 
 Build and run the router with the custom module added.

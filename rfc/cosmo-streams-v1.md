@@ -217,7 +217,7 @@ type NatsEvent struct {
 type KafkaEvent struct {
     Key []byte
     Data json.RawMessage
-    Headers map[[]byte]][]byte
+    Headers map[[]byte][]byte
 }
 
 // StreamBatchEventHook processes a batch of inbound stream events  
@@ -296,7 +296,7 @@ func (m *MyModule) OnStreamEvents(
         newEvents = append(newEvents, evt)
     }
 
-    return events, nil  
+    return newEvents, nil  
 }
 
 func (m *MyModule) Module() core.ModuleInfo {
@@ -798,6 +798,10 @@ type OperationContext interface {
 type StreamHookError struct {
     HttpError core.HttpError
     CloseSubscription bool
+}
+
+func (e StreamHookError) Error() string {
+    return e.HttpError.Message()
 }
 
 // STRUCTURES TO BE ADDED TO PUBSUB PACKAGE
