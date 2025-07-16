@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.87.2](https://github.com/wundergraph/cosmo/compare/wgc@0.87.1...wgc@0.87.2) (2025-07-16)
+
+### Bug Fixes
+
+* **cli:** add support for custom proto lock file paths in grpc generate command ([#2008](https://github.com/wundergraph/cosmo/issues/2008)) ([cc2a400](https://github.com/wundergraph/cosmo/commit/cc2a4006d4572bf4882aef75047cab562e372fac)) (@clayne11)
+
 ## [0.87.1](https://github.com/wundergraph/cosmo/compare/wgc@0.87.0...wgc@0.87.1) (2025-07-11)
 
 **Note:** Version bump only for package wgc
