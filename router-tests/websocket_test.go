@@ -1,7 +1,6 @@
 package integration
 
 import (
-	"context"
 	"crypto/sha256"
 	"encoding/json"
 	"errors"
@@ -81,18 +80,6 @@ type CountEmpData struct {
 // CountEmpResponse represents the structure of the countEmp subscription data
 type CountEmpResponse struct {
 	Data CountEmpData `json:"data"`
-}
-
-type TestAuthenticator struct{}
-
-func (a TestAuthenticator) Name() string {
-	return "Test"
-}
-
-func (a TestAuthenticator) Authenticate(ctx context.Context, p authentication.Provider) (authentication.Claims, error) {
-	return authentication.Claims{
-		"favorite_animal": "bear",
-	}, nil
 }
 
 func TestWebSockets(t *testing.T) {
@@ -863,6 +850,18 @@ func TestWebSockets(t *testing.T) {
 	t.Run("can use auth context in header expressions for subgraph requests", func(t *testing.T) {
 		t.Parallel()
 
+		authServer, err := jwks.NewServer(t)
+		require.NoError(t, err)
+		t.Cleanup(authServer.Close)
+		tokenDecoder, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)})
+		authOptions := authentication.HttpHeaderAuthenticatorOptions{
+			Name:         JwksName,
+			TokenDecoder: tokenDecoder,
+		}
+		authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
+		require.NoError(t, err)
+		authenticators := []authentication.Authenticator{authenticator}
+
 		headerRules := config.HeaderRules{
 			All: &config.GlobalHeaderRule{
 				Request: []*config.RequestHeaderRule{
@@ -883,9 +882,7 @@ func TestWebSockets(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithHeaderRules(headerRules),
-				core.WithAccessController(core.NewAccessController([]authentication.Authenticator{
-					TestAuthenticator{},
-				}, false)),
+				core.WithAccessController(core.NewAccessController(authenticators, false)),
 			},
 			Subgraphs: testenv.SubgraphsConfig{
 				GlobalMiddleware: func(next http.Handler) http.Handler {
@@ -900,8 +897,15 @@ func TestWebSockets(t *testing.T) {
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
-			err := testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{
+			token, err := authServer.Token(map[string]any{
+				"favorite_animal": "bear",
+			})
+			require.NoError(t, err)
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+			conn := xEnv.InitGraphQLWebSocketConnection(header, nil, nil)
+			err = testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
 				Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp } }"}`),
