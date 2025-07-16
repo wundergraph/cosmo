@@ -60,6 +60,10 @@ func New(options Options) (func(ctx context.Context) error, error) {
 		return nil, errors.New("logger must be provided")
 	}
 
+	if len(options.Paths) == 0 && options.Directory.DirPath == "" {
+		return nil, errors.New("either paths or directory must be provided")
+	}
+
 	if len(options.Paths) != 0 && options.Directory.DirPath != "" {
 		return nil, errors.New("can't watch both paths and directory")
 	}
@@ -105,17 +109,19 @@ func New(options Options) (func(ctx context.Context) error, error) {
 			case <-ticker:
 				changesDetected := false
 
+				if options.Directory.DirPath != "" {
+					options.Paths, err = ListDirFilePaths(options.Directory)
+					if err != nil {
+						ll.Error("failed to list directory files", zap.Error(err))
+					}
+				}
+
 				for _, path := range options.Paths {
 					stat, err := os.Stat(path)
 					if err != nil {
 						ll.Debug("Target file cannot be statted", zap.String("path", path), zap.Error(err))
-						if os.IsNotExist(err) {
-							delete(prevModTimes, path)
-							changesDetected = true
-						} else {
-							// Reset the mod time so we catch any new file at the target path
-							prevModTimes[path] = time.Time{}
-						}
+						// Reset the mod time so we catch any new file at the target path
+						prevModTimes[path] = time.Time{}
 						continue
 					}
 					ll.Debug("Checking file for changes",
@@ -132,10 +138,11 @@ func New(options Options) (func(ctx context.Context) error, error) {
 					}
 				}
 
-				if options.Directory.DirPath != "" {
-					options.Paths, err = ListDirFilePaths(options.Directory)
-					if err != nil {
-						ll.Error("failed to list directory files", zap.Error(err))
+				for path := range prevModTimes {
+					_, err := os.Stat(path)
+					if os.IsNotExist(err) {
+						delete(prevModTimes, path)
+						changesDetected = true
 					}
 				}
 

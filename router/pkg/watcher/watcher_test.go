@@ -53,6 +53,19 @@ func TestOptionsValidation(t *testing.T) {
 		}
 	})
 
+	t.Run("either paths or directory must be provided", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := watcher.New(watcher.Options{
+			Interval: watchInterval,
+			Logger:   zap.NewNop(),
+		})
+
+		if assert.Error(t, err) {
+			assert.ErrorContains(t, err, "either paths or directory must be provided")
+		}
+	})
+
 	t.Run("can't watch both paths and directory", func(t *testing.T) {
 		t.Parallel()
 		dir := t.TempDir()
@@ -801,7 +814,6 @@ func TestWatch(t *testing.T) {
 		require.NoError(t, os.WriteFile(tempFile, []byte("a"), 0o600))
 
 		sendTick(tickerChan)
-		sendTick(tickerChan)
 		spy.AssertCalled(t, 0)
 		sendTick(tickerChan)
 		spy.AssertCalled(t, 1)
@@ -925,9 +937,8 @@ func TestWatch(t *testing.T) {
 		require.NoError(t, os.Rename(tempFile2, newTempFile2))
 		require.NoError(t, os.Rename(tempFile3, newTempFile3))
 
+		// Two ticks are needed to run the callback
 		sendTick(tickerChan)
-		sendTick(tickerChan)
-		spy.AssertCalled(t, 0)
 		sendTick(tickerChan)
 		spy.AssertCalled(t, 1)
 	})
