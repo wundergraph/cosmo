@@ -47,14 +47,25 @@ func TestStartSubscriptionHook(t *testing.T) {
 						Forename string `graphql:"forename"`
 						Surname  string `graphql:"surname"`
 					} `graphql:"details"`
-				} `graphql:"employeeUpdatedMyKafka(employeeID: 3)"`
+				} `graphql:"employeeUpdatedMyKafka(employeeID: $employeeID)"`
 			}
 
 			surl := xEnv.GraphQLWebSocketSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
 
-			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
-				// should never be called
+			vars := map[string]interface{}{
+				"employeeID": 3,
+			}
+			type kafkaSubscriptionArgs struct {
+				dataValue []byte
+				errValue  error
+			}
+			subscriptionArgsCh := make(chan kafkaSubscriptionArgs)
+			subscriptionOneID, err := client.Subscribe(&subscriptionOne, vars, func(dataValue []byte, errValue error) error {
+				subscriptionArgsCh <- kafkaSubscriptionArgs{
+					dataValue: dataValue,
+					errValue:  errValue,
+				}
 				return nil
 			})
 			require.NoError(t, err)
@@ -67,9 +78,15 @@ func TestStartSubscriptionHook(t *testing.T) {
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*10)
 
+			testenv.AwaitChannelWithT(t, time.Second*10, subscriptionArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
+				require.NoError(t, args.errValue)
+				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
+			})
+
 			require.NoError(t, client.Close())
 			testenv.AwaitChannelWithT(t, time.Second*10, clientRunCh, func(t *testing.T, err error) {
 				require.NoError(t, err)
+
 			}, "unable to close client before timeout")
 
 			requestLog := xEnv.Observer().FilterMessage("SubscriptionOnStart Hook has been run")

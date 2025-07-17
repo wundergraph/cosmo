@@ -19,6 +19,10 @@ type Event struct {
 	Data json.RawMessage `json:"data"`
 }
 
+func (e *Event) GetData() []byte {
+	return e.Data
+}
+
 // SubscriptionEventConfiguration contains configuration for subscription events
 type SubscriptionEventConfiguration struct {
 	Provider  string   `json:"providerId"`
@@ -73,6 +77,15 @@ type SubscriptionDataSource struct {
 	pubSub Adapter
 }
 
+func (s *SubscriptionDataSource) SubscriptionEventConfiguration(input []byte) datasource.SubscriptionEventConfiguration {
+	var subscriptionConfiguration SubscriptionEventConfiguration
+	err := json.Unmarshal(input, &subscriptionConfiguration)
+	if err != nil {
+		return nil
+	}
+	return &subscriptionConfiguration
+}
+
 // UniqueRequestID computes a unique ID for the subscription request
 func (s *SubscriptionDataSource) UniqueRequestID(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
 	val, _, _, err := jsonparser.Get(input, "channels")
@@ -96,13 +109,13 @@ func (s *SubscriptionDataSource) UniqueRequestID(ctx *resolve.Context, input []b
 
 // Start starts the subscription
 func (s *SubscriptionDataSource) Start(ctx *resolve.Context, input []byte, updater resolve.SubscriptionUpdater) error {
-	var subscriptionConfiguration SubscriptionEventConfiguration
-	err := json.Unmarshal(input, &subscriptionConfiguration)
-	if err != nil {
-		return err
+	subConf := s.SubscriptionEventConfiguration(input)
+	conf, ok := subConf.(*SubscriptionEventConfiguration)
+	if !ok {
+		return fmt.Errorf("invalid subscription configuration")
 	}
 
-	return s.pubSub.Subscribe(ctx.Context(), subscriptionConfiguration, updater)
+	return s.pubSub.Subscribe(ctx.Context(), *conf, updater)
 }
 
 // LoadInitialData implements the interface method (not used for this subscription type)

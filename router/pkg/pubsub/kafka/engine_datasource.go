@@ -21,6 +21,10 @@ type Event struct {
 	Headers map[string][]byte `json:"headers"`
 }
 
+func (e *Event) GetData() []byte {
+	return e.Data
+}
+
 type SubscriptionEventConfiguration struct {
 	Provider  string   `json:"providerId"`
 	Topics    []string `json:"topics"`
@@ -74,6 +78,15 @@ type SubscriptionDataSource struct {
 	pubSub Adapter
 }
 
+func (s *SubscriptionDataSource) SubscriptionEventConfiguration(input []byte) datasource.SubscriptionEventConfiguration {
+	var subscriptionConfiguration SubscriptionEventConfiguration
+	err := json.Unmarshal(input, &subscriptionConfiguration)
+	if err != nil {
+		return nil
+	}
+	return &subscriptionConfiguration
+}
+
 func (s *SubscriptionDataSource) UniqueRequestID(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
 	val, _, _, err := jsonparser.Get(input, "topics")
 	if err != nil {
@@ -95,13 +108,13 @@ func (s *SubscriptionDataSource) UniqueRequestID(ctx *resolve.Context, input []b
 }
 
 func (s *SubscriptionDataSource) Start(ctx *resolve.Context, input []byte, updater resolve.SubscriptionUpdater) error {
-	var subscriptionConfiguration SubscriptionEventConfiguration
-	err := json.Unmarshal(input, &subscriptionConfiguration)
-	if err != nil {
-		return err
+	subConf := s.SubscriptionEventConfiguration(input)
+	conf, ok := subConf.(*SubscriptionEventConfiguration)
+	if !ok {
+		return fmt.Errorf("invalid subscription configuration")
 	}
 
-	return s.pubSub.Subscribe(ctx.Context(), subscriptionConfiguration, updater)
+	return s.pubSub.Subscribe(ctx.Context(), *conf, updater)
 }
 
 type PublishDataSource struct {

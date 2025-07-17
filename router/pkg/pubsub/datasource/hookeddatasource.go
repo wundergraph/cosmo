@@ -7,13 +7,17 @@ import (
 
 type HookedSubscriptionDataSource struct {
 	OnSubscriptionStartFns []OnSubscriptionStartFn
-	SubscriptionDataSource resolve.SubscriptionDataSource
+	SubscriptionDataSource SubscriptionDataSourceWithConfiguration
 }
 
 func (h *HookedSubscriptionDataSource) Start(ctx *resolve.Context, input []byte, updater resolve.SubscriptionUpdater) error {
 	for _, fn := range h.OnSubscriptionStartFns {
-		if err := fn(ctx, input); err != nil {
+		err, events := fn(ctx, h.SubscriptionDataSource.SubscriptionEventConfiguration(input))
+		if err != nil {
 			return err
+		}
+		for _, event := range events {
+			updater.Update(event.GetData())
 		}
 	}
 	return h.SubscriptionDataSource.Start(ctx, input, updater)

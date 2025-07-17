@@ -20,6 +20,10 @@ type Event struct {
 	Metadata map[string]string `json:"metadata"`
 }
 
+func (e *Event) GetData() []byte {
+	return e.Data
+}
+
 type StreamConfiguration struct {
 	Consumer                  string `json:"consumer"`
 	ConsumerInactiveThreshold int32  `json:"consumerInactiveThreshold"`
@@ -80,6 +84,15 @@ type SubscriptionSource struct {
 	pubSub Adapter
 }
 
+func (s *SubscriptionSource) SubscriptionEventConfiguration(input []byte) datasource.SubscriptionEventConfiguration {
+	var subscriptionConfiguration SubscriptionEventConfiguration
+	err := json.Unmarshal(input, &subscriptionConfiguration)
+	if err != nil {
+		return nil
+	}
+	return &subscriptionConfiguration
+}
+
 func (s *SubscriptionSource) UniqueRequestID(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
 
 	val, _, _, err := jsonparser.Get(input, "subjects")
@@ -102,13 +115,13 @@ func (s *SubscriptionSource) UniqueRequestID(ctx *resolve.Context, input []byte,
 }
 
 func (s *SubscriptionSource) Start(ctx *resolve.Context, input []byte, updater resolve.SubscriptionUpdater) error {
-	var subscriptionConfiguration SubscriptionEventConfiguration
-	err := json.Unmarshal(input, &subscriptionConfiguration)
-	if err != nil {
-		return err
+	subConf := s.SubscriptionEventConfiguration(input)
+	conf, ok := subConf.(*SubscriptionEventConfiguration)
+	if !ok {
+		return fmt.Errorf("invalid subscription configuration")
 	}
 
-	return s.pubSub.Subscribe(ctx.Context(), subscriptionConfiguration, updater)
+	return s.pubSub.Subscribe(ctx.Context(), *conf, updater)
 }
 
 type NatsPublishDataSource struct {

@@ -11,6 +11,10 @@ type StreamHookError struct {
 	CloseSubscription bool
 }
 
+func (e *StreamHookError) Error() string {
+	return e.HttpError.Error()
+}
+
 type SubscriptionOnStartHookContext interface {
 	// the request context
 	RequestContext() RequestContext
@@ -23,6 +27,7 @@ type SubscriptionOnStartHookContext interface {
 type subscriptionOnStartHookContext struct {
 	requestContext                 RequestContext
 	subscriptionEventConfiguration datasource.SubscriptionEventConfiguration
+	events                         []datasource.StreamEvent
 }
 
 func (c *subscriptionOnStartHookContext) RequestContext() RequestContext {
@@ -34,7 +39,7 @@ func (c *subscriptionOnStartHookContext) SubscriptionEventConfiguration() dataso
 }
 
 func (c *subscriptionOnStartHookContext) WriteEvent(event datasource.StreamEvent) {
-	//c.subscriptionEventConfiguration.WriteEvent(event)
+	c.events = append(c.events, event)
 }
 
 type SubscriptionOnStartHandler interface {
@@ -45,13 +50,16 @@ type SubscriptionOnStartHandler interface {
 
 //write a method that converts from func(ctx SubscriptionOnStartHookContext) error to func(ctx *resolve.Context, event StreamEvent) error
 
-func callSubscriptionOnStart(fn func(ctx SubscriptionOnStartHookContext) error) func(resolveCtx *resolve.Context, event datasource.StreamEvent) error {
-	return func(resolveCtx *resolve.Context, event datasource.StreamEvent) error {
+func callSubscriptionOnStart(fn func(ctx SubscriptionOnStartHookContext) error) func(resolveCtx *resolve.Context, subConf datasource.SubscriptionEventConfiguration) (error, []datasource.StreamEvent) {
+	return func(resolveCtx *resolve.Context, subConf datasource.SubscriptionEventConfiguration) (error, []datasource.StreamEvent) {
 		requestContext := getRequestContext(resolveCtx.Context())
+		hookCtx := &subscriptionOnStartHookContext{
+			requestContext:                 requestContext,
+			subscriptionEventConfiguration: subConf,
+		}
 
-		return fn(&subscriptionOnStartHookContext{
-			requestContext: requestContext,
-			//subscriptionEventConfiguration: subscriptionEventConfiguration,
-		})
+		err := fn(hookCtx)
+
+		return err, hookCtx.events
 	}
 }

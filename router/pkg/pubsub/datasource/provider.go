@@ -46,9 +46,11 @@ const (
 // StreamEvent is a generic interface for all stream events
 // Each provider will have its own event type that implements this interface
 // there could be common fields in future, but for now we don't need any
-type StreamEvent interface{}
+type StreamEvent interface {
+	GetData() []byte
+}
 
-type OnSubscriptionStartFn func(ctx *resolve.Context, event StreamEvent) error
+type OnSubscriptionStartFn func(ctx *resolve.Context, subConf SubscriptionEventConfiguration) (error, []StreamEvent)
 
 // SubscriptionEventConfiguration is the interface that all subscription event configurations must implement
 type SubscriptionEventConfiguration interface {

@@ -69,7 +69,7 @@ func (c *EngineDataSourceFactory) ResolveDataSourceInput(eventData []byte) (stri
 }
 
 // ResolveDataSourceSubscription returns the subscription data source
-func (c *EngineDataSourceFactory) ResolveDataSourceSubscription() (resolve.SubscriptionDataSource, error) {
+func (c *EngineDataSourceFactory) ResolveDataSourceSubscription() (datasource.SubscriptionDataSourceWithConfiguration, error) {
 	return &SubscriptionDataSource{
 		pubSub: c.RedisAdapter,
 	}, nil
