@@ -49,6 +49,10 @@ func (e *ProviderNotDefinedError) Error() string {
 	return fmt.Sprintf("%s provider with ID %s is not defined", e.ProviderTypeID, e.ProviderID)
 }
 
+type Hooks struct {
+	OnSubscriptionStarts []pubsub_datasource.OnSubscriptionStartFn
+}
+
 // BuildProvidersAndDataSources is a generic function that builds providers and data sources for the given
 // EventsConfiguration and DataSourceConfigurationWithMetadata
 func BuildProvidersAndDataSources(
@@ -58,6 +62,7 @@ func BuildProvidersAndDataSources(
 	dsConfs []DataSourceConfigurationWithMetadata,
 	hostName string,
 	routerListenAddr string,
+	hooks Hooks,
 ) ([]pubsub_datasource.Provider, []plan.DataSource, error) {
 	var pubSubProviders []pubsub_datasource.Provider
 	var outs []plan.DataSource
@@ -71,7 +76,7 @@ func BuildProvidersAndDataSources(
 			events: dsConf.Configuration.GetCustomEvents().GetKafka(),
 		})
 	}
-	kafkaPubSubProviders, kafkaOuts, err := build(ctx, kafkaBuilder, config.Providers.Kafka, kafkaDsConfsWithEvents)
+	kafkaPubSubProviders, kafkaOuts, err := build(ctx, kafkaBuilder, config.Providers.Kafka, kafkaDsConfsWithEvents, hooks)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -87,7 +92,7 @@ func BuildProvidersAndDataSources(
 			events: dsConf.Configuration.GetCustomEvents().GetNats(),
 		})
 	}
-	natsPubSubProviders, natsOuts, err := build(ctx, natsBuilder, config.Providers.Nats, natsDsConfsWithEvents)
+	natsPubSubProviders, natsOuts, err := build(ctx, natsBuilder, config.Providers.Nats, natsDsConfsWithEvents, hooks)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -103,7 +108,7 @@ func BuildProvidersAndDataSources(
 			events: dsConf.Configuration.GetCustomEvents().GetRedis(),
 		})
 	}
-	redisPubSubProviders, redisOuts, err := build(ctx, redisBuilder, config.Providers.Redis, redisDsConfsWithEvents)
+	redisPubSubProviders, redisOuts, err := build(ctx, redisBuilder, config.Providers.Redis, redisDsConfsWithEvents, hooks)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -113,7 +118,7 @@ func BuildProvidersAndDataSources(
 	return pubSubProviders, outs, nil
 }
 
-func build[P GetID, E GetEngineEventConfiguration](ctx context.Context, builder pubsub_datasource.ProviderBuilder[P, E], providersData []P, dsConfs []dsConfAndEvents[E]) ([]pubsub_datasource.Provider, []plan.DataSource, error) {
+func build[P GetID, E GetEngineEventConfiguration](ctx context.Context, builder pubsub_datasource.ProviderBuilder[P, E], providersData []P, dsConfs []dsConfAndEvents[E], hooks Hooks) ([]pubsub_datasource.Provider, []plan.DataSource, error) {
 	var pubSubProviders []pubsub_datasource.Provider
 	var outs []plan.DataSource
 
@@ -154,7 +159,7 @@ func build[P GetID, E GetEngineEventConfiguration](ctx context.Context, builder 
 	// build data sources for each event
 	for _, dsConf := range dsConfs {
 		for i, event := range dsConf.events {
-			plannerConfig := pubsub_datasource.NewPlannerConfig(builder, event)
+			plannerConfig := pubsub_datasource.NewPlannerConfig(builder, event, hooks.OnSubscriptionStarts)
 			out, err := plan.NewDataSourceConfiguration(
 				dsConf.dsConf.Configuration.Id+"-"+builder.TypeID()+"-"+strconv.Itoa(i),
 				pubsub_datasource.NewPlannerFactory(ctx, plannerConfig),

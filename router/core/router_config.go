@@ -118,6 +118,7 @@ type Config struct {
 	mcp                        config.MCPConfiguration
 	plugins                    config.PluginsConfiguration
 	tracingAttributes          []config.CustomAttribute
+	startSubscriptionModules   []func(ctx SubscriptionOnStartHookContext) error
 }
 
 // Usage returns an anonymized version of the config for usage tracking
