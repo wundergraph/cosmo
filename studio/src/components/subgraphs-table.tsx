@@ -109,7 +109,7 @@ export const Empty = ({
           <a
             target="_blank"
             rel="noreferrer"
-            href={docsBaseURL + "/cli/subgraphs/create"}
+            href={docsBaseURL + "/cli/subgraph/create"}
             className="text-primary"
           >
             Learn more.

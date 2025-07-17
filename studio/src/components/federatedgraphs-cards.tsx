@@ -481,7 +481,7 @@ export const Empty = ({
           <a
             target="_blank"
             rel="noreferrer"
-            href={docsBaseURL + "/cli/federated-graphs/create"}
+            href={docsBaseURL + "/cli/federated-graph/create"}
             className="text-primary"
           >
             docs

@@ -580,7 +580,7 @@ const IntegrationsPage: NextPageWithLayout = () => {
             <a
               target="_blank"
               rel="noreferrer"
-              href={docsBaseURL + "/studio/slack-integration"}
+              href={docsBaseURL + "/studio/alerts-and-notifications/slack-integration"}
               className="text-primary"
             >
               Learn more.
@@ -622,7 +622,7 @@ const IntegrationsPage: NextPageWithLayout = () => {
           Integrations are used to receive notifications on certain events from
           the platform.{" "}
           <Link
-            href={docsBaseURL + "/studio/slack-integration"}
+            href={docsBaseURL + "/studio/alerts-and-notifications/slack-integration"}
             className="text-primary"
             target="_blank"
             rel="noreferrer"
