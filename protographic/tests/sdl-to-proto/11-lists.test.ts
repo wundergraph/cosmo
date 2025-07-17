@@ -129,6 +129,22 @@ describe('SDL to Proto Lists', () => {
       }
 
       // Wrapper message for a list of String.
+      message ListOfListOfString {
+        message List {
+          repeated ListOfString items = 1;
+        }
+        List list = 1;
+      }
+
+      // Wrapper message for a list of User.
+      message ListOfListOfUser {
+        message List {
+          repeated ListOfUser items = 1;
+        }
+        List list = 1;
+      }
+
+      // Wrapper message for a list of String.
       message ListOfString {
         repeated string items = 1;
       }
@@ -147,9 +163,9 @@ describe('SDL to Proto Lists', () => {
       }
 
       message User {
-        repeated ListOfString middle_names = 1;
-        repeated ListOfString middle_names_2 = 2;
-        repeated ListOfUser friends = 3;
+        ListOfListOfString middle_names = 1;
+        ListOfListOfString middle_names_2 = 2;
+        ListOfListOfUser friends = 3;
       }"
     `);
   });
@@ -352,7 +368,7 @@ describe('SDL to Proto Lists', () => {
         string id = 1;
         repeated Status statuses = 2;
         ListOfStatus previous_statuses = 3;
-        repeated ListOfStatus status_history = 4;
+        ListOfListOfStatus status_history = 4;
         ListOfListOfStatus status_groups = 5;
       }
 
@@ -429,7 +445,7 @@ describe('SDL to Proto Lists', () => {
       message Timeline {
         repeated Node items = 1;
         ListOfNode optional_items = 2;
-        repeated ListOfNode nested_items = 3;
+        ListOfListOfNode nested_items = 3;
         ListOfListOfNode optional_nested_items = 4;
       }
 
@@ -514,7 +530,7 @@ describe('SDL to Proto Lists', () => {
       message SearchResults {
         repeated SearchResult results = 1;
         ListOfSearchResult optional_results = 2;
-        repeated ListOfSearchResult nested_results = 3;
+        ListOfListOfSearchResult nested_results = 3;
         ListOfListOfSearchResult optional_nested_results = 4;
       }
 
@@ -628,7 +644,7 @@ describe('SDL to Proto Lists', () => {
         ListOfDateTime optional_timestamps = 9;
         repeated string metadata = 10;
         ListOfJSON optional_metadata = 11;
-        repeated ListOfString nested_tags = 12;
+        ListOfListOfString nested_tags = 12;
         ListOfListOfString nested_optional_tags = 13;
       }"
     `);
@@ -663,6 +679,14 @@ describe('SDL to Proto Lists', () => {
       // Service definition for DefaultService
       service DefaultService {
         rpc QueryGetMatrix(QueryGetMatrixRequest) returns (QueryGetMatrixResponse) {}
+      }
+
+      // Wrapper message for a list of User.
+      message ListOfListOfListOfListOfListOfUser {
+        message List {
+          repeated ListOfListOfListOfListOfUser items = 1;
+        }
+        List list = 1;
       }
 
       // Wrapper message for a list of String.
@@ -732,10 +756,10 @@ describe('SDL to Proto Lists', () => {
       }
 
       message Matrix {
-        repeated ListOfListOfString level_1 = 1;
-        repeated ListOfListOfUser level_2 = 2;
+        ListOfListOfListOfString level_1 = 1;
+        ListOfListOfListOfUser level_2 = 2;
         ListOfListOfListOfListOfString level_3 = 3;
-        repeated ListOfListOfListOfListOfUser level_4 = 4;
+        ListOfListOfListOfListOfListOfUser level_4 = 4;
       }
 
       message User {
@@ -796,6 +820,14 @@ describe('SDL to Proto Lists', () => {
         rpc QueryGetUser(QueryGetUserRequest) returns (QueryGetUserResponse) {}
       }
 
+      // Wrapper message for a list of UpdateUserInput.
+      message ListOfListOfUpdateUserInput {
+        message List {
+          repeated ListOfUpdateUserInput items = 1;
+        }
+        List list = 1;
+      }
+
       // Wrapper message for a list of String.
       message ListOfString {
         repeated string items = 1;
@@ -839,7 +871,7 @@ describe('SDL to Proto Lists', () => {
       }
       // Request message for bulkUpdate operation.
       message MutationBulkUpdateRequest {
-        repeated ListOfUpdateUserInput updates = 1;
+        ListOfListOfUpdateUserInput updates = 1;
       }
       // Response message for bulkUpdate operation.
       message MutationBulkUpdateResponse {
@@ -961,6 +993,14 @@ describe('SDL to Proto Lists', () => {
         List list = 1;
       }
 
+      // Wrapper message for a list of Item.
+      message ListOfListOfListOfItem {
+        message List {
+          repeated ListOfListOfItem items = 1;
+        }
+        List list = 1;
+      }
+
       // Wrapper message for a list of Priority.
       message ListOfListOfListOfListOfPriority {
         message List {
@@ -1031,11 +1071,11 @@ describe('SDL to Proto Lists', () => {
         ListOfNode optional_nodes = 6;
         repeated Item items = 7;
         ListOfItem optional_items = 8;
-        repeated ListOfString nested_strings = 9;
+        ListOfListOfString nested_strings = 9;
         ListOfListOfString nested_optional_strings = 10;
-        repeated ListOfPriority nested_priorities = 11;
+        ListOfListOfPriority nested_priorities = 11;
         ListOfListOfPriority nested_optional_priorities = 12;
-        repeated ListOfListOfItem deep_nested_items = 13;
+        ListOfListOfListOfItem deep_nested_items = 13;
         ListOfListOfListOfListOfPriority mixed_nested = 14;
       }
 
@@ -1159,11 +1199,11 @@ describe('SDL to Proto Lists', () => {
         repeated string case_2 = 2;
         ListOfString case_3 = 3;
         ListOfListOfString case_4 = 4;
-        repeated ListOfString case_5 = 5;
+        ListOfListOfString case_5 = 5;
         ListOfListOfString case_6 = 6;
-        repeated ListOfString case_7 = 7;
+        ListOfListOfString case_7 = 7;
         ListOfListOfString case_8 = 8;
-        repeated ListOfString case_9 = 9;
+        ListOfListOfString case_9 = 9;
         ListOfListOfString case_10 = 10;
         ListOfUser users_1 = 11;
         repeated User users_2 = 12;

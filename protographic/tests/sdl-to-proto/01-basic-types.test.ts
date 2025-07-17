@@ -486,6 +486,22 @@ describe('SDL to Proto - Basic Types', () => {
         repeated int32 items = 1;
       }
 
+      // Wrapper message for a list of Float.
+      message ListOfListOfFloat {
+        message List {
+          repeated ListOfFloat items = 1;
+        }
+        List list = 1;
+      }
+
+      // Wrapper message for a list of Int.
+      message ListOfListOfInt {
+        message List {
+          repeated ListOfInt items = 1;
+        }
+        List list = 1;
+      }
+
       // Wrapper message for a list of Point.
       message ListOfListOfPoint {
         message List {
@@ -513,11 +529,11 @@ describe('SDL to Proto - Basic Types', () => {
       }
       // Request message for processMatrix operation.
       message QueryProcessMatrixRequest {
-        repeated ListOfFloat matrix = 1;
+        ListOfListOfFloat matrix = 1;
       }
       // Response message for processMatrix operation.
       message QueryProcessMatrixResponse {
-        repeated ListOfInt process_matrix = 1;
+        ListOfListOfInt process_matrix = 1;
       }
       // Request message for transformData operation.
       message QueryTransformDataRequest {
@@ -529,7 +545,7 @@ describe('SDL to Proto - Basic Types', () => {
       }
 
       message Matrix {
-        repeated ListOfInt values = 1;
+        ListOfListOfInt values = 1;
         repeated string labels = 2;
       }
 

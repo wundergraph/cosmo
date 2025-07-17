@@ -1457,15 +1457,15 @@ Example:
 
   /**
    * Converts GraphQL list types to appropriate Protocol Buffer representations.
-   * 
+   *
    * For non-nullable, single-level lists (e.g., [String!]!), generates simple repeated fields.
-   * For nullable lists (e.g., [String]) or nested lists (e.g., [[String]]), creates wrapper 
+   * For nullable lists (e.g., [String]) or nested lists (e.g., [[String]]), creates wrapper
    * messages to properly handle nullability in proto3.
-   * 
+   *
    * Examples:
    * - [String!]! → repeated string field_name = 1;
    * - [String] → ListOfString field_name = 1; (with wrapper message)
-   * - [[String!]!]! → repeated ListOfString field_name = 1; (with wrapper message)
+   * - [[String!]!]! → ListOfListOfString field_name = 1; (with nested wrapper messages)
    * - [[String]] → ListOfListOfString field_name = 1; (with nested wrapper messages)
    *
    * @param type - The GraphQL list type to convert
@@ -1484,7 +1484,10 @@ Example:
     // Nullable or nested lists need wrapper messages
     const baseType = getNamedType(listType);
     const nestingLevel = this.calculateNestingLevel(listType);
-    const wrapperNestingLevel = isNullableList ? nestingLevel : nestingLevel - 1;
+
+    // For nested lists, always use full nesting level to preserve inner list nullability
+    // For single-level nullable lists, use nesting level 1
+    const wrapperNestingLevel = isNestedList ? nestingLevel : 1;
 
     // Generate all required wrapper messages
     let wrapperName = '';
@@ -1492,7 +1495,8 @@ Example:
       wrapperName = this.createNestedListWrapper(i, baseType);
     }
 
-    return { typeName: wrapperName, isRepeated: !isNullableList };
+    // For nested lists, never use repeated at field level to preserve nullability
+    return { typeName: wrapperName, isRepeated: false };
   }
 
   /**
@@ -1525,15 +1529,15 @@ Example:
 
   /**
    * Creates wrapper messages for nullable or nested GraphQL lists.
-   * 
+   *
    * Generates Protocol Buffer message definitions to handle list nullability and nesting.
    * The wrapper messages are stored and later included in the final proto output.
-   * 
+   *
    * For level 1: Creates simple wrapper like:
    *   message ListOfString {
    *     repeated string items = 1;
    *   }
-   * 
+   *
    * For level > 1: Creates nested wrapper structures like:
    *   message ListOfListOfString {
    *     message List {
@@ -1541,14 +1545,14 @@ Example:
    *     }
    *     List list = 1;
    *   }
-   * 
+   *
    * @param level - The nesting level (1 for simple wrapper, >1 for nested structures)
    * @param baseType - The GraphQL base type being wrapped (e.g., String, User, etc.)
    * @returns The generated wrapper message name (e.g., "ListOfString", "ListOfListOfUser")
    */
   private createNestedListWrapper(level: number, baseType: GraphQLNamedType): string {
     const wrapperName = `${'ListOf'.repeat(level)}${baseType.name}`;
-    
+
     // Return existing wrapper if already created
     if (this.processedTypes.has(wrapperName) || this.nestedListWrappers.has(wrapperName)) {
       return wrapperName;
@@ -1577,12 +1581,17 @@ Example:
 
     const formatIndent = (indent: number, content: string) => {
       return '  '.repeat(indent) + content;
-    }
+    };
 
     if (level > 1) {
       // Nested structure for deep lists
       const innerWrapperName = `${'ListOf'.repeat(level - 1)}${baseType.name}`;
-      lines.push(formatIndent(1, `message List {`), formatIndent(2, `repeated ${innerWrapperName} items = 1;`), formatIndent(1, `}`), formatIndent(1, `List list = 1;`));
+      lines.push(
+        formatIndent(1, `message List {`),
+        formatIndent(2, `repeated ${innerWrapperName} items = 1;`),
+        formatIndent(1, `}`),
+        formatIndent(1, `List list = 1;`),
+      );
     } else {
       // Simple repeated field for level 1
       const fieldNumber = this.getFieldNumber(wrapperName, 'items', 1);
