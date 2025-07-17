@@ -489,7 +489,7 @@ describe('SDL to Proto - Basic Types', () => {
       // Wrapper message for a list of Point.
       message ListOfListOfPoint {
         message List {
-            repeated ListOfPoint items = 1;
+          repeated ListOfPoint items = 1;
         }
         List list = 1;
       }

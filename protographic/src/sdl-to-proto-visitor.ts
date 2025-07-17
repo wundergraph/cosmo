@@ -1473,59 +1473,54 @@ Example:
    */
   private handleListType(type: GraphQLList<GraphQLType>): ProtoType {
     const listType = (isNonNullType(type) ? type.ofType : type) as GraphQLList<GraphQLType>;
-
-    // Determine if this list can be null (e.g., [String] vs [String]!)
     const isNullableList = !isNonNullType(type);
-    
-    // Check if this is a nested list (e.g., [[String]] or [[String!]!])
-    const isNestedList =
-      isListType(listType.ofType) || (isNonNullType(listType.ofType) && isListType(listType.ofType.ofType));
+    const isNestedList = this.isNestedListType(listType);
 
-    // Nullable lists and nested lists require wrapper messages since proto3 doesn't support nullable repeated fields
-    if (isNullableList || isNestedList) {
-      // Extract the base type (e.g., String from [[String!]!])
-      const namedInnerType = getNamedType(listType);
-
-      // Calculate how many levels of nesting we have by walking the type tree
-      // Example: [[String!]!] has 2 levels, [String] has 1 level
-      let nestingLevel = 1;
-      let currentType: GraphQLType = listType.ofType;
-
-      while (true) {
-        // Skip NonNull wrappers to get to the actual type
-        if (isNonNullType(currentType)) {
-          currentType = currentType.ofType;
-        }
-
-        // If we find another list, increment nesting and continue
-        if (isListType(currentType)) {
-          currentType = currentType.ofType;
-          nestingLevel++;
-        } else {
-          break;
-        }
-      }
-
-      // For non-nullable lists, the outermost level can be represented as `repeated` 
-      // instead of a wrapper, so we reduce the wrapper nesting level by 1
-      let isRepeated = false;
-      if (!isNullableList) {
-        nestingLevel--;
-        isRepeated = true;
-      }
-
-      // Generate wrapper messages for each nesting level
-      // For [[String]], this creates ListOfString and ListOfListOfString
-      let lastWrapperName: string = '';
-      for (let i = 1; i <= nestingLevel; i++) {
-        lastWrapperName = this.createNestedListWrapper(i, namedInnerType);
-      }
-
-      return { typeName: lastWrapperName, isRepeated };
+    // Simple non-nullable lists can use repeated fields directly
+    if (!isNullableList && !isNestedList) {
+      return { ...this.getProtoTypeFromGraphQL(getNamedType(listType), true), isRepeated: true };
     }
 
-    // For simple non-nullable lists like [String!]!, use repeated fields directly
-    return { ...this.getProtoTypeFromGraphQL(getNamedType(listType), true), isRepeated: true };
+    // Nullable or nested lists need wrapper messages
+    const baseType = getNamedType(listType);
+    const nestingLevel = this.calculateNestingLevel(listType);
+    const wrapperNestingLevel = isNullableList ? nestingLevel : nestingLevel - 1;
+
+    // Generate all required wrapper messages
+    let wrapperName = '';
+    for (let i = 1; i <= wrapperNestingLevel; i++) {
+      wrapperName = this.createNestedListWrapper(i, baseType);
+    }
+
+    return { typeName: wrapperName, isRepeated: !isNullableList };
+  }
+
+  /**
+   * Checks if a GraphQL list type contains nested lists
+   */
+  private isNestedListType(listType: GraphQLList<GraphQLType>): boolean {
+    return isListType(listType.ofType) || (isNonNullType(listType.ofType) && isListType(listType.ofType.ofType));
+  }
+
+  /**
+   * Calculates the nesting level of a GraphQL list type
+   */
+  private calculateNestingLevel(listType: GraphQLList<GraphQLType>): number {
+    let level = 1;
+    let currentType: GraphQLType = listType.ofType;
+
+    while (true) {
+      if (isNonNullType(currentType)) {
+        currentType = currentType.ofType;
+      } else if (isListType(currentType)) {
+        currentType = currentType.ofType;
+        level++;
+      } else {
+        break;
+      }
+    }
+
+    return level;
   }
 
   /**
@@ -1552,66 +1547,51 @@ Example:
    * @returns The generated wrapper message name (e.g., "ListOfString", "ListOfListOfUser")
    */
   private createNestedListWrapper(level: number, baseType: GraphQLNamedType): string {
-    // Generate wrapper name: ListOfString, ListOfListOfString, etc.
     const wrapperName = `${'ListOf'.repeat(level)}${baseType.name}`;
     
-    // Avoid creating duplicate wrapper messages
+    // Return existing wrapper if already created
     if (this.processedTypes.has(wrapperName) || this.nestedListWrappers.has(wrapperName)) {
       return wrapperName;
     }
 
-    // Mark as processed to prevent infinite recursion
     this.processedTypes.add(wrapperName);
 
-    // Create a temporary array for the wrapper definition
-    const messageLines: string[] = [];
-
-    // Add a description comment for the wrapper message
-    if (this.includeComments) {
-      const wrapperComment = `Wrapper message for a list of ${baseType.name}.`;
-      messageLines.push(...this.formatComment(wrapperComment, 0)); // Top-level comment, no indent
-    }
-
-    messageLines.push(`message ${wrapperName} {`);
-
-    // For deeply nested lists (level > 1), create a nested message structure
-    // This allows proto3 to handle nullable nested lists properly
-    if (level > 1) {
-      const innerWrapperName = `${'ListOf'.repeat(level - 1)}${baseType.name}`;
-
-      // Create an inner "List" message that contains the repeated field
-      messageLines.push(`  message List {`);
-      messageLines.push(`${'  '.repeat(3)}repeated ${innerWrapperName} items = 1;`);
-      messageLines.push(`  }`);
-      
-      // The outer message has a single "list" field that can be null
-      messageLines.push(`  List list = 1;`);
-
-      messageLines.push('}');
-      messageLines.push('');
-
-      // Store the wrapper message for later inclusion in the output
-      this.nestedListWrappers.set(wrapperName, messageLines.join('\n'));
-      return wrapperName;
-    }
-
-    // For level 1 wrappers, create a simple message with a repeated field
-    // This handles cases like nullable lists: [String] -> ListOfString { repeated string items = 1; }
-    
-    // Get the appropriate field number from the lock
-    const fieldNumber = this.getFieldNumber(wrapperName, 'items', 1);
-
-    // Convert the GraphQL base type to its proto equivalent
-    const protoType = this.getProtoTypeFromGraphQL(baseType, true);
-    messageLines.push(`  repeated ${protoType.typeName} items = ${fieldNumber};`);
-
-    messageLines.push('}');
-    messageLines.push('');
-
-    // Store the wrapper message for later inclusion in the output
+    const messageLines = this.buildWrapperMessage(wrapperName, level, baseType);
     this.nestedListWrappers.set(wrapperName, messageLines.join('\n'));
 
     return wrapperName;
+  }
+
+  /**
+   * Builds the message lines for a wrapper message
+   */
+  private buildWrapperMessage(wrapperName: string, level: number, baseType: GraphQLNamedType): string[] {
+    const lines: string[] = [];
+
+    // Add comment if enabled
+    if (this.includeComments) {
+      lines.push(...this.formatComment(`Wrapper message for a list of ${baseType.name}.`, 0));
+    }
+
+    lines.push(`message ${wrapperName} {`);
+
+    const formatIndent = (indent: number, content: string) => {
+      return '  '.repeat(indent) + content;
+    }
+
+    if (level > 1) {
+      // Nested structure for deep lists
+      const innerWrapperName = `${'ListOf'.repeat(level - 1)}${baseType.name}`;
+      lines.push(formatIndent(1, `message List {`), formatIndent(2, `repeated ${innerWrapperName} items = 1;`), formatIndent(1, `}`), formatIndent(1, `List list = 1;`));
+    } else {
+      // Simple repeated field for level 1
+      const fieldNumber = this.getFieldNumber(wrapperName, 'items', 1);
+      const protoType = this.getProtoTypeFromGraphQL(baseType, true);
+      lines.push(formatIndent(1, `repeated ${protoType.typeName} items = ${fieldNumber};`));
+    }
+
+    lines.push('}', '');
+    return lines;
   }
 
   /**

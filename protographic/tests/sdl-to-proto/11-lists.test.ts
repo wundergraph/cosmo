@@ -171,54 +171,54 @@ describe('SDL to Proto Lists', () => {
     expectValidProto(protoText);
 
     expect(protoText).toMatchInlineSnapshot(`
-          "syntax = "proto3";
-          package service.v1;
+      "syntax = "proto3";
+      package service.v1;
 
-          // Service definition for DefaultService
-          service DefaultService {
-            rpc QueryGetUser(QueryGetUserRequest) returns (QueryGetUserResponse) {}
-          }
+      // Service definition for DefaultService
+      service DefaultService {
+        rpc QueryGetUser(QueryGetUserRequest) returns (QueryGetUserResponse) {}
+      }
 
-          // Wrapper message for a list of String.
-          message ListOfListOfString {
-            message List {
-                repeated ListOfString items = 1;
-            }
-            List list = 1;
-          }
+      // Wrapper message for a list of String.
+      message ListOfListOfString {
+        message List {
+          repeated ListOfString items = 1;
+        }
+        List list = 1;
+      }
 
-          // Wrapper message for a list of User.
-          message ListOfListOfUser {
-            message List {
-                repeated ListOfUser items = 1;
-            }
-            List list = 1;
-          }
+      // Wrapper message for a list of User.
+      message ListOfListOfUser {
+        message List {
+          repeated ListOfUser items = 1;
+        }
+        List list = 1;
+      }
 
-          // Wrapper message for a list of String.
-          message ListOfString {
-            repeated string items = 1;
-          }
+      // Wrapper message for a list of String.
+      message ListOfString {
+        repeated string items = 1;
+      }
 
-          // Wrapper message for a list of User.
-          message ListOfUser {
-            repeated User items = 1;
-          }
+      // Wrapper message for a list of User.
+      message ListOfUser {
+        repeated User items = 1;
+      }
 
-          // Request message for getUser operation.
-          message QueryGetUserRequest {
-          }
-          // Response message for getUser operation.
-          message QueryGetUserResponse {
-            User get_user = 1;
-          }
+      // Request message for getUser operation.
+      message QueryGetUserRequest {
+      }
+      // Response message for getUser operation.
+      message QueryGetUserResponse {
+        User get_user = 1;
+      }
 
-          message User {
-            ListOfListOfString middle_names = 1;
-            ListOfListOfString middle_names_2 = 2;
-            ListOfListOfUser friends = 3;
-          }"
-        `);
+      message User {
+        ListOfListOfString middle_names = 1;
+        ListOfListOfString middle_names_2 = 2;
+        ListOfListOfUser friends = 3;
+      }"
+    `);
   });
 
   it('should correctly generate protobuf for types with mixed nullable, non nullable, nested and non nested lists', () => {
@@ -241,57 +241,57 @@ describe('SDL to Proto Lists', () => {
     expectValidProto(protoText);
 
     expect(protoText).toMatchInlineSnapshot(`
-          "syntax = "proto3";
-          package service.v1;
+      "syntax = "proto3";
+      package service.v1;
 
-          // Service definition for DefaultService
-          service DefaultService {
-            rpc QueryGetUser(QueryGetUserRequest) returns (QueryGetUserResponse) {}
-          }
+      // Service definition for DefaultService
+      service DefaultService {
+        rpc QueryGetUser(QueryGetUserRequest) returns (QueryGetUserResponse) {}
+      }
 
-          // Wrapper message for a list of String.
-          message ListOfListOfString {
-            message List {
-                repeated ListOfString items = 1;
-            }
-            List list = 1;
-          }
+      // Wrapper message for a list of String.
+      message ListOfListOfString {
+        message List {
+          repeated ListOfString items = 1;
+        }
+        List list = 1;
+      }
 
-          // Wrapper message for a list of User.
-          message ListOfListOfUser {
-            message List {
-                repeated ListOfUser items = 1;
-            }
-            List list = 1;
-          }
+      // Wrapper message for a list of User.
+      message ListOfListOfUser {
+        message List {
+          repeated ListOfUser items = 1;
+        }
+        List list = 1;
+      }
 
-          // Wrapper message for a list of String.
-          message ListOfString {
-            repeated string items = 1;
-          }
+      // Wrapper message for a list of String.
+      message ListOfString {
+        repeated string items = 1;
+      }
 
-          // Wrapper message for a list of User.
-          message ListOfUser {
-            repeated User items = 1;
-          }
+      // Wrapper message for a list of User.
+      message ListOfUser {
+        repeated User items = 1;
+      }
 
-          // Request message for getUser operation.
-          message QueryGetUserRequest {
-          }
-          // Response message for getUser operation.
-          message QueryGetUserResponse {
-            User get_user = 1;
-          }
+      // Request message for getUser operation.
+      message QueryGetUserRequest {
+      }
+      // Response message for getUser operation.
+      message QueryGetUserResponse {
+        User get_user = 1;
+      }
 
-          message User {
-            repeated string first_names = 1;
-            ListOfString last_names = 2;
-            ListOfListOfString middle_names = 3;
-            ListOfListOfString middle_names_2 = 4;
-            ListOfListOfUser friends = 5;
-            repeated User friends_2 = 6;
-          }"
-        `);
+      message User {
+        repeated string first_names = 1;
+        ListOfString last_names = 2;
+        ListOfListOfString middle_names = 3;
+        ListOfListOfString middle_names_2 = 4;
+        ListOfListOfUser friends = 5;
+        repeated User friends_2 = 6;
+      }"
+    `);
   });
 
   it('should correctly generate protobuf for lists with enums', () => {
@@ -330,7 +330,7 @@ describe('SDL to Proto Lists', () => {
       // Wrapper message for a list of Status.
       message ListOfListOfStatus {
         message List {
-            repeated ListOfStatus items = 1;
+          repeated ListOfStatus items = 1;
         }
         List list = 1;
       }
@@ -408,7 +408,7 @@ describe('SDL to Proto Lists', () => {
       // Wrapper message for a list of Node.
       message ListOfListOfNode {
         message List {
-            repeated ListOfNode items = 1;
+          repeated ListOfNode items = 1;
         }
         List list = 1;
       }
@@ -493,7 +493,7 @@ describe('SDL to Proto Lists', () => {
       // Wrapper message for a list of SearchResult.
       message ListOfListOfSearchResult {
         message List {
-            repeated ListOfSearchResult items = 1;
+          repeated ListOfSearchResult items = 1;
         }
         List list = 1;
       }
@@ -598,7 +598,7 @@ describe('SDL to Proto Lists', () => {
       // Wrapper message for a list of String.
       message ListOfListOfString {
         message List {
-            repeated ListOfString items = 1;
+          repeated ListOfString items = 1;
         }
         List list = 1;
       }
@@ -668,7 +668,7 @@ describe('SDL to Proto Lists', () => {
       // Wrapper message for a list of String.
       message ListOfListOfListOfListOfString {
         message List {
-            repeated ListOfListOfListOfString items = 1;
+          repeated ListOfListOfListOfString items = 1;
         }
         List list = 1;
       }
@@ -676,7 +676,7 @@ describe('SDL to Proto Lists', () => {
       // Wrapper message for a list of User.
       message ListOfListOfListOfListOfUser {
         message List {
-            repeated ListOfListOfListOfUser items = 1;
+          repeated ListOfListOfListOfUser items = 1;
         }
         List list = 1;
       }
@@ -684,7 +684,7 @@ describe('SDL to Proto Lists', () => {
       // Wrapper message for a list of String.
       message ListOfListOfListOfString {
         message List {
-            repeated ListOfListOfString items = 1;
+          repeated ListOfListOfString items = 1;
         }
         List list = 1;
       }
@@ -692,7 +692,7 @@ describe('SDL to Proto Lists', () => {
       // Wrapper message for a list of User.
       message ListOfListOfListOfUser {
         message List {
-            repeated ListOfListOfUser items = 1;
+          repeated ListOfListOfUser items = 1;
         }
         List list = 1;
       }
@@ -700,7 +700,7 @@ describe('SDL to Proto Lists', () => {
       // Wrapper message for a list of String.
       message ListOfListOfString {
         message List {
-            repeated ListOfString items = 1;
+          repeated ListOfString items = 1;
         }
         List list = 1;
       }
@@ -708,7 +708,7 @@ describe('SDL to Proto Lists', () => {
       // Wrapper message for a list of User.
       message ListOfListOfUser {
         message List {
-            repeated ListOfUser items = 1;
+          repeated ListOfUser items = 1;
         }
         List list = 1;
       }
@@ -956,7 +956,7 @@ describe('SDL to Proto Lists', () => {
       // Wrapper message for a list of Item.
       message ListOfListOfItem {
         message List {
-            repeated ListOfItem items = 1;
+          repeated ListOfItem items = 1;
         }
         List list = 1;
       }
@@ -964,7 +964,7 @@ describe('SDL to Proto Lists', () => {
       // Wrapper message for a list of Priority.
       message ListOfListOfListOfListOfPriority {
         message List {
-            repeated ListOfListOfListOfPriority items = 1;
+          repeated ListOfListOfListOfPriority items = 1;
         }
         List list = 1;
       }
@@ -972,7 +972,7 @@ describe('SDL to Proto Lists', () => {
       // Wrapper message for a list of Priority.
       message ListOfListOfListOfPriority {
         message List {
-            repeated ListOfListOfPriority items = 1;
+          repeated ListOfListOfPriority items = 1;
         }
         List list = 1;
       }
@@ -980,7 +980,7 @@ describe('SDL to Proto Lists', () => {
       // Wrapper message for a list of Priority.
       message ListOfListOfPriority {
         message List {
-            repeated ListOfPriority items = 1;
+          repeated ListOfPriority items = 1;
         }
         List list = 1;
       }
@@ -988,7 +988,7 @@ describe('SDL to Proto Lists', () => {
       // Wrapper message for a list of String.
       message ListOfListOfString {
         message List {
-            repeated ListOfString items = 1;
+          repeated ListOfString items = 1;
         }
         List list = 1;
       }
@@ -1123,7 +1123,7 @@ describe('SDL to Proto Lists', () => {
       // Wrapper message for a list of String.
       message ListOfListOfString {
         message List {
-            repeated ListOfString items = 1;
+          repeated ListOfString items = 1;
         }
         List list = 1;
       }
@@ -1131,7 +1131,7 @@ describe('SDL to Proto Lists', () => {
       // Wrapper message for a list of User.
       message ListOfListOfUser {
         message List {
-            repeated ListOfUser items = 1;
+          repeated ListOfUser items = 1;
         }
         List list = 1;
       }
