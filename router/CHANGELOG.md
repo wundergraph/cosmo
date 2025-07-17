@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.235.0](https://github.com/wundergraph/cosmo/compare/router@0.234.0...router@0.235.0) (2025-07-17)
+
+### Features
+
+* **router:** add nonroot router docker image ([#2006](https://github.com/wundergraph/cosmo/issues/2006)) ([43c8912](https://github.com/wundergraph/cosmo/commit/43c89122fb5e12da903632c6bf0537952cc9d4b5)) (@obeaudet-ueat)
+
 # [0.234.0](https://github.com/wundergraph/cosmo/compare/router@0.233.0...router@0.234.0) (2025-07-16)
 
 ### Bug Fixes
