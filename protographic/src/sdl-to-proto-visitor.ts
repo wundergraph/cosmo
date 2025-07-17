@@ -95,8 +95,6 @@ interface ProtoType {
   isRepeated: boolean;
 }
 
-type UnwrapNonNull<T extends GraphQLType> = T extends GraphQLNonNull<infer U> ? U : T;
-
 /**
  * Visitor that converts GraphQL SDL to Protocol Buffer text definition
  *
