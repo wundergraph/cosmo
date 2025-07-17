@@ -8,6 +8,8 @@ import {
   GraphQLInterfaceType,
   GraphQLList,
   GraphQLNamedType,
+  GraphQLNonNull,
+  GraphQLNullableType,
   GraphQLObjectType,
   GraphQLSchema,
   GraphQLType,
@@ -92,6 +94,8 @@ interface ProtoType {
   typeName: string;
   isRepeated: boolean;
 }
+
+type UnwrapNonNull<T extends GraphQLType> = T extends GraphQLNonNull<infer U> ? U : T;
 
 /**
  * Visitor that converts GraphQL SDL to Protocol Buffer text definition
@@ -1468,12 +1472,12 @@ Example:
    * - [[String!]!]! → ListOfListOfString field_name = 1; (with nested wrapper messages)
    * - [[String]] → ListOfListOfString field_name = 1; (with nested wrapper messages)
    *
-   * @param type - The GraphQL list type to convert
+   * @param graphqlType - The GraphQL list type to convert
    * @returns ProtoType object containing the type name and whether it should be repeated
    */
-  private handleListType(type: GraphQLList<GraphQLType>): ProtoType {
-    const listType = (isNonNullType(type) ? type.ofType : type) as GraphQLList<GraphQLType>;
-    const isNullableList = !isNonNullType(type);
+  private handleListType(graphqlType: GraphQLList<GraphQLType> | GraphQLNonNull<GraphQLList<GraphQLType>>): ProtoType {
+    const listType = this.unwrapNonNullType(graphqlType);
+    const isNullableList = !isNonNullType(graphqlType);
     const isNestedList = this.isNestedListType(listType);
 
     // Simple non-nullable lists can use repeated fields directly
@@ -1500,9 +1504,19 @@ Example:
   }
 
   /**
-   * Checks if a GraphQL list type contains nested lists
+   * Unwraps a GraphQL type from a GraphQLNonNull type
    */
-  private isNestedListType(listType: GraphQLList<GraphQLType>): boolean {
+  private unwrapNonNullType<T extends GraphQLType>(graphqlType: T | GraphQLNonNull<T>): T {
+    return isNonNullType(graphqlType) ? (graphqlType.ofType as T) : graphqlType;
+  }
+
+  /**
+   * Checks if a GraphQL list type contains nested lists
+   * Type guard that narrows the input type when nested lists are detected
+   */
+  private isNestedListType(
+    listType: GraphQLList<GraphQLType>,
+  ): listType is GraphQLList<GraphQLList<GraphQLType> | GraphQLNonNull<GraphQLList<GraphQLType>>> {
     return isListType(listType.ofType) || (isNonNullType(listType.ofType) && isListType(listType.ofType.ofType));
   }
 
