@@ -42,7 +42,7 @@ jobs:
     timeout-minutes: 30
     strategy:
       matrix:
-        docker_build_target: [ '', 'nonroot' ]
+        docker_build_target: ${{ inputs.name == 'router' && fromJson('["", "nonroot"]') || fromJson('[""]') }}
     permissions:
       contents: read
       packages: write
