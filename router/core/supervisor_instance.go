@@ -191,6 +191,7 @@ func optionsFromResources(logger *zap.Logger, config *config.Config) []Option {
 		WithRouterTrafficConfig(&config.TrafficShaping.Router),
 		WithFileUploadConfig(&config.FileUpload),
 		WithSubgraphTransportOptions(NewSubgraphTransportOptions(config.TrafficShaping)),
+		WithSubgraphCircuitBreakerOptions(NewSubgraphCircuitBreakerOptions(config.TrafficShaping)),
 		WithSubgraphRetryOptions(
 			config.TrafficShaping.All.BackoffJitterRetry.Enabled,
 			config.TrafficShaping.All.BackoffJitterRetry.MaxAttempts,

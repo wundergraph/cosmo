@@ -4,6 +4,22 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.114.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.113.0...@wundergraph/cosmo-connect@0.114.0) (2025-07-09)
+
+### Features
+
+* return the proposal name on the creation of proposal ([#2003](https://github.com/wundergraph/cosmo/issues/2003)) ([ff1b237](https://github.com/wundergraph/cosmo/commit/ff1b2376921db2db7ac2a9d1619824eb1ae1e76d)) (@JivusAyrus)
+
+# [0.113.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.112.0...@wundergraph/cosmo-connect@0.113.0) (2025-07-01)
+
+### Bug Fixes
+
+* toggle ui logic and search to consider all operations ([#1982](https://github.com/wundergraph/cosmo/issues/1982)) ([e6264bd](https://github.com/wundergraph/cosmo/commit/e6264bd5fc98962b2b36f21a3a20c802333192f1)) (@JivusAyrus)
+
+### Features
+
+* allow organization members to be assigned multiple groups ([#1919](https://github.com/wundergraph/cosmo/issues/1919)) ([1e67757](https://github.com/wundergraph/cosmo/commit/1e677576a32efb89673cdfc3900a4c863eec8b7e)) (@wilsonrivera)
+
 # [0.112.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.111.0...@wundergraph/cosmo-connect@0.112.0) (2025-06-26)
 
 ### Features

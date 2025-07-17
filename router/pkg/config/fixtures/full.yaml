@@ -317,7 +317,7 @@ events:
     redis:
       - id: my-redis
         urls:
-          - "redis://localhost:6379/11"
+          - 'redis://localhost:6379/11'
         cluster_enabled: true
 
 engine:
@@ -447,6 +447,19 @@ automatic_persisted_queries:
   storage:
     provider_id: redis
     object_prefix: 'cosmo_apq'
+
+subgraph_error_propagation:
+  mode: pass-through
+  rewrite_paths: true
+  attach_service_name: true
+  default_extension_code: DOWNSTREAM_SERVICE_ERROR
+  omit_locations: true
+  omit_extensions: true
+  propagate_status_codes: false
+  allowed_extension_fields:
+    - 'field1'
+    - 'field2'
+  allow_all_extension_fields: true
 
 execution_config:
   storage:

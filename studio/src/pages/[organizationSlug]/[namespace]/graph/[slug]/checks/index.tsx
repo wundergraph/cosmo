@@ -130,7 +130,7 @@ const ChecksPage: NextPageWithLayout = () => {
             <a
               target="_blank"
               rel="noreferrer"
-              href={docsBaseURL + "/cli/subgraphs/check"}
+              href={docsBaseURL + "/cli/subgraph/check"}
               className="text-primary"
             >
               Learn more.

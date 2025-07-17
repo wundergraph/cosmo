@@ -169,12 +169,20 @@ type ModuleContext struct {
 // the error in the underlying telemetry system.
 func WriteResponseError(ctx RequestContext, err error) {
 	var errs graphqlerrors.RequestErrors
+	var statusCode int
 
 	if err != nil {
-		errs = graphqlerrors.RequestErrorsFromError(err)
+		if httpErr, ok := err.(HttpError); ok {
+			statusCode = httpErr.StatusCode()
+			errs = requestErrorsFromHttpError(httpErr)
+		} else {
+			statusCode = http.StatusInternalServerError
+			errs = graphqlerrors.RequestErrorsFromError(err)
+		}
 	} else {
+		statusCode = http.StatusInternalServerError
 		errs = graphqlerrors.RequestErrorsFromError(errors.New("Internal Error"))
 	}
 
-	writeRequestErrors(ctx.Request(), ctx.ResponseWriter(), http.StatusInternalServerError, errs, ctx.Logger())
+	writeRequestErrors(ctx.Request(), ctx.ResponseWriter(), statusCode, errs, ctx.Logger())
 }

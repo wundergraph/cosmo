@@ -4,6 +4,36 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.153.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.152.0...controlplane@0.153.0) (2025-07-10)
+
+### Features
+
+* add the `subgraph-viewer` role ([#2022](https://github.com/wundergraph/cosmo/issues/2022)) ([902b3bc](https://github.com/wundergraph/cosmo/commit/902b3bcd8ae9efaab71f5e1a97012938af51a57f)) (@wilsonrivera)
+
+# [0.152.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.151.2...controlplane@0.152.0) (2025-07-09)
+
+### Features
+
+* return the proposal name on the creation of proposal ([#2003](https://github.com/wundergraph/cosmo/issues/2003)) ([ff1b237](https://github.com/wundergraph/cosmo/commit/ff1b2376921db2db7ac2a9d1619824eb1ae1e76d)) (@JivusAyrus)
+
+## [0.151.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.151.1...controlplane@0.151.2) (2025-07-03)
+
+**Note:** Version bump only for package controlplane
+
+## [0.151.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.151.0...controlplane@0.151.1) (2025-07-03)
+
+**Note:** Version bump only for package controlplane
+
+# [0.151.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.150.8...controlplane@0.151.0) (2025-07-01)
+
+### Bug Fixes
+
+* toggle ui logic and search to consider all operations ([#1982](https://github.com/wundergraph/cosmo/issues/1982)) ([e6264bd](https://github.com/wundergraph/cosmo/commit/e6264bd5fc98962b2b36f21a3a20c802333192f1)) (@JivusAyrus)
+
+### Features
+
+* allow organization members to be assigned multiple groups ([#1919](https://github.com/wundergraph/cosmo/issues/1919)) ([1e67757](https://github.com/wundergraph/cosmo/commit/1e677576a32efb89673cdfc3900a4c863eec8b7e)) (@wilsonrivera)
+
 ## [0.150.8](https://github.com/wundergraph/cosmo/compare/controlplane@0.150.7...controlplane@0.150.8) (2025-06-30)
 
 **Note:** Version bump only for package controlplane

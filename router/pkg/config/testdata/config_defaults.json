@@ -39,6 +39,7 @@
         "EngineStats": {
           "Subscriptions": false
         },
+        "CircuitBreaker": false,
         "ExcludeMetrics": null,
         "ExcludeMetricLabels": null,
         "Exporters": null
@@ -52,6 +53,7 @@
         "EngineStats": {
           "Subscriptions": false
         },
+        "CircuitBreaker": false,
         "ExcludeMetrics": null,
         "ExcludeMetricLabels": null,
         "ExcludeScopeInfo": false,
@@ -59,7 +61,8 @@
           "Enabled": false,
           "IncludeOperationSha": false
         }
-      }
+      },
+      "CardinalityLimit": 2000
     }
   },
   "GraphqlMetrics": {
@@ -143,6 +146,18 @@
         "MaxAttempts": 5,
         "MaxDuration": 10000000000,
         "Interval": 3000000000
+      },
+      "CircuitBreaker": {
+        "Enabled": false,
+        "ErrorThresholdPercentage": 50,
+        "RequestThreshold": 20,
+        "SleepWindow": 5000000000,
+        "HalfOpenAttempts": 1,
+        "RequiredSuccessfulAttempts": 1,
+        "RollingDuration": 10000000000,
+        "NumBuckets": 10,
+        "ExecutionTimeout": 60000000000,
+        "MaxConcurrentRequests": -1
       },
       "RequestTimeout": 60000000000,
       "DialTimeout": 30000000000,
@@ -395,6 +410,7 @@
     "OmitExtensions": false,
     "AttachServiceName": true,
     "DefaultExtensionCode": "DOWNSTREAM_SERVICE_ERROR",
+    "AllowAllExtensionFields": false,
     "AllowedExtensionFields": [
       "code"
     ],
@@ -423,6 +439,7 @@
     }
   },
   "PersistedOperationsConfig": {
+    "Disabled": false,
     "LogUnknown": false,
     "Safelist": {
       "Enabled": false
