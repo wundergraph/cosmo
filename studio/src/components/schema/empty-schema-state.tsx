@@ -25,7 +25,7 @@ export const EmptySchema = ({ subgraphName }: { subgraphName?: string }) => {
             <a
               target="_blank"
               rel="noreferrer"
-              href={docsBaseURL + "/cli/subgraphs/publish"}
+              href={docsBaseURL + "/cli/subgraph/publish"}
               className="text-primary"
             >
               Learn more.
