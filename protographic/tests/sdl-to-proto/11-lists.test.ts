@@ -64,7 +64,7 @@ describe('SDL to Proto Lists', () => {
 
     const { proto: protoText } = compileGraphQLToProto(sdl);
 
-    // expectValidProto(protoText);
+    expectValidProto(protoText);
 
     expect(protoText).toMatchInlineSnapshot(`
           "syntax = "proto3";
