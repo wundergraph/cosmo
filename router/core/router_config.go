@@ -101,6 +101,7 @@ type Config struct {
 	registrationInfo             *nodev1.RegistrationInfo
 	securityConfiguration        config.SecurityConfiguration
 	customModules                []Module
+	customModulesV1              []ModuleV1
 	engineExecutionConfiguration config.EngineExecutionConfiguration
 	// should be removed once the users have migrated to the new overrides config
 	overrideRoutingURLConfiguration config.OverrideRoutingURLConfiguration
@@ -202,6 +203,7 @@ func (c *Config) Usage() map[string]any {
 
 	usage["prometheus"] = c.prometheusServer != nil
 	usage["custom_modules"] = len(c.customModules) > 0
+	usage["custom_modules_v1"] = len(c.customModulesV1) > 0
 	usage["header_rules"] = c.headerRules != nil && (c.headerRules.All != nil || len(c.headerRules.Subgraphs) > 0)
 	usage["subgraph_transport_options"] = c.subgraphTransportOptions != nil
 	usage["graphql_metrics"] = c.graphqlMetricsConfig != nil && c.graphqlMetricsConfig.Enabled

@@ -83,6 +83,7 @@ type (
 		Config
 		httpServer           *server
 		modules              []Module
+		moduleHooks          *coreModuleHooks
 		EngineStats          statistics.EngineStatistics
 		playgroundHandler    func(http.Handler) http.Handler
 		proxy                ProxyFunc
@@ -640,6 +641,22 @@ func (r *Router) initModules(ctx context.Context) error {
 	return nil
 }
 
+func (r *Router) initModulesV1(ctx context.Context) error {
+	if len(r.customModulesV1) == 0 {
+		return nil
+	}
+
+	moduleList := make([]ModuleV1Info, 0, len(r.customModulesV1))
+	for _, module := range r.customModulesV1 {
+		moduleList = append(moduleList, module.Module())
+	}
+
+	moduleList = sortModulesV1(moduleList)
+	r.moduleHooks = newCoreModuleHooks(r.logger)
+
+	return r.moduleHooks.initCoreModuleHooks(ctx, moduleList)
+}
+
 func (r *Router) BaseURL() string {
 	return r.baseURL
 }
@@ -913,6 +930,11 @@ func (r *Router) bootstrap(ctx context.Context) error {
 	// Modules are only initialized once and not on every config change
 	if err := r.initModules(ctx); err != nil {
 		return fmt.Errorf("failed to init user modules: %w", err)
+	}
+
+	// Initialize ModulesV1 system
+	if err := r.initModulesV1(ctx); err != nil {
+		return fmt.Errorf("failed to init modulesV1: %w", err)
 	}
 
 	if r.traceConfig.Enabled && len(r.tracePropagators) > 0 {
@@ -1469,6 +1491,18 @@ func (r *Router) Shutdown(ctx context.Context) error {
 		}
 	}()
 
+	// Cleanup ModulesV1
+	if r.moduleHooks != nil {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			if subErr := r.moduleHooks.cleanupCoreModuleHooks(ctx); subErr != nil {
+				err.Append(fmt.Errorf("failed to cleanup ModulesV1: %w", subErr))
+			}
+		}()
+	}
+
 	// Shutdown the CDN operation client and free up resources
 	if r.persistedOperationClient != nil {
 		r.persistedOperationClient.Close()
@@ -1719,6 +1753,12 @@ func WithEngineExecutionConfig(cfg config.EngineExecutionConfiguration) Option {
 func WithCustomModules(modules ...Module) Option {
 	return func(r *Router) {
 		r.customModules = modules
+	}
+}
+
+func WithCustomModulesV1(modules ...ModuleV1) Option {
+	return func(r *Router) {
+		r.customModulesV1 = modules
 	}
 }
 
