@@ -183,7 +183,8 @@ describe('Create subgraph tests', () => {
     'graph-admin',
     'graph-viewer',
     'subgraph-publisher',
-  ])('%s should not create regular subgraph can be created', async (role) => {
+    'subgraph-viewer',
+  ])('%s should not be able to create regular subgraph', async (role) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname });
 
     const subgraphName = genID('subgraph');
@@ -409,7 +410,9 @@ describe('Create subgraph tests', () => {
   });
 
   test.each([
-    'organization-admin', 'organization-developer', 'subgraph-admin'
+    'organization-admin',
+    'organization-developer',
+    'subgraph-admin',
   ])('%s should be able to create subgraphs', async (role) => {
     const { client, server, users, authenticator } = await SetupTest({ dbname, enableMultiUsers: true, enabledFeatures: ['rbac'] });
 
@@ -438,6 +441,7 @@ describe('Create subgraph tests', () => {
     'namespace-viewer',
     'graph-admin',
     'graph-viewer',
+    'subgraph-publisher',
     'subgraph-viewer',
   ])('%s should not be able to create subgraphs', async (role) => {
     const { client, server, users, authenticator } = await SetupTest({ dbname, enableMultiUsers: true, enabledFeatures: ['rbac'] });

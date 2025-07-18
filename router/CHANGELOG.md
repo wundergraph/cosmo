@@ -4,6 +4,36 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.235.0](https://github.com/wundergraph/cosmo/compare/router@0.234.0...router@0.235.0) (2025-07-17)
+
+### Features
+
+* **router:** add nonroot router docker image ([#2006](https://github.com/wundergraph/cosmo/issues/2006)) ([43c8912](https://github.com/wundergraph/cosmo/commit/43c89122fb5e12da903632c6bf0537952cc9d4b5)) (@obeaudet-ueat)
+
+# [0.234.0](https://github.com/wundergraph/cosmo/compare/router@0.233.0...router@0.234.0) (2025-07-16)
+
+### Bug Fixes
+
+* fix merging fetches and add dependencies update ([#2053](https://github.com/wundergraph/cosmo/issues/2053)) ([29d2b7b](https://github.com/wundergraph/cosmo/commit/29d2b7b942c5b1dc250876ba6acb798dc105c52e)) (@devsergiy)
+* security updates ([#2036](https://github.com/wundergraph/cosmo/issues/2036)) ([10f2e5f](https://github.com/wundergraph/cosmo/commit/10f2e5f9c79e6f492c84a5c65c2ae9cbd7776dba)) (@SkArchon)
+
+### Features
+
+* add Variables to OperationContext ([#2045](https://github.com/wundergraph/cosmo/issues/2045)) ([1919009](https://github.com/wundergraph/cosmo/commit/1919009cc2c7b916687a54dc0c15148293f14cb9)) (@alepane21)
+* support nullable types and composite types ([#2047](https://github.com/wundergraph/cosmo/issues/2047)) ([4c418b7](https://github.com/wundergraph/cosmo/commit/4c418b758ddd4f62021ff362749872b7eb94ee2e)) (@Noroth)
+
+# [0.233.0](https://github.com/wundergraph/cosmo/compare/router@0.232.1...router@0.233.0) (2025-07-10)
+
+### Features
+
+* **router:** option to allow all error extensions ([#2026](https://github.com/wundergraph/cosmo/issues/2026)) ([8fa9c45](https://github.com/wundergraph/cosmo/commit/8fa9c4529d5e541ce4b7cf29cfa778227120eff4)) (@endigma)
+
+## [0.232.1](https://github.com/wundergraph/cosmo/compare/router@0.232.0...router@0.232.1) (2025-07-10)
+
+### Bug Fixes
+
+* enable input value deprecation in introspection query ([#2030](https://github.com/wundergraph/cosmo/issues/2030)) ([d53e9d6](https://github.com/wundergraph/cosmo/commit/d53e9d678b655cc178ee3c14888ff1ea45df23ec)) (@JivusAyrus)
+
 # [0.232.0](https://github.com/wundergraph/cosmo/compare/router@0.231.1...router@0.232.0) (2025-07-09)
 
 ### Bug Fixes
