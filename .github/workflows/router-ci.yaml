@@ -286,7 +286,7 @@ jobs:
         with:
           name: ${{ matrix.docker_build_target != '' && format('Router-{0}', matrix.docker_build_target) || 'Router' }}
           github_token: ${{secrets.GITHUB_TOKEN}}
-          image_ref: ${{ steps.docker_build.outputs.image_ref }}
+          image_ref: ${{ steps.docker_build.outputs.image_ref }}${{ matrix.docker_build_target != '' && format('-{0}', matrix.docker_build_target) || '' }}
 
   build_push_image:
     # This is a limitation of GitHub. Only organization members can push to GitHub Container Registry
