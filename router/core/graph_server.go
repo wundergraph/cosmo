@@ -283,7 +283,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	}
 
 	wrapper, err := gzhttp.NewWrapper(
-		gzhttp.MinSize(1024*4), // 4KB
+		gzhttp.MinSize(int(s.routerTrafficConfig.ResponseCompressionMinSize)),
 		gzhttp.CompressionLevel(gzip.DefaultCompression),
 		gzhttp.ContentTypes(CompressibleContentTypes),
 	)
