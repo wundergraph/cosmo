@@ -1603,7 +1603,7 @@ Example:
         formatIndent(2, `repeated ${innerWrapperName} items = 1;`),
         formatIndent(1, `}`),
       );
-      
+
       // Wrapper types always use deterministic field numbers - 'list' field is always 1
       lines.push(formatIndent(1, `List list = 1;`));
     } else {

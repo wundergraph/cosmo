@@ -1368,10 +1368,10 @@ describe('Field Ordering and Preservation', () => {
       const userListNumber = listOfListOfUserFields['list'];
 
       // Verify correct field types for different wrapper levels
-      expect(stringItemsNumber).toBe(1);  // Simple wrapper has 'items'
-      expect(stringListNumber).toBe(1);   // Nested wrapper has 'list'
-      expect(userItemsNumber).toBe(1);    // Simple wrapper has 'items'
-      expect(userListNumber).toBe(1);     // Nested wrapper has 'list'
+      expect(stringItemsNumber).toBe(1); // Simple wrapper has 'items'
+      expect(stringListNumber).toBe(1); // Nested wrapper has 'list'
+      expect(userItemsNumber).toBe(1); // Simple wrapper has 'items'
+      expect(userListNumber).toBe(1); // Nested wrapper has 'list'
 
       // Get the generated lock data
       const lockData = visitor1.getGeneratedLockData();
