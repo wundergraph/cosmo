@@ -145,7 +145,6 @@ async function fetchLockData(lockFile: string): Promise<ProtoLock | undefined> {
   return existingLockData == null ? undefined : existingLockData;
 }
 
-// Usage of exists from node:fs is not recommended. Use access instead.
 async function exists(path: string): Promise<boolean> {
   try {
     await access(path, constants.R_OK);
