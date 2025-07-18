@@ -50,8 +50,8 @@ type SubscriptionOnStartHandler interface {
 
 //write a method that converts from func(ctx SubscriptionOnStartHookContext) error to func(ctx *resolve.Context, event StreamEvent) error
 
-func callSubscriptionOnStart(fn func(ctx SubscriptionOnStartHookContext) error) func(resolveCtx *resolve.Context, subConf datasource.SubscriptionEventConfiguration) (error, []datasource.StreamEvent) {
-	return func(resolveCtx *resolve.Context, subConf datasource.SubscriptionEventConfiguration) (error, []datasource.StreamEvent) {
+func callSubscriptionOnStart(fn func(ctx SubscriptionOnStartHookContext) error) func(resolveCtx *resolve.Context, subConf datasource.SubscriptionEventConfiguration) ([]datasource.StreamEvent, error) {
+	return func(resolveCtx *resolve.Context, subConf datasource.SubscriptionEventConfiguration) ([]datasource.StreamEvent, error) {
 		requestContext := getRequestContext(resolveCtx.Context())
 		hookCtx := &subscriptionOnStartHookContext{
 			requestContext:                 requestContext,
@@ -60,6 +60,6 @@ func callSubscriptionOnStart(fn func(ctx SubscriptionOnStartHookContext) error) 
 
 		err := fn(hookCtx)
 
-		return err, hookCtx.events
+		return hookCtx.events, err
 	}
 }

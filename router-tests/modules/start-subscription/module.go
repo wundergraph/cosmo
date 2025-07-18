@@ -1,19 +1,16 @@
 package start_subscription
 
 import (
-	"strings"
-
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/cosmo/router/core"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
 )
 
 const myModuleID = "startSubscriptionModule"
 
 type StartSubscriptionModule struct {
-	Logger *zap.Logger
+	Logger   *zap.Logger
+	Callback func(ctx core.SubscriptionOnStartHookContext) error
 }
 
 func (m *StartSubscriptionModule) Provision(ctx *core.ModuleContext) error {
@@ -27,25 +24,9 @@ func (m *StartSubscriptionModule) SubscriptionOnStart(ctx core.SubscriptionOnSta
 
 	m.Logger.Info("SubscriptionOnStart Hook has been run")
 
-	// check if the provider is nats
-	if ctx.SubscriptionEventConfiguration().ProviderType() != datasource.ProviderTypeKafka {
-		return nil
+	if m.Callback != nil {
+		return m.Callback(ctx)
 	}
-
-	// check if the provider id is the one expected by the module
-	if ctx.SubscriptionEventConfiguration().ProviderID() != "my-kafka" {
-		return nil
-	}
-
-	// check if the subject is the one expected by the module
-	kafkaConfig := ctx.SubscriptionEventConfiguration().(*kafka.SubscriptionEventConfiguration)
-	if !strings.Contains(kafkaConfig.Topics[0], "employeeUpdated") {
-		return nil
-	}
-
-	ctx.WriteEvent(&kafka.Event{
-		Data: []byte(`{"id": 1, "__typename": "Employee"}`),
-	})
 
 	return nil
 }

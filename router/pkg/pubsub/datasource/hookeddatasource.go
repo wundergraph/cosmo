@@ -12,7 +12,7 @@ type HookedSubscriptionDataSource struct {
 
 func (h *HookedSubscriptionDataSource) Start(ctx *resolve.Context, input []byte, updater resolve.SubscriptionUpdater) error {
 	for _, fn := range h.OnSubscriptionStartFns {
-		err, events := fn(ctx, h.SubscriptionDataSource.SubscriptionEventConfiguration(input))
+		events, err := fn(ctx, h.SubscriptionDataSource.SubscriptionEventConfiguration(input))
 		if err != nil {
 			return err
 		}

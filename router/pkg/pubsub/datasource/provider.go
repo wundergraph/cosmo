@@ -50,7 +50,7 @@ type StreamEvent interface {
 	GetData() []byte
 }
 
-type OnSubscriptionStartFn func(ctx *resolve.Context, subConf SubscriptionEventConfiguration) (error, []StreamEvent)
+type OnSubscriptionStartFn func(ctx *resolve.Context, subConf SubscriptionEventConfiguration) ([]StreamEvent, error)
 
 // SubscriptionEventConfiguration is the interface that all subscription event configurations must implement
 type SubscriptionEventConfiguration interface {

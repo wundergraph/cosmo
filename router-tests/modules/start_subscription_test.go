@@ -1,6 +1,7 @@
 package module_test
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
 )
 
 func TestStartSubscriptionHook(t *testing.T) {
@@ -25,6 +27,75 @@ func TestStartSubscriptionHook(t *testing.T) {
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
 				"startSubscriptionModule": start_subscription.StartSubscriptionModule{},
+			},
+		}
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
+			EnableKafka:              true,
+			RouterOptions: []core.Option{
+				core.WithModulesConfig(cfg.Modules),
+				core.WithCustomModules(&start_subscription.StartSubscriptionModule{}),
+			},
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			var subscriptionOne struct {
+				employeeUpdatedMyKafka struct {
+					ID      float64 `graphql:"id"`
+					Details struct {
+						Forename string `graphql:"forename"`
+						Surname  string `graphql:"surname"`
+					} `graphql:"details"`
+				} `graphql:"employeeUpdatedMyKafka(employeeID: $employeeID)"`
+			}
+
+			surl := xEnv.GraphQLWebSocketSubscriptionURL()
+			client := graphql.NewSubscriptionClient(surl)
+
+			vars := map[string]interface{}{
+				"employeeID": 3,
+			}
+			subscriptionOneID, err := client.Subscribe(&subscriptionOne, vars, func(dataValue []byte, errValue error) error {
+				return nil
+			})
+			require.NoError(t, err)
+			require.NotEmpty(t, subscriptionOneID)
+
+			clientRunCh := make(chan error)
+			go func() {
+				clientRunCh <- client.Run()
+			}()
+
+			xEnv.WaitForSubscriptionCount(1, time.Second*10)
+
+			require.NoError(t, client.Close())
+			testenv.AwaitChannelWithT(t, time.Second*10, clientRunCh, func(t *testing.T, err error) {
+				require.NoError(t, err)
+
+			}, "unable to close client before timeout")
+
+			requestLog := xEnv.Observer().FilterMessage("SubscriptionOnStart Hook has been run")
+			assert.Len(t, requestLog.All(), 1)
+		})
+	})
+
+	t.Run("Test StartSubscription write event works", func(t *testing.T) {
+		t.Parallel()
+
+		cfg := config.Config{
+			Graph: config.Graph{},
+			Modules: map[string]interface{}{
+				"startSubscriptionModule": start_subscription.StartSubscriptionModule{
+					Callback: func(ctx core.SubscriptionOnStartHookContext) error {
+						ctx.WriteEvent(&kafka.Event{
+							Data: []byte(`{"id": 1, "__typename": "Employee"}`),
+						})
+						return nil
+					},
+				},
 			},
 		}
 
@@ -91,6 +162,110 @@ func TestStartSubscriptionHook(t *testing.T) {
 
 			requestLog := xEnv.Observer().FilterMessage("SubscriptionOnStart Hook has been run")
 			assert.Len(t, requestLog.All(), 1)
+		})
+	})
+
+	t.Run("Test StartSubscription write event sends event only to the subscription", func(t *testing.T) {
+		t.Parallel()
+
+		cfg := config.Config{
+			Graph: config.Graph{},
+			Modules: map[string]interface{}{
+				"startSubscriptionModule": start_subscription.StartSubscriptionModule{
+					Callback: func(ctx core.SubscriptionOnStartHookContext) error {
+						employeeId := ctx.RequestContext().Operation().Variables().GetInt64("employeeID")
+						if employeeId != 1 {
+							return nil
+						}
+						ctx.WriteEvent(&kafka.Event{
+							Data: []byte(`{"id": 1, "__typename": "Employee"}`),
+						})
+						return nil
+					},
+				},
+			},
+		}
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
+			EnableKafka:              true,
+			RouterOptions: []core.Option{
+				core.WithModulesConfig(cfg.Modules),
+				core.WithCustomModules(&start_subscription.StartSubscriptionModule{}),
+			},
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			var subscription struct {
+				employeeUpdatedMyKafka struct {
+					ID      float64 `graphql:"id"`
+					Details struct {
+						Forename string `graphql:"forename"`
+						Surname  string `graphql:"surname"`
+					} `graphql:"details"`
+				} `graphql:"employeeUpdatedMyKafka(employeeID: $employeeID)"`
+			}
+
+			surl := xEnv.GraphQLWebSocketSubscriptionURL()
+			client := graphql.NewSubscriptionClient(surl)
+
+			vars := map[string]interface{}{
+				"employeeID": 3,
+			}
+			vars2 := map[string]interface{}{
+				"employeeID": 1,
+			}
+			type kafkaSubscriptionArgs struct {
+				dataValue []byte
+				errValue  error
+			}
+			subscriptionOneArgsCh := make(chan kafkaSubscriptionArgs)
+			subscriptionOneID, err := client.Subscribe(&subscription, vars, func(dataValue []byte, errValue error) error {
+				subscriptionOneArgsCh <- kafkaSubscriptionArgs{
+					dataValue: []byte{},
+					errValue:  errors.New("should not be called"),
+				}
+				return nil
+			})
+			require.NoError(t, err)
+			require.NotEmpty(t, subscriptionOneID)
+
+			subscriptionTwoArgsCh := make(chan kafkaSubscriptionArgs)
+			subscriptionTwoID, err := client.Subscribe(&subscription, vars2, func(dataValue []byte, errValue error) error {
+				subscriptionTwoArgsCh <- kafkaSubscriptionArgs{
+					dataValue: dataValue,
+					errValue:  errValue,
+				}
+				return nil
+			})
+			require.NoError(t, err)
+			require.NotEmpty(t, subscriptionTwoID)
+
+			clientRunCh := make(chan error)
+			go func() {
+				clientRunCh <- client.Run()
+			}()
+
+			xEnv.WaitForSubscriptionCount(2, time.Second*10)
+
+			testenv.AwaitChannelWithT(t, time.Second*10, subscriptionTwoArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
+				require.NoError(t, args.errValue)
+				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
+			})
+
+			require.NoError(t, client.Close())
+			testenv.AwaitChannelWithT(t, time.Second*10, clientRunCh, func(t *testing.T, err error) {
+				require.NoError(t, err)
+
+			}, "unable to close client before timeout")
+
+			requestLog := xEnv.Observer().FilterMessage("SubscriptionOnStart Hook has been run")
+			assert.Len(t, requestLog.All(), 1)
+			t.Cleanup(func() {
+				require.Len(t, subscriptionOneArgsCh, 0)
+			})
 		})
 	})
 }
