@@ -18,6 +18,7 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, isValidLabels } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { newCompositionOptions } from '../../../utils/utils.js';
 
 export function createFeatureFlag(
   opts: RouterOptions,
@@ -198,14 +199,15 @@ export function createFeatureFlag(
       const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
 
       const composition = await fedGraphRepo.composeAndDeployGraphs({
-        federatedGraphs,
         actorId: authContext.userId,
-        blobStorage: opts.blobStorage,
         admissionConfig: {
           cdnBaseUrl: opts.cdnBaseUrl,
           webhookJWTSecret: opts.admissionWebhookJWTSecret,
         },
+        blobStorage: opts.blobStorage,
         chClient: opts.chClient!,
+        compositionOptions: newCompositionOptions(req.disableResolvabilityValidation),
+        federatedGraphs,
       });
 
       compositionErrors.push(...composition.compositionErrors);

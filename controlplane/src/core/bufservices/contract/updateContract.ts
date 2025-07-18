@@ -17,6 +17,7 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, isValidSchemaTags } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { newCompositionOptions } from '../../../utils/utils.js';
 
 export function updateContract(
   opts: RouterOptions,
@@ -140,6 +141,7 @@ export function updateContract(
       },
       labelMatchers: [],
       chClient: opts.chClient!,
+      compositionOptions: newCompositionOptions(req.disableResolvabilityValidation),
     });
 
     const compositionErrors: PlainMessage<CompositionError>[] = [];
@@ -147,6 +149,14 @@ export function updateContract(
     const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
 
     const composition = await fedGraphRepo.composeAndDeployGraphs({
+      actorId: authContext.userId,
+      admissionConfig: {
+        cdnBaseUrl: opts.cdnBaseUrl,
+        webhookJWTSecret: opts.admissionWebhookJWTSecret,
+      },
+      blobStorage: opts.blobStorage,
+      chClient: opts.chClient!,
+      compositionOptions: newCompositionOptions(req.disableResolvabilityValidation),
       federatedGraphs: [
         {
           ...graph,
@@ -160,13 +170,6 @@ export function updateContract(
           },
         },
       ],
-      actorId: authContext.userId,
-      blobStorage: opts.blobStorage,
-      admissionConfig: {
-        cdnBaseUrl: opts.cdnBaseUrl,
-        webhookJWTSecret: opts.admissionWebhookJWTSecret,
-      },
-      chClient: opts.chClient!,
     });
 
     compositionErrors.push(...composition.compositionErrors);

@@ -1,6 +1,4 @@
 import {
-  federateSubgraphs,
-  FederationResultSuccess,
   FIRST_ORDINAL,
   invalidArgumentValueErrorMessage,
   invalidDirectiveError,
@@ -19,7 +17,7 @@ import {
   versionOneRouterDefinitions,
   versionTwoDirectiveDefinitions,
 } from '../utils/utils';
-import { normalizeString, schemaToSortedNormalizedString } from '../../utils/utils';
+import { federateSubgraphsSuccess, normalizeString, schemaToSortedNormalizedString } from '../../utils/utils';
 
 describe('Directive tests', () => {
   describe('Normalization tests', () => {
@@ -380,10 +378,7 @@ describe('Directive tests', () => {
 
   describe('Federation tests', () => {
     test('that @specifiedBy is supported', () => {
-      const result = federateSubgraphs(
-        [subgraphA, subgraphB],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -402,18 +397,18 @@ describe('Directive tests', () => {
   });
 
   test('that directives compose', () => {
-    const result = federateSubgraphs(
+    const result = federateSubgraphsSuccess(
       [
         { name: 'a', url: '', definitions: parse(`directive @test on OBJECT type Query { dummy: String! }`) },
         { name: 'b', url: '', definitions: parse(`directive @test(a: String!) on OBJECT`) },
       ],
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
+    );
     expect(result.success).toBe(true);
   });
 
   test('that schema directives are supported', () => {
-    const result = federateSubgraphs(
+    federateSubgraphsSuccess(
       [
         {
           name: 'test',
@@ -437,8 +432,7 @@ describe('Directive tests', () => {
         },
       ],
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
-    expect(result.success).toBe(true);
+    );
   });
 });
 

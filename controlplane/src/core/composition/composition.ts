@@ -6,11 +6,11 @@ import {
   FederationResult,
   NormalizationResult,
   normalizeSubgraphFromString,
-  ROUTER_COMPATIBILITY_VERSION_ONE,
   ROUTER_COMPATIBILITY_VERSIONS,
   Subgraph,
   SupportedRouterCompatibilityVersion,
 } from '@wundergraph/composition';
+import { CompositionOptions } from 'src/types/index.js';
 
 /**
  * Composes a list of subgraphs and returns the result for the base graph and its contract graphs
@@ -19,12 +19,14 @@ export function composeFederatedGraphWithPotentialContracts(
   subgraphs: Subgraph[],
   tagOptionsByContractName: Map<string, ContractTagOptions>,
   version: string,
+  compositionOptions?: CompositionOptions,
 ) {
-  return federateSubgraphsWithContracts(
+  return federateSubgraphsWithContracts({
+    disableResolvabilityValidation: compositionOptions?.disableResolvabilityValidation,
     subgraphs,
     tagOptionsByContractName,
-    validateRouterCompatibilityVersion(version),
-  );
+    version: validateRouterCompatibilityVersion(version),
+  });
 }
 
 /**
@@ -34,15 +36,29 @@ export function composeFederatedContract(
   subgraphs: Subgraph[],
   contractTagOptions: ContractTagOptions,
   version: string,
+  compositionOptions?: CompositionOptions,
 ) {
-  return federateSubgraphsContract(subgraphs, contractTagOptions, validateRouterCompatibilityVersion(version));
+  return federateSubgraphsContract({
+    contractTagOptions,
+    disableResolvabilityValidation: compositionOptions?.disableResolvabilityValidation,
+    subgraphs,
+    version: validateRouterCompatibilityVersion(version),
+  });
 }
 
 /**
  * Composes a list of subgraphs into a single schema.
  */
-export function composeSubgraphs(subgraphs: Subgraph[], version: string): FederationResult {
-  return federateSubgraphs(subgraphs, validateRouterCompatibilityVersion(version));
+export function composeSubgraphs(
+  subgraphs: Subgraph[],
+  version: string,
+  compositionOptions?: CompositionOptions,
+): FederationResult {
+  return federateSubgraphs({
+    disableResolvabilityValidation: compositionOptions?.disableResolvabilityValidation,
+    subgraphs,
+    version: validateRouterCompatibilityVersion(version),
+  });
 }
 
 /**

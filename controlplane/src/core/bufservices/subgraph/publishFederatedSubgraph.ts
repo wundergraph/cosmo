@@ -28,6 +28,7 @@ import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookSe
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { newCompositionOptions } from '../../../utils/utils.js';
 
 export function publishFederatedSubgraph(
   opts: RouterOptions,
@@ -407,6 +408,7 @@ export function publishFederatedSubgraph(
           webhookJWTSecret: opts.admissionWebhookJWTSecret,
         },
         opts.chClient!,
+        newCompositionOptions(req.disableResolvabilityValidation),
       );
 
     for (const graph of updatedFederatedGraphs) {

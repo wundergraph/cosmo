@@ -17,6 +17,7 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, isValidLabelMatchers } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { newCompositionOptions } from '../../../utils/utils.js';
 
 export function updateFederatedGraph(
   opts: RouterOptions,
@@ -111,21 +112,22 @@ export function updateFederatedGraph(
     const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
 
     const result = await fedGraphRepo.update({
-      targetId: federatedGraph.targetId,
-      labelMatchers: req.labelMatchers,
-      routingUrl: req.routingUrl,
-      updatedBy: authContext.userId,
-      readme: req.readme,
-      blobStorage: opts.blobStorage,
-      namespaceId: federatedGraph.namespaceId,
-      unsetLabelMatchers: req.unsetLabelMatchers,
-      admissionWebhookURL: req.admissionWebhookURL,
-      admissionWebhookSecret: req.admissionWebhookSecret,
       admissionConfig: {
         cdnBaseUrl: opts.cdnBaseUrl,
         jwtSecret: opts.admissionWebhookJWTSecret,
       },
+      admissionWebhookSecret: req.admissionWebhookSecret,
+      admissionWebhookURL: req.admissionWebhookURL,
+      blobStorage: opts.blobStorage,
       chClient: opts.chClient!,
+      compositionOptions: newCompositionOptions(req.disableResolvabilityValidation),
+      labelMatchers: req.labelMatchers,
+      namespaceId: federatedGraph.namespaceId,
+      readme: req.readme,
+      routingUrl: req.routingUrl,
+      targetId: federatedGraph.targetId,
+      unsetLabelMatchers: req.unsetLabelMatchers,
+      updatedBy: authContext.userId,
     });
 
     if (result?.deploymentErrors) {

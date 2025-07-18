@@ -18,6 +18,7 @@ import {
 } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { newCompositionOptions } from '../../../utils/utils.js';
 
 export function updateSubgraph(
   opts: RouterOptions,
@@ -183,6 +184,7 @@ export function updateSubgraph(
           webhookJWTSecret: opts.admissionWebhookJWTSecret,
         },
         opts.chClient!,
+        newCompositionOptions(req.disableResolvabilityValidation),
       );
 
     await auditLogRepo.addAuditLog({

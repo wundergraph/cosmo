@@ -7,7 +7,9 @@ import {
   PersistedDirectivesData,
 } from '../schema-building/types';
 import { FieldConfiguration } from '../router-configuration/types';
-import { SubgraphConfig } from '../subgraph/types';
+import { Subgraph, SubgraphConfig } from '../subgraph/types';
+import { SupportedRouterCompatibilityVersion, } from '../router-compatibility-version/router-compatibility-version';
+import { ContractName } from '../types/types';
 
 export type FederationResultFailure = {
   errors: Array<Error>;
@@ -62,4 +64,24 @@ export type MutualParentDefinitionData = {
   name: string;
   persistedDirectivesData: PersistedDirectivesData;
   description?: StringValueNode;
+};
+
+export type FederateSubgraphsParams = {
+  subgraphs: Array<Subgraph>;
+  disableResolvabilityValidation?: boolean;
+  version?: SupportedRouterCompatibilityVersion;
+};
+
+export type FederateSubgraphsWithContractsParams = {
+  subgraphs: Array<Subgraph>;
+  tagOptionsByContractName: Map<ContractName, ContractTagOptions>;
+  disableResolvabilityValidation?: boolean;
+  version?: SupportedRouterCompatibilityVersion;
+};
+
+export type FederateSubgraphsContractParams = {
+  contractTagOptions: ContractTagOptions;
+  subgraphs: Array<Subgraph>;
+  disableResolvabilityValidation?: boolean;
+  version?: SupportedRouterCompatibilityVersion;
 };
