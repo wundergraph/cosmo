@@ -68,10 +68,20 @@ func (p *PublishEventConfiguration) RootFieldName() string {
 	return p.FieldName
 }
 
-func (s *PublishEventConfiguration) MarshalJSONTemplate() string {
+func (s *PublishEventConfiguration) MarshalJSONTemplate() (string, error) {
 	// The content of the data field could be not valid JSON, so we can't use json.Marshal
 	// e.g. {"id":$$0$$,"update":$$1$$}
-	return fmt.Sprintf(`{"topic":"%s", "event": {"data": %s}, "providerId":"%s"}`, s.Topic, s.Event.Data, s.ProviderID())
+	headers := s.Event.Headers
+	if headers == nil {
+		headers = make(map[string][]byte)
+	}
+
+	headersBytes, err := json.Marshal(headers)
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf(`{"topic":"%s", "event": {"data": %s, "key": "%s", "headers": %s}, "providerId":"%s"}`, s.Topic, s.Event.Data, s.Event.Key, headersBytes, s.ProviderID()), nil
 }
 
 type SubscriptionDataSource struct {
@@ -107,7 +117,7 @@ func (s *SubscriptionDataSource) UniqueRequestID(ctx *resolve.Context, input []b
 	return err
 }
 
-func (s *SubscriptionDataSource) Start(ctx *resolve.Context, input []byte, updater resolve.SubscriptionUpdater) error {
+func (s *SubscriptionDataSource) Start(ctx *resolve.Context, input []byte, updater datasource.SubscriptionEventUpdater) error {
 	subConf := s.SubscriptionEventConfiguration(input)
 	conf, ok := subConf.(*SubscriptionEventConfiguration)
 	if !ok {

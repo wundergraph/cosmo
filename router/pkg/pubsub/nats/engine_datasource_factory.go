@@ -72,7 +72,7 @@ func (c *EngineDataSourceFactory) ResolveDataSourceInput(eventData []byte) (stri
 	return evtCfg.MarshalJSONTemplate(), nil
 }
 
-func (c *EngineDataSourceFactory) ResolveDataSourceSubscription() (datasource.SubscriptionDataSourceWithConfiguration, error) {
+func (c *EngineDataSourceFactory) ResolveDataSourceSubscription() (datasource.PubSubSubscriptionDataSource, error) {
 	return &SubscriptionSource{
 		pubSub: c.NatsAdapter,
 	}, nil

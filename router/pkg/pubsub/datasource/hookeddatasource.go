@@ -7,20 +7,21 @@ import (
 
 type HookedSubscriptionDataSource struct {
 	OnSubscriptionStartFns []OnSubscriptionStartFn
-	SubscriptionDataSource SubscriptionDataSourceWithConfiguration
+	SubscriptionDataSource PubSubSubscriptionDataSource
 }
 
 func (h *HookedSubscriptionDataSource) Start(ctx *resolve.Context, input []byte, updater resolve.SubscriptionUpdater) error {
+	subscriptionEventUpdater := NewSubscriptionEventUpdater(updater)
 	for _, fn := range h.OnSubscriptionStartFns {
 		events, err := fn(ctx, h.SubscriptionDataSource.SubscriptionEventConfiguration(input))
 		if err != nil {
 			return err
 		}
 		for _, event := range events {
-			updater.Update(event.GetData())
+			subscriptionEventUpdater.Update(event)
 		}
 	}
-	return h.SubscriptionDataSource.Start(ctx, input, updater)
+	return h.SubscriptionDataSource.Start(ctx, input, subscriptionEventUpdater)
 }
 
 func (h *HookedSubscriptionDataSource) UniqueRequestID(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) (err error) {

@@ -106,13 +106,13 @@ func TestSubscriptionSource_Start(t *testing.T) {
 	tests := []struct {
 		name        string
 		input       string
-		mockSetup   func(*MockAdapter, *datasource.MockSubscriptionUpdater)
+		mockSetup   func(*MockAdapter, *datasource.MockSubscriptionEventUpdater)
 		expectError bool
 	}{
 		{
 			name:  "successful subscription",
 			input: `{"subjects":["subject1", "subject2"], "providerId":"test-provider"}`,
-			mockSetup: func(m *MockAdapter, updater *datasource.MockSubscriptionUpdater) {
+			mockSetup: func(m *MockAdapter, updater *datasource.MockSubscriptionEventUpdater) {
 				m.On("Subscribe", mock.Anything, SubscriptionEventConfiguration{
 					Provider: "test-provider",
 					Subjects: []string{"subject1", "subject2"},
@@ -123,7 +123,7 @@ func TestSubscriptionSource_Start(t *testing.T) {
 		{
 			name:  "adapter returns error",
 			input: `{"subjects":["subject1"], "providerId":"test-provider"}`,
-			mockSetup: func(m *MockAdapter, updater *datasource.MockSubscriptionUpdater) {
+			mockSetup: func(m *MockAdapter, updater *datasource.MockSubscriptionEventUpdater) {
 				m.On("Subscribe", mock.Anything, SubscriptionEventConfiguration{
 					Provider: "test-provider",
 					Subjects: []string{"subject1"},
@@ -134,7 +134,7 @@ func TestSubscriptionSource_Start(t *testing.T) {
 		{
 			name:        "invalid input json",
 			input:       `{"invalid json":`,
-			mockSetup:   func(m *MockAdapter, updater *datasource.MockSubscriptionUpdater) {},
+			mockSetup:   func(m *MockAdapter, updater *datasource.MockSubscriptionEventUpdater) {},
 			expectError: true,
 		},
 	}
@@ -142,7 +142,7 @@ func TestSubscriptionSource_Start(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockAdapter := NewMockAdapter(t)
-			updater := datasource.NewMockSubscriptionUpdater(t)
+			updater := datasource.NewMockSubscriptionEventUpdater(t)
 			tt.mockSetup(mockAdapter, updater)
 
 			source := &SubscriptionSource{

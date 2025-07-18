@@ -91,6 +91,7 @@ func TestStartSubscriptionHook(t *testing.T) {
 				"startSubscriptionModule": start_subscription.StartSubscriptionModule{
 					Callback: func(ctx core.SubscriptionOnStartHookContext) error {
 						ctx.WriteEvent(&kafka.Event{
+							Key:  []byte("1"),
 							Data: []byte(`{"id": 1, "__typename": "Employee"}`),
 						})
 						return nil

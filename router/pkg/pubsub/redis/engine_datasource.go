@@ -108,7 +108,7 @@ func (s *SubscriptionDataSource) UniqueRequestID(ctx *resolve.Context, input []b
 }
 
 // Start starts the subscription
-func (s *SubscriptionDataSource) Start(ctx *resolve.Context, input []byte, updater resolve.SubscriptionUpdater) error {
+func (s *SubscriptionDataSource) Start(ctx *resolve.Context, input []byte, updater datasource.SubscriptionEventUpdater) error {
 	subConf := s.SubscriptionEventConfiguration(input)
 	conf, ok := subConf.(*SubscriptionEventConfiguration)
 	if !ok {

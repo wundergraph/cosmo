@@ -11,7 +11,6 @@ import (
 	"github.com/twmb/franz-go/pkg/kerr"
 	"github.com/twmb/franz-go/pkg/kgo"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
 )
 
@@ -21,7 +20,7 @@ var (
 
 // Adapter defines the interface for Kafka adapter operations
 type Adapter interface {
-	Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error
+	Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater datasource.SubscriptionEventUpdater) error
 	Publish(ctx context.Context, event PublishEventConfiguration) error
 	Startup(ctx context.Context) error
 	Shutdown(ctx context.Context) error
@@ -42,7 +41,7 @@ type ProviderAdapter struct {
 }
 
 // topicPoller polls the Kafka topic for new records and calls the updateTriggers function.
-func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, updater resolve.SubscriptionUpdater) error {
+func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, updater datasource.SubscriptionEventUpdater) error {
 	for {
 		select {
 		case <-p.ctx.Done(): // Close the poller if the application context was canceled
@@ -88,7 +87,16 @@ func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, u
 				r := iter.Next()
 
 				p.logger.Debug("subscription update", zap.String("topic", r.Topic), zap.ByteString("data", r.Value))
-				updater.Update(r.Value)
+				headers := make(map[string][]byte)
+				for _, header := range r.Headers {
+					headers[header.Key] = header.Value
+				}
+
+				updater.Update(&Event{
+					Data:    r.Value,
+					Headers: headers,
+					Key:     r.Key,
+				})
 			}
 		}
 	}
@@ -96,7 +104,7 @@ func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, u
 
 // Subscribe subscribes to the given topics and updates the subscription updater.
 // The engine already deduplicates subscriptions with the same topics, stream configuration, extensions, headers, etc.
-func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error {
+func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater datasource.SubscriptionEventUpdater) error {
 
 	log := p.logger.With(
 		zap.String("provider_id", event.ProviderID()),

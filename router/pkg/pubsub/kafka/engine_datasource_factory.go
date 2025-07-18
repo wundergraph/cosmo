@@ -55,10 +55,10 @@ func (c *EngineDataSourceFactory) ResolveDataSourceInput(eventData []byte) (stri
 		FieldName: c.fieldName,
 	}
 
-	return evtCfg.MarshalJSONTemplate(), nil
+	return evtCfg.MarshalJSONTemplate()
 }
 
-func (c *EngineDataSourceFactory) ResolveDataSourceSubscription() (datasource.SubscriptionDataSourceWithConfiguration, error) {
+func (c *EngineDataSourceFactory) ResolveDataSourceSubscription() (datasource.PubSubSubscriptionDataSource, error) {
 	return &SubscriptionDataSource{
 		pubSub: c.KafkaAdapter,
 	}, nil

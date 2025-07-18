@@ -114,7 +114,7 @@ func (s *SubscriptionSource) UniqueRequestID(ctx *resolve.Context, input []byte,
 	return err
 }
 
-func (s *SubscriptionSource) Start(ctx *resolve.Context, input []byte, updater resolve.SubscriptionUpdater) error {
+func (s *SubscriptionSource) Start(ctx *resolve.Context, input []byte, updater datasource.SubscriptionEventUpdater) error {
 	subConf := s.SubscriptionEventConfiguration(input)
 	conf, ok := subConf.(*SubscriptionEventConfiguration)
 	if !ok {

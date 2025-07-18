@@ -1,12 +1,14 @@
 package datasource
 
 import (
+	"github.com/cespare/xxhash/v2"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
-type SubscriptionDataSourceWithConfiguration interface {
+type PubSubSubscriptionDataSource interface {
 	SubscriptionEventConfiguration(input []byte) SubscriptionEventConfiguration
-	resolve.SubscriptionDataSource
+	Start(ctx *resolve.Context, input []byte, updater SubscriptionEventUpdater) error
+	UniqueRequestID(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) (err error)
 }
 
 // EngineDataSourceFactory is the interface that all pubsub data sources must implement.
@@ -28,7 +30,7 @@ type EngineDataSourceFactory interface {
 	// ResolveDataSourceSubscription returns the engine SubscriptionDataSource implementation
 	// that contains methods to start a subscription, which will be called by the Planner
 	// when a subscription is initiated
-	ResolveDataSourceSubscription() (SubscriptionDataSourceWithConfiguration, error)
+	ResolveDataSourceSubscription() (PubSubSubscriptionDataSource, error)
 	// ResolveDataSourceSubscriptionInput build the input that will be passed to the engine SubscriptionDataSource
 	ResolveDataSourceSubscriptionInput() (string, error)
 	// TransformEventData allows the data source to transform the event data using the extractFn
