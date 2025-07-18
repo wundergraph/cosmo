@@ -6,10 +6,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	rd "github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/redis"
 	"io"
 	"reflect"
 	"sync"
+
+	rd "github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/redis"
 
 	"github.com/expr-lang/expr/vm"
 	"github.com/go-redis/redis_rate/v10"
@@ -28,6 +29,7 @@ type CosmoRateLimiterOptions struct {
 	RejectStatusCode int
 
 	KeySuffixExpression string
+	FailOpen bool
 	ExprManager         *expr.Manager
 }
 
@@ -38,6 +40,7 @@ func NewCosmoRateLimiter(opts *CosmoRateLimiterOptions) (rl *CosmoRateLimiter, e
 		limiter:          limiter,
 		debug:            opts.Debug,
 		rejectStatusCode: opts.RejectStatusCode,
+		failOpen:         opts.FailOpen,
 	}
 	if rl.rejectStatusCode == 0 {
 		rl.rejectStatusCode = 200
@@ -55,10 +58,11 @@ type CosmoRateLimiter struct {
 	client  rd.RDCloser
 	limiter *redis_rate.Limiter
 	debug   bool
-
 	rejectStatusCode int
 
 	keySuffixProgram *vm.Program
+	
+	failOpen bool
 }
 
 func (c *CosmoRateLimiter) RateLimitPreFetch(ctx *resolve.Context, info *resolve.FetchInfo, input json.RawMessage) (result *resolve.RateLimitDeny, err error) {
@@ -72,11 +76,15 @@ func (c *CosmoRateLimiter) RateLimitPreFetch(ctx *resolve.Context, info *resolve
 		Period: ctx.RateLimitOptions.Period,
 	}
 	key, err := c.generateKey(ctx)
-	if err != nil {
+	if err != nil && c.failOpen{
+		return nil, nil
+	} else if err != nil {
 		return nil, err
 	}
 	allow, err := c.limiter.AllowN(ctx.Context(), key, limit, requestRate)
-	if err != nil {
+	if err != nil && c.failOpen{
+		return nil, nil
+	} else if err != nil {
 		return nil, err
 	}
 	c.setRateLimitStats(ctx, key, requestRate, allow.Remaining, allow.RetryAfter.Milliseconds(), allow.ResetAfter.Milliseconds())
