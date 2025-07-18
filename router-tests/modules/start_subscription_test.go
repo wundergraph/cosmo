@@ -269,4 +269,143 @@ func TestStartSubscriptionHook(t *testing.T) {
 			})
 		})
 	})
+
+	t.Run("Test StartSubscription hook is called for engine subscription", func(t *testing.T) {
+		t.Parallel()
+
+		cfg := config.Config{
+			Graph: config.Graph{},
+			Modules: map[string]interface{}{
+				"startSubscriptionModule": start_subscription.StartSubscriptionModule{},
+			},
+		}
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithModulesConfig(cfg.Modules),
+				core.WithCustomModules(&start_subscription.StartSubscriptionModule{}),
+			},
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+
+			var subscriptionCountEmp struct {
+				CountEmp int `graphql:"countEmp(max: $max, intervalMilliseconds: $interval)"`
+			}
+
+			surl := xEnv.GraphQLWebSocketSubscriptionURL()
+			client := graphql.NewSubscriptionClient(surl)
+
+			vars := map[string]interface{}{
+				"max":      1,
+				"interval": 200,
+			}
+			subscriptionOneID, err := client.Subscribe(&subscriptionCountEmp, vars, func(dataValue []byte, errValue error) error {
+				return nil
+			})
+			require.NoError(t, err)
+			require.NotEmpty(t, subscriptionOneID)
+
+			clientRunCh := make(chan error)
+			go func() {
+				clientRunCh <- client.Run()
+			}()
+
+			xEnv.WaitForSubscriptionCount(1, time.Second*10)
+
+			require.NoError(t, client.Close())
+			testenv.AwaitChannelWithT(t, time.Second*10, clientRunCh, func(t *testing.T, err error) {
+				require.NoError(t, err)
+
+			}, "unable to close client before timeout")
+
+			requestLog := xEnv.Observer().FilterMessage("SubscriptionOnStart Hook has been run")
+			assert.Len(t, requestLog.All(), 1)
+		})
+	})
+
+	t.Run("Test StartSubscription hook is called for engine subscription and write event works", func(t *testing.T) {
+		t.Parallel()
+
+		cfg := config.Config{
+			Graph: config.Graph{},
+			Modules: map[string]interface{}{
+				"startSubscriptionModule": start_subscription.StartSubscriptionModule{
+					Callback: func(ctx core.SubscriptionOnStartHookContext) error {
+						ctx.WriteEvent(&core.EngineEvent{
+							Data: []byte(`{"data":{"countEmp":1000}}`),
+						})
+						return nil
+					},
+				},
+			},
+		}
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithModulesConfig(cfg.Modules),
+				core.WithCustomModules(&start_subscription.StartSubscriptionModule{}),
+			},
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+
+			var subscriptionCountEmp struct {
+				CountEmp int `graphql:"countEmp(max: $max, intervalMilliseconds: $interval)"`
+			}
+
+			surl := xEnv.GraphQLWebSocketSubscriptionURL()
+			client := graphql.NewSubscriptionClient(surl)
+
+			vars := map[string]interface{}{
+				"max":      0,
+				"interval": 0,
+			}
+
+			type subscriptionArgs struct {
+				dataValue []byte
+				errValue  error
+			}
+			subscriptionOneArgsCh := make(chan subscriptionArgs)
+			subscriptionOneID, err := client.Subscribe(&subscriptionCountEmp, vars, func(dataValue []byte, errValue error) error {
+				subscriptionOneArgsCh <- subscriptionArgs{
+					dataValue: dataValue,
+					errValue:  errValue,
+				}
+				return nil
+			})
+			require.NoError(t, err)
+			require.NotEmpty(t, subscriptionOneID)
+
+			clientRunCh := make(chan error)
+			go func() {
+				clientRunCh <- client.Run()
+			}()
+
+			xEnv.WaitForSubscriptionCount(1, time.Second*10)
+
+			testenv.AwaitChannelWithT(t, time.Second*10, subscriptionOneArgsCh, func(t *testing.T, args subscriptionArgs) {
+				require.NoError(t, args.errValue)
+				require.JSONEq(t, `{"countEmp": 1000}`, string(args.dataValue))
+			})
+
+			testenv.AwaitChannelWithT(t, time.Second*10, subscriptionOneArgsCh, func(t *testing.T, args subscriptionArgs) {
+				require.NoError(t, args.errValue)
+				require.JSONEq(t, `{"countEmp": 0}`, string(args.dataValue))
+			})
+
+			require.NoError(t, client.Close())
+			testenv.AwaitChannelWithT(t, time.Second*10, clientRunCh, func(t *testing.T, err error) {
+				require.NoError(t, err)
+
+			}, "unable to close client before timeout")
+
+			requestLog := xEnv.Observer().FilterMessage("SubscriptionOnStart Hook has been run")
+			assert.Len(t, requestLog.All(), 1)
+		})
+	})
 }

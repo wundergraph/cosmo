@@ -643,7 +643,7 @@ func (r *Router) initModules(ctx context.Context) error {
 		}
 
 		if handler, ok := moduleInstance.(SubscriptionOnStartHandler); ok {
-			r.startSubscriptionModules = append(r.startSubscriptionModules, handler.SubscriptionOnStart)
+			r.subscriptionHooks.startSubscription = append(r.subscriptionHooks.startSubscription, handler.SubscriptionOnStart)
 		}
 
 		r.modules = append(r.modules, moduleInstance)

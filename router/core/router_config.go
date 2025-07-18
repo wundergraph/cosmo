@@ -25,6 +25,10 @@ import (
 	"go.uber.org/zap"
 )
 
+type subscriptionHooks struct {
+	startSubscription []func(ctx SubscriptionOnStartHookContext) error
+}
+
 type Config struct {
 	clusterName                     string
 	instanceID                      string
@@ -118,7 +122,7 @@ type Config struct {
 	mcp                        config.MCPConfiguration
 	plugins                    config.PluginsConfiguration
 	tracingAttributes          []config.CustomAttribute
-	startSubscriptionModules   []func(ctx SubscriptionOnStartHookContext) error
+	subscriptionHooks          subscriptionHooks
 }
 
 // Usage returns an anonymized version of the config for usage tracking
