@@ -1592,9 +1592,10 @@ export function invalidInterfaceObjectImplementationDefinitionsError(
   implementationTypeNames: Array<string>,
 ): Error {
   return new Error(
-    `The subgraph that defines an entity Interface Object (using "@interfaceObject") must not define any ` +
-      ` implementation types of that interface. However, the subgraph "${subgraphName}" defines the entity Interface` +
-      ` "${typeName}" as an Interface Object alongside the following implementation type` +
+    `The subgraph that defines an entity Interface Object (using "@interfaceObject") must not define any` +
+      ` implementation types of that Interface (unless the resolvable argument of each "@key" directive is set to false).` +
+      ` However, the subgraph "${subgraphName}" defines the entity Interface` +
+      ` "${typeName}" as an Interface Object alongside the following invalid implementation type` +
       (implementationTypeNames.length > 1 ? `s` : ``) +
       ` of "${typeName}":\n "` +
       implementationTypeNames.join(QUOTATION_JOIN) +
