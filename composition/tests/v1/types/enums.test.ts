@@ -2,7 +2,6 @@ import {
   duplicateEnumValueDefinitionError,
   ENUM,
   EnumDefinitionData,
-  federateSubgraphs,
   FederationResultFailure,
   FederationResultSuccess,
   incompatibleSharedEnumError,
@@ -22,7 +21,12 @@ import {
   versionOneRouterDefinitions,
   versionTwoRouterDefinitions,
 } from '../utils/utils';
-import { normalizeString, schemaToSortedNormalizedString } from '../../utils/utils';
+import {
+  federateSubgraphsFailure,
+  federateSubgraphsSuccess,
+  normalizeString,
+  schemaToSortedNormalizedString,
+} from '../../utils/utils';
 
 describe('Enum tests', () => {
   describe('Normalization tests', () => {
@@ -393,7 +397,7 @@ describe('Enum tests', () => {
     const parentName = 'Instruction';
 
     test('that an error is returned if federation results in an Enum extension orphan', () => {
-      const result = federateSubgraphs(
+      const result = federateSubgraphsFailure(
         [subgraphR, subgraphQ],
         ROUTER_COMPATIBILITY_VERSION_ONE,
       ) as FederationResultFailure;
@@ -403,7 +407,7 @@ describe('Enum tests', () => {
     });
 
     test('that an Enum type and extension definition federate successfully #1.1', () => {
-      const result = federateSubgraphs(
+      const result = federateSubgraphsSuccess(
         [subgraphR, subgraphQ, subgraphU],
         ROUTER_COMPATIBILITY_VERSION_ONE,
       ) as FederationResultSuccess;
@@ -426,7 +430,7 @@ describe('Enum tests', () => {
     });
 
     test('that an Enum type and extension definition federate successfully #1.2', () => {
-      const result = federateSubgraphs(
+      const result = federateSubgraphsSuccess(
         [subgraphR, subgraphU, subgraphQ],
         ROUTER_COMPATIBILITY_VERSION_ONE,
       ) as FederationResultSuccess;
@@ -449,7 +453,7 @@ describe('Enum tests', () => {
     });
 
     test('that Enums merge by union if unused in Input Fields or Arguments', () => {
-      const result = federateSubgraphs(
+      const result = federateSubgraphsSuccess(
         [subgraphA, subgraphB],
         ROUTER_COMPATIBILITY_VERSION_ONE,
       ) as FederationResultSuccess;
@@ -476,7 +480,7 @@ describe('Enum tests', () => {
     });
 
     test('that Enums merge by intersection if used as an Input Field', () => {
-      const result = federateSubgraphs(
+      const result = federateSubgraphsSuccess(
         [subgraphA, subgraphC],
         ROUTER_COMPATIBILITY_VERSION_ONE,
       ) as FederationResultSuccess;
@@ -505,7 +509,7 @@ describe('Enum tests', () => {
     });
 
     test('that Enums merge by intersection if used as an Argument', () => {
-      const result = federateSubgraphs(
+      const result = federateSubgraphsSuccess(
         [subgraphA, subgraphF],
         ROUTER_COMPATIBILITY_VERSION_ONE,
       ) as FederationResultSuccess;
@@ -533,7 +537,7 @@ describe('Enum tests', () => {
     });
 
     test('that Enums must be consistent if used as both an input and output', () => {
-      const result = federateSubgraphs(
+      const result = federateSubgraphsSuccess(
         [subgraphC, subgraphD],
         ROUTER_COMPATIBILITY_VERSION_ONE,
       ) as FederationResultSuccess;
@@ -567,7 +571,7 @@ describe('Enum tests', () => {
     });
 
     test('that an error is returned if an inconsistent Enum is used as both input and output', () => {
-      const result = federateSubgraphs(
+      const result = federateSubgraphsFailure(
         [subgraphC, subgraphE],
         ROUTER_COMPATIBILITY_VERSION_ONE,
       ) as FederationResultFailure;
@@ -577,7 +581,7 @@ describe('Enum tests', () => {
     });
 
     test('that declaring an Enum Value as inaccessible prevents an Enum inconsistency error #1.1', () => {
-      const result = federateSubgraphs(
+      const result = federateSubgraphsSuccess(
         [subgraphG, subgraphH],
         ROUTER_COMPATIBILITY_VERSION_ONE,
       ) as FederationResultSuccess;
@@ -620,7 +624,7 @@ describe('Enum tests', () => {
     });
 
     test('that declaring an Enum Value as inaccessible prevents an Enum inconsistency error #1.2', () => {
-      const result = federateSubgraphs(
+      const result = federateSubgraphsSuccess(
         [subgraphH, subgraphG],
         ROUTER_COMPATIBILITY_VERSION_ONE,
       ) as FederationResultSuccess;
@@ -663,7 +667,7 @@ describe('Enum tests', () => {
     });
 
     test('that an Enum has subgraphs data', () => {
-      const result = federateSubgraphs(
+      const result = federateSubgraphsSuccess(
         [subgraphA, subgraphC],
         ROUTER_COMPATIBILITY_VERSION_ONE,
       ) as FederationResultSuccess;

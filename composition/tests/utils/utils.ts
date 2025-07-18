@@ -1,9 +1,13 @@
 import { DocumentNode, GraphQLSchema, lexicographicSortSchema, print } from 'graphql';
 import { printSchemaWithDirectives } from '@graphql-tools/utils';
 import {
+  ContractTagOptions,
   federateSubgraphs,
+  federateSubgraphsContract,
+  federateSubgraphsWithContracts,
   FederationResultFailure,
   FederationResultSuccess,
+  FederationResultWithContractsSuccess,
   NormalizationResultFailure,
   NormalizationResultSuccess,
   normalizeSubgraph,
@@ -45,8 +49,9 @@ export function normalizeSubgraphSuccess(
 export function federateSubgraphsFailure(
   subgraphs: Array<Subgraph>,
   version: SupportedRouterCompatibilityVersion,
+  disableResolvabilityValidation = false,
 ): FederationResultFailure {
-  const result = federateSubgraphs(subgraphs, version);
+  const result = federateSubgraphs({ disableResolvabilityValidation, subgraphs, version });
   expect(result.success, 'federateSubgraphs succeeded when expected to fail').toBe(false);
   return result as FederationResultFailure;
 }
@@ -54,8 +59,41 @@ export function federateSubgraphsFailure(
 export function federateSubgraphsSuccess(
   subgraphs: Array<Subgraph>,
   version: SupportedRouterCompatibilityVersion,
+  disableResolvabilityValidation = false,
 ): FederationResultSuccess {
-  const result = federateSubgraphs(subgraphs, version);
+  const result = federateSubgraphs({ disableResolvabilityValidation, subgraphs, version });
   expect(result.success, 'federateSubgraphs failed when expected to succeed').toBe(true);
   return result as FederationResultSuccess;
+}
+
+export function federateSubgraphsContractSuccess(
+  subgraphs: Array<Subgraph>,
+  contractTagOptions: ContractTagOptions,
+  version: SupportedRouterCompatibilityVersion,
+  disableResolvabilityValidation = false,
+): FederationResultSuccess {
+  const result = federateSubgraphsContract({
+    contractTagOptions,
+    disableResolvabilityValidation,
+    subgraphs,
+    version,
+  });
+  expect(result.success, 'federateSubgraphsContract failed when expected to succeed').toBe(true);
+  return result as FederationResultSuccess;
+}
+
+export function federateSubgraphsWithContractsSuccess(
+  subgraphs: Array<Subgraph>,
+  tagOptionsByContractName: Map<string, ContractTagOptions>,
+  version: SupportedRouterCompatibilityVersion,
+  disableResolvabilityValidation = false,
+): FederationResultWithContractsSuccess {
+  const result = federateSubgraphsWithContracts({
+    disableResolvabilityValidation,
+    subgraphs,
+    tagOptionsByContractName,
+    version,
+  });
+  expect(result.success, 'federateSubgraphsWithContracts failed when expected to succeed').toBe(true);
+  return result as FederationResultWithContractsSuccess;
 }

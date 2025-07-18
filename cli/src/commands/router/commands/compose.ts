@@ -166,6 +166,11 @@ export default (opts: BaseCommandOptions) => {
   command.requiredOption('-i, --input <path-to-input>', 'The yaml file with data about graph and subgraphs.');
   command.option('-o, --out [string]', 'Destination file for the router config.');
   command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
+  command.option(
+    '--disable-resolvability-validation',
+    'This flag will disable the validation for whether all nodes of the federated graph are resolvable. Do NOT use unless troubleshooting.',
+  );
+
   command.action(async (options) => {
     const inputFile = resolve(options.input);
     const inputFileLocation = dirname(inputFile);
@@ -201,6 +206,7 @@ export default (opts: BaseCommandOptions) => {
           definitions: parse(s.sdl),
         };
       }),
+      options.disableResolvabilityValidation,
     );
 
     if (!result.success) {

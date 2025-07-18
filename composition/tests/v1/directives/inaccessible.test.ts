@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import {
   allChildDefinitionsAreInaccessibleError,
-  federateSubgraphs,
   FederationResultFailure,
   FederationResultSuccess,
   FIELD,
@@ -33,10 +32,7 @@ import { Kind } from 'graphql';
 
 describe('@inaccessible tests', () => {
   test('that inaccessible fields are included in client schema but not the router schema', () => {
-    const result = federateSubgraphs(
-      [subgraphA, subgraphB],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
+    const result = federateSubgraphsSuccess([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
       normalizeString(
@@ -74,7 +70,7 @@ describe('@inaccessible tests', () => {
   });
 
   test('that inaccessible fields are still subject to @shareable errors', () => {
-    const result = federateSubgraphs(
+    const result = federateSubgraphsFailure(
       [subgraphA, subgraphC],
       ROUTER_COMPATIBILITY_VERSION_ONE,
     ) as FederationResultFailure;
@@ -102,7 +98,7 @@ describe('@inaccessible tests', () => {
   });
 
   test('that composition is successful if a field is declared @inaccessible in both the interface definition and its implementation,', () => {
-    const result = federateSubgraphs(
+    const result = federateSubgraphsSuccess(
       [subgraphA, subgraphD],
       ROUTER_COMPATIBILITY_VERSION_ONE,
     ) as FederationResultSuccess;
@@ -150,7 +146,7 @@ describe('@inaccessible tests', () => {
   });
 
   test('that composition is successful if a field is declared @inaccessible in the interface but not in the implementation,', () => {
-    const result = federateSubgraphs(
+    const result = federateSubgraphsSuccess(
       [subgraphB, subgraphH],
       ROUTER_COMPATIBILITY_VERSION_ONE,
     ) as FederationResultSuccess;
@@ -227,7 +223,7 @@ describe('@inaccessible tests', () => {
   });
 
   test('that an error is returned if an interface field is @inaccessible but the implementation field is not defined #2,', () => {
-    const result = federateSubgraphs(
+    const result = federateSubgraphsFailure(
       [subgraphF, subgraphG],
       ROUTER_COMPATIBILITY_VERSION_ONE,
     ) as FederationResultFailure;
@@ -251,7 +247,7 @@ describe('@inaccessible tests', () => {
   });
 
   test('that an error is returned if all fields defined on an object are declared @inaccessible', () => {
-    const result = federateSubgraphs(
+    const result = federateSubgraphsFailure(
       [subgraphA, subgraphI],
       ROUTER_COMPATIBILITY_VERSION_ONE,
     ) as FederationResultFailure;
@@ -261,7 +257,7 @@ describe('@inaccessible tests', () => {
   });
 
   test('that an error is returned if all fields defined on an extended object are declared @inaccessible', () => {
-    const result = federateSubgraphs(
+    const result = federateSubgraphsFailure(
       [subgraphA, subgraphJ],
       ROUTER_COMPATIBILITY_VERSION_ONE,
     ) as FederationResultFailure;
@@ -271,7 +267,7 @@ describe('@inaccessible tests', () => {
   });
 
   test('that an error is returned if all fields defined on an interface are declared @inaccessible', () => {
-    const result = federateSubgraphs(
+    const result = federateSubgraphsFailure(
       [subgraphA, subgraphK],
       ROUTER_COMPATIBILITY_VERSION_ONE,
     ) as FederationResultFailure;
@@ -281,7 +277,7 @@ describe('@inaccessible tests', () => {
   });
 
   test('that an error is returned if all fields defined on an extended interface are declared @inaccessible', () => {
-    const result = federateSubgraphs(
+    const result = federateSubgraphsFailure(
       [subgraphA, subgraphL],
       ROUTER_COMPATIBILITY_VERSION_ONE,
     ) as FederationResultFailure;
@@ -291,7 +287,7 @@ describe('@inaccessible tests', () => {
   });
 
   test('that an inaccessible interface without accessible references is removed from the client schema', () => {
-    const result = federateSubgraphs(
+    const result = federateSubgraphsSuccess(
       [subgraphM, subgraphN],
       ROUTER_COMPATIBILITY_VERSION_ONE,
     ) as FederationResultSuccess;
@@ -334,7 +330,7 @@ describe('@inaccessible tests', () => {
   });
 
   test('that an inaccessible object is removed from a union', () => {
-    const result = federateSubgraphs(
+    const result = federateSubgraphsSuccess(
       [subgraphO, subgraphP],
       ROUTER_COMPATIBILITY_VERSION_ONE,
     ) as FederationResultSuccess;
@@ -384,7 +380,7 @@ describe('@inaccessible tests', () => {
   });
 
   test('that the @inaccessible state is propagated to children and arguments', () => {
-    const result = federateSubgraphs(
+    const result = federateSubgraphsSuccess(
       [subgraphP, subgraphQ],
       ROUTER_COMPATIBILITY_VERSION_ONE,
     ) as FederationResultSuccess;
@@ -436,7 +432,7 @@ describe('@inaccessible tests', () => {
   });
 
   test('that the @inaccessible state is propagated across subgraphs #1.1', () => {
-    const result = federateSubgraphs(
+    const result = federateSubgraphsSuccess(
       [subgraphR, subgraphS],
       ROUTER_COMPATIBILITY_VERSION_ONE,
     ) as FederationResultSuccess;
@@ -508,7 +504,7 @@ describe('@inaccessible tests', () => {
   });
 
   test('that @inaccessible fields do not affect resolvability #1.1', () => {
-    const result = federateSubgraphs(
+    const result = federateSubgraphsSuccess(
       [subgraphT, subgraphU],
       ROUTER_COMPATIBILITY_VERSION_ONE,
     ) as FederationResultSuccess;
@@ -553,7 +549,7 @@ describe('@inaccessible tests', () => {
   });
 
   test('that @inaccessible fields do not affect resolvability #1.2', () => {
-    const result = federateSubgraphs(
+    const result = federateSubgraphsSuccess(
       [subgraphU, subgraphT],
       ROUTER_COMPATIBILITY_VERSION_ONE,
     ) as FederationResultSuccess;
@@ -659,7 +655,7 @@ describe('@inaccessible tests', () => {
   });
 
   test('that an error is returned if all members of a union are inaccessible', () => {
-    const result = federateSubgraphs(
+    const result = federateSubgraphsFailure(
       [subgraphX, subgraphP],
       ROUTER_COMPATIBILITY_VERSION_ONE,
     ) as FederationResultFailure;
@@ -671,32 +667,32 @@ describe('@inaccessible tests', () => {
   });
 
   test('that an @inaccessible only needs to be declared on a single field #1.1', () => {
-    const result = federateSubgraphs([subgraphY, subgraphZ, subgraphAA]);
+    const result = federateSubgraphsSuccess([subgraphY, subgraphZ, subgraphAA], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
   });
 
   test('that an @inaccessible only needs to be declared on a single field #1.2', () => {
-    const result = federateSubgraphs([subgraphY, subgraphAA, subgraphZ]);
+    const result = federateSubgraphsSuccess([subgraphY, subgraphAA, subgraphZ], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
   });
 
   test('that an @inaccessible only needs to be declared on a single field #1.3', () => {
-    const result = federateSubgraphs([subgraphZ, subgraphY, subgraphAA]);
+    const result = federateSubgraphsSuccess([subgraphZ, subgraphY, subgraphAA], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
   });
 
   test('that an @inaccessible only needs to be declared on a single field #1.3', () => {
-    const result = federateSubgraphs([subgraphZ, subgraphAA, subgraphY]);
+    const result = federateSubgraphsSuccess([subgraphZ, subgraphAA, subgraphY], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
   });
 
   test('that an @inaccessible only needs to be declared on a single field #1.3', () => {
-    const result = federateSubgraphs([subgraphAA, subgraphY, subgraphZ]);
+    const result = federateSubgraphsSuccess([subgraphAA, subgraphY, subgraphZ], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
   });
 
   test('that an @inaccessible only needs to be declared on a single field #1.3', () => {
-    const result = federateSubgraphs([subgraphAA, subgraphZ, subgraphY]);
+    const result = federateSubgraphsSuccess([subgraphAA, subgraphZ, subgraphY], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
   });
 

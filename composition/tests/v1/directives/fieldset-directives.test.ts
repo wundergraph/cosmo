@@ -4,8 +4,6 @@ import {
   argumentsInKeyFieldSetErrorMessage,
   ConfigurationData,
   duplicateFieldInFieldSetErrorMessage,
-  federateSubgraphs,
-  FederationResultSuccess,
   FIRST_ORDINAL,
   INTERFACE,
   invalidDirectiveError,
@@ -36,7 +34,12 @@ import {
   unparsableFieldSetErrorMessage,
 } from '../../../src';
 import { schemaQueryDefinition, versionTwoDirectiveDefinitions } from '../utils/utils';
-import { normalizeString, normalizeSubgraphSuccess, schemaToSortedNormalizedString } from '../../utils/utils';
+import {
+  federateSubgraphsSuccess,
+  normalizeString,
+  normalizeSubgraphSuccess,
+  schemaToSortedNormalizedString,
+} from '../../utils/utils';
 
 describe('openfed_FieldSet tests', () => {
   describe('@key FieldSets', () => {
@@ -967,10 +970,7 @@ describe('openfed_FieldSet tests', () => {
 
   describe('Router configuration tests', () => {
     test('that a field that forms part of a @requires field set cannot be used as an implicit key', () => {
-      const result = federateSubgraphs(
-        [subgraphD, subgraphE],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphD, subgraphE], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       const d = result.subgraphConfigBySubgraphName.get(subgraphD.name);
       expect(d!.configurationDataByTypeName).toStrictEqual(
@@ -1076,10 +1076,7 @@ describe('openfed_FieldSet tests', () => {
     });
 
     test('that non-external v1 fields that form part of a @requires field set are treated as non-conditional but return a warning', () => {
-      const result = federateSubgraphs(
-        [subgraphE, subgraphF],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphE, subgraphF], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(1);
       expect(result.warnings[0]).toStrictEqual(
@@ -1194,10 +1191,7 @@ describe('openfed_FieldSet tests', () => {
     });
 
     test('that non-external v1 fields that form part of a @provides field set are treated as non-conditional but return a warning', () => {
-      const result = federateSubgraphs(
-        [subgraphE, subgraphG],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphE, subgraphG], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(1);
       expect(result.warnings[0]).toStrictEqual(

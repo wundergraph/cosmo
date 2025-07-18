@@ -2,9 +2,6 @@ import { describe, expect, test } from 'vitest';
 import {
   ConfigurationData,
   duplicateFieldDefinitionError,
-  federateSubgraphs,
-  FederationResultFailure,
-  FederationResultSuccess,
   FieldData,
   InputObjectDefinitionData,
   invalidNamedTypeError,
@@ -26,7 +23,13 @@ import {
   versionOneRouterDefinitions,
   versionTwoRouterDefinitions,
 } from '../utils/utils';
-import { normalizeString, normalizeSubgraphFailure, schemaToSortedNormalizedString } from '../../utils/utils';
+import {
+  federateSubgraphsFailure,
+  federateSubgraphsSuccess,
+  normalizeString,
+  normalizeSubgraphFailure,
+  schemaToSortedNormalizedString,
+} from '../../utils/utils';
 import { Kind } from 'graphql';
 
 describe('Object tests', () => {
@@ -459,10 +462,7 @@ describe('Object tests', () => {
 
   describe('Federation tests', () => {
     test('that an Object type and extension definition federate successfully #1.1', () => {
-      const result = federateSubgraphs(
-        [subgraphI, subgraphJ, subgraphM],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphI, subgraphJ, subgraphM], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -482,10 +482,7 @@ describe('Object tests', () => {
     });
 
     test('that an Object type and extension definition federate successfully #1.2', () => {
-      const result = federateSubgraphs(
-        [subgraphI, subgraphM, subgraphJ],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphI, subgraphM, subgraphJ], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -505,20 +502,14 @@ describe('Object tests', () => {
     });
 
     test('that an error is returned if federation results in an Object extension orphan', () => {
-      const result = federateSubgraphs(
-        [subgraphI, subgraphJ],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultFailure;
+      const result = federateSubgraphsFailure([subgraphI, subgraphJ], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(noBaseDefinitionForExtensionError(OBJECT, OBJECT));
     });
 
     test('that a V1 Object with @extends directive federates with a base definition #1.1', () => {
-      const result = federateSubgraphs(
-        [subgraphI, subgraphK, subgraphM],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphI, subgraphK, subgraphM], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -538,10 +529,7 @@ describe('Object tests', () => {
     });
 
     test('that a V1 Object with @extends directive federates with a base definition #1.2', () => {
-      const result = federateSubgraphs(
-        [subgraphI, subgraphM, subgraphK],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphI, subgraphM, subgraphK], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -561,40 +549,28 @@ describe('Object tests', () => {
     });
 
     test('that an error is returned if federation results in a V1 Object with @extends directive orphan #1', () => {
-      const result = federateSubgraphs(
-        [subgraphI, subgraphK],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultFailure;
+      const result = federateSubgraphsFailure([subgraphI, subgraphK], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(noBaseDefinitionForExtensionError(OBJECT, OBJECT));
     });
 
     test('that an error is returned if federation results in a V1 Object with @extends directive orphan #2.1', () => {
-      const result = federateSubgraphs(
-        [subgraphI, subgraphJ, subgraphK],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultFailure;
+      const result = federateSubgraphsFailure([subgraphI, subgraphJ, subgraphK], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(noBaseDefinitionForExtensionError(OBJECT, OBJECT));
     });
 
     test('that an error is returned if federation results in a V1 Object with @extends directive orphan #2.2', () => {
-      const result = federateSubgraphs(
-        [subgraphI, subgraphK, subgraphJ],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultFailure;
+      const result = federateSubgraphsFailure([subgraphI, subgraphK, subgraphJ], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(noBaseDefinitionForExtensionError(OBJECT, OBJECT));
     });
 
     test('that a V2 Object @extends directive orphan is valid #1', () => {
-      const result = federateSubgraphs(
-        [subgraphI, subgraphL],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphI, subgraphL], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -615,10 +591,7 @@ describe('Object tests', () => {
     });
 
     test('that a V2 Object @extends directive orphan is valid with another base type #1.1', () => {
-      const result = federateSubgraphs(
-        [subgraphI, subgraphL, subgraphM],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphI, subgraphL, subgraphM], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -640,10 +613,7 @@ describe('Object tests', () => {
     });
 
     test('that a V2 Object @extends directive orphan is valid with another base type #1.2', () => {
-      const result = federateSubgraphs(
-        [subgraphI, subgraphL, subgraphM],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphI, subgraphL, subgraphM], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -665,10 +635,7 @@ describe('Object tests', () => {
     });
 
     test('that a V2 Object @extends directive orphan is valid with another extension #1.1', () => {
-      const result = federateSubgraphs(
-        [subgraphI, subgraphJ, subgraphL],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphI, subgraphJ, subgraphL], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -689,10 +656,7 @@ describe('Object tests', () => {
     });
 
     test('that a V2 Object @extends directive orphan is valid with another extension #1.2', () => {
-      const result = federateSubgraphs(
-        [subgraphI, subgraphL, subgraphJ],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphI, subgraphL, subgraphJ], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
