@@ -230,29 +230,116 @@ enum UserRole {
 }
 ```
 
-## Nested List Types
+## List Types
 
-For nested lists in GraphQL (e.g., `[[Type]]`), Protographic creates a wrapper message:
+Protographic handles GraphQL list nullability by creating wrapper messages when needed, since Protocol Buffers doesn't natively support nullable lists or nested list structures.
+
+### Core Concepts
+
+- **Non-nullable single-level lists**: Use the `repeated` keyword directly
+- **Nullable lists**: Wrapped in `ListOf{Type}` messages 
+- **Nested lists**: Always use wrapper messages with multiple `ListOf` prefixes based on nesting level (e.g., `ListOfListOfString`)
+- **Nullable list items**: Currently ignored (no wrapper generated for item nullability)
+
+### Non-Nullable Single Lists
+Non-nullable lists use `repeated` fields directly:
 
 ```graphql
-type Matrix {
-  values: [[Int!]!]!
+type User {
+  tags: [String!]!
 }
 ```
 
 Maps to:
 
 ```protobuf
-message IntList {
-  repeated int32 result = 1;
-}
-
-message Matrix {
-  repeated IntList values = 1;
+message User {
+  repeated string tags = 1;
 }
 ```
 
-This approach is used for any nested list, regardless of the depth of nesting. For complex nested types, wrapper messages are created automatically with the naming convention of `{BaseType}List`.
+### Nullable Single Lists
+
+Nullable lists require wrapper messages:
+
+```graphql
+type User {
+  optionalTags: [String]
+}
+```
+
+Maps to:
+
+```protobuf
+message ListOfString {
+  repeated string items = 1;
+}
+
+message User {
+  ListOfString optional_tags = 1;
+}
+```
+
+### Non-Nullable Nested Lists
+
+Non-nullable nested lists always use wrapper messages to preserve inner list nullability:
+
+```graphql
+type User {
+  categories: [[String!]!]!
+}
+```
+
+Maps to:
+
+```protobuf
+message ListOfString {
+  repeated string items = 1;
+}
+
+message ListOfListOfString {
+  message List {
+    repeated ListOfString items = 1;
+  }
+  List list = 1;
+}
+
+message User {
+  ListOfListOfString categories = 1;
+}
+```
+
+### Nullable Nested Lists
+
+Nullable nested lists use nested wrapper messages:
+
+```graphql
+type User {
+  posts: [[String]]
+}
+```
+
+Maps to:
+
+```protobuf
+message ListOfString {
+  repeated string items = 1;
+}
+
+message ListOfListOfString {
+  message List {
+    repeated ListOfString items = 1;
+  }
+  List list = 1;
+}
+
+message User {
+  ListOfListOfString posts = 1;
+}
+```
+
+
+
 
 ## Field Numbering and Stability
 

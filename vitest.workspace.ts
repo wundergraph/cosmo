@@ -1,1 +1,1 @@
-export default ['controlplane', 'shared', 'cli', 'composition'];
+export default ['controlplane', 'shared', 'cli', 'composition', 'protographic'];
