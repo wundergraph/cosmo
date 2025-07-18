@@ -1219,4 +1219,793 @@ describe('SDL to Proto Lists', () => {
       }"
     `);
   });
+
+  it('should correctly generate protobuf for recursive types with lists', () => {
+    const sdl = `
+        type User {
+            id: ID!
+            name: String!
+            friends: [User!]!
+            optionalFriends: [User]
+            nestedFriendGroups: [[User!]!]!
+            optionalNestedFriendGroups: [[User]]
+        }
+
+        type Comment {
+            id: ID!
+            content: String!
+            author: User!
+            replies: [Comment!]!
+            optionalReplies: [Comment]
+            nestedReplies: [[Comment!]!]!
+        }
+
+        type Category {
+            id: ID!
+            name: String!
+            parent: Category
+            children: [Category!]!
+            optionalChildren: [Category]
+            subCategories: [[Category!]!]!
+            relatedCategories: [Category]
+        }
+
+        type Query {
+            getUser: User!
+            getComment: Comment!
+            getCategory: Category!
+        }`;
+
+    const { proto: protoText } = compileGraphQLToProto(sdl);
+
+    expectValidProto(protoText);
+
+    expect(protoText).toMatchInlineSnapshot(`
+      "syntax = "proto3";
+      package service.v1;
+
+      // Service definition for DefaultService
+      service DefaultService {
+        rpc QueryGetCategory(QueryGetCategoryRequest) returns (QueryGetCategoryResponse) {}
+        rpc QueryGetComment(QueryGetCommentRequest) returns (QueryGetCommentResponse) {}
+        rpc QueryGetUser(QueryGetUserRequest) returns (QueryGetUserResponse) {}
+      }
+
+      // Wrapper message for a list of Category.
+      message ListOfCategory {
+        repeated Category items = 1;
+      }
+
+      // Wrapper message for a list of Comment.
+      message ListOfComment {
+        repeated Comment items = 1;
+      }
+
+      // Wrapper message for a list of Category.
+      message ListOfListOfCategory {
+        message List {
+          repeated ListOfCategory items = 1;
+        }
+        List list = 1;
+      }
+
+      // Wrapper message for a list of Comment.
+      message ListOfListOfComment {
+        message List {
+          repeated ListOfComment items = 1;
+        }
+        List list = 1;
+      }
+
+      // Wrapper message for a list of User.
+      message ListOfListOfUser {
+        message List {
+          repeated ListOfUser items = 1;
+        }
+        List list = 1;
+      }
+
+      // Wrapper message for a list of User.
+      message ListOfUser {
+        repeated User items = 1;
+      }
+
+      // Request message for getUser operation.
+      message QueryGetUserRequest {
+      }
+      // Response message for getUser operation.
+      message QueryGetUserResponse {
+        User get_user = 1;
+      }
+      // Request message for getComment operation.
+      message QueryGetCommentRequest {
+      }
+      // Response message for getComment operation.
+      message QueryGetCommentResponse {
+        Comment get_comment = 1;
+      }
+      // Request message for getCategory operation.
+      message QueryGetCategoryRequest {
+      }
+      // Response message for getCategory operation.
+      message QueryGetCategoryResponse {
+        Category get_category = 1;
+      }
+
+      message User {
+        string id = 1;
+        string name = 2;
+        repeated User friends = 3;
+        ListOfUser optional_friends = 4;
+        ListOfListOfUser nested_friend_groups = 5;
+        ListOfListOfUser optional_nested_friend_groups = 6;
+      }
+
+      message Comment {
+        string id = 1;
+        string content = 2;
+        User author = 3;
+        repeated Comment replies = 4;
+        ListOfComment optional_replies = 5;
+        ListOfListOfComment nested_replies = 6;
+      }
+
+      message Category {
+        string id = 1;
+        string name = 2;
+        Category parent = 3;
+        repeated Category children = 4;
+        ListOfCategory optional_children = 5;
+        ListOfListOfCategory sub_categories = 6;
+        ListOfCategory related_categories = 7;
+      }"
+    `);
+  });
+
+  it('should correctly generate protobuf for complex input types with lists', () => {
+    const sdl = `
+        input TagInput {
+            name: String!
+            weight: Float
+        }
+
+        input UserFilterInput {
+            ids: [ID!]
+            optionalIds: [ID]
+            tags: [TagInput!]!
+            optionalTags: [TagInput]
+            nestedTags: [[TagInput!]!]!
+            optionalNestedTags: [[TagInput]]
+            names: [String!]
+            scores: [Int]
+            ratings: [Float!]
+        }
+
+        input SortInput {
+            field: String!
+            direction: String!
+        }
+
+        input PaginationInput {
+            limit: Int
+            offset: Int
+        }
+
+        input SearchInput {
+            query: String!
+            filters: [UserFilterInput!]!
+            optionalFilters: [UserFilterInput]
+            nestedFilters: [[UserFilterInput!]!]!
+            sorts: [SortInput!]
+            pagination: PaginationInput
+        }
+
+        type User {
+            id: ID!
+            name: String!
+            tags: [String!]!
+        }
+
+        type SearchResult {
+            users: [User!]!
+            total: Int!
+        }
+
+        type Query {
+            searchUsers(input: SearchInput!): SearchResult!
+        }
+
+        type Mutation {
+            updateUsers(updates: [UserFilterInput!]!): [User!]!
+            bulkSearch(searches: [SearchInput!]!): [SearchResult!]!
+        }`;
+
+    const { proto: protoText } = compileGraphQLToProto(sdl);
+
+    expectValidProto(protoText);
+
+    expect(protoText).toMatchInlineSnapshot(`
+      "syntax = "proto3";
+      package service.v1;
+
+      import "google/protobuf/wrappers.proto";
+
+      // Service definition for DefaultService
+      service DefaultService {
+        rpc MutationBulkSearch(MutationBulkSearchRequest) returns (MutationBulkSearchResponse) {}
+        rpc MutationUpdateUsers(MutationUpdateUsersRequest) returns (MutationUpdateUsersResponse) {}
+        rpc QuerySearchUsers(QuerySearchUsersRequest) returns (QuerySearchUsersResponse) {}
+      }
+
+      // Wrapper message for a list of Float.
+      message ListOfFloat {
+        repeated double items = 1;
+      }
+
+      // Wrapper message for a list of ID.
+      message ListOfID {
+        repeated string items = 1;
+      }
+
+      // Wrapper message for a list of Int.
+      message ListOfInt {
+        repeated int32 items = 1;
+      }
+
+      // Wrapper message for a list of TagInput.
+      message ListOfListOfTagInput {
+        message List {
+          repeated ListOfTagInput items = 1;
+        }
+        List list = 1;
+      }
+
+      // Wrapper message for a list of UserFilterInput.
+      message ListOfListOfUserFilterInput {
+        message List {
+          repeated ListOfUserFilterInput items = 1;
+        }
+        List list = 1;
+      }
+
+      // Wrapper message for a list of SortInput.
+      message ListOfSortInput {
+        repeated SortInput items = 1;
+      }
+
+      // Wrapper message for a list of String.
+      message ListOfString {
+        repeated string items = 1;
+      }
+
+      // Wrapper message for a list of TagInput.
+      message ListOfTagInput {
+        repeated TagInput items = 1;
+      }
+
+      // Wrapper message for a list of UserFilterInput.
+      message ListOfUserFilterInput {
+        repeated UserFilterInput items = 1;
+      }
+
+      // Request message for searchUsers operation.
+      message QuerySearchUsersRequest {
+        SearchInput input = 1;
+      }
+      // Response message for searchUsers operation.
+      message QuerySearchUsersResponse {
+        SearchResult search_users = 1;
+      }
+      // Request message for updateUsers operation.
+      message MutationUpdateUsersRequest {
+        repeated UserFilterInput updates = 1;
+      }
+      // Response message for updateUsers operation.
+      message MutationUpdateUsersResponse {
+        repeated User update_users = 1;
+      }
+      // Request message for bulkSearch operation.
+      message MutationBulkSearchRequest {
+        repeated SearchInput searches = 1;
+      }
+      // Response message for bulkSearch operation.
+      message MutationBulkSearchResponse {
+        repeated SearchResult bulk_search = 1;
+      }
+
+      message SearchInput {
+        string query = 1;
+        repeated UserFilterInput filters = 2;
+        ListOfUserFilterInput optional_filters = 3;
+        ListOfListOfUserFilterInput nested_filters = 4;
+        ListOfSortInput sorts = 5;
+        PaginationInput pagination = 6;
+      }
+
+      message SearchResult {
+        repeated User users = 1;
+        int32 total = 2;
+      }
+
+      message UserFilterInput {
+        ListOfID ids = 1;
+        ListOfID optional_ids = 2;
+        repeated TagInput tags = 3;
+        ListOfTagInput optional_tags = 4;
+        ListOfListOfTagInput nested_tags = 5;
+        ListOfListOfTagInput optional_nested_tags = 6;
+        ListOfString names = 7;
+        ListOfInt scores = 8;
+        ListOfFloat ratings = 9;
+      }
+
+      message User {
+        string id = 1;
+        string name = 2;
+        repeated string tags = 3;
+      }
+
+      message TagInput {
+        string name = 1;
+        google.protobuf.DoubleValue weight = 2;
+      }
+
+      message SortInput {
+        string field = 1;
+        string direction = 2;
+      }
+
+      message PaginationInput {
+        google.protobuf.Int32Value limit = 1;
+        google.protobuf.Int32Value offset = 2;
+      }"
+    `);
+  });
+
+  it('should correctly generate protobuf for recursive input types', () => {
+    const sdl = `
+        input CategoryInput {
+            id: ID!
+            name: String!
+            parentId: ID
+            children: [CategoryInput!]
+            optionalChildren: [CategoryInput]
+            nestedChildren: [[CategoryInput!]!]
+        }
+
+        input CommentInput {
+            id: ID!
+            content: String!
+            authorId: ID!
+            replies: [CommentInput!]!
+            optionalReplies: [CommentInput]
+            nestedReplies: [[CommentInput!]!]!
+        }
+
+        input FilterNodeInput {
+            field: String!
+            value: String!
+            operator: String!
+            children: [FilterNodeInput!]
+            optionalChildren: [FilterNodeInput]
+            andConditions: [[FilterNodeInput!]!]
+            orConditions: [[FilterNodeInput]]
+        }
+
+        type Category {
+            id: ID!
+            name: String!
+        }
+
+        type Comment {
+            id: ID!
+            content: String!
+        }
+
+        type FilterResult {
+            matched: Boolean!
+            count: Int!
+        }
+
+        type Query {
+            getCategory: Category!
+        }
+
+        type Mutation {
+            createCategory(input: CategoryInput!): Category!
+            createCategories(inputs: [CategoryInput!]!): [Category!]!
+            createComment(input: CommentInput!): Comment!
+            createComments(inputs: [CommentInput!]!): [Comment!]!
+            applyFilter(filter: FilterNodeInput!): FilterResult!
+            applyFilters(filters: [FilterNodeInput!]!): [FilterResult!]!
+            complexFilter(filters: [[FilterNodeInput!]!]!): FilterResult!
+        }`;
+
+    const { proto: protoText } = compileGraphQLToProto(sdl);
+
+    expectValidProto(protoText);
+
+    expect(protoText).toMatchInlineSnapshot(`
+      "syntax = "proto3";
+      package service.v1;
+
+      import "google/protobuf/wrappers.proto";
+
+      // Service definition for DefaultService
+      service DefaultService {
+        rpc MutationApplyFilter(MutationApplyFilterRequest) returns (MutationApplyFilterResponse) {}
+        rpc MutationApplyFilters(MutationApplyFiltersRequest) returns (MutationApplyFiltersResponse) {}
+        rpc MutationComplexFilter(MutationComplexFilterRequest) returns (MutationComplexFilterResponse) {}
+        rpc MutationCreateCategories(MutationCreateCategoriesRequest) returns (MutationCreateCategoriesResponse) {}
+        rpc MutationCreateCategory(MutationCreateCategoryRequest) returns (MutationCreateCategoryResponse) {}
+        rpc MutationCreateComment(MutationCreateCommentRequest) returns (MutationCreateCommentResponse) {}
+        rpc MutationCreateComments(MutationCreateCommentsRequest) returns (MutationCreateCommentsResponse) {}
+        rpc QueryGetCategory(QueryGetCategoryRequest) returns (QueryGetCategoryResponse) {}
+      }
+
+      // Wrapper message for a list of CategoryInput.
+      message ListOfCategoryInput {
+        repeated CategoryInput items = 1;
+      }
+
+      // Wrapper message for a list of CommentInput.
+      message ListOfCommentInput {
+        repeated CommentInput items = 1;
+      }
+
+      // Wrapper message for a list of FilterNodeInput.
+      message ListOfFilterNodeInput {
+        repeated FilterNodeInput items = 1;
+      }
+
+      // Wrapper message for a list of CategoryInput.
+      message ListOfListOfCategoryInput {
+        message List {
+          repeated ListOfCategoryInput items = 1;
+        }
+        List list = 1;
+      }
+
+      // Wrapper message for a list of CommentInput.
+      message ListOfListOfCommentInput {
+        message List {
+          repeated ListOfCommentInput items = 1;
+        }
+        List list = 1;
+      }
+
+      // Wrapper message for a list of FilterNodeInput.
+      message ListOfListOfFilterNodeInput {
+        message List {
+          repeated ListOfFilterNodeInput items = 1;
+        }
+        List list = 1;
+      }
+
+      // Request message for getCategory operation.
+      message QueryGetCategoryRequest {
+      }
+      // Response message for getCategory operation.
+      message QueryGetCategoryResponse {
+        Category get_category = 1;
+      }
+      // Request message for createCategory operation.
+      message MutationCreateCategoryRequest {
+        CategoryInput input = 1;
+      }
+      // Response message for createCategory operation.
+      message MutationCreateCategoryResponse {
+        Category create_category = 1;
+      }
+      // Request message for createCategories operation.
+      message MutationCreateCategoriesRequest {
+        repeated CategoryInput inputs = 1;
+      }
+      // Response message for createCategories operation.
+      message MutationCreateCategoriesResponse {
+        repeated Category create_categories = 1;
+      }
+      // Request message for createComment operation.
+      message MutationCreateCommentRequest {
+        CommentInput input = 1;
+      }
+      // Response message for createComment operation.
+      message MutationCreateCommentResponse {
+        Comment create_comment = 1;
+      }
+      // Request message for createComments operation.
+      message MutationCreateCommentsRequest {
+        repeated CommentInput inputs = 1;
+      }
+      // Response message for createComments operation.
+      message MutationCreateCommentsResponse {
+        repeated Comment create_comments = 1;
+      }
+      // Request message for applyFilter operation.
+      message MutationApplyFilterRequest {
+        FilterNodeInput filter = 1;
+      }
+      // Response message for applyFilter operation.
+      message MutationApplyFilterResponse {
+        FilterResult apply_filter = 1;
+      }
+      // Request message for applyFilters operation.
+      message MutationApplyFiltersRequest {
+        repeated FilterNodeInput filters = 1;
+      }
+      // Response message for applyFilters operation.
+      message MutationApplyFiltersResponse {
+        repeated FilterResult apply_filters = 1;
+      }
+      // Request message for complexFilter operation.
+      message MutationComplexFilterRequest {
+        ListOfListOfFilterNodeInput filters = 1;
+      }
+      // Response message for complexFilter operation.
+      message MutationComplexFilterResponse {
+        FilterResult complex_filter = 1;
+      }
+
+      message Category {
+        string id = 1;
+        string name = 2;
+      }
+
+      message CategoryInput {
+        string id = 1;
+        string name = 2;
+        google.protobuf.StringValue parent_id = 3;
+        ListOfCategoryInput children = 4;
+        ListOfCategoryInput optional_children = 5;
+        ListOfListOfCategoryInput nested_children = 6;
+      }
+
+      message CommentInput {
+        string id = 1;
+        string content = 2;
+        string author_id = 3;
+        repeated CommentInput replies = 4;
+        ListOfCommentInput optional_replies = 5;
+        ListOfListOfCommentInput nested_replies = 6;
+      }
+
+      message Comment {
+        string id = 1;
+        string content = 2;
+      }
+
+      message FilterNodeInput {
+        string field = 1;
+        string value = 2;
+        string operator = 3;
+        ListOfFilterNodeInput children = 4;
+        ListOfFilterNodeInput optional_children = 5;
+        ListOfListOfFilterNodeInput and_conditions = 6;
+        ListOfListOfFilterNodeInput or_conditions = 7;
+      }
+
+      message FilterResult {
+        bool matched = 1;
+        int32 count = 2;
+      }"
+    `);
+  });
+
+  it('should correctly generate protobuf for mixed recursive and non-recursive types with complex list nesting', () => {
+    const sdl = `
+        enum Status {
+            ACTIVE
+            INACTIVE
+            PENDING
+        }
+
+        scalar DateTime
+
+        input MetadataInput {
+            key: String!
+            value: String!
+            tags: [String!]
+            nestedData: [MetadataInput]
+        }
+
+        input TreeNodeInput {
+            id: ID!
+            value: String!
+            status: Status!
+            metadata: [MetadataInput!]
+            children: [TreeNodeInput!]
+            optionalChildren: [TreeNodeInput]
+            nestedChildren: [[TreeNodeInput!]!]
+            siblingGroups: [[[TreeNodeInput]]]
+        }
+
+        type TreeNode {
+            id: ID!
+            value: String!
+            status: Status!
+            children: [TreeNode!]!
+            optionalChildren: [TreeNode]
+            nestedChildren: [[TreeNode!]!]!
+            parent: TreeNode
+            ancestors: [TreeNode!]!
+            descendants: [[TreeNode]]
+        }
+
+        type ProcessingResult {
+            nodes: [TreeNode!]!
+            errors: [String]
+            warnings: [[String]]
+            metadata: [String!]!
+        }
+
+        type Query {
+            getTree: TreeNode!
+        }
+
+        type Mutation {
+            processTree(input: TreeNodeInput!): ProcessingResult!
+            processTrees(inputs: [TreeNodeInput!]!): [ProcessingResult!]!
+            bulkProcess(batches: [[TreeNodeInput!]!]!): ProcessingResult!
+            complexProcess(data: [[[TreeNodeInput]]]!): [ProcessingResult]
+        }`;
+
+    const { proto: protoText } = compileGraphQLToProto(sdl);
+
+    expectValidProto(protoText);
+
+    expect(protoText).toMatchInlineSnapshot(`
+      "syntax = "proto3";
+      package service.v1;
+
+      // Service definition for DefaultService
+      service DefaultService {
+        rpc MutationBulkProcess(MutationBulkProcessRequest) returns (MutationBulkProcessResponse) {}
+        rpc MutationComplexProcess(MutationComplexProcessRequest) returns (MutationComplexProcessResponse) {}
+        rpc MutationProcessTree(MutationProcessTreeRequest) returns (MutationProcessTreeResponse) {}
+        rpc MutationProcessTrees(MutationProcessTreesRequest) returns (MutationProcessTreesResponse) {}
+        rpc QueryGetTree(QueryGetTreeRequest) returns (QueryGetTreeResponse) {}
+      }
+
+      // Wrapper message for a list of TreeNodeInput.
+      message ListOfListOfListOfTreeNodeInput {
+        message List {
+          repeated ListOfListOfTreeNodeInput items = 1;
+        }
+        List list = 1;
+      }
+
+      // Wrapper message for a list of String.
+      message ListOfListOfString {
+        message List {
+          repeated ListOfString items = 1;
+        }
+        List list = 1;
+      }
+
+      // Wrapper message for a list of TreeNode.
+      message ListOfListOfTreeNode {
+        message List {
+          repeated ListOfTreeNode items = 1;
+        }
+        List list = 1;
+      }
+
+      // Wrapper message for a list of TreeNodeInput.
+      message ListOfListOfTreeNodeInput {
+        message List {
+          repeated ListOfTreeNodeInput items = 1;
+        }
+        List list = 1;
+      }
+
+      // Wrapper message for a list of MetadataInput.
+      message ListOfMetadataInput {
+        repeated MetadataInput items = 1;
+      }
+
+      // Wrapper message for a list of ProcessingResult.
+      message ListOfProcessingResult {
+        repeated ProcessingResult items = 1;
+      }
+
+      // Wrapper message for a list of String.
+      message ListOfString {
+        repeated string items = 1;
+      }
+
+      // Wrapper message for a list of TreeNode.
+      message ListOfTreeNode {
+        repeated TreeNode items = 1;
+      }
+
+      // Wrapper message for a list of TreeNodeInput.
+      message ListOfTreeNodeInput {
+        repeated TreeNodeInput items = 1;
+      }
+
+      // Request message for getTree operation.
+      message QueryGetTreeRequest {
+      }
+      // Response message for getTree operation.
+      message QueryGetTreeResponse {
+        TreeNode get_tree = 1;
+      }
+      // Request message for processTree operation.
+      message MutationProcessTreeRequest {
+        TreeNodeInput input = 1;
+      }
+      // Response message for processTree operation.
+      message MutationProcessTreeResponse {
+        ProcessingResult process_tree = 1;
+      }
+      // Request message for processTrees operation.
+      message MutationProcessTreesRequest {
+        repeated TreeNodeInput inputs = 1;
+      }
+      // Response message for processTrees operation.
+      message MutationProcessTreesResponse {
+        repeated ProcessingResult process_trees = 1;
+      }
+      // Request message for bulkProcess operation.
+      message MutationBulkProcessRequest {
+        ListOfListOfTreeNodeInput batches = 1;
+      }
+      // Response message for bulkProcess operation.
+      message MutationBulkProcessResponse {
+        ProcessingResult bulk_process = 1;
+      }
+      // Request message for complexProcess operation.
+      message MutationComplexProcessRequest {
+        ListOfListOfListOfTreeNodeInput data = 1;
+      }
+      // Response message for complexProcess operation.
+      message MutationComplexProcessResponse {
+        ListOfProcessingResult complex_process = 1;
+      }
+
+      message TreeNode {
+        string id = 1;
+        string value = 2;
+        Status status = 3;
+        repeated TreeNode children = 4;
+        ListOfTreeNode optional_children = 5;
+        ListOfListOfTreeNode nested_children = 6;
+        TreeNode parent = 7;
+        repeated TreeNode ancestors = 8;
+        ListOfListOfTreeNode descendants = 9;
+      }
+
+      message TreeNodeInput {
+        string id = 1;
+        string value = 2;
+        Status status = 3;
+        ListOfMetadataInput metadata = 4;
+        ListOfTreeNodeInput children = 5;
+        ListOfTreeNodeInput optional_children = 6;
+        ListOfListOfTreeNodeInput nested_children = 7;
+        ListOfListOfListOfTreeNodeInput sibling_groups = 8;
+      }
+
+      message ProcessingResult {
+        repeated TreeNode nodes = 1;
+        ListOfString errors = 2;
+        ListOfListOfString warnings = 3;
+        repeated string metadata = 4;
+      }
+
+      enum Status {
+        STATUS_UNSPECIFIED = 0;
+        STATUS_ACTIVE = 1;
+        STATUS_INACTIVE = 2;
+        STATUS_PENDING = 3;
+      }
+
+      message MetadataInput {
+        string key = 1;
+        string value = 2;
+        ListOfString tags = 3;
+        ListOfMetadataInput nested_data = 4;
+      }"
+    `);
+  });
 });

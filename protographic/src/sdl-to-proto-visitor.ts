@@ -1602,13 +1602,14 @@ Example:
         formatIndent(1, `message List {`),
         formatIndent(2, `repeated ${innerWrapperName} items = 1;`),
         formatIndent(1, `}`),
-        formatIndent(1, `List list = 1;`),
       );
+      
+      // Wrapper types always use deterministic field numbers - 'list' field is always 1
+      lines.push(formatIndent(1, `List list = 1;`));
     } else {
-      // Simple repeated field for level 1
-      const fieldNumber = this.getFieldNumber(wrapperName, 'items', 1);
+      // Simple repeated field for level 1 - 'items' field is always 1
       const protoType = this.getProtoTypeFromGraphQL(baseType, true);
-      lines.push(formatIndent(1, `repeated ${protoType.typeName} items = ${fieldNumber};`));
+      lines.push(formatIndent(1, `repeated ${protoType.typeName} items = 1;`));
     }
 
     lines.push('}', '');
