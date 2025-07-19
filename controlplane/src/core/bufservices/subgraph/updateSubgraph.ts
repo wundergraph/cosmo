@@ -15,10 +15,10 @@ import {
   getLogger,
   handleError,
   isValidLabels,
+  newCompositionOptions,
 } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { UnauthorizedError } from '../../errors/errors.js';
-import { newCompositionOptions } from '../../../utils/utils.js';
 
 export function updateSubgraph(
   opts: RouterOptions,

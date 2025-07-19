@@ -9,7 +9,7 @@ import {
   CompositionWarning,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { GraphQLSchema, parse } from 'graphql';
-import { CompositionOptions, SchemaGraphPruningIssues, SchemaLintIssues } from '../../../types/index.js';
+import { SchemaGraphPruningIssues, SchemaLintIssues } from '../../../types/index.js';
 import { CheckSubgraph, Composer } from '../../composition/composer.js';
 import { buildSchema } from '../../composition/composition.js';
 import { getDiffBetweenGraphs } from '../../composition/schemaCheck.js';
@@ -38,6 +38,7 @@ import {
   handleError,
   isValidGraphName,
   isValidLabels,
+  newCompositionOptions,
 } from '../../util.js';
 import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
@@ -402,14 +403,8 @@ export function checkSubgraphSchema(
       labels: subgraph ? undefined : req.labels,
     });
 
-    let compositionOptions: CompositionOptions | undefined;
-    if (req.disableResolvabilityValidation) {
-      compositionOptions = {
-        disableResolvabilityValidation: true,
-      };
-    }
     const { composedGraphs } = await composer.composeWithProposedSchemas({
-      compositionOptions,
+      compositionOptions: newCompositionOptions(req.disableResolvabilityValidation),
       graphs: federatedGraphs,
       inputSubgraphs: checkSubgraphs,
     });

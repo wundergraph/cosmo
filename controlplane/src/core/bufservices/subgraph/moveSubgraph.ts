@@ -9,9 +9,8 @@ import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { enrichLogger, getLogger, handleError, newCompositionOptions } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
-import { newCompositionOptions } from '../../../utils/utils.js';
 
 export function moveSubgraph(
   opts: RouterOptions,

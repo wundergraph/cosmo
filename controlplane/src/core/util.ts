@@ -573,3 +573,12 @@ export const flipDateRangeValuesIfNeeded = (dateRange?: { start: number; end: nu
   dateRange.start = dateRange.end;
   dateRange.end = tmp;
 };
+
+export function newCompositionOptions(disableResolvabilityValidation?: boolean): CompositionOptions | undefined {
+  if (!disableResolvabilityValidation) {
+    return;
+  }
+  return {
+    disableResolvabilityValidation,
+  };
+}

@@ -16,8 +16,14 @@ import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepos
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError, isValidGraphName, isValidSchemaTags } from '../../util.js';
-import { newCompositionOptions } from '../../../utils/utils.js';
+import {
+  enrichLogger,
+  getLogger,
+  handleError,
+  isValidGraphName,
+  isValidSchemaTags,
+  newCompositionOptions,
+} from '../../util.js';
 
 export function createContract(
   opts: RouterOptions,

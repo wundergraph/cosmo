@@ -12,11 +12,16 @@ import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepos
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getFederatedGraphRouterCompatibilityVersion, getLogger, handleError } from '../../util.js';
+import {
+  enrichLogger,
+  getFederatedGraphRouterCompatibilityVersion,
+  getLogger,
+  handleError,
+  newCompositionOptions,
+} from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
-import { newCompositionOptions } from '../../../utils/utils.js';
 
 export function deleteFederatedSubgraph(
   opts: RouterOptions,

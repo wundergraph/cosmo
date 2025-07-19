@@ -14,9 +14,8 @@ import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepos
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError, isValidLabelMatchers } from '../../util.js';
+import { enrichLogger, getLogger, handleError, isValidLabelMatchers, newCompositionOptions } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
-import { newCompositionOptions } from '../../../utils/utils.js';
 
 export function checkFederatedGraph(
   opts: RouterOptions,

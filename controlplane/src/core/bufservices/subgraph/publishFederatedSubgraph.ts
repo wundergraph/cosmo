@@ -23,12 +23,12 @@ import {
   handleError,
   isValidGraphName,
   isValidLabels,
+  newCompositionOptions,
 } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
-import { newCompositionOptions } from '../../../utils/utils.js';
 
 export function publishFederatedSubgraph(
   opts: RouterOptions,

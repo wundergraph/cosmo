@@ -1283,6 +1283,20 @@ describe('Field resolvability tests', () => {
       ),
     );
   });
+
+  test('that resolvability validation can be disabled', () => {
+    const resultOne = federateSubgraphs({
+      subgraphs: [subgraphBQ, subgraphBR],
+      version: ROUTER_COMPATIBILITY_VERSION_ONE,
+    });
+    expect(resultOne.success).toBe(false);
+    const resultTwo = federateSubgraphs({
+      disableResolvabilityValidation: true,
+      subgraphs: [subgraphBQ, subgraphBR],
+      version: ROUTER_COMPATIBILITY_VERSION_ONE,
+    });
+    expect(resultTwo.success).toBe(true);
+  });
 });
 
 const subgraphA: Subgraph = {
@@ -2502,6 +2516,30 @@ const subgraphBP: Subgraph = {
     type Entity @key(fields: "id") {
       id: ID!
       age: Int!
+    }
+  `),
+};
+
+const subgraphBQ: Subgraph = {
+  name: 'subgraph-bq',
+  url: '',
+  definitions: parse(`
+    type Object {
+      id: ID!
+    }
+    
+    type Query {
+      object: Object!
+    }
+  `),
+};
+
+const subgraphBR: Subgraph = {
+  name: 'subgraph-br',
+  url: '',
+  definitions: parse(`
+    type Object {
+      name: String!
     }
   `),
 };

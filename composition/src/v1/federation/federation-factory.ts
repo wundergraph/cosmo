@@ -2674,6 +2674,9 @@ export class FederationFactory {
     /* Resolvability evaluations are not necessary for contracts because the source graph resolvability evaluations
      * must have already completed without error.
      * Resolvability evaluations are also unnecessary for a single subgraph.
+     *
+     * These checks can be disabled by setting `disableResolvabilityValidation` to true.
+     * This should only be done for troubleshooting purposes.
      * */
     if (!this.disableResolvabilityValidation && this.internalSubgraphBySubgraphName.size > 1) {
       const resolvabilityErrors = this.internalGraph.validate();
