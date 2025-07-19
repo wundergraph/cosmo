@@ -9,14 +9,21 @@ import {
   DeploymentError,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { isValidUrl } from '@wundergraph/cosmo-shared';
-import { UnauthorizedError, PublicError } from '../../errors/errors.js';
+import { PublicError, UnauthorizedError } from '../../errors/errors.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { ContractRepository } from '../../repositories/ContractRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError, isValidGraphName, isValidSchemaTags } from '../../util.js';
+import {
+  enrichLogger,
+  getLogger,
+  handleError,
+  isValidGraphName,
+  isValidSchemaTags,
+  newCompositionOptions,
+} from '../../util.js';
 
 export function createContract(
   opts: RouterOptions,
@@ -190,14 +197,15 @@ export function createContract(
       const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
 
       const composition = await fedGraphRepo.composeAndDeployGraphs({
-        federatedGraphs: [{ ...contractGraph, contract }],
         actorId: authContext.userId,
-        blobStorage: opts.blobStorage,
         admissionConfig: {
           cdnBaseUrl: opts.cdnBaseUrl,
           webhookJWTSecret: opts.admissionWebhookJWTSecret,
         },
+        blobStorage: opts.blobStorage,
         chClient: opts.chClient!,
+        compositionOptions: newCompositionOptions(req.disableResolvabilityValidation),
+        federatedGraphs: [{ ...contractGraph, contract }],
       });
 
       compositionErrors.push(...composition.compositionErrors);

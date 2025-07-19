@@ -20,13 +20,18 @@ export default (opts: BaseCommandOptions) => {
     'The label matchers to the federated graph with which the check is to be performed',
   );
   command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
+  command.option(
+    '--disable-resolvability-validation',
+    'This flag will disable the validation for whether all nodes of the federated graph are resolvable. Do NOT use unless troubleshooting.',
+  );
 
   command.action(async (name, options) => {
     let success = false;
     const resp = await opts.client.platform.checkFederatedGraph(
       {
-        name,
+        disableResolvabilityValidation: options.disableResolvabilityValidation,
         labelMatchers: options.labelMatcher,
+        name,
         namespace: options.namespace,
       },
       {

@@ -25,7 +25,7 @@ import {
   GRPCMapping,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import Table from 'cli-table3';
-import { FederationResultSuccess, ROUTER_COMPATIBILITY_VERSION_ONE } from '@wundergraph/composition';
+import { FederationSuccess, ROUTER_COMPATIBILITY_VERSION_ONE } from '@wundergraph/composition';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { composeSubgraphs, introspectSubgraph } from '../../../utils.js';
 
@@ -107,7 +107,7 @@ type Config = {
   subgraphs: ConfigSubgraph[];
 };
 
-function constructRouterSubgraph(result: FederationResultSuccess, s: SubgraphMetadata, index: number): RouterSubgraph {
+function constructRouterSubgraph(result: FederationSuccess, s: SubgraphMetadata, index: number): RouterSubgraph {
   const subgraphConfig = result.subgraphConfigBySubgraphName.get(s.name);
   const schema = subgraphConfig?.schema;
   const configurationDataByTypeName = subgraphConfig?.configurationDataByTypeName;
@@ -166,6 +166,11 @@ export default (opts: BaseCommandOptions) => {
   command.requiredOption('-i, --input <path-to-input>', 'The yaml file with data about graph and subgraphs.');
   command.option('-o, --out [string]', 'Destination file for the router config.');
   command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
+  command.option(
+    '--disable-resolvability-validation',
+    'This flag will disable the validation for whether all nodes of the federated graph are resolvable. Do NOT use unless troubleshooting.',
+  );
+
   command.action(async (options) => {
     const inputFile = resolve(options.input);
     const inputFileLocation = dirname(inputFile);
@@ -201,6 +206,7 @@ export default (opts: BaseCommandOptions) => {
           definitions: parse(s.sdl),
         };
       }),
+      options.disableResolvabilityValidation,
     );
 
     if (!result.success) {
@@ -579,6 +585,7 @@ async function buildFeatureFlagsConfig(
         url: normalizeURL(s.routingUrl),
         definitions: parse(s.sdl),
       })),
+      options.disableResolvabilityValidation,
     );
 
     if (!featureResult.success) {

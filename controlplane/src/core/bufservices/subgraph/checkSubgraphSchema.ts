@@ -31,13 +31,14 @@ import {
   SchemaUsageTrafficInspector,
 } from '../../services/SchemaUsageTrafficInspector.js';
 import {
+  clamp,
   enrichLogger,
   getFederatedGraphRouterCompatibilityVersion,
   getLogger,
   handleError,
-  clamp,
-  isValidLabels,
   isValidGraphName,
+  isValidLabels,
+  newCompositionOptions,
 } from '../../util.js';
 import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
@@ -403,8 +404,9 @@ export function checkSubgraphSchema(
     });
 
     const { composedGraphs } = await composer.composeWithProposedSchemas({
-      inputSubgraphs: checkSubgraphs,
+      compositionOptions: newCompositionOptions(req.disableResolvabilityValidation),
       graphs: federatedGraphs,
+      inputSubgraphs: checkSubgraphs,
     });
 
     await schemaCheckRepo.createSchemaCheckCompositions({

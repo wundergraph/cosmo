@@ -27,6 +27,10 @@ export default (opts: BaseCommandOptions) => {
       ' This parameter is always ignored if the subgraph already exists.',
     [],
   );
+  command.option(
+    '--disable-resolvability-validation',
+    'This flag will disable the validation for whether all nodes of the federated graph are resolvable. Do NOT use unless troubleshooting.',
+  );
 
   command.action(async (name, options) => {
     let schemaFile;
@@ -62,14 +66,15 @@ export default (opts: BaseCommandOptions) => {
 
     const resp = await opts.client.platform.checkSubgraphSchema(
       {
-        subgraphName: name,
-        namespace: options.namespace,
-        schema: new Uint8Array(schema),
-        gitInfo,
         delete: options.delete,
-        skipTrafficCheck: options.skipTrafficCheck,
-        vcsContext,
+        disableResolvabilityValidation: options.disableResolvabilityValidation,
+        gitInfo,
+        namespace: options.namespace,
         labels: options.label.map((label: string) => splitLabel(label)),
+        schema: new Uint8Array(schema),
+        skipTrafficCheck: options.skipTrafficCheck,
+        subgraphName: name,
+        vcsContext,
       },
       {
         headers: getBaseHeaders(),

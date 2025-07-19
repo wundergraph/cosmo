@@ -1,9 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import {
   CONDITION,
-  federateSubgraphs,
-  FederationResultFailure,
-  FederationResultSuccess,
   FIRST_ORDINAL,
   inaccessibleSubscriptionFieldConditionFieldPathFieldErrorMessage,
   invalidArgumentValueErrorMessage,
@@ -17,8 +14,8 @@ import {
   LIST,
   nonKeyComposingObjectTypeNamesEventDrivenErrorMessage,
   nonLeafSubscriptionFieldConditionFieldPathFinalFieldErrorMessage,
-  NormalizationResultFailure,
-  NormalizationResultSuccess,
+  NormalizationFailure,
+  NormalizationSuccess,
   normalizeSubgraph,
   NULL,
   OBJECT,
@@ -37,7 +34,12 @@ import {
   subscriptionFilterConditionInvalidInputFieldTypeErrorMessage,
 } from '../../../src';
 import { versionOnePersistedDirectiveDefinitions } from '../utils/utils';
-import { normalizeString, schemaToSortedNormalizedString } from '../../utils/utils';
+import {
+  federateSubgraphsFailure,
+  federateSubgraphsSuccess,
+  normalizeString,
+  schemaToSortedNormalizedString,
+} from '../../utils/utils';
 
 describe('@openfed__subscriptionFilter tests', () => {
   describe('Normalization tests', () => {
@@ -47,7 +49,7 @@ describe('@openfed__subscriptionFilter tests', () => {
         subgraphA.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(2);
       expect(result.errors[0]).toStrictEqual(invalidSubscriptionFilterLocationError('Object.field'));
@@ -62,7 +64,7 @@ describe('@openfed__subscriptionFilter tests', () => {
         subgraphC.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(`
@@ -112,7 +114,7 @@ describe('@openfed__subscriptionFilter tests', () => {
         subgraphG.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(`
@@ -162,7 +164,7 @@ describe('@openfed__subscriptionFilter tests', () => {
         subgraphK.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.errors).toHaveLength(1);
       expect(result.errors).toStrictEqual([
         invalidDirectiveError('openfed__subscriptionFilter', 'Subscription.one', FIRST_ORDINAL, [
@@ -174,10 +176,7 @@ describe('@openfed__subscriptionFilter tests', () => {
 
   describe('Federation tests', () => {
     test('that configuration is generated correctly #1', () => {
-      const result = federateSubgraphs(
-        [subgraphB, subgraphC],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphB, subgraphC], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.fieldConfigurations).toStrictEqual([
         {
@@ -195,10 +194,7 @@ describe('@openfed__subscriptionFilter tests', () => {
     });
 
     test('that configuration is generated correctly #2', () => {
-      const result = federateSubgraphs(
-        [subgraphB, subgraphD],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphB, subgraphD], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.fieldConfigurations).toStrictEqual([
         {
@@ -250,10 +246,7 @@ describe('@openfed__subscriptionFilter tests', () => {
     });
 
     test('that an error is returned if condition.IN.fieldPath references a field that is not defined in the same subgraph as the directive', () => {
-      const result = federateSubgraphs(
-        [subgraphB, subgraphF],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultFailure;
+      const result = federateSubgraphsFailure([subgraphB, subgraphF], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -278,10 +271,7 @@ describe('@openfed__subscriptionFilter tests', () => {
     });
 
     test('that an error is returned if a non-object condition is provided', () => {
-      const result = federateSubgraphs(
-        [subgraphB, subgraphE],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultFailure;
+      const result = federateSubgraphsFailure([subgraphB, subgraphE], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -299,10 +289,7 @@ describe('@openfed__subscriptionFilter tests', () => {
     });
 
     test('that an error is returned if invalid condition.IN inputs are provided', () => {
-      const result = federateSubgraphs(
-        [subgraphB, subgraphH],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultFailure;
+      const result = federateSubgraphsFailure([subgraphB, subgraphH], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.errors).toHaveLength(2);
       expect(result.errors).toStrictEqual([
         invalidSubscriptionFilterDirectiveError('Subscription.one', [
@@ -321,10 +308,7 @@ describe('@openfed__subscriptionFilter tests', () => {
     });
 
     test('that an error is returned if condition.IN.values is provided an invalid value', () => {
-      const result = federateSubgraphs(
-        [subgraphB, subgraphI],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultFailure;
+      const result = federateSubgraphsFailure([subgraphB, subgraphI], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.errors).toHaveLength(4);
       expect(result.errors).toStrictEqual([
         invalidSubscriptionFilterDirectiveError('Subscription.one', [
@@ -367,10 +351,7 @@ describe('@openfed__subscriptionFilter tests', () => {
     });
 
     test('that valid non-list values provided to condition.IN.values will be coerced into a list', () => {
-      const result = federateSubgraphs(
-        [subgraphB, subgraphJ],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphB, subgraphJ], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.fieldConfigurations).toStrictEqual([
         {
@@ -421,10 +402,7 @@ describe('@openfed__subscriptionFilter tests', () => {
     });
 
     test('that an error is returned if condition input value fields are invalid', () => {
-      const result = federateSubgraphs(
-        [subgraphB, subgraphL],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultFailure;
+      const result = federateSubgraphsFailure([subgraphB, subgraphL], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.errors).toHaveLength(5);
       expect(result.errors).toStrictEqual([
         invalidSubscriptionFilterDirectiveError('Subscription.one', [
@@ -446,10 +424,7 @@ describe('@openfed__subscriptionFilter tests', () => {
     });
 
     test('that an error is returned if fieldPath references a non-leaf kind', () => {
-      const result = federateSubgraphs(
-        [subgraphB, subgraphM],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultFailure;
+      const result = federateSubgraphsFailure([subgraphB, subgraphM], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.errors).toHaveLength(1);
       expect(result.errors).toStrictEqual([
         invalidSubscriptionFilterDirectiveError('Subscription.one', [
@@ -473,10 +448,7 @@ describe('@openfed__subscriptionFilter tests', () => {
     });
 
     test('that an error is returned if fieldPath references an inaccessible field', () => {
-      const result = federateSubgraphs(
-        [subgraphB, subgraphN],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultFailure;
+      const result = federateSubgraphsFailure([subgraphB, subgraphN], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.errors).toHaveLength(1);
       expect(result.errors).toStrictEqual([
         invalidSubscriptionFilterDirectiveError('Subscription.one', [
@@ -499,10 +471,7 @@ describe('@openfed__subscriptionFilter tests', () => {
     });
 
     test('that an error is if condition.AND or condition.OR contain no elements or more than 5 elements', () => {
-      const result = federateSubgraphs(
-        [subgraphB, subgraphO],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultFailure;
+      const result = federateSubgraphsFailure([subgraphB, subgraphO], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.errors).toHaveLength(4);
       expect(result.errors).toStrictEqual([
         invalidSubscriptionFilterDirectiveError('Subscription.one', [
@@ -521,10 +490,7 @@ describe('@openfed__subscriptionFilter tests', () => {
     });
 
     test('that an error is returned if a condition has more than 5 layers of nesting', () => {
-      const result = federateSubgraphs(
-        [subgraphB, subgraphP],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultFailure;
+      const result = federateSubgraphsFailure([subgraphB, subgraphP], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.errors).toHaveLength(1);
       expect(result.errors).toStrictEqual([
         invalidSubscriptionFilterDirectiveError('Subscription.one', [
@@ -534,10 +500,7 @@ describe('@openfed__subscriptionFilter tests', () => {
     });
 
     test('that an entity can be defined as an extension in an EDG', () => {
-      const result = federateSubgraphs(
-        [subgraphQ, subgraphR],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphQ, subgraphR], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(

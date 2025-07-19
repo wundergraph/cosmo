@@ -12,13 +12,13 @@ import {
 import { Graph } from '../resolvability-graph/graph';
 import { InternalSubgraph } from '../subgraph/types';
 
-export type NormalizationResultFailure = {
+export type NormalizationFailure = {
   errors: Array<Error>;
   success: false;
   warnings: Array<Warning>;
 };
 
-export type NormalizationResultSuccess = {
+export type NormalizationSuccess = {
   authorizationDataByParentTypeName: Map<string, AuthorizationData>;
   concreteTypeNamesByAbstractTypeName: Map<string, Set<string>>;
   conditionalFieldDataByCoordinates: Map<string, ConditionalFieldData>;
@@ -42,15 +42,15 @@ export type NormalizationResultSuccess = {
   warnings: Array<Warning>;
 };
 
-export type NormalizationResult = NormalizationResultFailure | NormalizationResultSuccess;
+export type NormalizationResult = NormalizationFailure | NormalizationSuccess;
 
-export type BatchNormalizationResultFailure = {
+export type BatchNormalizationFailure = {
   errors: Array<Error>;
   success: false;
   warnings: Array<Warning>;
 };
 
-export type BatchNormalizationResultSuccess = {
+export type BatchNormalizationSuccess = {
   success: true;
   authorizationDataByParentTypeName: Map<string, AuthorizationData>;
   concreteTypeNamesByAbstractTypeName: Map<string, Set<string>>;
@@ -61,4 +61,4 @@ export type BatchNormalizationResultSuccess = {
   warnings: Array<Warning>;
 };
 
-export type BatchNormalizationResult = BatchNormalizationResultFailure | BatchNormalizationResultSuccess;
+export type BatchNormalizationResult = BatchNormalizationFailure | BatchNormalizationSuccess;

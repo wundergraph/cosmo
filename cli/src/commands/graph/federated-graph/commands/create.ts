@@ -35,6 +35,11 @@ export default (opts: BaseCommandOptions) => {
   );
   command.option('--readme <path-to-readme>', 'The markdown file which describes the federated graph.');
   command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
+  command.option(
+    '--disable-resolvability-validation',
+    'This flag will disable the validation for whether all nodes of the federated graph are resolvable. Do NOT use unless troubleshooting.',
+  );
+
   command.action(async (name, options) => {
     let readmeFile;
     if (options.readme) {
@@ -52,13 +57,14 @@ export default (opts: BaseCommandOptions) => {
 
     const resp = await opts.client.platform.createFederatedGraph(
       {
-        name,
-        routingUrl: options.routingUrl,
-        labelMatchers: options.labelMatcher,
-        readme: readmeFile ? await readFile(readmeFile, 'utf8') : undefined,
-        namespace: options.namespace,
-        admissionWebhookURL: options.admissionWebhookUrl,
         admissionWebhookSecret: options.admissionWebhookSecret,
+        admissionWebhookURL: options.admissionWebhookUrl,
+        disableResolvabilityValidation: options.disableResolvabilityValidation,
+        labelMatchers: options.labelMatcher,
+        name,
+        namespace: options.namespace,
+        readme: readmeFile ? await readFile(readmeFile, 'utf8') : undefined,
+        routingUrl: options.routingUrl,
       },
       {
         headers: getBaseHeaders(),

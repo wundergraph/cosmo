@@ -6,7 +6,7 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel, normalizeURL, splitLabel } from '@wundergraph/cosmo-shared';
 import { addDays } from 'date-fns';
-import { SQL, and, asc, count, desc, eq, getTableName, gt, inArray, like, lt, notInArray, or, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, getTableName, gt, inArray, like, lt, notInArray, or, SQL, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { WebsocketSubprotocol } from '../../db/models.js';
@@ -14,8 +14,8 @@ import * as schema from '../../db/schema.js';
 import {
   featureSubgraphsToBaseSubgraphs,
   fieldGracePeriod,
-  graphCompositionSubgraphs,
   graphCompositions,
+  graphCompositionSubgraphs,
   schemaChecks,
   schemaVersion,
   subgraphMembers,
@@ -25,6 +25,7 @@ import {
   users,
 } from '../../db/schema.js';
 import {
+  CompositionOptions,
   FederatedGraphDTO,
   GetChecksResponse,
   Label,
@@ -208,6 +209,7 @@ export class SubgraphRepository {
       cdnBaseUrl: string;
     },
     chClient: ClickHouseClient,
+    compositionOptions?: CompositionOptions,
   ): Promise<{
     compositionErrors: PlainMessage<CompositionError>[];
     compositionWarnings: PlainMessage<CompositionWarning>[];
@@ -428,11 +430,12 @@ export class SubgraphRepository {
         deploymentErrors: dErrors,
         compositionWarnings: cWarnings,
       } = await fedGraphRepo.composeAndDeployGraphs({
-        federatedGraphs: updatedFederatedGraphs.filter((g) => !g.contract),
         blobStorage,
         admissionConfig,
         actorId: data.updatedBy,
         chClient,
+        compositionOptions,
+        federatedGraphs: updatedFederatedGraphs.filter((g) => !g.contract),
       });
 
       compositionErrors.push(...cErrors);
@@ -464,6 +467,7 @@ export class SubgraphRepository {
       cdnBaseUrl: string;
     },
     chClient: ClickHouseClient,
+    compositionOptions?: CompositionOptions,
   ): Promise<{
     compositionErrors: PlainMessage<CompositionError>[];
     updatedFederatedGraphs: FederatedGraphDTO[];
@@ -515,6 +519,7 @@ export class SubgraphRepository {
         },
         actorId: data.updatedBy,
         chClient,
+        compositionOptions,
       });
 
       return { compositionErrors, updatedFederatedGraphs, deploymentErrors, compositionWarnings };

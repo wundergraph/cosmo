@@ -21,8 +21,8 @@ import {
   invalidSelectionSetErrorMessage,
   KEY,
   NAME,
-  NormalizationResultFailure,
-  NormalizationResultSuccess,
+  NormalizationFailure,
+  NormalizationSuccess,
   normalizeSubgraphFromString,
   numberToOrdinal,
   OBJECT,
@@ -59,11 +59,7 @@ import { printTypeNode } from '@graphql-tools/merge';
 
 describe('Normalization tests', () => {
   test('that an unparsable graph returns an error', () => {
-    const result = normalizeSubgraphFromString(
-      '',
-      true,
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
+    const result = normalizeSubgraphFromString('', true, ROUTER_COMPATIBILITY_VERSION_ONE) as NormalizationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0].message).toContain(
@@ -80,7 +76,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
+    ) as NormalizationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(undefinedTypeError('Unknown'));
@@ -99,7 +95,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultSuccess;
+    ) as NormalizationSuccess;
     expect(result.success).toBe(true);
     const subgraphString = result.subgraphString;
     expect(normalizeString(subgraphString!)).toBe(
@@ -126,7 +122,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
+    ) as NormalizationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(undefinedDirectiveError('UnknownDirective', 'Example.string'));
@@ -144,7 +140,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
+    ) as NormalizationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(duplicateDirectiveDefinitionError('KnownDirective'));
@@ -163,7 +159,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultSuccess;
+    ) as NormalizationSuccess;
     expect(result.success).toBe(true);
     const subgraphString = result.subgraphString;
     expect(normalizeString(subgraphString!)).toBe(
@@ -192,7 +188,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultSuccess;
+    ) as NormalizationSuccess;
     expect(result.success).toBe(true);
     const subgraphString = result.subgraphString;
     expect(normalizeString(subgraphString!)).toBe(
@@ -217,7 +213,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
+    ) as NormalizationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
@@ -240,7 +236,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
+    ) as NormalizationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
@@ -259,7 +255,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
+    ) as NormalizationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
@@ -282,7 +278,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultSuccess;
+    ) as NormalizationSuccess;
     expect(result.success).toBe(true);
     const subgraphString = result.subgraphString;
     expect(normalizeString(subgraphString!)).toBe(
@@ -319,7 +315,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultSuccess;
+    ) as NormalizationSuccess;
     expect(result.success).toBe(true);
     const subgraphString = result.subgraphString;
     expect(normalizeString(subgraphString!)).toBe(
@@ -358,7 +354,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
+    ) as NormalizationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(duplicateEnumValueDefinitionError('Alphabet', 'D'));
@@ -377,7 +373,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
+    ) as NormalizationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(duplicateTypeDefinitionError(ENUM, 'Alphabet'));
@@ -402,7 +398,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultSuccess;
+    ) as NormalizationSuccess;
     expect(result.success).toBe(true);
     const subgraphString = result.subgraphString;
     expect(normalizeString(subgraphString!)).toBe(
@@ -442,7 +438,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultSuccess;
+    ) as NormalizationSuccess;
     expect(result.success).toBe(true);
     const subgraphString = result.subgraphString;
     expect(normalizeString(subgraphString!)).toBe(
@@ -476,7 +472,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultSuccess;
+    ) as NormalizationSuccess;
     expect(result.success).toBe(true);
     const subgraphString = result.subgraphString;
     expect(normalizeString(subgraphString!)).toBe(
@@ -499,7 +495,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
+    ) as NormalizationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0].message).toBe(
@@ -520,7 +516,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultSuccess;
+    ) as NormalizationSuccess;
     expect(result.success).toBe(true);
     const subgraphString = result.subgraphString;
     expect(normalizeString(subgraphString!)).toBe(
@@ -567,7 +563,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultSuccess;
+    ) as NormalizationSuccess;
     expect(result.success).toBe(true);
     const subgraphString = result.subgraphString;
     expect(normalizeString(subgraphString!)).toBe(
@@ -608,7 +604,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
+    ) as NormalizationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0].message).toBe(
@@ -624,7 +620,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
+    ) as NormalizationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(undefinedTypeError('Pepper'));
@@ -641,7 +637,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
+    ) as NormalizationFailure;
     expect(result.success).toBe(false);
     expect(result.errors[0].message).toBe(
       `The subgraph has syntax errors and could not be parsed.\n` +
@@ -660,7 +656,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
+    ) as NormalizationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(duplicateEnumValueDefinitionError('UserRole', 'ADMIN'));
@@ -677,7 +673,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
+    ) as NormalizationFailure;
     expect(result.success).toBe(false);
     expect(result.errors[0].message).toBe(
       `The subgraph has syntax errors and could not be parsed.\n` +
@@ -722,7 +718,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultSuccess;
+    ) as NormalizationSuccess;
     expect(result.success).toBe(true);
     const subgraphString = result.subgraphString;
     expect(normalizeString(subgraphString!)).toBe(
@@ -784,7 +780,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultSuccess;
+    ) as NormalizationSuccess;
     expect(result.success).toBe(true);
     expect(schemaToSortedNormalizedString(result.schema)).toBe(
       normalizeString(
@@ -829,11 +825,7 @@ describe('Normalization tests', () => {
     const schema = readFileSync(join(__dirname, 'test-data/testNormalization.graphql'), {
       encoding: 'utf8',
     });
-    const result = normalizeSubgraphFromString(
-      schema,
-      true,
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultSuccess;
+    const result = normalizeSubgraphFromString(schema, true, ROUTER_COMPATIBILITY_VERSION_ONE) as NormalizationSuccess;
     expect(result.success).toBe(true);
     const subgraphString = result.subgraphString;
     expect(normalizeString(subgraphString!)).toBe(
@@ -934,7 +926,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
+    ) as NormalizationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
@@ -952,7 +944,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
+    ) as NormalizationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
@@ -970,7 +962,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
+    ) as NormalizationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
@@ -1001,7 +993,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
+    ) as NormalizationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
@@ -1019,7 +1011,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
+    ) as NormalizationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
@@ -1050,7 +1042,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
+    ) as NormalizationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
@@ -1070,7 +1062,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
+    ) as NormalizationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
@@ -1090,7 +1082,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
+    ) as NormalizationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
@@ -1131,7 +1123,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
+    ) as NormalizationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0].message).toStrictEqual(
@@ -1155,7 +1147,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
+    ) as NormalizationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
@@ -1175,7 +1167,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
+    ) as NormalizationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
@@ -1195,7 +1187,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
+    ) as NormalizationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
@@ -1215,7 +1207,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
+    ) as NormalizationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
@@ -1235,7 +1227,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
+    ) as NormalizationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
@@ -1267,7 +1259,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
+    ) as NormalizationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
@@ -1298,7 +1290,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
+    ) as NormalizationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
@@ -1318,7 +1310,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
+    ) as NormalizationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
@@ -1338,7 +1330,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
+    ) as NormalizationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
@@ -1358,7 +1350,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
+    ) as NormalizationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
@@ -1400,7 +1392,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
+    ) as NormalizationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
@@ -1420,7 +1412,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
+    ) as NormalizationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
@@ -1440,7 +1432,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
+    ) as NormalizationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
@@ -1460,7 +1452,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
+    ) as NormalizationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
@@ -1521,7 +1513,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
+    ) as NormalizationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
@@ -1594,7 +1586,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
+    ) as NormalizationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
@@ -1625,7 +1617,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
+    ) as NormalizationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
@@ -1659,7 +1651,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
+    ) as NormalizationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
@@ -1690,7 +1682,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
+    ) as NormalizationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toBeDefined();
     expect(result.errors[0]).toStrictEqual(
@@ -1721,7 +1713,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
+    ) as NormalizationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
@@ -1757,7 +1749,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
+    ) as NormalizationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toBeDefined();
     expect(result.errors[0]).toStrictEqual(
@@ -1825,7 +1817,7 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
+    ) as NormalizationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
