@@ -5,17 +5,10 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import type {
-  BinaryReadOptions,
-  FieldList,
-  JsonReadOptions,
-  JsonValue,
-  PartialMessage,
-  PlainMessage
-} from '@bufbuild/protobuf';
-import { Message, proto3, protoInt64 } from '@bufbuild/protobuf';
-import { EnumStatusCode, GraphQLSubscriptionProtocol, GraphQLWebsocketSubprotocol } from '../../common/common_pb.js';
-import { EventMeta } from '../../notifications/events_pb.js';
+import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
+import { Message, proto3, protoInt64 } from "@bufbuild/protobuf";
+import { EnumStatusCode, GraphQLSubscriptionProtocol, GraphQLWebsocketSubprotocol } from "../../common/common_pb.js";
+import { EventMeta } from "../../notifications/events_pb.js";
 
 /**
  * @generated from enum wg.cosmo.platform.v1.LintSeverity
@@ -994,6 +987,11 @@ export class FixSubgraphSchemaRequest extends Message<FixSubgraphSchemaRequest> 
    */
   namespace = "";
 
+  /**
+   * @generated from field: optional bool disable_resolvability_validation = 4;
+   */
+  disableResolvabilityValidation?: boolean;
+
   constructor(data?: PartialMessage<FixSubgraphSchemaRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1005,6 +1003,7 @@ export class FixSubgraphSchemaRequest extends Message<FixSubgraphSchemaRequest> 
     { no: 1, name: "subgraph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "schema", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "disable_resolvability_validation", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FixSubgraphSchemaRequest {

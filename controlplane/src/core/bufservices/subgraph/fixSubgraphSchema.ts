@@ -164,13 +164,12 @@ export function fixSubgraphSchema(
     }
 
     // Disabling resolvability checks would producer fewer errors to try to fix.
-    const disableResolvabilityValidation = false;
     const result = await composer.composeWithProposedSDL(
       subgraph.labels,
       subgraph.name,
       subgraph.namespaceId,
       newSchemaSDL,
-      newCompositionOptions(disableResolvabilityValidation),
+      newCompositionOptions(req.disableResolvabilityValidation),
     );
 
     const compositionErrors: PlainMessage<CompositionError>[] = [];

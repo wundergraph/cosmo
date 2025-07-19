@@ -16,6 +16,7 @@ import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, isValidLabelMatchers } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { newCompositionOptions } from '../../../utils/utils.js';
 
 export function checkFederatedGraph(
   opts: RouterOptions,
@@ -99,6 +100,7 @@ export function checkFederatedGraph(
         definitions: parse(s.schemaSDL),
       })),
       federatedGraph.routerCompatibilityVersion,
+      newCompositionOptions(req.disableResolvabilityValidation),
     );
 
     const compositionWarnings: PlainMessage<CompositionWarning>[] = [];

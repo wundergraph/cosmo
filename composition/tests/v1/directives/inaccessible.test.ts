@@ -70,10 +70,7 @@ describe('@inaccessible tests', () => {
   });
 
   test('that inaccessible fields are still subject to @shareable errors', () => {
-    const result = federateSubgraphsFailure(
-      [subgraphA, subgraphC],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultFailure;
+    const result = federateSubgraphsFailure([subgraphA, subgraphC], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
@@ -98,10 +95,7 @@ describe('@inaccessible tests', () => {
   });
 
   test('that composition is successful if a field is declared @inaccessible in both the interface definition and its implementation,', () => {
-    const result = federateSubgraphsSuccess(
-      [subgraphA, subgraphD],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
+    const result = federateSubgraphsSuccess([subgraphA, subgraphD], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
       normalizeString(
@@ -146,10 +140,7 @@ describe('@inaccessible tests', () => {
   });
 
   test('that composition is successful if a field is declared @inaccessible in the interface but not in the implementation,', () => {
-    const result = federateSubgraphsSuccess(
-      [subgraphB, subgraphH],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
+    const result = federateSubgraphsSuccess([subgraphB, subgraphH], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
       normalizeString(
@@ -223,10 +214,7 @@ describe('@inaccessible tests', () => {
   });
 
   test('that an error is returned if an interface field is @inaccessible but the implementation field is not defined #2,', () => {
-    const result = federateSubgraphsFailure(
-      [subgraphF, subgraphG],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultFailure;
+    const result = federateSubgraphsFailure([subgraphF, subgraphG], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
@@ -247,50 +235,35 @@ describe('@inaccessible tests', () => {
   });
 
   test('that an error is returned if all fields defined on an object are declared @inaccessible', () => {
-    const result = federateSubgraphsFailure(
-      [subgraphA, subgraphI],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultFailure;
+    const result = federateSubgraphsFailure([subgraphA, subgraphI], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(allChildDefinitionsAreInaccessibleError(OBJECT, OBJECT, FIELD));
   });
 
   test('that an error is returned if all fields defined on an extended object are declared @inaccessible', () => {
-    const result = federateSubgraphsFailure(
-      [subgraphA, subgraphJ],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultFailure;
+    const result = federateSubgraphsFailure([subgraphA, subgraphJ], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(allChildDefinitionsAreInaccessibleError(OBJECT, OBJECT, FIELD));
   });
 
   test('that an error is returned if all fields defined on an interface are declared @inaccessible', () => {
-    const result = federateSubgraphsFailure(
-      [subgraphA, subgraphK],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultFailure;
+    const result = federateSubgraphsFailure([subgraphA, subgraphK], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(allChildDefinitionsAreInaccessibleError(INTERFACE, INTERFACE, FIELD));
   });
 
   test('that an error is returned if all fields defined on an extended interface are declared @inaccessible', () => {
-    const result = federateSubgraphsFailure(
-      [subgraphA, subgraphL],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultFailure;
+    const result = federateSubgraphsFailure([subgraphA, subgraphL], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(allChildDefinitionsAreInaccessibleError(INTERFACE, INTERFACE, FIELD));
   });
 
   test('that an inaccessible interface without accessible references is removed from the client schema', () => {
-    const result = federateSubgraphsSuccess(
-      [subgraphM, subgraphN],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
+    const result = federateSubgraphsSuccess([subgraphM, subgraphN], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
       normalizeString(
@@ -330,10 +303,7 @@ describe('@inaccessible tests', () => {
   });
 
   test('that an inaccessible object is removed from a union', () => {
-    const result = federateSubgraphsSuccess(
-      [subgraphO, subgraphP],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
+    const result = federateSubgraphsSuccess([subgraphO, subgraphP], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
       normalizeString(
@@ -380,10 +350,7 @@ describe('@inaccessible tests', () => {
   });
 
   test('that the @inaccessible state is propagated to children and arguments', () => {
-    const result = federateSubgraphsSuccess(
-      [subgraphP, subgraphQ],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
+    const result = federateSubgraphsSuccess([subgraphP, subgraphQ], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
       normalizeString(
@@ -432,10 +399,7 @@ describe('@inaccessible tests', () => {
   });
 
   test('that the @inaccessible state is propagated across subgraphs #1.1', () => {
-    const result = federateSubgraphsSuccess(
-      [subgraphR, subgraphS],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
+    const result = federateSubgraphsSuccess([subgraphR, subgraphS], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
       normalizeString(
@@ -504,10 +468,7 @@ describe('@inaccessible tests', () => {
   });
 
   test('that @inaccessible fields do not affect resolvability #1.1', () => {
-    const result = federateSubgraphsSuccess(
-      [subgraphT, subgraphU],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
+    const result = federateSubgraphsSuccess([subgraphT, subgraphU], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
       normalizeString(
@@ -549,10 +510,7 @@ describe('@inaccessible tests', () => {
   });
 
   test('that @inaccessible fields do not affect resolvability #1.2', () => {
-    const result = federateSubgraphsSuccess(
-      [subgraphU, subgraphT],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
+    const result = federateSubgraphsSuccess([subgraphU, subgraphT], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
       normalizeString(
@@ -655,10 +613,7 @@ describe('@inaccessible tests', () => {
   });
 
   test('that an error is returned if all members of a union are inaccessible', () => {
-    const result = federateSubgraphsFailure(
-      [subgraphX, subgraphP],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultFailure;
+    const result = federateSubgraphsFailure([subgraphX, subgraphP], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(

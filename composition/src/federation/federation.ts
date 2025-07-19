@@ -33,7 +33,7 @@ export function federateSubgraphsWithContracts({
 }: FederateSubgraphsWithContractsParams): FederationResultWithContracts {
   switch (version) {
     default: {
-      return federateSubgraphsWithContractsV1({ subgraphs, tagOptionsByContractName, disableResolvabilityValidation });
+      return federateSubgraphsWithContractsV1({ disableResolvabilityValidation, subgraphs, tagOptionsByContractName });
     }
   }
 }
@@ -46,7 +46,7 @@ export function federateSubgraphsContract({
 }: FederateSubgraphsContractParams): FederationResult {
   switch (version) {
     default: {
-      return federateSubgraphsContractV1({ subgraphs, contractTagOptions, disableResolvabilityValidation });
+      return federateSubgraphsContractV1({ disableResolvabilityValidation, subgraphs, contractTagOptions });
     }
   }
 }

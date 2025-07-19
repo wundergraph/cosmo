@@ -397,20 +397,13 @@ describe('Enum tests', () => {
     const parentName = 'Instruction';
 
     test('that an error is returned if federation results in an Enum extension orphan', () => {
-      const result = federateSubgraphsFailure(
-        [subgraphR, subgraphQ],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultFailure;
-      expect(result.success).toBe(false);
+      const result = federateSubgraphsFailure([subgraphR, subgraphQ], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(noBaseDefinitionForExtensionError(ENUM, ENUM));
     });
 
     test('that an Enum type and extension definition federate successfully #1.1', () => {
-      const result = federateSubgraphsSuccess(
-        [subgraphR, subgraphQ, subgraphU],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphR, subgraphQ, subgraphU], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -430,10 +423,7 @@ describe('Enum tests', () => {
     });
 
     test('that an Enum type and extension definition federate successfully #1.2', () => {
-      const result = federateSubgraphsSuccess(
-        [subgraphR, subgraphU, subgraphQ],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphR, subgraphU, subgraphQ], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -453,10 +443,7 @@ describe('Enum tests', () => {
     });
 
     test('that Enums merge by union if unused in Input Fields or Arguments', () => {
-      const result = federateSubgraphsSuccess(
-        [subgraphA, subgraphB],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -480,10 +467,7 @@ describe('Enum tests', () => {
     });
 
     test('that Enums merge by intersection if used as an Input Field', () => {
-      const result = federateSubgraphsSuccess(
-        [subgraphA, subgraphC],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphA, subgraphC], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -509,10 +493,7 @@ describe('Enum tests', () => {
     });
 
     test('that Enums merge by intersection if used as an Argument', () => {
-      const result = federateSubgraphsSuccess(
-        [subgraphA, subgraphF],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphA, subgraphF], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -537,10 +518,7 @@ describe('Enum tests', () => {
     });
 
     test('that Enums must be consistent if used as both an input and output', () => {
-      const result = federateSubgraphsSuccess(
-        [subgraphC, subgraphD],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphC, subgraphD], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -571,20 +549,13 @@ describe('Enum tests', () => {
     });
 
     test('that an error is returned if an inconsistent Enum is used as both input and output', () => {
-      const result = federateSubgraphsFailure(
-        [subgraphC, subgraphE],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultFailure;
-      expect(result.success).toBe(false);
+      const result = federateSubgraphsFailure([subgraphC, subgraphE], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(incompatibleSharedEnumError(parentName));
     });
 
     test('that declaring an Enum Value as inaccessible prevents an Enum inconsistency error #1.1', () => {
-      const result = federateSubgraphsSuccess(
-        [subgraphG, subgraphH],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphG, subgraphH], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -624,10 +595,7 @@ describe('Enum tests', () => {
     });
 
     test('that declaring an Enum Value as inaccessible prevents an Enum inconsistency error #1.2', () => {
-      const result = federateSubgraphsSuccess(
-        [subgraphH, subgraphG],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphH, subgraphG], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -667,10 +635,7 @@ describe('Enum tests', () => {
     });
 
     test('that an Enum has subgraphs data', () => {
-      const result = federateSubgraphsSuccess(
-        [subgraphA, subgraphC],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphA, subgraphC], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
 
       const enumDef = result.parentDefinitionDataByTypeName.get('Instruction') as EnumDefinitionData;

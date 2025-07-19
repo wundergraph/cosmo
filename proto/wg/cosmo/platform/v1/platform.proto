@@ -101,6 +101,7 @@ message FixSubgraphSchemaRequest {
   // The string representation of the schema, the content of the file
   string schema = 2;
   string namespace = 3;
+  optional bool disable_resolvability_validation = 4;
 }
 
 message CreateMonographRequest {

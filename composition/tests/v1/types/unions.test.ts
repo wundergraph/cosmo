@@ -469,10 +469,7 @@ describe('Union tests', () => {
 
   describe('Federation tests', () => {
     test('that a Union type and extension definition federate successfully #1.1', () => {
-      const result = federateSubgraphsSuccess(
-        [subgraphAC, subgraphAD, subgraphAE],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphAC, subgraphAD, subgraphAE], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -497,10 +494,7 @@ describe('Union tests', () => {
     });
 
     test('that a Union type and extension definition federate successfully #1.2', () => {
-      const result = federateSubgraphsSuccess(
-        [subgraphAC, subgraphAE, subgraphAD],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphAC, subgraphAE, subgraphAD], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -525,20 +519,13 @@ describe('Union tests', () => {
     });
 
     test('that an error is returned if federation results in a Union extension orphan', () => {
-      const result = federateSubgraphsFailure(
-        [subgraphAC, subgraphAE],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultFailure;
-      expect(result.success).toBe(false);
+      const result = federateSubgraphsFailure([subgraphAC, subgraphAE], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(noBaseDefinitionForExtensionError(UNION, UNION));
     });
 
     test('that unions merge by union #1.1', () => {
-      const result = federateSubgraphsSuccess(
-        [subgraphA, subgraphB],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -579,10 +566,7 @@ describe('Union tests', () => {
     });
 
     test('that unions merge by union #1.2', () => {
-      const result = federateSubgraphsSuccess(
-        [subgraphB, subgraphA],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphB, subgraphA], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -623,11 +607,7 @@ describe('Union tests', () => {
     });
 
     test('that an error is returned if a union has no members #1.1', () => {
-      const result = federateSubgraphsFailure(
-        [subgraphB, subgraphC],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultFailure;
-      expect(result.success).toBe(false);
+      const result = federateSubgraphsFailure([subgraphB, subgraphC], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         subgraphValidationError('subgraph-c', [noDefinedUnionMembersError('Starters')]),
@@ -635,11 +615,7 @@ describe('Union tests', () => {
     });
 
     test('that an error is returned if a union has no members #1.1', () => {
-      const result = federateSubgraphsFailure(
-        [subgraphC, subgraphB],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultFailure;
-      expect(result.success).toBe(false);
+      const result = federateSubgraphsFailure([subgraphC, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         subgraphValidationError('subgraph-c', [noDefinedUnionMembersError('Starters')]),
@@ -647,10 +623,7 @@ describe('Union tests', () => {
     });
 
     test('that union extensions federate correctly #1.1', () => {
-      const result = federateSubgraphsSuccess(
-        [subgraphD, subgraphE],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphD, subgraphE], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -730,10 +703,7 @@ describe('Union tests', () => {
     });
 
     test('that Union extensions federate correctly #1.2', () => {
-      const result = federateSubgraphsSuccess(
-        [subgraphE, subgraphD],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphE, subgraphD], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -813,10 +783,7 @@ describe('Union tests', () => {
     });
 
     test('that Field named types can coerce Union Members into Unions #1.1', () => {
-      const result = federateSubgraphsSuccess(
-        [subgraphAF, subgraphAG],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphAF, subgraphAG], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -850,10 +817,7 @@ describe('Union tests', () => {
     });
 
     test('that Field named types can coerce Union Members into Unions #1.2', () => {
-      const result = federateSubgraphsSuccess(
-        [subgraphAG, subgraphAF],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphAG, subgraphAF], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -887,10 +851,7 @@ describe('Union tests', () => {
     });
 
     test('that Field named types can coerce Union Members into Unions #2.1', () => {
-      const result = federateSubgraphsSuccess(
-        [subgraphAH, subgraphAI, subgraphAJ],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphAH, subgraphAI, subgraphAJ], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -917,10 +878,7 @@ describe('Union tests', () => {
     });
 
     test('that Field named types can coerce Union Members into Unions #3.1', () => {
-      const result = federateSubgraphsSuccess(
-        [subgraphAK, subgraphAL],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphAK, subgraphAL], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -962,10 +920,7 @@ describe('Union tests', () => {
     });
 
     test('that Field named types can coerce Union Members into Unions #3.2', () => {
-      const result = federateSubgraphsSuccess(
-        [subgraphAK, subgraphAL],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphAK, subgraphAL], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -1007,10 +962,7 @@ describe('Union tests', () => {
     });
 
     test('that a Union has subgraphs data', () => {
-      const result = federateSubgraphsSuccess(
-        [subgraphA, subgraphB, subgraphAC],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphA, subgraphB, subgraphAC], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
 
       const unionDef = result.parentDefinitionDataByTypeName.get('Starters') as UnionDefinitionData;

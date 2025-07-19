@@ -22,7 +22,7 @@ import {
   subgraphs,
   subgraphsToFederatedGraph,
   targets,
-  users
+  users,
 } from '../../db/schema.js';
 import {
   CompositionOptions,

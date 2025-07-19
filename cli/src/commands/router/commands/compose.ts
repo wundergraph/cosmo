@@ -585,6 +585,7 @@ async function buildFeatureFlagsConfig(
         url: normalizeURL(s.routingUrl),
         definitions: parse(s.sdl),
       })),
+      options.disableResolvabilityValidation,
     );
 
     if (!featureResult.success) {

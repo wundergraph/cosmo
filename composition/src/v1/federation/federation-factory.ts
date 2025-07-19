@@ -235,9 +235,11 @@ import { ContractName } from '../../types/types';
 
 export class FederationFactory {
   authorizationDataByParentTypeName: Map<string, AuthorizationData>;
-  concreteTypeNamesByAbstractTypeName: Map<string, Set<string>>;
+  coordsByNamedTypeName = new Map<string, Set<string>>();
+  disableResolvabilityValidation: boolean = false;
   clientDefinitions: MutableTypeDefinitionNode[] = [DEPRECATED_DEFINITION];
   currentSubgraphName = '';
+  concreteTypeNamesByAbstractTypeName: Map<string, Set<string>>;
   subgraphNamesByNamedTypeNameByFieldCoords = new Map<string, Map<string, Set<string>>>();
   entityDataByTypeName: Map<string, EntityData>;
   entityInterfaceFederationDataByTypeName: Map<string, EntityInterfaceFederationData>;
@@ -255,7 +257,6 @@ export class FederationFactory {
   namedOutputTypeNames = new Set<string>();
   parentDefinitionDataByTypeName = new Map<string, ParentDefinitionData>();
   parentTagDataByTypeName = new Map<string, ParentTagData>();
-  coordsByNamedTypeName = new Map<string, Set<string>>();
   persistedDirectiveDefinitionByDirectiveName = new Map<string, DirectiveDefinitionNode>([
     [AUTHENTICATED, AUTHENTICATED_DEFINITION],
     [DEPRECATED, DEPRECATED_DEFINITION],
@@ -266,7 +267,6 @@ export class FederationFactory {
   persistedDirectiveDefinitions = new Set<string>([AUTHENTICATED, DEPRECATED, INACCESSIBLE, TAG, REQUIRES_SCOPES]);
   potentialPersistedDirectiveDefinitionDataByDirectiveName = new Map<string, PersistedDirectiveDefinitionData>();
   routerDefinitions: MutableTypeDefinitionNode[] = [DEPRECATED_DEFINITION, TAG_DEFINITION];
-  disableResolvabilityValidation: boolean = false;
   subscriptionFilterDataByFieldPath = new Map<string, SubscriptionFilterData>();
   tagNamesByCoords = new Map<string, Set<string>>();
   warnings: Warning[];
@@ -274,23 +274,23 @@ export class FederationFactory {
   constructor({
     authorizationDataByParentTypeName,
     concreteTypeNamesByAbstractTypeName,
+    disableResolvabilityValidation,
     entityDataByTypeName,
     entityInterfaceFederationDataByTypeName,
     fieldCoordsByNamedTypeName,
     internalGraph,
     internalSubgraphBySubgraphName,
     warnings,
-    disableResolvabilityValidation,
   }: FederationFactoryParams) {
     this.authorizationDataByParentTypeName = authorizationDataByParentTypeName;
     this.concreteTypeNamesByAbstractTypeName = concreteTypeNamesByAbstractTypeName;
+    this.disableResolvabilityValidation = disableResolvabilityValidation ?? false;
     this.entityDataByTypeName = entityDataByTypeName;
     this.entityInterfaceFederationDataByTypeName = entityInterfaceFederationDataByTypeName;
     this.fieldCoordsByNamedTypeName = fieldCoordsByNamedTypeName;
     this.internalGraph = internalGraph;
     this.internalSubgraphBySubgraphName = internalSubgraphBySubgraphName;
     this.warnings = warnings;
-    this.disableResolvabilityValidation = disableResolvabilityValidation ?? false;
   }
 
   getValidImplementedInterfaces(data: CompositeOutputData): NamedTypeNode[] {
@@ -3025,8 +3025,8 @@ type FederationFactoryResultFailure = {
 type FederationFactoryResult = FederationFactoryResultFailure | FederationFactoryResultSuccess;
 
 function initializeFederationFactory({
-  subgraphs,
   disableResolvabilityValidation,
+  subgraphs,
 }: FederationParams): FederationFactoryResult {
   if (subgraphs.length < 1) {
     return { errors: [minimumSubgraphRequirementError], success: false, warnings: [] };
@@ -3113,7 +3113,7 @@ function initializeFederationFactory({
   };
 }
 
-export function federateSubgraphs({ subgraphs, disableResolvabilityValidation }: FederationParams): FederationResult {
+export function federateSubgraphs({ disableResolvabilityValidation, subgraphs }: FederationParams): FederationResult {
   const federationFactoryResult = initializeFederationFactory({ subgraphs, disableResolvabilityValidation });
   if (!federationFactoryResult.success) {
     return { errors: federationFactoryResult.errors, success: false, warnings: federationFactoryResult.warnings };

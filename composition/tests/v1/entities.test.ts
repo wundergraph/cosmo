@@ -8,6 +8,7 @@ import {
   invalidDirectiveError,
   invalidFieldShareabilityError,
   KEY,
+  NormalizationResultFailure,
   normalizeSubgraph,
   ObjectDefinitionData,
   parse,
@@ -35,7 +36,7 @@ describe('Entity tests', () => {
         subgraphT.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultFailure;
+      ) as NormalizationResultFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(2);
       expect(result.errors[0]).toStrictEqual(

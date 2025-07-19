@@ -518,7 +518,7 @@ describe('Input tests', () => {
       const { errors } = federateSubgraphsFailure(
         [subgraphWithInputField('subgraph', 'String! = VALUE')],
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultFailure;
+      );
       expect(errors).toHaveLength(1);
       expect(errors[0]).toStrictEqual(
         subgraphValidationError('subgraph', [

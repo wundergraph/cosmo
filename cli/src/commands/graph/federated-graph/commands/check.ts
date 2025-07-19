@@ -29,8 +29,9 @@ export default (opts: BaseCommandOptions) => {
     let success = false;
     const resp = await opts.client.platform.checkFederatedGraph(
       {
-        name,
+        disableResolvabilityValidation: options.disableResolvabilityValidation,
         labelMatchers: options.labelMatcher,
+        name,
         namespace: options.namespace,
       },
       {

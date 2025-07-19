@@ -48,7 +48,7 @@ import {
   schemaVersionChangeAction,
   targetLabelMatchers,
   targets,
-  users
+  users,
 } from '../../db/schema.js';
 import {
   CompositionOptions,

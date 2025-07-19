@@ -77,8 +77,6 @@ export default (opts: BaseCommandOptions) => {
     const resp = await opts.client.platform.updateSubgraph(
       {
         disableResolvabilityValidation: options.disableResolvabilityValidation,
-        name,
-        namespace: options.namespace,
         labels:
           options.label?.map?.((label: string) => {
             const { key, value } = splitLabel(label);
@@ -87,16 +85,18 @@ export default (opts: BaseCommandOptions) => {
               value,
             };
           }) ?? [],
-        unsetLabels: options.unsetLabels,
-        subscriptionUrl: options.subscriptionUrl,
+        name,
+        namespace: options.namespace,
+        readme: readmeFile ? await readFile(readmeFile, 'utf8') : undefined,
         routingUrl: options.routingUrl,
         subscriptionProtocol: options.subscriptionProtocol
           ? parseGraphQLSubscriptionProtocol(options.subscriptionProtocol)
           : undefined,
+        subscriptionUrl: options.subscriptionUrl,
+        unsetLabels: options.unsetLabels,
         websocketSubprotocol: options.websocketSubprotocol
           ? parseGraphQLWebsocketSubprotocol(options.websocketSubprotocol)
           : undefined,
-        readme: readmeFile ? await readFile(readmeFile, 'utf8') : undefined,
       },
       {
         headers: getBaseHeaders(),
