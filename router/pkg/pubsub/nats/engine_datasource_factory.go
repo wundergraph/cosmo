@@ -63,15 +63,16 @@ func (c *EngineDataSourceFactory) ResolveDataSourceInput(eventData []byte) (stri
 	subject := c.subjects[0]
 
 	evtCfg := PublishAndRequestEventConfiguration{
-		ProviderID: c.providerId,
-		Subject:    subject,
-		Data:       eventData,
+		Provider:  c.providerId,
+		Subject:   subject,
+		Event:     Event{Data: eventData},
+		FieldName: c.fieldName,
 	}
 
 	return evtCfg.MarshalJSONTemplate(), nil
 }
 
-func (c *EngineDataSourceFactory) ResolveDataSourceSubscription() (resolve.SubscriptionDataSource, error) {
+func (c *EngineDataSourceFactory) ResolveDataSourceSubscription() (datasource.PubSubSubscriptionDataSource, error) {
 	return &SubscriptionSource{
 		pubSub: c.NatsAdapter,
 	}, nil
@@ -79,8 +80,9 @@ func (c *EngineDataSourceFactory) ResolveDataSourceSubscription() (resolve.Subsc
 
 func (c *EngineDataSourceFactory) ResolveDataSourceSubscriptionInput() (string, error) {
 	evtCfg := SubscriptionEventConfiguration{
-		ProviderID: c.providerId,
-		Subjects:   c.subjects,
+		Provider:  c.providerId,
+		Subjects:  c.subjects,
+		FieldName: c.fieldName,
 	}
 	if c.withStreamConfiguration {
 		evtCfg.StreamConfiguration = &StreamConfiguration{

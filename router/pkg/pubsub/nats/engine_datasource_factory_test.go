@@ -34,7 +34,7 @@ func TestEngineDataSourceFactoryWithMockAdapter(t *testing.T) {
 
 	// Configure mock expectations for Publish
 	mockAdapter.On("Publish", mock.Anything, mock.MatchedBy(func(event PublishAndRequestEventConfiguration) bool {
-		return event.ProviderID == "test-provider" && event.Subject == "test-subject"
+		return event.ProviderID() == "test-provider" && event.Subject == "test-subject"
 	})).Return(nil)
 
 	// Create the data source with mock adapter
@@ -167,7 +167,7 @@ func TestEngineDataSourceFactory_RequestDataSource(t *testing.T) {
 
 	// Configure mock expectations for Request
 	mockAdapter.On("Request", mock.Anything, mock.MatchedBy(func(event PublishAndRequestEventConfiguration) bool {
-		return event.ProviderID == "test-provider" && event.Subject == "test-subject"
+		return event.ProviderID() == "test-provider" && event.Subject == "test-subject"
 	}), mock.Anything).Return(nil).Run(func(args mock.Arguments) {
 		w := args.Get(2).(io.Writer)
 		w.Write([]byte(`{"response": "test"}`))

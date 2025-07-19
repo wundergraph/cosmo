@@ -17,6 +17,7 @@ packages:
       ProviderBuilder:
       EngineDataSourceFactory:
       Provider:
+      SubscriptionEventUpdater:
   github.com/wundergraph/cosmo/router/pkg/pubsub/nats:
     interfaces:
       Adapter:

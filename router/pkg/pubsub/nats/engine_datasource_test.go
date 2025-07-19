@@ -16,40 +16,6 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
-func TestPublishEventConfiguration_MarshalJSONTemplate(t *testing.T) {
-	tests := []struct {
-		name        string
-		config      PublishAndRequestEventConfiguration
-		wantPattern string
-	}{
-		{
-			name: "simple configuration",
-			config: PublishAndRequestEventConfiguration{
-				ProviderID: "test-provider",
-				Subject:    "test-subject",
-				Data:       json.RawMessage(`{"message":"hello"}`),
-			},
-			wantPattern: `{"subject":"test-subject", "data": {"message":"hello"}, "providerId":"test-provider"}`,
-		},
-		{
-			name: "with special characters",
-			config: PublishAndRequestEventConfiguration{
-				ProviderID: "test-provider-id",
-				Subject:    "subject-with-hyphens",
-				Data:       json.RawMessage(`{"message":"special \"quotes\" here"}`),
-			},
-			wantPattern: `{"subject":"subject-with-hyphens", "data": {"message":"special \"quotes\" here"}, "providerId":"test-provider-id"}`,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := tt.config.MarshalJSONTemplate()
-			assert.Equal(t, tt.wantPattern, result)
-		})
-	}
-}
-
 func TestPublishAndRequestEventConfiguration_MarshalJSONTemplate(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -59,20 +25,20 @@ func TestPublishAndRequestEventConfiguration_MarshalJSONTemplate(t *testing.T) {
 		{
 			name: "simple configuration",
 			config: PublishAndRequestEventConfiguration{
-				ProviderID: "test-provider",
-				Subject:    "test-subject",
-				Data:       json.RawMessage(`{"message":"hello"}`),
+				Provider: "test-provider",
+				Subject:  "test-subject",
+				Event:    Event{Data: json.RawMessage(`{"message":"hello"}`)},
 			},
-			wantPattern: `{"subject":"test-subject", "data": {"message":"hello"}, "providerId":"test-provider"}`,
+			wantPattern: `{"subject":"test-subject", "event": {"data": {"message":"hello"}}, "providerId":"test-provider"}`,
 		},
 		{
 			name: "with special characters",
 			config: PublishAndRequestEventConfiguration{
-				ProviderID: "test-provider-id",
-				Subject:    "subject-with-hyphens",
-				Data:       json.RawMessage(`{"message":"special \"quotes\" here"}`),
+				Provider: "test-provider-id",
+				Subject:  "subject-with-hyphens",
+				Event:    Event{Data: json.RawMessage(`{"message":"special \"quotes\" here"}`)},
 			},
-			wantPattern: `{"subject":"subject-with-hyphens", "data": {"message":"special \"quotes\" here"}, "providerId":"test-provider-id"}`,
+			wantPattern: `{"subject":"subject-with-hyphens", "event": {"data": {"message":"special \"quotes\" here"}}, "providerId":"test-provider-id"}`,
 		},
 	}
 
@@ -140,16 +106,16 @@ func TestSubscriptionSource_Start(t *testing.T) {
 	tests := []struct {
 		name        string
 		input       string
-		mockSetup   func(*MockAdapter, *datasource.MockSubscriptionUpdater)
+		mockSetup   func(*MockAdapter, *datasource.MockSubscriptionEventUpdater)
 		expectError bool
 	}{
 		{
 			name:  "successful subscription",
 			input: `{"subjects":["subject1", "subject2"], "providerId":"test-provider"}`,
-			mockSetup: func(m *MockAdapter, updater *datasource.MockSubscriptionUpdater) {
+			mockSetup: func(m *MockAdapter, updater *datasource.MockSubscriptionEventUpdater) {
 				m.On("Subscribe", mock.Anything, SubscriptionEventConfiguration{
-					ProviderID: "test-provider",
-					Subjects:   []string{"subject1", "subject2"},
+					Provider: "test-provider",
+					Subjects: []string{"subject1", "subject2"},
 				}, mock.Anything).Return(nil)
 			},
 			expectError: false,
@@ -157,10 +123,10 @@ func TestSubscriptionSource_Start(t *testing.T) {
 		{
 			name:  "adapter returns error",
 			input: `{"subjects":["subject1"], "providerId":"test-provider"}`,
-			mockSetup: func(m *MockAdapter, updater *datasource.MockSubscriptionUpdater) {
+			mockSetup: func(m *MockAdapter, updater *datasource.MockSubscriptionEventUpdater) {
 				m.On("Subscribe", mock.Anything, SubscriptionEventConfiguration{
-					ProviderID: "test-provider",
-					Subjects:   []string{"subject1"},
+					Provider: "test-provider",
+					Subjects: []string{"subject1"},
 				}, mock.Anything).Return(errors.New("subscription error"))
 			},
 			expectError: true,
@@ -168,7 +134,7 @@ func TestSubscriptionSource_Start(t *testing.T) {
 		{
 			name:        "invalid input json",
 			input:       `{"invalid json":`,
-			mockSetup:   func(m *MockAdapter, updater *datasource.MockSubscriptionUpdater) {},
+			mockSetup:   func(m *MockAdapter, updater *datasource.MockSubscriptionEventUpdater) {},
 			expectError: true,
 		},
 	}
@@ -176,7 +142,7 @@ func TestSubscriptionSource_Start(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockAdapter := NewMockAdapter(t)
-			updater := datasource.NewMockSubscriptionUpdater(t)
+			updater := datasource.NewMockSubscriptionEventUpdater(t)
 			tt.mockSetup(mockAdapter, updater)
 
 			source := &SubscriptionSource{
@@ -213,12 +179,12 @@ func TestNatsPublishDataSource_Load(t *testing.T) {
 	}{
 		{
 			name:  "successful publish",
-			input: `{"subject":"test-subject", "data":{"message":"hello"}, "providerId":"test-provider"}`,
+			input: `{"subject":"test-subject", "event": {"data":{"message":"hello"}}, "providerId":"test-provider"}`,
 			mockSetup: func(m *MockAdapter) {
 				m.On("Publish", mock.Anything, mock.MatchedBy(func(event PublishAndRequestEventConfiguration) bool {
-					return event.ProviderID == "test-provider" &&
+					return event.ProviderID() == "test-provider" &&
 						event.Subject == "test-subject" &&
-						string(event.Data) == `{"message":"hello"}`
+						string(event.Event.Data) == `{"message":"hello"}`
 				})).Return(nil)
 			},
 			expectError:     false,
@@ -227,7 +193,7 @@ func TestNatsPublishDataSource_Load(t *testing.T) {
 		},
 		{
 			name:  "publish error",
-			input: `{"subject":"test-subject", "data":{"message":"hello"}, "providerId":"test-provider"}`,
+			input: `{"subject":"test-subject", "event": {"data":{"message":"hello"}}, "providerId":"test-provider"}`,
 			mockSetup: func(m *MockAdapter) {
 				m.On("Publish", mock.Anything, mock.Anything).Return(errors.New("publish error"))
 			},
@@ -288,12 +254,12 @@ func TestNatsRequestDataSource_Load(t *testing.T) {
 	}{
 		{
 			name:  "successful request",
-			input: `{"subject":"test-subject", "data":{"message":"hello"}, "providerId":"test-provider"}`,
+			input: `{"subject":"test-subject", "event": {"data":{"message":"hello"}}, "providerId":"test-provider"}`,
 			mockSetup: func(m *MockAdapter) {
 				m.On("Request", mock.Anything, mock.MatchedBy(func(event PublishAndRequestEventConfiguration) bool {
-					return event.ProviderID == "test-provider" &&
+					return event.ProviderID() == "test-provider" &&
 						event.Subject == "test-subject" &&
-						string(event.Data) == `{"message":"hello"}`
+						string(event.Event.Data) == `{"message":"hello"}`
 				}), mock.Anything).Run(func(args mock.Arguments) {
 					// Write response to the output buffer
 					w := args.Get(2).(io.Writer)
@@ -305,7 +271,7 @@ func TestNatsRequestDataSource_Load(t *testing.T) {
 		},
 		{
 			name:  "request error",
-			input: `{"subject":"test-subject", "data":{"message":"hello"}, "providerId":"test-provider"}`,
+			input: `{"subject":"test-subject", "event": {"data":{"message":"hello"}}, "providerId":"test-provider"}`,
 			mockSetup: func(m *MockAdapter) {
 				m.On("Request", mock.Anything, mock.Anything, mock.Anything).Return(errors.New("request error"))
 			},

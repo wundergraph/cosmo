@@ -24,26 +24,45 @@ func TestPublishEventConfiguration_MarshalJSONTemplate(t *testing.T) {
 		{
 			name: "simple configuration",
 			config: PublishEventConfiguration{
-				ProviderID: "test-provider",
-				Topic:      "test-topic",
-				Data:       json.RawMessage(`{"message":"hello"}`),
+				Provider: "test-provider",
+				Topic:    "test-topic",
+				Event:    Event{Data: json.RawMessage(`{"message":"hello"}`)},
 			},
-			wantPattern: `{"topic":"test-topic", "data": {"message":"hello"}, "providerId":"test-provider"}`,
+			wantPattern: `{"topic":"test-topic", "event": {"data": {"message":"hello"}, "key": "", "headers": {}}, "providerId":"test-provider"}`,
 		},
 		{
 			name: "with special characters",
 			config: PublishEventConfiguration{
-				ProviderID: "test-provider-id",
-				Topic:      "topic-with-hyphens",
-				Data:       json.RawMessage(`{"message":"special \"quotes\" here"}`),
+				Provider: "test-provider-id",
+				Topic:    "topic-with-hyphens",
+				Event:    Event{Data: json.RawMessage(`{"message":"special \"quotes\" here"}`)},
 			},
-			wantPattern: `{"topic":"topic-with-hyphens", "data": {"message":"special \"quotes\" here"}, "providerId":"test-provider-id"}`,
+			wantPattern: `{"topic":"topic-with-hyphens", "event": {"data": {"message":"special \"quotes\" here"}, "key": "", "headers": {}}, "providerId":"test-provider-id"}`,
+		},
+		{
+			name: "with key",
+			config: PublishEventConfiguration{
+				Provider: "test-provider-id",
+				Topic:    "topic-with-hyphens",
+				Event:    Event{Key: []byte("blablabla"), Data: json.RawMessage(`{}`)},
+			},
+			wantPattern: `{"topic":"topic-with-hyphens", "event": {"data": {}, "key": "blablabla", "headers": {}}, "providerId":"test-provider-id"}`,
+		},
+		{
+			name: "with headers",
+			config: PublishEventConfiguration{
+				Provider: "test-provider-id",
+				Topic:    "topic-with-hyphens",
+				Event:    Event{Headers: map[string][]byte{"key": []byte(`blablabla`)}, Data: json.RawMessage(`{}`)},
+			},
+			wantPattern: `{"topic":"topic-with-hyphens", "event": {"data": {}, "key": "", "headers": {"key":"YmxhYmxhYmxh"}}, "providerId":"test-provider-id"}`,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := tt.config.MarshalJSONTemplate()
+			result, err := tt.config.MarshalJSONTemplate()
+			assert.NoError(t, err)
 			assert.Equal(t, tt.wantPattern, result)
 		})
 	}
@@ -105,16 +124,16 @@ func TestSubscriptionSource_Start(t *testing.T) {
 	tests := []struct {
 		name        string
 		input       string
-		mockSetup   func(*MockAdapter, *datasource.MockSubscriptionUpdater)
+		mockSetup   func(*MockAdapter, *datasource.MockSubscriptionEventUpdater)
 		expectError bool
 	}{
 		{
 			name:  "successful subscription",
 			input: `{"topics":["topic1", "topic2"], "providerId":"test-provider"}`,
-			mockSetup: func(m *MockAdapter, updater *datasource.MockSubscriptionUpdater) {
+			mockSetup: func(m *MockAdapter, updater *datasource.MockSubscriptionEventUpdater) {
 				m.On("Subscribe", mock.Anything, SubscriptionEventConfiguration{
-					ProviderID: "test-provider",
-					Topics:     []string{"topic1", "topic2"},
+					Provider: "test-provider",
+					Topics:   []string{"topic1", "topic2"},
 				}, mock.Anything).Return(nil)
 			},
 			expectError: false,
@@ -122,10 +141,10 @@ func TestSubscriptionSource_Start(t *testing.T) {
 		{
 			name:  "adapter returns error",
 			input: `{"topics":["topic1"], "providerId":"test-provider"}`,
-			mockSetup: func(m *MockAdapter, updater *datasource.MockSubscriptionUpdater) {
+			mockSetup: func(m *MockAdapter, updater *datasource.MockSubscriptionEventUpdater) {
 				m.On("Subscribe", mock.Anything, SubscriptionEventConfiguration{
-					ProviderID: "test-provider",
-					Topics:     []string{"topic1"},
+					Provider: "test-provider",
+					Topics:   []string{"topic1"},
 				}, mock.Anything).Return(errors.New("subscription error"))
 			},
 			expectError: true,
@@ -133,7 +152,7 @@ func TestSubscriptionSource_Start(t *testing.T) {
 		{
 			name:        "invalid input json",
 			input:       `{"invalid json":`,
-			mockSetup:   func(m *MockAdapter, updater *datasource.MockSubscriptionUpdater) {},
+			mockSetup:   func(m *MockAdapter, updater *datasource.MockSubscriptionEventUpdater) {},
 			expectError: true,
 		},
 	}
@@ -141,7 +160,7 @@ func TestSubscriptionSource_Start(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockAdapter := NewMockAdapter(t)
-			updater := datasource.NewMockSubscriptionUpdater(t)
+			updater := datasource.NewMockSubscriptionEventUpdater(t)
 			tt.mockSetup(mockAdapter, updater)
 
 			source := &SubscriptionDataSource{
@@ -178,12 +197,12 @@ func TestKafkaPublishDataSource_Load(t *testing.T) {
 	}{
 		{
 			name:  "successful publish",
-			input: `{"topic":"test-topic", "data":{"message":"hello"}, "providerId":"test-provider"}`,
+			input: `{"topic":"test-topic", "event": {"data":{"message":"hello"}}, "providerId":"test-provider"}`,
 			mockSetup: func(m *MockAdapter) {
 				m.On("Publish", mock.Anything, mock.MatchedBy(func(event PublishEventConfiguration) bool {
-					return event.ProviderID == "test-provider" &&
+					return event.ProviderID() == "test-provider" &&
 						event.Topic == "test-topic" &&
-						string(event.Data) == `{"message":"hello"}`
+						string(event.Event.Data) == `{"message":"hello"}`
 				})).Return(nil)
 			},
 			expectError:     false,
@@ -192,7 +211,7 @@ func TestKafkaPublishDataSource_Load(t *testing.T) {
 		},
 		{
 			name:  "publish error",
-			input: `{"topic":"test-topic", "data":{"message":"hello"}, "providerId":"test-provider"}`,
+			input: `{"topic":"test-topic", "event": {"data":{"message":"hello"}}, "providerId":"test-provider"}`,
 			mockSetup: func(m *MockAdapter) {
 				m.On("Publish", mock.Anything, mock.Anything).Return(errors.New("publish error"))
 			},
