@@ -44,9 +44,10 @@ export default (opts: BaseCommandOptions) => {
 
     const resp = await opts.client.platform.fixSubgraphSchema(
       {
-        subgraphName: name,
+        disableResolvabilityValidation: options.disableResolvabilityValidation,
         namespace: options.namespace,
         schema,
+        subgraphName: name,
       },
       {
         headers: getBaseHeaders(),

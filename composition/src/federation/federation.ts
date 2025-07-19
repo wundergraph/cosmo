@@ -19,7 +19,7 @@ export function federateSubgraphs({
 }: FederateSubgraphsParams): FederationResult {
   switch (version) {
     default: {
-      return federateSubgraphsV1({ subgraphs, disableResolvabilityValidation });
+      return federateSubgraphsV1({ disableResolvabilityValidation, subgraphs });
     }
   }
 }
