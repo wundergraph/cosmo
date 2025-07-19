@@ -11,13 +11,13 @@ import { Subgraph, SubgraphConfig } from '../subgraph/types';
 import { SupportedRouterCompatibilityVersion } from '../router-compatibility-version/router-compatibility-version';
 import { ContractName } from '../types/types';
 
-export type FederationResultFailure = {
+export type FederationFailure = {
   errors: Array<Error>;
   success: false;
   warnings: Array<Warning>;
 };
 
-export type FederationResultSuccess = {
+export type FederationSuccess = {
   fieldConfigurations: Array<FieldConfiguration>;
   federatedGraphAST: DocumentNode;
   federatedGraphClientSchema: GraphQLSchema;
@@ -29,7 +29,7 @@ export type FederationResultSuccess = {
   warnings: Array<Warning>;
 };
 
-export type FederationResult = FederationResultFailure | FederationResultSuccess;
+export type FederationResult = FederationFailure | FederationSuccess;
 
 export type FederationResultWithContractsFailure = {
   success: false;

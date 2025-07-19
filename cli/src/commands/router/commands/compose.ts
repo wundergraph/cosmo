@@ -25,7 +25,7 @@ import {
   GRPCMapping,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import Table from 'cli-table3';
-import { FederationResultSuccess, ROUTER_COMPATIBILITY_VERSION_ONE } from '@wundergraph/composition';
+import { FederationSuccess, ROUTER_COMPATIBILITY_VERSION_ONE } from '@wundergraph/composition';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { composeSubgraphs, introspectSubgraph } from '../../../utils.js';
 
@@ -107,7 +107,7 @@ type Config = {
   subgraphs: ConfigSubgraph[];
 };
 
-function constructRouterSubgraph(result: FederationResultSuccess, s: SubgraphMetadata, index: number): RouterSubgraph {
+function constructRouterSubgraph(result: FederationSuccess, s: SubgraphMetadata, index: number): RouterSubgraph {
   const subgraphConfig = result.subgraphConfigBySubgraphName.get(s.name);
   const schema = subgraphConfig?.schema;
   const configurationDataByTypeName = subgraphConfig?.configurationDataByTypeName;

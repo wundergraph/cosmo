@@ -1,14 +1,14 @@
 import {
   ConfigurationData,
   duplicateDirectiveArgumentDefinitionsErrorMessage,
-  FederationResultFailure,
+  FederationFailure,
   FieldData,
   FIELDS,
   FIRST_ORDINAL,
   invalidDirectiveError,
   invalidFieldShareabilityError,
   KEY,
-  NormalizationResultFailure,
+  NormalizationFailure,
   normalizeSubgraph,
   ObjectDefinitionData,
   parse,
@@ -36,7 +36,7 @@ describe('Entity tests', () => {
         subgraphT.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(2);
       expect(result.errors[0]).toStrictEqual(

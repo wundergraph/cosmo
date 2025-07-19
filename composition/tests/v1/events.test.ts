@@ -24,7 +24,7 @@ import {
   noBaseDefinitionForExtensionError,
   nonExternalKeyFieldNamesEventDrivenErrorMessage,
   nonKeyFieldNamesEventDrivenErrorMessage,
-  NormalizationResultSuccess,
+  NormalizationSuccess,
   normalizeSubgraphFromString,
   OBJECT,
   parse,
@@ -185,7 +185,7 @@ describe('events Configuration tests', () => {
         subgraphStringB,
         true,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(result.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
@@ -225,7 +225,7 @@ describe('events Configuration tests', () => {
         subgraphStringC,
         true,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(result.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([

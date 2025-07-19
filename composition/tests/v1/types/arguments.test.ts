@@ -11,7 +11,7 @@ import {
   invalidNamedTypeError,
   InvalidRequiredInputValueData,
   invalidRequiredInputValueError,
-  NormalizationResultFailure,
+  NormalizationFailure,
   normalizeSubgraphFromString,
   parse,
   ROUTER_COMPATIBILITY_VERSION_ONE,
@@ -281,7 +281,7 @@ describe('Argument federation tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
+    ) as NormalizationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(2);
     expect(result.errors[0]).toStrictEqual(duplicateArgumentsError('Object.field', ['argThree', 'argOne']));

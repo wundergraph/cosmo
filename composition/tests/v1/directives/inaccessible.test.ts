@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'vitest';
 import {
   allChildDefinitionsAreInaccessibleError,
-  FederationResultFailure,
-  FederationResultSuccess,
+  FederationFailure,
+  FederationSuccess,
   FIELD,
   FieldData,
   ImplementationErrors,
@@ -12,7 +12,7 @@ import {
   InvalidFieldImplementation,
   invalidFieldShareabilityError,
   invalidInterfaceImplementationError,
-  NormalizationResultFailure,
+  NormalizationFailure,
   normalizeSubgraph,
   OBJECT,
   ObjectDefinitionData,
@@ -193,7 +193,7 @@ describe('@inaccessible tests', () => {
       subgraphE.name,
       undefined,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
+    ) as NormalizationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(

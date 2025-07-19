@@ -14,8 +14,8 @@ import {
   LIST,
   nonKeyComposingObjectTypeNamesEventDrivenErrorMessage,
   nonLeafSubscriptionFieldConditionFieldPathFinalFieldErrorMessage,
-  NormalizationResultFailure,
-  NormalizationResultSuccess,
+  NormalizationFailure,
+  NormalizationSuccess,
   normalizeSubgraph,
   NULL,
   OBJECT,
@@ -49,7 +49,7 @@ describe('@openfed__subscriptionFilter tests', () => {
         subgraphA.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(2);
       expect(result.errors[0]).toStrictEqual(invalidSubscriptionFilterLocationError('Object.field'));
@@ -64,7 +64,7 @@ describe('@openfed__subscriptionFilter tests', () => {
         subgraphC.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(`
@@ -114,7 +114,7 @@ describe('@openfed__subscriptionFilter tests', () => {
         subgraphG.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(`
@@ -164,7 +164,7 @@ describe('@openfed__subscriptionFilter tests', () => {
         subgraphK.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.errors).toHaveLength(1);
       expect(result.errors).toStrictEqual([
         invalidDirectiveError('openfed__subscriptionFilter', 'Subscription.one', FIRST_ORDINAL, [

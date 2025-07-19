@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import {
   ARGUMENT_DEFINITION_UPPER,
-  BatchNormalizationResultSuccess,
+  BatchNormalizationSuccess,
   ConfigurationData,
   duplicateOverriddenFieldErrorMessage,
   duplicateOverriddenFieldsError,
@@ -12,7 +12,7 @@ import {
   invalidDirectiveLocationErrorMessage,
   invalidFieldShareabilityError,
   invalidOverrideTargetSubgraphNameWarning,
-  NormalizationResultFailure,
+  NormalizationFailure,
   normalizeSubgraph,
   ObjectDefinitionData,
   OVERRIDE,
@@ -38,7 +38,7 @@ describe('@override directive tests', () => {
         subgraphQ.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -49,7 +49,7 @@ describe('@override directive tests', () => {
     });
 
     test('that @override produces the correct engine configuration', () => {
-      const result = batchNormalize([subgraphA, subgraphE, subgraphF]) as BatchNormalizationResultSuccess;
+      const result = batchNormalize([subgraphA, subgraphE, subgraphF]) as BatchNormalizationSuccess;
       expect(result.success).toBe(true);
       const a = result.internalSubgraphBySubgraphName.get('subgraph-a');
       expect(a).toBeDefined();

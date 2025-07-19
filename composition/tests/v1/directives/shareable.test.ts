@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest';
 import {
   FieldData,
   invalidFieldShareabilityError,
-  NormalizationResultSuccess,
+  NormalizationSuccess,
   normalizeSubgraph,
   normalizeSubgraphFromString,
   ObjectDefinitionData,
@@ -47,7 +47,7 @@ describe('@shareable directive tests', () => {
       `,
         true,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -100,7 +100,7 @@ describe('@shareable directive tests', () => {
       `,
         true,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -132,7 +132,7 @@ describe('@shareable directive tests', () => {
         subgraphD.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -157,7 +157,7 @@ describe('@shareable directive tests', () => {
         subgraphE.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toStrictEqual(
         normalizeString(

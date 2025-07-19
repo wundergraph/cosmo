@@ -1,10 +1,4 @@
-import {
-  ContractTagOptions,
-  FederationResultSuccess,
-  parse,
-  ROUTER_COMPATIBILITY_VERSION_ONE,
-  Subgraph,
-} from '../../src';
+import { ContractTagOptions, FederationSuccess, parse, ROUTER_COMPATIBILITY_VERSION_ONE, Subgraph } from '../../src';
 import { describe, expect, test } from 'vitest';
 import { schemaQueryDefinition, versionOneRouterContractDefinitions, versionOneRouterDefinitions } from './utils/utils';
 import {
@@ -43,9 +37,9 @@ describe('Contract tests', () => {
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
       expect(result.federationResultByContractName).toBeDefined();
-      const contractOne = result.federationResultByContractName!.get('one') as FederationResultSuccess;
+      const contractOne = result.federationResultByContractName!.get('one') as FederationSuccess;
       expect(contractOne.success).toBe(true);
-      const contractTwo = result.federationResultByContractName!.get('two') as FederationResultSuccess;
+      const contractTwo = result.federationResultByContractName!.get('two') as FederationSuccess;
       expect(contractTwo.success).toBe(true);
       expect(schemaToSortedNormalizedString(contractOne.federatedGraphSchema)).toBe(
         normalizeString(
@@ -536,9 +530,9 @@ describe('Contract tests', () => {
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
       expect(result.success).toBe(true);
-      const contractOne = result.federationResultByContractName!.get('one') as FederationResultSuccess;
+      const contractOne = result.federationResultByContractName!.get('one') as FederationSuccess;
       expect(contractOne.success).toBe(true);
-      const contractTwo = result.federationResultByContractName!.get('two') as FederationResultSuccess;
+      const contractTwo = result.federationResultByContractName!.get('two') as FederationSuccess;
       expect(contractTwo.success).toBe(true);
       expect(schemaToSortedNormalizedString(contractOne.federatedGraphSchema)).toBe(
         normalizeString(
