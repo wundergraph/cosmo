@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.235.1](https://github.com/wundergraph/cosmo/compare/router@0.235.0...router@0.235.1) (2025-07-21)
+
+### Bug Fixes
+
+* **router:** provide request context of original WebSocket Upgrade request to subgraph requests ([#1957](https://github.com/wundergraph/cosmo/issues/1957)) ([b4420a1](https://github.com/wundergraph/cosmo/commit/b4420a1985b9f3999ce319ef877307677f8e6851)) (@DerZade)
+
 # [0.235.0](https://github.com/wundergraph/cosmo/compare/router@0.234.0...router@0.235.0) (2025-07-17)
 
 ### Features
