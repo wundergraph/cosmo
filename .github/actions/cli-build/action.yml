@@ -8,10 +8,6 @@ inputs:
   github-sha:
     description: 'GitHub SHA for versioning'
     required: true
-  working-directory:
-    description: 'Working directory for the build'
-    required: false
-    default: '.'
 
 outputs:
   artifact-url:
@@ -40,22 +36,20 @@ runs:
     - name: Install dependencies
       shell: bash
       run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic install --frozen-lockfile
-      working-directory: ${{ inputs.working-directory }}
 
     - name: Build
       shell: bash
       run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic run build
-      working-directory: ${{ inputs.working-directory }}
 
     - name: 'Build wgc binary'
       shell: bash
       run: bun build --compile --minify --sourcemap --target ${{ inputs.target }} src/index.ts --outfile out/${{ steps.outfile.outputs.name }}
-      working-directory: ${{ inputs.working-directory }}/cli
+      working-directory: cli
 
     - name: Chmod the build artifact
       shell: bash
       run: chmod +rwX out/${{ steps.outfile.outputs.name }}
-      working-directory: ${{ inputs.working-directory }}/cli
+      working-directory: cli
 
     - name: 'Upload builds as artifacts'
       id: upload
