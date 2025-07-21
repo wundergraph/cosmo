@@ -764,6 +764,7 @@ func TestHttpJwksAuthorization(t *testing.T) {
 		require.NoError(t, err)
 
 		token, err := authServer2.Token(nil)
+		require.NoError(t, err)
 
 		t.Parallel()
 

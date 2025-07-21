@@ -81,6 +81,10 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 			marshalOptions := jwkset.JWKMarshalOptions{
 				Private: true,
 			}
+			if len(c.Secret) < 32 {
+				logger.Warn("Using a short secret for JWKs may lead to weak security. Consider using a longer secret.")
+			}
+
 			alg := jwkset.ALG(c.Algorithm)
 			if !alg.IANARegistered() {
 				return nil, fmt.Errorf("unsupported algorithm: %s", c.Algorithm)
@@ -96,12 +100,12 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 			}
 			jwk, err := jwkset.NewJWKFromKey([]byte(c.Secret), jwkOptions)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("failed to create JWK from secret: %w", err)
 			}
 
 			err = given.KeyWrite(ctx, jwk)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("failed to write JWK to storage: %w", err)
 			}
 		}
 	}
