@@ -81,27 +81,7 @@ func (s *PublishEventConfiguration) MarshalJSONTemplate() (string, error) {
 		return "", err
 	}
 
-	// Properly escape string values for JSON
-	topicBytes, err := json.Marshal(s.Topic)
-	if err != nil {
-		return "", err
-	}
-
-	key := s.Event.Key
-	if key == nil {
-		key = []byte{}
-	}
-	keyBytes, err := json.Marshal(string(key))
-	if err != nil {
-		return "", err
-	}
-
-	providerBytes, err := json.Marshal(s.ProviderID())
-	if err != nil {
-		return "", err
-	}
-
-	return fmt.Sprintf(`{"topic":%s, "event": {"data": %s, "key": %s, "headers": %s}, "providerId":%s}`, topicBytes, s.Event.Data, keyBytes, headersBytes, providerBytes), nil
+	return fmt.Sprintf(`{"topic": "%s", "event": {"data": %s, "key": "%s", "headers": %s}, "providerId": "%s"}`, s.Topic, s.Event.Data, s.Event.Key, headersBytes, s.ProviderID()), nil
 }
 
 type SubscriptionDataSource struct {

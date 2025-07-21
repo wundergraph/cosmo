@@ -44,7 +44,8 @@ func TestPublishAndRequestEventConfiguration_MarshalJSONTemplate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := tt.config.MarshalJSONTemplate()
+			result, err := tt.config.MarshalJSONTemplate()
+			assert.NoError(t, err)
 			assert.Equal(t, tt.wantPattern, result)
 		})
 	}
