@@ -680,7 +680,7 @@ func TestAuthenticationWithCustomHeaders(t *testing.T) {
 	})
 }
 
-func TestAuthorization(t *testing.T) {
+func TestHttpJwksAuthorization(t *testing.T) {
 	t.Parallel()
 
 	t.Run("no token", func(t *testing.T) {
@@ -751,6 +751,174 @@ func TestAuthorization(t *testing.T) {
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
 			require.Equal(t, employeesExpectedData, string(data))
+		})
+	})
+
+	t.Run("authenticate when multiple jwks are present", func(t *testing.T) {
+		authServer1, err := jwks.NewServer(t)
+		t.Cleanup(authServer1.Close)
+		require.NoError(t, err)
+
+		authServer2, err := jwks.NewServer(t)
+		t.Cleanup(authServer2.Close)
+		require.NoError(t, err)
+
+		token, err := authServer2.Token(nil)
+
+		t.Parallel()
+
+		authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+			{
+				Secret:    "example secret",
+				Algorithm: string(jwkset.AlgHS256),
+				KeyId:     "givenKID",
+			},
+			{
+				URL:             authServer1.JWKSURL(),
+				RefreshInterval: time.Second * 5,
+			},
+			{
+				URL:             authServer2.JWKSURL(),
+				RefreshInterval: time.Second * 5,
+			},
+		})
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, true)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Operations with a token should succeed
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, employeesExpectedData, string(data))
+		})
+	})
+
+}
+
+func TestNonHttpAuthorization(t *testing.T) {
+	t.Run("valid HS256 token", func(t *testing.T) {
+		t.Parallel()
+
+		secret := "example secret"
+		kid := "givenKID"
+		authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+			{
+				Secret:    secret,
+				Algorithm: string(jwkset.AlgHS256),
+				KeyId:     kid,
+			},
+		})
+
+		token := generateToken(t, kid, secret, jwt.SigningMethodHS256)
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, true)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Operations with a token should succeed
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, employeesExpectedData, string(data))
+		})
+	})
+
+	t.Run("multiple tokens use HS256", func(t *testing.T) {
+		authServer, err := jwks.NewServer(t)
+		t.Cleanup(authServer.Close)
+		require.NoError(t, err)
+
+		t.Parallel()
+
+		secret := "example secret"
+		kid := "givenKID"
+		authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+			{
+				URL:             authServer.JWKSURL(),
+				RefreshInterval: time.Second * 5,
+			},
+			{
+				Secret:    secret,
+				Algorithm: string(jwkset.AlgHS256),
+				KeyId:     kid,
+			},
+		})
+
+		token := generateToken(t, kid, secret, jwt.SigningMethodHS256)
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, true)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Operations with a token should succeed
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, employeesExpectedData, string(data))
+		})
+	})
+
+	t.Run("multiple tokens use HS256 but invalid keyid", func(t *testing.T) {
+		t.Parallel()
+
+		secret := "example secret"
+		authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+			{
+				Secret:    secret,
+				Algorithm: string(jwkset.AlgHS256),
+				KeyId:     "givenKID1",
+			},
+			{
+				Secret:    secret,
+				Algorithm: string(jwkset.AlgHS256),
+				KeyId:     "givenKID2",
+			},
+		})
+
+		token := generateToken(t, "differentKID", secret, jwt.SigningMethodHS256)
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, true)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+			require.Equal(t, "", res.Header.Get(xAuthenticatedByHeader))
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.JSONEq(t, unauthorizedExpectedData, string(data))
 		})
 	})
 }
@@ -1865,4 +2033,12 @@ func toJWKSConfig(url string, refresh time.Duration, allowedAlgorithms ...string
 		RefreshInterval:   refresh,
 		AllowedAlgorithms: allowedAlgorithms,
 	}
+}
+
+func generateToken(t *testing.T, kid string, secret string, signingMethod *jwt.SigningMethodHMAC) string {
+	token := jwt.New(signingMethod)
+	token.Header[jwkset.HeaderKID] = kid
+	jwtValue, err := token.SignedString([]byte(secret))
+	require.NoError(t, err)
+	return jwtValue
 }

@@ -1634,11 +1634,28 @@
                     "description": "The URL of the JWKs. The JWKs are used to verify the JWT (JSON Web Token). The URL is specified as a string with the format 'scheme://host:port'.",
                     "format": "http-url"
                   },
+                  "secret": {
+                    "type": "string",
+                    "description": "The secret of the JWKs"
+                  },
+                  "algorithm": {
+                    "type": "string",
+                    "description": "The algorithm used",
+                    "enum": [
+                      "HS256",
+                      "HS384",
+                      "HS512"
+                    ]
+                  },
+                  "key_id": {
+                    "type": "string",
+                    "description": "The secret of the JWKs"
+                  },
                   "algorithms": {
                     "type": "array",
                     "description": "The allowed algorithms for the keys that are retrieved from the JWKs. An empty list means that all algorithms are allowed.",
                     "items": {
-                      "type": "string",
+                      "type": "string"  ,
                       "enum": [
                         "HS256",
                         "HS384",
@@ -1665,7 +1682,16 @@
                     "default": "1m"
                   }
                 },
-                "required": ["url"]
+                "oneOf": [
+                  {
+                    "required": ["url"],
+                    "not": { "anyOf": [{ "required": ["secret"] }, { "required": ["algorithm"] }, { "required": ["key_id"] }] }
+                  },
+                  {
+                    "required": ["secret", "algorithm", "key_id"],
+                    "not": { "anyOf": [{ "required": ["url"] }, { "required": ["algorithms"] }, { "required": ["refresh_interval"] }] }
+                  }
+                ]
               }
             },
             "header_name": {
