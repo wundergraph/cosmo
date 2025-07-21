@@ -755,6 +755,8 @@ func TestHttpJwksAuthorization(t *testing.T) {
 	})
 
 	t.Run("authenticate when multiple jwks are present", func(t *testing.T) {
+		t.Parallel()
+
 		authServer1, err := jwks.NewServer(t)
 		t.Cleanup(authServer1.Close)
 		require.NoError(t, err)
@@ -765,8 +767,6 @@ func TestHttpJwksAuthorization(t *testing.T) {
 
 		token, err := authServer2.Token(nil)
 		require.NoError(t, err)
-
-		t.Parallel()
 
 		authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
 			{
@@ -843,11 +843,11 @@ func TestNonHttpAuthorization(t *testing.T) {
 	})
 
 	t.Run("multiple tokens use HS256", func(t *testing.T) {
+		t.Parallel()
+
 		authServer, err := jwks.NewServer(t)
 		t.Cleanup(authServer.Close)
 		require.NoError(t, err)
-
-		t.Parallel()
 
 		secret := "example secret"
 		kid := "givenKID"

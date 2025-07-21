@@ -1203,6 +1203,8 @@ func TestValidateJwksConfiguration(t *testing.T) {
 	t.Parallel()
 
 	t.Run("verify valid url config", func(t *testing.T) {
+		t.Parallel()
+
 		f := createTempFileFromFixture(t, `
 version: "1"
 
@@ -1217,6 +1219,8 @@ authentication:
 	})
 
 	t.Run("verify valid secret config", func(t *testing.T) {
+		t.Parallel()
+
 		f := createTempFileFromFixture(t, `
 version: "1"
 
@@ -1233,6 +1237,8 @@ authentication:
 	})
 
 	t.Run("verify both secret and url are not allowed together", func(t *testing.T) {
+		t.Parallel()
+
 		f := createTempFileFromFixture(t, `
 version: "1"
 
@@ -1252,6 +1258,8 @@ authentication:
 	})
 
 	t.Run("verify secret parameters mandatory", func(t *testing.T) {
+		t.Parallel()
+
 		f := createTempFileFromFixture(t, `
 version: "1"
 
@@ -1267,6 +1275,8 @@ authentication:
 	})
 
 	t.Run("verify url parameter is mandatory", func(t *testing.T) {
+		t.Parallel()
+
 		f := createTempFileFromFixture(t, `
 version: "1"
 

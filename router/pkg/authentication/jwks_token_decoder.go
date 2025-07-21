@@ -64,7 +64,7 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 				HTTPExpectedStatus: http.StatusOK,
 				HTTPMethod:         http.MethodGet,
 				HTTPTimeout:        15 * time.Second,
-				RefreshErrorHandler: func(ctx context.Context, err error) {
+				RefreshErrorHandler: func(_ context.Context, err error) {
 					l.Error("Failed to refresh HTTP JWK Set from remote HTTP resource.", zap.Error(err))
 				},
 				RefreshInterval: c.RefreshInterval,
