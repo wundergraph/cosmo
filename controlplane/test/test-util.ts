@@ -958,3 +958,19 @@ export async function seedBilling(queryConnection: postgres.Sql) {
       .execute();
   }
 }
+
+export const resolvabilitySDLOne = `
+  type Object {
+    id: ID!
+  }
+  
+  type Query {
+    object: Object!
+  }
+`;
+
+export const resolvabilitySDLTwo = `
+  type Object {
+    name: String!
+  }
+`;

@@ -1,10 +1,8 @@
 import { describe, expect, test } from 'vitest';
 import {
-  federateSubgraphs,
-  FederationResultSuccess,
   noBaseScalarDefinitionError,
-  NormalizationResultFailure,
-  NormalizationResultSuccess,
+  NormalizationFailure,
+  NormalizationSuccess,
   normalizeSubgraph,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   SCALAR,
@@ -13,7 +11,7 @@ import {
 } from '../../../src';
 import { parse } from 'graphql';
 import { baseDirectiveDefinitions, versionOneRouterDefinitions } from '../utils/utils';
-import { normalizeString, schemaToSortedNormalizedString } from '../../utils/utils';
+import { federateSubgraphsSuccess, normalizeString, schemaToSortedNormalizedString } from '../../utils/utils';
 
 describe('Scalar tests', () => {
   describe('Normalization tests', () => {
@@ -23,7 +21,7 @@ describe('Scalar tests', () => {
         subgraphA.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -43,7 +41,7 @@ describe('Scalar tests', () => {
         subgraphB.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -63,7 +61,7 @@ describe('Scalar tests', () => {
         subgraphC.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(noBaseScalarDefinitionError(SCALAR));
@@ -72,10 +70,7 @@ describe('Scalar tests', () => {
 
   describe('Federation tests', () => {
     test('that a Scalar federates successfully #1.1', () => {
-      const result = federateSubgraphs(
-        [subgraphD, subgraphE, subgraphF],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphD, subgraphE, subgraphF], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -92,10 +87,7 @@ describe('Scalar tests', () => {
     });
 
     test('that a Scalar federates successfully #1.2', () => {
-      const result = federateSubgraphs(
-        [subgraphD, subgraphF, subgraphE],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphD, subgraphF, subgraphE], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -112,16 +104,12 @@ describe('Scalar tests', () => {
     });
 
     test('that a Scalar has subgraphs data', () => {
-      const result = federateSubgraphs([subgraphA, subgraphB, subgraphD], ROUTER_COMPATIBILITY_VERSION_ONE);
+      const result = federateSubgraphsSuccess([subgraphA, subgraphB, subgraphD], ROUTER_COMPATIBILITY_VERSION_ONE);
 
-      expect(result.success).toBe(true);
-
-      if (result.success) {
-        const scalarDef = result.parentDefinitionDataByTypeName.get('Scalar') as ScalarDefinitionData;
-        expect(scalarDef.subgraphNames.size).toBe(2);
-        expect(scalarDef.subgraphNames).toContain(subgraphA.name);
-        expect(scalarDef.subgraphNames).toContain(subgraphB.name);
-      }
+      const scalarDef = result.parentDefinitionDataByTypeName.get('Scalar') as ScalarDefinitionData;
+      expect(scalarDef.subgraphNames.size).toBe(2);
+      expect(scalarDef.subgraphNames).toContain(subgraphA.name);
+      expect(scalarDef.subgraphNames).toContain(subgraphB.name);
     });
   });
 });
