@@ -114,6 +114,8 @@ type OperationProcessorOptions struct {
 	ApolloCompatibilityFlags                         config.ApolloCompatibilityFlags
 	ApolloRouterCompatibilityFlags                   config.ApolloRouterCompatibilityFlags
 	DisableExposingVariablesContentOnValidationError bool
+	ParserHardLimits                                 config.ParserHardLimitsConfiguration
+	ComplexityLimits                                 *config.ComplexityLimits
 }
 
 // OperationProcessor provides shared resources to the parseKit and OperationKit.
@@ -127,6 +129,8 @@ type OperationProcessor struct {
 	parseKitSemaphore        chan int
 	introspectionEnabled     bool
 	parseKitOptions          *parseKitOptions
+	parserHardLimits         config.ParserHardLimitsConfiguration
+	complexityLimits         *config.ComplexityLimits
 }
 
 // parseKit is a helper struct to parse, normalize and validate operations
@@ -522,7 +526,16 @@ func (o *OperationKit) Parse() error {
 
 	report := &operationreport.Report{}
 	o.kit.doc.Input.ResetInputString(o.parsedOperation.Request.Query)
-	o.kit.parser.Parse(o.kit.doc, report)
+	if _, err := o.kit.parser.ParseWithLimits(
+		astparser.TokenizerLimits{
+			MaxDepth:  o.operationProcessor.parserHardLimits.ApproximateDepthLimit,
+			MaxFields: o.operationProcessor.parserHardLimits.ParserTotalFieldsLimit,
+		}, o.kit.doc, report); err != nil {
+		return &httpGraphqlError{
+			message:    err.Error(),
+			statusCode: http.StatusBadRequest,
+		}
+	}
 	if report.HasErrors() {
 		return &reportError{
 			report: report,
@@ -750,7 +763,16 @@ func (o *OperationKit) setAndParseOperationDoc() error {
 	o.kit.doc.Input.ResetInputString(o.parsedOperation.NormalizedRepresentation)
 	o.kit.doc.Input.Variables = o.parsedOperation.Request.Variables
 	report := &operationreport.Report{}
-	o.kit.parser.Parse(o.kit.doc, report)
+	if _, err := o.kit.parser.ParseWithLimits(
+		astparser.TokenizerLimits{
+			MaxDepth:  o.operationProcessor.parserHardLimits.ApproximateDepthLimit,
+			MaxFields: o.operationProcessor.parserHardLimits.ParserTotalFieldsLimit,
+		}, o.kit.doc, report); err != nil {
+		return &httpGraphqlError{
+			message:    err.Error(),
+			statusCode: http.StatusBadRequest,
+		}
+	}
 	if report.HasErrors() {
 		return &reportError{
 			report: report,
@@ -1076,15 +1098,19 @@ func (o *OperationKit) Validate(skipLoader bool, remapVariables map[string]strin
 }
 
 // ValidateQueryComplexity validates that the query complexity is within the limits set in the configuration
-func (o *OperationKit) ValidateQueryComplexity(complexityLimitConfig *config.ComplexityLimits, operation, definition *ast.Document, isPersisted bool) (bool, ComplexityCacheEntry, error) {
+func (o *OperationKit) ValidateQueryComplexity() (ok bool, cacheEntry ComplexityCacheEntry, err error) {
+	if o.operationProcessor.complexityLimits == nil {
+		return true, ComplexityCacheEntry{}, nil
+	}
+
 	if o.cache != nil && o.cache.complexityCache != nil {
 		if cachedComplexity, ok := o.cache.complexityCache.Get(o.parsedOperation.InternalID); ok {
-			return ok, cachedComplexity, o.runComplexityComparisons(complexityLimitConfig, cachedComplexity, isPersisted)
+			return ok, cachedComplexity, o.runComplexityComparisons(o.operationProcessor.complexityLimits, cachedComplexity, o.parsedOperation.IsPersistedOperation)
 		}
 	}
 
 	report := operationreport.Report{}
-	globalComplexityResult, rootFieldStats := operation_complexity.CalculateOperationComplexity(operation, definition, &report)
+	globalComplexityResult, rootFieldStats := operation_complexity.CalculateOperationComplexity(o.kit.doc, o.operationProcessor.executor.ClientSchema, &report)
 	cacheResult := ComplexityCacheEntry{
 		Depth:       globalComplexityResult.Depth,
 		TotalFields: globalComplexityResult.NodeCount,
@@ -1101,7 +1127,7 @@ func (o *OperationKit) ValidateQueryComplexity(complexityLimitConfig *config.Com
 		o.cache.complexityCache.Set(o.parsedOperation.InternalID, cacheResult, 1)
 	}
 
-	return false, cacheResult, o.runComplexityComparisons(complexityLimitConfig, cacheResult, isPersisted)
+	return false, cacheResult, o.runComplexityComparisons(o.operationProcessor.complexityLimits, cacheResult, o.parsedOperation.IsPersistedOperation)
 }
 
 func (o *OperationKit) runComplexityComparisons(complexityLimitConfig *config.ComplexityLimits, cachedComplexity ComplexityCacheEntry, isPersisted bool) error {
@@ -1219,6 +1245,8 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 		parseKits:                make(map[int]*parseKit, opts.ParseKitPoolSize),
 		parseKitSemaphore:        make(chan int, opts.ParseKitPoolSize),
 		introspectionEnabled:     opts.IntrospectionEnabled,
+		parserHardLimits:         opts.ParserHardLimits,
+		complexityLimits:         opts.ComplexityLimits,
 		parseKitOptions: &parseKitOptions{
 			apolloCompatibilityFlags:                         opts.ApolloCompatibilityFlags,
 			apolloRouterCompatibilityFlags:                   opts.ApolloRouterCompatibilityFlags,

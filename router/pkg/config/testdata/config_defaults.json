@@ -309,7 +309,11 @@
     },
     "ComplexityCalculationCache": null,
     "ComplexityLimits": null,
-    "DepthLimit": null
+    "DepthLimit": null,
+    "ParserHardLimits": {
+      "ApproximateDepthLimit": 100,
+      "ParserTotalFieldsLimit": 500
+    }
   },
   "EngineExecutionConfiguration": {
     "Debug": {

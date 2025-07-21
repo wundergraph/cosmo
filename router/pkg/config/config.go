@@ -399,12 +399,18 @@ type BlockOperationConfiguration struct {
 }
 
 type SecurityConfiguration struct {
-	BlockMutations              BlockOperationConfiguration `yaml:"block_mutations" envPrefix:"SECURITY_BLOCK_MUTATIONS_"`
-	BlockSubscriptions          BlockOperationConfiguration `yaml:"block_subscriptions" envPrefix:"SECURITY_BLOCK_SUBSCRIPTIONS_"`
-	BlockNonPersistedOperations BlockOperationConfiguration `yaml:"block_non_persisted_operations" envPrefix:"SECURITY_BLOCK_NON_PERSISTED_OPERATIONS_"`
-	ComplexityCalculationCache  *ComplexityCalculationCache `yaml:"complexity_calculation_cache"`
-	ComplexityLimits            *ComplexityLimits           `yaml:"complexity_limits"`
-	DepthLimit                  *QueryDepthConfiguration    `yaml:"depth_limit"`
+	BlockMutations              BlockOperationConfiguration   `yaml:"block_mutations" envPrefix:"SECURITY_BLOCK_MUTATIONS_"`
+	BlockSubscriptions          BlockOperationConfiguration   `yaml:"block_subscriptions" envPrefix:"SECURITY_BLOCK_SUBSCRIPTIONS_"`
+	BlockNonPersistedOperations BlockOperationConfiguration   `yaml:"block_non_persisted_operations" envPrefix:"SECURITY_BLOCK_NON_PERSISTED_OPERATIONS_"`
+	ComplexityCalculationCache  *ComplexityCalculationCache   `yaml:"complexity_calculation_cache"`
+	ComplexityLimits            *ComplexityLimits             `yaml:"complexity_limits"`
+	DepthLimit                  *QueryDepthConfiguration      `yaml:"depth_limit"`
+	ParserHardLimits            ParserHardLimitsConfiguration `yaml:"parser_hard_limits"`
+}
+
+type ParserHardLimitsConfiguration struct {
+	ApproximateDepthLimit  int `yaml:"approximate_depth_limit,omitempty" envDefault:"100"`
+	ParserTotalFieldsLimit int `yaml:"parser_total_fields_limit,omitempty" envDefault:"500"`
 }
 
 type QueryDepthConfiguration struct {

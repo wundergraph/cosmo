@@ -2437,6 +2437,25 @@
               "default": false
             }
           }
+        },
+        "parser_hard_limits": {
+          "type": "object",
+          "description": "The configuration to enforce parse hard limits for the query depth and fields count.",
+          "additionalProperties": false,
+          "properties": {
+            "approximate_depth_limit": {
+              "type": "integer",
+              "description": "The approximate cummulative depth limit of a query along with fragments.",
+              "default": 0,
+              "minimum": 0
+            },
+            "parser_total_fields_limit": {
+              "type": "integer",
+              "description": "The total fields count limit which parser will allow to parse.",
+              "default": 0,
+              "minimum": 0
+            }
+          }
         }
       }
     },

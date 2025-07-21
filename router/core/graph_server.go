@@ -1202,9 +1202,11 @@ func (s *graphServer) buildGraphMux(
 		OperationHashCache:                               gm.operationHashCache,
 		ParseKitPoolSize:                                 s.engineExecutionConfiguration.ParseKitPoolSize,
 		IntrospectionEnabled:                             s.Config.introspection,
+		ParserHardLimits:                                 s.Config.securityConfiguration.ParserHardLimits,
 		ApolloCompatibilityFlags:                         s.apolloCompatibilityFlags,
 		ApolloRouterCompatibilityFlags:                   s.apolloRouterCompatibilityFlags,
 		DisableExposingVariablesContentOnValidationError: s.engineExecutionConfiguration.DisableExposingVariablesContentOnValidationError,
+		ComplexityLimits:                                 s.securityConfiguration.ComplexityLimits,
 	})
 	operationPlanner := NewOperationPlanner(executor, gm.planCache)
 
