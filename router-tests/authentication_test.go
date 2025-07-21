@@ -754,7 +754,7 @@ func TestHttpJwksAuthorization(t *testing.T) {
 		})
 	})
 
-	t.Run("authenticate when multiple jwks are present", func(t *testing.T) {
+	t.Run("token is valid if at any one JWK config validation succeeds", func(t *testing.T) {
 		t.Parallel()
 
 		authServer1, err := jwks.NewServer(t)
