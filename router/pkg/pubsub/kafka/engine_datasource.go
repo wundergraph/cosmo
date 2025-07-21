@@ -81,7 +81,7 @@ func (s *PublishEventConfiguration) MarshalJSONTemplate() (string, error) {
 		return "", err
 	}
 
-	return fmt.Sprintf(`{"topic": "%s", "event": {"data": %s, "key": "%s", "headers": %s}, "providerId": "%s"}`, s.Topic, s.Event.Data, s.Event.Key, headersBytes, s.ProviderID()), nil
+	return fmt.Sprintf(`{"topic":"%s", "event": {"data": %s, "key": "%s", "headers": %s}, "providerId":"%s"}`, s.Topic, s.Event.Data, s.Event.Key, headersBytes, s.ProviderID()), nil
 }
 
 type SubscriptionDataSource struct {
