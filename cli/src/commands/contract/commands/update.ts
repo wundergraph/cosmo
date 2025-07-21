@@ -30,6 +30,11 @@ export default (opts: BaseCommandOptions) => {
     '--admission-webhook-secret [string]',
     'The admission webhook secret is used to sign requests to the webhook url.',
   );
+  command.option(
+    '--disable-resolvability-validation',
+    'This flag will disable the validation for whether all nodes of the federated graph are resolvable. Do NOT use unless troubleshooting.',
+  );
+
   command.action(async (name, options) => {
     if (options.exclude?.length > 0 && options.include?.length > 0) {
       program.error(
@@ -57,14 +62,15 @@ export default (opts: BaseCommandOptions) => {
     const spinner = ora('Contract is being updated...').start();
     const resp = await opts.client.platform.updateContract(
       {
-        name,
-        namespace: options.namespace,
+        admissionWebhookSecret: options.admissionWebhookSecret,
+        admissionWebhookUrl: options.admissionWebhookUrl,
+        disableResolvabilityValidation: options.disableResolvabilityValidation,
         excludeTags: options.exclude,
         includeTags: options.include,
+        name,
+        namespace: options.namespace,
         readme: readmeFile ? await readFile(readmeFile, 'utf8') : undefined,
         routingUrl: options.routingUrl,
-        admissionWebhookUrl: options.admissionWebhookUrl,
-        admissionWebhookSecret: options.admissionWebhookSecret,
       },
       {
         headers: getBaseHeaders(),

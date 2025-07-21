@@ -1,10 +1,10 @@
 /* eslint-disable import/named */
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import {
-  Subgraph,
   federateSubgraphs,
   FederationResult,
   ROUTER_COMPATIBILITY_VERSION_ONE,
+  Subgraph,
 } from '@wundergraph/composition';
 import boxen from 'boxen';
 import { buildClientSchema, printSchema } from 'graphql';
@@ -12,10 +12,10 @@ import yaml from 'js-yaml';
 import pc from 'picocolors';
 import { program } from 'commander';
 import {
-  SubscriptionProtocol,
-  WebsocketSubprotocol,
   isValidSubscriptionProtocol,
   isValidWebsocketSubprotocol,
+  SubscriptionProtocol,
+  WebsocketSubprotocol,
 } from '@wundergraph/cosmo-shared';
 import { config, configFile } from './core/config.js';
 import { KeycloakToken } from './commands/auth/utils.js';
@@ -179,9 +179,9 @@ export const introspectSubgraph = async ({
 /**
  * Composes a list of subgraphs into a single schema.
  */
-export function composeSubgraphs(subgraphs: Subgraph[]): FederationResult {
+export function composeSubgraphs(subgraphs: Subgraph[], disableResolvabilityValidation?: boolean): FederationResult {
   // @TODO get router compatibility version programmatically
-  return federateSubgraphs(subgraphs, ROUTER_COMPATIBILITY_VERSION_ONE);
+  return federateSubgraphs({ disableResolvabilityValidation, subgraphs, version: ROUTER_COMPATIBILITY_VERSION_ONE });
 }
 
 export type ConfigData = Partial<KeycloakToken & { organizationSlug: string; lastUpdateCheck: number }>;

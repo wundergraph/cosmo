@@ -13,10 +13,16 @@ export default (opts: BaseCommandOptions) => {
   command.requiredOption('-n, --namespace [string]', 'The namespace of the subgraph');
   command.requiredOption('-t, --to [string]', 'The new namespace of the subgraph.');
   command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
+  command.option(
+    '--disable-resolvability-validation',
+    'This flag will disable the validation for whether all nodes of the federated graph are resolvable. Do NOT use unless troubleshooting.',
+  );
+
   command.action(async (name, options) => {
     const spinner = ora('Subgraph is being moved...').start();
     const resp = await opts.client.platform.moveSubgraph(
       {
+        disableResolvabilityValidation: options.disableResolvabilityValidation,
         name,
         namespace: options.namespace,
         newNamespace: options.to,

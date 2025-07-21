@@ -1,13 +1,11 @@
 import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import Table from 'cli-table3';
 import { Command, program } from 'commander';
 import ora from 'ora';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { parseGraphQLSubscriptionProtocol, parseGraphQLWebsocketSubprotocol } from '@wundergraph/cosmo-shared';
-import { BaseCommandOptions, SubgraphCommandJsonOutput } from '../../../core/types/types.js';
+import { BaseCommandOptions } from '../../../core/types/types.js';
 import { getBaseHeaders } from '../../../core/config.js';
 import { validateSubscriptionProtocols } from '../../../utils.js';
 import { websocketSubprotocolDescription } from '../../../constants.js';
@@ -62,6 +60,10 @@ export default (opts: BaseCommandOptions) => {
   command.option('-r, --raw', 'Prints to the console in json format instead of table');
   command.option('-j, --json', 'Prints to the console in json format instead of table');
   command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
+  command.option(
+    '--disable-resolvability-validation',
+    'This flag will disable the validation for whether all nodes of the federated graph are resolvable. Do NOT use unless troubleshooting.',
+  );
 
   command.action(async (name, options) => {
     const schemaFile = resolve(options.schema);
@@ -94,22 +96,23 @@ export default (opts: BaseCommandOptions) => {
 
     const resp = await opts.client.platform.publishFederatedSubgraph(
       {
+        baseSubgraphName: options.subgraph,
+        disableResolvabilityValidation: options.disableResolvabilityValidation,
+        isFeatureSubgraph: true,
+        labels: [],
         name,
         namespace: options.namespace,
         // Publish schema only
-        schema,
         // Optional when feature subgraph does not exist yet
         routingUrl: options.routingUrl,
-        subscriptionUrl: options.subscriptionUrl,
+        schema,
         subscriptionProtocol: options.subscriptionProtocol
           ? parseGraphQLSubscriptionProtocol(options.subscriptionProtocol)
           : undefined,
+        subscriptionUrl: options.subscriptionUrl,
         websocketSubprotocol: options.websocketSubprotocol
           ? parseGraphQLWebsocketSubprotocol(options.websocketSubprotocol)
           : undefined,
-        labels: [],
-        isFeatureSubgraph: true,
-        baseSubgraphName: options.subgraph,
       },
       {
         headers: getBaseHeaders(),

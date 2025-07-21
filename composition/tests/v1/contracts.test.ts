@@ -1,17 +1,13 @@
-import {
-  ContractTagOptions,
-  federateSubgraphs,
-  federateSubgraphsContract,
-  federateSubgraphsWithContracts,
-  FederationResultSuccess,
-  FederationResultWithContractsSuccess,
-  parse,
-  ROUTER_COMPATIBILITY_VERSION_ONE,
-  Subgraph,
-} from '../../src';
+import { ContractTagOptions, FederationSuccess, parse, ROUTER_COMPATIBILITY_VERSION_ONE, Subgraph } from '../../src';
 import { describe, expect, test } from 'vitest';
 import { schemaQueryDefinition, versionOneRouterContractDefinitions, versionOneRouterDefinitions } from './utils/utils';
-import { normalizeString, schemaToSortedNormalizedString } from '../utils/utils';
+import {
+  federateSubgraphsContractSuccess,
+  federateSubgraphsSuccess,
+  federateSubgraphsWithContractsSuccess,
+  normalizeString,
+  schemaToSortedNormalizedString,
+} from '../utils/utils';
 
 describe('Contract tests', () => {
   describe('Exclude tags', () => {
@@ -26,7 +22,7 @@ describe('Contract tests', () => {
     };
 
     test('that Objects are removed by tag', () => {
-      const result = federateSubgraphsWithContracts(
+      const result = federateSubgraphsWithContractsSuccess(
         [subgraphOne, subgraphA],
         new Map<string, ContractTagOptions>([
           ['one', excludedTagsOne],
@@ -38,12 +34,12 @@ describe('Contract tests', () => {
             },
           ],
         ]),
-      ) as FederationResultWithContractsSuccess;
-      expect(result.success).toBe(true);
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
       expect(result.federationResultByContractName).toBeDefined();
-      const contractOne = result.federationResultByContractName!.get('one') as FederationResultSuccess;
+      const contractOne = result.federationResultByContractName!.get('one') as FederationSuccess;
       expect(contractOne.success).toBe(true);
-      const contractTwo = result.federationResultByContractName!.get('two') as FederationResultSuccess;
+      const contractTwo = result.federationResultByContractName!.get('two') as FederationSuccess;
       expect(contractTwo.success).toBe(true);
       expect(schemaToSortedNormalizedString(contractOne.federatedGraphSchema)).toBe(
         normalizeString(
@@ -112,11 +108,11 @@ describe('Contract tests', () => {
     });
 
     test('that Object Fields are removed by tag', () => {
-      const result = federateSubgraphsContract(
+      const result = federateSubgraphsContractSuccess(
         [subgraphB, subgraphD],
         excludedTagsOne,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      );
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -135,11 +131,11 @@ describe('Contract tests', () => {
     });
 
     test('that an Object is removed if its only Field is removed by tag', () => {
-      const result = federateSubgraphsContract(
+      const result = federateSubgraphsContractSuccess(
         [subgraphA, subgraphD],
         excludedTagsOne,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      );
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -154,11 +150,11 @@ describe('Contract tests', () => {
     });
 
     test('that Interfaces are removed by tag', () => {
-      const result = federateSubgraphsContract(
+      const result = federateSubgraphsContractSuccess(
         [subgraphJ, subgraphK],
         excludedTagsOne,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      );
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -173,11 +169,11 @@ describe('Contract tests', () => {
     });
 
     test('that Interface Fields are removed by tag', () => {
-      const result = federateSubgraphsContract(
+      const result = federateSubgraphsContractSuccess(
         [subgraphJ, subgraphL],
         excludedTagsOne,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      );
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -196,11 +192,11 @@ describe('Contract tests', () => {
     });
 
     test('that an Interface is removed if its only Field is removed by tag', () => {
-      const result = federateSubgraphsContract(
+      const result = federateSubgraphsContractSuccess(
         [subgraphA, subgraphL],
         excludedTagsOne,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      );
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -215,11 +211,11 @@ describe('Contract tests', () => {
     });
 
     test('that if an Interface is removed by tag, it is removed from its implementations', () => {
-      const result = federateSubgraphsContract(
+      const result = federateSubgraphsContractSuccess(
         [subgraphA, subgraphAE],
         excludedTagsTwo,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      );
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -238,11 +234,11 @@ describe('Contract tests', () => {
     });
 
     test('that Input Objects are removed by tag', () => {
-      const result = federateSubgraphsContract(
+      const result = federateSubgraphsContractSuccess(
         [subgraphN, subgraphO],
         excludedTagsOne,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      );
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -257,11 +253,11 @@ describe('Contract tests', () => {
     });
 
     test('that nullable Input Object fields are removed by tag', () => {
-      const result = federateSubgraphsContract(
+      const result = federateSubgraphsContractSuccess(
         [subgraphAA, subgraphAK],
         excludedTagsOne,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      );
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -280,11 +276,11 @@ describe('Contract tests', () => {
     });
 
     test('that an Input Object is removed if its only Field is removed by tag', () => {
-      const result = federateSubgraphsContract(
+      const result = federateSubgraphsContractSuccess(
         [subgraphA, subgraphP],
         excludedTagsOne,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      );
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -299,11 +295,11 @@ describe('Contract tests', () => {
     });
 
     test('that an Argument can be removed by tag #1.1', () => {
-      const result = federateSubgraphsContract(
+      const result = federateSubgraphsContractSuccess(
         [subgraphA, subgraphAF],
         excludedTagsTwo,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      );
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -322,11 +318,11 @@ describe('Contract tests', () => {
     });
 
     test('that an Argument can be removed by tag #1.2', () => {
-      const result = federateSubgraphsContract(
+      const result = federateSubgraphsContractSuccess(
         [subgraphA, subgraphAG],
         excludedTagsTwo,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      );
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -345,11 +341,11 @@ describe('Contract tests', () => {
     });
 
     test('that an Argument can be removed by tag #1.3', () => {
-      const result = federateSubgraphsContract(
+      const result = federateSubgraphsContractSuccess(
         [subgraphA, subgraphAH],
         excludedTagsTwo,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      );
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -364,11 +360,11 @@ describe('Contract tests', () => {
     });
 
     test('that a Scalar is removed by tag', () => {
-      const result = federateSubgraphsContract(
+      const result = federateSubgraphsContractSuccess(
         [subgraphQ, subgraphR],
         excludedTagsTwo,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      );
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -383,11 +379,11 @@ describe('Contract tests', () => {
     });
 
     test('that a Union is removed by tag', () => {
-      const result = federateSubgraphsContract(
+      const result = federateSubgraphsContractSuccess(
         [subgraphS, subgraphT],
         excludedTagsTwo,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      );
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -409,11 +405,11 @@ describe('Contract tests', () => {
 
     // TODO
     test.skip('that a Union is removed if all its members are removed by tag', () => {
-      const result = federateSubgraphsContract(
+      const result = federateSubgraphsContractSuccess(
         [subgraphS, subgraphG],
         excludedTagsOne,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      );
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -428,11 +424,11 @@ describe('Contract tests', () => {
     });
 
     test('that an Enum is removed by tag', () => {
-      const result = federateSubgraphsContract(
+      const result = federateSubgraphsContractSuccess(
         [subgraphAB, subgraphAC],
         excludedTagsOne,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      );
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -447,11 +443,11 @@ describe('Contract tests', () => {
     });
 
     test('that an Enum value is removed by tag', () => {
-      const result = federateSubgraphsContract(
+      const result = federateSubgraphsContractSuccess(
         [subgraphAB, subgraphAD],
         excludedTagsOne,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      );
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -470,11 +466,11 @@ describe('Contract tests', () => {
     });
 
     test('that an Enum is removed if its only Value is removed by tag', () => {
-      const result = federateSubgraphsContract(
+      const result = federateSubgraphsContractSuccess(
         [subgraphA, subgraphAD],
         excludedTagsOne,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      );
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -489,11 +485,11 @@ describe('Contract tests', () => {
     });
 
     test('that a nested Field can be removed by tag', () => {
-      const result = federateSubgraphsContract(
+      const result = federateSubgraphsContractSuccess(
         [subgraphA, subgraphAI],
         excludedTagsOne,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      );
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -525,17 +521,18 @@ describe('Contract tests', () => {
     };
 
     test('that Objects are included by tag', () => {
-      const result = federateSubgraphsWithContracts(
+      const result = federateSubgraphsWithContractsSuccess(
         [subgraphOne, subgraphInclude],
         new Map<string, ContractTagOptions>([
           ['one', includedTagsOne],
           ['two', includedTagsTwo],
         ]),
-      ) as FederationResultWithContractsSuccess;
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
       expect(result.success).toBe(true);
-      const contractOne = result.federationResultByContractName!.get('one') as FederationResultSuccess;
+      const contractOne = result.federationResultByContractName!.get('one') as FederationSuccess;
       expect(contractOne.success).toBe(true);
-      const contractTwo = result.federationResultByContractName!.get('two') as FederationResultSuccess;
+      const contractTwo = result.federationResultByContractName!.get('two') as FederationSuccess;
       expect(contractTwo.success).toBe(true);
       expect(schemaToSortedNormalizedString(contractOne.federatedGraphSchema)).toBe(
         normalizeString(
@@ -606,11 +603,11 @@ describe('Contract tests', () => {
     });
 
     test('that Object Fields are included by tag', () => {
-      const result = federateSubgraphsContract(
+      const result = federateSubgraphsContractSuccess(
         [subgraphB, subgraphD, subgraphInclude],
         includedTagsOne,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      );
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -629,11 +626,11 @@ describe('Contract tests', () => {
     });
 
     test('that an Object is removed if its only Field is not included by tag', () => {
-      const result = federateSubgraphsContract(
+      const result = federateSubgraphsContractSuccess(
         [subgraphInclude, subgraphD],
         includedTagsTwo,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      );
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -648,11 +645,11 @@ describe('Contract tests', () => {
     });
 
     test('that Interfaces are included by tag', () => {
-      const result = federateSubgraphsContract(
+      const result = federateSubgraphsContractSuccess(
         [subgraphJ, subgraphK, subgraphInclude],
         includedTagsOne,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      );
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -672,11 +669,11 @@ describe('Contract tests', () => {
     });
 
     test('that Interface Fields are removed if not included by tag', () => {
-      const result = federateSubgraphsContract(
+      const result = federateSubgraphsContractSuccess(
         [subgraphJ, subgraphL, subgraphInclude],
         includedTagsOne,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      );
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -695,11 +692,11 @@ describe('Contract tests', () => {
     });
 
     test('that an Interface is removed if its only Field is not included by tag', () => {
-      const result = federateSubgraphsContract(
+      const result = federateSubgraphsContractSuccess(
         [subgraphInclude, subgraphL],
         includedTagsTwo,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      );
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -714,11 +711,11 @@ describe('Contract tests', () => {
     });
 
     test('that if an Interface is not included by tag, it is removed from its implementations', () => {
-      const result = federateSubgraphsContract(
+      const result = federateSubgraphsContractSuccess(
         [subgraphInclude, subgraphAE],
         includedTagsTwo,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      );
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -737,11 +734,11 @@ describe('Contract tests', () => {
     });
 
     test('that Input Objects are included by tag', () => {
-      const result = federateSubgraphsContract(
+      const result = federateSubgraphsContractSuccess(
         [subgraphN, subgraphO, subgraphInclude],
         includedTagsOne,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      );
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -760,11 +757,11 @@ describe('Contract tests', () => {
     });
 
     test('that nullable Input Object Fields are removed if not included by tag', () => {
-      const result = federateSubgraphsContract(
+      const result = federateSubgraphsContractSuccess(
         [subgraphAA, subgraphAK, subgraphInclude],
         includedTagsOne,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      );
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -783,11 +780,11 @@ describe('Contract tests', () => {
     });
 
     test('that an Input Object is removed if its only Field is not included by tag', () => {
-      const result = federateSubgraphsContract(
+      const result = federateSubgraphsContractSuccess(
         [subgraphInclude, subgraphP],
         includedTagsThree,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      );
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -802,11 +799,11 @@ describe('Contract tests', () => {
     });
 
     test('that an Argument can be included by tag #1.1', () => {
-      const result = federateSubgraphsContract(
+      const result = federateSubgraphsContractSuccess(
         [subgraphInclude, subgraphAF],
         includedTagsOne,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      );
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -829,11 +826,11 @@ describe('Contract tests', () => {
     });
 
     test('that an Argument can be included by tag #1.2', () => {
-      const result = federateSubgraphsContract(
+      const result = federateSubgraphsContractSuccess(
         [subgraphInclude, subgraphAG],
         includedTagsOne,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      );
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -856,11 +853,11 @@ describe('Contract tests', () => {
     });
 
     test('that an Argument can be included by tag #1.3', () => {
-      const result = federateSubgraphsContract(
+      const result = federateSubgraphsContractSuccess(
         [subgraphInclude, subgraphAH],
         includedTagsOne,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      );
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -883,11 +880,11 @@ describe('Contract tests', () => {
     });
 
     test('that an Argument can be included by tag #1.4', () => {
-      const result = federateSubgraphsContract(
+      const result = federateSubgraphsContractSuccess(
         [subgraphInclude, subgraphAJ],
         includedTagsOne,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      );
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -907,11 +904,11 @@ describe('Contract tests', () => {
     });
 
     test('that if a Field is included, its Arguments are included by default', () => {
-      const result = federateSubgraphsContract(
+      const result = federateSubgraphsContractSuccess(
         [subgraphInclude, subgraphAL],
         includedTagsOne,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      );
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -931,11 +928,11 @@ describe('Contract tests', () => {
     });
 
     test('that a Scalar is included by tag', () => {
-      const result = federateSubgraphsContract(
+      const result = federateSubgraphsContractSuccess(
         [subgraphInclude, subgraphQ, subgraphR],
         includedTagsOne,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      );
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -952,11 +949,11 @@ describe('Contract tests', () => {
     });
 
     test('that a Union is included by tag', () => {
-      const result = federateSubgraphsContract(
+      const result = federateSubgraphsContractSuccess(
         [subgraphInclude, subgraphS, subgraphT],
         includedTagsOne,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      );
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -980,11 +977,11 @@ describe('Contract tests', () => {
 
     // TODO
     test.skip('that a Union is removed if none of its members are included by tag', () => {
-      const result = federateSubgraphsContract(
+      const result = federateSubgraphsContractSuccess(
         [subgraphInclude, subgraphS, subgraphG],
         includedTagsOne,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      );
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -999,11 +996,11 @@ describe('Contract tests', () => {
     });
 
     test('that an Enum is included by tag', () => {
-      const result = federateSubgraphsContract(
+      const result = federateSubgraphsContractSuccess(
         [subgraphInclude, subgraphAB, subgraphAC],
         includedTagsOne,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      );
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -1023,11 +1020,11 @@ describe('Contract tests', () => {
     });
 
     test('that an Enum Value is included by tag', () => {
-      const result = federateSubgraphsContract(
+      const result = federateSubgraphsContractSuccess(
         [subgraphInclude, subgraphAB, subgraphAD],
         includedTagsOne,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      );
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -1046,12 +1043,11 @@ describe('Contract tests', () => {
     });
 
     test('that an Enum is removed if its only value is not included by tag', () => {
-      const result = federateSubgraphsContract(
+      const result = federateSubgraphsContractSuccess(
         [subgraphInclude, subgraphAD],
         includedTagsThree,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
-      expect(result.success).toBe(true);
+      );
       expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
         normalizeString(
           schemaQueryDefinition +
@@ -1065,11 +1061,11 @@ describe('Contract tests', () => {
     });
 
     test('that a nested Field can be included by tag', () => {
-      const result = federateSubgraphsContract(
+      const result = federateSubgraphsContractSuccess(
         [subgraphInclude, subgraphAI],
         includedTagsOne,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      );
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
         normalizeString(
@@ -1103,10 +1099,7 @@ describe('Contract tests', () => {
 
   describe('Client schema generation', () => {
     test('that a client schema is produced if a @tag directive is defined on an Object #1.1', () => {
-      const result = federateSubgraphs(
-        [subgraphB, subgraphC],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphB, subgraphC], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -1140,10 +1133,7 @@ describe('Contract tests', () => {
     });
 
     test('that a client schema is produced if a @tag directive is defined on an Object #1.2', () => {
-      const result = federateSubgraphs(
-        [subgraphC, subgraphB],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphC, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -1177,10 +1167,7 @@ describe('Contract tests', () => {
     });
 
     test('that a client schema is produced if a @tag directive is defined on a Object Field #1.1', () => {
-      const result = federateSubgraphs(
-        [subgraphB, subgraphD],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphB, subgraphD], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -1214,10 +1201,7 @@ describe('Contract tests', () => {
     });
 
     test('that a client schema is produced if a @tag directive is defined on a Object Field #1.2', () => {
-      const result = federateSubgraphs(
-        [subgraphD, subgraphB],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphD, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -1251,10 +1235,7 @@ describe('Contract tests', () => {
     });
 
     test('that a client schema is produced if a @tag directive is defined on a Object Field Argument #1.1', () => {
-      const result = federateSubgraphs(
-        [subgraphB, subgraphE],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphB, subgraphE], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -1288,10 +1269,7 @@ describe('Contract tests', () => {
     });
 
     test('that a client schema is produced if a @tag directive is defined on a Object Field Argument #1.2', () => {
-      const result = federateSubgraphs(
-        [subgraphE, subgraphB],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphE, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -1325,10 +1303,7 @@ describe('Contract tests', () => {
     });
 
     test('that a client schema is produced if a @tag directive is defined on a shared Object Field #1.1', () => {
-      const result = federateSubgraphs(
-        [subgraphU, subgraphD],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphU, subgraphD], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -1360,10 +1335,7 @@ describe('Contract tests', () => {
     });
 
     test('that a client schema is produced if a @tag directive is defined on a shared Object Field #1.2', () => {
-      const result = federateSubgraphs(
-        [subgraphD, subgraphU],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphD, subgraphU], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -1395,10 +1367,7 @@ describe('Contract tests', () => {
     });
 
     test('that a client schema is produced if a @tag directive is defined on a shared Object Field Argument #1.1', () => {
-      const result = federateSubgraphs(
-        [subgraphV, subgraphE],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphV, subgraphE], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -1430,10 +1399,7 @@ describe('Contract tests', () => {
     });
 
     test('that a client schema is produced if a @tag directive is defined on a shared Object Field Argument #1.2', () => {
-      const result = federateSubgraphs(
-        [subgraphE, subgraphV],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphE, subgraphV], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -1465,10 +1431,7 @@ describe('Contract tests', () => {
     });
 
     test('that a client schema is produced if a @tag directive is defined on an Object extension #1.1', () => {
-      const result = federateSubgraphs(
-        [subgraphG, subgraphF],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphG, subgraphF], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -1504,10 +1467,7 @@ describe('Contract tests', () => {
     });
 
     test('that a client schema is produced if a @tag directive is defined on an Object extension #1.2', () => {
-      const result = federateSubgraphs(
-        [subgraphF, subgraphG],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphF, subgraphG], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -1543,10 +1503,7 @@ describe('Contract tests', () => {
     });
 
     test('that a client schema is produced if a @tag directive is defined on an Object extension Field #1.1', () => {
-      const result = federateSubgraphs(
-        [subgraphH, subgraphF],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphH, subgraphF], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -1582,10 +1539,7 @@ describe('Contract tests', () => {
     });
 
     test('that a client schema is produced if a @tag directive is defined on an Object extension Field #1.2', () => {
-      const result = federateSubgraphs(
-        [subgraphF, subgraphH],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphF, subgraphH], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -1621,10 +1575,7 @@ describe('Contract tests', () => {
     });
 
     test('that a client schema is produced if a @tag directive is defined on an Object extension Field Argument #1.1', () => {
-      const result = federateSubgraphs(
-        [subgraphF, subgraphI],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphF, subgraphI], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -1660,10 +1611,7 @@ describe('Contract tests', () => {
     });
 
     test('that a client schema is produced if a @tag directive is defined on an Object extension Field Argument #1.2', () => {
-      const result = federateSubgraphs(
-        [subgraphF, subgraphI],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphF, subgraphI], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -1699,10 +1647,7 @@ describe('Contract tests', () => {
     });
 
     test('that a client schema is produced if a @tag directive is defined on a shared Object extension Field #1.1', () => {
-      const result = federateSubgraphs(
-        [subgraphW, subgraphH],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphW, subgraphH], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -1736,10 +1681,7 @@ describe('Contract tests', () => {
     });
 
     test('that a client schema is produced if a @tag directive is defined on a shared Object extension Field #1.2', () => {
-      const result = federateSubgraphs(
-        [subgraphH, subgraphW],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphH, subgraphW], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -1773,10 +1715,7 @@ describe('Contract tests', () => {
     });
 
     test('that a client schema is produced if a @tag directive is defined on a shared Object extension Field Argument #1.1', () => {
-      const result = federateSubgraphs(
-        [subgraphX, subgraphI],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphX, subgraphI], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -1810,10 +1749,7 @@ describe('Contract tests', () => {
     });
 
     test('that a client schema is produced if a @tag directive is defined on a shared Object extension Field Argument #1.2', () => {
-      const result = federateSubgraphs(
-        [subgraphI, subgraphX],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphI, subgraphX], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -1847,10 +1783,7 @@ describe('Contract tests', () => {
     });
 
     test('that a client schema is produced if a @tag directive is defined on an Interface #1.1', () => {
-      const result = federateSubgraphs(
-        [subgraphJ, subgraphK],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphJ, subgraphK], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -1884,10 +1817,7 @@ describe('Contract tests', () => {
     });
 
     test('that a client schema is produced if a @tag directive is defined on an Interface #1.2', () => {
-      const result = federateSubgraphs(
-        [subgraphK, subgraphJ],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphK, subgraphJ], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -1921,10 +1851,7 @@ describe('Contract tests', () => {
     });
 
     test('that a client schema is produced if a @tag directive is defined on a Interface Field #1.1', () => {
-      const result = federateSubgraphs(
-        [subgraphJ, subgraphL],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphJ, subgraphL], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -1958,10 +1885,7 @@ describe('Contract tests', () => {
     });
 
     test('that a client schema is produced if a @tag directive is defined on a Interface Field #1.2', () => {
-      const result = federateSubgraphs(
-        [subgraphL, subgraphJ],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphL, subgraphJ], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -1995,10 +1919,7 @@ describe('Contract tests', () => {
     });
 
     test('that a client schema is produced if a @tag directive is defined on a Interface Field Argument #1.1', () => {
-      const result = federateSubgraphs(
-        [subgraphJ, subgraphM],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphJ, subgraphM], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -2032,10 +1953,7 @@ describe('Contract tests', () => {
     });
 
     test('that a client schema is produced if a @tag directive is defined on a Interface Field Argument #1.2', () => {
-      const result = federateSubgraphs(
-        [subgraphM, subgraphJ],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphM, subgraphJ], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -2069,10 +1987,7 @@ describe('Contract tests', () => {
     });
 
     test('that a client schema is produced if a @tag directive is defined on a shared Interface Field #1.1', () => {
-      const result = federateSubgraphs(
-        [subgraphY, subgraphL],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphY, subgraphL], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -2104,10 +2019,7 @@ describe('Contract tests', () => {
     });
 
     test('that a client schema is produced if a @tag directive is defined on a shared Interface Field #1.2', () => {
-      const result = federateSubgraphs(
-        [subgraphL, subgraphY],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphL, subgraphY], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -2139,10 +2051,7 @@ describe('Contract tests', () => {
     });
 
     test('that a client schema is produced if a @tag directive is defined on a shared Interface Field Argument #1.1', () => {
-      const result = federateSubgraphs(
-        [subgraphZ, subgraphM],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphZ, subgraphM], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -2174,10 +2083,7 @@ describe('Contract tests', () => {
     });
 
     test('that a client schema is produced if a @tag directive is defined on a shared Interface Field Argument #1.2', () => {
-      const result = federateSubgraphs(
-        [subgraphM, subgraphZ],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphM, subgraphZ], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -2209,10 +2115,7 @@ describe('Contract tests', () => {
     });
 
     test('that a client schema is produced if a @tag directive is defined on an Input Object #1.1', () => {
-      const result = federateSubgraphs(
-        [subgraphN, subgraphO],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphN, subgraphO], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -2244,10 +2147,7 @@ describe('Contract tests', () => {
     });
 
     test('that a client schema is produced if a @tag directive is defined on an Input Object #1.1', () => {
-      const result = federateSubgraphs(
-        [subgraphO, subgraphN],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphO, subgraphN], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -2279,10 +2179,7 @@ describe('Contract tests', () => {
     });
 
     test('that a client schema is produced if a @tag directive is defined on an Input Object Field #1.1', () => {
-      const result = federateSubgraphs(
-        [subgraphN, subgraphP],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphN, subgraphP], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -2314,10 +2211,7 @@ describe('Contract tests', () => {
     });
 
     test('that a client schema is produced if a @tag directive is defined on an Input Object Field #1.2', () => {
-      const result = federateSubgraphs(
-        [subgraphP, subgraphN],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphP, subgraphN], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -2349,10 +2243,7 @@ describe('Contract tests', () => {
     });
 
     test('that a client schema is produced if a @tag directive is defined on an Enum #1.1', () => {
-      const result = federateSubgraphs(
-        [subgraphAB, subgraphAC],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphAB, subgraphAC], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -2387,10 +2278,7 @@ describe('Contract tests', () => {
     });
 
     test('that a client schema is produced if a @tag directive is defined on an Enum #1.2', () => {
-      const result = federateSubgraphs(
-        [subgraphAC, subgraphAB],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphAC, subgraphAB], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -2425,10 +2313,7 @@ describe('Contract tests', () => {
     });
 
     test('that a client schema is produced if a @tag directive is defined on an Enum Value #1.1', () => {
-      const result = federateSubgraphs(
-        [subgraphAB, subgraphAD],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphAB, subgraphAD], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -2463,10 +2348,7 @@ describe('Contract tests', () => {
     });
 
     test('that a client schema is produced if a @tag directive is defined on an Enum Value #1.2', () => {
-      const result = federateSubgraphs(
-        [subgraphAD, subgraphAB],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphAD, subgraphAB], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -2501,10 +2383,7 @@ describe('Contract tests', () => {
     });
 
     test('that a client schema is produced if a @tag directive is defined on a Scalar #1.1', () => {
-      const result = federateSubgraphs(
-        [subgraphQ, subgraphR],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphQ, subgraphR], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -2533,10 +2412,7 @@ describe('Contract tests', () => {
     });
 
     test('that a client schema is produced if a @tag directive is defined on a Scalar #1.2', () => {
-      const result = federateSubgraphs(
-        [subgraphR, subgraphQ],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphR, subgraphQ], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -2565,10 +2441,7 @@ describe('Contract tests', () => {
     });
 
     test('that a client schema is produced if a @tag directive is defined on a Union #1.1', () => {
-      const result = federateSubgraphs(
-        [subgraphS, subgraphT],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphS, subgraphT], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -2609,10 +2482,7 @@ describe('Contract tests', () => {
     });
 
     test('that a client schema is produced if a @tag directive is defined on a Union #1.2', () => {
-      const result = federateSubgraphs(
-        [subgraphT, subgraphS],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphT, subgraphS], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(

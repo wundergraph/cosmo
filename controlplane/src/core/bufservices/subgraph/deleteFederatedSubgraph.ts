@@ -12,7 +12,13 @@ import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepos
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getFederatedGraphRouterCompatibilityVersion, getLogger, handleError } from '../../util.js';
+import {
+  enrichLogger,
+  getFederatedGraphRouterCompatibilityVersion,
+  getLogger,
+  handleError,
+  newCompositionOptions,
+} from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
@@ -171,14 +177,15 @@ export function deleteFederatedSubgraph(
         // Recompose and deploy all affected federated graphs and their respective contracts.
         // Collects all composition and deployment errors if any.
         const { compositionErrors, deploymentErrors, compositionWarnings } = await fedGraphRepo.composeAndDeployGraphs({
-          federatedGraphs: affectedFederatedGraphs,
-          blobStorage: opts.blobStorage,
+          actorId: authContext.userId,
           admissionConfig: {
             webhookJWTSecret: opts.admissionWebhookJWTSecret,
             cdnBaseUrl: opts.cdnBaseUrl,
           },
-          actorId: authContext.userId,
+          blobStorage: opts.blobStorage,
           chClient: opts.chClient!,
+          compositionOptions: newCompositionOptions(req.disableResolvabilityValidation),
+          federatedGraphs: affectedFederatedGraphs,
         });
 
         return { affectedFederatedGraphs, compositionErrors, deploymentErrors, compositionWarnings };

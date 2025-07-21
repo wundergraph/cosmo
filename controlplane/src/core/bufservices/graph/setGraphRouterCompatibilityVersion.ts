@@ -9,7 +9,7 @@ import { ROUTER_COMPATIBILITY_VERSIONS, SupportedRouterCompatibilityVersion } fr
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { enrichLogger, getLogger, handleError, newCompositionOptions } from '../../util.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
@@ -133,14 +133,15 @@ export function setGraphRouterCompatibilityVersion(
       });
 
       const composition = await fedGraphRepo.composeAndDeployGraphs({
-        federatedGraphs: [federatedGraph],
         actorId: authContext.userId,
-        blobStorage: opts.blobStorage,
         admissionConfig: {
           cdnBaseUrl: opts.cdnBaseUrl,
           webhookJWTSecret: opts.admissionWebhookJWTSecret,
         },
+        blobStorage: opts.blobStorage,
         chClient: opts.chClient!,
+        compositionOptions: newCompositionOptions(req.disableResolvabilityValidation),
+        federatedGraphs: [federatedGraph],
       });
 
       if (composition.compositionErrors.length > 0) {

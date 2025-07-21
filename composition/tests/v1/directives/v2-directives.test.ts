@@ -1,8 +1,5 @@
 import { describe, expect, test } from 'vitest';
 import {
-  federateSubgraphs,
-  FederationResultFailure,
-  FederationResultSuccess,
   FieldData,
   invalidFieldShareabilityError,
   ObjectDefinitionData,
@@ -11,14 +8,17 @@ import {
   Subgraph,
 } from '../../../src';
 import { versionOnePersistedBaseSchema, versionTwoRouterDefinitions } from '../utils/utils';
-import { documentNodeToNormalizedString, normalizeString, schemaToSortedNormalizedString } from '../../utils/utils';
+import {
+  documentNodeToNormalizedString,
+  federateSubgraphsFailure,
+  federateSubgraphsSuccess,
+  normalizeString,
+  schemaToSortedNormalizedString,
+} from '../../utils/utils';
 
 describe('V2 Directives Tests', () => {
   test('that external fields do not produce shareable errors', () => {
-    const result = federateSubgraphs(
-      [subgraphA, subgraphB, subgraphC],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
+    const result = federateSubgraphsSuccess([subgraphA, subgraphB, subgraphC], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
       normalizeString(
@@ -41,10 +41,7 @@ describe('V2 Directives Tests', () => {
   });
 
   test('that if all fields but one are external, no shareable error is returned', () => {
-    const result = federateSubgraphs(
-      [subgraphA, subgraphB, subgraphE],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
+    const result = federateSubgraphsSuccess([subgraphA, subgraphB, subgraphE], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
     expect(documentNodeToNormalizedString(result.federatedGraphAST)).toBe(
       normalizeString(
@@ -64,10 +61,7 @@ describe('V2 Directives Tests', () => {
   });
 
   test('that unshareable fields defined in multiple subgraphs return an error', () => {
-    const result = federateSubgraphs(
-      [subgraphC, subgraphD],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultFailure;
+    const result = federateSubgraphsFailure([subgraphC, subgraphD], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(

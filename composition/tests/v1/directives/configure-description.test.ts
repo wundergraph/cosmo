@@ -7,16 +7,13 @@ import {
   DESCRIPTION_OVERRIDE,
   duplicateDirectiveArgumentDefinitionsErrorMessage,
   ENUM,
-  federateSubgraphs,
-  FederationResultFailure,
-  FederationResultSuccess,
   FIRST_ORDINAL,
   INTERFACE,
   invalidArgumentValueErrorMessage,
   invalidDirectiveError,
   invalidRepeatedDirectiveErrorMessage,
-  NormalizationResultFailure,
-  NormalizationResultSuccess,
+  NormalizationFailure,
+  NormalizationSuccess,
   normalizeSubgraph,
   PROPAGATE,
   QUERY,
@@ -32,7 +29,12 @@ import {
   versionOneRouterDefinitions,
   versionTwoRouterDefinitions,
 } from '../utils/utils';
-import { normalizeString, schemaToSortedNormalizedString } from '../../utils/utils';
+import {
+  federateSubgraphsFailure,
+  federateSubgraphsSuccess,
+  normalizeString,
+  schemaToSortedNormalizedString,
+} from '../../utils/utils';
 
 describe('@openfed__configureDescription tests', () => {
   describe('Normalization tests', () => {
@@ -42,7 +44,7 @@ describe('@openfed__configureDescription tests', () => {
         na.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -58,7 +60,7 @@ describe('@openfed__configureDescription tests', () => {
         nb.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -74,7 +76,7 @@ describe('@openfed__configureDescription tests', () => {
         nc.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(configureDescriptionNoDescriptionError('Object', 'Query'));
@@ -86,7 +88,7 @@ describe('@openfed__configureDescription tests', () => {
         nd.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -102,7 +104,7 @@ describe('@openfed__configureDescription tests', () => {
         ne.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -118,7 +120,7 @@ describe('@openfed__configureDescription tests', () => {
         nf.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -144,7 +146,7 @@ describe('@openfed__configureDescription tests', () => {
         ng.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(configureDescriptionNoDescriptionError('Object', 'Query'));
@@ -156,7 +158,7 @@ describe('@openfed__configureDescription tests', () => {
         nh.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(configureDescriptionNoDescriptionError('Object', 'Query'));
@@ -166,7 +168,7 @@ describe('@openfed__configureDescription tests', () => {
   describe('Federation tests', () => {
     // Object
     test('that an Object description is propagated to the federated graph', () => {
-      const result = federateSubgraphs([faa, fab], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([faa, fab], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -190,7 +192,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that an Object extension override description is propagated to the federated graph #1', () => {
-      const result = federateSubgraphs([faa, fac], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([faa, fac], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -214,7 +216,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that an Object extension override description is propagated to the federated graph #2', () => {
-      const result = federateSubgraphs([faa, fad], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([faa, fad], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -238,7 +240,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that an error is returned if multiple instances of an Object attempt to propagate a description', () => {
-      const result = federateSubgraphs([fab, fae], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultFailure;
+      const result = federateSubgraphsFailure([fab, fae], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(configureDescriptionPropagationError(QUERY, [fab.name, fae.name]));
@@ -246,7 +248,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that an Object description with propagate: false is not propagated', () => {
-      const result = federateSubgraphs([faa, faf], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([faa, faf], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -270,7 +272,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that an Object instance with no description and another with propagate: false results in no description', () => {
-      const result = federateSubgraphs([faf, fag], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([faf, fag], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -291,7 +293,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that all Object instances with no description or propagate: false results in no description', () => {
-      const result = federateSubgraphs([faf, fah], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([faf, fah], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -313,7 +315,7 @@ describe('@openfed__configureDescription tests', () => {
 
     // Interface
     test('that an Interface description is propagated to the federated graph', () => {
-      const result = federateSubgraphs([fba, fbb], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fba, fbb], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -340,7 +342,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that an Interface extension override description is propagated to the federated graph #1', () => {
-      const result = federateSubgraphs([fba, fbc], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fba, fbc], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -368,7 +370,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that an Interface extension override description is propagated to the federated graph #2', () => {
-      const result = federateSubgraphs([fba, fbd], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fba, fbd], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -396,7 +398,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that an error is returned if multiple instances of an Interface attempt to propagate a description', () => {
-      const result = federateSubgraphs([fbb, fbe], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultFailure;
+      const result = federateSubgraphsFailure([fbb, fbe], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(configureDescriptionPropagationError(INTERFACE, [fbb.name, fbe.name]));
@@ -404,7 +406,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that an Interface description with propagate: false is not propagated', () => {
-      const result = federateSubgraphs([fba, fbf], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fba, fbf], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -432,7 +434,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that an Interface instance with no description and another with propagate: false results in no description', () => {
-      const result = federateSubgraphs([fbf, fbg], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fbf, fbg], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -455,7 +457,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that all Interface instances with no description or propagate: false results in no description', () => {
-      const result = federateSubgraphs([fbf, fbh], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fbf, fbh], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -479,7 +481,7 @@ describe('@openfed__configureDescription tests', () => {
 
     // Enum
     test('that an Enum description is propagated to the federated graph', () => {
-      const result = federateSubgraphs([fca, fcb], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fca, fcb], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -506,7 +508,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that an Enum extension override description is propagated to the federated graph #1', () => {
-      const result = federateSubgraphs([fca, fcc], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fca, fcc], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -534,7 +536,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that an Enum extension override description is propagated to the federated graph #2', () => {
-      const result = federateSubgraphs([fca, fcd], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fca, fcd], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -562,7 +564,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that an error is returned if multiple instances of an Enum attempt to propagate a description', () => {
-      const result = federateSubgraphs([fcb, fce], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultFailure;
+      const result = federateSubgraphsFailure([fcb, fce], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(configureDescriptionPropagationError(ENUM, [fcb.name, fce.name]));
@@ -570,7 +572,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that an Enum description with propagate: false is not propagated', () => {
-      const result = federateSubgraphs([fca, fcf], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fca, fcf], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -598,7 +600,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that an Enum instance with no description and another with propagate: false results in no description', () => {
-      const result = federateSubgraphs([fcf, fcg], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fcf, fcg], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -621,7 +623,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that all Enum instances with no description or propagate: false results in no description', () => {
-      const result = federateSubgraphs([fcf, fch], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fcf, fch], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -645,7 +647,7 @@ describe('@openfed__configureDescription tests', () => {
 
     // Input Object
     test('that an Input Object description is propagated to the federated graph', () => {
-      const result = federateSubgraphs([fda, fdb], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fda, fdb], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -672,7 +674,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that an Input Object extension override description is propagated to the federated graph #1', () => {
-      const result = federateSubgraphs([fda, fdc], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fda, fdc], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -700,7 +702,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that an Input Object extension override description is propagated to the federated graph #2', () => {
-      const result = federateSubgraphs([fda, fdd], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fda, fdd], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -728,7 +730,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that an error is returned if multiple instances of an Input Object attempt to propagate a description', () => {
-      const result = federateSubgraphs([fdb, fde], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultFailure;
+      const result = federateSubgraphsFailure([fdb, fde], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(configureDescriptionPropagationError('Input', [fdb.name, fde.name]));
@@ -736,7 +738,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that an Input Object description with propagate: false is not propagated', () => {
-      const result = federateSubgraphs([fda, fdf], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fda, fdf], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -764,7 +766,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that an Input Object instance with no description and another with propagate: false results in no description', () => {
-      const result = federateSubgraphs([fdf, fdg], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fdf, fdg], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -787,7 +789,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that all Input Object instances with no description or propagate: false results in no description', () => {
-      const result = federateSubgraphs([fdf, fdh], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fdf, fdh], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -811,7 +813,7 @@ describe('@openfed__configureDescription tests', () => {
 
     // Scalar
     test('that a Scalar description is propagated to the federated graph', () => {
-      const result = federateSubgraphs([fea, feb], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fea, feb], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -833,7 +835,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that a Scalar extension override description is propagated to the federated graph #1', () => {
-      const result = federateSubgraphs([fea, fec], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fea, fec], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -856,7 +858,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that a Scalar extension override description is propagated to the federated graph #2', () => {
-      const result = federateSubgraphs([fea, fed], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fea, fed], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -879,7 +881,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that an error is returned if multiple instances of an Input Object attempt to propagate a description', () => {
-      const result = federateSubgraphs([feb, fee], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultFailure;
+      const result = federateSubgraphsFailure([feb, fee], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(configureDescriptionPropagationError(SCALAR, [feb.name, fee.name]));
@@ -887,7 +889,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that a Scalar description with propagate: false is not propagated', () => {
-      const result = federateSubgraphs([fea, fef], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fea, fef], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -910,7 +912,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that a Scalar instance with no description and another with propagate: false results in no description', () => {
-      const result = federateSubgraphs([fef, feg], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fef, feg], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -928,7 +930,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that all Scalar instances with no description or propagate: false results in no description', () => {
-      const result = federateSubgraphs([fef, feh], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fef, feh], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -947,7 +949,7 @@ describe('@openfed__configureDescription tests', () => {
 
     // Union
     test('that a Union description is propagated to the federated graph', () => {
-      const result = federateSubgraphs([ffa, ffb], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([ffa, ffb], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -974,7 +976,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that a Union extension override description is propagated to the federated graph #1', () => {
-      const result = federateSubgraphs([ffa, ffc], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([ffa, ffc], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -1002,7 +1004,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that a Union extension override description is propagated to the federated graph #2', () => {
-      const result = federateSubgraphs([ffa, ffd], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([ffa, ffd], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -1029,7 +1031,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that an error is returned if multiple instances of a Union attempt to propagate a description', () => {
-      const result = federateSubgraphs([ffb, ffe], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultFailure;
+      const result = federateSubgraphsFailure([ffb, ffe], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(configureDescriptionPropagationError(UNION, [ffb.name, ffe.name]));
@@ -1037,7 +1039,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that a Union description with propagate: false is not propagated', () => {
-      const result = federateSubgraphs([ffa, fff], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([ffa, fff], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -1064,7 +1066,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that a Union instance with no description and another with propagate: false results in no description', () => {
-      const result = federateSubgraphs([fff, ffg], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fff, ffg], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -1088,7 +1090,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that all Union instances with no description or propagate: false results in no description', () => {
-      const result = federateSubgraphs([fff, ffh], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fff, ffh], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -1113,7 +1115,7 @@ describe('@openfed__configureDescription tests', () => {
 
     // Renamed root type
     test('that a renamed root type Object description is propagated to the federated graph', () => {
-      const result = federateSubgraphs([fga, fgb], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fga, fgb], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -1137,7 +1139,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that a renamed root type Object extension override description is propagated to the federated graph #1', () => {
-      const result = federateSubgraphs([fga, fgc], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fga, fgc], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -1161,7 +1163,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that a renamed root type Object extension override description is propagated to the federated graph #2', () => {
-      const result = federateSubgraphs([fga, fgd], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fga, fgd], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -1185,7 +1187,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that an error is returned if multiple instances of a renamed root type Object attempt to propagate a description', () => {
-      const result = federateSubgraphs([fgb, fge], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultFailure;
+      const result = federateSubgraphsFailure([fgb, fge], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(configureDescriptionPropagationError(QUERY, [fgb.name, fge.name]));
@@ -1193,7 +1195,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that a renamed root type Object description with propagate: false is not propagated', () => {
-      const result = federateSubgraphs([fga, fgf], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fga, fgf], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -1217,7 +1219,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that a renamed root type Object instance with no description and another with propagate: false results in no description', () => {
-      const result = federateSubgraphs([fgf, fgg], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fgf, fgg], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -1238,7 +1240,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that all renamed root type Object instances with no description or propagate: false results in no description', () => {
-      const result = federateSubgraphs([fgf, fgh], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fgf, fgh], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -1260,7 +1262,7 @@ describe('@openfed__configureDescription tests', () => {
 
     // Field
     test('that a field description is propagated to the federated graph', () => {
-      const result = federateSubgraphs([fha, fhb], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fha, fhb], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -1281,7 +1283,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that a field on an Object extension override description is propagated to the federated graph #1', () => {
-      const result = federateSubgraphs([fha, fhc], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fha, fhc], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -1302,7 +1304,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that a field on an Object extension override description is propagated to the federated graph #2', () => {
-      const result = federateSubgraphs([fha, fhd], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fha, fhd], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -1323,7 +1325,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that an error is returned if multiple instances of a field attempt to propagate a description', () => {
-      const result = federateSubgraphs([fhb, fhe], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultFailure;
+      const result = federateSubgraphsFailure([fhb, fhe], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(configureDescriptionPropagationError('Query.dummy', [fhb.name, fhe.name]));
@@ -1331,7 +1333,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that a field description with propagate: false is not propagated', () => {
-      const result = federateSubgraphs([fha, fhf], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fha, fhf], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -1352,7 +1354,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that a field instance with no description and another with propagate: false results in no description', () => {
-      const result = federateSubgraphs([fhf, fhg], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fhf, fhg], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -1370,7 +1372,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that all field instances with no description or propagate: false results in no description', () => {
-      const result = federateSubgraphs([fhf, fhh], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fhf, fhh], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -1389,7 +1391,7 @@ describe('@openfed__configureDescription tests', () => {
 
     // Field Argument
     test('that a field argument description is propagated to the federated graph', () => {
-      const result = federateSubgraphs([fia, fib], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fia, fib], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -1410,7 +1412,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that a field argument on an Object extension override description is propagated to the federated graph #1', () => {
-      const result = federateSubgraphs([fia, fic], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fia, fic], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -1431,7 +1433,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that a field argument on an Object extension override description is propagated to the federated graph #2', () => {
-      const result = federateSubgraphs([fia, fid], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fia, fid], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -1452,7 +1454,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that an error is returned if multiple instances of a field argument attempt to propagate a description', () => {
-      const result = federateSubgraphs([fib, fie], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultFailure;
+      const result = federateSubgraphsFailure([fib, fie], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -1462,7 +1464,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that a field argument description with propagate: false is not propagated', () => {
-      const result = federateSubgraphs([fia, fif], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fia, fif], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -1485,7 +1487,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that a field argument instance with no description and another with propagate: false results in no description', () => {
-      const result = federateSubgraphs([fif, fig], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fif, fig], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -1503,7 +1505,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that all field argument instances with propagate: false results in no description', () => {
-      const result = federateSubgraphs([fif, fih], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fif, fih], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -1522,7 +1524,7 @@ describe('@openfed__configureDescription tests', () => {
 
     // Input Value
     test('that an Input Value description is propagated to the federated graph', () => {
-      const result = federateSubgraphs([fja, fjb], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fja, fjb], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -1546,7 +1548,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that an Input Value extension override description is propagated to the federated graph #1', () => {
-      const result = federateSubgraphs([fja, fjc], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fja, fjc], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -1571,7 +1573,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that an Input Value extension override description is propagated to the federated graph #2', () => {
-      const result = federateSubgraphs([fja, fjd], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fja, fjd], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -1596,7 +1598,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that an error is returned if multiple instances of an Input Value attempt to propagate a description', () => {
-      const result = federateSubgraphs([fjb, fje], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultFailure;
+      const result = federateSubgraphsFailure([fjb, fje], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(configureDescriptionPropagationError('Input.name', [fjb.name, fje.name]));
@@ -1604,7 +1606,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that an Input Value description with propagate: false is not propagated', () => {
-      const result = federateSubgraphs([fja, fjf], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fja, fjf], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -1629,7 +1631,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that an Input Value instance with no description and another with propagate: false results in no description', () => {
-      const result = federateSubgraphs([fjf, fjg], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fjf, fjg], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -1649,7 +1651,7 @@ describe('@openfed__configureDescription tests', () => {
     });
 
     test('that all Input Object instances with no description or propagate: false results in no description', () => {
-      const result = federateSubgraphs([fjf, fjh], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([fjf, fjh], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(

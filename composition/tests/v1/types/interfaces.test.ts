@@ -1,8 +1,5 @@
 import {
   duplicateFieldDefinitionError,
-  federateSubgraphs,
-  FederationResultFailure,
-  FederationResultSuccess,
   ImplementationErrors,
   incompatibleFederatedFieldNamedTypeError,
   INTERFACE,
@@ -11,8 +8,8 @@ import {
   invalidInterfaceImplementationError,
   noBaseDefinitionForExtensionError,
   noFieldDefinitionsError,
-  NormalizationResultFailure,
-  NormalizationResultSuccess,
+  NormalizationFailure,
+  NormalizationSuccess,
   normalizeSubgraph,
   normalizeSubgraphFromString,
   OBJECT,
@@ -30,7 +27,12 @@ import {
   versionOneRouterDefinitions,
   versionTwoRouterDefinitions,
 } from '../utils/utils';
-import { normalizeString, schemaToSortedNormalizedString } from '../../utils/utils';
+import {
+  federateSubgraphsFailure,
+  federateSubgraphsSuccess,
+  normalizeString,
+  schemaToSortedNormalizedString,
+} from '../../utils/utils';
 
 describe('Interface tests', () => {
   describe('Normalization tests', () => {
@@ -40,7 +42,7 @@ describe('Interface tests', () => {
         subgraphR.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -62,7 +64,7 @@ describe('Interface tests', () => {
         subgraphAE.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -85,7 +87,7 @@ describe('Interface tests', () => {
         subgraphAF.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -108,7 +110,7 @@ describe('Interface tests', () => {
         subgraphV.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -130,7 +132,7 @@ describe('Interface tests', () => {
         subgraphW.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -152,7 +154,7 @@ describe('Interface tests', () => {
         subgraphX.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -174,7 +176,7 @@ describe('Interface tests', () => {
         subgraphY.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -196,7 +198,7 @@ describe('Interface tests', () => {
         subgraphZ.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -218,7 +220,7 @@ describe('Interface tests', () => {
         subgraphAA.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -240,7 +242,7 @@ describe('Interface tests', () => {
         subgraphAB.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -262,7 +264,7 @@ describe('Interface tests', () => {
         subgraphAC.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -284,7 +286,7 @@ describe('Interface tests', () => {
         subgraphAD.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -306,7 +308,7 @@ describe('Interface tests', () => {
         subgraphI.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(noFieldDefinitionsError(INTERFACE, INTERFACE));
@@ -318,7 +320,7 @@ describe('Interface tests', () => {
         subgraphJ.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(noFieldDefinitionsError(INTERFACE, INTERFACE));
@@ -330,7 +332,7 @@ describe('Interface tests', () => {
         subgraphK.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(noFieldDefinitionsError(INTERFACE, INTERFACE));
@@ -342,7 +344,7 @@ describe('Interface tests', () => {
         subgraphL.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(noFieldDefinitionsError(INTERFACE, INTERFACE));
@@ -354,7 +356,7 @@ describe('Interface tests', () => {
         subgraphM.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(duplicateFieldDefinitionError(INTERFACE, INTERFACE, 'name'));
@@ -366,7 +368,7 @@ describe('Interface tests', () => {
         subgraphN.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(duplicateFieldDefinitionError(INTERFACE, INTERFACE, 'name'));
@@ -378,7 +380,7 @@ describe('Interface tests', () => {
         subgraphO.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(duplicateFieldDefinitionError(INTERFACE, INTERFACE, 'name'));
@@ -390,7 +392,7 @@ describe('Interface tests', () => {
         subgraphP.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(duplicateFieldDefinitionError(INTERFACE, INTERFACE, 'name'));
@@ -419,7 +421,7 @@ describe('Interface tests', () => {
       `,
         true,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(2);
       expect(result.errors[0]).toStrictEqual(
@@ -536,7 +538,7 @@ describe('Interface tests', () => {
       `,
         true,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(2);
       expect(result.errors[0]).toStrictEqual(
@@ -620,7 +622,7 @@ describe('Interface tests', () => {
         subgraphG.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -640,7 +642,7 @@ describe('Interface tests', () => {
         subgraphH.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(selfImplementationError('Interface'));
@@ -653,7 +655,7 @@ describe('Interface tests', () => {
         subgraphAM.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(1);
       expect(result.warnings![0]).toStrictEqual(unimplementedInterfaceOutputTypeWarning(subgraphAM.name, 'Interface'));
@@ -666,7 +668,7 @@ describe('Interface tests', () => {
         subgraphAN.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -690,10 +692,7 @@ describe('Interface tests', () => {
 
   describe('Federation tests', () => {
     test('that an Interface type and extension definition federate successfully #1.1', () => {
-      const result = federateSubgraphs(
-        [subgraphQ, subgraphR, subgraphU],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphQ, subgraphR, subgraphU], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -713,10 +712,7 @@ describe('Interface tests', () => {
     });
 
     test('that an Interface type and extension definition federate successfully #1.1', () => {
-      const result = federateSubgraphs(
-        [subgraphQ, subgraphU, subgraphR],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphQ, subgraphU, subgraphR], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -736,10 +732,7 @@ describe('Interface tests', () => {
     });
 
     test('that Interfaces merge by union', () => {
-      const result = federateSubgraphs(
-        [subgraphA, subgraphB],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -775,10 +768,7 @@ describe('Interface tests', () => {
     });
 
     test('that Interfaces and implementations merge by union', () => {
-      const result = federateSubgraphs(
-        [subgraphA, subgraphC],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphA, subgraphC], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -812,10 +802,7 @@ describe('Interface tests', () => {
     });
 
     test('that nested Interfaces merge by union', () => {
-      const result = federateSubgraphs(
-        [subgraphC, subgraphD],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphC, subgraphD], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -846,10 +833,7 @@ describe('Interface tests', () => {
     });
 
     test('that errors are returned if implemented Interface Fields are invalid #1', () => {
-      const result = federateSubgraphs(
-        [subgraphE, subgraphF],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultFailure;
+      const result = federateSubgraphsFailure([subgraphE, subgraphF], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(2);
       expect(result.errors[0]).toStrictEqual(
@@ -927,20 +911,14 @@ describe('Interface tests', () => {
     });
 
     test('that an error is returned if federation results in an Interface extension orphan', () => {
-      const result = federateSubgraphs(
-        [subgraphQ, subgraphR],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultFailure;
+      const result = federateSubgraphsFailure([subgraphQ, subgraphR], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(noBaseDefinitionForExtensionError(INTERFACE, INTERFACE));
     });
 
     test('that a V1 Interface with @extends directive federates with a base definition #1.1', () => {
-      const result = federateSubgraphs(
-        [subgraphQ, subgraphS, subgraphU],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphQ, subgraphS, subgraphU], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -960,10 +938,7 @@ describe('Interface tests', () => {
     });
 
     test('that a V1 Interface with @extends directive federates with a base definition #1.2', () => {
-      const result = federateSubgraphs(
-        [subgraphQ, subgraphU, subgraphS],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphQ, subgraphU, subgraphS], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -983,40 +958,28 @@ describe('Interface tests', () => {
     });
 
     test('that an error is returned if federation results in a V1 Interface with @extends directive orphan #1', () => {
-      const result = federateSubgraphs(
-        [subgraphQ, subgraphS],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultFailure;
+      const result = federateSubgraphsFailure([subgraphQ, subgraphS], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(noBaseDefinitionForExtensionError(INTERFACE, INTERFACE));
     });
 
     test('that an error is returned if federation results in a V1 Interface with @extends directive orphan #2.1', () => {
-      const result = federateSubgraphs(
-        [subgraphQ, subgraphR, subgraphS],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultFailure;
+      const result = federateSubgraphsFailure([subgraphQ, subgraphR, subgraphS], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(noBaseDefinitionForExtensionError(INTERFACE, INTERFACE));
     });
 
     test('that an error is returned if federation results in a V1 Interface with @extends directive orphan #2.2', () => {
-      const result = federateSubgraphs(
-        [subgraphQ, subgraphS, subgraphR],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultFailure;
+      const result = federateSubgraphsFailure([subgraphQ, subgraphS, subgraphR], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(noBaseDefinitionForExtensionError(INTERFACE, INTERFACE));
     });
 
     test('that a V2 Interface @extends directive orphan is valid #1', () => {
-      const result = federateSubgraphs(
-        [subgraphQ, subgraphT],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphQ, subgraphT], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -1039,10 +1002,7 @@ describe('Interface tests', () => {
     });
 
     test('that a V2 Interface @extends directive orphan is valid with another base type #1.1', () => {
-      const result = federateSubgraphs(
-        [subgraphQ, subgraphT, subgraphU],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphQ, subgraphT, subgraphU], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -1066,10 +1026,7 @@ describe('Interface tests', () => {
     });
 
     test('that a V2 Interface @extends directive orphan is valid with another base type #1.2', () => {
-      const result = federateSubgraphs(
-        [subgraphQ, subgraphT, subgraphU],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphQ, subgraphT, subgraphU], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -1093,10 +1050,7 @@ describe('Interface tests', () => {
     });
 
     test('that a V2 Interface @extends directive orphan is valid with another extension #1.1', () => {
-      const result = federateSubgraphs(
-        [subgraphQ, subgraphR, subgraphT],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphQ, subgraphR, subgraphT], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -1119,10 +1073,7 @@ describe('Interface tests', () => {
     });
 
     test('that a V2 Interface @extends directive orphan is valid with another extension #1.2', () => {
-      const result = federateSubgraphs(
-        [subgraphQ, subgraphT, subgraphR],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphQ, subgraphT, subgraphR], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -1145,10 +1096,7 @@ describe('Interface tests', () => {
     });
 
     test('that Field named types can coerce implementing types into Interfaces #1.1', () => {
-      const result = federateSubgraphs(
-        [subgraphAG, subgraphAH],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphAG, subgraphAH], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -1182,10 +1130,7 @@ describe('Interface tests', () => {
     });
 
     test('that Field named types can coerce implementing types into Interfaces #1.2', () => {
-      const result = federateSubgraphs(
-        [subgraphAH, subgraphAG],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphAH, subgraphAG], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -1219,10 +1164,7 @@ describe('Interface tests', () => {
     });
 
     test('that Field named types can coerce a single implementing type into Interfaces #2.1', () => {
-      const result = federateSubgraphs(
-        [subgraphAI, subgraphAK, subgraphAL],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphAI, subgraphAK, subgraphAL], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -1256,10 +1198,7 @@ describe('Interface tests', () => {
     });
 
     test('that Field named types can coerce a single implementing types into Interfaces #2.2', () => {
-      const result = federateSubgraphs(
-        [subgraphAL, subgraphAK, subgraphAI],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphAL, subgraphAK, subgraphAI], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -1293,10 +1232,10 @@ describe('Interface tests', () => {
     });
 
     test('that Field named types cannot coerce more than one implementing type into Interfaces #3.1', () => {
-      const result = federateSubgraphs(
+      const result = federateSubgraphsFailure(
         [subgraphAI, subgraphAJ, subgraphAK, subgraphAL],
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultFailure;
+      );
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(2);
       expect(result.errors[0]).toStrictEqual(
@@ -1323,10 +1262,10 @@ describe('Interface tests', () => {
     });
 
     test('that Field named types cannot coerce more than one implementing type into Interfaces #3.2', () => {
-      const result = federateSubgraphs(
+      const result = federateSubgraphsFailure(
         [subgraphAL, subgraphAK, subgraphAJ, subgraphAI],
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultFailure;
+      );
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(2);
       expect(result.errors[0]).toStrictEqual(

@@ -30,6 +30,11 @@ export default (opts: BaseCommandOptions) => {
   );
   command.option('-j, --json', 'Prints to the console in json format instead of table');
   command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
+  command.option(
+    '--disable-resolvability-validation',
+    'This flag will disable the validation for whether all nodes of the federated graph are resolvable. Do NOT use unless troubleshooting.',
+  );
+
   command.action(async (name, options) => {
     const spinner = ora('The feature flag is being created...');
     if (!options.json) {
@@ -37,11 +42,12 @@ export default (opts: BaseCommandOptions) => {
     }
     const resp = await opts.client.platform.createFeatureFlag(
       {
-        name,
-        namespace: options.namespace,
-        labels: options.label ? options.label.map((label: string) => splitLabel(label)) : [],
+        disableResolvabilityValidation: options.disableResolvabilityValidation,
         featureSubgraphNames: options.featureSubgraphs,
         isEnabled: !!options.enabled,
+        labels: options.label ? options.label.map((label: string) => splitLabel(label)) : [],
+        name,
+        namespace: options.namespace,
       },
       {
         headers: getBaseHeaders(),

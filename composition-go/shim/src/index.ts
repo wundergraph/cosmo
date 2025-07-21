@@ -41,7 +41,7 @@ function createFederableSubgraph(subgraph: Subgraph) {
 }
 
 export function federateSubgraphs(subgraphs: Subgraph[]): FederatedGraph {
-  const result = realFederateSubgraphs(subgraphs.map(createFederableSubgraph), LATEST_ROUTER_COMPATIBILITY_VERSION);
+  const result = realFederateSubgraphs({ subgraphs: subgraphs.map(createFederableSubgraph), version: LATEST_ROUTER_COMPATIBILITY_VERSION });
   if (!result.success) {
     throw new Error(`could not federate schema: ${result.errors.map((e: Error) => e.message).join(', ')}`);
   }
@@ -52,7 +52,7 @@ export function federateSubgraphs(subgraphs: Subgraph[]): FederatedGraph {
 }
 
 export function buildRouterConfiguration(subgraphs: Subgraph[]): string {
-  const result = realFederateSubgraphs(subgraphs.map(createFederableSubgraph), LATEST_ROUTER_COMPATIBILITY_VERSION);
+  const result = realFederateSubgraphs({ subgraphs: subgraphs.map(createFederableSubgraph), version: LATEST_ROUTER_COMPATIBILITY_VERSION });
   if (!result.success) {
     throw new Error(`could not federate schema: ${result.errors.map((e: Error) => e.message).join(', ')}`);
   }

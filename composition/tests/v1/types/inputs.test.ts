@@ -1,16 +1,14 @@
 import {
   duplicateInputFieldDefinitionError,
-  federateSubgraphs,
-  FederationResultFailure,
-  FederationResultSuccess,
+  FederationFailure,
   incompatibleInputValueDefaultValueTypeError,
   INPUT_OBJECT,
   InputValueData,
   invalidNamedTypeError,
   invalidRequiredInputValueError,
   noInputValueDefinitionsError,
-  NormalizationResultFailure,
-  NormalizationResultSuccess,
+  NormalizationFailure,
+  NormalizationSuccess,
   normalizeSubgraph,
   ObjectDefinitionData,
   parse,
@@ -20,7 +18,13 @@ import {
 } from '../../../src';
 import { describe, expect, test } from 'vitest';
 import { baseDirectiveDefinitions, stringToTypeNode, versionOneRouterDefinitions } from '../utils/utils';
-import { normalizeString, normalizeSubgraphFailure, schemaToSortedNormalizedString } from '../../utils/utils';
+import {
+  federateSubgraphsFailure,
+  federateSubgraphsSuccess,
+  normalizeString,
+  normalizeSubgraphFailure,
+  schemaToSortedNormalizedString,
+} from '../../utils/utils';
 import { Kind } from 'graphql';
 
 describe('Input tests', () => {
@@ -31,7 +35,7 @@ describe('Input tests', () => {
         subgraphM.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -53,7 +57,7 @@ describe('Input tests', () => {
         subgraphN.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -76,7 +80,7 @@ describe('Input tests', () => {
         subgraphO.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -99,7 +103,7 @@ describe('Input tests', () => {
         subgraphP.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -121,7 +125,7 @@ describe('Input tests', () => {
         subgraphQ.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -143,7 +147,7 @@ describe('Input tests', () => {
         subgraphR.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -165,7 +169,7 @@ describe('Input tests', () => {
         subgraphS.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -187,7 +191,7 @@ describe('Input tests', () => {
         subgraphT.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -209,7 +213,7 @@ describe('Input tests', () => {
         subgraphU.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -231,7 +235,7 @@ describe('Input tests', () => {
         subgraphV.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -253,7 +257,7 @@ describe('Input tests', () => {
         subgraphW.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -275,7 +279,7 @@ describe('Input tests', () => {
         subgraphX.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -297,7 +301,7 @@ describe('Input tests', () => {
         subgraphE.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(noInputValueDefinitionsError('Input'));
@@ -309,7 +313,7 @@ describe('Input tests', () => {
         subgraphF.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(noInputValueDefinitionsError('Input'));
@@ -321,7 +325,7 @@ describe('Input tests', () => {
         subgraphG.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(noInputValueDefinitionsError('Input'));
@@ -333,7 +337,7 @@ describe('Input tests', () => {
         subgraphH.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(noInputValueDefinitionsError('Input'));
@@ -345,7 +349,7 @@ describe('Input tests', () => {
         subgraphI.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(duplicateInputFieldDefinitionError('Input', 'name'));
@@ -357,7 +361,7 @@ describe('Input tests', () => {
         subgraphJ.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(duplicateInputFieldDefinitionError('Input', 'name'));
@@ -369,7 +373,7 @@ describe('Input tests', () => {
         subgraphK.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(duplicateInputFieldDefinitionError('Input', 'name'));
@@ -381,7 +385,7 @@ describe('Input tests', () => {
         subgraphL.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(duplicateInputFieldDefinitionError('Input', 'name'));
@@ -406,11 +410,7 @@ describe('Input tests', () => {
 
   describe('Federation tests', () => {
     test('that Input Objects merge by intersection if the removed values are nullable', () => {
-      const result = federateSubgraphs(
-        [subgraphA, subgraphB],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
-      expect(result.success).toBe(true);
+      const result = federateSubgraphsSuccess([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
           versionOneRouterDefinitions +
@@ -429,11 +429,7 @@ describe('Input tests', () => {
     });
 
     test('that a required Input Object value that is omitted from the federated graph returns an error', () => {
-      const result = federateSubgraphs(
-        [subgraphA, subgraphC],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultFailure;
-      expect(result.success).toBe(false);
+      const result = federateSubgraphsFailure([subgraphA, subgraphC], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         invalidRequiredInputValueError(
@@ -449,7 +445,7 @@ describe('Input tests', () => {
     });
 
     test('that @deprecated is persisted on an Input field', () => {
-      const result = federateSubgraphs([subgraphD], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphD], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -469,10 +465,10 @@ describe('Input tests', () => {
     });
 
     test('that Float Input field accept integer default values', () => {
-      const result = federateSubgraphs(
+      const result = federateSubgraphsSuccess(
         [subgraphWithInputField('subgraph', 'Float = 1')],
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      );
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -491,13 +487,12 @@ describe('Input tests', () => {
     });
 
     test('that an error is returned if a required Input field uses a null default value', () => {
-      const result = federateSubgraphs(
+      const { errors } = federateSubgraphsFailure(
         [subgraphWithInputField('subgraph', 'String! = null')],
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultFailure;
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
         subgraphValidationError('subgraph', [
           incompatibleInputValueDefaultValueTypeError('Input field "field"', 'Input.field', 'String!', 'null'),
         ]),
@@ -505,10 +500,10 @@ describe('Input tests', () => {
     });
 
     test.skip('that an error is returned if a required Input field uses an object default value', () => {
-      const result = federateSubgraphs(
+      const result = federateSubgraphsFailure(
         [subgraphWithInputField('subgraph', 'String! = { field: "value" }')],
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultFailure;
+      );
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -520,13 +515,12 @@ describe('Input tests', () => {
 
     // @TODO a String input should coerce a default value string without quotations into a string
     test.skip('that an error is returned if a required Input field uses an enum default value', () => {
-      const result = federateSubgraphs(
+      const { errors } = federateSubgraphsFailure(
         [subgraphWithInputField('subgraph', 'String! = VALUE')],
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultFailure;
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
         subgraphValidationError('subgraph', [
           incompatibleInputValueDefaultValueTypeError('Input field "field"', 'Input.field', 'String!', 'VALUE'),
         ]),
@@ -534,13 +528,12 @@ describe('Input tests', () => {
     });
 
     test('that an error is returned if a required argument uses a null default value', () => {
-      const result = federateSubgraphs(
+      const { errors } = federateSubgraphsFailure(
         [subgraphWithInputField('subgraph', 'Boolean! = null')],
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultFailure;
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
         subgraphValidationError('subgraph', [
           incompatibleInputValueDefaultValueTypeError('Input field "field"', 'Input.field', 'Boolean!', 'null'),
         ]),
@@ -548,13 +541,12 @@ describe('Input tests', () => {
     });
 
     test('that an error is returned if a required argument defines an incompatible default value', () => {
-      const result = federateSubgraphs(
+      const { errors } = federateSubgraphsFailure(
         [subgraphWithInputField('subgraph', 'Int = "test"')],
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultFailure;
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
         subgraphValidationError('subgraph', [
           incompatibleInputValueDefaultValueTypeError('Input field "field"', 'Input.field', 'Int', '"test"'),
         ]),
@@ -562,13 +554,12 @@ describe('Input tests', () => {
     });
 
     test('that an error is returned if an Int input receives a float default value', () => {
-      const result = federateSubgraphs(
+      const { errors } = federateSubgraphsFailure(
         [subgraphWithInputField('subgraph', 'Int = 1.0')],
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultFailure;
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
         subgraphValidationError('subgraph', [
           incompatibleInputValueDefaultValueTypeError('Input field "field"', 'Input.field', 'Int', '1.0'),
         ]),
