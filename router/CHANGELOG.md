@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.235.2](https://github.com/wundergraph/cosmo/compare/router@0.235.1...router@0.235.2) (2025-07-22)
+
+### Bug Fixes
+
+* enforce parser limits ([#2068](https://github.com/wundergraph/cosmo/issues/2068)) ([94b2971](https://github.com/wundergraph/cosmo/commit/94b29711c5840d222b932e48950d1723e66efb41)) (@devsergiy)
+* fix merging inline fragment and field selections together ([#2073](https://github.com/wundergraph/cosmo/issues/2073)) ([cad2a35](https://github.com/wundergraph/cosmo/commit/cad2a350037939498d00e598060faee89f595b05)) (@ysmolski)
+
 ## [0.235.1](https://github.com/wundergraph/cosmo/compare/router@0.235.0...router@0.235.1) (2025-07-21)
 
 ### Bug Fixes
