@@ -263,7 +263,7 @@ func TestStartSubscriptionHook(t *testing.T) {
 			}, "unable to close client before timeout")
 
 			requestLog := xEnv.Observer().FilterMessage("SubscriptionOnStart Hook has been run")
-			assert.Len(t, requestLog.All(), 1)
+			assert.Len(t, requestLog.All(), 2)
 			t.Cleanup(func() {
 				require.Len(t, subscriptionOneArgsCh, 0)
 			})

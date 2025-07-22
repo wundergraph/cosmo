@@ -91,7 +91,7 @@ func NewPubSubOnSubscriptionStartHook(fn func(ctx SubscriptionOnStartHookContext
 }
 
 func NewEngineOnSubscriptionStartHook(fn func(ctx SubscriptionOnStartHookContext) error) graphql_datasource.OnSubscriptionStartFn {
-	return func(resolveCtx *resolve.Context) ([][]byte, error) {
+	return func(resolveCtx *resolve.Context, input []byte) ([][]byte, error) {
 		requestContext := getRequestContext(resolveCtx.Context())
 		hookCtx := &engineSubscriptionOnStartHookContext{
 			requestContext: requestContext,

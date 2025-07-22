@@ -10,18 +10,22 @@ type HookedSubscriptionDataSource struct {
 	SubscriptionDataSource PubSubSubscriptionDataSource
 }
 
-func (h *HookedSubscriptionDataSource) Start(ctx *resolve.Context, input []byte, updater resolve.SubscriptionUpdater) error {
-	subscriptionEventUpdater := NewSubscriptionEventUpdater(updater)
+func (h *HookedSubscriptionDataSource) OnSubscriptionStart(ctx *resolve.Context, input []byte) (err error) {
 	for _, fn := range h.OnSubscriptionStartFns {
 		events, err := fn(ctx, h.SubscriptionDataSource.SubscriptionEventConfiguration(input))
 		if err != nil {
 			return err
 		}
 		for _, event := range events {
-			subscriptionEventUpdater.Update(event)
+			ctx.EmitSubscriptionUpdate(event.GetData())
 		}
 	}
-	return h.SubscriptionDataSource.Start(ctx, input, subscriptionEventUpdater)
+
+	return nil
+}
+
+func (h *HookedSubscriptionDataSource) Start(ctx *resolve.Context, input []byte, updater resolve.SubscriptionUpdater) error {
+	return h.SubscriptionDataSource.Start(ctx, input, NewSubscriptionEventUpdater(updater))
 }
 
 func (h *HookedSubscriptionDataSource) UniqueRequestID(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) (err error) {
