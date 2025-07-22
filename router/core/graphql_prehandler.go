@@ -966,6 +966,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	if !requestContext.operation.traceOptions.ExcludePlannerStats {
 		httpOperation.traceTimings.StartPlanning()
 	}
+
 	startPlanning := time.Now()
 
 	_, enginePlanSpan := h.tracer.Start(req.Context(), "Operation - Plan",
@@ -984,22 +985,26 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	err = h.planner.plan(requestContext.operation, planOptions)
 	if err != nil {
 		httpOperation.requestLogger.Debug("failed to plan operation", zap.Error(err))
-		rtrace.AttachErrToSpan(enginePlanSpan, err)
 
 		if !requestContext.operation.traceOptions.ExcludePlannerStats {
 			httpOperation.traceTimings.EndPlanning()
 		}
 
+		requestContext.operation.planningTime = time.Since(startPlanning)
+
+		rtrace.AttachErrToSpan(enginePlanSpan, err)
 		enginePlanSpan.End()
 
 		return err
 	}
 
-	enginePlanSpan.SetAttributes(otel.WgEnginePlanCacheHit.Bool(requestContext.operation.planCacheHit))
+	if !requestContext.operation.traceOptions.ExcludePlannerStats {
+		httpOperation.traceTimings.EndPlanning()
+	}
 
 	requestContext.operation.planningTime = time.Since(startPlanning)
-	httpOperation.traceTimings.EndPlanning()
 
+	enginePlanSpan.SetAttributes(otel.WgEnginePlanCacheHit.Bool(requestContext.operation.planCacheHit))
 	enginePlanSpan.End()
 
 	planningAttrs := *requestContext.telemetry.AcquireAttributes()
@@ -1014,6 +1019,17 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	)
 
 	requestContext.telemetry.ReleaseAttributes(&planningAttrs)
+
+	if requestContext.operation.planningTime > 4*time.Second {
+		h.log.Warn("Planning time exceeded threshold",
+			zap.Duration("planning_time", requestContext.operation.planningTime),
+			zap.String("operation_id", requestContext.operation.name),
+			zap.String("operation_type", requestContext.operation.opType),
+			zap.String("operation_client", requestContext.operation.clientInfo.Name),
+			zap.String("operation_client_version", requestContext.operation.clientInfo.Version),
+			zap.String("operation_content", requestContext.operation.content),
+		)
+	}
 
 	// we could log the query plan only if query plans are calculated
 	if (h.queryPlansEnabled && requestContext.operation.executionOptions.IncludeQueryPlanInResponse) ||
