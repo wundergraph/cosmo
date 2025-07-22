@@ -8,10 +8,6 @@ import (
 	"os"
 
 	log "github.com/jensneuse/abstractlogger"
-	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"github.com/wundergraph/cosmo/router/pkg/config"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
@@ -24,6 +20,11 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 	"go.uber.org/zap"
+
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
 
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 )
@@ -125,7 +126,12 @@ func (pl *Planner) normalizeOperation(operation *ast.Document, operationName []b
 	report := operationreport.Report{}
 
 	astnormalization.NormalizeNamedOperation(operation, pl.definition, operationName, &report)
+	if report.HasErrors() {
+		return report
+	}
 
+	remapper := astnormalization.NewVariablesMapper()
+	remapper.NormalizeOperation(operation, pl.definition, &report)
 	if report.HasErrors() {
 		return report
 	}
