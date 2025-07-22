@@ -18,15 +18,15 @@ require (
 	github.com/prometheus/client_golang v1.19.1
 	github.com/prometheus/client_model v0.6.1
 	github.com/redis/go-redis/v9 v9.4.0
-	github.com/sebdah/goldie/v2 v2.5.3
+	github.com/sebdah/goldie/v2 v2.7.1
 	github.com/stretchr/testify v1.10.0
 	github.com/twmb/franz-go v1.16.1
 	github.com/twmb/franz-go/pkg/kadm v1.11.0
 	github.com/wundergraph/astjson v0.0.0-20250106123708-be463c97e083
-	github.com/wundergraph/cosmo/demo v0.0.0-20250721114211-ea47c3893316
+	github.com/wundergraph/cosmo/demo v0.0.0-20250722153010-5d8a29ac5c3d
 	github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects v0.0.0-20250715110703-10f2e5f9c79e
-	github.com/wundergraph/cosmo/router v0.0.0-20250721114211-ea47c3893316
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.208
+	github.com/wundergraph/cosmo/router v0.0.0-20250722153010-5d8a29ac5c3d
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.209
 	go.opentelemetry.io/otel v1.28.0
 	go.opentelemetry.io/otel/sdk v1.28.0
 	go.opentelemetry.io/otel/sdk/metric v1.28.0
