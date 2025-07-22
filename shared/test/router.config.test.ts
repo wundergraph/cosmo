@@ -5,7 +5,7 @@ import { describe, expect, test } from 'vitest';
 import { printSchema } from 'graphql';
 import {
   federateSubgraphs,
-  FederationResultSuccess,
+  FederationSuccess,
   LATEST_ROUTER_COMPATIBILITY_VERSION,
 } from '@wundergraph/composition';
 import {
@@ -30,7 +30,7 @@ const __dirname = url.fileURLToPath(new URL('.', import.meta.url));
 
 describe('Router Config Builder', () => {
   test('Build Subgraph schema', () => {
-    const result = federateTestSubgraphs() as FederationResultSuccess;
+    const result = federateTestSubgraphs() as FederationSuccess;
     expect(result.success).toBe(true);
     const accountsSubgraphConfig = result.subgraphConfigBySubgraphName.get('accounts');
     const productsSubgraphConfig = result.subgraphConfigBySubgraphName.get('products');
@@ -111,7 +111,7 @@ describe('Router Config Builder', () => {
   });
 
   test('Build config with plugin subgraph', () => {
-    const result = federateTestSubgraphs() as FederationResultSuccess;
+    const result = federateTestSubgraphs() as FederationSuccess;
     expect(result.success).toBe(true);
     const accountsSubgraphConfig = result.subgraphConfigBySubgraphName.get('accounts');
     const productsSubgraphConfig = result.subgraphConfigBySubgraphName.get('products');
@@ -199,10 +199,10 @@ describe('Router Config Builder', () => {
   });
 
   test('that the federatedClientSDL property is not propagated if it is empty', () => {
-    const result = federateSubgraphs(
-      [simpleAccounts, simpleProducts],
-      LATEST_ROUTER_COMPATIBILITY_VERSION,
-    ) as FederationResultSuccess;
+    const result = federateSubgraphs({
+      subgraphs: [simpleAccounts, simpleProducts],
+      version: LATEST_ROUTER_COMPATIBILITY_VERSION,
+    }) as FederationSuccess;
 
     expect(result.success).toBe(true);
 
@@ -253,10 +253,10 @@ describe('Router Config Builder', () => {
   });
 
   test('that the federatedClientSDL property is propagated if a schema uses the @tag directive', () => {
-    const result = federateSubgraphs(
-      [simpleAccounts, simpleProductsWithTags],
-      LATEST_ROUTER_COMPATIBILITY_VERSION,
-    ) as FederationResultSuccess;
+    const result = federateSubgraphs({
+      subgraphs: [simpleAccounts, simpleProductsWithTags],
+      version: LATEST_ROUTER_COMPATIBILITY_VERSION,
+    }) as FederationSuccess;
 
     expect(result.success).toBe(true);
 
@@ -307,10 +307,10 @@ describe('Router Config Builder', () => {
   });
 
   test('that the federatedClientSDL property is propagated if a schema uses the @inaccessible directive', () => {
-    const result = federateSubgraphs(
-      [simpleAccounts, simpleProductsWithInaccessible],
-      LATEST_ROUTER_COMPATIBILITY_VERSION,
-    ) as FederationResultSuccess;
+    const result = federateSubgraphs({
+      subgraphs: [simpleAccounts, simpleProductsWithInaccessible],
+      version: LATEST_ROUTER_COMPATIBILITY_VERSION,
+    }) as FederationSuccess;
 
     expect(result.success).toBe(true);
 

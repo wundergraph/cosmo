@@ -17,11 +17,17 @@ export default (opts: CommonGraphCommandOptions) => {
   command.requiredOption('-v, --version [number]', `The router compatibility version to set for the ${graphType}.`);
   command.option('-n, --namespace [string]', `The namespace of the ${graphType}.`);
   command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
+  command.option(
+    '--disable-resolvability-validation',
+    'This flag will disable the validation for whether all nodes of the federated graph are resolvable. Do NOT use unless troubleshooting.',
+  );
+
   command.action(async (name, options) => {
     const spinner = ora(`Attempting to set router compatibility version ${options.version}...`).start();
 
     const response = await opts.client.platform.setGraphRouterCompatibilityVersion(
       {
+        disableResolvabilityValidation: options.disableResolvabilityValidation,
         name,
         namespace: options.namespace,
         version: options.version,

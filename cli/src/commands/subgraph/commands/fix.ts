@@ -1,7 +1,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { Command, program } from 'commander';
-import { join, resolve } from 'pathe';
+import { resolve } from 'pathe';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import logSymbols from 'log-symbols';
@@ -19,6 +19,10 @@ export default (opts: BaseCommandOptions) => {
   command.option('-n, --namespace [string]', 'The namespace of the subgraph.');
   command.requiredOption('--schema <path-to-schema>', 'The path of the new schema file.');
   command.option('--out-schema <path-to-out-schema>', 'The path where the fixed schema file should be written.');
+  command.option(
+    '--disable-resolvability-validation',
+    'This flag will disable the validation for whether all nodes of the federated graph are resolvable. Do NOT use unless troubleshooting.',
+  );
 
   command.action(async (name, options) => {
     const schemaFile = resolve(options.schema);
@@ -40,9 +44,10 @@ export default (opts: BaseCommandOptions) => {
 
     const resp = await opts.client.platform.fixSubgraphSchema(
       {
-        subgraphName: name,
+        disableResolvabilityValidation: options.disableResolvabilityValidation,
         namespace: options.namespace,
         schema,
+        subgraphName: name,
       },
       {
         headers: getBaseHeaders(),
