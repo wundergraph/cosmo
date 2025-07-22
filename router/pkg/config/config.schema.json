@@ -2438,22 +2438,24 @@
             }
           }
         },
-        "parser_hard_limits": {
+        "parser_limits": {
           "type": "object",
-          "description": "The configuration to enforce parse hard limits for the query depth and fields count.",
+          "description": "The configuration to enforce parser limits for the query depth and fields count. This configuration leads to early fail for the queries above the limits during parsing. Do not change without need",
           "additionalProperties": false,
           "properties": {
             "approximate_depth_limit": {
               "type": "integer",
               "description": "The approximate cummulative depth limit of a query along with fragments.",
-              "default": 0,
-              "minimum": 0
+              "default": 100,
+              "minimum": 100,
+              "maximum": 1000
             },
             "parser_total_fields_limit": {
               "type": "integer",
               "description": "The total fields count limit which parser will allow to parse.",
-              "default": 0,
-              "minimum": 0
+              "default": 500,
+              "minimum": 10,
+              "maximum": 5000
             }
           }
         }

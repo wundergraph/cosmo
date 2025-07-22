@@ -114,8 +114,8 @@ type OperationProcessorOptions struct {
 	ApolloCompatibilityFlags                         config.ApolloCompatibilityFlags
 	ApolloRouterCompatibilityFlags                   config.ApolloRouterCompatibilityFlags
 	DisableExposingVariablesContentOnValidationError bool
-	ParserHardLimits                                 config.ParserHardLimitsConfiguration
 	ComplexityLimits                                 *config.ComplexityLimits
+	ParserTokenizerLimits                            astparser.TokenizerLimits
 }
 
 // OperationProcessor provides shared resources to the parseKit and OperationKit.
@@ -129,8 +129,8 @@ type OperationProcessor struct {
 	parseKitSemaphore        chan int
 	introspectionEnabled     bool
 	parseKitOptions          *parseKitOptions
-	parserHardLimits         config.ParserHardLimitsConfiguration
 	complexityLimits         *config.ComplexityLimits
+	parserTokenizerLimits    astparser.TokenizerLimits
 }
 
 // parseKit is a helper struct to parse, normalize and validate operations
@@ -526,11 +526,7 @@ func (o *OperationKit) Parse() error {
 
 	report := &operationreport.Report{}
 	o.kit.doc.Input.ResetInputString(o.parsedOperation.Request.Query)
-	if _, err := o.kit.parser.ParseWithLimits(
-		astparser.TokenizerLimits{
-			MaxDepth:  o.operationProcessor.parserHardLimits.ApproximateDepthLimit,
-			MaxFields: o.operationProcessor.parserHardLimits.ParserTotalFieldsLimit,
-		}, o.kit.doc, report); err != nil {
+	if _, err := o.kit.parser.ParseWithLimits(o.operationProcessor.parserTokenizerLimits, o.kit.doc, report); err != nil {
 		return &httpGraphqlError{
 			message:    err.Error(),
 			statusCode: http.StatusBadRequest,
@@ -763,11 +759,7 @@ func (o *OperationKit) setAndParseOperationDoc() error {
 	o.kit.doc.Input.ResetInputString(o.parsedOperation.NormalizedRepresentation)
 	o.kit.doc.Input.Variables = o.parsedOperation.Request.Variables
 	report := &operationreport.Report{}
-	if _, err := o.kit.parser.ParseWithLimits(
-		astparser.TokenizerLimits{
-			MaxDepth:  o.operationProcessor.parserHardLimits.ApproximateDepthLimit,
-			MaxFields: o.operationProcessor.parserHardLimits.ParserTotalFieldsLimit,
-		}, o.kit.doc, report); err != nil {
+	if _, err := o.kit.parser.ParseWithLimits(o.operationProcessor.parserTokenizerLimits, o.kit.doc, report); err != nil {
 		return &httpGraphqlError{
 			message:    err.Error(),
 			statusCode: http.StatusBadRequest,
@@ -1245,7 +1237,7 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 		parseKits:                make(map[int]*parseKit, opts.ParseKitPoolSize),
 		parseKitSemaphore:        make(chan int, opts.ParseKitPoolSize),
 		introspectionEnabled:     opts.IntrospectionEnabled,
-		parserHardLimits:         opts.ParserHardLimits,
+		parserTokenizerLimits:    opts.ParserTokenizerLimits,
 		complexityLimits:         opts.ComplexityLimits,
 		parseKitOptions: &parseKitOptions{
 			apolloCompatibilityFlags:                         opts.ApolloCompatibilityFlags,

@@ -19,7 +19,7 @@ func TestParserHardLimits(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-					securityConfiguration.ParserHardLimits = config.ParserHardLimitsConfiguration{
+					securityConfiguration.ParserLimits = config.ParserLimitsConfiguration{
 						ApproximateDepthLimit: 2,
 					}
 				},
@@ -36,7 +36,7 @@ func TestParserHardLimits(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-					securityConfiguration.ParserHardLimits = config.ParserHardLimitsConfiguration{
+					securityConfiguration.ParserLimits = config.ParserLimitsConfiguration{
 						ApproximateDepthLimit: 2,
 					}
 				},
@@ -78,8 +78,8 @@ func TestParserHardLimits(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-					securityConfiguration.ParserHardLimits = config.ParserHardLimitsConfiguration{
-						ParserTotalFieldsLimit: 2,
+					securityConfiguration.ParserLimits = config.ParserLimitsConfiguration{
+						TotalFieldsLimit: 2,
 					}
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -95,8 +95,8 @@ func TestParserHardLimits(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-					securityConfiguration.ParserHardLimits = config.ParserHardLimitsConfiguration{
-						ParserTotalFieldsLimit: 6, // fail if count > limit
+					securityConfiguration.ParserLimits = config.ParserLimitsConfiguration{
+						TotalFieldsLimit: 6, // fail if count > limit
 					}
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {

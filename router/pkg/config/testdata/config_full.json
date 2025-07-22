@@ -657,9 +657,9 @@
       }
     },
     "DepthLimit": null,
-    "ParserHardLimits": {
+    "ParserLimits": {
       "ApproximateDepthLimit": 100,
-      "ParserTotalFieldsLimit": 500
+      "TotalFieldsLimit": 500
     }
   },
   "EngineExecutionConfiguration": {
