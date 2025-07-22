@@ -35,6 +35,7 @@ const (
 	errorTypeInvalidWsSubprotocol
 	errorTypeEDFSInvalidMessage
 	errorTypeMergeResult
+	errorTypeCustomModuleError
 )
 
 type (
@@ -88,6 +89,10 @@ func getErrorType(err error) errorType {
 	var mergeResultErr resolve.ErrMergeResult
 	if errors.As(err, &mergeResultErr) {
 		return errorTypeMergeResult
+	}
+	var customModuleErr *CustomModuleError
+	if errors.As(err, &customModuleErr) {
+		return errorTypeCustomModuleError
 	}
 	return errorTypeUnknown
 }

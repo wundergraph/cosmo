@@ -10,7 +10,7 @@ const myModuleID = "startSubscriptionModule"
 
 type StartSubscriptionModule struct {
 	Logger   *zap.Logger
-	Callback func(ctx core.SubscriptionOnStartHookContext) error
+	Callback func(ctx core.SubscriptionOnStartHookContext) (bool, error)
 }
 
 func (m *StartSubscriptionModule) Provision(ctx *core.ModuleContext) error {
@@ -20,7 +20,7 @@ func (m *StartSubscriptionModule) Provision(ctx *core.ModuleContext) error {
 	return nil
 }
 
-func (m *StartSubscriptionModule) SubscriptionOnStart(ctx core.SubscriptionOnStartHookContext) error {
+func (m *StartSubscriptionModule) SubscriptionOnStart(ctx core.SubscriptionOnStartHookContext) (bool, error) {
 
 	m.Logger.Info("SubscriptionOnStart Hook has been run")
 
@@ -28,7 +28,7 @@ func (m *StartSubscriptionModule) SubscriptionOnStart(ctx core.SubscriptionOnSta
 		return m.Callback(ctx)
 	}
 
-	return nil
+	return false, nil
 }
 
 func (m *StartSubscriptionModule) Module() core.ModuleInfo {

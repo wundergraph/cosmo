@@ -10,18 +10,22 @@ type HookedSubscriptionDataSource struct {
 	SubscriptionDataSource PubSubSubscriptionDataSource
 }
 
-func (h *HookedSubscriptionDataSource) OnSubscriptionStart(ctx *resolve.Context, input []byte) (err error) {
+func (h *HookedSubscriptionDataSource) OnSubscriptionStart(ctx *resolve.Context, input []byte) (close bool, err error) {
 	for _, fn := range h.OnSubscriptionStartFns {
-		events, err := fn(ctx, h.SubscriptionDataSource.SubscriptionEventConfiguration(input))
+		events, close, err := fn(ctx, h.SubscriptionDataSource.SubscriptionEventConfiguration(input))
 		if err != nil {
-			return err
+			return close, err
 		}
 		for _, event := range events {
 			ctx.EmitSubscriptionUpdate(event.GetData())
 		}
+		// if close is true, the subscription should be close, so there is no need to call the next hook
+		if close {
+			return true, nil
+		}
 	}
 
-	return nil
+	return false, nil
 }
 
 func (h *HookedSubscriptionDataSource) Start(ctx *resolve.Context, input []byte, updater resolve.SubscriptionUpdater) error {

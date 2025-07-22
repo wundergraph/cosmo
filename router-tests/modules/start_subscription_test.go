@@ -2,6 +2,7 @@ package module_test
 
 import (
 	"errors"
+	"net/http"
 	"testing"
 	"time"
 
@@ -89,12 +90,12 @@ func TestStartSubscriptionHook(t *testing.T) {
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
 				"startSubscriptionModule": start_subscription.StartSubscriptionModule{
-					Callback: func(ctx core.SubscriptionOnStartHookContext) error {
+					Callback: func(ctx core.SubscriptionOnStartHookContext) (bool, error) {
 						ctx.WriteEvent(&kafka.Event{
 							Key:  []byte("1"),
 							Data: []byte(`{"id": 1, "__typename": "Employee"}`),
 						})
-						return nil
+						return false, nil
 					},
 				},
 			},
@@ -166,6 +167,88 @@ func TestStartSubscriptionHook(t *testing.T) {
 		})
 	})
 
+	t.Run("Test StartSubscription with close to true", func(t *testing.T) {
+		t.Parallel()
+
+		callbackCalled := make(chan bool)
+
+		cfg := config.Config{
+			Graph: config.Graph{},
+			Modules: map[string]interface{}{
+				"startSubscriptionModule": start_subscription.StartSubscriptionModule{
+					Callback: func(ctx core.SubscriptionOnStartHookContext) (bool, error) {
+						callbackCalled <- true
+						return true, nil
+					},
+				},
+			},
+		}
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
+			EnableKafka:              true,
+			RouterOptions: []core.Option{
+				core.WithModulesConfig(cfg.Modules),
+				core.WithCustomModules(&start_subscription.StartSubscriptionModule{}),
+			},
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			var subscriptionOne struct {
+				employeeUpdatedMyKafka struct {
+					ID      float64 `graphql:"id"`
+					Details struct {
+						Forename string `graphql:"forename"`
+						Surname  string `graphql:"surname"`
+					} `graphql:"details"`
+				} `graphql:"employeeUpdatedMyKafka(employeeID: $employeeID)"`
+			}
+
+			surl := xEnv.GraphQLWebSocketSubscriptionURL()
+			client := graphql.NewSubscriptionClient(surl)
+
+			vars := map[string]interface{}{
+				"employeeID": 3,
+			}
+			type kafkaSubscriptionArgs struct {
+				dataValue []byte
+				errValue  error
+			}
+			subscriptionArgsCh := make(chan kafkaSubscriptionArgs, 1)
+			subscriptionOneID, err := client.Subscribe(&subscriptionOne, vars, func(dataValue []byte, errValue error) error {
+				subscriptionArgsCh <- kafkaSubscriptionArgs{
+					dataValue: dataValue,
+					errValue:  errValue,
+				}
+				return nil
+			})
+			require.NoError(t, err)
+			require.NotEmpty(t, subscriptionOneID)
+
+			clientRunCh := make(chan error)
+			go func() {
+				clientRunCh <- client.Run()
+			}()
+
+			xEnv.WaitForSubscriptionCount(1, time.Second*10)
+			<-callbackCalled
+			xEnv.WaitForSubscriptionCount(0, time.Second*10)
+
+			// require.NoError(t, client.Close())
+			testenv.AwaitChannelWithT(t, time.Second*10, clientRunCh, func(t *testing.T, err error) {
+				require.NoError(t, err)
+
+			}, "unable to close client before timeout")
+
+			requestLog := xEnv.Observer().FilterMessage("SubscriptionOnStart Hook has been run")
+			assert.Len(t, requestLog.All(), 1)
+
+			require.Len(t, subscriptionArgsCh, 0)
+		})
+	})
+
 	t.Run("Test StartSubscription write event sends event only to the subscription", func(t *testing.T) {
 		t.Parallel()
 
@@ -173,15 +256,15 @@ func TestStartSubscriptionHook(t *testing.T) {
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
 				"startSubscriptionModule": start_subscription.StartSubscriptionModule{
-					Callback: func(ctx core.SubscriptionOnStartHookContext) error {
+					Callback: func(ctx core.SubscriptionOnStartHookContext) (bool, error) {
 						employeeId := ctx.RequestContext().Operation().Variables().GetInt64("employeeID")
 						if employeeId != 1 {
-							return nil
+							return false, nil
 						}
 						ctx.WriteEvent(&kafka.Event{
 							Data: []byte(`{"id": 1, "__typename": "Employee"}`),
 						})
-						return nil
+						return false, nil
 					},
 				},
 			},
@@ -270,6 +353,93 @@ func TestStartSubscriptionHook(t *testing.T) {
 		})
 	})
 
+	t.Run("Test StartSubscription error is propagated to the client", func(t *testing.T) {
+		t.Parallel()
+
+		cfg := config.Config{
+			Graph: config.Graph{},
+			Modules: map[string]interface{}{
+				"startSubscriptionModule": start_subscription.StartSubscriptionModule{
+					Callback: func(ctx core.SubscriptionOnStartHookContext) (bool, error) {
+						return false, core.NewCustomModuleError(errors.New("test error"), "test error", http.StatusLoopDetected, http.StatusText(http.StatusLoopDetected))
+					},
+				},
+			},
+		}
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
+			EnableKafka:              true,
+			RouterOptions: []core.Option{
+				core.WithModulesConfig(cfg.Modules),
+				core.WithCustomModules(&start_subscription.StartSubscriptionModule{}),
+			},
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			var subscription struct {
+				employeeUpdatedMyKafka struct {
+					ID      float64 `graphql:"id"`
+					Details struct {
+						Forename string `graphql:"forename"`
+						Surname  string `graphql:"surname"`
+					} `graphql:"details"`
+				} `graphql:"employeeUpdatedMyKafka(employeeID: $employeeID)"`
+			}
+
+			surl := xEnv.GraphQLWebSocketSubscriptionURL()
+			client := graphql.NewSubscriptionClient(surl)
+
+			vars := map[string]interface{}{
+				"employeeID": 1,
+			}
+			type kafkaSubscriptionArgs struct {
+				dataValue []byte
+				errValue  error
+			}
+			subscriptionOneArgsCh := make(chan kafkaSubscriptionArgs)
+			subscriptionOneID, err := client.Subscribe(&subscription, vars, func(dataValue []byte, errValue error) error {
+				subscriptionOneArgsCh <- kafkaSubscriptionArgs{
+					dataValue: dataValue,
+					errValue:  errValue,
+				}
+				return nil
+			})
+			require.NoError(t, err)
+			require.NotEmpty(t, subscriptionOneID)
+
+			clientRunCh := make(chan error)
+			go func() {
+				clientRunCh <- client.Run()
+			}()
+
+			xEnv.WaitForSubscriptionCount(1, time.Second*10)
+
+			testenv.AwaitChannelWithT(t, time.Second*10, subscriptionOneArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
+				var graphqlErrs graphql.Errors
+				require.ErrorAs(t, args.errValue, &graphqlErrs)
+				statusCode, ok := graphqlErrs[0].Extensions["statusCode"].(float64)
+				require.True(t, ok, "statusCode is not a float64")
+				require.Equal(t, http.StatusLoopDetected, int(statusCode))
+				require.Equal(t, http.StatusText(http.StatusLoopDetected), graphqlErrs[0].Extensions["code"])
+			})
+
+			require.NoError(t, client.Close())
+			testenv.AwaitChannelWithT(t, time.Second*10, clientRunCh, func(t *testing.T, err error) {
+				require.NoError(t, err)
+
+			}, "unable to close client before timeout")
+
+			requestLog := xEnv.Observer().FilterMessage("SubscriptionOnStart Hook has been run")
+			assert.Len(t, requestLog.All(), 1)
+			t.Cleanup(func() {
+				require.Len(t, subscriptionOneArgsCh, 0)
+			})
+		})
+	})
+
 	t.Run("Test StartSubscription hook is called for engine subscription", func(t *testing.T) {
 		t.Parallel()
 
@@ -333,11 +503,11 @@ func TestStartSubscriptionHook(t *testing.T) {
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
 				"startSubscriptionModule": start_subscription.StartSubscriptionModule{
-					Callback: func(ctx core.SubscriptionOnStartHookContext) error {
+					Callback: func(ctx core.SubscriptionOnStartHookContext) (bool, error) {
 						ctx.WriteEvent(&core.EngineEvent{
 							Data: []byte(`{"data":{"countEmp":1000}}`),
 						})
-						return nil
+						return false, nil
 					},
 				},
 			},
