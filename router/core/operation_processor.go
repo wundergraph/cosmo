@@ -1096,8 +1096,8 @@ func (o *OperationKit) ValidateQueryComplexity() (ok bool, cacheEntry Complexity
 	}
 
 	if o.cache != nil && o.cache.complexityCache != nil {
-		if cachedComplexity, ok := o.cache.complexityCache.Get(o.parsedOperation.InternalID); ok {
-			return ok, cachedComplexity, o.runComplexityComparisons(o.operationProcessor.complexityLimits, cachedComplexity, o.parsedOperation.IsPersistedOperation)
+		if cachedComplexity, found := o.cache.complexityCache.Get(o.parsedOperation.InternalID); found {
+			return true, cachedComplexity, o.runComplexityComparisons(o.operationProcessor.complexityLimits, cachedComplexity, o.parsedOperation.IsPersistedOperation)
 		}
 	}
 
