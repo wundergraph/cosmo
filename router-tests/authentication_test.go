@@ -754,7 +754,7 @@ func TestHttpJwksAuthorization(t *testing.T) {
 		})
 	})
 
-	t.Run("token is valid if at any one JWK config validation succeeds", func(t *testing.T) {
+	t.Run("authentication succeeds with valid token when multiple JWK configurations are specified", func(t *testing.T) {
 		t.Parallel()
 
 		authServer1, err := jwks.NewServer(t)
@@ -807,7 +807,7 @@ func TestHttpJwksAuthorization(t *testing.T) {
 }
 
 func TestNonHttpAuthorization(t *testing.T) {
-	t.Run("valid HS256 token", func(t *testing.T) {
+	t.Run("authentication succeeds with a valid HS256 token", func(t *testing.T) {
 		t.Parallel()
 
 		secret := "example secret"
@@ -842,7 +842,7 @@ func TestNonHttpAuthorization(t *testing.T) {
 		})
 	})
 
-	t.Run("multiple tokens use HS256", func(t *testing.T) {
+	t.Run("authentication succeeds with valid token when multiple JWK configurations are specified", func(t *testing.T) {
 		t.Parallel()
 
 		authServer, err := jwks.NewServer(t)
@@ -885,7 +885,7 @@ func TestNonHttpAuthorization(t *testing.T) {
 		})
 	})
 
-	t.Run("multiple tokens use HS256 but invalid keyid", func(t *testing.T) {
+	t.Run("authentication fails when the secret is correct but they key id does not match", func(t *testing.T) {
 		t.Parallel()
 
 		secret := "example secret"

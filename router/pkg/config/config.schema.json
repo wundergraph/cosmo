@@ -1655,11 +1655,8 @@
                     "type": "array",
                     "description": "The allowed algorithms for the keys that are retrieved from the JWKs. An empty list means that all algorithms are allowed.",
                     "items": {
-                      "type": "string"  ,
+                      "type": "string",
                       "enum": [
-                        "HS256",
-                        "HS384",
-                        "HS512",
                         "RS256",
                         "RS384",
                         "RS512",
