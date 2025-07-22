@@ -475,7 +475,7 @@
           "URL": "https://example.com/.well-known/jwks2.json",
           "Algorithms": [
             "RS256",
-            "HS256"
+            "ES256"
           ],
           "RefreshInterval": 120000000000,
           "Secret": "",
