@@ -11,7 +11,7 @@ import {
   parseGraphQLWebsocketSubprotocol,
   splitLabel,
 } from '@wundergraph/cosmo-shared';
-import { SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb.js';
+import { SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { getBaseHeaders } from '../../../core/config.js';
 import { validateSubscriptionProtocols } from '../../../utils.js';

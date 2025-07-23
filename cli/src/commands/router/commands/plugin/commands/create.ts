@@ -1,20 +1,16 @@
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import {
-  parseGraphQLSubscriptionProtocol,
-  parseGraphQLWebsocketSubprotocol,
-  splitLabel,
+  splitLabel
 } from '@wundergraph/cosmo-shared';
 import { Command, program } from 'commander';
 import ora from 'ora';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
-import { SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb.js';
 import { getBaseHeaders } from '../../../../../core/config.js';
 import { BaseCommandOptions } from '../../../../../core/types/types.js';
-import { validateSubscriptionProtocols } from '../../../../../utils.js';
-import { websocketSubprotocolDescription } from '../../../../../constants.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('create');

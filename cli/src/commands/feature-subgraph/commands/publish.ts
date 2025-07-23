@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
-import { SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb.js';
+import { SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { parseGraphQLSubscriptionProtocol, parseGraphQLWebsocketSubprotocol } from '@wundergraph/cosmo-shared';
 import { Command, program } from 'commander';
 import ora from 'ora';

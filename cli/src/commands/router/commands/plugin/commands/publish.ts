@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb.js';
+import { SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import {
     splitLabel
 } from '@wundergraph/cosmo-shared';
