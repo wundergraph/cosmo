@@ -104,6 +104,10 @@ type SubscriptionOnStartHandler interface {
 
 // NewPubSubOnSubscriptionStartHook converts a SubscriptionOnStartHandler to a pubsub.OnSubscriptionStartFn
 func NewPubSubOnSubscriptionStartHook(fn func(ctx SubscriptionOnStartHookContext) (bool, error)) datasource.OnSubscriptionStartFn {
+	if fn == nil {
+		return nil
+	}
+
 	return func(resolveCtx *resolve.Context, subConf datasource.SubscriptionEventConfiguration) (bool, error) {
 		requestContext := getRequestContext(resolveCtx.Context())
 		hookCtx := &pubSubSubscriptionOnStartHookContext{
@@ -120,6 +124,10 @@ func NewPubSubOnSubscriptionStartHook(fn func(ctx SubscriptionOnStartHookContext
 
 // NewEngineOnSubscriptionStartHook converts a SubscriptionOnStartHandler to a graphql_datasource.OnSubscriptionStartFn
 func NewEngineOnSubscriptionStartHook(fn func(ctx SubscriptionOnStartHookContext) (bool, error)) graphql_datasource.SubscriptionOnStartFn {
+	if fn == nil {
+		return nil
+	}
+
 	return func(resolveCtx *resolve.Context, input []byte) (bool, error) {
 		requestContext := getRequestContext(resolveCtx.Context())
 		hookCtx := &engineSubscriptionOnStartHookContext{
