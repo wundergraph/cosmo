@@ -51,7 +51,7 @@ type SubscriptionOnStartHookContext interface {
 type pubSubSubscriptionOnStartHookContext struct {
 	requestContext                 RequestContext
 	subscriptionEventConfiguration datasource.SubscriptionEventConfiguration
-	events                         []datasource.StreamEvent
+	writeEventHook                 func(data []byte)
 }
 
 func (c *pubSubSubscriptionOnStartHookContext) RequestContext() RequestContext {
@@ -63,7 +63,7 @@ func (c *pubSubSubscriptionOnStartHookContext) SubscriptionEventConfiguration() 
 }
 
 func (c *pubSubSubscriptionOnStartHookContext) WriteEvent(event datasource.StreamEvent) {
-	c.events = append(c.events, event)
+	c.writeEventHook(event.GetData())
 }
 
 // EngineEvent is the event used to write to the engine subscription
@@ -77,7 +77,7 @@ func (e *EngineEvent) GetData() []byte {
 
 type engineSubscriptionOnStartHookContext struct {
 	requestContext RequestContext
-	events         [][]byte
+	writeEventHook func(data []byte)
 }
 
 func (c *engineSubscriptionOnStartHookContext) RequestContext() RequestContext {
@@ -85,7 +85,7 @@ func (c *engineSubscriptionOnStartHookContext) RequestContext() RequestContext {
 }
 
 func (c *engineSubscriptionOnStartHookContext) WriteEvent(event datasource.StreamEvent) {
-	c.events = append(c.events, event.GetData())
+	c.writeEventHook(event.GetData())
 }
 
 func (c *engineSubscriptionOnStartHookContext) SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration {
@@ -101,29 +101,31 @@ type SubscriptionOnStartHandler interface {
 
 // NewPubSubOnSubscriptionStartHook converts a SubscriptionOnStartHandler to a pubsub.OnSubscriptionStartFn
 func NewPubSubOnSubscriptionStartHook(fn func(ctx SubscriptionOnStartHookContext) (bool, error)) datasource.OnSubscriptionStartFn {
-	return func(resolveCtx *resolve.Context, subConf datasource.SubscriptionEventConfiguration) ([]datasource.StreamEvent, bool, error) {
+	return func(resolveCtx *resolve.Context, subConf datasource.SubscriptionEventConfiguration) (bool, error) {
 		requestContext := getRequestContext(resolveCtx.Context())
 		hookCtx := &pubSubSubscriptionOnStartHookContext{
 			requestContext:                 requestContext,
 			subscriptionEventConfiguration: subConf,
+			writeEventHook:                 resolveCtx.EmitSubscriptionUpdate,
 		}
 
 		close, err := fn(hookCtx)
 
-		return hookCtx.events, close, err
+		return close, err
 	}
 }
 
 // NewEngineOnSubscriptionStartHook converts a SubscriptionOnStartHandler to a graphql_datasource.OnSubscriptionStartFn
 func NewEngineOnSubscriptionStartHook(fn func(ctx SubscriptionOnStartHookContext) (bool, error)) graphql_datasource.OnSubscriptionStartFn {
-	return func(resolveCtx *resolve.Context, input []byte) ([][]byte, bool, error) {
+	return func(resolveCtx *resolve.Context, input []byte) (bool, error) {
 		requestContext := getRequestContext(resolveCtx.Context())
 		hookCtx := &engineSubscriptionOnStartHookContext{
 			requestContext: requestContext,
+			writeEventHook: resolveCtx.EmitSubscriptionUpdate,
 		}
 
 		close, err := fn(hookCtx)
 
-		return hookCtx.events, close, err
+		return close, err
 	}
 }
