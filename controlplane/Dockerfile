@@ -17,7 +17,7 @@ COPY shared/package.json shared/
 COPY composition/package.json composition/
 COPY controlplane/package.json controlplane/
 
-RUN pnpm install --filter=wundergraph-cosmo --filter=./connect --filter=./shared --filter=./controlplane --filter=./composition --frozen-lockfile
+RUN pnpm install --filter=wundergraph-cosmo --filter=./connect --filter=./shared --filter=./controlplane --filter=./composition --filter=./protographic --frozen-lockfile
 
 COPY . /app/
 
