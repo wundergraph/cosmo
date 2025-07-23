@@ -192,6 +192,25 @@ type GraphQLRequestExtensionsPersistedQuery struct {
 	Sha256Hash string `json:"sha256Hash"`
 }
 
+// isValidHash verifies if the Sha256Hash string is valid and well-formed.
+func (pq *GraphQLRequestExtensionsPersistedQuery) isValidHash() bool {
+	if len(pq.Sha256Hash) != 64 {
+		return false
+	}
+	// Iterating over bytes of the string
+	for i := 0; i < len(pq.Sha256Hash); i++ {
+		b := pq.Sha256Hash[i]
+		if !(b >= '0' && b <= '9' || b >= 'a' && b <= 'f' || b >= 'A' && b <= 'F') {
+			return false
+		}
+	}
+	return true
+}
+
+func (pq *GraphQLRequestExtensionsPersistedQuery) HasHash() bool {
+	return pq != nil && len(pq.Sha256Hash) > 0
+}
+
 type complexityComparison struct {
 	field        int
 	cachedField  int
@@ -308,6 +327,13 @@ func (o *OperationKit) unmarshalOperation() error {
 			}
 		}
 		if o.parsedOperation.GraphQLRequestExtensions.PersistedQuery != nil {
+			if !o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.isValidHash() {
+				return &httpGraphqlError{
+					message:    "persisted query does not have a valid sha256 hash",
+					statusCode: http.StatusBadRequest,
+				}
+			}
+
 			// Delete persistedQuery from extensions to avoid it being passed to the subgraphs
 			o.parsedOperation.Request.Extensions, err = sjson.DeleteBytes(o.parsedOperation.Request.Extensions, "persistedQuery")
 			if err != nil {
@@ -354,7 +380,7 @@ func (o *OperationKit) unmarshalOperation() error {
 		o.parsedOperation.Request.OperationName = ""
 	}
 
-	if o.parsedOperation.GraphQLRequestExtensions.PersistedQuery != nil && len(o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash) > 0 {
+	if o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash() {
 		o.parsedOperation.IsPersistedOperation = true
 	}
 
@@ -509,7 +535,7 @@ func (o *OperationKit) isIntrospectionQuery() (result bool, err error) {
 	return false, nil
 }
 
-// Parse parses the operation, populate the document and set the operation type.
+// Parse parses the operation, populates the document and set the operation type.
 // UnmarshalOperationFromBody must be called before calling this method.
 func (o *OperationKit) Parse() error {
 	var (
