@@ -656,7 +656,11 @@
         "IgnorePersistedOperations": true
       }
     },
-    "DepthLimit": null
+    "DepthLimit": null,
+    "ParserLimits": {
+      "ApproximateDepthLimit": 100,
+      "TotalFieldsLimit": 500
+    }
   },
   "EngineExecutionConfiguration": {
     "Debug": {
