@@ -160,8 +160,8 @@ import (
 )
 
 func init() {
-	// Register your module here and it will be loaded at router start
-	core.RegisterModule(&MyModule{})
+    // Register your module here and it will be loaded at router start
+    core.RegisterModule(&MyModule{})
 }
 
 type MyModule struct {}
@@ -255,7 +255,7 @@ func (m *MyModule) Module() core.ModuleInfo {
 
 // Interface guards
 var (
-	_ core.StreamBatchEventHook = (*MyModule)(nil)
+    _ core.StreamBatchEventHook = (*MyModule)(nil)
 )
 ```
 
@@ -304,8 +304,8 @@ import (
 )
 
 func init() {
-	// Register your module here and it will be loaded at router start
-	core.RegisterModule(&MyModule{})
+    // Register your module here and it will be loaded at router start
+    core.RegisterModule(&MyModule{})
 }
 
 type MyModule struct {}
@@ -366,7 +366,7 @@ func (m *MyModule) Module() core.ModuleInfo {
 
 // Interface guards
 var (
-	_ core.StreamBatchEventHook = (*MyModule)(nil)
+    _ core.SubscriptionOnStartHandler = (*MyModule)(nil)
 )
 ```
 
