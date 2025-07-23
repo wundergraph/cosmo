@@ -467,6 +467,9 @@ type JWKSConfiguration struct {
 	Secret    string `yaml:"secret"`
 	Algorithm string `yaml:"algorithm"`
 	KeyId     string `yaml:"key_id"`
+
+	// Common
+	Audiences []string `yaml:"audiences"`
 }
 
 type HeaderSource struct {

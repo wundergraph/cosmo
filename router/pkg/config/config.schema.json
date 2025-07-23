@@ -1640,6 +1640,13 @@
                     "description": "The URL of the JWKs. The JWKs are used to verify the JWT (JSON Web Token). The URL is specified as a string with the format 'scheme://host:port'.",
                     "format": "http-url"
                   },
+                  "audiences": {
+                    "type": "array",
+                    "description": "The audiences of the JWKs. The audiences are used to verify the JWT (JSON Web Token). The audiences are specified as a list of strings.",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
                   "secret": {
                     "type": "string",
                     "description": "The secret of the JWKs"

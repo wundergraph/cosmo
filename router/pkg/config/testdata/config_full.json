@@ -470,7 +470,8 @@
           "RefreshInterval": 60000000000,
           "Secret": "",
           "Algorithm": "",
-          "KeyId": ""
+          "KeyId": "",
+          "Audiences": null
         },
         {
           "URL": "https://example.com/.well-known/jwks2.json",
@@ -481,7 +482,8 @@
           "RefreshInterval": 120000000000,
           "Secret": "",
           "Algorithm": "",
-          "KeyId": ""
+          "KeyId": "",
+          "Audiences": null
         },
         {
           "URL": "https://example.com/.well-known/jwks3.json",
@@ -489,7 +491,8 @@
           "RefreshInterval": 0,
           "Secret": "",
           "Algorithm": "",
-          "KeyId": ""
+          "KeyId": "",
+          "Audiences": null
         }
       ],
       "HeaderName": "Authorization",

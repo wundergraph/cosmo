@@ -2,6 +2,7 @@ package authentication
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -20,12 +21,12 @@ type TokenDecoder interface {
 }
 
 type jwksTokenDecoder struct {
-	jwks keyfunc.Keyfunc
+	jwks jwt.Keyfunc
 }
 
 // Decode implements TokenDecoder.
 func (j *jwksTokenDecoder) Decode(tokenString string) (Claims, error) {
-	token, err := jwt.Parse(tokenString, j.jwks.Keyfunc)
+	token, err := jwt.Parse(tokenString, j.jwks)
 	if err != nil {
 		return nil, fmt.Errorf("could not validate token: %w", err)
 	}
@@ -46,16 +47,26 @@ type JWKSConfig struct {
 	Secret    string
 	Algorithm string
 	KeyId     string
+
+	Audiences []string
+}
+
+type AudKey struct {
+	kid string
+	url string
 }
 
 func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKSConfig) (TokenDecoder, error) {
-
-	remoteJWKSets := make(map[string]jwkset.Storage)
-
-	given := jwkset.NewMemoryStorage()
+	audiencesMap := make(map[AudKey][]string, len(configs))
+	keyFuncMap := make(map[AudKey]keyfunc.Keyfunc, len(configs))
 
 	for _, c := range configs {
 		if c.URL != "" {
+			key := AudKey{url: c.URL}
+			if _, ok := audiencesMap[key]; ok {
+				return nil, fmt.Errorf("duplicate JWK URL found: %s", c.URL)
+			}
+
 			l := logger.With(zap.String("url", c.URL))
 
 			jwksetHTTPStorageOptions := jwkset.HTTPClientStorageOptions{
@@ -76,8 +87,30 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 				return nil, fmt.Errorf("failed to create HTTP client storage for JWK provider: %w", err)
 			}
 
-			remoteJWKSets[c.URL] = store
+			audiencesMap[key] = c.Audiences
+
+			jwksetHTTPClientOptions := jwkset.HTTPClientOptions{
+				HTTPURLs: map[string]jwkset.Storage{
+					c.URL: store,
+				},
+				PrioritizeHTTP:    true,
+				RefreshUnknownKID: rate.NewLimiter(rate.Every(5*time.Minute), 1),
+			}
+
+			jwks, err := createKeyFunc(ctx, jwksetHTTPClientOptions)
+			if err != nil {
+				return nil, err
+			}
+			keyFuncMap[key] = jwks
+
 		} else if c.Secret != "" {
+			key := AudKey{kid: c.KeyId}
+			if _, ok := audiencesMap[key]; ok {
+				return nil, fmt.Errorf("duplicate JWK keyid specified found: %s", c.URL)
+			}
+
+			given := jwkset.NewMemoryStorage()
+
 			marshalOptions := jwkset.JWKMarshalOptions{
 				Private: true,
 			}
@@ -103,21 +136,58 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 				return nil, fmt.Errorf("failed to create JWK from secret: %w", err)
 			}
 
+			audiencesMap[key] = c.Audiences
 			err = given.KeyWrite(ctx, jwk)
 			if err != nil {
 				return nil, fmt.Errorf("failed to write JWK to storage: %w", err)
 			}
+
+			jwksetHTTPClientOptions := jwkset.HTTPClientOptions{
+				Given:          given,
+				PrioritizeHTTP: false,
+			}
+
+			audiencesMap[key] = c.Audiences
+			jwks, err := createKeyFunc(ctx, jwksetHTTPClientOptions)
+			if err != nil {
+				return nil, err
+			}
+			keyFuncMap[key] = jwks
 		}
 	}
 
-	jwksetHTTPClientOptions := jwkset.HTTPClientOptions{
-		Given:             given,
-		HTTPURLs:          remoteJWKSets,
-		PrioritizeHTTP:    false,
-		RefreshUnknownKID: rate.NewLimiter(rate.Every(5*time.Minute), 1),
-	}
+	keyF := jwt.Keyfunc(func(token *jwt.Token) (any, error) {
+		var errJoin error
+		for key, keyFunc := range keyFuncMap {
+			pub, err := keyFunc.Keyfunc(token)
+			if err != nil {
+				errors.Join(err, errJoin)
+				continue
+			}
 
-	combined, err := jwkset.NewHTTPClient(jwksetHTTPClientOptions)
+			expectedAudiences := audiencesMap[key]
+			if len(expectedAudiences) > 0 {
+				tokenAudiences, err := token.Claims.GetAudience()
+				if err != nil {
+					return nil, err
+				}
+				if !hasAudience(tokenAudiences, expectedAudiences) {
+					return nil, errUnacceptableAud
+				}
+			}
+
+			return pub, nil
+		}
+		return nil, fmt.Errorf("no key found for token: %w", jwt.ErrTokenUnverifiable)
+	})
+
+	return &jwksTokenDecoder{
+		jwks: keyF,
+	}, nil
+}
+
+func createKeyFunc(ctx context.Context, options jwkset.HTTPClientOptions) (keyfunc.Keyfunc, error) {
+	combined, err := jwkset.NewHTTPClient(options)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create HTTP client storage for JWK provider: %w", err)
 	}
@@ -132,8 +202,19 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 	if err != nil {
 		return nil, fmt.Errorf("error initializing JWK: %w", err)
 	}
+	return jwks, nil
+}
 
-	return &jwksTokenDecoder{
-		jwks: jwks,
-	}, nil
+// hasAudience is a common intersection function to check if the token's audiences
+func hasAudience(tokenAudiences, expectedAudiences []string) bool {
+	set := make(map[string]struct{}, len(tokenAudiences))
+	for _, item := range tokenAudiences {
+		set[item] = struct{}{}
+	}
+	for _, item := range expectedAudiences {
+		if _, found := set[item]; found {
+			return true
+		}
+	}
+	return false
 }
