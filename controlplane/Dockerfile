@@ -23,7 +23,7 @@ COPY . /app/
 
 RUN pnpm buf generate --template buf.ts.gen.yaml
 
-RUN pnpm run --filter=./connect --filter=./shared --filter=./controlplane --filter=./composition build
+RUN pnpm run --filter=./connect --filter=./shared --filter=./controlplane --filter=./composition --filter=./protographic build
 
 RUN curl -fsSL -o /usr/local/bin/dbmate https://github.com/amacneil/dbmate/releases/download/v2.6.0/dbmate-linux-${TARGETARCH} && \
     chmod +x /usr/local/bin/dbmate
