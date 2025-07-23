@@ -45,7 +45,7 @@ func NewCustomModuleError(err error, message string, statusCode int, code string
 type SubscriptionOnStartHookContext interface {
 	// the request context
 	RequestContext() RequestContext
-	// the subscription event configuration
+	// the subscription event configuration (will return nil for engine subscription)
 	SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration
 	// write an event to the stream of the current subscription
 	WriteEvent(event datasource.StreamEvent)
