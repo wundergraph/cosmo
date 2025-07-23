@@ -99,9 +99,9 @@ func (m *MyModule) Module() core.ModuleInfo {
 Add a new hook to the subscription lifecycle, `SubscriptionOnStartHandler`, that will be called once at subscription start.
 
 The hook arguments are:
-* `ctx SubscriptionContext`: The subscription context, which contains the request context and, optionally, the stream context
+* `ctx SubscriptionOnStartHookContext`: The subscription context, which contains the request context and, optionally, the subscription event configuration, and a method to emit the event to the stream
 
-`RequestContext` already exists and requires no changes, but `SubscriptionContext` is new.
+`RequestContext` already exists and requires no changes, but `SubscriptionEventConfiguration` is new.
 
 The hook should return an error if the client is not allowed to subscribe to the stream, preventing the subscription from starting.
 The hook should return `nil` if the client is allowed to subscribe to the stream, allowing the subscription to proceed.
@@ -110,7 +110,8 @@ The hook can return a `SubscriptionHookError` to customize the error messages an
 
 I evaluated the possibility of adding the `SubscriptionContext` to the request context and using it within one of the existing hooks, but it would be difficult to build the subscription context without executing the pubsub code.
 
-The `StreamContext.SubscriptionEventConfiguration()` contains the subscription configuration as used by the provider. This allows the hooks system to be provider-agnostic, so adding a new provider will not require changes to the hooks system. To use specific fields, the hook can cast the configuration to the specific type for the provider.
+The `SubscriptionEventConfiguration()` contains the subscription configuration as used by the provider. This allows the hooks system to be provider-agnostic, so adding a new provider will not require changes to the hooks system. To use specific fields, the hook can cast the configuration to the specific type for the provider.
+The `WriteEvent()` method is new and allows the hook to emit the event to the stream.
 
 ## Initial Message
 
@@ -163,7 +164,7 @@ func (m *MyModule) SubscriptionOnStart(ctx SubscriptionOnStartHookContext) error
             },
         }
         // emit the event to the stream, that will be received only by the client that subscribed to the stream
-        ctx.StreamContext().WriteEvent(evt)
+        ctx.WriteEvent(evt)
     }
     return nil
 }
@@ -616,12 +617,12 @@ type MyModule struct {}
 
 func (m *MyModule) OnStreamEvents(ctx StreamBatchEventHookContext, events []core.StreamEvent) ([]core.StreamEvent, error) {
     // check if the provider is nats
-    if ctx.StreamContext().ProviderType() != pubsub.ProviderTypeNats {
+    if ctx.SubscriptionEventConfiguration().ProviderType() != pubsub.ProviderTypeNats {
         return events, nil
     }
 
     // check if the provider id is the one expected by the module
-    if ctx.StreamContext().ProviderID() != "my-nats" {
+    if ctx.SubscriptionEventConfiguration().ProviderID() != "my-nats" {
         return events, nil
     }
 
@@ -781,7 +782,6 @@ type StreamPublishEventHookContext interface {
 
 type SubscriptionOnStartHookContext interface {
     RequestContext() RequestContext
-    StreamContext() StreamContext
     SubscriptionEventConfiguration() SubscriptionEventConfiguration
     WriteEvent(event core.StreamEvent)
 }
@@ -1005,11 +1005,11 @@ import (
 type MyModule struct {}
 
 func (m *MyModule) OnStreamEvents(ctx StreamBatchEventHookContext, events []core.StreamEvent) ([]core.StreamEvent, error) {
-    if ctx.StreamContext().ProviderType() != "nats" {
+    if ctx.SubscriptionEventConfiguration().ProviderType() != pubsub.ProviderTypeNats {
         return events, nil
     }
 
-    if ctx.StreamContext().ProviderID() != "my-nats" {
+    if ctx.SubscriptionEventConfiguration().ProviderID() != "my-nats" {
         return events, nil
     }
 
