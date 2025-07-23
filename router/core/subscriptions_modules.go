@@ -15,7 +15,10 @@ type CustomModuleError struct {
 }
 
 func (e *CustomModuleError) Error() string {
-	return e.err.Error()
+	if e.err != nil {
+		return e.err.Error()
+	}
+	return e.message
 }
 
 func (e *CustomModuleError) Message() string {
