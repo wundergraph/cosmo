@@ -10,7 +10,7 @@ type HookedSubscriptionDataSource struct {
 	SubscriptionDataSource PubSubSubscriptionDataSource
 }
 
-func (h *HookedSubscriptionDataSource) OnSubscriptionStart(ctx *resolve.Context, input []byte) (close bool, err error) {
+func (h *HookedSubscriptionDataSource) SubscriptionOnStart(ctx *resolve.Context, input []byte) (close bool, err error) {
 	for _, fn := range h.OnSubscriptionStartFns {
 		close, err = fn(ctx, h.SubscriptionDataSource.SubscriptionEventConfiguration(input))
 		if err != nil || close {
