@@ -2464,9 +2464,9 @@ func TestAudienceValidation(t *testing.T) {
 
 	})
 
-	t.Run("authentication validation is ignored when expected aud is not provided", func(t *testing.T) {
+	t.Run("audience validation is ignored when expected aud is not provided", func(t *testing.T) {
 		t.Parallel()
-		
+
 		tokenAudiences := []bool{true, true}
 
 		authServer, err := jwks.NewServer(t)
