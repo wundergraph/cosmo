@@ -84,7 +84,7 @@ export default (opts: BaseCommandOptions) => {
     let protoMapping: string | undefined;
     let protoLock: string | undefined;
 
-    // write a condition to make sure, if defined all three are defined
+    // TODO write a condition to make sure, if defined all three are defined
 
     if (options.protoSchema) {
       const protoSchemaFile = resolve(options.protoSchema);

@@ -91,7 +91,7 @@ export interface ComposedSubgraphPlugin {
   configurationDataByTypeName?: Map<string, ConfigurationData>;
   // The normalized GraphQL schema for the subgraph
   schema?: GraphQLSchema;
-  artifact: Artifact;
+  artifact?: Artifact;
 }
 
 export interface ComposedSubgraphGRPC {
