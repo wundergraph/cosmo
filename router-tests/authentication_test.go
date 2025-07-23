@@ -975,6 +975,45 @@ func TestNonHttpAuthorization(t *testing.T) {
 	})
 }
 
+func TestInsecureUrlUsage(t *testing.T) {
+	t.Parallel()
+
+	t.Run("should fail when using an insecure URL", func(t *testing.T) {
+		t.Parallel()
+
+		insecureUrl := "http://url.com"
+		_, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{
+			{
+				URL:               insecureUrl,
+				RefreshInterval:   2 * time.Second,
+				AllowedAlgorithms: BaseJwksAlgorithms,
+			},
+		}, false)
+
+		require.ErrorContains(t, err, `insecure JWK URL "`+insecureUrl+`" is not allowed`)
+	})
+
+	t.Run("should not fail when using an secure URL", func(t *testing.T) {
+		t.Parallel()
+
+		authServer, err := jwks.NewServer(t)
+		require.NoError(t, err)
+		t.Cleanup(authServer.Close)
+
+		// Since the url does not exist we will error out, however it should not because of insecure JWK URL
+		_, err = authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{
+			{
+				URL:               "https://secureurl-wg-example",
+				RefreshInterval:   2 * time.Second,
+				AllowedAlgorithms: BaseJwksAlgorithms,
+			},
+		}, false)
+
+		require.NotContains(t, err.Error(), `insecure JWK URL`)
+	})
+
+}
+
 func TestAuthenticationValuePrefixes(t *testing.T) {
 	t.Parallel()
 
@@ -1193,6 +1232,19 @@ func TestAlgorithmMismatch(t *testing.T) {
 		return token, authenticators
 	}
 
+	t.Run("should fail when no algorithms are specified", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{
+			{
+				URL:             "https://url.com",
+				RefreshInterval: 2 * time.Second,
+			},
+		}, false)
+
+		require.ErrorContains(t, err, `algorithms not specified`)
+	})
+	
 	t.Run("should prevent access with invalid algorithm", func(t *testing.T) {
 		// create a crypto for RSA
 		rsaCrypto, err := jwks.NewRSACrypto("", jwkset.AlgRS256, 2048)

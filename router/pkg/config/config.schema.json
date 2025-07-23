@@ -1695,7 +1695,7 @@
                 },
                 "oneOf": [
                   {
-                    "required": ["url"],
+                    "required": ["url", "algorithms"],
                     "not": { "anyOf": [{ "required": ["secret"] }, { "required": ["algorithm"] }, { "required": ["key_id"] }] }
                   },
                   {

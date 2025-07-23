@@ -1212,10 +1212,45 @@ authentication:
   jwt:
     jwks:
       - url: "http://url/valid.json"
+        algorithms: ["RS256"]
+
+`)
+		value, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.False(t, value.Config.Authentication.JWT.AllowInsecureJwksUrls)
+	})
+
+	t.Run("verify error when algorithms is not present for url config", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+authentication:
+  jwt:
+    jwks:
+      - url: "http://url/valid.json"
+        algorithms: []
 
 `)
 		_, err := LoadConfig([]string{f})
-		require.NoError(t, err)
+		require.ErrorContains(t, err, "algorithms': minItems: got 0, want 1")
+	})
+
+	t.Run("verify error when algorithms is present but empty for url config", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+authentication:
+  jwt:
+    jwks:
+      - url: "http://url/valid.json"
+
+`)
+		_, err := LoadConfig([]string{f})
+		require.ErrorContains(t, err, "missing property 'algorithms'")
 	})
 
 	t.Run("verify valid secret config", func(t *testing.T) {
