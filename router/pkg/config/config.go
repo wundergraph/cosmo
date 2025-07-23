@@ -461,6 +461,12 @@ type JWKSConfiguration struct {
 	URL             string        `yaml:"url"`
 	Algorithms      []string      `yaml:"algorithms"`
 	RefreshInterval time.Duration `yaml:"refresh_interval" envDefault:"1m"`
+
+	// For secret based where we need to create a jwk  entry with
+	// a key id and algorithm
+	Secret    string `yaml:"secret"`
+	Algorithm string `yaml:"algorithm"`
+	KeyId     string `yaml:"key_id"`
 }
 
 type HeaderSource struct {

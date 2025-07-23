@@ -42,37 +42,76 @@ type JWKSConfig struct {
 	URL               string
 	RefreshInterval   time.Duration
 	AllowedAlgorithms []string
+
+	Secret    string
+	Algorithm string
+	KeyId     string
 }
 
 func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKSConfig) (TokenDecoder, error) {
 
 	remoteJWKSets := make(map[string]jwkset.Storage)
 
+	given := jwkset.NewMemoryStorage()
+
 	for _, c := range configs {
-		l := logger.With(zap.String("url", c.URL))
+		if c.URL != "" {
+			l := logger.With(zap.String("url", c.URL))
 
-		jwksetHTTPStorageOptions := jwkset.HTTPClientStorageOptions{
-			Client:             newOIDCDiscoveryClient(httpclient.NewRetryableHTTPClient(l)),
-			Ctx:                ctx, // Used to end background refresh goroutine.
-			HTTPExpectedStatus: http.StatusOK,
-			HTTPMethod:         http.MethodGet,
-			HTTPTimeout:        15 * time.Second,
-			RefreshErrorHandler: func(ctx context.Context, err error) {
-				l.Error("Failed to refresh HTTP JWK Set from remote HTTP resource.", zap.Error(err))
-			},
-			RefreshInterval: c.RefreshInterval,
-			Storage:         NewValidationStore(logger, nil, c.AllowedAlgorithms),
+			jwksetHTTPStorageOptions := jwkset.HTTPClientStorageOptions{
+				Client:             newOIDCDiscoveryClient(httpclient.NewRetryableHTTPClient(l)),
+				Ctx:                ctx, // Used to end background refresh goroutine.
+				HTTPExpectedStatus: http.StatusOK,
+				HTTPMethod:         http.MethodGet,
+				HTTPTimeout:        15 * time.Second,
+				RefreshErrorHandler: func(_ context.Context, err error) {
+					l.Error("Failed to refresh HTTP JWK Set from remote HTTP resource.", zap.Error(err))
+				},
+				RefreshInterval: c.RefreshInterval,
+				Storage:         NewValidationStore(logger, nil, c.AllowedAlgorithms),
+			}
+
+			store, err := jwkset.NewStorageFromHTTP(c.URL, jwksetHTTPStorageOptions)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create HTTP client storage for JWK provider: %w", err)
+			}
+
+			remoteJWKSets[c.URL] = store
+		} else if c.Secret != "" {
+			marshalOptions := jwkset.JWKMarshalOptions{
+				Private: true,
+			}
+			if len(c.Secret) < 32 {
+				logger.Warn("Using a short secret for JWKs may lead to weak security. Consider using a longer secret.")
+			}
+
+			alg := jwkset.ALG(c.Algorithm)
+			if !alg.IANARegistered() {
+				return nil, fmt.Errorf("unsupported algorithm: %s", c.Algorithm)
+			}
+			metadata := jwkset.JWKMetadataOptions{
+				ALG: alg,
+				KID: c.KeyId,
+				USE: jwkset.UseSig,
+			}
+			jwkOptions := jwkset.JWKOptions{
+				Marshal:  marshalOptions,
+				Metadata: metadata,
+			}
+			jwk, err := jwkset.NewJWKFromKey([]byte(c.Secret), jwkOptions)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create JWK from secret: %w", err)
+			}
+
+			err = given.KeyWrite(ctx, jwk)
+			if err != nil {
+				return nil, fmt.Errorf("failed to write JWK to storage: %w", err)
+			}
 		}
-
-		store, err := jwkset.NewStorageFromHTTP(c.URL, jwksetHTTPStorageOptions)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create HTTP client storage for JWK provider: %w", err)
-		}
-
-		remoteJWKSets[c.URL] = store
 	}
 
 	jwksetHTTPClientOptions := jwkset.HTTPClientOptions{
+		Given:             given,
 		HTTPURLs:          remoteJWKSets,
 		PrioritizeHTTP:    false,
 		RefreshUnknownKID: rate.NewLimiter(rate.Every(5*time.Minute), 1),
