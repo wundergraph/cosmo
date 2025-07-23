@@ -114,6 +114,7 @@ export function buildRouterExecutionConfig(
 export type ComposedSubgraph = (IComposedSubgraph | ComposedSubgraphPlugin | ComposedSubgraphGRPC) & {
   targetId: string;
   isFeatureSubgraph: boolean;
+  schemaVersionId: string;
 };
 
 export function subgraphDTOsToComposedSubgraphs(
