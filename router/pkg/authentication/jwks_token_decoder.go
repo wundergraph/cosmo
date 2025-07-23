@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/MicahParks/jwkset"
@@ -58,7 +59,7 @@ type audKey struct {
 
 type audienceSet map[string]struct{}
 
-func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKSConfig) (TokenDecoder, error) {
+func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKSConfig, allowInsecureJwksUrls bool) (TokenDecoder, error) {
 	audiencesMap := make(map[audKey]audienceSet, len(configs))
 	keyFuncMap := make(map[audKey]keyfunc.Keyfunc, len(configs))
 
@@ -69,7 +70,20 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 				return nil, fmt.Errorf("duplicate JWK URL found: %s", c.URL)
 			}
 
-			l := logger.With(zap.String("url", c.URL))
+			if !allowInsecureJwksUrls {
+				uri, err := url.ParseRequestURI(c.URL)
+				if err != nil {
+					return nil, fmt.Errorf("failed to parse given URL %q: %w", c.URL, err)
+				}
+				if uri.Scheme != "https" {
+					return nil, fmt.Errorf("insecure JWK URL %q is not allowed", c.URL)
+				}
+			}
+
+			newValidationStore, err := NewValidationStore(logger, nil, c.AllowedAlgorithms)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create validation store: %w", err)
+			}
 
 			jwksetHTTPStorageOptions := jwkset.HTTPClientStorageOptions{
 				Client:             newOIDCDiscoveryClient(httpclient.NewRetryableHTTPClient(l)),
@@ -81,7 +95,7 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 					l.Error("Failed to refresh HTTP JWK Set from remote HTTP resource.", zap.Error(err))
 				},
 				RefreshInterval: c.RefreshInterval,
-				Storage:         NewValidationStore(logger, nil, c.AllowedAlgorithms),
+				Storage:         newValidationStore,
 			}
 
 			store, err := jwkset.NewStorageFromHTTP(c.URL, jwksetHTTPStorageOptions)

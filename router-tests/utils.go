@@ -19,6 +19,19 @@ const (
 	JwksName = "my-jwks-server"
 )
 
+var BaseJwksAlgorithms = []string{
+	"RS256",
+	"RS384",
+	"RS512",
+	"ES256",
+	"ES384",
+	"ES512",
+	"PS256",
+	"PS384",
+	"PS512",
+	"EdDSA",
+}
+
 // NewContextWithCancel creates a new context with a cancel function that is called when the test is done.
 func NewContextWithCancel(t *testing.T) context.Context {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -46,10 +59,12 @@ func ConfigureAuth(t *testing.T) ([]authentication.Authenticator, *jwks.Server) 
 	authServer, err := jwks.NewServer(t)
 	require.NoError(t, err)
 	t.Cleanup(authServer.Close)
+
 	authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
 		{
-			URL:             authServer.JWKSURL(),
-			RefreshInterval: time.Second * 5,
+			URL:               authServer.JWKSURL(),
+			RefreshInterval:   time.Second * 5,
+			AllowedAlgorithms: BaseJwksAlgorithms,
 		},
 	})
 
@@ -57,7 +72,7 @@ func ConfigureAuth(t *testing.T) ([]authentication.Authenticator, *jwks.Server) 
 }
 
 func ConfigureAuthWithJwksConfig(t *testing.T, jwksConfig []authentication.JWKSConfig) []authentication.Authenticator {
-	tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), jwksConfig)
+	tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), jwksConfig, true)
 	require.NoError(t, err)
 
 	authOptions := authentication.HttpHeaderAuthenticatorOptions{

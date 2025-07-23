@@ -34,7 +34,7 @@ func configureAuth(t *testing.T) ([]authentication.Authenticator, *jwks.Server) 
 			URL:             authServer.JWKSURL(),
 			RefreshInterval: time.Second * 5,
 		},
-	})
+	}, true)
 	authOptions := authentication.HttpHeaderAuthenticatorOptions{
 		Name:         jwksName,
 		TokenDecoder: tokenDecoder,

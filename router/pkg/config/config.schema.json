@@ -1667,6 +1667,7 @@
                   "algorithms": {
                     "type": "array",
                     "description": "The allowed algorithms for the keys that are retrieved from the JWKs. An empty list means that all algorithms are allowed.",
+                    "minItems": 1,
                     "items": {
                       "type": "string",
                       "enum": [
