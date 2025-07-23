@@ -88,6 +88,7 @@ export interface FederatedGraphDTO {
   supportsFederation: boolean;
   contract?: ContractDTO;
   routerCompatibilityVersion: string;
+  organizationId: string;
 }
 
 export interface FederatedGraphChangelogDTO {

@@ -117,7 +117,7 @@ export type ComposedSubgraph = (IComposedSubgraph | ComposedSubgraphPlugin | Com
 };
 
 export function subgraphDTOsToComposedSubgraphs(
-  federatedGraphID: string,
+  organizationId: string,
   subgraphs: SubgraphDTO[],
   result: FederationResult,
 ): ComposedSubgraph[] {
@@ -135,25 +135,49 @@ export function subgraphDTOsToComposedSubgraphs(
     const configurationDataByTypeName = subgraphConfig?.configurationDataByTypeName;
 
     if (subgraph.type === 'plugin') {
+      if (!subgraph.proto || !subgraph.proto.pluginData) {
+        throw new Error(`Subgraph ${subgraph.name} is a plugin but does not have a plugin data`);
+      }
       return {
         kind: SubgraphKind.Plugin,
         id: subgraph.id,
-        version: 'v1', // TODO: get the version
+        version: subgraph.proto.pluginData.version,
         name: subgraph.name,
         sdl: subgraph.schemaSDL,
         url: subgraph.routingUrl,
+        schemaVersionId: subgraph.schemaVersionId,
         targetId: subgraph.targetId,
         isFeatureSubgraph: subgraph.isFeatureSubgraph,
         configurationDataByTypeName,
         schema,
-        protoSchema: '',
-        mapping: new GRPCMapping({}),
+        protoSchema: subgraph.proto.schema,
+        mapping: new GRPCMapping(JSON.parse(subgraph.proto.mappings)),
         artifact: new Artifact({
-          name: `/${federatedGraphID}/${subgraph.id}`,
-          reference: '',
+          name: `/${organizationId}/${subgraph.id}`,
+          reference: subgraph.proto.pluginData.version,
         }),
       };
     }
+    if (subgraph.type === 'grpc-subgraph') {
+      if (!subgraph.proto) {
+        throw new Error(`Subgraph ${subgraph.name} is a GRPC subgraph but does not have a proto`);
+      }
+      return {
+        kind: SubgraphKind.GRPC,
+        id: subgraph.id,
+        name: subgraph.name,
+        sdl: subgraph.schemaSDL,
+        url: subgraph.routingUrl,
+        schemaVersionId: subgraph.schemaVersionId,
+        targetId: subgraph.targetId,
+        isFeatureSubgraph: subgraph.isFeatureSubgraph,
+        configurationDataByTypeName,
+        schema,
+        protoSchema: subgraph.proto.schema,
+        mapping: new GRPCMapping(JSON.parse(subgraph.proto.mappings)),
+      };
+    }
+
     return {
       kind: SubgraphKind.Standard,
       id: subgraph.id,
@@ -188,7 +212,7 @@ export function mapResultToComposedGraph(
     federatedClientSchema: result.success ? printSchema(result.federatedGraphClientSchema) : undefined,
     shouldIncludeClientSchema: result.success ? result.shouldIncludeClientSchema : false,
     errors: result.success ? [] : result.errors,
-    subgraphs: subgraphDTOsToComposedSubgraphs(federatedGraph.id, subgraphs, result),
+    subgraphs: subgraphDTOsToComposedSubgraphs(federatedGraph.organizationId, subgraphs, result),
     fieldConfigurations: result.success ? result.fieldConfigurations : [],
     warnings: result.warnings,
   };

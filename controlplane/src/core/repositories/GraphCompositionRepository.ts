@@ -46,7 +46,7 @@ export class GraphCompositionRepository {
         throw new Error(`Could not find actor ${composedById}`);
       }
 
-      const subgraphSchemaVersionIds = composedSubgraphs.map((subgraph) => subgraph.schemaVersionId!);
+      const subgraphSchemaVersionIds = composedSubgraphs.map((subgraph) => subgraph.schemaVersionId);
 
       const previousComposition = (
         await tx
