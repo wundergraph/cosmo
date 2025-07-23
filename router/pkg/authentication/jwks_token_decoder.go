@@ -106,7 +106,7 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 		} else if c.Secret != "" {
 			key := AudKey{kid: c.KeyId}
 			if _, ok := audiencesMap[key]; ok {
-				return nil, fmt.Errorf("duplicate JWK keyid specified found: %s", c.URL)
+				return nil, fmt.Errorf("duplicate JWK keyid specified found: %s", c.KeyId)
 			}
 
 			given := jwkset.NewMemoryStorage()
@@ -147,7 +147,6 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 				PrioritizeHTTP: false,
 			}
 
-			audiencesMap[key] = c.Audiences
 			jwks, err := createKeyFunc(ctx, jwksetHTTPClientOptions)
 			if err != nil {
 				return nil, err
@@ -161,7 +160,7 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 		for key, keyFunc := range keyFuncMap {
 			pub, err := keyFunc.Keyfunc(token)
 			if err != nil {
-				errors.Join(err, errJoin)
+				errJoin = errors.Join(errJoin, err)
 				continue
 			}
 
