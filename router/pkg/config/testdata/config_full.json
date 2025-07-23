@@ -487,7 +487,10 @@
         },
         {
           "URL": "https://example.com/.well-known/jwks3.json",
-          "Algorithms": null,
+          "Algorithms": [
+            "RS256",
+            "ES256"
+          ],
           "RefreshInterval": 0,
           "Secret": "",
           "Algorithm": "",
