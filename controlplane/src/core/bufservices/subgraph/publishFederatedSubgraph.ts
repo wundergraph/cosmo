@@ -5,17 +5,24 @@ import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notificat
 import {
   PublishFederatedSubgraphRequest,
   PublishFederatedSubgraphResponse,
+  SubgraphType,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { isValidUrl } from '@wundergraph/cosmo-shared';
+import { compileGraphQLToMapping, compileGraphQLToProto, ProtoLock } from '@wundergraph/protographic';
 import { buildSchema } from '../../composition/composition.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
+import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
+import { PluginRepository } from '../../repositories/PluginRepository.js';
+import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import { SchemaGraphPruningRepository } from '../../repositories/SchemaGraphPruningRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import {
   enrichLogger,
+  formatSubgraphType,
   formatSubscriptionProtocol,
   formatWebsocketSubprotocol,
   getFederatedGraphRouterCompatibilityVersion,
@@ -23,11 +30,9 @@ import {
   handleError,
   isValidGraphName,
   isValidLabels,
+  isValidPluginVersion,
 } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
-import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
-import { ProposalRepository } from '../../repositories/ProposalRepository.js';
-import { UnauthorizedError } from '../../errors/errors.js';
 
 export function publishFederatedSubgraph(
   opts: RouterOptions,
@@ -52,6 +57,8 @@ export function publishFederatedSubgraph(
     const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
     const schemaGraphPruningRepo = new SchemaGraphPruningRepository(opts.db);
     const proposalRepo = new ProposalRepository(opts.db);
+    const pluginRepo = new PluginRepository(opts.db, authContext.organizationId);
+    const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
 
     req.namespace = req.namespace || DefaultNamespace;
     if (authContext.organizationDeactivated) {
@@ -347,6 +354,40 @@ export function publishFederatedSubgraph(
         };
       }
 
+      if (req.type === undefined) {
+        return {
+          response: {
+            code: EnumStatusCode.ERR,
+            details: `The type of the subgraph is required as the subgraph doesn't exist.`,
+          },
+          compositionErrors: [],
+          deploymentErrors: [],
+          compositionWarnings: [],
+          proposalMatchMessage,
+        };
+      }
+
+      if (req.type === SubgraphType.PLUGIN) {
+        const count = await pluginRepo.count({ namespaceId: namespace.id });
+        const feature = await orgRepo.getFeature({
+          organizationId: authContext.organizationId,
+          featureId: 'plugins',
+        });
+        const limit = feature?.limit === -1 ? undefined : feature?.limit;
+        if (limit && count >= limit) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_LIMIT_REACHED,
+              details: `The organization reached the limit of plugins`,
+            },
+            compositionErrors: [],
+            deploymentErrors: [],
+            compositionWarnings: [],
+            proposalMatchMessage,
+          };
+        }
+      }
+
       // Create the subgraph if it doesn't exist
       subgraph = await subgraphRepo.create({
         name: req.name,
@@ -368,6 +409,7 @@ export function publishFederatedSubgraph(
                 baseSubgraphID,
               }
             : undefined,
+        type: formatSubgraphType(req.type),
       });
 
       if (!subgraph) {
@@ -390,6 +432,84 @@ export function publishFederatedSubgraph(
       });
     }
 
+    let protoSchema = '';
+    let protoMappings = '';
+    let protoLock = '';
+
+    if (req.type === SubgraphType.PLUGIN || req.type === SubgraphType.GRPC_SUBGRAPH) {
+      if (!req.proto) {
+        return {
+          response: {
+            code: EnumStatusCode.ERR,
+            details: `The proto is required for plugin subgraphs.`,
+          },
+          compositionErrors: [],
+          deploymentErrors: [],
+          compositionWarnings: [],
+          proposalMatchMessage,
+        };
+      }
+      if (req.type === SubgraphType.PLUGIN) {
+        if (!req.proto.version || !req.proto.platforms) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The version and platforms are required for plugin subgraphs.`,
+            },
+            compositionErrors: [],
+            deploymentErrors: [],
+            compositionWarnings: [],
+            proposalMatchMessage,
+          };
+        }
+
+        if (!isValidPluginVersion(req.proto.version)) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The version must be in the format v1, v2, etc.`,
+            },
+            compositionErrors: [],
+            deploymentErrors: [],
+            compositionWarnings: [],
+            proposalMatchMessage,
+          };
+        }
+      }
+
+      const { schema, mappings, lock, goModulePath } = req.proto;
+      const serviceName = subgraph.name + 'Service';
+
+      const newMappings = compileGraphQLToMapping(subgraphSchemaSDL, serviceName);
+      const proto = compileGraphQLToProto(subgraphSchemaSDL, {
+        serviceName,
+        packageName: 'service',
+        goPackage: goModulePath,
+        lockData: subgraph.proto?.lock ? JSON.parse(subgraph.proto.lock) : undefined,
+      });
+
+      if (
+        schema !== proto.proto ||
+        mappings !== JSON.stringify(newMappings, null, 2) ||
+        lock !== JSON.stringify(proto.lockData, null, 2)
+      ) {
+        return {
+          response: {
+            code: EnumStatusCode.ERR,
+            details: `The proto schema, mappings, or lock do not match the expected values.`,
+          },
+          compositionErrors: [],
+          deploymentErrors: [],
+          compositionWarnings: [],
+          proposalMatchMessage,
+        };
+      }
+
+      protoSchema = proto.proto;
+      protoMappings = JSON.stringify(newMappings, null, 2);
+      protoLock = JSON.stringify(proto.lockData, null, 2);
+    }
+
     const { compositionErrors, updatedFederatedGraphs, deploymentErrors, subgraphChanged, compositionWarnings } =
       await subgraphRepo.update(
         {
@@ -400,6 +520,18 @@ export function publishFederatedSubgraph(
           updatedBy: authContext.userId,
           namespaceId: namespace.id,
           isV2Graph,
+          proto:
+            subgraph.type === 'plugin'
+              ? {
+                  schema: protoSchema,
+                  mappings: protoMappings,
+                  lock: protoLock,
+                  pluginData: {
+                    platforms: req.proto?.platforms || [],
+                    version: req.proto?.version || '',
+                  },
+                }
+              : undefined,
         },
         opts.blobStorage,
         {

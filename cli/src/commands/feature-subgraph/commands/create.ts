@@ -6,6 +6,7 @@ import { Command, program } from 'commander';
 import ora from 'ora';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
+import { SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb.js';
 import { getBaseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { validateSubscriptionProtocols } from '../../../utils.js';
@@ -67,6 +68,7 @@ export default (opts: BaseCommandOptions) => {
         readme: readmeFile ? await readFile(readmeFile, 'utf8') : undefined,
         isFeatureSubgraph: true,
         baseSubgraphName: options.subgraph,
+        type: SubgraphType.STANDARD,
       },
       {
         headers: getBaseHeaders(),

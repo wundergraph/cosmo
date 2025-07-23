@@ -4,6 +4,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import {
   CreateFederatedSubgraphRequest,
   CreateFederatedSubgraphResponse,
+  SubgraphType,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { isValidUrl } from '@wundergraph/cosmo-shared';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
@@ -12,6 +13,7 @@ import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import {
   enrichLogger,
+  formatSubgraphType,
   formatSubscriptionProtocol,
   formatWebsocketSubprotocol,
   getLogger,
@@ -20,6 +22,8 @@ import {
   isValidLabels,
 } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { PluginRepository } from '../../repositories/PluginRepository.js';
+import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 
 export function createFederatedSubgraph(
   opts: RouterOptions,
@@ -35,6 +39,8 @@ export function createFederatedSubgraph(
     const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
     const auditLogRepo = new AuditLogRepository(opts.db);
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
+    const pluginRepo = new PluginRepository(opts.db, authContext.organizationId);
+    const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
 
     req.namespace = req.namespace || DefaultNamespace;
     if (authContext.organizationDeactivated) {
@@ -171,6 +177,32 @@ export function createFederatedSubgraph(
       };
     }
 
+    if (req.type === undefined) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: `The type of the subgraph is required.`,
+        },
+      };
+    }
+
+    if (req.type === SubgraphType.PLUGIN) {
+      const count = await pluginRepo.count({ namespaceId: namespace.id });
+      const feature = await orgRepo.getFeature({
+        organizationId: authContext.organizationId,
+        featureId: 'plugins',
+      });
+      const limit = feature?.limit === -1 ? undefined : feature?.limit;
+      if (limit && count >= limit) {
+        return {
+          response: {
+            code: EnumStatusCode.ERR_LIMIT_REACHED,
+            details: `The organization reached the limit of plugins`,
+          },
+        };
+      }
+    }
+
     let baseSubgraphID = '';
     if (req.isFeatureSubgraph) {
       if (!req.baseSubgraphName) {
@@ -217,6 +249,7 @@ export function createFederatedSubgraph(
             baseSubgraphID,
           }
         : undefined,
+      type: formatSubgraphType(req.type),
     });
 
     if (!subgraph) {

@@ -1,63 +1,47 @@
-import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb.js';
+import {
+    splitLabel
+} from '@wundergraph/cosmo-shared';
 import Table from 'cli-table3';
 import { Command, program } from 'commander';
 import ora from 'ora';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import {
-  parseGraphQLSubscriptionProtocol,
-  parseGraphQLWebsocketSubprotocol,
-  splitLabel,
-} from '@wundergraph/cosmo-shared';
-import { SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb.js';
-import { BaseCommandOptions } from '../../../core/types/types.js';
-import { getBaseHeaders } from '../../../core/config.js';
-import { validateSubscriptionProtocols } from '../../../utils.js';
-import { websocketSubprotocolDescription } from '../../../constants.js';
+import { getBaseHeaders } from '../../../../../core/config.js';
+import { BaseCommandOptions } from '../../../../../core/types/types.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('publish');
   command.description(
-    "Publishes a subgraph on the control plane. If the subgraph doesn't exists, it will be created.\nIf the publication leads to composition errors, the errors will be visible in the Studio.\nThe router will continue to work with the latest valid schema.\nConsider using the 'wgc subgraph check' command to check for composition errors before publishing.",
+    "Publishes a plugin subgraph on the control plane. If the plugin subgraph doesn't exists, it will be created.\nIf the publication leads to composition errors, the errors will be visible in the Studio.\nThe router will continue to work with the latest valid schema.\nConsider using the 'wgc subgraph check' command to check for composition errors before publishing.",
   );
   command.argument(
     '<name>',
-    'The name of the subgraph to push the schema to. It is usually in the format of <org>.<service.name> and is used to uniquely identify your subgraph.',
+    'The name of the plugin subgraph to push the schema to. It is usually in the format of <org>.<service.name> and is used to uniquely identify your plugin subgraph.',
   );
-  command.requiredOption('--schema <path-to-schema>', 'The schema file to upload to the subgraph.');
-  command.option('-n, --namespace [string]', 'The namespace of the subgraph.');
+  command.requiredOption('--schema <path-to-schema>', 'The schema file to upload to the plugin subgraph.');
+  command.requiredOption('--go-module-path <path>', 'Thge path of the go module, used for go proto generation.');
+  command.requiredOption('--docker-file <path-to-docker-file>', 'The path to your docker file');
+  command.option('-n, --namespace [string]', 'The namespace of the plugin subgraph.');
   command.option(
-    '-r, --routing-url <url>',
-    'The routing URL of the subgraph. This is the URL at which the subgraph will be accessible.' +
-      ' This parameter is always ignored if the subgraph has already been created.' +
-      ' Required if the subgraph is not an Event-Driven Graph.' +
-      ' Returns an error if the subgraph is an Event-Driven Graph.',
+    '--docker-context <docker-context>',
+    'The path at which the docker should have context to build teh image. Defaults to "." ',
+  );
+  command.option('--proto-schema <path_to_proto_schema>', 'The path to the proto schema');
+  command.option('--proto-mapping <path_to_proto_mapping>', 'The path to the proto mapping');
+  command.option('--proto-lock <path_to_proto_lock>', 'The path to the proto lock file');
+  command.option(
+    '--platform [platforms...]',
+    'The platforms used to build the image. Format: $GOOS/$GOARCH. Supported GOOS: linux | darwin | windows and GOARCH: amd64 | arm64. Defaults to linux/amd64',
   );
   command.option(
     '--label [labels...]',
-    'The labels to apply to the subgraph. The labels are passed in the format <key>=<value> <key>=<value>.' +
-      ' This parameter is always ignored if the subgraph has already been created.',
+    'The labels to apply to the plugin subgraph. The labels are passed in the format <key>=<value> <key>=<value>.' +
+      ' This parameter is always ignored if the plugin subgraph has already been created.',
     [],
-  );
-  command.option(
-    '--subscription-url [url]',
-    'The url used for subscriptions. If empty, it defaults to same url used for routing.' +
-      ' This parameter is always ignored if the subgraph has already been created.' +
-      ' Returns an error if the subgraph is an Event-Driven Graph.',
-  );
-  command.option(
-    '--subscription-protocol <protocol>',
-    'The protocol to use when subscribing to the subgraph. The supported protocols are ws, sse, and sse_post.' +
-      ' This parameter is always ignored if the subgraph has already been created.' +
-      ' Returns an error if the subgraph is an Event-Driven Graph.',
-  );
-  command.option(
-    '--websocket-subprotocol <protocol>',
-    websocketSubprotocolDescription +
-      ' This parameter is always ignored if the subgraph has already been created.' +
-      ' Returns an error if the subgraph is an Event-Driven Graph.',
   );
   command.option(
     '--fail-on-composition-error',
@@ -81,6 +65,15 @@ export default (opts: BaseCommandOptions) => {
       );
     }
 
+    const dockerFile = resolve(options.dockerFile);
+    if (!existsSync(dockerFile)) {
+      program.error(
+        pc.red(
+          pc.bold(`The docker file '${pc.bold(dockerFile)}' does not exist. Please check the path and try again.`),
+        ),
+      );
+    }
+
     const schemaBuffer = await readFile(schemaFile);
     const schema = new TextDecoder().decode(schemaBuffer);
     if (schema.trim().length === 0) {
@@ -89,30 +82,107 @@ export default (opts: BaseCommandOptions) => {
       );
     }
 
-    validateSubscriptionProtocols({
-      subscriptionProtocol: options.subscriptionProtocol,
-      websocketSubprotocol: options.websocketSubprotocol,
-    });
+    let protoSchema: string | undefined;
+    let protoMapping: string | undefined;
+    let protoLock: string | undefined;
+
+    // write a condition to make sure, if defined all three are defined
+
+    if (options.protoSchema) {
+      const protoSchemaFile = resolve(options.protoSchema);
+      if (!existsSync(protoSchemaFile)) {
+        program.error(
+          pc.red(
+            pc.bold(
+              `The proto schema file '${pc.bold(protoSchemaFile)}' does not exist. Please check the path and try again.`,
+            ),
+          ),
+        );
+      }
+      const protoSchemaBuffer = await readFile(protoSchemaFile);
+      const schema = new TextDecoder().decode(protoSchemaBuffer);
+      if (schema.trim().length > 0) {
+        protoSchema = schema;
+      }
+    }
+
+    if (options.protoMapping) {
+      const protoMappingFile = resolve(options.protoMapping);
+      if (!existsSync(protoMappingFile)) {
+        program.error(
+          pc.red(
+            pc.bold(
+              `The proto lock file '${pc.bold(protoMappingFile)}' does not exist. Please check the path and try again.`,
+            ),
+          ),
+        );
+      }
+      const protoMappingBuffer = await readFile(protoMappingFile);
+      const mapping = new TextDecoder().decode(protoMappingBuffer);
+      if (mapping.trim().length > 0) {
+        protoMapping = mapping;
+      }
+    }
+
+    if (options.protoLock) {
+      const protoLockFile = resolve(options.protoLock);
+      if (!existsSync(protoLockFile)) {
+        program.error(
+          pc.red(
+            pc.bold(
+              `The proto lock file '${pc.bold(protoLockFile)}' does not exist. Please check the path and try again.`,
+            ),
+          ),
+        );
+      }
+      const protoLockBuffer = await readFile(protoLockFile);
+      const lock = new TextDecoder().decode(protoLockBuffer);
+      if (lock.trim().length > 0) {
+        protoLock = lock;
+      }
+    }
 
     const spinner = ora('Subgraph is being published...').start();
+
+    const pluginDataResponse = await opts.client.platform.validateAndFetchPluginData(
+      {
+        name,
+        namespace: options.namespace,
+        labels: options.label.map((label: string) => splitLabel(label)),
+      },
+      {
+        headers: getBaseHeaders(),
+      },
+    );
+
+    if (pluginDataResponse.response?.code !== EnumStatusCode.OK) {
+      program.error(pc.red(pc.bold(pluginDataResponse.response?.details)));
+    }
+
+    const newVersion = pluginDataResponse.newVersion;
+    const pushToken = pluginDataResponse.pushToken;
+
+    // upload the docker image to the registry
 
     const resp = await opts.client.platform.publishFederatedSubgraph(
       {
         name,
         namespace: options.namespace,
-        // Publish schema only
         schema,
         // Optional when subgraph does not exist yet
-        routingUrl: options.routingUrl,
-        subscriptionUrl: options.subscriptionUrl,
-        subscriptionProtocol: options.subscriptionProtocol
-          ? parseGraphQLSubscriptionProtocol(options.subscriptionProtocol)
-          : undefined,
-        websocketSubprotocol: options.websocketSubprotocol
-          ? parseGraphQLWebsocketSubprotocol(options.websocketSubprotocol)
-          : undefined,
         labels: options.label.map((label: string) => splitLabel(label)),
-        type: SubgraphType.STANDARD,
+        type: SubgraphType.PLUGIN,
+        proto:
+          protoSchema && protoMapping && protoLock
+            ? {
+                schema: protoSchema,
+                mappings: protoMapping,
+                lock: protoLock,
+                goModulePath: options.goModulePath,
+                platforms: options.platform || [],
+                version: newVersion,
+              }
+            : undefined,
       },
       {
         headers: getBaseHeaders(),

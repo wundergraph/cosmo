@@ -11,12 +11,20 @@ import {
   SupportedRouterCompatibilityVersion,
   Warning,
 } from '@wundergraph/composition';
-import { buildRouterConfig, ComposedSubgraph as IComposedSubgraph, SubgraphKind } from '@wundergraph/cosmo-shared';
+import {
+  buildRouterConfig,
+  ComposedSubgraphGRPC,
+  ComposedSubgraphPlugin,
+  ComposedSubgraph as IComposedSubgraph,
+  SubgraphKind,
+} from '@wundergraph/cosmo-shared';
 import { FastifyBaseLogger } from 'fastify';
 import { DocumentNode, GraphQLSchema, parse, printSchema } from 'graphql';
 import {
+  Artifact,
   FeatureFlagRouterExecutionConfig,
   FeatureFlagRouterExecutionConfigs,
+  GRPCMapping,
   RouterConfig,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
@@ -102,12 +110,14 @@ export function buildRouterExecutionConfig(
   });
 }
 
-export type ComposedSubgraph = IComposedSubgraph & {
+// TODO change type to add ComposedSubgraphPlugin and ComposedSubgraphGRPC
+export type ComposedSubgraph = (IComposedSubgraph | ComposedSubgraphPlugin | ComposedSubgraphGRPC) & {
   targetId: string;
   isFeatureSubgraph: boolean;
 };
 
 export function subgraphDTOsToComposedSubgraphs(
+  federatedGraphID: string,
   subgraphs: SubgraphDTO[],
   result: FederationResult,
 ): ComposedSubgraph[] {
@@ -123,6 +133,27 @@ export function subgraphDTOsToComposedSubgraphs(
     const subgraphConfig = result.success ? result.subgraphConfigBySubgraphName.get(subgraph.name) : undefined;
     const schema = subgraphConfig?.schema;
     const configurationDataByTypeName = subgraphConfig?.configurationDataByTypeName;
+
+    if (subgraph.type === 'plugin') {
+      return {
+        kind: SubgraphKind.Plugin,
+        id: subgraph.id,
+        version: 'v1', // TODO: get the version
+        name: subgraph.name,
+        sdl: subgraph.schemaSDL,
+        url: subgraph.routingUrl,
+        targetId: subgraph.targetId,
+        isFeatureSubgraph: subgraph.isFeatureSubgraph,
+        configurationDataByTypeName,
+        schema,
+        protoSchema: '',
+        mapping: new GRPCMapping({}),
+        artifact: new Artifact({
+          name: `/${federatedGraphID}/${subgraph.id}`,
+          reference: '',
+        }),
+      };
+    }
     return {
       kind: SubgraphKind.Standard,
       id: subgraph.id,
@@ -157,7 +188,7 @@ export function mapResultToComposedGraph(
     federatedClientSchema: result.success ? printSchema(result.federatedGraphClientSchema) : undefined,
     shouldIncludeClientSchema: result.success ? result.shouldIncludeClientSchema : false,
     errors: result.success ? [] : result.errors,
-    subgraphs: subgraphDTOsToComposedSubgraphs(subgraphs, result),
+    subgraphs: subgraphDTOsToComposedSubgraphs(federatedGraph.id, subgraphs, result),
     fieldConfigurations: result.success ? result.fieldConfigurations : [],
     warnings: result.warnings,
   };

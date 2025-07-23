@@ -7,6 +7,7 @@ import { resolve } from 'pathe';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { parseGraphQLSubscriptionProtocol, parseGraphQLWebsocketSubprotocol } from '@wundergraph/cosmo-shared';
+import { SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb.js';
 import { BaseCommandOptions, SubgraphCommandJsonOutput } from '../../../core/types/types.js';
 import { getBaseHeaders } from '../../../core/config.js';
 import { validateSubscriptionProtocols } from '../../../utils.js';
@@ -110,6 +111,7 @@ export default (opts: BaseCommandOptions) => {
         labels: [],
         isFeatureSubgraph: true,
         baseSubgraphName: options.subgraph,
+        type: SubgraphType.STANDARD,
       },
       {
         headers: getBaseHeaders(),

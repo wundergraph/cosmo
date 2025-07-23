@@ -36,6 +36,15 @@ message PublishMonographResponse {
   repeated CompositionWarning compositionWarnings = 4;
 }
 
+message ProtoInput {
+  string schema = 1;
+  string mappings = 2;
+  string lock = 3;
+  repeated string platforms = 4;
+  string go_module_path = 5;
+  string version = 6;
+}
+
 message PublishFederatedSubgraphRequest {
   // The FQDN of the subgraph to be published e.g. "wg.team1.orders"
   string name = 1;
@@ -55,6 +64,8 @@ message PublishFederatedSubgraphRequest {
   optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocket_subprotocol = 9;
   optional bool is_feature_subgraph = 10;
   optional string base_subgraph_name = 11;
+  optional SubgraphType type = 12;
+  optional ProtoInput proto = 13;
 }
 
 message PublishFederatedSubgraphResponse {
@@ -151,6 +162,7 @@ message CreateFederatedSubgraphRequest {
   optional bool is_event_driven_graph = 10;
   optional bool is_feature_subgraph = 11;
   optional string base_subgraph_name = 12;
+  SubgraphType type = 13;
 }
 
 message DeleteFederatedGraphRequest {
@@ -351,6 +363,12 @@ message GetSubgraphsRequest {
   bool exclude_feature_subgraphs = 5;
 }
 
+enum SubgraphType {
+  STANDARD = 0;
+  PLUGIN = 1;
+  GRPC_SUBGRAPH = 2;
+}
+
 message Subgraph {
   string id = 1;
   string name = 2;
@@ -369,6 +387,7 @@ message Subgraph {
   bool isFeatureSubgraph = 15;
   optional string baseSubgraphName = 16;
   optional string baseSubgraphId = 17;
+  SubgraphType type = 18;
 }
 
 message GetSubgraphsResponse {
@@ -2799,6 +2818,18 @@ message GetClientsFromAnalyticsResponse {
   repeated Client clients = 2;
 }
 
+message ValidateAndFetchPluginDataRequest {
+  string name = 1;
+  string namespace = 2;
+  repeated Label labels = 3;
+}
+
+message ValidateAndFetchPluginDataResponse {
+  Response response = 1;
+  string newVersion = 2;
+  string pushToken = 3;
+}
+
 service PlatformService {
   // PlaygroundScripts
   rpc CreatePlaygroundScript(CreatePlaygroundScriptRequest) returns (CreatePlaygroundScriptResponse) {}
@@ -3162,4 +3193,7 @@ service PlatformService {
   rpc GetOperations(GetOperationsRequest) returns (GetOperationsResponse) {}
   // GetClientsFromAnalytics returns all the clients of the federated graph from the analytics
   rpc GetClientsFromAnalytics(GetClientsFromAnalyticsRequest) returns (GetClientsFromAnalyticsResponse) {}
+
+  // ValidateAndFetchPluginData validates the limit of plugins and returns the latest version and token
+  rpc ValidateAndFetchPluginData(ValidateAndFetchPluginDataRequest) returns (ValidateAndFetchPluginDataResponse) {}
 }

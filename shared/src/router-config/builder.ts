@@ -15,6 +15,7 @@ import {
 } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 
 import {
+  Artifact,
   ConfigurationVariable,
   ConfigurationVariableKind,
   DataSourceConfiguration,
@@ -91,6 +92,7 @@ export interface ComposedSubgraphPlugin {
   configurationDataByTypeName?: Map<string, ConfigurationData>;
   // The normalized GraphQL schema for the subgraph
   schema?: GraphQLSchema;
+  artifact?: Artifact;
 }
 
 export interface ComposedSubgraphGRPC {
@@ -200,6 +202,7 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
           plugin: new PluginConfiguration({
             name: subgraph.name,
             version: subgraph.version,
+            artifact: subgraph.artifact,
           }),
         });
 

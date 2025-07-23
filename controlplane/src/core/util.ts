@@ -19,6 +19,7 @@ import {
   LATEST_ROUTER_COMPATIBILITY_VERSION,
   newContractTagOptionsFromArrays,
 } from '@wundergraph/composition';
+import { SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { MemberRole, WebsocketSubprotocol } from '../db/models.js';
 import { AuthContext, DateRange, FederatedGraphDTO, Label, ResponseMessage, S3StorageOptions } from '../types/index.js';
 import { isAuthenticationError, isAuthorizationError, isPublicError } from './errors/errors.js';
@@ -31,6 +32,7 @@ const organizationSlugRegex = /^[\da-z]+(?:-[\da-z]+)*$/;
 const namespaceRegex = /^[\da-z]+(?:[_-][\da-z]+)*$/;
 const schemaTagRegex = /^(?![/-])[\d/A-Za-z-]+(?<![/-])$/;
 const graphNameRegex = /^[\dA-Za-z]+(?:[./@_-][\dA-Za-z]+)*$/;
+const pluginVersionRegex = /^v\d+$/;
 
 /**
  * Wraps a function with a try/catch block and logs any errors that occur.
@@ -329,6 +331,10 @@ export const isValidOrganizationName = (name: string): boolean => {
   return true;
 };
 
+export const isValidPluginVersion = (version: string): boolean => {
+  return pluginVersionRegex.test(version);
+};
+
 export const validateDateRanges = ({
   limit,
   range,
@@ -561,4 +567,21 @@ export const flipDateRangeValuesIfNeeded = (dateRange?: { start: number; end: nu
   const tmp = dateRange.start;
   dateRange.start = dateRange.end;
   dateRange.end = tmp;
+};
+
+export const formatSubgraphType = (type: SubgraphType) => {
+  switch (type) {
+    case SubgraphType.STANDARD: {
+      return 'standard';
+    }
+    case SubgraphType.PLUGIN: {
+      return 'plugin';
+    }
+    case SubgraphType.GRPC_SUBGRAPH: {
+      return 'grpc-subgraph';
+    }
+    default: {
+      throw new Error(`Unknown subgraph type: ${type}`);
+    }
+  }
 };

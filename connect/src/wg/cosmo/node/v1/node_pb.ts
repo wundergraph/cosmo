@@ -1585,6 +1585,53 @@ export class GRPCConfiguration extends Message<GRPCConfiguration> {
 }
 
 /**
+ * @generated from message wg.cosmo.node.v1.Artifact
+ */
+export class Artifact extends Message<Artifact> {
+  /**
+   * {federated_graph_id}/{subgraph_id}
+   *
+   * @generated from field: string name = 1;
+   */
+  name = "";
+
+  /**
+   * v1
+   *
+   * @generated from field: string reference = 2;
+   */
+  reference = "";
+
+  constructor(data?: PartialMessage<Artifact>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.Artifact";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "reference", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Artifact {
+    return new Artifact().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Artifact {
+    return new Artifact().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Artifact {
+    return new Artifact().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Artifact | PlainMessage<Artifact> | undefined, b: Artifact | PlainMessage<Artifact> | undefined): boolean {
+    return proto3.util.equals(Artifact, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.node.v1.PluginConfiguration
  */
 export class PluginConfiguration extends Message<PluginConfiguration> {
@@ -1602,6 +1649,11 @@ export class PluginConfiguration extends Message<PluginConfiguration> {
    */
   version = "";
 
+  /**
+   * @generated from field: optional wg.cosmo.node.v1.Artifact artifact = 3;
+   */
+  artifact?: Artifact;
+
   constructor(data?: PartialMessage<PluginConfiguration>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1612,6 +1664,7 @@ export class PluginConfiguration extends Message<PluginConfiguration> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "version", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "artifact", kind: "message", T: Artifact, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PluginConfiguration {
