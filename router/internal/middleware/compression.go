@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"compress/gzip"
+
 	"net/http"
 	"strings"
 
@@ -32,14 +33,19 @@ func HandleCompression(logger *zap.Logger) func(http.Handler) http.Handler {
 					return
 				}
 
+				originalBody := r.Body
+
 				defer func() {
 					if err := gzr.Close(); err != nil {
 						logger.Error("failed to close gzip reader", zap.Error(err))
 					}
+
+					if err := originalBody.Close(); err != nil {
+						logger.Error("failed to close original body", zap.Error(err))
+					}
 				}()
 
 				r.Body = gzr
-
 			case "":
 			default:
 				http.Error(w, "unsupported media type", http.StatusUnsupportedMediaType)
