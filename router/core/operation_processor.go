@@ -192,6 +192,21 @@ type GraphQLRequestExtensionsPersistedQuery struct {
 	Sha256Hash string `json:"sha256Hash"`
 }
 
+// isWellFormed verifies if Sha256Hash string is valid and well-formed.
+func (pq *GraphQLRequestExtensionsPersistedQuery) isWellFormed() bool {
+	if len(pq.Sha256Hash) != 64 {
+		return false
+	}
+	// Iterating over bytes of the string
+	for i := 0; i < len(pq.Sha256Hash); i++ {
+		b := pq.Sha256Hash[i]
+		if !(b >= '0' && b <= '9' || b >= 'a' && b <= 'f' || b >= 'A' && b <= 'F') {
+			return false
+		}
+	}
+	return true
+}
+
 type complexityComparison struct {
 	field        int
 	cachedField  int
@@ -308,6 +323,13 @@ func (o *OperationKit) unmarshalOperation() error {
 			}
 		}
 		if o.parsedOperation.GraphQLRequestExtensions.PersistedQuery != nil {
+			if !o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.isWellFormed() {
+				return &httpGraphqlError{
+					message:    "persistedQuery.sha256Hash must be a valid sha256 hash",
+					statusCode: http.StatusBadRequest,
+				}
+			}
+
 			// Delete persistedQuery from extensions to avoid it being passed to the subgraphs
 			o.parsedOperation.Request.Extensions, err = sjson.DeleteBytes(o.parsedOperation.Request.Extensions, "persistedQuery")
 			if err != nil {
