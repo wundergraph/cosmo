@@ -86,6 +86,7 @@ export interface ComposedSubgraphPlugin {
   name: string;
   sdl: string;
   url: string;
+  schemaVersionId?: string;
   protoSchema: string;
   mapping: GRPCMapping;
   // The intermediate representation of the engine configuration for the subgraph
@@ -101,6 +102,7 @@ export interface ComposedSubgraphGRPC {
   name: string;
   sdl: string;
   url: string;
+  schemaVersionId?: string;
   protoSchema: string;
   mapping: GRPCMapping;
   // The intermediate representation of the engine configuration for the subgraph

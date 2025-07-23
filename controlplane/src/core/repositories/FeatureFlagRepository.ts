@@ -769,6 +769,7 @@ export class FeatureFlagRepository {
         baseSubgraphId: featureSubgraphsToBaseSubgraphs.baseSubgraphId,
         isEventDrivenGraph: subgraphs.isEventDrivenGraph,
         isFeatureSubgraph: subgraphs.isFeatureSubgraph,
+        type: subgraphs.type,
       })
       .from(featureFlagToFeatureSubgraphs)
       .innerJoin(

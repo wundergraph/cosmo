@@ -597,6 +597,23 @@ export const formatSubgraphType = (type: SubgraphType) => {
   }
 };
 
+export const convertToSubgraphType = (type: string) => {
+  switch (type) {
+    case 'standard': {
+      return SubgraphType.STANDARD;
+    }
+    case 'plugin': {
+      return SubgraphType.PLUGIN;
+    }
+    case 'grpc-subgraph': {
+      return SubgraphType.GRPC_SUBGRAPH;
+    }
+    default: {
+      throw new Error(`Unknown subgraph type: ${type}`);
+    }
+  }
+};
+
 export function newCompositionOptions(disableResolvabilityValidation?: boolean): CompositionOptions | undefined {
   if (!disableResolvabilityValidation) {
     return;
