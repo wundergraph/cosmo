@@ -16,6 +16,7 @@ export * from './schema-building/ast';
 export * from './schema-building/types';
 export * from './schema-building/utils';
 export * from './subgraph/types';
+export * from './types/types';
 export * from './utils/composition-version';
 export * from './utils/string-constants';
 export * from './utils/types';
@@ -25,6 +26,7 @@ export * from './warnings/types';
 // v1
 export * from './v1/federation/utils';
 export * from './v1/federation/walkers';
+export * from './v1/federation/types';
 export * from './v1/normalization/directive-definition-data';
 export * from './v1/normalization/utils';
 export * from './v1/normalization/types';

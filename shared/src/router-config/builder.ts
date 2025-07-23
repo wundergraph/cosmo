@@ -64,7 +64,7 @@ export enum SubgraphKind {
 export type RouterSubgraph = ComposedSubgraph | ComposedSubgraphPlugin | ComposedSubgraphGRPC;
 
 export interface ComposedSubgraph {
-  kind: SubgraphKind.Standard;
+  readonly kind: SubgraphKind.Standard;
   id: string;
   name: string;
   sdl: string;
@@ -80,7 +80,7 @@ export interface ComposedSubgraph {
 }
 
 export interface ComposedSubgraphPlugin {
-  kind: SubgraphKind.Plugin;
+  readonly kind: SubgraphKind.Plugin;
   id: string;
   version: string;
   name: string;
@@ -96,7 +96,7 @@ export interface ComposedSubgraphPlugin {
 }
 
 export interface ComposedSubgraphGRPC {
-  kind: SubgraphKind.GRPC;
+  readonly kind: SubgraphKind.GRPC;
   id: string;
   name: string;
   sdl: string;

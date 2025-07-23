@@ -70,6 +70,10 @@ export default (opts: BaseCommandOptions) => {
     false,
   );
   command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
+  command.option(
+    '--disable-resolvability-validation',
+    'This flag will disable the validation for whether all nodes of the federated graph are resolvable. Do NOT use unless troubleshooting.',
+  );
 
   command.action(async (name, options) => {
     const schemaFile = resolve(options.schema);
@@ -98,6 +102,7 @@ export default (opts: BaseCommandOptions) => {
 
     const resp = await opts.client.platform.publishFederatedSubgraph(
       {
+        disableResolvabilityValidation: options.disableResolvabilityValidation,
         name,
         namespace: options.namespace,
         // Publish schema only

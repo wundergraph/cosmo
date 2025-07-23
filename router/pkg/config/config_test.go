@@ -1198,3 +1198,97 @@ traffic_shaping:
 		require.NoError(t, err)
 	})
 }
+
+func TestValidateJwksConfiguration(t *testing.T) {
+	t.Parallel()
+
+	t.Run("verify valid url config", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+authentication:
+  jwt:
+    jwks:
+      - url: "http://url/valid.json"
+
+`)
+		_, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+	})
+
+	t.Run("verify valid secret config", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+authentication:
+  jwt:
+    jwks:
+      - key_id: "givenKID"
+        secret: "example secret"
+        algorithm: HS512
+
+`)
+		_, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+	})
+
+	t.Run("verify both secret and url are not allowed together", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+authentication:
+  jwt:
+    jwks:
+      - key_id: "givenKID"
+        url: "http://url/valid.json"
+        algorithms: []
+        secret: "example secret"
+        algorithm: HS512
+`)
+		_, err := LoadConfig([]string{f})
+		require.ErrorContains(t, err, "at '/authentication/jwt/jwks/")
+		require.ErrorContains(t, err, "oneOf failed, none matched")
+
+	})
+
+	t.Run("verify secret parameters mandatory", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+authentication:
+  jwt:
+    jwks:
+      - secret: "example secret"
+`)
+		_, err := LoadConfig([]string{f})
+		require.ErrorContains(t, err, "at '/authentication/jwt/jwks/")
+		require.ErrorContains(t, err, "missing properties 'algorithm', 'key_id'")
+
+	})
+
+	t.Run("verify url parameter is mandatory", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+authentication:
+  jwt:
+    jwks:
+      - algorithms: []
+
+`)
+		_, err := LoadConfig([]string{f})
+		require.ErrorContains(t, err, "at '/authentication/jwt/jwks/")
+		require.ErrorContains(t, err, "oneOf failed, none matched")
+
+	})
+}

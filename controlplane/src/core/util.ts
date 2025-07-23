@@ -21,7 +21,15 @@ import {
 } from '@wundergraph/composition';
 import { SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { MemberRole, WebsocketSubprotocol } from '../db/models.js';
-import { AuthContext, DateRange, FederatedGraphDTO, Label, ResponseMessage, S3StorageOptions } from '../types/index.js';
+import {
+  AuthContext,
+  CompositionOptions,
+  DateRange,
+  FederatedGraphDTO,
+  Label,
+  ResponseMessage,
+  S3StorageOptions,
+} from '../types/index.js';
 import { isAuthenticationError, isAuthorizationError, isPublicError } from './errors/errors.js';
 import { GraphKeyAuthContext } from './services/GraphApiTokenAuthenticator.js';
 import { composeFederatedContract, composeFederatedGraphWithPotentialContracts } from './composition/composition.js';
@@ -504,6 +512,7 @@ export function getFederationResultWithPotentialContracts(
   federatedGraph: FederatedGraphDTO,
   subgraphsToCompose: SubgraphsToCompose,
   tagOptionsByContractName: Map<string, ContractTagOptions>,
+  compositionOptions?: CompositionOptions,
 ): FederationResult | FederationResultWithContracts {
   // This condition is only true when entering the method to specifically create/update a contract
   if (federatedGraph.contract) {
@@ -511,12 +520,14 @@ export function getFederationResultWithPotentialContracts(
       subgraphsToCompose.compositionSubgraphs,
       newContractTagOptionsFromArrays(federatedGraph.contract.excludeTags, federatedGraph.contract.includeTags),
       federatedGraph.routerCompatibilityVersion,
+      compositionOptions,
     );
   }
   return composeFederatedGraphWithPotentialContracts(
     subgraphsToCompose.compositionSubgraphs,
     tagOptionsByContractName,
     federatedGraph.routerCompatibilityVersion,
+    compositionOptions,
   );
 }
 
@@ -585,3 +596,12 @@ export const formatSubgraphType = (type: SubgraphType) => {
     }
   }
 };
+
+export function newCompositionOptions(disableResolvabilityValidation?: boolean): CompositionOptions | undefined {
+  if (!disableResolvabilityValidation) {
+    return;
+  }
+  return {
+    disableResolvabilityValidation,
+  };
+}

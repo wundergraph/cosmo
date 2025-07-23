@@ -31,6 +31,7 @@ import {
   isValidGraphName,
   isValidLabels,
   isValidPluginVersion,
+  newCompositionOptions,
 } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 
@@ -539,6 +540,7 @@ export function publishFederatedSubgraph(
           webhookJWTSecret: opts.admissionWebhookJWTSecret,
         },
         opts.chClient!,
+        newCompositionOptions(req.disableResolvabilityValidation),
       );
 
     for (const graph of updatedFederatedGraphs) {

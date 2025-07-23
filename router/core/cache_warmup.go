@@ -305,13 +305,11 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 		return nil, err
 	}
 
+	// NOTE: we do not validate query complexity here, because queries come from analytics, so they should be valid
+
 	_, err = k.Validate(true, k.parsedOperation.RemapVariables, nil)
 	if err != nil {
 		return nil, err
-	}
-
-	if c.complexityLimits != nil {
-		_, _, _ = k.ValidateQueryComplexity(c.complexityLimits, k.kit.doc, c.routerSchema, k.parsedOperation.IsPersistedOperation)
 	}
 
 	planOptions := PlanOptions{
