@@ -26,7 +26,7 @@ require (
 	github.com/wundergraph/cosmo/demo v0.0.0-20250718181713-66224598e91f
 	github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects v0.0.0-20250715110703-10f2e5f9c79e
 	github.com/wundergraph/cosmo/router v0.0.0-20250718181713-66224598e91f
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.207.0.20250723073946-dc89310fee4c
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.210.0.20250723094008-91dbadd9d6b1
 	go.opentelemetry.io/otel v1.28.0
 	go.opentelemetry.io/otel/sdk v1.28.0
 	go.opentelemetry.io/otel/sdk/metric v1.28.0

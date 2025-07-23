@@ -93,7 +93,7 @@ func (c *engineSubscriptionOnStartHookContext) SubscriptionEventConfiguration() 
 }
 
 type SubscriptionOnStartHandler interface {
-	// OnSubscriptionOnStart is called once at subscription start
+	// SubscriptionOnStart is called once at subscription start
 	// If the boolean is true, the subscription is closed.
 	// The error is propagated to the client.
 	SubscriptionOnStart(ctx SubscriptionOnStartHookContext) (bool, error)
@@ -116,7 +116,7 @@ func NewPubSubOnSubscriptionStartHook(fn func(ctx SubscriptionOnStartHookContext
 }
 
 // NewEngineOnSubscriptionStartHook converts a SubscriptionOnStartHandler to a graphql_datasource.OnSubscriptionStartFn
-func NewEngineOnSubscriptionStartHook(fn func(ctx SubscriptionOnStartHookContext) (bool, error)) graphql_datasource.OnSubscriptionStartFn {
+func NewEngineOnSubscriptionStartHook(fn func(ctx SubscriptionOnStartHookContext) (bool, error)) graphql_datasource.SubscriptionOnStartFn {
 	return func(resolveCtx *resolve.Context, input []byte) (bool, error) {
 		requestContext := getRequestContext(resolveCtx.Context())
 		hookCtx := &engineSubscriptionOnStartHookContext{

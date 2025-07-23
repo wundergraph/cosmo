@@ -415,7 +415,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 				}
 			}
 
-			onSubscriptionStarts := make([]graphql_datasource.OnSubscriptionStartFn, len(l.subscriptionHooks.startSubscription))
+			onSubscriptionStarts := make([]graphql_datasource.SubscriptionOnStartFn, len(l.subscriptionHooks.startSubscription))
 			for i, fn := range l.subscriptionHooks.startSubscription {
 				onSubscriptionStarts[i] = NewEngineOnSubscriptionStartHook(fn)
 			}
@@ -432,7 +432,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 					ForwardedClientHeaderNames:              forwardedClientHeaders,
 					ForwardedClientHeaderRegularExpressions: forwardedClientRegexps,
 					WsSubProtocol:                           wsSubprotocol,
-					OnSubscriptionStartFns:                  onSubscriptionStarts,
+					SubscriptionOnStartFns:                  onSubscriptionStarts,
 				},
 				SchemaConfiguration:    schemaConfiguration,
 				CustomScalarTypeFields: customScalarTypeFields,
