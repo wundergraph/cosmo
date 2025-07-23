@@ -43,6 +43,8 @@ export function createFederatedSubgraph(
     const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
 
     req.namespace = req.namespace || DefaultNamespace;
+    req.type = req.type || SubgraphType.STANDARD;
+
     if (authContext.organizationDeactivated) {
       throw new UnauthorizedError();
     }
@@ -174,15 +176,6 @@ export function createFederatedSubgraph(
         compositionErrors: [],
         deploymentErrors: [],
         compositionWarnings: [],
-      };
-    }
-
-    if (req.type === undefined) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `The type of the subgraph is required.`,
-        },
       };
     }
 

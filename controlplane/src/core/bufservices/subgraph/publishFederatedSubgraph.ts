@@ -355,18 +355,7 @@ export function publishFederatedSubgraph(
         };
       }
 
-      if (req.type === undefined) {
-        return {
-          response: {
-            code: EnumStatusCode.ERR,
-            details: `The type of the subgraph is required as the subgraph doesn't exist.`,
-          },
-          compositionErrors: [],
-          deploymentErrors: [],
-          compositionWarnings: [],
-          proposalMatchMessage,
-        };
-      }
+      req.type = req.type || SubgraphType.STANDARD;
 
       if (req.type === SubgraphType.PLUGIN) {
         const count = await pluginRepo.count({ namespaceId: namespace.id });
