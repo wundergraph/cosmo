@@ -168,5 +168,5 @@ kapp delete -a cosmo
 ### Tips
 
 It is strongly recommended to use immutable tags in a production environment. This ensures your deployment does not change automatically if the same tag is updated with a different image.
-You can use a tool like [kbld](https://get-kbld.io/) to make sure your images are resolved to immutable tags.
+You can use a tool like [kbld](https://carvel.dev/kbld/) to make sure your images are resolved to immutable tags.
 WunderGraph will release a new chart updating its containers if a new version of the main container, significant changes, or critical vulnerabilities exist.
