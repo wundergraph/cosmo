@@ -59,24 +59,24 @@ type audKey struct {
 
 type audienceSet map[string]struct{}
 
-type JwksTokenDecoderConfig struct {
+type JWKSTokenDecoderConfig struct {
 	Logger                *zap.Logger
-	JwksConfigs           []JWKSConfig
-	AllowInsecureJwksUrls bool
+	JWKSConfigs           []JWKSConfig
+	AllowInsecureJWKSURLs bool
 }
 
-func NewJwksTokenDecoder(ctx context.Context, config JwksTokenDecoderConfig) (TokenDecoder, error) {
-	audiencesMap := make(map[audKey]audienceSet, len(config.JwksConfigs))
-	keyFuncMap := make(map[audKey]keyfunc.Keyfunc, len(config.JwksConfigs))
+func NewJwksTokenDecoder(ctx context.Context, config JWKSTokenDecoderConfig) (TokenDecoder, error) {
+	audiencesMap := make(map[audKey]audienceSet, len(config.JWKSConfigs))
+	keyFuncMap := make(map[audKey]keyfunc.Keyfunc, len(config.JWKSConfigs))
 
-	for _, c := range config.JwksConfigs {
+	for _, c := range config.JWKSConfigs {
 		if c.URL != "" {
 			key := audKey{url: c.URL}
 			if _, ok := audiencesMap[key]; ok {
 				return nil, fmt.Errorf("duplicate JWK URL found: %s", c.URL)
 			}
 
-			if !config.AllowInsecureJwksUrls {
+			if !config.AllowInsecureJWKSURLs {
 				uri, err := url.ParseRequestURI(c.URL)
 				if err != nil {
 					return nil, fmt.Errorf("failed to parse given URL %q: %w", c.URL, err)

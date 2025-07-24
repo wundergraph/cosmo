@@ -265,10 +265,10 @@ func TestHeaderSetWithExpression(t *testing.T) {
 
 		t.Cleanup(authServer.Close)
 
-		opts := authentication.JwksTokenDecoderConfig{
+		opts := authentication.JWKSTokenDecoderConfig{
 			Logger:                zap.NewNop(),
-			JwksConfigs:           []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)},
-			AllowInsecureJwksUrls: true,
+			JWKSConfigs:           []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)},
+			AllowInsecureJWKSURLs: true,
 		}
 		tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), opts)
 		require.NoError(t, err)

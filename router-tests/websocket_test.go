@@ -127,10 +127,10 @@ func TestWebSockets(t *testing.T) {
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
 
-		jwksConfig := authentication.JwksTokenDecoderConfig{
+		jwksConfig := authentication.JWKSTokenDecoderConfig{
 			Logger:                zap.NewNop(),
-			JwksConfigs:           []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)},
-			AllowInsecureJwksUrls: true,
+			JWKSConfigs:           []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)},
+			AllowInsecureJWKSURLs: true,
 		}
 		tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), jwksConfig)
 		require.NoError(t, err)
@@ -183,10 +183,10 @@ func TestWebSockets(t *testing.T) {
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
 
-		jwksConfig := authentication.JwksTokenDecoderConfig{
+		jwksConfig := authentication.JWKSTokenDecoderConfig{
 			Logger:                zap.NewNop(),
-			JwksConfigs:           []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)},
-			AllowInsecureJwksUrls: true,
+			JWKSConfigs:           []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)},
+			AllowInsecureJWKSURLs: true,
 		}
 		tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), jwksConfig)
 		require.NoError(t, err)
@@ -239,10 +239,10 @@ func TestWebSockets(t *testing.T) {
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
 
-		jwksConfig := authentication.JwksTokenDecoderConfig{
+		jwksConfig := authentication.JWKSTokenDecoderConfig{
 			Logger:                zap.NewNop(),
-			JwksConfigs:           []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)},
-			AllowInsecureJwksUrls: true,
+			JWKSConfigs:           []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)},
+			AllowInsecureJWKSURLs: true,
 		}
 		tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), jwksConfig)
 		require.NoError(t, err)
@@ -305,10 +305,10 @@ func TestWebSockets(t *testing.T) {
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
 
-		jwksConfig := authentication.JwksTokenDecoderConfig{
+		jwksConfig := authentication.JWKSTokenDecoderConfig{
 			Logger:                zap.NewNop(),
-			JwksConfigs:           []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)},
-			AllowInsecureJwksUrls: true,
+			JWKSConfigs:           []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)},
+			AllowInsecureJWKSURLs: true,
 		}
 		tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), jwksConfig)
 		require.NoError(t, err)
@@ -370,10 +370,10 @@ func TestWebSockets(t *testing.T) {
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
 
-		jwksConfig := authentication.JwksTokenDecoderConfig{
+		jwksConfig := authentication.JWKSTokenDecoderConfig{
 			Logger:                zap.NewNop(),
-			JwksConfigs:           []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)},
-			AllowInsecureJwksUrls: true,
+			JWKSConfigs:           []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)},
+			AllowInsecureJWKSURLs: true,
 		}
 		tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), jwksConfig)
 		require.NoError(t, err)
@@ -438,10 +438,10 @@ func TestWebSockets(t *testing.T) {
 		authServer, err := jwks.NewServer(t)
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
-		jwksConfig := authentication.JwksTokenDecoderConfig{
+		jwksConfig := authentication.JWKSTokenDecoderConfig{
 			Logger:                zap.NewNop(),
-			JwksConfigs:           []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)},
-			AllowInsecureJwksUrls: true,
+			JWKSConfigs:           []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)},
+			AllowInsecureJWKSURLs: true,
 		}
 		tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), jwksConfig)
 		require.NoError(t, err)
@@ -493,10 +493,10 @@ func TestWebSockets(t *testing.T) {
 		authServer, err := jwks.NewServer(t)
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
-		jwksConfig := authentication.JwksTokenDecoderConfig{
+		jwksConfig := authentication.JWKSTokenDecoderConfig{
 			Logger:                zap.NewNop(),
-			JwksConfigs:           []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)},
-			AllowInsecureJwksUrls: true,
+			JWKSConfigs:           []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)},
+			AllowInsecureJWKSURLs: true,
 		}
 		tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), jwksConfig)
 		require.NoError(t, err)
@@ -900,10 +900,10 @@ func TestWebSockets(t *testing.T) {
 		authServer, err := jwks.NewServer(t)
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
-		jwksConfig := authentication.JwksTokenDecoderConfig{
+		jwksConfig := authentication.JWKSTokenDecoderConfig{
 			Logger:                zap.NewNop(),
-			JwksConfigs:           []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)},
-			AllowInsecureJwksUrls: true,
+			JWKSConfigs:           []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)},
+			AllowInsecureJWKSURLs: true,
 		}
 		tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), jwksConfig)
 		require.NoError(t, err)

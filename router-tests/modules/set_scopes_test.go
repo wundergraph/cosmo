@@ -29,13 +29,19 @@ func configureAuth(t *testing.T) ([]authentication.Authenticator, *jwks.Server) 
 	authServer, err := jwks.NewServer(t)
 	require.NoError(t, err)
 	t.Cleanup(authServer.Close)
-	tokenDecoder, err := authentication.NewJwksTokenDecoder(integration.NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{
-		{
-			URL:               authServer.JWKSURL(),
-			RefreshInterval:   time.Second * 5,
-			AllowedAlgorithms: integration.BaseJwksAlgorithms,
+
+	jwksConfig := authentication.JWKSTokenDecoderConfig{
+		Logger: zap.NewNop(),
+		JWKSConfigs: []authentication.JWKSConfig{
+			{
+				URL:               authServer.JWKSURL(),
+				RefreshInterval:   time.Second * 5,
+				AllowedAlgorithms: integration.BaseJwksAlgorithms,
+			},
 		},
-	}, true)
+		AllowInsecureJWKSURLs: true,
+	}
+	tokenDecoder, err := authentication.NewJwksTokenDecoder(integration.NewContextWithCancel(t), jwksConfig)
 	require.NoError(t, err)
 	authOptions := authentication.HttpHeaderAuthenticatorOptions{
 		Name:         jwksName,

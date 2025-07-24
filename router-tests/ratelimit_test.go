@@ -257,16 +257,16 @@ func TestRateLimit(t *testing.T) {
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
 
-		opts := authentication.JwksTokenDecoderConfig{
+		opts := authentication.JWKSTokenDecoderConfig{
 			Logger: zap.NewNop(),
-			JwksConfigs: []authentication.JWKSConfig{
+			JWKSConfigs: []authentication.JWKSConfig{
 				{
 					URL:               authServer.JWKSURL(),
 					RefreshInterval:   time.Second * 5,
 					AllowedAlgorithms: BaseJwksAlgorithms,
 				},
 			},
-			AllowInsecureJwksUrls: true,
+			AllowInsecureJWKSURLs: true,
 		}
 		tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), opts)
 		require.NoError(t, err)
