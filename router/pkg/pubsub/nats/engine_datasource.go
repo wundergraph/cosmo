@@ -16,8 +16,8 @@ import (
 
 // Event represents an event from NATS
 type Event struct {
-	Data     json.RawMessage   `json:"data"`
-	Metadata map[string]string `json:"metadata"`
+	Data    json.RawMessage     `json:"data"`
+	Headers map[string][]string `json:"headers"`
 }
 
 func (e *Event) GetData() []byte {

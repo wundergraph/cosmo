@@ -48,13 +48,14 @@ type SubscriptionOnStartHookContext interface {
 	// the subscription event configuration (will return nil for engine subscription)
 	SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration
 	// write an event to the stream of the current subscription
-	WriteEvent(event datasource.StreamEvent)
+	// returns true if the event was written to the stream, false if the event was dropped
+	WriteEvent(event datasource.StreamEvent) bool
 }
 
 type pubSubSubscriptionOnStartHookContext struct {
 	requestContext                 RequestContext
 	subscriptionEventConfiguration datasource.SubscriptionEventConfiguration
-	writeEventHook                 func(data []byte)
+	writeEventHook                 func(data []byte) bool
 }
 
 func (c *pubSubSubscriptionOnStartHookContext) RequestContext() RequestContext {
@@ -65,8 +66,8 @@ func (c *pubSubSubscriptionOnStartHookContext) SubscriptionEventConfiguration() 
 	return c.subscriptionEventConfiguration
 }
 
-func (c *pubSubSubscriptionOnStartHookContext) WriteEvent(event datasource.StreamEvent) {
-	c.writeEventHook(event.GetData())
+func (c *pubSubSubscriptionOnStartHookContext) WriteEvent(event datasource.StreamEvent) bool {
+	return c.writeEventHook(event.GetData())
 }
 
 // EngineEvent is the event used to write to the engine subscription
@@ -80,15 +81,15 @@ func (e *EngineEvent) GetData() []byte {
 
 type engineSubscriptionOnStartHookContext struct {
 	requestContext RequestContext
-	writeEventHook func(data []byte)
+	writeEventHook func(data []byte) bool
 }
 
 func (c *engineSubscriptionOnStartHookContext) RequestContext() RequestContext {
 	return c.requestContext
 }
 
-func (c *engineSubscriptionOnStartHookContext) WriteEvent(event datasource.StreamEvent) {
-	c.writeEventHook(event.GetData())
+func (c *engineSubscriptionOnStartHookContext) WriteEvent(event datasource.StreamEvent) bool {
+	return c.writeEventHook(event.GetData())
 }
 
 func (c *engineSubscriptionOnStartHookContext) SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration {
@@ -113,7 +114,7 @@ func NewPubSubSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHookContext
 		hookCtx := &pubSubSubscriptionOnStartHookContext{
 			requestContext:                 requestContext,
 			subscriptionEventConfiguration: subConf,
-			writeEventHook:                 resolveCtx.EmitSubscriptionUpdate,
+			writeEventHook:                 resolveCtx.TryEmitSubscriptionUpdate,
 		}
 
 		close, err := fn(hookCtx)
@@ -132,7 +133,7 @@ func NewEngineSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHookContext
 		requestContext := getRequestContext(resolveCtx.Context())
 		hookCtx := &engineSubscriptionOnStartHookContext{
 			requestContext: requestContext,
-			writeEventHook: resolveCtx.EmitSubscriptionUpdate,
+			writeEventHook: resolveCtx.TryEmitSubscriptionUpdate,
 		}
 
 		close, err := fn(hookCtx)
