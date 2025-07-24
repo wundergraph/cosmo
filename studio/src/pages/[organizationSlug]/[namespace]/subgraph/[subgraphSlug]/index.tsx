@@ -140,11 +140,7 @@ const SubgraphOverviewPage = () => {
           <div className="flex-start flex min-w-[150px] flex-col gap-2">
             <dt className="text-sm text-muted-foreground">Type</dt>
             <dd className="flex gap-x-2">
-              <div
-                className={cn("flex flex-shrink-0 gap-x-2", {
-                  "ml-4": subgraph.labels.length === 0,
-                })}
-              >
+              <div className="flex flex-shrink-0 gap-x-2">
                 {subgraph.type === SubgraphType.PLUGIN ? (
                   <Badge variant="outline">Plugin</Badge>
                 ) : subgraph.type === SubgraphType.GRPC_SUBGRAPH ? (
@@ -155,6 +151,14 @@ const SubgraphOverviewPage = () => {
               </div>
             </dd>
           </div>
+          {subgraph.type === SubgraphType.PLUGIN && subgraph.protoVersion && (
+            <div className="flex-start flex min-w-[150px] flex-col gap-2">
+              <dt className="text-sm text-muted-foreground">Version</dt>
+              <dd className="flex gap-x-2">
+                <p className="text-sm">{subgraph.protoVersion}</p>
+              </dd>
+            </div>
+          )}
 
           <div className="flex-start flex flex-col gap-2 ">
             <dt className="text-sm text-muted-foreground">Last Published</dt>

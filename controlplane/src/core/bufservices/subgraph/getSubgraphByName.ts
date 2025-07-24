@@ -72,6 +72,7 @@ export function getSubgraphByName(
         baseSubgraphId: baseSubgraph?.id,
         baseSubgraphName: baseSubgraph?.name,
         type: convertToSubgraphType(subgraph.type),
+        protoVersion: subgraph.proto?.pluginData?.version,
       },
       members: await subgraphRepo.getSubgraphMembers(subgraph.id),
       response: {

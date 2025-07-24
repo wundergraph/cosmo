@@ -3048,6 +3048,11 @@ export class Subgraph extends Message<Subgraph> {
    */
   type = SubgraphType.STANDARD;
 
+  /**
+   * @generated from field: optional string protoVersion = 19;
+   */
+  protoVersion?: string;
+
   constructor(data?: PartialMessage<Subgraph>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3074,6 +3079,7 @@ export class Subgraph extends Message<Subgraph> {
     { no: 16, name: "baseSubgraphName", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 17, name: "baseSubgraphId", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 18, name: "type", kind: "enum", T: proto3.getEnumType(SubgraphType) },
+    { no: 19, name: "protoVersion", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Subgraph {

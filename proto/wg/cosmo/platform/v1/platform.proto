@@ -393,6 +393,7 @@ message Subgraph {
   optional string baseSubgraphName = 16;
   optional string baseSubgraphId = 17;
   SubgraphType type = 18;
+  optional string protoVersion = 19;
 }
 
 message GetSubgraphsResponse {

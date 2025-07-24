@@ -386,7 +386,7 @@ export const SubgraphsTable = ({
                     </TableCell>
                     <TableCell className="px-4 font-medium">{name}</TableCell>
                     <TableCell className="px-4 text-muted-foreground">
-                      {routingURL}
+                      {routingURL || "-"}
                     </TableCell>
                     <TableCell className="px-4">
                       {tab !== "featureSubgraphs" ? (
