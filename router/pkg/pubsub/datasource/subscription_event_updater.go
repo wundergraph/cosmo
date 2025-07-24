@@ -2,6 +2,9 @@ package datasource
 
 import "github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 
+// SubscriptionEventUpdater is a wrapper around the SubscriptionUpdater interface
+// that provides a way to send the event struct instead of the raw data
+// It is used to give access to the event additional fields to the hooks.
 type SubscriptionEventUpdater interface {
 	Update(event StreamEvent)
 	Complete()
