@@ -155,8 +155,12 @@ func (f *BufferedLogger) Close() error {
 	return f.bufferedWriteSyncer.Stop()
 }
 
-func NewLogFile(path string) (*os.File, error) {
-	return os.OpenFile(path, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0640)
+func NewLogFile(path string, fileMode os.FileMode) (*os.File, error) {
+	if fileMode == 0 {
+		fileMode = 0600
+	}
+
+	return os.OpenFile(path, os.O_WRONLY|os.O_APPEND|os.O_CREATE, fileMode)
 }
 
 func WithRequestID(reqID string) zap.Field {

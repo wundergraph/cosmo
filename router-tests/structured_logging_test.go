@@ -10,12 +10,11 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-
-	"github.com/stretchr/testify/assert"
 
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
@@ -190,7 +189,7 @@ func TestAccessLogsFileOutput(t *testing.T) {
 		t.Parallel()
 
 		fp := filepath.Join(os.TempDir(), "access.log")
-		f, err := logging.NewLogFile(filepath.Join(os.TempDir(), "access.log"))
+		f, err := logging.NewLogFile(filepath.Join(os.TempDir(), "access.log"), 0640)
 		require.NoError(t, err)
 
 		require.FileExists(t, fp)
@@ -244,6 +243,62 @@ func TestAccessLogsFileOutput(t *testing.T) {
 		})
 	})
 
+	t.Run("Custom file modes", func(t *testing.T) {
+		t.Parallel()
+
+		tests := []struct {
+			name         string
+			mode         config.FileMode
+			expectError  bool
+			expectedMode os.FileMode
+		}{
+			{
+				name:         "Should succeed with default mode",
+				mode:         0640,
+				expectError:  false,
+				expectedMode: 0640,
+			},
+			{
+				name:         "Should succeed with custom mode",
+				mode:         0600,
+				expectError:  false,
+				expectedMode: 0600,
+			},
+			{
+				name:         "Should succeed with zero mode",
+				mode:         0,
+				expectError:  false,
+				expectedMode: 0600,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				fp := filepath.Join(os.TempDir(), "access.log")
+				f, err := logging.NewLogFile(filepath.Join(os.TempDir(), "access.log"), os.FileMode(tt.mode))
+
+				t.Cleanup(func() {
+					if f != nil {
+						require.NoError(t, f.Close())
+						require.NoError(t, os.RemoveAll(fp))
+					}
+				})
+
+				if tt.expectError {
+					require.Error(t, err)
+					return
+				}
+
+				require.NoError(t, err)
+				require.FileExists(t, fp)
+				info, err := os.Stat(fp)
+				require.NoError(t, err)
+				require.Equal(t, info.Mode(), tt.expectedMode)
+			})
+		}
+
+	})
+
 	t.Run("subgraph", func(t *testing.T) {
 		t.Parallel()
 
@@ -251,7 +306,7 @@ func TestAccessLogsFileOutput(t *testing.T) {
 			t.Parallel()
 
 			fp := filepath.Join(t.TempDir(), "access.log")
-			f, err := logging.NewLogFile(fp)
+			f, err := logging.NewLogFile(fp, 0640)
 			require.NoError(t, err)
 
 			t.Cleanup(func() {
