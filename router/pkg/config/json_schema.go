@@ -5,10 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/dustin/go-humanize"
-	"github.com/goccy/go-yaml"
-	"github.com/santhosh-tekuri/jsonschema/v6"
-	"golang.org/x/text/message"
 	"io/fs"
 	"log"
 	"net"
@@ -19,6 +15,11 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/dustin/go-humanize"
+	"github.com/goccy/go-yaml"
+	"github.com/santhosh-tekuri/jsonschema/v6"
+	"golang.org/x/text/message"
 )
 
 const (
@@ -76,17 +77,11 @@ func goDurationVocab() *jsonschema.Vocabulary {
 	schemaURL := "http://example.com/meta/duration"
 	schema, err := jsonschema.UnmarshalJSON(strings.NewReader(`{
 	"properties" : {
-		"duration": {
-			"type": "object",
-			"additionalProperties": false,
-			"properties": {
-				"minimum": {
-					"type": "string"
-				},	
-				"maximum": {
-					"type": "string"
-				}
-			}
+		"duration_minimum": {
+			"type": "string"
+		},	
+		"duration_maximum": {
+			"type": "string"
 		}
 	}
 }`))
@@ -111,36 +106,42 @@ func goDurationVocab() *jsonschema.Vocabulary {
 }
 
 func compileDuration(ctx *jsonschema.CompilerContext, m map[string]any) (jsonschema.SchemaExt, error) {
-	if val, ok := m["duration"]; ok {
+	maxDurationVal, hasMaxDuration := m["duration_maximum"]
+	minDurationVal, hasMinDuration := m["duration_minimum"]
 
-		if mapVal, ok := val.(map[string]interface{}); ok {
-			var minDuration, maxDuration time.Duration
-			var err error
-
-			minDurationString, ok := mapVal["minimum"].(string)
-			if ok {
-				minDuration, err = time.ParseDuration(minDurationString)
-				if err != nil {
-					return nil, err
-				}
-			}
-			maxDurationString, ok := mapVal["maximum"].(string)
-			if ok {
-				maxDuration, err = time.ParseDuration(maxDurationString)
-				if err != nil {
-					return nil, err
-				}
-			}
-			return duration{
-				min: minDuration,
-				max: maxDuration,
-			}, nil
-		}
-
-		return duration{}, nil
-	}
 	// nothing to compile, return nil
-	return nil, nil
+	if !hasMaxDuration && !hasMinDuration {
+		return nil, nil
+	}
+
+	minDuration, err := getDuration(minDurationVal)
+	if err != nil {
+		return nil, err
+	}
+
+	maxDuration, err := getDuration(maxDurationVal)
+	if err != nil {
+		return nil, err
+	}
+
+	return duration{
+		min: minDuration,
+		max: maxDuration,
+	}, nil
+
+}
+
+func getDuration(value any) (time.Duration, error) {
+	if value == nil {
+		return 0, nil
+	}
+
+	durationString, ok := value.(string)
+	if !ok {
+		return 0, fmt.Errorf("invalid duration, given %v", value)
+	}
+
+	return time.ParseDuration(durationString)
 }
 
 type humanBytes struct {
@@ -282,6 +283,9 @@ func compileHumanBytes(ctx *jsonschema.CompilerContext, m map[string]any) (jsons
 var (
 	//go:embed config.schema.json
 	JSONSchema []byte
+
+	//go:embed config_schema_generated.json
+	JSONSchemaGenerated []byte
 
 	hostnameRegexRFC1123 = regexp.MustCompile(hostnameRegexStringRFC1123)
 )
