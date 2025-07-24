@@ -1,12 +1,14 @@
 package middleware
 
 import (
-	"compress/gzip"
+	"bytes"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"compress/gzip"
 
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -45,8 +47,7 @@ func TestHandleCompression(t *testing.T) {
 					w.WriteHeader(http.StatusOK)
 				})
 
-				req, err := http.NewRequest(tc.method, "/", strings.NewReader("test"))
-				require.NoError(t, err)
+				req := httptest.NewRequest(tc.method, "/", strings.NewReader("test"))
 
 				HandleCompression(zap.NewNop())(next).ServeHTTP(recorder, req)
 
@@ -64,8 +65,7 @@ func TestHandleCompression(t *testing.T) {
 			w.WriteHeader(http.StatusOK)
 		})
 
-		req, err := http.NewRequest(http.MethodPost, "/", strings.NewReader("test"))
-		require.NoError(t, err)
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("test"))
 		req.Header.Set("Content-Encoding", "gzip, deflate")
 
 		HandleCompression(zap.NewNop())(next).ServeHTTP(recorder, req)
@@ -92,16 +92,14 @@ func TestHandleCompression(t *testing.T) {
 
 		// create gzip compressed request
 
-		var sb strings.Builder
-		w := gzip.NewWriter(&sb)
+		var buf bytes.Buffer
+		w := gzip.NewWriter(&buf)
 
 		_, err := w.Write([]byte("test"))
 		require.NoError(t, err)
-
 		require.NoError(t, w.Close())
 
-		req, err := http.NewRequest(http.MethodPost, "/", strings.NewReader(sb.String()))
-		require.NoError(t, err)
+		req := httptest.NewRequest(http.MethodPost, "/", &buf)
 		req.Header.Set("Content-Encoding", "gzip")
 
 		HandleCompression(zap.NewNop())(next).ServeHTTP(recorder, req)
@@ -118,8 +116,7 @@ func TestHandleCompression(t *testing.T) {
 			w.WriteHeader(http.StatusOK)
 		})
 
-		req, err := http.NewRequest(http.MethodPost, "/", strings.NewReader("test"))
-		require.NoError(t, err)
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("test"))
 		req.Header.Set("Content-Encoding", "gzip")
 
 		HandleCompression(zap.NewNop())(next).ServeHTTP(recorder, req)
@@ -136,8 +133,7 @@ func TestHandleCompression(t *testing.T) {
 			w.WriteHeader(http.StatusOK)
 		})
 
-		req, err := http.NewRequest(http.MethodPost, "/", strings.NewReader("test"))
-		require.NoError(t, err)
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("test"))
 		req.Header.Set("Content-Encoding", "deflate")
 
 		HandleCompression(zap.NewNop())(next).ServeHTTP(recorder, req)
@@ -155,8 +151,7 @@ func TestHandleCompression(t *testing.T) {
 			w.WriteHeader(http.StatusOK)
 		})
 
-		req, err := http.NewRequest(http.MethodPost, "/", strings.NewReader("test"))
-		require.NoError(t, err)
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("test"))
 
 		HandleCompression(zap.NewNop())(next).ServeHTTP(recorder, req)
 
