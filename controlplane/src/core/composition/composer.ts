@@ -164,7 +164,7 @@ export function subgraphDTOsToComposedSubgraphs(
         mapping: parseGRPCMapping(subgraph.proto.mappings),
         imageReference: new ImageReference({
           registry: process.env.PLUGIN_REGISTRY_URL || '',
-          repository: `/${organizationId}/${subgraph.id}`,
+          repository: `${organizationId}/${subgraph.id}`,
           reference: subgraph.proto.pluginData.version,
         }),
       };
