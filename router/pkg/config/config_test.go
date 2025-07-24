@@ -1291,4 +1291,158 @@ authentication:
 		require.ErrorContains(t, err, "oneOf failed, none matched")
 
 	})
+
+	t.Run("verify file mode is parsed correctly", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+access_logs:
+  enabled: true
+  output:
+    file:
+      enabled: true
+      path: ./access.log
+      file_mode: "640"
+`)
+		_, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+	})
+
+	t.Run("verify file mode is parsed correctly with leading zero", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+access_logs:
+  enabled: true
+  output:
+    file:
+      enabled: true
+      path: ./access.log
+      file_mode: "0640"
+`)
+		_, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+	})
+
+	t.Run("verify file mode throws an error when pattern is not matched", func(t *testing.T) {
+		t.Parallel()
+
+		invalidPatterns := []string{
+			// Too few digits
+			"0",
+			"00",
+			"64",
+
+			// Too many digits
+			"6440",
+			"06440",
+			"64400",
+			"640000",
+			"0640000",
+
+			// Invalid octal digits (8, 9)
+			"648",
+			"0648",
+			"659",
+			"0659",
+			"688",
+			"0688",
+			"789",
+			"0789",
+			"888",
+			"0888",
+			"999",
+			"0999",
+
+			// Non-numeric characters
+			"64A",
+			"064A",
+			"6BC",
+			"0ABC",
+			"invalid",
+			"abc",
+			"",
+
+			// Special characters
+			"64-",
+			"64+",
+			"64.",
+			"64/",
+			"64 ",
+			" 640",
+			"6 40",
+
+			// Leading zeros in wrong position
+			"6040",
+			"6400",
+			"64000",
+		}
+
+		for _, pattern := range invalidPatterns {
+			f := createTempFileFromFixture(t, `
+version: "1"
+
+access_logs:
+  enabled: true
+  output:
+    file:
+      enabled: true
+      path: ./access.log
+      file_mode: "`+pattern+`"
+`)
+			_, err := LoadConfig([]string{f})
+			require.Error(t, err, "Pattern '%s' should be invalid but was accepted", pattern)
+		}
+	})
+
+	t.Run("verify file mode accepts valid octal patterns", func(t *testing.T) {
+		t.Parallel()
+
+		validPatterns := []string{
+			// 3 digits without leading zero
+			"000",
+			"064",
+			"001",
+			"644",
+			"640",
+			"755",
+			"777",
+			"600",
+			"700",
+			"666",
+			"111",
+
+			// 3 digits with leading zero
+			"0000",
+			"0001",
+			"0644",
+			"0640",
+			"0755",
+			"0777",
+			"0600",
+			"0700",
+			"0666",
+			"0111",
+		}
+
+		for _, pattern := range validPatterns {
+			f := createTempFileFromFixture(t, `
+version: "1"
+
+access_logs:
+  enabled: true
+  output:
+    file:
+      enabled: true
+      path: ./access.log
+      file_mode: "`+pattern+`"
+`)
+			_, err := LoadConfig([]string{f})
+			require.NoError(t, err, "Pattern '%s' should be valid but was rejected", pattern)
+		}
+	})
 }

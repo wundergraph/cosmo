@@ -679,7 +679,7 @@
                 },
                 "file_mode": {
                   "type": "string",
-                  "description": "The file mode (permissions) for the log file as an octal string (e.g., '0640' or '640'). The default value is '0640'.",
+                  "description": "The file mode (permissions) for the log file as an octal string. Must be exactly 3 octal digits (0-7), optionally prefixed with '0' (e.g., '640', '0640', '755', '0755'). The default value is '0640'.",
                   "default": "0640",
                   "pattern": "^0?[0-7]{3}$"
                 }
