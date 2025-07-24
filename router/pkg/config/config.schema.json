@@ -676,6 +676,12 @@
                 "path": {
                   "type": "string",
                   "description": "The path to the log file. The path is used to specify the path to the log file."
+                },
+                "file_mode": {
+                  "type": "string",
+                  "description": "The file mode (permissions) for the log file as an octal string. Must be exactly 3 octal digits (0-7), optionally prefixed with '0' (e.g., '640', '0640', '755', '0755'). The default value is '0640'.",
+                  "default": "0640",
+                  "pattern": "^0?[0-7]{3}$"
                 }
               }
             }
@@ -2472,7 +2478,7 @@
               "default": 100,
               "minimum": 0
             },
-            "parser_total_fields_limit": {
+            "total_fields_limit": {
               "type": "integer",
               "description": "The total number of fields the parser will allow. Set to 0 to disable.",
               "default": 500,
