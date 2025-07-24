@@ -212,17 +212,11 @@ func humanBytesVocab() *jsonschema.Vocabulary {
 	schemaURL := "http://example.com/meta/humanBytes"
 	schema, err := jsonschema.UnmarshalJSON(strings.NewReader(`{
 	"properties" : {
-		"bytes": {
-			"type": "object",
-			"additionalProperties": false,
-			"properties": {
-				"minimum": {
-					"type": "string"
-				},	
-				"minimum": {
-					"type": "string"
-				}
-			}
+		"bytes_minimum": {
+			"type": "string"
+		},	
+		"bytes_maximum": {
+			"type": "string"
 		}
 	}
 }`))
@@ -247,37 +241,46 @@ func humanBytesVocab() *jsonschema.Vocabulary {
 }
 
 func compileHumanBytes(ctx *jsonschema.CompilerContext, m map[string]any) (jsonschema.SchemaExt, error) {
-	if val, ok := m["bytes"]; ok {
+	maxBytesVal, hasMaxBytes := m["bytes_maximum"]
+	minBytesVal, hasMinBytes := m["bytes_minimum"]
 
-		if mapVal, ok := val.(map[string]interface{}); ok {
-			var minBytes, maxBytes uint64
-			var err error
-
-			minBytesString, ok := mapVal["minimum"].(string)
-			if ok {
-				minBytes, err = humanize.ParseBytes(minBytesString)
-				if err != nil {
-					return nil, err
-				}
-			}
-			maxBytesString, ok := mapVal["maximum"].(string)
-			if ok {
-				maxBytes, err = humanize.ParseBytes(maxBytesString)
-				if err != nil {
-					return nil, err
-				}
-			}
-			return humanBytes{
-				min: minBytes,
-				max: maxBytes,
-			}, nil
-		}
-
-		return humanBytes{}, nil
+	if !hasMaxBytes && !hasMinBytes {
+		// nothing to compile, return nil
+		return nil, nil
 	}
 
-	// nothing to compile, return nil
-	return nil, nil
+	minBytes, err := getHumanBytes(minBytesVal)
+	if err != nil {
+		return nil, err
+	}
+
+	maxBytes, err := getHumanBytes(maxBytesVal)
+	if err != nil {
+		return nil, err
+	}
+
+	return humanBytes{
+		min: minBytes,
+		max: maxBytes,
+	}, nil
+}
+
+func getHumanBytes(value any) (uint64, error) {
+	if value == nil {
+		return 0, nil
+	}
+
+	bytesString, ok := value.(string)
+	if !ok {
+		return 0, fmt.Errorf("invalid bytes, given %v", value)
+	}
+
+	bytesValue, err := humanize.ParseBytes(bytesString)
+	if err != nil {
+		return 0, err
+	}
+
+	return bytesValue, nil
 }
 
 var (
