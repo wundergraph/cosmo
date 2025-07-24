@@ -40,21 +40,21 @@ type CustomStaticAttribute struct {
 }
 
 type CustomDynamicAttribute struct {
-	RequestHeader  string `yaml:"request_header,omitempty"`  // The name of the request header from which to extract the value.
-	ContextField   string `yaml:"context_field,omitempty"`   // The field name of the context from which to extract the value.
-	ResponseHeader string `yaml:"response_header,omitempty"` // The name of the response header from which to extract the value.
-	Expression     string `yaml:"expression,omitempty"`      // The expression used to evaluate to extract a value for logging.
+	RequestHeader  string `yaml:"request_header,omitempty"`  // The name of the request header from which to extract the value. The value is only extracted when a request context is available otherwise the default value is used.
+	ContextField   string `yaml:"context_field,omitempty"`   // The field name of the context from which to extract the value. The value is only extracted when a context is available otherwise the default value is used.
+	ResponseHeader string `yaml:"response_header,omitempty"` // The name of the response header from which to extract the value. The value is only extracted for subgraph access logs.
+	Expression     string `yaml:"expression,omitempty"`      // The expression used to evaluate to extract a value for logging. The expression is specified as a string. Please see https://expr-lang.org/ for more information on constructing expressions.
 }
 
 type CustomAttribute struct {
 	Key       string                  `yaml:"key"`                  // The key of the field.
-	Default   string                  `yaml:"default"`              // The default value of the field. If the value is not set, value_from is used.
-	ValueFrom *CustomDynamicAttribute `yaml:"value_from,omitempty"` // Defines a source for the field value e.g. from a request header.
+	Default   string                  `yaml:"default"`              // The default value of the field. If the value is not set, value_from is used. If both value and value_from are set, value_from has precedence and in case of a missing value_from, the default value is used.
+	ValueFrom *CustomDynamicAttribute `yaml:"value_from,omitempty"` // Defines a source for the field value e.g. from a request header or request context. If both default and value_from are set, value_from has precedence.
 }
 
 type TracingExporterConfig struct {
-	BatchTimeout  time.Duration `yaml:"batch_timeout,omitempty" envDefault:"10s"`  // The maximum time to wait before exporting the traces. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.
-	ExportTimeout time.Duration `yaml:"export_timeout,omitempty" envDefault:"30s"` // The maximum time to wait for the export to complete. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.
+	BatchTimeout  time.Duration `yaml:"batch_timeout,omitempty" envDefault:"10s" jsonschema:"default=10s" jsonschema_extras:"duration_minimum=5s,duration_maximum=2m"`  // The maximum time to wait before exporting the traces. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.
+	ExportTimeout time.Duration `yaml:"export_timeout,omitempty" envDefault:"30s" jsonschema:"default=30s" jsonschema_extras:"duration_minimum=5s,duration_maximum=2m"` // The maximum time to wait for the export to complete. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.
 }
 
 type TracingGlobalFeatures struct {
@@ -83,7 +83,7 @@ type Tracing struct {
 	Exporters           []TracingExporter   `yaml:"exporters"`                                                                                           // The exporters to use to export the traces. If no exporters are specified, the default Cosmo Cloud exporter is used. If you override, please make sure to include the default exporter.
 	Propagation         PropagationConfig   `yaml:"propagation"`
 	ResponseTraceHeader ResponseTraceHeader `yaml:"response_trace_id"` // The configuration to expose the trace_id through a response header.
-	Attributes          []CustomAttribute   `yaml:"attributes"`        // Custom span attributes for subgraphs
+	Attributes          []CustomAttribute   `yaml:"attributes"`        // The configuration for custom span attributes for subgraph tracing.
 
 	TracingGlobalFeatures `yaml:",inline"`
 }
@@ -130,7 +130,7 @@ type MetricsOTLPExporter struct {
 }
 
 type Metrics struct {
-	Attributes       []CustomAttribute `yaml:"attributes"`                                                                                // The attributes to add to OTLP Metrics and Prometheus.
+	Attributes       []CustomAttribute `yaml:"attributes"`                                                                                // The configuration for custom attributes. Custom attributes can be created from request headers, static values or context fields. Not every context fields are available at all request life-cycle stages. If a value is a list, the value is JSON encoded for OTLP. For Prometheus, the values are exploded into multiple metrics with unique labels. Keep in mind, that every new custom attribute increases the cardinality.
 	OTLP             MetricsOTLP       `yaml:"otlp"`                                                                                      // The configuration for the OpenTelemetry protocol (OTLP). The OTLP is used to collect and export the metrics.
 	Prometheus       Prometheus        `yaml:"prometheus"`                                                                                // The configuration for the Prometheus metrics. The Prometheus metrics are used to collect and export the metrics.
 	CardinalityLimit int               `yaml:"experiment_cardinality_limit" envDefault:"2000" env:"METRICS_EXPERIMENT_CARDINALITY_LIMIT"` // Sets a hard limit on the number of Metric Points that can be collected during a collection cycle. NOTE: This option is experimental and may change in future versions.
@@ -157,17 +157,17 @@ type Telemetry struct {
 }
 
 type CORS struct {
-	Enabled          bool          `yaml:"enabled" envDefault:"true" env:"CORS_ENABLED"`                                           // Set this to enable/disable the CORS middleware. It is enabled by default. When disabled, the rest of the properties for CORS have no effect.
-	AllowOrigins     []string      `yaml:"allow_origins" envDefault:"*" env:"CORS_ALLOW_ORIGINS"`                                  // The allowed origins. The default value is to allow all origins. The value can be a list of origins or the wildcard '*'.
-	AllowMethods     []string      `yaml:"allow_methods" envDefault:"HEAD,GET,POST" env:"CORS_ALLOW_METHODS"`                      // The allowed HTTP methods. The default value is to allow the methods 'GET', 'POST', and 'HEAD'.
-	AllowHeaders     []string      `yaml:"allow_headers" envDefault:"Origin,Content-Length,Content-Type" env:"CORS_ALLOW_HEADERS"` // The allowed HTTP headers. The default value is to allow all headers. Default headers are always appended to the list of allowed headers.
-	AllowCredentials bool          `yaml:"allow_credentials" envDefault:"true" env:"CORS_ALLOW_CREDENTIALS"`                       // The allowed credentials. The default value is to allow credentials. This allows the browser to send cookies and authentication headers.
-	MaxAge           time.Duration `yaml:"max_age" envDefault:"5m" env:"CORS_MAX_AGE"`                                             // The maximum age of the preflight request. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.
+	Enabled          bool          `yaml:"enabled" envDefault:"true" env:"CORS_ENABLED"`                                                               // Set this to enable/disable the CORS middleware. It is enabled by default. When disabled, the rest of the properties for CORS have no effect.
+	AllowOrigins     []string      `yaml:"allow_origins" envDefault:"*" env:"CORS_ALLOW_ORIGINS"`                                                      // The allowed origins. The default value is to allow all origins. The value can be a list of origins or the wildcard '*'.
+	AllowMethods     []string      `yaml:"allow_methods" envDefault:"HEAD,GET,POST" env:"CORS_ALLOW_METHODS"`                                          // The allowed HTTP methods. The default value is to allow the methods 'GET', 'POST', and 'HEAD'.
+	AllowHeaders     []string      `yaml:"allow_headers" envDefault:"Origin,Content-Length,Content-Type" env:"CORS_ALLOW_HEADERS"`                     // The allowed HTTP headers. The default value is to allow all headers. Default headers are always appended to the list of allowed headers.
+	AllowCredentials bool          `yaml:"allow_credentials" envDefault:"true" env:"CORS_ALLOW_CREDENTIALS"`                                           // The allowed credentials. The default value is to allow credentials. This allows the browser to send cookies and authentication headers.
+	MaxAge           time.Duration `yaml:"max_age" envDefault:"5m" env:"CORS_MAX_AGE" jsonschema:"default=5m" jsonschema_extras:"duration_minimum=5m"` // The maximum age of the preflight request. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.
 }
 
 type TrafficShapingRules struct {
-	All       GlobalSubgraphRequestRule             `yaml:"all"`                 // The configuration for all subgraph. The configuration is used to configure the traffic shaping for all subgraphs.
-	Router    RouterTrafficConfiguration            `yaml:"router"`              // The configuration for requests from clients to the router
+	All       GlobalSubgraphRequestRule             `yaml:"all"`                 // The configuration for all subgraphs. The configuration is used to configure the traffic shaping for all subgraphs.
+	Router    RouterTrafficConfiguration            `yaml:"router"`              // The configuration for requests from clients to the router.
 	Subgraphs map[string]*GlobalSubgraphRequestRule `yaml:"subgraphs,omitempty"` // The configuration to control traffic shaping for specific subgraphs. These rules are applied to requests from the router to subgraphs. The key is the subgraph name.
 }
 
@@ -189,13 +189,13 @@ type GlobalSubgraphRequestRule struct {
 
 	// See https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/
 
-	RequestTimeout         *time.Duration `yaml:"request_timeout,omitempty" envDefault:"60s"`           // The request timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.
-	DialTimeout            *time.Duration `yaml:"dial_timeout,omitempty" envDefault:"30s"`              // The dial timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.
-	ResponseHeaderTimeout  *time.Duration `yaml:"response_header_timeout,omitempty" envDefault:"0s"`    // The response header timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.
-	ExpectContinueTimeout  *time.Duration `yaml:"expect_continue_timeout,omitempty" envDefault:"0s"`    // The expect continue timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.
-	TLSHandshakeTimeout    *time.Duration `yaml:"tls_handshake_timeout,omitempty" envDefault:"10s"`     // The TLS handshake timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.
-	KeepAliveIdleTimeout   *time.Duration `yaml:"keep_alive_idle_timeout,omitempty" envDefault:"90s"`   // The keep alive idle timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.
-	KeepAliveProbeInterval *time.Duration `yaml:"keep_alive_probe_interval,omitempty" envDefault:"30s"` // The keep alive probe interval. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.
+	RequestTimeout         *time.Duration `yaml:"request_timeout,omitempty" envDefault:"60s" jsonschema_extras:"duration_minimum=1s"`           // The request timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.
+	DialTimeout            *time.Duration `yaml:"dial_timeout,omitempty" envDefault:"30s"`                                                      // The dial timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.
+	ResponseHeaderTimeout  *time.Duration `yaml:"response_header_timeout,omitempty" envDefault:"0s"`                                            // The response header timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.
+	ExpectContinueTimeout  *time.Duration `yaml:"expect_continue_timeout,omitempty" envDefault:"0s"`                                            // The expect continue timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.
+	TLSHandshakeTimeout    *time.Duration `yaml:"tls_handshake_timeout,omitempty" envDefault:"10s"`                                             // The TLS handshake timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.
+	KeepAliveIdleTimeout   *time.Duration `yaml:"keep_alive_idle_timeout,omitempty" envDefault:"90s"`                                           // The keep alive idle timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.
+	KeepAliveProbeInterval *time.Duration `yaml:"keep_alive_probe_interval,omitempty" envDefault:"30s" jsonschema_extras:"duration_minimum=5s"` // The keep alive probe interval. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.
 
 	// Connection configuration
 
@@ -209,16 +209,16 @@ type SubgraphTrafficRequestRule struct {
 }
 
 type CircuitBreaker struct {
-	Enabled                    bool          `yaml:"enabled" envDefault:"false"`                 // Enable the circuit breaker
-	ErrorThresholdPercentage   int64         `yaml:"error_threshold_percentage" envDefault:"50"` // The error threshold percentage that needs to be met in the rolling window to trigger the circuit to an open state
-	RequestThreshold           int64         `yaml:"request_threshold" envDefault:"20"`          // The min number of pre-requisite requests required to start checking if the circuit breaker's status should be changed
-	SleepWindow                time.Duration `yaml:"sleep_window" envDefault:"5s"`               // After the circuit breaker is open, how long the circuit breaker will reject requests before allowing to send a half open request
-	HalfOpenAttempts           int64         `yaml:"half_open_attempts" envDefault:"1"`          // How many failed attempts are allowed to check if an open circuit can now make successful requests
-	RequiredSuccessfulAttempts int64         `yaml:"required_successful" envDefault:"1"`         // How many successful requests are required for a half open circuit breaker to close it
-	RollingDuration            time.Duration `yaml:"rolling_duration" envDefault:"10s"`          // The duration of which information on failed and successful requests are stored
-	NumBuckets                 int           `yaml:"num_buckets" envDefault:"10"`                // The number of buckets which store circuit requests information within a given rolling duration
-	ExecutionTimeout           time.Duration `yaml:"execution_timeout" envDefault:"60s"`         // The maximum time to wait for a circuit execution to complete before timing out
-	MaxConcurrentRequests      int64         `yaml:"max_concurrent_requests" envDefault:"-1"`    // The maximum number of concurrent requests allowed through the circuit breaker
+	Enabled                    bool          `yaml:"enabled" envDefault:"false"`                                                                                                 // Enable the circuit breaker
+	ErrorThresholdPercentage   int64         `yaml:"error_threshold_percentage" envDefault:"50"`                                                                                 // The error threshold percentage that needs to be met in the rolling window to trigger the circuit to an open state
+	RequestThreshold           int64         `yaml:"request_threshold" envDefault:"20"`                                                                                          // The min number of pre-requisite requests required to start checking if the circuit breaker's status should be changed
+	SleepWindow                time.Duration `yaml:"sleep_window" envDefault:"5s" jsonschema:"default=5s" jsonschema_extras:"duration_minimum=250ms,duration_maximum=2m"`        // After the circuit breaker is open, how long the circuit breaker will reject requests before allowing to send a half open request
+	HalfOpenAttempts           int64         `yaml:"half_open_attempts" envDefault:"1"`                                                                                          // How many failed attempts are allowed to check if an open circuit can now make successful requests
+	RequiredSuccessfulAttempts int64         `yaml:"required_successful" envDefault:"1"`                                                                                         // How many successful requests are required for a half open circuit breaker to close it
+	RollingDuration            time.Duration `yaml:"rolling_duration" envDefault:"10s" jsonschema:"default=10s" jsonschema_extras:"duration_minimum=5s,duration_maximum=120s"`   // The duration of which information on failed and successful requests are stored
+	NumBuckets                 int           `yaml:"num_buckets" envDefault:"10"`                                                                                                // The number of buckets which store circuit requests information within a given rolling duration
+	ExecutionTimeout           time.Duration `yaml:"execution_timeout" envDefault:"60s" jsonschema:"default=60s" jsonschema_extras:"duration_minimum=1ms,duration_maximum=300s"` // The maximum time to wait for a circuit execution to complete before timing out
+	MaxConcurrentRequests      int64         `yaml:"max_concurrent_requests" envDefault:"-1"`                                                                                    // The maximum number of concurrent requests allowed through the circuit breaker
 }
 
 type GraphqlMetrics struct {
@@ -358,33 +358,33 @@ type EngineDebugConfiguration struct {
 }
 
 type EngineExecutionConfiguration struct {
-	Debug                                            EngineDebugConfiguration `yaml:"debug"`                                                                                                                                                                    // The debug configuration. The debug configuration is used to enable the debug mode for the engine.
-	EnableSingleFlight                               bool                     `envDefault:"true" env:"ENGINE_ENABLE_SINGLE_FLIGHT" yaml:"enable_single_flight" jsonschema:"default=true"`                                                                       // Enable the single flight. The single flight is used to deduplicate the requests to the same subgraphs.
-	EnableRequestTracing                             bool                     `envDefault:"true" env:"ENGINE_ENABLE_REQUEST_TRACING" yaml:"enable_request_tracing" jsonschema:"default=true"`                                                                   // Enable the advanced request tracing. See https://cosmo-docs.wundergraph.com/router/advanced-request-tracing-art for more information.
-	EnableExecutionPlanCacheResponseHeader           bool                     `envDefault:"false" env:"ENGINE_ENABLE_EXECUTION_PLAN_CACHE_RESPONSE_HEADER" yaml:"enable_execution_plan_cache_response_header"`                                                  // Enable the execution plan cache response header. The execution plan cache response header is used to cache the execution plan in the client.
-	MaxConcurrentResolvers                           int                      `envDefault:"1024" env:"ENGINE_MAX_CONCURRENT_RESOLVERS" yaml:"max_concurrent_resolvers,omitempty" jsonschema:"default=1024"`                                                     // The maximum number of concurrent resolvers. The higher the number, the more requests can be processed in parallel but at the cost of more memory usage.
-	EnableNetPoll                                    bool                     `envDefault:"true" env:"ENGINE_ENABLE_NET_POLL" yaml:"enable_net_poll" jsonschema:"default=true"`                                                                                 // Enables the more efficient poll implementation for all WebSocket implementations (client, server) of the router. This is only available on Linux and MacOS. On Windows or when the host system is limited, the default synchronous implementation is used.
-	WebSocketClientPollTimeout                       time.Duration            `envDefault:"1s" env:"ENGINE_WEBSOCKET_CLIENT_POLL_TIMEOUT" yaml:"websocket_client_poll_timeout,omitempty" jsonschema:"default=1s"`                                               // The timeout for the poll loop of the WebSocket client implementation. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.
-	WebSocketClientConnBufferSize                    int                      `envDefault:"128" env:"ENGINE_WEBSOCKET_CLIENT_CONN_BUFFER_SIZE" yaml:"websocket_client_conn_buffer_size,omitempty" jsonschema:"default=128"`                                     // The buffer size for the poll buffer of the WebSocket client implementation. The buffer size determines how many connections can be handled in one loop.
-	WebSocketClientReadTimeout                       time.Duration            `envDefault:"5s" env:"ENGINE_WEBSOCKET_CLIENT_READ_TIMEOUT" yaml:"websocket_client_read_timeout,omitempty" jsonschema:"default=5s"`                                               // Defines the timeout for the websocket read of the WebSocket client implementation. This is used to set the read deadline for the connection. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.
-	WebSocketClientWriteTimeout                      time.Duration            `envDefault:"10s" env:"ENGINE_WEBSOCKET_CLIENT_WRITE_TIMEOUT" yaml:"websocket_client_write_timeout,omitempty" jsonschema:"default=10s"`                                           // Defines the timeout for the websocket write of the WebSocket client implementation. This is used to set the write deadline for the connection. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.
-	WebSocketClientPingInterval                      time.Duration            `envDefault:"15s" env:"ENGINE_WEBSOCKET_CLIENT_PING_INTERVAL" yaml:"websocket_client_ping_interval,omitempty" jsonschema:"default=15s"`                                           // The Websocket client ping interval to the subgraph. Defines how often the router will ping the subgraph to signal that the connection is still alive. Timeout needs to be coordinated with the subgraph. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.
-	WebSocketClientPingTimeout                       time.Duration            `envDefault:"30s" env:"ENGINE_WEBSOCKET_CLIENT_PING_TIMEOUT" yaml:"websocket_client_ping_timeout,omitempty" jsonschema:"default=30s"`                                             // The Websocket client ping timeout to the subgraph. Defines how long the router will wait for a ping response from the subgraph. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.
-	WebSocketClientFrameTimeout                      time.Duration            `envDefault:"100ms" env:"ENGINE_WEBSOCKET_CLIENT_FRAME_TIMEOUT" yaml:"websocket_client_frame_timeout,omitempty" jsonschema:"default=100ms"`                                       // The Websocket client frame timeout to the subgraph. Defines how long the router will wait for a frame response from the subgraph. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.
-	ExecutionPlanCacheSize                           int64                    `envDefault:"1024" env:"ENGINE_EXECUTION_PLAN_CACHE_SIZE" yaml:"execution_plan_cache_size,omitempty" jsonschema:"default=1024"`                                                   // The size of the execution plan cache.
-	MinifySubgraphOperations                         bool                     `envDefault:"true" env:"ENGINE_MINIFY_SUBGRAPH_OPERATIONS" yaml:"minify_subgraph_operations" jsonschema:"default=true"`                                                           // Minify the subgraph operations. If the value is true, GraphQL Operations get minified after planning. This reduces the amount of GraphQL AST nodes the Subgraph has to parse, which ultimately saves CPU time and memory, resulting in faster response times.
-	EnablePersistedOperationsCache                   bool                     `envDefault:"true" env:"ENGINE_ENABLE_PERSISTED_OPERATIONS_CACHE" yaml:"enable_persisted_operations_cache" jsonschema:"default=true"`                                             // Enable the persisted operations cache. The persisted operations cache is used to cache normalized persisted operations to improve performance.
-	EnableNormalizationCache                         bool                     `envDefault:"true" env:"ENGINE_ENABLE_NORMALIZATION_CACHE" yaml:"enable_normalization_cache" jsonschema:"default=true"`                                                           // Enable the normalization cache. The normalization cache is used to cache normalized operations to improve performance.
-	NormalizationCacheSize                           int64                    `envDefault:"1024" env:"ENGINE_NORMALIZATION_CACHE_SIZE" yaml:"normalization_cache_size,omitempty" jsonschema:"default=1024"`                                                     // The size of the normalization cache.
-	OperationHashCacheSize                           int64                    `envDefault:"2048" env:"ENGINE_OPERATION_HASH_CACHE_SIZE" yaml:"operation_hash_cache_size,omitempty" jsonschema:"default=2048"`                                                   // The size of the Operation Hash Cache. This should be larger than the plan cache because the hash is computed on the original query.
-	ParseKitPoolSize                                 int                      `envDefault:"16" env:"ENGINE_PARSEKIT_POOL_SIZE" yaml:"parsekit_pool_size,omitempty" jsonschema:"default=8"`                                                                      // The size of the ParseKit pool. The ParseKit pool provides re-usable Resources for parsing, normalizing, validating and planning GraphQL Operations. Setting the pool size to a value much higher than the number of CPU Threads available will not improve performance, but only increase memory usage.
-	EnableValidationCache                            bool                     `envDefault:"true" env:"ENGINE_ENABLE_VALIDATION_CACHE" yaml:"enable_validation_cache" jsonschema:"default=true"`                                                                 // Enable the validation cache. The validation cache is used to cache results of validating GraphQL Operations.
-	ValidationCacheSize                              int64                    `envDefault:"1024" env:"ENGINE_VALIDATION_CACHE_SIZE" yaml:"validation_cache_size,omitempty" jsonschema:"default=1024"`                                                           // The size of the validation cache.
-	DisableExposingVariablesContentOnValidationError bool                     `envDefault:"false" env:"ENGINE_DISABLE_EXPOSING_VARIABLES_CONTENT_ON_VALIDATION_ERROR" yaml:"disable_exposing_variables_content_on_validation_error" jsonschema:"default=false"` // Disables exposing the variables content in the error response. This is useful to avoid leaking sensitive information in the error response.
-	ResolverMaxRecyclableParserSize                  int                      `envDefault:"32768" env:"ENGINE_RESOLVER_MAX_RECYCLABLE_PARSER_SIZE" yaml:"resolver_max_recyclable_parser_size,omitempty" jsonschema:"default=32768"`                             // Limits the size of the Parser that can be recycled back into the Pool. If set to 0, no limit is applied. This helps keep the Heap size more maintainable if you regularly perform large queries.
-	EnableSubgraphFetchOperationName                 bool                     `envDefault:"false" env:"ENGINE_ENABLE_SUBGRAPH_FETCH_OPERATION_NAME" yaml:"enable_subgraph_fetch_operation_name" jsonschema:"default=false"`                                     // Enable appending the operation name to subgraph fetches. This will ensure that the operation name will be included in the corresponding subgraph requests using the following format: $operationName__$subgraphName__$sequenceID.
-	DisableVariablesRemapping                        bool                     `envDefault:"false" env:"ENGINE_DISABLE_VARIABLES_REMAPPING" yaml:"disable_variables_remapping" jsonschema:"default=false"`                                                       // Disables variables renaming during normalization. This option could have a negative impact on planner cache hits.
-	SubscriptionFetchTimeout                         time.Duration            `envDefault:"30s" env:"ENGINE_SUBSCRIPTION_FETCH_TIMEOUT" yaml:"subscription_fetch_timeout,omitempty" jsonschema:"default=30s"`                                                   // The maximum time a subscription fetch can take before it is considered timed out. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.
+	Debug                                            EngineDebugConfiguration `yaml:"debug"`                                                                                                                                                                        // The debug configuration. The debug configuration is used to enable the debug mode for the engine.
+	EnableSingleFlight                               bool                     `envDefault:"true" env:"ENGINE_ENABLE_SINGLE_FLIGHT" yaml:"enable_single_flight" jsonschema:"default=true"`                                                                           // Enable the single flight. The single flight is used to deduplicate the requests to the same subgraphs.
+	EnableRequestTracing                             bool                     `envDefault:"true" env:"ENGINE_ENABLE_REQUEST_TRACING" yaml:"enable_request_tracing" jsonschema:"default=true"`                                                                       // Enable the advanced request tracing. See https://cosmo-docs.wundergraph.com/router/advanced-request-tracing-art for more information.
+	EnableExecutionPlanCacheResponseHeader           bool                     `envDefault:"false" env:"ENGINE_ENABLE_EXECUTION_PLAN_CACHE_RESPONSE_HEADER" yaml:"enable_execution_plan_cache_response_header"`                                                      // Enable the execution plan cache response header. The execution plan cache response header is used to cache the execution plan in the client.
+	MaxConcurrentResolvers                           int                      `envDefault:"1024" env:"ENGINE_MAX_CONCURRENT_RESOLVERS" yaml:"max_concurrent_resolvers,omitempty" jsonschema:"default=1024"`                                                         // The maximum number of concurrent resolvers. The higher the number, the more requests can be processed in parallel but at the cost of more memory usage.
+	EnableNetPoll                                    bool                     `envDefault:"true" env:"ENGINE_ENABLE_NET_POLL" yaml:"enable_net_poll" jsonschema:"default=true"`                                                                                     // Enables the more efficient poll implementation for all WebSocket implementations (client, server) of the router. This is only available on Linux and MacOS. On Windows or when the host system is limited, the default synchronous implementation is used.
+	WebSocketClientPollTimeout                       time.Duration            `envDefault:"1s" env:"ENGINE_WEBSOCKET_CLIENT_POLL_TIMEOUT" yaml:"websocket_client_poll_timeout,omitempty" jsonschema:"default=1s"`                                                   // The timeout for the poll loop of the WebSocket client implementation. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.
+	WebSocketClientConnBufferSize                    int                      `envDefault:"128" env:"ENGINE_WEBSOCKET_CLIENT_CONN_BUFFER_SIZE" yaml:"websocket_client_conn_buffer_size,omitempty" jsonschema:"default=128"`                                         // The buffer size for the poll buffer of the WebSocket client implementation. The buffer size determines how many connections can be handled in one loop.
+	WebSocketClientReadTimeout                       time.Duration            `envDefault:"5s" env:"ENGINE_WEBSOCKET_CLIENT_READ_TIMEOUT" yaml:"websocket_client_read_timeout,omitempty" jsonschema:"default=5s"`                                                   // Defines the timeout for the websocket read of the WebSocket client implementation. This is used to set the read deadline for the connection. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.
+	WebSocketClientWriteTimeout                      time.Duration            `envDefault:"10s" env:"ENGINE_WEBSOCKET_CLIENT_WRITE_TIMEOUT" yaml:"websocket_client_write_timeout,omitempty" jsonschema:"default=10s"`                                               // Defines the timeout for the websocket write of the WebSocket client implementation. This is used to set the write deadline for the connection. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.
+	WebSocketClientPingInterval                      time.Duration            `envDefault:"15s" env:"ENGINE_WEBSOCKET_CLIENT_PING_INTERVAL" yaml:"websocket_client_ping_interval,omitempty" jsonschema:"default=15s" jsonschema_extras:"duration_minimum=5s"`       // The Websocket client ping interval to the subgraph. Defines how often the router will ping the subgraph to signal that the connection is still alive. Timeout needs to be coordinated with the subgraph. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.
+	WebSocketClientPingTimeout                       time.Duration            `envDefault:"30s" env:"ENGINE_WEBSOCKET_CLIENT_PING_TIMEOUT" yaml:"websocket_client_ping_timeout,omitempty" jsonschema:"default=30s" jsonschema_extras:"duration_minimum=5s"`         // The Websocket client ping timeout to the subgraph. Defines how long the router will wait for a ping response from the subgraph. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.
+	WebSocketClientFrameTimeout                      time.Duration            `envDefault:"100ms" env:"ENGINE_WEBSOCKET_CLIENT_FRAME_TIMEOUT" yaml:"websocket_client_frame_timeout,omitempty" jsonschema:"default=100ms" jsonschema_extras:"duration_minimum=10ms"` // The Websocket client frame timeout to the subgraph. Defines how long the router will wait for a frame response from the subgraph. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.
+	ExecutionPlanCacheSize                           int64                    `envDefault:"1024" env:"ENGINE_EXECUTION_PLAN_CACHE_SIZE" yaml:"execution_plan_cache_size,omitempty" jsonschema:"default=1024"`                                                       // The size of the execution plan cache.
+	MinifySubgraphOperations                         bool                     `envDefault:"true" env:"ENGINE_MINIFY_SUBGRAPH_OPERATIONS" yaml:"minify_subgraph_operations" jsonschema:"default=true"`                                                               // Minify the subgraph operations. If the value is true, GraphQL Operations get minified after planning. This reduces the amount of GraphQL AST nodes the Subgraph has to parse, which ultimately saves CPU time and memory, resulting in faster response times.
+	EnablePersistedOperationsCache                   bool                     `envDefault:"true" env:"ENGINE_ENABLE_PERSISTED_OPERATIONS_CACHE" yaml:"enable_persisted_operations_cache" jsonschema:"default=true"`                                                 // Enable the persisted operations cache. The persisted operations cache is used to cache normalized persisted operations to improve performance.
+	EnableNormalizationCache                         bool                     `envDefault:"true" env:"ENGINE_ENABLE_NORMALIZATION_CACHE" yaml:"enable_normalization_cache" jsonschema:"default=true"`                                                               // Enable the normalization cache. The normalization cache is used to cache normalized operations to improve performance.
+	NormalizationCacheSize                           int64                    `envDefault:"1024" env:"ENGINE_NORMALIZATION_CACHE_SIZE" yaml:"normalization_cache_size,omitempty" jsonschema:"default=1024"`                                                         // The size of the normalization cache.
+	OperationHashCacheSize                           int64                    `envDefault:"2048" env:"ENGINE_OPERATION_HASH_CACHE_SIZE" yaml:"operation_hash_cache_size,omitempty" jsonschema:"default=2048"`                                                       // The size of the Operation Hash Cache. This should be larger than the plan cache because the hash is computed on the original query.
+	ParseKitPoolSize                                 int                      `envDefault:"16" env:"ENGINE_PARSEKIT_POOL_SIZE" yaml:"parsekit_pool_size,omitempty" jsonschema:"default=8"`                                                                          // The size of the ParseKit pool. The ParseKit pool provides re-usable Resources for parsing, normalizing, validating and planning GraphQL Operations. Setting the pool size to a value much higher than the number of CPU Threads available will not improve performance, but only increase memory usage.
+	EnableValidationCache                            bool                     `envDefault:"true" env:"ENGINE_ENABLE_VALIDATION_CACHE" yaml:"enable_validation_cache" jsonschema:"default=true"`                                                                     // Enable the validation cache. The validation cache is used to cache results of validating GraphQL Operations.
+	ValidationCacheSize                              int64                    `envDefault:"1024" env:"ENGINE_VALIDATION_CACHE_SIZE" yaml:"validation_cache_size,omitempty" jsonschema:"default=1024"`                                                               // The size of the validation cache.
+	DisableExposingVariablesContentOnValidationError bool                     `envDefault:"false" env:"ENGINE_DISABLE_EXPOSING_VARIABLES_CONTENT_ON_VALIDATION_ERROR" yaml:"disable_exposing_variables_content_on_validation_error" jsonschema:"default=false"`     // Disables exposing the variables content in the error response. This is useful to avoid leaking sensitive information in the error response.
+	ResolverMaxRecyclableParserSize                  int                      `envDefault:"32768" env:"ENGINE_RESOLVER_MAX_RECYCLABLE_PARSER_SIZE" yaml:"resolver_max_recyclable_parser_size,omitempty" jsonschema:"default=32768"`                                 // Limits the size of the Parser that can be recycled back into the Pool. If set to 0, no limit is applied. This helps keep the Heap size more maintainable if you regularly perform large queries.
+	EnableSubgraphFetchOperationName                 bool                     `envDefault:"false" env:"ENGINE_ENABLE_SUBGRAPH_FETCH_OPERATION_NAME" yaml:"enable_subgraph_fetch_operation_name" jsonschema:"default=false"`                                         // Enable appending the operation name to subgraph fetches. This will ensure that the operation name will be included in the corresponding subgraph requests using the following format: $operationName__$subgraphName__$sequenceID.
+	DisableVariablesRemapping                        bool                     `envDefault:"false" env:"ENGINE_DISABLE_VARIABLES_REMAPPING" yaml:"disable_variables_remapping" jsonschema:"default=false"`                                                           // Disables variables renaming during normalization. This option could have a negative impact on planner cache hits.
+	SubscriptionFetchTimeout                         time.Duration            `envDefault:"30s" env:"ENGINE_SUBSCRIPTION_FETCH_TIMEOUT" yaml:"subscription_fetch_timeout,omitempty" jsonschema:"default=30s"`                                                       // The maximum time a subscription fetch can take before it is considered timed out. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.
 }
 
 type BlockOperationConfiguration struct {
@@ -452,9 +452,9 @@ type OverridesConfiguration struct {
 }
 
 type JWKSConfiguration struct {
-	URL             HttpUrlString `yaml:"url"`                                                                       // The URL of the JWKs.
-	Algorithms      []string      `yaml:"algorithms"`                                                                // The allowed algorithms for the keys that are retrieved from the JWKs.
-	RefreshInterval time.Duration `yaml:"refresh_interval" envDefault:"1m" jsonschema:"default=1m"` // The interval at which the JWKs are refreshed.
+	URL             HttpUrlString `yaml:"url"`                                                                                              // The URL of the JWKs.
+	Algorithms      []string      `yaml:"algorithms"`                                                                                       // The allowed algorithms for the keys that are retrieved from the JWKs.
+	RefreshInterval time.Duration `yaml:"refresh_interval" envDefault:"1m" jsonschema:"default=1m" jsonschema_extras:"duration_minimum=5s"` // The interval at which the JWKs are refreshed.
 
 	// For secret based where we need to create a jwk  entry with
 	// a key id and algorithm
@@ -514,7 +514,7 @@ type RedisConfiguration struct {
 type RateLimitSimpleStrategy struct {
 	Rate                           int           `yaml:"rate" envDefault:"10" env:"RATE_LIMIT_SIMPLE_RATE" jsonschema:"default=10"`                                                                   // The rate at which the requests are allowed. The rate is specified as a number of requests per second.
 	Burst                          int           `yaml:"burst" envDefault:"10" env:"RATE_LIMIT_SIMPLE_BURST" jsonschema:"default=10"`                                                                 // The maximum number of requests that are allowed to exceed the rate. The burst is specified as a number of requests.
-	Period                         time.Duration `yaml:"period" envDefault:"1s" env:"RATE_LIMIT_SIMPLE_PERIOD" jsonschema:"default=1s"`                                                               // The period of time over which the rate limit is enforced. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.
+	Period                         time.Duration `yaml:"period" envDefault:"1s" env:"RATE_LIMIT_SIMPLE_PERIOD" jsonschema:"default=1s" jsonschema_extras:"duration_minimum=1s"`                       // The period of time over which the rate limit is enforced. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.
 	RejectExceedingRequests        bool          `yaml:"reject_exceeding_requests" envDefault:"false" env:"RATE_LIMIT_SIMPLE_REJECT_EXCEEDING_REQUESTS" jsonschema:"default=false"`                   // Reject the requests that exceed the rate limit. If the value is true, the requests that exceed the rate limit are rejected.
 	RejectStatusCode               int           `yaml:"reject_status_code" envDefault:"200" env:"RATE_LIMIT_SIMPLE_REJECT_STATUS_CODE" jsonschema:"default=200"`                                     // The status code to return when the request is rejected. The default value is 200 (OK) as we're returning a well formed GraphQL response.
 	HideStatsFromResponseExtension bool          `yaml:"hide_stats_from_response_extension" envDefault:"false" env:"RATE_LIMIT_SIMPLE_HIDE_STATS_FROM_RESPONSE_EXTENSION" jsonschema:"default=false"` // Hide the rate limit stats from the response extension. If the value is true, the rate limit stats are not included in the response extension.
@@ -727,7 +727,7 @@ type SubgraphErrorPropagationConfiguration struct {
 }
 
 type StorageProviders struct {
-	S3         []S3StorageProvider         `yaml:"s3,omitempty"`
+	S3         []S3StorageProvider         `yaml:"s3,omitempty"` // The configuration for the S3 storage provider. If no access key and secret key are provided, the provider will attempt to retrieve IAM credentials from the EC2 service.
 	CDN        []CDNStorageProvider        `yaml:"cdn,omitempty"`
 	Redis      []RedisStorageProvider      `yaml:"redis,omitempty"`
 	FileSystem []FileSystemStorageProvider `yaml:"file_system,omitempty"`
@@ -744,9 +744,9 @@ type AutomaticPersistedQueriesStorageConfig struct {
 }
 
 type S3StorageProvider struct {
-	ID        string `yaml:"id,omitempty"`         // The ID of the storage provider.
-	Endpoint  string `yaml:"endpoint,omitempty"`   // The S3 endpoint to connect to.
-	AccessKey string `yaml:"access_key,omitempty"` // The access key of the S3 bucket.
+	ID        string `yaml:"id,omitempty"`         // The ID of the storage provider. The ID is used to identify the storage provider in the configuration.
+	Endpoint  string `yaml:"endpoint,omitempty"`   // The S3 endpoint to connect to. The endpoint is used to connect to the S3 provider. If not set, the default S3 endpoint is used.
+	AccessKey string `yaml:"access_key,omitempty"` // The access key of the S3 bucket. The access key ID is used to authenticate with the S3 bucket.
 	SecretKey string `yaml:"secret_key,omitempty"` // The secret key of the S3 bucket.
 	Bucket    string `yaml:"bucket,omitempty"`     // The name of the S3 bucket.
 	Region    string `yaml:"region,omitempty"`     // The region of the S3 bucket.
@@ -754,23 +754,23 @@ type S3StorageProvider struct {
 }
 
 type CDNStorageProvider struct {
-	ID  string `yaml:"id,omitempty"`                                                                                                        // The provider ID.
-	URL string `yaml:"url,omitempty" envDefault:"https://cosmo-cdn.wundergraph.com" jsonschema:"default=https://cosmo-cdn.wundergraph.com"` // The provider URL.
+	ID  string `yaml:"id,omitempty"`                                                                                                        // The provider ID. The provider ID is used to identify the provider in the configuration.
+	URL string `yaml:"url,omitempty" envDefault:"https://cosmo-cdn.wundergraph.com" jsonschema:"default=https://cosmo-cdn.wundergraph.com"` // The provider URL. The URL is used to connect to the provider.
 }
 
 type FileSystemStorageProvider struct {
-	ID   string `yaml:"id,omitempty" env:"STORAGE_PROVIDER_FS_ID"`     // The provider ID.
+	ID   string `yaml:"id,omitempty" env:"STORAGE_PROVIDER_FS_ID"`     // The provider ID. The provider ID is used to identify the provider in the configuration.
 	Path string `yaml:"path,omitempty" env:"STORAGE_PROVIDER_FS_PATH"` // The file system path where data is stored and retrieved.
 }
 
 type RedisStorageProvider struct {
-	ID             string   `yaml:"id,omitempty" env:"STORAGE_PROVIDER_REDIS_ID"`                                                                         // The provider ID.
-	URLs           []string `yaml:"urls,omitempty" env:"STORAGE_PROVIDER_REDIS_URLS"`                                                                     // List of Redis URLs to connect to.
+	ID             string   `yaml:"id,omitempty" env:"STORAGE_PROVIDER_REDIS_ID"`                                                                         // The provider ID. The provider ID is used to identify the provider in the configuration.
+	URLs           []string `yaml:"urls,omitempty" env:"STORAGE_PROVIDER_REDIS_URLS"`                                                                     // List of Redis URLs to connect to. If cluster_enabled is true, these are the seeds to discover the cluster.
 	ClusterEnabled bool     `yaml:"cluster_enabled,omitempty" envDefault:"false" env:"STORAGE_PROVIDER_REDIS_CLUSTER_ENABLED" jsonschema:"default=false"` // Whether to use the Redis Cluster client.
 }
 
 type PersistedOperationsCDNProvider struct {
-	URL string `yaml:"url,omitempty" envDefault:"https://cosmo-cdn.wundergraph.com" jsonschema:"default=https://cosmo-cdn.wundergraph.com"` // The provider URL.
+	URL string `yaml:"url,omitempty" envDefault:"https://cosmo-cdn.wundergraph.com" jsonschema:"default=https://cosmo-cdn.wundergraph.com"` // The provider URL. The URL is used to connect to the provider.
 }
 
 type ExecutionConfigStorage struct {
@@ -785,9 +785,9 @@ type FallbackExecutionConfigStorage struct {
 }
 
 type ExecutionConfigFile struct {
-	Path          FilePathString `yaml:"path,omitempty" env:"EXECUTION_CONFIG_FILE_PATH"`                                                             // The path to the execution config file.
-	Watch         bool           `yaml:"watch,omitempty" envDefault:"false" env:"EXECUTION_CONFIG_FILE_WATCH" jsonschema:"default=false"`             // Enable the watch mode.
-	WatchInterval time.Duration  `yaml:"watch_interval,omitempty" envDefault:"1s" env:"EXECUTION_CONFIG_FILE_WATCH_INTERVAL" jsonschema:"default=1s"` // The interval at which the file is checked for changes.
+	Path          FilePathString `yaml:"path,omitempty" env:"EXECUTION_CONFIG_FILE_PATH"`                                                                                                        // The path to the execution config file.
+	Watch         bool           `yaml:"watch,omitempty" envDefault:"false" env:"EXECUTION_CONFIG_FILE_WATCH" jsonschema:"default=false"`                                                        // Enable the watch mode.
+	WatchInterval time.Duration  `yaml:"watch_interval,omitempty" envDefault:"1s" env:"EXECUTION_CONFIG_FILE_WATCH_INTERVAL" jsonschema:"default=1s" jsonschema_extras:"duration_minimum=100ms"` // The interval at which the file is checked for changes.
 }
 
 type ExecutionConfig struct {
@@ -859,12 +859,12 @@ type AccessLogsFileOutputConfig struct {
 }
 
 type AccessLogsRouterConfig struct {
-	Fields []CustomAttribute `yaml:"fields,omitempty" env:"ACCESS_LOGS_ROUTER_FIELDS"` // The fields to add to the logs.
+	Fields []CustomAttribute `yaml:"fields,omitempty" env:"ACCESS_LOGS_ROUTER_FIELDS"` // The fields to add to the logs. The fields are added to the logs as key-value pairs.
 }
 
 type AccessLogsSubgraphsConfig struct {
 	Enabled bool              `yaml:"enabled" env:"ACCESS_LOGS_SUBGRAPH_ENABLED" envDefault:"false" jsonschema:"default=false"` // Enable the subgraph access logs.
-	Fields  []CustomAttribute `yaml:"fields,omitempty" env:"ACCESS_LOGS_SUBGRAPH_FIELDS"`                                       // The fields to add to the logs.
+	Fields  []CustomAttribute `yaml:"fields,omitempty" env:"ACCESS_LOGS_SUBGRAPH_FIELDS"`                                       // The configuration for custom fields. Custom attributes can be created from request headers or context fields. Not every context fields are available at all request life-cycle stages. If a value is a list, the value is JSON encoded for OTLP. For Prometheus, the values are exploded into multiple metrics with unique labels. Keep in mind, that every new custom attribute increases the cardinality.
 }
 
 type ApolloCompatibilityFlags struct {
@@ -904,11 +904,11 @@ type CacheWarmupFileSystemSource struct {
 type CacheWarmupCDNSource struct{}
 
 type CacheWarmupConfiguration struct {
-	Enabled        bool              `yaml:"enabled" envDefault:"false" env:"CACHE_WARMUP_ENABLED" jsonschema:"default=false"`             // Enable the cache warmup.
-	Source         CacheWarmupSource `yaml:"source"  env:"CACHE_WARMUP_SOURCE"`                                                            // The source of the cache warmup items.
-	Workers        int               `yaml:"workers" envDefault:"8" env:"CACHE_WARMUP_WORKERS" jsonschema:"default=8"`                     // The number of workers for the cache warmup to run in parallel.
-	ItemsPerSecond int               `yaml:"items_per_second" envDefault:"50" env:"CACHE_WARMUP_ITEMS_PER_SECOND" jsonschema:"default=50"` // The number of cache warmup items to process per second.
-	Timeout        time.Duration     `yaml:"timeout" envDefault:"30s" env:"CACHE_WARMUP_TIMEOUT" jsonschema:"default=30s"`                 // The timeout for warming up the cache.
+	Enabled        bool              `yaml:"enabled" envDefault:"false" env:"CACHE_WARMUP_ENABLED" jsonschema:"default=false"`                                     // Enable the cache warmup.
+	Source         CacheWarmupSource `yaml:"source"  env:"CACHE_WARMUP_SOURCE"`                                                                                    // The source of the cache warmup items.
+	Workers        int               `yaml:"workers" envDefault:"8" env:"CACHE_WARMUP_WORKERS" jsonschema:"default=8"`                                             // The number of workers for the cache warmup to run in parallel.
+	ItemsPerSecond int               `yaml:"items_per_second" envDefault:"50" env:"CACHE_WARMUP_ITEMS_PER_SECOND" jsonschema:"default=50"`                         // The number of cache warmup items to process per second.
+	Timeout        time.Duration     `yaml:"timeout" envDefault:"30s" env:"CACHE_WARMUP_TIMEOUT" jsonschema:"default=30s" jsonschema_extras:"duration_minimum=1s"` // The timeout for warming up the cache.
 }
 
 type MCPConfiguration struct {
@@ -966,9 +966,9 @@ type Config struct {
 	QueryPlansEnabled             bool                        `yaml:"query_plans_enabled" envDefault:"true" env:"QUERY_PLANS_ENABLED" jsonschema:"default=true"`                                                   // Query plans can be very useful for debugging and understand the query execution. By default, query plans are enabled, but they are still only accessible if a request is signed (from Cosmo Studio) or in dev mode, which is relatively secure. If you want to disable query plans completely, set this to false.
 	LogLevel                      zapcore.Level               `yaml:"log_level" envDefault:"info" env:"LOG_LEVEL" jsonschema:"default=info"`                                                                       // The log level. The log level is used to control the verbosity of the logs. The default value is 'info'.
 	JSONLog                       bool                        `yaml:"json_log" envDefault:"true" env:"JSON_LOG" jsonschema:"default=true"`                                                                         // Enable the JSON log format. The JSON log format is used to log the logs in JSON format. The default value is true. If the value is false, the logs are logged a human friendly text format.
-	ShutdownDelay                 time.Duration               `yaml:"shutdown_delay" envDefault:"60s" env:"SHUTDOWN_DELAY" jsonschema:"default=60s"`                                                               // The delay before the router shuts down. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.
+	ShutdownDelay                 time.Duration               `yaml:"shutdown_delay" envDefault:"60s" env:"SHUTDOWN_DELAY" jsonschema:"default=60s" jsonschema_extras:"duration_minimum=15s"`                      // The delay before the router shuts down. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.
 	GracePeriod                   time.Duration               `yaml:"grace_period" envDefault:"30s" env:"GRACE_PERIOD" jsonschema:"default=20s"`                                                                   // The grace period before the router shuts down. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.
-	PollInterval                  time.Duration               `yaml:"poll_interval" envDefault:"10s" env:"POLL_INTERVAL" jsonschema:"default=10s"`                                                                 // The interval at which the router polls the CDN for updates. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.
+	PollInterval                  time.Duration               `yaml:"poll_interval" envDefault:"10s" env:"POLL_INTERVAL" jsonschema:"default=10s" jsonschema_extras:"duration_minimum=5s"`                         // The interval at which the router polls the CDN for updates. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.
 	PollJitter                    time.Duration               `yaml:"poll_jitter" envDefault:"5s" env:"POLL_JITTER" jsonschema:"default=5s"`                                                                       // A duration maximum for jitter added to the polling interval. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.
 	HealthCheckPath               XUriString                  `yaml:"health_check_path" envDefault:"/health" env:"HEALTH_CHECK_PATH" jsonschema:"default=/health"`                                                 // The path of the health check endpoint. The health check endpoint is used to check the health of the router. The default value is '/health'.
 	ReadinessCheckPath            XUriString                  `yaml:"readiness_check_path" envDefault:"/health/ready" env:"READINESS_CHECK_PATH" jsonschema:"default=/health/ready"`                               // The path of the readiness check endpoint. The readiness check endpoint is used to check the readiness of the router. The default value is '/health/ready'.
@@ -1019,14 +1019,14 @@ type PlaygroundConfig struct {
 }
 
 type WatchConfig struct {
-	Enabled      bool                    `yaml:"enabled" envDefault:"false" env:"ENABLED" jsonschema:"default=false"` // Enable watching for configuration changes. This is useful for development and testing.
-	Interval     time.Duration           `yaml:"interval" envDefault:"10s" env:"INTERVAL" jsonschema:"default=10s"`   // The interval at which the config file is checked for changes. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.
-	StartupDelay WatchConfigStartupDelay `yaml:"startup_delay" envPrefix:"STARTUP_DELAY_"`                            // Configuration for delaying the initial file watcher start.
+	Enabled      bool                    `yaml:"enabled" envDefault:"false" env:"ENABLED" jsonschema:"default=false"`                                       // Enable watching for configuration changes. This is useful for development and testing.
+	Interval     time.Duration           `yaml:"interval" envDefault:"10s" env:"INTERVAL" jsonschema:"default=10s" jsonschema_extras:"duration_minimum=5s"` // The interval at which the config file is checked for changes. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.
+	StartupDelay WatchConfigStartupDelay `yaml:"startup_delay" envPrefix:"STARTUP_DELAY_"`                                                                  // Configuration for delaying the initial file watcher start.
 }
 
 type WatchConfigStartupDelay struct {
-	Enabled bool          `yaml:"enabled" envDefault:"false" env:"ENABLED" jsonschema:"default=false"` // Enable startup delay for the configuration watcher. This is useful for preventing race conditions during startup.
-	Maximum time.Duration `yaml:"maximum" envDefault:"10s" env:"MAXIMUM" jsonschema:"default=10s"`     // The maximum time to wait before starting the config file watcher. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.
+	Enabled bool          `yaml:"enabled" envDefault:"false" env:"ENABLED" jsonschema:"default=false"`                                     // Enable startup delay for the configuration watcher. This is useful for preventing race conditions during startup.
+	Maximum time.Duration `yaml:"maximum" envDefault:"10s" env:"MAXIMUM" jsonschema:"default=10s" jsonschema_extras:"duration_minimum=5s"` // The maximum time to wait before starting the config file watcher. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.
 }
 
 type LoadResult struct {

@@ -1,0 +1,3280 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+    "version": {
+      "type": "string",
+      "enum": [
+        "1"
+      ],
+      "description": "The version of the configuration file. This is used to ensure that the configuration file is compatible."
+    },
+    "instance_id": {
+      "type": "string",
+      "description": "The unique identifier of the instance. This is used to identify the instance in the control plane and in the metrics."
+    },
+    "graph": {
+      "properties": {
+        "token": {
+          "type": "string",
+          "description": "The token used to authenticate with other component from Cosmo. Can be ommitted if the router is started with a static execution config."
+        },
+        "sign_key": {
+          "type": "string",
+          "maxLength": 32,
+          "minLength": 32,
+          "description": "The key used to verify the graph config signature when downloading from the CDN. The same key was used to create the signature in the admission webhook '/validate-config'. If the key is not set, the router will not verify the graph configuration. The key must be a 32 byte long string."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "telemetry": {
+      "properties": {
+        "service_name": {
+          "type": "string",
+          "description": "The name of the service. The name is used to identify the service in the traces and metrics. The default value is 'cosmo-router'."
+        },
+        "attributes": {
+          "items": {
+            "properties": {
+              "key": {
+                "type": "string",
+                "description": "The key of the field."
+              },
+              "default": {
+                "type": "string",
+                "description": "The default value of the field. If the value is not set, value_from is used. If both value and value_from are set, value_from has precedence and in case of a missing value_from, the default value is used."
+              },
+              "value_from": {
+                "properties": {
+                  "request_header": {
+                    "type": "string",
+                    "description": "The name of the request header from which to extract the value. The value is only extracted when a request context is available otherwise the default value is used."
+                  },
+                  "context_field": {
+                    "type": "string",
+                    "description": "The field name of the context from which to extract the value. The value is only extracted when a context is available otherwise the default value is used."
+                  },
+                  "response_header": {
+                    "type": "string",
+                    "description": "The name of the response header from which to extract the value. The value is only extracted for subgraph access logs."
+                  },
+                  "expression": {
+                    "type": "string",
+                    "description": "The expression used to evaluate to extract a value for logging. The expression is specified as a string. Please see https://expr-lang.org/ for more information on constructing expressions."
+                  }
+                },
+                "additionalProperties": false,
+                "type": "object",
+                "description": "Defines a source for the field value e.g. from a request header or request context. If both default and value_from are set, value_from has precedence."
+              }
+            },
+            "additionalProperties": false,
+            "type": "object"
+          },
+          "type": "array",
+          "description": "The default attributes to add to OTEL and Prometheus metrics. Because Prometheus metrics rely on the OpenTelemetry metrics, the attributes are also added to the Prometheus metrics."
+        },
+        "resource_attributes": {
+          "items": {
+            "properties": {
+              "key": {
+                "type": "string",
+                "description": "The key of the attribute."
+              },
+              "value": {
+                "type": "string",
+                "description": "The value of the attribute."
+              }
+            },
+            "additionalProperties": false,
+            "type": "object"
+          },
+          "type": "array",
+          "description": "The resource attributes to add to OTEL metrics and traces. The resource attributes identify the entity producing the traces and metrics. Because Prometheus metrics rely on the OpenTelemetry metrics, the resource attributes are also added to the Prometheus target_info metric."
+        },
+        "tracing": {
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "sampling_rate": {
+              "type": "number",
+              "description": "The sampling rate for the traces. The value must be between 0 and 1. If the value is 0, no traces will be sampled. If the value is 1, all traces will be sampled. The default value is 1."
+            },
+            "parent_based_sampler": {
+              "type": "boolean",
+              "description": "Enable the parent-based sampler. The parent-based sampler is used to sample the traces based on the parent trace. The default value is true.",
+              "default": true
+            },
+            "exporters": {
+              "items": {
+                "properties": {
+                  "disabled": {
+                    "type": "boolean"
+                  },
+                  "exporter": {
+                    "type": "string",
+                    "description": "The exporter to use for the traces. The supported exporters are 'http' and 'grpc'."
+                  },
+                  "endpoint": {
+                    "type": "string"
+                  },
+                  "path": {
+                    "type": "string",
+                    "format": "x-uri",
+                    "description": "The path to which the traces are exported.",
+                    "default": "/v1/traces"
+                  },
+                  "headers": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "type": "object"
+                  },
+                  "batch_timeout": {
+                    "type": "string",
+                    "format": "go-duration",
+                    "description": "The maximum time to wait before exporting the traces. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+                    "default": "10s",
+                    "duration_maximum": "2m",
+                    "duration_minimum": "5s"
+                  },
+                  "export_timeout": {
+                    "type": "string",
+                    "format": "go-duration",
+                    "description": "The maximum time to wait for the export to complete. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+                    "default": "30s",
+                    "duration_maximum": "2m",
+                    "duration_minimum": "5s"
+                  }
+                },
+                "additionalProperties": false,
+                "type": "object"
+              },
+              "type": "array",
+              "description": "The exporters to use to export the traces. If no exporters are specified, the default Cosmo Cloud exporter is used. If you override, please make sure to include the default exporter."
+            },
+            "propagation": {
+              "properties": {
+                "trace_context": {
+                  "type": "boolean",
+                  "description": "Enable the trace context propagation. See https://www.w3.org/TR/trace-context/ for more information."
+                },
+                "jaeger": {
+                  "type": "boolean",
+                  "description": "Enable the Jaeger propagation. See https://www.jaegertracing.io/ (compliant with opentracing) for more information."
+                },
+                "b3": {
+                  "type": "boolean",
+                  "description": "Enable the B3 propagation. See https://github.com/openzipkin/b3-propagation (zipkin) for more information."
+                },
+                "baggage": {
+                  "type": "boolean",
+                  "description": "Enable the baggage propagation. See https://www.w3.org/TR/baggage/ for more information."
+                },
+                "datadog": {
+                  "type": "boolean",
+                  "description": "Enable the Datadog propagation."
+                }
+              },
+              "additionalProperties": false,
+              "type": "object"
+            },
+            "response_trace_id": {
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Enables the addition of trace_id to the response header."
+                },
+                "header_name": {
+                  "type": "string",
+                  "description": "The name of the header which the holds the trace_id. The default value is x-wg-trace-id."
+                }
+              },
+              "additionalProperties": false,
+              "type": "object",
+              "description": "The configuration to expose the trace_id through a response header."
+            },
+            "attributes": {
+              "items": {
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "description": "The key of the field."
+                  },
+                  "default": {
+                    "type": "string",
+                    "description": "The default value of the field. If the value is not set, value_from is used. If both value and value_from are set, value_from has precedence and in case of a missing value_from, the default value is used."
+                  },
+                  "value_from": {
+                    "properties": {
+                      "request_header": {
+                        "type": "string",
+                        "description": "The name of the request header from which to extract the value. The value is only extracted when a request context is available otherwise the default value is used."
+                      },
+                      "context_field": {
+                        "type": "string",
+                        "description": "The field name of the context from which to extract the value. The value is only extracted when a context is available otherwise the default value is used."
+                      },
+                      "response_header": {
+                        "type": "string",
+                        "description": "The name of the response header from which to extract the value. The value is only extracted for subgraph access logs."
+                      },
+                      "expression": {
+                        "type": "string",
+                        "description": "The expression used to evaluate to extract a value for logging. The expression is specified as a string. Please see https://expr-lang.org/ for more information on constructing expressions."
+                      }
+                    },
+                    "additionalProperties": false,
+                    "type": "object",
+                    "description": "Defines a source for the field value e.g. from a request header or request context. If both default and value_from are set, value_from has precedence."
+                  }
+                },
+                "additionalProperties": false,
+                "type": "object"
+              },
+              "type": "array",
+              "description": "The configuration for custom span attributes for subgraph tracing."
+            },
+            "export_graphql_variables": {
+              "type": "boolean",
+              "description": "Enable the export of the GraphQL variables. The GraphQL variables are exported with the traces. The default value is false to avoid leaking sensitive information."
+            },
+            "with_new_root": {
+              "type": "boolean",
+              "description": "Specifies that the router span should be treated as a root Span. Any existing parent span context will be ignored when defining the Span's trace identifiers. This is useful when the router must be the entry point of the trace."
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "The configuration for the collection and export of traces."
+        },
+        "metrics": {
+          "properties": {
+            "attributes": {
+              "items": {
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "description": "The key of the field."
+                  },
+                  "default": {
+                    "type": "string",
+                    "description": "The default value of the field. If the value is not set, value_from is used. If both value and value_from are set, value_from has precedence and in case of a missing value_from, the default value is used."
+                  },
+                  "value_from": {
+                    "properties": {
+                      "request_header": {
+                        "type": "string",
+                        "description": "The name of the request header from which to extract the value. The value is only extracted when a request context is available otherwise the default value is used."
+                      },
+                      "context_field": {
+                        "type": "string",
+                        "description": "The field name of the context from which to extract the value. The value is only extracted when a context is available otherwise the default value is used."
+                      },
+                      "response_header": {
+                        "type": "string",
+                        "description": "The name of the response header from which to extract the value. The value is only extracted for subgraph access logs."
+                      },
+                      "expression": {
+                        "type": "string",
+                        "description": "The expression used to evaluate to extract a value for logging. The expression is specified as a string. Please see https://expr-lang.org/ for more information on constructing expressions."
+                      }
+                    },
+                    "additionalProperties": false,
+                    "type": "object",
+                    "description": "Defines a source for the field value e.g. from a request header or request context. If both default and value_from are set, value_from has precedence."
+                  }
+                },
+                "additionalProperties": false,
+                "type": "object"
+              },
+              "type": "array",
+              "description": "The configuration for custom attributes. Custom attributes can be created from request headers, static values or context fields. Not every context fields are available at all request life-cycle stages. If a value is a list, the value is JSON encoded for OTLP. For Prometheus, the values are exploded into multiple metrics with unique labels. Keep in mind, that every new custom attribute increases the cardinality."
+            },
+            "otlp": {
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Enable the collection of metrics."
+                },
+                "router_runtime": {
+                  "type": "boolean",
+                  "description": "Enable the collection of metrics for the router runtime."
+                },
+                "graphql_cache": {
+                  "type": "boolean",
+                  "description": "Enable the collection of metrics for the GraphQL operation router caches. The default value is false."
+                },
+                "connection_stats": {
+                  "type": "boolean",
+                  "description": "Enable the collection of connection stats. The default value is false."
+                },
+                "engine_stats": {
+                  "properties": {
+                    "subscriptions": {
+                      "type": "boolean",
+                      "description": "Enabling this will report additional engine metrics for WebSockets and SSE such as connections, subscriptions and triggers. The default value is false"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "type": "object"
+                },
+                "circuit_breaker": {
+                  "type": "boolean",
+                  "description": "Enable the collection of circuit breaker stats. The default value is false."
+                },
+                "exclude_metrics": {
+                  "items": {
+                    "properties": {},
+                    "additionalProperties": false,
+                    "type": "object"
+                  },
+                  "type": "array",
+                  "description": "The metrics to exclude from the OTEL metrics. Accepts a list of Go regular expressions. Use https://regex101.com/ to test your regular expressions."
+                },
+                "exclude_metric_labels": {
+                  "items": {
+                    "properties": {},
+                    "additionalProperties": false,
+                    "type": "object"
+                  },
+                  "type": "array",
+                  "description": "The metric labels to exclude from the OTEL metrics. Accepts a list of Go regular expressions. Use https://regex101.com/ to test your regular expressions."
+                },
+                "exporters": {
+                  "items": {
+                    "properties": {
+                      "disabled": {
+                        "type": "boolean"
+                      },
+                      "exporter": {
+                        "type": "string",
+                        "description": "The exporter protocol to use to export metrics. The supported exporters are 'http' and 'grpc'."
+                      },
+                      "endpoint": {
+                        "type": "string",
+                        "description": "The endpoint to which the metrics are exported."
+                      },
+                      "path": {
+                        "type": "string",
+                        "format": "x-uri",
+                        "description": "The path to which the metrics are exported. This is ignored when using 'grpc' as exporter and can be omitted."
+                      },
+                      "headers": {
+                        "additionalProperties": {
+                          "type": "string"
+                        },
+                        "type": "object",
+                        "description": "The headers to send with the request. Use this to set the authentication headers."
+                      },
+                      "temporality": {
+                        "type": "string",
+                        "description": "Temporality defines the window that an aggregation is calculated over."
+                      }
+                    },
+                    "additionalProperties": false,
+                    "type": "object"
+                  },
+                  "type": "array",
+                  "description": "The exporters to use to export the metrics. If no exporters are specified, the default Cosmo Cloud exporter is used. If you override, please make sure to include the default exporter."
+                }
+              },
+              "additionalProperties": false,
+              "type": "object",
+              "description": "The configuration for the OpenTelemetry protocol (OTLP). The OTLP is used to collect and export the metrics."
+            },
+            "prometheus": {
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "path": {
+                  "type": "string",
+                  "format": "x-uri",
+                  "description": "The path to which the metrics are served."
+                },
+                "listen_addr": {
+                  "type": "string",
+                  "format": "hostname-port",
+                  "description": "The address on which the metrics are served."
+                },
+                "graphql_cache": {
+                  "type": "boolean",
+                  "description": "Enable the collection of metrics for the GraphQL operation router caches. The default value is false."
+                },
+                "connection_stats": {
+                  "type": "boolean",
+                  "description": "Enable the collection of connection stats. The default value is false."
+                },
+                "engine_stats": {
+                  "properties": {
+                    "subscriptions": {
+                      "type": "boolean",
+                      "description": "Enabling this will report additional engine metrics for WebSockets and SSE such as connections, subscriptions and triggers. The default value is false"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "type": "object"
+                },
+                "circuit_breaker": {
+                  "type": "boolean",
+                  "description": "Enable the collection of circuit breaker stats. The default value is false."
+                },
+                "exclude_metrics": {
+                  "items": {
+                    "properties": {},
+                    "additionalProperties": false,
+                    "type": "object"
+                  },
+                  "type": "array",
+                  "description": "The metrics to exclude from the Prometheus metrics. Accepts a list of Go regular expressions. Use https://regex101.com/ to test your regular expressions."
+                },
+                "exclude_metric_labels": {
+                  "items": {
+                    "properties": {},
+                    "additionalProperties": false,
+                    "type": "object"
+                  },
+                  "type": "array",
+                  "description": "The metric labels to exclude from the Prometheus metrics. Accepts a list of Go regular expressions. Use https://regex101.com/ to test your regular expressions."
+                },
+                "exclude_scope_info": {
+                  "type": "boolean",
+                  "description": "Exclude scope info from Prometheus metrics. The default value is false."
+                },
+                "schema_usage": {
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "description": "Enable the collection and export of GraphQL schema metrics to Prometheus. The default value is false."
+                    },
+                    "include_operation_sha": {
+                      "type": "boolean",
+                      "description": "Include the operation SHA256 in the metric labels, this can be an expensive operation. The default value is false."
+                    }
+                  },
+                  "additionalProperties": false,
+                  "type": "object",
+                  "description": "Configure schema field usage metrics for Prometheus"
+                }
+              },
+              "additionalProperties": false,
+              "type": "object",
+              "description": "The configuration for the Prometheus metrics. The Prometheus metrics are used to collect and export the metrics."
+            },
+            "experiment_cardinality_limit": {
+              "type": "integer",
+              "description": "Sets a hard limit on the number of Metric Points that can be collected during a collection cycle. NOTE: This option is experimental and may change in future versions."
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "The configuration for the collection and export of metrics. The metrics are collected and exported using the OpenTelemetry protocol (OTLP) and Prometheus."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "The configuration for the telemetry. The telemetry is used to collect and export the traces and metrics."
+    },
+    "graphql_metrics": {
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable the collection of the GraphQL metrics. The default value is true."
+        },
+        "collector_endpoint": {
+          "type": "string",
+          "format": "http-url",
+          "description": "The endpoint to which the GraphQL metrics are collected. The endpoint is specified as a string with the format 'scheme://host:port'."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "cors": {
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Set this to enable/disable the CORS middleware. It is enabled by default. When disabled, the rest of the properties for CORS have no effect."
+        },
+        "allow_origins": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "The allowed origins. The default value is to allow all origins. The value can be a list of origins or the wildcard '*'."
+        },
+        "allow_methods": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "The allowed HTTP methods. The default value is to allow the methods 'GET', 'POST', and 'HEAD'."
+        },
+        "allow_headers": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "The allowed HTTP headers. The default value is to allow all headers. Default headers are always appended to the list of allowed headers."
+        },
+        "allow_credentials": {
+          "type": "boolean",
+          "description": "The allowed credentials. The default value is to allow credentials. This allows the browser to send cookies and authentication headers."
+        },
+        "max_age": {
+          "type": "string",
+          "format": "go-duration",
+          "description": "The maximum age of the preflight request. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+          "default": "5m",
+          "duration_minimum": "5m"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "cluster": {
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the cluster."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "compliance": {
+      "properties": {
+        "anonymize_ip": {
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable the anonymization of the IP addresses.",
+              "default": true
+            },
+            "method": {
+              "type": "string",
+              "description": "The method used to anonymize the IP addresses.",
+              "default": "redact"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "The configuration for the anonymization of the IP addresses."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "The configuration for the compliance. Includes for example the configuration for the anonymization of the IP addresses."
+    },
+    "tls": {
+      "properties": {
+        "server": {
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable the TLS.",
+              "default": false
+            },
+            "cert_file": {
+              "type": "string",
+              "format": "file-path",
+              "description": "The path to the certificate file."
+            },
+            "key_file": {
+              "type": "string",
+              "format": "file-path",
+              "description": "The path to the key file."
+            },
+            "client_auth": {
+              "properties": {
+                "cert_file": {
+                  "type": "string",
+                  "format": "file-path",
+                  "description": "The path to the certificate file."
+                },
+                "required": {
+                  "type": "boolean",
+                  "description": "Require clients to present a valid certificate that is verified.",
+                  "default": false
+                }
+              },
+              "additionalProperties": false,
+              "type": "object",
+              "description": "The configuration for the client authentication."
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "The configuration for the server TLS."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "The configuration for the TLS. The TLS is used to enable the TLS for the router."
+    },
+    "cache_control_policy": {
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Determines whether cache control policy is enabled."
+        },
+        "value": {
+          "type": "string",
+          "description": "Global cache control value."
+        },
+        "subgraphs": {
+          "items": {
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Name of the subgraph."
+              },
+              "value": {
+                "type": "string",
+                "description": "Cache control value for the subgraph."
+              }
+            },
+            "additionalProperties": false,
+            "type": "object"
+          },
+          "type": "array",
+          "description": "Subgraph-specific cache control settings."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "mcp": {
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable the MCP server.",
+          "default": false
+        },
+        "server": {
+          "properties": {
+            "listen_addr": {
+              "type": "string",
+              "format": "hostname-port",
+              "description": "The address on which the MCP server listens for incoming requests.",
+              "default": "localhost:5025"
+            },
+            "base_url": {
+              "type": "string",
+              "format": "http-url",
+              "description": "The base URL of the MCP server."
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "Server configuration for the MCP server."
+        },
+        "storage": {
+          "properties": {
+            "provider_id": {
+              "type": "string",
+              "description": "The ID of the storage provider to use for loading GraphQL operations."
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "Storage provider configuration for the MCP server."
+        },
+        "graph_name": {
+          "type": "string",
+          "description": "The name of the graph to be used as suffix for the MCP server name.",
+          "default": "wundergraph-cosmo-mygraph"
+        },
+        "exclude_mutations": {
+          "type": "boolean",
+          "description": "Exclude mutation operations from being exposed via MCP.",
+          "default": false
+        },
+        "enable_arbitrary_operations": {
+          "type": "boolean",
+          "description": "Enable arbitrary GraphQL operation execution through MCP.",
+          "default": false
+        },
+        "expose_schema": {
+          "type": "boolean",
+          "description": "Expose the full GraphQL schema through MCP.",
+          "default": false
+        },
+        "router_url": {
+          "type": "string",
+          "format": "url",
+          "description": "Custom URL to use for the router GraphQL endpoint in MCP."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "The configuration for the Model Context Protocol (MCP) server. MCP allows AI models to interact with your GraphQL APIs. By exposing individual GraphQL operations to the model, you can open your graph to empower AI agents working with your data. See https://cosmo-docs.wundergraph.com/router/mcp for more information."
+    },
+    "demo_mode": {
+      "type": "boolean",
+      "description": "Launch the router in demo mode. If no execution config is found, the router will start with a demo execution config and deploy a demo federated graph that can be used for testing purposes.",
+      "default": false
+    },
+    "modules": {
+      "type": "object",
+      "description": "The configuration for the modules. The modules are used to extend the functionality of the router. The modules are specified as a map of module names to module configurations. It needs to match with the name of the module and the configuration of the module. See https://cosmo-docs.wundergraph.com/router/custom-modules for more information."
+    },
+    "headers": {
+      "properties": {
+        "all": {
+          "properties": {
+            "request": {
+              "items": {
+                "properties": {
+                  "op": {
+                    "type": "string",
+                    "description": "The operation to perform on the header."
+                  },
+                  "matching": {
+                    "type": "string",
+                    "description": "The matching rule for the header."
+                  },
+                  "negate_match": {
+                    "type": "boolean",
+                    "description": "If set to true, the result of the 'matching' regex will be inverted."
+                  },
+                  "named": {
+                    "type": "string",
+                    "description": "The name of the header to match."
+                  },
+                  "rename": {
+                    "type": "string",
+                    "description": "Rename is used to rename the named or the matching headers."
+                  },
+                  "default": {
+                    "type": "string",
+                    "description": "The default value of the header in case it is not present in the request."
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "The name of the header to set."
+                  },
+                  "value": {
+                    "type": "string",
+                    "description": "The value to set for the header."
+                  },
+                  "expression": {
+                    "type": "string",
+                    "description": "The Expr Lang template expression to evaluate."
+                  },
+                  "value_from": {
+                    "properties": {
+                      "request_header": {
+                        "type": "string",
+                        "description": "The name of the request header from which to extract the value. The value is only extracted when a request context is available otherwise the default value is used."
+                      },
+                      "context_field": {
+                        "type": "string",
+                        "description": "The field name of the context from which to extract the value. The value is only extracted when a context is available otherwise the default value is used."
+                      },
+                      "response_header": {
+                        "type": "string",
+                        "description": "The name of the response header from which to extract the value. The value is only extracted for subgraph access logs."
+                      },
+                      "expression": {
+                        "type": "string",
+                        "description": "The expression used to evaluate to extract a value for logging. The expression is specified as a string. Please see https://expr-lang.org/ for more information on constructing expressions."
+                      }
+                    },
+                    "additionalProperties": false,
+                    "type": "object",
+                    "description": "DEPRECATED: Use expression instead."
+                  }
+                },
+                "additionalProperties": false,
+                "type": "object"
+              },
+              "type": "array",
+              "description": "set of rules that apply to requests"
+            },
+            "response": {
+              "items": {
+                "properties": {
+                  "op": {
+                    "type": "string",
+                    "description": "Operation describes the header operation to perform e.g. \"propagate\""
+                  },
+                  "matching": {
+                    "type": "string",
+                    "description": "Matching is the regex to match the header name against"
+                  },
+                  "negate_match": {
+                    "type": "boolean",
+                    "description": "If set to true, the result of the 'matching' regex will be inverted."
+                  },
+                  "named": {
+                    "type": "string",
+                    "description": "Named is the exact header name to match"
+                  },
+                  "rename": {
+                    "type": "string",
+                    "description": "Rename renames the header's key to the provided value"
+                  },
+                  "default": {
+                    "type": "string",
+                    "description": "Default is the default value to set if the header is not present"
+                  },
+                  "algorithm": {
+                    "type": "string",
+                    "description": "Algorithm is the algorithm to use when multiple headers are present"
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Set header options\nName is the name of the header to set"
+                  },
+                  "value": {
+                    "type": "string",
+                    "description": "Value is the value of the header to set"
+                  }
+                },
+                "additionalProperties": false,
+                "type": "object"
+              },
+              "type": "array",
+              "description": "set of rules that apply to responses"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "All is a set of rules that apply to all requests"
+        },
+        "subgraphs": {
+          "additionalProperties": {
+            "properties": {
+              "request": {
+                "items": {
+                  "properties": {
+                    "op": {
+                      "type": "string",
+                      "description": "The operation to perform on the header."
+                    },
+                    "matching": {
+                      "type": "string",
+                      "description": "The matching rule for the header."
+                    },
+                    "negate_match": {
+                      "type": "boolean",
+                      "description": "If set to true, the result of the 'matching' regex will be inverted."
+                    },
+                    "named": {
+                      "type": "string",
+                      "description": "The name of the header to match."
+                    },
+                    "rename": {
+                      "type": "string",
+                      "description": "Rename is used to rename the named or the matching headers."
+                    },
+                    "default": {
+                      "type": "string",
+                      "description": "The default value of the header in case it is not present in the request."
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "The name of the header to set."
+                    },
+                    "value": {
+                      "type": "string",
+                      "description": "The value to set for the header."
+                    },
+                    "expression": {
+                      "type": "string",
+                      "description": "The Expr Lang template expression to evaluate."
+                    },
+                    "value_from": {
+                      "properties": {
+                        "request_header": {
+                          "type": "string",
+                          "description": "The name of the request header from which to extract the value. The value is only extracted when a request context is available otherwise the default value is used."
+                        },
+                        "context_field": {
+                          "type": "string",
+                          "description": "The field name of the context from which to extract the value. The value is only extracted when a context is available otherwise the default value is used."
+                        },
+                        "response_header": {
+                          "type": "string",
+                          "description": "The name of the response header from which to extract the value. The value is only extracted for subgraph access logs."
+                        },
+                        "expression": {
+                          "type": "string",
+                          "description": "The expression used to evaluate to extract a value for logging. The expression is specified as a string. Please see https://expr-lang.org/ for more information on constructing expressions."
+                        }
+                      },
+                      "additionalProperties": false,
+                      "type": "object",
+                      "description": "DEPRECATED: Use expression instead."
+                    }
+                  },
+                  "additionalProperties": false,
+                  "type": "object"
+                },
+                "type": "array",
+                "description": "set of rules that apply to requests"
+              },
+              "response": {
+                "items": {
+                  "properties": {
+                    "op": {
+                      "type": "string",
+                      "description": "Operation describes the header operation to perform e.g. \"propagate\""
+                    },
+                    "matching": {
+                      "type": "string",
+                      "description": "Matching is the regex to match the header name against"
+                    },
+                    "negate_match": {
+                      "type": "boolean",
+                      "description": "If set to true, the result of the 'matching' regex will be inverted."
+                    },
+                    "named": {
+                      "type": "string",
+                      "description": "Named is the exact header name to match"
+                    },
+                    "rename": {
+                      "type": "string",
+                      "description": "Rename renames the header's key to the provided value"
+                    },
+                    "default": {
+                      "type": "string",
+                      "description": "Default is the default value to set if the header is not present"
+                    },
+                    "algorithm": {
+                      "type": "string",
+                      "description": "Algorithm is the algorithm to use when multiple headers are present"
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "Set header options\nName is the name of the header to set"
+                    },
+                    "value": {
+                      "type": "string",
+                      "description": "Value is the value of the header to set"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "type": "object"
+                },
+                "type": "array",
+                "description": "set of rules that apply to responses"
+              }
+            },
+            "additionalProperties": false,
+            "type": "object"
+          },
+          "type": "object"
+        },
+        "cookie_whitelist": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "A list of Cookie keys allowed to be forwarded to the subgraph."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "The configuration for the headers. The headers rules are used to modify the headers of the incoming requests and how they are propagated to your subgraphs. See https://cosmo-docs.wundergraph.com/router/proxy-capabilities#forward-http-headers-to-subgraphs for more information."
+    },
+    "traffic_shaping": {
+      "properties": {
+        "all": {
+          "properties": {
+            "retry": {
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "algorithm": {
+                  "type": "string",
+                  "description": "The algorithm used to calculate the retry interval. The supported algorithms are 'backoff_jitter'."
+                },
+                "max_attempts": {
+                  "type": "integer",
+                  "description": "The maximum number of attempts. The default value is 5."
+                },
+                "max_duration": {
+                  "type": "string",
+                  "format": "go-duration",
+                  "description": "The maximum allowable duration between retries (random). The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+                },
+                "interval": {
+                  "type": "string",
+                  "format": "go-duration",
+                  "description": "The time duration between each retry attempt. Increase with every retry. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+                }
+              },
+              "additionalProperties": false,
+              "type": "object",
+              "description": "The retry configuration. The retry configuration is used to configure the retry behavior for the subgraphs requests. See https://cosmo-docs.wundergraph.com/router/traffic-shaping#automatic-retry for more information."
+            },
+            "circuit_breaker": {
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Enable the circuit breaker"
+                },
+                "error_threshold_percentage": {
+                  "type": "integer",
+                  "description": "The error threshold percentage that needs to be met in the rolling window to trigger the circuit to an open state"
+                },
+                "request_threshold": {
+                  "type": "integer",
+                  "description": "The min number of pre-requisite requests required to start checking if the circuit breaker's status should be changed"
+                },
+                "sleep_window": {
+                  "type": "string",
+                  "format": "go-duration",
+                  "description": "After the circuit breaker is open, how long the circuit breaker will reject requests before allowing to send a half open request",
+                  "default": "5s",
+                  "duration_maximum": "2m",
+                  "duration_minimum": "250ms"
+                },
+                "half_open_attempts": {
+                  "type": "integer",
+                  "description": "How many failed attempts are allowed to check if an open circuit can now make successful requests"
+                },
+                "required_successful": {
+                  "type": "integer",
+                  "description": "How many successful requests are required for a half open circuit breaker to close it"
+                },
+                "rolling_duration": {
+                  "type": "string",
+                  "format": "go-duration",
+                  "description": "The duration of which information on failed and successful requests are stored",
+                  "default": "10s",
+                  "duration_maximum": "120s",
+                  "duration_minimum": "5s"
+                },
+                "num_buckets": {
+                  "type": "integer",
+                  "description": "The number of buckets which store circuit requests information within a given rolling duration"
+                },
+                "execution_timeout": {
+                  "type": "string",
+                  "format": "go-duration",
+                  "description": "The maximum time to wait for a circuit execution to complete before timing out",
+                  "default": "60s",
+                  "duration_maximum": "300s",
+                  "duration_minimum": "1ms"
+                },
+                "max_concurrent_requests": {
+                  "type": "integer",
+                  "description": "The maximum number of concurrent requests allowed through the circuit breaker"
+                }
+              },
+              "additionalProperties": false,
+              "type": "object",
+              "description": "The Circuit Breaker configuration, it allows you to enable and configure circuit breakers for subgraphs."
+            },
+            "request_timeout": {
+              "type": "string",
+              "format": "go-duration",
+              "description": "The request timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+              "duration_minimum": "1s"
+            },
+            "dial_timeout": {
+              "type": "string",
+              "format": "go-duration",
+              "description": "The dial timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+            },
+            "response_header_timeout": {
+              "type": "string",
+              "format": "go-duration",
+              "description": "The response header timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+            },
+            "expect_continue_timeout": {
+              "type": "string",
+              "format": "go-duration",
+              "description": "The expect continue timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+            },
+            "tls_handshake_timeout": {
+              "type": "string",
+              "format": "go-duration",
+              "description": "The TLS handshake timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+            },
+            "keep_alive_idle_timeout": {
+              "type": "string",
+              "format": "go-duration",
+              "description": "The keep alive idle timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+            },
+            "keep_alive_probe_interval": {
+              "type": "string",
+              "format": "go-duration",
+              "description": "The keep alive probe interval. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+              "duration_minimum": "5s"
+            },
+            "max_conns_per_host": {
+              "type": "integer",
+              "description": "MaxConnsPerHost limits the total number of connections per host, including connections in the dialing, active, and idle states. Zero means no limit."
+            },
+            "max_idle_conns": {
+              "type": "integer",
+              "description": "MaxIdleConns controls the maximum number of idle (keep-alive) connections across all hosts. Zero means no limit"
+            },
+            "max_idle_conns_per_host": {
+              "type": "integer",
+              "description": "MaxIdleConnsPerHost, if non-zero, controls the maximum idle (keep-alive) connections to keep per-host. Zero will default to 2"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "The configuration for all subgraphs. The configuration is used to configure the traffic shaping for all subgraphs."
+        },
+        "router": {
+          "properties": {
+            "max_request_body_size": {
+              "type": "string",
+              "format": "bytes-string",
+              "description": "The maximum request body size. The size is specified as a string with a number and a unit, e.g. 10KB, 1MB, 1GB. The supported units are 'KB', 'MB', 'GB'."
+            },
+            "max_header_bytes": {
+              "type": "string",
+              "format": "bytes-string",
+              "description": "The maximum size of the request headers. Setting this to 0 uses the default value from the http standard lib, which is 1MiB."
+            },
+            "decompression_enabled": {
+              "type": "boolean",
+              "description": "When enabled, the router will check incoming requests for a 'Content-Encoding' header and decompress the body accordingly. Currently only gzip is supported"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "The configuration for requests from clients to the router."
+        },
+        "subgraphs": {
+          "additionalProperties": {
+            "properties": {
+              "retry": {
+                "properties": {
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "algorithm": {
+                    "type": "string",
+                    "description": "The algorithm used to calculate the retry interval. The supported algorithms are 'backoff_jitter'."
+                  },
+                  "max_attempts": {
+                    "type": "integer",
+                    "description": "The maximum number of attempts. The default value is 5."
+                  },
+                  "max_duration": {
+                    "type": "string",
+                    "format": "go-duration",
+                    "description": "The maximum allowable duration between retries (random). The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+                  },
+                  "interval": {
+                    "type": "string",
+                    "format": "go-duration",
+                    "description": "The time duration between each retry attempt. Increase with every retry. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+                  }
+                },
+                "additionalProperties": false,
+                "type": "object",
+                "description": "The retry configuration. The retry configuration is used to configure the retry behavior for the subgraphs requests. See https://cosmo-docs.wundergraph.com/router/traffic-shaping#automatic-retry for more information."
+              },
+              "circuit_breaker": {
+                "properties": {
+                  "enabled": {
+                    "type": "boolean",
+                    "description": "Enable the circuit breaker"
+                  },
+                  "error_threshold_percentage": {
+                    "type": "integer",
+                    "description": "The error threshold percentage that needs to be met in the rolling window to trigger the circuit to an open state"
+                  },
+                  "request_threshold": {
+                    "type": "integer",
+                    "description": "The min number of pre-requisite requests required to start checking if the circuit breaker's status should be changed"
+                  },
+                  "sleep_window": {
+                    "type": "string",
+                    "format": "go-duration",
+                    "description": "After the circuit breaker is open, how long the circuit breaker will reject requests before allowing to send a half open request",
+                    "default": "5s",
+                    "duration_maximum": "2m",
+                    "duration_minimum": "250ms"
+                  },
+                  "half_open_attempts": {
+                    "type": "integer",
+                    "description": "How many failed attempts are allowed to check if an open circuit can now make successful requests"
+                  },
+                  "required_successful": {
+                    "type": "integer",
+                    "description": "How many successful requests are required for a half open circuit breaker to close it"
+                  },
+                  "rolling_duration": {
+                    "type": "string",
+                    "format": "go-duration",
+                    "description": "The duration of which information on failed and successful requests are stored",
+                    "default": "10s",
+                    "duration_maximum": "120s",
+                    "duration_minimum": "5s"
+                  },
+                  "num_buckets": {
+                    "type": "integer",
+                    "description": "The number of buckets which store circuit requests information within a given rolling duration"
+                  },
+                  "execution_timeout": {
+                    "type": "string",
+                    "format": "go-duration",
+                    "description": "The maximum time to wait for a circuit execution to complete before timing out",
+                    "default": "60s",
+                    "duration_maximum": "300s",
+                    "duration_minimum": "1ms"
+                  },
+                  "max_concurrent_requests": {
+                    "type": "integer",
+                    "description": "The maximum number of concurrent requests allowed through the circuit breaker"
+                  }
+                },
+                "additionalProperties": false,
+                "type": "object",
+                "description": "The Circuit Breaker configuration, it allows you to enable and configure circuit breakers for subgraphs."
+              },
+              "request_timeout": {
+                "type": "string",
+                "format": "go-duration",
+                "description": "The request timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+                "duration_minimum": "1s"
+              },
+              "dial_timeout": {
+                "type": "string",
+                "format": "go-duration",
+                "description": "The dial timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+              },
+              "response_header_timeout": {
+                "type": "string",
+                "format": "go-duration",
+                "description": "The response header timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+              },
+              "expect_continue_timeout": {
+                "type": "string",
+                "format": "go-duration",
+                "description": "The expect continue timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+              },
+              "tls_handshake_timeout": {
+                "type": "string",
+                "format": "go-duration",
+                "description": "The TLS handshake timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+              },
+              "keep_alive_idle_timeout": {
+                "type": "string",
+                "format": "go-duration",
+                "description": "The keep alive idle timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+              },
+              "keep_alive_probe_interval": {
+                "type": "string",
+                "format": "go-duration",
+                "description": "The keep alive probe interval. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+                "duration_minimum": "5s"
+              },
+              "max_conns_per_host": {
+                "type": "integer",
+                "description": "MaxConnsPerHost limits the total number of connections per host, including connections in the dialing, active, and idle states. Zero means no limit."
+              },
+              "max_idle_conns": {
+                "type": "integer",
+                "description": "MaxIdleConns controls the maximum number of idle (keep-alive) connections across all hosts. Zero means no limit"
+              },
+              "max_idle_conns_per_host": {
+                "type": "integer",
+                "description": "MaxIdleConnsPerHost, if non-zero, controls the maximum idle (keep-alive) connections to keep per-host. Zero will default to 2"
+              }
+            },
+            "additionalProperties": false,
+            "type": "object"
+          },
+          "type": "object",
+          "description": "The configuration to control traffic shaping for specific subgraphs. These rules are applied to requests from the router to subgraphs. The key is the subgraph name."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "The configuration for the traffic shaping. Configure rules for traffic shaping like maximum request body size, timeouts, retry behavior, etc. See https://cosmo-docs.wundergraph.com/router/traffic-shaping for more information."
+    },
+    "file_upload": {
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "max_file_size": {
+          "type": "string",
+          "format": "bytes-string",
+          "description": "The maximum size of a file that can be uploaded. The size is specified as a string with a number and a unit, e.g. 10KB, 1MB, 1GB. The supported units are 'KB', 'MB', 'GB'."
+        },
+        "max_files": {
+          "type": "integer",
+          "description": "The maximum number of files that can be uploaded."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "The configuration for file upload. Configure whether it should be enabled along with file size and number of files."
+    },
+    "access_logs": {
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable the access logs.",
+          "default": true
+        },
+        "buffer": {
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable the buffer. The buffer is used to buffer the logs before writing them to the output.",
+              "default": false
+            },
+            "size": {
+              "type": "string",
+              "format": "bytes-string",
+              "description": "The size of the buffer.",
+              "default": "256KB"
+            },
+            "flush_interval": {
+              "type": "string",
+              "format": "go-duration",
+              "description": "The interval at which the buffer is flushed. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+              "default": "10s",
+              "duration_maximum": "1m",
+              "duration_minimum": "100ms"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object"
+        },
+        "output": {
+          "properties": {
+            "stdout": {
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": true
+                }
+              },
+              "additionalProperties": false,
+              "type": "object"
+            },
+            "file": {
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "path": {
+                  "type": "string",
+                  "description": "The path to the log file.",
+                  "default": "access.log"
+                }
+              },
+              "additionalProperties": false,
+              "type": "object"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "The log destination."
+        },
+        "router": {
+          "properties": {
+            "fields": {
+              "items": {
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "description": "The key of the field."
+                  },
+                  "default": {
+                    "type": "string",
+                    "description": "The default value of the field. If the value is not set, value_from is used. If both value and value_from are set, value_from has precedence and in case of a missing value_from, the default value is used."
+                  },
+                  "value_from": {
+                    "properties": {
+                      "request_header": {
+                        "type": "string",
+                        "description": "The name of the request header from which to extract the value. The value is only extracted when a request context is available otherwise the default value is used."
+                      },
+                      "context_field": {
+                        "type": "string",
+                        "description": "The field name of the context from which to extract the value. The value is only extracted when a context is available otherwise the default value is used."
+                      },
+                      "response_header": {
+                        "type": "string",
+                        "description": "The name of the response header from which to extract the value. The value is only extracted for subgraph access logs."
+                      },
+                      "expression": {
+                        "type": "string",
+                        "description": "The expression used to evaluate to extract a value for logging. The expression is specified as a string. Please see https://expr-lang.org/ for more information on constructing expressions."
+                      }
+                    },
+                    "additionalProperties": false,
+                    "type": "object",
+                    "description": "Defines a source for the field value e.g. from a request header or request context. If both default and value_from are set, value_from has precedence."
+                  }
+                },
+                "additionalProperties": false,
+                "type": "object"
+              },
+              "type": "array",
+              "description": "The fields to add to the logs. The fields are added to the logs as key-value pairs."
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "The configuration for the router access logs"
+        },
+        "subgraphs": {
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable the subgraph access logs.",
+              "default": false
+            },
+            "fields": {
+              "items": {
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "description": "The key of the field."
+                  },
+                  "default": {
+                    "type": "string",
+                    "description": "The default value of the field. If the value is not set, value_from is used. If both value and value_from are set, value_from has precedence and in case of a missing value_from, the default value is used."
+                  },
+                  "value_from": {
+                    "properties": {
+                      "request_header": {
+                        "type": "string",
+                        "description": "The name of the request header from which to extract the value. The value is only extracted when a request context is available otherwise the default value is used."
+                      },
+                      "context_field": {
+                        "type": "string",
+                        "description": "The field name of the context from which to extract the value. The value is only extracted when a context is available otherwise the default value is used."
+                      },
+                      "response_header": {
+                        "type": "string",
+                        "description": "The name of the response header from which to extract the value. The value is only extracted for subgraph access logs."
+                      },
+                      "expression": {
+                        "type": "string",
+                        "description": "The expression used to evaluate to extract a value for logging. The expression is specified as a string. Please see https://expr-lang.org/ for more information on constructing expressions."
+                      }
+                    },
+                    "additionalProperties": false,
+                    "type": "object",
+                    "description": "Defines a source for the field value e.g. from a request header or request context. If both default and value_from are set, value_from has precedence."
+                  }
+                },
+                "additionalProperties": false,
+                "type": "object"
+              },
+              "type": "array",
+              "description": "The configuration for custom fields. Custom attributes can be created from request headers or context fields. Not every context fields are available at all request life-cycle stages. If a value is a list, the value is JSON encoded for OTLP. For Prometheus, the values are exploded into multiple metrics with unique labels. Keep in mind, that every new custom attribute increases the cardinality."
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "The configuration for the subgraph access logs"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "batching": {
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable the batching.",
+          "default": false
+        },
+        "max_concurrency": {
+          "type": "integer",
+          "description": "The maximum number of batches that can be processed concurrently",
+          "default": 10
+        },
+        "max_entries_per_batch": {
+          "type": "integer",
+          "description": "The maximum number of entries allowed in a batch",
+          "default": 100
+        },
+        "omit_extensions": {
+          "type": "boolean",
+          "description": "omit extensions on any batch processing errors",
+          "default": false
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "listen_addr": {
+      "type": "string",
+      "format": "hostname-port",
+      "description": "The address on which the router listens for incoming requests. The address is specified as a string with the format 'host:port'.",
+      "default": "localhost:3002"
+    },
+    "controlplane_url": {
+      "type": "string",
+      "format": "http-url",
+      "description": "The URL of the control plane. The URL is used to register the router on the control-plane. The URL is specified as a string with the format 'scheme://host:port'.",
+      "default": "https://cosmo-cp.wundergraph.com"
+    },
+    "playground": {
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable the GraphQL Playground. The GraphQL Playground is a web-based GraphQL IDE that allows you to interact with the GraphQL API. The default value is true. If the value is false, the GraphQL Playground is disabled.",
+          "default": true
+        },
+        "path": {
+          "type": "string",
+          "format": "x-uri",
+          "description": "The path of the GraphQL Playground. The GraphQL Playground is a web-based GraphQL IDE that allows you to interact with the GraphQL API. The default value is '/'.",
+          "default": "/"
+        },
+        "concurrency_limit": {
+          "type": "integer",
+          "description": "The concurrency limit for loading the playground. This shouldn't impact normal usage.",
+          "default": 10
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "The configuration for the playground. The playground is a web-based GraphQL IDE that allows you to interact with the GraphQL API."
+    },
+    "playground_enabled": {
+      "type": "boolean",
+      "description": "Enable the GraphQL Playground. The GraphQL Playground is a web-based GraphQL IDE that allows you to interact with the GraphQL API. The default value is true. If the value is false, the GraphQL Playground is disabled.",
+      "default": true
+    },
+    "introspection_enabled": {
+      "type": "boolean",
+      "description": "Enable the GraphQL introspection. The GraphQL introspection allows you to query the schema of the GraphQL API. The default value is true. If the value is false, the GraphQL introspection is disabled. In production, it is recommended to disable the introspection.",
+      "default": true
+    },
+    "query_plans_enabled": {
+      "type": "boolean",
+      "description": "Query plans can be very useful for debugging and understand the query execution. By default, query plans are enabled, but they are still only accessible if a request is signed (from Cosmo Studio) or in dev mode, which is relatively secure. If you want to disable query plans completely, set this to false.",
+      "default": true
+    },
+    "log_level": {
+      "type": "string",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "error",
+        "panic",
+        "fatal"
+      ],
+      "description": "The log level. The log level is used to control the verbosity of the logs. The default value is 'info'.",
+      "default": "info"
+    },
+    "json_log": {
+      "type": "boolean",
+      "description": "Enable the JSON log format. The JSON log format is used to log the logs in JSON format. The default value is true. If the value is false, the logs are logged a human friendly text format.",
+      "default": true
+    },
+    "shutdown_delay": {
+      "type": "string",
+      "format": "go-duration",
+      "description": "The delay before the router shuts down. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+      "default": "60s",
+      "duration_minimum": "15s"
+    },
+    "grace_period": {
+      "type": "string",
+      "format": "go-duration",
+      "description": "The grace period before the router shuts down. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+      "default": "20s"
+    },
+    "poll_interval": {
+      "type": "string",
+      "format": "go-duration",
+      "description": "The interval at which the router polls the CDN for updates. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+      "default": "10s",
+      "duration_minimum": "5s"
+    },
+    "poll_jitter": {
+      "type": "string",
+      "format": "go-duration",
+      "description": "A duration maximum for jitter added to the polling interval. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+      "default": "5s"
+    },
+    "health_check_path": {
+      "type": "string",
+      "format": "x-uri",
+      "description": "The path of the health check endpoint. The health check endpoint is used to check the health of the router. The default value is '/health'.",
+      "default": "/health"
+    },
+    "readiness_check_path": {
+      "type": "string",
+      "format": "x-uri",
+      "description": "The path of the readiness check endpoint. The readiness check endpoint is used to check the readiness of the router. The default value is '/health/ready'.",
+      "default": "/health/ready"
+    },
+    "liveness_check_path": {
+      "type": "string",
+      "format": "x-uri",
+      "description": "The path of the liveness check endpoint. The liveness check endpoint is used to check the liveness of the router. The default value is '/health/live'.",
+      "default": "/health/live"
+    },
+    "graphql_path": {
+      "type": "string",
+      "format": "x-uri",
+      "description": "The path of the GraphQL endpoint. The GraphQL endpoint is used to send the GraphQL queries, subscriptions and mutations. The default value is '/graphql'.",
+      "default": "/graphql"
+    },
+    "playground_path": {
+      "type": "string",
+      "format": "x-uri",
+      "description": "The path of the GraphQL Playground. The GraphQL Playground is a web-based GraphQL IDE that allows you to interact with the GraphQL API. The default value is '/'.",
+      "default": "/"
+    },
+    "authentication": {
+      "properties": {
+        "jwt": {
+          "properties": {
+            "jwks": {
+              "items": {
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "format": "http-url",
+                    "description": "The URL of the JWKs."
+                  },
+                  "algorithms": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array",
+                    "description": "The allowed algorithms for the keys that are retrieved from the JWKs."
+                  },
+                  "refresh_interval": {
+                    "type": "string",
+                    "format": "go-duration",
+                    "description": "The interval at which the JWKs are refreshed.",
+                    "default": "1m",
+                    "duration_minimum": "5s"
+                  },
+                  "secret": {
+                    "type": "string",
+                    "description": "The secret of the JWKs"
+                  },
+                  "algorithm": {
+                    "type": "string",
+                    "description": "The algorithm used"
+                  },
+                  "key_id": {
+                    "type": "string",
+                    "description": "The secret of the JWKs"
+                  }
+                },
+                "additionalProperties": false,
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "header_name": {
+              "type": "string",
+              "description": "The name of the header. The header is used to extract the token from the request. The default value is 'Authorization'.",
+              "default": "Authorization"
+            },
+            "header_value_prefix": {
+              "type": "string",
+              "description": "The prefix of the header value. The prefix is used to extract the token from the header value. The default value is 'Bearer'.",
+              "default": "Bearer"
+            },
+            "header_sources": {
+              "items": {
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "description": "The type of the source."
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "The name of the header."
+                  },
+                  "value_prefixes": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array",
+                    "description": "The prefixes of the header value."
+                  }
+                },
+                "additionalProperties": false,
+                "type": "object"
+              },
+              "type": "array",
+              "description": "Additional sources for the token. The sources are used to extract the token from the request."
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "The configuration for JWT authentication."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "The configuration for the authentication. The authentication is used to authenticate the incoming requests. We currently support JWK (JSON Web Key) authentication."
+    },
+    "authorization": {
+      "properties": {
+        "require_authentication": {
+          "type": "boolean",
+          "description": "Ensure that the request is authenticated.",
+          "default": false
+        },
+        "reject_operation_if_unauthorized": {
+          "type": "boolean",
+          "description": "Reject the operation if the request is not authorized. Makes the router reject the whole GraphQL Operation if one field fails to authorize",
+          "default": false
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "rate_limit": {
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "strategy": {
+          "type": "string",
+          "description": "The strategy used to enforce the rate limit.",
+          "default": "simple"
+        },
+        "simple_strategy": {
+          "properties": {
+            "rate": {
+              "type": "integer",
+              "description": "The rate at which the requests are allowed. The rate is specified as a number of requests per second.",
+              "default": 10
+            },
+            "burst": {
+              "type": "integer",
+              "description": "The maximum number of requests that are allowed to exceed the rate. The burst is specified as a number of requests.",
+              "default": 10
+            },
+            "period": {
+              "type": "string",
+              "format": "go-duration",
+              "description": "The period of time over which the rate limit is enforced. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+              "default": "1s",
+              "duration_minimum": "1s"
+            },
+            "reject_exceeding_requests": {
+              "type": "boolean",
+              "description": "Reject the requests that exceed the rate limit. If the value is true, the requests that exceed the rate limit are rejected.",
+              "default": false
+            },
+            "reject_status_code": {
+              "type": "integer",
+              "description": "The status code to return when the request is rejected. The default value is 200 (OK) as we're returning a well formed GraphQL response.",
+              "default": 200
+            },
+            "hide_stats_from_response_extension": {
+              "type": "boolean",
+              "description": "Hide the rate limit stats from the response extension. If the value is true, the rate limit stats are not included in the response extension.",
+              "default": false
+            }
+          },
+          "additionalProperties": false,
+          "type": "object"
+        },
+        "storage": {
+          "properties": {
+            "urls": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array",
+              "description": "The Redis connection URLs."
+            },
+            "cluster_enabled": {
+              "type": "boolean",
+              "description": "Enable Redis Cluster connection.",
+              "default": false
+            },
+            "key_prefix": {
+              "type": "string",
+              "description": "The prefix of the keys used to store the rate limit data.",
+              "default": "cosmo_rate_limit"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object"
+        },
+        "debug": {
+          "type": "boolean",
+          "description": "Enable the debug mode for the rate limit.",
+          "default": false
+        },
+        "key_suffix_expression": {
+          "type": "string",
+          "description": "The expression to define a key suffix for the rate limit."
+        },
+        "error_extension_code": {
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable the error extension code for rate limiting.",
+              "default": true
+            },
+            "code": {
+              "type": "string",
+              "description": "The error extension code for the rate limit.",
+              "default": "RATE_LIMIT_EXCEEDED"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "If enabled, a code will be added to the extensions.code field of error objects related to rate limiting."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "The configuration for the rate limit. The rate limit is used to limit the number of requests that can be made to the router."
+    },
+    "localhost_fallback_inside_docker": {
+      "type": "boolean",
+      "description": "Enable the localhost fallback inside Docker. The localhost fallback is used to resolve the localhost address when running the router inside a Docker container. This should be only enabled for development and testing.",
+      "default": true
+    },
+    "cdn": {
+      "properties": {
+        "url": {
+          "type": "string",
+          "format": "http-url",
+          "description": "The URL of the CDN.",
+          "default": "https://cosmo-cdn.wundergraph.com"
+        },
+        "cache_size": {
+          "type": "string",
+          "format": "bytes-string",
+          "description": "The size of the cache used.",
+          "default": "100MB"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "The configuration for the CDN. The CDN is used to fetch the schema and configurations from the CDN."
+    },
+    "dev_mode": {
+      "type": "boolean",
+      "description": "Enable the development mode. The development mode is used to enable the development features like ART (Advanced Request Tracing) and pretty logs.",
+      "default": false
+    },
+    "events": {
+      "properties": {
+        "providers": {
+          "properties": {
+            "nats": {
+              "items": {
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "description": "The provider ID."
+                  },
+                  "url": {
+                    "type": "string",
+                    "format": "url",
+                    "description": "The provider URL."
+                  },
+                  "authentication": {
+                    "properties": {
+                      "user_info": {
+                        "properties": {
+                          "password": {
+                            "type": "string",
+                            "description": "The password for username/password-based authentication."
+                          },
+                          "username": {
+                            "type": "string",
+                            "description": "The username for username/password-based authentication."
+                          }
+                        },
+                        "additionalProperties": false,
+                        "type": "object",
+                        "description": "Userinfo configuration for the NATS provider."
+                      },
+                      "token": {
+                        "type": "string",
+                        "description": "The token for token-based authentication."
+                      }
+                    },
+                    "additionalProperties": false,
+                    "type": "object",
+                    "description": "Authentication configuration for the NATS provider."
+                  }
+                },
+                "additionalProperties": false,
+                "type": "object"
+              },
+              "type": "array",
+              "description": "Configuration used by the EDFS provider to connect to the NATS server."
+            },
+            "kafka": {
+              "items": {
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "description": "The provider ID."
+                  },
+                  "brokers": {
+                    "items": {
+                      "type": "string",
+                      "format": "hostname-port"
+                    },
+                    "type": "array",
+                    "description": "The list of Kafka brokers."
+                  },
+                  "authentication": {
+                    "properties": {
+                      "sasl_plain": {
+                        "properties": {
+                          "password": {
+                            "type": "string",
+                            "description": "The password for plain SASL authentication."
+                          },
+                          "username": {
+                            "type": "string",
+                            "description": "The username for plain SASL authentication."
+                          }
+                        },
+                        "additionalProperties": false,
+                        "type": "object",
+                        "description": "Plain SASL Authentication configuration for the Kafka provider."
+                      },
+                      "sasl_scram": {
+                        "properties": {
+                          "password": {
+                            "type": "string",
+                            "description": "The password for SCRAM SASL authentication."
+                          },
+                          "username": {
+                            "type": "string",
+                            "description": "The username for SCRAM SASL authentication."
+                          },
+                          "mechanism": {
+                            "type": "string",
+                            "description": "The mechanism for SCRAM SASL authentication."
+                          }
+                        },
+                        "additionalProperties": false,
+                        "type": "object",
+                        "description": "SCRAM SASL Authentication configuration for the Kafka provider."
+                      }
+                    },
+                    "additionalProperties": false,
+                    "type": "object",
+                    "description": "SASL Authentication configuration for the Kafka provider."
+                  },
+                  "tls": {
+                    "properties": {
+                      "enabled": {
+                        "type": "boolean",
+                        "description": "Enables the TLS.",
+                        "default": false
+                      }
+                    },
+                    "additionalProperties": false,
+                    "type": "object",
+                    "description": "TLS configuration for the Kafka provider."
+                  },
+                  "fetch_max_wait": {
+                    "type": "string",
+                    "format": "go-duration",
+                    "description": "The maximum wait time for fetching messages from the Kafka broker."
+                  }
+                },
+                "additionalProperties": false,
+                "type": "object"
+              },
+              "type": "array",
+              "description": "Configuration used by the EDFS provider to connect to the Kafka server."
+            },
+            "redis": {
+              "items": {
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "description": "The provider ID."
+                  },
+                  "urls": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array",
+                    "description": "The list of Redis URLs."
+                  },
+                  "cluster_enabled": {
+                    "type": "boolean",
+                    "description": "If enabled, the Redis cluster client is used to connect to the server.",
+                    "default": false
+                  }
+                },
+                "additionalProperties": false,
+                "type": "object"
+              },
+              "type": "array",
+              "description": "Configuration used by the EDFS provider to connect to the Redis server."
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "The provider configuration."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "The configuration for EDFS. See https://cosmo-docs.wundergraph.com/router/event-driven-federated-subscriptions-edfs for more information."
+    },
+    "cache_warmup": {
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable the cache warmup.",
+          "default": false
+        },
+        "source": {
+          "properties": {
+            "filesystem": {
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "format": "file-path",
+                  "description": "The path to the directory containing the cache warmup items."
+                }
+              },
+              "additionalProperties": false,
+              "type": "object",
+              "description": "The filesystem source of the cache warmup items."
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "The source of the cache warmup items."
+        },
+        "workers": {
+          "type": "integer",
+          "description": "The number of workers for the cache warmup to run in parallel.",
+          "default": 8
+        },
+        "items_per_second": {
+          "type": "integer",
+          "description": "The number of cache warmup items to process per second.",
+          "default": 50
+        },
+        "timeout": {
+          "type": "string",
+          "format": "go-duration",
+          "description": "The timeout for warming up the cache.",
+          "default": "30s",
+          "duration_minimum": "1s"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "Cache Warmup pre-warms all caches (e.g. normalization, validation, planning) before accepting traffic."
+    },
+    "router_config_path": {
+      "type": "string",
+      "format": "file-path",
+      "description": "The path of the router execution config file. This file contains the information how your graph is resolved and configured. The path is specified as a string with the format 'path/to/file'."
+    },
+    "router_registration": {
+      "type": "boolean",
+      "description": "Enable the router registration. The router registration is used to register the router on the control-plane. The default value is true. This should not be modified unless you know what you are doing.",
+      "default": true
+    },
+    "override_routing_url": {
+      "properties": {
+        "subgraphs": {
+          "additionalProperties": {
+            "type": "string",
+            "format": "http-url"
+          },
+          "type": "object",
+          "description": "The configuration for the subgraphs."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "The configuration for the override routing URL. The override routing URL is used to override the routing URL for subgraphs."
+    },
+    "overrides": {
+      "properties": {
+        "subgraphs": {
+          "additionalProperties": {
+            "properties": {
+              "routing_url": {
+                "type": "string",
+                "format": "http-url",
+                "description": "The URL of the subgraph."
+              },
+              "subscription_url": {
+                "type": "string",
+                "format": "http-url",
+                "description": "The Subscription URL of the subgraph."
+              },
+              "subscription_protocol": {
+                "type": "string",
+                "description": "The Subscription protocol of the subgraph."
+              },
+              "subscription_websocket_subprotocol": {
+                "type": "string",
+                "description": "The Websocket subprotocol of the subgraph."
+              }
+            },
+            "additionalProperties": false,
+            "type": "object"
+          },
+          "type": "object",
+          "description": "The configuration for the subgraphs."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "The configuration to override subgraph config. The config is used to override the config for subgraphs."
+    },
+    "security": {
+      "properties": {
+        "block_mutations": {
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Block mutation/subscription/non-persisted Operations. If the value is true, all operations are blocked. You can also specify a condition that is evaluated to determine if the operation should be blocked."
+            },
+            "condition": {
+              "type": "string",
+              "description": "The expression to evaluate if the operation should be blocked. The expression is specified as a string and needs to evaluate to a boolean. Please see https://expr-lang.org/ for more information."
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "The configuration for blocking mutations."
+        },
+        "block_subscriptions": {
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Block mutation/subscription/non-persisted Operations. If the value is true, all operations are blocked. You can also specify a condition that is evaluated to determine if the operation should be blocked."
+            },
+            "condition": {
+              "type": "string",
+              "description": "The expression to evaluate if the operation should be blocked. The expression is specified as a string and needs to evaluate to a boolean. Please see https://expr-lang.org/ for more information."
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "The configuration for blocking subscriptions."
+        },
+        "block_non_persisted_operations": {
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Block mutation/subscription/non-persisted Operations. If the value is true, all operations are blocked. You can also specify a condition that is evaluated to determine if the operation should be blocked."
+            },
+            "condition": {
+              "type": "string",
+              "description": "The expression to evaluate if the operation should be blocked. The expression is specified as a string and needs to evaluate to a boolean. Please see https://expr-lang.org/ for more information."
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "The configuration for blocking non-persisted operations."
+        },
+        "complexity_calculation_cache": {
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable the complexity calculation cache. If the value is true, the complexity calculation cache is enabled.",
+              "default": true
+            },
+            "size": {
+              "type": "integer",
+              "description": "The size of the cache for the complexity calculation.",
+              "default": 1024
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "The configuration for the complexity calculation cache."
+        },
+        "complexity_limits": {
+          "properties": {
+            "depth": {
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Enable the limit (depth/total fields/root fields/root field aliases). If the value is true (default: false), and a valid limit value is set, a limit will be applied to the queries.",
+                  "default": false
+                },
+                "limit": {
+                  "type": "integer",
+                  "description": "The limit value (depth/total fields/root fields/root field aliases). If the limit is 0, this limit isn't applied.",
+                  "default": 0
+                },
+                "ignore_persisted_operations": {
+                  "type": "boolean",
+                  "description": "Disable the limit for persisted operations. Since persisted operations are stored intentionally, users may want to disable the limit to consciously allow nested persisted operations.",
+                  "default": false
+                }
+              },
+              "additionalProperties": false,
+              "type": "object",
+              "description": "The configuration for adding a max depth limit for query (how many nested levels you can have in a query). This limit prevents infinite querying, and also limits the size of the data returned. If the limit is 0, this limit isn't applied."
+            },
+            "total_fields": {
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Enable the limit (depth/total fields/root fields/root field aliases). If the value is true (default: false), and a valid limit value is set, a limit will be applied to the queries.",
+                  "default": false
+                },
+                "limit": {
+                  "type": "integer",
+                  "description": "The limit value (depth/total fields/root fields/root field aliases). If the limit is 0, this limit isn't applied.",
+                  "default": 0
+                },
+                "ignore_persisted_operations": {
+                  "type": "boolean",
+                  "description": "Disable the limit for persisted operations. Since persisted operations are stored intentionally, users may want to disable the limit to consciously allow nested persisted operations.",
+                  "default": false
+                }
+              },
+              "additionalProperties": false,
+              "type": "object",
+              "description": "How many total fields are allowed to be in a particular query. This limit prevents queries from becoming too large."
+            },
+            "root_fields": {
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Enable the limit (depth/total fields/root fields/root field aliases). If the value is true (default: false), and a valid limit value is set, a limit will be applied to the queries.",
+                  "default": false
+                },
+                "limit": {
+                  "type": "integer",
+                  "description": "The limit value (depth/total fields/root fields/root field aliases). If the limit is 0, this limit isn't applied.",
+                  "default": 0
+                },
+                "ignore_persisted_operations": {
+                  "type": "boolean",
+                  "description": "Disable the limit for persisted operations. Since persisted operations are stored intentionally, users may want to disable the limit to consciously allow nested persisted operations.",
+                  "default": false
+                }
+              },
+              "additionalProperties": false,
+              "type": "object",
+              "description": "How many root fields are allowed in a query."
+            },
+            "root_field_aliases": {
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Enable the limit (depth/total fields/root fields/root field aliases). If the value is true (default: false), and a valid limit value is set, a limit will be applied to the queries.",
+                  "default": false
+                },
+                "limit": {
+                  "type": "integer",
+                  "description": "The limit value (depth/total fields/root fields/root field aliases). If the limit is 0, this limit isn't applied.",
+                  "default": 0
+                },
+                "ignore_persisted_operations": {
+                  "type": "boolean",
+                  "description": "Disable the limit for persisted operations. Since persisted operations are stored intentionally, users may want to disable the limit to consciously allow nested persisted operations.",
+                  "default": false
+                }
+              },
+              "additionalProperties": false,
+              "type": "object",
+              "description": "How many root field aliases are allowed in a query."
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "The configuration for complexity limits for queries"
+        },
+        "depth_limit": {
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable query depth limits. If the value is true (default: false), and a valid limit value is set, a query depth will be calculated for your requests, and a limit applied to the queries.",
+              "default": false
+            },
+            "limit": {
+              "type": "integer",
+              "description": "The depth limit for query. If the limit is 0, this limit isn't applied.",
+              "default": 0
+            },
+            "cache_size": {
+              "type": "integer",
+              "description": "The size of the cache for query depth. If users set a max_query_depth, we cache the decision per query.",
+              "default": 1024
+            },
+            "ignore_persisted_operations": {
+              "type": "boolean",
+              "description": "Disable the max query depth limit for persisted operations. Since persisted operations are stored intentionally, users may want to disable the limit to consciously allow nested persisted operations.",
+              "default": false
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "DEPRECATED: The configuration for adding a max depth limit for query."
+        },
+        "parser_limits": {
+          "properties": {
+            "approximate_depth_limit": {
+              "type": "integer",
+              "description": "The approximate cumulative depth limit of a query, including fragments. Set to 0 to disable.",
+              "default": 100
+            },
+            "total_fields_limit": {
+              "type": "integer",
+              "description": "The total number of fields the parser will allow. Set to 0 to disable.",
+              "default": 500
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "The configuration to enforce parser limits for the query depth and fields count."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "The configuration for the security. The security is used to configure the security settings for the router."
+    },
+    "engine": {
+      "properties": {
+        "debug": {
+          "properties": {
+            "print_operation_transformations": {
+              "type": "boolean",
+              "description": "Print the operation transformations."
+            },
+            "print_operation_enable_ast_refs": {
+              "type": "boolean",
+              "description": "Print the operation enable AST refs."
+            },
+            "print_planning_paths": {
+              "type": "boolean",
+              "description": "Print the planning paths."
+            },
+            "print_query_plans": {
+              "type": "boolean",
+              "description": "Print the query plans."
+            },
+            "print_intermediate_query_plans": {
+              "type": "boolean",
+              "description": "Print intermediate query plans."
+            },
+            "print_node_suggestions": {
+              "type": "boolean",
+              "description": "Print the node suggestions."
+            },
+            "configuration_visitor": {
+              "type": "boolean",
+              "description": "Print the configuration visitor."
+            },
+            "planning_visitor": {
+              "type": "boolean",
+              "description": "Print the planning visitor."
+            },
+            "datasource_visitor": {
+              "type": "boolean",
+              "description": "Print the datasource visitor."
+            },
+            "report_websocket_connections": {
+              "type": "boolean",
+              "description": "Print the websocket connections."
+            },
+            "report_memory_usage": {
+              "type": "boolean",
+              "description": "Print the memory usage."
+            },
+            "enable_resolver_debugging": {
+              "type": "boolean",
+              "description": "Enable verbose debug logging for the Resolver."
+            },
+            "enable_persisted_operations_cache_response_header": {
+              "type": "boolean",
+              "description": "Enable the persisted operations cache response header."
+            },
+            "enable_normalization_cache_response_header": {
+              "type": "boolean",
+              "description": "Enable the normalization cache response header."
+            },
+            "always_include_query_plan": {
+              "type": "boolean",
+              "description": "Always include the query plan in the response.",
+              "default": false
+            },
+            "always_skip_loader": {
+              "type": "boolean",
+              "description": "Always skip the loader.",
+              "default": false
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "The debug configuration. The debug configuration is used to enable the debug mode for the engine."
+        },
+        "enable_single_flight": {
+          "type": "boolean",
+          "description": "Enable the single flight. The single flight is used to deduplicate the requests to the same subgraphs.",
+          "default": true
+        },
+        "enable_request_tracing": {
+          "type": "boolean",
+          "description": "Enable the advanced request tracing. See https://cosmo-docs.wundergraph.com/router/advanced-request-tracing-art for more information.",
+          "default": true
+        },
+        "enable_execution_plan_cache_response_header": {
+          "type": "boolean",
+          "description": "Enable the execution plan cache response header. The execution plan cache response header is used to cache the execution plan in the client."
+        },
+        "max_concurrent_resolvers": {
+          "type": "integer",
+          "description": "The maximum number of concurrent resolvers. The higher the number, the more requests can be processed in parallel but at the cost of more memory usage.",
+          "default": 1024
+        },
+        "enable_net_poll": {
+          "type": "boolean",
+          "description": "Enables the more efficient poll implementation for all WebSocket implementations (client, server) of the router. This is only available on Linux and MacOS. On Windows or when the host system is limited, the default synchronous implementation is used.",
+          "default": true
+        },
+        "websocket_client_poll_timeout": {
+          "type": "string",
+          "format": "go-duration",
+          "description": "The timeout for the poll loop of the WebSocket client implementation. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+          "default": "1s"
+        },
+        "websocket_client_conn_buffer_size": {
+          "type": "integer",
+          "description": "The buffer size for the poll buffer of the WebSocket client implementation. The buffer size determines how many connections can be handled in one loop.",
+          "default": 128
+        },
+        "websocket_client_read_timeout": {
+          "type": "string",
+          "format": "go-duration",
+          "description": "Defines the timeout for the websocket read of the WebSocket client implementation. This is used to set the read deadline for the connection. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+          "default": "5s"
+        },
+        "websocket_client_write_timeout": {
+          "type": "string",
+          "format": "go-duration",
+          "description": "Defines the timeout for the websocket write of the WebSocket client implementation. This is used to set the write deadline for the connection. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+          "default": "10s"
+        },
+        "websocket_client_ping_interval": {
+          "type": "string",
+          "format": "go-duration",
+          "description": "The Websocket client ping interval to the subgraph. Defines how often the router will ping the subgraph to signal that the connection is still alive. Timeout needs to be coordinated with the subgraph. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+          "default": "15s",
+          "duration_minimum": "5s"
+        },
+        "websocket_client_ping_timeout": {
+          "type": "string",
+          "format": "go-duration",
+          "description": "The Websocket client ping timeout to the subgraph. Defines how long the router will wait for a ping response from the subgraph. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+          "default": "30s",
+          "duration_minimum": "5s"
+        },
+        "websocket_client_frame_timeout": {
+          "type": "string",
+          "format": "go-duration",
+          "description": "The Websocket client frame timeout to the subgraph. Defines how long the router will wait for a frame response from the subgraph. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+          "default": "100ms",
+          "duration_minimum": "10ms"
+        },
+        "execution_plan_cache_size": {
+          "type": "integer",
+          "description": "The size of the execution plan cache.",
+          "default": 1024
+        },
+        "minify_subgraph_operations": {
+          "type": "boolean",
+          "description": "Minify the subgraph operations. If the value is true, GraphQL Operations get minified after planning. This reduces the amount of GraphQL AST nodes the Subgraph has to parse, which ultimately saves CPU time and memory, resulting in faster response times.",
+          "default": true
+        },
+        "enable_persisted_operations_cache": {
+          "type": "boolean",
+          "description": "Enable the persisted operations cache. The persisted operations cache is used to cache normalized persisted operations to improve performance.",
+          "default": true
+        },
+        "enable_normalization_cache": {
+          "type": "boolean",
+          "description": "Enable the normalization cache. The normalization cache is used to cache normalized operations to improve performance.",
+          "default": true
+        },
+        "normalization_cache_size": {
+          "type": "integer",
+          "description": "The size of the normalization cache.",
+          "default": 1024
+        },
+        "operation_hash_cache_size": {
+          "type": "integer",
+          "description": "The size of the Operation Hash Cache. This should be larger than the plan cache because the hash is computed on the original query.",
+          "default": 2048
+        },
+        "parsekit_pool_size": {
+          "type": "integer",
+          "description": "The size of the ParseKit pool. The ParseKit pool provides re-usable Resources for parsing, normalizing, validating and planning GraphQL Operations. Setting the pool size to a value much higher than the number of CPU Threads available will not improve performance, but only increase memory usage.",
+          "default": 8
+        },
+        "enable_validation_cache": {
+          "type": "boolean",
+          "description": "Enable the validation cache. The validation cache is used to cache results of validating GraphQL Operations.",
+          "default": true
+        },
+        "validation_cache_size": {
+          "type": "integer",
+          "description": "The size of the validation cache.",
+          "default": 1024
+        },
+        "disable_exposing_variables_content_on_validation_error": {
+          "type": "boolean",
+          "description": "Disables exposing the variables content in the error response. This is useful to avoid leaking sensitive information in the error response.",
+          "default": false
+        },
+        "resolver_max_recyclable_parser_size": {
+          "type": "integer",
+          "description": "Limits the size of the Parser that can be recycled back into the Pool. If set to 0, no limit is applied. This helps keep the Heap size more maintainable if you regularly perform large queries.",
+          "default": 32768
+        },
+        "enable_subgraph_fetch_operation_name": {
+          "type": "boolean",
+          "description": "Enable appending the operation name to subgraph fetches. This will ensure that the operation name will be included in the corresponding subgraph requests using the following format: $operationName__$subgraphName__$sequenceID.",
+          "default": false
+        },
+        "disable_variables_remapping": {
+          "type": "boolean",
+          "description": "Disables variables renaming during normalization. This option could have a negative impact on planner cache hits.",
+          "default": false
+        },
+        "subscription_fetch_timeout": {
+          "type": "string",
+          "format": "go-duration",
+          "description": "The maximum time a subscription fetch can take before it is considered timed out. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+          "default": "30s"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "The configuration for the engine. The engine is used to execute the GraphQL queries, mutations and subscriptions. Only modify this if you know what you are doing."
+    },
+    "websocket": {
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable WebSocket transport.",
+          "default": true
+        },
+        "absinthe_protocol": {
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable Absinthe protocol.",
+              "default": true
+            },
+            "handler_path": {
+              "type": "string",
+              "description": "The path to mount the Absinthe Protocol Handler on.",
+              "default": "/absinthe/socket"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "AbsintheProtocol configuration for the Absinthe Protocol"
+        },
+        "forward_upgrade_headers": {
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Forward upgrade request headers in the extensions payload when starting a subscription on a Subgraph.",
+              "default": true
+            },
+            "allow_list": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array",
+              "description": "The names of the headers to forward.",
+              "default": [
+                "Authorization"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "Forward Upgrade Request Headers in the Extensions payload when starting a Subscription on a Subgraph"
+        },
+        "forward_upgrade_query_params": {
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Forward upgrade request query parameters in the extensions payload when starting a subscription on a Subgraph.",
+              "default": false
+            },
+            "allow_list": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array",
+              "description": "The names of the query parameters to forward.",
+              "default": [
+                "Authorization"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "forward Upgrade Request Query Parameters in the Extensions payload when starting a Subscription on a Subgraph"
+        },
+        "forward_initial_payload": {
+          "type": "boolean",
+          "description": "Forward the initial payload in the extensions payload when starting a subscription on a Subgraph.",
+          "default": true
+        },
+        "authentication": {
+          "properties": {
+            "from_initial_payload": {
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "This configuration indicates if the Router should look for the JWT in the initial payload of the WebSocket Connection.",
+                  "default": false
+                },
+                "key": {
+                  "type": "string",
+                  "description": "The name of the property holding the JWT value.",
+                  "default": "Authorization"
+                },
+                "export_token": {
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "description": "This configuration indicates if the Router will export the JWT to the client request header.",
+                      "default": true
+                    },
+                    "header_key": {
+                      "type": "string",
+                      "description": "The name of the header property that will have the JWT value.",
+                      "default": "Authorization"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "type": "object",
+                  "description": "The configuration responsible for exporting the JWT to the client's request header."
+                }
+              },
+              "additionalProperties": false,
+              "type": "object",
+              "description": "The configuration used to tell the Router to look for the JWT in the initial payload of the WebSocket Connection."
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "The configuration used to authenticate the WebSocket connections."
+        },
+        "client_info_from_initial_payload": {
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "This configuration indicates if the Router should set the client info from the initial payload of the WebSocket Connection.",
+              "default": true
+            },
+            "name_field": {
+              "type": "string",
+              "description": "The name of the field in the initial payload that will have the client name.",
+              "default": "graphql-client-name"
+            },
+            "version_field": {
+              "type": "string",
+              "description": "The name of the field in the initial payload that will have the client version.",
+              "default": "graphql-client-version"
+            },
+            "forward_to_request_headers": {
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "This configuration indicates if the Router should forward the client info to the request headers.",
+                  "default": true
+                },
+                "name_target_header": {
+                  "type": "string",
+                  "description": "The name of the header property that will have the client name.",
+                  "default": "graphql-client-name"
+                },
+                "version_target_header": {
+                  "type": "string",
+                  "description": "The name of the header property that will have the client version.",
+                  "default": "graphql-client-version"
+                }
+              },
+              "additionalProperties": false,
+              "type": "object"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "The configuration for the WebSocket transport. The WebSocket transport is used to enable the WebSocket transport for the GraphQL subscriptions."
+    },
+    "subgraph_error_propagation": {
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable error propagation.",
+          "default": true
+        },
+        "propagate_status_codes": {
+          "type": "boolean",
+          "description": "Propagate Subgraph HTTP status codes.",
+          "default": false
+        },
+        "mode": {
+          "type": "string",
+          "description": "The mode of error propagation.",
+          "default": "wrapped"
+        },
+        "rewrite_paths": {
+          "type": "boolean",
+          "description": "Rewrite the paths of the Subgraph errors.",
+          "default": true
+        },
+        "omit_locations": {
+          "type": "boolean",
+          "description": "Omit the location field of Subgraph errors.",
+          "default": true
+        },
+        "omit_extensions": {
+          "type": "boolean",
+          "description": "Omit the extensions field of Subgraph errors.",
+          "default": false
+        },
+        "attach_service_name": {
+          "type": "boolean",
+          "description": "Attach the service name to each Subgraph error.",
+          "default": true
+        },
+        "default_extension_code": {
+          "type": "string",
+          "description": "The default extension code.",
+          "default": "DOWNSTREAM_SERVICE_ERROR"
+        },
+        "allow_all_extension_fields": {
+          "type": "boolean",
+          "description": "Allow all extension fields from Subgraph errors to be propagated to the client.",
+          "default": false
+        },
+        "allowed_extension_fields": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "The allowed extension fields.",
+          "default": [
+            "code"
+          ]
+        },
+        "allowed_fields": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "The allowed fields in passthrough mode."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "The configuration for the subgraph error propagation. The subgraph error propagation is used to propagate the errors from the subgraphs to the client."
+    },
+    "storage_providers": {
+      "properties": {
+        "s3": {
+          "items": {
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "The ID of the storage provider. The ID is used to identify the storage provider in the configuration."
+              },
+              "endpoint": {
+                "type": "string",
+                "description": "The S3 endpoint to connect to. The endpoint is used to connect to the S3 provider. If not set, the default S3 endpoint is used."
+              },
+              "access_key": {
+                "type": "string",
+                "description": "The access key of the S3 bucket. The access key ID is used to authenticate with the S3 bucket."
+              },
+              "secret_key": {
+                "type": "string",
+                "description": "The secret key of the S3 bucket."
+              },
+              "bucket": {
+                "type": "string",
+                "description": "The name of the S3 bucket."
+              },
+              "region": {
+                "type": "string",
+                "description": "The region of the S3 bucket."
+              },
+              "secure": {
+                "type": "boolean",
+                "description": "Enable the secure connection."
+              }
+            },
+            "additionalProperties": false,
+            "type": "object"
+          },
+          "type": "array",
+          "description": "The configuration for the S3 storage provider. If no access key and secret key are provided, the provider will attempt to retrieve IAM credentials from the EC2 service."
+        },
+        "cdn": {
+          "items": {
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "The provider ID. The provider ID is used to identify the provider in the configuration."
+              },
+              "url": {
+                "type": "string",
+                "description": "The provider URL. The URL is used to connect to the provider.",
+                "default": "https://cosmo-cdn.wundergraph.com"
+              }
+            },
+            "additionalProperties": false,
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "redis": {
+          "items": {
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "The provider ID. The provider ID is used to identify the provider in the configuration."
+              },
+              "urls": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "description": "List of Redis URLs to connect to. If cluster_enabled is true, these are the seeds to discover the cluster."
+              },
+              "cluster_enabled": {
+                "type": "boolean",
+                "description": "Whether to use the Redis Cluster client.",
+                "default": false
+              }
+            },
+            "additionalProperties": false,
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "file_system": {
+          "items": {
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "The provider ID. The provider ID is used to identify the provider in the configuration."
+              },
+              "path": {
+                "type": "string",
+                "description": "The file system path where data is stored and retrieved."
+              }
+            },
+            "additionalProperties": false,
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "The configuration for the storage providers. Storage providers can be used to provide access to persisted operations, router execution config and MCP operations."
+    },
+    "execution_config": {
+      "properties": {
+        "file": {
+          "properties": {
+            "path": {
+              "type": "string",
+              "format": "file-path",
+              "description": "The path to the execution config file."
+            },
+            "watch": {
+              "type": "boolean",
+              "description": "Enable the watch mode.",
+              "default": false
+            },
+            "watch_interval": {
+              "type": "string",
+              "format": "go-duration",
+              "description": "The interval at which the file is checked for changes.",
+              "default": "1s",
+              "duration_minimum": "100ms"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "The configuration for the execution config file."
+        },
+        "storage": {
+          "properties": {
+            "provider_id": {
+              "type": "string",
+              "description": "The ID of the storage provider."
+            },
+            "object_path": {
+              "type": "string",
+              "description": "The path to the execution config in the storage provider."
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "The storage provider for the execution config."
+        },
+        "fallback_storage": {
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable fallback storage provider.",
+              "default": false
+            },
+            "provider_id": {
+              "type": "string",
+              "description": "The ID of the storage provider."
+            },
+            "object_path": {
+              "type": "string",
+              "description": "The path to the execution config in the storage provider."
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "The fallback storage provider for the execution config in case the primary one fails."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "The configuration for the execution config. You can load the execution config from the local file system or from a storage provider."
+    },
+    "persisted_operations": {
+      "properties": {
+        "disabled": {
+          "type": "boolean",
+          "description": "Disables persisted operations.",
+          "default": false
+        },
+        "log_unknown": {
+          "type": "boolean",
+          "description": "Log operations which haven't yet been persisted.",
+          "default": false
+        },
+        "safelist": {
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Only allows persisted operations.",
+              "default": false
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "The configuration for safelisting persisted operations."
+        },
+        "cache": {
+          "properties": {
+            "size": {
+              "type": "string",
+              "format": "bytes-string",
+              "description": "The size of the cache used.",
+              "default": "100MB"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object"
+        },
+        "storage": {
+          "properties": {
+            "provider_id": {
+              "type": "string",
+              "description": "The ID of the storage provider."
+            },
+            "object_prefix": {
+              "type": "string",
+              "description": "The prefix of the object in the storage provider location."
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "The storage provider for persisted operation."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "The configuration for the persisted operations."
+    },
+    "automatic_persisted_queries": {
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable automatic persisted queries.",
+          "default": false
+        },
+        "cache": {
+          "properties": {
+            "size": {
+              "type": "string",
+              "format": "bytes-string",
+              "description": "The size of the in-place cache used.",
+              "default": "100MB"
+            },
+            "ttl": {
+              "type": "integer",
+              "description": "The ttl of the cache (in seconds).",
+              "default": 0
+            }
+          },
+          "additionalProperties": false,
+          "type": "object"
+        },
+        "storage": {
+          "properties": {
+            "provider_id": {
+              "type": "string",
+              "description": "The ID of the storage provider."
+            },
+            "object_prefix": {
+              "type": "string",
+              "description": "The prefix of the object in the storage provider location."
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "The storage provider for automatic persisted operation."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "The configuration for the automatic persisted queries (APQ)."
+    },
+    "apollo_compatibility_flags": {
+      "properties": {
+        "enable_all": {
+          "type": "boolean",
+          "description": "Enable all Apollo compatibility flags.",
+          "default": false
+        },
+        "value_completion": {
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "Invalid __typename values will be returned in extensions.valueCompletion instead of errors."
+        },
+        "truncate_floats": {
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "Truncate floats like 1.0 to 1, 2.0 to 2, etc."
+        },
+        "suppress_fetch_errors": {
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "Suppresses fetch errors."
+        },
+        "replace_undefined_op_field_errors": {
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "Produces the same error as Apollo when an invalid operation field is included in an operation selection set."
+        },
+        "replace_invalid_var_errors": {
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "Produces the same error as Apollo when an invalid variable is supplied."
+        },
+        "replace_validation_error_status": {
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "Produces the same error status code (400) as Apollo when validation fails."
+        },
+        "subscription_multipart_print_boundary": {
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "Prints the multipart boundary right after the message in multipart subscriptions."
+        },
+        "use_graphql_validation_failed_status": {
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "Uses Apollo compliant validation errors, including 400 status and GRAPHQL_VALIDATION_FAILED extension."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "To enable full compatibility with Apollo Federation, Apollo Gateway and Apollo Router, you can enable certain compatibility flags, allowing you to use Cosmo Router as a drop-in replacement for Apollo."
+    },
+    "apollo_router_compatibility_flags": {
+      "properties": {
+        "replace_invalid_var_errors": {
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "Produces the same error as Apollo Router when an invalid variable is supplied."
+        },
+        "subrequest_http_error": {
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "Prepends an additional error when subgraph HTTP response code is non-2XX, similar to Apollo Router."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "To enable full compatibility with Apollo Router you can enable certain compatibility flags, allowing you to use Cosmo Router as a drop-in replacement for Apollo Router"
+    },
+    "client_header": {
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The custom client name header."
+        },
+        "version": {
+          "type": "string",
+          "description": "The custom client version header."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "The configuration to set custom client name and version header."
+    },
+    "plugins": {
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable the router gRPC plugins.",
+          "default": false
+        },
+        "path": {
+          "type": "string",
+          "description": "The path to the plugins directory.",
+          "default": "plugins"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "The configuration for the router gRPC plugins."
+    },
+    "watch_config": {
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable watching for configuration changes. This is useful for development and testing.",
+          "default": false
+        },
+        "interval": {
+          "type": "string",
+          "format": "go-duration",
+          "description": "The interval at which the config file is checked for changes. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+          "default": "10s",
+          "duration_minimum": "5s"
+        },
+        "startup_delay": {
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable startup delay for the configuration watcher. This is useful for preventing race conditions during startup.",
+              "default": false
+            },
+            "maximum": {
+              "type": "string",
+              "format": "go-duration",
+              "description": "The maximum time to wait before starting the config file watcher. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+              "default": "10s",
+              "duration_minimum": "5s"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "description": "Configuration for delaying the initial file watcher start."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "Configuration for watching changes to the router configuration."
+    }
+  },
+  "additionalProperties": false,
+  "type": "object"
+}
