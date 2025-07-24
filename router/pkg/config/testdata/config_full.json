@@ -388,7 +388,8 @@
       },
       "File": {
         "Enabled": false,
-        "Path": "access.log"
+        "Path": "access.log",
+        "FileMode": 416
       }
     },
     "Router": {

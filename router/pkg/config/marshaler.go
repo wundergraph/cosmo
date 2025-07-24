@@ -2,7 +2,9 @@ package config
 
 import (
 	"fmt"
+	"os"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/dustin/go-humanize"
@@ -78,4 +80,25 @@ func (b *BytesString) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 func (b BytesString) MarshalYAML() (interface{}, error) {
 	return humanize.Bytes(uint64(b)), nil
+}
+
+type FileMode os.FileMode
+
+func (b *FileMode) UnmarshalText(value []byte) error {
+	decoded, err := strconv.ParseUint(string(value), 8, 32)
+	if err != nil {
+		return fmt.Errorf("could not parse file mode: %w", err)
+	}
+
+	*b = FileMode(decoded)
+
+	return nil
+}
+
+func (b *FileMode) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var s string
+	if err := unmarshal(&s); err != nil {
+		return err
+	}
+	return b.UnmarshalText([]byte(s))
 }
