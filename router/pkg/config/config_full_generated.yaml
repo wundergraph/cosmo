@@ -1,0 +1,601 @@
+version: "1"
+graph:
+  token: mytoken
+telemetry:
+  service_name: cosmo-router
+  attributes: []
+  resource_attributes: []
+  tracing:
+    enabled: true
+    sampling_rate: 1.0
+    parent_based_sampler: true
+    exporters:
+    - disabled: false
+      exporter: http
+      endpoint: https://my-otel-collector.example.com
+      path: /v1/traces
+      batch_timeout: 10s
+      export_timeout: 30s
+    propagation:
+      trace_context: true
+      jaeger: false
+      b3: false
+      baggage: false
+      datadog: true
+    response_trace_id:
+      enabled: false
+      header_name: x-wg-trace-id
+    attributes:
+    - key: wg.tracing.custom.conn.subgraph.hostport
+      default: ""
+      value_from:
+        expression: subgraph.name
+    export_graphql_variables: true
+    with_new_root: false
+  metrics:
+    attributes: []
+    otlp:
+      enabled: true
+      router_runtime: true
+      graphql_cache: true
+      connection_stats: true
+      engine_stats:
+        subscriptions: true
+      circuit_breaker: false
+      exporters:
+      - disabled: false
+        exporter: http
+        endpoint: https://my-otel-collector.example.com
+        path: /v1/metrics
+        headers: {}
+        temporality: ""
+    prometheus:
+      enabled: true
+      path: /metrics
+      listen_addr: 127.0.0.1:8088
+      graphql_cache: true
+      connection_stats: true
+      engine_stats:
+        subscriptions: true
+      circuit_breaker: false
+      exclude_scope_info: true
+      schema_usage:
+        enabled: true
+        include_operation_sha: false
+    experiment_cardinality_limit: 2000
+graphql_metrics:
+  enabled: true
+  collector_endpoint: https://cosmo-metrics.wundergraph.com
+cors:
+  enabled: true
+  allow_origins:
+  - "*"
+  allow_methods:
+  - HEAD
+  - GET
+  - POST
+  allow_headers:
+  - Origin
+  - Content-Length
+  - Content-Type
+  allow_credentials: true
+  max_age: 5m0s
+cluster:
+  name: my-cluster
+compliance:
+  anonymize_ip:
+    enabled: true
+    method: redact
+cache_control_policy:
+  enabled: true
+  value: max-age=180, public
+  subgraphs:
+  - name: products
+    value: max-age=60, public
+mcp:
+  enabled: false
+  server:
+    listen_addr: localhost:5025
+    base_url: http://localhost:5025
+  storage:
+    provider_id: mcp
+  graph_name: cosmo
+  exclude_mutations: false
+  enable_arbitrary_operations: false
+  expose_schema: false
+  router_url: https://cosmo-router.wundergraph.com
+demo_mode: true
+modules:
+  myModule:
+    value: 1
+headers:
+  all:
+    request:
+    - op: propagate
+      matching: ""
+      named: X-Test-Header
+      default: ""
+      name: ""
+      value: ""
+      expression: ""
+    - op: propagate
+      matching: (?i)^X-Custom-.*
+      named: ""
+      default: ""
+      name: ""
+      value: ""
+      expression: ""
+    - op: propagate
+      matching: ""
+      named: X-User-Id
+      default: "123"
+      name: ""
+      value: ""
+      expression: ""
+    - op: set
+      matching: ""
+      named: ""
+      default: ""
+      name: X-API-Key
+      value: some-secret
+      expression: ""
+    - op: set
+      matching: ""
+      named: ""
+      default: ""
+      name: x-operation-name
+      value: ""
+      expression: ""
+      value_from:
+        context_field: operation_name
+    - op: set
+      matching: ""
+      named: ""
+      default: ""
+      name: x-expression-header
+      value: ""
+      expression: request.header.Get('X-Operation-Name')
+    response:
+    - op: propagate
+      matching: ""
+      named: X-Custom-Header
+      default: ""
+      algorithm: append
+      name: ""
+      value: ""
+  subgraphs:
+    specific-subgraph:
+      request:
+      - op: propagate
+        matching: ""
+        named: Subgraph-Secret
+        default: some-secret
+        name: ""
+        value: ""
+        expression: ""
+      response:
+      - op: set
+        matching: ""
+        named: ""
+        default: ""
+        name: X-Subgraph-Key
+        value: some-subgraph-secret
+  cookie_whitelist:
+  - cookie1
+  - cookie2
+traffic_shaping:
+  all:
+    retry:
+      enabled: true
+      algorithm: backoff_jitter
+      max_attempts: 5
+      max_duration: 10s
+      interval: 3s
+    circuit_breaker:
+      enabled: false
+      error_threshold_percentage: 50
+      request_threshold: 20
+      sleep_window: 5s
+      half_open_attempts: 1
+      required_successful: 1
+      rolling_duration: 10s
+      num_buckets: 10
+      execution_timeout: 1m0s
+      max_concurrent_requests: -1
+    request_timeout: 1m0s
+    dial_timeout: 30s
+    response_header_timeout: 0s
+    expect_continue_timeout: 0s
+    tls_handshake_timeout: 0s
+    keep_alive_idle_timeout: 0s
+    keep_alive_probe_interval: 30s
+    max_conns_per_host: 100
+    max_idle_conns: 1024
+    max_idle_conns_per_host: 20
+  router:
+    max_request_body_size: 5.0 MB
+    max_header_bytes: 4.2 MB
+    decompression_enabled: false
+  subgraphs:
+    products:
+      retry:
+        enabled: false
+        algorithm: ""
+        max_attempts: 0
+        max_duration: 0s
+        interval: 0s
+      circuit_breaker:
+        enabled: false
+        error_threshold_percentage: 0
+        request_threshold: 0
+        sleep_window: 250ms
+        half_open_attempts: 0
+        required_successful: 0
+        rolling_duration: 5s
+        num_buckets: 0
+        execution_timeout: 1s
+        max_concurrent_requests: 0
+      request_timeout: 2m0s
+file_upload:
+  enabled: true
+  max_file_size: 50 MB
+  max_files: 10
+access_logs:
+  enabled: true
+  buffer:
+    enabled: true
+    size: 100 MB
+    flush_interval: 100ms
+  output:
+    stdout:
+      enabled: true
+    file:
+      enabled: false
+      path: access.log
+  router:
+    fields:
+    - key: hello
+      default: ""
+      value_from:
+        context_field: operation_name
+    - key: request_information
+      default: ""
+      value_from:
+        expression: request.error ?? 'success'
+  subgraphs:
+    enabled: true
+    fields:
+    - key: response_field
+      default: ""
+      value_from:
+        response_header: X-Response-Field
+batching:
+  enabled: false
+  max_concurrency: 10
+  max_entries_per_batch: 100
+  omit_extensions: false
+listen_addr: localhost:3002
+controlplane_url: https://cosmo-cp.wundergraph.com
+playground:
+  enabled: false
+  path: /my-playground
+  concurrency_limit: 1500
+playground_enabled: true
+introspection_enabled: true
+query_plans_enabled: true
+log_level: info
+json_log: true
+shutdown_delay: 15s
+grace_period: 20s
+poll_interval: 10s
+poll_jitter: 5s
+health_check_path: /health
+readiness_check_path: /health/ready
+liveness_check_path: /health/live
+graphql_path: /graphql
+playground_path: /
+authentication:
+  jwt:
+    jwks:
+    - url: https://example.com/.well-known/jwks.json
+      algorithms:
+      - RS256
+      refresh_interval: 1m0s
+      secret: ""
+      algorithm: ""
+      key_id: ""
+    - url: https://example.com/.well-known/jwks2.json
+      algorithms:
+      - RS256
+      - ES256
+      refresh_interval: 2m0s
+      secret: ""
+      algorithm: ""
+      key_id: ""
+    - url: https://example.com/.well-known/jwks3.json
+      algorithms: []
+      refresh_interval: 1m0s
+      secret: ""
+      algorithm: ""
+      key_id: ""
+    header_name: Authorization
+    header_value_prefix: Bearer
+    header_sources:
+    - type: header
+      name: X-Authorization
+      value_prefixes:
+      - Bearer
+      - Token
+    - type: header
+      name: authz
+      value_prefixes: []
+rate_limit:
+  enabled: true
+  strategy: simple
+  simple_strategy:
+    rate: 60
+    burst: 60
+    period: 1m0s
+    reject_exceeding_requests: true
+    reject_status_code: 200
+    hide_stats_from_response_extension: false
+  storage:
+    urls:
+    - test@localhost:8000
+    - test2@localhost:8001
+    cluster_enabled: true
+    key_prefix: cosmo_rate_limit
+  debug: false
+  error_extension_code:
+    enabled: true
+    code: RATE_LIMIT_EXCEEDED
+localhost_fallback_inside_docker: true
+cdn:
+  url: https://cosmo-cdn.wundergraph.com
+  cache_size: 100 MB
+dev_mode: false
+events:
+  providers:
+    nats:
+    - id: default
+      url: nats://localhost:4222
+    - id: my-nats
+      url: nats://localhost:4222
+      authentication:
+        user_info:
+          password: admin
+          username: admin
+    kafka:
+    - id: my-kafka
+      brokers:
+      - localhost:9092
+      authentication:
+        sasl_plain:
+          password: admin
+          username: admin
+      tls:
+        enabled: true
+      fetch_max_wait: 10ms
+    redis:
+    - id: my-redis
+      urls:
+      - redis://localhost:6379/11
+      cluster_enabled: true
+cache_warmup:
+  enabled: false
+  source: {}
+  workers: 8
+  items_per_second: 50
+  timeout: 30s
+router_config_path: latest.json
+router_registration: true
+override_routing_url:
+  subgraphs:
+    some-subgraph: http://router:3002/graphql
+overrides:
+  subgraphs:
+    some-subgraph:
+      routing_url: http://router:3002/graphql
+      subscription_url: http://router:3002/graphql/ws
+      subscription_protocol: ws
+      subscription_websocket_subprotocol: graphql-ws
+security:
+  block_mutations:
+    enabled: false
+    condition: ""
+  block_subscriptions:
+    enabled: false
+    condition: ""
+  block_non_persisted_operations:
+    enabled: false
+    condition: ""
+  complexity_calculation_cache:
+    enabled: true
+    size: 1024
+  complexity_limits:
+    depth:
+      enabled: true
+      limit: 5
+      ignore_persisted_operations: true
+    total_fields:
+      enabled: true
+      limit: 7
+      ignore_persisted_operations: true
+    root_fields:
+      enabled: true
+      limit: 3
+      ignore_persisted_operations: true
+    root_field_aliases:
+      enabled: true
+      limit: 4
+      ignore_persisted_operations: true
+  depth_limit:
+    enabled: true
+    limit: 5
+    cache_size: 1024
+    ignore_persisted_operations: true
+  parser_limits:
+    approximate_depth_limit: 100
+    total_fields_limit: 500
+engine:
+  debug:
+    print_operation_transformations: false
+    print_operation_enable_ast_refs: false
+    print_planning_paths: false
+    print_query_plans: false
+    print_intermediate_query_plans: false
+    print_node_suggestions: false
+    configuration_visitor: false
+    planning_visitor: false
+    datasource_visitor: false
+    report_websocket_connections: false
+    report_memory_usage: false
+    enable_resolver_debugging: false
+    enable_persisted_operations_cache_response_header: false
+    enable_normalization_cache_response_header: false
+    always_include_query_plan: false
+    always_skip_loader: false
+  enable_single_flight: true
+  enable_request_tracing: true
+  enable_execution_plan_cache_response_header: false
+  max_concurrent_resolvers: 32
+  enable_net_poll: true
+  websocket_client_poll_timeout: 1s
+  websocket_client_conn_buffer_size: 128
+  websocket_client_read_timeout: 5s
+  websocket_client_write_timeout: 10s
+  websocket_client_ping_interval: 10s
+  websocket_client_ping_timeout: 30s
+  websocket_client_frame_timeout: 100ms
+  execution_plan_cache_size: 1024
+  minify_subgraph_operations: true
+  enable_persisted_operations_cache: true
+  enable_normalization_cache: true
+  normalization_cache_size: 1024
+  operation_hash_cache_size: 2048
+  parsekit_pool_size: 16
+  enable_validation_cache: true
+  validation_cache_size: 1024
+  disable_exposing_variables_content_on_validation_error: false
+  resolver_max_recyclable_parser_size: 4096
+  enable_subgraph_fetch_operation_name: true
+  disable_variables_remapping: false
+  subscription_fetch_timeout: 30s
+websocket:
+  enabled: true
+  absinthe_protocol:
+    enabled: true
+    handler_path: /absinthe/socket
+  forward_upgrade_headers:
+    enabled: true
+    allow_list:
+    - Authorization
+  forward_upgrade_query_params:
+    enabled: true
+    allow_list:
+    - Authorization
+  forward_initial_payload: true
+  authentication:
+    from_initial_payload:
+      enabled: true
+      key: Authorization
+      export_token:
+        enabled: true
+        header_key: Authorization
+  client_info_from_initial_payload:
+    enabled: true
+    name_field: graphql-client-name
+    version_field: graphql-client-version
+    forward_to_request_headers:
+      enabled: true
+      name_target_header: graphql-client-name
+      version_target_header: graphql-client-version
+subgraph_error_propagation:
+  enabled: true
+  propagate_status_codes: false
+  mode: pass-through
+  rewrite_paths: true
+  omit_locations: true
+  omit_extensions: true
+  attach_service_name: true
+  default_extension_code: DOWNSTREAM_SERVICE_ERROR
+  allow_all_extension_fields: true
+  allowed_extension_fields:
+  - field1
+  - field2
+  allowed_fields: []
+storage_providers:
+  s3:
+  - id: s3
+    endpoint: localhost:10000
+    access_key: Pj6opX3288YukriGCzIr
+    secret_key: WNMg9X4fzMva18henO6XLX4qRHEArwYdT7Yt84w9
+    bucket: cosmo
+    region: us-east-1
+  redis:
+  - id: my_redis
+    urls:
+    - test@localhost:8000
+    - test2@localhost:8001
+  file_system:
+  - id: mcp
+    path: operations
+execution_config:
+  file:
+    watch_interval: 1s
+  storage:
+    provider_id: s3
+    object_path: 5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/routerconfigs/latest.json
+persisted_operations:
+  disabled: false
+  log_unknown: true
+  safelist:
+    enabled: true
+  cache:
+    size: 100 MB
+  storage:
+    provider_id: s3
+    object_prefix: 5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/operations/foo
+automatic_persisted_queries:
+  enabled: true
+  cache:
+    size: 100 MB
+    ttl: 900
+  storage:
+    provider_id: redis
+    object_prefix: cosmo_apq
+apollo_compatibility_flags:
+  enable_all: false
+  value_completion:
+    enabled: false
+  truncate_floats:
+    enabled: false
+  suppress_fetch_errors:
+    enabled: false
+  replace_undefined_op_field_errors:
+    enabled: true
+  replace_invalid_var_errors:
+    enabled: false
+  replace_validation_error_status:
+    enabled: false
+  subscription_multipart_print_boundary:
+    enabled: false
+  use_graphql_validation_failed_status:
+    enabled: true
+apollo_router_compatibility_flags:
+  replace_invalid_var_errors:
+    enabled: false
+  subrequest_http_error:
+    enabled: false
+client_header:
+  name: Client-Name
+  version: Client_Version
+plugins:
+  enabled: true
+  path: some/path/to/plugins
+watch_config:
+  enabled: true
+  interval: 10s
+  startup_delay:
+    enabled: true
+    maximum: 10s

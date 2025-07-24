@@ -76,6 +76,10 @@ cors:
 
 access_logs:
   enabled: true
+  buffer:
+    enabled: true
+    size: 100MB
+    flush_interval: 100ms
   router:
     fields:
       - key: 'hello'
@@ -217,6 +221,11 @@ traffic_shaping:
   subgraphs:
     products: # Will only affect this subgraph
       request_timeout: 120s
+      circuit_breaker:
+        rolling_duration: 5s
+        sleep_window: 250ms
+        execution_timeout: 1s
+
 
 # Header manipulation
 # See "https://cosmo-docs.wundergraph.com/router/proxy-capabilities" for more information
@@ -272,6 +281,7 @@ authentication:
         refresh_interval: 2m
         algorithms: ['RS256', 'ES256']
       - url: 'https://example.com/.well-known/jwks3.json'
+        refresh_interval: 1m
     header_name: Authorization
     header_value_prefix: Bearer
     header_sources:

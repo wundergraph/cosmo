@@ -1132,12 +1132,15 @@
             "max_request_body_size": {
               "type": "string",
               "format": "bytes-string",
-              "description": "The maximum request body size. The size is specified as a string with a number and a unit, e.g. 10KB, 1MB, 1GB. The supported units are 'KB', 'MB', 'GB'."
+              "description": "The maximum request body size. The size is specified as a string with a number and a unit, e.g. 10KB, 1MB, 1GB. The supported units are 'KB', 'MB', 'GB'.",
+              "default": "5MB",
+              "bytes_minimum": "1MB"
             },
             "max_header_bytes": {
               "type": "string",
               "format": "bytes-string",
-              "description": "The maximum size of the request headers. Setting this to 0 uses the default value from the http standard lib, which is 1MiB."
+              "description": "The maximum size of the request headers. Setting this to 0 uses the default value from the http standard lib, which is 1MiB.",
+              "default": "0MiB"
             },
             "decompression_enabled": {
               "type": "boolean",
@@ -1307,7 +1310,9 @@
         "max_file_size": {
           "type": "string",
           "format": "bytes-string",
-          "description": "The maximum size of a file that can be uploaded. The size is specified as a string with a number and a unit, e.g. 10KB, 1MB, 1GB. The supported units are 'KB', 'MB', 'GB'."
+          "description": "The maximum size of a file that can be uploaded. The size is specified as a string with a number and a unit, e.g. 10KB, 1MB, 1GB. The supported units are 'KB', 'MB', 'GB'.",
+          "default": "50MB",
+          "bytes_minimum": "1MB"
         },
         "max_files": {
           "type": "integer",
@@ -1336,7 +1341,8 @@
               "type": "string",
               "format": "bytes-string",
               "description": "The size of the buffer.",
-              "default": "256KB"
+              "default": "256KB",
+              "bytes_minimum": "1KB"
             },
             "flush_interval": {
               "type": "string",
@@ -1862,7 +1868,8 @@
           "type": "string",
           "format": "bytes-string",
           "description": "The size of the cache used.",
-          "default": "100MB"
+          "default": "100MB",
+          "bytes_minimum": "10mb"
         }
       },
       "additionalProperties": false,
@@ -3005,7 +3012,8 @@
               "type": "string",
               "format": "bytes-string",
               "description": "The size of the cache used.",
-              "default": "100MB"
+              "default": "100MB",
+              "bytes_minimum": "10mb"
             }
           },
           "additionalProperties": false,
@@ -3044,7 +3052,8 @@
               "type": "string",
               "format": "bytes-string",
               "description": "The size of the in-place cache used.",
-              "default": "100MB"
+              "default": "100MB",
+              "bytes_minimum": "10mb"
             },
             "ttl": {
               "type": "integer",

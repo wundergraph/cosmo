@@ -173,14 +173,14 @@ type TrafficShapingRules struct {
 
 type FileUpload struct {
 	Enabled          bool        `yaml:"enabled" envDefault:"true" env:"FILE_UPLOAD_ENABLED"`
-	MaxFileSizeBytes BytesString `yaml:"max_file_size" envDefault:"50MB" env:"FILE_UPLOAD_MAX_FILE_SIZE"` // The maximum size of a file that can be uploaded. The size is specified as a string with a number and a unit, e.g. 10KB, 1MB, 1GB. The supported units are 'KB', 'MB', 'GB'.
-	MaxFiles         int         `yaml:"max_files" envDefault:"10" env:"FILE_UPLOAD_MAX_FILES"`           // The maximum number of files that can be uploaded.
+	MaxFileSizeBytes BytesString `yaml:"max_file_size" envDefault:"50MB" env:"FILE_UPLOAD_MAX_FILE_SIZE" jsonschema:"default=50MB" jsonschema_extras:"bytes_minimum=1MB"` // The maximum size of a file that can be uploaded. The size is specified as a string with a number and a unit, e.g. 10KB, 1MB, 1GB. The supported units are 'KB', 'MB', 'GB'.
+	MaxFiles         int         `yaml:"max_files" envDefault:"10" env:"FILE_UPLOAD_MAX_FILES"`                                                                           // The maximum number of files that can be uploaded.
 }
 
 type RouterTrafficConfiguration struct {
-	MaxRequestBodyBytes  BytesString `yaml:"max_request_body_size" envDefault:"5MB"`                    // The maximum request body size. The size is specified as a string with a number and a unit, e.g. 10KB, 1MB, 1GB. The supported units are 'KB', 'MB', 'GB'.
-	MaxHeaderBytes       BytesString `yaml:"max_header_bytes" envDefault:"0MiB" env:"MAX_HEADER_BYTES"` // The maximum size of the request headers. Setting this to 0 uses the default value from the http standard lib, which is 1MiB.
-	DecompressionEnabled bool        `yaml:"decompression_enabled" envDefault:"true"`                   // When enabled, the router will check incoming requests for a 'Content-Encoding' header and decompress the body accordingly. Currently only gzip is supported
+	MaxRequestBodyBytes  BytesString `yaml:"max_request_body_size" envDefault:"5MB" jsonschema:"default=5MB" jsonschema_extras:"bytes_minimum=1MB"` // The maximum request body size. The size is specified as a string with a number and a unit, e.g. 10KB, 1MB, 1GB. The supported units are 'KB', 'MB', 'GB'.
+	MaxHeaderBytes       BytesString `yaml:"max_header_bytes" envDefault:"0MiB" env:"MAX_HEADER_BYTES" jsonschema:"default=0MiB"`                   // The maximum size of the request headers. Setting this to 0 uses the default value from the http standard lib, which is 1MiB.
+	DecompressionEnabled bool        `yaml:"decompression_enabled" envDefault:"true"`                                                               // When enabled, the router will check incoming requests for a 'Content-Encoding' header and decompress the body accordingly. Currently only gzip is supported
 }
 
 type GlobalSubgraphRequestRule struct {
@@ -521,8 +521,8 @@ type RateLimitSimpleStrategy struct {
 }
 
 type CDNConfiguration struct {
-	URL       HttpUrlString `yaml:"url" env:"CDN_URL" envDefault:"https://cosmo-cdn.wundergraph.com" jsonschema:"default=https://cosmo-cdn.wundergraph.com"` // The URL of the CDN.
-	CacheSize BytesString   `yaml:"cache_size,omitempty" env:"CDN_CACHE_SIZE" envDefault:"100MB" jsonschema:"default=100MB"`                                 // The size of the cache used.
+	URL       HttpUrlString `yaml:"url" env:"CDN_URL" envDefault:"https://cosmo-cdn.wundergraph.com" jsonschema:"default=https://cosmo-cdn.wundergraph.com"`                                                                                                                            // The URL of the CDN.
+	CacheSize BytesString   `yaml:"cache_size,omitempty" env:"CDN_CACHE_SIZE" envDefault:"100MB" jsonschema:"default=100MB,deprecated=true,deprecationMessage=The cache_size is deprecated. Please use the persisted_operations.cache instead." jsonschema_extras:"bytes_minimum=10mb"` // The size of the cache used.
 }
 
 type NatsTokenBasedAuthentication struct {
@@ -797,12 +797,12 @@ type ExecutionConfig struct {
 }
 
 type PersistedOperationsCacheConfig struct {
-	Size BytesString `yaml:"size,omitempty" env:"PERSISTED_OPERATIONS_CACHE_SIZE" envDefault:"100MB" jsonschema:"default=100MB"` // The size of the cache used.
+	Size BytesString `yaml:"size,omitempty" env:"PERSISTED_OPERATIONS_CACHE_SIZE" envDefault:"100MB" jsonschema:"default=100MB" jsonschema_extras:"bytes_minimum=10mb"` // The size of the cache used.
 }
 
 type AutomaticPersistedQueriesCacheConfig struct {
-	Size BytesString `yaml:"size,omitempty" env:"APQ_CACHE_SIZE" envDefault:"100MB" jsonschema:"default=100MB"` // The size of the in-place cache used.
-	TTL  int         `yaml:"ttl" env:"APQ_CACHE_TTL" envDefault:"-1" jsonschema:"default=0"`                    // The ttl of the cache (in seconds).
+	Size BytesString `yaml:"size,omitempty" env:"APQ_CACHE_SIZE" envDefault:"100MB" jsonschema:"default=100MB" jsonschema_extras:"bytes_minimum=10mb"` // The size of the in-place cache used.
+	TTL  int         `yaml:"ttl" env:"APQ_CACHE_TTL" envDefault:"-1" jsonschema:"default=0"`                                                           // The ttl of the cache (in seconds).
 }
 
 type PersistedOperationsConfig struct {
@@ -840,7 +840,7 @@ type BatchingConfig struct {
 
 type AccessLogsBufferConfig struct {
 	Enabled       bool          `yaml:"enabled" env:"ACCESS_LOGS_BUFFER_ENABLED" envDefault:"false" jsonschema:"default=false"`                                                                   // Enable the buffer. The buffer is used to buffer the logs before writing them to the output.
-	Size          BytesString   `yaml:"size" envDefault:"256KB" env:"ACCESS_LOGS_BUFFER_SIZE" jsonschema:"default=256KB"`                                                                         // The size of the buffer.
+	Size          BytesString   `yaml:"size" envDefault:"256KB" env:"ACCESS_LOGS_BUFFER_SIZE" jsonschema:"default=256KB" jsonschema_extras:"bytes_minimum=1KB"`                                   // The size of the buffer.
 	FlushInterval time.Duration `yaml:"flush_interval" envDefault:"10s" env:"ACCESS_LOGS_FLUSH_INTERVAL" jsonschema:"default=10s" jsonschema_extras:"duration_minimum=100ms,duration_maximum=1m"` // The interval at which the buffer is flushed. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.
 }
 

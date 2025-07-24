@@ -1,18 +1,24 @@
 package config
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"os"
+	"reflect"
 	"regexp"
 	"testing"
 	"time"
 
-	"github.com/goccy/go-yaml"
-	"go.uber.org/zap/zapcore"
-
 	"github.com/caarlos0/env/v11"
+	"github.com/goccy/go-yaml"
+	genschema "github.com/invopop/jsonschema"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"github.com/sebdah/goldie/v2"
+	"github.com/stoewer/go-strcase"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap/zapcore"
 )
 
 func TestTokenNotRequiredWhenPassingStaticConfig(t *testing.T) {
@@ -304,11 +310,20 @@ telemetry:
 	require.Equal(t, "at '/telemetry/tracing/exporters/0/export_timeout': duration must be less or equal than 2m0s", js.Causes[0].Error())
 }
 
+func revalidateConfig(t *testing.T, fileName string) {
+	t.Helper()
+
+	content, err := os.ReadFile(fileName)
+	require.NoError(t, err)
+
+	require.NoError(t, ValidateConfig(content, JSONSchemaGenerated))
+}
+
 func TestLoadFullConfig(t *testing.T) {
 	t.Parallel()
 
 	cfg, err := LoadConfig([]string{"./fixtures/full.yaml"})
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	g := goldie.New(
 		t,
@@ -317,7 +332,81 @@ func TestLoadFullConfig(t *testing.T) {
 		goldie.WithDiffEngine(goldie.ClassicDiff),
 	)
 
+	yamlContent, _ := yaml.Marshal(cfg.Config)
+	os.WriteFile("config_full_generated.yaml", yamlContent, 0644)
+
 	g.AssertJson(t, "config_full", cfg.Config)
+
+	r := &genschema.Reflector{
+		Anonymous:                  true,
+		DoNotReference:             true,
+		ExpandedStruct:             true,
+		KeyNamer:                   strcase.SnakeCase,
+		RequiredFromJSONSchemaTags: true,
+		FieldNameTag:               "yaml",
+		Mapper: func(i reflect.Type) *genschema.Schema {
+			switch i {
+			case reflect.TypeOf(time.Duration(0)):
+				return &genschema.Schema{
+					Type:   "string",
+					Format: "go-duration",
+				}
+			case reflect.TypeOf(BytesString(0)):
+				return &genschema.Schema{
+					Type:   "string",
+					Format: "bytes-string",
+				}
+			case reflect.TypeOf(UrlString("")):
+				return &genschema.Schema{
+					Type:   "string",
+					Format: "url",
+				}
+			case reflect.TypeOf(HttpUrlString("")):
+				return &genschema.Schema{
+					Type:   "string",
+					Format: "http-url",
+				}
+			case reflect.TypeOf(FilePathString("")):
+				return &genschema.Schema{
+					Type:   "string",
+					Format: "file-path",
+				}
+			case reflect.TypeOf(XUriString("")):
+				return &genschema.Schema{
+					Type:   "string",
+					Format: "x-uri",
+				}
+			case reflect.TypeOf(HostNamePortString("")):
+				return &genschema.Schema{
+					Type:   "string",
+					Format: "hostname-port",
+				}
+			case reflect.TypeOf(zapcore.Level(0)):
+				return &genschema.Schema{
+					Type: "string",
+					Enum: []any{"debug", "info", "warn", "error", "panic", "fatal"},
+				}
+			}
+
+			return nil
+		},
+	}
+	if err := r.AddGoComments("github.com/wundergraph/cosmo/router/pkg/config", "./"); err != nil {
+		// deal with error
+	}
+
+	generatedSchema := r.Reflect(cfg.Config)
+	schemaContent, err := generatedSchema.MarshalJSON()
+	buf := new(bytes.Buffer)
+	json.Indent(buf, schemaContent, "", "  ")
+	schemaContent = buf.Bytes()
+
+	require.NoError(t, err)
+	os.WriteFile("config_schema_generated.json", schemaContent, 0644)
+
+	require.NoError(t, ValidateConfig(yamlContent, JSONSchemaGenerated))
+
+	// revalidateConfig(t, g.GoldenFileName(t, "config_full"))
 }
 
 func TestDefaults(t *testing.T) {
@@ -342,6 +431,8 @@ graph:
 	)
 
 	g.AssertJson(t, "config_defaults", cfg.Config)
+
+	revalidateConfig(t, g.GoldenFileName(t, "config_full"))
 }
 
 func TestOverrides(t *testing.T) {

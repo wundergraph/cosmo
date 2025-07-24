@@ -1,0 +1,14 @@
+{
+  "name": "config",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@apidevtools/json-schema-ref-parser": "^14.1.1"
+  }
+}

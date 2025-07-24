@@ -15,5 +15,8 @@
     "name": "WunderGraph Maintainers",
     "email": "info@wundergraph.com"
   },
-  "license": "Apache-2.0"
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@apidevtools/json-schema-ref-parser": "^14.1.1"
+  }
 }
