@@ -65,7 +65,6 @@ const {
   REDIS_PASSWORD,
   AUTH_ADMISSION_JWT_SECRET,
   CDN_BASE_URL,
-  PLUGIN_REGISTRY_URL,
 } = envVariables.parse(process.env);
 
 const options: BuildConfig = {
@@ -152,7 +151,6 @@ const options: BuildConfig = {
           }
         : undefined,
   },
-  pluginRegistryUrl: PLUGIN_REGISTRY_URL,
 };
 
 if (STRIPE_SECRET_KEY) {

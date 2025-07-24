@@ -209,9 +209,8 @@ message GRPCConfiguration {
 }
 
 message ImageReference {
-  string registry = 1;  
-  string repository = 2; // {organization_id}/{subgraph_id}
-  string reference = 3; // v1
+  string repository = 1; // {organization_id}/{subgraph_id}
+  string reference = 2; // v1
 }
 
 message PluginConfiguration {

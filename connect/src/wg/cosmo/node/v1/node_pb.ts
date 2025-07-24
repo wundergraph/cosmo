@@ -1589,21 +1589,16 @@ export class GRPCConfiguration extends Message<GRPCConfiguration> {
  */
 export class ImageReference extends Message<ImageReference> {
   /**
-   * @generated from field: string registry = 1;
-   */
-  registry = "";
-
-  /**
    * {organization_id}/{subgraph_id}
    *
-   * @generated from field: string repository = 2;
+   * @generated from field: string repository = 1;
    */
   repository = "";
 
   /**
    * v1
    *
-   * @generated from field: string reference = 3;
+   * @generated from field: string reference = 2;
    */
   reference = "";
 
@@ -1615,9 +1610,8 @@ export class ImageReference extends Message<ImageReference> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "wg.cosmo.node.v1.ImageReference";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "registry", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "repository", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "reference", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "repository", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "reference", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ImageReference {
