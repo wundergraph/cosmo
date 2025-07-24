@@ -131,14 +131,9 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEvent
 					for msg := range msgBatch.Messages() {
 						log.Debug("subscription update", zap.String("message_subject", msg.Subject()), zap.ByteString("data", msg.Data()))
 
-						headers := make(map[string][]string)
-						for key, value := range msg.Headers() {
-							headers[key] = value
-						}
-
 						updater.Update(&Event{
 							Data:    msg.Data(),
-							Headers: headers,
+							Headers: msg.Headers(),
 						})
 
 						// Acknowledge the message after it has been processed
@@ -177,7 +172,8 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEvent
 			case msg := <-msgChan:
 				log.Debug("subscription update", zap.String("message_subject", msg.Subject), zap.ByteString("data", msg.Data))
 				updater.Update(&Event{
-					Data: msg.Data,
+					Data:    msg.Data,
+					Headers: msg.Header,
 				})
 			case <-p.ctx.Done():
 				// When the application context is done, we stop the subscriptions
