@@ -46,6 +46,10 @@ func HandleCompression(logger *zap.Logger) func(http.Handler) http.Handler {
 				}()
 
 				r.Body = gzr
+
+				// Content-Length is no longer valid after decompression
+				r.Header.Del("Content-Length")
+				r.ContentLength = -1
 			case "":
 			default:
 				http.Error(w, "unsupported media type", http.StatusUnsupportedMediaType)
