@@ -274,8 +274,8 @@ func TestAccessLogsFileOutput(t *testing.T) {
 
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				fp := filepath.Join(os.TempDir(), "access.log")
-				f, err := logging.NewLogFile(filepath.Join(os.TempDir(), "access.log"), os.FileMode(tt.mode))
+				fp := filepath.Join(os.TempDir(), "access_filemode.log")
+				f, err := logging.NewLogFile(fp, os.FileMode(tt.mode))
 
 				t.Cleanup(func() {
 					if f != nil {
