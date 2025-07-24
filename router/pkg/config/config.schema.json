@@ -279,9 +279,7 @@
                   "type": "string",
                   "description": "The interval at which the file is checked for changes. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
                   "default": "1s",
-                  "duration": {
-                    "minimum": "100ms"
-                  }
+                  "duration_minimum": "100ms"
                 }
               }
             }
@@ -636,10 +634,8 @@
               "type": "string",
               "description": "The interval at which the buffer is flushed. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
               "default": "10s",
-              "duration": {
-                "minimum": "100ms",
-                "maximum": "1m"
-              }
+              "duration_maximum": "1m",
+              "duration_minimum": "100ms"
             },
             "size": {
               "type": "string",
@@ -879,19 +875,15 @@
                     "type": "string",
                     "description": "The maximum time to wait before exporting the traces. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
                     "default": "10s",
-                    "duration": {
-                      "minimum": "5s",
-                      "maximum": "2m"
-                    }
+                    "duration_minimum": "5s",
+                    "duration_maximum": "2m"
                   },
                   "export_timeout": {
                     "type": "string",
                     "description": "The maximum time to wait for the export to complete. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
                     "default": "30s",
-                    "duration": {
-                      "minimum": "5s",
-                      "maximum": "2m"
-                    }
+                    "duration_minimum": "5s",
+                    "duration_maximum": "2m"
                   }
                 }
               }
@@ -1274,9 +1266,7 @@
         },
         "max_age": {
           "type": "string",
-          "duration": {
-            "minimum": "5m"
-          },
+          "duration_minimum": "5m",
           "default": "5m",
           "description": "The maximum age of the preflight request. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
         }
@@ -1358,9 +1348,7 @@
     },
     "shutdown_delay": {
       "type": "string",
-      "duration": {
-        "minimum": "15s"
-      },
+      "duration_minimum": "15s",
       "description": "The delay before the router shuts down. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
       "default": "60s"
     },
@@ -1374,17 +1362,12 @@
       "type": "string",
       "description": "The interval at which the router polls the CDN for updates. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
       "default": "10s",
-      "duration": {
-        "minimum": "5s"
-      }
+      "duration_minimum": "5s"
     },
     "poll_jitter": {
       "type": "string",
       "description": "A duration maximum for jitter added to the polling interval. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
-      "default": "5s",
-      "duration": {
-        "minimum": "0s"
-      }
+      "default": "5s"
     },
     "health_check_path": {
       "type": "string",
@@ -1672,9 +1655,7 @@
                   },
                   "refresh_interval": {
                     "type": "string",
-                    "duration": {
-                      "minimum": "5s"
-                    },
+                    "duration_minimum": "5s",
                     "description": "The interval at which the JWKs are refreshed. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
                     "default": "1m"
                   }
@@ -1778,9 +1759,7 @@
             "period": {
               "type": "string",
               "description": "The period of time over which the rate limit is enforced. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
-              "duration": {
-                "minimum": "1s"
-              }
+              "duration_minimum": "1s"
             },
             "reject_exceeding_requests": {
               "type": "boolean",
@@ -2196,9 +2175,7 @@
           "type": "string",
           "description": "The timeout for warming up the cache. This can be used to limit the amount of time cache warming will block deploying a new config. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
           "default": "30s",
-          "duration": {
-            "minimum": "1s"
-          }
+          "duration_minimum": "1s"
         }
       }
     },
@@ -2472,7 +2449,7 @@
               "default": 100,
               "minimum": 0
             },
-            "parser_total_fields_limit": {
+            "total_fields_limit": {
               "type": "integer",
               "description": "The total number of fields the parser will allow. Set to 0 to disable.",
               "default": 500,
@@ -2612,27 +2589,21 @@
           "format": "go-duration",
           "description": "The Websocket client ping interval to the subgraph. Defines how often the router will ping the subgraph to signal that the connection is still alive. Timeout needs to be coordinated with the subgraph. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
           "default": "15s",
-          "duration": {
-            "minimum": "5s"
-          }
+          "duration_minimum": "5s"
         },
         "websocket_client_ping_timeout": {
           "type": "string",
           "format": "go-duration",
           "description": "The Websocket client ping timeout to the subgraph. Defines how long the router will wait for a ping response from the subgraph. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
           "default": "30s",
-          "duration": {
-            "minimum": "5s"
-          }
+          "duration_minimum": "5s"
         },
         "websocket_client_frame_timeout": {
           "type": "string",
           "format": "go-duration",
           "description": "The Websocket client frame timeout to the subgraph. Defines how long the router will wait for a frame response from the subgraph. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
           "default": "100ms",
-          "duration": {
-            "minimum": "10ms"
-          }
+          "duration_minimum": "10ms"
         },
         "execution_plan_cache_size": {
           "type": "integer",
@@ -2955,9 +2926,7 @@
           "type": "string",
           "description": "The interval at which the config file is checked for changes. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
           "default": "10s",
-          "duration": {
-            "minimum": "5s"
-          }
+          "duration_minimum": "5s"
         },
         "startup_delay": {
           "type": "object",
@@ -2973,9 +2942,7 @@
               "type": "string",
               "description": "The maximum time to wait before starting the config file watcher. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
               "default": "10s",
-              "duration": {
-                "minimum": "5s"
-              }
+              "duration_minimum": "5s"
             }
           }
         }
@@ -2990,9 +2957,7 @@
       "properties": {
         "request_timeout": {
           "type": "string",
-          "duration": {
-            "minimum": "1s"
-          },
+          "duration_minimum": "1s",
           "description": "The request timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
         },
         "dial_timeout": {
@@ -3022,9 +2987,7 @@
         },
         "keep_alive_probe_interval": {
           "type": "string",
-          "duration": {
-            "minimum": "5s"
-          },
+          "duration_minimum": "5s",
           "description": "The keep alive probe interval. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
         },
         "max_idle_conns": {
@@ -3067,10 +3030,8 @@
               "type": "string",
               "format": "go-duration",
               "description": "After the circuit breaker is open, how long the circuit breaker will reject requests before allowing to send a half open request",
-              "duration": {
-                "minimum": "250ms",
-                "maximum": "2m"
-              }
+              "duration_minimum": "250ms",
+              "duration_maximum": "2m"
             },
             "half_open_attempts": {
               "type": "integer",
@@ -3088,10 +3049,8 @@
               "type": "string",
               "format": "go-duration",
               "description": "The duration of which information on failed and successful requests are stored",
-              "duration": {
-                "minimum": "5s",
-                "maximum": "120s"
-              }
+              "duration_minimum": "5s",
+              "duration_maximum": "120s"
             },
             "num_buckets": {
               "type": "integer",
@@ -3103,10 +3062,8 @@
               "type": "string",
               "format": "go-duration",
               "description": "The maximum time to wait for a circuit execution to complete before timing out",
-              "duration": {
-                "minimum": "1ms",
-                "maximum": "300s"
-              }
+              "duration_minimum": "1ms",
+              "duration_maximum": "300s"
             },
             "max_concurrent_requests": {
               "type": "integer",
