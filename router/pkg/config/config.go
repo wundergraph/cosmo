@@ -879,9 +879,9 @@ type AccessLogsStdOutOutputConfig struct {
 }
 
 type AccessLogsFileOutputConfig struct {
-	Enabled  bool     `yaml:"enabled" env:"FILE_ENABLED" envDefault:"false"`
-	Path     string   `yaml:"path" env:"FILE_PATH" envDefault:"access.log"`
-	FileMode FileMode `yaml:"file_mode" env:"FILE_MODE" envDefault:"0640"`
+	Enabled  bool     `yaml:"enabled" env:"ENABLED" envDefault:"false"`
+	Path     string   `yaml:"path" env:"PATH" envDefault:"access.log"`
+	FileMode FileMode `yaml:"file_mode" env:"MODE" envDefault:"0640"`
 }
 
 type AccessLogsRouterConfig struct {
