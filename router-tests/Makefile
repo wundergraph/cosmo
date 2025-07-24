@@ -11,7 +11,7 @@ test-deps:
 	$(MAKE) -C ../demo plugin-build-ci
 
 test: test-deps
-	gotestsum -f $(FORMAT) -- -ldflags=-extldflags=-Wl,-ld_classic $(test_params) -race $(test_target)
+	gotestsum $(gotestsum_params) --packages=$(test_target) -f $(FORMAT) -- -ldflags=-extldflags=-Wl,-ld_classic $(test_params) -race $(test_target)
 
 update-snapshot:
 	go test -update -race $(test_target)
@@ -44,3 +44,9 @@ update-test-config:
 
 bump-deps:
 	./bump-deps.sh
+
+integration-tests:
+	$(MAKE) test test_params="-run '^Test[^(Flaky)]' --timeout=10m" test_target="./..."
+
+integration-tests-flaky:
+	$(MAKE) test gotestsum_params="--rerun-fails=5" test_params="-run '^TestFlaky' --timeout=10m -p 1 --parallel 10" test_target="./..."
