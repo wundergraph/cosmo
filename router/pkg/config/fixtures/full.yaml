@@ -409,6 +409,11 @@ security:
   complexity_calculation_cache:
     enabled: true
     size: 1024
+  depth_limit:
+    enabled: true
+    limit: 5
+    cache_size: 1024
+    ignore_persisted_operations: true
   complexity_limits:
     depth:
       enabled: true

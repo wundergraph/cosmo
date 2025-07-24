@@ -665,7 +665,12 @@
         "IgnorePersistedOperations": true
       }
     },
-    "DepthLimit": null,
+    "DepthLimit": {
+      "Enabled": true,
+      "Limit": 5,
+      "CacheSize": 1024,
+      "IgnorePersistedOperations": true
+    },
     "ParserLimits": {
       "ApproximateDepthLimit": 100,
       "TotalFieldsLimit": 500
