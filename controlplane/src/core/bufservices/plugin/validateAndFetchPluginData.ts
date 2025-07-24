@@ -144,7 +144,7 @@ export function validateAndFetchPluginData(
       secret: opts.jwtSecret,
       token: {
         iss: authContext.userId,
-        aud: audiences.cosmoGraphKey, // to distinguish from other tokens
+        aud: audiences.cosmoPluginKey, // to distinguish from other tokens
         exp: nowInSeconds() + 5 * 60, // 5 minutes
         access: [
           {

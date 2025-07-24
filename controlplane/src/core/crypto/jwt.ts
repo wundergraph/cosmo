@@ -16,6 +16,7 @@ export const cosmoIdpHintCookieName = 'cosmo_idp_hint';
 export const audiences = {
   cosmoGraphKey: 'cosmo:graph-key',
   cosmoCDNAdmission: 'cosmo:cdn-admission',
+  cosmoPluginKey: 'cosmo-podbay',
 };
 
 /**
