@@ -2,7 +2,14 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { SQL, and, count, desc, eq, gt, lt, not } from 'drizzle-orm';
 import { FastifyBaseLogger } from 'fastify';
 import * as schema from '../../db/schema.js';
-import { graphCompositions, graphCompositionSubgraphs, schemaVersion, subgraphs, targets, users } from '../../db/schema.js';
+import {
+  graphCompositions,
+  graphCompositionSubgraphs,
+  schemaVersion,
+  subgraphs,
+  targets,
+  users,
+} from '../../db/schema.js';
 import { DateRange, GraphCompositionDTO } from '../../types/index.js';
 import { ComposedSubgraph } from '../composition/composer.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
