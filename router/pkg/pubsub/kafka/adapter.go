@@ -172,9 +172,19 @@ func (p *ProviderAdapter) Publish(ctx context.Context, event PublishEventConfigu
 
 	var pErr error
 
+	headers := make([]kgo.RecordHeader, 0, len(event.Event.Headers))
+	for key, value := range event.Event.Headers {
+		headers = append(headers, kgo.RecordHeader{
+			Key:   key,
+			Value: value,
+		})
+	}
+
 	p.writeClient.Produce(ctx, &kgo.Record{
-		Topic: event.Topic,
-		Value: event.Event.Data,
+		Key:     event.Event.Key,
+		Topic:   event.Topic,
+		Value:   event.Event.Data,
+		Headers: headers,
 	}, func(record *kgo.Record, err error) {
 		defer wg.Done()
 		if err != nil {
