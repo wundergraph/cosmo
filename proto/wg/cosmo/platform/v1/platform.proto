@@ -463,6 +463,7 @@ message GetLatestSubgraphSDLResponse {
   Response response = 1;
   optional string sdl = 2;
   optional string version_id = 3;
+  optional string proto_schema = 4;
 }
 
 message GetChecksByFederatedGraphNameFilters {
@@ -1832,6 +1833,7 @@ message GraphCompositionSubgraph {
   string target_id = 4;
   bool isFeatureSubgraph = 5;
   string changeType = 6;
+  SubgraphType subgraphType = 7;
 }
 
 message GetCompositionsRequest {

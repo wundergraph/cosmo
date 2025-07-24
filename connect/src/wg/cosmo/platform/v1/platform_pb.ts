@@ -3617,6 +3617,11 @@ export class GetLatestSubgraphSDLResponse extends Message<GetLatestSubgraphSDLRe
    */
   versionId?: string;
 
+  /**
+   * @generated from field: optional string proto_schema = 4;
+   */
+  protoSchema?: string;
+
   constructor(data?: PartialMessage<GetLatestSubgraphSDLResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3628,6 +3633,7 @@ export class GetLatestSubgraphSDLResponse extends Message<GetLatestSubgraphSDLRe
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "sdl", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "version_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "proto_schema", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetLatestSubgraphSDLResponse {
@@ -14211,6 +14217,11 @@ export class GraphCompositionSubgraph extends Message<GraphCompositionSubgraph> 
    */
   changeType = "";
 
+  /**
+   * @generated from field: wg.cosmo.platform.v1.SubgraphType subgraphType = 7;
+   */
+  subgraphType = SubgraphType.STANDARD;
+
   constructor(data?: PartialMessage<GraphCompositionSubgraph>) {
     super();
     proto3.util.initPartial(data, this);
@@ -14225,6 +14236,7 @@ export class GraphCompositionSubgraph extends Message<GraphCompositionSubgraph> 
     { no: 4, name: "target_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "isFeatureSubgraph", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 6, name: "changeType", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "subgraphType", kind: "enum", T: proto3.getEnumType(SubgraphType) },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GraphCompositionSubgraph {
