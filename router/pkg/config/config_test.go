@@ -1292,6 +1292,11 @@ authentication:
 
 	})
 
+}
+
+func TestValidateAccessLogFileMode(t *testing.T) {
+	t.Parallel()
+
 	t.Run("verify file mode is parsed correctly", func(t *testing.T) {
 		t.Parallel()
 
