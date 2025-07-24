@@ -12,7 +12,14 @@ import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { PluginRepository } from '../../repositories/PluginRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError, isValidGraphName, isValidLabels } from '../../util.js';
+import {
+  enrichLogger,
+  getLogger,
+  handleError,
+  isValidGraphName,
+  isValidLabels,
+  isValidPluginVersion,
+} from '../../util.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 
 export function validateAndFetchPluginData(

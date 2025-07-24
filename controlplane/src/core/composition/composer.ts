@@ -110,7 +110,6 @@ export function buildRouterExecutionConfig(
   });
 }
 
-// TODO change type to add ComposedSubgraphPlugin and ComposedSubgraphGRPC
 export type ComposedSubgraph = (IComposedSubgraph | ComposedSubgraphPlugin | ComposedSubgraphGRPC) & {
   targetId: string;
   isFeatureSubgraph: boolean;
@@ -118,8 +117,12 @@ export type ComposedSubgraph = (IComposedSubgraph | ComposedSubgraphPlugin | Com
 };
 
 const parseGRPCMapping = (mappings: string): GRPCMapping => {
-  const mappingsJson = JSON.parse(mappings);
-  return GRPCMapping.fromJson(mappingsJson);
+  try {
+    const mappingsJson = JSON.parse(mappings);
+    return GRPCMapping.fromJson(mappingsJson);
+  } catch (error) {
+    throw new Error(`Failed to parse gRPC mappings: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
 };
 
 export function subgraphDTOsToComposedSubgraphs(

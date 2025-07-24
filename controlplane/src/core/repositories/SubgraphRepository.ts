@@ -560,7 +560,7 @@ export class SubgraphRepository {
           createdAt: schemaVersion.createdAt,
         });
 
-      if (data.proto) {
+      if (data.proto && (subgraph.type === 'grpc-subgraph' || subgraph.type === 'plugin')) {
         await tx.insert(schema.protobufSchemaVersions).values({
           schemaVersionId: insertedVersion[0].insertedId,
           protoSchema: data.proto.schema,
@@ -568,7 +568,7 @@ export class SubgraphRepository {
           protoLock: data.proto.lock,
         });
 
-        if (data.proto.pluginData) {
+        if (data.proto.pluginData && subgraph.type === 'plugin') {
           await tx.insert(schema.pluginImageVersions).values({
             schemaVersionId: insertedVersion[0].insertedId,
             version: data.proto.pluginData.version,

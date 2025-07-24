@@ -84,7 +84,19 @@ export default (opts: BaseCommandOptions) => {
     let protoMapping: string | undefined;
     let protoLock: string | undefined;
 
-    // TODO write a condition to make sure, if defined all three are defined
+    // Validate that if any proto option is defined, all three must be defined
+    const protoOptions = [options.protoSchema, options.protoMapping, options.protoLock];
+    const definedProtoOptions = protoOptions.filter((option) => option !== undefined);
+
+    if (definedProtoOptions.length > 0 && definedProtoOptions.length < 3) {
+      program.error(
+        pc.red(
+          pc.bold(
+            'If any proto option is specified, all three must be provided: --proto-schema, --proto-mapping, and --proto-lock',
+          ),
+        ),
+      );
+    }
 
     if (options.protoSchema) {
       const protoSchemaFile = resolve(options.protoSchema);
@@ -110,7 +122,7 @@ export default (opts: BaseCommandOptions) => {
         program.error(
           pc.red(
             pc.bold(
-              `The proto lock file '${pc.bold(protoMappingFile)}' does not exist. Please check the path and try again.`,
+              `The proto mapping file '${pc.bold(protoMappingFile)}' does not exist. Please check the path and try again.`,
             ),
           ),
         );

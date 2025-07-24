@@ -471,23 +471,40 @@ export function publishFederatedSubgraph(
       const { schema, mappings, lock, goModulePath } = req.proto;
       const serviceName = subgraph.name + 'Service';
 
-      const newMappings = compileGraphQLToMapping(subgraphSchemaSDL, serviceName);
-      const proto = compileGraphQLToProto(subgraphSchemaSDL, {
-        serviceName,
-        packageName: 'service',
-        goPackage: goModulePath,
-        lockData: subgraph.proto?.lock ? JSON.parse(subgraph.proto.lock) : undefined,
-      });
+      try {
+        const newMappings = compileGraphQLToMapping(subgraphSchemaSDL, serviceName);
+        const proto = compileGraphQLToProto(subgraphSchemaSDL, {
+          serviceName,
+          packageName: 'service',
+          goPackage: goModulePath,
+          lockData: subgraph.proto?.lock ? JSON.parse(subgraph.proto.lock) : undefined,
+        });
 
-      if (
-        (schema !== '' && schema !== proto.proto) ||
-        (mappings !== '' && mappings !== JSON.stringify(newMappings, null, 2)) ||
-        (lock !== '' && lock !== JSON.stringify(proto.lockData, null, 2))
-      ) {
+        if (
+          (schema !== '' && schema !== proto.proto) ||
+          (mappings !== '' && mappings !== JSON.stringify(newMappings, null, 2)) ||
+          (lock !== '' && lock !== JSON.stringify(proto.lockData, null, 2))
+        ) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The proto schema, mappings, or lock do not match the expected values.`,
+            },
+            compositionErrors: [],
+            deploymentErrors: [],
+            compositionWarnings: [],
+            proposalMatchMessage,
+          };
+        }
+
+        protoSchema = proto.proto;
+        protoMappings = JSON.stringify(newMappings, null, 2);
+        protoLock = JSON.stringify(proto.lockData, null, 2);
+      } catch (e) {
         return {
           response: {
             code: EnumStatusCode.ERR,
-            details: `The proto schema, mappings, or lock do not match the expected values.`,
+            details: `Error generating proto schema. ${e instanceof Error ? `Error: ${e.message}` : ''}`,
           },
           compositionErrors: [],
           deploymentErrors: [],
@@ -495,10 +512,6 @@ export function publishFederatedSubgraph(
           proposalMatchMessage,
         };
       }
-
-      protoSchema = proto.proto;
-      protoMappings = JSON.stringify(newMappings, null, 2);
-      protoLock = JSON.stringify(proto.lockData, null, 2);
     }
 
     const { compositionErrors, updatedFederatedGraphs, deploymentErrors, subgraphChanged, compositionWarnings } =
@@ -631,7 +644,6 @@ export function publishFederatedSubgraph(
       // Best effort approach. This way of counting tokens is not accurate.
       subgraph.schemaSDL.length <= 10_000
     ) {
-      const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
       const feature = await orgRepo.getFeature({
         organizationId: authContext.organizationId,
         featureId: 'ai',

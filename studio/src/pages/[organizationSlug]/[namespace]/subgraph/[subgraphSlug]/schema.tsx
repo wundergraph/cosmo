@@ -26,6 +26,154 @@ import { SubgraphType } from "@wundergraph/cosmo-connect/dist/platform/v1/platfo
 import Link from "next/link";
 import { useRouter } from "next/router";
 
+const SchemaFooter = ({
+  description,
+  routingURL,
+  lastUpdatedAt,
+}: {
+  description: string;
+  routingURL?: string;
+  lastUpdatedAt?: string;
+}) => {
+  return (
+    <div className="flex w-full flex-shrink-0 flex-col items-center gap-x-8 gap-y-1 border-t bg-card p-2 text-xs lg:flex-row lg:justify-between">
+      <p className="text-center">{description}</p>
+      <div className="flex flex-col gap-x-4 gap-y-1 lg:flex-row">
+        {routingURL && (
+          <p className="flex items-center gap-x-1">
+            Routing URL :
+            <Link
+              className="hover:underline"
+              target="_blank"
+              rel="noreferrer"
+              href={routingURL}
+            >
+              {routingURL}
+            </Link>
+          </p>
+        )}
+
+        {lastUpdatedAt && (
+          <p className="flex items-center gap-x-1">
+            Last updated :<span>{formatDateTime(new Date(lastUpdatedAt))}</span>
+          </p>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Helper function to properly unescape proto schema string
+const unescapeProtoSchema = (protoSchema: string): string => {
+  if (!protoSchema) return "";
+
+  try {
+    // Handle common escape sequences manually
+    // The proto schema contains literal \n, \", etc. sequences that need to be unescaped
+    return protoSchema
+      .replace(/\\n/g, "\n") // Convert \n to actual newlines
+      .replace(/\\r/g, "\r") // Convert \r to carriage returns
+      .replace(/\\t/g, "\t") // Convert \t to tabs
+      .replace(/\\"/g, '"') // Convert \" to quotes
+      .replace(/\\\\/g, "\\"); // Convert \\ to single backslash (do this last)
+  } catch (error) {
+    console.warn("Failed to unescape proto schema:", error);
+    return protoSchema; // Return original if all else fails
+  }
+};
+
+// Proto content component
+const ProtoContent = ({
+  protoSchema,
+  routingURL,
+  lastUpdatedAt,
+}: {
+  protoSchema?: string;
+  routingURL?: string;
+  lastUpdatedAt?: string;
+}) => {
+  return (
+    <>
+      {!protoSchema ? (
+        <EmptyState
+          icon={<CommandLineIcon />}
+          title="No proto schema found"
+          description="Use the CLI tool to publish the plugin"
+          actions={
+            <CLI
+              command={`npx wgc router plugin publish <name> --namespace <namespace> --schema <path-to-schema> -go-module-path <go-module-path> --docker-file <docker-file>`}
+            />
+          }
+        />
+      ) : (
+        <div className="flex h-full flex-col">
+          <div className="min-h-0 flex-1 overflow-hidden">
+            <SDLViewer
+              sdl={unescapeProtoSchema(protoSchema)}
+              language="protobuf"
+              className="h-full"
+            />
+          </div>
+          <SchemaFooter
+            description="Displaying the proto schema of this subgraph"
+            routingURL={routingURL}
+            lastUpdatedAt={lastUpdatedAt}
+          />
+        </div>
+      )}
+    </>
+  );
+};
+
+// Schema content component
+const SchemaContent = ({
+  sdl,
+  routingURL,
+  lastUpdatedAt,
+}: {
+  sdl: string;
+  routingURL?: string;
+  lastUpdatedAt?: string;
+}) => (
+  <>
+    {sdl === "" ? (
+      <EmptyState
+        icon={<CommandLineIcon />}
+        title="Publish schema using the CLI"
+        description={
+          <>
+            No schema found. Use the CLI tool to publish.{" "}
+            <a
+              target="_blank"
+              rel="noreferrer"
+              href={docsBaseURL + "/cli/subgraph/publish"}
+              className="text-primary"
+            >
+              Learn more.
+            </a>
+          </>
+        }
+        actions={
+          <CLI
+            command={`npx wgc subgraph publish <name> --namespace <namespace> --schema <path-to-schema>`}
+          />
+        }
+      />
+    ) : (
+      <div className="flex h-full flex-col">
+        <div className="min-h-0 flex-1 ">
+          <SDLViewer sdl={sdl ?? ""} className="h-full" />
+        </div>
+        <SchemaFooter
+          description="Displaying the latest published schema of this subgraph"
+          routingURL={routingURL}
+          lastUpdatedAt={lastUpdatedAt}
+        />
+      </div>
+    )}
+  </>
+);
+
 const SubgraphSchemaPage: NextPageWithLayout = () => {
   const router = useRouter();
   const graph = useSubgraph();
@@ -54,25 +202,6 @@ const SubgraphSchemaPage: NextPageWithLayout = () => {
       undefined,
       { shallow: true },
     );
-  };
-
-  // Helper function to properly unescape proto schema string
-  const unescapeProtoSchema = (protoSchema: string): string => {
-    if (!protoSchema) return "";
-
-    try {
-      // Handle common escape sequences manually
-      // The proto schema contains literal \n, \", etc. sequences that need to be unescaped
-      return protoSchema
-        .replace(/\\n/g, "\n") // Convert \n to actual newlines
-        .replace(/\\r/g, "\r") // Convert \r to carriage returns
-        .replace(/\\t/g, "\t") // Convert \t to tabs
-        .replace(/\\"/g, '"') // Convert \" to quotes
-        .replace(/\\\\/g, "\\"); // Convert \\ to single backslash (do this last)
-    } catch (error) {
-      console.warn("Failed to unescape proto schema:", error);
-      return protoSchema; // Return original if all else fails
-    }
   };
 
   if (isLoading) {
@@ -104,125 +233,6 @@ const SubgraphSchemaPage: NextPageWithLayout = () => {
   const isPlugin = type === SubgraphType.PLUGIN;
   const isGrpcSubgraph = type === SubgraphType.GRPC_SUBGRAPH;
   const showTabs = isPlugin || isGrpcSubgraph;
-
-  // Schema content component
-  const SchemaContent = () => (
-    <>
-      {data.sdl === "" ? (
-        <EmptyState
-          icon={<CommandLineIcon />}
-          title="Publish schema using the CLI"
-          description={
-            <>
-              No schema found. Use the CLI tool to publish.{" "}
-              <a
-                target="_blank"
-                rel="noreferrer"
-                href={docsBaseURL + "/cli/subgraph/publish"}
-                className="text-primary"
-              >
-                Learn more.
-              </a>
-            </>
-          }
-          actions={
-            <CLI
-              command={`npx wgc subgraph publish ${graph.subgraph?.name} --namespace ${graph.subgraph?.namespace} --schema ${graph.subgraph?.name}.graphql`}
-            />
-          }
-        />
-      ) : (
-        <div className="flex h-full flex-col">
-          <div className="min-h-0 flex-1 ">
-            <SDLViewer sdl={data.sdl ?? ""} className="h-full" />
-          </div>
-          <div className="flex w-full flex-shrink-0 flex-col items-center gap-x-8 gap-y-1 border-t bg-card p-2 text-xs lg:flex-row lg:justify-between">
-            <p className="text-center">
-              Displaying the latest published schema of this subgraph
-            </p>
-            <div className="flex flex-col gap-x-4 gap-y-1 lg:flex-row">
-              {routingURL && (
-                <p className="flex items-center gap-x-1">
-                  Routing URL :
-                  <Link
-                    className="hover:underline"
-                    target="_blank"
-                    rel="noreferrer"
-                    href={routingURL}
-                  >
-                    {routingURL}
-                  </Link>
-                </p>
-              )}
-
-              {graph.subgraph?.lastUpdatedAt && (
-                <p className="flex items-center gap-x-1">
-                  Last updated :
-                  <span>
-                    {formatDateTime(new Date(graph.subgraph.lastUpdatedAt))}
-                  </span>
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-    </>
-  );
-
-  // Proto content component
-  const ProtoContent = () => {
-    return (
-      <>
-        {!data.protoSchema ? (
-          <EmptyState
-            icon={<CommandLineIcon />}
-            title="Proto schema coming soon"
-            description="Proto schema viewing for Plugin and gRPC subgraphs is not yet implemented. The infrastructure is in place but requires additional API integration."
-          />
-        ) : (
-          <div className="flex h-full flex-col">
-            <div className="min-h-0 flex-1 overflow-hidden">
-              <SDLViewer
-                sdl={unescapeProtoSchema(data.protoSchema)}
-                language="protobuf"
-                className="h-full"
-              />
-            </div>
-            <div className="flex w-full flex-shrink-0 flex-col items-center gap-x-8 gap-y-1 border-t bg-card p-2 text-xs lg:flex-row lg:justify-between">
-              <p className="text-center">
-                Displaying the proto schema of this subgraph
-              </p>
-              <div className="flex flex-col gap-x-4 gap-y-1 lg:flex-row">
-                {routingURL && (
-                  <p className="flex items-center gap-x-1">
-                    Routing URL :
-                    <Link
-                      className="hover:underline"
-                      target="_blank"
-                      rel="noreferrer"
-                      href={routingURL}
-                    >
-                      {routingURL}
-                    </Link>
-                  </p>
-                )}
-
-                {graph.subgraph?.lastUpdatedAt && (
-                  <p className="flex items-center gap-x-1">
-                    Last updated :
-                    <span>
-                      {formatDateTime(new Date(graph.subgraph.lastUpdatedAt))}
-                    </span>
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-      </>
-    );
-  };
 
   return (
     <SubgraphPageLayout
@@ -278,12 +288,24 @@ const SubgraphSchemaPage: NextPageWithLayout = () => {
     >
       {showTabs ? (
         activeTab === "schema" ? (
-          <SchemaContent />
+          <SchemaContent
+            sdl={data?.sdl ?? ""}
+            routingURL={routingURL}
+            lastUpdatedAt={graph.subgraph?.lastUpdatedAt}
+          />
         ) : (
-          <ProtoContent />
+          <ProtoContent
+            protoSchema={data?.protoSchema ?? ""}
+            routingURL={routingURL}
+            lastUpdatedAt={graph.subgraph?.lastUpdatedAt}
+          />
         )
       ) : (
-        <SchemaContent />
+        <SchemaContent
+          sdl={data?.sdl ?? ""}
+          routingURL={routingURL}
+          lastUpdatedAt={graph.subgraph?.lastUpdatedAt}
+        />
       )}
     </SubgraphPageLayout>
   );

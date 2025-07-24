@@ -140,7 +140,7 @@ export class GraphCompositionRepository {
           subgraphId: subgraph.id,
           subgraphTargetId: subgraph.targetId,
           subgraphName: subgraph.name,
-          schemaVersionId: subgraph.schemaVersionId!,
+          schemaVersionId: subgraph.schemaVersionId,
           isFeatureSubgraph: subgraph.isFeatureSubgraph,
           changeType: (() => {
             if (addedSubgraphs.some((s) => s.id === subgraph.id)) {
