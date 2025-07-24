@@ -264,7 +264,7 @@ func TestAccessLogsFileOutput(t *testing.T) {
 			{
 				name:         "Should succeed with zero mode",
 				mode:         0,
-				expectedMode: 0600,
+				expectedMode: 0640,
 			},
 		}
 
