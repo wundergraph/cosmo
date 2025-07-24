@@ -515,7 +515,7 @@
           "ValuePrefixes": null
         }
       ],
-      "AllowInsecureJwksUrls": false
+      "AllowInsecureJWKSUrls": false
     }
   },
   "Authorization": {

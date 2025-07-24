@@ -236,7 +236,7 @@
       "HeaderName": "Authorization",
       "HeaderValuePrefix": "Bearer",
       "HeaderSources": null,
-      "AllowInsecureJwksUrls": false
+      "AllowInsecureJWKSUrls": false
     }
   },
   "Authorization": {
