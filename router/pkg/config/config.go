@@ -870,18 +870,18 @@ type AccessLogsBufferConfig struct {
 }
 
 type AccessLogsOutputConfig struct {
-	Stdout AccessLogsStdOutOutputConfig `yaml:"stdout" envPrefix:"ACCESS_LOGS_OUTPUT_STDOUT_"`
-	File   AccessLogsFileOutputConfig   `yaml:"file,omitempty" envPrefix:"ACCESS_LOGS_OUTPUT_FILE_"`
+	Stdout AccessLogsStdOutOutputConfig `yaml:"stdout" env:"ACCESS_LOGS_OUTPUT_STDOUT"`
+	File   AccessLogsFileOutputConfig   `yaml:"file,omitempty" env:"ACCESS_LOGS_FILE_OUTPUT"`
 }
 
 type AccessLogsStdOutOutputConfig struct {
-	Enabled bool `yaml:"enabled" envDefault:"true" env:"ENABLED"`
+	Enabled bool `yaml:"enabled" envDefault:"true" env:"ACCESS_LOGS_OUTPUT_STDOUT_ENABLED"`
 }
 
 type AccessLogsFileOutputConfig struct {
-	Enabled  bool     `yaml:"enabled" env:"ENABLED" envDefault:"false"`
-	Path     string   `yaml:"path" env:"PATH" envDefault:"access.log"`
-	FileMode FileMode `yaml:"file_mode" env:"MODE" envDefault:"0640"`
+	Enabled  bool     `yaml:"enabled" env:"ACCESS_LOGS_OUTPUT_FILE_ENABLED" envDefault:"false"`
+	Path     string   `yaml:"path" env:"ACCESS_LOGS_FILE_OUTPUT_PATH" envDefault:"access.log"`
+	FileMode FileMode `yaml:"file_mode" env:"ACCESS_LOGS_FILE_OUTPUT_FILE_MODE" envDefault:"0640"`
 }
 
 type AccessLogsRouterConfig struct {
