@@ -13,6 +13,7 @@ const (
 	requestIDField               = "request_id"
 	traceIDField                 = "trace_id"
 	batchRequestOperationIDField = "batched_request_operation_id"
+	defaultFileMode              = 0640
 )
 
 type RequestIDKey struct{}
@@ -157,7 +158,7 @@ func (f *BufferedLogger) Close() error {
 
 func NewLogFile(path string, fileMode os.FileMode) (*os.File, error) {
 	if fileMode == 0 {
-		fileMode = 0600
+		fileMode = defaultFileMode
 	}
 
 	return os.OpenFile(path, os.O_WRONLY|os.O_APPEND|os.O_CREATE, fileMode)
