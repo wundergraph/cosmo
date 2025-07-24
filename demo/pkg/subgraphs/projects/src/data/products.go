@@ -6,24 +6,30 @@ import projects "github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects/genera
 var ServiceProducts = []*projects.Product{
 	{
 		Upc: "cosmo",
-		Projects: []*projects.Project{
-			ServiceProjects[0], // Cloud Migration Overhaul
-			ServiceProjects[1], // Microservices Revolution
-			ServiceProjects[3], // DevOps Transformation
+		Projects: &projects.ListOfProject{
+			Items: []*projects.Project{
+				ServiceProjects[0], // Cloud Migration Overhaul
+				ServiceProjects[1], // Microservices Revolution
+				ServiceProjects[3], // DevOps Transformation
+			},
 		},
 	},
 	{
 		Upc: "sdk",
-		Projects: []*projects.Project{
-			ServiceProjects[2], // AI-Powered Analytics
-			ServiceProjects[6], // Data Lake Implementation
+		Projects: &projects.ListOfProject{
+			Items: []*projects.Project{
+				ServiceProjects[2], // AI-Powered Analytics
+				ServiceProjects[6], // Data Lake Implementation
+			},
 		},
 	},
 	{
 		Upc: "consultancy",
-		Projects: []*projects.Project{
-			ServiceProjects[4], // Security Overhaul
-			ServiceProjects[5], // Mobile App Redesign
+		Projects: &projects.ListOfProject{
+			Items: []*projects.Project{
+				ServiceProjects[4], // Security Overhaul
+				ServiceProjects[5], // Mobile App Redesign
+			},
 		},
 	},
 }
@@ -42,7 +48,7 @@ func GetProductByUpc(upc string) *projects.Product {
 func GetProjectsByProductUpc(upc string) []*projects.Project {
 	product := GetProductByUpc(upc)
 	if product != nil {
-		return product.Projects
+		return product.Projects.Items
 	}
 	return nil
 }

@@ -8,14 +8,14 @@ import (
 var ServiceProjects = []*projects.Project{
 	{
 		Id:              "1",
-		Name:            "Cloud Migration Overhaul",
+		Name:            "Hardcode docker url",
 		Description:     &wrapperspb.StringValue{Value: "Migrate legacy systems to cloud-native architecture"},
 		Status:          projects.ProjectStatus_PROJECT_STATUS_ACTIVE,
 		StartDate:       &wrapperspb.StringValue{Value: "2021-01-01"},
 		EndDate:         &wrapperspb.StringValue{Value: "2025-08-20"},
 		TeamMembers:     []*projects.Employee{},
 		RelatedProducts: []*projects.Product{}, // Will be resolved by GraphQL resolvers
-		MilestoneIds:    []string{"1", "2", "3"},
+		MilestoneIds:    &projects.ListOfString{Items: []string{"1", "2", "3"}},
 		Milestones:      GetMilestonesByProjectID("1"),
 		Tasks:           GetTasksByProjectID("1"),
 		Progress:        &wrapperspb.DoubleValue{Value: 65.0},
@@ -29,7 +29,7 @@ var ServiceProjects = []*projects.Project{
 		EndDate:         &wrapperspb.StringValue{Value: "2025-08-20"},
 		TeamMembers:     []*projects.Employee{},
 		RelatedProducts: []*projects.Product{},
-		MilestoneIds:    []string{"4", "5", "6"},
+		MilestoneIds:    &projects.ListOfString{Items: []string{"4", "5", "6"}},
 		Milestones:      GetMilestonesByProjectID("2"),
 		Tasks:           GetTasksByProjectID("2"),
 		Progress:        &wrapperspb.DoubleValue{Value: 75.0},
@@ -43,7 +43,7 @@ var ServiceProjects = []*projects.Project{
 		EndDate:         &wrapperspb.StringValue{Value: "2025-08-20"},
 		TeamMembers:     []*projects.Employee{},
 		RelatedProducts: []*projects.Product{},
-		MilestoneIds:    []string{},
+		MilestoneIds:    &projects.ListOfString{Items: []string{}},
 		Milestones:      GetMilestonesByProjectID("3"),
 		Tasks:           GetTasksByProjectID("3"),
 		Progress:        &wrapperspb.DoubleValue{Value: 45.0},
@@ -57,7 +57,7 @@ var ServiceProjects = []*projects.Project{
 		EndDate:         &wrapperspb.StringValue{Value: "2024-12-31"},
 		TeamMembers:     []*projects.Employee{},
 		RelatedProducts: []*projects.Product{},
-		MilestoneIds:    []string{},
+		MilestoneIds:    &projects.ListOfString{Items: []string{}},
 		Milestones:      GetMilestonesByProjectID("4"),
 		Tasks:           GetTasksByProjectID("4"),
 		Progress:        &wrapperspb.DoubleValue{Value: 10.0},
@@ -71,7 +71,7 @@ var ServiceProjects = []*projects.Project{
 		EndDate:         &wrapperspb.StringValue{Value: "2024-06-30"},
 		TeamMembers:     []*projects.Employee{},
 		RelatedProducts: []*projects.Product{},
-		MilestoneIds:    []string{},
+		MilestoneIds:    &projects.ListOfString{Items: []string{}},
 		Milestones:      GetMilestonesByProjectID("5"),
 		Tasks:           GetTasksByProjectID("5"),
 		Progress:        &wrapperspb.DoubleValue{Value: 5.0},
@@ -85,7 +85,7 @@ var ServiceProjects = []*projects.Project{
 		EndDate:         &wrapperspb.StringValue{Value: "2023-01-31"},
 		TeamMembers:     []*projects.Employee{},
 		RelatedProducts: []*projects.Product{},
-		MilestoneIds:    []string{"7", "8"},
+		MilestoneIds:    &projects.ListOfString{Items: []string{"7", "8"}},
 		Milestones:      GetMilestonesByProjectID("6"),
 		Tasks:           GetTasksByProjectID("6"),
 		Progress:        &wrapperspb.DoubleValue{Value: 100.0},
@@ -99,7 +99,7 @@ var ServiceProjects = []*projects.Project{
 		EndDate:         &wrapperspb.StringValue{Value: "2024-12-31"},
 		TeamMembers:     []*projects.Employee{},
 		RelatedProducts: []*projects.Product{},
-		MilestoneIds:    []string{"9", "10"},
+		MilestoneIds:    &projects.ListOfString{Items: []string{"9", "10"}},
 		Milestones:      GetMilestonesByProjectID("7"),
 		Tasks:           GetTasksByProjectID("7"),
 		Progress:        &wrapperspb.DoubleValue{Value: 40.0},
@@ -163,7 +163,7 @@ func GetProjectUpdatesByProjectID(projectID string) []*projects.ProjectUpdate {
 func GetTeamMembersByProjectId(projectID string) []*projects.Employee {
 	var teamMembers []*projects.Employee
 	for _, employee := range Employees {
-		for _, project := range employee.Projects {
+		for _, project := range employee.Projects.Items {
 			if project.Id == projectID {
 				teamMembers = append(teamMembers, employee)
 			}
