@@ -2478,7 +2478,7 @@
               "default": 100,
               "minimum": 0
             },
-            "parser_total_fields_limit": {
+            "total_fields_limit": {
               "type": "integer",
               "description": "The total number of fields the parser will allow. Set to 0 to disable.",
               "default": 500,
