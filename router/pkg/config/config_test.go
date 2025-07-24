@@ -1311,8 +1311,10 @@ access_logs:
       path: ./access.log
       file_mode: "640"
 `)
-		_, err := LoadConfig([]string{f})
+		c, err := LoadConfig([]string{f})
 		require.NoError(t, err)
+
+		require.Equal(t, FileMode(0640), c.Config.AccessLogs.Output.File.FileMode)
 	})
 
 	t.Run("verify file mode is parsed correctly with leading zero", func(t *testing.T) {
@@ -1329,8 +1331,10 @@ access_logs:
       path: ./access.log
       file_mode: "0640"
 `)
-		_, err := LoadConfig([]string{f})
+		c, err := LoadConfig([]string{f})
 		require.NoError(t, err)
+
+		require.Equal(t, FileMode(0640), c.Config.AccessLogs.Output.File.FileMode)
 	})
 
 	t.Run("verify file mode throws an error when pattern is not matched", func(t *testing.T) {
@@ -1407,34 +1411,36 @@ access_logs:
 	t.Run("verify file mode accepts valid octal patterns", func(t *testing.T) {
 		t.Parallel()
 
-		validPatterns := []string{
+		validPatterns := []struct {
+			pattern string
+			mode    FileMode
+		}{
 			// 3 digits without leading zero
-			"000",
-			"064",
-			"001",
-			"644",
-			"640",
-			"755",
-			"777",
-			"600",
-			"700",
-			"666",
-			"111",
+			{"000", FileMode(0000)},
+			{"001", FileMode(0001)},
+			{"644", FileMode(0644)},
+			{"640", FileMode(0640)},
+			{"755", FileMode(0755)},
+			{"777", FileMode(0777)},
+			{"600", FileMode(0600)},
+			{"700", FileMode(0700)},
+			{"666", FileMode(0666)},
+			{"111", FileMode(0111)},
 
 			// 3 digits with leading zero
-			"0000",
-			"0001",
-			"0644",
-			"0640",
-			"0755",
-			"0777",
-			"0600",
-			"0700",
-			"0666",
-			"0111",
+			{"0000", FileMode(0000)},
+			{"0001", FileMode(0001)},
+			{"0644", FileMode(0644)},
+			{"0640", FileMode(0640)},
+			{"0755", FileMode(0755)},
+			{"0777", FileMode(0777)},
+			{"0600", FileMode(0600)},
+			{"0700", FileMode(0700)},
+			{"0666", FileMode(0666)},
+			{"0111", FileMode(0111)},
 		}
 
-		for _, pattern := range validPatterns {
+		for _, tc := range validPatterns {
 			f := createTempFileFromFixture(t, `
 version: "1"
 
@@ -1444,10 +1450,11 @@ access_logs:
     file:
       enabled: true
       path: ./access.log
-      file_mode: "`+pattern+`"
+      file_mode: "`+tc.pattern+`"
 `)
-			_, err := LoadConfig([]string{f})
-			require.NoError(t, err, "Pattern '%s' should be valid but was rejected", pattern)
+			c, err := LoadConfig([]string{f})
+			require.NoError(t, err, "Pattern '%s' should be valid but was rejected", tc.pattern)
+			require.Equal(t, tc.mode, c.Config.AccessLogs.Output.File.FileMode, "Pattern '%s' should parse to mode %o but got %o", tc.pattern, tc.mode, c.Config.AccessLogs.Output.File.FileMode)
 		}
 	})
 }

@@ -249,25 +249,21 @@ func TestAccessLogsFileOutput(t *testing.T) {
 		tests := []struct {
 			name         string
 			mode         config.FileMode
-			expectError  bool
 			expectedMode os.FileMode
 		}{
 			{
 				name:         "Should succeed with default mode",
 				mode:         0640,
-				expectError:  false,
 				expectedMode: 0640,
 			},
 			{
 				name:         "Should succeed with custom mode",
 				mode:         0600,
-				expectError:  false,
 				expectedMode: 0600,
 			},
 			{
 				name:         "Should succeed with zero mode",
 				mode:         0,
-				expectError:  false,
 				expectedMode: 0600,
 			},
 		}
@@ -283,11 +279,6 @@ func TestAccessLogsFileOutput(t *testing.T) {
 						require.NoError(t, os.RemoveAll(fp))
 					}
 				})
-
-				if tt.expectError {
-					require.Error(t, err)
-					return
-				}
 
 				require.NoError(t, err)
 				require.FileExists(t, fp)
