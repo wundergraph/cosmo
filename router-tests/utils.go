@@ -72,7 +72,12 @@ func ConfigureAuth(t *testing.T) ([]authentication.Authenticator, *jwks.Server) 
 }
 
 func ConfigureAuthWithJwksConfig(t *testing.T, jwksConfig []authentication.JWKSConfig) []authentication.Authenticator {
-	tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), jwksConfig, true)
+	opts := authentication.JwksTokenDecoderConfig{
+		Logger:                zap.NewNop(),
+		JwksConfigs:           jwksConfig,
+		AllowInsecureJwksUrls: true,
+	}
+	tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), opts)
 	require.NoError(t, err)
 
 	authOptions := authentication.HttpHeaderAuthenticatorOptions{

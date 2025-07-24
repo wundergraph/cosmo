@@ -3,9 +3,6 @@ package core
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"os"
-
 	"github.com/KimMachineGun/automemlimit/memlimit"
 	"github.com/dustin/go-humanize"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
@@ -15,6 +12,8 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"go.uber.org/automaxprocs/maxprocs"
 	"go.uber.org/zap"
+	"net/http"
+	"os"
 )
 
 // newRouter creates a new router instance.
@@ -264,7 +263,12 @@ func setupAuthenticators(ctx context.Context, logger *zap.Logger, cfg *config.Co
 		})
 	}
 
-	tokenDecoder, err := authentication.NewJwksTokenDecoder(ctx, logger, configs, jwtConf.AllowInsecureJwksUrls)
+	decoderOpts := authentication.JwksTokenDecoderConfig{
+		Logger:                logger,
+		JwksConfigs:           configs,
+		AllowInsecureJwksUrls: jwtConf.AllowInsecureJwksUrls,
+	}
+	tokenDecoder, err := authentication.NewJwksTokenDecoder(ctx, decoderOpts)
 	if err != nil {
 		return nil, err
 	}

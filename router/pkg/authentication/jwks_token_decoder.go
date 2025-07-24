@@ -59,18 +59,24 @@ type audKey struct {
 
 type audienceSet map[string]struct{}
 
-func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKSConfig, allowInsecureJwksUrls bool) (TokenDecoder, error) {
-	audiencesMap := make(map[audKey]audienceSet, len(configs))
-	keyFuncMap := make(map[audKey]keyfunc.Keyfunc, len(configs))
+type JwksTokenDecoderConfig struct {
+	Logger                *zap.Logger
+	JwksConfigs           []JWKSConfig
+	AllowInsecureJwksUrls bool
+}
 
-	for _, c := range configs {
+func NewJwksTokenDecoder(ctx context.Context, config JwksTokenDecoderConfig) (TokenDecoder, error) {
+	audiencesMap := make(map[audKey]audienceSet, len(config.JwksConfigs))
+	keyFuncMap := make(map[audKey]keyfunc.Keyfunc, len(config.JwksConfigs))
+
+	for _, c := range config.JwksConfigs {
 		if c.URL != "" {
 			key := audKey{url: c.URL}
 			if _, ok := audiencesMap[key]; ok {
 				return nil, fmt.Errorf("duplicate JWK URL found: %s", c.URL)
 			}
 
-			if !allowInsecureJwksUrls {
+			if !config.AllowInsecureJwksUrls {
 				uri, err := url.ParseRequestURI(c.URL)
 				if err != nil {
 					return nil, fmt.Errorf("failed to parse given URL %q: %w", c.URL, err)
@@ -80,7 +86,9 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 				}
 			}
 
-			newValidationStore, err := NewValidationStore(logger, nil, c.AllowedAlgorithms)
+			l := config.Logger.With(zap.String("url", c.URL))
+
+			newValidationStore, err := NewValidationStore(config.Logger, nil, c.AllowedAlgorithms)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create validation store: %w", err)
 			}
@@ -131,7 +139,7 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 				Private: true,
 			}
 			if len(c.Secret) < 32 {
-				logger.Warn("Using a short secret for JWKs may lead to weak security. Consider using a longer secret.")
+				config.Logger.Warn("Using a short secret for JWKs may lead to weak security. Consider using a longer secret.")
 			}
 
 			alg := jwkset.ALG(c.Algorithm)

@@ -631,7 +631,13 @@ func TestAuthenticationWithCustomHeaders(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(authServer.Close)
 
-	tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)}, true)
+	jwksConfig := authentication.JwksTokenDecoderConfig{
+		Logger:                zap.NewNop(),
+		JwksConfigs:           []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)},
+		AllowInsecureJwksUrls: true,
+	}
+
+	tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), jwksConfig)
 	require.NoError(t, err)
 
 	authOptions := authentication.HttpHeaderAuthenticatorOptions{
@@ -692,18 +698,24 @@ func TestHttpJwksAuthorization(t *testing.T) {
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
 
-		_, err = authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{
-			{
-				URL:               authServer.JWKSURL(),
-				RefreshInterval:   2 * time.Second,
-				AllowedAlgorithms: BaseJwksAlgorithms,
+		jwksConfig := authentication.JwksTokenDecoderConfig{
+			Logger: zap.NewNop(),
+			JwksConfigs: []authentication.JWKSConfig{
+				{
+					URL:               authServer.JWKSURL(),
+					RefreshInterval:   2 * time.Second,
+					AllowedAlgorithms: BaseJwksAlgorithms,
+				},
+				{
+					URL:               authServer.JWKSURL(),
+					RefreshInterval:   2 * time.Second,
+					AllowedAlgorithms: BaseJwksAlgorithms,
+				},
 			},
-			{
-				URL:               authServer.JWKSURL(),
-				RefreshInterval:   2 * time.Second,
-				AllowedAlgorithms: BaseJwksAlgorithms,
-			},
-		}, true)
+			AllowInsecureJwksUrls: true,
+		}
+
+		_, err = authentication.NewJwksTokenDecoder(NewContextWithCancel(t), jwksConfig)
 
 		require.ErrorContains(t, err, "duplicate JWK URL found")
 	})
@@ -843,18 +855,23 @@ func TestNonHttpAuthorization(t *testing.T) {
 		secret := "example secret"
 		kid := "givenKID"
 
-		_, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{
-			{
-				Secret:    secret,
-				Algorithm: string(jwkset.AlgHS256),
-				KeyId:     kid,
+		jwksConfig := authentication.JwksTokenDecoderConfig{
+			Logger: zap.NewNop(),
+			JwksConfigs: []authentication.JWKSConfig{
+				{
+					Secret:    secret,
+					Algorithm: string(jwkset.AlgHS256),
+					KeyId:     kid,
+				},
+				{
+					Secret:    secret,
+					Algorithm: string(jwkset.AlgHS256),
+					KeyId:     kid,
+				},
 			},
-			{
-				Secret:    secret,
-				Algorithm: string(jwkset.AlgHS256),
-				KeyId:     kid,
-			},
-		}, true)
+			AllowInsecureJwksUrls: true,
+		}
+		_, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), jwksConfig)
 
 		require.ErrorContains(t, err, "duplicate JWK keyid specified found")
 	})
@@ -984,13 +1001,19 @@ func TestInsecureUrlUsage(t *testing.T) {
 		t.Parallel()
 
 		insecureUrl := "http://url.com"
-		_, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{
-			{
-				URL:               insecureUrl,
-				RefreshInterval:   2 * time.Second,
-				AllowedAlgorithms: BaseJwksAlgorithms,
+		jwksConfig := authentication.JwksTokenDecoderConfig{
+			Logger: zap.NewNop(),
+			JwksConfigs: []authentication.JWKSConfig{
+				{
+					URL:               insecureUrl,
+					RefreshInterval:   2 * time.Second,
+					AllowedAlgorithms: BaseJwksAlgorithms,
+				},
 			},
-		}, false)
+			AllowInsecureJwksUrls: false,
+		}
+
+		_, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), jwksConfig)
 
 		require.ErrorContains(t, err, `insecure JWK URL "`+insecureUrl+`" is not allowed`)
 	})
@@ -1002,14 +1025,20 @@ func TestInsecureUrlUsage(t *testing.T) {
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
 
-		// Since the url does not exist we will error out, however it should not because of insecure JWK URL
-		_, err = authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{
-			{
-				URL:               "https://secureurl-wg-example",
-				RefreshInterval:   2 * time.Second,
-				AllowedAlgorithms: BaseJwksAlgorithms,
+		jwksConfig := authentication.JwksTokenDecoderConfig{
+			Logger: zap.NewNop(),
+			JwksConfigs: []authentication.JWKSConfig{
+				{
+					URL:               "https://secureurl-wg-example",
+					RefreshInterval:   2 * time.Second,
+					AllowedAlgorithms: BaseJwksAlgorithms,
+				},
 			},
-		}, false)
+			AllowInsecureJwksUrls: false,
+		}
+
+		// Since the url does not exist we will error out, however it should not because of insecure JWK URL
+		_, err = authentication.NewJwksTokenDecoder(NewContextWithCancel(t), jwksConfig)
 
 		require.NotContains(t, err.Error(), `insecure JWK URL`)
 	})
@@ -1023,7 +1052,13 @@ func TestAuthenticationValuePrefixes(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(authServer.Close)
 
-	tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)}, true)
+	jwksConfig := authentication.JwksTokenDecoderConfig{
+		Logger:                zap.NewNop(),
+		JwksConfigs:           []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)},
+		AllowInsecureJwksUrls: true,
+	}
+
+	tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), jwksConfig)
 	require.NoError(t, err)
 	authenticatorHeaderValuePrefixes := []string{"Bearer", "Custom1", "Custom2"}
 	authenticator1, err := authentication.NewHttpHeaderAuthenticator(authentication.HttpHeaderAuthenticatorOptions{
@@ -1101,7 +1136,13 @@ func TestAuthenticationMultipleProviders(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(authServer2.Close)
 
-	tokenDecoder1, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer1.JWKSURL(), time.Second*5)}, true)
+	opts1 := authentication.JwksTokenDecoderConfig{
+		Logger:                zap.NewNop(),
+		JwksConfigs:           []authentication.JWKSConfig{toJWKSConfig(authServer1.JWKSURL(), time.Second*5)},
+		AllowInsecureJwksUrls: true,
+	}
+
+	tokenDecoder1, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), opts1)
 	require.NoError(t, err)
 	authenticator1HeaderValuePrefixes := []string{"Provider1"}
 	authenticator1, err := authentication.NewHttpHeaderAuthenticator(authentication.HttpHeaderAuthenticatorOptions{
@@ -1113,7 +1154,13 @@ func TestAuthenticationMultipleProviders(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	tokenDecoder2, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer2.JWKSURL(), time.Second*5)}, true)
+	opts2 := authentication.JwksTokenDecoderConfig{
+		Logger:                zap.NewNop(),
+		JwksConfigs:           []authentication.JWKSConfig{toJWKSConfig(authServer2.JWKSURL(), time.Second*5)},
+		AllowInsecureJwksUrls: true,
+	}
+
+	tokenDecoder2, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), opts2)
 	require.NoError(t, err)
 
 	authenticator2HeaderValuePrefixes := []string{"", "Provider2"}
@@ -1220,7 +1267,13 @@ func TestAlgorithmMismatch(t *testing.T) {
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
 
-		tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)}, true)
+		jwksConfig := authentication.JwksTokenDecoderConfig{
+			Logger:                zap.NewNop(),
+			JwksConfigs:           []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)},
+			AllowInsecureJwksUrls: true,
+		}
+
+		tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), jwksConfig)
 		require.NoError(t, err)
 
 		authOptions := authentication.HttpHeaderAuthenticatorOptions{
@@ -1241,12 +1294,18 @@ func TestAlgorithmMismatch(t *testing.T) {
 	t.Run("should fail when no algorithms are specified", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{
-			{
-				URL:             "https://url.com",
-				RefreshInterval: 2 * time.Second,
+		jwksConfig := authentication.JwksTokenDecoderConfig{
+			Logger: zap.NewNop(),
+			JwksConfigs: []authentication.JWKSConfig{
+				{
+					URL:             "https://url.com",
+					RefreshInterval: 2 * time.Second,
+				},
 			},
-		}, false)
+			AllowInsecureJwksUrls: false,
+		}
+
+		_, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), jwksConfig)
 
 		require.ErrorContains(t, err, `algorithms not specified`)
 	})
@@ -1353,8 +1412,14 @@ func TestOidcDiscovery(t *testing.T) {
 
 		t.Cleanup(authServer.Close)
 
-		tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{
-			toJWKSConfig(authServer.OIDCURL(), time.Second*5)}, true)
+		jwksConfig := authentication.JwksTokenDecoderConfig{
+			Logger: zap.NewNop(),
+			JwksConfigs: []authentication.JWKSConfig{
+				toJWKSConfig(authServer.OIDCURL(), time.Second*5)},
+			AllowInsecureJwksUrls: true,
+		}
+
+		tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), jwksConfig)
 		require.NoError(t, err)
 
 		authOptions := authentication.HttpHeaderAuthenticatorOptions{
@@ -1389,8 +1454,13 @@ func TestOidcDiscovery(t *testing.T) {
 
 		authServer.Close()
 
-		tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{
-			toJWKSConfig(authServer.OIDCURL(), time.Second*5)}, true)
+		jwksConfig := authentication.JwksTokenDecoderConfig{
+			Logger: zap.NewNop(),
+			JwksConfigs: []authentication.JWKSConfig{
+				toJWKSConfig(authServer.OIDCURL(), time.Second*5)},
+			AllowInsecureJwksUrls: true,
+		}
+		tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), jwksConfig)
 		require.Error(t, err)
 		require.Nil(t, tokenDecoder)
 	})
@@ -1407,8 +1477,13 @@ func TestOidcDiscovery(t *testing.T) {
 		// Simulate long-running operation
 		authServer.SetRespondTime(time.Minute)
 
-		tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{
-			toJWKSConfig(authServer.OIDCURL(), time.Second*5)}, true)
+		jwksConfig := authentication.JwksTokenDecoderConfig{
+			Logger: zap.NewNop(),
+			JwksConfigs: []authentication.JWKSConfig{
+				toJWKSConfig(authServer.OIDCURL(), time.Second*5)},
+			AllowInsecureJwksUrls: true,
+		}
+		tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), jwksConfig)
 		require.Error(t, err)
 		require.Nil(t, tokenDecoder)
 	})
@@ -1466,7 +1541,12 @@ func TestMultipleKeys(t *testing.T) {
 
 		t.Cleanup(authServer.Close)
 
-		tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)}, true)
+		jwksConfig := authentication.JwksTokenDecoderConfig{
+			Logger:                zap.NewNop(),
+			JwksConfigs:           []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)},
+			AllowInsecureJwksUrls: true,
+		}
+		tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), jwksConfig)
 		require.NoError(t, err)
 
 		authOptions := authentication.HttpHeaderAuthenticatorOptions{
@@ -1597,8 +1677,13 @@ func TestSupportedAlgorithms(t *testing.T) {
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
 
-		tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{
-			toJWKSConfig(authServer.JWKSURL(), time.Second*5, allowedAlgorithms...)}, true)
+		jwksConfig := authentication.JwksTokenDecoderConfig{
+			Logger: zap.NewNop(),
+			JwksConfigs: []authentication.JWKSConfig{
+				toJWKSConfig(authServer.JWKSURL(), time.Second*5, allowedAlgorithms...)},
+			AllowInsecureJwksUrls: true,
+		}
+		tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), jwksConfig)
 		require.NoError(t, err)
 
 		authOptions := authentication.HttpHeaderAuthenticatorOptions{
@@ -1952,7 +2037,12 @@ func TestAuthenticationOverWebsocket(t *testing.T) {
 	require.NoError(t, err)
 	defer authServer.Close()
 
-	tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)}, true)
+	jwksConfig := authentication.JwksTokenDecoderConfig{
+		Logger:                zap.NewNop(),
+		JwksConfigs:           []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)},
+		AllowInsecureJwksUrls: true,
+	}
+	tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), jwksConfig)
 	require.NoError(t, err)
 
 	jwksOpts := authentication.HttpHeaderAuthenticatorOptions{
