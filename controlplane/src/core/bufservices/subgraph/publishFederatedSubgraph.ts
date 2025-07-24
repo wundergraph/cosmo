@@ -310,7 +310,7 @@ export function publishFederatedSubgraph(
             proposalMatchMessage,
           };
         }
-      } else {
+      } else if (req.type !== SubgraphType.PLUGIN) {
         if (!isValidUrl(routingUrl)) {
           return {
             response: {
@@ -427,7 +427,7 @@ export function publishFederatedSubgraph(
     let protoLock = '';
 
     if (req.type === SubgraphType.PLUGIN || req.type === SubgraphType.GRPC_SUBGRAPH) {
-      if (!req.proto) {
+      if (!req.proto || !req.proto.goModulePath) {
         return {
           response: {
             code: EnumStatusCode.ERR,
@@ -439,6 +439,7 @@ export function publishFederatedSubgraph(
           proposalMatchMessage,
         };
       }
+
       if (req.type === SubgraphType.PLUGIN) {
         if (!req.proto.version || !req.proto.platforms) {
           return {
@@ -479,9 +480,9 @@ export function publishFederatedSubgraph(
       });
 
       if (
-        schema !== proto.proto ||
-        mappings !== JSON.stringify(newMappings, null, 2) ||
-        lock !== JSON.stringify(proto.lockData, null, 2)
+        (schema !== '' && schema !== proto.proto) ||
+        (mappings !== '' && mappings !== JSON.stringify(newMappings, null, 2)) ||
+        (lock !== '' && lock !== JSON.stringify(proto.lockData, null, 2))
       ) {
         return {
           response: {

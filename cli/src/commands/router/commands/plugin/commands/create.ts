@@ -37,7 +37,7 @@ export default (opts: BaseCommandOptions) => {
       }
     }
 
-    const spinner = ora('Subgraph is being created...').start();
+    const spinner = ora('Plugin Subgraph is being created...').start();
     const resp = await opts.client.platform.createFederatedSubgraph(
       {
         name,
@@ -53,9 +53,9 @@ export default (opts: BaseCommandOptions) => {
     );
 
     if (resp.response?.code === EnumStatusCode.OK) {
-      spinner.succeed('Subgraph was created successfully.');
+      spinner.succeed('Plugin Subgraph was created successfully.');
     } else {
-      spinner.fail('Failed to create subgraph.');
+      spinner.fail('Failed to create pluginsubgraph.');
       if (resp.response?.details) {
         console.log(pc.red(pc.bold(resp.response?.details)));
       }

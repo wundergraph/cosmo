@@ -46,10 +46,8 @@ export function validateAndFetchPluginData(
       };
     }
 
-    let subgraphExists = true;
     let subgraph = await subgraphRepo.byName(req.name, req.namespace);
     if (!subgraph) {
-      subgraphExists = false;
       if (!authContext.rbac.canCreateSubGraph(namespace)) {
         throw new UnauthorizedError();
       }

@@ -3,6 +3,9 @@ import { BaseCommandOptions } from '../../../../core/types/types.js';
 import InitPluginCommand from './commands/init.js';
 import BuildPluginCommand from './commands/build.js';
 import TestPluginCommand from './commands/test.js';
+import CreatePluginCommand from './commands/create.js';
+import PublishPluginCommand from './commands/publish.js';
+import DeletePluginCommand from './commands/delete.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('plugin');
@@ -10,6 +13,9 @@ export default (opts: BaseCommandOptions) => {
   command.addCommand(InitPluginCommand(opts));
   command.addCommand(BuildPluginCommand(opts));
   command.addCommand(TestPluginCommand(opts));
+  command.addCommand(CreatePluginCommand(opts));
+  command.addCommand(PublishPluginCommand(opts));
+  command.addCommand(DeletePluginCommand(opts));
 
   return command;
 };

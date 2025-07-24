@@ -117,6 +117,11 @@ export type ComposedSubgraph = (IComposedSubgraph | ComposedSubgraphPlugin | Com
   schemaVersionId: string;
 };
 
+const parseGRPCMapping = (mappings: string): GRPCMapping => {
+  const mappingsJson = JSON.parse(mappings);
+  return GRPCMapping.fromJson(mappingsJson);
+};
+
 export function subgraphDTOsToComposedSubgraphs(
   organizationId: string,
   subgraphs: SubgraphDTO[],
@@ -139,6 +144,7 @@ export function subgraphDTOsToComposedSubgraphs(
       if (!subgraph.proto || !subgraph.proto.pluginData) {
         throw new Error(`Subgraph ${subgraph.name} is a plugin but does not have a plugin data`);
       }
+
       return {
         kind: SubgraphKind.Plugin,
         id: subgraph.id,
@@ -152,7 +158,7 @@ export function subgraphDTOsToComposedSubgraphs(
         configurationDataByTypeName,
         schema,
         protoSchema: subgraph.proto.schema,
-        mapping: new GRPCMapping(JSON.parse(subgraph.proto.mappings)),
+        mapping: parseGRPCMapping(subgraph.proto.mappings),
         artifact: new Artifact({
           name: `/${organizationId}/${subgraph.id}`,
           reference: subgraph.proto.pluginData.version,
@@ -163,6 +169,7 @@ export function subgraphDTOsToComposedSubgraphs(
       if (!subgraph.proto) {
         throw new Error(`Subgraph ${subgraph.name} is a GRPC subgraph but does not have a proto`);
       }
+
       return {
         kind: SubgraphKind.GRPC,
         id: subgraph.id,
@@ -175,7 +182,7 @@ export function subgraphDTOsToComposedSubgraphs(
         configurationDataByTypeName,
         schema,
         protoSchema: subgraph.proto.schema,
-        mapping: new GRPCMapping(JSON.parse(subgraph.proto.mappings)),
+        mapping: parseGRPCMapping(subgraph.proto.mappings),
       };
     }
 

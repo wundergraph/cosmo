@@ -105,38 +105,38 @@ export function createFederatedSubgraph(
           admissionErrors: [],
         };
       }
-    } else {
-      if (!routingUrl) {
-        return {
-          response: {
-            code: EnumStatusCode.ERR,
-            details: `A non-Event-Driven Graph must define a routing URL`,
-          },
-          compositionErrors: [],
-          admissionErrors: [],
-        };
+    } else if (req.type !== SubgraphType.PLUGIN) {
+        if (!routingUrl) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `A non-Event-Driven Graph must define a routing URL`,
+            },
+            compositionErrors: [],
+            admissionErrors: [],
+          };
+        }
+        if (!isValidUrl(routingUrl)) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `Routing URL "${routingUrl}" is not a valid URL`,
+            },
+            compositionErrors: [],
+            admissionErrors: [],
+          };
+        }
+        if (req.subscriptionUrl && !isValidUrl(req.subscriptionUrl)) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `Subscription URL "${req.subscriptionUrl}" is not a valid URL`,
+            },
+            compositionErrors: [],
+            admissionErrors: [],
+          };
+        }
       }
-      if (!isValidUrl(routingUrl)) {
-        return {
-          response: {
-            code: EnumStatusCode.ERR,
-            details: `Routing URL "${routingUrl}" is not a valid URL`,
-          },
-          compositionErrors: [],
-          admissionErrors: [],
-        };
-      }
-      if (req.subscriptionUrl && !isValidUrl(req.subscriptionUrl)) {
-        return {
-          response: {
-            code: EnumStatusCode.ERR,
-            details: `Subscription URL "${req.subscriptionUrl}" is not a valid URL`,
-          },
-          compositionErrors: [],
-          admissionErrors: [],
-        };
-      }
-    }
 
     const namespace = await namespaceRepo.byName(req.namespace);
     if (!namespace) {

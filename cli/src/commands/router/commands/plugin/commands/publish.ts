@@ -170,17 +170,14 @@ export default (opts: BaseCommandOptions) => {
         // Optional when subgraph does not exist yet
         labels: options.label.map((label: string) => splitLabel(label)),
         type: SubgraphType.PLUGIN,
-        proto:
-          protoSchema && protoMapping && protoLock
-            ? {
-                schema: protoSchema,
-                mappings: protoMapping,
-                lock: protoLock,
-                goModulePath: options.goModulePath,
-                platforms: options.platform || [],
-                version: newVersion,
-              }
-            : undefined,
+        proto: {
+          schema: protoSchema,
+          mappings: protoMapping,
+          lock: protoLock,
+          goModulePath: options.goModulePath,
+          platforms: options.platform || [],
+          version: newVersion,
+        },
       },
       {
         headers: getBaseHeaders(),
