@@ -18,9 +18,6 @@ type validationStore struct {
 }
 
 var supportedAlgorithms = map[string]struct{}{
-	"HS256": {},
-	"HS384": {},
-	"HS512": {},
 	"RS256": {},
 	"RS384": {},
 	"RS512": {},
@@ -33,7 +30,7 @@ var supportedAlgorithms = map[string]struct{}{
 	"EdDSA": {},
 }
 
-func NewValidationStore(logger *zap.Logger, inner jwkset.Storage, algs []string) jwkset.Storage {
+func NewValidationStore(logger *zap.Logger, inner jwkset.Storage, algs []string) (jwkset.Storage, error) {
 	if inner == nil {
 		inner = jwkset.NewMemoryStorage()
 	}
@@ -51,7 +48,7 @@ func NewValidationStore(logger *zap.Logger, inner jwkset.Storage, algs []string)
 	}
 
 	if len(algs) == 0 {
-		return store
+		return nil, errNoAlgorithmsSpecified
 	}
 
 	for _, alg := range algs {
@@ -63,7 +60,7 @@ func NewValidationStore(logger *zap.Logger, inner jwkset.Storage, algs []string)
 	}
 
 	store.algs = algSet
-	return store
+	return store, nil
 }
 
 func (v *validationStore) KeyDelete(ctx context.Context, keyID string) (ok bool, err error) {

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/MicahParks/jwkset"
@@ -58,18 +59,39 @@ type audKey struct {
 
 type audienceSet map[string]struct{}
 
-func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKSConfig) (TokenDecoder, error) {
-	audiencesMap := make(map[audKey]audienceSet, len(configs))
-	keyFuncMap := make(map[audKey]keyfunc.Keyfunc, len(configs))
+type JWKSTokenDecoderConfig struct {
+	Logger                *zap.Logger
+	JWKSConfigs           []JWKSConfig
+	AllowInsecureJWKSURLs bool
+}
 
-	for _, c := range configs {
+func NewJWKSTokenDecoder(ctx context.Context, config JWKSTokenDecoderConfig) (TokenDecoder, error) {
+	audiencesMap := make(map[audKey]audienceSet, len(config.JWKSConfigs))
+	keyFuncMap := make(map[audKey]keyfunc.Keyfunc, len(config.JWKSConfigs))
+
+	for _, c := range config.JWKSConfigs {
 		if c.URL != "" {
 			key := audKey{url: c.URL}
 			if _, ok := audiencesMap[key]; ok {
 				return nil, fmt.Errorf("duplicate JWK URL found: %s", c.URL)
 			}
 
-			l := logger.With(zap.String("url", c.URL))
+			if !config.AllowInsecureJWKSURLs {
+				uri, err := url.ParseRequestURI(c.URL)
+				if err != nil {
+					return nil, fmt.Errorf("failed to parse given URL %q: %w", c.URL, err)
+				}
+				if uri.Scheme != "https" {
+					return nil, fmt.Errorf("insecure JWK URL %q is not allowed", c.URL)
+				}
+			}
+
+			l := config.Logger.With(zap.String("url", c.URL))
+
+			newValidationStore, err := NewValidationStore(config.Logger, nil, c.AllowedAlgorithms)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create validation store: %w", err)
+			}
 
 			jwksetHTTPStorageOptions := jwkset.HTTPClientStorageOptions{
 				Client:             newOIDCDiscoveryClient(httpclient.NewRetryableHTTPClient(l)),
@@ -81,7 +103,7 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 					l.Error("Failed to refresh HTTP JWK Set from remote HTTP resource.", zap.Error(err))
 				},
 				RefreshInterval: c.RefreshInterval,
-				Storage:         NewValidationStore(logger, nil, c.AllowedAlgorithms),
+				Storage:         newValidationStore,
 			}
 
 			store, err := jwkset.NewStorageFromHTTP(c.URL, jwksetHTTPStorageOptions)
@@ -117,7 +139,7 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 				Private: true,
 			}
 			if len(c.Secret) < 32 {
-				logger.Warn("Using a short secret for JWKs may lead to weak security. Consider using a longer secret.")
+				config.Logger.Warn("Using a short secret for JWKs may lead to weak security. Consider using a longer secret.")
 			}
 
 			alg := jwkset.ALG(c.Algorithm)

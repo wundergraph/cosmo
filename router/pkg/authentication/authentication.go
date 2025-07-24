@@ -79,6 +79,8 @@ func (a *authentication) Scopes() []string {
 
 var errUnacceptableAud = errors.New("audience match not found")
 
+var errNoAlgorithmsSpecified = errors.New("algorithms not specified")
+
 // Authenticate tries to authenticate the given Provider using the given authenticators. If any of
 // the authenticators succeeds, the Authentication result is returned with no error. If the Provider
 // has no authentication information, the Authentication result is nil with no error. If the authentication

@@ -99,7 +99,7 @@ func TestAuthentication(t *testing.T) {
 			require.NoError(t, err)
 			defer res.Body.Close()
 			require.Equal(t, http.StatusOK, res.StatusCode)
-			require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
+			require.Equal(t, JWKSName, res.Header.Get(xAuthenticatedByHeader))
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
 			require.Equal(t, employeesExpectedData, string(data))
@@ -143,7 +143,7 @@ func TestAuthentication(t *testing.T) {
 			require.NoError(t, err)
 			defer res.Body.Close()
 			require.Equal(t, http.StatusOK, res.StatusCode)
-			require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
+			require.Equal(t, JWKSName, res.Header.Get(xAuthenticatedByHeader))
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
 			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",0,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",1,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",2,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",3,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",4,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",5,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",6,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",7,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",8,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",9,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}}],"data":{"employees":[null,null,null,null,null,null,null,null,null,null]},"extensions":{"authorization":{"missingScopes":[{"coordinate":{"typeName":"Employee","fieldName":"startDate"},"required":[["read:employee","read:private"],["read:all"]]}],"actualScopes":[]}}}`, string(data))
@@ -170,7 +170,7 @@ func TestAuthentication(t *testing.T) {
 			require.NoError(t, err)
 			defer res.Body.Close()
 			require.Equal(t, http.StatusOK, res.StatusCode)
-			require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
+			require.Equal(t, JWKSName, res.Header.Get(xAuthenticatedByHeader))
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
 			require.Equal(t, `{"data":{"employees":[{"id":1,"startDate":"January 2020"},{"id":2,"startDate":"July 2022"},{"id":3,"startDate":"June 2021"},{"id":4,"startDate":"July 2022"},{"id":5,"startDate":"July 2022"},{"id":7,"startDate":"September 2022"},{"id":8,"startDate":"September 2022"},{"id":10,"startDate":"November 2022"},{"id":11,"startDate":"November 2022"},{"id":12,"startDate":"December 2022"}]}}`, string(data))
@@ -223,7 +223,7 @@ func TestAuthentication(t *testing.T) {
 			require.NoError(t, err)
 			defer res.Body.Close()
 			require.Equal(t, http.StatusOK, res.StatusCode)
-			require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
+			require.Equal(t, JWKSName, res.Header.Get(xAuthenticatedByHeader))
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
 			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",0,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",1,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",2,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",3,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",4,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",5,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",6,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",7,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",8,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",9,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}}],"data":{"employees":[null,null,null,null,null,null,null,null,null,null]},"extensions":{"authorization":{"missingScopes":[{"coordinate":{"typeName":"Employee","fieldName":"startDate"},"required":[["read:employee","read:private"],["read:all"]]}],"actualScopes":["read:employee"]}}}`, string(data))
@@ -253,7 +253,7 @@ func TestAuthentication(t *testing.T) {
 			require.NoError(t, err)
 			defer res.Body.Close()
 			require.Equal(t, http.StatusOK, res.StatusCode)
-			require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
+			require.Equal(t, JWKSName, res.Header.Get(xAuthenticatedByHeader))
 			data, err := io.ReadAll(res.Body)
 			data = bytes.TrimSpace(data)
 			require.NoError(t, err)
@@ -282,7 +282,7 @@ func TestAuthentication(t *testing.T) {
 			require.NoError(t, err)
 			defer res.Body.Close()
 			require.Equal(t, http.StatusOK, res.StatusCode)
-			require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
+			require.Equal(t, JWKSName, res.Header.Get(xAuthenticatedByHeader))
 			data, err := io.ReadAll(res.Body)
 			data = bytes.TrimSpace(data)
 			require.NoError(t, err)
@@ -358,7 +358,7 @@ func TestAuthentication(t *testing.T) {
 			require.NoError(t, err)
 			defer res.Body.Close()
 			require.Equal(t, http.StatusOK, res.StatusCode)
-			require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
+			require.Equal(t, JWKSName, res.Header.Get(xAuthenticatedByHeader))
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
 			require.Equal(t, `{"data":{"employees":[{"id":1,"startDate":"January 2020"},{"id":2,"startDate":"July 2022"},{"id":3,"startDate":"June 2021"},{"id":4,"startDate":"July 2022"},{"id":5,"startDate":"July 2022"},{"id":7,"startDate":"September 2022"},{"id":8,"startDate":"September 2022"},{"id":10,"startDate":"November 2022"},{"id":11,"startDate":"November 2022"},{"id":12,"startDate":"December 2022"}]}}`, string(data))
@@ -385,7 +385,7 @@ func TestAuthentication(t *testing.T) {
 			require.NoError(t, err)
 			defer res.Body.Close()
 			require.Equal(t, http.StatusOK, res.StatusCode)
-			require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
+			require.Equal(t, JWKSName, res.Header.Get(xAuthenticatedByHeader))
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
 			require.Equal(t, `{"data":{"employees":[{"id":1,"startDate":"January 2020"},{"id":2,"startDate":"July 2022"},{"id":3,"startDate":"June 2021"},{"id":4,"startDate":"July 2022"},{"id":5,"startDate":"July 2022"},{"id":7,"startDate":"September 2022"},{"id":8,"startDate":"September 2022"},{"id":10,"startDate":"November 2022"},{"id":11,"startDate":"November 2022"},{"id":12,"startDate":"December 2022"}]}}`, string(data))
@@ -414,7 +414,7 @@ func TestAuthentication(t *testing.T) {
 			require.NoError(t, err)
 			defer res.Body.Close()
 			require.Equal(t, http.StatusOK, res.StatusCode)
-			require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
+			require.Equal(t, JWKSName, res.Header.Get(xAuthenticatedByHeader))
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
 			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.topSecretFederationFacts.description', Reason: missing required scopes.","path":["topSecretFederationFacts",2,"description"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}}],"data":null,"extensions":{"authorization":{"missingScopes":[{"coordinate":{"typeName":"EntityFact","fieldName":"description"},"required":[["read:scalar"],["read:all"]]}],"actualScopes":["read:fact","read:miscellaneous"]}}}`, string(data))
@@ -631,9 +631,17 @@ func TestAuthenticationWithCustomHeaders(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(authServer.Close)
 
-	tokenDecoder, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)})
+	jwksConfig := authentication.JWKSTokenDecoderConfig{
+		Logger:                zap.NewNop(),
+		JWKSConfigs:           []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)},
+		AllowInsecureJWKSURLs: true,
+	}
+
+	tokenDecoder, err := authentication.NewJWKSTokenDecoder(NewContextWithCancel(t), jwksConfig)
+	require.NoError(t, err)
+
 	authOptions := authentication.HttpHeaderAuthenticatorOptions{
-		Name: JwksName,
+		Name: JWKSName,
 		HeaderSourcePrefixes: map[string][]string{
 			headerName: {headerValuePrefix},
 		},
@@ -660,7 +668,7 @@ func TestAuthenticationWithCustomHeaders(t *testing.T) {
 			require.NoError(t, err)
 			defer res.Body.Close()
 			require.Equal(t, http.StatusOK, res.StatusCode)
-			require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
+			require.Equal(t, JWKSName, res.Header.Get(xAuthenticatedByHeader))
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
 			require.Equal(t, employeesExpectedData, string(data))
@@ -680,7 +688,7 @@ func TestAuthenticationWithCustomHeaders(t *testing.T) {
 	})
 }
 
-func TestHttpJwksAuthorization(t *testing.T) {
+func TestHttpJWKSAuthorization(t *testing.T) {
 	t.Parallel()
 
 	t.Run("startup should fail when duplicate URLs are specified", func(t *testing.T) {
@@ -690,16 +698,24 @@ func TestHttpJwksAuthorization(t *testing.T) {
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
 
-		_, err = authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{
-			{
-				URL:             authServer.JWKSURL(),
-				RefreshInterval: 2 * time.Second,
+		jwksConfig := authentication.JWKSTokenDecoderConfig{
+			Logger: zap.NewNop(),
+			JWKSConfigs: []authentication.JWKSConfig{
+				{
+					URL:               authServer.JWKSURL(),
+					RefreshInterval:   2 * time.Second,
+					AllowedAlgorithms: BaseJWKSAlgorithms,
+				},
+				{
+					URL:               authServer.JWKSURL(),
+					RefreshInterval:   2 * time.Second,
+					AllowedAlgorithms: BaseJWKSAlgorithms,
+				},
 			},
-			{
-				URL:             authServer.JWKSURL(),
-				RefreshInterval: 2 * time.Second,
-			},
-		})
+			AllowInsecureJWKSURLs: true,
+		}
+
+		_, err = authentication.NewJWKSTokenDecoder(NewContextWithCancel(t), jwksConfig)
 
 		require.ErrorContains(t, err, "duplicate JWK URL found")
 	})
@@ -768,7 +784,7 @@ func TestHttpJwksAuthorization(t *testing.T) {
 			require.NoError(t, err)
 			defer res.Body.Close()
 			require.Equal(t, http.StatusOK, res.StatusCode)
-			require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
+			require.Equal(t, JWKSName, res.Header.Get(xAuthenticatedByHeader))
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
 			require.Equal(t, employeesExpectedData, string(data))
@@ -792,19 +808,21 @@ func TestHttpJwksAuthorization(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+		authenticators := ConfigureAuthWithJWKSConfig(t, []authentication.JWKSConfig{
 			{
 				Secret:    "example secret",
 				Algorithm: string(jwkset.AlgHS256),
 				KeyId:     "givenKID",
 			},
 			{
-				URL:             authServer1.JWKSURL(),
-				RefreshInterval: time.Second * 5,
+				URL:               authServer1.JWKSURL(),
+				RefreshInterval:   time.Second * 5,
+				AllowedAlgorithms: BaseJWKSAlgorithms,
 			},
 			{
-				URL:             authServer2.JWKSURL(),
-				RefreshInterval: time.Second * 5,
+				URL:               authServer2.JWKSURL(),
+				RefreshInterval:   time.Second * 5,
+				AllowedAlgorithms: BaseJWKSAlgorithms,
 			},
 		})
 
@@ -821,7 +839,7 @@ func TestHttpJwksAuthorization(t *testing.T) {
 			require.NoError(t, err)
 			defer res.Body.Close()
 			require.Equal(t, http.StatusOK, res.StatusCode)
-			require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
+			require.Equal(t, JWKSName, res.Header.Get(xAuthenticatedByHeader))
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
 			require.Equal(t, employeesExpectedData, string(data))
@@ -837,18 +855,23 @@ func TestNonHttpAuthorization(t *testing.T) {
 		secret := "example secret"
 		kid := "givenKID"
 
-		_, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{
-			{
-				Secret:    secret,
-				Algorithm: string(jwkset.AlgHS256),
-				KeyId:     kid,
+		jwksConfig := authentication.JWKSTokenDecoderConfig{
+			Logger: zap.NewNop(),
+			JWKSConfigs: []authentication.JWKSConfig{
+				{
+					Secret:    secret,
+					Algorithm: string(jwkset.AlgHS256),
+					KeyId:     kid,
+				},
+				{
+					Secret:    secret,
+					Algorithm: string(jwkset.AlgHS256),
+					KeyId:     kid,
+				},
 			},
-			{
-				Secret:    secret,
-				Algorithm: string(jwkset.AlgHS256),
-				KeyId:     kid,
-			},
-		})
+			AllowInsecureJWKSURLs: true,
+		}
+		_, err := authentication.NewJWKSTokenDecoder(NewContextWithCancel(t), jwksConfig)
 
 		require.ErrorContains(t, err, "duplicate JWK keyid specified found")
 	})
@@ -858,7 +881,7 @@ func TestNonHttpAuthorization(t *testing.T) {
 
 		secret := "example secret"
 		kid := "givenKID"
-		authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+		authenticators := ConfigureAuthWithJWKSConfig(t, []authentication.JWKSConfig{
 			{
 				Secret:    secret,
 				Algorithm: string(jwkset.AlgHS256),
@@ -881,7 +904,7 @@ func TestNonHttpAuthorization(t *testing.T) {
 			require.NoError(t, err)
 			defer res.Body.Close()
 			require.Equal(t, http.StatusOK, res.StatusCode)
-			require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
+			require.Equal(t, JWKSName, res.Header.Get(xAuthenticatedByHeader))
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
 			require.Equal(t, employeesExpectedData, string(data))
@@ -897,10 +920,11 @@ func TestNonHttpAuthorization(t *testing.T) {
 
 		secret := "example secret"
 		kid := "givenKID"
-		authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+		authenticators := ConfigureAuthWithJWKSConfig(t, []authentication.JWKSConfig{
 			{
-				URL:             authServer.JWKSURL(),
-				RefreshInterval: time.Second * 5,
+				URL:               authServer.JWKSURL(),
+				RefreshInterval:   time.Second * 5,
+				AllowedAlgorithms: BaseJWKSAlgorithms,
 			},
 			{
 				Secret:    secret,
@@ -924,7 +948,7 @@ func TestNonHttpAuthorization(t *testing.T) {
 			require.NoError(t, err)
 			defer res.Body.Close()
 			require.Equal(t, http.StatusOK, res.StatusCode)
-			require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
+			require.Equal(t, JWKSName, res.Header.Get(xAuthenticatedByHeader))
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
 			require.Equal(t, employeesExpectedData, string(data))
@@ -935,7 +959,7 @@ func TestNonHttpAuthorization(t *testing.T) {
 		t.Parallel()
 
 		secret := "example secret"
-		authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+		authenticators := ConfigureAuthWithJWKSConfig(t, []authentication.JWKSConfig{
 			{
 				Secret:    secret,
 				Algorithm: string(jwkset.AlgHS256),
@@ -970,6 +994,57 @@ func TestNonHttpAuthorization(t *testing.T) {
 	})
 }
 
+func TestInsecureUrlUsage(t *testing.T) {
+	t.Parallel()
+
+	t.Run("should fail when using an insecure URL", func(t *testing.T) {
+		t.Parallel()
+
+		insecureUrl := "http://url.com"
+		jwksConfig := authentication.JWKSTokenDecoderConfig{
+			Logger: zap.NewNop(),
+			JWKSConfigs: []authentication.JWKSConfig{
+				{
+					URL:               insecureUrl,
+					RefreshInterval:   2 * time.Second,
+					AllowedAlgorithms: BaseJWKSAlgorithms,
+				},
+			},
+			AllowInsecureJWKSURLs: false,
+		}
+
+		_, err := authentication.NewJWKSTokenDecoder(NewContextWithCancel(t), jwksConfig)
+
+		require.ErrorContains(t, err, `insecure JWK URL "`+insecureUrl+`" is not allowed`)
+	})
+
+	t.Run("should not fail when using an secure URL", func(t *testing.T) {
+		t.Parallel()
+
+		authServer, err := jwks.NewServer(t)
+		require.NoError(t, err)
+		t.Cleanup(authServer.Close)
+
+		jwksConfig := authentication.JWKSTokenDecoderConfig{
+			Logger: zap.NewNop(),
+			JWKSConfigs: []authentication.JWKSConfig{
+				{
+					URL:               "https://secureurl-wg-example",
+					RefreshInterval:   2 * time.Second,
+					AllowedAlgorithms: BaseJWKSAlgorithms,
+				},
+			},
+			AllowInsecureJWKSURLs: false,
+		}
+
+		// Since the url does not exist we will error out, however it should not because of insecure JWK URL
+		_, err = authentication.NewJWKSTokenDecoder(NewContextWithCancel(t), jwksConfig)
+
+		require.NotContains(t, err.Error(), `insecure JWK URL`)
+	})
+
+}
+
 func TestAuthenticationValuePrefixes(t *testing.T) {
 	t.Parallel()
 
@@ -977,10 +1052,17 @@ func TestAuthenticationValuePrefixes(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(authServer.Close)
 
-	tokenDecoder, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)})
+	jwksConfig := authentication.JWKSTokenDecoderConfig{
+		Logger:                zap.NewNop(),
+		JWKSConfigs:           []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)},
+		AllowInsecureJWKSURLs: true,
+	}
+
+	tokenDecoder, err := authentication.NewJWKSTokenDecoder(NewContextWithCancel(t), jwksConfig)
+	require.NoError(t, err)
 	authenticatorHeaderValuePrefixes := []string{"Bearer", "Custom1", "Custom2"}
 	authenticator1, err := authentication.NewHttpHeaderAuthenticator(authentication.HttpHeaderAuthenticatorOptions{
-		Name: JwksName,
+		Name: JWKSName,
 		HeaderSourcePrefixes: map[string][]string{
 			"Authorization": authenticatorHeaderValuePrefixes,
 		},
@@ -1032,7 +1114,7 @@ func TestAuthenticationValuePrefixes(t *testing.T) {
 					require.NoError(t, err)
 					defer res.Body.Close()
 					require.Equal(t, http.StatusOK, res.StatusCode)
-					require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
+					require.Equal(t, JWKSName, res.Header.Get(xAuthenticatedByHeader))
 					data, err := io.ReadAll(res.Body)
 					require.NoError(t, err)
 					require.Equal(t, employeesExpectedData, string(data))
@@ -1054,7 +1136,14 @@ func TestAuthenticationMultipleProviders(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(authServer2.Close)
 
-	tokenDecoder1, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer1.JWKSURL(), time.Second*5)})
+	opts1 := authentication.JWKSTokenDecoderConfig{
+		Logger:                zap.NewNop(),
+		JWKSConfigs:           []authentication.JWKSConfig{toJWKSConfig(authServer1.JWKSURL(), time.Second*5)},
+		AllowInsecureJWKSURLs: true,
+	}
+
+	tokenDecoder1, err := authentication.NewJWKSTokenDecoder(NewContextWithCancel(t), opts1)
+	require.NoError(t, err)
 	authenticator1HeaderValuePrefixes := []string{"Provider1"}
 	authenticator1, err := authentication.NewHttpHeaderAuthenticator(authentication.HttpHeaderAuthenticatorOptions{
 		Name: "1",
@@ -1065,7 +1154,15 @@ func TestAuthenticationMultipleProviders(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	tokenDecoder2, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer2.JWKSURL(), time.Second*5)})
+	opts2 := authentication.JWKSTokenDecoderConfig{
+		Logger:                zap.NewNop(),
+		JWKSConfigs:           []authentication.JWKSConfig{toJWKSConfig(authServer2.JWKSURL(), time.Second*5)},
+		AllowInsecureJWKSURLs: true,
+	}
+
+	tokenDecoder2, err := authentication.NewJWKSTokenDecoder(NewContextWithCancel(t), opts2)
+	require.NoError(t, err)
+
 	authenticator2HeaderValuePrefixes := []string{"", "Provider2"}
 	authenticator2, err := authentication.NewHttpHeaderAuthenticator(authentication.HttpHeaderAuthenticatorOptions{
 		Name: "2",
@@ -1170,11 +1267,17 @@ func TestAlgorithmMismatch(t *testing.T) {
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
 
-		tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)})
+		jwksConfig := authentication.JWKSTokenDecoderConfig{
+			Logger:                zap.NewNop(),
+			JWKSConfigs:           []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)},
+			AllowInsecureJWKSURLs: true,
+		}
+
+		tokenDecoder, err := authentication.NewJWKSTokenDecoder(NewContextWithCancel(t), jwksConfig)
 		require.NoError(t, err)
 
 		authOptions := authentication.HttpHeaderAuthenticatorOptions{
-			Name:         JwksName,
+			Name:         JWKSName,
 			TokenDecoder: tokenDecoder,
 		}
 		authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
@@ -1187,6 +1290,25 @@ func TestAlgorithmMismatch(t *testing.T) {
 
 		return token, authenticators
 	}
+
+	t.Run("should fail when no algorithms are specified", func(t *testing.T) {
+		t.Parallel()
+
+		jwksConfig := authentication.JWKSTokenDecoderConfig{
+			Logger: zap.NewNop(),
+			JWKSConfigs: []authentication.JWKSConfig{
+				{
+					URL:             "https://url.com",
+					RefreshInterval: 2 * time.Second,
+				},
+			},
+			AllowInsecureJWKSURLs: false,
+		}
+
+		_, err := authentication.NewJWKSTokenDecoder(NewContextWithCancel(t), jwksConfig)
+
+		require.ErrorContains(t, err, `algorithms not specified`)
+	})
 
 	t.Run("should prevent access with invalid algorithm", func(t *testing.T) {
 		// create a crypto for RSA
@@ -1271,7 +1393,7 @@ func TestOidcDiscovery(t *testing.T) {
 		require.NoError(t, err)
 		defer res.Body.Close()
 		require.Equal(t, http.StatusOK, res.StatusCode)
-		require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
+		require.Equal(t, JWKSName, res.Header.Get(xAuthenticatedByHeader))
 		data, err := io.ReadAll(res.Body)
 		require.NoError(t, err)
 		require.Equal(t, employeesExpectedData, string(data))
@@ -1290,13 +1412,18 @@ func TestOidcDiscovery(t *testing.T) {
 
 		t.Cleanup(authServer.Close)
 
-		tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(),
-			[]authentication.JWKSConfig{
-				toJWKSConfig(authServer.OIDCURL(), time.Second*5)})
+		jwksConfig := authentication.JWKSTokenDecoderConfig{
+			Logger: zap.NewNop(),
+			JWKSConfigs: []authentication.JWKSConfig{
+				toJWKSConfig(authServer.OIDCURL(), time.Second*5)},
+			AllowInsecureJWKSURLs: true,
+		}
+
+		tokenDecoder, err := authentication.NewJWKSTokenDecoder(NewContextWithCancel(t), jwksConfig)
 		require.NoError(t, err)
 
 		authOptions := authentication.HttpHeaderAuthenticatorOptions{
-			Name:         JwksName,
+			Name:         JWKSName,
 			TokenDecoder: tokenDecoder,
 		}
 		authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
@@ -1327,9 +1454,13 @@ func TestOidcDiscovery(t *testing.T) {
 
 		authServer.Close()
 
-		tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(),
-			[]authentication.JWKSConfig{
-				toJWKSConfig(authServer.OIDCURL(), time.Second*5)})
+		jwksConfig := authentication.JWKSTokenDecoderConfig{
+			Logger: zap.NewNop(),
+			JWKSConfigs: []authentication.JWKSConfig{
+				toJWKSConfig(authServer.OIDCURL(), time.Second*5)},
+			AllowInsecureJWKSURLs: true,
+		}
+		tokenDecoder, err := authentication.NewJWKSTokenDecoder(NewContextWithCancel(t), jwksConfig)
 		require.Error(t, err)
 		require.Nil(t, tokenDecoder)
 	})
@@ -1346,9 +1477,13 @@ func TestOidcDiscovery(t *testing.T) {
 		// Simulate long-running operation
 		authServer.SetRespondTime(time.Minute)
 
-		tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(),
-			[]authentication.JWKSConfig{
-				toJWKSConfig(authServer.OIDCURL(), time.Second*5)})
+		jwksConfig := authentication.JWKSTokenDecoderConfig{
+			Logger: zap.NewNop(),
+			JWKSConfigs: []authentication.JWKSConfig{
+				toJWKSConfig(authServer.OIDCURL(), time.Second*5)},
+			AllowInsecureJWKSURLs: true,
+		}
+		tokenDecoder, err := authentication.NewJWKSTokenDecoder(NewContextWithCancel(t), jwksConfig)
 		require.Error(t, err)
 		require.Nil(t, tokenDecoder)
 	})
@@ -1387,7 +1522,7 @@ func TestMultipleKeys(t *testing.T) {
 		require.NoError(t, err)
 		defer res.Body.Close()
 		require.Equal(t, http.StatusOK, res.StatusCode)
-		require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
+		require.Equal(t, JWKSName, res.Header.Get(xAuthenticatedByHeader))
 		data, err := io.ReadAll(res.Body)
 		require.NoError(t, err)
 		require.Equal(t, employeesExpectedData, string(data))
@@ -1406,11 +1541,16 @@ func TestMultipleKeys(t *testing.T) {
 
 		t.Cleanup(authServer.Close)
 
-		tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)})
+		jwksConfig := authentication.JWKSTokenDecoderConfig{
+			Logger:                zap.NewNop(),
+			JWKSConfigs:           []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)},
+			AllowInsecureJWKSURLs: true,
+		}
+		tokenDecoder, err := authentication.NewJWKSTokenDecoder(NewContextWithCancel(t), jwksConfig)
 		require.NoError(t, err)
 
 		authOptions := authentication.HttpHeaderAuthenticatorOptions{
-			Name:         JwksName,
+			Name:         JWKSName,
 			TokenDecoder: tokenDecoder,
 		}
 		authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
@@ -1500,57 +1640,6 @@ func TestMultipleKeys(t *testing.T) {
 		})
 	})
 
-	t.Run("Test with multiple symmetric keys", func(t *testing.T) {
-		t.Parallel()
-
-		t.Run("Should succeed with multiple HS256 keys", func(t *testing.T) {
-			t.Parallel()
-
-			hs1, err := jwks.NewHMACCrypto("", jwkset.AlgHS256)
-			require.NoError(t, err)
-
-			hs2, err := jwks.NewHMACCrypto("", jwkset.AlgHS256)
-			require.NoError(t, err)
-
-			tokens, authenticators := testSetup(t, hs1, hs2)
-
-			testenv.Run(t, &testenv.Config{
-				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, true)),
-				},
-			}, func(t *testing.T, xEnv *testenv.Environment) {
-				for _, token := range tokens {
-					testAuthentication(t, xEnv, token)
-				}
-			})
-		})
-	})
-
-	t.Run("Test with symmetric and asymmetric keys", func(t *testing.T) {
-		t.Parallel()
-
-		t.Run("Should succeed with RSA and HS256 keys", func(t *testing.T) {
-			t.Parallel()
-
-			rsa, err := jwks.NewRSACrypto("", jwkset.AlgRS256, 2048)
-			require.NoError(t, err)
-
-			hs, err := jwks.NewHMACCrypto("", jwkset.AlgHS256)
-			require.NoError(t, err)
-
-			tokens, authenticators := testSetup(t, rsa, hs)
-
-			testenv.Run(t, &testenv.Config{
-				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, true)),
-				},
-			}, func(t *testing.T, xEnv *testenv.Environment) {
-				for _, token := range tokens {
-					testAuthentication(t, xEnv, token)
-				}
-			})
-		})
-	})
 }
 
 func TestSupportedAlgorithms(t *testing.T) {
@@ -1571,7 +1660,7 @@ func TestSupportedAlgorithms(t *testing.T) {
 
 		if expectSuccess {
 			require.Equal(t, http.StatusOK, res.StatusCode)
-			require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
+			require.Equal(t, JWKSName, res.Header.Get(xAuthenticatedByHeader))
 		} else {
 			require.Equal(t, http.StatusUnauthorized, res.StatusCode)
 		}
@@ -1588,15 +1677,17 @@ func TestSupportedAlgorithms(t *testing.T) {
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
 
-		tokenDecoder, err := authentication.NewJwksTokenDecoder(
-			NewContextWithCancel(t),
-			zap.NewNop(),
-			[]authentication.JWKSConfig{
-				toJWKSConfig(authServer.JWKSURL(), time.Second*5, allowedAlgorithms...)})
+		jwksConfig := authentication.JWKSTokenDecoderConfig{
+			Logger: zap.NewNop(),
+			JWKSConfigs: []authentication.JWKSConfig{
+				toJWKSConfig(authServer.JWKSURL(), time.Second*5, allowedAlgorithms...)},
+			AllowInsecureJWKSURLs: true,
+		}
+		tokenDecoder, err := authentication.NewJWKSTokenDecoder(NewContextWithCancel(t), jwksConfig)
 		require.NoError(t, err)
 
 		authOptions := authentication.HttpHeaderAuthenticatorOptions{
-			Name:         JwksName,
+			Name:         JWKSName,
 			TokenDecoder: tokenDecoder,
 		}
 		authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
@@ -1788,97 +1879,6 @@ func TestSupportedAlgorithms(t *testing.T) {
 		})
 	})
 
-	t.Run("HMAC Tests", func(t *testing.T) {
-		t.Parallel()
-
-		t.Run("Test authentication with HMAC 256", func(t *testing.T) {
-			t.Parallel()
-
-			hmac, err := jwks.NewHMACCrypto("", jwkset.AlgHS256)
-			require.NoError(t, err)
-
-			token, authenticators := testSetup(t, hmac)
-
-			testenv.Run(t, &testenv.Config{
-				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, true)),
-				},
-			}, func(t *testing.T, xEnv *testenv.Environment) {
-				t.Run("Should succeed when providing token", func(t *testing.T) {
-					t.Parallel()
-					body := testRequest(t, xEnv, authHeader(token), true)
-					require.Equal(t, employeesExpectedData, string(body))
-
-				})
-
-				t.Run("Should fail when providing no Token", func(t *testing.T) {
-					t.Parallel()
-
-					body := testRequest(t, xEnv, nil, false)
-					require.JSONEq(t, unauthorizedExpectedData, body)
-				})
-			})
-		})
-
-		t.Run("Test authentication with HMAC 384", func(t *testing.T) {
-			t.Parallel()
-
-			hmac, err := jwks.NewHMACCrypto("", jwkset.AlgHS384)
-			require.NoError(t, err)
-
-			token, authenticators := testSetup(t, hmac)
-
-			testenv.Run(t, &testenv.Config{
-				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, true)),
-				},
-			}, func(t *testing.T, xEnv *testenv.Environment) {
-				t.Run("Should succeed when providing token", func(t *testing.T) {
-					t.Parallel()
-					body := testRequest(t, xEnv, authHeader(token), true)
-					require.Equal(t, employeesExpectedData, string(body))
-
-				})
-
-				t.Run("Should fail when providing no Token", func(t *testing.T) {
-					t.Parallel()
-
-					body := testRequest(t, xEnv, nil, false)
-					require.JSONEq(t, unauthorizedExpectedData, body)
-				})
-			})
-		})
-
-		t.Run("Test authentication with HMAC 512", func(t *testing.T) {
-			t.Parallel()
-
-			hmac, err := jwks.NewHMACCrypto("", jwkset.AlgHS512)
-			require.NoError(t, err)
-
-			token, authenticators := testSetup(t, hmac)
-
-			testenv.Run(t, &testenv.Config{
-				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, true)),
-				},
-			}, func(t *testing.T, xEnv *testenv.Environment) {
-				t.Run("Should succeed when providing token", func(t *testing.T) {
-					t.Parallel()
-					body := testRequest(t, xEnv, authHeader(token), true)
-					require.Equal(t, employeesExpectedData, string(body))
-
-				})
-
-				t.Run("Should fail when providing no Token", func(t *testing.T) {
-					t.Parallel()
-
-					body := testRequest(t, xEnv, nil, false)
-					require.JSONEq(t, unauthorizedExpectedData, body)
-				})
-			})
-		})
-	})
-
 	t.Run("ED25519 Tests", func(t *testing.T) {
 		t.Parallel()
 
@@ -2037,9 +2037,16 @@ func TestAuthenticationOverWebsocket(t *testing.T) {
 	require.NoError(t, err)
 	defer authServer.Close()
 
-	tokenDecoder, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)})
+	jwksConfig := authentication.JWKSTokenDecoderConfig{
+		Logger:                zap.NewNop(),
+		JWKSConfigs:           []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)},
+		AllowInsecureJWKSURLs: true,
+	}
+	tokenDecoder, err := authentication.NewJWKSTokenDecoder(NewContextWithCancel(t), jwksConfig)
+	require.NoError(t, err)
+
 	jwksOpts := authentication.HttpHeaderAuthenticatorOptions{
-		Name:         JwksName,
+		Name:         JWKSName,
 		TokenDecoder: tokenDecoder,
 	}
 
@@ -2095,11 +2102,12 @@ func TestAudienceValidation(t *testing.T) {
 				token, err := authServer.Token(map[string]any{"aud": tokenAudiences})
 				require.NoError(t, err)
 
-				authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+				authenticators := ConfigureAuthWithJWKSConfig(t, []authentication.JWKSConfig{
 					{
-						URL:             authServer.JWKSURL(),
-						RefreshInterval: time.Second * 5,
-						Audiences:       []string{"aud3", "aud5"},
+						URL:               authServer.JWKSURL(),
+						RefreshInterval:   time.Second * 5,
+						Audiences:         []string{"aud3", "aud5"},
+						AllowedAlgorithms: BaseJWKSAlgorithms,
 					},
 				})
 
@@ -2130,7 +2138,7 @@ func TestAudienceValidation(t *testing.T) {
 
 				secret := "example secret"
 				kid := "givenKID"
-				authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+				authenticators := ConfigureAuthWithJWKSConfig(t, []authentication.JWKSConfig{
 					{
 						Secret:    secret,
 						Algorithm: string(jwkset.AlgHS256),
@@ -2179,11 +2187,12 @@ func TestAudienceValidation(t *testing.T) {
 				token, err := authServer.Token(map[string]any{"aud": tokenAudiences})
 				require.NoError(t, err)
 
-				authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+				authenticators := ConfigureAuthWithJWKSConfig(t, []authentication.JWKSConfig{
 					{
-						URL:             authServer.JWKSURL(),
-						RefreshInterval: time.Second * 5,
-						Audiences:       []string{"aud3", "aud5"},
+						URL:               authServer.JWKSURL(),
+						RefreshInterval:   time.Second * 5,
+						Audiences:         []string{"aud3", "aud5"},
+						AllowedAlgorithms: BaseJWKSAlgorithms,
 					},
 				})
 
@@ -2214,7 +2223,7 @@ func TestAudienceValidation(t *testing.T) {
 
 				secret := "example secret"
 				kid := "givenKID"
-				authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+				authenticators := ConfigureAuthWithJWKSConfig(t, []authentication.JWKSConfig{
 					{
 						Secret:    secret,
 						Algorithm: string(jwkset.AlgHS256),
@@ -2268,11 +2277,12 @@ func TestAudienceValidation(t *testing.T) {
 				token, err := authServer.Token(map[string]any{"aud": tokenAudiences})
 				require.NoError(t, err)
 
-				authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+				authenticators := ConfigureAuthWithJWKSConfig(t, []authentication.JWKSConfig{
 					{
-						URL:             authServer.JWKSURL(),
-						RefreshInterval: time.Second * 5,
-						Audiences:       []string{matchingAudience, "aud5"},
+						URL:               authServer.JWKSURL(),
+						RefreshInterval:   time.Second * 5,
+						Audiences:         []string{matchingAudience, "aud5"},
+						AllowedAlgorithms: BaseJWKSAlgorithms,
 					},
 				})
 
@@ -2289,7 +2299,7 @@ func TestAudienceValidation(t *testing.T) {
 					require.NoError(t, err)
 					defer res.Body.Close()
 					require.Equal(t, http.StatusOK, res.StatusCode)
-					require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
+					require.Equal(t, JWKSName, res.Header.Get(xAuthenticatedByHeader))
 					data, err := io.ReadAll(res.Body)
 					require.NoError(t, err)
 					require.Equal(t, employeesExpectedData, string(data))
@@ -2304,7 +2314,7 @@ func TestAudienceValidation(t *testing.T) {
 
 				secret := "example secret"
 				kid := "givenKID"
-				authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+				authenticators := ConfigureAuthWithJWKSConfig(t, []authentication.JWKSConfig{
 					{
 						Secret:    secret,
 						Algorithm: string(jwkset.AlgHS256),
@@ -2330,7 +2340,7 @@ func TestAudienceValidation(t *testing.T) {
 					require.NoError(t, err)
 					defer res.Body.Close()
 					require.Equal(t, http.StatusOK, res.StatusCode)
-					require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
+					require.Equal(t, JWKSName, res.Header.Get(xAuthenticatedByHeader))
 					data, err := io.ReadAll(res.Body)
 					require.NoError(t, err)
 					require.Equal(t, employeesExpectedData, string(data))
@@ -2353,11 +2363,12 @@ func TestAudienceValidation(t *testing.T) {
 				token, err := authServer.Token(map[string]any{"aud": matchingAudience})
 				require.NoError(t, err)
 
-				authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+				authenticators := ConfigureAuthWithJWKSConfig(t, []authentication.JWKSConfig{
 					{
-						URL:             authServer.JWKSURL(),
-						RefreshInterval: time.Second * 5,
-						Audiences:       []string{matchingAudience, "aud5"},
+						URL:               authServer.JWKSURL(),
+						RefreshInterval:   time.Second * 5,
+						Audiences:         []string{matchingAudience, "aud5"},
+						AllowedAlgorithms: BaseJWKSAlgorithms,
 					},
 				})
 
@@ -2374,7 +2385,7 @@ func TestAudienceValidation(t *testing.T) {
 					require.NoError(t, err)
 					defer res.Body.Close()
 					require.Equal(t, http.StatusOK, res.StatusCode)
-					require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
+					require.Equal(t, JWKSName, res.Header.Get(xAuthenticatedByHeader))
 					data, err := io.ReadAll(res.Body)
 					require.NoError(t, err)
 					require.Equal(t, employeesExpectedData, string(data))
@@ -2388,7 +2399,7 @@ func TestAudienceValidation(t *testing.T) {
 
 				secret := "example secret"
 				kid := "givenKID"
-				authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+				authenticators := ConfigureAuthWithJWKSConfig(t, []authentication.JWKSConfig{
 					{
 						Secret:    secret,
 						Algorithm: string(jwkset.AlgHS256),
@@ -2414,7 +2425,7 @@ func TestAudienceValidation(t *testing.T) {
 					require.NoError(t, err)
 					defer res.Body.Close()
 					require.Equal(t, http.StatusOK, res.StatusCode)
-					require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
+					require.Equal(t, JWKSName, res.Header.Get(xAuthenticatedByHeader))
 					data, err := io.ReadAll(res.Body)
 					require.NoError(t, err)
 					require.Equal(t, employeesExpectedData, string(data))
@@ -2435,11 +2446,12 @@ func TestAudienceValidation(t *testing.T) {
 		token, err := authServer.Token(map[string]any{"aud": tokenAudiences})
 		require.NoError(t, err)
 
-		authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+		authenticators := ConfigureAuthWithJWKSConfig(t, []authentication.JWKSConfig{
 			{
-				URL:             authServer.JWKSURL(),
-				RefreshInterval: time.Second * 5,
-				Audiences:       []string{"aud3", "aud5"},
+				URL:               authServer.JWKSURL(),
+				RefreshInterval:   time.Second * 5,
+				Audiences:         []string{"aud3", "aud5"},
+				AllowedAlgorithms: BaseJWKSAlgorithms,
 			},
 		})
 
@@ -2476,10 +2488,11 @@ func TestAudienceValidation(t *testing.T) {
 		token, err := authServer.Token(map[string]any{"aud": tokenAudiences})
 		require.NoError(t, err)
 
-		authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+		authenticators := ConfigureAuthWithJWKSConfig(t, []authentication.JWKSConfig{
 			{
-				URL:             authServer.JWKSURL(),
-				RefreshInterval: time.Second * 5,
+				URL:               authServer.JWKSURL(),
+				RefreshInterval:   time.Second * 5,
+				AllowedAlgorithms: BaseJWKSAlgorithms,
 			},
 		})
 
@@ -2496,7 +2509,7 @@ func TestAudienceValidation(t *testing.T) {
 			require.NoError(t, err)
 			defer res.Body.Close()
 			require.Equal(t, http.StatusOK, res.StatusCode)
-			require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
+			require.Equal(t, JWKSName, res.Header.Get(xAuthenticatedByHeader))
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
 			require.Equal(t, employeesExpectedData, string(data))
@@ -2505,6 +2518,10 @@ func TestAudienceValidation(t *testing.T) {
 }
 
 func toJWKSConfig(url string, refresh time.Duration, allowedAlgorithms ...string) authentication.JWKSConfig {
+	// If no algorithms are specified, we consider all algorithms
+	if len(allowedAlgorithms) == 0 {
+		allowedAlgorithms = BaseJWKSAlgorithms
+	}
 	return authentication.JWKSConfig{
 		URL:               url,
 		RefreshInterval:   refresh,
