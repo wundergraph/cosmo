@@ -245,7 +245,7 @@ export class SubgraphRepository {
       }
 
       // TODO: avoid downloading the schema use hash instead
-      if (data.schemaSDL && data.schemaSDL !== subgraph.schemaSDL) {
+      if (data.schemaSDL && (subgraph.type === 'plugin' || data.schemaSDL !== subgraph.schemaSDL)) {
         subgraphChanged = true;
         const updatedSubgraph = await subgraphRepo.addSchemaVersion({
           targetId: subgraph.targetId,
