@@ -1,5 +1,5 @@
 {
-  "id": "4a3e7103-e849-4e45-93e7-e8f5808e2651",
+  "id": "4c7b2bdb-75fd-450c-bd13-ecb6c2e2bb73",
   "prevId": "f1c31ac5-9d78-42c7-bf4e-c9e3c48036bf",
   "version": "7",
   "dialect": "postgresql",
@@ -4918,15 +4918,9 @@
           "primaryKey": false,
           "notNull": true
         },
-        "architecture": {
-          "name": "architecture",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "os": {
-          "name": "os",
-          "type": "text",
+        "platform": {
+          "name": "platform",
+          "type": "text[]",
           "primaryKey": false,
           "notNull": true
         },
