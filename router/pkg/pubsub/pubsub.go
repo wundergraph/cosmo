@@ -50,7 +50,7 @@ func (e *ProviderNotDefinedError) Error() string {
 }
 
 type Hooks struct {
-	OnSubscriptionStarts []pubsub_datasource.OnSubscriptionStartFn
+	SubscriptionOnStart []pubsub_datasource.SubscriptionOnStartFn
 }
 
 // BuildProvidersAndDataSources is a generic function that builds providers and data sources for the given
@@ -159,7 +159,7 @@ func build[P GetID, E GetEngineEventConfiguration](ctx context.Context, builder 
 	// build data sources for each event
 	for _, dsConf := range dsConfs {
 		for i, event := range dsConf.events {
-			plannerConfig := pubsub_datasource.NewPlannerConfig(builder, event, hooks.OnSubscriptionStarts)
+			plannerConfig := pubsub_datasource.NewPlannerConfig(builder, event, hooks.SubscriptionOnStart)
 			out, err := plan.NewDataSourceConfiguration(
 				dsConf.dsConf.Configuration.Id+"-"+builder.TypeID()+"-"+strconv.Itoa(i),
 				pubsub_datasource.NewPlannerFactory(ctx, plannerConfig),

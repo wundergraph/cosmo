@@ -116,6 +116,10 @@ func (s *SubscriptionSource) UniqueRequestID(ctx *resolve.Context, input []byte,
 
 func (s *SubscriptionSource) Start(ctx *resolve.Context, input []byte, updater datasource.SubscriptionEventUpdater) error {
 	subConf := s.SubscriptionEventConfiguration(input)
+	if subConf == nil {
+		return fmt.Errorf("no subscription configuration found")
+	}
+
 	conf, ok := subConf.(*SubscriptionEventConfiguration)
 	if !ok {
 		return fmt.Errorf("invalid subscription configuration")

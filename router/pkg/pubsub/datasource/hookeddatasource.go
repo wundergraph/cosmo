@@ -6,12 +6,12 @@ import (
 )
 
 type HookedSubscriptionDataSource struct {
-	OnSubscriptionStartFns []OnSubscriptionStartFn
+	SubscriptionOnStartFns []SubscriptionOnStartFn
 	SubscriptionDataSource PubSubSubscriptionDataSource
 }
 
 func (h *HookedSubscriptionDataSource) SubscriptionOnStart(ctx *resolve.Context, input []byte) (close bool, err error) {
-	for _, fn := range h.OnSubscriptionStartFns {
+	for _, fn := range h.SubscriptionOnStartFns {
 		close, err = fn(ctx, h.SubscriptionDataSource.SubscriptionEventConfiguration(input))
 		if err != nil || close {
 			return

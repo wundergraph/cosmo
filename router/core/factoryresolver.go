@@ -415,9 +415,9 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 				}
 			}
 
-			onSubscriptionStarts := make([]graphql_datasource.SubscriptionOnStartFn, len(l.subscriptionHooks.startSubscription))
-			for i, fn := range l.subscriptionHooks.startSubscription {
-				onSubscriptionStarts[i] = NewEngineOnSubscriptionStartHook(fn)
+			subscriptionOnStartFns := make([]graphql_datasource.SubscriptionOnStartFn, len(l.subscriptionHooks.onStart))
+			for i, fn := range l.subscriptionHooks.onStart {
+				subscriptionOnStartFns[i] = NewEngineSubscriptionOnStartHook(fn)
 			}
 			customConfiguration, err := graphql_datasource.NewConfiguration(graphql_datasource.ConfigurationInput{
 				Fetch: &graphql_datasource.FetchConfiguration{
@@ -432,7 +432,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 					ForwardedClientHeaderNames:              forwardedClientHeaders,
 					ForwardedClientHeaderRegularExpressions: forwardedClientRegexps,
 					WsSubProtocol:                           wsSubprotocol,
-					SubscriptionOnStartFns:                  onSubscriptionStarts,
+					SubscriptionOnStartFns:                  subscriptionOnStartFns,
 				},
 				SchemaConfiguration:    schemaConfiguration,
 				CustomScalarTypeFields: customScalarTypeFields,
@@ -474,9 +474,9 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 		}
 	}
 
-	onSubscriptionStarts := make([]pubsub_datasource.OnSubscriptionStartFn, len(l.subscriptionHooks.startSubscription))
-	for i, fn := range l.subscriptionHooks.startSubscription {
-		onSubscriptionStarts[i] = NewPubSubOnSubscriptionStartHook(fn)
+	subscriptionOnStartFns := make([]pubsub_datasource.SubscriptionOnStartFn, len(l.subscriptionHooks.onStart))
+	for i, fn := range l.subscriptionHooks.onStart {
+		subscriptionOnStartFns[i] = NewPubSubSubscriptionOnStartHook(fn)
 	}
 	factoryProviders, factoryDataSources, err := pubsub.BuildProvidersAndDataSources(
 		l.ctx,
@@ -486,7 +486,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 		l.resolver.InstanceData().HostName,
 		l.resolver.InstanceData().ListenAddress,
 		pubsub.Hooks{
-			OnSubscriptionStarts: onSubscriptionStarts,
+			SubscriptionOnStart: subscriptionOnStartFns,
 		},
 	)
 	if err != nil {

@@ -236,7 +236,6 @@ func TestStartSubscriptionHook(t *testing.T) {
 			<-callbackCalled
 			xEnv.WaitForSubscriptionCount(0, time.Second*10)
 
-			// require.NoError(t, client.Close())
 			testenv.AwaitChannelWithT(t, time.Second*10, clientRunCh, func(t *testing.T, err error) {
 				require.NoError(t, err)
 

@@ -102,8 +102,8 @@ type SubscriptionOnStartHandler interface {
 	SubscriptionOnStart(ctx SubscriptionOnStartHookContext) (bool, error)
 }
 
-// NewPubSubOnSubscriptionStartHook converts a SubscriptionOnStartHandler to a pubsub.OnSubscriptionStartFn
-func NewPubSubOnSubscriptionStartHook(fn func(ctx SubscriptionOnStartHookContext) (bool, error)) datasource.OnSubscriptionStartFn {
+// NewPubSubSubscriptionOnStartHook converts a SubscriptionOnStartHandler to a pubsub.SubscriptionOnStartFn
+func NewPubSubSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHookContext) (bool, error)) datasource.SubscriptionOnStartFn {
 	if fn == nil {
 		return nil
 	}
@@ -122,8 +122,8 @@ func NewPubSubOnSubscriptionStartHook(fn func(ctx SubscriptionOnStartHookContext
 	}
 }
 
-// NewEngineOnSubscriptionStartHook converts a SubscriptionOnStartHandler to a graphql_datasource.OnSubscriptionStartFn
-func NewEngineOnSubscriptionStartHook(fn func(ctx SubscriptionOnStartHookContext) (bool, error)) graphql_datasource.SubscriptionOnStartFn {
+// NewEngineSubscriptionOnStartHook converts a SubscriptionOnStartHandler to a graphql_datasource.SubscriptionOnStartFn
+func NewEngineSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHookContext) (bool, error)) graphql_datasource.SubscriptionOnStartFn {
 	if fn == nil {
 		return nil
 	}

@@ -26,7 +26,7 @@ import (
 )
 
 type subscriptionHooks struct {
-	startSubscription []func(ctx SubscriptionOnStartHookContext) (bool, error)
+	onStart []func(ctx SubscriptionOnStartHookContext) (bool, error)
 }
 
 type Config struct {

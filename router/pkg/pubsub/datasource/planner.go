@@ -119,7 +119,7 @@ func (p *Planner[PB, P, E]) ConfigureSubscription() plan.SubscriptionConfigurati
 
 	hookedDataSource := &HookedSubscriptionDataSource{
 		SubscriptionDataSource: dataSource,
-		OnSubscriptionStartFns: p.config.OnSubscriptionStartFns,
+		SubscriptionOnStartFns: p.config.SubscriptionOnStartFns,
 	}
 
 	input, err := pubSubDataSource.ResolveDataSourceSubscriptionInput()
