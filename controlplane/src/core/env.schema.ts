@@ -171,6 +171,10 @@ export const envVariables = z
      * Admission Webhook
      */
     AUTH_ADMISSION_JWT_SECRET: z.string(),
+    /**
+     * Plugin Registry
+     */
+    PLUGIN_REGISTRY_URL: z.string(),
   })
   .refine((input) => {
     if (input.STRIPE_WEBHOOK_SECRET && !input.STRIPE_SECRET_KEY) {

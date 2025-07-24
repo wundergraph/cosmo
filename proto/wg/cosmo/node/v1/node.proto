@@ -208,9 +208,10 @@ message GRPCConfiguration {
   PluginConfiguration plugin = 3;
 }
 
-message Artifact {
-  string name = 1; // {federated_graph_id}/{subgraph_id}
-  string reference = 2; // v1
+message ImageReference {
+  string registry = 1;  
+  string repository = 2; // {organization_id}/{subgraph_id}
+  string reference = 3; // v1
 }
 
 message PluginConfiguration {
@@ -218,7 +219,7 @@ message PluginConfiguration {
   string name = 1;
   // Plugin version
   string version = 2;
-  optional Artifact artifact = 3;
+  optional ImageReference image_reference = 3;
 }
 
 message SSLConfiguration {

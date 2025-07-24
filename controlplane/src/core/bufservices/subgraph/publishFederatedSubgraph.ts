@@ -469,7 +469,7 @@ export function publishFederatedSubgraph(
       }
 
       const { schema, mappings, lock, goModulePath } = req.proto;
-      const serviceName = subgraph.name + 'Service';
+      const serviceName = subgraph.name.charAt(0).toUpperCase() + subgraph.name.slice(1) + 'Service';
 
       try {
         const newMappings = compileGraphQLToMapping(subgraphSchemaSDL, serviceName);

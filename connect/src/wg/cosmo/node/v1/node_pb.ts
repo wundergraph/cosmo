@@ -1585,49 +1585,55 @@ export class GRPCConfiguration extends Message<GRPCConfiguration> {
 }
 
 /**
- * @generated from message wg.cosmo.node.v1.Artifact
+ * @generated from message wg.cosmo.node.v1.ImageReference
  */
-export class Artifact extends Message<Artifact> {
+export class ImageReference extends Message<ImageReference> {
   /**
-   * {federated_graph_id}/{subgraph_id}
-   *
-   * @generated from field: string name = 1;
+   * @generated from field: string registry = 1;
    */
-  name = "";
+  registry = "";
+
+  /**
+   * {organization_id}/{subgraph_id}
+   *
+   * @generated from field: string repository = 2;
+   */
+  repository = "";
 
   /**
    * v1
    *
-   * @generated from field: string reference = 2;
+   * @generated from field: string reference = 3;
    */
   reference = "";
 
-  constructor(data?: PartialMessage<Artifact>) {
+  constructor(data?: PartialMessage<ImageReference>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.node.v1.Artifact";
+  static readonly typeName = "wg.cosmo.node.v1.ImageReference";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "reference", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "registry", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "repository", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "reference", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Artifact {
-    return new Artifact().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ImageReference {
+    return new ImageReference().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Artifact {
-    return new Artifact().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ImageReference {
+    return new ImageReference().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Artifact {
-    return new Artifact().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ImageReference {
+    return new ImageReference().fromJsonString(jsonString, options);
   }
 
-  static equals(a: Artifact | PlainMessage<Artifact> | undefined, b: Artifact | PlainMessage<Artifact> | undefined): boolean {
-    return proto3.util.equals(Artifact, a, b);
+  static equals(a: ImageReference | PlainMessage<ImageReference> | undefined, b: ImageReference | PlainMessage<ImageReference> | undefined): boolean {
+    return proto3.util.equals(ImageReference, a, b);
   }
 }
 
@@ -1650,9 +1656,9 @@ export class PluginConfiguration extends Message<PluginConfiguration> {
   version = "";
 
   /**
-   * @generated from field: optional wg.cosmo.node.v1.Artifact artifact = 3;
+   * @generated from field: optional wg.cosmo.node.v1.ImageReference image_reference = 3;
    */
-  artifact?: Artifact;
+  imageReference?: ImageReference;
 
   constructor(data?: PartialMessage<PluginConfiguration>) {
     super();
@@ -1664,7 +1670,7 @@ export class PluginConfiguration extends Message<PluginConfiguration> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "version", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "artifact", kind: "message", T: Artifact, opt: true },
+    { no: 3, name: "image_reference", kind: "message", T: ImageReference, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PluginConfiguration {

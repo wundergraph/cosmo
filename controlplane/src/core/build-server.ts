@@ -134,6 +134,7 @@ export interface BuildConfig {
       key?: string; // e.g. string or '/path/to/my/client-key.pem'
     };
   };
+  pluginRegistryUrl: string;
 }
 
 export interface MetricsOptions {

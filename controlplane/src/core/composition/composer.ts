@@ -21,10 +21,10 @@ import {
 import { FastifyBaseLogger } from 'fastify';
 import { DocumentNode, GraphQLSchema, parse, printSchema } from 'graphql';
 import {
-  Artifact,
   FeatureFlagRouterExecutionConfig,
   FeatureFlagRouterExecutionConfigs,
   GRPCMapping,
+  ImageReference,
   RouterConfig,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
@@ -162,8 +162,9 @@ export function subgraphDTOsToComposedSubgraphs(
         schema,
         protoSchema: subgraph.proto.schema,
         mapping: parseGRPCMapping(subgraph.proto.mappings),
-        artifact: new Artifact({
-          name: `/${organizationId}/${subgraph.id}`,
+        imageReference: new ImageReference({
+          registry: process.env.PLUGIN_REGISTRY_URL || '',
+          repository: `/${organizationId}/${subgraph.id}`,
           reference: subgraph.proto.pluginData.version,
         }),
       };
