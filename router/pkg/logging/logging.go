@@ -156,7 +156,7 @@ func (f *BufferedLogger) Close() error {
 }
 
 func NewLogFile(path string) (*os.File, error) {
-	return os.OpenFile(path, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
+	return os.OpenFile(path, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0640)
 }
 
 func WithRequestID(reqID string) zap.Field {

@@ -193,6 +193,11 @@ func TestAccessLogsFileOutput(t *testing.T) {
 		f, err := logging.NewLogFile(filepath.Join(os.TempDir(), "access.log"))
 		require.NoError(t, err)
 
+		require.FileExists(t, fp)
+		info, err := os.Stat(fp)
+		require.NoError(t, err)
+		require.Equal(t, info.Mode(), os.FileMode(0640))
+
 		t.Cleanup(func() {
 			require.NoError(t, f.Close())
 			require.NoError(t, os.RemoveAll(fp))
