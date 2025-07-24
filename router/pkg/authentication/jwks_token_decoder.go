@@ -65,7 +65,7 @@ type JWKSTokenDecoderConfig struct {
 	AllowInsecureJWKSURLs bool
 }
 
-func NewJwksTokenDecoder(ctx context.Context, config JWKSTokenDecoderConfig) (TokenDecoder, error) {
+func NewJWKSTokenDecoder(ctx context.Context, config JWKSTokenDecoderConfig) (TokenDecoder, error) {
 	audiencesMap := make(map[audKey]audienceSet, len(config.JWKSConfigs))
 	keyFuncMap := make(map[audKey]keyfunc.Keyfunc, len(config.JWKSConfigs))
 

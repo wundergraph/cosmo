@@ -266,9 +266,9 @@ func setupAuthenticators(ctx context.Context, logger *zap.Logger, cfg *config.Co
 	decoderOpts := authentication.JWKSTokenDecoderConfig{
 		Logger:                logger,
 		JWKSConfigs:           configs,
-		AllowInsecureJWKSURLs: jwtConf.AllowInsecureJwksUrls,
+		AllowInsecureJWKSURLs: jwtConf.AllowInsecureJWKSUrls,
 	}
-	tokenDecoder, err := authentication.NewJwksTokenDecoder(ctx, decoderOpts)
+	tokenDecoder, err := authentication.NewJWKSTokenDecoder(ctx, decoderOpts)
 	if err != nil {
 		return nil, err
 	}

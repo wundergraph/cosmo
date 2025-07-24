@@ -36,12 +36,12 @@ func configureAuth(t *testing.T) ([]authentication.Authenticator, *jwks.Server) 
 			{
 				URL:               authServer.JWKSURL(),
 				RefreshInterval:   time.Second * 5,
-				AllowedAlgorithms: integration.BaseJwksAlgorithms,
+				AllowedAlgorithms: integration.BaseJWKSAlgorithms,
 			},
 		},
 		AllowInsecureJWKSURLs: true,
 	}
-	tokenDecoder, err := authentication.NewJwksTokenDecoder(integration.NewContextWithCancel(t), jwksConfig)
+	tokenDecoder, err := authentication.NewJWKSTokenDecoder(integration.NewContextWithCancel(t), jwksConfig)
 	require.NoError(t, err)
 	authOptions := authentication.HttpHeaderAuthenticatorOptions{
 		Name:         jwksName,

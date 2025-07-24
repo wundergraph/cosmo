@@ -16,10 +16,10 @@ import (
 )
 
 const (
-	JwksName = "my-jwks-server"
+	JWKSName = "my-jwks-server"
 )
 
-var BaseJwksAlgorithms = []string{
+var BaseJWKSAlgorithms = []string{
 	"RS256",
 	"RS384",
 	"RS512",
@@ -60,28 +60,28 @@ func ConfigureAuth(t *testing.T) ([]authentication.Authenticator, *jwks.Server) 
 	require.NoError(t, err)
 	t.Cleanup(authServer.Close)
 
-	authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+	authenticators := ConfigureAuthWithJWKSConfig(t, []authentication.JWKSConfig{
 		{
 			URL:               authServer.JWKSURL(),
 			RefreshInterval:   time.Second * 5,
-			AllowedAlgorithms: BaseJwksAlgorithms,
+			AllowedAlgorithms: BaseJWKSAlgorithms,
 		},
 	})
 
 	return authenticators, authServer
 }
 
-func ConfigureAuthWithJwksConfig(t *testing.T, jwksConfig []authentication.JWKSConfig) []authentication.Authenticator {
+func ConfigureAuthWithJWKSConfig(t *testing.T, jwksConfig []authentication.JWKSConfig) []authentication.Authenticator {
 	opts := authentication.JWKSTokenDecoderConfig{
 		Logger:                zap.NewNop(),
 		JWKSConfigs:           jwksConfig,
 		AllowInsecureJWKSURLs: true,
 	}
-	tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), opts)
+	tokenDecoder, err := authentication.NewJWKSTokenDecoder(NewContextWithCancel(t), opts)
 	require.NoError(t, err)
 
 	authOptions := authentication.HttpHeaderAuthenticatorOptions{
-		Name:         JwksName,
+		Name:         JWKSName,
 		TokenDecoder: tokenDecoder,
 	}
 	authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)

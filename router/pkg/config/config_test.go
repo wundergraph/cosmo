@@ -1199,7 +1199,7 @@ traffic_shaping:
 	})
 }
 
-func TestValidateJwksConfiguration(t *testing.T) {
+func TestValidateJWKSConfiguration(t *testing.T) {
 	t.Parallel()
 
 	t.Run("verify valid url config", func(t *testing.T) {
@@ -1217,7 +1217,7 @@ authentication:
 `)
 		value, err := LoadConfig([]string{f})
 		require.NoError(t, err)
-		require.False(t, value.Config.Authentication.JWT.AllowInsecureJwksUrls)
+		require.False(t, value.Config.Authentication.JWT.AllowInsecureJWKSUrls)
 	})
 
 	t.Run("verify error when algorithms is not present for url config", func(t *testing.T) {

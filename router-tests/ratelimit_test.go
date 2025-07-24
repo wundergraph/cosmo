@@ -263,12 +263,12 @@ func TestRateLimit(t *testing.T) {
 				{
 					URL:               authServer.JWKSURL(),
 					RefreshInterval:   time.Second * 5,
-					AllowedAlgorithms: BaseJwksAlgorithms,
+					AllowedAlgorithms: BaseJWKSAlgorithms,
 				},
 			},
 			AllowInsecureJWKSURLs: true,
 		}
-		tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), opts)
+		tokenDecoder, err := authentication.NewJWKSTokenDecoder(NewContextWithCancel(t), opts)
 		require.NoError(t, err)
 		authOptions := authentication.HttpHeaderAuthenticatorOptions{
 			Name:         "my-jwks-server",

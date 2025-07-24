@@ -132,10 +132,10 @@ func TestWebSockets(t *testing.T) {
 			JWKSConfigs:           []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)},
 			AllowInsecureJWKSURLs: true,
 		}
-		tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), jwksConfig)
+		tokenDecoder, err := authentication.NewJWKSTokenDecoder(NewContextWithCancel(t), jwksConfig)
 		require.NoError(t, err)
 		authOptions := authentication.HttpHeaderAuthenticatorOptions{
-			Name:         JwksName,
+			Name:         JWKSName,
 			TokenDecoder: tokenDecoder,
 		}
 		authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
@@ -188,10 +188,10 @@ func TestWebSockets(t *testing.T) {
 			JWKSConfigs:           []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)},
 			AllowInsecureJWKSURLs: true,
 		}
-		tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), jwksConfig)
+		tokenDecoder, err := authentication.NewJWKSTokenDecoder(NewContextWithCancel(t), jwksConfig)
 		require.NoError(t, err)
 		authOptions := authentication.HttpHeaderAuthenticatorOptions{
-			Name:         JwksName,
+			Name:         JWKSName,
 			TokenDecoder: tokenDecoder,
 		}
 		authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
@@ -244,10 +244,10 @@ func TestWebSockets(t *testing.T) {
 			JWKSConfigs:           []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)},
 			AllowInsecureJWKSURLs: true,
 		}
-		tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), jwksConfig)
+		tokenDecoder, err := authentication.NewJWKSTokenDecoder(NewContextWithCancel(t), jwksConfig)
 		require.NoError(t, err)
 		authOptions := authentication.HttpHeaderAuthenticatorOptions{
-			Name:         JwksName,
+			Name:         JWKSName,
 			TokenDecoder: tokenDecoder,
 		}
 		authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
@@ -310,10 +310,10 @@ func TestWebSockets(t *testing.T) {
 			JWKSConfigs:           []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)},
 			AllowInsecureJWKSURLs: true,
 		}
-		tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), jwksConfig)
+		tokenDecoder, err := authentication.NewJWKSTokenDecoder(NewContextWithCancel(t), jwksConfig)
 		require.NoError(t, err)
 		authOptions := authentication.HttpHeaderAuthenticatorOptions{
-			Name:         JwksName,
+			Name:         JWKSName,
 			TokenDecoder: tokenDecoder,
 		}
 		authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
@@ -375,7 +375,7 @@ func TestWebSockets(t *testing.T) {
 			JWKSConfigs:           []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)},
 			AllowInsecureJWKSURLs: true,
 		}
-		tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), jwksConfig)
+		tokenDecoder, err := authentication.NewJWKSTokenDecoder(NewContextWithCancel(t), jwksConfig)
 		require.NoError(t, err)
 		authOptions := authentication.WebsocketInitialPayloadAuthenticatorOptions{
 			TokenDecoder: tokenDecoder,
@@ -443,7 +443,7 @@ func TestWebSockets(t *testing.T) {
 			JWKSConfigs:           []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)},
 			AllowInsecureJWKSURLs: true,
 		}
-		tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), jwksConfig)
+		tokenDecoder, err := authentication.NewJWKSTokenDecoder(NewContextWithCancel(t), jwksConfig)
 		require.NoError(t, err)
 		authOptions := authentication.WebsocketInitialPayloadAuthenticatorOptions{
 			TokenDecoder: tokenDecoder,
@@ -498,7 +498,7 @@ func TestWebSockets(t *testing.T) {
 			JWKSConfigs:           []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)},
 			AllowInsecureJWKSURLs: true,
 		}
-		tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), jwksConfig)
+		tokenDecoder, err := authentication.NewJWKSTokenDecoder(NewContextWithCancel(t), jwksConfig)
 		require.NoError(t, err)
 		authOptions := authentication.WebsocketInitialPayloadAuthenticatorOptions{
 			TokenDecoder: tokenDecoder,
@@ -905,10 +905,10 @@ func TestWebSockets(t *testing.T) {
 			JWKSConfigs:           []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)},
 			AllowInsecureJWKSURLs: true,
 		}
-		tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), jwksConfig)
+		tokenDecoder, err := authentication.NewJWKSTokenDecoder(NewContextWithCancel(t), jwksConfig)
 		require.NoError(t, err)
 		authOptions := authentication.HttpHeaderAuthenticatorOptions{
-			Name:         JwksName,
+			Name:         JWKSName,
 			TokenDecoder: tokenDecoder,
 		}
 		authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)

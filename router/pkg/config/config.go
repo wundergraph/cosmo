@@ -483,7 +483,7 @@ type JWTAuthenticationConfiguration struct {
 	HeaderName            string              `yaml:"header_name" envDefault:"Authorization"`
 	HeaderValuePrefix     string              `yaml:"header_value_prefix" envDefault:"Bearer"`
 	HeaderSources         []HeaderSource      `yaml:"header_sources"`
-	AllowInsecureJwksUrls bool                `yaml:"allow_insecure_jwks_urls" envDefault:"false" env:"ALLOW_INSECURE_JWKS_URLS"`
+	AllowInsecureJWKSUrls bool                `yaml:"allow_insecure_jwks_urls" envDefault:"false" env:"ALLOW_INSECURE_JWKS_URLS"`
 }
 
 type AuthenticationConfiguration struct {
