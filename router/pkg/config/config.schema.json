@@ -676,6 +676,12 @@
                 "path": {
                   "type": "string",
                   "description": "The path to the log file. The path is used to specify the path to the log file."
+                },
+                "file_mode": {
+                  "type": "string",
+                  "description": "The file mode (permissions) for the log file as an octal string. Must be exactly 3 octal digits (0-7), optionally prefixed with '0' (e.g., '640', '0640', '755', '0755'). The default value is '0640'.",
+                  "default": "0640",
+                  "pattern": "^0?[0-7]{3}$"
                 }
               }
             }
@@ -1643,15 +1649,29 @@
                     "description": "The URL of the JWKs. The JWKs are used to verify the JWT (JSON Web Token). The URL is specified as a string with the format 'scheme://host:port'.",
                     "format": "http-url"
                   },
+                  "secret": {
+                    "type": "string",
+                    "description": "The secret of the JWKs"
+                  },
+                  "algorithm": {
+                    "type": "string",
+                    "description": "The algorithm used",
+                    "enum": [
+                      "HS256",
+                      "HS384",
+                      "HS512"
+                    ]
+                  },
+                  "key_id": {
+                    "type": "string",
+                    "description": "The secret of the JWKs"
+                  },
                   "algorithms": {
                     "type": "array",
                     "description": "The allowed algorithms for the keys that are retrieved from the JWKs. An empty list means that all algorithms are allowed.",
                     "items": {
                       "type": "string",
                       "enum": [
-                        "HS256",
-                        "HS384",
-                        "HS512",
                         "RS256",
                         "RS384",
                         "RS512",
@@ -1674,7 +1694,16 @@
                     "default": "1m"
                   }
                 },
-                "required": ["url"]
+                "oneOf": [
+                  {
+                    "required": ["url"],
+                    "not": { "anyOf": [{ "required": ["secret"] }, { "required": ["algorithm"] }, { "required": ["key_id"] }] }
+                  },
+                  {
+                    "required": ["secret", "algorithm", "key_id"],
+                    "not": { "anyOf": [{ "required": ["url"] }, { "required": ["algorithms"] }, { "required": ["refresh_interval"] }] }
+                  }
+                ]
               }
             },
             "header_name": {
@@ -2444,6 +2473,25 @@
               "type": "boolean",
               "description": "Disable the max query depth limit for persisted operations. Since persisted operations are stored intentionally, users may want to disable the limit to consciously allow nested persisted operations.",
               "default": false
+            }
+          }
+        },
+        "parser_limits": {
+          "type": "object",
+          "description": "The configuration to enforce parser limits for the query depth and fields count. This configuration leads to early fail for the queries above the limits during parsing. Do not change without need",
+          "additionalProperties": false,
+          "properties": {
+            "approximate_depth_limit": {
+              "type": "integer",
+              "description": "The approximate cumulative depth limit of a query, including fragments. Set to 0 to disable.",
+              "default": 100,
+              "minimum": 0
+            },
+            "total_fields_limit": {
+              "type": "integer",
+              "description": "The total number of fields the parser will allow. Set to 0 to disable.",
+              "default": 500,
+              "minimum": 0
             }
           }
         }

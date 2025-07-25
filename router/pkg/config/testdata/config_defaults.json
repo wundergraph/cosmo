@@ -192,7 +192,8 @@
       },
       "File": {
         "Enabled": false,
-        "Path": "access.log"
+        "Path": "access.log",
+        "FileMode": 416
       }
     },
     "Router": {
@@ -310,7 +311,11 @@
     },
     "ComplexityCalculationCache": null,
     "ComplexityLimits": null,
-    "DepthLimit": null
+    "DepthLimit": null,
+    "ParserLimits": {
+      "ApproximateDepthLimit": 100,
+      "TotalFieldsLimit": 500
+    }
   },
   "EngineExecutionConfiguration": {
     "Debug": {

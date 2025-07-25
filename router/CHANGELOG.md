@@ -4,6 +4,37 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.236.0](https://github.com/wundergraph/cosmo/compare/router@0.235.3...router@0.236.0) (2025-07-24)
+
+### Bug Fixes
+
+* improve gzip request decompression middleware ([#2077](https://github.com/wundergraph/cosmo/issues/2077)) ([c8a12ef](https://github.com/wundergraph/cosmo/commit/c8a12ef4aa62c24e86e22310f98d7b0087d18e59)) (@endigma)
+* json schema ([#2082](https://github.com/wundergraph/cosmo/issues/2082)) ([c7b4cf5](https://github.com/wundergraph/cosmo/commit/c7b4cf5d004c2786f59f41017414361fad229499)) (@devsergiy)
+
+### Features
+
+* **router:** make filemode configurable for access log files ([#2081](https://github.com/wundergraph/cosmo/issues/2081)) ([6b3d78e](https://github.com/wundergraph/cosmo/commit/6b3d78e900d4e07a8c72f1e211e8ee9921b742f0)) (@Noroth)
+* support symmetric key algorithms for JWKs ([#2067](https://github.com/wundergraph/cosmo/issues/2067)) ([9bbdfbb](https://github.com/wundergraph/cosmo/commit/9bbdfbbb4a758f0b026ce13e8bd6f8ddad6b61b2)) (@SkArchon)
+
+## [0.235.3](https://github.com/wundergraph/cosmo/compare/router@0.235.2...router@0.235.3) (2025-07-22)
+
+### Bug Fixes
+
+* planner fixes for parent entity jumps and unique nodes selections ([#2044](https://github.com/wundergraph/cosmo/issues/2044)) ([3c54a59](https://github.com/wundergraph/cosmo/commit/3c54a59970f808bba15c9e59fddde610c54c63ca)) (@devsergiy)
+
+## [0.235.2](https://github.com/wundergraph/cosmo/compare/router@0.235.1...router@0.235.2) (2025-07-22)
+
+### Bug Fixes
+
+* enforce parser limits ([#2068](https://github.com/wundergraph/cosmo/issues/2068)) ([94b2971](https://github.com/wundergraph/cosmo/commit/94b29711c5840d222b932e48950d1723e66efb41)) (@devsergiy)
+* fix merging inline fragment and field selections together ([#2073](https://github.com/wundergraph/cosmo/issues/2073)) ([cad2a35](https://github.com/wundergraph/cosmo/commit/cad2a350037939498d00e598060faee89f595b05)) (@ysmolski)
+
+## [0.235.1](https://github.com/wundergraph/cosmo/compare/router@0.235.0...router@0.235.1) (2025-07-21)
+
+### Bug Fixes
+
+* **router:** provide request context of original WebSocket Upgrade request to subgraph requests ([#1957](https://github.com/wundergraph/cosmo/issues/1957)) ([b4420a1](https://github.com/wundergraph/cosmo/commit/b4420a1985b9f3999ce319ef877307677f8e6851)) (@DerZade)
+
 # [0.235.0](https://github.com/wundergraph/cosmo/compare/router@0.234.0...router@0.235.0) (2025-07-17)
 
 ### Features
