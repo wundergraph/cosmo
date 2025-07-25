@@ -1314,7 +1314,7 @@ access_logs:
 		c, err := LoadConfig([]string{f})
 		require.NoError(t, err)
 
-		require.Equal(t, FileMode(0640), c.Config.AccessLogs.Output.File.FileMode)
+		require.Equal(t, FileMode(0640), c.Config.AccessLogs.Output.File.Mode)
 	})
 
 	t.Run("verify file mode is parsed correctly with leading zero", func(t *testing.T) {
@@ -1334,7 +1334,7 @@ access_logs:
 		c, err := LoadConfig([]string{f})
 		require.NoError(t, err)
 
-		require.Equal(t, FileMode(0640), c.Config.AccessLogs.Output.File.FileMode)
+		require.Equal(t, FileMode(0640), c.Config.AccessLogs.Output.File.Mode)
 	})
 
 	t.Run("verify file mode throws an error when pattern is not matched", func(t *testing.T) {
@@ -1454,7 +1454,7 @@ access_logs:
 `)
 			c, err := LoadConfig([]string{f})
 			require.NoError(t, err, "Pattern '%s' should be valid but was rejected", tc.pattern)
-			require.Equal(t, tc.mode, c.Config.AccessLogs.Output.File.FileMode, "Pattern '%s' should parse to mode %o but got %o", tc.pattern, tc.mode, c.Config.AccessLogs.Output.File.FileMode)
+			require.Equal(t, tc.mode, c.Config.AccessLogs.Output.File.Mode, "Pattern '%s' should parse to mode %o but got %o", tc.pattern, tc.mode, c.Config.AccessLogs.Output.File.Mode)
 		}
 	})
 }
