@@ -2,6 +2,7 @@ package cors
 
 import (
 	"net/http"
+	"slices"
 	"strings"
 )
 
@@ -17,7 +18,8 @@ type cors struct {
 }
 
 var (
-	maxRecursionDepth = 10 // Safeguard against deep recursion
+	maxRecursionDepth = 10   // Safeguard against deep recursion
+	maxOriginLength   = 1024 // Maximum length of an origin string
 	DefaultSchemas    = []string{
 		"http://",
 		"https://",
@@ -102,10 +104,8 @@ func (cors *cors) validateOrigin(origin string) bool {
 	if cors.allowAllOrigins {
 		return true
 	}
-	for _, value := range cors.allowOrigins {
-		if value == origin {
-			return true
-		}
+	if slices.Contains(cors.allowOrigins, origin) {
+		return true
 	}
 	if len(cors.wildcardOrigins) > 0 && cors.validateWildcardOrigin(origin) {
 		return true
@@ -145,6 +145,10 @@ func matchOriginWithRule(origin string, rule []string, depth int, memo map[strin
 	part := rule[0]
 
 	if part == "*" {
+		if len(origin) > maxOriginLength {
+			return false
+		}
+
 		// Try to match the remaining rule by advancing in origin
 		for i := 0; i <= len(origin); i++ {
 			if matchOriginWithRule(origin[i:], rule[1:], depth+1, memo) {
