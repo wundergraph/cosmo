@@ -73,7 +73,7 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 		}
 
 		if cfg.AccessLogs.Output.File.Enabled {
-			f, err := logging.NewLogFile(cfg.AccessLogs.Output.File.Path)
+			f, err := logging.NewLogFile(cfg.AccessLogs.Output.File.Path, os.FileMode(cfg.AccessLogs.Output.File.Mode))
 			if err != nil {
 				return nil, fmt.Errorf("could not create log file: %w", err)
 			}
