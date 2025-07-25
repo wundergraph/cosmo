@@ -198,13 +198,9 @@ export default (opts: BaseCommandOptions) => {
       // Docker login
       spinner.text = 'Logging into Docker registry...';
       await new Promise<void>((resolve, reject) => {
-        const loginProcess = spawn(
-          'docker',
-          ['login', config.pluginRegistryURL, '-u', 'x', '-p', pushToken],
-          {
-            stdio: 'pipe',
-          },
-        );
+        const loginProcess = spawn('docker', ['login', config.pluginRegistryURL, '-u', 'x', '-p', pushToken], {
+          stdio: 'pipe',
+        });
 
         loginProcess.on('close', (code) => {
           if (code === 0) {
