@@ -390,7 +390,7 @@
       "File": {
         "Enabled": false,
         "Path": "access.log",
-        "FileMode": 416
+        "Mode": 416
       }
     },
     "Router": {
