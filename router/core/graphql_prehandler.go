@@ -477,7 +477,7 @@ func (h *PreHandler) shouldComputeOperationSha256(operationKit *OperationKit) bo
 	}
 
 	hasPersistedHash := operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery != nil && operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash != ""
-	// If it already has a persisted hash attached to the request, then there is no need for us to compute it anew
+	// If it already has a persisted hash attached to the request, then there is no need for us to compute it anew.
 	// Otherwise, we only want to compute the hash (an expensive operation) if we're safelisting or logging unknown persisted operations
 	return !hasPersistedHash && (h.operationBlocker.safelistEnabled || h.operationBlocker.logUnknownOperationsEnabled)
 }
