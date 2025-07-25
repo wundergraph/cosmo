@@ -555,6 +555,17 @@ describe('Create subgraph tests', () => {
 
       expect(createPluginSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
 
+      // Validate that the subgraph was created with the correct type
+      const getSubgraphResp = await client.getSubgraphByName({
+        name: pluginName,
+        namespace: DEFAULT_NAMESPACE,
+      });
+
+      expect(getSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+      expect(getSubgraphResp.graph).toBeDefined();
+      expect(getSubgraphResp.graph?.name).toBe(pluginName);
+      expect(getSubgraphResp.graph?.type).toBe(SubgraphType.PLUGIN);
+
       await server.close();
     });
 

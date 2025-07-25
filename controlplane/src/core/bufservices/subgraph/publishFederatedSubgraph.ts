@@ -180,11 +180,11 @@ export function publishFederatedSubgraph(
         authContext,
       });
 
-      if (req.type && subgraph.type !== formatSubgraphType(req.type)) {
+      if (req.type !== undefined && subgraph.type !== formatSubgraphType(req.type)) {
         return {
           response: {
             code: EnumStatusCode.ERR,
-            details: `Subgraph ${subgraph.name} is not of type ${req.type}.`,
+            details: `Subgraph ${subgraph.name} is not of type ${formatSubgraphType(req.type)}.`,
           },
           compositionErrors: [],
           deploymentErrors: [],
@@ -440,7 +440,7 @@ export function publishFederatedSubgraph(
     let protoLock = '';
 
     if (req.type === SubgraphType.PLUGIN || req.type === SubgraphType.GRPC_SUBGRAPH) {
-      if (!req.proto || !req.proto.goModulePath) {
+      if (!req.proto) {
         return {
           response: {
             code: EnumStatusCode.ERR,
@@ -453,8 +453,21 @@ export function publishFederatedSubgraph(
         };
       }
 
+      if (!req.proto.goModulePath) {
+        return {
+          response: {
+            code: EnumStatusCode.ERR,
+            details: `The goModulePath is required for plugin subgraphs.`,
+          },
+          compositionErrors: [],
+          deploymentErrors: [],
+          compositionWarnings: [],
+          proposalMatchMessage,
+        };
+      }
+
       if (req.type === SubgraphType.PLUGIN) {
-        if (!req.proto.version || !req.proto.platforms) {
+        if (!req.proto.version || !req.proto.platforms || req.proto.platforms.length === 0) {
           return {
             response: {
               code: EnumStatusCode.ERR,
