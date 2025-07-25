@@ -1,5 +1,6 @@
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
+import { spawn } from 'node:child_process';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { splitLabel } from '@wundergraph/cosmo-shared';
@@ -8,7 +9,7 @@ import { Command, program } from 'commander';
 import ora from 'ora';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
-import { getBaseHeaders } from '../../../../../core/config.js';
+import { config, getBaseHeaders } from '../../../../../core/config.js';
 import { BaseCommandOptions } from '../../../../../core/types/types.js';
 
 export default (opts: BaseCommandOptions) => {
@@ -33,7 +34,7 @@ export default (opts: BaseCommandOptions) => {
   command.option('--proto-lock <path_to_proto_lock>', 'The path to the proto lock file');
   command.option(
     '--platform [platforms...]',
-    'The platforms used to build the image. Format: $GOOS/$GOARCH. Supported GOOS: linux | darwin | windows and GOARCH: amd64 | arm64. Defaults to linux/amd64',
+    'The platforms used to build the image. Pass multiple platforms separated by spaces (e.g., --platform linux/amd64 linux/arm64). Supported formats: linux/amd64, linux/arm64, darwin/amd64, darwin/arm64, windows/amd64. Defaults to linux/amd64',
   );
   command.option(
     '--label [labels...]',
@@ -169,10 +170,117 @@ export default (opts: BaseCommandOptions) => {
       program.error(pc.red(pc.bold(pluginDataResponse.response?.details)));
     }
 
+    const reference = pluginDataResponse.reference;
     const newVersion = pluginDataResponse.newVersion;
     const pushToken = pluginDataResponse.pushToken;
 
+    // // Validate platforms
+    const supportedPlatforms = ['linux/amd64', 'linux/arm64', 'darwin/amd64', 'darwin/arm64', 'windows/amd64'];
+    if (options.platform && options.platform.length > 0) {
+      const invalidPlatforms = options.platform.filter((platform: string) => !supportedPlatforms.includes(platform));
+      if (invalidPlatforms.length > 0) {
+        program.error(
+          pc.red(
+            pc.bold(
+              `Invalid platform(s): ${invalidPlatforms.join(', ')}. Supported platforms are: ${supportedPlatforms.join(', ')}`,
+            ),
+          ),
+        );
+      }
+    }
+
     // upload the docker image to the registry
+    const platforms = options.platform && options.platform.length > 0 ? options.platform.join(',') : 'linux/amd64';
+    const dockerContext = options.dockerContext || '.';
+    const imageTag = `${config.pluginRegistryURL}/${reference}:${newVersion}`;
+
+    try {
+      // Docker login
+      spinner.text = 'Logging into Docker registry...';
+      await new Promise<void>((resolve, reject) => {
+        const loginProcess = spawn(
+          'docker',
+          ['login', config.pluginRegistryURL, '-u', 'x', '-p', pushToken],
+          {
+            stdio: 'pipe',
+          },
+        );
+
+        loginProcess.on('close', (code) => {
+          if (code === 0) {
+            resolve();
+          } else {
+            reject(new Error(`Docker login failed with exit code ${code}`));
+          }
+        });
+
+        loginProcess.on('error', (error) => {
+          reject(error);
+        });
+      });
+
+      // Docker buildx build
+      spinner.text = 'Building and pushing Docker image...';
+      await new Promise<void>((resolve, reject) => {
+        const buildArgs = [
+          'buildx',
+          'build',
+          '--sbom=false',
+          '--provenance=false',
+          '--push',
+          '--platform',
+          platforms,
+          '-f',
+          dockerFile,
+          '-t',
+          imageTag,
+          dockerContext,
+        ];
+
+        const buildProcess = spawn('docker', buildArgs, {
+          stdio: 'inherit',
+        });
+
+        buildProcess.on('close', (code) => {
+          if (code === 0) {
+            resolve();
+          } else {
+            reject(new Error(`Docker build failed with exit code ${code}`));
+          }
+        });
+
+        buildProcess.on('error', (error) => {
+          reject(error);
+        });
+      });
+
+      // Docker logout
+      spinner.text = 'Logging out of Docker registry...';
+      await new Promise<void>((resolve, reject) => {
+        const logoutProcess = spawn('docker', ['logout', config.pluginRegistryURL], {
+          stdio: 'pipe',
+        });
+
+        logoutProcess.on('close', (code) => {
+          if (code === 0) {
+            resolve();
+          } else {
+            reject(new Error(`Docker logout failed with exit code ${code}`));
+          }
+        });
+
+        logoutProcess.on('error', (error) => {
+          reject(error);
+        });
+      });
+
+      spinner.text = 'Subgraph is being published...';
+    } catch (error) {
+      spinner.fail(`Failed to build and push Docker image: ${error instanceof Error ? error.message : String(error)}`);
+      program.error(
+        pc.red(pc.bold(`Docker operation failed: ${error instanceof Error ? error.message : String(error)}`)),
+      );
+    }
 
     const resp = await opts.client.platform.publishFederatedSubgraph(
       {

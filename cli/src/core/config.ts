@@ -34,6 +34,7 @@ export const config = {
   checkAuthor: process.env.COSMO_VCS_AUTHOR || '',
   checkCommitSha: process.env.COSMO_VCS_COMMIT || '',
   checkBranch: process.env.COSMO_VCS_BRANCH || '',
+  pluginRegistryURL: process.env.PLUGIN_REGISTRY_URL || 'cosmo-podbay-production.wundergraph-staging.workers.dev',
 };
 
 export const getBaseHeaders = (): HeadersInit => {

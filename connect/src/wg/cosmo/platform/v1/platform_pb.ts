@@ -22375,6 +22375,11 @@ export class ValidateAndFetchPluginDataResponse extends Message<ValidateAndFetch
    */
   pushToken = "";
 
+  /**
+   * @generated from field: string reference = 4;
+   */
+  reference = "";
+
   constructor(data?: PartialMessage<ValidateAndFetchPluginDataResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -22386,6 +22391,7 @@ export class ValidateAndFetchPluginDataResponse extends Message<ValidateAndFetch
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "newVersion", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "pushToken", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "reference", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ValidateAndFetchPluginDataResponse {

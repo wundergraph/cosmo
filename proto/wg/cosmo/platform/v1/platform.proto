@@ -2847,6 +2847,7 @@ message ValidateAndFetchPluginDataResponse {
   Response response = 1;
   string newVersion = 2;
   string pushToken = 3;
+  string reference = 4;
 }
 
 service PlatformService {

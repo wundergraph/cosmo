@@ -50,6 +50,7 @@ export function validateAndFetchPluginData(
         },
         newVersion: '',
         pushToken: '',
+        reference: '',
       };
     }
 
@@ -73,6 +74,7 @@ export function validateAndFetchPluginData(
           },
           newVersion: '',
           pushToken: '',
+          reference: '',
         };
       }
 
@@ -84,6 +86,7 @@ export function validateAndFetchPluginData(
           },
           newVersion: '',
           pushToken: '',
+          reference: '',
         };
       }
 
@@ -95,6 +98,7 @@ export function validateAndFetchPluginData(
           },
           newVersion: '',
           pushToken: '',
+          reference: '',
         };
       }
 
@@ -117,6 +121,7 @@ export function validateAndFetchPluginData(
           },
           newVersion: '',
           pushToken: '',
+          reference: '',
         };
       }
     }
@@ -140,6 +145,8 @@ export function validateAndFetchPluginData(
       newVersion = `v${currentNumber + 1}`;
     }
 
+    const reference = `${authContext.organizationId}/${subgraph.id}`;
+
     const pushToken = await signJwtHS256<PluginApiKeyJwtPayload>({
       secret: opts.jwtSecret,
       token: {
@@ -149,7 +156,7 @@ export function validateAndFetchPluginData(
         access: [
           {
             type: 'repository',
-            name: `${authContext.organizationId}/${subgraph.id}`,
+            name: reference,
             tag: newVersion,
             actions: ['push'],
           },
@@ -163,6 +170,7 @@ export function validateAndFetchPluginData(
       },
       newVersion,
       pushToken,
+      reference,
     };
   });
 }
