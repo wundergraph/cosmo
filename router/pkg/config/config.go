@@ -181,6 +181,8 @@ type RouterTrafficConfiguration struct {
 	MaxHeaderBytes BytesString `yaml:"max_header_bytes" envDefault:"0MiB" env:"MAX_HEADER_BYTES"`
 	// DecompressionEnabled is the configuration for request compression
 	DecompressionEnabled bool `yaml:"decompression_enabled" envDefault:"true"`
+	// ResponseCompressionMinSize is the minimum size of the response body in bytes to enable response compression
+	ResponseCompressionMinSize BytesString `yaml:"response_compression_min_size" envDefault:"4KiB" env:"RESPONSE_COMPRESSION_MIN_SIZE"`
 }
 
 type GlobalSubgraphRequestRule struct {

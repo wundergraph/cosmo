@@ -1802,7 +1802,8 @@ func WithDisableUsageTracking() Option {
 
 func DefaultRouterTrafficConfig() *config.RouterTrafficConfiguration {
 	return &config.RouterTrafficConfiguration{
-		MaxRequestBodyBytes: 1000 * 1000 * 5, // 5 MB
+		MaxRequestBodyBytes:        1000 * 1000 * 5, // 5 MB
+		ResponseCompressionMinSize: 1024 * 4,        // 4 KiB
 	}
 }
 
