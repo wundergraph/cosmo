@@ -1309,7 +1309,7 @@ access_logs:
     file:
       enabled: true
       path: ./access.log
-      file_mode: "640"
+      mode: "640"
 `)
 		c, err := LoadConfig([]string{f})
 		require.NoError(t, err)
@@ -1329,7 +1329,7 @@ access_logs:
     file:
       enabled: true
       path: ./access.log
-      file_mode: "0640"
+      mode: "0640"
 `)
 		c, err := LoadConfig([]string{f})
 		require.NoError(t, err)
@@ -1401,7 +1401,7 @@ access_logs:
     file:
       enabled: true
       path: ./access.log
-      file_mode: "`+pattern+`"
+      mode: "`+pattern+`"
 `)
 			_, err := LoadConfig([]string{f})
 			require.Error(t, err, "Pattern '%s' should be invalid but was accepted", pattern)
@@ -1450,7 +1450,7 @@ access_logs:
     file:
       enabled: true
       path: ./access.log
-      file_mode: "`+tc.pattern+`"
+      mode: "`+tc.pattern+`"
 `)
 			c, err := LoadConfig([]string{f})
 			require.NoError(t, err, "Pattern '%s' should be valid but was rejected", tc.pattern)
