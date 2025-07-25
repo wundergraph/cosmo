@@ -1,0 +1,201 @@
+package integration
+
+import (
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"testing"
+	"time"
+
+	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router/core"
+	"github.com/wundergraph/cosmo/router/pkg/config"
+)
+
+func TestMCPOperationHotReload(t *testing.T) {
+	t.Parallel()
+	operationsDir := t.TempDir()
+	storageProviderID := "mcp_hot_reload_test_id"
+
+	t.Run("List Updated User Operations On Addition and Removal", func(t *testing.T) {
+
+		testenv.Run(t, &testenv.Config{
+			MCP: config.MCPConfiguration{
+				Enabled: true,
+				Storage: config.MCPStorageConfig{
+					ProviderID: storageProviderID,
+				},
+				HotReloadConfig: config.MCPOperationsHotReloadConfig{
+					Enabled:  true,
+					Interval: 1 * time.Second,
+				},
+			},
+			RouterOptions: []core.Option{
+				core.WithStorageProviders(config.StorageProviders{
+					FileSystem: []config.FileSystemStorageProvider{
+						{
+							ID:   storageProviderID,
+							Path: operationsDir,
+						},
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+
+			toolsRequest := mcp.ListToolsRequest{}
+			resp, err := xEnv.MCPClient.ListTools(xEnv.Context, toolsRequest)
+			require.NoError(t, err)
+
+			initialToolsCount := len(resp.Tools)
+
+			mcpOperationFile := filepath.Join(operationsDir, "main.graphql")
+
+			// write mcp operation content
+			err = os.WriteFile(mcpOperationFile, []byte("query getEmployeeNotes($id: Int!) {\nemployee(id: $id) {\nid\nnotes\n}\n}"), 0644)
+			assert.NoError(t, err)
+
+			require.EventuallyWithT(t, func(t *assert.CollectT) {
+
+				resp, err := xEnv.MCPClient.ListTools(xEnv.Context, toolsRequest)
+				assert.NoError(t, err)
+				assert.Len(t, resp.Tools, initialToolsCount+1)
+
+				// verity getEmployeeNotes operation is present
+				require.Contains(t, resp.Tools, mcp.Tool{
+					Name:        "execute_operation_get_employee_notes",
+					Description: "Executes the GraphQL operation 'getEmployeeNotes' of type query.",
+					InputSchema: mcp.ToolInputSchema{
+						Type:       "object",
+						Properties: map[string]interface{}{"id": map[string]interface{}{"type": "integer"}},
+						Required:   []string{"id"},
+					},
+					RawInputSchema: json.RawMessage(nil),
+					Annotations: mcp.ToolAnnotation{
+						Title:          "Execute operation getEmployeeNotes",
+						ReadOnlyHint:   mcp.ToBoolPtr(true),
+						IdempotentHint: mcp.ToBoolPtr(true),
+						OpenWorldHint:  mcp.ToBoolPtr(true),
+					},
+				})
+			}, 10*time.Second, 100*time.Millisecond)
+
+			err = os.Remove(mcpOperationFile)
+			assert.NoError(t, err)
+
+			assert.EventuallyWithT(t, func(t *assert.CollectT) {
+
+				resp, err = xEnv.MCPClient.ListTools(xEnv.Context, toolsRequest)
+				assert.NoError(t, err)
+				assert.Len(t, resp.Tools, initialToolsCount)
+
+				// verity getEmployeeNotes operation tool is properly removed
+				require.NotContains(t, resp.Tools, mcp.Tool{
+					Name:        "execute_operation_get_employee_notes",
+					Description: "Executes the GraphQL operation 'getEmployeeNotes' of type query.",
+					InputSchema: mcp.ToolInputSchema{
+						Type:       "object",
+						Properties: map[string]interface{}{"id": map[string]interface{}{"type": "integer"}},
+						Required:   []string{"id"},
+					},
+					RawInputSchema: json.RawMessage(nil),
+					Annotations: mcp.ToolAnnotation{
+						Title:          "Execute operation getEmployeeNotes",
+						ReadOnlyHint:   mcp.ToBoolPtr(true),
+						IdempotentHint: mcp.ToBoolPtr(true),
+						OpenWorldHint:  mcp.ToBoolPtr(true),
+					},
+				})
+
+			}, 10*time.Second, 100*time.Millisecond)
+
+		})
+	})
+
+	t.Run("List Updated User Operations On Content Update", func(t *testing.T) {
+
+		testenv.Run(t, &testenv.Config{
+			MCP: config.MCPConfiguration{
+				Enabled: true,
+				Storage: config.MCPStorageConfig{
+					ProviderID: storageProviderID,
+				},
+				HotReloadConfig: config.MCPOperationsHotReloadConfig{
+					Enabled:  true,
+					Interval: 1 * time.Second,
+				},
+			},
+			RouterOptions: []core.Option{
+				core.WithStorageProviders(config.StorageProviders{
+					FileSystem: []config.FileSystemStorageProvider{
+						{
+							ID:   storageProviderID,
+							Path: operationsDir,
+						},
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+
+			mcpOperationFile := filepath.Join(operationsDir, "main.graphql")
+
+			// write mcp operation content
+			require.NoError(t, os.WriteFile(mcpOperationFile, []byte("query getEmployeeNotes($id: Int!) {\nemployee(id: $id) {\nid\nnotes\n}\n}"), 0o600))
+
+			require.EventuallyWithT(t, func(t *assert.CollectT) {
+
+				toolsRequest := mcp.ListToolsRequest{}
+				resp, err := xEnv.MCPClient.ListTools(xEnv.Context, toolsRequest)
+				assert.NoError(t, err)
+
+				// verity getEmployeeNotes operation is present
+				require.Contains(t, resp.Tools, mcp.Tool{
+					Name:        "execute_operation_get_employee_notes",
+					Description: "Executes the GraphQL operation 'getEmployeeNotes' of type query.",
+					InputSchema: mcp.ToolInputSchema{
+						Type:       "object",
+						Properties: map[string]interface{}{"id": map[string]interface{}{"type": "integer"}},
+						Required:   []string{"id"},
+					},
+					RawInputSchema: json.RawMessage(nil),
+					Annotations: mcp.ToolAnnotation{
+						Title:          "Execute operation getEmployeeNotes",
+						ReadOnlyHint:   mcp.ToBoolPtr(true),
+						IdempotentHint: mcp.ToBoolPtr(true),
+						OpenWorldHint:  mcp.ToBoolPtr(true),
+					},
+				})
+			}, 10*time.Second, 100*time.Millisecond)
+
+			// update mcp operation content
+			require.NoError(t, os.WriteFile(mcpOperationFile, []byte("\nquery getEmployeeNotesUpdatedTitle($id: Int!) {\nemployee(id: $id) {\nid\nnotes\n}\n}"), 0o600))
+
+			require.EventuallyWithT(t, func(t *assert.CollectT) {
+
+				toolsRequest := mcp.ListToolsRequest{}
+				resp, err := xEnv.MCPClient.ListTools(xEnv.Context, toolsRequest)
+				assert.NoError(t, err)
+
+				// verity getEmployeeNotesUpdatedTitle operation is present
+				require.Contains(t, resp.Tools, mcp.Tool{
+					Name:        "execute_operation_get_employee_notes_updated_title",
+					Description: "Executes the GraphQL operation 'getEmployeeNotesUpdatedTitle' of type query.",
+					InputSchema: mcp.ToolInputSchema{
+						Type:       "object",
+						Properties: map[string]interface{}{"id": map[string]interface{}{"type": "integer"}},
+						Required:   []string{"id"},
+					},
+					RawInputSchema: json.RawMessage(nil),
+					Annotations: mcp.ToolAnnotation{
+						Title:          "Execute operation getEmployeeNotesUpdatedTitle",
+						ReadOnlyHint:   mcp.ToBoolPtr(true),
+						IdempotentHint: mcp.ToBoolPtr(true),
+						OpenWorldHint:  mcp.ToBoolPtr(true),
+					},
+				})
+			}, 10*time.Second, 100*time.Millisecond)
+		})
+	})
+}
