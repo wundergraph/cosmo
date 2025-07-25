@@ -335,7 +335,7 @@
       "MaxRequestBodyBytes": 5000000,
       "MaxHeaderBytes": 4194304,
       "DecompressionEnabled": false,
-      "ResponseCompressionMinSize": 4000
+      "ResponseCompressionMinSize": 4096
     },
     "Subgraphs": {
       "products": {

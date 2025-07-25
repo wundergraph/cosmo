@@ -170,7 +170,7 @@
       "MaxRequestBodyBytes": 5000000,
       "MaxHeaderBytes": 0,
       "DecompressionEnabled": true,
-      "ResponseCompressionMinSize": 4000
+      "ResponseCompressionMinSize": 4096
     },
     "Subgraphs": null
   },

@@ -1472,8 +1472,8 @@
             "response_compression_min_size": {
               "type": "string",
               "format": "bytes-string",
-              "description": "The minimum size of the response body in bytes to enable response compression. The size is specified as a string with a number and a unit, e.g. 10KB, 1MB, 1GB. The supported units are 'B', 'KB', 'MB', 'GB'.",
-              "default": "4KB",
+              "description": "The minimum size of the response body in bytes to enable response compression. The size is specified as a string with a number and a unit, e.g. 4KiB, 10KB, 1MB",
+              "default": "4KiB",
               "bytes": {
                 "minimum": "1B"
               }
