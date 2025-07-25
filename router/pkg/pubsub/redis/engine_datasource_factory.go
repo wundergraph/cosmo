@@ -59,16 +59,17 @@ func (c *EngineDataSourceFactory) ResolveDataSourceInput(eventData []byte) (stri
 	providerId := c.providerId
 
 	evtCfg := PublishEventConfiguration{
-		ProviderID: providerId,
-		Channel:    channel,
-		Data:       eventData,
+		Provider:  providerId,
+		Channel:   channel,
+		Event:     Event{Data: eventData},
+		FieldName: c.fieldName,
 	}
 
 	return evtCfg.MarshalJSONTemplate()
 }
 
 // ResolveDataSourceSubscription returns the subscription data source
-func (c *EngineDataSourceFactory) ResolveDataSourceSubscription() (resolve.SubscriptionDataSource, error) {
+func (c *EngineDataSourceFactory) ResolveDataSourceSubscription() (datasource.PubSubSubscriptionDataSource, error) {
 	return &SubscriptionDataSource{
 		pubSub: c.RedisAdapter,
 	}, nil
@@ -77,8 +78,9 @@ func (c *EngineDataSourceFactory) ResolveDataSourceSubscription() (resolve.Subsc
 // ResolveDataSourceSubscriptionInput builds the input for the subscription data source
 func (c *EngineDataSourceFactory) ResolveDataSourceSubscriptionInput() (string, error) {
 	evtCfg := SubscriptionEventConfiguration{
-		ProviderID: c.providerId,
-		Channels:   c.channels,
+		Provider:  c.providerId,
+		Channels:  c.channels,
+		FieldName: c.fieldName,
 	}
 	object, err := json.Marshal(evtCfg)
 	if err != nil {

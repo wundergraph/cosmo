@@ -49,15 +49,16 @@ func (c *EngineDataSourceFactory) ResolveDataSourceInput(eventData []byte) (stri
 	}
 
 	evtCfg := PublishEventConfiguration{
-		ProviderID: c.providerId,
-		Topic:      c.topics[0],
-		Data:       eventData,
+		Provider:  c.providerId,
+		Topic:     c.topics[0],
+		Event:     Event{Data: eventData},
+		FieldName: c.fieldName,
 	}
 
-	return evtCfg.MarshalJSONTemplate(), nil
+	return evtCfg.MarshalJSONTemplate()
 }
 
-func (c *EngineDataSourceFactory) ResolveDataSourceSubscription() (resolve.SubscriptionDataSource, error) {
+func (c *EngineDataSourceFactory) ResolveDataSourceSubscription() (datasource.PubSubSubscriptionDataSource, error) {
 	return &SubscriptionDataSource{
 		pubSub: c.KafkaAdapter,
 	}, nil
@@ -65,8 +66,9 @@ func (c *EngineDataSourceFactory) ResolveDataSourceSubscription() (resolve.Subsc
 
 func (c *EngineDataSourceFactory) ResolveDataSourceSubscriptionInput() (string, error) {
 	evtCfg := SubscriptionEventConfiguration{
-		ProviderID: c.providerId,
-		Topics:     c.topics,
+		Provider:  c.providerId,
+		Topics:    c.topics,
+		FieldName: c.fieldName,
 	}
 	object, err := json.Marshal(evtCfg)
 	if err != nil {

@@ -33,7 +33,7 @@ func TestEngineDataSourceFactoryWithMockAdapter(t *testing.T) {
 
 	// Configure mock expectations for Publish
 	mockAdapter.On("Publish", mock.Anything, mock.MatchedBy(func(event PublishEventConfiguration) bool {
-		return event.ProviderID == "test-provider" && event.Topic == "test-topic"
+		return event.ProviderID() == "test-provider" && event.Topic == "test-topic"
 	})).Return(nil)
 
 	// Create the data source with mock adapter

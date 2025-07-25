@@ -24,20 +24,20 @@ func TestPublishEventConfiguration_MarshalJSONTemplate(t *testing.T) {
 		{
 			name: "simple configuration",
 			config: PublishEventConfiguration{
-				ProviderID: "test-provider",
-				Channel:    "test-channel",
-				Data:       json.RawMessage(`{"message":"hello"}`),
+				Provider: "test-provider",
+				Channel:  "test-channel",
+				Event:    Event{Data: json.RawMessage(`{"message":"hello"}`)},
 			},
-			wantPattern: `{"channel":"test-channel", "data": {"message":"hello"}, "providerId":"test-provider"}`,
+			wantPattern: `{"channel":"test-channel", "event": {"data": {"message":"hello"}}, "providerId":"test-provider"}`,
 		},
 		{
 			name: "with special characters",
 			config: PublishEventConfiguration{
-				ProviderID: "test-provider-id",
-				Channel:    "channel-with-hyphens",
-				Data:       json.RawMessage(`{"message":"special \"quotes\" here"}`),
+				Provider: "test-provider-id",
+				Channel:  "channel-with-hyphens",
+				Event:    Event{Data: json.RawMessage(`{"message":"special \"quotes\" here"}`)},
 			},
-			wantPattern: `{"channel":"channel-with-hyphens", "data": {"message":"special \"quotes\" here"}, "providerId":"test-provider-id"}`,
+			wantPattern: `{"channel":"channel-with-hyphens", "event": {"data": {"message":"special \"quotes\" here"}}, "providerId":"test-provider-id"}`,
 		},
 	}
 
@@ -106,16 +106,16 @@ func TestSubscriptionSource_Start(t *testing.T) {
 	tests := []struct {
 		name        string
 		input       string
-		mockSetup   func(*MockAdapter, *datasource.MockSubscriptionUpdater)
+		mockSetup   func(*MockAdapter, *datasource.MockSubscriptionEventUpdater)
 		expectError bool
 	}{
 		{
 			name:  "successful subscription",
 			input: `{"channels":["channel1", "channel2"], "providerId":"test-provider"}`,
-			mockSetup: func(m *MockAdapter, updater *datasource.MockSubscriptionUpdater) {
+			mockSetup: func(m *MockAdapter, updater *datasource.MockSubscriptionEventUpdater) {
 				m.On("Subscribe", mock.Anything, SubscriptionEventConfiguration{
-					ProviderID: "test-provider",
-					Channels:   []string{"channel1", "channel2"},
+					Provider: "test-provider",
+					Channels: []string{"channel1", "channel2"},
 				}, mock.Anything).Return(nil)
 			},
 			expectError: false,
@@ -123,10 +123,10 @@ func TestSubscriptionSource_Start(t *testing.T) {
 		{
 			name:  "adapter returns error",
 			input: `{"channels":["channel1"], "providerId":"test-provider"}`,
-			mockSetup: func(m *MockAdapter, updater *datasource.MockSubscriptionUpdater) {
+			mockSetup: func(m *MockAdapter, updater *datasource.MockSubscriptionEventUpdater) {
 				m.On("Subscribe", mock.Anything, SubscriptionEventConfiguration{
-					ProviderID: "test-provider",
-					Channels:   []string{"channel1"},
+					Provider: "test-provider",
+					Channels: []string{"channel1"},
 				}, mock.Anything).Return(errors.New("subscription error"))
 			},
 			expectError: true,
@@ -134,7 +134,7 @@ func TestSubscriptionSource_Start(t *testing.T) {
 		{
 			name:        "invalid input json",
 			input:       `{"invalid json":`,
-			mockSetup:   func(m *MockAdapter, updater *datasource.MockSubscriptionUpdater) {},
+			mockSetup:   func(m *MockAdapter, updater *datasource.MockSubscriptionEventUpdater) {},
 			expectError: true,
 		},
 	}
@@ -142,7 +142,7 @@ func TestSubscriptionSource_Start(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockAdapter := NewMockAdapter(t)
-			updater := datasource.NewMockSubscriptionUpdater(t)
+			updater := datasource.NewMockSubscriptionEventUpdater(t)
 			tt.mockSetup(mockAdapter, updater)
 
 			source := &SubscriptionDataSource{
@@ -179,12 +179,12 @@ func TestRedisPublishDataSource_Load(t *testing.T) {
 	}{
 		{
 			name:  "successful publish",
-			input: `{"channel":"test-channel", "data":{"message":"hello"}, "providerId":"test-provider"}`,
+			input: `{"channel":"test-channel", "event": {"data":{"message":"hello"}}, "providerId":"test-provider"}`,
 			mockSetup: func(m *MockAdapter) {
 				m.On("Publish", mock.Anything, mock.MatchedBy(func(event PublishEventConfiguration) bool {
-					return event.ProviderID == "test-provider" &&
+					return event.ProviderID() == "test-provider" &&
 						event.Channel == "test-channel" &&
-						string(event.Data) == `{"message":"hello"}`
+						string(event.Event.Data) == `{"message":"hello"}`
 				})).Return(nil)
 			},
 			expectError:     false,
@@ -193,7 +193,7 @@ func TestRedisPublishDataSource_Load(t *testing.T) {
 		},
 		{
 			name:  "publish error",
-			input: `{"channel":"test-channel", "data":{"message":"hello"}, "providerId":"test-provider"}`,
+			input: `{"channel":"test-channel", "event": {"data":{"message":"hello"}}, "providerId":"test-provider"}`,
 			mockSetup: func(m *MockAdapter) {
 				m.On("Publish", mock.Anything, mock.Anything).Return(errors.New("publish error"))
 			},
