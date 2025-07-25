@@ -16,15 +16,15 @@ type: application
 # This is the chart version. This version number should be incremented each time you make changes
 # to the chart and its templates, including the app version.
 # Versions are expected to follow Semantic Versioning (https://semver.org/)
-version: '0.13.1'
+version: '0.14.0'
 
 home: https://github.com/wundergraph/cosmo
 
 # See https://artifacthub.io/docs/topics/annotations/helm/
 annotations:
   artifacthub.io/changes: |
-    - kind: changed
-      description: "Pin dependencies to the latest stable version"
+    - kind: added
+      description: "Add extraContainers support for router chart"
   artifacthub.io/links: |
     - name: source
       url: https://github.com/wundergraph/cosmo/helm/cosmo

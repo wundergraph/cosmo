@@ -252,6 +252,9 @@ router:
   # -- Add labels to all deployed resources
   commonLabels: {}
 
+  # -- Optionally specify extra list of additional containers for Router pods
+  extraContainers: {}
+
   terminationGracePeriodSeconds: 60
   deploymentStrategy:
     rollingUpdate:

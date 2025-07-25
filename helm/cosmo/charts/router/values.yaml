@@ -42,6 +42,9 @@ extraVolumes: []
 # -- Optionally specify extra list of additional volumeMounts for Router container's
 extraVolumeMounts: []
 
+# -- Optionally specify extra list of additional containers for Router pods
+extraContainers: []
+
 # -- Name of existing ConfigMap containing extra env vars
 extraEnvVarsCM: ""
 

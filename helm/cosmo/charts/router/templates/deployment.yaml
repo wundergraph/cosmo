@@ -227,6 +227,12 @@ spec:
             {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+      {{- if .Values.extraContainers }}
+      {{- range $key, $value := .Values.extraContainers }}
+        - name: "{{ $key }}"
+          {{- toYaml $value | nindent 10 }}
+      {{- end }}
+      {{- end }}
       volumes:
         {{- if .Values.configuration.executionConfig }}
         - name: execution-config
