@@ -174,7 +174,7 @@ export default (opts: BaseCommandOptions) => {
     const newVersion = pluginDataResponse.newVersion;
     const pushToken = pluginDataResponse.pushToken;
 
-    // // Validate platforms
+    // Validate platforms
     const supportedPlatforms = ['linux/amd64', 'linux/arm64', 'darwin/amd64', 'darwin/arm64', 'windows/amd64'];
     if (options.platform && options.platform.length > 0) {
       const invalidPlatforms = options.platform.filter((platform: string) => !supportedPlatforms.includes(platform));

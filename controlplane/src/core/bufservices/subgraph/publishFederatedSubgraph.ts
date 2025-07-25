@@ -180,6 +180,19 @@ export function publishFederatedSubgraph(
         authContext,
       });
 
+      if (req.type && subgraph.type !== formatSubgraphType(req.type)) {
+        return {
+          response: {
+            code: EnumStatusCode.ERR,
+            details: `Subgraph ${subgraph.name} is not of type ${req.type}.`,
+          },
+          compositionErrors: [],
+          deploymentErrors: [],
+          compositionWarnings: [],
+          proposalMatchMessage,
+        };
+      }
+
       /* The subgraph already exists, so the database flag and the normalization result should match.
        * If he flags do not match, the database is the source of truth, so return an appropriate error.
        * */
