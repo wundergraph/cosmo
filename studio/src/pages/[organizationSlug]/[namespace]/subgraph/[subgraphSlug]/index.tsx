@@ -151,13 +151,25 @@ const SubgraphOverviewPage = () => {
               </div>
             </dd>
           </div>
-          {subgraph.type === SubgraphType.PLUGIN && subgraph.protoVersion && (
-            <div className="flex-start flex min-w-[150px] flex-col gap-2">
-              <dt className="text-sm text-muted-foreground">Version</dt>
-              <dd className="flex gap-x-2">
-                <p className="text-sm">{subgraph.protoVersion}</p>
-              </dd>
-            </div>
+          {subgraph.type === SubgraphType.PLUGIN && subgraph.pluginData && (
+            <>
+              <div className="flex-start flex min-w-[60px] flex-col gap-2">
+                <dt className="text-sm text-muted-foreground">Version</dt>
+                <dd className="flex gap-x-2">
+                  <p className="text-sm">{subgraph.pluginData.version}</p>
+                </dd>
+              </div>
+              <div className="flex-start flex min-w-[100px] flex-col gap-2">
+                <dt className="text-sm text-muted-foreground">Platforms</dt>
+                <dd className="flex gap-x-1">
+                  {subgraph.pluginData.platforms.map((platform) => (
+                    <Badge variant="secondary" key={platform}>
+                      {platform}
+                    </Badge>
+                  ))}
+                </dd>
+              </div>
+            </>
           )}
 
           <div className="flex-start flex flex-col gap-2 ">

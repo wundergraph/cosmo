@@ -375,6 +375,11 @@ enum SubgraphType {
 }
 
 message Subgraph {
+  message PluginData{
+    string version = 1;
+    repeated string platforms = 2;
+  }
+
   string id = 1;
   string name = 2;
   string routingURL = 3;
@@ -393,7 +398,7 @@ message Subgraph {
   optional string baseSubgraphName = 16;
   optional string baseSubgraphId = 17;
   SubgraphType type = 18;
-  optional string protoVersion = 19;
+  optional PluginData pluginData = 19;
 }
 
 message GetSubgraphsResponse {

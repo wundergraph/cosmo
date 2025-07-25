@@ -3049,9 +3049,9 @@ export class Subgraph extends Message<Subgraph> {
   type = SubgraphType.STANDARD;
 
   /**
-   * @generated from field: optional string protoVersion = 19;
+   * @generated from field: optional wg.cosmo.platform.v1.Subgraph.PluginData pluginData = 19;
    */
-  protoVersion?: string;
+  pluginData?: Subgraph_PluginData;
 
   constructor(data?: PartialMessage<Subgraph>) {
     super();
@@ -3079,7 +3079,7 @@ export class Subgraph extends Message<Subgraph> {
     { no: 16, name: "baseSubgraphName", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 17, name: "baseSubgraphId", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 18, name: "type", kind: "enum", T: proto3.getEnumType(SubgraphType) },
-    { no: 19, name: "protoVersion", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 19, name: "pluginData", kind: "message", T: Subgraph_PluginData, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Subgraph {
@@ -3096,6 +3096,49 @@ export class Subgraph extends Message<Subgraph> {
 
   static equals(a: Subgraph | PlainMessage<Subgraph> | undefined, b: Subgraph | PlainMessage<Subgraph> | undefined): boolean {
     return proto3.util.equals(Subgraph, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.Subgraph.PluginData
+ */
+export class Subgraph_PluginData extends Message<Subgraph_PluginData> {
+  /**
+   * @generated from field: string version = 1;
+   */
+  version = "";
+
+  /**
+   * @generated from field: repeated string platforms = 2;
+   */
+  platforms: string[] = [];
+
+  constructor(data?: PartialMessage<Subgraph_PluginData>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.Subgraph.PluginData";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "version", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "platforms", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Subgraph_PluginData {
+    return new Subgraph_PluginData().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Subgraph_PluginData {
+    return new Subgraph_PluginData().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Subgraph_PluginData {
+    return new Subgraph_PluginData().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Subgraph_PluginData | PlainMessage<Subgraph_PluginData> | undefined, b: Subgraph_PluginData | PlainMessage<Subgraph_PluginData> | undefined): boolean {
+    return proto3.util.equals(Subgraph_PluginData, a, b);
   }
 }
 
