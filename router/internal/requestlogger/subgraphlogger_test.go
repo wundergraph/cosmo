@@ -2,6 +2,9 @@ package requestlogger_test
 
 import (
 	"errors"
+	"net/http"
+	"testing"
+
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
@@ -10,8 +13,6 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
-	"net/http"
-	"testing"
 )
 
 func TestSubgraphAccessLogger(t *testing.T) {
@@ -136,7 +137,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 			"method":   "POST",
 			"path":     "/graphql",
 			"query":    "",
-			"ip":       "6d792d74657374e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+			"ip":       "c616478f21f8bb743c3ca95097961f9bf81eae9527311effbf04529d73e8cd9b",
 		}
 		additionalExpectedKeys := []string{"user_agent", "hostname", "pid", "url"}
 		checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
