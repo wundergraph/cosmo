@@ -6,37 +6,30 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/connectrpc"
 )
 
-func init() {
-	RegisterModule(&ConnectRPCHandler{})
-}
-
 const ConnectRPCPrefix = "/connectrpc"
 
 type ConnectRPCHandler struct {
-	ConnectRPC *connectrpc.ConnectRPC
-}
-
-func (h *ConnectRPCHandler) Module() ModuleInfo {
-	return ModuleInfo{
-		ID:       "connectrpc",
-		Priority: 100,
-		New:      func() Module { return h },
-	}
+	ConnectRPC  *connectrpc.ConnectRPC
+	graphqlPath string
 }
 
 func (h *ConnectRPCHandler) HandlerFunc(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
-		found := h.ConnectRPC.HandlerFunc(resp, req)
-		if !found {
+		handled := h.ConnectRPC.HandlerFunc(resp, req, h.graphqlPath, next)
+		if !handled {
 			next.ServeHTTP(resp, req)
-			return
 		}
 	})
 }
 
-func NewConnectRPCHandler(prefix string, data []connectrpc.ConnectRPCData) *ConnectRPCHandler {
+func (h *ConnectRPCHandler) Bootstrap() error {
+	return h.ConnectRPC.Bootstrap()
+}
+
+func NewConnectRPCHandler(graphqlPath, prefix string, data []connectrpc.ConnectRPCData) *ConnectRPCHandler {
 	connectRPC := connectrpc.NewConnectRPC(prefix, data)
 	return &ConnectRPCHandler{
-		ConnectRPC: connectRPC,
+		ConnectRPC:  connectRPC,
+		graphqlPath: graphqlPath,
 	}
 }

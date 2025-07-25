@@ -3,6 +3,7 @@ package integration
 import (
 	"net/http"
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -24,23 +25,52 @@ func TestConnectRPC(t *testing.T) {
 		t.Parallel()
 
 		opts := []core.Option{
-			core.WithConnectRPC(core.ConnectRPCPrefix, []connectrpc.ConnectRPCData{
+			core.WithConnectRPC("/graphql", core.ConnectRPCPrefix, []connectrpc.ConnectRPCData{
 				{
-					Schema: `
+					Schema: `syntax = "proto3";
+					package service.v1;
+
 					service EmployeeService {
-						rpc GetEmployee(GetEmployeeRequest) returns (GetEmployeeResponse);
+						rpc QueryGetEmployee(QueryGetEmployeeRequest) returns (QueryGetEmployeeResponse);
 					}
 
-					message GetEmployeeRequest {
+					message QueryGetEmployeeRequest {
 						int32 id = 1;
 					}
 
-					message GetEmployeeResponse {
-						Employee employee = 1;
-					}`,
+					message QueryGetEmployeeResponse {
+						int32 id = 1;
+						QueryGetEmployeeResponseEmployeeDetails details = 2;
+					}
+
+					message QueryGetEmployeeResponseEmployeeDetails {
+						string forename = 1;
+						string surname = 2;
+					}
+					`,
 					Mapping: &nodev1.GRPCMapping{
+						EntityMappings: []*nodev1.EntityMapping{
+							{
+								Key:      "id",
+								Kind:     "entity",
+								Request:  "LookupUserByIdRequest",
+								Response: "QueryGetEmployeeResponse",
+								Rpc:      "LookupUserById",
+								TypeName: "Employee",
+							},
+							{
+								Key:      "id",
+								Kind:     "entity",
+								Request:  "LookupUserByIdRequest",
+								Response: "QueryGetEmployeeResponseEmployeeDetails",
+								Rpc:      "LookupUserById",
+								TypeName: "EmployeeDetails",
+							},
+						},
 						OperationMappings: []*nodev1.OperationMapping{
 							{
+								Original: "TestQueryUser",
+								Response: "QueryGetEmployeeResponse",
 								OriginalQuery: `query GetEmployee($id: Int!) {
 									employee(id: $id) {
 										id
@@ -50,7 +80,35 @@ func TestConnectRPC(t *testing.T) {
 										}
 									}
 								}`,
-								Mapped: "GetEmployee",
+								Mapped: "QueryGetEmployee",
+							},
+						},
+						TypeFieldMappings: []*nodev1.TypeFieldMapping{
+							{
+								FieldMappings: []*nodev1.FieldMapping{
+									{
+										Mapped:   "id",
+										Original: "id",
+									},
+									{
+										Mapped:   "name",
+										Original: "name",
+									},
+									{
+										Mapped:   "details",
+										Original: "details",
+									},
+								},
+								Type: "Employee",
+							},
+							{
+								FieldMappings: []*nodev1.FieldMapping{
+									{
+										Mapped:   "age",
+										Original: "age",
+									},
+								},
+								Type: "EmployeeDetails",
 							},
 						},
 					},
@@ -62,9 +120,10 @@ func TestConnectRPC(t *testing.T) {
 			NoRetryClient: true,
 			RouterOptions: opts,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			urlPath, err := url.JoinPath(xEnv.RouterURL, "/connectrpc/v1/employees/1")
+			urlPath, err := url.JoinPath(xEnv.RouterURL, "/connectrpc/service.v1.EmployeeService/QueryGetEmployee")
 			require.NoError(t, err)
-			req, err := http.NewRequest("GET", urlPath, nil)
+			req, err := http.NewRequest("POST", urlPath, strings.NewReader(`{"id": 1}`))
+			req.Header.Add("Content-Type", "application/json")
 			require.NoError(t, err)
 			res, err := xEnv.MakeGraphQLRequestRaw(req)
 			require.NoError(t, err)

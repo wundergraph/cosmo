@@ -35,6 +35,10 @@ func getFieldsMapping(mapping *nodev1.GRPCMapping, typeName string) []*nodev1.Fi
 		}
 	}
 
+	if entityMapping == nil {
+		return nil
+	}
+
 	var responseTypeMapping []*nodev1.FieldMapping
 	for _, typeMapping := range mapping.TypeFieldMappings {
 		if typeMapping.Type == entityMapping.TypeName {
@@ -46,7 +50,7 @@ func getFieldsMapping(mapping *nodev1.GRPCMapping, typeName string) []*nodev1.Fi
 	return responseTypeMapping
 }
 
-func graphqlToRPC(protoFd linker.File, mapping *nodev1.GRPCMapping, graphqlResponse string) (*dynamicpb.Message, error) {
+func graphqlToRPC(protoFd linker.File, methodName string, mapping *nodev1.GRPCMapping, graphqlResponse string) (*dynamicpb.Message, error) {
 
 	// Parse GraphQL response JSON
 	var gqlResp map[string]interface{}
@@ -60,11 +64,17 @@ func graphqlToRPC(protoFd linker.File, mapping *nodev1.GRPCMapping, graphqlRespo
 		return nil, fmt.Errorf("GraphQL response missing data field")
 	}
 
-	var resOperationName string
+	if len(data) == 0 {
+		return nil, fmt.Errorf("no data found in GraphQL response")
+	}
+
+	if len(data) > 1 {
+		return nil, fmt.Errorf("multiple operations found in GraphQL response")
+	}
+
 	var resOperationData map[string]interface{}
-	for k, v := range data {
+	for _, v := range data {
 		// TODO: handle multiple operations
-		resOperationName = k
 		resOperationData = v.(map[string]interface{})
 		break
 	}
@@ -72,7 +82,7 @@ func graphqlToRPC(protoFd linker.File, mapping *nodev1.GRPCMapping, graphqlRespo
 	// Find the operation mapping to get the response type
 	var responseTypeName string
 	for _, opMapping := range mapping.OperationMappings {
-		if opMapping.Original == resOperationName {
+		if opMapping.Mapped == methodName {
 			responseTypeName = opMapping.Response
 			break
 		}
@@ -105,6 +115,9 @@ func graphqlToRPC(protoFd linker.File, mapping *nodev1.GRPCMapping, graphqlRespo
 		switch field.Kind() {
 		case protoreflect.StringKind:
 			dynamicMsg.Set(field, protoreflect.ValueOfString(resOperationData[fieldMapping.Original].(string)))
+		case protoreflect.Int32Kind:
+			asInt32 := int32(resOperationData[fieldMapping.Original].(float64))
+			dynamicMsg.Set(field, protoreflect.ValueOfInt32(asInt32))
 		case protoreflect.MessageKind:
 			subMsg := dynamicpb.NewMessage(field.Message())
 			subResponseName := string(field.Message().Name())
@@ -123,7 +136,7 @@ func graphqlToRPC(protoFd linker.File, mapping *nodev1.GRPCMapping, graphqlRespo
 			}
 			dynamicMsg.Set(field, protoreflect.ValueOfMessage(subMsg))
 		default:
-			return nil, fmt.Errorf("field %s of type %s is not supported", fieldMapping.Mapped, responseTypeName)
+			return nil, fmt.Errorf("field %s of type %s and kind %s is not supported", fieldMapping.Mapped, responseTypeName, field.Kind())
 		}
 	}
 

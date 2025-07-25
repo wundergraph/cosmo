@@ -107,11 +107,11 @@ func TestGraphQLResponseToConnectrpc(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, mapping)
 
-	connectrpc, err := graphqlToRPC(fd, mapping, graphqlResponse)
+	connectrpc, err := graphqlToRPC(fd, "QueryTestQueryUser", mapping, graphqlResponse)
 	require.NoError(t, err)
 	require.NotNil(t, connectrpc)
 	json, err := protojson.Marshal(connectrpc)
 	require.NoError(t, err)
-	require.Equal(t, `{"id":"1","name":"John Doe","details":{"age":30}}`, string(json))
+	require.JSONEq(t, `{"id":"1","name":"John Doe","details":{"age":30}}`, string(json))
 
 }

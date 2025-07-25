@@ -269,7 +269,13 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		httpRouter.Use(handler)
 	}
 
-	httpRouter.Use(r.connectRPC.HandlerFunc)
+	if r.connectRPC != nil {
+		err := r.connectRPC.Bootstrap()
+		if err != nil {
+			return nil, fmt.Errorf("failed to bootstrap connectRPC: %w", err)
+		}
+		httpRouter.Use(r.connectRPC.HandlerFunc)
+	}
 
 	if s.batchingConfig.Enabled {
 		if s.batchingConfig.MaxConcurrentRoutines <= 0 {

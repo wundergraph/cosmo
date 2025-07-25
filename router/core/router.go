@@ -2017,9 +2017,9 @@ func WithDemoMode(demoMode bool) Option {
 	}
 }
 
-func WithConnectRPC(prefix string, data []connectrpc.ConnectRPCData) Option {
+func WithConnectRPC(graphqlPath, prefix string, data []connectrpc.ConnectRPCData) Option {
 	return func(r *Router) {
-		r.connectRPC = NewConnectRPCHandler(prefix, data)
+		r.connectRPC = NewConnectRPCHandler(graphqlPath, prefix, data)
 	}
 }
 

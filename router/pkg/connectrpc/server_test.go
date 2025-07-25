@@ -11,6 +11,25 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type TestHandler struct {
+}
+
+func (h *TestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte(`
+	{
+		"data": {
+			"TestQueryUser": {
+				"id": "1",
+				"name": "John Doe",
+				"details": {
+					"age": 30
+				}
+			}
+		}
+	}
+	`))
+}
+
 const TestSchema = `syntax = "proto3";
 
 package foo.v1;
@@ -49,6 +68,7 @@ func TestConnect(t *testing.T) {
 			Mapping: mapping,
 		},
 	})
+
 	err = c.Bootstrap()
 	require.NoError(t, err)
 
@@ -60,7 +80,7 @@ func TestConnect(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	// Call the handler
-	found := c.HandlerFunc(w, req)
+	found := c.HandlerFunc(w, req, "/graphql", &TestHandler{})
 	require.True(t, found)
 
 	// The handler should respond (even if it's just a basic response)
