@@ -15,12 +15,12 @@ import { IPlatformWebhookService } from './webhooks/PlatformWebhookService.js';
 import { BlobStorage } from './blobstorage/index.js';
 import Mailer from './services/Mailer.js';
 import { Authorization } from './services/Authorization.js';
-import { AIGraphReadmeQueue } from './workers/AIGraphReadmeWorker.js';
-import { DeleteOrganizationQueue } from './workers/DeleteOrganizationWorker.js';
-import { DeactivateOrganizationQueue } from './workers/DeactivateOrganizationWorker.js';
-import { DeleteUserQueue } from './workers/DeleteUserQueue.js';
-import { ReactivateOrganizationQueue } from './workers/ReactivateOrganizationWorker.js';
-import { DeleteOrganizationAuditLogsQueue } from './workers/DeleteOrganizationAuditLogsWorker.js';
+import { AIGraphReadmeQueue } from './workers/AIGraphReadme.js';
+import { DeleteOrganizationQueue } from './workers/DeleteOrganization.js';
+import { DeactivateOrganizationQueue } from './workers/DeactivateOrganization.js';
+import { DeleteUserQueue } from './workers/DeleteUser.js';
+import { ReactivateOrganizationQueue } from './workers/ReactivateOrganization.js';
+import { DeleteOrganizationAuditLogsQueue } from './workers/DeleteOrganizationAuditLogs.js';
 
 export interface RouterOptions {
   db: PostgresJsDatabase<typeof schema>;
