@@ -22,7 +22,7 @@ watch_config:
 plugins:
   enabled: true
   registry:
-    url: cosmo-podbay.wundergraph-staging.workers.dev
+    url: localhost:8787
 
 engine:
   max_concurrent_resolvers: 1024
