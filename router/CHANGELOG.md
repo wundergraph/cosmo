@@ -4,6 +4,17 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.237.0](https://github.com/wundergraph/cosmo/compare/router@0.236.0...router@0.237.0) (2025-07-25)
+
+### Bug Fixes
+
+* ip anonymization hash implementation ([#2080](https://github.com/wundergraph/cosmo/issues/2080)) ([40eaea2](https://github.com/wundergraph/cosmo/commit/40eaea27be93449a8d32611e16561ddd9c1ae3c8)) (@endigma)
+* **router:** file mode duplicated prefix ([#2084](https://github.com/wundergraph/cosmo/issues/2084)) ([2b0e18d](https://github.com/wundergraph/cosmo/commit/2b0e18d2ddc303bdd58d1b0b1b61752b6cdc2bda)) (@Noroth)
+
+### Features
+
+* ability to configure the min size for response compression ([#2060](https://github.com/wundergraph/cosmo/issues/2060)) ([455fb0d](https://github.com/wundergraph/cosmo/commit/455fb0d9ead74954933273c1f6d39d3ceeafac3a)) (@mrpahdan)
+
 # [0.236.0](https://github.com/wundergraph/cosmo/compare/router@0.235.3...router@0.236.0) (2025-07-24)
 
 ### Bug Fixes
