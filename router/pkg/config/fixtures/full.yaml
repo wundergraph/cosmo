@@ -198,6 +198,7 @@ traffic_shaping:
     max_request_body_size: 5MB
     max_header_bytes: 4MiB
     decompression_enabled: false
+    response_compression_min_size: 4KiB
   all: # Rules are applied to all subgraph requests.
     # Subgraphs transport options
     request_timeout: 60s
