@@ -185,8 +185,8 @@ export function createFederatedSubgraph(
         organizationId: authContext.organizationId,
         featureId: 'plugins',
       });
-      const limit = feature?.limit === -1 ? undefined : feature?.limit;
-      if (limit && count >= limit) {
+      const limit = feature?.limit === -1 ? 0 : feature?.limit ?? 0;
+      if (count >= limit) {
         return {
           response: {
             code: EnumStatusCode.ERR_LIMIT_REACHED,
