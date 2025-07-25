@@ -1511,13 +1511,18 @@ func (s *graphServer) setupConnector(ctx context.Context, config *nodev1.EngineC
 		}
 
 		if imgRef := pluginConfig.GetImageReference(); imgRef != nil {
-			ref := fmt.Sprintf("%s/%s:%s", "cosmo-podbay-production.wundergraph-staging.workers.dev", imgRef.GetRepository(), imgRef.GetReference())
+			ref := fmt.Sprintf("%s/%s:%s",
+				s.plugins.Registry.URL,
+				imgRef.GetRepository(),
+				imgRef.GetReference(),
+			)
 
 			s.logger.Warn("USING GRPC PLUGIN", zap.String("ref", ref))
 
 			grpcPlugin, err := grpcpluginoci.NewGRPCOCIPlugin(grpcpluginoci.GRPCPluginConfig{
-				Logger:   s.logger,
-				ImageRef: ref,
+				Logger:        s.logger,
+				ImageRef:      ref,
+				RegistryToken: s.graphApiToken,
 			})
 			if err != nil {
 				return fmt.Errorf("failed to create grpc oci plugin for subgraph %s: %w", dsConfig.Id, err)

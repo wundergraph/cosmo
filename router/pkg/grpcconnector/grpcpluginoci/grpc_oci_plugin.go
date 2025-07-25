@@ -20,8 +20,9 @@ import (
 )
 
 type GRPCPluginConfig struct {
-	Logger   *zap.Logger
-	ImageRef string
+	Logger        *zap.Logger
+	ImageRef      string
+	RegistryToken string
 }
 
 type GRPCPlugin struct {
@@ -38,10 +39,7 @@ type GRPCPlugin struct {
 	client *grpccommon.GRPCPluginClient
 }
 
-const token = "eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiIyZWFjYWVlYi0xMmYzLTQ1NDEtYWJkMy0xNzVjYzQwYzZlMTMiLCJmZWRlcmF0ZWRfZ3JhcGhfaWQiOiJlNWQwY2YyMC04YzkyLTRiMDgtOTE4Ny04ZDQ5M2JlZTBlNjYiLCJhdWQiOiJjb3NtbzpncmFwaC1rZXkiLCJvcmdhbml6YXRpb25faWQiOiIxZDI2NWRiOS0zNjAwLTQ4ZWMtODQwNy01OGU2M2Y5NDU3ZDYiLCJpYXQiOjE3NDAwNDc4OTF9.-_kxsT3zBW8-1JaNKpVr-mYpo_7THaQqpiuoCocY7b8"
-
 func NewGRPCOCIPlugin(config GRPCPluginConfig) (*GRPCPlugin, error) {
-
 	if config.Logger == nil {
 		return nil, fmt.Errorf("logger is required")
 	}
@@ -50,18 +48,23 @@ func NewGRPCOCIPlugin(config GRPCPluginConfig) (*GRPCPlugin, error) {
 		return nil, fmt.Errorf("image source is required")
 	}
 
+	if config.RegistryToken == "" {
+		return nil, fmt.Errorf("registry token is required")
+	}
+
 	var img v1.Image
 
 	desc, err := crane.Get(config.ImageRef,
 		crane.WithAuth(&authn.Basic{
 			Username: "router",
-			Password: token,
+			Password: config.RegistryToken,
 		}),
 		crane.WithPlatform(&v1.Platform{
 			Architecture: runtime.GOARCH,
 			OS:           runtime.GOOS,
 		}),
 	)
+
 	if err != nil {
 		return nil, fmt.Errorf("pulling image %s: %w", config.ImageRef, err)
 	}
