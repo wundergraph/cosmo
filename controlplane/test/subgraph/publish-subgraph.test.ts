@@ -418,6 +418,17 @@ describe('Publish subgraph tests', () => {
 
       expect(publishResponse.response?.code).toBe(EnumStatusCode.OK);
 
+      // Validate by fetching the subgraph and checking type, version, and platforms
+      const getSubgraphResponse = await client.getSubgraphByName({
+        name: pluginName,
+        namespace: 'default',
+      });
+
+      expect(getSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
+      expect(getSubgraphResponse.graph?.type).toBe(SubgraphType.PLUGIN);
+      expect(getSubgraphResponse.graph?.pluginData?.version).toBe(validProtoRequest.version);
+      expect(getSubgraphResponse.graph?.pluginData?.platforms).toEqual(validProtoRequest.platforms);
+
       await server.close();
     });
 
@@ -440,6 +451,17 @@ describe('Publish subgraph tests', () => {
       });
 
       expect(publishResponse.response?.code).toBe(EnumStatusCode.OK);
+
+      // Validate by fetching the subgraph and checking type, version, and platforms
+      const getSubgraphResponse = await client.getSubgraphByName({
+        name: pluginName,
+        namespace: 'default',
+      });
+
+      expect(getSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
+      expect(getSubgraphResponse.graph?.type).toBe(SubgraphType.PLUGIN);
+      expect(getSubgraphResponse.graph?.pluginData?.version).toBe(validProtoRequest.version);
+      expect(getSubgraphResponse.graph?.pluginData?.platforms).toEqual(validProtoRequest.platforms);
 
       await server.close();
     });
