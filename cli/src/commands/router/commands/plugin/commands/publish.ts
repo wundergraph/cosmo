@@ -1,0 +1,428 @@
+import { existsSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
+import { spawn } from 'node:child_process';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { splitLabel } from '@wundergraph/cosmo-shared';
+import Table from 'cli-table3';
+import { Command, program } from 'commander';
+import ora from 'ora';
+import { resolve } from 'pathe';
+import pc from 'picocolors';
+import { config, getBaseHeaders } from '../../../../../core/config.js';
+import { BaseCommandOptions } from '../../../../../core/types/types.js';
+
+export default (opts: BaseCommandOptions) => {
+  const command = new Command('publish');
+  command.description(
+    "Publishes a plugin subgraph on the control plane. If the plugin subgraph doesn't exists, it will be created.\nIf the publication leads to composition errors, the errors will be visible in the Studio.\nThe router will continue to work with the latest valid schema.\nConsider using the 'wgc subgraph check' command to check for composition errors before publishing.",
+  );
+  command.argument(
+    '<name>',
+    'The name of the plugin subgraph to push the schema to. It is usually in the format of <org>.<service.name> and is used to uniquely identify your plugin subgraph.',
+  );
+  command.requiredOption('--schema <path-to-schema>', 'The schema file to upload to the plugin subgraph.');
+  command.requiredOption('--go-module-path <path>', 'Thge path of the go module, used for go proto generation.');
+  command.requiredOption('--docker-file <path-to-docker-file>', 'The path to your docker file');
+  command.option('-n, --namespace [string]', 'The namespace of the plugin subgraph.');
+  command.option(
+    '--docker-context <docker-context>',
+    'The path at which the docker should have context to build teh image. Defaults to "." ',
+  );
+  command.option('--proto-schema <path_to_proto_schema>', 'The path to the proto schema');
+  command.option('--proto-mapping <path_to_proto_mapping>', 'The path to the proto mapping');
+  command.option('--proto-lock <path_to_proto_lock>', 'The path to the proto lock file');
+  command.option(
+    '--platform [platforms...]',
+    'The platforms used to build the image. Pass multiple platforms separated by spaces (e.g., --platform linux/amd64 linux/arm64). Supported formats: linux/amd64, linux/arm64, darwin/amd64, darwin/arm64, windows/amd64. Defaults to linux/amd64',
+  );
+  command.option(
+    '--label [labels...]',
+    'The labels to apply to the plugin subgraph. The labels are passed in the format <key>=<value> <key>=<value>.' +
+      ' This parameter is always ignored if the plugin subgraph has already been created.',
+    [],
+  );
+  command.option(
+    '--fail-on-composition-error',
+    'If set, the command will fail if the composition of the federated graph fails.',
+    false,
+  );
+  command.option(
+    '--fail-on-admission-webhook-error',
+    'If set, the command will fail if the admission webhook fails.',
+    false,
+  );
+  command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
+
+  command.action(async (name, options) => {
+    const schemaFile = resolve(options.schema);
+    if (!existsSync(schemaFile)) {
+      program.error(
+        pc.red(
+          pc.bold(`The schema file '${pc.bold(schemaFile)}' does not exist. Please check the path and try again.`),
+        ),
+      );
+    }
+
+    const dockerFile = resolve(options.dockerFile);
+    if (!existsSync(dockerFile)) {
+      program.error(
+        pc.red(
+          pc.bold(`The docker file '${pc.bold(dockerFile)}' does not exist. Please check the path and try again.`),
+        ),
+      );
+    }
+
+    const schemaBuffer = await readFile(schemaFile);
+    const schema = new TextDecoder().decode(schemaBuffer);
+    if (schema.trim().length === 0) {
+      program.error(
+        pc.red(pc.bold(`The schema file '${pc.bold(schemaFile)}' is empty. Please provide a valid schema.`)),
+      );
+    }
+
+    let protoSchema: string | undefined;
+    let protoMapping: string | undefined;
+    let protoLock: string | undefined;
+
+    // Validate that if any proto option is defined, all three must be defined
+    const protoOptions = [options.protoSchema, options.protoMapping, options.protoLock];
+    const definedProtoOptions = protoOptions.filter((option) => option !== undefined);
+
+    if (definedProtoOptions.length > 0 && definedProtoOptions.length < 3) {
+      program.error(
+        pc.red(
+          pc.bold(
+            'If any proto option is specified, all three must be provided: --proto-schema, --proto-mapping, and --proto-lock',
+          ),
+        ),
+      );
+    }
+
+    if (options.protoSchema) {
+      const protoSchemaFile = resolve(options.protoSchema);
+      if (!existsSync(protoSchemaFile)) {
+        program.error(
+          pc.red(
+            pc.bold(
+              `The proto schema file '${pc.bold(protoSchemaFile)}' does not exist. Please check the path and try again.`,
+            ),
+          ),
+        );
+      }
+      const protoSchemaBuffer = await readFile(protoSchemaFile);
+      const schema = new TextDecoder().decode(protoSchemaBuffer);
+      if (schema.trim().length > 0) {
+        protoSchema = schema;
+      }
+    }
+
+    if (options.protoMapping) {
+      const protoMappingFile = resolve(options.protoMapping);
+      if (!existsSync(protoMappingFile)) {
+        program.error(
+          pc.red(
+            pc.bold(
+              `The proto mapping file '${pc.bold(protoMappingFile)}' does not exist. Please check the path and try again.`,
+            ),
+          ),
+        );
+      }
+      const protoMappingBuffer = await readFile(protoMappingFile);
+      const mapping = new TextDecoder().decode(protoMappingBuffer);
+      if (mapping.trim().length > 0) {
+        protoMapping = mapping;
+      }
+    }
+
+    if (options.protoLock) {
+      const protoLockFile = resolve(options.protoLock);
+      if (!existsSync(protoLockFile)) {
+        program.error(
+          pc.red(
+            pc.bold(
+              `The proto lock file '${pc.bold(protoLockFile)}' does not exist. Please check the path and try again.`,
+            ),
+          ),
+        );
+      }
+      const protoLockBuffer = await readFile(protoLockFile);
+      const lock = new TextDecoder().decode(protoLockBuffer);
+      if (lock.trim().length > 0) {
+        protoLock = lock;
+      }
+    }
+
+    const spinner = ora('Subgraph is being published...').start();
+
+    const pluginDataResponse = await opts.client.platform.validateAndFetchPluginData(
+      {
+        name,
+        namespace: options.namespace,
+        labels: options.label.map((label: string) => splitLabel(label)),
+      },
+      {
+        headers: getBaseHeaders(),
+      },
+    );
+
+    if (pluginDataResponse.response?.code !== EnumStatusCode.OK) {
+      program.error(pc.red(pc.bold(pluginDataResponse.response?.details)));
+    }
+
+    const reference = pluginDataResponse.reference;
+    const newVersion = pluginDataResponse.newVersion;
+    const pushToken = pluginDataResponse.pushToken;
+
+    // Validate platforms
+    const supportedPlatforms = ['linux/amd64', 'linux/arm64', 'darwin/amd64', 'darwin/arm64', 'windows/amd64'];
+    if (options.platform && options.platform.length > 0) {
+      const invalidPlatforms = options.platform.filter((platform: string) => !supportedPlatforms.includes(platform));
+      if (invalidPlatforms.length > 0) {
+        program.error(
+          pc.red(
+            pc.bold(
+              `Invalid platform(s): ${invalidPlatforms.join(', ')}. Supported platforms are: ${supportedPlatforms.join(', ')}`,
+            ),
+          ),
+        );
+      }
+    }
+
+    // upload the docker image to the registry
+    const platforms = options.platform && options.platform.length > 0 ? options.platform.join(',') : 'linux/amd64';
+    const dockerContext = options.dockerContext || '.';
+    const imageTag = `${config.pluginRegistryURL}/${reference}:${newVersion}`;
+
+    try {
+      // Docker login
+      spinner.text = 'Logging into Docker registry...';
+      await new Promise<void>((resolve, reject) => {
+        const loginProcess = spawn('docker', ['login', config.pluginRegistryURL, '-u', 'x', '-p', pushToken], {
+          stdio: 'pipe',
+        });
+
+        loginProcess.on('close', (code) => {
+          if (code === 0) {
+            resolve();
+          } else {
+            reject(new Error(`Docker login failed with exit code ${code}`));
+          }
+        });
+
+        loginProcess.on('error', (error) => {
+          reject(error);
+        });
+      });
+
+      // Docker buildx build
+      spinner.text = 'Building and pushing Docker image...';
+      await new Promise<void>((resolve, reject) => {
+        const buildArgs = [
+          'buildx',
+          'build',
+          '--sbom=false',
+          '--provenance=false',
+          '--push',
+          '--platform',
+          platforms,
+          '-f',
+          dockerFile,
+          '-t',
+          imageTag,
+          dockerContext,
+        ];
+
+        const buildProcess = spawn('docker', buildArgs, {
+          stdio: 'inherit',
+        });
+
+        buildProcess.on('close', (code) => {
+          if (code === 0) {
+            resolve();
+          } else {
+            reject(new Error(`Docker build failed with exit code ${code}`));
+          }
+        });
+
+        buildProcess.on('error', (error) => {
+          reject(error);
+        });
+      });
+
+      // Docker logout
+      spinner.text = 'Logging out of Docker registry...';
+      await new Promise<void>((resolve, reject) => {
+        const logoutProcess = spawn('docker', ['logout', config.pluginRegistryURL], {
+          stdio: 'pipe',
+        });
+
+        logoutProcess.on('close', (code) => {
+          if (code === 0) {
+            resolve();
+          } else {
+            reject(new Error(`Docker logout failed with exit code ${code}`));
+          }
+        });
+
+        logoutProcess.on('error', (error) => {
+          reject(error);
+        });
+      });
+
+      spinner.text = 'Subgraph is being published...';
+    } catch (error) {
+      spinner.fail(`Failed to build and push Docker image: ${error instanceof Error ? error.message : String(error)}`);
+      program.error(
+        pc.red(pc.bold(`Docker operation failed: ${error instanceof Error ? error.message : String(error)}`)),
+      );
+    }
+
+    const resp = await opts.client.platform.publishFederatedSubgraph(
+      {
+        name,
+        namespace: options.namespace,
+        schema,
+        // Optional when subgraph does not exist yet
+        labels: options.label.map((label: string) => splitLabel(label)),
+        type: SubgraphType.PLUGIN,
+        proto: {
+          schema: protoSchema,
+          mappings: protoMapping,
+          lock: protoLock,
+          goModulePath: options.goModulePath,
+          platforms: options.platform || [],
+          version: newVersion,
+        },
+      },
+      {
+        headers: getBaseHeaders(),
+      },
+    );
+
+    switch (resp.response?.code) {
+      case EnumStatusCode.OK: {
+        spinner.succeed(resp?.hasChanged === false ? 'No new changes to publish.' : 'Subgraph published successfully.');
+        if (resp.proposalMatchMessage) {
+          console.log(pc.yellow(`Warning: Proposal match failed`));
+          console.log(pc.yellow(resp.proposalMatchMessage));
+        }
+
+        break;
+      }
+      case EnumStatusCode.ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL: {
+        spinner.fail(`Failed to publish subgraph "${name}".`);
+        console.log(pc.red(`Error: Proposal match failed`));
+        console.log(pc.red(resp.proposalMatchMessage));
+        break;
+      }
+      case EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED: {
+        spinner.warn('Subgraph published but with composition errors.');
+        if (resp.proposalMatchMessage) {
+          console.log(pc.yellow(`Warning: Proposal match failed`));
+          console.log(pc.yellow(resp.proposalMatchMessage));
+        }
+
+        const compositionErrorsTable = new Table({
+          head: [
+            pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
+            pc.bold(pc.white('NAMESPACE')),
+            pc.bold(pc.white('FEATURE_FLAG')),
+            pc.bold(pc.white('ERROR_MESSAGE')),
+          ],
+          colWidths: [30, 30, 30, 120],
+          wordWrap: true,
+        });
+
+        console.log(
+          pc.red(
+            `We found composition errors, while composing the federated graph.\nThe router will continue to work with the latest valid schema.\n${pc.bold(
+              'Please check the errors below:',
+            )}`,
+          ),
+        );
+        for (const compositionError of resp.compositionErrors) {
+          compositionErrorsTable.push([
+            compositionError.federatedGraphName,
+            compositionError.namespace,
+            compositionError.featureFlag || '-',
+            compositionError.message,
+          ]);
+        }
+        // Don't exit here with 1 because the change was still applied
+        console.log(compositionErrorsTable.toString());
+
+        if (options.failOnCompositionError) {
+          program.error(pc.red(pc.bold('The command failed due to composition errors.')));
+        }
+
+        break;
+      }
+      case EnumStatusCode.ERR_DEPLOYMENT_FAILED: {
+        spinner.warn(
+          "Subgraph was published, but the updated composition hasn't been deployed, so it's not accessible to the router. Check the errors listed below for details.",
+        );
+
+        const deploymentErrorsTable = new Table({
+          head: [
+            pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
+            pc.bold(pc.white('NAMESPACE')),
+            pc.bold(pc.white('ERROR_MESSAGE')),
+          ],
+          colWidths: [30, 30, 120],
+          wordWrap: true,
+        });
+
+        for (const deploymentError of resp.deploymentErrors) {
+          deploymentErrorsTable.push([
+            deploymentError.federatedGraphName,
+            deploymentError.namespace,
+            deploymentError.message,
+          ]);
+        }
+        // Don't exit here with 1 because the change was still applied
+        console.log(deploymentErrorsTable.toString());
+
+        if (options.failOnAdmissionWebhookError) {
+          program.error(pc.red(pc.bold('The command failed due to admission webhook errors.')));
+        }
+
+        break;
+      }
+      default: {
+        spinner.fail(`Failed to publish subgraph "${name}".`);
+        if (resp.response?.details) {
+          console.error(pc.red(pc.bold(resp.response?.details)));
+        }
+        process.exitCode = 1;
+        return;
+      }
+    }
+
+    if (!options.suppressWarnings && resp.compositionWarnings.length > 0) {
+      const compositionWarningsTable = new Table({
+        head: [
+          pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
+          pc.bold(pc.white('NAMESPACE')),
+          pc.bold(pc.white('FEATURE_FLAG')),
+          pc.bold(pc.white('WARNING_MESSAGE')),
+        ],
+        colWidths: [30, 30, 30, 120],
+        wordWrap: true,
+      });
+
+      console.log(pc.yellow(`The following warnings were produced while composing the federated graph:`));
+      for (const compositionWarning of resp.compositionWarnings) {
+        compositionWarningsTable.push([
+          compositionWarning.federatedGraphName,
+          compositionWarning.namespace,
+          compositionWarning.featureFlag || '-',
+          compositionWarning.message,
+        ]);
+      }
+      console.log(compositionWarningsTable.toString());
+    }
+  });
+
+  return command;
+};

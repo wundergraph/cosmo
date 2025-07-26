@@ -17,6 +17,7 @@ import {
   proposalStateEnum,
   proposalMatchEnum,
   schemaChangeTypeEnum,
+  subgraphTypeEnum,
 } from './schema.js';
 
 export type FederatedGraph = typeof federatedGraphs.$inferSelect;
@@ -37,6 +38,7 @@ export type ProposalState = (typeof proposalStateEnum.enumValues)[number];
 export type ProposalMatch = (typeof proposalMatchEnum.enumValues)[number];
 export type WebhookDeliveryInfo = typeof webhookDeliveries.$inferInsert;
 export type DBSchemaChangeType = (typeof schemaChangeTypeEnum.enumValues)[number];
+export type DBSubgraphType = (typeof subgraphTypeEnum.enumValues)[number];
 
 export type AuditableType =
   | 'organization'
