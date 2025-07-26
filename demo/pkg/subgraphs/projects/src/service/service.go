@@ -2,12 +2,13 @@ package service
 
 import (
 	"context"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
+	"github.com/shirou/gopsutil/v4/process"
 	service "github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects/generated"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects/src/data"
 	"google.golang.org/grpc/codes"
@@ -424,7 +425,28 @@ func (p *ProjectsService) QuerySearchProjects(ctx context.Context, req *service.
 
 // QueryKillService implements projects.ProjectsServiceServer.
 func (p *ProjectsService) QueryKillService(context.Context, *service.QueryKillServiceRequest) (*service.QueryKillServiceResponse, error) {
-	syscall.Kill(syscall.Getpid(), syscall.SIGKILL)
+
+	proc, err := process.NewProcess(int32(os.Getpid())) // Specify process id of parent
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to create process: %v", err)
+	}
+
+	children, err := proc.Children()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get children processes: %v", err)
+	}
+
+	for _, v := range children {
+		err = v.Kill() // Kill each child
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "failed to kill child process: %v", err)
+		}
+	}
+
+	err = proc.Kill() // Kill the parent process
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to kill parent process: %v", err)
+	}
 
 	return &service.QueryKillServiceResponse{
 		KillService: true,
@@ -514,7 +536,7 @@ func (p *ProjectsService) MutationAddProject(ctx context.Context, req *service.M
 		EndDate:         req.Project.EndDate,
 		TeamMembers:     []*service.Employee{},
 		RelatedProducts: []*service.Product{},
-		MilestoneIds:    []string{},
+		MilestoneIds:    &service.ListOfString{Items: []string{}},
 		Milestones:      []*service.Milestone{},
 		Tasks:           []*service.Task{},
 		Progress:        &wrapperspb.DoubleValue{Value: 0.0},
