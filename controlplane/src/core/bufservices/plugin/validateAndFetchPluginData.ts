@@ -158,7 +158,7 @@ export function validateAndFetchPluginData(
             type: 'repository',
             name: reference,
             tag: newVersion,
-            actions: ['push'],
+            actions: ['push', 'pull'],
           },
         ],
       },
