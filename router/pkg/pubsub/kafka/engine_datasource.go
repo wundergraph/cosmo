@@ -25,6 +25,8 @@ func (e *Event) GetData() []byte {
 	return e.Data
 }
 
+// SubscriptionEventConfiguration is a public type that is used to allow access to custom fields
+// of the provider
 type SubscriptionEventConfiguration struct {
 	Provider  string   `json:"providerId"`
 	Topics    []string `json:"topics"`
@@ -46,10 +48,44 @@ func (s *SubscriptionEventConfiguration) RootFieldName() string {
 	return s.FieldName
 }
 
+// publishData is a private type that is used to pass data from the engine to the provider
+type publishData struct {
+	Provider  string `json:"providerId"`
+	Topic     string `json:"topic"`
+	Event     Event  `json:"event"`
+	FieldName string `json:"rootFieldName"`
+}
+
+// PublishEventConfiguration returns the publish event configuration from the publishData type
+func (p *publishData) PublishEventConfiguration() datasource.PublishEventConfiguration {
+	return &PublishEventConfiguration{
+		Provider:  p.Provider,
+		Topic:     p.Topic,
+		FieldName: p.FieldName,
+	}
+}
+
+func (p *publishData) MarshalJSONTemplate() (string, error) {
+	// The content of the data field could be not valid JSON, so we can't use json.Marshal
+	// e.g. {"id":$$0$$,"update":$$1$$}
+	headers := p.Event.Headers
+	if headers == nil {
+		headers = make(map[string][]byte)
+	}
+
+	headersBytes, err := json.Marshal(headers)
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf(`{"topic":"%s", "event": {"data": %s, "key": "%s", "headers": %s}, "providerId":"%s"}`, p.Topic, p.Event.Data, p.Event.Key, headersBytes, p.Provider), nil
+}
+
+// PublishEventConfiguration is a public type that is used to allow access to custom fields
+// of the provider
 type PublishEventConfiguration struct {
 	Provider  string `json:"providerId"`
 	Topic     string `json:"topic"`
-	Event     Event  `json:"event"` // this should be in a different and private type, only used internally
 	FieldName string `json:"rootFieldName"`
 }
 
@@ -66,22 +102,6 @@ func (p *PublishEventConfiguration) ProviderType() datasource.ProviderType {
 // RootFieldName returns the root field name
 func (p *PublishEventConfiguration) RootFieldName() string {
 	return p.FieldName
-}
-
-func (s *PublishEventConfiguration) MarshalJSONTemplate() (string, error) {
-	// The content of the data field could be not valid JSON, so we can't use json.Marshal
-	// e.g. {"id":$$0$$,"update":$$1$$}
-	headers := s.Event.Headers
-	if headers == nil {
-		headers = make(map[string][]byte)
-	}
-
-	headersBytes, err := json.Marshal(headers)
-	if err != nil {
-		return "", err
-	}
-
-	return fmt.Sprintf(`{"topic":"%s", "event": {"data": %s, "key": "%s", "headers": %s}, "providerId":"%s"}`, s.Topic, s.Event.Data, s.Event.Key, headersBytes, s.ProviderID()), nil
 }
 
 type SubscriptionDataSource struct {
@@ -136,13 +156,13 @@ type PublishDataSource struct {
 }
 
 func (s *PublishDataSource) Load(ctx context.Context, input []byte, out *bytes.Buffer) error {
-	var publishConfiguration PublishEventConfiguration
-	err := json.Unmarshal(input, &publishConfiguration)
+	var publishData publishData
+	err := json.Unmarshal(input, &publishData)
 	if err != nil {
 		return err
 	}
 
-	if err := s.pubSub.Publish(ctx, &publishConfiguration, []datasource.StreamEvent{&publishConfiguration.Event}); err != nil {
+	if err := s.pubSub.Publish(ctx, publishData.PublishEventConfiguration(), []datasource.StreamEvent{&publishData.Event}); err != nil {
 		_, err = io.WriteString(out, `{"success": false}`)
 		return err
 	}

@@ -45,11 +45,31 @@ func (s *SubscriptionEventConfiguration) RootFieldName() string {
 	return s.FieldName
 }
 
+// publishData is a private type that is used to pass data from the engine to the provider
+
+type publishData struct {
+	Provider  string `json:"providerId"`
+	Channel   string `json:"channel"`
+	Event     Event  `json:"event"`
+	FieldName string `json:"rootFieldName"`
+}
+
+func (p *publishData) PublishEventConfiguration() datasource.PublishEventConfiguration {
+	return &PublishEventConfiguration{
+		Provider:  p.Provider,
+		Channel:   p.Channel,
+		FieldName: p.FieldName,
+	}
+}
+
+func (p *publishData) MarshalJSONTemplate() (string, error) {
+	return fmt.Sprintf(`{"channel":"%s", "event": {"data": %s}, "providerId":"%s"}`, p.Channel, p.Event.Data, p.Provider), nil
+}
+
 // PublishEventConfiguration contains configuration for publish events
 type PublishEventConfiguration struct {
 	Provider  string `json:"providerId"`
 	Channel   string `json:"channel"`
-	Event     Event  `json:"event"` // this should be in a different and private type, only used internally
 	FieldName string `json:"rootFieldName"`
 }
 
@@ -66,10 +86,6 @@ func (p *PublishEventConfiguration) ProviderType() datasource.ProviderType {
 // RootFieldName returns the root field name
 func (p *PublishEventConfiguration) RootFieldName() string {
 	return p.FieldName
-}
-
-func (s *PublishEventConfiguration) MarshalJSONTemplate() (string, error) {
-	return fmt.Sprintf(`{"channel":"%s", "event": {"data": %s}, "providerId":"%s"}`, s.Channel, s.Event.Data, s.ProviderID()), nil
 }
 
 // SubscriptionDataSource implements resolve.SubscriptionDataSource for Redis
@@ -134,13 +150,13 @@ type PublishDataSource struct {
 
 // Load processes a request to publish to Redis
 func (s *PublishDataSource) Load(ctx context.Context, input []byte, out *bytes.Buffer) error {
-	var publishConfiguration PublishEventConfiguration
-	err := json.Unmarshal(input, &publishConfiguration)
+	var publishData publishData
+	err := json.Unmarshal(input, &publishData)
 	if err != nil {
 		return err
 	}
 
-	if err := s.pubSub.Publish(ctx, &publishConfiguration, []datasource.StreamEvent{&publishConfiguration.Event}); err != nil {
+	if err := s.pubSub.Publish(ctx, publishData.PublishEventConfiguration(), []datasource.StreamEvent{&publishData.Event}); err != nil {
 		_, err = io.WriteString(out, `{"success": false}`)
 		return err
 	}

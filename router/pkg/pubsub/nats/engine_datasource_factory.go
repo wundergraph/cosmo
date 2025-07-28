@@ -61,11 +61,11 @@ func (c *EngineDataSourceFactory) ResolveDataSourceInput(eventData []byte) (stri
 
 	subject := c.subjects[0]
 
-	evtCfg := PublishAndRequestEventConfiguration{
+	evtCfg := publishData{
 		Provider:  c.providerId,
 		Subject:   subject,
-		Event:     Event{Data: eventData},
 		FieldName: c.fieldName,
+		Event:     Event{Data: eventData},
 	}
 
 	return evtCfg.MarshalJSONTemplate()

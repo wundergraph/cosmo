@@ -19,12 +19,12 @@ import (
 func TestPublishEventConfiguration_MarshalJSONTemplate(t *testing.T) {
 	tests := []struct {
 		name        string
-		config      PublishEventConfiguration
+		config      publishData
 		wantPattern string
 	}{
 		{
 			name: "simple configuration",
-			config: PublishEventConfiguration{
+			config: publishData{
 				Provider: "test-provider",
 				Channel:  "test-channel",
 				Event:    Event{Data: json.RawMessage(`{"message":"hello"}`)},
@@ -33,7 +33,7 @@ func TestPublishEventConfiguration_MarshalJSONTemplate(t *testing.T) {
 		},
 		{
 			name: "with special characters",
-			config: PublishEventConfiguration{
+			config: publishData{
 				Provider: "test-provider-id",
 				Channel:  "channel-with-hyphens",
 				Event:    Event{Data: json.RawMessage(`{"message":"special \"quotes\" here"}`)},
@@ -184,8 +184,7 @@ func TestRedisPublishDataSource_Load(t *testing.T) {
 			mockSetup: func(m *datasource.MockProvider) {
 				m.On("Publish", mock.Anything, mock.MatchedBy(func(event *PublishEventConfiguration) bool {
 					return event.ProviderID() == "test-provider" &&
-						event.Channel == "test-channel" &&
-						string(event.Event.Data) == `{"message":"hello"}`
+						event.Channel == "test-channel"
 				}), mock.MatchedBy(func(events []datasource.StreamEvent) bool {
 					return len(events) == 1 && strings.EqualFold(string(events[0].GetData()), `{"message":"hello"}`)
 				})).Return(nil)

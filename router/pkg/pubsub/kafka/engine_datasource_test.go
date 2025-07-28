@@ -16,15 +16,15 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
-func TestPublishEventConfiguration_MarshalJSONTemplate(t *testing.T) {
+func TestPublishData_MarshalJSONTemplate(t *testing.T) {
 	tests := []struct {
 		name        string
-		config      PublishEventConfiguration
+		config      publishData
 		wantPattern string
 	}{
 		{
 			name: "simple configuration",
-			config: PublishEventConfiguration{
+			config: publishData{
 				Provider: "test-provider",
 				Topic:    "test-topic",
 				Event:    Event{Data: json.RawMessage(`{"message":"hello"}`)},
@@ -33,7 +33,7 @@ func TestPublishEventConfiguration_MarshalJSONTemplate(t *testing.T) {
 		},
 		{
 			name: "with special characters",
-			config: PublishEventConfiguration{
+			config: publishData{
 				Provider: "test-provider-id",
 				Topic:    "topic-with-hyphens",
 				Event:    Event{Data: json.RawMessage(`{"message":"special \"quotes\" here"}`)},
@@ -42,7 +42,7 @@ func TestPublishEventConfiguration_MarshalJSONTemplate(t *testing.T) {
 		},
 		{
 			name: "with key",
-			config: PublishEventConfiguration{
+			config: publishData{
 				Provider: "test-provider-id",
 				Topic:    "topic-with-hyphens",
 				Event:    Event{Key: []byte("blablabla"), Data: json.RawMessage(`{}`)},
@@ -51,7 +51,7 @@ func TestPublishEventConfiguration_MarshalJSONTemplate(t *testing.T) {
 		},
 		{
 			name: "with headers",
-			config: PublishEventConfiguration{
+			config: publishData{
 				Provider: "test-provider-id",
 				Topic:    "topic-with-hyphens",
 				Event:    Event{Headers: map[string][]byte{"key": []byte(`blablabla`)}, Data: json.RawMessage(`{}`)},
@@ -202,8 +202,7 @@ func TestKafkaPublishDataSource_Load(t *testing.T) {
 			mockSetup: func(m *datasource.MockProvider) {
 				m.On("Publish", mock.Anything, mock.MatchedBy(func(event *PublishEventConfiguration) bool {
 					return event.ProviderID() == "test-provider" &&
-						event.Topic == "test-topic" &&
-						string(event.Event.Data) == `{"message":"hello"}`
+						event.Topic == "test-topic"
 				}), mock.MatchedBy(func(events []datasource.StreamEvent) bool {
 					return len(events) == 1 && strings.EqualFold(string(events[0].GetData()), `{"message":"hello"}`)
 				})).Return(nil)

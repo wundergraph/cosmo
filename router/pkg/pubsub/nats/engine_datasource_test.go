@@ -21,12 +21,12 @@ import (
 func TestPublishAndRequestEventConfiguration_MarshalJSONTemplate(t *testing.T) {
 	tests := []struct {
 		name        string
-		config      PublishAndRequestEventConfiguration
+		config      publishData
 		wantPattern string
 	}{
 		{
 			name: "simple configuration",
-			config: PublishAndRequestEventConfiguration{
+			config: publishData{
 				Provider: "test-provider",
 				Subject:  "test-subject",
 				Event:    Event{Data: json.RawMessage(`{"message":"hello"}`)},
@@ -35,7 +35,7 @@ func TestPublishAndRequestEventConfiguration_MarshalJSONTemplate(t *testing.T) {
 		},
 		{
 			name: "with special characters",
-			config: PublishAndRequestEventConfiguration{
+			config: publishData{
 				Provider: "test-provider-id",
 				Subject:  "subject-with-hyphens",
 				Event:    Event{Data: json.RawMessage(`{"message":"special \"quotes\" here"}`)},
@@ -48,7 +48,7 @@ func TestPublishAndRequestEventConfiguration_MarshalJSONTemplate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := tt.config.MarshalJSONTemplate()
 			assert.NoError(t, err)
-			assert.Equal(t, tt.wantPattern, result)
+			assert.Equal(t, tt.wantPattern, string(result))
 		})
 	}
 }
@@ -186,8 +186,7 @@ func TestNatsPublishDataSource_Load(t *testing.T) {
 			mockSetup: func(m *MockAdapter) {
 				m.On("Publish", mock.Anything, mock.MatchedBy(func(event *PublishAndRequestEventConfiguration) bool {
 					return event.ProviderID() == "test-provider" &&
-						event.Subject == "test-subject" &&
-						string(event.Event.Data) == `{"message":"hello"}`
+						event.Subject == "test-subject"
 				}), mock.MatchedBy(func(events []datasource.StreamEvent) bool {
 					return len(events) == 1 && strings.EqualFold(string(events[0].GetData()), `{"message":"hello"}`)
 				})).Return(nil)
@@ -263,8 +262,7 @@ func TestNatsRequestDataSource_Load(t *testing.T) {
 			mockSetup: func(m *MockAdapter) {
 				m.On("Request", mock.Anything, mock.MatchedBy(func(event *PublishAndRequestEventConfiguration) bool {
 					return event.ProviderID() == "test-provider" &&
-						event.Subject == "test-subject" &&
-						string(event.Event.Data) == `{"message":"hello"}`
+						event.Subject == "test-subject"
 				}), mock.MatchedBy(func(event datasource.StreamEvent) bool {
 					return event != nil && strings.EqualFold(string(event.GetData()), `{"message":"hello"}`)
 				}), mock.Anything).Run(func(args mock.Arguments) {

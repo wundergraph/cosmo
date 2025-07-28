@@ -52,10 +52,31 @@ func (s *SubscriptionEventConfiguration) RootFieldName() string {
 	return s.FieldName
 }
 
+// publishData is a private type that is used to pass data from the engine to the provider
+type publishData struct {
+	Provider  string `json:"providerId"`
+	Subject   string `json:"subject"`
+	Event     Event  `json:"event"`
+	FieldName string `json:"rootFieldName"`
+}
+
+func (p *publishData) PublishEventConfiguration() datasource.PublishEventConfiguration {
+	return &PublishAndRequestEventConfiguration{
+		Provider:  p.Provider,
+		Subject:   p.Subject,
+		FieldName: p.FieldName,
+	}
+}
+
+func (p *publishData) MarshalJSONTemplate() (string, error) {
+	// The content of the data field could be not valid JSON, so we can't use json.Marshal
+	// e.g. {"id":$$0$$,"update":$$1$$}
+	return fmt.Sprintf(`{"subject":"%s", "event": {"data": %s}, "providerId":"%s"}`, p.Subject, p.Event.Data, p.Provider), nil
+}
+
 type PublishAndRequestEventConfiguration struct {
 	Provider  string `json:"providerId"`
 	Subject   string `json:"subject"`
-	Event     Event  `json:"event"` // this should be in a different and private type, only used internally
 	FieldName string `json:"rootFieldName"`
 }
 
@@ -72,12 +93,6 @@ func (p *PublishAndRequestEventConfiguration) ProviderType() datasource.Provider
 // RootFieldName returns the root field name
 func (p *PublishAndRequestEventConfiguration) RootFieldName() string {
 	return p.FieldName
-}
-
-func (s *PublishAndRequestEventConfiguration) MarshalJSONTemplate() (string, error) {
-	// The content of the data field could be not valid JSON, so we can't use json.Marshal
-	// e.g. {"id":$$0$$,"update":$$1$$}
-	return fmt.Sprintf(`{"subject":"%s", "event": {"data": %s}, "providerId":"%s"}`, s.Subject, s.Event.Data, s.ProviderID()), nil
 }
 
 type SubscriptionSource struct {
@@ -133,13 +148,13 @@ type NatsPublishDataSource struct {
 }
 
 func (s *NatsPublishDataSource) Load(ctx context.Context, input []byte, out *bytes.Buffer) error {
-	var publishConfiguration PublishAndRequestEventConfiguration
-	err := json.Unmarshal(input, &publishConfiguration)
+	var publishData publishData
+	err := json.Unmarshal(input, &publishData)
 	if err != nil {
 		return err
 	}
 
-	if err := s.pubSub.Publish(ctx, &publishConfiguration, []datasource.StreamEvent{&publishConfiguration.Event}); err != nil {
+	if err := s.pubSub.Publish(ctx, publishData.PublishEventConfiguration(), []datasource.StreamEvent{&publishData.Event}); err != nil {
 		_, err = io.WriteString(out, `{"success": false}`)
 		return err
 	}
@@ -156,28 +171,28 @@ type NatsRequestDataSource struct {
 }
 
 func (s *NatsRequestDataSource) Load(ctx context.Context, input []byte, out *bytes.Buffer) error {
-	var subscriptionConfiguration PublishAndRequestEventConfiguration
-	err := json.Unmarshal(input, &subscriptionConfiguration)
+	var publishData publishData
+	err := json.Unmarshal(input, &publishData)
 	if err != nil {
 		return err
 	}
 
 	hookedProvider, ok := s.pubSub.(*datasource.HookedProvider)
 	if !ok {
-		return fmt.Errorf("adapter for provider %s is not of the right hooked type", subscriptionConfiguration.ProviderID())
+		return fmt.Errorf("adapter for provider %s is not of the right hooked type", publishData.Provider)
 	}
 
 	providerBase, ok := hookedProvider.Provider.(*datasource.PubSubProvider)
 	if !ok {
-		return fmt.Errorf("adapter for provider %s is not of the right type", subscriptionConfiguration.ProviderID())
+		return fmt.Errorf("adapter for provider %s is not of the right type", publishData.Provider)
 	}
 
 	adapter, ok := providerBase.Adapter.(Adapter)
 	if !ok {
-		return fmt.Errorf("adapter for provider %s is not of the right type", subscriptionConfiguration.ProviderID())
+		return fmt.Errorf("adapter for provider %s is not of the right type", publishData.Provider)
 	}
 
-	return adapter.Request(ctx, &subscriptionConfiguration, &subscriptionConfiguration.Event, out)
+	return adapter.Request(ctx, publishData.PublishEventConfiguration(), &publishData.Event, out)
 }
 
 func (s *NatsRequestDataSource) LoadWithFiles(ctx context.Context, input []byte, files []*httpclient.FileUpload, out *bytes.Buffer) error {
