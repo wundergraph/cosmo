@@ -2,15 +2,16 @@ package requestlogger
 
 import (
 	"crypto/sha256"
-	"fmt"
+	"encoding/hex"
+	"net"
+	"net/http"
+	"time"
+
 	"github.com/wundergraph/cosmo/router/internal/errors"
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
-	"net"
-	"net/http"
-	"time"
 
 	"github.com/go-chi/chi/v5/middleware"
 
@@ -195,10 +196,12 @@ func (al *accessLogger) getRequestFields(r *http.Request) []zapcore.Field {
 	remoteAddr := r.RemoteAddr
 
 	if al.ipAnonymizationConfig != nil && al.ipAnonymizationConfig.Enabled {
-		if al.ipAnonymizationConfig.Method == Hash {
+		switch al.ipAnonymizationConfig.Method {
+		case Hash:
 			h := sha256.New()
-			remoteAddr = fmt.Sprintf("%x", h.Sum([]byte(r.RemoteAddr)))
-		} else if al.ipAnonymizationConfig.Method == Redact {
+			h.Write([]byte(r.RemoteAddr))
+			remoteAddr = hex.EncodeToString(h.Sum(nil))
+		case Redact:
 			remoteAddr = "[REDACTED]"
 		}
 	}

@@ -4,6 +4,29 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.237.0](https://github.com/wundergraph/cosmo/compare/router@0.236.0...router@0.237.0) (2025-07-25)
+
+### Bug Fixes
+
+* ip anonymization hash implementation ([#2080](https://github.com/wundergraph/cosmo/issues/2080)) ([40eaea2](https://github.com/wundergraph/cosmo/commit/40eaea27be93449a8d32611e16561ddd9c1ae3c8)) (@endigma)
+* **router:** file mode duplicated prefix ([#2084](https://github.com/wundergraph/cosmo/issues/2084)) ([2b0e18d](https://github.com/wundergraph/cosmo/commit/2b0e18d2ddc303bdd58d1b0b1b61752b6cdc2bda)) (@Noroth)
+
+### Features
+
+* ability to configure the min size for response compression ([#2060](https://github.com/wundergraph/cosmo/issues/2060)) ([455fb0d](https://github.com/wundergraph/cosmo/commit/455fb0d9ead74954933273c1f6d39d3ceeafac3a)) (@mrpahdan)
+
+# [0.236.0](https://github.com/wundergraph/cosmo/compare/router@0.235.3...router@0.236.0) (2025-07-24)
+
+### Bug Fixes
+
+* improve gzip request decompression middleware ([#2077](https://github.com/wundergraph/cosmo/issues/2077)) ([c8a12ef](https://github.com/wundergraph/cosmo/commit/c8a12ef4aa62c24e86e22310f98d7b0087d18e59)) (@endigma)
+* json schema ([#2082](https://github.com/wundergraph/cosmo/issues/2082)) ([c7b4cf5](https://github.com/wundergraph/cosmo/commit/c7b4cf5d004c2786f59f41017414361fad229499)) (@devsergiy)
+
+### Features
+
+* **router:** make filemode configurable for access log files ([#2081](https://github.com/wundergraph/cosmo/issues/2081)) ([6b3d78e](https://github.com/wundergraph/cosmo/commit/6b3d78e900d4e07a8c72f1e211e8ee9921b742f0)) (@Noroth)
+* support symmetric key algorithms for JWKs ([#2067](https://github.com/wundergraph/cosmo/issues/2067)) ([9bbdfbb](https://github.com/wundergraph/cosmo/commit/9bbdfbbb4a758f0b026ce13e8bd6f8ddad6b61b2)) (@SkArchon)
+
 ## [0.235.3](https://github.com/wundergraph/cosmo/compare/router@0.235.2...router@0.235.3) (2025-07-22)
 
 ### Bug Fixes

@@ -237,11 +237,12 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		)
 	})))
 
-	// Request traffic shaping related middlewares
-	httpRouter.Use(rmiddleware.RequestSize(int64(s.routerTrafficConfig.MaxRequestBodyBytes)))
 	if s.routerTrafficConfig.DecompressionEnabled {
 		httpRouter.Use(rmiddleware.HandleCompression(s.logger))
 	}
+
+	// Request traffic shaping related middlewares, happens after decompression to prevent unbounded decompression attacks
+	httpRouter.Use(rmiddleware.RequestSize(int64(s.routerTrafficConfig.MaxRequestBodyBytes)))
 
 	httpRouter.Use(middleware.RequestID)
 	httpRouter.Use(middleware.RealIP)
@@ -283,7 +284,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	}
 
 	wrapper, err := gzhttp.NewWrapper(
-		gzhttp.MinSize(1024*4), // 4KB
+		gzhttp.MinSize(int(s.routerTrafficConfig.ResponseCompressionMinSize)),
 		gzhttp.CompressionLevel(gzip.DefaultCompression),
 		gzhttp.ContentTypes(CompressibleContentTypes),
 	)
