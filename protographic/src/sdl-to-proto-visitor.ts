@@ -1589,30 +1589,26 @@ Example:
       lines.push(...this.formatComment(`Wrapper message for a list of ${baseType.name}.`, 0));
     }
 
-    lines.push(`message ${wrapperName} {`);
-
     const formatIndent = (indent: number, content: string) => {
       return '  '.repeat(indent) + content;
     };
 
+    lines.push(`message ${wrapperName} {`);
+    let innerWrapperName = '';
     if (level > 1) {
-      // Nested structure for deep lists
-      const innerWrapperName = `${'ListOf'.repeat(level - 1)}${baseType.name}`;
-      lines.push(
-        formatIndent(1, `message List {`),
-        formatIndent(2, `repeated ${innerWrapperName} items = 1;`),
-        formatIndent(1, `}`),
-      );
-
-      // Wrapper types always use deterministic field numbers - 'list' field is always 1
-      lines.push(formatIndent(1, `List list = 1;`));
+      innerWrapperName = `${'ListOf'.repeat(level - 1)}${baseType.name}`;
     } else {
-      // Simple repeated field for level 1 - 'items' field is always 1
-      const protoType = this.getProtoTypeFromGraphQL(baseType, true);
-      lines.push(formatIndent(1, `repeated ${protoType.typeName} items = 1;`));
+      innerWrapperName = this.getProtoTypeFromGraphQL(baseType, true).typeName;
     }
 
-    lines.push('}', '');
+    lines.push(
+      formatIndent(1, `message List {`),
+      formatIndent(2, `repeated ${innerWrapperName} items = 1;`),
+      formatIndent(1, `}`),
+      formatIndent(1, `List list = 1;`),
+      formatIndent(0, `}`),
+    );
+
     return lines;
   }
 
