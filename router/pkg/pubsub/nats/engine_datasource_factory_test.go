@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/pubsubtest"
+	"go.uber.org/zap"
 )
 
 func TestNatsEngineDataSourceFactory(t *testing.T) {
@@ -168,6 +169,8 @@ func TestNatsEngineDataSourceFactoryWithStreamConfiguration(t *testing.T) {
 func TestEngineDataSourceFactory_RequestDataSource(t *testing.T) {
 	// Create mock adapter
 	mockAdapter := NewMockAdapter(t)
+	pubSubProvider := datasource.NewPubSubProvider("test-provider", "nats", mockAdapter, zap.NewNop())
+	provider := datasource.NewHookedProvider(pubSubProvider, []datasource.OnStreamEventsFn{}, []datasource.OnPublishEventsFn{})
 
 	// Configure mock expectations for Request
 	mockAdapter.On("Request", mock.Anything, mock.MatchedBy(func(event *PublishAndRequestEventConfiguration) bool {
@@ -185,7 +188,7 @@ func TestEngineDataSourceFactory_RequestDataSource(t *testing.T) {
 		eventType:   EventTypeRequest,
 		subjects:    []string{"test-subject"},
 		fieldName:   "testField",
-		NatsAdapter: mockAdapter,
+		NatsAdapter: provider,
 	}
 
 	// Get the data source

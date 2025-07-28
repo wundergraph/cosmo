@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+	"go.uber.org/zap"
 )
 
 func TestPublishAndRequestEventConfiguration_MarshalJSONTemplate(t *testing.T) {
@@ -296,10 +297,12 @@ func TestNatsRequestDataSource_Load(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockAdapter := NewMockAdapter(t)
+			pubSubProvider := datasource.NewPubSubProvider("test-provider", "nats", mockAdapter, zap.NewNop())
+			provider := datasource.NewHookedProvider(pubSubProvider, []datasource.OnStreamEventsFn{}, []datasource.OnPublishEventsFn{})
 			tt.mockSetup(mockAdapter)
 
 			dataSource := &NatsRequestDataSource{
-				pubSub: mockAdapter,
+				pubSub: provider,
 			}
 
 			ctx := context.Background()
