@@ -677,7 +677,7 @@
                   "type": "string",
                   "description": "The path to the log file. The path is used to specify the path to the log file."
                 },
-                "file_mode": {
+                "mode": {
                   "type": "string",
                   "description": "The file mode (permissions) for the log file as an octal string. Must be exactly 3 octal digits (0-7), optionally prefixed with '0' (e.g., '640', '0640', '755', '0755'). The default value is '0640'.",
                   "default": "0640",
@@ -1474,6 +1474,15 @@
               "type": "boolean",
               "description": "When enabled, the router will check incoming requests for a 'Content-Encoding' header and decompress the body accordingly. Currently only gzip is supported",
               "default": true
+            },
+            "response_compression_min_size": {
+              "type": "string",
+              "format": "bytes-string",
+              "description": "The minimum size of the response body in bytes to enable response compression. The size is specified as a string with a number and a unit, e.g. 4KiB, 10KB, 1MB",
+              "default": "4KiB",
+              "bytes": {
+                "minimum": "1B"
+              }
             }
           }
         },

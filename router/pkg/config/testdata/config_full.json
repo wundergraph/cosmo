@@ -334,7 +334,8 @@
     "Router": {
       "MaxRequestBodyBytes": 5000000,
       "MaxHeaderBytes": 4194304,
-      "DecompressionEnabled": false
+      "DecompressionEnabled": false,
+      "ResponseCompressionMinSize": 4096
     },
     "Subgraphs": {
       "products": {
@@ -389,7 +390,7 @@
       "File": {
         "Enabled": false,
         "Path": "access.log",
-        "FileMode": 416
+        "Mode": 416
       }
     },
     "Router": {
