@@ -19,16 +19,26 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ProjectsService_LookupEmployeeById_FullMethodName    = "/service.ProjectsService/LookupEmployeeById"
-	ProjectsService_LookupProductByUpc_FullMethodName    = "/service.ProjectsService/LookupProductByUpc"
-	ProjectsService_LookupProjectById_FullMethodName     = "/service.ProjectsService/LookupProjectById"
-	ProjectsService_MutationAddProject_FullMethodName    = "/service.ProjectsService/MutationAddProject"
-	ProjectsService_QueryKillService_FullMethodName      = "/service.ProjectsService/QueryKillService"
-	ProjectsService_QueryPanic_FullMethodName            = "/service.ProjectsService/QueryPanic"
-	ProjectsService_QueryProject_FullMethodName          = "/service.ProjectsService/QueryProject"
-	ProjectsService_QueryProjectStatuses_FullMethodName  = "/service.ProjectsService/QueryProjectStatuses"
-	ProjectsService_QueryProjects_FullMethodName         = "/service.ProjectsService/QueryProjects"
-	ProjectsService_QueryProjectsByStatus_FullMethodName = "/service.ProjectsService/QueryProjectsByStatus"
+	ProjectsService_LookupEmployeeById_FullMethodName          = "/service.ProjectsService/LookupEmployeeById"
+	ProjectsService_LookupMilestoneById_FullMethodName         = "/service.ProjectsService/LookupMilestoneById"
+	ProjectsService_LookupProductByUpc_FullMethodName          = "/service.ProjectsService/LookupProductByUpc"
+	ProjectsService_LookupProjectById_FullMethodName           = "/service.ProjectsService/LookupProjectById"
+	ProjectsService_LookupTaskById_FullMethodName              = "/service.ProjectsService/LookupTaskById"
+	ProjectsService_MutationAddMilestone_FullMethodName        = "/service.ProjectsService/MutationAddMilestone"
+	ProjectsService_MutationAddProject_FullMethodName          = "/service.ProjectsService/MutationAddProject"
+	ProjectsService_MutationAddTask_FullMethodName             = "/service.ProjectsService/MutationAddTask"
+	ProjectsService_MutationUpdateProjectStatus_FullMethodName = "/service.ProjectsService/MutationUpdateProjectStatus"
+	ProjectsService_QueryKillService_FullMethodName            = "/service.ProjectsService/QueryKillService"
+	ProjectsService_QueryMilestones_FullMethodName             = "/service.ProjectsService/QueryMilestones"
+	ProjectsService_QueryPanic_FullMethodName                  = "/service.ProjectsService/QueryPanic"
+	ProjectsService_QueryProject_FullMethodName                = "/service.ProjectsService/QueryProject"
+	ProjectsService_QueryProjectActivities_FullMethodName      = "/service.ProjectsService/QueryProjectActivities"
+	ProjectsService_QueryProjectResources_FullMethodName       = "/service.ProjectsService/QueryProjectResources"
+	ProjectsService_QueryProjectStatuses_FullMethodName        = "/service.ProjectsService/QueryProjectStatuses"
+	ProjectsService_QueryProjects_FullMethodName               = "/service.ProjectsService/QueryProjects"
+	ProjectsService_QueryProjectsByStatus_FullMethodName       = "/service.ProjectsService/QueryProjectsByStatus"
+	ProjectsService_QuerySearchProjects_FullMethodName         = "/service.ProjectsService/QuerySearchProjects"
+	ProjectsService_QueryTasks_FullMethodName                  = "/service.ProjectsService/QueryTasks"
 )
 
 // ProjectsServiceClient is the client API for ProjectsService service.
@@ -39,17 +49,29 @@ const (
 type ProjectsServiceClient interface {
 	// Lookup Employee entity by id
 	LookupEmployeeById(ctx context.Context, in *LookupEmployeeByIdRequest, opts ...grpc.CallOption) (*LookupEmployeeByIdResponse, error)
+	// Lookup Milestone entity by id
+	LookupMilestoneById(ctx context.Context, in *LookupMilestoneByIdRequest, opts ...grpc.CallOption) (*LookupMilestoneByIdResponse, error)
 	// Lookup Product entity by upc
 	LookupProductByUpc(ctx context.Context, in *LookupProductByUpcRequest, opts ...grpc.CallOption) (*LookupProductByUpcResponse, error)
 	// Lookup Project entity by id
 	LookupProjectById(ctx context.Context, in *LookupProjectByIdRequest, opts ...grpc.CallOption) (*LookupProjectByIdResponse, error)
+	// Lookup Task entity by id
+	LookupTaskById(ctx context.Context, in *LookupTaskByIdRequest, opts ...grpc.CallOption) (*LookupTaskByIdResponse, error)
+	MutationAddMilestone(ctx context.Context, in *MutationAddMilestoneRequest, opts ...grpc.CallOption) (*MutationAddMilestoneResponse, error)
 	MutationAddProject(ctx context.Context, in *MutationAddProjectRequest, opts ...grpc.CallOption) (*MutationAddProjectResponse, error)
+	MutationAddTask(ctx context.Context, in *MutationAddTaskRequest, opts ...grpc.CallOption) (*MutationAddTaskResponse, error)
+	MutationUpdateProjectStatus(ctx context.Context, in *MutationUpdateProjectStatusRequest, opts ...grpc.CallOption) (*MutationUpdateProjectStatusResponse, error)
 	QueryKillService(ctx context.Context, in *QueryKillServiceRequest, opts ...grpc.CallOption) (*QueryKillServiceResponse, error)
+	QueryMilestones(ctx context.Context, in *QueryMilestonesRequest, opts ...grpc.CallOption) (*QueryMilestonesResponse, error)
 	QueryPanic(ctx context.Context, in *QueryPanicRequest, opts ...grpc.CallOption) (*QueryPanicResponse, error)
 	QueryProject(ctx context.Context, in *QueryProjectRequest, opts ...grpc.CallOption) (*QueryProjectResponse, error)
+	QueryProjectActivities(ctx context.Context, in *QueryProjectActivitiesRequest, opts ...grpc.CallOption) (*QueryProjectActivitiesResponse, error)
+	QueryProjectResources(ctx context.Context, in *QueryProjectResourcesRequest, opts ...grpc.CallOption) (*QueryProjectResourcesResponse, error)
 	QueryProjectStatuses(ctx context.Context, in *QueryProjectStatusesRequest, opts ...grpc.CallOption) (*QueryProjectStatusesResponse, error)
 	QueryProjects(ctx context.Context, in *QueryProjectsRequest, opts ...grpc.CallOption) (*QueryProjectsResponse, error)
 	QueryProjectsByStatus(ctx context.Context, in *QueryProjectsByStatusRequest, opts ...grpc.CallOption) (*QueryProjectsByStatusResponse, error)
+	QuerySearchProjects(ctx context.Context, in *QuerySearchProjectsRequest, opts ...grpc.CallOption) (*QuerySearchProjectsResponse, error)
+	QueryTasks(ctx context.Context, in *QueryTasksRequest, opts ...grpc.CallOption) (*QueryTasksResponse, error)
 }
 
 type projectsServiceClient struct {
@@ -64,6 +86,16 @@ func (c *projectsServiceClient) LookupEmployeeById(ctx context.Context, in *Look
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(LookupEmployeeByIdResponse)
 	err := c.cc.Invoke(ctx, ProjectsService_LookupEmployeeById_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *projectsServiceClient) LookupMilestoneById(ctx context.Context, in *LookupMilestoneByIdRequest, opts ...grpc.CallOption) (*LookupMilestoneByIdResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(LookupMilestoneByIdResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_LookupMilestoneById_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -90,6 +122,26 @@ func (c *projectsServiceClient) LookupProjectById(ctx context.Context, in *Looku
 	return out, nil
 }
 
+func (c *projectsServiceClient) LookupTaskById(ctx context.Context, in *LookupTaskByIdRequest, opts ...grpc.CallOption) (*LookupTaskByIdResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(LookupTaskByIdResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_LookupTaskById_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *projectsServiceClient) MutationAddMilestone(ctx context.Context, in *MutationAddMilestoneRequest, opts ...grpc.CallOption) (*MutationAddMilestoneResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MutationAddMilestoneResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_MutationAddMilestone_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *projectsServiceClient) MutationAddProject(ctx context.Context, in *MutationAddProjectRequest, opts ...grpc.CallOption) (*MutationAddProjectResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(MutationAddProjectResponse)
@@ -100,10 +152,40 @@ func (c *projectsServiceClient) MutationAddProject(ctx context.Context, in *Muta
 	return out, nil
 }
 
+func (c *projectsServiceClient) MutationAddTask(ctx context.Context, in *MutationAddTaskRequest, opts ...grpc.CallOption) (*MutationAddTaskResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MutationAddTaskResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_MutationAddTask_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *projectsServiceClient) MutationUpdateProjectStatus(ctx context.Context, in *MutationUpdateProjectStatusRequest, opts ...grpc.CallOption) (*MutationUpdateProjectStatusResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MutationUpdateProjectStatusResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_MutationUpdateProjectStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *projectsServiceClient) QueryKillService(ctx context.Context, in *QueryKillServiceRequest, opts ...grpc.CallOption) (*QueryKillServiceResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(QueryKillServiceResponse)
 	err := c.cc.Invoke(ctx, ProjectsService_QueryKillService_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *projectsServiceClient) QueryMilestones(ctx context.Context, in *QueryMilestonesRequest, opts ...grpc.CallOption) (*QueryMilestonesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryMilestonesResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_QueryMilestones_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -124,6 +206,26 @@ func (c *projectsServiceClient) QueryProject(ctx context.Context, in *QueryProje
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(QueryProjectResponse)
 	err := c.cc.Invoke(ctx, ProjectsService_QueryProject_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *projectsServiceClient) QueryProjectActivities(ctx context.Context, in *QueryProjectActivitiesRequest, opts ...grpc.CallOption) (*QueryProjectActivitiesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryProjectActivitiesResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_QueryProjectActivities_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *projectsServiceClient) QueryProjectResources(ctx context.Context, in *QueryProjectResourcesRequest, opts ...grpc.CallOption) (*QueryProjectResourcesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryProjectResourcesResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_QueryProjectResources_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -160,6 +262,26 @@ func (c *projectsServiceClient) QueryProjectsByStatus(ctx context.Context, in *Q
 	return out, nil
 }
 
+func (c *projectsServiceClient) QuerySearchProjects(ctx context.Context, in *QuerySearchProjectsRequest, opts ...grpc.CallOption) (*QuerySearchProjectsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QuerySearchProjectsResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_QuerySearchProjects_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *projectsServiceClient) QueryTasks(ctx context.Context, in *QueryTasksRequest, opts ...grpc.CallOption) (*QueryTasksResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryTasksResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_QueryTasks_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ProjectsServiceServer is the server API for ProjectsService service.
 // All implementations must embed UnimplementedProjectsServiceServer
 // for forward compatibility.
@@ -168,17 +290,29 @@ func (c *projectsServiceClient) QueryProjectsByStatus(ctx context.Context, in *Q
 type ProjectsServiceServer interface {
 	// Lookup Employee entity by id
 	LookupEmployeeById(context.Context, *LookupEmployeeByIdRequest) (*LookupEmployeeByIdResponse, error)
+	// Lookup Milestone entity by id
+	LookupMilestoneById(context.Context, *LookupMilestoneByIdRequest) (*LookupMilestoneByIdResponse, error)
 	// Lookup Product entity by upc
 	LookupProductByUpc(context.Context, *LookupProductByUpcRequest) (*LookupProductByUpcResponse, error)
 	// Lookup Project entity by id
 	LookupProjectById(context.Context, *LookupProjectByIdRequest) (*LookupProjectByIdResponse, error)
+	// Lookup Task entity by id
+	LookupTaskById(context.Context, *LookupTaskByIdRequest) (*LookupTaskByIdResponse, error)
+	MutationAddMilestone(context.Context, *MutationAddMilestoneRequest) (*MutationAddMilestoneResponse, error)
 	MutationAddProject(context.Context, *MutationAddProjectRequest) (*MutationAddProjectResponse, error)
+	MutationAddTask(context.Context, *MutationAddTaskRequest) (*MutationAddTaskResponse, error)
+	MutationUpdateProjectStatus(context.Context, *MutationUpdateProjectStatusRequest) (*MutationUpdateProjectStatusResponse, error)
 	QueryKillService(context.Context, *QueryKillServiceRequest) (*QueryKillServiceResponse, error)
+	QueryMilestones(context.Context, *QueryMilestonesRequest) (*QueryMilestonesResponse, error)
 	QueryPanic(context.Context, *QueryPanicRequest) (*QueryPanicResponse, error)
 	QueryProject(context.Context, *QueryProjectRequest) (*QueryProjectResponse, error)
+	QueryProjectActivities(context.Context, *QueryProjectActivitiesRequest) (*QueryProjectActivitiesResponse, error)
+	QueryProjectResources(context.Context, *QueryProjectResourcesRequest) (*QueryProjectResourcesResponse, error)
 	QueryProjectStatuses(context.Context, *QueryProjectStatusesRequest) (*QueryProjectStatusesResponse, error)
 	QueryProjects(context.Context, *QueryProjectsRequest) (*QueryProjectsResponse, error)
 	QueryProjectsByStatus(context.Context, *QueryProjectsByStatusRequest) (*QueryProjectsByStatusResponse, error)
+	QuerySearchProjects(context.Context, *QuerySearchProjectsRequest) (*QuerySearchProjectsResponse, error)
+	QueryTasks(context.Context, *QueryTasksRequest) (*QueryTasksResponse, error)
 	mustEmbedUnimplementedProjectsServiceServer()
 }
 
@@ -192,23 +326,47 @@ type UnimplementedProjectsServiceServer struct{}
 func (UnimplementedProjectsServiceServer) LookupEmployeeById(context.Context, *LookupEmployeeByIdRequest) (*LookupEmployeeByIdResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method LookupEmployeeById not implemented")
 }
+func (UnimplementedProjectsServiceServer) LookupMilestoneById(context.Context, *LookupMilestoneByIdRequest) (*LookupMilestoneByIdResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method LookupMilestoneById not implemented")
+}
 func (UnimplementedProjectsServiceServer) LookupProductByUpc(context.Context, *LookupProductByUpcRequest) (*LookupProductByUpcResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method LookupProductByUpc not implemented")
 }
 func (UnimplementedProjectsServiceServer) LookupProjectById(context.Context, *LookupProjectByIdRequest) (*LookupProjectByIdResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method LookupProjectById not implemented")
 }
+func (UnimplementedProjectsServiceServer) LookupTaskById(context.Context, *LookupTaskByIdRequest) (*LookupTaskByIdResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method LookupTaskById not implemented")
+}
+func (UnimplementedProjectsServiceServer) MutationAddMilestone(context.Context, *MutationAddMilestoneRequest) (*MutationAddMilestoneResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method MutationAddMilestone not implemented")
+}
 func (UnimplementedProjectsServiceServer) MutationAddProject(context.Context, *MutationAddProjectRequest) (*MutationAddProjectResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method MutationAddProject not implemented")
 }
+func (UnimplementedProjectsServiceServer) MutationAddTask(context.Context, *MutationAddTaskRequest) (*MutationAddTaskResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method MutationAddTask not implemented")
+}
+func (UnimplementedProjectsServiceServer) MutationUpdateProjectStatus(context.Context, *MutationUpdateProjectStatusRequest) (*MutationUpdateProjectStatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method MutationUpdateProjectStatus not implemented")
+}
 func (UnimplementedProjectsServiceServer) QueryKillService(context.Context, *QueryKillServiceRequest) (*QueryKillServiceResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method QueryKillService not implemented")
+}
+func (UnimplementedProjectsServiceServer) QueryMilestones(context.Context, *QueryMilestonesRequest) (*QueryMilestonesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method QueryMilestones not implemented")
 }
 func (UnimplementedProjectsServiceServer) QueryPanic(context.Context, *QueryPanicRequest) (*QueryPanicResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method QueryPanic not implemented")
 }
 func (UnimplementedProjectsServiceServer) QueryProject(context.Context, *QueryProjectRequest) (*QueryProjectResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method QueryProject not implemented")
+}
+func (UnimplementedProjectsServiceServer) QueryProjectActivities(context.Context, *QueryProjectActivitiesRequest) (*QueryProjectActivitiesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method QueryProjectActivities not implemented")
+}
+func (UnimplementedProjectsServiceServer) QueryProjectResources(context.Context, *QueryProjectResourcesRequest) (*QueryProjectResourcesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method QueryProjectResources not implemented")
 }
 func (UnimplementedProjectsServiceServer) QueryProjectStatuses(context.Context, *QueryProjectStatusesRequest) (*QueryProjectStatusesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method QueryProjectStatuses not implemented")
@@ -218,6 +376,12 @@ func (UnimplementedProjectsServiceServer) QueryProjects(context.Context, *QueryP
 }
 func (UnimplementedProjectsServiceServer) QueryProjectsByStatus(context.Context, *QueryProjectsByStatusRequest) (*QueryProjectsByStatusResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method QueryProjectsByStatus not implemented")
+}
+func (UnimplementedProjectsServiceServer) QuerySearchProjects(context.Context, *QuerySearchProjectsRequest) (*QuerySearchProjectsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method QuerySearchProjects not implemented")
+}
+func (UnimplementedProjectsServiceServer) QueryTasks(context.Context, *QueryTasksRequest) (*QueryTasksResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method QueryTasks not implemented")
 }
 func (UnimplementedProjectsServiceServer) mustEmbedUnimplementedProjectsServiceServer() {}
 func (UnimplementedProjectsServiceServer) testEmbeddedByValue()                         {}
@@ -258,6 +422,24 @@ func _ProjectsService_LookupEmployeeById_Handler(srv interface{}, ctx context.Co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ProjectsService_LookupMilestoneById_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LookupMilestoneByIdRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).LookupMilestoneById(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_LookupMilestoneById_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).LookupMilestoneById(ctx, req.(*LookupMilestoneByIdRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _ProjectsService_LookupProductByUpc_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(LookupProductByUpcRequest)
 	if err := dec(in); err != nil {
@@ -294,6 +476,42 @@ func _ProjectsService_LookupProjectById_Handler(srv interface{}, ctx context.Con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ProjectsService_LookupTaskById_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LookupTaskByIdRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).LookupTaskById(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_LookupTaskById_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).LookupTaskById(ctx, req.(*LookupTaskByIdRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProjectsService_MutationAddMilestone_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MutationAddMilestoneRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).MutationAddMilestone(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_MutationAddMilestone_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).MutationAddMilestone(ctx, req.(*MutationAddMilestoneRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _ProjectsService_MutationAddProject_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(MutationAddProjectRequest)
 	if err := dec(in); err != nil {
@@ -312,6 +530,42 @@ func _ProjectsService_MutationAddProject_Handler(srv interface{}, ctx context.Co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ProjectsService_MutationAddTask_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MutationAddTaskRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).MutationAddTask(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_MutationAddTask_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).MutationAddTask(ctx, req.(*MutationAddTaskRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProjectsService_MutationUpdateProjectStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MutationUpdateProjectStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).MutationUpdateProjectStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_MutationUpdateProjectStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).MutationUpdateProjectStatus(ctx, req.(*MutationUpdateProjectStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _ProjectsService_QueryKillService_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(QueryKillServiceRequest)
 	if err := dec(in); err != nil {
@@ -326,6 +580,24 @@ func _ProjectsService_QueryKillService_Handler(srv interface{}, ctx context.Cont
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ProjectsServiceServer).QueryKillService(ctx, req.(*QueryKillServiceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProjectsService_QueryMilestones_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryMilestonesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).QueryMilestones(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_QueryMilestones_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).QueryMilestones(ctx, req.(*QueryMilestonesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -362,6 +634,42 @@ func _ProjectsService_QueryProject_Handler(srv interface{}, ctx context.Context,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ProjectsServiceServer).QueryProject(ctx, req.(*QueryProjectRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProjectsService_QueryProjectActivities_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryProjectActivitiesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).QueryProjectActivities(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_QueryProjectActivities_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).QueryProjectActivities(ctx, req.(*QueryProjectActivitiesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProjectsService_QueryProjectResources_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryProjectResourcesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).QueryProjectResources(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_QueryProjectResources_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).QueryProjectResources(ctx, req.(*QueryProjectResourcesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -420,6 +728,42 @@ func _ProjectsService_QueryProjectsByStatus_Handler(srv interface{}, ctx context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ProjectsService_QuerySearchProjects_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QuerySearchProjectsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).QuerySearchProjects(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_QuerySearchProjects_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).QuerySearchProjects(ctx, req.(*QuerySearchProjectsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProjectsService_QueryTasks_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryTasksRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).QueryTasks(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_QueryTasks_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).QueryTasks(ctx, req.(*QueryTasksRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ProjectsService_ServiceDesc is the grpc.ServiceDesc for ProjectsService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -432,6 +776,10 @@ var ProjectsService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _ProjectsService_LookupEmployeeById_Handler,
 		},
 		{
+			MethodName: "LookupMilestoneById",
+			Handler:    _ProjectsService_LookupMilestoneById_Handler,
+		},
+		{
 			MethodName: "LookupProductByUpc",
 			Handler:    _ProjectsService_LookupProductByUpc_Handler,
 		},
@@ -440,12 +788,32 @@ var ProjectsService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _ProjectsService_LookupProjectById_Handler,
 		},
 		{
+			MethodName: "LookupTaskById",
+			Handler:    _ProjectsService_LookupTaskById_Handler,
+		},
+		{
+			MethodName: "MutationAddMilestone",
+			Handler:    _ProjectsService_MutationAddMilestone_Handler,
+		},
+		{
 			MethodName: "MutationAddProject",
 			Handler:    _ProjectsService_MutationAddProject_Handler,
 		},
 		{
+			MethodName: "MutationAddTask",
+			Handler:    _ProjectsService_MutationAddTask_Handler,
+		},
+		{
+			MethodName: "MutationUpdateProjectStatus",
+			Handler:    _ProjectsService_MutationUpdateProjectStatus_Handler,
+		},
+		{
 			MethodName: "QueryKillService",
 			Handler:    _ProjectsService_QueryKillService_Handler,
+		},
+		{
+			MethodName: "QueryMilestones",
+			Handler:    _ProjectsService_QueryMilestones_Handler,
 		},
 		{
 			MethodName: "QueryPanic",
@@ -454,6 +822,14 @@ var ProjectsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "QueryProject",
 			Handler:    _ProjectsService_QueryProject_Handler,
+		},
+		{
+			MethodName: "QueryProjectActivities",
+			Handler:    _ProjectsService_QueryProjectActivities_Handler,
+		},
+		{
+			MethodName: "QueryProjectResources",
+			Handler:    _ProjectsService_QueryProjectResources_Handler,
 		},
 		{
 			MethodName: "QueryProjectStatuses",
@@ -466,6 +842,14 @@ var ProjectsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "QueryProjectsByStatus",
 			Handler:    _ProjectsService_QueryProjectsByStatus_Handler,
+		},
+		{
+			MethodName: "QuerySearchProjects",
+			Handler:    _ProjectsService_QuerySearchProjects_Handler,
+		},
+		{
+			MethodName: "QueryTasks",
+			Handler:    _ProjectsService_QueryTasks_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

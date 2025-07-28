@@ -334,7 +334,8 @@
     "Router": {
       "MaxRequestBodyBytes": 5000000,
       "MaxHeaderBytes": 4194304,
-      "DecompressionEnabled": false
+      "DecompressionEnabled": false,
+      "ResponseCompressionMinSize": 4096
     },
     "Subgraphs": {
       "products": {
@@ -388,7 +389,8 @@
       },
       "File": {
         "Enabled": false,
-        "Path": "access.log"
+        "Path": "access.log",
+        "Mode": 416
       }
     },
     "Router": {
@@ -466,20 +468,29 @@
           "Algorithms": [
             "RS256"
           ],
-          "RefreshInterval": 60000000000
+          "RefreshInterval": 60000000000,
+          "Secret": "",
+          "Algorithm": "",
+          "KeyId": ""
         },
         {
           "URL": "https://example.com/.well-known/jwks2.json",
           "Algorithms": [
             "RS256",
-            "HS256"
+            "ES256"
           ],
-          "RefreshInterval": 120000000000
+          "RefreshInterval": 120000000000,
+          "Secret": "",
+          "Algorithm": "",
+          "KeyId": ""
         },
         {
           "URL": "https://example.com/.well-known/jwks3.json",
           "Algorithms": null,
-          "RefreshInterval": 0
+          "RefreshInterval": 0,
+          "Secret": "",
+          "Algorithm": "",
+          "KeyId": ""
         }
       ],
       "HeaderName": "Authorization",
@@ -656,7 +667,11 @@
         "IgnorePersistedOperations": true
       }
     },
-    "DepthLimit": null
+    "DepthLimit": null,
+    "ParserLimits": {
+      "ApproximateDepthLimit": 100,
+      "TotalFieldsLimit": 500
+    }
   },
   "EngineExecutionConfiguration": {
     "Debug": {
@@ -747,14 +762,16 @@
   "SubgraphErrorPropagation": {
     "Enabled": true,
     "PropagateStatusCodes": false,
-    "Mode": "wrapped",
+    "Mode": "pass-through",
     "RewritePaths": true,
     "OmitLocations": true,
-    "OmitExtensions": false,
+    "OmitExtensions": true,
     "AttachServiceName": true,
     "DefaultExtensionCode": "DOWNSTREAM_SERVICE_ERROR",
+    "AllowAllExtensionFields": true,
     "AllowedExtensionFields": [
-      "code"
+      "field1",
+      "field2"
     ],
     "AllowedFields": null
   },

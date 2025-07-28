@@ -245,7 +245,7 @@ const ClientOperations = () => {
               <a
                 target="_blank"
                 rel="noreferrer"
-                href={docsBaseURL + "/router/persisted-operations"}
+                href={docsBaseURL + "/router/persisted-queries/persisted-operations"}
                 className="text-primary"
               >
                 Learn more.
@@ -645,7 +645,7 @@ const ClientsPage: NextPageWithLayout = () => {
               <a
                 target="_blank"
                 rel="noreferrer"
-                href={docsBaseURL + "/router/persisted-operations"}
+                href={docsBaseURL + "/router/persisted-queries/persisted-operations"}
                 className="text-primary"
               >
                 Learn more.
@@ -661,7 +661,7 @@ const ClientsPage: NextPageWithLayout = () => {
               Create and view clients to which you can publish persisted
               operations.{" "}
               <Link
-                href={docsBaseURL + "/router/persisted-operations"}
+                href={docsBaseURL + "/router/persisted-queries/persisted-operations"}
                 className="text-primary"
                 target="_blank"
                 rel="noreferrer"

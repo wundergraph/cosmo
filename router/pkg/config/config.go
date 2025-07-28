@@ -181,6 +181,8 @@ type RouterTrafficConfiguration struct {
 	MaxHeaderBytes BytesString `yaml:"max_header_bytes" envDefault:"0MiB" env:"MAX_HEADER_BYTES"`
 	// DecompressionEnabled is the configuration for request compression
 	DecompressionEnabled bool `yaml:"decompression_enabled" envDefault:"true"`
+	// ResponseCompressionMinSize is the minimum size of the response body in bytes to enable response compression
+	ResponseCompressionMinSize BytesString `yaml:"response_compression_min_size" envDefault:"4KiB" env:"RESPONSE_COMPRESSION_MIN_SIZE"`
 }
 
 type GlobalSubgraphRequestRule struct {
@@ -405,6 +407,12 @@ type SecurityConfiguration struct {
 	ComplexityCalculationCache  *ComplexityCalculationCache `yaml:"complexity_calculation_cache"`
 	ComplexityLimits            *ComplexityLimits           `yaml:"complexity_limits"`
 	DepthLimit                  *QueryDepthConfiguration    `yaml:"depth_limit"`
+	ParserLimits                ParserLimitsConfiguration   `yaml:"parser_limits"`
+}
+
+type ParserLimitsConfiguration struct {
+	ApproximateDepthLimit int `yaml:"approximate_depth_limit,omitempty" envDefault:"100"` // 0 means disabled
+	TotalFieldsLimit      int `yaml:"total_fields_limit,omitempty" envDefault:"500"`      // 0 means disabled
 }
 
 type QueryDepthConfiguration struct {
@@ -455,6 +463,12 @@ type JWKSConfiguration struct {
 	URL             string        `yaml:"url"`
 	Algorithms      []string      `yaml:"algorithms"`
 	RefreshInterval time.Duration `yaml:"refresh_interval" envDefault:"1m"`
+
+	// For secret based where we need to create a jwk  entry with
+	// a key id and algorithm
+	Secret    string `yaml:"secret"`
+	Algorithm string `yaml:"algorithm"`
+	KeyId     string `yaml:"key_id"`
 }
 
 type HeaderSource struct {
@@ -724,16 +738,17 @@ const (
 )
 
 type SubgraphErrorPropagationConfiguration struct {
-	Enabled                bool                         `yaml:"enabled" envDefault:"true" env:"SUBGRAPH_ERROR_PROPAGATION_ENABLED"`
-	PropagateStatusCodes   bool                         `yaml:"propagate_status_codes" envDefault:"false" env:"SUBGRAPH_ERROR_PROPAGATION_STATUS_CODES"`
-	Mode                   SubgraphErrorPropagationMode `yaml:"mode" envDefault:"wrapped" env:"SUBGRAPH_ERROR_PROPAGATION_MODE"`
-	RewritePaths           bool                         `yaml:"rewrite_paths" envDefault:"true" env:"SUBGRAPH_ERROR_PROPAGATION_REWRITE_PATHS"`
-	OmitLocations          bool                         `yaml:"omit_locations" envDefault:"true" env:"SUBGRAPH_ERROR_PROPAGATION_OMIT_LOCATIONS"`
-	OmitExtensions         bool                         `yaml:"omit_extensions" envDefault:"false" env:"SUBGRAPH_ERROR_PROPAGATION_OMIT_EXTENSIONS"`
-	AttachServiceName      bool                         `yaml:"attach_service_name" envDefault:"true" env:"SUBGRAPH_ERROR_PROPAGATION_ATTACH_SERVICE_NAME"`
-	DefaultExtensionCode   string                       `yaml:"default_extension_code" envDefault:"DOWNSTREAM_SERVICE_ERROR" env:"SUBGRAPH_ERROR_PROPAGATION_DEFAULT_EXTENSION_CODE"`
-	AllowedExtensionFields []string                     `yaml:"allowed_extension_fields" envDefault:"code" env:"SUBGRAPH_ERROR_PROPAGATION_ALLOWED_EXTENSION_FIELDS"`
-	AllowedFields          []string                     `yaml:"allowed_fields" env:"SUBGRAPH_ERROR_PROPAGATION_ALLOWED_FIELDS"`
+	Enabled                 bool                         `yaml:"enabled" envDefault:"true" env:"ENABLED"`
+	PropagateStatusCodes    bool                         `yaml:"propagate_status_codes" envDefault:"false" env:"STATUS_CODES"`
+	Mode                    SubgraphErrorPropagationMode `yaml:"mode" envDefault:"wrapped" env:"MODE"`
+	RewritePaths            bool                         `yaml:"rewrite_paths" envDefault:"true" env:"REWRITE_PATHS"`
+	OmitLocations           bool                         `yaml:"omit_locations" envDefault:"true" env:"OMIT_LOCATIONS"`
+	OmitExtensions          bool                         `yaml:"omit_extensions" envDefault:"false" env:"OMIT_EXTENSIONS"`
+	AttachServiceName       bool                         `yaml:"attach_service_name" envDefault:"true" env:"ATTACH_SERVICE_NAME"`
+	DefaultExtensionCode    string                       `yaml:"default_extension_code" envDefault:"DOWNSTREAM_SERVICE_ERROR" env:"DEFAULT_EXTENSION_CODE"`
+	AllowAllExtensionFields bool                         `yaml:"allow_all_extension_fields" envDefault:"false" env:"ALLOW_ALL_EXTENSION_FIELDS"`
+	AllowedExtensionFields  []string                     `yaml:"allowed_extension_fields" envDefault:"code" env:"ALLOWED_EXTENSION_FIELDS"`
+	AllowedFields           []string                     `yaml:"allowed_fields" env:"ALLOWED_FIELDS"`
 }
 
 type StorageProviders struct {
@@ -866,8 +881,9 @@ type AccessLogsStdOutOutputConfig struct {
 }
 
 type AccessLogsFileOutputConfig struct {
-	Enabled bool   `yaml:"enabled" env:"ACCESS_LOGS_OUTPUT_FILE_ENABLED" envDefault:"false"`
-	Path    string `yaml:"path" env:"ACCESS_LOGS_FILE_OUTPUT_PATH" envDefault:"access.log"`
+	Enabled bool     `yaml:"enabled" env:"ACCESS_LOGS_OUTPUT_FILE_ENABLED" envDefault:"false"`
+	Path    string   `yaml:"path" env:"ACCESS_LOGS_FILE_OUTPUT_PATH" envDefault:"access.log"`
+	Mode    FileMode `yaml:"mode" env:"ACCESS_LOGS_FILE_OUTPUT_MODE" envDefault:"0640"`
 }
 
 type AccessLogsRouterConfig struct {
@@ -1009,7 +1025,7 @@ type Config struct {
 
 	WebSocket WebSocketConfiguration `yaml:"websocket,omitempty"`
 
-	SubgraphErrorPropagation SubgraphErrorPropagationConfiguration `yaml:"subgraph_error_propagation"`
+	SubgraphErrorPropagation SubgraphErrorPropagationConfiguration `yaml:"subgraph_error_propagation" envPrefix:"SUBGRAPH_ERROR_PROPAGATION_"`
 
 	StorageProviders               StorageProviders                `yaml:"storage_providers"`
 	ExecutionConfig                ExecutionConfig                 `yaml:"execution_config"`

@@ -16,7 +16,13 @@ import { DefaultNamespace, NamespaceRepository } from '../../repositories/Namesp
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getFederatedGraphRouterCompatibilityVersion, getLogger, handleError } from '../../util.js';
+import {
+  enrichLogger,
+  getFederatedGraphRouterCompatibilityVersion,
+  getLogger,
+  handleError,
+  newCompositionOptions,
+} from '../../util.js';
 
 export function fixSubgraphSchema(
   opts: RouterOptions,
@@ -32,7 +38,7 @@ export function fixSubgraphSchema(
     const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
     const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
     const contractRepo = new ContractRepository(logger, opts.db, authContext.organizationId);
-    const graphCompostionRepo = new GraphCompositionRepository(logger, opts.db);
+    const graphCompositionRepo = new GraphCompositionRepository(logger, opts.db);
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
     const composer = new Composer(
@@ -41,7 +47,7 @@ export function fixSubgraphSchema(
       fedGraphRepo,
       subgraphRepo,
       contractRepo,
-      graphCompostionRepo,
+      graphCompositionRepo,
       opts.chClient,
     );
 
@@ -162,11 +168,13 @@ export function fixSubgraphSchema(
       };
     }
 
+    // Disabling resolvability checks would producer fewer errors to try to fix.
     const result = await composer.composeWithProposedSDL(
       subgraph.labels,
       subgraph.name,
       subgraph.namespaceId,
       newSchemaSDL,
+      newCompositionOptions(req.disableResolvabilityValidation),
     );
 
     const compositionErrors: PlainMessage<CompositionError>[] = [];

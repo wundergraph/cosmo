@@ -14,8 +14,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/wundergraph/cosmo/router/internal/circuit"
-
 	"github.com/cespare/xxhash/v2"
 	"github.com/cloudflare/backoff"
 	"github.com/dgraph-io/ristretto/v2"
@@ -24,6 +22,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/klauspost/compress/gzhttp"
 	"github.com/klauspost/compress/gzip"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -35,6 +34,7 @@ import (
 
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/internal/circuit"
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	rjwt "github.com/wundergraph/cosmo/router/internal/jwt"
 	rmiddleware "github.com/wundergraph/cosmo/router/internal/middleware"
@@ -237,11 +237,12 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		)
 	})))
 
-	// Request traffic shaping related middlewares
-	httpRouter.Use(rmiddleware.RequestSize(int64(s.routerTrafficConfig.MaxRequestBodyBytes)))
 	if s.routerTrafficConfig.DecompressionEnabled {
 		httpRouter.Use(rmiddleware.HandleCompression(s.logger))
 	}
+
+	// Request traffic shaping related middlewares, happens after decompression to prevent unbounded decompression attacks
+	httpRouter.Use(rmiddleware.RequestSize(int64(s.routerTrafficConfig.MaxRequestBodyBytes)))
 
 	httpRouter.Use(middleware.RequestID)
 	httpRouter.Use(middleware.RealIP)
@@ -283,7 +284,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	}
 
 	wrapper, err := gzhttp.NewWrapper(
-		gzhttp.MinSize(1024*4), // 4KB
+		gzhttp.MinSize(int(s.routerTrafficConfig.ResponseCompressionMinSize)),
 		gzhttp.CompressionLevel(gzip.DefaultCompression),
 		gzhttp.ContentTypes(CompressibleContentTypes),
 	)
@@ -1190,21 +1191,26 @@ func (s *graphServer) buildGraphMux(
 	}
 
 	operationProcessor := NewOperationProcessor(OperationProcessorOptions{
-		Executor:                                         executor,
-		MaxOperationSizeInBytes:                          int64(s.routerTrafficConfig.MaxRequestBodyBytes),
-		PersistedOperationClient:                         s.persistedOperationClient,
-		AutomaticPersistedOperationCacheTtl:              s.automaticPersistedQueriesConfig.Cache.TTL,
-		EnablePersistedOperationsCache:                   s.engineExecutionConfiguration.EnablePersistedOperationsCache,
-		PersistedOpsNormalizationCache:                   gm.persistedOperationCache,
-		NormalizationCache:                               gm.normalizationCache,
-		ValidationCache:                                  gm.validationCache,
-		QueryDepthCache:                                  gm.complexityCalculationCache,
-		OperationHashCache:                               gm.operationHashCache,
-		ParseKitPoolSize:                                 s.engineExecutionConfiguration.ParseKitPoolSize,
-		IntrospectionEnabled:                             s.Config.introspection,
+		Executor:                            executor,
+		MaxOperationSizeInBytes:             int64(s.routerTrafficConfig.MaxRequestBodyBytes),
+		PersistedOperationClient:            s.persistedOperationClient,
+		AutomaticPersistedOperationCacheTtl: s.automaticPersistedQueriesConfig.Cache.TTL,
+		EnablePersistedOperationsCache:      s.engineExecutionConfiguration.EnablePersistedOperationsCache,
+		PersistedOpsNormalizationCache:      gm.persistedOperationCache,
+		NormalizationCache:                  gm.normalizationCache,
+		ValidationCache:                     gm.validationCache,
+		QueryDepthCache:                     gm.complexityCalculationCache,
+		OperationHashCache:                  gm.operationHashCache,
+		ParseKitPoolSize:                    s.engineExecutionConfiguration.ParseKitPoolSize,
+		IntrospectionEnabled:                s.Config.introspection,
+		ParserTokenizerLimits: astparser.TokenizerLimits{
+			MaxDepth:  s.Config.securityConfiguration.ParserLimits.ApproximateDepthLimit,
+			MaxFields: s.Config.securityConfiguration.ParserLimits.TotalFieldsLimit,
+		},
 		ApolloCompatibilityFlags:                         s.apolloCompatibilityFlags,
 		ApolloRouterCompatibilityFlags:                   s.apolloRouterCompatibilityFlags,
 		DisableExposingVariablesContentOnValidationError: s.engineExecutionConfiguration.DisableExposingVariablesContentOnValidationError,
+		ComplexityLimits:                                 s.securityConfiguration.ComplexityLimits,
 	})
 	operationPlanner := NewOperationPlanner(executor, gm.planCache)
 

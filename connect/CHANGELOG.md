@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.115.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.114.0...@wundergraph/cosmo-connect@0.115.0) (2025-07-21)
+
+### Features
+
+* add disable resolvability validation flag ([#2065](https://github.com/wundergraph/cosmo/issues/2065)) ([0c920cc](https://github.com/wundergraph/cosmo/commit/0c920cc95065099667fc378b50e9278e8a99c286)) (@Aenimus)
+
 # [0.114.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.113.0...@wundergraph/cosmo-connect@0.114.0) (2025-07-09)
 
 ### Features
