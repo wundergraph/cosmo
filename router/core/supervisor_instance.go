@@ -73,7 +73,7 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 		}
 
 		if cfg.AccessLogs.Output.File.Enabled {
-			f, err := logging.NewLogFile(cfg.AccessLogs.Output.File.Path)
+			f, err := logging.NewLogFile(cfg.AccessLogs.Output.File.Path, os.FileMode(cfg.AccessLogs.Output.File.Mode))
 			if err != nil {
 				return nil, fmt.Errorf("could not create log file: %w", err)
 			}
@@ -255,6 +255,10 @@ func setupAuthenticators(ctx context.Context, logger *zap.Logger, cfg *config.Co
 			URL:               jwks.URL,
 			RefreshInterval:   jwks.RefreshInterval,
 			AllowedAlgorithms: jwks.Algorithms,
+
+			Secret:    jwks.Secret,
+			Algorithm: jwks.Algorithm,
+			KeyId:     jwks.KeyId,
 		})
 	}
 

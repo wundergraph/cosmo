@@ -3,6 +3,7 @@ package trace
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"net/url"
 
@@ -162,12 +163,14 @@ func NewTracerProvider(ctx context.Context, config *ProviderConfig) (*sdktrace.T
 
 		var rFunc redact.RedactFunc
 
-		if config.IPAnonymization.Method == Hash {
+		switch config.IPAnonymization.Method {
+		case Hash:
 			rFunc = func(key attribute.KeyValue) string {
 				h := sha256.New()
-				return string(h.Sum([]byte(key.Value.AsString())))
+				h.Write([]byte(key.Value.AsString()))
+				return hex.EncodeToString(h.Sum(nil))
 			}
-		} else if config.IPAnonymization.Method == Redact {
+		case Redact:
 			rFunc = func(key attribute.KeyValue) string {
 				return "[REDACTED]"
 			}

@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.43.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.42.2...@wundergraph/composition@0.43.0) (2025-07-21)
+
+### Features
+
+* add disable resolvability validation flag ([#2065](https://github.com/wundergraph/cosmo/issues/2065)) ([0c920cc](https://github.com/wundergraph/cosmo/commit/0c920cc95065099667fc378b50e9278e8a99c286)) (@Aenimus)
+
 ## [0.42.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.42.1...@wundergraph/composition@0.42.2) (2025-07-03)
 
 **Note:** Version bump only for package @wundergraph/composition

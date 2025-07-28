@@ -140,12 +140,17 @@ describe('SDL to Proto - Basic Types', () => {
         rpc QueryStringList(QueryStringListRequest) returns (QueryStringListResponse) {}
       }
 
+      // Wrapper message for a list of String.
+      message ListOfString {
+        repeated string items = 1;
+      }
+
       // Request message for stringList operation.
       message QueryStringListRequest {
       }
       // Response message for stringList operation.
       message QueryStringListResponse {
-        repeated string string_list = 1;
+        ListOfString string_list = 1;
       }
       // Request message for intList operation.
       message QueryIntListRequest {
@@ -240,6 +245,11 @@ describe('SDL to Proto - Basic Types', () => {
         rpc QueryUser(QueryUserRequest) returns (QueryUserResponse) {}
       }
 
+      // Wrapper message for a list of User.
+      message ListOfUser {
+        repeated User items = 1;
+      }
+
       // Request message for user operation.
       message QueryUserRequest {
         string id = 1;
@@ -256,7 +266,7 @@ describe('SDL to Proto - Basic Types', () => {
       }
       // Response message for filteredUsers operation.
       message QueryFilteredUsersResponse {
-        repeated User filtered_users = 1;
+        ListOfUser filtered_users = 1;
       }
 
       message User {
@@ -371,7 +381,7 @@ describe('SDL to Proto - Basic Types', () => {
       
       type Query {
         categoriesByKinds(kinds: [CategoryKind!]!): [Category!]!
-        filterItems(ids: [ID!], tags: [String]): [String]
+        filterItems(ids: [ID!]!, tags: [String]!): [String!]!
       }
     `;
 
@@ -467,18 +477,47 @@ describe('SDL to Proto - Basic Types', () => {
       }
 
       // Wrapper message for a list of Float.
-      message FloatList {
-        repeated double result = 1;
+      message ListOfFloat {
+        repeated double items = 1;
       }
 
       // Wrapper message for a list of Int.
-      message IntList {
-        repeated int32 result = 1;
+      message ListOfInt {
+        repeated int32 items = 1;
+      }
+
+      // Wrapper message for a list of Float.
+      message ListOfListOfFloat {
+        message List {
+          repeated ListOfFloat items = 1;
+        }
+        List list = 1;
+      }
+
+      // Wrapper message for a list of Int.
+      message ListOfListOfInt {
+        message List {
+          repeated ListOfInt items = 1;
+        }
+        List list = 1;
       }
 
       // Wrapper message for a list of Point.
-      message PointList {
-        repeated Point result = 1;
+      message ListOfListOfPoint {
+        message List {
+          repeated ListOfPoint items = 1;
+        }
+        List list = 1;
+      }
+
+      // Wrapper message for a list of Point.
+      message ListOfPoint {
+        repeated Point items = 1;
+      }
+
+      // Wrapper message for a list of String.
+      message ListOfString {
+        repeated string items = 1;
       }
 
       // Request message for getMatrix operation.
@@ -490,23 +529,23 @@ describe('SDL to Proto - Basic Types', () => {
       }
       // Request message for processMatrix operation.
       message QueryProcessMatrixRequest {
-        repeated FloatList matrix = 1;
+        ListOfListOfFloat matrix = 1;
       }
       // Response message for processMatrix operation.
       message QueryProcessMatrixResponse {
-        repeated IntList process_matrix = 1;
+        ListOfListOfInt process_matrix = 1;
       }
       // Request message for transformData operation.
       message QueryTransformDataRequest {
-        repeated PointList points = 1;
+        ListOfListOfPoint points = 1;
       }
       // Response message for transformData operation.
       message QueryTransformDataResponse {
-        repeated string transform_data = 1;
+        ListOfString transform_data = 1;
       }
 
       message Matrix {
-        repeated IntList values = 1;
+        ListOfListOfInt values = 1;
         repeated string labels = 2;
       }
 
@@ -662,6 +701,16 @@ describe('SDL to Proto - Basic Types', () => {
         rpc QueryUser(QueryUserRequest) returns (QueryUserResponse) {}
       }
 
+      // Wrapper message for a list of TreeNode.
+      message ListOfTreeNode {
+        repeated TreeNode items = 1;
+      }
+
+      // Wrapper message for a list of User.
+      message ListOfUser {
+        repeated User items = 1;
+      }
+
       // Request message for user operation.
       message QueryUserRequest {
         string id = 1;
@@ -702,7 +751,7 @@ describe('SDL to Proto - Basic Types', () => {
         string name = 2;
         google.protobuf.StringValue email = 3;
         UserProfile profile = 4;
-        repeated User friends = 5;
+        ListOfUser friends = 5;
       }
 
       message TreeNode {
@@ -710,7 +759,7 @@ describe('SDL to Proto - Basic Types', () => {
         google.protobuf.StringValue value = 2;
         google.protobuf.DoubleValue weight = 3;
         bool is_leaf = 4;
-        repeated TreeNode children = 5;
+        ListOfTreeNode children = 5;
         TreeNode parent = 6;
       }
 

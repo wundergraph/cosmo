@@ -181,6 +181,8 @@ type RouterTrafficConfiguration struct {
 	MaxHeaderBytes BytesString `yaml:"max_header_bytes" envDefault:"0MiB" env:"MAX_HEADER_BYTES"`
 	// DecompressionEnabled is the configuration for request compression
 	DecompressionEnabled bool `yaml:"decompression_enabled" envDefault:"true"`
+	// ResponseCompressionMinSize is the minimum size of the response body in bytes to enable response compression
+	ResponseCompressionMinSize BytesString `yaml:"response_compression_min_size" envDefault:"4KiB" env:"RESPONSE_COMPRESSION_MIN_SIZE"`
 }
 
 type GlobalSubgraphRequestRule struct {
@@ -405,6 +407,12 @@ type SecurityConfiguration struct {
 	ComplexityCalculationCache  *ComplexityCalculationCache `yaml:"complexity_calculation_cache"`
 	ComplexityLimits            *ComplexityLimits           `yaml:"complexity_limits"`
 	DepthLimit                  *QueryDepthConfiguration    `yaml:"depth_limit"`
+	ParserLimits                ParserLimitsConfiguration   `yaml:"parser_limits"`
+}
+
+type ParserLimitsConfiguration struct {
+	ApproximateDepthLimit int `yaml:"approximate_depth_limit,omitempty" envDefault:"100"` // 0 means disabled
+	TotalFieldsLimit      int `yaml:"total_fields_limit,omitempty" envDefault:"500"`      // 0 means disabled
 }
 
 type QueryDepthConfiguration struct {
@@ -455,6 +463,12 @@ type JWKSConfiguration struct {
 	URL             string        `yaml:"url"`
 	Algorithms      []string      `yaml:"algorithms"`
 	RefreshInterval time.Duration `yaml:"refresh_interval" envDefault:"1m"`
+
+	// For secret based where we need to create a jwk  entry with
+	// a key id and algorithm
+	Secret    string `yaml:"secret"`
+	Algorithm string `yaml:"algorithm"`
+	KeyId     string `yaml:"key_id"`
 }
 
 type HeaderSource struct {
@@ -867,8 +881,9 @@ type AccessLogsStdOutOutputConfig struct {
 }
 
 type AccessLogsFileOutputConfig struct {
-	Enabled bool   `yaml:"enabled" env:"ACCESS_LOGS_OUTPUT_FILE_ENABLED" envDefault:"false"`
-	Path    string `yaml:"path" env:"ACCESS_LOGS_FILE_OUTPUT_PATH" envDefault:"access.log"`
+	Enabled bool     `yaml:"enabled" env:"ACCESS_LOGS_OUTPUT_FILE_ENABLED" envDefault:"false"`
+	Path    string   `yaml:"path" env:"ACCESS_LOGS_FILE_OUTPUT_PATH" envDefault:"access.log"`
+	Mode    FileMode `yaml:"mode" env:"ACCESS_LOGS_FILE_OUTPUT_MODE" envDefault:"0640"`
 }
 
 type AccessLogsRouterConfig struct {
