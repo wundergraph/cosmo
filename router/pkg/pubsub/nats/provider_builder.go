@@ -20,7 +20,6 @@ type ProviderBuilder struct {
 	logger           *zap.Logger
 	hostName         string
 	routerListenAddr string
-	adapters         map[string]Adapter
 }
 
 func (p *ProviderBuilder) TypeID() string {
@@ -65,15 +64,10 @@ func (p *ProviderBuilder) BuildEngineDataSourceFactory(data *nodev1.NatsEventCon
 }
 
 func (p *ProviderBuilder) BuildProvider(provider config.NatsEventSource) (datasource.Provider, error) {
-	adapterBase, pubSubProvider, err := buildProvider(p.ctx, provider, p.logger, p.hostName, p.routerListenAddr)
+	pubSubProvider, err := buildProvider(p.ctx, provider, p.logger, p.hostName, p.routerListenAddr)
 	if err != nil {
 		return nil, err
 	}
-	adapter, ok := adapterBase.(Adapter)
-	if !ok {
-		return nil, fmt.Errorf("adapter for provider %s is not an Adapter", provider.ID)
-	}
-	p.adapters[provider.ID] = adapter
 
 	return pubSubProvider, nil
 }
@@ -122,18 +116,18 @@ func buildNatsOptions(eventSource config.NatsEventSource, logger *zap.Logger) ([
 	return opts, nil
 }
 
-func buildProvider(ctx context.Context, provider config.NatsEventSource, logger *zap.Logger, hostName string, routerListenAddr string) (datasource.ProviderBase, datasource.Provider, error) {
+func buildProvider(ctx context.Context, provider config.NatsEventSource, logger *zap.Logger, hostName string, routerListenAddr string) (datasource.Provider, error) {
 	options, err := buildNatsOptions(provider, logger)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to build options for Nats provider with ID \"%s\": %w", provider.ID, err)
+		return nil, fmt.Errorf("failed to build options for Nats provider with ID \"%s\": %w", provider.ID, err)
 	}
 	adapter, err := NewAdapter(ctx, logger, provider.URL, options, hostName, routerListenAddr)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to create adapter for Nats provider with ID \"%s\": %w", provider.ID, err)
+		return nil, fmt.Errorf("failed to create adapter for Nats provider with ID \"%s\": %w", provider.ID, err)
 	}
 	pubSubProvider := datasource.NewPubSubProvider(provider.ID, providerTypeID, adapter, logger)
 
-	return adapter, pubSubProvider, nil
+	return pubSubProvider, nil
 }
 
 func NewProviderBuilder(
@@ -147,6 +141,5 @@ func NewProviderBuilder(
 		logger:           logger,
 		hostName:         hostName,
 		routerListenAddr: routerListenAddr,
-		adapters:         make(map[string]Adapter),
 	}
 }
