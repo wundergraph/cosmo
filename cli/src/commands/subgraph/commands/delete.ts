@@ -14,6 +14,11 @@ export default (opts: BaseCommandOptions) => {
   command.option('-n, --namespace [string]', 'The namespace of the subgraph.');
   command.option('-f --force', 'Flag to force the deletion (skip confirmation).');
   command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
+  command.option(
+    '--disable-resolvability-validation',
+    'This flag will disable the validation for whether all nodes of the federated graph are resolvable. Do NOT use unless troubleshooting.',
+  );
+
   command.action(async (name, options) => {
     if (!options.force) {
       const deletionConfirmed = await inquirer.prompt({
@@ -31,8 +36,9 @@ export default (opts: BaseCommandOptions) => {
 
     const resp = await opts.client.platform.deleteFederatedSubgraph(
       {
-        subgraphName: name,
+        disableResolvabilityValidation: options.disableResolvabilityValidation,
         namespace: options.namespace,
+        subgraphName: name,
       },
       {
         headers: getBaseHeaders(),
