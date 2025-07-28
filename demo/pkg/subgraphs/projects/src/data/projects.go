@@ -15,17 +15,17 @@ var ServiceProjects = []*projects.Project{
 		EndDate:             &wrapperspb.StringValue{Value: "2025-08-20"},
 		TeamMembers:         []*projects.Employee{},
 		RelatedProducts:     []*projects.Product{}, // Will be resolved by GraphQL resolvers
-		MilestoneIds:        &projects.ListOfString{Items: []string{"1", "2", "3"}},
+		MilestoneIds:        &projects.ListOfString{List: &projects.ListOfString_List{Items: []string{"1", "2", "3"}}},
 		Milestones:          GetMilestonesByProjectID("1"),
 		Tasks:               GetTasksByProjectID("1"),
 		Progress:            &wrapperspb.DoubleValue{Value: 65.0},
-		Tags:                &projects.ListOfString{Items: []string{"cloud", "migration", "priority"}},
-		AlternativeProjects: &projects.ListOfProject{Items: []*projects.Project{}}, // nullable list of nullable projects
-		Dependencies:        &projects.ListOfProject{Items: []*projects.Project{}}, // will be populated by helper function
-		ResourceGroups:      &projects.ListOfListOfProjectResource{},               // will be populated by helper function
-		TasksByPhase:        &projects.ListOfListOfTask{},                          // will be populated by helper function
-		MilestoneGroups:     &projects.ListOfListOfMilestone{},                     // nullable nested list
-		PriorityMatrix:      &projects.ListOfListOfListOfTask{},                    // triple nested
+		Tags:                &projects.ListOfString{List: &projects.ListOfString_List{Items: []string{"cloud", "migration", "priority"}}},
+		AlternativeProjects: &projects.ListOfProject{List: &projects.ListOfProject_List{Items: []*projects.Project{}}}, // nullable list of nullable projects
+		Dependencies:        &projects.ListOfProject{List: &projects.ListOfProject_List{Items: []*projects.Project{}}}, // will be populated by helper function
+		ResourceGroups:      &projects.ListOfListOfProjectResource{},                                                   // will be populated by helper function
+		TasksByPhase:        &projects.ListOfListOfTask{},                                                              // will be populated by helper function
+		MilestoneGroups:     &projects.ListOfListOfMilestone{},                                                         // nullable nested list
+		PriorityMatrix:      &projects.ListOfListOfListOfTask{},                                                        // triple nested
 	},
 	{
 		Id:                  "2",
@@ -36,13 +36,13 @@ var ServiceProjects = []*projects.Project{
 		EndDate:             &wrapperspb.StringValue{Value: "2025-08-20"},
 		TeamMembers:         []*projects.Employee{},
 		RelatedProducts:     []*projects.Product{},
-		MilestoneIds:        &projects.ListOfString{Items: []string{"4", "5", "6"}},
+		MilestoneIds:        &projects.ListOfString{List: &projects.ListOfString_List{Items: []string{"4", "5", "6"}}},
 		Milestones:          GetMilestonesByProjectID("2"),
 		Tasks:               GetTasksByProjectID("2"),
 		Progress:            &wrapperspb.DoubleValue{Value: 75.0},
-		Tags:                &projects.ListOfString{Items: []string{"microservices", "architecture"}},
-		AlternativeProjects: &projects.ListOfProject{Items: []*projects.Project{}},
-		Dependencies:        &projects.ListOfProject{Items: []*projects.Project{}},
+		Tags:                &projects.ListOfString{List: &projects.ListOfString_List{Items: []string{"microservices", "architecture"}}},
+		AlternativeProjects: &projects.ListOfProject{List: &projects.ListOfProject_List{Items: []*projects.Project{}}},
+		Dependencies:        &projects.ListOfProject{List: &projects.ListOfProject_List{Items: []*projects.Project{}}},
 		ResourceGroups:      &projects.ListOfListOfProjectResource{},
 		TasksByPhase:        &projects.ListOfListOfTask{},
 		MilestoneGroups:     &projects.ListOfListOfMilestone{},
@@ -57,13 +57,13 @@ var ServiceProjects = []*projects.Project{
 		EndDate:             &wrapperspb.StringValue{Value: "2025-08-20"},
 		TeamMembers:         []*projects.Employee{},
 		RelatedProducts:     []*projects.Product{},
-		MilestoneIds:        &projects.ListOfString{Items: []string{}},
+		MilestoneIds:        &projects.ListOfString{List: &projects.ListOfString_List{Items: []string{}}},
 		Milestones:          GetMilestonesByProjectID("3"),
 		Tasks:               GetTasksByProjectID("3"),
 		Progress:            &wrapperspb.DoubleValue{Value: 45.0},
 		Tags:                nil, // nullable list example
-		AlternativeProjects: &projects.ListOfProject{Items: []*projects.Project{}},
-		Dependencies:        &projects.ListOfProject{Items: []*projects.Project{}},
+		AlternativeProjects: &projects.ListOfProject{List: &projects.ListOfProject_List{Items: []*projects.Project{}}},
+		Dependencies:        &projects.ListOfProject{List: &projects.ListOfProject_List{Items: []*projects.Project{}}},
 		ResourceGroups:      &projects.ListOfListOfProjectResource{},
 		TasksByPhase:        &projects.ListOfListOfTask{},
 		MilestoneGroups:     nil, // nullable nested list example
@@ -78,13 +78,13 @@ var ServiceProjects = []*projects.Project{
 		EndDate:             &wrapperspb.StringValue{Value: "2024-12-31"},
 		TeamMembers:         []*projects.Employee{},
 		RelatedProducts:     []*projects.Product{},
-		MilestoneIds:        &projects.ListOfString{Items: []string{}},
+		MilestoneIds:        &projects.ListOfString{List: &projects.ListOfString_List{Items: []string{}}},
 		Milestones:          GetMilestonesByProjectID("4"),
 		Tasks:               GetTasksByProjectID("4"),
 		Progress:            &wrapperspb.DoubleValue{Value: 10.0},
-		Tags:                &projects.ListOfString{Items: []string{"devops", "ci-cd", "infrastructure"}},
-		AlternativeProjects: &projects.ListOfProject{Items: []*projects.Project{}},
-		Dependencies:        &projects.ListOfProject{Items: []*projects.Project{}},
+		Tags:                &projects.ListOfString{List: &projects.ListOfString_List{Items: []string{"devops", "ci-cd", "infrastructure"}}},
+		AlternativeProjects: &projects.ListOfProject{List: &projects.ListOfProject_List{Items: []*projects.Project{}}},
+		Dependencies:        &projects.ListOfProject{List: &projects.ListOfProject_List{Items: []*projects.Project{}}},
 		ResourceGroups:      &projects.ListOfListOfProjectResource{},
 		TasksByPhase:        &projects.ListOfListOfTask{},
 		MilestoneGroups:     &projects.ListOfListOfMilestone{},
@@ -99,13 +99,13 @@ var ServiceProjects = []*projects.Project{
 		EndDate:             &wrapperspb.StringValue{Value: "2024-06-30"},
 		TeamMembers:         []*projects.Employee{},
 		RelatedProducts:     []*projects.Product{},
-		MilestoneIds:        &projects.ListOfString{Items: []string{}},
+		MilestoneIds:        &projects.ListOfString{List: &projects.ListOfString_List{Items: []string{}}},
 		Milestones:          GetMilestonesByProjectID("5"),
 		Tasks:               GetTasksByProjectID("5"),
 		Progress:            &wrapperspb.DoubleValue{Value: 5.0},
-		Tags:                &projects.ListOfString{Items: []string{"security", "zero-trust"}},
-		AlternativeProjects: &projects.ListOfProject{Items: []*projects.Project{}},
-		Dependencies:        &projects.ListOfProject{Items: []*projects.Project{}},
+		Tags:                &projects.ListOfString{List: &projects.ListOfString_List{Items: []string{"security", "zero-trust"}}},
+		AlternativeProjects: &projects.ListOfProject{List: &projects.ListOfProject_List{Items: []*projects.Project{}}},
+		Dependencies:        &projects.ListOfProject{List: &projects.ListOfProject_List{Items: []*projects.Project{}}},
 		ResourceGroups:      &projects.ListOfListOfProjectResource{},
 		TasksByPhase:        &projects.ListOfListOfTask{},
 		MilestoneGroups:     &projects.ListOfListOfMilestone{},
@@ -120,13 +120,13 @@ var ServiceProjects = []*projects.Project{
 		EndDate:             &wrapperspb.StringValue{Value: "2024-09-30"},
 		TeamMembers:         []*projects.Employee{},
 		RelatedProducts:     []*projects.Product{},
-		MilestoneIds:        &projects.ListOfString{Items: []string{"7", "8"}},
+		MilestoneIds:        &projects.ListOfString{List: &projects.ListOfString_List{Items: []string{"7", "8"}}},
 		Milestones:          GetMilestonesByProjectID("6"),
 		Tasks:               GetTasksByProjectID("6"),
 		Progress:            &wrapperspb.DoubleValue{Value: 30.0},
-		Tags:                &projects.ListOfString{Items: []string{"mobile", "ios", "android"}},
-		AlternativeProjects: &projects.ListOfProject{Items: []*projects.Project{}},
-		Dependencies:        &projects.ListOfProject{Items: []*projects.Project{}},
+		Tags:                &projects.ListOfString{List: &projects.ListOfString_List{Items: []string{"mobile", "ios", "android"}}},
+		AlternativeProjects: &projects.ListOfProject{List: &projects.ListOfProject_List{Items: []*projects.Project{}}},
+		Dependencies:        &projects.ListOfProject{List: &projects.ListOfProject_List{Items: []*projects.Project{}}},
 		ResourceGroups:      &projects.ListOfListOfProjectResource{},
 		TasksByPhase:        &projects.ListOfListOfTask{},
 		MilestoneGroups:     &projects.ListOfListOfMilestone{},
@@ -141,13 +141,13 @@ var ServiceProjects = []*projects.Project{
 		EndDate:             &wrapperspb.StringValue{Value: "2024-12-31"},
 		TeamMembers:         []*projects.Employee{},
 		RelatedProducts:     []*projects.Product{},
-		MilestoneIds:        &projects.ListOfString{Items: []string{"9", "10"}},
+		MilestoneIds:        &projects.ListOfString{List: &projects.ListOfString_List{Items: []string{"9", "10"}}},
 		Milestones:          GetMilestonesByProjectID("7"),
 		Tasks:               GetTasksByProjectID("7"),
 		Progress:            &wrapperspb.DoubleValue{Value: 40.0},
-		Tags:                &projects.ListOfString{Items: []string{"data", "analytics", "lake"}},
-		AlternativeProjects: &projects.ListOfProject{Items: []*projects.Project{}},
-		Dependencies:        &projects.ListOfProject{Items: []*projects.Project{}},
+		Tags:                &projects.ListOfString{List: &projects.ListOfString_List{Items: []string{"data", "analytics", "lake"}}},
+		AlternativeProjects: &projects.ListOfProject{List: &projects.ListOfProject_List{Items: []*projects.Project{}}},
+		Dependencies:        &projects.ListOfProject{List: &projects.ListOfProject_List{Items: []*projects.Project{}}},
 		ResourceGroups:      &projects.ListOfListOfProjectResource{},
 		TasksByPhase:        &projects.ListOfListOfTask{},
 		MilestoneGroups:     &projects.ListOfListOfMilestone{},
@@ -212,8 +212,8 @@ func GetProjectUpdatesByProjectID(projectID string) []*projects.ProjectUpdate {
 func GetTeamMembersByProjectId(projectID string) []*projects.Employee {
 	var teamMembers []*projects.Employee
 	for _, employee := range Employees {
-		if employee.Projects != nil {
-			for _, project := range employee.Projects.Items {
+		if employee.Projects != nil && employee.Projects.List != nil {
+			for _, project := range employee.Projects.List.Items {
 				if project.Id == projectID {
 					teamMembers = append(teamMembers, employee)
 				}
@@ -230,8 +230,8 @@ func GetAllProjectTags() *projects.ListOfString {
 	var allTags []string
 
 	for _, project := range ServiceProjects {
-		if project.Tags != nil {
-			for _, tag := range project.Tags.Items {
+		if project.Tags != nil && project.Tags.List != nil {
+			for _, tag := range project.Tags.List.Items {
 				if !tagSet[tag] {
 					tagSet[tag] = true
 					allTags = append(allTags, tag)
@@ -243,7 +243,7 @@ func GetAllProjectTags() *projects.ListOfString {
 	// Add some nullable tags for testing
 	allTags = append(allTags, "", "nullable-tag") // "" represents a nullable string
 
-	return &projects.ListOfString{Items: allTags}
+	return &projects.ListOfString{List: &projects.ListOfString_List{Items: allTags}}
 }
 
 // Helper function to get archived projects (for testing nullable list of nullable projects)
@@ -282,7 +282,7 @@ func GetProjectDependencies(projectID string) *projects.ListOfProject {
 		dependencies = append(dependencies, nil)
 	}
 
-	return &projects.ListOfProject{Items: dependencies}
+	return &projects.ListOfProject{List: &projects.ListOfProject_List{Items: dependencies}}
 }
 
 // Helper function to get alternative projects
@@ -299,7 +299,7 @@ func GetAlternativeProjects(projectID string) *projects.ListOfProject {
 		alternatives = append(alternatives, GetProjectByID("4")) // DevOps could address some security needs
 	}
 
-	return &projects.ListOfProject{Items: alternatives}
+	return &projects.ListOfProject{List: &projects.ListOfProject_List{Items: alternatives}}
 }
 
 // Helper function to get tasks grouped by phase (status)
@@ -328,11 +328,11 @@ func GetTasksByPhase(projectID string) *projects.ListOfListOfTask {
 	}
 
 	phases := []*projects.ListOfTask{
-		{Items: todoTasks},
-		{Items: inProgressTasks},
-		{Items: reviewTasks},
-		{Items: completedTasks},
-		{Items: blockedTasks},
+		{List: &projects.ListOfTask_List{Items: todoTasks}},
+		{List: &projects.ListOfTask_List{Items: inProgressTasks}},
+		{List: &projects.ListOfTask_List{Items: reviewTasks}},
+		{List: &projects.ListOfTask_List{Items: completedTasks}},
+		{List: &projects.ListOfTask_List{Items: blockedTasks}},
 	}
 
 	// Add nullable list for testing
@@ -373,10 +373,10 @@ func GetMilestoneGroups(projectID string) *projects.ListOfListOfMilestone {
 	}
 
 	groups := []*projects.ListOfMilestone{
-		{Items: pendingMilestones},
-		{Items: inProgressMilestones},
-		{Items: completedMilestones},
-		{Items: delayedMilestones},
+		{List: &projects.ListOfMilestone_List{Items: pendingMilestones}},
+		{List: &projects.ListOfMilestone_List{Items: inProgressMilestones}},
+		{List: &projects.ListOfMilestone_List{Items: completedMilestones}},
+		{List: &projects.ListOfMilestone_List{Items: delayedMilestones}},
 	}
 
 	return &projects.ListOfListOfMilestone{
@@ -404,13 +404,13 @@ func GetPriorityMatrix(projectID string) *projects.ListOfListOfListOfTask {
 	for _, task := range tasks {
 		switch task.Priority {
 		case projects.TaskPriority_TASK_PRIORITY_LOW:
-			lowStatusGroups = append(lowStatusGroups, &projects.ListOfTask{Items: []*projects.Task{task}})
+			lowStatusGroups = append(lowStatusGroups, &projects.ListOfTask{List: &projects.ListOfTask_List{Items: []*projects.Task{task}}})
 		case projects.TaskPriority_TASK_PRIORITY_MEDIUM:
-			mediumStatusGroups = append(mediumStatusGroups, &projects.ListOfTask{Items: []*projects.Task{task}})
+			mediumStatusGroups = append(mediumStatusGroups, &projects.ListOfTask{List: &projects.ListOfTask_List{Items: []*projects.Task{task}}})
 		case projects.TaskPriority_TASK_PRIORITY_HIGH:
-			highStatusGroups = append(highStatusGroups, &projects.ListOfTask{Items: []*projects.Task{task}})
+			highStatusGroups = append(highStatusGroups, &projects.ListOfTask{List: &projects.ListOfTask_List{Items: []*projects.Task{task}}})
 		case projects.TaskPriority_TASK_PRIORITY_URGENT:
-			urgentStatusGroups = append(urgentStatusGroups, &projects.ListOfTask{Items: []*projects.Task{task}})
+			urgentStatusGroups = append(urgentStatusGroups, &projects.ListOfTask{List: &projects.ListOfTask_List{Items: []*projects.Task{task}}})
 		}
 	}
 
@@ -448,7 +448,7 @@ func GetResourceGroups(projectID string) *projects.ListOfListOfProjectResource {
 		})
 	}
 	if len(humanResources) > 0 {
-		resourceGroups = append(resourceGroups, &projects.ListOfProjectResource{Items: humanResources})
+		resourceGroups = append(resourceGroups, &projects.ListOfProjectResource{List: &projects.ListOfProjectResource_List{Items: humanResources}})
 	}
 
 	// Group 2: Milestone resources
@@ -460,7 +460,7 @@ func GetResourceGroups(projectID string) *projects.ListOfListOfProjectResource {
 		})
 	}
 	if len(milestoneResources) > 0 {
-		resourceGroups = append(resourceGroups, &projects.ListOfProjectResource{Items: milestoneResources})
+		resourceGroups = append(resourceGroups, &projects.ListOfProjectResource{List: &projects.ListOfProjectResource_List{Items: milestoneResources}})
 	}
 
 	// Group 3: Task resources (first 3 tasks only for testing)
@@ -475,7 +475,7 @@ func GetResourceGroups(projectID string) *projects.ListOfListOfProjectResource {
 		})
 	}
 	if len(taskResources) > 0 {
-		resourceGroups = append(resourceGroups, &projects.ListOfProjectResource{Items: taskResources})
+		resourceGroups = append(resourceGroups, &projects.ListOfProjectResource{List: &projects.ListOfProjectResource_List{Items: taskResources}})
 	}
 
 	return &projects.ListOfListOfProjectResource{

@@ -123,6 +123,11 @@ func TestGRPCSubgraph(t *testing.T) {
 				query:    `query { project(id: "1") { id priorityMatrix { id name priority } } }`,
 				expected: `{"data":{"project":{"id":"1","priorityMatrix":[[],[[{"id":"3","name":"Network Setup","priority":"MEDIUM"}]],[[{"id":"1","name":"Current Infrastructure Audit","priority":"HIGH"}],[{"id":"2","name":"Cloud Provider Selection","priority":"HIGH"}],[{"id":"14","name":"Database Migration","priority":"HIGH"}]],[]]}}}`,
 			},
+			{
+				name:     "query project subtasks for empty and nullable lists",
+				query:    `query { projects { id tasks { id subtasks { id name } } } }`,
+				expected: `{"data":{"projects":[{"id":"1","tasks":[{"id":"1","subtasks":[{"id":"1a","name":"Server Inventory"},{"id":"1b","name":"Database Inventory"},{"id":"","name":""}]},{"id":"2","subtasks":null},{"id":"3","subtasks":[{"id":"3a","name":"VPC Configuration"},{"id":"3b","name":"Security Groups"},{"id":"","name":""}]},{"id":"14","subtasks":null}]},{"id":"2","tasks":[{"id":"4","subtasks":null},{"id":"5","subtasks":null}]},{"id":"3","tasks":[{"id":"6","subtasks":null},{"id":"7","subtasks":null}]},{"id":"4","tasks":[{"id":"8","subtasks":null}]},{"id":"5","tasks":[{"id":"9","subtasks":null}]},{"id":"6","tasks":[{"id":"10","subtasks":null},{"id":"11","subtasks":null}]},{"id":"7","tasks":[{"id":"12","subtasks":null},{"id":"13","subtasks":null}]}]}}`,
+			},
 		}
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: testenv.ConfigWithGRPCJSONTemplate,

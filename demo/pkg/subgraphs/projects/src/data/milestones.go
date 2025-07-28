@@ -15,9 +15,9 @@ var ServiceMilestones = []*projects.Milestone{
 		EndDate:              &wrapperspb.StringValue{Value: "2021-03-31"},
 		Status:               projects.MilestoneStatus_MILESTONE_STATUS_COMPLETED,
 		CompletionPercentage: &wrapperspb.DoubleValue{Value: 100.0},
-		Dependencies:         []*projects.Milestone{},                                 // Will be populated dynamically
-		Subtasks:             &projects.ListOfTask{Items: []*projects.Task{}},         // Will be populated dynamically
-		Reviewers:            &projects.ListOfEmployee{Items: []*projects.Employee{}}, // Will be populated dynamically
+		Dependencies:         []*projects.Milestone{},                                                                      // Will be populated dynamically
+		Subtasks:             &projects.ListOfTask{List: &projects.ListOfTask_List{Items: []*projects.Task{}}},             // Will be populated dynamically
+		Reviewers:            &projects.ListOfEmployee{List: &projects.ListOfEmployee_List{Items: []*projects.Employee{}}}, // Will be populated dynamically
 	},
 	{
 		Id:                   "2",
@@ -28,9 +28,9 @@ var ServiceMilestones = []*projects.Milestone{
 		EndDate:              &wrapperspb.StringValue{Value: "2021-06-30"},
 		Status:               projects.MilestoneStatus_MILESTONE_STATUS_IN_PROGRESS,
 		CompletionPercentage: &wrapperspb.DoubleValue{Value: 65.0},
-		Dependencies:         []*projects.Milestone{},                                 // Will be populated dynamically
-		Subtasks:             nil,                                                     // nullable list example - will be populated dynamically
-		Reviewers:            &projects.ListOfEmployee{Items: []*projects.Employee{}}, // Will be populated dynamically
+		Dependencies:         []*projects.Milestone{},                                                                      // Will be populated dynamically
+		Subtasks:             nil,                                                                                          // nullable list example - will be populated dynamically
+		Reviewers:            &projects.ListOfEmployee{List: &projects.ListOfEmployee_List{Items: []*projects.Employee{}}}, // Will be populated dynamically
 	},
 	{
 		Id:                   "3",
@@ -41,9 +41,9 @@ var ServiceMilestones = []*projects.Milestone{
 		EndDate:              &wrapperspb.StringValue{Value: "2025-08-20"},
 		Status:               projects.MilestoneStatus_MILESTONE_STATUS_PENDING,
 		CompletionPercentage: &wrapperspb.DoubleValue{Value: 25.0},
-		Dependencies:         []*projects.Milestone{},                                 // Will be populated dynamically
-		Subtasks:             &projects.ListOfTask{Items: []*projects.Task{}},         // Will be populated dynamically
-		Reviewers:            &projects.ListOfEmployee{Items: []*projects.Employee{}}, // Will be populated dynamically
+		Dependencies:         []*projects.Milestone{},                                                                      // Will be populated dynamically
+		Subtasks:             &projects.ListOfTask{List: &projects.ListOfTask_List{Items: []*projects.Task{}}},             // Will be populated dynamically
+		Reviewers:            &projects.ListOfEmployee{List: &projects.ListOfEmployee_List{Items: []*projects.Employee{}}}, // Will be populated dynamically
 	},
 	{
 		Id:                   "4",
@@ -54,9 +54,9 @@ var ServiceMilestones = []*projects.Milestone{
 		EndDate:              &wrapperspb.StringValue{Value: "2021-04-30"},
 		Status:               projects.MilestoneStatus_MILESTONE_STATUS_COMPLETED,
 		CompletionPercentage: &wrapperspb.DoubleValue{Value: 100.0},
-		Dependencies:         []*projects.Milestone{},                                 // Will be populated dynamically
-		Subtasks:             &projects.ListOfTask{Items: []*projects.Task{}},         // Will be populated dynamically
-		Reviewers:            &projects.ListOfEmployee{Items: []*projects.Employee{}}, // Will be populated dynamically
+		Dependencies:         []*projects.Milestone{},                                                                      // Will be populated dynamically
+		Subtasks:             &projects.ListOfTask{List: &projects.ListOfTask_List{Items: []*projects.Task{}}},             // Will be populated dynamically
+		Reviewers:            &projects.ListOfEmployee{List: &projects.ListOfEmployee_List{Items: []*projects.Employee{}}}, // Will be populated dynamically
 	},
 	{
 		Id:                   "5",
@@ -176,7 +176,7 @@ func GetMilestoneSubtasks(milestoneID string) *projects.ListOfTask {
 		subtasks = append(subtasks, nil)
 	}
 
-	return &projects.ListOfTask{Items: subtasks}
+	return &projects.ListOfTask{List: &projects.ListOfTask_List{Items: subtasks}}
 }
 
 // Helper function to get milestone reviewers
@@ -195,7 +195,7 @@ func GetMilestoneReviewers(milestoneID string) *projects.ListOfEmployee {
 		reviewers = append(reviewers, GetEmployeeByID(5), GetEmployeeByID(12))
 	}
 
-	return &projects.ListOfEmployee{Items: reviewers}
+	return &projects.ListOfEmployee{List: &projects.ListOfEmployee_List{Items: reviewers}}
 }
 
 // Helper function to get milestone by ID

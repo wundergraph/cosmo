@@ -43,7 +43,7 @@ func setupTestService(t *testing.T) *testService {
 	// Start the server
 	go func() {
 		if err := grpcServer.Serve(lis); err != nil {
-			t.Fatalf("failed to serve: %v", err)
+			t.Logf("failed to serve: %v", err)
 		}
 	}()
 
@@ -359,7 +359,7 @@ func TestEmployeeProjectHistory(t *testing.T) {
 	// Count groups with actual projects (gRPC converts nil to empty objects)
 	groupsWithProjects := 0
 	for _, group := range employee.ProjectHistory.List.Items {
-		if group != nil && group.Items != nil && len(group.Items) > 0 {
+		if group != nil && group.List != nil && len(group.List.Items) > 0 {
 			groupsWithProjects++
 		}
 	}
@@ -380,7 +380,7 @@ func TestEmployeeProjectHistory(t *testing.T) {
 	// Count employee 2's project groups
 	employee2GroupsWithProjects := 0
 	for _, group := range employee2.ProjectHistory.List.Items {
-		if group != nil && group.Items != nil && len(group.Items) > 0 {
+		if group != nil && group.List != nil && len(group.List.Items) > 0 {
 			employee2GroupsWithProjects++
 		}
 	}

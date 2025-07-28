@@ -19,11 +19,11 @@ var ServiceTasks = []*projects.Task{
 		ActualHours:    &wrapperspb.DoubleValue{Value: 45.0},
 		CreatedAt:      &wrapperspb.StringValue{Value: "2021-01-01T00:00:00Z"},
 		CompletedAt:    &wrapperspb.StringValue{Value: "2021-01-15T17:30:00Z"},
-		Labels:         &projects.ListOfString{Items: []string{"audit", "infrastructure", "high-priority"}},                   // nullable list of nullable labels
-		Subtasks:       &projects.ListOfTask{Items: []*projects.Task{}},                                                       // nullable list of non-nullable subtasks
-		Dependencies:   []*projects.Task{},                                                                                    // non-nullable list of nullable tasks
-		AttachmentUrls: []string{"https://docs.company.com/audit-report.pdf", "https://drive.company.com/infrastructure-map"}, // non-nullable list of non-nullable URLs
-		ReviewerIds:    &projects.ListOfInt{Items: []int32{2, 3}},                                                             // nullable list of nullable reviewer IDs
+		Labels:         &projects.ListOfString{List: &projects.ListOfString_List{Items: []string{"audit", "infrastructure", "high-priority"}}}, // nullable list of nullable labels
+		Subtasks:       &projects.ListOfTask{List: &projects.ListOfTask_List{Items: []*projects.Task{}}},                                       // nullable list of non-nullable subtasks
+		Dependencies:   []*projects.Task{},                                                                                                     // non-nullable list of nullable tasks
+		AttachmentUrls: []string{"https://docs.company.com/audit-report.pdf", "https://drive.company.com/infrastructure-map"},                  // non-nullable list of non-nullable URLs
+		ReviewerIds:    &projects.ListOfInt{List: &projects.ListOfInt_List{Items: []int32{2, 3}}},                                              // nullable list of nullable reviewer IDs
 	},
 	{
 		Id:             "2",
@@ -38,11 +38,11 @@ var ServiceTasks = []*projects.Task{
 		ActualHours:    &wrapperspb.DoubleValue{Value: 20.0},
 		CreatedAt:      &wrapperspb.StringValue{Value: "2021-01-16T00:00:00Z"},
 		CompletedAt:    &wrapperspb.StringValue{Value: "2021-02-28T16:00:00Z"},
-		Labels:         nil, // nullable list example
-		Subtasks:       &projects.ListOfTask{Items: []*projects.Task{}},
-		Dependencies:   []*projects.Task{}, // depends on task 1 (will be populated by helper)
+		Labels:         nil,                                                     // nullable list example
+		Subtasks:       &projects.ListOfTask{List: &projects.ListOfTask_List{}}, // null list example
+		Dependencies:   []*projects.Task{},                                      // depends on task 1 (will be populated by helper)
 		AttachmentUrls: []string{"https://docs.company.com/cloud-comparison.xlsx"},
-		ReviewerIds:    &projects.ListOfInt{Items: []int32{1, 4}},
+		ReviewerIds:    &projects.ListOfInt{List: &projects.ListOfInt_List{Items: []int32{1, 4}}},
 	},
 	{
 		Id:             "3",
@@ -57,11 +57,11 @@ var ServiceTasks = []*projects.Task{
 		ActualHours:    &wrapperspb.DoubleValue{Value: 25.0},
 		CreatedAt:      &wrapperspb.StringValue{Value: "2021-04-01T00:00:00Z"},
 		CompletedAt:    nil,
-		Labels:         &projects.ListOfString{Items: []string{"networking", "cloud", "security"}},
-		Subtasks:       &projects.ListOfTask{Items: []*projects.Task{}},
+		Labels:         &projects.ListOfString{List: &projects.ListOfString_List{Items: []string{"networking", "cloud", "security"}}},
+		Subtasks:       &projects.ListOfTask{List: &projects.ListOfTask_List{Items: []*projects.Task{}}},
 		Dependencies:   []*projects.Task{}, // depends on tasks 1 and 2
 		AttachmentUrls: []string{},
-		ReviewerIds:    &projects.ListOfInt{Items: []int32{2}},
+		ReviewerIds:    &projects.ListOfInt{List: &projects.ListOfInt_List{Items: []int32{2}}},
 	},
 	{
 		Id:             "4",
@@ -309,7 +309,7 @@ func GetTaskSubtasks(taskID string) *projects.ListOfTask {
 		subtasks = append(subtasks, nil)
 	}
 
-	return &projects.ListOfTask{Items: subtasks}
+	return &projects.ListOfTask{List: &projects.ListOfTask_List{Items: subtasks}}
 }
 
 // Helper function to get task by ID

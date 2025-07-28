@@ -40,14 +40,18 @@ service ProjectsService {
 
 // Wrapper message for a list of Employee.
 message ListOfEmployee {
-  repeated Employee items = 1;
+  message List {
+    repeated Employee items = 1;
+  }
+  List list = 1;
 }
-
 // Wrapper message for a list of Int.
 message ListOfInt {
-  repeated int32 items = 1;
+  message List {
+    repeated int32 items = 1;
+  }
+  List list = 1;
 }
-
 // Wrapper message for a list of Task.
 message ListOfListOfListOfTask {
   message List {
@@ -55,7 +59,6 @@ message ListOfListOfListOfTask {
   }
   List list = 1;
 }
-
 // Wrapper message for a list of Milestone.
 message ListOfListOfMilestone {
   message List {
@@ -63,7 +66,6 @@ message ListOfListOfMilestone {
   }
   List list = 1;
 }
-
 // Wrapper message for a list of Project.
 message ListOfListOfProject {
   message List {
@@ -71,7 +73,6 @@ message ListOfListOfProject {
   }
   List list = 1;
 }
-
 // Wrapper message for a list of ProjectResource.
 message ListOfListOfProjectResource {
   message List {
@@ -79,7 +80,6 @@ message ListOfListOfProjectResource {
   }
   List list = 1;
 }
-
 // Wrapper message for a list of String.
 message ListOfListOfString {
   message List {
@@ -87,7 +87,6 @@ message ListOfListOfString {
   }
   List list = 1;
 }
-
 // Wrapper message for a list of Task.
 message ListOfListOfTask {
   message List {
@@ -95,32 +94,41 @@ message ListOfListOfTask {
   }
   List list = 1;
 }
-
 // Wrapper message for a list of Milestone.
 message ListOfMilestone {
-  repeated Milestone items = 1;
+  message List {
+    repeated Milestone items = 1;
+  }
+  List list = 1;
 }
-
 // Wrapper message for a list of Project.
 message ListOfProject {
-  repeated Project items = 1;
+  message List {
+    repeated Project items = 1;
+  }
+  List list = 1;
 }
-
 // Wrapper message for a list of ProjectResource.
 message ListOfProjectResource {
-  repeated ProjectResource items = 1;
+  message List {
+    repeated ProjectResource items = 1;
+  }
+  List list = 1;
 }
-
 // Wrapper message for a list of String.
 message ListOfString {
-  repeated string items = 1;
+  message List {
+    repeated string items = 1;
+  }
+  List list = 1;
 }
-
 // Wrapper message for a list of Task.
 message ListOfTask {
-  repeated Task items = 1;
+  message List {
+    repeated Task items = 1;
+  }
+  List list = 1;
 }
-
 // Key message for Project entity lookup
 message LookupProjectByIdRequestKey {
   // Key field for Project entity lookup.

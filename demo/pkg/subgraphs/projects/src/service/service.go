@@ -543,7 +543,7 @@ func (p *ProjectsService) MutationAddProject(ctx context.Context, req *service.M
 		EndDate:         req.Project.EndDate,
 		TeamMembers:     []*service.Employee{},
 		RelatedProducts: []*service.Product{},
-		MilestoneIds:    &service.ListOfString{Items: []string{}},
+		MilestoneIds:    &service.ListOfString{List: &service.ListOfString_List{Items: []string{}}},
 		Milestones:      []*service.Milestone{},
 		Tasks:           []*service.Task{},
 		Progress:        &wrapperspb.DoubleValue{Value: 0.0},
@@ -667,10 +667,10 @@ func (p *ProjectsService) QueryTasksByPriority(ctx context.Context, req *service
 	tasksByPriority := &service.ListOfListOfTask{
 		List: &service.ListOfListOfTask_List{
 			Items: []*service.ListOfTask{
-				{Items: lowTasks},
-				{Items: mediumTasks},
-				{Items: highTasks},
-				{Items: urgentTasks},
+				{List: &service.ListOfTask_List{Items: lowTasks}},
+				{List: &service.ListOfTask_List{Items: mediumTasks}},
+				{List: &service.ListOfTask_List{Items: highTasks}},
+				{List: &service.ListOfTask_List{Items: urgentTasks}},
 				nil, // Add nullable list for testing
 			},
 		},
@@ -726,10 +726,10 @@ func (p *ProjectsService) QueryResourceMatrix(ctx context.Context, req *service.
 	}
 
 	resourceMatrix = []*service.ListOfProjectResource{
-		{Items: milestoneResources},
-		{Items: taskResources},
-		{Items: employeeResources},
-		{Items: productResources},
+		{List: &service.ListOfProjectResource_List{Items: milestoneResources}},
+		{List: &service.ListOfProjectResource_List{Items: taskResources}},
+		{List: &service.ListOfProjectResource_List{Items: employeeResources}},
+		{List: &service.ListOfProjectResource_List{Items: productResources}},
 	}
 
 	return &service.QueryResourceMatrixResponse{

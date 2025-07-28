@@ -261,6 +261,8 @@ message User {
 ### Nullable Single Lists
 
 Nullable lists require wrapper messages:
+We always use a nested `List` message to wrap the repeated field as repeated fields are not nullable in Protobuf.
+In order to ensure correct nullability, this is handle on the engine side. The implementation needs to follow the GraphQL rules for nullability.
 
 ```graphql
 type User {
@@ -272,7 +274,10 @@ Maps to:
 
 ```protobuf
 message ListOfString {
-  repeated string items = 1;
+  message List {
+    repeated string items = 1;
+  }
+  List list = 1;
 }
 
 message User {
@@ -294,7 +299,10 @@ Maps to:
 
 ```protobuf
 message ListOfString {
-  repeated string items = 1;
+  message List {
+    repeated string items = 1;
+  }
+  List list = 1;
 }
 
 message ListOfListOfString {
