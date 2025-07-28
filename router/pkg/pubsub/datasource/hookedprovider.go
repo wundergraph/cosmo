@@ -16,11 +16,16 @@ type hookedUpdater struct {
 func (h *hookedUpdater) Update(events []StreamEvent) {
 	var newEvents []StreamEvent
 	var err error
+	if len(h.OnStreamEventsFns) == 0 {
+		h.updater.Update(events)
+		return
+	}
+
 	for _, fn := range h.OnStreamEventsFns {
 		newEvents, err = fn(h.ctx, h.subscriptionEventConfiguration, events)
 		if err != nil {
 			// TODO: do something with the error
-			return
+			continue
 		}
 	}
 
@@ -63,6 +68,10 @@ func (h *HookedProvider) Subscribe(ctx context.Context, cfg SubscriptionEventCon
 func (h *HookedProvider) Publish(ctx context.Context, cfg PublishEventConfiguration, events []StreamEvent) error {
 	var newEvents []StreamEvent
 	var err error
+	if len(h.OnPublishEventsFns) == 0 {
+		return h.Provider.Publish(ctx, cfg, events)
+	}
+
 	for _, fn := range h.OnPublishEventsFns {
 		newEvents, err = fn(ctx, cfg, events)
 		if err != nil {

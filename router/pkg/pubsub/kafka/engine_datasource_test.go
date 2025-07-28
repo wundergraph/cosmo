@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/cespare/xxhash/v2"
@@ -131,7 +132,7 @@ func TestSubscriptionSource_Start(t *testing.T) {
 			name:  "successful subscription",
 			input: `{"topics":["topic1", "topic2"], "providerId":"test-provider"}`,
 			mockSetup: func(m *datasource.MockProvider, updater *datasource.MockSubscriptionEventUpdater) {
-				m.On("Subscribe", mock.Anything, SubscriptionEventConfiguration{
+				m.On("Subscribe", mock.Anything, &SubscriptionEventConfiguration{
 					Provider: "test-provider",
 					Topics:   []string{"topic1", "topic2"},
 				}, mock.Anything).Return(nil)
@@ -142,7 +143,7 @@ func TestSubscriptionSource_Start(t *testing.T) {
 			name:  "adapter returns error",
 			input: `{"topics":["topic1"], "providerId":"test-provider"}`,
 			mockSetup: func(m *datasource.MockProvider, updater *datasource.MockSubscriptionEventUpdater) {
-				m.On("Subscribe", mock.Anything, SubscriptionEventConfiguration{
+				m.On("Subscribe", mock.Anything, &SubscriptionEventConfiguration{
 					Provider: "test-provider",
 					Topics:   []string{"topic1"},
 				}, mock.Anything).Return(errors.New("subscription error"))
@@ -199,10 +200,12 @@ func TestKafkaPublishDataSource_Load(t *testing.T) {
 			name:  "successful publish",
 			input: `{"topic":"test-topic", "event": {"data":{"message":"hello"}}, "providerId":"test-provider"}`,
 			mockSetup: func(m *datasource.MockProvider) {
-				m.On("Publish", mock.Anything, mock.MatchedBy(func(event PublishEventConfiguration) bool {
+				m.On("Publish", mock.Anything, mock.MatchedBy(func(event *PublishEventConfiguration) bool {
 					return event.ProviderID() == "test-provider" &&
 						event.Topic == "test-topic" &&
 						string(event.Event.Data) == `{"message":"hello"}`
+				}), mock.MatchedBy(func(events []datasource.StreamEvent) bool {
+					return len(events) == 1 && strings.EqualFold(string(events[0].GetData()), `{"message":"hello"}`)
 				})).Return(nil)
 			},
 			expectError:     false,
@@ -213,7 +216,7 @@ func TestKafkaPublishDataSource_Load(t *testing.T) {
 			name:  "publish error",
 			input: `{"topic":"test-topic", "event": {"data":{"message":"hello"}}, "providerId":"test-provider"}`,
 			mockSetup: func(m *datasource.MockProvider) {
-				m.On("Publish", mock.Anything, mock.Anything).Return(errors.New("publish error"))
+				m.On("Publish", mock.Anything, mock.Anything, mock.Anything).Return(errors.New("publish error"))
 			},
 			expectError:     false, // The Load method doesn't return the publish error directly
 			expectedOutput:  `{"success": false}`,

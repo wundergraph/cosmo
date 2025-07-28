@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/mock"
@@ -33,8 +34,10 @@ func TestEngineDataSourceFactoryWithMockAdapter(t *testing.T) {
 	mockAdapter := datasource.NewMockProvider(t)
 
 	// Configure mock expectations for Publish
-	mockAdapter.On("Publish", mock.Anything, mock.MatchedBy(func(event PublishEventConfiguration) bool {
+	mockAdapter.On("Publish", mock.Anything, mock.MatchedBy(func(event *PublishEventConfiguration) bool {
 		return event.ProviderID() == "test-provider" && event.Channel == "test-channel"
+	}), mock.MatchedBy(func(events []datasource.StreamEvent) bool {
+		return len(events) == 1 && strings.EqualFold(string(events[0].GetData()), `{"test":"data"}`)
 	})).Return(nil)
 
 	// Create the data source with mock adapter

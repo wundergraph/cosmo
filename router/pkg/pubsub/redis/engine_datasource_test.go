@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/cespare/xxhash/v2"
@@ -113,7 +114,7 @@ func TestSubscriptionSource_Start(t *testing.T) {
 			name:  "successful subscription",
 			input: `{"channels":["channel1", "channel2"], "providerId":"test-provider"}`,
 			mockSetup: func(m *datasource.MockProvider, updater *datasource.MockSubscriptionEventUpdater) {
-				m.On("Subscribe", mock.Anything, SubscriptionEventConfiguration{
+				m.On("Subscribe", mock.Anything, &SubscriptionEventConfiguration{
 					Provider: "test-provider",
 					Channels: []string{"channel1", "channel2"},
 				}, mock.Anything).Return(nil)
@@ -124,7 +125,7 @@ func TestSubscriptionSource_Start(t *testing.T) {
 			name:  "adapter returns error",
 			input: `{"channels":["channel1"], "providerId":"test-provider"}`,
 			mockSetup: func(m *datasource.MockProvider, updater *datasource.MockSubscriptionEventUpdater) {
-				m.On("Subscribe", mock.Anything, SubscriptionEventConfiguration{
+				m.On("Subscribe", mock.Anything, &SubscriptionEventConfiguration{
 					Provider: "test-provider",
 					Channels: []string{"channel1"},
 				}, mock.Anything).Return(errors.New("subscription error"))
@@ -181,10 +182,12 @@ func TestRedisPublishDataSource_Load(t *testing.T) {
 			name:  "successful publish",
 			input: `{"channel":"test-channel", "event": {"data":{"message":"hello"}}, "providerId":"test-provider"}`,
 			mockSetup: func(m *datasource.MockProvider) {
-				m.On("Publish", mock.Anything, mock.MatchedBy(func(event PublishEventConfiguration) bool {
+				m.On("Publish", mock.Anything, mock.MatchedBy(func(event *PublishEventConfiguration) bool {
 					return event.ProviderID() == "test-provider" &&
 						event.Channel == "test-channel" &&
 						string(event.Event.Data) == `{"message":"hello"}`
+				}), mock.MatchedBy(func(events []datasource.StreamEvent) bool {
+					return len(events) == 1 && strings.EqualFold(string(events[0].GetData()), `{"message":"hello"}`)
 				})).Return(nil)
 			},
 			expectError:     false,
@@ -195,7 +198,7 @@ func TestRedisPublishDataSource_Load(t *testing.T) {
 			name:  "publish error",
 			input: `{"channel":"test-channel", "event": {"data":{"message":"hello"}}, "providerId":"test-provider"}`,
 			mockSetup: func(m *datasource.MockProvider) {
-				m.On("Publish", mock.Anything, mock.Anything).Return(errors.New("publish error"))
+				m.On("Publish", mock.Anything, mock.Anything, mock.Anything).Return(errors.New("publish error"))
 			},
 			expectError:     false, // The Load method doesn't return the publish error directly
 			expectedOutput:  `{"success": false}`,

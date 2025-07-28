@@ -34,11 +34,6 @@ func (p *ProviderBuilder) BuildEngineDataSourceFactory(data *nodev1.NatsEventCon
 		return nil, fmt.Errorf("failed to get adapter for provider %s with ID %s", p.TypeID(), providerId)
 	}
 
-	adapter, ok := provider.(Adapter)
-	if !ok {
-		return nil, fmt.Errorf("adapter for provider %s is not of the right type", providerId)
-	}
-
 	var eventType EventType
 	switch data.GetEngineEventConfiguration().GetType() {
 	case nodev1.EventType_PUBLISH:
@@ -51,7 +46,7 @@ func (p *ProviderBuilder) BuildEngineDataSourceFactory(data *nodev1.NatsEventCon
 		return nil, fmt.Errorf("unsupported event type: %s", data.GetEngineEventConfiguration().GetType())
 	}
 	dataSourceFactory := &EngineDataSourceFactory{
-		NatsAdapter:             adapter,
+		NatsAdapter:             provider,
 		fieldName:               data.GetEngineEventConfiguration().GetFieldName(),
 		eventType:               eventType,
 		subjects:                data.GetSubjects(),

@@ -18,7 +18,7 @@ const (
 )
 
 type EngineDataSourceFactory struct {
-	NatsAdapter Adapter
+	NatsAdapter datasource.ProviderBase
 
 	fieldName  string
 	eventType  EventType

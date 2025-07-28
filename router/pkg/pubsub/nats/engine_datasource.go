@@ -81,7 +81,7 @@ func (s *PublishAndRequestEventConfiguration) MarshalJSONTemplate() (string, err
 }
 
 type SubscriptionSource struct {
-	pubSub Adapter
+	pubSub datasource.ProviderBase
 }
 
 func (s *SubscriptionSource) SubscriptionEventConfiguration(input []byte) datasource.SubscriptionEventConfiguration {
@@ -129,7 +129,7 @@ func (s *SubscriptionSource) Start(ctx *resolve.Context, input []byte, updater d
 }
 
 type NatsPublishDataSource struct {
-	pubSub Adapter
+	pubSub datasource.ProviderBase
 }
 
 func (s *NatsPublishDataSource) Load(ctx context.Context, input []byte, out *bytes.Buffer) error {
@@ -152,7 +152,7 @@ func (s *NatsPublishDataSource) LoadWithFiles(ctx context.Context, input []byte,
 }
 
 type NatsRequestDataSource struct {
-	pubSub Adapter
+	pubSub datasource.ProviderBase
 }
 
 func (s *NatsRequestDataSource) Load(ctx context.Context, input []byte, out *bytes.Buffer) error {
@@ -162,7 +162,22 @@ func (s *NatsRequestDataSource) Load(ctx context.Context, input []byte, out *byt
 		return err
 	}
 
-	return s.pubSub.Request(ctx, &subscriptionConfiguration, &subscriptionConfiguration.Event, out)
+	hookedProvider, ok := s.pubSub.(*datasource.HookedProvider)
+	if !ok {
+		return fmt.Errorf("adapter for provider %s is not of the right hooked type", subscriptionConfiguration.ProviderID())
+	}
+
+	providerBase, ok := hookedProvider.Provider.(*datasource.PubSubProvider)
+	if !ok {
+		return fmt.Errorf("adapter for provider %s is not of the right type", subscriptionConfiguration.ProviderID())
+	}
+
+	adapter, ok := providerBase.Adapter.(Adapter)
+	if !ok {
+		return fmt.Errorf("adapter for provider %s is not of the right type", subscriptionConfiguration.ProviderID())
+	}
+
+	return adapter.Request(ctx, &subscriptionConfiguration, &subscriptionConfiguration.Event, out)
 }
 
 func (s *NatsRequestDataSource) LoadWithFiles(ctx context.Context, input []byte, files []*httpclient.FileUpload, out *bytes.Buffer) error {

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"strings"
 	"testing"
 
 	"github.com/cespare/xxhash/v2"
@@ -114,7 +115,7 @@ func TestSubscriptionSource_Start(t *testing.T) {
 			name:  "successful subscription",
 			input: `{"subjects":["subject1", "subject2"], "providerId":"test-provider"}`,
 			mockSetup: func(m *MockAdapter, updater *datasource.MockSubscriptionEventUpdater) {
-				m.On("Subscribe", mock.Anything, SubscriptionEventConfiguration{
+				m.On("Subscribe", mock.Anything, &SubscriptionEventConfiguration{
 					Provider: "test-provider",
 					Subjects: []string{"subject1", "subject2"},
 				}, mock.Anything).Return(nil)
@@ -125,7 +126,7 @@ func TestSubscriptionSource_Start(t *testing.T) {
 			name:  "adapter returns error",
 			input: `{"subjects":["subject1"], "providerId":"test-provider"}`,
 			mockSetup: func(m *MockAdapter, updater *datasource.MockSubscriptionEventUpdater) {
-				m.On("Subscribe", mock.Anything, SubscriptionEventConfiguration{
+				m.On("Subscribe", mock.Anything, &SubscriptionEventConfiguration{
 					Provider: "test-provider",
 					Subjects: []string{"subject1"},
 				}, mock.Anything).Return(errors.New("subscription error"))
@@ -182,10 +183,12 @@ func TestNatsPublishDataSource_Load(t *testing.T) {
 			name:  "successful publish",
 			input: `{"subject":"test-subject", "event": {"data":{"message":"hello"}}, "providerId":"test-provider"}`,
 			mockSetup: func(m *MockAdapter) {
-				m.On("Publish", mock.Anything, mock.MatchedBy(func(event PublishAndRequestEventConfiguration) bool {
+				m.On("Publish", mock.Anything, mock.MatchedBy(func(event *PublishAndRequestEventConfiguration) bool {
 					return event.ProviderID() == "test-provider" &&
 						event.Subject == "test-subject" &&
 						string(event.Event.Data) == `{"message":"hello"}`
+				}), mock.MatchedBy(func(events []datasource.StreamEvent) bool {
+					return len(events) == 1 && strings.EqualFold(string(events[0].GetData()), `{"message":"hello"}`)
 				})).Return(nil)
 			},
 			expectError:     false,
@@ -196,7 +199,7 @@ func TestNatsPublishDataSource_Load(t *testing.T) {
 			name:  "publish error",
 			input: `{"subject":"test-subject", "event": {"data":{"message":"hello"}}, "providerId":"test-provider"}`,
 			mockSetup: func(m *MockAdapter) {
-				m.On("Publish", mock.Anything, mock.Anything).Return(errors.New("publish error"))
+				m.On("Publish", mock.Anything, mock.Anything, mock.Anything).Return(errors.New("publish error"))
 			},
 			expectError:     false, // The Load method doesn't return the publish error directly
 			expectedOutput:  `{"success": false}`,
@@ -257,13 +260,15 @@ func TestNatsRequestDataSource_Load(t *testing.T) {
 			name:  "successful request",
 			input: `{"subject":"test-subject", "event": {"data":{"message":"hello"}}, "providerId":"test-provider"}`,
 			mockSetup: func(m *MockAdapter) {
-				m.On("Request", mock.Anything, mock.MatchedBy(func(event PublishAndRequestEventConfiguration) bool {
+				m.On("Request", mock.Anything, mock.MatchedBy(func(event *PublishAndRequestEventConfiguration) bool {
 					return event.ProviderID() == "test-provider" &&
 						event.Subject == "test-subject" &&
 						string(event.Event.Data) == `{"message":"hello"}`
+				}), mock.MatchedBy(func(event datasource.StreamEvent) bool {
+					return event != nil && strings.EqualFold(string(event.GetData()), `{"message":"hello"}`)
 				}), mock.Anything).Run(func(args mock.Arguments) {
 					// Write response to the output buffer
-					w := args.Get(2).(io.Writer)
+					w := args.Get(3).(io.Writer)
 					_, _ = w.Write([]byte(`{"response":"success"}`))
 				}).Return(nil)
 			},
@@ -274,7 +279,7 @@ func TestNatsRequestDataSource_Load(t *testing.T) {
 			name:  "request error",
 			input: `{"subject":"test-subject", "event": {"data":{"message":"hello"}}, "providerId":"test-provider"}`,
 			mockSetup: func(m *MockAdapter) {
-				m.On("Request", mock.Anything, mock.Anything, mock.Anything).Return(errors.New("request error"))
+				m.On("Request", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(errors.New("request error"))
 			},
 			expectError:    true,
 			expectedOutput: "",
