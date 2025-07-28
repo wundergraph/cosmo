@@ -63,7 +63,7 @@ func TestPersistedOperationInvalidHash(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
 			require.Equal(t, res.Response.Header.Get("Content-Type"), "application/json; charset=utf-8")
-			require.Equal(t, `{"errors":[{"message":"error parsing request body"}]}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"invalid request body: persistedQuery does not have a valid sha256 hash"}]}`, res.Body)
 		})
 	}
 }

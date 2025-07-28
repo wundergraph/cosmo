@@ -532,7 +532,7 @@ func TestVariables(t *testing.T) {
 			})
 			require.NoError(t, err)
 			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
-			require.Equal(t, `{"errors":[{"message":"error parsing request body"}]}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"invalid request body: variables must be a JSON object"}]}`, res.Body)
 		})
 
 		t.Run("invalid string", func(t *testing.T) {
@@ -542,7 +542,7 @@ func TestVariables(t *testing.T) {
 			})
 			require.NoError(t, err)
 			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
-			require.Equal(t, `{"errors":[{"message":"error parsing request body"}]}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"invalid request body: variables must be a JSON object"}]}`, res.Body)
 		})
 
 		t.Run("invalid boolean", func(t *testing.T) {
@@ -552,7 +552,7 @@ func TestVariables(t *testing.T) {
 			})
 			require.NoError(t, err)
 			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
-			require.Equal(t, `{"errors":[{"message":"error parsing request body"}]}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"invalid request body: variables must be a JSON object"}]}`, res.Body)
 		})
 
 		t.Run("invalid array", func(t *testing.T) {
@@ -562,7 +562,7 @@ func TestVariables(t *testing.T) {
 			})
 			require.NoError(t, err)
 			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
-			require.Equal(t, `{"errors":[{"message":"error parsing request body"}]}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"invalid request body: variables must be a JSON object"}]}`, res.Body)
 		})
 
 		t.Run("missing", func(t *testing.T) {

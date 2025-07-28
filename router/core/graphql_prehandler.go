@@ -512,14 +512,14 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	if req.Method == http.MethodGet {
 		if err := operationKit.UnmarshalOperationFromURL(req.URL); err != nil {
 			return &httpGraphqlError{
-				message:    fmt.Sprintf("error parsing request query params: %s", err),
+				message:    fmt.Sprintf("invalid GET request: %s", err),
 				statusCode: http.StatusBadRequest,
 			}
 		}
 	} else if req.Method == http.MethodPost {
 		if err := operationKit.UnmarshalOperationFromBody(httpOperation.body); err != nil {
 			return &httpGraphqlError{
-				message:    "error parsing request body",
+				message:    fmt.Sprintf("invalid request body: %s", err),
 				statusCode: http.StatusBadRequest,
 			}
 		}
