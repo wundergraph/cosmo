@@ -130,7 +130,7 @@ export function validateAndFetchPluginData(
     await opts.authorizer.authorize({
       db: opts.db,
       graph: {
-        targetId: subgraph.id,
+        targetId: subgraph.targetId,
         targetType: 'subgraph',
       },
       headers: ctx.requestHeader,
