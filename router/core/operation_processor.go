@@ -197,14 +197,8 @@ func (pq *GraphQLRequestExtensionsPersistedQuery) isValidHash() bool {
 	if len(pq.Sha256Hash) != 64 {
 		return false
 	}
-	// Iterating over bytes of the string
-	for i := 0; i < len(pq.Sha256Hash); i++ {
-		b := pq.Sha256Hash[i]
-		if !(b >= '0' && b <= '9' || b >= 'a' && b <= 'f' || b >= 'A' && b <= 'F') {
-			return false
-		}
-	}
-	return true
+	_, err := hex.DecodeString(pq.Sha256Hash)
+	return err == nil
 }
 
 func (pq *GraphQLRequestExtensionsPersistedQuery) HasHash() bool {
