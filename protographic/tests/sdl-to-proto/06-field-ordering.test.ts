@@ -1162,7 +1162,7 @@ describe('Field Ordering and Preservation', () => {
       const stringListType = root1.lookupType('ListOfString').lookupType('List');
       const intListType = root1.lookupType('ListOfInt').lookupType('List');
       const userListType = root1.lookupType('ListOfUser').lookupType('List');
-      
+
       const stringListFields = getFieldNumbersFromMessage(stringListType.root, 'List');
       const intListFields = getFieldNumbersFromMessage(intListType.root, 'List');
       const userListFields = getFieldNumbersFromMessage(userListType.root, 'List');
@@ -1235,7 +1235,7 @@ describe('Field Ordering and Preservation', () => {
       const intListType2 = root2.lookupType('ListOfInt').lookupType('List');
       const userListType2 = root2.lookupType('ListOfUser').lookupType('List');
       const floatListType2 = root2.lookupType('ListOfFloat').lookupType('List');
-      
+
       const stringListFields2 = getFieldNumbersFromMessage(stringListType2.root, 'List');
       const intListFields2 = getFieldNumbersFromMessage(intListType2.root, 'List');
       const userListFields2 = getFieldNumbersFromMessage(userListType2.root, 'List');
@@ -1301,7 +1301,7 @@ describe('Field Ordering and Preservation', () => {
       // Get the inner List type field numbers for items
       const stringListType = root1.lookupType('ListOfString').lookupType('List');
       const intListType = root1.lookupType('ListOfInt').lookupType('List');
-      
+
       const stringListFields = getFieldNumbersFromMessage(stringListType.root, 'List');
       const intListFields = getFieldNumbersFromMessage(intListType.root, 'List');
 
@@ -1373,7 +1373,7 @@ describe('Field Ordering and Preservation', () => {
       const stringListType2 = root2.lookupType('ListOfString').lookupType('List');
       const intListType2 = root2.lookupType('ListOfInt').lookupType('List');
       const userListType2 = root2.lookupType('ListOfUser').lookupType('List');
-      
+
       const stringListFields2 = getFieldNumbersFromMessage(stringListType2.root, 'List');
       const intListFields2 = getFieldNumbersFromMessage(intListType2.root, 'List');
       const userListFields2 = getFieldNumbersFromMessage(userListType2.root, 'List');
@@ -1423,7 +1423,7 @@ describe('Field Ordering and Preservation', () => {
       // Get the inner List type field numbers for items
       const stringListType = root1.lookupType('ListOfString').lookupType('List');
       const userListType = root1.lookupType('ListOfUser').lookupType('List');
-      
+
       const stringListFields = getFieldNumbersFromMessage(stringListType.root, 'List');
       const userListFields = getFieldNumbersFromMessage(userListType.root, 'List');
 
@@ -1495,7 +1495,7 @@ describe('Field Ordering and Preservation', () => {
       const stringListType2 = root2.lookupType('ListOfString').lookupType('List');
       const userListType2 = root2.lookupType('ListOfUser').lookupType('List');
       const intListType2 = root2.lookupType('ListOfInt').lookupType('List');
-      
+
       const stringListFields2 = getFieldNumbersFromMessage(stringListType2.root, 'List');
       const userListFields2 = getFieldNumbersFromMessage(userListType2.root, 'List');
       const intListFields2 = getFieldNumbersFromMessage(intListType2.root, 'List');
