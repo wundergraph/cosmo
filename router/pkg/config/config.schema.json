@@ -1649,22 +1649,29 @@
                     "description": "The URL of the JWKs. The JWKs are used to verify the JWT (JSON Web Token). The URL is specified as a string with the format 'scheme://host:port'.",
                     "format": "http-url"
                   },
+                  "audiences": {
+                    "type": "array",
+                    "description": "The audiences of the JWKs. The audiences are used to verify the JWT (JSON Web Token). The audiences are specified as a list of strings.",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
                   "secret": {
                     "type": "string",
                     "description": "The secret of the JWKs"
                   },
-                  "algorithm": {
+                  "symmetric_algorithm": {
                     "type": "string",
-                    "description": "The algorithm used",
+                    "description": "The symmetric algorithm used",
                     "enum": [
                       "HS256",
                       "HS384",
                       "HS512"
                     ]
                   },
-                  "key_id": {
+                  "header_key_id": {
                     "type": "string",
-                    "description": "The secret of the JWKs"
+                    "description": "The KID header of the JWK token created using the secret"
                   },
                   "algorithms": {
                     "type": "array",
@@ -1672,6 +1679,9 @@
                     "items": {
                       "type": "string",
                       "enum": [
+                        "HS256",
+                        "HS384",
+                        "HS512",
                         "RS256",
                         "RS384",
                         "RS512",
@@ -1697,10 +1707,10 @@
                 "oneOf": [
                   {
                     "required": ["url"],
-                    "not": { "anyOf": [{ "required": ["secret"] }, { "required": ["algorithm"] }, { "required": ["key_id"] }] }
+                    "not": { "anyOf": [{ "required": ["secret"] }, { "required": ["symmetric_algorithm"] }, { "required": ["header_key_id"] }] }
                   },
                   {
-                    "required": ["secret", "algorithm", "key_id"],
+                    "required": ["secret", "symmetric_algorithm", "header_key_id"],
                     "not": { "anyOf": [{ "required": ["url"] }, { "required": ["algorithms"] }, { "required": ["refresh_interval"] }] }
                   }
                 ]
