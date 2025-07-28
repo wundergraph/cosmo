@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.238.0](https://github.com/wundergraph/cosmo/compare/router@0.237.0...router@0.238.0) (2025-07-28)
+
+### Features
+
+* add audience validation ([#2074](https://github.com/wundergraph/cosmo/issues/2074)) ([6ae66c8](https://github.com/wundergraph/cosmo/commit/6ae66c83cbf6129f2fa91c83a58cd7900c4906dc)) (@SkArchon)
+
 # [0.237.0](https://github.com/wundergraph/cosmo/compare/router@0.236.0...router@0.237.0) (2025-07-25)
 
 ### Bug Fixes
