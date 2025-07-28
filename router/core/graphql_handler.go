@@ -269,12 +269,8 @@ func (h *GraphQLHandler) configureRateLimiting(ctx *resolve.Context) *resolve.Co
 	ctx.SetRateLimiter(h.rateLimiter)
 	ctx.RateLimitOptions = resolve.RateLimitOptions{
 		Enable:                          true,
-		IncludeStatsInResponseExtension: !h.rateLimitConfig.SimpleStrategy.HideStatsFromResponseExtension,
-		Rate:                            h.rateLimitConfig.SimpleStrategy.Rate,
-		Burst:                           h.rateLimitConfig.SimpleStrategy.Burst,
-		Period:                          h.rateLimitConfig.SimpleStrategy.Period,
-		RateLimitKey:                    h.rateLimitConfig.Storage.KeyPrefix,
-		RejectExceedingRequests:         h.rateLimitConfig.SimpleStrategy.RejectExceedingRequests,
+		IncludeStatsInResponseExtension: !h.rateLimitConfig.HideStatsFromResponseExtension,
+		//RateLimitKey:                    h.rateLimitConfig.Storage.KeyPrefix,
 		ErrorExtensionCode: resolve.RateLimitErrorExtensionCode{
 			Enabled: h.rateLimitConfig.ErrorExtensionCode.Enabled,
 			Code:    h.rateLimitConfig.ErrorExtensionCode.Code,
@@ -317,7 +313,7 @@ func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolv
 				Code: h.rateLimitConfig.ErrorExtensionCode.Code,
 			}
 		}
-		if !h.rateLimitConfig.SimpleStrategy.HideStatsFromResponseExtension {
+		if !h.rateLimitConfig.HideStatsFromResponseExtension {
 			buf := bytes.NewBuffer(make([]byte, 0, 1024))
 			err = h.rateLimiter.RenderResponseExtension(ctx, buf)
 			if err != nil {

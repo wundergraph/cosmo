@@ -40,7 +40,7 @@ func TestRateLimiterGenerateKey(t *testing.T) {
 		t.Parallel()
 		rl, err := NewCosmoRateLimiter(&CosmoRateLimiterOptions{})
 		assert.NoError(t, err)
-		key, err := rl.generateKey(expressionResolveContext(t, nil, nil))
+		key, err := rl.generateKey(expressionResolveContext(t, nil, nil), nil)
 		assert.NoError(t, err)
 		assert.Equal(t, "test", key)
 	})
@@ -51,9 +51,7 @@ func TestRateLimiterGenerateKey(t *testing.T) {
 			ExprManager:         expr.CreateNewExprManager(),
 		})
 		require.NoError(t, err)
-		key, err := rl.generateKey(
-			expressionResolveContext(t, http.Header{"Authorization": []string{"token"}}, nil),
-		)
+		key, err := rl.generateKey(expressionResolveContext(t, http.Header{"Authorization": []string{"token"}}, nil), nil)
 		assert.NoError(t, err)
 		assert.Equal(t, "test:token", key)
 	})
@@ -64,9 +62,7 @@ func TestRateLimiterGenerateKey(t *testing.T) {
 			ExprManager:         expr.CreateNewExprManager(),
 		})
 		assert.NoError(t, err)
-		key, err := rl.generateKey(
-			expressionResolveContext(t, http.Header{"Authorization": []string{"123"}}, nil),
-		)
+		key, err := rl.generateKey(expressionResolveContext(t, http.Header{"Authorization": []string{"123"}}, nil), nil)
 		assert.NoError(t, err)
 		assert.Equal(t, "test:123", key)
 	})
@@ -77,9 +73,7 @@ func TestRateLimiterGenerateKey(t *testing.T) {
 			ExprManager:         expr.CreateNewExprManager(),
 		})
 		assert.NoError(t, err)
-		key, err := rl.generateKey(
-			expressionResolveContext(t, http.Header{"Authorization": []string{"  token  "}}, nil),
-		)
+		key, err := rl.generateKey(expressionResolveContext(t, http.Header{"Authorization": []string{"  token  "}}, nil), nil)
 		assert.NoError(t, err)
 		assert.Equal(t, "test:token", key)
 	})
@@ -90,9 +84,7 @@ func TestRateLimiterGenerateKey(t *testing.T) {
 			ExprManager:         expr.CreateNewExprManager(),
 		})
 		assert.NoError(t, err)
-		key, err := rl.generateKey(
-			expressionResolveContext(t, nil, map[string]any{"sub": "token"}),
-		)
+		key, err := rl.generateKey(expressionResolveContext(t, nil, map[string]any{"sub": "token"}), nil)
 		assert.NoError(t, err)
 		assert.Equal(t, "test:token", key)
 	})
@@ -103,9 +95,7 @@ func TestRateLimiterGenerateKey(t *testing.T) {
 			ExprManager:         expr.CreateNewExprManager(),
 		})
 		assert.NoError(t, err)
-		key, err := rl.generateKey(
-			expressionResolveContext(t, nil, map[string]any{"sub": 123}),
-		)
+		key, err := rl.generateKey(expressionResolveContext(t, nil, map[string]any{"sub": 123}), nil)
 		assert.Error(t, err)
 		assert.Empty(t, key)
 	})
@@ -116,9 +106,7 @@ func TestRateLimiterGenerateKey(t *testing.T) {
 			ExprManager:         expr.CreateNewExprManager(),
 		})
 		assert.NoError(t, err)
-		key, err := rl.generateKey(
-			expressionResolveContext(t, http.Header{"X-Forwarded-For": []string{"192.168.0.1"}}, map[string]any{"sub": "token"}),
-		)
+		key, err := rl.generateKey(expressionResolveContext(t, http.Header{"X-Forwarded-For": []string{"192.168.0.1"}}, map[string]any{"sub": "token"}), nil)
 		assert.NoError(t, err)
 		assert.Equal(t, "test:token", key)
 	})
@@ -129,9 +117,7 @@ func TestRateLimiterGenerateKey(t *testing.T) {
 			ExprManager:         expr.CreateNewExprManager(),
 		})
 		assert.NoError(t, err)
-		key, err := rl.generateKey(
-			expressionResolveContext(t, http.Header{"X-Forwarded-For": []string{"192.168.0.1"}}, nil),
-		)
+		key, err := rl.generateKey(expressionResolveContext(t, http.Header{"X-Forwarded-For": []string{"192.168.0.1"}}, nil), nil)
 		assert.NoError(t, err)
 		assert.Equal(t, "test:192.168.0.1", key)
 	})

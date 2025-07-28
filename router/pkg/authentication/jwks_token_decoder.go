@@ -96,7 +96,7 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 					c.URL: store,
 				},
 				PrioritizeHTTP:    true,
-				RefreshUnknownKID: rate.NewLimiter(rate.Every(5*time.Minute), 1),
+				RefreshUnknownKID: rate.NewLimiter(rate.Every(2*time.Second), 1),
 			}
 
 			jwks, err := createKeyFunc(ctx, jwksetHTTPClientOptions)

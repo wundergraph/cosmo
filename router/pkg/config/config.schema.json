@@ -1820,6 +1820,47 @@
               "type": "boolean",
               "default": false,
               "description": "Hide the rate limit stats from the response extension. If the value is true, the rate limit stats are not included in the response extension."
+            },
+            "key_mapping": {
+              "type": "object",
+              "description": "The configuration per key entry.",
+              "additionalProperties": {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "The configuration for all subgraphs. The configuration is used to configure the traffic shaping for all subgraphs.",
+                "properties": {
+                  "enabled": {
+                    "type": "boolean",
+                    "description": "The rate at which the requests are allowed. The rate is specified as a number of requests per second."
+                  },
+                  "rate": {
+                    "type": "integer",
+                    "description": "The rate at which the requests are allowed. The rate is specified as a number of requests per second.",
+                    "minimum": 1
+                  },
+                  "burst": {
+                    "type": "integer",
+                    "description": "The maximum number of requests that are allowed to exceed the rate. The burst is specified as a number of requests.",
+                    "minimum": 1
+                  },
+                  "period": {
+                    "type": "string",
+                    "description": "The period of time over which the rate limit is enforced. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+                    "duration": {
+                      "minimum": "1s"
+                    }
+                  },
+                  "reject_exceeding_requests": {
+                    "type": "boolean",
+                    "description": "Reject the requests that exceed the rate limit. If the value is true, the requests that exceed the rate limit are rejected."
+                  },
+                  "reject_status_code": {
+                    "type": "integer",
+                    "description": "The status code to return when the request is rejected. The default value is 200 (OK) as we're returning a well formed GraphQL response.",
+                    "default": 200
+                  }
+                }
+              }
             }
           },
           "required": ["rate", "burst", "period"]

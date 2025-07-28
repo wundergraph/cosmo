@@ -1315,10 +1315,12 @@ func (s *graphServer) buildGraphMux(
 	if s.redisClient != nil {
 		handlerOpts.RateLimitConfig = s.rateLimit
 		handlerOpts.RateLimiter, err = NewCosmoRateLimiter(&CosmoRateLimiterOptions{
-			RedisClient:         s.redisClient,
-			Debug:               s.rateLimit.Debug,
-			RejectStatusCode:    s.rateLimit.SimpleStrategy.RejectStatusCode,
+			RedisClient: s.redisClient,
+			Debug:       s.rateLimit.Debug,
+			//RejectStatusCode:    s.rateLimit.SimpleStrategy.RejectStatusCode,
 			KeySuffixExpression: s.rateLimit.KeySuffixExpression,
+			RateLimitConfig:     s.rateLimit.SimpleStrategy,
+			BaseRateLimitKey:    s.rateLimit.Storage.KeyPrefix,
 			ExprManager:         exprManager,
 		})
 		if err != nil {

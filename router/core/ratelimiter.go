@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	rd "github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/redis"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"io"
 	"reflect"
 	"sync"
@@ -25,10 +26,12 @@ type CosmoRateLimiterOptions struct {
 	RedisClient rd.RDCloser
 	Debug       bool
 
-	RejectStatusCode int
-
 	KeySuffixExpression string
 	ExprManager         *expr.Manager
+
+	BaseRateLimitKey string
+
+	RateLimitConfig config.RateLimitSimpleStrategy
 }
 
 func NewCosmoRateLimiter(opts *CosmoRateLimiterOptions) (rl *CosmoRateLimiter, err error) {
@@ -37,7 +40,8 @@ func NewCosmoRateLimiter(opts *CosmoRateLimiterOptions) (rl *CosmoRateLimiter, e
 		client:           opts.RedisClient,
 		limiter:          limiter,
 		debug:            opts.Debug,
-		rejectStatusCode: opts.RejectStatusCode,
+		baseRateLimitKey: opts.BaseRateLimitKey,
+		rateLimitConfig:  opts.RateLimitConfig,
 	}
 	if rl.rejectStatusCode == 0 {
 		rl.rejectStatusCode = 200
@@ -59,6 +63,10 @@ type CosmoRateLimiter struct {
 	rejectStatusCode int
 
 	keySuffixProgram *vm.Program
+
+	// TODO: To decouple from the config
+	rateLimitConfig  config.RateLimitSimpleStrategy
+	baseRateLimitKey string
 }
 
 func (c *CosmoRateLimiter) RateLimitPreFetch(ctx *resolve.Context, info *resolve.FetchInfo, input json.RawMessage) (result *resolve.RateLimitDeny, err error) {
@@ -66,15 +74,30 @@ func (c *CosmoRateLimiter) RateLimitPreFetch(ctx *resolve.Context, info *resolve
 		return nil, nil
 	}
 	requestRate := c.calculateRate()
-	limit := redis_rate.Limit{
-		Rate:   ctx.RateLimitOptions.Rate,
-		Burst:  ctx.RateLimitOptions.Burst,
-		Period: ctx.RateLimitOptions.Period,
-	}
-	key, err := c.generateKey(ctx)
+	rawExprKey, key, err := c.generateKey(ctx, info)
 	if err != nil {
 		return nil, err
 	}
+
+	limitDetails, found := c.rateLimitConfig.KeyMapping[rawExprKey]
+	if !found {
+		if !c.rateLimitConfig.Enabled {
+			return nil, nil
+		} else {
+			limitDetails = c.rateLimitConfig.RateLimitSimpleStrategyEntry
+		}
+	} else {
+		if !limitDetails.Enabled {
+			return nil, nil
+		}
+	}
+
+	limit := redis_rate.Limit{
+		Rate:   limitDetails.Rate,
+		Burst:  limitDetails.Burst,
+		Period: limitDetails.Period,
+	}
+
 	allow, err := c.limiter.AllowN(ctx.Context(), key, limit, requestRate)
 	if err != nil {
 		return nil, err
@@ -83,29 +106,32 @@ func (c *CosmoRateLimiter) RateLimitPreFetch(ctx *resolve.Context, info *resolve
 	if allow.Allowed >= requestRate {
 		return nil, nil
 	}
-	if ctx.RateLimitOptions.RejectExceedingRequests {
+	if limitDetails.RejectExceedingRequests {
 		return nil, ErrRateLimitExceeded
 	}
 	return &resolve.RateLimitDeny{}, nil
 }
 
-func (c *CosmoRateLimiter) generateKey(ctx *resolve.Context) (string, error) {
+func (c *CosmoRateLimiter) generateKey(ctx *resolve.Context, info *resolve.FetchInfo) (string, string, error) {
 	if c.keySuffixProgram == nil {
-		return ctx.RateLimitOptions.RateLimitKey, nil
+		return "", c.baseRateLimitKey, nil
 	}
 	rc := getRequestContext(ctx.Context())
 	if rc == nil {
-		return "", errors.New("no request context")
+		return "", "", errors.New("no request context")
 	}
-	str, err := expr.ResolveStringExpression(c.keySuffixProgram, rc.expressionContext)
+	clonedEc := rc.expressionContext.Clone()
+	clonedEc.Subgraph.Id = info.DataSourceID
+	clonedEc.Subgraph.Name = info.DataSourceName
+	str, err := expr.ResolveStringExpression(c.keySuffixProgram, *clonedEc)
 	if err != nil {
-		return "", fmt.Errorf("failed to resolve key suffix expression: %w", err)
+		return "", "", fmt.Errorf("failed to resolve key suffix expression: %w", err)
 	}
-	buf := bytes.NewBuffer(make([]byte, 0, len(ctx.RateLimitOptions.RateLimitKey)+len(str)+1))
-	_, _ = buf.WriteString(ctx.RateLimitOptions.RateLimitKey)
+	buf := bytes.NewBuffer(make([]byte, 0, len(c.baseRateLimitKey)+len(str)+1))
+	_, _ = buf.WriteString(c.baseRateLimitKey)
 	_ = buf.WriteByte(':')
 	_, _ = buf.WriteString(str)
-	return buf.String(), nil
+	return str, buf.String(), nil
 }
 
 func (c *CosmoRateLimiter) RejectStatusCode() int {
