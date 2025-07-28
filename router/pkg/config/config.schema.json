@@ -1662,7 +1662,7 @@
                   },
                   "symmetric_algorithm": {
                     "type": "string",
-                    "description": "The algorithm used",
+                    "description": "The symmetric algorithm used",
                     "enum": [
                       "HS256",
                       "HS384",
@@ -1671,7 +1671,7 @@
                   },
                   "header_key_id": {
                     "type": "string",
-                    "description": "The secret of the JWKs"
+                    "description": "The KID header of the JWK token created using the secret"
                   },
                   "algorithms": {
                     "type": "array",
@@ -1679,6 +1679,9 @@
                     "items": {
                       "type": "string",
                       "enum": [
+                        "HS256",
+                        "HS384",
+                        "HS512",
                         "RS256",
                         "RS384",
                         "RS512",
