@@ -1660,7 +1660,7 @@
                     "type": "string",
                     "description": "The secret of the JWKs"
                   },
-                  "algorithm": {
+                  "symmetric_algorithm": {
                     "type": "string",
                     "description": "The algorithm used",
                     "enum": [
@@ -1669,7 +1669,7 @@
                       "HS512"
                     ]
                   },
-                  "key_id": {
+                  "header_key_id": {
                     "type": "string",
                     "description": "The secret of the JWKs"
                   },
@@ -1704,10 +1704,10 @@
                 "oneOf": [
                   {
                     "required": ["url"],
-                    "not": { "anyOf": [{ "required": ["secret"] }, { "required": ["algorithm"] }, { "required": ["key_id"] }] }
+                    "not": { "anyOf": [{ "required": ["secret"] }, { "required": ["symmetric_algorithm"] }, { "required": ["header_key_id"] }] }
                   },
                   {
-                    "required": ["secret", "algorithm", "key_id"],
+                    "required": ["secret", "symmetric_algorithm", "header_key_id"],
                     "not": { "anyOf": [{ "required": ["url"] }, { "required": ["algorithms"] }, { "required": ["refresh_interval"] }] }
                   }
                 ]

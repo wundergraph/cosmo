@@ -467,8 +467,8 @@ type JWKSConfiguration struct {
 	// For secret based where we need to create a jwk  entry with
 	// a key id and algorithm
 	Secret    string `yaml:"secret"`
-	Algorithm string `yaml:"algorithm"`
-	KeyId     string `yaml:"key_id"`
+	Algorithm string `yaml:"symmetric_algorithm"`
+	KeyId     string `yaml:"header_key_id"`
 
 	// Common
 	Audiences []string `yaml:"audiences"`
