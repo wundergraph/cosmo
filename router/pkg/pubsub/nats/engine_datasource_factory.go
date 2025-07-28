@@ -6,7 +6,6 @@ import (
 	"slices"
 
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
-
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 

@@ -6,7 +6,7 @@ import "github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 // that provides a way to send the event struct instead of the raw data
 // It is used to give access to the event additional fields to the hooks.
 type SubscriptionEventUpdater interface {
-	Update(event StreamEvent)
+	Update(events []StreamEvent)
 	Complete()
 	Close(kind resolve.SubscriptionCloseKind)
 }
@@ -15,8 +15,10 @@ type subscriptionEventUpdater struct {
 	eventUpdater resolve.SubscriptionUpdater
 }
 
-func (h *subscriptionEventUpdater) Update(event StreamEvent) {
-	h.eventUpdater.Update(event.GetData())
+func (h *subscriptionEventUpdater) Update(events []StreamEvent) {
+	for _, event := range events {
+		h.eventUpdater.Update(event.GetData())
+	}
 }
 
 func (h *subscriptionEventUpdater) Complete() {

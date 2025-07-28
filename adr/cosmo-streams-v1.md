@@ -69,8 +69,6 @@ type PublishEventConfiguration interface {
 type SubscriptionOnStartHookContext interface {
     // the request context
     RequestContext() RequestContext
-    // the stream context
-    StreamContext() StreamContext
     // the subscription event configuration
     SubscriptionEventConfiguration() SubscriptionEventConfiguration
     // write an event to the stream of the current subscription

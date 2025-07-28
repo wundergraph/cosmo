@@ -17,6 +17,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/health"
 	"github.com/wundergraph/cosmo/router/pkg/mcpserver"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"go.opentelemetry.io/otel/propagation"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
@@ -26,7 +27,9 @@ import (
 )
 
 type subscriptionHooks struct {
-	onStart []func(ctx SubscriptionOnStartHookContext) (bool, error)
+	onStart         []func(ctx SubscriptionOnStartHookContext) (bool, error)
+	onPublishEvents []func(ctx StreamPublishEventHookContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error)
+	onStreamEvents  []func(ctx StreamBatchEventHookContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error)
 }
 
 type Config struct {

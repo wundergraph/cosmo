@@ -49,7 +49,7 @@ func (s *SubscriptionEventConfiguration) RootFieldName() string {
 type PublishEventConfiguration struct {
 	Provider  string `json:"providerId"`
 	Channel   string `json:"channel"`
-	Event     Event  `json:"event"`
+	Event     Event  `json:"event"` // this should be in a different and private type, only used internally
 	FieldName string `json:"rootFieldName"`
 }
 
@@ -119,7 +119,7 @@ func (s *SubscriptionDataSource) Start(ctx *resolve.Context, input []byte, updat
 		return fmt.Errorf("invalid subscription configuration")
 	}
 
-	return s.pubSub.Subscribe(ctx.Context(), *conf, updater)
+	return s.pubSub.Subscribe(ctx.Context(), conf, updater)
 }
 
 // LoadInitialData implements the interface method (not used for this subscription type)
@@ -140,7 +140,7 @@ func (s *PublishDataSource) Load(ctx context.Context, input []byte, out *bytes.B
 		return err
 	}
 
-	if err := s.pubSub.Publish(ctx, publishConfiguration); err != nil {
+	if err := s.pubSub.Publish(ctx, &publishConfiguration, []datasource.StreamEvent{&publishConfiguration.Event}); err != nil {
 		_, err = io.WriteString(out, `{"success": false}`)
 		return err
 	}

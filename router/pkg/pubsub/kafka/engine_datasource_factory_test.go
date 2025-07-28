@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/pubsubtest"
 )
 
@@ -29,7 +30,7 @@ func TestKafkaEngineDataSourceFactory(t *testing.T) {
 // TestEngineDataSourceFactoryWithMockAdapter tests the EngineDataSourceFactory with a mocked adapter
 func TestEngineDataSourceFactoryWithMockAdapter(t *testing.T) {
 	// Create mock adapter
-	mockAdapter := NewMockAdapter(t)
+	mockAdapter := datasource.NewMockProvider(t)
 
 	// Configure mock expectations for Publish
 	mockAdapter.On("Publish", mock.Anything, mock.MatchedBy(func(event PublishEventConfiguration) bool {
@@ -63,7 +64,7 @@ func TestEngineDataSourceFactoryWithMockAdapter(t *testing.T) {
 // TestEngineDataSourceFactory_GetResolveDataSource_WrongType tests the EngineDataSourceFactory with a mocked adapter
 func TestEngineDataSourceFactory_GetResolveDataSource_WrongType(t *testing.T) {
 	// Create mock adapter
-	mockAdapter := NewMockAdapter(t)
+	mockAdapter := datasource.NewMockProvider(t)
 
 	// Create the data source with mock adapter
 	pubsub := &EngineDataSourceFactory{

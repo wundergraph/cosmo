@@ -9,7 +9,7 @@ import (
 type PubSubProvider struct {
 	id      string
 	typeID  string
-	Adapter ProviderLifecycle
+	Adapter ProviderBase
 	Logger  *zap.Logger
 }
 
@@ -35,7 +35,15 @@ func (p *PubSubProvider) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-func NewPubSubProvider(id string, typeID string, adapter ProviderLifecycle, logger *zap.Logger) *PubSubProvider {
+func (p *PubSubProvider) Subscribe(ctx context.Context, conf SubscriptionEventConfiguration, updater SubscriptionEventUpdater) error {
+	return p.Adapter.Subscribe(ctx, conf, updater)
+}
+
+func (p *PubSubProvider) Publish(ctx context.Context, conf PublishEventConfiguration, events []StreamEvent) error {
+	return p.Adapter.Publish(ctx, conf, events)
+}
+
+func NewPubSubProvider(id string, typeID string, adapter ProviderBase, logger *zap.Logger) *PubSubProvider {
 	return &PubSubProvider{
 		id:      id,
 		typeID:  typeID,

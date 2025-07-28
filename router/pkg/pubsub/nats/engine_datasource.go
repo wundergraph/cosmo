@@ -55,7 +55,7 @@ func (s *SubscriptionEventConfiguration) RootFieldName() string {
 type PublishAndRequestEventConfiguration struct {
 	Provider  string `json:"providerId"`
 	Subject   string `json:"subject"`
-	Event     Event  `json:"event"`
+	Event     Event  `json:"event"` // this should be in a different and private type, only used internally
 	FieldName string `json:"rootFieldName"`
 }
 
@@ -125,7 +125,7 @@ func (s *SubscriptionSource) Start(ctx *resolve.Context, input []byte, updater d
 		return fmt.Errorf("invalid subscription configuration")
 	}
 
-	return s.pubSub.Subscribe(ctx.Context(), *conf, updater)
+	return s.pubSub.Subscribe(ctx.Context(), conf, updater)
 }
 
 type NatsPublishDataSource struct {
@@ -139,7 +139,7 @@ func (s *NatsPublishDataSource) Load(ctx context.Context, input []byte, out *byt
 		return err
 	}
 
-	if err := s.pubSub.Publish(ctx, publishConfiguration); err != nil {
+	if err := s.pubSub.Publish(ctx, &publishConfiguration, []datasource.StreamEvent{&publishConfiguration.Event}); err != nil {
 		_, err = io.WriteString(out, `{"success": false}`)
 		return err
 	}
@@ -162,7 +162,7 @@ func (s *NatsRequestDataSource) Load(ctx context.Context, input []byte, out *byt
 		return err
 	}
 
-	return s.pubSub.Request(ctx, subscriptionConfiguration, out)
+	return s.pubSub.Request(ctx, &subscriptionConfiguration, &subscriptionConfiguration.Event, out)
 }
 
 func (s *NatsRequestDataSource) LoadWithFiles(ctx context.Context, input []byte, files []*httpclient.FileUpload, out *bytes.Buffer) error {

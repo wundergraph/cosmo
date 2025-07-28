@@ -27,11 +27,16 @@ func (p *ProviderBuilder) TypeID() string {
 	return providerTypeID
 }
 
-func (p *ProviderBuilder) BuildEngineDataSourceFactory(data *nodev1.NatsEventConfiguration) (datasource.EngineDataSourceFactory, error) {
+func (p *ProviderBuilder) BuildEngineDataSourceFactory(data *nodev1.NatsEventConfiguration, providers map[string]datasource.Provider) (datasource.EngineDataSourceFactory, error) {
 	providerId := data.GetEngineEventConfiguration().GetProviderId()
-	adapter, ok := p.adapters[providerId]
+	provider, ok := providers[providerId]
 	if !ok {
 		return nil, fmt.Errorf("failed to get adapter for provider %s with ID %s", p.TypeID(), providerId)
+	}
+
+	adapter, ok := provider.(Adapter)
+	if !ok {
+		return nil, fmt.Errorf("adapter for provider %s is not of the right type", providerId)
 	}
 
 	var eventType EventType
@@ -65,9 +70,13 @@ func (p *ProviderBuilder) BuildEngineDataSourceFactory(data *nodev1.NatsEventCon
 }
 
 func (p *ProviderBuilder) BuildProvider(provider config.NatsEventSource) (datasource.Provider, error) {
-	adapter, pubSubProvider, err := buildProvider(p.ctx, provider, p.logger, p.hostName, p.routerListenAddr)
+	adapterBase, pubSubProvider, err := buildProvider(p.ctx, provider, p.logger, p.hostName, p.routerListenAddr)
 	if err != nil {
 		return nil, err
+	}
+	adapter, ok := adapterBase.(Adapter)
+	if !ok {
+		return nil, fmt.Errorf("adapter for provider %s is not an Adapter", provider.ID)
 	}
 	p.adapters[provider.ID] = adapter
 
@@ -118,7 +127,7 @@ func buildNatsOptions(eventSource config.NatsEventSource, logger *zap.Logger) ([
 	return opts, nil
 }
 
-func buildProvider(ctx context.Context, provider config.NatsEventSource, logger *zap.Logger, hostName string, routerListenAddr string) (Adapter, datasource.Provider, error) {
+func buildProvider(ctx context.Context, provider config.NatsEventSource, logger *zap.Logger, hostName string, routerListenAddr string) (datasource.ProviderBase, datasource.Provider, error) {
 	options, err := buildNatsOptions(provider, logger)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to build options for Nats provider with ID \"%s\": %w", provider.ID, err)

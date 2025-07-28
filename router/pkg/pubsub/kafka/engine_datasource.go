@@ -49,7 +49,7 @@ func (s *SubscriptionEventConfiguration) RootFieldName() string {
 type PublishEventConfiguration struct {
 	Provider  string `json:"providerId"`
 	Topic     string `json:"topic"`
-	Event     Event  `json:"event"`
+	Event     Event  `json:"event"` // this should be in a different and private type, only used internally
 	FieldName string `json:"rootFieldName"`
 }
 
@@ -85,7 +85,7 @@ func (s *PublishEventConfiguration) MarshalJSONTemplate() (string, error) {
 }
 
 type SubscriptionDataSource struct {
-	pubSub Adapter
+	pubSub datasource.ProviderBase
 }
 
 func (s *SubscriptionDataSource) SubscriptionEventConfiguration(input []byte) datasource.SubscriptionEventConfiguration {
@@ -128,11 +128,11 @@ func (s *SubscriptionDataSource) Start(ctx *resolve.Context, input []byte, updat
 		return fmt.Errorf("invalid subscription configuration")
 	}
 
-	return s.pubSub.Subscribe(ctx.Context(), *conf, updater)
+	return s.pubSub.Subscribe(ctx.Context(), conf, updater)
 }
 
 type PublishDataSource struct {
-	pubSub Adapter
+	pubSub datasource.ProviderBase
 }
 
 func (s *PublishDataSource) Load(ctx context.Context, input []byte, out *bytes.Buffer) error {
@@ -142,7 +142,7 @@ func (s *PublishDataSource) Load(ctx context.Context, input []byte, out *bytes.B
 		return err
 	}
 
-	if err := s.pubSub.Publish(ctx, publishConfiguration); err != nil {
+	if err := s.pubSub.Publish(ctx, &publishConfiguration, []datasource.StreamEvent{&publishConfiguration.Event}); err != nil {
 		_, err = io.WriteString(out, `{"success": false}`)
 		return err
 	}

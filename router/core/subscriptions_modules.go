@@ -1,6 +1,8 @@
 package core
 
 import (
+	"context"
+
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
@@ -50,6 +52,19 @@ type SubscriptionOnStartHookContext interface {
 	// write an event to the stream of the current subscription
 	// returns true if the event was written to the stream, false if the event was dropped
 	WriteEvent(event datasource.StreamEvent) bool
+}
+
+type pubSubPublishEventHookContext struct {
+	requestContext            RequestContext
+	publishEventConfiguration datasource.PublishEventConfiguration
+}
+
+func (c *pubSubPublishEventHookContext) RequestContext() RequestContext {
+	return c.requestContext
+}
+
+func (c *pubSubPublishEventHookContext) PublishEventConfiguration() datasource.PublishEventConfiguration {
+	return c.publishEventConfiguration
 }
 
 type pubSubSubscriptionOnStartHookContext struct {
@@ -139,5 +154,76 @@ func NewEngineSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHookContext
 		close, err := fn(hookCtx)
 
 		return close, err
+	}
+}
+
+type StreamBatchEventHookContext interface {
+	// the request context
+	RequestContext() RequestContext
+	// the subscription event configuration
+	SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration
+}
+
+type StreamBatchEventHook interface {
+	// OnStreamEvents is called each time a batch of events is received from the provider
+	// Returning an error will result in a GraphQL error being returned to the client, could be customized returning a StreamHookError.
+	OnStreamEvents(ctx StreamBatchEventHookContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error)
+}
+
+type StreamPublishEventHookContext interface {
+	// the request context
+	RequestContext() RequestContext
+	// the publish event configuration
+	PublishEventConfiguration() datasource.PublishEventConfiguration
+}
+
+type StreamPublishEventHook interface {
+	// OnPublishEvents is called each time a batch of events is going to be sent to the provider
+	// Returning an error will result in a GraphQL error being returned to the client, could be customized returning a StreamHookError.
+	OnPublishEvents(ctx StreamPublishEventHookContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error)
+}
+
+func NewPubSubOnPublishEventsHook(fn func(ctx StreamPublishEventHookContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error)) datasource.OnPublishEventsFn {
+	if fn == nil {
+		return nil
+	}
+
+	return func(ctx context.Context, pubConf datasource.PublishEventConfiguration, evts []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
+		requestContext := getRequestContext(ctx)
+		hookCtx := &pubSubPublishEventHookContext{
+			requestContext:            requestContext,
+			publishEventConfiguration: pubConf,
+		}
+
+		return fn(hookCtx, evts)
+	}
+}
+
+type pubSubStreamBatchEventHookContext struct {
+	requestContext                 RequestContext
+	subscriptionEventConfiguration datasource.SubscriptionEventConfiguration
+}
+
+func (c *pubSubStreamBatchEventHookContext) RequestContext() RequestContext {
+	return c.requestContext
+}
+
+func (c *pubSubStreamBatchEventHookContext) SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration {
+	return c.subscriptionEventConfiguration
+}
+
+func NewPubSubOnStreamEventsHook(fn func(ctx StreamBatchEventHookContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error)) datasource.OnStreamEventsFn {
+	if fn == nil {
+		return nil
+	}
+
+	return func(ctx context.Context, subConf datasource.SubscriptionEventConfiguration, evts []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
+		requestContext := getRequestContext(ctx)
+		hookCtx := &pubSubStreamBatchEventHookContext{
+			requestContext:                 requestContext,
+			subscriptionEventConfiguration: subConf,
+		}
+
+		return fn(hookCtx, evts)
 	}
 }
