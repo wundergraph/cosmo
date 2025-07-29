@@ -671,7 +671,8 @@ func (p *ProjectsService) QueryTasksByPriority(ctx context.Context, req *service
 				{List: &service.ListOfTask_List{Items: mediumTasks}},
 				{List: &service.ListOfTask_List{Items: highTasks}},
 				{List: &service.ListOfTask_List{Items: urgentTasks}},
-				nil, // Add nullable list for testing
+				{List: &service.ListOfTask_List{}}, // Empty list for testing
+				nil,                                // Add nullable list for testing
 			},
 		},
 	}

@@ -117,7 +117,7 @@ func TestRouterPluginRequests(t *testing.T) {
 		{
 			name:     "query project list with nested field",
 			query:    `query { projects { id name milestoneIds teamMembers { id notes currentMood } } }`,
-			expected: `{"data":{"projects":[{"id":"1","name":"Cloud Migration Overhaul","milestoneIds":["1","2","3"],"teamMembers":[{"id":1,"notes":"Jens notes resolved by products","currentMood":"HAPPY"},{"id":2,"notes":"Dustin notes resolved by products","currentMood":"HAPPY"},{"id":3,"notes":"Stefan notes resolved by products","currentMood":"HAPPY"}]},{"id":"2","name":"Microservices Revolution","milestoneIds":["4","5","6"],"teamMembers":[{"id":2,"notes":"Dustin notes resolved by products","currentMood":"HAPPY"},{"id":4,"notes":"Björn notes resolved by products","currentMood":"HAPPY"},{"id":7,"notes":"Suvij notes resolved by products","currentMood":"HAPPY"},{"id":8,"notes":"Nithin notes resolved by products","currentMood":"HAPPY"}]},{"id":"3","name":"AI-Powered Analytics","milestoneIds":null,"teamMembers":[{"id":5,"notes":"Sergiy notes resolved by products","currentMood":"HAPPY"},{"id":6,"notes":null,"currentMood":"HAPPY"}]},{"id":"4","name":"DevOps Transformation","milestoneIds":null,"teamMembers":[{"id":1,"notes":"Jens notes resolved by products","currentMood":"HAPPY"},{"id":9,"notes":null,"currentMood":"HAPPY"}]},{"id":"5","name":"Security Overhaul","milestoneIds":null,"teamMembers":[{"id":2,"notes":"Dustin notes resolved by products","currentMood":"HAPPY"},{"id":9,"notes":null,"currentMood":"HAPPY"},{"id":10,"notes":"Eelco notes resolved by products","currentMood":"HAPPY"}]},{"id":"6","name":"Mobile App Development","milestoneIds":["7","8"],"teamMembers":[{"id":3,"notes":"Stefan notes resolved by products","currentMood":"HAPPY"},{"id":11,"notes":"Alexandra notes resolved by products","currentMood":"HAPPY"}]},{"id":"7","name":"Data Lake Implementation","milestoneIds":["9","10"],"teamMembers":[{"id":5,"notes":"Sergiy notes resolved by products","currentMood":"HAPPY"},{"id":12,"notes":"David notes resolved by products","currentMood":"HAPPY"}]}]}}`,
+			expected: `{"data":{"projects":[{"id":"1","name":"Cloud Migration Overhaul","milestoneIds":["1","2","3"],"teamMembers":[{"id":1,"notes":"Jens notes resolved by products","currentMood":"HAPPY"},{"id":2,"notes":"Dustin notes resolved by products","currentMood":"HAPPY"},{"id":3,"notes":"Stefan notes resolved by products","currentMood":"HAPPY"}]},{"id":"2","name":"Microservices Revolution","milestoneIds":["4","5","6"],"teamMembers":[{"id":2,"notes":"Dustin notes resolved by products","currentMood":"HAPPY"},{"id":4,"notes":"Björn notes resolved by products","currentMood":"HAPPY"},{"id":7,"notes":"Suvij notes resolved by products","currentMood":"HAPPY"},{"id":8,"notes":"Nithin notes resolved by products","currentMood":"HAPPY"}]},{"id":"3","name":"AI-Powered Analytics","milestoneIds":[],"teamMembers":[{"id":5,"notes":"Sergiy notes resolved by products","currentMood":"HAPPY"},{"id":6,"notes":null,"currentMood":"HAPPY"}]},{"id":"4","name":"DevOps Transformation","milestoneIds":[],"teamMembers":[{"id":1,"notes":"Jens notes resolved by products","currentMood":"HAPPY"},{"id":9,"notes":null,"currentMood":"HAPPY"}]},{"id":"5","name":"Security Overhaul","milestoneIds":[],"teamMembers":[{"id":2,"notes":"Dustin notes resolved by products","currentMood":"HAPPY"},{"id":9,"notes":null,"currentMood":"HAPPY"},{"id":10,"notes":"Eelco notes resolved by products","currentMood":"HAPPY"}]},{"id":"6","name":"Mobile App Development","milestoneIds":["7","8"],"teamMembers":[{"id":3,"notes":"Stefan notes resolved by products","currentMood":"HAPPY"},{"id":11,"notes":"Alexandra notes resolved by products","currentMood":"HAPPY"}]},{"id":"7","name":"Data Lake Implementation","milestoneIds":["9","10"],"teamMembers":[{"id":5,"notes":"Sergiy notes resolved by products","currentMood":"HAPPY"},{"id":12,"notes":"David notes resolved by products","currentMood":"HAPPY"}]}]}}`,
 		},
 		{
 			name:     "query employee list with nested field",
@@ -142,7 +142,7 @@ func TestRouterPluginRequests(t *testing.T) {
 		{
 			name:     "query project with nullable list fields",
 			query:    `query { project(id: "1") { id name tags alternativeProjects { id name } dependencies { id name } } }`,
-			expected: `{"data":{"project":{"id":"1","name":"Cloud Migration Overhaul","tags":["cloud","migration","priority"],"alternativeProjects":[{"id":"4","name":"DevOps Transformation"}],"dependencies":null}}}`,
+			expected: `{"data":{"project":{"id":"1","name":"Cloud Migration Overhaul","tags":["cloud","migration","priority"],"alternativeProjects":[{"id":"4","name":"DevOps Transformation"}],"dependencies":[]}}}`,
 		},
 		{
 			name:     "query project with null tags",
@@ -152,7 +152,7 @@ func TestRouterPluginRequests(t *testing.T) {
 		{
 			name:     "query tasks by priority nested lists",
 			query:    `query { tasksByPriority(projectId: "1") { __typename priority } }`,
-			expected: `{"data":{"tasksByPriority":[null,[{"__typename":"Task","priority":"MEDIUM"}],[{"__typename":"Task","priority":"HIGH"},{"__typename":"Task","priority":"HIGH"},{"__typename":"Task","priority":"HIGH"}],null,null]}}`,
+			expected: `{"data":{"tasksByPriority":[[],[{"__typename":"Task","priority":"MEDIUM"}],[{"__typename":"Task","priority":"HIGH"},{"__typename":"Task","priority":"HIGH"},{"__typename":"Task","priority":"HIGH"}],[],[],null]}}`,
 		},
 		{
 			name:     "query project tags simple list",
@@ -187,12 +187,12 @@ func TestRouterPluginRequests(t *testing.T) {
 		{
 			name:     "query project with milestone groups nested lists",
 			query:    `query { project(id: "1") { id milestoneGroups { id name status } } }`,
-			expected: `{"data":{"project":{"id":"1","milestoneGroups":[[{"id":"3","name":"Application Migration","status":"PENDING"}],[{"id":"2","name":"Cloud Environment Setup","status":"IN_PROGRESS"}],[{"id":"1","name":"Infrastructure Assessment","status":"COMPLETED"}],null]}}}`,
+			expected: `{"data":{"project":{"id":"1","milestoneGroups":[[{"id":"3","name":"Application Migration","status":"PENDING"}],[{"id":"2","name":"Cloud Environment Setup","status":"IN_PROGRESS"}],[{"id":"1","name":"Infrastructure Assessment","status":"COMPLETED"}],[]]}}}`,
 		},
 		{
 			name:     "query project with tasks by phase nested lists",
 			query:    `query { project(id: "1") { id tasksByPhase { id name status } } }`,
-			expected: `{"data":{"project":{"id":"1","tasksByPhase":[[{"id":"14","name":"Database Migration","status":"TODO"}],[{"id":"3","name":"Network Setup","status":"IN_PROGRESS"}],null,[{"id":"1","name":"Current Infrastructure Audit","status":"COMPLETED"},{"id":"2","name":"Cloud Provider Selection","status":"COMPLETED"}],null,null]}}}`,
+			expected: `{"data":{"project":{"id":"1","tasksByPhase":[[{"id":"14","name":"Database Migration","status":"TODO"}],[{"id":"3","name":"Network Setup","status":"IN_PROGRESS"}],[],[{"id":"1","name":"Current Infrastructure Audit","status":"COMPLETED"},{"id":"2","name":"Cloud Provider Selection","status":"COMPLETED"}],[],null]}}}`,
 		},
 		{
 			name:     "query resource matrix nested lists",
@@ -207,7 +207,7 @@ func TestRouterPluginRequests(t *testing.T) {
 		{
 			name:     "query project subtasks for empty and nullable lists",
 			query:    `query { projects { id tasks { id subtasks { id name } } } }`,
-			expected: `{"data":{"projects":[{"id":"1","tasks":[{"id":"1","subtasks":[{"id":"1a","name":"Server Inventory"},{"id":"1b","name":"Database Inventory"},{"id":"","name":""}]},{"id":"2","subtasks":null},{"id":"3","subtasks":[{"id":"3a","name":"VPC Configuration"},{"id":"3b","name":"Security Groups"},{"id":"","name":""}]},{"id":"14","subtasks":null}]},{"id":"2","tasks":[{"id":"4","subtasks":null},{"id":"5","subtasks":null}]},{"id":"3","tasks":[{"id":"6","subtasks":null},{"id":"7","subtasks":null}]},{"id":"4","tasks":[{"id":"8","subtasks":null}]},{"id":"5","tasks":[{"id":"9","subtasks":null}]},{"id":"6","tasks":[{"id":"10","subtasks":null},{"id":"11","subtasks":null}]},{"id":"7","tasks":[{"id":"12","subtasks":null},{"id":"13","subtasks":null}]}]}}`,
+			expected: `{"data":{"projects":[{"id":"1","tasks":[{"id":"1","subtasks":[{"id":"1a","name":"Server Inventory"},{"id":"1b","name":"Database Inventory"},{"id":"","name":""}]},{"id":"2","subtasks":null},{"id":"3","subtasks":[{"id":"3a","name":"VPC Configuration"},{"id":"3b","name":"Security Groups"},{"id":"","name":""}]},{"id":"14","subtasks":[]}]},{"id":"2","tasks":[{"id":"4","subtasks":[]},{"id":"5","subtasks":[]}]},{"id":"3","tasks":[{"id":"6","subtasks":null},{"id":"7","subtasks":[]}]},{"id":"4","tasks":[{"id":"8","subtasks":[]}]},{"id":"5","tasks":[{"id":"9","subtasks":[]}]},{"id":"6","tasks":[{"id":"10","subtasks":null},{"id":"11","subtasks":[]}]},{"id":"7","tasks":[{"id":"12","subtasks":[]},{"id":"13","subtasks":[]}]}]}}`,
 		},
 	}
 	testenv.Run(t, &testenv.Config{
