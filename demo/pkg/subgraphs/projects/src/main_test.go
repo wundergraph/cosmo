@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"strconv"
 	"testing"
@@ -44,7 +43,7 @@ func setupTestService(t *testing.T) *testService {
 	// Start the server
 	go func() {
 		if err := grpcServer.Serve(lis); err != nil {
-			panic(fmt.Sprintf("failed to serve: %v", err))
+			t.Errorf("failed to serve: %v", err)
 		}
 	}()
 
