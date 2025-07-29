@@ -2,6 +2,7 @@ package cors
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -218,6 +219,17 @@ func TestGeneratePreflightHeaders_MaxAge(t *testing.T) {
 	assert.Equal(t, header.Get("Access-Control-Max-Age"), "43200") // 12*60*60
 	assert.Equal(t, header.Get("Vary"), "Origin")
 	assert.Len(t, header, 2)
+}
+
+func TestExtremeLengthOriginKillswitch(t *testing.T) {
+	cors := newCors(nil, Config{
+		Enabled:      true,
+		AllowOrigins: []string{"https://*.google.com"},
+	})
+
+	assert.True(t, cors.validateOrigin(fmt.Sprintf("https://%s.google.com", strings.Repeat("a", 10))))
+	assert.True(t, cors.validateOrigin(fmt.Sprintf("https://%s.google.com", strings.Repeat("a", 500))))
+	assert.False(t, cors.validateOrigin(fmt.Sprintf("https://%s.google.com", strings.Repeat("a", 2000))))
 }
 
 func TestValidateOrigin(t *testing.T) {
