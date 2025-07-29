@@ -19,6 +19,19 @@ watch_config:
     enabled: false
     maximum: '10s'
 
+cors:
+  allow_origins: ['*.example.com']
+  allow_methods:
+    - HEAD
+    - GET
+    - POST
+  allow_headers:
+    - Origin
+    - Content-Length
+    - Content-Type
+  allow_credentials: true
+  max_age: 5m
+
 engine:
   max_concurrent_resolvers: 1024
   debug:

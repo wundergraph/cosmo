@@ -227,9 +227,21 @@ func TestExtremeLengthOriginKillswitch(t *testing.T) {
 		AllowOrigins: []string{"https://*.google.com"},
 	})
 
-	assert.True(t, cors.validateOrigin(fmt.Sprintf("https://%s.google.com", strings.Repeat("a", 10))))
-	assert.True(t, cors.validateOrigin(fmt.Sprintf("https://%s.google.com", strings.Repeat("a", 500))))
-	assert.False(t, cors.validateOrigin(fmt.Sprintf("https://%s.google.com", strings.Repeat("a", 2000))))
+	shortSubdomain := strings.Repeat("a", 10)
+	longSubdomain := strings.Repeat("a", 500)
+	tooLongSubdomain := strings.Repeat("a", 2000)
+
+	assert.True(t, cors.validateOrigin(fmt.Sprintf("https://%s.google.com", shortSubdomain)))
+	assert.True(t, cors.validateOrigin(fmt.Sprintf("https://%s.google.com", longSubdomain)))
+	assert.False(t, cors.validateOrigin(fmt.Sprintf("https://%s.google.com", tooLongSubdomain)))
+
+	// Should not affect strict origins
+	cors = newCors(nil, Config{
+		Enabled:      true,
+		AllowOrigins: []string{fmt.Sprintf("https://%s.google.com", tooLongSubdomain)},
+	})
+
+	assert.True(t, cors.validateOrigin(fmt.Sprintf("https://%s.google.com", tooLongSubdomain)))
 }
 
 func TestValidateOrigin(t *testing.T) {
