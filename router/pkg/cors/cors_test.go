@@ -229,7 +229,7 @@ func TestExtremeLengthOriginKillswitch(t *testing.T) {
 
 	shortSubdomain := strings.Repeat("a", 10)
 	longSubdomain := strings.Repeat("a", 500)
-	tooLongSubdomain := strings.Repeat("a", 2000)
+	tooLongSubdomain := strings.Repeat("a", 4096)
 
 	assert.True(t, cors.validateOrigin(fmt.Sprintf("https://%s.google.com", shortSubdomain)))
 	assert.True(t, cors.validateOrigin(fmt.Sprintf("https://%s.google.com", longSubdomain)))
@@ -543,27 +543,8 @@ func TestComplexWildcards(t *testing.T) {
 	}
 	for _, tc := range testCasesList {
 		w := performRequest(router, "GET", tc.origin)
-		assert.Equal(t, tc.expectedCode, w.Code)
+		assert.Equalf(t, tc.expectedCode, w.Code, "expected %d for %s, got %d", tc.expectedCode, tc.origin, w.Code)
 	}
-}
-
-func TestMaxRecursionDepth(t *testing.T) {
-	router := newTestRouter(Config{
-		Enabled: true,
-		AllowOrigins: []string{
-			"https://*.example.*.*.com", // multiple sequential wildcards
-			"https://*.*.*.*.com",
-		},
-		AllowMethods: []string{"GET"},
-	})
-
-	maxRecursionDepth = 2
-	w := performRequest(router, "GET", "https://subdomain.example.subdomain.example.com")
-	assert.Equal(t, 403, w.Code)
-
-	maxRecursionDepth = 10
-	w = performRequest(router, "GET", "https://subdomain.example.subdomain.example.com")
-	assert.Equal(t, 200, w.Code)
 }
 
 func TestDisabled(t *testing.T) {
@@ -585,34 +566,7 @@ func TestDisabled(t *testing.T) {
 	assert.Equal(t, 200, w.Code)
 }
 
-func BenchmarkCorsWithoutWildcards(b *testing.B) {
-	b.ReportAllocs()
-	b.ResetTimer()
-
-	b.Run("without wildcards", func(b *testing.B) {
-		router := newTestRouter(Config{
-			Enabled: true,
-			AllowOrigins: []string{
-				"https://*.wgexample.com",
-				"https://wgexample.com",
-				"https://*.wgexample.io:*",
-				"https://*.wgexample.org",
-				"https://*.d2grknavcceso7.amplifyapp.com",
-				"https://*.example.*.*.com", // multiple sequential wildcards
-				"https://*.*.*.*.com",
-			},
-			AllowMethods: []string{"GET"},
-		})
-
-		w := performRequest(router, "GET", "https://wgexample.com")
-		assert.Equal(b, 200, w.Code)
-	})
-}
-
 func BenchmarkCorsWithWildcards(b *testing.B) {
-	b.ReportAllocs()
-	b.ResetTimer()
-
 	b.Run("with wildcards", func(b *testing.B) {
 		router := newTestRouter(Config{
 			Enabled: true,
@@ -623,7 +577,48 @@ func BenchmarkCorsWithWildcards(b *testing.B) {
 			AllowMethods: []string{"GET"},
 		})
 
-		w := performRequest(router, "GET", "https://subdomain.test.example.subdomain.example.co.whatgoeshere.woohoo.com")
-		assert.Equal(b, 200, w.Code)
+		b.ReportAllocs()
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			w := performRequest(router, "GET", "https://subdomain.test.example.subdomain.example.co.whatgoeshere.woohoo.com")
+			assert.Equal(b, 200, w.Code)
+		}
+	})
+
+	b.Run("with massive wildcards", func(b *testing.B) {
+		router := newTestRouter(Config{
+			Enabled: true,
+			AllowOrigins: []string{
+				"https://*.example.*.*.com", // multiple sequential wildcards
+				"https://*.*.*.*.com",
+			},
+			AllowMethods: []string{"GET"},
+		})
+
+		longString := strings.Repeat("a", 50000)
+
+		b.ReportAllocs()
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			w := performRequest(router, "GET", fmt.Sprintf("https://%[1]s.%[1]s.%[1]s.%[1]s.com", longString))
+			assert.Equal(b, 200, w.Code)
+		}
+	})
+
+	b.Run("without wildcards", func(b *testing.B) {
+		router := newTestRouter(Config{
+			Enabled: true,
+			AllowOrigins: []string{
+				"https://wgexample.com",
+			},
+			AllowMethods: []string{"GET"},
+		})
+
+		b.ReportAllocs()
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			w := performRequest(router, "GET", "https://wgexample.com")
+			assert.Equal(b, 200, w.Code)
+		}
 	})
 }
