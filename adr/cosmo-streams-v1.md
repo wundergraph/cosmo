@@ -17,7 +17,8 @@ This ADR describes new hooks that will be added to the router to support more cu
 The goal is to allow developers to customize the cosmo streams behavior.
 
 ## Decision
-A developer can implement a custom module by creating a struct that implements the following interfaces:
+The following interfaces will extend the existing logic in the custom modules.
+These provide additional control over subscriptions by providing hooks, which are invoked during specific events.
 
 - `SubscriptionOnStartHandler`: Called once at subscription start.
 - `StreamBatchEventHook`: Called each time a batch of events is received from the provider.
