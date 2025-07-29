@@ -192,6 +192,19 @@ type GraphQLRequestExtensionsPersistedQuery struct {
 	Sha256Hash string `json:"sha256Hash"`
 }
 
+// isValidHash verifies if the Sha256Hash string is valid and well-formed.
+func (pq *GraphQLRequestExtensionsPersistedQuery) isValidHash() bool {
+	if len(pq.Sha256Hash) != 64 {
+		return false
+	}
+	_, err := hex.DecodeString(pq.Sha256Hash)
+	return err == nil
+}
+
+func (pq *GraphQLRequestExtensionsPersistedQuery) HasHash() bool {
+	return pq != nil && len(pq.Sha256Hash) > 0
+}
+
 type complexityComparison struct {
 	field        int
 	cachedField  int
@@ -248,29 +261,26 @@ func (o *OperationKit) UnmarshalOperationFromURL(url *url.URL) error {
 	variables := values.Get("variables")
 	if variables != "" {
 		o.parsedOperation.Request.Variables = []byte(variables)
+		// Do sanity check early with json because later we parse variables with fastjson,
+		// and fastjson produces verbose error messages.
 		buf := bytes.NewBuffer(make([]byte, len(o.parsedOperation.Request.Variables))[:0])
 		err := json.Compact(buf, o.parsedOperation.Request.Variables)
 		if err != nil {
-			return err
+			return fmt.Errorf("error parsing variables: %w", err)
 		}
 	}
 
 	extensions := values.Get("extensions")
 	if extensions != "" {
 		o.parsedOperation.Request.Extensions = []byte(extensions)
-		buf := bytes.NewBuffer(make([]byte, len(o.parsedOperation.Request.Extensions))[:0])
-		err := json.Compact(buf, o.parsedOperation.Request.Extensions)
-		if err != nil {
-			return err
-		}
 	}
 
 	return o.unmarshalOperation()
 }
 
-// UnmarshalOperationFromBody loads the operation from the request body and unmarshal it into the ParsedOperation
-// This will load operationName, query, variables and extensions from the request body but extension and variables
-// will be unmarshalled as JSON.RawMessage.
+// UnmarshalOperationFromBody loads the operation from the request body and unmarshal it into the ParsedOperation.
+// This will load operationName, query, variables and extensions from the request body,
+// but extension and variables will be unmarshalled as JSON.RawMessage.
 // We always compact the variables and extensions to ensure that we produce easy to parse JSON for the engine
 func (o *OperationKit) UnmarshalOperationFromBody(data []byte) error {
 	buf := bytes.NewBuffer(make([]byte, len(data))[:0])
@@ -291,23 +301,31 @@ func (o *OperationKit) UnmarshalOperationFromBody(data []byte) error {
 func (o *OperationKit) unmarshalOperation() error {
 	var err error
 
-	if o.parsedOperation.Request.Extensions != nil {
-		var mapExtensions map[string]any
-		err = json.Unmarshal(o.parsedOperation.Request.Extensions, &mapExtensions)
-		if err != nil {
-			return &httpGraphqlError{
-				message:    fmt.Sprintf("error parsing extensions: %s", err),
-				statusCode: http.StatusBadRequest,
-			}
+	// trimmedError removes details not relevant to a user
+	trimmedError := func(err error) string {
+		var ue *json.UnmarshalTypeError
+		if errors.As(err, &ue) {
+			return "json: cannot unmarshal " + ue.Value
 		}
+		return err.Error()
+	}
+
+	if o.parsedOperation.Request.Extensions != nil {
 		err = json.Unmarshal(o.parsedOperation.Request.Extensions, &o.parsedOperation.GraphQLRequestExtensions)
 		if err != nil {
 			return &httpGraphqlError{
-				message:    fmt.Sprintf("error parsing extensions: %s", err),
+				message:    fmt.Sprintf("error parsing extensions: %s", trimmedError(err)),
 				statusCode: http.StatusBadRequest,
 			}
 		}
 		if o.parsedOperation.GraphQLRequestExtensions.PersistedQuery != nil {
+			if !o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.isValidHash() {
+				return &httpGraphqlError{
+					message:    "persistedQuery does not have a valid sha256 hash",
+					statusCode: http.StatusBadRequest,
+				}
+			}
+
 			// Delete persistedQuery from extensions to avoid it being passed to the subgraphs
 			o.parsedOperation.Request.Extensions, err = sjson.DeleteBytes(o.parsedOperation.Request.Extensions, "persistedQuery")
 			if err != nil {
@@ -338,13 +356,13 @@ func (o *OperationKit) unmarshalOperation() error {
 			o.parsedOperation.Variables = variables.GetObject()
 		default:
 			return &httpGraphqlError{
-				message:    "variables must be an object",
+				message:    "variables must be a JSON object",
 				statusCode: http.StatusBadRequest,
 			}
 		}
 	} else {
-		// set variables to empty object if they are null, so we can later add exported defaults
-		// also, other parts of the engine depend on variables being a valid JSON object
+		// Set variables to an empty object if they are null, so we can add exported defaults later.
+		// Also, other parts of the engine depend on variables being a valid JSON object.
 		o.parsedOperation.Request.Variables = []byte("{}")
 		o.parsedOperation.Variables = fastjson.MustParseBytes(o.parsedOperation.Request.Variables).GetObject()
 	}
@@ -354,7 +372,7 @@ func (o *OperationKit) unmarshalOperation() error {
 		o.parsedOperation.Request.OperationName = ""
 	}
 
-	if o.parsedOperation.GraphQLRequestExtensions.PersistedQuery != nil && len(o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash) > 0 {
+	if o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash() {
 		o.parsedOperation.IsPersistedOperation = true
 	}
 
@@ -509,7 +527,7 @@ func (o *OperationKit) isIntrospectionQuery() (result bool, err error) {
 	return false, nil
 }
 
-// Parse parses the operation, populate the document and set the operation type.
+// Parse parses the operation, populates the document and set the operation type.
 // UnmarshalOperationFromBody must be called before calling this method.
 func (o *OperationKit) Parse() error {
 	var (
@@ -519,7 +537,7 @@ func (o *OperationKit) Parse() error {
 
 	if len(o.parsedOperation.Request.Query) == 0 {
 		return &httpGraphqlError{
-			message:    "error parsing request body",
+			message:    "empty request body",
 			statusCode: http.StatusBadRequest,
 		}
 	}
