@@ -49,13 +49,40 @@ func (p *ProjectsService) populateProjectRelationships(project *service.Project)
 		EndDate:      project.EndDate,
 		MilestoneIds: project.MilestoneIds,
 		Progress:     project.Progress,
-		// Populate relationships
-		Milestones:      data.GetMilestonesByProjectID(project.Id),
-		Tasks:           data.GetTasksByProjectID(project.Id),
+		// Populate relationships with populated versions
+		Milestones:      p.populateMilestonesList(data.GetMilestonesByProjectID(project.Id)),
+		Tasks:           p.populateTasksList(data.GetTasksByProjectID(project.Id)),
 		TeamMembers:     data.GetTeamMembersByProjectId(project.Id),
 		RelatedProducts: p.getRelatedProductsByProjectId(project.Id),
+		// Populate all new fields with helper functions
+		Tags:                project.Tags, // Keep original tags
+		AlternativeProjects: data.GetAlternativeProjects(project.Id),
+		Dependencies:        data.GetProjectDependencies(project.Id),
+		ResourceGroups:      data.GetResourceGroups(project.Id),
+		TasksByPhase:        data.GetTasksByPhase(project.Id),
+		MilestoneGroups:     data.GetMilestoneGroups(project.Id),
+		PriorityMatrix:      data.GetPriorityMatrix(project.Id),
 	}
+
 	return populatedProject
+}
+
+// Helper function to populate a list of milestones with their relationships
+func (p *ProjectsService) populateMilestonesList(milestones []*service.Milestone) []*service.Milestone {
+	var populatedMilestones []*service.Milestone
+	for _, milestone := range milestones {
+		populatedMilestones = append(populatedMilestones, data.PopulateMilestoneRelationships(milestone))
+	}
+	return populatedMilestones
+}
+
+// Helper function to populate a list of tasks with their relationships
+func (p *ProjectsService) populateTasksList(tasks []*service.Task) []*service.Task {
+	var populatedTasks []*service.Task
+	for _, task := range tasks {
+		populatedTasks = append(populatedTasks, data.PopulateTaskRelationships(task))
+	}
+	return populatedTasks
 }
 
 func (p *ProjectsService) populateProjectUpdateRelationships(update *service.ProjectUpdate) *service.ProjectUpdate {
@@ -90,7 +117,9 @@ func (p *ProjectsService) LookupMilestoneById(ctx context.Context, req *service.
 		found := false
 		for _, milestone := range data.ServiceMilestones {
 			if milestone.Id == key.Id {
-				result = append(result, milestone)
+				// Populate the milestone with its relationships
+				populatedMilestone := data.PopulateMilestoneRelationships(milestone)
+				result = append(result, populatedMilestone)
 				found = true
 				break
 			}
@@ -115,7 +144,9 @@ func (p *ProjectsService) LookupTaskById(ctx context.Context, req *service.Looku
 		found := false
 		for _, task := range data.ServiceTasks {
 			if task.Id == key.Id {
-				result = append(result, task)
+				// Populate the task with its relationships
+				populatedTask := data.PopulateTaskRelationships(task)
+				result = append(result, populatedTask)
 				found = true
 				break
 			}
@@ -273,8 +304,7 @@ func (p *ProjectsService) QueryMilestones(ctx context.Context, req *service.Quer
 
 	milestones := data.GetMilestonesByProjectID(req.ProjectId)
 	// Populate relationships for all milestones
-	var populatedMilestones []*service.Milestone
-	populatedMilestones = append(populatedMilestones, milestones...)
+	populatedMilestones := p.populateMilestonesList(milestones)
 
 	return &service.QueryMilestonesResponse{Milestones: populatedMilestones}, nil
 }
@@ -286,8 +316,7 @@ func (p *ProjectsService) QueryTasks(ctx context.Context, req *service.QueryTask
 
 	tasks := data.GetTasksByProjectID(req.ProjectId)
 	// Populate relationships for all tasks
-	var populatedTasks []*service.Task
-	populatedTasks = append(populatedTasks, tasks...)
+	populatedTasks := p.populateTasksList(tasks)
 
 	return &service.QueryTasksResponse{Tasks: populatedTasks}, nil
 }
@@ -514,7 +543,7 @@ func (p *ProjectsService) MutationAddProject(ctx context.Context, req *service.M
 		EndDate:         req.Project.EndDate,
 		TeamMembers:     []*service.Employee{},
 		RelatedProducts: []*service.Product{},
-		MilestoneIds:    []string{},
+		MilestoneIds:    &service.ListOfString{List: &service.ListOfString_List{Items: []string{}}},
 		Milestones:      []*service.Milestone{},
 		Tasks:           []*service.Task{},
 		Progress:        &wrapperspb.DoubleValue{Value: 0.0},
@@ -588,4 +617,125 @@ func (p *ProjectsService) QueryProjectsByStatus(ctx context.Context, req *servic
 	}
 
 	return &service.QueryProjectsByStatusResponse{ProjectsByStatus: projects}, nil
+}
+
+// QueryProjectTags implements projects.ProjectsServiceServer.
+func (p *ProjectsService) QueryProjectTags(ctx context.Context, req *service.QueryProjectTagsRequest) (*service.QueryProjectTagsResponse, error) {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	tags := data.GetAllProjectTags()
+	return &service.QueryProjectTagsResponse{ProjectTags: tags}, nil
+}
+
+// QueryArchivedProjects implements projects.ProjectsServiceServer.
+func (p *ProjectsService) QueryArchivedProjects(ctx context.Context, req *service.QueryArchivedProjectsRequest) (*service.QueryArchivedProjectsResponse, error) {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	archivedProjects := data.GetArchivedProjects()
+	return &service.QueryArchivedProjectsResponse{ArchivedProjects: archivedProjects}, nil
+}
+
+// QueryTasksByPriority implements projects.ProjectsServiceServer.
+func (p *ProjectsService) QueryTasksByPriority(ctx context.Context, req *service.QueryTasksByPriorityRequest) (*service.QueryTasksByPriorityResponse, error) {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	tasks := data.GetTasksByProjectID(req.ProjectId)
+
+	// Group tasks by priority - create nested lists
+	lowTasks := []*service.Task{}
+	mediumTasks := []*service.Task{}
+	highTasks := []*service.Task{}
+	urgentTasks := []*service.Task{}
+
+	for _, task := range tasks {
+		switch task.Priority {
+		case service.TaskPriority_TASK_PRIORITY_LOW:
+			lowTasks = append(lowTasks, task)
+		case service.TaskPriority_TASK_PRIORITY_MEDIUM:
+			mediumTasks = append(mediumTasks, task)
+		case service.TaskPriority_TASK_PRIORITY_HIGH:
+			highTasks = append(highTasks, task)
+		case service.TaskPriority_TASK_PRIORITY_URGENT:
+			urgentTasks = append(urgentTasks, task)
+		}
+	}
+
+	// Create nested list structure for testing
+	tasksByPriority := &service.ListOfListOfTask{
+		List: &service.ListOfListOfTask_List{
+			Items: []*service.ListOfTask{
+				{List: &service.ListOfTask_List{Items: lowTasks}},
+				{List: &service.ListOfTask_List{Items: mediumTasks}},
+				{List: &service.ListOfTask_List{Items: highTasks}},
+				{List: &service.ListOfTask_List{Items: urgentTasks}},
+				{List: &service.ListOfTask_List{}}, // Empty list for testing
+				nil,                                // Add nullable list for testing
+			},
+		},
+	}
+
+	return &service.QueryTasksByPriorityResponse{TasksByPriority: tasksByPriority}, nil
+}
+
+// QueryResourceMatrix implements projects.ProjectsServiceServer.
+func (p *ProjectsService) QueryResourceMatrix(ctx context.Context, req *service.QueryResourceMatrixRequest) (*service.QueryResourceMatrixResponse, error) {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	// Create a matrix of resources grouped by type for testing
+	var resourceMatrix []*service.ListOfProjectResource
+
+	// Get project resources
+	milestones := data.GetMilestonesByProjectID(req.ProjectId)
+	tasks := data.GetTasksByProjectID(req.ProjectId)
+	teamMembers := data.GetTeamMembersByProjectId(req.ProjectId)
+	relatedProducts := p.getRelatedProductsByProjectId(req.ProjectId)
+
+	// Group 1: Milestones as resources
+	milestoneResources := []*service.ProjectResource{}
+	for _, milestone := range milestones {
+		milestoneResources = append(milestoneResources, &service.ProjectResource{
+			Value: &service.ProjectResource_Milestone{Milestone: milestone},
+		})
+	}
+
+	// Group 2: Tasks as resources
+	taskResources := []*service.ProjectResource{}
+	for _, task := range tasks {
+		taskResources = append(taskResources, &service.ProjectResource{
+			Value: &service.ProjectResource_Task{Task: task},
+		})
+	}
+
+	// Group 3: Team members as resources
+	employeeResources := []*service.ProjectResource{}
+	for _, employee := range teamMembers {
+		employeeResources = append(employeeResources, &service.ProjectResource{
+			Value: &service.ProjectResource_Employee{Employee: employee},
+		})
+	}
+
+	// Group 4: Products as resources
+	productResources := []*service.ProjectResource{}
+	for _, product := range relatedProducts {
+		productResources = append(productResources, &service.ProjectResource{
+			Value: &service.ProjectResource_Product{Product: product},
+		})
+	}
+
+	resourceMatrix = []*service.ListOfProjectResource{
+		{List: &service.ListOfProjectResource_List{Items: milestoneResources}},
+		{List: &service.ListOfProjectResource_List{Items: taskResources}},
+		{List: &service.ListOfProjectResource_List{Items: employeeResources}},
+		{List: &service.ListOfProjectResource_List{Items: productResources}},
+	}
+
+	return &service.QueryResourceMatrixResponse{
+		ResourceMatrix: &service.ListOfListOfProjectResource{
+			List: &service.ListOfListOfProjectResource_List{Items: resourceMatrix},
+		},
+	}, nil
 }
