@@ -7,19 +7,17 @@ import (
 )
 
 type cors struct {
-	allowAllOrigins        bool
-	allowCredentials       bool
-	allowOriginFunc        func(string) bool
-	allowOrigins           []string
-	normalHeaders          http.Header
-	preflightHeaders       http.Header
-	wildcardOrigins        []*WildcardPattern
-	handler                http.Handler
-	disableMaxOriginLength bool
+	allowAllOrigins  bool
+	allowCredentials bool
+	allowOriginFunc  func(string) bool
+	allowOrigins     []string
+	normalHeaders    http.Header
+	preflightHeaders http.Header
+	wildcardOrigins  []*WildcardPattern
+	handler          http.Handler
 }
 
 var (
-	maxRecursionDepth       = 10   // Safeguard against deep recursion
 	maxWildcardOriginLength = 4096 // Maximum length of an origin string for it to be eligible for wildcard matching
 	DefaultSchemas          = []string{
 		"http://",
