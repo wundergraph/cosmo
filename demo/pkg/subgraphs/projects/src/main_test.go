@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"strconv"
 	"testing"
@@ -43,7 +44,7 @@ func setupTestService(t *testing.T) *testService {
 	// Start the server
 	go func() {
 		if err := grpcServer.Serve(lis); err != nil {
-			t.Logf("failed to serve: %v", err)
+			panic(fmt.Sprintf("failed to serve: %v", err))
 		}
 	}()
 
@@ -170,7 +171,7 @@ func TestQueryProjectsByStatus(t *testing.T) {
 			require.NoError(t, err)
 			if tt.count == 0 {
 				// For zero results, the response might be nil or empty slice
-				assert.True(t, resp.ProjectsByStatus == nil || len(resp.ProjectsByStatus) == 0)
+				assert.True(t, len(resp.ProjectsByStatus) == 0)
 			} else {
 				assert.NotNil(t, resp.ProjectsByStatus)
 				assert.Len(t, resp.ProjectsByStatus, tt.count)

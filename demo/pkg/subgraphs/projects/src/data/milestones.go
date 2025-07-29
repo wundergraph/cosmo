@@ -167,9 +167,7 @@ func GetMilestoneSubtasks(milestoneID string) *projects.ListOfTask {
 
 	// Add some nullable tasks for testing
 	var subtasks []*projects.Task
-	for _, task := range tasks {
-		subtasks = append(subtasks, task)
-	}
+	subtasks = append(subtasks, tasks...)
 
 	// Add nil task for testing nullable items
 	if len(subtasks) > 0 {
