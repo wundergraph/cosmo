@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.239.1](https://github.com/wundergraph/cosmo/compare/router@0.239.0...router@0.239.1) (2025-07-29)
+
+### Bug Fixes
+
+* impose limit on origin length when CORS is enabled with a wildcard ([#2085](https://github.com/wundergraph/cosmo/issues/2085)) ([ec71bd4](https://github.com/wundergraph/cosmo/commit/ec71bd42d9fa8f654f272d7a9c91bdd7113b37d9)) (@endigma)
+* **router:** check persisted ops hashes to be well-formed ([#2078](https://github.com/wundergraph/cosmo/issues/2078)) ([5f0a0b8](https://github.com/wundergraph/cosmo/commit/5f0a0b8b1804ff3974ed7c5582aa61dd6a378e73)) (@ysmolski)
+
 # [0.239.0](https://github.com/wundergraph/cosmo/compare/router@0.238.0...router@0.239.0) (2025-07-29)
 
 ### Features
