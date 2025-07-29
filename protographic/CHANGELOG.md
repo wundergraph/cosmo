@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.7.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.6.0...@wundergraph/protographic@0.7.0) (2025-07-29)
+
+### Features
+
+* handle nested and nullable lists ([#2088](https://github.com/wundergraph/cosmo/issues/2088)) ([7fe14fb](https://github.com/wundergraph/cosmo/commit/7fe14fb70cbe1d6b1374621edf547903390c63c9)) (@Noroth)
+
 # [0.6.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.5.1...@wundergraph/protographic@0.6.0) (2025-07-28)
 
 ### Features
