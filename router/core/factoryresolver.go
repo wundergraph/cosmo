@@ -419,6 +419,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 			for i, fn := range l.subscriptionHooks.onStart {
 				subscriptionOnStartFns[i] = NewEngineSubscriptionOnStartHook(fn)
 			}
+
 			customConfiguration, err := graphql_datasource.NewConfiguration(graphql_datasource.ConfigurationInput{
 				Fetch: &graphql_datasource.FetchConfiguration{
 					URL:    fetchUrl,
@@ -432,7 +433,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 					ForwardedClientHeaderNames:              forwardedClientHeaders,
 					ForwardedClientHeaderRegularExpressions: forwardedClientRegexps,
 					WsSubProtocol:                           wsSubprotocol,
-					SubscriptionOnStartFns:                  subscriptionOnStartFns,
+					StartupHooks:                            subscriptionOnStartFns,
 				},
 				SchemaConfiguration:    schemaConfiguration,
 				CustomScalarTypeFields: customScalarTypeFields,
@@ -478,6 +479,17 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 	for i, fn := range l.subscriptionHooks.onStart {
 		subscriptionOnStartFns[i] = NewPubSubSubscriptionOnStartHook(fn)
 	}
+
+	onPublishEventsFns := make([]pubsub_datasource.OnPublishEventsFn, len(l.subscriptionHooks.onPublishEvents))
+	for i, fn := range l.subscriptionHooks.onPublishEvents {
+		onPublishEventsFns[i] = NewPubSubOnPublishEventsHook(fn)
+	}
+
+	onStreamEventsFns := make([]pubsub_datasource.OnStreamEventsFn, len(l.subscriptionHooks.onStreamEvents))
+	for i, fn := range l.subscriptionHooks.onStreamEvents {
+		onStreamEventsFns[i] = NewPubSubOnStreamEventsHook(fn)
+	}
+
 	factoryProviders, factoryDataSources, err := pubsub.BuildProvidersAndDataSources(
 		l.ctx,
 		routerEngineConfig.Events,
@@ -487,6 +499,8 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 		l.resolver.InstanceData().ListenAddress,
 		pubsub.Hooks{
 			SubscriptionOnStart: subscriptionOnStartFns,
+			OnStreamEvents:      onStreamEventsFns,
+			OnPublishEvents:     onPublishEventsFns,
 		},
 	)
 	if err != nil {
