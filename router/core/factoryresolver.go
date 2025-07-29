@@ -432,7 +432,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 					ForwardedClientHeaderNames:              forwardedClientHeaders,
 					ForwardedClientHeaderRegularExpressions: forwardedClientRegexps,
 					WsSubProtocol:                           wsSubprotocol,
-					SubscriptionOnStartFns:                  subscriptionOnStartFns,
+					StartupHooks:                            subscriptionOnStartFns,
 				},
 				SchemaConfiguration:    schemaConfiguration,
 				CustomScalarTypeFields: customScalarTypeFields,
