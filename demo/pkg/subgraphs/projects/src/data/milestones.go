@@ -206,16 +206,6 @@ func GetMilestoneByID(id string) *projects.Milestone {
 	return nil
 }
 
-// Helper function to get employee by ID (this should probably be in employee.go but adding here for convenience)
-func GetEmployeeByID(id int32) *projects.Employee {
-	for _, employee := range Employees {
-		if employee.Id == id {
-			return employee
-		}
-	}
-	return nil
-}
-
 // Function to populate milestone with its relationships (call this dynamically, not during initialization)
 func PopulateMilestoneRelationships(milestone *projects.Milestone) *projects.Milestone {
 	populatedMilestone := &projects.Milestone{

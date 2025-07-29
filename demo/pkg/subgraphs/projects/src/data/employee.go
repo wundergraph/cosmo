@@ -347,3 +347,13 @@ func GetCompletedTasksByEmployeeId(employeeId int32) []*projects.Task {
 	}
 	return tasks
 }
+
+// Helper function to get employee by ID
+func GetEmployeeByID(id int32) *projects.Employee {
+	for _, employee := range Employees {
+		if employee.Id == id {
+			return employee
+		}
+	}
+	return nil
+}
