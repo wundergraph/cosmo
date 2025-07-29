@@ -74,7 +74,7 @@ func TestGraphQLOverHTTPCompatibility(t *testing.T) {
 			require.Equal(t, res.Header.Get("Content-Type"), "application/json; charset=utf-8")
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"invalid request body: error parsing extensions: json: cannot unmarshal bool into Go value of type core.GraphQLRequestExtensions"}]}`, string(data))
+			require.Equal(t, `{"errors":[{"message":"invalid request body: error parsing extensions: json: cannot unmarshal bool"}]}`, string(data))
 		})
 		t.Run("valid request with Operation Name should return 200 OK with valid response", func(t *testing.T) {
 			header := http.Header{

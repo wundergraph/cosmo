@@ -261,6 +261,8 @@ func (o *OperationKit) UnmarshalOperationFromURL(url *url.URL) error {
 	variables := values.Get("variables")
 	if variables != "" {
 		o.parsedOperation.Request.Variables = []byte(variables)
+		// Do sanity check early with json because later we parse variables with fastjson,
+		// and fastjson produces verbose error messages.
 		buf := bytes.NewBuffer(make([]byte, len(o.parsedOperation.Request.Variables))[:0])
 		err := json.Compact(buf, o.parsedOperation.Request.Variables)
 		if err != nil {
@@ -271,11 +273,6 @@ func (o *OperationKit) UnmarshalOperationFromURL(url *url.URL) error {
 	extensions := values.Get("extensions")
 	if extensions != "" {
 		o.parsedOperation.Request.Extensions = []byte(extensions)
-		buf := bytes.NewBuffer(make([]byte, len(o.parsedOperation.Request.Extensions))[:0])
-		err := json.Compact(buf, o.parsedOperation.Request.Extensions)
-		if err != nil {
-			return fmt.Errorf("error parsing extensions: %w", err)
-		}
 	}
 
 	return o.unmarshalOperation()
@@ -304,11 +301,20 @@ func (o *OperationKit) UnmarshalOperationFromBody(data []byte) error {
 func (o *OperationKit) unmarshalOperation() error {
 	var err error
 
+	// trimmedError removes details not relevant to a user
+	trimmedError := func(err error) string {
+		var ue *json.UnmarshalTypeError
+		if errors.As(err, &ue) {
+			return "json: cannot unmarshal " + ue.Value
+		}
+		return err.Error()
+	}
+
 	if o.parsedOperation.Request.Extensions != nil {
 		err = json.Unmarshal(o.parsedOperation.Request.Extensions, &o.parsedOperation.GraphQLRequestExtensions)
 		if err != nil {
 			return &httpGraphqlError{
-				message:    fmt.Sprintf("error parsing extensions: %s", err),
+				message:    fmt.Sprintf("error parsing extensions: %s", trimmedError(err)),
 				statusCode: http.StatusBadRequest,
 			}
 		}
