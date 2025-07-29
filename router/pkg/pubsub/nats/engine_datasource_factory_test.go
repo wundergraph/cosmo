@@ -169,8 +169,7 @@ func TestNatsEngineDataSourceFactoryWithStreamConfiguration(t *testing.T) {
 func TestEngineDataSourceFactory_RequestDataSource(t *testing.T) {
 	// Create mock adapter
 	mockAdapter := NewMockAdapter(t)
-	pubSubProvider := datasource.NewPubSubProvider("test-provider", "nats", mockAdapter, zap.NewNop())
-	provider := datasource.NewHookedProvider(pubSubProvider, []datasource.OnStreamEventsFn{}, []datasource.OnPublishEventsFn{})
+	provider := datasource.NewPubSubProvider("test-provider", "nats", mockAdapter, zap.NewNop())
 
 	// Configure mock expectations for Request
 	mockAdapter.On("Request", mock.Anything, mock.MatchedBy(func(event *PublishAndRequestEventConfiguration) bool {

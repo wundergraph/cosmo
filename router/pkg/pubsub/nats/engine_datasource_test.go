@@ -295,8 +295,7 @@ func TestNatsRequestDataSource_Load(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockAdapter := NewMockAdapter(t)
-			pubSubProvider := datasource.NewPubSubProvider("test-provider", "nats", mockAdapter, zap.NewNop())
-			provider := datasource.NewHookedProvider(pubSubProvider, []datasource.OnStreamEventsFn{}, []datasource.OnPublishEventsFn{})
+			provider := datasource.NewPubSubProvider("test-provider", "nats", mockAdapter, zap.NewNop())
 			tt.mockSetup(mockAdapter)
 
 			dataSource := &NatsRequestDataSource{

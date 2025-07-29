@@ -619,6 +619,86 @@ func (_c *MockProvider_Publish_Call) RunAndReturn(run func(ctx context.Context, 
 	return _c
 }
 
+// SetOnPublishEventsFns provides a mock function for the type MockProvider
+func (_mock *MockProvider) SetOnPublishEventsFns(onPublishEventsFns []OnPublishEventsFn) {
+	_mock.Called(onPublishEventsFns)
+	return
+}
+
+// MockProvider_SetOnPublishEventsFns_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetOnPublishEventsFns'
+type MockProvider_SetOnPublishEventsFns_Call struct {
+	*mock.Call
+}
+
+// SetOnPublishEventsFns is a helper method to define mock.On call
+//   - onPublishEventsFns []OnPublishEventsFn
+func (_e *MockProvider_Expecter) SetOnPublishEventsFns(onPublishEventsFns interface{}) *MockProvider_SetOnPublishEventsFns_Call {
+	return &MockProvider_SetOnPublishEventsFns_Call{Call: _e.mock.On("SetOnPublishEventsFns", onPublishEventsFns)}
+}
+
+func (_c *MockProvider_SetOnPublishEventsFns_Call) Run(run func(onPublishEventsFns []OnPublishEventsFn)) *MockProvider_SetOnPublishEventsFns_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 []OnPublishEventsFn
+		if args[0] != nil {
+			arg0 = args[0].([]OnPublishEventsFn)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockProvider_SetOnPublishEventsFns_Call) Return() *MockProvider_SetOnPublishEventsFns_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *MockProvider_SetOnPublishEventsFns_Call) RunAndReturn(run func(onPublishEventsFns []OnPublishEventsFn)) *MockProvider_SetOnPublishEventsFns_Call {
+	_c.Run(run)
+	return _c
+}
+
+// SetOnStreamEventsFns provides a mock function for the type MockProvider
+func (_mock *MockProvider) SetOnStreamEventsFns(onStreamEventsFns []OnStreamEventsFn) {
+	_mock.Called(onStreamEventsFns)
+	return
+}
+
+// MockProvider_SetOnStreamEventsFns_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetOnStreamEventsFns'
+type MockProvider_SetOnStreamEventsFns_Call struct {
+	*mock.Call
+}
+
+// SetOnStreamEventsFns is a helper method to define mock.On call
+//   - onStreamEventsFns []OnStreamEventsFn
+func (_e *MockProvider_Expecter) SetOnStreamEventsFns(onStreamEventsFns interface{}) *MockProvider_SetOnStreamEventsFns_Call {
+	return &MockProvider_SetOnStreamEventsFns_Call{Call: _e.mock.On("SetOnStreamEventsFns", onStreamEventsFns)}
+}
+
+func (_c *MockProvider_SetOnStreamEventsFns_Call) Run(run func(onStreamEventsFns []OnStreamEventsFn)) *MockProvider_SetOnStreamEventsFns_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 []OnStreamEventsFn
+		if args[0] != nil {
+			arg0 = args[0].([]OnStreamEventsFn)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockProvider_SetOnStreamEventsFns_Call) Return() *MockProvider_SetOnStreamEventsFns_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *MockProvider_SetOnStreamEventsFns_Call) RunAndReturn(run func(onStreamEventsFns []OnStreamEventsFn)) *MockProvider_SetOnStreamEventsFns_Call {
+	_c.Run(run)
+	return _c
+}
+
 // Shutdown provides a mock function for the type MockProvider
 func (_mock *MockProvider) Shutdown(ctx context.Context) error {
 	ret := _mock.Called(ctx)

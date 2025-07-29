@@ -149,11 +149,9 @@ func build[P GetID, E GetEngineEventConfiguration](ctx context.Context, builder 
 		if err != nil {
 			return nil, nil, err
 		}
-		pubSubProviders[provider.ID()] = pubsub_datasource.NewHookedProvider(
-			provider,
-			hooks.OnStreamEvents,
-			hooks.OnPublishEvents,
-		)
+		provider.SetOnStreamEventsFns(hooks.OnStreamEvents)
+		provider.SetOnPublishEventsFns(hooks.OnPublishEvents)
+		pubSubProviders[provider.ID()] = provider
 	}
 
 	// check if all used providers are initialized

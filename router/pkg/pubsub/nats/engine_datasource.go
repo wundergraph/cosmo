@@ -177,12 +177,7 @@ func (s *NatsRequestDataSource) Load(ctx context.Context, input []byte, out *byt
 		return err
 	}
 
-	hookedProvider, ok := s.pubSub.(*datasource.HookedProvider)
-	if !ok {
-		return fmt.Errorf("adapter for provider %s is not of the right hooked type", publishData.Provider)
-	}
-
-	providerBase, ok := hookedProvider.Provider.(*datasource.PubSubProvider)
+	providerBase, ok := s.pubSub.(*datasource.PubSubProvider)
 	if !ok {
 		return fmt.Errorf("adapter for provider %s is not of the right type", publishData.Provider)
 	}
