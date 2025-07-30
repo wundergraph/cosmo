@@ -151,6 +151,8 @@ export default (opts: BaseCommandOptions) => {
         await rename(tempDir, pluginDir);
       }
 
+      await writeFile(resolve(pluginDir, 'Dockerfile'), pupa(PluginTemplates.dockerfile, { originalPluginName }));
+
       const endTime = performance.now();
       const elapsedTimeMs = endTime - startTime;
       const formattedTime =

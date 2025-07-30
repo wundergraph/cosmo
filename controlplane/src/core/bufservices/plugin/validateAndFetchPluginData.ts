@@ -8,7 +8,7 @@ import {
 import { PluginApiKeyJwtPayload } from '../../../types/index.js';
 import { audiences, nowInSeconds, signJwtHS256 } from '../../crypto/jwt.js';
 import { UnauthorizedError } from '../../errors/errors.js';
-import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
+import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { PluginRepository } from '../../repositories/PluginRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
@@ -33,6 +33,8 @@ export function validateAndFetchPluginData(
     if (authContext.organizationDeactivated) {
       throw new UnauthorizedError();
     }
+
+    req.namespace = req.namespace || DefaultNamespace;
 
     const namespace = await namespaceRepo.byName(req.namespace);
     if (!namespace) {

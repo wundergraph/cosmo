@@ -7,7 +7,7 @@ import Table from 'cli-table3';
 import { Command, program } from 'commander';
 import { execa } from 'execa';
 import ora from 'ora';
-import { resolve } from 'pathe';
+import path, { resolve } from 'pathe';
 import pc from 'picocolors';
 import { config, getBaseHeaders } from '../../../../../core/config.js';
 import { BaseCommandOptions } from '../../../../../core/types/types.js';
@@ -17,11 +17,7 @@ export default (opts: BaseCommandOptions) => {
   command.description(
     "Publishes a plugin subgraph on the control plane. If the plugin subgraph doesn't exists, it will be created.\nIf the publication leads to composition errors, the errors will be visible in the Studio.\nThe router will continue to work with the latest valid schema.\nConsider using the 'wgc subgraph check' command to check for composition errors before publishing.",
   );
-  command.argument(
-    '<name>',
-    'The name of the plugin subgraph to push the schema to. It is used to uniquely identify your plugin subgraph.',
-  );
-  command.requiredOption('--plugin <path-to-plugin-directory>', 'The path to the plugin directory.');
+  command.argument('[directory]', 'The path to the plugin directory.', '.');
   command.option('-n, --namespace [string]', 'The namespace of the plugin subgraph.');
   command.option(
     '--platform [platforms...]',
@@ -46,8 +42,8 @@ export default (opts: BaseCommandOptions) => {
   );
   command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
 
-  command.action(async (name, options) => {
-    const pluginDir = resolve(options.plugin);
+  command.action(async (directory, options) => {
+    const pluginDir = resolve(directory);
     if (!existsSync(pluginDir)) {
       program.error(
         pc.red(
@@ -55,6 +51,8 @@ export default (opts: BaseCommandOptions) => {
         ),
       );
     }
+
+    const pluginName = path.basename(pluginDir);
 
     const schemaFile = resolve(pluginDir, 'src', 'schema.graphql');
     const dockerFile = resolve(pluginDir, 'Dockerfile');
@@ -158,7 +156,7 @@ export default (opts: BaseCommandOptions) => {
 
     const pluginDataResponse = await opts.client.platform.validateAndFetchPluginData(
       {
-        name,
+        name: pluginName,
         namespace: options.namespace,
         labels: options.label.map((label: string) => splitLabel(label)),
       },
@@ -182,8 +180,9 @@ export default (opts: BaseCommandOptions) => {
     try {
       // Docker login
       spinner.text = 'Logging into Docker registry...';
-      await execa('docker', ['login', config.pluginRegistryURL, '-u', 'x', '-p', pushToken], {
+      await execa('docker', ['login', config.pluginRegistryURL, '-u', 'x', '--password-stdin'], {
         stdio: 'pipe',
+        input: pushToken,
       });
 
       // Docker buildx build
@@ -225,7 +224,7 @@ export default (opts: BaseCommandOptions) => {
 
     const resp = await opts.client.platform.publishFederatedSubgraph(
       {
-        name,
+        name: pluginName,
         namespace: options.namespace,
         schema,
         // Optional when subgraph does not exist yet
