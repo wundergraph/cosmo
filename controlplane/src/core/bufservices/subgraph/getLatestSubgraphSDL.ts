@@ -44,7 +44,6 @@ export function getLatestSubgraphSDL(
       },
       sdl: subgraph.schemaSDL,
       versionId: subgraph.schemaVersionId,
-      protoSchema: subgraph.proto?.schema,
     };
   });
 }

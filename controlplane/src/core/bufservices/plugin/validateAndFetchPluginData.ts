@@ -9,6 +9,7 @@ import { PluginApiKeyJwtPayload } from '../../../types/index.js';
 import { audiences, nowInSeconds, signJwtHS256 } from '../../crypto/jwt.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
+import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { PluginRepository } from '../../repositories/PluginRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
@@ -17,10 +18,8 @@ import {
   getLogger,
   handleError,
   isValidGraphName,
-  isValidLabels,
-  isValidPluginVersion,
+  isValidLabels
 } from '../../util.js';
-import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 
 export function validateAndFetchPluginData(
   opts: RouterOptions,

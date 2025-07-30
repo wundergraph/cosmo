@@ -640,12 +640,7 @@ export class ProtoInput extends Message<ProtoInput> {
   platforms: string[] = [];
 
   /**
-   * @generated from field: string go_module_path = 5;
-   */
-  goModulePath = "";
-
-  /**
-   * @generated from field: string version = 6;
+   * @generated from field: string version = 5;
    */
   version = "";
 
@@ -661,8 +656,7 @@ export class ProtoInput extends Message<ProtoInput> {
     { no: 2, name: "mappings", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "lock", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "platforms", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 5, name: "go_module_path", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 6, name: "version", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "version", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ProtoInput {
@@ -3666,11 +3660,6 @@ export class GetLatestSubgraphSDLResponse extends Message<GetLatestSubgraphSDLRe
    */
   versionId?: string;
 
-  /**
-   * @generated from field: optional string proto_schema = 4;
-   */
-  protoSchema?: string;
-
   constructor(data?: PartialMessage<GetLatestSubgraphSDLResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3682,7 +3671,6 @@ export class GetLatestSubgraphSDLResponse extends Message<GetLatestSubgraphSDLRe
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "sdl", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "version_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 4, name: "proto_schema", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetLatestSubgraphSDLResponse {

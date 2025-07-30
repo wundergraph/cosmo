@@ -388,7 +388,6 @@ describe('Publish subgraph tests', () => {
     `;
 
     const validProtoRequest = {
-      goModulePath: 'github.com/example/plugin',
       version: 'v1',
       platforms: ['linux/amd64', 'darwin/amd64'],
       schema: '',
@@ -561,37 +560,6 @@ describe('Publish subgraph tests', () => {
 
       expect(publishResponse.response?.code).toBe(EnumStatusCode.ERR);
       expect(publishResponse.response?.details).toBe('The proto is required for plugin subgraphs.');
-
-      await server.close();
-    });
-
-    test('Should fail to publish plugin without goModulePath', async () => {
-      const { client, server } = await SetupTest({
-        dbname,
-        setupBilling: { plan: 'launch@1' },
-      });
-
-      const pluginName = genID('plugin');
-
-      const incompleteProto = {
-        version: 'v1',
-        platforms: ['linux/amd64'],
-        schema: '',
-        mappings: '',
-        lock: '',
-      };
-
-      // Try to publish without goModulePath
-      const publishResponse = await client.publishFederatedSubgraph({
-        name: pluginName,
-        namespace: 'default',
-        schema: pluginSDL,
-        type: SubgraphType.PLUGIN,
-        proto: incompleteProto,
-      });
-
-      expect(publishResponse.response?.code).toBe(EnumStatusCode.ERR);
-      expect(publishResponse.response?.details).toBe('The goModulePath is required for plugin subgraphs.');
 
       await server.close();
     });

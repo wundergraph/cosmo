@@ -435,29 +435,12 @@ export function publishFederatedSubgraph(
       });
     }
 
-    let protoSchema = '';
-    let protoMappings = '';
-    let protoLock = '';
-
     if (req.type === SubgraphType.PLUGIN || req.type === SubgraphType.GRPC_SUBGRAPH) {
       if (!req.proto) {
         return {
           response: {
             code: EnumStatusCode.ERR,
             details: `The proto is required for plugin subgraphs.`,
-          },
-          compositionErrors: [],
-          deploymentErrors: [],
-          compositionWarnings: [],
-          proposalMatchMessage,
-        };
-      }
-
-      if (!req.proto.goModulePath) {
-        return {
-          response: {
-            code: EnumStatusCode.ERR,
-            details: `The goModulePath is required for plugin subgraphs.`,
           },
           compositionErrors: [],
           deploymentErrors: [],
@@ -494,43 +477,11 @@ export function publishFederatedSubgraph(
         }
       }
 
-      const { schema, mappings, lock, goModulePath } = req.proto;
-      const serviceName = subgraph.name.charAt(0).toUpperCase() + subgraph.name.slice(1) + 'Service';
-
-      try {
-        const newMappings = compileGraphQLToMapping(subgraphSchemaSDL, serviceName);
-        const proto = compileGraphQLToProto(subgraphSchemaSDL, {
-          serviceName,
-          packageName: 'service',
-          goPackage: goModulePath,
-          lockData: subgraph.proto?.lock ? JSON.parse(subgraph.proto.lock) : undefined,
-        });
-
-        if (
-          (schema !== '' && schema !== proto.proto) ||
-          (mappings !== '' && mappings !== JSON.stringify(newMappings, null, 2)) ||
-          (lock !== '' && lock !== JSON.stringify(proto.lockData, null, 2))
-        ) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR,
-              details: `The proto schema, mappings, or lock do not match the expected values.`,
-            },
-            compositionErrors: [],
-            deploymentErrors: [],
-            compositionWarnings: [],
-            proposalMatchMessage,
-          };
-        }
-
-        protoSchema = proto.proto;
-        protoMappings = JSON.stringify(newMappings, null, 2);
-        protoLock = JSON.stringify(proto.lockData, null, 2);
-      } catch (e) {
+      if (!req.proto.schema || !req.proto.mappings || !req.proto.lock) {
         return {
           response: {
             code: EnumStatusCode.ERR,
-            details: `Error generating proto schema. ${e instanceof Error ? `Error: ${e.message}` : ''}`,
+            details: `The schema, mappings, and lock are required for plugin subgraphs.`,
           },
           compositionErrors: [],
           deploymentErrors: [],
@@ -553,9 +504,9 @@ export function publishFederatedSubgraph(
           proto:
             subgraph.type === 'plugin'
               ? {
-                  schema: protoSchema,
-                  mappings: protoMappings,
-                  lock: protoLock,
+                  schema: req.proto?.schema || '',
+                  mappings: req.proto?.mappings || '',
+                  lock: req.proto?.lock || '',
                   pluginData: {
                     platforms: req.proto?.platforms || [],
                     version: req.proto?.version || '',

@@ -1,11 +1,11 @@
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
-import { spawn } from 'node:child_process';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { splitLabel } from '@wundergraph/cosmo-shared';
 import Table from 'cli-table3';
 import { Command, program } from 'commander';
+import { execa } from 'execa';
 import ora from 'ora';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
@@ -19,22 +19,14 @@ export default (opts: BaseCommandOptions) => {
   );
   command.argument(
     '<name>',
-    'The name of the plugin subgraph to push the schema to. It is usually in the format of <org>.<service.name> and is used to uniquely identify your plugin subgraph.',
+    'The name of the plugin subgraph to push the schema to. It is used to uniquely identify your plugin subgraph.',
   );
-  command.requiredOption('--schema <path-to-schema>', 'The schema file to upload to the plugin subgraph.');
-  command.requiredOption('--go-module-path <path>', 'Thge path of the go module, used for go proto generation.');
-  command.requiredOption('--docker-file <path-to-docker-file>', 'The path to your docker file');
+  command.requiredOption('--plugin <path-to-plugin-directory>', 'The path to the plugin directory.');
   command.option('-n, --namespace [string]', 'The namespace of the plugin subgraph.');
-  command.option(
-    '--docker-context <docker-context>',
-    'The path at which the docker should have context to build teh image. Defaults to "." ',
-  );
-  command.option('--proto-schema <path_to_proto_schema>', 'The path to the proto schema');
-  command.option('--proto-mapping <path_to_proto_mapping>', 'The path to the proto mapping');
-  command.option('--proto-lock <path_to_proto_lock>', 'The path to the proto lock file');
   command.option(
     '--platform [platforms...]',
     'The platforms used to build the image. Pass multiple platforms separated by spaces (e.g., --platform linux/amd64 linux/arm64). Supported formats: linux/amd64, linux/arm64, darwin/amd64, darwin/arm64, windows/amd64. Defaults to linux/amd64',
+    ['linux/amd64'],
   );
   command.option(
     '--label [labels...]',
@@ -55,20 +47,25 @@ export default (opts: BaseCommandOptions) => {
   command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
 
   command.action(async (name, options) => {
-    const schemaFile = resolve(options.schema);
-    if (!existsSync(schemaFile)) {
+    const pluginDir = resolve(options.plugin);
+    if (!existsSync(pluginDir)) {
       program.error(
         pc.red(
-          pc.bold(`The schema file '${pc.bold(schemaFile)}' does not exist. Please check the path and try again.`),
+          pc.bold(`The plugin directory '${pc.bold(pluginDir)}' does not exist. Please check the path and try again.`),
         ),
       );
     }
 
-    const dockerFile = resolve(options.dockerFile);
-    if (!existsSync(dockerFile)) {
+    const schemaFile = resolve(pluginDir, 'src', 'schema.graphql');
+    const dockerFile = resolve(pluginDir, 'Dockerfile');
+    const protoSchemaFile = resolve(pluginDir, 'generated', 'service.proto');
+    const protoMappingFile = resolve(pluginDir, 'generated', 'service.mapping.json');
+    const protoLockFile = resolve(pluginDir, 'generated', 'service.lock');
+
+    if (!existsSync(schemaFile)) {
       program.error(
         pc.red(
-          pc.bold(`The docker file '${pc.bold(dockerFile)}' does not exist. Please check the path and try again.`),
+          pc.bold(`The schema file '${pc.bold(schemaFile)}' does not exist. Please check the path and try again.`),
         ),
       );
     }
@@ -81,75 +78,79 @@ export default (opts: BaseCommandOptions) => {
       );
     }
 
-    let protoSchema: string | undefined;
-    let protoMapping: string | undefined;
-    let protoLock: string | undefined;
-
-    // Validate that if any proto option is defined, all three must be defined
-    const protoOptions = [options.protoSchema, options.protoMapping, options.protoLock];
-    const definedProtoOptions = protoOptions.filter((option) => option !== undefined);
-
-    if (definedProtoOptions.length > 0 && definedProtoOptions.length < 3) {
+    if (!existsSync(dockerFile)) {
       program.error(
         pc.red(
-          pc.bold(
-            'If any proto option is specified, all three must be provided: --proto-schema, --proto-mapping, and --proto-lock',
-          ),
+          pc.bold(`The docker file '${pc.bold(dockerFile)}' does not exist. Please check the path and try again.`),
         ),
       );
     }
 
-    if (options.protoSchema) {
-      const protoSchemaFile = resolve(options.protoSchema);
-      if (!existsSync(protoSchemaFile)) {
-        program.error(
-          pc.red(
-            pc.bold(
-              `The proto schema file '${pc.bold(protoSchemaFile)}' does not exist. Please check the path and try again.`,
-            ),
+    if (!existsSync(protoSchemaFile)) {
+      program.error(
+        pc.red(
+          pc.bold(
+            `The proto schema file '${pc.bold(protoSchemaFile)}' does not exist. Please check the path and try again.`,
           ),
-        );
-      }
-      const protoSchemaBuffer = await readFile(protoSchemaFile);
-      const schema = new TextDecoder().decode(protoSchemaBuffer);
-      if (schema.trim().length > 0) {
-        protoSchema = schema;
-      }
+        ),
+      );
+    }
+    const protoSchemaBuffer = await readFile(protoSchemaFile);
+    const protoSchema = new TextDecoder().decode(protoSchemaBuffer);
+    if (protoSchema.trim().length === 0) {
+      program.error(
+        pc.red(pc.bold(`The proto schema file '${pc.bold(protoSchemaFile)}' is empty. Please provide a valid schema.`)),
+      );
     }
 
-    if (options.protoMapping) {
-      const protoMappingFile = resolve(options.protoMapping);
-      if (!existsSync(protoMappingFile)) {
-        program.error(
-          pc.red(
-            pc.bold(
-              `The proto mapping file '${pc.bold(protoMappingFile)}' does not exist. Please check the path and try again.`,
-            ),
+    if (!existsSync(protoMappingFile)) {
+      program.error(
+        pc.red(
+          pc.bold(
+            `The proto mapping file '${pc.bold(protoMappingFile)}' does not exist. Please check the path and try again.`,
           ),
-        );
-      }
-      const protoMappingBuffer = await readFile(protoMappingFile);
-      const mapping = new TextDecoder().decode(protoMappingBuffer);
-      if (mapping.trim().length > 0) {
-        protoMapping = mapping;
-      }
+        ),
+      );
+    }
+    const protoMappingBuffer = await readFile(protoMappingFile);
+    const protoMapping = new TextDecoder().decode(protoMappingBuffer);
+    if (protoMapping.trim().length === 0) {
+      program.error(
+        pc.red(
+          pc.bold(`The proto mapping file '${pc.bold(protoMappingFile)}' is empty. Please provide a valid mapping.`),
+        ),
+      );
     }
 
-    if (options.protoLock) {
-      const protoLockFile = resolve(options.protoLock);
-      if (!existsSync(protoLockFile)) {
+    if (!existsSync(protoLockFile)) {
+      program.error(
+        pc.red(
+          pc.bold(
+            `The proto lock file '${pc.bold(protoLockFile)}' does not exist. Please check the path and try again.`,
+          ),
+        ),
+      );
+    }
+    const protoLockBuffer = await readFile(protoLockFile);
+    const protoLock = new TextDecoder().decode(protoLockBuffer);
+    if (protoLock.trim().length === 0) {
+      program.error(
+        pc.red(pc.bold(`The proto lock file '${pc.bold(protoLockFile)}' is empty. Please provide a valid lock.`)),
+      );
+    }
+
+    // Validate platforms
+    const supportedPlatforms = ['linux/amd64', 'linux/arm64', 'darwin/amd64', 'darwin/arm64', 'windows/amd64'];
+    if (options.platform && options.platform.length > 0) {
+      const invalidPlatforms = options.platform.filter((platform: string) => !supportedPlatforms.includes(platform));
+      if (invalidPlatforms.length > 0) {
         program.error(
           pc.red(
             pc.bold(
-              `The proto lock file '${pc.bold(protoLockFile)}' does not exist. Please check the path and try again.`,
+              `Invalid platform(s): ${invalidPlatforms.join(', ')}. Supported platforms are: ${supportedPlatforms.join(', ')}`,
             ),
           ),
         );
-      }
-      const protoLockBuffer = await readFile(protoLockFile);
-      const lock = new TextDecoder().decode(protoLockBuffer);
-      if (lock.trim().length > 0) {
-        protoLock = lock;
       }
     }
 
@@ -174,51 +175,22 @@ export default (opts: BaseCommandOptions) => {
     const newVersion = pluginDataResponse.newVersion;
     const pushToken = pluginDataResponse.pushToken;
 
-    // Validate platforms
-    const supportedPlatforms = ['linux/amd64', 'linux/arm64', 'darwin/amd64', 'darwin/arm64', 'windows/amd64'];
-    if (options.platform && options.platform.length > 0) {
-      const invalidPlatforms = options.platform.filter((platform: string) => !supportedPlatforms.includes(platform));
-      if (invalidPlatforms.length > 0) {
-        program.error(
-          pc.red(
-            pc.bold(
-              `Invalid platform(s): ${invalidPlatforms.join(', ')}. Supported platforms are: ${supportedPlatforms.join(', ')}`,
-            ),
-          ),
-        );
-      }
-    }
-
     // upload the docker image to the registry
-    const platforms = options.platform && options.platform.length > 0 ? options.platform.join(',') : 'linux/amd64';
-    const dockerContext = options.dockerContext || '.';
+    const platforms = options.platform && options.platform.join(',');
     const imageTag = `${config.pluginRegistryURL}/${reference}:${newVersion}`;
 
     try {
       // Docker login
       spinner.text = 'Logging into Docker registry...';
-      await new Promise<void>((resolve, reject) => {
-        const loginProcess = spawn('docker', ['login', config.pluginRegistryURL, '-u', 'x', '-p', pushToken], {
-          stdio: 'pipe',
-        });
-
-        loginProcess.on('close', (code) => {
-          if (code === 0) {
-            resolve();
-          } else {
-            reject(new Error(`Docker login failed with exit code ${code}`));
-          }
-        });
-
-        loginProcess.on('error', (error) => {
-          reject(error);
-        });
+      await execa('docker', ['login', config.pluginRegistryURL, '-u', 'x', '-p', pushToken], {
+        stdio: 'pipe',
       });
 
       // Docker buildx build
       spinner.text = 'Building and pushing Docker image...';
-      await new Promise<void>((resolve, reject) => {
-        const buildArgs = [
+      await execa(
+        'docker',
+        [
           'buildx',
           'build',
           '--sbom=false',
@@ -230,44 +202,17 @@ export default (opts: BaseCommandOptions) => {
           dockerFile,
           '-t',
           imageTag,
-          dockerContext,
-        ];
-
-        const buildProcess = spawn('docker', buildArgs, {
+          pluginDir,
+        ],
+        {
           stdio: 'inherit',
-        });
-
-        buildProcess.on('close', (code) => {
-          if (code === 0) {
-            resolve();
-          } else {
-            reject(new Error(`Docker build failed with exit code ${code}`));
-          }
-        });
-
-        buildProcess.on('error', (error) => {
-          reject(error);
-        });
-      });
+        },
+      );
 
       // Docker logout
       spinner.text = 'Logging out of Docker registry...';
-      await new Promise<void>((resolve, reject) => {
-        const logoutProcess = spawn('docker', ['logout', config.pluginRegistryURL], {
-          stdio: 'pipe',
-        });
-
-        logoutProcess.on('close', (code) => {
-          if (code === 0) {
-            resolve();
-          } else {
-            reject(new Error(`Docker logout failed with exit code ${code}`));
-          }
-        });
-
-        logoutProcess.on('error', (error) => {
-          reject(error);
-        });
+      await execa('docker', ['logout', config.pluginRegistryURL], {
+        stdio: 'pipe',
       });
 
       spinner.text = 'Subgraph is being published...';
@@ -290,7 +235,6 @@ export default (opts: BaseCommandOptions) => {
           schema: protoSchema,
           mappings: protoMapping,
           lock: protoLock,
-          goModulePath: options.goModulePath,
           platforms: options.platform || [],
           version: newVersion,
         },

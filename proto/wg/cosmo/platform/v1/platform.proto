@@ -41,8 +41,7 @@ message ProtoInput {
   string mappings = 2;
   string lock = 3;
   repeated string platforms = 4;
-  string go_module_path = 5;
-  string version = 6;
+  string version = 5;
 }
 
 message PublishFederatedSubgraphRequest {
@@ -469,7 +468,6 @@ message GetLatestSubgraphSDLResponse {
   Response response = 1;
   optional string sdl = 2;
   optional string version_id = 3;
-  optional string proto_schema = 4;
 }
 
 message GetChecksByFederatedGraphNameFilters {
