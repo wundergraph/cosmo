@@ -969,7 +969,7 @@ type PluginsConfiguration struct {
 }
 
 type PluginRegistryConfiguration struct {
-	URL string `yaml:"url" env:"URL" envDefault:"registry.wundergraph.com"`
+	URL string `yaml:"url" env:"URL" envDefault:"cosmo-registry.wundergraph.com"`
 }
 
 type Config struct {
