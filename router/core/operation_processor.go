@@ -116,7 +116,7 @@ type OperationProcessorOptions struct {
 	DisableExposingVariablesContentOnValidationError bool
 	ComplexityLimits                                 *config.ComplexityLimits
 	ParserTokenizerLimits                            astparser.TokenizerLimits
-	OperationNameTrimLimit                           int
+	OperationNameLimit                               int
 }
 
 // OperationProcessor provides shared resources to the parseKit and OperationKit.
@@ -132,7 +132,7 @@ type OperationProcessor struct {
 	parseKitOptions          *parseKitOptions
 	complexityLimits         *config.ComplexityLimits
 	parserTokenizerLimits    astparser.TokenizerLimits
-	operationNameTrimLimit   int
+	operationNameLimit       int
 }
 
 // parseKit is a helper struct to parse, normalize and validate operations
@@ -257,7 +257,7 @@ func (o *OperationKit) UnmarshalOperationFromURL(url *url.URL) error {
 
 	operationName := values.Get("operationName")
 	if operationName != "" {
-		_, o.parsedOperation.Request.OperationName = GetOperationNameTrimmed(operationName, o.operationProcessor.operationNameTrimLimit)
+		o.parsedOperation.Request.OperationName = operationName
 	}
 
 	variables := values.Get("variables")
@@ -380,8 +380,6 @@ func (o *OperationKit) unmarshalOperation() error {
 	// we're doing string matching on the operation name, so we override null with empty string
 	if o.jsonIsNull(unsafebytes.StringToBytes(o.parsedOperation.Request.OperationName)) {
 		o.parsedOperation.Request.OperationName = ""
-	} else {
-		_, o.parsedOperation.Request.OperationName = GetOperationNameTrimmed(o.parsedOperation.Request.OperationName, o.operationProcessor.operationNameTrimLimit)
 	}
 
 	if o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash() {
@@ -499,6 +497,13 @@ func (o *OperationKit) isIntrospectionQuery() (result bool, err error) {
 			ref := possibleOperationDefinitionRefs[i]
 			name := o.kit.doc.OperationDefinitionNameString(ref)
 
+			if o.isOperationNameExceedLimit(name) {
+				return false, &httpGraphqlError{
+					message:    "operation name too large",
+					statusCode: http.StatusBadRequest,
+				}
+			}
+
 			if o.parsedOperation.Request.OperationName == name {
 				operationDefinitionRef = ref
 				break
@@ -539,6 +544,13 @@ func (o *OperationKit) isIntrospectionQuery() (result bool, err error) {
 	return false, nil
 }
 
+func (o *OperationKit) isOperationNameExceedLimit(operationName string) bool {
+	if o.operationProcessor.operationNameLimit == 0 {
+		return false
+	}
+	return len(operationName) > o.operationProcessor.operationNameLimit
+}
+
 // Parse parses the operation, populates the document and set the operation type.
 // UnmarshalOperationFromBody must be called before calling this method.
 func (o *OperationKit) Parse() error {
@@ -572,6 +584,11 @@ func (o *OperationKit) Parse() error {
 		isIntrospection, err := o.isIntrospectionQuery()
 
 		if err != nil {
+			var httpGqlError *httpGraphqlError
+			if errors.As(err, &httpGqlError) {
+				return httpGqlError
+			}
+
 			return &httpGraphqlError{
 				message:    "could not determine if operation was an introspection query",
 				statusCode: http.StatusOK,
@@ -593,7 +610,7 @@ func (o *OperationKit) Parse() error {
 		}
 		o.kit.numOperations++
 		ref := o.kit.doc.RootNodes[i].Ref
-		trimmed, name := GetOperationNameTrimmed(string(o.kit.doc.OperationDefinitionNameBytes(ref)), o.operationProcessor.operationNameTrimLimit)
+		name := string(o.kit.doc.OperationDefinitionNameBytes(ref))
 
 		if len(name) == 0 {
 			anonymousOperationCount++
@@ -601,6 +618,13 @@ func (o *OperationKit) Parse() error {
 				anonymousOperationDefinitionRef = ref
 			}
 			continue
+		} else {
+			if o.isOperationNameExceedLimit(name) {
+				return &httpGraphqlError{
+					message:    "operation name too large",
+					statusCode: http.StatusBadRequest,
+				}
+			}
 		}
 
 		if o.parsedOperation.Request.OperationName == "" {
@@ -612,12 +636,6 @@ func (o *OperationKit) Parse() error {
 		if name == o.parsedOperation.Request.OperationName && o.operationDefinitionRef == -1 {
 			o.operationDefinitionRef = ref
 			o.originalOperationNameRef = o.kit.doc.OperationDefinitions[ref].Name
-		}
-
-		if o.kit.doc.OperationDefinitions != nil && trimmed {
-			newSet := o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name
-			newSet.End = newSet.Start + uint32(o.operationProcessor.operationNameTrimLimit)
-			o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name = newSet
 		}
 	}
 
@@ -1276,7 +1294,7 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 		parseKitSemaphore:        make(chan int, opts.ParseKitPoolSize),
 		introspectionEnabled:     opts.IntrospectionEnabled,
 		parserTokenizerLimits:    opts.ParserTokenizerLimits,
-		operationNameTrimLimit:   opts.OperationNameTrimLimit,
+		operationNameLimit:       opts.OperationNameLimit,
 		complexityLimits:         opts.ComplexityLimits,
 		parseKitOptions: &parseKitOptions{
 			apolloCompatibilityFlags:                         opts.ApolloCompatibilityFlags,

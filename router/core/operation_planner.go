@@ -53,20 +53,6 @@ func (p *OperationPlanner) preparePlan(ctx *operationContext) (*planWithMetaData
 		return nil, &reportError{report: &report}
 	}
 
-	// The doc is parsed using ctx.content which is the normalized content from the original parsed content
-	// This contains the original operation name, so we need to manually tell the parser to ignore the
-	// extra parts
-	for i := range doc.RootNodes {
-		if doc.RootNodes[i].Kind != ast.NodeKindOperationDefinition {
-			continue
-		}
-		currName := doc.OperationDefinitionNameString(doc.RootNodes[i].Ref)
-		if trimmed, _ := GetOperationNameTrimmed(currName, ctx.operationTrimLimit); trimmed {
-			name := doc.OperationDefinitions[doc.RootNodes[i].Ref].Name
-			doc.OperationDefinitions[doc.RootNodes[i].Ref].Name.End = name.Start + uint32(ctx.operationTrimLimit)
-		}
-	}
-
 	planner, err := plan.NewPlanner(p.executor.PlanConfig)
 	if err != nil {
 		return nil, err

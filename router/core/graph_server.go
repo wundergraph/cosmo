@@ -1207,7 +1207,7 @@ func (s *graphServer) buildGraphMux(
 			MaxDepth:  s.Config.securityConfiguration.ParserLimits.ApproximateDepthLimit,
 			MaxFields: s.Config.securityConfiguration.ParserLimits.TotalFieldsLimit,
 		},
-		OperationNameTrimLimit:                           int(s.securityConfiguration.OperationNameTrimLimit),
+		OperationNameLimit:                               s.securityConfiguration.OperationNameLimit,
 		ApolloCompatibilityFlags:                         s.apolloCompatibilityFlags,
 		ApolloRouterCompatibilityFlags:                   s.apolloRouterCompatibilityFlags,
 		DisableExposingVariablesContentOnValidationError: s.engineExecutionConfiguration.DisableExposingVariablesContentOnValidationError,

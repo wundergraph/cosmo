@@ -675,7 +675,7 @@
       "ApproximateDepthLimit": 100,
       "TotalFieldsLimit": 500
     },
-    "OperationNameTrimLimit": 256
+    "OperationNameLimit": 2000
   },
   "EngineExecutionConfiguration": {
     "Debug": {

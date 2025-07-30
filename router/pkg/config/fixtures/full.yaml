@@ -427,6 +427,7 @@ security:
       enabled: true
       limit: 4
       ignore_persisted_operations: true
+  operation_name_limit: 2000
 persisted_operations:
   safelist:
     enabled: true

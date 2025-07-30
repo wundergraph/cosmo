@@ -1,10 +1,9 @@
 package integration
 
 import (
+	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
-	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/metric"
 	"net/http"
 	"testing"
 
@@ -117,111 +116,160 @@ func TestParserHardLimits(t *testing.T) {
 func TestQueryNamingLimits(t *testing.T) {
 	t.Parallel()
 
-	t.Run("verify that a operation name over the limit gets trimmed", func(t *testing.T) {
+	t.Run("verify operation query naming limits", func(t *testing.T) {
 		t.Parallel()
-		metricReader := metric.NewManualReader()
-		exporter := tracetest.NewInMemoryExporter(t)
 
-		trimSize := 2
-		queryName := "longstring"
+		t.Run("with large query name and no operation name", func(t *testing.T) {
+			t.Parallel()
+			trimSize := 2
+			queryName := "longstring"
 
-		testenv.Run(t, &testenv.Config{
-			TraceExporter: exporter,
-			MetricReader:  metricReader,
-			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-				securityConfiguration.OperationNameTrimLimit = trimSize
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: "query " + queryName + " { employees { id } }",
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.OperationNameLimit = trimSize
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Query: "query " + queryName + " { employees { id } }",
+				})
+				require.NoError(t, err)
+				require.JSONEq(t, `{"errors":[{"message":"operation name too large"}]}`, res.Body)
+				require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
 			})
-			sn := exporter.GetSpans().Snapshots()
-
-			require.Equal(t, "Operation - Execute", sn[7].Name())
-			operationName := getOperationName(sn[7].Attributes())
-			require.NotNil(t, operationName)
-			require.Equal(t, operationName.AsString(), queryName[:trimSize])
 		})
-	})
 
-	t.Run("verify that a string thats exactly on the limit does not get trimmed", func(t *testing.T) {
-		t.Parallel()
-		metricReader := metric.NewManualReader()
-		exporter := tracetest.NewInMemoryExporter(t)
+		t.Run("with large query name and small operation name", func(t *testing.T) {
+			t.Parallel()
+			trimSize := 6
+			queryName := "longstring"
+			operationName := `"short"`
 
-		queryName := "longstring"
-		trimSize := len(queryName)
-
-		testenv.Run(t, &testenv.Config{
-			TraceExporter: exporter,
-			MetricReader:  metricReader,
-			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-				securityConfiguration.OperationNameTrimLimit = trimSize
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: "query " + queryName + " { employees { id } }",
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.OperationNameLimit = trimSize
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Query:         "query " + queryName + " { employees { id } }",
+					OperationName: []byte(operationName),
+				})
+				require.NoError(t, err)
+				require.JSONEq(t, `{"errors":[{"message":"operation name too large"}]}`, res.Body)
+				require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
 			})
-			sn := exporter.GetSpans().Snapshots()
-
-			require.Equal(t, "Operation - Execute", sn[7].Name())
-			operationName := getOperationName(sn[7].Attributes())
-			require.NotNil(t, operationName)
-			require.Equal(t, operationName.AsString(), queryName)
 		})
-	})
 
-	t.Run("verify that a string thats under the limit does not get trimmed", func(t *testing.T) {
-		t.Parallel()
-		metricReader := metric.NewManualReader()
-		exporter := tracetest.NewInMemoryExporter(t)
+		t.Run("with small query name and large operation name", func(t *testing.T) {
+			t.Parallel()
 
-		queryName := "longstring"
-		trimSize := len(queryName) + 5
+			trimSize := 6
+			queryName := "short"
+			operationName := `"longname"`
 
-		testenv.Run(t, &testenv.Config{
-			TraceExporter: exporter,
-			MetricReader:  metricReader,
-			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-				securityConfiguration.OperationNameTrimLimit = trimSize
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: "query " + queryName + " { employees { id } }",
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.OperationNameLimit = trimSize
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Query:         "query " + queryName + " { employees { id } }",
+					OperationName: []byte(operationName),
+				})
+				require.NoError(t, err)
+				require.JSONEq(t, `{"errors":[{"message":"operation name too large"}]}`, res.Body)
+				require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
 			})
-			sn := exporter.GetSpans().Snapshots()
-
-			require.Equal(t, "Operation - Execute", sn[7].Name())
-			operationName := getOperationName(sn[7].Attributes())
-			require.NotNil(t, operationName)
-			require.Equal(t, operationName.AsString(), queryName)
 		})
-	})
 
-	t.Run("verify any length is accepted when set to 0", func(t *testing.T) {
-		t.Parallel()
-		metricReader := metric.NewManualReader()
-		exporter := tracetest.NewInMemoryExporter(t)
+		t.Run("with small query name and small operation name", func(t *testing.T) {
+			t.Parallel()
 
-		queryName := "longstringlongstringlongstringlongstringlongstringlongstringlongstringlongstring"
-		trimSize := 0
+			trimSize := 6
+			queryName := "short"
+			operationName := `"short"`
 
-		testenv.Run(t, &testenv.Config{
-			TraceExporter: exporter,
-			MetricReader:  metricReader,
-			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-				securityConfiguration.OperationNameTrimLimit = trimSize
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: "query " + queryName + " { employees { id } }",
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.OperationNameLimit = trimSize
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Query:         "query " + queryName + " { employees { id } }",
+					OperationName: []byte(operationName),
+				})
+				require.NoError(t, err)
+				require.NotEqual(t, `{"errors":[{"message":"operation name too large"}]}`, res.Body)
+				require.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
+				require.Equal(t, http.StatusOK, res.Response.StatusCode)
 			})
-			sn := exporter.GetSpans().Snapshots()
+		})
 
-			require.Equal(t, "Operation - Execute", sn[7].Name())
-			operationName := getOperationName(sn[7].Attributes())
-			require.NotNil(t, operationName)
-			require.Equal(t, operationName.AsString(), queryName)
+		t.Run("with multiple queries of which one is large", func(t *testing.T) {
+			t.Parallel()
+
+			trimSize := 6
+			query1Name := "short"
+			query2Name := "longstring"
+
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.OperationNameLimit = trimSize
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Query: "query " + query1Name + " { employees { id } } query " + query2Name + " { employees { id } }",
+				})
+				require.NoError(t, err)
+				require.JSONEq(t, `{"errors":[{"message":"operation name too large"}]}`, res.Body)
+				require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+			})
+		})
+
+		t.Run("with multiple queries of which both are small", func(t *testing.T) {
+			t.Parallel()
+
+			trimSize := 6
+			query1Name := "short1"
+			query2Name := "short2"
+
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.OperationNameLimit = trimSize
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Query: "query " + query1Name + " { employees { id } } query " + query2Name + " { employees { id } }",
+				})
+				require.NoError(t, err)
+				require.NotEqual(t, `{"errors":[{"message":"operation name too large"}]}`, res.Body)
+				require.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
+				require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			})
+		})
+
+		// In case of introspection checks, we could potentially early return
+		t.Run("with multiple queries with introspection disabled", func(t *testing.T) {
+			t.Parallel()
+
+			trimSize := 6
+			query1Name := "longquery"
+			query2Name := "short2"
+
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.OperationNameLimit = trimSize
+				},
+				RouterOptions: []core.Option{
+					core.WithIntrospection(false),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Query: "query " + query1Name + " { __schema { __typename } } query " + query2Name + " { employees { id } }",
+				})
+				require.NoError(t, err)
+				require.JSONEq(t, `{"errors":[{"message":"operation name too large"}]}`, res.Body)
+				require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+			})
 		})
 	})
 

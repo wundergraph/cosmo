@@ -2457,10 +2457,10 @@
             }
           }
         },
-        "operation_name_trim_limit": {
+        "operation_name_limit": {
           "type": "integer",
-          "description": "The limit of the operation name length",
-          "default": "256",
+          "description": "The max allowed limit of the operation name length, 0 would disable the limit validation.",
+          "default": "512",
           "minimum": 0
         },
         "depth_limit": {

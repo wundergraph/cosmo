@@ -533,8 +533,6 @@ type operationContext struct {
 	validationTime    time.Duration
 	planningTime      time.Duration
 	normalizationTime time.Duration
-
-	operationTrimLimit int
 }
 
 func (o *operationContext) Variables() *astjson.Value {

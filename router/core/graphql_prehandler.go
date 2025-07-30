@@ -241,8 +241,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		}
 
 		requestContext.operation = &operationContext{
-			clientInfo:         clientInfo,
-			operationTrimLimit: h.operationProcessor.operationNameTrimLimit,
+			clientInfo: clientInfo,
 		}
 
 		defer func() {
@@ -527,6 +526,13 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		// If we have files, we need to set them on the parsed operation
 		if len(httpOperation.files) > 0 {
 			requestContext.operation.files = httpOperation.files
+		}
+	}
+
+	if operationKit.isOperationNameExceedLimit(operationKit.parsedOperation.Request.OperationName) {
+		return &httpGraphqlError{
+			message:    "operation name too large",
+			statusCode: http.StatusBadRequest,
 		}
 	}
 
