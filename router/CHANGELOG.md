@@ -4,6 +4,31 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.239.2](https://github.com/wundergraph/cosmo/compare/router@0.239.1...router@0.239.2) (2025-07-29)
+
+### Bug Fixes
+
+* fix parent node jump lookup ([#2091](https://github.com/wundergraph/cosmo/issues/2091)) ([b5c25de](https://github.com/wundergraph/cosmo/commit/b5c25de00de51d57c2fa112316d40cc92dfd6903)) (@devsergiy)
+
+## [0.239.1](https://github.com/wundergraph/cosmo/compare/router@0.239.0...router@0.239.1) (2025-07-29)
+
+### Bug Fixes
+
+* impose limit on origin length when CORS is enabled with a wildcard ([#2085](https://github.com/wundergraph/cosmo/issues/2085)) ([ec71bd4](https://github.com/wundergraph/cosmo/commit/ec71bd42d9fa8f654f272d7a9c91bdd7113b37d9)) (@endigma)
+* **router:** check persisted ops hashes to be well-formed ([#2078](https://github.com/wundergraph/cosmo/issues/2078)) ([5f0a0b8](https://github.com/wundergraph/cosmo/commit/5f0a0b8b1804ff3974ed7c5582aa61dd6a378e73)) (@ysmolski)
+
+# [0.239.0](https://github.com/wundergraph/cosmo/compare/router@0.238.0...router@0.239.0) (2025-07-29)
+
+### Features
+
+* handle nested and nullable lists ([#2088](https://github.com/wundergraph/cosmo/issues/2088)) ([7fe14fb](https://github.com/wundergraph/cosmo/commit/7fe14fb70cbe1d6b1374621edf547903390c63c9)) (@Noroth)
+
+# [0.238.0](https://github.com/wundergraph/cosmo/compare/router@0.237.0...router@0.238.0) (2025-07-28)
+
+### Features
+
+* add audience validation ([#2074](https://github.com/wundergraph/cosmo/issues/2074)) ([6ae66c8](https://github.com/wundergraph/cosmo/commit/6ae66c83cbf6129f2fa91c83a58cd7900c4906dc)) (@SkArchon)
+
 # [0.237.0](https://github.com/wundergraph/cosmo/compare/router@0.236.0...router@0.237.0) (2025-07-25)
 
 ### Bug Fixes
