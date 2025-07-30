@@ -280,14 +280,6 @@ func (o *OperationKit) UnmarshalOperationFromURL(url *url.URL) error {
 	return o.unmarshalOperation()
 }
 
-func GetOperationNameTrimmed(operationName string, limit int) (bool, string) {
-	if limit <= 0 || len(operationName) <= limit {
-		return false, operationName
-	}
-	operationName = operationName[:limit]
-	return true, operationName
-}
-
 // UnmarshalOperationFromBody loads the operation from the request body and unmarshal it into the ParsedOperation.
 // This will load operationName, query, variables and extensions from the request body,
 // but extension and variables will be unmarshalled as JSON.RawMessage.
@@ -497,7 +489,7 @@ func (o *OperationKit) isIntrospectionQuery() (result bool, err error) {
 			ref := possibleOperationDefinitionRefs[i]
 			name := o.kit.doc.OperationDefinitionNameString(ref)
 
-			if o.isOperationNameExceedLimit(name) {
+			if o.isOperationNameLimitExceeded(name) {
 				return false, &httpGraphqlError{
 					message:    "operation name too large",
 					statusCode: http.StatusBadRequest,
@@ -544,7 +536,7 @@ func (o *OperationKit) isIntrospectionQuery() (result bool, err error) {
 	return false, nil
 }
 
-func (o *OperationKit) isOperationNameExceedLimit(operationName string) bool {
+func (o *OperationKit) isOperationNameLimitExceeded(operationName string) bool {
 	if o.operationProcessor.operationNameLimit == 0 {
 		return false
 	}
@@ -619,7 +611,7 @@ func (o *OperationKit) Parse() error {
 			}
 			continue
 		} else {
-			if o.isOperationNameExceedLimit(name) {
+			if o.isOperationNameLimitExceeded(name) {
 				return &httpGraphqlError{
 					message:    "operation name too large",
 					statusCode: http.StatusBadRequest,

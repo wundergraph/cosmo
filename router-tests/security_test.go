@@ -2,8 +2,6 @@ package integration
 
 import (
 	"github.com/wundergraph/cosmo/router/core"
-	"github.com/wundergraph/cosmo/router/pkg/otel"
-	"go.opentelemetry.io/otel/attribute"
 	"net/http"
 	"testing"
 
@@ -272,14 +270,4 @@ func TestQueryNamingLimits(t *testing.T) {
 			})
 		})
 	})
-
-}
-
-func getOperationName(sn []attribute.KeyValue) *attribute.Value {
-	for _, attr := range sn {
-		if attr.Key == otel.WgOperationName {
-			return &attr.Value
-		}
-	}
-	return nil
 }

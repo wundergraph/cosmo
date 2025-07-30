@@ -529,7 +529,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		}
 	}
 
-	if operationKit.isOperationNameExceedLimit(operationKit.parsedOperation.Request.OperationName) {
+	if operationKit.isOperationNameLimitExceeded(operationKit.parsedOperation.Request.OperationName) {
 		return &httpGraphqlError{
 			message:    "operation name too large",
 			statusCode: http.StatusBadRequest,
