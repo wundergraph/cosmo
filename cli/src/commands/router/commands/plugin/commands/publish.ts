@@ -254,7 +254,7 @@ export default (opts: BaseCommandOptions) => {
         break;
       }
       case EnumStatusCode.ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL: {
-        spinner.fail(`Failed to publish subgraph "${name}".`);
+        spinner.fail(`Failed to publish subgraph "${pluginName}".`);
         console.log(pc.red(`Error: Proposal match failed`));
         console.log(pc.red(resp.proposalMatchMessage));
         break;
@@ -333,7 +333,7 @@ export default (opts: BaseCommandOptions) => {
         break;
       }
       default: {
-        spinner.fail(`Failed to publish subgraph "${name}".`);
+        spinner.fail(`Failed to publish subgraph "${pluginName}".`);
         if (resp.response?.details) {
           console.error(pc.red(pc.bold(resp.response?.details)));
         }
