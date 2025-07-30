@@ -354,7 +354,7 @@ func TestQueryNamingLimits(t *testing.T) {
 				require.Equal(t, http.StatusBadRequest, resPost.Response.StatusCode)
 
 				resGet, err := xEnv.MakeGraphQLRequestOverGET(testenv.GraphQLRequest{
-					Query: "query " + query1Name + " { employees { id } } query " + query2Name + " { employees { id } }",
+					Query: "query " + query1Name + " { __schema { __typename } } query " + query2Name + " { employees { id } }",
 				})
 				require.NoError(t, err)
 				require.JSONEq(t, expectedErrorMessage, resGet.Body)
