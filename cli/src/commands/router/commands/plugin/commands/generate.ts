@@ -4,7 +4,12 @@ import Spinner from 'ora';
 import { resolve } from 'pathe';
 import { BaseCommandOptions } from '../../../../../core/types/types.js';
 import { renderResultTree } from '../helper.js';
-import { checkAndInstallTools, generateGRPCCode, generateProtoAndMapping, installGoDependencies } from '../toolchain.js';
+import {
+  checkAndInstallTools,
+  generateGRPCCode,
+  generateProtoAndMapping,
+  installGoDependencies,
+} from '../toolchain.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('generate');
