@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
@@ -13,6 +15,12 @@ import {
 import { DEFAULT_NAMESPACE, SetupTest } from '../test-util.js';
 import { OrganizationRole } from '../../src/db/models.js';
 import { audiences } from '../../src/core/crypto/jwt.js';
+
+// Read the actual proto, mapping and lock files
+const testDataPath = path.join(process.cwd(), 'test/test-data/plugin');
+const pluginSchema = readFileSync(path.join(testDataPath, 'service.proto'), 'utf8');
+const pluginMappings = readFileSync(path.join(testDataPath, 'mapping.json'), 'utf8');
+const pluginLock = readFileSync(path.join(testDataPath, 'service.proto.lock.json'), 'utf8');
 
 let dbname = '';
 
@@ -75,9 +83,9 @@ describe('ValidateAndFetchPluginData', () => {
       schema: 'type Query { hello: String! }',
       type: SubgraphType.PLUGIN,
       proto: {
-        schema: '',
-        mappings: '',
-        lock: '',
+        schema: pluginSchema,
+        mappings: pluginMappings,
+        lock: pluginLock,
         version: 'v1',
         platforms: ['linux/amd64'],
       },
@@ -421,9 +429,9 @@ describe('ValidateAndFetchPluginData', () => {
       schema: 'type Query { hello: String! }',
       type: SubgraphType.PLUGIN,
       proto: {
-        schema: '',
-        mappings: '',
-        lock: '',
+        schema: pluginSchema,
+        mappings: pluginMappings,
+        lock: pluginLock,
         version: 'v99',
         platforms: ['linux/amd64'],
       },

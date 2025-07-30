@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
@@ -11,6 +13,12 @@ import {
   genUniqueLabel,
 } from '../../src/core/test-util.js';
 import { createEventDrivenGraph, createSubgraph, eventDrivenGraphSDL, SetupTest, subgraphSDL } from '../test-util.js';
+
+// Read the actual proto, mapping and lock files
+const testDataPath = path.join(process.cwd(), 'test/test-data/plugin');
+const pluginSchema = readFileSync(path.join(testDataPath, 'service.proto'), 'utf8');
+const pluginMappings = readFileSync(path.join(testDataPath, 'mapping.json'), 'utf8');
+const pluginLock = readFileSync(path.join(testDataPath, 'service.proto.lock.json'), 'utf8');
 
 let dbname = '';
 
@@ -390,9 +398,9 @@ describe('Publish subgraph tests', () => {
     const validProtoRequest = {
       version: 'v1',
       platforms: ['linux/amd64', 'darwin/amd64'],
-      schema: '',
-      mappings: '',
-      lock: '',
+      schema: pluginSchema,
+      mappings: pluginMappings,
+      lock: pluginLock,
     };
 
     test('Should be able to publish an existing plugin subgraph', async () => {
@@ -575,9 +583,9 @@ describe('Publish subgraph tests', () => {
       const incompleteProto = {
         goModulePath: 'github.com/example/plugin',
         platforms: ['linux/amd64'],
-        schema: '',
-        mappings: '',
-        lock: '',
+        schema: pluginSchema,
+        mappings: pluginMappings,
+        lock: pluginLock,
       };
 
       // Try to publish without version
@@ -606,9 +614,9 @@ describe('Publish subgraph tests', () => {
       const incompleteProto = {
         goModulePath: 'github.com/example/plugin',
         version: 'v1',
-        schema: '',
-        mappings: '',
-        lock: '',
+        schema: pluginSchema,
+        mappings: pluginMappings,
+        lock: pluginLock,
       };
 
       // Try to publish without platforms
