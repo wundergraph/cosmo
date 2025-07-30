@@ -116,6 +116,7 @@ type OperationProcessorOptions struct {
 	DisableExposingVariablesContentOnValidationError bool
 	ComplexityLimits                                 *config.ComplexityLimits
 	ParserTokenizerLimits                            astparser.TokenizerLimits
+	OperationNameTrimLimit                           int
 }
 
 // OperationProcessor provides shared resources to the parseKit and OperationKit.
@@ -131,6 +132,7 @@ type OperationProcessor struct {
 	parseKitOptions          *parseKitOptions
 	complexityLimits         *config.ComplexityLimits
 	parserTokenizerLimits    astparser.TokenizerLimits
+	operationNameTrimLimit   int
 }
 
 // parseKit is a helper struct to parse, normalize and validate operations
@@ -255,7 +257,7 @@ func (o *OperationKit) UnmarshalOperationFromURL(url *url.URL) error {
 
 	operationName := values.Get("operationName")
 	if operationName != "" {
-		o.parsedOperation.Request.OperationName = operationName
+		_, o.parsedOperation.Request.OperationName = GetOperationNameTrimmed(operationName, o.operationProcessor.operationNameTrimLimit)
 	}
 
 	variables := values.Get("variables")
@@ -276,6 +278,14 @@ func (o *OperationKit) UnmarshalOperationFromURL(url *url.URL) error {
 	}
 
 	return o.unmarshalOperation()
+}
+
+func GetOperationNameTrimmed(operationName string, limit int) (bool, string) {
+	if len(operationName) <= limit {
+		return false, operationName
+	}
+	operationName = operationName[:limit]
+	return true, operationName
 }
 
 // UnmarshalOperationFromBody loads the operation from the request body and unmarshal it into the ParsedOperation.
@@ -370,6 +380,8 @@ func (o *OperationKit) unmarshalOperation() error {
 	// we're doing string matching on the operation name, so we override null with empty string
 	if o.jsonIsNull(unsafebytes.StringToBytes(o.parsedOperation.Request.OperationName)) {
 		o.parsedOperation.Request.OperationName = ""
+	} else {
+		_, o.parsedOperation.Request.OperationName = GetOperationNameTrimmed(o.parsedOperation.Request.OperationName, o.operationProcessor.operationNameTrimLimit)
 	}
 
 	if o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash() {
@@ -581,7 +593,8 @@ func (o *OperationKit) Parse() error {
 		}
 		o.kit.numOperations++
 		ref := o.kit.doc.RootNodes[i].Ref
-		name := string(o.kit.doc.OperationDefinitionNameBytes(ref))
+		trimmed, name := GetOperationNameTrimmed(string(o.kit.doc.OperationDefinitionNameBytes(ref)), o.operationProcessor.operationNameTrimLimit)
+
 		if len(name) == 0 {
 			anonymousOperationCount++
 			if anonymousOperationDefinitionRef == -1 {
@@ -589,6 +602,7 @@ func (o *OperationKit) Parse() error {
 			}
 			continue
 		}
+
 		if o.parsedOperation.Request.OperationName == "" {
 			o.operationDefinitionRef = ref
 			o.originalOperationNameRef = o.kit.doc.OperationDefinitions[ref].Name
@@ -598,6 +612,12 @@ func (o *OperationKit) Parse() error {
 		if name == o.parsedOperation.Request.OperationName && o.operationDefinitionRef == -1 {
 			o.operationDefinitionRef = ref
 			o.originalOperationNameRef = o.kit.doc.OperationDefinitions[ref].Name
+		}
+
+		if o.kit.doc.OperationDefinitions != nil && trimmed {
+			newSet := o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name
+			newSet.End = newSet.Start + uint32(o.operationProcessor.operationNameTrimLimit)
+			o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name = newSet
 		}
 	}
 
@@ -1256,6 +1276,7 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 		parseKitSemaphore:        make(chan int, opts.ParseKitPoolSize),
 		introspectionEnabled:     opts.IntrospectionEnabled,
 		parserTokenizerLimits:    opts.ParserTokenizerLimits,
+		operationNameTrimLimit:   opts.OperationNameTrimLimit,
 		complexityLimits:         opts.ComplexityLimits,
 		parseKitOptions: &parseKitOptions{
 			apolloCompatibilityFlags:                         opts.ApolloCompatibilityFlags,

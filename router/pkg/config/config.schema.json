@@ -2457,6 +2457,11 @@
             }
           }
         },
+        "operation_name_trim_limit": {
+          "type": "integer",
+          "description": "The limit of the operation name length",
+          "default": "256"
+        },
         "depth_limit": {
           "type": "object",
           "description": "DEPRECATED (move to complexity_limits.depth): The configuration for adding a max depth limit for query (how many nested levels you can have in a query).",

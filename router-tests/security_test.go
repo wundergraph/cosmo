@@ -1,6 +1,10 @@
 package integration
 
 import (
+	"github.com/wundergraph/cosmo/router/pkg/otel"
+	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/metric"
 	"net/http"
 	"testing"
 
@@ -108,4 +112,99 @@ func TestParserHardLimits(t *testing.T) {
 			})
 		})
 	})
+}
+
+func TestQueryNamingLimits(t *testing.T) {
+	t.Parallel()
+
+	t.Run("verify that a operation name over the limit gets trimmed", func(t *testing.T) {
+		t.Parallel()
+		metricReader := metric.NewManualReader()
+		exporter := tracetest.NewInMemoryExporter(t)
+
+		trimSize := 2
+		queryName := "longstring"
+
+		testenv.Run(t, &testenv.Config{
+			TraceExporter: exporter,
+			MetricReader:  metricReader,
+			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+				securityConfiguration.OperationNameTrimLimit = trimSize
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: "query " + queryName + " { employees { id } }",
+			})
+			sn := exporter.GetSpans().Snapshots()
+
+			require.Equal(t, "Operation - Execute", sn[7].Name())
+			operationName := getOperationName(sn[7].Attributes())
+			require.NotNil(t, operationName)
+			require.Equal(t, operationName.AsString(), queryName[:trimSize])
+		})
+	})
+
+	t.Run("verify that a string thats exactly on the limit does not get trimmed", func(t *testing.T) {
+		t.Parallel()
+		metricReader := metric.NewManualReader()
+		exporter := tracetest.NewInMemoryExporter(t)
+
+		queryName := "longstring"
+		trimSize := len(queryName)
+
+		testenv.Run(t, &testenv.Config{
+			TraceExporter: exporter,
+			MetricReader:  metricReader,
+			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+				securityConfiguration.OperationNameTrimLimit = trimSize
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: "query " + queryName + " { employees { id } }",
+			})
+			sn := exporter.GetSpans().Snapshots()
+
+			require.Equal(t, "Operation - Execute", sn[7].Name())
+			operationName := getOperationName(sn[7].Attributes())
+			require.NotNil(t, operationName)
+			require.Equal(t, operationName.AsString(), queryName)
+		})
+	})
+
+	t.Run("verify that a string thats under the limit does not get trimmed", func(t *testing.T) {
+		t.Parallel()
+		metricReader := metric.NewManualReader()
+		exporter := tracetest.NewInMemoryExporter(t)
+
+		queryName := "longstring"
+		trimSize := len(queryName) + 5
+
+		testenv.Run(t, &testenv.Config{
+			TraceExporter: exporter,
+			MetricReader:  metricReader,
+			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+				securityConfiguration.OperationNameTrimLimit = trimSize
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: "query " + queryName + " { employees { id } }",
+			})
+			sn := exporter.GetSpans().Snapshots()
+
+			require.Equal(t, "Operation - Execute", sn[7].Name())
+			operationName := getOperationName(sn[7].Attributes())
+			require.NotNil(t, operationName)
+			require.Equal(t, operationName.AsString(), queryName)
+		})
+	})
+
+}
+
+func getOperationName(sn []attribute.KeyValue) *attribute.Value {
+	for _, attr := range sn {
+		if attr.Key == otel.WgOperationName {
+			return &attr.Value
+		}
+	}
+	return nil
 }

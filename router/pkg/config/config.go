@@ -408,6 +408,7 @@ type SecurityConfiguration struct {
 	ComplexityLimits            *ComplexityLimits           `yaml:"complexity_limits"`
 	DepthLimit                  *QueryDepthConfiguration    `yaml:"depth_limit"`
 	ParserLimits                ParserLimitsConfiguration   `yaml:"parser_limits"`
+	OperationNameTrimLimit      int                         `yaml:"operation_name_trim_limit" envDefault:"256"`
 }
 
 type ParserLimitsConfiguration struct {

@@ -241,7 +241,8 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		}
 
 		requestContext.operation = &operationContext{
-			clientInfo: clientInfo,
+			clientInfo:         clientInfo,
+			operationTrimLimit: h.operationProcessor.operationNameTrimLimit,
 		}
 
 		defer func() {
