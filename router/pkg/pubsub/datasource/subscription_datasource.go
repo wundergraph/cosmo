@@ -2,7 +2,7 @@ package datasource
 
 import (
 	"encoding/json"
-	"fmt"
+	"errors"
 
 	"github.com/cespare/xxhash/v2"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
@@ -18,13 +18,13 @@ type PubSubSubscriptionDataSource[C SubscriptionEventConfiguration] struct {
 	subscriptionOnStartFns []SubscriptionOnStartFn
 }
 
-func (s *PubSubSubscriptionDataSource[C]) SubscriptionEventConfiguration(input []byte) SubscriptionEventConfiguration {
+func (s *PubSubSubscriptionDataSource[C]) SubscriptionEventConfiguration(input []byte) (SubscriptionEventConfiguration, error) {
 	var subscriptionConfiguration C
 	err := json.Unmarshal(input, &subscriptionConfiguration)
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	return subscriptionConfiguration
+	return subscriptionConfiguration, nil
 }
 
 func (s *PubSubSubscriptionDataSource[C]) UniqueRequestID(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
@@ -32,14 +32,14 @@ func (s *PubSubSubscriptionDataSource[C]) UniqueRequestID(ctx *resolve.Context, 
 }
 
 func (s *PubSubSubscriptionDataSource[C]) Start(ctx *resolve.Context, input []byte, updater resolve.SubscriptionUpdater) error {
-	subConf := s.SubscriptionEventConfiguration(input)
-	if subConf == nil {
-		return fmt.Errorf("no subscription configuration found")
+	subConf, err := s.SubscriptionEventConfiguration(input)
+	if err != nil {
+		return err
 	}
 
 	conf, ok := subConf.(C)
 	if !ok {
-		return fmt.Errorf("invalid subscription configuration")
+		return errors.New("invalid subscription configuration")
 	}
 
 	return s.pubSub.Subscribe(ctx.Context(), conf, NewSubscriptionEventUpdater(updater))
@@ -47,7 +47,11 @@ func (s *PubSubSubscriptionDataSource[C]) Start(ctx *resolve.Context, input []by
 
 func (s *PubSubSubscriptionDataSource[C]) SubscriptionOnStart(ctx *resolve.Context, input []byte) (close bool, err error) {
 	for _, fn := range s.subscriptionOnStartFns {
-		close, err = fn(ctx, s.SubscriptionEventConfiguration(input))
+		conf, errConf := s.SubscriptionEventConfiguration(input)
+		if errConf != nil {
+			return true, err
+		}
+		close, err = fn(ctx, conf)
 		if err != nil || close {
 			return
 		}

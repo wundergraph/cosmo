@@ -49,6 +49,7 @@ func (e *ProviderNotDefinedError) Error() string {
 	return fmt.Sprintf("%s provider with ID %s is not defined", e.ProviderTypeID, e.ProviderID)
 }
 
+// Hooks contains hooks for the pubsub providers and data sources
 type Hooks struct {
 	SubscriptionOnStart []pubsub_datasource.SubscriptionOnStartFn
 }

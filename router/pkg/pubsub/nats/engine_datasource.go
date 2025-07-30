@@ -83,8 +83,7 @@ type NatsPublishDataSource struct {
 
 func (s *NatsPublishDataSource) Load(ctx context.Context, input []byte, out *bytes.Buffer) error {
 	var publishConfiguration PublishAndRequestEventConfiguration
-	err := json.Unmarshal(input, &publishConfiguration)
-	if err != nil {
+	if err := json.Unmarshal(input, &publishConfiguration); err != nil {
 		return err
 	}
 
@@ -92,7 +91,7 @@ func (s *NatsPublishDataSource) Load(ctx context.Context, input []byte, out *byt
 		_, err = io.WriteString(out, `{"success": false}`)
 		return err
 	}
-	_, err = io.WriteString(out, `{"success": true}`)
+	_, err := io.WriteString(out, `{"success": true}`)
 	return err
 }
 
@@ -106,8 +105,7 @@ type NatsRequestDataSource struct {
 
 func (s *NatsRequestDataSource) Load(ctx context.Context, input []byte, out *bytes.Buffer) error {
 	var subscriptionConfiguration PublishAndRequestEventConfiguration
-	err := json.Unmarshal(input, &subscriptionConfiguration)
-	if err != nil {
+	if err := json.Unmarshal(input, &subscriptionConfiguration); err != nil {
 		return err
 	}
 

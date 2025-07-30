@@ -45,7 +45,8 @@ func TestPubSubSubscriptionDataSource_SubscriptionEventConfiguration_Success(t *
 	input, err := json.Marshal(testConfig)
 	assert.NoError(t, err)
 
-	result := dataSource.SubscriptionEventConfiguration(input)
+	result, err := dataSource.SubscriptionEventConfiguration(input)
+	assert.NoError(t, err)
 	assert.NotNil(t, result)
 
 	typedResult, ok := result.(testSubscriptionEventConfiguration)
@@ -63,7 +64,8 @@ func TestPubSubSubscriptionDataSource_SubscriptionEventConfiguration_InvalidJSON
 	dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn)
 
 	invalidInput := []byte(`{"invalid": json}`)
-	result := dataSource.SubscriptionEventConfiguration(invalidInput)
+	result, err := dataSource.SubscriptionEventConfiguration(invalidInput)
+	assert.Error(t, err)
 	assert.Nil(t, result)
 }
 
@@ -140,7 +142,7 @@ func TestPubSubSubscriptionDataSource_Start_NoConfiguration(t *testing.T) {
 
 	err := dataSource.Start(ctx, invalidInput, mockUpdater)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "no subscription configuration found")
+	assert.Contains(t, err.Error(), "invalid character 'j' looking for beginning of value")
 }
 
 func TestPubSubSubscriptionDataSource_Start_SubscribeError(t *testing.T) {

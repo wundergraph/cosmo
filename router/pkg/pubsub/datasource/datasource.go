@@ -6,7 +6,7 @@ import (
 )
 
 type SubscriptionDataSource interface {
-	SubscriptionEventConfiguration(input []byte) SubscriptionEventConfiguration
+	SubscriptionEventConfiguration(input []byte) (SubscriptionEventConfiguration, error)
 	Start(ctx *resolve.Context, input []byte, updater resolve.SubscriptionUpdater) error
 	UniqueRequestID(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) (err error)
 	SetSubscriptionOnStartFns(fns ...SubscriptionOnStartFn)
