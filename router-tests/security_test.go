@@ -198,6 +198,33 @@ func TestQueryNamingLimits(t *testing.T) {
 		})
 	})
 
+	t.Run("verify any length is accepted when set to 0", func(t *testing.T) {
+		t.Parallel()
+		metricReader := metric.NewManualReader()
+		exporter := tracetest.NewInMemoryExporter(t)
+
+		queryName := "longstringlongstringlongstringlongstringlongstringlongstringlongstringlongstring"
+		trimSize := 0
+
+		testenv.Run(t, &testenv.Config{
+			TraceExporter: exporter,
+			MetricReader:  metricReader,
+			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+				securityConfiguration.OperationNameTrimLimit = trimSize
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: "query " + queryName + " { employees { id } }",
+			})
+			sn := exporter.GetSpans().Snapshots()
+
+			require.Equal(t, "Operation - Execute", sn[7].Name())
+			operationName := getOperationName(sn[7].Attributes())
+			require.NotNil(t, operationName)
+			require.Equal(t, operationName.AsString(), queryName)
+		})
+	})
+
 }
 
 func getOperationName(sn []attribute.KeyValue) *attribute.Value {

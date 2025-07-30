@@ -2460,7 +2460,8 @@
         "operation_name_trim_limit": {
           "type": "integer",
           "description": "The limit of the operation name length",
-          "default": "256"
+          "default": "256",
+          "minimum": 0
         },
         "depth_limit": {
           "type": "object",

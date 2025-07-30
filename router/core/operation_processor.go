@@ -281,7 +281,7 @@ func (o *OperationKit) UnmarshalOperationFromURL(url *url.URL) error {
 }
 
 func GetOperationNameTrimmed(operationName string, limit int) (bool, string) {
-	if len(operationName) <= limit {
+	if limit <= 0 || len(operationName) <= limit {
 		return false, operationName
 	}
 	operationName = operationName[:limit]
