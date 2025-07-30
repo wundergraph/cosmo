@@ -37,7 +37,7 @@ type Provider interface {
 }
 
 // ProviderBuilder is the interface that the provider builder must implement.
-type ProviderBuilder[P any, E any] interface {
+type ProviderBuilder[P, E any] interface {
 	// TypeID Get the provider type id (e.g. "kafka", "nats")
 	TypeID() string
 	// BuildProvider Build the provider and the adapter
