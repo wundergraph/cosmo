@@ -149,8 +149,7 @@ type NatsPublishDataSource struct {
 
 func (s *NatsPublishDataSource) Load(ctx context.Context, input []byte, out *bytes.Buffer) error {
 	var publishData publishData
-	err := json.Unmarshal(input, &publishData)
-	if err != nil {
+	if err := json.Unmarshal(input, &publishData); err != nil {
 		return err
 	}
 
@@ -158,7 +157,7 @@ func (s *NatsPublishDataSource) Load(ctx context.Context, input []byte, out *byt
 		_, err = io.WriteString(out, `{"success": false}`)
 		return err
 	}
-	_, err = io.WriteString(out, `{"success": true}`)
+	_, err := io.WriteString(out, `{"success": true}`)
 	return err
 }
 
@@ -172,8 +171,7 @@ type NatsRequestDataSource struct {
 
 func (s *NatsRequestDataSource) Load(ctx context.Context, input []byte, out *bytes.Buffer) error {
 	var publishData publishData
-	err := json.Unmarshal(input, &publishData)
-	if err != nil {
+	if err := json.Unmarshal(input, &publishData); err != nil {
 		return err
 	}
 

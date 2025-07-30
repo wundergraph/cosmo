@@ -151,8 +151,7 @@ type PublishDataSource struct {
 // Load processes a request to publish to Redis
 func (s *PublishDataSource) Load(ctx context.Context, input []byte, out *bytes.Buffer) error {
 	var publishData publishData
-	err := json.Unmarshal(input, &publishData)
-	if err != nil {
+	if err := json.Unmarshal(input, &publishData); err != nil {
 		return err
 	}
 
@@ -160,7 +159,7 @@ func (s *PublishDataSource) Load(ctx context.Context, input []byte, out *bytes.B
 		_, err = io.WriteString(out, `{"success": false}`)
 		return err
 	}
-	_, err = io.WriteString(out, `{"success": true}`)
+	_, err := io.WriteString(out, `{"success": true}`)
 	return err
 }
 
