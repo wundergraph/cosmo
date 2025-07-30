@@ -1517,8 +1517,6 @@ func (s *graphServer) setupConnector(ctx context.Context, config *nodev1.EngineC
 				imgRef.GetReference(),
 			)
 
-			s.logger.Warn("USING GRPC PLUGIN", zap.String("ref", ref))
-
 			grpcPlugin, err := grpcpluginoci.NewGRPCOCIPlugin(grpcpluginoci.GRPCPluginConfig{
 				Logger:        s.logger,
 				ImageRef:      ref,

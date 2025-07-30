@@ -18,6 +18,12 @@ func (d *GRPCPlugin) PreparePlugin(img v1.Image) (*exec.Cmd, error) {
 	}
 	d.workDir = workDir
 
+	defer func() {
+		if err != nil {
+			os.RemoveAll(workDir)
+		}
+	}()
+
 	// 2. Extract image to directory
 	if err := os.MkdirAll(workDir, 0o755); err != nil {
 		return nil, fmt.Errorf("failed to create untar dir: %w", err)

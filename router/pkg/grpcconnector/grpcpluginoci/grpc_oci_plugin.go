@@ -147,6 +147,9 @@ func (p *GRPCPlugin) startPluginProcess() error {
 		return fmt.Errorf("plugin does not implement grpc.ClientConnInterface")
 	}
 
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
 	if p.client == nil {
 		// first time we start the plugin, we need to create a new client
 		p.client, err = grpccommon.NewGRPCPluginClient(pluginClient, grpcClient)
@@ -163,6 +166,9 @@ func (p *GRPCPlugin) startPluginProcess() error {
 }
 
 func (p *GRPCPlugin) cleanupPluginWorkDir() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
 	if p.workDir != "" {
 		os.RemoveAll(p.workDir)
 		p.workDir = ""
@@ -217,9 +223,7 @@ func (p *GRPCPlugin) Stop() error {
 		}
 	}
 
-	if p.workDir != "" {
-		os.RemoveAll(p.workDir)
-	}
+	p.cleanupPluginWorkDir()
 
 	p.disposed.Store(true)
 
