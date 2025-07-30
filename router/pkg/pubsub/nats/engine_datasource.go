@@ -96,7 +96,7 @@ func (p *PublishAndRequestEventConfiguration) RootFieldName() string {
 }
 
 type SubscriptionSource struct {
-	pubSub datasource.ProviderBase
+	pubSub datasource.Adapter
 }
 
 func (s *SubscriptionSource) SubscriptionEventConfiguration(input []byte) datasource.SubscriptionEventConfiguration {
@@ -144,7 +144,7 @@ func (s *SubscriptionSource) Start(ctx *resolve.Context, input []byte, updater d
 }
 
 type NatsPublishDataSource struct {
-	pubSub datasource.ProviderBase
+	pubSub datasource.Adapter
 }
 
 func (s *NatsPublishDataSource) Load(ctx context.Context, input []byte, out *bytes.Buffer) error {
@@ -167,7 +167,7 @@ func (s *NatsPublishDataSource) LoadWithFiles(ctx context.Context, input []byte,
 }
 
 type NatsRequestDataSource struct {
-	pubSub datasource.ProviderBase
+	pubSub datasource.Adapter
 }
 
 func (s *NatsRequestDataSource) Load(ctx context.Context, input []byte, out *bytes.Buffer) error {

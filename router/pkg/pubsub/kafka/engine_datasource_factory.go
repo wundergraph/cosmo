@@ -21,7 +21,7 @@ type EngineDataSourceFactory struct {
 	topics     []string
 	providerId string
 
-	KafkaAdapter datasource.ProviderBase
+	KafkaAdapter datasource.Adapter
 }
 
 func (c *EngineDataSourceFactory) GetFieldName() string {

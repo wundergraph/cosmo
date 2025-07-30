@@ -23,7 +23,7 @@ type Adapter interface {
 }
 
 // Ensure ProviderAdapter implements ProviderSubscriptionHooks
-var _ datasource.ProviderBase = (*ProviderAdapter)(nil)
+var _ datasource.Adapter = (*ProviderAdapter)(nil)
 
 func NewProviderAdapter(ctx context.Context, logger *zap.Logger, urls []string, clusterEnabled bool) Adapter {
 	ctx, cancel := context.WithCancel(ctx)

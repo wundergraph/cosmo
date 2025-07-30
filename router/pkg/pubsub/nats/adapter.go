@@ -17,13 +17,13 @@ import (
 
 // Adapter defines the methods that a NATS adapter should implement
 type Adapter interface {
-	datasource.ProviderBase
+	datasource.Adapter
 	// Request sends a request to the specified subject and writes the response to the given writer
 	Request(ctx context.Context, cfg datasource.PublishEventConfiguration, event datasource.StreamEvent, w io.Writer) error
 }
 
 // Ensure ProviderAdapter implements ProviderSubscriptionHooks
-var _ datasource.ProviderBase = (*ProviderAdapter)(nil)
+var _ datasource.Adapter = (*ProviderAdapter)(nil)
 
 // ProviderAdapter implements the AdapterInterface for NATS pub/sub
 type ProviderAdapter struct {

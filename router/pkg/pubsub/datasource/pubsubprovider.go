@@ -12,7 +12,7 @@ type PubSubProvider struct {
 	onStreamEventsFns  []OnStreamEventsFn
 	id                 string
 	typeID             string
-	Adapter            ProviderBase
+	Adapter            Adapter
 	Logger             *zap.Logger
 }
 
@@ -129,7 +129,7 @@ func (p *PubSubProvider) SetOnStreamEventsFns(fns []OnStreamEventsFn) {
 	p.onStreamEventsFns = fns
 }
 
-func NewPubSubProvider(id string, typeID string, adapter ProviderBase, logger *zap.Logger) *PubSubProvider {
+func NewPubSubProvider(id string, typeID string, adapter Adapter, logger *zap.Logger) *PubSubProvider {
 	return &PubSubProvider{
 		id:      id,
 		typeID:  typeID,

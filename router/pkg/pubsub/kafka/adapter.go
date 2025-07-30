@@ -18,8 +18,8 @@ var (
 	errClientClosed = errors.New("client closed")
 )
 
-// Ensure ProviderAdapter implements ProviderBase
-var _ datasource.ProviderBase = (*ProviderAdapter)(nil)
+// Ensure ProviderAdapter implements Adapter
+var _ datasource.Adapter = (*ProviderAdapter)(nil)
 
 // ProviderAdapter is a Kafka pubsub implementation.
 // It uses the franz-go Kafka client to consume and produce messages.

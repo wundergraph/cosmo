@@ -105,7 +105,7 @@ func (p *PublishEventConfiguration) RootFieldName() string {
 }
 
 type SubscriptionDataSource struct {
-	pubSub datasource.ProviderBase
+	pubSub datasource.Adapter
 }
 
 func (s *SubscriptionDataSource) SubscriptionEventConfiguration(input []byte) datasource.SubscriptionEventConfiguration {
@@ -152,7 +152,7 @@ func (s *SubscriptionDataSource) Start(ctx *resolve.Context, input []byte, updat
 }
 
 type PublishDataSource struct {
-	pubSub datasource.ProviderBase
+	pubSub datasource.Adapter
 }
 
 func (s *PublishDataSource) Load(ctx context.Context, input []byte, out *bytes.Buffer) error {
