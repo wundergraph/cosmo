@@ -300,6 +300,34 @@ func TestQueryNamingLimits(t *testing.T) {
 			})
 		})
 
+		t.Run("with large queries with max length of 0 where the validation is not ebaled", func(t *testing.T) {
+			t.Parallel()
+
+			maxLength := 0
+			query1Name := "longlonglonglonglonglonglonglonglonglong1"
+			query2Name := "short2"
+
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.OperationNameLengthLimit = maxLength
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				resPost, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Query: "query " + query1Name + " { employees { id } } query " + query2Name + " { employees { id } }",
+				})
+				require.NoError(t, err)
+				require.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, resPost.Body)
+				require.Equal(t, http.StatusOK, resPost.Response.StatusCode)
+
+				resGet, err := xEnv.MakeGraphQLRequestOverGET(testenv.GraphQLRequest{
+					Query: "query " + query1Name + " { employees { id } } query " + query2Name + " { employees { id } }",
+				})
+				require.NoError(t, err)
+				require.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, resGet.Body)
+				require.Equal(t, http.StatusOK, resGet.Response.StatusCode)
+			})
+		})
+
 		// In case of introspection checks, we could potentially early return
 		t.Run("with multiple queries with introspection disabled", func(t *testing.T) {
 			t.Parallel()
