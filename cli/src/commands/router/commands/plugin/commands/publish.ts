@@ -59,8 +59,8 @@ export default (opts: BaseCommandOptions) => {
     const schemaFile = resolve(pluginDir, 'src', 'schema.graphql');
     const dockerFile = resolve(pluginDir, 'Dockerfile');
     const protoSchemaFile = resolve(pluginDir, 'generated', 'service.proto');
-    const protoMappingFile = resolve(pluginDir, 'generated', 'service.mapping.json');
-    const protoLockFile = resolve(pluginDir, 'generated', 'service.lock');
+    const protoMappingFile = resolve(pluginDir, 'generated', 'mapping.json');
+    const protoLockFile = resolve(pluginDir, 'generated', 'service.proto.lock.json');
 
     if (!existsSync(schemaFile)) {
       program.error(
