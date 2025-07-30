@@ -2457,9 +2457,9 @@
             }
           }
         },
-        "operation_name_limit": {
+        "operation_name_length_limit": {
           "type": "integer",
-          "description": "The max allowed limit of the operation name length, 0 would disable the limit validation.",
+          "description": "The maximum allowed length of the operation name, 0 allows any length.",
           "default": "512",
           "minimum": 0
         },

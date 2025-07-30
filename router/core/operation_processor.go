@@ -116,7 +116,7 @@ type OperationProcessorOptions struct {
 	DisableExposingVariablesContentOnValidationError bool
 	ComplexityLimits                                 *config.ComplexityLimits
 	ParserTokenizerLimits                            astparser.TokenizerLimits
-	OperationNameLimit                               int
+	OperationNameLengthLimit                         int
 }
 
 // OperationProcessor provides shared resources to the parseKit and OperationKit.
@@ -491,7 +491,8 @@ func (o *OperationKit) isIntrospectionQuery() (result bool, err error) {
 
 			if o.isOperationNameLimitExceeded(name) {
 				return false, &httpGraphqlError{
-					message:    "operation name too large",
+					message: fmt.Sprintf("operation name of length %d exceeds max length of %d",
+						len(name), o.operationProcessor.operationNameLimit),
 					statusCode: http.StatusBadRequest,
 				}
 			}
@@ -614,7 +615,8 @@ func (o *OperationKit) Parse() error {
 
 		if o.isOperationNameLimitExceeded(name) {
 			return &httpGraphqlError{
-				message:    "operation name too large",
+				message: fmt.Sprintf("operation name of length %d exceeds max length of %d",
+					len(name), o.operationProcessor.operationNameLimit),
 				statusCode: http.StatusBadRequest,
 			}
 		}
@@ -1286,7 +1288,7 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 		parseKitSemaphore:        make(chan int, opts.ParseKitPoolSize),
 		introspectionEnabled:     opts.IntrospectionEnabled,
 		parserTokenizerLimits:    opts.ParserTokenizerLimits,
-		operationNameLimit:       opts.OperationNameLimit,
+		operationNameLimit:       opts.OperationNameLengthLimit,
 		complexityLimits:         opts.ComplexityLimits,
 		parseKitOptions: &parseKitOptions{
 			apolloCompatibilityFlags:                         opts.ApolloCompatibilityFlags,
