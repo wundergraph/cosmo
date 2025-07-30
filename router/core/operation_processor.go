@@ -610,12 +610,12 @@ func (o *OperationKit) Parse() error {
 				anonymousOperationDefinitionRef = ref
 			}
 			continue
-		} else {
-			if o.isOperationNameLimitExceeded(name) {
-				return &httpGraphqlError{
-					message:    "operation name too large",
-					statusCode: http.StatusBadRequest,
-				}
+		}
+
+		if o.isOperationNameLimitExceeded(name) {
+			return &httpGraphqlError{
+				message:    "operation name too large",
+				statusCode: http.StatusBadRequest,
 			}
 		}
 
