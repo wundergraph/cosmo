@@ -49,13 +49,6 @@ func (e *ProviderNotDefinedError) Error() string {
 	return fmt.Sprintf("%s provider with ID %s is not defined", e.ProviderTypeID, e.ProviderID)
 }
 
-// Hooks contains hooks for the pubsub providers and data sources
-type Hooks struct {
-	SubscriptionOnStart []pubsub_datasource.SubscriptionOnStartFn
-	OnStreamEvents      []pubsub_datasource.OnStreamEventsFn
-	OnPublishEvents     []pubsub_datasource.OnPublishEventsFn
-}
-
 // BuildProvidersAndDataSources is a generic function that builds providers and data sources for the given
 // EventsConfiguration and DataSourceConfigurationWithMetadata
 func BuildProvidersAndDataSources(
@@ -65,7 +58,7 @@ func BuildProvidersAndDataSources(
 	dsConfs []DataSourceConfigurationWithMetadata,
 	hostName string,
 	routerListenAddr string,
-	hooks Hooks,
+	hooks pubsub_datasource.Hooks,
 ) ([]pubsub_datasource.Provider, []plan.DataSource, error) {
 	var pubSubProviders []pubsub_datasource.Provider
 	var outs []plan.DataSource
@@ -127,7 +120,7 @@ func BuildProvidersAndDataSources(
 	return pubSubProviders, outs, nil
 }
 
-func build[P GetID, E GetEngineEventConfiguration](ctx context.Context, builder pubsub_datasource.ProviderBuilder[P, E], providersData []P, dsConfs []dsConfAndEvents[E], hooks Hooks) (map[string]pubsub_datasource.Provider, []plan.DataSource, error) {
+func build[P GetID, E GetEngineEventConfiguration](ctx context.Context, builder pubsub_datasource.ProviderBuilder[P, E], providersData []P, dsConfs []dsConfAndEvents[E], hooks pubsub_datasource.Hooks) (map[string]pubsub_datasource.Provider, []plan.DataSource, error) {
 	pubSubProviders := make(map[string]pubsub_datasource.Provider)
 	var outs []plan.DataSource
 
@@ -172,7 +165,7 @@ func build[P GetID, E GetEngineEventConfiguration](ctx context.Context, builder 
 				builder,
 				event,
 				pubSubProviders,
-				hooks.SubscriptionOnStart,
+				hooks,
 			)
 			out, err := plan.NewDataSourceConfiguration(
 				dsConf.dsConf.Configuration.Id+"-"+builder.TypeID()+"-"+strconv.Itoa(i),

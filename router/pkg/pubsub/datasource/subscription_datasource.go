@@ -16,6 +16,7 @@ type PubSubSubscriptionDataSource[C SubscriptionEventConfiguration] struct {
 	pubSub                 Adapter
 	uniqueRequestID        uniqueRequestIdFn
 	subscriptionOnStartFns []SubscriptionOnStartFn
+	onStreamEventsFns      []OnStreamEventsFn
 }
 
 func (s *PubSubSubscriptionDataSource[C]) SubscriptionEventConfiguration(input []byte) (SubscriptionEventConfiguration, error) {
@@ -42,7 +43,7 @@ func (s *PubSubSubscriptionDataSource[C]) Start(ctx *resolve.Context, input []by
 		return errors.New("invalid subscription configuration")
 	}
 
-	return s.pubSub.Subscribe(ctx.Context(), conf, NewSubscriptionEventUpdater(updater))
+	return s.pubSub.Subscribe(ctx.Context(), conf, NewSubscriptionEventUpdater(ctx.Context(), conf, s.onStreamEventsFns, updater))
 }
 
 func (s *PubSubSubscriptionDataSource[C]) SubscriptionOnStart(ctx *resolve.Context, input []byte) (close bool, err error) {
@@ -62,6 +63,10 @@ func (s *PubSubSubscriptionDataSource[C]) SubscriptionOnStart(ctx *resolve.Conte
 
 func (s *PubSubSubscriptionDataSource[C]) SetSubscriptionOnStartFns(fns ...SubscriptionOnStartFn) {
 	s.subscriptionOnStartFns = append(s.subscriptionOnStartFns, fns...)
+}
+
+func (s *PubSubSubscriptionDataSource[C]) SetOnStreamEventsFns(fns ...OnStreamEventsFn) {
+	s.onStreamEventsFns = append(s.onStreamEventsFns, fns...)
 }
 
 var _ SubscriptionDataSource = (*PubSubSubscriptionDataSource[SubscriptionEventConfiguration])(nil)

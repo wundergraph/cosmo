@@ -10,6 +10,7 @@ type SubscriptionDataSource interface {
 	Start(ctx *resolve.Context, input []byte, updater resolve.SubscriptionUpdater) error
 	UniqueRequestID(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) (err error)
 	SetSubscriptionOnStartFns(fns ...SubscriptionOnStartFn)
+	SetOnStreamEventsFns(fns ...OnStreamEventsFn)
 }
 
 // EngineDataSourceFactory is the interface that all pubsub data sources must implement.

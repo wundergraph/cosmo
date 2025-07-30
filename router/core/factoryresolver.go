@@ -496,7 +496,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 		pubSubDS,
 		l.resolver.InstanceData().HostName,
 		l.resolver.InstanceData().ListenAddress,
-		pubsub.Hooks{
+		pubsub_datasource.Hooks{
 			SubscriptionOnStart: subscriptionOnStartFns,
 			OnStreamEvents:      onStreamEventsFns,
 			OnPublishEvents:     onPublishEventsFns,

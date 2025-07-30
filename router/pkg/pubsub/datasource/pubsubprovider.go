@@ -3,7 +3,6 @@ package datasource
 import (
 	"context"
 
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
 )
 
@@ -14,51 +13,6 @@ type PubSubProvider struct {
 	typeID             string
 	Adapter            Adapter
 	Logger             *zap.Logger
-}
-
-type hookedUpdater struct {
-	ctx                            context.Context
-	updater                        SubscriptionEventUpdater
-	subscriptionEventConfiguration SubscriptionEventConfiguration
-	OnStreamEventsFns              []OnStreamEventsFn
-}
-
-func (h *hookedUpdater) Update(events []StreamEvent) {
-	if len(h.OnStreamEventsFns) == 0 {
-		h.updater.Update(events)
-		return
-	}
-
-	processedEvents, err := applyStreamEventHooks(h.ctx, h.subscriptionEventConfiguration, events, h.OnStreamEventsFns)
-	if err != nil {
-		// TODO: do something with the error - for now, continue with original events
-		h.updater.Update(events)
-		return
-	}
-
-	h.updater.Update(processedEvents)
-}
-
-func (h *hookedUpdater) Complete() {
-	h.updater.Complete()
-}
-
-func (h *hookedUpdater) Close(kind resolve.SubscriptionCloseKind) {
-	h.updater.Close(kind)
-}
-
-// applyStreamEventHooks processes events through a chain of hook functions
-// Each hook receives the result from the previous hook, creating a proper middleware pipeline
-func applyStreamEventHooks(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent, hooks []OnStreamEventsFn) ([]StreamEvent, error) {
-	currentEvents := events
-	for _, hook := range hooks {
-		var err error
-		currentEvents, err = hook(ctx, cfg, currentEvents)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return currentEvents, nil
 }
 
 // applyPublishEventHooks processes events through a chain of hook functions
@@ -98,14 +52,7 @@ func (p *PubSubProvider) Shutdown(ctx context.Context) error {
 }
 
 func (p *PubSubProvider) Subscribe(ctx context.Context, conf SubscriptionEventConfiguration, updater SubscriptionEventUpdater) error {
-	hookedUpdater := &hookedUpdater{
-		ctx:                            ctx,
-		updater:                        updater,
-		subscriptionEventConfiguration: conf,
-		OnStreamEventsFns:              p.onStreamEventsFns,
-	}
-
-	return p.Adapter.Subscribe(ctx, conf, hookedUpdater)
+	return p.Adapter.Subscribe(ctx, conf, updater)
 }
 
 func (p *PubSubProvider) Publish(ctx context.Context, conf PublishEventConfiguration, events []StreamEvent) error {

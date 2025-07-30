@@ -2,8 +2,6 @@ package datasource
 
 import (
 	"context"
-
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
 type ArgumentTemplateCallback func(tpl string) (string, error)
@@ -63,12 +61,6 @@ const (
 type StreamEvent interface {
 	GetData() []byte
 }
-
-type SubscriptionOnStartFn func(ctx *resolve.Context, subConf SubscriptionEventConfiguration) (bool, error)
-
-type OnPublishEventsFn func(ctx context.Context, pubConf PublishEventConfiguration, evts []StreamEvent) ([]StreamEvent, error)
-
-type OnStreamEventsFn func(ctx context.Context, subConf SubscriptionEventConfiguration, evts []StreamEvent) ([]StreamEvent, error)
 
 // SubscriptionEventConfiguration is the interface that all subscription event configurations must implement
 type SubscriptionEventConfiguration interface {
