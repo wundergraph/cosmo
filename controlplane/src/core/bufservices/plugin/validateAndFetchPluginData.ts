@@ -13,13 +13,7 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import { PluginRepository } from '../../repositories/PluginRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import {
-  enrichLogger,
-  getLogger,
-  handleError,
-  isValidGraphName,
-  isValidLabels
-} from '../../util.js';
+import { enrichLogger, getLogger, handleError, isValidGraphName, isValidLabels } from '../../util.js';
 
 export function validateAndFetchPluginData(
   opts: RouterOptions,
