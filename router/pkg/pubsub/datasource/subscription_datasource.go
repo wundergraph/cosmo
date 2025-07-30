@@ -10,6 +10,8 @@ import (
 
 type uniqueRequestIdFn func(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error
 
+// PubSubSubscriptionDataSource is a data source for handling subscriptions using a Pub/Sub mechanism.
+// It implements the SubscriptionDataSource interface and HookableSubscriptionDataSource
 type PubSubSubscriptionDataSource[C SubscriptionEventConfiguration] struct {
 	pubSub                 Adapter
 	uniqueRequestID        uniqueRequestIdFn
@@ -57,6 +59,9 @@ func (s *PubSubSubscriptionDataSource[C]) SubscriptionOnStart(ctx *resolve.Conte
 func (s *PubSubSubscriptionDataSource[C]) SetSubscriptionOnStartFns(fns ...SubscriptionOnStartFn) {
 	s.subscriptionOnStartFns = append(s.subscriptionOnStartFns, fns...)
 }
+
+var _ SubscriptionDataSource = (*PubSubSubscriptionDataSource[SubscriptionEventConfiguration])(nil)
+var _ resolve.HookableSubscriptionDataSource = (*PubSubSubscriptionDataSource[SubscriptionEventConfiguration])(nil)
 
 func NewPubSubSubscriptionDataSource[C SubscriptionEventConfiguration](pubSub Adapter, uniqueRequestIdFn uniqueRequestIdFn) *PubSubSubscriptionDataSource[C] {
 	return &PubSubSubscriptionDataSource[C]{
