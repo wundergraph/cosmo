@@ -127,12 +127,19 @@ func TestQueryNamingLimits(t *testing.T) {
 					securityConfiguration.OperationNameLimit = trimSize
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
-				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				resPost, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 					Query: "query " + queryName + " { employees { id } }",
 				})
 				require.NoError(t, err)
-				require.JSONEq(t, `{"errors":[{"message":"operation name too large"}]}`, res.Body)
-				require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+				require.JSONEq(t, `{"errors":[{"message":"operation name too large"}]}`, resPost.Body)
+				require.Equal(t, http.StatusBadRequest, resPost.Response.StatusCode)
+
+				resGet, err := xEnv.MakeGraphQLRequestOverGET(testenv.GraphQLRequest{
+					Query: "query " + queryName + " { employees { id } }",
+				})
+				require.NoError(t, err)
+				require.JSONEq(t, `{"errors":[{"message":"operation name too large"}]}`, resGet.Body)
+				require.Equal(t, http.StatusBadRequest, resGet.Response.StatusCode)
 			})
 		})
 
@@ -147,13 +154,21 @@ func TestQueryNamingLimits(t *testing.T) {
 					securityConfiguration.OperationNameLimit = trimSize
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
-				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				resPost, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 					Query:         "query " + queryName + " { employees { id } }",
 					OperationName: []byte(operationName),
 				})
 				require.NoError(t, err)
-				require.JSONEq(t, `{"errors":[{"message":"operation name too large"}]}`, res.Body)
-				require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+				require.JSONEq(t, `{"errors":[{"message":"operation name too large"}]}`, resPost.Body)
+				require.Equal(t, http.StatusBadRequest, resPost.Response.StatusCode)
+
+				resGet, err := xEnv.MakeGraphQLRequestOverGET(testenv.GraphQLRequest{
+					Query:         "query " + queryName + " { employees { id } }",
+					OperationName: []byte(operationName),
+				})
+				require.NoError(t, err)
+				require.JSONEq(t, `{"errors":[{"message":"operation name too large"}]}`, resGet.Body)
+				require.Equal(t, http.StatusBadRequest, resGet.Response.StatusCode)
 			})
 		})
 
@@ -169,13 +184,21 @@ func TestQueryNamingLimits(t *testing.T) {
 					securityConfiguration.OperationNameLimit = trimSize
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
-				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				resPost, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 					Query:         "query " + queryName + " { employees { id } }",
 					OperationName: []byte(operationName),
 				})
 				require.NoError(t, err)
-				require.JSONEq(t, `{"errors":[{"message":"operation name too large"}]}`, res.Body)
-				require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+				require.JSONEq(t, `{"errors":[{"message":"operation name too large"}]}`, resPost.Body)
+				require.Equal(t, http.StatusBadRequest, resPost.Response.StatusCode)
+
+				resGet, err := xEnv.MakeGraphQLRequestOverGET(testenv.GraphQLRequest{
+					Query:         "query " + queryName + " { employees { id } }",
+					OperationName: []byte(operationName),
+				})
+				require.NoError(t, err)
+				require.JSONEq(t, `{"errors":[{"message":"operation name too large"}]}`, resGet.Body)
+				require.Equal(t, http.StatusBadRequest, resGet.Response.StatusCode)
 			})
 		})
 
@@ -191,14 +214,23 @@ func TestQueryNamingLimits(t *testing.T) {
 					securityConfiguration.OperationNameLimit = trimSize
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
-				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				resPost, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 					Query:         "query " + queryName + " { employees { id } }",
 					OperationName: []byte(operationName),
 				})
 				require.NoError(t, err)
-				require.NotEqual(t, `{"errors":[{"message":"operation name too large"}]}`, res.Body)
-				require.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
-				require.Equal(t, http.StatusOK, res.Response.StatusCode)
+				require.NotEqual(t, `{"errors":[{"message":"operation name too large"}]}`, resPost.Body)
+				require.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, resPost.Body)
+				require.Equal(t, http.StatusOK, resPost.Response.StatusCode)
+
+				resGet, err := xEnv.MakeGraphQLRequestOverGET(testenv.GraphQLRequest{
+					Query:         "query " + queryName + " { employees { id } }",
+					OperationName: []byte(operationName),
+				})
+				require.NoError(t, err)
+				require.NotEqual(t, `{"errors":[{"message":"operation name too large"}]}`, resGet.Body)
+				require.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, resGet.Body)
+				require.Equal(t, http.StatusOK, resGet.Response.StatusCode)
 			})
 		})
 
@@ -214,12 +246,19 @@ func TestQueryNamingLimits(t *testing.T) {
 					securityConfiguration.OperationNameLimit = trimSize
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
-				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				resPost, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 					Query: "query " + query1Name + " { employees { id } } query " + query2Name + " { employees { id } }",
 				})
 				require.NoError(t, err)
-				require.JSONEq(t, `{"errors":[{"message":"operation name too large"}]}`, res.Body)
-				require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+				require.JSONEq(t, `{"errors":[{"message":"operation name too large"}]}`, resPost.Body)
+				require.Equal(t, http.StatusBadRequest, resPost.Response.StatusCode)
+
+				resGet, err := xEnv.MakeGraphQLRequestOverGET(testenv.GraphQLRequest{
+					Query: "query " + query1Name + " { employees { id } } query " + query2Name + " { employees { id } }",
+				})
+				require.NoError(t, err)
+				require.JSONEq(t, `{"errors":[{"message":"operation name too large"}]}`, resGet.Body)
+				require.Equal(t, http.StatusBadRequest, resGet.Response.StatusCode)
 			})
 		})
 
@@ -235,13 +274,21 @@ func TestQueryNamingLimits(t *testing.T) {
 					securityConfiguration.OperationNameLimit = trimSize
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
-				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				resPost, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 					Query: "query " + query1Name + " { employees { id } } query " + query2Name + " { employees { id } }",
 				})
 				require.NoError(t, err)
-				require.NotEqual(t, `{"errors":[{"message":"operation name too large"}]}`, res.Body)
-				require.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
-				require.Equal(t, http.StatusOK, res.Response.StatusCode)
+				require.NotEqual(t, `{"errors":[{"message":"operation name too large"}]}`, resPost.Body)
+				require.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, resPost.Body)
+				require.Equal(t, http.StatusOK, resPost.Response.StatusCode)
+
+				resGet, err := xEnv.MakeGraphQLRequestOverGET(testenv.GraphQLRequest{
+					Query: "query " + query1Name + " { employees { id } } query " + query2Name + " { employees { id } }",
+				})
+				require.NoError(t, err)
+				require.NotEqual(t, `{"errors":[{"message":"operation name too large"}]}`, resGet.Body)
+				require.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, resGet.Body)
+				require.Equal(t, http.StatusOK, resGet.Response.StatusCode)
 			})
 		})
 
@@ -261,12 +308,19 @@ func TestQueryNamingLimits(t *testing.T) {
 					core.WithIntrospection(false),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
-				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				resPost, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 					Query: "query " + query1Name + " { __schema { __typename } } query " + query2Name + " { employees { id } }",
 				})
 				require.NoError(t, err)
-				require.JSONEq(t, `{"errors":[{"message":"operation name too large"}]}`, res.Body)
-				require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+				require.JSONEq(t, `{"errors":[{"message":"operation name too large"}]}`, resPost.Body)
+				require.Equal(t, http.StatusBadRequest, resPost.Response.StatusCode)
+
+				resGet, err := xEnv.MakeGraphQLRequestOverGET(testenv.GraphQLRequest{
+					Query: "query " + query1Name + " { employees { id } } query " + query2Name + " { employees { id } }",
+				})
+				require.NoError(t, err)
+				require.JSONEq(t, `{"errors":[{"message":"operation name too large"}]}`, resGet.Body)
+				require.Equal(t, http.StatusBadRequest, resGet.Response.StatusCode)
 			})
 		})
 	})
