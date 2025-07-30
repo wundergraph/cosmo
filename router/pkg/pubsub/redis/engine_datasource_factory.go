@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"slices"
 
+	"github.com/buger/jsonparser"
+	"github.com/cespare/xxhash/v2"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
@@ -69,10 +71,28 @@ func (c *EngineDataSourceFactory) ResolveDataSourceInput(eventData []byte) (stri
 }
 
 // ResolveDataSourceSubscription returns the subscription data source
-func (c *EngineDataSourceFactory) ResolveDataSourceSubscription() (datasource.PubSubSubscriptionDataSource, error) {
-	return &SubscriptionDataSource{
-		pubSub: c.RedisAdapter,
-	}, nil
+func (c *EngineDataSourceFactory) ResolveDataSourceSubscription() (datasource.SubscriptionDataSource, error) {
+	return datasource.NewPubSubSubscriptionDataSource[*SubscriptionEventConfiguration](
+		c.RedisAdapter,
+		func(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
+			val, _, _, err := jsonparser.Get(input, "channels")
+			if err != nil {
+				return err
+			}
+
+			_, err = xxh.Write(val)
+			if err != nil {
+				return err
+			}
+
+			val, _, _, err = jsonparser.Get(input, "providerId")
+			if err != nil {
+				return err
+			}
+
+			_, err = xxh.Write(val)
+			return err
+		}), nil
 }
 
 // ResolveDataSourceSubscriptionInput builds the input for the subscription data source

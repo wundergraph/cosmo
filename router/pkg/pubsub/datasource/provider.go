@@ -59,7 +59,7 @@ const (
 
 // StreamEvent is a generic interface for all stream events
 // Each provider will have its own event type that implements this interface
-// there could be common fields in future, but for now we don't need any
+// there could be other common fields in the future, but for now we only have data
 type StreamEvent interface {
 	GetData() []byte
 }

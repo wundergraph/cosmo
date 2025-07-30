@@ -116,11 +116,7 @@ func (p *Planner[PB, P, E]) ConfigureSubscription() plan.SubscriptionConfigurati
 		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to get resolve data source subscription: %w", err))
 		return plan.SubscriptionConfiguration{}
 	}
-
-	hookedDataSource := &HookedSubscriptionDataSource{
-		SubscriptionDataSource: dataSource,
-		SubscriptionOnStartFns: p.config.SubscriptionOnStartFns,
-	}
+	dataSource.SetSubscriptionOnStartFns(p.config.SubscriptionOnStartFns...)
 
 	input, err := pubSubDataSource.ResolveDataSourceSubscriptionInput()
 	if err != nil {
@@ -131,7 +127,7 @@ func (p *Planner[PB, P, E]) ConfigureSubscription() plan.SubscriptionConfigurati
 	return plan.SubscriptionConfiguration{
 		Input:      input,
 		Variables:  p.variables,
-		DataSource: hookedDataSource,
+		DataSource: dataSource,
 		PostProcessing: resolve.PostProcessingConfiguration{
 			MergePath: []string{pubSubDataSource.GetFieldName()},
 		},

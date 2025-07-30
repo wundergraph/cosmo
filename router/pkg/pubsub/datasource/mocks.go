@@ -198,23 +198,23 @@ func (_c *MockEngineDataSourceFactory_ResolveDataSourceInput_Call) RunAndReturn(
 }
 
 // ResolveDataSourceSubscription provides a mock function for the type MockEngineDataSourceFactory
-func (_mock *MockEngineDataSourceFactory) ResolveDataSourceSubscription() (PubSubSubscriptionDataSource, error) {
+func (_mock *MockEngineDataSourceFactory) ResolveDataSourceSubscription() (SubscriptionDataSource, error) {
 	ret := _mock.Called()
 
 	if len(ret) == 0 {
 		panic("no return value specified for ResolveDataSourceSubscription")
 	}
 
-	var r0 PubSubSubscriptionDataSource
+	var r0 SubscriptionDataSource
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func() (PubSubSubscriptionDataSource, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func() (SubscriptionDataSource, error)); ok {
 		return returnFunc()
 	}
-	if returnFunc, ok := ret.Get(0).(func() PubSubSubscriptionDataSource); ok {
+	if returnFunc, ok := ret.Get(0).(func() SubscriptionDataSource); ok {
 		r0 = returnFunc()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(PubSubSubscriptionDataSource)
+			r0 = ret.Get(0).(SubscriptionDataSource)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func() error); ok {
@@ -242,12 +242,12 @@ func (_c *MockEngineDataSourceFactory_ResolveDataSourceSubscription_Call) Run(ru
 	return _c
 }
 
-func (_c *MockEngineDataSourceFactory_ResolveDataSourceSubscription_Call) Return(pubSubSubscriptionDataSource PubSubSubscriptionDataSource, err error) *MockEngineDataSourceFactory_ResolveDataSourceSubscription_Call {
-	_c.Call.Return(pubSubSubscriptionDataSource, err)
+func (_c *MockEngineDataSourceFactory_ResolveDataSourceSubscription_Call) Return(subscriptionDataSource SubscriptionDataSource, err error) *MockEngineDataSourceFactory_ResolveDataSourceSubscription_Call {
+	_c.Call.Return(subscriptionDataSource, err)
 	return _c
 }
 
-func (_c *MockEngineDataSourceFactory_ResolveDataSourceSubscription_Call) RunAndReturn(run func() (PubSubSubscriptionDataSource, error)) *MockEngineDataSourceFactory_ResolveDataSourceSubscription_Call {
+func (_c *MockEngineDataSourceFactory_ResolveDataSourceSubscription_Call) RunAndReturn(run func() (SubscriptionDataSource, error)) *MockEngineDataSourceFactory_ResolveDataSourceSubscription_Call {
 	_c.Call.Return(run)
 	return _c
 }

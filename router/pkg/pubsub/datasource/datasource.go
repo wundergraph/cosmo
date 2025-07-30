@@ -5,10 +5,11 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
-type PubSubSubscriptionDataSource interface {
+type SubscriptionDataSource interface {
 	SubscriptionEventConfiguration(input []byte) SubscriptionEventConfiguration
-	Start(ctx *resolve.Context, input []byte, updater SubscriptionEventUpdater) error
+	Start(ctx *resolve.Context, input []byte, updater resolve.SubscriptionUpdater) error
 	UniqueRequestID(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) (err error)
+	SetSubscriptionOnStartFns(fns ...SubscriptionOnStartFn)
 }
 
 // EngineDataSourceFactory is the interface that all pubsub data sources must implement.
@@ -30,7 +31,7 @@ type EngineDataSourceFactory interface {
 	// ResolveDataSourceSubscription returns the engine SubscriptionDataSource implementation
 	// that contains methods to start a subscription, which will be called by the Planner
 	// when a subscription is initiated
-	ResolveDataSourceSubscription() (PubSubSubscriptionDataSource, error)
+	ResolveDataSourceSubscription() (SubscriptionDataSource, error)
 	// ResolveDataSourceSubscriptionInput build the input that will be passed to the engine SubscriptionDataSource
 	ResolveDataSourceSubscriptionInput() (string, error)
 	// TransformEventData allows the data source to transform the event data using the extractFn
