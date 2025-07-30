@@ -7,11 +7,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/buger/jsonparser"
-	"github.com/cespare/xxhash/v2"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
 // Event represents an event from Redis
@@ -70,61 +67,6 @@ func (p *PublishEventConfiguration) RootFieldName() string {
 
 func (s *PublishEventConfiguration) MarshalJSONTemplate() (string, error) {
 	return fmt.Sprintf(`{"channel":"%s", "event": {"data": %s}, "providerId":"%s"}`, s.Channel, s.Event.Data, s.ProviderID()), nil
-}
-
-// SubscriptionDataSource implements resolve.SubscriptionDataSource for Redis
-type SubscriptionDataSource struct {
-	pubSub Adapter
-}
-
-func (s *SubscriptionDataSource) SubscriptionEventConfiguration(input []byte) datasource.SubscriptionEventConfiguration {
-	var subscriptionConfiguration SubscriptionEventConfiguration
-	err := json.Unmarshal(input, &subscriptionConfiguration)
-	if err != nil {
-		return nil
-	}
-	return &subscriptionConfiguration
-}
-
-// UniqueRequestID computes a unique ID for the subscription request
-func (s *SubscriptionDataSource) UniqueRequestID(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
-	val, _, _, err := jsonparser.Get(input, "channels")
-	if err != nil {
-		return err
-	}
-
-	_, err = xxh.Write(val)
-	if err != nil {
-		return err
-	}
-
-	val, _, _, err = jsonparser.Get(input, "providerId")
-	if err != nil {
-		return err
-	}
-
-	_, err = xxh.Write(val)
-	return err
-}
-
-// Start starts the subscription
-func (s *SubscriptionDataSource) Start(ctx *resolve.Context, input []byte, updater datasource.SubscriptionEventUpdater) error {
-	subConf := s.SubscriptionEventConfiguration(input)
-	if subConf == nil {
-		return fmt.Errorf("no subscription configuration found")
-	}
-
-	conf, ok := subConf.(*SubscriptionEventConfiguration)
-	if !ok {
-		return fmt.Errorf("invalid subscription configuration")
-	}
-
-	return s.pubSub.Subscribe(ctx.Context(), *conf, updater)
-}
-
-// LoadInitialData implements the interface method (not used for this subscription type)
-func (s *SubscriptionDataSource) LoadInitialData(ctx context.Context) (initial []byte, err error) {
-	return nil, nil
 }
 
 // PublishDataSource implements resolve.DataSource for Redis publishing

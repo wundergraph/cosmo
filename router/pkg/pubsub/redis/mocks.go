@@ -198,7 +198,7 @@ func (_c *MockAdapter_Startup_Call) RunAndReturn(run func(ctx context.Context) e
 }
 
 // Subscribe provides a mock function for the type MockAdapter
-func (_mock *MockAdapter) Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater datasource.SubscriptionEventUpdater) error {
+func (_mock *MockAdapter) Subscribe(ctx context.Context, event datasource.SubscriptionEventConfiguration, updater datasource.SubscriptionEventUpdater) error {
 	ret := _mock.Called(ctx, event, updater)
 
 	if len(ret) == 0 {
@@ -206,7 +206,7 @@ func (_mock *MockAdapter) Subscribe(ctx context.Context, event SubscriptionEvent
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, SubscriptionEventConfiguration, datasource.SubscriptionEventUpdater) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, datasource.SubscriptionEventConfiguration, datasource.SubscriptionEventUpdater) error); ok {
 		r0 = returnFunc(ctx, event, updater)
 	} else {
 		r0 = ret.Error(0)
@@ -221,21 +221,21 @@ type MockAdapter_Subscribe_Call struct {
 
 // Subscribe is a helper method to define mock.On call
 //   - ctx context.Context
-//   - event SubscriptionEventConfiguration
+//   - event datasource.SubscriptionEventConfiguration
 //   - updater datasource.SubscriptionEventUpdater
 func (_e *MockAdapter_Expecter) Subscribe(ctx interface{}, event interface{}, updater interface{}) *MockAdapter_Subscribe_Call {
 	return &MockAdapter_Subscribe_Call{Call: _e.mock.On("Subscribe", ctx, event, updater)}
 }
 
-func (_c *MockAdapter_Subscribe_Call) Run(run func(ctx context.Context, event SubscriptionEventConfiguration, updater datasource.SubscriptionEventUpdater)) *MockAdapter_Subscribe_Call {
+func (_c *MockAdapter_Subscribe_Call) Run(run func(ctx context.Context, event datasource.SubscriptionEventConfiguration, updater datasource.SubscriptionEventUpdater)) *MockAdapter_Subscribe_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 SubscriptionEventConfiguration
+		var arg1 datasource.SubscriptionEventConfiguration
 		if args[1] != nil {
-			arg1 = args[1].(SubscriptionEventConfiguration)
+			arg1 = args[1].(datasource.SubscriptionEventConfiguration)
 		}
 		var arg2 datasource.SubscriptionEventUpdater
 		if args[2] != nil {
@@ -255,7 +255,7 @@ func (_c *MockAdapter_Subscribe_Call) Return(err error) *MockAdapter_Subscribe_C
 	return _c
 }
 
-func (_c *MockAdapter_Subscribe_Call) RunAndReturn(run func(ctx context.Context, event SubscriptionEventConfiguration, updater datasource.SubscriptionEventUpdater) error) *MockAdapter_Subscribe_Call {
+func (_c *MockAdapter_Subscribe_Call) RunAndReturn(run func(ctx context.Context, event datasource.SubscriptionEventConfiguration, updater datasource.SubscriptionEventUpdater) error) *MockAdapter_Subscribe_Call {
 	_c.Call.Return(run)
 	return _c
 }

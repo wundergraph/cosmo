@@ -8,16 +8,25 @@ import (
 
 type ArgumentTemplateCallback func(tpl string) (string, error)
 
-type ProviderLifecycle interface {
+// Lifecycle is the interface that the provider must implement
+// to allow the router to start and stop the provider
+type Lifecycle interface {
 	// Startup is the method called when the provider is started
 	Startup(ctx context.Context) error
 	// Shutdown is the method called when the provider is shut down
 	Shutdown(ctx context.Context) error
 }
 
+// Adapter is the interface that the provider must implement
+// to implement the basic functionality
+type Adapter interface {
+	Lifecycle
+	Subscribe(ctx context.Context, cfg SubscriptionEventConfiguration, updater SubscriptionEventUpdater) error
+}
+
 // Provider is the interface that the PubSub provider must implement
 type Provider interface {
-	ProviderLifecycle
+	Adapter
 	// ID Get the provider ID as specified in the configuration
 	ID() string
 	// TypeID Get the provider type id (e.g. "kafka", "nats")
@@ -45,7 +54,7 @@ const (
 
 // StreamEvent is a generic interface for all stream events
 // Each provider will have its own event type that implements this interface
-// there could be common fields in future, but for now we don't need any
+// there could be other common fields in the future, but for now we only have data
 type StreamEvent interface {
 	GetData() []byte
 }

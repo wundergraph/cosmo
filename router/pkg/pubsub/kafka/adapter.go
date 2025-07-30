@@ -20,7 +20,7 @@ var (
 
 // Adapter defines the interface for Kafka adapter operations
 type Adapter interface {
-	Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater datasource.SubscriptionEventUpdater) error
+	Subscribe(ctx context.Context, event datasource.SubscriptionEventConfiguration, updater datasource.SubscriptionEventUpdater) error
 	Publish(ctx context.Context, event PublishEventConfiguration) error
 	Startup(ctx context.Context) error
 	Shutdown(ctx context.Context) error
@@ -104,23 +104,27 @@ func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, u
 
 // Subscribe subscribes to the given topics and updates the subscription updater.
 // The engine already deduplicates subscriptions with the same topics, stream configuration, extensions, headers, etc.
-func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater datasource.SubscriptionEventUpdater) error {
+func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.SubscriptionEventConfiguration, updater datasource.SubscriptionEventUpdater) error {
+	subConf, ok := conf.(*SubscriptionEventConfiguration)
+	if !ok {
+		return datasource.NewError("invalid event type for Kafka adapter", nil)
+	}
 
 	log := p.logger.With(
-		zap.String("provider_id", event.ProviderID()),
+		zap.String("provider_id", subConf.ProviderID()),
 		zap.String("method", "subscribe"),
-		zap.Strings("topics", event.Topics),
+		zap.Strings("topics", subConf.Topics),
 	)
 
 	// Create a new client for the topic
 	client, err := kgo.NewClient(append(p.opts,
-		kgo.ConsumeTopics(event.Topics...),
+		kgo.ConsumeTopics(subConf.Topics...),
 		// We want to consume the events produced after the first subscription was created
 		// Messages are shared among all subscriptions, therefore old events are not redelivered
 		// This replicates a stateless publish-subscribe model
 		kgo.ConsumeResetOffset(kgo.NewOffset().AfterMilli(time.Now().UnixMilli())),
 		// For observability, we set the client ID to "router"
-		kgo.ClientID(fmt.Sprintf("cosmo.router.consumer.%s", strings.Join(event.Topics, "-"))),
+		kgo.ClientID(fmt.Sprintf("cosmo.router.consumer.%s", strings.Join(subConf.Topics, "-"))),
 		// FIXME: the client id should have some unique identifier, like in nats
 		// What if we have multiple subscriptions for the same topics?
 		// What if we have more router instances?

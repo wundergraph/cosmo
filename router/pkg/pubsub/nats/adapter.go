@@ -18,7 +18,7 @@ import (
 // Adapter defines the methods that a NATS adapter should implement
 type Adapter interface {
 	// Subscribe subscribes to the given events and sends updates to the updater
-	Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater datasource.SubscriptionEventUpdater) error
+	Subscribe(ctx context.Context, event datasource.SubscriptionEventConfiguration, updater datasource.SubscriptionEventUpdater) error
 	// Publish publishes the given event to the specified subject
 	Publish(ctx context.Context, event PublishAndRequestEventConfiguration) error
 	// Request sends a request to the specified subject and writes the response to the given writer
@@ -71,11 +71,15 @@ func (p *ProviderAdapter) getDurableConsumerName(durableName string, subjects []
 	return fmt.Sprintf("%s-%x", durableName, subjHash.Sum64()), nil
 }
 
-func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater datasource.SubscriptionEventUpdater) error {
+func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.SubscriptionEventConfiguration, updater datasource.SubscriptionEventUpdater) error {
+	subConf, ok := conf.(*SubscriptionEventConfiguration)
+	if !ok {
+		return datasource.NewError("invalid event type for Kafka adapter", nil)
+	}
 	log := p.logger.With(
-		zap.String("provider_id", event.ProviderID()),
+		zap.String("provider_id", subConf.ProviderID()),
 		zap.String("method", "subscribe"),
-		zap.Strings("subjects", event.Subjects),
+		zap.Strings("subjects", subConf.Subjects),
 	)
 
 	if p.client == nil {
@@ -86,24 +90,24 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEvent
 		return datasource.NewError("nats jetstream not initialized", nil)
 	}
 
-	if event.StreamConfiguration != nil {
-		durableConsumerName, err := p.getDurableConsumerName(event.StreamConfiguration.Consumer, event.Subjects)
+	if subConf.StreamConfiguration != nil {
+		durableConsumerName, err := p.getDurableConsumerName(subConf.StreamConfiguration.Consumer, subConf.Subjects)
 		if err != nil {
 			return err
 		}
 		consumerConfig := jetstream.ConsumerConfig{
 			Durable:        durableConsumerName,
-			FilterSubjects: event.Subjects,
+			FilterSubjects: subConf.Subjects,
 		}
 		// Durable consumers are removed automatically only if the InactiveThreshold value is set
-		if event.StreamConfiguration.ConsumerInactiveThreshold > 0 {
-			consumerConfig.InactiveThreshold = time.Duration(event.StreamConfiguration.ConsumerInactiveThreshold) * time.Second
+		if subConf.StreamConfiguration.ConsumerInactiveThreshold > 0 {
+			consumerConfig.InactiveThreshold = time.Duration(subConf.StreamConfiguration.ConsumerInactiveThreshold) * time.Second
 		}
 
-		consumer, err := p.js.CreateOrUpdateConsumer(ctx, event.StreamConfiguration.StreamName, consumerConfig)
+		consumer, err := p.js.CreateOrUpdateConsumer(ctx, subConf.StreamConfiguration.StreamName, consumerConfig)
 		if err != nil {
 			log.Error("creating or updating consumer", zap.Error(err))
-			return datasource.NewError(fmt.Sprintf(`failed to create or update consumer for stream "%s"`, event.StreamConfiguration.StreamName), err)
+			return datasource.NewError(fmt.Sprintf(`failed to create or update consumer for stream "%s"`, subConf.StreamConfiguration.StreamName), err)
 		}
 
 		p.closeWg.Add(1)
@@ -152,8 +156,8 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEvent
 	}
 
 	msgChan := make(chan *nats.Msg)
-	subscriptions := make([]*nats.Subscription, len(event.Subjects))
-	for i, subject := range event.Subjects {
+	subscriptions := make([]*nats.Subscription, len(subConf.Subjects))
+	for i, subject := range subConf.Subjects {
 		subscription, err := p.client.ChanSubscribe(subject, msgChan)
 		if err != nil {
 			log.Error("subscribing to NATS subject", zap.Error(err), zap.String("subscription_subject", subject))

@@ -13,7 +13,7 @@ import (
 // Adapter defines the methods that a Redis adapter should implement
 type Adapter interface {
 	// Subscribe subscribes to the given events and sends updates to the updater
-	Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater datasource.SubscriptionEventUpdater) error
+	Subscribe(ctx context.Context, event datasource.SubscriptionEventConfiguration, updater datasource.SubscriptionEventUpdater) error
 	// Publish publishes the given event to the specified channel
 	Publish(ctx context.Context, event PublishEventConfiguration) error
 	// Startup initializes the adapter
@@ -73,19 +73,23 @@ func (p *ProviderAdapter) Shutdown(ctx context.Context) error {
 	return p.conn.Close()
 }
 
-func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater datasource.SubscriptionEventUpdater) error {
+func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.SubscriptionEventConfiguration, updater datasource.SubscriptionEventUpdater) error {
+	subConf, ok := conf.(*SubscriptionEventConfiguration)
+	if !ok {
+		return datasource.NewError("invalid event type for Kafka adapter", nil)
+	}
 	log := p.logger.With(
-		zap.String("provider_id", event.ProviderID()),
+		zap.String("provider_id", subConf.ProviderID()),
 		zap.String("method", "subscribe"),
-		zap.Strings("channels", event.Channels),
+		zap.Strings("channels", subConf.Channels),
 	)
-	sub := p.conn.PSubscribe(ctx, event.Channels...)
+	sub := p.conn.PSubscribe(ctx, subConf.Channels...)
 	msgChan := sub.Channel()
 
 	cleanup := func() {
-		err := sub.PUnsubscribe(ctx, event.Channels...)
+		err := sub.PUnsubscribe(ctx, subConf.Channels...)
 		if err != nil {
-			log.Error(fmt.Sprintf("error unsubscribing from redis for topics %v", event.Channels), zap.Error(err))
+			log.Error(fmt.Sprintf("error unsubscribing from redis for topics %v", subConf.Channels), zap.Error(err))
 		}
 	}
 

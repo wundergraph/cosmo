@@ -7,11 +7,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/buger/jsonparser"
-	"github.com/cespare/xxhash/v2"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
 // Event represents an event from NATS
@@ -74,58 +71,10 @@ func (p *PublishAndRequestEventConfiguration) RootFieldName() string {
 	return p.FieldName
 }
 
-func (s *PublishAndRequestEventConfiguration) MarshalJSONTemplate() (string, error) {
+func (p *PublishAndRequestEventConfiguration) MarshalJSONTemplate() (string, error) {
 	// The content of the data field could be not valid JSON, so we can't use json.Marshal
 	// e.g. {"id":$$0$$,"update":$$1$$}
-	return fmt.Sprintf(`{"subject":"%s", "event": {"data": %s}, "providerId":"%s"}`, s.Subject, s.Event.Data, s.ProviderID()), nil
-}
-
-type SubscriptionSource struct {
-	pubSub Adapter
-}
-
-func (s *SubscriptionSource) SubscriptionEventConfiguration(input []byte) datasource.SubscriptionEventConfiguration {
-	var subscriptionConfiguration SubscriptionEventConfiguration
-	err := json.Unmarshal(input, &subscriptionConfiguration)
-	if err != nil {
-		return nil
-	}
-	return &subscriptionConfiguration
-}
-
-func (s *SubscriptionSource) UniqueRequestID(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
-
-	val, _, _, err := jsonparser.Get(input, "subjects")
-	if err != nil {
-		return err
-	}
-
-	_, err = xxh.Write(val)
-	if err != nil {
-		return err
-	}
-
-	val, _, _, err = jsonparser.Get(input, "providerId")
-	if err != nil {
-		return err
-	}
-
-	_, err = xxh.Write(val)
-	return err
-}
-
-func (s *SubscriptionSource) Start(ctx *resolve.Context, input []byte, updater datasource.SubscriptionEventUpdater) error {
-	subConf := s.SubscriptionEventConfiguration(input)
-	if subConf == nil {
-		return fmt.Errorf("no subscription configuration found")
-	}
-
-	conf, ok := subConf.(*SubscriptionEventConfiguration)
-	if !ok {
-		return fmt.Errorf("invalid subscription configuration")
-	}
-
-	return s.pubSub.Subscribe(ctx.Context(), *conf, updater)
+	return fmt.Sprintf(`{"subject":"%s", "event": {"data": %s}, "providerId":"%s"}`, p.Subject, p.Event.Data, p.ProviderID()), nil
 }
 
 type NatsPublishDataSource struct {
