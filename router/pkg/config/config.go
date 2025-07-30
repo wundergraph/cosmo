@@ -963,8 +963,13 @@ type MCPServer struct {
 }
 
 type PluginsConfiguration struct {
-	Enabled bool   `yaml:"enabled" envDefault:"false" env:"ENABLED"`
-	Path    string `yaml:"path" envDefault:"plugins" env:"PATH"`
+	Enabled  bool                        `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	Path     string                      `yaml:"path" envDefault:"plugins" env:"PATH"`
+	Registry PluginRegistryConfiguration `yaml:"registry" envPrefix:"REGISTRY_"`
+}
+
+type PluginRegistryConfiguration struct {
+	URL string `yaml:"url" env:"URL" envDefault:"cosmo-registry.wundergraph.com"`
 }
 
 type Config struct {

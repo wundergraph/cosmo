@@ -1,18 +1,17 @@
 //go:build linux
 // +build linux
 
-package grpcconnector
+package grpccommon
 
 import (
 	"os/exec"
 	"syscall"
 )
 
-func newPluginCommand(filePath string) *exec.Cmd {
-	cmd := exec.Command(filePath)
+// PrepareCommand adds Linux-specific options to the command.
+func PrepareCommand(cmd *exec.Cmd) {
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Setpgid:   true,
 		Pdeathsig: syscall.SIGTERM,
 	}
-	return cmd
 }

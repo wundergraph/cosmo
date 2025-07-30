@@ -19,6 +19,9 @@ watch_config:
     enabled: false
     maximum: '10s'
 
+plugins:
+  enabled: true
+
 engine:
   max_concurrent_resolvers: 1024
   debug:
