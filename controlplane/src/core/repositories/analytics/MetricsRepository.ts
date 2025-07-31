@@ -746,14 +746,14 @@ export class MetricsRepository {
       AND OrganizationID = '${organizationId}'
       AND FederatedGraphID = '${graphId}'
       ${whereSql ? `AND ${whereSql}` : ''}
-    GROUP BY OperationName, OperationHash, OperationType ORDER BY latency DESC LIMIT ${props.limit}`;
+    GROUP BY OperationName, OperationHash, OperationType ORDER BY latency DESC LIMIT {limit:UInt32}`;
 
     const res: {
       operationHash: string;
       operationName: string;
       operationType: string;
       latency: number;
-    }[] = await this.client.queryPromise(query, queryParams);
+    }[] = await this.client.queryPromise(query, { ...queryParams, limit: props.limit });
 
     if (Array.isArray(res)) {
       return res;
