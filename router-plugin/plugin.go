@@ -149,7 +149,8 @@ func NewRouterPlugin(registrationfunc func(*grpc.Server), opts ...PluginOption) 
 	}
 
 	routerPlugin.serveConfig.GRPCServer = func(serverOpts []grpc.ServerOption) *grpc.Server {
-		allOpts := append(serverOpts, grpcOpts...)
+		allOpts := append([]grpc.ServerOption{}, serverOpts...)
+		allOpts = append(allOpts, grpcOpts...)
 		return grpc.NewServer(allOpts...)
 	}
 

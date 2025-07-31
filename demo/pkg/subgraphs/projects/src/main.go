@@ -16,9 +16,6 @@ func main() {
 				NextID: 1,
 			})
 		},
-		routerplugin.WithTracing(),
-		routerplugin.WithServiceName("projects-service"),
-		routerplugin.WithServiceVersion("v1.0"),
 	)
 
 	if err != nil {
