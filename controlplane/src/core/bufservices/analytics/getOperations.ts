@@ -52,6 +52,17 @@ export function getOperations(
     }
 
     req.limit = req.limit ?? 100;
+    // Validate limit is within reasonable bounds
+    if (req.limit < 1 || req.limit > 1000) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: 'Limit must be between 1 and 1000',
+        },
+        operations: [],
+      };
+    }
+
     const range = 7 * 24;
 
     const operations = await metricsRepo.getOperations({
