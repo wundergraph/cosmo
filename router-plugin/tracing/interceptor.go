@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
@@ -11,18 +12,18 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-const traceparentHeader = "traceparent"
+const (
+	traceparentHeader = "traceparent"
+	tracestateHeader  = "tracestate"
+)
 
 func CreateTracingInterceptor(tracingOpts TracingOptions) (func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error), error) {
-	tracingConfig := tracingOpts.TracingConfig
-	
-	if tracingConfig == nil {
+	if tracingOpts.TracingConfig == nil {
 		return nil, errors.New("nil tracing config not supported")
 	}
 
-	// TODO: We currently don't have a shutdown logic in the plugin
-	// which calls tp.Shutdown
-	tp, err := initTracer(context.Background(), tracingOpts, *tracingConfig)
+	// TODO: We currently don't have a shutdown logic in the plugin which calls tp.Shutdown
+	tp, err := initTracer(context.Background(), tracingOpts, *tracingOpts.TracingConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -34,12 +35,12 @@ func CreateTracingInterceptor(tracingOpts TracingOptions) (func(ctx context.Cont
 			// We should only get one traceparent value
 			// in case we get more drop the extras
 			traceparent := md.Get(traceparentHeader)
-			if len(traceparent) != 0 {
+			if len(traceparent) > 0 {
 				carrier := propagation.MapCarrier{traceparentHeader: traceparent[0]}
-				propagator := propagation.NewCompositeTextMapPropagator(
-					propagation.TraceContext{},
-					propagation.Baggage{},
-				)
+				if values := md.Get(tracestateHeader); len(values) > 0 {
+					carrier[tracestateHeader] = values[0]
+				}
+				propagator := otel.GetTextMapPropagator()
 				ctx = propagator.Extract(ctx, carrier)
 
 				var span trace.Span

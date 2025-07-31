@@ -22,6 +22,11 @@ var RouterPluginHandshakeConfig = plugin.HandshakeConfig{
 
 const startupConfigKey = "startup_config"
 
+const (
+	baseServiceName    = "cosmo-router-plugin"
+	baseServiceVersion = "1.0.0"
+)
+
 // PluginMapName is the name of the plugin in the plugin map.
 var PluginMapName = "grpc_datasource"
 
@@ -121,9 +126,18 @@ func NewRouterPlugin(registrationfunc func(*grpc.Server), opts ...PluginOption) 
 
 	grpcOpts := make([]grpc.ServerOption, 0)
 	if routerPlugin.config.TracingEnabled && routerPlugin.startupConfig.Telemetry != nil {
+		serviceName := baseServiceName
+		if routerPlugin.config.ServiceName != "" {
+			serviceName = routerPlugin.config.ServiceName
+		}
+		serviceVersion := baseServiceVersion
+		if routerPlugin.config.ServiceVersion != "" {
+			serviceVersion = routerPlugin.config.ServiceVersion
+		}
+
 		tracingInterceptor, err := tracing.CreateTracingInterceptor(tracing.TracingOptions{
-			ServiceName:      routerPlugin.config.ServiceName,
-			ServiceVersion:   routerPlugin.config.ServiceVersion,
+			ServiceName:      serviceName,
+			ServiceVersion:   serviceVersion,
 			ErrorHandlerFunc: routerPlugin.config.TracingErrorHandler,
 			TracingConfig:    routerPlugin.startupConfig.Telemetry.Tracing,
 			IPAnonymization:  routerPlugin.startupConfig.IPAnonymization,
