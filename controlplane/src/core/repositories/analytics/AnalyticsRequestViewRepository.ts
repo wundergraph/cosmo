@@ -455,12 +455,11 @@ export class AnalyticsRequestViewRepository {
 
     const operationNamesResult = await this.client?.queryPromise(allOperationNamesQuery, queryParams);
 
-    const allOperationNames: string[] = [];
     if (Array.isArray(operationNamesResult)) {
-      allOperationNames.push(...operationNamesResult.map((o) => o.OperationName));
+      return operationNamesResult.map((o) => o.OperationName);
     }
 
-    return allOperationNames;
+    return [];
   }
 
   private async getAllClients(
@@ -482,12 +481,11 @@ export class AnalyticsRequestViewRepository {
 
     const result = await this.client?.queryPromise(query, queryParams);
 
-    const clientNames: string[] = [];
     if (Array.isArray(result)) {
-      clientNames.push(...result.map((c) => c.ClientName));
+      return result.map((c) => c.ClientName);
     }
 
-    return clientNames;
+    return [];
   }
 
   private async getAllClientVersions(
@@ -514,16 +512,11 @@ export class AnalyticsRequestViewRepository {
 
     const result = await this.client?.queryPromise(query, queryParams);
 
-    const clientVersions: string[] = [];
     if (Array.isArray(result)) {
-      clientVersions.push(
-        ...result.map((c) => {
-          return c.ClientVersion;
-        }),
-      );
+      return result.map((c) => c.ClientVersion);
     }
 
-    return clientVersions;
+    return [];
   }
 
   private async getAllHttpStatusCodes(
@@ -545,12 +538,11 @@ export class AnalyticsRequestViewRepository {
 
     const result = await this.client?.queryPromise(query, queryParams);
 
-    const httpStatusCodes: string[] = [];
     if (Array.isArray(result)) {
-      httpStatusCodes.push(...result.map((s) => s.HttpStatusCode));
+     return result.map((s) => s.HttpStatusCode);
     }
 
-    return httpStatusCodes;
+    return [];
   }
 
   private getBaseFiltersForGroup = (name: AnalyticsViewGroupName) => {
