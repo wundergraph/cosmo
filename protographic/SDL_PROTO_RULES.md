@@ -53,13 +53,13 @@ Rules should follow [Proto Best Practices](https://protobuf.dev/best-practices/d
 
 ### Scalar Types
 
-| GraphQL Type | Protocol Buffer Type |
-| ------------ | -------------------- |
-| ID           | string               |
-| String       | string               |
-| Int          | int32                |
-| Float        | double               |
-| Boolean      | bool                 |
+| GraphQL Type | Protocol Buffer Type (Non-Null) | Protocol Buffer Type (Nullable) |
+| ------------ | ------------------------------- | ------------------------------- |
+| ID           | string                          | google.protobuf.StringValue     |
+| String       | string                          | google.protobuf.StringValue     |
+| Int          | int32                           | google.protobuf.Int32Value      |
+| Float        | double                          | google.protobuf.DoubleValue     |
+| Boolean      | bool                            | google.protobuf.BoolValue       |
 
 ### Complex Types
 
@@ -230,29 +230,124 @@ enum UserRole {
 }
 ```
 
-## Nested List Types
+## List Types
 
-For nested lists in GraphQL (e.g., `[[Type]]`), Protographic creates a wrapper message:
+Protographic handles GraphQL list nullability by creating wrapper messages when needed, since Protocol Buffers doesn't natively support nullable lists or nested list structures.
+
+### Core Concepts
+
+- **Non-nullable single-level lists**: Use the `repeated` keyword directly
+- **Nullable lists**: Wrapped in `ListOf{Type}` messages 
+- **Nested lists**: Always use wrapper messages with multiple `ListOf` prefixes based on nesting level (e.g., `ListOfListOfString`)
+- **Nullable list items**: Currently ignored (no wrapper generated for item nullability)
+
+### Non-Nullable Single Lists
+Non-nullable lists use `repeated` fields directly:
 
 ```graphql
-type Matrix {
-  values: [[Int!]!]!
+type User {
+  tags: [String!]!
 }
 ```
 
 Maps to:
 
 ```protobuf
-message IntList {
-  repeated int32 result = 1;
-}
-
-message Matrix {
-  repeated IntList values = 1;
+message User {
+  repeated string tags = 1;
 }
 ```
 
-This approach is used for any nested list, regardless of the depth of nesting. For complex nested types, wrapper messages are created automatically with the naming convention of `{BaseType}List`.
+### Nullable Single Lists
+
+Nullable lists require wrapper messages:
+We always use a nested `List` message to wrap the repeated field as repeated fields are not nullable in Protobuf.
+In order to ensure correct nullability, this is handled on the engine side. The service implementation needs to follow the GraphQL rules for nullability.
+
+```graphql
+type User {
+  optionalTags: [String]
+}
+```
+
+Maps to:
+
+```protobuf
+message ListOfString {
+  message List {
+    repeated string items = 1;
+  }
+  List list = 1;
+}
+
+message User {
+  ListOfString optional_tags = 1;
+}
+```
+
+### Non-Nullable Nested Lists
+
+Non-nullable nested lists always use wrapper messages to preserve inner list nullability:
+
+```graphql
+type User {
+  categories: [[String!]!]!
+}
+```
+
+Maps to:
+
+```protobuf
+message ListOfString {
+  message List {
+    repeated string items = 1;
+  }
+  List list = 1;
+}
+
+message ListOfListOfString {
+  message List {
+    repeated ListOfString items = 1;
+  }
+  List list = 1;
+}
+
+message User {
+  ListOfListOfString categories = 1;
+}
+```
+
+### Nullable Nested Lists
+
+Nullable nested lists use nested wrapper messages:
+
+```graphql
+type User {
+  posts: [[String]]
+}
+```
+
+Maps to:
+
+```protobuf
+message ListOfString {
+  repeated string items = 1;
+}
+
+message ListOfListOfString {
+  message List {
+    repeated ListOfString items = 1;
+  }
+  List list = 1;
+}
+
+message User {
+  ListOfListOfString posts = 1;
+}
+```
+
+
+
 
 ## Field Numbering and Stability
 
@@ -286,13 +381,15 @@ type User {
 Generates:
 
 ```protobuf
+import "google/protobuf/wrappers.proto";
+
 message User {
   string id = 1;
   string name = 2;
   string email = 3;
-  int32 age = 4;
-  string bio = 5;
-  bool is_active = 6;
+  google.protobuf.Int32Value age = 4;
+  google.protobuf.StringValue bio = 5;
+  google.protobuf.BoolValue is_active = 6;
 }
 ```
 
@@ -312,11 +409,13 @@ type User {
 Generates (with range notation for reserved fields):
 
 ```protobuf
+import "google/protobuf/wrappers.proto";
+
 message User {
   reserved 3 to 5;  // Efficiently reserves fields 3, 4, and 5
   string id = 1;
   string name = 2;
-  bool is_active = 6;
+  google.protobuf.BoolValue is_active = 6;
 }
 ```
 
@@ -335,13 +434,15 @@ type User {
 Generates:
 
 ```protobuf
+import "google/protobuf/wrappers.proto";
+
 message User {
   reserved 3 to 4;  // Fields 3 and 4 remain reserved
   string id = 1;
   string name = 2;
-  string bio = 5;   // Restored field keeps its original number
-  bool is_active = 6;
-  string created_at = 7; // New field gets next available number
+  google.protobuf.StringValue bio = 5;   // Restored field keeps its original number
+  google.protobuf.BoolValue is_active = 6;
+  google.protobuf.StringValue created_at = 7; // New field gets next available number
 }
 ```
 

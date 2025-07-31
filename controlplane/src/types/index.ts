@@ -279,7 +279,7 @@ export interface OrganizationInvitationDTO {
   userID: string;
   email: string;
   invitedBy?: string;
-  groupId?: string;
+  groups: { groupId: string; kcGroupId: string | null }[];
 }
 
 export interface APIKeyDTO {
@@ -745,3 +745,7 @@ export interface ProposalSubgraphDTO {
   isNew: boolean;
   labels: Label[];
 }
+
+export type CompositionOptions = {
+  disableResolvabilityValidation: boolean;
+};

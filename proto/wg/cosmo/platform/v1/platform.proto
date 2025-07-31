@@ -55,6 +55,7 @@ message PublishFederatedSubgraphRequest {
   optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocket_subprotocol = 9;
   optional bool is_feature_subgraph = 10;
   optional string base_subgraph_name = 11;
+  optional bool disable_resolvability_validation = 12;
 }
 
 message PublishFederatedSubgraphResponse {
@@ -91,6 +92,7 @@ message CheckSubgraphSchemaRequest {
   optional bool skip_traffic_check = 6;
   optional VCSContext vcsContext = 7;
   repeated Label labels = 8;
+  optional bool disable_resolvability_validation = 9;
 }
 
 message FixSubgraphSchemaRequest {
@@ -99,6 +101,7 @@ message FixSubgraphSchemaRequest {
   // The string representation of the schema, the content of the file
   string schema = 2;
   string namespace = 3;
+  optional bool disable_resolvability_validation = 4;
 }
 
 message CreateMonographRequest {
@@ -131,6 +134,7 @@ message CreateFederatedGraphRequest {
   string namespace = 5;
   string admissionWebhookURL = 6;
   optional string admissionWebhookSecret = 7;
+  optional bool disable_resolvability_validation = 8;
 }
 
 message CreateFederatedSubgraphRequest {
@@ -171,6 +175,7 @@ message DeleteFederatedSubgraphRequest {
   // The FQDN of the subgraph to be checked e.g. "wg.team1.orders"
   string subgraph_name = 1;
   string namespace = 2;
+  optional bool disable_resolvability_validation = 3;
 }
 
 message SchemaChange{
@@ -549,6 +554,7 @@ message GetCheckOperationsRequest {
   string namespace = 3;
   int32 limit = 4;
   int32 offset = 5;
+  optional string search = 6;
 }
 
 message GetCheckOperationsResponse {
@@ -569,6 +575,8 @@ message GetCheckOperationsResponse {
   string created_at = 4;
   bool client_traffic_check_skipped = 5;
   int32 totalOperationsCount = 6;
+  bool doAllOperationsHaveIgnoreAllOverride = 7;
+  bool doAllOperationsHaveAllTheirChangesMarkedSafe = 8;
 }
 
 message GetOperationContentRequest {
@@ -626,6 +634,7 @@ message UpdateSubgraphRequest {
   string namespace = 8;
   optional bool unset_labels = 9;
   optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocket_subprotocol = 10;
+  optional bool disable_resolvability_validation = 11;
 }
 
 message UpdateSubgraphResponse {
@@ -644,6 +653,7 @@ message UpdateFederatedGraphRequest {
   optional bool unset_label_matchers = 6;
   optional string admissionWebhookURL = 7;
   optional string admissionWebhookSecret = 8;
+  optional bool disable_resolvability_validation = 9;
 }
 
 message UpdateFederatedGraphResponse {
@@ -674,6 +684,7 @@ message CheckFederatedGraphRequest {
   string name = 1;
   repeated string label_matchers = 2;
   string namespace = 3;
+  optional bool disable_resolvability_validation = 4;
 }
 
 message CheckFederatedGraphResponse {
@@ -993,7 +1004,7 @@ message GetOrganizationMembersResponse {
 
 message InviteUserRequest {
   string email = 1;
-  string groupId = 2;
+  repeated string groups = 2;
 }
 
 message InviteUserResponse {
@@ -1360,9 +1371,8 @@ message UpdateOrganizationDetailsResponse {
 }
 
 message UpdateOrgMemberGroupRequest {
-  string userID = 1;
-  string orgMemberUserID = 2;
-  string groupId = 3;
+  string orgMemberUserID = 1;
+  repeated string groups = 2;
 }
 
 message UpdateOrgMemberGroupResponse {
@@ -1567,6 +1577,7 @@ message ToggleChangeOverridesForAllOperationsRequest {
   bool is_safe = 2;
   string graph_name = 3;
   string namespace = 4;
+  optional string search = 5;
 }
 
 message ToggleChangeOverridesForAllOperationsResponse {
@@ -1577,6 +1588,7 @@ message CreateIgnoreOverridesForAllOperationsRequest {
   string check_id = 1;
   string graph_name = 2;
   string namespace = 3;
+  optional string search = 4;
 }
 
 message CreateIgnoreOverridesForAllOperationsResponse {
@@ -2058,6 +2070,7 @@ message MoveGraphRequest {
   string name = 1;
   string namespace = 2;
   string new_namespace = 3;
+  optional bool disable_resolvability_validation = 4;
 }
 
 message MoveGraphResponse {
@@ -2185,6 +2198,7 @@ message CreateContractRequest {
   optional string readme = 7;
   optional string admission_webhook_secret = 8;
   repeated string include_tags = 9;
+  optional bool disable_resolvability_validation = 10;
 }
 
 message CreateContractResponse {
@@ -2203,6 +2217,7 @@ message UpdateContractRequest {
   optional string admission_webhook_url = 6;
   optional string admission_webhook_secret = 7;
   optional string readme = 8;
+  optional bool disable_resolvability_validation = 9;
 }
 
 message UpdateContractResponse {
@@ -2232,6 +2247,7 @@ message CreateFeatureFlagRequest {
   repeated Label labels = 3;
   repeated string feature_subgraph_names = 4;
   bool is_enabled = 5;
+  optional bool disable_resolvability_validation = 6;
 }
 
 message CreateFeatureFlagResponse {
@@ -2247,6 +2263,7 @@ message UpdateFeatureFlagRequest {
   repeated Label labels = 3;
   repeated string feature_subgraph_names = 4;
   bool unset_labels = 5;
+  optional bool disable_resolvability_validation = 6;
 }
 
 message UpdateFeatureFlagResponse {
@@ -2260,6 +2277,7 @@ message EnableFeatureFlagRequest {
   string name = 1;
   string namespace = 2;
   bool enabled = 3;
+  optional bool disable_resolvability_validation = 4;
 }
 
 message EnableFeatureFlagResponse {
@@ -2273,6 +2291,7 @@ message EnableFeatureFlagResponse {
 message DeleteFeatureFlagRequest {
   string name = 1;
   string namespace = 2;
+  optional bool disable_resolvability_validation = 3;
 }
 
 message DeleteFeatureFlagResponse {
@@ -2578,6 +2597,7 @@ message SetGraphRouterCompatibilityVersionRequest {
   string name = 1;
   string namespace = 2;
   string version = 3;
+  optional bool disable_resolvability_validation = 4;
 }
 
 message SetGraphRouterCompatibilityVersionResponse {
@@ -2620,11 +2640,17 @@ message ProposalSubgraph {
   repeated Label labels = 5;
 }
 
+enum ProposalNamingConvention {
+  NORMAL = 0;
+  INCREMENTAL = 1;
+}
+
 message CreateProposalRequest {
   string federatedGraphName = 1;
   string namespace = 2;
   string name = 3;
   repeated ProposalSubgraph subgraphs = 4;
+  ProposalNamingConvention namingConvention = 5;
 }
 
 message CreateProposalResponse {
@@ -2644,6 +2670,7 @@ message CreateProposalResponse {
   bool graphPruningSkipped = 14;
   string checkUrl = 15;
   string proposalUrl = 16;
+  string proposalName = 17;
 }
 
 message GetProposalRequest {
@@ -2668,7 +2695,7 @@ message GetProposalsByFederatedGraphRequest {
   string endDate = 4;
   int32 limit = 5;
   int32 offset = 6;
-}   
+}
 
 message GetProposalsByFederatedGraphResponse {
   Response response = 1;
@@ -2754,6 +2781,7 @@ message GetOperationsRequest {
   string federatedGraphName = 1;
   string namespace = 2;
   optional string clientName = 3;
+  optional int32 limit = 4;
 }
 
 message GetOperationsResponse {

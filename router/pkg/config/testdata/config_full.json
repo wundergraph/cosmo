@@ -60,6 +60,7 @@
         "EngineStats": {
           "Subscriptions": true
         },
+        "CircuitBreaker": false,
         "ExcludeMetrics": null,
         "ExcludeMetricLabels": null,
         "Exporters": [
@@ -82,6 +83,7 @@
         "EngineStats": {
           "Subscriptions": true
         },
+        "CircuitBreaker": false,
         "ExcludeMetrics": null,
         "ExcludeMetricLabels": null,
         "ExcludeScopeInfo": true,
@@ -89,7 +91,8 @@
           "Enabled": true,
           "IncludeOperationSha": false
         }
-      }
+      },
+      "CardinalityLimit": 2000
     }
   },
   "GraphqlMetrics": {
@@ -305,6 +308,18 @@
         "MaxDuration": 10000000000,
         "Interval": 3000000000
       },
+      "CircuitBreaker": {
+        "Enabled": false,
+        "ErrorThresholdPercentage": 50,
+        "RequestThreshold": 20,
+        "SleepWindow": 5000000000,
+        "HalfOpenAttempts": 1,
+        "RequiredSuccessfulAttempts": 1,
+        "RollingDuration": 10000000000,
+        "NumBuckets": 10,
+        "ExecutionTimeout": 60000000000,
+        "MaxConcurrentRequests": -1
+      },
       "RequestTimeout": 60000000000,
       "DialTimeout": 30000000000,
       "ResponseHeaderTimeout": 0,
@@ -319,7 +334,8 @@
     "Router": {
       "MaxRequestBodyBytes": 5000000,
       "MaxHeaderBytes": 4194304,
-      "DecompressionEnabled": false
+      "DecompressionEnabled": false,
+      "ResponseCompressionMinSize": 4096
     },
     "Subgraphs": {
       "products": {
@@ -329,6 +345,18 @@
           "MaxAttempts": 0,
           "MaxDuration": 0,
           "Interval": 0
+        },
+        "CircuitBreaker": {
+          "Enabled": false,
+          "ErrorThresholdPercentage": 0,
+          "RequestThreshold": 0,
+          "SleepWindow": 0,
+          "HalfOpenAttempts": 0,
+          "RequiredSuccessfulAttempts": 0,
+          "RollingDuration": 0,
+          "NumBuckets": 0,
+          "ExecutionTimeout": 0,
+          "MaxConcurrentRequests": 0
         },
         "RequestTimeout": 120000000000,
         "DialTimeout": null,
@@ -361,7 +389,8 @@
       },
       "File": {
         "Enabled": false,
-        "Path": "access.log"
+        "Path": "access.log",
+        "Mode": 416
       }
     },
     "Router": {
@@ -439,20 +468,32 @@
           "Algorithms": [
             "RS256"
           ],
-          "RefreshInterval": 60000000000
+          "RefreshInterval": 60000000000,
+          "Secret": "",
+          "Algorithm": "",
+          "KeyId": "",
+          "Audiences": null
         },
         {
           "URL": "https://example.com/.well-known/jwks2.json",
           "Algorithms": [
             "RS256",
-            "HS256"
+            "ES256"
           ],
-          "RefreshInterval": 120000000000
+          "RefreshInterval": 120000000000,
+          "Secret": "",
+          "Algorithm": "",
+          "KeyId": "",
+          "Audiences": null
         },
         {
           "URL": "https://example.com/.well-known/jwks3.json",
           "Algorithms": null,
-          "RefreshInterval": 0
+          "RefreshInterval": 0,
+          "Secret": "",
+          "Algorithm": "",
+          "KeyId": "",
+          "Audiences": null
         }
       ],
       "HeaderName": "Authorization",
@@ -552,6 +593,15 @@
           },
           "FetchMaxWait": 10000000
         }
+      ],
+      "Redis": [
+        {
+          "ID": "my-redis",
+          "URLs": [
+            "redis://localhost:6379/11"
+          ],
+          "ClusterEnabled": true
+        }
       ]
     }
   },
@@ -620,7 +670,12 @@
         "IgnorePersistedOperations": true
       }
     },
-    "DepthLimit": null
+    "DepthLimit": null,
+    "ParserLimits": {
+      "ApproximateDepthLimit": 100,
+      "TotalFieldsLimit": 500
+    },
+    "OperationNameLengthLimit": 2000
   },
   "EngineExecutionConfiguration": {
     "Debug": {
@@ -711,14 +766,16 @@
   "SubgraphErrorPropagation": {
     "Enabled": true,
     "PropagateStatusCodes": false,
-    "Mode": "wrapped",
+    "Mode": "pass-through",
     "RewritePaths": true,
     "OmitLocations": true,
-    "OmitExtensions": false,
+    "OmitExtensions": true,
     "AttachServiceName": true,
     "DefaultExtensionCode": "DOWNSTREAM_SERVICE_ERROR",
+    "AllowAllExtensionFields": true,
     "AllowedExtensionFields": [
-      "code"
+      "field1",
+      "field2"
     ],
     "AllowedFields": null
   },
@@ -769,6 +826,7 @@
     }
   },
   "PersistedOperationsConfig": {
+    "Disabled": false,
     "LogUnknown": true,
     "Safelist": {
       "Enabled": true

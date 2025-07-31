@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS "pr_federated_graph_id_idx" ON "proposals" USING btree ("federated_graph_id");

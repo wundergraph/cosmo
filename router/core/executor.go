@@ -18,8 +18,8 @@ import (
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/grpcconnector"
 	pubsub_datasource "github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
-	"github.com/wundergraph/cosmo/router/pkg/routerplugin"
 )
 
 type ExecutorConfigurationBuilder struct {
@@ -31,7 +31,7 @@ type ExecutorConfigurationBuilder struct {
 	transportOptions *TransportOptions
 	baseTripper      http.RoundTripper
 	subgraphTrippers map[string]http.RoundTripper
-	pluginHost       *routerplugin.Host
+	pluginHost       *grpcconnector.Connector
 
 	subscriptionClientOptions *SubscriptionClientOptions
 	instanceData              InstanceData
@@ -81,6 +81,7 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 		AttachServiceNameToErrorExtensions: opts.RouterEngineConfig.SubgraphErrorPropagation.AttachServiceName,
 		DefaultErrorExtensionCode:          opts.RouterEngineConfig.SubgraphErrorPropagation.DefaultExtensionCode,
 		AllowedSubgraphErrorFields:         opts.RouterEngineConfig.SubgraphErrorPropagation.AllowedFields,
+		AllowAllErrorExtensionFields:       opts.RouterEngineConfig.SubgraphErrorPropagation.AllowAllExtensionFields,
 		MaxRecyclableParserSize:            opts.RouterEngineConfig.Execution.ResolverMaxRecyclableParserSize,
 		MultipartSubHeartbeatInterval:      opts.HeartbeatInterval,
 		MaxSubscriptionFetchTimeout:        opts.RouterEngineConfig.Execution.SubscriptionFetchTimeout,
@@ -100,7 +101,7 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 	}
 
 	if opts.ApolloRouterCompatibilityFlags.SubrequestHTTPError.Enabled {
-		options.ResolvableOptions.ApolloRouterCompatibilitySubrequestHTTPError = true
+		options.ApolloRouterCompatibilitySubrequestHTTPError = true
 	}
 
 	switch opts.RouterEngineConfig.SubgraphErrorPropagation.Mode {

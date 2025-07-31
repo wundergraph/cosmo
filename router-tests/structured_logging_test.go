@@ -10,12 +10,11 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-
-	"github.com/stretchr/testify/assert"
 
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
@@ -158,6 +157,7 @@ func TestRouterStartLogs(t *testing.T) {
 		RouterConfigJSONTemplate: testenv.ConfigWithEdfsJSONTemplate,
 		EnableNats:               true,
 		EnableKafka:              true,
+		EnableRedis:              true,
 		LogObservation: testenv.LogObservationConfig{
 			Enabled:  true,
 			LogLevel: zapcore.InfoLevel,
@@ -189,8 +189,13 @@ func TestAccessLogsFileOutput(t *testing.T) {
 		t.Parallel()
 
 		fp := filepath.Join(os.TempDir(), "access.log")
-		f, err := logging.NewLogFile(filepath.Join(os.TempDir(), "access.log"))
+		f, err := logging.NewLogFile(filepath.Join(os.TempDir(), "access.log"), 0640)
 		require.NoError(t, err)
+
+		require.FileExists(t, fp)
+		info, err := os.Stat(fp)
+		require.NoError(t, err)
+		require.Equal(t, info.Mode(), os.FileMode(0640))
 
 		t.Cleanup(func() {
 			require.NoError(t, f.Close())
@@ -238,6 +243,53 @@ func TestAccessLogsFileOutput(t *testing.T) {
 		})
 	})
 
+	t.Run("Custom file modes", func(t *testing.T) {
+		t.Parallel()
+
+		tests := []struct {
+			name         string
+			mode         config.FileMode
+			expectedMode os.FileMode
+		}{
+			{
+				name:         "Should succeed with default mode",
+				mode:         0640,
+				expectedMode: 0640,
+			},
+			{
+				name:         "Should succeed with custom mode",
+				mode:         0600,
+				expectedMode: 0600,
+			},
+			{
+				name:         "Should succeed with zero mode",
+				mode:         0,
+				expectedMode: 0640,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				fp := filepath.Join(os.TempDir(), "access_filemode.log")
+				f, err := logging.NewLogFile(fp, os.FileMode(tt.mode))
+
+				t.Cleanup(func() {
+					if f != nil {
+						require.NoError(t, f.Close())
+						require.NoError(t, os.RemoveAll(fp))
+					}
+				})
+
+				require.NoError(t, err)
+				require.FileExists(t, fp)
+				info, err := os.Stat(fp)
+				require.NoError(t, err)
+				require.Equal(t, info.Mode(), tt.expectedMode)
+			})
+		}
+
+	})
+
 	t.Run("subgraph", func(t *testing.T) {
 		t.Parallel()
 
@@ -245,7 +297,7 @@ func TestAccessLogsFileOutput(t *testing.T) {
 			t.Parallel()
 
 			fp := filepath.Join(t.TempDir(), "access.log")
-			f, err := logging.NewLogFile(fp)
+			f, err := logging.NewLogFile(fp, 0640)
 			require.NoError(t, err)
 
 			t.Cleanup(func() {
@@ -1942,6 +1994,59 @@ func TestFlakyAccessLogs(t *testing.T) {
 			)
 		})
 
+		t.Run("should be able to use an expression for access logging in feature flags", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t,
+				&testenv.Config{
+					AccessLogFields: []config.CustomAttribute{
+						{
+							Key: "url_method_expression",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "request.url.method",
+							},
+						},
+					},
+					LogObservation: testenv.LogObservationConfig{
+						Enabled:  true,
+						LogLevel: zapcore.InfoLevel,
+					},
+				},
+				func(t *testing.T, xEnv *testenv.Environment) {
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query employees { employees { id } }`,
+						Header: map[string][]string{
+							"X-Feature-Flag": {"myff"},
+						},
+					})
+					require.JSONEq(t, employeesIDData, res.Body)
+					requestLog := xEnv.Observer().FilterMessage("/graphql")
+					requestLogAll := requestLog.All()
+					requestContext := requestLogAll[0].ContextMap()
+
+					expectedValues := map[string]interface{}{
+						"log_type":              "request",
+						"status":                int64(200),
+						"method":                "POST",
+						"path":                  "/graphql",
+						"query":                 "",
+						"ip":                    "[REDACTED]",
+						"feature_flag":          "myff",
+						"url_method_expression": "POST", // From expression
+					}
+					additionalExpectedKeys := []string{
+						"user_agent",
+						"latency",
+						"config_version",
+						"request_id",
+						"pid",
+						"hostname",
+					}
+					checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
+				},
+			)
+		})
+
 		t.Run("validate expression evaluation for default value", func(t *testing.T) {
 			t.Parallel()
 
@@ -2477,6 +2582,70 @@ func TestFlakyAccessLogs(t *testing.T) {
 				require.Len(t, sn, 0)
 			})
 		})
+
+		t.Run("verify response body in expression", func(t *testing.T) {
+			t.Parallel()
+
+			t.Run("for successful request", func(t *testing.T) {
+				testenv.Run(t, &testenv.Config{
+					AccessLogFields: []config.CustomAttribute{
+						{
+							Key: "response_body",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "response.body.raw",
+							},
+						},
+					},
+					LogObservation: testenv.LogObservationConfig{
+						Enabled:  true,
+						LogLevel: zapcore.InfoLevel,
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query myQuery { employees { id } }`,
+					})
+
+					requestLog := xEnv.Observer().FilterMessage("/graphql")
+					requestLogAll := requestLog.All()
+					requestContextMap := requestLogAll[0].ContextMap()
+
+					responseBody := requestContextMap["response_body"].(string)
+					require.Equal(t,
+						`{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`,
+						responseBody)
+				})
+			})
+
+			t.Run("for unsuccessful request", func(t *testing.T) {
+				testenv.Run(t, &testenv.Config{
+					AccessLogFields: []config.CustomAttribute{
+						{
+							Key: "response_body",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "response.body.raw",
+							},
+						},
+					},
+					LogObservation: testenv.LogObservationConfig{
+						Enabled:  true,
+						LogLevel: zapcore.InfoLevel,
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query myQuery { employees { id2 } }`,
+					})
+
+					requestLog := xEnv.Observer().FilterMessage("/graphql")
+					requestLogAll := requestLog.All()
+					requestContextMap := requestLogAll[0].ContextMap()
+
+					responseBody := requestContextMap["response_body"].(string)
+					require.Equal(t,
+						`{"errors":[{"message":"Cannot query field \"id2\" on type \"Employee\".","path":["query","employees"]}]}`,
+						responseBody)
+				})
+			})
+		})
 	})
 
 	t.Run("verify error codes from engine and not subgraph", func(t *testing.T) {
@@ -2851,6 +3020,56 @@ func TestFlakyAccessLogs(t *testing.T) {
 				connAcquireDuration, ok := requestContextMap["conn_acquire_duration"].(float64)
 				require.True(t, ok)
 				require.Greater(t, connAcquireDuration, 0.0)
+			})
+		})
+
+		t.Run("verify subgraph response body printed", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				SubgraphAccessLogsEnabled: true,
+				SubgraphAccessLogFields: []config.CustomAttribute{
+					{
+						Key: "response_body",
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "subgraph.response.body.raw",
+						},
+					},
+				},
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query myQuery { employees { isAvailable products hobbies { employees { id tag } } }  }`,
+				})
+				requestLog := xEnv.Observer().FilterMessage("/graphql")
+
+				actual1 := requestLog.All()[0].ContextMap()["response_body"].(string)
+				require.Equal(t,
+					`{"data":{"employees":[{"__typename":"Employee","id":1},{"__typename":"Employee","id":2},{"__typename":"Employee","id":3},{"__typename":"Employee","id":4},{"__typename":"Employee","id":5},{"__typename":"Employee","id":7},{"__typename":"Employee","id":8},{"__typename":"Employee","id":10},{"__typename":"Employee","id":11},{"__typename":"Employee","id":12}]}}`,
+					actual1)
+
+				actual2 := requestLog.All()[1].ContextMap()["response_body"].(string)
+				require.Equal(t,
+					`{"data":{"_entities":[{"__typename":"Employee","isAvailable":false},{"__typename":"Employee","isAvailable":false},{"__typename":"Employee","isAvailable":false},{"__typename":"Employee","isAvailable":false},{"__typename":"Employee","isAvailable":false},{"__typename":"Employee","isAvailable":false},{"__typename":"Employee","isAvailable":false},{"__typename":"Employee","isAvailable":false},{"__typename":"Employee","isAvailable":false},{"__typename":"Employee","isAvailable":false}]}}`,
+					actual2)
+
+				actual3 := requestLog.All()[2].ContextMap()["response_body"].(string)
+				require.Equal(t,
+					`{"data":{"_entities":[{"__typename":"Employee","products":["CONSULTANCY","COSMO","ENGINE","MARKETING","SDK"]},{"__typename":"Employee","products":["COSMO","SDK"]},{"__typename":"Employee","products":["CONSULTANCY","MARKETING"]},{"__typename":"Employee","products":["FINANCE","HUMAN_RESOURCES","MARKETING"]},{"__typename":"Employee","products":["ENGINE","SDK"]},{"__typename":"Employee","products":["COSMO","SDK"]},{"__typename":"Employee","products":["COSMO","SDK"]},{"__typename":"Employee","products":["CONSULTANCY","COSMO","SDK"]},{"__typename":"Employee","products":["FINANCE"]},{"__typename":"Employee","products":["CONSULTANCY","COSMO","ENGINE","SDK"]}]}}`,
+					actual3)
+
+				actual4 := requestLog.All()[3].ContextMap()["response_body"].(string)
+				require.Equal(t,
+					`{"data":{"_entities":[{"__typename":"Employee","hobbies":[{"employees":[{"id":1,"__typename":"Employee"},{"id":2,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":4,"__typename":"Employee"},{"id":8,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":12,"__typename":"Employee"}]},{"employees":[{"id":1,"__typename":"Employee"},{"id":2,"__typename":"Employee"},{"id":7,"__typename":"Employee"},{"id":8,"__typename":"Employee"},{"id":12,"__typename":"Employee"}]},{"employees":[{"id":1,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":7,"__typename":"Employee"},{"id":8,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":11,"__typename":"Employee"}]},{"employees":[{"id":1,"__typename":"Employee"},{"id":2,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":12,"__typename":"Employee"}]},{"employees":[{"id":1,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":4,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":12,"__typename":"Employee"}]}]},{"__typename":"Employee","hobbies":[{"employees":[{"id":1,"__typename":"Employee"},{"id":2,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":4,"__typename":"Employee"},{"id":8,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":12,"__typename":"Employee"}]},{"employees":[{"id":1,"__typename":"Employee"},{"id":2,"__typename":"Employee"},{"id":7,"__typename":"Employee"},{"id":8,"__typename":"Employee"},{"id":12,"__typename":"Employee"}]},{"employees":[{"id":1,"__typename":"Employee"},{"id":2,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":12,"__typename":"Employee"}]}]},{"__typename":"Employee","hobbies":[{"employees":[{"id":1,"__typename":"Employee"},{"id":2,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":4,"__typename":"Employee"},{"id":8,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":12,"__typename":"Employee"}]},{"employees":[{"id":1,"__typename":"Employee"},{"id":2,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":4,"__typename":"Employee"},{"id":8,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":12,"__typename":"Employee"}]},{"employees":[{"id":1,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":7,"__typename":"Employee"},{"id":8,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":11,"__typename":"Employee"}]},{"employees":[{"id":1,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":4,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":12,"__typename":"Employee"}]}]},{"__typename":"Employee","hobbies":[{"employees":[{"id":1,"__typename":"Employee"},{"id":2,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":4,"__typename":"Employee"},{"id":8,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":12,"__typename":"Employee"}]},{"employees":[{"id":4,"__typename":"Employee"}]},{"employees":[{"id":1,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":4,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":12,"__typename":"Employee"}]}]},{"__typename":"Employee","hobbies":[{"employees":[{"id":1,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":7,"__typename":"Employee"},{"id":8,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":11,"__typename":"Employee"}]},{"employees":[{"id":1,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":7,"__typename":"Employee"},{"id":8,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":11,"__typename":"Employee"}]},{"employees":[{"id":1,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":7,"__typename":"Employee"},{"id":8,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":11,"__typename":"Employee"}]}]},{"__typename":"Employee","hobbies":[{"employees":[{"id":1,"__typename":"Employee"},{"id":2,"__typename":"Employee"},{"id":7,"__typename":"Employee"},{"id":8,"__typename":"Employee"},{"id":12,"__typename":"Employee"}]},{"employees":[{"id":1,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":7,"__typename":"Employee"},{"id":8,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":11,"__typename":"Employee"}]}]},{"__typename":"Employee","hobbies":[{"employees":[{"id":1,"__typename":"Employee"},{"id":2,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":4,"__typename":"Employee"},{"id":8,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":12,"__typename":"Employee"}]},{"employees":[{"id":1,"__typename":"Employee"},{"id":2,"__typename":"Employee"},{"id":7,"__typename":"Employee"},{"id":8,"__typename":"Employee"},{"id":12,"__typename":"Employee"}]},{"employees":[{"id":1,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":7,"__typename":"Employee"},{"id":8,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":11,"__typename":"Employee"}]}]},{"__typename":"Employee","hobbies":[{"employees":[{"id":1,"__typename":"Employee"},{"id":2,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":12,"__typename":"Employee"}]},{"employees":[{"id":1,"__typename":"Employee"},{"id":2,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":4,"__typename":"Employee"},{"id":8,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":12,"__typename":"Employee"}]},{"employees":[{"id":1,"__typename":"Employee"},{"id":2,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":4,"__typename":"Employee"},{"id":8,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":12,"__typename":"Employee"}]},{"employees":[{"id":1,"__typename":"Employee"},{"id":2,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":4,"__typename":"Employee"},{"id":8,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":12,"__typename":"Employee"}]},{"employees":[{"id":1,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":7,"__typename":"Employee"},{"id":8,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":11,"__typename":"Employee"}]},{"employees":[{"id":1,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":4,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":12,"__typename":"Employee"}]}]},{"__typename":"Employee","hobbies":[{"employees":[{"id":1,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":5,"__typename":"Employee"},{"id":7,"__typename":"Employee"},{"id":8,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":11,"__typename":"Employee"}]}]},{"__typename":"Employee","hobbies":[{"employees":[{"id":1,"__typename":"Employee"},{"id":2,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":12,"__typename":"Employee"}]},{"employees":[{"id":1,"__typename":"Employee"},{"id":2,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":4,"__typename":"Employee"},{"id":8,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":12,"__typename":"Employee"}]},{"employees":[{"id":1,"__typename":"Employee"},{"id":2,"__typename":"Employee"},{"id":7,"__typename":"Employee"},{"id":8,"__typename":"Employee"},{"id":12,"__typename":"Employee"}]},{"employees":[{"id":1,"__typename":"Employee"},{"id":3,"__typename":"Employee"},{"id":4,"__typename":"Employee"},{"id":10,"__typename":"Employee"},{"id":12,"__typename":"Employee"}]}]}]}}`,
+					actual4)
+
+				actual5 := requestLog.All()[4].ContextMap()["response_body"].(string)
+				require.Equal(t,
+					`{"data":{"_entities":[{"__typename":"Employee","tag":""},{"__typename":"Employee","tag":""},{"__typename":"Employee","tag":""},{"__typename":"Employee","tag":""},{"__typename":"Employee","tag":""},{"__typename":"Employee","tag":""},{"__typename":"Employee","tag":""},{"__typename":"Employee","tag":""},{"__typename":"Employee","tag":""},{"__typename":"Employee","tag":""}]}}`,
+					actual5)
 			})
 		})
 

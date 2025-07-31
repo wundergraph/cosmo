@@ -1346,6 +1346,7 @@ export const organizationRoleEnum = pgEnum('organization_role', [
   'graph-viewer',
   'subgraph-admin',
   'subgraph-publisher',
+  'subgraph-viewer',
 ] as const);
 
 export const organizationGroups = pgTable('organization_groups', {
@@ -1526,7 +1527,6 @@ export const organizationInvitations = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     invitedBy: uuid('invited_by').references(() => users.id, { onDelete: 'cascade' }),
-    groupId: uuid('group_id').references(() => organizationGroups.id, { onDelete: 'set null' }),
     accepted: boolean('accepted').default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -1535,6 +1535,25 @@ export const organizationInvitations = pgTable(
       organizationIdIndex: index('orginv_organization_id_idx').on(t.organizationId),
       userIdIndex: index('orginv_user_id_idx').on(t.userId),
       invitedByIndex: index('orginv_invited_by_idx').on(t.invitedBy),
+    };
+  },
+);
+
+export const organizationInvitationGroups = pgTable(
+  'organization_invitation_groups',
+  {
+    id: uuid('id').notNull().primaryKey().defaultRandom(),
+    invitationId: uuid('invitation_id')
+      .notNull()
+      .references(() => organizationInvitations.id, { onDelete: 'cascade' }),
+    groupId: uuid('group_id')
+      .notNull()
+      .references(() => organizationGroups.id, { onDelete: 'cascade' }),
+  },
+  (t) => {
+    return {
+      invitationIdIndex: index('org_inv_invitation_idx').on(t.invitationId),
+      groupIdIndex: index('org_inv_group_id').on(t.groupId),
     };
   },
 );
@@ -2369,6 +2388,7 @@ export const proposals = pgTable(
   (t) => ({
     uniqueFederatedGraphClientName: unique('federated_graph_proposal_name').on(t.federatedGraphId, t.name),
     createdByIdIndex: index('pr_created_by_id_idx').on(t.createdById),
+    federatedGraphIdIndex: index('pr_federated_graph_id_idx').on(t.federatedGraphId),
   }),
 );
 

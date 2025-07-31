@@ -11,7 +11,6 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import { UserRepository } from '../../repositories/UserRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
-import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
 
 export function acceptOrDeclineInvitation(
   opts: RouterOptions,
@@ -27,7 +26,6 @@ export function acceptOrDeclineInvitation(
     const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
     const userRepo = new UserRepository(logger, opts.db);
     const orgInvitationRepo = new OrganizationInvitationRepository(logger, opts.db, opts.billingDefaultPlanId);
-    const orgGroupRepo = new OrganizationGroupRepository(opts.db);
     const auditLogRepo = new AuditLogRepository(opts.db);
 
     const user = await userRepo.byId(authContext.userId);
@@ -65,27 +63,24 @@ export function acceptOrDeclineInvitation(
     }
 
     if (req.accept) {
-      if (invitation.groupId) {
-        const group = await orgGroupRepo.byId({
-          organizationId: authContext.organizationId,
-          groupId: invitation.groupId,
-        });
+      await opts.keycloakClient.authenticateClient();
+      const keycloakUser = await opts.keycloakClient.client.users.find({
+        max: 1,
+        email: user.email,
+        realm: opts.keycloakRealm,
+        exact: true,
+      });
 
-        if (group?.kcGroupId) {
-          await opts.keycloakClient.authenticateClient();
-          const keycloakUser = await opts.keycloakClient.client.users.find({
-            max: 1,
-            email: user.email,
-            realm: opts.keycloakRealm,
-            exact: true,
-          });
-
-          await opts.keycloakClient.client.users.addToGroup({
-            id: keycloakUser[0].id!,
-            groupId: group.kcGroupId,
-            realm: opts.keycloakRealm,
-          });
+      for (const group of invitation.groups) {
+        if (!group.kcGroupId) {
+          continue;
         }
+
+        await opts.keycloakClient.client.users.addToGroup({
+          id: keycloakUser[0].id!,
+          groupId: group.kcGroupId,
+          realm: opts.keycloakRealm,
+        });
       }
 
       await orgInvitationRepo.acceptInvite({ userId: user.id, organizationId: req.organizationId });

@@ -101,6 +101,7 @@ type Prometheus struct {
 	GraphqlCache        bool        `yaml:"graphql_cache" envDefault:"false" env:"PROMETHEUS_GRAPHQL_CACHE"`
 	ConnectionStats     bool        `yaml:"connection_stats" envDefault:"false" env:"PROMETHEUS_CONNECTION_STATS"`
 	EngineStats         EngineStats `yaml:"engine_stats" envPrefix:"PROMETHEUS_"`
+	CircuitBreaker      bool        `yaml:"circuit_breaker" envDefault:"false" env:"PROMETHEUS_CIRCUIT_BREAKER"`
 	ExcludeMetrics      RegExArray  `yaml:"exclude_metrics,omitempty" env:"PROMETHEUS_EXCLUDE_METRICS"`
 	ExcludeMetricLabels RegExArray  `yaml:"exclude_metric_labels,omitempty" env:"PROMETHEUS_EXCLUDE_METRIC_LABELS"`
 	ExcludeScopeInfo    bool        `yaml:"exclude_scope_info" envDefault:"false" env:"PROMETHEUS_EXCLUDE_SCOPE_INFO"`
@@ -123,9 +124,10 @@ type MetricsOTLPExporter struct {
 }
 
 type Metrics struct {
-	Attributes []CustomAttribute `yaml:"attributes"`
-	OTLP       MetricsOTLP       `yaml:"otlp"`
-	Prometheus Prometheus        `yaml:"prometheus"`
+	Attributes       []CustomAttribute `yaml:"attributes"`
+	OTLP             MetricsOTLP       `yaml:"otlp"`
+	Prometheus       Prometheus        `yaml:"prometheus"`
+	CardinalityLimit int               `yaml:"experiment_cardinality_limit" envDefault:"2000" env:"METRICS_EXPERIMENT_CARDINALITY_LIMIT"`
 }
 
 type MetricsOTLP struct {
@@ -134,6 +136,7 @@ type MetricsOTLP struct {
 	GraphqlCache        bool                  `yaml:"graphql_cache" envDefault:"false" env:"METRICS_OTLP_GRAPHQL_CACHE"`
 	ConnectionStats     bool                  `yaml:"connection_stats" envDefault:"false" env:"METRICS_OTLP_CONNECTION_STATS"`
 	EngineStats         EngineStats           `yaml:"engine_stats" envPrefix:"METRICS_OTLP_"`
+	CircuitBreaker      bool                  `yaml:"circuit_breaker" envDefault:"false" env:"METRICS_OTLP_CIRCUIT_BREAKER"`
 	ExcludeMetrics      RegExArray            `yaml:"exclude_metrics,omitempty" env:"METRICS_OTLP_EXCLUDE_METRICS"`
 	ExcludeMetricLabels RegExArray            `yaml:"exclude_metric_labels,omitempty" env:"METRICS_OTLP_EXCLUDE_METRIC_LABELS"`
 	Exporters           []MetricsOTLPExporter `yaml:"exporters"`
@@ -178,11 +181,15 @@ type RouterTrafficConfiguration struct {
 	MaxHeaderBytes BytesString `yaml:"max_header_bytes" envDefault:"0MiB" env:"MAX_HEADER_BYTES"`
 	// DecompressionEnabled is the configuration for request compression
 	DecompressionEnabled bool `yaml:"decompression_enabled" envDefault:"true"`
+	// ResponseCompressionMinSize is the minimum size of the response body in bytes to enable response compression
+	ResponseCompressionMinSize BytesString `yaml:"response_compression_min_size" envDefault:"4KiB" env:"RESPONSE_COMPRESSION_MIN_SIZE"`
 }
 
 type GlobalSubgraphRequestRule struct {
 	BackoffJitterRetry BackoffJitterRetry `yaml:"retry"`
+	CircuitBreaker     CircuitBreaker     `yaml:"circuit_breaker"`
 	// See https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/
+
 	RequestTimeout         *time.Duration `yaml:"request_timeout,omitempty" envDefault:"60s"`
 	DialTimeout            *time.Duration `yaml:"dial_timeout,omitempty" envDefault:"30s"`
 	ResponseHeaderTimeout  *time.Duration `yaml:"response_header_timeout,omitempty" envDefault:"0s"`
@@ -199,6 +206,19 @@ type GlobalSubgraphRequestRule struct {
 
 type SubgraphTrafficRequestRule struct {
 	RequestTimeout time.Duration `yaml:"request_timeout,omitempty" envDefault:"60s"`
+}
+
+type CircuitBreaker struct {
+	Enabled                    bool          `yaml:"enabled" envDefault:"false"`
+	ErrorThresholdPercentage   int64         `yaml:"error_threshold_percentage" envDefault:"50"`
+	RequestThreshold           int64         `yaml:"request_threshold" envDefault:"20"`
+	SleepWindow                time.Duration `yaml:"sleep_window" envDefault:"5s"`
+	HalfOpenAttempts           int64         `yaml:"half_open_attempts" envDefault:"1"`
+	RequiredSuccessfulAttempts int64         `yaml:"required_successful" envDefault:"1"`
+	RollingDuration            time.Duration `yaml:"rolling_duration" envDefault:"10s"`
+	NumBuckets                 int           `yaml:"num_buckets" envDefault:"10"`
+	ExecutionTimeout           time.Duration `yaml:"execution_timeout" envDefault:"60s"`
+	MaxConcurrentRequests      int64         `yaml:"max_concurrent_requests" envDefault:"-1"`
 }
 
 type GraphqlMetrics struct {
@@ -387,6 +407,13 @@ type SecurityConfiguration struct {
 	ComplexityCalculationCache  *ComplexityCalculationCache `yaml:"complexity_calculation_cache"`
 	ComplexityLimits            *ComplexityLimits           `yaml:"complexity_limits"`
 	DepthLimit                  *QueryDepthConfiguration    `yaml:"depth_limit"`
+	ParserLimits                ParserLimitsConfiguration   `yaml:"parser_limits"`
+	OperationNameLengthLimit    int                         `yaml:"operation_name_length_limit" envDefault:"512" env:"SECURITY_OPERATION_NAME_LENGTH_LIMIT"` // 0 is disabled
+}
+
+type ParserLimitsConfiguration struct {
+	ApproximateDepthLimit int `yaml:"approximate_depth_limit,omitempty" envDefault:"100"` // 0 means disabled
+	TotalFieldsLimit      int `yaml:"total_fields_limit,omitempty" envDefault:"500"`      // 0 means disabled
 }
 
 type QueryDepthConfiguration struct {
@@ -437,6 +464,15 @@ type JWKSConfiguration struct {
 	URL             string        `yaml:"url"`
 	Algorithms      []string      `yaml:"algorithms"`
 	RefreshInterval time.Duration `yaml:"refresh_interval" envDefault:"1m"`
+
+	// For secret based where we need to create a jwk  entry with
+	// a key id and algorithm
+	Secret    string `yaml:"secret"`
+	Algorithm string `yaml:"symmetric_algorithm"`
+	KeyId     string `yaml:"header_key_id"`
+
+	// Common
+	Audiences []string `yaml:"audiences"`
 }
 
 type HeaderSource struct {
@@ -570,9 +606,20 @@ func (k KafkaEventSource) GetID() string {
 	return k.ID
 }
 
+type RedisEventSource struct {
+	ID             string   `yaml:"id,omitempty"`
+	URLs           []string `yaml:"urls,omitempty"`
+	ClusterEnabled bool     `yaml:"cluster_enabled"`
+}
+
+func (r RedisEventSource) GetID() string {
+	return r.ID
+}
+
 type EventProviders struct {
 	Nats  []NatsEventSource  `yaml:"nats,omitempty"`
 	Kafka []KafkaEventSource `yaml:"kafka,omitempty"`
+	Redis []RedisEventSource `yaml:"redis,omitempty"`
 }
 
 type EventsConfiguration struct {
@@ -695,16 +742,17 @@ const (
 )
 
 type SubgraphErrorPropagationConfiguration struct {
-	Enabled                bool                         `yaml:"enabled" envDefault:"true" env:"SUBGRAPH_ERROR_PROPAGATION_ENABLED"`
-	PropagateStatusCodes   bool                         `yaml:"propagate_status_codes" envDefault:"false" env:"SUBGRAPH_ERROR_PROPAGATION_STATUS_CODES"`
-	Mode                   SubgraphErrorPropagationMode `yaml:"mode" envDefault:"wrapped" env:"SUBGRAPH_ERROR_PROPAGATION_MODE"`
-	RewritePaths           bool                         `yaml:"rewrite_paths" envDefault:"true" env:"SUBGRAPH_ERROR_PROPAGATION_REWRITE_PATHS"`
-	OmitLocations          bool                         `yaml:"omit_locations" envDefault:"true" env:"SUBGRAPH_ERROR_PROPAGATION_OMIT_LOCATIONS"`
-	OmitExtensions         bool                         `yaml:"omit_extensions" envDefault:"false" env:"SUBGRAPH_ERROR_PROPAGATION_OMIT_EXTENSIONS"`
-	AttachServiceName      bool                         `yaml:"attach_service_name" envDefault:"true" env:"SUBGRAPH_ERROR_PROPAGATION_ATTACH_SERVICE_NAME"`
-	DefaultExtensionCode   string                       `yaml:"default_extension_code" envDefault:"DOWNSTREAM_SERVICE_ERROR" env:"SUBGRAPH_ERROR_PROPAGATION_DEFAULT_EXTENSION_CODE"`
-	AllowedExtensionFields []string                     `yaml:"allowed_extension_fields" envDefault:"code" env:"SUBGRAPH_ERROR_PROPAGATION_ALLOWED_EXTENSION_FIELDS"`
-	AllowedFields          []string                     `yaml:"allowed_fields" env:"SUBGRAPH_ERROR_PROPAGATION_ALLOWED_FIELDS"`
+	Enabled                 bool                         `yaml:"enabled" envDefault:"true" env:"ENABLED"`
+	PropagateStatusCodes    bool                         `yaml:"propagate_status_codes" envDefault:"false" env:"STATUS_CODES"`
+	Mode                    SubgraphErrorPropagationMode `yaml:"mode" envDefault:"wrapped" env:"MODE"`
+	RewritePaths            bool                         `yaml:"rewrite_paths" envDefault:"true" env:"REWRITE_PATHS"`
+	OmitLocations           bool                         `yaml:"omit_locations" envDefault:"true" env:"OMIT_LOCATIONS"`
+	OmitExtensions          bool                         `yaml:"omit_extensions" envDefault:"false" env:"OMIT_EXTENSIONS"`
+	AttachServiceName       bool                         `yaml:"attach_service_name" envDefault:"true" env:"ATTACH_SERVICE_NAME"`
+	DefaultExtensionCode    string                       `yaml:"default_extension_code" envDefault:"DOWNSTREAM_SERVICE_ERROR" env:"DEFAULT_EXTENSION_CODE"`
+	AllowAllExtensionFields bool                         `yaml:"allow_all_extension_fields" envDefault:"false" env:"ALLOW_ALL_EXTENSION_FIELDS"`
+	AllowedExtensionFields  []string                     `yaml:"allowed_extension_fields" envDefault:"code" env:"ALLOWED_EXTENSION_FIELDS"`
+	AllowedFields           []string                     `yaml:"allowed_fields" env:"ALLOWED_FIELDS"`
 }
 
 type StorageProviders struct {
@@ -787,8 +835,9 @@ type AutomaticPersistedQueriesCacheConfig struct {
 }
 
 type PersistedOperationsConfig struct {
-	LogUnknown bool                             `yaml:"log_unknown" env:"PERSISTED_OPERATIONS_LOG_UNKNOWN" envDefault:"false"`
-	Safelist   SafelistConfiguration            `yaml:"safelist" envPrefix:"PERSISTED_OPERATIONS_SAFELIST_"`
+	Disabled   bool                             `yaml:"disabled" env:"DISABLED" envDefault:"false"`
+	LogUnknown bool                             `yaml:"log_unknown" env:"LOG_UNKNOWN" envDefault:"false"`
+	Safelist   SafelistConfiguration            `yaml:"safelist" envPrefix:"SAFELIST_"`
 	Cache      PersistedOperationsCacheConfig   `yaml:"cache"`
 	Storage    PersistedOperationsStorageConfig `yaml:"storage"`
 }
@@ -836,8 +885,9 @@ type AccessLogsStdOutOutputConfig struct {
 }
 
 type AccessLogsFileOutputConfig struct {
-	Enabled bool   `yaml:"enabled" env:"ACCESS_LOGS_OUTPUT_FILE_ENABLED" envDefault:"false"`
-	Path    string `yaml:"path" env:"ACCESS_LOGS_FILE_OUTPUT_PATH" envDefault:"access.log"`
+	Enabled bool     `yaml:"enabled" env:"ACCESS_LOGS_OUTPUT_FILE_ENABLED" envDefault:"false"`
+	Path    string   `yaml:"path" env:"ACCESS_LOGS_FILE_OUTPUT_PATH" envDefault:"access.log"`
+	Mode    FileMode `yaml:"mode" env:"ACCESS_LOGS_FILE_OUTPUT_MODE" envDefault:"0640"`
 }
 
 type AccessLogsRouterConfig struct {
@@ -979,11 +1029,11 @@ type Config struct {
 
 	WebSocket WebSocketConfiguration `yaml:"websocket,omitempty"`
 
-	SubgraphErrorPropagation SubgraphErrorPropagationConfiguration `yaml:"subgraph_error_propagation"`
+	SubgraphErrorPropagation SubgraphErrorPropagationConfiguration `yaml:"subgraph_error_propagation" envPrefix:"SUBGRAPH_ERROR_PROPAGATION_"`
 
 	StorageProviders               StorageProviders                `yaml:"storage_providers"`
 	ExecutionConfig                ExecutionConfig                 `yaml:"execution_config"`
-	PersistedOperationsConfig      PersistedOperationsConfig       `yaml:"persisted_operations"`
+	PersistedOperationsConfig      PersistedOperationsConfig       `yaml:"persisted_operations" envPrefix:"PERSISTED_OPERATIONS_"`
 	AutomaticPersistedQueries      AutomaticPersistedQueriesConfig `yaml:"automatic_persisted_queries"`
 	ApolloCompatibilityFlags       ApolloCompatibilityFlags        `yaml:"apollo_compatibility_flags"`
 	ApolloRouterCompatibilityFlags ApolloRouterCompatibilityFlags  `yaml:"apollo_router_compatibility_flags"`

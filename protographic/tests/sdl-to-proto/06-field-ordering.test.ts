@@ -10,6 +10,7 @@ import {
   getServiceMethods,
   getReservedNumbers,
 } from '../util';
+import { isNull } from 'lodash-es';
 
 describe('Field Ordering and Preservation', () => {
   describe('Basic Message Field Ordering', () => {
@@ -1121,6 +1122,408 @@ describe('Field Ordering and Preservation', () => {
       expect(priceRangeFields2['min']).toBe(minNumber);
       expect(priceRangeFields2['max']).toBe(maxNumber);
       expect(priceRangeFields2['currency']).toBe(currencyNumber);
+    });
+  });
+
+  describe('List Wrapper Types Field Ordering', () => {
+    test('should preserve field numbers for simple list wrapper types', () => {
+      // Initial schema with nullable lists that generate simple wrapper types
+      const initialSchema = buildSchema(`
+        type User {
+          id: ID!
+          name: String!
+          tags: [String]        # nullable list -> generates ListOfString wrapper
+          scores: [Int]         # nullable list -> generates ListOfInt wrapper
+          categories: [User]    # nullable list -> generates ListOfUser wrapper
+        }
+        
+        type Query {
+          getUsers: [User]
+        }
+      `);
+
+      // Create the visitor with no initial lock data
+      const visitor1 = new GraphQLToProtoTextVisitor(initialSchema, {
+        serviceName: 'UserService',
+      });
+
+      // Generate the first proto
+      const proto1 = visitor1.visit();
+
+      // Parse the proto with protobufjs
+      const root1 = loadProtoFromText(proto1);
+
+      // Verify wrapper types exist and get their field numbers
+      const listOfStringWrapperFields = getFieldNumbersFromMessage(root1, 'ListOfString');
+      const listOfIntWrapperFields = getFieldNumbersFromMessage(root1, 'ListOfInt');
+      const listOfUserWrapperFields = getFieldNumbersFromMessage(root1, 'ListOfUser');
+
+      // Get the inner List type field numbers for items
+      const stringListType = root1.lookupType('ListOfString').lookupType('List');
+      const intListType = root1.lookupType('ListOfInt').lookupType('List');
+      const userListType = root1.lookupType('ListOfUser').lookupType('List');
+
+      const stringListFields = getFieldNumbersFromMessage(stringListType.root, 'List');
+      const intListFields = getFieldNumbersFromMessage(intListType.root, 'List');
+      const userListFields = getFieldNumbersFromMessage(userListType.root, 'List');
+
+      // Store original field numbers for wrapper types (outer 'list' field)
+      const stringWrapperListFieldNumber = listOfStringWrapperFields['list'];
+      const intWrapperListFieldNumber = listOfIntWrapperFields['list'];
+      const userWrapperListFieldNumber = listOfUserWrapperFields['list'];
+
+      // Store original field numbers for inner List types ('items' field)
+      const stringListItemsFieldNumber = stringListFields['items'];
+      const intListItemsFieldNumber = intListFields['items'];
+      const userListItemsFieldNumber = userListFields['items'];
+
+      // Verify all wrapper types have the 'list' field with field number 1
+      expect(stringWrapperListFieldNumber).toBe(1);
+      expect(intWrapperListFieldNumber).toBe(1);
+      expect(userWrapperListFieldNumber).toBe(1);
+
+      // Verify all inner List types have the 'items' field with field number 1
+      expect(stringListItemsFieldNumber).toBe(1);
+      expect(intListItemsFieldNumber).toBe(1);
+      expect(userListItemsFieldNumber).toBe(1);
+
+      // Get the generated lock data
+      const lockData = visitor1.getGeneratedLockData();
+      expect(lockData).not.toBeNull();
+
+      // Verify wrapper types are NOT in lock data (they're auto-generated with deterministic field numbers)
+      expect(lockData!.messages['ListOfString']).toBeUndefined();
+      expect(lockData!.messages['ListOfInt']).toBeUndefined();
+      expect(lockData!.messages['ListOfUser']).toBeUndefined();
+
+      // Modified schema with additional nullable lists (triggers regeneration)
+      const modifiedSchema = buildSchema(`
+        type User {
+          id: ID!
+          name: String!
+          tags: [String]        # existing nullable list
+          scores: [Int]         # existing nullable list  
+          categories: [User]    # existing nullable list
+          ratings: [Float]      # new nullable list -> generates ListOfFloat wrapper
+        }
+        
+        type Query {
+          getUsers: [User]
+        }
+      `);
+
+      // Create another visitor using the generated lock data
+      const visitor2 = new GraphQLToProtoTextVisitor(modifiedSchema, {
+        serviceName: 'UserService',
+        lockData: lockData || undefined,
+      });
+
+      // Generate the second proto
+      const proto2 = visitor2.visit();
+
+      // Parse the proto with protobufjs
+      const root2 = loadProtoFromText(proto2);
+
+      // Verify existing wrapper types preserved their field numbers
+      const listOfStringWrapperFields2 = getFieldNumbersFromMessage(root2, 'ListOfString');
+      const listOfIntWrapperFields2 = getFieldNumbersFromMessage(root2, 'ListOfInt');
+      const listOfUserWrapperFields2 = getFieldNumbersFromMessage(root2, 'ListOfUser');
+      const listOfFloatWrapperFields2 = getFieldNumbersFromMessage(root2, 'ListOfFloat');
+
+      // Get the inner List type field numbers for items verification
+      const stringListType2 = root2.lookupType('ListOfString').lookupType('List');
+      const intListType2 = root2.lookupType('ListOfInt').lookupType('List');
+      const userListType2 = root2.lookupType('ListOfUser').lookupType('List');
+      const floatListType2 = root2.lookupType('ListOfFloat').lookupType('List');
+
+      const stringListFields2 = getFieldNumbersFromMessage(stringListType2.root, 'List');
+      const intListFields2 = getFieldNumbersFromMessage(intListType2.root, 'List');
+      const userListFields2 = getFieldNumbersFromMessage(userListType2.root, 'List');
+      const floatListFields2 = getFieldNumbersFromMessage(floatListType2.root, 'List');
+
+      // Verify wrapper field numbers are preserved (outer 'list' field)
+      expect(listOfStringWrapperFields2['list']).toBe(stringWrapperListFieldNumber);
+      expect(listOfIntWrapperFields2['list']).toBe(intWrapperListFieldNumber);
+      expect(listOfUserWrapperFields2['list']).toBe(userWrapperListFieldNumber);
+
+      // Verify inner List field numbers are preserved ('items' field)
+      expect(stringListFields2['items']).toBe(stringListItemsFieldNumber);
+      expect(intListFields2['items']).toBe(intListItemsFieldNumber);
+      expect(userListFields2['items']).toBe(userListItemsFieldNumber);
+
+      // Verify new wrapper types have field number 1
+      expect(listOfFloatWrapperFields2['list']).toBe(1);
+      expect(floatListFields2['items']).toBe(1);
+    });
+
+    test('should preserve field numbers for nested list wrapper types', () => {
+      // Initial schema with nested lists that generate nested wrapper types
+      const initialSchema = buildSchema(`
+        type User {
+          id: ID!
+          name: String!
+          tagGroups: [[String]]      # nested nullable list -> generates ListOfListOfString wrapper
+          scoreMatrix: [[Int]]       # nested nullable list -> generates ListOfListOfInt wrapper
+        }
+        
+        type Query {
+          getUsers: [User]
+        }
+      `);
+
+      // Create the visitor with no initial lock data
+      const visitor1 = new GraphQLToProtoTextVisitor(initialSchema, {
+        serviceName: 'UserService',
+      });
+
+      // Generate the first proto
+      const proto1 = visitor1.visit();
+
+      // Parse the proto with protobufjs
+      const root1 = loadProtoFromText(proto1);
+
+      // Verify nested wrapper types exist and get their field numbers
+      const listOfListOfStringWrapperFields = getFieldNumbersFromMessage(root1, 'ListOfListOfString');
+      const listOfListOfIntWrapperFields = getFieldNumbersFromMessage(root1, 'ListOfListOfInt');
+
+      // For nested wrappers, they should have a 'list' field at the outer level
+      const nestedStringWrapperListFieldNumber = listOfListOfStringWrapperFields['list'];
+      const nestedIntWrapperListFieldNumber = listOfListOfIntWrapperFields['list'];
+
+      // Verify nested wrapper types have the 'list' field with field number 1
+      expect(nestedStringWrapperListFieldNumber).toBe(1);
+      expect(nestedIntWrapperListFieldNumber).toBe(1);
+
+      // Also verify the inner simple wrapper types exist and get their field numbers
+      const listOfStringWrapperFields = getFieldNumbersFromMessage(root1, 'ListOfString');
+      const listOfIntWrapperFields = getFieldNumbersFromMessage(root1, 'ListOfInt');
+
+      // Get the inner List type field numbers for items
+      const stringListType = root1.lookupType('ListOfString').lookupType('List');
+      const intListType = root1.lookupType('ListOfInt').lookupType('List');
+
+      const stringListFields = getFieldNumbersFromMessage(stringListType.root, 'List');
+      const intListFields = getFieldNumbersFromMessage(intListType.root, 'List');
+
+      const simpleStringWrapperListFieldNumber = listOfStringWrapperFields['list'];
+      const simpleIntWrapperListFieldNumber = listOfIntWrapperFields['list'];
+      const stringListItemsFieldNumber = stringListFields['items'];
+      const intListItemsFieldNumber = intListFields['items'];
+
+      expect(simpleStringWrapperListFieldNumber).toBe(1);
+      expect(simpleIntWrapperListFieldNumber).toBe(1);
+      expect(stringListItemsFieldNumber).toBe(1);
+      expect(intListItemsFieldNumber).toBe(1);
+
+      // Get the generated lock data
+      const lockData = visitor1.getGeneratedLockData();
+      expect(lockData).not.toBeNull();
+
+      // Verify wrapper types are NOT in lock data (they're auto-generated with deterministic field numbers)
+      expect(lockData!.messages['ListOfListOfString']).toBeUndefined();
+      expect(lockData!.messages['ListOfListOfInt']).toBeUndefined();
+      expect(lockData!.messages['ListOfString']).toBeUndefined();
+      expect(lockData!.messages['ListOfInt']).toBeUndefined();
+
+      // Modified schema with additional nested lists
+      const modifiedSchema = buildSchema(`
+        type User {
+          id: ID!
+          name: String!
+          tagGroups: [[String]]      # existing nested nullable list
+          scoreMatrix: [[Int]]       # existing nested nullable list
+          userGroups: [[User]]       # new nested nullable list -> generates ListOfListOfUser wrapper
+        }
+        
+        type Query {
+          getUsers: [User]
+        }
+      `);
+
+      // Create another visitor using the generated lock data
+      const visitor2 = new GraphQLToProtoTextVisitor(modifiedSchema, {
+        serviceName: 'UserService',
+        lockData: lockData || undefined,
+      });
+
+      // Generate the second proto
+      const proto2 = visitor2.visit();
+
+      // Parse the proto with protobufjs
+      const root2 = loadProtoFromText(proto2);
+
+      // Verify existing wrapper types preserved their field numbers
+      const listOfListOfStringWrapperFields2 = getFieldNumbersFromMessage(root2, 'ListOfListOfString');
+      const listOfListOfIntWrapperFields2 = getFieldNumbersFromMessage(root2, 'ListOfListOfInt');
+      const listOfListOfUserWrapperFields2 = getFieldNumbersFromMessage(root2, 'ListOfListOfUser');
+
+      // Verify existing nested wrapper field numbers are preserved
+      expect(listOfListOfStringWrapperFields2['list']).toBe(nestedStringWrapperListFieldNumber);
+      expect(listOfListOfIntWrapperFields2['list']).toBe(nestedIntWrapperListFieldNumber);
+
+      // Verify new nested wrapper type has field number 1
+      expect(listOfListOfUserWrapperFields2['list']).toBe(1);
+
+      // Verify simple wrapper types are still preserved
+      const listOfStringWrapperFields2 = getFieldNumbersFromMessage(root2, 'ListOfString');
+      const listOfIntWrapperFields2 = getFieldNumbersFromMessage(root2, 'ListOfInt');
+      const listOfUserWrapperFields2 = getFieldNumbersFromMessage(root2, 'ListOfUser');
+
+      // Get the inner List type field numbers for verification
+      const stringListType2 = root2.lookupType('ListOfString').lookupType('List');
+      const intListType2 = root2.lookupType('ListOfInt').lookupType('List');
+      const userListType2 = root2.lookupType('ListOfUser').lookupType('List');
+
+      const stringListFields2 = getFieldNumbersFromMessage(stringListType2.root, 'List');
+      const intListFields2 = getFieldNumbersFromMessage(intListType2.root, 'List');
+      const userListFields2 = getFieldNumbersFromMessage(userListType2.root, 'List');
+
+      expect(listOfStringWrapperFields2['list']).toBe(simpleStringWrapperListFieldNumber);
+      expect(listOfIntWrapperFields2['list']).toBe(simpleIntWrapperListFieldNumber);
+      expect(stringListFields2['items']).toBe(stringListItemsFieldNumber);
+      expect(intListFields2['items']).toBe(intListItemsFieldNumber);
+      expect(listOfUserWrapperFields2['list']).toBe(1); // New simple wrapper for User
+      expect(userListFields2['items']).toBe(1); // New simple wrapper inner List for User
+    });
+
+    test('should handle mixed simple and nested wrapper types with field preservation', () => {
+      // Initial schema with both simple and nested nullable lists
+      const initialSchema = buildSchema(`
+        type User {
+          id: ID!
+          name: String!
+          tags: [String]             # simple nullable list -> ListOfString
+          nestedTags: [[String]]     # nested nullable list -> ListOfListOfString
+          friends: [User]            # simple nullable list -> ListOfUser  
+          friendGroups: [[User]]     # nested nullable list -> ListOfListOfUser
+        }
+        
+        type Query {
+          getUsers: [User]
+        }
+      `);
+
+      // Create the visitor with no initial lock data
+      const visitor1 = new GraphQLToProtoTextVisitor(initialSchema, {
+        serviceName: 'UserService',
+      });
+
+      // Generate the first proto
+      const proto1 = visitor1.visit();
+
+      // Parse the proto with protobufjs
+      const root1 = loadProtoFromText(proto1);
+
+      // Get field numbers for all wrapper types
+      const listOfStringWrapperFields = getFieldNumbersFromMessage(root1, 'ListOfString');
+      const listOfListOfStringWrapperFields = getFieldNumbersFromMessage(root1, 'ListOfListOfString');
+      const listOfUserWrapperFields = getFieldNumbersFromMessage(root1, 'ListOfUser');
+      const listOfListOfUserWrapperFields = getFieldNumbersFromMessage(root1, 'ListOfListOfUser');
+
+      // Get the inner List type field numbers for items
+      const stringListType = root1.lookupType('ListOfString').lookupType('List');
+      const userListType = root1.lookupType('ListOfUser').lookupType('List');
+
+      const stringListFields = getFieldNumbersFromMessage(stringListType.root, 'List');
+      const userListFields = getFieldNumbersFromMessage(userListType.root, 'List');
+
+      // Store original field numbers for wrapper types (outer 'list' field)
+      const simpleStringWrapperListFieldNumber = listOfStringWrapperFields['list'];
+      const simpleUserWrapperListFieldNumber = listOfUserWrapperFields['list'];
+      const nestedStringWrapperListFieldNumber = listOfListOfStringWrapperFields['list'];
+      const nestedUserWrapperListFieldNumber = listOfListOfUserWrapperFields['list'];
+
+      // Store original field numbers for inner List types ('items' field)
+      const stringListItemsFieldNumber = stringListFields['items'];
+      const userListItemsFieldNumber = userListFields['items'];
+
+      // Verify correct field numbers for different wrapper levels
+      expect(simpleStringWrapperListFieldNumber).toBe(1); // Simple wrapper outer 'list' field
+      expect(stringListItemsFieldNumber).toBe(1); // Simple wrapper inner 'items' field
+      expect(nestedStringWrapperListFieldNumber).toBe(1); // Nested wrapper outer 'list' field
+      expect(simpleUserWrapperListFieldNumber).toBe(1); // Simple wrapper outer 'list' field
+      expect(nestedUserWrapperListFieldNumber).toBe(1); // Nested wrapper outer 'list' field
+      expect(userListItemsFieldNumber).toBe(1); // Simple wrapper inner 'items' field
+
+      // Get the generated lock data
+      const lockData = visitor1.getGeneratedLockData();
+      expect(lockData).not.toBeNull();
+
+      // Verify wrapper types are NOT in lock data (they're auto-generated with deterministic field numbers)
+      expect(lockData!.messages['ListOfString']).toBeUndefined();
+      expect(lockData!.messages['ListOfListOfString']).toBeUndefined();
+      expect(lockData!.messages['ListOfUser']).toBeUndefined();
+      expect(lockData!.messages['ListOfListOfUser']).toBeUndefined();
+
+      // Modified schema with some lists removed and new ones added
+      const modifiedSchema = buildSchema(`
+        type User {
+          id: ID!
+          name: String!
+          tags: [String]             # preserved
+          # nestedTags: [[String]]   # removed
+          friends: [User]            # preserved
+          friendGroups: [[User]]     # preserved
+          scores: [Int]              # new simple nullable list -> ListOfInt
+          # scoreMatrix: [[Int]]     # hypothetical nested list (not added yet)
+        }
+        
+        type Query {
+          getUsers: [User]
+        }
+      `);
+
+      // Create another visitor using the generated lock data
+      const visitor2 = new GraphQLToProtoTextVisitor(modifiedSchema, {
+        serviceName: 'UserService',
+        lockData: lockData || undefined,
+      });
+
+      // Generate the second proto
+      const proto2 = visitor2.visit();
+
+      // Parse the proto with protobufjs
+      const root2 = loadProtoFromText(proto2);
+
+      // Verify preserved wrapper types maintain their field numbers
+      const listOfStringWrapperFields2 = getFieldNumbersFromMessage(root2, 'ListOfString');
+      const listOfUserWrapperFields2 = getFieldNumbersFromMessage(root2, 'ListOfUser');
+      const listOfListOfUserWrapperFields2 = getFieldNumbersFromMessage(root2, 'ListOfListOfUser');
+      const listOfIntWrapperFields2 = getFieldNumbersFromMessage(root2, 'ListOfInt');
+
+      // Get the inner List type field numbers for verification
+      const stringListType2 = root2.lookupType('ListOfString').lookupType('List');
+      const userListType2 = root2.lookupType('ListOfUser').lookupType('List');
+      const intListType2 = root2.lookupType('ListOfInt').lookupType('List');
+
+      const stringListFields2 = getFieldNumbersFromMessage(stringListType2.root, 'List');
+      const userListFields2 = getFieldNumbersFromMessage(userListType2.root, 'List');
+      const intListFields2 = getFieldNumbersFromMessage(intListType2.root, 'List');
+
+      // Verify wrapper field numbers are preserved (outer 'list' field)
+      expect(listOfStringWrapperFields2['list']).toBe(simpleStringWrapperListFieldNumber);
+      expect(listOfUserWrapperFields2['list']).toBe(simpleUserWrapperListFieldNumber);
+      expect(listOfListOfUserWrapperFields2['list']).toBe(nestedUserWrapperListFieldNumber);
+
+      // Verify inner List field numbers are preserved ('items' field)
+      expect(stringListFields2['items']).toBe(stringListItemsFieldNumber);
+      expect(userListFields2['items']).toBe(userListItemsFieldNumber);
+
+      // Verify new wrapper types have field number 1
+      expect(listOfIntWrapperFields2['list']).toBe(1);
+      expect(intListFields2['items']).toBe(1);
+
+      // Verify removed wrapper type is not present
+      // Check if the removed wrapper type exists in the proto
+      let listOfListOfStringExists = false;
+      try {
+        root2.lookupType('ListOfListOfString');
+        listOfListOfStringExists = true;
+      } catch (e) {
+        // Type doesn't exist, which is expected when the field is removed
+        listOfListOfStringExists = false;
+      }
+      expect(listOfListOfStringExists).toBe(false); // Should not exist since nestedTags was removed
     });
   });
 });

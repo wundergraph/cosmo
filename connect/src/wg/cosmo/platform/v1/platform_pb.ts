@@ -335,6 +335,26 @@ proto3.util.setEnumType(Feature, "wg.cosmo.platform.v1.Feature", [
 ]);
 
 /**
+ * @generated from enum wg.cosmo.platform.v1.ProposalNamingConvention
+ */
+export enum ProposalNamingConvention {
+  /**
+   * @generated from enum value: NORMAL = 0;
+   */
+  NORMAL = 0,
+
+  /**
+   * @generated from enum value: INCREMENTAL = 1;
+   */
+  INCREMENTAL = 1,
+}
+// Retrieve enum metadata with: proto3.getEnumType(ProposalNamingConvention)
+proto3.util.setEnumType(ProposalNamingConvention, "wg.cosmo.platform.v1.ProposalNamingConvention", [
+  { no: 0, name: "NORMAL" },
+  { no: 1, name: "INCREMENTAL" },
+]);
+
+/**
  * @generated from message wg.cosmo.platform.v1.Label
  */
 export class Label extends Message<Label> {
@@ -639,6 +659,11 @@ export class PublishFederatedSubgraphRequest extends Message<PublishFederatedSub
    */
   baseSubgraphName?: string;
 
+  /**
+   * @generated from field: optional bool disable_resolvability_validation = 12;
+   */
+  disableResolvabilityValidation?: boolean;
+
   constructor(data?: PartialMessage<PublishFederatedSubgraphRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -657,6 +682,7 @@ export class PublishFederatedSubgraphRequest extends Message<PublishFederatedSub
     { no: 9, name: "websocket_subprotocol", kind: "enum", T: proto3.getEnumType(GraphQLWebsocketSubprotocol), opt: true },
     { no: 10, name: "is_feature_subgraph", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 11, name: "base_subgraph_name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 12, name: "disable_resolvability_validation", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PublishFederatedSubgraphRequest {
@@ -897,6 +923,11 @@ export class CheckSubgraphSchemaRequest extends Message<CheckSubgraphSchemaReque
    */
   labels: Label[] = [];
 
+  /**
+   * @generated from field: optional bool disable_resolvability_validation = 9;
+   */
+  disableResolvabilityValidation?: boolean;
+
   constructor(data?: PartialMessage<CheckSubgraphSchemaRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -913,6 +944,7 @@ export class CheckSubgraphSchemaRequest extends Message<CheckSubgraphSchemaReque
     { no: 6, name: "skip_traffic_check", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 7, name: "vcsContext", kind: "message", T: VCSContext, opt: true },
     { no: 8, name: "labels", kind: "message", T: Label, repeated: true },
+    { no: 9, name: "disable_resolvability_validation", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CheckSubgraphSchemaRequest {
@@ -955,6 +987,11 @@ export class FixSubgraphSchemaRequest extends Message<FixSubgraphSchemaRequest> 
    */
   namespace = "";
 
+  /**
+   * @generated from field: optional bool disable_resolvability_validation = 4;
+   */
+  disableResolvabilityValidation?: boolean;
+
   constructor(data?: PartialMessage<FixSubgraphSchemaRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -966,6 +1003,7 @@ export class FixSubgraphSchemaRequest extends Message<FixSubgraphSchemaRequest> 
     { no: 1, name: "subgraph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "schema", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "disable_resolvability_validation", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FixSubgraphSchemaRequest {
@@ -1162,6 +1200,11 @@ export class CreateFederatedGraphRequest extends Message<CreateFederatedGraphReq
    */
   admissionWebhookSecret?: string;
 
+  /**
+   * @generated from field: optional bool disable_resolvability_validation = 8;
+   */
+  disableResolvabilityValidation?: boolean;
+
   constructor(data?: PartialMessage<CreateFederatedGraphRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1177,6 +1220,7 @@ export class CreateFederatedGraphRequest extends Message<CreateFederatedGraphReq
     { no: 5, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 6, name: "admissionWebhookURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 7, name: "admissionWebhookSecret", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 8, name: "disable_resolvability_validation", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateFederatedGraphRequest {
@@ -1444,6 +1488,11 @@ export class DeleteFederatedSubgraphRequest extends Message<DeleteFederatedSubgr
    */
   namespace = "";
 
+  /**
+   * @generated from field: optional bool disable_resolvability_validation = 3;
+   */
+  disableResolvabilityValidation?: boolean;
+
   constructor(data?: PartialMessage<DeleteFederatedSubgraphRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1454,6 +1503,7 @@ export class DeleteFederatedSubgraphRequest extends Message<DeleteFederatedSubgr
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "subgraph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "disable_resolvability_validation", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteFederatedSubgraphRequest {
@@ -4256,6 +4306,11 @@ export class GetCheckOperationsRequest extends Message<GetCheckOperationsRequest
    */
   offset = 0;
 
+  /**
+   * @generated from field: optional string search = 6;
+   */
+  search?: string;
+
   constructor(data?: PartialMessage<GetCheckOperationsRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -4269,6 +4324,7 @@ export class GetCheckOperationsRequest extends Message<GetCheckOperationsRequest
     { no: 3, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "limit", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 5, name: "offset", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 6, name: "search", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCheckOperationsRequest {
@@ -4322,6 +4378,16 @@ export class GetCheckOperationsResponse extends Message<GetCheckOperationsRespon
    */
   totalOperationsCount = 0;
 
+  /**
+   * @generated from field: bool doAllOperationsHaveIgnoreAllOverride = 7;
+   */
+  doAllOperationsHaveIgnoreAllOverride = false;
+
+  /**
+   * @generated from field: bool doAllOperationsHaveAllTheirChangesMarkedSafe = 8;
+   */
+  doAllOperationsHaveAllTheirChangesMarkedSafe = false;
+
   constructor(data?: PartialMessage<GetCheckOperationsResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -4336,6 +4402,8 @@ export class GetCheckOperationsResponse extends Message<GetCheckOperationsRespon
     { no: 4, name: "created_at", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "client_traffic_check_skipped", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 6, name: "totalOperationsCount", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 7, name: "doAllOperationsHaveIgnoreAllOverride", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 8, name: "doAllOperationsHaveAllTheirChangesMarkedSafe", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCheckOperationsResponse {
@@ -4835,6 +4903,11 @@ export class UpdateSubgraphRequest extends Message<UpdateSubgraphRequest> {
    */
   websocketSubprotocol?: GraphQLWebsocketSubprotocol;
 
+  /**
+   * @generated from field: optional bool disable_resolvability_validation = 11;
+   */
+  disableResolvabilityValidation?: boolean;
+
   constructor(data?: PartialMessage<UpdateSubgraphRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -4853,6 +4926,7 @@ export class UpdateSubgraphRequest extends Message<UpdateSubgraphRequest> {
     { no: 8, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 9, name: "unset_labels", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 10, name: "websocket_subprotocol", kind: "enum", T: proto3.getEnumType(GraphQLWebsocketSubprotocol), opt: true },
+    { no: 11, name: "disable_resolvability_validation", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateSubgraphRequest {
@@ -4971,6 +5045,11 @@ export class UpdateFederatedGraphRequest extends Message<UpdateFederatedGraphReq
    */
   admissionWebhookSecret?: string;
 
+  /**
+   * @generated from field: optional bool disable_resolvability_validation = 9;
+   */
+  disableResolvabilityValidation?: boolean;
+
   constructor(data?: PartialMessage<UpdateFederatedGraphRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -4987,6 +5066,7 @@ export class UpdateFederatedGraphRequest extends Message<UpdateFederatedGraphReq
     { no: 6, name: "unset_label_matchers", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 7, name: "admissionWebhookURL", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 8, name: "admissionWebhookSecret", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 9, name: "disable_resolvability_validation", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateFederatedGraphRequest {
@@ -5208,6 +5288,11 @@ export class CheckFederatedGraphRequest extends Message<CheckFederatedGraphReque
    */
   namespace = "";
 
+  /**
+   * @generated from field: optional bool disable_resolvability_validation = 4;
+   */
+  disableResolvabilityValidation?: boolean;
+
   constructor(data?: PartialMessage<CheckFederatedGraphRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -5219,6 +5304,7 @@ export class CheckFederatedGraphRequest extends Message<CheckFederatedGraphReque
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "label_matchers", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 3, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "disable_resolvability_validation", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CheckFederatedGraphRequest {
@@ -7424,9 +7510,9 @@ export class InviteUserRequest extends Message<InviteUserRequest> {
   email = "";
 
   /**
-   * @generated from field: string groupId = 2;
+   * @generated from field: repeated string groups = 2;
    */
-  groupId = "";
+  groups: string[] = [];
 
   constructor(data?: PartialMessage<InviteUserRequest>) {
     super();
@@ -7437,7 +7523,7 @@ export class InviteUserRequest extends Message<InviteUserRequest> {
   static readonly typeName = "wg.cosmo.platform.v1.InviteUserRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "email", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "groupId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "groups", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): InviteUserRequest {
@@ -10439,19 +10525,14 @@ export class UpdateOrganizationDetailsResponse extends Message<UpdateOrganizatio
  */
 export class UpdateOrgMemberGroupRequest extends Message<UpdateOrgMemberGroupRequest> {
   /**
-   * @generated from field: string userID = 1;
-   */
-  userID = "";
-
-  /**
-   * @generated from field: string orgMemberUserID = 2;
+   * @generated from field: string orgMemberUserID = 1;
    */
   orgMemberUserID = "";
 
   /**
-   * @generated from field: string groupId = 3;
+   * @generated from field: repeated string groups = 2;
    */
-  groupId = "";
+  groups: string[] = [];
 
   constructor(data?: PartialMessage<UpdateOrgMemberGroupRequest>) {
     super();
@@ -10461,9 +10542,8 @@ export class UpdateOrgMemberGroupRequest extends Message<UpdateOrgMemberGroupReq
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "wg.cosmo.platform.v1.UpdateOrgMemberGroupRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "userID", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "orgMemberUserID", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "groupId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "orgMemberUserID", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "groups", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateOrgMemberGroupRequest {
@@ -12056,6 +12136,11 @@ export class ToggleChangeOverridesForAllOperationsRequest extends Message<Toggle
    */
   namespace = "";
 
+  /**
+   * @generated from field: optional string search = 5;
+   */
+  search?: string;
+
   constructor(data?: PartialMessage<ToggleChangeOverridesForAllOperationsRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -12068,6 +12153,7 @@ export class ToggleChangeOverridesForAllOperationsRequest extends Message<Toggle
     { no: 2, name: "is_safe", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 3, name: "graph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "search", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ToggleChangeOverridesForAllOperationsRequest {
@@ -12143,6 +12229,11 @@ export class CreateIgnoreOverridesForAllOperationsRequest extends Message<Create
    */
   namespace = "";
 
+  /**
+   * @generated from field: optional string search = 4;
+   */
+  search?: string;
+
   constructor(data?: PartialMessage<CreateIgnoreOverridesForAllOperationsRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -12154,6 +12245,7 @@ export class CreateIgnoreOverridesForAllOperationsRequest extends Message<Create
     { no: 1, name: "check_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "graph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "search", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateIgnoreOverridesForAllOperationsRequest {
@@ -16063,6 +16155,11 @@ export class MoveGraphRequest extends Message<MoveGraphRequest> {
    */
   newNamespace = "";
 
+  /**
+   * @generated from field: optional bool disable_resolvability_validation = 4;
+   */
+  disableResolvabilityValidation?: boolean;
+
   constructor(data?: PartialMessage<MoveGraphRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -16074,6 +16171,7 @@ export class MoveGraphRequest extends Message<MoveGraphRequest> {
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "new_namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "disable_resolvability_validation", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MoveGraphRequest {
@@ -17150,6 +17248,11 @@ export class CreateContractRequest extends Message<CreateContractRequest> {
    */
   includeTags: string[] = [];
 
+  /**
+   * @generated from field: optional bool disable_resolvability_validation = 10;
+   */
+  disableResolvabilityValidation?: boolean;
+
   constructor(data?: PartialMessage<CreateContractRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -17167,6 +17270,7 @@ export class CreateContractRequest extends Message<CreateContractRequest> {
     { no: 7, name: "readme", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 8, name: "admission_webhook_secret", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 9, name: "include_tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 10, name: "disable_resolvability_validation", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateContractRequest {
@@ -17285,6 +17389,11 @@ export class UpdateContractRequest extends Message<UpdateContractRequest> {
    */
   readme?: string;
 
+  /**
+   * @generated from field: optional bool disable_resolvability_validation = 9;
+   */
+  disableResolvabilityValidation?: boolean;
+
   constructor(data?: PartialMessage<UpdateContractRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -17301,6 +17410,7 @@ export class UpdateContractRequest extends Message<UpdateContractRequest> {
     { no: 6, name: "admission_webhook_url", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 7, name: "admission_webhook_secret", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 8, name: "readme", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 9, name: "disable_resolvability_validation", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateContractRequest {
@@ -17552,6 +17662,11 @@ export class CreateFeatureFlagRequest extends Message<CreateFeatureFlagRequest> 
    */
   isEnabled = false;
 
+  /**
+   * @generated from field: optional bool disable_resolvability_validation = 6;
+   */
+  disableResolvabilityValidation?: boolean;
+
   constructor(data?: PartialMessage<CreateFeatureFlagRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -17565,6 +17680,7 @@ export class CreateFeatureFlagRequest extends Message<CreateFeatureFlagRequest> 
     { no: 3, name: "labels", kind: "message", T: Label, repeated: true },
     { no: 4, name: "feature_subgraph_names", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 5, name: "is_enabled", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 6, name: "disable_resolvability_validation", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateFeatureFlagRequest {
@@ -17668,6 +17784,11 @@ export class UpdateFeatureFlagRequest extends Message<UpdateFeatureFlagRequest> 
    */
   unsetLabels = false;
 
+  /**
+   * @generated from field: optional bool disable_resolvability_validation = 6;
+   */
+  disableResolvabilityValidation?: boolean;
+
   constructor(data?: PartialMessage<UpdateFeatureFlagRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -17681,6 +17802,7 @@ export class UpdateFeatureFlagRequest extends Message<UpdateFeatureFlagRequest> 
     { no: 3, name: "labels", kind: "message", T: Label, repeated: true },
     { no: 4, name: "feature_subgraph_names", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 5, name: "unset_labels", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 6, name: "disable_resolvability_validation", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateFeatureFlagRequest {
@@ -17774,6 +17896,11 @@ export class EnableFeatureFlagRequest extends Message<EnableFeatureFlagRequest> 
    */
   enabled = false;
 
+  /**
+   * @generated from field: optional bool disable_resolvability_validation = 4;
+   */
+  disableResolvabilityValidation?: boolean;
+
   constructor(data?: PartialMessage<EnableFeatureFlagRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -17785,6 +17912,7 @@ export class EnableFeatureFlagRequest extends Message<EnableFeatureFlagRequest> 
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "enabled", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 4, name: "disable_resolvability_validation", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EnableFeatureFlagRequest {
@@ -17879,6 +18007,11 @@ export class DeleteFeatureFlagRequest extends Message<DeleteFeatureFlagRequest> 
    */
   namespace = "";
 
+  /**
+   * @generated from field: optional bool disable_resolvability_validation = 3;
+   */
+  disableResolvabilityValidation?: boolean;
+
   constructor(data?: PartialMessage<DeleteFeatureFlagRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -17889,6 +18022,7 @@ export class DeleteFeatureFlagRequest extends Message<DeleteFeatureFlagRequest> 
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "disable_resolvability_validation", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteFeatureFlagRequest {
@@ -20368,6 +20502,11 @@ export class SetGraphRouterCompatibilityVersionRequest extends Message<SetGraphR
    */
   version = "";
 
+  /**
+   * @generated from field: optional bool disable_resolvability_validation = 4;
+   */
+  disableResolvabilityValidation?: boolean;
+
   constructor(data?: PartialMessage<SetGraphRouterCompatibilityVersionRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -20379,6 +20518,7 @@ export class SetGraphRouterCompatibilityVersionRequest extends Message<SetGraphR
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "version", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "disable_resolvability_validation", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SetGraphRouterCompatibilityVersionRequest {
@@ -20727,6 +20867,11 @@ export class CreateProposalRequest extends Message<CreateProposalRequest> {
    */
   subgraphs: ProposalSubgraph[] = [];
 
+  /**
+   * @generated from field: wg.cosmo.platform.v1.ProposalNamingConvention namingConvention = 5;
+   */
+  namingConvention = ProposalNamingConvention.NORMAL;
+
   constructor(data?: PartialMessage<CreateProposalRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -20739,6 +20884,7 @@ export class CreateProposalRequest extends Message<CreateProposalRequest> {
     { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "subgraphs", kind: "message", T: ProposalSubgraph, repeated: true },
+    { no: 5, name: "namingConvention", kind: "enum", T: proto3.getEnumType(ProposalNamingConvention) },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateProposalRequest {
@@ -20842,6 +20988,11 @@ export class CreateProposalResponse extends Message<CreateProposalResponse> {
    */
   proposalUrl = "";
 
+  /**
+   * @generated from field: string proposalName = 17;
+   */
+  proposalName = "";
+
   constructor(data?: PartialMessage<CreateProposalResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -20866,6 +21017,7 @@ export class CreateProposalResponse extends Message<CreateProposalResponse> {
     { no: 14, name: "graphPruningSkipped", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 15, name: "checkUrl", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 16, name: "proposalUrl", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 17, name: "proposalName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateProposalResponse {
@@ -21737,6 +21889,11 @@ export class GetOperationsRequest extends Message<GetOperationsRequest> {
    */
   clientName?: string;
 
+  /**
+   * @generated from field: optional int32 limit = 4;
+   */
+  limit?: number;
+
   constructor(data?: PartialMessage<GetOperationsRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -21748,6 +21905,7 @@ export class GetOperationsRequest extends Message<GetOperationsRequest> {
     { no: 1, name: "federatedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "clientName", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "limit", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOperationsRequest {

@@ -38,8 +38,6 @@ describe('SDL to Proto - Federation and Special Types', () => {
       "syntax = "proto3";
       package service.v1;
 
-      option go_package = "cosmo/pkg/proto/service.v1;servicev1";
-
       // Service definition for DefaultService
       service DefaultService {
         // Lookup Product entity by id
@@ -166,8 +164,6 @@ describe('SDL to Proto - Federation and Special Types', () => {
       "syntax = "proto3";
       package service.v1;
 
-      option go_package = "cosmo/pkg/proto/service.v1;servicev1";
-
       // Service definition for DefaultService
       service DefaultService {
         // Lookup OrderItem entity by orderId
@@ -265,8 +261,6 @@ describe('SDL to Proto - Federation and Special Types', () => {
     expect(protoText).toMatchInlineSnapshot(`
       "syntax = "proto3";
       package service.v1;
-
-      option go_package = "cosmo/pkg/proto/service.v1;servicev1";
 
       // Service definition for DefaultService
       service DefaultService {
@@ -405,7 +399,7 @@ describe('SDL to Proto - Federation and Special Types', () => {
       "syntax = "proto3";
       package service.v1;
 
-      option go_package = "cosmo/pkg/proto/service.v1;servicev1";
+      import "google/protobuf/wrappers.proto";
 
       // Service definition for DefaultService
       service DefaultService {
@@ -433,9 +427,9 @@ describe('SDL to Proto - Federation and Special Types', () => {
         string id = 1;
         string name = 2;
         string start_time = 3;
-        string end_time = 4;
-        string metadata = 5;
-        string attachment = 6;
+        google.protobuf.StringValue end_time = 4;
+        google.protobuf.StringValue metadata = 5;
+        google.protobuf.StringValue attachment = 6;
       }"
     `);
   });

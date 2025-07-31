@@ -51,9 +51,12 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
+	"google.golang.org/grpc"
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs"
+	projects "github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects/generated"
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects/src/service"
 	"github.com/wundergraph/cosmo/router/core"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -69,6 +72,7 @@ const (
 	natsDefaultSourceName = "default"
 	myNatsProviderID      = "my-nats"
 	myKafkaProviderID     = "my-kafka"
+	myRedisProviderID     = "my-redis"
 )
 
 var (
@@ -80,10 +84,16 @@ var (
 	ConfigWithEdfsKafkaJSONTemplate string
 	//go:embed testdata/configWithEdfsNats.json
 	ConfigWithEdfsNatsJSONTemplate string
+	//go:embed testdata/configWithEdfsRedis.json
+	ConfigWithEdfsRedisJSONTemplate string
 	//go:embed testdata/configWithPlugins.json
 	ConfigWithPluginsJSONTemplate string
-	DemoNatsProviders             = []string{natsDefaultSourceName, myNatsProviderID}
-	DemoKafkaProviders            = []string{myKafkaProviderID}
+	//go:embed testdata/configWithGRPC.json
+	ConfigWithGRPCJSONTemplate string
+
+	DemoNatsProviders  = []string{natsDefaultSourceName, myNatsProviderID}
+	DemoKafkaProviders = []string{myKafkaProviderID}
+	DemoRedisProviders = []string{myRedisProviderID}
 )
 
 func init() {
@@ -250,15 +260,17 @@ type EngineStatOptions struct {
 }
 
 type MetricOptions struct {
-	MetricExclusions                  MetricExclusions
-	EnableRuntimeMetrics              bool
-	EnableOTLPRouterCache             bool
-	EnablePrometheusRouterCache       bool
-	OTLPEngineStatsOptions            EngineStatOptions
-	PrometheusEngineStatsOptions      EngineStatOptions
-	PrometheusSchemaFieldUsage        PrometheusSchemaFieldUsage
-	EnableOTLPConnectionMetrics       bool
-	EnablePrometheusConnectionMetrics bool
+	MetricExclusions                      MetricExclusions
+	EnableRuntimeMetrics                  bool
+	EnableOTLPRouterCache                 bool
+	EnablePrometheusRouterCache           bool
+	OTLPEngineStatsOptions                EngineStatOptions
+	PrometheusEngineStatsOptions          EngineStatOptions
+	PrometheusSchemaFieldUsage            PrometheusSchemaFieldUsage
+	EnableOTLPConnectionMetrics           bool
+	EnableOTLPCircuitBreakerMetrics       bool
+	EnablePrometheusConnectionMetrics     bool
+	EnablePrometheusCircuitBreakerMetrics bool
 }
 
 type PrometheusSchemaFieldUsage struct {
@@ -317,7 +329,10 @@ type Config struct {
 	UseVersionedGraph                  bool
 	NoShutdownTestServer               bool
 	MCP                                config.MCPConfiguration
+	EnableRedis                        bool
+	EnableRedisCluster                 bool
 	Plugins                            PluginConfig
+	EnableGRPC                         bool
 }
 
 type PluginConfig struct {
@@ -355,6 +370,7 @@ type SubgraphsConfig struct {
 	Availability     SubgraphConfig
 	Mood             SubgraphConfig
 	Countries        SubgraphConfig
+	Projects         SubgraphConfig
 }
 
 type SubgraphConfig struct {
@@ -372,6 +388,9 @@ type MCPConfig struct {
 	Enabled bool
 	Port    int
 }
+
+var redisHost = "redis://localhost:6379"
+var redisClusterHost = "redis://localhost:7001"
 
 // CreateTestSupervisorEnv is currently tailored specifically for /lifecycle/supervisor_test.go, refer to that test
 // for usage example. CreateTestSupervisorEnv is not a drop-in replacement for CreateTestEnv!
@@ -554,6 +573,15 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	countriesServer := makeSafeHttpTestServer(t, countries)
 	productFgServer := makeSafeHttpTestServer(t, productsFg)
 
+	var (
+		projectServer *grpc.Server
+		endpoint      string
+	)
+
+	if cfg.EnableGRPC {
+		projectServer, endpoint = makeSafeGRPCServer(t, &projects.ProjectsService_ServiceDesc, &service.ProjectsService{})
+	}
+
 	replacements := map[string]string{
 		subgraphs.EmployeesDefaultDemoURL:    gqlURL(employeesServer),
 		subgraphs.FamilyDefaultDemoURL:       gqlURL(familyServer),
@@ -564,6 +592,7 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		subgraphs.MoodDefaultDemoURL:         gqlURL(moodServer),
 		subgraphs.CountriesDefaultDemoURL:    gqlURL(countriesServer),
 		subgraphs.ProductsFgDefaultDemoURL:   gqlURL(productFgServer),
+		subgraphs.ProjectsDefaultDemoURL:     grpcURL(endpoint),
 	}
 
 	if cfg.RouterConfigJSONTemplate == "" {
@@ -706,6 +735,9 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	if cfg.Subgraphs.ProductsFg.CloseOnStart {
 		productFgServer.Close()
 	}
+	if cfg.EnableGRPC && cfg.Subgraphs.Projects.CloseOnStart {
+		projectServer.Stop()
+	}
 
 	if cfg.ShutdownDelay == 0 {
 		cfg.ShutdownDelay = 30 * time.Second
@@ -744,11 +776,23 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 			countriesServer,
 			productFgServer,
 		},
+		GRPCServers: []*grpc.Server{
+			projectServer,
+		},
 	}
 
 	if natsSetup != nil {
 		e.NatsConnectionDefault = natsSetup.Connections[0]
 		e.NatsConnectionMyNats = natsSetup.Connections[1]
+	}
+
+	if cfg.EnableRedis {
+		e.RedisHosts = []string{redisHost}
+	}
+
+	if cfg.EnableRedisCluster {
+		e.RedisHosts = []string{redisClusterHost}
+		e.RedisWithClusterMode = true
 	}
 
 	if routerConfig.FeatureFlagConfigs != nil {
@@ -956,6 +1000,15 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	countriesServer := makeSafeHttpTestServer(t, countries)
 	productFgServer := makeSafeHttpTestServer(t, productsFg)
 
+	var (
+		projectServer *grpc.Server
+		endpoint      string
+	)
+
+	if cfg.EnableGRPC {
+		projectServer, endpoint = makeSafeGRPCServer(t, &projects.ProjectsService_ServiceDesc, &service.ProjectsService{})
+	}
+
 	replacements := map[string]string{
 		subgraphs.EmployeesDefaultDemoURL:    gqlURL(employeesServer),
 		subgraphs.FamilyDefaultDemoURL:       gqlURL(familyServer),
@@ -966,6 +1019,7 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		subgraphs.MoodDefaultDemoURL:         gqlURL(moodServer),
 		subgraphs.CountriesDefaultDemoURL:    gqlURL(countriesServer),
 		subgraphs.ProductsFgDefaultDemoURL:   gqlURL(productFgServer),
+		subgraphs.ProjectsDefaultDemoURL:     grpcURL(endpoint),
 	}
 
 	if cfg.RouterConfigJSONTemplate == "" {
@@ -1102,6 +1156,10 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		productFgServer.Close()
 	}
 
+	if cfg.EnableGRPC && cfg.Subgraphs.Projects.CloseOnStart {
+		projectServer.Stop()
+	}
+
 	if cfg.ShutdownDelay == 0 {
 		cfg.ShutdownDelay = 30 * time.Second
 	}
@@ -1138,11 +1196,23 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 			countriesServer,
 			productFgServer,
 		},
+		GRPCServers: []*grpc.Server{
+			projectServer,
+		},
 	}
 
 	if natsSetup != nil {
 		e.NatsConnectionDefault = natsSetup.Connections[0]
 		e.NatsConnectionMyNats = natsSetup.Connections[1]
+	}
+
+	if cfg.EnableRedis {
+		e.RedisHosts = []string{redisHost}
+	}
+
+	if cfg.EnableRedisCluster {
+		e.RedisHosts = []string{redisClusterHost}
+		e.RedisWithClusterMode = true
 	}
 
 	if routerConfig.FeatureFlagConfigs != nil {
@@ -1265,6 +1335,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 
 	var natsEventSources []config.NatsEventSource
 	var kafkaEventSources []config.KafkaEventSource
+	var redisEventSources []config.RedisEventSource
 
 	if natsData != nil {
 		for _, sourceName := range DemoNatsProviders {
@@ -1285,10 +1356,29 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		}
 	}
 
+	if testConfig.EnableRedis {
+		for _, sourceName := range DemoRedisProviders {
+			redisEventSources = append(redisEventSources, config.RedisEventSource{
+				ID:   sourceName,
+				URLs: []string{redisHost},
+			})
+		}
+	}
+
+	if testConfig.EnableRedisCluster {
+		for _, sourceName := range DemoRedisProviders {
+			redisEventSources = append(redisEventSources, config.RedisEventSource{
+				ID:   sourceName,
+				URLs: []string{redisClusterHost},
+			})
+		}
+	}
+
 	eventsConfiguration := config.EventsConfiguration{
 		Providers: config.EventProviders{
 			Nats:  natsEventSources,
 			Kafka: kafkaEventSources,
+			Redis: redisEventSources,
 		},
 	}
 	if testConfig.ModifyEventsConfiguration != nil {
@@ -1328,6 +1418,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		core.WithQueryPlans(true),
 		core.WithEvents(eventsConfiguration),
 	}
+
 	routerOpts = append(routerOpts, testConfig.RouterOptions...)
 
 	if testConfig.RouterConfig != nil {
@@ -1408,6 +1499,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			EngineStats: rmetric.EngineStatsConfig{
 				Subscription: testConfig.MetricOptions.PrometheusEngineStatsOptions.EnableSubscription,
 			},
+			CircuitBreaker:      testConfig.MetricOptions.EnablePrometheusCircuitBreakerMetrics,
 			ExcludeMetrics:      testConfig.MetricOptions.MetricExclusions.ExcludedPrometheusMetrics,
 			ExcludeMetricLabels: testConfig.MetricOptions.MetricExclusions.ExcludedPrometheusMetricLabels,
 			ExcludeScopeInfo:    testConfig.MetricOptions.MetricExclusions.ExcludeScopeInfo,
@@ -1436,6 +1528,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 					EngineStats: config.EngineStats{
 						Subscriptions: testConfig.MetricOptions.OTLPEngineStatsOptions.EnableSubscription,
 					},
+					CircuitBreaker:      testConfig.MetricOptions.EnableOTLPCircuitBreakerMetrics,
 					ExcludeMetrics:      testConfig.MetricOptions.MetricExclusions.ExcludedOTLPMetrics,
 					ExcludeMetricLabels: testConfig.MetricOptions.MetricExclusions.ExcludedOTLPMetricLabels,
 				},
@@ -1545,6 +1638,29 @@ func makeSafeHttpTestServer(t testing.TB, handler http.Handler) *httptest.Server
 	return s
 }
 
+func makeSafeGRPCServer(t testing.TB, sd *grpc.ServiceDesc, service any) (*grpc.Server, string) {
+	t.Helper()
+
+	port := freeport.GetOne(t)
+
+	endpoint := fmt.Sprintf("localhost:%d", port)
+
+	lis, err := net.Listen("tcp", endpoint)
+	require.NoError(t, err)
+
+	require.NotNil(t, service)
+
+	s := grpc.NewServer()
+	s.RegisterService(sd, service)
+
+	go func() {
+		err := s.Serve(lis)
+		require.NoError(t, err)
+	}()
+
+	return s, endpoint
+}
+
 func SetupCDNServer(t testing.TB, port int) *httptest.Server {
 	_, filePath, _, ok := runtime.Caller(0)
 	require.True(t, ok)
@@ -1585,6 +1701,10 @@ func gqlURL(srv *httptest.Server) string {
 	return path
 }
 
+func grpcURL(endpoint string) string {
+	return "dns:///" + endpoint
+}
+
 func ReadAndCheckJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err error) {
 	_, payload, err := conn.ReadMessage()
 	if err != nil {
@@ -1610,6 +1730,7 @@ type Environment struct {
 	RouterURL             string
 	RouterClient          *http.Client
 	Servers               []*httptest.Server
+	GRPCServers           []*grpc.Server
 	CDN                   *httptest.Server
 	NatsData              *NatsData
 	NatsConnectionDefault *nats.Conn
@@ -1620,6 +1741,8 @@ type Environment struct {
 	logObserver           *observer.ObservedLogs
 	getPubSubName         func(name string) string
 	MCPClient             *mcpclient.Client
+	RedisHosts            []string
+	RedisWithClusterMode  bool
 
 	shutdownDelay       time.Duration
 	extraURLQueryValues url.Values
@@ -1701,6 +1824,12 @@ func (e *Environment) Shutdown() {
 		lErr := s.Listener.Close()
 		if lErr != nil {
 			e.t.Logf("could not close server listener: %s", lErr)
+		}
+	}
+
+	for _, s := range e.GRPCServers {
+		if s != nil {
+			s.Stop()
 		}
 	}
 
