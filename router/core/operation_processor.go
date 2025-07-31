@@ -132,7 +132,7 @@ type OperationProcessor struct {
 	parseKitOptions          *parseKitOptions
 	complexityLimits         *config.ComplexityLimits
 	parserTokenizerLimits    astparser.TokenizerLimits
-	operationNameLimit       int
+	operationNameLengthLimit int
 }
 
 // parseKit is a helper struct to parse, normalize and validate operations
@@ -492,7 +492,7 @@ func (o *OperationKit) isIntrospectionQuery() (result bool, err error) {
 			if o.isOperationNameLimitExceeded(name) {
 				return false, &httpGraphqlError{
 					message: fmt.Sprintf("operation name of length %d exceeds max length of %d",
-						len(name), o.operationProcessor.operationNameLimit),
+						len(name), o.operationProcessor.operationNameLengthLimit),
 					statusCode: http.StatusBadRequest,
 				}
 			}
@@ -538,10 +538,10 @@ func (o *OperationKit) isIntrospectionQuery() (result bool, err error) {
 }
 
 func (o *OperationKit) isOperationNameLimitExceeded(operationName string) bool {
-	if o.operationProcessor.operationNameLimit == 0 {
+	if o.operationProcessor.operationNameLengthLimit == 0 {
 		return false
 	}
-	return len(operationName) > o.operationProcessor.operationNameLimit
+	return len(operationName) > o.operationProcessor.operationNameLengthLimit
 }
 
 // Parse parses the operation, populates the document and set the operation type.
@@ -616,7 +616,7 @@ func (o *OperationKit) Parse() error {
 		if o.isOperationNameLimitExceeded(name) {
 			return &httpGraphqlError{
 				message: fmt.Sprintf("operation name of length %d exceeds max length of %d",
-					len(name), o.operationProcessor.operationNameLimit),
+					len(name), o.operationProcessor.operationNameLengthLimit),
 				statusCode: http.StatusBadRequest,
 			}
 		}
@@ -1288,7 +1288,7 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 		parseKitSemaphore:        make(chan int, opts.ParseKitPoolSize),
 		introspectionEnabled:     opts.IntrospectionEnabled,
 		parserTokenizerLimits:    opts.ParserTokenizerLimits,
-		operationNameLimit:       opts.OperationNameLengthLimit,
+		operationNameLengthLimit: opts.OperationNameLengthLimit,
 		complexityLimits:         opts.ComplexityLimits,
 		parseKitOptions: &parseKitOptions{
 			apolloCompatibilityFlags:                         opts.ApolloCompatibilityFlags,
