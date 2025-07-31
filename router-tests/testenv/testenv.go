@@ -1326,17 +1326,8 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	}
 
 	if testConfig.ModifySecurityConfiguration != nil {
-		originalFunc := testConfig.ModifySecurityConfiguration
-		testConfig.ModifySecurityConfiguration = func(securityConfiguration *config.SecurityConfiguration) {
-			securityConfiguration.OperationNameLengthLimit = 512
-			originalFunc(securityConfiguration)
-		}
-	} else {
-		testConfig.ModifySecurityConfiguration = func(securityConfiguration *config.SecurityConfiguration) {
-			securityConfiguration.OperationNameLengthLimit = 512
-		}
+		testConfig.ModifySecurityConfiguration(&cfg.SecurityConfiguration)
 	}
-	testConfig.ModifySecurityConfiguration(&cfg.SecurityConfiguration)
 
 	if testConfig.ModifySubgraphErrorPropagation != nil {
 		testConfig.ModifySubgraphErrorPropagation(&cfg.SubgraphErrorPropagation)
