@@ -52,27 +52,7 @@ export function getOperations(
       };
     }
 
-    const analyticsRetention = await orgRepo.getFeature({
-      organizationId: authContext.organizationId,
-      featureId: 'analytics-retention',
-    });
-
-    const limit = analyticsRetention?.limit ?? 7;
-
-    const { range } = validateDateRanges({
-      limit,
-      range: limit * 24,
-    });
-
-    if (!range) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: 'Invalid date range',
-        },
-        operations: [],
-      };
-    }
+    const range = 7 * 24;
 
     const operations = await metricsRepo.getOperations({
       range,

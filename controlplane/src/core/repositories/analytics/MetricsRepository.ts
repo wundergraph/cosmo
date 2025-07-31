@@ -746,7 +746,7 @@ export class MetricsRepository {
       AND OrganizationID = '${organizationId}'
       AND FederatedGraphID = '${graphId}'
       ${whereSql ? `AND ${whereSql}` : ''}
-    GROUP BY OperationName, OperationHash, OperationType ORDER BY latency DESC`;
+    GROUP BY OperationName, OperationHash, OperationType ORDER BY latency DESC LIMIT 100`;
 
     const res: {
       operationHash: string;
