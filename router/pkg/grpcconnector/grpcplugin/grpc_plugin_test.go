@@ -1,4 +1,4 @@
-package grpcconnector
+package grpcplugin
 
 import (
 	"testing"

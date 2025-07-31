@@ -376,7 +376,7 @@ export class MetricsRepository {
             sum(TotalErrors) as totalErrors
           FROM ${this.client.database}.operation_request_metrics_5_30
           WHERE Timestamp >= startDate AND Timestamp <= endDate
-            AND OrganizationID = '${organizationId}'
+          AND OrganizationID = '${organizationId}'
             AND FederatedGraphID = '${graphId}'
             ${whereSql ? `AND ${whereSql}` : ''}
           GROUP BY Timestamp, OperationName 

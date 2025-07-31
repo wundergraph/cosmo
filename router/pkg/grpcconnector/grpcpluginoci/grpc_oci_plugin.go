@@ -1,52 +1,83 @@
-package grpcconnector
+package grpcpluginoci
 
 import (
 	"context"
 	"errors"
 	"fmt"
 	"os"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/crane"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/hashicorp/go-plugin"
+	"github.com/wundergraph/cosmo/router/pkg/grpcconnector/grpccommon"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 )
 
 type GRPCPluginConfig struct {
-	Logger     *zap.Logger
-	PluginPath string
-	PluginName string
+	Logger        *zap.Logger
+	ImageRef      string
+	RegistryToken string
 }
 
 type GRPCPlugin struct {
-	plugin.Plugin
-	plugin.GRPCPlugin
-
 	logger *zap.Logger
 
 	done     chan struct{}
 	mu       sync.Mutex
 	disposed atomic.Bool
 
-	pluginPath string
-	pluginName string
+	workDir string
 
-	client *GRPCPluginClient
+	img v1.Image
+
+	client *grpccommon.GRPCPluginClient
 }
 
-func NewGRPCPlugin(config GRPCPluginConfig) (*GRPCPlugin, error) {
+func NewGRPCOCIPlugin(config GRPCPluginConfig) (*GRPCPlugin, error) {
 	if config.Logger == nil {
 		return nil, fmt.Errorf("logger is required")
 	}
 
-	if config.PluginName == "" {
-		return nil, fmt.Errorf("plugin name is required")
+	if config.ImageRef == "" {
+		return nil, fmt.Errorf("image source is required")
 	}
 
-	if config.PluginPath == "" {
-		return nil, fmt.Errorf("plugin path is required")
+	if config.RegistryToken == "" {
+		return nil, fmt.Errorf("registry token is required")
+	}
+
+	var img v1.Image
+
+	desc, err := crane.Get(config.ImageRef,
+		crane.WithAuth(&authn.Basic{
+			Username: "router",
+			Password: config.RegistryToken,
+		}),
+		crane.WithPlatform(&v1.Platform{
+			Architecture: runtime.GOARCH,
+			OS:           runtime.GOOS,
+		}),
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf("pulling image %s: %w", config.ImageRef, err)
+	}
+	if desc.MediaType.IsSchema1() {
+		img, err = desc.Schema1()
+		if err != nil {
+			return nil, fmt.Errorf("pulling schema 1 image %s: %w", config.ImageRef, err)
+		}
+	} else {
+		img, err = desc.Image()
+		if err != nil {
+			return nil, fmt.Errorf("pulling Image %s: %w", config.ImageRef, err)
+		}
 	}
 
 	return &GRPCPlugin{
@@ -55,9 +86,7 @@ func NewGRPCPlugin(config GRPCPluginConfig) (*GRPCPlugin, error) {
 		disposed: atomic.Bool{},
 
 		logger: config.Logger,
-
-		pluginPath: config.PluginPath,
-		pluginName: config.PluginName,
+		img:    img,
 	}, nil
 }
 
@@ -71,34 +100,35 @@ func (p *GRPCPlugin) GetClient() grpc.ClientConnInterface {
 }
 
 func (p *GRPCPlugin) ensureRunningPluginProcess() {
-	if p.client.IsPluginProcessExited() {
-		if err := p.fork(); err != nil {
+	if p.client == nil || p.client.IsPluginProcessExited() {
+		p.cleanupPluginWorkDir()
+		if err := p.startPluginProcess(); err != nil {
 			p.logger.Error("failed to restart plugin", zap.Error(err))
 		}
 	}
 }
 
-func (p *GRPCPlugin) fork() error {
-	filePath, err := p.validatePluginPath()
-	if err != nil {
-		return fmt.Errorf("failed to validate plugin path: %w", err)
-	}
-
+func (p *GRPCPlugin) startPluginProcess() error {
 	handshakeConfig := plugin.HandshakeConfig{
 		ProtocolVersion:  1,
 		MagicCookieKey:   "GRPC_DATASOURCE_PLUGIN",
 		MagicCookieValue: "GRPC_DATASOURCE_PLUGIN",
 	}
 
-	pluginCmd := newPluginCommand(filePath)
+	pluginCmd, err := p.PreparePlugin(p.img)
+	if err != nil {
+		return fmt.Errorf("failed to prepare plugin: %w", err)
+	}
+
+	p.logger.Debug("Prepared working directory for plugin", zap.String("dir", p.workDir))
 
 	pluginClient := plugin.NewClient(&plugin.ClientConfig{
 		Cmd:              pluginCmd,
 		AllowedProtocols: []plugin.Protocol{plugin.ProtocolGRPC},
 		HandshakeConfig:  handshakeConfig,
-		Logger:           NewPluginLogger(p.logger),
+		Logger:           grpccommon.NewPluginLogger(p.logger),
 		Plugins: map[string]plugin.Plugin{
-			p.pluginName: p,
+			"grpc_datasource": &grpccommon.ThinPlugin{},
 		},
 	})
 
@@ -107,7 +137,7 @@ func (p *GRPCPlugin) fork() error {
 		return fmt.Errorf("failed to create plugin client protocol: %w", err)
 	}
 
-	rawClient, err := clientProtocol.Dispense(p.pluginName)
+	rawClient, err := clientProtocol.Dispense("grpc_datasource")
 	if err != nil {
 		return fmt.Errorf("failed to dispense plugin: %w", err)
 	}
@@ -117,24 +147,32 @@ func (p *GRPCPlugin) fork() error {
 		return fmt.Errorf("plugin does not implement grpc.ClientConnInterface")
 	}
 
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
 	if p.client == nil {
 		// first time we start the plugin, we need to create a new client
-		p.client, err = newGRPCPluginClient(pluginClient, grpcClient)
+		p.client, err = grpccommon.NewGRPCPluginClient(pluginClient, grpcClient)
 		if err != nil {
 			return fmt.Errorf("failed to create grpc plugin client: %w", err)
 		}
 		return nil
 	}
 
-	p.client.setClients(pluginClient, grpcClient)
+	p.client.SetClients(pluginClient, grpcClient)
 
 	return nil
 
 }
 
-// Name implements Plugin.
-func (p *GRPCPlugin) Name() string {
-	return p.pluginName
+func (p *GRPCPlugin) cleanupPluginWorkDir() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if p.workDir != "" {
+		os.RemoveAll(p.workDir)
+		p.workDir = ""
+	}
 }
 
 // Start implements Plugin.
@@ -151,8 +189,8 @@ func (p *GRPCPlugin) Start(ctx context.Context) error {
 		}
 	}()
 
-	if err := p.fork(); err != nil {
-		return fmt.Errorf("failed to start plugin process: %w", err)
+	if err := p.startPluginProcess(); err != nil {
+		return err
 	}
 
 	go func() {
@@ -185,35 +223,10 @@ func (p *GRPCPlugin) Stop() error {
 		}
 	}
 
+	p.cleanupPluginWorkDir()
+
 	p.disposed.Store(true)
 
 	close(p.done)
 	return retErr
-}
-
-// GRPCClient implements plugin.GRPCPlugin.
-func (p *GRPCPlugin) GRPCClient(ctx context.Context, broker *plugin.GRPCBroker, conn *grpc.ClientConn) (interface{}, error) {
-	return conn, nil
-}
-
-func (p *GRPCPlugin) validatePluginPath() (string, error) {
-	filePath := p.pluginPath
-	info, err := os.Stat(filePath)
-	if err != nil {
-		return "", fmt.Errorf("failed to stat plugin: %w", err)
-	}
-
-	if info.IsDir() {
-		return "", fmt.Errorf("plugin is a directory")
-	}
-
-	if info.Size() == 0 {
-		return "", fmt.Errorf("plugin is empty")
-	}
-
-	if info.Mode()&0111 == 0 {
-		return "", fmt.Errorf("plugin is not executable")
-	}
-
-	return filePath, nil
 }
