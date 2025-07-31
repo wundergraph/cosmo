@@ -3,20 +3,19 @@ import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
+  AnalyticsFilter,
+  AnalyticsViewFilterOperator,
   GetOperationsRequest,
   GetOperationsResponse,
   GetOperationsResponse_Operation,
   GetOperationsResponse_OperationType,
-  AnalyticsViewFilterOperator,
-  AnalyticsFilter,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { deafultRangeForGetOperations } from '../../constants.js';
 import { MetricsRepository } from '../../repositories/analytics/MetricsRepository.js';
 import { CacheWarmerRepository } from '../../repositories/CacheWarmerRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
-import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
+import { enrichLogger, getLogger, handleError } from '../../util.js';
 
 export function getOperations(
   opts: RouterOptions,
