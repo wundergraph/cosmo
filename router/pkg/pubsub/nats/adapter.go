@@ -132,10 +132,15 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, cfg datasource.Subscrip
 					for msg := range msgBatch.Messages() {
 						log.Debug("subscription update", zap.String("message_subject", msg.Subject()), zap.ByteString("data", msg.Data()))
 
-						updater.Update([]datasource.StreamEvent{&Event{
+						updateErr := updater.Update([]datasource.StreamEvent{&Event{
 							Data:    msg.Data(),
 							Headers: msg.Headers(),
 						}})
+						if updateErr != nil {
+							// If the update fails, we do not acknowledge the message
+							log.Error("error updating subscription", zap.Error(updateErr), zap.String("message_subject", msg.Subject()))
+							return
+						}
 
 						// Acknowledge the message after it has been processed
 						ackErr := msg.Ack()
@@ -172,10 +177,22 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, cfg datasource.Subscrip
 			select {
 			case msg := <-msgChan:
 				log.Debug("subscription update", zap.String("message_subject", msg.Subject), zap.ByteString("data", msg.Data))
-				updater.Update([]datasource.StreamEvent{&Event{
+				updateErr := updater.Update([]datasource.StreamEvent{&Event{
 					Data:    msg.Data,
 					Headers: msg.Header,
 				}})
+				if updateErr != nil {
+					// If the update fails, we log the error and unsubscribe from all subscriptions
+					log.Error("error updating subscription", zap.Error(updateErr), zap.String("message_subject", msg.Subject))
+					for _, subscription := range subscriptions {
+						if err := subscription.Unsubscribe(); err != nil {
+							log.Error("unsubscribing from NATS subject after an error on updating subscription",
+								zap.Error(err), zap.String("subject", subscription.Subject),
+							)
+						}
+					}
+					return
+				}
 			case <-p.ctx.Done():
 				// When the application context is done, we stop the subscriptions
 				for _, subscription := range subscriptions {

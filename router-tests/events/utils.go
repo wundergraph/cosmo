@@ -14,7 +14,7 @@ func EnsureTopicExists(t *testing.T, xEnv *testenv.Environment, timeout time.Dur
 	// Delete topic for idempotency
 	deleteCtx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	prefixedTopics := make([]string, len(topics))
+	prefixedTopics := make([]string, 0, len(topics))
 	for _, topic := range topics {
 		prefixedTopics = append(prefixedTopics, xEnv.GetPubSubName(topic))
 	}
@@ -61,6 +61,7 @@ func ReadKafkaMessages(xEnv *testenv.Environment, timeout time.Duration, topicNa
 	if err != nil {
 		return nil, err
 	}
+	defer client.Close()
 
 	fetchs := client.PollRecords(ctx, msgs)
 

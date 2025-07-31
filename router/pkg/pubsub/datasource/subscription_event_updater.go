@@ -10,7 +10,7 @@ import (
 // that provides a way to send the event struct instead of the raw data
 // It is used to give access to the event additional fields to the hooks.
 type SubscriptionEventUpdater interface {
-	Update(events []StreamEvent)
+	Update(events []StreamEvent) error
 	Complete()
 	Close(kind resolve.SubscriptionCloseKind)
 	SetHooks(hooks Hooks)
@@ -29,20 +29,20 @@ func (s *subscriptionEventUpdater) updateEvents(events []StreamEvent) {
 	}
 }
 
-func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
+func (s *subscriptionEventUpdater) Update(events []StreamEvent) error {
 	if len(s.hooks.OnStreamEvents) == 0 {
 		s.updateEvents(events)
-		return
+		return nil
 	}
 
 	processedEvents, err := applyStreamEventHooks(s.ctx, s.subscriptionEventConfiguration, events, s.hooks.OnStreamEvents)
 	if err != nil {
-		// TODO: do something with the error - for now, continue with original events
-		s.updateEvents(events)
-		return
+		return err
 	}
 
 	s.updateEvents(processedEvents)
+
+	return nil
 }
 
 func (s *subscriptionEventUpdater) Complete() {

@@ -87,11 +87,15 @@ func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, u
 					headers[header.Key] = header.Value
 				}
 
-				updater.Update([]datasource.StreamEvent{&Event{
+				err := updater.Update([]datasource.StreamEvent{&Event{
 					Data:    r.Value,
 					Headers: headers,
 					Key:     r.Key,
 				}})
+				// if an error occurred while updating the subscription, should exit the poller
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
