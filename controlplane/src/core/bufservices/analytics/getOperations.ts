@@ -10,7 +10,7 @@ import {
   GetOperationsResponse_Operation,
   GetOperationsResponse_OperationType,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { deafultRangeForGetOperations } from '../../constants.js';
+import { deafultRangeInHoursForGetOperations } from '../../constants.js';
 import { MetricsRepository } from '../../repositories/analytics/MetricsRepository.js';
 import { CacheWarmerRepository } from '../../repositories/CacheWarmerRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
@@ -63,7 +63,7 @@ export function getOperations(
       };
     }
 
-    const range = deafultRangeForGetOperations;
+    const range = deafultRangeInHoursForGetOperations;
 
     const operations = await metricsRepo.getOperations({
       range,
