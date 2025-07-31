@@ -3,9 +3,8 @@ package routerplugin
 import (
 	"context"
 	"errors"
-	"fmt"
+
 	"github.com/hashicorp/go-plugin"
-	"github.com/wundergraph/cosmo/router-plugin/tracing"
 	"google.golang.org/grpc"
 )
 
@@ -35,81 +34,40 @@ func (p *RouterPlugin) GRPCClient(_ context.Context, _ *plugin.GRPCBroker, cc *g
 type RouterPlugin struct {
 	plugin.Plugin
 	registrationFunc func(*grpc.Server)
-	serveConfig      *plugin.ServeConfig
-	metadata         RouterPluginMetadata
+
+	serveConfig *plugin.ServeConfig
 }
 
-type RouterPluginMetadata struct {
-	ServiceName    string
-	ServiceVersion string
-	TracingEnabled bool
-}
-
-type PluginOption func(*RouterPlugin)
+type PluginOption func(*plugin.ServeConfig)
 
 func WithTestConfig(testConfig *plugin.ServeTestConfig) PluginOption {
-	return func(c *RouterPlugin) {
-		c.serveConfig.Test = testConfig
+	return func(c *plugin.ServeConfig) {
+		c.Test = testConfig
 	}
 }
 
-// WithTracing enables tracing for the plugin.
-// This includes creating a tracing interceptor
-func WithTracing() PluginOption {
-	return func(c *RouterPlugin) {
-		c.metadata.TracingEnabled = true
-	}
-}
-
-func WithServiceName(serviceName string) PluginOption {
-	return func(c *RouterPlugin) {
-		c.metadata.ServiceName = serviceName
-	}
-}
-
-func WithServiceVersion(serviceVersion string) PluginOption {
-	return func(c *RouterPlugin) {
-		c.metadata.ServiceVersion = serviceVersion
-	}
-}
-
-func NewRouterPlugin(registrationFunc func(*grpc.Server), opts ...PluginOption) (*RouterPlugin, error) {
-	if registrationFunc == nil {
+func NewRouterPlugin(registrationfunc func(*grpc.Server), opts ...PluginOption) (*RouterPlugin, error) {
+	if registrationfunc == nil {
 		return nil, errors.New("unable to register service, registration function not provided")
 	}
 
 	routerPlugin := &RouterPlugin{
-		registrationFunc: registrationFunc,
+		registrationFunc: registrationfunc,
 	}
-	routerPlugin.serveConfig = &plugin.ServeConfig{
+
+	serveConfig := &plugin.ServeConfig{
 		HandshakeConfig: RouterPluginHandshakeConfig,
+		GRPCServer:      plugin.DefaultGRPCServer,
 		Plugins: map[string]plugin.Plugin{
 			PluginMapName: routerPlugin,
 		},
 	}
 
 	for _, opt := range opts {
-		opt(routerPlugin)
+		opt(serveConfig)
 	}
 
-	grpcOpts := make([]grpc.ServerOption, 0)
-	if routerPlugin.metadata.TracingEnabled {
-		tracingInterceptor, err := tracing.CreateTracingInterceptor(tracing.TracingOptions{
-			ServiceName:    routerPlugin.metadata.ServiceName,
-			ServiceVersion: routerPlugin.metadata.ServiceVersion,
-		})
-		grpcOpts = append(grpcOpts, grpc.UnaryInterceptor(tracingInterceptor))
-		if err != nil {
-			return nil, fmt.Errorf("failed to create tracing interceptor: %w", err)
-		}
-	}
-
-	routerPlugin.serveConfig.GRPCServer = func(serverOpts []grpc.ServerOption) *grpc.Server {
-		allOpts := append([]grpc.ServerOption{}, serverOpts...)
-		allOpts = append(allOpts, grpcOpts...)
-		return grpc.NewServer(allOpts...)
-	}
-
+	routerPlugin.serveConfig = serveConfig
 	return routerPlugin, nil
 }
 

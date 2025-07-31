@@ -3,8 +3,6 @@ package routerplugin
 import (
 	"context"
 	"errors"
-	"go.opentelemetry.io/otel"
-	"google.golang.org/grpc/metadata"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -129,11 +127,6 @@ func (g *GRPCPluginClient) Invoke(ctx context.Context, method string, args any, 
 
 	g.mu.RLock()
 	defer g.mu.RUnlock()
-
-	md := make(metadata.MD)
-	otel.GetTextMapPropagator().Inject(ctx, metadataCarrier{md})
-	ctx = metadata.NewOutgoingContext(ctx, md)
-
 	return g.cc.Invoke(ctx, method, args, reply, opts...)
 }
 

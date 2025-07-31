@@ -9,28 +9,19 @@ import (
 
 	service "github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects/generated"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects/src/data"
+
 	routerplugin "github.com/wundergraph/cosmo/router-plugin"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-const (
-	serviceName    = "projects-plugin"
-	serviceVersion = "v0.1.0"
-)
-
 func main() {
-	pl, err := routerplugin.NewRouterPlugin(
-		func(s *grpc.Server) {
-			s.RegisterService(&service.ProjectsService_ServiceDesc, &ProjectsService{
-				nextID: 1,
-			})
-		},
-		routerplugin.WithServiceName(serviceName),
-		routerplugin.WithServiceVersion(serviceVersion),
-		routerplugin.WithTracing(),
-	)
+	pl, err := routerplugin.NewRouterPlugin(func(s *grpc.Server) {
+		s.RegisterService(&service.ProjectsService_ServiceDesc, &ProjectsService{
+			nextID: 1,
+		})
+	})
 
 	if err != nil {
 		log.Fatalf("failed to create router plugin: %v", err)
