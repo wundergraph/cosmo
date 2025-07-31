@@ -719,7 +719,7 @@ export class MetricsRepository {
     });
   }
 
-  public async getOperations(props: GetMetricsViewProps) {
+  public async getOperations(props: GetMetricsViewProps & { limit: number }) {
     const { dateRange, organizationId, graphId, whereSql, queryParams } = this.getMetricsProps(props);
 
     const query = `
@@ -746,7 +746,7 @@ export class MetricsRepository {
       AND OrganizationID = '${organizationId}'
       AND FederatedGraphID = '${graphId}'
       ${whereSql ? `AND ${whereSql}` : ''}
-    GROUP BY OperationName, OperationHash, OperationType ORDER BY latency DESC LIMIT 100`;
+    GROUP BY OperationName, OperationHash, OperationType ORDER BY latency DESC LIMIT ${props.limit}`;
 
     const res: {
       operationHash: string;

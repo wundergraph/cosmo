@@ -39,7 +39,6 @@ export function getOperations(
     const metricsRepo = new MetricsRepository(opts.chClient);
     const cacheWarmerRepo = new CacheWarmerRepository(opts.chClient, opts.db);
     const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
-    const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
 
     const graph = await fedGraphRepo.byName(req.federatedGraphName, req.namespace);
     if (!graph) {
@@ -52,6 +51,7 @@ export function getOperations(
       };
     }
 
+    req.limit = req.limit ?? 100;
     const range = 7 * 24;
 
     const operations = await metricsRepo.getOperations({
@@ -67,6 +67,7 @@ export function getOperations(
             }),
           ]
         : [],
+      limit: req.limit,
     });
 
     if (operations.length === 0) {
