@@ -16,6 +16,7 @@ import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepos
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
+import { deafultRangeForGetOperations } from 'src/core/constants.js';
 
 export function getOperations(
   opts: RouterOptions,
@@ -63,7 +64,7 @@ export function getOperations(
       };
     }
 
-    const range = 7 * 24;
+    const range = deafultRangeForGetOperations;
 
     const operations = await metricsRepo.getOperations({
       range,

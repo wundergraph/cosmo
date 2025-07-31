@@ -7,3 +7,5 @@ export const apiKeyPermissions = [
 
 export const delayForManualOrgDeletionInDays = 3;
 export const delayForOrgAuditLogsDeletionInDays = 90;
+
+export const deafultRangeForGetOperations = 7 * 24;
