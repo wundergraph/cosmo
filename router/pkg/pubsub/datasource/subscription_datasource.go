@@ -21,10 +21,7 @@ type PubSubSubscriptionDataSource[C SubscriptionEventConfiguration] struct {
 func (s *PubSubSubscriptionDataSource[C]) SubscriptionEventConfiguration(input []byte) (SubscriptionEventConfiguration, error) {
 	var subscriptionConfiguration C
 	err := json.Unmarshal(input, &subscriptionConfiguration)
-	if err != nil {
-		return nil, err
-	}
-	return subscriptionConfiguration, nil
+	return subscriptionConfiguration, err
 }
 
 func (s *PubSubSubscriptionDataSource[C]) UniqueRequestID(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
