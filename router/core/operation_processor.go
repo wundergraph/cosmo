@@ -489,7 +489,7 @@ func (o *OperationKit) isIntrospectionQuery() (result bool, err error) {
 			ref := possibleOperationDefinitionRefs[i]
 			name := o.kit.doc.OperationDefinitionNameString(ref)
 
-			if o.isOperationNameLimitExceeded(name) {
+			if o.isOperationNameLengthLimitExceeded(name) {
 				return false, &httpGraphqlError{
 					message: fmt.Sprintf("operation name of length %d exceeds max length of %d",
 						len(name), o.operationProcessor.operationNameLengthLimit),
@@ -537,7 +537,7 @@ func (o *OperationKit) isIntrospectionQuery() (result bool, err error) {
 	return false, nil
 }
 
-func (o *OperationKit) isOperationNameLimitExceeded(operationName string) bool {
+func (o *OperationKit) isOperationNameLengthLimitExceeded(operationName string) bool {
 	if o.operationProcessor.operationNameLengthLimit == 0 {
 		return false
 	}
@@ -613,7 +613,7 @@ func (o *OperationKit) Parse() error {
 			continue
 		}
 
-		if o.isOperationNameLimitExceeded(name) {
+		if o.isOperationNameLengthLimitExceeded(name) {
 			return &httpGraphqlError{
 				message: fmt.Sprintf("operation name of length %d exceeds max length of %d",
 					len(name), o.operationProcessor.operationNameLengthLimit),

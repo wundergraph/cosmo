@@ -529,7 +529,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		}
 	}
 
-	if operationKit.isOperationNameLimitExceeded(operationKit.parsedOperation.Request.OperationName) {
+	if operationKit.isOperationNameLengthLimitExceeded(operationKit.parsedOperation.Request.OperationName) {
 		return &httpGraphqlError{
 			message: fmt.Sprintf("operation name of length %d exceeds max length of %d",
 				len(operationKit.parsedOperation.Request.OperationName),
