@@ -13,10 +13,9 @@ type uniqueRequestIdFn func(ctx *resolve.Context, input []byte, xxh *xxhash.Dige
 // PubSubSubscriptionDataSource is a data source for handling subscriptions using a Pub/Sub mechanism.
 // It implements the SubscriptionDataSource interface and HookableSubscriptionDataSource
 type PubSubSubscriptionDataSource[C SubscriptionEventConfiguration] struct {
-	pubSub                 Adapter
-	uniqueRequestID        uniqueRequestIdFn
-	subscriptionOnStartFns []SubscriptionOnStartFn
-	onStreamEventsFns      []OnStreamEventsFn
+	pubSub          Adapter
+	uniqueRequestID uniqueRequestIdFn
+	hooks           Hooks
 }
 
 func (s *PubSubSubscriptionDataSource[C]) SubscriptionEventConfiguration(input []byte) (SubscriptionEventConfiguration, error) {
@@ -43,11 +42,11 @@ func (s *PubSubSubscriptionDataSource[C]) Start(ctx *resolve.Context, input []by
 		return errors.New("invalid subscription configuration")
 	}
 
-	return s.pubSub.Subscribe(ctx.Context(), conf, NewSubscriptionEventUpdater(ctx.Context(), conf, s.onStreamEventsFns, updater))
+	return s.pubSub.Subscribe(ctx.Context(), conf, NewSubscriptionEventUpdater(ctx.Context(), conf, s.hooks, updater))
 }
 
 func (s *PubSubSubscriptionDataSource[C]) SubscriptionOnStart(ctx *resolve.Context, input []byte) (close bool, err error) {
-	for _, fn := range s.subscriptionOnStartFns {
+	for _, fn := range s.hooks.SubscriptionOnStart {
 		conf, errConf := s.SubscriptionEventConfiguration(input)
 		if errConf != nil {
 			return true, err
@@ -61,12 +60,8 @@ func (s *PubSubSubscriptionDataSource[C]) SubscriptionOnStart(ctx *resolve.Conte
 	return
 }
 
-func (s *PubSubSubscriptionDataSource[C]) SetSubscriptionOnStartFns(fns ...SubscriptionOnStartFn) {
-	s.subscriptionOnStartFns = append(s.subscriptionOnStartFns, fns...)
-}
-
-func (s *PubSubSubscriptionDataSource[C]) SetOnStreamEventsFns(fns ...OnStreamEventsFn) {
-	s.onStreamEventsFns = append(s.onStreamEventsFns, fns...)
+func (s *PubSubSubscriptionDataSource[C]) SetHooks(hooks Hooks) {
+	s.hooks = hooks
 }
 
 var _ SubscriptionDataSource = (*PubSubSubscriptionDataSource[SubscriptionEventConfiguration])(nil)

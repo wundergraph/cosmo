@@ -13,14 +13,14 @@ type SubscriptionEventUpdater interface {
 	Update(events []StreamEvent)
 	Complete()
 	Close(kind resolve.SubscriptionCloseKind)
-	SetOnStreamEventsFns([]OnStreamEventsFn)
+	SetHooks(hooks Hooks)
 }
 
 type subscriptionEventUpdater struct {
 	eventUpdater                   resolve.SubscriptionUpdater
 	ctx                            context.Context
 	subscriptionEventConfiguration SubscriptionEventConfiguration
-	onStreamEventsFns              []OnStreamEventsFn
+	hooks                          Hooks
 }
 
 func (s *subscriptionEventUpdater) updateEvents(events []StreamEvent) {
@@ -30,12 +30,12 @@ func (s *subscriptionEventUpdater) updateEvents(events []StreamEvent) {
 }
 
 func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
-	if len(s.onStreamEventsFns) == 0 {
+	if len(s.hooks.OnStreamEvents) == 0 {
 		s.updateEvents(events)
 		return
 	}
 
-	processedEvents, err := applyStreamEventHooks(s.ctx, s.subscriptionEventConfiguration, events, s.onStreamEventsFns)
+	processedEvents, err := applyStreamEventHooks(s.ctx, s.subscriptionEventConfiguration, events, s.hooks.OnStreamEvents)
 	if err != nil {
 		// TODO: do something with the error - for now, continue with original events
 		s.updateEvents(events)
@@ -53,8 +53,8 @@ func (s *subscriptionEventUpdater) Close(kind resolve.SubscriptionCloseKind) {
 	s.eventUpdater.Close(kind)
 }
 
-func (s *subscriptionEventUpdater) SetOnStreamEventsFns(fns []OnStreamEventsFn) {
-	s.onStreamEventsFns = fns
+func (s *subscriptionEventUpdater) SetHooks(hooks Hooks) {
+	s.hooks = hooks
 }
 
 // applyStreamEventHooks processes events through a chain of hook functions
@@ -78,12 +78,12 @@ func applyStreamEventHooks(
 func NewSubscriptionEventUpdater(
 	ctx context.Context,
 	cfg SubscriptionEventConfiguration,
-	onStreamEventsFns []OnStreamEventsFn,
+	hooks Hooks,
 	eventUpdater resolve.SubscriptionUpdater) SubscriptionEventUpdater {
 	return &subscriptionEventUpdater{
 		ctx:                            ctx,
 		subscriptionEventConfiguration: cfg,
-		onStreamEventsFns:              onStreamEventsFns,
+		hooks:                          hooks,
 		eventUpdater:                   eventUpdater,
 	}
 }
