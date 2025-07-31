@@ -300,7 +300,7 @@ func TestQueryNamingLimits(t *testing.T) {
 			})
 		})
 
-		t.Run("with large queries with max length of 0 where the validation is not ebaled", func(t *testing.T) {
+		t.Run("with large queries with max length of 0 where the validation is not enabled", func(t *testing.T) {
 			t.Parallel()
 
 			maxLength := 0
