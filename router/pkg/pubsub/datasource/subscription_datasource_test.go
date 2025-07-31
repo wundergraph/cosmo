@@ -66,7 +66,7 @@ func TestPubSubSubscriptionDataSource_SubscriptionEventConfiguration_InvalidJSON
 	invalidInput := []byte(`{"invalid": json}`)
 	result, err := dataSource.SubscriptionEventConfiguration(invalidInput)
 	assert.Error(t, err)
-	assert.Nil(t, result)
+	assert.Equal(t, testSubscriptionEventConfiguration{}, result)
 }
 
 func TestPubSubSubscriptionDataSource_UniqueRequestID_Success(t *testing.T) {
