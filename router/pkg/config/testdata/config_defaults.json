@@ -315,7 +315,8 @@
     "ParserLimits": {
       "ApproximateDepthLimit": 100,
       "TotalFieldsLimit": 500
-    }
+    },
+    "OperationNameLengthLimit": 512
   },
   "EngineExecutionConfiguration": {
     "Debug": {

@@ -529,6 +529,15 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		}
 	}
 
+	if operationKit.isOperationNameLengthLimitExceeded(operationKit.parsedOperation.Request.OperationName) {
+		return &httpGraphqlError{
+			message: fmt.Sprintf("operation name of length %d exceeds max length of %d",
+				len(operationKit.parsedOperation.Request.OperationName),
+				operationKit.operationProcessor.operationNameLengthLimit),
+			statusCode: http.StatusBadRequest,
+		}
+	}
+
 	// Compute the operation sha256 hash as soon as possible for observability reasons
 	if h.shouldComputeOperationSha256(operationKit) {
 		if err := operationKit.ComputeOperationSha256(); err != nil {
