@@ -6,22 +6,25 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
+	"go.uber.org/zap"
 )
 
 func TestPublishAndRequestEventConfiguration_MarshalJSONTemplate(t *testing.T) {
 	tests := []struct {
 		name        string
-		config      PublishAndRequestEventConfiguration
+		config      publishData
 		wantPattern string
 	}{
 		{
 			name: "simple configuration",
-			config: PublishAndRequestEventConfiguration{
+			config: publishData{
 				Provider: "test-provider",
 				Subject:  "test-subject",
 				Event:    Event{Data: json.RawMessage(`{"message":"hello"}`)},
@@ -30,7 +33,7 @@ func TestPublishAndRequestEventConfiguration_MarshalJSONTemplate(t *testing.T) {
 		},
 		{
 			name: "with special characters",
-			config: PublishAndRequestEventConfiguration{
+			config: publishData{
 				Provider: "test-provider-id",
 				Subject:  "subject-with-hyphens",
 				Event:    Event{Data: json.RawMessage(`{"message":"special \"quotes\" here"}`)},
@@ -43,7 +46,7 @@ func TestPublishAndRequestEventConfiguration_MarshalJSONTemplate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := tt.config.MarshalJSONTemplate()
 			assert.NoError(t, err)
-			assert.Equal(t, tt.wantPattern, result)
+			assert.Equal(t, tt.wantPattern, string(result))
 		})
 	}
 }
@@ -61,10 +64,11 @@ func TestNatsPublishDataSource_Load(t *testing.T) {
 			name:  "successful publish",
 			input: `{"subject":"test-subject", "event": {"data":{"message":"hello"}}, "providerId":"test-provider"}`,
 			mockSetup: func(m *MockAdapter) {
-				m.On("Publish", mock.Anything, mock.MatchedBy(func(event PublishAndRequestEventConfiguration) bool {
+				m.On("Publish", mock.Anything, mock.MatchedBy(func(event *PublishAndRequestEventConfiguration) bool {
 					return event.ProviderID() == "test-provider" &&
-						event.Subject == "test-subject" &&
-						string(event.Event.Data) == `{"message":"hello"}`
+						event.Subject == "test-subject"
+				}), mock.MatchedBy(func(events []datasource.StreamEvent) bool {
+					return len(events) == 1 && strings.EqualFold(string(events[0].GetData()), `{"message":"hello"}`)
 				})).Return(nil)
 			},
 			expectError:     false,
@@ -75,7 +79,7 @@ func TestNatsPublishDataSource_Load(t *testing.T) {
 			name:  "publish error",
 			input: `{"subject":"test-subject", "event": {"data":{"message":"hello"}}, "providerId":"test-provider"}`,
 			mockSetup: func(m *MockAdapter) {
-				m.On("Publish", mock.Anything, mock.Anything).Return(errors.New("publish error"))
+				m.On("Publish", mock.Anything, mock.Anything, mock.Anything).Return(errors.New("publish error"))
 			},
 			expectError:     false, // The Load method doesn't return the publish error directly
 			expectedOutput:  `{"success": false}`,
@@ -136,13 +140,14 @@ func TestNatsRequestDataSource_Load(t *testing.T) {
 			name:  "successful request",
 			input: `{"subject":"test-subject", "event": {"data":{"message":"hello"}}, "providerId":"test-provider"}`,
 			mockSetup: func(m *MockAdapter) {
-				m.On("Request", mock.Anything, mock.MatchedBy(func(event PublishAndRequestEventConfiguration) bool {
+				m.On("Request", mock.Anything, mock.MatchedBy(func(event *PublishAndRequestEventConfiguration) bool {
 					return event.ProviderID() == "test-provider" &&
-						event.Subject == "test-subject" &&
-						string(event.Event.Data) == `{"message":"hello"}`
+						event.Subject == "test-subject"
+				}), mock.MatchedBy(func(event datasource.StreamEvent) bool {
+					return event != nil && strings.EqualFold(string(event.GetData()), `{"message":"hello"}`)
 				}), mock.Anything).Run(func(args mock.Arguments) {
 					// Write response to the output buffer
-					w := args.Get(2).(io.Writer)
+					w := args.Get(3).(io.Writer)
 					_, _ = w.Write([]byte(`{"response":"success"}`))
 				}).Return(nil)
 			},
@@ -153,7 +158,7 @@ func TestNatsRequestDataSource_Load(t *testing.T) {
 			name:  "request error",
 			input: `{"subject":"test-subject", "event": {"data":{"message":"hello"}}, "providerId":"test-provider"}`,
 			mockSetup: func(m *MockAdapter) {
-				m.On("Request", mock.Anything, mock.Anything, mock.Anything).Return(errors.New("request error"))
+				m.On("Request", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(errors.New("request error"))
 			},
 			expectError:    true,
 			expectedOutput: "",
@@ -170,10 +175,11 @@ func TestNatsRequestDataSource_Load(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockAdapter := NewMockAdapter(t)
+			provider := datasource.NewPubSubProvider("test-provider", "nats", mockAdapter, zap.NewNop())
 			tt.mockSetup(mockAdapter)
 
 			dataSource := &NatsRequestDataSource{
-				pubSub: mockAdapter,
+				pubSub: provider,
 			}
 
 			ctx := context.Background()

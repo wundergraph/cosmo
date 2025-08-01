@@ -216,7 +216,9 @@ func TestPubSubSubscriptionDataSource_SubscriptionOnStart_WithHooks(t *testing.T
 		return false, nil
 	}
 
-	dataSource.SetSubscriptionOnStartFns(hook1, hook2)
+	dataSource.SetHooks(Hooks{
+		SubscriptionOnStart: []SubscriptionOnStartFn{hook1, hook2},
+	})
 
 	testConfig := testSubscriptionEventConfiguration{
 		Topic:   "test-topic",
@@ -247,7 +249,9 @@ func TestPubSubSubscriptionDataSource_SubscriptionOnStart_HookReturnsClose(t *te
 		return true, nil
 	}
 
-	dataSource.SetSubscriptionOnStartFns(hook)
+	dataSource.SetHooks(Hooks{
+		SubscriptionOnStart: []SubscriptionOnStartFn{hook},
+	})
 
 	testConfig := testSubscriptionEventConfiguration{
 		Topic:   "test-topic",
@@ -277,7 +281,9 @@ func TestPubSubSubscriptionDataSource_SubscriptionOnStart_HookReturnsError(t *te
 		return false, expectedError
 	}
 
-	dataSource.SetSubscriptionOnStartFns(hook)
+	dataSource.SetHooks(Hooks{
+		SubscriptionOnStart: []SubscriptionOnStartFn{hook},
+	})
 
 	testConfig := testSubscriptionEventConfiguration{
 		Topic:   "test-topic",
@@ -303,7 +309,7 @@ func TestPubSubSubscriptionDataSource_SetSubscriptionOnStartFns(t *testing.T) {
 	dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn)
 
 	// Initially should have no hooks
-	assert.Len(t, dataSource.subscriptionOnStartFns, 0)
+	assert.Len(t, dataSource.hooks.SubscriptionOnStart, 0)
 
 	// Add hooks
 	hook1 := func(ctx *resolve.Context, config SubscriptionEventConfiguration) (bool, error) {
@@ -313,11 +319,15 @@ func TestPubSubSubscriptionDataSource_SetSubscriptionOnStartFns(t *testing.T) {
 		return false, nil
 	}
 
-	dataSource.SetSubscriptionOnStartFns(hook1)
-	assert.Len(t, dataSource.subscriptionOnStartFns, 1)
+	dataSource.SetHooks(Hooks{
+		SubscriptionOnStart: []SubscriptionOnStartFn{hook1},
+	})
+	assert.Len(t, dataSource.hooks.SubscriptionOnStart, 1)
 
-	dataSource.SetSubscriptionOnStartFns(hook2)
-	assert.Len(t, dataSource.subscriptionOnStartFns, 2)
+	dataSource.SetHooks(Hooks{
+		SubscriptionOnStart: []SubscriptionOnStartFn{hook2},
+	})
+	assert.Len(t, dataSource.hooks.SubscriptionOnStart, 1)
 }
 
 func TestNewPubSubSubscriptionDataSource(t *testing.T) {
@@ -331,7 +341,7 @@ func TestNewPubSubSubscriptionDataSource(t *testing.T) {
 	assert.NotNil(t, dataSource)
 	assert.Equal(t, mockAdapter, dataSource.pubSub)
 	assert.NotNil(t, dataSource.uniqueRequestID)
-	assert.Empty(t, dataSource.subscriptionOnStartFns)
+	assert.Empty(t, dataSource.hooks.SubscriptionOnStart)
 }
 
 func TestPubSubSubscriptionDataSource_InterfaceCompliance(t *testing.T) {

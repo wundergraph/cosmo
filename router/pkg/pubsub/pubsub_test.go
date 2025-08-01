@@ -59,13 +59,15 @@ func TestBuild_OK(t *testing.T) {
 	}
 
 	mockPubSubProvider.On("ID").Return("provider-1")
+	mockPubSubProvider.On("SetOnStreamEventsFns", []datasource.OnStreamEventsFn(nil)).Return(nil)
+	mockPubSubProvider.On("SetOnPublishEventsFns", []datasource.OnPublishEventsFn(nil)).Return(nil)
 
 	mockBuilder.On("TypeID").Return("nats")
 	mockBuilder.On("BuildProvider", natsEventSources[0]).Return(mockPubSubProvider, nil)
 
 	// ctx, kafkaBuilder, config.Providers.Kafka, kafkaDsConfsWithEvents
 	// Execute the function
-	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs, Hooks{})
+	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs, datasource.Hooks{})
 
 	// Assertions
 	assert.NoError(t, err)
@@ -121,7 +123,7 @@ func TestBuild_ProviderError(t *testing.T) {
 	mockBuilder.On("BuildProvider", natsEventSources[0]).Return(nil, errors.New("provider error"))
 
 	// Execute the function
-	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs, Hooks{})
+	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs, datasource.Hooks{})
 
 	// Assertions
 	assert.Error(t, err)
@@ -176,7 +178,7 @@ func TestBuild_ShouldGetAnErrorIfProviderIsNotDefined(t *testing.T) {
 	mockBuilder.On("TypeID").Return("nats")
 
 	// Execute the function
-	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs, Hooks{})
+	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs, datasource.Hooks{})
 
 	// Assertions
 	assert.Error(t, err)
@@ -234,12 +236,14 @@ func TestBuild_ShouldNotInitializeProviderIfNotUsed(t *testing.T) {
 	}
 
 	mockPubSubUsedProvider.On("ID").Return("provider-2")
+	mockPubSubUsedProvider.On("SetOnStreamEventsFns", []datasource.OnStreamEventsFn(nil)).Return(nil)
+	mockPubSubUsedProvider.On("SetOnPublishEventsFns", []datasource.OnPublishEventsFn(nil)).Return(nil)
 
 	mockBuilder.On("TypeID").Return("nats")
 	mockBuilder.On("BuildProvider", natsEventSources[1]).Return(mockPubSubUsedProvider, nil)
 
 	// Execute the function
-	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs, Hooks{})
+	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs, datasource.Hooks{})
 
 	// Assertions
 	assert.NoError(t, err)
@@ -290,7 +294,7 @@ func TestBuildProvidersAndDataSources_Nats_OK(t *testing.T) {
 				{ID: "provider-1"},
 			},
 		},
-	}, zap.NewNop(), dsConfs, "host", "addr", Hooks{})
+	}, zap.NewNop(), dsConfs, "host", "addr", datasource.Hooks{})
 
 	// Assertions
 	assert.NoError(t, err)
@@ -343,7 +347,7 @@ func TestBuildProvidersAndDataSources_Kafka_OK(t *testing.T) {
 				{ID: "provider-1"},
 			},
 		},
-	}, zap.NewNop(), dsConfs, "host", "addr", Hooks{})
+	}, zap.NewNop(), dsConfs, "host", "addr", datasource.Hooks{})
 
 	// Assertions
 	assert.NoError(t, err)
@@ -396,7 +400,7 @@ func TestBuildProvidersAndDataSources_Redis_OK(t *testing.T) {
 				{ID: "provider-1"},
 			},
 		},
-	}, zap.NewNop(), dsConfs, "host", "addr", Hooks{})
+	}, zap.NewNop(), dsConfs, "host", "addr", datasource.Hooks{})
 
 	// Assertions
 	assert.NoError(t, err)

@@ -23,7 +23,7 @@ type EngineDataSourceFactory struct {
 	topics     []string
 	providerId string
 
-	KafkaAdapter Adapter
+	KafkaAdapter datasource.Adapter
 }
 
 func (c *EngineDataSourceFactory) GetFieldName() string {
@@ -50,7 +50,7 @@ func (c *EngineDataSourceFactory) ResolveDataSourceInput(eventData []byte) (stri
 		return "", fmt.Errorf("publish events should define one topic but received %d", len(c.topics))
 	}
 
-	evtCfg := PublishEventConfiguration{
+	evtCfg := publishData{
 		Provider:  c.providerId,
 		Topic:     c.topics[0],
 		Event:     Event{Data: eventData},

@@ -13,14 +13,17 @@ import (
 // Adapter defines the methods that a Redis adapter should implement
 type Adapter interface {
 	// Subscribe subscribes to the given events and sends updates to the updater
-	Subscribe(ctx context.Context, event datasource.SubscriptionEventConfiguration, updater datasource.SubscriptionEventUpdater) error
-	// Publish publishes the given event to the specified channel
-	Publish(ctx context.Context, event PublishEventConfiguration) error
+	Subscribe(ctx context.Context, conf datasource.SubscriptionEventConfiguration, updater datasource.SubscriptionEventUpdater) error
+	// Publish publishes the given events to the specified channel
+	Publish(ctx context.Context, conf datasource.PublishEventConfiguration, events []datasource.StreamEvent) error
 	// Startup initializes the adapter
 	Startup(ctx context.Context) error
 	// Shutdown gracefully shuts down the adapter
 	Shutdown(ctx context.Context) error
 }
+
+// Ensure ProviderAdapter implements ProviderSubscriptionHooks
+var _ datasource.Adapter = (*ProviderAdapter)(nil)
 
 func NewProviderAdapter(ctx context.Context, logger *zap.Logger, urls []string, clusterEnabled bool) Adapter {
 	ctx, cancel := context.WithCancel(ctx)
@@ -76,10 +79,11 @@ func (p *ProviderAdapter) Shutdown(ctx context.Context) error {
 func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.SubscriptionEventConfiguration, updater datasource.SubscriptionEventUpdater) error {
 	subConf, ok := conf.(*SubscriptionEventConfiguration)
 	if !ok {
-		return datasource.NewError("invalid event type for Kafka adapter", nil)
+		return datasource.NewError("subscription event not support by redis provider", nil)
 	}
+
 	log := p.logger.With(
-		zap.String("provider_id", subConf.ProviderID()),
+		zap.String("provider_id", conf.ProviderID()),
 		zap.String("method", "subscribe"),
 		zap.Strings("channels", subConf.Channels),
 	)
@@ -110,9 +114,15 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 					return
 				}
 				log.Debug("subscription update", zap.String("message_channel", msg.Channel), zap.String("data", msg.Payload))
-				updater.Update(&Event{
+				updateErr := updater.Update([]datasource.StreamEvent{&Event{
 					Data: []byte(msg.Payload),
-				})
+				}})
+				if updateErr != nil {
+					log.Error("error updating subscription, stopping subscription", zap.Error(updateErr), zap.String("message_channel", msg.Channel))
+					// If the error is not recoverable, we stop the subscription
+					cleanup()
+					return
+				}
 			case <-p.ctx.Done():
 				// When the application context is done, we stop the subscription if it is not already done
 				log.Debug("application context done, stopping subscription")
@@ -130,27 +140,45 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 	return nil
 }
 
-func (p *ProviderAdapter) Publish(ctx context.Context, event PublishEventConfiguration) error {
+func (p *ProviderAdapter) Publish(ctx context.Context, conf datasource.PublishEventConfiguration, events []datasource.StreamEvent) error {
+	pubConf, ok := conf.(*PublishEventConfiguration)
+	if !ok {
+		return datasource.NewError("publish event not support by redis provider", nil)
+	}
+
 	log := p.logger.With(
-		zap.String("provider_id", event.ProviderID()),
+		zap.String("provider_id", conf.ProviderID()),
 		zap.String("method", "publish"),
-		zap.String("channel", event.Channel),
+		zap.String("channel", pubConf.Channel),
 	)
 
-	log.Debug("publish", zap.ByteString("data", event.Event.Data))
-
-	data, dataErr := event.Event.Data.MarshalJSON()
-	if dataErr != nil {
-		log.Error("error marshalling data", zap.Error(dataErr))
-		return datasource.NewError("error marshalling data", dataErr)
-	}
 	if p.conn == nil {
 		return datasource.NewError("redis connection not initialized", nil)
 	}
-	intCmd := p.conn.Publish(ctx, event.Channel, data)
-	if intCmd.Err() != nil {
-		log.Error("publish error", zap.Error(intCmd.Err()))
-		return datasource.NewError(fmt.Sprintf("error publishing to Redis PubSub channel %s", event.Channel), intCmd.Err())
+
+	if len(events) == 0 {
+		return nil
+	}
+
+	log.Debug("publish", zap.Int("event_count", len(events)))
+
+	for _, streamEvent := range events {
+		redisEvent, ok := streamEvent.(*Event)
+		if !ok {
+			return datasource.NewError("invalid event type for Redis adapter", nil)
+		}
+
+		data, dataErr := redisEvent.Data.MarshalJSON()
+		if dataErr != nil {
+			log.Error("error marshalling data", zap.Error(dataErr))
+			return datasource.NewError("error marshalling data", dataErr)
+		}
+
+		intCmd := p.conn.Publish(ctx, pubConf.Channel, data)
+		if intCmd.Err() != nil {
+			log.Error("publish error", zap.Error(intCmd.Err()))
+			return datasource.NewError(fmt.Sprintf("error publishing to Redis PubSub channel %s", pubConf.Channel), intCmd.Err())
+		}
 	}
 
 	return nil

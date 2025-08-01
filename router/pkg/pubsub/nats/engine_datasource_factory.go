@@ -8,7 +8,6 @@ import (
 	"github.com/buger/jsonparser"
 	"github.com/cespare/xxhash/v2"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
-
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
@@ -21,7 +20,7 @@ const (
 )
 
 type EngineDataSourceFactory struct {
-	NatsAdapter Adapter
+	NatsAdapter datasource.Adapter
 
 	fieldName  string
 	eventType  EventType
@@ -64,11 +63,11 @@ func (c *EngineDataSourceFactory) ResolveDataSourceInput(eventData []byte) (stri
 
 	subject := c.subjects[0]
 
-	evtCfg := PublishAndRequestEventConfiguration{
+	evtCfg := publishData{
 		Provider:  c.providerId,
 		Subject:   subject,
-		Event:     Event{Data: eventData},
 		FieldName: c.fieldName,
+		Event:     Event{Data: eventData},
 	}
 
 	return evtCfg.MarshalJSONTemplate()
