@@ -619,28 +619,28 @@ func (_c *MockProvider_Publish_Call) RunAndReturn(run func(ctx context.Context, 
 	return _c
 }
 
-// SetOnPublishEventsFns provides a mock function for the type MockProvider
-func (_mock *MockProvider) SetOnPublishEventsFns(onPublishEventsFns []OnPublishEventsFn) {
-	_mock.Called(onPublishEventsFns)
+// SetHooks provides a mock function for the type MockProvider
+func (_mock *MockProvider) SetHooks(hooks Hooks) {
+	_mock.Called(hooks)
 	return
 }
 
-// MockProvider_SetOnPublishEventsFns_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetOnPublishEventsFns'
-type MockProvider_SetOnPublishEventsFns_Call struct {
+// MockProvider_SetHooks_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetHooks'
+type MockProvider_SetHooks_Call struct {
 	*mock.Call
 }
 
-// SetOnPublishEventsFns is a helper method to define mock.On call
-//   - onPublishEventsFns []OnPublishEventsFn
-func (_e *MockProvider_Expecter) SetOnPublishEventsFns(onPublishEventsFns interface{}) *MockProvider_SetOnPublishEventsFns_Call {
-	return &MockProvider_SetOnPublishEventsFns_Call{Call: _e.mock.On("SetOnPublishEventsFns", onPublishEventsFns)}
+// SetHooks is a helper method to define mock.On call
+//   - hooks Hooks
+func (_e *MockProvider_Expecter) SetHooks(hooks interface{}) *MockProvider_SetHooks_Call {
+	return &MockProvider_SetHooks_Call{Call: _e.mock.On("SetHooks", hooks)}
 }
 
-func (_c *MockProvider_SetOnPublishEventsFns_Call) Run(run func(onPublishEventsFns []OnPublishEventsFn)) *MockProvider_SetOnPublishEventsFns_Call {
+func (_c *MockProvider_SetHooks_Call) Run(run func(hooks Hooks)) *MockProvider_SetHooks_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 []OnPublishEventsFn
+		var arg0 Hooks
 		if args[0] != nil {
-			arg0 = args[0].([]OnPublishEventsFn)
+			arg0 = args[0].(Hooks)
 		}
 		run(
 			arg0,
@@ -649,52 +649,12 @@ func (_c *MockProvider_SetOnPublishEventsFns_Call) Run(run func(onPublishEventsF
 	return _c
 }
 
-func (_c *MockProvider_SetOnPublishEventsFns_Call) Return() *MockProvider_SetOnPublishEventsFns_Call {
+func (_c *MockProvider_SetHooks_Call) Return() *MockProvider_SetHooks_Call {
 	_c.Call.Return()
 	return _c
 }
 
-func (_c *MockProvider_SetOnPublishEventsFns_Call) RunAndReturn(run func(onPublishEventsFns []OnPublishEventsFn)) *MockProvider_SetOnPublishEventsFns_Call {
-	_c.Run(run)
-	return _c
-}
-
-// SetOnStreamEventsFns provides a mock function for the type MockProvider
-func (_mock *MockProvider) SetOnStreamEventsFns(onStreamEventsFns []OnStreamEventsFn) {
-	_mock.Called(onStreamEventsFns)
-	return
-}
-
-// MockProvider_SetOnStreamEventsFns_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetOnStreamEventsFns'
-type MockProvider_SetOnStreamEventsFns_Call struct {
-	*mock.Call
-}
-
-// SetOnStreamEventsFns is a helper method to define mock.On call
-//   - onStreamEventsFns []OnStreamEventsFn
-func (_e *MockProvider_Expecter) SetOnStreamEventsFns(onStreamEventsFns interface{}) *MockProvider_SetOnStreamEventsFns_Call {
-	return &MockProvider_SetOnStreamEventsFns_Call{Call: _e.mock.On("SetOnStreamEventsFns", onStreamEventsFns)}
-}
-
-func (_c *MockProvider_SetOnStreamEventsFns_Call) Run(run func(onStreamEventsFns []OnStreamEventsFn)) *MockProvider_SetOnStreamEventsFns_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 []OnStreamEventsFn
-		if args[0] != nil {
-			arg0 = args[0].([]OnStreamEventsFn)
-		}
-		run(
-			arg0,
-		)
-	})
-	return _c
-}
-
-func (_c *MockProvider_SetOnStreamEventsFns_Call) Return() *MockProvider_SetOnStreamEventsFns_Call {
-	_c.Call.Return()
-	return _c
-}
-
-func (_c *MockProvider_SetOnStreamEventsFns_Call) RunAndReturn(run func(onStreamEventsFns []OnStreamEventsFn)) *MockProvider_SetOnStreamEventsFns_Call {
+func (_c *MockProvider_SetHooks_Call) RunAndReturn(run func(hooks Hooks)) *MockProvider_SetHooks_Call {
 	_c.Run(run)
 	return _c
 }
@@ -1209,10 +1169,61 @@ func (_c *MockSubscriptionEventUpdater_Complete_Call) RunAndReturn(run func()) *
 	return _c
 }
 
-// Update provides a mock function for the type MockSubscriptionEventUpdater
-func (_mock *MockSubscriptionEventUpdater) Update(events []StreamEvent) {
-	_mock.Called(events)
+// SetHooks provides a mock function for the type MockSubscriptionEventUpdater
+func (_mock *MockSubscriptionEventUpdater) SetHooks(hooks Hooks) {
+	_mock.Called(hooks)
 	return
+}
+
+// MockSubscriptionEventUpdater_SetHooks_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetHooks'
+type MockSubscriptionEventUpdater_SetHooks_Call struct {
+	*mock.Call
+}
+
+// SetHooks is a helper method to define mock.On call
+//   - hooks Hooks
+func (_e *MockSubscriptionEventUpdater_Expecter) SetHooks(hooks interface{}) *MockSubscriptionEventUpdater_SetHooks_Call {
+	return &MockSubscriptionEventUpdater_SetHooks_Call{Call: _e.mock.On("SetHooks", hooks)}
+}
+
+func (_c *MockSubscriptionEventUpdater_SetHooks_Call) Run(run func(hooks Hooks)) *MockSubscriptionEventUpdater_SetHooks_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 Hooks
+		if args[0] != nil {
+			arg0 = args[0].(Hooks)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockSubscriptionEventUpdater_SetHooks_Call) Return() *MockSubscriptionEventUpdater_SetHooks_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *MockSubscriptionEventUpdater_SetHooks_Call) RunAndReturn(run func(hooks Hooks)) *MockSubscriptionEventUpdater_SetHooks_Call {
+	_c.Run(run)
+	return _c
+}
+
+// Update provides a mock function for the type MockSubscriptionEventUpdater
+func (_mock *MockSubscriptionEventUpdater) Update(events []StreamEvent) error {
+	ret := _mock.Called(events)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Update")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func([]StreamEvent) error); ok {
+		r0 = returnFunc(events)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
 }
 
 // MockSubscriptionEventUpdater_Update_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Update'
@@ -1239,12 +1250,12 @@ func (_c *MockSubscriptionEventUpdater_Update_Call) Run(run func(events []Stream
 	return _c
 }
 
-func (_c *MockSubscriptionEventUpdater_Update_Call) Return() *MockSubscriptionEventUpdater_Update_Call {
-	_c.Call.Return()
+func (_c *MockSubscriptionEventUpdater_Update_Call) Return(err error) *MockSubscriptionEventUpdater_Update_Call {
+	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *MockSubscriptionEventUpdater_Update_Call) RunAndReturn(run func(events []StreamEvent)) *MockSubscriptionEventUpdater_Update_Call {
-	_c.Run(run)
+func (_c *MockSubscriptionEventUpdater_Update_Call) RunAndReturn(run func(events []StreamEvent) error) *MockSubscriptionEventUpdater_Update_Call {
+	_c.Call.Return(run)
 	return _c
 }
