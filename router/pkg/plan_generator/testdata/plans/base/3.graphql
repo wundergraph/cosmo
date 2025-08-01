@@ -1,0 +1,12 @@
+QueryPlan {
+  Trigger {
+    Fetch(service: "employees") {
+      {
+          currentTime {
+              __typename
+              timeStamp
+          }
+      }
+    }
+  }
+}
