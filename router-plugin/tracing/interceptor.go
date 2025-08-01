@@ -32,28 +32,26 @@ func CreateTracingInterceptor(tracingOpts TracingOptions) (func(ctx context.Cont
 
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 		if md, ok := metadata.FromIncomingContext(ctx); ok {
-			// We should only get one traceparent value
-			// in case we get more drop the extras
-			traceparent := md.Get(traceparentHeader)
-			if len(traceparent) > 0 {
-				carrier := propagation.MapCarrier{traceparentHeader: traceparent[0]}
-				if values := md.Get(tracestateHeader); len(values) > 0 {
-					carrier[tracestateHeader] = values[0]
-				}
-				propagator := otel.GetTextMapPropagator()
-				ctx = propagator.Extract(ctx, carrier)
-
-				var span trace.Span
-				ctx, span = tracer.Start(ctx, "Router Plugin - "+info.FullMethod)
-				defer span.End()
-
-				result, err := handler(ctx, req)
-				if err != nil {
-					span.SetStatus(codes.Error, err.Error())
-					span.RecordError(err)
-				}
-				return result, err
+			carrier := propagation.MapCarrier{}
+			if values := md.Get(traceparentHeader); len(values) > 0 {
+				carrier[traceparentHeader] = values[0]
 			}
+			if values := md.Get(tracestateHeader); len(values) > 0 {
+				carrier[tracestateHeader] = values[0]
+			}
+			propagator := otel.GetTextMapPropagator()
+			ctx = propagator.Extract(ctx, carrier)
+
+			var span trace.Span
+			ctx, span = tracer.Start(ctx, "Router Plugin - "+info.FullMethod)
+			defer span.End()
+
+			result, err := handler(ctx, req)
+			if err != nil {
+				span.SetStatus(codes.Error, err.Error())
+				span.RecordError(err)
+			}
+			return result, err
 		}
 
 		return handler(ctx, req)

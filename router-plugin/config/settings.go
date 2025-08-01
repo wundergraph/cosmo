@@ -21,6 +21,7 @@ const (
 	PropagatorDatadog      Propagator = "datadog"
 )
 
+// StartupConfig contains the configuration passed from the router.
 type StartupConfig struct {
 	Telemetry       *Telemetry       `json:"telemetry,omitempty"`
 	IPAnonymization *IPAnonymization `json:"ip_anonymization,omitempty"`

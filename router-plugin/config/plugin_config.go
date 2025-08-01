@@ -1,4 +1,4 @@
-package routerplugin
+package config
 
 import sdktrace "go.opentelemetry.io/otel/sdk/trace"
 

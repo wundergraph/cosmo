@@ -2,7 +2,10 @@ package routerplugin
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"github.com/wundergraph/cosmo/router-plugin/config"
+	"github.com/wundergraph/cosmo/router-plugin/setup"
 	"os"
 
 	"github.com/hashicorp/go-plugin"
@@ -26,7 +29,7 @@ type RouterPlugin struct {
 	registrationFunc func(*grpc.Server)
 
 	serveConfig *plugin.ServeConfig
-	config      RouterPluginConfig
+	config      config.RouterPluginConfig
 }
 
 // GRPCPlugin is the interface that is implemented to serve/connect to
@@ -97,9 +100,17 @@ func NewRouterPlugin(registrationfunc func(*grpc.Server), opts ...PluginOption) 
 		opt(routerPlugin)
 	}
 
-	grpcServerFunc, err := GrpcServer(GrpcServerInitOpts{
-		ExporterConfig: os.Getenv(startupConfigKey),
-		PluginConfig:   routerPlugin.config,
+	var startupConfig config.StartupConfig
+	if exporterString := os.Getenv(startupConfigKey); exporterString != "" {
+		err := json.Unmarshal([]byte(exporterString), &startupConfig)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	grpcServerFunc, err := setup.GrpcServer(setup.GrpcServerInitOpts{
+		StartupConfig: startupConfig,
+		PluginConfig:  routerPlugin.config,
 	})
 	if err != nil {
 		return nil, err

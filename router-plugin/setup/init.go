@@ -1,7 +1,6 @@
-package routerplugin
+package setup
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/wundergraph/cosmo/router-plugin/config"
 	"github.com/wundergraph/cosmo/router-plugin/tracing"
@@ -16,22 +15,18 @@ const (
 )
 
 type GrpcServerInitOpts struct {
-	ExporterConfig string
-	PluginConfig   RouterPluginConfig
+	StartupConfig config.StartupConfig
+	PluginConfig  config.RouterPluginConfig
 }
 
 func GrpcServer(opts GrpcServerInitOpts) (GrpcServerInitFunc, error) {
-	var startupConfig config.StartupConfig
-	if opts.ExporterConfig != "" {
-		err := json.Unmarshal([]byte(opts.ExporterConfig), &startupConfig)
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	grpcOpts := make([]grpc.ServerOption, 0)
 
-	if opts.PluginConfig.TracingEnabled && startupConfig.Telemetry != nil {
+	isTracingEnabled := opts.PluginConfig.TracingEnabled &&
+		opts.StartupConfig.Telemetry != nil &&
+		opts.StartupConfig.Telemetry.Tracing != nil
+
+	if isTracingEnabled {
 		serviceName := baseServiceName
 		if opts.PluginConfig.ServiceName != "" {
 			serviceName = opts.PluginConfig.ServiceName
@@ -45,8 +40,8 @@ func GrpcServer(opts GrpcServerInitOpts) (GrpcServerInitFunc, error) {
 			ServiceName:      serviceName,
 			ServiceVersion:   serviceVersion,
 			ErrorHandlerFunc: opts.PluginConfig.TracingErrorHandler,
-			TracingConfig:    startupConfig.Telemetry.Tracing,
-			IPAnonymization:  startupConfig.IPAnonymization,
+			TracingConfig:    opts.StartupConfig.Telemetry.Tracing,
+			IPAnonymization:  opts.StartupConfig.IPAnonymization,
 			MemoryExporter:   opts.PluginConfig.MemoryExporter,
 		})
 		if err != nil {

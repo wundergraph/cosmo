@@ -41,7 +41,7 @@ func initTracer(
 	memoryExporter sdktrace.SpanExporter,
 ) (*sdktrace.TracerProvider, error) {
 	// Return no-op provider
-	if len(tracingConfig.Exporters) == 0 {
+	if memoryExporter == nil && len(tracingConfig.Exporters) == 0 {
 		provider := sdktrace.NewTracerProvider(sdktrace.WithSampler(sdktrace.NeverSample()))
 		otel.SetTracerProvider(provider)
 		return provider, nil
