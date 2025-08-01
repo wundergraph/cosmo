@@ -305,7 +305,7 @@ export default class AuthUtils {
 
     // Check if the access token is expired
     const parsedAccessToken = decodeJWT(userSession.accessToken);
-    if (parsedAccessToken.exp && parsedAccessToken.exp < (Date.now() / 1000) + 15) {
+    if (parsedAccessToken.exp && parsedAccessToken.exp < Date.now() / 1000 + 15) {
       if (!userSession.refreshToken) {
         throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'No refresh token');
       }
