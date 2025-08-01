@@ -36,6 +36,11 @@ type GRPCPlugin struct {
 
 	img v1.Image
 
+	imgRef string
+
+	registryUsername string
+	registryPassword string
+
 	client *grpccommon.GRPCPluginClient
 }
 
@@ -52,41 +57,17 @@ func NewGRPCOCIPlugin(config GRPCPluginConfig) (*GRPCPlugin, error) {
 		return nil, fmt.Errorf("registry token is required")
 	}
 
-	var img v1.Image
-
-	desc, err := crane.Get(config.ImageRef,
-		crane.WithAuth(&authn.Basic{
-			Username: "router",
-			Password: config.RegistryToken,
-		}),
-		crane.WithPlatform(&v1.Platform{
-			Architecture: runtime.GOARCH,
-			OS:           runtime.GOOS,
-		}),
-	)
-
-	if err != nil {
-		return nil, fmt.Errorf("pulling image %s: %w", config.ImageRef, err)
-	}
-	if desc.MediaType.IsSchema1() {
-		img, err = desc.Schema1()
-		if err != nil {
-			return nil, fmt.Errorf("pulling schema 1 image %s: %w", config.ImageRef, err)
-		}
-	} else {
-		img, err = desc.Image()
-		if err != nil {
-			return nil, fmt.Errorf("pulling Image %s: %w", config.ImageRef, err)
-		}
-	}
-
 	return &GRPCPlugin{
 		done:     make(chan struct{}),
 		mu:       sync.Mutex{},
 		disposed: atomic.Bool{},
 
 		logger: config.Logger,
-		img:    img,
+
+		imgRef: config.ImageRef,
+
+		registryUsername: "router",
+		registryPassword: config.RegistryToken,
 	}, nil
 }
 
@@ -177,6 +158,32 @@ func (p *GRPCPlugin) cleanupPluginWorkDir() {
 
 // Start implements Plugin.
 func (p *GRPCPlugin) Start(ctx context.Context) error {
+	desc, err := crane.Get(p.imgRef,
+		crane.WithAuth(&authn.Basic{
+			Username: p.registryUsername,
+			Password: p.registryPassword,
+		}),
+		crane.WithPlatform(&v1.Platform{
+			Architecture: runtime.GOARCH,
+			OS:           runtime.GOOS,
+		}),
+	)
+
+	if err != nil {
+		return fmt.Errorf("pulling image %s: %w", p.imgRef, err)
+	}
+	if desc.MediaType.IsSchema1() {
+		p.img, err = desc.Schema1()
+		if err != nil {
+			return fmt.Errorf("pulling schema 1 image %s: %w", p.imgRef, err)
+		}
+	} else {
+		p.img, err = desc.Image()
+		if err != nil {
+			return fmt.Errorf("pulling Image %s: %w", p.imgRef, err)
+		}
+	}
+
 	go func() {
 		select {
 		case <-ctx.Done():

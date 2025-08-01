@@ -18,19 +18,30 @@ func TestNewGRPCOCIPlugin(t *testing.T) {
 		{
 			name: "successful creation with valid config",
 			config: GRPCPluginConfig{
-				Logger:   zap.NewNop(),
-				ImageRef: "example.com/image",
+				Logger:        zap.NewNop(),
+				ImageRef:      "cosmo-registry.wundergraph-test/org/image",
+				RegistryToken: "lalala",
 			},
 			wantErr: false,
 		},
 		{
 			name: "fails with nil logger",
 			config: GRPCPluginConfig{
-				Logger:   nil,
-				ImageRef: "example.com/image",
+				Logger:        nil,
+				ImageRef:      "cosmo-registry.wundergraph-test/org/image",
+				RegistryToken: "lalala",
 			},
 			wantErr:     true,
 			errContains: "logger is required",
+		},
+		{
+			name: "fails with no registry token",
+			config: GRPCPluginConfig{
+				Logger:   zap.NewNop(),
+				ImageRef: "cosmo-registry.wundergraph-test/org/image",
+			},
+			wantErr:     true,
+			errContains: "registry token is required",
 		},
 	}
 
