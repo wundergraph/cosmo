@@ -24,6 +24,7 @@ type TracingOptions struct {
 	ErrorHandlerFunc func(err error)
 	TracingConfig    *config.Tracing
 	IPAnonymization  *config.IPAnonymization
+	MemoryExporter   sdktrace.SpanExporter
 }
 
 const (
@@ -33,7 +34,12 @@ const (
 	WgIsPlugin = attribute.Key("wg.is_plugin")
 )
 
-func initTracer(ctx context.Context, optParams TracingOptions, tracingConfig config.Tracing) (*sdktrace.TracerProvider, error) {
+func initTracer(
+	ctx context.Context,
+	optParams TracingOptions,
+	tracingConfig config.Tracing,
+	memoryExporter sdktrace.SpanExporter,
+) (*sdktrace.TracerProvider, error) {
 	// Return no-op provider
 	if len(tracingConfig.Exporters) == 0 {
 		provider := sdktrace.NewTracerProvider(sdktrace.WithSampler(sdktrace.NeverSample()))
@@ -96,47 +102,54 @@ func initTracer(ctx context.Context, optParams TracingOptions, tracingConfig con
 		opts = append(opts, Attributes(SensitiveAttributes, rFunc))
 	}
 
-	for _, exp := range tracingConfig.Exporters {
-		// Default to OLTP HTTP
-		if exp.Exporter == "" {
-			exp.Exporter = config.ExporterOLTPHTTP
-		}
+	if memoryExporter != nil {
+		opts = append(opts, sdktrace.WithSyncer(memoryExporter))
+	} else {
+		for _, exp := range tracingConfig.Exporters {
+			// Default to OLTP HTTP
+			if exp.Exporter == "" {
+				exp.Exporter = config.ExporterOLTPHTTP
+			}
 
-		exporter, err := createExporter(exp)
-		if err != nil {
-			return nil, err
-		}
+			exporter, err := createExporter(exp)
+			if err != nil {
+				return nil, err
+			}
 
-		batchTimeout := exp.BatchTimeout
-		if batchTimeout == 0 {
-			batchTimeout = DefaultBatchTimeout
-		}
+			batchTimeout := exp.BatchTimeout
+			if batchTimeout == 0 {
+				batchTimeout = DefaultBatchTimeout
+			}
 
-		exportTimeout := exp.ExportTimeout
-		if exportTimeout == 0 {
-			exportTimeout = DefaultExportTimeout
-		}
+			exportTimeout := exp.ExportTimeout
+			if exportTimeout == 0 {
+				exportTimeout = DefaultExportTimeout
+			}
 
-		// Always be sure to batch in production.
-		opts = append(opts,
-			sdktrace.WithBatcher(exporter,
-				sdktrace.WithBatchTimeout(batchTimeout),
-				sdktrace.WithExportTimeout(exportTimeout),
-				sdktrace.WithMaxExportBatchSize(512),
-				sdktrace.WithMaxQueueSize(2048),
-			),
-		)
+			// Always be sure to batch in production.
+			opts = append(opts,
+				sdktrace.WithBatcher(exporter,
+					sdktrace.WithBatchTimeout(batchTimeout),
+					sdktrace.WithExportTimeout(exportTimeout),
+					sdktrace.WithMaxExportBatchSize(512),
+					sdktrace.WithMaxQueueSize(2048),
+				),
+			)
+		}
 	}
 
 	tp := sdktrace.NewTracerProvider(opts...)
 
-	otel.SetTracerProvider(tp)
+	// Options to skip when testing with the memory exporter
+	if memoryExporter == nil {
+		otel.SetTracerProvider(tp)
 
-	propagators, err := buildPropagators(tracingConfig.Propagators)
-	if err != nil {
-		return nil, err
+		propagators, err := buildPropagators(tracingConfig.Propagators)
+		if err != nil {
+			return nil, err
+		}
+		otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagators...))
 	}
-	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagators...))
 
 	if optParams.ErrorHandlerFunc != nil {
 		otel.SetErrorHandler(otel.ErrorHandlerFunc(optParams.ErrorHandlerFunc))
@@ -150,6 +163,7 @@ func createExporter(exp config.Exporter) (sdktrace.SpanExporter, error) {
 	if err != nil {
 		return nil, fmt.Errorf("invalid OpenTelemetry endpoint: %w", err)
 	}
+
 	var exporter sdktrace.SpanExporter
 	// Just support OTLP and gRPC for now. Jaeger has native OTLP support.
 	switch exp.Exporter {

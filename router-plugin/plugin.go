@@ -2,11 +2,7 @@ package routerplugin
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"fmt"
-	"github.com/wundergraph/cosmo/router-plugin/config"
-	"github.com/wundergraph/cosmo/router-plugin/tracing"
 	"os"
 
 	"github.com/hashicorp/go-plugin"
@@ -22,13 +18,16 @@ var RouterPluginHandshakeConfig = plugin.HandshakeConfig{
 
 const startupConfigKey = "startup_config"
 
-const (
-	baseServiceName    = "cosmo-router-plugin"
-	baseServiceVersion = "1.0.0"
-)
-
 // PluginMapName is the name of the plugin in the plugin map.
 var PluginMapName = "grpc_datasource"
+
+type RouterPlugin struct {
+	plugin.Plugin
+	registrationFunc func(*grpc.Server)
+
+	serveConfig *plugin.ServeConfig
+	config      RouterPluginConfig
+}
 
 // GRPCPlugin is the interface that is implemented to serve/connect to
 // a plugin over gRPC.
@@ -41,23 +40,6 @@ func (p *RouterPlugin) GRPCServer(_ *plugin.GRPCBroker, server *grpc.Server) err
 // a plugin over gRPC.
 func (p *RouterPlugin) GRPCClient(_ context.Context, _ *plugin.GRPCBroker, cc *grpc.ClientConn) (interface{}, error) {
 	return cc, nil
-}
-
-type RouterPlugin struct {
-	plugin.Plugin
-	registrationFunc func(*grpc.Server)
-
-	serveConfig *plugin.ServeConfig
-	config      RouterPluginConfig
-
-	startupConfig config.StartupConfig
-}
-
-type RouterPluginConfig struct {
-	ServiceName         string
-	ServiceVersion      string
-	TracingEnabled      bool
-	TracingErrorHandler func(err error)
 }
 
 type PluginOption func(*RouterPlugin)
@@ -115,44 +97,15 @@ func NewRouterPlugin(registrationfunc func(*grpc.Server), opts ...PluginOption) 
 		opt(routerPlugin)
 	}
 
-	if exporterConfig := os.Getenv(startupConfigKey); exporterConfig != "" {
-		var startupConfig config.StartupConfig
-		err := json.Unmarshal([]byte(exporterConfig), &startupConfig)
-		if err != nil {
-			return nil, err
-		}
-		routerPlugin.startupConfig = startupConfig
+	grpcServerFunc, err := GrpcServer(GrpcServerInitOpts{
+		ExporterConfig: os.Getenv(startupConfigKey),
+		PluginConfig:   routerPlugin.config,
+	})
+	if err != nil {
+		return nil, err
 	}
 
-	grpcOpts := make([]grpc.ServerOption, 0)
-	if routerPlugin.config.TracingEnabled && routerPlugin.startupConfig.Telemetry != nil {
-		serviceName := baseServiceName
-		if routerPlugin.config.ServiceName != "" {
-			serviceName = routerPlugin.config.ServiceName
-		}
-		serviceVersion := baseServiceVersion
-		if routerPlugin.config.ServiceVersion != "" {
-			serviceVersion = routerPlugin.config.ServiceVersion
-		}
-
-		tracingInterceptor, err := tracing.CreateTracingInterceptor(tracing.TracingOptions{
-			ServiceName:      serviceName,
-			ServiceVersion:   serviceVersion,
-			ErrorHandlerFunc: routerPlugin.config.TracingErrorHandler,
-			TracingConfig:    routerPlugin.startupConfig.Telemetry.Tracing,
-			IPAnonymization:  routerPlugin.startupConfig.IPAnonymization,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to create tracing interceptor: %w", err)
-		}
-		grpcOpts = append(grpcOpts, grpc.UnaryInterceptor(tracingInterceptor))
-	}
-
-	routerPlugin.serveConfig.GRPCServer = func(serverOpts []grpc.ServerOption) *grpc.Server {
-		allOpts := append([]grpc.ServerOption{}, serverOpts...)
-		allOpts = append(allOpts, grpcOpts...)
-		return grpc.NewServer(allOpts...)
-	}
+	routerPlugin.serveConfig.GRPCServer = grpcServerFunc
 
 	return routerPlugin, nil
 }

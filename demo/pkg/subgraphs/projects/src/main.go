@@ -16,6 +16,7 @@ func main() {
 				NextID: 1,
 			})
 		},
+		routerplugin.WithTracing(),
 	)
 
 	if err != nil {
