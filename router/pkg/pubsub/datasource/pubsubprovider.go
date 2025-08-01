@@ -7,12 +7,11 @@ import (
 )
 
 type PubSubProvider struct {
-	id                 string
-	typeID             string
-	Adapter            Adapter
-	Logger             *zap.Logger
-	onPublishEventsFns []OnPublishEventsFn
-	onStreamEventsFns  []OnStreamEventsFn
+	id      string
+	typeID  string
+	Adapter Adapter
+	Logger  *zap.Logger
+	hooks   Hooks
 }
 
 // applyPublishEventHooks processes events through a chain of hook functions
@@ -56,11 +55,11 @@ func (p *PubSubProvider) Subscribe(ctx context.Context, cfg SubscriptionEventCon
 }
 
 func (p *PubSubProvider) Publish(ctx context.Context, cfg PublishEventConfiguration, events []StreamEvent) error {
-	if len(p.onPublishEventsFns) == 0 {
+	if len(p.hooks.OnPublishEvents) == 0 {
 		return p.Adapter.Publish(ctx, cfg, events)
 	}
 
-	processedEvents, err := applyPublishEventHooks(ctx, cfg, events, p.onPublishEventsFns)
+	processedEvents, err := applyPublishEventHooks(ctx, cfg, events, p.hooks.OnPublishEvents)
 	if err != nil {
 		return err
 	}
@@ -68,12 +67,8 @@ func (p *PubSubProvider) Publish(ctx context.Context, cfg PublishEventConfigurat
 	return p.Adapter.Publish(ctx, cfg, processedEvents)
 }
 
-func (p *PubSubProvider) SetOnPublishEventsFns(fns []OnPublishEventsFn) {
-	p.onPublishEventsFns = fns
-}
-
-func (p *PubSubProvider) SetOnStreamEventsFns(fns []OnStreamEventsFn) {
-	p.onStreamEventsFns = fns
+func (p *PubSubProvider) SetHooks(hooks Hooks) {
+	p.hooks = hooks
 }
 
 func NewPubSubProvider(id string, typeID string, adapter Adapter, logger *zap.Logger) *PubSubProvider {

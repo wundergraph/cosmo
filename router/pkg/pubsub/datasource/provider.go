@@ -30,10 +30,8 @@ type Provider interface {
 	ID() string
 	// TypeID Get the provider type id (e.g. "kafka", "nats")
 	TypeID() string
-	// SetOnPublishEventsFns Set the functions that will be called before publishing events
-	SetOnPublishEventsFns([]OnPublishEventsFn)
-	// SetOnStreamEventsFns Set the functions that will be called when receiving events
-	SetOnStreamEventsFns([]OnStreamEventsFn)
+	// SetHooks Set the hooks
+	SetHooks(Hooks)
 }
 
 // ProviderBuilder is the interface that the provider builder must implement.

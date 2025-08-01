@@ -143,8 +143,7 @@ func build[P GetID, E GetEngineEventConfiguration](ctx context.Context, builder 
 		if err != nil {
 			return nil, nil, err
 		}
-		provider.SetOnStreamEventsFns(hooks.OnStreamEvents)
-		provider.SetOnPublishEventsFns(hooks.OnPublishEvents)
+		provider.SetHooks(hooks)
 		pubSubProviders[provider.ID()] = provider
 	}
 
