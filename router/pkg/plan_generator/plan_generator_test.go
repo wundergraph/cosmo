@@ -139,19 +139,19 @@ func TestPlanGenerator(t *testing.T) {
 
 		queries, err := os.ReadDir(tempDir)
 		assert.NoError(t, err)
-		assert.Len(t, queries, 2)
+		assert.Len(t, queries, 3)
 
-		queryPlan1, err := os.ReadFile(path.Join(tempDir, "1.graphql"))
-		assert.NoError(t, err)
-		queryPlan1Expected, err := os.ReadFile(path.Join(getTestDataDir(), "plans", "base", "1.graphql"))
-		assert.NoError(t, err)
-		assert.Equal(t, string(queryPlan1Expected), string(queryPlan1))
+		files := []string{"1.graphql", "2.graphql", "3.graphql"}
+		for _, filename := range files {
+			t.Run(filename, func(t *testing.T) {
+				queryPlan, err := os.ReadFile(path.Join(tempDir, filename))
+				assert.NoError(t, err)
+				expected, err := os.ReadFile(path.Join(getTestDataDir(), "plans", "base", filename))
+				assert.NoError(t, err)
+				assert.Equal(t, string(expected), string(queryPlan))
+			})
+		}
 
-		queryPlan2, err := os.ReadFile(path.Join(tempDir, "2.graphql"))
-		assert.NoError(t, err)
-		queryPlan2Expected, err := os.ReadFile(path.Join(getTestDataDir(), "plans", "base", "2.graphql"))
-		assert.NoError(t, err)
-		assert.Equal(t, string(queryPlan2Expected), string(queryPlan2))
 	})
 
 	t.Run("generates a plan for every file filtered", func(t *testing.T) {
