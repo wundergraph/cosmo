@@ -153,8 +153,8 @@ func (c *Client) Request(ctx context.Context, method, path string, body interfac
 	ctx, span = c.tracer.Start(ctx, fmt.Sprintf("http.request - %s %s", method, url),
 		trace.WithSpanKind(trace.SpanKindClient),
 		trace.WithAttributes(
-			semconv.HTTPMethod(method),
-			semconv.HTTPURL(url),
+			semconv.HTTPMethodKey.String(method),
+			semconv.HTTPURLKey.String(url),
 		),
 	)
 	defer span.End()

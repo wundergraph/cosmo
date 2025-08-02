@@ -496,7 +496,7 @@ func TestTracing(t *testing.T) {
 	})
 
 	t.Run("http client tracing", func(t *testing.T) {
-		t.Run("when tracing enabled", func(t *testing.T) {
+		t.Run("when tracing is disabled", func(t *testing.T) {
 			expectedResponse := `{"message":"success"}`
 			mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("Content-Type", "application/json")
@@ -513,10 +513,12 @@ func TestTracing(t *testing.T) {
 			}
 
 			runner := func(ctx context.Context, req *plugin.QueryRunRequest) (*plugin.QueryRunResponse, error) {
-				client := httpclient.New(httpclient.WithTracing(), httpclient.WithBaseURL(mockServer.URL))
-				resp, err := client.Get(ctx, "/test")
-				require.NoError(t, err)
-				require.Equal(t, expectedResponse, string(resp.Body))
+				for range 5 {
+					client := httpclient.New(httpclient.WithBaseURL(mockServer.URL))
+					resp, err := client.Get(ctx, "/test")
+					require.NoError(t, err)
+					require.Equal(t, expectedResponse, string(resp.Body))
+				}
 
 				response := &plugin.QueryRunResponse{
 					Run: &plugin.Result{
@@ -533,11 +535,79 @@ func TestTracing(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, resp.Run)
 
-			sn := exporter.GetSpans().Snapshots()
-			require.Len(t, sn, 2)
+			snapshots := exporter.GetSpans().Snapshots()
+			require.Len(t, snapshots, 1)
 
-			baseSpan := sn[0]
-			require.Len(t, baseSpan.Attributes(), 2)
+			baseSpan := snapshots[0]
+			baseSpanName := "Router Plugin - /service.HelloService/QueryRun"
+			require.Equal(t, baseSpanName, baseSpan.Name())
+			require.Len(t, baseSpan.Attributes(), 0)
+		})
+
+		t.Run("when tracing enabled", func(t *testing.T) {
+			expectedResponse := `{"message":"success"}`
+			mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				_, err := w.Write([]byte(expectedResponse))
+				require.NoError(t, err)
+			}))
+			defer mockServer.Close()
+
+			exporter := tracetest.NewInMemoryExporter(t)
+
+			opts := config.RouterPluginConfig{
+				TracingEnabled: true,
+				MemoryExporter: exporter,
+			}
+
+			numberOfHttpRequests := 5
+			path := "/test"
+
+			runner := func(ctx context.Context, req *plugin.QueryRunRequest) (*plugin.QueryRunResponse, error) {
+				for range numberOfHttpRequests {
+					client := httpclient.New(httpclient.WithTracing(), httpclient.WithBaseURL(mockServer.URL))
+					resp, err := client.Get(ctx, path)
+					require.NoError(t, err)
+					require.Equal(t, expectedResponse, string(resp.Body))
+				}
+
+				response := &plugin.QueryRunResponse{
+					Run: &plugin.Result{
+						ResponseString: "response string",
+					},
+				}
+				return response, nil
+			}
+
+			svc := setupTracingTest(t, getTracingBaseConfig(), opts, runner)
+			defer svc.cleanup()
+
+			resp, err := svc.client.QueryRun(context.Background(), &plugin.QueryRunRequest{})
+			require.NoError(t, err)
+			require.NotNil(t, resp.Run)
+
+			snapshots := exporter.GetSpans().Snapshots()
+			require.Len(t, snapshots, 1+numberOfHttpRequests)
+
+			httpCallSpan1 := snapshots[0]
+			require.Len(t, httpCallSpan1.Attributes(), 2)
+
+			expectedMethod := "GET"
+			expectedUrl := mockServer.URL + path
+			expectedSpanName := fmt.Sprintf("http.request - %s %s", expectedMethod, expectedUrl)
+
+			require.Equal(t, expectedSpanName, httpCallSpan1.Name())
+			require.Contains(t, httpCallSpan1.Attributes(), semconv.HTTPURLKey.String(expectedUrl))
+			require.Contains(t, httpCallSpan1.Attributes(), semconv.HTTPMethodKey.String(expectedMethod))
+
+			// Verify that the HTTP client spans are the actual occurences
+			httpCallInstances := 0
+			for _, snapshot := range snapshots {
+				if expectedSpanName == snapshot.Name() {
+					httpCallInstances++
+				}
+			}
+			require.Equal(t, numberOfHttpRequests, httpCallInstances)
 		})
 	})
 
@@ -547,8 +617,10 @@ func getTracingBaseConfig() config.StartupConfig {
 	return config.StartupConfig{
 		Telemetry: &config.Telemetry{
 			Tracing: &config.Tracing{
-				Sampler:   1.0,
-				Exporters: []config.Exporter{},
+				Sampler: 1.0,
+				Exporters: []config.Exporter{
+					{},
+				},
 			},
 		},
 	}
