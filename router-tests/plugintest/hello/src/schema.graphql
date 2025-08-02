@@ -1,0 +1,7 @@
+type Result {
+  responseString: String!
+}
+
+type Query {
+  run(input: String!): Result!
+}
