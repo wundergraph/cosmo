@@ -10,14 +10,11 @@ import (
 )
 
 func main() {
-	pl, err := routerplugin.NewRouterPlugin(
-		func(s *grpc.Server) {
-			s.RegisterService(&projects.ProjectsService_ServiceDesc, &service.ProjectsService{
-				NextID: 1,
-			})
-		},
-		routerplugin.WithTracing(),
-	)
+	pl, err := routerplugin.NewRouterPlugin(func(s *grpc.Server) {
+		s.RegisterService(&projects.ProjectsService_ServiceDesc, &service.ProjectsService{
+			NextID: 1,
+		})
+	})
 
 	if err != nil {
 		log.Fatalf("failed to create router plugin: %v", err)
