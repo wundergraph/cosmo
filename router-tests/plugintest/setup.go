@@ -71,7 +71,8 @@ func SetupPluginForTest[T any](t *testing.T, testConfig PluginTestConfig[T]) *Pl
 	dialer := func(context.Context, string) (net.Conn, error) {
 		return lis.Dial()
 	}
-	conn, err := grpc.Dial(
+
+	conn, err := grpc.NewClient(
 		"passthrough:///bufnet",
 		grpc.WithContextDialer(dialer),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),

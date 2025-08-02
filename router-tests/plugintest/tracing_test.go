@@ -269,7 +269,7 @@ func TestTracing(t *testing.T) {
 			runner := func(ctx context.Context, req *plugin.QueryRunRequest) (*plugin.QueryRunResponse, error) {
 				tracer := otel.Tracer("inner-tracer")
 
-				ctx, span := tracer.Start(ctx, customSpanName)
+				_, span := tracer.Start(ctx, customSpanName)
 				span.SetAttributes(
 					customKey,
 					customValue,
