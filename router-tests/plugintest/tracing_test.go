@@ -13,6 +13,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -608,6 +609,83 @@ func TestTracing(t *testing.T) {
 				}
 			}
 			require.Equal(t, numberOfHttpRequests, httpCallInstances)
+		})
+
+		t.Run("verify external service gets headers propagated", func(t *testing.T) {
+			traceId := "4bf92f3577b34da6a3ce929d0e0e4736"
+			traceParentHeader := "00-" + traceId + "-00f067aa0ba902b7-01"
+			baggageValue := "key1=value1,key2=value2"
+
+			mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				//Jaeger
+				require.Contains(t, r.Header.Get("Uber-Trace-Id"), "4bf92f3577b34da6a3ce929d0e0e4736")
+
+				// B3
+				require.Contains(t, r.Header.Get("B3"), traceId)
+				require.Equal(t, traceId, r.Header.Get("X-B3-Traceid"))
+				require.NotEmpty(t, r.Header.Get("X-B3-Spanid"))
+				require.Equal(t, "1", r.Header.Get("X-B3-Sampled"))
+
+				// Datadog
+				require.NotEmpty(t, r.Header.Get("X-Datadog-Parent-Id"))
+				require.Equal(t, "11803532876627986230", r.Header.Get("X-Datadog-Trace-Id"))
+				require.Equal(t, "1", r.Header.Get("X-Datadog-Sampling-Priority"))
+
+				// Traceparent
+				require.Contains(t, r.Header.Get("Traceparent"), traceId)
+
+				// Baggage
+				require.Contains(t, r.Header.Get("Baggage"), baggageValue)
+
+				w.Header().Set("Content-Type", "application/json")
+				_, err := w.Write([]byte(`{"message":"success"}`))
+				require.NoError(t, err)
+			}))
+			defer mockServer.Close()
+
+			exporter := tracetest.NewInMemoryExporter(t)
+
+			baseConfig := getTracingBaseConfig()
+			baseConfig.Telemetry.Tracing.Propagators = []config.Propagator{
+				config.PropagatorTraceContext,
+				config.PropagatorB3,
+				config.PropagatorJaeger,
+				config.PropagatorBaggage,
+				config.PropagatorDatadog,
+			}
+
+			opts := config.RouterPluginConfig{
+				TracingEnabled: true,
+				MemoryExporter: exporter,
+			}
+
+			runner := func(ctx context.Context, req *plugin.QueryRunRequest) (*plugin.QueryRunResponse, error) {
+				client := httpclient.New(httpclient.WithTracing(), httpclient.WithBaseURL(mockServer.URL))
+				_, err := client.Get(ctx, "/test")
+				require.NoError(t, err)
+
+				response := &plugin.QueryRunResponse{
+					Run: &plugin.Result{
+						ResponseString: "response string",
+					},
+				}
+				return response, nil
+			}
+
+			svc := setupTracingTest(t, baseConfig, opts, runner)
+			defer svc.cleanup()
+
+			ctx := context.Background()
+
+			ctx = metadata.NewOutgoingContext(ctx, metadata.New(map[string]string{
+				"traceparent": traceParentHeader,
+				"Baggage":     baggageValue,
+			}))
+
+			resp, err := svc.client.QueryRun(ctx, &plugin.QueryRunRequest{})
+			require.NoError(t, err)
+			require.NotNil(t, resp.Run)
+			require.Len(t, exporter.GetSpans().Snapshots(), 2)
 		})
 	})
 

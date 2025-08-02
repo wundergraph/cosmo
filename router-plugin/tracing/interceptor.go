@@ -15,6 +15,7 @@ import (
 const (
 	traceparentHeader = "traceparent"
 	tracestateHeader  = "tracestate"
+	baggageHeader     = "baggage"
 )
 
 func CreateTracingInterceptor(tracingOpts TracingOptions) (func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error), error) {
@@ -38,6 +39,9 @@ func CreateTracingInterceptor(tracingOpts TracingOptions) (func(ctx context.Cont
 			}
 			if values := md.Get(tracestateHeader); len(values) > 0 {
 				carrier[tracestateHeader] = values[0]
+			}
+			if values := md.Get(baggageHeader); len(values) > 0 {
+				carrier[baggageHeader] = values[0]
 			}
 			propagator := otel.GetTextMapPropagator()
 			ctx = propagator.Extract(ctx, carrier)
