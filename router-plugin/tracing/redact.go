@@ -7,11 +7,6 @@ import (
 	semconv17 "go.opentelemetry.io/otel/semconv/v1.17.0"
 )
 
-const (
-	Hash   string = "hash"
-	Redact string = "redact"
-)
-
 // SensitiveAttributes that should be redacted by the OTEL http instrumentation package.
 // Take attention to the right version of the semconv package.
 var SensitiveAttributes = []attribute.Key{

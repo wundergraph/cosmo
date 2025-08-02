@@ -41,7 +41,7 @@ func initTracer(
 	memoryExporter sdktrace.SpanExporter,
 ) (*sdktrace.TracerProvider, error) {
 	// Return no-op provider
-	if memoryExporter == nil && len(tracingConfig.Exporters) == 0 {
+	if len(tracingConfig.Exporters) == 0 {
 		provider := sdktrace.NewTracerProvider(sdktrace.WithSampler(sdktrace.NeverSample()))
 		otel.SetTracerProvider(provider)
 		return provider, nil
@@ -88,13 +88,13 @@ func initTracer(
 		var rFunc RedactFunc
 
 		switch optParams.IPAnonymization.Method {
-		case Hash:
+		case config.Hash:
 			rFunc = func(key attribute.KeyValue) string {
 				h := sha256.New()
 				h.Write([]byte(key.Value.AsString()))
 				return hex.EncodeToString(h.Sum(nil))
 			}
-		case Redact:
+		case config.Redact:
 			rFunc = func(key attribute.KeyValue) string {
 				return "[REDACTED]"
 			}
@@ -140,16 +140,13 @@ func initTracer(
 
 	tp := sdktrace.NewTracerProvider(opts...)
 
-	// Options to skip when testing with the memory exporter
-	if memoryExporter == nil {
-		otel.SetTracerProvider(tp)
+	otel.SetTracerProvider(tp)
 
-		propagators, err := buildPropagators(tracingConfig.Propagators)
-		if err != nil {
-			return nil, err
-		}
-		otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagators...))
+	propagators, err := buildPropagators(tracingConfig.Propagators)
+	if err != nil {
+		return nil, err
 	}
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagators...))
 
 	if optParams.ErrorHandlerFunc != nil {
 		otel.SetErrorHandler(otel.ErrorHandlerFunc(optParams.ErrorHandlerFunc))

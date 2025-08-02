@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/wundergraph/cosmo/router-plugin/config"
 	routerplugin "github.com/wundergraph/cosmo/router-plugin/setup"
+	plugin "github.com/wundergraph/cosmo/router-tests/plugintest/hello/generated"
 	"net"
 	"testing"
 
@@ -13,8 +14,17 @@ import (
 	"google.golang.org/grpc/test/bufconn"
 )
 
-// PluginSetupResposne is a wrapper that holds the gRPC test components
-type PluginSetupResposne[T any] struct {
+type HelloService struct {
+	runFunc func(_ context.Context, req *plugin.QueryRunRequest) (*plugin.QueryRunResponse, error)
+	plugin.UnimplementedHelloServiceServer
+}
+
+func (s *HelloService) QueryRun(ctx context.Context, req *plugin.QueryRunRequest) (*plugin.QueryRunResponse, error) {
+	return s.runFunc(ctx, req)
+}
+
+// PluginSetupResponse is a wrapper that holds the gRPC test components
+type PluginSetupResponse[T any] struct {
 	client  T
 	cleanup func()
 }
@@ -31,7 +41,7 @@ type PluginTestConfig[T any] struct {
 }
 
 // SetupPluginForTest creates a local gRPC server for testing
-func SetupPluginForTest[T any](t *testing.T, testConfig PluginTestConfig[T]) *PluginSetupResposne[T] {
+func SetupPluginForTest[T any](t *testing.T, testConfig PluginTestConfig[T]) *PluginSetupResponse[T] {
 	// Create a buffer for gRPC connections
 	lis := bufconn.Listen(bufSize)
 
@@ -73,11 +83,11 @@ func SetupPluginForTest[T any](t *testing.T, testConfig PluginTestConfig[T]) *Pl
 	// Return cleanup function
 	cleanup := func() {
 		err := conn.Close()
-		grpcServer.Stop()
 		require.NoError(t, err)
+		grpcServer.Stop()
 	}
 
-	return &PluginSetupResposne[T]{
+	return &PluginSetupResponse[T]{
 		client:  client,
 		cleanup: cleanup,
 	}

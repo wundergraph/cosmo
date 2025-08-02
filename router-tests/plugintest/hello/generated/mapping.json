@@ -4,10 +4,10 @@
   "operationMappings": [
     {
       "type": "OPERATION_TYPE_QUERY",
-      "original": "hello",
-      "mapped": "QueryHello",
-      "request": "QueryHelloRequest",
-      "response": "QueryHelloResponse"
+      "original": "run",
+      "mapped": "QueryRun",
+      "request": "QueryRunRequest",
+      "response": "QueryRunResponse"
     }
   ],
   "entityMappings": [],
@@ -16,28 +16,23 @@
       "type": "Query",
       "fieldMappings": [
         {
-          "original": "hello",
-          "mapped": "hello",
+          "original": "run",
+          "mapped": "run",
           "argumentMappings": [
             {
-              "original": "name",
-              "mapped": "name"
+              "original": "input",
+              "mapped": "input"
             }
           ]
         }
       ]
     },
     {
-      "type": "World",
+      "type": "Result",
       "fieldMappings": [
         {
-          "original": "id",
-          "mapped": "id",
-          "argumentMappings": []
-        },
-        {
-          "original": "name",
-          "mapped": "name",
+          "original": "responseString",
+          "mapped": "response_string",
           "argumentMappings": []
         }
       ]

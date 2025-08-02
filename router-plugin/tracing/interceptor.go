@@ -22,7 +22,7 @@ func CreateTracingInterceptor(tracingOpts TracingOptions) (func(ctx context.Cont
 		return nil, errors.New("nil tracing config not supported")
 	}
 
-	// TODO: We currently don't have a shutdown logic in the plugin which calls tp.Shutdown
+	// TODO: We currently don't have a shutdown logic in the plugin which could call tp.Shutdown
 	tp, err := initTracer(context.Background(), tracingOpts, *tracingOpts.TracingConfig, tracingOpts.MemoryExporter)
 	if err != nil {
 		return nil, err

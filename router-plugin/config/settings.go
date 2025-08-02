@@ -8,6 +8,13 @@ type (
 	Propagator           string
 )
 
+type IPAnonymizationMethod string
+
+const (
+	Hash   IPAnonymizationMethod = "hash"
+	Redact IPAnonymizationMethod = "redact"
+)
+
 const (
 	ExporterOLTPHTTP ExporterProtocolType = "http"
 	ExporterOLTPGRPC ExporterProtocolType = "grpc"
@@ -47,6 +54,6 @@ type Exporter struct {
 }
 
 type IPAnonymization struct {
-	Enabled bool   `json:"enabled"`
-	Method  string `json:"method"`
+	Enabled bool                  `json:"enabled"`
+	Method  IPAnonymizationMethod `json:"method"`
 }

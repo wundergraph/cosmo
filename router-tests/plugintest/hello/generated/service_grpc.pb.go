@@ -19,7 +19,7 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	HelloService_QueryHello_FullMethodName = "/service.HelloService/QueryHello"
+	HelloService_QueryRun_FullMethodName = "/service.HelloService/QueryRun"
 )
 
 // HelloServiceClient is the client API for HelloService service.
@@ -28,8 +28,7 @@ const (
 //
 // Service definition for HelloService
 type HelloServiceClient interface {
-	// The hello query
-	QueryHello(ctx context.Context, in *QueryHelloRequest, opts ...grpc.CallOption) (*QueryHelloResponse, error)
+	QueryRun(ctx context.Context, in *QueryRunRequest, opts ...grpc.CallOption) (*QueryRunResponse, error)
 }
 
 type helloServiceClient struct {
@@ -40,10 +39,10 @@ func NewHelloServiceClient(cc grpc.ClientConnInterface) HelloServiceClient {
 	return &helloServiceClient{cc}
 }
 
-func (c *helloServiceClient) QueryHello(ctx context.Context, in *QueryHelloRequest, opts ...grpc.CallOption) (*QueryHelloResponse, error) {
+func (c *helloServiceClient) QueryRun(ctx context.Context, in *QueryRunRequest, opts ...grpc.CallOption) (*QueryRunResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(QueryHelloResponse)
-	err := c.cc.Invoke(ctx, HelloService_QueryHello_FullMethodName, in, out, cOpts...)
+	out := new(QueryRunResponse)
+	err := c.cc.Invoke(ctx, HelloService_QueryRun_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -56,8 +55,7 @@ func (c *helloServiceClient) QueryHello(ctx context.Context, in *QueryHelloReque
 //
 // Service definition for HelloService
 type HelloServiceServer interface {
-	// The hello query
-	QueryHello(context.Context, *QueryHelloRequest) (*QueryHelloResponse, error)
+	QueryRun(context.Context, *QueryRunRequest) (*QueryRunResponse, error)
 	mustEmbedUnimplementedHelloServiceServer()
 }
 
@@ -68,8 +66,8 @@ type HelloServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedHelloServiceServer struct{}
 
-func (UnimplementedHelloServiceServer) QueryHello(context.Context, *QueryHelloRequest) (*QueryHelloResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method QueryHello not implemented")
+func (UnimplementedHelloServiceServer) QueryRun(context.Context, *QueryRunRequest) (*QueryRunResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method QueryRun not implemented")
 }
 func (UnimplementedHelloServiceServer) mustEmbedUnimplementedHelloServiceServer() {}
 func (UnimplementedHelloServiceServer) testEmbeddedByValue()                      {}
@@ -92,20 +90,20 @@ func RegisterHelloServiceServer(s grpc.ServiceRegistrar, srv HelloServiceServer)
 	s.RegisterService(&HelloService_ServiceDesc, srv)
 }
 
-func _HelloService_QueryHello_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(QueryHelloRequest)
+func _HelloService_QueryRun_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryRunRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(HelloServiceServer).QueryHello(ctx, in)
+		return srv.(HelloServiceServer).QueryRun(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: HelloService_QueryHello_FullMethodName,
+		FullMethod: HelloService_QueryRun_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(HelloServiceServer).QueryHello(ctx, req.(*QueryHelloRequest))
+		return srv.(HelloServiceServer).QueryRun(ctx, req.(*QueryRunRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -118,8 +116,8 @@ var HelloService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*HelloServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "QueryHello",
-			Handler:    _HelloService_QueryHello_Handler,
+			MethodName: "QueryRun",
+			Handler:    _HelloService_QueryRun_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
