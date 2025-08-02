@@ -1,4 +1,4 @@
-FROM --platform=${BUILDPLATFORM} timbru31/java-node:11-jdk-18
+FROM --platform=${BUILDPLATFORM} timbru31/java-node:17-jdk-18
 
 WORKDIR /app
 

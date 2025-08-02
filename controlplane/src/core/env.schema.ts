@@ -57,6 +57,7 @@ export const envVariables = z
      * Auth
      */
     AUTH_JWT_SECRET: z.string().min(32).max(32),
+    AUTH_SSO_COOKIE_DOMAIN: z.string().optional(),
     AUTH_REDIRECT_URI: z.string().url(),
     /**
      * Database
