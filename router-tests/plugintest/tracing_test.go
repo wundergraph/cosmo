@@ -9,8 +9,7 @@ import (
 	plugin "github.com/wundergraph/cosmo/router-tests/plugintest/hello/generated"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	semconv17 "go.opentelemetry.io/otel/semconv/v1.17.0"
-	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -329,8 +328,8 @@ func TestTracing(t *testing.T) {
 				span := trace.SpanFromContext(ctx)
 				require.NotNil(t, span)
 				span.SetAttributes(
-					semconv17.HTTPClientIPKey.String(httpClientIPKey),
-					semconv17.NetSockPeerAddrKey.String(netSockPeerAddrKey),
+					semconv.HTTPClientIPKey.String(httpClientIPKey),
+					semconv.NetSockPeerAddrKey.String(netSockPeerAddrKey),
 				)
 
 				response := &plugin.QueryRunResponse{
@@ -353,8 +352,8 @@ func TestTracing(t *testing.T) {
 
 			baseSpan := sn[0]
 			require.Len(t, baseSpan.Attributes(), 2)
-			require.Contains(t, baseSpan.Attributes(), semconv17.HTTPClientIPKey.String(httpClientIPKey))
-			require.Contains(t, baseSpan.Attributes(), semconv17.NetSockPeerAddrKey.String(netSockPeerAddrKey))
+			require.Contains(t, baseSpan.Attributes(), semconv.HTTPClientIPKey.String(httpClientIPKey))
+			require.Contains(t, baseSpan.Attributes(), semconv.NetSockPeerAddrKey.String(netSockPeerAddrKey))
 		})
 
 		t.Run("when nil", func(t *testing.T) {
@@ -375,8 +374,8 @@ func TestTracing(t *testing.T) {
 				span := trace.SpanFromContext(ctx)
 				require.NotNil(t, span)
 				span.SetAttributes(
-					semconv17.HTTPClientIPKey.String(httpClientIPKey),
-					semconv17.NetSockPeerAddrKey.String(netSockPeerAddrKey),
+					semconv.HTTPClientIPKey.String(httpClientIPKey),
+					semconv.NetSockPeerAddrKey.String(netSockPeerAddrKey),
 				)
 
 				response := &plugin.QueryRunResponse{
@@ -399,8 +398,8 @@ func TestTracing(t *testing.T) {
 
 			baseSpan := sn[0]
 			require.Len(t, baseSpan.Attributes(), 2)
-			require.Contains(t, baseSpan.Attributes(), semconv17.HTTPClientIPKey.String(httpClientIPKey))
-			require.Contains(t, baseSpan.Attributes(), semconv17.NetSockPeerAddrKey.String(netSockPeerAddrKey))
+			require.Contains(t, baseSpan.Attributes(), semconv.HTTPClientIPKey.String(httpClientIPKey))
+			require.Contains(t, baseSpan.Attributes(), semconv.NetSockPeerAddrKey.String(netSockPeerAddrKey))
 		})
 
 		t.Run("with redact", func(t *testing.T) {
@@ -421,8 +420,8 @@ func TestTracing(t *testing.T) {
 				span := trace.SpanFromContext(ctx)
 				require.NotNil(t, span)
 				span.SetAttributes(
-					semconv17.HTTPClientIPKey.String("127.2.2.5"),
-					semconv17.NetSockPeerAddrKey.String("127.3.2.5"),
+					semconv.HTTPClientIPKey.String("127.2.2.5"),
+					semconv.NetSockPeerAddrKey.String("127.3.2.5"),
 				)
 
 				response := &plugin.QueryRunResponse{
@@ -445,8 +444,8 @@ func TestTracing(t *testing.T) {
 
 			baseSpan := sn[0]
 			require.Len(t, baseSpan.Attributes(), 2)
-			require.Contains(t, baseSpan.Attributes(), semconv17.HTTPClientIPKey.String("[REDACTED]"))
-			require.Contains(t, baseSpan.Attributes(), semconv17.NetSockPeerAddrKey.String("[REDACTED]"))
+			require.Contains(t, baseSpan.Attributes(), semconv.HTTPClientIPKey.String("[REDACTED]"))
+			require.Contains(t, baseSpan.Attributes(), semconv.NetSockPeerAddrKey.String("[REDACTED]"))
 		})
 
 		t.Run("with hash", func(t *testing.T) {
@@ -467,8 +466,8 @@ func TestTracing(t *testing.T) {
 				span := trace.SpanFromContext(ctx)
 				require.NotNil(t, span)
 				span.SetAttributes(
-					semconv17.HTTPClientIPKey.String("127.2.2.5"),
-					semconv17.NetSockPeerAddrKey.String("127.3.2.5"),
+					semconv.HTTPClientIPKey.String("127.2.2.5"),
+					semconv.NetSockPeerAddrKey.String("127.3.2.5"),
 				)
 
 				response := &plugin.QueryRunResponse{
@@ -491,8 +490,8 @@ func TestTracing(t *testing.T) {
 
 			baseSpan := sn[0]
 			require.Len(t, baseSpan.Attributes(), 2)
-			require.Contains(t, baseSpan.Attributes(), semconv17.HTTPClientIPKey.String("70c76e7df1c5f51c716f98e4ec3372566a242d429de2cc87c683034df9a440f5"))
-			require.Contains(t, baseSpan.Attributes(), semconv17.NetSockPeerAddrKey.String("a5ec9311d0d04e08d359e8135fda0e8426a797199eefe98f07ab95b7a1acdf59"))
+			require.Contains(t, baseSpan.Attributes(), semconv.HTTPClientIPKey.String("70c76e7df1c5f51c716f98e4ec3372566a242d429de2cc87c683034df9a440f5"))
+			require.Contains(t, baseSpan.Attributes(), semconv.NetSockPeerAddrKey.String("a5ec9311d0d04e08d359e8135fda0e8426a797199eefe98f07ab95b7a1acdf59"))
 		})
 	})
 

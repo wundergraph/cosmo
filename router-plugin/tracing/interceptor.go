@@ -24,7 +24,7 @@ func CreateTracingInterceptor(tracingOpts TracingOptions) (func(ctx context.Cont
 	}
 
 	// TODO: We currently don't have a shutdown logic in the plugin which could call tp.Shutdown
-	tp, err := initTracer(context.Background(), tracingOpts, *tracingOpts.TracingConfig, tracingOpts.MemoryExporter)
+	tp, err := initTracer(context.Background(), tracingOpts)
 	if err != nil {
 		return nil, err
 	}

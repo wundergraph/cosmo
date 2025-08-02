@@ -36,20 +36,18 @@ const (
 
 func initTracer(
 	ctx context.Context,
-	optParams TracingOptions,
-	tracingConfig config.Tracing,
-	memoryExporter sdktrace.SpanExporter,
+	config TracingOptions,
 ) (*sdktrace.TracerProvider, error) {
 	// Return no-op provider
-	if len(tracingConfig.Exporters) == 0 {
+	if len(config.TracingConfig.Exporters) == 0 {
 		provider := sdktrace.NewTracerProvider(sdktrace.WithSampler(sdktrace.NeverSample()))
 		otel.SetTracerProvider(provider)
 		return provider, nil
 	}
 
 	r, err := resource.New(ctx,
-		resource.WithAttributes(semconv.ServiceNameKey.String(optParams.ServiceName)),
-		resource.WithAttributes(semconv.ServiceVersionKey.String(optParams.ServiceVersion)),
+		resource.WithAttributes(semconv.ServiceNameKey.String(config.ServiceName)),
+		resource.WithAttributes(semconv.ServiceVersionKey.String(config.ServiceVersion)),
 		resource.WithAttributes(WgIsPlugin.Bool(true)),
 		resource.WithProcessPID(),
 		resource.WithOSType(),
@@ -79,15 +77,14 @@ func initTracer(
 	opts = append(opts,
 		sdktrace.WithSampler(
 			sdktrace.ParentBased(
-				sdktrace.TraceIDRatioBased(tracingConfig.Sampler),
+				sdktrace.TraceIDRatioBased(config.TracingConfig.Sampler),
 			),
 		),
 	)
 
-	if optParams.IPAnonymization != nil && optParams.IPAnonymization.Enabled {
+	if config.IPAnonymization != nil && config.IPAnonymization.Enabled {
 		var rFunc RedactFunc
-
-		switch optParams.IPAnonymization.Method {
+		switch config.IPAnonymization.Method {
 		case config.Hash:
 			rFunc = func(key attribute.KeyValue) string {
 				h := sha256.New()
@@ -99,13 +96,16 @@ func initTracer(
 				return "[REDACTED]"
 			}
 		}
-		opts = append(opts, Attributes(SensitiveAttributes, rFunc))
+		// In case hash or redact was not used
+		if rFunc != nil {
+			opts = append(opts, Attributes(SensitiveAttributes, rFunc))
+		}
 	}
 
-	if memoryExporter != nil {
-		opts = append(opts, sdktrace.WithSyncer(memoryExporter))
+	if config.MemoryExporter != nil {
+		opts = append(opts, sdktrace.WithSyncer(config.MemoryExporter))
 	} else {
-		for _, exp := range tracingConfig.Exporters {
+		for _, exp := range config.TracingConfig.Exporters {
 			// Default to OLTP HTTP
 			if exp.Exporter == "" {
 				exp.Exporter = config.ExporterOLTPHTTP
@@ -142,14 +142,14 @@ func initTracer(
 
 	otel.SetTracerProvider(tp)
 
-	propagators, err := buildPropagators(tracingConfig.Propagators)
+	propagators, err := buildPropagators(config.TracingConfig.Propagators)
 	if err != nil {
 		return nil, err
 	}
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagators...))
 
-	if optParams.ErrorHandlerFunc != nil {
-		otel.SetErrorHandler(otel.ErrorHandlerFunc(optParams.ErrorHandlerFunc))
+	if config.ErrorHandlerFunc != nil {
+		otel.SetErrorHandler(otel.ErrorHandlerFunc(config.ErrorHandlerFunc))
 	}
 
 	return tp, nil
