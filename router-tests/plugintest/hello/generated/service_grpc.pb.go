@@ -4,8 +4,6 @@
 // - protoc             v5.29.3
 // source: generated/service.proto
 
-//lint:file-ignore all "staticcheck does not like some of the generated code, and the latest protoc generates the code"
-
 package plugin
 
 import (
