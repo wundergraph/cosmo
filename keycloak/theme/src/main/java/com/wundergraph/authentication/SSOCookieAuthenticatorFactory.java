@@ -86,6 +86,6 @@ public class SSOCookieAuthenticatorFactory implements AuthenticatorFactory {
 
     @Override
     public String getHelpText() {
-        return "Adds TERMS_AND_CONDITIONS required action if not already present";
+        return "Retrieve the SSO cookie and construct an additional SSO login link based on it.";
     }
 }
