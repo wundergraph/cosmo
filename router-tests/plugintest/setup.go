@@ -2,6 +2,7 @@ package plugintest
 
 import (
 	"context"
+	"fmt"
 	"github.com/wundergraph/cosmo/router-plugin/config"
 	routerplugin "github.com/wundergraph/cosmo/router-plugin/setup"
 	plugin "github.com/wundergraph/cosmo/router-tests/plugintest/hello/generated"
@@ -62,7 +63,7 @@ func SetupPluginForTest[T any](t *testing.T, testConfig PluginTestConfig[T]) *Pl
 	// Start the server
 	go func() {
 		if err := grpcServer.Serve(lis); err != nil {
-			t.Fatalf("failed to serve: %v", err)
+			panic(fmt.Sprintf("failed to serve: %v", err))
 		}
 	}()
 
