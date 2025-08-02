@@ -36,18 +36,18 @@ const (
 
 func initTracer(
 	ctx context.Context,
-	config TracingOptions,
+	tracingConfig TracingOptions,
 ) (*sdktrace.TracerProvider, error) {
 	// Return no-op provider
-	if len(config.TracingConfig.Exporters) == 0 {
+	if len(tracingConfig.TracingConfig.Exporters) == 0 {
 		provider := sdktrace.NewTracerProvider(sdktrace.WithSampler(sdktrace.NeverSample()))
 		otel.SetTracerProvider(provider)
 		return provider, nil
 	}
 
 	r, err := resource.New(ctx,
-		resource.WithAttributes(semconv.ServiceNameKey.String(config.ServiceName)),
-		resource.WithAttributes(semconv.ServiceVersionKey.String(config.ServiceVersion)),
+		resource.WithAttributes(semconv.ServiceNameKey.String(tracingConfig.ServiceName)),
+		resource.WithAttributes(semconv.ServiceVersionKey.String(tracingConfig.ServiceVersion)),
 		resource.WithAttributes(WgIsPlugin.Bool(true)),
 		resource.WithProcessPID(),
 		resource.WithOSType(),
@@ -77,14 +77,14 @@ func initTracer(
 	opts = append(opts,
 		sdktrace.WithSampler(
 			sdktrace.ParentBased(
-				sdktrace.TraceIDRatioBased(config.TracingConfig.Sampler),
+				sdktrace.TraceIDRatioBased(tracingConfig.TracingConfig.Sampler),
 			),
 		),
 	)
 
-	if config.IPAnonymization != nil && config.IPAnonymization.Enabled {
+	if tracingConfig.IPAnonymization != nil && tracingConfig.IPAnonymization.Enabled {
 		var rFunc RedactFunc
-		switch config.IPAnonymization.Method {
+		switch tracingConfig.IPAnonymization.Method {
 		case config.Hash:
 			rFunc = func(key attribute.KeyValue) string {
 				h := sha256.New()
@@ -102,10 +102,10 @@ func initTracer(
 		}
 	}
 
-	if config.MemoryExporter != nil {
-		opts = append(opts, sdktrace.WithSyncer(config.MemoryExporter))
+	if tracingConfig.MemoryExporter != nil {
+		opts = append(opts, sdktrace.WithSyncer(tracingConfig.MemoryExporter))
 	} else {
-		for _, exp := range config.TracingConfig.Exporters {
+		for _, exp := range tracingConfig.TracingConfig.Exporters {
 			// Default to OLTP HTTP
 			if exp.Exporter == "" {
 				exp.Exporter = config.ExporterOLTPHTTP
@@ -142,14 +142,14 @@ func initTracer(
 
 	otel.SetTracerProvider(tp)
 
-	propagators, err := buildPropagators(config.TracingConfig.Propagators)
+	propagators, err := buildPropagators(tracingConfig.TracingConfig.Propagators)
 	if err != nil {
 		return nil, err
 	}
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagators...))
 
-	if config.ErrorHandlerFunc != nil {
-		otel.SetErrorHandler(otel.ErrorHandlerFunc(config.ErrorHandlerFunc))
+	if tracingConfig.ErrorHandlerFunc != nil {
+		otel.SetErrorHandler(otel.ErrorHandlerFunc(tracingConfig.ErrorHandlerFunc))
 	}
 
 	return tp, nil
