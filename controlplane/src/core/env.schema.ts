@@ -63,7 +63,7 @@ export const envVariables = z
       .optional()
       .refine(
         (val) => !val || /^[\d.a-z-]+$/i.test(val),
-        'AUTH_SSO_COOKIE_DOMAIN must be a valid domain (e.g. ".example.com")'
+        'AUTH_SSO_COOKIE_DOMAIN must be a valid domain (e.g. ".example.com")',
       ),
     AUTH_REDIRECT_URI: z.string().url(),
     /**
