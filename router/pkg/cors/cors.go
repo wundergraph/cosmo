@@ -108,35 +108,16 @@ func (c *Config) Validate() error {
 	return nil
 }
 
-func (c *Config) parseWildcardRules() [][]string {
-	var wRules [][]string
+func (c *Config) parseNewWildcardRules() []*WildcardPattern {
+	var wRules []*WildcardPattern
 
 	for _, o := range c.AllowOrigins {
 		if !strings.Contains(o, "*") {
 			continue
 		}
 
-		// Split origin by wildcard (*)
-		parts := strings.Split(o, "*")
-
-		// If there’s no wildcard, skip this origin
-		if len(parts) == 1 {
-			continue
-		}
-
-		// Generate rules for origins with multiple wildcard segments
-		var rule []string
-		for i, part := range parts {
-			if i > 0 {
-				rule = append(rule, "*") // Add wildcard indicator between segments
-			}
-			if part != "" {
-				rule = append(rule, part)
-			}
-		}
-
-		// Add parsed rule to wRules
-		wRules = append(wRules, rule)
+		wp := Compile(o)
+		wRules = append(wRules, wp)
 	}
 
 	return wRules

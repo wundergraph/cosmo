@@ -476,8 +476,8 @@ func (h *PreHandler) shouldComputeOperationSha256(operationKit *OperationKit) bo
 		return true
 	}
 
-	hasPersistedHash := operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery != nil && operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash != ""
-	// If it already has a persisted hash attached to the request, then there is no need for us to compute it anew
+	hasPersistedHash := operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash()
+	// If it already has a persisted hash attached to the request, then there is no need for us to compute it anew.
 	// Otherwise, we only want to compute the hash (an expensive operation) if we're safelisting or logging unknown persisted operations
 	return !hasPersistedHash && (h.operationBlocker.safelistEnabled || h.operationBlocker.logUnknownOperationsEnabled)
 }
@@ -512,20 +512,29 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	if req.Method == http.MethodGet {
 		if err := operationKit.UnmarshalOperationFromURL(req.URL); err != nil {
 			return &httpGraphqlError{
-				message:    fmt.Sprintf("error parsing request query params: %s", err),
+				message:    fmt.Sprintf("invalid GET request: %s", err),
 				statusCode: http.StatusBadRequest,
 			}
 		}
 	} else if req.Method == http.MethodPost {
 		if err := operationKit.UnmarshalOperationFromBody(httpOperation.body); err != nil {
 			return &httpGraphqlError{
-				message:    "error parsing request body",
+				message:    fmt.Sprintf("invalid request body: %s", err),
 				statusCode: http.StatusBadRequest,
 			}
 		}
 		// If we have files, we need to set them on the parsed operation
 		if len(httpOperation.files) > 0 {
 			requestContext.operation.files = httpOperation.files
+		}
+	}
+
+	if operationKit.isOperationNameLengthLimitExceeded(operationKit.parsedOperation.Request.OperationName) {
+		return &httpGraphqlError{
+			message: fmt.Sprintf("operation name of length %d exceeds max length of %d",
+				len(operationKit.parsedOperation.Request.OperationName),
+				operationKit.operationProcessor.operationNameLengthLimit),
+			statusCode: http.StatusBadRequest,
 		}
 	}
 
@@ -685,11 +694,10 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		}
 	}
 
-	if operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery != nil &&
-		operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash != "" {
-
-		requestContext.operation.persistedID = operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash
-		persistedIDAttribute := otel.WgOperationPersistedID.String(operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)
+	if operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash() {
+		hash := operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash
+		requestContext.operation.persistedID = hash
+		persistedIDAttribute := otel.WgOperationPersistedID.String(hash)
 
 		requestContext.telemetry.addCommonAttribute(persistedIDAttribute)
 
@@ -897,6 +905,28 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		trace.WithSpanKind(trace.SpanKindInternal),
 		trace.WithAttributes(requestContext.telemetry.traceAttrs...),
 	)
+
+	// Validate that the planned query doesn't exceed the maximum query depth configured
+	// This check runs if they've configured a max query depth, and it can optionally be turned off for persisted operations
+	if h.complexityLimits != nil {
+		cacheHit, complexityCalcs, queryDepthErr := operationKit.ValidateQueryComplexity()
+		engineValidateSpan.SetAttributes(otel.WgQueryDepth.Int(complexityCalcs.Depth))
+		engineValidateSpan.SetAttributes(otel.WgQueryTotalFields.Int(complexityCalcs.TotalFields))
+		engineValidateSpan.SetAttributes(otel.WgQueryRootFields.Int(complexityCalcs.RootFields))
+		engineValidateSpan.SetAttributes(otel.WgQueryRootFieldAliases.Int(complexityCalcs.RootFieldAliases))
+		engineValidateSpan.SetAttributes(otel.WgQueryDepthCacheHit.Bool(cacheHit))
+		if queryDepthErr != nil {
+			rtrace.AttachErrToSpan(engineValidateSpan, err)
+
+			requestContext.operation.validationTime = time.Since(startValidation)
+			httpOperation.traceTimings.EndValidate()
+
+			engineValidateSpan.End()
+
+			return queryDepthErr
+		}
+	}
+
 	validationCached, err := operationKit.Validate(requestContext.operation.executionOptions.SkipLoader, requestContext.operation.remapVariables, h.apolloCompatibilityFlags)
 	if err != nil {
 		rtrace.AttachErrToSpan(engineValidateSpan, err)
@@ -919,27 +949,6 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		// we skip the validation of variables as we're not using them
 		// this allows us to generate query plans without having to provide variables
 		engineValidateSpan.SetAttributes(otel.WgVariablesValidationSkipped.Bool(true))
-	}
-
-	// Validate that the planned query doesn't exceed the maximum query depth configured
-	// This check runs if they've configured a max query depth, and it can optionally be turned off for persisted operations
-	if h.complexityLimits != nil {
-		cacheHit, complexityCalcs, queryDepthErr := operationKit.ValidateQueryComplexity(h.complexityLimits, operationKit.kit.doc, h.executor.RouterSchema, operationKit.parsedOperation.IsPersistedOperation)
-		engineValidateSpan.SetAttributes(otel.WgQueryDepth.Int(complexityCalcs.Depth))
-		engineValidateSpan.SetAttributes(otel.WgQueryTotalFields.Int(complexityCalcs.TotalFields))
-		engineValidateSpan.SetAttributes(otel.WgQueryRootFields.Int(complexityCalcs.RootFields))
-		engineValidateSpan.SetAttributes(otel.WgQueryRootFieldAliases.Int(complexityCalcs.RootFieldAliases))
-		engineValidateSpan.SetAttributes(otel.WgQueryDepthCacheHit.Bool(cacheHit))
-		if queryDepthErr != nil {
-			rtrace.AttachErrToSpan(engineValidateSpan, err)
-
-			requestContext.operation.validationTime = time.Since(startValidation)
-			httpOperation.traceTimings.EndValidate()
-
-			engineValidateSpan.End()
-
-			return queryDepthErr
-		}
 	}
 
 	requestContext.operation.validationTime = time.Since(startValidation)

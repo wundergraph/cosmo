@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/buger/jsonparser"
@@ -16,16 +17,55 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
+// cacheHashNotStored is a constant representing a non-existent entry in Persisted Queries Cache
+// of the testenv. All the pre-stored persistent entries used in testing are located here:
+// ./testenv/testdata/cdn/organization/graph/operations/my-client
+const cacheHashNotStored = "0000000000000000000000000000000000000000000000000000000000000000"
+
 func TestPersistedOperationNotFound(t *testing.T) {
 	t.Parallel()
 
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-			Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "does-not-exist"}}`),
+			Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + cacheHashNotStored + `"}}`),
 		})
 		require.Equal(t, res.Response.Header.Get("Content-Type"), "application/json; charset=utf-8")
 		require.Equal(t, `{"errors":[{"message":"PersistedQueryNotFound","extensions":{"code":"PERSISTED_QUERY_NOT_FOUND"}}]}`, res.Body)
 	})
+}
+
+func TestPersistedOperationInvalidHash(t *testing.T) {
+	t.Parallel()
+
+	malformed := []string{
+		"malformed",
+		"some-words-free-style-not-allowed",
+		"../../../path/not/ok",
+		// too short
+		strings.Repeat("0", 63),
+		strings.Repeat("0", 62),
+		"0000",
+		"0",
+		"",
+		// too long
+		strings.Repeat("0", 74),
+		strings.Repeat("0", 65),
+		// 1 bad character spoils everything
+		"0000000000000z00000000000000000000000000000000000000000000000000",
+		"0000000000000000000000000000000000000z00000000000000000000000000",
+		"000000000000000000000000000000000000000000000000000000000000000z",
+	}
+	for _, hash := range malformed {
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + hash + `"}}`),
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+			require.Equal(t, res.Response.Header.Get("Content-Type"), "application/json; charset=utf-8")
+			require.Equal(t, `{"errors":[{"message":"invalid request body: persistedQuery does not have a valid sha256 hash"}]}`, res.Body)
+		})
+	}
 }
 
 func TestPersistedOperation(t *testing.T) {
@@ -440,11 +480,12 @@ func TestPersistedOperationsWithNestedVariablesExtraction(t *testing.T) {
 	t.Parallel()
 
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		nestedVariableExtraction := "5000000000000000000000000000000000000000000000000000000000000000"
 		header := make(http.Header)
 		header.Add("graphql-client-name", "my-client")
 		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"NormalizationQuery"`),
-			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "nestedVariableExtraction"}}`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + nestedVariableExtraction + `"}}`),
 			Header:        header,
 			Variables:     []byte(`{"arg":"a"}`),
 		})
@@ -453,7 +494,7 @@ func TestPersistedOperationsWithNestedVariablesExtraction(t *testing.T) {
 		require.Equal(t, `{"data":{"rootFieldWithListOfInputArg":[{"arg":"a"}]}}`, res.Body)
 		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"NormalizationQuery"`),
-			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "nestedVariableExtraction"}}`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + nestedVariableExtraction + `"}}`),
 			Header:        header,
 			Variables:     []byte(`{"arg":"a"}`),
 		})
@@ -462,7 +503,7 @@ func TestPersistedOperationsWithNestedVariablesExtraction(t *testing.T) {
 		require.Equal(t, `{"data":{"rootFieldWithListOfInputArg":[{"arg":"a"}]}}`, res.Body)
 		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"NormalizationQuery"`),
-			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "nestedVariableExtraction"}}`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + nestedVariableExtraction + `"}}`),
 			Header:        header,
 			Variables:     []byte(`{"arg":"b"}`),
 		})
@@ -476,11 +517,12 @@ func TestPersistedOperationCacheWithVariablesAndDefaultValues(t *testing.T) {
 	t.Parallel()
 
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		skipVariableWithDefault := "4000000000000000000000000000000000000000000000000000000000000000"
 		header := make(http.Header)
 		header.Add("graphql-client-name", "my-client")
 		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"MyQuery"`),
-			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "skipVariableWithDefault"}}`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + skipVariableWithDefault + `"}}`),
 			Header:        header,
 			Variables:     []byte(`{}`),
 		})
@@ -489,7 +531,7 @@ func TestPersistedOperationCacheWithVariablesAndDefaultValues(t *testing.T) {
 		require.Equal(t, `{"data":{"employee":{"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
 		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"MyQuery"`),
-			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "skipVariableWithDefault"}}`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + skipVariableWithDefault + `"}}`),
 			Header:        header,
 			Variables:     []byte(`{}`),
 		})
@@ -498,7 +540,7 @@ func TestPersistedOperationCacheWithVariablesAndDefaultValues(t *testing.T) {
 		require.Equal(t, `{"data":{"employee":{"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
 		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"MyQuery"`),
-			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "skipVariableWithDefault"}}`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + skipVariableWithDefault + `"}}`),
 			Header:        header,
 			Variables:     []byte(`{"yes":false}`),
 		})
@@ -507,7 +549,7 @@ func TestPersistedOperationCacheWithVariablesAndDefaultValues(t *testing.T) {
 		require.Equal(t, "MISS", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"MyQuery"`),
-			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "skipVariableWithDefault"}}`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + skipVariableWithDefault + `"}}`),
 			Header:        header,
 			Variables:     []byte(`{"yes":false}`),
 		})
@@ -516,7 +558,7 @@ func TestPersistedOperationCacheWithVariablesAndDefaultValues(t *testing.T) {
 		require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"MyQuery"`),
-			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "skipVariableWithDefault"}}`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + skipVariableWithDefault + `"}}`),
 			Header:        header,
 			Variables:     []byte(`{"yes":true}`),
 		})
@@ -525,7 +567,7 @@ func TestPersistedOperationCacheWithVariablesAndDefaultValues(t *testing.T) {
 		require.Equal(t, "MISS", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"MyQuery"`),
-			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "skipVariableWithDefault"}}`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + skipVariableWithDefault + `"}}`),
 			Header:        header,
 			Variables:     []byte(`{"yes":true}`),
 		})
@@ -539,11 +581,12 @@ func TestPersistedOperationCacheWithVariablesCoercion(t *testing.T) {
 	t.Parallel()
 
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		listArgQuery := "1000000000000000000000000000000000000000000000000000000000000000"
 		header := make(http.Header)
 		header.Add("graphql-client-name", "my-client")
 		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"MyQuery"`),
-			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "listArgQuery"}}`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + listArgQuery + `"}}`),
 			Header:        header,
 			Variables:     []byte(`{"arg": "a"}`),
 		})
@@ -552,7 +595,7 @@ func TestPersistedOperationCacheWithVariablesCoercion(t *testing.T) {
 		require.Equal(t, "MISS", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"MyQuery"`),
-			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "listArgQuery"}}`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + listArgQuery + `"}}`),
 			Header:        header,
 			Variables:     []byte(`{"arg": "a"}`),
 		})
@@ -561,7 +604,7 @@ func TestPersistedOperationCacheWithVariablesCoercion(t *testing.T) {
 		require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"MyQuery"`),
-			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "listArgQuery"}}`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + listArgQuery + `"}}`),
 			Header:        header,
 			Variables:     []byte(`{"arg": "b"}`),
 		})
@@ -569,9 +612,10 @@ func TestPersistedOperationCacheWithVariablesCoercion(t *testing.T) {
 		require.Equal(t, `{"data":{"rootFieldWithListArg":["b"]}}`, res.Body)
 		require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 
+		listArgQueryWithDefault := "2000000000000000000000000000000000000000000000000000000000000000"
 		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"MyQuery"`),
-			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "listArgQueryWithDefault"}}`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + listArgQueryWithDefault + `"}}`),
 			Header:        header,
 			Variables:     []byte(`{}`),
 		})
@@ -580,7 +624,7 @@ func TestPersistedOperationCacheWithVariablesCoercion(t *testing.T) {
 		require.Equal(t, "MISS", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"MyQuery"`),
-			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "listArgQueryWithDefault"}}`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + listArgQueryWithDefault + `"}}`),
 			Header:        header,
 			Variables:     []byte(`{}`),
 		})
@@ -589,7 +633,7 @@ func TestPersistedOperationCacheWithVariablesCoercion(t *testing.T) {
 		require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"MyQuery"`),
-			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "listArgQueryWithDefault"}}`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + listArgQueryWithDefault + `"}}`),
 			Header:        header,
 			Variables:     []byte(`{"arg": "b"}`),
 		})
@@ -598,7 +642,7 @@ func TestPersistedOperationCacheWithVariablesCoercion(t *testing.T) {
 		require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"MyQuery"`),
-			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "listArgQueryWithDefault"}}`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + listArgQueryWithDefault + `"}}`),
 			Header:        header,
 			Variables:     []byte(`{"arg": ["c"]}`),
 		})
@@ -606,10 +650,11 @@ func TestPersistedOperationCacheWithVariablesCoercion(t *testing.T) {
 		require.Equal(t, `{"data":{"rootFieldWithListArg":["c"]}}`, res.Body)
 		require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 
+		nestedEnum := "3000000000000000000000000000000000000000000000000000000000000000"
 		// nested list of enums
 		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"MyQuery"`),
-			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "nestedEnum"}}`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + nestedEnum + `"}}`),
 			Header:        header,
 			Variables:     []byte(`{"arg":{"enums":"A"}}`),
 		})
@@ -618,7 +663,7 @@ func TestPersistedOperationCacheWithVariablesCoercion(t *testing.T) {
 		require.Equal(t, "MISS", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			OperationName: []byte(`"MyQuery"`),
-			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "nestedEnum"}}`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + nestedEnum + `"}}`),
 			Header:        header,
 			Variables:     []byte(`{"arg":{"enums":"B"}}`),
 		})
