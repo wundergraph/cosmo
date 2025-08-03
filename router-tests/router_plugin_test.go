@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -108,19 +109,21 @@ func TestVerifyTelemetryForRouterPluginRequests(t *testing.T) {
 		func(t *testing.T, xEnv *testenv.Environment) {
 			t.Run("query projects simple", func(t *testing.T) {
 				t.Parallel()
+
+				queryName := "query sample"
 				response := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-					Query: `query there { projects { id name } }`,
+					Query: fmt.Sprintf(`%s { projects { id name } }`, queryName),
 				})
 
 				expected := `{"data":{"projects":[{"id":"1","name":"Cloud Migration Overhaul"},{"id":"2","name":"Microservices Revolution"},{"id":"3","name":"AI-Powered Analytics"},{"id":"4","name":"DevOps Transformation"},{"id":"5","name":"Security Overhaul"},{"id":"6","name":"Mobile App Development"},{"id":"7","name":"Data Lake Implementation"}]}}`
 				require.Equal(t, expected, response.Body)
 
-				sn := exporter.GetSpans().Snapshots()
-				require.Len(t, sn, 8)
+				snapshots := exporter.GetSpans().Snapshots()
+				require.Len(t, snapshots, 8)
 
 				queryNameInstances := 0
-				for i, _ := range sn {
-					if sn[i].Name() == "query there" {
+				for _, sn := range snapshots {
+					if sn.Name() == queryName {
 						queryNameInstances++
 					}
 				}
