@@ -40,9 +40,9 @@ func TestTracing(t *testing.T) {
 			}
 
 			svc := setupTracingTest(t, startup, opts, nil)
-			defer svc.cleanup()
+			defer svc.Cleanup()
 
-			resp, err := svc.client.QueryRun(context.Background(), &plugin.QueryRunRequest{})
+			resp, err := svc.Client.QueryRun(context.Background(), &plugin.QueryRunRequest{})
 			require.NoError(t, err)
 			require.NotNil(t, resp.Run)
 
@@ -64,9 +64,9 @@ func TestTracing(t *testing.T) {
 			}
 
 			svc := setupTracingTest(t, startup, opts, nil)
-			defer svc.cleanup()
+			defer svc.Cleanup()
 
-			resp, err := svc.client.QueryRun(context.Background(), &plugin.QueryRunRequest{})
+			resp, err := svc.Client.QueryRun(context.Background(), &plugin.QueryRunRequest{})
 			require.NoError(t, err)
 			require.NotNil(t, resp.Run)
 
@@ -88,9 +88,9 @@ func TestTracing(t *testing.T) {
 			}
 
 			svc := setupTracingTest(t, startup, opts, nil)
-			defer svc.cleanup()
+			defer svc.Cleanup()
 
-			resp, err := svc.client.QueryRun(context.Background(), &plugin.QueryRunRequest{})
+			resp, err := svc.Client.QueryRun(context.Background(), &plugin.QueryRunRequest{})
 			require.NoError(t, err)
 			require.NotNil(t, resp.Run)
 
@@ -112,9 +112,9 @@ func TestTracing(t *testing.T) {
 			}
 
 			svc := setupTracingTest(t, startup, opts, nil)
-			defer svc.cleanup()
+			defer svc.Cleanup()
 
-			resp, err := svc.client.QueryRun(context.Background(), &plugin.QueryRunRequest{})
+			resp, err := svc.Client.QueryRun(context.Background(), &plugin.QueryRunRequest{})
 			require.NoError(t, err)
 			require.NotNil(t, resp.Run)
 
@@ -137,9 +137,9 @@ func TestTracing(t *testing.T) {
 			}
 
 			svc := setupTracingTest(t, startup, opts, nil)
-			defer svc.cleanup()
+			defer svc.Cleanup()
 
-			resp, err := svc.client.QueryRun(context.Background(), &plugin.QueryRunRequest{})
+			resp, err := svc.Client.QueryRun(context.Background(), &plugin.QueryRunRequest{})
 			require.NoError(t, err)
 			require.NotNil(t, resp.Run)
 
@@ -189,9 +189,9 @@ func TestTracing(t *testing.T) {
 			}
 
 			svc := setupTracingTest(t, getTracingBaseConfig(), opts, nil)
-			defer svc.cleanup()
+			defer svc.Cleanup()
 
-			resp, err := svc.client.QueryRun(context.Background(), &plugin.QueryRunRequest{})
+			resp, err := svc.Client.QueryRun(context.Background(), &plugin.QueryRunRequest{})
 			require.NoError(t, err)
 			require.NotNil(t, resp.Run)
 
@@ -234,9 +234,9 @@ func TestTracing(t *testing.T) {
 			}
 
 			svc := setupTracingTest(t, getTracingBaseConfig(), opts, runner)
-			defer svc.cleanup()
+			defer svc.Cleanup()
 
-			resp, err := svc.client.QueryRun(context.Background(), &plugin.QueryRunRequest{})
+			resp, err := svc.Client.QueryRun(context.Background(), &plugin.QueryRunRequest{})
 			require.NoError(t, err)
 			require.NotNil(t, resp.Run)
 
@@ -285,9 +285,9 @@ func TestTracing(t *testing.T) {
 			}
 
 			svc := setupTracingTest(t, getTracingBaseConfig(), opts, runner)
-			defer svc.cleanup()
+			defer svc.Cleanup()
 
-			resp, err := svc.client.QueryRun(context.Background(), &plugin.QueryRunRequest{})
+			resp, err := svc.Client.QueryRun(context.Background(), &plugin.QueryRunRequest{})
 			require.NoError(t, err)
 			require.NotNil(t, resp.Run)
 
@@ -341,9 +341,9 @@ func TestTracing(t *testing.T) {
 			}
 
 			svc := setupTracingTest(t, startup, opts, runner)
-			defer svc.cleanup()
+			defer svc.Cleanup()
 
-			resp, err := svc.client.QueryRun(context.Background(), &plugin.QueryRunRequest{})
+			resp, err := svc.Client.QueryRun(context.Background(), &plugin.QueryRunRequest{})
 			require.NoError(t, err)
 			require.NotNil(t, resp.Run)
 
@@ -387,9 +387,9 @@ func TestTracing(t *testing.T) {
 			}
 
 			svc := setupTracingTest(t, startup, opts, runner)
-			defer svc.cleanup()
+			defer svc.Cleanup()
 
-			resp, err := svc.client.QueryRun(context.Background(), &plugin.QueryRunRequest{})
+			resp, err := svc.Client.QueryRun(context.Background(), &plugin.QueryRunRequest{})
 			require.NoError(t, err)
 			require.NotNil(t, resp.Run)
 
@@ -433,9 +433,9 @@ func TestTracing(t *testing.T) {
 			}
 
 			svc := setupTracingTest(t, startup, opts, runner)
-			defer svc.cleanup()
+			defer svc.Cleanup()
 
-			resp, err := svc.client.QueryRun(context.Background(), &plugin.QueryRunRequest{})
+			resp, err := svc.Client.QueryRun(context.Background(), &plugin.QueryRunRequest{})
 			require.NoError(t, err)
 			require.NotNil(t, resp.Run)
 
@@ -479,9 +479,9 @@ func TestTracing(t *testing.T) {
 			}
 
 			svc := setupTracingTest(t, startup, opts, runner)
-			defer svc.cleanup()
+			defer svc.Cleanup()
 
-			resp, err := svc.client.QueryRun(context.Background(), &plugin.QueryRunRequest{})
+			resp, err := svc.Client.QueryRun(context.Background(), &plugin.QueryRunRequest{})
 			require.NoError(t, err)
 			require.NotNil(t, resp.Run)
 
@@ -529,9 +529,9 @@ func TestTracing(t *testing.T) {
 			}
 
 			svc := setupTracingTest(t, getTracingBaseConfig(), opts, runner)
-			defer svc.cleanup()
+			defer svc.Cleanup()
 
-			resp, err := svc.client.QueryRun(context.Background(), &plugin.QueryRunRequest{})
+			resp, err := svc.Client.QueryRun(context.Background(), &plugin.QueryRunRequest{})
 			require.NoError(t, err)
 			require.NotNil(t, resp.Run)
 
@@ -580,9 +580,9 @@ func TestTracing(t *testing.T) {
 			}
 
 			svc := setupTracingTest(t, getTracingBaseConfig(), opts, runner)
-			defer svc.cleanup()
+			defer svc.Cleanup()
 
-			resp, err := svc.client.QueryRun(context.Background(), &plugin.QueryRunRequest{})
+			resp, err := svc.Client.QueryRun(context.Background(), &plugin.QueryRunRequest{})
 			require.NoError(t, err)
 			require.NotNil(t, resp.Run)
 
@@ -672,7 +672,7 @@ func TestTracing(t *testing.T) {
 			}
 
 			svc := setupTracingTest(t, baseConfig, opts, runner)
-			defer svc.cleanup()
+			defer svc.Cleanup()
 
 			ctx := context.Background()
 
@@ -681,7 +681,7 @@ func TestTracing(t *testing.T) {
 				"Baggage":     baggageValue,
 			}))
 
-			resp, err := svc.client.QueryRun(ctx, &plugin.QueryRunRequest{})
+			resp, err := svc.Client.QueryRun(ctx, &plugin.QueryRunRequest{})
 			require.NoError(t, err)
 			require.NotNil(t, resp.Run)
 			require.Len(t, exporter.GetSpans().Snapshots(), 2)

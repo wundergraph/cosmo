@@ -2,7 +2,6 @@ package plugintest
 
 import (
 	"context"
-	"fmt"
 	"github.com/wundergraph/cosmo/router-plugin/config"
 	routerplugin "github.com/wundergraph/cosmo/router-plugin/setup"
 	plugin "github.com/wundergraph/cosmo/router-tests/plugintest/hello/generated"
@@ -26,8 +25,8 @@ func (s *HelloService) QueryRun(ctx context.Context, req *plugin.QueryRunRequest
 
 // PluginSetupResponse is a wrapper that holds the gRPC test components
 type PluginSetupResponse[T any] struct {
-	client  T
-	cleanup func()
+	Client  T
+	Cleanup func()
 }
 
 const (
@@ -62,9 +61,8 @@ func SetupPluginForTest[T any](t *testing.T, testConfig PluginTestConfig[T]) *Pl
 
 	// Start the server
 	go func() {
-		if err := grpcServer.Serve(lis); err != nil {
-			panic(fmt.Sprintf("failed to serve: %v", err))
-		}
+		err := grpcServer.Serve(lis)
+		require.NoError(t, err)
 	}()
 
 	// Create a client connection
@@ -90,7 +88,7 @@ func SetupPluginForTest[T any](t *testing.T, testConfig PluginTestConfig[T]) *Pl
 	}
 
 	return &PluginSetupResponse[T]{
-		client:  client,
-		cleanup: cleanup,
+		Client:  client,
+		Cleanup: cleanup,
 	}
 }

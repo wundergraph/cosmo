@@ -9,6 +9,7 @@ import (
 	"go.uber.org/zap/zapcore"
 
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
 )
 
 func TestRouterPlugin(t *testing.T) {
@@ -90,6 +91,44 @@ func TestRouterPlugin(t *testing.T) {
 			},
 		)
 	})
+}
+
+func TestVerifyTelemetryForRouterPluginRequests(t *testing.T) {
+	exporter := tracetest.NewInMemoryExporter(t)
+
+	testenv.Run(t,
+		&testenv.Config{
+			TraceExporter:            exporter,
+			RouterConfigJSONTemplate: testenv.ConfigWithPluginsJSONTemplate,
+			Plugins: testenv.PluginConfig{
+				Enabled: true,
+				Path:    "../router/plugins",
+			},
+		},
+		func(t *testing.T, xEnv *testenv.Environment) {
+			t.Run("query projects simple", func(t *testing.T) {
+				t.Parallel()
+				response := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query there { projects { id name } }`,
+				})
+
+				expected := `{"data":{"projects":[{"id":"1","name":"Cloud Migration Overhaul"},{"id":"2","name":"Microservices Revolution"},{"id":"3","name":"AI-Powered Analytics"},{"id":"4","name":"DevOps Transformation"},{"id":"5","name":"Security Overhaul"},{"id":"6","name":"Mobile App Development"},{"id":"7","name":"Data Lake Implementation"}]}}`
+				require.Equal(t, expected, response.Body)
+
+				sn := exporter.GetSpans().Snapshots()
+				require.Len(t, sn, 8)
+
+				queryNameInstances := 0
+				for i, _ := range sn {
+					if sn[i].Name() == "query there" {
+						queryNameInstances++
+					}
+				}
+
+				// Normal http spans would have query there twice
+				require.Equal(t, queryNameInstances, 1)
+			})
+		})
 }
 
 func TestRouterPluginRequests(t *testing.T) {
