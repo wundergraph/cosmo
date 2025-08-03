@@ -25,15 +25,17 @@ public class SSOCookieAuthenticator implements Authenticator {
 
         // Ensure that the SSO cookie value is not empty and set the hint note
         String ssoCookieValue = ssoCookie.getValue();
-        if (ssoCookieValue == null || ssoCookieValue.isEmpty()) {
+        if (ssoCookieValue == null || ssoCookieValue.trim().isEmpty()) {
             // The SSO cookie doesn't exist or the value is empty
             authenticationFlowContext.success();
             return;
         }
 
+        ssoCookieValue = ssoCookieValue.trim();
+
         // Make sure that value of the SSO cookie is a registered and enabled IDP
         RealmModel realm = authenticationFlowContext.getRealm();
-        IdentityProviderModel idpModel = realm.getIdentityProviderByAlias(ssoCookieValue.trim());
+        IdentityProviderModel idpModel = realm.getIdentityProviderByAlias(ssoCookieValue);
 
         if (idpModel != null && idpModel.isEnabled()) {
             // Create the login URL for it and pass it to the frontend

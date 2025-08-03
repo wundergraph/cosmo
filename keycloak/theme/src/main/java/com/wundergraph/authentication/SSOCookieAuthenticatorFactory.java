@@ -9,6 +9,7 @@ import org.keycloak.models.KeycloakSessionFactory;
 import org.keycloak.provider.ProviderConfigProperty;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class SSOCookieAuthenticatorFactory implements AuthenticatorFactory {
@@ -16,9 +17,11 @@ public class SSOCookieAuthenticatorFactory implements AuthenticatorFactory {
     public static final String SSO_COOKIE_CONFIG_NAME = "sso-cookie-name";
     public static final String DEFAULT_COOKIE_NAME = "cosmo_idp_hint";
 
-    private static final List<ProviderConfigProperty> configProperties = new ArrayList<>();
+    private static final List<ProviderConfigProperty> configProperties;
 
     static {
+        List<ProviderConfigProperty> props = new ArrayList<>();
+
         ProviderConfigProperty prop = new ProviderConfigProperty();
         prop.setName(SSO_COOKIE_CONFIG_NAME);
         prop.setLabel("Cookie Name");
@@ -27,7 +30,8 @@ public class SSOCookieAuthenticatorFactory implements AuthenticatorFactory {
         prop.setRequired(true);
         prop.setType(ProviderConfigProperty.STRING_TYPE);
 
-        configProperties.add(prop);
+        props.add(prop);
+        configProperties = Collections.unmodifiableList(props);
     }
 
     @Override
