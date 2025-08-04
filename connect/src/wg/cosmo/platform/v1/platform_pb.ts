@@ -21889,6 +21889,11 @@ export class GetOperationsRequest extends Message<GetOperationsRequest> {
    */
   clientName?: string;
 
+  /**
+   * @generated from field: optional int32 limit = 4;
+   */
+  limit?: number;
+
   constructor(data?: PartialMessage<GetOperationsRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -21900,6 +21905,7 @@ export class GetOperationsRequest extends Message<GetOperationsRequest> {
     { no: 1, name: "federatedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "clientName", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "limit", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOperationsRequest {
