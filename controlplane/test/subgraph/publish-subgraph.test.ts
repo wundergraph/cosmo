@@ -524,7 +524,7 @@ describe('Publish subgraph tests', () => {
       await server.close();
     });
 
-    test('Should fail when trying to publish a regular subgraph with same name as existing plugin', async () => {
+    test('Should fail when trying to publish a plugin with STANDARD type', async () => {
       const { client, server } = await SetupTest({
         dbname,
         setupBilling: { plan: 'launch@1' },
@@ -535,7 +535,6 @@ describe('Publish subgraph tests', () => {
       // First create a plugin subgraph
       await createPluginSubgraph(client, pluginName);
 
-      // Try to publish a regular subgraph with the same name
       const publishResponse = await client.publishFederatedSubgraph({
         name: pluginName,
         namespace: 'default',
@@ -545,7 +544,9 @@ describe('Publish subgraph tests', () => {
       });
 
       expect(publishResponse.response?.code).toBe(EnumStatusCode.ERR);
-      expect(publishResponse.response?.details).toContain(`Subgraph ${pluginName} is not of type standard`);
+      expect(publishResponse.response?.details).toContain(
+        `Subgraph plugin-ANC1JXIDA0RGK3A1Y2VFKV is a plugin. Please use the 'wgc router plugin publish' command to publish the plugin.`,
+      );
 
       await server.close();
     });
