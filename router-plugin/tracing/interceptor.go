@@ -33,6 +33,7 @@ func CreateTracingInterceptor(tracingOpts TracingOptions) (func(ctx context.Cont
 
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 		if md, ok := metadata.FromIncomingContext(ctx); ok {
+			// Extract headers from the incoming context
 			carrier := propagation.MapCarrier{}
 			for key, values := range md {
 				if len(values) > 0 {
