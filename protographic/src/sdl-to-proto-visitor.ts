@@ -9,7 +9,6 @@ import {
   GraphQLList,
   GraphQLNamedType,
   GraphQLNonNull,
-  GraphQLNullableType,
   GraphQLObjectType,
   GraphQLSchema,
   GraphQLType,
@@ -845,10 +844,7 @@ Example:
     const lockData = this.lockManager.getLockData();
     const argNames = field.args.map((arg) => graphqlFieldToProtoField(arg.name));
 
-    if (lockData.messages[requestName]) {
-      const originalFieldNames = Object.keys(lockData.messages[requestName].fields);
-      this.trackRemovedFields(requestName, originalFieldNames, argNames);
-    }
+    this.lockManager.reconcileMessageFieldOrder(requestName, argNames);
 
     // Add a description comment for the request message
     if (this.includeComments) {
@@ -883,8 +879,11 @@ Example:
         const argType = this.getProtoTypeFromGraphQL(arg.type);
         const argProtoName = graphqlFieldToProtoField(arg.name);
 
-        // Get the field number from the messages structure using the original field name
-        const fieldNumber = lockData.messages[operationName]?.fields[argName];
+        const fieldNumber = this.getFieldNumber(
+          requestName,
+          argProtoName,
+          this.getNextAvailableFieldNumber(requestName),
+        );
 
         // Add argument description as comment
         if (arg.description) {
