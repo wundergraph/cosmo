@@ -50,22 +50,16 @@ export function createResponseMessageName(methodName: string): string {
 /**
  * Creates an entity lookup method name for an entity type
  */
-export function createEntityLookupMethodName(typeName: string, keyField: string = 'id'): string {
-  return `Lookup${typeName}By${upperFirst(camelCase(keyField))}`;
-}
+export function createEntityLookupMethodName(typeName: string, keyString: string = 'id'): string {
+  const fields = keyString.split(' ');
 
-/**
- * Creates a request message name for an entity lookup
- */
-export function createEntityLookupRequestName(typeName: string, keyField: string = 'id'): string {
-  return `Lookup${typeName}By${upperFirst(camelCase(keyField))}Request`;
-}
+  if (fields.length === 1) {
+    return `Lookup${typeName}By${upperFirst(camelCase(fields[0]))}`;
+  }
 
-/**
- * Creates a response message name for an entity lookup
- */
-export function createEntityLookupResponseName(typeName: string, keyField: string = 'id'): string {
-  return `Lookup${typeName}By${upperFirst(camelCase(keyField))}Response`;
+  // For compound keys: LookupProductByIdAndUpc
+  const keyPart = fields.map((field) => upperFirst(camelCase(field))).join('And');
+  return `Lookup${typeName}By${keyPart}`;
 }
 
 /**
