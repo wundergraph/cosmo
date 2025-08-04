@@ -34,8 +34,11 @@ public class SSOCookieAuthenticator implements Authenticator {
         ssoCookieValue = ssoCookieValue.trim();
 
         // Make sure that value of the SSO cookie is a registered and enabled IDP
+        KeycloakSession session = authenticationFlowContext.getSession();
         RealmModel realm = authenticationFlowContext.getRealm();
-        IdentityProviderModel idpModel = realm.getIdentityProviderByAlias(ssoCookieValue);
+
+        IdentityProviderStorageProvider storage = session.getProvider(IdentityProviderStorageProvider.class);
+        IdentityProviderModel idpModel = storage.getByAlias(ssoCookieValue);
 
         if (idpModel != null && idpModel.isEnabled()) {
             // Create the login URL for it and pass it to the frontend
