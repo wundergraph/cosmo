@@ -34,14 +34,10 @@ func CreateTracingInterceptor(tracingOpts TracingOptions) (func(ctx context.Cont
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 		if md, ok := metadata.FromIncomingContext(ctx); ok {
 			carrier := propagation.MapCarrier{}
-			if values := md.Get(traceparentHeader); len(values) > 0 {
-				carrier[traceparentHeader] = values[0]
-			}
-			if values := md.Get(tracestateHeader); len(values) > 0 {
-				carrier[tracestateHeader] = values[0]
-			}
-			if values := md.Get(baggageHeader); len(values) > 0 {
-				carrier[baggageHeader] = values[0]
+			for key, values := range md {
+				if len(values) > 0 {
+					carrier[key] = values[0]
+				}
 			}
 			propagator := otel.GetTextMapPropagator()
 			ctx = propagator.Extract(ctx, carrier)
