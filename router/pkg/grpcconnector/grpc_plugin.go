@@ -111,6 +111,7 @@ func (p *GRPCPlugin) fork() error {
 		Cmd:              pluginCmd,
 		AllowedProtocols: []plugin.Protocol{plugin.ProtocolGRPC},
 		HandshakeConfig:  handshakeConfig,
+		SkipHostEnv:      true,
 		Logger:           NewPluginLogger(p.logger),
 		Plugins: map[string]plugin.Plugin{
 			p.pluginName: p,
