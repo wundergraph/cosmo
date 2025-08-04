@@ -2,7 +2,11 @@ package routerplugin
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"github.com/wundergraph/cosmo/router-plugin/config"
+	"github.com/wundergraph/cosmo/router-plugin/setup"
+	"os"
 
 	"github.com/hashicorp/go-plugin"
 	"google.golang.org/grpc"
@@ -15,8 +19,18 @@ var RouterPluginHandshakeConfig = plugin.HandshakeConfig{
 	MagicCookieValue: "GRPC_DATASOURCE_PLUGIN",
 }
 
+const startupConfigKey = "startup_config"
+
 // PluginMapName is the name of the plugin in the plugin map.
 var PluginMapName = "grpc_datasource"
+
+type RouterPlugin struct {
+	plugin.Plugin
+	registrationFunc func(*grpc.Server)
+
+	serveConfig *plugin.ServeConfig
+	config      config.RouterPluginConfig
+}
 
 // GRPCPlugin is the interface that is implemented to serve/connect to
 // a plugin over gRPC.
@@ -31,18 +45,37 @@ func (p *RouterPlugin) GRPCClient(_ context.Context, _ *plugin.GRPCBroker, cc *g
 	return cc, nil
 }
 
-type RouterPlugin struct {
-	plugin.Plugin
-	registrationFunc func(*grpc.Server)
-
-	serveConfig *plugin.ServeConfig
-}
-
-type PluginOption func(*plugin.ServeConfig)
+type PluginOption func(*RouterPlugin)
 
 func WithTestConfig(testConfig *plugin.ServeTestConfig) PluginOption {
-	return func(c *plugin.ServeConfig) {
-		c.Test = testConfig
+	return func(c *RouterPlugin) {
+		c.serveConfig.Test = testConfig
+	}
+}
+
+// WithTracing enables tracing for the plugin.
+// This includes creating a tracing interceptor
+func WithTracing() PluginOption {
+	return func(c *RouterPlugin) {
+		c.config.TracingEnabled = true
+	}
+}
+
+func WithServiceName(serviceName string) PluginOption {
+	return func(c *RouterPlugin) {
+		c.config.ServiceName = serviceName
+	}
+}
+
+func WithTracingErrorHandler(errHandler func(err error)) PluginOption {
+	return func(c *RouterPlugin) {
+		c.config.TracingErrorHandler = errHandler
+	}
+}
+
+func WithServiceVersion(serviceVersion string) PluginOption {
+	return func(c *RouterPlugin) {
+		c.config.ServiceVersion = serviceVersion
 	}
 }
 
@@ -55,7 +88,7 @@ func NewRouterPlugin(registrationfunc func(*grpc.Server), opts ...PluginOption) 
 		registrationFunc: registrationfunc,
 	}
 
-	serveConfig := &plugin.ServeConfig{
+	routerPlugin.serveConfig = &plugin.ServeConfig{
 		HandshakeConfig: RouterPluginHandshakeConfig,
 		GRPCServer:      plugin.DefaultGRPCServer,
 		Plugins: map[string]plugin.Plugin{
@@ -64,10 +97,27 @@ func NewRouterPlugin(registrationfunc func(*grpc.Server), opts ...PluginOption) 
 	}
 
 	for _, opt := range opts {
-		opt(serveConfig)
+		opt(routerPlugin)
 	}
 
-	routerPlugin.serveConfig = serveConfig
+	var startupConfig config.StartupConfig
+	if exporterString := os.Getenv(startupConfigKey); exporterString != "" {
+		err := json.Unmarshal([]byte(exporterString), &startupConfig)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	grpcServerFunc, err := setup.GrpcServer(setup.GrpcServerInitOpts{
+		StartupConfig: startupConfig,
+		PluginConfig:  routerPlugin.config,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	routerPlugin.serveConfig.GRPCServer = grpcServerFunc
+
 	return routerPlugin, nil
 }
 
