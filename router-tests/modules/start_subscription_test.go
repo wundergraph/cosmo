@@ -90,12 +90,12 @@ func TestStartSubscriptionHook(t *testing.T) {
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
 				"startSubscriptionModule": start_subscription.StartSubscriptionModule{
-					Callback: func(ctx core.SubscriptionOnStartHookContext) (bool, error) {
+					Callback: func(ctx core.SubscriptionOnStartHookContext) error {
 						ctx.WriteEvent(&kafka.Event{
 							Key:  []byte("1"),
 							Data: []byte(`{"id": 1, "__typename": "Employee"}`),
 						})
-						return false, nil
+						return nil
 					},
 				},
 			},
@@ -176,9 +176,9 @@ func TestStartSubscriptionHook(t *testing.T) {
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
 				"startSubscriptionModule": start_subscription.StartSubscriptionModule{
-					Callback: func(ctx core.SubscriptionOnStartHookContext) (bool, error) {
+					Callback: func(ctx core.SubscriptionOnStartHookContext) error {
 						callbackCalled <- true
-						return true, nil
+						return core.NewStreamHookError(nil, "subscription closed", http.StatusOK, "", true)
 					},
 				},
 			},
@@ -255,15 +255,15 @@ func TestStartSubscriptionHook(t *testing.T) {
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
 				"startSubscriptionModule": start_subscription.StartSubscriptionModule{
-					Callback: func(ctx core.SubscriptionOnStartHookContext) (bool, error) {
+					Callback: func(ctx core.SubscriptionOnStartHookContext) error {
 						employeeId := ctx.RequestContext().Operation().Variables().GetInt64("employeeID")
 						if employeeId != 1 {
-							return false, nil
+							return nil
 						}
 						ctx.WriteEvent(&kafka.Event{
 							Data: []byte(`{"id": 1, "__typename": "Employee"}`),
 						})
-						return false, nil
+						return nil
 					},
 				},
 			},
@@ -359,8 +359,8 @@ func TestStartSubscriptionHook(t *testing.T) {
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
 				"startSubscriptionModule": start_subscription.StartSubscriptionModule{
-					Callback: func(ctx core.SubscriptionOnStartHookContext) (bool, error) {
-						return false, core.NewCustomModuleError(errors.New("test error"), "test error", http.StatusLoopDetected, http.StatusText(http.StatusLoopDetected))
+					Callback: func(ctx core.SubscriptionOnStartHookContext) error {
+						return core.NewStreamHookError(errors.New("test error"), "test error", http.StatusLoopDetected, http.StatusText(http.StatusLoopDetected), false)
 					},
 				},
 			},
@@ -502,11 +502,11 @@ func TestStartSubscriptionHook(t *testing.T) {
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
 				"startSubscriptionModule": start_subscription.StartSubscriptionModule{
-					Callback: func(ctx core.SubscriptionOnStartHookContext) (bool, error) {
+					Callback: func(ctx core.SubscriptionOnStartHookContext) error {
 						ctx.WriteEvent(&core.EngineEvent{
 							Data: []byte(`{"data":{"countEmp":1000}}`),
 						})
-						return false, nil
+						return nil
 					},
 				},
 			},
