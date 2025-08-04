@@ -1,7 +1,9 @@
 package mcpserver
 
 import (
+	"context"
 	"fmt"
+	"time"
 
 	"github.com/wundergraph/cosmo/router/pkg/schemaloader"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
@@ -30,10 +32,10 @@ func NewOperationsManager(schemaDoc *ast.Document, logger *zap.Logger, excludeMu
 }
 
 // LoadOperationsFromDirectory loads operations from a specified directory
-func (om *OperationsManager) LoadOperationsFromDirectory(operationsDir string) error {
+func (om *OperationsManager) LoadOperationsFromDirectory(ctx context.Context, operationsDir string, reloadOperationsChan chan bool, hotReload bool, hotReloadInterval time.Duration) error {
 	// Load operations
 	loader := schemaloader.NewOperationLoader(om.logger, om.schemaDoc)
-	operations, err := loader.LoadOperationsFromDirectory(operationsDir)
+	operations, err := loader.LoadOperationsFromDirectory(ctx, operationsDir, reloadOperationsChan, hotReload, hotReloadInterval)
 	if err != nil {
 		return fmt.Errorf("failed to load operations: %w", err)
 	}
