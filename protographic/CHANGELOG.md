@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.7.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.7.1...@wundergraph/protographic@0.7.2) (2025-08-04)
+
+### Bug Fixes
+
+* don't reuse request field numbers when arguments are removed ([#2103](https://github.com/wundergraph/cosmo/issues/2103)) ([5b1332d](https://github.com/wundergraph/cosmo/commit/5b1332daf0e3d91bb849895135fec111785cf85f)) (@endigma)
+
 ## [0.7.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.7.0...@wundergraph/protographic@0.7.1) (2025-07-31)
 
 **Note:** Version bump only for package @wundergraph/protographic
