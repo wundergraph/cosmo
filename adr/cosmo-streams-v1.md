@@ -121,7 +121,12 @@ type StreamPublishEventHook interface {
 ## Backwards Compatibility
 
 The new hooks can be integrated in the router in a fully backwards compatible way.
-When the new module system will be released, some changes will be needed.
+
+When the new module system will be released, the Cosmo Streams hooks:
+- will be moved to the `core/hooks.go` file
+- will be added to the `hookRegistry`
+- will be initialized in the `coreModuleHooks.initCoreModuleHooks`
+
 
 # Example Modules
 
