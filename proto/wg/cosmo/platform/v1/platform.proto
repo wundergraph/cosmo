@@ -2806,6 +2806,7 @@ message GetOperationsRequest {
   string federatedGraphName = 1;
   string namespace = 2;
   optional string clientName = 3;
+  optional int32 limit = 4;
 }
 
 message GetOperationsResponse {

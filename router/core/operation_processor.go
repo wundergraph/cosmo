@@ -116,6 +116,7 @@ type OperationProcessorOptions struct {
 	DisableExposingVariablesContentOnValidationError bool
 	ComplexityLimits                                 *config.ComplexityLimits
 	ParserTokenizerLimits                            astparser.TokenizerLimits
+	OperationNameLengthLimit                         int
 }
 
 // OperationProcessor provides shared resources to the parseKit and OperationKit.
@@ -131,6 +132,7 @@ type OperationProcessor struct {
 	parseKitOptions          *parseKitOptions
 	complexityLimits         *config.ComplexityLimits
 	parserTokenizerLimits    astparser.TokenizerLimits
+	operationNameLengthLimit int
 }
 
 // parseKit is a helper struct to parse, normalize and validate operations
@@ -487,6 +489,14 @@ func (o *OperationKit) isIntrospectionQuery() (result bool, err error) {
 			ref := possibleOperationDefinitionRefs[i]
 			name := o.kit.doc.OperationDefinitionNameString(ref)
 
+			if o.isOperationNameLengthLimitExceeded(name) {
+				return false, &httpGraphqlError{
+					message: fmt.Sprintf("operation name of length %d exceeds max length of %d",
+						len(name), o.operationProcessor.operationNameLengthLimit),
+					statusCode: http.StatusBadRequest,
+				}
+			}
+
 			if o.parsedOperation.Request.OperationName == name {
 				operationDefinitionRef = ref
 				break
@@ -527,6 +537,13 @@ func (o *OperationKit) isIntrospectionQuery() (result bool, err error) {
 	return false, nil
 }
 
+func (o *OperationKit) isOperationNameLengthLimitExceeded(operationName string) bool {
+	if o.operationProcessor.operationNameLengthLimit == 0 {
+		return false
+	}
+	return len(operationName) > o.operationProcessor.operationNameLengthLimit
+}
+
 // Parse parses the operation, populates the document and set the operation type.
 // UnmarshalOperationFromBody must be called before calling this method.
 func (o *OperationKit) Parse() error {
@@ -560,6 +577,11 @@ func (o *OperationKit) Parse() error {
 		isIntrospection, err := o.isIntrospectionQuery()
 
 		if err != nil {
+			var httpGqlError *httpGraphqlError
+			if errors.As(err, &httpGqlError) {
+				return httpGqlError
+			}
+
 			return &httpGraphqlError{
 				message:    "could not determine if operation was an introspection query",
 				statusCode: http.StatusOK,
@@ -582,6 +604,7 @@ func (o *OperationKit) Parse() error {
 		o.kit.numOperations++
 		ref := o.kit.doc.RootNodes[i].Ref
 		name := string(o.kit.doc.OperationDefinitionNameBytes(ref))
+
 		if len(name) == 0 {
 			anonymousOperationCount++
 			if anonymousOperationDefinitionRef == -1 {
@@ -589,6 +612,15 @@ func (o *OperationKit) Parse() error {
 			}
 			continue
 		}
+
+		if o.isOperationNameLengthLimitExceeded(name) {
+			return &httpGraphqlError{
+				message: fmt.Sprintf("operation name of length %d exceeds max length of %d",
+					len(name), o.operationProcessor.operationNameLengthLimit),
+				statusCode: http.StatusBadRequest,
+			}
+		}
+
 		if o.parsedOperation.Request.OperationName == "" {
 			o.operationDefinitionRef = ref
 			o.originalOperationNameRef = o.kit.doc.OperationDefinitions[ref].Name
@@ -1256,6 +1288,7 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 		parseKitSemaphore:        make(chan int, opts.ParseKitPoolSize),
 		introspectionEnabled:     opts.IntrospectionEnabled,
 		parserTokenizerLimits:    opts.ParserTokenizerLimits,
+		operationNameLengthLimit: opts.OperationNameLengthLimit,
 		complexityLimits:         opts.ComplexityLimits,
 		parseKitOptions: &parseKitOptions{
 			apolloCompatibilityFlags:                         opts.ApolloCompatibilityFlags,
