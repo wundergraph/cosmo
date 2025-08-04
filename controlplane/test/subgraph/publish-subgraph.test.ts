@@ -545,7 +545,7 @@ describe('Publish subgraph tests', () => {
 
       expect(publishResponse.response?.code).toBe(EnumStatusCode.ERR);
       expect(publishResponse.response?.details).toContain(
-        `Subgraph plugin-ANC1JXIDA0RGK3A1Y2VFKV is a plugin. Please use the 'wgc router plugin publish' command to publish the plugin.`,
+        `Subgraph ${pluginName} is a plugin. Please use the 'wgc router plugin publish' command to publish the plugin.`,
       );
 
       await server.close();
