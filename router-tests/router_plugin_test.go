@@ -128,7 +128,7 @@ func TestVerifyTelemetryForRouterPluginRequests(t *testing.T) {
 					}
 				}
 
-				// Normal http spans would have query there twice
+				// Normal http spans would have query sample twice
 				require.Equal(t, queryNameInstances, 1)
 			})
 		})

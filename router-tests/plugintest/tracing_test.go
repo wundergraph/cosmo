@@ -705,7 +705,7 @@ func getTracingBaseConfig() config.StartupConfig {
 
 type runFunc func(_ context.Context, req *plugin.QueryRunRequest) (*plugin.QueryRunResponse, error)
 
-func setupTracingTest(t *testing.T, startup config.StartupConfig, opts config.RouterPluginConfig, runner runFunc) *PluginSetupResponse[plugin.HelloServiceClient] {
+func setupTracingTest(t *testing.T, startup config.StartupConfig, opts config.RouterPluginConfig, runner runFunc) *PluginGrpcServerSetupResponse[plugin.HelloServiceClient] {
 	// Use base runner if nothing is passed
 	if runner == nil {
 		runner = func(_ context.Context, req *plugin.QueryRunRequest) (*plugin.QueryRunResponse, error) {
@@ -718,7 +718,7 @@ func setupTracingTest(t *testing.T, startup config.StartupConfig, opts config.Ro
 		}
 	}
 
-	svc := SetupPluginForTest[plugin.HelloServiceClient](t, PluginTestConfig[plugin.HelloServiceClient]{
+	svc := SetupPluginGrpcServerForTest[plugin.HelloServiceClient](t, PluginGrpcTestConfig[plugin.HelloServiceClient]{
 		StartupConfig:      startup,
 		RouterPluginConfig: opts,
 		RegisterServiceFunc: func(reg grpc.ServiceRegistrar) {

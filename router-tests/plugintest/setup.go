@@ -23,8 +23,8 @@ func (s *HelloService) QueryRun(ctx context.Context, req *plugin.QueryRunRequest
 	return s.runFunc(ctx, req)
 }
 
-// PluginSetupResponse is a wrapper that holds the gRPC test components
-type PluginSetupResponse[T any] struct {
+// PluginGrpcServerSetupResponse is a wrapper that holds the gRPC test components
+type PluginGrpcServerSetupResponse[T any] struct {
 	Client  T
 	Cleanup func()
 }
@@ -33,15 +33,15 @@ const (
 	bufSize = 1024 * 1024
 )
 
-type PluginTestConfig[T any] struct {
+type PluginGrpcTestConfig[T any] struct {
 	StartupConfig       config.StartupConfig
 	RouterPluginConfig  config.RouterPluginConfig
 	RegisterServiceFunc func(grpc.ServiceRegistrar)
 	CreateClientFunc    func(conn *grpc.ClientConn) T
 }
 
-// SetupPluginForTest creates a local gRPC server for testing
-func SetupPluginForTest[T any](t *testing.T, testConfig PluginTestConfig[T]) *PluginSetupResponse[T] {
+// SetupPluginGrpcServerForTest creates a local gRPC server for testing
+func SetupPluginGrpcServerForTest[T any](t *testing.T, testConfig PluginGrpcTestConfig[T]) *PluginGrpcServerSetupResponse[T] {
 	// Create a buffer for gRPC connections
 	lis := bufconn.Listen(bufSize)
 
@@ -87,7 +87,7 @@ func SetupPluginForTest[T any](t *testing.T, testConfig PluginTestConfig[T]) *Pl
 		grpcServer.Stop()
 	}
 
-	return &PluginSetupResponse[T]{
+	return &PluginGrpcServerSetupResponse[T]{
 		Client:  client,
 		Cleanup: cleanup,
 	}
