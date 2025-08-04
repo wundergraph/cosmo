@@ -23,6 +23,7 @@ const (
 	ProjectsService_LookupMilestoneById_FullMethodName         = "/service.ProjectsService/LookupMilestoneById"
 	ProjectsService_LookupProductByUpc_FullMethodName          = "/service.ProjectsService/LookupProductByUpc"
 	ProjectsService_LookupProjectById_FullMethodName           = "/service.ProjectsService/LookupProjectById"
+	ProjectsService_LookupShippingById_FullMethodName          = "/service.ProjectsService/LookupShippingById"
 	ProjectsService_LookupTaskById_FullMethodName              = "/service.ProjectsService/LookupTaskById"
 	ProjectsService_MutationAddMilestone_FullMethodName        = "/service.ProjectsService/MutationAddMilestone"
 	ProjectsService_MutationAddProject_FullMethodName          = "/service.ProjectsService/MutationAddProject"
@@ -59,6 +60,8 @@ type ProjectsServiceClient interface {
 	LookupProductByUpc(ctx context.Context, in *LookupProductByUpcRequest, opts ...grpc.CallOption) (*LookupProductByUpcResponse, error)
 	// Lookup Project entity by id
 	LookupProjectById(ctx context.Context, in *LookupProjectByIdRequest, opts ...grpc.CallOption) (*LookupProjectByIdResponse, error)
+	// Lookup Shipping entity by id
+	LookupShippingById(ctx context.Context, in *LookupShippingByIdRequest, opts ...grpc.CallOption) (*LookupShippingByIdResponse, error)
 	// Lookup Task entity by id
 	LookupTaskById(ctx context.Context, in *LookupTaskByIdRequest, opts ...grpc.CallOption) (*LookupTaskByIdResponse, error)
 	MutationAddMilestone(ctx context.Context, in *MutationAddMilestoneRequest, opts ...grpc.CallOption) (*MutationAddMilestoneResponse, error)
@@ -124,6 +127,16 @@ func (c *projectsServiceClient) LookupProjectById(ctx context.Context, in *Looku
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(LookupProjectByIdResponse)
 	err := c.cc.Invoke(ctx, ProjectsService_LookupProjectById_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *projectsServiceClient) LookupShippingById(ctx context.Context, in *LookupShippingByIdRequest, opts ...grpc.CallOption) (*LookupShippingByIdResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(LookupShippingByIdResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_LookupShippingById_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -344,6 +357,8 @@ type ProjectsServiceServer interface {
 	LookupProductByUpc(context.Context, *LookupProductByUpcRequest) (*LookupProductByUpcResponse, error)
 	// Lookup Project entity by id
 	LookupProjectById(context.Context, *LookupProjectByIdRequest) (*LookupProjectByIdResponse, error)
+	// Lookup Shipping entity by id
+	LookupShippingById(context.Context, *LookupShippingByIdRequest) (*LookupShippingByIdResponse, error)
 	// Lookup Task entity by id
 	LookupTaskById(context.Context, *LookupTaskByIdRequest) (*LookupTaskByIdResponse, error)
 	MutationAddMilestone(context.Context, *MutationAddMilestoneRequest) (*MutationAddMilestoneResponse, error)
@@ -386,6 +401,9 @@ func (UnimplementedProjectsServiceServer) LookupProductByUpc(context.Context, *L
 }
 func (UnimplementedProjectsServiceServer) LookupProjectById(context.Context, *LookupProjectByIdRequest) (*LookupProjectByIdResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method LookupProjectById not implemented")
+}
+func (UnimplementedProjectsServiceServer) LookupShippingById(context.Context, *LookupShippingByIdRequest) (*LookupShippingByIdResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method LookupShippingById not implemented")
 }
 func (UnimplementedProjectsServiceServer) LookupTaskById(context.Context, *LookupTaskByIdRequest) (*LookupTaskByIdResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method LookupTaskById not implemented")
@@ -536,6 +554,24 @@ func _ProjectsService_LookupProjectById_Handler(srv interface{}, ctx context.Con
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ProjectsServiceServer).LookupProjectById(ctx, req.(*LookupProjectByIdRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProjectsService_LookupShippingById_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LookupShippingByIdRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).LookupShippingById(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_LookupShippingById_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).LookupShippingById(ctx, req.(*LookupShippingByIdRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -922,6 +958,10 @@ var ProjectsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "LookupProjectById",
 			Handler:    _ProjectsService_LookupProjectById_Handler,
+		},
+		{
+			MethodName: "LookupShippingById",
+			Handler:    _ProjectsService_LookupShippingById_Handler,
 		},
 		{
 			MethodName: "LookupTaskById",

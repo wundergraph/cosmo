@@ -1,0 +1,13 @@
+FROM golang:1.23 as builder
+
+WORKDIR /app
+
+COPY ./pkg/subgraphs/projects ./
+
+RUN go mod download && go mod verify
+
+RUN go build ./cmd/service && mv service server
+
+ENTRYPOINT [ "./server" ]
+
+EXPOSE 4011

@@ -89,6 +89,16 @@ type Mutation struct {
 type Queries struct {
 }
 
+type Shipping struct {
+	ID             string  `json:"id"`
+	Carrier        string  `json:"carrier"`
+	TrackingNumber string  `json:"trackingNumber"`
+	Weight         float64 `json:"weight"`
+	Estimate       float64 `json:"estimate"`
+}
+
+func (Shipping) IsEntity() {}
+
 type Thing struct {
 	A string `json:"a"`
 }

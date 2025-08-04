@@ -7,6 +7,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log"
 	"net"
 	"os"
@@ -22,8 +23,10 @@ import (
 )
 
 const (
-	port = ":4011"
+	defaultPort = "4011"
 )
+
+var port string
 
 func recoveryInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 	defer func() {
@@ -61,9 +64,15 @@ func errorInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServ
 	return resp, err
 }
 
+func init() {
+	flag.StringVar(&port, "port", defaultPort, "The port to listen on")
+}
+
 func main() {
+	flag.Parse()
+
 	// Create a listener on the specified port
-	lis, err := net.Listen("tcp", port)
+	lis, err := net.Listen("tcp", ":"+port)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}

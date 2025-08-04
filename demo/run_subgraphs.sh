@@ -8,4 +8,5 @@ npx concurrently --kill-others \
     "cd cmd/availability && go run main.go" \
     "cd cmd/mood && go run main.go" \
     "cd cmd/test1 && go run main.go" \
-    "cd cmd/products_fg && go run main.go"
+    "cd cmd/products_fg && go run main.go" \
+    "cd pkg/subgraphs/projects/cmd/service && go run main.go"

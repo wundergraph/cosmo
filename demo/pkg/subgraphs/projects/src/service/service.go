@@ -37,7 +37,31 @@ type ProjectsService struct {
 	NextID int
 }
 
-// Helper functions to populate relationships
+// LookupShippingById implements projects.ProjectsServiceServer.
+func (p *ProjectsService) LookupShippingById(ctx context.Context, req *service.LookupShippingByIdRequest) (*service.LookupShippingByIdResponse, error) {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	var result []*service.Shipping
+
+	// Maintain order of keys [[memory:4011759]]
+	for _, key := range req.Keys {
+		found := false
+		for _, shipping := range data.ServiceShipping {
+			if shipping.Id == key.Id {
+				result = append(result, shipping)
+				found = true
+				break
+			}
+		}
+		if !found {
+			result = append(result, nil)
+		}
+	}
+
+	return &service.LookupShippingByIdResponse{Result: result}, nil
+}
+
 func (p *ProjectsService) populateProjectRelationships(project *service.Project) *service.Project {
 	// Create a copy to avoid modifying the original
 	populatedProject := &service.Project{

@@ -15,6 +15,8 @@ service ProjectsService {
   rpc LookupProductByUpc(LookupProductByUpcRequest) returns (LookupProductByUpcResponse) {}
   // Lookup Project entity by id
   rpc LookupProjectById(LookupProjectByIdRequest) returns (LookupProjectByIdResponse) {}
+  // Lookup Shipping entity by id
+  rpc LookupShippingById(LookupShippingByIdRequest) returns (LookupShippingByIdResponse) {}
   // Lookup Task entity by id
   rpc LookupTaskById(LookupTaskByIdRequest) returns (LookupTaskByIdResponse) {}
   rpc MutationAddMilestone(MutationAddMilestoneRequest) returns (MutationAddMilestoneResponse) {}
@@ -299,6 +301,40 @@ message LookupProductByUpcResponse {
   repeated Product result = 1;
 }
 
+// Key message for Shipping entity lookup
+message LookupShippingByIdRequestKey {
+  // Key field for Shipping entity lookup.
+  string id = 1;
+}
+
+// Request message for Shipping entity lookup.
+message LookupShippingByIdRequest {
+  /*
+   * List of keys to look up Shipping entities.
+   * Order matters - each key maps to one entity in LookupShippingByIdResponse.
+   */
+  repeated LookupShippingByIdRequestKey keys = 1;
+}
+
+// Response message for Shipping entity lookup.
+message LookupShippingByIdResponse {
+  /*
+   * List of Shipping entities in the same order as the keys in LookupShippingByIdRequest.
+   * Always return the same number of entities as keys. Use null for entities that cannot be found.
+   * 
+   * Example:
+   *   LookupUserByIdRequest:
+   *     keys:
+   *       - id: 1
+   *       - id: 2
+   *   LookupUserByIdResponse:
+   *     result:
+   *       - id: 1 # User with id 1 found
+   *       - null  # User with id 2 not found
+   */
+  repeated Shipping result = 1;
+}
+
 // Request message for projects operation.
 message QueryProjectsRequest {
 }
@@ -517,6 +553,13 @@ message Product {
   string upc = 1;
   ListOfProject projects = 2;
   ListOfListOfString feature_matrix = 3;
+  string id = 4;
+}
+
+message Shipping {
+  reserved 2;
+  string id = 1;
+  double weight = 3;
 }
 
 enum ProjectStatus {

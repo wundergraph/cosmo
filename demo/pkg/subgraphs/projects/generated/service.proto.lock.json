@@ -402,6 +402,7 @@
     },
     "Product": {
       "fields": {
+        "id": 4,
         "upc": 1,
         "projects": 2,
         "featureMatrix": 3
@@ -487,6 +488,45 @@
       "fields": {
         "Task": 1
       }
+    },
+    "LookupProductByIdRequestKey": {
+      "fields": {
+        "id": 1
+      }
+    },
+    "LookupProductByIdRequest": {
+      "fields": {
+        "keys": 1
+      }
+    },
+    "LookupProductByIdResponse": {
+      "fields": {
+        "result": 1
+      }
+    },
+    "LookupShippingByIdRequestKey": {
+      "fields": {
+        "id": 1
+      }
+    },
+    "LookupShippingByIdRequest": {
+      "fields": {
+        "keys": 1
+      }
+    },
+    "LookupShippingByIdResponse": {
+      "fields": {
+        "result": 1
+      }
+    },
+    "Shipping": {
+      "fields": {
+        "id": 1,
+        "weight": 3
+      },
+      "reservedNumbers": [
+        2
+      ]
     }
   },
   "enums": {

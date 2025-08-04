@@ -11,6 +11,8 @@ type Queries {
   topSecretFederationFacts: [TopSecretFact!]! @requiresScopes(scopes: [["read:fact"], ["read:all"]])
   factTypes: [TopSecretFactType!]
   sharedThings(numOfA: Int! numOfB: Int!): [Thing!]! @shareable
+  shippings: [Shipping!]!
+  findShipping(id: ID!, trackingNumber: ID!): Shipping!
 }
 
 type Mutation {
@@ -90,4 +92,12 @@ type Cosmo @key(fields: "upc") {
 type Documentation {
   url(product: ProductName!): String!
   urls(products: [ProductName!]!): [String!]!
+}
+
+type Shipping @key(fields: "id") {
+  id: ID!
+  carrier: String!
+  trackingNumber: String!
+  weight: Float! @external
+  estimate: Float! @requires(fields: "weight")
 }

@@ -12,7 +12,9 @@ federation:
   package: generated
   version: 2
   options:
-    explicit_requires: true
+    computed_requires: true
+    
+call_argument_directives_with_null: true
 
 # Where should any generated models go?
 model:

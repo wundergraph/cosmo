@@ -18,6 +18,9 @@ plugin-build-binary:
 plugin-compose:
 	pnpx tsx --env-file ../cli/.env ../cli/src/index.ts router compose -i ./graph-with-plugin.yaml -o ./configWithPlugins.json
 
+plugin-compose-custom:
+	pnpx tsx --env-file ../cli/.env ../cli/src/index.ts router compose -i ./custom-plugin-compose.yaml -o ./configWithCustomPlugin.json
+
 plugin-build-integration: plugin-build plugin-compose
 	rm -rf ../router/plugins/*
 	cp -a pkg/subgraphs/projects ../router/plugins/

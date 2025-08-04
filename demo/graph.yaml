@@ -43,3 +43,9 @@ subgraphs:
   - name: employeeupdated
     schema:
       file: ./pkg/subgraphs/employeeupdated/subgraph/schema.graphqls
+  - name: projects
+    routing_url: dns:///localhost:4011
+    grpc:
+      schema_file: ./pkg/subgraphs/projects/src/schema.graphql
+      proto_file: ./pkg/subgraphs/projects/generated/service.proto
+      mapping_file: ./pkg/subgraphs/projects/generated/mapping.json

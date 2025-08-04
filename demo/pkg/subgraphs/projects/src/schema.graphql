@@ -213,7 +213,8 @@ type Employee @key(fields: "id") {
   projectHistory: [[Project!]]!  # non-nullable list of nullable lists of non-nullable projects
 }
 
-type Product @key(fields: "upc") {
+type Product @key(fields: "upc") @key(fields: "id") {
+  id: ID!
   upc: String! 
   # Projects contributing to this product:
   projects: [Project!]
@@ -222,3 +223,7 @@ type Product @key(fields: "upc") {
   featureMatrix: [[String]]  # nullable list of nullable lists of nullable features
 }
 
+type Shipping @key(fields: "id") {
+  id: ID!
+  weight: Float! 
+}

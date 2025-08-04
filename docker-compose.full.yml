@@ -107,6 +107,21 @@ services:
     networks:
       - primary
 
+  projects:
+    container_name: projects
+    environment:
+      OTEL_AUTH_TOKEN: ${OTEL_AUTH_TOKEN}
+      OTEL_HTTP_ENDPOINT: ${OTEL_HTTP_ENDPOINT:-otelcollector:4318}
+    build:
+      context: ./demo
+      dockerfile: Dockerfile.projects
+    profiles:
+      - subgraphs
+    ports:
+      - '4011:4011'
+    networks:
+      - primary
+
   # Infrastructure services
 
   clickhouse:

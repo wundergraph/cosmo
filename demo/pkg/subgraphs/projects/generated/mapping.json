@@ -176,6 +176,14 @@
       "rpc": "LookupProductByUpc",
       "request": "LookupProductByUpcRequest",
       "response": "LookupProductByUpcResponse"
+    },
+    {
+      "typeName": "Shipping",
+      "kind": "entity",
+      "key": "id",
+      "rpc": "LookupShippingById",
+      "request": "LookupShippingByIdRequest",
+      "response": "LookupShippingByIdResponse"
     }
   ],
   "typeFieldMappings": [
@@ -787,6 +795,11 @@
       "type": "Product",
       "fieldMappings": [
         {
+          "original": "id",
+          "mapped": "id",
+          "argumentMappings": []
+        },
+        {
           "original": "upc",
           "mapped": "upc",
           "argumentMappings": []
@@ -799,6 +812,21 @@
         {
           "original": "featureMatrix",
           "mapped": "feature_matrix",
+          "argumentMappings": []
+        }
+      ]
+    },
+    {
+      "type": "Shipping",
+      "fieldMappings": [
+        {
+          "original": "id",
+          "mapped": "id",
+          "argumentMappings": []
+        },
+        {
+          "original": "weight",
+          "mapped": "weight",
           "argumentMappings": []
         }
       ]
