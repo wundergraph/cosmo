@@ -12,12 +12,6 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-const (
-	traceparentHeader = "traceparent"
-	tracestateHeader  = "tracestate"
-	baggageHeader     = "baggage"
-)
-
 func CreateTracingInterceptor(tracingOpts TracingOptions) (func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error), error) {
 	if tracingOpts.TracingConfig == nil {
 		return nil, errors.New("nil tracing config not supported")
