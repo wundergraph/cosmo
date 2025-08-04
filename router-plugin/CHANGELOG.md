@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.3.0](https://github.com/wundergraph/cosmo/compare/router-plugin@0.2.0...router-plugin@0.3.0) (2025-08-04)
+
+### Features
+
+* otel support for grpc plugins ([#2021](https://github.com/wundergraph/cosmo/issues/2021)) ([f7861a2](https://github.com/wundergraph/cosmo/commit/f7861a2d5099896ba6f5b3a29d9d087d58502987)) (@SkArchon)
+
 # [0.2.0](https://github.com/wundergraph/cosmo/compare/router-plugin@0.1.1...router-plugin@0.2.0) (2025-06-25)
 
 ### Features
