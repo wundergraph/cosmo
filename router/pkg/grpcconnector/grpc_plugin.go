@@ -98,7 +98,7 @@ func (p *GRPCPlugin) fork() error {
 	pluginCmd := newPluginCommand(filePath)
 
 	// This is the same as SkipHostEnv false
-	// except that we do that first so that any params are not overriden
+	// except that we do that first so that any params are not overridden
 	pluginCmd.Env = append(pluginCmd.Env, os.Environ()...)
 
 	configJson, err := json.Marshal(p.startupConfig)
