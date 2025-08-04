@@ -6,6 +6,7 @@ package subgraph
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -112,7 +113,15 @@ func (r *queriesResolver) FindShipping(ctx context.Context, id string, trackingN
 // Estimate is the resolver for the estimate field.
 func (r *shippingResolver) Estimate(ctx context.Context, obj *model.Shipping, federationRequires map[string]any) (float64, error) {
 	if weight, ok := federationRequires["weight"]; ok {
-		weightFloat, ok := weight.(float64)
+		weightNumber, ok := weight.(json.Number)
+		if !ok {
+			return 0, fmt.Errorf("weight is not a json.Number")
+		}
+
+		weightFloat, err := weightNumber.Float64()
+		if err != nil {
+			return 0, fmt.Errorf("weight is not a float64")
+		}
 		if !ok {
 			return 0, fmt.Errorf("weight is not a float64")
 		}
