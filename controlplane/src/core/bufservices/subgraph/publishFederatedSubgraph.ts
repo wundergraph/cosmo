@@ -21,6 +21,7 @@ import { SchemaGraphPruningRepository } from '../../repositories/SchemaGraphPrun
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import {
+  convertToSubgraphType,
   enrichLogger,
   formatSubgraphType,
   formatSubscriptionProtocol,
@@ -62,6 +63,8 @@ export function publishFederatedSubgraph(
     const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
 
     req.namespace = req.namespace || DefaultNamespace;
+    req.type = req.type || SubgraphType.STANDARD;
+
     if (authContext.organizationDeactivated) {
       throw new UnauthorizedError();
     }
@@ -184,7 +187,10 @@ export function publishFederatedSubgraph(
         return {
           response: {
             code: EnumStatusCode.ERR,
-            details: `Subgraph ${subgraph.name} is not of type ${formatSubgraphType(req.type)}.`,
+            details:
+              subgraph.type === 'plugin'
+                ? `Subgraph ${subgraph.name} is a plugin. Please use the 'wgc router plugin publish' command to publish the plugin.`
+                : `Subgraph ${subgraph.name} is not of type ${formatSubgraphType(req.type)}.`,
           },
           compositionErrors: [],
           deploymentErrors: [],
@@ -235,6 +241,20 @@ export function publishFederatedSubgraph(
             };
           }
           baseSubgraphID = baseSubgraph.id;
+          req.type = convertToSubgraphType(baseSubgraph.type);
+
+          if (baseSubgraph.type === 'plugin') {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: `Cannot create a feature subgraph with a plugin base subgraph using this command. Since the base subgraph "${req.baseSubgraphName}" is a plugin, please use the 'wgc feature-subgraph create' command to create the feature subgraph first, then publish it using the 'wgc router plugin publish' command.`,
+              },
+              compositionErrors: [],
+              deploymentErrors: [],
+              compositionWarnings: [],
+              proposalMatchMessage,
+            };
+          }
         } else {
           return {
             response: {
@@ -367,8 +387,6 @@ export function publishFederatedSubgraph(
           proposalMatchMessage,
         };
       }
-
-      req.type = req.type || SubgraphType.STANDARD;
 
       if (req.type === SubgraphType.PLUGIN) {
         const count = await pluginRepo.count({ namespaceId: namespace.id });

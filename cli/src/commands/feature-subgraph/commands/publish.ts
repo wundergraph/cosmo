@@ -112,6 +112,7 @@ export default (opts: BaseCommandOptions) => {
       websocketSubprotocol: options.websocketSubprotocol
         ? parseGraphQLWebsocketSubprotocol(options.websocketSubprotocol)
         : undefined,
+      // passing Standard type to the backend, because the users have to use the 'wgc router plugin publish' command to publish the plugin
       type: SubgraphType.STANDARD,
     });
 

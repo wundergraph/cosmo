@@ -68,7 +68,6 @@ export default (opts: BaseCommandOptions) => {
         readme: readmeFile ? await readFile(readmeFile, 'utf8') : undefined,
         isFeatureSubgraph: true,
         baseSubgraphName: options.subgraph,
-        type: SubgraphType.STANDARD,
       },
       {
         headers: getBaseHeaders(),

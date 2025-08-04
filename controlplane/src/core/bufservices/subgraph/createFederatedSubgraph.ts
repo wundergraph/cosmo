@@ -12,6 +12,7 @@ import { DefaultNamespace, NamespaceRepository } from '../../repositories/Namesp
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import {
+  convertToSubgraphType,
   enrichLogger,
   formatSubgraphType,
   formatSubscriptionProtocol,
@@ -24,6 +25,7 @@ import {
 import { UnauthorizedError } from '../../errors/errors.js';
 import { PluginRepository } from '../../repositories/PluginRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
+import { DBSubgraphType } from '../../../db/models.js';
 
 export function createFederatedSubgraph(
   opts: RouterOptions,
@@ -60,8 +62,35 @@ export function createFederatedSubgraph(
       };
     }
 
+    let baseSubgraphID = '';
+    if (req.isFeatureSubgraph) {
+      if (!req.baseSubgraphName) {
+        return {
+          response: {
+            code: EnumStatusCode.ERR,
+            details: `A feature subgraph requires a base subgraph.`,
+          },
+          compositionErrors: [],
+          admissionErrors: [],
+        };
+      }
+      const baseSubgraph = await subgraphRepo.byName(req.baseSubgraphName, req.namespace);
+      if (!baseSubgraph) {
+        return {
+          response: {
+            code: EnumStatusCode.ERR,
+            details: `Base subgraph "${req.baseSubgraphName}" does not exist in the namespace "${req.namespace}".`,
+          },
+          compositionErrors: [],
+          admissionErrors: [],
+        };
+      }
+      baseSubgraphID = baseSubgraph.id;
+      req.type = convertToSubgraphType(baseSubgraph.type);
+    }
+
     /* Routing URL is now optional; if empty or undefined, set an empty string
-     * The routing URL must be defined unless the subgraph is an Event-Driven Graph
+     * The routing URL must be defined unless the subgraph is an Event-Driven Graph or a Plugin
      * */
     const routingUrl = req.routingUrl || '';
     if (req.isEventDrivenGraph) {
@@ -194,32 +223,6 @@ export function createFederatedSubgraph(
           },
         };
       }
-    }
-
-    let baseSubgraphID = '';
-    if (req.isFeatureSubgraph) {
-      if (!req.baseSubgraphName) {
-        return {
-          response: {
-            code: EnumStatusCode.ERR,
-            details: `A feature subgraph requires a base subgraph.`,
-          },
-          compositionErrors: [],
-          admissionErrors: [],
-        };
-      }
-      const baseSubgraph = await subgraphRepo.byName(req.baseSubgraphName, req.namespace);
-      if (!baseSubgraph) {
-        return {
-          response: {
-            code: EnumStatusCode.ERR,
-            details: `Base subgraph "${req.baseSubgraphName}" does not exist in the namespace "${req.namespace}".`,
-          },
-          compositionErrors: [],
-          admissionErrors: [],
-        };
-      }
-      baseSubgraphID = baseSubgraph.id;
     }
 
     const subgraph = await subgraphRepo.create({
