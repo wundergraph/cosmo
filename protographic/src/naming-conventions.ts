@@ -52,12 +52,6 @@ export function createResponseMessageName(methodName: string): string {
  */
 export function createEntityLookupMethodName(typeName: string, keyString: string = 'id'): string {
   const fields = keyString.split(' ');
-
-  if (fields.length === 1) {
-    return `Lookup${typeName}By${upperFirst(camelCase(fields[0]))}`;
-  }
-
-  // For compound keys: LookupProductByIdAndUpc
   const keyPart = fields.map((field) => upperFirst(camelCase(field))).join('And');
   return `Lookup${typeName}By${keyPart}`;
 }
