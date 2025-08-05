@@ -1,0 +1,18 @@
+type Query {
+  projects: [Project]!
+}
+
+type Project {
+  id: ID!
+  name: String!
+  description: String
+  startDate: String   # ISO date
+  endDate: String     # ISO date
+  status: ProjectStatus!
+  tags: [String]!
+}
+
+enum ProjectStatus {
+  ACTIVE
+  INACTIVE
+}
