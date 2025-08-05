@@ -1,6 +1,8 @@
 package start_subscription
 
 import (
+	"net/http"
+
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/cosmo/router/core"
@@ -9,8 +11,9 @@ import (
 const myModuleID = "startSubscriptionModule"
 
 type StartSubscriptionModule struct {
-	Logger   *zap.Logger
-	Callback func(ctx core.SubscriptionOnStartHookContext) error
+	Logger                   *zap.Logger
+	Callback                 func(ctx core.SubscriptionOnStartHookContext) error
+	CallbackOnOriginResponse func(response *http.Response, ctx core.RequestContext) *http.Response
 }
 
 func (m *StartSubscriptionModule) Provision(ctx *core.ModuleContext) error {
@@ -31,6 +34,14 @@ func (m *StartSubscriptionModule) SubscriptionOnStart(ctx core.SubscriptionOnSta
 	return nil
 }
 
+func (m *StartSubscriptionModule) OnOriginResponse(response *http.Response, ctx core.RequestContext) *http.Response {
+	if m.CallbackOnOriginResponse != nil {
+		return m.CallbackOnOriginResponse(response, ctx)
+	}
+
+	return response
+}
+
 func (m *StartSubscriptionModule) Module() core.ModuleInfo {
 	return core.ModuleInfo{
 		// This is the ID of your module, it must be unique
@@ -46,4 +57,5 @@ func (m *StartSubscriptionModule) Module() core.ModuleInfo {
 // Interface guard
 var (
 	_ core.SubscriptionOnStartHandler = (*StartSubscriptionModule)(nil)
+	_ core.EnginePostOriginHandler    = (*StartSubscriptionModule)(nil)
 )
