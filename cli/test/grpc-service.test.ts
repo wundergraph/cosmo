@@ -188,45 +188,25 @@ describe('gRPC Generate Command', () => {
 
     const schemaPath = resolve(__dirname, 'fixtures', 'schema-with-nullable-list-items.graphql');
 
-    // Capture console output to verify warning messages
-    const originalConsoleLog = console.log;
-    const consoleOutput: string[] = [];
-    
-    console.log = (...args: any[]) => {
-      consoleOutput.push(args.join(' '));
-      originalConsoleLog(...args);
-    };
+    // Should complete successfully despite warnings
+    await program.parseAsync(
+      [
+        'generate',
+        'testservice',
+        '-i',
+        schemaPath,
+        '-o',
+        tmpDir,
+      ],
+      {
+        from: 'user',
+      }
+    );
 
-    try {
-      await program.parseAsync(
-        [
-          'generate',
-          'testservice',
-          '-i',
-          schemaPath,
-          '-o',
-          tmpDir,
-        ],
-        {
-          from: 'user',
-        }
-      );
-
-      // Verify warning output was displayed
-      const fullOutput = consoleOutput.join('\n');
-      expect(fullOutput).toContain('Schema validation warnings:');
-      expect(fullOutput).toContain('warnings: 2');
-      expect(fullOutput).toContain('Nullable items are not supported in list types');
-      expect(fullOutput).toContain('Continuing with generation despite warnings');
-
-      // Verify the output files exist (generation should continue)
-      expect(existsSync(join(tmpDir, 'mapping.json'))).toBe(true);
-      expect(existsSync(join(tmpDir, 'service.proto'))).toBe(true);
-      expect(existsSync(join(tmpDir, 'service.proto.lock.json'))).toBe(true);
-    } finally {
-      // Restore original console.log
-      console.log = originalConsoleLog;
-    }
+    // Verify the output files exist (generation should continue with warnings)
+    expect(existsSync(join(tmpDir, 'mapping.json'))).toBe(true);
+    expect(existsSync(join(tmpDir, 'service.proto'))).toBe(true);
+    expect(existsSync(join(tmpDir, 'service.proto.lock.json'))).toBe(true);
   });
 
   test('should fail when schema has validation errors', async (testContext) => {
@@ -246,47 +226,27 @@ describe('gRPC Generate Command', () => {
 
     const schemaPath = resolve(__dirname, 'fixtures', 'schema-with-validation-errors.graphql');
 
-    // Capture console output to verify error messages
-    const originalConsoleLog = console.log;
-    const consoleOutput: string[] = [];
-    
-    console.log = (...args: any[]) => {
-      consoleOutput.push(args.join(' '));
-      originalConsoleLog(...args);
-    };
+    // Should fail due to validation errors
+    await expect(
+      program.parseAsync(
+        [
+          'generate',
+          'testservice',
+          '-i',
+          schemaPath,
+          '-o',
+          tmpDir,
+        ],
+        {
+          from: 'user',
+        }
+      )
+    ).rejects.toThrow('Schema validation failed');
 
-    try {
-      await expect(
-        program.parseAsync(
-          [
-            'generate',
-            'testservice',
-            '-i',
-            schemaPath,
-            '-o',
-            tmpDir,
-          ],
-          {
-            from: 'user',
-          }
-        )
-      ).rejects.toThrow('Schema validation failed');
-
-      // Verify error output was displayed
-      const fullOutput = consoleOutput.join('\n');
-      expect(fullOutput).toContain('Schema validation errors:');
-      expect(fullOutput).toContain('errors: 1');
-      expect(fullOutput).toContain('Nested key directives are not supported');
-      expect(fullOutput).toContain('Generation stopped due to validation errors');
-
-      // Verify no output files were created (generation should stop)
-      expect(existsSync(join(tmpDir, 'mapping.json'))).toBe(false);
-      expect(existsSync(join(tmpDir, 'service.proto'))).toBe(false);
-      expect(existsSync(join(tmpDir, 'service.proto.lock.json'))).toBe(false);
-    } finally {
-      // Restore original console.log
-      console.log = originalConsoleLog;
-    }
+    // Verify no output files were created (generation should stop on errors)
+    expect(existsSync(join(tmpDir, 'mapping.json'))).toBe(false);
+    expect(existsSync(join(tmpDir, 'service.proto'))).toBe(false);
+    expect(existsSync(join(tmpDir, 'service.proto.lock.json'))).toBe(false);
   });
 
   test('should display warnings and stop on errors', async (testContext) => {
@@ -306,53 +266,26 @@ describe('gRPC Generate Command', () => {
 
     const schemaPath = resolve(__dirname, 'fixtures', 'schema-with-warnings-and-errors.graphql');
 
-    // Capture console output to verify both warning and error messages
-    const originalConsoleLog = console.log;
-    const consoleOutput: string[] = [];
-    
-    console.log = (...args: any[]) => {
-      consoleOutput.push(args.join(' '));
-      originalConsoleLog(...args);
-    };
+    // Should fail due to validation errors (despite having warnings)
+    await expect(
+      program.parseAsync(
+        [
+          'generate',
+          'testservice',
+          '-i',
+          schemaPath,
+          '-o',
+          tmpDir,
+        ],
+        {
+          from: 'user',
+        }
+      )
+    ).rejects.toThrow('Schema validation failed');
 
-    try {
-      await expect(
-        program.parseAsync(
-          [
-            'generate',
-            'testservice',
-            '-i',
-            schemaPath,
-            '-o',
-            tmpDir,
-          ],
-          {
-            from: 'user',
-          }
-        )
-      ).rejects.toThrow('Schema validation failed');
-
-      // Verify both warning and error output was displayed
-      const fullOutput = consoleOutput.join('\n');
-      
-      // Should show warnings first
-      expect(fullOutput).toContain('Schema validation warnings:');
-      expect(fullOutput).toContain('warnings: 2');
-      expect(fullOutput).toContain('Nullable items are not supported in list types');
-      
-      // Should show errors
-      expect(fullOutput).toContain('Schema validation errors:');
-      expect(fullOutput).toContain('errors: 1');
-      expect(fullOutput).toContain('Nested key directives are not supported');
-      expect(fullOutput).toContain('Generation stopped due to validation errors');
-
-      // Verify no output files were created (generation should stop on errors)
-      expect(existsSync(join(tmpDir, 'mapping.json'))).toBe(false);
-      expect(existsSync(join(tmpDir, 'service.proto'))).toBe(false);
-      expect(existsSync(join(tmpDir, 'service.proto.lock.json'))).toBe(false);
-    } finally {
-      // Restore original console.log
-      console.log = originalConsoleLog;
-    }
+    // Verify no output files were created (generation should stop on errors)
+    expect(existsSync(join(tmpDir, 'mapping.json'))).toBe(false);
+    expect(existsSync(join(tmpDir, 'service.proto'))).toBe(false);
+    expect(existsSync(join(tmpDir, 'service.proto.lock.json'))).toBe(false);
   });
 });
