@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/wundergraph/cosmo/router/pkg/grpcconnector/grpccommon"
 	"go.uber.org/zap"
 )
 
@@ -61,7 +62,8 @@ func (d *GRPCPlugin) PreparePlugin(img v1.Image) (*exec.Cmd, error) {
 
 	cmd := exec.Command(execPath, finalArgs...)
 	cmd.Dir = workDir
-	cmd.Env = os.Environ()
+
+	grpccommon.PrepareCommand(cmd, d.startupConfig)
 
 	return cmd, nil
 }

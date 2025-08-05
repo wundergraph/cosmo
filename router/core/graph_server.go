@@ -45,8 +45,8 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"github.com/wundergraph/cosmo/router/pkg/grpcconnector"
-	"github.com/wundergraph/cosmo/router/pkg/grpcconnector/grpcplugin"
 	"github.com/wundergraph/cosmo/router/pkg/grpcconnector/grpccommon"
+	"github.com/wundergraph/cosmo/router/pkg/grpcconnector/grpcplugin"
 	"github.com/wundergraph/cosmo/router/pkg/grpcconnector/grpcpluginoci"
 	"github.com/wundergraph/cosmo/router/pkg/grpcconnector/grpcremote"
 	"github.com/wundergraph/cosmo/router/pkg/health"
@@ -1512,6 +1512,8 @@ func (s *graphServer) setupConnector(ctx context.Context, config *nodev1.EngineC
 			basePath = s.plugins.Path
 		}
 
+		startupConfig := newGRPCStartupParams(s.traceConfig, s.ipAnonymization)
+
 		if imgRef := pluginConfig.GetImageReference(); imgRef != nil {
 			ref := fmt.Sprintf("%s/%s:%s",
 				s.plugins.Registry.URL,
@@ -1523,6 +1525,7 @@ func (s *graphServer) setupConnector(ctx context.Context, config *nodev1.EngineC
 				Logger:        s.logger,
 				ImageRef:      ref,
 				RegistryToken: s.graphApiToken,
+				StartupConfig: startupConfig,
 			})
 			if err != nil {
 				return fmt.Errorf("failed to create grpc oci plugin for subgraph %s: %w", dsConfig.Id, err)
@@ -1542,7 +1545,7 @@ func (s *graphServer) setupConnector(ctx context.Context, config *nodev1.EngineC
 				Logger:        s.logger,
 				PluginName:    pluginConfig.GetName(),
 				PluginPath:    pluginPath,
-				StartupConfig: newGRPCStartupParams(s.traceConfig, s.ipAnonymization),
+				StartupConfig: startupConfig,
 			})
 			if err != nil {
 				return fmt.Errorf("failed to create grpc plugin for subgraph %s: %w", dsConfig.Id, err)

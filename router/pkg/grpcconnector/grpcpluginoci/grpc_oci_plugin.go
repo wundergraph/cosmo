@@ -23,6 +23,7 @@ type GRPCPluginConfig struct {
 	Logger        *zap.Logger
 	ImageRef      string
 	RegistryToken string
+	StartupConfig grpccommon.GRPCStartupParams
 }
 
 type GRPCPlugin struct {
@@ -42,6 +43,8 @@ type GRPCPlugin struct {
 	registryPassword string
 
 	client *grpccommon.GRPCPluginClient
+
+	startupConfig grpccommon.GRPCStartupParams
 }
 
 func NewGRPCOCIPlugin(config GRPCPluginConfig) (*GRPCPlugin, error) {

@@ -2,7 +2,6 @@ package grpcplugin
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -98,18 +97,7 @@ func (p *GRPCPlugin) fork() error {
 	}
 
 	pluginCmd := exec.Command(filePath)
-	grpccommon.PrepareCommand(pluginCmd)
-
-	// This is the same as SkipHostEnv false, except
-	// that we set the base env variables first so that any params
-	// that may contain the same name are not overridden
-	pluginCmd.Env = append(pluginCmd.Env, os.Environ()...)
-
-	configJson, err := json.Marshal(p.startupConfig)
-	if err != nil {
-		return fmt.Errorf("failed to create plugin startup config: %w", err)
-	}
-	pluginCmd.Env = append(pluginCmd.Env, fmt.Sprintf("%s=%s", "startup_config", configJson))
+	grpccommon.PrepareCommand(pluginCmd, p.startupConfig)
 
 	pluginClient := plugin.NewClient(&plugin.ClientConfig{
 		Cmd:              pluginCmd,

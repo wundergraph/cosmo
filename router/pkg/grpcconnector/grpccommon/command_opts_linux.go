@@ -9,7 +9,7 @@ import (
 )
 
 // PrepareCommand adds Linux-specific options to the command.
-func PrepareCommand(cmd *exec.Cmd) {
+func PrepareCommandForLinux(cmd *exec.Cmd) {
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Setpgid:   true,
 		Pdeathsig: syscall.SIGTERM,
