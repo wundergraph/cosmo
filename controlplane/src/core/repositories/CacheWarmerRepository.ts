@@ -96,7 +96,7 @@ export class CacheWarmerRepository {
     rangeInHours,
     dateRange,
     operationHashes,
-    federatedGraphID, 
+    federatedGraphID,
     organizationID,
   }: {
     rangeInHours?: number;
