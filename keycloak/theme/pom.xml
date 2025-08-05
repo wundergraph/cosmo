@@ -5,7 +5,7 @@
 
     <groupId>com.cosmo</groupId>
     <artifactId>cosmo</artifactId>
-    <version>1.0</version>
+    <version>1.10</version>
     <name>cosmo</name>
     <description/>
     <packaging>jar</packaging>
@@ -14,7 +14,7 @@
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <keycloak.version>26.3.2</keycloak.version>
+        <keycloak.version>26.2.5</keycloak.version>
     </properties>
 
     <dependencies>
