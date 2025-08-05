@@ -17,16 +17,21 @@ Rules should follow [Proto Best Practices](https://protobuf.dev/best-practices/d
 - ✓ Query operations
 - ✓ Mutation operations
 - ✓ Federation entity lookups with a single key
+- ✓ Federation entity lookups with multiple keys
+- ✓ Federation entity lookups with compound keys
 
 #### Data Types
 
 - ✓ Scalar arguments
 - ✓ Complex input types
+- ✓ Nullable scalar types
 - ✓ Enum values with bidirectional mapping
 - ✓ Interface types with implementing types
 - ✓ Union types with member types
 - ✓ Recursive types (self-referencing structures)
 - ✓ Nested object types and relationships
+- ✓ Lists (nullable and non-nullable)
+- ✓ Nested lists (nullable and non-nullable)
 
 </td>
 <td width="50%" valign="top">
@@ -35,7 +40,6 @@ Rules should follow [Proto Best Practices](https://protobuf.dev/best-practices/d
 
 #### Federation Features
 
-- ✗ Federation entity lookups with multiple keys
 - ✗ Federation entity lookups with nested keys
 - ✗ @requires directive
 
@@ -44,6 +48,7 @@ Rules should follow [Proto Best Practices](https://protobuf.dev/best-practices/d
 - ✗ Subscriptions (only Query and Mutation operations)
 - ✗ Custom scalar conversion (fixed mappings only)
 - ✗ Field resolvers
+- ✗ Nullable list items (not supported in Protobuf)
 
 </td>
 </tr>
