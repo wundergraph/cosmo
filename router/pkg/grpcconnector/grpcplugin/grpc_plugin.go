@@ -2,6 +2,7 @@ package grpcplugin
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -18,9 +19,10 @@ import (
 )
 
 type GRPCPluginConfig struct {
-	Logger     *zap.Logger
-	PluginPath string
-	PluginName string
+	Logger        *zap.Logger
+	PluginPath    string
+	PluginName    string
+	StartupConfig grpccommon.GRPCStartupParams
 }
 
 type GRPCPlugin struct {
@@ -33,7 +35,8 @@ type GRPCPlugin struct {
 	pluginPath string
 	pluginName string
 
-	client *grpccommon.GRPCPluginClient
+	client        *grpccommon.GRPCPluginClient
+	startupConfig grpccommon.GRPCStartupParams
 }
 
 var _ grpcconnector.ClientProvider = (*GRPCPlugin)(nil)
@@ -60,6 +63,8 @@ func NewGRPCPlugin(config GRPCPluginConfig) (*GRPCPlugin, error) {
 
 		pluginPath: config.PluginPath,
 		pluginName: config.PluginName,
+
+		startupConfig: config.StartupConfig,
 	}, nil
 }
 
@@ -95,11 +100,23 @@ func (p *GRPCPlugin) fork() error {
 	pluginCmd := exec.Command(filePath)
 	grpccommon.PrepareCommand(pluginCmd)
 
+	// This is the same as SkipHostEnv false, except
+	// that we set the base env variables first so that any params
+	// that may contain the same name are not overridden
+	pluginCmd.Env = append(pluginCmd.Env, os.Environ()...)
+
+	configJson, err := json.Marshal(p.startupConfig)
+	if err != nil {
+		return fmt.Errorf("failed to create plugin startup config: %w", err)
+	}
+	pluginCmd.Env = append(pluginCmd.Env, fmt.Sprintf("%s=%s", "startup_config", configJson))
+
 	pluginClient := plugin.NewClient(&plugin.ClientConfig{
 		Cmd:              pluginCmd,
 		AllowedProtocols: []plugin.Protocol{plugin.ProtocolGRPC},
 		HandshakeConfig:  handshakeConfig,
 		Logger:           grpccommon.NewPluginLogger(p.logger),
+		SkipHostEnv:      true,
 		Plugins: map[string]plugin.Plugin{
 			p.pluginName: &grpccommon.ThinPlugin{},
 		},

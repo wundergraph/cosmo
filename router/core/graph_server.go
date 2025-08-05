@@ -46,6 +46,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"github.com/wundergraph/cosmo/router/pkg/grpcconnector"
 	"github.com/wundergraph/cosmo/router/pkg/grpcconnector/grpcplugin"
+	"github.com/wundergraph/cosmo/router/pkg/grpcconnector/grpccommon"
 	"github.com/wundergraph/cosmo/router/pkg/grpcconnector/grpcpluginoci"
 	"github.com/wundergraph/cosmo/router/pkg/grpcconnector/grpcremote"
 	"github.com/wundergraph/cosmo/router/pkg/health"
@@ -1538,9 +1539,10 @@ func (s *graphServer) setupConnector(ctx context.Context, config *nodev1.EngineC
 			}
 
 			grpcPlugin, err := grpcplugin.NewGRPCPlugin(grpcplugin.GRPCPluginConfig{
-				Logger:     s.logger,
-				PluginName: pluginConfig.GetName(),
-				PluginPath: pluginPath,
+				Logger:        s.logger,
+				PluginName:    pluginConfig.GetName(),
+				PluginPath:    pluginPath,
+				StartupConfig: newGRPCStartupParams(s.traceConfig, s.ipAnonymization),
 			})
 			if err != nil {
 				return fmt.Errorf("failed to create grpc plugin for subgraph %s: %w", dsConfig.Id, err)
@@ -1551,7 +1553,6 @@ func (s *graphServer) setupConnector(ctx context.Context, config *nodev1.EngineC
 				return fmt.Errorf("failed to register grpc plugin: %w", err)
 			}
 		}
-
 	}
 
 	if err := s.connector.Run(ctx); err != nil {
@@ -1559,6 +1560,50 @@ func (s *graphServer) setupConnector(ctx context.Context, config *nodev1.EngineC
 	}
 
 	return nil
+}
+
+func newGRPCStartupParams(traceConfig *rtrace.Config, ipAnonymization *IPAnonymizationConfig) grpccommon.GRPCStartupParams {
+	startupConfig := grpccommon.GRPCStartupParams{}
+
+	if traceConfig.Enabled && len(traceConfig.Exporters) > 0 {
+		enabledExporters := make([]grpccommon.GRPCExporter, 0)
+		for _, exporter := range traceConfig.Exporters {
+			if exporter != nil && !exporter.Disabled {
+				transformedExporter := grpccommon.GRPCExporter{
+					Endpoint:      exporter.Endpoint,
+					Exporter:      string(exporter.Exporter),
+					BatchTimeout:  exporter.BatchTimeout,
+					ExportTimeout: exporter.ExportTimeout,
+					Headers:       exporter.Headers,
+					HTTPPath:      exporter.HTTPPath,
+				}
+				enabledExporters = append(enabledExporters, transformedExporter)
+			}
+		}
+
+		// Convert to []string
+		propagators := make([]string, 0, len(traceConfig.Propagators))
+		for _, propagator := range traceConfig.Propagators {
+			propagators = append(propagators, string(propagator))
+		}
+
+		startupConfig.Telemetry = &grpccommon.GRPCTelemetry{
+			Tracing: &grpccommon.GRPCTracing{
+				Exporters:   enabledExporters,
+				Propagators: propagators,
+				Sampler:     traceConfig.Sampler,
+			},
+		}
+	}
+
+	if ipAnonymization != nil {
+		startupConfig.IPAnonymization = &grpccommon.GRPCIPAnonymization{
+			Enabled: ipAnonymization.Enabled,
+			Method:  string(ipAnonymization.Method),
+		}
+	}
+
+	return startupConfig
 }
 
 // wait waits for all in-flight requests to finish. Similar to http.Server.Shutdown we wait in intervals + jitter
