@@ -7,6 +7,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -20,8 +21,14 @@ func getTestDataDir() string {
 }
 
 func TestPlanGenerator(t *testing.T) {
-	allFiles := []string{"1.graphql", "2.graphql", "3.graphql", "4.graphql"}
-	filtered := allFiles[0]
+	entries, _ := os.ReadDir(path.Join(getTestDataDir(), "queries", "base"))
+	allFiles := make([]string, 0, len(entries))
+	for _, e := range entries {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".graphql") {
+			allFiles = append(allFiles, e.Name())
+		}
+	}
+	filtered := "1.graphql"
 
 	t.Run("checks queries path exists", func(t *testing.T) {
 		tempDir, err := os.MkdirTemp("", "plans-")
