@@ -349,12 +349,12 @@ github.com/wundergraph/cosmo/composition-go v0.0.0-20240124120900-5effe48a4a1d h
 github.com/wundergraph/cosmo/composition-go v0.0.0-20240124120900-5effe48a4a1d/go.mod h1:9I3gPMAlAY+m1/cFL20iN7XHTyuZd3VT5ijccdU/FsI=
 github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects v0.0.0-20250715110703-10f2e5f9c79e h1:VdJNlsiyWYxJzAD3jEe+DAQdzxkf9btD8qQNYNU+xQU=
 github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects v0.0.0-20250715110703-10f2e5f9c79e/go.mod h1:WZ0yBeaDSGHqDMcQrP1JRYgCj9atF7ORXF8srnd2Sro=
-github.com/wundergraph/cosmo/router v0.0.0-20250731082520-d014b3ab1555 h1:+n2t7+lXsqR85wa7IANB6y8JdSoUOrzwSxFhJMrgVcQ=
-github.com/wundergraph/cosmo/router v0.0.0-20250731082520-d014b3ab1555/go.mod h1:QapzpsmO9xKjIft1R3+tVl8dAUu0ZvDyOZnfwRmqRZc=
+github.com/wundergraph/cosmo/router v0.0.0-20250805164355-fca32f6d33ac h1:SWumdDA9Kx8cCttwtXuL5j04ElOoBgYz3Ywvp+VtfpY=
+github.com/wundergraph/cosmo/router v0.0.0-20250805164355-fca32f6d33ac/go.mod h1:SL/ZbCFXw+KjErn3SKJNQlvKYL7hXomBoHPyuLUixxQ=
 github.com/wundergraph/cosmo/router-tests v0.0.0-20250718080012-21acbd83c77f h1:AB3PcgliYMtTInM1Tz1uBbL9eTnGagdiFdyQilJiAIA=
 github.com/wundergraph/cosmo/router-tests v0.0.0-20250718080012-21acbd83c77f/go.mod h1:ESnTrSqgo+ZcJhB7dFEI3A7T/KaTuA61HLerhcQOXy4=
-github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.213.0.20250729124331-87cb3a8c31f7 h1:eLp4+z2txqVvGJnjd3lQmfJR2PrNqGPWGV+1Ldgq7xE=
-github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.213.0.20250729124331-87cb3a8c31f7/go.mod h1:DnYY1alnsgzkanSwbFiFIdXKOuf8dHQWQ2P4BzTc6aI=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.213.0.20250805163150-ea8ab759db29 h1:NWGN8OW4FjhCkHxYLvw59NE8SzZ0IjXWvE/B6ifn3hs=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.213.0.20250805163150-ea8ab759db29/go.mod h1:DnYY1alnsgzkanSwbFiFIdXKOuf8dHQWQ2P4BzTc6aI=
 github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 h1:gEOO8jv9F4OT7lGCjxCBTO/36wtF6j2nSip77qHd4x4=
 github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1/go.mod h1:Ohn+xnUBiLI6FVj/9LpzZWtj1/D6lUovWYBkxHVV3aM=
 github.com/yosida95/uritemplate/v3 v3.0.2 h1:Ed3Oyj9yrmi9087+NczuL5BwkIc4wvTb5zIM+UJPGz4=
