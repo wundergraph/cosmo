@@ -56,6 +56,17 @@ const OperationContent = ({
     set(data.operationContent);
   }, [data]);
 
+  if (!federatedGraphName || !namespace) {
+    return (
+      <EmptyState
+        icon={<ExclamationTriangleIcon />}
+        title="Could not retrieve content"
+        description="Please try again"
+        actions={<Button onClick={() => refetch()}>Retry</Button>}
+      />
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="h-96">
