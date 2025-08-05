@@ -244,7 +244,10 @@ func TestStartSubscriptionHook(t *testing.T) {
 			requestLog := xEnv.Observer().FilterMessage("SubscriptionOnStart Hook has been run")
 			assert.Len(t, requestLog.All(), 1)
 
-			require.Len(t, subscriptionArgsCh, 0)
+			require.Len(t, subscriptionArgsCh, 1)
+			subscriptionArgs := <-subscriptionArgsCh
+			require.Error(t, subscriptionArgs.errValue)
+			require.Empty(t, subscriptionArgs.dataValue)
 		})
 	})
 
@@ -587,7 +590,7 @@ func TestStartSubscriptionHook(t *testing.T) {
 			Modules: map[string]interface{}{
 				"startSubscriptionModule": start_subscription.StartSubscriptionModule{
 					Callback: func(ctx core.SubscriptionOnStartHookContext) error {
-						return core.NewStreamHookError(nil, "subscription closed", http.StatusOK, "", true)
+						return core.NewStreamHookError(errors.New("subscription closed"), "subscription closed", http.StatusOK, "NotFound", true)
 					},
 					CallbackOnOriginResponse: func(response *http.Response, ctx core.RequestContext) *http.Response {
 						originResponseCalled <- response
@@ -644,17 +647,11 @@ func TestStartSubscriptionHook(t *testing.T) {
 				require.Empty(t, args.dataValue)
 			})
 
-			require.NoError(t, client.Close())
 			testenv.AwaitChannelWithT(t, time.Second*10, clientRunCh, func(t *testing.T, err error) {
 				require.NoError(t, err)
 			}, "unable to close client before timeout")
 
-			select {
-			case response := <-originResponseCalled:
-				require.NotNil(t, response)
-			case <-time.After(time.Second * 10):
-				t.Fatal("origin response not called")
-			}
+			require.Empty(t, originResponseCalled)
 
 			requestLog := xEnv.Observer().FilterMessage("SubscriptionOnStart Hook has been run")
 			assert.Len(t, requestLog.All(), 1)
