@@ -126,7 +126,7 @@ export class SDLValidationVisitor {
 
       const visitor = this.createASTVisitor();
       visit(astNode, visitor);
-      
+
       return this.validationResult;
     } catch (error) {
       if (error instanceof Error) {
@@ -193,7 +193,7 @@ export class SDLValidationVisitor {
    */
   private validateListTypeNullability(node: ListTypeNode): void {
     let currentNode: TypeNode = node;
-    
+
     // Traverse nested list types to find the innermost type.
     while (currentNode.kind === Kind.LIST_TYPE) {
       currentNode = currentNode.type;
@@ -214,10 +214,7 @@ export class SDLValidationVisitor {
     // If the innermost type is a named type (not wrapped in NonNull), it's nullable
     if (currentNode.kind === Kind.NAMED_TYPE) {
       const sourceText = this.extractSourceText(node);
-      this.addWarning(
-        `Nullable items are not supported in list types: ${sourceText}`,
-        node.loc
-      );
+      this.addWarning(`Nullable items are not supported in list types: ${sourceText}`, node.loc);
     }
   }
 
@@ -260,19 +257,13 @@ export class SDLValidationVisitor {
 
     const keyFields = node.arguments?.find((arg) => arg.name.value === 'fields');
     if (keyFields?.value.kind !== Kind.STRING) {
-      this.addWarning(
-        'Invalid @key directive: fields argument must be a string',
-        node.loc
-      );
+      this.addWarning('Invalid @key directive: fields argument must be a string', node.loc);
       return;
     }
 
     const keyFieldsValue = keyFields.value.value;
     if (keyFieldsValue.includes('{')) {
-      this.addError(
-        'Nested key directives are not supported yet',
-        keyFields.loc
-      );
+      this.addError('Nested key directives are not supported yet', keyFields.loc);
     }
   }
 
@@ -282,15 +273,10 @@ export class SDLValidationVisitor {
    * @private
    */
   private validateRequiresDirective(node: FieldDefinitionNode): void {
-    const hasRequiresDirective = node.directives?.some(
-      (directive) => directive.name.value === 'requires'
-    );
+    const hasRequiresDirective = node.directives?.some((directive) => directive.name.value === 'requires');
 
     if (hasRequiresDirective) {
-      this.addWarning(
-        'Use of requires is not supported yet',
-        node.loc
-      );
+      this.addWarning('Use of requires is not supported yet', node.loc);
     }
   }
 
@@ -301,7 +287,7 @@ export class SDLValidationVisitor {
    * @returns true if the rule was found and configured, false otherwise
    */
   public configureRule(ruleName: string, enabled: boolean): boolean {
-    const rule = this.featureGates.find(gate => gate.name === ruleName);
+    const rule = this.featureGates.find((gate) => gate.name === ruleName);
     if (rule) {
       rule.enabled = enabled;
       return true;
@@ -340,14 +326,8 @@ export class SDLValidationVisitor {
    * @param context - Additional context information
    * @private
    */
-  private addWarning(
-    message: string,
-    location?: Location,
-    context?: MessageContext
-  ): void {
-    this.validationResult.warnings.push(
-      this.formatMessage('Warning', message, location, context)
-    );
+  private addWarning(message: string, location?: Location, context?: MessageContext): void {
+    this.validationResult.warnings.push(this.formatMessage('Warning', message, location, context));
   }
 
   /**
@@ -357,14 +337,8 @@ export class SDLValidationVisitor {
    * @param context - Additional context information
    * @private
    */
-  private addError(
-    message: string,
-    location?: Location,
-    context?: MessageContext
-  ): void {
-    this.validationResult.errors.push(
-      this.formatMessage('Error', message, location, context)
-    );
+  private addError(message: string, location?: Location, context?: MessageContext): void {
+    this.validationResult.errors.push(this.formatMessage('Error', message, location, context));
   }
 
   /**
@@ -380,7 +354,7 @@ export class SDLValidationVisitor {
     level: 'Error' | 'Warning',
     message: string,
     location?: Location,
-    context?: MessageContext
+    context?: MessageContext,
   ): string {
     const parts: string[] = [`[${level}]`, message];
 

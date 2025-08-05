@@ -80,7 +80,7 @@ export function compileGraphQLToProto(
 
 /**
  * Validates a GraphQL SDL schema against specific rules and constraints
- * 
+ *
  * @param sdl - The GraphQL SDL string to validate
  * @returns ValidationResult containing any errors and warnings found during validation
  * @throws Error if the SDL cannot be parsed as valid GraphQL

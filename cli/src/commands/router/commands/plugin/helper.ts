@@ -89,7 +89,8 @@ export function renderValidationResults(validationResult: ValidationResult, sche
     console.log(` ${pc.dim('├──── warnings')}: ${pc.yellow(validationResult.warnings.length.toString())}`);
     console.log(` ${pc.dim('│')}`);
 
-    for (const [index, warning] of validationResult.warnings.slice(0, 10).entries()) { // take at max 10
+    for (const [index, warning] of validationResult.warnings.slice(0, 10).entries()) {
+      // take at max 10
       const isLast = index === validationResult.warnings.length - 1 && !hasErrors;
       const connector = isLast ? '└─' : '├─';
       console.log(` ${pc.dim(connector)} ${pc.yellow('warn')}: ${warning.replace('[Warning] ', '')}`);
@@ -114,7 +115,8 @@ export function renderValidationResults(validationResult: ValidationResult, sche
     console.log(` ${pc.dim('├────── errors')}: ${pc.red(validationResult.errors.length.toString())}`);
     console.log(` ${pc.dim('│')}`);
 
-    for (const [index, error] of validationResult.errors.slice(0, 10).entries()) { // take at max 10
+    for (const [index, error] of validationResult.errors.slice(0, 10).entries()) {
+      // take at max 10
       const isLast = index === validationResult.errors.length - 1;
       const connector = isLast ? '└─' : '├─';
       console.log(` ${pc.dim(connector)} ${pc.red('error')}: ${error.replace('[Error] ', '')}`);
