@@ -644,6 +644,84 @@ describe('GraphQL Federation to Proto Mapping', () => {
     `);
   });
 
+  it('correctly handles malformed key fields', () => {
+    // fields has a space after id
+    const sdl = `
+      directive @key(fields: String!) on OBJECT
+      
+      type Product @key(fields: "id ") {
+        id: ID!
+        upc: String!
+        name: String!
+        price: Float!
+      }
+      
+      type Query {
+        products: [Product!]!
+      }
+    `;
+
+    const mapping = compileGraphQLToMapping(sdl, 'ProductService');
+
+    expect(mapping.toJson()).toMatchInlineSnapshot(`
+      {
+        "entityMappings": [
+          {
+            "key": "id ",
+            "kind": "entity",
+            "request": "LookupProductByIdRequest",
+            "response": "LookupProductByIdResponse",
+            "rpc": "LookupProductById",
+            "typeName": "Product",
+          },
+        ],
+        "operationMappings": [
+          {
+            "mapped": "QueryProducts",
+            "original": "products",
+            "request": "QueryProductsRequest",
+            "response": "QueryProductsResponse",
+            "type": "OPERATION_TYPE_QUERY",
+          },
+        ],
+        "service": "ProductService",
+        "typeFieldMappings": [
+          {
+            "fieldMappings": [
+              {
+                "mapped": "products",
+                "original": "products",
+              },
+            ],
+            "type": "Query",
+          },
+          {
+            "fieldMappings": [
+              {
+                "mapped": "id",
+                "original": "id",
+              },
+              {
+                "mapped": "upc",
+                "original": "upc",
+              },
+              {
+                "mapped": "name",
+                "original": "name",
+              },
+              {
+                "mapped": "price",
+                "original": "price",
+              },
+            ],
+            "type": "Product",
+          },
+        ],
+        "version": 1,
+      }
+    `);
+  });
+
   it('maps entity with compound key fields to single entity mapping', () => {
     const sdl = `
       directive @key(fields: String!) on OBJECT

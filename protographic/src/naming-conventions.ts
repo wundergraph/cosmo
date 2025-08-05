@@ -51,7 +51,7 @@ export function createResponseMessageName(methodName: string): string {
  * Creates an entity lookup method name for an entity type
  */
 export function createEntityLookupMethodName(typeName: string, keyString: string = 'id'): string {
-  const fields = keyString.split(' ');
+  const fields = keyString.trim().split(' ');
   const keyPart = fields.map((field) => upperFirst(camelCase(field))).join('And');
   return `Lookup${typeName}By${keyPart}`;
 }
