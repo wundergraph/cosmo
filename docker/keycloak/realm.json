@@ -1246,61 +1246,8 @@
   "enabledEventTypes": [],
   "adminEventsEnabled": false,
   "adminEventsDetailsEnabled": false,
-  "identityProviders": [
-    {
-      "alias": "wundergraph_b42",
-      "displayName": "auth0",
-      "internalId": "1afb0b21-e492-4576-ae8d-3c63e3bd75d9",
-      "providerId": "oidc",
-      "enabled": true,
-      "updateProfileFirstLoginMode": "on",
-      "trustEmail": false,
-      "storeToken": false,
-      "addReadTokenRoleOnCreate": false,
-      "authenticateByDefault": false,
-      "linkOnly": false,
-      "hideOnLogin": true,
-      "config": {
-        "validateSignature": "true",
-        "clientId": "3R1lKNWzm7nnYgMHzUESIsSA9reFIQbV",
-        "tokenUrl": "https://dev-h0om0j0r2batw32m.us.auth0.com/oauth/token",
-        "jwksUrl": "https://dev-h0om0j0r2batw32m.us.auth0.com/.well-known/jwks.json",
-        "authorizationUrl": "https://dev-h0om0j0r2batw32m.us.auth0.com/authorize",
-        "logoutUrl": "https://dev-h0om0j0r2batw32m.us.auth0.com/oidc/logout",
-        "syncMode": "FORCE",
-        "clientSecret": "**********",
-        "issuer": "https://dev-h0om0j0r2batw32m.us.auth0.com/",
-        "defaultScope": "openid email profile",
-        "useJwksUrl": "true"
-      }
-    }
-  ],
-  "identityProviderMappers": [
-    {
-      "id": "8dfcc19c-c409-4590-a9f7-e005b30f98ec",
-      "name": "420f7d7f41",
-      "identityProviderAlias": "wundergraph_b42",
-      "identityProviderMapper": "oidc-advanced-group-idp-mapper",
-      "config": {
-        "claims": "[{ \"key\": \"ssoGroups\", \"value\": \".*\" }]",
-        "syncMode": "INHERIT",
-        "are.claim.values.regex": "true",
-        "group": "/wundergraph"
-      }
-    },
-    {
-      "id": "8f5818d2-985e-4872-adc3-196474039dd5",
-      "name": "20f7d7f415",
-      "identityProviderAlias": "wundergraph_b42",
-      "identityProviderMapper": "oidc-advanced-group-idp-mapper",
-      "config": {
-        "claims": "[{ \"key\": \"ssoGroups\", \"value\": \"admin\" }]",
-        "syncMode": "INHERIT",
-        "are.claim.values.regex": "true",
-        "group": "/wundergraph/admin"
-      }
-    }
-  ],
+  "identityProviders": [],
+  "identityProviderMappers": [],
   "components": {
     "org.keycloak.services.clientregistration.policy.ClientRegistrationPolicy": [
       {
@@ -1349,12 +1296,12 @@
           "allowed-protocol-mapper-types": [
             "saml-role-list-mapper",
             "saml-user-property-mapper",
-            "oidc-usermodel-property-mapper",
+            "oidc-full-name-mapper",
             "oidc-usermodel-attribute-mapper",
             "saml-user-attribute-mapper",
             "oidc-address-mapper",
-            "oidc-full-name-mapper",
-            "oidc-sha256-pairwise-sub-mapper"
+            "oidc-sha256-pairwise-sub-mapper",
+            "oidc-usermodel-property-mapper"
           ]
         }
       },
@@ -1374,14 +1321,14 @@
         "subComponents": {},
         "config": {
           "allowed-protocol-mapper-types": [
-            "saml-role-list-mapper",
+            "oidc-usermodel-attribute-mapper",
             "oidc-full-name-mapper",
             "oidc-address-mapper",
-            "oidc-sha256-pairwise-sub-mapper",
-            "saml-user-property-mapper",
-            "oidc-usermodel-attribute-mapper",
+            "saml-role-list-mapper",
+            "oidc-usermodel-property-mapper",
             "saml-user-attribute-mapper",
-            "oidc-usermodel-property-mapper"
+            "oidc-sha256-pairwise-sub-mapper",
+            "saml-user-property-mapper"
           ]
         }
       },
@@ -1489,6 +1436,7 @@
     ]
   },
   "internationalizationEnabled": false,
+  "supportedLocales": [],
   "authenticationFlows": [
     {
       "id": "7ebda311-20e4-4467-887f-7e6b1e7ec275",
@@ -1778,14 +1726,14 @@
           "requirement": "ALTERNATIVE",
           "priority": 30,
           "autheticatorFlow": true,
-          "flowAlias": "browser with sso forms",
+          "flowAlias": "browser alt forms",
           "userSetupAllowed": false
         }
       ]
     },
     {
       "id": "c22f7df8-9f25-482c-ae9c-7260b87e054e",
-      "alias": "browser with sso Browser - Conditional OTP",
+      "alias": "browser alt Browser - Conditional OTP",
       "description": "Flow to determine if the OTP is required for the authentication",
       "providerId": "basic-flow",
       "topLevel": false,
@@ -1811,7 +1759,7 @@
     },
     {
       "id": "8de60f3b-1624-4465-9c3c-599c9f03d23e",
-      "alias": "browser with sso forms",
+      "alias": "browser alt forms",
       "description": "Username, password, otp and other auth forms.",
       "providerId": "basic-flow",
       "topLevel": false,
@@ -1838,7 +1786,7 @@
           "requirement": "CONDITIONAL",
           "priority": 21,
           "autheticatorFlow": true,
-          "flowAlias": "browser with sso Browser - Conditional OTP",
+          "flowAlias": "browser alt Browser - Conditional OTP",
           "userSetupAllowed": false
         }
       ]
@@ -2248,7 +2196,7 @@
     "frontendUrl": "http://localhost:8080",
     "shortVerificationUri": ""
   },
-  "keycloakVersion": "26.3.2",
+  "keycloakVersion": "26.2.5",
   "userManagedAccessAllowed": false,
   "organizationsEnabled": false,
   "verifiableCredentialsEnabled": false,
