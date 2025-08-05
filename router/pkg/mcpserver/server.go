@@ -330,8 +330,10 @@ func (s *GraphQLSchemaServer) Reload(schema *ast.Document) error {
 	s.schemaCompiler = NewSchemaCompiler(s.logger)
 	s.operationsManager = NewOperationsManager(schema, s.logger, s.excludeMutations)
 
-	if err := s.operationsManager.LoadOperationsFromDirectory(s.operationsDir); err != nil {
-		return fmt.Errorf("failed to load operations: %w", err)
+	if s.operationsDir != "" {
+		if err := s.operationsManager.LoadOperationsFromDirectory(s.operationsDir); err != nil {
+			return fmt.Errorf("failed to load operations: %w", err)
+		}
 	}
 
 	s.server.DeleteTools(s.registeredTools...)
@@ -345,7 +347,7 @@ func (s *GraphQLSchemaServer) Reload(schema *ast.Document) error {
 
 // Stop gracefully shuts down the MCP server
 func (s *GraphQLSchemaServer) Stop(ctx context.Context) error {
-	s.logger.Debug("shutting down MCP server")
+	s.logger.Debug("Shutting down MCP server")
 
 	// Create a shutdown context with timeout
 	shutdownCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
