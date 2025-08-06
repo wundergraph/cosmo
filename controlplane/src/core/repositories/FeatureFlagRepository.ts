@@ -24,6 +24,7 @@ import {
   FeatureSubgraphDTO,
   FederatedGraphDTO,
   Label,
+  ProtoSubgraph,
   SubgraphDTO,
 } from '../../types/index.js';
 import { normalizeLabels } from '../util.js';
@@ -795,6 +796,8 @@ export class FeatureFlagRepository {
       let lastUpdatedAt = '';
       let schemaSDL = '';
       let schemaVersionId = '';
+      let isV2Graph: boolean | undefined;
+      let proto: ProtoSubgraph | undefined;
 
       if (fg.schemaVersionId !== null) {
         const sv = await this.db.query.schemaVersion.findFirst({
@@ -803,6 +806,28 @@ export class FeatureFlagRepository {
         lastUpdatedAt = sv?.createdAt?.toISOString() ?? '';
         schemaSDL = sv?.schemaSDL ?? '';
         schemaVersionId = sv?.id ?? '';
+        isV2Graph = sv?.isV2Graph || undefined;
+        if (fg.type === 'plugin' || fg.type === 'grpc-subgraph') {
+          const protobufSchemaVersion = await this.db.query.protobufSchemaVersions.findFirst({
+            where: eq(schema.protobufSchemaVersions.schemaVersionId, fg.schemaVersionId),
+          });
+
+          proto = {
+            schema: protobufSchemaVersion?.protoSchema ?? '',
+            mappings: protobufSchemaVersion?.protoMappings ?? '',
+            lock: protobufSchemaVersion?.protoLock ?? '',
+          };
+
+          if (fg.type === 'plugin') {
+            const pluginImageVersion = await this.db.query.pluginImageVersions.findFirst({
+              where: eq(schema.pluginImageVersions.schemaVersionId, fg.schemaVersionId),
+            });
+            proto.pluginData = {
+              platforms: pluginImageVersion?.platform ?? [],
+              version: pluginImageVersion?.version ?? 'v1',
+            };
+          }
+        }
       }
 
       const baseSubgraph = await subgraphRepo.byId(fg.baseSubgraphId);
@@ -822,6 +847,8 @@ export class FeatureFlagRepository {
         schemaSDL,
         lastUpdatedAt,
         baseSubgraphName: baseSubgraph.name,
+        isV2Graph,
+        proto,
       });
     }
     return featureGraphsByFlag;
