@@ -2,45 +2,52 @@ package core
 
 import (
 	"context"
+	"errors"
 
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
-// CustomModuleError is used to customize the error messages and the behavior
-type CustomModuleError struct {
-	err        error
-	message    string
-	statusCode int
-	code       string
+// StreamHookError is used to customize the error messages and the behavior
+type StreamHookError struct {
+	err             error
+	message         string
+	statusCode      int
+	code            string
+	closeConnection bool
 }
 
-func (e *CustomModuleError) Error() string {
+func (e *StreamHookError) Error() string {
 	if e.err != nil {
 		return e.err.Error()
 	}
 	return e.message
 }
 
-func (e *CustomModuleError) Message() string {
+func (e *StreamHookError) Message() string {
 	return e.message
 }
 
-func (e *CustomModuleError) StatusCode() int {
+func (e *StreamHookError) StatusCode() int {
 	return e.statusCode
 }
 
-func (e *CustomModuleError) Code() string {
+func (e *StreamHookError) Code() string {
 	return e.code
 }
 
-func NewCustomModuleError(err error, message string, statusCode int, code string) *CustomModuleError {
-	return &CustomModuleError{
-		err:        err,
-		message:    message,
-		statusCode: statusCode,
-		code:       code,
+func (e *StreamHookError) CloseConnection() bool {
+	return e.closeConnection
+}
+
+func NewStreamHookError(err error, message string, statusCode int, code string, closeConnection bool) *StreamHookError {
+	return &StreamHookError{
+		err:             err,
+		message:         message,
+		statusCode:      statusCode,
+		code:            code,
+		closeConnection: closeConnection,
 	}
 }
 
@@ -113,13 +120,13 @@ func (c *engineSubscriptionOnStartHookContext) SubscriptionEventConfiguration() 
 
 type SubscriptionOnStartHandler interface {
 	// SubscriptionOnStart is called once at subscription start
-	// If the boolean is true, the subscription is closed.
+	// If the error is a StreamHookError and CloseConnection is true, the subscription is closed.
 	// The error is propagated to the client.
-	SubscriptionOnStart(ctx SubscriptionOnStartHookContext) (bool, error)
+	SubscriptionOnStart(ctx SubscriptionOnStartHookContext) error
 }
 
 // NewPubSubSubscriptionOnStartHook converts a SubscriptionOnStartHandler to a pubsub.SubscriptionOnStartFn
-func NewPubSubSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHookContext) (bool, error)) datasource.SubscriptionOnStartFn {
+func NewPubSubSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHookContext) error) datasource.SubscriptionOnStartFn {
 	if fn == nil {
 		return nil
 	}
@@ -132,14 +139,21 @@ func NewPubSubSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHookContext
 			writeEventHook:                 resolveCtx.TryEmitSubscriptionUpdate,
 		}
 
-		close, err := fn(hookCtx)
+		err := fn(hookCtx)
+
+		// Check if the error is a StreamHookError and should close the connection
+		var streamHookErr *StreamHookError
+		close := false
+		if errors.As(err, &streamHookErr) {
+			close = streamHookErr.CloseConnection()
+		}
 
 		return close, err
 	}
 }
 
 // NewEngineSubscriptionOnStartHook converts a SubscriptionOnStartHandler to a graphql_datasource.SubscriptionOnStartFn
-func NewEngineSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHookContext) (bool, error)) graphql_datasource.SubscriptionOnStartFn {
+func NewEngineSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHookContext) error) graphql_datasource.SubscriptionOnStartFn {
 	if fn == nil {
 		return nil
 	}
@@ -151,7 +165,14 @@ func NewEngineSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHookContext
 			writeEventHook: resolveCtx.TryEmitSubscriptionUpdate,
 		}
 
-		close, err := fn(hookCtx)
+		err := fn(hookCtx)
+
+		// Check if the error is a StreamHookError and should close the connection
+		var streamHookErr *StreamHookError
+		close := false
+		if errors.As(err, &streamHookErr) {
+			close = streamHookErr.CloseConnection()
+		}
 
 		return close, err
 	}

@@ -90,12 +90,12 @@ func TestStartSubscriptionHook(t *testing.T) {
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
 				"startSubscriptionModule": start_subscription.StartSubscriptionModule{
-					Callback: func(ctx core.SubscriptionOnStartHookContext) (bool, error) {
+					Callback: func(ctx core.SubscriptionOnStartHookContext) error {
 						ctx.WriteEvent(&kafka.Event{
 							Key:  []byte("1"),
 							Data: []byte(`{"id": 1, "__typename": "Employee"}`),
 						})
-						return false, nil
+						return nil
 					},
 				},
 			},
@@ -176,9 +176,9 @@ func TestStartSubscriptionHook(t *testing.T) {
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
 				"startSubscriptionModule": start_subscription.StartSubscriptionModule{
-					Callback: func(ctx core.SubscriptionOnStartHookContext) (bool, error) {
+					Callback: func(ctx core.SubscriptionOnStartHookContext) error {
 						callbackCalled <- true
-						return true, nil
+						return core.NewStreamHookError(nil, "subscription closed", http.StatusOK, "", true)
 					},
 				},
 			},
@@ -244,7 +244,10 @@ func TestStartSubscriptionHook(t *testing.T) {
 			requestLog := xEnv.Observer().FilterMessage("SubscriptionOnStart Hook has been run")
 			assert.Len(t, requestLog.All(), 1)
 
-			require.Len(t, subscriptionArgsCh, 0)
+			require.Len(t, subscriptionArgsCh, 1)
+			subscriptionArgs := <-subscriptionArgsCh
+			require.Error(t, subscriptionArgs.errValue)
+			require.Empty(t, subscriptionArgs.dataValue)
 		})
 	})
 
@@ -255,15 +258,15 @@ func TestStartSubscriptionHook(t *testing.T) {
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
 				"startSubscriptionModule": start_subscription.StartSubscriptionModule{
-					Callback: func(ctx core.SubscriptionOnStartHookContext) (bool, error) {
+					Callback: func(ctx core.SubscriptionOnStartHookContext) error {
 						employeeId := ctx.RequestContext().Operation().Variables().GetInt64("employeeID")
 						if employeeId != 1 {
-							return false, nil
+							return nil
 						}
 						ctx.WriteEvent(&kafka.Event{
 							Data: []byte(`{"id": 1, "__typename": "Employee"}`),
 						})
-						return false, nil
+						return nil
 					},
 				},
 			},
@@ -359,8 +362,8 @@ func TestStartSubscriptionHook(t *testing.T) {
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
 				"startSubscriptionModule": start_subscription.StartSubscriptionModule{
-					Callback: func(ctx core.SubscriptionOnStartHookContext) (bool, error) {
-						return false, core.NewCustomModuleError(errors.New("test error"), "test error", http.StatusLoopDetected, http.StatusText(http.StatusLoopDetected))
+					Callback: func(ctx core.SubscriptionOnStartHookContext) error {
+						return core.NewStreamHookError(errors.New("test error"), "test error", http.StatusLoopDetected, http.StatusText(http.StatusLoopDetected), false)
 					},
 				},
 			},
@@ -502,11 +505,11 @@ func TestStartSubscriptionHook(t *testing.T) {
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
 				"startSubscriptionModule": start_subscription.StartSubscriptionModule{
-					Callback: func(ctx core.SubscriptionOnStartHookContext) (bool, error) {
+					Callback: func(ctx core.SubscriptionOnStartHookContext) error {
 						ctx.WriteEvent(&core.EngineEvent{
 							Data: []byte(`{"data":{"countEmp":1000}}`),
 						})
-						return false, nil
+						return nil
 					},
 				},
 			},
@@ -572,6 +575,83 @@ func TestStartSubscriptionHook(t *testing.T) {
 				require.NoError(t, err)
 
 			}, "unable to close client before timeout")
+
+			requestLog := xEnv.Observer().FilterMessage("SubscriptionOnStart Hook has been run")
+			assert.Len(t, requestLog.All(), 1)
+		})
+	})
+
+	t.Run("Test StartSubscription hook is called, return StreamHookError with CloseConnection true, response on OnOriginResponse should still be set", func(t *testing.T) {
+		t.Parallel()
+		originResponseCalled := make(chan *http.Response, 1)
+
+		cfg := config.Config{
+			Graph: config.Graph{},
+			Modules: map[string]interface{}{
+				"startSubscriptionModule": start_subscription.StartSubscriptionModule{
+					Callback: func(ctx core.SubscriptionOnStartHookContext) error {
+						return core.NewStreamHookError(errors.New("subscription closed"), "subscription closed", http.StatusOK, "NotFound", true)
+					},
+					CallbackOnOriginResponse: func(response *http.Response, ctx core.RequestContext) *http.Response {
+						originResponseCalled <- response
+						return response
+					},
+				},
+			},
+		}
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithModulesConfig(cfg.Modules),
+				core.WithCustomModules(&start_subscription.StartSubscriptionModule{}),
+			},
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			var subscriptionCountEmp struct {
+				CountEmp int `graphql:"countEmp(max: $max, intervalMilliseconds: $interval)"`
+			}
+
+			surl := xEnv.GraphQLWebSocketSubscriptionURL()
+			client := graphql.NewSubscriptionClient(surl)
+
+			vars := map[string]interface{}{
+				"max":      0,
+				"interval": 0,
+			}
+
+			type subscriptionArgs struct {
+				dataValue []byte
+				errValue  error
+			}
+			subscriptionOneArgsCh := make(chan subscriptionArgs)
+			subscriptionOneID, err := client.Subscribe(&subscriptionCountEmp, vars, func(dataValue []byte, errValue error) error {
+				subscriptionOneArgsCh <- subscriptionArgs{
+					dataValue: dataValue,
+					errValue:  errValue,
+				}
+				return nil
+			})
+			require.NoError(t, err)
+			require.NotEmpty(t, subscriptionOneID)
+
+			clientRunCh := make(chan error)
+			go func() {
+				clientRunCh <- client.Run()
+			}()
+
+			testenv.AwaitChannelWithT(t, time.Second*10, subscriptionOneArgsCh, func(t *testing.T, args subscriptionArgs) {
+				require.Error(t, args.errValue)
+				require.Empty(t, args.dataValue)
+			})
+
+			testenv.AwaitChannelWithT(t, time.Second*10, clientRunCh, func(t *testing.T, err error) {
+				require.NoError(t, err)
+			}, "unable to close client before timeout")
+
+			require.Empty(t, originResponseCalled)
 
 			requestLog := xEnv.Observer().FilterMessage("SubscriptionOnStart Hook has been run")
 			assert.Len(t, requestLog.All(), 1)
