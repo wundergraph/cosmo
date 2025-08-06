@@ -590,7 +590,7 @@ describe('@interfaceObject tests', () => {
     );
   });
 
-  test('that a propagating an Interface Object field through multiple Interface Objects causes @shareable errors', () => {
+  test('that propagating an Interface Object field through multiple Interface Objects causes @shareable errors', () => {
     const { errors } = federateSubgraphsFailure([fca, fcc, fcd], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(errors).toHaveLength(2);
     expect(errors[0]).toStrictEqual(
