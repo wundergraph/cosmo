@@ -10,4 +10,8 @@ class URL {
             this[prop] = result[prop]
         }
     }
+
+    static canParse(url) {
+        return urlCanParse(url);
+    }
 }

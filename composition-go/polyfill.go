@@ -62,3 +62,8 @@ func urlParse(rawURL string, base string) (*urlShim, error) {
 		Username: u.User.Username(),
 	}, nil
 }
+
+func urlCanParse(rawURL string) bool {
+	_, err := url.Parse(rawURL)
+	return err == nil
+}
