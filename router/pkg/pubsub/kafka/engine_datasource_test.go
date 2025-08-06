@@ -67,6 +67,22 @@ func TestPublishData_MarshalJSONTemplate(t *testing.T) {
 	}
 }
 
+func TestPublishData_PublishEventConfiguration(t *testing.T) {
+	data := publishData{
+		Provider:  "test-provider",
+		Topic:     "test-topic",
+		FieldName: "test-field",
+	}
+
+	evtCfg := &PublishEventConfiguration{
+		Provider:  data.Provider,
+		Topic:     data.Topic,
+		FieldName: data.FieldName,
+	}
+
+	assert.Equal(t, evtCfg, data.PublishEventConfiguration())
+}
+
 func TestKafkaPublishDataSource_Load(t *testing.T) {
 	tests := []struct {
 		name            string

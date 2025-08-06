@@ -51,6 +51,22 @@ func TestPublishAndRequestEventConfiguration_MarshalJSONTemplate(t *testing.T) {
 	}
 }
 
+func TestPublishData_PublishEventConfiguration(t *testing.T) {
+	data := publishData{
+		Provider:  "test-provider",
+		Subject:   "test-subject",
+		FieldName: "test-field",
+	}
+
+	evtCfg := &PublishAndRequestEventConfiguration{
+		Provider:  data.Provider,
+		Subject:   data.Subject,
+		FieldName: data.FieldName,
+	}
+
+	assert.Equal(t, evtCfg, data.PublishEventConfiguration())
+}
+
 func TestNatsPublishDataSource_Load(t *testing.T) {
 	tests := []struct {
 		name            string

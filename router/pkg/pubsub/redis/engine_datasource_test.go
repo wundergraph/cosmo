@@ -49,6 +49,22 @@ func TestPublishEventConfiguration_MarshalJSONTemplate(t *testing.T) {
 	}
 }
 
+func TestPublishData_PublishEventConfiguration(t *testing.T) {
+	data := publishData{
+		Provider:  "test-provider",
+		Channel:   "test-channel",
+		FieldName: "test-field",
+	}
+
+	evtCfg := &PublishEventConfiguration{
+		Provider:  data.Provider,
+		Channel:   data.Channel,
+		FieldName: data.FieldName,
+	}
+
+	assert.Equal(t, evtCfg, data.PublishEventConfiguration())
+}
+
 func TestRedisPublishDataSource_Load(t *testing.T) {
 	tests := []struct {
 		name            string
