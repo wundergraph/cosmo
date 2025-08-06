@@ -92,7 +92,6 @@ import {
   newAuthorizationData,
   newEntityInterfaceFederationData,
   newFieldAuthorizationData,
-  subtractSet,
   upsertAuthorizationConfiguration,
   upsertEntityInterfaceFederationData,
   upsertFieldAuthorizationData,
@@ -231,7 +230,7 @@ import {
   InvalidRequiredInputValueData,
 } from '../../utils/types';
 import { FederateSubgraphsContractV1Params, FederateSubgraphsWithContractsV1Params, FederationParams } from './types';
-import { ContractName } from '../../types/types';
+import { ContractName, FieldCoords, TypeName } from '../../types/types';
 
 export class FederationFactory {
   authorizationDataByParentTypeName: Map<string, AuthorizationData>;
@@ -245,7 +244,7 @@ export class FederationFactory {
   entityInterfaceFederationDataByTypeName: Map<string, EntityInterfaceFederationData>;
   errors: Error[] = [];
   fieldConfigurationByFieldCoords = new Map<string, FieldConfiguration>();
-  fieldCoordsByNamedTypeName: Map<string, Set<string>>;
+  fieldCoordsByNamedTypeName: Map<TypeName, Set<FieldCoords>>;
   inaccessibleCoords = new Set<string>();
   inaccessibleRequiredInputValueErrorByCoords = new Map<string, Error>();
   internalGraph: Graph;
@@ -425,11 +424,11 @@ export class FederationFactory {
         objectData?.kind || Kind.NULL,
       );
     }
-    const configurationData = getOrThrowError(
-      internalSubgraph.configurationDataByTypeName,
-      entityData.typeName,
-      'internalSubgraph.configurationDataByTypeName',
-    );
+    const configurationData = internalSubgraph.configurationDataByTypeName.get(entityData.typeName);
+    // If all fields are overridden, there will be no configuration data.
+    if (!configurationData) {
+      return;
+    }
     const implicitKeys: RequiredFieldConfiguration[] = [];
     const graphNode = this.internalGraph.nodeByNodeName.get(`${this.currentSubgraphName}.${entityData.typeName}`);
     // Any errors in the field sets would be caught when evaluating the explicit entities, so they are ignored here
@@ -1574,13 +1573,12 @@ export class FederationFactory {
 
   handleEntityInterfaces() {
     for (const [entityInterfaceTypeName, entityInterfaceData] of this.entityInterfaceFederationDataByTypeName) {
-      subtractSet(entityInterfaceData.interfaceFieldNames, entityInterfaceData.interfaceObjectFieldNames);
-      const entityInterface = getOrThrowError(
+      const entityInterfaceFederationData = getOrThrowError(
         this.parentDefinitionDataByTypeName,
         entityInterfaceTypeName,
         PARENT_DEFINITION_DATA,
       );
-      if (entityInterface.kind !== Kind.INTERFACE_TYPE_DEFINITION) {
+      if (entityInterfaceFederationData.kind !== Kind.INTERFACE_TYPE_DEFINITION) {
         // TODO error
         continue;
       }
@@ -1605,7 +1603,9 @@ export class FederationFactory {
           // TODO no keys error
           continue;
         }
-        interfaceObjectConfiguration.entityInterfaceConcreteTypeNames = entityInterfaceData.concreteTypeNames;
+        interfaceObjectConfiguration.entityInterfaceConcreteTypeNames = new Set<TypeName>(
+          entityInterfaceData.concreteTypeNames,
+        );
         this.internalGraph.setSubgraphName(subgraphName);
         const interfaceObjectNode = this.internalGraph.addOrUpdateNode(entityInterfaceTypeName, { isAbstract: true });
         for (const concreteTypeName of concreteTypeNames) {
@@ -1648,17 +1648,20 @@ export class FederationFactory {
             resolvableKeyFieldSets.add(key.selectionSet);
           }
           const interfaceAuthData = this.authorizationDataByParentTypeName.get(entityInterfaceTypeName);
-          for (const fieldName of entityInterfaceData.interfaceObjectFieldNames) {
+          const entityInterfaceSubgraphData = getOrThrowError(
+            internalSubgraph.parentDefinitionDataByTypeName,
+            entityInterfaceTypeName,
+            'internalSubgraph.parentDefinitionDataByTypeName',
+          );
+          if (!isObjectDefinitionData(entityInterfaceSubgraphData)) {
+            continue;
+          }
+          for (const [fieldName, fieldData] of entityInterfaceSubgraphData.fieldDataByName) {
             const fieldCoords = `${concreteTypeName}.${fieldName}`;
-            const interfaceFieldData = getOrThrowError(
-              entityInterface.fieldDataByName,
-              fieldName,
-              `${entityInterfaceTypeName}.fieldDataByFieldName`,
-            );
             getValueOrDefault(
               this.fieldCoordsByNamedTypeName,
-              interfaceFieldData.namedTypeName,
-              () => new Set<string>(),
+              fieldData.namedTypeName,
+              () => new Set<FieldCoords>(),
             ).add(fieldCoords);
             const interfaceFieldAuthData = interfaceAuthData?.fieldAuthDataByFieldName.get(fieldName);
             if (interfaceFieldAuthData) {
@@ -1671,12 +1674,16 @@ export class FederationFactory {
             }
             const existingFieldData = concreteTypeData.fieldDataByName.get(fieldName);
             if (existingFieldData) {
-              // TODO handle shareability
+              const isShareable = fieldData.isShareableBySubgraphName.get(subgraphName) ?? false;
+              existingFieldData.isShareableBySubgraphName.set(subgraphName, isShareable);
+              existingFieldData.subgraphNames.add(subgraphName);
               continue;
             }
             const isInaccessible =
-              entityInterface.isInaccessible || concreteTypeData.isInaccessible || interfaceFieldData.isInaccessible;
-            concreteTypeData.fieldDataByName.set(fieldName, this.copyFieldData(interfaceFieldData, isInaccessible));
+              entityInterfaceFederationData.isInaccessible ||
+              concreteTypeData.isInaccessible ||
+              fieldData.isInaccessible;
+            concreteTypeData.fieldDataByName.set(fieldName, this.copyFieldData(fieldData, isInaccessible));
           }
           this.handleInterfaceObjectForInternalGraph({
             internalSubgraph,
@@ -3053,7 +3060,7 @@ function initializeFederationFactory({
       upsertEntityInterfaceFederationData(existingData, entityInterfaceData, subgraphName);
     }
   }
-  const entityInterfaceErrors: Array<Error> = [];
+  const entityInterfaceErrors = new Array<Error>();
   for (const [typeName, entityInterfaceData] of entityInterfaceFederationDataByTypeName) {
     const implementations = entityInterfaceData.concreteTypeNames.size;
     for (const [subgraphName, subgraphData] of entityInterfaceData.subgraphDataByTypeName) {
