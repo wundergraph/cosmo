@@ -1268,6 +1268,7 @@ func TestNatsEvents(t *testing.T) {
 				switch i {
 				case 1, 3, 4, 5, 7, 8, 11:
 					gErr := conn.ReadJSON(&msg)
+					fmt.Printf("ws i: %d, gErr: %v, msg: %s, %s, %v\n", i, gErr, msg.ID, msg.Type, string(msg.Payload))
 					require.NoError(t, gErr)
 					require.Equal(t, "1", msg.ID)
 					require.Equal(t, "next", msg.Type)
@@ -1376,6 +1377,7 @@ func TestNatsEvents(t *testing.T) {
 				switch i {
 				case 1, 3, 4, 5, 7, 8, 11:
 					eventNext, _, gErr = reader.ReadLine()
+					fmt.Printf("sse i: %d, eventNext: %s gErr: %s\n", i, eventNext, gErr)
 					require.NoError(t, gErr)
 					require.Equal(t, "event: next", string(eventNext))
 					data, _, gErr = reader.ReadLine()
