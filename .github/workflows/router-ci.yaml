@@ -6,6 +6,7 @@ on:
       - 'composition-go/**/*'
       - 'demo/**/*'
       - 'router/**/*'
+      - 'router-plugin/**/*'
       - 'router-tests/**/*'
       - 'connect/**/*'
       - '.github/workflows/router-ci.yaml'

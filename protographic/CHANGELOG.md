@@ -4,6 +4,19 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.8.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.7.2...@wundergraph/protographic@0.8.0) (2025-08-06)
+
+### Features
+
+* add validation to protographic ([#2108](https://github.com/wundergraph/cosmo/issues/2108)) ([11a7ddf](https://github.com/wundergraph/cosmo/commit/11a7ddff1f0f76ecc3c905df601e6bc35efac95e)) (@Noroth)
+* **protographic:** multiple keys and compound keys for entity rpc ([#2105](https://github.com/wundergraph/cosmo/issues/2105)) ([a69e5e5](https://github.com/wundergraph/cosmo/commit/a69e5e5ad1f7703fc3bd46c86c479b2215c03fa4)) (@endigma)
+
+## [0.7.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.7.1...@wundergraph/protographic@0.7.2) (2025-08-04)
+
+### Bug Fixes
+
+* don't reuse request field numbers when arguments are removed ([#2103](https://github.com/wundergraph/cosmo/issues/2103)) ([5b1332d](https://github.com/wundergraph/cosmo/commit/5b1332daf0e3d91bb849895135fec111785cf85f)) (@endigma)
+
 ## [0.7.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.7.0...@wundergraph/protographic@0.7.1) (2025-07-31)
 
 **Note:** Version bump only for package @wundergraph/protographic
