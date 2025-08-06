@@ -1025,15 +1025,17 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		}
 
 		if h.queryPlansLoggingEnabled {
+			var printedPlan string
 			switch p := requestContext.operation.preparedPlan.preparedPlan.(type) {
 			case *plan.SynchronousResponsePlan:
-				printedPlan := p.Response.Fetches.QueryPlan().PrettyPrint()
-
-				if h.developmentMode {
-					h.log.Sugar().Debugf("Query Plan:\n%s", printedPlan)
-				} else {
-					h.log.Debug("Query Plan", zap.String("query_plan", printedPlan))
-				}
+				printedPlan = p.Response.Fetches.QueryPlan().PrettyPrint()
+			case *plan.SubscriptionResponsePlan:
+				printedPlan = p.Response.Response.Fetches.QueryPlan().PrettyPrint()
+			}
+			if h.developmentMode {
+				h.log.Sugar().Debugf("Query Plan:\n%s", printedPlan)
+			} else {
+				h.log.Debug("Query Plan", zap.String("query_plan", printedPlan))
 			}
 		}
 	}
