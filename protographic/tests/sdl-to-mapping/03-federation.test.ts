@@ -726,7 +726,7 @@ describe('GraphQL Federation to Proto Mapping', () => {
     const sdl = `
       directive @key(fields: String!) on OBJECT
       
-      type OrderItem @key(fields: "orderId itemId") {
+      type OrderItem @key(fields: "orderId itemId") @key(fields: "itemId orderId") {
         orderId: ID!
         itemId: ID!
         quantity: Int!
@@ -746,9 +746,17 @@ describe('GraphQL Federation to Proto Mapping', () => {
           {
             "key": "orderId itemId",
             "kind": "entity",
-            "request": "LookupOrderItemByOrderIdAndItemIdRequest",
-            "response": "LookupOrderItemByOrderIdAndItemIdResponse",
-            "rpc": "LookupOrderItemByOrderIdAndItemId",
+            "request": "LookupOrderItemByItemIdAndOrderIdRequest",
+            "response": "LookupOrderItemByItemIdAndOrderIdResponse",
+            "rpc": "LookupOrderItemByItemIdAndOrderId",
+            "typeName": "OrderItem",
+          },
+          {
+            "key": "itemId orderId",
+            "kind": "entity",
+            "request": "LookupOrderItemByItemIdAndOrderIdRequest",
+            "response": "LookupOrderItemByItemIdAndOrderIdResponse",
+            "rpc": "LookupOrderItemByItemIdAndOrderId",
             "typeName": "OrderItem",
           },
         ],

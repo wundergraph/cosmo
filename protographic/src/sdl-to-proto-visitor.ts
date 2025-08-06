@@ -555,30 +555,43 @@ export class GraphQLToProtoTextVisitor {
           // Queue this type for message generation (only once)
           this.queueTypeForProcessing(type);
 
-          // Process each @key directive separately
+          // Normalize keys by sorting fields alphabetically and deduplicating
+
+          const normalizedKeysSet = new Set<string>();
           for (const keyDirective of keyDirectives) {
             const keyString = this.getKeyFromDirective(keyDirective);
-            if (keyString) {
-              const methodName = createEntityLookupMethodName(typeName, keyString);
+            if (!keyString) continue;
 
-              const requestName = createRequestMessageName(methodName);
-              const responseName = createResponseMessageName(methodName);
+            const normalizedKey = keyString
+              .trim()
+              .split(/[,\s]+/)
+              .sort()
+              .join(' ');
 
-              // Add method name and RPC method with description from the entity type
-              result.methodNames.push(methodName);
-              const keyFields = keyString.split(' ');
-              const keyDescription = keyFields.length === 1 ? keyFields[0] : keyFields.join(' and ');
-              const description = `Lookup ${typeName} entity by ${keyDescription}${
-                type.description ? ': ' + type.description : ''
-              }`;
-              result.rpcMethods.push(this.createRpcMethod(methodName, requestName, responseName, description));
+            normalizedKeysSet.add(normalizedKey);
+          }
 
-              // Create request and response messages for this key combination
-              result.messageDefinitions.push(
-                ...this.createKeyRequestMessage(typeName, requestName, keyString, responseName),
-              );
-              result.messageDefinitions.push(...this.createKeyResponseMessage(typeName, responseName, requestName));
-            }
+          // Process each normalized key
+          for (const normalizedKeyString of normalizedKeysSet) {
+            const methodName = createEntityLookupMethodName(typeName, normalizedKeyString);
+
+            const requestName = createRequestMessageName(methodName);
+            const responseName = createResponseMessageName(methodName);
+
+            // Add method name and RPC method with description from the entity type
+            result.methodNames.push(methodName);
+            const keyFields = normalizedKeyString.split(' ');
+            const keyDescription = keyFields.length === 1 ? keyFields[0] : keyFields.join(' and ');
+            const description = `Lookup ${typeName} entity by ${keyDescription}${
+              type.description ? ': ' + type.description : ''
+            }`;
+            result.rpcMethods.push(this.createRpcMethod(methodName, requestName, responseName, description));
+
+            // Create request and response messages for this key combination
+            result.messageDefinitions.push(
+              ...this.createKeyRequestMessage(typeName, requestName, normalizedKeyString, responseName),
+            );
+            result.messageDefinitions.push(...this.createKeyResponseMessage(typeName, responseName, requestName));
           }
         }
       }

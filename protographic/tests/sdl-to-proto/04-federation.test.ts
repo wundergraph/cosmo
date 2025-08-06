@@ -166,32 +166,32 @@ describe('SDL to Proto - Federation and Special Types', () => {
 
       // Service definition for DefaultService
       service DefaultService {
-        // Lookup OrderItem entity by orderId and itemId
-        rpc LookupOrderItemByOrderIdAndItemId(LookupOrderItemByOrderIdAndItemIdRequest) returns (LookupOrderItemByOrderIdAndItemIdResponse) {}
+        // Lookup OrderItem entity by itemId and orderId
+        rpc LookupOrderItemByItemIdAndOrderId(LookupOrderItemByItemIdAndOrderIdRequest) returns (LookupOrderItemByItemIdAndOrderIdResponse) {}
         rpc QueryOrderItem(QueryOrderItemRequest) returns (QueryOrderItemResponse) {}
       }
 
       // Key message for OrderItem entity lookup
-      message LookupOrderItemByOrderIdAndItemIdRequestKey {
+      message LookupOrderItemByItemIdAndOrderIdRequestKey {
         // Key field for OrderItem entity lookup.
-        string order_id = 1;
+        string item_id = 1;
         // Key field for OrderItem entity lookup.
-        string item_id = 2;
+        string order_id = 2;
       }
 
       // Request message for OrderItem entity lookup.
-      message LookupOrderItemByOrderIdAndItemIdRequest {
+      message LookupOrderItemByItemIdAndOrderIdRequest {
         /*
          * List of keys to look up OrderItem entities.
-         * Order matters - each key maps to one entity in LookupOrderItemByOrderIdAndItemIdResponse.
+         * Order matters - each key maps to one entity in LookupOrderItemByItemIdAndOrderIdResponse.
          */
-        repeated LookupOrderItemByOrderIdAndItemIdRequestKey keys = 1;
+        repeated LookupOrderItemByItemIdAndOrderIdRequestKey keys = 1;
       }
 
       // Response message for OrderItem entity lookup.
-      message LookupOrderItemByOrderIdAndItemIdResponse {
+      message LookupOrderItemByItemIdAndOrderIdResponse {
         /*
-         * List of OrderItem entities in the same order as the keys in LookupOrderItemByOrderIdAndItemIdRequest.
+         * List of OrderItem entities in the same order as the keys in LookupOrderItemByItemIdAndOrderIdRequest.
          * Always return the same number of entities as keys. Use null for entities that cannot be found.
          * 
          * Example:
@@ -560,7 +560,7 @@ describe('SDL to Proto - Federation and Special Types', () => {
     const sdl = `
       directive @key(fields: String!) on OBJECT | INTERFACE
       
-      type OrderItem @key(fields: "orderId itemId") {
+      type OrderItem @key(fields: "orderId itemId") @key(fields: "itemId orderId") {
         orderId: ID!
         itemId: ID!
         quantity: Int!
@@ -584,32 +584,32 @@ describe('SDL to Proto - Federation and Special Types', () => {
 
       // Service definition for DefaultService
       service DefaultService {
-        // Lookup OrderItem entity by orderId and itemId
-        rpc LookupOrderItemByOrderIdAndItemId(LookupOrderItemByOrderIdAndItemIdRequest) returns (LookupOrderItemByOrderIdAndItemIdResponse) {}
+        // Lookup OrderItem entity by itemId and orderId
+        rpc LookupOrderItemByItemIdAndOrderId(LookupOrderItemByItemIdAndOrderIdRequest) returns (LookupOrderItemByItemIdAndOrderIdResponse) {}
         rpc QueryOrderItems(QueryOrderItemsRequest) returns (QueryOrderItemsResponse) {}
       }
 
       // Key message for OrderItem entity lookup
-      message LookupOrderItemByOrderIdAndItemIdRequestKey {
+      message LookupOrderItemByItemIdAndOrderIdRequestKey {
         // Key field for OrderItem entity lookup.
-        string order_id = 1;
+        string item_id = 1;
         // Key field for OrderItem entity lookup.
-        string item_id = 2;
+        string order_id = 2;
       }
 
       // Request message for OrderItem entity lookup.
-      message LookupOrderItemByOrderIdAndItemIdRequest {
+      message LookupOrderItemByItemIdAndOrderIdRequest {
         /*
          * List of keys to look up OrderItem entities.
-         * Order matters - each key maps to one entity in LookupOrderItemByOrderIdAndItemIdResponse.
+         * Order matters - each key maps to one entity in LookupOrderItemByItemIdAndOrderIdResponse.
          */
-        repeated LookupOrderItemByOrderIdAndItemIdRequestKey keys = 1;
+        repeated LookupOrderItemByItemIdAndOrderIdRequestKey keys = 1;
       }
 
       // Response message for OrderItem entity lookup.
-      message LookupOrderItemByOrderIdAndItemIdResponse {
+      message LookupOrderItemByItemIdAndOrderIdResponse {
         /*
-         * List of OrderItem entities in the same order as the keys in LookupOrderItemByOrderIdAndItemIdRequest.
+         * List of OrderItem entities in the same order as the keys in LookupOrderItemByItemIdAndOrderIdRequest.
          * Always return the same number of entities as keys. Use null for entities that cannot be found.
          * 
          * Example:

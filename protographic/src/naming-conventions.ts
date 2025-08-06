@@ -53,9 +53,11 @@ export function createResponseMessageName(methodName: string): string {
 export function createEntityLookupMethodName(typeName: string, keyString: string = 'id'): string {
   const keyPart = keyString
     .trim()
-    .replace(/,|\s\s/g, ' ')
+    .replace(/[,\s]+/g, ' ')
     .split(' ')
+    .filter((field) => field.length > 0)
     .map((field) => upperFirst(camelCase(field)))
+    .sort()
     .join('And');
 
   return `Lookup${typeName}By${keyPart}`;
