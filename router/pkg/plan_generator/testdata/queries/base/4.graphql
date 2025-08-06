@@ -1,0 +1,6 @@
+subscription PubSub {
+    employeeUpdated(employeeID: 1) {
+        id
+        tag
+    }
+}

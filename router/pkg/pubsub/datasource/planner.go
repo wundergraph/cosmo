@@ -130,6 +130,11 @@ func (p *Planner[PB, P, E]) ConfigureSubscription() plan.SubscriptionConfigurati
 		PostProcessing: resolve.PostProcessingConfiguration{
 			MergePath: []string{pubSubDataSource.GetFieldName()},
 		},
+		// No query plan should be displayed
+		QueryPlan: &resolve.QueryPlan{
+			DependsOnFields: nil,
+			Query:           "",
+		},
 	}
 }
 
