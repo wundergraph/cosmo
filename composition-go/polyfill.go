@@ -63,7 +63,7 @@ func urlParse(rawURL string, base string) (*urlShim, error) {
 	}, nil
 }
 
-func urlCanParse(rawURL string) bool {
-	_, err := url.Parse(rawURL)
+func urlCanParse(rawURL string, base string) bool {
+	_, err := urlParse(rawURL, base)
 	return err == nil
 }

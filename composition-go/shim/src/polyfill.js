@@ -11,7 +11,7 @@ class URL {
         }
     }
 
-    static canParse(url) {
-        return urlCanParse(url);
+    static canParse(url, base = undefined) {
+        return urlCanParse(url, base || '');
     }
 }

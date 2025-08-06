@@ -243,8 +243,9 @@ func urlCanParseV8(info *v8.FunctionCallbackInfo) *v8.Value {
 	isolate := info.Context().Isolate()
 	args := info.Args()
 	url := args[0].String()
+	base := args[1].String()
 
-	result := urlCanParse(url)
+	result := urlCanParse(url, base)
 	value, err := v8.NewValue(isolate, result)
 	if err != nil {
 		panic(err)
