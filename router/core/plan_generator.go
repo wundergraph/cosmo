@@ -125,7 +125,15 @@ func (pl *Planner) normalizeOperation(operation *ast.Document, operationName []b
 
 	report := operationreport.Report{}
 
-	astnormalization.NormalizeNamedOperation(operation, pl.definition, operationName, &report)
+	normalizer := astnormalization.NewWithOpts(
+		astnormalization.WithRemoveNotMatchingOperationDefinitions(),
+		astnormalization.WithExtractVariables(),
+		astnormalization.WithRemoveFragmentDefinitions(),
+		astnormalization.WithInlineFragmentSpreads(),
+		astnormalization.WithRemoveUnusedVariables(),
+		astnormalization.WithIgnoreSkipInclude(),
+	)
+	normalizer.NormalizeNamedOperation(operation, pl.definition, operationName, &report)
 	if report.HasErrors() {
 		return report
 	}
