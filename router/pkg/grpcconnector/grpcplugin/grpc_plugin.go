@@ -125,6 +125,9 @@ func (p *GRPCPlugin) fork() error {
 		return fmt.Errorf("plugin does not implement grpc.ClientConnInterface")
 	}
 
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
 	if p.client == nil {
 		// first time we start the plugin, we need to create a new client
 		p.client, err = grpccommon.NewGRPCPluginClient(pluginClient, grpcClient)
