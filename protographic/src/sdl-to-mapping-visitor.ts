@@ -13,8 +13,6 @@ import {
 } from 'graphql';
 import {
   createEntityLookupMethodName,
-  createEntityLookupRequestName,
-  createEntityLookupResponseName,
   createOperationMethodName,
   createRequestMessageName,
   createResponseMessageName,
@@ -116,26 +114,29 @@ export class GraphQLToProtoVisitor {
 
       // Check if this is an entity type (has @key directive)
       if (isObjectType(type)) {
-        const keyDirective = this.getKeyDirective(type);
-        if (!keyDirective) continue;
+        const keyDirectives = this.getKeyDirectives(type);
+        if (keyDirectives.length === 0) continue;
 
-        const keyFields = this.getKeyFieldsFromDirective(keyDirective);
-        if (keyFields.length > 0) {
-          // Create entity mapping using the first key field
-          this.createEntityMapping(typeName, keyFields[0]);
+        // Process each @key directive separately
+        for (const keyDirective of keyDirectives) {
+          const key = this.getKeyFromDirective(keyDirective);
+          if (key) {
+            // Create entity mapping for each key combination
+            this.createEntityMapping(typeName, key);
+          }
         }
       }
     }
   }
 
   /**
-   * Extract the key directive from a GraphQL object type
+   * Extract all key directives from a GraphQL object type
    *
-   * @param type - The GraphQL object type to check for key directive
-   * @returns The key directive if found, undefined otherwise
+   * @param type - The GraphQL object type to check for key directives
+   * @returns Array of all key directives found
    */
-  private getKeyDirective(type: GraphQLObjectType): DirectiveNode | undefined {
-    return type.astNode?.directives?.find((d) => d.name.value === 'key');
+  private getKeyDirectives(type: GraphQLObjectType): DirectiveNode[] {
+    return type.astNode?.directives?.filter((d) => d.name.value === 'key') || [];
   }
 
   /**
@@ -148,13 +149,15 @@ export class GraphQLToProtoVisitor {
    * @param keyField - The field that serves as the entity's key
    */
   private createEntityMapping(typeName: string, keyField: string): void {
+    const rpc = createEntityLookupMethodName(typeName, keyField);
+
     const entityMapping = new EntityMapping({
       typeName,
       kind: 'entity',
       key: keyField,
-      rpc: createEntityLookupMethodName(typeName, keyField),
-      request: createEntityLookupRequestName(typeName, keyField),
-      response: createEntityLookupResponseName(typeName, keyField),
+      rpc: rpc,
+      request: createRequestMessageName(rpc),
+      response: createResponseMessageName(rpc),
     });
 
     this.mapping.entityMappings.push(entityMapping);
@@ -164,18 +167,18 @@ export class GraphQLToProtoVisitor {
    * Extract key fields from a @key directive
    *
    * The @key directive specifies which fields form the entity's primary key
-   * in Federation. This method extracts those field names.
+   * in Federation. This method extracts the key string as-is.
    *
    * @param directive - The @key directive from the GraphQL AST
-   * @returns Array of field names that form the key
+   * @returns The key string (e.g. "id" or "id upc")
    */
-  private getKeyFieldsFromDirective(directive: DirectiveNode): string[] {
+  private getKeyFromDirective(directive: DirectiveNode): string | null {
     // Extract fields argument from the key directive
     const fieldsArg = directive.arguments?.find((arg) => arg.name.value === 'fields');
     if (fieldsArg && fieldsArg.value.kind === Kind.STRING) {
-      return fieldsArg.value.value.split(' ');
+      return fieldsArg.value.value;
     }
-    return [];
+    return null;
   }
 
   /**
