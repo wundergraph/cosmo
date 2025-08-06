@@ -563,8 +563,8 @@ export class GraphQLToProtoTextVisitor {
             if (!keyString) continue;
 
             const normalizedKey = keyString
-              .trim()
               .split(/[,\s]+/)
+              .filter((field) => field.length > 0)
               .sort()
               .join(' ');
 

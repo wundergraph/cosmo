@@ -642,6 +642,92 @@ describe('SDL to Proto - Federation and Special Types', () => {
     `);
   });
 
+  test('should handle entity types with proper compound key fields with extra commas and spaces', () => {
+    const sdl = `
+      directive @key(fields: String!) on OBJECT | INTERFACE
+      
+      type OrderItem @key(fields: "     ,orderId,     itemId, ") {
+        orderId: ID!
+        itemId: ID!
+        quantity: Int!
+        price: Float!
+      }
+      
+      type Query {
+        orderItems: [OrderItem!]!
+      }
+    `;
+
+    const { proto: protoText } = compileGraphQLToProto(sdl);
+
+    // Validate Proto definition
+    expectValidProto(protoText);
+
+    // Check that compound key lookup with both fields is present
+    expect(protoText).toMatchInlineSnapshot(`
+      "syntax = "proto3";
+      package service.v1;
+
+      // Service definition for DefaultService
+      service DefaultService {
+        // Lookup OrderItem entity by itemId and orderId
+        rpc LookupOrderItemByItemIdAndOrderId(LookupOrderItemByItemIdAndOrderIdRequest) returns (LookupOrderItemByItemIdAndOrderIdResponse) {}
+        rpc QueryOrderItems(QueryOrderItemsRequest) returns (QueryOrderItemsResponse) {}
+      }
+
+      // Key message for OrderItem entity lookup
+      message LookupOrderItemByItemIdAndOrderIdRequestKey {
+        // Key field for OrderItem entity lookup.
+        string item_id = 1;
+        // Key field for OrderItem entity lookup.
+        string order_id = 2;
+      }
+
+      // Request message for OrderItem entity lookup.
+      message LookupOrderItemByItemIdAndOrderIdRequest {
+        /*
+         * List of keys to look up OrderItem entities.
+         * Order matters - each key maps to one entity in LookupOrderItemByItemIdAndOrderIdResponse.
+         */
+        repeated LookupOrderItemByItemIdAndOrderIdRequestKey keys = 1;
+      }
+
+      // Response message for OrderItem entity lookup.
+      message LookupOrderItemByItemIdAndOrderIdResponse {
+        /*
+         * List of OrderItem entities in the same order as the keys in LookupOrderItemByItemIdAndOrderIdRequest.
+         * Always return the same number of entities as keys. Use null for entities that cannot be found.
+         * 
+         * Example:
+         *   LookupUserByIdRequest:
+         *     keys:
+         *       - id: 1
+         *       - id: 2
+         *   LookupUserByIdResponse:
+         *     result:
+         *       - id: 1 # User with id 1 found
+         *       - null  # User with id 2 not found
+         */
+        repeated OrderItem result = 1;
+      }
+
+      // Request message for orderItems operation.
+      message QueryOrderItemsRequest {
+      }
+      // Response message for orderItems operation.
+      message QueryOrderItemsResponse {
+        repeated OrderItem order_items = 1;
+      }
+
+      message OrderItem {
+        string order_id = 1;
+        string item_id = 2;
+        int32 quantity = 3;
+        double price = 4;
+      }"
+    `);
+  });
+
   test('should handle entity types with mixed multiple and compound keys', () => {
     const sdl = `
       directive @key(fields: String!) on OBJECT | INTERFACE

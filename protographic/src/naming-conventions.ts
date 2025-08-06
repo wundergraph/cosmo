@@ -51,16 +51,14 @@ export function createResponseMessageName(methodName: string): string {
  * Creates an entity lookup method name for an entity type
  */
 export function createEntityLookupMethodName(typeName: string, keyString: string = 'id'): string {
-  const keyPart = keyString
-    .trim()
-    .replace(/[,\s]+/g, ' ')
-    .split(' ')
+  const normalizedKey = keyString
+    .split(/[,\s]+/)
     .filter((field) => field.length > 0)
     .map((field) => upperFirst(camelCase(field)))
     .sort()
     .join('And');
 
-  return `Lookup${typeName}By${keyPart}`;
+  return `Lookup${typeName}By${normalizedKey}`;
 }
 
 /**

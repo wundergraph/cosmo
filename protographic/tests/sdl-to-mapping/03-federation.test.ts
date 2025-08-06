@@ -896,4 +896,94 @@ describe('GraphQL Federation to Proto Mapping', () => {
       }
     `);
   });
+
+  it('maps entity with mixed multiple and compound keys with commas and extra spaces', () => {
+    const sdl = `
+      directive @key(fields: String!) on OBJECT
+      
+      type Product @key(fields: "id") @key(fields: "manufacturerId,    productCode") {
+        id: ID!
+        manufacturerId: ID!
+        productCode: String!
+        name: String!
+        price: Float!
+      }
+      
+      type Query {
+        products: [Product!]!
+      }
+    `;
+
+    const mapping = compileGraphQLToMapping(sdl, 'ProductService');
+
+    expect(mapping.toJson()).toMatchInlineSnapshot(`
+      {
+        "entityMappings": [
+          {
+            "key": "id",
+            "kind": "entity",
+            "request": "LookupProductByIdRequest",
+            "response": "LookupProductByIdResponse",
+            "rpc": "LookupProductById",
+            "typeName": "Product",
+          },
+          {
+            "key": "manufacturerId,    productCode",
+            "kind": "entity",
+            "request": "LookupProductByManufacturerIdAndProductCodeRequest",
+            "response": "LookupProductByManufacturerIdAndProductCodeResponse",
+            "rpc": "LookupProductByManufacturerIdAndProductCode",
+            "typeName": "Product",
+          },
+        ],
+        "operationMappings": [
+          {
+            "mapped": "QueryProducts",
+            "original": "products",
+            "request": "QueryProductsRequest",
+            "response": "QueryProductsResponse",
+            "type": "OPERATION_TYPE_QUERY",
+          },
+        ],
+        "service": "ProductService",
+        "typeFieldMappings": [
+          {
+            "fieldMappings": [
+              {
+                "mapped": "products",
+                "original": "products",
+              },
+            ],
+            "type": "Query",
+          },
+          {
+            "fieldMappings": [
+              {
+                "mapped": "id",
+                "original": "id",
+              },
+              {
+                "mapped": "manufacturer_id",
+                "original": "manufacturerId",
+              },
+              {
+                "mapped": "product_code",
+                "original": "productCode",
+              },
+              {
+                "mapped": "name",
+                "original": "name",
+              },
+              {
+                "mapped": "price",
+                "original": "price",
+              },
+            ],
+            "type": "Product",
+          },
+        ],
+        "version": 1,
+      }
+    `);
+  });
 });
