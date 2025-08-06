@@ -522,11 +522,46 @@
     "Shipping": {
       "fields": {
         "id": 1,
+        "trackingNumber": 4,
         "weight": 3
       },
       "reservedNumbers": [
         2
       ]
+    },
+    "QueryProjectsRequest": {
+      "fields": {}
+    },
+    "QueryProjectStatusesRequest": {
+      "fields": {}
+    },
+    "QueryProjectTagsRequest": {
+      "fields": {}
+    },
+    "QueryArchivedProjectsRequest": {
+      "fields": {}
+    },
+    "QueryKillServiceRequest": {
+      "fields": {}
+    },
+    "QueryPanicRequest": {
+      "fields": {}
+    },
+    "LookupShippingByIdAndTrackingNumberRequestKey": {
+      "fields": {
+        "id": 1,
+        "tracking_number": 2
+      }
+    },
+    "LookupShippingByIdAndTrackingNumberRequest": {
+      "fields": {
+        "keys": 1
+      }
+    },
+    "LookupShippingByIdAndTrackingNumberResponse": {
+      "fields": {
+        "result": 1
+      }
     }
   },
   "enums": {

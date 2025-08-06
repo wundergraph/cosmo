@@ -34,10 +34,10 @@ func (r *entityResolver) FindEmployeeByID(ctx context.Context, id int) (*model.E
 	return nil, nil
 }
 
-// FindShippingByID is the resolver for the findShippingByID field.
-func (r *entityResolver) FindShippingByID(ctx context.Context, id string) (*model.Shipping, error) {
+// FindShippingByIDAndTrackingNumber is the resolver for the findShippingByIDAndTrackingNumber field.
+func (r *entityResolver) FindShippingByIDAndTrackingNumber(ctx context.Context, id string, trackingNumber string) (*model.Shipping, error) {
 	for _, shipping := range shippingData {
-		if shipping.ID == id {
+		if shipping.ID == id && shipping.TrackingNumber == trackingNumber {
 			return shipping, nil
 		}
 	}

@@ -38,17 +38,17 @@ type ProjectsService struct {
 }
 
 // LookupShippingById implements projects.ProjectsServiceServer.
-func (p *ProjectsService) LookupShippingById(ctx context.Context, req *service.LookupShippingByIdRequest) (*service.LookupShippingByIdResponse, error) {
+func (p *ProjectsService) LookupShippingByIdAndTrackingNumber(ctx context.Context, req *service.LookupShippingByIdAndTrackingNumberRequest) (*service.LookupShippingByIdAndTrackingNumberResponse, error) {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
 	var result []*service.Shipping
 
-	// Maintain order of keys [[memory:4011759]]
+	// Maintain order of keys
 	for _, key := range req.Keys {
 		found := false
 		for _, shipping := range data.ServiceShipping {
-			if shipping.Id == key.Id {
+			if shipping.Id == key.Id && shipping.TrackingNumber == key.TrackingNumber {
 				result = append(result, shipping)
 				found = true
 				break
@@ -59,7 +59,7 @@ func (p *ProjectsService) LookupShippingById(ctx context.Context, req *service.L
 		}
 	}
 
-	return &service.LookupShippingByIdResponse{Result: result}, nil
+	return &service.LookupShippingByIdAndTrackingNumberResponse{Result: result}, nil
 }
 
 func (p *ProjectsService) populateProjectRelationships(project *service.Project) *service.Project {

@@ -19,31 +19,32 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ProjectsService_LookupEmployeeById_FullMethodName          = "/service.ProjectsService/LookupEmployeeById"
-	ProjectsService_LookupMilestoneById_FullMethodName         = "/service.ProjectsService/LookupMilestoneById"
-	ProjectsService_LookupProductByUpc_FullMethodName          = "/service.ProjectsService/LookupProductByUpc"
-	ProjectsService_LookupProjectById_FullMethodName           = "/service.ProjectsService/LookupProjectById"
-	ProjectsService_LookupShippingById_FullMethodName          = "/service.ProjectsService/LookupShippingById"
-	ProjectsService_LookupTaskById_FullMethodName              = "/service.ProjectsService/LookupTaskById"
-	ProjectsService_MutationAddMilestone_FullMethodName        = "/service.ProjectsService/MutationAddMilestone"
-	ProjectsService_MutationAddProject_FullMethodName          = "/service.ProjectsService/MutationAddProject"
-	ProjectsService_MutationAddTask_FullMethodName             = "/service.ProjectsService/MutationAddTask"
-	ProjectsService_MutationUpdateProjectStatus_FullMethodName = "/service.ProjectsService/MutationUpdateProjectStatus"
-	ProjectsService_QueryArchivedProjects_FullMethodName       = "/service.ProjectsService/QueryArchivedProjects"
-	ProjectsService_QueryKillService_FullMethodName            = "/service.ProjectsService/QueryKillService"
-	ProjectsService_QueryMilestones_FullMethodName             = "/service.ProjectsService/QueryMilestones"
-	ProjectsService_QueryPanic_FullMethodName                  = "/service.ProjectsService/QueryPanic"
-	ProjectsService_QueryProject_FullMethodName                = "/service.ProjectsService/QueryProject"
-	ProjectsService_QueryProjectActivities_FullMethodName      = "/service.ProjectsService/QueryProjectActivities"
-	ProjectsService_QueryProjectResources_FullMethodName       = "/service.ProjectsService/QueryProjectResources"
-	ProjectsService_QueryProjectStatuses_FullMethodName        = "/service.ProjectsService/QueryProjectStatuses"
-	ProjectsService_QueryProjectTags_FullMethodName            = "/service.ProjectsService/QueryProjectTags"
-	ProjectsService_QueryProjects_FullMethodName               = "/service.ProjectsService/QueryProjects"
-	ProjectsService_QueryProjectsByStatus_FullMethodName       = "/service.ProjectsService/QueryProjectsByStatus"
-	ProjectsService_QueryResourceMatrix_FullMethodName         = "/service.ProjectsService/QueryResourceMatrix"
-	ProjectsService_QuerySearchProjects_FullMethodName         = "/service.ProjectsService/QuerySearchProjects"
-	ProjectsService_QueryTasks_FullMethodName                  = "/service.ProjectsService/QueryTasks"
-	ProjectsService_QueryTasksByPriority_FullMethodName        = "/service.ProjectsService/QueryTasksByPriority"
+	ProjectsService_LookupEmployeeById_FullMethodName                  = "/service.ProjectsService/LookupEmployeeById"
+	ProjectsService_LookupMilestoneById_FullMethodName                 = "/service.ProjectsService/LookupMilestoneById"
+	ProjectsService_LookupProductById_FullMethodName                   = "/service.ProjectsService/LookupProductById"
+	ProjectsService_LookupProductByUpc_FullMethodName                  = "/service.ProjectsService/LookupProductByUpc"
+	ProjectsService_LookupProjectById_FullMethodName                   = "/service.ProjectsService/LookupProjectById"
+	ProjectsService_LookupShippingByIdAndTrackingNumber_FullMethodName = "/service.ProjectsService/LookupShippingByIdAndTrackingNumber"
+	ProjectsService_LookupTaskById_FullMethodName                      = "/service.ProjectsService/LookupTaskById"
+	ProjectsService_MutationAddMilestone_FullMethodName                = "/service.ProjectsService/MutationAddMilestone"
+	ProjectsService_MutationAddProject_FullMethodName                  = "/service.ProjectsService/MutationAddProject"
+	ProjectsService_MutationAddTask_FullMethodName                     = "/service.ProjectsService/MutationAddTask"
+	ProjectsService_MutationUpdateProjectStatus_FullMethodName         = "/service.ProjectsService/MutationUpdateProjectStatus"
+	ProjectsService_QueryArchivedProjects_FullMethodName               = "/service.ProjectsService/QueryArchivedProjects"
+	ProjectsService_QueryKillService_FullMethodName                    = "/service.ProjectsService/QueryKillService"
+	ProjectsService_QueryMilestones_FullMethodName                     = "/service.ProjectsService/QueryMilestones"
+	ProjectsService_QueryPanic_FullMethodName                          = "/service.ProjectsService/QueryPanic"
+	ProjectsService_QueryProject_FullMethodName                        = "/service.ProjectsService/QueryProject"
+	ProjectsService_QueryProjectActivities_FullMethodName              = "/service.ProjectsService/QueryProjectActivities"
+	ProjectsService_QueryProjectResources_FullMethodName               = "/service.ProjectsService/QueryProjectResources"
+	ProjectsService_QueryProjectStatuses_FullMethodName                = "/service.ProjectsService/QueryProjectStatuses"
+	ProjectsService_QueryProjectTags_FullMethodName                    = "/service.ProjectsService/QueryProjectTags"
+	ProjectsService_QueryProjects_FullMethodName                       = "/service.ProjectsService/QueryProjects"
+	ProjectsService_QueryProjectsByStatus_FullMethodName               = "/service.ProjectsService/QueryProjectsByStatus"
+	ProjectsService_QueryResourceMatrix_FullMethodName                 = "/service.ProjectsService/QueryResourceMatrix"
+	ProjectsService_QuerySearchProjects_FullMethodName                 = "/service.ProjectsService/QuerySearchProjects"
+	ProjectsService_QueryTasks_FullMethodName                          = "/service.ProjectsService/QueryTasks"
+	ProjectsService_QueryTasksByPriority_FullMethodName                = "/service.ProjectsService/QueryTasksByPriority"
 )
 
 // ProjectsServiceClient is the client API for ProjectsService service.
@@ -56,12 +57,14 @@ type ProjectsServiceClient interface {
 	LookupEmployeeById(ctx context.Context, in *LookupEmployeeByIdRequest, opts ...grpc.CallOption) (*LookupEmployeeByIdResponse, error)
 	// Lookup Milestone entity by id
 	LookupMilestoneById(ctx context.Context, in *LookupMilestoneByIdRequest, opts ...grpc.CallOption) (*LookupMilestoneByIdResponse, error)
+	// Lookup Product entity by id
+	LookupProductById(ctx context.Context, in *LookupProductByIdRequest, opts ...grpc.CallOption) (*LookupProductByIdResponse, error)
 	// Lookup Product entity by upc
 	LookupProductByUpc(ctx context.Context, in *LookupProductByUpcRequest, opts ...grpc.CallOption) (*LookupProductByUpcResponse, error)
 	// Lookup Project entity by id
 	LookupProjectById(ctx context.Context, in *LookupProjectByIdRequest, opts ...grpc.CallOption) (*LookupProjectByIdResponse, error)
-	// Lookup Shipping entity by id
-	LookupShippingById(ctx context.Context, in *LookupShippingByIdRequest, opts ...grpc.CallOption) (*LookupShippingByIdResponse, error)
+	// Lookup Shipping entity by id and trackingNumber
+	LookupShippingByIdAndTrackingNumber(ctx context.Context, in *LookupShippingByIdAndTrackingNumberRequest, opts ...grpc.CallOption) (*LookupShippingByIdAndTrackingNumberResponse, error)
 	// Lookup Task entity by id
 	LookupTaskById(ctx context.Context, in *LookupTaskByIdRequest, opts ...grpc.CallOption) (*LookupTaskByIdResponse, error)
 	MutationAddMilestone(ctx context.Context, in *MutationAddMilestoneRequest, opts ...grpc.CallOption) (*MutationAddMilestoneResponse, error)
@@ -113,6 +116,16 @@ func (c *projectsServiceClient) LookupMilestoneById(ctx context.Context, in *Loo
 	return out, nil
 }
 
+func (c *projectsServiceClient) LookupProductById(ctx context.Context, in *LookupProductByIdRequest, opts ...grpc.CallOption) (*LookupProductByIdResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(LookupProductByIdResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_LookupProductById_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *projectsServiceClient) LookupProductByUpc(ctx context.Context, in *LookupProductByUpcRequest, opts ...grpc.CallOption) (*LookupProductByUpcResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(LookupProductByUpcResponse)
@@ -133,10 +146,10 @@ func (c *projectsServiceClient) LookupProjectById(ctx context.Context, in *Looku
 	return out, nil
 }
 
-func (c *projectsServiceClient) LookupShippingById(ctx context.Context, in *LookupShippingByIdRequest, opts ...grpc.CallOption) (*LookupShippingByIdResponse, error) {
+func (c *projectsServiceClient) LookupShippingByIdAndTrackingNumber(ctx context.Context, in *LookupShippingByIdAndTrackingNumberRequest, opts ...grpc.CallOption) (*LookupShippingByIdAndTrackingNumberResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(LookupShippingByIdResponse)
-	err := c.cc.Invoke(ctx, ProjectsService_LookupShippingById_FullMethodName, in, out, cOpts...)
+	out := new(LookupShippingByIdAndTrackingNumberResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_LookupShippingByIdAndTrackingNumber_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -353,12 +366,14 @@ type ProjectsServiceServer interface {
 	LookupEmployeeById(context.Context, *LookupEmployeeByIdRequest) (*LookupEmployeeByIdResponse, error)
 	// Lookup Milestone entity by id
 	LookupMilestoneById(context.Context, *LookupMilestoneByIdRequest) (*LookupMilestoneByIdResponse, error)
+	// Lookup Product entity by id
+	LookupProductById(context.Context, *LookupProductByIdRequest) (*LookupProductByIdResponse, error)
 	// Lookup Product entity by upc
 	LookupProductByUpc(context.Context, *LookupProductByUpcRequest) (*LookupProductByUpcResponse, error)
 	// Lookup Project entity by id
 	LookupProjectById(context.Context, *LookupProjectByIdRequest) (*LookupProjectByIdResponse, error)
-	// Lookup Shipping entity by id
-	LookupShippingById(context.Context, *LookupShippingByIdRequest) (*LookupShippingByIdResponse, error)
+	// Lookup Shipping entity by id and trackingNumber
+	LookupShippingByIdAndTrackingNumber(context.Context, *LookupShippingByIdAndTrackingNumberRequest) (*LookupShippingByIdAndTrackingNumberResponse, error)
 	// Lookup Task entity by id
 	LookupTaskById(context.Context, *LookupTaskByIdRequest) (*LookupTaskByIdResponse, error)
 	MutationAddMilestone(context.Context, *MutationAddMilestoneRequest) (*MutationAddMilestoneResponse, error)
@@ -396,14 +411,17 @@ func (UnimplementedProjectsServiceServer) LookupEmployeeById(context.Context, *L
 func (UnimplementedProjectsServiceServer) LookupMilestoneById(context.Context, *LookupMilestoneByIdRequest) (*LookupMilestoneByIdResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method LookupMilestoneById not implemented")
 }
+func (UnimplementedProjectsServiceServer) LookupProductById(context.Context, *LookupProductByIdRequest) (*LookupProductByIdResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method LookupProductById not implemented")
+}
 func (UnimplementedProjectsServiceServer) LookupProductByUpc(context.Context, *LookupProductByUpcRequest) (*LookupProductByUpcResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method LookupProductByUpc not implemented")
 }
 func (UnimplementedProjectsServiceServer) LookupProjectById(context.Context, *LookupProjectByIdRequest) (*LookupProjectByIdResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method LookupProjectById not implemented")
 }
-func (UnimplementedProjectsServiceServer) LookupShippingById(context.Context, *LookupShippingByIdRequest) (*LookupShippingByIdResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method LookupShippingById not implemented")
+func (UnimplementedProjectsServiceServer) LookupShippingByIdAndTrackingNumber(context.Context, *LookupShippingByIdAndTrackingNumberRequest) (*LookupShippingByIdAndTrackingNumberResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method LookupShippingByIdAndTrackingNumber not implemented")
 }
 func (UnimplementedProjectsServiceServer) LookupTaskById(context.Context, *LookupTaskByIdRequest) (*LookupTaskByIdResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method LookupTaskById not implemented")
@@ -522,6 +540,24 @@ func _ProjectsService_LookupMilestoneById_Handler(srv interface{}, ctx context.C
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ProjectsService_LookupProductById_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LookupProductByIdRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).LookupProductById(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_LookupProductById_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).LookupProductById(ctx, req.(*LookupProductByIdRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _ProjectsService_LookupProductByUpc_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(LookupProductByUpcRequest)
 	if err := dec(in); err != nil {
@@ -558,20 +594,20 @@ func _ProjectsService_LookupProjectById_Handler(srv interface{}, ctx context.Con
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ProjectsService_LookupShippingById_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(LookupShippingByIdRequest)
+func _ProjectsService_LookupShippingByIdAndTrackingNumber_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LookupShippingByIdAndTrackingNumberRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ProjectsServiceServer).LookupShippingById(ctx, in)
+		return srv.(ProjectsServiceServer).LookupShippingByIdAndTrackingNumber(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: ProjectsService_LookupShippingById_FullMethodName,
+		FullMethod: ProjectsService_LookupShippingByIdAndTrackingNumber_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ProjectsServiceServer).LookupShippingById(ctx, req.(*LookupShippingByIdRequest))
+		return srv.(ProjectsServiceServer).LookupShippingByIdAndTrackingNumber(ctx, req.(*LookupShippingByIdAndTrackingNumberRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -952,6 +988,10 @@ var ProjectsService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _ProjectsService_LookupMilestoneById_Handler,
 		},
 		{
+			MethodName: "LookupProductById",
+			Handler:    _ProjectsService_LookupProductById_Handler,
+		},
+		{
 			MethodName: "LookupProductByUpc",
 			Handler:    _ProjectsService_LookupProductByUpc_Handler,
 		},
@@ -960,8 +1000,8 @@ var ProjectsService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _ProjectsService_LookupProjectById_Handler,
 		},
 		{
-			MethodName: "LookupShippingById",
-			Handler:    _ProjectsService_LookupShippingById_Handler,
+			MethodName: "LookupShippingByIdAndTrackingNumber",
+			Handler:    _ProjectsService_LookupShippingByIdAndTrackingNumber_Handler,
 		},
 		{
 			MethodName: "LookupTaskById",

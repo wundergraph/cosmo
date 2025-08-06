@@ -94,7 +94,7 @@ type Documentation {
   urls(products: [ProductName!]!): [String!]!
 }
 
-type Shipping @key(fields: "id") {
+type Shipping @key(fields: "id trackingNumber") {
   id: ID!
   carrier: String!
   trackingNumber: String!

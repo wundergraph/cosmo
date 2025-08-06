@@ -79,10 +79,10 @@ type ComplexityRoot struct {
 	}
 
 	Entity struct {
-		FindConsultancyByUpc func(childComplexity int, upc string) int
-		FindCosmoByUpc       func(childComplexity int, upc string) int
-		FindEmployeeByID     func(childComplexity int, id int) int
-		FindShippingByID     func(childComplexity int, id string) int
+		FindConsultancyByUpc              func(childComplexity int, upc string) int
+		FindCosmoByUpc                    func(childComplexity int, upc string) int
+		FindEmployeeByID                  func(childComplexity int, id int) int
+		FindShippingByIDAndTrackingNumber func(childComplexity int, id string, trackingNumber string) int
 	}
 
 	EntityFact struct {
@@ -137,7 +137,7 @@ type EntityResolver interface {
 	FindConsultancyByUpc(ctx context.Context, upc string) (*model.Consultancy, error)
 	FindCosmoByUpc(ctx context.Context, upc string) (*model.Cosmo, error)
 	FindEmployeeByID(ctx context.Context, id int) (*model.Employee, error)
-	FindShippingByID(ctx context.Context, id string) (*model.Shipping, error)
+	FindShippingByIDAndTrackingNumber(ctx context.Context, id string, trackingNumber string) (*model.Shipping, error)
 }
 type MutationResolver interface {
 	AddFact(ctx context.Context, fact model.TopSecretFactInput) (model.TopSecretFact, error)
@@ -335,17 +335,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Entity.FindEmployeeByID(childComplexity, args["id"].(int)), true
 
-	case "Entity.findShippingByID":
-		if e.complexity.Entity.FindShippingByID == nil {
+	case "Entity.findShippingByIDAndTrackingNumber":
+		if e.complexity.Entity.FindShippingByIDAndTrackingNumber == nil {
 			break
 		}
 
-		args, err := ec.field_Entity_findShippingByID_args(ctx, rawArgs)
+		args, err := ec.field_Entity_findShippingByIDAndTrackingNumber_args(ctx, rawArgs)
 		if err != nil {
 			return 0, false
 		}
 
-		return e.complexity.Entity.FindShippingByID(childComplexity, args["id"].(string)), true
+		return e.complexity.Entity.FindShippingByIDAndTrackingNumber(childComplexity, args["id"].(string), args["trackingNumber"].(string)), true
 
 	case "EntityFact.description":
 		if e.complexity.EntityFact.Description == nil {
@@ -728,7 +728,7 @@ type Documentation {
   urls(products: [ProductName!]!): [String!]!
 }
 
-type Shipping @key(fields: "id") {
+type Shipping @key(fields: "id trackingNumber") {
   id: ID!
   carrier: String!
   trackingNumber: String!
@@ -796,7 +796,7 @@ type Entity {
 	findConsultancyByUpc(upc: ID!,): Consultancy!
 	findCosmoByUpc(upc: ID!,): Cosmo!
 	findEmployeeByID(id: Int!,): Employee!
-	findShippingByID(id: ID!,): Shipping!
+	findShippingByIDAndTrackingNumber(id: ID!,trackingNumber: String!,): Shipping!
 }
 
 type _Service {
@@ -870,7 +870,7 @@ func (ec *executionContext) field_Entity_findEmployeeByID_args(ctx context.Conte
 	return args, nil
 }
 
-func (ec *executionContext) field_Entity_findShippingByID_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+func (ec *executionContext) field_Entity_findShippingByIDAndTrackingNumber_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
 	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id", ec.unmarshalNID2string)
@@ -878,6 +878,11 @@ func (ec *executionContext) field_Entity_findShippingByID_args(ctx context.Conte
 		return nil, err
 	}
 	args["id"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "trackingNumber", ec.unmarshalNString2string)
+	if err != nil {
+		return nil, err
+	}
+	args["trackingNumber"] = arg1
 	return args, nil
 }
 
@@ -1819,8 +1824,8 @@ func (ec *executionContext) fieldContext_Entity_findEmployeeByID(ctx context.Con
 	return fc, nil
 }
 
-func (ec *executionContext) _Entity_findShippingByID(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Entity_findShippingByID(ctx, field)
+func (ec *executionContext) _Entity_findShippingByIDAndTrackingNumber(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Entity_findShippingByIDAndTrackingNumber(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -1833,7 +1838,7 @@ func (ec *executionContext) _Entity_findShippingByID(ctx context.Context, field 
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Entity().FindShippingByID(rctx, fc.Args["id"].(string))
+		return ec.resolvers.Entity().FindShippingByIDAndTrackingNumber(rctx, fc.Args["id"].(string), fc.Args["trackingNumber"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1850,7 +1855,7 @@ func (ec *executionContext) _Entity_findShippingByID(ctx context.Context, field 
 	return ec.marshalNShipping2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐShipping(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Entity_findShippingByID(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Entity_findShippingByIDAndTrackingNumber(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Entity",
 		Field:      field,
@@ -1879,7 +1884,7 @@ func (ec *executionContext) fieldContext_Entity_findShippingByID(ctx context.Con
 		}
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Entity_findShippingByID_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+	if fc.Args, err = ec.field_Entity_findShippingByIDAndTrackingNumber_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -5533,7 +5538,7 @@ func (ec *executionContext) _Entity(ctx context.Context, sel ast.SelectionSet) g
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
-		case "findShippingByID":
+		case "findShippingByIDAndTrackingNumber":
 			field := field
 
 			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
@@ -5542,7 +5547,7 @@ func (ec *executionContext) _Entity(ctx context.Context, sel ast.SelectionSet) g
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
-				res = ec._Entity_findShippingByID(ctx, field)
+				res = ec._Entity_findShippingByIDAndTrackingNumber(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}

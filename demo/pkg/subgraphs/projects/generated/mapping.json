@@ -178,12 +178,20 @@
       "response": "LookupProductByUpcResponse"
     },
     {
-      "typeName": "Shipping",
+      "typeName": "Product",
       "kind": "entity",
       "key": "id",
-      "rpc": "LookupShippingById",
-      "request": "LookupShippingByIdRequest",
-      "response": "LookupShippingByIdResponse"
+      "rpc": "LookupProductById",
+      "request": "LookupProductByIdRequest",
+      "response": "LookupProductByIdResponse"
+    },
+    {
+      "typeName": "Shipping",
+      "kind": "entity",
+      "key": "id trackingNumber",
+      "rpc": "LookupShippingByIdAndTrackingNumber",
+      "request": "LookupShippingByIdAndTrackingNumberRequest",
+      "response": "LookupShippingByIdAndTrackingNumberResponse"
     }
   ],
   "typeFieldMappings": [
@@ -822,6 +830,11 @@
         {
           "original": "id",
           "mapped": "id",
+          "argumentMappings": []
+        },
+        {
+          "original": "trackingNumber",
+          "mapped": "tracking_number",
           "argumentMappings": []
         },
         {

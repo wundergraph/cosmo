@@ -217,12 +217,16 @@ func (ec *executionContext) resolveEntity(
 		}
 		switch resolverName {
 
-		case "findShippingByID":
+		case "findShippingByIDAndTrackingNumber":
 			id0, err := ec.unmarshalNID2string(ctx, rep["id"])
 			if err != nil {
-				return nil, fmt.Errorf(`unmarshalling param 0 for findShippingByID(): %w`, err)
+				return nil, fmt.Errorf(`unmarshalling param 0 for findShippingByIDAndTrackingNumber(): %w`, err)
 			}
-			entity, err := ec.resolvers.Entity().FindShippingByID(ctx, id0)
+			id1, err := ec.unmarshalNString2string(ctx, rep["trackingNumber"])
+			if err != nil {
+				return nil, fmt.Errorf(`unmarshalling param 1 for findShippingByIDAndTrackingNumber(): %w`, err)
+			}
+			entity, err := ec.resolvers.Entity().FindShippingByIDAndTrackingNumber(ctx, id0, id1)
 			if err != nil {
 				return nil, fmt.Errorf(`resolving Entity "Shipping": %w`, err)
 			}
@@ -384,12 +388,22 @@ func entityResolverNameForShipping(ctx context.Context, rep EntityRepresentation
 		if allNull {
 			allNull = val == nil
 		}
+		m = rep
+		val, ok = m["trackingNumber"]
+		if !ok {
+			entityResolverErrs = append(entityResolverErrs,
+				fmt.Errorf("%w due to missing Key Field \"trackingNumber\" for Shipping", ErrTypeNotFound))
+			break
+		}
+		if allNull {
+			allNull = val == nil
+		}
 		if allNull {
 			entityResolverErrs = append(entityResolverErrs,
 				fmt.Errorf("%w due to all null value KeyFields for Shipping", ErrTypeNotFound))
 			break
 		}
-		return "findShippingByID", nil
+		return "findShippingByIDAndTrackingNumber", nil
 	}
 	return "", fmt.Errorf("%w for Shipping due to %v", ErrTypeNotFound,
 		errors.Join(entityResolverErrs...).Error())

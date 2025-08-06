@@ -18,9 +18,9 @@ type Query {
   projectActivities(projectId: ID!): [ProjectActivity!]!
   
   # New query fields with different list patterns
-  projectTags: [String]  # nullable list of nullable strings
-  archivedProjects: [Project]!  # non-nullable list of nullable projects
-  tasksByPriority(projectId: ID!): [[Task]]  # nullable list of nullable lists
+  projectTags: [String!]  # nullable list of nullable strings
+  archivedProjects: [Project!]!  # non-nullable list of nullable projects
+  tasksByPriority(projectId: ID!): [[Task!]]  # nullable list of nullable lists
   resourceMatrix(projectId: ID!): [[ProjectResource!]!]!  # non-nullable list of non-nullable lists
 
   # query to simulate that the service goes down
@@ -95,12 +95,12 @@ type Project implements Node & Timestamped @key(fields: "id") {
   progress: Float  # Completion percentage
   
   # New fields with various list patterns for testing
-  tags: [String]  # nullable list of nullable tags
-  alternativeProjects: [Project]  # nullable list of nullable projects
+  tags: [String!]  # nullable list of nullable tags
+  alternativeProjects: [Project!]  # nullable list of nullable projects
   dependencies: [Project!]  # nullable list of non-nullable projects
   resourceGroups: [[ProjectResource!]!]!  # nested lists: non-nullable list of non-nullable lists
   tasksByPhase: [[Task!]]!  # nested lists: non-nullable list of nullable lists
-  milestoneGroups: [[Milestone]]  # nested lists: nullable list of nullable lists
+  milestoneGroups: [[Milestone!]]  # nested lists: nullable list of nullable lists
   priorityMatrix: [[[Task!]!]!]  # triple nested: non-nullable list of non-nullable lists of non-nullable lists
 }
 
@@ -116,8 +116,8 @@ type Milestone implements Node & Timestamped @key(fields: "id") {
   completionPercentage: Float
   
   # New fields with different list patterns
-  dependencies: [Milestone]!  # non-nullable list of nullable milestones
-  subtasks: [Task]  # nullable list of nullable tasks
+  dependencies: [Milestone!]!  # non-nullable list of nullable milestones
+  subtasks: [Task!]  # nullable list of nullable tasks
   reviewers: [Employee!]  # nullable list of non-nullable employees
 }
 
@@ -136,11 +136,11 @@ type Task implements Node & Assignable @key(fields: "id") {
   completedAt: String # ISO date
   
   # New fields with different list patterns
-  labels: [String]  # nullable list of nullable labels
+  labels: [String!]  # nullable list of nullable labels
   subtasks: [Task!]  # nullable list of non-nullable subtasks
-  dependencies: [Task]!  # non-nullable list of nullable tasks
+  dependencies: [Task!]!  # non-nullable list of nullable tasks
   attachmentUrls: [String!]!  # non-nullable list of non-nullable URLs
-  reviewerIds: [Int]  # nullable list of nullable reviewer IDs
+  reviewerIds: [Int!]  # nullable list of nullable reviewer IDs
 }
 
 type ProjectUpdate implements Node {
@@ -208,7 +208,7 @@ type Employee @key(fields: "id") {
   completedTasks: [Task!]!
   
   # New fields with different list patterns
-  skills: [String]  # nullable list of nullable skills
+  skills: [String!]  # nullable list of nullable skills
   certifications: [String!]  # nullable list of non-nullable certifications
   projectHistory: [[Project!]]!  # non-nullable list of nullable lists of non-nullable projects
 }
@@ -220,10 +220,11 @@ type Product @key(fields: "upc") @key(fields: "id") {
   projects: [Project!]
   
   # New field with nested lists
-  featureMatrix: [[String]]  # nullable list of nullable lists of nullable features
+  featureMatrix: [[String!]]  # nullable list of nullable lists of nullable features
 }
 
-type Shipping @key(fields: "id") {
+type Shipping @key(fields: "id trackingNumber") {
   id: ID!
+  trackingNumber: String!
   weight: Float! 
 }

@@ -11,12 +11,14 @@ service ProjectsService {
   rpc LookupEmployeeById(LookupEmployeeByIdRequest) returns (LookupEmployeeByIdResponse) {}
   // Lookup Milestone entity by id
   rpc LookupMilestoneById(LookupMilestoneByIdRequest) returns (LookupMilestoneByIdResponse) {}
+  // Lookup Product entity by id
+  rpc LookupProductById(LookupProductByIdRequest) returns (LookupProductByIdResponse) {}
   // Lookup Product entity by upc
   rpc LookupProductByUpc(LookupProductByUpcRequest) returns (LookupProductByUpcResponse) {}
   // Lookup Project entity by id
   rpc LookupProjectById(LookupProjectByIdRequest) returns (LookupProjectByIdResponse) {}
-  // Lookup Shipping entity by id
-  rpc LookupShippingById(LookupShippingByIdRequest) returns (LookupShippingByIdResponse) {}
+  // Lookup Shipping entity by id and trackingNumber
+  rpc LookupShippingByIdAndTrackingNumber(LookupShippingByIdAndTrackingNumberRequest) returns (LookupShippingByIdAndTrackingNumberResponse) {}
   // Lookup Task entity by id
   rpc LookupTaskById(LookupTaskByIdRequest) returns (LookupTaskByIdResponse) {}
   rpc MutationAddMilestone(MutationAddMilestoneRequest) returns (MutationAddMilestoneResponse) {}
@@ -301,25 +303,61 @@ message LookupProductByUpcResponse {
   repeated Product result = 1;
 }
 
-// Key message for Shipping entity lookup
-message LookupShippingByIdRequestKey {
-  // Key field for Shipping entity lookup.
+// Key message for Product entity lookup
+message LookupProductByIdRequestKey {
+  // Key field for Product entity lookup.
   string id = 1;
 }
 
+// Request message for Product entity lookup.
+message LookupProductByIdRequest {
+  /*
+   * List of keys to look up Product entities.
+   * Order matters - each key maps to one entity in LookupProductByIdResponse.
+   */
+  repeated LookupProductByIdRequestKey keys = 1;
+}
+
+// Response message for Product entity lookup.
+message LookupProductByIdResponse {
+  /*
+   * List of Product entities in the same order as the keys in LookupProductByIdRequest.
+   * Always return the same number of entities as keys. Use null for entities that cannot be found.
+   * 
+   * Example:
+   *   LookupUserByIdRequest:
+   *     keys:
+   *       - id: 1
+   *       - id: 2
+   *   LookupUserByIdResponse:
+   *     result:
+   *       - id: 1 # User with id 1 found
+   *       - null  # User with id 2 not found
+   */
+  repeated Product result = 1;
+}
+
+// Key message for Shipping entity lookup
+message LookupShippingByIdAndTrackingNumberRequestKey {
+  // Key field for Shipping entity lookup.
+  string id = 1;
+  // Key field for Shipping entity lookup.
+  string tracking_number = 2;
+}
+
 // Request message for Shipping entity lookup.
-message LookupShippingByIdRequest {
+message LookupShippingByIdAndTrackingNumberRequest {
   /*
    * List of keys to look up Shipping entities.
-   * Order matters - each key maps to one entity in LookupShippingByIdResponse.
+   * Order matters - each key maps to one entity in LookupShippingByIdAndTrackingNumberResponse.
    */
-  repeated LookupShippingByIdRequestKey keys = 1;
+  repeated LookupShippingByIdAndTrackingNumberRequestKey keys = 1;
 }
 
 // Response message for Shipping entity lookup.
-message LookupShippingByIdResponse {
+message LookupShippingByIdAndTrackingNumberResponse {
   /*
-   * List of Shipping entities in the same order as the keys in LookupShippingByIdRequest.
+   * List of Shipping entities in the same order as the keys in LookupShippingByIdAndTrackingNumberRequest.
    * Always return the same number of entities as keys. Use null for entities that cannot be found.
    * 
    * Example:
@@ -560,6 +598,7 @@ message Shipping {
   reserved 2;
   string id = 1;
   double weight = 3;
+  string tracking_number = 4;
 }
 
 enum ProjectStatus {
