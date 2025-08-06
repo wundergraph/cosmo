@@ -224,7 +224,6 @@ func (p *GRPCPlugin) Stop() error {
 	}
 
 	p.mu.Lock()
-	defer p.mu.Unlock()
 
 	var retErr error
 	if p.client != nil {
@@ -232,6 +231,8 @@ func (p *GRPCPlugin) Stop() error {
 			retErr = errors.Join(retErr, err)
 		}
 	}
+
+	p.mu.Unlock()
 
 	p.cleanupPluginWorkDir()
 

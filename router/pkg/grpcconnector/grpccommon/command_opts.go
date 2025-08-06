@@ -20,8 +20,8 @@ func PrepareCommand(cmd *exec.Cmd, startupConfig GRPCStartupParams) error {
 
 	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", "startup_config", configJson))
 
-	// Run build tagged extra command prep for Linux
-	PrepareCommandForLinux(cmd)
+	// Run build tagged extra command prep for OS-specific options
+	PrepareCommandForOS(cmd)
 
 	return nil
 }

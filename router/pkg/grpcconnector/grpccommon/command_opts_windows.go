@@ -1,4 +1,4 @@
-//go:build linux
+//go:build windows
 
 package grpccommon
 
@@ -10,7 +10,6 @@ import (
 // PrepareCommand adds OS-specific options to the command.
 func PrepareCommandForOS(cmd *exec.Cmd) {
 	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Setpgid:   true,
-		Pdeathsig: syscall.SIGTERM,
+		CreationFlags: syscall.CREATE_NEW_PROCESS_GROUP,
 	}
 }

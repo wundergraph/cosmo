@@ -1,5 +1,4 @@
-//go:build !linux
-// +build !linux
+//go:build !linux && !darwin && !windows
 
 package grpccommon
 
@@ -8,6 +7,6 @@ import (
 )
 
 // PrepareCommandForLinux adds Linux-specific options to the command.
-func PrepareCommandForLinux(cmd *exec.Cmd) {
+func PrepareCommandForOS(cmd *exec.Cmd) {
 
 }
