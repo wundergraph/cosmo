@@ -25,8 +25,6 @@ import {
 } from 'graphql';
 import {
   createEntityLookupMethodName,
-  createEntityLookupRequestName,
-  createEntityLookupResponseName,
   createEnumUnspecifiedValue,
   createOperationMethodName,
   createRequestMessageName,
@@ -551,30 +549,47 @@ export class GraphQLToProtoTextVisitor {
 
       // Check if this is an entity type (has @key directive)
       if (isObjectType(type)) {
-        const astNode = type.astNode;
-        const keyDirective = astNode?.directives?.find((d) => d.name.value === 'key');
+        const keyDirectives = this.getKeyDirectives(type);
 
-        if (keyDirective) {
-          // Queue this type for message generation
+        if (keyDirectives.length > 0) {
+          // Queue this type for message generation (only once)
           this.queueTypeForProcessing(type);
 
-          const keyFields = this.getKeyFieldsFromDirective(keyDirective);
-          if (keyFields.length > 0) {
-            const keyField = keyFields[0];
-            const methodName = createEntityLookupMethodName(typeName, keyField);
-            const requestName = createEntityLookupRequestName(typeName, keyField);
-            const responseName = createEntityLookupResponseName(typeName, keyField);
+          // Normalize keys by sorting fields alphabetically and deduplicating
+
+          const normalizedKeysSet = new Set<string>();
+          for (const keyDirective of keyDirectives) {
+            const keyString = this.getKeyFromDirective(keyDirective);
+            if (!keyString) continue;
+
+            const normalizedKey = keyString
+              .split(/[,\s]+/)
+              .filter((field) => field.length > 0)
+              .sort()
+              .join(' ');
+
+            normalizedKeysSet.add(normalizedKey);
+          }
+
+          // Process each normalized key
+          for (const normalizedKeyString of normalizedKeysSet) {
+            const methodName = createEntityLookupMethodName(typeName, normalizedKeyString);
+
+            const requestName = createRequestMessageName(methodName);
+            const responseName = createResponseMessageName(methodName);
 
             // Add method name and RPC method with description from the entity type
             result.methodNames.push(methodName);
-            const description = `Lookup ${typeName} entity by ${keyField}${
+            const keyFields = normalizedKeyString.split(' ');
+            const keyDescription = keyFields.length === 1 ? keyFields[0] : keyFields.join(' and ');
+            const description = `Lookup ${typeName} entity by ${keyDescription}${
               type.description ? ': ' + type.description : ''
             }`;
             result.rpcMethods.push(this.createRpcMethod(methodName, requestName, responseName, description));
 
-            // Create request and response messages
+            // Create request and response messages for this key combination
             result.messageDefinitions.push(
-              ...this.createKeyRequestMessage(typeName, requestName, keyFields[0], responseName),
+              ...this.createKeyRequestMessage(typeName, requestName, normalizedKeyString, responseName),
             );
             result.messageDefinitions.push(...this.createKeyResponseMessage(typeName, responseName, requestName));
           }
@@ -697,7 +712,7 @@ export class GraphQLToProtoTextVisitor {
   private createKeyRequestMessage(
     typeName: string,
     requestName: string,
-    keyField: string,
+    keyString: string,
     responseName: string,
   ): string[] {
     const messageLines: string[] = [];
@@ -717,28 +732,36 @@ export class GraphQLToProtoTextVisitor {
       messageLines.push(`  reserved ${this.formatReservedNumbers(keyMessageLock.reservedNumbers)};`);
     }
 
+    const keyFields = keyString.split(' ');
+
     // Check for field removals in the key message
     if (lockData.messages[keyMessageName]) {
       const originalKeyFieldNames = Object.keys(lockData.messages[keyMessageName].fields);
-      const currentKeyFieldNames = [graphqlFieldToProtoField(keyField)];
+      const currentKeyFieldNames = keyFields.map((field) => graphqlFieldToProtoField(field));
       this.trackRemovedFields(keyMessageName, originalKeyFieldNames, currentKeyFieldNames);
     }
 
-    const protoKeyField = graphqlFieldToProtoField(keyField);
+    // Add all key fields to the key message
+    const protoKeyFields: string[] = [];
+    keyFields.forEach((keyField, index) => {
+      const protoKeyField = graphqlFieldToProtoField(keyField);
+      protoKeyFields.push(protoKeyField);
 
-    // Get the appropriate field number for the key field
-    const keyFieldNumber = this.getFieldNumber(keyMessageName, protoKeyField, 1);
+      // Get the appropriate field number for this key field
+      const keyFieldNumber = this.getFieldNumber(keyMessageName, protoKeyField, index + 1);
 
-    if (this.includeComments) {
-      const keyFieldComment = `Key field for ${typeName} entity lookup.`;
-      messageLines.push(...this.formatComment(keyFieldComment, 1)); // Field comment, indent 1 level
-    }
-    messageLines.push(`  string ${protoKeyField} = ${keyFieldNumber};`);
+      if (this.includeComments) {
+        const keyFieldComment = `Key field for ${typeName} entity lookup.`;
+        messageLines.push(...this.formatComment(keyFieldComment, 1)); // Field comment, indent 1 level
+      }
+      messageLines.push(`  string ${protoKeyField} = ${keyFieldNumber};`);
+    });
+
     messageLines.push('}');
     messageLines.push('');
 
     // Ensure the key message is registered in the lock manager data
-    this.lockManager.reconcileMessageFieldOrder(keyMessageName, [protoKeyField]);
+    this.lockManager.reconcileMessageFieldOrder(keyMessageName, protoKeyFields);
 
     // Now create the main request message with a repeated key field
     // Check for field removals in the request message
@@ -973,6 +996,16 @@ Example:
   }
 
   /**
+   * Extract all key directives from a GraphQL object type
+   *
+   * @param type - The GraphQL object type to check for key directives
+   * @returns Array of all key directives found
+   */
+  private getKeyDirectives(type: GraphQLObjectType): DirectiveNode[] {
+    return type.astNode?.directives?.filter((d) => d.name.value === 'key') || [];
+  }
+
+  /**
    * Extract key fields from a directive
    *
    * The @key directive specifies which fields form the entity's primary key.
@@ -981,13 +1014,13 @@ Example:
    * @param directive - The @key directive from the GraphQL AST
    * @returns Array of field names that form the key
    */
-  private getKeyFieldsFromDirective(directive: DirectiveNode): string[] {
+  private getKeyFromDirective(directive: DirectiveNode): string | null {
     const fieldsArg = directive.arguments?.find((arg: ArgumentNode) => arg.name.value === 'fields');
     if (fieldsArg && fieldsArg.value.kind === 'StringValue') {
       const stringValue = fieldsArg.value as StringValueNode;
-      return stringValue.value.split(' ');
+      return stringValue.value;
     }
-    return [];
+    return null;
   }
 
   /**
