@@ -162,8 +162,11 @@ func (pl *Planner) planOperation(operation *ast.Document) (planNode *resolve.Fet
 	post := postprocess.NewProcessor()
 	post.Process(preparedPlan)
 
-	if p, ok := preparedPlan.(*plan.SynchronousResponsePlan); ok {
+	switch p := preparedPlan.(type) {
+	case *plan.SynchronousResponsePlan:
 		return p.Response.Fetches.QueryPlan(), nil
+	case *plan.SubscriptionResponsePlan:
+		return p.Response.Response.Fetches.QueryPlan(), nil
 	}
 
 	return &resolve.FetchTreeQueryPlanNode{}, nil
