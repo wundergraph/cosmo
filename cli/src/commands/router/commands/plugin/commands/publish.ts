@@ -179,7 +179,7 @@ export default (opts: BaseCommandOptions) => {
 
     try {
       // Docker login
-      spinner.text = 'Logging into Docker registry...';
+      spinner.text = 'Logging into Cosmo registry...';
       await execa('docker', ['login', config.pluginRegistryURL, '-u', 'x', '--password-stdin'], {
         stdio: 'pipe',
         input: pushToken,
@@ -209,7 +209,7 @@ export default (opts: BaseCommandOptions) => {
       );
 
       // Docker logout
-      spinner.text = 'Logging out of Docker registry...';
+      spinner.text = 'Logging out of Cosmo registry...';
       await execa('docker', ['logout', config.pluginRegistryURL], {
         stdio: 'pipe',
       });
