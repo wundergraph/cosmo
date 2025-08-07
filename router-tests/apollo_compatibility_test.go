@@ -17,6 +17,8 @@ import (
 func TestApolloRouterCompatibility(t *testing.T) {
 	t.Parallel()
 
+	// dummy change
+
 	t.Run("enable replace invalid variable error", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
