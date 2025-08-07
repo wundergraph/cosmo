@@ -812,6 +812,12 @@ export class FeatureFlagRepository {
             where: eq(schema.protobufSchemaVersions.schemaVersionId, fg.schemaVersionId),
           });
 
+          if (!protobufSchemaVersion) {
+            this.logger.warn(
+              `Missing protobuf schema for ${fg.type} subgraph with schemaVersionId: ${fg.schemaVersionId}`,
+            );
+          }
+
           proto = {
             schema: protobufSchemaVersion?.protoSchema ?? '',
             mappings: protobufSchemaVersion?.protoMappings ?? '',
@@ -822,6 +828,13 @@ export class FeatureFlagRepository {
             const pluginImageVersion = await this.db.query.pluginImageVersions.findFirst({
               where: eq(schema.pluginImageVersions.schemaVersionId, fg.schemaVersionId),
             });
+
+            if (!pluginImageVersion) {
+              this.logger.warn(
+                `Missing plugin image version for ${fg.type} subgraph with schemaVersionId: ${fg.schemaVersionId}`,
+              );
+            }
+
             proto.pluginData = {
               platforms: pluginImageVersion?.platform ?? [],
               version: pluginImageVersion?.version ?? 'v1',
