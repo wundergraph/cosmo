@@ -8,6 +8,7 @@ import {
 import { PluginApiKeyJwtPayload } from '../../../types/index.js';
 import { audiences, nowInSeconds, signJwtHS256 } from '../../crypto/jwt.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { PluginRepository } from '../../repositories/PluginRepository.js';
@@ -30,6 +31,7 @@ export function validateAndFetchPluginData(
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
     const pluginRepo = new PluginRepository(opts.db, authContext.organizationId);
     const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
+    const auditLogRepo = new AuditLogRepository(opts.db);
     if (authContext.organizationDeactivated) {
       throw new UnauthorizedError();
     }
@@ -119,9 +121,25 @@ export function validateAndFetchPluginData(
           reference: '',
         };
       }
+
+      await auditLogRepo.addAuditLog({
+        organizationId: authContext.organizationId,
+        organizationSlug: authContext.organizationSlug,
+        auditAction: 'subgraph.created',
+        action: 'created',
+        actorId: authContext.userId,
+        auditableType: 'subgraph',
+        auditableDisplayName: subgraph.name,
+        actorDisplayName: authContext.userDisplayName,
+        apiKeyName: authContext.apiKeyName,
+        actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+        targetNamespaceId: subgraph.namespaceId,
+        targetNamespaceDisplayName: subgraph.namespace,
+      });
     }
 
     // check whether the user is authorized to perform the action
+    // this authorization is to check the user has write access to the subgraph, as we are creating a token to push the plugin
     await opts.authorizer.authorize({
       db: opts.db,
       graph: {
