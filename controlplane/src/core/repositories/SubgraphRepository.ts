@@ -957,6 +957,12 @@ export class SubgraphRepository {
           where: eq(schema.protobufSchemaVersions.schemaVersionId, resp[0].schemaVersionId),
         });
 
+        if (!protobufSchemaVersion) {
+          this.logger.warn(
+            `Missing protobuf schema for ${resp[0].type} subgraph with schemaVersionId: ${resp[0].schemaVersionId}`,
+          );
+        }
+
         proto = {
           schema: protobufSchemaVersion?.protoSchema ?? '',
           mappings: protobufSchemaVersion?.protoMappings ?? '',
@@ -967,6 +973,13 @@ export class SubgraphRepository {
           const pluginImageVersion = await this.db.query.pluginImageVersions.findFirst({
             where: eq(schema.pluginImageVersions.schemaVersionId, resp[0].schemaVersionId),
           });
+
+          if (!pluginImageVersion) {
+            this.logger.warn(
+              `Missing plugin image version for ${resp[0].type} subgraph with schemaVersionId: ${resp[0].schemaVersionId}`,
+            );
+          }
+
           proto.pluginData = {
             platforms: pluginImageVersion?.platform ?? [],
             version: pluginImageVersion?.version ?? 'v1',
