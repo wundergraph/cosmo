@@ -4,6 +4,22 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.155.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.155.0...controlplane@0.155.1) (2025-08-06)
+
+**Note:** Version bump only for package controlplane
+
+# [0.155.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.154.1...controlplane@0.155.0) (2025-08-06)
+
+### Features
+
+* improve session renewal ([#2096](https://github.com/wundergraph/cosmo/issues/2096)) ([bef5e09](https://github.com/wundergraph/cosmo/commit/bef5e09eb5f93e10a6feb0d7ffd04b2f4410af00)) (@wilsonrivera)
+
+## [0.154.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.154.0...controlplane@0.154.1) (2025-07-31)
+
+### Bug Fixes
+
+* take limit as input so the no of operations returned is always limited ([#2095](https://github.com/wundergraph/cosmo/issues/2095)) ([80691fe](https://github.com/wundergraph/cosmo/commit/80691fe5b30011f8212380ffea769b141fa121d5)) (@JivusAyrus)
+
 # [0.154.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.153.0...controlplane@0.154.0) (2025-07-21)
 
 ### Features
