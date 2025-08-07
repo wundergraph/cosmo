@@ -34,6 +34,9 @@ func sanitizePathWithinDestDir(destDir, path string) (string, error) {
 		return "", fmt.Errorf("failed to get relative path: %w", err)
 	}
 
+	// We don't want to allow paths that attempt to escape the destination directory
+	// This is both a security measure against theoretical malicious input and a simple
+	// check to ensure relevant files are within the plugin working directory.
 	if strings.HasPrefix(rel, "..") || strings.Contains(rel, string(filepath.Separator)+"..") {
 		return "", fmt.Errorf("path escapes destination directory")
 	}
@@ -43,7 +46,7 @@ func sanitizePathWithinDestDir(destDir, path string) (string, error) {
 
 // UnpackImageToDir unpacks a v1.Image to destDir.
 func UnpackImageToDir(img v1.Image, destDir string) error {
-	os.MkdirAll(destDir, os.ModePerm)
+	os.MkdirAll(destDir, 0700)
 
 	reader := mutate.Extract(img)
 	defer reader.Close()
