@@ -1,9 +1,11 @@
 package execution_config
 
 import (
-	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"google.golang.org/protobuf/encoding/protojson"
 	"os"
+
+	"google.golang.org/protobuf/encoding/protojson"
+
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 )
 
 // FromFile creates a new router config from the file at the given path.
@@ -12,6 +14,8 @@ func FromFile(path string) (*nodev1.RouterConfig, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// dummy router change
 
 	return UnmarshalConfig(data)
 }
