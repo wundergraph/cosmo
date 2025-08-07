@@ -30,6 +30,7 @@ import { getEntriesNotInHashSet, getOrThrowError, kindToNodeType, numberToOrdina
 import { ImplementationErrors, InvalidEntityInterface, InvalidRequiredInputValueData } from '../utils/types';
 import { isFieldData } from '../schema-building/utils';
 import { printTypeNode } from '@graphql-tools/merge';
+import { NodeType, TypeName } from '../types/types';
 
 export const minimumSubgraphRequirementError = new Error('At least one subgraph is required for federation.');
 
@@ -424,9 +425,9 @@ export function subgraphInvalidSyntaxError(error?: Error): Error {
 }
 
 export function invalidInterfaceImplementationError(
-  parentTypeName: string,
-  parentTypeString: string,
-  implementationErrorsByInterfaceTypeName: Map<string, ImplementationErrors>,
+  parentTypeName: TypeName,
+  parentNodeType: NodeType,
+  implementationErrorsByInterfaceTypeName: Map<TypeName, ImplementationErrors>,
 ): Error {
   const messages: string[] = [];
   for (const [interfaceName, implementationErrors] of implementationErrorsByInterfaceTypeName) {
@@ -486,7 +487,7 @@ export function invalidInterfaceImplementationError(
     messages.push(message);
   }
   return new Error(
-    `The ${parentTypeString} "${parentTypeName}" has the following Interface implementation errors:\n` +
+    `The ${parentNodeType} "${parentTypeName}" has the following Interface implementation errors:\n` +
       messages.join('\n'),
   );
 }
@@ -856,8 +857,8 @@ export function undefinedEntityInterfaceImplementationsError(
     );
     const implementedConcreteTypeNames = entityInterfaceDatas.concreteTypeNames!;
     message +=
-      ` Across all subgraphs, the entity interface "${typeName}" is implemented by the following entities` +
-      (implementedConcreteTypeNames.size > 1 ? `s` : ``) +
+      ` Across all subgraphs, the entity interface "${typeName}" is implemented by the following entit` +
+      (implementedConcreteTypeNames.size > 1 ? `ies` : `y`) +
       `:\n  "` +
       Array.from(implementedConcreteTypeNames).join(QUOTATION_JOIN) +
       `"\n` +
