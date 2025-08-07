@@ -363,8 +363,8 @@ const subgraphD: Subgraph = {
   definitions: parse(`
     type Interface @key(fields: "id") @interfaceObject {
       id: ID!
-      name: String!
-      age: Int!
+      name: String! @shareable
+      age: Int! @shareable
     }
   `),
 };
