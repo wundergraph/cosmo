@@ -18,6 +18,7 @@ export default (opts: BaseCommandOptions) => {
     "Publishes a plugin subgraph on the control plane. If the plugin subgraph doesn't exists, it will be created.\nIf the publication leads to composition errors, the errors will be visible in the Studio.\nThe router will continue to work with the latest valid schema.\nConsider using the 'wgc subgraph check' command to check for composition errors before publishing.",
   );
   command.argument('[directory]', 'The path to the plugin directory.', '.');
+  command.option('--name [string]', 'The name of the plugin.');
   command.option('-n, --namespace [string]', 'The namespace of the plugin subgraph.');
   command.option(
     '--platform [platforms...]',
@@ -52,7 +53,7 @@ export default (opts: BaseCommandOptions) => {
       );
     }
 
-    const pluginName = path.basename(pluginDir);
+    const pluginName = options.name || path.basename(pluginDir);
 
     const schemaFile = resolve(pluginDir, 'src', 'schema.graphql');
     const dockerFile = resolve(pluginDir, 'Dockerfile');
