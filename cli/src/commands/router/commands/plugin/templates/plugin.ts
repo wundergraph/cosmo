@@ -28,7 +28,7 @@ generate:
 	npx wgc@latest router plugin generate .
 
 publish: generate
-	npx wgc@latest router plugin publish . --platform linux/amd64,linux/arm64,darwin/amd64,darwin/arm64,windows/amd64
+	npx wgc@latest router plugin publish .
 
 build:
 	npx wgc@latest router plugin build . --debug
