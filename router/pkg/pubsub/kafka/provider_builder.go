@@ -52,6 +52,7 @@ func (p *ProviderBuilder) BuildEngineDataSourceFactory(data *nodev1.KafkaEventCo
 		topics:       data.GetTopics(),
 		providerId:   providerId,
 		KafkaAdapter: provider,
+		logger:       p.logger,
 	}, nil
 }
 

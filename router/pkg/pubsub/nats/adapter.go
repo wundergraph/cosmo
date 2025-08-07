@@ -138,7 +138,14 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, cfg datasource.Subscrip
 						}})
 						if updateErr != nil {
 							// If the update fails, we do not acknowledge the message
-							log.Error("error updating subscription", zap.Error(updateErr), zap.String("message_subject", msg.Subject()))
+							log.Error(
+								"error updating subscription, stopping subscription",
+								zap.Error(updateErr),
+								zap.String("message_subject", msg.Subject()),
+								zap.String("provider_id", subConf.ProviderID()),
+								zap.String("provider_type", string(subConf.ProviderType())),
+								zap.String("field_name", subConf.RootFieldName()),
+							)
 							return
 						}
 
@@ -183,7 +190,14 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, cfg datasource.Subscrip
 				}})
 				if updateErr != nil {
 					// If the update fails, we log the error and unsubscribe from all subscriptions
-					log.Error("error updating subscription", zap.Error(updateErr), zap.String("message_subject", msg.Subject))
+					log.Error(
+						"error updating subscription, stopping subscription",
+						zap.Error(updateErr),
+						zap.String("message_subject", msg.Subject),
+						zap.String("provider_id", subConf.ProviderID()),
+						zap.String("provider_type", string(subConf.ProviderType())),
+						zap.String("field_name", subConf.RootFieldName()),
+					)
 					for _, subscription := range subscriptions {
 						if err := subscription.Unsubscribe(); err != nil {
 							log.Error("unsubscribing from NATS subject after an error on updating subscription",
@@ -250,7 +264,13 @@ func (p *ProviderAdapter) Publish(_ context.Context, conf datasource.PublishEven
 
 		err := p.client.Publish(pubConf.Subject, natsEvent.Data)
 		if err != nil {
-			log.Error("publish error", zap.Error(err))
+			log.Error(
+				"publish error",
+				zap.Error(err),
+				zap.String("provider_id", pubConf.ProviderID()),
+				zap.String("provider_type", string(pubConf.ProviderType())),
+				zap.String("field_name", pubConf.RootFieldName()),
+			)
 			return datasource.NewError(fmt.Sprintf("error publishing to NATS subject %s", pubConf.Subject), err)
 		}
 	}
@@ -283,7 +303,13 @@ func (p *ProviderAdapter) Request(ctx context.Context, cfg datasource.PublishEve
 
 	msg, err := p.client.RequestWithContext(ctx, reqConf.Subject, natsEvent.Data)
 	if err != nil {
-		log.Error("request error", zap.Error(err))
+		log.Error(
+			"request error",
+			zap.Error(err),
+			zap.String("provider_id", reqConf.ProviderID()),
+			zap.String("provider_type", string(reqConf.ProviderType())),
+			zap.String("field_name", reqConf.RootFieldName()),
+		)
 		return datasource.NewError(fmt.Sprintf("error requesting from NATS subject %s", reqConf.Subject), err)
 	}
 

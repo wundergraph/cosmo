@@ -9,6 +9,7 @@ import (
 	"github.com/cespare/xxhash/v2"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+	"go.uber.org/zap"
 )
 
 type EventType int
@@ -26,6 +27,7 @@ type EngineDataSourceFactory struct {
 	eventType  EventType
 	subjects   []string
 	providerId string
+	logger     *zap.Logger
 
 	withStreamConfiguration   bool
 	consumerName              string
@@ -94,7 +96,7 @@ func (c *EngineDataSourceFactory) ResolveDataSourceSubscription() (datasource.Su
 
 			_, err = xxh.Write(val)
 			return err
-		}), nil
+		}, c.logger), nil
 }
 
 func (c *EngineDataSourceFactory) ResolveDataSourceSubscriptionInput() (string, error) {

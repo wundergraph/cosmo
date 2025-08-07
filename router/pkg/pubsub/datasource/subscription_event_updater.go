@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+	"go.uber.org/zap"
 )
 
 // SubscriptionEventUpdater is a wrapper around the SubscriptionUpdater interface
@@ -21,6 +22,7 @@ type subscriptionEventUpdater struct {
 	ctx                            context.Context
 	subscriptionEventConfiguration SubscriptionEventConfiguration
 	hooks                          Hooks
+	logger                         *zap.Logger
 }
 
 func (s *subscriptionEventUpdater) updateEvents(events []StreamEvent) {
@@ -37,7 +39,24 @@ func (s *subscriptionEventUpdater) Update(events []StreamEvent) error {
 
 	processedEvents, err := applyStreamEventHooks(s.ctx, s.subscriptionEventConfiguration, events, s.hooks.OnStreamEvents)
 	if err != nil {
-		return err
+		// Check if the error is a StreamHookError and should close the subscription
+		// We use type assertion to check for the CloseSubscription method without importing core
+		if hookErr, ok := err.(ErrorWithCloseSubscription); ok {
+			if hookErr.CloseSubscription() {
+				// If CloseSubscription is true, return the error to close the subscription
+				return err
+			}
+		}
+		// For all other errors, just log them and continue
+		if s.logger != nil {
+			s.logger.Error(
+				"An error occurred while processing stream events hooks",
+				zap.Error(err),
+				zap.String("provider_type", string(s.subscriptionEventConfiguration.ProviderType())),
+				zap.String("provider_id", s.subscriptionEventConfiguration.ProviderID()),
+				zap.String("field_name", s.subscriptionEventConfiguration.RootFieldName()),
+			)
+		}
 	}
 
 	s.updateEvents(processedEvents)
@@ -79,11 +98,14 @@ func NewSubscriptionEventUpdater(
 	ctx context.Context,
 	cfg SubscriptionEventConfiguration,
 	hooks Hooks,
-	eventUpdater resolve.SubscriptionUpdater) SubscriptionEventUpdater {
+	eventUpdater resolve.SubscriptionUpdater,
+	logger *zap.Logger,
+) SubscriptionEventUpdater {
 	return &subscriptionEventUpdater{
 		ctx:                            ctx,
 		subscriptionEventConfiguration: cfg,
 		hooks:                          hooks,
 		eventUpdater:                   eventUpdater,
+		logger:                         logger,
 	}
 }

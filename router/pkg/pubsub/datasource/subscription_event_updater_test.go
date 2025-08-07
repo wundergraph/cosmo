@@ -8,6 +8,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest/observer"
 )
 
 // Test helper type for subscription event configuration
@@ -140,8 +142,8 @@ func TestSubscriptionEventUpdater_Update_WithHooks_Error(t *testing.T) {
 
 	err := updater.Update(events)
 
-	assert.Error(t, err)
-	assert.Equal(t, hookError, err)
+	// With the new behavior, errors are logged and nil is returned
+	assert.NoError(t, err)
 	// Assert that Update was not called on the eventUpdater
 	mockUpdater.AssertNotCalled(t, "Update")
 }
@@ -293,7 +295,7 @@ func TestNewSubscriptionEventUpdater(t *testing.T) {
 		OnStreamEvents: []OnStreamEventsFn{testHook},
 	}
 
-	updater := NewSubscriptionEventUpdater(ctx, config, hooks, mockUpdater)
+	updater := NewSubscriptionEventUpdater(ctx, config, hooks, mockUpdater, zap.NewNop())
 
 	assert.NotNil(t, updater)
 
@@ -540,3 +542,138 @@ func TestSubscriptionEventUpdater_Close_WithDifferentCloseKinds(t *testing.T) {
 		})
 	}
 }
+
+func TestSubscriptionEventUpdater_Update_WithStreamHookError_CloseSubscription(t *testing.T) {
+	mockUpdater := NewMockSubscriptionUpdater(t)
+	ctx := context.Background()
+	config := &testSubscriptionEventConfig{
+		providerID:   "test-provider",
+		providerType: ProviderTypeNats,
+		fieldName:    "testField",
+	}
+	events := []StreamEvent{
+		&testEvent{data: []byte("test data")},
+	}
+
+	// Create a mock StreamHookError with CloseSubscription=true
+	mockHookError := &mockStreamHookError{
+		closeSubscription: true,
+		message:         "subscription should close",
+	}
+
+	// Define hook that returns a StreamHookError with CloseSubscription=true
+	testHook := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
+		return nil, mockHookError
+	}
+
+	updater := &subscriptionEventUpdater{
+		eventUpdater:                   mockUpdater,
+		ctx:                            ctx,
+		subscriptionEventConfiguration: config,
+		hooks: Hooks{
+			OnStreamEvents: []OnStreamEventsFn{testHook},
+		},
+	}
+
+	err := updater.Update(events)
+
+	// Should return the error when CloseSubscription is true
+	assert.Error(t, err)
+	assert.Equal(t, mockHookError, err)
+	// Assert that Update was not called on the eventUpdater
+	mockUpdater.AssertNotCalled(t, "Update")
+}
+
+func TestSubscriptionEventUpdater_Update_WithStreamHookError_NoCloseSubscription(t *testing.T) {
+	mockUpdater := NewMockSubscriptionUpdater(t)
+	ctx := context.Background()
+	config := &testSubscriptionEventConfig{
+		providerID:   "test-provider",
+		providerType: ProviderTypeNats,
+		fieldName:    "testField",
+	}
+	events := []StreamEvent{
+		&testEvent{data: []byte("test data")},
+	}
+
+	// Create a mock StreamHookError with CloseSubscription=false
+	mockHookError := &mockStreamHookError{
+		closeSubscription: false,
+		message:         "subscription should not close",
+	}
+
+	// Define hook that returns a StreamHookError with CloseSubscription=false
+	testHook := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
+		return nil, mockHookError
+	}
+
+	updater := &subscriptionEventUpdater{
+		eventUpdater:                   mockUpdater,
+		ctx:                            ctx,
+		subscriptionEventConfiguration: config,
+		hooks: Hooks{
+			OnStreamEvents: []OnStreamEventsFn{testHook},
+		},
+	}
+
+	err := updater.Update(events)
+
+	// Should return nil when CloseSubscription is false (error is logged)
+	assert.NoError(t, err)
+	// Assert that Update was not called on the eventUpdater
+	mockUpdater.AssertNotCalled(t, "Update")
+}
+
+func TestSubscriptionEventUpdater_Update_WithHooks_Error_LoggerWritesError(t *testing.T) {
+	mockUpdater := NewMockSubscriptionUpdater(t)
+	ctx := context.Background()
+	config := &testSubscriptionEventConfig{
+		providerID:   "test-provider",
+		providerType: ProviderTypeNats,
+		fieldName:    "testField",
+	}
+	events := []StreamEvent{
+		&testEvent{data: []byte("test data")},
+	}
+	hookError := errors.New("hook processing error")
+
+	// Define hook that returns an error
+	testHook := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
+		return nil, hookError
+	}
+
+	zCore, logObserver := observer.New(zap.InfoLevel)
+	logger := zap.New(zCore)
+
+	// Test with a real zap logger to verify error logging behavior
+	// The logger.Error() call should be executed when an error occurs
+	updater := NewSubscriptionEventUpdater(ctx, config, Hooks{
+		OnStreamEvents: []OnStreamEventsFn{testHook},
+	}, mockUpdater, logger)
+
+	err := updater.Update(events)
+
+	// Should return nil when error is logged
+	assert.NoError(t, err)
+	// Assert that Update was not called on the eventUpdater
+	mockUpdater.AssertNotCalled(t, "Update")
+	
+	msgs := logObserver.FilterMessageSnippet("An error occurred while processing stream events hooks").TakeAll()
+	assert.Equal(t, 1, len(msgs))
+}
+
+// mockStreamHookError implements the CloseSubscription() method for testing
+type mockStreamHookError struct {
+	closeSubscription bool
+	message         string
+}
+
+func (e *mockStreamHookError) Error() string {
+	return e.message
+}
+
+func (e *mockStreamHookError) CloseSubscription() bool {
+	return e.closeSubscription
+}
+
+

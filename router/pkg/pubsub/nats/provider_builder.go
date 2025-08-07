@@ -51,6 +51,7 @@ func (p *ProviderBuilder) BuildEngineDataSourceFactory(data *nodev1.NatsEventCon
 		subjects:                data.GetSubjects(),
 		providerId:              providerId,
 		withStreamConfiguration: data.GetStreamConfiguration() != nil,
+		logger:                  p.logger,
 	}
 
 	if data.GetStreamConfiguration() != nil {

@@ -64,6 +64,7 @@ func (b *ProviderBuilder) BuildEngineDataSourceFactory(data *nodev1.RedisEventCo
 		channels:     data.GetChannels(),
 		providerId:   providerId,
 		RedisAdapter: provider,
+		logger:       b.logger,
 	}, nil
 }
 

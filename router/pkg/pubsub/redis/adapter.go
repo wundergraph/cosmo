@@ -118,7 +118,14 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 					Data: []byte(msg.Payload),
 				}})
 				if updateErr != nil {
-					log.Error("error updating subscription, stopping subscription", zap.Error(updateErr), zap.String("message_channel", msg.Channel))
+					log.Error(
+						"error updating subscription, stopping subscription",
+						zap.Error(updateErr),
+						zap.String("message_channel", msg.Channel),
+						zap.String("provider_id", conf.ProviderID()),
+						zap.String("provider_type", string(conf.ProviderType())),
+						zap.String("field_name", conf.RootFieldName()),
+					)
 					// If the error is not recoverable, we stop the subscription
 					cleanup()
 					return

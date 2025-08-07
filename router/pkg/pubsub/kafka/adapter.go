@@ -144,8 +144,13 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 			if errors.Is(err, errClientClosed) || errors.Is(err, context.Canceled) {
 				log.Debug("poller canceled", zap.Error(err))
 			} else {
-				log.Error("poller error", zap.Error(err))
-
+				log.Error(
+					"poller error",
+					zap.Error(err),
+					zap.String("provider_id", conf.ProviderID()),
+					zap.String("provider_type", string(conf.ProviderType())),
+					zap.String("field_name", conf.RootFieldName()),
+				)
 			}
 			return
 		}

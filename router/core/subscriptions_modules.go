@@ -37,9 +37,11 @@ func (e *StreamHookError) Code() string {
 	return e.code
 }
 
-func (e *StreamHookError) CloseConnection() bool {
+func (e *StreamHookError) CloseSubscription() bool {
 	return e.closeConnection
 }
+
+var _ datasource.ErrorWithCloseSubscription = &StreamHookError{}
 
 func NewStreamHookError(err error, message string, statusCode int, code string, closeConnection bool) *StreamHookError {
 	return &StreamHookError{
@@ -145,7 +147,7 @@ func NewPubSubSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHookContext
 		var streamHookErr *StreamHookError
 		close := false
 		if errors.As(err, &streamHookErr) {
-			close = streamHookErr.CloseConnection()
+			close = streamHookErr.CloseSubscription()
 		}
 
 		return close, err
@@ -171,7 +173,7 @@ func NewEngineSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHookContext
 		var streamHookErr *StreamHookError
 		close := false
 		if errors.As(err, &streamHookErr) {
-			close = streamHookErr.CloseConnection()
+			close = streamHookErr.CloseSubscription()
 		}
 
 		return close, err
