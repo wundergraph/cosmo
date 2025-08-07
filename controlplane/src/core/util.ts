@@ -585,11 +585,11 @@ export const formatSubgraphType = (type: SubgraphType) => {
     case SubgraphType.STANDARD: {
       return 'standard';
     }
-    case SubgraphType.PLUGIN: {
-      return 'plugin';
+    case SubgraphType.GRPC_PLUGIN: {
+      return 'grpc_plugin';
     }
-    case SubgraphType.GRPC_SUBGRAPH: {
-      return 'grpc-subgraph';
+    case SubgraphType.GRPC_SERVICE: {
+      return 'grpc_service';
     }
     default: {
       throw new Error(`Unknown subgraph type: ${type}`);
@@ -602,11 +602,11 @@ export const convertToSubgraphType = (type: string) => {
     case 'standard': {
       return SubgraphType.STANDARD;
     }
-    case 'plugin': {
-      return SubgraphType.PLUGIN;
+    case 'grpc_plugin': {
+      return SubgraphType.GRPC_PLUGIN;
     }
-    case 'grpc-subgraph': {
-      return SubgraphType.GRPC_SUBGRAPH;
+    case 'grpc_service': {
+      return SubgraphType.GRPC_SERVICE;
     }
     default: {
       throw new Error(`Unknown subgraph type: ${type}`);

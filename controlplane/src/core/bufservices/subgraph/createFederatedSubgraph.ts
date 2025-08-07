@@ -134,7 +134,7 @@ export function createFederatedSubgraph(
           admissionErrors: [],
         };
       }
-    } else if (req.type !== SubgraphType.PLUGIN) {
+    } else if (req.type !== SubgraphType.GRPC_PLUGIN) {
       if (!routingUrl) {
         return {
           response: {
@@ -208,7 +208,7 @@ export function createFederatedSubgraph(
       };
     }
 
-    if (req.type === SubgraphType.PLUGIN) {
+    if (req.type === SubgraphType.GRPC_PLUGIN) {
       const count = await pluginRepo.count({ namespaceId: namespace.id });
       const feature = await orgRepo.getFeature({
         organizationId: authContext.organizationId,

@@ -245,7 +245,7 @@ export class SubgraphRepository {
       }
 
       // TODO: avoid downloading the schema use hash instead
-      if (data.schemaSDL && (subgraph.type === 'plugin' || data.schemaSDL !== subgraph.schemaSDL)) {
+      if (data.schemaSDL && (subgraph.type === 'grpc_plugin' || data.schemaSDL !== subgraph.schemaSDL)) {
         subgraphChanged = true;
         const updatedSubgraph = await subgraphRepo.addSchemaVersion({
           targetId: subgraph.targetId,
@@ -560,7 +560,7 @@ export class SubgraphRepository {
           createdAt: schemaVersion.createdAt,
         });
 
-      if (data.proto && (subgraph.type === 'grpc-subgraph' || subgraph.type === 'plugin')) {
+      if (data.proto && (subgraph.type === 'grpc_service' || subgraph.type === 'grpc_plugin')) {
         await tx.insert(schema.protobufSchemaVersions).values({
           schemaVersionId: insertedVersion[0].insertedId,
           protoSchema: data.proto.schema,
@@ -568,7 +568,7 @@ export class SubgraphRepository {
           protoLock: data.proto.lock,
         });
 
-        if (data.proto.pluginData && subgraph.type === 'plugin') {
+        if (data.proto.pluginData && subgraph.type === 'grpc_plugin') {
           await tx.insert(schema.pluginImageVersions).values({
             schemaVersionId: insertedVersion[0].insertedId,
             version: data.proto.pluginData.version,
@@ -952,7 +952,7 @@ export class SubgraphRepository {
       schemaVersionId = sv?.id ?? '';
       isV2Graph = sv?.isV2Graph || undefined;
 
-      if (resp[0].type === 'plugin' || resp[0].type === 'grpc-subgraph') {
+      if (resp[0].type === 'grpc_plugin' || resp[0].type === 'grpc_service') {
         const protobufSchemaVersion = await this.db.query.protobufSchemaVersions.findFirst({
           where: eq(schema.protobufSchemaVersions.schemaVersionId, resp[0].schemaVersionId),
         });
@@ -963,7 +963,7 @@ export class SubgraphRepository {
           lock: protobufSchemaVersion?.protoLock ?? '',
         };
 
-        if (resp[0].type === 'plugin') {
+        if (resp[0].type === 'grpc_plugin') {
           const pluginImageVersion = await this.db.query.pluginImageVersions.findFirst({
             where: eq(schema.pluginImageVersions.schemaVersionId, resp[0].schemaVersionId),
           });

@@ -98,7 +98,7 @@ describe('Publish feature subgraph tests', () => {
     // Create a plugin base subgraph
     const createBasePluginResponse = await client.createFederatedSubgraph({
       name: basePluginName,
-      type: SubgraphType.PLUGIN,
+      type: SubgraphType.GRPC_PLUGIN,
       labels: [pluginLabel],
     });
     expect(createBasePluginResponse.response?.code).toBe(EnumStatusCode.OK);
@@ -135,7 +135,7 @@ describe('Publish feature subgraph tests', () => {
     // Create a plugin subgraph
     const createPluginResponse = await client.createFederatedSubgraph({
       name: pluginName,
-      type: SubgraphType.PLUGIN,
+      type: SubgraphType.GRPC_PLUGIN,
       labels: [pluginLabel],
     });
     expect(createPluginResponse.response?.code).toBe(EnumStatusCode.OK);

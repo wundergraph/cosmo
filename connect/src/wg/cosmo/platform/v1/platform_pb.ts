@@ -40,20 +40,20 @@ export enum SubgraphType {
   STANDARD = 0,
 
   /**
-   * @generated from enum value: PLUGIN = 1;
+   * @generated from enum value: GRPC_PLUGIN = 1;
    */
-  PLUGIN = 1,
+  GRPC_PLUGIN = 1,
 
   /**
-   * @generated from enum value: GRPC_SUBGRAPH = 2;
+   * @generated from enum value: GRPC_SERVICE = 2;
    */
-  GRPC_SUBGRAPH = 2,
+  GRPC_SERVICE = 2,
 }
 // Retrieve enum metadata with: proto3.getEnumType(SubgraphType)
 proto3.util.setEnumType(SubgraphType, "wg.cosmo.platform.v1.SubgraphType", [
   { no: 0, name: "STANDARD" },
-  { no: 1, name: "PLUGIN" },
-  { no: 2, name: "GRPC_SUBGRAPH" },
+  { no: 1, name: "GRPC_PLUGIN" },
+  { no: 2, name: "GRPC_SERVICE" },
 ]);
 
 /**

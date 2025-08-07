@@ -382,7 +382,7 @@ describe('Create feature subgraph tests', () => {
     // Create a plugin base subgraph
     const createBasePluginResponse = await client.createFederatedSubgraph({
       name: baseSubgraphName,
-      type: SubgraphType.PLUGIN,
+      type: SubgraphType.GRPC_PLUGIN,
       labels: [pluginLabel],
     });
     expect(createBasePluginResponse.response?.code).toBe(EnumStatusCode.OK);
@@ -392,7 +392,7 @@ describe('Create feature subgraph tests', () => {
       name: baseSubgraphName,
     });
     expect(getBaseSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
-    expect(getBaseSubgraphResponse.graph?.type).toBe(SubgraphType.PLUGIN);
+    expect(getBaseSubgraphResponse.graph?.type).toBe(SubgraphType.GRPC_PLUGIN);
 
     // Create a feature subgraph based on the plugin
     const createFeatureSubgraphResponse = await client.createFederatedSubgraph({
@@ -409,7 +409,7 @@ describe('Create feature subgraph tests', () => {
     expect(getFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
     expect(getFeatureSubgraphResponse.graph?.name).toBe(featureSubgraphName);
     expect(getFeatureSubgraphResponse.graph?.isFeatureSubgraph).toBe(true);
-    expect(getFeatureSubgraphResponse.graph?.type).toBe(SubgraphType.PLUGIN);
+    expect(getFeatureSubgraphResponse.graph?.type).toBe(SubgraphType.GRPC_PLUGIN);
 
     await server.close();
   });
@@ -429,7 +429,7 @@ describe('Create feature subgraph tests', () => {
     // Create the base plugin subgraph (1st plugin)
     const createBasePluginResponse = await client.createFederatedSubgraph({
       name: basePluginName,
-      type: SubgraphType.PLUGIN,
+      type: SubgraphType.GRPC_PLUGIN,
       labels: [pluginLabel],
     });
     expect(createBasePluginResponse.response?.code).toBe(EnumStatusCode.OK);
@@ -437,14 +437,14 @@ describe('Create feature subgraph tests', () => {
     // Create 2 more plugin subgraphs to reach the limit (2nd and 3rd plugins)
     const createPlugin1Response = await client.createFederatedSubgraph({
       name: plugin1Name,
-      type: SubgraphType.PLUGIN,
+      type: SubgraphType.GRPC_PLUGIN,
       labels: [pluginLabel],
     });
     expect(createPlugin1Response.response?.code).toBe(EnumStatusCode.OK);
 
     const createPlugin2Response = await client.createFederatedSubgraph({
       name: plugin2Name,
-      type: SubgraphType.PLUGIN,
+      type: SubgraphType.GRPC_PLUGIN,
       labels: [pluginLabel],
     });
     expect(createPlugin2Response.response?.code).toBe(EnumStatusCode.OK);
@@ -476,7 +476,7 @@ describe('Create feature subgraph tests', () => {
     // Create a plugin base subgraph (no routing URL required for plugins)
     const createBasePluginResponse = await client.createFederatedSubgraph({
       name: basePluginName,
-      type: SubgraphType.PLUGIN,
+      type: SubgraphType.GRPC_PLUGIN,
       labels: [pluginLabel],
     });
     expect(createBasePluginResponse.response?.code).toBe(EnumStatusCode.OK);
@@ -486,7 +486,7 @@ describe('Create feature subgraph tests', () => {
       name: basePluginName,
     });
     expect(getBasePluginResponse.response?.code).toBe(EnumStatusCode.OK);
-    expect(getBasePluginResponse.graph?.type).toBe(SubgraphType.PLUGIN);
+    expect(getBasePluginResponse.graph?.type).toBe(SubgraphType.GRPC_PLUGIN);
     expect(getBasePluginResponse.graph?.routingURL).toBe(''); // Plugins have empty routing URL
 
     // Create a feature subgraph based on the plugin (no routing URL should be required)
@@ -505,7 +505,7 @@ describe('Create feature subgraph tests', () => {
     expect(getFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
     expect(getFeatureSubgraphResponse.graph?.name).toBe(featureSubgraphName);
     expect(getFeatureSubgraphResponse.graph?.isFeatureSubgraph).toBe(true);
-    expect(getFeatureSubgraphResponse.graph?.type).toBe(SubgraphType.PLUGIN);
+    expect(getFeatureSubgraphResponse.graph?.type).toBe(SubgraphType.GRPC_PLUGIN);
     expect(getFeatureSubgraphResponse.graph?.routingURL).toBe(''); // Feature plugin should also have empty routing URL
 
     await server.close();
@@ -525,7 +525,7 @@ describe('Create feature subgraph tests', () => {
     // Create a plugin base subgraph
     const createBasePluginResponse = await client.createFederatedSubgraph({
       name: baseSubgraphName,
-      type: SubgraphType.PLUGIN,
+      type: SubgraphType.GRPC_PLUGIN,
       labels: [pluginLabel],
     });
     expect(createBasePluginResponse.response?.code).toBe(EnumStatusCode.OK);
@@ -551,14 +551,14 @@ describe('Create feature subgraph tests', () => {
       name: featureSubgraphName1,
     });
     expect(getFeatureSubgraph1Response.response?.code).toBe(EnumStatusCode.OK);
-    expect(getFeatureSubgraph1Response.graph?.type).toBe(SubgraphType.PLUGIN);
+    expect(getFeatureSubgraph1Response.graph?.type).toBe(SubgraphType.GRPC_PLUGIN);
     expect(getFeatureSubgraph1Response.graph?.isFeatureSubgraph).toBe(true);
 
     const getFeatureSubgraph2Response = await client.getSubgraphByName({
       name: featureSubgraphName2,
     });
     expect(getFeatureSubgraph2Response.response?.code).toBe(EnumStatusCode.OK);
-    expect(getFeatureSubgraph2Response.graph?.type).toBe(SubgraphType.PLUGIN);
+    expect(getFeatureSubgraph2Response.graph?.type).toBe(SubgraphType.GRPC_PLUGIN);
     expect(getFeatureSubgraph2Response.graph?.isFeatureSubgraph).toBe(true);
 
     await server.close();

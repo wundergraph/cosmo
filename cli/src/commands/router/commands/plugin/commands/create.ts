@@ -45,7 +45,7 @@ export default (opts: BaseCommandOptions) => {
         labels: options.label ? options.label.map((label: string) => splitLabel(label)) : [],
         routingUrl: '',
         readme: readmeFile ? await readFile(readmeFile, 'utf8') : undefined,
-        type: SubgraphType.PLUGIN,
+        type: SubgraphType.GRPC_PLUGIN,
       },
       {
         headers: getBaseHeaders(),

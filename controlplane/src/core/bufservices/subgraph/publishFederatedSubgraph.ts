@@ -188,7 +188,7 @@ export function publishFederatedSubgraph(
           response: {
             code: EnumStatusCode.ERR,
             details:
-              subgraph.type === 'plugin'
+              subgraph.type === 'grpc_plugin'
                 ? `Subgraph ${subgraph.name} is a plugin. Please use the 'wgc router plugin publish' command to publish the plugin.`
                 : `Subgraph ${subgraph.name} is not of type ${formatSubgraphType(req.type)}.`,
           },
@@ -243,7 +243,7 @@ export function publishFederatedSubgraph(
           baseSubgraphID = baseSubgraph.id;
           req.type = convertToSubgraphType(baseSubgraph.type);
 
-          if (baseSubgraph.type === 'plugin') {
+          if (baseSubgraph.type === 'grpc_plugin') {
             return {
               response: {
                 code: EnumStatusCode.ERR,
@@ -343,7 +343,7 @@ export function publishFederatedSubgraph(
             proposalMatchMessage,
           };
         }
-      } else if (req.type !== SubgraphType.PLUGIN) {
+      } else if (req.type !== SubgraphType.GRPC_PLUGIN) {
         if (!isValidUrl(routingUrl)) {
           return {
             response: {
@@ -388,7 +388,7 @@ export function publishFederatedSubgraph(
         };
       }
 
-      if (req.type === SubgraphType.PLUGIN) {
+      if (req.type === SubgraphType.GRPC_PLUGIN) {
         const count = await pluginRepo.count({ namespaceId: namespace.id });
         const feature = await orgRepo.getFeature({
           organizationId: authContext.organizationId,
@@ -453,7 +453,7 @@ export function publishFederatedSubgraph(
       });
     }
 
-    if (req.type === SubgraphType.PLUGIN || req.type === SubgraphType.GRPC_SUBGRAPH) {
+    if (req.type === SubgraphType.GRPC_PLUGIN || req.type === SubgraphType.GRPC_SERVICE) {
       if (!req.proto) {
         return {
           response: {
@@ -467,7 +467,7 @@ export function publishFederatedSubgraph(
         };
       }
 
-      if (req.type === SubgraphType.PLUGIN) {
+      if (req.type === SubgraphType.GRPC_PLUGIN) {
         if (!req.proto.version || !req.proto.platforms || req.proto.platforms.length === 0) {
           return {
             response: {
@@ -520,7 +520,7 @@ export function publishFederatedSubgraph(
           namespaceId: namespace.id,
           isV2Graph,
           proto:
-            subgraph.type === 'plugin'
+            subgraph.type === 'grpc_plugin'
               ? {
                   schema: req.proto?.schema || '',
                   mappings: req.proto?.mappings || '',

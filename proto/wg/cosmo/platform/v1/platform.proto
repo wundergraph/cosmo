@@ -369,8 +369,8 @@ message GetSubgraphsRequest {
 
 enum SubgraphType {
   STANDARD = 0;
-  PLUGIN = 1;
-  GRPC_SUBGRAPH = 2;
+  GRPC_PLUGIN = 1;
+  GRPC_SERVICE = 2;
 }
 
 message Subgraph {

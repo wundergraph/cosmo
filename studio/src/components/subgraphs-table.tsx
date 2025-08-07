@@ -413,10 +413,10 @@ export const SubgraphsTable = ({
                       )}
                     </TableCell>
                     <TableCell className="px-4 text-muted-foreground ">
-                      {type === SubgraphType.PLUGIN ? (
-                        <Badge variant="outline">Plugin</Badge>
-                      ) : type === SubgraphType.GRPC_SUBGRAPH ? (
-                        <Badge variant="outline">GRPC</Badge>
+                      {type === SubgraphType.GRPC_PLUGIN ? (
+                        <Badge variant="outline">GRPC_Plugin</Badge>
+                      ) : type === SubgraphType.GRPC_SERVICE ? (
+                        <Badge variant="outline">GRPC_Service</Badge>
                       ) : (
                         <Badge variant="outline">Standard</Badge>
                       )}

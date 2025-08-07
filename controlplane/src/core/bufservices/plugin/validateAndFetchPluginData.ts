@@ -107,7 +107,7 @@ export function validateAndFetchPluginData(
         labels: req.labels,
         routingUrl: '',
         isEventDrivenGraph: false,
-        type: 'plugin',
+        type: 'grpc_plugin',
       });
 
       if (!subgraph) {

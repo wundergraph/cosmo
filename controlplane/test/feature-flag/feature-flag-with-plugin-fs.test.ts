@@ -79,7 +79,7 @@ describe('Feature flag with plugin feature subgraph tests', () => {
     const createPluginResponse = await client.createFederatedSubgraph({
       name: pluginSubgraphName,
       namespace: 'default',
-      type: SubgraphType.PLUGIN,
+      type: SubgraphType.GRPC_PLUGIN,
       labels: [sharedLabel],
     });
     expect(createPluginResponse.response?.code).toBe(EnumStatusCode.OK);
@@ -111,7 +111,7 @@ describe('Feature flag with plugin feature subgraph tests', () => {
       name: pluginSubgraphName,
       namespace: 'default',
       schema: pluginSDL,
-      type: SubgraphType.PLUGIN,
+      type: SubgraphType.GRPC_PLUGIN,
       proto: validProtoRequest,
     });
     expect(publishPluginResponse.response?.code).toBe(EnumStatusCode.OK);
@@ -121,7 +121,7 @@ describe('Feature flag with plugin feature subgraph tests', () => {
       name: pluginSubgraphName,
     });
     expect(getPluginSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
-    expect(getPluginSubgraphResponse.graph?.type).toBe(SubgraphType.PLUGIN);
+    expect(getPluginSubgraphResponse.graph?.type).toBe(SubgraphType.GRPC_PLUGIN);
     expect(getPluginSubgraphResponse.graph?.pluginData?.version).toBe('v1');
     expect(getPluginSubgraphResponse.graph?.pluginData?.platforms).toEqual(['linux/amd64', 'darwin/amd64']);
 
@@ -172,7 +172,7 @@ describe('Feature flag with plugin feature subgraph tests', () => {
     const publishFeatureSubgraphResponse = await client.publishFederatedSubgraph({
       name: featureSubgraphName,
       schema: featureSubgraphSDL,
-      type: SubgraphType.PLUGIN,
+      type: SubgraphType.GRPC_PLUGIN,
       proto: validProtoRequest, // Plugin feature subgraphs also need proto data
     });
     expect(publishFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
@@ -184,7 +184,7 @@ describe('Feature flag with plugin feature subgraph tests', () => {
     expect(getFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
     expect(getFeatureSubgraphResponse.graph?.name).toBe(featureSubgraphName);
     expect(getFeatureSubgraphResponse.graph?.isFeatureSubgraph).toBe(true);
-    expect(getFeatureSubgraphResponse.graph?.type).toBe(SubgraphType.PLUGIN);
+    expect(getFeatureSubgraphResponse.graph?.type).toBe(SubgraphType.GRPC_PLUGIN);
     expect(getFeatureSubgraphResponse.graph?.routingURL).toBe(''); // Plugin feature subgraphs have empty routing URL
 
     // Step 7: Create a feature flag using the feature subgraph
@@ -199,7 +199,7 @@ describe('Feature flag with plugin feature subgraph tests', () => {
     // Verify feature flag was created successfully
     const getFeatureFlagResponse = await client.getFeatureFlagByName({
       name: featureFlagName,
-      namespace: 'default'
+      namespace: 'default',
     });
     expect(getFeatureFlagResponse.response?.code).toBe(EnumStatusCode.OK);
     expect(getFeatureFlagResponse.featureFlag?.name).toBe(featureFlagName);

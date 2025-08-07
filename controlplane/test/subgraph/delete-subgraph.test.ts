@@ -259,7 +259,7 @@ describe('DeleteSubgraph', (ctx) => {
     const createPluginSubgraphResp = await client.createFederatedSubgraph({
       name: pluginName,
       namespace: DEFAULT_NAMESPACE,
-      type: SubgraphType.PLUGIN,
+      type: SubgraphType.GRPC_PLUGIN,
       labels: [pluginLabel],
     });
 
@@ -274,7 +274,7 @@ describe('DeleteSubgraph', (ctx) => {
     expect(getPluginResp.response?.code).toBe(EnumStatusCode.OK);
     expect(getPluginResp.graph).toBeDefined();
     expect(getPluginResp.graph?.name).toBe(pluginName);
-    expect(getPluginResp.graph?.type).toBe(SubgraphType.PLUGIN);
+    expect(getPluginResp.graph?.type).toBe(SubgraphType.GRPC_PLUGIN);
 
     // Delete the plugin subgraph
     const deletePluginSubgraphResp = await client.deleteFederatedSubgraph({

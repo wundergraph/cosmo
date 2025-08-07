@@ -807,7 +807,7 @@ export class FeatureFlagRepository {
         schemaSDL = sv?.schemaSDL ?? '';
         schemaVersionId = sv?.id ?? '';
         isV2Graph = sv?.isV2Graph || undefined;
-        if (fg.type === 'plugin' || fg.type === 'grpc-subgraph') {
+        if (fg.type === 'grpc_plugin' || fg.type === 'grpc_service') {
           const protobufSchemaVersion = await this.db.query.protobufSchemaVersions.findFirst({
             where: eq(schema.protobufSchemaVersions.schemaVersionId, fg.schemaVersionId),
           });
@@ -818,7 +818,7 @@ export class FeatureFlagRepository {
             lock: protobufSchemaVersion?.protoLock ?? '',
           };
 
-          if (fg.type === 'plugin') {
+          if (fg.type === 'grpc_plugin') {
             const pluginImageVersion = await this.db.query.pluginImageVersions.findFirst({
               where: eq(schema.pluginImageVersions.schemaVersionId, fg.schemaVersionId),
             });

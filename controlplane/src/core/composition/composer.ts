@@ -143,7 +143,7 @@ export function subgraphDTOsToComposedSubgraphs(
     const schema = subgraphConfig?.schema;
     const configurationDataByTypeName = subgraphConfig?.configurationDataByTypeName;
 
-    if (subgraph.type === 'plugin') {
+    if (subgraph.type === 'grpc_plugin') {
       if (!subgraph.proto || !subgraph.proto.pluginData) {
         throw new Error(`Subgraph ${subgraph.name} is a plugin but does not have a plugin data`);
       }
@@ -168,9 +168,9 @@ export function subgraphDTOsToComposedSubgraphs(
         }),
       };
     }
-    if (subgraph.type === 'grpc-subgraph') {
+    if (subgraph.type === 'grpc_service') {
       if (!subgraph.proto) {
-        throw new Error(`Subgraph ${subgraph.name} is a GRPC subgraph but does not have a proto`);
+        throw new Error(`Subgraph ${subgraph.name} is a GRPC service but does not have a proto`);
       }
 
       return {

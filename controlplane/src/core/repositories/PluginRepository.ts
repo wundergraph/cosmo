@@ -19,7 +19,7 @@ export class PluginRepository {
         and(
           eq(targets.namespaceId, opts.namespaceId),
           eq(targets.organizationId, this.organizationId),
-          eq(subgraphs.type, 'plugin'),
+          eq(subgraphs.type, 'grpc_plugin'),
         ),
       );
 

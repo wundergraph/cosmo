@@ -1,5 +1,5 @@
 {
-  "id": "4c7b2bdb-75fd-450c-bd13-ecb6c2e2bb73",
+  "id": "e8d72d6a-3744-48e9-88a2-d8617e9a867c",
   "prevId": "f1c31ac5-9d78-42c7-bf4e-c9e3c48036bf",
   "version": "7",
   "dialect": "postgresql",
@@ -8310,8 +8310,8 @@
       "schema": "public",
       "values": [
         "standard",
-        "plugin",
-        "grpc-subgraph"
+        "grpc_plugin",
+        "grpc_service"
       ]
     },
     "public.subscription_protocol": {

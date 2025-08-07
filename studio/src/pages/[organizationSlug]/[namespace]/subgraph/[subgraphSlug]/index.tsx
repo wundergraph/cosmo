@@ -141,36 +141,37 @@ const SubgraphOverviewPage = () => {
             <dt className="text-sm text-muted-foreground">Type</dt>
             <dd className="flex gap-x-2">
               <div className="flex flex-shrink-0 gap-x-2">
-                {subgraph.type === SubgraphType.PLUGIN ? (
-                  <Badge variant="outline">Plugin</Badge>
-                ) : subgraph.type === SubgraphType.GRPC_SUBGRAPH ? (
-                  <Badge variant="outline">GRPC</Badge>
+                {subgraph.type === SubgraphType.GRPC_PLUGIN ? (
+                  <Badge variant="outline">GRPC_Plugin</Badge>
+                ) : subgraph.type === SubgraphType.GRPC_SERVICE ? (
+                  <Badge variant="outline">GRPC_Service</Badge>
                 ) : (
                   <Badge variant="outline">Standard</Badge>
                 )}
               </div>
             </dd>
           </div>
-          {subgraph.type === SubgraphType.PLUGIN && subgraph.pluginData && (
-            <>
-              <div className="flex-start flex min-w-[60px] flex-col gap-2">
-                <dt className="text-sm text-muted-foreground">Version</dt>
-                <dd className="flex gap-x-2">
-                  <p className="text-sm">{subgraph.pluginData.version}</p>
-                </dd>
-              </div>
-              <div className="flex-start flex min-w-[100px] flex-col gap-2">
-                <dt className="text-sm text-muted-foreground">Platforms</dt>
-                <dd className="flex gap-x-1">
-                  {subgraph.pluginData.platforms.map((platform) => (
-                    <Badge variant="secondary" key={platform}>
-                      {platform}
-                    </Badge>
-                  ))}
-                </dd>
-              </div>
-            </>
-          )}
+          {subgraph.type === SubgraphType.GRPC_PLUGIN &&
+            subgraph.pluginData && (
+              <>
+                <div className="flex-start flex min-w-[60px] flex-col gap-2">
+                  <dt className="text-sm text-muted-foreground">Version</dt>
+                  <dd className="flex gap-x-2">
+                    <p className="text-sm">{subgraph.pluginData.version}</p>
+                  </dd>
+                </div>
+                <div className="flex-start flex min-w-[100px] flex-col gap-2">
+                  <dt className="text-sm text-muted-foreground">Platforms</dt>
+                  <dd className="flex gap-x-1">
+                    {subgraph.pluginData.platforms.map((platform) => (
+                      <Badge variant="secondary" key={platform}>
+                        {platform}
+                      </Badge>
+                    ))}
+                  </dd>
+                </div>
+              </>
+            )}
 
           <div className="flex-start flex flex-col gap-2 ">
             <dt className="text-sm text-muted-foreground">Last Published</dt>

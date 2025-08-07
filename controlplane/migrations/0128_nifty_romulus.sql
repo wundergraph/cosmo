@@ -1,4 +1,4 @@
-CREATE TYPE "public"."subgraph_type" AS ENUM('standard', 'plugin', 'grpc-subgraph');--> statement-breakpoint
+CREATE TYPE "public"."subgraph_type" AS ENUM('standard', 'grpc_plugin', 'grpc_service');--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "plugin_image_versions" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"schema_version_id" uuid NOT NULL,

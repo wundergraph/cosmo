@@ -216,7 +216,7 @@ const SubgraphDetails = ({
               {getIcon(subgraph.id, subgraph.isFeatureSubgraph)}
             </div>
             <span>{subgraph.name}</span>
-            {subgraph.subgraphType === SubgraphType.PLUGIN && (
+            {subgraph.subgraphType === SubgraphType.GRPC_PLUGIN && (
               <div className="mt-[2px]">
                 <Tooltip>
                   <TooltipTrigger>

@@ -72,7 +72,7 @@ describe('ValidateAndFetchPluginData', () => {
       name: pluginName,
       namespace: DEFAULT_NAMESPACE,
       labels: [label],
-      type: SubgraphType.PLUGIN,
+      type: SubgraphType.GRPC_PLUGIN,
     });
     expect(createResponse.response?.code).toBe(EnumStatusCode.OK);
 
@@ -81,7 +81,7 @@ describe('ValidateAndFetchPluginData', () => {
       name: pluginName,
       namespace: DEFAULT_NAMESPACE,
       schema: 'type Query { hello: String! }',
-      type: SubgraphType.PLUGIN,
+      type: SubgraphType.GRPC_PLUGIN,
       proto: {
         schema: pluginSchema,
         mappings: pluginMappings,
@@ -219,7 +219,7 @@ describe('ValidateAndFetchPluginData', () => {
       name: pluginName,
       namespace: DEFAULT_NAMESPACE,
       labels: [label],
-      type: SubgraphType.PLUGIN,
+      type: SubgraphType.GRPC_PLUGIN,
     });
     expect(createResponse.response?.code).toBe(EnumStatusCode.OK);
 
@@ -418,7 +418,7 @@ describe('ValidateAndFetchPluginData', () => {
       name: pluginName,
       namespace: DEFAULT_NAMESPACE,
       labels: [label],
-      type: SubgraphType.PLUGIN,
+      type: SubgraphType.GRPC_PLUGIN,
     });
     expect(createResponse.response?.code).toBe(EnumStatusCode.OK);
 
@@ -427,7 +427,7 @@ describe('ValidateAndFetchPluginData', () => {
       name: pluginName,
       namespace: DEFAULT_NAMESPACE,
       schema: 'type Query { hello: String! }',
-      type: SubgraphType.PLUGIN,
+      type: SubgraphType.GRPC_PLUGIN,
       proto: {
         schema: pluginSchema,
         mappings: pluginMappings,

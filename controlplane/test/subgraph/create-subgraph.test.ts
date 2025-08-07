@@ -549,7 +549,7 @@ describe('Create subgraph tests', () => {
       const createPluginSubgraphResp = await client.createFederatedSubgraph({
         name: pluginName,
         namespace: DEFAULT_NAMESPACE,
-        type: SubgraphType.PLUGIN,
+        type: SubgraphType.GRPC_PLUGIN,
         labels: [pluginLabel],
       });
 
@@ -564,7 +564,7 @@ describe('Create subgraph tests', () => {
       expect(getSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
       expect(getSubgraphResp.graph).toBeDefined();
       expect(getSubgraphResp.graph?.name).toBe(pluginName);
-      expect(getSubgraphResp.graph?.type).toBe(SubgraphType.PLUGIN);
+      expect(getSubgraphResp.graph?.type).toBe(SubgraphType.GRPC_PLUGIN);
 
       await server.close();
     });
@@ -581,7 +581,7 @@ describe('Create subgraph tests', () => {
       const createPluginSubgraphResp = await client.createFederatedSubgraph({
         name: pluginName,
         namespace: DEFAULT_NAMESPACE,
-        type: SubgraphType.PLUGIN,
+        type: SubgraphType.GRPC_PLUGIN,
         labels: [pluginLabel],
       });
 
@@ -605,7 +605,7 @@ describe('Create subgraph tests', () => {
         const createPluginSubgraphResp = await client.createFederatedSubgraph({
           name: pluginName,
           namespace: DEFAULT_NAMESPACE,
-          type: SubgraphType.PLUGIN,
+          type: SubgraphType.GRPC_PLUGIN,
           labels: [pluginLabel],
         });
 
@@ -619,7 +619,7 @@ describe('Create subgraph tests', () => {
       const createFourthPluginResp = await client.createFederatedSubgraph({
         name: fourthPluginName,
         namespace: DEFAULT_NAMESPACE,
-        type: SubgraphType.PLUGIN,
+        type: SubgraphType.GRPC_PLUGIN,
         labels: [fourthPluginLabel],
       });
 
@@ -653,7 +653,7 @@ describe('Create subgraph tests', () => {
       const createPluginSubgraphResp = await client.createFederatedSubgraph({
         name: sharedName,
         namespace: DEFAULT_NAMESPACE,
-        type: SubgraphType.PLUGIN,
+        type: SubgraphType.GRPC_PLUGIN,
         labels: [pluginLabel],
       });
 
@@ -679,7 +679,7 @@ describe('Create subgraph tests', () => {
       const createPluginSubgraphResp = await client.createFederatedSubgraph({
         name: sharedName,
         namespace: DEFAULT_NAMESPACE,
-        type: SubgraphType.PLUGIN,
+        type: SubgraphType.GRPC_PLUGIN,
         labels: [pluginLabel],
       });
 
@@ -722,7 +722,7 @@ describe('Create subgraph tests', () => {
         const createPluginSubgraphResp = await client.createFederatedSubgraph({
           name: pluginName,
           namespace: DEFAULT_NAMESPACE,
-          type: SubgraphType.PLUGIN,
+          type: SubgraphType.GRPC_PLUGIN,
           labels: [pluginLabel],
         });
 
@@ -760,7 +760,7 @@ describe('Create subgraph tests', () => {
       const createPluginSubgraphResp = await client.createFederatedSubgraph({
         name: pluginName,
         namespace: DEFAULT_NAMESPACE,
-        type: SubgraphType.PLUGIN,
+        type: SubgraphType.GRPC_PLUGIN,
         labels: [pluginLabel],
       });
 
@@ -783,7 +783,7 @@ describe('Create subgraph tests', () => {
       const createPluginSubgraphResp = await client.createFederatedSubgraph({
         name: pluginName,
         namespace: DEFAULT_NAMESPACE,
-        type: SubgraphType.PLUGIN,
+        type: SubgraphType.GRPC_PLUGIN,
         labels: [envLabel, teamLabel, typeLabel],
       });
 
@@ -806,7 +806,7 @@ describe('Create subgraph tests', () => {
         const createPluginResp = await client.createFederatedSubgraph({
           name: pluginName,
           namespace: DEFAULT_NAMESPACE,
-          type: SubgraphType.PLUGIN,
+          type: SubgraphType.GRPC_PLUGIN,
           labels: [pluginLabel],
         });
 
@@ -820,7 +820,7 @@ describe('Create subgraph tests', () => {
       const createExtraPluginResp = await client.createFederatedSubgraph({
         name: extraPluginName,
         namespace: DEFAULT_NAMESPACE,
-        type: SubgraphType.PLUGIN,
+        type: SubgraphType.GRPC_PLUGIN,
         labels: [extraPluginLabel],
       });
 

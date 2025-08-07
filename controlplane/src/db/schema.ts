@@ -213,7 +213,7 @@ export const websocketSubprotocolEnum = pgEnum('websocket_subprotocol', [
   'graphql-transport-ws',
 ] as const);
 
-export const subgraphTypeEnum = pgEnum('subgraph_type', ['standard', 'plugin', 'grpc-subgraph'] as const);
+export const subgraphTypeEnum = pgEnum('subgraph_type', ['standard', 'grpc_plugin', 'grpc_service'] as const);
 
 export const subgraphs = pgTable(
   'subgraphs', // subgraphs

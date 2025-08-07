@@ -27,7 +27,7 @@ async function createPluginSubgraph(client: any, name: string, namespace = 'defa
   const response = await client.createFederatedSubgraph({
     name,
     namespace,
-    type: SubgraphType.PLUGIN,
+    type: SubgraphType.GRPC_PLUGIN,
     labels: [pluginLabel],
   });
   expect(response.response?.code).toBe(EnumStatusCode.OK);
@@ -419,7 +419,7 @@ describe('Publish subgraph tests', () => {
         name: pluginName,
         namespace: 'default',
         schema: pluginSDL,
-        type: SubgraphType.PLUGIN,
+        type: SubgraphType.GRPC_PLUGIN,
         proto: validProtoRequest,
       });
 
@@ -432,7 +432,7 @@ describe('Publish subgraph tests', () => {
       });
 
       expect(getSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
-      expect(getSubgraphResponse.graph?.type).toBe(SubgraphType.PLUGIN);
+      expect(getSubgraphResponse.graph?.type).toBe(SubgraphType.GRPC_PLUGIN);
       expect(getSubgraphResponse.graph?.pluginData?.version).toBe(validProtoRequest.version);
       expect(getSubgraphResponse.graph?.pluginData?.platforms).toEqual(validProtoRequest.platforms);
 
@@ -452,7 +452,7 @@ describe('Publish subgraph tests', () => {
         name: pluginName,
         namespace: 'default',
         schema: pluginSDL,
-        type: SubgraphType.PLUGIN,
+        type: SubgraphType.GRPC_PLUGIN,
         proto: validProtoRequest,
         labels: [genUniqueLabel('plugin')],
       });
@@ -466,7 +466,7 @@ describe('Publish subgraph tests', () => {
       });
 
       expect(getSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
-      expect(getSubgraphResponse.graph?.type).toBe(SubgraphType.PLUGIN);
+      expect(getSubgraphResponse.graph?.type).toBe(SubgraphType.GRPC_PLUGIN);
       expect(getSubgraphResponse.graph?.pluginData?.version).toBe(validProtoRequest.version);
       expect(getSubgraphResponse.graph?.pluginData?.platforms).toEqual(validProtoRequest.platforms);
 
@@ -486,7 +486,7 @@ describe('Publish subgraph tests', () => {
         name: pluginName,
         namespace: 'default',
         schema: pluginSDL,
-        type: SubgraphType.PLUGIN,
+        type: SubgraphType.GRPC_PLUGIN,
         proto: validProtoRequest,
         labels: [genUniqueLabel('plugin')],
       });
@@ -513,7 +513,7 @@ describe('Publish subgraph tests', () => {
         name: subgraphName,
         namespace: 'default',
         schema: pluginSDL,
-        type: SubgraphType.PLUGIN,
+        type: SubgraphType.GRPC_PLUGIN,
         proto: validProtoRequest,
         labels: [genUniqueLabel('plugin')],
       });
@@ -564,7 +564,7 @@ describe('Publish subgraph tests', () => {
         name: pluginName,
         namespace: 'default',
         schema: pluginSDL,
-        type: SubgraphType.PLUGIN,
+        type: SubgraphType.GRPC_PLUGIN,
       });
 
       expect(publishResponse.response?.code).toBe(EnumStatusCode.ERR);
@@ -594,7 +594,7 @@ describe('Publish subgraph tests', () => {
         name: pluginName,
         namespace: 'default',
         schema: pluginSDL,
-        type: SubgraphType.PLUGIN,
+        type: SubgraphType.GRPC_PLUGIN,
         proto: incompleteProto,
       });
 
@@ -625,7 +625,7 @@ describe('Publish subgraph tests', () => {
         name: pluginName,
         namespace: 'default',
         schema: pluginSDL,
-        type: SubgraphType.PLUGIN,
+        type: SubgraphType.GRPC_PLUGIN,
         proto: incompleteProto,
       });
 
@@ -653,7 +653,7 @@ describe('Publish subgraph tests', () => {
         name: pluginName,
         namespace: 'default',
         schema: pluginSDL,
-        type: SubgraphType.PLUGIN,
+        type: SubgraphType.GRPC_PLUGIN,
         proto: invalidProto,
       });
 
@@ -682,7 +682,7 @@ describe('Publish subgraph tests', () => {
           name: pluginName,
           namespace: 'default',
           schema: pluginSDL,
-          type: SubgraphType.PLUGIN,
+          type: SubgraphType.GRPC_PLUGIN,
           proto: validProtoRequest,
           labels: [genUniqueLabel('plugin')],
         });
@@ -719,7 +719,7 @@ describe('Publish subgraph tests', () => {
         name: pluginName,
         namespace: 'default',
         schema: pluginSDL,
-        type: SubgraphType.PLUGIN,
+        type: SubgraphType.GRPC_PLUGIN,
         proto: validProtoRequest,
         labels: [genUniqueLabel('plugin')],
       });
@@ -751,7 +751,7 @@ describe('Publish subgraph tests', () => {
           name: pluginName,
           namespace: 'default',
           schema: pluginSDL,
-          type: SubgraphType.PLUGIN,
+          type: SubgraphType.GRPC_PLUGIN,
           proto: validProtoRequest,
         });
 
