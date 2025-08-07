@@ -519,7 +519,7 @@ describe('Publish subgraph tests', () => {
       });
 
       expect(publishResponse.response?.code).toBe(EnumStatusCode.ERR);
-      expect(publishResponse.response?.details).toContain(`Subgraph ${subgraphName} is not of type plugin`);
+      expect(publishResponse.response?.details).toContain(`Subgraph ${subgraphName} is not of type grpc_plugin`);
 
       await server.close();
     });
