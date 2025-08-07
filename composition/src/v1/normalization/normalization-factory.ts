@@ -289,6 +289,7 @@ import {
   INHERITABLE_DIRECTIVE_NAMES,
   INPUT_FIELD,
   INT_SCALAR,
+  INTERFACE_OBJECT,
   KEY,
   LINK,
   LINK_IMPORT,
@@ -1267,11 +1268,15 @@ export class NormalizationFactory {
         return;
       }
       this.updateCompositeOutputDataByNode(node, parentData, extensionType);
-      this.addConcreteTypeNamesForImplementedInterfaces(parentData.implementedInterfaceTypeNames, typeName);
+      if (!directivesByDirectiveName.has(INTERFACE_OBJECT)) {
+        this.addConcreteTypeNamesForImplementedInterfaces(parentData.implementedInterfaceTypeNames, typeName);
+      }
       return;
     }
     const implementedInterfaceTypeNames = this.extractImplementedInterfaceTypeNames(node, new Set<string>());
-    this.addConcreteTypeNamesForImplementedInterfaces(implementedInterfaceTypeNames, typeName);
+    if (!directivesByDirectiveName.has(INTERFACE_OBJECT)) {
+      this.addConcreteTypeNamesForImplementedInterfaces(implementedInterfaceTypeNames, typeName);
+    }
     const newParentData: ObjectDefinitionData = {
       configureDescriptionDataBySubgraphName: new Map<string, ConfigureDescriptionData>(),
       directivesByDirectiveName,

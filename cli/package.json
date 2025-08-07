@@ -1,6 +1,6 @@
 {
   "name": "wgc",
-  "version": "0.89.0",
+  "version": "0.89.2",
   "description": "The official CLI tool to manage the GraphQL Federation Platform Cosmo",
   "type": "module",
   "main": "dist/src/index.js",
@@ -102,7 +102,7 @@
     "prettier": "^3.5.2",
     "tsx": "^4.19.4",
     "typescript": "5.5.2",
-    "vitest": "^3.1.2"
+    "vitest": "^3.2.4"
   },
   "gitHead": "c37aed755e1b19ed91d30f9b5f7041e15c56901a"
 }

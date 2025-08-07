@@ -1,6 +1,6 @@
 {
   "name": "studio",
-  "version": "0.123.0",
+  "version": "0.123.2",
   "private": true,
   "license": "Apache-2.0",
   "description": "WunderGraph Cosmo Studio",
@@ -141,6 +141,6 @@
     "postcss": "8.4.38",
     "prettier-plugin-tailwindcss": "^0.5.6",
     "typescript": "5.5.2",
-    "vitest": "^3.1.2"
+    "vitest": "^3.2.4"
   }
 }
