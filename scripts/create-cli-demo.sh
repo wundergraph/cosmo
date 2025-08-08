@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -e
 
 # Create demo using the published CLI
@@ -6,7 +6,14 @@ set -e
 
 . ./scripts/configurations/local.sh
 
-npm install -g wgc@latest
+# Check if wgc is available, install locally if not
+if ! command -v wgc &> /dev/null; then
+  echo "wgc not found, installing locally..."
+  export NPM_CONFIG_PREFIX="${NPM_CONFIG_PREFIX:-$HOME/.npm-global}"
+  export PATH="$NPM_CONFIG_PREFIX/bin:$PATH"
+  mkdir -p "$NPM_CONFIG_PREFIX"
+  npm install -g --prefix "$NPM_CONFIG_PREFIX" wgc@latest
+fi
 
 wgc federated-graph create mygraph --namespace default --label-matcher team=A,team=B --routing-url http://localhost:3002/graphql
 

@@ -422,7 +422,7 @@ clickhouse:
     password: 'changeme'
   initdbScripts:
     db-init.sh: |
-      #!/bin/bash
+      #!/usr/bin/env bash
       set -e
       clickhouse-client --user $CLICKHOUSE_ADMIN_USER --password $CLICKHOUSE_ADMIN_PASSWORD -n <<-EOSQL
         CREATE DATABASE IF NOT EXISTS cosmo;
