@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 # Create and publish a demo federated graph based on the subgraphs in the demo folder
 
