@@ -135,8 +135,8 @@ github.com/iancoleman/strcase v0.3.0 h1:nTXanmYxhfFAMjZL34Ov6gkzEsSJZ5DbhxWjvSAS
 github.com/iancoleman/strcase v0.3.0/go.mod h1:iwCmte+B7n89clKwxIoIXy/HfoL7AsD47ZCWhYzw7ho=
 github.com/jensneuse/abstractlogger v0.0.4 h1:sa4EH8fhWk3zlTDbSncaWKfwxYM8tYSlQ054ETLyyQY=
 github.com/jensneuse/abstractlogger v0.0.4/go.mod h1:6WuamOHuykJk8zED/R0LNiLhWR6C7FIAo43ocUEB3mo=
-github.com/jensneuse/byte-template v0.0.0-20231025215717-69252eb3ed56 h1:wo26fh6a6Za0cOMZIopD2sfH/kq83SJ89ixUWl7pCWc=
-github.com/jensneuse/byte-template v0.0.0-20231025215717-69252eb3ed56/go.mod h1:0D5r/VSW6D/o65rKLL9xk7sZxL2+oku2HvFPYeIMFr4=
+github.com/jensneuse/byte-template v0.0.0-20200214152254-4f3cf06e5c68 h1:E80wOd3IFQcoBxLkAUpUQ3BoGrZ4DxhQdP21+HH1s6A=
+github.com/jensneuse/byte-template v0.0.0-20200214152254-4f3cf06e5c68/go.mod h1:0D5r/VSW6D/o65rKLL9xk7sZxL2+oku2HvFPYeIMFr4=
 github.com/jensneuse/diffview v1.0.0 h1:4b6FQJ7y3295JUHU3tRko6euyEboL825ZsXeZZM47Z4=
 github.com/jensneuse/diffview v1.0.0/go.mod h1:i6IacuD8LnEaPuiyzMHA+Wfz5mAuycMOf3R/orUY9y4=
 github.com/jhump/protoreflect v1.15.1 h1:HUMERORf3I3ZdX05WaQ6MIpd/NJ434hTp5YiKgfCL6c=
@@ -290,8 +290,8 @@ github.com/vektah/gqlparser/v2 v2.5.16 h1:1gcmLTvs3JLKXckwCwlUagVn/IlV2bwqle0vJ0
 github.com/vektah/gqlparser/v2 v2.5.16/go.mod h1:1lz1OeCqgQbQepsGxPVywrjdBHW2T08PUS3pJqepRww=
 github.com/wundergraph/astjson v0.0.0-20250106123708-be463c97e083 h1:8/D7f8gKxTBjW+SZK4mhxTTBVpxcqeBgWF1Rfmltbfk=
 github.com/wundergraph/astjson v0.0.0-20250106123708-be463c97e083/go.mod h1:eOTL6acwctsN4F3b7YE+eE2t8zcJ/doLm9sZzsxxxrE=
-github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.218.0.20250808094708-42a4532af562 h1:P4XqNTrIUj80hSghh3NpiDrShQXbQbcrEEvTS6QveNY=
-github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.218.0.20250808094708-42a4532af562/go.mod h1:DnYY1alnsgzkanSwbFiFIdXKOuf8dHQWQ2P4BzTc6aI=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.219 h1:caSsQXPHNsFU897BFCfZftpexIxcz12u1785AcREWHE=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.219/go.mod h1:DnYY1alnsgzkanSwbFiFIdXKOuf8dHQWQ2P4BzTc6aI=
 github.com/yosida95/uritemplate/v3 v3.0.2 h1:Ed3Oyj9yrmi9087+NczuL5BwkIc4wvTb5zIM+UJPGz4=
 github.com/yosida95/uritemplate/v3 v3.0.2/go.mod h1:ILOh0sOhIJR3+L/8afwt/kE++YT040gmv5BQTMR2HP4=
 github.com/yuin/gopher-lua v1.1.1 h1:kYKnWBjvbNP4XLT3+bPEwAXJx262OhaHDWDVOPjL46M=

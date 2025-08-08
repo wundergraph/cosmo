@@ -31,7 +31,7 @@ require (
 	github.com/tidwall/gjson v1.18.0
 	github.com/tidwall/sjson v1.2.5
 	github.com/twmb/franz-go v1.16.1
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.218.0.20250808094708-42a4532af562
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.219
 	// Do not upgrade, it renames attributes we rely on
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1
 	go.opentelemetry.io/contrib/propagators/b3 v1.23.0
@@ -113,7 +113,7 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/hashicorp/yamux v0.1.1 // indirect
-	github.com/jensneuse/byte-template v0.0.0-20231025215717-69252eb3ed56 // indirect
+	github.com/jensneuse/byte-template v0.0.0-20200214152254-4f3cf06e5c68 // indirect
 	github.com/kingledion/go-tools v0.6.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.8 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
