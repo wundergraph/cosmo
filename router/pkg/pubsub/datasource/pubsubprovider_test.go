@@ -239,19 +239,20 @@ func TestProvider_Publish_WithHooks_HookError(t *testing.T) {
 		return nil, hookError
 	}
 
-	// Should not call Publish on adapter since hook fails
+	mockAdapter.On("Publish", mock.Anything, config, []StreamEvent(nil)).Return(nil)
+
+	// Should call Publish on adapter also if hook fails
 	provider := PubSubProvider{
 		Adapter: mockAdapter,
 		hooks: Hooks{
 			OnPublishEvents: []OnPublishEventsFn{testHook},
 		},
+		Logger: zap.NewNop(),
 	}
 	err := provider.Publish(context.Background(), config, events)
 
 	assert.Error(t, err)
 	assert.Equal(t, hookError, err)
-	// Assert that Publish was not called on the adapter
-	mockAdapter.AssertNotCalled(t, "Publish")
 }
 
 func TestProvider_Publish_WithHooks_AdapterError(t *testing.T) {
