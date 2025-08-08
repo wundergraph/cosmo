@@ -5,12 +5,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/cespare/xxhash/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/pubsubtest"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
@@ -33,11 +35,13 @@ func TestRedisEngineDataSourceFactory(t *testing.T) {
 // TestEngineDataSourceFactoryWithMockAdapter tests the EngineDataSourceFactory with a mocked adapter
 func TestEngineDataSourceFactoryWithMockAdapter(t *testing.T) {
 	// Create mock adapter
-	mockAdapter := NewMockAdapter(t)
+	mockAdapter := datasource.NewMockProvider(t)
 
 	// Configure mock expectations for Publish
-	mockAdapter.On("Publish", mock.Anything, mock.MatchedBy(func(event PublishEventConfiguration) bool {
+	mockAdapter.On("Publish", mock.Anything, mock.MatchedBy(func(event *PublishEventConfiguration) bool {
 		return event.ProviderID() == "test-provider" && event.Channel == "test-channel"
+	}), mock.MatchedBy(func(events []datasource.StreamEvent) bool {
+		return len(events) == 1 && strings.EqualFold(string(events[0].GetData()), `{"test":"data"}`)
 	})).Return(nil)
 
 	// Create the data source with mock adapter
@@ -67,7 +71,7 @@ func TestEngineDataSourceFactoryWithMockAdapter(t *testing.T) {
 // TestEngineDataSourceFactory_GetResolveDataSource_WrongType tests the EngineDataSourceFactory with a mocked adapter
 func TestEngineDataSourceFactory_GetResolveDataSource_WrongType(t *testing.T) {
 	// Create mock adapter
-	mockAdapter := NewMockAdapter(t)
+	mockAdapter := datasource.NewMockProvider(t)
 
 	// Create the data source with mock adapter
 	pubsub := &EngineDataSourceFactory{
@@ -210,7 +214,7 @@ func TestRedisEngineDataSourceFactory_UniqueRequestID(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			factory := &EngineDataSourceFactory{
-				RedisAdapter: NewMockAdapter(t),
+				RedisAdapter: datasource.NewMockProvider(t),
 			}
 			source, err := factory.ResolveDataSourceSubscription()
 			require.NoError(t, err)

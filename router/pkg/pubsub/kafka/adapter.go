@@ -18,13 +18,8 @@ var (
 	errClientClosed = errors.New("client closed")
 )
 
-// Adapter defines the interface for Kafka adapter operations
-type Adapter interface {
-	Subscribe(ctx context.Context, event datasource.SubscriptionEventConfiguration, updater datasource.SubscriptionEventUpdater) error
-	Publish(ctx context.Context, event PublishEventConfiguration) error
-	Startup(ctx context.Context) error
-	Shutdown(ctx context.Context) error
-}
+// Ensure ProviderAdapter implements Adapter
+var _ datasource.Adapter = (*ProviderAdapter)(nil)
 
 // ProviderAdapter is a Kafka pubsub implementation.
 // It uses the franz-go Kafka client to consume and produce messages.
@@ -92,11 +87,15 @@ func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, u
 					headers[header.Key] = header.Value
 				}
 
-				updater.Update(&Event{
+				err := updater.Update([]datasource.StreamEvent{&Event{
 					Data:    r.Value,
 					Headers: headers,
 					Key:     r.Key,
-				})
+				}})
+				// if an error occurred while updating the subscription, should exit the poller
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -111,7 +110,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 	}
 
 	log := p.logger.With(
-		zap.String("provider_id", subConf.ProviderID()),
+		zap.String("provider_id", conf.ProviderID()),
 		zap.String("method", "subscribe"),
 		zap.Strings("topics", subConf.Topics),
 	)
@@ -145,8 +144,13 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 			if errors.Is(err, errClientClosed) || errors.Is(err, context.Canceled) {
 				log.Debug("poller canceled", zap.Error(err))
 			} else {
-				log.Error("poller error", zap.Error(err))
-
+				log.Error(
+					"poller error",
+					zap.Error(err),
+					zap.String("provider_id", conf.ProviderID()),
+					zap.String("provider_type", string(conf.ProviderType())),
+					zap.String("field_name", conf.RootFieldName()),
+				)
 			}
 			return
 		}
@@ -155,52 +159,71 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 	return nil
 }
 
-// Publish publishes the given event to the Kafka topic in a non-blocking way.
+// Publish publishes the given events to the Kafka topic in a non-blocking way.
 // Publish errors are logged and returned as a pubsub error.
-// The event is written with a dedicated write client.
-func (p *ProviderAdapter) Publish(ctx context.Context, event PublishEventConfiguration) error {
+// The events are written with a dedicated write client.
+func (p *ProviderAdapter) Publish(ctx context.Context, conf datasource.PublishEventConfiguration, events []datasource.StreamEvent) error {
+	pubConf, ok := conf.(*PublishEventConfiguration)
+	if !ok {
+		return datasource.NewError("invalid event type for Kafka adapter", nil)
+	}
+
 	log := p.logger.With(
-		zap.String("provider_id", event.ProviderID()),
+		zap.String("provider_id", conf.ProviderID()),
 		zap.String("method", "publish"),
-		zap.String("topic", event.Topic),
+		zap.String("topic", pubConf.Topic),
 	)
 
 	if p.writeClient == nil {
 		return datasource.NewError("kafka write client not initialized", nil)
 	}
 
-	log.Debug("publish", zap.ByteString("data", event.Event.Data))
-
-	var wg sync.WaitGroup
-	wg.Add(1)
-
-	var pErr error
-
-	headers := make([]kgo.RecordHeader, 0, len(event.Event.Headers))
-	for key, value := range event.Event.Headers {
-		headers = append(headers, kgo.RecordHeader{
-			Key:   key,
-			Value: value,
-		})
+	if len(events) == 0 {
+		return nil
 	}
 
-	p.writeClient.Produce(ctx, &kgo.Record{
-		Key:     event.Event.Key,
-		Topic:   event.Topic,
-		Value:   event.Event.Data,
-		Headers: headers,
-	}, func(record *kgo.Record, err error) {
-		defer wg.Done()
-		if err != nil {
-			pErr = err
+	log.Debug("publish", zap.Int("event_count", len(events)))
+
+	var wg sync.WaitGroup
+	wg.Add(len(events))
+
+	var pErr error
+	var errMutex sync.Mutex
+
+	for _, streamEvent := range events {
+		kafkaEvent, ok := streamEvent.(*Event)
+		if !ok {
+			return datasource.NewError("invalid event type for Kafka adapter", nil)
 		}
-	})
+
+		headers := make([]kgo.RecordHeader, 0, len(kafkaEvent.Headers))
+		for key, value := range kafkaEvent.Headers {
+			headers = append(headers, kgo.RecordHeader{
+				Key:   key,
+				Value: value,
+			})
+		}
+
+		p.writeClient.Produce(ctx, &kgo.Record{
+			Key:     kafkaEvent.Key,
+			Topic:   pubConf.Topic,
+			Value:   kafkaEvent.Data,
+			Headers: headers,
+		}, func(record *kgo.Record, err error) {
+			defer wg.Done()
+			if err != nil {
+				errMutex.Lock()
+				pErr = err
+				errMutex.Unlock()
+			}
+		})
+	}
 
 	wg.Wait()
 
 	if pErr != nil {
 		log.Error("publish error", zap.Error(pErr))
-		return datasource.NewError(fmt.Sprintf("error publishing to Kafka topic %s", event.Topic), pErr)
+		return datasource.NewError(fmt.Sprintf("error publishing to Kafka topic %s", pubConf.Topic), pErr)
 	}
 
 	return nil
