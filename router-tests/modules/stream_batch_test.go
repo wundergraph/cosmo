@@ -51,7 +51,7 @@ func TestBatchHook(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			topics := []string{"employeeUpdated"}
-			events.EnsureTopicExists(t, xEnv, time.Second, topics...)
+			events.KafkaEnsureTopicExists(t, xEnv, time.Second, topics...)
 
 			var subscriptionOne struct {
 				employeeUpdatedMyKafka struct {
@@ -136,7 +136,7 @@ func TestBatchHook(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			topics := []string{"employeeUpdated"}
-			events.EnsureTopicExists(t, xEnv, time.Second, topics...)
+			events.KafkaEnsureTopicExists(t, xEnv, time.Second, topics...)
 
 			var subscriptionOne struct {
 				employeeUpdatedMyKafka struct {

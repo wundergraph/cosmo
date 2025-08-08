@@ -22,7 +22,7 @@ func applyPublishEventHooks(ctx context.Context, cfg PublishEventConfiguration, 
 		var err error
 		currentEvents, err = hook(ctx, cfg, currentEvents)
 		if err != nil {
-			return nil, err
+			return currentEvents, err
 		}
 	}
 	return currentEvents, nil
@@ -59,12 +59,23 @@ func (p *PubSubProvider) Publish(ctx context.Context, cfg PublishEventConfigurat
 		return p.Adapter.Publish(ctx, cfg, events)
 	}
 
-	processedEvents, err := applyPublishEventHooks(ctx, cfg, events, p.hooks.OnPublishEvents)
-	if err != nil {
-		return err
+	processedEvents, hooksErr := applyPublishEventHooks(ctx, cfg, events, p.hooks.OnPublishEvents)
+	if hooksErr != nil {
+		p.Logger.Error(
+			"error applying publish event hooks",
+			zap.Error(hooksErr),
+			zap.String("provider_id", cfg.ProviderID()),
+			zap.String("provider_type_id", string(cfg.ProviderType())),
+			zap.String("field_name", cfg.RootFieldName()),
+		)
 	}
 
-	return p.Adapter.Publish(ctx, cfg, processedEvents)
+	errPublish := p.Adapter.Publish(ctx, cfg, processedEvents)
+	if errPublish != nil {
+		return errPublish
+	}
+
+	return hooksErr
 }
 
 func (p *PubSubProvider) SetHooks(hooks Hooks) {

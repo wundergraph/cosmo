@@ -1,6 +1,8 @@
 package module_test
 
 import (
+	"encoding/json"
+	"errors"
 	"testing"
 	"time"
 
@@ -86,7 +88,7 @@ func TestPublishHook(t *testing.T) {
 				LogLevel: zapcore.InfoLevel,
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			events.EnsureTopicExists(t, xEnv, time.Second, "employeeUpdated")
+			events.KafkaEnsureTopicExists(t, xEnv, time.Second, "employeeUpdated")
 			resOne := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `mutation { updateEmployeeMyKafka(employeeID: 3, update: {name: "name test"}) { success } }`,
 			})
@@ -101,6 +103,138 @@ func TestPublishHook(t *testing.T) {
 			header := records[0].Headers[0]
 			require.Equal(t, "x-test", header.Key)
 			require.Equal(t, []byte("test"), header.Value)
+		})
+	})
+
+	t.Run("Test kafka publish error is returned and messages sent", func(t *testing.T) {
+		t.Parallel()
+
+		cfg := config.Config{
+			Graph: config.Graph{},
+			Modules: map[string]interface{}{
+				"publishModule": stream_publish.PublishModule{
+					Callback: func(ctx core.StreamPublishEventHookContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
+						return events, core.NewStreamHookError(errors.New("test"), "test", 500, "INTERNAL_SERVER_ERROR", false)
+					},
+				},
+			},
+		}
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
+			EnableKafka:              true,
+			RouterOptions: []core.Option{
+				core.WithModulesConfig(cfg.Modules),
+				core.WithCustomModules(&stream_publish.PublishModule{}),
+			},
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			events.KafkaEnsureTopicExists(t, xEnv, time.Second, "employeeUpdated")
+			resOne := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `mutation { updateEmployeeMyKafka(employeeID: 3, update: {name: "name test"}) { success } }`,
+			})
+			require.JSONEq(t, `{"data": {"updateEmployeeMyKafka": {"success": false}}}`, resOne.Body)
+
+			requestLog := xEnv.Observer().FilterMessage("Publish Hook has been run")
+			assert.Len(t, requestLog.All(), 1)
+
+			records, err := events.ReadKafkaMessages(xEnv, time.Second, "employeeUpdated", 1)
+			require.NoError(t, err)
+			require.Len(t, records, 1)
+		})
+	})
+
+	t.Run("Test nats publish error is returned and messages sent", func(t *testing.T) {
+		t.Parallel()
+
+		cfg := config.Config{
+			Graph: config.Graph{},
+			Modules: map[string]interface{}{
+				"publishModule": stream_publish.PublishModule{
+					Callback: func(ctx core.StreamPublishEventHookContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
+						return events, core.NewStreamHookError(errors.New("test"), "test", 500, "INTERNAL_SERVER_ERROR", false)
+					},
+				},
+			},
+		}
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+			EnableNats:               true,
+			RouterOptions: []core.Option{
+				core.WithModulesConfig(cfg.Modules),
+				core.WithCustomModules(&stream_publish.PublishModule{}),
+			},
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			firstSub, err := xEnv.NatsConnectionDefault.SubscribeSync(xEnv.GetPubSubName("employeeUpdatedMyNats.3"))
+			require.NoError(t, err)
+			t.Cleanup(func() {
+				_ = firstSub.Unsubscribe()
+			})
+			require.NoError(t, xEnv.NatsConnectionDefault.Flush())
+			resOne := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `mutation UpdateEmployeeNats($update: UpdateEmployeeInput!) {
+							updateEmployeeMyNats(id: 3, update: $update) {success}
+						}`,
+				Variables: json.RawMessage(`{"update":{"name":"Stefan Avramovic","email":"avramovic@wundergraph.com"}}`),
+			})
+			assert.JSONEq(t, `{"data": {"updateEmployeeMyNats": {"success": false}}}`, resOne.Body)
+
+			requestLog := xEnv.Observer().FilterMessage("Publish Hook has been run")
+			assert.Len(t, requestLog.All(), 1)
+
+			msgOne, err := firstSub.NextMsg(5 * time.Second)
+			require.NoError(t, err)
+			require.Equal(t, xEnv.GetPubSubName("employeeUpdatedMyNats.3"), msgOne.Subject)
+			require.Equal(t, `{"id":3,"update":{"name":"Stefan Avramovic","email":"avramovic@wundergraph.com"}}`, string(msgOne.Data))
+			require.NoError(t, err)
+		})
+	})
+
+	t.Run("Test redis publish error is returned and messages sent", func(t *testing.T) {
+		t.Parallel()
+
+		cfg := config.Config{
+			Graph: config.Graph{},
+			Modules: map[string]interface{}{
+				"publishModule": stream_publish.PublishModule{
+					Callback: func(ctx core.StreamPublishEventHookContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
+						return events, core.NewStreamHookError(errors.New("test"), "test", 500, "INTERNAL_SERVER_ERROR", false)
+					},
+				},
+			},
+		}
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsRedisJSONTemplate,
+			EnableRedis:              true,
+			RouterOptions: []core.Option{
+				core.WithModulesConfig(cfg.Modules),
+				core.WithCustomModules(&stream_publish.PublishModule{}),
+			},
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			resOne := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `mutation { updateEmployeeMyKafka(employeeID: 3, update: {name: "name test"}) { success } }`,
+			})
+			require.JSONEq(t, `{"data": {"updateEmployeeMyKafka": {"success": false}}}`, resOne.Body)
+
+			requestLog := xEnv.Observer().FilterMessage("Publish Hook has been run")
+			assert.Len(t, requestLog.All(), 1)
+
+			records, err := events.ReadKafkaMessages(xEnv, time.Second, "employeeUpdated", 1)
+			require.NoError(t, err)
+			require.Len(t, records, 1)
 		})
 	})
 }

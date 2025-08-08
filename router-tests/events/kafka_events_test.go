@@ -73,7 +73,7 @@ func TestKafkaEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			events.EnsureTopicExists(t, xEnv, KafkaWaitTimeout, topics...)
+			events.KafkaEnsureTopicExists(t, xEnv, KafkaWaitTimeout, topics...)
 
 			var subscriptionOne struct {
 				employeeUpdatedMyKafka struct {
@@ -129,7 +129,7 @@ func TestKafkaEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			events.EnsureTopicExists(t, xEnv, KafkaWaitTimeout, topics...)
+			events.KafkaEnsureTopicExists(t, xEnv, KafkaWaitTimeout, topics...)
 
 			var subscriptionOne struct {
 				employeeUpdatedMyKafka struct {
@@ -203,7 +203,7 @@ func TestKafkaEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			events.EnsureTopicExists(t, xEnv, KafkaWaitTimeout, topics...)
+			events.KafkaEnsureTopicExists(t, xEnv, KafkaWaitTimeout, topics...)
 
 			var subscriptionOne struct {
 				employeeUpdatedMyKafka struct {
@@ -276,7 +276,7 @@ func TestKafkaEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			events.EnsureTopicExists(t, xEnv, KafkaWaitTimeout, topics...)
+			events.KafkaEnsureTopicExists(t, xEnv, KafkaWaitTimeout, topics...)
 
 			var subscriptionOne struct {
 				employeeUpdatedMyKafka struct {
@@ -365,7 +365,7 @@ func TestKafkaEvents(t *testing.T) {
 				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Millisecond * 100
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			events.EnsureTopicExists(t, xEnv, KafkaWaitTimeout, topics...)
+			events.KafkaEnsureTopicExists(t, xEnv, KafkaWaitTimeout, topics...)
 
 			var subscriptionOne struct {
 				employeeUpdatedMyKafka struct {
@@ -430,7 +430,7 @@ func TestKafkaEvents(t *testing.T) {
 					core.WithMultipartHeartbeatInterval(multipartHeartbeatInterval),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
-				events.EnsureTopicExists(t, xEnv, KafkaWaitTimeout, topics...)
+				events.KafkaEnsureTopicExists(t, xEnv, KafkaWaitTimeout, topics...)
 
 				subscribePayload := []byte(`{"query":"subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename surname } }}"}`)
 
@@ -496,7 +496,7 @@ func TestKafkaEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			events.EnsureTopicExists(t, xEnv, KafkaWaitTimeout, topics...)
+			events.KafkaEnsureTopicExists(t, xEnv, KafkaWaitTimeout, topics...)
 
 			subscribePayload := []byte(`{"query":"subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename surname } }}"}`)
 
@@ -561,7 +561,7 @@ func TestKafkaEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			events.EnsureTopicExists(t, xEnv, KafkaWaitTimeout, topics...)
+			events.KafkaEnsureTopicExists(t, xEnv, KafkaWaitTimeout, topics...)
 
 			subscribePayload := []byte(`{"query":"subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename surname } }}"}`)
 
@@ -671,7 +671,7 @@ func TestKafkaEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			events.EnsureTopicExists(t, xEnv, KafkaWaitTimeout, topics...)
+			events.KafkaEnsureTopicExists(t, xEnv, KafkaWaitTimeout, topics...)
 
 			type subscriptionPayload struct {
 				Data struct {
@@ -738,7 +738,7 @@ func TestKafkaEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			events.EnsureTopicExists(t, xEnv, KafkaWaitTimeout, topics...)
+			events.KafkaEnsureTopicExists(t, xEnv, KafkaWaitTimeout, topics...)
 
 			type subscriptionPayload struct {
 				Data struct {
@@ -805,7 +805,7 @@ func TestKafkaEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			events.EnsureTopicExists(t, xEnv, KafkaWaitTimeout, topics...)
+			events.KafkaEnsureTopicExists(t, xEnv, KafkaWaitTimeout, topics...)
 
 			type subscriptionPayload struct {
 				Data struct {
@@ -860,7 +860,7 @@ func TestKafkaEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			events.EnsureTopicExists(t, xEnv, KafkaWaitTimeout, topics...)
+			events.KafkaEnsureTopicExists(t, xEnv, KafkaWaitTimeout, topics...)
 
 			var subscriptionOne struct {
 				employeeUpdatedMyKafka struct {
@@ -931,7 +931,7 @@ func TestKafkaEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			events.EnsureTopicExists(t, xEnv, KafkaWaitTimeout, topics...)
+			events.KafkaEnsureTopicExists(t, xEnv, KafkaWaitTimeout, topics...)
 
 			// Send a mutation to trigger the first subscription
 			resOne := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -979,7 +979,7 @@ func TestKafkaEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			events.EnsureTopicExists(t, xEnv, KafkaWaitTimeout, topics...)
+			events.KafkaEnsureTopicExists(t, xEnv, KafkaWaitTimeout, topics...)
 
 			type subscriptionPayload struct {
 				Data struct {

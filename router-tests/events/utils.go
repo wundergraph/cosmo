@@ -2,15 +2,17 @@ package events
 
 import (
 	"context"
+	"net/url"
 	"testing"
 	"time"
 
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
 	"github.com/twmb/franz-go/pkg/kgo"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 )
 
-func EnsureTopicExists(t *testing.T, xEnv *testenv.Environment, timeout time.Duration, topics ...string) {
+func KafkaEnsureTopicExists(t *testing.T, xEnv *testenv.Environment, timeout time.Duration, topics ...string) {
 	// Delete topic for idempotency
 	deleteCtx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
@@ -66,4 +68,54 @@ func ReadKafkaMessages(xEnv *testenv.Environment, timeout time.Duration, topicNa
 	fetchs := client.PollRecords(ctx, msgs)
 
 	return fetchs.Records(), nil
+}
+
+func ProduceRedisMessage(t *testing.T, xEnv *testenv.Environment, topicName string, message string) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	parsedURL, err := url.Parse(xEnv.RedisHosts[0])
+	if err != nil {
+		t.Fatalf("Failed to parse Redis URL: %v", err)
+	}
+	var redisConn redis.UniversalClient
+	if !xEnv.RedisWithClusterMode {
+		redisConn = redis.NewClient(&redis.Options{
+			Addr: parsedURL.Host,
+		})
+	} else {
+		redisConn = redis.NewClusterClient(&redis.ClusterOptions{
+			Addrs: []string{parsedURL.Host},
+		})
+	}
+
+	intCmd := redisConn.Publish(ctx, xEnv.GetPubSubName(topicName), message)
+	require.NoError(t, intCmd.Err())
+}
+
+func ReadRedisMessages(t *testing.T, xEnv *testenv.Environment, channelName string) (<-chan *redis.Message, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	parsedURL, err := url.Parse(xEnv.RedisHosts[0])
+	if err != nil {
+		return nil, err
+	}
+	var redisConn redis.UniversalClient
+	if !xEnv.RedisWithClusterMode {
+		redisConn = redis.NewClient(&redis.Options{
+			Addr: parsedURL.Host,
+		})
+	} else {
+		redisConn = redis.NewClusterClient(&redis.ClusterOptions{
+			Addrs: []string{parsedURL.Host},
+		})
+	}
+	sub := redisConn.Subscribe(ctx, xEnv.GetPubSubName(channelName))
+	t.Cleanup(func() {
+		sub.Close()
+		redisConn.Close()
+	})
+
+	return sub.Channel(), nil
 }
