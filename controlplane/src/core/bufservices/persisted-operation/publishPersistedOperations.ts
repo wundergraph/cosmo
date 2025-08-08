@@ -52,7 +52,7 @@ export function publishPersistedOperations(
       };
     }
 
-    req.clientName = req.clientName.trim();
+    req.clientName = req.clientName ? req.clientName.trim() : '';
 
     if (!req.clientName) {
       return {
