@@ -85,7 +85,7 @@ describe('Persisted operations', (ctx) => {
     await server.close();
   });
 
-  test('Should not publish persisted operations without a client ID', async (testContext) => {
+  test('Should not publish persisted operations without a client name', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
     const fedGraphName = genID('fedGraph');
     await setupFederatedGraph(fedGraphName, client);
@@ -97,6 +97,35 @@ describe('Persisted operations', (ctx) => {
     });
 
     expect(publishOperationsResp.response?.code).not.toBe(EnumStatusCode.OK);
+    expect(publishOperationsResp.response?.details).toContain('Client name is required');
+
+    await server.close();
+  });
+
+  test('Should not publish persisted operations with a client name length < 3 or > 255', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname, chClient });
+    const fedGraphName = genID('fedGraph');
+    await setupFederatedGraph(fedGraphName, client);
+
+    let publishOperationsResp = await client.publishPersistedOperations({
+      fedGraphName,
+      namespace: 'default',
+      clientName: 'ab',
+      operations: [{ id: genID('hello'), contents: `query { hello }` }],
+    });
+
+    expect(publishOperationsResp.response?.code).not.toBe(EnumStatusCode.OK);
+    expect(publishOperationsResp.response?.details).toContain('Client name must be between 3 and 255 characters');
+
+    publishOperationsResp = await client.publishPersistedOperations({
+      fedGraphName,
+      namespace: 'default',
+      clientName: 'a'.repeat(256),
+      operations: [{ id: genID('hello'), contents: `query { hello }` }],
+    });
+
+    expect(publishOperationsResp.response?.code).not.toBe(EnumStatusCode.OK);
+    expect(publishOperationsResp.response?.details).toContain('Client name must be between 3 and 255 characters');
 
     await server.close();
   });
@@ -152,6 +181,43 @@ describe('Persisted operations', (ctx) => {
 
     const storageKeys = blobStorage.keys();
     expect(storageKeys.length).toBe(2);
+    const keyComponents = storageKeys[1].split('/');
+    const keyFilename = keyComponents.at(-1)!;
+    const keyBasename = keyFilename.split('.')[0];
+    expect(keyBasename).toBe(id);
+
+    const blobObject = await blobStorage.getObject({
+      key: storageKeys[1],
+    });
+    const text = await new Response(blobObject.stream).text();
+    expect(JSON.parse(text)).toEqual({ version: 1, body: query });
+    await server.close();
+  });
+
+  test('Should escape persistent operation client name before storing to blog storage', async (testContext) => {
+    const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+    const fedGraphName = genID('fedGraph');
+    await setupFederatedGraph(fedGraphName, client);
+
+    const id = genID('hello');
+    const query = `query { hello }`;
+    const clientName = 'foo/bar'; // Client name with a slash
+
+    const publishOperationsResp = await client.publishPersistedOperations({
+      fedGraphName,
+      namespace: 'default',
+      clientName,
+      operations: [{ id, contents: query }],
+    });
+
+    expect(publishOperationsResp.response?.code).toBe(EnumStatusCode.OK);
+
+    const storageKeys = blobStorage.keys();
+    expect(storageKeys.length).toBe(2);
+
+    // The client name should be escaped in the storage key
+    expect(storageKeys[1]).toContain(encodeURIComponent(clientName));
+
     const keyComponents = storageKeys[1].split('/');
     const keyFilename = keyComponents.at(-1)!;
     const keyBasename = keyFilename.split('.')[0];
