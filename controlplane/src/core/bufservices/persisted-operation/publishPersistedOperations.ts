@@ -51,6 +51,30 @@ export function publishPersistedOperations(
         operations: [],
       };
     }
+
+    req.clientName = req.clientName.trim();
+
+    if (!req.clientName) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: `Client name is required`,
+        },
+        operations: [],
+      };
+    }
+
+    // Validate client name. Min length is 3 and max length is 255.
+    if (req.clientName.length < 3 || req.clientName.length > 255) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: `Client name must be between 3 and 255 characters`,
+        },
+        operations: [],
+      };
+    }
+
     const organizationId = authContext.organizationId;
     const federatedGraphRepo = new FederatedGraphRepository(logger, opts.db, organizationId);
 
@@ -145,7 +169,8 @@ export function publishPersistedOperations(
       }
       const operationNames = extractOperationNames(operation.contents);
       operationsByOperationId.set(operationId, { hash: operationHash, operationNames });
-      const path = `${organizationId}/${federatedGraph.id}/operations/${req.clientName}/${operationId}.json`;
+      const clientName = encodeURIComponent(req.clientName);
+      const path = `${organizationId}/${federatedGraph.id}/operations/${clientName}/${operationId}.json`;
       updatedOperations.push({
         operationId,
         hash: operationHash,
