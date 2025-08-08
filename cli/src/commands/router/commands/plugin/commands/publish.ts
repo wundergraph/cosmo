@@ -1,5 +1,6 @@
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
+import { arch, platform } from 'node:os';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { splitLabel } from '@wundergraph/cosmo-shared';
@@ -12,6 +13,50 @@ import pc from 'picocolors';
 import { config, getBaseHeaders } from '../../../../../core/config.js';
 import { BaseCommandOptions } from '../../../../../core/types/types.js';
 
+function getDefaultPlatforms(): string[] {
+  const supportedPlatforms = ['linux/amd64', 'linux/arm64', 'darwin/amd64', 'darwin/arm64', 'windows/amd64'];
+  const defaultPlatforms = ['linux/amd64'];
+
+  // Get current OS and architecture
+  const currentPlatform = platform();
+  const currentArch = arch();
+
+  // Map Node.js platform/arch to Docker platform format
+  let dockerPlatform: string | null = null;
+
+  switch (currentPlatform) {
+    case 'linux': {
+      if (currentArch === 'x64') {
+        dockerPlatform = 'linux/amd64';
+      } else if (currentArch === 'arm64') {
+        dockerPlatform = 'linux/arm64';
+      }
+      break;
+    }
+    case 'darwin': {
+      if (currentArch === 'x64') {
+        dockerPlatform = 'darwin/amd64';
+      } else if (currentArch === 'arm64') {
+        dockerPlatform = 'darwin/arm64';
+      }
+      break;
+    }
+    case 'win32': {
+      if (currentArch === 'x64') {
+        dockerPlatform = 'windows/amd64';
+      }
+      break;
+    }
+  }
+
+  // Add user's platform to defaults if supported and not already included
+  if (dockerPlatform && supportedPlatforms.includes(dockerPlatform) && !defaultPlatforms.includes(dockerPlatform)) {
+    defaultPlatforms.push(dockerPlatform);
+  }
+
+  return defaultPlatforms;
+}
+
 export default (opts: BaseCommandOptions) => {
   const command = new Command('publish');
   command.description(
@@ -22,8 +67,8 @@ export default (opts: BaseCommandOptions) => {
   command.option('-n, --namespace [string]', 'The namespace of the plugin subgraph.');
   command.option(
     '--platform [platforms...]',
-    'The platforms used to build the image. Pass multiple platforms separated by spaces (e.g., --platform linux/amd64 linux/arm64). Supported formats: linux/amd64, linux/arm64, darwin/amd64, darwin/arm64, windows/amd64. Defaults to linux/amd64',
-    ['linux/amd64'],
+    'The platforms used to build the image. Pass multiple platforms separated by spaces (e.g., --platform linux/amd64 linux/arm64). Supported formats: linux/amd64, linux/arm64, darwin/amd64, darwin/arm64, windows/amd64. Defaults to linux/amd64 and includes your current platform if supported.',
+    getDefaultPlatforms(),
   );
   command.option(
     '--label [labels...]',
