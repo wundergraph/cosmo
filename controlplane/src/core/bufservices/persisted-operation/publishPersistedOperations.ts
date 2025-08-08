@@ -3,12 +3,12 @@ import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
-  PublishPersistedOperationsRequest,
-  PublishPersistedOperationsResponse,
   PublishedOperation,
   PublishedOperationStatus,
+  PublishPersistedOperationsRequest,
+  PublishPersistedOperationsResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { DocumentNode, buildASTSchema as graphQLBuildASTSchema, parse, validate } from 'graphql';
+import { buildASTSchema as graphQLBuildASTSchema, DocumentNode, parse, validate } from 'graphql';
 import { PublishedOperationData, UpdatedPersistedOperation } from '../../../types/index.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
@@ -130,20 +130,10 @@ export function publishPersistedOperations(
         };
       }
     }
+
     const operationsRepo = new OperationsRepository(opts.db, federatedGraph.id);
-    let clientId: string;
-    try {
-      clientId = await operationsRepo.registerClient(req.clientName, userId);
-    } catch (e: any) {
-      const message = e instanceof Error ? e.message : e.toString();
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `Could not register client "${req.clientName}": ${message}`,
-        },
-        operations: [],
-      };
-    }
+    const clientId = await operationsRepo.registerClient(req.clientName, userId);
+
     const operations: PublishedOperation[] = [];
     const updatedOperations: UpdatedPersistedOperation[] = [];
     // Retrieve the operations that have already been published

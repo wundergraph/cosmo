@@ -70,6 +70,8 @@ describe('Persisted operations', (ctx) => {
 
   test('Should be able to publish persisted operations', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     await setupFederatedGraph(fedGraphName, client);
 
@@ -81,12 +83,12 @@ describe('Persisted operations', (ctx) => {
     });
 
     expect(publishOperationsResp.response?.code).toBe(EnumStatusCode.OK);
-
-    await server.close();
   });
 
   test('Should not publish persisted operations without a client name', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     await setupFederatedGraph(fedGraphName, client);
 
@@ -98,12 +100,12 @@ describe('Persisted operations', (ctx) => {
 
     expect(publishOperationsResp.response?.code).not.toBe(EnumStatusCode.OK);
     expect(publishOperationsResp.response?.details).toContain('Client name is required');
-
-    await server.close();
   });
 
   test('Should not publish persisted operations with a client name length < 3 or > 255', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     await setupFederatedGraph(fedGraphName, client);
 
@@ -126,12 +128,12 @@ describe('Persisted operations', (ctx) => {
 
     expect(publishOperationsResp.response?.code).not.toBe(EnumStatusCode.OK);
     expect(publishOperationsResp.response?.details).toContain('Client name must be between 3 and 255 characters');
-
-    await server.close();
   });
 
   test('Should not publish persisted operations with invalid queries', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     await setupFederatedGraph(fedGraphName, client);
 
@@ -142,12 +144,12 @@ describe('Persisted operations', (ctx) => {
     });
 
     expect(publishOperationsResp.response?.code).not.toBe(EnumStatusCode.OK);
-
-    await server.close();
   });
 
   test('Should not publish persisted operations with an invalid federated graph name', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     await setupFederatedGraph(fedGraphName, client);
 
@@ -158,12 +160,12 @@ describe('Persisted operations', (ctx) => {
     });
 
     expect(publishOperationsResp.response?.code).not.toBe(EnumStatusCode.OK);
-
-    await server.close();
   });
 
   test('Should store persisted operations in blob storage', async (testContext) => {
     const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     await setupFederatedGraph(fedGraphName, client);
 
@@ -191,11 +193,12 @@ describe('Persisted operations', (ctx) => {
     });
     const text = await new Response(blobObject.stream).text();
     expect(JSON.parse(text)).toEqual({ version: 1, body: query });
-    await server.close();
   });
 
   test('Should escape persistent operation client name before storing to blog storage', async (testContext) => {
     const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     await setupFederatedGraph(fedGraphName, client);
 
@@ -228,11 +231,21 @@ describe('Persisted operations', (ctx) => {
     });
     const text = await new Response(blobObject.stream).text();
     expect(JSON.parse(text)).toEqual({ version: 1, body: query });
-    await server.close();
+
+    const clients = await client.getClients({
+      fedGraphName,
+      namespace: 'default',
+    });
+
+    expect(clients.response?.code).toBe(EnumStatusCode.OK);
+    expect(clients.clients).toHaveLength(1);
+    expect(clients.clients[0].name).toBe(clientName);
   });
 
   test('Should delete persisted operations from blob storage when the federated graph is deleted', async (testContext) => {
     const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     await setupFederatedGraph(fedGraphName, client);
 
@@ -255,7 +268,5 @@ describe('Persisted operations', (ctx) => {
     });
     expect(deleteFederatedGraphResp.response?.code).toBe(EnumStatusCode.OK);
     expect(blobStorage.keys().length).toBe(0);
-
-    await server.close();
   });
 });
