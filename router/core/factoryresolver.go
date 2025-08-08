@@ -627,7 +627,7 @@ func toGRPCConfiguration(config *nodev1.GRPCConfiguration, pluginsEnabled bool) 
 		QueryRPCs:        make(grpcdatasource.RPCConfigMap),
 		MutationRPCs:     make(grpcdatasource.RPCConfigMap),
 		SubscriptionRPCs: make(grpcdatasource.RPCConfigMap),
-		EntityRPCs:       make(map[string]grpcdatasource.EntityRPCConfig),
+		EntityRPCs:       make(map[string][]grpcdatasource.EntityRPCConfig),
 		Fields:           make(map[string]grpcdatasource.FieldMap),
 		EnumValues:       make(map[string][]grpcdatasource.EnumValueMapping),
 	}
@@ -649,14 +649,14 @@ func toGRPCConfiguration(config *nodev1.GRPCConfiguration, pluginsEnabled bool) 
 	}
 
 	for _, entity := range in.EntityMappings {
-		result.EntityRPCs[entity.Key] = grpcdatasource.EntityRPCConfig{
+		result.EntityRPCs[entity.TypeName] = append(result.EntityRPCs[entity.TypeName], grpcdatasource.EntityRPCConfig{
 			Key: entity.Key,
 			RPCConfig: grpcdatasource.RPCConfig{
 				RPC:      entity.Rpc,
 				Request:  entity.Request,
 				Response: entity.Response,
 			},
-		}
+		})
 	}
 
 	for _, field := range in.TypeFieldMappings {
