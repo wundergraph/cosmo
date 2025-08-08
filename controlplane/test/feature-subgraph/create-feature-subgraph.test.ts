@@ -313,7 +313,7 @@ describe('Create feature subgraph tests', () => {
       routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
       isFeatureSubgraph: true,
       baseSubgraphName,
-      labels: [label]
+      labels: [label],
     });
     expect(createFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
 
@@ -327,43 +327,114 @@ describe('Create feature subgraph tests', () => {
     await server.close();
   });
 
-  test.each([
-    'organization-admin',
-    'organization-developer',
-    'subgraph-admin',
-  ])('%s should be able to create feature subgraph', async (role) => {
-    const { client, server, authenticator, users } = await SetupTest({ dbname });
+  test('that an error is returned if a feature subgraph is used as a base subgraph', async () => {
+    const { client, server } = await SetupTest({ dbname });
 
-    const subgraphName = genID('subgraph');
+    const baseSubgraphName = genID('baseSubgraph');
     const featureSubgraphName = genID('featureSubgraph');
+    const secondFeatureSubgraphName = genID('secondFeatureSubgraph');
 
-    await createSubgraph(client, subgraphName, DEFAULT_SUBGRAPH_URL_ONE);
+    // Create the base subgraph
+    await createSubgraph(client, baseSubgraphName, DEFAULT_SUBGRAPH_URL_ONE);
 
-    authenticator.changeUserWithSuppliedContext({
-      ...users.adminAliceCompanyA,
-      rbac: createTestRBACEvaluator(createTestGroup({ role })),
-    });
-
-    const featureSubgraphResponse = await client.createFederatedSubgraph({
+    // Create the first feature subgraph
+    const firstFeatureSubgraphResponse = await client.createFederatedSubgraph({
       name: featureSubgraphName,
       routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
       isFeatureSubgraph: true,
-      baseSubgraphName: subgraphName,
+      baseSubgraphName,
+    });
+    expect(firstFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Try to create a second feature subgraph using the first feature subgraph as base
+    const secondFeatureSubgraphResponse = await client.createFederatedSubgraph({
+      name: secondFeatureSubgraphName,
+      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
+      isFeatureSubgraph: true,
+      baseSubgraphName: featureSubgraphName,
     });
 
-    expect(featureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
-
-    const getFeatureSubgraphResponse = await client.getSubgraphByName({
-      name: featureSubgraphName,
-    });
-
-    expect(getFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
-    expect(getFeatureSubgraphResponse.graph?.name).toBe(featureSubgraphName);
-    expect(getFeatureSubgraphResponse.graph?.routingURL).toBe(DEFAULT_SUBGRAPH_URL_TWO);
-    expect(getFeatureSubgraphResponse.graph?.isFeatureSubgraph).toBe(true);
+    expect(secondFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.ERR);
+    expect(secondFeatureSubgraphResponse.response?.details).toBe(
+      `Base subgraph "${featureSubgraphName}" is a feature subgraph. Feature subgraphs cannot have feature subgraphs as their base.`,
+    );
 
     await server.close();
   });
+
+  test('that an error is returned if a feature subgraph is used as a base subgraph when publishing directly', async () => {
+    const { client, server } = await SetupTest({ dbname });
+
+    const baseSubgraphName = genID('baseSubgraph');
+    const featureSubgraphName = genID('featureSubgraph');
+    const secondFeatureSubgraphName = genID('secondFeatureSubgraph');
+
+    // Create the base subgraph
+    await createSubgraph(client, baseSubgraphName, DEFAULT_SUBGRAPH_URL_ONE);
+
+    // Create and publish the first feature subgraph
+    const firstFeatureSubgraphResponse = await client.publishFederatedSubgraph({
+      name: featureSubgraphName,
+      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
+      isFeatureSubgraph: true,
+      baseSubgraphName,
+      schema: 'type Query { hello: String }',
+    });
+    expect(firstFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Try to create and publish a second feature subgraph using the first feature subgraph as base
+    const secondFeatureSubgraphResponse = await client.publishFederatedSubgraph({
+      name: secondFeatureSubgraphName,
+      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
+      isFeatureSubgraph: true,
+      baseSubgraphName: featureSubgraphName,
+      schema: 'type Query { world: String }',
+    });
+
+    expect(secondFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.ERR);
+    expect(secondFeatureSubgraphResponse.response?.details).toBe(
+      `Base subgraph "${featureSubgraphName}" is a feature subgraph. Feature subgraphs cannot have feature subgraphs as their base.`,
+    );
+
+    await server.close();
+  });
+
+  test.each(['organization-admin', 'organization-developer', 'subgraph-admin'])(
+    '%s should be able to create feature subgraph',
+    async (role) => {
+      const { client, server, authenticator, users } = await SetupTest({ dbname });
+
+      const subgraphName = genID('subgraph');
+      const featureSubgraphName = genID('featureSubgraph');
+
+      await createSubgraph(client, subgraphName, DEFAULT_SUBGRAPH_URL_ONE);
+
+      authenticator.changeUserWithSuppliedContext({
+        ...users.adminAliceCompanyA,
+        rbac: createTestRBACEvaluator(createTestGroup({ role })),
+      });
+
+      const featureSubgraphResponse = await client.createFederatedSubgraph({
+        name: featureSubgraphName,
+        routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
+        isFeatureSubgraph: true,
+        baseSubgraphName: subgraphName,
+      });
+
+      expect(featureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
+
+      const getFeatureSubgraphResponse = await client.getSubgraphByName({
+        name: featureSubgraphName,
+      });
+
+      expect(getFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
+      expect(getFeatureSubgraphResponse.graph?.name).toBe(featureSubgraphName);
+      expect(getFeatureSubgraphResponse.graph?.routingURL).toBe(DEFAULT_SUBGRAPH_URL_TWO);
+      expect(getFeatureSubgraphResponse.graph?.isFeatureSubgraph).toBe(true);
+
+      await server.close();
+    },
+  );
 
   test('subgraph-admin should be able to crete feature subgraph only on the allowed namespace', async (role) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname });
@@ -383,10 +454,12 @@ describe('Create feature subgraph tests', () => {
 
     authenticator.changeUserWithSuppliedContext({
       ...users.adminAliceCompanyA,
-      rbac: createTestRBACEvaluator(createTestGroup({
-        role: 'subgraph-admin',
-        namespaces: [getNamespaceResponse.namespace!.id],
-      })),
+      rbac: createTestRBACEvaluator(
+        createTestGroup({
+          role: 'subgraph-admin',
+          namespaces: [getNamespaceResponse.namespace!.id],
+        }),
+      ),
     });
 
     let featureSubgraphResponse = await client.createFederatedSubgraph({
