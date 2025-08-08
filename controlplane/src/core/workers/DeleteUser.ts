@@ -1,15 +1,14 @@
 import { PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
-import { ConnectionOptions, Job, JobsOptions, Queue, Worker } from 'bullmq';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { ConnectionOptions, Job, JobsOptions } from 'bullmq';
 import pino from 'pino';
-import * as schema from '../../db/schema.js';
 import { BlobStorage } from '../blobstorage/index.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import { UserRepository } from '../repositories/UserRepository.js';
 import Keycloak from '../services/Keycloak.js';
 import { PlatformWebhookService } from '../webhooks/PlatformWebhookService.js';
-import { IQueue, IWorker } from './Worker.js';
-import { DeleteOrganizationAuditLogsQueue } from './DeleteOrganizationAuditLogsWorker.js';
+import { DB } from '../../db/index.js';
+import { BaseQueue, BaseWorker } from './base/index.js';
+import { DeleteOrganizationAuditLogsQueue } from './DeleteOrganizationAuditLogs.js';
 
 const QueueName = 'user.delete';
 const WorkerName = 'DeleteUserWorker';
@@ -19,32 +18,9 @@ export interface DeleteUserInput {
   userEmail: string;
 }
 
-export class DeleteUserQueue implements IQueue<DeleteUserInput> {
-  private readonly queue: Queue<DeleteUserInput>;
-  private readonly logger: pino.Logger;
-
+export class DeleteUserQueue extends BaseQueue<DeleteUserInput> {
   constructor(log: pino.Logger, conn: ConnectionOptions) {
-    this.logger = log.child({ queue: QueueName });
-    this.queue = new Queue<DeleteUserInput>(QueueName, {
-      connection: conn,
-      defaultJobOptions: {
-        removeOnComplete: {
-          age: 90 * 86_400,
-        },
-        removeOnFail: {
-          age: 90 * 86_400,
-        },
-        attempts: 6,
-        backoff: {
-          type: 'exponential',
-          delay: 112_000,
-        },
-      },
-    });
-
-    this.queue.on('error', (err) => {
-      this.logger.error(err, 'Queue error');
-    });
+    super({ name: QueueName, log, conn });
   }
 
   public addJob(job: DeleteUserInput, opts?: Omit<JobsOptions, 'jobId'>) {
@@ -63,11 +39,11 @@ export class DeleteUserQueue implements IQueue<DeleteUserInput> {
   }
 }
 
-class DeleteUserWorker implements IWorker {
+export class DeleteUserWorker extends BaseWorker<DeleteUserInput> {
   constructor(
     private input: {
+      db: DB;
       redisConnection: ConnectionOptions;
-      db: PostgresJsDatabase<typeof schema>;
       logger: pino.Logger;
       keycloakClient: Keycloak;
       keycloakRealm: string;
@@ -76,10 +52,10 @@ class DeleteUserWorker implements IWorker {
       deleteOrganizationAuditLogsQueue: DeleteOrganizationAuditLogsQueue;
     },
   ) {
-    this.input.logger = input.logger.child({ worker: WorkerName });
+    super(WorkerName, QueueName, { connection: input.redisConnection, concurrency: 10 }, input.logger);
   }
 
-  public async handler(job: Job<DeleteUserInput>) {
+  protected async handler(job: Job<DeleteUserInput>) {
     try {
       const userRepo = new UserRepository(this.input.logger, this.input.db);
       const orgRepo = new OrganizationRepository(this.input.logger, this.input.db);
@@ -123,27 +99,3 @@ class DeleteUserWorker implements IWorker {
     }
   }
 }
-
-export const createDeleteUserWorker = (input: {
-  redisConnection: ConnectionOptions;
-  db: PostgresJsDatabase<typeof schema>;
-  logger: pino.Logger;
-  keycloakClient: Keycloak;
-  keycloakRealm: string;
-  blobStorage: BlobStorage;
-  platformWebhooks: PlatformWebhookService;
-  deleteOrganizationAuditLogsQueue: DeleteOrganizationAuditLogsQueue;
-}) => {
-  const log = input.logger.child({ worker: WorkerName });
-  const worker = new Worker<DeleteUserInput>(QueueName, (job) => new DeleteUserWorker(input).handler(job), {
-    connection: input.redisConnection,
-    concurrency: 10,
-  });
-  worker.on('stalled', (job) => {
-    log.warn({ joinId: job }, `Job stalled`);
-  });
-  worker.on('error', (err) => {
-    log.error(err, 'Worker error');
-  });
-  return worker;
-};
