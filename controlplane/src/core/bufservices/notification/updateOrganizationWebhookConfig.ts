@@ -80,6 +80,7 @@ export function updateOrganizationWebhookConfig(
       key: req.key,
       eventsMeta: req.eventsMeta,
       shouldUpdateKey: req.shouldUpdateKey,
+      headers: req.headers.map(h => ({ key: h.key, value: h.value })),
     });
 
     await auditLogRepo.addAuditLog({

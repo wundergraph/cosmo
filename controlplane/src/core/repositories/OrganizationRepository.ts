@@ -657,6 +657,7 @@ export class OrganizationRepository {
     key: string;
     events: string[];
     eventsMeta: EventMeta[];
+    headers?: Array<{ key: string; value: string }>;
   }): Promise<string> {
     return await this.db.transaction(async (tx) => {
       const createWebhookResult = await tx
@@ -666,6 +667,7 @@ export class OrganizationRepository {
           endpoint: input.endpoint,
           events: input.events,
           key: input.key,
+          headers: input.headers,
         })
         .returning();
 
@@ -829,6 +831,7 @@ export class OrganizationRepository {
       id: r.id,
       endpoint: r.endpoint ?? '',
       events: r.events ?? [],
+      headers: (r.headers as Array<{ key: string; value: string }>) ?? [],
     }));
   }
 
@@ -840,11 +843,13 @@ export class OrganizationRepository {
     events: string[];
     eventsMeta: EventMeta[];
     shouldUpdateKey: boolean;
+    headers?: Array<{ key: string; value: string }>;
   }) {
     await this.db.transaction(async (tx) => {
       const set: Partial<typeof organizationWebhooks.$inferInsert> = {
         endpoint: input.endpoint,
         events: input.events,
+        headers: input.headers,
       };
       if (input.shouldUpdateKey) {
         set.key = input.key;

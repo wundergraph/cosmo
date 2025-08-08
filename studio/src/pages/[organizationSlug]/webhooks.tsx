@@ -45,7 +45,7 @@ import { docsBaseURL } from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
 import { cn } from "@/lib/utils";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
-import { Pencil1Icon, PlusIcon, TrashIcon } from "@radix-ui/react-icons";
+import { Pencil1Icon, PlusIcon, TrashIcon, MinusIcon } from "@radix-ui/react-icons";
 import { useQuery, useMutation } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
@@ -146,6 +146,10 @@ const FormSchema = z.object({
     ),
   key: z.string().optional(),
   events: z.array(z.string()).optional(),
+  headers: z.array(z.object({
+    key: z.string().min(1, "Header name is required"),
+    value: z.string().min(1, "Header value is required"),
+  })).optional(),
 });
 
 type Input = z.infer<typeof FormSchema>;
@@ -162,6 +166,7 @@ const Webhook = ({
     id: string;
     endpoint: string;
     events: string[];
+    headers: Array<{ key: string; value: string }>;
   };
 }) => {
   const checkUserAccess = useCheckUserAccess();
@@ -177,6 +182,23 @@ const Webhook = ({
   );
 
   const [shouldUpdateKey, setShouldUpdateKey] = useState(false);
+  const [headers, setHeaders] = useState<Array<{ key: string; value: string }>>(
+    existing?.headers ?? []
+  );
+
+  const addHeader = () => {
+    setHeaders([...headers, { key: "", value: "" }]);
+  };
+
+  const removeHeader = (index: number) => {
+    setHeaders(headers.filter((_, i) => i !== index));
+  };
+
+  const updateHeader = (index: number, field: 'key' | 'value', value: string) => {
+    const newHeaders = [...headers];
+    newHeaders[index] = { ...newHeaders[index], [field]: value };
+    setHeaders(newHeaders);
+  };
 
   const form = useZodForm<Input>({
     mode: "onBlur",
@@ -211,6 +233,7 @@ const Webhook = ({
           key: data.key,
           events: data.events ?? [],
           eventsMeta: meta,
+          headers: headers.filter(h => h.key && h.value),
         },
         {
           onSuccess: (d) => {
@@ -244,6 +267,7 @@ const Webhook = ({
           events: data.events ?? [],
           eventsMeta: meta,
           shouldUpdateKey,
+          headers: headers.filter(h => h.key && h.value),
         },
         {
           onSuccess: (d) => {
@@ -279,6 +303,7 @@ const Webhook = ({
         if (!state) {
           setShouldUpdateKey(false);
           setMeta([]);
+          setHeaders(existing?.headers ?? []);
         }
         setIsOpen(state);
       }}
@@ -453,6 +478,49 @@ const Webhook = ({
                   </FormItem>
                 )}
               />
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <FormLabel className="text-base">Custom Headers</FormLabel>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addHeader}
+                  >
+                    <PlusIcon className="mr-2 h-4 w-4" />
+                    Add Header
+                  </Button>
+                </div>
+                <FormDescription>
+                  Add custom headers to be sent with each webhook request. For example, add an Authorization header for services that require authentication.
+                </FormDescription>
+                {headers.map((header, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <Input
+                      placeholder="Header name (e.g., Authorization)"
+                      value={header.key}
+                      onChange={(e) => updateHeader(index, 'key', e.target.value)}
+                      className="flex-1"
+                    />
+                    <Input
+                      placeholder="Header value (e.g., Bearer token)"
+                      value={header.value}
+                      onChange={(e) => updateHeader(index, 'value', e.target.value)}
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => removeHeader(index)}
+                    >
+                      <MinusIcon className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+
               <Button
                 className="mt-2"
                 type="submit"
@@ -541,7 +609,7 @@ const WebhooksPage: NextPageWithLayout = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.configs.map(({ id, endpoint, events }) => {
+            {data.configs.map(({ id, endpoint, events, headers }) => {
               return (
                 <TableRow key={id}>
                   <TableCell className="font-medium">{endpoint}</TableCell>
@@ -568,6 +636,7 @@ const WebhooksPage: NextPageWithLayout = () => {
                           id,
                           endpoint,
                           events,
+                          headers: headers ?? [],
                         }}
                       />
                       <DeleteWebhook id={id} refresh={() => refetch()} />

@@ -75,6 +75,7 @@ type Config = {
   allowedUserEvents?: string[];
   meta: PlainMessage<EventMeta>['meta'];
   type: 'webhook' | 'slack';
+  headers?: Array<{ key: string; value: string }>;
 };
 
 export class OrganizationWebhookService {
@@ -178,6 +179,7 @@ export class OrganizationWebhookService {
         allowedUserEvents: config?.events ?? [],
         type: 'webhook',
         meta,
+        headers: config?.headers as Array<{ key: string; value: string }> ?? [],
       });
     }
 
@@ -462,7 +464,7 @@ export class OrganizationWebhookService {
 
       // @TODO Use a queue to send the events
       try {
-        const res = await makeWebhookRequest(this.httpClient, data, config.url, config.key);
+        const res = await makeWebhookRequest(this.httpClient, data, config.url, config.key, config.headers);
         deliveryInfo.responseStatusCode = res.status;
         deliveryInfo.responseHeaders = res.headers;
         deliveryInfo.responseBody = JSON.stringify(res.data);

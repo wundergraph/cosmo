@@ -1225,11 +1225,17 @@ message Header{
   string value = 2;
 }
 
+message WebhookHeader {
+  string key = 1;
+  string value = 2;
+}
+
 message CreateOrganizationWebhookConfigRequest {
   string endpoint = 1;
   string key = 2;
   repeated string events = 3;
   repeated wg.cosmo.notifications.EventMeta events_meta = 4;
+  repeated WebhookHeader headers = 5;
 }
 
 message CreateOrganizationWebhookConfigResponse {
@@ -1244,6 +1250,7 @@ message GetOrganizationWebhookConfigsResponse {
     string id = 1;
     string endpoint = 2;
     repeated string events = 3;
+    repeated WebhookHeader headers = 4;
   }
   Response response = 1;
   repeated Config configs = 2;
@@ -1265,6 +1272,7 @@ message UpdateOrganizationWebhookConfigRequest {
   repeated string events = 4;
   repeated wg.cosmo.notifications.EventMeta events_meta = 5;
   bool should_update_key = 6;
+  repeated WebhookHeader headers = 7;
 }
 
 message UpdateOrganizationWebhookConfigResponse {
