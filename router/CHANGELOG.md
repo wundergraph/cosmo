@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.241.0](https://github.com/wundergraph/cosmo/compare/router@0.240.3...router@0.241.0) (2025-08-08)
+
+### Features
+
+* improve handling for entities with multiple keys ([#2123](https://github.com/wundergraph/cosmo/issues/2123)) ([5e1e6e8](https://github.com/wundergraph/cosmo/commit/5e1e6e82785b685e143c8962f41fe1062bf05207)) (@Noroth)
+
 ## [0.240.3](https://github.com/wundergraph/cosmo/compare/router@0.240.2...router@0.240.3) (2025-08-07)
 
 ### Bug Fixes
