@@ -2,6 +2,7 @@ import path from 'node:path';
 import { Command, program } from 'commander';
 import Spinner from 'ora';
 import { resolve } from 'pathe';
+import pc from 'picocolors';
 import { BaseCommandOptions } from '../../../../../core/types/types.js';
 import { renderResultTree } from '../helper.js';
 import {
@@ -63,6 +64,11 @@ export default (opts: BaseCommandOptions) => {
         'go module': goModulePath,
         time: formattedTime,
       });
+
+      console.log('');
+      console.log(
+        `  Now you can modify your implementation in src/main.go, then when you're ready to publish, run ${pc.bold('wgc router plugin publish')}.`,
+      );
     } catch (error: any) {
       renderResultTree(spinner, 'Plugin code generation failed!', false, pluginName, {
         output: pluginDir,

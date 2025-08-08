@@ -158,7 +158,10 @@ export default (opts: BaseCommandOptions) => {
       });
       console.log('');
       console.log(
-        `  Checkout the ${pc.bold(pc.italic('README.md'))} file for instructions on how to build and run your plugin.`,
+        `  You can modify your schema in src/schema.graphql, when you're ready to start implementing, run ${pc.bold('wgc router plugin generate')}.`,
+      );
+      console.log(
+        `  For more information, checkout the ${pc.bold(pc.italic('README.md'))} file for instructions on how to build and run your plugin.`,
       );
       console.log(`  Go to https://cosmo-docs.wundergraph.com/router/plugins to learn more about it.`);
       console.log('');

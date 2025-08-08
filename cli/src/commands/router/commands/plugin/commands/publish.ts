@@ -198,7 +198,7 @@ export default (opts: BaseCommandOptions) => {
       }
     }
 
-    const spinner = ora('Subgraph is being published...').start();
+    const spinner = ora('Plugin is being published...').start();
 
     const pluginDataResponse = await opts.client.platform.validateAndFetchPluginData(
       {
@@ -291,22 +291,29 @@ export default (opts: BaseCommandOptions) => {
 
     switch (resp.response?.code) {
       case EnumStatusCode.OK: {
-        spinner.succeed(resp?.hasChanged === false ? 'No new changes to publish.' : 'Subgraph published successfully.');
+        spinner.succeed(
+          resp?.hasChanged === false
+            ? 'No new changes to publish.'
+            : `Plugin ${pc.bold(pluginName)} published successfully.`,
+        );
+        console.log('');
+        console.log(
+          'To apply any new changes after this publication, update your plugin by modifying your schema (remember to generate), updating your implementation and then publishing again.',
+        );
         if (resp.proposalMatchMessage) {
           console.log(pc.yellow(`Warning: Proposal match failed`));
           console.log(pc.yellow(resp.proposalMatchMessage));
         }
-
         break;
       }
       case EnumStatusCode.ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL: {
-        spinner.fail(`Failed to publish subgraph "${pluginName}".`);
+        spinner.fail(`Failed to publish plugin "${pluginName}".`);
         console.log(pc.red(`Error: Proposal match failed`));
         console.log(pc.red(resp.proposalMatchMessage));
         break;
       }
       case EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED: {
-        spinner.warn('Subgraph published but with composition errors.');
+        spinner.warn('Plugin published but with composition errors.');
         if (resp.proposalMatchMessage) {
           console.log(pc.yellow(`Warning: Proposal match failed`));
           console.log(pc.yellow(resp.proposalMatchMessage));
@@ -349,7 +356,7 @@ export default (opts: BaseCommandOptions) => {
       }
       case EnumStatusCode.ERR_DEPLOYMENT_FAILED: {
         spinner.warn(
-          "Subgraph was published, but the updated composition hasn't been deployed, so it's not accessible to the router. Check the errors listed below for details.",
+          "Plugin was published, but the updated composition hasn't been deployed, so it's not accessible to the router. Check the errors listed below for details.",
         );
 
         const deploymentErrorsTable = new Table({
@@ -379,7 +386,7 @@ export default (opts: BaseCommandOptions) => {
         break;
       }
       default: {
-        spinner.fail(`Failed to publish subgraph "${pluginName}".`);
+        spinner.fail(`Failed to publish plugin "${pluginName}".`);
         if (resp.response?.details) {
           console.error(pc.red(pc.bold(resp.response?.details)));
         }
