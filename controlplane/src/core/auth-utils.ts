@@ -21,6 +21,7 @@ import { AuthenticationError } from './errors/errors.js';
 export type AuthUtilsOptions = {
   webBaseUrl: string;
   webErrorPath: string;
+  ssoCookieDomain: string | undefined;
   jwtSecret: string;
   oauth: {
     clientID: string;
@@ -113,7 +114,7 @@ export default class AuthUtils {
   createSsoCookie(res: FastifyReply, ssoSlug: string) {
     const currentDate = new Date();
     const userSsoCookie = cookie.serialize(cosmoIdpHintCookieName, ssoSlug, {
-      domain: this.webDomain,
+      domain: this.opts.ssoCookieDomain ?? this.webDomain,
       sameSite: 'lax',
       expires: new Date(currentDate.setFullYear(currentDate.getFullYear() + 1)),
       path: '/',
