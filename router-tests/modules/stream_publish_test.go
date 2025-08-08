@@ -141,6 +141,9 @@ func TestPublishHook(t *testing.T) {
 			requestLog := xEnv.Observer().FilterMessage("Publish Hook has been run")
 			assert.Len(t, requestLog.All(), 1)
 
+			requestLog2 := xEnv.Observer().FilterMessage("error applying publish event hooks")
+			assert.Len(t, requestLog2.All(), 1)
+
 			records, err := events.ReadKafkaMessages(xEnv, time.Second, "employeeUpdated", 1)
 			require.NoError(t, err)
 			require.Len(t, records, 1)
@@ -190,6 +193,9 @@ func TestPublishHook(t *testing.T) {
 			requestLog := xEnv.Observer().FilterMessage("Publish Hook has been run")
 			assert.Len(t, requestLog.All(), 1)
 
+			requestLog2 := xEnv.Observer().FilterMessage("error applying publish event hooks")
+			assert.Len(t, requestLog2.All(), 1)
+
 			msgOne, err := firstSub.NextMsg(5 * time.Second)
 			require.NoError(t, err)
 			require.Equal(t, xEnv.GetPubSubName("employeeUpdatedMyNats.3"), msgOne.Subject)
@@ -234,7 +240,10 @@ func TestPublishHook(t *testing.T) {
 
 			requestLog := xEnv.Observer().FilterMessage("Publish Hook has been run")
 			assert.Len(t, requestLog.All(), 1)
-			
+
+			requestLog2 := xEnv.Observer().FilterMessage("error applying publish event hooks")
+			assert.Len(t, requestLog2.All(), 1)
+
 			require.Len(t, records, 1)
 		})
 	})

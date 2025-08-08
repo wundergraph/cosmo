@@ -154,8 +154,9 @@ func (s *NatsPublishDataSource) Load(ctx context.Context, input []byte, out *byt
 	}
 
 	if err := s.pubSub.Publish(ctx, publishData.PublishEventConfiguration(), []datasource.StreamEvent{&publishData.Event}); err != nil {
-		_, err = io.WriteString(out, `{"success": false}`)
-		return err
+		// err will not be returned but only logged inside PubSubProvider.Publish to avoid a "unable to fetch from subgraph" error
+		_, errWrite := io.WriteString(out, `{"success": false}`)
+		return errWrite
 	}
 	_, err := io.WriteString(out, `{"success": true}`)
 	return err
