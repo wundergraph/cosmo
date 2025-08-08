@@ -4671,6 +4671,16 @@ export class GetOperationContentRequest extends Message<GetOperationContentReque
    */
   hash = "";
 
+  /**
+   * @generated from field: string federated_graph_name = 2;
+   */
+  federatedGraphName = "";
+
+  /**
+   * @generated from field: string namespace = 3;
+   */
+  namespace = "";
+
   constructor(data?: PartialMessage<GetOperationContentRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -4680,6 +4690,8 @@ export class GetOperationContentRequest extends Message<GetOperationContentReque
   static readonly typeName = "wg.cosmo.platform.v1.GetOperationContentRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "hash", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "federated_graph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOperationContentRequest {

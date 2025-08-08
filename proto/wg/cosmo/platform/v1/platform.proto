@@ -605,6 +605,8 @@ message GetCheckOperationsResponse {
 
 message GetOperationContentRequest {
   string hash = 1;
+  string federated_graph_name = 2;
+  string namespace = 3;
 }
 
 message GetOperationContentResponse {
