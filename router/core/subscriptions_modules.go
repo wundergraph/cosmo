@@ -11,11 +11,11 @@ import (
 
 // StreamHookError is used to customize the error messages and the behavior
 type StreamHookError struct {
-	err             error
-	message         string
-	statusCode      int
-	code            string
-	closeConnection bool
+	err               error
+	message           string
+	statusCode        int
+	code              string
+	closeSubscription bool
 }
 
 func (e *StreamHookError) Error() string {
@@ -38,18 +38,16 @@ func (e *StreamHookError) Code() string {
 }
 
 func (e *StreamHookError) CloseSubscription() bool {
-	return e.closeConnection
+	return e.closeSubscription
 }
 
-var _ datasource.ErrorWithCloseSubscription = &StreamHookError{}
-
-func NewStreamHookError(err error, message string, statusCode int, code string, closeConnection bool) *StreamHookError {
+func NewStreamHookError(err error, message string, statusCode int, code string, closeSubscription bool) *StreamHookError {
 	return &StreamHookError{
-		err:             err,
-		message:         message,
-		statusCode:      statusCode,
-		code:            code,
-		closeConnection: closeConnection,
+		err:               err,
+		message:           message,
+		statusCode:        statusCode,
+		code:              code,
+		closeSubscription: closeSubscription,
 	}
 }
 
@@ -122,7 +120,7 @@ func (c *engineSubscriptionOnStartHookContext) SubscriptionEventConfiguration() 
 
 type SubscriptionOnStartHandler interface {
 	// SubscriptionOnStart is called once at subscription start
-	// If the error is a StreamHookError and CloseConnection is true, the subscription is closed.
+	// If the error is a StreamHookError and CloseSubscription is true, the subscription is closed.
 	// The error is propagated to the client.
 	SubscriptionOnStart(ctx SubscriptionOnStartHookContext) error
 }
