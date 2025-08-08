@@ -1663,11 +1663,7 @@
                   "symmetric_algorithm": {
                     "type": "string",
                     "description": "The symmetric algorithm used",
-                    "enum": [
-                      "HS256",
-                      "HS384",
-                      "HS512"
-                    ]
+                    "enum": ["HS256", "HS384", "HS512"]
                   },
                   "header_key_id": {
                     "type": "string",
@@ -1707,11 +1703,35 @@
                 "oneOf": [
                   {
                     "required": ["url"],
-                    "not": { "anyOf": [{ "required": ["secret"] }, { "required": ["symmetric_algorithm"] }, { "required": ["header_key_id"] }] }
+                    "not": {
+                      "anyOf": [
+                        {
+                          "required": ["secret"]
+                        },
+                        {
+                          "required": ["symmetric_algorithm"]
+                        },
+                        {
+                          "required": ["header_key_id"]
+                        }
+                      ]
+                    }
                   },
                   {
                     "required": ["secret", "symmetric_algorithm", "header_key_id"],
-                    "not": { "anyOf": [{ "required": ["url"] }, { "required": ["algorithms"] }, { "required": ["refresh_interval"] }] }
+                    "not": {
+                      "anyOf": [
+                        {
+                          "required": ["url"]
+                        },
+                        {
+                          "required": ["algorithms"]
+                        },
+                        {
+                          "required": ["refresh_interval"]
+                        }
+                      ]
+                    }
                   }
                 ]
               }
@@ -2925,6 +2945,18 @@
           "type": "string",
           "description": "The path to the plugins directory. The plugins directory is used to load the plugins.",
           "default": "plugins"
+        },
+        "registry": {
+          "type": "object",
+          "description": "Configuration for the plugin registry.",
+          "additionalProperties": false,
+          "properties": {
+            "url": {
+              "type": "string",
+              "default": "cosmo-registry.wundergraph.com",
+              "description": "The URL of the plugin registry."
+            }
+          }
         }
       }
     },
