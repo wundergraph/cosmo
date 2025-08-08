@@ -1,3 +1,5 @@
+"use client";
+
 import { cn } from "@/lib/utils";
 import { UpdateIcon } from "@radix-ui/react-icons";
 import { Slot } from "@radix-ui/react-slot";
