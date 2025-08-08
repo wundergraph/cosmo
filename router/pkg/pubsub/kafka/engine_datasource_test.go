@@ -26,8 +26,9 @@ func TestPublishData_MarshalJSONTemplate(t *testing.T) {
 				Provider: "test-provider",
 				Topic:    "test-topic",
 				Event:    Event{Data: json.RawMessage(`{"message":"hello"}`)},
+				FieldName: "test-field",
 			},
-			wantPattern: `{"topic":"test-topic", "event": {"data": {"message":"hello"}, "key": "", "headers": {}}, "providerId":"test-provider"}`,
+			wantPattern: `{"topic":"test-topic", "event": {"data": {"message":"hello"}, "key": "", "headers": {}}, "providerId":"test-provider", "rootFieldName":"test-field"}`,
 		},
 		{
 			name: "with special characters",
@@ -35,8 +36,9 @@ func TestPublishData_MarshalJSONTemplate(t *testing.T) {
 				Provider: "test-provider-id",
 				Topic:    "topic-with-hyphens",
 				Event:    Event{Data: json.RawMessage(`{"message":"special \"quotes\" here"}`)},
+				FieldName: "test-field",
 			},
-			wantPattern: `{"topic":"topic-with-hyphens", "event": {"data": {"message":"special \"quotes\" here"}, "key": "", "headers": {}}, "providerId":"test-provider-id"}`,
+			wantPattern: `{"topic":"topic-with-hyphens", "event": {"data": {"message":"special \"quotes\" here"}, "key": "", "headers": {}}, "providerId":"test-provider-id", "rootFieldName":"test-field"}`,
 		},
 		{
 			name: "with key",
@@ -44,8 +46,9 @@ func TestPublishData_MarshalJSONTemplate(t *testing.T) {
 				Provider: "test-provider-id",
 				Topic:    "topic-with-hyphens",
 				Event:    Event{Key: []byte("blablabla"), Data: json.RawMessage(`{}`)},
+				FieldName: "test-field",
 			},
-			wantPattern: `{"topic":"topic-with-hyphens", "event": {"data": {}, "key": "blablabla", "headers": {}}, "providerId":"test-provider-id"}`,
+			wantPattern: `{"topic":"topic-with-hyphens", "event": {"data": {}, "key": "blablabla", "headers": {}}, "providerId":"test-provider-id", "rootFieldName":"test-field"}`,
 		},
 		{
 			name: "with headers",
@@ -53,8 +56,9 @@ func TestPublishData_MarshalJSONTemplate(t *testing.T) {
 				Provider: "test-provider-id",
 				Topic:    "topic-with-hyphens",
 				Event:    Event{Headers: map[string][]byte{"key": []byte(`blablabla`)}, Data: json.RawMessage(`{}`)},
+				FieldName: "test-field",
 			},
-			wantPattern: `{"topic":"topic-with-hyphens", "event": {"data": {}, "key": "", "headers": {"key":"YmxhYmxhYmxh"}}, "providerId":"test-provider-id"}`,
+			wantPattern: `{"topic":"topic-with-hyphens", "event": {"data": {}, "key": "", "headers": {"key":"YmxhYmxhYmxh"}}, "providerId":"test-provider-id", "rootFieldName":"test-field"}`,
 		},
 	}
 
