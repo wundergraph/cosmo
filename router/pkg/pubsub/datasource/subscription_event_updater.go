@@ -38,6 +38,9 @@ func (s *subscriptionEventUpdater) Update(events []StreamEvent) error {
 	}
 
 	processedEvents, err := applyStreamEventHooks(s.ctx, s.subscriptionEventConfiguration, events, s.hooks.OnStreamEvents)
+	// updates the events even if the hooks fail
+	// if a hook doesn't want to send the events, it should return no events!
+	s.updateEvents(processedEvents)
 	if err != nil {
 		// Check if the error is a StreamHookError and should close the subscription
 		// We use type assertion to check for the CloseSubscription method without importing core
@@ -58,8 +61,6 @@ func (s *subscriptionEventUpdater) Update(events []StreamEvent) error {
 			)
 		}
 	}
-
-	s.updateEvents(processedEvents)
 
 	return nil
 }
@@ -88,7 +89,7 @@ func applyStreamEventHooks(
 		var err error
 		currentEvents, err = hook(ctx, cfg, currentEvents)
 		if err != nil {
-			return nil, err
+			return currentEvents, err
 		}
 	}
 	return currentEvents, nil

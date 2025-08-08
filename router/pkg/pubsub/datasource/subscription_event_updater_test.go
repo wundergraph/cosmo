@@ -563,7 +563,7 @@ func TestSubscriptionEventUpdater_Update_WithStreamHookError_CloseSubscription(t
 
 	// Define hook that returns a StreamHookError with CloseSubscription=true
 	testHook := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
-		return nil, mockHookError
+		return events, mockHookError
 	}
 
 	updater := &subscriptionEventUpdater{
@@ -575,13 +575,12 @@ func TestSubscriptionEventUpdater_Update_WithStreamHookError_CloseSubscription(t
 		},
 	}
 
+	mockUpdater.On("Update", []byte("test data")).Return()
 	err := updater.Update(events)
 
 	// Should return the error when CloseSubscription is true
 	assert.Error(t, err)
 	assert.Equal(t, mockHookError, err)
-	// Assert that Update was not called on the eventUpdater
-	mockUpdater.AssertNotCalled(t, "Update")
 }
 
 func TestSubscriptionEventUpdater_Update_WithStreamHookError_NoCloseSubscription(t *testing.T) {
@@ -604,7 +603,7 @@ func TestSubscriptionEventUpdater_Update_WithStreamHookError_NoCloseSubscription
 
 	// Define hook that returns a StreamHookError with CloseSubscription=false
 	testHook := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
-		return nil, mockHookError
+		return events, mockHookError
 	}
 
 	updater := &subscriptionEventUpdater{
@@ -616,6 +615,7 @@ func TestSubscriptionEventUpdater_Update_WithStreamHookError_NoCloseSubscription
 		},
 	}
 
+	mockUpdater.On("Update", []byte("test data")).Return()
 	err := updater.Update(events)
 
 	// Should return nil when CloseSubscription is false (error is logged)
