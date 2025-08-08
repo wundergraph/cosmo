@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -eu
 
 fly secrets set -a product-api GRAPH_API_TOKEN="$GRAPH_API_TOKEN"

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -e
 
 fly deploy -a product-api --dockerfile ./Dockerfile.products

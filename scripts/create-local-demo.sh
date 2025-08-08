@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -e
 
 # Create and publish a demo federated graph based on the subgraphs in the demo folder

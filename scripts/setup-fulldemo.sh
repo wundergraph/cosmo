@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 echo ""
 echo "Setting up keycloak and seeding the database ..."
@@ -21,6 +21,12 @@ echo ""
 make create-cli-demo
 
 echo "Demo project created successfully."
+
+# Ensure wgc is available in PATH
+if ! command -v wgc &> /dev/null; then
+  export NPM_CONFIG_PREFIX="${NPM_CONFIG_PREFIX:-$HOME/.npm-global}"
+  export PATH="$NPM_CONFIG_PREFIX/bin:$PATH"
+fi
 
 token=$(wgc router token create mytoken --graph-name mygraph --namespace default -r)
 
