@@ -187,18 +187,12 @@ export class ApiKeyRepository {
       .innerJoin(apiKeyResources, eq(apiKeyResources.apiKeyId, apiKeys.id))
       .where(eq(apiKeys.key, apiKey));
 
+    // if no resources, it means that the api key has access to all the resources of the organization.
     if (resources.length === 0) {
-      // if no resources, it means that the api key has access to all the resources of the organization.
       return true;
     }
 
-    const targetIds = resources.map((r) => r.targetId);
-
-    if (targetIds.includes(accessedTargetId)) {
-      return true;
-    }
-
-    return false;
+    return resources.some((r) => r.targetId === accessedTargetId);
   }
 
   public async verifyAPIKeyPermissions({
@@ -216,16 +210,6 @@ export class ApiKeyRepository {
       .innerJoin(apiKeyPermissions, eq(apiKeyPermissions.apiKeyId, apiKeys.id))
       .where(eq(apiKeys.key, apiKey));
 
-    if (dbPermissions.length === 0) {
-      return false;
-    }
-
-    const permissions = dbPermissions.map((p) => p.permission);
-
-    if (permissions.includes(permission)) {
-      return true;
-    }
-
-    return false;
+    return dbPermissions.some((p) => p.permission === permission);
   }
 }
