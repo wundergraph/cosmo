@@ -224,16 +224,17 @@ func TestPublishHook(t *testing.T) {
 				LogLevel: zapcore.InfoLevel,
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
+			records, err := events.ReadRedisMessages(t, xEnv, "employeeUpdatedMyRedis")
+			require.NoError(t, err)
+
 			resOne := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `mutation { updateEmployeeMyKafka(employeeID: 3, update: {name: "name test"}) { success } }`,
+				Query: `mutation { updateEmployeeMyRedis(id: 3, update: {name: "name test"}) { success } }`,
 			})
-			require.JSONEq(t, `{"data": {"updateEmployeeMyKafka": {"success": false}}}`, resOne.Body)
+			require.JSONEq(t, `{"data": {"updateEmployeeMyRedis": {"success": false}}}`, resOne.Body)
 
 			requestLog := xEnv.Observer().FilterMessage("Publish Hook has been run")
 			assert.Len(t, requestLog.All(), 1)
-
-			records, err := events.ReadKafkaMessages(xEnv, time.Second, "employeeUpdated", 1)
-			require.NoError(t, err)
+			
 			require.Len(t, records, 1)
 		})
 	})
