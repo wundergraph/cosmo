@@ -63,7 +63,7 @@ func (p *publishData) PublishEventConfiguration() datasource.PublishEventConfigu
 }
 
 func (p *publishData) MarshalJSONTemplate() (string, error) {
-	return fmt.Sprintf(`{"channel":"%s", "event": {"data": %s}, "providerId":"%s"}`, p.Channel, p.Event.Data, p.Provider), nil
+	return fmt.Sprintf(`{"channel":"%s", "event": {"data": %s}, "providerId":"%s", "rootFieldName":"%s"}`, p.Channel, p.Event.Data, p.Provider, p.FieldName), nil
 }
 
 // PublishEventConfiguration contains configuration for publish events

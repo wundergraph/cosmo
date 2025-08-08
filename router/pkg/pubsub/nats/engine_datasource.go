@@ -71,7 +71,7 @@ func (p *publishData) PublishEventConfiguration() datasource.PublishEventConfigu
 func (p *publishData) MarshalJSONTemplate() (string, error) {
 	// The content of the data field could be not valid JSON, so we can't use json.Marshal
 	// e.g. {"id":$$0$$,"update":$$1$$}
-	return fmt.Sprintf(`{"subject":"%s", "event": {"data": %s}, "providerId":"%s"}`, p.Subject, p.Event.Data, p.Provider), nil
+	return fmt.Sprintf(`{"subject":"%s", "event": {"data": %s}, "providerId":"%s", "rootFieldName":"%s"}`, p.Subject, p.Event.Data, p.Provider, p.FieldName), nil
 }
 
 type PublishAndRequestEventConfiguration struct {

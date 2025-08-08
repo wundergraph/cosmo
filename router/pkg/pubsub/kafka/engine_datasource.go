@@ -78,7 +78,7 @@ func (p *publishData) MarshalJSONTemplate() (string, error) {
 		return "", err
 	}
 
-	return fmt.Sprintf(`{"topic":"%s", "event": {"data": %s, "key": "%s", "headers": %s}, "providerId":"%s"}`, p.Topic, p.Event.Data, p.Event.Key, headersBytes, p.Provider), nil
+	return fmt.Sprintf(`{"topic":"%s", "event": {"data": %s, "key": "%s", "headers": %s}, "providerId":"%s", "rootFieldName":"%s"}`, p.Topic, p.Event.Data, p.Event.Key, headersBytes, p.Provider, p.FieldName), nil
 }
 
 // PublishEventConfiguration is a public type that is used to allow access to custom fields

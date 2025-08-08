@@ -3,6 +3,7 @@ package module_test
 import (
 	"encoding/json"
 	"errors"
+	"strconv"
 	"testing"
 	"time"
 
@@ -245,6 +246,69 @@ func TestPublishHook(t *testing.T) {
 			assert.Len(t, requestLog2.All(), 1)
 
 			require.Len(t, records, 1)
+		})
+	})
+
+	t.Run("Test kafka module publish with argument in header", func(t *testing.T) {
+		t.Parallel()
+
+		cfg := config.Config{
+			Graph: config.Graph{},
+			Modules: map[string]interface{}{
+				"publishModule": stream_publish.PublishModule{
+					Callback: func(ctx core.StreamPublishEventHookContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
+						if ctx.PublishEventConfiguration().RootFieldName() != "updateEmployeeMyKafka" {
+							return events, nil
+						}
+
+						employeeID := ctx.RequestContext().Operation().Variables().GetInt("employeeID")
+
+						newEvents := []datasource.StreamEvent{}
+						for _, event := range events {
+							evt, ok := event.(*kafka.Event)
+							if !ok {
+								continue
+							}
+							if evt.Headers == nil {
+								evt.Headers = map[string][]byte{}
+							}
+							evt.Headers["x-employee-id"] = []byte(strconv.Itoa(employeeID))
+							newEvents = append(newEvents, event)
+						}
+						return newEvents, nil
+					},
+				},
+			},
+		}
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
+			EnableKafka:              true,
+			RouterOptions: []core.Option{
+				core.WithModulesConfig(cfg.Modules),
+				core.WithCustomModules(&stream_publish.PublishModule{}),
+			},
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			events.KafkaEnsureTopicExists(t, xEnv, time.Second, "employeeUpdated")
+			resOne := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `mutation UpdateEmployeeKafka($employeeID: Int!) { updateEmployeeMyKafka(employeeID: $employeeID, update: {name: "name test"}) { success } }`,
+				Variables: json.RawMessage(`{"employeeID": 3}`),
+			})
+			require.JSONEq(t, `{"data": {"updateEmployeeMyKafka": {"success": true}}}`, resOne.Body)
+
+			requestLog := xEnv.Observer().FilterMessage("Publish Hook has been run")
+			assert.Len(t, requestLog.All(), 1)
+
+			records, err := events.ReadKafkaMessages(xEnv, time.Second, "employeeUpdated", 1)
+			require.NoError(t, err)
+			require.Len(t, records, 1)
+			header := records[0].Headers[0]
+			require.Equal(t, "x-employee-id", header.Key)
+			require.Equal(t, []byte("3"), header.Value)
 		})
 	})
 }
