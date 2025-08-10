@@ -581,6 +581,8 @@ message GetCheckOperationsResponse {
 
 message GetOperationContentRequest {
   string hash = 1;
+  string federated_graph_name = 2;
+  string namespace = 3;
 }
 
 message GetOperationContentResponse {
@@ -2781,6 +2783,7 @@ message GetOperationsRequest {
   string federatedGraphName = 1;
   string namespace = 2;
   optional string clientName = 3;
+  optional int32 limit = 4;
 }
 
 message GetOperationsResponse {

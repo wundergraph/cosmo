@@ -4,6 +4,42 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.89.3](https://github.com/wundergraph/cosmo/compare/wgc@0.89.2...wgc@0.89.3) (2025-08-08)
+
+**Note:** Version bump only for package wgc
+
+## [0.89.2](https://github.com/wundergraph/cosmo/compare/wgc@0.89.1...wgc@0.89.2) (2025-08-07)
+
+**Note:** Version bump only for package wgc
+
+## [0.89.1](https://github.com/wundergraph/cosmo/compare/wgc@0.89.0...wgc@0.89.1) (2025-08-06)
+
+**Note:** Version bump only for package wgc
+
+# [0.89.0](https://github.com/wundergraph/cosmo/compare/wgc@0.88.4...wgc@0.89.0) (2025-08-06)
+
+### Features
+
+* add validation to protographic ([#2108](https://github.com/wundergraph/cosmo/issues/2108)) ([11a7ddf](https://github.com/wundergraph/cosmo/commit/11a7ddff1f0f76ecc3c905df601e6bc35efac95e)) (@Noroth)
+
+## [0.88.4](https://github.com/wundergraph/cosmo/compare/wgc@0.88.3...wgc@0.88.4) (2025-08-04)
+
+### Bug Fixes
+
+* use input file location for compose ([#2102](https://github.com/wundergraph/cosmo/issues/2102)) ([62dac5b](https://github.com/wundergraph/cosmo/commit/62dac5bd3337884799733ac9c11d6b6f21e3e571)) (@Noroth)
+
+## [0.88.3](https://github.com/wundergraph/cosmo/compare/wgc@0.88.2...wgc@0.88.3) (2025-07-31)
+
+**Note:** Version bump only for package wgc
+
+## [0.88.2](https://github.com/wundergraph/cosmo/compare/wgc@0.88.1...wgc@0.88.2) (2025-07-29)
+
+**Note:** Version bump only for package wgc
+
+## [0.88.1](https://github.com/wundergraph/cosmo/compare/wgc@0.88.0...wgc@0.88.1) (2025-07-28)
+
+**Note:** Version bump only for package wgc
+
 # [0.88.0](https://github.com/wundergraph/cosmo/compare/wgc@0.87.3...wgc@0.88.0) (2025-07-21)
 
 ### Features

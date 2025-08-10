@@ -277,24 +277,24 @@ function toSubgraphMetadata(
   subgraphs: SubgraphMetadata[],
 ): Promise<SubgraphMetadata> {
   if ('plugin' in subgraphConfig) {
-    return toSubgraphMetadataPlugin(subgraphConfig, subgraphs);
+    return toSubgraphMetadataPlugin(inputFileLocation, subgraphConfig, subgraphs);
   }
 
   if ('grpc' in subgraphConfig) {
-    return toSubgraphMetadataGRPC(subgraphConfig);
+    return toSubgraphMetadataGRPC(inputFileLocation, subgraphConfig);
   }
 
   return toSubgraphMetadataStandard(inputFileLocation, index, subgraphConfig, subgraphs);
 }
 
-async function toSubgraphMetadataGRPC(s: GRPCSubgraphConfig): Promise<GRPCSubgraphMetadata> {
-  validateGRPCSubgraph(s);
+async function toSubgraphMetadataGRPC(inputFileLocation: string, s: GRPCSubgraphConfig): Promise<GRPCSubgraphMetadata> {
+  validateGRPCSubgraph(inputFileLocation, s);
 
-  const mappingFileContent = await readFile(s.grpc.mapping_file, 'utf8');
+  const mappingFileContent = await readFile(resolve(inputFileLocation, s.grpc.mapping_file), 'utf8');
   const mapping = GRPCMapping.fromJsonString(mappingFileContent);
 
-  const protoSchemaFileContent = await readFile(s.grpc.proto_file, 'utf8');
-  const sdl = await readFile(s.grpc.schema_file, 'utf8');
+  const protoSchemaFileContent = await readFile(resolve(inputFileLocation, s.grpc.proto_file), 'utf8');
+  const sdl = await readFile(resolve(inputFileLocation, s.grpc.schema_file), 'utf8');
 
   return {
     kind: SubgraphKind.GRPC,
@@ -307,6 +307,7 @@ async function toSubgraphMetadataGRPC(s: GRPCSubgraphConfig): Promise<GRPCSubgra
 }
 
 async function toSubgraphMetadataPlugin(
+  inputFileLocation: string,
   s: SubgraphPluginConfig,
   subgraphs: SubgraphMetadata[],
 ): Promise<SubgraphPluginMetadata> {
@@ -319,14 +320,14 @@ async function toSubgraphMetadataPlugin(
     );
   }
 
-  validateSubgraphPlugin(s);
+  validateSubgraphPlugin(inputFileLocation, s);
 
   // Check if a plugin with the same name already exists
-  const mappingFilePath = resolve(s.plugin.path, 'generated', 'mapping.json');
+  const mappingFilePath = resolve(inputFileLocation, s.plugin.path, 'generated', 'mapping.json');
   const mappingFile = await readFile(mappingFilePath, 'utf8');
-  const schemaFilePath = resolve(s.plugin.path, 'src', 'schema.graphql');
+  const schemaFilePath = resolve(inputFileLocation, s.plugin.path, 'src', 'schema.graphql');
   const sdl = await readFile(schemaFilePath, 'utf8');
-  const protoSchemaFilePath = resolve(s.plugin.path, 'generated', 'service.proto');
+  const protoSchemaFilePath = resolve(inputFileLocation, s.plugin.path, 'generated', 'service.proto');
   const protoSchema = await readFile(protoSchemaFilePath, 'utf8');
 
   return {
@@ -405,7 +406,7 @@ async function toSubgraphMetadataStandard(
   };
 }
 
-function validateGRPCSubgraph(s: GRPCSubgraphConfig) {
+function validateGRPCSubgraph(inputFileLocation: string, s: GRPCSubgraphConfig) {
   if (!s.name) {
     program.error(
       pc.red(pc.bold(`The subgraph name is missing in the input file. Please check the name and try again.`)),
@@ -436,7 +437,7 @@ function validateGRPCSubgraph(s: GRPCSubgraphConfig) {
     );
   }
 
-  if (!existsSync(s.grpc.schema_file)) {
+  if (!existsSync(resolve(inputFileLocation, s.grpc.schema_file))) {
     program.error(
       pc.red(
         pc.bold(
@@ -446,7 +447,7 @@ function validateGRPCSubgraph(s: GRPCSubgraphConfig) {
     );
   }
 
-  if (!existsSync(s.grpc.proto_file)) {
+  if (!existsSync(resolve(inputFileLocation, s.grpc.proto_file))) {
     program.error(
       pc.red(
         pc.bold(`The proto file '${pc.bold(s.grpc.proto_file)}' does not exist. Please check the path and try again.`),
@@ -454,7 +455,7 @@ function validateGRPCSubgraph(s: GRPCSubgraphConfig) {
     );
   }
 
-  if (!existsSync(s.grpc.mapping_file)) {
+  if (!existsSync(resolve(inputFileLocation, s.grpc.mapping_file))) {
     program.error(
       pc.red(
         pc.bold(
@@ -465,13 +466,13 @@ function validateGRPCSubgraph(s: GRPCSubgraphConfig) {
   }
 }
 
-function validateSubgraphPlugin(s: SubgraphPluginConfig) {
+function validateSubgraphPlugin(inputFileLocation: string, s: SubgraphPluginConfig) {
   if (!s.plugin.path) {
     program.error(
       pc.red(pc.bold(`The plugin path is missing in the input file. Please check the path and try again.`)),
     );
   }
-  if (!existsSync(s.plugin.path)) {
+  if (!existsSync(resolve(inputFileLocation, s.plugin.path))) {
     program.error(
       pc.red(
         pc.bold(`The plugin path '${pc.bold(s.plugin.path)}' does not exist. Please check the path and try again.`),

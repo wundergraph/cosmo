@@ -1207,6 +1207,7 @@ func (s *graphServer) buildGraphMux(
 			MaxDepth:  s.Config.securityConfiguration.ParserLimits.ApproximateDepthLimit,
 			MaxFields: s.Config.securityConfiguration.ParserLimits.TotalFieldsLimit,
 		},
+		OperationNameLengthLimit:                         s.securityConfiguration.OperationNameLengthLimit,
 		ApolloCompatibilityFlags:                         s.apolloCompatibilityFlags,
 		ApolloRouterCompatibilityFlags:                   s.apolloRouterCompatibilityFlags,
 		DisableExposingVariablesContentOnValidationError: s.engineExecutionConfiguration.DisableExposingVariablesContentOnValidationError,
@@ -1514,10 +1515,12 @@ func (s *graphServer) setupConnector(ctx context.Context, config *nodev1.EngineC
 		}
 
 		grpcPlugin, err := grpcconnector.NewGRPCPlugin(grpcconnector.GRPCPluginConfig{
-			Logger:     s.logger,
-			PluginName: pluginConfig.GetName(),
-			PluginPath: pluginPath,
+			Logger:        s.logger,
+			PluginName:    pluginConfig.GetName(),
+			PluginPath:    pluginPath,
+			StartupConfig: newGRPCStartupParams(s.traceConfig, s.ipAnonymization),
 		})
+
 		if err != nil {
 			return fmt.Errorf("failed to create grpc plugin for subgraph %s: %w", dsConfig.Id, err)
 		}
@@ -1533,6 +1536,50 @@ func (s *graphServer) setupConnector(ctx context.Context, config *nodev1.EngineC
 	}
 
 	return nil
+}
+
+func newGRPCStartupParams(traceConfig *rtrace.Config, ipAnonymization *IPAnonymizationConfig) grpcconnector.GRPCStartupParams {
+	startupConfig := grpcconnector.GRPCStartupParams{}
+
+	if traceConfig.Enabled && len(traceConfig.Exporters) > 0 {
+		enabledExporters := make([]grpcconnector.GRPCExporter, 0)
+		for _, exporter := range traceConfig.Exporters {
+			if exporter != nil && !exporter.Disabled {
+				transformedExporter := grpcconnector.GRPCExporter{
+					Endpoint:      exporter.Endpoint,
+					Exporter:      string(exporter.Exporter),
+					BatchTimeout:  exporter.BatchTimeout,
+					ExportTimeout: exporter.ExportTimeout,
+					Headers:       exporter.Headers,
+					HTTPPath:      exporter.HTTPPath,
+				}
+				enabledExporters = append(enabledExporters, transformedExporter)
+			}
+		}
+
+		// Convert to []string
+		propagators := make([]string, 0, len(traceConfig.Propagators))
+		for _, propagator := range traceConfig.Propagators {
+			propagators = append(propagators, string(propagator))
+		}
+
+		startupConfig.Telemetry = &grpcconnector.GRPCTelemetry{
+			Tracing: &grpcconnector.GRPCTracing{
+				Exporters:   enabledExporters,
+				Propagators: propagators,
+				Sampler:     traceConfig.Sampler,
+			},
+		}
+	}
+
+	if ipAnonymization != nil {
+		startupConfig.IPAnonymization = &grpcconnector.GRPCIPAnonymization{
+			Enabled: ipAnonymization.Enabled,
+			Method:  string(ipAnonymization.Method),
+		}
+	}
+
+	return startupConfig
 }
 
 // wait waits for all in-flight requests to finish. Similar to http.Server.Shutdown we wait in intervals + jitter

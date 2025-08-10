@@ -46,6 +46,50 @@ func TestOperationsOverGET(t *testing.T) {
 		})
 	})
 
+	t.Run("Invalid GET variables", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequestOverGET(testenv.GraphQLRequest{
+				OperationName: []byte(`Find`),
+				Query:         `query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
+				Variables:     []byte(`{"criteria":{   "nationality":GERMAN}  }   `),
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+			require.Equal(t, `{"errors":[{"message":"invalid GET request: error parsing variables: invalid character 'G' looking for beginning of value"}]}`, res.Body)
+		})
+	})
+
+	t.Run("Invalid GET extensions from bool", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequestOverGET(testenv.GraphQLRequest{
+				OperationName: []byte(`Find`),
+				Query:         `query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
+				Variables:     []byte(`{"criteria":{   "nationality":"GERMAN"}  }   `),
+				Extensions:    []byte(`true`),
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+			require.Equal(t, `{"errors":[{"message":"invalid GET request: error parsing extensions: json: cannot unmarshal bool"}]}`, res.Body)
+		})
+	})
+
+	t.Run("Invalid GET extensions version from bool", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequestOverGET(testenv.GraphQLRequest{
+				OperationName: []byte(`Find`),
+				Query:         `query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
+				Variables:     []byte(`{"criteria":{   "nationality":"GERMAN"}  }   `),
+				Extensions:    []byte(`{"persistedQuery": {"version": true, "sha256Hash": "` + cacheHashNotStored + `"}}`),
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+			require.Equal(t, `{"errors":[{"message":"invalid GET request: error parsing extensions: json: cannot unmarshal bool"}]}`, res.Body)
+		})
+	})
+
 	t.Run("Only queries are supported over GET", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {

@@ -408,11 +408,12 @@ type SecurityConfiguration struct {
 	ComplexityLimits            *ComplexityLimits           `yaml:"complexity_limits"`
 	DepthLimit                  *QueryDepthConfiguration    `yaml:"depth_limit"`
 	ParserLimits                ParserLimitsConfiguration   `yaml:"parser_limits"`
+	OperationNameLengthLimit    int                         `yaml:"operation_name_length_limit" envDefault:"512" env:"SECURITY_OPERATION_NAME_LENGTH_LIMIT"` // 0 is disabled
 }
 
 type ParserLimitsConfiguration struct {
-	ApproximateDepthLimit int `yaml:"approximate_depth_limit,omitempty" envDefault:"100"` // 0 means disabled
-	TotalFieldsLimit      int `yaml:"total_fields_limit,omitempty" envDefault:"500"`      // 0 means disabled
+	ApproximateDepthLimit int `yaml:"approximate_depth_limit,omitempty" envDefault:"200"` // 0 means disabled
+	TotalFieldsLimit      int `yaml:"total_fields_limit,omitempty" envDefault:"3500"`     // 0 means disabled
 }
 
 type QueryDepthConfiguration struct {
@@ -467,8 +468,11 @@ type JWKSConfiguration struct {
 	// For secret based where we need to create a jwk  entry with
 	// a key id and algorithm
 	Secret    string `yaml:"secret"`
-	Algorithm string `yaml:"algorithm"`
-	KeyId     string `yaml:"key_id"`
+	Algorithm string `yaml:"symmetric_algorithm"`
+	KeyId     string `yaml:"header_key_id"`
+
+	// Common
+	Audiences []string `yaml:"audiences"`
 }
 
 type HeaderSource struct {

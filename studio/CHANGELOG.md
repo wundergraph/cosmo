@@ -4,6 +4,30 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.123.3](https://github.com/wundergraph/cosmo/compare/studio@0.123.2...studio@0.123.3) (2025-08-08)
+
+### Bug Fixes
+
+* use federated graph id and org id to fetch operation content ([#2107](https://github.com/wundergraph/cosmo/issues/2107)) ([cfe1036](https://github.com/wundergraph/cosmo/commit/cfe10361e0d756f803ef4210b5efa46c3f16d8bb)) (@JivusAyrus)
+
+## [0.123.2](https://github.com/wundergraph/cosmo/compare/studio@0.123.1...studio@0.123.2) (2025-08-07)
+
+**Note:** Version bump only for package studio
+
+## [0.123.1](https://github.com/wundergraph/cosmo/compare/studio@0.123.0...studio@0.123.1) (2025-08-06)
+
+**Note:** Version bump only for package studio
+
+# [0.123.0](https://github.com/wundergraph/cosmo/compare/studio@0.122.3...studio@0.123.0) (2025-08-06)
+
+### Features
+
+* add LinkedIn Insight and GTM scripts ([#2098](https://github.com/wundergraph/cosmo/issues/2098)) ([826a265](https://github.com/wundergraph/cosmo/commit/826a265f61f96dfaceb183eb16e0da1fa080f480)) (@wilsonrivera)
+
+## [0.122.3](https://github.com/wundergraph/cosmo/compare/studio@0.122.2...studio@0.122.3) (2025-07-31)
+
+**Note:** Version bump only for package studio
+
 ## [0.122.2](https://github.com/wundergraph/cosmo/compare/studio@0.122.1...studio@0.122.2) (2025-07-21)
 
 **Note:** Version bump only for package studio
