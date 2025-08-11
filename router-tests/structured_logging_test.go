@@ -3087,12 +3087,6 @@ func TestFlakyAccessLogs(t *testing.T) {
 					Enabled:  true,
 					LogLevel: zapcore.InfoLevel,
 				},
-				ApqConfig: config.AutomaticPersistedQueriesConfig{
-					Enabled: true,
-					Cache: config.AutomaticPersistedQueriesCacheConfig{
-						Size: 1024 * 1024,
-					},
-				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				variables := `{"criteria":  {"nationality":  "GERMAN"   }}`
 				persistedQueries := `{"persistedQuery": {"version": 1, "sha256Hash": "e33580cf6276de9a75fb3b1c4b7580fec2a1c8facd13f3487bf6c7c3f854f7e3"}}`
@@ -3144,12 +3138,6 @@ func TestFlakyAccessLogs(t *testing.T) {
 					Enabled:  true,
 					LogLevel: zapcore.InfoLevel,
 				},
-				ApqConfig: config.AutomaticPersistedQueriesConfig{
-					Enabled: true,
-					Cache: config.AutomaticPersistedQueriesCacheConfig{
-						Size: 1024 * 1024,
-					},
-				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				variables := `{"criteria":  {"nationality":  "GERMAN"   }}`
 				persistedQueries := `{"persistedQuery": {"version": 1, "sha256Hash": "e33580cf6276de9a75fb3b1c4b7580fec2a1c8facd13f3487bf6c7c3f854f7e3"}}`
@@ -3200,12 +3188,6 @@ func TestFlakyAccessLogs(t *testing.T) {
 				LogObservation: testenv.LogObservationConfig{
 					Enabled:  true,
 					LogLevel: zapcore.InfoLevel,
-				},
-				ApqConfig: config.AutomaticPersistedQueriesConfig{
-					Enabled: true,
-					Cache: config.AutomaticPersistedQueriesCacheConfig{
-						Size: 1024 * 1024,
-					},
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				request := testenv.GraphQLRequest{
