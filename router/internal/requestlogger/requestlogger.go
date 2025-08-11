@@ -197,9 +197,9 @@ func (al *accessLogger) getRequestFields(r *http.Request, logger *zap.Logger) []
 	}
 
 	start := time.Now()
-	urlLocal := r.URL
-	path := urlLocal.Path
-	query := urlLocal.RawQuery
+	reqUrl := r.URL
+	path := reqUrl.Path
+	query := reqUrl.RawQuery
 	remoteAddr := r.RemoteAddr
 
 	if al.ipAnonymizationConfig != nil && al.ipAnonymizationConfig.Enabled {
@@ -214,7 +214,7 @@ func (al *accessLogger) getRequestFields(r *http.Request, logger *zap.Logger) []
 	}
 
 	if query != "" && len(al.ignoreQueryParamsList) > 0 {
-		vals, err := url.ParseQuery(urlLocal.RawQuery)
+		vals, err := url.ParseQuery(reqUrl.RawQuery)
 		if err != nil {
 			// We ignore logging the err since it could leak partial sensitive data
 			// such as %pa from "%password"
