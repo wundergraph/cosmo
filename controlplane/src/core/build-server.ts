@@ -312,7 +312,11 @@ export default async function build(opts: BuildConfig) {
 
   const s3Client = new S3Client(s3Config);
   const blobStorage = new S3BlobStorage(s3Client, bucketName, {
-    useIndividualDeletes: opts.s3Storage.useIndividualDeletes ?? false,
+    // When using GCS, we overwrite the configured behavior to always use individual deletes as GCS doesn't
+    // support bulk object deletion as of August 11th, 2025
+    useIndividualDeletes: opts.s3Storage.url.toLowerCase().includes('storage.googleapis.com')
+      ? true
+      : opts.s3Storage.useIndividualDeletes ?? false,
   });
 
   const platformWebhooks = new PlatformWebhookService(opts.webhook?.url, opts.webhook?.key, logger);
