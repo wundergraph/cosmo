@@ -3110,7 +3110,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				require.Equal(t, `{"data":{"findEmployees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}}]}}`, res.Body)
 
 				requestLog := xEnv.Observer().FilterMessage("/graphql")
-				require.Equal(t, requestLog.Len(), 1)
+				require.Equal(t, 1, requestLog.Len())
 				requestContext := requestLog.All()[0].ContextMap()
 
 				query := requestContext["query"].(string)
@@ -3167,13 +3167,13 @@ func TestFlakyAccessLogs(t *testing.T) {
 				require.Equal(t, `{"data":{"findEmployees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}}]}}`, res.Body)
 
 				requestLog := xEnv.Observer().FilterMessage("/graphql")
-				require.Equal(t, requestLog.Len(), 1)
+				require.Equal(t, 1, requestLog.Len())
 				requestContext := requestLog.All()[0].ContextMap()
 
 				query := requestContext["query"].(string)
 
-				rawQueryString := fmt.Sprintf("extensions=%s",
-					url.QueryEscape(persistedQueries))
+				rawQueryString := "extensions=" + url.QueryEscape(persistedQueries)
+
 				require.Equal(t, rawQueryString, query)
 
 				parseQuery, err := url.ParseQuery(query)
@@ -3230,7 +3230,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				require.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
 
 				requestLog := xEnv.Observer().FilterMessage("/graphql")
-				require.Equal(t, requestLog.Len(), 1)
+				require.Equal(t, 1, requestLog.Len())
 				requestContext := requestLog.All()[0].ContextMap()
 
 				query := requestContext["query"].(string)
