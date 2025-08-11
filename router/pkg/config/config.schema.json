@@ -694,6 +694,13 @@
           "properties": {
             "fields": {
               "$ref": "#/$defs/context_fields"
+            },
+            "ignore_query_params_list": {
+              "type": "array",
+              "description": "List of query params to be ignored from being logged in the query field.",
+              "items": {
+                "type": "string"
+              }
             }
           }
         },
