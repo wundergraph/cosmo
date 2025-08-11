@@ -4,6 +4,26 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.241.0](https://github.com/wundergraph/cosmo/compare/router@0.240.3...router@0.241.0) (2025-08-08)
+
+### Features
+
+* improve handling for entities with multiple keys ([#2123](https://github.com/wundergraph/cosmo/issues/2123)) ([5e1e6e8](https://github.com/wundergraph/cosmo/commit/5e1e6e82785b685e143c8962f41fe1062bf05207)) (@Noroth)
+
+## [0.240.3](https://github.com/wundergraph/cosmo/compare/router@0.240.2...router@0.240.3) (2025-08-07)
+
+### Bug Fixes
+
+* fix rewriting an interface object implementing interface ([#2120](https://github.com/wundergraph/cosmo/issues/2120)) ([627d542](https://github.com/wundergraph/cosmo/commit/627d542d2797999fb03de83e54b973fa86ddbf63)) (@devsergiy)
+
+## [0.240.2](https://github.com/wundergraph/cosmo/compare/router@0.240.1...router@0.240.2) (2025-08-06)
+
+### Bug Fixes
+
+* dont try to load operation when dir is empty ([#2101](https://github.com/wundergraph/cosmo/issues/2101)) ([a3b3fc2](https://github.com/wundergraph/cosmo/commit/a3b3fc2021baa051adbb6e129b32ce049ae0fbc5)) (@StarpTech)
+* generate plans for subscriptions ([#2097](https://github.com/wundergraph/cosmo/issues/2097)) ([589d43b](https://github.com/wundergraph/cosmo/commit/589d43bb2879397f71e832fedb6b9d72e282dd07)) (@ysmolski)
+* plan generator ignores the skip/include directives ([#2113](https://github.com/wundergraph/cosmo/issues/2113)) ([c935d14](https://github.com/wundergraph/cosmo/commit/c935d142e78f8515543da272ce6c66d620643c88)) (@ysmolski)
+
 ## [0.240.1](https://github.com/wundergraph/cosmo/compare/router@0.240.0...router@0.240.1) (2025-08-04)
 
 ### Bug Fixes

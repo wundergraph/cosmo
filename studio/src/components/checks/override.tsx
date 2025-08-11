@@ -438,6 +438,8 @@ export const ConfigureOverride = () => {
                     View Operation Content
                   </Button>
                 }
+                federatedGraphName={graphContext?.graph?.name ?? ""}
+                namespace={graphContext?.graph?.namespace ?? ""}
               />
             </div>
           </SheetDescription>

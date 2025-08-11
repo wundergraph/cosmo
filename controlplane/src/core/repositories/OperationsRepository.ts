@@ -163,9 +163,6 @@ export class OperationsRepository {
   }
 
   public async registerClient(clientName: string, userId: string): Promise<string> {
-    if (!clientName) {
-      throw new Error('client name is empty');
-    }
     const updatedAt = new Date();
     await this.db
       .insert(federatedGraphClients)

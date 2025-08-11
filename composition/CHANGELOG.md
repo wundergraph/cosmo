@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.43.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.43.1...@wundergraph/composition@0.43.2) (2025-08-07)
+
+**Note:** Version bump only for package @wundergraph/composition
+
+## [0.43.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.43.0...@wundergraph/composition@0.43.1) (2025-08-06)
+
+### Bug Fixes
+
+* interface object implementing entity interface ([#2117](https://github.com/wundergraph/cosmo/issues/2117)) ([e999a8c](https://github.com/wundergraph/cosmo/commit/e999a8c8e34dd39f5e6718503e2f5f6bd1903f3e)) (@Aenimus)
+
 # [0.43.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.42.2...@wundergraph/composition@0.43.0) (2025-07-21)
 
 ### Features
