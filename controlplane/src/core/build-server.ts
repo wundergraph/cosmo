@@ -106,6 +106,7 @@ export interface BuildConfig {
     username?: string;
     password?: string;
     forcePathStyle?: boolean;
+    useIndividualDeletes?: boolean;
   };
   mailer: {
     smtpEnabled: boolean;
@@ -310,7 +311,9 @@ export default async function build(opts: BuildConfig) {
   const s3Config = createS3ClientConfig(bucketName, opts.s3Storage);
 
   const s3Client = new S3Client(s3Config);
-  const blobStorage = new S3BlobStorage(s3Client, bucketName);
+  const blobStorage = new S3BlobStorage(s3Client, bucketName, {
+    useIndividualDeletes: opts.s3Storage.useIndividualDeletes ?? false,
+  });
 
   const platformWebhooks = new PlatformWebhookService(opts.webhook?.url, opts.webhook?.key, logger);
 
