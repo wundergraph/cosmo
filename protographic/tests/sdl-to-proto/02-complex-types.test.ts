@@ -31,20 +31,25 @@ describe('SDL to Proto - Complex Types', () => {
       "syntax = "proto3";
       package service.v1;
 
-      option go_package = "cosmo/pkg/proto/service.v1;servicev1";
-
       // Service definition for DefaultService
       service DefaultService {
         rpc QueryUsersByRole(QueryUsersByRoleRequest) returns (QueryUsersByRoleResponse) {}
       }
 
+      // Wrapper message for a list of User.
+      message ListOfUser {
+        message List {
+          repeated User items = 1;
+        }
+        List list = 1;
+      }
       // Request message for usersByRole operation.
       message QueryUsersByRoleRequest {
         UserRole role = 1;
       }
       // Response message for usersByRole operation.
       message QueryUsersByRoleResponse {
-        repeated User users_by_role = 1;
+        ListOfUser users_by_role = 1;
       }
 
       message User {
@@ -95,7 +100,7 @@ describe('SDL to Proto - Complex Types', () => {
       "syntax = "proto3";
       package service.v1;
 
-      option go_package = "cosmo/pkg/proto/service.v1;servicev1";
+      import "google/protobuf/wrappers.proto";
 
       // Service definition for DefaultService
       service DefaultService {
@@ -108,7 +113,7 @@ describe('SDL to Proto - Complex Types', () => {
       }
       // Response message for dummy operation.
       message QueryDummyResponse {
-        string dummy = 1;
+        google.protobuf.StringValue dummy = 1;
       }
       // Request message for createUser operation.
       message MutationCreateUserRequest {
@@ -122,14 +127,14 @@ describe('SDL to Proto - Complex Types', () => {
       message UserInput {
         string name = 1;
         string email = 2;
-        int32 age = 3;
+        google.protobuf.Int32Value age = 3;
       }
 
       message User {
         string id = 1;
         string name = 2;
         string email = 3;
-        int32 age = 4;
+        google.protobuf.Int32Value age = 4;
       }"
     `);
   });
@@ -164,8 +169,6 @@ describe('SDL to Proto - Complex Types', () => {
     expect(protoText).toMatchInlineSnapshot(`
       "syntax = "proto3";
       package service.v1;
-
-      option go_package = "cosmo/pkg/proto/service.v1;servicev1";
 
       // Service definition for DefaultService
       service DefaultService {
@@ -222,14 +225,19 @@ describe('SDL to Proto - Complex Types', () => {
       "syntax = "proto3";
       package service.v1;
 
-      option go_package = "cosmo/pkg/proto/service.v1;servicev1";
-
       // Service definition for DefaultService
       service DefaultService {
         rpc QueryNode(QueryNodeRequest) returns (QueryNodeResponse) {}
         rpc QueryRootNode(QueryRootNodeRequest) returns (QueryRootNodeResponse) {}
       }
 
+      // Wrapper message for a list of TreeNode.
+      message ListOfTreeNode {
+        message List {
+          repeated TreeNode items = 1;
+        }
+        List list = 1;
+      }
       // Request message for rootNode operation.
       message QueryRootNodeRequest {
       }
@@ -250,7 +258,7 @@ describe('SDL to Proto - Complex Types', () => {
         string id = 1;
         string value = 2;
         TreeNode parent = 3;
-        repeated TreeNode children = 4;
+        ListOfTreeNode children = 4;
       }"
     `);
   });
@@ -292,27 +300,41 @@ describe('SDL to Proto - Complex Types', () => {
       "syntax = "proto3";
       package service.v1;
 
-      option go_package = "cosmo/pkg/proto/service.v1;servicev1";
+      import "google/protobuf/wrappers.proto";
 
       // Service definition for DefaultService
       service DefaultService {
         rpc QueryUsers(QueryUsersRequest) returns (QueryUsersResponse) {}
       }
 
+      // Wrapper message for a list of AddressInput.
+      message ListOfAddressInput {
+        message List {
+          repeated AddressInput items = 1;
+        }
+        List list = 1;
+      }
+      // Wrapper message for a list of User.
+      message ListOfUser {
+        message List {
+          repeated User items = 1;
+        }
+        List list = 1;
+      }
       // Request message for users operation.
       message QueryUsersRequest {
         UserFilterInput filter = 1;
       }
       // Response message for users operation.
       message QueryUsersResponse {
-        repeated User users = 1;
+        ListOfUser users = 1;
       }
 
       message UserFilterInput {
-        string name_contains = 1;
-        int32 min_age = 2;
-        int32 max_age = 3;
-        repeated AddressInput addresses = 4;
+        google.protobuf.StringValue name_contains = 1;
+        google.protobuf.Int32Value min_age = 2;
+        google.protobuf.Int32Value max_age = 3;
+        ListOfAddressInput addresses = 4;
       }
 
       message User {
@@ -325,7 +347,7 @@ describe('SDL to Proto - Complex Types', () => {
         string street = 1;
         string city = 2;
         string country = 3;
-        string zip_code = 4;
+        google.protobuf.StringValue zip_code = 4;
       }"
     `);
   });

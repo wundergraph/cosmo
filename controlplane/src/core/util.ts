@@ -19,8 +19,17 @@ import {
   LATEST_ROUTER_COMPATIBILITY_VERSION,
   newContractTagOptionsFromArrays,
 } from '@wundergraph/composition';
+import { SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { MemberRole, WebsocketSubprotocol } from '../db/models.js';
-import { AuthContext, DateRange, FederatedGraphDTO, Label, ResponseMessage, S3StorageOptions } from '../types/index.js';
+import {
+  AuthContext,
+  CompositionOptions,
+  DateRange,
+  FederatedGraphDTO,
+  Label,
+  ResponseMessage,
+  S3StorageOptions,
+} from '../types/index.js';
 import { isAuthenticationError, isAuthorizationError, isPublicError } from './errors/errors.js';
 import { GraphKeyAuthContext } from './services/GraphApiTokenAuthenticator.js';
 import { composeFederatedContract, composeFederatedGraphWithPotentialContracts } from './composition/composition.js';
@@ -31,6 +40,7 @@ const organizationSlugRegex = /^[\da-z]+(?:-[\da-z]+)*$/;
 const namespaceRegex = /^[\da-z]+(?:[_-][\da-z]+)*$/;
 const schemaTagRegex = /^(?![/-])[\d/A-Za-z-]+(?<![/-])$/;
 const graphNameRegex = /^[\dA-Za-z]+(?:[./@_-][\dA-Za-z]+)*$/;
+const pluginVersionRegex = /^v\d+$/;
 
 /**
  * Wraps a function with a try/catch block and logs any errors that occur.
@@ -329,6 +339,10 @@ export const isValidOrganizationName = (name: string): boolean => {
   return true;
 };
 
+export const isValidPluginVersion = (version: string): boolean => {
+  return pluginVersionRegex.test(version);
+};
+
 export const validateDateRanges = ({
   limit,
   range,
@@ -498,6 +512,7 @@ export function getFederationResultWithPotentialContracts(
   federatedGraph: FederatedGraphDTO,
   subgraphsToCompose: SubgraphsToCompose,
   tagOptionsByContractName: Map<string, ContractTagOptions>,
+  compositionOptions?: CompositionOptions,
 ): FederationResult | FederationResultWithContracts {
   // This condition is only true when entering the method to specifically create/update a contract
   if (federatedGraph.contract) {
@@ -505,12 +520,14 @@ export function getFederationResultWithPotentialContracts(
       subgraphsToCompose.compositionSubgraphs,
       newContractTagOptionsFromArrays(federatedGraph.contract.excludeTags, federatedGraph.contract.includeTags),
       federatedGraph.routerCompatibilityVersion,
+      compositionOptions,
     );
   }
   return composeFederatedGraphWithPotentialContracts(
     subgraphsToCompose.compositionSubgraphs,
     tagOptionsByContractName,
     federatedGraph.routerCompatibilityVersion,
+    compositionOptions,
   );
 }
 
@@ -562,3 +579,46 @@ export const flipDateRangeValuesIfNeeded = (dateRange?: { start: number; end: nu
   dateRange.start = dateRange.end;
   dateRange.end = tmp;
 };
+
+export const formatSubgraphType = (type: SubgraphType) => {
+  switch (type) {
+    case SubgraphType.STANDARD: {
+      return 'standard';
+    }
+    case SubgraphType.GRPC_PLUGIN: {
+      return 'grpc_plugin';
+    }
+    case SubgraphType.GRPC_SERVICE: {
+      return 'grpc_service';
+    }
+    default: {
+      throw new Error(`Unknown subgraph type: ${type}`);
+    }
+  }
+};
+
+export const convertToSubgraphType = (type: string) => {
+  switch (type) {
+    case 'standard': {
+      return SubgraphType.STANDARD;
+    }
+    case 'grpc_plugin': {
+      return SubgraphType.GRPC_PLUGIN;
+    }
+    case 'grpc_service': {
+      return SubgraphType.GRPC_SERVICE;
+    }
+    default: {
+      throw new Error(`Unknown subgraph type: ${type}`);
+    }
+  }
+};
+
+export function newCompositionOptions(disableResolvabilityValidation?: boolean): CompositionOptions | undefined {
+  if (!disableResolvabilityValidation) {
+    return;
+  }
+  return {
+    disableResolvabilityValidation,
+  };
+}

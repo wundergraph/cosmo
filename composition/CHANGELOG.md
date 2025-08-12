@@ -4,6 +4,48 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.43.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.43.1...@wundergraph/composition@0.43.2) (2025-08-07)
+
+**Note:** Version bump only for package @wundergraph/composition
+
+## [0.43.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.43.0...@wundergraph/composition@0.43.1) (2025-08-06)
+
+### Bug Fixes
+
+* interface object implementing entity interface ([#2117](https://github.com/wundergraph/cosmo/issues/2117)) ([e999a8c](https://github.com/wundergraph/cosmo/commit/e999a8c8e34dd39f5e6718503e2f5f6bd1903f3e)) (@Aenimus)
+
+# [0.43.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.42.2...@wundergraph/composition@0.43.0) (2025-07-21)
+
+### Features
+
+* add disable resolvability validation flag ([#2065](https://github.com/wundergraph/cosmo/issues/2065)) ([0c920cc](https://github.com/wundergraph/cosmo/commit/0c920cc95065099667fc378b50e9278e8a99c286)) (@Aenimus)
+
+## [0.42.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.42.1...@wundergraph/composition@0.42.2) (2025-07-03)
+
+**Note:** Version bump only for package @wundergraph/composition
+
+## [0.42.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.42.0...@wundergraph/composition@0.42.1) (2025-07-03)
+
+**Note:** Version bump only for package @wundergraph/composition
+
+# [0.42.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.41.1...@wundergraph/composition@0.42.0) (2025-06-30)
+
+### Features
+
+* add isVersionTwo to SubgraphConfig ([#1997](https://github.com/wundergraph/cosmo/issues/1997)) ([09baaa8](https://github.com/wundergraph/cosmo/commit/09baaa8a3d4c963f1278fe672b3d55bce1346294)) (@wilsonrivera)
+
+## [0.41.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.41.0...@wundergraph/composition@0.41.1) (2025-06-26)
+
+### Bug Fixes
+
+* force release ([#1991](https://github.com/wundergraph/cosmo/issues/1991)) ([ea07353](https://github.com/wundergraph/cosmo/commit/ea07353b82fcbecedfe07b97bef109f28b2e286c)) (@alepane21)
+
+# [0.41.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.40.0...@wundergraph/composition@0.41.0) (2025-06-26)
+
+### Features
+
+* add redis pubsub support to EDFS ([#1810](https://github.com/wundergraph/cosmo/issues/1810)) ([8f294b6](https://github.com/wundergraph/cosmo/commit/8f294b62c14e9cae7e1ad85e65b0ca3ada0bcfbb)) (@alepane21)
+
 # [0.40.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.39.2...@wundergraph/composition@0.40.0) (2025-06-02)
 
 ### Features

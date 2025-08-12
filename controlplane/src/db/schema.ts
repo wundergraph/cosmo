@@ -213,6 +213,8 @@ export const websocketSubprotocolEnum = pgEnum('websocket_subprotocol', [
   'graphql-transport-ws',
 ] as const);
 
+export const subgraphTypeEnum = pgEnum('subgraph_type', ['standard', 'grpc_plugin', 'grpc_service'] as const);
+
 export const subgraphs = pgTable(
   'subgraphs', // subgraphs
   {
@@ -232,6 +234,7 @@ export const subgraphs = pgTable(
       }),
     isFeatureSubgraph: boolean('is_feature_subgraph').notNull().default(false),
     isEventDrivenGraph: boolean('is_event_driven_graph').notNull().default(false),
+    type: subgraphTypeEnum('type').notNull().default('standard'),
   },
   (t) => {
     return {
@@ -1346,6 +1349,7 @@ export const organizationRoleEnum = pgEnum('organization_role', [
   'graph-viewer',
   'subgraph-admin',
   'subgraph-publisher',
+  'subgraph-viewer',
 ] as const);
 
 export const organizationGroups = pgTable('organization_groups', {
@@ -1526,7 +1530,6 @@ export const organizationInvitations = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     invitedBy: uuid('invited_by').references(() => users.id, { onDelete: 'cascade' }),
-    groupId: uuid('group_id').references(() => organizationGroups.id, { onDelete: 'set null' }),
     accepted: boolean('accepted').default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -1535,6 +1538,25 @@ export const organizationInvitations = pgTable(
       organizationIdIndex: index('orginv_organization_id_idx').on(t.organizationId),
       userIdIndex: index('orginv_user_id_idx').on(t.userId),
       invitedByIndex: index('orginv_invited_by_idx').on(t.invitedBy),
+    };
+  },
+);
+
+export const organizationInvitationGroups = pgTable(
+  'organization_invitation_groups',
+  {
+    id: uuid('id').notNull().primaryKey().defaultRandom(),
+    invitationId: uuid('invitation_id')
+      .notNull()
+      .references(() => organizationInvitations.id, { onDelete: 'cascade' }),
+    groupId: uuid('group_id')
+      .notNull()
+      .references(() => organizationGroups.id, { onDelete: 'cascade' }),
+  },
+  (t) => {
+    return {
+      invitationIdIndex: index('org_inv_invitation_idx').on(t.invitationId),
+      groupIdIndex: index('org_inv_group_id').on(t.groupId),
     };
   },
 );
@@ -2369,6 +2391,7 @@ export const proposals = pgTable(
   (t) => ({
     uniqueFederatedGraphClientName: unique('federated_graph_proposal_name').on(t.federatedGraphId, t.name),
     createdByIdIndex: index('pr_created_by_id_idx').on(t.createdById),
+    federatedGraphIdIndex: index('pr_federated_graph_id_idx').on(t.federatedGraphId),
   }),
 );
 
@@ -2445,5 +2468,40 @@ export const schemaCheckProposalMatchRelations = relations(schemaCheckProposalMa
   proposal: one(proposals, {
     fields: [schemaCheckProposalMatch.proposalId],
     references: [proposals.id],
+  }),
+}));
+
+export const protobufSchemaVersions = pgTable('protobuf_schema_versions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  schemaVersionId: uuid('schema_version_id')
+    .notNull()
+    .references(() => schemaVersion.id, { onDelete: 'cascade' }),
+  protoSchema: text('proto_schema').notNull(),
+  protoMappings: text('proto_mappings').notNull(),
+  protoLock: text('proto_lock').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const protobufSchemaVersionsRelations = relations(protobufSchemaVersions, ({ one }) => ({
+  schemaVersion: one(schemaVersion, {
+    fields: [protobufSchemaVersions.schemaVersionId],
+    references: [schemaVersion.id],
+  }),
+}));
+
+export const pluginImageVersions = pgTable('plugin_image_versions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  schemaVersionId: uuid('schema_version_id')
+    .notNull()
+    .references(() => schemaVersion.id, { onDelete: 'cascade' }),
+  version: text('version').notNull(),
+  platform: text('platform').array().notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const pluginImageVersionsRelations = relations(pluginImageVersions, ({ one }) => ({
+  schemaVersion: one(schemaVersion, {
+    fields: [pluginImageVersions.schemaVersionId],
+    references: [schemaVersion.id],
   }),
 }));

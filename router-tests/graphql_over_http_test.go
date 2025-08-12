@@ -60,7 +60,7 @@ func TestGraphQLOverHTTPCompatibility(t *testing.T) {
 			require.Equal(t, res.Header.Get("Content-Type"), "application/json; charset=utf-8")
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"error parsing request body"}]}`, string(data))
+			require.Equal(t, `{"errors":[{"message":"invalid request body: variables must be a JSON object"}]}`, string(data))
 		})
 		t.Run("return 400 bad request when extensions is not a map", func(t *testing.T) {
 			header := http.Header{
@@ -74,7 +74,7 @@ func TestGraphQLOverHTTPCompatibility(t *testing.T) {
 			require.Equal(t, res.Header.Get("Content-Type"), "application/json; charset=utf-8")
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"error parsing request body"}]}`, string(data))
+			require.Equal(t, `{"errors":[{"message":"invalid request body: error parsing extensions: json: cannot unmarshal bool"}]}`, string(data))
 		})
 		t.Run("valid request with Operation Name should return 200 OK with valid response", func(t *testing.T) {
 			header := http.Header{
@@ -101,7 +101,7 @@ func TestGraphQLOverHTTPCompatibility(t *testing.T) {
 			require.Equal(t, res.Header.Get("Content-Type"), "application/json; charset=utf-8")
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"error parsing request body"}]}`, string(data))
+			require.Equal(t, `{"errors":[{"message":"invalid request body: invalid character 'q' looking for beginning of value"}]}`, string(data))
 		})
 		t.Run("malformed JSON variant should return 400", func(t *testing.T) {
 			header := http.Header{
@@ -115,7 +115,7 @@ func TestGraphQLOverHTTPCompatibility(t *testing.T) {
 			require.Equal(t, res.Header.Get("Content-Type"), "application/json; charset=utf-8")
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"error parsing request body"}]}`, string(data))
+			require.Equal(t, `{"errors":[{"message":"invalid request body: invalid character '{' looking for beginning of object key string"}]}`, string(data))
 		})
 		t.Run("malformed JSON variant #2 should return 400", func(t *testing.T) {
 			header := http.Header{
@@ -129,7 +129,7 @@ func TestGraphQLOverHTTPCompatibility(t *testing.T) {
 			require.Equal(t, res.Header.Get("Content-Type"), "application/json; charset=utf-8")
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"error parsing request body"}]}`, string(data))
+			require.Equal(t, `{"errors":[{"message":"empty request body"}]}`, string(data))
 		})
 		t.Run("malformed JSON variables variant should return 400", func(t *testing.T) {
 			header := http.Header{
@@ -143,7 +143,7 @@ func TestGraphQLOverHTTPCompatibility(t *testing.T) {
 			require.Equal(t, res.Header.Get("Content-Type"), "application/json; charset=utf-8")
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"error parsing request body"}]}`, string(data))
+			require.Equal(t, `{"errors":[{"message":"invalid request body: invalid character 'G' looking for beginning of value"}]}`, string(data))
 		})
 		t.Run("missing variables should return 200 OK with validation errors response", func(t *testing.T) {
 			header := http.Header{

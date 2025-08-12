@@ -6,16 +6,16 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel, normalizeURL, splitLabel } from '@wundergraph/cosmo-shared';
 import { addDays } from 'date-fns';
-import { SQL, and, asc, count, desc, eq, getTableName, gt, inArray, like, lt, notInArray, or, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, getTableName, gt, inArray, like, lt, notInArray, or, SQL, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
-import { WebsocketSubprotocol } from '../../db/models.js';
+import { DBSubgraphType, WebsocketSubprotocol } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import {
   featureSubgraphsToBaseSubgraphs,
   fieldGracePeriod,
-  graphCompositionSubgraphs,
   graphCompositions,
+  graphCompositionSubgraphs,
   schemaChecks,
   schemaVersion,
   subgraphMembers,
@@ -25,9 +25,11 @@ import {
   users,
 } from '../../db/schema.js';
 import {
+  CompositionOptions,
   FederatedGraphDTO,
   GetChecksResponse,
   Label,
+  ProtoSubgraph,
   SchemaCheckDetailsDTO,
   SchemaCheckSummaryDTO,
   SchemaGraphPruningDTO,
@@ -90,6 +92,7 @@ export class SubgraphRepository {
       isFeatureSubgraph: boolean;
       baseSubgraphID: string;
     };
+    type: DBSubgraphType;
   }): Promise<SubgraphDTO | undefined> {
     const uniqueLabels = normalizeLabels(data.labels);
     const routingUrl = normalizeURL(data.routingUrl);
@@ -130,6 +133,7 @@ export class SubgraphRepository {
           subscriptionProtocol: data.subscriptionProtocol ?? 'ws',
           websocketSubprotocol: data.websocketSubprotocol || 'auto',
           isFeatureSubgraph: data.featureSubgraphOptions?.isFeatureSubgraph || false,
+          type: data.type,
         })
         .returning()
         .execute();
@@ -183,7 +187,11 @@ export class SubgraphRepository {
         namespaceId: data.namespaceId,
         isFeatureSubgraph: insertedSubgraph[0].isFeatureSubgraph,
         isEventDrivenGraph: data.isEventDrivenGraph,
-      } as SubgraphDTO;
+        type: data.type,
+        subscriptionUrl: subscriptionUrl ?? '',
+        subscriptionProtocol: data.subscriptionProtocol ?? 'ws',
+        websocketSubprotocol: data.websocketSubprotocol ?? 'auto',
+      } satisfies SubgraphDTO;
     });
   }
 
@@ -201,6 +209,7 @@ export class SubgraphRepository {
       websocketSubprotocol?: WebsocketSubprotocol;
       isV2Graph?: boolean;
       readme?: string;
+      proto?: ProtoSubgraph;
     },
     blobStorage: BlobStorage,
     admissionConfig: {
@@ -208,6 +217,7 @@ export class SubgraphRepository {
       cdnBaseUrl: string;
     },
     chClient: ClickHouseClient,
+    compositionOptions?: CompositionOptions,
   ): Promise<{
     compositionErrors: PlainMessage<CompositionError>[];
     compositionWarnings: PlainMessage<CompositionWarning>[];
@@ -235,12 +245,13 @@ export class SubgraphRepository {
       }
 
       // TODO: avoid downloading the schema use hash instead
-      if (data.schemaSDL && data.schemaSDL !== subgraph.schemaSDL) {
+      if (data.schemaSDL && (subgraph.type === 'grpc_plugin' || data.schemaSDL !== subgraph.schemaSDL)) {
         subgraphChanged = true;
         const updatedSubgraph = await subgraphRepo.addSchemaVersion({
           targetId: subgraph.targetId,
           subgraphSchema: data.schemaSDL,
           isV2Graph: data.isV2Graph,
+          proto: data.proto,
         });
         if (!updatedSubgraph) {
           throw new Error(`The subgraph "${subgraph.name}" was not found.`);
@@ -428,11 +439,12 @@ export class SubgraphRepository {
         deploymentErrors: dErrors,
         compositionWarnings: cWarnings,
       } = await fedGraphRepo.composeAndDeployGraphs({
-        federatedGraphs: updatedFederatedGraphs.filter((g) => !g.contract),
         blobStorage,
         admissionConfig,
         actorId: data.updatedBy,
         chClient,
+        compositionOptions,
+        federatedGraphs: updatedFederatedGraphs.filter((g) => !g.contract),
       });
 
       compositionErrors.push(...cErrors);
@@ -464,6 +476,7 @@ export class SubgraphRepository {
       cdnBaseUrl: string;
     },
     chClient: ClickHouseClient,
+    compositionOptions?: CompositionOptions,
   ): Promise<{
     compositionErrors: PlainMessage<CompositionError>[];
     updatedFederatedGraphs: FederatedGraphDTO[];
@@ -515,6 +528,7 @@ export class SubgraphRepository {
         },
         actorId: data.updatedBy,
         chClient,
+        compositionOptions,
       });
 
       return { compositionErrors, updatedFederatedGraphs, deploymentErrors, compositionWarnings };
@@ -525,14 +539,15 @@ export class SubgraphRepository {
     targetId: string;
     subgraphSchema: string;
     isV2Graph?: boolean;
+    proto?: ProtoSubgraph;
   }): Promise<SubgraphDTO | undefined> {
-    return this.db.transaction(async (db) => {
+    return this.db.transaction(async (tx) => {
       const subgraph = await this.byTargetId(data.targetId);
       if (subgraph === undefined) {
         return undefined;
       }
 
-      const insertedVersion = await db
+      const insertedVersion = await tx
         .insert(schemaVersion)
         .values({
           targetId: subgraph.targetId,
@@ -545,7 +560,24 @@ export class SubgraphRepository {
           createdAt: schemaVersion.createdAt,
         });
 
-      await db
+      if (data.proto && (subgraph.type === 'grpc_service' || subgraph.type === 'grpc_plugin')) {
+        await tx.insert(schema.protobufSchemaVersions).values({
+          schemaVersionId: insertedVersion[0].insertedId,
+          protoSchema: data.proto.schema,
+          protoMappings: data.proto.mappings,
+          protoLock: data.proto.lock,
+        });
+
+        if (data.proto.pluginData && subgraph.type === 'grpc_plugin') {
+          await tx.insert(schema.pluginImageVersions).values({
+            schemaVersionId: insertedVersion[0].insertedId,
+            version: data.proto.pluginData.version,
+            platform: data.proto.pluginData.platforms,
+          });
+        }
+      }
+
+      await tx
         .update(subgraphs)
         .set({
           // Update the schema of the subgraph with a valid schema version.
@@ -570,6 +602,7 @@ export class SubgraphRepository {
         namespace: subgraph.namespace,
         namespaceId: subgraph.namespaceId,
         isFeatureSubgraph: subgraph.isFeatureSubgraph,
+        type: subgraph.type,
       };
     });
   }
@@ -589,7 +622,8 @@ export class SubgraphRepository {
 
     const graphAdmin = rbac.ruleFor('subgraph-admin');
     const graphPublisher = rbac.ruleFor('subgraph-publisher');
-    if (!graphAdmin && !graphPublisher) {
+    const graphViewer = rbac.ruleFor('subgraph-viewer');
+    if (!graphAdmin && !graphPublisher && !graphViewer) {
       return false;
     }
 
@@ -604,6 +638,11 @@ export class SubgraphRepository {
     if (graphPublisher) {
       namespaces.push(...graphPublisher.namespaces);
       resources.push(...graphPublisher.resources);
+    }
+
+    if (graphViewer) {
+      namespaces.push(...graphViewer.namespaces);
+      resources.push(...graphViewer.resources);
     }
 
     if (namespaces.length > 0 && resources.length > 0) {
@@ -886,6 +925,7 @@ export class SubgraphRepository {
         schemaVersionId: schema.subgraphs.schemaVersionId,
         isFeatureSubgraph: schema.subgraphs.isFeatureSubgraph,
         isEventDrivenGraph: schema.subgraphs.isEventDrivenGraph,
+        type: schema.subgraphs.type,
       })
       .from(targets)
       .innerJoin(schema.subgraphs, eq(targets.id, schema.subgraphs.targetId))
@@ -900,6 +940,7 @@ export class SubgraphRepository {
     let schemaSDL = '';
     let schemaVersionId = '';
     let isV2Graph: boolean | undefined;
+    let proto: ProtoSubgraph | undefined;
 
     // Subgraphs are created without a schema version.
     if (resp[0].schemaVersionId !== null) {
@@ -910,6 +951,41 @@ export class SubgraphRepository {
       schemaSDL = sv?.schemaSDL ?? '';
       schemaVersionId = sv?.id ?? '';
       isV2Graph = sv?.isV2Graph || undefined;
+
+      if (resp[0].type === 'grpc_plugin' || resp[0].type === 'grpc_service') {
+        const protobufSchemaVersion = await this.db.query.protobufSchemaVersions.findFirst({
+          where: eq(schema.protobufSchemaVersions.schemaVersionId, resp[0].schemaVersionId),
+        });
+
+        if (!protobufSchemaVersion) {
+          this.logger.warn(
+            `Missing protobuf schema for ${resp[0].type} subgraph with schemaVersionId: ${resp[0].schemaVersionId}`,
+          );
+        }
+
+        proto = {
+          schema: protobufSchemaVersion?.protoSchema ?? '',
+          mappings: protobufSchemaVersion?.protoMappings ?? '',
+          lock: protobufSchemaVersion?.protoLock ?? '',
+        };
+
+        if (resp[0].type === 'grpc_plugin') {
+          const pluginImageVersion = await this.db.query.pluginImageVersions.findFirst({
+            where: eq(schema.pluginImageVersions.schemaVersionId, resp[0].schemaVersionId),
+          });
+
+          if (!pluginImageVersion) {
+            this.logger.warn(
+              `Missing plugin image version for ${resp[0].type} subgraph with schemaVersionId: ${resp[0].schemaVersionId}`,
+            );
+          }
+
+          proto.pluginData = {
+            platforms: pluginImageVersion?.platform ?? [],
+            version: pluginImageVersion?.version ?? 'v1',
+          };
+        }
+      }
     }
 
     return {
@@ -931,6 +1007,8 @@ export class SubgraphRepository {
       isEventDrivenGraph: resp[0].isEventDrivenGraph,
       isV2Graph,
       isFeatureSubgraph: resp[0].isFeatureSubgraph,
+      type: resp[0].type,
+      proto,
     };
   }
 
@@ -1386,6 +1464,9 @@ export class SubgraphRepository {
       .where(and(eq(targets.id, targetId), eq(schema.targets.organizationId, this.organizationId)));
   }
 
+  /**
+   * @deprecated Subgraph members was deprecated in favor of group resources.
+   */
   public getSubgraphMembers(subgraphId: string): Promise<SubgraphMemberDTO[]> {
     return this.db
       .select({

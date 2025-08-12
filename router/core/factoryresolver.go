@@ -9,12 +9,12 @@ import (
 	"slices"
 
 	"github.com/buger/jsonparser"
+	"github.com/wundergraph/cosmo/router/pkg/grpcconnector"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub"
 	pubsub_datasource "github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/argument_templates"
 
 	"github.com/wundergraph/cosmo/router/pkg/config"
-	"github.com/wundergraph/cosmo/router/pkg/routerplugin"
 
 	"github.com/jensneuse/abstractlogger"
 	"go.uber.org/zap"
@@ -63,7 +63,7 @@ type DefaultFactoryResolver struct {
 
 	httpClient          *http.Client
 	subgraphHTTPClients map[string]*http.Client
-	pluginHost          *routerplugin.Host
+	connector           *grpcconnector.Connector
 
 	factoryLogger abstractlogger.Logger
 	instanceData  InstanceData
@@ -75,7 +75,7 @@ func NewDefaultFactoryResolver(
 	subscriptionClientOptions *SubscriptionClientOptions,
 	baseTransport http.RoundTripper,
 	subgraphTransports map[string]http.RoundTripper,
-	pluginHost *routerplugin.Host,
+	connector *grpcconnector.Connector,
 	log *zap.Logger,
 	enableSingleFlight bool,
 	enableNetPoll bool,
@@ -158,18 +158,18 @@ func NewDefaultFactoryResolver(
 
 		httpClient:          defaultHTTPClient,
 		subgraphHTTPClients: subgraphHTTPClients,
-		pluginHost:          pluginHost,
+		connector:           connector,
 		instanceData:        instanceData,
 	}
 }
 
 func (d *DefaultFactoryResolver) ResolveGraphqlFactory(subgraphName string) (plan.PlannerFactory[graphql_datasource.Configuration], error) {
-	if d.pluginHost != nil {
-		// If the plugin host is not nil, we try to get the plugin for the subgraph.
-		// In case of a plugin, we use the gRPC client provider to create the factory.
-		plugin, exists := d.pluginHost.GetPlugin(subgraphName)
+	if d.connector != nil {
+		// If the connector is not nil, we try to get the provider for the subgraph.
+		// In case of a provider, we use the gRPC client provider to create the factory.
+		provider, exists := d.connector.GetClientProvider(subgraphName)
 		if exists {
-			return graphql_datasource.NewFactoryGRPCClientProvider(d.engineCtx, plugin.GetClient)
+			return graphql_datasource.NewFactoryGRPCClientProvider(d.engineCtx, provider.GetClient)
 		}
 	}
 
@@ -627,7 +627,7 @@ func toGRPCConfiguration(config *nodev1.GRPCConfiguration, pluginsEnabled bool) 
 		QueryRPCs:        make(grpcdatasource.RPCConfigMap),
 		MutationRPCs:     make(grpcdatasource.RPCConfigMap),
 		SubscriptionRPCs: make(grpcdatasource.RPCConfigMap),
-		EntityRPCs:       make(map[string]grpcdatasource.EntityRPCConfig),
+		EntityRPCs:       make(map[string][]grpcdatasource.EntityRPCConfig),
 		Fields:           make(map[string]grpcdatasource.FieldMap),
 		EnumValues:       make(map[string][]grpcdatasource.EnumValueMapping),
 	}
@@ -649,14 +649,14 @@ func toGRPCConfiguration(config *nodev1.GRPCConfiguration, pluginsEnabled bool) 
 	}
 
 	for _, entity := range in.EntityMappings {
-		result.EntityRPCs[entity.Key] = grpcdatasource.EntityRPCConfig{
+		result.EntityRPCs[entity.TypeName] = append(result.EntityRPCs[entity.TypeName], grpcdatasource.EntityRPCConfig{
 			Key: entity.Key,
 			RPCConfig: grpcdatasource.RPCConfig{
 				RPC:      entity.Rpc,
 				Request:  entity.Request,
 				Response: entity.Response,
 			},
-		}
+		})
 	}
 
 	for _, field := range in.TypeFieldMappings {
@@ -686,8 +686,14 @@ func toGRPCConfiguration(config *nodev1.GRPCConfiguration, pluginsEnabled bool) 
 		}
 	}
 
+	// If no plugin config exists, we enable the datasource by default.
+	// If the config has a plugin:
+	//  * Enable the datasource when plugins are enabled.
+	//  * Disable the datasource when plugins are not enabled.
+	disabled := config.Plugin != nil && !pluginsEnabled
+
 	return &grpcdatasource.GRPCConfiguration{
 		Mapping:  result,
-		Disabled: !pluginsEnabled,
+		Disabled: disabled,
 	}
 }

@@ -8,12 +8,12 @@ import {
   ROUTER_COMPATIBILITY_VERSIONS,
   SupportedRouterCompatibilityVersion,
 } from '@wundergraph/composition';
-import { GraphQLSchema, lexicographicSortSchema } from 'graphql';
 import {
   GraphQLSubscriptionProtocol,
   GraphQLWebsocketSubprotocol,
 } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-
+import { GraphQLSchema, lexicographicSortSchema } from 'graphql';
+import { PartialMessage } from '@bufbuild/protobuf';
 import {
   ConfigurationVariable,
   ConfigurationVariableKind,
@@ -26,14 +26,14 @@ import {
   GRPCConfiguration,
   GRPCMapping,
   HTTPMethod,
+  ImageReference,
   InternedString,
   PluginConfiguration,
   RouterConfig,
   TypeField,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import { PartialMessage } from '@bufbuild/protobuf';
-import { configurationDatasToDataSourceConfiguration, generateFieldConfigurations } from './graphql-configuration.js';
 import { invalidRouterCompatibilityVersion, normalizationFailureError } from './errors.js';
+import { configurationDatasToDataSourceConfiguration, generateFieldConfigurations } from './graphql-configuration.js';
 
 export interface Input {
   federatedClientSDL: string;
@@ -57,17 +57,17 @@ export type WebsocketSubprotocol = 'auto' | 'graphql-ws' | 'graphql-transport-ws
 export enum SubgraphKind {
   Plugin,
   Standard,
+  GRPC,
 }
 
-export type RouterSubgraph = ComposedSubgraph | ComposedSubgraphPlugin;
+export type RouterSubgraph = ComposedSubgraph | ComposedSubgraphPlugin | ComposedSubgraphGRPC;
 
 export interface ComposedSubgraph {
-  kind: SubgraphKind.Standard;
+  readonly kind: SubgraphKind.Standard;
   id: string;
   name: string;
   sdl: string;
   url: string;
-  schemaVersionId?: string;
   subscriptionUrl: string;
   subscriptionProtocol?: SubscriptionProtocol | undefined;
   websocketSubprotocol?: WebsocketSubprotocol | undefined;
@@ -78,9 +78,24 @@ export interface ComposedSubgraph {
 }
 
 export interface ComposedSubgraphPlugin {
-  kind: SubgraphKind.Plugin;
+  readonly kind: SubgraphKind.Plugin;
   id: string;
   version: string;
+  name: string;
+  sdl: string;
+  url: string;
+  protoSchema: string;
+  mapping: GRPCMapping;
+  // The intermediate representation of the engine configuration for the subgraph
+  configurationDataByTypeName?: Map<string, ConfigurationData>;
+  // The normalized GraphQL schema for the subgraph
+  schema?: GraphQLSchema;
+  imageReference?: ImageReference;
+}
+
+export interface ComposedSubgraphGRPC {
+  readonly kind: SubgraphKind.GRPC;
+  id: string;
   name: string;
   sdl: string;
   url: string;
@@ -163,36 +178,54 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
 
     let grcpConfig: GRPCConfiguration | undefined;
 
-    if (subgraph.kind === SubgraphKind.Standard) {
-      subscriptionConfig.enabled = true;
-      subscriptionConfig.protocol = parseGraphQLSubscriptionProtocol(subgraph.subscriptionProtocol || 'ws');
-      subscriptionConfig.websocketSubprotocol = parseGraphQLWebsocketSubprotocol(
-        subgraph.websocketSubprotocol || 'auto',
-      );
-      // When changing this, please do it in the router subgraph override as well
-      subscriptionConfig.url = new ConfigurationVariable({
-        kind: ConfigurationVariableKind.STATIC_CONFIGURATION_VARIABLE,
-        staticVariableContent: subgraph.subscriptionUrl || subgraph.url,
-      });
-    } else if (subgraph.kind === SubgraphKind.Plugin) {
-      grcpConfig = new GRPCConfiguration({
-        mapping: subgraph.mapping,
-        protoSchema: subgraph.protoSchema,
-        plugin: new PluginConfiguration({
-          name: subgraph.name,
-          version: subgraph.version,
-        }),
-      });
+    switch (subgraph.kind) {
+      case SubgraphKind.Standard: {
+        subscriptionConfig.enabled = true;
+        subscriptionConfig.protocol = parseGraphQLSubscriptionProtocol(subgraph.subscriptionProtocol || 'ws');
+        subscriptionConfig.websocketSubprotocol = parseGraphQLWebsocketSubprotocol(
+          subgraph.websocketSubprotocol || 'auto',
+        );
+        // When changing this, please do it in the router subgraph override as well
+        subscriptionConfig.url = new ConfigurationVariable({
+          kind: ConfigurationVariableKind.STATIC_CONFIGURATION_VARIABLE,
+          staticVariableContent: subgraph.subscriptionUrl || subgraph.url,
+        });
+
+        break;
+      }
+      case SubgraphKind.Plugin: {
+        grcpConfig = new GRPCConfiguration({
+          mapping: subgraph.mapping,
+          protoSchema: subgraph.protoSchema,
+          plugin: new PluginConfiguration({
+            name: subgraph.name,
+            version: subgraph.version,
+            imageReference: subgraph.imageReference,
+          }),
+        });
+
+        break;
+      }
+      case SubgraphKind.GRPC: {
+        grcpConfig = new GRPCConfiguration({
+          mapping: subgraph.mapping,
+          protoSchema: subgraph.protoSchema,
+        });
+
+        break;
+      }
+      // No default
     }
 
     let kind: DataSourceKind;
     let customGraphql: DataSourceCustom_GraphQL | undefined;
     let customEvents: DataSourceCustomEvents | undefined;
-    if (events.kafka.length > 0 || events.nats.length > 0) {
+    if (events.kafka.length > 0 || events.nats.length > 0 || events.redis.length > 0) {
       kind = DataSourceKind.PUBSUB;
       customEvents = new DataSourceCustomEvents({
         kafka: events.kafka,
         nats: events.nats,
+        redis: events.redis,
       });
       // PUBSUB data sources cannot have root nodes other than
       // Query/Mutation/Subscription. Filter rootNodes in place

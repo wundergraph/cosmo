@@ -4039,11 +4039,12 @@ func TestFlakyTelemetry(t *testing.T) {
 			TraceExporter: exporter,
 			MetricReader:  metricReader,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
+			listArgQuery := "1000000000000000000000000000000000000000000000000000000000000000"
 			header := make(http.Header)
 			header.Add("graphql-client-name", "my-client")
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 				OperationName: []byte(`"MyQuery"`),
-				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "listArgQuery"}}`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + listArgQuery + `"}}`),
 				Header:        header,
 				Variables:     []byte(`{"arg": "a"}`),
 			})
@@ -4071,7 +4072,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 				OperationName: []byte(`"MyQuery"`),
-				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "listArgQuery"}}`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + listArgQuery + `"}}`),
 				Header:        header,
 				Variables:     []byte(`{"arg": "a"}`),
 			})

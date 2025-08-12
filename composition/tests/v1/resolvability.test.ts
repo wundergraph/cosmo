@@ -1,8 +1,6 @@
 import {
   EntityAncestorData,
   federateSubgraphs,
-  FederationResultFailure,
-  FederationResultSuccess,
   generateResolvabilityErrorReasons,
   generateSelectionSetSegments,
   GraphFieldData,
@@ -31,10 +29,7 @@ import {
 
 describe('Field resolvability tests', () => {
   test('that shared queries that return a nested type that is only resolvable over multiple subgraphs are valid', () => {
-    const result = federateSubgraphs(
-      [subgraphA, subgraphB],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
+    const result = federateSubgraphsSuccess([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
       normalizeString(
@@ -79,10 +74,7 @@ describe('Field resolvability tests', () => {
       subgraphNames: new Set<string>(['subgraph-c']),
       typeName: 'Nested4',
     };
-    const result = federateSubgraphs(
-      [subgraphB, subgraphC],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultFailure;
+    const result = federateSubgraphsFailure([subgraphB, subgraphC], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
@@ -105,10 +97,7 @@ describe('Field resolvability tests', () => {
       subgraphNames: new Set<string>(['subgraph-f']),
       typeName: 'Friend',
     };
-    const result = federateSubgraphs(
-      [subgraphD, subgraphF],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultFailure;
+    const result = federateSubgraphsFailure([subgraphD, subgraphF], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
@@ -136,10 +125,7 @@ describe('Field resolvability tests', () => {
       subgraphNames: new Set<string>(['subgraph-v']),
       typeName: 'Entity',
     };
-    const result = federateSubgraphs(
-      [subgraphV, subgraphW],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultFailure;
+    const result = federateSubgraphsFailure([subgraphV, subgraphW], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
@@ -167,10 +153,7 @@ describe('Field resolvability tests', () => {
       subgraphNames: new Set<string>(['subgraph-v']),
       typeName: 'Entity',
     };
-    const result = federateSubgraphs(
-      [subgraphW, subgraphV],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultFailure;
+    const result = federateSubgraphsFailure([subgraphW, subgraphV], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
@@ -193,10 +176,7 @@ describe('Field resolvability tests', () => {
       subgraphNames: new Set<string>(['subgraph-f']),
       typeName: 'Friend',
     };
-    const result = federateSubgraphs(
-      [subgraphF, subgraphD],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultFailure;
+    const result = federateSubgraphsFailure([subgraphF, subgraphD], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
@@ -228,10 +208,7 @@ describe('Field resolvability tests', () => {
       subgraphNames: new Set<string>(['subgraph-g']),
       typeName: 'Friend',
     };
-    const result = federateSubgraphs(
-      [subgraphD, subgraphF, subgraphG],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultFailure;
+    const result = federateSubgraphsFailure([subgraphD, subgraphF, subgraphG], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(2);
     expect(result.errors[0]).toStrictEqual(
@@ -249,10 +226,7 @@ describe('Field resolvability tests', () => {
   });
 
   test('that shared queries that return a type that is only resolvable over multiple subgraphs are valid', () => {
-    const result = federateSubgraphs(
-      [subgraphD, subgraphE],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
+    const result = federateSubgraphsSuccess([subgraphD, subgraphE], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
       normalizeString(
@@ -274,10 +248,7 @@ describe('Field resolvability tests', () => {
   });
 
   test('that shared queries that return an interface that is only resolvable over multiple subgraphs are valid', () => {
-    const result = federateSubgraphs(
-      [subgraphH, subgraphI],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
+    const result = federateSubgraphsSuccess([subgraphH, subgraphI], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
       normalizeString(
@@ -313,10 +284,7 @@ describe('Field resolvability tests', () => {
       subgraphNames: new Set<string>(['subgraph-j']),
       typeName: 'Friend',
     };
-    const result = federateSubgraphs(
-      [subgraphI, subgraphJ],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultFailure;
+    const result = federateSubgraphsFailure([subgraphI, subgraphJ], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
@@ -339,10 +307,7 @@ describe('Field resolvability tests', () => {
       subgraphNames: new Set<string>(['subgraph-l']),
       typeName: 'Cat',
     };
-    const result = federateSubgraphs(
-      [subgraphK, subgraphL],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultFailure;
+    const result = federateSubgraphsFailure([subgraphK, subgraphL], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
@@ -354,10 +319,7 @@ describe('Field resolvability tests', () => {
   });
 
   test('that shared queries that return a union that is only resolvable over multiple subgraphs are valid', () => {
-    const result = federateSubgraphs(
-      [subgraphM, subgraphN],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
+    const result = federateSubgraphsSuccess([subgraphM, subgraphN], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
       normalizeString(
@@ -393,10 +355,7 @@ describe('Field resolvability tests', () => {
       subgraphNames: new Set<string>(['subgraph-p']),
       typeName: 'Enemy',
     };
-    const result = federateSubgraphs(
-      [subgraphO, subgraphP],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultFailure;
+    const result = federateSubgraphsFailure([subgraphO, subgraphP], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
@@ -408,10 +367,7 @@ describe('Field resolvability tests', () => {
   });
 
   test('that an entity ancestor provides access to an otherwise unreachable field', () => {
-    const result = federateSubgraphs(
-      [subgraphQ, subgraphR],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
+    const result = federateSubgraphsSuccess([subgraphQ, subgraphR], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
     expect(documentNodeToNormalizedString(result.federatedGraphAST)).toBe(
       normalizeString(
@@ -440,10 +396,7 @@ describe('Field resolvability tests', () => {
   });
 
   test('that a nested self-referential type does not create an infinite validation loop', () => {
-    const result = federateSubgraphs(
-      [subgraphS, subgraphD],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
+    const result = federateSubgraphsSuccess([subgraphS, subgraphD], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
       normalizeString(
@@ -473,10 +426,7 @@ describe('Field resolvability tests', () => {
   });
 
   test('that unreachable interface implementations do not return an error', () => {
-    const result = federateSubgraphs(
-      [subgraphT, subgraphU],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
+    const result = federateSubgraphsSuccess([subgraphT, subgraphU], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
       normalizeString(
@@ -503,10 +453,7 @@ describe('Field resolvability tests', () => {
   });
 
   test('that extensions do not affect resolvability', () => {
-    const result = federateSubgraphs(
-      [subgraphX, subgraphY, subgraphZ],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
+    const result = federateSubgraphsSuccess([subgraphX, subgraphY, subgraphZ], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
       normalizeString(
@@ -541,10 +488,7 @@ describe('Field resolvability tests', () => {
   });
 
   test('that a root field cycle does not affect resolvability', () => {
-    const result = federateSubgraphs(
-      [subgraphAA, subgraphAB],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
+    const result = federateSubgraphsSuccess([subgraphAA, subgraphAB], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
       normalizeString(
@@ -594,10 +538,7 @@ describe('Field resolvability tests', () => {
       subgraphNames: new Set<string>(['subgraph-ac']),
       typeName: 'EntityOne',
     };
-    const result = federateSubgraphs(
-      [subgraphAC, subgraphAD],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultFailure;
+    const result = federateSubgraphsFailure([subgraphAC, subgraphAD], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(2);
     expect(result.errors[0]).toStrictEqual(
@@ -640,10 +581,7 @@ describe('Field resolvability tests', () => {
       subgraphNames: new Set<string>(['subgraph-ba']),
       typeName: 'EntityOne',
     };
-    const result = federateSubgraphs(
-      [subgraphBA, subgraphBB],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultFailure;
+    const result = federateSubgraphsFailure([subgraphBA, subgraphBB], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(2);
     expect(result.errors[0]).toStrictEqual(
@@ -677,10 +615,7 @@ describe('Field resolvability tests', () => {
       subgraphNames: new Set<string>(['subgraph-af']),
       typeName: 'Entity',
     };
-    const result = federateSubgraphs(
-      [subgraphAE, subgraphAF],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultFailure;
+    const result = federateSubgraphsFailure([subgraphAE, subgraphAF], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
@@ -693,15 +628,12 @@ describe('Field resolvability tests', () => {
 
   // TODO
   test.skip('that entity keys can be resolved over multiple subgraphs', () => {
-    const result = federateSubgraphs([subgraphAG, subgraphAH, subgraphAI, subgraphAJ]);
+    const result = federateSubgraphs({ subgraphs: [subgraphAG, subgraphAH, subgraphAI, subgraphAJ] });
     expect(result.success).toBe(true);
   });
 
   test('that entity resolve chains (leapfrogging) are valid', () => {
-    const result = federateSubgraphs(
-      [subgraphAK, subgraphAL, subgraphAM],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
+    const result = federateSubgraphsSuccess([subgraphAK, subgraphAL, subgraphAM], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
       normalizeString(
@@ -739,7 +671,7 @@ describe('Field resolvability tests', () => {
   });
 
   test('that cyclical references are valid', () => {
-    const result = federateSubgraphs([subgraphAN], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+    const result = federateSubgraphsSuccess([subgraphAN], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
       normalizeString(
@@ -769,10 +701,7 @@ describe('Field resolvability tests', () => {
   });
 
   test('that revisited fields do not produce false positives #1', () => {
-    const result = federateSubgraphs(
-      [subgraphAP, subgraphAQ],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
+    const result = federateSubgraphsSuccess([subgraphAP, subgraphAQ], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
       normalizeString(
@@ -804,7 +733,7 @@ describe('Field resolvability tests', () => {
   });
 
   test('that revisited fields do not produce false positives #2', () => {
-    const result = federateSubgraphs([subgraphAR], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
+    const result = federateSubgraphsSuccess([subgraphAR], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
       normalizeString(
@@ -835,10 +764,7 @@ describe('Field resolvability tests', () => {
   });
 
   test('that revisited fields do not produce false positives #3', () => {
-    const result = federateSubgraphs(
-      [subgraphAS, subgraphAT],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
+    const result = federateSubgraphsSuccess([subgraphAS, subgraphAT], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
       normalizeString(
@@ -879,10 +805,7 @@ describe('Field resolvability tests', () => {
   });
 
   test('that inaccessible concrete types that implement an interface are not assessed by the resolvability graph', () => {
-    const result = federateSubgraphs(
-      [subgraphAU, subgraphAV],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
+    const result = federateSubgraphsSuccess([subgraphAU, subgraphAV], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
       normalizeString(
@@ -915,10 +838,7 @@ describe('Field resolvability tests', () => {
   });
 
   test('that interface objects do not create false positives #1.1', () => {
-    const result = federateSubgraphs(
-      [subgraphAW, subgraphAX],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
+    const result = federateSubgraphsSuccess([subgraphAW, subgraphAX], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
       normalizeString(
@@ -991,10 +911,7 @@ describe('Field resolvability tests', () => {
   });
 
   test('that interface objects can contribute implicit keys #1.1', () => {
-    const result = federateSubgraphs(
-      [subgraphAY, subgraphAX, subgraphAW],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
+    const result = federateSubgraphsSuccess([subgraphAY, subgraphAX, subgraphAW], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
       normalizeString(
@@ -1033,10 +950,7 @@ describe('Field resolvability tests', () => {
   });
 
   test('that interface objects can contribute implicit keys #1.2', () => {
-    const result = federateSubgraphs(
-      [subgraphAW, subgraphAX, subgraphAY],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
+    const result = federateSubgraphsSuccess([subgraphAW, subgraphAX, subgraphAY], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
       normalizeString(
@@ -1075,10 +989,7 @@ describe('Field resolvability tests', () => {
   });
 
   test('that interface objects can contribute implicit keys #1.3', () => {
-    const result = federateSubgraphs(
-      [subgraphAY, subgraphAW, subgraphAX],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
+    const result = federateSubgraphsSuccess([subgraphAY, subgraphAW, subgraphAX], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
       normalizeString(
@@ -1117,10 +1028,7 @@ describe('Field resolvability tests', () => {
   });
 
   test('that inaccessible fields are not considered for resolvability', () => {
-    const result = federateSubgraphs(
-      [subgraphAZ, subgraphAO],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
+    const result = federateSubgraphsSuccess([subgraphAZ, subgraphAO], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
       normalizeString(
@@ -1143,10 +1051,7 @@ describe('Field resolvability tests', () => {
   });
 
   test('that shared entity fields do not trigger false positives', () => {
-    const result = federateSubgraphs(
-      [subgraphBC, subgraphBD, subgraphBE],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
+    const result = federateSubgraphsSuccess([subgraphBC, subgraphBD, subgraphBE], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
       normalizeString(
@@ -1176,10 +1081,7 @@ describe('Field resolvability tests', () => {
   });
 
   test('that shared entity fields frm a root field do not produce false positives', () => {
-    const result = federateSubgraphs(
-      [subgraphBF, subgraphBG],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
+    const result = federateSubgraphsSuccess([subgraphBF, subgraphBG], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
       normalizeString(
@@ -1203,10 +1105,7 @@ describe('Field resolvability tests', () => {
   });
 
   test('that interface objects satisfied by implicit keys do not produce false positives', () => {
-    const result = federateSubgraphs(
-      [subgraphBH, subgraphBI],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
+    const result = federateSubgraphsSuccess([subgraphBH, subgraphBI], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
       normalizeString(
@@ -1268,10 +1167,7 @@ describe('Field resolvability tests', () => {
   });
 
   test('that a shared entity field cycle is resolvable', () => {
-    const result = federateSubgraphs(
-      [subgraphBK, subgraphBL],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
+    const result = federateSubgraphsSuccess([subgraphBK, subgraphBL], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
       normalizeString(
@@ -1386,6 +1282,20 @@ describe('Field resolvability tests', () => {
         `,
       ),
     );
+  });
+
+  test('that resolvability validation can be disabled', () => {
+    const resultOne = federateSubgraphs({
+      subgraphs: [subgraphBQ, subgraphBR],
+      version: ROUTER_COMPATIBILITY_VERSION_ONE,
+    });
+    expect(resultOne.success).toBe(false);
+    const resultTwo = federateSubgraphs({
+      disableResolvabilityValidation: true,
+      subgraphs: [subgraphBQ, subgraphBR],
+      version: ROUTER_COMPATIBILITY_VERSION_ONE,
+    });
+    expect(resultTwo.success).toBe(true);
   });
 });
 
@@ -2266,7 +2176,7 @@ const subgraphAW: Subgraph = {
     
     type Interface @interfaceObject @key(fields: "id") {
      id: ID!
-     age: Int!
+     age: Int! @shareable
     }
   `),
 };
@@ -2606,6 +2516,30 @@ const subgraphBP: Subgraph = {
     type Entity @key(fields: "id") {
       id: ID!
       age: Int!
+    }
+  `),
+};
+
+const subgraphBQ: Subgraph = {
+  name: 'subgraph-bq',
+  url: '',
+  definitions: parse(`
+    type Object {
+      id: ID!
+    }
+    
+    type Query {
+      object: Object!
+    }
+  `),
+};
+
+const subgraphBR: Subgraph = {
+  name: 'subgraph-br',
+  url: '',
+  definitions: parse(`
+    type Object {
+      name: String!
     }
   `),
 };

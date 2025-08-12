@@ -11,16 +11,24 @@ import {
   SupportedRouterCompatibilityVersion,
   Warning,
 } from '@wundergraph/composition';
-import { buildRouterConfig, ComposedSubgraph as IComposedSubgraph, SubgraphKind } from '@wundergraph/cosmo-shared';
+import {
+  buildRouterConfig,
+  ComposedSubgraphGRPC,
+  ComposedSubgraphPlugin,
+  ComposedSubgraph as IComposedSubgraph,
+  SubgraphKind,
+} from '@wundergraph/cosmo-shared';
 import { FastifyBaseLogger } from 'fastify';
 import { DocumentNode, GraphQLSchema, parse, printSchema } from 'graphql';
 import {
   FeatureFlagRouterExecutionConfig,
   FeatureFlagRouterExecutionConfigs,
+  GRPCMapping,
+  ImageReference,
   RouterConfig,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { FederatedGraphDTO, Label, SubgraphDTO } from '../../types/index.js';
+import { CompositionOptions, FederatedGraphDTO, Label, SubgraphDTO } from '../../types/index.js';
 import { BlobStorage } from '../blobstorage/index.js';
 import { audiences, nowInSeconds, signJwtHS256 } from '../crypto/jwt.js';
 import { ContractRepository } from '../repositories/ContractRepository.js';
@@ -102,12 +110,23 @@ export function buildRouterExecutionConfig(
   });
 }
 
-export type ComposedSubgraph = IComposedSubgraph & {
+export type ComposedSubgraph = (IComposedSubgraph | ComposedSubgraphPlugin | ComposedSubgraphGRPC) & {
   targetId: string;
   isFeatureSubgraph: boolean;
+  schemaVersionId: string;
+};
+
+const parseGRPCMapping = (mappings: string): GRPCMapping => {
+  try {
+    const mappingsJson = JSON.parse(mappings);
+    return GRPCMapping.fromJson(mappingsJson);
+  } catch (error) {
+    throw new Error(`Failed to parse gRPC mappings: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
 };
 
 export function subgraphDTOsToComposedSubgraphs(
+  organizationId: string,
   subgraphs: SubgraphDTO[],
   result: FederationResult,
 ): ComposedSubgraph[] {
@@ -123,6 +142,53 @@ export function subgraphDTOsToComposedSubgraphs(
     const subgraphConfig = result.success ? result.subgraphConfigBySubgraphName.get(subgraph.name) : undefined;
     const schema = subgraphConfig?.schema;
     const configurationDataByTypeName = subgraphConfig?.configurationDataByTypeName;
+
+    if (subgraph.type === 'grpc_plugin') {
+      if (!subgraph.proto || !subgraph.proto.pluginData) {
+        throw new Error(`Subgraph ${subgraph.name} is a plugin but does not have a plugin data`);
+      }
+
+      return {
+        kind: SubgraphKind.Plugin,
+        id: subgraph.id,
+        version: subgraph.proto.pluginData.version,
+        name: subgraph.name,
+        sdl: subgraph.schemaSDL,
+        url: subgraph.routingUrl,
+        schemaVersionId: subgraph.schemaVersionId,
+        targetId: subgraph.targetId,
+        isFeatureSubgraph: subgraph.isFeatureSubgraph,
+        configurationDataByTypeName,
+        schema,
+        protoSchema: subgraph.proto.schema,
+        mapping: parseGRPCMapping(subgraph.proto.mappings),
+        imageReference: new ImageReference({
+          repository: `${organizationId}/${subgraph.id}`,
+          reference: subgraph.proto.pluginData.version,
+        }),
+      };
+    }
+    if (subgraph.type === 'grpc_service') {
+      if (!subgraph.proto) {
+        throw new Error(`Subgraph ${subgraph.name} is a GRPC service but does not have a proto`);
+      }
+
+      return {
+        kind: SubgraphKind.GRPC,
+        id: subgraph.id,
+        name: subgraph.name,
+        sdl: subgraph.schemaSDL,
+        url: subgraph.routingUrl,
+        schemaVersionId: subgraph.schemaVersionId,
+        targetId: subgraph.targetId,
+        isFeatureSubgraph: subgraph.isFeatureSubgraph,
+        configurationDataByTypeName,
+        schema,
+        protoSchema: subgraph.proto.schema,
+        mapping: parseGRPCMapping(subgraph.proto.mappings),
+      };
+    }
+
     return {
       kind: SubgraphKind.Standard,
       id: subgraph.id,
@@ -157,7 +223,7 @@ export function mapResultToComposedGraph(
     federatedClientSchema: result.success ? printSchema(result.federatedGraphClientSchema) : undefined,
     shouldIncludeClientSchema: result.success ? result.shouldIncludeClientSchema : false,
     errors: result.success ? [] : result.errors,
-    subgraphs: subgraphDTOsToComposedSubgraphs(subgraphs, result),
+    subgraphs: subgraphDTOsToComposedSubgraphs(federatedGraph.organizationId, subgraphs, result),
     fieldConfigurations: result.success ? result.fieldConfigurations : [],
     warnings: result.warnings,
   };
@@ -561,6 +627,7 @@ export class Composer {
     mapSubgraphs: (
       subgraphs: SubgraphDTO[],
     ) => [SubgraphDTO[], { name: string; url: string; definitions: DocumentNode }[]],
+    compositionOptions?: CompositionOptions,
   ): Promise<CompositionResult> {
     const composedGraphs: ComposedFederatedGraph[] = [];
 
@@ -579,7 +646,11 @@ export class Composer {
         const contracts = await this.contractRepo.bySourceFederatedGraphId(graph.id);
 
         if (contracts.length === 0) {
-          const federationResult = composeSubgraphs(subgraphsToBeComposed, graph.routerCompatibilityVersion);
+          const federationResult = composeSubgraphs(
+            subgraphsToBeComposed,
+            graph.routerCompatibilityVersion,
+            compositionOptions,
+          );
           composedGraphs.push(mapResultToComposedGraph(graph, subgraphs, federationResult));
           continue;
         }
@@ -597,6 +668,7 @@ export class Composer {
           subgraphsToBeComposed,
           tagOptionsByContractName,
           graph.routerCompatibilityVersion,
+          compositionOptions,
         );
         composedGraphs.push(mapResultToComposedGraph(graph, subgraphs, federationResult));
 
@@ -639,36 +711,44 @@ export class Composer {
     subgraphName: string,
     namespaceId: string,
     subgraphSchemaSDL: string,
+    compositionOptions?: CompositionOptions,
   ) {
-    return this.composeWithLabels(subgraphLabels, namespaceId, (subgraphs) => {
-      const subgraphsToBeComposed: Array<Subgraph> = [];
+    return this.composeWithLabels(
+      subgraphLabels,
+      namespaceId,
+      (subgraphs) => {
+        const subgraphsToBeComposed: Array<Subgraph> = [];
 
-      for (const subgraph of subgraphs) {
-        if (subgraph.name === subgraphName) {
-          subgraphsToBeComposed.push({
-            name: subgraph.name,
-            url: subgraph.routingUrl,
-            definitions: parse(subgraphSchemaSDL),
-          });
-        } else if (subgraph.schemaSDL !== '') {
-          subgraphsToBeComposed.push({
-            name: subgraph.name,
-            url: subgraph.routingUrl,
-            definitions: parse(subgraph.schemaSDL),
-          });
+        for (const subgraph of subgraphs) {
+          if (subgraph.name === subgraphName) {
+            subgraphsToBeComposed.push({
+              name: subgraph.name,
+              url: subgraph.routingUrl,
+              definitions: parse(subgraphSchemaSDL),
+            });
+          } else if (subgraph.schemaSDL !== '') {
+            subgraphsToBeComposed.push({
+              name: subgraph.name,
+              url: subgraph.routingUrl,
+              definitions: parse(subgraph.schemaSDL),
+            });
+          }
         }
-      }
 
-      return [subgraphs, subgraphsToBeComposed];
-    });
+        return [subgraphs, subgraphsToBeComposed];
+      },
+      compositionOptions,
+    );
   }
 
   async composeWithProposedSchemas({
-    inputSubgraphs,
+    compositionOptions,
     graphs,
+    inputSubgraphs,
   }: {
-    inputSubgraphs: Map<string, CheckSubgraph>;
     graphs: FederatedGraphDTO[];
+    inputSubgraphs: Map<string, CheckSubgraph>;
+    compositionOptions?: CompositionOptions;
   }) {
     const composedGraphs: ComposedFederatedGraph[] = [];
     // the key is the federated graph id and the value is the list of check subgraph ids which are part of the composition for that federated graph
@@ -735,7 +815,11 @@ export class Composer {
         const contracts = await this.contractRepo.bySourceFederatedGraphId(graph.id);
 
         if (contracts.length === 0) {
-          const federationResult = composeSubgraphs(subgraphsToBeComposed, graph.routerCompatibilityVersion);
+          const federationResult = composeSubgraphs(
+            subgraphsToBeComposed,
+            graph.routerCompatibilityVersion,
+            compositionOptions,
+          );
           composedGraphs.push(mapResultToComposedGraph(graph, subgraphsOfFedGraph, federationResult));
           continue;
         }
@@ -753,6 +837,7 @@ export class Composer {
           subgraphsToBeComposed,
           tagOptionsByContractName,
           graph.routerCompatibilityVersion,
+          compositionOptions,
         );
         composedGraphs.push(mapResultToComposedGraph(graph, subgraphsOfFedGraph, federationResult));
 

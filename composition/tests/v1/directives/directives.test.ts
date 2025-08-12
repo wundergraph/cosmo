@@ -1,11 +1,9 @@
 import {
-  federateSubgraphs,
-  FederationResultSuccess,
   FIRST_ORDINAL,
   invalidArgumentValueErrorMessage,
   invalidDirectiveError,
-  NormalizationResultFailure,
-  NormalizationResultSuccess,
+  NormalizationFailure,
+  NormalizationSuccess,
   normalizeSubgraph,
   normalizeSubgraphFromString,
   parse,
@@ -19,7 +17,7 @@ import {
   versionOneRouterDefinitions,
   versionTwoDirectiveDefinitions,
 } from '../utils/utils';
-import { normalizeString, schemaToSortedNormalizedString } from '../../utils/utils';
+import { federateSubgraphsSuccess, normalizeString, schemaToSortedNormalizedString } from '../../utils/utils';
 
 describe('Directive tests', () => {
   describe('Normalization tests', () => {
@@ -29,7 +27,7 @@ describe('Directive tests', () => {
         na.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -46,7 +44,7 @@ describe('Directive tests', () => {
         nb.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -72,7 +70,7 @@ describe('Directive tests', () => {
         nc.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -89,7 +87,7 @@ describe('Directive tests', () => {
         nd.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -115,7 +113,7 @@ describe('Directive tests', () => {
         ne.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -145,7 +143,7 @@ describe('Directive tests', () => {
         nf.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -162,7 +160,7 @@ describe('Directive tests', () => {
         ng.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -195,7 +193,7 @@ describe('Directive tests', () => {
         nh.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -222,7 +220,7 @@ describe('Directive tests', () => {
         ni.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -249,7 +247,7 @@ describe('Directive tests', () => {
         nj.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -278,7 +276,7 @@ describe('Directive tests', () => {
         nk.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -305,7 +303,7 @@ describe('Directive tests', () => {
         subgraphA.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
     });
 
@@ -328,7 +326,7 @@ describe('Directive tests', () => {
       `,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -364,7 +362,7 @@ describe('Directive tests', () => {
       `,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -380,10 +378,7 @@ describe('Directive tests', () => {
 
   describe('Federation tests', () => {
     test('that @specifiedBy is supported', () => {
-      const result = federateSubgraphs(
-        [subgraphA, subgraphB],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -402,18 +397,18 @@ describe('Directive tests', () => {
   });
 
   test('that directives compose', () => {
-    const result = federateSubgraphs(
+    const result = federateSubgraphsSuccess(
       [
         { name: 'a', url: '', definitions: parse(`directive @test on OBJECT type Query { dummy: String! }`) },
         { name: 'b', url: '', definitions: parse(`directive @test(a: String!) on OBJECT`) },
       ],
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
+    );
     expect(result.success).toBe(true);
   });
 
   test('that schema directives are supported', () => {
-    const result = federateSubgraphs(
+    federateSubgraphsSuccess(
       [
         {
           name: 'test',
@@ -437,8 +432,7 @@ describe('Directive tests', () => {
         },
       ],
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
-    expect(result.success).toBe(true);
+    );
   });
 });
 

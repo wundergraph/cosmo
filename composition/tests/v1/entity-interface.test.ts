@@ -2,8 +2,6 @@ import {
   ConfigurationData,
   EntityInterfaceFederationData,
   EntityInterfaceSubgraphData,
-  federateSubgraphs,
-  FederationResultSuccess,
   InvalidEntityInterface,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   SimpleFieldData,
@@ -23,10 +21,7 @@ import {
 
 describe('Entity Interface Tests', () => {
   test('that an @interfaceObject does not need to contribute new fields', () => {
-    const result = federateSubgraphs(
-      [subgraphC, subgraphD],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
+    const result = federateSubgraphsSuccess([subgraphC, subgraphD], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
       normalizeString(
@@ -55,10 +50,7 @@ describe('Entity Interface Tests', () => {
   });
 
   test('that fields contributed by an interface object are added to each concrete type', () => {
-    const result = federateSubgraphs(
-      [subgraphA, subgraphB],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
+    const result = federateSubgraphsSuccess([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
       normalizeString(
@@ -87,10 +79,7 @@ describe('Entity Interface Tests', () => {
   });
 
   test('that interface objects produce the correct engine configuration', () => {
-    const result = federateSubgraphs(
-      [subgraphA, subgraphB],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
+    const result = federateSubgraphsSuccess([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
     const subgraphConfigBySubgraphName = result.subgraphConfigBySubgraphName;
     expect(subgraphConfigBySubgraphName).toBeDefined();
@@ -374,8 +363,8 @@ const subgraphD: Subgraph = {
   definitions: parse(`
     type Interface @key(fields: "id") @interfaceObject {
       id: ID!
-      name: String!
-      age: Int!
+      name: String! @shareable
+      age: Int! @shareable
     }
   `),
 };

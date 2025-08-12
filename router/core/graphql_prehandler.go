@@ -300,7 +300,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			var err error
 			body, files, err = multipartParser.Parse(r, h.getBodyReadBuffer(r.ContentLength))
 			// We set it before the error so that users could log the body if it exists in case of an error
-			if h.exprManager.VisitorManager.IsBodyUsedInExpressions() {
+			if h.exprManager.VisitorManager.IsRequestBodyUsedInExpressions() {
 				requestContext.expressionContext.Request.Body.Raw = string(body)
 			}
 			if err != nil {
@@ -332,7 +332,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			var err error
 			body, err = h.operationProcessor.ReadBody(r.Body, h.getBodyReadBuffer(r.ContentLength))
 			// We set it before the error so that users could log the body if it exists in case of an error
-			if h.exprManager.VisitorManager.IsBodyUsedInExpressions() {
+			if h.exprManager.VisitorManager.IsRequestBodyUsedInExpressions() {
 				requestContext.expressionContext.Request.Body.Raw = string(body)
 			}
 			if err != nil {
@@ -476,17 +476,17 @@ func (h *PreHandler) shouldComputeOperationSha256(operationKit *OperationKit) bo
 		return true
 	}
 
-	hasPersistedHash := operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery != nil && operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash != ""
-	// If it already has a persisted hash attached to the request, then there is no need for us to compute it anew
+	hasPersistedHash := operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash()
+	// If it already has a persisted hash attached to the request, then there is no need for us to compute it anew.
 	// Otherwise, we only want to compute the hash (an expensive operation) if we're safelisting or logging unknown persisted operations
-	return !hasPersistedHash && (h.operationBlocker.SafelistEnabled || h.operationBlocker.LogUnknownOperationsEnabled)
+	return !hasPersistedHash && (h.operationBlocker.safelistEnabled || h.operationBlocker.logUnknownOperationsEnabled)
 }
 
 // shouldFetchPersistedOperation determines if we should fetch a persisted operation. The most intuitive case is if the
 // operation is a persisted operation. However, we also want to fetch persisted operations if we're enabling safelisting
 // and if we're logging unknown operations. This is because we want to check if the operation is already persisted in the cache
 func (h *PreHandler) shouldFetchPersistedOperation(operationKit *OperationKit) bool {
-	return operationKit.parsedOperation.IsPersistedOperation || h.operationBlocker.SafelistEnabled || h.operationBlocker.LogUnknownOperationsEnabled
+	return operationKit.parsedOperation.IsPersistedOperation || h.operationBlocker.safelistEnabled || h.operationBlocker.logUnknownOperationsEnabled
 }
 
 func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson.Parser, httpOperation *httpOperation) error {
@@ -512,20 +512,29 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	if req.Method == http.MethodGet {
 		if err := operationKit.UnmarshalOperationFromURL(req.URL); err != nil {
 			return &httpGraphqlError{
-				message:    fmt.Sprintf("error parsing request query params: %s", err),
+				message:    fmt.Sprintf("invalid GET request: %s", err),
 				statusCode: http.StatusBadRequest,
 			}
 		}
 	} else if req.Method == http.MethodPost {
 		if err := operationKit.UnmarshalOperationFromBody(httpOperation.body); err != nil {
 			return &httpGraphqlError{
-				message:    "error parsing request body",
+				message:    fmt.Sprintf("invalid request body: %s", err),
 				statusCode: http.StatusBadRequest,
 			}
 		}
 		// If we have files, we need to set them on the parsed operation
 		if len(httpOperation.files) > 0 {
 			requestContext.operation.files = httpOperation.files
+		}
+	}
+
+	if operationKit.isOperationNameLengthLimitExceeded(operationKit.parsedOperation.Request.OperationName) {
+		return &httpGraphqlError{
+			message: fmt.Sprintf("operation name of length %d exceeds max length of %d",
+				len(operationKit.parsedOperation.Request.OperationName),
+				operationKit.operationProcessor.operationNameLengthLimit),
+			statusCode: http.StatusBadRequest,
 		}
 	}
 
@@ -539,7 +548,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		}
 		requestContext.operation.sha256Hash = operationKit.parsedOperation.Sha256Hash
 		requestContext.telemetry.addCustomMetricStringAttr(ContextFieldOperationSha256, requestContext.operation.sha256Hash)
-		if h.operationBlocker.SafelistEnabled || h.operationBlocker.LogUnknownOperationsEnabled {
+		if h.operationBlocker.safelistEnabled || h.operationBlocker.logUnknownOperationsEnabled {
 			// Set the request hash to the parsed hash, to see if it matches a persisted operation
 			operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery = &GraphQLRequestExtensionsPersistedQuery{
 				Sha256Hash: operationKit.parsedOperation.Sha256Hash,
@@ -562,6 +571,13 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	)
 
 	if h.shouldFetchPersistedOperation(operationKit) {
+		if h.operationBlocker.persistedOperationsDisabled {
+			return &httpGraphqlError{
+				message:    "persisted operations are disabled",
+				statusCode: http.StatusBadRequest,
+			}
+		}
+
 		ctx, span := h.tracer.Start(req.Context(), "Load Persisted Operation",
 			trace.WithSpanKind(trace.SpanKindClient),
 			trace.WithAttributes(requestContext.telemetry.traceAttrs...),
@@ -574,9 +590,9 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 			span.SetStatus(codes.Error, err.Error())
 
 			var poNotFoundErr *persistedoperation.PersistentOperationNotFoundError
-			if h.operationBlocker.LogUnknownOperationsEnabled && errors.As(err, &poNotFoundErr) {
+			if h.operationBlocker.logUnknownOperationsEnabled && errors.As(err, &poNotFoundErr) {
 				requestContext.logger.Warn("Unknown persisted operation found", zap.String("query", operationKit.parsedOperation.Request.Query), zap.String("sha256Hash", poNotFoundErr.Sha256Hash))
-				if h.operationBlocker.SafelistEnabled {
+				if h.operationBlocker.safelistEnabled {
 					span.End()
 					return err
 				}
@@ -678,11 +694,10 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		}
 	}
 
-	if operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery != nil &&
-		operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash != "" {
-
-		requestContext.operation.persistedID = operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash
-		persistedIDAttribute := otel.WgOperationPersistedID.String(operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)
+	if operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash() {
+		hash := operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash
+		requestContext.operation.persistedID = hash
+		persistedIDAttribute := otel.WgOperationPersistedID.String(hash)
 
 		requestContext.telemetry.addCommonAttribute(persistedIDAttribute)
 
@@ -890,6 +905,28 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		trace.WithSpanKind(trace.SpanKindInternal),
 		trace.WithAttributes(requestContext.telemetry.traceAttrs...),
 	)
+
+	// Validate that the planned query doesn't exceed the maximum query depth configured
+	// This check runs if they've configured a max query depth, and it can optionally be turned off for persisted operations
+	if h.complexityLimits != nil {
+		cacheHit, complexityCalcs, queryDepthErr := operationKit.ValidateQueryComplexity()
+		engineValidateSpan.SetAttributes(otel.WgQueryDepth.Int(complexityCalcs.Depth))
+		engineValidateSpan.SetAttributes(otel.WgQueryTotalFields.Int(complexityCalcs.TotalFields))
+		engineValidateSpan.SetAttributes(otel.WgQueryRootFields.Int(complexityCalcs.RootFields))
+		engineValidateSpan.SetAttributes(otel.WgQueryRootFieldAliases.Int(complexityCalcs.RootFieldAliases))
+		engineValidateSpan.SetAttributes(otel.WgQueryDepthCacheHit.Bool(cacheHit))
+		if queryDepthErr != nil {
+			rtrace.AttachErrToSpan(engineValidateSpan, err)
+
+			requestContext.operation.validationTime = time.Since(startValidation)
+			httpOperation.traceTimings.EndValidate()
+
+			engineValidateSpan.End()
+
+			return queryDepthErr
+		}
+	}
+
 	validationCached, err := operationKit.Validate(requestContext.operation.executionOptions.SkipLoader, requestContext.operation.remapVariables, h.apolloCompatibilityFlags)
 	if err != nil {
 		rtrace.AttachErrToSpan(engineValidateSpan, err)
@@ -912,27 +949,6 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		// we skip the validation of variables as we're not using them
 		// this allows us to generate query plans without having to provide variables
 		engineValidateSpan.SetAttributes(otel.WgVariablesValidationSkipped.Bool(true))
-	}
-
-	// Validate that the planned query doesn't exceed the maximum query depth configured
-	// This check runs if they've configured a max query depth, and it can optionally be turned off for persisted operations
-	if h.complexityLimits != nil {
-		cacheHit, complexityCalcs, queryDepthErr := operationKit.ValidateQueryComplexity(h.complexityLimits, operationKit.kit.doc, h.executor.RouterSchema, operationKit.parsedOperation.IsPersistedOperation)
-		engineValidateSpan.SetAttributes(otel.WgQueryDepth.Int(complexityCalcs.Depth))
-		engineValidateSpan.SetAttributes(otel.WgQueryTotalFields.Int(complexityCalcs.TotalFields))
-		engineValidateSpan.SetAttributes(otel.WgQueryRootFields.Int(complexityCalcs.RootFields))
-		engineValidateSpan.SetAttributes(otel.WgQueryRootFieldAliases.Int(complexityCalcs.RootFieldAliases))
-		engineValidateSpan.SetAttributes(otel.WgQueryDepthCacheHit.Bool(cacheHit))
-		if queryDepthErr != nil {
-			rtrace.AttachErrToSpan(engineValidateSpan, err)
-
-			requestContext.operation.validationTime = time.Since(startValidation)
-			httpOperation.traceTimings.EndValidate()
-
-			engineValidateSpan.End()
-
-			return queryDepthErr
-		}
 	}
 
 	requestContext.operation.validationTime = time.Since(startValidation)
@@ -1009,15 +1025,17 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		}
 
 		if h.queryPlansLoggingEnabled {
+			var printedPlan string
 			switch p := requestContext.operation.preparedPlan.preparedPlan.(type) {
 			case *plan.SynchronousResponsePlan:
-				printedPlan := p.Response.Fetches.QueryPlan().PrettyPrint()
-
-				if h.developmentMode {
-					h.log.Sugar().Debugf("Query Plan:\n%s", printedPlan)
-				} else {
-					h.log.Debug("Query Plan", zap.String("query_plan", printedPlan))
-				}
+				printedPlan = p.Response.Fetches.QueryPlan().PrettyPrint()
+			case *plan.SubscriptionResponsePlan:
+				printedPlan = p.Response.Response.Fetches.QueryPlan().PrettyPrint()
+			}
+			if h.developmentMode {
+				h.log.Sugar().Debugf("Query Plan:\n%s", printedPlan)
+			} else {
+				h.log.Debug("Query Plan", zap.String("query_plan", printedPlan))
 			}
 		}
 	}

@@ -233,7 +233,6 @@ import {
   newConditionalFieldData,
   newExternalFieldData,
   newPersistedDirectivesData,
-  removeInheritableDirectivesFromObjectParent,
 } from '../../schema-building/utils';
 import {
   CompositeOutputNode,
@@ -259,6 +258,8 @@ import {
   ARGUMENT,
   AUTHENTICATED,
   BOOLEAN_SCALAR,
+  CHANNEL,
+  CHANNELS,
   CONFIGURE_CHILD_DESCRIPTIONS,
   CONFIGURE_DESCRIPTION,
   CONSUMER_INACTIVE_THRESHOLD,
@@ -272,6 +273,8 @@ import {
   EDFS_NATS_STREAM_CONFIGURATION,
   EDFS_NATS_SUBSCRIBE,
   EDFS_PUBLISH_RESULT,
+  EDFS_REDIS_PUBLISH,
+  EDFS_REDIS_SUBSCRIBE,
   ENTITIES_FIELD,
   EXECUTABLE_DIRECTIVE_LOCATIONS,
   EXECUTION,
@@ -283,8 +286,10 @@ import {
   HYPHEN_JOIN,
   ID_SCALAR,
   INACCESSIBLE,
+  INHERITABLE_DIRECTIVE_NAMES,
   INPUT_FIELD,
   INT_SCALAR,
+  INTERFACE_OBJECT,
   KEY,
   LINK,
   LINK_IMPORT,
@@ -301,6 +306,7 @@ import {
   PROVIDER_ID,
   PROVIDER_TYPE_KAFKA,
   PROVIDER_TYPE_NATS,
+  PROVIDER_TYPE_REDIS,
   PUBLISH,
   QUERY,
   REQUEST,
@@ -545,12 +551,17 @@ export class NormalizationFactory {
     }
   }
 
-  addInheritedDirectivesToFieldData(fieldDirectivesByDirectiveName: Map<string, Array<ConstDirectiveNode>>) {
-    if (this.isParentObjectShareable) {
-      getValueOrDefault(fieldDirectivesByDirectiveName, SHAREABLE, () => [generateSimpleDirective(SHAREABLE)]);
+  addInheritedDirectivesToFieldData(
+    fieldDirectivesByDirectiveName: Map<string, Array<ConstDirectiveNode>>,
+    inheritedDirectiveNames: Set<string>,
+  ) {
+    if (this.isParentObjectShareable && !fieldDirectivesByDirectiveName.has(SHAREABLE)) {
+      fieldDirectivesByDirectiveName.set(SHAREABLE, [generateSimpleDirective(SHAREABLE)]);
+      inheritedDirectiveNames.add(SHAREABLE);
     }
-    if (this.isParentObjectExternal) {
-      getValueOrDefault(fieldDirectivesByDirectiveName, EXTERNAL, () => [generateSimpleDirective(EXTERNAL)]);
+    if (this.isParentObjectExternal && !fieldDirectivesByDirectiveName.has(EXTERNAL)) {
+      fieldDirectivesByDirectiveName.set(EXTERNAL, [generateSimpleDirective(EXTERNAL)]);
+      inheritedDirectiveNames.add(EXTERNAL);
     }
     return fieldDirectivesByDirectiveName;
   }
@@ -1066,6 +1077,7 @@ export class NormalizationFactory {
     node: FieldDefinitionNode,
     argumentDataByArgumentName: Map<string, InputValueData>,
     directivesByDirectiveName: Map<string, ConstDirectiveNode[]>,
+    inheritedDirectiveNames: Set<string> = new Set<string>(),
   ): FieldData {
     const name = node.name.value;
     const parentTypeName = this.renamedParentTypeName || this.originalParentTypeName;
@@ -1083,6 +1095,7 @@ export class NormalizationFactory {
         [this.subgraphName, newExternalFieldData(isExternal)],
       ]),
       federatedCoords: `${parentTypeName}.${name}`,
+      inheritedDirectiveNames,
       isInaccessible: directivesByDirectiveName.has(INACCESSIBLE),
       isShareableBySubgraphName: new Map<string, boolean>([[this.subgraphName, isShareable]]),
       kind: Kind.FIELD_DEFINITION,
@@ -1255,11 +1268,15 @@ export class NormalizationFactory {
         return;
       }
       this.updateCompositeOutputDataByNode(node, parentData, extensionType);
-      this.addConcreteTypeNamesForImplementedInterfaces(parentData.implementedInterfaceTypeNames, typeName);
+      if (!directivesByDirectiveName.has(INTERFACE_OBJECT)) {
+        this.addConcreteTypeNamesForImplementedInterfaces(parentData.implementedInterfaceTypeNames, typeName);
+      }
       return;
     }
     const implementedInterfaceTypeNames = this.extractImplementedInterfaceTypeNames(node, new Set<string>());
-    this.addConcreteTypeNamesForImplementedInterfaces(implementedInterfaceTypeNames, typeName);
+    if (!directivesByDirectiveName.has(INTERFACE_OBJECT)) {
+      this.addConcreteTypeNamesForImplementedInterfaces(implementedInterfaceTypeNames, typeName);
+    }
     const newParentData: ObjectDefinitionData = {
       configureDescriptionDataBySubgraphName: new Map<string, ConfigureDescriptionData>(),
       directivesByDirectiveName,
@@ -2413,6 +2430,89 @@ export class NormalizationFactory {
     };
   }
 
+  getRedisPublishConfiguration(
+    directive: ConstDirectiveNode,
+    argumentDataByArgumentName: Map<string, InputValueData>,
+    fieldName: string,
+    errorMessages: string[],
+  ): EventConfiguration | undefined {
+    const channels: string[] = [];
+    let providerId = DEFAULT_EDFS_PROVIDER_ID;
+    for (const argumentNode of directive.arguments || []) {
+      switch (argumentNode.name.value) {
+        case CHANNEL: {
+          if (argumentNode.value.kind !== Kind.STRING || argumentNode.value.value.length < 1) {
+            errorMessages.push(invalidEventSubjectErrorMessage(CHANNEL));
+            continue;
+          }
+          validateArgumentTemplateReferences(argumentNode.value.value, argumentDataByArgumentName, errorMessages);
+          channels.push(argumentNode.value.value);
+          break;
+        }
+        case PROVIDER_ID: {
+          if (argumentNode.value.kind !== Kind.STRING || argumentNode.value.value.length < 1) {
+            errorMessages.push(invalidEventProviderIdErrorMessage);
+            continue;
+          }
+          providerId = argumentNode.value.value;
+          break;
+        }
+      }
+    }
+    if (errorMessages.length > 0) {
+      return;
+    }
+    return { fieldName, providerId, providerType: PROVIDER_TYPE_REDIS, channels, type: PUBLISH };
+  }
+
+  getRedisSubscribeConfiguration(
+    directive: ConstDirectiveNode,
+    argumentDataByArgumentName: Map<string, InputValueData>,
+    fieldName: string,
+    errorMessages: string[],
+  ): EventConfiguration | undefined {
+    const channels: string[] = [];
+    let providerId = DEFAULT_EDFS_PROVIDER_ID;
+    for (const argumentNode of directive.arguments || []) {
+      switch (argumentNode.name.value) {
+        case CHANNELS: {
+          //@TODO list coercion
+          if (argumentNode.value.kind !== Kind.LIST) {
+            errorMessages.push(invalidEventSubjectsErrorMessage(CHANNELS));
+            continue;
+          }
+          for (const value of argumentNode.value.values) {
+            if (value.kind !== Kind.STRING || value.value.length < 1) {
+              errorMessages.push(invalidEventSubjectsItemErrorMessage(CHANNELS));
+              break;
+            }
+            validateArgumentTemplateReferences(value.value, argumentDataByArgumentName, errorMessages);
+            channels.push(value.value);
+          }
+          break;
+        }
+        case PROVIDER_ID: {
+          if (argumentNode.value.kind !== Kind.STRING || argumentNode.value.value.length < 1) {
+            errorMessages.push(invalidEventProviderIdErrorMessage);
+            continue;
+          }
+          providerId = argumentNode.value.value;
+          break;
+        }
+      }
+    }
+    if (errorMessages.length > 0) {
+      return;
+    }
+    return {
+      fieldName,
+      providerId,
+      providerType: PROVIDER_TYPE_REDIS,
+      channels,
+      type: SUBSCRIBE,
+    };
+  }
+
   validateSubscriptionFilterDirectiveLocation(node: FieldDefinitionNode) {
     if (!node.directives) {
       return;
@@ -2490,6 +2590,24 @@ export class NormalizationFactory {
           );
           break;
         }
+        case EDFS_REDIS_PUBLISH: {
+          eventConfiguration = this.getRedisPublishConfiguration(
+            directive,
+            argumentDataByArgumentName,
+            fieldName,
+            errorMessages,
+          );
+          break;
+        }
+        case EDFS_REDIS_SUBSCRIBE: {
+          eventConfiguration = this.getRedisSubscribeConfiguration(
+            directive,
+            argumentDataByArgumentName,
+            fieldName,
+            errorMessages,
+          );
+          break;
+        }
         default:
           continue;
       }
@@ -2515,11 +2633,11 @@ export class NormalizationFactory {
   getValidEventsDirectiveNamesForOperationTypeNode(operationTypeNode: OperationTypeNode): Set<string> {
     switch (operationTypeNode) {
       case OperationTypeNode.MUTATION:
-        return new Set<string>([EDFS_KAFKA_PUBLISH, EDFS_NATS_PUBLISH, EDFS_NATS_REQUEST]);
+        return new Set<string>([EDFS_KAFKA_PUBLISH, EDFS_NATS_PUBLISH, EDFS_NATS_REQUEST, EDFS_REDIS_PUBLISH]);
       case OperationTypeNode.QUERY:
         return new Set<string>([EDFS_NATS_REQUEST]);
       case OperationTypeNode.SUBSCRIPTION:
-        return new Set<string>([EDFS_KAFKA_SUBSCRIBE, EDFS_NATS_SUBSCRIBE]);
+        return new Set<string>([EDFS_KAFKA_SUBSCRIBE, EDFS_NATS_SUBSCRIBE, EDFS_REDIS_SUBSCRIBE]);
     }
   }
 
@@ -2851,9 +2969,13 @@ export class NormalizationFactory {
   getValidFlattenedDirectiveArray(
     directivesByDirectiveName: Map<string, ConstDirectiveNode[]>,
     directiveCoords: string,
+    removeInheritedDirectives = false,
   ): ConstDirectiveNode[] {
     const flattenedArray: ConstDirectiveNode[] = [];
     for (const [directiveName, directiveNodes] of directivesByDirectiveName) {
+      if (removeInheritedDirectives && INHERITABLE_DIRECTIVE_NAMES.has(directiveName)) {
+        continue;
+      }
       const directiveDefinition = this.directiveDefinitionDataByDirectiveName.get(directiveName);
       if (!directiveDefinition) {
         continue;
@@ -2924,6 +3046,7 @@ export class NormalizationFactory {
     compositeOutputData.node.directives = this.getValidFlattenedDirectiveArray(
       compositeOutputData.directivesByDirectiveName,
       compositeOutputData.name,
+      true,
     );
     compositeOutputData.node.fields = childMapToValueArray(compositeOutputData.fieldDataByName);
     compositeOutputData.node.interfaces = setToNamedTypeNodeArray(compositeOutputData.implementedInterfaceTypeNames);
@@ -3273,7 +3396,6 @@ export class NormalizationFactory {
             parentData.fieldDataByName.delete(SERVICE_FIELD);
             parentData.fieldDataByName.delete(ENTITIES_FIELD);
           }
-          removeInheritableDirectivesFromObjectParent(parentData);
           const externalInterfaceFieldNames: Array<string> = [];
           for (const [fieldName, fieldData] of parentData.fieldDataByName) {
             if (!isObject && fieldData.externalFieldDataBySubgraphName.get(this.subgraphName)?.isDefinedExternal) {

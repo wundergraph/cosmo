@@ -53,7 +53,6 @@ import {
   EXTERNAL,
   FLOAT_SCALAR,
   INACCESSIBLE,
-  INHERITABLE_DIRECTIVE_NAMES,
   INPUT_FIELD,
   INPUT_NODE_KINDS,
   INT_SCALAR,
@@ -72,6 +71,7 @@ import {
 import { generateRequiresScopesDirective, generateSimpleDirective, getEntriesNotInHashSet } from '../utils/utils';
 import { InputNodeKind, InvalidRequiredInputValueData, OutputNodeKind } from '../utils/types';
 import { getDescriptionFromString } from '../v1/federation/utils';
+import { SubgraphName } from '../types/types';
 
 export function newPersistedDirectivesData(): PersistedDirectivesData {
   return {
@@ -232,15 +232,6 @@ export function childMapToValueArray<T extends ChildData, U extends ChildDefinit
     valueArray.push(childData.node);
   }
   return valueArray as Array<U>;
-}
-
-export function removeInheritableDirectivesFromObjectParent(parentData: ParentDefinitionData) {
-  if (parentData.kind !== Kind.OBJECT_TYPE_DEFINITION) {
-    return;
-  }
-  for (const directiveName of INHERITABLE_DIRECTIVE_NAMES) {
-    parentData.directivesByDirectiveName.delete(directiveName);
-  }
 }
 
 export function setLongestDescription(existingData: DefinitionData, incomingData: DefinitionData) {
@@ -582,7 +573,7 @@ export function newInvalidFieldNames() {
 export function validateExternalAndShareable(fieldData: FieldData, invalidFieldNames: InvalidFieldNames) {
   // fieldData.subgraphNames.size is not used due to overridden fields
   const instances = fieldData.isShareableBySubgraphName.size;
-  let externalFieldSubgraphNames: Array<string> = [];
+  let externalFieldSubgraphNames = new Array<SubgraphName>();
   let unshareableFields = 0;
   for (const [subgraphName, isShareable] of fieldData.isShareableBySubgraphName) {
     /*
