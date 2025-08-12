@@ -4,9 +4,13 @@ go 1.23.0
 
 require (
 	github.com/stretchr/testify v1.10.0
-	github.com/wundergraph/cosmo/router-plugin v0.0.0-20250616075713-f2b99c96cec4 // v0.1.0
 	google.golang.org/grpc v1.68.1
 	google.golang.org/protobuf v1.36.5
+)
+
+require (
+	github.com/hashicorp/go-hclog v1.6.3
+	github.com/wundergraph/cosmo/router-plugin v0.0.0-20250808194725-de123ba1c65e
 )
 
 require (
@@ -18,7 +22,6 @@ require (
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.19.0 // indirect
-	github.com/hashicorp/go-hclog v1.6.3 // indirect
 	github.com/hashicorp/go-plugin v1.6.3 // indirect
 	github.com/hashicorp/yamux v0.1.1 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
