@@ -84,7 +84,7 @@ func WithServiceVersion(serviceVersion string) PluginOption {
 	}
 }
 
-// WithLogger sets the logger to the default logger.
+// WithLogger configures a plugin logger at the provided level.
 // The `level` parameter is the level of the logger.
 func WithLogger(level hclog.Level) PluginOption {
 	return func(c *RouterPlugin) {
@@ -92,6 +92,8 @@ func WithLogger(level hclog.Level) PluginOption {
 			Level: level,
 			// We use JSON format as we can retrieve those as args in the router.
 			JSONFormat: true,
+			// Disable timestamps to prevent duplicates when router ingests logs.
+			DisableTime: true,
 		})
 
 		c.serveConfig.Logger = logger
