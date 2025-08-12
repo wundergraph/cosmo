@@ -37,7 +37,7 @@ import { BillingRepository } from './repositories/BillingRepository.js';
 import { BillingService } from './services/BillingService.js';
 import { UserRepository } from './repositories/UserRepository.js';
 import { AIGraphReadmeQueue, createAIGraphReadmeWorker } from './workers/AIGraphReadmeWorker.js';
-import { fastifyLoggerId, createS3ClientConfig, extractS3BucketName } from './util.js';
+import { fastifyLoggerId, createS3ClientConfig, extractS3BucketName, isGoogleCloudStorageUrl } from './util.js';
 import { ApiKeyRepository } from './repositories/ApiKeyRepository.js';
 import { createDeleteOrganizationWorker, DeleteOrganizationQueue } from './workers/DeleteOrganizationWorker.js';
 import {
@@ -312,11 +312,12 @@ export default async function build(opts: BuildConfig) {
 
   const s3Client = new S3Client(s3Config);
   const blobStorage = new S3BlobStorage(s3Client, bucketName, {
-    // When using GCS, we overwrite the configured behavior to always use individual deletes as GCS doesn't
-    // support bulk object deletion as of August 11th, 2025
-    useIndividualDeletes: opts.s3Storage.url.toLowerCase().includes('storage.googleapis.com')
-      ? true
-      : opts.s3Storage.useIndividualDeletes ?? false,
+    // If the configuration option is not set, we try to detect whether the provided endpoint is a
+    // Google Cloud Storage endpoint, this is because GCS doesn't support the `deleteObjects` request as of
+    // August 12th, 2025
+    useIndividualDeletes:
+      opts.s3Storage.useIndividualDeletes ??
+      (isGoogleCloudStorageUrl(opts.s3Storage.url) || isGoogleCloudStorageUrl(s3Config.endpoint as string)),
   });
 
   const platformWebhooks = new PlatformWebhookService(opts.webhook?.url, opts.webhook?.key, logger);
