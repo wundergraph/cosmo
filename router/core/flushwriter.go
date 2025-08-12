@@ -77,6 +77,27 @@ func (f *HttpFlushWriter) Write(p []byte) (n int, err error) {
 	return f.buf.Write(p)
 }
 
+func (f *HttpFlushWriter) Heartbeat() error {
+	if err := f.ctx.Err(); err != nil {
+		return err
+	}
+
+	var heartbeat []byte
+	if f.sse {
+		heartbeat = []byte(":\n\n")
+	} else if f.multipart {
+		heartbeat = []byte("{}")
+	}
+
+	if _, err := f.writer.Write(heartbeat); err != nil {
+		return err
+	}
+
+	f.flusher.Flush()
+
+	return nil
+}
+
 func (f *HttpFlushWriter) Close(_ resolve.SubscriptionCloseKind) {
 	if f.ctx.Err() != nil {
 		return
@@ -159,7 +180,7 @@ func GetSubscriptionResponseWriter(ctx *resolve.Context, r *http.Request, w http
 	flushWriter.ctx, flushWriter.cancel = context.WithCancel(ctx.Context())
 	ctx = ctx.WithContext(flushWriter.ctx)
 
-	if wgParams.UseMultipart {
+	if wgParams.UseMultipart || wgParams.UseSse {
 		ctx.ExecutionOptions.SendHeartbeat = true
 	}
 
