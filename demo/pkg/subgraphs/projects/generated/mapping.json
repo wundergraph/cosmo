@@ -108,6 +108,13 @@
       "response": "QueryPanicResponse"
     },
     {
+      "type": "OPERATION_TYPE_QUERY",
+      "original": "interfaceNamed",
+      "mapped": "QueryInterfaceNamed",
+      "request": "QueryInterfaceNamedRequest",
+      "response": "QueryInterfaceNamedResponse"
+    },
+    {
       "type": "OPERATION_TYPE_MUTATION",
       "original": "addProject",
       "mapped": "MutationAddProject",
@@ -300,6 +307,11 @@
         {
           "original": "panic",
           "mapped": "panic",
+          "argumentMappings": []
+        },
+        {
+          "original": "interfaceNamed",
+          "mapped": "interface_named",
           "argumentMappings": []
         }
       ]

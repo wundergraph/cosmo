@@ -133,6 +133,23 @@ func TestGRPCSubgraph(t *testing.T) {
 				query:    `query { project(id: "1") { id name myDescription: description myStartDate: startDate myEndDate: endDate } }`,
 				expected: `{"data":{"project":{"id":"1","name":"Cloud Migration Overhaul","myDescription":"Migrate legacy systems to cloud-native architecture","myStartDate":"2021-01-01","myEndDate":"2025-08-20"}}}`,
 			},
+			{
+				name: "query projects on inline fragments with interfaces",
+				query: `
+				query {
+					interfaceNamed {
+						... on Project {
+							id
+						}
+						... on Timestamped {
+							... on Project {
+								name
+							}
+						}
+					}
+				}`,
+				expected: `{"data":{"interfaceNamed":[{"id":"1","name":"Cloud Migration Overhaul"},{"id":"2","name":"Microservices Revolution"},{"id":"3","name":"AI-Powered Analytics"},{"id":"4","name":"DevOps Transformation"},{"id":"5","name":"Security Overhaul"},{"id":"6","name":"Mobile App Development"},{"id":"7","name":"Data Lake Implementation"}]}}`,
+			},
 		}
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: testenv.ConfigWithGRPCJSONTemplate,

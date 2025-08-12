@@ -683,6 +683,26 @@ func (p *ProjectsService) QueryProjects(ctx context.Context, req *service.QueryP
 	return &service.QueryProjectsResponse{Projects: populatedProjects}, nil
 }
 
+// QueryInterfaceNamed implements projects.ProjectsServiceServer.
+func (p *ProjectsService) QueryInterfaceNamed(ctx context.Context, req *service.QueryInterfaceNamedRequest) (*service.QueryInterfaceNamedResponse, error) {
+
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	// Populate relationships for all projects
+	var populatedProjects []*service.Named
+	for _, project := range data.ServiceProjects {
+		n := &service.Named{
+			Instance: &service.Named_Project{
+				Project: p.populateProjectRelationships(project),
+			},
+		}
+		populatedProjects = append(populatedProjects, n)
+	}
+
+	return &service.QueryInterfaceNamedResponse{InterfaceNamed: populatedProjects}, nil
+}
+
 // QueryProjectsByStatus implements projects.ProjectsServiceServer.
 func (p *ProjectsService) QueryProjectsByStatus(ctx context.Context, req *service.QueryProjectsByStatusRequest) (*service.QueryProjectsByStatusResponse, error) {
 	logger := hclog.FromContext(ctx)

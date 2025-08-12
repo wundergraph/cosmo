@@ -22,6 +22,7 @@ service ProjectsService {
   rpc MutationAddTask(MutationAddTaskRequest) returns (MutationAddTaskResponse) {}
   rpc MutationUpdateProjectStatus(MutationUpdateProjectStatusRequest) returns (MutationUpdateProjectStatusResponse) {}
   rpc QueryArchivedProjects(QueryArchivedProjectsRequest) returns (QueryArchivedProjectsResponse) {}
+  rpc QueryInterfaceNamed(QueryInterfaceNamedRequest) returns (QueryInterfaceNamedResponse) {}
   rpc QueryKillService(QueryKillServiceRequest) returns (QueryKillServiceResponse) {}
   rpc QueryMilestones(QueryMilestonesRequest) returns (QueryMilestonesResponse) {}
   rpc QueryPanic(QueryPanicRequest) returns (QueryPanicResponse) {}
@@ -413,6 +414,13 @@ message QueryPanicRequest {
 message QueryPanicResponse {
   bool panic = 1;
 }
+// Request message for interfaceNamed operation.
+message QueryInterfaceNamedRequest {
+}
+// Response message for interfaceNamed operation.
+message QueryInterfaceNamedResponse {
+  repeated Named interface_named = 1;
+}
 // Request message for addProject operation.
 message MutationAddProjectRequest {
   ProjectInput project = 1;
@@ -549,6 +557,12 @@ message ProjectActivity {
   ProjectUpdate project_update = 1;
   Milestone milestone = 2;
   Task task = 3;
+  }
+}
+
+message Named {
+  oneof instance {
+  Project project = 1;
   }
 }
 

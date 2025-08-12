@@ -30,3 +30,5 @@ plugin-build-ci: plugin-build-binary
 
 standalone-compose:
 	pnpx tsx --env-file ../cli/.env ../cli/src/index.ts router compose -i ./graph-with-standalone.yaml -o ./configWithStandalone.json
+# Move formatted config to the testenv:
+#   prettier ./configWithStandalone.json -w && mv ./configWithStandalone.json ../router-tests/testenv/testdata/configWithGRPC.json

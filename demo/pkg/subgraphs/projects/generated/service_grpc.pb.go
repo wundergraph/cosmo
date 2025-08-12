@@ -29,6 +29,7 @@ const (
 	ProjectsService_MutationAddTask_FullMethodName             = "/service.ProjectsService/MutationAddTask"
 	ProjectsService_MutationUpdateProjectStatus_FullMethodName = "/service.ProjectsService/MutationUpdateProjectStatus"
 	ProjectsService_QueryArchivedProjects_FullMethodName       = "/service.ProjectsService/QueryArchivedProjects"
+	ProjectsService_QueryInterfaceNamed_FullMethodName         = "/service.ProjectsService/QueryInterfaceNamed"
 	ProjectsService_QueryKillService_FullMethodName            = "/service.ProjectsService/QueryKillService"
 	ProjectsService_QueryMilestones_FullMethodName             = "/service.ProjectsService/QueryMilestones"
 	ProjectsService_QueryPanic_FullMethodName                  = "/service.ProjectsService/QueryPanic"
@@ -66,6 +67,7 @@ type ProjectsServiceClient interface {
 	MutationAddTask(ctx context.Context, in *MutationAddTaskRequest, opts ...grpc.CallOption) (*MutationAddTaskResponse, error)
 	MutationUpdateProjectStatus(ctx context.Context, in *MutationUpdateProjectStatusRequest, opts ...grpc.CallOption) (*MutationUpdateProjectStatusResponse, error)
 	QueryArchivedProjects(ctx context.Context, in *QueryArchivedProjectsRequest, opts ...grpc.CallOption) (*QueryArchivedProjectsResponse, error)
+	QueryInterfaceNamed(ctx context.Context, in *QueryInterfaceNamedRequest, opts ...grpc.CallOption) (*QueryInterfaceNamedResponse, error)
 	QueryKillService(ctx context.Context, in *QueryKillServiceRequest, opts ...grpc.CallOption) (*QueryKillServiceResponse, error)
 	QueryMilestones(ctx context.Context, in *QueryMilestonesRequest, opts ...grpc.CallOption) (*QueryMilestonesResponse, error)
 	QueryPanic(ctx context.Context, in *QueryPanicRequest, opts ...grpc.CallOption) (*QueryPanicResponse, error)
@@ -184,6 +186,16 @@ func (c *projectsServiceClient) QueryArchivedProjects(ctx context.Context, in *Q
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(QueryArchivedProjectsResponse)
 	err := c.cc.Invoke(ctx, ProjectsService_QueryArchivedProjects_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *projectsServiceClient) QueryInterfaceNamed(ctx context.Context, in *QueryInterfaceNamedRequest, opts ...grpc.CallOption) (*QueryInterfaceNamedResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryInterfaceNamedResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_QueryInterfaceNamed_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -351,6 +363,7 @@ type ProjectsServiceServer interface {
 	MutationAddTask(context.Context, *MutationAddTaskRequest) (*MutationAddTaskResponse, error)
 	MutationUpdateProjectStatus(context.Context, *MutationUpdateProjectStatusRequest) (*MutationUpdateProjectStatusResponse, error)
 	QueryArchivedProjects(context.Context, *QueryArchivedProjectsRequest) (*QueryArchivedProjectsResponse, error)
+	QueryInterfaceNamed(context.Context, *QueryInterfaceNamedRequest) (*QueryInterfaceNamedResponse, error)
 	QueryKillService(context.Context, *QueryKillServiceRequest) (*QueryKillServiceResponse, error)
 	QueryMilestones(context.Context, *QueryMilestonesRequest) (*QueryMilestonesResponse, error)
 	QueryPanic(context.Context, *QueryPanicRequest) (*QueryPanicResponse, error)
@@ -404,6 +417,9 @@ func (UnimplementedProjectsServiceServer) MutationUpdateProjectStatus(context.Co
 }
 func (UnimplementedProjectsServiceServer) QueryArchivedProjects(context.Context, *QueryArchivedProjectsRequest) (*QueryArchivedProjectsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method QueryArchivedProjects not implemented")
+}
+func (UnimplementedProjectsServiceServer) QueryInterfaceNamed(context.Context, *QueryInterfaceNamedRequest) (*QueryInterfaceNamedResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method QueryInterfaceNamed not implemented")
 }
 func (UnimplementedProjectsServiceServer) QueryKillService(context.Context, *QueryKillServiceRequest) (*QueryKillServiceResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method QueryKillService not implemented")
@@ -644,6 +660,24 @@ func _ProjectsService_QueryArchivedProjects_Handler(srv interface{}, ctx context
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ProjectsServiceServer).QueryArchivedProjects(ctx, req.(*QueryArchivedProjectsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProjectsService_QueryInterfaceNamed_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryInterfaceNamedRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).QueryInterfaceNamed(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_QueryInterfaceNamed_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).QueryInterfaceNamed(ctx, req.(*QueryInterfaceNamedRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -946,6 +980,10 @@ var ProjectsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "QueryArchivedProjects",
 			Handler:    _ProjectsService_QueryArchivedProjects_Handler,
+		},
+		{
+			MethodName: "QueryInterfaceNamed",
+			Handler:    _ProjectsService_QueryInterfaceNamed_Handler,
 		},
 		{
 			MethodName: "QueryKillService",

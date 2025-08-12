@@ -92,7 +92,8 @@
         "tasksByPriority": 12,
         "resourceMatrix": 13,
         "killService": 14,
-        "panic": 15
+        "panic": 15,
+        "interfaceNamed": 16
       }
     },
     "QueryProjectsResponse": {
@@ -486,6 +487,37 @@
     "AssignableImplementations": {
       "fields": {
         "Task": 1
+      }
+    },
+    "QueryProjectsRequest": {
+      "fields": {}
+    },
+    "QueryProjectStatusesRequest": {
+      "fields": {}
+    },
+    "QueryProjectTagsRequest": {
+      "fields": {}
+    },
+    "QueryArchivedProjectsRequest": {
+      "fields": {}
+    },
+    "QueryKillServiceRequest": {
+      "fields": {}
+    },
+    "QueryPanicRequest": {
+      "fields": {}
+    },
+    "QueryInterfaceNamedRequest": {
+      "fields": {}
+    },
+    "QueryInterfaceNamedResponse": {
+      "fields": {
+        "interface_named": 1
+      }
+    },
+    "NamedImplementations": {
+      "fields": {
+        "Project": 1
       }
     }
   },
