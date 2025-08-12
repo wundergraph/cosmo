@@ -14,7 +14,7 @@ import (
 func Recovery(ctx context.Context, req any, _ *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			hclog.FromContext(ctx).Error("panic", "error", r)
+			hclog.FromContext(ctx).Error("panic", "error", r, "plugin_stack", hclog.Stacktrace())
 			resp = nil
 			err = status.Errorf(codes.Internal, "internal server error")
 		}

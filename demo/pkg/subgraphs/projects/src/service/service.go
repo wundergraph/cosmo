@@ -512,7 +512,7 @@ func (p *ProjectsService) QueryKillService(context.Context, *service.QueryKillSe
 
 // QueryPanic implements projects.ProjectsServiceServer.
 func (p *ProjectsService) QueryPanic(context.Context, *service.QueryPanicRequest) (*service.QueryPanicResponse, error) {
-	panic("Panic")
+	panic("The panic was triggered from QueryPanic")
 }
 
 // LookupEmployeeById implements projects.ProjectsServiceServer.
