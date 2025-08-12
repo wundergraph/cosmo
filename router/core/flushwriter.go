@@ -85,15 +85,21 @@ func (f *HttpFlushWriter) Heartbeat() error {
 	var heartbeat []byte
 	if f.sse {
 		heartbeat = []byte(":\n\n")
+
+		if _, err := f.writer.Write(heartbeat); err != nil {
+			return err
+		}
+
+		f.flusher.Flush()
 	} else if f.multipart {
-		heartbeat = []byte("{}")
-	}
+		if _, err := f.Write([]byte("{}")); err != nil {
+			return err
+		}
 
-	if _, err := f.writer.Write(heartbeat); err != nil {
-		return err
+		if err := f.Flush(); err != nil {
+			return err
+		}
 	}
-
-	f.flusher.Flush()
 
 	return nil
 }
