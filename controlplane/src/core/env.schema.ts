@@ -144,8 +144,6 @@ export const envVariables = z
       .default('true'),
     /**
      * Whether to use individual deletes for S3 objects instead of bulking them.
-     *
-     * This value is overwritten when using GCS to always be `true` as GCS does not support bulk object deletes.
      */
     S3_USE_INDIVIDUAL_DELETES: z
       .string()

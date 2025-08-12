@@ -409,7 +409,11 @@ export function isGoogleCloudStorageUrl(s: string): boolean {
 
   try {
     const url = new URL(s);
-    return url.hostname === 'storage.googleapis.com' || url.protocol === 'gs:';
+    const hostname = url.hostname.toLowerCase();
+
+    return (
+      url.protocol === 'gs:' || hostname === 'storage.googleapis.com' || hostname.endsWith('.storage.googleapis.com')
+    );
   } catch {
     // ignore
   }
