@@ -84,31 +84,13 @@ func WithServiceVersion(serviceVersion string) PluginOption {
 	}
 }
 
-// WithConsoleLogger sets the logger to the default logger.
-// This logger does not use JSON format and does not include timestamps.
-func WithConsoleLogger(level hclog.Level) PluginOption {
+// WithLogger sets the logger to the default logger.
+// The `level` parameter is the level of the logger.
+func WithLogger(level hclog.Level) PluginOption {
 	return func(c *RouterPlugin) {
 		logger := hclog.New(&hclog.LoggerOptions{
-			// We need to disable the time here.
-			// go-plugin asserts each log line with e.g. strings.HasPrefix(line, "[TRACE]"):
-			// and when timestamps are included the line will start with the timestamp and not the level.
-			// Therefore this will always default to the debug level.
-			// See: https://github.com/hashicorp/go-plugin/blob/92fb14e530db1a4d6d1053adb0f823155f52165d/client.go#L1224-L1247
-			DisableTime: true,
-			Level:       level,
-			JSONFormat:  false,
-		})
-
-		c.serveConfig.Logger = logger
-	}
-}
-
-// WithJSONLogger sets the logger to the default logger.
-// This logger uses JSON format and includes timestamps.
-func WithJSONLogger(level hclog.Level) PluginOption {
-	return func(c *RouterPlugin) {
-		logger := hclog.New(&hclog.LoggerOptions{
-			Level:      level,
+			Level: level,
+			// We use JSON format as we can retrieve those as args in the router.
 			JSONFormat: true,
 		})
 
@@ -116,6 +98,9 @@ func WithJSONLogger(level hclog.Level) PluginOption {
 	}
 }
 
+// WithCustomLogger sets the logger to the provided logger.
+// This is useful for when you want to use a custom logger.
+// For example, when you want to use a custom logger for the plugin.
 func WithCustomLogger(logger hclog.Logger) PluginOption {
 	return func(c *RouterPlugin) {
 		c.serveConfig.Logger = logger

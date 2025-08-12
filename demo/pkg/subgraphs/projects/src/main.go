@@ -19,7 +19,7 @@ func main() {
 	}
 
 	pl, err := routerplugin.NewRouterPlugin(registerFunc,
-		routerplugin.WithJSONLogger(hclog.Info),
+		routerplugin.WithLogger(hclog.Info),
 	)
 
 	if err != nil {
