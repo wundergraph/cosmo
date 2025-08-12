@@ -69,6 +69,11 @@
         {
           "id": "field-pruning-grace-period",
           "limit": 7
+        },
+        {
+          "id": "plugins",
+          "description": "3 Plugins",
+          "limit": 3
         }
       ]
     },
@@ -116,6 +121,11 @@
         {
           "id": "field-pruning-grace-period",
           "limit": 14
+        },
+        {
+          "id": "plugins",
+          "description": "15 Plugins",
+          "limit": 15
         }
       ]
     },
@@ -159,7 +169,12 @@
           "id": "field-pruning-grace-period",
           "limit": 30
         },
-        { "id": "cache-warmer", "description": "Cache Warmer" }
+        { "id": "cache-warmer", "description": "Cache Warmer" },
+        {
+          "id": "plugins",
+          "description": "Unlimited Plugins",
+          "limit": 20
+        }
       ]
     }
   }
