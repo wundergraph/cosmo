@@ -141,8 +141,9 @@ func NewRouterPlugin(registrationfunc func(*grpc.Server), opts ...PluginOption) 
 	logger := routerPlugin.serveConfig.Logger
 	if logger == nil {
 		logger = hclog.New(&hclog.LoggerOptions{
-			Level:      hclog.Trace,
-			JSONFormat: true,
+			Level:       hclog.Debug,
+			JSONFormat:  true,
+			DisableTime: true,
 		})
 	}
 
