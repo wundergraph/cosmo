@@ -8,6 +8,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	service "github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects/generated"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects/src/data"
 	"google.golang.org/grpc/codes"
@@ -107,6 +108,9 @@ func (p *ProjectsService) getRelatedProductsByProjectId(projectId string) []*ser
 
 // LookupMilestoneById implements projects.ProjectsServiceServer.
 func (p *ProjectsService) LookupMilestoneById(ctx context.Context, req *service.LookupMilestoneByIdRequest) (*service.LookupMilestoneByIdResponse, error) {
+	logger := hclog.FromContext(ctx)
+	logger.Info("LookupMilestoneById", "milestone_id", req.Keys[0].Id)
+
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
@@ -134,6 +138,9 @@ func (p *ProjectsService) LookupMilestoneById(ctx context.Context, req *service.
 
 // LookupTaskById implements projects.ProjectsServiceServer.
 func (p *ProjectsService) LookupTaskById(ctx context.Context, req *service.LookupTaskByIdRequest) (*service.LookupTaskByIdResponse, error) {
+	logger := hclog.FromContext(ctx)
+	logger.Info("LookupTaskById", "task_id", req.Keys[0].Id)
+
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
@@ -161,6 +168,9 @@ func (p *ProjectsService) LookupTaskById(ctx context.Context, req *service.Looku
 
 // LookupProductByUpc implements projects.ProjectsServiceServer.
 func (p *ProjectsService) LookupProductByUpc(ctx context.Context, req *service.LookupProductByUpcRequest) (*service.LookupProductByUpcResponse, error) {
+	logger := hclog.FromContext(ctx)
+	logger.Info("LookupProductByUpc", "upc", req.Keys[0].Upc)
+
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
@@ -186,6 +196,9 @@ func (p *ProjectsService) LookupProductByUpc(ctx context.Context, req *service.L
 
 // MutationAddMilestone implements projects.ProjectsServiceServer.
 func (p *ProjectsService) MutationAddMilestone(ctx context.Context, req *service.MutationAddMilestoneRequest) (*service.MutationAddMilestoneResponse, error) {
+	logger := hclog.FromContext(ctx)
+	logger.Info("MutationAddMilestone", "project_id", req.Milestone.ProjectId)
+
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
@@ -220,6 +233,9 @@ func (p *ProjectsService) MutationAddMilestone(ctx context.Context, req *service
 
 // MutationAddTask implements projects.ProjectsServiceServer.
 func (p *ProjectsService) MutationAddTask(ctx context.Context, req *service.MutationAddTaskRequest) (*service.MutationAddTaskResponse, error) {
+	logger := hclog.FromContext(ctx)
+	logger.Info("MutationAddTask", "project_id", req.Task.ProjectId)
+
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
@@ -252,6 +268,9 @@ func (p *ProjectsService) MutationAddTask(ctx context.Context, req *service.Muta
 
 // MutationUpdateProjectStatus implements projects.ProjectsServiceServer.
 func (p *ProjectsService) MutationUpdateProjectStatus(ctx context.Context, req *service.MutationUpdateProjectStatusRequest) (*service.MutationUpdateProjectStatusResponse, error) {
+	logger := hclog.FromContext(ctx)
+	logger.Info("MutationUpdateProjectStatus", "project_id", req.ProjectId, "status", req.Status)
+
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
@@ -299,6 +318,9 @@ func (p *ProjectsService) MutationUpdateProjectStatus(ctx context.Context, req *
 
 // QueryMilestones implements projects.ProjectsServiceServer.
 func (p *ProjectsService) QueryMilestones(ctx context.Context, req *service.QueryMilestonesRequest) (*service.QueryMilestonesResponse, error) {
+	logger := hclog.FromContext(ctx)
+	logger.Info("QueryMilestones", "project_id", req.ProjectId)
+
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
@@ -311,6 +333,9 @@ func (p *ProjectsService) QueryMilestones(ctx context.Context, req *service.Quer
 
 // QueryTasks implements projects.ProjectsServiceServer.
 func (p *ProjectsService) QueryTasks(ctx context.Context, req *service.QueryTasksRequest) (*service.QueryTasksResponse, error) {
+	logger := hclog.FromContext(ctx)
+	logger.Info("QueryTasks", "project_id", req.ProjectId)
+
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
@@ -323,6 +348,9 @@ func (p *ProjectsService) QueryTasks(ctx context.Context, req *service.QueryTask
 
 // QueryProjectActivities implements projects.ProjectsServiceServer.
 func (p *ProjectsService) QueryProjectActivities(ctx context.Context, req *service.QueryProjectActivitiesRequest) (*service.QueryProjectActivitiesResponse, error) {
+	logger := hclog.FromContext(ctx)
+	logger.Info("QueryProjectActivities", "project_id", req.ProjectId)
+
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
@@ -357,6 +385,9 @@ func (p *ProjectsService) QueryProjectActivities(ctx context.Context, req *servi
 
 // QueryProjectResources implements projects.ProjectsServiceServer.
 func (p *ProjectsService) QueryProjectResources(ctx context.Context, req *service.QueryProjectResourcesRequest) (*service.QueryProjectResourcesResponse, error) {
+	logger := hclog.FromContext(ctx)
+	logger.Info("QueryProjectResources", "project_id", req.ProjectId)
+
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
@@ -411,6 +442,9 @@ func (p *ProjectsService) QueryProjectResources(ctx context.Context, req *servic
 
 // QuerySearchProjects implements projects.ProjectsServiceServer.
 func (p *ProjectsService) QuerySearchProjects(ctx context.Context, req *service.QuerySearchProjectsRequest) (*service.QuerySearchProjectsResponse, error) {
+	logger := hclog.FromContext(ctx)
+	logger.Info("QuerySearchProjects", "query", req.Query)
+
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
@@ -467,6 +501,9 @@ func (p *ProjectsService) QueryPanic(context.Context, *service.QueryPanicRequest
 
 // LookupEmployeeById implements projects.ProjectsServiceServer.
 func (p *ProjectsService) LookupEmployeeById(ctx context.Context, req *service.LookupEmployeeByIdRequest) (*service.LookupEmployeeByIdResponse, error) {
+	logger := hclog.FromContext(ctx)
+	logger.Info("LookupEmployeeById", "employee_id", req.Keys[0].Id)
+
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
@@ -497,6 +534,9 @@ func (p *ProjectsService) LookupEmployeeById(ctx context.Context, req *service.L
 
 // LookupProjectById implements projects.ProjectsServiceServer.
 func (p *ProjectsService) LookupProjectById(ctx context.Context, req *service.LookupProjectByIdRequest) (*service.LookupProjectByIdResponse, error) {
+	logger := hclog.FromContext(ctx)
+	logger.Info("LookupProjectById", "project_id", req.Keys[0].Id)
+
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
@@ -522,6 +562,9 @@ func (p *ProjectsService) LookupProjectById(ctx context.Context, req *service.Lo
 
 // MutationAddProject implements projects.ProjectsServiceServer.
 func (p *ProjectsService) MutationAddProject(ctx context.Context, req *service.MutationAddProjectRequest) (*service.MutationAddProjectResponse, error) {
+	logger := hclog.FromContext(ctx)
+	logger.Info("MutationAddProject")
+
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
@@ -556,6 +599,9 @@ func (p *ProjectsService) MutationAddProject(ctx context.Context, req *service.M
 
 // QueryProject implements projects.ProjectsServiceServer.
 func (p *ProjectsService) QueryProject(ctx context.Context, req *service.QueryProjectRequest) (*service.QueryProjectResponse, error) {
+	logger := hclog.FromContext(ctx)
+	logger.Info("QueryProject", "project_id", req.Id)
+
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
@@ -569,7 +615,10 @@ func (p *ProjectsService) QueryProject(ctx context.Context, req *service.QueryPr
 }
 
 // QueryProjectStatuses implements projects.ProjectsServiceServer.
-func (p *ProjectsService) QueryProjectStatuses(context.Context, *service.QueryProjectStatusesRequest) (*service.QueryProjectStatusesResponse, error) {
+func (p *ProjectsService) QueryProjectStatuses(ctx context.Context, _ *service.QueryProjectStatusesRequest) (*service.QueryProjectStatusesResponse, error) {
+	logger := hclog.FromContext(ctx)
+	logger.Info("QueryProjectStatuses")
+
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
@@ -591,6 +640,9 @@ func (p *ProjectsService) QueryProjectStatuses(context.Context, *service.QueryPr
 
 // QueryProjects implements projects.ProjectsServiceServer.
 func (p *ProjectsService) QueryProjects(ctx context.Context, req *service.QueryProjectsRequest) (*service.QueryProjectsResponse, error) {
+	logger := hclog.FromContext(ctx)
+	logger.Info("QueryProjects")
+
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
@@ -605,6 +657,9 @@ func (p *ProjectsService) QueryProjects(ctx context.Context, req *service.QueryP
 
 // QueryProjectsByStatus implements projects.ProjectsServiceServer.
 func (p *ProjectsService) QueryProjectsByStatus(ctx context.Context, req *service.QueryProjectsByStatusRequest) (*service.QueryProjectsByStatusResponse, error) {
+	logger := hclog.FromContext(ctx)
+	logger.Info("QueryProjectsByStatus", "status", req.Status)
+
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
@@ -621,6 +676,9 @@ func (p *ProjectsService) QueryProjectsByStatus(ctx context.Context, req *servic
 
 // QueryProjectTags implements projects.ProjectsServiceServer.
 func (p *ProjectsService) QueryProjectTags(ctx context.Context, req *service.QueryProjectTagsRequest) (*service.QueryProjectTagsResponse, error) {
+	logger := hclog.FromContext(ctx)
+	logger.Info("QueryProjectTags")
+
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
@@ -630,6 +688,9 @@ func (p *ProjectsService) QueryProjectTags(ctx context.Context, req *service.Que
 
 // QueryArchivedProjects implements projects.ProjectsServiceServer.
 func (p *ProjectsService) QueryArchivedProjects(ctx context.Context, req *service.QueryArchivedProjectsRequest) (*service.QueryArchivedProjectsResponse, error) {
+	logger := hclog.FromContext(ctx)
+	logger.Info("QueryArchivedProjects")
+
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
@@ -639,6 +700,9 @@ func (p *ProjectsService) QueryArchivedProjects(ctx context.Context, req *servic
 
 // QueryTasksByPriority implements projects.ProjectsServiceServer.
 func (p *ProjectsService) QueryTasksByPriority(ctx context.Context, req *service.QueryTasksByPriorityRequest) (*service.QueryTasksByPriorityResponse, error) {
+	logger := hclog.FromContext(ctx)
+	logger.Info("QueryTasksByPriority", "project_id", req.ProjectId)
+
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
@@ -682,6 +746,9 @@ func (p *ProjectsService) QueryTasksByPriority(ctx context.Context, req *service
 
 // QueryResourceMatrix implements projects.ProjectsServiceServer.
 func (p *ProjectsService) QueryResourceMatrix(ctx context.Context, req *service.QueryResourceMatrixRequest) (*service.QueryResourceMatrixResponse, error) {
+	logger := hclog.FromContext(ctx)
+	logger.Info("QueryResourceMatrix", "project_id", req.ProjectId)
+
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 

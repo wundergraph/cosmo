@@ -3,11 +3,12 @@ package grpcconnector
 import (
 	"context"
 	"errors"
-	"go.opentelemetry.io/otel"
-	"google.golang.org/grpc/metadata"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"go.opentelemetry.io/otel"
+	"google.golang.org/grpc/metadata"
 
 	"github.com/hashicorp/go-plugin"
 	"google.golang.org/grpc"

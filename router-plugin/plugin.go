@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/wundergraph/cosmo/router-plugin/config"
-	"github.com/wundergraph/cosmo/router-plugin/setup"
 	"os"
 
+	"github.com/wundergraph/cosmo/router-plugin/config"
+	"github.com/wundergraph/cosmo/router-plugin/setup"
+
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
 	"google.golang.org/grpc"
 )
@@ -61,21 +63,62 @@ func WithTracing() PluginOption {
 	}
 }
 
+// WithServiceName sets the service name for the plugin.
 func WithServiceName(serviceName string) PluginOption {
 	return func(c *RouterPlugin) {
 		c.config.ServiceName = serviceName
 	}
 }
 
+// WithTracingErrorHandler sets the tracing error handler for the plugin.
 func WithTracingErrorHandler(errHandler func(err error)) PluginOption {
 	return func(c *RouterPlugin) {
 		c.config.TracingErrorHandler = errHandler
 	}
 }
 
+// WithServiceVersion sets the service version for the plugin.
 func WithServiceVersion(serviceVersion string) PluginOption {
 	return func(c *RouterPlugin) {
 		c.config.ServiceVersion = serviceVersion
+	}
+}
+
+// WithConsoleLogger sets the logger to the default logger.
+// This logger does not use JSON format and does not include timestamps.
+func WithConsoleLogger(level hclog.Level) PluginOption {
+	return func(c *RouterPlugin) {
+		logger := hclog.New(&hclog.LoggerOptions{
+			// We need to disable the time here.
+			// go-plugin asserts each log line with e.g. strings.HasPrefix(line, "[TRACE]"):
+			// and when timestamps are included the line will start with the timestamp and not the level.
+			// Therefore this will always default to the debug level.
+			// See: https://github.com/hashicorp/go-plugin/blob/92fb14e530db1a4d6d1053adb0f823155f52165d/client.go#L1224-L1247
+			DisableTime: true,
+			Level:       level,
+			JSONFormat:  false,
+		})
+
+		c.serveConfig.Logger = logger
+	}
+}
+
+// WithJSONLogger sets the logger to the default logger.
+// This logger uses JSON format and includes timestamps.
+func WithJSONLogger(level hclog.Level) PluginOption {
+	return func(c *RouterPlugin) {
+		logger := hclog.New(&hclog.LoggerOptions{
+			Level:      level,
+			JSONFormat: true,
+		})
+
+		c.serveConfig.Logger = logger
+	}
+}
+
+func WithCustomLogger(logger hclog.Logger) PluginOption {
+	return func(c *RouterPlugin) {
+		c.serveConfig.Logger = logger
 	}
 }
 
@@ -108,16 +151,24 @@ func NewRouterPlugin(registrationfunc func(*grpc.Server), opts ...PluginOption) 
 		}
 	}
 
+	logger := routerPlugin.serveConfig.Logger
+	if logger == nil {
+		logger = hclog.New(&hclog.LoggerOptions{
+			Level:      hclog.Trace,
+			JSONFormat: true,
+		})
+	}
+
 	grpcServerFunc, err := setup.GrpcServer(setup.GrpcServerInitOpts{
 		StartupConfig: startupConfig,
 		PluginConfig:  routerPlugin.config,
+		Logger:        logger,
 	})
 	if err != nil {
 		return nil, err
 	}
 
 	routerPlugin.serveConfig.GRPCServer = grpcServerFunc
-
 	return routerPlugin, nil
 }
 
