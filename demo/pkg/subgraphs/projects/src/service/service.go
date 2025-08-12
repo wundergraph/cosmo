@@ -109,6 +109,11 @@ func (p *ProjectsService) getRelatedProductsByProjectId(projectId string) []*ser
 // LookupMilestoneById implements projects.ProjectsServiceServer.
 func (p *ProjectsService) LookupMilestoneById(ctx context.Context, req *service.LookupMilestoneByIdRequest) (*service.LookupMilestoneByIdResponse, error) {
 	logger := hclog.FromContext(ctx)
+	if len(req.Keys) == 0 {
+		logger.Info("LookupMilestoneById", "no keys provided")
+		return &service.LookupMilestoneByIdResponse{Result: []*service.Milestone{}}, nil
+	}
+
 	logger.Info("LookupMilestoneById", "milestone_id", req.Keys[0].Id)
 
 	p.lock.RLock()
@@ -139,6 +144,11 @@ func (p *ProjectsService) LookupMilestoneById(ctx context.Context, req *service.
 // LookupTaskById implements projects.ProjectsServiceServer.
 func (p *ProjectsService) LookupTaskById(ctx context.Context, req *service.LookupTaskByIdRequest) (*service.LookupTaskByIdResponse, error) {
 	logger := hclog.FromContext(ctx)
+	if len(req.Keys) == 0 {
+		logger.Info("LookupTaskById", "no keys provided")
+		return &service.LookupTaskByIdResponse{Result: []*service.Task{}}, nil
+	}
+
 	logger.Info("LookupTaskById", "task_id", req.Keys[0].Id)
 
 	p.lock.RLock()
@@ -169,6 +179,12 @@ func (p *ProjectsService) LookupTaskById(ctx context.Context, req *service.Looku
 // LookupProductByUpc implements projects.ProjectsServiceServer.
 func (p *ProjectsService) LookupProductByUpc(ctx context.Context, req *service.LookupProductByUpcRequest) (*service.LookupProductByUpcResponse, error) {
 	logger := hclog.FromContext(ctx)
+
+	if len(req.Keys) == 0 {
+		logger.Info("LookupProductByUpc", "no keys provided")
+		return &service.LookupProductByUpcResponse{Result: []*service.Product{}}, nil
+	}
+
 	logger.Info("LookupProductByUpc", "upc", req.Keys[0].Upc)
 
 	p.lock.RLock()
@@ -502,6 +518,12 @@ func (p *ProjectsService) QueryPanic(context.Context, *service.QueryPanicRequest
 // LookupEmployeeById implements projects.ProjectsServiceServer.
 func (p *ProjectsService) LookupEmployeeById(ctx context.Context, req *service.LookupEmployeeByIdRequest) (*service.LookupEmployeeByIdResponse, error) {
 	logger := hclog.FromContext(ctx)
+
+	if len(req.Keys) == 0 {
+		logger.Info("LookupEmployeeById", "no keys provided")
+		return &service.LookupEmployeeByIdResponse{Result: []*service.Employee{}}, nil
+	}
+
 	logger.Info("LookupEmployeeById", "employee_id", req.Keys[0].Id)
 
 	p.lock.RLock()
@@ -535,6 +557,12 @@ func (p *ProjectsService) LookupEmployeeById(ctx context.Context, req *service.L
 // LookupProjectById implements projects.ProjectsServiceServer.
 func (p *ProjectsService) LookupProjectById(ctx context.Context, req *service.LookupProjectByIdRequest) (*service.LookupProjectByIdResponse, error) {
 	logger := hclog.FromContext(ctx)
+
+	if len(req.Keys) == 0 {
+		logger.Info("LookupProjectById", "no keys provided")
+		return &service.LookupProjectByIdResponse{Result: []*service.Project{}}, nil
+	}
+
 	logger.Info("LookupProjectById", "project_id", req.Keys[0].Id)
 
 	p.lock.RLock()
