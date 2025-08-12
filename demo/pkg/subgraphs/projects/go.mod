@@ -3,14 +3,11 @@ module github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects
 go 1.23.0
 
 require (
+	github.com/hashicorp/go-hclog v1.6.3
 	github.com/stretchr/testify v1.10.0
+	github.com/wundergraph/cosmo/router-plugin v0.0.0-20250808194725-de123ba1c65e
 	google.golang.org/grpc v1.68.1
 	google.golang.org/protobuf v1.36.5
-)
-
-require (
-	github.com/hashicorp/go-hclog v1.6.3
-	github.com/wundergraph/cosmo/router-plugin v0.0.0-20250808194725-de123ba1c65e
 )
 
 require (
