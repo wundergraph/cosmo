@@ -337,6 +337,7 @@ describe('Create feature subgraph tests', () => {
 
     const baseSubgraphName = genID('baseSubgraph');
     const featureSubgraphName = genID('featureSubgraph');
+    const secondFeatureSubgraphName = genID('secondFeatureSubgraph');
 
     // Create a standard base subgraph (default type)
     await createSubgraph(client, baseSubgraphName, DEFAULT_SUBGRAPH_URL_ONE);
@@ -689,6 +690,78 @@ describe('Create feature subgraph tests', () => {
     });
 
     expect(featureSubgraphResponse.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
+
+    await server.close();
+  });
+
+  test('that an error is returned if a feature subgraph is used as a base subgraph', async () => {
+    const { client, server } = await SetupTest({ dbname });
+
+    const baseSubgraphName = genID('baseSubgraph');
+    const featureSubgraphName = genID('featureSubgraph');
+    const secondFeatureSubgraphName = genID('secondFeatureSubgraph');
+
+    // Create the base subgraph
+    await createSubgraph(client, baseSubgraphName, DEFAULT_SUBGRAPH_URL_ONE);
+
+    // Create the first feature subgraph
+    const firstFeatureSubgraphResponse = await client.createFederatedSubgraph({
+      name: featureSubgraphName,
+      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
+      isFeatureSubgraph: true,
+      baseSubgraphName,
+    });
+    expect(firstFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Try to create a second feature subgraph using the first feature subgraph as base
+    const secondFeatureSubgraphResponse = await client.createFederatedSubgraph({
+      name: secondFeatureSubgraphName,
+      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
+      isFeatureSubgraph: true,
+      baseSubgraphName: featureSubgraphName,
+    });
+
+    expect(secondFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.ERR);
+    expect(secondFeatureSubgraphResponse.response?.details).toBe(
+      `Base subgraph "${featureSubgraphName}" is a feature subgraph. Feature subgraphs cannot have feature subgraphs as their base.`,
+    );
+
+    await server.close();
+  });
+
+  test('that an error is returned if a feature subgraph is used as a base subgraph when publishing directly', async () => {
+    const { client, server } = await SetupTest({ dbname });
+
+    const baseSubgraphName = genID('baseSubgraph');
+    const featureSubgraphName = genID('featureSubgraph');
+    const secondFeatureSubgraphName = genID('secondFeatureSubgraph');
+
+    // Create the base subgraph
+    await createSubgraph(client, baseSubgraphName, DEFAULT_SUBGRAPH_URL_ONE);
+
+    // Create and publish the first feature subgraph
+    const firstFeatureSubgraphResponse = await client.publishFederatedSubgraph({
+      name: featureSubgraphName,
+      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
+      isFeatureSubgraph: true,
+      baseSubgraphName,
+      schema: 'type Query { hello: String }',
+    });
+    expect(firstFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Try to create and publish a second feature subgraph using the first feature subgraph as base
+    const secondFeatureSubgraphResponse = await client.publishFederatedSubgraph({
+      name: secondFeatureSubgraphName,
+      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
+      isFeatureSubgraph: true,
+      baseSubgraphName: featureSubgraphName,
+      schema: 'type Query { world: String }',
+    });
+
+    expect(secondFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.ERR);
+    expect(secondFeatureSubgraphResponse.response?.details).toBe(
+      `Base subgraph "${featureSubgraphName}" is a feature subgraph. Feature subgraphs cannot have feature subgraphs as their base.`,
+    );
 
     await server.close();
   });

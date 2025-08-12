@@ -239,6 +239,18 @@ export function publishFederatedSubgraph(
               proposalMatchMessage,
             };
           }
+          if (baseSubgraph.isFeatureSubgraph) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: `Base subgraph "${req.baseSubgraphName}" is a feature subgraph. Feature subgraphs cannot have feature subgraphs as their base.`,
+              },
+              compositionErrors: [],
+              deploymentErrors: [],
+              compositionWarnings: [],
+              proposalMatchMessage,
+            };
+          }
           baseSubgraphID = baseSubgraph.id;
           req.type = convertToSubgraphType(baseSubgraph.type);
 
