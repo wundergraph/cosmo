@@ -1,13 +1,16 @@
-package grpcconnector
+package grpccommon
 
 import (
 	"context"
 	"errors"
-	"go.opentelemetry.io/otel"
-	"google.golang.org/grpc/metadata"
+	"io"
+
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"go.opentelemetry.io/otel"
+	"google.golang.org/grpc/metadata"
 
 	"github.com/hashicorp/go-plugin"
 	"google.golang.org/grpc"
@@ -47,7 +50,7 @@ func WithReconnectConfig(reconnectTimeout time.Duration, pingInterval time.Durat
 
 var _ grpc.ClientConnInterface = &GRPCPluginClient{}
 
-func newGRPCPluginClient(pc *plugin.Client, cc grpc.ClientConnInterface, options ...GRPCPluginClientOption) (*GRPCPluginClient, error) {
+func NewGRPCPluginClient(pc *plugin.Client, cc grpc.ClientConnInterface, options ...GRPCPluginClientOption) (*GRPCPluginClient, error) {
 	if pc == nil || cc == nil {
 		return nil, errors.New("plugin client or grpc client conn is nil")
 	}
@@ -106,11 +109,24 @@ func (g *GRPCPluginClient) isPluginActive() (bool, error) {
 	return true, nil
 }
 
-func (g *GRPCPluginClient) setClients(pluginClient *plugin.Client, clientConn grpc.ClientConnInterface) {
+func (g *GRPCPluginClient) SetClients(pluginClient *plugin.Client, clientConn grpc.ClientConnInterface) {
 	// We need to lock here to avoid race conditions
 	// We potentially access the plugin clients during invokes
 	g.mu.Lock()
 	defer g.mu.Unlock()
+
+	// Kill the previous plugin client if it exists
+	if g.pc != nil {
+		g.pc.Kill()
+	}
+
+	// Close the previous client connection if it exists
+	if g.cc != nil {
+		if closer, ok := g.cc.(io.Closer); ok {
+			closer.Close()
+		}
+	}
+
 	g.pc = pluginClient
 	g.cc = clientConn
 }
@@ -151,6 +167,10 @@ func (g *GRPCPluginClient) IsPluginProcessExited() bool {
 }
 
 func (g *GRPCPluginClient) Close() error {
+	if g.pc == nil {
+		return nil
+	}
+
 	if g.pc.Exited() || g.isClosed.Load() {
 		return nil
 	}

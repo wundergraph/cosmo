@@ -45,6 +45,10 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"github.com/wundergraph/cosmo/router/pkg/grpcconnector"
+	"github.com/wundergraph/cosmo/router/pkg/grpcconnector/grpccommon"
+	"github.com/wundergraph/cosmo/router/pkg/grpcconnector/grpcplugin"
+	"github.com/wundergraph/cosmo/router/pkg/grpcconnector/grpcpluginoci"
+	"github.com/wundergraph/cosmo/router/pkg/grpcconnector/grpcremote"
 	"github.com/wundergraph/cosmo/router/pkg/health"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
@@ -1481,9 +1485,8 @@ func (s *graphServer) setupConnector(ctx context.Context, config *nodev1.EngineC
 
 		pluginConfig := grpcConfig.GetPlugin()
 		if pluginConfig == nil {
-			remoteProvider, err := grpcconnector.NewRemoteGRPCProvider(grpcconnector.RemoteGRPCProviderConfig{
+			remoteProvider, err := grpcremote.NewRemoteGRPCProvider(grpcremote.RemoteGRPCProviderConfig{
 				Logger:   s.logger,
-				Name:     sg.Name,
 				Endpoint: sg.RoutingUrl,
 			})
 
@@ -1509,25 +1512,49 @@ func (s *graphServer) setupConnector(ctx context.Context, config *nodev1.EngineC
 			basePath = s.plugins.Path
 		}
 
-		pluginPath, err := filepath.Abs(filepath.Join(basePath, pluginConfig.GetName(), "bin", fmt.Sprintf("%s_%s", runtime.GOOS, runtime.GOARCH)))
-		if err != nil {
-			return fmt.Errorf("failed to get plugin path: %w", err)
-		}
+		startupConfig := newGRPCStartupParams(s.traceConfig, s.ipAnonymization)
 
-		grpcPlugin, err := grpcconnector.NewGRPCPlugin(grpcconnector.GRPCPluginConfig{
-			Logger:        s.logger,
-			PluginName:    pluginConfig.GetName(),
-			PluginPath:    pluginPath,
-			StartupConfig: newGRPCStartupParams(s.traceConfig, s.ipAnonymization),
-		})
+		if imgRef := pluginConfig.GetImageReference(); imgRef != nil {
+			ref := fmt.Sprintf("%s/%s:%s",
+				s.plugins.Registry.URL,
+				imgRef.GetRepository(),
+				imgRef.GetReference(),
+			)
 
-		if err != nil {
-			return fmt.Errorf("failed to create grpc plugin for subgraph %s: %w", dsConfig.Id, err)
-		}
+			grpcPlugin, err := grpcpluginoci.NewGRPCOCIPlugin(grpcpluginoci.GRPCPluginConfig{
+				Logger:        s.logger,
+				ImageRef:      ref,
+				RegistryToken: s.graphApiToken,
+				StartupConfig: startupConfig,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to create grpc oci plugin for subgraph %s: %w", dsConfig.Id, err)
+			}
 
-		err = s.connector.RegisterClientProvider(sg.Name, grpcPlugin)
-		if err != nil {
-			return fmt.Errorf("failed to register grpc plugin: %w", err)
+			err = s.connector.RegisterClientProvider(sg.Name, grpcPlugin)
+			if err != nil {
+				return fmt.Errorf("failed to register grpc plugin: %w", err)
+			}
+		} else {
+			pluginPath, err := filepath.Abs(filepath.Join(basePath, pluginConfig.GetName(), "bin", fmt.Sprintf("%s_%s", runtime.GOOS, runtime.GOARCH)))
+			if err != nil {
+				return fmt.Errorf("failed to get plugin path: %w", err)
+			}
+
+			grpcPlugin, err := grpcplugin.NewGRPCPlugin(grpcplugin.GRPCPluginConfig{
+				Logger:        s.logger,
+				PluginName:    pluginConfig.GetName(),
+				PluginPath:    pluginPath,
+				StartupConfig: startupConfig,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to create grpc plugin for subgraph %s: %w", dsConfig.Id, err)
+			}
+
+			err = s.connector.RegisterClientProvider(sg.Name, grpcPlugin)
+			if err != nil {
+				return fmt.Errorf("failed to register grpc plugin: %w", err)
+			}
 		}
 	}
 
@@ -1538,14 +1565,14 @@ func (s *graphServer) setupConnector(ctx context.Context, config *nodev1.EngineC
 	return nil
 }
 
-func newGRPCStartupParams(traceConfig *rtrace.Config, ipAnonymization *IPAnonymizationConfig) grpcconnector.GRPCStartupParams {
-	startupConfig := grpcconnector.GRPCStartupParams{}
+func newGRPCStartupParams(traceConfig *rtrace.Config, ipAnonymization *IPAnonymizationConfig) grpccommon.GRPCStartupParams {
+	startupConfig := grpccommon.GRPCStartupParams{}
 
 	if traceConfig.Enabled && len(traceConfig.Exporters) > 0 {
-		enabledExporters := make([]grpcconnector.GRPCExporter, 0)
+		enabledExporters := make([]grpccommon.GRPCExporter, 0)
 		for _, exporter := range traceConfig.Exporters {
 			if exporter != nil && !exporter.Disabled {
-				transformedExporter := grpcconnector.GRPCExporter{
+				transformedExporter := grpccommon.GRPCExporter{
 					Endpoint:      exporter.Endpoint,
 					Exporter:      string(exporter.Exporter),
 					BatchTimeout:  exporter.BatchTimeout,
@@ -1563,8 +1590,8 @@ func newGRPCStartupParams(traceConfig *rtrace.Config, ipAnonymization *IPAnonymi
 			propagators = append(propagators, string(propagator))
 		}
 
-		startupConfig.Telemetry = &grpcconnector.GRPCTelemetry{
-			Tracing: &grpcconnector.GRPCTracing{
+		startupConfig.Telemetry = &grpccommon.GRPCTelemetry{
+			Tracing: &grpccommon.GRPCTracing{
 				Exporters:   enabledExporters,
 				Propagators: propagators,
 				Sampler:     traceConfig.Sampler,
@@ -1573,7 +1600,7 @@ func newGRPCStartupParams(traceConfig *rtrace.Config, ipAnonymization *IPAnonymi
 	}
 
 	if ipAnonymization != nil {
-		startupConfig.IPAnonymization = &grpcconnector.GRPCIPAnonymization{
+		startupConfig.IPAnonymization = &grpccommon.GRPCIPAnonymization{
 			Enabled: ipAnonymization.Enabled,
 			Method:  string(ipAnonymization.Method),
 		}

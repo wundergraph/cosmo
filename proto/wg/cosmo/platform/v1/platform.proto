@@ -36,6 +36,14 @@ message PublishMonographResponse {
   repeated CompositionWarning compositionWarnings = 4;
 }
 
+message ProtoInput {
+  string schema = 1;
+  string mappings = 2;
+  string lock = 3;
+  repeated string platforms = 4;
+  string version = 5;
+}
+
 message PublishFederatedSubgraphRequest {
   // The FQDN of the subgraph to be published e.g. "wg.team1.orders"
   string name = 1;
@@ -56,6 +64,8 @@ message PublishFederatedSubgraphRequest {
   optional bool is_feature_subgraph = 10;
   optional string base_subgraph_name = 11;
   optional bool disable_resolvability_validation = 12;
+  optional SubgraphType type = 13;
+  optional ProtoInput proto = 14;
 }
 
 message PublishFederatedSubgraphResponse {
@@ -155,6 +165,7 @@ message CreateFederatedSubgraphRequest {
   optional bool is_event_driven_graph = 10;
   optional bool is_feature_subgraph = 11;
   optional string base_subgraph_name = 12;
+  SubgraphType type = 13;
 }
 
 message DeleteFederatedGraphRequest {
@@ -356,7 +367,18 @@ message GetSubgraphsRequest {
   bool exclude_feature_subgraphs = 5;
 }
 
+enum SubgraphType {
+  STANDARD = 0;
+  GRPC_PLUGIN = 1;
+  GRPC_SERVICE = 2;
+}
+
 message Subgraph {
+  message PluginData{
+    string version = 1;
+    repeated string platforms = 2;
+  }
+
   string id = 1;
   string name = 2;
   string routingURL = 3;
@@ -374,6 +396,8 @@ message Subgraph {
   bool isFeatureSubgraph = 15;
   optional string baseSubgraphName = 16;
   optional string baseSubgraphId = 17;
+  SubgraphType type = 18;
+  optional PluginData pluginData = 19;
 }
 
 message GetSubgraphsResponse {
@@ -1815,6 +1839,7 @@ message GraphCompositionSubgraph {
   string target_id = 4;
   bool isFeatureSubgraph = 5;
   string changeType = 6;
+  SubgraphType subgraphType = 7;
 }
 
 message GetCompositionsRequest {
@@ -2818,6 +2843,19 @@ message GetClientsFromAnalyticsResponse {
   repeated Client clients = 2;
 }
 
+message ValidateAndFetchPluginDataRequest {
+  string name = 1;
+  string namespace = 2;
+  repeated Label labels = 3;
+}
+
+message ValidateAndFetchPluginDataResponse {
+  Response response = 1;
+  string newVersion = 2;
+  string pushToken = 3;
+  string reference = 4;
+}
+
 service PlatformService {
   // PlaygroundScripts
   rpc CreatePlaygroundScript(CreatePlaygroundScriptRequest) returns (CreatePlaygroundScriptResponse) {}
@@ -3181,4 +3219,7 @@ service PlatformService {
   rpc GetOperations(GetOperationsRequest) returns (GetOperationsResponse) {}
   // GetClientsFromAnalytics returns all the clients of the federated graph from the analytics
   rpc GetClientsFromAnalytics(GetClientsFromAnalyticsRequest) returns (GetClientsFromAnalyticsResponse) {}
+
+  // ValidateAndFetchPluginData validates the limit of plugins and returns the latest version and token
+  rpc ValidateAndFetchPluginData(ValidateAndFetchPluginDataRequest) returns (ValidateAndFetchPluginDataResponse) {}
 }

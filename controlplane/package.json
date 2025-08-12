@@ -55,6 +55,7 @@
     "@wundergraph/composition": "workspace:*",
     "@wundergraph/cosmo-connect": "workspace:*",
     "@wundergraph/cosmo-shared": "workspace:*",
+    "@wundergraph/protographic": "workspace:*",
     "axios": "^1.8.4",
     "axios-retry": "^4.5.0",
     "bullmq": "^5.10.0",

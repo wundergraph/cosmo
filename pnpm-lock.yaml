@@ -487,6 +487,9 @@ importers:
       '@wundergraph/cosmo-shared':
         specifier: workspace:*
         version: link:../shared
+      '@wundergraph/protographic':
+        specifier: workspace:*
+        version: link:../protographic
       axios:
         specifier: ^1.8.4
         version: 1.8.4

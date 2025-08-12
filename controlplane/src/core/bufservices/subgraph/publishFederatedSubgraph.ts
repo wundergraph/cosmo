@@ -5,17 +5,24 @@ import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notificat
 import {
   PublishFederatedSubgraphRequest,
   PublishFederatedSubgraphResponse,
+  SubgraphType,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { isValidUrl } from '@wundergraph/cosmo-shared';
 import { buildSchema } from '../../composition/composition.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
+import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
+import { PluginRepository } from '../../repositories/PluginRepository.js';
+import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import { SchemaGraphPruningRepository } from '../../repositories/SchemaGraphPruningRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import {
+  convertToSubgraphType,
   enrichLogger,
+  formatSubgraphType,
   formatSubscriptionProtocol,
   formatWebsocketSubprotocol,
   getFederatedGraphRouterCompatibilityVersion,
@@ -23,12 +30,10 @@ import {
   handleError,
   isValidGraphName,
   isValidLabels,
+  isValidPluginVersion,
   newCompositionOptions,
 } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
-import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
-import { ProposalRepository } from '../../repositories/ProposalRepository.js';
-import { UnauthorizedError } from '../../errors/errors.js';
 
 export function publishFederatedSubgraph(
   opts: RouterOptions,
@@ -53,8 +58,12 @@ export function publishFederatedSubgraph(
     const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
     const schemaGraphPruningRepo = new SchemaGraphPruningRepository(opts.db);
     const proposalRepo = new ProposalRepository(opts.db);
+    const pluginRepo = new PluginRepository(opts.db, authContext.organizationId);
+    const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
 
     req.namespace = req.namespace || DefaultNamespace;
+    req.type = req.type || SubgraphType.STANDARD;
+
     if (authContext.organizationDeactivated) {
       throw new UnauthorizedError();
     }
@@ -173,6 +182,22 @@ export function publishFederatedSubgraph(
         authContext,
       });
 
+      if (req.type !== undefined && subgraph.type !== formatSubgraphType(req.type)) {
+        return {
+          response: {
+            code: EnumStatusCode.ERR,
+            details:
+              subgraph.type === 'grpc_plugin'
+                ? `Subgraph ${subgraph.name} is a plugin. Please use the 'wgc router plugin publish' command to publish the plugin.`
+                : `Subgraph ${subgraph.name} is not of type ${formatSubgraphType(req.type)}.`,
+          },
+          compositionErrors: [],
+          deploymentErrors: [],
+          compositionWarnings: [],
+          proposalMatchMessage,
+        };
+      }
+
       /* The subgraph already exists, so the database flag and the normalization result should match.
        * If he flags do not match, the database is the source of truth, so return an appropriate error.
        * */
@@ -227,6 +252,20 @@ export function publishFederatedSubgraph(
             };
           }
           baseSubgraphID = baseSubgraph.id;
+          req.type = convertToSubgraphType(baseSubgraph.type);
+
+          if (baseSubgraph.type === 'grpc_plugin') {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: `Cannot create a feature subgraph with a plugin base subgraph using this command. Since the base subgraph "${req.baseSubgraphName}" is a plugin, please use the 'wgc feature-subgraph create' command to create the feature subgraph first, then publish it using the 'wgc router plugin publish' command.`,
+              },
+              compositionErrors: [],
+              deploymentErrors: [],
+              compositionWarnings: [],
+              proposalMatchMessage,
+            };
+          }
         } else {
           return {
             response: {
@@ -315,7 +354,7 @@ export function publishFederatedSubgraph(
             proposalMatchMessage,
           };
         }
-      } else {
+      } else if (req.type !== SubgraphType.GRPC_PLUGIN) {
         if (!isValidUrl(routingUrl)) {
           return {
             response: {
@@ -360,6 +399,27 @@ export function publishFederatedSubgraph(
         };
       }
 
+      if (req.type === SubgraphType.GRPC_PLUGIN) {
+        const count = await pluginRepo.count({ namespaceId: namespace.id });
+        const feature = await orgRepo.getFeature({
+          organizationId: authContext.organizationId,
+          featureId: 'plugins',
+        });
+        const limit = feature?.limit === -1 ? 0 : feature?.limit ?? 0;
+        if (count >= limit) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_LIMIT_REACHED,
+              details: `The organization reached the limit of plugins`,
+            },
+            compositionErrors: [],
+            deploymentErrors: [],
+            compositionWarnings: [],
+            proposalMatchMessage,
+          };
+        }
+      }
+
       // Create the subgraph if it doesn't exist
       subgraph = await subgraphRepo.create({
         name: req.name,
@@ -381,6 +441,7 @@ export function publishFederatedSubgraph(
                 baseSubgraphID,
               }
             : undefined,
+        type: formatSubgraphType(req.type),
       });
 
       if (!subgraph) {
@@ -403,6 +464,62 @@ export function publishFederatedSubgraph(
       });
     }
 
+    if (req.type === SubgraphType.GRPC_PLUGIN || req.type === SubgraphType.GRPC_SERVICE) {
+      if (!req.proto) {
+        return {
+          response: {
+            code: EnumStatusCode.ERR,
+            details: `The proto is required for plugin subgraphs.`,
+          },
+          compositionErrors: [],
+          deploymentErrors: [],
+          compositionWarnings: [],
+          proposalMatchMessage,
+        };
+      }
+
+      if (req.type === SubgraphType.GRPC_PLUGIN) {
+        if (!req.proto.version || !req.proto.platforms || req.proto.platforms.length === 0) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The version and platforms are required for plugin subgraphs.`,
+            },
+            compositionErrors: [],
+            deploymentErrors: [],
+            compositionWarnings: [],
+            proposalMatchMessage,
+          };
+        }
+
+        if (!isValidPluginVersion(req.proto.version)) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The version must be in the format v1, v2, etc.`,
+            },
+            compositionErrors: [],
+            deploymentErrors: [],
+            compositionWarnings: [],
+            proposalMatchMessage,
+          };
+        }
+      }
+
+      if (!req.proto.schema || !req.proto.mappings || !req.proto.lock) {
+        return {
+          response: {
+            code: EnumStatusCode.ERR,
+            details: `The schema, mappings, and lock are required for plugin subgraphs.`,
+          },
+          compositionErrors: [],
+          deploymentErrors: [],
+          compositionWarnings: [],
+          proposalMatchMessage,
+        };
+      }
+    }
+
     const { compositionErrors, updatedFederatedGraphs, deploymentErrors, subgraphChanged, compositionWarnings } =
       await subgraphRepo.update(
         {
@@ -413,6 +530,18 @@ export function publishFederatedSubgraph(
           updatedBy: authContext.userId,
           namespaceId: namespace.id,
           isV2Graph,
+          proto:
+            subgraph.type === 'grpc_plugin'
+              ? {
+                  schema: req.proto?.schema || '',
+                  mappings: req.proto?.mappings || '',
+                  lock: req.proto?.lock || '',
+                  pluginData: {
+                    platforms: req.proto?.platforms || [],
+                    version: req.proto?.version || '',
+                  },
+                }
+              : undefined,
         },
         opts.blobStorage,
         {
@@ -521,7 +650,6 @@ export function publishFederatedSubgraph(
       // Best effort approach. This way of counting tokens is not accurate.
       subgraph.schemaSDL.length <= 10_000
     ) {
-      const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
       const feature = await orgRepo.getFeature({
         organizationId: authContext.organizationId,
         featureId: 'ai',

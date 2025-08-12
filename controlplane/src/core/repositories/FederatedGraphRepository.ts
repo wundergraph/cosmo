@@ -188,6 +188,7 @@ export class FederatedGraphRepository {
         namespaceId: data.namespaceId,
         supportsFederation: insertedGraph[0].supportsFederation,
         routerCompatibilityVersion: insertedGraph[0].routerCompatibilityVersion,
+        organizationId: this.organizationId,
       };
     });
   }
@@ -585,6 +586,7 @@ export class FederatedGraphRepository {
         admissionWebhookSecret: schema.federatedGraphs.admissionWebhookSecret,
         supportsFederation: schema.federatedGraphs.supportsFederation,
         routerCompatibilityVersion: schema.federatedGraphs.routerCompatibilityVersion,
+        organizationId: schema.targets.organizationId,
       })
       .from(targets)
       .where(and(...conditions))
@@ -645,6 +647,7 @@ export class FederatedGraphRepository {
       supportsFederation: resp[0].supportsFederation,
       contract,
       routerCompatibilityVersion: resp[0].routerCompatibilityVersion,
+      organizationId: resp[0].organizationId,
     };
   }
 
@@ -885,6 +888,7 @@ export class FederatedGraphRepository {
         namespace: fedGraph.namespace,
         namespaceId: fedGraph.namespaceId,
         routerCompatibilityVersion: fedGraph.routerCompatibilityVersion,
+        organizationId: fedGraph.organizationId,
       };
     });
   }

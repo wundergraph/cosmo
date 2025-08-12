@@ -9,7 +9,7 @@ services:
       OTEL_HTTP_ENDPOINT: ${OTEL_HTTP_ENDPOINT:-otelcollector:4318}
     build:
       context: ./demo
-      dockerfile: Dockerfile.employees
+      dockerfile: docker/employees.Dockerfile
     profiles:
       - subgraphs
     ports:
@@ -24,7 +24,7 @@ services:
       OTEL_HTTP_ENDPOINT: ${OTEL_HTTP_ENDPOINT:-otelcollector:4318}
     build:
       context: ./demo
-      dockerfile: Dockerfile.family
+      dockerfile: docker/family.Dockerfile
     profiles:
       - subgraphs
     ports:
@@ -39,7 +39,7 @@ services:
       OTEL_HTTP_ENDPOINT: ${OTEL_HTTP_ENDPOINT:-otelcollector:4318}
     build:
       context: ./demo
-      dockerfile: Dockerfile.hobbies
+      dockerfile: docker/hobbies.Dockerfile
     profiles:
       - subgraphs
     ports:
@@ -54,7 +54,7 @@ services:
     container_name: products
     build:
       context: ./demo
-      dockerfile: Dockerfile.products
+      dockerfile: docker/products.Dockerfile
     profiles:
       - subgraphs
     ports:
@@ -69,7 +69,7 @@ services:
       OTEL_HTTP_ENDPOINT: ${OTEL_HTTP_ENDPOINT:-otelcollector:4318}
     build:
       context: ./demo
-      dockerfile: Dockerfile.availability
+      dockerfile: docker/availability.Dockerfile
     profiles:
       - subgraphs
     ports:
@@ -84,7 +84,7 @@ services:
       OTEL_HTTP_ENDPOINT: ${OTEL_HTTP_ENDPOINT:-otelcollector:4318}
     build:
       context: ./demo
-      dockerfile: Dockerfile.mood
+      dockerfile: docker/mood.Dockerfile
     profiles:
       - subgraphs
     ports:
@@ -99,7 +99,7 @@ services:
       OTEL_HTTP_ENDPOINT: ${OTEL_HTTP_ENDPOINT:-otelcollector:4318}
     build:
       context: ./demo
-      dockerfile: Dockerfile.products_fg
+      dockerfile: docker/products_fg.Dockerfile
     profiles:
       - subgraphs
     ports:
@@ -345,7 +345,7 @@ services:
       HTTPS_PROXY: ${HTTPS_PROXY}
       HTTP_PROXY: ${HTTP_PROXY}
       NO_PROXY: ${NO_PROXY}
-      NATS_URL: "nats://nats:4222"
+      NATS_URL: 'nats://nats:4222'
     restart: on-failure
     volumes:
       # Mount the example config from the repo into the working dir of the router binary location

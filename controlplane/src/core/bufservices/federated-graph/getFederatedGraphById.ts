@@ -13,7 +13,7 @@ import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepos
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import { AnalyticsDashboardViewRepository } from '../../repositories/analytics/AnalyticsDashboardViewRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { convertToSubgraphType, enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
 export function getFederatedGraphById(
@@ -163,6 +163,7 @@ export function getFederatedGraphById(
         isV2Graph: g.isV2Graph,
         websocketSubprotocol: g.websocketSubprotocol || '',
         isFeatureSubgraph: g.isFeatureSubgraph,
+        type: convertToSubgraphType(g.type),
       })),
       featureFlags,
       graphRequestToken: routerRequestToken,

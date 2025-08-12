@@ -8,7 +8,7 @@ import {
 import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.js';
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { convertToSubgraphType, enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
 export function getFeatureSubgraphsByFeatureFlag(
@@ -79,6 +79,7 @@ export function getFeatureSubgraphsByFeatureFlag(
         isFeatureSubgraph: f.isFeatureSubgraph,
         baseSubgraphName: f.baseSubgraphName,
         baseSubgraphId: f.baseSubgraphId,
+        type: convertToSubgraphType(f.type),
       })),
     };
   });

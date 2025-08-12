@@ -1,4 +1,4 @@
-package grpcconnector
+package grpcpluginoci
 
 import (
 	"testing"
@@ -8,7 +8,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func TestNewGRPCPlugin(t *testing.T) {
+func TestNewGRPCOCIPlugin(t *testing.T) {
 	tests := []struct {
 		name        string
 		config      GRPCPluginConfig
@@ -18,47 +18,36 @@ func TestNewGRPCPlugin(t *testing.T) {
 		{
 			name: "successful creation with valid config",
 			config: GRPCPluginConfig{
-				Logger:     zap.NewNop(),
-				PluginPath: "/path/to/plugin",
-				PluginName: "test-plugin",
+				Logger:        zap.NewNop(),
+				ImageRef:      "cosmo-registry.wundergraph-test/org/image",
+				RegistryToken: "lalala",
 			},
 			wantErr: false,
 		},
 		{
 			name: "fails with nil logger",
 			config: GRPCPluginConfig{
-				Logger:     nil,
-				PluginPath: "/path/to/plugin",
-				PluginName: "test-plugin",
+				Logger:        nil,
+				ImageRef:      "cosmo-registry.wundergraph-test/org/image",
+				RegistryToken: "lalala",
 			},
 			wantErr:     true,
 			errContains: "logger is required",
 		},
 		{
-			name: "fails with empty plugin name",
+			name: "fails with no registry token",
 			config: GRPCPluginConfig{
-				Logger:     zap.NewNop(),
-				PluginPath: "/path/to/plugin",
-				PluginName: "",
+				Logger:   zap.NewNop(),
+				ImageRef: "cosmo-registry.wundergraph-test/org/image",
 			},
 			wantErr:     true,
-			errContains: "plugin name is required",
-		},
-		{
-			name: "fails with empty plugin path",
-			config: GRPCPluginConfig{
-				Logger:     zap.NewNop(),
-				PluginPath: "",
-				PluginName: "test-plugin",
-			},
-			wantErr:     true,
-			errContains: "plugin path is required",
+			errContains: "registry token is required",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			plugin, err := NewGRPCPlugin(tt.config)
+			plugin, err := NewGRPCOCIPlugin(tt.config)
 
 			if tt.wantErr {
 				require.Error(t, err)
@@ -72,8 +61,6 @@ func TestNewGRPCPlugin(t *testing.T) {
 
 			// Verify the plugin was initialized with correct values
 			assert.Equal(t, tt.config.Logger, plugin.logger)
-			assert.Equal(t, tt.config.PluginPath, plugin.pluginPath)
-			assert.Equal(t, tt.config.PluginName, plugin.pluginName)
 			assert.NotNil(t, plugin.done)
 			assert.False(t, plugin.disposed.Load())
 		})

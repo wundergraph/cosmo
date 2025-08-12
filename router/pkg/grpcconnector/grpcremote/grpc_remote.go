@@ -1,4 +1,4 @@
-package grpcconnector
+package grpcremote
 
 import (
 	"context"
@@ -6,35 +6,33 @@ import (
 	"io"
 	"sync"
 
+	"github.com/wundergraph/cosmo/router/pkg/grpcconnector"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-// Ensure GRPCStandaloneProvider implements the ClientProvider interface
-var _ ClientProvider = (*RemoteGRPCProvider)(nil)
+// RemoteGRPCProviderConfig holds the configuration parameters for creating a new RemoteGRPCProvider.
+type RemoteGRPCProviderConfig struct {
+	// Logger is the zap logger instance to use for logging. If nil, a no-op logger will be used.
+	Logger *zap.Logger
+	// Endpoint is the URL of the gRPC server to connect to.
+	Endpoint string
+}
 
 // RemoteGRPCProvider is a client provider that manages a gRPC client connection to a standalone gRPC server.
 // It is used to connect to a standalone gRPC server that is not part of the cosmo cluster.
 // The provider maintains a single client connection and provides thread-safe access to it.
 type RemoteGRPCProvider struct {
 	logger   *zap.Logger
-	name     string
 	endpoint string
 
 	cc grpc.ClientConnInterface
 	mu sync.RWMutex
 }
 
-// RemoteGRPCProviderConfig holds the configuration parameters for creating a new RemoteGRPCProvider.
-type RemoteGRPCProviderConfig struct {
-	// Logger is the zap logger instance to use for logging. If nil, a no-op logger will be used.
-	Logger *zap.Logger
-	// Name is the name of the subgraph this provider is connecting to.
-	Name string
-	// Endpoint is the URL of the gRPC server to connect to.
-	Endpoint string
-}
+// Ensure GRPCStandaloneProvider implements the ClientProvider interface
+var _ grpcconnector.ClientProvider = (*RemoteGRPCProvider)(nil)
 
 // NewRemoteGRPCProvider creates a new RemoteGRPCProvider with the given configuration.
 // It validates the configuration parameters and returns an error if any required parameters are missing.
@@ -43,17 +41,12 @@ func NewRemoteGRPCProvider(config RemoteGRPCProviderConfig) (*RemoteGRPCProvider
 		config.Logger = zap.NewNop()
 	}
 
-	if config.Name == "" {
-		return nil, fmt.Errorf("subgraph name is required")
-	}
-
 	if config.Endpoint == "" {
 		return nil, fmt.Errorf("endpoint is required")
 	}
 
 	return &RemoteGRPCProvider{
 		logger:   config.Logger,
-		name:     config.Name,
 		endpoint: config.Endpoint,
 	}, nil
 }
@@ -65,11 +58,6 @@ func (g *RemoteGRPCProvider) GetClient() grpc.ClientConnInterface {
 	defer g.mu.RUnlock()
 
 	return g.cc
-}
-
-// Name returns the name of the provider.
-func (g *RemoteGRPCProvider) Name() string {
-	return g.name
 }
 
 // Start initializes the gRPC client connection if it hasn't been created yet.
