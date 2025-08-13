@@ -22,9 +22,9 @@ service ProjectsService {
   rpc MutationAddTask(MutationAddTaskRequest) returns (MutationAddTaskResponse) {}
   rpc MutationUpdateProjectStatus(MutationUpdateProjectStatusRequest) returns (MutationUpdateProjectStatusResponse) {}
   rpc QueryArchivedProjects(QueryArchivedProjectsRequest) returns (QueryArchivedProjectsResponse) {}
-  rpc QueryInterfaceNamed(QueryInterfaceNamedRequest) returns (QueryInterfaceNamedResponse) {}
   rpc QueryKillService(QueryKillServiceRequest) returns (QueryKillServiceResponse) {}
   rpc QueryMilestones(QueryMilestonesRequest) returns (QueryMilestonesResponse) {}
+  rpc QueryNodesById(QueryNodesByIdRequest) returns (QueryNodesByIdResponse) {}
   rpc QueryPanic(QueryPanicRequest) returns (QueryPanicResponse) {}
   rpc QueryProject(QueryProjectRequest) returns (QueryProjectResponse) {}
   rpc QueryProjectActivities(QueryProjectActivitiesRequest) returns (QueryProjectActivitiesResponse) {}
@@ -414,12 +414,13 @@ message QueryPanicRequest {
 message QueryPanicResponse {
   bool panic = 1;
 }
-// Request message for interfaceNamed operation.
-message QueryInterfaceNamedRequest {
+// Request message for nodesByID operation.
+message QueryNodesByIdRequest {
+  string id = 1;
 }
-// Response message for interfaceNamed operation.
-message QueryInterfaceNamedResponse {
-  repeated Named interface_named = 1;
+// Response message for nodesByID operation.
+message QueryNodesByIdResponse {
+  repeated Node nodes_by_id = 1;
 }
 // Request message for addProject operation.
 message MutationAddProjectRequest {
@@ -560,9 +561,12 @@ message ProjectActivity {
   }
 }
 
-message Named {
+message Node {
   oneof instance {
   Project project = 1;
+  Milestone milestone = 2;
+  Task task = 3;
+  ProjectUpdate project_update = 4;
   }
 }
 
@@ -600,15 +604,6 @@ message ProjectUpdate {
   string description = 5;
   string timestamp = 6;
   google.protobuf.StringValue metadata = 7;
-}
-
-message Node {
-  oneof instance {
-  Project project = 1;
-  Milestone milestone = 2;
-  Task task = 3;
-  ProjectUpdate project_update = 4;
-  }
 }
 
 message Timestamped {

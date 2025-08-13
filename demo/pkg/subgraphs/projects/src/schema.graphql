@@ -27,7 +27,7 @@ type Query {
   killService: Boolean!
   panic: Boolean!
 
-  interfaceNamed: [Named!]!
+  nodesByID(id: ID!): [Node!]!
 }
 
 type Mutation {
@@ -68,10 +68,6 @@ interface Node {
   id: ID!
 }
 
-interface Named {
-    name: String!
-}
-
 interface Timestamped {
   startDate: String
   endDate: String
@@ -82,7 +78,7 @@ interface Assignable {
 }
 
 # Updated Project type implementing interfaces
-type Project implements Node & Timestamped & Named @key(fields: "id") {
+type Project implements Node & Timestamped @key(fields: "id") {
   id: ID!
   name: String!
   description: String

@@ -109,10 +109,10 @@
     },
     {
       "type": "OPERATION_TYPE_QUERY",
-      "original": "interfaceNamed",
-      "mapped": "QueryInterfaceNamed",
-      "request": "QueryInterfaceNamedRequest",
-      "response": "QueryInterfaceNamedResponse"
+      "original": "nodesByID",
+      "mapped": "QueryNodesById",
+      "request": "QueryNodesByIdRequest",
+      "response": "QueryNodesByIdResponse"
     },
     {
       "type": "OPERATION_TYPE_MUTATION",
@@ -310,9 +310,14 @@
           "argumentMappings": []
         },
         {
-          "original": "interfaceNamed",
-          "mapped": "interface_named",
-          "argumentMappings": []
+          "original": "nodesByID",
+          "mapped": "nodes_by_id",
+          "argumentMappings": [
+            {
+              "original": "id",
+              "mapped": "id"
+            }
+          ]
         }
       ]
     },

@@ -93,8 +93,11 @@
         "resourceMatrix": 13,
         "killService": 14,
         "panic": 15,
-        "interfaceNamed": 16
-      }
+        "nodesByID": 17
+      },
+      "reservedNumbers": [
+        16
+      ]
     },
     "QueryProjectsResponse": {
       "fields": {
@@ -518,6 +521,21 @@
     "NamedImplementations": {
       "fields": {
         "Project": 1
+      }
+    },
+    "QueryNodesByIdRequest": {
+      "fields": {
+        "id": 1
+      }
+    },
+    "QueryNodesById": {
+      "fields": {
+        "id": 1
+      }
+    },
+    "QueryNodesByIdResponse": {
+      "fields": {
+        "nodes_by_id": 1
       }
     }
   },

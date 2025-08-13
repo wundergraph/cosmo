@@ -683,24 +683,54 @@ func (p *ProjectsService) QueryProjects(ctx context.Context, req *service.QueryP
 	return &service.QueryProjectsResponse{Projects: populatedProjects}, nil
 }
 
-// QueryInterfaceNamed implements projects.ProjectsServiceServer.
-func (p *ProjectsService) QueryInterfaceNamed(ctx context.Context, req *service.QueryInterfaceNamedRequest) (*service.QueryInterfaceNamedResponse, error) {
+// QueryNodesById implements projects.ProjectsServiceServer.
+func (p *ProjectsService) QueryNodesById(ctx context.Context, req *service.QueryNodesByIdRequest) (*service.QueryNodesByIdResponse, error) {
+	logger := hclog.FromContext(ctx)
+	logger.Info("QueryNodesById", "id", req.Id)
 
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
-	// Populate relationships for all projects
-	var populatedProjects []*service.Named
+	var nodes []*service.Node
+
 	for _, project := range data.ServiceProjects {
-		n := &service.Named{
-			Instance: &service.Named_Project{
-				Project: p.populateProjectRelationships(project),
-			},
+		if project.Id == req.Id {
+			nodes = append(nodes, &service.Node{
+				Instance: &service.Node_Project{
+					Project: p.populateProjectRelationships(project),
+				},
+			})
 		}
-		populatedProjects = append(populatedProjects, n)
+	}
+	for _, milestone := range data.ServiceMilestones {
+		if milestone.Id == req.Id {
+			nodes = append(nodes, &service.Node{
+				Instance: &service.Node_Milestone{
+					Milestone: data.PopulateMilestoneRelationships(milestone),
+				},
+			})
+		}
+	}
+	for _, task := range data.ServiceTasks {
+		if task.Id == req.Id {
+			nodes = append(nodes, &service.Node{
+				Instance: &service.Node_Task{
+					Task: data.PopulateTaskRelationships(task),
+				},
+			})
+		}
+	}
+	for _, update := range data.ServiceProjectUpdates {
+		if update.Id == req.Id {
+			nodes = append(nodes, &service.Node {
+				Instance: &service.Node_ProjectUpdate{
+					ProjectUpdate: p.populateProjectUpdateRelationships(update),
+				},
+			})
+		}
 	}
 
-	return &service.QueryInterfaceNamedResponse{InterfaceNamed: populatedProjects}, nil
+	return &service.QueryNodesByIdResponse{NodesById: nodes}, nil
 }
 
 // QueryProjectsByStatus implements projects.ProjectsServiceServer.

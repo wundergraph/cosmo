@@ -137,18 +137,31 @@ func TestGRPCSubgraph(t *testing.T) {
 				name: "query projects on inline fragments with interfaces",
 				query: `
 				query {
-					interfaceNamed {
+					nodesByID(id: 1) {
+                        __typename
 						... on Project {
+							id
+						}
+						... on Milestone {
+							id
+						}
+						... on Task {
+							id
+						}
+						... on ProjectUpdate {
 							id
 						}
 						... on Timestamped {
 							... on Project {
 								name
 							}
+							... on Milestone {
+								name
+							}
 						}
 					}
 				}`,
-				expected: `{"data":{"interfaceNamed":[{"id":"1","name":"Cloud Migration Overhaul"},{"id":"2","name":"Microservices Revolution"},{"id":"3","name":"AI-Powered Analytics"},{"id":"4","name":"DevOps Transformation"},{"id":"5","name":"Security Overhaul"},{"id":"6","name":"Mobile App Development"},{"id":"7","name":"Data Lake Implementation"}]}}`,
+				expected: `{"data":{"nodesByID":[{"__typename":"Project","id":"1","name":"Cloud Migration Overhaul"},{"__typename":"Milestone","id":"1","name":"Infrastructure Assessment"},{"__typename":"Task","id":"1"},{"__typename":"ProjectUpdate","id":"1"}]}}`,
 			},
 		}
 		testenv.Run(t, &testenv.Config{
