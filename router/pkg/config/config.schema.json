@@ -698,6 +698,7 @@
             "ignore_query_params_list": {
               "type": "array",
               "description": "List of query params to be ignored from being logged in the query field.",
+              "default": ["variables"],
               "items": {
                 "type": "string"
               }
