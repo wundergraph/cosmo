@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"io"
 	"log"
 	"net/http"
@@ -210,13 +211,13 @@ func New(ctx context.Context, config *Config) (*Subgraphs, error) {
 
 	natsPubSubByProviderID := map[string]natsPubsub.Adapter{}
 
-	defaultAdapter, err := natsPubsub.NewAdapter(ctx, zap.NewNop(), url, []nats.Option{}, "hostname", "test")
+	defaultAdapter, err := natsPubsub.NewAdapter(ctx, zap.NewNop(), url, []nats.Option{}, "hostname", "test", datasource.ProviderOpts{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create default nats adapter: %w", err)
 	}
 	natsPubSubByProviderID["default"] = defaultAdapter
 
-	myNatsAdapter, err := natsPubsub.NewAdapter(ctx, zap.NewNop(), url, []nats.Option{}, "hostname", "test")
+	myNatsAdapter, err := natsPubsub.NewAdapter(ctx, zap.NewNop(), url, []nats.Option{}, "hostname", "test", datasource.ProviderOpts{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create my-nats adapter: %w", err)
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"net/http"
 	"net/url"
 	"slices"
@@ -211,6 +212,7 @@ type RouterEngineConfiguration struct {
 	Headers                  *config.HeaderRules
 	Events                   config.EventsConfiguration
 	SubgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
+	EventMetricStore         *rmetric.EventMetrics
 }
 
 func mapProtoFilterToPlanFilter(input *nodev1.SubscriptionFilterCondition, output *plan.SubscriptionFilterCondition) *plan.SubscriptionFilterCondition {
@@ -470,6 +472,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 	factoryProviders, factoryDataSources, err := pubsub.BuildProvidersAndDataSources(
 		l.ctx,
 		routerEngineConfig.Events,
+		routerEngineConfig.EventMetricStore,
 		l.logger,
 		pubSubDS,
 		l.resolver.InstanceData().HostName,

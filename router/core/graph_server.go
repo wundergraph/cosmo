@@ -514,6 +514,7 @@ type graphMux struct {
 	metricStore                rmetric.Store
 	prometheusCacheMetrics     *rmetric.CacheMetrics
 	otelCacheMetrics           *rmetric.CacheMetrics
+	eventMetricStore           *rmetric.EventMetrics
 }
 
 // buildOperationCaches creates the caches for the graph mux.
@@ -755,6 +756,12 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 		}
 	}
 
+	if s.eventMetricStore != nil {
+		if aErr := s.eventMetricStore.Shutdown(ctx); aErr != nil {
+			err = errors.Join(err, aErr)
+		}
+	}
+
 	if err != nil {
 		return fmt.Errorf("shutdown graph mux: %w", err)
 	}
@@ -866,6 +873,19 @@ func (s *graphServer) buildGraphMux(
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	if s.metricConfig.OpenTelemetry.EventMetrics || s.metricConfig.Prometheus.EventMetrics {
+		store, err := rmetric.NewEventMetricStore(
+			s.logger,
+			baseMetricAttributes,
+			s.otlpMeterProvider,
+			s.promMeterProvider,
+			s.metricConfig)
+		if err != nil {
+			return nil, err
+		}
+		gm.eventMetricStore = store
 	}
 
 	subgraphs, err := configureSubgraphOverwrites(
@@ -1110,6 +1130,7 @@ func (s *graphServer) buildGraphMux(
 		Headers:                  s.headerRules,
 		Events:                   s.eventsConfig,
 		SubgraphErrorPropagation: s.subgraphErrorPropagation,
+		EventMetricStore:         gm.eventMetricStore,
 	}
 
 	// map[string]*http.Transport cannot be coerced into map[string]http.RoundTripper, unfortunately

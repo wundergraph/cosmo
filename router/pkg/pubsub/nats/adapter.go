@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/pkg/metric"
 	"io"
 	"sync"
 	"time"
@@ -42,6 +43,7 @@ type ProviderAdapter struct {
 	url              string
 	opts             []nats.Option
 	flushTimeout     time.Duration
+	eventMetricStore *metric.EventMetrics
 }
 
 // getInstanceIdentifier returns an identifier for the current instance.
@@ -132,6 +134,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEvent
 					for msg := range msgBatch.Messages() {
 						log.Debug("subscription update", zap.String("message_subject", msg.Subject()), zap.ByteString("data", msg.Data()))
 
+						p.eventMetricStore.MessageReceived(p.ctx, "nats", 1)
 						updater.Update(msg.Data())
 
 						// Acknowledge the message after it has been processed
@@ -169,6 +172,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEvent
 			select {
 			case msg := <-msgChan:
 				log.Debug("subscription update", zap.String("message_subject", msg.Subject), zap.ByteString("data", msg.Data))
+				p.eventMetricStore.MessageReceived(p.ctx, "nats", 1)
 				updater.Update(msg.Data)
 			case <-p.ctx.Done():
 				// When the application context is done, we stop the subscriptions
@@ -197,7 +201,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEvent
 	return nil
 }
 
-func (p *ProviderAdapter) Publish(_ context.Context, event PublishAndRequestEventConfiguration) error {
+func (p *ProviderAdapter) Publish(ctx context.Context, event PublishAndRequestEventConfiguration) error {
 	log := p.logger.With(
 		zap.String("provider_id", event.ProviderID),
 		zap.String("method", "publish"),
@@ -215,6 +219,8 @@ func (p *ProviderAdapter) Publish(_ context.Context, event PublishAndRequestEven
 		log.Error("publish error", zap.Error(err))
 		return datasource.NewError(fmt.Sprintf("error publishing to NATS subject %s", event.Subject), err)
 	}
+
+	p.eventMetricStore.Publish(ctx, "nats", 1)
 
 	return nil
 }
@@ -303,7 +309,15 @@ func (p *ProviderAdapter) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-func NewAdapter(ctx context.Context, logger *zap.Logger, url string, opts []nats.Option, hostName string, routerListenAddr string) (Adapter, error) {
+func NewAdapter(
+	ctx context.Context,
+	logger *zap.Logger,
+	url string,
+	opts []nats.Option,
+	hostName string,
+	routerListenAddr string,
+	providerOpts datasource.ProviderOpts,
+) (Adapter, error) {
 	if logger == nil {
 		logger = zap.NewNop()
 	}
@@ -317,5 +331,6 @@ func NewAdapter(ctx context.Context, logger *zap.Logger, url string, opts []nats
 		url:              url,
 		opts:             opts,
 		flushTimeout:     10 * time.Second,
+		eventMetricStore: providerOpts.EventMetricStore,
 	}, nil
 }

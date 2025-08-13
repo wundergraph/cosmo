@@ -290,7 +290,7 @@ func TestBuildProvidersAndDataSources_Nats_OK(t *testing.T) {
 				{ID: "provider-1"},
 			},
 		},
-	}, zap.NewNop(), dsConfs, "host", "addr")
+	}, nil, zap.NewNop(), dsConfs, "host", "addr")
 
 	// Assertions
 	assert.NoError(t, err)
@@ -343,7 +343,7 @@ func TestBuildProvidersAndDataSources_Kafka_OK(t *testing.T) {
 				{ID: "provider-1"},
 			},
 		},
-	}, zap.NewNop(), dsConfs, "host", "addr")
+	}, nil, zap.NewNop(), dsConfs, "host", "addr")
 
 	// Assertions
 	assert.NoError(t, err)
@@ -396,7 +396,7 @@ func TestBuildProvidersAndDataSources_Redis_OK(t *testing.T) {
 				{ID: "provider-1"},
 			},
 		},
-	}, zap.NewNop(), dsConfs, "host", "addr")
+	}, nil, zap.NewNop(), dsConfs, "host", "addr")
 
 	// Assertions
 	assert.NoError(t, err)

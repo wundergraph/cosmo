@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/pkg/metric"
 	"strings"
 	"sync"
 	"time"
@@ -33,12 +34,13 @@ type Adapter interface {
 // It uses a single write client to produce messages and a client per topic to consume messages.
 // Each client polls the Kafka topic for new records and updates the subscriptions with the new data.
 type ProviderAdapter struct {
-	ctx         context.Context
-	opts        []kgo.Opt
-	logger      *zap.Logger
-	writeClient *kgo.Client
-	closeWg     sync.WaitGroup
-	cancel      context.CancelFunc
+	ctx              context.Context
+	opts             []kgo.Opt
+	logger           *zap.Logger
+	writeClient      *kgo.Client
+	closeWg          sync.WaitGroup
+	cancel           context.CancelFunc
+	eventMetricStore *metric.EventMetrics
 }
 
 // topicPoller polls the Kafka topic for new records and calls the updateTriggers function.
@@ -181,6 +183,8 @@ func (p *ProviderAdapter) Publish(ctx context.Context, event PublishEventConfigu
 		return datasource.NewError(fmt.Sprintf("error publishing to Kafka topic %s", event.Topic), pErr)
 	}
 
+	p.eventMetricStore.Publish(ctx, "nats", 1)
+
 	return nil
 }
 
@@ -222,17 +226,18 @@ func (p *ProviderAdapter) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-func NewProviderAdapter(ctx context.Context, logger *zap.Logger, opts []kgo.Opt) (*ProviderAdapter, error) {
+func NewProviderAdapter(ctx context.Context, logger *zap.Logger, opts []kgo.Opt, providerOpts datasource.ProviderOpts) (*ProviderAdapter, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	if logger == nil {
 		logger = zap.NewNop()
 	}
 
 	return &ProviderAdapter{
-		ctx:     ctx,
-		logger:  logger.With(zap.String("pubsub", "kafka")),
-		opts:    opts,
-		closeWg: sync.WaitGroup{},
-		cancel:  cancel,
+		ctx:              ctx,
+		logger:           logger.With(zap.String("pubsub", "kafka")),
+		opts:             opts,
+		closeWg:          sync.WaitGroup{},
+		cancel:           cancel,
+		eventMetricStore: providerOpts.EventMetricStore,
 	}, nil
 }

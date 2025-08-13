@@ -3,6 +3,7 @@ package redis
 import (
 	"context"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/pkg/metric"
 	"sync"
 
 	rd "github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/redis"
@@ -23,25 +24,27 @@ type Adapter interface {
 	Shutdown(ctx context.Context) error
 }
 
-func NewProviderAdapter(ctx context.Context, logger *zap.Logger, urls []string, clusterEnabled bool) Adapter {
+func NewProviderAdapter(ctx context.Context, logger *zap.Logger, urls []string, clusterEnabled bool, opts datasource.ProviderOpts) Adapter {
 	ctx, cancel := context.WithCancel(ctx)
 	return &ProviderAdapter{
-		ctx:            ctx,
-		cancel:         cancel,
-		logger:         logger,
-		urls:           urls,
-		clusterEnabled: clusterEnabled,
+		ctx:              ctx,
+		cancel:           cancel,
+		logger:           logger,
+		urls:             urls,
+		clusterEnabled:   clusterEnabled,
+		eventMetricStore: opts.EventMetricStore,
 	}
 }
 
 type ProviderAdapter struct {
-	ctx            context.Context
-	cancel         context.CancelFunc
-	conn           rd.RDCloser
-	logger         *zap.Logger
-	closeWg        sync.WaitGroup
-	urls           []string
-	clusterEnabled bool
+	ctx              context.Context
+	cancel           context.CancelFunc
+	conn             rd.RDCloser
+	logger           *zap.Logger
+	closeWg          sync.WaitGroup
+	urls             []string
+	clusterEnabled   bool
+	eventMetricStore *metric.EventMetrics
 }
 
 func (p *ProviderAdapter) Startup(ctx context.Context) error {

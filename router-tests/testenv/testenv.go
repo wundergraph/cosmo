@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"io"
 	"log"
 	"math/rand"
@@ -2817,7 +2818,7 @@ func subgraphOptions(ctx context.Context, t testing.TB, logger *zap.Logger, nats
 	}
 	natsPubSubByProviderID := make(map[string]pubsubNats.Adapter, len(DemoNatsProviders))
 	for _, sourceName := range DemoNatsProviders {
-		adapter, err := pubsubNats.NewAdapter(ctx, logger, natsData.Params[0].Url, natsData.Params[0].Opts, "hostname", "listenaddr")
+		adapter, err := pubsubNats.NewAdapter(ctx, logger, natsData.Params[0].Url, natsData.Params[0].Opts, "hostname", "listenaddr", datasource.ProviderOpts{})
 		require.NoError(t, err)
 		require.NoError(t, adapter.Startup(ctx))
 		t.Cleanup(func() {
