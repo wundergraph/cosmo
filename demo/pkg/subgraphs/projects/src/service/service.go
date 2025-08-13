@@ -683,6 +683,56 @@ func (p *ProjectsService) QueryProjects(ctx context.Context, req *service.QueryP
 	return &service.QueryProjectsResponse{Projects: populatedProjects}, nil
 }
 
+// QueryNodesById implements projects.ProjectsServiceServer.
+func (p *ProjectsService) QueryNodesById(ctx context.Context, req *service.QueryNodesByIdRequest) (*service.QueryNodesByIdResponse, error) {
+	logger := hclog.FromContext(ctx)
+	logger.Info("QueryNodesById", "id", req.Id)
+
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	var nodes []*service.Node
+
+	for _, project := range data.ServiceProjects {
+		if project.Id == req.Id {
+			nodes = append(nodes, &service.Node{
+				Instance: &service.Node_Project{
+					Project: p.populateProjectRelationships(project),
+				},
+			})
+		}
+	}
+	for _, milestone := range data.ServiceMilestones {
+		if milestone.Id == req.Id {
+			nodes = append(nodes, &service.Node{
+				Instance: &service.Node_Milestone{
+					Milestone: data.PopulateMilestoneRelationships(milestone),
+				},
+			})
+		}
+	}
+	for _, task := range data.ServiceTasks {
+		if task.Id == req.Id {
+			nodes = append(nodes, &service.Node{
+				Instance: &service.Node_Task{
+					Task: data.PopulateTaskRelationships(task),
+				},
+			})
+		}
+	}
+	for _, update := range data.ServiceProjectUpdates {
+		if update.Id == req.Id {
+			nodes = append(nodes, &service.Node{
+				Instance: &service.Node_ProjectUpdate{
+					ProjectUpdate: p.populateProjectUpdateRelationships(update),
+				},
+			})
+		}
+	}
+
+	return &service.QueryNodesByIdResponse{NodesById: nodes}, nil
+}
+
 // QueryProjectsByStatus implements projects.ProjectsServiceServer.
 func (p *ProjectsService) QueryProjectsByStatus(ctx context.Context, req *service.QueryProjectsByStatusRequest) (*service.QueryProjectsByStatusResponse, error) {
 	logger := hclog.FromContext(ctx)

@@ -108,6 +108,13 @@
       "response": "QueryPanicResponse"
     },
     {
+      "type": "OPERATION_TYPE_QUERY",
+      "original": "nodesById",
+      "mapped": "QueryNodesById",
+      "request": "QueryNodesByIdRequest",
+      "response": "QueryNodesByIdResponse"
+    },
+    {
       "type": "OPERATION_TYPE_MUTATION",
       "original": "addProject",
       "mapped": "MutationAddProject",
@@ -301,6 +308,16 @@
           "original": "panic",
           "mapped": "panic",
           "argumentMappings": []
+        },
+        {
+          "original": "nodesById",
+          "mapped": "nodes_by_id",
+          "argumentMappings": [
+            {
+              "original": "id",
+              "mapped": "id"
+            }
+          ]
         }
       ]
     },
