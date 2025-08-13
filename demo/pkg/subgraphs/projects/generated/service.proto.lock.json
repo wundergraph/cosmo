@@ -93,12 +93,8 @@
         "resourceMatrix": 13,
         "killService": 14,
         "panic": 15,
-        "nodesById": 18
-      },
-      "reservedNumbers": [
-        16,
-        17
-      ]
+        "nodesById": 16
+      }
     },
     "QueryProjectsResponse": {
       "fields": {
@@ -493,6 +489,21 @@
         "Task": 1
       }
     },
+    "QueryNodesByIdRequest": {
+      "fields": {
+        "id": 1
+      }
+    },
+    "QueryNodesById": {
+      "fields": {
+        "id": 1
+      }
+    },
+    "QueryNodesByIdResponse": {
+      "fields": {
+        "nodes_by_id": 1
+      }
+    },
     "QueryProjectsRequest": {
       "fields": {}
     },
@@ -510,34 +521,6 @@
     },
     "QueryPanicRequest": {
       "fields": {}
-    },
-    "QueryInterfaceNamedRequest": {
-      "fields": {}
-    },
-    "QueryInterfaceNamedResponse": {
-      "fields": {
-        "interface_named": 1
-      }
-    },
-    "NamedImplementations": {
-      "fields": {
-        "Project": 1
-      }
-    },
-    "QueryNodesByIdRequest": {
-      "fields": {
-        "id": 1
-      }
-    },
-    "QueryNodesById": {
-      "fields": {
-        "id": 1
-      }
-    },
-    "QueryNodesByIdResponse": {
-      "fields": {
-        "nodes_by_id": 1
-      }
     }
   },
   "enums": {
