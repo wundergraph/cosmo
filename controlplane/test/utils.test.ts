@@ -39,13 +39,14 @@ describe('Utils', () => {
     });
 
     test('that true is returned when an URL with the `gs` protocol', () => {
-      expect(isGoogleCloudStorageUrl('gs://bucket-name'));
+      expect(isGoogleCloudStorageUrl('gs://bucket-name')).toBe(true);
     });
 
     test('that false is returned when the URL is not a valid Google Cloud Storage URL', () => {
-      expect(isGoogleCloudStorageUrl('http://minio/cosmo'));
-      expect(isGoogleCloudStorageUrl('https://bucket-name.s3.amazonaws.com/'));
-      expect(isGoogleCloudStorageUrl('https://bucket-name.s3.amazonaws.com'));
+      expect(isGoogleCloudStorageUrl('http://minio/cosmo')).toBe(false);
+      expect(isGoogleCloudStorageUrl('https://bucket-name.s3.amazonaws.com/')).toBe(false);
+      expect(isGoogleCloudStorageUrl('https://bucket-name.s3.amazonaws.com')).toBe(false);
+      expect(isGoogleCloudStorageUrl('https://storage.googleapis.com.evil.com')).toBe(false);
     });
   });
 });
