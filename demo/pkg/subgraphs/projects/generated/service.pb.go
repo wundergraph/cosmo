@@ -3112,7 +3112,7 @@ func (x *QueryPanicResponse) GetPanic() bool {
 	return false
 }
 
-// Request message for nodesByID operation.
+// Request message for nodesById operation.
 type QueryNodesByIdRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -3160,7 +3160,7 @@ func (x *QueryNodesByIdRequest) GetId() string {
 	return ""
 }
 
-// Response message for nodesByID operation.
+// Response message for nodesById operation.
 type QueryNodesByIdResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache

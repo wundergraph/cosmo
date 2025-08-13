@@ -109,7 +109,7 @@
     },
     {
       "type": "OPERATION_TYPE_QUERY",
-      "original": "nodesByID",
+      "original": "nodesById",
       "mapped": "QueryNodesById",
       "request": "QueryNodesByIdRequest",
       "response": "QueryNodesByIdResponse"
@@ -310,7 +310,7 @@
           "argumentMappings": []
         },
         {
-          "original": "nodesByID",
+          "original": "nodesById",
           "mapped": "nodes_by_id",
           "argumentMappings": [
             {

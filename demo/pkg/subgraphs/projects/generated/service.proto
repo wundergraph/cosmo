@@ -414,11 +414,11 @@ message QueryPanicRequest {
 message QueryPanicResponse {
   bool panic = 1;
 }
-// Request message for nodesByID operation.
+// Request message for nodesById operation.
 message QueryNodesByIdRequest {
   string id = 1;
 }
-// Response message for nodesByID operation.
+// Response message for nodesById operation.
 message QueryNodesByIdResponse {
   repeated Node nodes_by_id = 1;
 }

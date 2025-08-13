@@ -137,7 +137,7 @@ func TestGRPCSubgraph(t *testing.T) {
 				name: "query projects on inline fragments with interfaces",
 				query: `
 				query {
-					nodesByID(id: 1) {
+					nodesById(id: 1) {
                         __typename
 						... on Project {
 							id
@@ -161,7 +161,7 @@ func TestGRPCSubgraph(t *testing.T) {
 						}
 					}
 				}`,
-				expected: `{"data":{"nodesByID":[{"__typename":"Project","id":"1","name":"Cloud Migration Overhaul"},{"__typename":"Milestone","id":"1","name":"Infrastructure Assessment"},{"__typename":"Task","id":"1"},{"__typename":"ProjectUpdate","id":"1"}]}}`,
+				expected: `{"data":{"nodesById":[{"__typename":"Project","id":"1","name":"Cloud Migration Overhaul"},{"__typename":"Milestone","id":"1","name":"Infrastructure Assessment"},{"__typename":"Task","id":"1"},{"__typename":"ProjectUpdate","id":"1"}]}}`,
 			},
 		}
 		testenv.Run(t, &testenv.Config{

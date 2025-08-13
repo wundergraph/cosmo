@@ -93,10 +93,11 @@
         "resourceMatrix": 13,
         "killService": 14,
         "panic": 15,
-        "nodesByID": 17
+        "nodesById": 18
       },
       "reservedNumbers": [
-        16
+        16,
+        17
       ]
     },
     "QueryProjectsResponse": {

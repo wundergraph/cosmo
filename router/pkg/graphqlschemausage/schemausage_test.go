@@ -588,13 +588,6 @@ func (f *FakePlanner[T]) ConfigureSubscription() plan.SubscriptionConfiguration 
 	return plan.SubscriptionConfiguration{}
 }
 
-func (f *FakePlanner[T]) DataSourcePlanningBehavior() plan.DataSourcePlanningBehavior {
-	return plan.DataSourcePlanningBehavior{
-		MergeAliasedRootNodes:      false,
-		OverrideFieldPathFromAlias: false,
-	}
-}
-
 func (f *FakePlanner[T]) DownstreamResponseFieldAlias(_ int) (alias string, exists bool) {
 	return
 }

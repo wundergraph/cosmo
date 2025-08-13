@@ -722,7 +722,7 @@ func (p *ProjectsService) QueryNodesById(ctx context.Context, req *service.Query
 	}
 	for _, update := range data.ServiceProjectUpdates {
 		if update.Id == req.Id {
-			nodes = append(nodes, &service.Node {
+			nodes = append(nodes, &service.Node{
 				Instance: &service.Node_ProjectUpdate{
 					ProjectUpdate: p.populateProjectUpdateRelationships(update),
 				},

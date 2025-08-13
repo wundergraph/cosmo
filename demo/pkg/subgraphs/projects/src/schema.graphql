@@ -27,7 +27,7 @@ type Query {
   killService: Boolean!
   panic: Boolean!
 
-  nodesByID(id: ID!): [Node!]!
+  nodesById(id: ID!): [Node!]!
 }
 
 type Mutation {
