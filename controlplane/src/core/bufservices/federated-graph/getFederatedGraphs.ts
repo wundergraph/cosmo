@@ -15,7 +15,7 @@ import { AnalyticsDashboardViewRepository } from '../../repositories/analytics/A
 import { parseTimeFilters } from '../../repositories/analytics/util.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
-import { SubgraphRepository } from "../../repositories/SubgraphRepository.js";
+import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 
 export function getFederatedGraphs(
   opts: RouterOptions,
@@ -89,12 +89,16 @@ export function getFederatedGraphs(
             rbac: authContext.rbac,
           });
 
-          subgraphs.push(...subgraphsForFederatedGraph.map((sg) => SubgraphMinimal.fromJson({
-            id: sg.id,
-            name: sg.name,
-            namespace: sg.namespace,
-            fedGraphId: g.id,
-          })));
+          subgraphs.push(
+            ...subgraphsForFederatedGraph.map((sg) =>
+              SubgraphMinimal.fromJson({
+                id: sg.id,
+                name: sg.name,
+                namespace: sg.namespace,
+                fedGraphId: g.id,
+              }),
+            ),
+          );
         }),
       );
     }

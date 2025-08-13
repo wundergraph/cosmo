@@ -8,7 +8,7 @@ import { useRouter } from "next/router";
 import { useApplyParams } from "@/components/analytics/use-apply-params";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 
-type WorkspaceFederatedGraph = {
+export type WorkspaceFederatedGraph = {
   graph: FederatedGraph;
   subgraphs: SubgraphMinimal[];
 };
