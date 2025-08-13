@@ -312,12 +312,11 @@ export default async function build(opts: BuildConfig) {
 
   const s3Client = new S3Client(s3Config);
   const blobStorage = new S3BlobStorage(s3Client, bucketName, {
-    // If the configuration option is not set, we try to detect whether the provided endpoint is a
-    // Google Cloud Storage endpoint, this is because GCS doesn't support the `deleteObjects` request as of
-    // August 12th, 2025
+    // GCS does not support DeleteObjects; force individual deletes when detected.
     useIndividualDeletes:
-      opts.s3Storage.useIndividualDeletes ??
-      (isGoogleCloudStorageUrl(opts.s3Storage.url) || isGoogleCloudStorageUrl(s3Config.endpoint as string)),
+      (isGoogleCloudStorageUrl(opts.s3Storage.url) || isGoogleCloudStorageUrl(s3Config.endpoint as string))
+        ? true
+        : (opts.s3Storage.useIndividualDeletes ?? false),
   });
 
   const platformWebhooks = new PlatformWebhookService(opts.webhook?.url, opts.webhook?.key, logger);
