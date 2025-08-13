@@ -1,0 +1,922 @@
+{
+  "version": 1,
+  "service": "ProjectsService",
+  "operationMappings": [
+    {
+      "type": "OPERATION_TYPE_QUERY",
+      "original": "projects",
+      "mapped": "QueryProjects",
+      "request": "QueryProjectsRequest",
+      "response": "QueryProjectsResponse"
+    },
+    {
+      "type": "OPERATION_TYPE_QUERY",
+      "original": "project",
+      "mapped": "QueryProject",
+      "request": "QueryProjectRequest",
+      "response": "QueryProjectResponse"
+    },
+    {
+      "type": "OPERATION_TYPE_QUERY",
+      "original": "projectStatuses",
+      "mapped": "QueryProjectStatuses",
+      "request": "QueryProjectStatusesRequest",
+      "response": "QueryProjectStatusesResponse"
+    },
+    {
+      "type": "OPERATION_TYPE_QUERY",
+      "original": "projectsByStatus",
+      "mapped": "QueryProjectsByStatus",
+      "request": "QueryProjectsByStatusRequest",
+      "response": "QueryProjectsByStatusResponse"
+    },
+    {
+      "type": "OPERATION_TYPE_QUERY",
+      "original": "projectResources",
+      "mapped": "QueryProjectResources",
+      "request": "QueryProjectResourcesRequest",
+      "response": "QueryProjectResourcesResponse"
+    },
+    {
+      "type": "OPERATION_TYPE_QUERY",
+      "original": "searchProjects",
+      "mapped": "QuerySearchProjects",
+      "request": "QuerySearchProjectsRequest",
+      "response": "QuerySearchProjectsResponse"
+    },
+    {
+      "type": "OPERATION_TYPE_QUERY",
+      "original": "milestones",
+      "mapped": "QueryMilestones",
+      "request": "QueryMilestonesRequest",
+      "response": "QueryMilestonesResponse"
+    },
+    {
+      "type": "OPERATION_TYPE_QUERY",
+      "original": "tasks",
+      "mapped": "QueryTasks",
+      "request": "QueryTasksRequest",
+      "response": "QueryTasksResponse"
+    },
+    {
+      "type": "OPERATION_TYPE_QUERY",
+      "original": "projectActivities",
+      "mapped": "QueryProjectActivities",
+      "request": "QueryProjectActivitiesRequest",
+      "response": "QueryProjectActivitiesResponse"
+    },
+    {
+      "type": "OPERATION_TYPE_QUERY",
+      "original": "projectTags",
+      "mapped": "QueryProjectTags",
+      "request": "QueryProjectTagsRequest",
+      "response": "QueryProjectTagsResponse"
+    },
+    {
+      "type": "OPERATION_TYPE_QUERY",
+      "original": "archivedProjects",
+      "mapped": "QueryArchivedProjects",
+      "request": "QueryArchivedProjectsRequest",
+      "response": "QueryArchivedProjectsResponse"
+    },
+    {
+      "type": "OPERATION_TYPE_QUERY",
+      "original": "tasksByPriority",
+      "mapped": "QueryTasksByPriority",
+      "request": "QueryTasksByPriorityRequest",
+      "response": "QueryTasksByPriorityResponse"
+    },
+    {
+      "type": "OPERATION_TYPE_QUERY",
+      "original": "resourceMatrix",
+      "mapped": "QueryResourceMatrix",
+      "request": "QueryResourceMatrixRequest",
+      "response": "QueryResourceMatrixResponse"
+    },
+    {
+      "type": "OPERATION_TYPE_QUERY",
+      "original": "killService",
+      "mapped": "QueryKillService",
+      "request": "QueryKillServiceRequest",
+      "response": "QueryKillServiceResponse"
+    },
+    {
+      "type": "OPERATION_TYPE_QUERY",
+      "original": "panic",
+      "mapped": "QueryPanic",
+      "request": "QueryPanicRequest",
+      "response": "QueryPanicResponse"
+    },
+    {
+      "type": "OPERATION_TYPE_MUTATION",
+      "original": "addProject",
+      "mapped": "MutationAddProject",
+      "request": "MutationAddProjectRequest",
+      "response": "MutationAddProjectResponse"
+    },
+    {
+      "type": "OPERATION_TYPE_MUTATION",
+      "original": "addMilestone",
+      "mapped": "MutationAddMilestone",
+      "request": "MutationAddMilestoneRequest",
+      "response": "MutationAddMilestoneResponse"
+    },
+    {
+      "type": "OPERATION_TYPE_MUTATION",
+      "original": "addTask",
+      "mapped": "MutationAddTask",
+      "request": "MutationAddTaskRequest",
+      "response": "MutationAddTaskResponse"
+    },
+    {
+      "type": "OPERATION_TYPE_MUTATION",
+      "original": "updateProjectStatus",
+      "mapped": "MutationUpdateProjectStatus",
+      "request": "MutationUpdateProjectStatusRequest",
+      "response": "MutationUpdateProjectStatusResponse"
+    }
+  ],
+  "entityMappings": [
+    {
+      "typeName": "Project",
+      "kind": "entity",
+      "key": "id",
+      "rpc": "LookupProjectById",
+      "request": "LookupProjectByIdRequest",
+      "response": "LookupProjectByIdResponse"
+    },
+    {
+      "typeName": "Milestone",
+      "kind": "entity",
+      "key": "id",
+      "rpc": "LookupMilestoneById",
+      "request": "LookupMilestoneByIdRequest",
+      "response": "LookupMilestoneByIdResponse"
+    },
+    {
+      "typeName": "Task",
+      "kind": "entity",
+      "key": "id",
+      "rpc": "LookupTaskById",
+      "request": "LookupTaskByIdRequest",
+      "response": "LookupTaskByIdResponse"
+    },
+    {
+      "typeName": "Employee",
+      "kind": "entity",
+      "key": "id",
+      "rpc": "LookupEmployeeById",
+      "request": "LookupEmployeeByIdRequest",
+      "response": "LookupEmployeeByIdResponse"
+    },
+    {
+      "typeName": "Product",
+      "kind": "entity",
+      "key": "upc",
+      "rpc": "LookupProductByUpc",
+      "request": "LookupProductByUpcRequest",
+      "response": "LookupProductByUpcResponse"
+    }
+  ],
+  "typeFieldMappings": [
+    {
+      "type": "Query",
+      "fieldMappings": [
+        {
+          "original": "projects",
+          "mapped": "projects",
+          "argumentMappings": []
+        },
+        {
+          "original": "project",
+          "mapped": "project",
+          "argumentMappings": [
+            {
+              "original": "id",
+              "mapped": "id"
+            }
+          ]
+        },
+        {
+          "original": "projectStatuses",
+          "mapped": "project_statuses",
+          "argumentMappings": []
+        },
+        {
+          "original": "projectsByStatus",
+          "mapped": "projects_by_status",
+          "argumentMappings": [
+            {
+              "original": "status",
+              "mapped": "status"
+            }
+          ]
+        },
+        {
+          "original": "projectResources",
+          "mapped": "project_resources",
+          "argumentMappings": [
+            {
+              "original": "projectId",
+              "mapped": "project_id"
+            }
+          ]
+        },
+        {
+          "original": "searchProjects",
+          "mapped": "search_projects",
+          "argumentMappings": [
+            {
+              "original": "query",
+              "mapped": "query"
+            }
+          ]
+        },
+        {
+          "original": "milestones",
+          "mapped": "milestones",
+          "argumentMappings": [
+            {
+              "original": "projectId",
+              "mapped": "project_id"
+            }
+          ]
+        },
+        {
+          "original": "tasks",
+          "mapped": "tasks",
+          "argumentMappings": [
+            {
+              "original": "projectId",
+              "mapped": "project_id"
+            }
+          ]
+        },
+        {
+          "original": "projectActivities",
+          "mapped": "project_activities",
+          "argumentMappings": [
+            {
+              "original": "projectId",
+              "mapped": "project_id"
+            }
+          ]
+        },
+        {
+          "original": "projectTags",
+          "mapped": "project_tags",
+          "argumentMappings": []
+        },
+        {
+          "original": "archivedProjects",
+          "mapped": "archived_projects",
+          "argumentMappings": []
+        },
+        {
+          "original": "tasksByPriority",
+          "mapped": "tasks_by_priority",
+          "argumentMappings": [
+            {
+              "original": "projectId",
+              "mapped": "project_id"
+            }
+          ]
+        },
+        {
+          "original": "resourceMatrix",
+          "mapped": "resource_matrix",
+          "argumentMappings": [
+            {
+              "original": "projectId",
+              "mapped": "project_id"
+            }
+          ]
+        },
+        {
+          "original": "killService",
+          "mapped": "kill_service",
+          "argumentMappings": []
+        },
+        {
+          "original": "panic",
+          "mapped": "panic",
+          "argumentMappings": []
+        }
+      ]
+    },
+    {
+      "type": "Mutation",
+      "fieldMappings": [
+        {
+          "original": "addProject",
+          "mapped": "add_project",
+          "argumentMappings": [
+            {
+              "original": "project",
+              "mapped": "project"
+            }
+          ]
+        },
+        {
+          "original": "addMilestone",
+          "mapped": "add_milestone",
+          "argumentMappings": [
+            {
+              "original": "milestone",
+              "mapped": "milestone"
+            }
+          ]
+        },
+        {
+          "original": "addTask",
+          "mapped": "add_task",
+          "argumentMappings": [
+            {
+              "original": "task",
+              "mapped": "task"
+            }
+          ]
+        },
+        {
+          "original": "updateProjectStatus",
+          "mapped": "update_project_status",
+          "argumentMappings": [
+            {
+              "original": "projectId",
+              "mapped": "project_id"
+            },
+            {
+              "original": "status",
+              "mapped": "status"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "ProjectInput",
+      "fieldMappings": [
+        {
+          "original": "name",
+          "mapped": "name",
+          "argumentMappings": []
+        },
+        {
+          "original": "description",
+          "mapped": "description",
+          "argumentMappings": []
+        },
+        {
+          "original": "startDate",
+          "mapped": "start_date",
+          "argumentMappings": []
+        },
+        {
+          "original": "endDate",
+          "mapped": "end_date",
+          "argumentMappings": []
+        },
+        {
+          "original": "status",
+          "mapped": "status",
+          "argumentMappings": []
+        }
+      ]
+    },
+    {
+      "type": "MilestoneInput",
+      "fieldMappings": [
+        {
+          "original": "projectId",
+          "mapped": "project_id",
+          "argumentMappings": []
+        },
+        {
+          "original": "name",
+          "mapped": "name",
+          "argumentMappings": []
+        },
+        {
+          "original": "description",
+          "mapped": "description",
+          "argumentMappings": []
+        },
+        {
+          "original": "dueDate",
+          "mapped": "due_date",
+          "argumentMappings": []
+        },
+        {
+          "original": "status",
+          "mapped": "status",
+          "argumentMappings": []
+        }
+      ]
+    },
+    {
+      "type": "TaskInput",
+      "fieldMappings": [
+        {
+          "original": "projectId",
+          "mapped": "project_id",
+          "argumentMappings": []
+        },
+        {
+          "original": "assigneeId",
+          "mapped": "assignee_id",
+          "argumentMappings": []
+        },
+        {
+          "original": "name",
+          "mapped": "name",
+          "argumentMappings": []
+        },
+        {
+          "original": "description",
+          "mapped": "description",
+          "argumentMappings": []
+        },
+        {
+          "original": "priority",
+          "mapped": "priority",
+          "argumentMappings": []
+        },
+        {
+          "original": "status",
+          "mapped": "status",
+          "argumentMappings": []
+        },
+        {
+          "original": "estimatedHours",
+          "mapped": "estimated_hours",
+          "argumentMappings": []
+        }
+      ]
+    },
+    {
+      "type": "Project",
+      "fieldMappings": [
+        {
+          "original": "id",
+          "mapped": "id",
+          "argumentMappings": []
+        },
+        {
+          "original": "name",
+          "mapped": "name",
+          "argumentMappings": []
+        },
+        {
+          "original": "description",
+          "mapped": "description",
+          "argumentMappings": []
+        },
+        {
+          "original": "startDate",
+          "mapped": "start_date",
+          "argumentMappings": []
+        },
+        {
+          "original": "endDate",
+          "mapped": "end_date",
+          "argumentMappings": []
+        },
+        {
+          "original": "status",
+          "mapped": "status",
+          "argumentMappings": []
+        },
+        {
+          "original": "teamMembers",
+          "mapped": "team_members",
+          "argumentMappings": []
+        },
+        {
+          "original": "relatedProducts",
+          "mapped": "related_products",
+          "argumentMappings": []
+        },
+        {
+          "original": "milestoneIds",
+          "mapped": "milestone_ids",
+          "argumentMappings": []
+        },
+        {
+          "original": "milestones",
+          "mapped": "milestones",
+          "argumentMappings": []
+        },
+        {
+          "original": "tasks",
+          "mapped": "tasks",
+          "argumentMappings": []
+        },
+        {
+          "original": "progress",
+          "mapped": "progress",
+          "argumentMappings": []
+        },
+        {
+          "original": "tags",
+          "mapped": "tags",
+          "argumentMappings": []
+        },
+        {
+          "original": "alternativeProjects",
+          "mapped": "alternative_projects",
+          "argumentMappings": []
+        },
+        {
+          "original": "dependencies",
+          "mapped": "dependencies",
+          "argumentMappings": []
+        },
+        {
+          "original": "resourceGroups",
+          "mapped": "resource_groups",
+          "argumentMappings": []
+        },
+        {
+          "original": "tasksByPhase",
+          "mapped": "tasks_by_phase",
+          "argumentMappings": []
+        },
+        {
+          "original": "milestoneGroups",
+          "mapped": "milestone_groups",
+          "argumentMappings": []
+        },
+        {
+          "original": "priorityMatrix",
+          "mapped": "priority_matrix",
+          "argumentMappings": []
+        }
+      ]
+    },
+    {
+      "type": "Milestone",
+      "fieldMappings": [
+        {
+          "original": "id",
+          "mapped": "id",
+          "argumentMappings": []
+        },
+        {
+          "original": "projectId",
+          "mapped": "project_id",
+          "argumentMappings": []
+        },
+        {
+          "original": "name",
+          "mapped": "name",
+          "argumentMappings": []
+        },
+        {
+          "original": "description",
+          "mapped": "description",
+          "argumentMappings": []
+        },
+        {
+          "original": "startDate",
+          "mapped": "start_date",
+          "argumentMappings": []
+        },
+        {
+          "original": "endDate",
+          "mapped": "end_date",
+          "argumentMappings": []
+        },
+        {
+          "original": "status",
+          "mapped": "status",
+          "argumentMappings": []
+        },
+        {
+          "original": "completionPercentage",
+          "mapped": "completion_percentage",
+          "argumentMappings": []
+        },
+        {
+          "original": "dependencies",
+          "mapped": "dependencies",
+          "argumentMappings": []
+        },
+        {
+          "original": "subtasks",
+          "mapped": "subtasks",
+          "argumentMappings": []
+        },
+        {
+          "original": "reviewers",
+          "mapped": "reviewers",
+          "argumentMappings": []
+        }
+      ]
+    },
+    {
+      "type": "Task",
+      "fieldMappings": [
+        {
+          "original": "id",
+          "mapped": "id",
+          "argumentMappings": []
+        },
+        {
+          "original": "projectId",
+          "mapped": "project_id",
+          "argumentMappings": []
+        },
+        {
+          "original": "milestoneId",
+          "mapped": "milestone_id",
+          "argumentMappings": []
+        },
+        {
+          "original": "assigneeId",
+          "mapped": "assignee_id",
+          "argumentMappings": []
+        },
+        {
+          "original": "name",
+          "mapped": "name",
+          "argumentMappings": []
+        },
+        {
+          "original": "description",
+          "mapped": "description",
+          "argumentMappings": []
+        },
+        {
+          "original": "priority",
+          "mapped": "priority",
+          "argumentMappings": []
+        },
+        {
+          "original": "status",
+          "mapped": "status",
+          "argumentMappings": []
+        },
+        {
+          "original": "estimatedHours",
+          "mapped": "estimated_hours",
+          "argumentMappings": []
+        },
+        {
+          "original": "actualHours",
+          "mapped": "actual_hours",
+          "argumentMappings": []
+        },
+        {
+          "original": "createdAt",
+          "mapped": "created_at",
+          "argumentMappings": []
+        },
+        {
+          "original": "completedAt",
+          "mapped": "completed_at",
+          "argumentMappings": []
+        },
+        {
+          "original": "labels",
+          "mapped": "labels",
+          "argumentMappings": []
+        },
+        {
+          "original": "subtasks",
+          "mapped": "subtasks",
+          "argumentMappings": []
+        },
+        {
+          "original": "dependencies",
+          "mapped": "dependencies",
+          "argumentMappings": []
+        },
+        {
+          "original": "attachmentUrls",
+          "mapped": "attachment_urls",
+          "argumentMappings": []
+        },
+        {
+          "original": "reviewerIds",
+          "mapped": "reviewer_ids",
+          "argumentMappings": []
+        }
+      ]
+    },
+    {
+      "type": "ProjectUpdate",
+      "fieldMappings": [
+        {
+          "original": "id",
+          "mapped": "id",
+          "argumentMappings": []
+        },
+        {
+          "original": "projectId",
+          "mapped": "project_id",
+          "argumentMappings": []
+        },
+        {
+          "original": "updatedById",
+          "mapped": "updated_by_id",
+          "argumentMappings": []
+        },
+        {
+          "original": "updateType",
+          "mapped": "update_type",
+          "argumentMappings": []
+        },
+        {
+          "original": "description",
+          "mapped": "description",
+          "argumentMappings": []
+        },
+        {
+          "original": "timestamp",
+          "mapped": "timestamp",
+          "argumentMappings": []
+        },
+        {
+          "original": "metadata",
+          "mapped": "metadata",
+          "argumentMappings": []
+        }
+      ]
+    },
+    {
+      "type": "Employee",
+      "fieldMappings": [
+        {
+          "original": "id",
+          "mapped": "id",
+          "argumentMappings": []
+        },
+        {
+          "original": "projects",
+          "mapped": "projects",
+          "argumentMappings": []
+        },
+        {
+          "original": "assignedTasks",
+          "mapped": "assigned_tasks",
+          "argumentMappings": []
+        },
+        {
+          "original": "completedTasks",
+          "mapped": "completed_tasks",
+          "argumentMappings": []
+        },
+        {
+          "original": "skills",
+          "mapped": "skills",
+          "argumentMappings": []
+        },
+        {
+          "original": "certifications",
+          "mapped": "certifications",
+          "argumentMappings": []
+        },
+        {
+          "original": "projectHistory",
+          "mapped": "project_history",
+          "argumentMappings": []
+        }
+      ]
+    },
+    {
+      "type": "Product",
+      "fieldMappings": [
+        {
+          "original": "upc",
+          "mapped": "upc",
+          "argumentMappings": []
+        },
+        {
+          "original": "projects",
+          "mapped": "projects",
+          "argumentMappings": []
+        },
+        {
+          "original": "featureMatrix",
+          "mapped": "feature_matrix",
+          "argumentMappings": []
+        }
+      ]
+    }
+  ],
+  "enumMappings": [
+    {
+      "type": "ProjectStatus",
+      "values": [
+        {
+          "original": "PLANNING",
+          "mapped": "PROJECT_STATUS_PLANNING"
+        },
+        {
+          "original": "ACTIVE",
+          "mapped": "PROJECT_STATUS_ACTIVE"
+        },
+        {
+          "original": "COMPLETED",
+          "mapped": "PROJECT_STATUS_COMPLETED"
+        },
+        {
+          "original": "ON_HOLD",
+          "mapped": "PROJECT_STATUS_ON_HOLD"
+        }
+      ]
+    },
+    {
+      "type": "MilestoneStatus",
+      "values": [
+        {
+          "original": "PENDING",
+          "mapped": "MILESTONE_STATUS_PENDING"
+        },
+        {
+          "original": "IN_PROGRESS",
+          "mapped": "MILESTONE_STATUS_IN_PROGRESS"
+        },
+        {
+          "original": "COMPLETED",
+          "mapped": "MILESTONE_STATUS_COMPLETED"
+        },
+        {
+          "original": "DELAYED",
+          "mapped": "MILESTONE_STATUS_DELAYED"
+        }
+      ]
+    },
+    {
+      "type": "TaskStatus",
+      "values": [
+        {
+          "original": "TODO",
+          "mapped": "TASK_STATUS_TODO"
+        },
+        {
+          "original": "IN_PROGRESS",
+          "mapped": "TASK_STATUS_IN_PROGRESS"
+        },
+        {
+          "original": "REVIEW",
+          "mapped": "TASK_STATUS_REVIEW"
+        },
+        {
+          "original": "COMPLETED",
+          "mapped": "TASK_STATUS_COMPLETED"
+        },
+        {
+          "original": "BLOCKED",
+          "mapped": "TASK_STATUS_BLOCKED"
+        }
+      ]
+    },
+    {
+      "type": "TaskPriority",
+      "values": [
+        {
+          "original": "LOW",
+          "mapped": "TASK_PRIORITY_LOW"
+        },
+        {
+          "original": "MEDIUM",
+          "mapped": "TASK_PRIORITY_MEDIUM"
+        },
+        {
+          "original": "HIGH",
+          "mapped": "TASK_PRIORITY_HIGH"
+        },
+        {
+          "original": "URGENT",
+          "mapped": "TASK_PRIORITY_URGENT"
+        }
+      ]
+    },
+    {
+      "type": "ProjectUpdateType",
+      "values": [
+        {
+          "original": "STATUS_CHANGE",
+          "mapped": "PROJECT_UPDATE_TYPE_STATUS_CHANGE"
+        },
+        {
+          "original": "MILESTONE_ADDED",
+          "mapped": "PROJECT_UPDATE_TYPE_MILESTONE_ADDED"
+        },
+        {
+          "original": "TASK_ASSIGNED",
+          "mapped": "PROJECT_UPDATE_TYPE_TASK_ASSIGNED"
+        },
+        {
+          "original": "PROGRESS_UPDATE",
+          "mapped": "PROJECT_UPDATE_TYPE_PROGRESS_UPDATE"
+        },
+        {
+          "original": "TEAM_CHANGE",
+          "mapped": "PROJECT_UPDATE_TYPE_TEAM_CHANGE"
+        }
+      ]
+    }
+  ]
+}

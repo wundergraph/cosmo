@@ -34,6 +34,7 @@ export const config = {
   checkAuthor: process.env.COSMO_VCS_AUTHOR || '',
   checkCommitSha: process.env.COSMO_VCS_COMMIT || '',
   checkBranch: process.env.COSMO_VCS_BRANCH || '',
+  pluginRegistryURL: process.env.PLUGIN_REGISTRY_URL || 'cosmo-registry.wundergraph.com',
 };
 
 export const getBaseHeaders = (): HeadersInit => {
