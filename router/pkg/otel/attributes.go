@@ -1,8 +1,9 @@
 package otel
 
 import (
-	"go.opentelemetry.io/otel/attribute"
 	"net"
+
+	"go.opentelemetry.io/otel/attribute"
 )
 
 const (
@@ -57,6 +58,14 @@ const (
 	WgOperationSha256   = attribute.Key("wg.operation.sha256")
 	WgGraphQLFieldName  = attribute.Key("wg.graphql.field.name")
 	WgGraphQLParentType = attribute.Key("wg.graphql.parent_type")
+)
+
+// Event metrics attributes
+const (
+	WgEventProviderID = attribute.Key("wg.event.provider.id")
+	WgKafkaTopic      = attribute.Key("wg.kafka.topic")
+	WgNatsSubject     = attribute.Key("wg.nats.subject")
+	WgRedisChannel    = attribute.Key("wg.redis.channel")
 )
 
 const (

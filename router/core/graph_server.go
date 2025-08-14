@@ -514,7 +514,7 @@ type graphMux struct {
 	metricStore                rmetric.Store
 	prometheusCacheMetrics     *rmetric.CacheMetrics
 	otelCacheMetrics           *rmetric.CacheMetrics
-	eventMetricStore           *rmetric.EventMetrics
+	eventMetricStore           rmetric.EventMetricStore
 }
 
 // buildOperationCaches creates the caches for the graph mux.
@@ -777,7 +777,8 @@ func (s *graphServer) buildGraphMux(
 	opts BuildGraphMuxOptions,
 ) (*graphMux, error) {
 	gm := &graphMux{
-		metricStore: rmetric.NewNoopMetrics(),
+		metricStore:      rmetric.NewNoopMetrics(),
+		eventMetricStore: rmetric.NewNoopEventMetricStore(),
 	}
 
 	httpRouter := chi.NewRouter()

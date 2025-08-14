@@ -3,8 +3,9 @@ package redis
 import (
 	"context"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/pkg/metric"
 	"sync"
+
+	"github.com/wundergraph/cosmo/router/pkg/metric"
 
 	rd "github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/redis"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
@@ -44,7 +45,7 @@ type ProviderAdapter struct {
 	closeWg          sync.WaitGroup
 	urls             []string
 	clusterEnabled   bool
-	eventMetricStore *metric.EventMetrics
+	eventMetricStore metric.EventMetricStore
 }
 
 func (p *ProviderAdapter) Startup(ctx context.Context) error {
@@ -110,6 +111,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEvent
 					return
 				}
 				log.Debug("subscription update", zap.String("message_channel", msg.Channel), zap.String("data", msg.Payload))
+				p.eventMetricStore.RedisMessageReceived(ctx, event.ProviderID, msg.Channel)
 				updater.Update([]byte(msg.Payload))
 			case <-p.ctx.Done():
 				// When the application context is done, we stop the subscription if it is not already done
@@ -148,7 +150,10 @@ func (p *ProviderAdapter) Publish(ctx context.Context, event PublishEventConfigu
 	intCmd := p.conn.Publish(ctx, event.Channel, data)
 	if intCmd.Err() != nil {
 		log.Error("publish error", zap.Error(intCmd.Err()))
+		p.eventMetricStore.RedisPublishFailure(ctx, event.ProviderID, event.Channel)
 		return datasource.NewError(fmt.Sprintf("error publishing to Redis PubSub channel %s", event.Channel), intCmd.Err())
+	} else {
+		p.eventMetricStore.RedisPublish(ctx, event.ProviderID, event.Channel)
 	}
 
 	return nil

@@ -41,11 +41,11 @@ type ProviderAdapter struct {
 	writeClient      *kgo.Client
 	closeWg          sync.WaitGroup
 	cancel           context.CancelFunc
-	eventMetricStore *metric.EventMetrics
+	eventMetricStore metric.EventMetricStore
 }
 
 // topicPoller polls the Kafka topic for new records and calls the updateTriggers function.
-func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, updater resolve.SubscriptionUpdater) error {
+func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, updater resolve.SubscriptionUpdater, providerId string) error {
 	for {
 		select {
 		case <-p.ctx.Done(): // Close the poller if the application context was canceled
@@ -91,7 +91,7 @@ func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, u
 				r := iter.Next()
 
 				p.logger.Debug("subscription update", zap.String("topic", r.Topic), zap.ByteString("data", r.Value))
-				p.eventMetricStore.KafkaMessageReceived(p.ctx)
+				p.eventMetricStore.KafkaMessageReceived(p.ctx, providerId, r.Topic)
 				updater.Update(r.Value)
 			}
 		}
@@ -132,7 +132,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEvent
 
 		defer p.closeWg.Done()
 
-		err := p.topicPoller(ctx, client, updater)
+		err := p.topicPoller(ctx, client, updater, event.ProviderID)
 		if err != nil {
 			if errors.Is(err, errClientClosed) || errors.Is(err, context.Canceled) {
 				log.Debug("poller canceled", zap.Error(err))
@@ -182,10 +182,10 @@ func (p *ProviderAdapter) Publish(ctx context.Context, event PublishEventConfigu
 
 	if pErr != nil {
 		log.Error("publish error", zap.Error(pErr))
-		p.eventMetricStore.KafkaPublishFailure(ctx)
+		p.eventMetricStore.KafkaPublishFailure(ctx, event.ProviderID, event.Topic)
 		return datasource.NewError(fmt.Sprintf("error publishing to Kafka topic %s", event.Topic), pErr)
 	} else {
-		p.eventMetricStore.KafkaPublish(ctx)
+		p.eventMetricStore.KafkaPublish(ctx, event.ProviderID, event.Topic)
 	}
 
 	return nil

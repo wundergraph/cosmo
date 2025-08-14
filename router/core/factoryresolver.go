@@ -212,7 +212,7 @@ type RouterEngineConfiguration struct {
 	Headers                  *config.HeaderRules
 	Events                   config.EventsConfiguration
 	SubgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
-	EventMetricStore         *rmetric.EventMetrics
+	EventMetricStore         rmetric.EventMetricStore
 }
 
 func mapProtoFilterToPlanFilter(input *nodev1.SubscriptionFilterCondition, output *plan.SubscriptionFilterCondition) *plan.SubscriptionFilterCondition {

@@ -9,13 +9,8 @@ import (
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.uber.org/zap"
-)
 
-// EventBackend represents supported backends
-const (
-	EventBackendKafka = "kafka"
-	EventBackendRedis = "redis"
-	EventBackendNats  = "nats"
+	otelattrs "github.com/wundergraph/cosmo/router/pkg/otel"
 )
 
 // EventMetricProvider is the interface that wraps the basic Event metric methods.
@@ -32,11 +27,31 @@ type EventMetricProvider interface {
 	NatsPublish(ctx context.Context, opts ...otelmetric.AddOption)
 	NatsPublishFailure(ctx context.Context, opts ...otelmetric.AddOption)
 	NatsMessageReceived(ctx context.Context, opts ...otelmetric.AddOption)
+
 	NatsRequest(ctx context.Context, opts ...otelmetric.AddOption)
 	NatsRequestFailure(ctx context.Context, opts ...otelmetric.AddOption)
 
 	Flush(ctx context.Context) error
 	Shutdown() error
+}
+
+type EventMetricStore interface {
+	KafkaPublish(ctx context.Context, providerID string, topic string)
+	KafkaPublishFailure(ctx context.Context, providerID string, topic string)
+	KafkaMessageReceived(ctx context.Context, providerID string, topic string)
+
+	RedisPublish(ctx context.Context, providerID string, channel string)
+	RedisPublishFailure(ctx context.Context, providerID string, channel string)
+	RedisMessageReceived(ctx context.Context, providerID string, channel string)
+
+	NatsPublish(ctx context.Context, providerID string, subject string)
+	NatsPublishFailure(ctx context.Context, providerID string, subject string)
+	NatsMessageReceived(ctx context.Context, providerID string, subject string)
+	NatsRequest(ctx context.Context, providerID string, subject string)
+	NatsRequestFailure(ctx context.Context, providerID string, subject string)
+
+	Flush(ctx context.Context) error
+	Shutdown(ctx context.Context) error
 }
 
 // EventMetrics is the store for Event (Kafka/Redis/NATS) metrics.
@@ -57,7 +72,7 @@ func NewEventMetricStore(logger *zap.Logger, baseAttributes []attribute.KeyValue
 	}
 
 	if metricsConfig.OpenTelemetry.EventMetrics {
-		otlpMetrics, err := newOtlpEventMetrics(logger, otelProvider, baseAttributes)
+		otlpMetrics, err := newOtlpEventMetrics(logger, otelProvider)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create otlp event metrics: %w", err)
 		}
@@ -65,7 +80,7 @@ func NewEventMetricStore(logger *zap.Logger, baseAttributes []attribute.KeyValue
 	}
 
 	if metricsConfig.Prometheus.EventMetrics {
-		promMetrics, err := newPromEventMetrics(logger, promProvider, baseAttributes)
+		promMetrics, err := newPromEventMetrics(logger, promProvider)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create prometheus event metrics: %w", err)
 		}
@@ -80,68 +95,68 @@ func (e *EventMetrics) withAttrs(attrs ...attribute.KeyValue) otelmetric.AddOpti
 	return otelmetric.WithAttributes(append(copied, attrs...)...)
 }
 
-func (e *EventMetrics) KafkaPublish(ctx context.Context, attrs ...attribute.KeyValue) {
-	opts := e.withAttrs(attrs...)
+func (e *EventMetrics) KafkaPublish(ctx context.Context, providerID string, topic string) {
+	opts := e.withAttrs(otelattrs.WgEventProviderID.String(providerID), otelattrs.WgKafkaTopic.String(topic))
 	e.otlpMetrics.KafkaPublish(ctx, opts)
 	e.promMetrics.KafkaPublish(ctx, opts)
 }
 
-func (e *EventMetrics) KafkaPublishFailure(ctx context.Context, attrs ...attribute.KeyValue) {
-	opts := e.withAttrs(attrs...)
+func (e *EventMetrics) KafkaPublishFailure(ctx context.Context, providerID string, topic string) {
+	opts := e.withAttrs(otelattrs.WgEventProviderID.String(providerID), otelattrs.WgKafkaTopic.String(topic))
 	e.otlpMetrics.KafkaPublishFailure(ctx, opts)
 	e.promMetrics.KafkaPublishFailure(ctx, opts)
 }
 
-func (e *EventMetrics) KafkaMessageReceived(ctx context.Context, attrs ...attribute.KeyValue) {
-	opts := e.withAttrs(attrs...)
+func (e *EventMetrics) KafkaMessageReceived(ctx context.Context, providerID string, topic string) {
+	opts := e.withAttrs(otelattrs.WgEventProviderID.String(providerID), otelattrs.WgKafkaTopic.String(topic))
 	e.otlpMetrics.KafkaMessageReceived(ctx, opts)
 	e.promMetrics.KafkaMessageReceived(ctx, opts)
 }
 
-func (e *EventMetrics) RedisPublish(ctx context.Context, attrs ...attribute.KeyValue) {
-	opts := e.withAttrs(attrs...)
+func (e *EventMetrics) RedisPublish(ctx context.Context, providerID string, channel string) {
+	opts := e.withAttrs(otelattrs.WgEventProviderID.String(providerID), otelattrs.WgRedisChannel.String(channel))
 	e.otlpMetrics.RedisPublish(ctx, opts)
 	e.promMetrics.RedisPublish(ctx, opts)
 }
 
-func (e *EventMetrics) RedisPublishFailure(ctx context.Context, attrs ...attribute.KeyValue) {
-	opts := e.withAttrs(attrs...)
+func (e *EventMetrics) RedisPublishFailure(ctx context.Context, providerID string, channel string) {
+	opts := e.withAttrs(otelattrs.WgEventProviderID.String(providerID), otelattrs.WgRedisChannel.String(channel))
 	e.otlpMetrics.RedisPublishFailure(ctx, opts)
 	e.promMetrics.RedisPublishFailure(ctx, opts)
 }
 
-func (e *EventMetrics) RedisMessageReceived(ctx context.Context, attrs ...attribute.KeyValue) {
-	opts := e.withAttrs(attrs...)
+func (e *EventMetrics) RedisMessageReceived(ctx context.Context, providerID string, channel string) {
+	opts := e.withAttrs(otelattrs.WgEventProviderID.String(providerID), otelattrs.WgRedisChannel.String(channel))
 	e.otlpMetrics.RedisMessageReceived(ctx, opts)
 	e.promMetrics.RedisMessageReceived(ctx, opts)
 }
 
-func (e *EventMetrics) NatsPublish(ctx context.Context, attrs ...attribute.KeyValue) {
-	opts := e.withAttrs(attrs...)
+func (e *EventMetrics) NatsPublish(ctx context.Context, providerID string, subject string) {
+	opts := e.withAttrs(otelattrs.WgEventProviderID.String(providerID), otelattrs.WgNatsSubject.String(subject))
 	e.otlpMetrics.NatsPublish(ctx, opts)
 	e.promMetrics.NatsPublish(ctx, opts)
 }
 
-func (e *EventMetrics) NatsPublishFailure(ctx context.Context, attrs ...attribute.KeyValue) {
-	opts := e.withAttrs(attrs...)
+func (e *EventMetrics) NatsPublishFailure(ctx context.Context, providerID string, subject string) {
+	opts := e.withAttrs(otelattrs.WgEventProviderID.String(providerID), otelattrs.WgNatsSubject.String(subject))
 	e.otlpMetrics.NatsPublishFailure(ctx, opts)
 	e.promMetrics.NatsPublishFailure(ctx, opts)
 }
 
-func (e *EventMetrics) NatsMessageReceived(ctx context.Context, attrs ...attribute.KeyValue) {
-	opts := e.withAttrs(attrs...)
+func (e *EventMetrics) NatsMessageReceived(ctx context.Context, providerID string, subject string) {
+	opts := e.withAttrs(otelattrs.WgEventProviderID.String(providerID), otelattrs.WgNatsSubject.String(subject))
 	e.otlpMetrics.NatsMessageReceived(ctx, opts)
 	e.promMetrics.NatsMessageReceived(ctx, opts)
 }
 
-func (e *EventMetrics) NatsRequest(ctx context.Context, attrs ...attribute.KeyValue) {
-	opts := e.withAttrs(attrs...)
+func (e *EventMetrics) NatsRequest(ctx context.Context, providerID string, subject string) {
+	opts := e.withAttrs(otelattrs.WgEventProviderID.String(providerID), otelattrs.WgNatsSubject.String(subject))
 	e.otlpMetrics.NatsRequest(ctx, opts)
 	e.promMetrics.NatsRequest(ctx, opts)
 }
 
-func (e *EventMetrics) NatsRequestFailure(ctx context.Context, attrs ...attribute.KeyValue) {
-	opts := e.withAttrs(attrs...)
+func (e *EventMetrics) NatsRequestFailure(ctx context.Context, providerID string, subject string) {
+	opts := e.withAttrs(otelattrs.WgEventProviderID.String(providerID), otelattrs.WgNatsSubject.String(subject))
 	e.otlpMetrics.NatsRequestFailure(ctx, opts)
 	e.promMetrics.NatsRequestFailure(ctx, opts)
 }

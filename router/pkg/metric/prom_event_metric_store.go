@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.uber.org/zap"
@@ -22,7 +21,7 @@ type promEventMetrics struct {
 	meter         otelmetric.Meter
 }
 
-func newPromEventMetrics(logger *zap.Logger, meterProvider *metric.MeterProvider, baseAttributes []attribute.KeyValue) (*promEventMetrics, error) {
+func newPromEventMetrics(logger *zap.Logger, meterProvider *metric.MeterProvider) (*promEventMetrics, error) {
 	meter := meterProvider.Meter(
 		cosmoRouterEventPromMeterName,
 		otelmetric.WithInstrumentationVersion(cosmoRouterEventPromMeterVersion),
