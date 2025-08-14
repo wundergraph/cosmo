@@ -270,8 +270,10 @@ type MetricOptions struct {
 	PrometheusSchemaFieldUsage            PrometheusSchemaFieldUsage
 	EnableOTLPConnectionMetrics           bool
 	EnableOTLPCircuitBreakerMetrics       bool
+	EnableOTLPEventMetrics                bool
 	EnablePrometheusConnectionMetrics     bool
 	EnablePrometheusCircuitBreakerMetrics bool
+	EnablePrometheusEventMetrics          bool
 }
 
 type PrometheusSchemaFieldUsage struct {
@@ -1503,6 +1505,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			CircuitBreaker:      testConfig.MetricOptions.EnablePrometheusCircuitBreakerMetrics,
 			ExcludeMetrics:      testConfig.MetricOptions.MetricExclusions.ExcludedPrometheusMetrics,
 			ExcludeMetricLabels: testConfig.MetricOptions.MetricExclusions.ExcludedPrometheusMetricLabels,
+			EventMetrics:        testConfig.MetricOptions.EnablePrometheusEventMetrics,
 			ExcludeScopeInfo:    testConfig.MetricOptions.MetricExclusions.ExcludeScopeInfo,
 			PromSchemaFieldUsage: rmetric.PrometheusSchemaFieldUsage{
 				Enabled:             testConfig.MetricOptions.PrometheusSchemaFieldUsage.Enabled,
@@ -1525,6 +1528,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 					Enabled:         true,
 					RouterRuntime:   testConfig.MetricOptions.EnableRuntimeMetrics,
 					GraphqlCache:    testConfig.MetricOptions.EnableOTLPRouterCache,
+					EventMetrics:    testConfig.MetricOptions.EnableOTLPEventMetrics,
 					ConnectionStats: testConfig.MetricOptions.EnableOTLPConnectionMetrics,
 					EngineStats: config.EngineStats{
 						Subscriptions: testConfig.MetricOptions.OTLPEngineStatsOptions.EnableSubscription,

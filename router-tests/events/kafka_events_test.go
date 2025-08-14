@@ -1,4 +1,4 @@
-package events_test
+package events
 
 import (
 	"bufio"
@@ -74,7 +74,7 @@ func TestKafkaEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			ensureTopicExists(t, xEnv, topics...)
+			EnsureTopicExists(t, xEnv, topics...)
 
 			var subscriptionOne struct {
 				employeeUpdatedMyKafka struct {
@@ -130,7 +130,7 @@ func TestKafkaEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			ensureTopicExists(t, xEnv, topics...)
+			EnsureTopicExists(t, xEnv, topics...)
 
 			var subscriptionOne struct {
 				employeeUpdatedMyKafka struct {
@@ -204,7 +204,7 @@ func TestKafkaEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			ensureTopicExists(t, xEnv, topics...)
+			EnsureTopicExists(t, xEnv, topics...)
 
 			var subscriptionOne struct {
 				employeeUpdatedMyKafka struct {
@@ -277,7 +277,7 @@ func TestKafkaEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			ensureTopicExists(t, xEnv, topics...)
+			EnsureTopicExists(t, xEnv, topics...)
 
 			var subscriptionOne struct {
 				employeeUpdatedMyKafka struct {
@@ -366,7 +366,7 @@ func TestKafkaEvents(t *testing.T) {
 				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Millisecond * 100
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			ensureTopicExists(t, xEnv, topics...)
+			EnsureTopicExists(t, xEnv, topics...)
 
 			var subscriptionOne struct {
 				employeeUpdatedMyKafka struct {
@@ -431,7 +431,7 @@ func TestKafkaEvents(t *testing.T) {
 					core.WithMultipartHeartbeatInterval(multipartHeartbeatInterval),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
-				ensureTopicExists(t, xEnv, topics...)
+				EnsureTopicExists(t, xEnv, topics...)
 
 				subscribePayload := []byte(`{"query":"subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename surname } }}"}`)
 
@@ -497,7 +497,7 @@ func TestKafkaEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			ensureTopicExists(t, xEnv, topics...)
+			EnsureTopicExists(t, xEnv, topics...)
 
 			subscribePayload := []byte(`{"query":"subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename surname } }}"}`)
 
@@ -562,7 +562,7 @@ func TestKafkaEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			ensureTopicExists(t, xEnv, topics...)
+			EnsureTopicExists(t, xEnv, topics...)
 
 			subscribePayload := []byte(`{"query":"subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename surname } }}"}`)
 
@@ -672,7 +672,7 @@ func TestKafkaEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			ensureTopicExists(t, xEnv, topics...)
+			EnsureTopicExists(t, xEnv, topics...)
 
 			type subscriptionPayload struct {
 				Data struct {
@@ -739,7 +739,7 @@ func TestKafkaEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			ensureTopicExists(t, xEnv, topics...)
+			EnsureTopicExists(t, xEnv, topics...)
 
 			type subscriptionPayload struct {
 				Data struct {
@@ -806,7 +806,7 @@ func TestKafkaEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			ensureTopicExists(t, xEnv, topics...)
+			EnsureTopicExists(t, xEnv, topics...)
 
 			type subscriptionPayload struct {
 				Data struct {
@@ -861,7 +861,7 @@ func TestKafkaEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			ensureTopicExists(t, xEnv, topics...)
+			EnsureTopicExists(t, xEnv, topics...)
 
 			var subscriptionOne struct {
 				employeeUpdatedMyKafka struct {
@@ -932,7 +932,7 @@ func TestKafkaEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			ensureTopicExists(t, xEnv, topics...)
+			EnsureTopicExists(t, xEnv, topics...)
 
 			// Send a mutation to trigger the first subscription
 			resOne := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -980,7 +980,7 @@ func TestKafkaEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			ensureTopicExists(t, xEnv, topics...)
+			EnsureTopicExists(t, xEnv, topics...)
 
 			type subscriptionPayload struct {
 				Data struct {
@@ -1040,25 +1040,6 @@ func TestKafkaEvents(t *testing.T) {
 			}
 		})
 	})
-}
-
-func ensureTopicExists(t *testing.T, xEnv *testenv.Environment, topics ...string) {
-	// Delete topic for idempotency
-	deleteCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	prefixedTopics := make([]string, len(topics))
-	for _, topic := range topics {
-		prefixedTopics = append(prefixedTopics, xEnv.GetPubSubName(topic))
-	}
-
-	_, err := xEnv.KafkaAdminClient.DeleteTopics(deleteCtx, prefixedTopics...)
-	require.NoError(t, err)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	_, err = xEnv.KafkaAdminClient.CreateTopics(ctx, 1, 1, nil, prefixedTopics...)
-	require.NoError(t, err)
 }
 
 func produceKafkaMessage(t *testing.T, xEnv *testenv.Environment, topicName string, message string) {
