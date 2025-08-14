@@ -404,6 +404,29 @@ export function webhookAxiosRetryCond(err: AxiosError) {
   return isNetworkError(err) || isRetryableError(err);
 }
 
+/**
+ * Determines whether the given string is a Google Cloud Storage address by checking whether the hostname is
+ * `storage.googleapis.com` or the protocol is `gs:`.
+ */
+export function isGoogleCloudStorageUrl(s: string): boolean {
+  if (!s) {
+    return false;
+  }
+
+  try {
+    const url = new URL(s);
+    const hostname = url.hostname.toLowerCase();
+
+    return (
+      url.protocol === 'gs:' || hostname === 'storage.googleapis.com' || hostname.endsWith('.storage.googleapis.com')
+    );
+  } catch {
+    // ignore
+  }
+
+  return false;
+}
+
 export function createS3ClientConfig(bucketName: string, opts: S3StorageOptions): S3ClientConfig {
   const url = new URL(opts.url);
   const { region, username, password } = opts;

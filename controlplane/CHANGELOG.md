@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.156.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.156.1...controlplane@0.156.2) (2025-08-14)
+
+### Bug Fixes
+
+* **s3:** allow to delete objects individually ([#2131](https://github.com/wundergraph/cosmo/issues/2131)) ([d8bac2a](https://github.com/wundergraph/cosmo/commit/d8bac2a5f25c70dd614bd23fc09e893adc830b7d)) (@StarpTech)
+
+## [0.156.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.156.0...controlplane@0.156.1) (2025-08-13)
+
+### Bug Fixes
+
+* make the session cookie last as long as Keycloak's ([#2135](https://github.com/wundergraph/cosmo/issues/2135)) ([589bbc9](https://github.com/wundergraph/cosmo/commit/589bbc9c778c21879ddf088a38f419fb0b909219)) (@wilsonrivera)
+
 # [0.156.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.155.3...controlplane@0.156.0) (2025-08-12)
 
 ### Features
