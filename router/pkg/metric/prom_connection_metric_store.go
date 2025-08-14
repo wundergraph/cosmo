@@ -45,7 +45,7 @@ func newPromConnectionMetrics(logger *zap.Logger, meterProvider *metric.MeterPro
 
 	err = metrics.startInitMetrics(stats, attributes)
 	if err != nil {
-		logger.Error("failed to start initial connection metrics", zap.Error(err))
+		return nil, err
 	}
 
 	return metrics, nil

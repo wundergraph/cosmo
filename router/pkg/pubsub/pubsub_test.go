@@ -3,6 +3,7 @@ package pubsub
 import (
 	"context"
 	"errors"
+	"github.com/stretchr/testify/mock"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"testing"
 
@@ -119,7 +120,7 @@ func TestBuild_ProviderError(t *testing.T) {
 		{ID: "provider-1"},
 	}
 
-	mockBuilder.On("BuildProvider", natsEventSources[0]).Return(nil, errors.New("provider error"))
+	mockBuilder.On("BuildProvider", natsEventSources[0], mock.Anything).Return(nil, errors.New("provider error"))
 
 	// Execute the function
 	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs, rmetric.NewNoopEventMetricStore())
